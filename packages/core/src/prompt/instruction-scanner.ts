@@ -88,7 +88,9 @@ export function scanInstructions(cwd: string, options: ScanOptions = {}): Instru
   // 3. Collect directories from ceiling down to cwd
   const dirs = collectDirsDownward(resolve(cwd), ceiling);
 
-  // 4. Walk directories root→cwd (depth 0, 1, 2, ...)
+  // 4. Walk directories root→cwd (depth 0, 1, 2, ...). Local overrides are
+  // collected separately so all of them follow every project entry.
+  const localEntries: InstructionEntry[] = [];
   for (let depth = 0; depth < dirs.length; depth++) {
     const dir = dirs[depth];
 
@@ -108,11 +110,11 @@ export function scanInstructions(cwd: string, options: ScanOptions = {}): Instru
     // Local instructions (not version controlled)
     for (const name of allNames) {
       const localName = name.replace(/\.md$/, ".local.md");
-      tryAddFile(join(dir, localName), "local", depth, entries);
+      tryAddFile(join(dir, localName), "local", depth, localEntries);
     }
   }
 
-  return dedup(entries);
+  return dedup([...entries, ...localEntries]);
 }
 
 /**
