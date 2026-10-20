@@ -84,7 +84,6 @@ import {
   localCredentialAccess,
   sessionsRoot,
   // Quota — remaining CC/Codex subscription usage.
-  ErrorCodes,
   WORKSPACE_PROFILE_NAME_RE,
   previewLocalTheme,
   installReviewedLocalTheme,
@@ -294,6 +293,7 @@ import {
   makeCronRunnerWithResume,
   resolveDesktopAutomationJobWorkspace,
 } from "./automation-host.js";
+import { createAutomationResumeTurn } from "./automation-resume-turn.js";
 import { automationLifecycleNotification } from "./automation-notification.js";
 import { DesktopNotifier } from "./desktop-notifier.js";
 import {
@@ -301,7 +301,6 @@ import {
   showNativeDesktopNotification,
 } from "./native-desktop-notification.js";
 import * as desktopNotifications from "./desktop-notification-routes.js";
-import type { CronRunResult } from "@cjhyy/code-shell-core/internal";
 import {
   setAutomationScheduler,
   listAutomations,
@@ -374,7 +373,6 @@ import {
 } from "@cjhyy/code-shell-server/mobile-remote";
 import {
   MobileRemoteOrchestrator,
-  injectAndAwaitResult,
   resolveRoomPermissionMode,
   type AuthenticatedMobileClientEvent,
 } from "./mobile-remote-orchestrator.js";
@@ -3645,51 +3643,12 @@ app.whenReady().then(async () => {
       emitAutomationEvent,
       announceAutomationSession,
     );
-    // "Continue this conversation" jobs (job.resumeSessionId) don't run a
-    // headless Engine — they feed their prompt into the LIVE session as a new
-    // user turn, exactly like a human typing at a scheduled time. agent/run with
-    // an existing sessionId makes the worker resume it from disk if it isn't
-    // already live (engine.ts: exists()→resume). The run then inherits that
-    // session's own cwd / permission mode / tools / background-completion wakeup.
-    const injectResumeTurn = async (
-      sessionId: string,
-      prompt: string,
-      _signal?: AbortSignal,
-      job?: import("@cjhyy/code-shell-core/internal").CronJob,
-    ): Promise<CronRunResult> => {
-      if (!bridge) return { text: "", reason: "no-bridge" };
-      // requireExisting: if the user deleted the target conversation, the worker
-      // returns SessionNotFound instead of running the prompt against a blank
-      // session. We turn that into a `stop` so the scheduler auto-disables this
-      // recurring job (and the host notifies the user) rather than silently
-      // re-firing into nothing every tick.
-      const res = await injectAndAwaitResult(
-        bridge,
-        "agent/run",
-        {
-          task: prompt,
-          sessionId,
-          requireExisting: true,
-          ...(job?.projectId ? { projectId: job.projectId } : {}),
-          ...(job?.rootId ? { rootId: job.rootId } : {}),
-        },
-        { origin: "host", producer: "automation-resume" },
-      );
-      if (res.ok) {
-        const r = res.result as { text?: string; reason?: string } | undefined;
-        return { text: r?.text ?? "", reason: r?.reason ?? "done" };
-      }
-      if (res.code === ErrorCodes.SessionNotFound) {
-        // A missing bound conversation is rare and consequential, so notify even while focused.
-        await desktopNotifications.notifyMissingAutomationResumeTarget(desktopNotifier, job);
-        return {
-          text: "",
-          reason: "resume-target-missing",
-          stop: { reason: "续接的对话已被删除,已停止该定时任务" },
-        };
-      }
-      return { text: "", reason: res.message };
-    };
+    // "Continue this conversation" jobs feed their prompt into the live session.
+    const injectResumeTurn = createAutomationResumeTurn({
+      bridge: () => bridge,
+      notifyMissingTarget: (job) =>
+        desktopNotifications.notifyMissingAutomationResumeTarget(desktopNotifier, job),
+    });
     const automationRunner = makeCronRunnerWithResume(
       headlessAutomationRunner,
       injectResumeTurn,
