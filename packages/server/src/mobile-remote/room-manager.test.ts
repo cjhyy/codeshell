@@ -154,6 +154,31 @@ describe("RoomManager", () => {
     expect(readdirSync(join(dir!, room.id)).some((name) => name.endsWith(".tmp"))).toBe(false);
   });
 
+  // Regression (audit R3-04): the default name only split on "/", so a
+  // Windows cwd became the whole path, and a long one produced a name the
+  // metadata reader rejects (> 512), hiding the room it had just created.
+  test("default room name is the last cwd segment for Windows paths and stays readable", () => {
+    const { mgr } = makeManager();
+    const windows = mgr.createRoom({ cwd: String.raw`C:\work\project-name` });
+    expect(windows.name).toBe("project-name");
+    expect(mgr.createRoom({ cwd: "\\\\server\\share\\repo\\" }).name).toBe("repo");
+
+    const long = "C:\\" + Array.from({ length: 12 }, () => "directory".repeat(5)).join("\\");
+    expect(mgr.getRoom(mgr.createRoom({ cwd: `${long}\\project-name` }).id)?.name).toBe(
+      "project-name",
+    );
+
+    // A single over-long segment is bounded without splitting a surrogate pair.
+    const segment = "a".repeat(511) + "😀" + "b".repeat(100);
+    const bounded = mgr.createRoom({ cwd: `/work/${segment}` });
+    const stored = mgr.getRoom(bounded.id);
+    expect(stored?.name).toBe("a".repeat(511));
+    expect(mgr.listRooms().some((room) => room.id === bounded.id)).toBe(true);
+
+    // POSIX paths keep backslashes as ordinary name characters.
+    expect(mgr.createRoom({ cwd: String.raw`/work/a\b` }).name).toBe(String.raw`a\b`);
+  });
+
   test("a torn JSONL tail blocks an active writer instead of concealing corruption", () => {
     const { mgr } = makeManager();
     const room = mgr.createRoom({ cwd: "/repo" });

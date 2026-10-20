@@ -84,6 +84,28 @@ function readBoundedUtf8File(path: string, maxBytes: number): string {
   }
 }
 
+/** Room metadata names are capped at this many UTF-16 units by parseRoomMeta. */
+const MAX_ROOM_NAME_LENGTH = 512;
+
+/**
+ * Default room name: the cwd's last path segment. Windows drive and UNC paths
+ * also split on backslashes. Bounded to the metadata name limit, without
+ * leaving half of a surrogate pair, so the reader accepts what we write.
+ */
+function defaultRoomName(cwd: string): string {
+  const windows = /^(?:[A-Za-z]:[\\/]|\\\\)/.test(cwd);
+  const segment =
+    cwd
+      .split(windows ? /[\\/]/ : "/")
+      .filter(Boolean)
+      .pop() ?? "room";
+  if (segment.length <= MAX_ROOM_NAME_LENGTH) return segment;
+  const end = /[\uD800-\uDBFF]/.test(segment[MAX_ROOM_NAME_LENGTH - 1]!)
+    ? MAX_ROOM_NAME_LENGTH - 1
+    : MAX_ROOM_NAME_LENGTH;
+  return segment.slice(0, end);
+}
+
 function parseRoomMeta(value: unknown, expectedId?: string): RoomMeta | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const raw = value as Record<string, unknown>;
@@ -93,7 +115,7 @@ function parseRoomMeta(value: unknown, expectedId?: string): RoomMeta | undefine
     (expectedId !== undefined && raw.id !== expectedId) ||
     typeof raw.name !== "string" ||
     !raw.name ||
-    raw.name.length > 512 ||
+    raw.name.length > MAX_ROOM_NAME_LENGTH ||
     raw.name.includes("\0") ||
     typeof raw.cwd !== "string" ||
     !raw.cwd ||
@@ -614,7 +636,7 @@ export class RoomManager {
     const id = `room_${this.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
     const meta: RoomMeta = {
       id,
-      name: input.name ?? input.cwd.split("/").filter(Boolean).pop() ?? "room",
+      name: input.name ?? defaultRoomName(input.cwd),
       cwd: input.cwd,
       kind: input.kind ?? "claude-code",
       permissionMode: input.permissionMode ?? "default",
