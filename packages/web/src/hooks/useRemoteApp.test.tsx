@@ -2406,3 +2406,70 @@ describe("useRemoteApp native output journal", () => {
     }
   });
 });
+
+describe("useRemoteApp CLI room controls", () => {
+  const room = {
+    id: "room-cli",
+    name: "CLI",
+    cwd: "/repo",
+    kind: "claude-code" as const,
+    permissionMode: "bypassPermissions" as const,
+    createdAt: 1,
+    lastActiveAt: 1,
+    open: true,
+    observing: false,
+  };
+
+  async function openRoom() {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      ws.message({ type: "room.projects.ok", projects: [{ path: "/repo", name: "repo" }] });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.selectProject("/repo");
+      hook.result.current.openCcSession("thread-cli", "/repo", "bypassPermissions");
+      await flushMicrotasks();
+      ws.message({
+        type: "ccRoom.opened",
+        roomId: room.id,
+        sessionId: "thread-cli",
+        status: "running",
+      });
+      ws.message({ type: "room.list.ok", rooms: [room] });
+      await flushMicrotasks();
+    });
+    const sent = () => ws.sent.map((payload) => JSON.parse(payload));
+    const approval = (requestId: string, askUser?: unknown) =>
+      ws.message({
+        type: "ccRoom.approvalRequest",
+        roomId: room.id,
+        req: { requestId, toolName: askUser ? "AskUserQuestion" : "Read", input: {}, askUser },
+      });
+    return { hook, ws, sent, approval };
+  }
+
+  test("a multi-question CLI approval keeps every question for one response", async () => {
+    const { hook, approval } = await openRoom();
+    try {
+      const question = (text: string) => ({ question: text, options: ["A"], multiSelect: false });
+      await act(async () => {
+        approval("ask-many", {
+          ...question("First?"),
+          questions: [question("First?"), question("Second?")],
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals[0]?.questions?.map((q) => q.question)).toEqual([
+        "First?",
+        "Second?",
+      ]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+});

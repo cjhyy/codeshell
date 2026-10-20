@@ -295,6 +295,98 @@ function CcModeDialog({
 }
 
 export function DesktopApproval({ approval, app }: { approval: PendingApproval; app: RemoteApp }) {
+  if (approval.roomId && approval.questions && approval.questions.length > 1)
+    return <DesktopAskQuestions approval={approval} app={app} />;
+  return <DesktopApprovalCard approval={approval} app={app} />;
+}
+
+/** A CLI AskUserQuestion request with several questions accepts exactly one
+ *  response, so every answer is collected before it is sent. */
+function DesktopAskQuestions({ approval, app }: { approval: PendingApproval; app: RemoteApp }) {
+  const questions = approval.questions ?? [];
+  const [picked, setPicked] = React.useState<string[][]>(() => questions.map(() => []));
+  const [free, setFree] = React.useState<string[]>(() => questions.map(() => ""));
+  const answers = questions.map((_q, index) => free[index]?.trim() || picked[index]!.join(", "));
+  const online = app.status === "online";
+  const pick = (index: number, option: string, multiSelect: boolean) =>
+    setPicked((all) =>
+      all.map((labels, i) =>
+        i !== index
+          ? labels
+          : multiSelect
+            ? labels.includes(option)
+              ? labels.filter((label) => label !== option)
+              : [...labels, option]
+            : [option],
+      ),
+    );
+  const respond = (decision: Parameters<RemoteApp["respondCcApproval"]>[2]) => {
+    if (online && approval.roomId)
+      app.respondCcApproval(approval.roomId, approval.requestId, decision);
+  };
+  return (
+    <div className="approval">
+      <div className="approval-title">
+        Agent 提问<em> · {approval.risk}</em>
+      </div>
+      {questions.map((question, index) => (
+        <div key={`${index}:${question.question}`} className="approval-question">
+          <div className="approval-summary">
+            {question.header ? `${question.header} · ` : ""}
+            {question.question}
+          </div>
+          <div className="desktop-ask-options">
+            {question.options.map((option, optionIndex) => (
+              <button
+                className="library-button"
+                key={`${option}:${optionIndex}`}
+                aria-pressed={picked[index]!.includes(option)}
+                disabled={!online}
+                onClick={() => pick(index, option, question.multiSelect)}
+              >
+                {optionIndex + 1}. {option}
+              </button>
+            ))}
+          </div>
+          <textarea
+            className="approval-answer"
+            aria-label={`自定义回答：${question.question}`}
+            placeholder="输入回答…"
+            value={free[index]}
+            onChange={(event) =>
+              setFree((all) => all.map((text, i) => (i === index ? event.target.value : text)))
+            }
+          />
+        </div>
+      ))}
+      <div className="approval-actions">
+        <button
+          className="send"
+          disabled={!online || !answers.every(Boolean)}
+          onClick={() =>
+            respond({
+              behavior: "allow",
+              answers: Object.fromEntries(
+                questions.map((q, index) => [q.question, answers[index]!]),
+              ),
+            })
+          }
+        >
+          提交回答
+        </button>
+        <button
+          className="stop"
+          disabled={!online}
+          onClick={() => respond({ behavior: "deny", message: "denied by user" })}
+        >
+          拒绝
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DesktopApprovalCard({ approval, app }: { approval: PendingApproval; app: RemoteApp }) {
   const [scope, setScope] = React.useState<ApprovalScope>("once");
   const [pathScope, setPathScope] = React.useState<ApprovalPathScope>("tool");
   const [answer, setAnswer] = React.useState("");

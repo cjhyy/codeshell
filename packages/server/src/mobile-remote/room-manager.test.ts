@@ -948,6 +948,69 @@ describe("RoomManager", () => {
     ]);
   });
 
+  test("a multi-question AskUserQuestion forwards every question and settles once with all answers", () => {
+    dir = mkdtempSync(join(tmpdir(), "rooms-"));
+    let emit!: (e: ResidentAgentEvent) => void;
+    const forwarded: { requestId: string; askUser: unknown }[] = [];
+    const controls: { requestId: string; decision: unknown }[] = [];
+    const mgr = new RoomManager({
+      rootDir: dir,
+      createAgent: (_r, onEvent) => {
+        emit = onEvent;
+        return {
+          start() {},
+          send: () => true,
+          isRunning: () => true,
+          stop() {},
+          respondControl: (requestId, decision) => controls.push({ requestId, decision }),
+        };
+      },
+      onMessage: () => {},
+      onApprovalRequest: (_roomId, req) =>
+        forwarded.push({ requestId: req.requestId, askUser: req.askUser }),
+    });
+    const room = mgr.createRoom({ cwd: "/repo" });
+    mgr.open(room.id);
+    const input = {
+      questions: [
+        { question: "语言?", header: "Lang", options: [{ label: "TS" }, { label: "Go" }] },
+        { question: "测试?", options: [{ label: "单测" }, { label: "集成" }], multiSelect: true },
+      ],
+    };
+    emit({ type: "approval_request", requestId: "ask-2", toolName: "AskUserQuestion", input });
+    expect(forwarded).toEqual([
+      {
+        requestId: "ask-2",
+        askUser: {
+          question: "语言?",
+          header: "Lang",
+          options: ["TS", "Go"],
+          multiSelect: false,
+          questions: [
+            { question: "语言?", header: "Lang", options: ["TS", "Go"], multiSelect: false },
+            { question: "测试?", options: ["单测", "集成"], multiSelect: true },
+          ],
+        },
+      },
+    ]);
+
+    expect(
+      mgr.respondApproval(room.id, "ask-2", {
+        behavior: "allow",
+        answers: { "语言?": "Go", "测试?": "单测, 集成" },
+      }),
+    ).toBe(true);
+    expect(controls).toEqual([
+      {
+        requestId: "ask-2",
+        decision: {
+          behavior: "allow",
+          updatedInput: { ...input, answers: { "语言?": "Go", "测试?": "单测, 集成" } },
+        },
+      },
+    ]);
+  });
+
   test("malformed AskUserQuestion (no questions) auto-allows so the turn isn't wedged", () => {
     dir = mkdtempSync(join(tmpdir(), "rooms-"));
     let emit!: (e: ResidentAgentEvent) => void;

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import React, { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../src/test-utils/renderHook.js";
 import { initialChatState } from "../src/lib/streamReducer.js";
@@ -492,6 +493,83 @@ describe("Desktop workbench controller", () => {
     expect(sidebar).toContain("Claude Code");
     expect(sidebar).toContain("Codex");
   });
+});
+
+function reactProps(node: unknown): Record<string, any> {
+  const key = Object.keys(node as object).find((name) => name.startsWith("__reactProps$"));
+  return key ? (node as Record<string, any>)[key] : {};
+}
+function elementsByTag(node: any, tag: string): any[] {
+  return [
+    ...(node.tagName === tag ? [node] : []),
+    ...(node.childNodes ?? []).flatMap((child: any) => elementsByTag(child, tag)),
+  ];
+}
+function textOf(node: any): string {
+  if (node.nodeType === 3) return node.nodeValue ?? node.textContent ?? "";
+  return node.childNodes?.length ? node.childNodes.map(textOf).join("") : (node.textContent ?? "");
+}
+
+test("a multi-question CLI clarification answers every question in one response", async () => {
+  ensureMiniDom();
+  const responses: unknown[] = [];
+  const app = remoteApp({
+    respondCcApproval: (roomId, requestId, decision) =>
+      responses.push({ roomId, requestId, decision }),
+  });
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const question = (text: string) => ({ question: text, options: ["A", "B"], multiSelect: false });
+  await act(async () => {
+    root.render(
+      <DesktopApproval
+        app={app}
+        approval={{
+          requestId: "ask-many",
+          roomId: "room-1",
+          toolName: "AskUserQuestion",
+          summary: "First?",
+          description: "First?",
+          risk: "low",
+          options: ["A", "B"],
+          optionsOnly: false,
+          pathScoped: false,
+          questions: [question("First?"), question("Second?")],
+        }}
+      />,
+    );
+    await flushMicrotasks();
+  });
+  try {
+    expect(textOf(container)).toContain("Second?");
+    const button = (label: string) =>
+      elementsByTag(container, "BUTTON").filter((node) => textOf(node).endsWith(label));
+    await act(async () => {
+      reactProps(button("B")[0]).onClick();
+      await flushMicrotasks();
+    });
+    expect(responses).toEqual([]);
+    expect(reactProps(button("提交回答")[0]).disabled).toBe(true);
+    await act(async () => {
+      reactProps(elementsByTag(container, "TEXTAREA")[1]).onChange({
+        target: { value: "My own" },
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactProps(button("提交回答")[0]).onClick();
+      await flushMicrotasks();
+    });
+    expect(responses).toEqual([
+      {
+        roomId: "room-1",
+        requestId: "ask-many",
+        decision: { behavior: "allow", answers: { "First?": "B", "Second?": "My own" } },
+      },
+    ]);
+  } finally {
+    await act(async () => root.unmount());
+  }
 });
 
 test("Link return restores its original management workspace and cannot send into another active project", async () => {

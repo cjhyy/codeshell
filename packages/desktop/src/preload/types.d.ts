@@ -37,6 +37,7 @@ import type {
   PanelAppSourceInput,
   PanelAppPreview,
   PanelAppUpdateCheck,
+  MobileServerEvent,
 } from "@cjhyy/code-shell-core";
 import type {
   ApprovalRequest,
@@ -2507,8 +2508,7 @@ export interface CodeshellApi
         displayName?: string;
         input: unknown;
         description?: string;
-        /** AskUserQuestion only: parsed prompt + option labels for a choice card. */
-        askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
+        askUser?: Extract<MobileServerEvent, { type: "ccRoom.approvalRequest" }>["req"]["askUser"];
       }) => void,
     ): () => void;
     onApprovalResolved(

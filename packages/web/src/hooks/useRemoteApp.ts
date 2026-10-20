@@ -66,6 +66,9 @@ export interface PendingApproval {
   options?: string[];
   /** When true, the user must pick an option (no free text). */
   optionsOnly?: boolean;
+  /** CLI AskUserQuestion asking several questions in one request. They are
+   *  answered together: the request accepts exactly one response. */
+  questions?: Array<{ question: string; header?: string; options: string[]; multiSelect: boolean }>;
   /** A nonblocking question remains answerable after the run ends. */
   asynchronous?: boolean;
   /** True for path-scoped tools (Read/Edit/Write/…) → show file/dir scope. */
@@ -133,12 +136,13 @@ export interface RemoteApp {
   ccCliKind: CcCliKind;
   setCcCliKind: (kind: CcCliKind) => void;
   openCcSession: (sessionId: string, cwd: string, mode: PermissionMode) => void;
-  respondCcApproval: (
-    roomId: string,
-    requestId: string,
-    decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
-  ) => void;
+  respondCcApproval: (roomId: string, requestId: string, decision: CcApprovalDecision) => void;
 }
+
+type CcApprovalDecision = Extract<
+  import("@cjhyy/code-shell-core").MobileClientEvent,
+  { type: "ccRoom.respondApproval" }
+>["decision"];
 
 export type MobileSessionCreateTarget =
   | { projectId: string; rootId?: string }
@@ -1220,6 +1224,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
                     risk,
                     options: askUser?.options,
                     optionsOnly: false,
+                    ...(askUser?.questions && askUser.questions.length > 1
+                      ? { questions: askUser.questions }
+                      : {}),
                     pathScoped: PATH_SCOPED.has(event.req.toolName),
                   },
                 ],
@@ -1571,13 +1578,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   );
 
   const respondCcApproval = useCallback(
-    (
-      roomId: string,
-      requestId: string,
-      decision:
-        | { behavior: "allow"; updatedInput?: unknown }
-        | { behavior: "deny"; message: string },
-    ) => {
+    (roomId: string, requestId: string, decision: CcApprovalDecision) => {
       const a = approvalsRef.current.find((p) => p.requestId === requestId);
       if (!a) return; // approve-once: already resolved
       socket.send({ type: "ccRoom.respondApproval", roomId, requestId, decision });
