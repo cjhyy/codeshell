@@ -202,12 +202,18 @@ export async function cronCreateTool(
   }
   fireCronChanged();
   const tz = job.timezone ? ` (${job.timezone})` : "";
-  const next = job.nextRun ? new Date(job.nextRun).toLocaleString() : "n/a";
+  // Render the wall clock in the job's timezone so it matches the label.
+  const next = job.nextRun
+    ? new Date(job.nextRun).toLocaleString(
+        undefined,
+        job.timezone ? { timeZone: job.timezone } : undefined,
+      )
+    : "n/a";
   const cont = job.resumeSessionId ? "(到点续接当前对话,带上下文)" : "";
   if (job.once) {
     return `一次性任务 #${job.id} "${job.name}" 已创建${cont}。将于 ${next}${tz} 执行一次后自动删除。`;
   }
-  return `Cron job #${job.id} "${job.name}" created${cont}. Schedule: ${job.schedule}${tz}. Next run: ${next}.`;
+  return `Cron job #${job.id} "${job.name}" created${cont}. Schedule: ${job.schedule}${tz}. Next run: ${next}${tz}.`;
 }
 
 export const cronDeleteToolDef: ToolDefinition = {
