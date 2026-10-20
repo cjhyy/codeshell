@@ -75,6 +75,8 @@ import {
   CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS,
   buildAnchoredSummaryMessage,
   buildContextPackagePromptFromSerialized,
+  takeContextPackageWindow,
+  contextPackageRequestFits,
   estimateTokens,
   groupMessagesByApiRound,
   serializeContextPackageMessages,
@@ -1324,62 +1326,26 @@ export class Engine {
     const client = resolvedAux.client;
     const systemPrompt =
       "You package selected conversation context. Be concise, factual, and complete.";
-    const fitsAuxWindow = (conversation: string, priorSummary?: string): boolean => {
-      const prompt = buildContextPackagePromptFromSerialized(conversation, priorSummary);
-      const requestTokens = estimateTokens([
-        { role: "system", content: systemPrompt },
-        { role: "user", content: prompt },
-      ]);
-      return requestTokens + CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS <= resolvedAux.maxContextTokens;
-    };
+    const fitsAuxWindow = contextPackageRequestFits(systemPrompt, resolvedAux.maxContextTokens);
     if (!fitsAuxWindow("x")) {
       throw new Error(
         `Auxiliary model context window (${resolvedAux.maxContextTokens}) is too small for the context package template and output reserve`,
       );
     }
 
-    // Preserve complete API rounds whenever they fit. If one round alone is
-    // larger than the aux window, split its lossless serialized form and feed
-    // every fragment through the same rolling nine-section merge.
+    // Every complete round or lossless fragment feeds the same rolling
+    // nine-section merge.
     const pending = groupMessagesByApiRound(messages).map(
       (group) => serializeContextPackageMessages(group).text,
     );
     let summary: string | undefined;
     while (pending.length > 0) {
-      let conversation = "";
-      while (pending.length > 0) {
-        const next = pending[0]!;
-        const candidate = conversation ? `${conversation}\n${next}` : next;
-        if (fitsAuxWindow(candidate, summary)) {
-          conversation = candidate;
-          pending.shift();
-          continue;
-        }
-        if (conversation) break;
-
-        let low = 1;
-        let high = next.length;
-        let fitLength = 0;
-        while (low <= high) {
-          const middle = Math.floor((low + high) / 2);
-          if (fitsAuxWindow(next.slice(0, middle), summary)) {
-            fitLength = middle;
-            low = middle + 1;
-          } else {
-            high = middle - 1;
-          }
-        }
-        if (fitLength === 0) {
-          throw new Error(
-            `Auxiliary model context window (${resolvedAux.maxContextTokens}) cannot fit the rolling context package prompt`,
-          );
-        }
-        conversation = next.slice(0, fitLength);
-        const remainder = next.slice(fitLength);
-        if (remainder) pending[0] = remainder;
-        else pending.shift();
-        break;
-      }
+      const priorSummary = summary;
+      const conversation = takeContextPackageWindow(
+        pending,
+        (candidate) => fitsAuxWindow(candidate, priorSummary),
+        resolvedAux.maxContextTokens,
+      );
       const sourceState = sourceSessionId
         ? this.sessionManager.readSessionState(sourceSessionId)
         : undefined;
