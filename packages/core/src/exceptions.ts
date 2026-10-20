@@ -35,6 +35,17 @@ export class LLMRateLimitError extends LLMError {
   }
 }
 
+/**
+ * HTTP 429 caused by an exhausted balance or spend/usage quota rather than
+ * transient throttling. Waiting does not restore access, so it is not retried.
+ */
+export class LLMQuotaError extends LLMError {
+  constructor(provider: string, detail: string, details?: Record<string, unknown>) {
+    super(`Billing/quota limit reached for ${provider}: ${detail}`, provider, details);
+    this.name = "LLMQuotaError";
+  }
+}
+
 export class ContextLimitError extends LLMError {
   constructor(provider?: string) {
     super("Context limit exceeded", provider);

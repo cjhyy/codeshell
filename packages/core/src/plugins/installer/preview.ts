@@ -475,11 +475,14 @@ export async function installReviewedLocalPlugin(
       if (snapshotPreview.reviewToken !== expectedReviewToken) {
         throw new LocalPluginReviewChangedError();
       }
+      // Install the reviewed snapshot's bytes, but record the durable
+      // directory the user chose (as a direct install would) so later updates
+      // do not point at the snapshot deleted below.
       return await installLocalPlugin(
         { kind: "dir", path: snapshotRoot },
         installedAt,
         snapshotPreview.name,
-        options,
+        input.kind === "dir" ? { ...options, source: sourceRoot } : options,
       );
     } finally {
       await rm(snapshotContainer, { recursive: true, force: true });

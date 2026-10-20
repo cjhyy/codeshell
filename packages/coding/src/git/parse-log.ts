@@ -6,9 +6,15 @@ export interface GitLogEntry {
   date: string;
 }
 
+/** ASCII unit separator: unlike `|`, it does not occur in real commit subjects or author names. */
+export const GIT_LOG_FIELD_SEPARATOR = "\x1f";
+
+/** `git log --format` producing the fields parsed by {@link parseGitLog}. */
+export const GIT_LOG_FORMAT = "%H%x1f%s%x1f%an%x1f%ci";
+
 /**
- * Parse `git log --format=%H|%s|%an|%ci` output into entries. Tolerates
- * malformed/short lines (missing `|` separators) by defaulting absent fields
+ * Parse `git log --format=GIT_LOG_FORMAT` output into entries. Tolerates
+ * malformed/short lines (missing separators) by defaulting absent fields
  * to "" rather than destructuring `undefined` and crashing on `.slice`
  * (review-2026-05-30). Blank lines are skipped.
  */
@@ -17,7 +23,7 @@ export function parseGitLog(raw: string): GitLogEntry[] {
     .split("\n")
     .filter((line) => line.trim() !== "")
     .map((line) => {
-      const parts = line.split("|");
+      const parts = line.split(GIT_LOG_FIELD_SEPARATOR);
       const hash = parts[0] ?? "";
       return {
         hash: hash.slice(0, 8),

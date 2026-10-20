@@ -13,6 +13,11 @@ import { basename, dirname, resolve } from "node:path";
 import { CollectionLocalEntrySchema, type LocalCollectionEntry } from "./collection.js";
 import { MAX_DOCUMENT_BYTES } from "./documents/types.js";
 
+/** A selected local original no longer matches its saved version; updating the collection fixes it. */
+export class CollectionOriginalChangedError extends Error {
+  override name = "CollectionOriginalChangedError";
+}
+
 export interface CollectionReadOptions {
   signal?: AbortSignal;
   assertAuthorized?: () => void;
@@ -22,7 +27,9 @@ export interface CollectionReadOptions {
 export function collectionLocalDirectoryIdentity(entry: LocalCollectionEntry): string {
   const parent = dirname(entry.path);
   if (realpathSync(parent) !== parent)
-    throw new Error("Collection file directory changed; update the collection");
+    throw new CollectionOriginalChangedError(
+      "Collection file directory changed; update the collection",
+    );
   const info = lstatSync(parent, { bigint: true });
   if (!info.isDirectory() || info.isSymbolicLink())
     throw new Error("Collection file directory is no longer a regular directory");
@@ -42,7 +49,7 @@ function snapshot(
 ) {
   assertAllowed(options);
   if (realpathSync(path) !== path)
-    throw new Error("Collection file path changed; update the collection");
+    throw new CollectionOriginalChangedError("Collection file path changed; update the collection");
   const before = lstatSync(path, { bigint: true });
   if (!before.isFile() || before.isSymbolicLink())
     throw new Error("Collection entry must be a regular file");
@@ -56,7 +63,7 @@ function snapshot(
         Number(info.size) !== expected.sizeBytes ||
         Number(info.mtimeNs) / 1_000_000 !== expected.mtimeMs)
     )
-      throw new Error(
+      throw new CollectionOriginalChangedError(
         "Collection file changed since selection; update the collection before reading",
       );
   };
@@ -76,7 +83,9 @@ function snapshot(
       opened.mtimeNs !== before.mtimeNs ||
       opened.ctimeNs !== before.ctimeNs
     )
-      throw new Error("Collection file changed before reading; update the collection");
+      throw new CollectionOriginalChangedError(
+        "Collection file changed before reading; update the collection",
+      );
     reserveInputBytes?.(Number(opened.size));
     const bytes = Buffer.alloc(Number(opened.size) + 1);
     let length = 0;
@@ -103,7 +112,9 @@ function snapshot(
       named.ctimeNs !== opened.ctimeNs ||
       realpathSync(path) !== path
     )
-      throw new Error("Collection file changed during reading; update the collection");
+      throw new CollectionOriginalChangedError(
+        "Collection file changed during reading; update the collection",
+      );
     const content = bytes.subarray(0, length);
     return {
       bytes: content,
@@ -164,7 +175,7 @@ export function readCollectionLocalFile(
     current.mtimeMs !== expected.mtimeMs ||
     current.sha256 !== expected.sha256
   )
-    throw new Error(
+    throw new CollectionOriginalChangedError(
       "Collection file changed since selection; update the collection before reading",
     );
   return current.bytes;

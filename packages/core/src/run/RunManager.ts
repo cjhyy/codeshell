@@ -80,6 +80,8 @@ export interface RunManagerConfig {
   defaultTags?: string[];
   /** Metadata merged into every submitted run. Submit input wins on conflicts. */
   defaultMetadata?: Record<string, unknown>;
+  /** Working directory for submitted runs that do not set one. Default: process.cwd() */
+  defaultCwd?: string;
   /** AgentModules installed into the built-in runner and artifact tracker. */
   modules?: readonly AgentModule[];
 }
@@ -101,6 +103,7 @@ export class RunManager {
   private readonly evaluator: Evaluator;
   private readonly defaultTags: string[];
   private readonly defaultMetadata: Record<string, unknown>;
+  private readonly defaultCwd: string | undefined;
   private readonly defaultPreset: string;
   private readonly artifactDetectors: readonly CapabilityArtifactDetector[];
   private readonly subscribers = new Map<string, Set<RunStreamCallback>>();
@@ -142,6 +145,7 @@ export class RunManager {
     this.evaluator = config.evaluator ?? new NoopEvaluator();
     this.defaultTags = config.defaultTags ?? [];
     this.defaultMetadata = config.defaultMetadata ?? {};
+    this.defaultCwd = config.defaultCwd;
     this.defaultPreset = composition.engine.defaultPreset;
     this.artifactDetectors = composition.engine.artifactDetectors.map((c) => c.value);
 
@@ -162,7 +166,7 @@ export class RunManager {
       runId,
       objective: input.objective,
       preset: input.preset ?? this.defaultPreset,
-      cwd: input.cwd ?? process.cwd(),
+      cwd: input.cwd ?? this.defaultCwd ?? process.cwd(),
       status: "queued",
       createdAt: now,
       updatedAt: now,

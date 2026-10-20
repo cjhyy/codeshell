@@ -1614,6 +1614,75 @@ describe("WorkspaceIndicator", () => {
     expect(textOf(container)).not.toContain("worktree/old-session");
   });
 
+  test("a repeated switch while a workspace mutation is pending sends only one request", async () => {
+    ensureMiniDom();
+    const workspace: SessionWorkspace = { root: "/repo", kind: "main" };
+    const requests: unknown[][] = [];
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionGitBranches: async () => ({ isRepo: true, current: "main", branches: [] }),
+      getSessionWorkspace: async () => workspace,
+      listSessionWorktrees: async () => ({
+        current: workspace,
+        mainRoot: "/repo",
+        worktrees: [
+          { path: "/repo", branch: "main", head: "abc123", isMain: true },
+          {
+            path: "/repo/.worktrees/feature",
+            branch: "worktree/feature",
+            head: "def456",
+            isManaged: true,
+          },
+          {
+            path: "/repo/.worktrees/other",
+            branch: "worktree/other",
+            head: "fed654",
+            isManaged: true,
+          },
+        ],
+      }),
+      getSessionWorktreeDiff: async () => undefined,
+      switchSessionWorkspace: (...args: unknown[]) => {
+        requests.push(args);
+        return new Promise(() => {});
+      },
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />,
+      );
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      clickHostNode(findElement(container, (node) => node.tagName === "BUTTON"));
+      await flushMicrotasks();
+    });
+    const rowButton = (branch: string) =>
+      findElement(
+        container,
+        (node) =>
+          node.tagName === "BUTTON" &&
+          textOf(node).includes(branch) &&
+          reactPropsOf(node)["aria-current"] === undefined,
+      );
+    const feature = rowButton("worktree/feature");
+    expect(feature).not.toBeNull();
+    // Both activations land before React re-renders with the busy state, the
+    // way a repeated Enter in the New worktree dialog does.
+    await act(async () => {
+      clickHostNode(feature);
+      clickHostNode(feature);
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      clickHostNode(rowButton("worktree/other"));
+      await flushMicrotasks();
+    });
+
+    expect(requests).toEqual([["session", "/repo", "/repo/.worktrees/feature"]]);
+  });
+
   test("refreshes the current workspace when workspace:changed targets this session", async () => {
     ensureMiniDom();
     let changed: ((event: { sessionId: string }) => void) | undefined;

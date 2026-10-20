@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { ApiError } from "./auth.js";
 import {
+  changedDefaults,
   configurationErrorMessage,
   connectionDraft,
   filterSkills,
@@ -244,4 +245,14 @@ test("connection writes carry the reviewed revision and new connections explicit
     "opaque-review-token",
   ]);
   expect(draft.apiKey).toBe("");
+});
+
+describe("changedDefaults", () => {
+  test("submits only the default this form changed", () => {
+    const saved = { text: "one", auxText: "one" };
+    expect(changedDefaults(saved, "two", "one")).toEqual({ text: "two" });
+    expect(changedDefaults(saved, "one", "three")).toEqual({ auxText: "three" });
+    expect(changedDefaults(saved, "one", "")).toEqual({ auxText: null });
+    expect(changedDefaults({ text: "one" }, "two", "")).toEqual({ text: "two" });
+  });
 });

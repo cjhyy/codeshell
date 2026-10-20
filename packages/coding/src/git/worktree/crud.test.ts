@@ -67,6 +67,32 @@ describe("coding worktree CRUD", () => {
     expect(readFileSync(precious, "utf-8")).toBe("do not delete me\n");
   });
 
+  test("a concurrent duplicate create never rolls back the winner's worktree, branch or files", async () => {
+    // Two identical requests (e.g. a repeated Enter) race for the same path and
+    // branch. The loser must fail without deleting what the winner created.
+    const results = await Promise.allSettled([
+      createWorktree(repo, "race", "race123456").then((wt) => {
+        writeFileSync(join(wt.worktreePath, "uncommitted.txt"), "keep me\n");
+        return wt;
+      }),
+      createWorktree(repo, "race", "race123456").then((wt) => {
+        writeFileSync(join(wt.worktreePath, "uncommitted.txt"), "keep me\n");
+        return wt;
+      }),
+    ]);
+
+    const winners = results.filter((result) => result.status === "fulfilled");
+    expect(winners).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+    const winner = (
+      winners[0] as PromiseFulfilledResult<Awaited<ReturnType<typeof createWorktree>>>
+    ).value;
+    expect(existsSync(winner.worktreePath)).toBe(true);
+    expect(readFileSync(join(winner.worktreePath, "uncommitted.txt"), "utf8")).toBe("keep me\n");
+    expect(git(repo, ["branch", "--list", winner.worktreeBranch])).toContain(winner.worktreeBranch);
+    expect(git(repo, ["worktree", "list", "--porcelain"])).toContain(winner.worktreePath);
+  });
+
   test("symlinks root node_modules and workspace package node_modules into the worktree", async () => {
     // Root-level shared dir (existing behavior).
     mkdirSync(join(repo, "node_modules", "left-pad"), { recursive: true });

@@ -119,6 +119,9 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
   private refs = new Map<string, RefRecord>();
   private disposed = false;
   private readonly abort = new AbortController();
+  /** Actions enqueued before the latest cancelPendingActions() are abandoned. */
+  private cancelGeneration = 0;
+  private cancelWaits = new AbortController();
   private tail: Promise<unknown> = Promise.resolve();
   private inspector?: ReturnType<typeof createPuppeteerInspector>;
   private readonly onDocumentChange = () => this.resetRefs();
@@ -152,6 +155,17 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
   resetRefs(): void {
     this.generation++;
     this.releaseRefs();
+  }
+
+  /**
+   * Abandon every action already queued or waiting (the run that requested it
+   * was stopped): readiness waits end and no input is submitted. The page,
+   * its refs and actions enqueued afterwards are unaffected.
+   */
+  cancelPendingActions(): void {
+    this.cancelGeneration++;
+    this.cancelWaits.abort();
+    this.cancelWaits = new AbortController();
   }
 
   /** Compatibility with hosts resetting a transport lease; no CDP domains exist here. */
@@ -639,17 +653,21 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
     ref: string,
     action: (handle: ElementHandle<Element>) => Promise<unknown>,
   ): Promise<BrowserResult> {
-    return this.enqueue(async () => {
+    return this.enqueue(async (scope) => {
       const before = this.documentId();
       let record: RefRecord | undefined;
       try {
+        scope.check();
         record = await this.resolve(ref);
-        await this.ready(record.handle);
+        await this.ready(record.handle, scope.signal);
         this.checkDocument(before);
+        // Readiness can take seconds. Recheck right before submitting input.
+        scope.check();
         await action(record.handle);
         this.checkActive();
         return this.success(before);
       } catch (error) {
+        if (scope.cancelled()) return this.cancelled();
         if (record && before === this.documentId() && !(await this.connected(record)))
           return this.stale(ref);
         return this.failure(error, before);
@@ -658,10 +676,11 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
   }
 
   private resultAction(action: () => Promise<unknown>): Promise<BrowserResult> {
-    return this.enqueue(async () => {
+    return this.enqueue(async (scope) => {
       const before = this.documentId();
       try {
         this.checkActive();
+        scope.check();
         await action();
         this.checkActive();
         return this.success(before);
@@ -671,7 +690,10 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
     });
   }
 
-  private async ready(handle: ElementHandle<Element>): Promise<void> {
+  private async ready(
+    handle: ElementHandle<Element>,
+    signal: AbortSignal = this.abort.signal,
+  ): Promise<void> {
     const ready = await handle.frame.waitForFunction(
       (element) => {
         if (!element.isConnected) throw new Error("referenced node is detached");
@@ -684,7 +706,7 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
           !element.hasAttribute("disabled")
         );
       },
-      { timeout: this.options.actionTimeoutMs ?? 12_000, signal: this.abort.signal },
+      { timeout: this.options.actionTimeoutMs ?? 12_000, signal },
       handle,
     );
     await ready.dispose();
@@ -707,7 +729,7 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
           first.height === second.height
         );
       },
-      { timeout: this.options.actionTimeoutMs ?? 12_000, signal: this.abort.signal },
+      { timeout: this.options.actionTimeoutMs ?? 12_000, signal },
       handle,
     );
     await stable.dispose();
@@ -1009,6 +1031,14 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
         "the page or a frame navigated; observe the new document",
       );
   }
+  private cancelled(): BrowserResult {
+    return {
+      ok: false,
+      code: "BLOCKED",
+      retryable: false,
+      detail: "the run that requested this browser action was stopped",
+    };
+  }
   private stale(ref: string): BrowserResult {
     return {
       ok: false,
@@ -1071,11 +1101,29 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
       return undefined;
     }
   }
-  private enqueue<T>(action: () => Promise<T>): Promise<T> {
-    const pending = this.tail.then(action, action);
+  private enqueue<T>(action: (scope: ActionScope) => Promise<T>): Promise<T> {
+    const generation = this.cancelGeneration;
+    const signal = AbortSignal.any([this.abort.signal, this.cancelWaits.signal]);
+    const cancelled = () => this.cancelGeneration !== generation;
+    const scope: ActionScope = {
+      signal,
+      cancelled,
+      check: () => {
+        if (cancelled()) throw new DriverError("BLOCKED", "browser action was cancelled");
+      },
+    };
+    const run = () => action(scope);
+    const pending = this.tail.then(run, run);
     this.tail = pending.catch(() => undefined);
     return pending;
   }
+}
+
+interface ActionScope {
+  /** Aborts when the driver is disposed or this action is cancelled. */
+  signal: AbortSignal;
+  cancelled(): boolean;
+  check(): void;
 }
 
 class DriverError extends Error {

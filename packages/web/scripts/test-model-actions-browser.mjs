@@ -245,8 +245,12 @@ async function mount({ width = 390, height = 360, theme = "light", single = fals
 async function finishWrite(write = host.pendingWrites.shift(), status = host.writeStatus) {
   assert.ok(write);
   if (status === 200) {
-    if (write.method === "PUT") host.configuration.defaults = { ...write.body };
-    else {
+    if (write.method === "PUT") {
+      // Like the Hub, merge only the defaults the form changed (R25).
+      const next = { ...host.configuration.defaults, ...write.body };
+      if (next.auxText === null) delete next.auxText;
+      host.configuration.defaults = next;
+    } else {
       host.configuration.connections = host.configuration.connections.filter(
         (c) => c.id !== write.body.id,
       );
@@ -401,7 +405,8 @@ try {
             assert.deepEqual(host.writes[0], {
               path: "/api/v1/configuration/defaults",
               method: "PUT",
-              body: { text: "owned-11", auxText: "owned-1" },
+              // Only the changed default is sent, so a stale form cannot roll back the other (R25).
+              body: { text: "owned-11" },
             });
             await readLong(feedback);
           } else {
@@ -547,7 +552,7 @@ try {
   await page.keyboard.press("Enter");
   await defaults().getByRole("status").waitFor();
   await ready();
-  assert.deepEqual(host.writes[0].body, { text: "owned-0", auxText: null });
+  assert.deepEqual(host.writes[0].body, { auxText: null });
   await visible(defaults().getByRole("status", { name: "默认模型保存结果" }), true);
   reports.push({ label: "follow-default-auxiliary-contract", writes: host.writes });
   // A 409 still queues exactly one read; no enable/focus gap while that read is held.

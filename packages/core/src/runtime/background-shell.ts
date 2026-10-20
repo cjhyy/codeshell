@@ -155,6 +155,11 @@ interface InternalShell extends Omit<BgShell, "totalBytes"> {
 }
 
 let shellCounter = 0;
+/** A process group this manager may still need to terminate. */
+function isLiveStatus(status: BgShellStatus): boolean {
+  return status === "running" || status === "starting" || status === "orphaned";
+}
+
 function nextShellId(): string {
   shellCounter += 1;
   // Short, collision-resistant enough within a process: counter + base36 of
@@ -581,20 +586,22 @@ export class BackgroundShellManager {
     return { ok: true, status: "killed" };
   }
 
-  /** Kill every background shell belonging to `sessionId`. */
+  /**
+   * Kill every background shell belonging to `sessionId`. A recovered orphan is
+   * still a live process group of this session (KillShell reaps it the same
+   * way), so the session-close barrier must include it.
+   */
   async killSession(sessionId: string): Promise<void> {
     const ids = [...this.shells.values()]
-      .filter(
-        (s) => s.sessionId === sessionId && (s.status === "running" || s.status === "starting"),
-      )
+      .filter((s) => s.sessionId === sessionId && isLiveStatus(s.status))
       .map((s) => s.shellId);
     await Promise.all(ids.map((id) => this.kill(id)));
   }
 
-  /** Kill every background shell (app/worker exit). */
+  /** Kill every background shell (app/worker exit), including recovered orphans. */
   async killAll(): Promise<void> {
     const ids = [...this.shells.values()]
-      .filter((s) => s.status === "running" || s.status === "starting")
+      .filter((s) => isLiveStatus(s.status))
       .map((s) => s.shellId);
     await Promise.all(ids.map((id) => this.kill(id)));
   }

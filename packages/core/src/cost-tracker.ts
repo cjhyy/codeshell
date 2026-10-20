@@ -68,7 +68,10 @@ function lookupPricing(model: string): { pricing: ModelPricing; known: boolean }
 }
 
 export interface UsageRecord {
+  /** Canonical name, used for display and grouping. */
   model: string;
+  /** Original identifier when it differs from `model`; pricing is resolved from it. */
+  pricingModel?: string;
   promptTokens: number;
   completionTokens: number;
   cacheReadTokens: number;
@@ -76,6 +79,19 @@ export interface UsageRecord {
   totalTokens: number;
   timestamp: number;
   isSubAgent?: boolean;
+}
+
+/** Estimated cost of one record, priced by its original identifier when kept. */
+function recordCost(r: UsageRecord): number {
+  const { pricing: p } = lookupPricing(r.pricingModel ?? r.model);
+  // promptTokens includes cache tokens — subtract them to avoid double billing
+  const uncachedInput = Math.max(0, r.promptTokens - r.cacheReadTokens - r.cacheWriteTokens);
+  return (
+    (uncachedInput / 1_000_000) * p.input +
+    (r.completionTokens / 1_000_000) * p.output +
+    (r.cacheReadTokens / 1_000_000) * p.cacheRead +
+    (r.cacheWriteTokens / 1_000_000) * p.cacheWrite
+  );
 }
 
 /** Normalize model names: strip provider prefix and version suffixes for consistent grouping. */
@@ -113,6 +129,7 @@ export class CostTracker {
     }
     this.records.push({
       model: canonical,
+      ...(canonical !== model ? { pricingModel: model } : {}),
       promptTokens,
       completionTokens,
       cacheReadTokens,
@@ -144,15 +161,7 @@ export class CostTracker {
   getEstimatedCost(): number {
     if (this.ledger) return this.ledger.summary().knownEstimatedCostUsd;
     let totalCost = 0;
-    for (const r of this.records) {
-      const { pricing: p } = lookupPricing(r.model);
-      // promptTokens includes cache tokens — subtract them to avoid double billing
-      const uncachedInput = Math.max(0, r.promptTokens - r.cacheReadTokens - r.cacheWriteTokens);
-      totalCost += (uncachedInput / 1_000_000) * p.input;
-      totalCost += (r.completionTokens / 1_000_000) * p.output;
-      totalCost += (r.cacheReadTokens / 1_000_000) * p.cacheRead;
-      totalCost += (r.cacheWriteTokens / 1_000_000) * p.cacheWrite;
-    }
+    for (const r of this.records) totalCost += recordCost(r);
     return totalCost;
   }
 
@@ -248,6 +257,7 @@ export class CostTracker {
         completion: number;
         cacheRead: number;
         cacheWrite: number;
+        cost: number;
         count: number;
       }
     >();
@@ -257,12 +267,14 @@ export class CostTracker {
         completion: 0,
         cacheRead: 0,
         cacheWrite: 0,
+        cost: 0,
         count: 0,
       };
       existing.prompt += r.promptTokens;
       existing.completion += r.completionTokens;
       existing.cacheRead += r.cacheReadTokens;
       existing.cacheWrite += r.cacheWriteTokens;
+      existing.cost += recordCost(r);
       existing.count++;
       modelMap.set(r.model, existing);
     }
@@ -271,18 +283,11 @@ export class CostTracker {
       lines.push("");
       lines.push(`    ${c.dim("By model:")}`);
       for (const [model, stats] of modelMap) {
-        const { pricing: p } = lookupPricing(model);
-        const uncachedInput = Math.max(0, stats.prompt - stats.cacheRead - stats.cacheWrite);
-        const modelCost =
-          (uncachedInput / 1_000_000) * p.input +
-          (stats.completion / 1_000_000) * p.output +
-          (stats.cacheRead / 1_000_000) * p.cacheRead +
-          (stats.cacheWrite / 1_000_000) * p.cacheWrite;
         const tokenDetail =
           `${formatNumber(stats.prompt)} in, ${formatNumber(stats.completion)} out` +
           (stats.cacheRead > 0 ? `, ${formatNumber(stats.cacheRead)} cache` : "");
         lines.push(
-          `      ${c.dim(model)} — ${tokenDetail}, ${formatCost(modelCost)} (${stats.count} reqs)`,
+          `      ${c.dim(model)} — ${tokenDetail}, ${formatCost(stats.cost)} (${stats.count} reqs)`,
         );
       }
     }

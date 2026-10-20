@@ -163,6 +163,34 @@ describe("AutomationView interaction", () => {
     expect(document.activeElement).toBe(choices[0]);
   });
 
+  test("a job the Host stops in the background refreshes the open detail", async () => {
+    const listeners = new Set<(version: number) => void>();
+    window.codeshell.taskInbox = {
+      onChanged: (listener: (version: number) => void) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+    } as never;
+    await renderView();
+    await click(button("立即运行"));
+    const detail = () => descendants(container).find((node) => props(node).role === "region")!;
+    expect(textOf(detail())).toContain("活跃");
+    // The run fails after the action's own refresh: the scheduler auto-disables it.
+    jobs = [{ ...firstJob, enabled: false, disabledReason: "续接的对话已被删除" }, secondJob];
+    await act(async () => {
+      for (const listener of listeners) listener(2);
+      await flushMicrotasks();
+    });
+    expect(textOf(detail())).not.toContain("活跃");
+    expect(textOf(detail())).toContain("续接的对话已被删除");
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+    expect(listeners.size).toBe(0);
+    root = createRoot(container);
+  });
+
   test("task-center deep links select the exact automation and missing IDs do not silently select another", async () => {
     await renderView("weekly");
     const detail = descendants(container).find((node) => props(node).role === "region");

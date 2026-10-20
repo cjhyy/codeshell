@@ -18,6 +18,7 @@ import {
   LocalPluginReviewChangedError,
   previewLocalPlugin,
 } from "./preview.js";
+import { updatePluginByName } from "./update.js";
 
 const PNG_1X1 = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -259,6 +260,30 @@ describe("previewLocalPlugin", () => {
     expect(existsSync(join(installed.dir, "commands", "review.md"))).toBe(true);
     expect(readdirSync(previewTmp)).toEqual([]);
   });
+
+  test(
+    "records the reviewed directory, not its deleted snapshot, as the update source",
+    async () => {
+      writeCodexPlugin();
+      const preview = await previewLocalPlugin({ kind: "dir", path: source });
+      const installed = await installReviewedLocalPlugin(
+        { kind: "dir", path: source },
+        preview.reviewToken,
+        "2026-07-17T00:00:00.000Z",
+      );
+      const meta = () => JSON.parse(readFileSync(join(installed.dir, ".cs-meta.json"), "utf8"));
+      expect(meta().source).toBe(source);
+
+      const manifestPath = join(source, ".codex-plugin", "plugin.json");
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+      writeFileSync(manifestPath, JSON.stringify({ ...manifest, version: "2.0.0" }));
+      const update = await updatePluginByName(installed.name, "2026-07-18T00:00:00.000Z", false);
+
+      expect(update.updated).toBe(true);
+      expect(meta()).toMatchObject({ source, version: "2.0.0" });
+    },
+    PREVIEW_TEST_TIMEOUT_MS,
+  );
 
   test("rejects changed sources and symbolic links before installed-state mutation", async () => {
     writeCodexPlugin();

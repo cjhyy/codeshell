@@ -58,9 +58,12 @@ function validateHost(value: string): string {
 
 function validateUpstream(value: string): string {
   const url = new URL(`http://${value}`);
+  // URL drops an explicit default port (`:80` becomes ""), so a missing port
+  // must be judged from the authority the operator actually wrote.
+  const authority = value.split(/[/?#]/u, 1)[0] ?? "";
   if (
     !["127.0.0.1", "localhost", "[::1]", "::1"].includes(url.hostname) ||
-    !url.port ||
+    (!url.port && !/:\d+$/u.test(authority)) ||
     url.pathname !== "/" ||
     url.username ||
     url.password ||

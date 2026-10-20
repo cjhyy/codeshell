@@ -54,6 +54,8 @@ interface ChromeTabGrant {
   controlEpoch: number;
   sensitiveRefs: Set<string>;
   tail: Promise<void>;
+  /** Granted over a live native connection, whose end also ends this grant. */
+  overNativeConnection: boolean;
 }
 
 export interface ChromeExtensionRuntimeStatus {
@@ -304,6 +306,7 @@ export class ChromeExtensionBackend {
       controlEpoch: 0,
       sensitiveRefs: new Set<string>(),
       tail: Promise.resolve(),
+      overNativeConnection: this.server.status().connected,
     });
     this.grants.set(pairing.sessionId, grant);
     this.endedGrants.delete(pairing.sessionId);
@@ -469,7 +472,8 @@ export class ChromeExtensionBackend {
       scroll: (dir, amount) => forward({ action: "scroll", dir, amount }),
       readContent: (options) => forward({ action: "readContent", ...options }),
       extractLinks: () => forward({ action: "extractLinks" }),
-      waitForLoad: (timeoutMs, condition) => forward({ action: "waitForLoad", timeoutMs, condition }),
+      waitForLoad: (timeoutMs, condition) =>
+        forward({ action: "waitForLoad", timeoutMs, condition }),
       hover: (ref) => forward({ action: "hover", ref }),
       selectOption: (ref, value) => forward({ action: "selectOption", ref, value }),
       pressKey: (key, ref) => forward({ action: "pressKey", key, ref }),
@@ -550,6 +554,14 @@ export class ChromeExtensionBackend {
   private liveGrant(sessionId: string): ChromeTabGrant | undefined {
     const grant = this.grants.get(sessionId);
     if (!grant) return undefined;
+    // A grant lives on one native connection (a new hello never restores it).
+    // Once that connection ends, status must stop reporting the tab in use so
+    // the task can reauthorize; the ended marker keeps actions fenced.
+    if (grant.overNativeConnection && !this.server.status().connected) {
+      this.grants.delete(sessionId);
+      this.endedGrants.set(sessionId, { tabId: grant.tab.id, reason: "Chrome connection ended" });
+      return undefined;
+    }
     if (grant.expiresAt <= this.now()) {
       this.grants.delete(sessionId);
       this.endedGrants.set(sessionId, {

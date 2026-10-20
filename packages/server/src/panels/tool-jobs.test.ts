@@ -1,6 +1,6 @@
 import { panelExecutionGate } from "./execution-gate.js";
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -506,6 +506,43 @@ describe("durable native tool jobs", () => {
     c.calls[1]!.gate.resolve(null);
     await finished(f.service, c.calls[1]!.job.id);
     expect(jobs).toHaveLength(3);
+  });
+
+  test("a failed final record write surfaces a terminal error and frees the active slot", async () => {
+    const c = controlled();
+    const events: ToolJob[] = [];
+    const f = await fixture({ execute: c.execute, onEvent: (job) => events.push(job) });
+    const viewed: string[] = [];
+    f.service.subscribe(scope, (job) => viewed.push(job.status));
+    const started = await f.service.start(scope, request);
+    await eventually(async () => (c.calls.length ? true : undefined));
+    const jobDir = join(f.root, started.id);
+    await chmod(jobDir, 0o500);
+    try {
+      c.calls[0]!.gate.resolve({ output: "completed" });
+      const settled = await finished(f.service, started.id);
+      expect(settled).toMatchObject({
+        status: "failed",
+        error: { code: "TOOL_JOB_STORAGE_FAILED", retryable: true },
+        // The completed result stays available in this Host session.
+        result: { output: "completed" },
+      });
+      expect(settled.error!.message).toContain("EACCES");
+      expect(f.service.activeCount()).toBe(0);
+      expect(events.at(-1)).toMatchObject({ status: "failed" });
+      expect(viewed.at(-1)).toBe("failed");
+      // The record on disk still says running; a later Host marks it interrupted.
+      expect(JSON.parse(await readFile(join(jobDir, "job.json"), "utf8")).status).toBe("running");
+    } finally {
+      await chmod(jobDir, 0o700);
+    }
+    await f.service.retry(scope, started.id);
+    await eventually(async () => (c.calls.length === 2 ? true : undefined));
+    c.calls[1]!.gate.resolve({ output: "again" });
+    expect(await finished(f.service, started.id)).toMatchObject({
+      status: "succeeded",
+      result: { output: "again" },
+    });
   });
 
   test("shutdown awaits executors and reopens as interrupted without rerunning", async () => {

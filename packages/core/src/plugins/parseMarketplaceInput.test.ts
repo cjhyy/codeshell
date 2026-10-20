@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { parseMarketplaceInput } from "./parseMarketplaceInput.js";
+import { assertSafePluginName } from "./installer/paths.js";
+import { deriveMarketplaceName, parseMarketplaceInput } from "./parseMarketplaceInput.js";
 
 describe("parseMarketplaceInput", () => {
   test("rejects insecure http marketplace URLs by default", () => {
@@ -17,4 +18,19 @@ describe("parseMarketplaceInput", () => {
       url: "http://example.com/marketplace.git",
     });
   });
+});
+
+// Regression (PLUGIN-R8-03): drive-prefixed Windows paths with backslashes are
+// accepted by the parser, so the derived name must split on backslashes too.
+describe("deriveMarketplaceName for local Windows paths", () => {
+  test.each(["C:\\work\\skills.git", "C:/work/skills.git", "D:\\repos\\team\\skills.git"])(
+    "%s derives a safe tail name",
+    (input) => {
+      const source = parseMarketplaceInput(input);
+      expect(source).not.toBeNull();
+      const name = deriveMarketplaceName(source!);
+      expect(name).toBe("skills");
+      expect(() => assertSafePluginName(name)).not.toThrow();
+    },
+  );
 });

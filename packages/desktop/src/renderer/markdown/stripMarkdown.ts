@@ -3,15 +3,23 @@
  * button. Not a full parser — just strips the markers users don't
  * want to paste into Slack / docs / commit messages.
  *
- * Order matters: fenced code blocks first (we keep their content
- * verbatim, only drop the ```), then links / images, then inline
- * emphasis / inline code / headings / lists / blockquotes.
+ * Order matters: fenced code blocks and inline code first (we keep
+ * their content verbatim, only drop the backticks), then links / images,
+ * then inline emphasis / headings / lists / blockquotes.
  */
 export function stripMarkdownToPlain(input: string): string {
   let s = input;
 
+  // Code is copied verbatim: park fenced bodies and inline code behind
+  // placeholders so the prose passes below never see them, and restore last.
+  const code: string[] = [];
+  const park = (text: string): string => `\u0000${code.push(text) - 1}\u0000`;
+
   // Fenced code blocks ```lang\n...\n``` — keep body, drop fences.
-  s = s.replace(/```[\w-]*\n?([\s\S]*?)\n?```/g, (_, body: string) => body);
+  s = s.replace(/```[\w-]*\n?([\s\S]*?)\n?```/g, (_, body: string) => park(body));
+
+  // Inline code: `x` → x.
+  s = s.replace(/`([^`]+)`/g, (_, text: string) => park(text));
 
   // Images: ![alt](url) → alt (drop URL).
   s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
@@ -40,14 +48,13 @@ export function stripMarkdownToPlain(input: string): string {
   s = s.replace(/(\*|_)(.+?)\1/g, "$2");
   s = s.replace(/~~(.+?)~~/g, "$1");
 
-  // Inline code: `x` → x.
-  s = s.replace(/`([^`]+)`/g, "$1");
-
   // Horizontal rules.
   s = s.replace(/^\s*([-*_])(?:\s*\1){2,}\s*$/gm, "");
 
   // Collapse 3+ blank lines down to 2.
   s = s.replace(/\n{3,}/g, "\n\n");
+
+  s = s.replace(/\u0000(\d+)\u0000/g, (_, index: string) => code[Number(index)] ?? "");
 
   return s.trim();
 }

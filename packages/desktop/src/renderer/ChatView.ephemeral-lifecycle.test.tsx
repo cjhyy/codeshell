@@ -334,6 +334,48 @@ describe("ChatView ephemeral async lifecycle", () => {
     );
   });
 
+  test("attaches a Files Panel image dropped into quick chat", async () => {
+    const png = "data:image/png;base64,iVBORw0KGgo=";
+    const reads: unknown[] = [];
+    const attachmentWrites: ImageAttachment[][] = [];
+    const mounted = await mountChatView({
+      codeshell: {
+        sttAvailable: async () => ({ available: false }),
+        readImageDataUrl: async (path: string, scope: unknown) => {
+          reads.push([path, scope]);
+          return png;
+        },
+      },
+      onAttachmentsChange: (next) => {
+        if (typeof next === "function") attachmentWrites.push(next([]));
+        else attachmentWrites.push(next);
+      },
+    });
+    const chatRoot = findElement(mounted, (props) => props["data-chat-variant"] === "quickChat");
+    await act(async () => {
+      reactProps(chatRoot).onDrop({
+        preventDefault() {},
+        dataTransfer: {
+          files: [],
+          getData: (mime: string) =>
+            mime === "application/x-codeshell-path" ? "/tmp/project/shots/screen.png" : "",
+        },
+      });
+      await flushMicrotasks();
+    });
+
+    expect(reads).toEqual([
+      ["/tmp/project/shots/screen.png", { cwd: "/tmp/project", sessionId: "qchat-lifecycle" }],
+    ]);
+    const attached = attachmentWrites.at(-1) ?? [];
+    expect(attached).toHaveLength(1);
+    expect(attached[0]).toMatchObject({
+      absPath: "/tmp/project/shots/screen.png",
+      origin: "file-panel",
+      dataUrl: png,
+    });
+  });
+
   test("does not persist a quick-chat prompt in main composer history", async () => {
     const setItem = mock(() => undefined);
     Object.defineProperty(globalThis, "localStorage", {
@@ -427,6 +469,61 @@ describe("ChatView ephemeral async lifecycle", () => {
     expect(clearTimer).toHaveBeenCalled();
     expect(transcribeAudio).not.toHaveBeenCalled();
     clearTimer.mockRestore();
+  });
+
+  test("a second click while the microphone is starting opens only one recording", async () => {
+    const tracks: Array<{ stop: ReturnType<typeof mock> }> = [];
+    let getUserMediaCalls = 0;
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: {
+        mediaDevices: {
+          getUserMedia: async () => {
+            getUserMediaCalls += 1;
+            const track = { stop: mock(() => undefined) };
+            tracks.push(track);
+            return { getTracks: () => [track] } as unknown as MediaStream;
+          },
+        },
+      },
+    });
+    Object.defineProperty(globalThis, "MediaRecorder", {
+      configurable: true,
+      value: FakeMediaRecorder,
+    });
+    const access = deferred<{ granted: boolean }>();
+    const mounted = await mountChatView({
+      codeshell: {
+        sttAvailable: async () => ({ available: true }),
+        ensureMicAccess: () => access.promise,
+        transcribeAudio: async () => ({ ok: true, text: "" }),
+      },
+    });
+    const mic = () => findElement(mounted, (props) => props["aria-label"] === "语音输入");
+    await act(async () => {
+      reactProps(mic()).onClick();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactProps(mic()).onClick();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      access.resolve({ granted: true });
+      await flushMicrotasks();
+    });
+    expect(getUserMediaCalls).toBe(1);
+    expect(FakeMediaRecorder.instances).toHaveLength(1);
+
+    await act(async () => {
+      root?.unmount();
+      root = null;
+      await flushMicrotasks();
+    });
+    expect(FakeMediaRecorder.instances.every((recorder) => recorder.state === "inactive")).toBe(
+      true,
+    );
+    expect(tracks.every((track) => track.stop.mock.calls.length === 1)).toBe(true);
   });
 
   test("drops a transcription result that resolves after quick chat unmounts", async () => {

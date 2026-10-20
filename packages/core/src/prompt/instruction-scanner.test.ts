@@ -70,6 +70,27 @@ describe("scanInstructions hierarchy (AGENTS.md)", () => {
     expect(combined).toContain("local override");
   });
 
+  test("every local override comes after every project instruction, at any depth", () => {
+    const root = tmpProject();
+    const sub = join(root, "packages", "app");
+    mkdirSync(sub, { recursive: true });
+    writeFileSync(join(root, "AGENTS.md"), "ROOT_PROJECT");
+    writeFileSync(join(root, "AGENTS.local.md"), "ROOT_LOCAL");
+    writeFileSync(join(sub, "AGENTS.md"), "CHILD_PROJECT");
+    writeFileSync(join(sub, "AGENTS.local.md"), "CHILD_LOCAL");
+
+    const entries = scanInstructions(sub, {
+      compatFileNames: ["AGENTS.md"],
+      boundaryFinder: () => root,
+    });
+    expect(entries.map((e) => e.content)).toEqual([
+      "ROOT_PROJECT",
+      "CHILD_PROJECT",
+      "ROOT_LOCAL",
+      "CHILD_LOCAL",
+    ]);
+  });
+
   test("scope labels distinguish project depth vs local", () => {
     const root = tmpProject();
     writeFileSync(join(root, "AGENTS.md"), "P");

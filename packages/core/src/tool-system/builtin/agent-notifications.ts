@@ -42,6 +42,8 @@ export interface AgentProgressTokens {
 
 export interface AgentProgressLastTool {
   name: string;
+  /** Call id, so a result is only paired with its own start time. */
+  toolCallId?: string;
   state: "running" | "completed" | "failed" | "aborted";
   startedAt?: number;
   finishedAt?: number;

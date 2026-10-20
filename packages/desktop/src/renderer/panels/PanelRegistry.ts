@@ -27,6 +27,7 @@ const TerminalPanel = lazy(async () => ({
 interface TerminalPanelProps {
   cwd: string | null;
   sessionId: string;
+  engineSessionId?: string | null;
 }
 import { BackgroundShellPanel } from "./BackgroundShellPanel";
 import { CCRoomView } from "../cc-room/CCRoomView";
@@ -181,13 +182,17 @@ const BUILTIN_PANEL_ENTRIES: PanelEntry[] = [
     icon: SquareTerminal,
     order: 30,
     enabled: alwaysEnabled,
-    render: ({ cwd, bucket, tabId }) =>
+    render: ({ cwd, bucket, tabId, engineSessionId }) =>
       createElement(
         Suspense,
         // No spinner: the chunk is local and resolves in a frame or two, so a
         // flash of loading UI would be more distracting than an empty panel.
         { fallback: null },
-        createElement(TerminalPanel, { cwd, sessionId: `term:${bucket}:${tabId}` }),
+        createElement(TerminalPanel, {
+          cwd,
+          sessionId: `term:${bucket}:${tabId}`,
+          engineSessionId,
+        }),
       ),
   }),
   builtin({

@@ -181,6 +181,19 @@ describe("Hub workspace configuration", () => {
     expect((await api("/defaults", { text: "illustration" })).status).toBe(400);
   });
 
+  test("merges defaults changed by two stale forms instead of reverting either", async () => {
+    const { api, cwd } = await fixture();
+    // Both forms opened at {text: primary, auxText: secondary}; each submits only its change.
+    expect((await api("/defaults", { text: "secondary" })).status).toBe(200);
+    expect((await api("/defaults", { auxText: null })).status).toBe(200);
+
+    expect(new SettingsManager(cwd, "full").get().defaults).toMatchObject({
+      text: "secondary",
+      auxText: "",
+    });
+    expect((await api("/defaults", {})).status).toBe(400);
+  });
+
   test("updates a model and private key atomically without changing shared credentials", async () => {
     let mutations = 0;
     const { api, localFile, cwd } = await fixture({

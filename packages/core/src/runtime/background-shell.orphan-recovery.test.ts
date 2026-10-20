@@ -84,4 +84,34 @@ describe("background shell orphan recovery surfaces real .log output (#7)", () =
       expect(out.text).toContain("HELLO_FROM_BG");
     }
   });
+
+  test.each(["killSession", "killAll"] as const)(
+    "%s terminates a recovered orphan instead of skipping it",
+    async (method) => {
+      const sid = "sessOrphanKill";
+      const spawn = mgrA.spawnBackground({ command: "sleep 1000", cwd: home, sessionId: sid });
+      expect(spawn.ok).toBe(true);
+      if (!spawn.ok) return;
+      const pgid = mgrA.get(spawn.shellId)!.pgid;
+      const alive = () => {
+        try {
+          process.kill(-pgid, 0);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      expect(await waitFor(alive)).toBe(true);
+
+      mgrB = new BackgroundShellManager();
+      mgrB.reapOrphansFromPidfiles();
+      expect(mgrB.get(spawn.shellId)?.status).toBe("orphaned");
+
+      if (method === "killSession") await mgrB.killSession(sid);
+      else await mgrB.killAll();
+
+      expect(await waitFor(() => !alive())).toBe(true);
+      expect(mgrB.get(spawn.shellId)?.status).toBe("killed");
+    },
+  );
 });

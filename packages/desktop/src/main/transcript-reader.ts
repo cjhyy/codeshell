@@ -284,6 +284,12 @@ function textOf(content: unknown): string {
   return "";
 }
 
+function imageBlockCount(content: unknown): number {
+  return Array.isArray(content)
+    ? (content as ContentBlockLike[]).filter((b) => b && b.type === "image").length
+    : 0;
+}
+
 export function transcriptToFoldItems(jsonl: string): FoldItem[] {
   const items: FoldItem[] = [];
   // Current turn boundaries follow the model response. Older transcripts could
@@ -394,12 +400,12 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
             }
             break;
           }
+          const hasDisplayText = typeof d.displayText === "string" && d.displayText.trim();
+          const images = hasDisplayText ? 0 : imageBlockCount(d.content);
           items.push({
             kind: "user",
-            text:
-              typeof d.displayText === "string" && d.displayText.trim()
-                ? d.displayText
-                : textOf(d.content),
+            text: hasDisplayText ? (d.displayText as string) : textOf(d.content),
+            ...(images > 0 ? { images } : {}),
             ...(d.steerId ? { steerId: String(d.steerId) } : {}),
             ...(typeof d.clientMessageId === "string" && d.clientMessageId
               ? { clientMessageId: d.clientMessageId }

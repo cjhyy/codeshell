@@ -142,20 +142,29 @@ export function FilesPanel({
   onRevealConsumed,
 }: Props) {
   const { t } = useT();
+  // Only a Session's bound main root may take the workspace path (it can be a
+  // worktree of that root). Without a binding, e.g. a summary fork before its
+  // first run, pick the registered root at the workspace path and keep every
+  // root's own path, so an id is never paired with another root's folder.
+  const unboundWorkspaceRootId =
+    !sessionMainRootId && workspaceCwd
+      ? project?.roots.find((root) => root.path === workspaceCwd)?.id
+      : undefined;
+  const mainRootId = sessionMainRootId ?? unboundWorkspaceRootId ?? project?.primaryRootId;
   const rootOptions = useMemo(() => {
-    if (!project) return [];
-    const mainRootId = sessionMainRootId ?? project.primaryRootId;
+    if (!project || !mainRootId) return [];
     const primary = project.roots.find((root) => root.id === mainRootId);
+    const mainPath = sessionMainRootId ? workspaceCwd : null;
     return [
       ...(primary
-        ? [{ ...primary, path: workspaceCwd ?? primary.path }]
+        ? [{ ...primary, path: mainPath ?? primary.path }]
         : workspaceCwd
           ? [{ id: mainRootId, path: workspaceCwd, name: project.name, addedAt: 0 }]
           : []),
       ...project.roots.filter((root) => root.id !== mainRootId),
     ];
-  }, [project, sessionMainRootId, workspaceCwd]);
-  const defaultRootId = sessionMainRootId ?? project?.primaryRootId ?? null;
+  }, [project, mainRootId, sessionMainRootId, workspaceCwd]);
+  const defaultRootId = mainRootId ?? null;
   const rootSelectionKey = JSON.stringify([
     project?.id,
     project?.primaryRootId,
@@ -182,7 +191,9 @@ export function FilesPanel({
   const fileSystem = useMemo<FileSystemReader>(() => {
     if (engineSessionId && sessionMainRootId && activeRoot) {
       return {
-        readImage: UNAVAILABLE_FILE_SYSTEM.readImage,
+        // The Session authorizes its managed worktree, which is not a project root.
+        readImage: (root, path) =>
+          window.codeshell.readImageDataUrl(path, { cwd: root, sessionId: engineSessionId }),
         readDir: (_root, dir) =>
           window.codeshell.readSessionDir(engineSessionId, activeRoot.id, dir),
         readFile: (_root, path) =>

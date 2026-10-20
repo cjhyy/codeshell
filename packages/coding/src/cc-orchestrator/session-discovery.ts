@@ -156,7 +156,7 @@ function firstUserMessage(lines: string[]): string {
     } catch {
       continue;
     }
-    if (d.type !== "user") continue;
+    if (d?.type !== "user") continue;
     const c = d.message?.content;
     const text =
       typeof c === "string"
@@ -170,6 +170,36 @@ function firstUserMessage(lines: string[]): string {
     return t.slice(0, 200);
   }
   return "";
+}
+
+/** First top-level `cwd` recorded in a transcript: the launch cwd Claude used
+ *  to name the project dir (later records may follow in-session `cd`s). */
+function firstRecordedCwd(lines: string[]): string | undefined {
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    let d: unknown;
+    try {
+      d = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (!d || typeof d !== "object") continue;
+    const recorded = (d as { cwd?: unknown }).cwd;
+    if (typeof recorded === "string") return recorded;
+  }
+  return undefined;
+}
+
+/**
+ * True when a transcript's recorded cwd is a different path that merely shares
+ * `cwd`'s lossy project-dir encoding (`/foo-bar` vs `/foo/bar`). A missing
+ * cwd cannot disprove ownership, so legacy transcripts stay in their bucket.
+ */
+function isCollidingClaudeCwd(recordedCwd: string | undefined, cwd: string): boolean {
+  if (recordedCwd === undefined) return false;
+  const recorded = resolve(recordedCwd);
+  const expected = resolve(cwd);
+  return recorded !== expected && encodeCwd(recorded) === encodeCwd(expected);
 }
 
 function countUserMessages(lines: string[]): number {
@@ -232,15 +262,23 @@ export function discoverSessions(
 ): DiscoveredSession[] {
   const dir = join(claudeProjectsDir(claudeHome), encodeCwd(cwd));
   if (!existsSync(dir)) return [];
-  const selected = selectRecentStats(listSessionStats(dir), opts);
+  // Window first, then apply the limit while skipping collided identities so a
+  // foreign session in the shared bucket never displaces one of this cwd's.
+  const windowed = selectRecentStats(listSessionStats(dir), {
+    sinceMs: opts.sinceMs,
+    now: opts.now,
+  });
+  const limit = opts.limit && opts.limit > 0 ? opts.limit : Infinity;
   const out: DiscoveredSession[] = [];
-  for (const s of selected) {
+  for (const s of windowed) {
+    if (out.length >= limit) break;
     let lines: string[];
     try {
       lines = readFileSync(s.file, "utf-8").split("\n");
     } catch {
       continue;
     }
+    if (isCollidingClaudeCwd(firstRecordedCwd(lines), cwd)) continue;
     out.push({
       sessionId: s.sessionId,
       cwd,
@@ -366,10 +404,22 @@ export function discoverRecentClaudeSessions(
   return out;
 }
 
-/** Count of all session files for `cwd`, cheaply (stat only). Lets the UI know
- *  whether a bounded `discoverSessions` left older sessions unshown. */
+/** Count of session files for `cwd`, cheaply (stat + small identity probe).
+ *  Lets the UI know whether a bounded `discoverSessions` left older sessions
+ *  unshown. An identity the probe cannot read is counted, so this may only
+ *  overestimate the authoritative discovered length. */
 export function countSessions(cwd: string, claudeHome = join(homedir(), ".claude")): number {
   const dir = join(claudeProjectsDir(claudeHome), encodeCwd(cwd));
   if (!existsSync(dir)) return 0;
-  return listSessionStats(dir).length;
+  let count = 0;
+  for (const s of listSessionStats(dir)) {
+    let recorded: string | undefined;
+    try {
+      recorded = readSessionIdentityCwd(s.file);
+    } catch {
+      continue;
+    }
+    if (!isCollidingClaudeCwd(recorded, cwd)) count++;
+  }
+  return count;
 }

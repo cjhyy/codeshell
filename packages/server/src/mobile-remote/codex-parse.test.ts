@@ -72,14 +72,73 @@ describe("parseCodexJsonLine", () => {
     ]);
   });
 
-  test("file_change → tool(Edit) with the path summary + input.path", () => {
+  // codex 0.142.4 reports a file_change once, on item.completed, with a
+  // `changes[]` array of {path, kind} and status completed|failed.
+  test("file_change completed → tool(Edit) listing every changed path + paired tool_result", () => {
+    const changes = [
+      { path: "/a/b.ts", kind: "update" },
+      { path: "/a/c.ts", kind: "add" },
+    ];
     const line = JSON.stringify({
-      type: "item.started",
-      item: { id: "f0", type: "file_change", path: "/a/b.ts", kind: "modify" },
+      type: "item.completed",
+      item: { id: "f0", type: "file_change", changes, status: "completed" },
     });
     expect(parseCodexJsonLine(line)).toEqual([
-      { type: "tool", id: "f0", tool: "Edit", summary: "/a/b.ts", input: { path: "/a/b.ts", kind: "modify" } },
+      { type: "tool", id: "f0", tool: "Edit", summary: "/a/b.ts, /a/c.ts", input: { changes } },
+      { type: "tool_result", id: "f0", summary: "update /a/b.ts\nadd /a/c.ts", isError: false },
     ]);
+    const failed = JSON.stringify({
+      type: "item.completed",
+      item: { id: "f1", type: "file_change", changes: [changes[0]], status: "failed" },
+    });
+    expect(parseCodexJsonLine(failed)[1]).toEqual({
+      type: "tool_result",
+      id: "f1",
+      summary: "update /a/b.ts",
+      isError: true,
+    });
+  });
+
+  test("file_change started emits nothing (the completion carries the changes)", () => {
+    const line = JSON.stringify({
+      type: "item.started",
+      item: { id: "f0", type: "file_change", changes: [{ path: "/a/b.ts", kind: "update" }] },
+    });
+    expect(parseCodexJsonLine(line)).toEqual([]);
+  });
+
+  test("mcp_tool_call completed → readable text from structured result content", () => {
+    const done = JSON.stringify({
+      type: "item.completed",
+      item: {
+        id: "m1",
+        type: "mcp_tool_call",
+        server: "fs",
+        tool: "read",
+        arguments: {},
+        result: { content: [{ type: "text", text: "line one" }, { type: "image", data: "x" }, { type: "text", text: "line two" }], structured_content: { count: 1 } },
+        status: "completed",
+      },
+    });
+    expect(parseCodexJsonLine(done)).toEqual([{ type: "tool_result", id: "m1", summary: "line one\nline two", isError: false }]);
+
+    const structuredOnly = JSON.stringify({
+      type: "item.completed",
+      item: { id: "m2", type: "mcp_tool_call", result: { content: [], structured_content: { count: 1 } }, status: "completed" },
+    });
+    expect(parseCodexJsonLine(structuredOnly)).toEqual([{ type: "tool_result", id: "m2", summary: '{"count":1}', isError: false }]);
+  });
+
+  test("mcp_tool_call failed → error.message as the result summary", () => {
+    const failed = JSON.stringify({
+      type: "item.completed",
+      item: { id: "m3", type: "mcp_tool_call", server: "fs", tool: "read", arguments: {}, error: { message: "file is unavailable" }, status: "failed" },
+    });
+    expect(parseCodexJsonLine(failed)).toEqual([{ type: "tool_result", id: "m3", summary: "file is unavailable", isError: true }]);
+  });
+
+  test("non-object JSON records are ignored like malformed lines", () => {
+    for (const line of ["null", "42", '"text"', "[]"]) expect(parseCodexJsonLine(line)).toEqual([]);
   });
 
   test("turn.completed → turn_end", () => {

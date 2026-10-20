@@ -431,6 +431,10 @@ export class PanelToolJobService {
     job.updatedAt = this.now();
     job.sequence++;
     await this.storage.write(job.id, job, toolJobLimits.maxRecordBytes);
+    this.publish(job);
+  }
+  /** Make a job state visible to readers and subscribers. */
+  private publish(job: StoredJob): void {
     this.jobs.set(job.id, job);
     try {
       this.options.onEvent?.(publicJob(job));
@@ -827,7 +831,24 @@ export class PanelToolJobService {
         next.result = result;
         next.progress = { ...next.progress, fraction: 1 };
       }
-      await this.commit(next);
+      try {
+        await this.commit(next);
+      } catch (error) {
+        // The executor has exited; a job that stays "running" in memory would
+        // count as active forever and hide the outcome. Publish an explicit
+        // failure for this Host session instead (keeping any result), while
+        // the stale disk record is recovered as interrupted by a later Host.
+        const outcome = next.error ? `${next.status} (${next.error.message})` : next.status;
+        next.status = "failed";
+        next.error = {
+          code: "TOOL_JOB_STORAGE_FAILED",
+          message: `Task ${outcome} but its final state could not be saved: ${
+            error instanceof Error ? error.message : String(error)
+          }`.slice(0, 2000),
+          retryable: next.recovery === "retry",
+        };
+        this.publish(next);
+      }
     });
   }
   async cancel(rawScope: ToolJobScope, id: string): Promise<ToolJob> {

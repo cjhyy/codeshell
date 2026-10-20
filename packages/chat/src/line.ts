@@ -6,6 +6,10 @@ import { waitForAbort } from "./lifecycle.js";
 import { remoteAttachment, safeAttachmentName } from "./media.js";
 import { readRequestBody, sendResponse } from "./webhook.js";
 
+/** Messaging API limits for a buttons-template URI action. */
+const LINE_ACTION_LABEL_MAX = 20;
+const LINE_URI_ACTION_MAX = 1_000;
+
 export interface LineAdapterConfig {
   channelSecret: string;
   channelAccessToken: string;
@@ -111,7 +115,15 @@ export class LineAdapter implements WebhookChannelAdapter {
 
   async send(target: string, message: OutgoingMessage): Promise<void> {
     const messages: unknown[] = [{ type: "text", text: message.text }];
-    if (message.button) {
+    if (
+      message.button &&
+      (message.button.text.length > LINE_ACTION_LABEL_MAX ||
+        message.button.url.length > LINE_URI_ACTION_MAX)
+    ) {
+      // LINE rejects the whole push when an action exceeds its field limits,
+      // which would also lose the reply text. Deliver the link as text instead.
+      messages.push({ type: "text", text: `${message.button.text}\n${message.button.url}` });
+    } else if (message.button) {
       messages.push({
         type: "template",
         altText: message.button.text,

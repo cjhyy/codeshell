@@ -15,8 +15,10 @@ import type { ResidentAgentEvent } from "./resident-agent.js";
  *       item.type "reasoning"         → []      (thinking noise)
  *       item.type "command_execution" → tool(Bash) on start, tool_result on complete
  *       item.type "mcp_tool_call"     → tool(server__tool) on start, tool_result on complete
+ *                                        (result.content text blocks, or error.message on failure)
  *       item.type "web_search"        → tool(WebSearch) on start
- *       item.type "file_change"       → tool(Edit) on start
+ *       item.type "file_change"       → tool(Edit) + tool_result on complete (only the
+ *                                        completion carries `changes[]` {path, kind})
  *   {type:"turn.completed", usage}                           → turn_end
  *   {type:"turn.failed", error}                              → error
  *   {type:"error", message}                                  → error
@@ -33,6 +35,8 @@ export function parseCodexJsonLine(line: string): ResidentAgentEvent[] {
   } catch {
     return [];
   }
+  // A valid JSON scalar (e.g. `null`) is not an event; ignore it like noise.
+  if (!msg || typeof msg !== "object") return [];
 
   if (msg.type === "turn.completed") return [{ type: "turn_end", reason: "completed" }];
   if (msg.type === "turn.failed") {
@@ -76,7 +80,7 @@ export function parseCodexJsonLine(line: string): ResidentAgentEvent[] {
         return [{
           type: "tool_result",
           id,
-          summary: String(item.result ?? item.output ?? "").slice(0, 400),
+          summary: mcpResultText(item).slice(0, 400),
           isError: item.status === "failed" || Boolean(item.is_error),
         }];
       }
@@ -95,16 +99,23 @@ export function parseCodexJsonLine(line: string): ResidentAgentEvent[] {
         ? [{ type: "tool", id, tool: "WebSearch", summary: String(item.query ?? ""), input: { query: String(item.query ?? "") } }]
         : [];
 
-    case "file_change":
-      return phase === "started"
-        ? [{
-            type: "tool",
-            id,
-            tool: "Edit",
-            summary: String(item.path ?? ""),
-            input: item.kind !== undefined ? { path: String(item.path ?? ""), kind: item.kind } : { path: String(item.path ?? "") },
-          }]
+    case "file_change": {
+      if (phase !== "completed") return [];
+      const changes: { path: string; kind: unknown }[] = Array.isArray(item.changes)
+        ? item.changes
+            .filter((c: any) => c && typeof c === "object" && typeof c.path === "string")
+            .map((c: any) => ({ path: c.path, kind: c.kind }))
         : [];
+      return [
+        { type: "tool", id, tool: "Edit", summary: changes.map((c) => c.path).join(", "), input: { changes } },
+        {
+          type: "tool_result",
+          id,
+          summary: changes.map((c) => `${typeof c.kind === "string" ? c.kind : "update"} ${c.path}`).join("\n").slice(0, 400),
+          isError: item.status === "failed",
+        },
+      ];
+    }
 
     default:
       return [];
@@ -128,6 +139,24 @@ export function extractThreadId(line: string): string | undefined {
     return undefined;
   }
   return msg.type === "thread.started" && typeof msg.thread_id === "string" ? msg.thread_id : undefined;
+}
+
+/** Readable MCP outcome: the failure message, else the result's text content
+ *  blocks, else its structured content (an older plain-string result passes). */
+function mcpResultText(item: any): string {
+  const failure = errText(item.error);
+  if (failure) return failure;
+  const result = item.result ?? item.output;
+  if (result === undefined || result === null) return "";
+  if (typeof result !== "object") return String(result);
+  if (Array.isArray(result.content)) {
+    const text = result.content
+      .map((block: any) => (block?.type === "text" && typeof block.text === "string" ? block.text : ""))
+      .filter(Boolean)
+      .join("\n");
+    if (text) return text;
+  }
+  return JSON.stringify(result.structured_content ?? result) ?? "";
 }
 
 function errText(e: unknown): string {

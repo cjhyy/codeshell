@@ -13,6 +13,7 @@ const MAX_NAME_LENGTH = 512;
 const MAX_PATH_LENGTH = 32_768;
 const MAX_MESSAGE_LENGTH = 512 * 1024;
 const MAX_HISTORY_LIMIT = 500;
+const MAX_ASK_USER_ANSWERS = 32;
 
 /** Runtime validation at the WebSocket boundary; TypeScript types do not validate JSON. */
 export function parseMobileClientEvent(value: unknown): MobileClientEvent | undefined {
@@ -277,12 +278,26 @@ function isAttachment(value: unknown): value is MobileImageAttachment {
     : value.transport === "upload" && boundedString(value.uploadId, MAX_ID_LENGTH);
 }
 
+function isAnswerRecord(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  const entries = Object.entries(value);
+  return (
+    entries.length <= MAX_ASK_USER_ANSWERS &&
+    entries.every(
+      ([question, answer]) =>
+        question.length <= MAX_MESSAGE_LENGTH &&
+        boundedOptionalEmptyString(answer, MAX_MESSAGE_LENGTH),
+    )
+  );
+}
+
 function isApprovalDecision(value: unknown): boolean {
   if (!isRecord(value)) return false;
   if (value.behavior === "allow") {
     return (
       (value.answer === undefined ||
         boundedOptionalEmptyString(value.answer, MAX_MESSAGE_LENGTH)) &&
+      (value.answers === undefined || isAnswerRecord(value.answers)) &&
       (value.updatedInput === undefined || isRecord(value.updatedInput))
     );
   }

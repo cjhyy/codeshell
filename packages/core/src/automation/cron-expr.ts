@@ -56,8 +56,11 @@ export function isCronExpression(s: string): boolean {
 function parseField(field: string, spec: FieldSpec): Set<number> {
   const out = new Set<number>();
   for (const part of field.split(",")) {
-    // Split optional step: "a-b/n" or "*/n" or "a/n"
-    const [rangePart, stepPart] = part.split("/");
+    // Split optional step: "a-b/n" or "*/n" or "a/n". More than one
+    // separator is malformed; destructuring would silently drop the rest.
+    const stepSplit = part.split("/");
+    if (stepSplit.length > 2) throw new Error(`Invalid cron step in "${field}"`);
+    const [rangePart, stepPart] = stepSplit;
     const step = stepPart === undefined ? 1 : parseInt(stepPart, 10);
     if (!Number.isInteger(step) || step <= 0) {
       throw new Error(`Invalid cron step in "${field}"`);
@@ -69,7 +72,9 @@ function parseField(field: string, spec: FieldSpec): Set<number> {
       lo = spec.min;
       hi = spec.max;
     } else if (rangePart.includes("-")) {
-      const [a, b] = rangePart.split("-");
+      const bounds = rangePart.split("-");
+      if (bounds.length !== 2) throw new Error(`Invalid cron field "${field}"`);
+      const [a, b] = bounds;
       lo = parseInt(a, 10);
       hi = parseInt(b, 10);
     } else {

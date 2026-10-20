@@ -92,6 +92,21 @@ export function acquireLockOnPath(target: string, timeoutMs = LOCK_WAIT_MS): () 
   return acquireLockOn(target, timeoutMs);
 }
 
+/**
+ * Whether a failed attempt means "someone else holds it right now". Only that
+ * (plus transient busy errors) can succeed on retry. A permission, read-only or
+ * full-disk error repeats identically for the whole budget, and because the
+ * retry loop sleeps synchronously it would freeze the caller's event loop for
+ * all of it — so those fail immediately instead.
+ */
+function isRetryableLockError(err: unknown): boolean {
+  const code = (err as NodeJS.ErrnoException | undefined)?.code;
+  if (code === "ELOCKED" || code === "EBUSY" || code === "EAGAIN") return true;
+  // Windows reports EPERM while a just-released lock directory is still being
+  // deleted, which clears on its own.
+  return code === "EPERM" && process.platform === "win32";
+}
+
 function acquireLockOn(target: string, timeoutMs: number): () => void {
   const deadline = Date.now() + timeoutMs;
   let lastError: unknown;
@@ -101,7 +116,7 @@ function acquireLockOn(target: string, timeoutMs: number): () => void {
       return lockSync(target, { stale: LOCK_STALE_MS, retries: 0 });
     } catch (err) {
       lastError = err;
-      if (Date.now() > deadline) throw lastError;
+      if (!isRetryableLockError(err) || Date.now() > deadline) throw lastError;
       // Randomized backoff. A fixed delay makes every waiter wake at the same
       // instant and collide again, so under real contention (dozens of writers)
       // the same unlucky processes kept losing and eventually timed out.

@@ -91,7 +91,10 @@ export async function editTool(
       }
     }
 
-    const updatedLf = replaceAll ? content.split(oldLf).join(newLf) : content.replace(oldLf, newLf);
+    // A function replacer keeps `$&`, `$$`, `` $` `` and `$'` in new_string literal.
+    const updatedLf = replaceAll
+      ? content.split(oldLf).join(newLf)
+      : content.replace(oldLf, () => newLf);
 
     const beforeWrite = revalidateFinalWritePath(filePath, cwd, approvedPath, roots, digest);
     if ("error" in beforeWrite) return { ok: false, error: beforeWrite.error };

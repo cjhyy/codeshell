@@ -120,6 +120,7 @@ export function createRunManager(options: CreateRunManagerOptions): RunManager {
     evaluator: options.evaluator,
     defaultTags: options.defaultTags,
     defaultMetadata: options.defaultMetadata,
+    defaultCwd: options.cwd,
     modules: options.modules,
   });
 }

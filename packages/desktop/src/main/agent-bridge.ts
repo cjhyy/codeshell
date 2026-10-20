@@ -70,6 +70,7 @@ import {
   builtInBrowserHandoffGrants,
   chromeExtensionRuntimeService,
   annotateBrowserRuntimeStreamEvent,
+  cancelBrowserActionsForStoppedRun,
   dispatchInteractiveBrowserRuntimeAction,
   releaseChildBrowserRuntime,
   activateChildBrowserRuntime,
@@ -126,6 +127,7 @@ import {
 import {
   buildNoChildFallbackReply,
   compactQuerySessionId,
+  goalResumeSessionId,
   forkSourceSessionId,
   quickChatForkRequest,
   quickChatRunRequest,
@@ -888,6 +890,7 @@ export class AgentBridge implements PetStateBridge {
   ): { line: string; method?: string } {
     const prepared = prepareAgentRunMetadata(line, meta, this.agentRunMetadataDeps());
     const parsed = prepared.parsed;
+    cancelBrowserActionsForStoppedRun(parsed);
     if (
       isOptimizationLabQuery(parsed) &&
       (meta.origin !== "host" || !this.trustedLabRequests.has(String(parsed.id)))
@@ -958,6 +961,7 @@ export class AgentBridge implements PetStateBridge {
         throw error;
       }
       const parsed = prepared.parsed;
+      cancelBrowserActionsForStoppedRun(parsed);
       if (isOptimizationLabQuery(parsed)) {
         if (parsed.id !== undefined && !event.sender.isDestroyed()) {
           event.sender.send(
@@ -1054,6 +1058,10 @@ export class AgentBridge implements PetStateBridge {
           this.core.ensureWorker(
             this.sessionsForFallback().readSessionMainRoot(compactSessionId) ?? parsed.params?.cwd,
           );
+        }
+        const goalResumeId = goalResumeSessionId(parsed);
+        if (goalResumeId) {
+          this.core.ensureWorker(this.sessionsForFallback().readSessionMainRoot(goalResumeId));
         }
       }
 

@@ -113,6 +113,33 @@ export function __setSessionWorkspaceServiceProjectStoreForTests(
   projectStoreForTests = store;
 }
 
+/** Tail of the pending workspace mutations per Session. */
+const sessionMutationQueues = new Map<string, Promise<void>>();
+
+/**
+ * Run one workspace mutation at a time per Session. A repeated create/switch
+ * then observes the first request's result (the new worktree already exists)
+ * instead of racing it through the same branch/path prechecks.
+ */
+async function withSessionWorkspaceMutation<T>(
+  sessionId: string,
+  run: () => Promise<T>,
+): Promise<T> {
+  const previous = sessionMutationQueues.get(sessionId) ?? Promise.resolve();
+  let release!: () => void;
+  const tail = previous.then(
+    () => new Promise<void>((resolveRelease) => (release = resolveRelease)),
+  );
+  sessionMutationQueues.set(sessionId, tail);
+  await previous;
+  try {
+    return await run();
+  } finally {
+    release();
+    if (sessionMutationQueues.get(sessionId) === tail) sessionMutationQueues.delete(sessionId);
+  }
+}
+
 function sessions(): SessionManager {
   if (sessionManagerForTests) return sessionManagerForTests;
   const home = process.env.CODE_SHELL_HOME;
@@ -510,9 +537,20 @@ export async function getSessionWorktreeDiffForUi(
 
 export async function switchSessionWorkspaceForUi(
   sessionId: string,
-  _cwd: string,
+  cwd: string,
   target: string,
   opts: SessionWorkspaceMutationOptions = {},
+): Promise<SessionWorkspaceList> {
+  return await withSessionWorkspaceMutation(sessionId, () =>
+    switchSessionWorkspace(sessionId, cwd, target, opts),
+  );
+}
+
+async function switchSessionWorkspace(
+  sessionId: string,
+  _cwd: string,
+  target: string,
+  opts: SessionWorkspaceMutationOptions,
 ): Promise<SessionWorkspaceList> {
   const sm = sessions();
   requireKnownSession(sm, sessionId);
@@ -607,10 +645,22 @@ export async function releaseManySessionWorkspacesForUi(
 
 export async function cleanupSessionWorktreeForUi(
   sessionId: string,
-  _cwd: string,
+  cwd: string,
   worktreePath: string,
   action: WorkspaceCleanupAction,
   opts: SessionWorkspaceMutationOptions = {},
+): Promise<SessionWorkspaceList> {
+  return await withSessionWorkspaceMutation(sessionId, () =>
+    cleanupSessionWorktree(sessionId, cwd, worktreePath, action, opts),
+  );
+}
+
+async function cleanupSessionWorktree(
+  sessionId: string,
+  _cwd: string,
+  worktreePath: string,
+  action: WorkspaceCleanupAction,
+  opts: SessionWorkspaceMutationOptions,
 ): Promise<SessionWorkspaceList> {
   if (action !== "detach" && action !== "discard") {
     throw new Error("action must be detach or discard");

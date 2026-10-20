@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import { extname } from "node:path";
+import { extname, posix } from "node:path";
 import { SaxesParser } from "saxes";
 import type { Entry, ZipFile } from "yauzl";
 import { truncateUtf8Text } from "../truncate-utf8.js";
@@ -63,7 +63,12 @@ function parseXml(
     if (++depth > 128 || ++elements > MAX_XML_ELEMENTS)
       throw new Error("Document XML exceeds structural limits");
     const attrs: Record<string, string> = {};
-    for (const attr of Object.values(tag.attributes)) attrs[attr.name] = attr.value;
+    for (const attr of Object.values(tag.attributes)) {
+      attrs[attr.name] = attr.value;
+      // Also key namespaced attributes by expanded name: the prefix is only a
+      // placeholder chosen by the producer.
+      if (attr.uri) attrs[`{${attr.uri}}${attr.local}`] = attr.value;
+    }
     handlers.open?.(tag.local, attrs);
   });
   parser.on("closetag", (tag) => {
@@ -279,6 +284,19 @@ function sheetText(xml: string, strings: string[], maxBytes: number) {
   return { text: cells.join(""), truncated };
 }
 
+const OFFICE_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+const STRICT_OFFICE_REL_NS = "http://purl.oclc.org/ooxml/officeDocument/relationships";
+
+/**
+ * Resolve a relationship Target against its source part's folder (RFC 3986):
+ * `/x` is package-absolute, `x` and `./x` are relative, `..` is normalized.
+ */
+function resolvePartTarget(baseDir: string, target: string): string {
+  return target.startsWith("/")
+    ? posix.normalize(target).slice(1)
+    : posix.normalize(posix.join(baseDir, target));
+}
+
 function orderedParts(entries: Map<string, string>, format: "xlsx" | "pptx") {
   const root = format === "xlsx" ? "xl" : "ppt";
   const name = format === "xlsx" ? "workbook" : "presentation";
@@ -288,7 +306,7 @@ function orderedParts(entries: Map<string, string>, format: "xlsx" | "pptx") {
     parseXml(relXml, {
       open: (tag, attrs) => {
         if (tag !== "Relationship" || attrs.TargetMode === "External") return;
-        const target = `${root}/${attrs.Target ?? ""}`;
+        const target = resolvePartTarget(root, attrs.Target ?? "");
         if (wantedXml(target, format) && entries.has(target)) relationships.set(attrs.Id, target);
       },
     });
@@ -298,7 +316,9 @@ function orderedParts(entries: Map<string, string>, format: "xlsx" | "pptx") {
     parseXml(mainXml, {
       open: (tag, attrs) => {
         if (tag !== (format === "xlsx" ? "sheet" : "sldId")) return;
-        const path = relationships.get(attrs["r:id"]);
+        const path = relationships.get(
+          attrs[`{${OFFICE_REL_NS}}id`] ?? attrs[`{${STRICT_OFFICE_REL_NS}}id`] ?? attrs["r:id"],
+        );
         if (path) result.push({ path, label: attrs.name ?? `slide ${result.length + 1}` });
       },
     });

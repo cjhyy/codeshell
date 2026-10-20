@@ -622,9 +622,13 @@ test("deleting A while its staged result is pending cannot resurrect its attachm
   const remove = sidebarProps?.onDeleteSession;
   expect(typeof remove).toBe("function");
   await act(async () => {
-    remove("repoA", "session-a");
-    const index = JSON.parse(storage.getItem("codeshell.sessionIndex.repoA")!);
-    expect(index.sessions.some((session: any) => session.id === "session-a")).toBe(false);
+    // Deletion completes only after Main confirms it (R60).
+    await remove("repoA", "session-a");
+    await settle();
+  });
+  const index = JSON.parse(storage.getItem("codeshell.sessionIndex.repoA")!);
+  expect(index.sessions.some((session: any) => session.id === "session-a")).toBe(false);
+  await act(async () => {
     staged[0].result.resolve(imageMeta(staged[0].input));
     await settle();
   });

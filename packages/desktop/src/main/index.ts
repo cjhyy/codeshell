@@ -84,7 +84,6 @@ import {
   localCredentialAccess,
   sessionsRoot,
   // Quota — remaining CC/Codex subscription usage.
-  ErrorCodes,
   WORKSPACE_PROFILE_NAME_RE,
   previewLocalTheme,
   installReviewedLocalTheme,
@@ -171,6 +170,7 @@ import {
   requireRendererProjectPrimary,
   requireRendererProjectRoot,
 } from "./renderer-project-path.js";
+import { requireRendererOrSessionPath, type PtyStartRequest } from "./renderer-session-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
 import {
@@ -294,6 +294,7 @@ import {
   makeCronRunnerWithResume,
   resolveDesktopAutomationJobWorkspace,
 } from "./automation-host.js";
+import { createAutomationResumeTurn } from "./automation-resume-turn.js";
 import { automationLifecycleNotification } from "./automation-notification.js";
 import { DesktopNotifier } from "./desktop-notifier.js";
 import {
@@ -301,7 +302,6 @@ import {
   showNativeDesktopNotification,
 } from "./native-desktop-notification.js";
 import * as desktopNotifications from "./desktop-notification-routes.js";
-import type { CronRunResult } from "@cjhyy/code-shell-core/internal";
 import {
   setAutomationScheduler,
   listAutomations,
@@ -374,7 +374,6 @@ import {
 } from "@cjhyy/code-shell-server/mobile-remote";
 import {
   MobileRemoteOrchestrator,
-  injectAndAwaitResult,
   resolveRoomPermissionMode,
   type AuthenticatedMobileClientEvent,
 } from "./mobile-remote-orchestrator.js";
@@ -2800,7 +2799,7 @@ async function createWindow(): Promise<BrowserWindow> {
     loadRenderer();
   }
 
-  await installAppMenu(win);
+  await installAppMenu(win, projectStore);
   return win;
 }
 
@@ -3645,51 +3644,12 @@ app.whenReady().then(async () => {
       emitAutomationEvent,
       announceAutomationSession,
     );
-    // "Continue this conversation" jobs (job.resumeSessionId) don't run a
-    // headless Engine — they feed their prompt into the LIVE session as a new
-    // user turn, exactly like a human typing at a scheduled time. agent/run with
-    // an existing sessionId makes the worker resume it from disk if it isn't
-    // already live (engine.ts: exists()→resume). The run then inherits that
-    // session's own cwd / permission mode / tools / background-completion wakeup.
-    const injectResumeTurn = async (
-      sessionId: string,
-      prompt: string,
-      _signal?: AbortSignal,
-      job?: import("@cjhyy/code-shell-core/internal").CronJob,
-    ): Promise<CronRunResult> => {
-      if (!bridge) return { text: "", reason: "no-bridge" };
-      // requireExisting: if the user deleted the target conversation, the worker
-      // returns SessionNotFound instead of running the prompt against a blank
-      // session. We turn that into a `stop` so the scheduler auto-disables this
-      // recurring job (and the host notifies the user) rather than silently
-      // re-firing into nothing every tick.
-      const res = await injectAndAwaitResult(
-        bridge,
-        "agent/run",
-        {
-          task: prompt,
-          sessionId,
-          requireExisting: true,
-          ...(job?.projectId ? { projectId: job.projectId } : {}),
-          ...(job?.rootId ? { rootId: job.rootId } : {}),
-        },
-        { origin: "host", producer: "automation-resume" },
-      );
-      if (res.ok) {
-        const r = res.result as { text?: string; reason?: string } | undefined;
-        return { text: r?.text ?? "", reason: r?.reason ?? "done" };
-      }
-      if (res.code === ErrorCodes.SessionNotFound) {
-        // A missing bound conversation is rare and consequential, so notify even while focused.
-        await desktopNotifications.notifyMissingAutomationResumeTarget(desktopNotifier, job);
-        return {
-          text: "",
-          reason: "resume-target-missing",
-          stop: { reason: "续接的对话已被删除,已停止该定时任务" },
-        };
-      }
-      return { text: "", reason: res.message };
-    };
+    // "Continue this conversation" jobs feed their prompt into the live session.
+    const injectResumeTurn = createAutomationResumeTurn({
+      bridge: () => bridge,
+      notifyMissingTarget: (job) =>
+        desktopNotifications.notifyMissingAutomationResumeTarget(desktopNotifier, job),
+    });
     const automationRunner = makeCronRunnerWithResume(
       headlessAutomationRunner,
       injectResumeTurn,
@@ -5245,7 +5205,7 @@ ipcMain.handle(
   ): Promise<string | null> => {
     const cwd =
       typeof payload?.cwd === "string" && payload.cwd
-        ? await requireRendererProjectPath(payload.cwd)
+        ? await requireRendererOrSessionPath(payload.cwd, payload.sessionId)
         : undefined;
     return readImageDataUrl(typeof payload?.absPath === "string" ? payload.absPath : "", {
       cwd,
@@ -5827,14 +5787,10 @@ ipcMain.handle(
         transcriptSubscriptions?.unsubscribeSubscriber(subscriberId);
       });
     }
-    return transcriptSubscriptions!.subscribe({
-      subscriberId,
-      roomId,
-      cwd,
-      sessionId,
-      kind,
-      limit,
-    });
+    return {
+      ...transcriptSubscriptions!.subscribe({ subscriberId, roomId, cwd, sessionId, kind, limit }),
+      approvals: approvalBridge.pendingRequests(roomId), // cards a remounted view missed
+    };
   },
 );
 ipcMain.handle("ccRoom:unsubscribeTranscript", async (event, roomId: string) => {
@@ -6587,17 +6543,16 @@ ipcMain.handle("files:redoTurn", async (event, sessionId: unknown) => {
 
 // ── Terminal (pty) — interactive shell panel ───────────────────────────────
 // Output streams back to the requesting webContents via "pty:data"/"pty:exit".
-ipcMain.handle(
-  "pty:start",
-  async (e, opts: { sessionId: string; cwd?: string; cols?: number; rows?: number }) => {
-    if (!opts) {
-      throw new Error("pty:start requires sessionId");
-    }
-    assertValidPtySessionId(opts.sessionId);
-    const cwd = await requireRendererProjectPath(opts.cwd ?? resolveNoRepoCwd());
-    return ptyStart(e.sender, { ...opts, cwd });
-  },
-);
+ipcMain.handle("pty:start", async (e, opts: PtyStartRequest) => {
+  if (!opts) throw new Error("pty:start requires sessionId");
+  assertValidPtySessionId(opts.sessionId);
+  // A Session's managed worktree is authorized only through that Session.
+  const cwd = await requireRendererOrSessionPath(
+    opts.cwd ?? resolveNoRepoCwd(),
+    opts.engineSessionId,
+  );
+  return ptyStart(e.sender, { ...opts, cwd });
+});
 ipcMain.handle("pty:write", (e, sessionId: string, data: string) => {
   assertValidPtySessionId(sessionId);
   if (typeof data !== "string" || data.length > 1024 * 1024) {

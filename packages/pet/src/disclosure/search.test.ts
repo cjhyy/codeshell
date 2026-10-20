@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { searchSessionTranscripts } from "./search.js";
@@ -112,6 +112,27 @@ describe("searchSessionTranscripts", () => {
     expect(result.truncated).toBe(false);
   });
 
+  test("candidates beyond the scanned band mark the result incomplete", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-band-"));
+    for (let i = 0; i < 500; i += 1) {
+      const id = `recent-${i}`;
+      writeSession(root, id, { kind: "work", cwd: "/a", title: id }, [
+        { role: "user", content: "ordinary recent work", turnNumber: 0 },
+      ]);
+      utimesSync(join(root, id, "transcript.jsonl"), 1_700_000_000 + i, 1_700_000_000 + i);
+    }
+    writeSession(root, "older-target", { kind: "work", cwd: "/a", title: "Older" }, [
+      { role: "user", content: "the papaya migration plan", turnNumber: 0 },
+    ]);
+    utimesSync(join(root, "older-target", "transcript.jsonl"), 1_600_000_000, 1_600_000_000);
+
+    const result = await searchSessionTranscripts(root, "papaya", { budgetMs: 60_000 });
+
+    expect(result.scannedSessions).toBe(500);
+    expect(result.matches).toEqual([]);
+    expect(result.truncated).toBe(true);
+  });
+
   test("scannedSessions does not count a candidate missing transcript.jsonl", async () => {
     const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-missing-transcript-"));
     writeSession(root, "work-1", { kind: "work", cwd: "/a", title: "Work 1" }, [
@@ -130,5 +151,59 @@ describe("searchSessionTranscripts", () => {
     expect(result.scannedSessions).toBe(1);
     expect(result.matches.length).toBe(1);
     expect(result.matches[0]?.sessionId).toBe("work-1");
+  });
+
+  // Regression (PET-01): the raw-file prefilter compared the plain query with
+  // JSON-encoded text, so quotes and backslashes in the message never matched.
+  test.each([['console.log("hello")'], ["C:\\work\\notes.txt"]])(
+    "finds %s even though JSON encodes it differently on disk",
+    async (query) => {
+      const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-json-"));
+      writeSession(root, "work-1", { kind: "work", cwd: "/a", title: "Work 1" }, [
+        {
+          role: "user",
+          content: 'Use console.log("hello") and file C:\\work\\notes.txt',
+          turnNumber: 0,
+        },
+      ]);
+
+      const result = await searchSessionTranscripts(root, query, {});
+
+      expect(result.matches.map((match) => match.sessionId)).toEqual(["work-1"]);
+      expect(result.matches[0]?.snippets[0]?.text).toContain(query);
+    },
+  );
+
+  // Regression (PET-R10-01): workers already reading when the cap was reached
+  // still appended matches, and the final slice dropped them silently.
+  test("truncated is true when more sessions match than maxSessions returns", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-overflow-"));
+    for (let i = 0; i < 21; i++) {
+      writeSession(root, `work-${i}`, { kind: "work", cwd: "/a", title: `Work ${i}` }, [
+        { role: "user", content: "guava smoothie recipe", turnNumber: 0 },
+      ]);
+    }
+
+    const result = await searchSessionTranscripts(root, "guava", {});
+
+    expect(result.matches.length).toBe(20);
+    expect(result.truncated).toBe(true);
+  });
+
+  // Regression (PET-R10-02): toLowerCase can lengthen text (İ → i + U+0307),
+  // so the lowered-string offset must be mapped back to the original text.
+  test("snippet contains the match after characters that lengthen when lowercased", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-unicode-"));
+    writeSession(root, "work-1", { kind: "work", cwd: "/a", title: "Work 1" }, [
+      {
+        role: "user",
+        content: "İ".repeat(240) + " TARGET " + "z".repeat(240),
+        turnNumber: 0,
+      },
+    ]);
+
+    const result = await searchSessionTranscripts(root, "target", {});
+
+    expect(result.matches[0]?.snippets[0]?.text).toContain(" TARGET ");
   });
 });

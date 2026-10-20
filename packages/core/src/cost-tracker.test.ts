@@ -56,4 +56,19 @@ describe("CostTracker cost math (over extracted MODEL_PRICING)", () => {
     expect(t.getEstimatedCost()).toBeCloseTo(2.0, 9);
     expect(t.getRequestCount()).toBe(2);
   });
+
+  it("prices recorded vendor-prefixed snapshot ids by the full id, also after restore", () => {
+    // google/gemini-4-argon is priced only in the OpenRouter snapshot ($2/$10);
+    // its bare name has no direct metadata and would fall back to $3/$15.
+    const t = new CostTracker();
+    const id = "google/gemini-4-argon";
+    expect(t.estimateForTokens(id, 1_000_000, 1_000_000)).toBeCloseTo(12, 9);
+    t.record(id, 1_000_000, 1_000_000);
+    expect(t.getEstimatedCost()).toBeCloseTo(12, 9);
+    expect(t.formatSummary()).toContain("gemini-4-argon — 1.0M in, 1.0M out, $12 (1 reqs)");
+
+    const restored = new CostTracker();
+    restored.restore(JSON.parse(JSON.stringify(t.serialize())));
+    expect(restored.getEstimatedCost()).toBeCloseTo(12, 9);
+  });
 });

@@ -187,6 +187,35 @@ describe("project picker and registry synchronization", () => {
     expect(projectIdForPath(replacement.roots[0]!.path)).toBeUndefined();
   });
 
+  test("a project added during startup migration survives the older initial snapshot", async () => {
+    const added: LocalProject = {
+      ...project,
+      id: "added-project",
+      name: "added",
+      roots: [{ id: "added-root", path: "/workspace/added", name: "added", addedAt: 2 }],
+      primaryRootId: "added-root",
+    };
+    diskProjects = [project];
+    const registry = (window as unknown as { codeshell: { projectRegistry: any } }).codeshell
+      .projectRegistry;
+    // The migration's own re-list reads the registry before the add is
+    // broadcast, but its response is delivered after that broadcast.
+    const staleList = deferred<LocalProject[]>();
+    let listCalls = 0;
+    registry.list = async () => (++listCalls === 2 ? staleList.promise : diskProjects);
+    hook = await renderHook(useHarness);
+    expect(listCalls).toBe(2);
+
+    await broadcast([project, added]);
+    expect(hook.result.current.projects.map((item) => item.id)).toEqual([project.id, added.id]);
+    await act(async () => {
+      staleList.resolve([project]);
+      await flushMicrotasks();
+    });
+
+    expect(hook.result.current.projects.map((item) => item.id)).toEqual([project.id, added.id]);
+  });
+
   test("keeps one project when its registry broadcast arrives before the picker response", async () => {
     hook = await renderHook(useHarness);
     const adding = hook.result.current.handleAddProject();

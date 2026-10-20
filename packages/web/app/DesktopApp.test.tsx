@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import React, { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../src/test-utils/renderHook.js";
 import { initialChatState } from "../src/lib/streamReducer.js";
@@ -7,7 +8,7 @@ import type { RemoteApp } from "../src/hooks/useRemoteApp.js";
 import { useDesktopController } from "./DesktopApp.js";
 import { getApiWorkspace } from "./api-context.js";
 import { Workbench } from "./Workbench.js";
-import { DesktopApproval, DesktopSidebar } from "./DesktopControls.js";
+import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopControls.js";
 
 const noop = () => {};
 const session = { id: "paired-session", username: "synthetic", deviceName: "Fixture" };
@@ -199,7 +200,9 @@ describe("Desktop workbench controller", () => {
       ack.resolve(true);
       await flushMicrotasks();
     });
-    expect(sent).toEqual([{ text: "first task", attachments: [] }]);
+    expect(sent).toEqual([
+      { text: "first task", attachments: [], onUncertain: expect.any(Function) },
+    ]);
     expect(hook.result.current.activeId).toBe("mobile-real-1");
     expect(hook.result.current.draft).toBe("next task while accepting");
     expect(hook.result.current.files.map((file) => file.name)).toEqual(["next.png"]);
@@ -289,7 +292,7 @@ describe("Desktop workbench controller", () => {
     await hook.unmount();
   });
 
-  test("failed send restores untouched text and images but never overwrites later edits", async () => {
+  test("failed send restores text and images and keeps later edits after them", async () => {
     let pending = deferred<boolean>();
     const app = remoteApp({ activeSessionId: "existing", sendChat: () => pending.promise });
     const hook = await renderHook(() => useDesktopController(app, undefined, noop));
@@ -317,8 +320,9 @@ describe("Desktop workbench controller", () => {
       pending.resolve(false);
       await flushMicrotasks();
     });
-    expect(hook.result.current.draft).toBe("replacement");
-    expect(hook.result.current.files).toHaveLength(0);
+    // The failed task is put back before the newer text; neither is lost.
+    expect(hook.result.current.draft).toBe("keep on failure\n\nreplacement");
+    expect(hook.result.current.files.map((file) => file.name)).toEqual(["kept.png"]);
     await hook.unmount();
   });
 
@@ -469,6 +473,33 @@ describe("Desktop workbench controller", () => {
     await hook.unmount();
   });
 
+  test("leaving this device is immediate even while the HTTP logout is still pending", async () => {
+    const logoutResponse = deferred<Response>();
+    const requests: string[] = [];
+    globalThis.fetch = (async (path: string | URL | Request) => {
+      requests.push(String(path));
+      return logoutResponse.promise;
+    }) as typeof fetch;
+    let loggedOut = 0;
+    const app = remoteApp({ logout: () => loggedOut++ });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      await act(async () => {
+        hook.result.current.logout?.();
+        await flushMicrotasks();
+      });
+      expect(requests).toEqual(["/api/v1/auth/logout"]);
+      expect(loggedOut).toBe(1);
+      await act(async () => {
+        logoutResponse.resolve(Response.json({ ok: true }));
+        await flushMicrotasks();
+      });
+      expect(loggedOut).toBe(1);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("offline approvals cannot be submitted and CLI roots remain available", () => {
     const app = remoteApp({ status: "offline" });
     const markup = renderToStaticMarkup(
@@ -492,6 +523,110 @@ describe("Desktop workbench controller", () => {
     expect(sidebar).toContain("Claude Code");
     expect(sidebar).toContain("Codex");
   });
+});
+
+function reactProps(node: unknown): Record<string, any> {
+  const key = Object.keys(node as object).find((name) => name.startsWith("__reactProps$"));
+  return key ? (node as Record<string, any>)[key] : {};
+}
+function elementsByTag(node: any, tag: string): any[] {
+  return [
+    ...(node.tagName === tag ? [node] : []),
+    ...(node.childNodes ?? []).flatMap((child: any) => elementsByTag(child, tag)),
+  ];
+}
+function textOf(node: any): string {
+  if (node.nodeType === 3) return node.nodeValue ?? node.textContent ?? "";
+  return node.childNodes?.length ? node.childNodes.map(textOf).join("") : (node.textContent ?? "");
+}
+
+test("CLI room chat controls show the room's actual mode and cannot change it natively", () => {
+  const room = {
+    id: "room-1",
+    name: "CLI",
+    cwd: "/repo",
+    kind: "claude-code" as const,
+    permissionMode: "bypassPermissions" as const,
+    createdAt: 1,
+    lastActiveAt: 1,
+    open: true,
+    observing: false,
+  };
+  const markup = (patch: Partial<RemoteApp>) =>
+    renderToStaticMarkup(<DesktopChatControls app={remoteApp(patch)} />);
+  const inRoom = markup({ activeRoomId: room.id, activeRoom: room, permissionMode: "default" });
+  expect(inRoom).toMatch(/<select[^>]*disabled=""/);
+  expect(inRoom).toContain('<option value="bypassPermissions" selected="">');
+  expect(inRoom).not.toContain('<option value="default" selected="">');
+  // Metadata not loaded yet: show no mode rather than the stricter native one.
+  const pending = markup({ activeRoomId: room.id, permissionMode: "default" });
+  expect(pending).toMatch(/<select[^>]*disabled=""/);
+  expect(pending).not.toContain('<option value="default" selected="">');
+  const native = markup({ permissionMode: "acceptEdits" });
+  expect(native).not.toMatch(/<select[^>]*disabled=""/);
+  expect(native).toContain('<option value="acceptEdits" selected="">');
+});
+
+test("a multi-question CLI clarification answers every question in one response", async () => {
+  ensureMiniDom();
+  const responses: unknown[] = [];
+  const app = remoteApp({
+    respondCcApproval: (roomId, requestId, decision) =>
+      responses.push({ roomId, requestId, decision }),
+  });
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const question = (text: string) => ({ question: text, options: ["A", "B"], multiSelect: false });
+  await act(async () => {
+    root.render(
+      <DesktopApproval
+        app={app}
+        approval={{
+          requestId: "ask-many",
+          roomId: "room-1",
+          toolName: "AskUserQuestion",
+          summary: "First?",
+          description: "First?",
+          risk: "low",
+          options: ["A", "B"],
+          optionsOnly: false,
+          pathScoped: false,
+          questions: [question("First?"), question("Second?")],
+        }}
+      />,
+    );
+    await flushMicrotasks();
+  });
+  try {
+    expect(textOf(container)).toContain("Second?");
+    const button = (label: string) =>
+      elementsByTag(container, "BUTTON").filter((node) => textOf(node).endsWith(label));
+    await act(async () => {
+      reactProps(button("B")[0]).onClick();
+      await flushMicrotasks();
+    });
+    expect(responses).toEqual([]);
+    expect(reactProps(button("提交回答")[0]).disabled).toBe(true);
+    await act(async () => {
+      reactProps(elementsByTag(container, "TEXTAREA")[1]).onChange({
+        target: { value: "My own" },
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactProps(button("提交回答")[0]).onClick();
+      await flushMicrotasks();
+    });
+    expect(responses).toEqual([
+      {
+        roomId: "room-1",
+        requestId: "ask-many",
+        decision: { behavior: "allow", answers: { "First?": "B", "Second?": "My own" } },
+      },
+    ]);
+  } finally {
+    await act(async () => root.unmount());
+  }
 });
 
 test("Link return restores its original management workspace and cannot send into another active project", async () => {

@@ -658,7 +658,13 @@ function parseKeypress(s: string = ''): ParsedKey {
   // would leave the tail as garbage if it partially matched.
   if ((match = MODIFY_OTHER_KEYS_RE.exec(s))) {
     const mods = decodeModifier(parseInt(match[1]!, 10))
-    const name = keycodeToName(parseInt(match[2]!, 10))
+    const keycode = parseInt(match[2]!, 10)
+    // xterm sends the character itself (65 = 'A' for Shift+A), so non-Ctrl
+    // printable text keeps its case; Ctrl shortcuts use the lowercase name.
+    const name =
+      !mods.ctrl && keycode > 32 && keycode <= 126
+        ? String.fromCharCode(keycode)
+        : keycodeToName(keycode)
     return {
       kind: 'key',
       name,

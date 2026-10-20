@@ -37,6 +37,7 @@ import type {
   PanelAppSourceInput,
   PanelAppPreview,
   PanelAppUpdateCheck,
+  MobileServerEvent,
 } from "@cjhyy/code-shell-core";
 import type {
   ApprovalRequest,
@@ -51,6 +52,18 @@ import type {
   QuotaResult,
 } from "@cjhyy/code-shell-capability-coding/orchestration";
 import type { TaskInboxApi } from "./task-inbox-api";
+import type {
+  AutomationPermissionLevel,
+  AutomationSummary,
+  CreateAutomationInput,
+  UpdateAutomationInput,
+} from "./automation-types";
+export type {
+  AutomationPermissionLevel,
+  AutomationSummary,
+  CreateAutomationInput,
+  UpdateAutomationInput,
+} from "./automation-types";
 import type { ProfilePluginExportApi } from "../shared/profile-plugin-export";
 import type { ProfileMemoryPromotionApi } from "../shared/profile-memory-promotion";
 import type { OptimizationLabApi } from "./optimization-lab-api";
@@ -274,6 +287,8 @@ export type FoldItem =
       clientMessageId?: string;
       /** Persisted user-event identity, independent of the loaded history window. */
       sourceEventId?: string;
+      /** Image blocks of raw model-facing text (no displayText) whose envelope clients hide. */
+      images?: number;
       timestamp?: number;
     }
   // User interrupted this turn (Stop). Rebuilt from the core transcript's
@@ -1301,12 +1316,7 @@ export interface CodeshellApi
   /** Token unique to this window's renderer process (for window-unique ids). */
   windowToken: string;
   /** Start (or reattach) the pty for sessionId. */
-  ptyStart(opts: {
-    sessionId: string;
-    cwd?: string;
-    cols?: number;
-    rows?: number;
-  }): Promise<PtyStartResult>;
+  ptyStart(opts: import("../shared/pty.js").PtyStartRequest): Promise<PtyStartResult>;
   /** Send user keystrokes to the shell. */
   ptyWrite(sessionId: string, data: string): Promise<void>;
   /** Tell the shell the viewport changed. */
@@ -1751,6 +1761,7 @@ export interface CodeshellApi
       cwd: string;
       title: string;
       updatedAt: number;
+      clientMessageId?: string;
       origin: "desktop" | "automation" | "subagent";
       parentSessionId?: string;
       status?: "active" | "paused" | "completed" | "failed" | "cancelled";
@@ -2486,14 +2497,12 @@ export interface CodeshellApi
       limit: number,
     ): Promise<{
       active: boolean;
-      messages: {
-        role: "user" | "assistant";
-        text: string;
-        tools?: { name: string; summary: string; args?: Record<string, unknown> }[];
-      }[];
+      messages: Extract<MobileServerEvent, { type: "ccRoom.transcriptSubscribed" }>["messages"];
       hasMore: boolean;
       totalCount: number;
       roomCursor: number;
+      /** CLI approvals the room is still waiting on (a remounted view missed their push). */
+      approvals?: Array<Extract<MobileServerEvent, { type: "ccRoom.approvalRequest" }>["req"]>;
     }>;
     unsubscribeTranscript(roomId: string): Promise<void>;
     closeSession(roomId: string): Promise<void>;
@@ -2507,8 +2516,7 @@ export interface CodeshellApi
         displayName?: string;
         input: unknown;
         description?: string;
-        /** AskUserQuestion only: parsed prompt + option labels for a choice card. */
-        askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
+        askUser?: Extract<MobileServerEvent, { type: "ccRoom.approvalRequest" }>["req"]["askUser"];
       }) => void,
     ): () => void;
     onApprovalResolved(
@@ -2858,59 +2866,6 @@ export interface PluginDetail extends PluginSummary {
       permissions: string[];
     }>;
   };
-}
-
-export type AutomationPermissionLevel = "read-only" | "workspace-write" | "full";
-
-export interface AutomationSummary {
-  id: string;
-  name: string;
-  schedule: string;
-  prompt: string;
-  enabled: boolean;
-  cwd: string | null;
-  projectId: string | null;
-  rootId: string | null;
-  timezone: string | null;
-  permissionLevel: AutomationPermissionLevel | null;
-  lastRun: number | null;
-  nextRun: number | null;
-  runCount: number;
-  createdAt: number;
-  /** @deprecated Always null — automation runs as a Session, not a RunManager run. */
-  lastRunId: string | null;
-  once: boolean;
-  resumeSessionId: string | null;
-  templateSource: {
-    installKey: string;
-    templateId: string;
-    revision: string;
-    pluginVersion?: string;
-  } | null;
-}
-
-export interface CreateAutomationInput {
-  name: string;
-  schedule: string;
-  prompt: string;
-  cwd?: string;
-  projectId?: string | null;
-  rootId?: string | null;
-  timezone?: string;
-  permissionLevel?: AutomationPermissionLevel;
-  resumeSessionId?: string;
-}
-
-export interface UpdateAutomationInput {
-  name?: string;
-  prompt?: string;
-  schedule?: string;
-  timezone?: string;
-  cwd?: string;
-  projectId?: string | null;
-  rootId?: string | null;
-  permissionLevel?: AutomationPermissionLevel;
-  resumeSessionId?: string | null;
 }
 
 export interface RunSummary {

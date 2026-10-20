@@ -5,6 +5,7 @@ import {
   type ChannelAdapter,
   type ChannelCapabilities,
   type ChannelMessageHandler,
+  type ChannelSendOptions,
   type ChatCommandDefinition,
   type OutgoingMessage,
   type WebhookChannelAdapter,
@@ -278,9 +279,13 @@ class LazyChannelAdapter implements ChannelAdapter {
     return adapter.run(handler, signal);
   }
 
-  async send(target: string, message: OutgoingMessage): Promise<void> {
+  async send(
+    target: string,
+    message: OutgoingMessage,
+    options?: ChannelSendOptions,
+  ): Promise<void> {
     const adapter = await this.load();
-    return adapter.send(target, message);
+    return options ? adapter.send(target, message, options) : adapter.send(target, message);
   }
 
   protected load(): Promise<ChannelAdapter> {

@@ -25,7 +25,7 @@ import type {
 import type { CreateMessageOptions } from "../types.js";
 import type { ReasoningSetting } from "../reasoning-setting.js";
 import { LLMClientBase } from "../client-base.js";
-import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions.js";
+import { ContextLimitError, LLMError, LLMQuotaError, LLMRateLimitError } from "../../exceptions.js";
 import { logger } from "../../logging/logger.js";
 import { countTokens } from "../token-counter.js";
 import { capabilitiesForConfig, type Capability } from "../capabilities/index.js";
@@ -1360,6 +1360,19 @@ export class OpenAIClient extends LLMClientBase {
     }
     if (err instanceof OpenAI.APIError) {
       if (err.status === 429) {
+        // OpenAI reports exhausted balance/spend limits as 429 too; keep that
+        // cause instead of turning it into a "wait and retry" rate limit.
+        if (
+          err.code === "insufficient_quota" ||
+          err.type === "insufficient_quota" ||
+          /insufficient_quota|billing/i.test(err.message ?? "")
+        ) {
+          throw new LLMQuotaError("openai", err.message, {
+            status: err.status,
+            code: err.code,
+            type: err.type,
+          });
+        }
         throw new LLMRateLimitError("openai");
       }
       const msg = (err.message ?? "").toLowerCase();

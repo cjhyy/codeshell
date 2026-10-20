@@ -116,6 +116,40 @@ describe("webhook adapters", () => {
     expect(downloads).toBe(1);
   });
 
+  test("LINE keeps native buttons within template limits and links the rest as text", async () => {
+    const payloads: Array<{ to: string; messages: Array<Record<string, any>> }> = [];
+    const adapter = new LineAdapter(
+      { channelSecret: "line-secret", channelAccessToken: "line-token" },
+      async (_url, init) => {
+        payloads.push(JSON.parse(String(init?.body)));
+        return new Response("{}");
+      },
+    );
+    const longUrl = `https://example.test/${"a".repeat(1_000)}`;
+
+    await adapter.send("user-1", {
+      text: "ready",
+      button: { text: "L".repeat(20), url: "https://example.test/doc" },
+    });
+    await adapter.send("user-1", {
+      text: "ready",
+      button: { text: "L".repeat(21), url: "https://example.test/doc" },
+    });
+    await adapter.send("user-1", { text: "ready", button: { text: "Open", url: longUrl } });
+
+    expect(payloads[0]!.messages[1]!.template.actions).toEqual([
+      { type: "uri", label: "L".repeat(20), uri: "https://example.test/doc" },
+    ]);
+    expect(payloads[1]!.messages).toEqual([
+      { type: "text", text: "ready" },
+      { type: "text", text: `${"L".repeat(21)}\nhttps://example.test/doc` },
+    ]);
+    expect(payloads[2]!.messages).toEqual([
+      { type: "text", text: "ready" },
+      { type: "text", text: `Open\n${longUrl}` },
+    ]);
+  });
+
   test("WhatsApp verifies Meta's challenge token", async () => {
     const adapter = new WhatsAppAdapter(baseWhatsAppConfig());
     const response = fakeResponse();

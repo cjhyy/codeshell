@@ -237,8 +237,27 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   let configurationChanging = false;
   let configurationReloadFailed = false;
   const runUploads = new Map<string, PreparedHubUploads>();
+  // Core also starts top-level runs that never pass through a host agent/run,
+  // e.g. the follow-up turn of an asynchronously answered question. Count them
+  // from their own top-level stream boundaries so archive/export/automation
+  // gates see the session as busy until the run's terminal turn_complete.
+  const streamRuns = new Map<string, number>();
   const isRunning = (sessionId: string): boolean =>
-    [...runningSessions.values()].includes(sessionId) || !!automationWorker?.ownsSession(sessionId);
+    [...runningSessions.values()].includes(sessionId) ||
+    (streamRuns.get(sessionId) ?? 0) > 0 ||
+    !!automationWorker?.ownsSession(sessionId);
+  const observeRunBoundary = (sessionId: string, event: Record<string, unknown> | null): void => {
+    if (!event || event.agentId !== undefined) return;
+    const before = isRunning(sessionId);
+    const count = streamRuns.get(sessionId) ?? 0;
+    if (event.type === "session_started") streamRuns.set(sessionId, count + 1);
+    else if (event.type === "turn_complete" && count > 0) {
+      if (count === 1) streamRuns.delete(sessionId);
+      else streamRuns.set(sessionId, count - 1);
+    } else return;
+    const running = isRunning(sessionId);
+    if (running !== before) notify("serve/sessionStatus", { sessionId, running });
+  };
   let nextTabId = 1;
   let nextWorkerRequestId = 1;
   const outbound = new HubOutboundTransport({
@@ -313,6 +332,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     pendingWorkerResponses.clear();
     pendingResponsesByTab.clear();
     runningSessions.clear();
+    streamRuns.clear();
     runOwners.clear();
     runReplay.clear();
     runInputs.clear();
@@ -384,6 +404,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           let event = params.event;
           let deliveredInput: { echoed: boolean } | undefined;
           const value = event as Record<string, unknown> | null;
+          observeRunBoundary(params.sessionId, value);
           if (value?.type === "session_user_message" && typeof value.clientMessageId === "string") {
             const input = [...runInputs.values()].find(
               (candidate) =>
@@ -818,6 +839,12 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           );
           return;
         }
+        if (upload && req.method === "DELETE") {
+          // Removing a draft attachment releases its quota; idempotent for retries.
+          await uploads!.discard(upload[1]!, session.id);
+          res.writeHead(204, { "cache-control": "no-store" }).end();
+          return;
+        }
         hubJson(res, 404, { error: "API endpoint not found" });
         return;
       }
@@ -1009,7 +1036,24 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           );
           return;
         }
+        // Retryable admission gates run before an approval lease is submitted:
+        // a submitted lease is excluded from snapshots until the worker ACKs.
+        if (hubAuth && (configurationChanging || configurationReloadFailed)) {
+          sendToTab(
+            ws,
+            hostQueryError(
+              parsed.id ?? null,
+              -32009,
+              configurationReloadFailed
+                ? "请先重新保存配置或重启服务，再发送任务。"
+                : "配置正在保存，请稍后重新发送任务。",
+            ),
+            "configuration-changing",
+          );
+          return;
+        }
         let approvalId: string | undefined;
+        let approvalRouted = false;
         if (hubAuth && parsed.method === "agent/approve") {
           const requestId = parsed.params?.requestId;
           const approval = typeof requestId === "string" ? leases.get(requestId) : undefined;
@@ -1059,20 +1103,6 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         let preparedUploads: PreparedHubUploads | undefined;
         let uploadsTransferred = false;
         const preparingRun = !!hubAuth && parsed.method === "agent/run";
-        if (hubAuth && (configurationChanging || configurationReloadFailed)) {
-          sendToTab(
-            ws,
-            hostQueryError(
-              parsed.id ?? null,
-              -32009,
-              configurationReloadFailed
-                ? "请先重新保存配置或重启服务，再发送任务。"
-                : "配置正在保存，请稍后重新发送任务。",
-            ),
-            "configuration-changing",
-          );
-          return;
-        }
         if (preparingRun) preparingRuns++;
         try {
           if (hubAuth && parsed.method === "agent/run") {
@@ -1226,6 +1256,8 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
               method: parsed.method,
               ...(approvalId ? { approvalId } : {}),
             });
+            // The worker response route now owns the submitted lease.
+            approvalRouted = true;
             pendingResponsesByTab.set(tabId, (pendingResponsesByTab.get(tabId) ?? 0) + 1);
             workerMessage.id = workerRequestId;
             if (preparedUploads?.attachments.length) {
@@ -1272,6 +1304,11 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         } finally {
           if (preparingRun) preparingRuns--;
           if (!uploadsTransferred) preparedUploads?.release();
+          if (approvalId && !approvalRouted) {
+            // Rejected before dispatch: the worker never saw this decision.
+            leases.retry(approvalId);
+            notify("serve/approvalSnapshot", { approvals: leases.snapshot() });
+          }
         }
       };
       let queued = 0;
@@ -1580,7 +1617,7 @@ function replyToHostSessionQuery(
         data: {
           state,
           ...(legacy ? { outputJournal: journal, legacyBaseComplete: legacy.complete } : {}),
-          ...(runReplay ? runReplay.snapshot(sessionId, transcript) : { transcript }),
+          ...(runReplay ? runReplay.snapshot(sessionId, transcript, !!legacy) : { transcript }),
           running: isRunning(sessionId),
         },
       },

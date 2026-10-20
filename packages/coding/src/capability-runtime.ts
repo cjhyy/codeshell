@@ -77,7 +77,12 @@ export const gitDynamicContextProvider: CapabilityDynamicContextProvider = ({ cw
   const log = getGitLog(cwd, 5);
   const parts = [`gitStatus: Current branch: ${branch}`];
   if (status.length > 0) {
-    parts.push(`Status:\n${status.map((entry) => `${entry.status} ${entry.path}`).join("\n")}`);
+    const lines = status.map((entry) =>
+      entry.origPath
+        ? `${entry.status} ${entry.origPath} -> ${entry.path}`
+        : `${entry.status} ${entry.path}`,
+    );
+    parts.push(`Status:\n${lines.join("\n")}`);
   }
   if (log.length > 0) {
     parts.push(

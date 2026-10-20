@@ -38,6 +38,20 @@ describe("locateClosureWindow", () => {
     expect(window?.range).toEqual({ start: 0, end: 2 });
   });
 
+  // Regression (PET-R57-01): a boundary may be a filtered-out turn (an injected
+  // follow-up wake). It resolves to the position of the next kept message.
+  test("resolves a boundary on a filtered turn recorded as a preceding id", () => {
+    const withWake: ClosureMessage[] = [
+      ...messages.slice(0, 4),
+      { role: "assistant", text: "续办结果", precedingClientMessageIds: ["wake"] },
+      { role: "user", text: "新话题", clientMessageId: "c2" },
+    ];
+    expect(locateClosureWindow(withWake, "c0", "wake")?.range).toEqual({ start: 0, end: 4 });
+    const next = locateClosureWindow(withWake, "wake", "c2");
+    expect(next?.range).toEqual({ start: 4, end: 5 });
+    expect(next?.messages.map((m) => m.text)).toEqual(["续办结果"]);
+  });
+
   test("returns null when a boundary id is not in the transcript or window is empty", () => {
     expect(locateClosureWindow(messages, "missing", "c2")).toBeNull();
     expect(locateClosureWindow(messages, "c2", "c0")).toBeNull();

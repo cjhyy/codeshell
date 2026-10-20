@@ -56,6 +56,8 @@ export interface BrowserRuntimeLike {
   acquire(options: BrowserRuntimeAcquireOptions): Promise<BrowserRuntimeLease>;
   close(ownerId: string): void;
   closeAll(): void;
+  /** Abandon the owner's not-yet-submitted actions (its run was stopped). */
+  cancelPending?(ownerId: string): void;
 }
 
 export interface RuntimeTargetPool {
@@ -67,6 +69,7 @@ export interface RuntimeTargetPool {
   }): BackgroundBrowserLease;
   close(ownerId: string): void;
   closeAll(): void;
+  cancelPending?(ownerId: string): void;
 }
 
 export interface DesktopBrowserRuntimeOptions {
@@ -217,6 +220,10 @@ export class DesktopBrowserRuntime implements BrowserRuntimeLike {
     for (const backend of this.backends) backend.close(ownerId);
   }
 
+  cancelPending(ownerId: string): void {
+    for (const backend of this.backends) backend.cancelPending?.(ownerId);
+  }
+
   closeAll(): void {
     this.progressByOwner.clear();
     this.selectedBackendByOwner.clear();
@@ -325,7 +332,8 @@ function lazyBrowserBridge(resolve: () => Promise<BrowserBridge>): BrowserBridge
     scroll: async (dir, amount) => (await resolve()).scroll(dir, amount),
     readContent: async (options) => (await resolve()).readContent(options),
     extractLinks: async () => (await resolve()).extractLinks(),
-    waitForLoad: async (timeoutMs, condition) => (await resolve()).waitForLoad(timeoutMs, condition),
+    waitForLoad: async (timeoutMs, condition) =>
+      (await resolve()).waitForLoad(timeoutMs, condition),
     hover: async (ref) => (await resolve()).hover(ref),
     selectOption: async (ref, value) => (await resolve()).selectOption(ref, value),
     pressKey: async (key, ref) => (await resolve()).pressKey(key, ref),

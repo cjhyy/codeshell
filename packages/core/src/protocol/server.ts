@@ -23,6 +23,7 @@ import {
 import type { Transport } from "./transport.js";
 import { handleCancelRequest, handleSteerRequest, runOptions } from "./server-run-controls.js";
 import { deliverAsyncUserAnswer } from "./async-user-answer.js";
+import { queueGoalResumeTurn as queueGoalResume } from "./goal-resume-turn.js";
 import {
   type RpcRequest,
   type RunParams,
@@ -91,7 +92,8 @@ import type { ChatSession } from "./chat-session.js";
 import type { ChatSessionManager, EngineConfigSlice } from "./chat-session-manager.js";
 import { wakeSessionForBackgroundResults } from "./background-result-wakeup.js";
 import { assertSafeSessionId, SessionManager } from "../session/session-manager.js";
-import { redactLlmConfig, maskSecretValue } from "./redact.js";
+import { maskSecretValue } from "./redact.js";
+import { configQueryData } from "./config-query.js";
 import { redactSecrets } from "../logging/sanitize-messages.js";
 import type {
   ExtensionQueryHandler,
@@ -2316,31 +2318,20 @@ export class AgentServer {
     existing?: import("./chat-session.js").ChatSession,
   ): Promise<{ completion: Promise<boolean> } | null> {
     if (!this.chatManager) return null;
-    let session = existing;
-    if (!session) {
-      // Let ChatSessionManager probe through its configured Engine factory so
-      // custom sessionStorageDir roots stay aligned with the host. The generic
-      // background-wakeup helper's default SessionManager probe is not safe for
-      // this cold-resume path.
-      session =
-        (await this.chatManager.getOrCreatePersisted(sessionId, {
-          projectTrusted: false,
-        })) ?? undefined;
-      if (!session) return null;
-      this.wireInteractiveSession(session, sessionId);
-    }
-    if (session.engine.isHeadless()) return null;
-    return {
-      completion: session
-        .enqueueGoalResumeTurn(goal, {
-          onStream: (event: StreamEvent) => {
-            this.observeSessionStream(sessionId, event);
-            this.notify(Methods.StreamEvent, { sessionId, event });
-          },
-          approvalRouter: this.approvalRouter,
-        })
-        .finally(() => this.observeRunBoundary(sessionId, "end")),
-    };
+    return queueGoalResume({
+      sessionId,
+      goal,
+      existing,
+      manager: this.chatManager,
+      wire: (session) => this.wireInteractiveSession(session, sessionId),
+      resolveWorkspace: (session) => this.resolveSessionTurnWorkspace(session, sessionId),
+      onStream: (event: StreamEvent) => {
+        this.observeSessionStream(sessionId, event);
+        this.notify(Methods.StreamEvent, { sessionId, event });
+      },
+      approvalRouter: this.approvalRouter,
+      onEnd: () => this.observeRunBoundary(sessionId, "end"),
+    });
   }
 
   private reconcileFailedGoalResume(
@@ -2374,19 +2365,18 @@ export class AgentServer {
     if (rolledBack && claimedOwner && this.approvalRouter.matches(claimedOwner)) {
       this.approvalRouter.release(sessionId, this.connectionId, "goal resume turn was not queued");
     }
+    const detail = error instanceof Error ? error.message : String(error);
     logger.warn("goal.resume_turn_not_queued", {
       sessionId,
       goalId: goal.goalId,
       revision: goal.revision,
-      error: error instanceof Error ? error.message : String(error),
+      error: detail,
     });
     this.notify(Methods.StreamEvent, {
       sessionId,
       event: {
         type: "error",
-        error: rolledBack
-          ? "Goal resume could not start; the Goal was paused again"
-          : "Goal resume could not start; Goal state changed before rollback",
+        error: `Goal resume could not start (${detail}); ${rolledBack ? "the Goal was paused again" : "Goal state changed before rollback"}`,
       },
     });
   }
@@ -3183,27 +3173,8 @@ export class AgentServer {
           "config",
         );
         if (!configEngine) return;
-        const config = configEngine.getConfig();
         this.transport.send(
-          createResponse(req.id, {
-            type: "config",
-            data: {
-              permissionMode: config.permissionMode ?? "default",
-              planMode: configEngine.planMode ?? false,
-              preset: config.preset,
-              model: config.llm.model,
-              cwd: config.cwd,
-              maxContextTokens: config.maxContextTokens,
-              // apiKey is redacted at this boundary: clients only get
-              // hasApiKey + optional apiKeyPreview. See protocol/redact.ts.
-              llm: redactLlmConfig(config.llm),
-              // Resolved feature flags (defaults merged with settings overlay)
-              // so the /features command can list current state.
-              featureFlags: configEngine.getFeatureFlags(),
-              // Effective permission rules so /permissions can list them (TODO 5.1).
-              permissionRules: configEngine.getPermissionRules(),
-            },
-          }),
+          createResponse(req.id, { type: "config", data: configQueryData(configEngine) }),
         );
         break;
       }
@@ -4017,14 +3988,7 @@ export class AgentServer {
           continuation: { ...continuation, approvalRouter: this.approvalRouter },
           requestingRun,
           isCurrent,
-          resolveWorkspace: async () => {
-            if (this.workspaceBridgeEnabled) {
-              const workspace = await this.resolveHostSessionWorkspace(session, sessionId);
-              this.rememberSessionSlice(sessionId, workspace);
-              return workspace;
-            }
-            return session.engine.resolveSessionRunWorkspace?.(sessionId) ?? {};
-          },
+          resolveWorkspace: () => this.resolveSessionTurnWorkspace(session, sessionId),
           onStream: (event) => {
             this.observeSessionStream(sessionId, event);
             this.notify(Methods.StreamEvent, { sessionId, event });
@@ -4469,6 +4433,15 @@ export class AgentServer {
   }
 
   /** The same host authority resolves both dispatched turns and their reply wakeups. */
+  /** Host-authoritative workspace for a Core-started turn on an existing Session. */
+  private async resolveSessionTurnWorkspace(session: ChatSession, sessionId: string) {
+    if (!this.workspaceBridgeEnabled)
+      return session.engine.resolveSessionRunWorkspace?.(sessionId) ?? {};
+    const workspace = await this.resolveHostSessionWorkspace(session, sessionId);
+    this.rememberSessionSlice(sessionId, workspace);
+    return workspace;
+  }
+
   private async resolveHostSessionWorkspace(
     source: ChatSession,
     targetId: string,

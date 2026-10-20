@@ -96,6 +96,19 @@ describe("automation-service", () => {
     sched.stopAll();
   });
 
+  test("an auto-disabled job keeps its reason in the summary until it is resumed", async () => {
+    const job = await createAutomation({ name: "x", schedule: "1h", prompt: "p" });
+    expect(getAutomation(job.id)?.disabledReason).toBeNull();
+    sched.disableWithReason(job.id, "续接的对话已被删除,已停止该定时任务");
+    expect(getAutomation(job.id)).toMatchObject({
+      enabled: false,
+      disabledReason: "续接的对话已被删除,已停止该定时任务",
+    });
+    expect(resumeAutomation(job.id)).toBe(true);
+    expect(getAutomation(job.id)?.disabledReason).toBeNull();
+    sched.stopAll();
+  });
+
   test("update changes prompt + schedule and returns the new summary", async () => {
     const job = await createAutomation({ name: "j", schedule: "1h", prompt: "old" });
     const updated = await updateAutomation(job.id, {

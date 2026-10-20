@@ -235,11 +235,11 @@ export const migrateRepoBucketOverrides = migrateProjectBucketOverrides;
  * Seeding useState from localStorage on mount fixes that. Mirrors the
  * loadPanelState/savePanelState contract above (empty clears the key).
  */
-function overrideMapKey(namespace: string): string {
+export function overrideMapKey(namespace: string): string {
   return `codeshell.overrides.${namespace}`;
 }
 
-function isTransientOverrideBucket(bucket: string): boolean {
+export function isTransientOverrideBucket(bucket: string): boolean {
   return isDraftBucket(bucket) || bucket.startsWith("__quick_chat__::");
 }
 

@@ -3,8 +3,11 @@ import { constants } from "node:fs";
 import { chmod, lstat, mkdir, open, readdir, rm } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { join } from "node:path";
+import { lockSync } from "@cjhyy/code-shell-core/internal";
 import {
+  isStageableImageMime,
   markAttachmentsSent,
+  MAX_STAGED_IMAGE_BYTES,
   stageFileBytes,
   stageImageBytes,
   type InputAttachmentMeta,
@@ -12,6 +15,16 @@ import {
 
 const MAX_BYTES = 20 * 1024 * 1024;
 const TTL_MS = 15 * 60 * 1000;
+/** Instance leases are renewed every 10s; a lease idle for 30s belongs to a dead Host. */
+const LEASE_STALE_MS = 30_000;
+const LEASE_UPDATE_MS = 10_000;
+const UUID = "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}";
+const LEGACY_SPOOL = new RegExp(`^${UUID}\\.upload$`);
+const INSTANCE_ENTRY = new RegExp(`^(instance-${UUID})(?:\\.lock)?$`);
+
+/** Image MIME types go through image staging; everything else is staged as a file. */
+const routesToImageStaging = (mimeType: string): boolean =>
+  mimeType.startsWith("image/") && mimeType !== "image/svg+xml";
 const SAFE_ID = /^[a-zA-Z0-9_-]{8,80}$/;
 // Match the session/history boundary so existing dotted session IDs can attach files.
 const SAFE_SESSION_ID = /^(?!.*\.\.)[A-Za-z0-9_-][A-Za-z0-9_.-]{0,127}$/;
@@ -54,20 +67,68 @@ export class HubUploads {
   private readonly uploads = new Map<string, Upload>();
   private readonly active = new Set<IncomingMessage>();
   private closed = false;
+  /** This Host's own spool directory, held by a renewed lease while it runs. */
+  private readonly spool: string;
+  private releaseLease?: () => void;
 
   constructor(
     private readonly root: string,
     private readonly cwd: string,
-  ) {}
+  ) {
+    this.spool = join(root, `instance-${randomUUID()}`);
+  }
 
   async ready(): Promise<void> {
     await mkdir(this.root, { recursive: true, mode: 0o700 });
     const info = await lstat(this.root);
     if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("unsafe upload directory");
     await chmod(this.root, 0o700);
-    // A pending draft cannot survive a restart; staged attachments live in the workspace.
+    // A pending draft cannot survive a restart; staged attachments live in the
+    // workspace. Several Hosts (a duplicate launch that has not bound its port
+    // yet, or another port) can share this root, so reclaim only spools that
+    // are provably unused instead of everything present.
+    await this.reclaimAbandoned();
+    await mkdir(this.spool, { mode: 0o700 });
+    this.releaseLease = lockSync(this.spool, {
+      stale: LEASE_STALE_MS,
+      update: LEASE_UPDATE_MS,
+      realpath: false,
+      retries: 0,
+      // A lost lease only risks another Host reclaiming these drafts; sends then
+      // fail with "upload not found", which the client already handles.
+      onCompromised: () => {},
+    });
+  }
+
+  private async reclaimAbandoned(): Promise<void> {
+    const instances = new Set<string>();
     for (const name of await readdir(this.root)) {
-      if (/^[a-f0-9-]{36}\.upload$/.test(name)) await rm(join(this.root, name), { force: true });
+      const instance = INSTANCE_ENTRY.exec(name)?.[1];
+      if (instance) {
+        instances.add(instance);
+        continue;
+      }
+      // Hosts before instance leases spooled into the root. An older live Host
+      // rejects anything past the TTL, so only expired files are safe to remove.
+      if (!LEGACY_SPOOL.test(name)) continue;
+      const path = join(this.root, name);
+      const entry = await lstat(path).catch(() => undefined);
+      if (entry?.isFile() && Date.now() - entry.mtimeMs >= TTL_MS) await rm(path, { force: true });
+    }
+    for (const instance of instances) {
+      const path = join(this.root, instance);
+      let release: () => void;
+      try {
+        // Succeeds only when no live Host renews this instance's lease.
+        release = lockSync(path, { stale: LEASE_STALE_MS, realpath: false, retries: 0 });
+      } catch {
+        continue;
+      }
+      try {
+        await rm(path, { recursive: true, force: true });
+      } finally {
+        release();
+      }
     }
   }
 
@@ -97,6 +158,19 @@ export class HubUploads {
     if (!req.headers["content-length"]) return reject(411, "content length required");
     if (!Number.isSafeInteger(size) || size <= 0) return reject(400, "empty or invalid upload");
     if (size > MAX_BYTES) return reject(413, "attachment exceeds 20 MiB");
+    const mimeType = String(req.headers["content-type"] ?? "application/octet-stream")
+      .split(";", 1)[0]!
+      .trim()
+      .toLowerCase();
+    if (mimeType.length > 128 || !/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(mimeType)) {
+      return reject(400, "invalid content type");
+    }
+    // Admit only what the send path can stage, so a draft never looks
+    // uploaded and then fails on every Send.
+    if (routesToImageStaging(mimeType)) {
+      if (!isStageableImageMime(mimeType)) return reject(415, "unsupported image type");
+      if (size > MAX_STAGED_IMAGE_BYTES) return reject(413, "image exceeds 10 MiB");
+    }
     if (
       [...this.uploads.values()].reduce((sum, entry) => sum + entry.size, size) >
       128 * 1024 * 1024
@@ -112,20 +186,13 @@ export class HubUploads {
     if (!name.trim() || name.length > 255 || /[\x00-\x1f/\\]/.test(name)) {
       return reject(400, "invalid file name");
     }
-    const mimeType = String(req.headers["content-type"] ?? "application/octet-stream")
-      .split(";", 1)[0]!
-      .trim()
-      .toLowerCase();
-    if (mimeType.length > 128 || !/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(mimeType)) {
-      return reject(400, "invalid content type");
-    }
     const upload: Upload = {
       id,
       owner,
       name,
       mimeType,
       size,
-      path: join(this.root, `${randomUUID()}.upload`),
+      path: join(this.spool, `${randomUUID()}.upload`),
       createdAt: Date.now(),
       status: "receiving",
     };
@@ -136,8 +203,11 @@ export class HubUploads {
     deadline.unref?.();
     try {
       // Recheck the managed root: a workspace tool must not redirect the upload writer via symlink.
-      if (!(await lstat(this.root)).isDirectory() || (await lstat(this.root)).isSymbolicLink()) {
-        throw new Error("unsafe upload directory");
+      for (const directory of [this.root, this.spool]) {
+        const current = await lstat(directory);
+        if (!current.isDirectory() || current.isSymbolicLink()) {
+          throw new Error("unsafe upload directory");
+        }
       }
       handle = await open(
         upload.path,
@@ -219,7 +289,7 @@ export class HubUploads {
           origin: "mobile" as const,
         };
         result.push(
-          record.mimeType.startsWith("image/") && record.mimeType !== "image/svg+xml"
+          routesToImageStaging(record.mimeType)
             ? await stageImageBytes(input)
             : await stageFileBytes(input),
         );
@@ -249,6 +319,19 @@ export class HubUploads {
     }
   }
 
+  /**
+   * Drop an owner's unsent upload, for example when it is removed from the
+   * draft. An upload being claimed by a send stays put. Returns whether the
+   * upload was discarded.
+   */
+  async discard(id: string, owner: string): Promise<boolean> {
+    const record = this.uploads.get(id);
+    if (!record || record.owner !== owner || record.status !== "ready") return false;
+    this.uploads.delete(id);
+    await rm(record.path, { force: true });
+    return true;
+  }
+
   async sweep(): Promise<void> {
     for (const [id, record] of this.uploads) {
       if (record.status === "ready" && Date.now() - record.createdAt >= TTL_MS) {
@@ -263,5 +346,14 @@ export class HubUploads {
     for (const req of this.active) req.destroy();
     for (const record of this.uploads.values()) await rm(record.path, { force: true });
     this.uploads.clear();
+    if (this.releaseLease) {
+      await rm(this.spool, { recursive: true, force: true });
+      try {
+        this.releaseLease();
+      } catch {
+        /* A compromised lease has nothing left to release. */
+      }
+      this.releaseLease = undefined;
+    }
   }
 }

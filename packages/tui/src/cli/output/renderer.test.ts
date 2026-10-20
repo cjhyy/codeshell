@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { stripVTControlCharacters } from "node:util";
 import { createRenderer } from "./renderer.js";
 import type { StreamEvent, TerminalReason } from "@cjhyy/code-shell-core";
 
@@ -107,5 +108,33 @@ describe("output renderers — schema contracts", () => {
     expect(stderrChunks.join("")).not.toContain("已加载图片");
     expect(stderrChunks.join("")).not.toContain("image/png");
     expect(stderrChunks.join("")).not.toContain("12 KB");
+  });
+
+  test("json fallback text excludes sub-agent output", () => {
+    const r = createRenderer("json");
+    r.onEvent({ type: "text_delta", text: "child-only-output", agentId: "agent-1" } as StreamEvent);
+    r.onEvent({ type: "text_delta", text: "parent " } as StreamEvent);
+    r.onEvent({ type: "text_delta", text: "partial" } as StreamEvent);
+    r.onComplete("", "aborted_streaming", meta);
+    restore();
+    expect(JSON.parse(chunks[0]).result).toBe("parent partial");
+  });
+
+  test("text renderer counts Glob matches, not its header or status lines", () => {
+    const r = createRenderer("text");
+    const glob = (result: string) =>
+      r.onEvent({
+        type: "tool_result",
+        result: { id: "call_1", toolName: "Glob", result },
+      } as StreamEvent);
+    glob("1 files matched:\nsrc/a.ts  (10B)");
+    glob("No files matched the pattern.");
+    const many = Array.from({ length: 200 }, (_, i) => `f${i}.ts  (1B)`).join("\n");
+    glob(`${many}\n\n... and 5 more files (205 total)`);
+    restore();
+    const out = stripVTControlCharacters(stderrChunks.join(""));
+    expect(out).toContain("Glob 1 files");
+    expect(out).toContain("Glob 0 files");
+    expect(out).toContain("Glob 205 files");
   });
 });

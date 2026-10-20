@@ -70,6 +70,7 @@ async function main(args = process.argv.slice(2)): Promise<void> {
   const stop = () => shutdown.abort();
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
+  let gatewayTask: Promise<void> | undefined;
   try {
     const desktop = new DesktopControlClient(config.desktop);
     const adapters = await Promise.all(
@@ -112,7 +113,7 @@ async function main(args = process.argv.slice(2)): Promise<void> {
     console.log(
       `[code-shell-chat] gateway 已启动：${config.channels.map(({ channel }) => channel).join(", ")}`,
     );
-    const gatewayTask = gateway.run(shutdown.signal);
+    gatewayTask = gateway.run(shutdown.signal);
     const notificationTask = desktop.watchEvents(
       shutdown.signal,
       createDesktopNotificationHandler(adapters, config.notifications, {
@@ -140,6 +141,9 @@ async function main(args = process.argv.slice(2)): Promise<void> {
     shutdown.abort();
     process.off("SIGINT", stop);
     process.off("SIGTERM", stop);
+    // The inbox belongs to this lease until the gateway has settled its writes,
+    // even when the notification watcher failed first.
+    await gatewayTask?.catch(() => undefined);
     lease.release();
   }
 }

@@ -145,8 +145,10 @@ function parseOneHunk(lines: string[], offset: number, lineNumber: number): OneH
 
     const chunks: UpdateFileChunk[] = [];
     while (cursor < lines.length) {
-      // Skip blank lines between chunks.
-      if (lines[cursor].trim() === "") {
+      // Skip blank lines between chunks. The first chunk may omit `@@`, so a
+      // space-marked line there is whitespace context, not a separator.
+      const leadingContext = chunks.length === 0 && lines[cursor].startsWith(" ");
+      if (lines[cursor].trim() === "" && !leadingContext) {
         cursor++;
         consumed++;
         continue;

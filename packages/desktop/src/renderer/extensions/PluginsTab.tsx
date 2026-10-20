@@ -37,6 +37,8 @@ interface Props {
   configurationTarget: RendererConfigurationTarget;
   query: string;
   isEnabled: (p: PluginSummary) => boolean;
+  /** False until the enable/disable state is authoritative; switches stay inert. */
+  toggleReady?: boolean;
   onToggle: (p: PluginSummary, next: boolean) => void;
   onChanged: () => void;
 }
@@ -46,6 +48,7 @@ export function PluginsTab({
   configurationTarget,
   query,
   isEnabled,
+  toggleReady = true,
   onToggle,
   onChanged,
 }: Props) {
@@ -460,6 +463,7 @@ export function PluginsTab({
                 <Switch
                   aria-label={t("ext.plugins.toggle", { name: p.displayName })}
                   checked={isEnabled(p)}
+                  disabled={!toggleReady}
                   onCheckedChange={(v) => onToggle(p, v)}
                 />
                 <DropdownMenu>

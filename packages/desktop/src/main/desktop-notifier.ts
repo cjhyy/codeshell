@@ -48,6 +48,7 @@ export class DesktopNotifier {
   private receipts = new Map<string, DesktopNotificationReceipt>();
   private loadPromise: Promise<void> | undefined;
   private mutationQueue: Promise<unknown> = Promise.resolve();
+  private ordinaryQueue: Promise<unknown> = Promise.resolve();
   private notifyTimes: number[] = [];
 
   constructor(
@@ -56,10 +57,32 @@ export class DesktopNotifier {
   ) {}
 
   notify(input: DesktopNotificationInput): Promise<DesktopNotificationOutcome> {
+    // Urgent notices bypass the rate limit, so their single attempt never waits.
+    if (input.urgent) return this.deliver(input);
+    // Ordinary notifications keep their FIFO order among themselves but wait
+    // for a rate slot OUTSIDE the mutation queue, so an urgent notice is never
+    // held behind a throttled completion. Every attempt re-checks
+    // dedupe/focus/support inside the queue before showing.
+    const run = this.ordinaryQueue.catch(() => undefined).then(() => this.deliver(input));
+    this.ordinaryQueue = run.catch(() => undefined);
+    return run;
+  }
+
+  private async deliver(input: DesktopNotificationInput): Promise<DesktopNotificationOutcome> {
+    for (;;) {
+      const attempt = await this.serialized(() => this.notifyLoaded(input));
+      if (typeof attempt === "string") return attempt;
+      await (this.dependencies.sleep?.(attempt.retryAfterMs) ??
+        new Promise<void>((resolve) => setTimeout(resolve, attempt.retryAfterMs)));
+    }
+  }
+
+  /** Receipt reads, dedupe, show and the durable commit run one at a time. */
+  private serialized<T>(task: () => Promise<T>): Promise<T> {
     const run = this.mutationQueue
       .catch(() => undefined)
       .then(() => this.load())
-      .then(() => this.notifyLoaded(input));
+      .then(task);
     this.mutationQueue = run.catch(() => undefined);
     return run;
   }
@@ -118,7 +141,9 @@ export class DesktopNotifier {
     }
   }
 
-  private async notifyLoaded(input: DesktopNotificationInput): Promise<DesktopNotificationOutcome> {
+  private async notifyLoaded(
+    input: DesktopNotificationInput,
+  ): Promise<DesktopNotificationOutcome | { retryAfterMs: number }> {
     if (!validKey(input.key)) throw new Error("desktop notification key is invalid");
     if (!validTitle(input.title)) throw new Error("desktop notification title is invalid");
     if (typeof input.body !== "string") throw new Error("desktop notification body is invalid");
@@ -131,7 +156,11 @@ export class DesktopNotifier {
 
     // Urgent lifecycle failures bypass burst throttling. Ordinary completions
     // wait for a slot instead of silently dropping the sixth notification.
-    const now = input.urgent ? this.now() : await this.waitForRateSlot();
+    const now = this.now();
+    if (!input.urgent) {
+      const retryAfterMs = this.rateDelay(now);
+      if (retryAfterMs > 0) return { retryAfterMs };
+    }
 
     try {
       this.dependencies.show({
@@ -165,7 +194,8 @@ export class DesktopNotifier {
     return this.dependencies.now?.() ?? Date.now();
   }
 
-  private async waitForRateSlot(): Promise<number> {
+  /** 0 when an ordinary notification may show at `now`, else the wait in ms. */
+  private rateDelay(now: number): number {
     const rateWindowMs = this.dependencies.rateWindowMs ?? RATE_WINDOW_MS;
     const maxNotifications =
       this.dependencies.maxNotificationsPerWindow ?? MAX_NOTIFICATIONS_PER_WINDOW;
@@ -176,14 +206,9 @@ export class DesktopNotifier {
       throw new Error("desktop notification rate limit must be a positive integer");
     }
 
-    for (;;) {
-      const now = this.now();
-      this.notifyTimes = this.notifyTimes.filter((shownAt) => now - shownAt < rateWindowMs);
-      if (this.notifyTimes.length < maxNotifications) return now;
-      const delayMs = Math.max(1, this.notifyTimes[0]! + rateWindowMs - now);
-      await (this.dependencies.sleep?.(delayMs) ??
-        new Promise<void>((resolve) => setTimeout(resolve, delayMs)));
-    }
+    this.notifyTimes = this.notifyTimes.filter((shownAt) => now - shownAt < rateWindowMs);
+    if (this.notifyTimes.length < maxNotifications) return 0;
+    return Math.max(1, this.notifyTimes[0]! + rateWindowMs - now);
   }
 }
 

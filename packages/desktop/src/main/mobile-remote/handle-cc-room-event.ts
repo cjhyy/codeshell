@@ -33,6 +33,14 @@ export async function handleCcRoomEvent(
     else if (deviceId) ctx.remote.sendToDevice(deviceId, e);
     else ctx.remote.broadcast(e);
   };
+  // Approval prompts are pushed once. A viewer that was viewing another
+  // conversation or offline at that moment rebuilds the cards it missed
+  // whenever it (re)opens the room; the CLI is still waiting for them.
+  const replayPendingApprovals = (roomId: string): void => {
+    for (const req of ctx.approvalBridge.pendingRequests(roomId)) {
+      reply({ type: "ccRoom.approvalRequest", roomId, req });
+    }
+  };
   try {
     if (event.type === "ccRoom.probe") {
       const kind = event.kind ?? "claude-code";
@@ -72,7 +80,10 @@ export async function handleCcRoomEvent(
         roomId,
         sessionId: event.sessionId,
         status,
+        // openForSession persists and (re)spawns with exactly this mode.
+        permissionMode: mode,
       });
+      replayPendingApprovals(roomId);
       return;
     }
     if (event.type === "ccRoom.subscribeTranscript") {
@@ -94,6 +105,7 @@ export async function handleCcRoomEvent(
         sessionId: event.sessionId,
         ...snapshot,
       });
+      replayPendingApprovals(event.roomId);
       return;
     }
     if (event.type === "ccRoom.unsubscribeTranscript") {

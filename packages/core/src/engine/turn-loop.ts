@@ -1691,6 +1691,18 @@ export class TurnLoop {
 
           this.config.onStream?.({ type: "tool_result", result: streamResult });
         }
+        // The model facade already persisted every tool_use of the response,
+        // including calls the cap dropped. Close those durably so replay and
+        // full fork do not see pending calls; live messages omit them instead.
+        for (const tc of droppedToolCalls) {
+          this.deps.transcript.appendToolUse(tc.toolName, tc.id, tc.args);
+          this.deps.transcript.appendToolResult(
+            tc.id,
+            tc.toolName,
+            undefined,
+            `Tool call was not executed: the per-turn limit of ${this.config.maxToolCallsPerTurn} tool calls was exceeded.`,
+          );
+        }
 
         // Fire-and-forget tool use summary (non-blocking). The whole chain is
         // best-effort observability — a thrown onStream handler, a failed dynamic

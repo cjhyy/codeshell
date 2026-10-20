@@ -600,26 +600,36 @@ function SkillEditor({
 }) {
   const [name, setName] = React.useState(detail?.name ?? "my-skill");
   const [content, setContent] = React.useState(detail?.content ?? newSkillContent("my-skill"));
-  const dirty = content !== detail?.content;
+  // The revision a save is based on. After a conflict the user can read the
+  // latest version and explicitly adopt it as the base for their draft; the
+  // page refresh alone never moves it, so another device's save is not
+  // overwritten silently.
+  const [base, setBase] = React.useState(detail);
+  const [conflict, setConflict] = React.useState(false);
+  const [latest, setLatest] = React.useState<SkillDetail | null>(null);
+  const dirty = content !== base?.content;
   const editable = !detail || detail.editable;
   React.useEffect(() => {
     onDirtyChange(
       editable &&
-        (detail
-          ? content !== detail.content
+        (base
+          ? content !== base.content
           : name !== "my-skill" || content !== newSkillContent("my-skill")),
     );
-  }, [content, name, detail, editable, onDirtyChange]);
+  }, [content, name, base, editable, onDirtyChange]);
   return (
     <form
       className="skills-editor"
       onSubmit={(event) => {
         event.preventDefault();
         void run(
-          detail ? "正在保存 Skill" : "正在创建 Skill",
+          base ? "正在保存 Skill" : "正在创建 Skill",
           (signal) =>
-            detail
-              ? editSkill(detail.name, content, detail.revision, signal)
+            base
+              ? editSkill(base.name, content, base.revision, signal).catch((cause) => {
+                  if (cause instanceof ApiError && cause.status === 409) setConflict(true);
+                  throw cause;
+                })
               : createSkill(name.trim(), content, signal),
           true,
         ).then((result) => {
@@ -650,7 +660,7 @@ function SkillEditor({
         <label>
           <span>
             {editable ? "SKILL.md" : "说明"}
-            {detail && editable && dirty && <small className="skills-unsaved">未保存</small>}
+            {base && editable && dirty && <small className="skills-unsaved">未保存</small>}
           </span>
           <textarea
             value={content}
@@ -661,6 +671,52 @@ function SkillEditor({
             aria-label="SKILL.md 内容"
           />
         </label>
+        {base && editable && conflict && (
+          <div className="skills-conflict" role="alert">
+            <p className="config-help">
+              这个 Skill 已在其他地方修改。你的草稿仍保留；请读取最新版本核对后再决定是否保存。
+            </p>
+            {latest ? (
+              <>
+                <label>
+                  <span>最新版本</span>
+                  <textarea
+                    value={latest.content}
+                    readOnly
+                    rows={10}
+                    spellCheck={false}
+                    aria-label="最新版本内容"
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="config-button"
+                  onClick={() => {
+                    setBase(latest);
+                    setLatest(null);
+                    setConflict(false);
+                  }}
+                >
+                  基于最新版本保存我的草稿
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="config-button"
+                onClick={() => {
+                  void run("正在读取最新 Skill", (signal) =>
+                    readManagedSkill(base.name, signal),
+                  ).then((next) => {
+                    if (next) setLatest(next);
+                  });
+                }}
+              >
+                读取最新版本
+              </button>
+            )}
+          </div>
+        )}
         {detail?.origin && editable && (
           <p className="config-help">
             手动编辑会保留 GitHub 来源；以后更新来源时，会预览将替换的完整内容。
@@ -674,11 +730,9 @@ function SkillEditor({
             <button
               className="config-button config-button-primary"
               type="submit"
-              disabled={
-                !content.trim() || (!detail && !validSkillName(name)) || (!!detail && !dirty)
-              }
+              disabled={!content.trim() || (!base && !validSkillName(name)) || (!!base && !dirty)}
             >
-              {detail ? "保存修改" : "创建 Skill"}
+              {base ? "保存修改" : "创建 Skill"}
             </button>
           </div>
         )}

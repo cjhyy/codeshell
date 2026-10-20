@@ -26,7 +26,10 @@ import {
   type CollectionDocumentRead,
 } from "../../sources/adapters/collection.js";
 import { collectionConfig } from "../../sources/collection.js";
-import { collectionLocalDirectoryIdentity } from "../../sources/collection-local.js";
+import {
+  CollectionOriginalChangedError,
+  collectionLocalDirectoryIdentity,
+} from "../../sources/collection-local.js";
 import { defaultCredentialStatus } from "../../sources/credential-status.js";
 import { HIGH_PRIORITY_SOURCE_GUIDANCE } from "../../sources/context-summary.js";
 import { resolveEffectiveSourceAccess, type EffectiveSourceAccess } from "../../sources/resolve.js";
@@ -58,8 +61,14 @@ interface DocumentQueryService {
   query: string;
   reserveInputBytes(bytes: number): void;
   capture(receipt: DocumentQueryRead): void;
+  /** The exact read failed only because its selected local original changed. */
+  originalChanged(): void;
 }
 const mcpResourceAdapter = defaultMcpResourceAdapter();
+
+function changedOriginalMessage(selection: SelectedDocument): string {
+  return `Collection file "${selection.resource}" in scope "${selection.scope}" changed since selection; update the collection before reading`;
+}
 
 /** Registering the same adapter objects is safe to repeat across test/host imports. */
 export function registerBuiltinSourceAdapters(): void {
@@ -312,6 +321,18 @@ async function querySourceCollection(
   if (!ctx?.executeBoundTool || !ctx.previewToolPermission)
     return "Error: collection queries require the owning tool authorization pipeline.";
   const receipts: DocumentQueryRead[] = [];
+  // receipts[i] belongs to selected[i]; a changed original is named for recovery.
+  const assertReceiptsCurrent = () => {
+    for (const [index, original] of receipts.entries()) {
+      try {
+        original.assertCurrent();
+      } catch (error) {
+        if (error instanceof CollectionOriginalChangedError)
+          throw new Error(changedOriginalMessage(selected[index]!), { cause: error });
+        throw error;
+      }
+    }
+  };
   const deadline = new AbortController();
   const combined = signal ? AbortSignal.any([signal, deadline.signal]) : deadline.signal;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -423,6 +444,7 @@ async function querySourceCollection(
     for (const selection of selected) {
       assertAuthorized();
       let receipt: DocumentQueryRead | undefined;
+      let originalChanged = false;
       const service: DocumentQueryService = Object.freeze({
         source: access.sourceId,
         scope: selection.scope,
@@ -451,6 +473,9 @@ async function querySourceCollection(
           indexBytes += bytes;
           receipt = value;
         },
+        originalChanged() {
+          originalChanged = true;
+        },
       });
       pauseAuthorization();
       const result = boundToolResult(
@@ -469,13 +494,17 @@ async function querySourceCollection(
       );
       resumeComputation();
       assertAuthorized();
+      // Child error prose stays private. Only the selection and a typed,
+      // user-recoverable cause cross into this result.
       if (result.isError || !receipt)
         throw new Error(
-          "A selected document read was denied, failed or produced no trusted receipt",
+          originalChanged
+            ? changedOriginalMessage(selection)
+            : `The read of resource "${selection.resource}" in scope "${selection.scope}" was denied, failed or produced no trusted receipt`,
         );
       receipts.push(receipt);
       // Includes earlier files while a later approval/parse was awaiting.
-      for (const original of receipts) original.assertCurrent();
+      assertReceiptsCurrent();
     }
     const corpus = searchDocumentIndexes(
       receipts.map((item) => item.index),
@@ -524,7 +553,7 @@ async function querySourceCollection(
     }
     // No await between all local identity/hash checks and the final result.
     assertAuthorized();
-    for (const original of receipts) original.assertCurrent();
+    assertReceiptsCurrent();
     assertAuthorized();
     const wrapped = wrapUntrustedInput(
       output,
@@ -615,6 +644,9 @@ export async function readSourceTool(
   if (typeof args.resource !== "string" || !resource)
     return "Error: choose one exact resource or an explicit document resources query.";
 
+  const service = ctx?.boundToolServices?.get(documentQueryService) as
+    | DocumentQueryService
+    | undefined;
   try {
     // Validate resource ownership from the selected scope's metadata before
     // any content read. This prevents a valid id from another scope being used
@@ -630,9 +662,6 @@ export async function readSourceTool(
       return `Error: resource "${resource}" is not listed in scope "${scope}" for source "${source}".`;
     }
 
-    const service = ctx?.boundToolServices?.get(documentQueryService) as
-      | DocumentQueryService
-      | undefined;
     if (
       service &&
       (service.source !== source ||
@@ -683,8 +712,29 @@ export async function readSourceTool(
     const provenance = `source=${source} scope=${scope} resource=${resource}${
       truncated ? " (truncated)" : ""
     }`;
-    return wrapUntrustedInput(scrubSecrets(capped.text), provenance);
+    const structured = typeof query === "string" || typeof chunk === "string";
+    return wrapUntrustedInput(redactReadText(capped.text, structured), provenance);
   } catch (error) {
+    if (error instanceof CollectionOriginalChangedError) service?.originalChanged();
     return `Error: read failed: ${error instanceof Error ? error.message : String(error)}`;
   }
+}
+
+/**
+ * Query and chunk reads return serialized JSON. Free-text redaction would
+ * treat a JSON closing quote as part of a secret value and corrupt the
+ * document, so redact the parsed values and serialize again.
+ */
+function redactReadText(text: string, structured: boolean): string {
+  if (structured) {
+    try {
+      const parsed: unknown = JSON.parse(text);
+      if (parsed !== null && typeof parsed === "object") {
+        return JSON.stringify(scrubSecretValue(parsed));
+      }
+    } catch {
+      // Not (complete) JSON, e.g. truncated or adapter-defined text.
+    }
+  }
+  return scrubSecrets(text);
 }

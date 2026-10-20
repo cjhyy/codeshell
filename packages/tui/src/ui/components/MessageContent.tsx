@@ -155,13 +155,58 @@ const TABLE_COLUMN_PADDING = 2;
 const TABLE_MAX_COLUMN_WIDTH = 40;
 const TABLE_MIN_COLUMN_WIDTH = 6;
 
+// CommonMark fence: up to 3 spaces of indent, then 3+ backticks or tildes. A
+// closing fence uses the same character, is at least as long, and has no info string.
+const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
+
+/**
+ * Split a `| a | b |` row into cells. An escaped `\|` is part of the cell
+ * text (GFM tables), not a column boundary.
+ */
+function splitTableRow(line: string): string[] {
+  const cells: string[] = [];
+  let cell = "";
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === "\\" && line[i + 1] === "|") {
+      cell += "|";
+      i++;
+    } else if (line[i] === "|") {
+      cells.push(cell.trim());
+      cell = "";
+    } else {
+      cell += line[i];
+    }
+  }
+  cells.push(cell.trim());
+  return cells.slice(1, -1);
+}
+
 function extractTable(text: string): { before: string; table: TableData; after: string } | null {
   const lines = text.split("\n");
   let tableStart = -1;
   let tableEnd = -1;
   let sepLine = -1;
+  // Open code fence marker; table syntax inside a fence is literal code.
+  let fence: string | null = null;
 
   for (let i = 0; i < lines.length; i++) {
+    const fenceMatch = FENCE_RE.exec(lines[i]);
+    if (fence !== null) {
+      const closer = fenceMatch?.[1];
+      if (
+        closer &&
+        closer[0] === fence[0] &&
+        closer.length >= fence.length &&
+        !fenceMatch![2]!.trim()
+      ) {
+        fence = null;
+      }
+      continue;
+    }
+    if (fenceMatch && tableStart === -1) {
+      fence = fenceMatch[1]!;
+      continue;
+    }
     const line = lines[i].trim();
     if (line.startsWith("|") && line.endsWith("|")) {
       if (tableStart === -1) tableStart = i;
@@ -174,16 +219,10 @@ function extractTable(text: string): { before: string; table: TableData; after: 
 
   if (tableStart === -1 || sepLine === -1 || tableEnd - tableStart < 2) return null;
 
-  const parseRow = (line: string): string[] =>
-    line
-      .split("|")
-      .slice(1, -1)
-      .map((c) => c.trim());
-
-  const headers = parseRow(lines[tableStart]);
+  const headers = splitTableRow(lines[tableStart].trim());
   const rows: string[][] = [];
   for (let i = sepLine + 1; i <= tableEnd; i++) {
-    rows.push(parseRow(lines[i]));
+    rows.push(splitTableRow(lines[i].trim()));
   }
 
   return {

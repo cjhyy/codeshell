@@ -128,12 +128,23 @@ export class DeliveryQueue {
     this.pump();
   }
 
-  stop(): void {
+  /**
+   * Stop accepting and scheduling work. Resolves once no state write is in
+   * progress; afterwards this instance never writes the inbox again, so the
+   * caller may release its single-instance lease to a new owner. Deliveries
+   * still running keep their durable record and are replayed by that owner.
+   */
+  async stop(): Promise<void> {
     this.stopped = true;
     if (this.retryTimer) clearTimeout(this.retryTimer);
     this.retryTimer = undefined;
     if (this.persistRetryTimer) clearTimeout(this.persistRetryTimer);
     this.persistRetryTimer = undefined;
+    let tail: Promise<void>;
+    do {
+      tail = this.mutation;
+      await tail;
+    } while (tail !== this.mutation);
   }
 
   status(): DeliveryQueueStatus {
@@ -147,7 +158,8 @@ export class DeliveryQueue {
 
   async enqueue(adapterId: string, message: ChannelMessage): Promise<"queued" | "duplicate"> {
     if (this.stopped) throw new Error("Chat Gateway inbox is stopped");
-    const dedupeKey = deliveryDedupeKey(message);
+    const dedupeKey = deliveryDedupeKey(adapterId, message);
+    const legacyDedupeKey = legacyDeliveryDedupeKey(message);
     const id = randomUUID();
     const target = targetKey(message);
     let previousPreparation: Promise<void> | undefined;
@@ -159,6 +171,9 @@ export class DeliveryQueue {
       if (
         dedupeKey &&
         (this.completed.has(dedupeKey) ||
+          // Completed keys persisted before keys named the account cannot say
+          // which account accepted them; stay conservative until they expire.
+          (legacyDedupeKey !== undefined && this.completed.has(legacyDedupeKey)) ||
           this.pending.some((entry) => entry.dedupeKey === dedupeKey) ||
           [...this.preparing.values()].some((candidate) => candidate === dedupeKey))
       ) {
@@ -177,13 +192,14 @@ export class DeliveryQueue {
     });
     if (!reserved) return "duplicate";
 
-    // attachment.load() may perform an unbounded network read. The reservation
-    // above preserves dedupe/backpressure, while doing the I/O here prevents one
-    // slow attachment from blocking every enqueue and terminal state write.
-    const spooled = await this.spoolAttachments(id, message);
-    await previousPreparation;
+    let spooled: SpooledAttachment[] | undefined;
     let record: DeliveryRecord | undefined;
     try {
+      // attachment.load() may perform an unbounded network read. The reservation
+      // above preserves dedupe/backpressure, while doing the I/O here prevents one
+      // slow attachment from blocking every enqueue and terminal state write.
+      spooled = await this.spoolAttachments(id, message);
+      await previousPreparation;
       await this.withMutation(async () => {
         try {
           if (this.stopped) throw new Error("Chat Gateway inbox is stopped");
@@ -216,6 +232,7 @@ export class DeliveryQueue {
         }
       });
     } catch (error) {
+      this.preparing.delete(id);
       await this.discardSpool(
         record ?? {
           id,
@@ -229,6 +246,9 @@ export class DeliveryQueue {
       );
       throw error;
     } finally {
+      // Same-target successors wait on this preparation. Even on failure,
+      // release it only after every earlier one so nothing overtakes them.
+      await previousPreparation;
       releasePreparation?.();
       if (this.preparationByTarget.get(target) === preparation) {
         this.preparationByTarget.delete(target);
@@ -284,6 +304,10 @@ export class DeliveryQueue {
         const targetCount = (this.targetInFlight.get(key) ?? 1) - 1;
         if (targetCount <= 0) this.targetInFlight.delete(key);
         else this.targetInFlight.set(key, targetCount);
+        // A stopped queue may already have handed the inbox to a new owner.
+        // Writing this instance's snapshot would erase that owner's accepted
+        // messages; leave the record (and its spool) for the owner to replay.
+        if (this.stopped) return;
 
         if (terminal) {
           // Success, or a permanently unroutable record: drop it so a message
@@ -323,6 +347,7 @@ export class DeliveryQueue {
       this.persistRetryTimer = undefined;
       if (this.stopped) return;
       void this.withMutation(async () => {
+        if (this.stopped) return;
         await this.persist();
         for (const [id, pendingCleanup] of this.persistRetryCleanups) {
           await this.discardSpool(pendingCleanup.entry);
@@ -346,9 +371,11 @@ export class DeliveryQueue {
   /**
    * Materialize a message's attachments to disk so the record can be persisted.
    *
-   * Returns undefined when there is nothing to spool, or when spooling fails —
-   * in which case the caller falls back to the old memory-only behaviour rather
-   * than dropping the message.
+   * Returns undefined when there is nothing to spool, or when the attachments
+   * cannot be materialized within the spool policy (too many, too large, or the
+   * platform download failed) — the caller then keeps the message memory-only.
+   * A local spool I/O failure throws instead: the durable inbox cannot record
+   * an ordinary attachment, so the platform must not be told it was accepted.
    */
   private async spoolAttachments(
     recordId: string,
@@ -358,16 +385,29 @@ export class DeliveryQueue {
     const dir = this.spoolDir();
     if (!attachments?.length || !dir) return undefined;
     const limit = this.config.maxSpooledAttachmentBytes ?? 16 * 1024 * 1024;
+    if (attachments.length > MAX_SPOOLED_ATTACHMENTS) return undefined;
     const written: string[] = [];
+    const discardWritten = () =>
+      Promise.all(written.map((target) => rm(target, { force: true }).catch(() => undefined)));
     try {
-      if (attachments.length > MAX_SPOOLED_ATTACHMENTS) return undefined;
       await ensureRealDirectory(dir);
       const spooled: SpooledAttachment[] = [];
       for (const [index, attachment] of attachments.entries()) {
-        const bytes = await attachment.load();
+        let bytes: Uint8Array;
+        try {
+          bytes = await attachment.load();
+        } catch {
+          // A failed platform download keeps the memory-only path; delivery
+          // retries the original load().
+          await discardWritten();
+          return undefined;
+        }
         // Oversized payloads stay in memory: spooling them would trade a lost
         // message for unbounded disk use.
-        if (bytes.byteLength > limit) throw new Error("attachment exceeds spool limit");
+        if (bytes.byteLength > limit) {
+          await discardWritten();
+          return undefined;
+        }
         const file = `${recordId}.${index}`;
         const target = `${dir}/${file}`;
         await writeFile(target, bytes, { mode: 0o600, flag: "wx" });
@@ -382,12 +422,9 @@ export class DeliveryQueue {
         });
       }
       return spooled;
-    } catch {
-      // Spooling is an availability improvement, never a new failure mode.
-      await Promise.all(
-        written.map((target) => rm(target, { force: true }).catch(() => undefined)),
-      );
-      return undefined;
+    } catch (error) {
+      await discardWritten();
+      throw error;
     }
   }
 
@@ -509,6 +546,12 @@ export class DeliveryQueue {
         const restored = this.rehydrateAttachments(entry.spooled);
         this.pending.push({
           ...entry,
+          // Records persisted before dedupe keys named the account carry the
+          // legacy key; the stored adapterId lets them join the new namespace.
+          ...(entry.dedupeKey !== undefined &&
+          entry.dedupeKey === legacyDeliveryDedupeKey(entry.message)
+            ? { dedupeKey: deliveryDedupeKey(entry.adapterId, entry.message) }
+            : {}),
           message: restored ? { ...entry.message, attachments: restored } : entry.message,
           persistent: true,
           nextAttemptAt: Date.now(),
@@ -592,7 +635,18 @@ export class DeliveryQueue {
   }
 }
 
-function deliveryDedupeKey(message: ChannelMessage): string | undefined {
+/**
+ * Platform message ids are only unique within one account: two accounts on the
+ * same channel can legitimately receive the same id, so the adapter is part of
+ * the key.
+ */
+function deliveryDedupeKey(adapterId: string, message: ChannelMessage): string | undefined {
+  const legacy = legacyDeliveryDedupeKey(message);
+  return legacy === undefined ? undefined : `${adapterId}\0${legacy}`;
+}
+
+/** Account-less key written by earlier versions; read-only compatibility. */
+function legacyDeliveryDedupeKey(message: ChannelMessage): string | undefined {
   return message.messageId
     ? `${message.channel}\0${message.target}\0${message.senderId}\0${message.messageId}`
     : undefined;

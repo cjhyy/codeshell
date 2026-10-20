@@ -692,6 +692,66 @@ export function useRunController({
       });
   };
 
+  // Idle bucket: send its next serialized queued turn. Either a 引导打断
+  // relay handoff (drain the WHOLE queue as one merged re-send) or a leftover
+  // queue (take the next item). Clear the relay marker once we fire.
+  const sendNextQueued = (bucket: string): void => {
+    const isRelay = relayingBuckets.has(bucket);
+    if (isRelay) {
+      const {
+        text,
+        displayText,
+        attachments,
+        ids,
+        state: next,
+      } = drainQueuedInput(queuedInputs, bucket);
+      ids.forEach((id) => {
+        steeredIdsRef.current.delete(id);
+        injectedSteerIdsRef.current.delete(id);
+      });
+      dispatch({ type: "remove_pending_steers", bucket, steerIds: ids });
+      setQueuedInputs(next);
+      setRelayingBuckets((prev) => {
+        if (!prev.has(bucket)) return prev;
+        const n = new Set(prev);
+        n.delete(bucket);
+        return n;
+      });
+      if (text !== null) send(text, { bucket, attachments, displayText });
+      return;
+    }
+    const { item, state: next } = dequeueQueuedInput(queuedInputs, bucket);
+    if (!item) {
+      setQueuedInputs(next);
+      return;
+    }
+    // The turn ended (busy→false). If this entry was already auto-steered into
+    // the engine but the turn finished BEFORE consuming it (no steer_injected),
+    // the entry is stranded in steerQueueBySid and would be eaten by the next
+    // run — re-sending it here as a fresh run would then double (one send +
+    // one leftover steer_injected). Revoke the stale steer first, so this
+    // send() is the single source. (cancel/turn-end does NOT clear the steer
+    // queue — same seam as the relay path's revokeSteeredForRelay.)
+    if (steeredIdsRef.current.has(item.id)) {
+      // Same as the steer path above: resolve from bucket so we revoke the
+      // stale steer on THIS session's engine, not runningBucketRef's.
+      const engineSessionId = resolveEngineSessionIdForBucket(bucket);
+      if (engineSessionId) void window.codeshell.unsteer(engineSessionId, item.id);
+      steeredIdsRef.current.delete(item.id);
+    }
+    injectedSteerIdsRef.current.delete(item.id);
+    dispatch({ type: "remove_pending_steers", bucket, steerIds: [item.id] });
+    setQueuedInputs(next);
+    if (item.text || (item.attachments?.length ?? 0) > 0) {
+      send(item.text, {
+        bucket,
+        clientMessageId: item.clientMessageId,
+        attachments: item.attachments,
+        displayText: item.displayText,
+      });
+    }
+  };
+
   useEffect(() => {
     if (!activeSessionId) return;
     const queued = queuedInputs[activeBucket];
@@ -768,64 +828,22 @@ export function useRunController({
       return;
     }
 
-    // !busy: no live run. Either a 引导打断 relay handoff (drain the WHOLE queue
-    // as one merged re-send) or a leftover queue typed while idle (take the next
-    // item). Clear the relay marker once we fire.
-    const isRelay = relayingBuckets.has(activeBucket);
-    if (isRelay) {
-      const {
-        text,
-        displayText,
-        attachments,
-        ids,
-        state: next,
-      } = drainQueuedInput(queuedInputs, activeBucket);
-      ids.forEach((id) => {
-        steeredIdsRef.current.delete(id);
-        injectedSteerIdsRef.current.delete(id);
-      });
-      dispatch({ type: "remove_pending_steers", bucket: activeBucket, steerIds: ids });
-      setQueuedInputs(next);
-      setRelayingBuckets((prev) => {
-        if (!prev.has(activeBucket)) return prev;
-        const n = new Set(prev);
-        n.delete(activeBucket);
-        return n;
-      });
-      if (text !== null) send(text, { bucket: activeBucket, attachments, displayText });
-      return;
-    }
-    const { item, state: next } = dequeueQueuedInput(queuedInputs, activeBucket);
-    if (!item) {
-      setQueuedInputs(next);
-      return;
-    }
-    // The turn ended (busy→false). If this entry was already auto-steered into
-    // the engine but the turn finished BEFORE consuming it (no steer_injected),
-    // the entry is stranded in steerQueueBySid and would be eaten by the next
-    // run — re-sending it here as a fresh run would then double (one send +
-    // one leftover steer_injected). Revoke the stale steer first, so this
-    // send() is the single source. (cancel/turn-end does NOT clear the steer
-    // queue — same seam as the relay path's revokeSteeredForRelay.)
-    if (steeredIdsRef.current.has(item.id)) {
-      // Same as the steer path above: resolve from activeBucket so we revoke the
-      // stale steer on THIS session's engine, not runningBucketRef's.
-      const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);
-      if (engineSessionId) void window.codeshell.unsteer(engineSessionId, item.id);
-      steeredIdsRef.current.delete(item.id);
-    }
-    injectedSteerIdsRef.current.delete(item.id);
-    dispatch({ type: "remove_pending_steers", bucket: activeBucket, steerIds: [item.id] });
-    setQueuedInputs(next);
-    if (item.text || (item.attachments?.length ?? 0) > 0) {
-      send(item.text, {
-        bucket: activeBucket,
-        clientMessageId: item.clientMessageId,
-        attachments: item.attachments,
-        displayText: item.displayText,
-      });
-    }
+    // !busy: no live run in the viewed conversation; send its next queued turn.
+    sendNextQueued(activeBucket);
   }, [busy, activeBucket, activeSessionId, queuedInputs, relayingBuckets]);
+
+  // A queued follow-up belongs to its conversation, not to the view. When a
+  // background conversation's run ends (external runtimes cannot steer, so
+  // they always wait for this), send its next serialized turn there.
+  useEffect(() => {
+    for (const bucket of Object.keys(queuedInputs)) {
+      if (bucket === activeBucket || busyKeys.has(bucket)) continue;
+      if (!queuedInputs[bucket]?.length || quickChatSessionIdFromBucket(bucket)) continue;
+      if (!parsePanelBucket(bucket).sessionId) continue;
+      sendNextQueued(bucket);
+      return; // one bucket per pass: its queue update re-runs this effect
+    }
+  }, [activeBucket, busyKeys, queuedInputs, relayingBuckets]);
 
   const newQueuedId = (): string =>
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"

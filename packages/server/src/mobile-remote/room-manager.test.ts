@@ -86,6 +86,7 @@ afterEach(() => {
 class FakeAgent implements RoomAgent {
   running = false;
   sent: string[] = [];
+  mode?: string;
   constructor(private readonly emit: (e: ResidentAgentEvent) => void) {}
   start() {
     this.running = true;
@@ -119,8 +120,9 @@ function makeManager(options?: {
   const mgr = new RoomManager({
     rootDir: dir,
     now: () => clock++,
-    createAgent: (_room, onEvent) => {
+    createAgent: (room, onEvent) => {
       const a = new FakeAgent(onEvent);
+      a.mode = room.permissionMode;
       agents.push(a);
       return a;
     },
@@ -152,6 +154,31 @@ describe("RoomManager", () => {
       expect(statSync(join(dir!, room.id, "messages.jsonl")).mode & 0o777).toBe(0o600);
     }
     expect(readdirSync(join(dir!, room.id)).some((name) => name.endsWith(".tmp"))).toBe(false);
+  });
+
+  // Regression (audit R3-04): the default name only split on "/", so a
+  // Windows cwd became the whole path, and a long one produced a name the
+  // metadata reader rejects (> 512), hiding the room it had just created.
+  test("default room name is the last cwd segment for Windows paths and stays readable", () => {
+    const { mgr } = makeManager();
+    const windows = mgr.createRoom({ cwd: String.raw`C:\work\project-name` });
+    expect(windows.name).toBe("project-name");
+    expect(mgr.createRoom({ cwd: "\\\\server\\share\\repo\\" }).name).toBe("repo");
+
+    const long = "C:\\" + Array.from({ length: 12 }, () => "directory".repeat(5)).join("\\");
+    expect(mgr.getRoom(mgr.createRoom({ cwd: `${long}\\project-name` }).id)?.name).toBe(
+      "project-name",
+    );
+
+    // A single over-long segment is bounded without splitting a surrogate pair.
+    const segment = "a".repeat(511) + "😀" + "b".repeat(100);
+    const bounded = mgr.createRoom({ cwd: `/work/${segment}` });
+    const stored = mgr.getRoom(bounded.id);
+    expect(stored?.name).toBe("a".repeat(511));
+    expect(mgr.listRooms().some((room) => room.id === bounded.id)).toBe(true);
+
+    // POSIX paths keep backslashes as ordinary name characters.
+    expect(mgr.createRoom({ cwd: String.raw`/work/a\b` }).name).toBe(String.raw`a\b`);
   });
 
   test("a torn JSONL tail blocks an active writer instead of concealing corruption", () => {
@@ -703,6 +730,41 @@ describe("RoomManager", () => {
     expect(agents).toHaveLength(1);
   });
 
+  test("a stale takeover retires a concurrently reopened bypass agent instead of reusing it", () => {
+    const target: LinkedSessionTarget = {
+      externalSessionId: "cc-shared",
+      cwd: "/tmp/p",
+      kind: "claude-code",
+    };
+    const { mgr, agents } = makeManager({ linkedSessions: [target] });
+    // View A observes the transcript and keeps its takeover button.
+    const observed = mgr.openLinkedSession(target.externalSessionId, target.cwd, target.kind);
+    // View B takes over and then explicitly reopens the session in bypass mode.
+    mgr.takeOverLinkedSession(observed.roomId, target.externalSessionId, target.cwd, target.kind);
+    mgr.openForSession(target.externalSessionId, target.cwd, "bypassPermissions", target.kind);
+    expect(agents.map((agent) => [agent.mode, agent.running])).toEqual([
+      ["default", false],
+      ["bypassPermissions", true],
+    ]);
+
+    const takenOver = mgr.takeOverLinkedSession(
+      observed.roomId,
+      target.externalSessionId,
+      target.cwd,
+      target.kind,
+    );
+    expect(takenOver).toMatchObject({ status: "running", mode: "default" });
+    const live = agents.filter((agent) => agent.running);
+    expect(live.map((agent) => agent.mode)).toEqual(["default"]);
+    mgr.send(observed.roomId, "after takeover");
+    expect(agents[1]?.sent).toEqual([]);
+    expect(live[0]?.sent).toEqual(["after takeover"]);
+
+    // Reopening with the mode now shown keeps the matching agent.
+    mgr.openForSession(target.externalSessionId, target.cwd, "default", target.kind);
+    expect(agents.filter((agent) => agent.running)).toEqual(live);
+  });
+
   test("openLinkedSession fails closed for a missing transcript without creating a room", () => {
     const { mgr, agents } = makeManager();
     expect(() => mgr.openLinkedSession("missing", "/tmp/project", "codex")).toThrow(/transcript/i);
@@ -907,6 +969,69 @@ describe("RoomManager", () => {
       {
         requestId: "ask-1",
         decision: { behavior: "allow", updatedInput: { ...input, answers: { "选哪个?": "乙" } } },
+      },
+    ]);
+  });
+
+  test("a multi-question AskUserQuestion forwards every question and settles once with all answers", () => {
+    dir = mkdtempSync(join(tmpdir(), "rooms-"));
+    let emit!: (e: ResidentAgentEvent) => void;
+    const forwarded: { requestId: string; askUser: unknown }[] = [];
+    const controls: { requestId: string; decision: unknown }[] = [];
+    const mgr = new RoomManager({
+      rootDir: dir,
+      createAgent: (_r, onEvent) => {
+        emit = onEvent;
+        return {
+          start() {},
+          send: () => true,
+          isRunning: () => true,
+          stop() {},
+          respondControl: (requestId, decision) => controls.push({ requestId, decision }),
+        };
+      },
+      onMessage: () => {},
+      onApprovalRequest: (_roomId, req) =>
+        forwarded.push({ requestId: req.requestId, askUser: req.askUser }),
+    });
+    const room = mgr.createRoom({ cwd: "/repo" });
+    mgr.open(room.id);
+    const input = {
+      questions: [
+        { question: "语言?", header: "Lang", options: [{ label: "TS" }, { label: "Go" }] },
+        { question: "测试?", options: [{ label: "单测" }, { label: "集成" }], multiSelect: true },
+      ],
+    };
+    emit({ type: "approval_request", requestId: "ask-2", toolName: "AskUserQuestion", input });
+    expect(forwarded).toEqual([
+      {
+        requestId: "ask-2",
+        askUser: {
+          question: "语言?",
+          header: "Lang",
+          options: ["TS", "Go"],
+          multiSelect: false,
+          questions: [
+            { question: "语言?", header: "Lang", options: ["TS", "Go"], multiSelect: false },
+            { question: "测试?", options: ["单测", "集成"], multiSelect: true },
+          ],
+        },
+      },
+    ]);
+
+    expect(
+      mgr.respondApproval(room.id, "ask-2", {
+        behavior: "allow",
+        answers: { "语言?": "Go", "测试?": "单测, 集成" },
+      }),
+    ).toBe(true);
+    expect(controls).toEqual([
+      {
+        requestId: "ask-2",
+        decision: {
+          behavior: "allow",
+          updatedInput: { ...input, answers: { "语言?": "Go", "测试?": "单测, 集成" } },
+        },
       },
     ]);
   });

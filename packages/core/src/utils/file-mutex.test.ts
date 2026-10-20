@@ -9,10 +9,23 @@
 // These tests spawn REAL processes so the cross-process path is what is
 // exercised — an in-process test would pass even with no lock at all.
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mutateJsonFile, writeFileAtomic } from "./file-mutex.js";
+import {
+  acquireFileLock,
+  acquireLockOnPath,
+  mutateJsonFile,
+  writeFileAtomic,
+} from "./file-mutex.js";
 
 const MUTEX_MODULE = join(import.meta.dir, "file-mutex.ts");
 
@@ -197,4 +210,52 @@ describe("mutateJsonFile", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   }, 60_000);
+});
+
+describe("lock acquisition errors", () => {
+  test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "a permission error fails immediately instead of blocking for the contention budget",
+    () => {
+      const dir = tmp();
+      const stateDir = join(dir, "hub");
+      mkdirSync(stateDir);
+      // The lock is created beside the state directory, so a read-only parent
+      // makes every attempt fail with EACCES. Retrying cannot fix that, and
+      // the retry loop sleeps synchronously, freezing the whole Host.
+      chmodSync(dir, 0o500);
+      try {
+        const started = Date.now();
+        let error: NodeJS.ErrnoException | undefined;
+        try {
+          acquireFileLock(join(stateDir, "auth.json"))();
+        } catch (caught) {
+          error = caught as NodeJS.ErrnoException;
+        }
+        expect(error?.code).toBe("EACCES");
+        expect(Date.now() - started).toBeLessThan(1_000);
+      } finally {
+        chmodSync(dir, 0o700);
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
+
+  test("a lock held by another holder is still retried until the deadline", () => {
+    const dir = tmp();
+    try {
+      const release = acquireLockOnPath(dir);
+      try {
+        const started = Date.now();
+        expect(() => acquireLockOnPath(dir, 150)).toThrow(
+          expect.objectContaining({ code: "ELOCKED" }),
+        );
+        expect(Date.now() - started).toBeGreaterThanOrEqual(150);
+      } finally {
+        release();
+      }
+      acquireLockOnPath(dir)();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

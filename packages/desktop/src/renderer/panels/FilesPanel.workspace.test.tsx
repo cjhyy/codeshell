@@ -519,4 +519,38 @@ describe("FilesPanel workspace identity", () => {
     expect(readSessionDirs).toContainEqual(["old-session", "new-primary", "/notes"]);
     expect(readProjectDirs).toEqual([]);
   });
+  test("keeps each root's own path for an unbound Session after Make primary", async () => {
+    // A summary fork inherits the old main folder before its first run binds
+    // a mainRootId; the project's current primary is now another folder.
+    project = {
+      id: "project-1",
+      name: "Project",
+      path: "/notes",
+      roots: [
+        { id: "old-main", path: "/repo", name: "repo", addedAt: 1 },
+        { id: "new-primary", path: "/notes", name: "notes", addedAt: 2 },
+      ],
+      primaryRootId: "new-primary",
+      addedAt: 1,
+    };
+    cwd = "/repo";
+    engineSessionId = "fork-session";
+    sessionMainRootId = undefined;
+    revealConsumed = true;
+    await render();
+
+    expect(readProjectDirs).toContainEqual(["project-1", "old-main", "/repo"]);
+    const select = rootSelectProps();
+    expect(select.options.map((option: { value: string }) => option.value)).toEqual([
+      "old-main",
+      "new-primary",
+    ]);
+    await act(async () => {
+      select.onChange("new-primary");
+      await flushMicrotasks();
+    });
+
+    expect(readProjectDirs).toContainEqual(["project-1", "new-primary", "/notes"]);
+    expect(readProjectDirs).not.toContainEqual(["project-1", "new-primary", "/repo"]);
+  });
 });

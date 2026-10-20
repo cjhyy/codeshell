@@ -184,10 +184,18 @@ export class NotificationDeliveryProgress {
   }
 
   private ensureLoaded(): Promise<void> {
-    this.loadTask ??= (async () => {
-      const loaded = await this.store?.load();
-      this.state = loaded ? cloneProgress(loaded) : undefined;
-    })();
+    if (!this.loadTask) {
+      const task = (async () => {
+        const loaded = await this.store?.load();
+        this.state = loaded ? cloneProgress(loaded) : undefined;
+      })();
+      // Forget a failed load so the watcher's next retry reads the store again
+      // instead of replaying the cached rejection forever.
+      task.catch(() => {
+        if (this.loadTask === task) this.loadTask = undefined;
+      });
+      this.loadTask = task;
+    }
     return this.loadTask;
   }
 

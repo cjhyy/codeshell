@@ -17,6 +17,7 @@ export interface SubmittedDraft {
  * which return to an empty value, so a late failure cannot undo user intent. */
 export class SessionDrafts {
   private readonly drafts = new Map<string, ComposerDraft>();
+  private readonly settled = new WeakSet<SubmittedDraft>();
 
   get(sessionId: string): ComposerDraft {
     return this.drafts.get(sessionId) ?? { text: "", files: [], revision: 0 };
@@ -51,12 +52,33 @@ export class SessionDrafts {
     return { sessionId, draft, clearedRevision: cleared.revision };
   }
 
-  restore(submitted: SubmittedDraft): boolean {
+  /**
+   * Put a submission that was not delivered back into its session's composer,
+   * at most once. "restored" means the composer now holds exactly that
+   * submission. When the user kept typing meanwhile, nothing they wrote is
+   * overwritten: the failed text and attachments are placed before it and the
+   * result is "merged". The failed submission is never dropped, because it
+   * may be the only copy of the task.
+   */
+  restore(submitted: SubmittedDraft): "restored" | "merged" | false {
+    if (this.settled.has(submitted)) return false;
+    this.settled.add(submitted);
     const current = this.get(submitted.sessionId);
-    if (current.revision !== submitted.clearedRevision || current.text || current.files.length)
-      return false;
-    this.update(submitted.sessionId, submitted.draft);
-    return true;
+    const { draft } = submitted;
+    if (!current.text && !current.files.length) {
+      this.update(submitted.sessionId, { text: draft.text, files: draft.files });
+      return "restored";
+    }
+    const restoredIds = new Set(draft.files.map((file) => file.id));
+    this.update(submitted.sessionId, {
+      text: !draft.text
+        ? current.text
+        : !current.text
+          ? draft.text
+          : `${draft.text}\n\n${current.text}`,
+      files: [...draft.files, ...current.files.filter((file) => !restoredIds.has(file.id))],
+    });
+    return "merged";
   }
 
   unsent(): Array<{ sessionId: string; draft: ComposerDraft }> {

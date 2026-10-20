@@ -1,10 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { listPlugins, uninstallPluginEntry } from "./plugins-service.js";
 import {
+  addMarketplaceFromInput,
   classifyLocalInstallError,
   installLocalPluginForUi,
+  installPluginForUi,
+  listPluginInstallJobsForUi,
   parseRecommendedMarketplaces,
   previewLocalPluginForUi,
 } from "./marketplace-service.js";
@@ -142,5 +147,82 @@ describe("reviewed local plugin installation", () => {
 
     expect(result).toEqual({ ok: true, name: "reviewed-local" });
     expect(existsSync(join(home, ".code-shell", "plugins", "reviewed-local"))).toBe(true);
+  });
+});
+
+describe("marketplace install jobs", () => {
+  let home: string;
+  let base: string;
+  let previousHome: string | undefined;
+
+  beforeEach(() => {
+    previousHome = process.env.HOME;
+    home = mkdtempSync(join(tmpdir(), "desktop-market-job-home-"));
+    base = mkdtempSync(join(tmpdir(), "desktop-market-job-source-"));
+    process.env.HOME = home;
+  });
+
+  afterEach(() => {
+    process.env.HOME = previousHome;
+    rmSync(home, { recursive: true, force: true });
+    rmSync(base, { recursive: true, force: true });
+  });
+
+  function git(cwd: string, args: string[]): void {
+    execFileSync("git", args, {
+      cwd,
+      env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" },
+      stdio: "pipe",
+    });
+  }
+
+  async function waitForJob(id: string, status: string): Promise<void> {
+    const started = Date.now();
+    while (listPluginInstallJobsForUi().find((job) => job.id === id)?.status !== status) {
+      if (Date.now() - started > 10_000) throw new Error(`job ${id} never reached ${status}`);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  }
+
+  test("an uninstalled plugin can be reinstalled from the same marketplace", async () => {
+    const market = "job-market";
+    const plugin = "job-plugin";
+    const repo = join(base, `${market}.git`);
+    mkdirSync(join(repo, ".claude-plugin"), { recursive: true });
+    mkdirSync(join(repo, "payload", ".claude-plugin"), { recursive: true });
+    writeFileSync(
+      join(repo, "payload", ".claude-plugin", "plugin.json"),
+      JSON.stringify({ name: plugin, version: "1.0.0" }),
+    );
+    writeFileSync(
+      join(repo, ".claude-plugin", "marketplace.json"),
+      JSON.stringify({
+        name: market,
+        owner: { name: "Fixture" },
+        plugins: [{ name: plugin, source: "./payload", version: "1.0.0" }],
+      }),
+    );
+    git(repo, ["init", "-q"]);
+    git(repo, ["add", "."]);
+    git(repo, ["-c", "user.email=t@t.t", "-c", "user.name=t", "commit", "-q", "-m", "v1"]);
+    expect(await addMarketplaceFromInput(repo)).toMatchObject({ ok: true, name: market });
+    const jobId = `${market}::${plugin}`;
+    const installed = () => listPlugins("").some((p) => p.installKey === `${plugin}@${market}`);
+
+    expect(await installPluginForUi(plugin, market)).toMatchObject({ ok: true });
+    await waitForJob(jobId, "installed");
+    expect(installed()).toBe(true);
+
+    uninstallPluginEntry(plugin, market);
+    expect(installed()).toBe(false);
+    // The earlier success no longer describes the installed inventory.
+    expect(listPluginInstallJobsForUi().find((job) => job.id === jobId)?.status).not.toBe(
+      "installed",
+    );
+
+    const again = await installPluginForUi(plugin, market);
+    expect(again.job?.status).not.toBe("installed");
+    await waitForJob(jobId, "installed");
+    expect(installed()).toBe(true);
   });
 });

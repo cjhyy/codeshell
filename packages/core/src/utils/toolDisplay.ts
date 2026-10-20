@@ -6,7 +6,7 @@
  * - cli/output/renderer.ts (headless text output)
  */
 
-import { sep } from "node:path";
+import * as path from "node:path";
 
 /** Maximum preview lines for tool output. */
 export const MAX_PREVIEW_LINES = 4;
@@ -21,15 +21,19 @@ const PATH_ARG_KEYS = new Set(["file_path", "path", "directory", "cwd"]);
 
 /**
  * Strip the cwd prefix from a path string for display. Paths outside
- * cwd, relative paths, and non-string values are returned unchanged.
+ * cwd and relative paths are returned unchanged. Absoluteness and containment
+ * use the platform path API, so Windows drive-letter paths shorten too.
  */
-function relativizePath(value: string): string {
-  if (!value || !value.startsWith("/")) return value;
-  const cwd = process.cwd();
-  const prefix = cwd.endsWith(sep) ? cwd : cwd + sep;
-  if (value === cwd) return ".";
-  if (value.startsWith(prefix)) return value.slice(prefix.length);
-  return value;
+export function relativizeDisplayPath(
+  value: string,
+  cwd: string = process.cwd(),
+  pathApi: Pick<typeof path, "isAbsolute" | "relative" | "sep"> = path,
+): string {
+  if (!value || !pathApi.isAbsolute(value)) return value;
+  const rel = pathApi.relative(cwd, value);
+  if (rel === "") return ".";
+  if (rel === ".." || rel.startsWith(`..${pathApi.sep}`) || pathApi.isAbsolute(rel)) return value;
+  return rel;
 }
 
 /** Tool name → display color for the dot indicator. */
@@ -89,7 +93,7 @@ export function formatToolArgs(toolName: string, args: Record<string, unknown>):
     if (v !== undefined && !k.startsWith("__")) {
       let s = String(v);
       if (toolName === "Bash" && k === "command") s = stripCdPrefix(s);
-      else if (PATH_ARG_KEYS.has(k)) s = relativizePath(s);
+      else if (PATH_ARG_KEYS.has(k)) s = relativizeDisplayPath(s);
       // Bash commands deserve more room than other args — the truncation
       // budget here used to swallow `git diff …` after a long cd prefix.
       const max = toolName === "Bash" && k === "command" ? MAX_LINE_WIDTH : 60;

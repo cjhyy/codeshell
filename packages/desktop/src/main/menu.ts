@@ -1,14 +1,51 @@
 import { Menu, MenuItem, app, BrowserWindow } from "electron";
 import { loadRecents } from "./recents-store.js";
 
+/** The project registry whose changes rewrite recents.json. */
+export interface AppMenuRecentsSource {
+  onChanged(listener: () => void): () => void;
+}
+
+/** The window that last installed the menu; only a fallback target. */
+let installingWindow: BrowserWindow | null = null;
+let recentsSubscribed = false;
+
+/**
+ * The application menu is shared by every window, so an action targets the
+ * window Electron reports as focused for the click, not the window whose
+ * creation last installed the menu.
+ */
+function sendToFocusedWindow(
+  focused: Electron.BaseWindow | undefined,
+  channel: string,
+  ...args: unknown[]
+): void {
+  const candidates = [focused, BrowserWindow.getFocusedWindow(), installingWindow];
+  const target = candidates.find(
+    (candidate): candidate is BrowserWindow =>
+      !!candidate && "webContents" in candidate && !candidate.isDestroyed(),
+  );
+  target?.webContents.send(channel, ...args);
+}
+
 /**
  * Build and install the app menu, including a dynamic "最近项目"
  * submenu populated from recents.json on each rebuild.
  *
- * Call `installAppMenu()` after window create, and again any time
- * recents change (we re-read the file each call).
+ * Call `installAppMenu()` after window create. With a recents source the
+ * menu also rebuilds whenever the project registry (and so recents) changes.
  */
-export async function installAppMenu(win: BrowserWindow): Promise<void> {
+export async function installAppMenu(
+  win: BrowserWindow,
+  recentsSource?: AppMenuRecentsSource,
+): Promise<void> {
+  installingWindow = win;
+  if (recentsSource && !recentsSubscribed) {
+    recentsSubscribed = true;
+    recentsSource.onChanged(() => {
+      if (installingWindow) void installAppMenu(installingWindow);
+    });
+  }
   const isMac = process.platform === "darwin";
   if (!isMac) {
     Menu.setApplicationMenu(null);
@@ -42,15 +79,15 @@ export async function installAppMenu(win: BrowserWindow): Promise<void> {
         {
           label: "新窗口",
           accelerator: "CmdOrCtrl+Shift+N",
-          click: () => {
-            win.webContents.send("menu:new-window");
+          click: (_item, focused) => {
+            sendToFocusedWindow(focused, "menu:new-window");
           },
         },
         {
           label: "添加项目…",
           accelerator: "CmdOrCtrl+O",
-          click: () => {
-            win.webContents.send("menu:add-project");
+          click: (_item, focused) => {
+            sendToFocusedWindow(focused, "menu:add-project");
           },
         },
         {
@@ -61,8 +98,8 @@ export async function installAppMenu(win: BrowserWindow): Promise<void> {
               : recents.map((r) => ({
                   label: r.name,
                   sublabel: r.path,
-                  click: () => {
-                    win.webContents.send("menu:open-recent", r);
+                  click: (_item, focused) => {
+                    sendToFocusedWindow(focused, "menu:open-recent", r);
                   },
                 })),
         },
@@ -84,8 +121,8 @@ export async function installAppMenu(win: BrowserWindow): Promise<void> {
         {
           label: "查找…",
           accelerator: "CmdOrCtrl+F",
-          click: () => {
-            win.webContents.send("menu:find");
+          click: (_item, focused) => {
+            sendToFocusedWindow(focused, "menu:find");
           },
         },
       ],
@@ -96,22 +133,22 @@ export async function installAppMenu(win: BrowserWindow): Promise<void> {
         {
           label: "命令面板…",
           accelerator: "CmdOrCtrl+K",
-          click: () => {
-            win.webContents.send("menu:palette");
+          click: (_item, focused) => {
+            sendToFocusedWindow(focused, "menu:palette");
           },
         },
         {
           label: "切换 侧栏",
           accelerator: "CmdOrCtrl+B",
-          click: () => {
-            win.webContents.send("menu:toggle-sidebar");
+          click: (_item, focused) => {
+            sendToFocusedWindow(focused, "menu:toggle-sidebar");
           },
         },
         {
           label: "查看当前会话的模型调用",
           accelerator: "CmdOrCtrl+I",
-          click: () => {
-            win.webContents.send("menu:toggle-inspector");
+          click: (_item, focused) => {
+            sendToFocusedWindow(focused, "menu:toggle-inspector");
           },
         },
         { type: "separator" },
