@@ -140,6 +140,13 @@ export type ChannelMessageHandler = (message: ChannelMessage) => Promise<void>;
 
 export interface ChannelAdapter {
   readonly channel: string;
+  /**
+   * Stable account identity among adapters sharing this channel. A durable
+   * gateway binds accepted messages to it, so reordering the adapter list can
+   * never replay one account's input through another. Required when a durable
+   * gateway runs several adapters for the same channel.
+   */
+  readonly accountId?: string;
   readonly capabilities?: ChannelCapabilities;
   /**
    * True only when one visible platform request atomically publishes both the

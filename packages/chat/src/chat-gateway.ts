@@ -122,6 +122,7 @@ export class ChatGateway {
 
   async run(signal: AbortSignal): Promise<void> {
     if (this.startedAt) throw new Error("ChatGateway is already running");
+    const adapterById = routableAdapterIds(this.adapters, Boolean(this.delivery.path));
     this.startedAt = Date.now();
     const ownedAbort = new AbortController();
     const stopOwned = () => ownedAbort.abort();
@@ -129,28 +130,10 @@ export class ChatGateway {
     else signal.addEventListener("abort", stopOwned, { once: true });
 
     const webhooks: WebhookRegistration[] = [];
-    const adapterById = new Map<string, ChannelAdapter>();
-    // Key adapters by a per-channel ordinal (channel:0, channel:1, …) rather
-    // than the global array index. Delivery-queue records persist this id and
-    // are replayed on the next run; a global index would shift when an
-    // unrelated channel is removed from config, orphaning durable messages
-    // against an id that no longer maps to their adapter.
-    const perChannelCount = new Map<string, number>();
-    for (const adapter of this.adapters) {
-      const ordinal = perChannelCount.get(adapter.channel) ?? 0;
-      perChannelCount.set(adapter.channel, ordinal + 1);
-      adapterById.set(`${adapter.channel}:${ordinal}`, adapter);
-    }
     const queue = new DeliveryQueue(
       this.delivery,
       async (adapterId, message) => {
-        const adapter = adapterById.get(adapterId);
-        if (!adapter) {
-          // A durable record survived a config change that removed its adapter.
-          // Signal unroutable so the queue drops it instead of retrying forever.
-          throw new UnroutableDeliveryError(`Chat adapter no longer exists: ${adapterId}`);
-        }
-        await this.dispatch(adapter, message);
+        await this.dispatch(resolveDurableAdapter(adapterById, adapterId), message);
       },
       this.onError,
     );
@@ -234,6 +217,75 @@ export class ChatGateway {
     this.adapterStates.set(state.id, state);
     this.onAdapterState?.({ ...state });
   }
+}
+
+const MAX_ACCOUNT_ID_LENGTH = 128;
+
+/**
+ * Delivery-queue records persist the adapter id and are replayed on the next
+ * run, so the id must keep naming the same account across config edits.
+ * Adapters with an `accountId` use `channel@account`. Others keep the historic
+ * per-channel ordinal (`channel:0`), which is stable only while the channel has
+ * one adapter — a durable gateway therefore requires account identities for a
+ * multi-account channel instead of letting a reorder swap accounts.
+ */
+function routableAdapterIds(
+  adapters: readonly ChannelAdapter[],
+  durable: boolean,
+): Map<string, ChannelAdapter> {
+  const perChannel = new Map<string, ChannelAdapter[]>();
+  for (const adapter of adapters) {
+    const accountId = adapter.accountId;
+    if (
+      accountId !== undefined &&
+      (typeof accountId !== "string" ||
+        !accountId ||
+        accountId.length > MAX_ACCOUNT_ID_LENGTH ||
+        /[\u0000-\u001f\u007f]/u.test(accountId))
+    ) {
+      throw new Error(`Chat adapter ${adapter.channel} has an invalid accountId`);
+    }
+    perChannel.set(adapter.channel, [...(perChannel.get(adapter.channel) ?? []), adapter]);
+  }
+  const byId = new Map<string, ChannelAdapter>();
+  for (const [channel, members] of perChannel) {
+    if (durable && members.length > 1 && members.some(({ accountId }) => !accountId)) {
+      throw new Error(
+        `Durable chat delivery needs a unique accountId for every ${channel} adapter`,
+      );
+    }
+    for (const [ordinal, adapter] of members.entries()) {
+      const id = adapter.accountId ? `${channel}@${adapter.accountId}` : `${channel}:${ordinal}`;
+      if (byId.has(id)) {
+        throw new Error(`Duplicate ${channel} adapter accountId: ${adapter.accountId}`);
+      }
+      byId.set(id, adapter);
+    }
+  }
+  return byId;
+}
+
+/** Resolve a persisted adapter id without ever falling back to another account. */
+function resolveDurableAdapter(
+  adapterById: ReadonlyMap<string, ChannelAdapter>,
+  adapterId: string,
+): ChannelAdapter {
+  const exact = adapterById.get(adapterId);
+  if (exact) return exact;
+  const legacy = /^(.+):(\d+)$/u.exec(adapterId);
+  const channel = legacy?.[1] ?? adapterId.slice(0, Math.max(0, adapterId.indexOf("@")));
+  const members = [...adapterById.values()].filter((adapter) => adapter.channel === channel);
+  // A legacy ordinal record written while this channel had a single adapter
+  // still belongs to that adapter after it gains an accountId.
+  if (legacy?.[2] === "0" && members.length === 1) return members[0]!;
+  if (legacy && members.length > 0) {
+    // The ordinal no longer identifies an account. Keep the durable record for
+    // the operator rather than dropping it or delivering through a guess.
+    throw new Error(`Chat adapter ${adapterId} is ambiguous; configure account identities`);
+  }
+  // A durable record survived a config change that removed its adapter.
+  // Signal unroutable so the queue drops it instead of retrying forever.
+  throw new UnroutableDeliveryError(`Chat adapter no longer exists: ${adapterId}`);
 }
 
 /** Deny-by-default allowlist middleware for multi-channel gateways. */
