@@ -429,6 +429,61 @@ describe("ChatView ephemeral async lifecycle", () => {
     clearTimer.mockRestore();
   });
 
+  test("a second click while the microphone is starting opens only one recording", async () => {
+    const tracks: Array<{ stop: ReturnType<typeof mock> }> = [];
+    let getUserMediaCalls = 0;
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: {
+        mediaDevices: {
+          getUserMedia: async () => {
+            getUserMediaCalls += 1;
+            const track = { stop: mock(() => undefined) };
+            tracks.push(track);
+            return { getTracks: () => [track] } as unknown as MediaStream;
+          },
+        },
+      },
+    });
+    Object.defineProperty(globalThis, "MediaRecorder", {
+      configurable: true,
+      value: FakeMediaRecorder,
+    });
+    const access = deferred<{ granted: boolean }>();
+    const mounted = await mountChatView({
+      codeshell: {
+        sttAvailable: async () => ({ available: true }),
+        ensureMicAccess: () => access.promise,
+        transcribeAudio: async () => ({ ok: true, text: "" }),
+      },
+    });
+    const mic = () => findElement(mounted, (props) => props["aria-label"] === "语音输入");
+    await act(async () => {
+      reactProps(mic()).onClick();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactProps(mic()).onClick();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      access.resolve({ granted: true });
+      await flushMicrotasks();
+    });
+    expect(getUserMediaCalls).toBe(1);
+    expect(FakeMediaRecorder.instances).toHaveLength(1);
+
+    await act(async () => {
+      root?.unmount();
+      root = null;
+      await flushMicrotasks();
+    });
+    expect(FakeMediaRecorder.instances.every((recorder) => recorder.state === "inactive")).toBe(
+      true,
+    );
+    expect(tracks.every((track) => track.stop.mock.calls.length === 1)).toBe(true);
+  });
+
   test("drops a transcription result that resolves after quick chat unmounts", async () => {
     const track = { stop: mock(() => undefined) };
     const stream = { getTracks: () => [track] } as unknown as MediaStream;

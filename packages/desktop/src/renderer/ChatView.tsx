@@ -655,6 +655,7 @@ export function ChatView({
   const mountedRef = useRef(true);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const voiceStartingRef = useRef(false);
   const audioChunksRef = useRef<Blob[]>([]);
   // Whether a transcription provider is configured (or fallback-reachable). When
   // false the mic button is disabled with a "configure in settings" tooltip,
@@ -752,6 +753,10 @@ export function ChatView({
   );
 
   const startRecording = useCallback(async () => {
+    // Mic permission and getUserMedia are awaited while voiceState is still
+    // idle; a second click in that window must not open a second recorder.
+    if (voiceStartingRef.current || mediaRecorderRef.current) return;
+    voiceStartingRef.current = true;
     try {
       // macOS gates the mic at the OS level — request access first so the user
       // gets the system prompt (and we surface a clear message if denied).
@@ -808,6 +813,8 @@ export function ChatView({
         variant: "error",
       });
       setVoiceState("idle");
+    } finally {
+      voiceStartingRef.current = false;
     }
   }, [transcribeChunks, toast, t]);
 
