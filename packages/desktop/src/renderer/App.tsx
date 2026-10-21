@@ -510,6 +510,20 @@ function App() {
    *  edit from rolling back a newer pause/edit/delete without letting an
    *  operation in another tab suppress this bucket's reconciliation. */
   const goalMutationSeqRef = useRef<Map<string, number>>(new Map());
+  // Buckets whose latest Goal control is still in flight. The Goal bar keeps its
+  // controls disabled meanwhile: a second click on the optimistic projection
+  // sent the opposite operation against a revision main had not reached yet.
+  const [goalPendingBuckets, setGoalPendingBuckets] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const markGoalPending = (bucket: string, pending: boolean): void =>
+    setGoalPendingBuckets((previous) => {
+      if (previous.has(bucket) === pending) return previous;
+      const next = new Set(previous);
+      if (pending) next.add(bucket);
+      else next.delete(bucket);
+      return next;
+    });
   /**
    * The no-repo sandbox cwd (~/.code-shell/no-repo), fetched once from Main.
    * State feeds the draft authority projection; the ref still serves callbacks
@@ -1881,6 +1895,9 @@ function App() {
             objective: persisted.goal,
             paused: persisted.paused ?? false,
             round: sameGoal ? before.round : 0,
+            ...((persisted.setAtMs ?? (sameGoal ? before.setAtMs : undefined))
+              ? { setAtMs: persisted.setAtMs ?? before.setAtMs }
+              : {}),
           },
         });
         return "active";
@@ -1932,6 +1949,7 @@ function App() {
     };
     const mutationSeq = (goalMutationSeqRef.current.get(bucket) ?? 0) + 1;
     goalMutationSeqRef.current.set(bucket, mutationSeq);
+    markGoalPending(bucket, true);
     dispatch({
       type: "stream",
       bucket,
@@ -1974,6 +1992,8 @@ function App() {
           error: error instanceof Error ? error.message : String(error),
         });
         await reconcileGoalMutation(eid, bucket, before, optimistic, mutationSeq);
+      } finally {
+        if (goalMutationSeqRef.current.get(bucket) === mutationSeq) markGoalPending(bucket, false);
       }
     })();
   };
@@ -2004,6 +2024,7 @@ function App() {
     const previousGoalToggle = goalOverrides[bucket] ?? false;
     const mutationSeq = (goalMutationSeqRef.current.get(bucket) ?? 0) + 1;
     goalMutationSeqRef.current.set(bucket, mutationSeq);
+    markGoalPending(bucket, true);
     dispatch({
       type: "stream",
       bucket,
@@ -2037,6 +2058,8 @@ function App() {
         if (reconciled === "active") {
           setGoalOverrides((prev) => ({ ...prev, [bucket]: previousGoalToggle }));
         }
+      } finally {
+        if (goalMutationSeqRef.current.get(bucket) === mutationSeq) markGoalPending(bucket, false);
       }
     })();
   };
@@ -2675,6 +2698,11 @@ function App() {
                     onPermissionChange={onPermissionChange}
                     goalEnabled={goalEnabled}
                     onGoalToggle={onGoalToggle}
+                    activeGoal={cloudSelected ? null : state.activeGoal}
+                    goalPending={goalPendingBuckets.has(activeBucket)}
+                    onUpdateGoal={handleUpdateGoal}
+                    onGoalPausedChange={handleGoalPausedChange}
+                    onDeleteGoal={handleDeleteGoal}
                     modelOptions={modelOptions}
                     activeModelKey={activeModelKey}
                     onModelChange={onModelChange}

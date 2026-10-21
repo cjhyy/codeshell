@@ -196,6 +196,8 @@ export function useRunController({
   }, [approvalQueue, setApproval, approvalBucketsRef]);
   const pendingLaunchesRef = useRef(new Map<string, { cancelled: boolean }>());
   const launchVersionsRef = useRef(new Map<string, symbol>());
+  // Queued ids that already asked a running external Goal to yield.
+  const goalYieldIdsRef = useRef(new Set<string>());
   const send = (
     text: string,
     sendOpts: {
@@ -784,8 +786,25 @@ export function useRunController({
       // External runtimes do not implement the native Engine's step-boundary
       // steer RPC. Leave the draft in the queue; the !busy branch sends it as
       // the next serialized turn after the current provider turn completes.
+      // A Goal keeps every continuation round in one submission, so ask it to
+      // yield at the next round boundary instead of waiting out the whole run.
       const queuedModelKey = modelOverrides[activeBucket] ?? defaultActiveModelKey;
-      if (parseExternalRuntimeModelKey(queuedModelKey)) return;
+      if (parseExternalRuntimeModelKey(queuedModelKey)) {
+        const goal = state.activeGoal;
+        const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);
+        const fresh = queued.filter((item) => !goalYieldIdsRef.current.has(item.id));
+        if (goal && !goal.paused && engineSessionId && fresh.length > 0) {
+          fresh.forEach((item) => goalYieldIdsRef.current.add(item.id));
+          void window.codeshell.externalRuntime?.yieldGoal?.(engineSessionId).catch((err) => {
+            window.codeshell.log("goal.yield_failed", {
+              bucket: activeBucket,
+              engineSessionId,
+              error: String((err as Error)?.message ?? err),
+            });
+          });
+        }
+        return;
+      }
       // Step-gap steering (默认, 不打断): hand each not-yet-sent queued draft to
       // the engine, which splices it into the running turn at its NEXT step
       // boundary. The item STAYS in the panel (visible + revocable) — it's only
@@ -850,7 +869,7 @@ export function useRunController({
 
     // !busy: no live run in the viewed conversation; send its next queued turn.
     sendNextQueued(activeBucket);
-  }, [busy, activeBucket, activeSessionId, queuedInputs, relayingBuckets]);
+  }, [busy, activeBucket, activeSessionId, queuedInputs, relayingBuckets, state.activeGoal]);
 
   // A queued follow-up belongs to its conversation, not to the view. When a
   // background conversation's run ends (external runtimes cannot steer, so
@@ -1005,9 +1024,8 @@ export function useRunController({
     // opts.relay = 引导打断 (handoff to a queued re-send). The compact stopped
     // status preserves the interrupted turn's elapsed time and expanded output;
     // the relayingBuckets marker set by the caller keeps
-    // liveTurnActive lit across the cancel→re-send gap. (relay no longer changes
-    // the turn_end dispatch — kept in the signature for call-site clarity.)
-    void opts;
+    // liveTurnActive lit across the cancel→re-send gap. relay does not change
+    // the turn_end dispatch; it keeps an external Goal active through the cancel.
     // The composer Stop button belongs to the VIEWED conversation (its
     // visibility is busy=busyKeys.has(activeBucket)), so default to activeBucket
     // — NOT the global runningBucket ref, which points at whichever conversation
@@ -1051,7 +1069,9 @@ export function useRunController({
     // closes out the killed turn (and clears the streaming pointers, which the
     // relay handoff needs anyway — see appendTurnEndMessage).
     dispatch({ type: "turn_end", bucket, reason: "stopped", elapsedMs });
-    void window.codeshell.cancel(engineSessionId);
+    // 打断发送 redirects a Goal rather than stopping it: an external runtime
+    // would otherwise pause the Goal and rebuild itself for the re-send.
+    void window.codeshell.cancel(engineSessionId, opts?.relay ? { keepGoal: true } : undefined);
   };
 
   // A Panel App submission may replace a session's external runtime from main.

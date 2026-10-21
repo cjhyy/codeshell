@@ -779,7 +779,11 @@ export class ExternalRuntimeService {
         "claim that a sub-agent was dispatched unless DriveAgent returned success. " +
         "When DriveAgent returns a background jobId, do not poll it or duplicate its work " +
         "locally. Unless the user explicitly requested concurrent work, finish the current " +
-        "turn; CodeShell will inject the completion and continue this same task automatically.",
+        "turn; CodeShell will inject the completion and continue this same task automatically. " +
+        "Start other agent CLIs only through DriveAgent: never launch codex exec, claude -p or " +
+        "a similar agent from a shell, because CodeShell cannot track, stop, notify on or " +
+        "account for such a process. Use background=true for anything that may take more " +
+        "than a few minutes; a foreground tool call is cut off by this runtime's tool timeout.",
       "CodeShell Desktop can play local audio and video inline in chat. " +
         "Save media artifacts inside this session's workspace and include a Markdown " +
         "embed such as ![Audio description](/absolute/path/audio.mp3) or " +
@@ -1557,10 +1561,22 @@ export class ExternalRuntimeService {
       : undefined;
   }
 
+  /** Let queued user input in after the current provider turn; see `yieldAfterTurn`. */
+  yieldGoal(sessionId: string, callerWebContentsId?: number): boolean {
+    this.assertOwner(sessionId, callerWebContentsId);
+    return this.goals.yieldAfterTurn(sessionId);
+  }
+
+  /**
+   * Stop the running provider turn. `keepGoal` is the interrupt-and-send path:
+   * the user is redirecting the Goal, not stopping it, so it stays active and
+   * the message that follows starts its next run. A plain Stop pauses it.
+   */
   async interrupt(
     sessionId: string,
     callerWebContentsId?: number,
     expected?: { session: ExternalRuntimeSession; runId: string },
+    options: { keepGoal?: boolean } = {},
   ): Promise<void> {
     this.assertOwner(sessionId, callerWebContentsId);
     const entry = this.sessions.get(sessionId);
@@ -1581,7 +1597,9 @@ export class ExternalRuntimeService {
       entry.lifecycle.interruptGeneration++;
     }
     const run = this.goals.running(sessionId);
-    if (run && this.goals.isCurrent(run)) this.goals.pause(run, "用户已停止本轮执行");
+    if (run && !options.keepGoal && this.goals.isCurrent(run)) {
+      this.goals.pause(run, "用户已停止本轮执行");
+    }
     this.goals.stop(sessionId);
     // A CLI result can settle its provider turn before process exit resolves
     // done. User Stop still aborts the open logical Goal in that narrow gap.

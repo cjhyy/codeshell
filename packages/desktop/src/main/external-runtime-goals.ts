@@ -34,6 +34,8 @@ export interface ExternalGoalRun {
   stopBlocks: number;
   lastOutput?: string;
   stopped: boolean;
+  /** End after the current provider turn without pausing (the user has input queued). */
+  yieldRequested?: boolean;
 }
 
 function positiveInteger(value: unknown): value is number {
@@ -87,6 +89,7 @@ export class ExternalRuntimeGoals {
       goal: goal?.objective ?? null,
       ...(goal?.goalId ? { goalId: goal.goalId } : {}),
       ...(goal?.revision ? { revision: goal.revision } : {}),
+      ...(goal?.setAtMs ? { setAtMs: goal.setAtMs } : {}),
       paused: goal?.paused === true,
     };
   }
@@ -115,6 +118,7 @@ export class ExternalRuntimeGoals {
         revision: goal.revision,
         objective: goal.objective,
         replaced: !!stored,
+        setAtMs: goal.setAtMs,
       });
     }
     if (!goal || goal.paused) return undefined;
@@ -148,6 +152,20 @@ export class ExternalRuntimeGoals {
   stop(sessionId: string): void {
     const run = this.runs.get(sessionId);
     if (run) run.stopped = true;
+  }
+
+  /**
+   * Let a queued user message in at the next provider-turn boundary. External
+   * runtimes cannot splice input into a running turn, and every continuation
+   * round lives inside one submission, so without this a typed message waited
+   * for the whole Goal run. The Goal stays active; the user's message starts
+   * the next run of it.
+   */
+  yieldAfterTurn(sessionId: string): boolean {
+    const run = this.runs.get(sessionId);
+    if (!run || !this.isCurrent(run)) return false;
+    run.yieldRequested = true;
+    return true;
   }
 
   end(run: ExternalGoalRun): void {
@@ -235,7 +253,7 @@ export class ExternalRuntimeGoals {
     if (Number.isFinite(tokens) && tokens > 0) run.tokensUsed += tokens;
     run.stopBlocks = run.lastOutput === output ? run.stopBlocks + 1 : 0;
     run.lastOutput = output;
-    if (!this.isCurrent(run)) return false;
+    if (!this.isCurrent(run) || run.yieldRequested) return false;
     const limit =
       run.tokenBudget !== undefined && run.tokensUsed >= run.tokenBudget
         ? "达到本轮 token 预算"
@@ -335,6 +353,7 @@ export class ExternalRuntimeGoals {
       "Only if the user explicitly cancels it, call mcp__codeshell_tools__cancel_goal with this goalId, revision, confirm=true and the user's reason.",
       "Use mcp__codeshell_tools__get_goal to check the current identity. Do not call the runtime's separate create_goal/update_goal tools for this CodeShell goal.",
       `This run allows ${run.maxTurns} provider turns and ${run.timeBudgetMs} ms${run.tokenBudget ? `, with ${run.tokenBudget} tokens` : ""}. If it pauses, do not claim completion.`,
+      "CodeShell sends automatic continuation messages (such as 继续处理尚未完成的目标 or 继续执行已保存的目标) to keep this goal moving. Such a message is not a reply from the user: it never answers a question you asked and never grants an approval you requested. If you are waiting for the user's decision (new permissions, installs, payments, deletion, publishing or other outward actions), do not proceed on that step; do other safe work or end your reply by restating the pending question.",
       "</codeshell_goal>",
     ].join("\n");
   }
@@ -346,6 +365,7 @@ export class ExternalRuntimeGoals {
       revision: goal.revision,
       objective: goal.objective,
       paused: goal.paused === true,
+      ...(goal.setAtMs ? { setAtMs: goal.setAtMs } : {}),
     });
   }
 }
