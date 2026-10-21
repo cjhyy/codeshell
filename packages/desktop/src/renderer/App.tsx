@@ -128,6 +128,7 @@ import { useNotificationSessionNavigation } from "./app/useNotificationSessionNa
 import { useSessionHistorySync } from "./app/useSessionHistorySync";
 import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
+import { useGoalPendingBuckets } from "./app/useGoalPendingBuckets";
 import { createChatLinkReadHandler } from "./chat/linkResourceIntents";
 import { usePanelBuckets } from "./app/usePanelBuckets";
 import { useViewTargets } from "./app/useViewTargets";
@@ -510,20 +511,7 @@ function App() {
    *  edit from rolling back a newer pause/edit/delete without letting an
    *  operation in another tab suppress this bucket's reconciliation. */
   const goalMutationSeqRef = useRef<Map<string, number>>(new Map());
-  // Buckets whose latest Goal control is still in flight. The Goal bar keeps its
-  // controls disabled meanwhile: a second click on the optimistic projection
-  // sent the opposite operation against a revision main had not reached yet.
-  const [goalPendingBuckets, setGoalPendingBuckets] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
-  const markGoalPending = (bucket: string, pending: boolean): void =>
-    setGoalPendingBuckets((previous) => {
-      if (previous.has(bucket) === pending) return previous;
-      const next = new Set(previous);
-      if (pending) next.add(bucket);
-      else next.delete(bucket);
-      return next;
-    });
+  const { goalPendingBuckets, markGoalPending } = useGoalPendingBuckets();
   /**
    * The no-repo sandbox cwd (~/.code-shell/no-repo), fetched once from Main.
    * State feeds the draft authority projection; the ref still serves callbacks
