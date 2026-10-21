@@ -4,6 +4,7 @@ import {
   ArrowUp,
   ArrowUpRight,
   ArrowDown,
+  Brain,
   CheckCircle2,
   FileText,
   FolderKanban,
@@ -14,6 +15,7 @@ import {
   Square,
   X,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   PetDelegationReceipt,
@@ -803,12 +805,14 @@ export function PetChatHost({
   modelOptions,
   onOpenSession,
   onOpenSettings,
+  onOpenMemory,
 }: {
   defaultProjectPath: string | null;
   defaultModelKey: string | null;
   modelOptions: ModelOption[];
   onOpenSession?: (request: PetOpenSessionRequest) => void;
   onOpenSettings?: () => void;
+  onOpenMemory?: () => void;
 }) {
   const { t } = useT();
   const dogIcon = usePetSprite();
@@ -835,6 +839,7 @@ export function PetChatHost({
   } = usePetState();
   const [error, setError] = React.useState<string | null>(null);
   const [dragOver, setDragOver] = React.useState(false);
+  const composerRef = React.useRef<HTMLTextAreaElement>(null);
   const pathAttachments = state.chatPathAttachments;
   const setPathAttachments = (next: string[] | ((current: string[]) => string[])): void =>
     dispatch({
@@ -944,6 +949,39 @@ export function PetChatHost({
 
   const setDraft = (draft: string): void => dispatch({ type: "set-chat-draft", draft });
 
+  const resizeComposer = React.useCallback(() => {
+    const input = composerRef.current;
+    if (!input) return;
+    input.style.height = "auto";
+    input.style.height = `${Math.min(168, Math.max(64, input.scrollHeight))}px`;
+  }, []);
+
+  React.useLayoutEffect(resizeComposer, [state.chatDraft, resizeComposer]);
+
+  React.useEffect(() => {
+    const input = composerRef.current;
+    if (!input || typeof ResizeObserver === "undefined") return;
+    let lastWidth = input.clientWidth;
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry || entry.contentRect.width === lastWidth) return;
+      lastWidth = entry.contentRect.width;
+      resizeComposer();
+    });
+    observer.observe(input);
+    return () => observer.disconnect();
+  }, [resizeComposer]);
+
+  React.useEffect(() => {
+    const focusComposer = () => composerRef.current?.focus();
+    window.addEventListener("codeshell:pet-compose", focusComposer);
+    return () => window.removeEventListener("codeshell:pet-compose", focusComposer);
+  }, []);
+
+  const preparePrompt = (draft: string): void => {
+    dispatch({ type: "insert-chat-prompt", draft });
+    composerRef.current?.focus();
+  };
+
   const dragHasFiles = (dataTransfer: DataTransfer | null): boolean => {
     if (!dataTransfer) return false;
     return (
@@ -1014,7 +1052,7 @@ export function PetChatHost({
 
   return (
     <section
-      className={`mimi-surface relative flex min-h-0 w-full flex-col overflow-hidden rounded-3xl @min-[1100px]/pet-page:col-start-1 @min-[1100px]/pet-page:row-start-1 @min-[1100px]/pet-page:max-w-[960px] @min-[1100px]/pet-page:justify-self-center ${
+      className={`mimi-surface mimi-chat-surface relative flex min-h-0 w-full flex-col overflow-hidden rounded-2xl @min-[1100px]/pet-page:col-start-1 @min-[1100px]/pet-page:row-start-1 ${
         dragOver ? "ring-2 ring-inset ring-primary/50" : ""
       }`}
       aria-label={t("pet.chat.title")}
@@ -1033,8 +1071,8 @@ export function PetChatHost({
           </div>
         </div>
       )}
-      <div className="@container/composer-controls flex items-center gap-3 border-b border-border/55 px-5 py-4 @min-[1440px]/pet-page:px-6 @min-[1440px]/pet-page:py-5">
-        <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+      <div className="@container/composer-controls flex flex-wrap items-center gap-3 border-b border-border/55 px-4 py-3 @min-[1440px]/pet-page:px-6 @min-[1440px]/pet-page:py-4">
+        <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/8">
           <img
             src={dogIcon}
             alt=""
@@ -1042,15 +1080,28 @@ export function PetChatHost({
             className="h-9 w-9 select-none object-contain"
           />
           <span
-            className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-status-ok"
+            className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card ${!petSessionId ? "bg-muted-foreground" : chatBusy ? "bg-status-running" : "bg-status-ok"}`}
             aria-hidden="true"
           />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold">{t("pet.chat.managerTitle")}</div>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">{t("pet.chat.subtitle")}</p>
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            {t("pet.chat.managerTitle")}
+            <span className="text-[10px] font-normal text-muted-foreground" role="status">
+              {t(
+                !petSessionId
+                  ? "pet.chat.connecting"
+                  : chatBusy
+                    ? "pet.chat.working"
+                    : "pet.chat.ready",
+              )}
+            </span>
+          </div>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {t("pet.chat.companionHint")}
+          </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="mimi-chat-tools flex max-w-full shrink-0 items-center gap-1.5">
           <ModelPill
             activeKey={effectiveModelKey}
             options={modelOptions}
@@ -1058,23 +1109,40 @@ export function PetChatHost({
             disabled={chatBusy || modelOptions.length === 0}
             portal
           />
-          {onOpenSettings && (
-            <button
+          {onOpenMemory && (
+            <Button
               type="button"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+              variant="ghost"
+              size="icon"
+              data-pet-open-memory="true"
+              className="h-9 w-9 shrink-0 rounded-lg text-muted-foreground"
+              aria-label={t("pet.settings.manageMemory")}
+              title={t("pet.settings.manageMemory")}
+              onClick={onOpenMemory}
+            >
+              <Brain size={16} aria-hidden="true" />
+            </Button>
+          )}
+          {onOpenSettings && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 shrink-0 rounded-lg text-muted-foreground"
               aria-label={t("pet.settings.open")}
               title={t("pet.settings.open")}
               onClick={onOpenSettings}
             >
               <Settings size={16} aria-hidden="true" />
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto bg-muted/15 px-4 py-5 @min-[1440px]/pet-page:px-5"
+        data-pet-chat-scroll="true"
+        className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,hsl(var(--cs-muted)/0.12),transparent_12rem)] [scrollbar-gutter:stable] overscroll-contain px-4 py-5 @min-[1440px]/pet-page:px-6"
         onScroll={(event) => {
           const scroller = event.currentTarget;
           followLatestRef.current =
@@ -1101,24 +1169,54 @@ export function PetChatHost({
           </div>
         )}
         {rows.length === 0 ? (
-          <div className="flex h-full min-h-56 items-center justify-center px-5 text-center">
-            <div className="max-w-xs">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl border border-primary/10 bg-primary/8 shadow-sm">
+          <div className="mimi-chat-welcome flex min-h-full items-center justify-center py-5 text-center">
+            <div className="w-full max-w-lg">
+              <div className="mx-auto mb-5 flex h-20 w-20 -rotate-[4deg] items-center justify-center rounded-[28px] border border-primary/10 bg-gradient-to-br from-primary/10 to-primary/[0.025] shadow-[0_8px_28px_hsl(var(--cs-primary)/0.045)]">
                 <img
                   src={dogIcon}
                   alt=""
                   draggable={false}
-                  className="h-14 w-14 select-none object-contain"
+                  className="h-16 w-16 rotate-[4deg] select-none object-contain"
                 />
               </div>
-              <h3 className="text-base font-semibold tracking-tight">{t("pet.chat.emptyTitle")}</h3>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              <h3 className="text-xl font-semibold tracking-tight @min-[1100px]/pet-page:text-2xl">
+                {t("pet.chat.emptyTitle")}
+              </h3>
+              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
                 {petSessionId ? t("pet.chat.empty") : t("pet.chat.loading")}
               </p>
+              {petSessionId && (
+                <div className="mimi-chat-suggestions mx-auto mt-6 grid max-w-md grid-cols-1 gap-2 text-left @min-[600px]/pet-page:grid-cols-3">
+                  {(["plan", "review", "recap"] as const).map((suggestion) => (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      key={suggestion}
+                      data-pet-chat-suggestion={suggestion}
+                      className="mimi-suggestion group h-auto min-w-0 justify-start [&_svg]:size-3.5 gap-3 whitespace-normal rounded-xl border border-border/65 bg-background/70 p-3 text-left font-normal transition hover:border-primary/30 hover:bg-primary/5 focus-visible:ring-primary/35 @min-[600px]/pet-page:flex-col @min-[600px]/pet-page:items-start @min-[600px]/pet-page:gap-2"
+                      onClick={() => preparePrompt(t(`pet.chat.suggestion.${suggestion}Prompt`))}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-medium">
+                          {t(`pet.chat.suggestion.${suggestion}`)}
+                        </span>
+                        <span className="mt-1 block text-[11px] leading-4 text-muted-foreground">
+                          {t(`pet.chat.suggestion.${suggestion}Hint`)}
+                        </span>
+                      </span>
+                      <ArrowUpRight
+                        size={14}
+                        className="shrink-0 text-muted-foreground transition group-hover:text-primary"
+                        aria-hidden="true"
+                      />
+                    </Button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ) : (
-          <div className="space-y-3.5">
+          <div className="mx-auto max-w-[840px] space-y-5">
             {rows.map((row) => (
               <PetChatRowView
                 key={row.id}
@@ -1202,8 +1300,8 @@ export function PetChatHost({
         </p>
       )}
 
-      <div className="shrink-0 p-4 pt-2 @min-[1440px]/pet-page:p-5 @min-[1440px]/pet-page:pt-3">
-        <div className="rounded-2xl border border-input/90 bg-background p-2 shadow-[0_8px_24px_hsl(var(--cs-foreground)/0.06)] transition focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10">
+      <div className="mimi-composer-wrap shrink-0 px-3 pb-3 pt-2 @min-[1440px]/pet-page:px-5 @min-[1440px]/pet-page:pb-4">
+        <div className="mimi-composer mx-auto max-w-[880px] rounded-2xl border border-input/80 bg-background p-2 shadow-[0_3px_12px_hsl(var(--cs-foreground)/0.035)] transition focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-primary/10">
           {pathAttachments.length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-1 pb-2" data-pet-path-attachments="true">
               {pathAttachments.map((path) => (
@@ -1232,6 +1330,8 @@ export function PetChatHost({
             </div>
           )}
           <textarea
+            ref={composerRef}
+            data-pet-composer="true"
             value={state.chatDraft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
@@ -1241,15 +1341,14 @@ export function PetChatHost({
               void submitToPet();
             }}
             rows={2}
-            className="w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-6 outline-none placeholder:text-muted-foreground/75"
+            className="block max-h-[min(168px,18svh)] min-h-16 w-full resize-none overflow-y-auto bg-transparent px-2 py-1.5 text-sm leading-6 outline-none placeholder:text-muted-foreground/75"
             placeholder={t("pet.chat.placeholder")}
             aria-label={t("pet.chat.placeholder")}
             disabled={!petSessionId}
           />
           <div className="flex items-end justify-between gap-3 px-1 pb-0.5">
             <p className="flex min-w-0 items-center gap-1.5 text-[10px] leading-4 text-muted-foreground">
-              <Sparkles size={11} className="shrink-0 text-primary" aria-hidden="true" />
-              <span className="line-clamp-2">{t("pet.chat.autoRoute")}</span>
+              <span className="line-clamp-2">{t("pet.chat.inputHint")}</span>
             </p>
             <div className="flex shrink-0 items-center gap-2">
               {chatCanStop && (
@@ -1267,7 +1366,7 @@ export function PetChatHost({
               )}
               <button
                 type="button"
-                className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-40"
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 disabled:opacity-40"
                 disabled={
                   (!state.chatDraft.trim() && pathAttachments.length === 0) || !petSessionId
                 }

@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import React from "react";
+import React, { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
+import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { PetPage } from "./PetPage";
 
 describe("PetPage", () => {
@@ -19,7 +21,10 @@ describe("PetPage", () => {
     expect(html).toContain("world pane");
     expect(html).toContain("chat slot");
     expect(html).toContain("@container/pet-page");
-    expect(html).toContain("@min-[1100px]/pet-page:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]");
+    expect(html).toContain("<h1");
+    expect(html).toContain('data-pet-workspace-layout="split"');
+    expect(html).toContain('data-pet-focus-mode="toggle"');
+    expect(html).toContain('aria-pressed="false"');
     expect(html).toContain("@min-[1100px]/pet-page:overflow-hidden");
   });
 
@@ -39,4 +44,59 @@ describe("PetPage", () => {
     expect(html).toContain("@min-[1100px]/pet-page:grid-rows-1");
     expect(html).toContain("@min-[1100px]/pet-page:overflow-hidden");
   });
+});
+
+/** Records the work rail's classes at the moment a child effect would scroll into it. */
+function RailProbe({ focus, seen }: { focus: boolean; seen: string[] }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!focus) return;
+    let node = ref.current?.parentNode as (Element & { parentNode: unknown }) | null;
+    const classes = (element: typeof node) => element?.getAttribute?.("class") ?? "";
+    while (node && !classes(node).includes("col-start-2")) {
+      node = node.parentNode as typeof node;
+    }
+    seen.push(node ? classes(node) : "missing");
+  }, [focus, seen]);
+  return <div ref={ref} />;
+}
+
+test("a reveal request unhides the work rail before its children scroll into it", async () => {
+  ensureMiniDom();
+  const container = document.createElement("div") as unknown as HTMLElement;
+  const root = createRoot(container);
+  const seen: string[] = [];
+  const render = async (reveal: boolean) => {
+    await act(async () => {
+      root.render(
+        <PetPage focusPending={reveal}>
+          <RailProbe focus={reveal} seen={seen} />
+          <div>chat</div>
+        </PetPage>,
+      );
+      await flushMicrotasks();
+    });
+  };
+  try {
+    await render(false);
+    const toggle = (function find(node: any): any {
+      if (node?.getAttribute?.("data-pet-focus-mode") === "toggle") return node;
+      for (const child of Array.from(node?.childNodes ?? [])) {
+        const hit = find(child);
+        if (hit) return hit;
+      }
+      return undefined;
+    })(container);
+    const props = toggle[Object.keys(toggle).find((key) => key.startsWith("__reactProps$"))!];
+    await act(async () => {
+      props.onClick();
+      await flushMicrotasks();
+    });
+    await render(true);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toContain("col-start-2");
+    expect(seen[0]).not.toContain("@min-[1100px]/pet-page:hidden");
+  } finally {
+    await act(async () => root.unmount());
+  }
 });

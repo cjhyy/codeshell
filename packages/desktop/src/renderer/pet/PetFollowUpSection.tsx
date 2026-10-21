@@ -49,16 +49,17 @@ export function PetFollowUpSection({
       onOpen={onOpen}
       onDismiss={onDismiss}
       onControl={window.codeshell.pet?.controlFollowUp}
-      onAskMimi={(row) =>
+      onAskMimi={(row) => {
         dispatch({
-          type: "set-chat-draft",
+          type: "insert-chat-prompt",
           draft: t("pet.followUp.askMimiPrompt", {
             followUpId: row.followUpId,
             title: row.title,
             text: row.text,
           }),
-        })
-      }
+        });
+        window.dispatchEvent(new Event("codeshell:pet-compose"));
+      }}
       dismissedIds={dismissedIds}
     />
   );
@@ -117,10 +118,10 @@ export default function PetFollowUpSectionView({
   return (
     <section
       data-pet-follow-up="needs-follow-up"
-      className="rounded-2xl border border-status-warn/40 bg-status-warn/5 p-1"
+      className="rounded-2xl border border-status-warn/20 bg-status-warn/[0.035] p-1"
     >
       <div className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-status-warn/15 text-status-warn">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-status-warn/10 text-status-warn">
           <BellRing size={16} aria-hidden="true" />
         </span>
         <span className="min-w-0 flex-1">
@@ -143,13 +144,15 @@ export default function PetFollowUpSectionView({
             key={row.followUpId}
             data-pet-follow-up-row={row.sessionId}
             data-pet-follow-up-id={row.followUpId}
-            className="rounded-2xl border border-border/60 bg-background/60 p-3"
+            className="min-w-0 rounded-xl border border-border/45 bg-background/80 p-3"
           >
             <div className="flex w-full min-w-0 items-baseline gap-2">
-              <div className="flex min-w-0 flex-1 items-baseline gap-2">
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold">{row.title}</span>
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="block max-w-full break-words text-xs font-semibold leading-5">
+                  {row.title}
+                </span>
                 {row.workspace && (
-                  <span className="shrink-0 truncate text-[11px] text-muted-foreground">
+                  <span className="block max-w-full truncate text-[10px] text-muted-foreground">
                     {row.workspace}
                   </span>
                 )}
@@ -167,7 +170,7 @@ export default function PetFollowUpSectionView({
                 </button>
               )}
             </div>
-            <p className="mt-2 whitespace-pre-wrap break-words text-sm text-foreground/90">
+            <p className="mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-foreground/85">
               {row.text}
             </p>
             {row.kind === "registered" && row.wakeAt && (
@@ -268,7 +271,7 @@ export default function PetFollowUpSectionView({
                   void control(row, "reschedule");
                 }}
               >
-                <label className="text-xs text-muted-foreground">
+                <label className="min-w-0 max-w-full text-xs text-muted-foreground">
                   {t("pet.followUp.newTime", {
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                   })}
@@ -277,7 +280,7 @@ export default function PetFollowUpSectionView({
                     required
                     value={nextTime}
                     onChange={(event) => setNextTime(event.target.value)}
-                    className="ml-2 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+                    className="mt-1 block max-w-full rounded-md border border-border bg-background px-2 py-1 text-foreground"
                   />
                 </label>
                 <button

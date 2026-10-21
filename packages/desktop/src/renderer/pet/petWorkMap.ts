@@ -57,6 +57,9 @@ export interface PetWorkspaceWorkGroup {
 
 export interface PetWorkMap {
   groups: PetWorkspaceWorkGroup[];
+  /** All included work, newest first, including rows the display limits omit.
+   *  Search and filters group it on demand (see groupWorkItems). */
+  allItems?: PetWorkItem[];
   counts: Record<PetWorkGroup, number>;
   itemIds: Record<PetWorkGroup, string[]>;
   dismissedCount: number;
@@ -66,6 +69,14 @@ export interface PetWorkMap {
 }
 
 const GROUP_ORDER: readonly PetWorkGroup[] = ["running", "pending", "completed", "other"];
+
+/** Branch order in the work inbox: what needs the user first. */
+export const PET_WORK_BRANCH_ORDER: readonly PetWorkGroup[] = [
+  "pending",
+  "running",
+  "completed",
+  "other",
+];
 
 const DISPLAY_LIMITS: Record<PetWorkGroup, number> = {
   running: 16,
@@ -164,6 +175,27 @@ function pendingWithoutSession(pending: PetPendingDecision): PetWorkItem {
   };
 }
 
+export function groupWorkItems(items: readonly PetWorkItem[]): PetWorkspaceWorkGroup[] {
+  const groupsByWorkspace = new Map<string, PetWorkspaceWorkGroup>();
+  for (const item of items) {
+    const key = item.workspace ?? "";
+    const group = groupsByWorkspace.get(key) ?? {
+      workspace: item.workspace,
+      buckets: GROUP_ORDER.map((g) => ({ group: g, items: [] as PetWorkItem[] })),
+      latestActivityAt: 0,
+    };
+    group.buckets.find((bucket) => bucket.group === item.group)!.items.push(item);
+    group.latestActivityAt = Math.max(group.latestActivityAt, item.lastActivityAt);
+    groupsByWorkspace.set(key, group);
+  }
+  return [...groupsByWorkspace.values()]
+    .map((group) => ({
+      ...group,
+      buckets: group.buckets.filter((bucket) => bucket.items.length > 0),
+    }))
+    .sort((left, right) => right.latestActivityAt - left.latestActivityAt);
+}
+
 export function buildPetWorkMap(
   sessions: readonly PetSessionProjection[],
   pending: readonly PetPendingDecision[],
@@ -207,26 +239,9 @@ export function buildPetWorkMap(
   const visible = GROUP_ORDER.flatMap((group) =>
     included.filter((item) => item.group === group).slice(0, DISPLAY_LIMITS[group]),
   );
-  const groupsByWorkspace = new Map<string, PetWorkspaceWorkGroup>();
-  for (const item of visible) {
-    const key = item.workspace ?? "";
-    const group = groupsByWorkspace.get(key) ?? {
-      workspace: item.workspace,
-      buckets: GROUP_ORDER.map((g) => ({ group: g, items: [] as PetWorkItem[] })),
-      latestActivityAt: 0,
-    };
-    group.buckets.find((bucket) => bucket.group === item.group)!.items.push(item);
-    group.latestActivityAt = Math.max(group.latestActivityAt, item.lastActivityAt);
-    groupsByWorkspace.set(key, group);
-  }
-
   return {
-    groups: [...groupsByWorkspace.values()]
-      .map((group) => ({
-        ...group,
-        buckets: group.buckets.filter((bucket) => bucket.items.length > 0),
-      }))
-      .sort((left, right) => right.latestActivityAt - left.latestActivityAt),
+    groups: groupWorkItems(visible),
+    allItems: included,
     counts,
     itemIds,
     dismissedCount,

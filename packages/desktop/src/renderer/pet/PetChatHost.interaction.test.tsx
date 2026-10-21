@@ -167,6 +167,29 @@ describe("Mimi chat interactions", () => {
     expect(renderedText(container)).toContain("中文输入");
   });
 
+  test("prepares a suggested prompt without sending or erasing the draft and attachments", async () => {
+    await mount("host");
+    const input = elements(container, "TEXTAREA")[0]!;
+    let focused = false;
+    input.focus = () => {
+      focused = true;
+    };
+    await act(async () => {
+      latest.dispatch({ type: "set-chat-draft", draft: "我的补充要求" });
+      latest.dispatch({ type: "set-chat-path-attachments", paths: ["/tmp/project-notes.md"] });
+    });
+    const suggestion = elements(container, "BUTTON").find(
+      (node) => propsOf(node)["data-pet-chat-suggestion"] === "plan",
+    )!;
+    expect(suggestion).toBeTruthy();
+    await act(async () => propsOf(suggestion).onClick());
+    expect(latest.state.chatDraft).toStartWith("我的补充要求\n\n");
+    expect(latest.state.chatDraft).toContain("我想开始一个新任务");
+    expect(latest.state.chatPathAttachments).toEqual(["/tmp/project-notes.md"]);
+    expect(sent).toHaveLength(0);
+    expect(focused).toBe(true);
+  });
+
   test("prevents the widget form from submitting Chinese candidate confirmation", async () => {
     await mount("widget");
     const input = elements(container, "INPUT")[0]!;

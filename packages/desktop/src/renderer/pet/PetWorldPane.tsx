@@ -31,7 +31,7 @@ export function countVisibleFollowUps(
 export function PetWorldPane({
   projection,
   status,
-  now = Date.now(),
+  now: fixedNow,
   onNavigate,
   focusPending = false,
   selectedLongTaskId,
@@ -45,6 +45,7 @@ export function PetWorldPane({
   selectedLongTaskId?: string | null;
   excludedSessionIds?: ReadonlySet<string>;
 }) {
+  const now = fixedNow ?? Date.now();
   const selected = selectPetOverview(projection, status, now);
   const [dismissedIds, setDismissedIds] = React.useState<Set<string>>(() => new Set());
   const dismissedIdsRef = React.useRef(dismissedIds);
@@ -149,31 +150,23 @@ export function PetWorldPane({
   return (
     <section
       data-pet-world-pane="deterministic"
-      className="mimi-surface @container/work-pane flex flex-col self-stretch overflow-visible rounded-3xl @min-[1100px]/pet-page:col-start-2 @min-[1100px]/pet-page:row-start-1 @min-[1100px]/pet-page:max-h-full @min-[1100px]/pet-page:self-start @min-[1100px]/pet-page:overflow-hidden"
+      className="mimi-surface @container/work-pane flex min-h-0 flex-col self-stretch overflow-visible rounded-2xl @min-[1100px]/pet-page:col-start-2 @min-[1100px]/pet-page:row-start-1 @min-[1100px]/pet-page:max-h-full @min-[1100px]/pet-page:h-full @min-[1100px]/pet-page:overflow-hidden"
     >
       <PetOverviewHeader
         runningCount={workMap.counts.running}
         pendingCount={workMap.counts.pending}
         followUpCount={visibleFollowUpCount}
         observedAt={projection?.observedAt}
-        now={now}
+        now={fixedNow}
         loading={status === "loading"}
         reconciling={status === "reconciling"}
         retrying={status === "error"}
       />
-      <div className="min-h-0 flex-1 overflow-visible p-3.5 @min-[1100px]/pet-page:overflow-y-auto">
+      <div
+        data-pet-world-scroll="true"
+        className="min-h-0 flex-1 overflow-visible px-3 py-4 @min-[1100px]/pet-page:overflow-y-auto"
+      >
         <div ref={pendingRef} tabIndex={-1} className="space-y-3 outline-none">
-          <PetLongTaskSection
-            selectedTaskId={selectedLongTaskId}
-            onOpenSession={(sessionId) => {
-              if (!projection) return;
-              onNavigate?.({
-                agentSessionId: sessionId,
-                snapshotVersion: projection.version,
-                generation: projection.generation,
-              });
-            }}
-          />
           <PetFollowUpSection
             rows={followUps}
             dismissedIds={dismissedIds}
@@ -187,28 +180,45 @@ export function PetWorldPane({
               });
             }}
           />
-          <PetWorkTree
-            workMap={workMap}
-            emptyState={selected.emptyState}
-            defaultOpen={focusPending}
-            onDismiss={(item) => dismissItems([item.id])}
-            onArchive={async (item) => {
-              const archive = window.codeshell.pet.archiveSession;
-              if (!archive) throw new Error("Session archive is unavailable");
-              await archive(item.navigation.agentSessionId);
-            }}
-            onClearCompleted={() => dismissItems(workMap.itemIds.completed)}
-            onRestoreDismissed={restoreDismissed}
-            onOpen={(item) => {
-              if (!projection) return;
-              if (item.external && !item.navigation.external) return;
-              onNavigate?.({
-                ...item.navigation,
-                snapshotVersion: projection.version,
-                generation: projection.generation,
-              });
-            }}
-          />
+          {/* Long tasks stay above the inbox: they are the most time-sensitive
+              work, and the inbox opens expanded and can fill the rail. */}
+          <div data-pet-work-section="long-tasks">
+            <PetLongTaskSection
+              selectedTaskId={selectedLongTaskId}
+              onOpenSession={(sessionId) => {
+                if (!projection) return;
+                onNavigate?.({
+                  agentSessionId: sessionId,
+                  snapshotVersion: projection.version,
+                  generation: projection.generation,
+                });
+              }}
+            />
+          </div>
+          <div data-pet-work-section="inbox">
+            <PetWorkTree
+              workMap={workMap}
+              emptyState={selected.emptyState}
+              focusPending={focusPending}
+              onDismiss={(item) => dismissItems([item.id])}
+              onArchive={async (item) => {
+                const archive = window.codeshell.pet.archiveSession;
+                if (!archive) throw new Error("Session archive is unavailable");
+                await archive(item.navigation.agentSessionId);
+              }}
+              onClearCompleted={() => dismissItems(workMap.itemIds.completed)}
+              onRestoreDismissed={restoreDismissed}
+              onOpen={(item) => {
+                if (!projection) return;
+                if (item.external && !item.navigation.external) return;
+                onNavigate?.({
+                  ...item.navigation,
+                  snapshotVersion: projection.version,
+                  generation: projection.generation,
+                });
+              }}
+            />
+          </div>
         </div>
       </div>
     </section>

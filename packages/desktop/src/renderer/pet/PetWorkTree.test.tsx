@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import React from "react";
+import React, { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
+import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { PetWorkTree } from "./PetWorkTree";
+import { buildPetWorkMap } from "./petWorkMap";
 import type { PetWorkMap } from "./petWorkMap";
 
 const workMap: PetWorkMap = {
@@ -69,22 +72,24 @@ const workMap: PetWorkMap = {
 };
 
 describe("PetWorkTree", () => {
-  test("keeps the work inbox drawer closed by default", () => {
+  test("shows active work immediately while keeping finished branches folded", () => {
     const html = renderToStaticMarkup(<PetWorkTree workMap={workMap} />);
     expect(html).toContain('data-pet-work-tree="workspace-work-map"');
     expect(html).toContain('data-pet-work-drawer="toggle"');
-    expect(html).toContain('aria-expanded="false"');
+    expect(html).toMatch(/data-pet-work-drawer="toggle"[^>]*aria-expanded="true"/);
     expect(html).toContain("工作收件箱");
     expect(html).toContain("3 项");
-    expect(html).not.toContain('data-pet-work-drawer-content="open"');
-    expect(html).not.toContain("codeshell");
+    expect(html).toContain('data-pet-work-drawer-content="open"');
+    expect(html).toContain("codeshell");
+    expect(html).toMatch(/<details open=""[^>]*data-pet-work-branch="running"/);
+    expect(html).toMatch(/<details data-pet-work-branch="completed"/);
+    expect(html).toContain('data-pet-work-search="true"');
   });
 
   test("renders a bounded workspace work tree instead of a raw session list when opened", () => {
     const html = renderToStaticMarkup(
       <PetWorkTree
         workMap={workMap}
-        defaultOpen
         onDismiss={() => {}}
         onClearCompleted={() => {}}
         onRestoreDismissed={() => {}}
@@ -104,6 +109,238 @@ describe("PetWorkTree", () => {
     expect(html).not.toContain("工作会话");
     expect(html).not.toContain("session-secret");
   });
+});
+
+function reactPropsOf(node: unknown): Record<string, any> {
+  const element = node as Record<string, any>;
+  const key = Object.keys(element).find((name) => name.startsWith("__reactProps$"));
+  return key ? element[key] : {};
+}
+
+function elementsByProp(node: unknown, prop: string, value?: unknown): any[] {
+  const current = node as { childNodes?: unknown[] };
+  const props = reactPropsOf(current);
+  const matches = props[prop] !== undefined && (value === undefined || props[prop] === value);
+  return [
+    ...(matches ? [current] : []),
+    ...(current.childNodes ?? []).flatMap((child) => elementsByProp(child, prop, value)),
+  ];
+}
+
+test("keeps an explicit collapse across snapshot updates and reopens for a pending deep link", async () => {
+  ensureMiniDom();
+  const container = document.createElement("div") as unknown as HTMLElement;
+  const root = createRoot(container);
+  const render = async (focusPending = false): Promise<void> => {
+    await act(async () => {
+      root.render(<PetWorkTree workMap={{ ...workMap }} focusPending={focusPending} />);
+      await flushMicrotasks();
+    });
+  };
+  try {
+    await render();
+    const branch = elementsByProp(container, "data-pet-work-branch", "running")[0];
+    expect(reactPropsOf(branch).open).toBe(true);
+    await act(async () => {
+      reactPropsOf(branch).onToggle({ currentTarget: { open: false } });
+      await flushMicrotasks();
+    });
+    await render();
+    expect(reactPropsOf(elementsByProp(container, "data-pet-work-branch", "running")[0]).open).toBe(
+      false,
+    );
+
+    const drawer = elementsByProp(container, "data-pet-work-drawer")[0];
+    await act(async () => {
+      reactPropsOf(drawer).onClick();
+      await flushMicrotasks();
+    });
+    await render();
+    expect(reactPropsOf(drawer)["aria-expanded"]).toBe(false);
+    await render(true);
+    expect(reactPropsOf(drawer)["aria-expanded"]).toBe(true);
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+test("combines title, workspace and localized-state search with status filters and reset", async () => {
+  ensureMiniDom();
+  const container = document.createElement("div") as unknown as HTMLElement;
+  const root = createRoot(container);
+  const itemIds = (): string[] =>
+    elementsByProp(container, "data-pet-work-item").map(
+      (node) => reactPropsOf(node)["data-pet-work-item"],
+    );
+  const search = async (value: string): Promise<void> => {
+    await act(async () => {
+      reactPropsOf(elementsByProp(container, "data-pet-work-search")[0]).onChange({
+        target: { value },
+      });
+      await flushMicrotasks();
+    });
+  };
+  try {
+    await act(async () => {
+      root.render(<PetWorkTree workMap={workMap} />);
+      await flushMicrotasks();
+    });
+    await search("CODESHELL");
+    expect(itemIds()).toHaveLength(3);
+    await search("已完成");
+    expect(itemIds()).toEqual(["completed:one"]);
+    expect(
+      reactPropsOf(elementsByProp(container, "data-pet-work-branch", "completed")[0]).open,
+    ).toBe(true);
+    await search("正在运行测试");
+    expect(itemIds()).toEqual(["running:one"]);
+    await search("");
+    await act(async () => {
+      reactPropsOf(elementsByProp(container, "data-pet-work-filter", "running")[0]).onClick();
+      await flushMicrotasks();
+    });
+    expect(itemIds()).toEqual(["running:one"]);
+    await search("完成宠物");
+    expect(itemIds()).toEqual([]);
+    expect(elementsByProp(container, "data-pet-work-no-matches")).toHaveLength(1);
+    await act(async () => {
+      reactPropsOf(elementsByProp(container, "data-pet-work-reset")[0]).onClick();
+      await flushMicrotasks();
+    });
+    expect(itemIds()).toHaveLength(3);
+    expect(
+      reactPropsOf(elementsByProp(container, "data-pet-work-filter", "all")[0])["aria-pressed"],
+    ).toBe(true);
+    expect(reactPropsOf(elementsByProp(container, "data-pet-work-search")[0]).value).toBe("");
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+test("a pending focus request clears filters and reopens a collapsed decision branch", async () => {
+  ensureMiniDom();
+  const container = document.createElement("div") as unknown as HTMLElement;
+  const root = createRoot(container);
+  const pendingMap: PetWorkMap = {
+    ...workMap,
+    counts: { ...workMap.counts, pending: 1 },
+    itemIds: { ...workMap.itemIds, pending: ["pending:decision"] },
+    groups: [
+      {
+        ...workMap.groups[0],
+        buckets: [
+          ...workMap.groups[0].buckets,
+          {
+            group: "pending",
+            items: [
+              {
+                id: "pending:decision",
+                group: "pending",
+                state: "needs-action",
+                workspace: "codeshell",
+                title: "确认发布",
+                lastActivityAt: 4_000,
+                navigation: { agentSessionId: "decision", requestId: "approval" },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  const render = async (focusPending: boolean): Promise<void> => {
+    await act(async () => {
+      root.render(<PetWorkTree workMap={{ ...pendingMap }} focusPending={focusPending} />);
+      await flushMicrotasks();
+    });
+  };
+  const pendingBranch = () => elementsByProp(container, "data-pet-work-branch", "pending")[0];
+  try {
+    await render(false);
+    await act(async () => {
+      reactPropsOf(elementsByProp(container, "data-pet-work-filter", "pending")[0]).onClick();
+      reactPropsOf(elementsByProp(container, "data-pet-work-search")[0]).onChange({
+        target: { value: "codeshell" },
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactPropsOf(pendingBranch()).onToggle({ currentTarget: { open: false } });
+      await flushMicrotasks();
+    });
+    await render(false);
+    expect(reactPropsOf(pendingBranch()).open).toBe(false);
+    expect(reactPropsOf(elementsByProp(container, "data-pet-work-search")[0]).value).toBe(
+      "codeshell",
+    );
+
+    await render(true);
+    expect(reactPropsOf(elementsByProp(container, "data-pet-work-search")[0]).value).toBe("");
+    expect(
+      reactPropsOf(elementsByProp(container, "data-pet-work-filter", "all")[0])["aria-pressed"],
+    ).toBe(true);
+    expect(reactPropsOf(pendingBranch()).open).toBe(true);
+    await act(async () => {
+      reactPropsOf(pendingBranch()).onToggle({ currentTarget: { open: false } });
+      await flushMicrotasks();
+    });
+    await render(true);
+    expect(reactPropsOf(pendingBranch()).open).toBe(false);
+    await render(false);
+    await render(true);
+    expect(reactPropsOf(pendingBranch()).open).toBe(true);
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+test("finds older work beyond normal display limits without expanding the unfiltered inbox", async () => {
+  ensureMiniDom();
+  const container = document.createElement("div") as unknown as HTMLElement;
+  const root = createRoot(container);
+  const map = buildPetWorkMap(
+    Array.from({ length: 10 }, (_, index) => ({
+      agentSessionId: `completed-${index}`,
+      title: index === 0 ? "Earlier launch notes" : `Recent result ${index}`,
+      workspaceDisplayName: "codeshell",
+      runState: "terminal" as const,
+      terminal: { status: "completed" as const, at: index },
+      queueDepth: 0,
+      lastActivityAt: index,
+      pendingDecisionCount: 0,
+      freshness: { source: "disk" as const, observedAt: 2_000, workerState: "reclaimed" as const },
+    })),
+    [],
+  );
+  try {
+    await act(async () => {
+      root.render(<PetWorkTree workMap={map} />);
+      await flushMicrotasks();
+    });
+    expect(elementsByProp(container, "data-pet-work-item")).toHaveLength(8);
+    expect(elementsByProp(container, "data-pet-work-item", "completed:completed-0")).toHaveLength(
+      0,
+    );
+    await act(async () => {
+      reactPropsOf(elementsByProp(container, "data-pet-work-search")[0]).onChange({
+        target: { value: "earlier launch" },
+      });
+      await flushMicrotasks();
+    });
+    expect(elementsByProp(container, "data-pet-work-item")).toHaveLength(1);
+    expect(elementsByProp(container, "data-pet-work-item", "completed:completed-0")).toHaveLength(
+      1,
+    );
+    await act(async () => {
+      reactPropsOf(elementsByProp(container, "data-pet-work-search")[0]).onChange({
+        target: { value: "" },
+      });
+      await flushMicrotasks();
+    });
+    expect(elementsByProp(container, "data-pet-work-item")).toHaveLength(8);
+  } finally {
+    await act(async () => root.unmount());
+  }
 });
 
 test("renders external-CLI and risk badges on items that carry them", () => {
@@ -177,10 +414,14 @@ test("renders external-CLI and risk badges on items that carry them", () => {
     hiddenCount: 0,
     unclassifiedCount: 0,
   };
-  const html = renderToStaticMarkup(<PetWorkTree workMap={badgeMap} defaultOpen />);
+  const html = renderToStaticMarkup(<PetWorkTree workMap={badgeMap} />);
   expect(html).toContain("codex");
   expect(html).toContain("高风险");
   expect(html).toContain("Bash");
+  expect(html).toMatch(/<details open=""[^>]*data-pet-work-branch="pending"/);
+  expect(html.indexOf('data-pet-work-branch="pending"')).toBeLessThan(
+    html.indexOf('data-pet-work-branch="running"'),
+  );
   // The plain "other" item must not sprout a risk/external badge.
   expect(html).not.toContain("claude");
 });
@@ -233,7 +474,7 @@ test("gives non-external rows a latest-result expand affordance and external row
     hiddenCount: 0,
     unclassifiedCount: 0,
   };
-  const html = renderToStaticMarkup(<PetWorkTree workMap={mixed} defaultOpen />);
+  const html = renderToStaticMarkup(<PetWorkTree workMap={mixed} />);
   // NOTE: renderToStaticMarkup cannot exercise the click → IPC → loading/error
   // states; this asserts the affordance contract only.
   expect(html).toContain('data-pet-work-expand="running:internal"');
@@ -281,7 +522,7 @@ test("disables an external item whose locator is incomplete and explains why", (
     unclassifiedCount: 0,
   };
 
-  const html = renderToStaticMarkup(<PetWorkTree workMap={incomplete} defaultOpen />);
+  const html = renderToStaticMarkup(<PetWorkTree workMap={incomplete} />);
   expect(html).toMatch(
     /<button[^>]*disabled=""[^>]*title="外部会话定位信息不完整或 transcript 已不存在，无法打开"/,
   );
@@ -326,7 +567,7 @@ test.each([
     hiddenCount: 0,
     unclassifiedCount: 0,
   };
-  const html = renderToStaticMarkup(<PetWorkTree workMap={riskMap} defaultOpen />);
+  const html = renderToStaticMarkup(<PetWorkTree workMap={riskMap} />);
   expect(html).toContain(label);
   expect(html).toContain(tone);
   expect(html).toContain("Write");
@@ -362,7 +603,60 @@ test("renders the other bucket and its i18n label without hiding items", () => {
     hiddenCount: 0,
     unclassifiedCount: 0,
   };
-  const html = renderToStaticMarkup(<PetWorkTree workMap={otherOnly} defaultOpen />);
+  const html = renderToStaticMarkup(<PetWorkTree workMap={otherOnly} />);
   expect(html).toContain("闲置会话");
   expect(html).toContain("其他"); // pet.work.branch.other zh label
+});
+
+test("the active filter chip stays selectable after its last item resolves", async () => {
+  ensureMiniDom();
+  const container = document.createElement("div") as unknown as HTMLElement;
+  const root = createRoot(container);
+  const render = async (map: PetWorkMap): Promise<void> => {
+    await act(async () => {
+      root.render(<PetWorkTree workMap={map} />);
+      await flushMicrotasks();
+    });
+  };
+  const withoutRunning: PetWorkMap = {
+    ...workMap,
+    counts: { ...workMap.counts, running: 0 },
+    itemIds: { ...workMap.itemIds, running: [] },
+    groups: workMap.groups.map((group) => ({
+      ...group,
+      buckets: group.buckets.filter((bucket) => bucket.group !== "running"),
+    })),
+  };
+  try {
+    await render(workMap);
+    const chip = () => elementsByProp(container, "data-pet-work-filter", "running")[0];
+    await act(async () => {
+      reactPropsOf(chip()).onClick();
+      await flushMicrotasks();
+    });
+    await render(withoutRunning);
+    expect(chip()).toBeDefined();
+    expect(reactPropsOf(chip())["aria-pressed"]).toBe(true);
+    expect(elementsByProp(container, "data-pet-work-reset", "true")).toHaveLength(1);
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+test("filter chip counts include rows hidden by the display limits", () => {
+  const map = buildPetWorkMap(
+    Array.from({ length: 12 }, (_, index) => ({
+      agentSessionId: `done-${index}`,
+      title: `Done ${index}`,
+      workspace: "codeshell",
+      runState: "terminal" as const,
+      terminal: { status: "completed" as const, at: index },
+      lastActivityAt: index,
+    })) as never,
+    [],
+  );
+  const html = renderToStaticMarkup(<PetWorkTree workMap={map} />);
+  const chip = html.match(/data-pet-work-filter="completed"[^>]*>.*?<span[^>]*>(\d+)<\/span>/);
+  expect(map.hiddenCount).toBeGreaterThan(0);
+  expect(chip?.[1]).toBe(String(map.counts.completed));
 });

@@ -765,27 +765,19 @@
   }
 
   .mimi-page-shell {
-    background:
-      radial-gradient(circle at 8% 0%, hsl(var(--cs-primary) / 0.09), transparent 34%),
-      radial-gradient(circle at 100% 100%, hsl(var(--cs-status-running) / 0.07), transparent 38%),
-      hsl(var(--cs-muted) / 0.34);
+    background: hsl(var(--cs-muted) / 0.25);
   }
 
   .mimi-surface {
-    border: 1px solid hsl(var(--cs-border) / 0.68);
-    background: hsl(var(--cs-card) / 0.88);
-    box-shadow:
-      0 18px 48px hsl(var(--cs-foreground) / 0.055),
-      0 1px 2px hsl(var(--cs-foreground) / 0.045);
-    backdrop-filter: blur(18px);
+    border: 1px solid hsl(var(--cs-border) / 0.7);
+    background: hsl(var(--cs-card) / 0.96);
+    box-shadow: 0 2px 8px hsl(var(--cs-foreground) / 0.025);
   }
 
   .dark .mimi-surface {
     border-color: hsl(var(--cs-border) / 0.82);
-    background: hsl(var(--cs-card) / 0.82);
-    box-shadow:
-      0 22px 56px rgb(0 0 0 / 0.24),
-      0 1px 2px rgb(0 0 0 / 0.2);
+    background: hsl(var(--cs-card) / 0.96);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
   }
 
   .cs-control {

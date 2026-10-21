@@ -129,6 +129,7 @@ import { useSessionHistorySync } from "./app/useSessionHistorySync";
 import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
 import { useGoalPendingBuckets } from "./app/useGoalPendingBuckets";
+import { usePetMemoryNavigation } from "./app/usePetMemoryNavigation";
 import { createChatLinkReadHandler } from "./chat/linkResourceIntents";
 import { usePanelBuckets } from "./app/usePanelBuckets";
 import { useViewTargets } from "./app/useViewTargets";
@@ -1133,6 +1134,7 @@ function App() {
       approvalBucketsRef,
     },
   });
+  const { openPetMemory, leavePetMemory } = usePetMemoryNavigation({ openPetPage, setViewMode });
 
   const {
     panelByBucket,
@@ -2356,7 +2358,7 @@ function App() {
               }
             >
               {isPetView ? (
-                <PetPage overview={petState}>
+                <PetPage overview={petState} revealTask={!!petInitialTaskId}>
                   <PetWorldPane
                     projection={petState.projection}
                     status={petState.status}
@@ -2371,6 +2373,7 @@ function App() {
                     modelOptions={quickChatModelOptions}
                     onOpenSession={(request) => void handleOpenPetTarget(request)}
                     onOpenSettings={() => setViewMode("pet_settings")}
+                    onOpenMemory={() => openPetMemory("workspace")}
                   />
                 </PetPage>
               ) : isPetSettingsView ? (
@@ -2384,13 +2387,13 @@ function App() {
                   onWidgetVisibleChange={setPetWidgetVisibility}
                   onOpenPersonalization={() => setViewMode("pet_personalization")}
                   onOpenConnections={() => setViewMode("credentials")}
-                  onOpenMemory={() => setViewMode("pet_memory")}
+                  onOpenMemory={() => openPetMemory("settings")}
                   onBack={openPetPage}
                 />
               ) : isPetPersonalizationView ? (
                 <PetPersonalizationPage onBack={() => setViewMode("pet_settings")} />
               ) : isPetMemoryView ? (
-                <PetMemoryCenterPage onBack={() => setViewMode("pet_settings")} />
+                <PetMemoryCenterPage onBack={leavePetMemory} />
               ) : registeredPageRender ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   {registeredPageRender({

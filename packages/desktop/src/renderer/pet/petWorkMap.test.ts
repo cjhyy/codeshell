@@ -162,6 +162,33 @@ describe("buildPetWorkMap", () => {
       ),
     ).toEqual([]);
   });
+
+  test("retains older included rows for search while preserving display limits and dismissals", () => {
+    const map = buildPetWorkMap(
+      Array.from({ length: 12 }, (_, index) =>
+        session(`completed-${index}`, {
+          runState: "terminal",
+          terminal: { status: "completed", at: index },
+          lastActivityAt: index,
+        }),
+      ),
+      [],
+      {
+        dismissedIds: new Set(["completed:completed-1"]),
+        excludedSessionIds: new Set(["completed-2"]),
+      },
+    );
+    const visible = map.groups.flatMap((group) => group.buckets.flatMap((bucket) => bucket.items));
+    const searchable = map.allItems!;
+    expect(visible).toHaveLength(8);
+    expect(searchable).toHaveLength(10);
+    expect(map.counts.completed).toBe(10);
+    expect(map.hiddenCount).toBe(2);
+    expect(visible.some((item) => item.navigation.agentSessionId === "completed-0")).toBe(false);
+    expect(searchable.some((item) => item.navigation.agentSessionId === "completed-0")).toBe(true);
+    expect(searchable.some((item) => item.navigation.agentSessionId === "completed-1")).toBe(false);
+    expect(searchable.some((item) => item.navigation.agentSessionId === "completed-2")).toBe(false);
+  });
 });
 
 describe("buildPetWorkMap structured classification", () => {

@@ -1,45 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import React, { act } from "react";
-import { createRoot } from "react-dom/client";
+import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { PetOverviewHeader } from "./PetOverviewHeader";
 
-function reactPropsOf(node: unknown): Record<string, any> {
-  const current = node as Record<string, any>;
-  const key = Object.keys(current).find((name) => name.startsWith("__reactProps$"));
-  return key ? current[key] : {};
-}
-
-function findElement(node: unknown, tagName: string): any {
-  const current = node as { tagName?: string; childNodes?: unknown[] };
-  if (current.tagName === tagName) return current;
-  for (const child of current.childNodes ?? []) {
-    const found = findElement(child, tagName);
-    if (found) return found;
-  }
-  return undefined;
-}
-
-function findElementByProp(node: unknown, prop: string): any {
-  const current = node as { childNodes?: unknown[] };
-  if (reactPropsOf(current)[prop] !== undefined) return current;
-  for (const child of current.childNodes ?? []) {
-    const found = findElementByProp(child, prop);
-    if (found) return found;
-  }
-  return undefined;
-}
-
-function textOf(node: unknown): string {
-  const current = node as { data?: string; textContent?: string; childNodes?: unknown[] };
-  if (current.data !== undefined) return current.data;
-  const children = (current.childNodes ?? []).map(textOf).join("");
-  return children || current.textContent || "";
-}
-
 describe("PetOverviewHeader", () => {
-  test("hides counts and freshness behind the Mimi workspace summary by default", () => {
+  test("shows work counts and freshness without a disclosure", () => {
     const html = renderToStaticMarkup(
       <PetOverviewHeader
         runningCount={2}
@@ -50,72 +15,29 @@ describe("PetOverviewHeader", () => {
       />,
     );
     expect(html).toContain("Mimi 工作台");
-    expect(html).toContain("shrink-0 border-b");
-    expect(html).toContain('aria-expanded="false"');
-    expect(html).not.toContain('data-pet-overview-stat="running"');
-    expect(html).not.toContain('data-pet-overview-stat="pending"');
-    expect(html).not.toContain('data-pet-overview-stat="follow-up"');
-    expect(html).not.toContain("1 分钟前更新");
+    expect(html).toContain("工作动态");
+    expect(html).toContain('data-pet-overview-stat="running"');
+    expect(html).toContain('data-pet-overview-stat="pending"');
+    expect(html).toContain('data-pet-overview-stat="follow-up"');
+    expect(html).toContain("进行中");
+    expect(html).toContain("待决策");
+    expect(html).toContain("待跟进");
+    expect(html).toContain("1 分钟前更新");
+    expect(html).not.toContain("aria-expanded");
+    expect(html).not.toContain("data-pet-overview-popover");
   });
 
-  test("reveals deterministic counts and freshness when clicked", async () => {
-    ensureMiniDom();
-    const testWindow = window as unknown as Record<string, any>;
-    testWindow.innerWidth = 900;
-    testWindow.innerHeight = 820;
-    testWindow.requestAnimationFrame = () => 1;
-    testWindow.cancelAnimationFrame = () => {};
-    const elementPrototype = testWindow.HTMLElement.prototype as Record<string, any>;
-    elementPrototype.getBoundingClientRect = () => ({
-      top: 60,
-      bottom: 90,
-      left: 600,
-      right: 760,
-      width: 160,
-      height: 30,
-    });
-    Object.defineProperty(elementPrototype, "offsetWidth", {
-      configurable: true,
-      get: () => 352,
-    });
-    Object.defineProperty(elementPrototype, "offsetHeight", {
-      configurable: true,
-      get: () => 128,
-    });
-    const container = document.createElement("div") as unknown as HTMLElement;
-    const root = createRoot(container);
-    await act(async () => {
-      root.render(
-        <PetOverviewHeader
-          runningCount={2}
-          pendingCount={1}
-          followUpCount={3}
-          observedAt={1_000}
-          now={61_000}
-        />,
-      );
-      await flushMicrotasks();
-    });
-    const button = findElement(container, "BUTTON");
-    await act(async () => {
-      reactPropsOf(button).onClick();
-      await flushMicrotasks();
-    });
-
-    expect(reactPropsOf(button)["aria-expanded"]).toBe(true);
-    expect(textOf(container)).not.toContain("进行中2");
-    expect(textOf(document.body)).toContain("进行中2");
-    expect(textOf(document.body)).toContain("待决策1");
-    expect(textOf(document.body)).toContain("待跟进3");
-    expect(textOf(document.body)).toContain("1 分钟前更新");
-    const details = findElementByProp(document.body, "data-pet-overview-popover");
-    expect(details).toBeTruthy();
-    expect(details.parentNode).toBe(document.body);
-    await act(async () => root.unmount());
+  test("does not present absent snapshots as freshly updated or loading counts as zero", () => {
+    const unknown = renderToStaticMarkup(<PetOverviewHeader />);
+    expect(unknown).toContain("尚未同步");
+    expect(unknown).not.toContain("刚刚更新");
+    const loading = renderToStaticMarkup(<PetOverviewHeader loading />);
+    expect(loading).toContain("正在加载工作状态");
+    expect(loading).toContain("—");
+    expect(loading).not.toContain("刚刚更新");
   });
 
-  test("distinguishes loading and reconciling without hiding a chat failure", () => {
-    expect(renderToStaticMarkup(<PetOverviewHeader loading />)).toContain("正在加载工作状态");
+  test("distinguishes loading, reconciling, and retrying while keeping a chat failure visible", () => {
     const html = renderToStaticMarkup(
       <PetOverviewHeader
         runningCount={0}
@@ -130,5 +52,18 @@ describe("PetOverviewHeader", () => {
     expect(html).toContain("正在对账");
     expect(html).toContain("Mimi 对话暂时不可用");
     expect(html).toContain("工作状态仍可查看");
+    expect(html).not.toContain("刚刚更新");
+    const retrying = renderToStaticMarkup(<PetOverviewHeader retrying observedAt={1_000} />);
+    expect(retrying).toContain("加载失败，正在重试");
+    expect(retrying).not.toContain("分钟前更新");
   });
+});
+
+test("only exceptional states sit in the live region; the routine age does not", () => {
+  const routine = renderToStaticMarkup(<PetOverviewHeader observedAt={1_000} now={61_000} />);
+  expect(routine).toMatch(/<span role="status" aria-live="polite"><\/span>/);
+  const retrying = renderToStaticMarkup(
+    <PetOverviewHeader observedAt={1_000} now={61_000} retrying />,
+  );
+  expect(retrying).toMatch(/<span role="status" aria-live="polite">[^<]+<\/span>/);
 });
