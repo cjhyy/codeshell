@@ -35,6 +35,8 @@ export function createDesktopWebService(options: {
     projectPath: string,
     cwd: string,
   ) => Promise<PanelProjectScopeBinding | undefined>;
+  /** The project a workspace's Panels bind to; native binds every project root at its primary. */
+  resolvePanelProjectPath?: (cwd: string) => string;
   getBridge: () => AgentBridge | null;
   remoteLink?: () => RemoteLinkConfiguration | undefined;
   captureRemoteAuthority?: CaptureLinkAccountAccess;
@@ -42,6 +44,7 @@ export function createDesktopWebService(options: {
   onSessionsChanged: (cwd: string, sessionId: string) => void;
   onPanelsChanged?: (id: string, kind: "install" | "update" | "binding" | "remove") => void;
 }) {
+  const panelProjectPath = options.resolvePanelProjectPath ?? resolvePanelAppBindingProjectPath;
   const contexts = new WeakMap<IncomingMessage, DesktopWebRequestContext>();
   const links = new Map<string, { handler: ReturnType<typeof createLinkHttp>; active: number }>();
   const panels = new Map<string, { handler: ReturnType<typeof createPanelHttp>; active: number }>();
@@ -58,7 +61,7 @@ export function createDesktopWebService(options: {
     sessionRootDir: sessionsRoot(),
     resolveWorkspace: options.resolveWorkspace,
     resolveModelTraceScopes: createDesktopModelTraceScopeResolver({
-      resolveBindingProjectPath: resolvePanelAppBindingProjectPath,
+      resolveBindingProjectPath: panelProjectPath,
       resolveWorkspace: options.resolveWorkspace,
     }),
     withConfigurationMutation: withMutation,
@@ -87,7 +90,7 @@ export function createDesktopWebService(options: {
             await idle[1].handler.close();
           }
           const cwd = context.cwd;
-          const bindingCwd = resolvePanelAppBindingProjectPath(cwd);
+          const bindingCwd = panelProjectPath(cwd);
           if (
             bindingCwd !== cwd &&
             (await options.resolveWorkspace(bindingCwd, context.deviceId)) !== bindingCwd
@@ -133,7 +136,7 @@ export function createDesktopWebService(options: {
                 await Promise.all(
                   [...panels.entries()]
                     .filter(([otherCwd]) => {
-                      const otherProject = resolvePanelAppBindingProjectPath(otherCwd);
+                      const otherProject = panelProjectPath(otherCwd);
                       if (kind === "remove" || otherProject === bindingCwd) return true;
                       if (kind === "binding") return false;
                       // Legacy projects still follow the catalog. Only a valid

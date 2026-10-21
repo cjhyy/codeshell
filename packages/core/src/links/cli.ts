@@ -572,7 +572,8 @@ async function executeGithubCliAction(
     return { ...result, size: undefined };
   }
   if (actionId === "get_file") {
-    const path = pathParam(params, "path", { required: true, maxLength: 2_000 })!;
+    // Exact: LinkAction trims agent free text; saved references replay byte-exact.
+    const path = pathParam(params, "path", { required: true, maxLength: 2_000, exact: true })!;
     const ref = stringParam(params, "ref", { maxLength: 300 });
     const endpoint = `${base}/contents/${path}${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`;
     return githubFile(await api("github", endpoint, options, run), owner, repo, ref);

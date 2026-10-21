@@ -9,7 +9,7 @@
  *
  *   - level: "user" (no projectDir → ~/.code-shell/memory/<scope>),
  *            "project" (projectDir set to the active repo path →
- *            ~/.code-shell/projects/<hash>/memory/<scope>), or
+ *            ~/.code-shell/project-memory/<key>/<scope>), or
  *            "profile" (digital-human-owned →
  *            ~/.code-shell/profiles/<name>/memory/<scope>).
  *   - scope: "user" (manual entries) or "dream" (auto-consolidated).

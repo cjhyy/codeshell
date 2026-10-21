@@ -16,7 +16,11 @@ import { guardProjectScopeNetwork } from "../../../server/src/panels/__fixtures_
 guardProjectScopeNetwork(afterAll);
 const { ProjectStore } = await import("./project-store.js");
 const { SessionCwdIndex } = await import("./session-cwd-index.js");
-const { createDesktopPanelProjectScopeResolver } = await import("./panel-project-scope.js");
+const {
+  createDesktopPanelProjectScopeResolver,
+  isRegisteredPanelProjectRoot,
+  resolveDesktopPanelProjectPath,
+} = await import("./panel-project-scope.js");
 const { codeShellHome } = await import("@cjhyy/code-shell-core");
 const roots: string[] = [];
 afterEach(() => roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true })));
@@ -132,4 +136,53 @@ test("real Git worktrees share project identity and have distinct execution root
   writeFileSync(join(worktree, ".git"), "gitdir: /forged/worktrees/fixture\n");
   expect(() => linked!.assertCurrent()).toThrow();
   await expect(f.resolve(f.cwd, worktree)).rejects.toThrow();
+});
+
+test("R22: a registered secondary root keeps project identity and executes in that root", async () => {
+  const f = await fixture();
+  const secondary = join(f.root, "secondary");
+  mkdirSync(secondary);
+  const added = await f.store.addRoot(f.project.id, secondary);
+  const secondaryRoot = added.project.roots.find((root) => root.path === secondary)!;
+  const primary = await f.resolve(f.cwd, f.cwd);
+  const migrated = await f.resolve(f.cwd, secondary);
+  expect(migrated!.scope.projectId).toBe(f.project.id);
+  expect(migrated!.scope.environmentId).toBe(primary!.scope.environmentId);
+  // Execution identity follows the Session's root; it equals that root's own scope.
+  expect(migrated!.scope).toEqual((await f.resolve(secondary, secondary))!.scope);
+  expect(migrated!.scope.rootId).not.toBe(primary!.scope.rootId);
+  migrated!.assertCurrent();
+  expect(isRegisteredPanelProjectRoot(f.store, f.cwd, secondary)).toBe(true);
+  expect(isRegisteredPanelProjectRoot(f.store, f.cwd, f.cwd)).toBe(true);
+  // Paired Web binds a secondary-root workspace to the same project as native.
+  expect(resolveDesktopPanelProjectPath(f.store, secondary)).toBe(f.cwd);
+  expect(resolveDesktopPanelProjectPath(f.store, f.cwd)).toBe(f.cwd);
+  await f.store.removeRoot(f.project.id, secondaryRoot.id);
+  expect(() => migrated!.assertCurrent()).toThrow();
+  expect(isRegisteredPanelProjectRoot(f.store, f.cwd, secondary)).toBe(false);
+  await expect(f.resolve(f.cwd, secondary)).rejects.toThrow(/outside its registered project/);
+});
+
+test("R22: another project's root, an unregistered path or a forged pointer stays rejected", async () => {
+  const f = await fixture();
+  const otherPath = join(f.root, "other");
+  mkdirSync(otherPath);
+  await f.store.createFromPath(otherPath);
+  const unregistered = join(f.root, "unregistered");
+  mkdirSync(unregistered);
+  await expect(f.resolve(f.cwd, otherPath)).rejects.toThrow(/outside its registered project/);
+  await expect(f.resolve(f.cwd, unregistered)).rejects.toThrow(/outside its registered project/);
+  expect(isRegisteredPanelProjectRoot(f.store, f.cwd, otherPath)).toBe(false);
+  expect(isRegisteredPanelProjectRoot(f.store, f.cwd, unregistered)).toBe(false);
+  expect(isRegisteredPanelProjectRoot(f.store, unregistered, unregistered)).toBe(false);
+  expect(resolveDesktopPanelProjectPath(f.store, otherPath)).toBe(otherPath);
+  expect(resolveDesktopPanelProjectPath(f.store, unregistered)).toBe(unregistered);
+  // A forged worktree pointer into a legal secondary root is not a Git proof.
+  const secondary = join(f.root, "secondary");
+  mkdirSync(secondary);
+  await f.store.addRoot(f.project.id, secondary);
+  const forged = join(f.root, "forged");
+  mkdirSync(forged);
+  writeFileSync(join(forged, ".git"), `gitdir: ${secondary}/.git/worktrees/forged\n`);
+  await expect(f.resolve(f.cwd, forged)).rejects.toThrow();
 });

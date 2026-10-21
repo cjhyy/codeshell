@@ -381,6 +381,68 @@ test("local GitHub view uses production LinkAction HTTP path and original link-p
   expect(output).not.toContain("github_pat_private_fixture");
 });
 
+// Regression (audit HL-01): a saved exact file reference was re-trimmed on read,
+// so " a.txt" opened "a.txt".
+test("saved GitHub file references replay their exact paths through LinkAction", async () => {
+  const meta: CredentialMetadata = {
+    id: "connection-1",
+    type: "link",
+    label: "Local",
+    hasSecret: true,
+    meta: {
+      linkProvider: "github",
+      linkExecutionRuntime: "local",
+      linkExecutionBackend: "http-token",
+      linkAccountId: "42",
+    },
+  };
+  setDefaultCredentialAccess({
+    listMasked: () => [meta],
+    resolveMeta: () => meta,
+    envExposures: () => ({}),
+    resolveValue: async () => "github_pat_private_fixture",
+  });
+  const files: Record<string, string> = {
+    "%20a.txt": "leading space file",
+    "a.txt%20": "trailing space file",
+    "a.txt": "plain file",
+  };
+  const urls: string[] = [];
+  globalThis.fetch = (async (url) => {
+    urls.push(String(url));
+    const name = String(url).replace("https://api.github.com/repos/acme/approved/contents/", "");
+    return new Response(
+      JSON.stringify({
+        type: "file",
+        path: decodeURIComponent(name),
+        sha: "abc",
+        size: Buffer.byteLength(files[name]!),
+        content: Buffer.from(files[name]!).toString("base64"),
+      }),
+    );
+  }) as typeof fetch;
+  // "existing" is an ordinary reference as stored before the fix; it keeps reading a.txt.
+  const output: string[] = [];
+  for (const [id, path] of [
+    ["leading", " a.txt"],
+    ["trailing", "a.txt "],
+    ["existing", "a.txt"],
+  ]) {
+    const def = definition("github", "get_file");
+    const params = { ...def.adapterConfig.params, path };
+    bind({ ...def, id, adapterConfig: { ...def.adapterConfig, params } });
+    output.push(await read({ source: id, scope: "github:get_file", resource: "result" }));
+  }
+  expect(urls).toEqual([
+    "https://api.github.com/repos/acme/approved/contents/%20a.txt",
+    "https://api.github.com/repos/acme/approved/contents/a.txt%20",
+    "https://api.github.com/repos/acme/approved/contents/a.txt",
+  ]);
+  expect(output[0]).toContain("leading space file");
+  expect(output[1]).toContain("trailing space file");
+  expect(output[2]).toContain("plain file");
+});
+
 test("wrong provider, missing capability, unavailable project credential, and write configuration fail closed before IO", async () => {
   const meta = credential();
   let calls = 0;

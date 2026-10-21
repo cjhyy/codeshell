@@ -13,6 +13,7 @@ const repository = resolve(desktopMain, "../../../..");
 const userData = join(root, "electron-profile");
 const first = join(root, "first %20 project");
 const second = join(root, "second project");
+const firstSecondary = join(root, "first secondary root");
 const forged = join(root, "forged-worktree");
 const outside = join(root, "unregistered-project");
 const source = join(root, "panel-source");
@@ -20,6 +21,7 @@ for (const directory of [
   userData,
   first,
   second,
+  firstSecondary,
   forged,
   outside,
   join(source, ".codeshell-panel"),
@@ -88,11 +90,11 @@ const panelsModule = await import(join(repository, "packages/server/src/index.pa
 mock.module("@cjhyy/code-shell-server/panels", () => panelsModule);
 const { createDesktopWebService } = await import(join(desktopMain, "desktop-web-service.ts"));
 const { getProjectStore } = await import(join(desktopMain, "project-store.ts"));
-const { createDesktopPanelProjectScopeResolver } = await import(
+const { createDesktopPanelProjectScopeResolver, resolveDesktopPanelProjectPath } = await import(
   join(desktopMain, "panel-project-scope.ts")
 );
 const projectStore = getProjectStore();
-await projectStore.createFromPath(first);
+await projectStore.addRoot((await projectStore.createFromPath(first)).id, firstSecondary);
 await projectStore.createFromPath(second);
 const resolveProjectScope = createDesktopPanelProjectScopeResolver({
   store: projectStore,
@@ -169,11 +171,12 @@ const bridge = {
     notifications++;
   },
 };
-const allowed = new Set([first, second, forged]);
+const allowed = new Set([first, second, firstSecondary, forged]);
 const api = createDesktopWebService({
   devices,
   automations: automationHost,
   resolveProjectScope,
+  resolvePanelProjectPath: (cwd) => resolveDesktopPanelProjectPath(projectStore, cwd),
   sharedToolJobs: {
     bind: async () => {
       throw new Error("This storage-only fixture must not bind native tasks");
@@ -301,6 +304,21 @@ try {
   assert.equal(scheduler.list().length, 1);
   assert.equal(await call(first, grantA, "storage.get", { key: "marker" }), "desktop-first");
   assert.equal(await call(second, grantB, "storage.get", { key: "marker" }), "desktop-second");
+  // R22: a Session on the first project's secondary root opens the first
+  // project's Panel and storage, while execution follows that root like native.
+  assert.equal((await list(firstSecondary)).bound, true);
+  const grantSecondary = await prepare(firstSecondary, "session-first");
+  assert.equal(grantSecondary.context.cwd, firstSecondary);
+  assert.deepEqual(
+    grantSecondary.context.projectScope,
+    (await resolveProjectScope(first, firstSecondary)).scope,
+  );
+  assert.equal(grantSecondary.context.projectScope.projectId, nativeScope.scope.projectId);
+  assert.notEqual(grantSecondary.context.projectScope.rootId, nativeScope.scope.rootId);
+  assert.equal(
+    await call(firstSecondary, grantSecondary, "storage.get", { key: "marker" }),
+    "desktop-first",
+  );
   for (const grant of [grantA, grantB]) {
     assert.equal(grant.context.host, "desktop");
     const html = await request(grant.src, { cwd: undefined, authenticated: false, origin: "null" });
@@ -392,6 +410,7 @@ try {
       nativePairedProjectScope: true,
       sessionIndependentProjectScope: true,
       forgedProjectScopeRejected: true,
+      secondaryRootProjectScope: true,
     }),
   );
 } finally {

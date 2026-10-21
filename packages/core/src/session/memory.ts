@@ -29,6 +29,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { createHash, randomUUID } from "node:crypto";
 import { acquireFileLock, writeFileAtomic } from "../utils/file-mutex.js";
+import { prepareProjectMemoryRoot, projectMemoryRoot } from "./project-memory-root.js";
 
 /**
  * Memory scopes (storage subdirs under a memory root):
@@ -140,7 +141,10 @@ export interface SaveMemoryOptions {
 }
 
 export interface MemoryManagerOptions {
-  /** Project root path; when set, memories are scoped under projects/<hash>/memory. */
+  /**
+   * Project root path; when set, memories are scoped under
+   * project-memory/<slug>-<hash> (see project-memory-root.ts).
+   */
   projectDir?: string;
   /** Override the base directory (~/.code-shell by default). Takes precedence over env. */
   baseDir?: string;
@@ -186,12 +190,9 @@ export class MemoryManager {
     this.projectDir = opts.projectDir;
     this.scope = opts.scope ?? "user";
 
-    if (opts.projectDir) {
-      const projectHash = opts.projectDir.replace(/[/\\:]/g, "-").replace(/^-/, "");
-      this.memoryRoot = join(this.baseDir, "projects", projectHash, "memory");
-    } else {
-      this.memoryRoot = join(this.baseDir, "memory");
-    }
+    this.memoryRoot = opts.projectDir
+      ? prepareProjectMemoryRoot(this.baseDir, opts.projectDir)
+      : join(this.baseDir, "memory");
 
     this.memoryDir = join(this.memoryRoot, this.scope);
     this.indexPath = join(this.memoryDir, "MEMORY.md");
@@ -201,6 +202,15 @@ export class MemoryManager {
     // layout), move them into user/. Idempotent — once migrated, the root has
     // no flat .md files and this becomes a no-op.
     this.migrateFlatLayout();
+  }
+
+  /**
+   * The memory root a manager for these options uses, without creating or
+   * migrating anything. For read-only callers that must not drift from it.
+   */
+  static memoryRootFor(opts: { baseDir?: string; projectDir?: string } = {}): string {
+    const baseDir = resolveMemoryBaseDir(opts.baseDir);
+    return opts.projectDir ? projectMemoryRoot(baseDir, opts.projectDir) : join(baseDir, "memory");
   }
 
   getMemoryDir(): string {

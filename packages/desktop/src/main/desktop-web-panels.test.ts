@@ -51,6 +51,7 @@ test("Desktop Web panels use paired authority and Electron's existing storage", 
       nativePairedProjectScope: true,
       sessionIndependentProjectScope: true,
       forgedProjectScopeRejected: true,
+      secondaryRootProjectScope: true,
     });
   } finally {
     rmSync(root, { recursive: true, force: true });

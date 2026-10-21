@@ -383,7 +383,12 @@ export function createDefaultLinkProviders(
         async (ctx) => {
           const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
           const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
-          const path = pathParam(ctx.params, "path", { required: true, maxLength: 2_000 })!;
+          // Exact: LinkAction trims agent free text; saved references replay byte-exact.
+          const path = pathParam(ctx.params, "path", {
+            required: true,
+            maxLength: 2_000,
+            exact: true,
+          })!;
           const ref = stringParam(ctx.params, "ref", { maxLength: 300 });
           const url = new URL(
             `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${path}`,
