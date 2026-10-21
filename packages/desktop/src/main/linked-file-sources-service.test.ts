@@ -248,6 +248,41 @@ test("repeated selection reuses stable ids, preserves renamed definitions and de
   expect(listSourceDefinitions()).toHaveLength(1);
 });
 
+// Regression (audit HL-01): exact picked paths were trimmed into one reference.
+test("picked exact paths stay distinct while typed paths keep stable trimmed ids", async () => {
+  const f = fixture();
+  const existing = await f.api.add("project-a", input());
+  const github = (path: string, exact?: boolean) => ({
+    kind: "github-file" as const,
+    owner: "owner",
+    repo: "docs",
+    path,
+    ...(exact === undefined ? {} : { exact }),
+  });
+  const picked = await f.api.add(
+    "project-a",
+    input({
+      files: [github(" manual.md", true), github("manual.md ", true), github("manual.md", true)],
+    }),
+  );
+  expect(picked.sourceIds).toHaveLength(3);
+  expect(picked.sourceIds[2]).toBe(existing.sourceIds[0]!);
+  expect(
+    picked.sourceIds.map(
+      (id) => (readSourceDefinition(id)!.adapterConfig.params as { path: string }).path,
+    ),
+  ).toEqual([" manual.md", "manual.md ", "manual.md"]);
+  expect(readSourceDefinition(picked.sourceIds[0]!)!.label).toBe("owner/docs/ manual.md");
+  const typed = await f.api.add("project-a", input({ files: [github("  manual.md  ")] }));
+  expect(typed.sourceIds).toEqual(existing.sourceIds);
+  expect(listSourceDefinitions()).toHaveLength(3);
+  expect(bindings().map((binding) => binding.sourceId)).toEqual([
+    existing.sourceIds[0]!,
+    picked.sourceIds[0]!,
+    picked.sourceIds[1]!,
+  ]);
+});
+
 test.each(["disabled", "changed"])(
   "existing %s definitions are preserved and never rebound",
   async (mode) => {

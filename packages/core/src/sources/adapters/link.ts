@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { ConnectorAdapter } from "../adapter.js";
 import { isLinkSourceAvailable, linkSourceView } from "../link-view.js";
+import { savedLinkSourceRead } from "../../links/link-action-tool.js";
 import { truncateUtf8Text } from "../truncate-utf8.js";
 import { boundToolResult } from "../../tool-system/bound-tool-result.js";
 
@@ -41,7 +42,11 @@ export const linkSourceAdapter: ConnectorAdapter = {
           params: view.params,
         },
       },
-      { signal: options.signal, assertAuthorized: options.assertAuthorized },
+      {
+        signal: options.signal,
+        assertAuthorized: options.assertAuthorized,
+        privateServices: new Map([[savedLinkSourceRead, true]]),
+      },
     );
     const execution = boundToolResult(boundExecution);
     if (execution.isError || typeof execution.result !== "string")

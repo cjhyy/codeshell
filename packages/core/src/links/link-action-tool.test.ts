@@ -9,7 +9,8 @@ import { asGlobalFetch } from "../testing/fetch-stub.js";
 import { setDefaultCredentialAccess, type CredentialAccess } from "../credentials/access.js";
 import type { ToolContext } from "../tool-system/context.js";
 import { linkActionTool } from "./link-action-tool.js";
-import { runCliLinkCommand } from "./cli.js";
+import { executeCliLinkAction, runCliLinkCommand } from "./cli.js";
+import { prepareRemoteLinkAction } from "./remote-adapters.js";
 import { createSessionOperationController } from "../operations/controller.js";
 import { CapabilityResolver } from "../operations/resolver.js";
 import {
@@ -280,6 +281,79 @@ describe("path template hardening", () => {
     )) as Record<string, unknown>;
     expect(urls).toEqual(["https://api.github.com/repos/o/r/contents/docs/a/b.md"]);
     expect(result.content).toBe("hello");
+  });
+});
+
+// Regression (audit HL-01): exact GitHub file paths were trimmed by every executor.
+describe("exact GitHub file paths", () => {
+  const fileResponse = () =>
+    new Response(
+      JSON.stringify({
+        type: "file",
+        path: "docs/a.md",
+        sha: "abc",
+        size: 5,
+        content: Buffer.from("hello").toString("base64"),
+      }),
+      { status: 200 },
+    );
+
+  test("agent-supplied LinkAction paths keep the trimmed contract", async () => {
+    setDefaultCredentialAccess(githubAccess({ connected: true, resolveCalls: 0 }));
+    const previousFetch = globalThis.fetch;
+    const urls: string[] = [];
+    globalThis.fetch = asGlobalFetch(async (url) => {
+      urls.push(String(url));
+      return fileResponse();
+    });
+    try {
+      const result = JSON.parse(
+        await linkActionTool(
+          {
+            provider: "github",
+            action: "get_file",
+            params: { owner: "acme", repo: "repo", path: "  docs/a.md \n" },
+          },
+          context(),
+        ),
+      );
+      expect(result).toMatchObject({ kind: "action_result", data: { content: "hello" } });
+      expect(urls).toEqual(["https://api.github.com/repos/acme/repo/contents/docs/a.md"]);
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+
+  test("HTTP, CLI and remote executors send the exact path they receive", async () => {
+    const { urls, fetchImpl } = recordingFetch(fileResponse);
+    await executeProviderAction(
+      "github",
+      "get_file",
+      { owner: "acme", repo: "repo", path: " docs/a.md " },
+      fetchImpl,
+    );
+    expect(urls).toEqual(["https://api.github.com/repos/acme/repo/contents/%20docs/a.md%20"]);
+    let captured: string[] = [];
+    await executeCliLinkAction(
+      "github",
+      "get_file",
+      { owner: "acme", repo: "repo", path: " docs/a.md " },
+      {},
+      async (_provider, _command, args) => {
+        captured = args;
+        return { stdout: await fileResponse().text(), stderr: "" };
+      },
+    );
+    expect(captured[1]).toBe("repos/acme/repo/contents/%20docs/a.md%20");
+    const groups = [{ id: "repositories", items: [{ id: "acme/repo", label: "acme/repo" }] }];
+    expect(
+      prepareRemoteLinkAction(
+        "github",
+        "get_file",
+        { owner: "acme", repo: "repo", path: " docs/a.md " },
+        groups,
+      ),
+    ).toEqual({ owner: "acme", repo: "repo", path: " docs/a.md " });
   });
 });
 

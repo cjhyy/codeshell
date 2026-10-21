@@ -88,6 +88,12 @@ export const linkActionToolDef: ToolDefinition = {
   },
 };
 
+/**
+ * Private bound-tool service marking a saved source read. Its params are the exact
+ * stored reference and are replayed byte-exact; model or hook JSON cannot create it.
+ */
+export const savedLinkSourceRead = Symbol("saved-link-source-read");
+
 interface ConnectedLink {
   credential: CredentialMetadata;
   providerId: string;
@@ -413,6 +419,14 @@ async function executeLinkAction(
       params = githubSetStarredParameters(params);
     if (providerId === "github" && actionId === "update_issue")
       params = githubIssueStateParameters(params);
+    // Agent free text keeps its trimmed file path; a saved reference replays its exact path.
+    if (
+      providerId === "github" &&
+      actionId === "get_file" &&
+      typeof params.path === "string" &&
+      !ctx?.boundToolServices?.has(savedLinkSourceRead)
+    )
+      params = { ...params, path: params.path.trim() };
     validateLinkOperationInput(contract, params);
     const recipeId = resolveLinkRecipeId(connection.credential.meta ?? {});
     if (!recipeId)

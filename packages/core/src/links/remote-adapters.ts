@@ -266,8 +266,10 @@ export function prepareRemoteLinkAction(
     const output: Record<string, unknown> = { owner, repo };
     if (action === "get_file") {
       assertKeys(params, ["owner", "repo", "path", "ref"]);
-      pathParam(params, "path", { required: true, maxLength: 2_000 });
-      output.path = stringParam(params, "path", { required: true, maxLength: 2_000 });
+      // Exact: LinkAction trims agent free text; saved references replay byte-exact.
+      const exactPath = { required: true, maxLength: 2_000, exact: true };
+      pathParam(params, "path", exactPath);
+      output.path = stringParam(params, "path", exactPath);
     } else if (["get_readme", "get_repository", "get_starred"].includes(action))
       assertKeys(params, ["owner", "repo"]);
     else if (action === "set_starred") {
