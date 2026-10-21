@@ -13,6 +13,7 @@ import {
   type OutputJournalBinding,
 } from "./output-journal-binding.js";
 import { readOutputJournal } from "./output-journal.js";
+import { SessionOutputCoverageStore } from "./output-coverage-state.js";
 import {
   decodeJson,
   OUTPUT_ANCHOR,
@@ -35,6 +36,11 @@ const RECEIPT = "receipt.json";
 const RESULT = "result.json";
 const SOURCE = "source";
 const hex = /^[a-f0-9]{64}$/;
+const operationId = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
+const validInputId = (value: unknown): value is string =>
+  typeof value === "string" && !!value.trim() && value.length <= 512;
+type AssertLease = () => void;
+const noLease: AssertLease = () => {};
 const flags = (mode: number) =>
   mode | (fs.constants.O_NOFOLLOW ?? 0) | (fs.constants.O_NONBLOCK ?? 0);
 
@@ -108,7 +114,14 @@ function openFile(path: string, mode = fs.constants.O_RDONLY, receiptAlias = fal
     throw cause;
   }
 }
-function bytes(path: string, limit = MAX_FILE, receiptAlias = false): Buffer {
+function bytes(
+  path: string,
+  limit = MAX_FILE,
+  receiptAlias = false,
+  flush = false,
+  assertLease = noLease,
+): Buffer {
+  assertLease();
   const fd = openFile(path, fs.constants.O_RDONLY, receiptAlias);
   try {
     const before = stamp(fd),
@@ -120,6 +133,7 @@ function bytes(path: string, limit = MAX_FILE, receiptAlias = false): Buffer {
     );
     const result = Buffer.alloc(size);
     for (let offset = 0; offset < size; ) {
+      assertLease();
       const count = fs.readSync(fd, result, offset, Math.min(65536, size - offset), offset);
       requireRepair(count > 0, "source_changed", "Identity migration source changed");
       offset += count;
@@ -129,6 +143,10 @@ function bytes(path: string, limit = MAX_FILE, receiptAlias = false): Buffer {
       "source_changed",
       "Identity migration source changed",
     );
+    if (flush) {
+      assertLease();
+      fs.fsyncSync(fd);
+    }
     return result;
   } finally {
     fs.closeSync(fd);
@@ -144,12 +162,14 @@ function syncDirectory(path: string): void {
     fs.closeSync(fd);
   }
 }
-function writeAll(fd: number, data: Buffer, start = 0): void {
+function writeAll(fd: number, data: Buffer, start = 0, assertLease = noLease): void {
   for (let offset = start; offset < data.length; ) {
+    assertLease();
     const count = fs.writeSync(fd, data, offset, Math.min(65536, data.length - offset), offset);
     requireRepair(count > 0, "write_failed", "Identity migration write made no progress");
     offset += count;
   }
+  assertLease();
   fs.fsyncSync(fd);
 }
 function exists(path: string): boolean {
@@ -216,7 +236,8 @@ function unseal(path: string): any {
   return wrapper.value;
 }
 /** A receipt is visible only after the full file and its directory entry are durable. */
-function publishReceipt(path: string, value: unknown, id: string): void {
+function publishReceipt(path: string, value: unknown, id: string, assertLease = noLease): void {
+  assertLease();
   if (exists(path)) {
     requireRepair(
       JSON.stringify(unseal(path)) === JSON.stringify(value),
@@ -230,13 +251,15 @@ function publishReceipt(path: string, value: unknown, id: string): void {
     JSON.stringify({ value, sha256: sha256(JSON.stringify(value)), alias: basename(temp) }) + "\n",
   );
   requireRepair(data.length <= MAX_RECEIPT, "file_budget", "Migration receipt exceeds its bound");
-  writeExclusive(temp, data);
+  writeExclusive(temp, data, assertLease);
+  assertLease();
   fs.linkSync(temp, path);
   fs.unlinkSync(temp);
   syncDirectory(dirname(path));
 }
 /** Exclusive, retryable publication. A partial private file is completed only from its exact prefix. */
-function writeExclusive(path: string, data: Buffer): void {
+function writeExclusive(path: string, data: Buffer, assertLease = noLease): void {
+  assertLease();
   if (!exists(path)) {
     const fd = fs.openSync(
       path,
@@ -244,7 +267,7 @@ function writeExclusive(path: string, data: Buffer): void {
       0o600,
     );
     try {
-      writeAll(fd, data);
+      writeAll(fd, data, 0, assertLease);
     } finally {
       fs.closeSync(fd);
     }
@@ -252,13 +275,13 @@ function writeExclusive(path: string, data: Buffer): void {
   }
   const fd = openFile(path, fs.constants.O_RDWR);
   try {
-    const current = bytes(path, data.length);
+    const current = bytes(path, data.length, false, false, assertLease);
     requireRepair(
       current.equals(data.subarray(0, current.length)),
       "evidence_invalid",
       "Existing migration evidence differs",
     );
-    writeAll(fd, data, current.length);
+    writeAll(fd, data, current.length, assertLease);
   } finally {
     fs.closeSync(fd);
   }
@@ -267,7 +290,11 @@ function contains(parent: string, child: string): boolean {
   const at = relative(parent, child);
   return at === "" || (!isAbsolute(at) && at !== ".." && !at.startsWith(".." + sep));
 }
-function inventory(directory: string, ignored = new Set<string>()): SourceFile[] {
+function inventory(
+  directory: string,
+  ignored = new Set<string>(),
+  assertLease = noLease,
+): SourceFile[] {
   const files: SourceFile[] = [];
   let total = 0,
     directories = 0;
@@ -276,6 +303,7 @@ function inventory(directory: string, ignored = new Set<string>()): SourceFile[]
     for (const entry of fs
       .readdirSync(base, { withFileTypes: true })
       .sort((a, b) => a.name.localeCompare(b.name))) {
+      assertLease();
       if (!prefix && (entry.name === "state.json.lock" || ignored.has(entry.name))) continue;
       const name = prefix ? prefix + "/" + entry.name : entry.name;
       const path = join(base, entry.name),
@@ -305,7 +333,7 @@ function inventory(directory: string, ignored = new Set<string>()): SourceFile[]
         files.push({
           name,
           bytes: at.size,
-          sha256: sha256(bytes(path)),
+          sha256: sha256(bytes(path, MAX_FILE, false, false, assertLease)),
           dev: at.dev,
           ino: at.ino,
           stamp: stamp(fd).split(":").slice(1).join(":"),
@@ -324,6 +352,7 @@ function assertInventory(
   expected: SourceFile[],
   migratedState?: Buffer,
   migrationId?: string,
+  assertLease = noLease,
 ): void {
   const current = inventory(
     directory,
@@ -331,6 +360,7 @@ function assertInventory(
       OUTPUT_REPAIR_PENDING,
       ...(migrationId ? [`.output-identity-state-${migrationId}.tmp`] : []),
     ]),
+    assertLease,
   );
   requireRepair(
     current.length === expected.length,
@@ -363,8 +393,10 @@ function assertInventory(
     }
   }
 }
-function verifySourceEvidence(evidence: string, files: SourceFile[]): void {
+function verifySourceEvidence(evidence: string, files: SourceFile[], assertLease = noLease): void {
+  const directories = new Set<string>([join(evidence, SOURCE)]);
   for (const file of files) {
+    assertLease();
     requireRepair(
       typeof file.name === "string" &&
         file.name
@@ -374,12 +406,25 @@ function verifySourceEvidence(evidence: string, files: SourceFile[]): void {
       "Unsafe evidence name",
     );
     evidenceParents(evidence, file.name, false);
-    const data = bytes(join(evidence, SOURCE, file.name));
+    const path = join(evidence, SOURCE, file.name);
+    const data = bytes(path, MAX_FILE, false, true, assertLease);
     requireRepair(
       data.length === file.bytes && sha256(data) === file.sha256,
       "evidence_invalid",
       "Session evidence is incomplete or changed",
     );
+    for (
+      let parent = dirname(path);
+      contains(join(evidence, SOURCE), parent);
+      parent = dirname(parent)
+    ) {
+      directories.add(parent);
+      if (parent === join(evidence, SOURCE)) break;
+    }
+  }
+  for (const directory of [...directories].sort((a, b) => b.length - a.length)) {
+    assertLease();
+    syncDirectory(directory);
   }
 }
 function validateBinding(root: string, directory: string, binding: OutputJournalBinding): void {
@@ -398,7 +443,9 @@ function makePlan(
   files: SourceFile[],
   resume: boolean,
   originalState?: Buffer,
+  assertLease = noLease,
 ): Receipt {
+  assertLease();
   const stateBytes = originalState ?? bytes(join(directory, "state.json"), 1024 * 1024),
     state = decodeJson(stateBytes);
   requireRepair(
@@ -444,7 +491,7 @@ function makePlan(
     "authority_mismatch",
     "Published files are missing or replaced",
   );
-  const data = bytes(join(directory, OUTPUT_ANCHOR));
+  const data = bytes(join(directory, OUTPUT_ANCHOR), MAX_FILE, false, false, assertLease);
   const newline = data.indexOf(10);
   requireRepair(newline >= 0 && newline < 256 * 1024, "chain_invalid", "Journal header is missing");
   const head = decodeJson(bytes(join(directory, OUTPUT_HEAD), 4096)).head;
@@ -467,7 +514,11 @@ function makePlan(
         typeof proof.unpaired === "boolean" &&
         Array.isArray(proof.inputIds) &&
         proof.inputIds.length <= 128 &&
-        proof.inputIds.every((id: unknown) => typeof id === "string" && id.length <= 512) &&
+        proof.inputIds.every(validInputId) &&
+        new Set(proof.inputIds).size === proof.inputIds.length &&
+        proof.inputIds.reduce((sum: number, id: string) => sum + Buffer.byteLength(id), 0) <=
+          32 * 1024 &&
+        (proof.lastInputId === undefined || validInputId(proof.lastInputId)) &&
         (proof.journalIdentity === undefined ||
           proof.journalIdentity === state.outputJournalIdentity),
       "coverage_mismatch",
@@ -497,14 +548,16 @@ function makePlan(
     }),
   };
   verifyBackupChain(manifest, (name, start, end, consume) => {
-    const source = bytes(join(directory, name));
+    const source = bytes(join(directory, name), MAX_FILE, false, false, assertLease);
     requireRepair(
       start >= 0 && end >= start && end <= source.length,
       "chain_invalid",
       "Invalid migration verification range",
     );
-    for (let offset = start; offset < end; offset += 65536)
+    for (let offset = start; offset < end; offset += 65536) {
+      assertLease();
       consume(source.subarray(offset, Math.min(end, offset + 65536)));
+    }
   });
   const binding: OutputJournalBinding = {
     version: 1,
@@ -571,15 +624,23 @@ function migratedState(receipt: Receipt, receiptHash: string): Buffer {
   requireRepair(result.length <= 1024 * 1024, "file_budget", "Migrated state exceeds its bound");
   return result;
 }
-function publishState(path: string, data: Buffer, id: string): void {
+function publishState(path: string, data: Buffer, id: string, assertLease = noLease): void {
   const temp = join(dirname(path), `.output-identity-state-${id}.tmp`);
-  writeExclusive(temp, data);
+  writeExclusive(temp, data, assertLease);
+  assertLease();
   fs.renameSync(temp, path);
   syncDirectory(dirname(path));
 }
-function verifyConsumer(root: string, sessionId: string, identity: string): void {
+function verifyConsumer(
+  root: string,
+  sessionId: string,
+  identity: string,
+  expected: Record<string, any>,
+  assertLease = noLease,
+): void {
   let after: string | undefined, through: string | undefined;
   for (let page = 0; page < 1_000_000; page++) {
+    assertLease();
     const result = readOutputJournal(root, sessionId, { after, through });
     requireRepair(
       result.status === "ok" && result.through && result.next,
@@ -591,7 +652,22 @@ function verifyConsumer(root: string, sessionId: string, identity: string): void
       "authority_mismatch",
       "Migration changed the logical cursor domain",
     );
-    if (result.complete) return;
+    if (result.complete) {
+      const coverage = new SessionOutputCoverageStore(() => root).read(sessionId);
+      const persisted = decodeJson(bytes(join(root, sessionId, "state.json"), 1024 * 1024));
+      requireRepair(
+        coverage.status === "ok" &&
+          coverage.incarnation === expected.outputJournalBinding.coverageIdentity &&
+          coverage.journalIdentity === expected.outputJournalIdentity &&
+          coverage.unpaired === (expected.outputCoverage?.unpaired ?? false) &&
+          JSON.stringify(coverage.inputIds) ===
+            JSON.stringify(expected.outputCoverage?.inputIds ?? []) &&
+          persisted.outputCoverage?.lastInputId === expected.outputCoverage?.lastInputId,
+        "coverage_mismatch",
+        "Migrated display coverage does not preserve the admitted input history",
+      );
+      return;
+    }
     requireRepair(
       result.next !== after,
       "consumer_incomplete",
@@ -649,8 +725,30 @@ export function migrateOutputJournalIdentity(
     "path_replaced",
     "Session directory was replaced",
   );
-  const release = lockSync(statePath, { realpath: false, retries: 0 });
-  try {
+  const release = lockSync(statePath, {
+    realpath: false,
+    retries: 0,
+    stale: 120_000,
+    update: 60_000,
+  });
+  const lockPath = statePath + ".lock",
+    lease = fs.lstatSync(lockPath);
+  let refreshedAt = 0;
+  const assertLease = () => {
+    const current = fs.lstatSync(lockPath);
+    requireRepair(
+      current.isDirectory() && !current.isSymbolicLink() && sameFile(current, lease),
+      "lock_lost",
+      "Output identity migration state lease was replaced",
+    );
+    const now = Date.now();
+    if (now - refreshedAt >= 1000) {
+      fs.utimesSync(lockPath, new Date(now), new Date(now));
+      refreshedAt = now;
+    }
+  };
+  const work = (): OutputIdentityMigrationResult => {
+    assertLease();
     const receiptPath = join(evidenceDirectory, RECEIPT);
     let receipt: Receipt;
     if (exists(receiptPath)) {
@@ -661,6 +759,11 @@ export function migrateOutputJournalIdentity(
         "Evidence source directory was replaced",
       );
       receipt = unseal(receiptPath);
+      requireRepair(
+        typeof receipt?.id === "string" && operationId.test(receipt.id),
+        "evidence_invalid",
+        "Migration receipt has an invalid operation ID",
+      );
       requireRepair(
         receipt?.format === FORMAT &&
           receipt.version === 1 &&
@@ -673,7 +776,7 @@ export function migrateOutputJournalIdentity(
         "evidence_invalid",
         "Identity migration receipt belongs to a different operation",
       );
-      verifySourceEvidence(evidenceDirectory, receipt.files);
+      verifySourceEvidence(evidenceDirectory, receipt.files, assertLease);
       const verified = makePlan(
         root,
         sessionId,
@@ -682,6 +785,7 @@ export function migrateOutputJournalIdentity(
         receipt.files,
         receipt.resumeWithRecordedGap,
         bytes(join(evidenceDirectory, SOURCE, "state.json"), 1024 * 1024),
+        assertLease,
       );
       requireRepair(
         JSON.stringify(verified.state) === JSON.stringify(receipt.state) &&
@@ -693,7 +797,7 @@ export function migrateOutputJournalIdentity(
       );
     } else {
       requireRepair(!exists(pendingPath), "repair_pending", "A different repair is pending");
-      const files = inventory(directory);
+      const files = inventory(directory, undefined, assertLease);
       receipt = makePlan(
         root,
         sessionId,
@@ -701,22 +805,35 @@ export function migrateOutputJournalIdentity(
         evidenceDirectory,
         files,
         !!options.resumeWithRecordedGap,
+        undefined,
+        assertLease,
       );
       privateDirectory(evidenceDirectory);
       privateDirectory(join(evidenceDirectory, SOURCE));
       for (const file of files) {
+        assertLease();
         const target = join(evidenceDirectory, SOURCE, file.name);
         evidenceParents(evidenceDirectory, file.name, true);
-        writeExclusive(target, bytes(join(directory, file.name)));
+        writeExclusive(
+          target,
+          bytes(join(directory, file.name), MAX_FILE, false, false, assertLease),
+          assertLease,
+        );
         syncDirectory(dirname(target));
       }
-      assertInventory(directory, files);
-      verifySourceEvidence(evidenceDirectory, files);
-      publishReceipt(receiptPath, receipt, receipt.id);
+      assertInventory(directory, files, undefined, undefined, assertLease);
+      verifySourceEvidence(evidenceDirectory, files, assertLease);
+      publishReceipt(receiptPath, receipt, receipt.id, assertLease);
       syncDirectory(evidenceDirectory);
       syncDirectory(dirname(evidenceDirectory));
     }
-    const receiptHash = sha256(bytes(receiptPath, MAX_RECEIPT));
+    // A preceding invocation may have failed after linking a complete receipt
+    // but before its directory flush. Re-flush the already verified proof and
+    // directory entries before allowing the source state to change on retry.
+    assertLease();
+    const receiptHash = sha256(bytes(receiptPath, MAX_RECEIPT, false, true, assertLease));
+    syncDirectory(evidenceDirectory);
+    syncDirectory(dirname(evidenceDirectory));
     const nextState = migratedState(receipt, receiptHash);
     const pending = {
       format: FORMAT,
@@ -727,17 +844,27 @@ export function migrateOutputJournalIdentity(
     };
     const currentState = bytes(statePath, 1024 * 1024);
     const alreadyCommitted = currentState.equals(nextState);
-    if (!alreadyCommitted) assertInventory(directory, receipt.files, undefined, receipt.id);
-    else assertInventory(directory, receipt.files, nextState, receipt.id);
+    if (!alreadyCommitted)
+      assertInventory(directory, receipt.files, undefined, receipt.id, assertLease);
+    else assertInventory(directory, receipt.files, nextState, receipt.id, assertLease);
     options.onCheckpoint?.("evidence-durable");
+    assertLease();
     validateBinding(root, directory, receipt.binding);
-    writeExclusive(pendingPath, sealed(pending));
+    writeExclusive(pendingPath, sealed(pending), assertLease);
     syncDirectory(directory);
     options.onCheckpoint?.("barrier-durable");
-    assertInventory(directory, receipt.files, alreadyCommitted ? nextState : undefined, receipt.id);
-    if (!alreadyCommitted) publishState(statePath, nextState, receipt.id);
+    assertLease();
+    assertInventory(
+      directory,
+      receipt.files,
+      alreadyCommitted ? nextState : undefined,
+      receipt.id,
+      assertLease,
+    );
+    if (!alreadyCommitted) publishState(statePath, nextState, receipt.id, assertLease);
     options.onCheckpoint?.("state-durable");
-    assertInventory(directory, receipt.files, nextState, receipt.id);
+    assertLease();
+    assertInventory(directory, receipt.files, nextState, receipt.id, assertLease);
     validateBinding(root, directory, receipt.binding);
     const result: OutputIdentityMigrationResult = {
       version: 1,
@@ -750,20 +877,47 @@ export function migrateOutputJournalIdentity(
       transcriptSha256: receipt.transcriptSha256,
     };
     try {
+      assertLease();
       fs.unlinkSync(pendingPath);
       syncDirectory(directory);
-      verifyConsumer(root, sessionId, receipt.binding.journalIdentity);
+      verifyConsumer(
+        root,
+        sessionId,
+        receipt.binding.journalIdentity,
+        decodeJson(nextState),
+        assertLease,
+      );
       options.onCheckpoint?.("consumer-verified");
+      assertLease();
       const durableResult = { ...result, status: "migrated" };
-      publishReceipt(join(evidenceDirectory, RESULT), durableResult, receipt.id);
+      publishReceipt(join(evidenceDirectory, RESULT), durableResult, receipt.id, assertLease);
       syncDirectory(evidenceDirectory);
       return result;
     } catch (cause) {
-      writeExclusive(pendingPath, sealed(pending));
+      assertLease();
+      writeExclusive(pendingPath, sealed(pending), assertLease);
       syncDirectory(directory);
       throw cause;
     }
-  } finally {
-    release();
+  };
+  let result: OutputIdentityMigrationResult | undefined, primary: unknown;
+  try {
+    result = work();
+  } catch (cause) {
+    primary = cause;
   }
+  try {
+    assertLease();
+    release();
+  } catch (cause) {
+    if (primary)
+      throw new AggregateError(
+        [primary, cause],
+        "Output identity migration and lease release failed",
+        { cause },
+      );
+    throw cause;
+  }
+  if (primary) throw primary;
+  return result!;
 }

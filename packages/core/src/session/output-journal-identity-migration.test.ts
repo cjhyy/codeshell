@@ -1,4 +1,4 @@
-import { afterAll, afterEach, expect, test } from "bun:test";
+import { afterAll, afterEach, expect, spyOn, test } from "bun:test";
 import * as fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
@@ -403,3 +403,150 @@ test("evidence inside the Session store and symbolic-link inventory entries are 
   expect(fs.readFileSync(f.statePath)).toEqual(originalState);
   expect(fs.existsSync(f.evidence)).toBe(false);
 });
+
+test("migration preserves valid nonempty input coverage and last input while recording a gap", () => {
+  const f = fixture();
+  const before = state(f);
+  before.outputCoverage.inputIds = ["pending-one", "等待中的输入🙂"];
+  before.outputCoverage.lastInputId = "prior-input";
+  fs.writeFileSync(f.statePath, JSON.stringify(before) + "\n");
+  migrateOutputJournalIdentity(f.root, f.id, f.evidence, options);
+  expect(state(f).outputCoverage).toMatchObject({
+    inputIds: before.outputCoverage.inputIds,
+    lastInputId: "prior-input",
+    unpaired: true,
+  });
+  expect(new SessionOutputCoverageStore(() => f.root).read(f.id)).toMatchObject({
+    status: "ok",
+    inputIds: before.outputCoverage.inputIds,
+    unpaired: true,
+  });
+  expectPreserved(f);
+});
+
+test("malformed coverage is rejected before any re-admission", () => {
+  for (const invalid of [
+    { inputIds: [""] },
+    { inputIds: ["   "] },
+    { inputIds: ["duplicate", "duplicate"] },
+    { inputIds: Array.from({ length: 128 }, (_, i) => String(i).padEnd(512, "x")) },
+    { lastInputId: "" },
+    { lastInputId: "  " },
+    { lastInputId: "x".repeat(513) },
+  ]) {
+    const f = fixture();
+    const before = state(f);
+    Object.assign(before.outputCoverage, invalid);
+    const original = JSON.stringify(before) + "\n";
+    fs.writeFileSync(f.statePath, original);
+    expect(() => migrateOutputJournalIdentity(f.root, f.id, f.evidence, options)).toThrow(
+      "coverage identity",
+    );
+    expect(fs.readFileSync(f.statePath, "utf8")).toBe(original);
+    expect(fs.existsSync(f.evidence)).toBe(false);
+  }
+});
+
+test("retry rejects a self-checksummed receipt with a path-bearing operation ID", () => {
+  const f = fixture();
+  expect(() =>
+    migrateOutputJournalIdentity(f.root, f.id, f.evidence, {
+      ...options,
+      onCheckpoint: (phase) => {
+        if (phase === "evidence-durable") throw new Error("stop after evidence");
+      },
+    }),
+  ).toThrow("stop after evidence");
+  const path = join(f.evidence, "receipt.json"),
+    receipt = JSON.parse(fs.readFileSync(path, "utf8"));
+  receipt.value.id = "../../../../escape";
+  receipt.sha256 = hash(JSON.stringify(receipt.value));
+  fs.writeFileSync(path, JSON.stringify(receipt) + "\n");
+  const original = fs.readFileSync(f.statePath);
+  expect(() => migrateOutputJournalIdentity(f.root, f.id, f.evidence, options)).toThrow(
+    "invalid operation ID",
+  );
+  expect(fs.readFileSync(f.statePath)).toEqual(original);
+  expect(fs.existsSync(join(f.directory, "output-journal-repair-pending.json"))).toBe(false);
+});
+
+test("retry reflushes a linked receipt, source files and directory entries before mutation", () => {
+  const f = fixture();
+  const originalOpen = fs.openSync,
+    originalFsync = fs.fsyncSync,
+    originalLink = fs.linkSync;
+  const opened = new Map<number, string>(),
+    events: string[] = [];
+  let receiptLinked = false,
+    failDirectoryFlush = true;
+  const open = spyOn(fs, "openSync").mockImplementation((path, flags, mode) => {
+    const name = String(path);
+    if (name === join(f.directory, "output-journal-repair-pending.json")) events.push("mutate");
+    const fd = originalOpen(path, flags, mode);
+    opened.set(fd, name);
+    return fd;
+  });
+  const link = spyOn(fs, "linkSync").mockImplementation((source, target) => {
+    originalLink(source, target);
+    if (String(target) === join(f.evidence, "receipt.json")) receiptLinked = true;
+  });
+  const sync = spyOn(fs, "fsyncSync").mockImplementation((fd) => {
+    const path = opened.get(fd);
+    if (receiptLinked && failDirectoryFlush && path === f.evidence) {
+      failDirectoryFlush = false;
+      throw new Error("evidence directory flush failed");
+    }
+    events.push("flush:" + path);
+    originalFsync(fd);
+  });
+  try {
+    expect(() => migrateOutputJournalIdentity(f.root, f.id, f.evidence, options)).toThrow(
+      "directory flush failed",
+    );
+    expect(fs.existsSync(join(f.evidence, "receipt.json"))).toBe(true);
+    expect(fs.existsSync(join(f.directory, "output-journal-repair-pending.json"))).toBe(false);
+    events.length = 0;
+    expect(migrateOutputJournalIdentity(f.root, f.id, f.evidence, options).status).toBe("migrated");
+    const beforeMutation = events.slice(0, events.indexOf("mutate"));
+    for (const path of [
+      join(f.evidence, "receipt.json"),
+      join(f.evidence, "source", "state.json"),
+      join(f.evidence, "source", "transcript.jsonl"),
+      join(f.evidence, "source", "output-journal.jsonl"),
+      join(f.evidence, "source", "output-journal-head.json"),
+      join(f.evidence, "source", "attachments", "retained.txt"),
+      join(f.evidence, "source", "attachments"),
+      join(f.evidence, "source"),
+      f.evidence,
+      f.parent,
+    ])
+      expect(beforeMutation).toContain("flush:" + path);
+    expectPreserved(f);
+  } finally {
+    sync.mockRestore();
+    link.mockRestore();
+    open.mockRestore();
+  }
+});
+
+for (const phase of ["barrier-durable", "state-durable"] as const)
+  test(`a replaced state lease at ${phase} leaves the Session fenced`, () => {
+    const f = fixture();
+    const competingLease = f.statePath + ".lock";
+    expect(() =>
+      migrateOutputJournalIdentity(f.root, f.id, f.evidence, {
+        ...options,
+        onCheckpoint: (at) => {
+          if (at === phase) {
+            fs.renameSync(competingLease, join(f.directory, "retired-lease"));
+            fs.mkdirSync(competingLease, { mode: 0o700 });
+          }
+        },
+      }),
+    ).toThrow("lease");
+    expect(fs.existsSync(competingLease)).toBe(true);
+    expect(fs.existsSync(join(f.directory, "output-journal-repair-pending.json"))).toBe(true);
+    expect(readOutputJournal(f.root, f.id).status).toBe("incomplete");
+    expectPreserved(f);
+    if (phase === "barrier-durable") expect(state(f).outputRecoveryIncomplete).toBe(true);
+  });
