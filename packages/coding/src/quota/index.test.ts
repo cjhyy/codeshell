@@ -23,12 +23,12 @@ function claudeResponse(headers: Record<string, string>, ok = true, status = 200
 }
 
 describe("queryCodexQuota", () => {
-  it("maps primary/secondary windows to 5h/7d", async () => {
+  it("labels primary/secondary windows from their reported durations", async () => {
     const fetchImpl = codexResponse({
       plan_type: "team",
       rate_limit: {
-        primary_window: { used_percent: 21, reset_at: 1782893448 },
-        secondary_window: { used_percent: 36, reset_at: 1783389389 },
+        primary_window: { limit_window_seconds: 18000, used_percent: 21, reset_at: 1782893448 },
+        secondary_window: { limit_window_seconds: 604800, used_percent: 36, reset_at: 1783389389 },
       },
     });
     const q = await queryCodexQuota(CREDS, fetchImpl, NEVER_ABORT);
@@ -38,6 +38,105 @@ describe("queryCodexQuota", () => {
       { kind: "5h", usedPercent: 21, resetsAt: 1782893448 },
       { kind: "7d", usedPercent: 36, resetsAt: 1783389389 },
     ]);
+  });
+
+  it("uses each window's own duration when primary and secondary are swapped", async () => {
+    const q = await queryCodexQuota(
+      CREDS,
+      codexResponse({
+        rate_limit: {
+          primary_window: {
+            limit_window_seconds: 604800,
+            used_percent: 71.25,
+            reset_at: 1783389389,
+          },
+          secondary_window: {
+            limit_window_seconds: 18000,
+            used_percent: "21.5",
+            reset_at: "1782893448",
+          },
+        },
+      }),
+      NEVER_ABORT,
+    );
+    expect(q.windows).toEqual([
+      { kind: "7d", usedPercent: 71.25, resetsAt: 1783389389 },
+      { kind: "5h", usedPercent: 21.5, resetsAt: 1782893448 },
+    ]);
+  });
+
+  it.each([
+    ["1h", 3600],
+    ["25h", 90000],
+    ["90m", 5400],
+    ["1m", 60],
+    ["3661s", 3661],
+    ["61s", 61],
+    ["1.5s", 1.5],
+  ])("labels %s from its reported duration exactly", async (kind, seconds) => {
+    const q = await queryCodexQuota(
+      CREDS,
+      codexResponse({
+        rate_limit: { primary_window: { limit_window_seconds: seconds, used_percent: 12.5 } },
+      }),
+      NEVER_ABORT,
+    );
+    expect(q.windows).toEqual([{ kind, usedPercent: 12.5, resetsAt: null }]);
+  });
+
+  it.each<[string, unknown]>([
+    ["missing", undefined],
+    ["null", null],
+    ["zero", 0],
+    ["negative", -1],
+    ["NaN", NaN],
+    ["infinity", Infinity],
+    ["negative infinity", -Infinity],
+    ["empty string", ""],
+    ["invalid string", "invalid"],
+    ["partial numeric string", "3600seconds"],
+    ["numeric string", "3600"],
+    ["boolean", true],
+    ["object", {}],
+    ["array", []],
+  ])("falls back to the slot name for %s duration", async (_name, seconds) => {
+    const q = await queryCodexQuota(
+      CREDS,
+      codexResponse({
+        rate_limit: {
+          primary_window: { limit_window_seconds: seconds, used_percent: 21, reset_at: null },
+          secondary_window: {
+            limit_window_seconds: seconds,
+            used_percent: "36.5",
+            reset_at: "1783389389",
+          },
+        },
+      }),
+      NEVER_ABORT,
+    );
+    expect(q.error).toBeUndefined();
+    expect(q.windows).toEqual([
+      { kind: "primary", usedPercent: 21, resetsAt: null },
+      { kind: "secondary", usedPercent: 36.5, resetsAt: 1783389389 },
+    ]);
+  });
+
+  it("continues skipping invalid utilization and preserving invalid reset handling", async () => {
+    const q = await queryCodexQuota(
+      CREDS,
+      codexResponse({
+        rate_limit: {
+          primary_window: { limit_window_seconds: 18000, used_percent: "invalid", reset_at: 1 },
+          secondary_window: {
+            limit_window_seconds: 604800,
+            used_percent: "36.5",
+            reset_at: "invalid",
+          },
+        },
+      }),
+      NEVER_ABORT,
+    );
+    expect(q.windows).toEqual([{ kind: "7d", usedPercent: 36.5, resetsAt: null }]);
   });
 
   it("no token → error, no fetch", async () => {
@@ -159,11 +258,33 @@ describe("queryClaudeQuota", () => {
 describe("coding checkQuota", () => {
   it("queries only the requested provider", async () => {
     const fetchImpl = codexResponse({
-      rate_limit: { primary_window: { used_percent: 5, reset_at: 1 } },
+      rate_limit: { primary_window: { limit_window_seconds: 18000, used_percent: 5, reset_at: 1 } },
     });
     const r = await checkQuota({ creds: CREDS, providers: ["codex"], fetchImpl });
     expect(r.codex?.windows?.[0].usedPercent).toBe(5);
     expect(r.claude).toBeUndefined();
+  });
+
+  it("renders a 7d primary window without inventing a null secondary window", async () => {
+    const now = 1782893448;
+    const resetsAt = now + 5 * 86400 + 4 * 3600;
+    const r = await checkQuota({
+      creds: CREDS,
+      providers: ["codex"],
+      fetchImpl: codexResponse({
+        plan_type: "pro",
+        rate_limit: {
+          primary_window: { limit_window_seconds: 604800, used_percent: 71, reset_at: resetsAt },
+          secondary_window: null,
+        },
+      }),
+    });
+    expect(r.codex).toEqual({
+      provider: "codex",
+      planType: "pro",
+      windows: [{ kind: "7d", usedPercent: 71, resetsAt }],
+    });
+    expect(formatQuota(r, now)).toBe("Codex [pro]: 7d 用了 71% (重置 5d4h 后)");
   });
 });
 

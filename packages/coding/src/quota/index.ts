@@ -3,7 +3,8 @@
  *
  * Both lookups are verified against the real backends (2026-07-01):
  *   - Codex: GET https://chatgpt.com/backend-api/wham/usage → JSON
- *            rate_limit.{primary_window,secondary_window}.{used_percent,reset_at}.
+ *            rate_limit.{primary_window,secondary_window} contains
+ *            limit_window_seconds, used_percent and reset_at.
  *            Zero cost (no message sent).
  *   - Claude: POST /v1/messages (max_tokens:1) → response headers
  *            anthropic-ratelimit-unified-<window>-{utilization,reset}, where
@@ -47,6 +48,23 @@ function num(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Label a Codex window from its reported `limit_window_seconds`.
+ *
+ * The slots are NOT fixed durations: an account whose only limit is weekly
+ * reports that 7d window as `primary_window`, so mapping primary→5h /
+ * secondary→7d by position mislabels it. When the duration is missing or
+ * malformed we fall back to the slot name rather than inventing a duration, so
+ * the two windows stay distinguishable.
+ */
+function codexWindowKind(seconds: unknown, slot: "primary" | "secondary"): string {
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds <= 0) return slot;
+  if (seconds % 86400 === 0) return `${seconds / 86400}d`;
+  if (seconds % 3600 === 0) return `${seconds / 3600}h`;
+  if (seconds % 60 === 0) return `${seconds / 60}m`;
+  return `${seconds}s`;
+}
+
 /** Codex: GET the usage endpoint and map its JSON to ProviderQuota. */
 export async function queryCodexQuota(
   creds: QuotaCredentials,
@@ -85,16 +103,16 @@ export async function queryCodexQuota(
   }
   const rl = (body.rate_limit ?? {}) as Record<string, unknown>;
   const windows: QuotaWindow[] = [];
-  const map: [string, "5h" | "7d"][] = [
-    ["primary_window", "5h"],
-    ["secondary_window", "7d"],
-  ];
-  for (const [key, kind] of map) {
-    const w = rl[key] as Record<string, unknown> | undefined;
+  for (const slot of ["primary", "secondary"] as const) {
+    const w = rl[`${slot}_window`] as Record<string, unknown> | undefined;
     if (!w) continue;
     const usedPercent = num(w.used_percent);
     if (usedPercent == null) continue;
-    windows.push({ kind, usedPercent, resetsAt: num(w.reset_at) });
+    windows.push({
+      kind: codexWindowKind(w.limit_window_seconds, slot),
+      usedPercent,
+      resetsAt: num(w.reset_at),
+    });
   }
   if (windows.length === 0) return { provider: "codex", error: "响应无 rate_limit 窗口" };
   return {
