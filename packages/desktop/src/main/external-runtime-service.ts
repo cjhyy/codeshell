@@ -689,7 +689,11 @@ export class ExternalRuntimeService {
         "claim that a sub-agent was dispatched unless DriveAgent returned success. " +
         "When DriveAgent returns a background jobId, do not poll it or duplicate its work " +
         "locally. Unless the user explicitly requested concurrent work, finish the current " +
-        "turn; CodeShell will inject the completion and continue this same task automatically.",
+        "turn; CodeShell will inject the completion and continue this same task automatically. " +
+        "Start other agent CLIs only through DriveAgent: never launch codex exec, claude -p or " +
+        "a similar agent from a shell, because CodeShell cannot track, stop, notify on or " +
+        "account for such a process. Use background=true for anything that may take more " +
+        "than a few minutes; a foreground tool call is cut off by this runtime's tool timeout.",
       "CodeShell Desktop can play local audio and video inline in chat. " +
         "Save media artifacts inside this session's workspace and include a Markdown " +
         "embed such as ![Audio description](/absolute/path/audio.mp3) or " +

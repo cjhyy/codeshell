@@ -816,6 +816,7 @@ describe("ExternalRuntimeService", () => {
     expect(registry.getToolDefinitions().map((tool) => tool.name)).toContain("DriveAgentJobs");
     expect(starts[0]!.developerInstructions).toContain('DriveAgent with cli="codex"');
     expect(starts[0]!.developerInstructions).toContain('permissionMode="acceptEdits"');
+    expect(starts[0]!.developerInstructions).toContain("never launch codex exec");
   });
 
   test("dontAsk disables approval prompts but preserves user questions", async () => {
