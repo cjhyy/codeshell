@@ -730,6 +730,9 @@ export function migrateOutputJournalIdentity(
     retries: 0,
     stale: 120_000,
     update: 60_000,
+    // assertLease detects and fences a replaced lease; a later refresh that
+    // finds it compromised must not raise an uncaught exception in the Host.
+    onCompromised: () => undefined,
   });
   const lockPath = statePath + ".lock",
     lease = fs.lstatSync(lockPath);
