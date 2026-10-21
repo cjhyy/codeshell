@@ -23,19 +23,22 @@ import {
   type StreamEvent,
   type ToolRegistry,
 } from "@cjhyy/code-shell-core";
-import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
+import { backgroundJobRegistry, ModelTraceStore } from "@cjhyy/code-shell-core/internal";
 import { createSessionToolHost, FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
 import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { EXTERNAL_GOAL_TOOLS } from "./external-runtime-goals.js";
 import type { ExternalRuntimeServiceDeps } from "./external-runtime-service.js";
 import { getProjectStore } from "./project-store.js";
 import { mobileSessionCommandAuthority } from "./mobile-remote/output-recovery-authority.js";
+import { setProjectTrustWithRevocation } from "./project-trust-lifecycle.js";
 
 type StartArgs = Record<string, unknown>;
 const starts: StartArgs[] = [];
 const closed: string[] = [];
 /** When set, the next fake provider send rejects the way a dead process does. */
 let failNextSend = false;
+let failNextStart = false;
+let providerStart: (() => Promise<void>) | undefined;
 let providerSend:
   | ((args: StartArgs, input: { text: string; injected?: boolean }) => Promise<void>)
   | undefined;
@@ -90,6 +93,11 @@ mock.module("@cjhyy/code-shell-capability-coding/external-runtimes", () => ({
   ...runtimeExports,
   startExternalRuntimeSession: async (args: StartArgs) => {
     starts.push(args);
+    if (failNextStart) {
+      failNextStart = false;
+      throw new Error("provider startup failed");
+    }
+    await providerStart?.();
     return fakeSession(args);
   },
   textWithAttachmentReferences: (input: { text: string; attachments?: Array<{ path: string }> }) =>
@@ -146,6 +154,59 @@ const request = {
   ownerWindow: { webContents: { id: 77 } } as never,
 };
 
+function backgroundDelivery() {
+  type Listener = Parameters<
+    NonNullable<ExternalRuntimeServiceDeps["backgroundWork"]>["subscribe"]
+  >[0];
+  let listener: Listener | undefined;
+  const pending = new Map<string, string>();
+  const running = new Set<string>();
+  const dropped: string[] = [];
+  const delivery = {
+    subscribe(next: Listener) {
+      listener = next;
+      return () => {
+        listener = undefined;
+      };
+    },
+    hasPending: (sessionId: string) => pending.has(sessionId),
+    hasRunning: (sessionId: string) => running.has(sessionId),
+    drainMessage(sessionId: string) {
+      const message = pending.get(sessionId);
+      pending.delete(sessionId);
+      return message;
+    },
+    dropSession(sessionId: string) {
+      dropped.push(sessionId);
+      pending.delete(sessionId);
+      running.delete(sessionId);
+    },
+  };
+  return {
+    delivery,
+    pending,
+    running,
+    dropped,
+    complete(sessionId: string, text = "delegated result") {
+      running.delete(sessionId);
+      pending.set(sessionId, text);
+      listener?.(sessionId, {
+        type: "background_agent_completed",
+        agentId: "cc-replacement",
+        description: "delegated task",
+        status: "completed",
+        enqueuedAt: Date.now(),
+      });
+    },
+  };
+}
+
+async function settleBackgroundWakeup() {
+  for (let index = 0; index < 10; index++) {
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
+}
+
 beforeEach(() => {
   previousHome = process.env.CODE_SHELL_HOME;
   testHome = mkdtempSync(join(tmpdir(), "codeshell-external-service-"));
@@ -157,6 +218,8 @@ beforeEach(() => {
   emitted.length = 0;
   stateChanges.length = 0;
   failNextSend = false;
+  failNextStart = false;
+  providerStart = undefined;
   providerSend = undefined;
   providerInterrupt = undefined;
   providerInputs.length = 0;
@@ -409,6 +472,72 @@ describe("ExternalRuntimeService", () => {
     expect(
       streamEvents.some((event) => event.type === "goal_progress" && event.status === "met"),
     ).toBe(false);
+  });
+
+  test("an interrupt that keeps the Goal lets the user's next message steer it", async () => {
+    let release!: () => void;
+    let started!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    providerInterrupt = async () => release();
+    providerSend = async () => {
+      if (providerInputs.length > 1) return;
+      started();
+      await blocked;
+    };
+    const running = svc.send(request.sessionId, { text: "执行", goal: "持续推进的目标" });
+    await entered;
+    await svc.interrupt(request.sessionId, 77, undefined, { keepGoal: true });
+    await running;
+    expect(svc.getGoal(request.sessionId)).toMatchObject({
+      goal: "持续推进的目标",
+      paused: false,
+      revision: 1,
+    });
+    expect(
+      streamEvents.some(
+        (event) => event.type === "goal_progress" && event.gaps?.includes("目标已暂停"),
+      ),
+    ).toBe(false);
+    providerSend = async (args) => {
+      const goal = svc.getGoal(request.sessionId);
+      await (args.registry as ToolRegistry).executeTool("complete_goal", {
+        goalId: goal.goalId,
+        revision: goal.revision,
+      });
+    };
+    await svc.send(request.sessionId, { text: "换个方向：先做求职" });
+    expect(providerInputs[1]!.text).toContain("换个方向：先做求职");
+    expect(providerInputs[1]!.text).toContain("<codeshell_goal>");
+    expect(starts).toHaveLength(1);
+    await svc.stop(request.sessionId);
+  });
+
+  test("yielding a Goal ends the run after the current turn without pausing it", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    expect(svc.yieldGoal(request.sessionId, 77)).toBe(false);
+    providerSend = async () => {
+      expect(svc.yieldGoal(request.sessionId, 77)).toBe(true);
+    };
+    await svc.send(request.sessionId, { text: "执行", goal: "让位给排队消息" });
+    expect(providerInputs).toHaveLength(1);
+    expect(svc.getGoal(request.sessionId)).toMatchObject({
+      goal: "让位给排队消息",
+      paused: false,
+    });
+    expect(
+      streamEvents.some(
+        (event) => event.type === "goal_progress" && event.gaps?.includes("目标已暂停"),
+      ),
+    ).toBe(false);
+    await svc.stop(request.sessionId);
   });
 
   test("interrupt failure pauses the edited revision and requires rebuilding the provider", async () => {
@@ -750,6 +879,7 @@ describe("ExternalRuntimeService", () => {
     expect(registry.getToolDefinitions().map((tool) => tool.name)).toContain("DriveAgentJobs");
     expect(starts[0]!.developerInstructions).toContain('DriveAgent with cli="codex"');
     expect(starts[0]!.developerInstructions).toContain('permissionMode="acceptEdits"');
+    expect(starts[0]!.developerInstructions).toContain("never launch codex exec");
   });
 
   test("dontAsk disables approval prompts but preserves user questions", async () => {
@@ -1569,6 +1699,395 @@ describe("ExternalRuntimeService", () => {
     await svc.start(request);
     expect(released).toEqual(["sess-1"]);
     expect(claims).toHaveLength(2);
+  });
+
+  test("replacing a physical runtime keeps delegated work and delivers its result once", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    background.running.add(request.sessionId);
+
+    await svc.start({ ...request, model: "replacement-model" });
+    expect(background.running.has(request.sessionId)).toBe(true);
+    expect(background.dropped).toEqual([]);
+    expect(released).toEqual([request.sessionId]);
+
+    background.complete(request.sessionId);
+    await settleBackgroundWakeup();
+    expect(providerInputs).toHaveLength(1);
+    expect(providerInputs[0]).toMatchObject({ injected: true });
+    expect(providerInputs[0]!.text).toContain("delegated result");
+    expect(background.pending.size).toBe(0);
+
+    await svc.stop(request.sessionId, 77);
+    expect(background.dropped).toEqual([request.sessionId]);
+  });
+
+  test("only business-session close invokes a delegated job's actual abort handle", async () => {
+    const background = backgroundDelivery();
+    let aborted = 0;
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: {
+        ...background.delivery,
+        dropSession(sessionId: string) {
+          background.delivery.dropSession(sessionId);
+          backgroundJobRegistry.dropForSession(sessionId);
+        },
+      },
+    });
+    await svc.start(request);
+    backgroundJobRegistry.start("cc-preserved-runtime", request.sessionId, "delegated task", {
+      kind: "drive-agent",
+      abort: () => {
+        aborted++;
+      },
+    });
+    try {
+      await svc.start(request);
+      expect(aborted).toBe(0);
+      expect(backgroundJobRegistry.get("cc-preserved-runtime")?.status).toBe("running");
+      await svc.stop(request.sessionId, 77);
+      expect(aborted).toBe(1);
+      expect(backgroundJobRegistry.get("cc-preserved-runtime")).toBeUndefined();
+    } finally {
+      await svc.stopAll();
+      backgroundJobRegistry.dropForSession(request.sessionId);
+    }
+  });
+
+  test("a result queued between physical runtimes wakes the replacement exactly once", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    const old = svc.get(request.sessionId)!;
+    old.close = async () => background.complete(request.sessionId, "completed during replacement");
+
+    await svc.start(request);
+    await settleBackgroundWakeup();
+    expect(background.dropped).toEqual([]);
+    expect(providerInputs).toHaveLength(1);
+    expect(providerInputs[0]!.text).toContain("completed during replacement");
+    expect(background.pending.size).toBe(0);
+    await svc.stopAll();
+  });
+
+  for (const failure of ["close", "start"] as const) {
+    test(`a failed replacement ${failure} retains owner custody until explicit close`, async () => {
+      const background = backgroundDelivery();
+      const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+        backgroundWork: background.delivery,
+      });
+      await svc.start(request);
+      background.running.add(request.sessionId);
+      if (failure === "close") {
+        svc.get(request.sessionId)!.close = async () => {
+          throw new Error("provider close failed");
+        };
+      } else {
+        failNextStart = true;
+      }
+
+      await expect(svc.start(request)).rejects.toThrow(/failed/);
+      expect(svc.get(request.sessionId)).toBeUndefined();
+      expect(background.running.has(request.sessionId)).toBe(true);
+      expect(background.dropped).toEqual([]);
+      await expect(svc.stop(request.sessionId, 99)).rejects.toThrow(/owned by another/);
+      await svc.stopOwnedBy(77);
+      expect(background.running.has(request.sessionId)).toBe(false);
+      expect(background.dropped).toEqual([request.sessionId]);
+      await svc.stopAll();
+      expect(background.dropped).toHaveLength(1);
+    });
+  }
+
+  test("a paused Goal remains paused when its runtime is replaced and a result arrives", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    await svc.send(request.sessionId, {
+      text: "run one bounded turn",
+      goal: { objective: "paused goal", maxTurns: 1 },
+    });
+    const goal = svc.getGoal(request.sessionId);
+    expect(goal.paused).toBe(true);
+    await svc.start(request);
+    background.complete(request.sessionId);
+    await settleBackgroundWakeup();
+    expect(providerInputs).toHaveLength(1);
+    expect(svc.getGoal(request.sessionId)).toEqual(goal);
+    expect(background.pending.has(request.sessionId)).toBe(true);
+    await svc.stopAll();
+  });
+
+  for (const change of [
+    "trust",
+    "permissions",
+    "plan",
+    "host-tools",
+    "root",
+    "project-binding",
+  ] as const) {
+    test(`a changed ${change} grant cancels background work instead of retaining it`, async () => {
+      const background = backgroundDelivery();
+      const flags = { external_agent_runtime: true, external_host_tools: true };
+      let binding = { projectId: "project-a", mainRootId: "root-a" };
+      const svc = service(flags, undefined, {
+        backgroundWork: background.delivery,
+        ...(change === "project-binding" ? { resolveProjectBinding: () => binding } : {}),
+      });
+      const original = { ...request, permissionMode: "acceptEdits" as const };
+      await svc.start(original);
+      background.running.add(request.sessionId);
+      if (change === "trust") trust = "untrusted";
+      if (change === "host-tools") flags.external_host_tools = false;
+      if (change === "project-binding") binding = { ...binding, mainRootId: "root-b" };
+      const next = {
+        ...original,
+        ...(change === "permissions" ? { permissionMode: "default" as const } : {}),
+        ...(change === "plan" ? { planMode: true } : {}),
+        ...(change === "root" ? { cwd: "/tmp/another-project" } : {}),
+      };
+      // Canonical Session guards may reject retargeting, but must not preserve
+      // the old CLI while the newly requested root/binding fails to start.
+      if (change === "root" || change === "project-binding")
+        await expect(svc.ensure(next)).rejects.toThrow();
+      else await svc.ensure(next);
+      expect(background.running.has(request.sessionId)).toBe(false);
+      expect(background.dropped).toContain(request.sessionId);
+      expect(closed).toContain(request.sessionId);
+      await svc.stopAll();
+    });
+  }
+
+  test("a revoked retained grant is cancelled before a failed replacement preflight", async () => {
+    const background = backgroundDelivery();
+    let failPreflight = false;
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+      prepareCodexLaunch: async () => {
+        if (failPreflight) throw new Error("replacement preflight failed");
+        return { command: "/test/bin/codex" };
+      },
+    });
+    await svc.start(request);
+    background.running.add(request.sessionId);
+    failNextStart = true;
+    await expect(svc.start(request)).rejects.toThrow(/startup failed/);
+    expect(background.running.has(request.sessionId)).toBe(true);
+    trust = "untrusted";
+    failPreflight = true;
+    await expect(svc.start(request)).rejects.toThrow(/preflight failed/);
+    expect(background.running.has(request.sessionId)).toBe(false);
+    await svc.stopAll();
+  });
+
+  test("trust revocation immediately aborts a real delegated job while preflight is pending", async () => {
+    const background = backgroundDelivery();
+    let blocked = false,
+      prepared!: () => void,
+      release!: () => void,
+      aborted = 0,
+      interrupted = 0,
+      approvalsCancelled = 0;
+    providerInterrupt = async () => {
+      interrupted++;
+    };
+    const entered = new Promise<void>((resolve) => {
+      prepared = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      cancelApprovals: () => {
+        approvalsCancelled++;
+      },
+      backgroundWork: {
+        ...background.delivery,
+        dropSession: (id: string) => {
+          background.delivery.dropSession(id);
+          backgroundJobRegistry.dropForSession(id);
+        },
+      },
+      prepareCodexLaunch: async () => {
+        if (blocked) {
+          prepared();
+          await gate;
+        }
+        return { command: "/test/bin/codex" };
+      },
+    });
+    await svc.start(request);
+    backgroundJobRegistry.start("cc-revocation-preflight", request.sessionId, "delegated", {
+      kind: "drive-agent",
+      abort: () => {
+        aborted++;
+      },
+    });
+    blocked = true;
+    const replacing = svc.start(request);
+    await entered;
+    trust = "untrusted";
+    const revoking = svc.revokeProjectTrust(request.cwd);
+    expect(aborted).toBe(1);
+    expect(interrupted).toBe(1);
+    expect(approvalsCancelled).toBeGreaterThanOrEqual(1);
+    release();
+    await expect(replacing).rejects.toThrow(/trust was revoked/);
+    await revoking;
+    expect(svc.get(request.sessionId)).toBeUndefined();
+    expect(starts).toHaveLength(1);
+    expect(aborted).toBe(1);
+    await svc.stopAll();
+  });
+
+  test("revocation while old provider close waits cannot launch trusted setup afterward", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    background.running.add(request.sessionId);
+    let closing!: () => void, release!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      closing = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    svc.get(request.sessionId)!.close = async () => {
+      closing();
+      await gate;
+    };
+    const replacing = svc.start(request);
+    await entered;
+    trust = "untrusted";
+    const revoking = svc.revokeProjectTrust(request.cwd);
+    expect(background.running.has(request.sessionId)).toBe(false);
+    release();
+    await expect(replacing).rejects.toThrow(/authority changed while replacing/);
+    await revoking;
+    expect(starts).toHaveLength(1);
+    expect(svc.get(request.sessionId)).toBeUndefined();
+    await svc.stopAll();
+  });
+
+  test("pending and future native approvals cannot accept after trust revocation", async () => {
+    let release!: () => void,
+      approvals = 0;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, async () => {
+      approvals++;
+      await gate;
+      return { approved: true };
+    });
+    await svc.start(request);
+    const hooks = starts[0]!.hooks as {
+      onNativeApproval(input: { method: string; params: unknown }): Promise<string>;
+    };
+    const pending = hooks.onNativeApproval({ method: "exec", params: {} });
+    trust = "untrusted";
+    const revoking = svc.revokeProjectTrust(request.cwd);
+    release();
+    expect(await pending).toBe("decline");
+    expect(await hooks.onNativeApproval({ method: "exec", params: {} })).toBe("decline");
+    expect(approvals).toBe(1);
+    await revoking;
+    await svc.stopAll();
+  });
+
+  test("revocation during provider startup cannot publish a newly stale runtime", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    background.running.add(request.sessionId);
+    let started!: () => void, release!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    providerStart = async () => {
+      started();
+      await gate;
+    };
+    const replacing = svc.start(request);
+    await entered;
+    trust = "untrusted";
+    const revoking = svc.revokeProjectTrust(request.cwd);
+    expect(background.running.has(request.sessionId)).toBe(false);
+    release();
+    await expect(replacing).rejects.toThrow(/authority changed while starting/);
+    await revoking;
+    expect(svc.get(request.sessionId)).toBeUndefined();
+    await svc.stopAll();
+  });
+
+  test("queued input rechecks trust after asynchronous acceptance checks", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    background.running.add(request.sessionId);
+    await expect(
+      svc.send(request.sessionId, "must not reach provider", 77, undefined, {
+        beforeInput: async () => {
+          trust = "untrusted";
+        },
+        accepted: () => {
+          throw new Error("revoked input must not be accepted");
+        },
+      }),
+    ).rejects.toThrow(/authority changed/);
+    expect(providerInputs).toHaveLength(0);
+    expect(background.running.has(request.sessionId)).toBe(false);
+    expect(svc.get(request.sessionId)).toBeUndefined();
+  });
+
+  test("the trust-setting seam persists revocation and stops only the matching canonical workspace", async () => {
+    const target = join(testHome, "target"),
+      alias = join(testHome, "alias"),
+      other = join(testHome, "other");
+    mkdirSync(target);
+    mkdirSync(other);
+    symlinkSync(target, alias, "dir");
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start({ ...request, cwd: target });
+    await svc.start({ ...request, sessionId: "sess-other", cwd: other });
+    background.running.add(request.sessionId);
+    background.running.add("sess-other");
+    const order: string[] = [];
+    await setProjectTrustWithRevocation(alias, "untrusted", {
+      setTrust: async () => {
+        order.push("persist");
+        trust = "untrusted";
+      },
+      revokeExternalRuntimeTrust: async (cwd) => {
+        order.push("revoke");
+        await svc.revokeProjectTrust(cwd);
+      },
+    });
+    expect(order).toEqual(["persist", "revoke"]);
+    expect(svc.get(request.sessionId)).toBeUndefined();
+    expect(svc.get("sess-other")).toBeDefined();
+    expect(background.running.has(request.sessionId)).toBe(false);
+    expect(background.running.has("sess-other")).toBe(true);
+    await svc.stopAll();
   });
 });
 

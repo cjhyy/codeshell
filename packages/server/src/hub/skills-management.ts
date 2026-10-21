@@ -2,13 +2,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomBytes, createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import {
-  SettingsManager,
-  scanSkills,
-  invalidateSkillCache,
-  userHome,
-} from "@cjhyy/code-shell-core";
-import { computeEffectiveDisabledLists } from "@cjhyy/code-shell-core/internal";
+import { scanSkills, invalidateSkillCache, userHome } from "@cjhyy/code-shell-core";
+import { readSkillInventory } from "@cjhyy/code-shell-host";
 import {
   assertSafeSkillName,
   assertOwnedSkillDirectory,
@@ -142,11 +137,9 @@ export function createHubSkills(options: HubSkillsOptions) {
   }
 
   function snapshot(): { skills: HubManagedSkill[]; directories: string[] } {
-    invalidateSkillCache();
-    const manager = new SettingsManager(options.cwd, "full");
-    const disabled = computeEffectiveDisabledLists(manager, options.cwd);
-    const enabled = new Set(scanSkills(options.cwd, disabled).map((entry) => entry.name));
-    const skills = scanSkills(options.cwd).map((skill): HubManagedSkill => {
+    const inventory = readSkillInventory(options.cwd, { refresh: true });
+    const disabled = inventory;
+    const skills = inventory.skills.map(({ definition: skill, enabled }): HubManagedSkill => {
       let editable = false;
       let revision = createHash("sha256").update(skill.content).digest("hex");
       let readOnlyReason: string | undefined;
@@ -170,7 +163,7 @@ export function createHubSkills(options: HubSkillsOptions) {
         name: skill.name,
         description: skill.description,
         source: skill.source,
-        enabled: enabled.has(skill.name),
+        enabled,
         editable,
         removable: editable,
         revision,

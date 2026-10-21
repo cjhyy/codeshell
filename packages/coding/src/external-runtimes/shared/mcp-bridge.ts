@@ -28,7 +28,10 @@ import type { SessionContextStore, SessionContextMissReason } from "./session-co
 export interface BridgeToolHost {
   readonly businessSessionId: string;
   listTools(): readonly { name: string; description: string; inputSchema: unknown }[];
-  execute(call: { id: string; name: string; input: unknown }): Promise<{
+  execute(
+    call: { id: string; name: string; input: unknown },
+    signal?: AbortSignal,
+  ): Promise<{
     result?: string;
     error?: string;
     isError?: boolean;
@@ -141,6 +144,38 @@ export async function startLoopbackMcpBridge(options: McpBridgeOptions): Promise
    */
   const threadIdFor = (params: unknown): string | undefined =>
     pinnedThreadId ?? threadIdFromMeta(params);
+
+  /**
+   * In-flight `tools/call` requests, so a client-side cancellation reaches the
+   * tool. Without this a Codex tool timeout abandoned the call while a
+   * foreground DriveAgent kept its child CLI running as an orphan.
+   *
+   * JSON-RPC ids are only unique per client, and one bridge can serve several
+   * Codex threads, so entries are keyed by thread as well as request id.
+   */
+  const inFlight = new Set<{
+    threadId: string | undefined;
+    requestId: string;
+    controller: AbortController;
+  }>();
+  const cancelInFlight = (params: unknown): void => {
+    const raw = (params as { requestId?: unknown } | undefined)?.requestId;
+    if (raw === undefined || raw === null) return;
+    const requestId = JSON.stringify(raw);
+    const threadId = threadIdFor(params);
+    // An unattributed cancellation may only act when exactly one thread has
+    // that request id in flight; guessing between two would cancel the wrong
+    // session's tool.
+    const matches = [...inFlight].filter(
+      (entry) =>
+        entry.requestId === requestId && (threadId === undefined || entry.threadId === threadId),
+    );
+    if (matches.length !== 1) return;
+    const reason = (params as { reason?: unknown }).reason;
+    matches[0]!.controller.abort(
+      typeof reason === "string" && reason ? reason : "MCP request cancelled",
+    );
+  };
 
   const server: Server = createServer((req, res) => {
     void handle(req, res).catch((error) => {
@@ -269,6 +304,7 @@ export async function startLoopbackMcpBridge(options: McpBridgeOptions): Promise
       return;
     }
     if (typeof message.method === "string" && message.method.startsWith("notifications/")) {
+      if (message.method === "notifications/cancelled") cancelInFlight(message.params);
       res.writeHead(202).end();
       return;
     }
@@ -327,15 +363,38 @@ export async function startLoopbackMcpBridge(options: McpBridgeOptions): Promise
       }
       const name = typeof params?.name === "string" ? params.name : "";
       const started = Date.now();
-      // The host is the authorization boundary; the bridge only routes.
-      const outcome = await resolved.host.execute({
-        // One turn can contain many calls, including parallel ones. A turn id
-        // aliases their transcript/UI entries and overwrites navigate with a
-        // later observe error. Mint a host identity for each actual invocation.
-        id: `mcp-${randomBytes(12).toString("hex")}`,
-        name,
-        input: params?.arguments ?? {},
-      });
+      const pending = {
+        threadId,
+        requestId: JSON.stringify(message.id ?? null),
+        controller: new AbortController(),
+      };
+      inFlight.add(pending);
+      // A client that gives up drops the connection; treat that as cancellation.
+      // Node emits this unfinished `close` on disconnect (Bun's node:http does
+      // not, so the explicit notification above is the tested path). `req`'s
+      // own `close` fires once the body is read and cannot be used here.
+      const onClose = () => {
+        if (!res.writableFinished) pending.controller.abort("MCP client disconnected");
+      };
+      res.once("close", onClose);
+      let outcome: Awaited<ReturnType<BridgeToolHost["execute"]>>;
+      try {
+        // The host is the authorization boundary; the bridge only routes.
+        outcome = await resolved.host.execute(
+          {
+            // One turn can contain many calls, including parallel ones. A turn id
+            // aliases their transcript/UI entries and overwrites navigate with a
+            // later observe error. Mint a host identity for each actual invocation.
+            id: `mcp-${randomBytes(12).toString("hex")}`,
+            name,
+            input: params?.arguments ?? {},
+          },
+          pending.controller.signal,
+        );
+      } finally {
+        inFlight.delete(pending);
+        res.off("close", onClose);
+      }
       log("bridge.call", {
         businessSessionId: resolved.host.businessSessionId,
         threadIdPrefix: threadId?.slice(0, 8),

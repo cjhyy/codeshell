@@ -94,7 +94,7 @@ describe("the shipped preload actually routes", () => {
   const source = readFileSync(new URL("./index.ts", import.meta.url), "utf8");
 
   test("cancel checks the external-session set before falling back to the worker", () => {
-    const start = source.indexOf("  cancel: (sessionId?: string)");
+    const start = source.indexOf("  cancel: (sessionId?: string");
     // Anchor the end on the rpc CALL, not the string "agent/cancel" — that also
     // appears in the explanatory comment above it, which would truncate the
     // slice before the branch and make this test fail on correct code.

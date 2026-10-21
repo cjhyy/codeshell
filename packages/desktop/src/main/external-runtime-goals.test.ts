@@ -50,8 +50,10 @@ describe("external Goal lifecycle", () => {
         revision: 1,
         objective: "完成独立测试",
         replaced: false,
+        setAtMs: 10_000,
       },
     ]);
+    expect(goals.get(sessionId).setAtMs).toBe(10_000);
     const restored = new ExternalRuntimeGoals(() => {});
     expect(restored.get(sessionId)).toEqual(goals.get(sessionId));
     goals.end(run);
@@ -147,6 +149,20 @@ describe("external Goal lifecycle", () => {
       false,
     );
     expect(events.at(-1)).toMatchObject({ type: "goal_progress", status: "not_met" });
+  });
+
+  test("a yielded run stops continuing without pausing the persisted Goal", () => {
+    const run = goals.start(sessionId, { objective: "让位给用户" })!;
+    expect(goals.yieldAfterTurn(sessionId)).toBe(true);
+    expect(goals.afterTurn(run, 10, "本轮结果")).toBe(false);
+    expect(goals.get(sessionId)).toMatchObject({ goal: "让位给用户", paused: false, revision: 1 });
+    goals.end(run);
+    expect(goals.yieldAfterTurn(sessionId)).toBe(false);
+  });
+
+  test("the continuation instruction says it is not a user reply or approval", () => {
+    const run = goals.start(sessionId, { objective: "安装面板" })!;
+    expect(goals.instruction(run)).toContain("not a reply from the user");
   });
 
   test("extensions raise only the active run ceilings and stale controls cannot delete a goal", () => {

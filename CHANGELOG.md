@@ -8,8 +8,32 @@ breaking.
 
 ## [Unreleased]
 
+### Added
+
+- Share Host skill inventory, bounded MCP probes and safe session file metadata
+  between Desktop and Hub. MCP SDK connections remain behind a narrow Core
+  internal interface; adapters keep authorization, DTOs and cache policy.
+
+### Changed
+
+- Move Hub's existing single-request model connection test into Host ownership,
+  retaining its compatibility entry and Core clients. Core model listing and
+  Desktop model metadata retain their existing behavior. Output replay remains
+  deferred until both journal cursor and stateVersion resumptions exist.
+
 ### Fixed
 
+- Keep successful MCP POST probes usable after optional GET/SSE diagnostics,
+  preserve Desktop launcher-banner and structured-logger compatibility, and
+  redact explicit credentials at any length plus longer private env/argv values
+  without corrupting ordinary short launcher/env values or protocol text.
+- Retry ordinary session-state atomic replacements only in lists, retain strict
+  authorization reads, and expose a narrow Host storage entry. Desktop catalog
+  state over 2 MiB now emits a safe diagnostic when omitted.
+- Reject mismatched external accounting references with actionable Native recovery
+  guidance while preserving historical costs and keeping a healthy CLI retryable.
+- Avoid a second renderer failure terminal/toast after the current run has already
+  streamed its terminal, including cancellation from another client.
 - Keep Link account menus visible in scrolling dialogs, give authorized Figma
   files clear names and open actions, and separate alternative connections and
   authorization-service diagnostics from everyday account management.

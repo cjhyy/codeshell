@@ -4,6 +4,7 @@ import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/render
 import { INITIAL_STATE } from "../types";
 import { NO_REPO_KEY, saveSessionIndex } from "../transcripts";
 import { useRunController } from "./useRunController";
+import { transcriptsReducer } from "../transcriptsReducer";
 
 function deferred() {
   let resolve!: (value: unknown) => void;
@@ -25,153 +26,209 @@ afterEach(async () => {
   if (originalBridge) Object.defineProperty(window, "codeshell", originalBridge);
 });
 
-test.each(["old-resolve", "old-reject", "current-reject"] as const)(
-  "run promise settlement preserves the current launch (%s)",
-  async (settlement) => {
-    ensureMiniDom();
-    originalStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
-    originalBridge = Object.getOwnPropertyDescriptor(window, "codeshell");
-    const storage = new Map<string, string>();
-    Object.defineProperty(globalThis, "localStorage", {
-      configurable: true,
-      value: {
-        getItem: (key: string) => storage.get(key) ?? null,
-        setItem: (key: string, value: string) => storage.set(key, value),
-        removeItem: (key: string) => storage.delete(key),
+test.each([
+  "old-resolve",
+  "old-reject",
+  "current-reject",
+  "stream-error",
+  "remote-abort",
+  "next-reject",
+] as const)("run promise settlement preserves the current launch (%s)", async (settlement) => {
+  ensureMiniDom();
+  originalStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  originalBridge = Object.getOwnPropertyDescriptor(window, "codeshell");
+  const storage = new Map<string, string>();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+      removeItem: (key: string) => storage.delete(key),
+    },
+  });
+  const first = deferred();
+  const second = deferred();
+  let calls = 0;
+  let clientMessageId = "";
+  let busy = false;
+  const actions: unknown[] = [];
+  const toasts: unknown[] = [];
+  const noop = () => {};
+  Object.assign(window, {
+    codeshell: {
+      log: noop,
+      registerBrowserSessionBucket: noop,
+      cancel: async () => {},
+      run: (_text: string, opts: { clientMessageId: string }) => {
+        clientMessageId = opts.clientMessageId;
+        return ++calls === 1 ? first.promise : second.promise;
       },
-    });
-    const first = deferred();
-    const second = deferred();
-    let calls = 0;
-    let busy = false;
-    const actions: unknown[] = [];
-    const noop = () => {};
-    Object.assign(window, {
-      codeshell: {
-        log: noop,
-        registerBrowserSessionBucket: noop,
-        cancel: async () => {},
-        run: () => (++calls === 1 ? first.promise : second.promise),
-      },
-    });
-    const index = {
-      sessions: [{ id: "session", title: "Session", createdAt: 1, updatedAt: 1 }],
+    },
+  });
+  const index = {
+    sessions: [{ id: "session", title: "Session", createdAt: 1, updatedAt: 1 }],
+    activeSessionId: "session",
+  };
+  saveSessionIndex(null, index);
+  const bucket = `${NO_REPO_KEY}::session`;
+  const params: Parameters<typeof useRunController>[0] = {
+    shell: {
+      t: ((key: string) => key) as any,
+      lang: "en",
+      toast: (value) => toasts.push(value),
+      setView: noop,
+    },
+    session: {
+      activeProjectId: null,
       activeSessionId: "session",
-    };
-    saveSessionIndex(null, index);
-    const bucket = `${NO_REPO_KEY}::session`;
-    const params: Parameters<typeof useRunController>[0] = {
-      shell: { t: ((key: string) => key) as any, lang: "en", toast: noop, setView: noop },
-      session: {
-        activeProjectId: null,
-        activeSessionId: "session",
-        activeBucket: bucket,
-        projects: [],
-        sessionIndices: { [NO_REPO_KEY]: index },
-        setSessionIndices: noop,
-        ensureActiveSession: () => "session",
+      activeBucket: bucket,
+      projects: [],
+      sessionIndices: { [NO_REPO_KEY]: index },
+      setSessionIndices: noop,
+      ensureActiveSession: () => "session",
+    },
+    preferences: {
+      permissionOverrides: {},
+      setPermissionOverrides: noop,
+      defaultPermissionMode: null,
+      goalOverrides: {},
+      setGoalOverrides: noop,
+      modelOverrides: {},
+      setModelOverrides: noop,
+      defaultActiveModelKey: null,
+      quickChatDefaultModelKey: null,
+    },
+    runtime: {
+      setBusyForKey: (_key, value) => {
+        busy = value;
       },
-      preferences: {
-        permissionOverrides: {},
-        setPermissionOverrides: noop,
-        defaultPermissionMode: null,
-        goalOverrides: {},
-        setGoalOverrides: noop,
-        modelOverrides: {},
-        setModelOverrides: noop,
-        defaultActiveModelKey: null,
-        quickChatDefaultModelKey: null,
+      runningBucketRef: { current: null },
+      engineToBucketRef: { current: new Map() },
+      noRepoCwdRef: { current: "/tmp" },
+      quickChatSessionsRef: { current: {} },
+      queuedInputs: {},
+      setQueuedInputs: noop,
+      busy: false,
+      busyKeys: new Set(),
+      relayingBuckets: new Set(),
+      setRelayingBuckets: noop,
+      steeredIdsRef: { current: new Set() },
+      injectedSteerIdsRef: { current: new Set() },
+      downgradeRunQueueRef: { current: Promise.resolve() } as any,
+      queuedSeqRef: { current: 0 },
+      busySinceRef: { current: new Map() },
+      compactingBucketsRef: { current: new Set() },
+      setCompactingBuckets: noop,
+    },
+    transcript: {
+      transcriptsRef: { current: {} },
+      dispatch: (action) => {
+        actions.push(action);
+        params.transcript.transcriptsRef.current = transcriptsReducer(
+          params.transcript.transcriptsRef.current,
+          action,
+        );
       },
-      runtime: {
-        setBusyForKey: (_key, value) => {
-          busy = value;
-        },
-        runningBucketRef: { current: null },
-        engineToBucketRef: { current: new Map() },
-        noRepoCwdRef: { current: "/tmp" },
-        quickChatSessionsRef: { current: {} },
-        queuedInputs: {},
-        setQueuedInputs: noop,
-        busy: false,
-        busyKeys: new Set(),
-        relayingBuckets: new Set(),
-        setRelayingBuckets: noop,
-        steeredIdsRef: { current: new Set() },
-        injectedSteerIdsRef: { current: new Set() },
-        downgradeRunQueueRef: { current: Promise.resolve() } as any,
-        queuedSeqRef: { current: 0 },
-        busySinceRef: { current: new Map() },
-        compactingBucketsRef: { current: new Set() },
-        setCompactingBuckets: noop,
+      state: INITIAL_STATE,
+    },
+    approvals: {
+      approval: null,
+      approvalQueue: [],
+      setApprovalQueue: noop,
+      setApproval: noop,
+      setApprovalHistory: noop,
+      approvalBucketsRef: { current: new Map() },
+    },
+  };
+  const hook = await renderHook(() => useRunController(params));
+  cleanup = hook.unmount;
+  let oldRun!: Promise<void>;
+  let newRun!: Promise<void>;
+  await act(async () => {
+    oldRun = hook.result.current.send("old");
+    await flushMicrotasks();
+  });
+  expect(calls).toBe(1);
+  if (["stream-error", "remote-abort", "next-reject"].includes(settlement)) {
+    for (const event of [
+      { type: "session_started", sessionId: "session", promptTokens: 0 },
+      ...(settlement === "remote-abort" ? [] : [{ type: "error", error: "setup failed" }]),
+      {
+        type: "turn_complete",
+        reason: settlement === "remote-abort" ? "aborted_streaming" : "model_error",
       },
-      transcript: {
-        dispatch: (action) => {
-          actions.push(action);
-        },
-        state: INITIAL_STATE,
-      },
-      approvals: {
-        approval: null,
-        approvalQueue: [],
-        setApprovalQueue: noop,
-        setApproval: noop,
-        setApprovalHistory: noop,
-        approvalBucketsRef: { current: new Map() },
-      },
-    };
-    const hook = await renderHook(() => useRunController(params));
-    cleanup = hook.unmount;
-    let oldRun!: Promise<void>;
-    let newRun!: Promise<void>;
-    await act(async () => {
-      oldRun = hook.result.current.send("old");
-      await flushMicrotasks();
-    });
-    expect(calls).toBe(1);
-    if (settlement === "current-reject") {
-      params.runtime.busySinceRef.current.set(bucket, Date.now() - 3_456);
-      await act(async () => {
-        first.reject(new Error("worker disconnected during the turn"));
-        await oldRun;
-        await flushMicrotasks();
+    ]) {
+      params.transcript.dispatch({
+        type: "stream",
+        bucket,
+        event: { ...event, runId: "first-run", clientMessageId } as any,
       });
-      expect(busy).toBe(false);
-      expect(actions).toContainEqual(
-        expect.objectContaining({
-          type: "turn_end",
-          bucket,
-          reason: "error",
-          detail: "worker disconnected during the turn",
-          elapsedMs: expect.any(Number),
-        }),
-      );
-      const terminal = actions.find((action: any) => action.type === "turn_end") as {
-        elapsedMs: number;
-      };
-      expect(terminal.elapsedMs).toBeGreaterThanOrEqual(3_456);
-      return;
     }
     await act(async () => {
-      hook.result.current.stop();
-      newRun = hook.result.current.send("new");
-      await flushMicrotasks();
-    });
-    expect(calls).toBe(2);
-    expect(busy).toBe(true);
-    const before = actions.length;
-    await act(async () => {
-      if (settlement === "old-reject") first.reject(new Error("late old failure"));
-      else first.resolve({ reason: "aborted_streaming" });
+      first.reject(new Error("RPC initialization rejected"));
       await oldRun;
       await flushMicrotasks();
     });
-    expect(busy).toBe(true);
-    expect(actions.length).toBe(before);
+    expect(busy).toBe(false);
+    expect(actions.filter((action: any) => action.type === "turn_end")).toHaveLength(0);
+    expect(toasts).toHaveLength(0);
+    if (settlement !== "next-reject") return;
     await act(async () => {
-      second.resolve({ reason: "completed" });
+      newRun = hook.result.current.send("next real failure");
+      await flushMicrotasks();
+      second.reject(new Error("next RPC failure"));
       await newRun;
       await flushMicrotasks();
     });
+    expect(actions).toContainEqual(
+      expect.objectContaining({ type: "turn_end", bucket, detail: "next RPC failure" }),
+    );
+    expect(toasts).toHaveLength(1);
+    return;
+  }
+  if (settlement === "current-reject") {
+    params.runtime.busySinceRef.current.set(bucket, Date.now() - 3_456);
+    await act(async () => {
+      first.reject(new Error("worker disconnected during the turn"));
+      await oldRun;
+      await flushMicrotasks();
+    });
     expect(busy).toBe(false);
-  },
-);
+    expect(actions).toContainEqual(
+      expect.objectContaining({
+        type: "turn_end",
+        bucket,
+        reason: "error",
+        detail: "worker disconnected during the turn",
+        elapsedMs: expect.any(Number),
+      }),
+    );
+    const terminal = actions.find((action: any) => action.type === "turn_end") as {
+      elapsedMs: number;
+    };
+    expect(terminal.elapsedMs).toBeGreaterThanOrEqual(3_456);
+    return;
+  }
+  await act(async () => {
+    hook.result.current.stop();
+    newRun = hook.result.current.send("new");
+    await flushMicrotasks();
+  });
+  expect(calls).toBe(2);
+  expect(busy).toBe(true);
+  const before = actions.length;
+  await act(async () => {
+    if (settlement === "old-reject") first.reject(new Error("late old failure"));
+    else first.resolve({ reason: "aborted_streaming" });
+    await oldRun;
+    await flushMicrotasks();
+  });
+  expect(busy).toBe(true);
+  expect(actions.length).toBe(before);
+  await act(async () => {
+    second.resolve({ reason: "completed" });
+    await newRun;
+    await flushMicrotasks();
+  });
+  expect(busy).toBe(false);
+});
