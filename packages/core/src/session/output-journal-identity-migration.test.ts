@@ -553,3 +553,34 @@ for (const phase of ["barrier-durable", "state-durable"] as const)
     expectPreserved(f);
     if (phase === "barrier-durable") expect(state(f).outputRecoveryIncomplete).toBe(true);
   });
+
+test("a compromised state lease never throws from the lock refresh timer", async () => {
+  // A replaced lease is detected and fenced by the migration itself; the lock
+  // library's later compromise callback must not raise an uncaught exception.
+  const lockfile = await import("../utils/lockfile.js");
+  const real = lockfile.lockSync;
+  let lockOptions: Parameters<typeof real>[1];
+  const lockSync = spyOn(lockfile, "lockSync").mockImplementation((file, opts) => {
+    lockOptions = opts;
+    return real(file, opts);
+  });
+  try {
+    const f = fixture();
+    const competingLease = f.statePath + ".lock";
+    expect(() =>
+      migrateOutputJournalIdentity(f.root, f.id, f.evidence, {
+        ...options,
+        onCheckpoint: (at) => {
+          if (at === "state-durable") {
+            fs.renameSync(competingLease, join(f.directory, "retired-lease"));
+            fs.mkdirSync(competingLease, { mode: 0o700 });
+          }
+        },
+      }),
+    ).toThrow("lease");
+  } finally {
+    lockSync.mockRestore();
+  }
+  expect(typeof lockOptions?.onCompromised).toBe("function");
+  expect(() => lockOptions!.onCompromised!(new Error("ENOENT: lease removed"))).not.toThrow();
+});

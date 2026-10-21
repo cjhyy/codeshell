@@ -548,7 +548,11 @@ import {
 } from "./updater.js";
 import { loadRecents, loadProjects } from "./recents-store.js";
 import { getProjectStore } from "./project-store.js";
-import { createDesktopPanelProjectScopeResolver } from "./panel-project-scope.js";
+import {
+  createDesktopPanelProjectScopeResolver,
+  isRegisteredPanelProjectRoot,
+  resolveDesktopPanelProjectPath,
+} from "./panel-project-scope.js";
 import { registerProjectAuthorityIpc } from "./project-authority-ipc.js";
 import { reviewService } from "./review-service.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
@@ -689,6 +693,8 @@ const panelAppBridge = new PanelAppBridge({
     [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
   isWorkspaceTrusted: (cwd) => getTrustCachedSync(cwd) === "trusted",
   isPanelAppBound: isPanelAppBoundToProject,
+  isProjectRoot: (projectPath, rootPath) =>
+    isRegisteredPanelProjectRoot(getProjectStore(), projectPath, rootPath),
   resolveProjectScope: resolvePanelProjectScope,
   getAgentBridge: () => bridge,
   getExternalRuntimeService: () => externalRuntimeService,
@@ -1012,6 +1018,7 @@ const mobileRemote = new RemoteHostManager({
     automations: createDesktopPanelAutomationHost(desktopAutomationAuthorityDeps),
     sharedToolJobs: panelAppBridge.sharedToolJobs(),
     resolveProjectScope: resolvePanelProjectScope,
+    resolvePanelProjectPath: (cwd) => resolveDesktopPanelProjectPath(getProjectStore(), cwd),
     authorizePanelDirectory: (app, projectPath, workspacePath) =>
       panelAppBridge.authorizePanelDirectory(app, projectPath, workspacePath),
     getBridge: () => bridge,

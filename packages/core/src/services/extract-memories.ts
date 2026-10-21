@@ -10,7 +10,7 @@ export interface ExtractedMemory {
   /**
    * Storage location (用户拍板). "global" = a general lesson/preference that
    * still holds in a different project (→ ~/.code-shell/memory). "project" =
-   * specific to the current repo (→ projects/<hash>/memory). Decided by the
+   * specific to the current repo (→ project-memory/<key>). Decided by the
    * extracting LLM. Missing/invalid → "project" (conservative: don't pollute
    * the global layer with one-off events).
    */

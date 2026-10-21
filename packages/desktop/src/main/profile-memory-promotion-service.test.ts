@@ -4,6 +4,7 @@ import https from "node:https";
 import { EventEmitter } from "node:events";
 import { syncBuiltinESMExports } from "node:module";
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -169,6 +170,35 @@ test("flat legacy memory preview refuses migration and leaves files in place", (
   expect(readFileSync(path)).toEqual(bytes);
   expect(existsSync(join(source.getMemoryDir(), "flat-legacy.md"))).toBe(false);
   expect(existsSync(join(workspaceProfileDir("pm"), "memory"))).toBe(false);
+});
+test("review reads the project's own memory root, not a colliding sibling's", () => {
+  // OM5: <root>/project and <root>-project once shared projects/<legacy key>/memory.
+  const other = new MemoryManager({ projectDir: `${root}-project`, scope: "user" });
+  other.save({
+    id: "sibling-note",
+    name: "Sibling",
+    description: "x",
+    type: "project",
+    content: "",
+  });
+  expect(other.getMemoryDir()).not.toBe(source.getMemoryDir());
+  expect(source.getMemoryDir()).toBe(
+    join(MemoryManager.memoryRootFor({ projectDir: cwd }), "user"),
+  );
+  const foreign = { ...input(), source: { scope: "user" as const, id: "sibling-note" } };
+  expect(() => reviews.preview(1, foreign)).toThrow("source memory is missing");
+  expect(preview().source.id).toBe(sourceId);
+});
+test("review never adopts an unmigrated legacy store; opening the project does", () => {
+  const fresh = join(root, "fresh");
+  const legacyKey = fresh.replace(/[/\\:]/g, "-").replace(/^-/, "");
+  const legacy = join(process.env.CODE_SHELL_HOME!, "projects", legacyKey, "memory");
+  cpSync(dirname(source.getMemoryDir()), legacy, { recursive: true });
+  const freshInput = { ...input(), cwd: fresh };
+  expect(() => reviews.preview(1, freshInput)).toThrow("source memory is missing");
+  expect(existsSync(MemoryManager.memoryRootFor({ projectDir: fresh }))).toBe(false);
+  new MemoryManager({ projectDir: fresh });
+  expect(reviews.preview(1, freshInput).source.id).toBe(sourceId);
 });
 test("disabled portable memory may be prepared without enabling the Profile", () => {
   profile(false);

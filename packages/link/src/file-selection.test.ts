@@ -44,6 +44,55 @@ describe("reviewed provider file selection", () => {
     });
   });
 
+  // Regression (audit HL-01): exact picked paths were trimmed, so " a.txt" and
+  // "a.txt" collapsed into one reference.
+  test("exact picked GitHub paths keep surrounding whitespace and stay distinct", () => {
+    const pick = (path: string) =>
+      resolveLinkFileSelection("github", {
+        kind: "github-file",
+        owner: "owner",
+        repo: "repo",
+        path,
+        exact: true,
+      });
+    const paths = [" a.txt", "a.txt ", "　a.txt", "docs/ b.md", "a.txt"];
+    const selected = paths.map(pick);
+    expect(selected.map((item) => item.params.path)).toEqual(paths);
+    expect(new Set(selected.map((item) => JSON.stringify(item.params))).size).toBe(paths.length);
+    expect(selected[0]!.label).toBe("owner/repo/ a.txt");
+    for (const path of [" ", "a/ /../b", " /a//b", "a/\u0000b"]) expect(() => pick(path)).toThrow();
+  });
+
+  test("typed GitHub paths are still trimmed and keep the existing reference shape", () => {
+    const typed = resolveLinkFileSelection("github", {
+      kind: "github-file",
+      owner: "owner",
+      repo: "repo",
+      path: "  docs/a.txt  ",
+    });
+    expect(typed.params).toEqual({ owner: "owner", repo: "repo", path: "docs/a.txt" });
+    // An ordinary exact pick resolves to the same reference, so stored ids stay stable.
+    expect(
+      resolveLinkFileSelection("github", {
+        kind: "github-file",
+        owner: "owner",
+        repo: "repo",
+        path: "docs/a.txt",
+        exact: true,
+      }),
+    ).toEqual(typed);
+    for (const exact of ["true", 1, null])
+      expect(() =>
+        resolveLinkFileSelection("github", {
+          kind: "github-file",
+          owner: "owner",
+          repo: "repo",
+          path: "a.txt",
+          exact,
+        }),
+      ).toThrow();
+  });
+
   test("Figma URLs and keys normalize to the same exact granted resource", () => {
     const key = resolveLinkFileSelection("figma", { kind: "figma-file", fileUrlOrKey: "File_key" });
     expect(key.action).toBe("read_design_content");

@@ -160,10 +160,11 @@ export function firstString(...values: unknown[]): string | undefined {
   return values.find((value): value is string => typeof value === "string" && value.length > 0);
 }
 
+/** Free-text params are trimmed; `exact` keeps a reviewed identifier byte-exact. */
 export function stringParam(
   params: Record<string, unknown>,
   key: string,
-  options: { required?: boolean; maxLength?: number } = {},
+  options: { required?: boolean; maxLength?: number; exact?: boolean } = {},
 ): string | undefined {
   const value = params[key];
   if (value === undefined || value === null || value === "") {
@@ -174,9 +175,10 @@ export function stringParam(
   const trimmed = value.trim();
   if (!trimmed && options.required)
     throw new Error(`Missing required Link Action parameter: ${key}`);
+  const result = options.exact ? value : trimmed;
   const max = options.maxLength ?? 300;
-  if (trimmed.length > max) throw new Error(`Link Action parameter ${key} is too long`);
-  return trimmed;
+  if (result.length > max) throw new Error(`Link Action parameter ${key} is too long`);
+  return result;
 }
 
 /**
@@ -220,7 +222,7 @@ export function pathSegmentParam(
 export function pathParam(
   params: Record<string, unknown>,
   key: string,
-  options: { required?: boolean; maxLength?: number } = {},
+  options: { required?: boolean; maxLength?: number; exact?: boolean } = {},
 ): string | undefined {
   const value = stringParam(params, key, options);
   if (value === undefined) return undefined;

@@ -1,10 +1,19 @@
 import { getLinkProviderManifest } from "./catalog.js";
 
 export type LinkFileSelectionInput =
-  | { kind: "github-file"; owner: string; repo: string; path: string; ref?: string; label?: string }
+  | {
+      kind: "github-file";
+      owner: string;
+      repo: string;
+      path: string;
+      ref?: string;
+      label?: string;
+      /** The path was picked from a provider listing: keep it byte-exact, never trim it. */
+      exact?: boolean;
+    }
   | { kind: "figma-file"; fileUrlOrKey: string; label?: string };
 
-function text(value: unknown, field: string, max: number): string {
+function text(value: unknown, field: string, max: number, exact = false): string {
   if (
     typeof value !== "string" ||
     !value.trim() ||
@@ -12,7 +21,7 @@ function text(value: unknown, field: string, max: number): string {
     /[\x00-\x1f\x7f]/.test(value)
   )
     throw new Error(`Invalid linked file ${field}`);
-  return value.trim();
+  return exact ? value : value.trim();
 }
 
 /** Provider-owned normalization, shared by Hosts without accepting arbitrary action JSON. */
@@ -24,7 +33,7 @@ export function resolveLinkFileSelection(providerId: string, input: unknown) {
   if (file.kind !== capability.kind) throw new Error("Linked file belongs to another provider");
   const allowed =
     capability.kind === "github-file"
-      ? ["kind", "owner", "repo", "path", "ref", "label"]
+      ? ["kind", "owner", "repo", "path", "ref", "label", "exact"]
       : ["kind", "fileUrlOrKey", "label"];
   if (Object.keys(file).some((key) => !allowed.includes(key)))
     throw new Error("Unknown linked file field");
@@ -39,7 +48,10 @@ export function resolveLinkFileSelection(providerId: string, input: unknown) {
       [".", ".."].includes(repo)
     )
       throw new Error("Invalid GitHub repository");
-    const path = text(file.path, "path", 2_000);
+    if (file.exact !== undefined && typeof file.exact !== "boolean")
+      throw new Error("Invalid linked file exact flag");
+    // Typed paths are trimmed; picked exact paths keep surrounding whitespace (audit HL-01).
+    const path = text(file.path, "path", 2_000, file.exact === true);
     for (const segment of path.split("/")) {
       let decoded = segment;
       try {
