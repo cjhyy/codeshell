@@ -35,6 +35,9 @@ assert.equal(typeof publicApi.createServer, "function");
 // internal-only value (`BUILTIN_CATALOG`) even though the separation was
 // correct and the four source-level contract tests passed.
 const hostOnlySamples = [
+  "McpProbeConnectionError",
+  "createMcpProbeConnection",
+  "listSessionEntries",
   "backupOutputJournal",
   "restoreOutputJournalBackup",
   "inspectOutputJournalRepair",
@@ -137,6 +140,27 @@ assert.equal("Arena" in internalApi, false);
 // Include the already-exported process-launch and missed-cron contracts;
 // the compiled declaration pin must describe the current Host surface.
 const expectedInternalTypeExports = [
+  // Main's model tracing and Link authority contracts remain Host-only.
+  "ExternalModelTraceInput",
+  "LegacyLinkCleanupEntry",
+  "McpLinkActionOptions",
+  "McpLinkActionRequest",
+  "ModelTraceAttempt",
+  "ModelTraceCallType",
+  "ModelTraceConfig",
+  "ModelTraceConfigPatch",
+  "ModelTraceContentState",
+  "ModelTraceContext",
+  "ModelTraceEvent",
+  "ModelTraceEventInput",
+  "ModelTraceListQuery",
+  "ModelTraceOutput",
+  "ModelTracePage",
+  "ModelTraceRecord",
+  "ModelTraceSessionPage",
+  "ModelTraceSessionSummary",
+  "ModelTraceStatus",
+  "ModelTraceSummary",
   "SessionOutputCoverageProof",
   "ConstrainedDockerRuntime",
   "ConstrainedProcessHost",
@@ -174,6 +198,8 @@ const expectedInternalTypeExports = [
   "CronRunResult",
   "CronRunner",
   "CronTemplateSource",
+  "DesktopOperationBatchAuthorityInput",
+  "DesktopOperationBatchAuthorityResult",
   "DigitalHumanCatalogSourceEntry",
   "DigitalHumanCatalogTeam",
   "FakeToolContextOptions",

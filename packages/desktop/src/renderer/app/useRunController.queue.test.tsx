@@ -102,7 +102,7 @@ test("a queued follow-up is sent when its conversation finishes in the backgroun
       compactingBucketsRef: { current: new Set() },
       setCompactingBuckets: noop,
     },
-    transcript: { dispatch: noop, state: INITIAL_STATE },
+    transcript: { dispatch: noop, state: INITIAL_STATE, transcriptsRef: { current: {} } },
     approvals: {
       approval: null,
       approvalQueue: [],

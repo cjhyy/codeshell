@@ -26,6 +26,7 @@ import {
   isOutputJournalRepairPending,
 } from "./output-journal-repair.js";
 import {
+  admitPersistentPublishedOutputHead,
   initializePublishedOutputHead,
   readPublishedOutputHead,
   updatePublishedOutputHead,
@@ -33,6 +34,7 @@ import {
   type PublishedOutputHead,
 } from "./output-journal-head.js";
 import {
+  admitPersistentOutputStorage,
   initializeOutputStorage,
   isOutputStorageBarrier,
   rotateOutputStorage,
@@ -40,6 +42,12 @@ import {
   shouldSegmentOutput,
   type OutputStoragePin,
 } from "./output-journal-storage.js";
+import {
+  createOutputJournalBinding,
+  validateOutputJournalBinding,
+  type OutputJournalBinding,
+} from "./output-journal-binding.js";
+import { capturePersistentFileIdentity } from "./persistent-file-identity.js";
 
 const MAX_JOURNAL_BYTES = 128 * 1024 * 1024;
 const MAX_RECORD_BYTES = 256 * 1024;
@@ -230,6 +238,7 @@ function sessionLocation(root: string, sessionId: string) {
     outputJournalIdentity?: string;
     outputJournalHead?: OutputHeadPin;
     outputJournalStorage?: OutputStoragePin;
+    outputJournalBinding?: OutputJournalBinding;
   };
   try {
     state = JSON.parse(readBounded(stateFd, 1024 * 1024));
@@ -250,6 +259,13 @@ function sessionLocation(root: string, sessionId: string) {
         code: "CODESHELL_EPHEMERAL_OUTPUT",
       },
     );
+  if (state.outputJournalBinding !== undefined) {
+    try {
+      validateOutputJournalBinding(canonicalRoot, directory, undefined, state.outputJournalBinding);
+    } catch {
+      invalid("Output journal persistent Session identity changed");
+    }
+  }
   return {
     root: canonicalRoot,
     directory,
@@ -405,9 +421,18 @@ function readHeader(fd: number, location: ReturnType<typeof sessionLocation>) {
     location.state.outputJournalIdentity !== seed
   )
     invalid("Pinned output journal identity changed");
-  const identity = digest(
+  const legacyIdentity = digest(
     `${digest(location.root)}\n${first.value.text}\n${location.stat.dev}:${location.stat.ino}\n${file.dev}:${file.ino}`,
   );
+  const binding = location.state.outputJournalBinding;
+  if (binding !== undefined) {
+    try {
+      validateOutputJournalBinding(location.root, location.directory, fd, binding);
+    } catch {
+      invalid("Output journal persistent anchor identity changed");
+    }
+  }
+  const identity = binding?.journalIdentity ?? legacyIdentity;
   return { header, identity, start: { sequence: 0, offset: first.value.end, hash: seed } };
 }
 function validProducer(value: unknown): value is OutputJournalProducer {
@@ -888,6 +913,9 @@ export class SessionOutputJournal {
     let created = false;
     try {
       this.location.state = this.assertOwner(true).state;
+      // Resolve the volume before materializing any output file. A platform
+      // lookup failure must not strand a newly created, unadmitted journal.
+      capturePersistentFileIdentity(this.location.directory, this.location.stat);
       if (
         expectedIncarnation !== undefined &&
         outputCoverageIncarnation(this.location.root, sessionId, this.location.state.startedAt!) !==
@@ -958,6 +986,30 @@ export class SessionOutputJournal {
           );
         this.persistPin(this.identityPin);
       }
+      const prepareAdmission = () =>
+        !this.location.state.outputJournalBinding
+          ? {
+              binding: createOutputJournalBinding(
+                this.location.root,
+                this.location.directory,
+                fd!,
+                this.identity,
+                outputCoverageIncarnation(
+                  this.location.root,
+                  sessionId,
+                  this.location.state.startedAt!,
+                ),
+              ),
+              storage: this.location.state.outputJournalStorage
+                ? admitPersistentOutputStorage(
+                    this.location.directory,
+                    this.location.state.outputJournalStorage,
+                    this.identity,
+                  )
+                : undefined,
+            }
+          : undefined;
+      let admission: ReturnType<typeof prepareAdmission>;
       if (this.location.state.outputJournalHead === undefined) {
         if (
           !created &&
@@ -966,12 +1018,16 @@ export class SessionOutputJournal {
             this.position.offset !== size)
         )
           throw new JournalError("incomplete", "Output tail has no published watermark authority");
-        this.persistHead(this.position);
+        admission = prepareAdmission();
+        this.persistHead(this.position, admission);
       } else {
         const published = publishedHead(output, this.location, loaded, verified);
         if (published.offset !== this.position.offset || published.hash !== this.position.hash)
           throw new JournalError("incomplete", "Unpublished complete output requires repair");
-        if (this.location.state.outputJournalHead.version === 1) this.persistHead(this.position);
+        if (this.location.state.outputJournalHead.version === 1) {
+          admission = prepareAdmission();
+          this.persistHead(this.position, admission);
+        }
       }
       // Isolate only a non-newline tail or an unfinished final whole-event
       // fragment group, including complete lines. Never skip interior damage.
@@ -1002,6 +1058,24 @@ export class SessionOutputJournal {
       }
       this.fileIdentity = fstatSync(fd);
       this.verifiedStamp = fileStamp(output);
+      // First admission is made only after the existing physical pins and the
+      // complete retained hash chain have passed their original checks. A
+      // legacy device mismatch requires explicit offline migration instead.
+      if (!this.location.state.outputJournalBinding) {
+        admission ??= prepareAdmission();
+        const current = this.assertOwner(true);
+        const pin = current.state.outputJournalHead!;
+        const head = admitPersistentPublishedOutputHead(current.directory, pin);
+        const patch = {
+          outputJournalBinding: admission!.binding,
+          outputJournalHead: head,
+          ...(admission!.storage ? { outputJournalStorage: admission!.storage } : {}),
+        };
+        this.persistProof(patch);
+        Object.assign(this.location.state, patch);
+        // Admission may have added physical manifest proofs; cache its new stamp.
+        this.verifiedStamp = fileStamp(output);
+      }
     } finally {
       storage?.close();
       if (fd !== undefined) closeSync(fd);
@@ -1049,15 +1123,24 @@ export class SessionOutputJournal {
   private persistPin(pin: string): void {
     this.persistProof({ outputJournalIdentity: pin });
   }
-  private persistHead(position: Position): void {
+  private persistHead(
+    position: Position,
+    admission?: { binding: OutputJournalBinding; storage?: OutputStoragePin },
+  ): void {
     const current = this.assertOwner(true);
     const head = { version: 1 as const, identity: this.identity, ...position };
     const pin = current.state.outputJournalHead;
-    if (pin?.version === 2) updatePublishedOutputHead(current.directory, pin, head);
+    if (pin?.version === 2 || pin?.version === 3)
+      updatePublishedOutputHead(current.directory, pin, head);
     else {
       const next = initializePublishedOutputHead(current.directory, head);
-      this.persistProof({ outputJournalHead: next });
-      this.location.state.outputJournalHead = next;
+      const patch = {
+        outputJournalHead: next,
+        ...(admission ? { outputJournalBinding: admission.binding } : {}),
+        ...(admission?.storage ? { outputJournalStorage: admission.storage } : {}),
+      };
+      this.persistProof(patch);
+      Object.assign(this.location.state, patch);
     }
   }
   private persistProof(patch: Partial<ReturnType<typeof sessionLocation>["state"]>): void {

@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./session-files": {
+      "types": "./dist/index.session-files.d.ts",
+      "import": "./dist/index.session-files.js"
     }
   },
   "files": [

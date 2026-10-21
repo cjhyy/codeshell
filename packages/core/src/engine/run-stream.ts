@@ -146,6 +146,15 @@ export function buildWrappedOnStream(args: {
           }
           event = { ...event, outputCursor: childJournal.append(event) };
         } catch (error) {
+          if (
+            !childJournal &&
+            event.type === "agent_start" &&
+            (error as NodeJS.ErrnoException).code ===
+              "CODESHELL_OUTPUT_IDENTITY_REVALIDATION_REQUIRED"
+          ) {
+            failed = true;
+            throw error;
+          }
           failure(true);
           throw error;
         }
@@ -195,6 +204,17 @@ export function buildWrappedOnStream(args: {
           });
         }
       } catch (error) {
+        if (
+          !journal &&
+          event.type === "session_started" &&
+          (error as NodeJS.ErrnoException).code ===
+            "CODESHELL_OUTPUT_IDENTITY_REVALIDATION_REQUIRED"
+        ) {
+          // No output has been admitted for this run. A legacy physical
+          // binding needs migration; this is not proof of a failed write.
+          failed = true;
+          throw error;
+        }
         failure();
         throw error;
       }

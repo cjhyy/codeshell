@@ -131,6 +131,91 @@ describe("Codex MCP bridge", () => {
     expect(calls).toEqual(['sess-a:Panel:{"action":"list"}', 'sess-b:Panel:{"action":"list"}']);
   });
 
+  describe("per-call cancellation", () => {
+    /** A host whose tool runs until its per-call signal aborts. */
+    function blockingHost(sessionId: string, aborted: string[]): BridgeToolHost {
+      return {
+        businessSessionId: sessionId,
+        listTools: () => [],
+        execute: (call, signal) =>
+          new Promise((resolve) => {
+            signal?.addEventListener(
+              "abort",
+              () => {
+                aborted.push(`${sessionId}:${call.name}`);
+                resolve({ error: "aborted", isError: true });
+              },
+              { once: true },
+            );
+          }),
+      };
+    }
+
+    const call = (id: number, threadId: string) => ({
+      id,
+      method: "tools/call",
+      params: { name: "DriveAgent", arguments: {}, _meta: { threadId } },
+    });
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
+
+    test("notifications/cancelled aborts the matching in-flight call", async () => {
+      const aborted: string[] = [];
+      const { handle, store } = await boot();
+      store.register("thread-a", blockingHost("sess-a", aborted));
+      const pending = rpc(handle, call(7, "thread-a"));
+      await settle();
+      await rpc(handle, {
+        method: "notifications/cancelled",
+        params: { requestId: 7, reason: "timeout", _meta: { threadId: "thread-a" } },
+      });
+      const response = await pending;
+      expect(aborted).toEqual(["sess-a:DriveAgent"]);
+      expect(response.json.result.isError).toBe(true);
+    });
+
+    test("a cancellation for another thread's request id leaves this call running", async () => {
+      const aborted: string[] = [];
+      const { handle, store } = await boot();
+      store.register("thread-a", blockingHost("sess-a", aborted));
+      store.register("thread-b", blockingHost("sess-b", aborted));
+      const first = rpc(handle, call(7, "thread-a"));
+      const second = rpc(handle, call(7, "thread-b"));
+      await settle();
+      await rpc(handle, {
+        method: "notifications/cancelled",
+        params: { requestId: 7, _meta: { threadId: "thread-b" } },
+      });
+      await second;
+      expect(aborted).toEqual(["sess-b:DriveAgent"]);
+      await rpc(handle, {
+        method: "notifications/cancelled",
+        params: { requestId: 7, _meta: { threadId: "thread-a" } },
+      });
+      await first;
+      expect(aborted).toEqual(["sess-b:DriveAgent", "sess-a:DriveAgent"]);
+    });
+
+    test("an unattributed cancellation aborts only an unambiguous request id", async () => {
+      const aborted: string[] = [];
+      const { handle, store } = await boot();
+      store.register("thread-a", blockingHost("sess-a", aborted));
+      store.register("thread-b", blockingHost("sess-b", aborted));
+      const first = rpc(handle, call(7, "thread-a"));
+      const second = rpc(handle, call(7, "thread-b"));
+      await settle();
+      await rpc(handle, { method: "notifications/cancelled", params: { requestId: 7 } });
+      await settle();
+      expect(aborted).toEqual([]);
+      for (const threadId of ["thread-a", "thread-b"]) {
+        await rpc(handle, {
+          method: "notifications/cancelled",
+          params: { requestId: 7, _meta: { threadId } },
+        });
+      }
+      await Promise.all([first, second]);
+    });
+  });
+
   test("keeps calls in the same Codex turn distinct in the host transcript", async () => {
     const { handle, store } = await boot();
     const calls: Array<{ id: string; name: string }> = [];

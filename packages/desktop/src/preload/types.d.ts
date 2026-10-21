@@ -1116,8 +1116,10 @@ export interface CodeshellApi
       goal?: string;
     },
   ): Promise<RpcResponse>;
-  /** Cancel a session's running turn. sessionId optional for legacy callers. */
-  cancel(sessionId?: string): Promise<RpcResponse>;
+  /** Cancel a session's running turn. sessionId optional for legacy callers.
+   *  `keepGoal` interrupts an external runtime without pausing its Goal (the
+   *  interrupt-and-send path); a plain Stop pauses it. */
+  cancel(sessionId?: string, options?: { keepGoal?: boolean }): Promise<RpcResponse>;
   /** Steer an in-flight run: queue a user message spliced at the next turn-loop
    *  step (不打断, for 引导). `id` is a stable handle echoed back on the
    *  steer_injected event and used to revoke via unsteer. Waits for the next
@@ -1189,6 +1191,8 @@ export interface CodeshellApi
     goalId?: string;
     paused?: boolean;
     revision?: number;
+    /** When the objective was set (epoch ms). */
+    setAtMs?: number;
   }>;
   /** Background-shell dock panel (TODO 3.2). */
   listBackgroundShells(sessionId: string): Promise<{ shells: BackgroundShellInfo[] }>;
@@ -1514,6 +1518,9 @@ export interface CodeshellApi
       attachments?: InputAttachmentMeta[];
     }): Promise<{ ok: boolean; reason?: string; text?: string; streamed?: boolean }>;
     interrupt(sessionId: string): Promise<void>;
+    /** End the running Goal run after its current provider turn, without
+     *  pausing it, so queued chat input is sent next. False when none runs. */
+    yieldGoal(sessionId: string): Promise<boolean>;
     stop(sessionId: string): Promise<void>;
     /** Main started or stopped a runtime for a session. Returns unsubscribe. */
     onSessionState(cb: (payload: { sessionId: string; active: boolean }) => void): () => void;
@@ -2262,7 +2269,11 @@ export interface CodeshellApi
   ): Promise<void>;
   inspectGithubSkill(url: string, existingNames?: string[]): Promise<GithubRepoInspection>;
   installFromGithub(input: GithubSkillInstallInput): Promise<InstalledSkill>;
-  probeMcpServers(configs: McpServerProbeInput[], force?: boolean): Promise<McpProbeResult[]>;
+  probeMcpServers(
+    configs: McpServerProbeInput[],
+    force?: boolean,
+    target?: RendererConfigurationTarget | null,
+  ): Promise<McpProbeResult[]>;
   listMergedMcpServers(
     base: Record<string, unknown>,
     disabledPlugins?: string[],

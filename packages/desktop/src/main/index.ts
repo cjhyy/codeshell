@@ -146,6 +146,7 @@ import { getCuaDriverHost } from "./computer-use/service.js";
 import { initializeDesktopComputerUse } from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
+import { setProjectTrustWithRevocation } from "./project-trust-lifecycle.js";
 import {
   createExternalGoalRpcHandler,
   parseExternalGoalInput,
@@ -5391,17 +5392,21 @@ ipcMain.handle(
   },
 );
 
-ipcMain.handle("mcp:probe", async (_e, raw: unknown, force?: boolean) => {
-  if (!Array.isArray(raw)) return [];
-  const configs = raw.filter(
-    (x): x is McpServerConfig =>
-      !!x && typeof x === "object" && typeof (x as McpServerConfig).name === "string",
-  );
-  return probeMcpServers(configs, {
-    force: Boolean(force),
-    oauthService: getMcpOAuthService(),
-  });
-});
+ipcMain.handle(
+  "mcp:probe",
+  async (_e, raw: unknown, force?: boolean, target?: RendererConfigurationTarget | null) => {
+    if (!Array.isArray(raw)) return [];
+    const configs = raw.filter(
+      (x): x is McpServerConfig =>
+        !!x && typeof x === "object" && typeof (x as McpServerConfig).name === "string",
+    );
+    return probeMcpServers(configs, {
+      force: Boolean(force),
+      cwd: await rendererOptionalConfigurationCwd(target ?? null, resolveNoRepoCwd()),
+      oauthService: getMcpOAuthService(),
+    });
+  },
+);
 
 ipcMain.handle(
   "mcp:listMerged",
@@ -6240,9 +6245,20 @@ ipcMain.handle(
   },
 );
 
-ipcMain.handle("externalRuntime:interrupt", async (event, sessionId: unknown) => {
+ipcMain.handle(
+  "externalRuntime:interrupt",
+  async (event, sessionId: unknown, options?: { keepGoal?: unknown }) => {
+    assertDesktopSessionId(sessionId);
+    await externalRuntimeService?.interrupt(sessionId, event.sender.id, undefined, {
+      keepGoal: options?.keepGoal === true,
+    });
+  },
+);
+
+/** A queued chat message asks the running Goal to yield after this provider turn. */
+ipcMain.handle("externalRuntime:yieldGoal", (event, sessionId: unknown) => {
   assertDesktopSessionId(sessionId);
-  await externalRuntimeService?.interrupt(sessionId, event.sender.id);
+  return externalRuntimeService?.yieldGoal(sessionId, event.sender.id) ?? false;
 });
 
 /** The renderer answering a prompt this session's runtime is parked on. */
@@ -7167,7 +7183,10 @@ ipcMain.handle("trust:get", async (_e, p: string) => {
 ipcMain.handle("trust:set", async (_e, p: string, level: TrustLevel) => {
   if (typeof p !== "string") throw new Error("trust:set requires path");
   if (level !== "trusted" && level !== "untrusted") throw new Error("invalid level");
-  await setTrust(await requireRendererProjectPath(p), level);
+  await setProjectTrustWithRevocation(await requireRendererProjectPath(p), level, {
+    setTrust,
+    revokeExternalRuntimeTrust: async (cwd) => externalRuntimeService?.revokeProjectTrust(cwd),
+  });
 });
 
 ipcMain.handle("trust:risks", async (_e, p: string) => {

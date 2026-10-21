@@ -8,12 +8,15 @@ import {
   chmodSync,
   linkSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { runInNewContext } from "node:vm";
 import {
   assertDockerBrowserGuard,
@@ -30,10 +33,8 @@ const origin = "http://127.0.0.1:32123";
 
 // No process, socket or browser is started. The ChildProcess instance is a
 // synthetic receipt subject; actual capture/driver integration belongs to CI.
-function fixture() {
-  const ws = createTestStockWebSocketPackage(
-    new URL("../packages/server/package.json", import.meta.url).pathname,
-  );
+function fixture(sourceAnchor = new URL("../packages/server/package.json", import.meta.url)) {
+  const ws = createTestStockWebSocketPackage(fileURLToPath(sourceAnchor));
   const root = ws.root;
   const home = join(root, "home");
   mkdirSync(home, { mode: 0o700 });
@@ -87,6 +88,26 @@ function fixture() {
     dispose: ws.dispose,
   };
 }
+
+test("real ws resolution and guard pinning work with a Unicode and space-containing source anchor", async () => {
+  const root = mkdtempSync(join(tmpdir(), "中文 source anchor with spaces-"));
+  let f: ReturnType<typeof fixture> | undefined;
+  try {
+    writeFileSync(join(root, "package.json"), '{"private":true}');
+    symlinkSync(
+      fileURLToPath(new URL("../packages/server/node_modules", import.meta.url)),
+      join(root, "node_modules"),
+      "dir",
+    );
+    f = fixture(pathToFileURL(join(root, "package.json")));
+    const guard = await createDockerBrowserGuard(f.input);
+    expect(() => assertDockerBrowserGuard(guard)).not.toThrow();
+    await guard.createContext(fakeBrowser().browser);
+  } finally {
+    f?.dispose();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 function fakeBrowser({ preexisting = false, setupFailure = false, closeFailure = false } = {}) {
   const contexts = [];

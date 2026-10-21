@@ -369,6 +369,16 @@ jobs:
           path: /tmp/codeshell-profile-memory-electron-*
           if-no-files-found: ignore
           retention-days: 7
+      - name: Preserve synthetic cost-history failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cost-history-synthetic-failure
+          path: |
+            /tmp/codeshell-cost-gui-*/home/evidence/failure.json
+            /tmp/codeshell-cost-gui-*/home/evidence/cost-history-failure.png
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Preserve synthetic operation-read failure evidence
         if: failure()
         uses: actions/upload-artifact@v4

@@ -102,7 +102,8 @@ describe("architecture growth budgets", () => {
     // Panel model observations add no lines or authority to this composition root.
     // Pin HEAD (7_330): Pet handlers registered before the renderer loads, root-scoped
     // project file search and the review:preparePrompt handler; logic stays in services.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_330);
+    // +4 composition lines bind MCP probes to the selected configuration target and authorized cwd.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_334);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider
@@ -189,7 +190,8 @@ describe("architecture growth budgets", () => {
       // +4 local model trace list/detail/config read/update routes, restricted to application main frames.
       // +1 metadata-only session grouping route shares the same fixed store and caller guard.
       // +1 review:preparePrompt; prompt assembly and Git reads stay in the review service.
-    ).toBeLessThanOrEqual(362);
+      // +1 externalRuntime:yieldGoal; the owner check and Goal state stay in the service.
+    ).toBeLessThanOrEqual(363);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -271,7 +273,8 @@ describe("architecture growth budgets", () => {
     // +3 type-only native review declaration lines reuse the extracted API contract.
     // +6 type-only declaration lines compose the extracted memory-copy API.
     // +1 net: plugin installation origin and forwarded source event identity fields.
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_984);
+    // +4 declaration lines carry that selected MCP configuration target; no new IPC route.
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_988);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and
@@ -492,7 +495,10 @@ describe("architecture growth budgets", () => {
       // observations; no stable SDK or extension persistence authority is added.
       // +1 Host-only cumulative usage normalizer (c938007c2) so Desktop restores
       // foreground-only cache counters with the same rule as Core.
-      "packages/core/src/index.internal.ts": 121,
+      // +2 Host 1.2 internal seams: SDK-only bounded MCP connect/list/close,
+      // and the existing session listing algorithm with Host filesystem custody.
+      // Neither is exported by the stable public SDK or extension entry.
+      "packages/core/src/index.internal.ts": 123,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules

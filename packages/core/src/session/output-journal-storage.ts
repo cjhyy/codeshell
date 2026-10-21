@@ -11,8 +11,15 @@ import {
   readSync,
   unlinkSync,
   writeSync,
+  type Stats,
 } from "node:fs";
 import { join } from "node:path";
+import {
+  capturePersistentFileIdentity,
+  isValidPersistentFileIdentity,
+  matchesPersistentFileIdentity,
+  type PersistentFileIdentity,
+} from "./persistent-file-identity.js";
 
 export interface OutputPosition {
   sequence: number;
@@ -22,13 +29,14 @@ export interface OutputPosition {
 export interface OutputStoragePin {
   version: 1;
   identity: string;
-  file: { dev: number; ino: number };
+  file: { dev: number; ino: number; stable?: PersistentFileIdentity };
   origin: OutputPosition;
 }
 interface Segment {
   name: string;
   dev: number;
   ino: number;
+  stable?: PersistentFileIdentity;
   start: OutputPosition;
   end?: OutputPosition;
 }
@@ -60,6 +68,16 @@ function valid(position: OutputPosition): boolean {
     position.offset >= 0 &&
     /^[a-f0-9]{64}$/.test(position.hash)
   );
+}
+/** Persisted identities survive remounts; open-vs-name checks below stay boot-local. */
+function matchesFile(
+  path: string,
+  pin: { dev: number; ino: number; stable?: PersistentFileIdentity },
+  stat: Stats,
+): boolean {
+  return pin.stable !== undefined
+    ? matchesPersistentFileIdentity(path, pin.stable, stat)
+    : stat.dev === pin.dev && stat.ino === pin.ino;
 }
 function stamp(fd: number): string {
   const at = fstatSync(fd, { bigint: true });
@@ -181,13 +199,14 @@ export class SegmentedOutputFile {
       !valid(pin.origin) ||
       !pin.file ||
       !Number.isSafeInteger(pin.file.dev) ||
-      !Number.isSafeInteger(pin.file.ino)
+      !Number.isSafeInteger(pin.file.ino) ||
+      (pin.file.stable !== undefined && !isValidPersistentFileIdentity(pin.file.stable))
     )
       throw new Error("Invalid output storage admission pin");
     this.manifestFd = open(join(directory, NAME), constants.O_RDONLY);
     try {
       const at = fstatSync(this.manifestFd);
-      if (at.dev !== pin.file.dev || at.ino !== pin.file.ino)
+      if (!matchesFile(join(directory, NAME), pin.file, at))
         throw new Error("Output storage manifest was replaced");
       this.manifest = readManifest(this.manifestFd, identity, pin);
       this.floor = this.manifest.floor;
@@ -230,6 +249,7 @@ export class SegmentedOutputFile {
           !same(segment.start, expected) ||
           !Number.isSafeInteger(segment.dev) ||
           !Number.isSafeInteger(segment.ino) ||
+          (segment.stable !== undefined && !isValidPersistentFileIdentity(segment.stable)) ||
           (index === this.manifest.segments.length - 1
             ? segment.end !== undefined
             : !valid(segment.end!))
@@ -246,8 +266,7 @@ export class SegmentedOutputFile {
           base: segment.start.offset,
         });
         if (
-          stat.dev !== segment.dev ||
-          stat.ino !== segment.ino ||
+          !matchesFile(path, segment, stat) ||
           stat.size > MAX_SEGMENT_BYTES ||
           (segment.end &&
             (segment.end.offset !== segment.start.offset + stat.size ||
@@ -327,7 +346,7 @@ export class SegmentedOutputFile {
     const segment = this.manifest.segments.at(-1)!;
     const fd = open(join(this.directory, segment.name), constants.O_RDWR);
     const at = fstatSync(fd);
-    if (at.dev !== segment.dev || at.ino !== segment.ino) {
+    if (!matchesFile(join(this.directory, segment.name), segment, at)) {
       closeSync(fd);
       throw new Error("Active output segment was replaced");
     }
@@ -347,7 +366,13 @@ function createSegment(directory: string, start: OutputPosition): Segment {
     fsyncSync(fd);
     const at = fstatSync(fd);
     directorySync(directory);
-    return { name, dev: at.dev, ino: at.ino, start: { ...start } };
+    return {
+      name,
+      dev: at.dev,
+      ino: at.ino,
+      stable: capturePersistentFileIdentity(join(directory, name), at),
+      start: { ...start },
+    };
   } finally {
     closeSync(fd);
   }
@@ -383,12 +408,67 @@ export function initializeOutputStorage(
       version: 1,
       identity,
       origin: { ...origin },
-      file: { dev: at.dev, ino: at.ino },
+      file: {
+        dev: at.dev,
+        ino: at.ino,
+        stable: capturePersistentFileIdentity(join(directory, NAME), at),
+      },
     };
     admit(pin);
     return pin;
   } finally {
     closeSync(fd);
+  }
+}
+/**
+ * Caller owns state.lock and has already verified the complete logical chain.
+ * Upgrade physical proof only after every old pin still identifies its original file.
+ */
+export function admitPersistentOutputStorage(
+  directory: string,
+  pin: OutputStoragePin,
+  identity: string,
+): OutputStoragePin {
+  const anchorPath = join(directory, "output-journal.jsonl");
+  const anchor = open(anchorPath, constants.O_RDONLY);
+  let view: SegmentedOutputFile | undefined;
+  try {
+    const header = Buffer.alloc(Math.min(fstatSync(anchor).size, 256 * 1024));
+    const count = readSync(anchor, header, 0, header.length, 0);
+    const newline = header.subarray(0, count).indexOf(10);
+    if (newline < 0) throw new Error("Output storage anchor header is missing");
+    view = new SegmentedOutputFile(anchor, directory, anchorPath, newline + 1, pin, identity);
+    const manifest = structuredClone(view.manifest);
+    let changed = false;
+    for (const segment of manifest.segments) {
+      if (segment.stable) continue;
+      segment.stable = capturePersistentFileIdentity(join(directory, segment.name));
+      changed = true;
+    }
+    const next: OutputStoragePin = {
+      ...pin,
+      file: {
+        ...pin.file,
+        stable: pin.file.stable ?? capturePersistentFileIdentity(join(directory, NAME)),
+      },
+    };
+    if (changed) {
+      view.assertNamed();
+      const fd = open(join(directory, NAME), constants.O_RDWR);
+      try {
+        if (!matchesFile(join(directory, NAME), pin.file, fstatSync(fd)))
+          throw new Error("Output storage manifest was replaced");
+        writeManifest(fd, manifest);
+        view.assertNamed();
+      } finally {
+        closeSync(fd);
+      }
+    }
+    view.assertNamed();
+    return next;
+  } finally {
+    view?.close();
+    closeSync(anchor);
   }
 }
 /** Whole-event rotation. Durable floor precedes deletion; original anchor inode survives. */
@@ -428,7 +508,7 @@ export function rotateOutputStorage(
   const fd = open(join(directory, NAME), constants.O_RDWR);
   try {
     const at = fstatSync(fd);
-    if (at.dev !== view.pin.file.dev || at.ino !== view.pin.file.ino)
+    if (!matchesFile(join(directory, NAME), view.pin.file, at))
       throw new Error("Output storage manifest was replaced");
     writeManifest(fd, manifest);
     if (retireAnchor) {
@@ -443,7 +523,7 @@ export function rotateOutputStorage(
     for (const segment of removed) {
       const path = join(directory, segment.name),
         at = lstatSync(path);
-      if (at.isSymbolicLink() || at.dev !== segment.dev || at.ino !== segment.ino)
+      if (at.isSymbolicLink() || !matchesFile(path, segment, at))
         throw new Error("Retired output segment was replaced");
       unlinkSync(path);
     }
