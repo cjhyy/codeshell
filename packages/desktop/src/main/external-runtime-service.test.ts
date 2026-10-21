@@ -411,6 +411,72 @@ describe("ExternalRuntimeService", () => {
     ).toBe(false);
   });
 
+  test("an interrupt that keeps the Goal lets the user's next message steer it", async () => {
+    let release!: () => void;
+    let started!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    providerInterrupt = async () => release();
+    providerSend = async () => {
+      if (providerInputs.length > 1) return;
+      started();
+      await blocked;
+    };
+    const running = svc.send(request.sessionId, { text: "执行", goal: "持续推进的目标" });
+    await entered;
+    await svc.interrupt(request.sessionId, 77, undefined, { keepGoal: true });
+    await running;
+    expect(svc.getGoal(request.sessionId)).toMatchObject({
+      goal: "持续推进的目标",
+      paused: false,
+      revision: 1,
+    });
+    expect(
+      streamEvents.some(
+        (event) => event.type === "goal_progress" && event.gaps?.includes("目标已暂停"),
+      ),
+    ).toBe(false);
+    providerSend = async (args) => {
+      const goal = svc.getGoal(request.sessionId);
+      await (args.registry as ToolRegistry).executeTool("complete_goal", {
+        goalId: goal.goalId,
+        revision: goal.revision,
+      });
+    };
+    await svc.send(request.sessionId, { text: "换个方向：先做求职" });
+    expect(providerInputs[1]!.text).toContain("换个方向：先做求职");
+    expect(providerInputs[1]!.text).toContain("<codeshell_goal>");
+    expect(starts).toHaveLength(1);
+    await svc.stop(request.sessionId);
+  });
+
+  test("yielding a Goal ends the run after the current turn without pausing it", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    expect(svc.yieldGoal(request.sessionId, 77)).toBe(false);
+    providerSend = async () => {
+      expect(svc.yieldGoal(request.sessionId, 77)).toBe(true);
+    };
+    await svc.send(request.sessionId, { text: "执行", goal: "让位给排队消息" });
+    expect(providerInputs).toHaveLength(1);
+    expect(svc.getGoal(request.sessionId)).toMatchObject({
+      goal: "让位给排队消息",
+      paused: false,
+    });
+    expect(
+      streamEvents.some(
+        (event) => event.type === "goal_progress" && event.gaps?.includes("目标已暂停"),
+      ),
+    ).toBe(false);
+    await svc.stop(request.sessionId);
+  });
+
   test("interrupt failure pauses the edited revision and requires rebuilding the provider", async () => {
     let release!: () => void;
     let started!: () => void;

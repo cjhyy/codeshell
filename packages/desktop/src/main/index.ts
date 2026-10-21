@@ -6233,9 +6233,20 @@ ipcMain.handle(
   },
 );
 
-ipcMain.handle("externalRuntime:interrupt", async (event, sessionId: unknown) => {
+ipcMain.handle(
+  "externalRuntime:interrupt",
+  async (event, sessionId: unknown, options?: { keepGoal?: unknown }) => {
+    assertDesktopSessionId(sessionId);
+    await externalRuntimeService?.interrupt(sessionId, event.sender.id, undefined, {
+      keepGoal: options?.keepGoal === true,
+    });
+  },
+);
+
+/** A queued chat message asks the running Goal to yield after this provider turn. */
+ipcMain.handle("externalRuntime:yieldGoal", (event, sessionId: unknown) => {
   assertDesktopSessionId(sessionId);
-  await externalRuntimeService?.interrupt(sessionId, event.sender.id);
+  return externalRuntimeService?.yieldGoal(sessionId, event.sender.id) ?? false;
 });
 
 /** The renderer answering a prompt this session's runtime is parked on. */

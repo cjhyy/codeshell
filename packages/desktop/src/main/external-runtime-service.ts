@@ -1413,10 +1413,22 @@ export class ExternalRuntimeService {
       : undefined;
   }
 
+  /** Let queued user input in after the current provider turn; see `yieldAfterTurn`. */
+  yieldGoal(sessionId: string, callerWebContentsId?: number): boolean {
+    this.assertOwner(sessionId, callerWebContentsId);
+    return this.goals.yieldAfterTurn(sessionId);
+  }
+
+  /**
+   * Stop the running provider turn. `keepGoal` is the interrupt-and-send path:
+   * the user is redirecting the Goal, not stopping it, so it stays active and
+   * the message that follows starts its next run. A plain Stop pauses it.
+   */
   async interrupt(
     sessionId: string,
     callerWebContentsId?: number,
     expected?: { session: ExternalRuntimeSession; runId: string },
+    options: { keepGoal?: boolean } = {},
   ): Promise<void> {
     this.assertOwner(sessionId, callerWebContentsId);
     const entry = this.sessions.get(sessionId);
@@ -1437,7 +1449,9 @@ export class ExternalRuntimeService {
       entry.lifecycle.interruptGeneration++;
     }
     const run = this.goals.running(sessionId);
-    if (run && this.goals.isCurrent(run)) this.goals.pause(run, "用户已停止本轮执行");
+    if (run && !options.keepGoal && this.goals.isCurrent(run)) {
+      this.goals.pause(run, "用户已停止本轮执行");
+    }
     this.goals.stop(sessionId);
     // A CLI result can settle its provider turn before process exit resolves
     // done. User Stop still aborts the open logical Goal in that narrow gap.

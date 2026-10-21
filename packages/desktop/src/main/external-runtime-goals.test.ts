@@ -149,6 +149,20 @@ describe("external Goal lifecycle", () => {
     expect(events.at(-1)).toMatchObject({ type: "goal_progress", status: "not_met" });
   });
 
+  test("a yielded run stops continuing without pausing the persisted Goal", () => {
+    const run = goals.start(sessionId, { objective: "让位给用户" })!;
+    expect(goals.yieldAfterTurn(sessionId)).toBe(true);
+    expect(goals.afterTurn(run, 10, "本轮结果")).toBe(false);
+    expect(goals.get(sessionId)).toMatchObject({ goal: "让位给用户", paused: false, revision: 1 });
+    goals.end(run);
+    expect(goals.yieldAfterTurn(sessionId)).toBe(false);
+  });
+
+  test("the continuation instruction says it is not a user reply or approval", () => {
+    const run = goals.start(sessionId, { objective: "安装面板" })!;
+    expect(goals.instruction(run)).toContain("not a reply from the user");
+  });
+
   test("extensions raise only the active run ceilings and stale controls cannot delete a goal", () => {
     const run = goals.start(sessionId, { objective: "执行", maxTurns: 2, timeBudgetMs: 100 })!;
     run.tokensUsed = 50;
