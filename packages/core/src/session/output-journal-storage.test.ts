@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { SessionManager } from "./session-manager.js";
 import { readOutputJournal, SessionOutputJournal } from "./output-journal.js";
-import { SegmentedOutputFile } from "./output-journal-storage.js";
+import { admitPersistentOutputStorage, SegmentedOutputFile } from "./output-journal-storage.js";
 import {
   readOutputJournal as oldRead,
   SessionOutputJournal as OldWriter,
@@ -143,6 +143,77 @@ test("lost, replaced and corrupted storage manifests or segments never become co
     expect(fs.readFileSync(f.file)).toEqual(original);
   }
 });
+test("persistent manifest and segment proof survives changed device observations", () => {
+  const f = fixture();
+  const cursor = f.writer.append(huge);
+  const statePath = join(f.directory, "state.json");
+  const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
+  expect(state.outputJournalStorage.file.stable).toBeDefined();
+  state.outputJournalStorage.file.dev += 1;
+  fs.writeFileSync(statePath, JSON.stringify(state));
+  const stored = manifest(f);
+  for (const segment of stored.segments) {
+    expect(segment.stable).toBeDefined();
+    segment.dev += 1;
+  }
+  writeManifestFixture(f.directory, stored);
+  expect(readOutputJournal(f.root, f.id, { after: cursor, through: cursor }).complete).toBe(true);
+  const writer = new SessionOutputJournal(f.root, f.id, f.runId);
+  const next = writer.append({ type: "text_delta", text: "after remount" });
+  const page = readOutputJournal(f.root, f.id, { after: cursor, through: next });
+  expect(page.complete).toBe(true);
+  expect(page.frames.map((frame) => frame.event)).toEqual([
+    { type: "text_delta", text: "after remount" },
+  ]);
+});
+
+test("stable segment proof rejects another volume even with the same inode and intact bytes", () => {
+  const f = fixture();
+  const cursor = f.writer.append(huge);
+  const stored = manifest(f);
+  stored.segments[0].stable.volume = "darwin-volume:00000000-0000-4000-8000-000000000001";
+  writeManifestFixture(f.directory, stored);
+  expect(readOutputJournal(f.root, f.id, { after: cursor, through: cursor }).complete).toBe(false);
+  expect(() => new SessionOutputJournal(f.root, f.id, f.runId)).toThrow();
+});
+
+test("healthy legacy storage admission upgrades physical proof while retaining every logical byte", () => {
+  const f = fixture();
+  const cursor = f.writer.append(huge);
+  const statePath = join(f.directory, "state.json");
+  const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
+  const pin = state.outputJournalStorage;
+  delete pin.file.stable;
+  const stored = manifest(f);
+  for (const segment of stored.segments) delete segment.stable;
+  writeManifestFixture(f.directory, stored);
+  fs.writeFileSync(statePath, JSON.stringify(state));
+  const original = fs.readFileSync(f.file);
+  const segmentBytes = stored.segments.map((segment: any) =>
+    fs.readFileSync(join(f.directory, segment.name)),
+  );
+  const next = admitPersistentOutputStorage(f.directory, pin, pin.identity);
+  expect(next.file.stable).toBeDefined();
+  expect(manifest(f).segments.every((segment: any) => !!segment.stable)).toBe(true);
+  expect(fs.readFileSync(f.file)).toEqual(original);
+  for (const [index, segment] of stored.segments.entries())
+    expect(fs.readFileSync(join(f.directory, segment.name))).toEqual(segmentBytes[index]);
+  fs.writeFileSync(statePath, JSON.stringify({ ...state, outputJournalStorage: next }));
+  expect(readOutputJournal(f.root, f.id, { after: cursor, through: cursor }).complete).toBe(true);
+});
+
+function writeManifestFixture(directory: string, manifest: any): void {
+  const data = Buffer.from(
+    JSON.stringify({
+      manifest,
+      sha256: createHash("sha256").update(JSON.stringify(manifest)).digest("hex"),
+    }),
+  );
+  const block = Buffer.alloc(32768, 0x20);
+  data.copy(block);
+  fs.writeFileSync(join(directory, "output-journal-segments.json"), block);
+}
+
 test("failure after the durable format barrier keeps real historical algorithms fenced", () => {
   const f = fixture();
   const real = fs.renameSync;

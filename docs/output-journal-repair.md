@@ -15,6 +15,7 @@ subdirectories, rather than a Session directory or application HOME.
 code-shell-output-journal inspect /absolute/path/to/sessions SESSION_ID
 code-shell-output-journal backup /absolute/path/to/sessions SESSION_ID /absolute/path/to/new-bundle
 code-shell-output-journal restore /absolute/path/to/sessions SESSION_ID /absolute/path/to/bundle
+code-shell-output-journal migrate-identity /absolute/path/to/sessions SESSION_ID /absolute/path/to/new-evidence --accept-legacy-identity --resume-with-recorded-gap
 ```
 
 The executable ships with `@cjhyy/code-shell-core`. A source checkout can use
@@ -23,6 +24,61 @@ Successful commands print one JSON result. Invalid arguments, unsafe paths,
 incomplete backups, missing authority, and failed writes produce a refusal on
 stderr and a nonzero exit code. `inspect` prints an `ok` or `incomplete` diagnostic;
 its exit code alone is not a coverage verdict.
+
+## Re-admit a legacy identity after a device-number change
+
+On macOS the device number returned by `stat` can change after a reboot or a
+remount. Older Sessions stored that number in their output identity. A legacy
+Session may therefore refuse to open with `Output watermark file was lost or
+replaced` even when its inode, complete journal, and published-head checksum are
+unchanged. New admissions use a persistent volume/file binding separately from
+the immutable logical journal and coverage identities.
+
+`migrate-identity` is an explicit, offline re-admission for **monolithic** legacy
+version-2 head pins. It refuses segmented legacy Sessions, replaced head inodes,
+damaged chains, unfinished event fragments, unpublished tails, missing authority,
+unsafe paths, and any competing repair. The command never starts an Engine,
+selects a provider, reads a default HOME, or sends a model request.
+
+Stop the Host, worker, and historical clients first. Deploy the updated runtime
+before reopening the Session: old workers cache failed Session and coverage
+state, and cannot interpret the new durable binding. Use a new evidence directory
+outside the Session store. The command captures the complete bounded Session
+inventory, including `transcript.jsonl` and attachments, as private files and
+flushes the source copies and a checksummed receipt before changing state.
+Files are individually limited to 128 MiB, the inventory to 4096 files/directories,
+and all source bytes to 512 MiB.
+
+`--accept-legacy-identity` is required. The old format never recorded a stable
+volume UUID; matching inodes and journal hashes support diagnosis but cannot
+reconstruct that missing historical binding. This flag explicitly accepts the
+recorded source evidence as the basis for a new physical admission. The original
+logical cursor identity is reconstructed from the legacy device number and
+verified against the published head. Coverage identity is verified separately.
+The new binding captures the current stable volume/file identity. Existing
+transcript, journal, header, and durable-head bytes are not rewritten.
+
+An existing `outputRecoveryIncomplete` flag additionally requires
+`--resume-with-recorded-gap`. This permits future writes while keeping the prior
+failure in the immutable evidence receipt and `outputIdentityRecovery` state
+record. It sets historical display coverage to `unpaired: true`, preserves
+existing pending input IDs, and makes no claim that previously unrecorded output
+has been recovered. An existing historical gap remains a gap. A healthy legacy
+Session does not require this second flag and retains its coverage status.
+
+State publication uses the existing `output-journal-repair-pending.json` barrier.
+If interrupted or refused after publication, keep writers stopped and retry the
+**same root, Session, evidence directory, and flags**. The receipt validates both
+the complete original evidence and current source before a retry; changed or
+replaced source is never accepted solely because a pending marker exists. Do not
+delete the pending marker or edit the receipt. After state is durable, the real
+output reader verifies the retained history and original cursor domain. A failed
+reader re-establishes the barrier. Successful commands retain the source evidence
+and a checksummed `result.json`; a repeat returns `already_migrated`.
+
+The evidence directory can contain private conversation content. Preserve it
+with the original Session. Verify that the new Host shows the original chat and
+can append new output before discarding any separate operator backup.
 
 ## Create a complete bundle while the journal is healthy
 
@@ -101,8 +157,8 @@ replace pending markers, source evidence, creation receipts, or authority files
 to force recovery. Malformed/replaced receipts or changed authority intentionally
 remain blocked for diagnosis.
 
-The result includes the source-evidence directory and `coverage: "ok"` or
-`"incomplete"`. Repair never clears `outputRecoveryIncomplete`, unpaired coverage,
+The restore result includes the source-evidence directory and `coverage: "ok"` or
+`"incomplete"`. Restore never clears `outputRecoveryIncomplete`, unpaired coverage,
 or recorded input gaps. Restoring bytes alone cannot prove that an unrecorded
 output was durably published. A sticky failure therefore remains incomplete even
 when the proved bytes were restored successfully.

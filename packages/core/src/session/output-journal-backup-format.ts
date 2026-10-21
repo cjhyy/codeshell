@@ -2,6 +2,15 @@
 import { createHash } from "node:crypto";
 import type { OutputHeadPin, PublishedOutputHead } from "./output-journal-head.js";
 import type { OutputPosition, OutputStoragePin } from "./output-journal-storage.js";
+import {
+  isValidPersistentFileIdentity,
+  persistentFileIdentityKey,
+  type PersistentFileIdentity,
+} from "./persistent-file-identity.js";
+import {
+  isValidOutputJournalBinding,
+  type OutputJournalBinding,
+} from "./output-journal-binding.js";
 
 export const OUTPUT_REPAIR_PENDING = "output-journal-repair-pending.json";
 export const OUTPUT_BACKUP_MANIFEST = "output-journal-backup.json";
@@ -16,6 +25,7 @@ export const samePosition = (a: OutputPosition, b: OutputPosition): boolean =>
 export interface FileIdentity {
   dev: number;
   ino: number;
+  stable?: PersistentFileIdentity;
 }
 export interface RepairAuthority {
   root: string;
@@ -28,6 +38,7 @@ export interface RepairAuthority {
   headPin: OutputHeadPin;
   head: PublishedOutputHead;
   storagePin?: OutputStoragePin;
+  binding?: OutputJournalBinding;
 }
 export interface BackupFile extends FileIdentity {
   name: string;
@@ -73,8 +84,52 @@ export function validIdentity(value: FileIdentity): boolean {
     Number.isSafeInteger(value.dev) &&
     value.dev >= 0 &&
     Number.isSafeInteger(value.ino) &&
-    value.ino >= 0,
+    value.ino >= 0 &&
+    (value.stable === undefined || isValidPersistentFileIdentity(value.stable)),
   );
+}
+/** Compare admitted physical identities, preserving exact legacy bundle semantics. */
+export function sameFileIdentity(first: FileIdentity, second: FileIdentity): boolean {
+  if (first.stable !== undefined && second.stable !== undefined)
+    return (
+      isValidPersistentFileIdentity(first.stable) &&
+      isValidPersistentFileIdentity(second.stable) &&
+      persistentFileIdentityKey(first.stable!) === persistentFileIdentityKey(second.stable!)
+    );
+  return first.dev === second.dev && first.ino === second.ino;
+}
+/** Legacy authorities retain exact device checks; stable pairs ignore only boot-local observations. */
+export function sameRepairAuthority(first: RepairAuthority, second: RepairAuthority): boolean {
+  const same = (a: unknown, b: unknown): boolean => {
+    if (a === b) return true;
+    if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+    if (Array.isArray(a) || Array.isArray(b))
+      return (
+        Array.isArray(a) &&
+        Array.isArray(b) &&
+        a.length === b.length &&
+        a.every((value, index) => same(value, b[index]))
+      );
+    const left = a as Record<string, unknown>,
+      right = b as Record<string, unknown>;
+    const physical = "dev" in left && "ino" in left && "dev" in right && "ino" in right;
+    if (
+      physical &&
+      !sameFileIdentity(left as unknown as FileIdentity, right as unknown as FileIdentity)
+    )
+      return false;
+    const keys = (value: Record<string, unknown>) =>
+      Object.keys(value)
+        .filter((key) => !(physical && ["dev", "ino", "stable"].includes(key)))
+        .sort();
+    const leftKeys = keys(left),
+      rightKeys = keys(right);
+    return (
+      leftKeys.join("\0") === rightKeys.join("\0") &&
+      leftKeys.every((key) => same(left[key], right[key]))
+    );
+  };
+  return same(first, second);
 }
 export function validPosition(value: OutputPosition): boolean {
   return Boolean(
@@ -167,7 +222,7 @@ export function encodeRepairStorage(manifest: RepairStorageManifest): Buffer {
 export function logicalStorage(manifest: RepairStorageManifest): string {
   return JSON.stringify({
     ...manifest,
-    segments: manifest.segments.map(({ dev: _dev, ino: _ino, ...s }) => s),
+    segments: manifest.segments.map(({ dev: _dev, ino: _ino, stable: _stable, ...s }) => s),
   });
 }
 export function outputRepairCursor(authority: RepairAuthority, position: OutputPosition): string {
@@ -197,7 +252,9 @@ export function verifyBackupChain(
       !authority.sessionId.includes("..") &&
       Number.isFinite(authority.startedAt) &&
       /^[a-f0-9]{64}$/.test(authority.identityPin) &&
-      authority.headPin?.version === 2 &&
+      (authority.headPin?.version === 2 ||
+        (authority.headPin?.version === 3 &&
+          isValidPersistentFileIdentity(authority.headPin.file?.stable))) &&
       validIdentity(authority.headPin.file!) &&
       validPosition(authority.headPin) &&
       authority.head?.version === 1 &&
@@ -213,7 +270,7 @@ export function verifyBackupChain(
   requireRepair(entries.size === manifest.files.length, "bundle_invalid", "Duplicate backup file");
   const anchor = entries.get(OUTPUT_ANCHOR);
   requireRepair(
-    anchor && anchor.dev === authority.anchor.dev && anchor.ino === authority.anchor.ino,
+    anchor && sameFileIdentity(anchor, authority.anchor),
     "authority_mismatch",
     "Backup anchor identity is different",
   );
@@ -237,9 +294,24 @@ export function verifyBackupChain(
     "authority_mismatch",
     "Backup header does not identify the admitted journal",
   );
-  const identity = sha256(
-    `${sha256(authority.root)}\n${headerBytes.subarray(0, -1).toString("utf8")}\n${authority.sessionFile.dev}:${authority.sessionFile.ino}\n${authority.anchor.dev}:${authority.anchor.ino}`,
-  );
+  if (authority.binding)
+    requireRepair(
+      isValidOutputJournalBinding(authority.binding) &&
+        authority.binding.root === authority.root &&
+        isValidPersistentFileIdentity(authority.sessionFile.stable) &&
+        isValidPersistentFileIdentity(authority.anchor.stable) &&
+        persistentFileIdentityKey(authority.binding.directory) ===
+          persistentFileIdentityKey(authority.sessionFile.stable!) &&
+        persistentFileIdentityKey(authority.binding.anchor) ===
+          persistentFileIdentityKey(authority.anchor.stable!),
+      "authority_mismatch",
+      "Backup persistent journal binding changed",
+    );
+  const identity =
+    authority.binding?.journalIdentity ??
+    sha256(
+      `${sha256(authority.root)}\n${headerBytes.subarray(0, -1).toString("utf8")}\n${authority.sessionFile.dev}:${authority.sessionFile.ino}\n${authority.anchor.dev}:${authority.anchor.ino}`,
+    );
   requireRepair(
     identity === authority.head.identity,
     "authority_mismatch",
@@ -251,10 +323,7 @@ export function verifyBackupChain(
   let storage: RepairStorageManifest | undefined;
   const headEntry = entries.get(OUTPUT_HEAD);
   requireRepair(
-    headEntry &&
-      headEntry.dev === authority.headPin.file!.dev &&
-      headEntry.ino === authority.headPin.file!.ino &&
-      headEntry.bytes === 4096,
+    headEntry && sameFileIdentity(headEntry, authority.headPin.file!) && headEntry.bytes === 4096,
     "authority_mismatch",
     "Backup durable-head file is different",
   );
@@ -272,9 +341,7 @@ export function verifyBackupChain(
   if (authority.storagePin) {
     const item = entries.get(OUTPUT_SEGMENTS);
     requireRepair(
-      item &&
-        item.dev === authority.storagePin.file.dev &&
-        item.ino === authority.storagePin.file.ino,
+      item && sameFileIdentity(item, authority.storagePin.file),
       "manifest_unproved",
       "Backup segment manifest inode changed",
     );
@@ -317,8 +384,7 @@ export function verifyBackupChain(
       const item = entries.get(segment.name);
       requireRepair(
         item &&
-          item.dev === segment.dev &&
-          item.ino === segment.ino &&
+          sameFileIdentity(item, segment) &&
           item.bytes <= 32 * 1024 * 1024 &&
           (!segment.end || item.bytes === segment.end.offset - segment.start.offset),
         "bundle_invalid",

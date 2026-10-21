@@ -11,6 +11,12 @@ import {
   writeSync,
 } from "node:fs";
 import { join } from "node:path";
+import {
+  capturePersistentFileIdentity,
+  isValidPersistentFileIdentity,
+  matchesPersistentFileIdentity,
+  type PersistentFileIdentity,
+} from "./persistent-file-identity.js";
 
 export interface PublishedOutputHead {
   version: 1;
@@ -20,8 +26,8 @@ export interface PublishedOutputHead {
   hash: string;
 }
 export interface OutputHeadPin extends Omit<PublishedOutputHead, "version"> {
-  version: 1 | 2;
-  file?: { dev: number; ino: number };
+  version: 1 | 2 | 3;
+  file?: { dev: number; ino: number; stable?: PersistentFileIdentity };
 }
 const BYTES = 4096;
 const NAME = "output-journal-head.json";
@@ -48,15 +54,36 @@ function open(directory: string, flags: number, pin?: OutputHeadPin): number {
     flags | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
     0o600,
   );
-  const at = fstatSync(fd);
-  if (
-    !at.isFile() ||
-    (pin && (!pin.file || at.dev !== pin.file.dev || at.ino !== pin.file.ino || at.size !== BYTES))
-  ) {
+  try {
+    const at = fstatSync(fd);
+    if (
+      pin?.version === 2 &&
+      pin.file &&
+      at.isFile() &&
+      at.size === BYTES &&
+      at.ino === pin.file.ino &&
+      at.dev !== pin.file.dev
+    )
+      throw Object.assign(
+        new Error("Output journal device number changed; identity migration is required"),
+        { code: "CODESHELL_OUTPUT_IDENTITY_REVALIDATION_REQUIRED" },
+      );
+    if (
+      !at.isFile() ||
+      (pin &&
+        (!pin.file ||
+          at.size !== BYTES ||
+          (pin.version === 3
+            ? !isValidPersistentFileIdentity(pin.file.stable) ||
+              !matchesPersistentFileIdentity(path, pin.file.stable, at)
+            : at.dev !== pin.file.dev || at.ino !== pin.file.ino)))
+    )
+      throw new Error("Output watermark file was lost or replaced");
+    return fd;
+  } catch (cause) {
     closeSync(fd);
-    throw new Error("Output watermark file was lost or replaced");
+    throw cause;
   }
-  return fd;
 }
 function encoded(head: PublishedOutputHead): Buffer {
   const value = JSON.stringify(head);
@@ -97,12 +124,14 @@ export function readPublishedOutputHead(
   if (!validHead(pin)) throw new Error("Invalid output watermark admission pin");
   if (pin.version === 1) return { ...pin, version: 1 };
   if (
-    pin.version !== 2 ||
+    ![2, 3].includes(pin.version) ||
     !pin.file ||
-    !Number.isSafeInteger(pin.file.dev) ||
-    !Number.isSafeInteger(pin.file.ino) ||
-    pin.file.dev < 0 ||
-    pin.file.ino < 0
+    (pin.version === 2 &&
+      (!Number.isSafeInteger(pin.file.dev) ||
+        !Number.isSafeInteger(pin.file.ino) ||
+        pin.file.dev < 0 ||
+        pin.file.ino < 0)) ||
+    (pin.version === 3 && !isValidPersistentFileIdentity(pin.file.stable))
   )
     throw new Error("Invalid output watermark admission pin");
   const fd = open(directory, constants.O_RDONLY, pin);
@@ -120,6 +149,7 @@ export function readPublishedOutputHead(
       const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(data));
       const head = value?.head as PublishedOutputHead;
       const named = lstatSync(join(directory, NAME));
+      const opened = fstatSync(fd);
       if (
         !validHead(head) ||
         head.version !== 1 ||
@@ -129,8 +159,8 @@ export function readPublishedOutputHead(
         (head.sequence === pin.sequence && head.hash !== pin.hash) ||
         value.sha256 !== hash(JSON.stringify(head)) ||
         named.isSymbolicLink() ||
-        named.dev !== pin.file.dev ||
-        named.ino !== pin.file.ino
+        named.dev !== opened.dev ||
+        named.ino !== opened.ino
       )
         throw new Error("Output watermark proof was damaged or replaced");
       return head;
@@ -157,7 +187,15 @@ export function initializePublishedOutputHead(
         closeSync(dir);
       }
     }
-    return { ...head, version: 2, file: { dev: at.dev, ino: at.ino } };
+    return {
+      ...head,
+      version: 3,
+      file: {
+        dev: at.dev,
+        ino: at.ino,
+        stable: capturePersistentFileIdentity(join(directory, NAME), at),
+      },
+    };
   } finally {
     closeSync(fd);
   }
@@ -171,6 +209,28 @@ export function updatePublishedOutputHead(
   const fd = open(directory, constants.O_RDWR, pin);
   try {
     write(fd, encoded(head));
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/** Upgrade only the exact head admitted by the old proof; never recapture a replacement. */
+export function admitPersistentPublishedOutputHead(
+  directory: string,
+  pin: OutputHeadPin,
+): OutputHeadPin {
+  readPublishedOutputHead(directory, pin);
+  if (pin.version === 3) return pin;
+  if (pin.version !== 2)
+    throw new Error("Inline output head must be materialized before admission");
+  const fd = open(directory, constants.O_RDONLY, pin);
+  try {
+    const stable = capturePersistentFileIdentity(
+      join(directory, NAME),
+      fstatSync(fd, { bigint: true }),
+    );
+    readPublishedOutputHead(directory, pin);
+    return { ...pin, version: 3, file: { ...pin.file!, stable } };
   } finally {
     closeSync(fd);
   }

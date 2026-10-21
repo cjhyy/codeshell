@@ -5,6 +5,10 @@ import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { lockSync } from "../utils/lockfile.js";
 import { readPublishedOutputHead, type OutputHeadPin } from "./output-journal-head.js";
 import { readOutputJournal } from "./output-journal.js";
+import {
+  capturePersistentFileIdentity,
+  matchesPersistentFileIdentity,
+} from "./persistent-file-identity.js";
 import { isOutputJournalRepairPending } from "./output-journal-repair.js";
 import {
   OUTPUT_ANCHOR,
@@ -20,6 +24,7 @@ import {
   outputRepairCursor,
   parseRepairStorage,
   requireRepair,
+  sameRepairAuthority,
   sha256,
   validIdentity,
   verifyBackupChain,
@@ -64,7 +69,10 @@ function openFile(
         at?.isFile() &&
         !at.isSymbolicLink() &&
         sameInode(stat, at) &&
-        (!expected || sameInode(stat, expected)),
+        (!expected ||
+          (expected.stable
+            ? matchesPersistentFileIdentity(path, expected.stable, stat)
+            : sameInode(stat, expected))),
       "path_replaced",
       "An output file was linked or replaced",
     );
@@ -245,7 +253,7 @@ function locate(root: string, sessionId: string, anchorIdentity?: FileIdentity):
   );
   const pin = state.outputJournalHead as OutputHeadPin;
   requireRepair(
-    pin?.version === 2 && validIdentity(pin.file!),
+    (pin?.version === 2 || pin?.version === 3) && validIdentity(pin.file!),
     "head_unproved",
     "Original durable-head file proof is required",
   );
@@ -264,14 +272,27 @@ function locate(root: string, sessionId: string, anchorIdentity?: FileIdentity):
     const file = fs.fstatSync(anchor);
     const authority: RepairAuthority = {
       root: canonicalRoot,
-      rootFile: { dev: rootFile.dev, ino: rootFile.ino },
+      rootFile: {
+        dev: rootFile.dev,
+        ino: rootFile.ino,
+        stable: capturePersistentFileIdentity(canonicalRoot, rootFile),
+      },
       sessionId,
-      sessionFile: { dev: sessionFile.dev, ino: sessionFile.ino },
+      sessionFile: {
+        dev: sessionFile.dev,
+        ino: sessionFile.ino,
+        stable: capturePersistentFileIdentity(dir, sessionFile),
+      },
       startedAt: state.startedAt,
-      anchor: { dev: file.dev, ino: file.ino },
+      anchor: {
+        dev: file.dev,
+        ino: file.ino,
+        stable: capturePersistentFileIdentity(join(dir, OUTPUT_ANCHOR), file),
+      },
       identityPin: state.outputJournalIdentity,
       headPin: pin,
       head,
+      ...(state.outputJournalBinding ? { binding: state.outputJournalBinding } : {}),
       ...(state.outputJournalStorage ? { storagePin: state.outputJournalStorage } : {}),
     };
     return { root: canonicalRoot, directory: dir, statePath, state, authority };
@@ -282,7 +303,7 @@ function locate(root: string, sessionId: string, anchorIdentity?: FileIdentity):
 function assertAuthority(at: Location, expected = at.authority): Location {
   const now = locate(at.root, expected.sessionId, expected.anchor);
   requireRepair(
-    JSON.stringify(now.authority) === JSON.stringify(expected),
+    sameRepairAuthority(now.authority, expected),
     "authority_mismatch",
     "Current Session, published head or storage authority changed",
   );
@@ -350,7 +371,7 @@ function inventory(storage?: RepairStorageManifest): string[] {
     ...(storage ? [OUTPUT_SEGMENTS, ...storage.segments.map((s) => s.name)] : []),
   ];
 }
-function copyFile(from: number, destination: string, name: string): BackupFile {
+function copyFile(from: number, destination: string, name: string, sourcePath: string): BackupFile {
   const before = stamp(from),
     original = fs.fstatSync(from);
   requireRepair(
@@ -381,6 +402,7 @@ function copyFile(from: number, destination: string, name: string): BackupFile {
       name,
       dev: original.dev,
       ino: original.ino,
+      stable: capturePersistentFileIdentity(sourcePath, original),
       bytes: original.size,
       sha256: hash.digest("hex"),
     };
@@ -526,7 +548,7 @@ export function backupOutputJournal(
     for (const name of inventory(storage)) {
       const source = openFile(join(at.directory, name));
       try {
-        const item = copyFile(source, join(target, name), name);
+        const item = copyFile(source, join(target, name), name, join(at.directory, name));
         total += item.bytes;
         files.push(item);
       } finally {
@@ -656,7 +678,7 @@ function captureEvidence(
       name === "state.json" ? undefined : bundle.manifest.files.find((file) => file.name === name);
     const fd = openFile(join(at.directory, name), fs.constants.O_RDONLY, expected);
     try {
-      const file = copyFile(fd, join(data, name), name);
+      const file = copyFile(fd, join(data, name), name, join(at.directory, name));
       evidence.files.push(file);
       total += file.bytes;
     } finally {
@@ -697,7 +719,7 @@ function loadEvidence(
       /^[a-f0-9-]{36}$/.test(pending.attempt) &&
       pending.evidence === `.output-manual-repair-${pending.attempt}` &&
       pending.bundleDigest === bundle.digest &&
-      JSON.stringify(pending.authority) === JSON.stringify(at.authority),
+      sameRepairAuthority(pending.authority, at.authority),
     "pending_mismatch",
     "Pending repair belongs to a different backup or published authority",
   );
@@ -713,7 +735,7 @@ function loadEvidence(
   const evidence = unseal(join(dir, "receipt.json")) as Evidence;
   requireRepair(
     evidence.version === 1 &&
-      JSON.stringify(evidence.authority) === JSON.stringify(at.authority) &&
+      sameRepairAuthority(evidence.authority, at.authority) &&
       evidence.bundleDigest === bundle.digest &&
       Array.isArray(evidence.files) &&
       evidence.files
@@ -754,7 +776,12 @@ function loadEvidence(
   }
   return { pending, evidence, directory: dir };
 }
-function createdSegment(dir: string, segment: BackupFile, source: number): Created {
+function createdSegment(
+  dir: string,
+  segment: BackupFile,
+  source: number,
+  sourcePath: string,
+): Created {
   const receiptPath = join(dir, `created-${segment.name}.json`);
   if (named(receiptPath)) {
     const created = unseal(receiptPath) as Created;
@@ -773,7 +800,7 @@ function createdSegment(dir: string, segment: BackupFile, source: number): Creat
     return created;
   }
   const temp = `.segment-${randomUUID()}.tmp`,
-    file = copyFile(source, join(dir, temp), segment.name);
+    file = copyFile(source, join(dir, temp), segment.name, sourcePath);
   requireRepair(
     file.bytes === segment.bytes && file.sha256 === segment.sha256,
     "bundle_invalid",
@@ -786,6 +813,7 @@ function createdSegment(dir: string, segment: BackupFile, source: number): Creat
     temp,
     dev: actual.dev,
     ino: actual.ino,
+    stable: capturePersistentFileIdentity(join(dir, temp), actual),
     bytes: file.bytes,
     sha256: file.sha256,
   };
@@ -817,7 +845,7 @@ export function restoreOutputJournalBackup(
   try {
     return locked(root, sessionId, (at, assertLock) => {
       requireRepair(
-        JSON.stringify(at.authority) === JSON.stringify(bundle.manifest.authority),
+        sameRepairAuthority(at.authority, bundle.manifest.authority),
         "head_mismatch",
         "Backup is stale or belongs to another root, inode, head or authority",
       );
@@ -934,7 +962,12 @@ export function restoreOutputJournalBackup(
           const path = join(at.directory, file.name);
           let identity: FileIdentity = file;
           if ("missing" in originalEvidence) {
-            const created = createdSegment(attempt.directory, file, bundle.fds.get(file.name)!);
+            const created = createdSegment(
+              attempt.directory,
+              file,
+              bundle.fds.get(file.name)!,
+              join(bundle.directory, file.name),
+            );
             const temp = join(attempt.directory, created.temp),
               live = named(path);
             if (!live) {
@@ -952,13 +985,17 @@ export function restoreOutputJournalBackup(
               syncDirectory(at.directory);
             }
             requireRepair(
-              sameInode(named(path)!, created),
+              created.stable
+                ? matchesPersistentFileIdentity(path, created.stable, named(path)!)
+                : sameInode(named(path)!, created),
               "path_replaced",
               "Missing segment was replaced during repair",
             );
             if (named(temp)) {
               requireRepair(
-                sameInode(named(temp)!, created),
+                created.stable
+                  ? matchesPersistentFileIdentity(temp, created.stable, named(temp)!)
+                  : sameInode(named(temp)!, created),
                 "path_replaced",
                 "Private prepared segment was replaced",
               );
@@ -969,6 +1006,7 @@ export function restoreOutputJournalBackup(
             const entry = updated!.segments.find((x) => x.name === file.name)!;
             entry.dev = created.dev;
             entry.ino = created.ino;
+            entry.stable = created.stable;
           }
           const fd = openFile(path, fs.constants.O_RDWR, identity);
           targets.set(file.name, fd);
