@@ -10,7 +10,7 @@ import {
   type BigIntStats,
 } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { MemoryManager, type MemoryEntry } from "@cjhyy/code-shell-core";
 import { readWorkspaceProfile, workspaceProfileDir } from "@cjhyy/code-shell-core/internal";
 import type {
@@ -139,11 +139,6 @@ function memoryBaseDir(): string {
   // Match MemoryManager's public storage contract, including its HOME override.
   return process.env.CODE_SHELL_HOME || join(process.env.HOME ?? homedir(), ".code-shell");
 }
-function memoryRoot(baseDir: string, projectDir?: string): string {
-  return projectDir
-    ? join(baseDir, "projects", projectDir.replace(/[/\\:]/g, "-").replace(/^-/, ""), "memory")
-    : join(baseDir, "memory");
-}
 function boundedNames(path: string): string[] {
   const dir = opendirSync(path);
   const names: string[] = [];
@@ -165,15 +160,10 @@ function readStore(
   projectDir?: string,
 ): { manager: MemoryManager; proofs: Map<string, string> } | undefined {
   if (!directory(baseDir)) return undefined;
-  if (projectDir) {
-    const projects = join(baseDir, "projects");
-    if (
-      !directory(projects) ||
-      !directory(join(projects, projectDir.replace(/[/\\:]/g, "-").replace(/^-/, "")))
-    )
-      return undefined;
-  }
-  const root = memoryRoot(baseDir, projectDir);
+  // The exact root MemoryManager uses. Review never migrates a legacy store:
+  // opening the project's memory editor adopts it first.
+  const root = MemoryManager.memoryRootFor({ baseDir, projectDir });
+  if (projectDir && !directory(dirname(root))) return undefined;
   if (!directory(root)) return undefined;
   // MemoryManager's constructor migrates the old flat layout. Review never
   // triggers that write: the existing memory editor must migrate it first.

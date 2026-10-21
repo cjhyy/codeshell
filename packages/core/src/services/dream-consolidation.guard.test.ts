@@ -319,7 +319,7 @@ describe("dream consolidation origin guard", () => {
 
         const entries = user.loadAll();
         const markdownFiles = readdirSync(
-          join(base, "projects", "tmp-dream-guard-user-update", "memory", "user"),
+          join(MemoryManager.memoryRootFor({ baseDir: base, projectDir }), "user"),
         ).filter((f) => f.endsWith(".md") && f !== "MEMORY.md");
         expect(markdownFiles).toEqual([fileName]);
         expect(entries).toHaveLength(1);
