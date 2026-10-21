@@ -229,6 +229,7 @@ test("explicit full backup repairs damaged bytes on the same anchor inode and th
 
 test("stable backup authority survives device-number changes and restores the same cursors and transcript", () => {
   const f = fixture();
+  const before = fold(f);
   const transcriptPath = join(f.directory, "transcript.jsonl");
   const transcript = fs.readFileSync(transcriptPath);
   backupOutputJournal(f.root, f.id, f.backup);
@@ -249,10 +250,7 @@ test("stable backup authority survives device-number changes and restores the sa
   const restored = restoreOutputJournalBackup(f.root, f.id, f.backup);
   expect(restored.coverage).toBe("ok");
   expect(restored.through).toBe(f.through);
-  expect(fold(f)).toEqual([
-    { type: "text_delta", text: "first published body" },
-    { type: "text_delta", text: f.large },
-  ]);
+  expect(fold(f)).toEqual(before);
   expect(fs.readFileSync(transcriptPath)).toEqual(transcript);
 });
 
@@ -704,6 +702,7 @@ function historicalFixture() {
   fs.unlinkSync(join(f.directory, "output-journal-head.json"));
   delete current.outputJournalIdentity;
   delete current.outputJournalHead;
+  delete current.outputJournalBinding;
   fs.writeFileSync(f.statePath, JSON.stringify(current));
   const historical = new OldWriter(f.root, f.id, "fixture-run");
   const first = historical.append({ type: "text_delta", text: "historical first" }),
@@ -714,7 +713,7 @@ function historicalFixture() {
   const before = fs.readFileSync(f.file),
     writer = new SessionOutputJournal(f.root, f.id, "fixture-run");
   expect(fs.readFileSync(f.file)).toEqual(before);
-  expect(state(f).outputJournalHead.version).toBe(2);
+  expect(state(f).outputJournalHead.version).toBe(3);
   expect(readOutputJournal(f.root, f.id).through).toBe(through);
   backupOutputJournal(f.root, f.id, f.backup);
   fs.truncateSync(f.file, JSON.parse(Buffer.from(first, "base64url").toString()).offset);

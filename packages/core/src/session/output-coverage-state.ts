@@ -15,6 +15,10 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { lockSync } from "../utils/lockfile.js";
+import {
+  validateOutputJournalBinding,
+  type OutputJournalBinding,
+} from "./output-journal-binding.js";
 
 export interface PersistedOutputCoverage {
   version: 1;
@@ -38,6 +42,7 @@ type State = Record<string, unknown> & {
   outputJournalIdentity?: string;
   outputCoverageIdentity?: string;
   outputCoverage?: PersistedOutputCoverage;
+  outputJournalBinding?: OutputJournalBinding;
 };
 const LIMIT = 1024 * 1024;
 const hex = /^[a-f0-9]{64}$/;
@@ -50,8 +55,60 @@ export function outputCoverageIncarnation(
   root: string,
   sessionId: string,
   startedAt: number,
+  admittedBinding?: OutputJournalBinding,
 ): string {
+  if (
+    !/^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,127}$/.test(sessionId) ||
+    sessionId.includes("..") ||
+    !Number.isFinite(startedAt)
+  )
+    throw failed();
   const canonicalRoot = realpathSync(root);
+  // Read callers can supply the already bounded state snapshot. The public
+  // three-argument form must also honor a durable admission after a restart.
+  let binding = admittedBinding;
+  if (binding === undefined) {
+    const target = join(canonicalRoot, sessionId, "state.json");
+    let fd: number | undefined;
+    try {
+      fd = openSync(
+        target,
+        constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+      );
+      const before = fstatSync(fd, { bigint: true });
+      if (!before.isFile() || before.size <= 0n || before.size > BigInt(LIMIT)) throw failed();
+      const size = Number(before.size);
+      const data = Buffer.alloc(size);
+      let offset = 0;
+      while (offset < size) {
+        const count = readSync(fd, data, offset, size - offset, offset);
+        if (!count) throw failed();
+        offset += count;
+      }
+      const after = fstatSync(fd, { bigint: true });
+      const named = lstatSync(target, { bigint: true });
+      if (
+        after.size !== before.size ||
+        after.mtimeNs !== before.mtimeNs ||
+        after.ctimeNs !== before.ctimeNs ||
+        named.dev !== before.dev ||
+        named.ino !== before.ino ||
+        named.isSymbolicLink()
+      )
+        throw failed();
+      const state = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(data));
+      if (state.sessionId !== sessionId || state.startedAt !== startedAt) throw failed();
+      binding = state.outputJournalBinding;
+    } catch (cause) {
+      if ((cause as NodeJS.ErrnoException).code !== "ENOENT") throw cause;
+    } finally {
+      if (fd !== undefined) closeSync(fd);
+    }
+  }
+  if (binding !== undefined) {
+    validateOutputJournalBinding(canonicalRoot, join(canonicalRoot, sessionId), undefined, binding);
+    return binding.coverageIdentity;
+  }
   const stat = lstatSync(join(canonicalRoot, sessionId), { bigint: true });
   return createHash("sha256")
     .update(`${canonicalRoot}\n${sessionId}\n${stat.dev}:${stat.ino}\n${startedAt}`)
@@ -109,7 +166,12 @@ function location(root: string, sessionId: string) {
     (typeof state.outputJournalIdentity !== "string" || !hex.test(state.outputJournalIdentity))
   )
     throw failed();
-  const incarnation = outputCoverageIncarnation(canonicalRoot, sessionId, state.startedAt);
+  const incarnation = outputCoverageIncarnation(
+    canonicalRoot,
+    sessionId,
+    state.startedAt,
+    state.outputJournalBinding,
+  );
   return { directory, target, state, incarnation, stat };
 }
 function coverage(at: ReturnType<typeof location>): PersistedOutputCoverage | undefined {

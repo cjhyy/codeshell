@@ -366,16 +366,11 @@ export interface SessionState {
   outputRecoveryIncomplete?: boolean;
   /** Immutable journal header pin, committed before any output cursor is published. */
   outputJournalIdentity?: string;
-  /** Durable publication proof: inline v1 head or immutable v2 sidecar admission floor. */
-  outputJournalHead?: {
-    version: 1 | 2;
-    identity: string;
-    sequence: number;
-    offset: number;
-    hash: string;
-    /** V2 admission floor pins the durable, in-place publication watermark. */
-    file?: { dev: number; ino: number };
-  };
+  /** Durable publication proof; v3 binds the sidecar across device renumbering. */
+  outputJournalHead?: import("./session/output-journal-head.js").OutputHeadPin;
+  outputJournalBinding?: import("./session/output-journal-binding.js").OutputJournalBinding;
+  /** Explicit offline recovery evidence; historical gaps are never silently cleared. */
+  outputIdentityRecovery?: Record<string, unknown>;
   /** Host-owned segmented storage admission, preserving the original cursor domain. */
   outputJournalStorage?: import("./session/output-journal-storage.js").OutputStoragePin;
   /** Host-only coverage proof; never authorizes a run or claims no-run output persistence. */

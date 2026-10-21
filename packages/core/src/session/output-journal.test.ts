@@ -528,7 +528,7 @@ describe("Session output journal", () => {
       const f = fixture();
       const published = f.writer.append({ type: "text_delta", text: "durable" });
       const persisted = f.manager.readSessionState(f.id)!.outputJournalHead;
-      expect(persisted?.version).toBe(2);
+      expect(persisted?.version).toBe(3);
       expect(persisted?.sequence).toBe(0); // Immutable admission floor, not a per-frame state rewrite.
       expect(f.manager.saveState(f.session.state)).toBe(true);
       expect(f.manager.readSessionState(f.id)!.outputJournalHead).toEqual(persisted);
