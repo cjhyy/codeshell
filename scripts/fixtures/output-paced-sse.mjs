@@ -1,7 +1,6 @@
 import { createServer } from "node:http";
 import { performance } from "node:perf_hooks";
 import { installLocalNetworkGuard } from "../runtime-cost-smoke-isolation.mjs";
-let timingSent = false;
 const server = createServer(async (request, response) => {
   let raw = "";
   for await (const chunk of request) raw += chunk;
@@ -14,11 +13,9 @@ const server = createServer(async (request, response) => {
   const monoBegun = performance.now();
   const timing = cancelled ? undefined : [];
   if (timing)
+    // Every paced request reports its timing; the smoke keeps the latest attempt's.
     response.once("finish", () => {
-      if (!timingSent) {
-        timingSent = true;
-        if (process.connected) process.send({ pacedSourceTiming: timing }, () => {});
-      }
+      if (process.connected) process.send({ pacedSourceTiming: timing }, () => {});
     });
   for (let index = 0; index < count && !response.destroyed; index++) {
     const remaining = begun + index * interval - Date.now();
