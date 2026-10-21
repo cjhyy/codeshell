@@ -30,6 +30,7 @@ import { EXTERNAL_GOAL_TOOLS } from "./external-runtime-goals.js";
 import type { ExternalRuntimeServiceDeps } from "./external-runtime-service.js";
 import { getProjectStore } from "./project-store.js";
 import { mobileSessionCommandAuthority } from "./mobile-remote/output-recovery-authority.js";
+import { setProjectTrustWithRevocation } from "./project-trust-lifecycle.js";
 
 type StartArgs = Record<string, unknown>;
 const starts: StartArgs[] = [];
@@ -37,6 +38,7 @@ const closed: string[] = [];
 /** When set, the next fake provider send rejects the way a dead process does. */
 let failNextSend = false;
 let failNextStart = false;
+let providerStart: (() => Promise<void>) | undefined;
 let providerSend:
   | ((args: StartArgs, input: { text: string; injected?: boolean }) => Promise<void>)
   | undefined;
@@ -95,6 +97,7 @@ mock.module("@cjhyy/code-shell-capability-coding/external-runtimes", () => ({
       failNextStart = false;
       throw new Error("provider startup failed");
     }
+    await providerStart?.();
     return fakeSession(args);
   },
   textWithAttachmentReferences: (input: { text: string; attachments?: Array<{ path: string }> }) =>
@@ -216,6 +219,7 @@ beforeEach(() => {
   stateChanges.length = 0;
   failNextSend = false;
   failNextStart = false;
+  providerStart = undefined;
   providerSend = undefined;
   providerInterrupt = undefined;
   providerInputs.length = 0;
@@ -1751,6 +1755,271 @@ describe("ExternalRuntimeService", () => {
     expect(providerInputs).toHaveLength(1);
     expect(svc.getGoal(request.sessionId)).toEqual(goal);
     expect(background.pending.has(request.sessionId)).toBe(true);
+    await svc.stopAll();
+  });
+
+  for (const change of [
+    "trust",
+    "permissions",
+    "plan",
+    "host-tools",
+    "root",
+    "project-binding",
+  ] as const) {
+    test(`a changed ${change} grant cancels background work instead of retaining it`, async () => {
+      const background = backgroundDelivery();
+      const flags = { external_agent_runtime: true, external_host_tools: true };
+      let binding = { projectId: "project-a", mainRootId: "root-a" };
+      const svc = service(flags, undefined, {
+        backgroundWork: background.delivery,
+        ...(change === "project-binding" ? { resolveProjectBinding: () => binding } : {}),
+      });
+      const original = { ...request, permissionMode: "acceptEdits" as const };
+      await svc.start(original);
+      background.running.add(request.sessionId);
+      if (change === "trust") trust = "untrusted";
+      if (change === "host-tools") flags.external_host_tools = false;
+      if (change === "project-binding") binding = { ...binding, mainRootId: "root-b" };
+      const next = {
+        ...original,
+        ...(change === "permissions" ? { permissionMode: "default" as const } : {}),
+        ...(change === "plan" ? { planMode: true } : {}),
+        ...(change === "root" ? { cwd: "/tmp/another-project" } : {}),
+      };
+      // Canonical Session guards may reject retargeting, but must not preserve
+      // the old CLI while the newly requested root/binding fails to start.
+      if (change === "root" || change === "project-binding")
+        await expect(svc.ensure(next)).rejects.toThrow();
+      else await svc.ensure(next);
+      expect(background.running.has(request.sessionId)).toBe(false);
+      expect(background.dropped).toContain(request.sessionId);
+      expect(closed).toContain(request.sessionId);
+      await svc.stopAll();
+    });
+  }
+
+  test("a revoked retained grant is cancelled before a failed replacement preflight", async () => {
+    const background = backgroundDelivery();
+    let failPreflight = false;
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+      prepareCodexLaunch: async () => {
+        if (failPreflight) throw new Error("replacement preflight failed");
+        return { command: "/test/bin/codex" };
+      },
+    });
+    await svc.start(request);
+    background.running.add(request.sessionId);
+    failNextStart = true;
+    await expect(svc.start(request)).rejects.toThrow(/startup failed/);
+    expect(background.running.has(request.sessionId)).toBe(true);
+    trust = "untrusted";
+    failPreflight = true;
+    await expect(svc.start(request)).rejects.toThrow(/preflight failed/);
+    expect(background.running.has(request.sessionId)).toBe(false);
+    await svc.stopAll();
+  });
+
+  test("trust revocation immediately aborts a real delegated job while preflight is pending", async () => {
+    const background = backgroundDelivery();
+    let blocked = false,
+      prepared!: () => void,
+      release!: () => void,
+      aborted = 0,
+      interrupted = 0,
+      approvalsCancelled = 0;
+    providerInterrupt = async () => {
+      interrupted++;
+    };
+    const entered = new Promise<void>((resolve) => {
+      prepared = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      cancelApprovals: () => {
+        approvalsCancelled++;
+      },
+      backgroundWork: {
+        ...background.delivery,
+        dropSession: (id: string) => {
+          background.delivery.dropSession(id);
+          backgroundJobRegistry.dropForSession(id);
+        },
+      },
+      prepareCodexLaunch: async () => {
+        if (blocked) {
+          prepared();
+          await gate;
+        }
+        return { command: "/test/bin/codex" };
+      },
+    });
+    await svc.start(request);
+    backgroundJobRegistry.start("cc-revocation-preflight", request.sessionId, "delegated", {
+      kind: "drive-agent",
+      abort: () => {
+        aborted++;
+      },
+    });
+    blocked = true;
+    const replacing = svc.start(request);
+    await entered;
+    trust = "untrusted";
+    const revoking = svc.revokeProjectTrust(request.cwd);
+    expect(aborted).toBe(1);
+    expect(interrupted).toBe(1);
+    expect(approvalsCancelled).toBeGreaterThanOrEqual(1);
+    release();
+    await expect(replacing).rejects.toThrow(/trust was revoked/);
+    await revoking;
+    expect(svc.get(request.sessionId)).toBeUndefined();
+    expect(starts).toHaveLength(1);
+    expect(aborted).toBe(1);
+    await svc.stopAll();
+  });
+
+  test("revocation while old provider close waits cannot launch trusted setup afterward", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    background.running.add(request.sessionId);
+    let closing!: () => void, release!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      closing = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    svc.get(request.sessionId)!.close = async () => {
+      closing();
+      await gate;
+    };
+    const replacing = svc.start(request);
+    await entered;
+    trust = "untrusted";
+    const revoking = svc.revokeProjectTrust(request.cwd);
+    expect(background.running.has(request.sessionId)).toBe(false);
+    release();
+    await expect(replacing).rejects.toThrow(/authority changed while replacing/);
+    await revoking;
+    expect(starts).toHaveLength(1);
+    expect(svc.get(request.sessionId)).toBeUndefined();
+    await svc.stopAll();
+  });
+
+  test("pending and future native approvals cannot accept after trust revocation", async () => {
+    let release!: () => void,
+      approvals = 0;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, async () => {
+      approvals++;
+      await gate;
+      return { approved: true };
+    });
+    await svc.start(request);
+    const hooks = starts[0]!.hooks as {
+      onNativeApproval(input: { method: string; params: unknown }): Promise<string>;
+    };
+    const pending = hooks.onNativeApproval({ method: "exec", params: {} });
+    trust = "untrusted";
+    const revoking = svc.revokeProjectTrust(request.cwd);
+    release();
+    expect(await pending).toBe("decline");
+    expect(await hooks.onNativeApproval({ method: "exec", params: {} })).toBe("decline");
+    expect(approvals).toBe(1);
+    await revoking;
+    await svc.stopAll();
+  });
+
+  test("revocation during provider startup cannot publish a newly stale runtime", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    background.running.add(request.sessionId);
+    let started!: () => void, release!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    providerStart = async () => {
+      started();
+      await gate;
+    };
+    const replacing = svc.start(request);
+    await entered;
+    trust = "untrusted";
+    const revoking = svc.revokeProjectTrust(request.cwd);
+    expect(background.running.has(request.sessionId)).toBe(false);
+    release();
+    await expect(replacing).rejects.toThrow(/authority changed while starting/);
+    await revoking;
+    expect(svc.get(request.sessionId)).toBeUndefined();
+    await svc.stopAll();
+  });
+
+  test("queued input rechecks trust after asynchronous acceptance checks", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    background.running.add(request.sessionId);
+    await expect(
+      svc.send(request.sessionId, "must not reach provider", 77, undefined, {
+        beforeInput: async () => {
+          trust = "untrusted";
+        },
+        accepted: () => {
+          throw new Error("revoked input must not be accepted");
+        },
+      }),
+    ).rejects.toThrow(/authority changed/);
+    expect(providerInputs).toHaveLength(0);
+    expect(background.running.has(request.sessionId)).toBe(false);
+    expect(svc.get(request.sessionId)).toBeUndefined();
+  });
+
+  test("the trust-setting seam persists revocation and stops only the matching canonical workspace", async () => {
+    const target = join(testHome, "target"),
+      alias = join(testHome, "alias"),
+      other = join(testHome, "other");
+    mkdirSync(target);
+    mkdirSync(other);
+    symlinkSync(target, alias, "dir");
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start({ ...request, cwd: target });
+    await svc.start({ ...request, sessionId: "sess-other", cwd: other });
+    background.running.add(request.sessionId);
+    background.running.add("sess-other");
+    const order: string[] = [];
+    await setProjectTrustWithRevocation(alias, "untrusted", {
+      setTrust: async () => {
+        order.push("persist");
+        trust = "untrusted";
+      },
+      revokeExternalRuntimeTrust: async (cwd) => {
+        order.push("revoke");
+        await svc.revokeProjectTrust(cwd);
+      },
+    });
+    expect(order).toEqual(["persist", "revoke"]);
+    expect(svc.get(request.sessionId)).toBeUndefined();
+    expect(svc.get("sess-other")).toBeDefined();
+    expect(background.running.has(request.sessionId)).toBe(false);
+    expect(background.running.has("sess-other")).toBe(true);
     await svc.stopAll();
   });
 });

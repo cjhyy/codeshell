@@ -60,3 +60,44 @@ The safe current execution fallback is a separately supervised, bounded CLI
 workflow with checkpoint artifacts and an absolute deadline. Persistent scheduling
 and reviewed external-runtime scheduling tools require their own authority and
 recovery work; directly editing the shared cron store is not part of this fix.
+
+## Follow-up: authority continuity and trust revocation
+
+The initial custody change is commit
+`414343ee09af073ca72f5406e9dc45a3e79794bd`. Its follow-up restricts retention to
+the same trusted authority: canonical workspace root, stable project binding,
+permission mode, plan mode, and Host-tool availability must all match. Changing
+those fields cancels the old delegated work even when replacement preflight
+subsequently fails. Ordinary preflight failure under the same authority still
+keeps a usable existing runtime.
+
+The actual `trust:set` IPC now revokes matching external runtimes when trust is
+withdrawn. It immediately interrupts the provider, aborts Host tools, declines
+pending approvals, stops the Goal continuation, and drops delegated jobs; queued
+resource teardown follows. A workspace revocation epoch fences in-flight starts,
+including a revocation while executable preparation or provider startup awaits.
+Authority is checked again after old-provider teardown and before queued input
+submission. Canonical root matching covers symlink aliases and leaves unrelated
+workspaces alone. If trust persistence fails, runtime cancellation is still
+attempted and the error remains visible.
+
+Independent diff review found two races (revocation during slow provider close
+and pending native approval after revocation); both were fixed and have targeted
+regression coverage. The final independent review found no further definite
+defect within this scope.
+
+Follow-up validation:
+
+- `node scripts/run-bun-test-shard.mjs --timeout 30000` with
+  `external-runtime-service.test.ts`, `external-runtime-goals.test.ts`,
+  `external-runtime-state.test.ts`, `project-trust-lifecycle.test.ts`, and
+  `trust-store.test.ts`: **149 passed, 0 failed**.
+- `bunx tsc -p packages/desktop/tsconfig.json --noEmit`: passed.
+- Targeted ESLint on the five changed TypeScript files: 0 errors; the same
+  existing `prefer-const` test warning remains.
+- `git diff --check`: passed.
+
+This remains an unintegrated source delivery. The running Desktop and the
+independent waiting implementation were not restarted, edited, or merged. It
+does not add application-restart recovery, persistent scheduling, or new Goal
+budget behavior.
