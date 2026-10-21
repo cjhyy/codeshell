@@ -42,7 +42,9 @@ export interface OutputIdentityMigrationOptions {
   acceptLegacyIdentity: boolean;
   resumeWithRecordedGap?: boolean;
   /** Durable progress notifications; a thrown callback leaves a retryable checkpoint. */
-  onCheckpoint?: (phase: "evidence-durable" | "barrier-durable" | "state-durable") => void;
+  onCheckpoint?: (
+    phase: "evidence-durable" | "barrier-durable" | "state-durable" | "consumer-verified",
+  ) => void;
 }
 export interface OutputIdentityMigrationResult {
   version: 1;
@@ -265,7 +267,7 @@ function contains(parent: string, child: string): boolean {
   const at = relative(parent, child);
   return at === "" || (!isAbsolute(at) && at !== ".." && !at.startsWith(".." + sep));
 }
-function inventory(directory: string): SourceFile[] {
+function inventory(directory: string, ignored = new Set<string>()): SourceFile[] {
   const files: SourceFile[] = [];
   let total = 0,
     directories = 0;
@@ -274,7 +276,7 @@ function inventory(directory: string): SourceFile[] {
     for (const entry of fs
       .readdirSync(base, { withFileTypes: true })
       .sort((a, b) => a.name.localeCompare(b.name))) {
-      if (!prefix && entry.name === "state.json.lock") continue; // The lease owned by this operation.
+      if (!prefix && (entry.name === "state.json.lock" || ignored.has(entry.name))) continue;
       const name = prefix ? prefix + "/" + entry.name : entry.name;
       const path = join(base, entry.name),
         at = fs.lstatSync(path);
@@ -323,10 +325,12 @@ function assertInventory(
   migratedState?: Buffer,
   migrationId?: string,
 ): void {
-  const current = inventory(directory).filter(
-    (item) =>
-      item.name !== OUTPUT_REPAIR_PENDING &&
-      (!migrationId || item.name !== `.output-identity-state-${migrationId}.tmp`),
+  const current = inventory(
+    directory,
+    new Set([
+      OUTPUT_REPAIR_PENDING,
+      ...(migrationId ? [`.output-identity-state-${migrationId}.tmp`] : []),
+    ]),
   );
   requireRepair(
     current.length === expected.length,
@@ -707,6 +711,7 @@ export function migrateOutputJournalIdentity(
         syncDirectory(dirname(target));
       }
       assertInventory(directory, files);
+      verifySourceEvidence(evidenceDirectory, files);
       publishReceipt(receiptPath, receipt, receipt.id);
       syncDirectory(evidenceDirectory);
       syncDirectory(dirname(evidenceDirectory));
@@ -734,15 +739,6 @@ export function migrateOutputJournalIdentity(
     options.onCheckpoint?.("state-durable");
     assertInventory(directory, receipt.files, nextState, receipt.id);
     validateBinding(root, directory, receipt.binding);
-    fs.unlinkSync(pendingPath);
-    syncDirectory(directory);
-    try {
-      verifyConsumer(root, sessionId, receipt.binding.journalIdentity);
-    } catch (cause) {
-      writeExclusive(pendingPath, sealed(pending));
-      syncDirectory(directory);
-      throw cause;
-    }
     const result: OutputIdentityMigrationResult = {
       version: 1,
       status: alreadyCommitted ? "already_migrated" : "migrated",
@@ -753,10 +749,20 @@ export function migrateOutputJournalIdentity(
       historicalGap: receipt.historicalGap,
       transcriptSha256: receipt.transcriptSha256,
     };
-    const durableResult = { ...result, status: "migrated" };
-    publishReceipt(join(evidenceDirectory, RESULT), durableResult, receipt.id);
-    syncDirectory(evidenceDirectory);
-    return result;
+    try {
+      fs.unlinkSync(pendingPath);
+      syncDirectory(directory);
+      verifyConsumer(root, sessionId, receipt.binding.journalIdentity);
+      options.onCheckpoint?.("consumer-verified");
+      const durableResult = { ...result, status: "migrated" };
+      publishReceipt(join(evidenceDirectory, RESULT), durableResult, receipt.id);
+      syncDirectory(evidenceDirectory);
+      return result;
+    } catch (cause) {
+      writeExclusive(pendingPath, sealed(pending));
+      syncDirectory(directory);
+      throw cause;
+    }
   } finally {
     release();
   }

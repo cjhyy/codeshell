@@ -239,7 +239,12 @@ test("legacy re-admission and resuming an incomplete Session each require explic
   expectPreserved(f);
 });
 
-for (const phase of ["evidence-durable", "barrier-durable", "state-durable"] as const)
+for (const phase of [
+  "evidence-durable",
+  "barrier-durable",
+  "state-durable",
+  "consumer-verified",
+] as const)
   test(`migration retries the same evidence after interruption at ${phase}`, () => {
     const f = fixture();
     expect(() =>
@@ -254,7 +259,9 @@ for (const phase of ["evidence-durable", "barrier-durable", "state-durable"] as 
     if (phase !== "evidence-durable")
       expect(readOutputJournal(f.root, f.id).status).toBe("incomplete");
     const result = migrateOutputJournalIdentity(f.root, f.id, f.evidence, options);
-    expect(result.status).toBe(phase === "state-durable" ? "already_migrated" : "migrated");
+    expect(result.status).toBe(
+      ["state-durable", "consumer-verified"].includes(phase) ? "already_migrated" : "migrated",
+    );
     expect(readOutputJournal(f.root, f.id).status).toBe("ok");
     expect(fs.existsSync(join(f.directory, "output-journal-repair-pending.json"))).toBe(false);
     expect(migrateOutputJournalIdentity(f.root, f.id, f.evidence, options).status).toBe(
