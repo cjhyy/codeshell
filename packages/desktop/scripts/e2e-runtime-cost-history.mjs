@@ -163,8 +163,10 @@ async function selectTrace(id, sessionId, cost, status, { unknownAttempts = 0 } 
     if (await back.isVisible()) await back.click();
   }
   await session.click();
-  await page.locator(`[data-trace-request="${id}"]`).focus();
-  await win.keyboard.press("Enter");
+  // Session selection schedules heading focus on the next animation frame.
+  // Let it finish before activating the request through its own keyboard target.
+  await page.evaluate(() => new Promise((done) => window.requestAnimationFrame(done)));
+  await page.locator(`[data-trace-request="${id}"]`).press("Enter");
   const detail = page.locator(`[data-trace-detail-id="${id}"]`);
   await detail.waitFor();
   await detail.getByText(status, { exact: true }).waitFor();
