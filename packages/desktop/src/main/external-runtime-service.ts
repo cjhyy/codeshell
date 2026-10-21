@@ -39,6 +39,7 @@ import {
   isFeatureEnabled,
   type FeatureFlagOverrides,
 } from "@cjhyy/code-shell-core/extension";
+import { canonicalKey } from "@cjhyy/code-shell-core/internal";
 import { getTrustCachedSync } from "./trust-store.js";
 import { dlog } from "./desktop-logger.js";
 import { createCodexLaunchResolver, type CodexLaunch } from "./external-runtime-launch.js";
@@ -166,6 +167,16 @@ export interface ExternalRuntimeServiceDeps {
   prepareCodexLaunch?: (cwd: string) => Promise<CodexLaunch>;
 }
 
+interface ExternalRuntimeAuthority {
+  key: string;
+  cwdKey: string;
+  projectTrusted: boolean;
+  projectBinding?: SessionProjectBinding;
+  permissionMode: PermissionMode;
+  planMode: boolean;
+  epoch: number;
+}
+
 /**
  * Owns the live external-runtime sessions for this Desktop process.
  *
@@ -185,6 +196,7 @@ export class ExternalRuntimeService {
       initialContext?: string;
       routingKey: string;
       configurationKey: string;
+      authority: ExternalRuntimeAuthority;
       ownerWebContentsId?: number;
       forwardEvent: (event: StreamEvent) => void;
       outputFailure: () => ExternalRuntimeTurnOutcome;
@@ -214,6 +226,13 @@ export class ExternalRuntimeService {
   private readonly lifecycleTails = new Map<string, Promise<void>>();
   /** At most one notification-drain continuation may be scheduled per Session. */
   private readonly backgroundWakeups = new Set<string>();
+  /** Keep business-session custody while its physical runtime is being replaced. */
+  private readonly retainedBackgroundOwners = new Map<
+    string,
+    { ownerWebContentsId?: number; cwd: string; authority: ExternalRuntimeAuthority }
+  >();
+  /** Fences starts already awaiting executable/environment preparation at revocation. */
+  private readonly workspaceRevocationEpochs = new Map<string, number>();
   private backgroundWorkUnsubscribe?: () => void;
   private readonly prepareCodexLaunch: (cwd: string) => Promise<CodexLaunch>;
   private readonly goals: ExternalRuntimeGoals;
@@ -374,6 +393,7 @@ export class ExternalRuntimeService {
     return (
       entry !== undefined &&
       !entry.lifecycle.faulted &&
+      this.authorityStillCurrent(entry.cwd, entry.authority) &&
       entry.routingKey === this.routingKey(request)
     );
   }
@@ -386,7 +406,7 @@ export class ExternalRuntimeService {
 
   private assertOwner(sessionId: string, callerWebContentsId?: number): void {
     if (callerWebContentsId === undefined) return; // trusted main-process caller
-    const entry = this.sessions.get(sessionId);
+    const entry = this.sessions.get(sessionId) ?? this.retainedBackgroundOwners.get(sessionId);
     // An existing ownerless session was created by trusted main-process code;
     // renderer IPC must not claim it merely because its owner field is absent.
     if (entry && entry.ownerWebContentsId !== callerWebContentsId) {
@@ -457,6 +477,34 @@ export class ExternalRuntimeService {
     });
   }
 
+  private captureAuthority(
+    request: Pick<ExternalRuntimeStartRequest, "cwd" | "permissionMode" | "planMode">,
+  ): ExternalRuntimeAuthority {
+    const cwdKey = canonicalKey(request.cwd);
+    const binding = this.deps.resolveProjectBinding(request.cwd);
+    const projectBinding = binding
+      ? { projectId: binding.projectId, mainRootId: binding.mainRootId }
+      : undefined;
+    const values = {
+      cwdKey,
+      projectBinding,
+      projectTrusted: (this.deps.projectTrust ?? getTrustCachedSync)(request.cwd) === "trusted",
+      permissionMode: request.permissionMode ?? "default",
+      planMode: request.planMode === true,
+      hostToolsEnabled: this.areHostToolsEnabled(),
+      epoch: this.workspaceRevocationEpochs.get(cwdKey) ?? 0,
+    };
+    return { ...values, key: JSON.stringify(values) };
+  }
+
+  private authorityStillCurrent(cwd: string, authority: ExternalRuntimeAuthority): boolean {
+    try {
+      return this.captureAuthority({ cwd, ...authority }).key === authority.key;
+    } catch {
+      return false;
+    }
+  }
+
   private persistBindingSafely(
     sessionId: string,
     binding: Parameters<typeof writeExternalRuntimeBinding>[1],
@@ -472,7 +520,7 @@ export class ExternalRuntimeService {
   }
 
   /** Always attempt both registry and approval cleanup; return the first failure. */
-  private releaseHostSession(sessionId: string): unknown {
+  private releaseHostSession(sessionId: string, preserveBackgroundWork = false): unknown {
     let firstError: unknown;
     try {
       this.deps.releaseSession(sessionId);
@@ -484,10 +532,13 @@ export class ExternalRuntimeService {
     } catch (error) {
       firstError ??= error;
     }
-    try {
-      this.deps.backgroundWork?.dropSession(sessionId);
-    } catch (error) {
-      firstError ??= error;
+    if (!preserveBackgroundWork) {
+      this.retainedBackgroundOwners.delete(sessionId);
+      try {
+        this.deps.backgroundWork?.dropSession(sessionId);
+      } catch (error) {
+        firstError ??= error;
+      }
     }
     return firstError;
   }
@@ -526,7 +577,10 @@ export class ExternalRuntimeService {
   private mayWakeForBackgroundWork(sessionId: string): boolean {
     const entry = this.sessions.get(sessionId);
     return (
-      !!entry?.lifecycle.active && !entry.lifecycle.faulted && !this.goals.read(sessionId)?.paused
+      !!entry?.lifecycle.active &&
+      !entry.lifecycle.faulted &&
+      this.authorityStillCurrent(entry.cwd, entry.authority) &&
+      !this.goals.read(sessionId)?.paused
     );
   }
 
@@ -584,6 +638,7 @@ export class ExternalRuntimeService {
       if (
         entry &&
         !entry.lifecycle.faulted &&
+        this.authorityStillCurrent(entry.cwd, entry.authority) &&
         entry.configurationKey === this.configurationKey(request)
       ) {
         return entry.session;
@@ -605,6 +660,22 @@ export class ExternalRuntimeService {
     const ownerId = request.ownerWindow?.webContents.id;
     this.assertOwner(request.sessionId, ownerId);
 
+    let authority: ExternalRuntimeAuthority;
+    try {
+      authority = this.captureAuthority(request);
+    } catch (error) {
+      await this.stopExclusive(request.sessionId);
+      throw error;
+    }
+    const previous =
+      this.sessions.get(request.sessionId) ?? this.retainedBackgroundOwners.get(request.sessionId);
+    // A new permission/root/trust scope is not a physical restart of the old grant.
+    // Revoke before awaiting preflight: even a failed new start cannot keep the
+    // old CLI running with authority the user has just withdrawn.
+    if (previous && (!authority.projectTrusted || previous.authority.key !== authority.key)) {
+      await this.stopExclusive(request.sessionId);
+    }
+
     // Do not tear down a usable runtime or reserve its replacement until the
     // replacement's program and working directory have passed preflight.
     const codexLaunch =
@@ -619,15 +690,33 @@ export class ExternalRuntimeService {
       throw new Error(`external runtime owner window closed while preparing: ${request.sessionId}`);
     }
 
+    if ((this.workspaceRevocationEpochs.get(authority.cwdKey) ?? 0) !== authority.epoch) {
+      await this.stopExclusive(request.sessionId);
+      throw new Error("Project trust was revoked while preparing the external runtime");
+    }
+    try {
+      authority = this.captureAuthority(request);
+    } catch (error) {
+      await this.stopExclusive(request.sessionId);
+      throw error;
+    }
+    const current =
+      this.sessions.get(request.sessionId) ?? this.retainedBackgroundOwners.get(request.sessionId);
+    const preserveBackgroundWork =
+      authority.projectTrusted && current?.authority.key === authority.key;
+
     // Replacing an existing session: close the old one first so two runtimes
     // cannot interleave turns on the same business session.
-    await this.stopExclusive(request.sessionId);
+    await this.stopExclusive(request.sessionId, preserveBackgroundWork);
+    if (!this.authorityStillCurrent(request.cwd, authority)) {
+      await this.stopExclusive(request.sessionId);
+      throw new Error("External runtime authority changed while replacing its provider");
+    }
 
     // Trust is resolved HERE, from the store Desktop owns. `permissions` is the
     // first DANGEROUS_PROJECT_FIELD, so an untrusted project's rules must be
     // stripped — and the layers below deliberately have no default for this.
-    const projectTrusted =
-      (this.deps.projectTrust ?? getTrustCachedSync)(request.cwd) === "trusted";
+    const projectTrusted = authority.projectTrusted;
 
     // Host tools are gated by their OWN flag, so the runtime can be trialled with
     // no tool surface at all (§20). An empty allowlist is the honest expression of
@@ -718,7 +807,7 @@ export class ExternalRuntimeService {
       request.cwd,
       request.modelKey ?? `${request.kind}/${request.model ?? "default"}`,
       request.kind,
-      this.deps.resolveProjectBinding(request.cwd),
+      authority.projectBinding,
     );
     const lifecycle = {
       active: true,
@@ -887,6 +976,8 @@ export class ExternalRuntimeService {
       ...(this.deps.requestApproval
         ? {
             askUser: async (question: string, options?: Record<string, unknown>) => {
+              if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
+                throw new Error("External runtime authority was revoked");
               const decision = await this.deps.requestApproval!(
                 request.sessionId,
                 askUserApprovalRequest(question, options),
@@ -939,8 +1030,16 @@ export class ExternalRuntimeService {
         ...(toolApprovalBackend
           ? {
               approvalBackend: {
-                requestApproval: (approvalRequest) =>
-                  toolApprovalBackend.requestApproval({ ...approvalRequest }),
+                requestApproval: async (approvalRequest) => {
+                  if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
+                    return { approved: false, reason: "External runtime authority was revoked" };
+                  const decision = await toolApprovalBackend.requestApproval({
+                    ...approvalRequest,
+                  });
+                  return lifecycle.active && this.authorityStillCurrent(request.cwd, authority)
+                    ? decision
+                    : { approved: false, reason: "External runtime authority was revoked" };
+                },
               },
             }
           : {}),
@@ -968,18 +1067,26 @@ export class ExternalRuntimeService {
           ...(toolApprovalBackend
             ? {
                 onNativeApproval: async (nativeRequest) => {
+                  if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
+                    return "decline";
                   const decision = await toolApprovalBackend.requestApproval({
                     toolName: "Codex native tool",
                     method: nativeRequest.method,
                     params: nativeRequest.params,
                   });
-                  return decision.approved ? "accept" : "decline";
+                  return lifecycle.active &&
+                    this.authorityStillCurrent(request.cwd, authority) &&
+                    decision.approved
+                    ? "accept"
+                    : "decline";
                 },
               }
             : {}),
           ...(this.deps.requestApproval
             ? {
                 onUserInput: async (inputRequest) => {
+                  if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
+                    return { answers: {} };
                   const params =
                     inputRequest.params && typeof inputRequest.params === "object"
                       ? (inputRequest.params as Record<string, unknown>)
@@ -987,6 +1094,8 @@ export class ExternalRuntimeService {
                   const questions = Array.isArray(params.questions) ? params.questions : [];
                   const answers: Record<string, { answers: string[] }> = {};
                   for (const value of questions) {
+                    if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
+                      return { answers: {} };
                     if (!value || typeof value !== "object") continue;
                     const question = value as Record<string, unknown>;
                     const id = typeof question.id === "string" ? question.id : "";
@@ -1014,7 +1123,12 @@ export class ExternalRuntimeService {
                         ...(options && options.length > 0 ? { options } : {}),
                       }),
                     );
-                    if (decision.answer) answers[id] = { answers: [decision.answer] };
+                    if (
+                      lifecycle.active &&
+                      this.authorityStillCurrent(request.cwd, authority) &&
+                      decision.answer
+                    )
+                      answers[id] = { answers: [decision.answer] };
                   }
                   return { answers };
                 },
@@ -1025,7 +1139,9 @@ export class ExternalRuntimeService {
       });
     } catch (error) {
       lifecycle.active = false;
-      const cleanupError = this.releaseHostSession(request.sessionId);
+      // Startup failure does not revoke work owned by this business Session.
+      // A later replacement can receive its result; explicit Stop still cancels it.
+      const cleanupError = this.releaseHostSession(request.sessionId, true);
       if (cleanupError) {
         dlog("external-runtime", "session.start_cleanup_failed", {
           sessionId: request.sessionId,
@@ -1033,6 +1149,16 @@ export class ExternalRuntimeService {
         });
       }
       throw error;
+    }
+
+    if (!this.authorityStillCurrent(request.cwd, authority)) {
+      lifecycle.active = false;
+      try {
+        await session.close();
+      } finally {
+        this.releaseHostSession(request.sessionId);
+      }
+      throw new Error("External runtime authority changed while starting");
     }
 
     if (request.ownerWindow?.isDestroyed?.()) {
@@ -1054,6 +1180,7 @@ export class ExternalRuntimeService {
       initialContext: request.initialContext,
       routingKey: this.routingKey(request),
       configurationKey: this.configurationKey(request),
+      authority,
       turnTail: Promise.resolve(),
       lifecycle,
       goalToolsAvailable,
@@ -1064,6 +1191,7 @@ export class ExternalRuntimeService {
       ...(ownerId !== undefined ? { ownerWebContentsId: ownerId } : {}),
       ...(request.model ? { model: request.model } : {}),
     });
+    this.retainedBackgroundOwners.delete(request.sessionId);
     this.notifySessionStateSafely(request.sessionId, true, ownerId);
     if (session.runtimeSessionId) {
       this.persistBindingSafely(request.sessionId, {
@@ -1081,6 +1209,11 @@ export class ExternalRuntimeService {
       exposedToolCount: session.listTools().length,
       hasOwnerWindow: ownerId !== undefined,
     });
+    // A completion may have arrived while the previous runtime was closing,
+    // when there was no physical receiver. The queue belongs to the Session.
+    if (this.deps.backgroundWork?.hasPending(request.sessionId)) {
+      this.maybeWakeForBackgroundWork(request.sessionId);
+    }
     return session;
   }
 
@@ -1137,6 +1270,10 @@ export class ExternalRuntimeService {
           acceptedGeneration !== entry.lifecycle.interruptGeneration
         )
           throw new Error("External submission owner changed before input");
+      }
+      if (!this.authorityStillCurrent(entry.cwd, entry.authority)) {
+        await this.stop(sessionId);
+        throw new Error("External runtime authority changed; start a newly authorized runtime");
       }
       const inheritedGoal = this.goals.read(sessionId);
       if (
@@ -1494,24 +1631,76 @@ export class ExternalRuntimeService {
     });
   }
 
-  private async stopExclusive(sessionId: string): Promise<void> {
+  /** Persisted project-trust revocation, including starts still in preflight. */
+  async revokeProjectTrust(cwd: string): Promise<void> {
+    const cwdKey = canonicalKey(cwd);
+    this.workspaceRevocationEpochs.set(
+      cwdKey,
+      (this.workspaceRevocationEpochs.get(cwdKey) ?? 0) + 1,
+    );
+    const ids = [
+      ...new Map<string, { authority: ExternalRuntimeAuthority }>([
+        ...this.retainedBackgroundOwners,
+        ...this.sessions,
+      ]),
+    ]
+      .filter(([, entry]) => entry.authority.cwdKey === cwdKey)
+      .map(([sessionId]) => sessionId);
+    const failures: unknown[] = [];
+    const interrupts: Promise<void>[] = [];
+    for (const sessionId of ids) {
+      const entry = this.sessions.get(sessionId);
+      entry?.toolTurnAbort?.abort("Project trust revoked");
+      if (entry) {
+        entry.lifecycle.interruptGeneration++;
+        try {
+          entry.finalizeOperations("aborted_streaming");
+        } catch {
+          entry.outputFailure();
+        }
+        this.abortRecordedRun(sessionId);
+        // Refuse new Host calls, provider output and approvals before the
+        // serialized close can run behind a slow replacement preflight.
+        entry.lifecycle.active = false;
+        try {
+          this.deps.cancelApprovals?.(sessionId);
+        } catch (error) {
+          failures.push(error);
+        }
+        try {
+          interrupts.push(entry.session.interrupt());
+        } catch (error) {
+          failures.push(error);
+        }
+      }
+      this.goals.stop(sessionId);
+      // Cancel the external CLI immediately, even if stop() is queued behind a
+      // slow preflight. The epoch fence prevents that start from recreating it.
+      try {
+        this.deps.backgroundWork?.dropSession(sessionId);
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+    const stopped = await Promise.allSettled([
+      ...interrupts,
+      ...ids.map((sessionId) => this.stop(sessionId)),
+    ]);
+    failures.push(
+      ...stopped.flatMap((result) => (result.status === "rejected" ? [result.reason] : [])),
+    );
+    if (failures.length)
+      throw new AggregateError(failures, "Could not fully revoke external runtime trust");
+  }
+
+  /** Close the output boundary before interrupt/close can flush late events. */
+  private abortRecordedRun(sessionId: string): void {
     const entry = this.sessions.get(sessionId);
     if (!entry) return;
-    try {
-      entry.finalizeOperations("aborted_streaming");
-    } catch {
-      entry.outputFailure();
-    }
-    entry.toolTurnAbort?.abort("External submission stopped");
-    entry.lifecycle.interruptGeneration++;
-    this.goals.stop(sessionId);
     if (
       entry.lifecycle.turnActive ||
       (entry.lifecycle.goalRunActive && entry.recorder.hasOpenRun)
     ) {
-      // Persist and stream an explicit terminal boundary before invalidating the
-      // provider callbacks. Otherwise app shutdown / deletion can leave Session
-      // state "active" forever and the next launch restores a phantom busy turn.
       const terminalEvent = {
         type: "turn_complete" as const,
         reason: "aborted_streaming" as const,
@@ -1525,10 +1714,40 @@ export class ExternalRuntimeService {
       }
       entry.lifecycle.turnActive = false;
     }
+  }
+
+  private async stopExclusive(sessionId: string, preserveBackgroundWork = false): Promise<void> {
+    const entry = this.sessions.get(sessionId);
+    if (!entry) {
+      // A failed replacement can leave background work without a live provider.
+      // Explicit close must still cancel that work and release its owner fence.
+      if (!preserveBackgroundWork && this.retainedBackgroundOwners.has(sessionId)) {
+        const cleanupError = this.releaseHostSession(sessionId);
+        if (cleanupError) throw cleanupError;
+      }
+      return;
+    }
+    try {
+      entry.finalizeOperations("aborted_streaming");
+    } catch {
+      entry.outputFailure();
+    }
+    entry.toolTurnAbort?.abort("External submission stopped");
+    entry.lifecycle.interruptGeneration++;
+    this.goals.stop(sessionId);
+    // Otherwise app shutdown/deletion can restore a phantom busy turn.
+    this.abortRecordedRun(sessionId);
     // Invalidate callbacks before awaiting close(): close may itself trigger a
     // final provider event, and a restart can claim the same business id as soon
     // as this method returns.
     entry.lifecycle.active = false;
+    if (preserveBackgroundWork) {
+      this.retainedBackgroundOwners.set(sessionId, {
+        ownerWebContentsId: entry.ownerWebContentsId,
+        cwd: entry.cwd,
+        authority: entry.authority,
+      });
+    }
     this.sessions.delete(sessionId);
     this.notifySessionStateSafely(sessionId, false, entry.ownerWebContentsId);
     let closeError: unknown;
@@ -1539,7 +1758,7 @@ export class ExternalRuntimeService {
     }
     // A close failure must not skip host cleanup, and a registry cleanup failure
     // must not skip approval cancellation.
-    const cleanupError = this.releaseHostSession(sessionId);
+    const cleanupError = this.releaseHostSession(sessionId, preserveBackgroundWork);
     if (closeError) throw closeError;
     if (cleanupError) throw cleanupError;
     dlog("external-runtime", "session.stopped", { sessionId });
@@ -1550,7 +1769,13 @@ export class ExternalRuntimeService {
    * and a listening port, and neither dies with the parent on Windows.
    */
   async stopAll(): Promise<void> {
-    const ids = [...new Set([...this.sessions.keys(), ...this.lifecycleTails.keys()])];
+    const ids = [
+      ...new Set([
+        ...this.sessions.keys(),
+        ...this.lifecycleTails.keys(),
+        ...this.retainedBackgroundOwners.keys(),
+      ]),
+    ];
     const results = await Promise.allSettled(ids.map((id) => this.stop(id)));
     this.backgroundWorkUnsubscribe?.();
     this.backgroundWorkUnsubscribe = undefined;
@@ -1562,7 +1787,12 @@ export class ExternalRuntimeService {
 
   /** Reap every runtime whose renderer disappeared (notably on macOS, where the app stays alive). */
   async stopOwnedBy(ownerWebContentsId: number): Promise<void> {
-    const ids = [...this.sessions]
+    const ids = [
+      ...new Map<string, { ownerWebContentsId?: number }>([
+        ...this.retainedBackgroundOwners,
+        ...this.sessions,
+      ]),
+    ]
       .filter(([, entry]) => entry.ownerWebContentsId === ownerWebContentsId)
       .map(([sessionId]) => sessionId);
     await Promise.allSettled(ids.map((sessionId) => this.stop(sessionId)));

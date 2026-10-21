@@ -146,6 +146,7 @@ import { getCuaDriverHost } from "./computer-use/service.js";
 import { initializeDesktopComputerUse } from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
+import { setProjectTrustWithRevocation } from "./project-trust-lifecycle.js";
 import {
   createExternalGoalRpcHandler,
   parseExternalGoalInput,
@@ -7164,7 +7165,10 @@ ipcMain.handle("trust:get", async (_e, p: string) => {
 ipcMain.handle("trust:set", async (_e, p: string, level: TrustLevel) => {
   if (typeof p !== "string") throw new Error("trust:set requires path");
   if (level !== "trusted" && level !== "untrusted") throw new Error("invalid level");
-  await setTrust(await requireRendererProjectPath(p), level);
+  await setProjectTrustWithRevocation(await requireRendererProjectPath(p), level, {
+    setTrust,
+    revokeExternalRuntimeTrust: async (cwd) => externalRuntimeService?.revokeProjectTrust(cwd),
+  });
 });
 
 ipcMain.handle("trust:risks", async (_e, p: string) => {
