@@ -190,7 +190,8 @@ describe("architecture growth budgets", () => {
       // +4 local model trace list/detail/config read/update routes, restricted to application main frames.
       // +1 metadata-only session grouping route shares the same fixed store and caller guard.
       // +1 review:preparePrompt; prompt assembly and Git reads stay in the review service.
-    ).toBeLessThanOrEqual(362);
+      // +1 externalRuntime:yieldGoal; the owner check and Goal state stay in the service.
+    ).toBeLessThanOrEqual(363);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
