@@ -73,4 +73,5 @@ P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 
 - **同一 Workspace 同时一个 active Profile**；项目专属定制仍放项目指令，项目明确 override 优先。
 - **Mimi 工作台不恢复 TodoWrite 聚合**：个人待办由 Mimi 收尾小结和跟进项承载，Session TodoWrite 是执行进度。
 - **Mimi 记忆与 core 记忆分开**：不顺手引入置信度分流、待确认收件箱、周月巩固或向量检索；隐形 segment 与 notes 上下文策略保留。
+- **结果文本里的产物路径不靠猜**（审计 ATT-R9-01，已知限制）：GenerateImage 主路径已改用结构化产物；通用工具结果的附件卡片仍从正文识别路径，含空格的路径（如 `/tmp/project with spaces/a.png`）可能被截断或漏掉，而仅凭正文无法与普通句子可靠区分。不再改进正文识别；待工具结果增加结构化 `artifacts` 字段时一并解决。
 - **执行 Runtime 先单管理员**：云账号与设备目录按用户要求支持多用户，当前不扩展团队租户或 per-user worker；显式 passcode-only 兼容入口和 identity/dataRoot 底座保留。
