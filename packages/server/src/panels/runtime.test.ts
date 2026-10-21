@@ -1271,8 +1271,23 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
       text: JSON.stringify({ value: "metadata" }),
     });
     await f.read("process.end", { processId: started.processId });
-    const exited = await waitRuntimeEvent(f, f.grant.instanceId, "process.exit");
-    expect(exited.payload.code).toBe(0);
+    const exited = await waitRuntimeEvent(
+      f,
+      f.grant.instanceId,
+      "process.exit",
+      0,
+      (event) => event.payload.processId === started.processId,
+    );
+    const receipt =
+      exited.payload.code === 0
+        ? undefined
+        : await f.read("process.get", { processId: started.processId });
+    expect(
+      exited.payload.code,
+      JSON.stringify({ exit: exited.payload, receipt })
+        .replaceAll("runtime-fixture-cookie", "[fixture-cookie]")
+        .slice(0, 16_384),
+    ).toBe(0);
     await mutate();
     const output = JSON.stringify((await runtimeEvents(f, f.grant.instanceId)).events);
     expect(output).toContain("metadata");

@@ -10,17 +10,12 @@
  * so the UI can be refreshed without re-probing on every tab switch.
  */
 
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { localCredentialAccess } from "@cjhyy/code-shell-core";
 import {
-  buildHttpHeaders,
-  buildStdioEnv,
-  createMcpAuthenticatedFetch,
-  CredentialStore,
-  isCredentialSecretAvailable,
-  localCredentialAccess,
-} from "@cjhyy/code-shell-core";
+  probeMcp,
+  mcpProbeTransport,
+  type McpProbeResult as HostMcpProbeResult,
+} from "@cjhyy/code-shell-host";
 import { dlog } from "./desktop-logger.js";
 import type { McpOAuthService } from "./mcp-oauth-service.js";
 
@@ -61,7 +56,7 @@ export interface McpProbeResult {
   tools?: McpProbedTool[];
   /** Short, user-readable error if status is "error". */
   errorMessage?: string;
-  /** Verbatim error stack/output (for "查看详情" expander). */
+  /** Redacted error detail (for "查看详情" expander). */
   errorDetail?: string;
 }
 
@@ -78,7 +73,7 @@ const cache = new Map<string, CacheEntry>();
 
 function hashConfig(cfg: McpServerConfig): string {
   return JSON.stringify({
-    t: cfg.transport ?? (cfg.command ? "stdio" : "streamable-http"),
+    t: mcpProbeTransport(cfg),
     c: cfg.command,
     a: cfg.args ?? [],
     u: cfg.url,
@@ -91,181 +86,94 @@ function hashConfig(cfg: McpServerConfig): string {
   });
 }
 
-function transportOf(cfg: McpServerConfig): "stdio" | "streamable-http" | "sse" {
-  if (cfg.transport) return cfg.transport;
-  if (cfg.url) return "streamable-http";
-  return "stdio";
-}
-
-/** Exported for unit testing (error classification). */
-export function humanizeError(raw: string, command?: string): string {
-  if (/ENOENT/.test(raw)) return "找不到命令（请确认已安装或路径正确）";
-  if (/EACCES/.test(raw)) return "命令没有可执行权限";
-  if (/ECONNREFUSED/.test(raw)) return "无法连接到服务（拒绝连接）";
-  if (/ETIMEDOUT|timed out/i.test(raw)) {
-    // npx/uvx-style runners download the package on FIRST run, which easily
-    // blows the probe timeout; the cache makes the next run instant. Say so,
-    // instead of leaving the user staring at a bare "连接超时".
-    if (command && /\b(npx|uvx|bunx|pipx)\b/.test(command)) {
-      return "连接超时 — npx/uvx 首次运行需下载包，常超过探测超时；稍后重试通常即可";
-    }
-    return "连接超时";
-  }
-  if (/ENOTFOUND/.test(raw)) return "域名解析失败";
-  // Auth errors, most-specific first:
-  // 1. A referenced env var is missing — core's readRequiredEnv error names
-  //    the var and the config field; surface both so the fix is obvious.
-  const envMiss = /env var "([^"]+)" \(from ([^)]+)\) is not set/.exec(raw);
-  if (envMiss) {
-    return `鉴权配置错误：环境变量 ${envMiss[1]}（${envMiss[2]}）未设置或为空 — 该字段填的是环境变量名，值在连接时从系统环境读取，请先在启动环境里设置它`;
-  }
-  if (/oauth credential "([^"]+)" access token expired/i.test(raw)) {
-    return "OAuth 登录已过期 — 请在 MCP 认证设置里刷新或重新登录该 OAuth 凭证";
-  }
-  // 2. Credentials reached the server but were rejected (401) vs accepted
-  //    but lacking permission (403).
-  if (/unauthorized|\b401\b|-32001/i.test(raw)) {
-    return "鉴权失败（HTTP 401）— 该 server 需要认证：如果是 Bearer/JWT，请配置 Bearer 凭证或 Bearer Token 环境变量；如果是 OAuth，请登录或刷新 OAuth 凭证；如果是 API key，请配置服务要求的自定义认证 Header（如 x-api-key）";
-  }
-  if (/forbidden|\b403\b/i.test(raw)) {
-    return "无权限（HTTP 403）— 凭证有效但权限不足，请检查该 token / key 的权限范围";
-  }
-  if (/Invalid URL/i.test(raw)) return "URL 格式无效";
-  // Trim to first line to keep the card readable.
-  return raw.split("\n")[0].slice(0, 200);
-}
-
-async function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
-  let timeout: NodeJS.Timeout | undefined;
-  try {
-    return await Promise.race<T>([
-      p,
-      new Promise<T>((_resolve, reject) => {
-        timeout = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
-      }),
-    ]);
-  } finally {
-    if (timeout) clearTimeout(timeout);
+function desktopProbeError(
+  error: NonNullable<HostMcpProbeResult["error"]>,
+  command?: string,
+): string {
+  switch (error.code) {
+    case "command_missing":
+      return "找不到命令（请确认已安装或路径正确）";
+    case "permission_denied":
+      return "命令没有可执行权限";
+    case "connection_refused":
+      return "无法连接到服务（拒绝连接）";
+    case "dns":
+      return "域名解析失败";
+    case "timeout":
+      return command && /\b(npx|uvx|bunx|pipx)\b/.test(command)
+        ? "连接超时 — npx/uvx 首次运行需下载包，常超过探测超时；稍后重试通常即可"
+        : "连接超时";
+    case "environment_missing":
+      return error.environment
+        ? `鉴权配置错误：环境变量 ${error.environment.name}（${error.environment.field}）未设置或为空 — 该字段填的是环境变量名，值在连接时从系统环境读取，请先在启动环境里设置它`
+        : "鉴权配置错误：引用的环境变量未设置或为空";
+    case "credential_expired":
+      return "OAuth 登录已过期 — 请在 MCP 认证设置里刷新或重新登录该 OAuth 凭证";
+    case "unauthorized":
+      return "鉴权失败（HTTP 401）— 该 server 需要认证：如果是 Bearer/JWT，请配置 Bearer 凭证或 Bearer Token 环境变量；如果是 OAuth，请登录或刷新 OAuth 凭证；如果是 API key，请配置服务要求的自定义认证 Header（如 x-api-key）";
+    case "forbidden":
+      return "无权限（HTTP 403）— 凭证有效但权限不足，请检查该 token / key 的权限范围";
+    default:
+      return error.message;
   }
 }
 
-async function probeOne(
-  cfg: McpServerConfig,
-  oauthService?: Pick<McpOAuthService, "resolveAccessToken">,
-): Promise<McpProbeResult> {
-  const transport = transportOf(cfg);
-  const startedAt = new Date().toISOString();
-  const base: McpProbeResult = {
+interface ProbeOptions {
+  force?: boolean;
+  cwd?: string;
+  signal?: AbortSignal;
+  oauthService?: Pick<McpOAuthService, "resolveAccessToken">;
+}
+
+async function probeOne(cfg: McpServerConfig, options: ProbeOptions): Promise<McpProbeResult> {
+  const base = {
     name: cfg.name,
-    transport,
-    status: "probing",
-    lastProbedAt: startedAt,
+    transport: mcpProbeTransport(cfg),
+    lastProbedAt: new Date().toISOString(),
   };
-
-  let client: Client | undefined;
-  let mcpTransport: StdioClientTransport | StreamableHTTPClientTransport | undefined;
-
-  try {
-    client = new Client({ name: "code-shell-probe", version: "0.1.0" }, { capabilities: {} });
-
-    if (transport === "stdio") {
-      if (!cfg.command) throw new Error("stdio 缺少 command 字段");
-      // Same env semantics as the real connection (core buildStdioEnv):
-      // inherited process.env < forwarded envVars < explicit env.
-      mcpTransport = new StdioClientTransport({
-        command: cfg.command,
-        args: cfg.args,
-        env: buildStdioEnv(cfg.name, cfg),
-      });
-    } else {
-      if (!cfg.url) throw new Error("远程 transport 缺少 url 字段");
-      // Same header semantics as the real connection (core buildHttpHeaders):
-      // static headers + env-sourced bearerTokenEnvVar / envHeaders. A missing
-      // env var throws here and is classified by humanizeError below — before
-      // this the probe silently ignored env-based auth and reported a
-      // misleading 401 even when the config was correct.
-      // Resolve credentialRef against the user-scope store (same surface as the
-      // real connect in core's MCPManager) so testing a credential-bound server
-      // actually sends its auth instead of a misleading 401.
-      const credential = cfg.credentialRef
-        ? new CredentialStore(undefined).resolve(cfg.credentialRef)
-        : undefined;
-      const oauth = credential?.type === "oauth";
-      const headers = oauth
-        ? buildHttpHeaders(cfg.name, { ...cfg, credentialRef: undefined })
-        : buildProbeHttpHeaders(cfg);
-      const access = oauthService
-        ? {
-            ...localCredentialAccess,
-            resolveOAuthAccess: (req: {
-              id: string;
-              scope: "full";
-              serverUrl: string;
-              forceRefresh?: boolean;
-            }) =>
-              oauthService.resolveAccessToken(req.id, {
-                serverUrl: req.serverUrl,
-                forceRefresh: req.forceRefresh,
-              }),
-          }
-        : localCredentialAccess;
-      mcpTransport = new StreamableHTTPClientTransport(new URL(cfg.url), {
-        requestInit: Object.keys(headers).length > 0 ? { headers } : undefined,
-        fetch: createMcpAuthenticatedFetch(cfg.name, cfg, access) as never,
-      });
-    }
-
-    await withTimeout(client.connect(mcpTransport), PROBE_TIMEOUT_MS, "connect");
-    const list = await withTimeout(client.listTools(), PROBE_TIMEOUT_MS, "listTools");
-    const tools = list.tools.map((t) => ({
-      name: t.name,
-      description: t.description,
-    }));
-
-    return {
-      ...base,
-      status: "ok",
-      toolCount: tools.length,
-      tools,
-      lastProbedAt: new Date().toISOString(),
-    };
-  } catch (err) {
-    const raw = err instanceof Error ? err.message : String(err);
-    const detail = err instanceof Error ? (err.stack ?? raw) : raw;
-    dlog("mcp-probe", "failed", { server: cfg.name, transport, error: raw });
+  if (!options.cwd)
     return {
       ...base,
       status: "error",
-      errorMessage: humanizeError(raw, cfg.command),
-      errorDetail: detail,
-      lastProbedAt: new Date().toISOString(),
+      errorMessage: "缺少明确的工作区，请重新打开 MCP 设置后重试。",
     };
-  } finally {
-    if (client) {
-      try {
-        await client.close();
-      } catch {
-        /* best-effort cleanup */
+  const access = options.oauthService
+    ? {
+        ...localCredentialAccess,
+        resolveOAuthAccess: (req: {
+          id: string;
+          scope: "full";
+          serverUrl: string;
+          forceRefresh?: boolean;
+        }) =>
+          options.oauthService!.resolveAccessToken(req.id, {
+            serverUrl: req.serverUrl,
+            forceRefresh: req.forceRefresh,
+          }),
       }
-    }
-    if (mcpTransport && !client) {
-      try {
-        await mcpTransport.close?.();
-      } catch {
-        /* best-effort */
-      }
-    }
-  }
-}
-
-export function buildProbeHttpHeaders(cfg: McpServerConfig): Record<string, string> {
-  const credStore = new CredentialStore(undefined);
-  return buildHttpHeaders(cfg.name, cfg, (id) => {
-    const cred = credStore.resolve(id);
-    return cred && isCredentialSecretAvailable(cred.secret)
-      ? { secret: cred.secret, type: cred.type, label: cred.label }
-      : undefined;
+    : localCredentialAccess;
+  const result = await probeMcp(cfg, {
+    cwd: options.cwd,
+    signal: options.signal,
+    timeoutMs: PROBE_TIMEOUT_MS,
+    credentialAccess: access,
+    stdioPolicy: "skip-banner",
   });
+  if (result.status === "ok")
+    return {
+      ...base,
+      status: "ok",
+      toolCount: result.toolCount,
+      tools: result.tools?.map(({ name, description }) => ({ name, description })),
+    };
+  const message = result.error ? desktopProbeError(result.error, cfg.command) : "连接测试失败";
+  const detail = result.error?.detail ?? message;
+  dlog("mcp-probe", "failed", {
+    server: cfg.name,
+    transport: base.transport,
+    code: result.error?.code,
+  });
+  return { ...base, status: "error", errorMessage: message, errorDetail: detail };
 }
 
 /**
@@ -273,10 +181,20 @@ export function buildProbeHttpHeaders(cfg: McpServerConfig): Record<string, stri
  */
 export async function probeMcpServer(
   cfg: McpServerConfig,
-  options: { force?: boolean; oauthService?: Pick<McpOAuthService, "resolveAccessToken"> } = {},
+  options: ProbeOptions = {},
 ): Promise<McpProbeResult> {
   const configHash = hashConfig(cfg);
-  const cached = cache.get(cfg.name);
+  const key = JSON.stringify([options.cwd, cfg.name]);
+  // Credential and forwarded-env revisions are owned by the adapter. Without
+  // a versioned snapshot, do not retain their results across authorization changes.
+  const cacheable =
+    !!options.cwd &&
+    !options.signal &&
+    !cfg.credentialRef &&
+    !cfg.bearerTokenEnvVar &&
+    !cfg.envVars?.length &&
+    !Object.keys(cfg.envHeaders ?? {}).length;
+  const cached = cacheable ? cache.get(key) : undefined;
   if (
     !options.force &&
     cached &&
@@ -286,12 +204,13 @@ export async function probeMcpServer(
     return cached.result;
   }
 
-  const result = await probeOne(cfg, options.oauthService);
-  cache.set(cfg.name, {
-    result,
-    configHash,
-    expiresAt: Date.now() + CACHE_TTL_MS,
-  });
+  const result = await probeOne(cfg, options);
+  if (cacheable)
+    cache.set(key, {
+      result,
+      configHash,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    });
   return result;
 }
 
@@ -301,12 +220,13 @@ export async function probeMcpServer(
  */
 export async function probeMcpServers(
   configs: McpServerConfig[],
-  options: { force?: boolean; oauthService?: Pick<McpOAuthService, "resolveAccessToken"> } = {},
+  options: ProbeOptions = {},
 ): Promise<McpProbeResult[]> {
   return Promise.all(configs.map((c) => probeMcpServer(c, options)));
 }
 
 export function invalidateMcpProbeCache(name?: string): void {
-  if (name) cache.delete(name);
-  else cache.clear();
+  if (name) {
+    for (const key of cache.keys()) if (JSON.parse(key)[1] === name) cache.delete(key);
+  } else cache.clear();
 }

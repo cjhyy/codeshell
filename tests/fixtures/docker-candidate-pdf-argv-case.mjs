@@ -6,13 +6,23 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
-import { installDockerCandidateGuard } from "../../scripts/docker-candidate-guard.mjs";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const home = fs.realpathSync(process.env.HOME);
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
-const preload = new URL("../../scripts/docker-candidate-preload.mjs", import.meta.url).pathname;
-const guardPath = new URL("../../scripts/docker-candidate-guard.mjs", import.meta.url).pathname;
+// As in docker-candidate-guard.test.ts, prepare the reviewed bytes in a private
+// bundle. The guard intentionally forbids whitespace in its exact NODE_OPTIONS
+// preload path; the source entry itself may contain Unicode and spaces.
+const bundle = join(home, "bundle");
+fs.mkdirSync(bundle, { mode: 0o700 });
+for (const name of ["docker-candidate-preload.mjs", "docker-candidate-guard.mjs"])
+  fs.copyFileSync(
+    fileURLToPath(new URL(`../../scripts/${name}`, import.meta.url)),
+    join(bundle, name),
+  );
+const preload = join(bundle, "docker-candidate-preload.mjs");
+const guardPath = join(bundle, "docker-candidate-guard.mjs");
+const { installDockerCandidateGuard } = await import(pathToFileURL(guardPath).href);
 process.env.NODE_OPTIONS = `--import=${preload}`;
 const receipt = join(home, "guard.jsonl");
 installDockerCandidateGuard({
@@ -202,5 +212,12 @@ assert.equal(receipts[0].dnsNegativeProbes, 4);
 const nativeChildStarts = receipts.filter((event) => event.event === "child-started").length;
 assert.equal(nativeChildStarts, 0);
 console.log(
-  JSON.stringify({ scenario, cases, sourceHash, argvCount: captured.length, nativeChildStarts }),
+  JSON.stringify({
+    scenario,
+    cases,
+    sourceHash,
+    argvCount: captured.length,
+    nativeChildStarts,
+    fixturePath: fileURLToPath(import.meta.url),
+  }),
 );

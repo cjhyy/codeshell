@@ -22,6 +22,7 @@ import { CONTRACTS } from "./contracts.js";
 // index.internal.ts. Host-assembly surfaces (installer/marketplace/onboarding/
 // updater) moved here in 0.8.
 const expectedRuntimeExportsByPartition = {
+  hostSharedServices: ["McpProbeConnectionError", "createMcpProbeConnection", "listSessionEntries"],
   modelTraces: [
     "ModelTraceStore",
     "DEFAULT_MODEL_TRACE_CONFIG",
@@ -342,6 +343,9 @@ const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).
 // Host-only symbols that must NOT leak back onto the public root barrel.
 // (Representative sample across the removed @internal partitions.)
 const hostOnlySamples = [
+  "McpProbeConnectionError",
+  "createMcpProbeConnection",
+  "listSessionEntries",
   ...expectedRuntimeExportsByPartition.modelTraces,
   ...expectedRuntimeExportsByPartition.mcpCredentialBinding,
   ...expectedRuntimeExportsByPartition.linkHostServices,
@@ -534,6 +538,12 @@ describe("core public/internal export contract", () => {
     expect(extensionApi.resolveLLMConfigForTag).toBe(publicApi.resolveLLMConfigForTag);
 
     // The extension entry stays narrow: no Engine, no host UI utilities.
+    for (const name of [
+      "McpProbeConnectionError",
+      "createMcpProbeConnection",
+      "listSessionEntries",
+    ])
+      expect(extensionApi).not.toHaveProperty(name);
     expect(extensionApi).not.toHaveProperty("Engine");
     expect(extensionApi).not.toHaveProperty("sliceAnsi");
     expect(extensionApi).not.toHaveProperty("acquireWorkspaceWriteLock");
