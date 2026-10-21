@@ -128,7 +128,7 @@ settings.json · settings.managed.json · credentials.json
 model-catalog.user.json · cron.json · auto-dream-state.json
 sessions/<id>/{state.json, transcript.jsonl, file-history/}
 runs/<id>/{run.json, events.jsonl, checkpoints/, approvals/, artifacts/}
-memory/{user,dream,pending}/ · projects/<hash>/memory/ · memory-trash/
+memory/{user,dream,pending}/ · project-memory/<slug>-<hash>/ · memory-trash/
 plugins/ · bg-shells/ · cache/models/
 ```
 

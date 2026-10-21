@@ -390,7 +390,7 @@ describe("MemoryManager", () => {
   it("scopes by projectDir under baseDir", () => {
     const scoped = new MemoryManager({ baseDir: tmpDir, projectDir: "/some/project" });
     expect(scoped.getMemoryDir().startsWith(tmpDir)).toBe(true);
-    expect(scoped.getMemoryDir()).toContain("projects");
+    expect(scoped.getMemoryDir()).toContain("project-memory");
   });
 
   it("falls back to CODE_SHELL_HOME env when no baseDir given", () => {

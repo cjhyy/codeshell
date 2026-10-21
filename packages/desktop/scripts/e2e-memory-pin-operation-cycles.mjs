@@ -412,12 +412,11 @@ ipcMain.handle = (channel, listener) => handle(channel, !["memory:list", "memory
     },
     { project, names, bodies },
   );
-  const memoryRoot = join(
-    isolated.codeShellHome,
-    "projects",
-    project.replace(/[/\\:]/g, "-").replace(/^-/, ""),
-    "memory",
-  );
+  // The isolated home holds exactly one project, so its memory root is the only
+  // entry under project-memory/ (keyed by MemoryManager's collision-free key).
+  const projectMemoryDirs = await readdir(join(isolated.codeShellHome, "project-memory"));
+  assert.equal(projectMemoryDirs.length, 1);
+  const memoryRoot = join(isolated.codeShellHome, "project-memory", projectMemoryDirs[0]);
   filePaths = Object.fromEntries(
     Object.entries(names).map(([key, name]) => {
       const scope = key === "dream" ? "dream" : "user";

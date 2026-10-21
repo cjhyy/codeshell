@@ -52,12 +52,12 @@ digital human or team.
 
 The four stores have distinct ownership:
 
-| Level         | Location                                  | Owner                                 |
-| ------------- | ----------------------------------------- | ------------------------------------- |
-| Global        | `CODE_SHELL_HOME/memory/`                 | user across all projects and profiles |
-| Digital human | `CODE_SHELL_HOME/profiles/<name>/memory/` | one profile across project Sessions   |
-| Project       | `CODE_SHELL_HOME/projects/<hash>/memory/` | one project, independent of profile   |
-| Pet / Mimi    | Electron `userData/pet/memories.json`     | Mimi across Pet manager conversations |
+| Level         | Location                                        | Owner                                 |
+| ------------- | ----------------------------------------------- | ------------------------------------- |
+| Global        | `CODE_SHELL_HOME/memory/`                       | user across all projects and profiles |
+| Digital human | `CODE_SHELL_HOME/profiles/<name>/memory/`       | one profile across project Sessions   |
+| Project       | `CODE_SHELL_HOME/project-memory/<slug>-<hash>/` | one project, independent of profile   |
+| Pet / Mimi    | Electron `userData/pet/memories.json`           | Mimi across Pet manager conversations |
 
 The digital-human card opens its profile memory store directly. Entries can be
 listed, created, edited, pinned, and soft-deleted. They are injected only when
