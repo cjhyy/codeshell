@@ -107,7 +107,11 @@ async function mountBusyExternal(goal: ActiveGoal | null, queued: boolean) {
       compactingBucketsRef: { current: new Set() },
       setCompactingBuckets: noop,
     },
-    transcript: { dispatch: noop, state: { ...INITIAL_STATE, activeGoal: goal } },
+    transcript: {
+      dispatch: noop,
+      state: { ...INITIAL_STATE, activeGoal: goal },
+      transcriptsRef: { current: {} },
+    },
     approvals: {
       approval: null,
       approvalQueue: [],
