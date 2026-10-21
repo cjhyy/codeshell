@@ -1,5 +1,7 @@
 # 正式64：认证、Panel来源、附件与Hook来源
 
+> **当前状态（2026-10-21）**：120 条已全部处理。119 条已修复；ATT-R9-01 主路径已修复，其余部分记为已知限制。逐条状态与修复提交见 [STATUS-2026-10-21.md](STATUS-2026-10-21.md)。以下原文为本轮冻结的审计记录，未改动。
+
 新增 **1条P2：ATTACH-R64-01**。同会话相同图片复用磁盘文件但使用不同附件ID，旧草稿24h清理会删掉仍在30d保留期内的已发送图片。[问题详情](attachment-retention.md)、[首次fixture](evidence/attachment-shared-path.test.ts)、[原始日志](evidence/attachment-shared-path.first.log)。
 
 首次规定guarded shard：**1 pass /11 expect /0 fail /0 skip，exit0，Completed**。运行真实附件服务和自有临时FS，使用公开now参数；断言当前错误与独立路径正常对照。未修产品，未启真实UI/native/网络或账号，未重跑失败方向。
