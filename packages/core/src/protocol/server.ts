@@ -2509,6 +2509,7 @@ export class AgentServer {
         type: "goal_updated",
         ...(goal.goalId ? { goalId: goal.goalId } : {}),
         ...(goal.revision ? { revision: goal.revision } : {}),
+        ...(goal.setAtMs ? { setAtMs: goal.setAtMs } : {}),
         objective: goal.objective,
         paused: goal.paused === true,
       },
@@ -2676,6 +2677,7 @@ export class AgentServer {
         goal: goal ? goal.objective : null,
         ...(goal?.goalId ? { goalId: goal.goalId } : {}),
         ...(goal?.revision ? { revision: goal.revision } : {}),
+        ...(goal?.setAtMs ? { setAtMs: goal.setAtMs } : {}),
         paused: goal?.paused === true,
       }),
     );

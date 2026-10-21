@@ -11,7 +11,7 @@ import {
 import { computeEffectiveDisabledLists, getMergedCatalog } from "@cjhyy/code-shell-core/internal";
 import { withModelTraceContext } from "@cjhyy/code-shell-core/internal";
 
-import { probeConfiguredModel } from "./model-probe.js";
+import { probeConfiguredModel } from "@cjhyy/code-shell-host";
 
 const ROOT = "/api/v1/configuration";
 const MAX_BODY_BYTES = 64 * 1024;

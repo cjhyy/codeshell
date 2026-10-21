@@ -559,14 +559,18 @@ contextBridge.exposeInMainWorld("codeshell", {
    * multi-session worker; legacy callers that omitted it routed through
    * the (now-removed) single-flag path — multi-session always wants the id.
    */
-  cancel: (sessionId?: string) => {
+  cancel: (sessionId?: string, options?: { keepGoal?: boolean }) => {
     // The Stop button. An external-runtime session has no worker to receive
     // `agent/cancel`, so routing it there would make Stop a silent no-op while
     // the model kept streaming. Interrupting the runtime is the equivalent
     // action, and intercepting here keeps the renderer's Stop handler identical
     // for both backends.
+    // `keepGoal` (interrupt-and-send) only matters there: the native Engine
+    // never pauses a Goal on cancel.
     if (sessionId && externalRuntimeSessions.has(sessionId)) {
-      return ipcRenderer.invoke("externalRuntime:interrupt", sessionId);
+      return ipcRenderer.invoke("externalRuntime:interrupt", sessionId, {
+        keepGoal: options?.keepGoal === true,
+      });
     }
     return rpc("agent/cancel", { sessionId });
   },
@@ -1368,8 +1372,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   inspectGithubSkill: (url: string, existingNames?: string[]) =>
     ipcRenderer.invoke("skills:inspectGithub", url, existingNames),
   installFromGithub: (input: unknown) => ipcRenderer.invoke("skills:installFromGithub", input),
-  probeMcpServers: (configs: unknown, force?: boolean) =>
-    ipcRenderer.invoke("mcp:probe", configs, force),
+  probeMcpServers: (cfgs: unknown, force?: boolean, target?: RendererConfigurationTarget | null) =>
+    ipcRenderer.invoke("mcp:probe", cfgs, force, target),
   listMergedMcpServers: (
     base: unknown,
     disabledPlugins?: unknown,
@@ -1629,6 +1633,8 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.invoke("externalRuntime:send", payload),
     interrupt: (sessionId: string): Promise<void> =>
       ipcRenderer.invoke("externalRuntime:interrupt", sessionId),
+    yieldGoal: (sessionId: string): Promise<boolean> =>
+      ipcRenderer.invoke("externalRuntime:yieldGoal", sessionId),
     stop: (sessionId: string): Promise<void> => {
       externalRuntimeSessions.delete(sessionId);
       return ipcRenderer.invoke("externalRuntime:stop", sessionId);

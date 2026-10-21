@@ -22,10 +22,11 @@ import {
 } from "lucide-react";
 import { MessageStream, type ContextPackageCreatedHandler } from "./MessageStream";
 import type { SubagentSelection } from "./subagents/SubagentNavigation";
-import type { Message } from "./types";
+import type { ActiveGoal, Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
 import { PermissionPill, type PermissionMode } from "./chat/PermissionPill";
 import { GoalToggle } from "./chat/GoalToggle";
+import { GoalBar } from "./chat/GoalBar";
 import { ModelPill, type ModelOption } from "./chat/ModelPill";
 import { Lightbox, type LightboxItem } from "./chat/Lightbox";
 import { ContextRing } from "./chat/ContextRing";
@@ -229,6 +230,13 @@ interface Props {
   /** Goal 模式开关(与权限正交)。开启时这条消息当目标,跑到完成为止。 */
   goalEnabled: boolean;
   onGoalToggle: (next: boolean) => void;
+  /** The session's persistent Goal, shown in a bar above the composer. */
+  activeGoal?: ActiveGoal | null;
+  /** A Goal control is in flight; the bar's controls stay disabled. */
+  goalPending?: boolean;
+  onUpdateGoal?: (objective: string) => void;
+  onGoalPausedChange?: (paused: boolean) => void;
+  onDeleteGoal?: () => void;
   modelOptions: ModelOption[];
   activeModelKey: string | null;
   onModelChange: (opt: ModelOption) => void;
@@ -448,6 +456,11 @@ export function ChatView({
   onPermissionChange,
   goalEnabled,
   onGoalToggle,
+  activeGoal,
+  goalPending,
+  onUpdateGoal,
+  onGoalPausedChange,
+  onDeleteGoal,
   modelOptions,
   activeModelKey,
   onModelChange,
@@ -2140,6 +2153,16 @@ export function ChatView({
                 ))}
               </div>
             </div>
+          )}
+          {variant === "main" && activeGoal && (
+            <GoalBar
+              goal={activeGoal}
+              busy={busy}
+              pending={goalPending}
+              onUpdate={onUpdateGoal}
+              onPausedChange={onGoalPausedChange}
+              onDelete={onDeleteGoal}
+            />
           )}
           {/*
             Drop is captured at the chat root so the user can drag a screenshot

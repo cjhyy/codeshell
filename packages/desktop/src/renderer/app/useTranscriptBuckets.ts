@@ -384,7 +384,8 @@ export function useTranscriptBuckets({
         const goalLookupEpoch = state.snapshotEpoch ?? null;
         let goalLookupSucceeded = false;
         try {
-          const { ok, goal, goalId, paused, revision } = await window.codeshell.goalGet(engineId);
+          const { ok, goal, goalId, paused, revision, setAtMs } =
+            await window.codeshell.goalGet(engineId);
           goalLookupSucceeded = ok !== false;
           if (ok !== false && goal) {
             const persistedGoalId = goalId ?? state.activeGoal?.goalId;
@@ -399,6 +400,7 @@ export function useTranscriptBuckets({
               revision: persistedRevision,
               objective: goal,
               paused: paused ?? false,
+              ...(setAtMs ? { setAtMs } : {}),
               ...(replacesLocalGoal ? { replaced: true } : {}),
             } as StreamEvent);
           } else if (ok !== false && state.activeGoal) {

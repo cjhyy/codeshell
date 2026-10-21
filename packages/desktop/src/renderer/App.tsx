@@ -128,6 +128,7 @@ import { useNotificationSessionNavigation } from "./app/useNotificationSessionNa
 import { useSessionHistorySync } from "./app/useSessionHistorySync";
 import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
+import { useGoalPendingBuckets } from "./app/useGoalPendingBuckets";
 import { createChatLinkReadHandler } from "./chat/linkResourceIntents";
 import { usePanelBuckets } from "./app/usePanelBuckets";
 import { useViewTargets } from "./app/useViewTargets";
@@ -510,6 +511,7 @@ function App() {
    *  edit from rolling back a newer pause/edit/delete without letting an
    *  operation in another tab suppress this bucket's reconciliation. */
   const goalMutationSeqRef = useRef<Map<string, number>>(new Map());
+  const { goalPendingBuckets, markGoalPending } = useGoalPendingBuckets();
   /**
    * The no-repo sandbox cwd (~/.code-shell/no-repo), fetched once from Main.
    * State feeds the draft authority projection; the ref still serves callbacks
@@ -1121,7 +1123,7 @@ function App() {
       compactingBucketsRef,
       setCompactingBuckets,
     },
-    transcript: { dispatch, state },
+    transcript: { dispatch, state, transcriptsRef },
     approvals: {
       approval,
       approvalQueue,
@@ -1881,6 +1883,9 @@ function App() {
             objective: persisted.goal,
             paused: persisted.paused ?? false,
             round: sameGoal ? before.round : 0,
+            ...((persisted.setAtMs ?? (sameGoal ? before.setAtMs : undefined))
+              ? { setAtMs: persisted.setAtMs ?? before.setAtMs }
+              : {}),
           },
         });
         return "active";
@@ -1932,6 +1937,7 @@ function App() {
     };
     const mutationSeq = (goalMutationSeqRef.current.get(bucket) ?? 0) + 1;
     goalMutationSeqRef.current.set(bucket, mutationSeq);
+    markGoalPending(bucket, true);
     dispatch({
       type: "stream",
       bucket,
@@ -1974,6 +1980,8 @@ function App() {
           error: error instanceof Error ? error.message : String(error),
         });
         await reconcileGoalMutation(eid, bucket, before, optimistic, mutationSeq);
+      } finally {
+        if (goalMutationSeqRef.current.get(bucket) === mutationSeq) markGoalPending(bucket, false);
       }
     })();
   };
@@ -2004,6 +2012,7 @@ function App() {
     const previousGoalToggle = goalOverrides[bucket] ?? false;
     const mutationSeq = (goalMutationSeqRef.current.get(bucket) ?? 0) + 1;
     goalMutationSeqRef.current.set(bucket, mutationSeq);
+    markGoalPending(bucket, true);
     dispatch({
       type: "stream",
       bucket,
@@ -2037,6 +2046,8 @@ function App() {
         if (reconciled === "active") {
           setGoalOverrides((prev) => ({ ...prev, [bucket]: previousGoalToggle }));
         }
+      } finally {
+        if (goalMutationSeqRef.current.get(bucket) === mutationSeq) markGoalPending(bucket, false);
       }
     })();
   };
@@ -2675,6 +2686,11 @@ function App() {
                     onPermissionChange={onPermissionChange}
                     goalEnabled={goalEnabled}
                     onGoalToggle={onGoalToggle}
+                    activeGoal={cloudSelected ? null : state.activeGoal}
+                    goalPending={goalPendingBuckets.has(activeBucket)}
+                    onUpdateGoal={handleUpdateGoal}
+                    onGoalPausedChange={handleGoalPausedChange}
+                    onDeleteGoal={handleDeleteGoal}
                     modelOptions={modelOptions}
                     activeModelKey={activeModelKey}
                     onModelChange={onModelChange}

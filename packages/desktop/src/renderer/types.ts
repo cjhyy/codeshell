@@ -209,6 +209,8 @@ export interface ActiveGoal {
   revision?: number;
   round: number;
   paused: boolean;
+  /** When the objective was set (epoch ms), for the Goal bar's elapsed time. */
+  setAtMs?: number;
 }
 
 /**
@@ -1835,6 +1837,7 @@ function applyStreamEventToTurn(
           revision: event.revision,
           round: 0,
           paused: event.paused ?? false,
+          ...(event.setAtMs ? { setAtMs: event.setAtMs } : {}),
         },
       };
     }
@@ -1855,6 +1858,9 @@ function applyStreamEventToTurn(
           revision: event.revision ?? state.activeGoal?.revision,
           round: state.activeGoal?.round ?? 0,
           paused: event.paused,
+          ...((event.setAtMs ?? state.activeGoal?.setAtMs)
+            ? { setAtMs: event.setAtMs ?? state.activeGoal?.setAtMs }
+            : {}),
         },
       };
     }

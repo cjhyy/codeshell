@@ -1,16 +1,16 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SettingsManager } from "@cjhyy/code-shell-core";
-import { computeEffectiveDisabledLists } from "@cjhyy/code-shell-core/internal";
-import {
-  createHubConfiguration,
-  HubConfigurationError,
-  type HubConfigurationOptions,
-} from "./configuration.js";
+import { installFixtureNetworkGuard } from "../../../../tests/helpers/network-fixture.js";
+const network = installFixtureNetworkGuard();
+afterAll(() => network.restore());
+const { SettingsManager } = await import("@cjhyy/code-shell-core");
+const { computeEffectiveDisabledLists } = await import("@cjhyy/code-shell-core/internal");
+import type { HubConfigurationOptions } from "./configuration.js";
+const { createHubConfiguration, HubConfigurationError } = await import("./configuration.js");
 
 const directories: string[] = [];
 const servers: Server[] = [];
@@ -85,8 +85,10 @@ async function fixture(options: Partial<HubConfigurationOptions> = {}) {
   servers.push(server);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  network.allowOrigin(origin);
   const api = (endpoint = "", body?: unknown, headers?: Record<string, string>, method?: string) =>
     fetch(`${origin}/api/v1/configuration${endpoint}`, {
+      redirect: "error",
       method: method ?? (body === undefined ? "GET" : "PUT"),
       ...(body !== undefined
         ? {
@@ -358,7 +360,12 @@ describe("Hub workspace configuration", () => {
     expect((await api("/defaults", { text: "x".repeat(70_000) })).status).toBe(413);
     expect((await api("/defaults", ["primary"])).status).toBe(400);
     expect(
-      (await fetch(`${origin}/api/v1/configuration/defaults`, { method: "POST" })).status,
+      (
+        await fetch(`${origin}/api/v1/configuration/defaults`, {
+          method: "POST",
+          redirect: "error",
+        })
+      ).status,
     ).toBe(405);
     expect(readFileSync(localFile, "utf8")).toBe(before);
   });
@@ -564,6 +571,7 @@ describe("Hub workspace configuration", () => {
     const controller = new AbortController();
     const requestId = randomUUID();
     const pending = fetch(`${f.origin}/api/v1/configuration/connections/probe`, {
+      redirect: "error",
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ id: "primary", requestId }),

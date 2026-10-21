@@ -815,6 +815,8 @@ type StreamEventPayload =
       objective: string;
       replaced: boolean;
       paused?: boolean;
+      /** When the objective was set (epoch ms); drives the elapsed-time display. */
+      setAtMs?: number;
     }
   | {
       type: "goal_updated";
@@ -822,6 +824,7 @@ type StreamEventPayload =
       revision?: number;
       objective: string;
       paused: boolean;
+      setAtMs?: number;
     }
   | { type: "goal_cleared"; goalId?: string; revision?: number }
   | { type: "error"; error: string; agentId?: string }

@@ -1,13 +1,13 @@
 import { expect, test } from "bun:test";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "..");
 const node = realpathSync(Bun.which("node")!);
-async function actualNode(scenario: string) {
+async function actualNode(scenario: string, sourceRoot = root) {
   const home = realpathSync(mkdtempSync(join(tmpdir(), "candidate-pdf-argv-")));
   chmodSync(home, 0o700);
   const temporary = join(home, "tmp");
@@ -17,7 +17,11 @@ async function actualNode(scenario: string) {
   try {
     child = spawn(
       node,
-      [join(root, "tests/fixtures/docker-candidate-pdf-argv-case.mjs"), scenario],
+      [
+        "--preserve-symlinks-main",
+        join(sourceRoot, "tests/fixtures/docker-candidate-pdf-argv-case.mjs"),
+        scenario,
+      ],
       {
         cwd: home,
         env: {
@@ -74,4 +78,20 @@ test("Hub PDF scope rejects other jobs, non-work paths, unsafe custody and chang
 
 test("existing workspace and home PDF consumers retain their original cwd contract", async () => {
   expect((await actualNode("legacy")).cases).toBe(9);
+});
+
+test("real Node executes all frozen PDF boundaries through a Unicode and space-containing source entry", async () => {
+  const alias = mkdtempSync(join(tmpdir(), "中文 fixture with spaces-"));
+  try {
+    // Only aliases to the two source directories, never a replacement checkout.
+    symlinkSync(join(root, "tests"), join(alias, "tests"), "dir");
+    symlinkSync(join(root, "scripts"), join(alias, "scripts"), "dir");
+    const receipt = await actualNode("boundaries", alias);
+    expect(receipt.cases).toBe(18);
+    expect(receipt.fixturePath).toBe(
+      join(alias, "tests/fixtures/docker-candidate-pdf-argv-case.mjs"),
+    );
+  } finally {
+    rmSync(alias, { recursive: true, force: true });
+  }
 });

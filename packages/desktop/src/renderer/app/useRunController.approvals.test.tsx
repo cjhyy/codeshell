@@ -75,7 +75,7 @@ function baseParams(toasts: unknown[]): Omit<Params, "approvals"> {
       compactingBucketsRef: { current: new Set() },
       setCompactingBuckets: noop,
     },
-    transcript: { dispatch: noop, state: INITIAL_STATE },
+    transcript: { dispatch: noop, state: INITIAL_STATE, transcriptsRef: { current: {} } },
   };
 }
 let restoreStorage: PropertyDescriptor | undefined;

@@ -82,11 +82,15 @@ describe("external runtime failures surface to the user", () => {
     expect(busyStart).toBeGreaterThan(-1);
     expect(idleStart).toBeGreaterThan(busyStart);
     const busyQueueBranch = controllerSource.slice(busyStart, idleStart);
+    // The external branch may ask a running Goal to yield, but must return
+    // before the native steer call.
     const externalGuard = busyQueueBranch.indexOf(
-      "if (parseExternalRuntimeModelKey(queuedModelKey)) return;",
+      "if (parseExternalRuntimeModelKey(queuedModelKey)) {",
     );
+    const externalReturn = busyQueueBranch.indexOf("return;", externalGuard);
     const steerCall = busyQueueBranch.indexOf(".steer(engineSessionId");
     expect(externalGuard).toBeGreaterThan(-1);
-    expect(steerCall).toBeGreaterThan(externalGuard);
+    expect(busyQueueBranch.slice(externalGuard, externalReturn)).not.toContain(".steer(");
+    expect(steerCall).toBeGreaterThan(externalReturn);
   });
 });
