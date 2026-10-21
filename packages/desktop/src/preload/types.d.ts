@@ -1191,6 +1191,8 @@ export interface CodeshellApi
     goalId?: string;
     paused?: boolean;
     revision?: number;
+    /** When the objective was set (epoch ms). */
+    setAtMs?: number;
   }>;
   /** Background-shell dock panel (TODO 3.2). */
   listBackgroundShells(sessionId: string): Promise<{ shells: BackgroundShellInfo[] }>;

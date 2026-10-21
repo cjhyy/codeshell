@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useAnchoredPopover } from "./chat/useAnchoredPopover";
 import { StatusDot } from "./ui/StatusDot";
 import { IconButton } from "./ui/IconButton";
-import { Forward, PanelLeft, PanelRight, UserRound } from "lucide-react";
+import { CirclePause, Forward, PanelLeft, PanelRight, Target, UserRound } from "lucide-react";
 import { StatusPopover } from "./topbar/StatusPopover";
 import { WorkspaceIndicator } from "./topbar/WorkspaceIndicator";
 import type { LiveActivity } from "./topbar/liveActivity";
@@ -371,19 +371,24 @@ function StatusBadge({
         aria-label={t("topbar.statusDetails")}
         onClick={() => setOpen((current) => !current)}
       >
-        {activeGoal && (
-          // ◎ marker: an active persistent goal exists. Hover the dot to see it.
-          <span
-            className={`text-xs ${activeGoal.paused ? "text-muted-foreground" : "text-status-running"}`}
-            title={
-              activeGoal.paused
-                ? `${t("topbar.hasActiveGoal")} · ${t("misc.status.paused")}`
-                : t("topbar.hasActiveGoal")
-            }
-          >
-            ◎
-          </span>
-        )}
+        {activeGoal &&
+          // Goal marker: a target while it drives, a pause badge once it stopped
+          // driving, so a paused Goal no longer looks like a running one.
+          (activeGoal.paused ? (
+            <CirclePause
+              size={13}
+              className="text-status-warn"
+              data-goal-marker="paused"
+              aria-label={`${t("topbar.hasActiveGoal")} · ${t("misc.status.paused")}`}
+            />
+          ) : (
+            <Target
+              size={13}
+              className="text-status-running"
+              data-goal-marker="active"
+              aria-label={t("topbar.hasActiveGoal")}
+            />
+          ))}
         {/* Persistent task indicator: TodoWrite tasks used to be visible ONLY on
             hover (the popover), so users kept missing them. Show a compact
             done/total chip inline whenever tasks exist — hover still opens the

@@ -98,6 +98,7 @@ export function resolveRunGoal(args: {
       revision: explicitGoal.revision,
       objective: explicitGoal.objective,
       replaced,
+      setAtMs: explicitGoal.setAtMs,
     });
   }
   const fallbackGoal = goalDisabled ? undefined : normalizeGoal(configGoal);

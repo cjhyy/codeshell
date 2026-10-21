@@ -89,6 +89,7 @@ export class ExternalRuntimeGoals {
       goal: goal?.objective ?? null,
       ...(goal?.goalId ? { goalId: goal.goalId } : {}),
       ...(goal?.revision ? { revision: goal.revision } : {}),
+      ...(goal?.setAtMs ? { setAtMs: goal.setAtMs } : {}),
       paused: goal?.paused === true,
     };
   }
@@ -117,6 +118,7 @@ export class ExternalRuntimeGoals {
         revision: goal.revision,
         objective: goal.objective,
         replaced: !!stored,
+        setAtMs: goal.setAtMs,
       });
     }
     if (!goal || goal.paused) return undefined;
@@ -363,6 +365,7 @@ export class ExternalRuntimeGoals {
       revision: goal.revision,
       objective: goal.objective,
       paused: goal.paused === true,
+      ...(goal.setAtMs ? { setAtMs: goal.setAtMs } : {}),
     });
   }
 }

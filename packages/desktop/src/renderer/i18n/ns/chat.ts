@@ -201,6 +201,12 @@ export const chat = {
         off: "Goal 模式已关闭",
         onTitle: "Goal 模式:把这条消息当目标,跑到完成为止(危险操作仍按权限处理)",
         offTitle: "Goal 模式(关):点亮后设目标,agent 跑到完成为止",
+        barActive: "进行中的目标",
+        barPaused: "已暂停的目标",
+        barPausedHint: "目标已暂停，不会自动继续。点击恢复后接着推进。",
+        barElapsed: "目标已设置 {elapsed}",
+        expand: "展开目标",
+        collapse: "收起目标",
       },
       model: {
         select: "选择模型",
@@ -521,6 +527,13 @@ export const chat = {
         onTitle:
           "Goal mode: treat this message as a goal and run until done (dangerous actions still respect permissions)",
         offTitle: "Goal mode (off): turn on to set a goal and let the agent run until done",
+        barActive: "Active goal",
+        barPaused: "Paused goal",
+        barPausedHint:
+          "This goal is paused and will not continue on its own. Resume it to keep going.",
+        barElapsed: "Goal set {elapsed} ago",
+        expand: "Expand goal",
+        collapse: "Collapse goal",
       },
       model: {
         select: "Select model",

@@ -50,8 +50,10 @@ describe("external Goal lifecycle", () => {
         revision: 1,
         objective: "完成独立测试",
         replaced: false,
+        setAtMs: 10_000,
       },
     ]);
+    expect(goals.get(sessionId).setAtMs).toBe(10_000);
     const restored = new ExternalRuntimeGoals(() => {});
     expect(restored.get(sessionId)).toEqual(goals.get(sessionId));
     goals.end(run);
