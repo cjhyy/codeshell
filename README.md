@@ -273,7 +273,7 @@ assets/       # README / product images (mascot, promo hero, Playwright desktop 
 docs/
 ├── architecture/        # System architecture chapters + feature inventory (see architecture/README.md)
 ├── todo/                # Roadmap + forward-looking design docs (see todo/README.md)
-└── archive/             # Superseded design docs, audits, and the prior architecture set
+└── archive/             # Superseded design docs, audits, and earlier architecture sets
 
 scripts/      # Build, release, and repo maintenance scripts
 ```
@@ -312,9 +312,9 @@ bun run build
 - [Package boundaries & Pet split rationale](docs/architecture/12-package-boundaries-and-release-units.md)
 - [Plugin parity matrix](docs/architecture/13-plugin-parity-and-video-editor.md)
 - [Digital humans & Pet architecture](docs/architecture/14-digital-human-and-pet.md)
-- [Architecture & feature inventory](docs/architecture/README.md)
+- [Architecture (function-level chapters 00–10) & feature inventory](docs/architecture/README.md)
 - [Roadmap & TODO](docs/todo/README.md)
-- [Prior architecture documentation set (archived, pending rewrite)](docs/archive/architecture/README.md)
+- Archived architecture sets: [2026-07 edition](docs/archive/architecture-2026-07/README.md) and [2026-05 set](docs/archive/architecture/README.md)
 
 ---
 

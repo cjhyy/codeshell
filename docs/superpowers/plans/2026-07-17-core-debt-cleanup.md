@@ -31,14 +31,14 @@
 - Modify: `scripts/check-no-engine-bypass.sh:10`
 - Modify: `scripts/check-no-engine-bypass.sh:63`
 
-背景:脚本两处引用 `docs/architecture/14-engine-call-paths.md`,该路径已不存在(现行 14 号章节是 `14-digital-human-and-pet.md`)。原 ADR 完整保留在 `docs/archive/architecture/14-engine-call-paths.md`;现行文档中描述 protocol 包装路径的是 `docs/architecture/04-protocol-and-sessions.md`。两处都改指 archive ADR,并在头注补一句现行章节指引。
+背景:脚本两处引用 `docs/architecture/14-engine-call-paths.md`,该路径已不存在(现行 14 号章节是 `14-digital-human-and-pet.md`)。原 ADR 完整保留在 `docs/archive/architecture/14-engine-call-paths.md`;现行文档中描述 protocol 包装路径的是 `docs/archive/architecture-2026-07/04-protocol-and-sessions.md`。两处都改指 archive ADR,并在头注补一句现行章节指引。
 
 - [ ] **Step 1: 确认死链与目标文档存在**
 
 ```bash
 test -f docs/architecture/14-engine-call-paths.md && echo UNEXPECTED || echo "dead link confirmed"
 test -f docs/archive/architecture/14-engine-call-paths.md && echo "archive ADR exists"
-test -f docs/architecture/04-protocol-and-sessions.md && echo "living chapter exists"
+test -f docs/archive/architecture-2026-07/04-protocol-and-sessions.md && echo "living chapter exists"
 ```
 
 预期:第一行 `dead link confirmed`,后两行文件存在。
@@ -57,7 +57,7 @@ test -f docs/architecture/04-protocol-and-sessions.md && echo "living chapter ex
 ```
 # that previously only worked from the REPL path. See P1 ADR
 # docs/archive/architecture/14-engine-call-paths.md (living description:
-# docs/architecture/04-protocol-and-sessions.md).
+# docs/archive/architecture-2026-07/04-protocol-and-sessions.md).
 ```
 
 - [ ] **Step 3: 修改第 63 行(报错输出)**

@@ -25,7 +25,7 @@
 4. **插件面板的内置面板数已从设计稿的 6 个变成 7 个**：quick-chat 已加入，但 `PanelTab` union、`KINDS`/`META` 和渲染 switch 仍是手工多点维护。锚点：`packages/desktop/src/renderer/view.ts:18`、`packages/desktop/src/renderer/panels/PanelArea.tsx:108`、`:464`。
 5. **旧 roadmap 的“只有两个测试文件”已严重过期**：当前扫描到约 728 个 test/spec/smoke 路径；真正缺口是 full-suite 稳定门、builtin 跨层集成、Electron e2e 基座和 coverage gate。CI 当前仍只运行 targeted suites：`.github/workflows/ci.yml:45`。
 6. 当前大文件规模也已变化：`core/index.ts` 859 行、`desktop/main/index.ts` 3494 行、Desktop `App.tsx` 4257 行、TUI `App.tsx` 2369 行。`engine.ts` 拆分属于 TODO 的独立 M 项，本报告在“架构债 P1/P2”中明确排除。
-7. **架构文档措辞债也已自然消失**：当前 `docs/architecture/00-overview.md:70` 明说支持直接构造 Engine，`docs/architecture/04-protocol-and-sessions.md:9` 只把 protocol seam 约束在 interactive hosts，不再声称所有 run 都强制过 client/server，因此不再拆成待做任务。
+7. **架构文档措辞债也已自然消失**：当前 `docs/archive/architecture-2026-07/00-overview.md:70` 明说支持直接构造 Engine，`docs/archive/architecture-2026-07/04-protocol-and-sessions.md:9` 只把 protocol seam 约束在 interactive hosts，不再声称所有 run 都强制过 client/server，因此不再拆成待做任务。
 
 ## 跨 feature 依赖与去重
 
@@ -208,7 +208,7 @@ MVP 只注入数据源的名称/范围/状态，真实内容必须经显式 read
 | ID | 有序子任务（交付/验收） | 依赖 | 体量 | 锚点 | 可独立先做 |
 |---|---|---|---|---|---|
 | EQ-01 | **full-suite 事实基线与清扫清单**：运行完整 `bun test`，分类 deterministic failure、真实平台限定、real-provider opt-in 和 flaky；输出机器可读 allowlist/owner，目标是默认 full suite 可重复绿。 | 无 | S | `package.json:17`；`.github/workflows/ci.yml:45`；`docs/todo/roadmap.md:90` | **是** |
-| EQ-02 | **builtin 风险/覆盖矩阵**：从 `BUILTIN_TOOLS` 派生清单，按 read/write/path/permission/background/bridge 分类，标记 unit、registry integration、host e2e 缺口；CI 检查新工具必须登记。 | 无 | S | `packages/core/src/tool-system/builtin/index.ts:172`；`validate-tool-metadata.test.ts`；`docs/architecture/02-tool-system.md:118` | **是** |
+| EQ-02 | **builtin 风险/覆盖矩阵**：从 `BUILTIN_TOOLS` 派生清单，按 read/write/path/permission/background/bridge 分类，标记 unit、registry integration、host e2e 缺口；CI 检查新工具必须登记。 | 无 | S | `packages/core/src/tool-system/builtin/index.ts:172`；`validate-tool-metadata.test.ts`；`docs/archive/architecture-2026-07/02-tool-system.md:118` | **是** |
 | EQ-03 | **共享 ToolRegistry 集成 harness**：统一 fake ToolContext、cwd/temp HOME、permission decision、abort/timeout 和 result snapshot；测试真正走 registry/executor，不直接调用函数。 | EQ-02 | M | `packages/core/src/tool-system/registry.ts:19`、`:35`；`tool-system/__tests__/` | 否 |
 | EQ-04 | **表驱动 builtin 基础集成组**：先覆盖 read-only 与本地 mutation/path-policy 两组，验证 metadata、visibility、permission、cwd containment、abort 与错误归一。 | EQ-03 | M | `packages/core/src/tool-system/path-policy-array-arg.test.ts`；`executor-permission-hooks.test.ts`；`builtin/index.ts:172` | 否 |
 | EQ-05 | **bridge/长任务集成组**：为 MCP、browser、credentials、background shell、Agent/DriveAgent/GenerateVideo 建 fake bridge/process，覆盖 start→event→cancel/timeout→cleanup。 | EQ-03 | M | `packages/core/src/tool-system/browser-bridge.test.ts`；`mcp-manager.test.ts`；`builtin/background-jobs.test.ts` | 否 |

@@ -11,15 +11,15 @@
 
 本文以现有架构文档为基线，而不是重新发明一套架构：
 
-- `docs/architecture/02-tool-system.md` 将工具路径定义为“preset 可见性 → executor 安全门 →
+- `docs/archive/architecture-2026-07/02-tool-system.md` 将工具路径定义为“preset 可见性 → executor 安全门 →
   registry/handler”；源码中的第二次执行期拦截仍位于
   `packages/core/src/tool-system/executor.ts:157-228`。
-- `docs/architecture/05-presets-prompt-hooks-skills.md` 将 preset 定义为 prompt、工具可见性和默认权限的
+- `docs/archive/architecture-2026-07/05-presets-prompt-hooks-skills.md` 将 preset 定义为 prompt、工具可见性和默认权限的
   组合；当前 `AgentPreset` 的实际字段见 `packages/core/src/preset/index.ts:22-32`。
-- `docs/architecture/07-plugins-capabilities-credentials-memory.md` 把插件运行面归纳为 hooks、MCP、skills、
+- `docs/archive/architecture-2026-07/07-plugins-capabilities-credentials-memory.md` 把插件运行面归纳为 hooks、MCP、skills、
   agents、commands；当前只读 inventory 也确实只有这五类，见
   `packages/core/src/plugins/pluginContent.ts:15-26`。
-- `docs/architecture/10-desktop-and-mobile.md` 和
+- `docs/archive/architecture-2026-07/10-desktop-and-mobile.md` 和
   `docs/core-deep-dive/v2-05-protocol-hosts-orchestration-deep-dive.md` 的宿主边界是“renderer 只经
   preload/IPC 调 main”；源码约束见 `packages/desktop/src/preload/index.ts:1-16`、
   `packages/desktop/src/preload/index.ts:365-386`。

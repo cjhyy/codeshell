@@ -377,7 +377,7 @@
 **准确性要求**：
 - 成稿前逐条核对 §2 红线。
 - 凡涉及 protocol、desktop main、durable background、core 是否 coding agent 的句子，都要避免绝对化。
-- `docs/architecture/00-overview.md` 里关于 “Everything runs through protocol seam” 的概括不得照抄为绝对事实；以本规划红线和当前源码为准。
+- `docs/archive/architecture-2026-07/00-overview.md` 里关于 “Everything runs through protocol seam” 的概括不得照抄为绝对事实；以本规划红线和当前源码为准。
 - 行号只写“在某文件/某函数附近”，不要把漂移行号当事实。
 
 **素材与结构要求**：

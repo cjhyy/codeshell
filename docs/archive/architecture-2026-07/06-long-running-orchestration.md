@@ -4,9 +4,9 @@
 > machinery for work that can outlive a single interactive prompt. Source-mapped
 > against the current `packages/core/src/` tree.
 
-![Sub-agent and background-work wakeup flow](images/long-running-subagents-background.png)
+![Sub-agent and background-work wakeup flow](../../architecture/images/long-running-subagents-background.png)
 
-![Run, cron, and goal lifecycle](images/long-running-run-cron-goal.png)
+![Run, cron, and goal lifecycle](../../architecture/images/long-running-run-cron-goal.png)
 
 ## 1. Managed runs (`packages/core/src/run/`)
 

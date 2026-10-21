@@ -18,7 +18,7 @@ node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round2
 
 ## 普通合同与去重
 
-[run.ts](../../packages/tui/src/cli/commands/run.ts#L230) 逐 invocation 创建 renderer，client stream 的 envelope.event 传给 onEvent；onComplete 实际只收到 `{ sessionId, turnCount }`。这支持本批普通 final metadata 控制，不存在本批可达的 type/text/reason/result 自造碰撞输入。输出模式见 [main.ts](../../packages/tui/src/cli/main.ts#L70) 与 [headless 文档](../architecture/09-tui.md#L94)。这些 selected caller/document 只静态审查，没有调用 CLI、transport、run 或进程退出。
+[run.ts](../../packages/tui/src/cli/commands/run.ts#L230) 逐 invocation 创建 renderer，client stream 的 envelope.event 传给 onEvent；onComplete 实际只收到 `{ sessionId, turnCount }`。这支持本批普通 final metadata 控制，不存在本批可达的 type/text/reason/result 自造碰撞输入。输出模式见 [main.ts](../../packages/tui/src/cli/main.ts#L70) 与 [headless 文档](../archive/architecture-2026-07/09-tui.md#L94)。这些 selected caller/document 只静态审查，没有调用 CLI、transport、run 或进程退出。
 
 [全历史扫描](evidence/jsonoutput-dedup.json) 排除本批，含 **1,189 Markdown + 980 JSON = 2,169 文件**，递归值 **288,528 string leaves / 404,370 scalar leaves**，0 JSON parse errors。三个模式分别有133/488/148条 Markdown 行或值叶匹配，每组只保留前100上下文，每段最多1,200字符；匹配不是语义穷尽。库存描述冻结工作树读取时点，不保证后来 main 文档不变。[去重决定](evidence/jsonoutput-dedup-decisions.json) 明确：旧 [A12](../audit-2026-10-16/root.md#L99) 的 child delta + 空 final fallback 已确认，本批不重现或重记；2026-05-30 backlog_verdicts 的 JSON renderer reuse 第107项为 false_positive，当前一次 run 一个实例，没有普通复用 producer，不恢复此疑似问题。
 

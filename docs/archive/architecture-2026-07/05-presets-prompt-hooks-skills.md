@@ -36,7 +36,7 @@ Default permission rules are part of the preset, but they do not expose a tool b
 
 ## 2. Prompt assembly (`prompt/`)
 
-![Prompt assembly pipeline](images/prompt-assembly-pipeline.png)
+![Prompt assembly pipeline](../../architecture/images/prompt-assembly-pipeline.png)
 
 | File                            | Role                                                                                        | LOC |
 | ------------------------------- | ------------------------------------------------------------------------------------------- | --- |
@@ -74,7 +74,7 @@ Dynamic context is intentionally past the cache breakpoint. `buildDynamicContext
 
 ## 3. Hooks (`hooks/` + plugin hook loader)
 
-![Hook lifecycle pipeline](images/hook-lifecycle-pipeline.png)
+![Hook lifecycle pipeline](../../architecture/images/hook-lifecycle-pipeline.png)
 
 | File                           | Role                                                                                | LOC |
 | ------------------------------ | ----------------------------------------------------------------------------------- | --- |

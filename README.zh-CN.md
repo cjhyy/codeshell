@@ -257,7 +257,7 @@ assets/       # README / product images (mascot, promo hero, Playwright desktop 
 docs/
 ├── architecture/        # System architecture chapters + feature inventory
 ├── todo/                # Roadmap + forward-looking design docs
-└── archive/             # Superseded design docs, audits, and prior architecture set
+└── archive/             # Superseded design docs, audits, and earlier architecture sets
 
 scripts/      # Build, release, and repo maintenance scripts
 ```
@@ -288,14 +288,14 @@ bun run build
 
 ## 延伸阅读
 
-- [Architecture & feature inventory](docs/architecture/README.md)
+- [架构（函数级 00–10 章）与能力盘点](docs/architecture/README.md)
 - [Plugin panels v1](docs/plugin-panels.md)
 - [视频剪辑参考插件](examples/plugins/video-editor/README.md)
 - [包边界与 Pet 拆分理由](docs/architecture/12-package-boundaries-and-release-units.md)
 - [插件能力差距矩阵](docs/architecture/13-plugin-parity-and-video-editor.md)
 - [数字人与 Pet 架构](docs/architecture/14-digital-human-and-pet.md)
 - [Roadmap & TODO](docs/todo/README.md)
-- [Prior architecture documentation set (archived, pending rewrite)](docs/archive/architecture/README.md)
+- 已归档的架构文档：[2026-07 版](docs/archive/architecture-2026-07/README.md)、[2026-05 版](docs/archive/architecture/README.md)
 
 ---
 

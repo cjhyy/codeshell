@@ -4,7 +4,7 @@
 > 基线：codeshell `main @ 08eaa4369`（0.9.41 源码已合入、尚未正式发布；v0.9.40 之后 97 个提交）；codeshell-services `main @ a5958f0`（锁定 `@cjhyy/code-shell-server` 0.9.38）
 > 对照：Codex（本机 ChatGPT.app 26.1002.52244 安装包、本仓库第 15 章）、Claude Code（公开设计）
 > 上游文档：[15 · Codex 对比与路线](15-codex-harness-comparison-and-roadmap.md)（Protocol v2 契约与术语以该章为准）
-> 并行文档：[统一工作台规划](../todo/unified-desktop-web-mobile-workbench-plan.md)（产品模型）、[项目本地与云端运行 V2](../todo/project-cloud-runtime-v2-plan.md)（运行位置）、[Browser Panel Runtime 设计](../todo/browser-panel-runtime-design.md)
+> 并行文档：[统一工作台规划](../todo/unified-desktop-web-mobile-workbench-plan.md)（产品模型）、[项目本地与云端运行 V2](../todo/project-cloud-runtime-v2-plan.md)（运行位置）、Browser Panel Runtime 设计（该文档从未入库）
 > 示意图：[目标架构交互图](archify/platform-consolidation-target.architecture.html)
 
 ## 0. 摘要

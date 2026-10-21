@@ -304,7 +304,7 @@ Bash 工具读取 `ctx.sandbox ?? off`，sandboxed 时用 hardened env allowlist
 
 - 严重度：P3。
 - 现状：当前 TurnLoop 主链路用 `toolResultToBlock()`，会保留 `contentBlocks` 并给错误设置 `is_error`。`ToolExecutor.resultsToMessages()` 仍把 result/error 简化为纯文本，忽略 `contentBlocks` 和 `isError`。本轮 `rg "resultsToMessages("` 未发现源码调用，但旧文档仍引用。
-- 证据：主链路转换见 `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1024`；旧 helper 见 `packages/core/src/tool-system/executor.ts:638`、`packages/core/src/tool-system/executor.ts:641`；旧文档引用见 `docs/architecture/02-tool-system.md:49`。
+- 证据：主链路转换见 `packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1024`；旧 helper 见 `packages/core/src/tool-system/executor.ts:638`、`packages/core/src/tool-system/executor.ts:641`；旧文档引用见 `docs/archive/architecture-2026-07/02-tool-system.md:49`。
 - 为什么可疑：如果后续 SDK/测试/重构重新使用这个 helper，image result 会退化成文本，错误 result 也可能少掉 provider wire 层 `is_error`，破坏 I-01/I-17 的“错误不能伪装成功”语义。
 - 建议：删除 helper，或让它委托 `toolResultToBlock()` / 共享同一个转换函数；同步更新旧架构文档。
 

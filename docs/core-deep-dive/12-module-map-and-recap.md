@@ -75,18 +75,18 @@ logs/ · bg-shells/ · cache/models/ · mcp_images/ · agents/ · skills/
 
 | 想深入 | 顶层目录 | 对应文章 | 对应架构文档 |
 |--------|----------|----------|--------------|
-| 公共 API | `index.ts` | [01](01-core-overview.md) | `docs/architecture/00-overview.md` |
-| turn loop / 上下文 | `engine/`、`context/` | [02](02-engine-turn-loop.md) | `01-engine-and-turn-loop.md` |
-| 工具 / 权限 / 沙箱 | `tool-system/` | [03](03-tool-system.md) | `02-tool-system.md` |
-| 模型 / catalog | `llm/`、`model-catalog/` | [04](04-llm-model-layer.md) | `03-llm-and-model-layer.md` |
-| 协议 / 会话 | `protocol/`、`session/` | [05](05-protocol-and-sessions.md) | `04-protocol-and-sessions.md` |
-| preset / prompt / hooks / skills | `preset/`、`prompt/`、`hooks/`、`skills/` | [06](06-presets-prompt-hooks-skills.md) | `05-presets-prompt-hooks-skills.md` |
-| run / cron / goal | `run/`、`automation/`、`cron/` | [07](07-run-automation-goal.md) | `06-long-running-orchestration.md` |
-| 插件 / 能力 / 凭证 / 记忆 | `plugins/`、`capability-control/`、`credentials/`、`session/memory.ts` | [08](08-plugins-capabilities-credentials-memory.md) | `07-plugins-capabilities-credentials-memory.md` |
-| Arena / 集成 | `arena/`、`cc-orchestrator/`、`stt/`、`review/` | [09](09-arena-and-integrations.md) | `08-arena-and-integrations.md` |
-| TUI 宿主 | `packages/tui/` | [10](10-tui-host.md) | `09-tui.md` |
-| 桌面/手机/CDP 宿主 | `packages/desktop/`、`packages/cdp/` | [11](11-desktop-mobile-host.md) | `10-desktop-and-mobile.md` |
-| 跨切面 / 模块地图 | `settings/`、`onboarding.ts`、`runtime/` | 本篇 | `00-overview.md`(末段) |
+| 公共 API | `index.ts` | [01](01-core-overview.md) | `docs/architecture/00-overview.md`、`05-core-runtime-settings-composition.md` |
+| turn loop / 上下文 | `engine/`、`context/` | [02](02-engine-turn-loop.md) | `01-core-engine.md`、`03-core-llm-session-context.md` |
+| 工具 / 权限 / 沙箱 | `tool-system/` | [03](03-tool-system.md) | `02-core-tool-system.md` |
+| 模型 / catalog | `llm/`、`model-catalog/` | [04](04-llm-model-layer.md) | `03-core-llm-session-context.md` |
+| 协议 / 会话 | `protocol/`、`session/` | [05](05-protocol-and-sessions.md) | `04-core-protocol-plugins-links.md`、`03-core-llm-session-context.md` |
+| preset / prompt / hooks / skills | `preset/`、`prompt/`、`hooks/`、`skills/` | [06](06-presets-prompt-hooks-skills.md) | `02`（hooks）、`03`（prompt）、`04`（skills）、`05`（preset） |
+| run / cron / goal | `run/`、`automation/`、`cron/` | [07](07-run-automation-goal.md) | `01-core-engine.md` |
+| 插件 / 能力 / 凭证 / 记忆 | `plugins/`、`capability-control/`、`credentials/`、`session/memory.ts` | [08](08-plugins-capabilities-credentials-memory.md) | `04-core-protocol-plugins-links.md`、`05-core-runtime-settings-composition.md` |
+| Arena / 集成 | `arena/`、`cc-orchestrator/`、`stt/`、`review/` | [09](09-arena-and-integrations.md) | `06-capability-packages.md` |
+| TUI 宿主 | `packages/tui/` | [10](10-tui-host.md) | `07-tui.md` |
+| 桌面/手机/CDP 宿主 | `packages/desktop/`、`packages/cdp/` | [11](11-desktop-mobile-host.md) | `08-desktop-main.md`、`09-desktop-renderer-mobile-web.md` |
+| 跨切面 / 模块地图 | `settings/`、`onboarding.ts`、`runtime/` | 本篇 | `05-core-runtime-settings-composition.md` |
 
 > 本系列是 `docs/architecture/` 的科普重写版:**事实以架构文档与当前源码为准**;架构文档有精确 `file:line` 锚点,可在那查具体行号(行号会漂移,以源码为准)。
 

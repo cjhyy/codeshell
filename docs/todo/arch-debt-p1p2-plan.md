@@ -59,7 +59,7 @@ Goal 纯模型 -> legacy decoder -> state 领域更新 -> Engine/host 切换 -> 
 
 - core 是 UI 无关的通用 agent harness；交互式 TUI/desktop 主路径通常经
   `AgentClient -> AgentServer -> ChatSession -> Engine`，但 SDK、子 Agent、测试和专用 runner 可以
-  直接构造 Engine。证据见 `docs/architecture/00-overview.md:41-75`、
+  直接构造 Engine。证据见 `docs/archive/architecture-2026-07/00-overview.md:41-75`、
   `docs/core-deep-dive/v2-01-core-as-agent-harness.md:201-218`、
   `docs/core-deep-dive/v2-05-protocol-hosts-orchestration-deep-dive.md:94-121`。
 - 工具注册目前是“静态总表 + preset 白名单”两层：`ToolRegistry` 静态导入
@@ -418,8 +418,8 @@ P2 邻接边界（与 Goal schema 无逻辑耦合，但列入本轮完成矩阵�
   - `0 0 29 2 *` 从 2027-03-01 返回 2028-02-29；`0 0 30 2 *` 在搜索窗口内返回 `null`；
   - 月末 31 日跨短月、恰好命中时仍严格返回未来分钟。
   这些期望已在当前 HEAD 用只读 `bun -e` 调用核实，不是推测。
-- 文档措辞：`docs/architecture/00-overview.md:59-75` 与 v2 文档已经明确 protocol 例外；
-  `docs/architecture/04-protocol-and-sessions.md:7-11` 虽已限定“interactive hosts”，仍应补一句 SDK/
+- 文档措辞：`docs/archive/architecture-2026-07/00-overview.md:59-75` 与 v2 文档已经明确 protocol 例外；
+  `docs/archive/architecture-2026-07/04-protocol-and-sessions.md:7-11` 虽已限定“interactive hosts”，仍应补一句 SDK/
   `asyncAgentRegistry`/测试可直接 Engine，避免再次被概括成硬不变量。Goal 切换后同步把该文档
   `:91` 的“single persistent activeGoal”改成 versioned `goalLifecycle`，并更新 long-running 图文。
 

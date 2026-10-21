@@ -55,7 +55,7 @@ MVP 不做：
 - mobile remote 两份设计已经确定“Web/PWA + HTTP/WS + trusted device + 复用 core permission”的桌面遥控方向，并明确 remote host 只是 transport/UI，不实现第二套 runtime（`docs/superpowers/specs/2026-06-06-mobile-remote-control-design.md:110`、`docs/superpowers/specs/2026-06-06-mobile-remote-control-design.md:455`）。本稿不重做手机遥控设计，只回答如何脱离 Electron、增加账号与多用户隔离。
 - tunnel 设计已经解释 quick tunnel、loopback、passcode、WSS 和不自动重启的选择（`docs/superpowers/specs/2026-06-09-mobile-remote-tunnel-design.md:27`、`docs/superpowers/specs/2026-06-09-mobile-remote-tunnel-design.md:97`）。本稿把 tunnel 视为可选接入方式，不把它当账号系统。
 - IM gateway 文档已经把 gateway 定位为“通道 + 生命周期编排”，并把 tunnel/host 是否从 main 抽出列为未决（`docs/todo/im-gateway-remote-orchestration.md:18`、`docs/todo/im-gateway-remote-orchestration.md:43`）。本稿给出的 `packages/server` 可成为未来 gateway/assistant 的受控服务端，但不纳入 Phase 1。
-- 协议与 desktop/mobile 架构文档已说明 stdio/TCP/IPC 和 mobile 链路（`docs/architecture/04-protocol-and-sessions.md:23`、`docs/architecture/10-desktop-and-mobile.md:48`）。本稿重点增加 tenant/account/authorization/storage 视角。
+- 协议与 desktop/mobile 架构文档已说明 stdio/TCP/IPC 和 mobile 链路（`docs/archive/architecture-2026-07/04-protocol-and-sessions.md:23`、`docs/archive/architecture-2026-07/10-desktop-and-mobile.md:48`）。本稿重点增加 tenant/account/authorization/storage 视角。
 - connector 方案里的 `Connection` 是第三方 provider 账号实例，不是 CodeShell 终端用户账号；该文档也明确 credentials 只是 secret material、还不是 identity-aware connection（`docs/nightly-2026-07-10/connector-capability-plan.md:125`、`docs/nightly-2026-07-10/connector-capability-plan.md:260`）。两套“账号”不可混用，但 server 用户隔离必须包住未来 connector connection/grant。
 
 ### 2.2 Protocol / Server 的真实传输与生命周期

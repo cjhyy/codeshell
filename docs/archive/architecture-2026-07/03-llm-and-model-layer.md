@@ -18,7 +18,7 @@ The layer deliberately splits **model identity** from **runtime knobs**. `LLMCon
 | `model-catalog/` | built-in + user catalog, `CatalogEntry`, `ParamSpec`, instance resolution, safe user-catalog writes | ~940 |
 | `engine/resolve-llm-config.ts`, `engine/model-connections-pool.ts`, `engine/runtime.ts`, `engine/aux-key.ts` | settings → pool entries, shared-runtime reload, aux model resolution | ~226 |
 
-![LLM adapter layers](images/llm-adapter-layers.png)
+![LLM adapter layers](../../architecture/images/llm-adapter-layers.png)
 
 Do not confuse the three "catalog" concepts:
 - `model-catalog/` is the user-facing template catalog. `getMergedCatalog()` overlays `~/.code-shell/model-catalog.user.json` on `BUILTIN_CATALOG`, with user entries winning by `id` (`model-catalog/index.ts:49`, `model-catalog/index.ts:54`).
@@ -27,7 +27,7 @@ Do not confuse the three "catalog" concepts:
 
 ## 2. The resolution flow
 
-![Model catalog and reasoning flow](images/model-catalog-reasoning-flow.png)
+![Model catalog and reasoning flow](../../architecture/images/model-catalog-reasoning-flow.png)
 
 A normal text chat turn gets its `LLMConfig` through the unified instance store:
 

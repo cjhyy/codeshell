@@ -8,7 +8,7 @@
 # status notifications, and the in-process running lock — three behaviors
 # that previously only worked from the REPL path. See P1 ADR
 # docs/archive/architecture/14-engine-call-paths.md (living description:
-# docs/architecture/04-protocol-and-sessions.md).
+# docs/architecture/04-core-protocol-plugins-links.md).
 #
 # Allowed sites:
 #   packages/core/src/engine/engine.ts       — Engine class itself + sub-agent spawn

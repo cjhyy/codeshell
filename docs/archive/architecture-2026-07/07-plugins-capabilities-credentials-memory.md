@@ -10,7 +10,7 @@ CodeShell has three plugin install families:
 2. **Local/direct install** (`code-shell plugin install <source>` and the desktop dir/zip entry) installs into `~/.code-shell/plugins/<name>/`, detects CC vs Codex, converts Codex assets into the CC-shaped runtime layout, writes `.cs-meta.json`, and registers the plugin as `name@local`.
 3. **Public npm Phase A** (`code-shell plugin install npm:<package>@<exact-or-tag>`) resolves only against `registry.npmjs.org`, locks a tag to an exact version, verifies the registry SHA-512 digest, and then hands a self-contained package to the same local projector. It never runs npm/Bun, lifecycle scripts, dependency installation, private registries, ranges, or auto-update.
 
-![Plugin extension surface](images/plugin-extension-surface.png)
+![Plugin extension surface](../../architecture/images/plugin-extension-surface.png)
 
 | File                                                               | Role                                                                                                                                        | Anchor                                                                                                                                                       |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -105,7 +105,7 @@ Agents are first-class here too. `projectAgents` excludes plugin-sourced agents 
 
 The credential layer stores `token`, `link`, and `cookie` credentials in user/project scopes, lists them only in masked form, and exposes two AI-facing tools: `UseCredential` for values or temporary `cookies.txt`, and `InjectCredential` for browser cookie restoration.
 
-![Credential store gates](images/credential-store-gates.png)
+![Credential store gates](../../architecture/images/credential-store-gates.png)
 
 | File                                    | Role                                                                                                        | Anchor                                                                                                                                                                                                                                                                     |
 | --------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -129,7 +129,7 @@ The credential layer stores `token`, `link`, and `cookie` credentials in user/pr
 
 Memory is a two-location (`global` / `project`) and three-scope (`user` / `dream` / `pending`) markdown store. Prompt injection uses only compact indexes from `user` and `dream`; full bodies are fetched on demand with `MemoryRead`, which records recall metadata for TTL and UI visibility.
 
-![Memory scopes and Dream](images/memory-scopes-and-dream.png)
+![Memory scopes and Dream](../../architecture/images/memory-scopes-and-dream.png)
 
 ### Storage and injection (`session/memory.ts`, `tool-system/builtin/memory.ts`)
 

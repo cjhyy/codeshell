@@ -102,7 +102,7 @@ AgentClient.run(task, sessionId)
 - **测试**:大量单测直接装配 Engine,绕开协议层。
 - **桌面 automation 的活跃路径**:这是最有教学价值的反例,下一节展开。
 
-所以本系列所有相关表述都写成"**host 主路径 / 推荐接缝**",绝不写成"一律经过 protocol"。`docs/architecture/00-overview.md` 里那句 "Everything runs through protocol seam" 是一个理想化概括,**不能照抄为绝对事实**。
+所以本系列所有相关表述都写成"**host 主路径 / 推荐接缝**",绝不写成"一律经过 protocol"。`docs/archive/architecture-2026-07/00-overview.md` 里那句 "Everything runs through protocol seam" 是一个理想化概括,**不能照抄为绝对事实**。
 
 ### 桌面 automation 的活跃路径就在 main 进程里直接跑 Engine
 
