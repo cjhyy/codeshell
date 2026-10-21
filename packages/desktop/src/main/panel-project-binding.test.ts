@@ -39,6 +39,10 @@ const { CronScheduler } = await import("@cjhyy/code-shell-core/internal");
 const { SessionManager } = await import("@cjhyy/code-shell-core");
 const { readOutputJournal } = await import("@cjhyy/code-shell-core/internal");
 const { MainOutputPublisher } = await import("./main-output-publisher.js");
+const { ProjectStore } = await import("./project-store.js");
+const { SessionCwdIndex } = await import("./session-cwd-index.js");
+const { createDesktopPanelProjectScopeResolver, isRegisteredPanelProjectRoot } =
+  await import("./panel-project-scope.js");
 
 // Execute actual Main methods without Electron startup or replacing their bind logic.
 const source = readFileSync(new URL("./panel-app-bridge.ts", import.meta.url), "utf8");
@@ -85,6 +89,7 @@ const methods = [
   "storageVersioned",
   "storageSet",
   "storageDelete",
+  "storagePath",
 ].map((name) => {
   const method = declaration.members.find(
     (node) => ts.isMethodDeclaration(node) && node.name.getText(parsed) === name,
@@ -183,6 +188,8 @@ function fixture(permissions = ["context.workspace", "context.session"]) {
       "sha256:" + createHash("sha256").update(value).digest("hex"),
     resolvePanelAppBindingProjectPath: (path: string) =>
       path === "/project-worktree" ? "/project" : path,
+    createHash,
+    app: { getPath: () => tmpdir() },
     isPanelAppDescriptorSelected: () => true,
     BrowserWindow: {
       fromWebContents: (value: unknown) => (value === sender ? owner : undefined),
@@ -961,4 +968,78 @@ test("real final storage prepare cannot publish after guest or registry revocati
         rmSync(root, { recursive: true, force: true });
       }
     }
+});
+
+test("R22: a Session on a registered secondary root opens with project identity, storage and its own execution root", async () => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "panel-binding-multiroot-")));
+  try {
+    const [primary, secondary, other] = ["primary", "secondary", "other"].map((name) => {
+      mkdirSync(join(root, name));
+      return join(root, name);
+    });
+    const store = new ProjectStore({
+      file: join(root, "registry", "projects.json"),
+      recentsFile: join(root, "registry", "recents.json"),
+      migrationMarkerFile: join(root, "registry", "migration.json"),
+      sessionIndex: new SessionCwdIndex({ sessionsRoot: join(root, "sessions") }),
+      noRepoPath: join(root, "no-repo"),
+    });
+    const project = await store.createFromPath(primary);
+    await store.addRoot(project.id, secondary);
+    await store.createFromPath(other);
+    const resolveProjectScope = createDesktopPanelProjectScopeResolver({
+      store,
+      environmentDir: join(root, "desktop"),
+    });
+    let membershipChecks = 0;
+    // Each case is a freshly opened Panel bound to the project's primary root.
+    const open = (cwd: string, registry = true) => {
+      const f = fixture(["context.workspace", "context.session", "storage"]);
+      f.binding.projectPath = primary;
+      f.bridge.options.resolveProjectScope = resolveProjectScope;
+      if (registry)
+        f.bridge.options.isProjectRoot = (projectPath: string, rootPath: string) => {
+          membershipChecks++;
+          return isRegisteredPanelProjectRoot(store, projectPath, rootPath);
+        };
+      return {
+        f,
+        bind: () => f.bridge.bindGuest(f.sender, { ...f.input, projectPath: primary, cwd }),
+      };
+    };
+
+    const onPrimary = open(primary);
+    expect(await onPrimary.bind()).toBe(true);
+    expect(membershipChecks).toBe(0);
+    const primaryContext = onPrimary.f.bridge.contextFor(onPrimary.f.guest);
+    expect(primaryContext.cwd).toBe(primary);
+    expect(primaryContext.projectScope).toEqual(
+      (await resolveProjectScope(primary, primary))!.scope,
+    );
+
+    const onSecondary = open(secondary);
+    expect(await onSecondary.bind()).toBe(true);
+    const context = onSecondary.f.bridge.contextFor(onSecondary.f.guest);
+    expect(context.cwd).toBe(secondary);
+    expect((onSecondary.f.binding as { cwd?: string }).cwd).toBe(secondary);
+    expect(onSecondary.f.binding.projectPath).toBe(primary);
+    expect(context.projectScope.projectId).toBe(project.id);
+    expect(context.projectScope.environmentId).toBe(primaryContext.projectScope.environmentId);
+    expect(context.projectScope).toEqual((await resolveProjectScope(primary, secondary))!.scope);
+    expect(onSecondary.f.bridge.storagePath(onSecondary.f.binding)).toBe(
+      onPrimary.f.bridge.storagePath(onPrimary.f.binding),
+    );
+
+    const onOtherProject = open(other);
+    await expect(onOtherProject.bind()).rejects.toThrow(
+      "Panel App workspace does not belong to its bound project",
+    );
+    expect(onOtherProject.f.events).toHaveLength(0);
+    const withoutRegistry = open(secondary, false);
+    await expect(withoutRegistry.bind()).rejects.toThrow(
+      "Panel App workspace does not belong to its bound project",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

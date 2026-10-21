@@ -232,6 +232,8 @@ export interface PanelAppBridgeOptions {
   isWorkspaceTrusted(cwd: string): boolean;
   /** Rechecked on prepare, bind, Agent invocation, and every Host call. */
   isPanelAppBound(projectPath: string, appId: string): boolean;
+  /** Main's project registry: `rootPath` is a registered root of the project at `projectPath`. */
+  isProjectRoot?(projectPath: string, rootPath: string): boolean;
   /** Shared with paired Web; IDs are resolved by Main, never accepted from a guest. */
   resolveProjectScope?(
     projectPath: string,
@@ -1220,7 +1222,14 @@ export class PanelAppBridge {
     if (bindingProjectPath !== binding.projectPath) {
       throw new Error("Panel App project binding does not match its prepared scope");
     }
-    if (input.cwd && resolvePanelAppBindingProjectPath(input.cwd) !== binding.projectPath) {
+    // Identity and storage stay with the bound project; a Session on another
+    // registered root of that project executes there (Main's registry proves it).
+    const workspaceRoot = input.cwd && resolvePanelAppBindingProjectPath(input.cwd);
+    if (
+      workspaceRoot &&
+      workspaceRoot !== binding.projectPath &&
+      !this.options.isProjectRoot?.(binding.projectPath, workspaceRoot)
+    ) {
       throw new Error("Panel App workspace does not belong to its bound project");
     }
     this.assertProjectBinding(binding);
@@ -2518,7 +2527,7 @@ export class PanelAppBridge {
     const descriptor = binding.resource?.descriptor;
     const revision = descriptor?.revision;
     const appId = descriptor?.appId;
-    let topology: ReturnType<typeof createPanelDirectoryProjectScope> | undefined = undefined;
+    let topology: { projectPath: string; assertCurrent(): void } | undefined = undefined;
     const assertCurrent = () => {
       if (
         !cwd ||
@@ -2544,7 +2553,24 @@ export class PanelAppBridge {
     assertCurrent();
     const workspacePath = await this.trustedWorkspaceRoot(binding);
     assertCurrent();
-    topology = createPanelDirectoryProjectScope(workspacePath, projectPath);
+    // A secondary root's workspace is proven against that root, and Main's
+    // registry proves the root belongs to the project that keeps the bookmarks.
+    const isProjectRoot = (root: string) =>
+      this.options.isProjectRoot?.(projectPath, root) === true;
+    const root = this.options.isProjectRoot && resolvePanelAppBindingProjectPath(workspacePath);
+    if (root && root !== projectPath && isProjectRoot(root)) {
+      const workspace = createPanelDirectoryProjectScope(workspacePath, root);
+      const project = createPanelDirectoryProjectScope(projectPath, projectPath);
+      topology = {
+        projectPath: project.projectPath,
+        assertCurrent: () => {
+          workspace.assertCurrent();
+          project.assertCurrent();
+          if (!isProjectRoot(root))
+            throw new PanelBridgeError("REVOKED", "Directory project root authorization changed");
+        },
+      };
+    } else topology = createPanelDirectoryProjectScope(workspacePath, projectPath);
     assertCurrent();
     return { workspacePath, projectPath: topology.projectPath, assertCurrent };
   }
