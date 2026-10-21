@@ -213,6 +213,8 @@ export class ExternalRuntimeService {
   private readonly lifecycleTails = new Map<string, Promise<void>>();
   /** At most one notification-drain continuation may be scheduled per Session. */
   private readonly backgroundWakeups = new Set<string>();
+  /** Keep business-session custody while its physical runtime is being replaced. */
+  private readonly retainedBackgroundOwners = new Map<string, { ownerWebContentsId?: number }>();
   private backgroundWorkUnsubscribe?: () => void;
   private readonly prepareCodexLaunch: (cwd: string) => Promise<CodexLaunch>;
   private readonly goals: ExternalRuntimeGoals;
@@ -385,7 +387,7 @@ export class ExternalRuntimeService {
 
   private assertOwner(sessionId: string, callerWebContentsId?: number): void {
     if (callerWebContentsId === undefined) return; // trusted main-process caller
-    const entry = this.sessions.get(sessionId);
+    const entry = this.sessions.get(sessionId) ?? this.retainedBackgroundOwners.get(sessionId);
     // An existing ownerless session was created by trusted main-process code;
     // renderer IPC must not claim it merely because its owner field is absent.
     if (entry && entry.ownerWebContentsId !== callerWebContentsId) {
@@ -471,7 +473,7 @@ export class ExternalRuntimeService {
   }
 
   /** Always attempt both registry and approval cleanup; return the first failure. */
-  private releaseHostSession(sessionId: string): unknown {
+  private releaseHostSession(sessionId: string, preserveBackgroundWork = false): unknown {
     let firstError: unknown;
     try {
       this.deps.releaseSession(sessionId);
@@ -483,10 +485,13 @@ export class ExternalRuntimeService {
     } catch (error) {
       firstError ??= error;
     }
-    try {
-      this.deps.backgroundWork?.dropSession(sessionId);
-    } catch (error) {
-      firstError ??= error;
+    if (!preserveBackgroundWork) {
+      this.retainedBackgroundOwners.delete(sessionId);
+      try {
+        this.deps.backgroundWork?.dropSession(sessionId);
+      } catch (error) {
+        firstError ??= error;
+      }
     }
     return firstError;
   }
@@ -620,7 +625,7 @@ export class ExternalRuntimeService {
 
     // Replacing an existing session: close the old one first so two runtimes
     // cannot interleave turns on the same business session.
-    await this.stopExclusive(request.sessionId);
+    await this.stopExclusive(request.sessionId, true);
 
     // Trust is resolved HERE, from the store Desktop owns. `permissions` is the
     // first DANGEROUS_PROJECT_FIELD, so an untrusted project's rules must be
@@ -1024,7 +1029,9 @@ export class ExternalRuntimeService {
       });
     } catch (error) {
       lifecycle.active = false;
-      const cleanupError = this.releaseHostSession(request.sessionId);
+      // Startup failure does not revoke work owned by this business Session.
+      // A later replacement can receive its result; explicit Stop still cancels it.
+      const cleanupError = this.releaseHostSession(request.sessionId, true);
       if (cleanupError) {
         dlog("external-runtime", "session.start_cleanup_failed", {
           sessionId: request.sessionId,
@@ -1063,6 +1070,7 @@ export class ExternalRuntimeService {
       ...(ownerId !== undefined ? { ownerWebContentsId: ownerId } : {}),
       ...(request.model ? { model: request.model } : {}),
     });
+    this.retainedBackgroundOwners.delete(request.sessionId);
     this.notifySessionStateSafely(request.sessionId, true, ownerId);
     if (session.runtimeSessionId) {
       this.persistBindingSafely(request.sessionId, {
@@ -1080,6 +1088,11 @@ export class ExternalRuntimeService {
       exposedToolCount: session.listTools().length,
       hasOwnerWindow: ownerId !== undefined,
     });
+    // A completion may have arrived while the previous runtime was closing,
+    // when there was no physical receiver. The queue belongs to the Session.
+    if (this.deps.backgroundWork?.hasPending(request.sessionId)) {
+      this.maybeWakeForBackgroundWork(request.sessionId);
+    }
     return session;
   }
 
@@ -1487,9 +1500,17 @@ export class ExternalRuntimeService {
     });
   }
 
-  private async stopExclusive(sessionId: string): Promise<void> {
+  private async stopExclusive(sessionId: string, preserveBackgroundWork = false): Promise<void> {
     const entry = this.sessions.get(sessionId);
-    if (!entry) return;
+    if (!entry) {
+      // A failed replacement can leave background work without a live provider.
+      // Explicit close must still cancel that work and release its owner fence.
+      if (!preserveBackgroundWork && this.retainedBackgroundOwners.has(sessionId)) {
+        const cleanupError = this.releaseHostSession(sessionId);
+        if (cleanupError) throw cleanupError;
+      }
+      return;
+    }
     try {
       entry.finalizeOperations("aborted_streaming");
     } catch {
@@ -1522,6 +1543,11 @@ export class ExternalRuntimeService {
     // final provider event, and a restart can claim the same business id as soon
     // as this method returns.
     entry.lifecycle.active = false;
+    if (preserveBackgroundWork) {
+      this.retainedBackgroundOwners.set(sessionId, {
+        ownerWebContentsId: entry.ownerWebContentsId,
+      });
+    }
     this.sessions.delete(sessionId);
     this.notifySessionStateSafely(sessionId, false, entry.ownerWebContentsId);
     let closeError: unknown;
@@ -1532,7 +1558,7 @@ export class ExternalRuntimeService {
     }
     // A close failure must not skip host cleanup, and a registry cleanup failure
     // must not skip approval cancellation.
-    const cleanupError = this.releaseHostSession(sessionId);
+    const cleanupError = this.releaseHostSession(sessionId, preserveBackgroundWork);
     if (closeError) throw closeError;
     if (cleanupError) throw cleanupError;
     dlog("external-runtime", "session.stopped", { sessionId });
@@ -1543,7 +1569,13 @@ export class ExternalRuntimeService {
    * and a listening port, and neither dies with the parent on Windows.
    */
   async stopAll(): Promise<void> {
-    const ids = [...new Set([...this.sessions.keys(), ...this.lifecycleTails.keys()])];
+    const ids = [
+      ...new Set([
+        ...this.sessions.keys(),
+        ...this.lifecycleTails.keys(),
+        ...this.retainedBackgroundOwners.keys(),
+      ]),
+    ];
     const results = await Promise.allSettled(ids.map((id) => this.stop(id)));
     this.backgroundWorkUnsubscribe?.();
     this.backgroundWorkUnsubscribe = undefined;
@@ -1555,7 +1587,12 @@ export class ExternalRuntimeService {
 
   /** Reap every runtime whose renderer disappeared (notably on macOS, where the app stays alive). */
   async stopOwnedBy(ownerWebContentsId: number): Promise<void> {
-    const ids = [...this.sessions]
+    const ids = [
+      ...new Map<string, { ownerWebContentsId?: number }>([
+        ...this.retainedBackgroundOwners,
+        ...this.sessions,
+      ]),
+    ]
       .filter(([, entry]) => entry.ownerWebContentsId === ownerWebContentsId)
       .map(([sessionId]) => sessionId);
     await Promise.allSettled(ids.map((sessionId) => this.stop(sessionId)));

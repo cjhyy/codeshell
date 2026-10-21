@@ -23,7 +23,7 @@ import {
   type StreamEvent,
   type ToolRegistry,
 } from "@cjhyy/code-shell-core";
-import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
+import { backgroundJobRegistry, ModelTraceStore } from "@cjhyy/code-shell-core/internal";
 import { createSessionToolHost, FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
 import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { EXTERNAL_GOAL_TOOLS } from "./external-runtime-goals.js";
@@ -36,6 +36,7 @@ const starts: StartArgs[] = [];
 const closed: string[] = [];
 /** When set, the next fake provider send rejects the way a dead process does. */
 let failNextSend = false;
+let failNextStart = false;
 let providerSend:
   | ((args: StartArgs, input: { text: string; injected?: boolean }) => Promise<void>)
   | undefined;
@@ -90,6 +91,10 @@ mock.module("@cjhyy/code-shell-capability-coding/external-runtimes", () => ({
   ...runtimeExports,
   startExternalRuntimeSession: async (args: StartArgs) => {
     starts.push(args);
+    if (failNextStart) {
+      failNextStart = false;
+      throw new Error("provider startup failed");
+    }
     return fakeSession(args);
   },
   textWithAttachmentReferences: (input: { text: string; attachments?: Array<{ path: string }> }) =>
@@ -146,6 +151,59 @@ const request = {
   ownerWindow: { webContents: { id: 77 } } as never,
 };
 
+function backgroundDelivery() {
+  type Listener = Parameters<
+    NonNullable<ExternalRuntimeServiceDeps["backgroundWork"]>["subscribe"]
+  >[0];
+  let listener: Listener | undefined;
+  const pending = new Map<string, string>();
+  const running = new Set<string>();
+  const dropped: string[] = [];
+  const delivery = {
+    subscribe(next: Listener) {
+      listener = next;
+      return () => {
+        listener = undefined;
+      };
+    },
+    hasPending: (sessionId: string) => pending.has(sessionId),
+    hasRunning: (sessionId: string) => running.has(sessionId),
+    drainMessage(sessionId: string) {
+      const message = pending.get(sessionId);
+      pending.delete(sessionId);
+      return message;
+    },
+    dropSession(sessionId: string) {
+      dropped.push(sessionId);
+      pending.delete(sessionId);
+      running.delete(sessionId);
+    },
+  };
+  return {
+    delivery,
+    pending,
+    running,
+    dropped,
+    complete(sessionId: string, text = "delegated result") {
+      running.delete(sessionId);
+      pending.set(sessionId, text);
+      listener?.(sessionId, {
+        type: "background_agent_completed",
+        agentId: "cc-replacement",
+        description: "delegated task",
+        status: "completed",
+        enqueuedAt: Date.now(),
+      });
+    },
+  };
+}
+
+async function settleBackgroundWakeup() {
+  for (let index = 0; index < 10; index++) {
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
+}
+
 beforeEach(() => {
   previousHome = process.env.CODE_SHELL_HOME;
   testHome = mkdtempSync(join(tmpdir(), "codeshell-external-service-"));
@@ -157,6 +215,7 @@ beforeEach(() => {
   emitted.length = 0;
   stateChanges.length = 0;
   failNextSend = false;
+  failNextStart = false;
   providerSend = undefined;
   providerInterrupt = undefined;
   providerInputs.length = 0;
@@ -1569,6 +1628,130 @@ describe("ExternalRuntimeService", () => {
     await svc.start(request);
     expect(released).toEqual(["sess-1"]);
     expect(claims).toHaveLength(2);
+  });
+
+  test("replacing a physical runtime keeps delegated work and delivers its result once", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    background.running.add(request.sessionId);
+
+    await svc.start({ ...request, model: "replacement-model" });
+    expect(background.running.has(request.sessionId)).toBe(true);
+    expect(background.dropped).toEqual([]);
+    expect(released).toEqual([request.sessionId]);
+
+    background.complete(request.sessionId);
+    await settleBackgroundWakeup();
+    expect(providerInputs).toHaveLength(1);
+    expect(providerInputs[0]).toMatchObject({ injected: true });
+    expect(providerInputs[0]!.text).toContain("delegated result");
+    expect(background.pending.size).toBe(0);
+
+    await svc.stop(request.sessionId, 77);
+    expect(background.dropped).toEqual([request.sessionId]);
+  });
+
+  test("only business-session close invokes a delegated job's actual abort handle", async () => {
+    const background = backgroundDelivery();
+    let aborted = 0;
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: {
+        ...background.delivery,
+        dropSession(sessionId: string) {
+          background.delivery.dropSession(sessionId);
+          backgroundJobRegistry.dropForSession(sessionId);
+        },
+      },
+    });
+    await svc.start(request);
+    backgroundJobRegistry.start("cc-preserved-runtime", request.sessionId, "delegated task", {
+      kind: "drive-agent",
+      abort: () => {
+        aborted++;
+      },
+    });
+    try {
+      await svc.start(request);
+      expect(aborted).toBe(0);
+      expect(backgroundJobRegistry.get("cc-preserved-runtime")?.status).toBe("running");
+      await svc.stop(request.sessionId, 77);
+      expect(aborted).toBe(1);
+      expect(backgroundJobRegistry.get("cc-preserved-runtime")).toBeUndefined();
+    } finally {
+      await svc.stopAll();
+      backgroundJobRegistry.dropForSession(request.sessionId);
+    }
+  });
+
+  test("a result queued between physical runtimes wakes the replacement exactly once", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    const old = svc.get(request.sessionId)!;
+    old.close = async () => background.complete(request.sessionId, "completed during replacement");
+
+    await svc.start(request);
+    await settleBackgroundWakeup();
+    expect(background.dropped).toEqual([]);
+    expect(providerInputs).toHaveLength(1);
+    expect(providerInputs[0]!.text).toContain("completed during replacement");
+    expect(background.pending.size).toBe(0);
+    await svc.stopAll();
+  });
+
+  for (const failure of ["close", "start"] as const) {
+    test(`a failed replacement ${failure} retains owner custody until explicit close`, async () => {
+      const background = backgroundDelivery();
+      const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+        backgroundWork: background.delivery,
+      });
+      await svc.start(request);
+      background.running.add(request.sessionId);
+      if (failure === "close") {
+        svc.get(request.sessionId)!.close = async () => {
+          throw new Error("provider close failed");
+        };
+      } else {
+        failNextStart = true;
+      }
+
+      await expect(svc.start(request)).rejects.toThrow(/failed/);
+      expect(svc.get(request.sessionId)).toBeUndefined();
+      expect(background.running.has(request.sessionId)).toBe(true);
+      expect(background.dropped).toEqual([]);
+      await expect(svc.stop(request.sessionId, 99)).rejects.toThrow(/owned by another/);
+      await svc.stopOwnedBy(77);
+      expect(background.running.has(request.sessionId)).toBe(false);
+      expect(background.dropped).toEqual([request.sessionId]);
+      await svc.stopAll();
+      expect(background.dropped).toHaveLength(1);
+    });
+  }
+
+  test("a paused Goal remains paused when its runtime is replaced and a result arrives", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    await svc.send(request.sessionId, {
+      text: "run one bounded turn",
+      goal: { objective: "paused goal", maxTurns: 1 },
+    });
+    const goal = svc.getGoal(request.sessionId);
+    expect(goal.paused).toBe(true);
+    await svc.start(request);
+    background.complete(request.sessionId);
+    await settleBackgroundWakeup();
+    expect(providerInputs).toHaveLength(1);
+    expect(svc.getGoal(request.sessionId)).toEqual(goal);
+    expect(background.pending.has(request.sessionId)).toBe(true);
+    await svc.stopAll();
   });
 });
 
