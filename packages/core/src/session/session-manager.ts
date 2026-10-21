@@ -1815,11 +1815,17 @@ export class SessionManager {
    * always the write base, so unrelated fields written by another host survive.
    * Replacement is explicit and terminally closes the latest active identity;
    * a non-replacement write may only normalize the same legacy/current goal.
+   * Optional expected identity/revision fences are rechecked on every CAS retry,
+   * so re-arming a waiting Goal cannot roll back a concurrent edit or pause.
    */
   saveActiveGoal(
     state: SessionState,
     goal: GoalConfig,
-    options: { replaceCurrent?: boolean } = {},
+    options: {
+      replaceCurrent?: boolean;
+      expectedGoalId?: string;
+      expectedRevision?: number;
+    } = {},
   ): boolean {
     const armedGoal: GoalConfig = {
       ...goal,
@@ -1829,6 +1835,13 @@ export class SessionManager {
     for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
       const latest = this.readPersistedState(state.sessionId);
       const current = latest.goalLifecycle;
+      if (
+        (options.expectedGoalId !== undefined && current?.goalId !== options.expectedGoalId) ||
+        (options.expectedRevision !== undefined && current?.revision !== options.expectedRevision)
+      ) {
+        this.rebaseLiveState(state, latest);
+        return false;
+      }
       if (current) {
         const sameIdentity = current.goalId === armedGoal.goalId;
         const sameRevision = current.revision === (armedGoal.revision ?? 1);

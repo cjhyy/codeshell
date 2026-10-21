@@ -73,6 +73,97 @@ describe("external Goal lifecycle", () => {
     expect(() => goals.start(sessionId, { objective: "bad", tokenBudget: NaN })).toThrow();
   });
 
+  test("background waiting preserves the Goal and re-arms the same version on completion", () => {
+    const run = goals.start(sessionId, "收集后台结果")!;
+    expect(goals.afterTurn(run, 20, "后台任务进行中", true)).toBe(true);
+    expect(events).toHaveLength(1);
+    expect(goals.waitForBackgroundWork(run)).toBe(true);
+    expect(manager.readSessionState(sessionId)?.goalLifecycle).toMatchObject({
+      phase: "waiting",
+      goalId: run.goal.goalId,
+      revision: run.goal.revision,
+      waitingFor: "finite_background_work",
+    });
+    expect(goals.get(sessionId)).toMatchObject({ goal: "收集后台结果", paused: false });
+    expect(events.at(-1)).toMatchObject({
+      type: "goal_progress",
+      status: "not_met",
+      gaps: "等待后台任务完成，完成后自动继续。",
+    });
+    expect(events.some((event) => event.type === "goal_progress" && event.status === "met")).toBe(
+      false,
+    );
+    goals.end(run);
+
+    const resumed = goals.start(sessionId)!;
+    expect(resumed.goal).toEqual(run.goal);
+    expect(manager.readSessionState(sessionId)?.goalLifecycle).toMatchObject({
+      phase: "active",
+      goalId: run.goal.goalId,
+      revision: run.goal.revision,
+    });
+    expect(events.filter((event) => event.type === "goal_set")).toHaveLength(1);
+  });
+
+  test("stale or failed background waiting never publishes a waiting transition", () => {
+    const run = goals.start(sessionId, "后台任务")!;
+    const waiting = spyOn(SessionManager.prototype, "markGoalWaiting").mockReturnValue(false);
+    try {
+      expect(goals.waitForBackgroundWork(run)).toBe(false);
+      expect(manager.readSessionState(sessionId)?.goalLifecycle?.phase).toBe("active");
+      expect(events).toHaveLength(1);
+    } finally {
+      waiting.mockRestore();
+    }
+    goals.update(sessionId, {
+      objective: "修订后的后台任务",
+      expectedGoalId: run.goal.goalId!,
+      expectedRevision: run.goal.revision!,
+    });
+    const eventCount = events.length;
+    expect(goals.waitForBackgroundWork(run)).toBe(false);
+    expect(events).toHaveLength(eventCount);
+    expect(manager.readSessionState(sessionId)?.goalLifecycle).toMatchObject({
+      phase: "active",
+      revision: 2,
+      config: { objective: "修订后的后台任务" },
+    });
+  });
+
+  test("waiting still enforces Goal budgets before parking", () => {
+    const run = goals.start(sessionId, { objective: "限额后台任务", tokenBudget: 10 })!;
+    expect(goals.afterTurn(run, 10, "任务启动", true)).toBe(false);
+    expect(run.tokensUsed).toBe(10);
+    expect(goals.waitForBackgroundWork(run)).toBe(false);
+    expect(goals.get(sessionId).paused).toBe(true);
+    expect(manager.readSessionState(sessionId)?.goalLifecycle?.phase).toBe("paused");
+  });
+
+  test("an inherited Goal is not re-armed over an edit between the read and write", () => {
+    const run = goals.start(sessionId, "旧后台任务")!;
+    expect(goals.waitForBackgroundWork(run)).toBe(true);
+    goals.end(run);
+    const read = spyOn(SessionManager.prototype, "readActiveGoal");
+    read.mockImplementationOnce(() => {
+      manager.updateActiveGoal(sessionId, {
+        objective: "修订后台任务",
+        expectedGoalId: run.goal.goalId!,
+        expectedRevision: run.goal.revision!,
+      });
+      return run.goal;
+    });
+    try {
+      expect(() => goals.start(sessionId)).toThrow(/re-arm/);
+      expect(manager.readSessionState(sessionId)?.goalLifecycle).toMatchObject({
+        phase: "active",
+        revision: 2,
+        config: { objective: "修订后台任务" },
+      });
+    } finally {
+      read.mockRestore();
+    }
+  });
+
   test("pause and edit use revision fences; stale completion cannot clear the new objective", () => {
     const run = goals.start(sessionId, "旧目标")!;
     const edited = goals.update(sessionId, {

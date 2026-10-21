@@ -19,6 +19,7 @@ import {
   type SessionProjectBinding,
   type StreamEvent,
   type TerminalReason,
+  type TurnCompletionKind,
 } from "@cjhyy/code-shell-core";
 import {
   SessionOutputJournal,
@@ -192,6 +193,7 @@ interface UsageSnapshot {
 export interface ExternalRuntimeTurnOutcome {
   ok: boolean;
   reason: TerminalReason;
+  completionKind?: TurnCompletionKind;
   text?: string;
   /** The terminal/error events were already delivered to the shared stream. */
   streamed: true;
@@ -467,22 +469,39 @@ export class ExternalRuntimeSessionRecorder {
   }
 
   /** One terminal for the whole logical submission, including Goal continuations. */
-  completeRun(reason: TerminalReason): StreamEvent | undefined {
+  completeRun(
+    reason: TerminalReason,
+    completionKind?: TurnCompletionKind,
+  ): StreamEvent | undefined {
     if (this.runClosed) return undefined;
     this.assertOwner();
+    const kind = reason === "completed" ? completionKind : undefined;
     this.manager.updateSessionState(
       this.sessionId,
       {
         status: reason,
+        lastCompletionKind: kind,
+        // This cursor freezes a closed provider boundary, including a parked
+        // Goal. Goal achievement remains separate in the canonical lifecycle.
         ...(reason === "completed" && this.boundaryId
           ? { completedSnapshotVersion: 1, completedThroughEventId: this.boundaryId }
           : {}),
       },
       this.runId,
     );
-    const event = this.appendOutput({ type: "turn_complete", reason });
+    const event = this.appendOutput({
+      type: "turn_complete",
+      reason,
+      ...(kind ? { completionKind: kind } : {}),
+    });
     this.runClosed = true;
-    this.outcome = { ...this.outcome, ok: reason === "completed", reason, streamed: true };
+    this.outcome = {
+      ...this.outcome,
+      ok: reason === "completed",
+      reason,
+      ...(kind ? { completionKind: kind } : {}),
+      streamed: true,
+    };
     return event;
   }
 

@@ -117,6 +117,8 @@ export interface ExternalRuntimeBackgroundWorkDelivery {
   /** Drain and format all pending results for one injected continuation turn. */
   drainMessage(sessionId: string): string | undefined;
   hasPending(sessionId: string): boolean;
+  /** Finite work that will publish a completion notification for this Session. */
+  hasRunning(sessionId: string): boolean;
   /** Abort jobs and clear queued results when their owning Session closes. */
   dropSession(sessionId: string): void;
 }
@@ -1480,6 +1482,9 @@ export class ExternalRuntimeService {
               });
             }
             finalOutcome = entry.recorder.finishIfMissing();
+            const waitingForBackgroundWork =
+              this.deps.backgroundWork?.hasRunning(sessionId) === true &&
+              !this.deps.backgroundWork.hasPending(sessionId);
             if (
               !goalRun ||
               finalOutcome.reason !== "completed" ||
@@ -1489,10 +1494,27 @@ export class ExternalRuntimeService {
                   goalRun,
                   entry.recorder.turnTokensUsed,
                   finalOutcome!.text ?? "",
+                  waitingForBackgroundWork,
                 ),
               ) ||
               entry.recorder.outputFailed
             ) {
+              return finalOutcome;
+            }
+            if (waitingForBackgroundWork) {
+              // A final reply can hand work to DriveAgent. Keep the Goal alive,
+              // but release this submission until its completion notification
+              // arrives; immediately prompting again would poll the same job.
+              const waiting = this.withGoalOutput(sessionId, publishGoalOutput, () =>
+                this.goals.waitForBackgroundWork(goalRun),
+              );
+              if (waiting) {
+                finalOutcome = { ...finalOutcome, completionKind: "background_wait" };
+              } else if (this.goals.isCurrent(goalRun)) {
+                const error = "Could not persist the Goal background wait; retry the submission.";
+                publishGoalOutput({ type: "error", error });
+                finalOutcome = { ...finalOutcome, ok: false, reason: "model_error", text: error };
+              }
               return finalOutcome;
             }
             providerRound++;
@@ -1513,6 +1535,7 @@ export class ExternalRuntimeService {
               try {
                 const terminal = entry.recorder.completeRun(
                   entry.finalizeOperations(finalOutcome.reason),
+                  finalOutcome.completionKind,
                 );
                 if (terminal) this.emitSafely(sessionId, terminal);
               } catch {
@@ -1597,8 +1620,22 @@ export class ExternalRuntimeService {
       entry.lifecycle.interruptGeneration++;
     }
     const run = this.goals.running(sessionId);
-    if (run && !options.keepGoal && this.goals.isCurrent(run)) {
-      this.goals.pause(run, "用户已停止本轮执行");
+    // Interrupt-and-send (keepGoal) redirects the Goal instead of stopping it.
+    if (!options.keepGoal) {
+      if (run && this.goals.isCurrent(run)) {
+        this.goals.pause(run, "用户已停止本轮执行");
+      } else {
+        // A background wait has released its live run. Stop must still pause
+        // the persisted Goal, or the next completion would silently wake it.
+        const goal = this.goals.read(sessionId);
+        if (goal && !goal.paused) {
+          this.goals.update(sessionId, {
+            paused: true,
+            expectedGoalId: goal.goalId!,
+            expectedRevision: goal.revision!,
+          });
+        }
+      }
     }
     this.goals.stop(sessionId);
     // A CLI result can settle its provider turn before process exit resolves

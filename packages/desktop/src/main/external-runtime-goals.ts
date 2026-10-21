@@ -122,6 +122,18 @@ export class ExternalRuntimeGoals {
       });
     }
     if (!goal || goal.paused) return undefined;
+    if (explicit === undefined) {
+      const state = this.manager.readSessionState(sessionId);
+      if (
+        !state ||
+        !this.manager.saveActiveGoal(state, goal, {
+          expectedGoalId: goal.goalId,
+          expectedRevision: goal.revision,
+        })
+      ) {
+        throw new Error("Could not re-arm the external runtime goal");
+      }
+    }
     const run: ExternalGoalRun = {
       sessionId,
       goal: { ...goal },
@@ -248,7 +260,28 @@ export class ExternalRuntimeGoals {
     return Math.max(0, run.timeBudgetMs - (this.now() - run.startedAtMs));
   }
 
-  afterTurn(run: ExternalGoalRun, tokens: number, output: string): boolean {
+  /** Park only the matching live Goal; completion delivery will re-arm it. */
+  waitForBackgroundWork(run: ExternalGoalRun): boolean {
+    if (!this.isCurrent(run)) return false;
+    const state = this.manager.readSessionState(run.sessionId);
+    if (!state || !this.manager.markGoalWaiting(state, run.goal)) return false;
+    this.emit(run.sessionId, {
+      type: "goal_progress",
+      goalId: run.goal.goalId,
+      revision: run.goal.revision,
+      status: "not_met",
+      round: run.turns,
+      gaps: "等待后台任务完成，完成后自动继续。",
+    });
+    return true;
+  }
+
+  afterTurn(
+    run: ExternalGoalRun,
+    tokens: number,
+    output: string,
+    waitingForBackgroundWork = false,
+  ): boolean {
     run.turns++;
     if (Number.isFinite(tokens) && tokens > 0) run.tokensUsed += tokens;
     run.stopBlocks = run.lastOutput === output ? run.stopBlocks + 1 : 0;
@@ -268,6 +301,7 @@ export class ExternalRuntimeGoals {
       this.pause(run, limit);
       return false;
     }
+    if (waitingForBackgroundWork) return true;
     const remaining = run.maxTurns - run.turns;
     this.emit(run.sessionId, {
       type: "goal_progress",

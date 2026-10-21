@@ -1758,6 +1758,7 @@ async function createWindow(): Promise<BrowserWindow> {
           return pending.length > 0 ? buildNotificationMessage(pending) : undefined;
         },
         hasPending: (sessionId) => notificationQueue.getSnapshot(sessionId).length > 0,
+        hasRunning: (sessionId) => backgroundJobRegistry.hasRunningForSession(sessionId),
         dropSession: (sessionId) => {
           backgroundJobRegistry.dropForSession(sessionId);
           notificationQueue.reset(sessionId);
