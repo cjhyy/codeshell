@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { lockSync } from "../utils/lockfile.js";
+import { STATE_LEASE_LOCK_OPTIONS } from "./output-journal-state-lease.js";
 import { readPublishedOutputHead, type OutputHeadPin } from "./output-journal-head.js";
 import { readOutputJournal } from "./output-journal.js";
 import {
@@ -315,12 +316,7 @@ function locked<T>(
   work: (at: Location, assertLock: () => void) => T,
 ): T {
   const before = locate(root, sessionId);
-  const release = lockSync(before.statePath, {
-    realpath: false,
-    retries: 0,
-    stale: 120000,
-    update: 60000,
-  });
+  const release = lockSync(before.statePath, STATE_LEASE_LOCK_OPTIONS);
   const lockPath = before.statePath + ".lock",
     pin = directory(lockPath);
   const assertLock = () => {

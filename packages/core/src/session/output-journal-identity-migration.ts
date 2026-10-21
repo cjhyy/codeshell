@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import { randomUUID } from "node:crypto";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { lockSync } from "../utils/lockfile.js";
+import { STATE_LEASE_LOCK_OPTIONS } from "./output-journal-state-lease.js";
 import {
   capturePersistentFileIdentity,
   matchesPersistentFileIdentity,
@@ -725,15 +726,7 @@ export function migrateOutputJournalIdentity(
     "path_replaced",
     "Session directory was replaced",
   );
-  const release = lockSync(statePath, {
-    realpath: false,
-    retries: 0,
-    stale: 120_000,
-    update: 60_000,
-    // assertLease detects and fences a replaced lease; a later refresh that
-    // finds it compromised must not raise an uncaught exception in the Host.
-    onCompromised: () => undefined,
-  });
+  const release = lockSync(statePath, STATE_LEASE_LOCK_OPTIONS);
   const lockPath = statePath + ".lock",
     lease = fs.lstatSync(lockPath);
   let refreshedAt = 0;
