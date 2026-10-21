@@ -12,6 +12,10 @@ import {
 import { PanelAppProcessService } from "./panel-app-process-service.js";
 import { PanelAppDirectoryBookmarks } from "./panel-app-directory-bookmarks.js";
 import { PanelBridgeError } from "../../../server/src/panels/bridge-contract.js";
+import { resolvePanelAppBindingProjectPath } from "@cjhyy/code-shell-core";
+import { ProjectStore } from "./project-store.js";
+import { SessionCwdIndex } from "./session-cwd-index.js";
+import { isRegisteredPanelProjectRoot } from "./panel-project-scope.js";
 
 // Execute the real bridge methods without loading Electron and its application
 // startup dependencies. Authorization uses real filesystem paths and the real
@@ -66,6 +70,7 @@ async function fixture() {
     stat,
     PanelBridgeError,
     createPanelDirectoryProjectScope,
+    resolvePanelAppBindingProjectPath,
     isPanelAppDescriptorSelected: () => true,
     BrowserWindow: { fromId: () => ({ isDestroyed: () => false }) },
     dialog: picker,
@@ -230,6 +235,54 @@ describe("Panel project process directory", () => {
       ).toBe("ENOENT");
     });
   }
+
+  test("R22: a registered secondary root grants its own directories while bookmarks stay with the project", async () => {
+    const { bridge, project, service, owner, bind, picker } = await fixture();
+    const [secondary, other] = [join(root, "secondary"), join(root, "other")];
+    await mkdir(secondary);
+    await mkdir(other);
+    const store = new ProjectStore({
+      file: join(root, "registry", "projects.json"),
+      recentsFile: join(root, "registry", "recents.json"),
+      migrationMarkerFile: join(root, "registry", "migration.json"),
+      sessionIndex: new SessionCwdIndex({ sessionsRoot: join(root, "sessions") }),
+      noRepoPath: join(root, "no-repo"),
+    });
+    const registered = await store.createFromPath(project);
+    const added = await store.addRoot(registered.id, secondary);
+    await store.createFromPath(other);
+    bridge.options.isWorkspaceTrusted = (path: string) =>
+      [project, secondary, other].includes(path);
+    bridge.options.isProjectRoot = (projectPath: string, rootPath: string) =>
+      isRegisteredPanelProjectRoot(store, projectPath, rootPath);
+    bridge.directoryBookmarks = desktopPanelDirectoryBookmarks(project);
+    const binding = bind(secondary);
+    const known = await bridge.getKnownProcessDirectory(binding, { name: "project" });
+    expect(known.path).toBe(await realpath(secondary));
+    expect(service.directoryPath(owner, known.handle)).toBe(known.path);
+    const records = JSON.parse(
+      await readFile(join(project, "panel-app-directory-bookmarks.json"), "utf8"),
+    ).bookmarks;
+    expect(records.map((item: { projectPath: string }) => item.projectPath)).toEqual([project]);
+    // The project's bookmark is restorable from its primary root as well.
+    service.revokeGuest(owner.guestId);
+    const restored = await bridge.restoreProcessDirectory(bind(), { bookmark: known.bookmark });
+    expect(restored.path).toBe(known.path);
+    await expect(
+      bridge.getKnownProcessDirectory(bind(other), { name: "project" }),
+    ).rejects.toThrow();
+    // Removing the root from the project revokes an in-flight secondary-root grant.
+    picker.showOpenDialog = async () => {
+      await store.removeRoot(
+        registered.id,
+        added.project.roots.find((r) => r.path === secondary)!.id,
+      );
+      return { canceled: false, filePaths: [secondary] };
+    };
+    await expect(bridge.pickProcessDirectory(bind(secondary))).rejects.toThrow(
+      /authorization changed/,
+    );
+  });
 
   test("a rebind during process authorization cannot allocate a directory handle", async () => {
     const { bridge, project, service, bind } = await fixture();
