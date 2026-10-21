@@ -227,6 +227,35 @@ test("explicit full backup repairs damaged bytes on the same anchor inode and th
   expect(readOutputJournal(f.root, f.id, { after: f.through, through: next }).complete).toBe(true);
 });
 
+test("stable backup authority survives device-number changes and restores the same cursors and transcript", () => {
+  const f = fixture();
+  const transcriptPath = join(f.directory, "transcript.jsonl");
+  const transcript = fs.readFileSync(transcriptPath);
+  backupOutputJournal(f.root, f.id, f.backup);
+  const path = join(f.backup, OUTPUT_BACKUP_MANIFEST);
+  const backup = JSON.parse(fs.readFileSync(path, "utf8"));
+  for (const pin of [
+    backup.authority.rootFile,
+    backup.authority.sessionFile,
+    backup.authority.anchor,
+    backup.authority.headPin.file,
+    ...backup.files,
+  ]) {
+    expect(pin.stable).toBeDefined();
+    pin.dev += 1;
+  }
+  fs.writeFileSync(path, JSON.stringify(backup));
+  corrupt(f.file);
+  const restored = restoreOutputJournalBackup(f.root, f.id, f.backup);
+  expect(restored.coverage).toBe("ok");
+  expect(restored.through).toBe(f.through);
+  expect(fold(f)).toEqual([
+    { type: "text_delta", text: "first published body" },
+    { type: "text_delta", text: f.large },
+  ]);
+  expect(fs.readFileSync(transcriptPath)).toEqual(transcript);
+});
+
 test("stale head, wrong root, lost head, replaced anchor and unsafe bundle fail before source mutation", () => {
   for (const mode of [
     "stale",
