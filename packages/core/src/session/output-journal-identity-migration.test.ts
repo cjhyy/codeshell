@@ -281,8 +281,11 @@ test("identity migration refuses changed output and inode replacement without mo
       fs.writeFileSync(f.anchor, data);
     } else {
       const data = fs.readFileSync(f.headPath);
-      fs.unlinkSync(f.headPath);
+      const originalInode = fs.statSync(f.headPath).ino;
+      // Keep the original inode allocated: unlinking can let Linux reuse it immediately.
+      fs.renameSync(f.headPath, `${f.headPath}.original`);
       fs.writeFileSync(f.headPath, data, { mode: 0o600 });
+      expect(fs.statSync(f.headPath).ino).not.toBe(originalInode);
     }
     expect(() => migrateOutputJournalIdentity(f.root, f.id, f.evidence, options)).toThrow();
     expect(fs.readFileSync(f.statePath)).toEqual(originalState);
