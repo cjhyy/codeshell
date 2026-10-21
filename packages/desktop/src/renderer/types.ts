@@ -211,6 +211,8 @@ export interface ActiveGoal {
   paused: boolean;
   /** When the objective was set (epoch ms), for the Goal bar's elapsed time. */
   setAtMs?: number;
+  /** The Goal stopped to wait for the user's answer to this question. */
+  waitingForUser?: string;
 }
 
 /**
@@ -1815,6 +1817,8 @@ function applyStreamEventToTurn(
                 ...state.activeGoal,
                 round: event.round,
                 revision: event.revision ?? state.activeGoal.revision,
+                // Any later progress means the Goal is moving again.
+                waitingForUser: event.waitingForUser,
               }
             : state.activeGoal;
       return { ...state, messages: [...base, msg], activeGoal };

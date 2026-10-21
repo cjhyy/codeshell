@@ -3,6 +3,7 @@ import {
   ChevronDown,
   ChevronUp,
   CirclePause,
+  MessageCircleQuestion,
   Pause,
   Pencil,
   Play,
@@ -73,7 +74,13 @@ export function GoalBar({
   }, [goal.paused, goal.setAtMs, now]);
 
   const elapsed = goal.setAtMs !== undefined ? formatGoalElapsed(clock - goal.setAtMs) : undefined;
-  const label = goal.paused ? t("chat.goal.barPaused") : t("chat.goal.barActive");
+  // Paused wins: a paused Goal does not continue even after the user replies.
+  const waiting = !goal.paused && !!goal.waitingForUser;
+  const label = goal.paused
+    ? t("chat.goal.barPaused")
+    : waiting
+      ? t("chat.goal.barWaiting")
+      : t("chat.goal.barActive");
   const saveEdit = (): void => {
     const objective = draft.trim();
     if (!objective) return;
@@ -89,9 +96,13 @@ export function GoalBar({
     <div
       className={cn(
         "mx-3 rounded-t-2xl border border-b-0 px-3 text-sm",
-        goal.paused ? "border-status-warn/40 bg-status-warn/5" : "border-border bg-background/80",
+        goal.paused
+          ? "border-status-warn/40 bg-status-warn/5"
+          : waiting
+            ? "border-primary/30 bg-primary/5"
+            : "border-border bg-background/80",
       )}
-      data-goal-state={goal.paused ? "paused" : busy ? "running" : "active"}
+      data-goal-state={goal.paused ? "paused" : waiting ? "waiting" : busy ? "running" : "active"}
     >
       <div className="flex h-9 min-w-0 items-center gap-2">
         {goal.paused ? (
@@ -99,6 +110,12 @@ export function GoalBar({
             size={15}
             className="shrink-0 text-status-warn"
             aria-label={t("misc.status.paused")}
+          />
+        ) : waiting ? (
+          <MessageCircleQuestion
+            size={15}
+            className="shrink-0 text-primary"
+            aria-label={t("chat.goal.barWaiting")}
           />
         ) : (
           <Target
@@ -110,9 +127,15 @@ export function GoalBar({
         <span
           className={cn(
             "shrink-0 font-medium",
-            goal.paused ? "text-status-warn" : "text-foreground",
+            goal.paused ? "text-status-warn" : waiting ? "text-primary" : "text-foreground",
           )}
-          title={goal.paused ? t("chat.goal.barPausedHint") : undefined}
+          title={
+            goal.paused
+              ? t("chat.goal.barPausedHint")
+              : waiting
+                ? `${t("chat.goal.barWaitingHint")} ${goal.waitingForUser}`
+                : undefined
+          }
         >
           {label}
         </span>
@@ -245,6 +268,11 @@ export function GoalBar({
           )}
           {goal.paused && (
             <p className="mt-1.5 text-xs text-status-warn">{t("chat.goal.barPausedHint")}</p>
+          )}
+          {waiting && (
+            <p className="mt-1.5 whitespace-pre-wrap break-words text-xs text-primary">
+              {t("chat.goal.barWaitingHint")} {goal.waitingForUser}
+            </p>
           )}
         </div>
       )}

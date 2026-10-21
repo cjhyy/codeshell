@@ -203,6 +203,8 @@ export const chat = {
         offTitle: "Goal 模式(关):点亮后设目标,agent 跑到完成为止",
         barActive: "进行中的目标",
         barPaused: "已暂停的目标",
+        barWaiting: "等待你的回复",
+        barWaitingHint: "目标在等你回答这个问题，回复后才会继续：",
         barPausedHint: "目标已暂停，不会自动继续。点击恢复后接着推进。",
         barElapsed: "目标已设置 {elapsed}",
         expand: "展开目标",
@@ -529,6 +531,8 @@ export const chat = {
         offTitle: "Goal mode (off): turn on to set a goal and let the agent run until done",
         barActive: "Active goal",
         barPaused: "Paused goal",
+        barWaiting: "Waiting for your reply",
+        barWaitingHint: "The goal is waiting for your answer before it continues:",
         barPausedHint:
           "This goal is paused and will not continue on its own. Resume it to keep going.",
         barElapsed: "Goal set {elapsed} ago",

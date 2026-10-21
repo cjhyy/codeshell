@@ -2081,3 +2081,23 @@ describe("applyStreamEvent — interleaved file writers", () => {
     expect(parseUnifiedDiff(diff)[0]?.hunks).toHaveLength(1);
   });
 });
+
+describe("goal waiting for the user", () => {
+  test("a wait_for_user progress marks the Goal and later progress clears it", () => {
+    const set = dispatch(INITIAL_STATE, [
+      ev("goal_set", { goalId: "g", revision: 1, objective: "安装面板", replaced: false } as never),
+      ev("goal_progress", {
+        goalId: "g",
+        revision: 1,
+        status: "not_met",
+        round: 1,
+        waitingForUser: "允许新增权限吗？",
+      } as never),
+    ]);
+    expect(set.activeGoal?.waitingForUser).toBe("允许新增权限吗？");
+    const moving = dispatch(set, [
+      ev("goal_progress", { goalId: "g", revision: 1, status: "not_met", round: 2 } as never),
+    ]);
+    expect(moving.activeGoal?.waitingForUser).toBeUndefined();
+  });
+});

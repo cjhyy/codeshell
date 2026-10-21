@@ -251,6 +251,48 @@ describe("external Goal lifecycle", () => {
     expect(goals.yieldAfterTurn(sessionId)).toBe(false);
   });
 
+  test("wait_for_user ends the run without pausing and keeps the question until the user replies", () => {
+    const run = goals.start(sessionId, { objective: "安装面板" })!;
+    expect(
+      goals.waitForUser(sessionId, {
+        goalId: run.goal.goalId,
+        revision: run.goal.revision,
+        question: "允许三项新权限并安装吗？",
+      }),
+    ).toMatchObject({ ok: true });
+    expect(events.at(-1)).toMatchObject({
+      type: "goal_progress",
+      status: "not_met",
+      waitingForUser: "允许三项新权限并安装吗？",
+    });
+    expect(goals.afterTurn(run, 10, "已提问")).toBe(false);
+    expect(goals.get(sessionId)).toMatchObject({ goal: "安装面板", paused: false });
+    goals.end(run);
+    expect(goals.pendingQuestion(sessionId)).toBe("允许三项新权限并安装吗？");
+    // A resume or other automatic continuation must still see the open question.
+    const resumed = goals.start(sessionId)!;
+    expect(goals.instruction(resumed)).toContain("允许三项新权限并安装吗？");
+    goals.end(resumed);
+    goals.userReplied(sessionId);
+    expect(goals.pendingQuestion(sessionId)).toBeUndefined();
+  });
+
+  test("wait_for_user refuses a stale identity or an empty question", () => {
+    const run = goals.start(sessionId, { objective: "安装面板" })!;
+    expect(
+      goals.waitForUser(sessionId, { goalId: "other", revision: 1, question: "继续吗？" }),
+    ).toMatchObject({ ok: false });
+    expect(
+      goals.waitForUser(sessionId, {
+        goalId: run.goal.goalId,
+        revision: run.goal.revision,
+        question: "   ",
+      }),
+    ).toMatchObject({ ok: false });
+    expect(goals.pendingQuestion(sessionId)).toBeUndefined();
+    expect(goals.afterTurn(run, 10, "继续")).toBe(true);
+  });
+
   test("the continuation instruction says it is not a user reply or approval", () => {
     const run = goals.start(sessionId, { objective: "安装面板" })!;
     expect(goals.instruction(run)).toContain("not a reply from the user");

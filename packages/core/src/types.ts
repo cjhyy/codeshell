@@ -801,6 +801,8 @@ type StreamEventPayload =
       stopBlocksRemaining?: number;
       /** For "approaching_limit": which ceiling is closest — drives UI copy + extend default. */
       nearest?: "turns" | "stopBlocks";
+      /** The Goal stopped to wait for the user's answer to this question (wait_for_user). */
+      waitingForUser?: string;
       agentId?: string;
     }
   // Persistent goal lifecycle (CC /goal style). `goal_set` fires when a send

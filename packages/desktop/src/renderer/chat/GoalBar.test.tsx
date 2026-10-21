@@ -69,4 +69,21 @@ describe("GoalBar", () => {
     const html = renderToStaticMarkup(<GoalBar goal={withoutTime} busy={false} now={at(0)} />);
     expect(html).not.toMatch(/\d+s</);
   });
+
+  test("a Goal waiting on the user shows the question state, unless it is paused", () => {
+    const waiting = renderToStaticMarkup(
+      <GoalBar goal={{ ...goal, waitingForUser: "允许新增权限吗？" }} busy={false} now={at(0)} />,
+    );
+    expect(waiting).toContain('data-goal-state="waiting"');
+    expect(waiting).toContain("lucide-message-circle-question");
+    expect(waiting).toContain("等待你的回复");
+    const paused = renderToStaticMarkup(
+      <GoalBar
+        goal={{ ...goal, paused: true, waitingForUser: "允许新增权限吗？" }}
+        busy={false}
+        now={at(0)}
+      />,
+    );
+    expect(paused).toContain('data-goal-state="paused"');
+  });
 });
