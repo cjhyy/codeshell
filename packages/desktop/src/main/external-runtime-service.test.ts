@@ -905,6 +905,27 @@ describe("ExternalRuntimeService", () => {
     }
   });
 
+  test("interrupt-and-send during a background wait keeps the Goal active", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: {
+        subscribe: () => () => {},
+        drainMessage: () => undefined,
+        hasPending: () => false,
+        hasRunning: () => true,
+        dropSession: () => {},
+      },
+    });
+    await svc.start(request);
+    try {
+      await svc.send(request.sessionId, { text: "执行", goal: "等待方案" });
+      expect(providerInputs).toHaveLength(1);
+      await svc.interrupt(request.sessionId, 77, undefined, { keepGoal: true });
+      expect(svc.getGoal(request.sessionId)).toMatchObject({ goal: "等待方案", paused: false });
+    } finally {
+      await svc.stopAll();
+    }
+  });
+
   test("failed waiting persistence reports an error without busy-looping or claiming a wait", async () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
       backgroundWork: {
