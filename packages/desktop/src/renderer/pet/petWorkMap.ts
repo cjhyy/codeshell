@@ -57,8 +57,9 @@ export interface PetWorkspaceWorkGroup {
 
 export interface PetWorkMap {
   groups: PetWorkspaceWorkGroup[];
-  /** All included work, including older rows omitted by the normal display limits. */
-  searchGroups?: PetWorkspaceWorkGroup[];
+  /** All included work, newest first, including rows the display limits omit.
+   *  Search and filters group it on demand (see groupWorkItems). */
+  allItems?: PetWorkItem[];
   counts: Record<PetWorkGroup, number>;
   itemIds: Record<PetWorkGroup, string[]>;
   dismissedCount: number;
@@ -68,6 +69,14 @@ export interface PetWorkMap {
 }
 
 const GROUP_ORDER: readonly PetWorkGroup[] = ["running", "pending", "completed", "other"];
+
+/** Branch order in the work inbox: what needs the user first. */
+export const PET_WORK_BRANCH_ORDER: readonly PetWorkGroup[] = [
+  "pending",
+  "running",
+  "completed",
+  "other",
+];
 
 const DISPLAY_LIMITS: Record<PetWorkGroup, number> = {
   running: 16,
@@ -166,7 +175,7 @@ function pendingWithoutSession(pending: PetPendingDecision): PetWorkItem {
   };
 }
 
-function groupWorkItems(items: readonly PetWorkItem[]): PetWorkspaceWorkGroup[] {
+export function groupWorkItems(items: readonly PetWorkItem[]): PetWorkspaceWorkGroup[] {
   const groupsByWorkspace = new Map<string, PetWorkspaceWorkGroup>();
   for (const item of items) {
     const key = item.workspace ?? "";
@@ -232,7 +241,7 @@ export function buildPetWorkMap(
   );
   return {
     groups: groupWorkItems(visible),
-    searchGroups: groupWorkItems(included),
+    allItems: included,
     counts,
     itemIds,
     dismissedCount,

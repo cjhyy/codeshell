@@ -7,6 +7,7 @@ export interface PetOverviewHeaderProps {
   pendingCount?: number;
   followUpCount?: number;
   observedAt?: number;
+  /** Fixed clock for tests; without it the header keeps its own 30-second clock. */
   now?: number;
   loading?: boolean;
   reconciling?: boolean;
@@ -20,13 +21,22 @@ export function PetOverviewHeader({
   pendingCount = 0,
   followUpCount = 0,
   observedAt,
-  now = Date.now(),
+  now: fixedNow,
   loading = false,
   reconciling = false,
   retrying = false,
   chatError,
 }: PetOverviewHeaderProps) {
   const { t } = useT();
+  const [clock, setClock] = React.useState(() => Date.now());
+  // "Updated just now" must age while no projection event arrives.
+  React.useEffect(() => {
+    if (fixedNow !== undefined || observedAt === undefined) return;
+    setClock(Date.now());
+    const timer = setInterval(() => setClock(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, [fixedNow, observedAt]);
+  const now = fixedNow ?? clock;
   const minutes =
     observedAt === undefined ? undefined : Math.floor(Math.max(0, now - observedAt) / 60_000);
   const exceptionalStatus = loading
@@ -38,7 +48,7 @@ export function PetOverviewHeader({
         : null;
   const freshness =
     minutes === undefined
-      ? t("pet.session.state.unknown")
+      ? t("pet.overview.notSynced")
       : minutes < 1
         ? t("pet.overview.updatedNow")
         : t("pet.overview.updatedMinutes", { count: minutes });
@@ -103,11 +113,13 @@ export function PetOverviewHeader({
       </dl>
       <p
         className={`mt-3 flex items-center gap-1.5 text-[10px] leading-4 ${exceptionalStatus ? "text-status-warn" : "text-muted-foreground"}`}
-        role="status"
-        aria-live="polite"
       >
         <Clock3 size={11} aria-hidden="true" />
-        {exceptionalStatus ?? freshness}
+        {/* Only exceptional states are announced; the ticking age is not. */}
+        <span role="status" aria-live="polite">
+          {exceptionalStatus}
+        </span>
+        {!exceptionalStatus && <span>{freshness}</span>}
       </p>
       {chatError && (
         <p

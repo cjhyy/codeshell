@@ -18,6 +18,8 @@ export interface PetState {
   chatDraft: string;
   chatPathAttachments: string[];
   chatTranscript: unknown[];
+  /** The last prompt a suggestion or follow-up inserted, so the next one can replace it. */
+  chatInsertedPrompt?: string;
 }
 
 export const initialPetState: PetState = {
@@ -42,6 +44,7 @@ export type PetStateAction =
   | { type: "set-chat-path-attachments"; paths: string[] }
   | { type: "clear-chat-draft" }
   | { type: "restore-chat-draft"; draft: string; paths: string[] }
+  | { type: "insert-chat-prompt"; draft: string }
   | { type: "set-chat-transcript"; transcript: unknown[] };
 
 function requireSnapshot(state: PetState): PetState {
@@ -158,6 +161,18 @@ export function petStateReducer(state: PetState, action: PetStateAction): PetSta
           ...action.paths,
         ]),
       };
+    case "insert-chat-prompt": {
+      // Replace an empty draft or the previous inserted prompt; never stack the
+      // same prompt twice, and keep anything the user typed by appending.
+      const current = state.chatDraft;
+      const chatDraft =
+        !current.trim() || current === state.chatInsertedPrompt
+          ? action.draft
+          : current.includes(action.draft)
+            ? current
+            : `${current}\n\n${action.draft}`;
+      return { ...state, chatDraft, chatInsertedPrompt: action.draft };
+    }
     case "set-chat-transcript":
       return { ...state, chatTranscript: action.transcript };
   }

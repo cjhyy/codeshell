@@ -51,8 +51,7 @@ export function PetFollowUpSection({
       onControl={window.codeshell.pet?.controlFollowUp}
       onAskMimi={(row) => {
         dispatch({
-          type: "restore-chat-draft",
-          paths: [],
+          type: "insert-chat-prompt",
           draft: t("pet.followUp.askMimiPrompt", {
             followUpId: row.followUpId,
             title: row.title,

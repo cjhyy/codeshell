@@ -31,7 +31,7 @@ export function countVisibleFollowUps(
 export function PetWorldPane({
   projection,
   status,
-  now = Date.now(),
+  now: fixedNow,
   onNavigate,
   focusPending = false,
   selectedLongTaskId,
@@ -45,6 +45,7 @@ export function PetWorldPane({
   selectedLongTaskId?: string | null;
   excludedSessionIds?: ReadonlySet<string>;
 }) {
+  const now = fixedNow ?? Date.now();
   const selected = selectPetOverview(projection, status, now);
   const [dismissedIds, setDismissedIds] = React.useState<Set<string>>(() => new Set());
   const dismissedIdsRef = React.useRef(dismissedIds);
@@ -156,7 +157,7 @@ export function PetWorldPane({
         pendingCount={workMap.counts.pending}
         followUpCount={visibleFollowUpCount}
         observedAt={projection?.observedAt}
-        now={now}
+        now={fixedNow}
         loading={status === "loading"}
         reconciling={status === "reconciling"}
         retrying={status === "error"}
@@ -179,6 +180,21 @@ export function PetWorldPane({
               });
             }}
           />
+          {/* Long tasks stay above the inbox: they are the most time-sensitive
+              work, and the inbox opens expanded and can fill the rail. */}
+          <div data-pet-work-section="long-tasks">
+            <PetLongTaskSection
+              selectedTaskId={selectedLongTaskId}
+              onOpenSession={(sessionId) => {
+                if (!projection) return;
+                onNavigate?.({
+                  agentSessionId: sessionId,
+                  snapshotVersion: projection.version,
+                  generation: projection.generation,
+                });
+              }}
+            />
+          </div>
           <div data-pet-work-section="inbox">
             <PetWorkTree
               workMap={workMap}
@@ -197,19 +213,6 @@ export function PetWorldPane({
                 if (item.external && !item.navigation.external) return;
                 onNavigate?.({
                   ...item.navigation,
-                  snapshotVersion: projection.version,
-                  generation: projection.generation,
-                });
-              }}
-            />
-          </div>
-          <div data-pet-work-section="long-tasks">
-            <PetLongTaskSection
-              selectedTaskId={selectedLongTaskId}
-              onOpenSession={(sessionId) => {
-                if (!projection) return;
-                onNavigate?.({
-                  agentSessionId: sessionId,
                   snapshotVersion: projection.version,
                   generation: projection.generation,
                 });

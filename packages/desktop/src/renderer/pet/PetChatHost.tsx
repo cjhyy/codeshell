@@ -15,6 +15,7 @@ import {
   Square,
   X,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   PetDelegationReceipt,
@@ -977,7 +978,7 @@ export function PetChatHost({
   }, []);
 
   const preparePrompt = (draft: string): void => {
-    dispatch({ type: "restore-chat-draft", draft, paths: [] });
+    dispatch({ type: "insert-chat-prompt", draft });
     composerRef.current?.focus();
   };
 
@@ -1109,27 +1110,31 @@ export function PetChatHost({
             portal
           />
           {onOpenMemory && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               data-pet-open-memory="true"
-              className="mimi-quiet-button inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground"
+              className="h-9 w-9 shrink-0 rounded-lg text-muted-foreground"
               aria-label={t("pet.settings.manageMemory")}
               title={t("pet.settings.manageMemory")}
               onClick={onOpenMemory}
             >
               <Brain size={16} aria-hidden="true" />
-            </button>
+            </Button>
           )}
           {onOpenSettings && (
-            <button
+            <Button
               type="button"
-              className="mimi-quiet-button inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground"
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 shrink-0 rounded-lg text-muted-foreground"
               aria-label={t("pet.settings.open")}
               title={t("pet.settings.open")}
               onClick={onOpenSettings}
             >
               <Settings size={16} aria-hidden="true" />
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -1137,7 +1142,7 @@ export function PetChatHost({
       <div
         ref={scrollRef}
         data-pet-chat-scroll="true"
-        className="mimi-chat-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 @min-[1440px]/pet-page:px-6"
+        className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,hsl(var(--cs-muted)/0.12),transparent_12rem)] [scrollbar-gutter:stable] overscroll-contain px-4 py-5 @min-[1440px]/pet-page:px-6"
         onScroll={(event) => {
           const scroller = event.currentTarget;
           followLatestRef.current =
@@ -1166,12 +1171,12 @@ export function PetChatHost({
         {rows.length === 0 ? (
           <div className="mimi-chat-welcome flex min-h-full items-center justify-center py-5 text-center">
             <div className="w-full max-w-lg">
-              <div className="mimi-welcome-avatar mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-[28px] border border-primary/10 bg-primary/5">
+              <div className="mx-auto mb-5 flex h-20 w-20 -rotate-[4deg] items-center justify-center rounded-[28px] border border-primary/10 bg-gradient-to-br from-primary/10 to-primary/[0.025] shadow-[0_8px_28px_hsl(var(--cs-primary)/0.045)]">
                 <img
                   src={dogIcon}
                   alt=""
                   draggable={false}
-                  className="h-16 w-16 select-none object-contain"
+                  className="h-16 w-16 rotate-[4deg] select-none object-contain"
                 />
               </div>
               <h3 className="text-xl font-semibold tracking-tight @min-[1100px]/pet-page:text-2xl">
@@ -1183,11 +1188,12 @@ export function PetChatHost({
               {petSessionId && (
                 <div className="mimi-chat-suggestions mx-auto mt-6 grid max-w-md grid-cols-1 gap-2 text-left @min-[600px]/pet-page:grid-cols-3">
                   {(["plan", "review", "recap"] as const).map((suggestion) => (
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
                       key={suggestion}
                       data-pet-chat-suggestion={suggestion}
-                      className="mimi-suggestion group flex min-w-0 items-center gap-3 rounded-xl border border-border/65 bg-background/70 p-3 text-left transition hover:border-primary/30 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 @min-[600px]/pet-page:flex-col @min-[600px]/pet-page:items-start @min-[600px]/pet-page:gap-2"
+                      className="mimi-suggestion group h-auto min-w-0 justify-start [&_svg]:size-3.5 gap-3 whitespace-normal rounded-xl border border-border/65 bg-background/70 p-3 text-left font-normal transition hover:border-primary/30 hover:bg-primary/5 focus-visible:ring-primary/35 @min-[600px]/pet-page:flex-col @min-[600px]/pet-page:items-start @min-[600px]/pet-page:gap-2"
                       onClick={() => preparePrompt(t(`pet.chat.suggestion.${suggestion}Prompt`))}
                     >
                       <span className="min-w-0 flex-1">
@@ -1203,7 +1209,7 @@ export function PetChatHost({
                         className="shrink-0 text-muted-foreground transition group-hover:text-primary"
                         aria-hidden="true"
                       />
-                    </button>
+                    </Button>
                   ))}
                 </div>
               )}
@@ -1295,7 +1301,7 @@ export function PetChatHost({
       )}
 
       <div className="mimi-composer-wrap shrink-0 px-3 pb-3 pt-2 @min-[1440px]/pet-page:px-5 @min-[1440px]/pet-page:pb-4">
-        <div className="mimi-composer mx-auto max-w-[880px] rounded-2xl border border-input/80 bg-background p-2 transition focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-primary/10">
+        <div className="mimi-composer mx-auto max-w-[880px] rounded-2xl border border-input/80 bg-background p-2 shadow-[0_3px_12px_hsl(var(--cs-foreground)/0.035)] transition focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-primary/10">
           {pathAttachments.length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-1 pb-2" data-pet-path-attachments="true">
               {pathAttachments.map((path) => (
@@ -1335,7 +1341,7 @@ export function PetChatHost({
               void submitToPet();
             }}
             rows={2}
-            className="block max-h-[min(168px,18cqh)] min-h-16 w-full resize-none overflow-y-auto bg-transparent px-2 py-1.5 text-sm leading-6 outline-none placeholder:text-muted-foreground/75"
+            className="block max-h-[min(168px,18svh)] min-h-16 w-full resize-none overflow-y-auto bg-transparent px-2 py-1.5 text-sm leading-6 outline-none placeholder:text-muted-foreground/75"
             placeholder={t("pet.chat.placeholder")}
             aria-label={t("pet.chat.placeholder")}
             disabled={!petSessionId}

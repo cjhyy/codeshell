@@ -29,7 +29,7 @@ describe("PetOverviewHeader", () => {
 
   test("does not present absent snapshots as freshly updated or loading counts as zero", () => {
     const unknown = renderToStaticMarkup(<PetOverviewHeader />);
-    expect(unknown).toContain("状态未知");
+    expect(unknown).toContain("尚未同步");
     expect(unknown).not.toContain("刚刚更新");
     const loading = renderToStaticMarkup(<PetOverviewHeader loading />);
     expect(loading).toContain("正在加载工作状态");
@@ -57,4 +57,13 @@ describe("PetOverviewHeader", () => {
     expect(retrying).toContain("加载失败，正在重试");
     expect(retrying).not.toContain("分钟前更新");
   });
+});
+
+test("only exceptional states sit in the live region; the routine age does not", () => {
+  const routine = renderToStaticMarkup(<PetOverviewHeader observedAt={1_000} now={61_000} />);
+  expect(routine).toMatch(/<span role="status" aria-live="polite"><\/span>/);
+  const retrying = renderToStaticMarkup(
+    <PetOverviewHeader observedAt={1_000} now={61_000} retrying />,
+  );
+  expect(retrying).toMatch(/<span role="status" aria-live="polite">[^<]+<\/span>/);
 });

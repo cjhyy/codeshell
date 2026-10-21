@@ -129,6 +129,7 @@ import { useSessionHistorySync } from "./app/useSessionHistorySync";
 import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
 import { useGoalPendingBuckets } from "./app/useGoalPendingBuckets";
+import { usePetMemoryNavigation } from "./app/usePetMemoryNavigation";
 import { createChatLinkReadHandler } from "./chat/linkResourceIntents";
 import { usePanelBuckets } from "./app/usePanelBuckets";
 import { useViewTargets } from "./app/useViewTargets";
@@ -206,7 +207,6 @@ function App() {
   } = useOptionalPetState();
   // Pet visibility is process-scoped and mirrored by the desktop host.
   const [petWidgetVisible, setPetWidgetVisible] = useState(false);
-  const petMemoryOriginRef = useRef<"workspace" | "settings">("settings");
   const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
@@ -1134,6 +1134,7 @@ function App() {
       approvalBucketsRef,
     },
   });
+  const { openPetMemory, leavePetMemory } = usePetMemoryNavigation({ openPetPage, setViewMode });
 
   const {
     panelByBucket,
@@ -2357,7 +2358,7 @@ function App() {
               }
             >
               {isPetView ? (
-                <PetPage overview={petState}>
+                <PetPage overview={petState} revealTask={!!petInitialTaskId}>
                   <PetWorldPane
                     projection={petState.projection}
                     status={petState.status}
@@ -2372,10 +2373,7 @@ function App() {
                     modelOptions={quickChatModelOptions}
                     onOpenSession={(request) => void handleOpenPetTarget(request)}
                     onOpenSettings={() => setViewMode("pet_settings")}
-                    onOpenMemory={() => {
-                      petMemoryOriginRef.current = "workspace";
-                      setViewMode("pet_memory");
-                    }}
+                    onOpenMemory={() => openPetMemory("workspace")}
                   />
                 </PetPage>
               ) : isPetSettingsView ? (
@@ -2389,22 +2387,13 @@ function App() {
                   onWidgetVisibleChange={setPetWidgetVisibility}
                   onOpenPersonalization={() => setViewMode("pet_personalization")}
                   onOpenConnections={() => setViewMode("credentials")}
-                  onOpenMemory={() => {
-                    petMemoryOriginRef.current = "settings";
-                    setViewMode("pet_memory");
-                  }}
+                  onOpenMemory={() => openPetMemory("settings")}
                   onBack={openPetPage}
                 />
               ) : isPetPersonalizationView ? (
                 <PetPersonalizationPage onBack={() => setViewMode("pet_settings")} />
               ) : isPetMemoryView ? (
-                <PetMemoryCenterPage
-                  onBack={() =>
-                    petMemoryOriginRef.current === "workspace"
-                      ? openPetPage()
-                      : setViewMode("pet_settings")
-                  }
-                />
+                <PetMemoryCenterPage onBack={leavePetMemory} />
               ) : registeredPageRender ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   {registeredPageRender({

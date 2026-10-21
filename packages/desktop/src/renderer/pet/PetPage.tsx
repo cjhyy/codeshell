@@ -1,6 +1,7 @@
 import React from "react";
 import { useT } from "../i18n";
 import { ChevronDown, PanelRightClose, PanelRightOpen, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { PetState } from "./petStateReducer";
 
 export interface PetPageProps {
@@ -9,6 +10,8 @@ export interface PetPageProps {
   runningCount?: number;
   pendingCount?: number;
   focusPending?: boolean;
+  /** A long task was opened from outside (e.g. a notification); show the work rail. */
+  revealTask?: boolean;
 }
 
 /**
@@ -24,23 +27,30 @@ export function PetPage({
   ).length ?? 0,
   pendingCount = overview?.projection?.pending.length ?? 0,
   focusPending = overview?.overviewFocus === "pending",
+  revealTask = false,
 }: PetPageProps) {
   const { t } = useT();
-  const [workExpanded, setWorkExpanded] = React.useState(focusPending);
+  const reveal = focusPending || revealTask;
+  const [workExpanded, setWorkExpanded] = React.useState(reveal);
   const [focusMode, setFocusMode] = React.useState(false);
-  React.useEffect(() => {
-    if (focusPending) {
+  // Adjust during render, not in an effect: the work rail's own effects scroll
+  // and focus the requested item, and child effects run before a parent
+  // effect could unhide the rail, so they would target a display:none column.
+  const [revealed, setRevealed] = React.useState(reveal);
+  if (reveal !== revealed) {
+    setRevealed(reveal);
+    if (reveal) {
       setWorkExpanded(true);
       setFocusMode(false);
     }
-  }, [focusPending]);
+  }
   const [work, ...chat] = React.Children.toArray(children);
   const workId = React.useId();
   return (
     <section
       data-pet-page="standalone"
       aria-label={t("pet.overview.regionLabel")}
-      className="mimi-page-shell @container/pet-page relative flex h-full min-w-0 flex-1 flex-col overflow-hidden"
+      className="mimi-page-shell @container/pet-page relative flex h-full min-w-0 flex-1 flex-col overflow-hidden motion-reduce:**:animate-none motion-reduce:**:transition-none"
     >
       <header className="mimi-page-heading mx-auto flex w-full max-w-[1680px] shrink-0 items-center justify-between gap-3 px-4 pb-3 pt-4 @min-[1100px]/pet-page:px-6 @min-[1100px]/pet-page:pb-4 @min-[1100px]/pet-page:pt-5">
         <div className="min-w-0">
@@ -52,14 +62,16 @@ export function PetPage({
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{t("pet.overview.workspaceHint")}</p>
         </div>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           data-pet-focus-mode="toggle"
           aria-pressed={focusMode}
           aria-controls={workId}
           aria-label={t(focusMode ? "pet.overview.showActivity" : "pet.overview.focusMode")}
           title={t(focusMode ? "pet.overview.showActivity" : "pet.overview.focusMode")}
-          className="mimi-quiet-button hidden shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground @min-[1100px]/pet-page:inline-flex"
+          className="hidden shrink-0 gap-2 rounded-lg px-3 text-xs font-normal text-muted-foreground @min-[1100px]/pet-page:inline-flex"
           onClick={() => setFocusMode((value) => !value)}
         >
           {focusMode ? (
@@ -68,7 +80,7 @@ export function PetPage({
             <PanelRightClose size={15} aria-hidden="true" />
           )}
           {t(focusMode ? "pet.overview.showActivity" : "pet.overview.focusMode")}
-        </button>
+        </Button>
       </header>
       <div
         data-pet-workspace-layout={focusMode ? "focused" : "split"}
@@ -99,7 +111,7 @@ export function PetPage({
           </button>
           <div
             id={workId}
-            className={`${workExpanded ? "mt-2 max-h-[min(30cqh,max(80px,calc(100cqh_-_450px)))] overflow-y-auto" : "hidden"} @min-[1100px]/pet-page:mt-0 @min-[1100px]/pet-page:block @min-[1100px]/pet-page:h-full @min-[1100px]/pet-page:max-h-full @min-[1100px]/pet-page:overflow-y-auto`}
+            className={`${workExpanded ? "mt-2 max-h-[min(30svh,max(80px,calc(100svh_-_450px)))] overflow-y-auto" : "hidden"} @min-[1100px]/pet-page:mt-0 @min-[1100px]/pet-page:block @min-[1100px]/pet-page:h-full @min-[1100px]/pet-page:max-h-full @min-[1100px]/pet-page:overflow-y-auto`}
           >
             {work}
           </div>

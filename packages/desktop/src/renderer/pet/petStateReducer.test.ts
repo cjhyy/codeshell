@@ -149,3 +149,25 @@ describe("petStateReducer", () => {
     ).toMatchObject({ status: "error", needsSnapshot: true, error: "still starting" });
   });
 });
+
+describe("inserted chat prompts", () => {
+  const insert = (state: typeof initialPetState, draft: string) =>
+    petStateReducer(state, { type: "insert-chat-prompt", draft });
+
+  test("a second suggestion replaces the first instead of stacking", () => {
+    const planned = insert(initialPetState, "plan prompt");
+    expect(insert(planned, "review prompt").chatDraft).toBe("review prompt");
+  });
+
+  test("inserting the same prompt twice is a no-op", () => {
+    const once = insert(initialPetState, "follow-up prompt");
+    expect(insert(once, "follow-up prompt").chatDraft).toBe("follow-up prompt");
+  });
+
+  test("the user's own text is kept and the prompt is appended once", () => {
+    const typed = petStateReducer(initialPetState, { type: "set-chat-draft", draft: "my note" });
+    const appended = insert(typed, "follow-up prompt");
+    expect(appended.chatDraft).toBe("my note\n\nfollow-up prompt");
+    expect(insert(appended, "follow-up prompt").chatDraft).toBe("my note\n\nfollow-up prompt");
+  });
+});

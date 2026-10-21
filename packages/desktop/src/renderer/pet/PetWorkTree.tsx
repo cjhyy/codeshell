@@ -15,7 +15,18 @@ import {
 import type { PetLatestSessionResult } from "../../preload/types";
 import { useT } from "../i18n";
 import type { PetSessionEmptyState } from "./SessionStatusSection";
-import { RISK_TONE, type PetWorkGroup, type PetWorkItem, type PetWorkMap } from "./petWorkMap";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import {
+  groupWorkItems,
+  PET_WORK_BRANCH_ORDER,
+  RISK_TONE,
+  type PetWorkGroup,
+  type PetWorkItem,
+  type PetWorkMap,
+  type PetWorkspaceWorkGroup,
+} from "./petWorkMap";
 
 const STATE_DOT: Record<PetWorkItem["state"], string> = {
   "needs-action": "bg-status-warn",
@@ -60,7 +71,11 @@ const BRANCH_META: Record<PetWorkGroup, { Icon: LucideIcon; icon: string; count:
   },
 };
 
-const WORK_GROUP_ORDER: readonly PetWorkGroup[] = ["pending", "running", "completed", "other"];
+const countItems = (groups: readonly PetWorkspaceWorkGroup[]): number =>
+  groups.reduce(
+    (count, group) => count + group.buckets.reduce((sum, bucket) => sum + bucket.items.length, 0),
+    0,
+  );
 
 type LatestResultState =
   | { status: "loading" }
@@ -349,7 +364,6 @@ function WorkBranch({
 export function PetWorkTree({
   workMap,
   emptyState = "empty",
-  defaultOpen = false,
   focusPending = false,
   onOpen,
   onDismiss,
@@ -359,7 +373,6 @@ export function PetWorkTree({
 }: {
   workMap: PetWorkMap;
   emptyState?: PetSessionEmptyState;
-  defaultOpen?: boolean;
   focusPending?: boolean;
   onOpen?: (item: PetWorkItem) => void;
   onDismiss?: (item: PetWorkItem) => void;
@@ -375,57 +388,63 @@ export function PetWorkTree({
   const headingId = React.useId();
   const searchRef = React.useRef<HTMLInputElement>(null);
   React.useEffect(() => {
-    if (defaultOpen) setDrawerOpen(true);
-  }, [defaultOpen]);
-  React.useEffect(() => {
     if (!focusPending) return;
     setDrawerOpen(true);
     setQuery("");
     setFilter("all");
   }, [focusPending]);
   const hasVisibleWork = workMap.groups.length > 0;
-  const visibleItemCount = workMap.groups.reduce(
-    (count, group) =>
-      count + group.buckets.reduce((bucketCount, bucket) => bucketCount + bucket.items.length, 0),
-    0,
-  );
+  const visibleItemCount = countItems(workMap.groups);
   const search = query.trim().toLocaleLowerCase();
   const filtered = search.length > 0 || filter !== "all";
-  const searchableGroups = search ? (workMap.searchGroups ?? workMap.groups) : workMap.groups;
-  const sourceItemCount = searchableGroups.reduce(
-    (count, group) =>
-      count + group.buckets.reduce((bucketCount, bucket) => bucketCount + bucket.items.length, 0),
-    0,
+  // Filters and search read every included item: the display-limited groups
+  // omit older rows, which a filter must still be able to reach.
+  const allItems = React.useMemo(
+    () => workMap.allItems ?? workMap.groups.flatMap((g) => g.buckets.flatMap((b) => b.items)),
+    [workMap],
   );
-  const filteredGroups = searchableGroups
+  const sourceGroups = React.useMemo(
+    () => (filtered ? groupWorkItems(allItems) : workMap.groups),
+    [filtered, allItems, workMap.groups],
+  );
+  const searching = search.length > 0;
+  // Rebuilt when search starts or the items change, not on every keystroke.
+  const searchText = React.useMemo(() => {
+    if (!searching) return undefined;
+    return new Map(
+      allItems.map((item) => [
+        item.id,
+        [
+          item.title,
+          item.workspace ?? t("pet.work.unassignedWorkspace"),
+          item.detail,
+          t(`pet.work.state.${item.state}`),
+          item.external?.cli,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLocaleLowerCase(),
+      ]),
+    );
+  }, [searching, allItems, t]);
+  const filteredGroups = sourceGroups
     .map((group) => ({
       ...group,
-      buckets: WORK_GROUP_ORDER.flatMap((kind) => {
+      buckets: PET_WORK_BRANCH_ORDER.flatMap((kind) => {
         if (filter !== "all" && filter !== kind) return [];
         const bucket = group.buckets.find((candidate) => candidate.group === kind);
         if (!bucket) return [];
-        const items = bucket.items.filter((item) => {
-          if (!search) return true;
-          return [
-            item.title,
-            item.workspace ?? t("pet.work.unassignedWorkspace"),
-            item.detail,
-            t(`pet.work.state.${item.state}`),
-            item.external?.cli,
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .toLocaleLowerCase()
-            .includes(search);
-        });
+        const items = searchText
+          ? bucket.items.filter((item) => searchText.get(item.id)?.includes(search))
+          : bucket.items;
         return items.length > 0 ? [{ ...bucket, items }] : [];
       }),
     }))
     .filter((group) => group.buckets.length > 0);
-  const matchingCount = filteredGroups.reduce(
-    (count, group) => count + group.buckets.reduce((sum, bucket) => sum + bucket.items.length, 0),
-    0,
-  );
+  const matchingCount = countItems(filteredGroups);
+  // Chip counts always cover all included work, so they do not jump between
+  // the display-limited and full sets as a query is typed.
+  const totalCount = PET_WORK_BRANCH_ORDER.reduce((sum, kind) => sum + workMap.counts[kind], 0);
   const resetFilters = (): void => {
     setQuery("");
     setFilter("all");
@@ -486,28 +505,30 @@ export function PetWorkTree({
             <div className="mb-3 space-y-2 px-1">
               <div className="flex items-center gap-2 rounded-lg border border-border/65 bg-background px-2.5 focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-primary/10">
                 <Search size={13} className="shrink-0 text-muted-foreground" aria-hidden="true" />
-                <input
+                <Input
                   ref={searchRef}
                   type="search"
                   value={query}
                   aria-label={t("pet.work.searchLabel")}
                   placeholder={t("pet.work.searchPlaceholder")}
                   data-pet-work-search="true"
-                  className="h-9 min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/70 [&::-webkit-search-cancel-button]:appearance-none"
+                  className="h-9 min-w-0 flex-1 border-0 bg-transparent px-0 text-xs shadow-none placeholder:text-muted-foreground/70 focus-visible:ring-0 [&::-webkit-search-cancel-button]:appearance-none"
                   onChange={(event) => setQuery(event.target.value)}
                 />
                 {query && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     aria-label={t("pet.work.clearSearch")}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    className="h-7 w-7 shrink-0 text-muted-foreground [&_svg]:size-3"
                     onClick={() => {
                       setQuery("");
                       searchRef.current?.focus();
                     }}
                   >
-                    <X size={12} aria-hidden="true" />
-                  </button>
+                    <X aria-hidden="true" />
+                  </Button>
                 )}
               </div>
               <div
@@ -515,34 +536,29 @@ export function PetWorkTree({
                 aria-label={t("pet.work.filterLabel")}
                 className="flex flex-wrap gap-1"
               >
-                {(["all", ...WORK_GROUP_ORDER] as const).map((kind) => {
-                  const count =
-                    kind === "all"
-                      ? sourceItemCount
-                      : searchableGroups.reduce(
-                          (total, group) =>
-                            total +
-                            (group.buckets.find((bucket) => bucket.group === kind)?.items.length ??
-                              0),
-                          0,
-                        );
-                  if (kind !== "all" && count === 0) return null;
+                {(["all", ...PET_WORK_BRANCH_ORDER] as const).map((kind) => {
+                  const count = kind === "all" ? totalCount : workMap.counts[kind];
+                  // The active chip stays even at zero, so the user can see
+                  // and leave the filter that emptied the list.
+                  if (kind !== "all" && count === 0 && filter !== kind) return null;
                   return (
-                    <button
+                    <Button
                       key={kind}
                       type="button"
+                      variant="ghost"
                       data-pet-work-filter={kind}
                       aria-pressed={filter === kind}
-                      className={`inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-[11px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+                      className={cn(
+                        "h-auto min-h-7 gap-1.5 rounded-md px-2 text-[11px] font-normal",
                         filter === kind
-                          ? "bg-primary/10 font-medium text-primary"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }`}
+                          ? "bg-primary/10 font-medium text-primary hover:bg-primary/15 hover:text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
                       onClick={() => setFilter(kind)}
                     >
                       {kind === "all" ? t("pet.work.filterAll") : t(`pet.work.branch.${kind}`)}
                       <span className="text-[10px] tabular-nums opacity-70">{count}</span>
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -566,10 +582,7 @@ export function PetWorkTree({
           ) : filteredGroups.length > 0 ? (
             <ul className="space-y-4">
               {filteredGroups.map((group) => {
-                const itemCount = group.buckets.reduce(
-                  (count, bucket) => count + bucket.items.length,
-                  0,
-                );
+                const itemCount = countItems([group]);
                 return (
                   <li
                     key={group.workspace ?? "__unassigned__"}
@@ -617,14 +630,16 @@ export function PetWorkTree({
             >
               <Search size={20} className="text-muted-foreground/55" aria-hidden="true" />
               <p className="text-xs text-muted-foreground">{t("pet.work.noMatches")}</p>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 data-pet-work-reset="true"
-                className="rounded-md px-2 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="h-auto px-2 py-1.5 text-xs text-primary hover:bg-primary/10 hover:text-primary"
                 onClick={resetFilters}
               >
                 {t("pet.work.resetFilters")}
-              </button>
+              </Button>
             </div>
           ) : (
             <div

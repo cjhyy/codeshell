@@ -179,9 +179,7 @@ describe("buildPetWorkMap", () => {
       },
     );
     const visible = map.groups.flatMap((group) => group.buckets.flatMap((bucket) => bucket.items));
-    const searchable = map.searchGroups!.flatMap((group) =>
-      group.buckets.flatMap((bucket) => bucket.items),
-    );
+    const searchable = map.allItems!;
     expect(visible).toHaveLength(8);
     expect(searchable).toHaveLength(10);
     expect(map.counts.completed).toBe(10);
