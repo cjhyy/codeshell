@@ -485,3 +485,232 @@ describe("CodexRuntime", () => {
     await expect(turn.done).resolves.toBeUndefined();
   });
 });
+
+/** Read what a fake app-server recorded, through the runtime's own client. */
+async function collectFrom<T>(runtime: CodexRuntime): Promise<T> {
+  return (await (
+    runtime as unknown as { client: { request(m: string): Promise<unknown> } }
+  ).client.request("collect")) as T;
+}
+
+/** Fail the test instead of hanging the suite when a promise never settles. */
+function within<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    promise.finally(() => clearTimeout(timer)),
+    new Promise<T>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${label} did not settle within ${ms}ms`)), ms);
+    }),
+  ]);
+}
+
+describe("CodexRuntime lifecycle when the app-server dies mid-turn (E01)", () => {
+  test("an exit after Codex accepted the turn settles it with a model_error", async () => {
+    const events: StreamEvent[] = [];
+    const runtime = makeRuntime(
+      `
+      setOnLine((m) => {
+        if (m.method === "initialize") return send({ id: m.id, result: {} });
+        if (m.method === "thread/start") return send({ id: m.id, result: { thread: { id: "t" } } });
+        if (m.method === "turn/start") {
+          send({ id: m.id, result: { turn: { id: "turn-1" } } });
+          send({ method: "turn/started", params: { threadId: "t", turn: { id: "turn-1" } } });
+          setTimeout(() => process.exit(3), 50);
+        }
+      });
+    `,
+      (event) => events.push(event),
+    );
+    await runtime.start();
+    const turn = await runtime.send({ text: "hi" });
+    await within(turn.done, 3_000, "turn.done");
+
+    const terminal = events.filter((event) => event.type === "turn_complete");
+    expect(terminal).toEqual([{ type: "turn_complete", reason: "model_error" }]);
+    const error = events.find((event) => event.type === "error");
+    expect(error).toMatchObject({ type: "error" });
+    expect((error as { error: string }).error).toMatch(/app-server exited \(code 3\)/);
+    // The terminal error is the last thing the turn reports.
+    expect(events.at(-1)).toEqual({ type: "turn_complete", reason: "model_error" });
+  });
+
+  test("a later send fails fast so the host can rebuild the runtime", async () => {
+    const runtime = makeRuntime(`
+      setOnLine((m) => {
+        if (m.method === "initialize") return send({ id: m.id, result: {} });
+        if (m.method === "thread/start") return send({ id: m.id, result: { thread: { id: "t" } } });
+        if (m.method === "turn/start") {
+          send({ id: m.id, result: { turn: { id: "turn-1" } } });
+          setTimeout(() => process.exit(4), 50);
+        }
+      });
+    `);
+    await runtime.start();
+    const turn = await runtime.send({ text: "hi" });
+    await within(turn.done, 3_000, "turn.done");
+    await expect(within(runtime.send({ text: "again" }), 1_000, "send")).rejects.toThrow(
+      /app-server exited \(code 4\)/,
+    );
+    // Nothing to stop on a dead runtime, and asking must not hang.
+    await expect(within(runtime.interrupt(), 1_000, "interrupt")).resolves.toBeUndefined();
+  });
+
+  test("an exit before the turn/start response rejects send() without a duplicate terminal", async () => {
+    const events: StreamEvent[] = [];
+    const runtime = makeRuntime(
+      `
+      setOnLine((m) => {
+        if (m.method === "initialize") return send({ id: m.id, result: {} });
+        if (m.method === "thread/start") return send({ id: m.id, result: { thread: { id: "t" } } });
+        if (m.method === "turn/start") {
+          send({ method: "turn/started", params: { threadId: "t", turn: { id: "turn-1" } } });
+          setTimeout(() => process.exit(5), 50);
+        }
+      });
+    `,
+      (event) => events.push(event),
+    );
+    await runtime.start();
+    await expect(within(runtime.send({ text: "hi" }), 3_000, "send")).rejects.toThrow(
+      /app-server exited \(code 5\)/,
+    );
+    // The rejected send is the caller's terminal signal; the runtime must not
+    // also report one, or the host would record the failure twice.
+    expect(events.filter((event) => event.type === "turn_complete")).toEqual([]);
+  });
+
+  test("a turn that completed just before the server exited is not misreported", async () => {
+    const events: StreamEvent[] = [];
+    const runtime = makeRuntime(
+      `
+      setOnLine((m) => {
+        if (m.method === "initialize") return send({ id: m.id, result: {} });
+        if (m.method === "thread/start") return send({ id: m.id, result: { thread: { id: "t" } } });
+        if (m.method === "turn/start") {
+          send({ id: m.id, result: { turn: { id: "turn-1" } } });
+          send({ method: "turn/started", params: { threadId: "t", turn: { id: "turn-1" } } });
+          setTimeout(() => {
+            send({ method: "turn/completed", params: { threadId: "t", turn: { id: "turn-1", status: "completed" } } });
+            process.stdout.write("", () => process.exit(0));
+          }, 50);
+        }
+      });
+    `,
+      (event) => events.push(event),
+    );
+    await runtime.start();
+    const turn = await runtime.send({ text: "hi" });
+    await within(turn.done, 3_000, "turn.done");
+    expect(events.filter((event) => event.type === "turn_complete")).toEqual([
+      { type: "turn_complete", reason: "completed" },
+    ]);
+  });
+});
+
+describe("CodexRuntime interrupt before the turn id is known (E02)", () => {
+  /**
+   * A fake whose turn/start acknowledgement is delayed. `startedAfterMs` and
+   * `responseAfterMs` control when the turn id becomes visible to the client.
+   */
+  function delayedStart(options: {
+    startedAfterMs?: number;
+    responseAfterMs: number;
+    responseError?: boolean;
+  }): string {
+    return `
+      const interrupts = [];
+      setOnLine((m) => {
+        if (m.method === "initialize") return send({ id: m.id, result: {} });
+        if (m.method === "thread/start") return send({ id: m.id, result: { thread: { id: "t" } } });
+        if (m.method === "turn/start") {
+          ${
+            options.startedAfterMs === undefined
+              ? ""
+              : `setTimeout(() => send({ method: "turn/started", params: { threadId: "t", turn: { id: "turn-1" } } }), ${options.startedAfterMs});`
+          }
+          setTimeout(() => send(${
+            options.responseError
+              ? `{ id: m.id, error: { code: -1, message: "turn refused" } }`
+              : `{ id: m.id, result: { turn: { id: "turn-1" } } }`
+          }), ${options.responseAfterMs});
+          return;
+        }
+        if (m.method === "turn/interrupt") {
+          interrupts.push(m.params);
+          send({ id: m.id, result: {} });
+          send({ method: "turn/completed", params: { threadId: "t", turn: { id: m.params.turnId, status: "interrupted" } } });
+          return;
+        }
+        if (m.method === "collect") return send({ id: m.id, result: { interrupts } });
+      });
+    `;
+  }
+
+  test("Stop after turn/started but before the response interrupts that turn", async () => {
+    const events: StreamEvent[] = [];
+    const runtime = makeRuntime(
+      delayedStart({ startedAfterMs: 0, responseAfterMs: 400 }),
+      (event) => events.push(event),
+    );
+    await runtime.start();
+    const sending = runtime.send({ text: "hi" });
+    // Wait until Codex has announced the turn, then Stop while the RPC is open.
+    for (let i = 0; i < 100 && !events.some((e) => e.type === "stream_request_start"); i++) {
+      await Bun.sleep(10);
+    }
+    await within(runtime.interrupt(), 3_000, "interrupt");
+    const turn = await within(sending, 3_000, "send");
+    await within(turn.done, 3_000, "turn.done");
+
+    const { interrupts } = await collectFrom<{ interrupts: unknown[] }>(runtime);
+    expect(interrupts).toEqual([{ threadId: "t", turnId: "turn-1" }]);
+    expect(events.at(-1)).toEqual({ type: "turn_complete", reason: "aborted_streaming" });
+  });
+
+  test("Stop before any turn id is known is delivered once, as soon as the id arrives", async () => {
+    const events: StreamEvent[] = [];
+    const runtime = makeRuntime(
+      delayedStart({ startedAfterMs: 150, responseAfterMs: 400 }),
+      (event) => events.push(event),
+    );
+    await runtime.start();
+    const sending = runtime.send({ text: "hi" });
+    const stopping = runtime.interrupt();
+    const second = runtime.interrupt();
+    await within(stopping, 3_000, "interrupt");
+    await within(second, 3_000, "second interrupt");
+    const turn = await within(sending, 3_000, "send");
+    await within(turn.done, 3_000, "turn.done");
+    expect(turn.turnId).toBe("turn-1");
+
+    // Sent on turn/started, and NOT again when the turn/start response lands.
+    const { interrupts } = await collectFrom<{ interrupts: unknown[] }>(runtime);
+    expect(interrupts).toEqual([{ threadId: "t", turnId: "turn-1" }]);
+    expect(events.filter((event) => event.type === "turn_complete")).toEqual([
+      { type: "turn_complete", reason: "aborted_streaming" },
+    ]);
+  });
+
+  test("Stop is delivered from the turn/start response when no turn/started came first", async () => {
+    const runtime = makeRuntime(delayedStart({ responseAfterMs: 150 }));
+    await runtime.start();
+    const sending = runtime.send({ text: "hi" });
+    const stopping = runtime.interrupt();
+    await within(stopping, 3_000, "interrupt");
+    const turn = await within(sending, 3_000, "send");
+    await within(turn.done, 3_000, "turn.done");
+    const { interrupts } = await collectFrom<{ interrupts: unknown[] }>(runtime);
+    expect(interrupts).toEqual([{ threadId: "t", turnId: "turn-1" }]);
+  });
+
+  test("Stop during a turn/start that fails settles without sending an interrupt", async () => {
+    const runtime = makeRuntime(delayedStart({ responseAfterMs: 100, responseError: true }));
+    await runtime.start();
+    const sending = runtime.send({ text: "hi" });
+    const stopping = runtime.interrupt();
+    await expect(within(sending, 3_000, "send")).rejects.toThrow(/turn refused/);
+    await expect(within(stopping, 3_000, "interrupt")).resolves.toBeUndefined();
+    const { interrupts } = await collectFrom<{ interrupts: unknown[] }>(runtime);
+    expect(interrupts).toEqual([]);
+  });
+});

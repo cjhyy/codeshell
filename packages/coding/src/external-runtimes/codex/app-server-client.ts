@@ -57,6 +57,15 @@ export type NotificationHandler = (method: string, params: unknown) => void;
  */
 export type ServerRequestHandler = (method: string, params: unknown) => Promise<unknown> | unknown;
 
+/**
+ * Told once when the transport is gone for good — the process exited or failed
+ * to spawn, the stream broke, or {@link CodexAppServerClient.close} ran. Pending
+ * requests are rejected by then; this is for state that is NOT a request, such
+ * as a turn whose RPC was already answered and now waits on notifications that
+ * can never arrive.
+ */
+export type CloseHandler = (reason: string) => void;
+
 interface Pending {
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
@@ -70,6 +79,7 @@ export class CodexAppServerClient {
   private readonly pending = new Map<number, Pending>();
   private notificationHandler?: NotificationHandler;
   private requestHandler?: ServerRequestHandler;
+  private closeHandler?: CloseHandler;
   private closed = false;
   private closeReason?: string;
   /** Buffer lines that arrive before a handler exists, then drain in order. */
@@ -91,6 +101,10 @@ export class CodexAppServerClient {
 
   onServerRequest(handler: ServerRequestHandler): void {
     this.requestHandler = handler;
+  }
+
+  onClose(handler: CloseHandler): void {
+    this.closeHandler = handler;
   }
 
   /** Spawn the app-server. Handlers must already be registered. */
@@ -279,6 +293,18 @@ export class CodexAppServerClient {
       entry.reject(new Error(reason));
     }
     this.pending.clear();
+    try {
+      this.closeHandler?.(reason);
+    } catch (error) {
+      this.log("appserver.close_handler_failed", {
+        error: error instanceof Error ? error.name : "unknown",
+      });
+    }
+  }
+
+  /** Why the transport closed, once it has. */
+  get closedReason(): string | undefined {
+    return this.closeReason;
   }
 
   get isClosed(): boolean {
