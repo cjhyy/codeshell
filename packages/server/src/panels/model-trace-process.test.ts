@@ -170,6 +170,17 @@ test("ordinary process execution gets no descriptor or inherited trace authority
     ],
   };
   const result = await f.processes.start(f.owner, params);
-  expect((await f.processes.waitForExit(f.owner, result)).code).toBe(0);
+  const exit = await f.processes.waitForExit(f.owner, result);
+  // Keep the signal and captured streams in assertion output if a child fails.
+  const output = (stream: "stdout" | "stderr") =>
+    f.events
+      .filter((event) => event.event === "process.output" && event.payload.stream === stream)
+      .map((event) => event.payload.text)
+      .join("");
+  expect({ exit, stdout: output("stdout"), stderr: output("stderr") }).toEqual({
+    exit: { code: 0, signal: null },
+    stdout: "ordinary\n",
+    stderr: "",
+  });
   expect(f.store.list().items).toHaveLength(0);
 });
