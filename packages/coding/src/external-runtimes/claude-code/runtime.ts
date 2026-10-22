@@ -38,7 +38,42 @@ export interface ClaudeRuntimeOptions {
   resumeRuntimeSessionId?: string;
   initialContext?: string;
   serverName?: string;
+  /**
+   * How long `interrupt()`/`close()` wait after SIGTERM before SIGKILL.
+   * Defaults to {@link DEFAULT_INTERRUPT_GRACE_MS}.
+   */
+  interruptGraceMs?: number;
   log?: (event: string, data: Record<string, unknown>) => void;
+}
+
+/** SIGTERM grace before escalating to SIGKILL. */
+export const DEFAULT_INTERRUPT_GRACE_MS = 3_000;
+/**
+ * Bound on waiting for `exit` after SIGKILL. SIGKILL cannot be ignored, so this
+ * only guards against a lost `exit` event; the turn is settled regardless.
+ */
+const KILL_SETTLE_MS = 2_000;
+
+/** One running `claude -p` process — and therefore one turn. */
+interface ActiveTurn {
+  readonly child: ChildProcessWithoutNullStreams;
+  /** Resolves once the turn is terminal and its resources are released. */
+  readonly settled: Promise<void>;
+  /** Settle now, even without an `exit` event. Idempotent. */
+  finish(code?: number | null, error?: Error): void;
+  /** Set by interrupt()/close(): the exit was requested, not a failure. */
+  interrupted: boolean;
+  stopping?: Promise<void>;
+}
+
+function settlesWithin(promise: Promise<void>, ms: number): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const timer = setTimeout(() => resolve(false), ms);
+    void promise.then(() => {
+      clearTimeout(timer);
+      resolve(true);
+    });
+  });
 }
 
 export interface ClaudeRuntimeHooks {
@@ -52,7 +87,7 @@ export interface ClaudeTurnHandle {
 export class ClaudeCodeRuntime {
   readonly kind = "claude-code" as const;
   private readonly log: (event: string, data: Record<string, unknown>) => void;
-  private child?: ChildProcessWithoutNullStreams;
+  private active?: ActiveTurn;
   private claudeSessionId?: string;
   private closed = false;
   private firstTurn = true;
@@ -84,7 +119,7 @@ export class ClaudeCodeRuntime {
     onEvent?: (event: StreamEvent) => void,
   ): Promise<ClaudeTurnHandle> {
     if (this.closed) throw new Error("ClaudeCodeRuntime is closed");
-    if (this.child) throw new Error("a turn is already running");
+    if (this.active) throw new Error("a turn is already running");
     let terminalSeen = false;
     const turnNumber = ++this.turnCount;
     const translator = new ClaudeEventTranslator({
@@ -125,7 +160,6 @@ export class ClaudeCodeRuntime {
       stdio: ["pipe", "pipe", "pipe"],
       shell: false,
     }) as ChildProcessWithoutNullStreams;
-    this.child = child;
 
     child.stdout.setEncoding("utf8");
     const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
@@ -152,32 +186,44 @@ export class ClaudeCodeRuntime {
     this.firstTurn = false;
     child.stdin.end(text);
 
-    const done = new Promise<void>((resolve) => {
-      let finished = false;
-      const finish = (code?: number | null, error?: Error): void => {
+    let resolveSettled!: () => void;
+    const settled = new Promise<void>((resolve) => (resolveSettled = resolve));
+    let finished = false;
+    const active: ActiveTurn = {
+      child,
+      settled,
+      interrupted: false,
+      finish: (code, error) => {
         if (finished) return;
         finished = true;
         lines.close();
         // Clean up the config file that carried the bearer token.
         wiring.cleanup();
-        this.child = undefined;
+        if (this.active === active) this.active = undefined;
         if (!terminalSeen) {
-          const detail =
-            error?.message ??
-            `Claude Code exited without a terminal result (code ${code ?? "unknown"})`;
-          this.emit({ type: "error", error: detail }, onEvent);
-          this.emit({ type: "turn_complete", reason: "model_error" }, onEvent);
+          if (active.interrupted) {
+            // A stop the user asked for is not a model failure. Same terminal
+            // reason Codex reports for an interrupted turn.
+            this.emit({ type: "turn_complete", reason: "aborted_streaming" }, onEvent);
+          } else {
+            const detail =
+              error?.message ??
+              `Claude Code exited without a terminal result (code ${code ?? "unknown"})`;
+            this.emit({ type: "error", error: detail }, onEvent);
+            this.emit({ type: "turn_complete", reason: "model_error" }, onEvent);
+          }
         }
-        resolve();
-      };
-      child.once("exit", (code) => finish(code));
-      child.once("error", (error) => {
-        this.log("claude.spawn_failed", { error: error.message.slice(0, 200) });
-        finish(undefined, error);
-      });
+        resolveSettled();
+      },
+    };
+    this.active = active;
+    child.once("exit", (code) => active.finish(code));
+    child.once("error", (error) => {
+      this.log("claude.spawn_failed", { error: error.message.slice(0, 200) });
+      active.finish(undefined, error);
     });
 
-    return { done };
+    return { done: settled };
   }
 
   private onLine(
@@ -215,15 +261,37 @@ export class ClaudeCodeRuntime {
   }
 
   /**
-   * Interrupt the active turn.
+   * Interrupt the active turn and wait until its process is gone.
    *
-   * `claude -p` has no interrupt RPC, so this is a signal. As with Codex, it
-   * cannot retract side effects already dispatched — it only stops further steps.
+   * `claude -p` has no interrupt RPC, so this is a signal: SIGTERM, then SIGKILL
+   * after the grace period. Returning while the process still runs would let a
+   * CLI that ignores SIGTERM keep working — and keep the turn pending — after
+   * the host believes it stopped. The turn settles with `aborted_streaming`.
+   *
+   * As with Codex, it cannot retract side effects already dispatched — it only
+   * stops further steps.
    */
   async interrupt(): Promise<void> {
-    const child = this.child;
-    if (!child) return;
-    child.kill("SIGTERM");
+    const active = this.active;
+    if (!active) return;
+    active.interrupted = true;
+    active.stopping ??= this.terminate(active);
+    await active.stopping;
+  }
+
+  private async terminate(active: ActiveTurn): Promise<void> {
+    const { child } = active;
+    const running = (): boolean => child.exitCode === null && child.signalCode === null;
+    if (running()) child.kill("SIGTERM");
+    const grace = this.options.interruptGraceMs ?? DEFAULT_INTERRUPT_GRACE_MS;
+    if (await settlesWithin(active.settled, grace)) return;
+    this.log("claude.sigkill", { graceMs: grace });
+    if (running()) child.kill("SIGKILL");
+    if (await settlesWithin(active.settled, KILL_SETTLE_MS)) return;
+    // No `exit` event even after SIGKILL (or the spawn never produced a process).
+    // Settle the turn anyway so neither the caller nor the session hangs.
+    this.log("claude.exit_not_observed", {});
+    active.finish(null);
   }
 
   async close(): Promise<void> {
