@@ -2169,6 +2169,101 @@ describe("ExternalRuntimeService", () => {
     });
   }
 
+  test("a background wake keeps its queue position ahead of later user input", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    providerSend = async (_args, input) => {
+      if (input.text.startsWith("first turn")) await gate;
+    };
+    const first = svc.send(request.sessionId, "first turn");
+    await settleBackgroundWakeup();
+    background.complete(request.sessionId);
+    const followUp = svc.send(request.sessionId, "follow-up");
+    release();
+    await first;
+    await followUp;
+    await settleBackgroundWakeup();
+    // The result was drained for the wake; it must reach the provider before
+    // the user's later turn, not be held in a turn queued behind it.
+    const delivered = providerInputs.findIndex((input) => input.text.includes("delegated result"));
+    const userTurn = providerInputs.findIndex((input) => input.text === "follow-up");
+    expect(delivered).toBeGreaterThan(0);
+    expect(delivered).toBeLessThan(userTurn);
+    expect(background.pending.size).toBe(0);
+    await svc.stopAll();
+  });
+
+  async function goalWaitingForBackgroundWork() {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    background.running.add(request.sessionId);
+    await svc.send(request.sessionId, {
+      text: "first turn",
+      goal: { objective: "wait for delegated work", maxTurns: 5 },
+    });
+    expect(svc.getGoal(request.sessionId).paused).toBeFalsy();
+    const gates = new Map<string, () => void>();
+    providerSend = async (_args, input) => {
+      const name = input.text.split("\n")[0]!;
+      if (name.endsWith("gated")) await new Promise<void>((resolve) => gates.set(name, resolve));
+    };
+    const pause = async () => {
+      const goal = svc.getGoal(request.sessionId);
+      await svc.updateGoal(request.sessionId, {
+        paused: true,
+        expectedGoalId: goal.goalId!,
+        expectedRevision: goal.revision!,
+      });
+    };
+    return { background, svc, gates, pause };
+  }
+
+  test("a Goal paused before a queued background wake runs keeps the result queued", async () => {
+    const { background, svc, gates, pause } = await goalWaitingForBackgroundWork();
+    const second = svc.send(request.sessionId, { text: "second gated", disableGoal: true });
+    await settleBackgroundWakeup();
+    background.complete(request.sessionId);
+    await pause();
+    gates.get("second gated")!();
+    await second;
+    await settleBackgroundWakeup();
+    expect(svc.getGoal(request.sessionId).paused).toBe(true);
+    expect(providerInputs.some((input) => input.text.includes("delegated result"))).toBe(false);
+    expect(background.pending.get(request.sessionId)).toBe("delegated result");
+    await svc.stopAll();
+  });
+
+  test("a background wake never delivers after a pause made while later input ran", async () => {
+    const { background, svc, gates, pause } = await goalWaitingForBackgroundWork();
+    const second = svc.send(request.sessionId, { text: "second gated", disableGoal: true });
+    await settleBackgroundWakeup();
+    background.complete(request.sessionId);
+    const third = svc.send(request.sessionId, { text: "third gated", disableGoal: true });
+    gates.get("second gated")!();
+    await second;
+    await settleBackgroundWakeup();
+    const pausedAt = providerInputs.length;
+    await pause();
+    gates.get("third gated")!();
+    await third;
+    await settleBackgroundWakeup();
+    expect(svc.getGoal(request.sessionId).paused).toBe(true);
+    expect(
+      providerInputs.slice(pausedAt).some((input) => input.text.includes("delegated result")),
+    ).toBe(false);
+    await svc.stopAll();
+  });
+
   test("a paused Goal remains paused when its runtime is replaced and a result arrives", async () => {
     const background = backgroundDelivery();
     const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {

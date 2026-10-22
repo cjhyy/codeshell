@@ -596,14 +596,20 @@ export class ExternalRuntimeService {
     const entry = this.sessions.get(sessionId);
     if (!entry || !entry.lifecycle.active || !this.deps.backgroundWork) return;
     // A completion can arrive before the launching turn reaches its terminal
-    // callback. Never overlap recorder state or provider turns.
-    await entry.turnTail;
-    if (this.sessions.get(sessionId) !== entry || !this.mayWakeForBackgroundWork(sessionId)) return;
-    const message = this.deps.backgroundWork.drainMessage(sessionId);
-    if (!message) return;
-    await this.send(sessionId, {
-      text: `<system-reminder>\n${message}\n</system-reminder>`,
-      injected: true,
+    // callback, and user input can queue behind it. Drain and recheck Goal
+    // pause/question state only in the serialized slot that actually runs: a
+    // user turn ahead of this one consumes the results itself, and a refusal
+    // leaves them queued for the next resume.
+    await this.submit(sessionId, () => {
+      if (this.sessions.get(sessionId) !== entry || !this.mayWakeForBackgroundWork(sessionId))
+        return undefined;
+      const message = this.deps.backgroundWork?.drainMessage(sessionId);
+      return message
+        ? { text: `<system-reminder>\n${message}\n</system-reminder>`, injected: true }
+        : undefined;
+    }).catch((error) => {
+      // A replaced runtime never drained; its successor wakes on the queue.
+      if (this.sessions.get(sessionId) === entry) throw error;
     });
   }
 
@@ -1282,9 +1288,25 @@ export class ExternalRuntimeService {
     return session;
   }
 
-  async send(
+  send(
     sessionId: string,
     input: DesktopExternalRuntimeTurnInput | string,
+    callerWebContentsId?: number,
+    expectedGoal?: { goalId: string; revision: number },
+    hooks?: ExternalRuntimeSubmissionHooks,
+  ): Promise<ExternalRuntimeTurnOutcome> {
+    const turnInput = typeof input === "string" ? { text: input } : input;
+    return this.submit(sessionId, () => turnInput, callerWebContentsId, expectedGoal, hooks);
+  }
+
+  /**
+   * Queue one turn whose input is resolved inside its serialized slot. A
+   * resolver returning undefined skips the slot without touching the provider,
+   * the recorder or the Goal (an unneeded or refused background wake).
+   */
+  private async submit(
+    sessionId: string,
+    resolveInput: () => DesktopExternalRuntimeTurnInput | undefined,
     callerWebContentsId?: number,
     expectedGoal?: { goalId: string; revision: number },
     hooks?: ExternalRuntimeSubmissionHooks,
@@ -1292,7 +1314,7 @@ export class ExternalRuntimeService {
     this.assertOwner(sessionId, callerWebContentsId);
     const entry = this.sessions.get(sessionId);
     if (!entry) throw new Error(`no external runtime session for ${sessionId}`);
-    const turnInput = typeof input === "string" ? { text: input } : input;
+    let turnInput!: DesktopExternalRuntimeTurnInput;
     const acceptedGeneration = entry.lifecycle.interruptGeneration;
     let accountingRejected = false;
     const runTurnExclusive = async (): Promise<ExternalRuntimeTurnOutcome> => {
@@ -1304,6 +1326,9 @@ export class ExternalRuntimeService {
       if (acceptedGeneration !== entry.lifecycle.interruptGeneration) {
         return { ok: false, reason: "aborted_streaming", streamed: true };
       }
+      const resolved = resolveInput();
+      if (!resolved) return { ok: true, reason: "completed", streamed: true };
+      turnInput = resolved;
       if (expectedGoal) {
         const current = this.goals.read(sessionId);
         if (
