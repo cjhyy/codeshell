@@ -141,6 +141,7 @@ import {
 } from "./app/composerDraftTargets";
 import { useQuickChatImages } from "./chat/useQuickChatImages";
 import { AppMainView, AppShell } from "./app/AppShell";
+import { WindowTitleBar } from "./app/WindowTitleBar";
 import { switchActiveModel } from "./app/switchActiveModel";
 import { useActiveSessionUiAuthority } from "./sessionUiAuthority";
 import { readReviewAvailability, useReviewAvailability } from "./panels/useReviewAvailability";
@@ -2196,6 +2197,7 @@ function App() {
   return (
     <AppShell
       platformClass={platformClass}
+      platform={platform}
       sidebarCollapsed={!sidebarVisible}
       isFullscreen={isFullscreen}
       sidebarIsDialog={isNarrowWindow}
@@ -2877,44 +2879,47 @@ function App() {
       />
 
       {isSettingsPage && (
-        <div className="absolute inset-0 z-50 overflow-hidden bg-background">
-          <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
-            {view.viewMode === "settings_page" ? (
-              <SettingsPage
-                key="settings-global"
-                activeProjectPath={activeProject?.path ?? null}
-                initialModule={settingsInitialModule}
-                projects={projects}
-                sessionIndices={sessionIndices}
-                onRestoreArchivedSession={handleRestoreArchivedSession}
-                onDeleteArchivedSession={handleDeleteSession}
-                isMac={isMac}
-                isFullscreen={isFullscreen}
-                onBack={() => setViewMode("chat")}
-                onOpenDigitalHumans={() => setViewMode("digital_humans")}
-                onOpenLink={openLinkCredentials}
-              />
-            ) : activeProject ? (
-              // project_config: the same settings center, preselected to the
-              // project's scope (SettingsPage opens on its project overview).
-              <SettingsPage
-                // key forces a remount when hopping between the global route and
-                // a project-config route — initialProjectPath is mount-time only.
-                key={`settings-project-${activeProject.path}`}
-                activeProjectPath={activeProject.path}
-                initialProjectPath={activeProject.path}
-                projects={projects}
-                sessionIndices={sessionIndices}
-                onRestoreArchivedSession={handleRestoreArchivedSession}
-                onDeleteArchivedSession={handleDeleteSession}
-                isMac={isMac}
-                isFullscreen={isFullscreen}
-                onBack={() => setViewMode("chat")}
-                onOpenDigitalHumans={() => setViewMode("digital_humans")}
-                onOpenLink={openLinkCredentials}
-              />
-            ) : null}
-          </React.Suspense>
+        <div className="absolute inset-0 z-50 flex min-h-0 flex-col overflow-hidden bg-background">
+          <WindowTitleBar isFullscreen={isFullscreen} />
+          <div className="min-h-0 flex-1">
+            <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
+              {view.viewMode === "settings_page" ? (
+                <SettingsPage
+                  key="settings-global"
+                  activeProjectPath={activeProject?.path ?? null}
+                  initialModule={settingsInitialModule}
+                  projects={projects}
+                  sessionIndices={sessionIndices}
+                  onRestoreArchivedSession={handleRestoreArchivedSession}
+                  onDeleteArchivedSession={handleDeleteSession}
+                  isMac={isMac}
+                  isFullscreen={isFullscreen}
+                  onBack={() => setViewMode("chat")}
+                  onOpenDigitalHumans={() => setViewMode("digital_humans")}
+                  onOpenLink={openLinkCredentials}
+                />
+              ) : activeProject ? (
+                // project_config: the same settings center, preselected to the
+                // project's scope (SettingsPage opens on its project overview).
+                <SettingsPage
+                  // key forces a remount when hopping between the global route and
+                  // a project-config route — initialProjectPath is mount-time only.
+                  key={`settings-project-${activeProject.path}`}
+                  activeProjectPath={activeProject.path}
+                  initialProjectPath={activeProject.path}
+                  projects={projects}
+                  sessionIndices={sessionIndices}
+                  onRestoreArchivedSession={handleRestoreArchivedSession}
+                  onDeleteArchivedSession={handleDeleteSession}
+                  isMac={isMac}
+                  isFullscreen={isFullscreen}
+                  onBack={() => setViewMode("chat")}
+                  onOpenDigitalHumans={() => setViewMode("digital_humans")}
+                  onOpenLink={openLinkCredentials}
+                />
+              ) : null}
+            </React.Suspense>
+          </div>
         </div>
       )}
     </AppShell>

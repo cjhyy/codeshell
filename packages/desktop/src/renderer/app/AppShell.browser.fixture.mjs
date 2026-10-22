@@ -19,6 +19,7 @@ const source = String.raw`
   import React from 'react';
   import {createRoot} from 'react-dom/client';
   import {AppShell,AppMainView} from './app/AppShell';
+  import {WindowTitleBar} from './app/WindowTitleBar';
   import {TopBar} from './TopBar';
   import {ResponsiveSidebar,SIDEBAR_NAVIGATION_ID} from './app/ResponsiveSidebar';
   import {Sidebar} from './Sidebar';
@@ -30,9 +31,16 @@ const source = String.raw`
   window.codeshell={
     cloudAccount:{status:async()=>({state:'signed-out'}),onStatus:()=>noop},
     getUpdaterStatus:async()=>({kind:'idle'}),onUpdaterStatus:()=>noop,
+    getWindowZoomFactor:()=>window.fixtureZoom??1,
+    setWindowTitleBarOverlay:async()=>{},
     onWorkspaceChanged:()=>noop,onThemesChanged:()=>noop,
   };
   const recent=Date.now();
+  const activeTasks={kind:'task_list',id:'titlebar-layout-tasks',tasks:[
+    {id:'one',subject:'检查窗口安全区',status:'completed'},
+    {id:'two',subject:'检查主题边框',status:'completed'},
+    {id:'three',subject:'检查窄屏操作',status:'in_progress'},
+  ]};
   const sidebarProps={
     projects:[],sessions:{__no_repo__:{sessions:[
       {id:'demo-1',title:'界面对齐检查',createdAt:recent-60000,updatedAt:recent-60000},
@@ -48,18 +56,31 @@ const source = String.raw`
     onTogglePetWidget:noop,onLoadMoreSessionHistory:noop,onRenameSession:noop,
     onPinSession:noop,onArchiveSession:noop,onDeleteSession:noop,
   };
-  function Fixture({narrow,fullscreen,collapsed,panel,music}) {
+  function Fixture({platform,narrow,fullscreen,collapsed,panel,music,controlsLeft,controlsRight,viewportWidth,activeChat}) {
     const [sidebarOpen,setSidebarOpen]=React.useState(!collapsed);
     const [panelOpen,setPanelOpen]=React.useState(panel);
     const [settingsOpen,setSettingsOpen]=React.useState(false);
     React.useEffect(()=>{window.setFixtureSettings=setSettingsOpen},[]);
+    React.useLayoutEffect(()=>{
+      const shell=window.document.querySelector('[data-app-shell]');
+      if(controlsLeft!==undefined||controlsRight!==undefined){
+        shell.style.setProperty('--cs-native-titlebar-x',(controlsLeft??0)+'px');
+        shell.style.setProperty('--cs-native-titlebar-width',(viewportWidth-(controlsLeft??0)-(controlsRight??138))+'px');
+      }else{
+        shell.style.removeProperty('--cs-native-titlebar-x');
+        shell.style.removeProperty('--cs-native-titlebar-width');
+      }
+    },[controlsLeft,controlsRight,viewportWidth]);
     const toggleRef=React.useRef(null);
-    return <AppShell platformClass="platform-mac" sidebarCollapsed={!sidebarOpen} sidebarIsDialog={narrow} isFullscreen={fullscreen}>
-      <TopBar projectName="Demo" sessionTitle="界面对齐检查" busy={false}
+    return <AppShell platform={platform} platformClass={platform==='darwin'?'platform-darwin':''} sidebarCollapsed={!sidebarOpen} sidebarIsDialog={narrow} isFullscreen={fullscreen}>
+      <TopBar projectName="Demo" sessionTitle="界面对齐检查" busy={!!activeChat}
         sidebarCollapsed={!sidebarOpen} onToggleSidebar={()=>setSidebarOpen(value=>!value)}
         sidebarToggleRef={toggleRef} sidebarControlsId={SIDEBAR_NAVIGATION_ID} sidebarIsDialog={narrow}
         panelOpen={panelOpen} onTogglePanel={()=>setPanelOpen(value=>!value)}
-        isMac isFullscreen={fullscreen} statusAvailable={false}/>
+        isMac={platform==='darwin'} isFullscreen={fullscreen} statusAvailable={!!activeChat}
+        contextSelectionAvailable={!!activeChat} onSelectContext={noop}
+        tasks={activeChat?activeTasks:null}
+        activeGoal={activeChat?{objective:'验证Windows标题栏',round:1,paused:false}:null}/>
       {music&&<div data-fixture-music className="h-9 shrink-0 border-b border-border/70 px-3 py-2 text-[11px] text-muted-foreground">演示音乐条</div>}
       <div data-app-body data-fixture-body className="relative flex min-h-0 flex-1">
         <ResponsiveSidebar narrow={narrow} open={sidebarOpen} onClose={()=>setSidebarOpen(false)} onAfterClose={noop} toggleRef={toggleRef}>
@@ -81,11 +102,17 @@ const source = String.raw`
           <div className="p-3 text-xs text-muted-foreground">demo-project<br/><span className="pl-3">README.md</span></div>
         </aside>}
       </div>
-      {settingsOpen&&<section data-fixture-settings className="absolute inset-0 bg-background p-6">演示设置页面</section>}
+      {settingsOpen&&<section data-fixture-settings className="absolute inset-0 flex flex-col overflow-hidden bg-background">
+        <WindowTitleBar isFullscreen={fullscreen}/>
+        <div data-fixture-settings-body className="min-h-0 flex-1 p-6">演示设置页面</div>
+      </section>}
     </AppShell>;
   }
   const root=createRoot(window.document.getElementById('root'));
   window.renderFixture=config=>{
+    window.fixtureZoom=config.zoom??1;
+    window.codeshell.platform=config.platform;
+    window.codeshell.hasWindowTitleBarOverlay=config.platform==='win32';
     const html=window.document.documentElement;
     html.classList.toggle('dark',config.dark);
     html.style.setProperty('--cs-frame-width',config.frame+'px');
@@ -96,8 +123,12 @@ const source = String.raw`
     html.style.setProperty('--cs-surface-window-opacity',config.image?'0.3':'0');
     saveUILanguage('zh');
     root.render(<React.StrictMode><I18nProvider><ToastProvider><DialogProvider>
-      <Fixture key={JSON.stringify(config)} {...config}/>
+      <Fixture key={config.name} {...config}/>
     </DialogProvider></ToastProvider></I18nProvider></React.StrictMode>);
+  };
+  window.renderStandaloneTitlebar=hasOverlay=>{
+    window.codeshell.hasWindowTitleBarOverlay=hasOverlay;
+    root.render(<WindowTitleBar/>);
   };
 `;
 const bundle = await build({
@@ -144,13 +175,98 @@ const cases = [
     panel: false,
     music: true,
   },
-];
+  { name: "windows-light", platform: "win32", frame: 2, radius: 14, dark: false, panel: true },
+  {
+    name: "windows-zoom-out",
+    platform: "win32",
+    frame: 2,
+    radius: 14,
+    dark: false,
+    panel: true,
+    zoom: 0.5,
+  },
+  {
+    name: "windows-dark-scale-125",
+    platform: "win32",
+    frame: 3,
+    radius: 16,
+    dark: true,
+    panel: true,
+    scale: 1.25,
+  },
+  {
+    name: "windows-max-frame-scale-150",
+    platform: "win32",
+    frame: 8,
+    radius: 24,
+    dark: false,
+    panel: true,
+    image: true,
+    scale: 1.5,
+  },
+  {
+    name: "windows-fullscreen-scale-200",
+    platform: "win32",
+    frame: 8,
+    radius: 24,
+    dark: true,
+    fullscreen: true,
+    panel: true,
+    scale: 2,
+  },
+  {
+    name: "windows-narrow-drawer",
+    platform: "win32",
+    frame: 2,
+    radius: 16,
+    dark: true,
+    narrow: true,
+    panel: false,
+    music: true,
+    scale: 1.25,
+  },
+  {
+    name: "windows-narrow-350",
+    platform: "win32",
+    width: 350,
+    frame: 2,
+    radius: 16,
+    dark: false,
+    narrow: true,
+    panel: false,
+    music: true,
+  },
+  {
+    name: "windows-custom-native-geometry",
+    platform: "win32",
+    frame: 3,
+    radius: 16,
+    dark: true,
+    panel: true,
+    controlsLeft: 140,
+    controlsRight: 180,
+  },
+  ...[350, 390, 600, 601].map((width) => ({
+    name: `windows-active-chat-${width}`,
+    platform: "win32",
+    width,
+    frame: 2,
+    radius: 14,
+    dark: true,
+    narrow: true,
+    panel: false,
+    music: true,
+    activeChat: true,
+  })),
+  { name: "linux-rounded", platform: "linux", frame: 2, radius: 14, dark: true, panel: true },
+].map((config) => ({ platform: "darwin", ...config }));
 const near = (actual, expected, label) =>
   assert.ok(Math.abs(actual - expected) <= 1, `${label}: ${actual} should equal ${expected}`);
 try {
   for (const config of cases) {
-    const viewport = { width: config.narrow ? 390 : 1100, height: 720 };
-    const page = await browser.newPage({ viewport });
+    const viewport = { width: config.width ?? (config.narrow ? 390 : 1100), height: 720 };
+    const fixtureConfig = { ...config, viewportWidth: viewport.width };
+    const page = await browser.newPage({ viewport, deviceScaleFactor: config.scale ?? 1 });
     page.setDefaultTimeout(5000);
     const errors = [];
     page.on("pageerror", (error) => {
@@ -168,15 +284,50 @@ try {
     await page.addScriptTag({
       content: bundle.outputFiles.find((file) => file.path.endsWith(".js")).text,
     });
-    await page.evaluate((props) => window.renderFixture(props), config);
+    await page.evaluate((props) => window.renderFixture(props), fixtureConfig);
     const header = page.locator('[data-theme-surface="titlebar"]');
     await header.waitFor();
+    const expectedHeaderHeight = Math.max(44, 32 / (config.zoom ?? 1));
+    if (config.zoom) {
+      await page.waitForFunction(
+        (height) =>
+          window.document.querySelector("[data-window-titlebar]").getBoundingClientRect().height ===
+          height,
+        expectedHeaderHeight,
+      );
+    }
     const inset = config.fullscreen ? 0 : config.frame;
+    const expectedRadius = config.fullscreen || config.platform === "win32" ? 0 : config.radius;
+    const shell = page.locator("[data-app-shell]");
+    assert.equal(await shell.getAttribute("data-platform"), config.platform);
+    const frame = await shell.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      const stroke = window.getComputedStyle(element, "::after");
+      return {
+        radius: Number.parseFloat(style.borderTopLeftRadius),
+        strokeRadius: Number.parseFloat(stroke.borderTopLeftRadius),
+        widths: [
+          stroke.borderTopWidth,
+          stroke.borderRightWidth,
+          stroke.borderBottomWidth,
+          stroke.borderLeftWidth,
+        ].map(Number.parseFloat),
+        pointerEvents: stroke.pointerEvents,
+      };
+    });
+    near(frame.radius, expectedRadius, `${config.name} outer corner radius`);
+    near(frame.strokeRadius, expectedRadius, `${config.name} decorative stroke corner radius`);
+    assert.deepEqual(
+      frame.widths,
+      [inset, inset, inset, inset],
+      `${config.name} frame stroke width`,
+    );
+    assert.equal(frame.pointerEvents, "none", `${config.name} frame leaves controls clickable`);
     const head = await header.boundingBox();
     near(head.x, inset, `${config.name} titlebar left inset`);
     near(head.y, inset, `${config.name} titlebar top inset`);
     near(head.width, viewport.width - inset * 2, `${config.name} titlebar width`);
-    near(head.height, 44, `${config.name} titlebar height`);
+    near(head.height, expectedHeaderHeight, `${config.name} titlebar height`);
     const body = await page.locator("[data-fixture-body]").boundingBox();
     near(
       body.y,
@@ -193,7 +344,7 @@ try {
       );
     near(
       innerRadius,
-      config.fullscreen ? 0 : Math.max(0, config.radius - inset),
+      Math.max(0, expectedRadius - inset),
       `${config.name} content radius follows frame inset`,
     );
     assert.equal(
@@ -203,10 +354,91 @@ try {
     );
     const toggle = page.locator('[data-sidebar-action="toggle"]');
     const toggleBox = await toggle.boundingBox();
-    assert.ok(
-      config.fullscreen ? toggleBox.x < 40 : toggleBox.x >= 80,
-      `${config.name} macOS traffic-light safe area follows fullscreen state`,
+    if (config.zoom) {
+      near(
+        toggleBox.y + toggleBox.height / 2,
+        head.y + (head.height - 1) / 2,
+        "zoomed-out controls remain vertically centered",
+      );
+    }
+    const hasNativeGutter = config.platform === "darwin" && !config.fullscreen;
+    const nativeLeft =
+      config.platform === "win32" && !config.fullscreen ? (config.controlsLeft ?? 0) : 0;
+    const nativeRight =
+      config.platform === "win32" && !config.fullscreen ? (config.controlsRight ?? 138) : 0;
+    const safeLeft = Math.max(inset, nativeLeft);
+    const safeRight = Math.min(viewport.width - inset, viewport.width - nativeRight);
+    assert.equal(
+      await page.locator("[data-native-controls-gutter]").count(),
+      hasNativeGutter ? 1 : 0,
+      `${config.name} only macOS reserves traffic-light space`,
     );
+    assert.ok(
+      hasNativeGutter ? toggleBox.x >= 80 : toggleBox.x >= safeLeft && toggleBox.x < safeLeft + 40,
+      `${config.name} toggle follows the platform native-control safe area`,
+    );
+    async function titlebarControlsFit(row, left, right, label, interactive = true) {
+      assert.equal(
+        await row.evaluate((element) =>
+          window.getComputedStyle(element).getPropertyValue("-webkit-app-region"),
+        ),
+        "drag",
+        `${label} keeps a native drag surface`,
+      );
+      for (const button of await row.locator("button").all()) {
+        if (!(await button.isVisible())) continue;
+        const box = await button.boundingBox();
+        assert.ok(
+          box.x >= left - 1 && box.x + box.width <= right + 1,
+          `${label} keeps ${await button.getAttribute("aria-label")} outside native buttons: ${JSON.stringify({ x: box.x, width: box.width, left, right })}`,
+        );
+        if (interactive) {
+          const reachability = await button.evaluate((element) => {
+            const box = element.getBoundingClientRect();
+            const hit = window.document.elementFromPoint(
+              box.x + box.width / 2,
+              box.y + box.height / 2,
+            );
+            return {
+              reachable: element === hit || element.contains(hit),
+              hit: hit?.outerHTML.slice(0, 300),
+            };
+          });
+          assert.equal(
+            reachability.reachable,
+            true,
+            `${label} ${await button.getAttribute("aria-label")} remains reachable: ${reachability.hit}`,
+          );
+        }
+      }
+    }
+    if (config.platform === "win32") {
+      assert.notEqual(await header.getAttribute("data-window-titlebar"), null);
+      await titlebarControlsFit(header, safeLeft, safeRight, config.name, !config.narrow);
+      near(
+        (await page.locator('[data-panel-action="toggle"]').boundingBox()).width,
+        28,
+        `${config.name} panel toggle remains visible`,
+      );
+      if (config.activeChat) {
+        assert.equal(await header.locator('[data-context-action="open"]').count(), 1);
+        assert.equal(await header.locator('[data-goal-marker="active"]').count(), 1);
+        assert.equal(await header.locator('[data-context-action="open"]').isVisible(), true);
+        assert.equal(await header.locator('[data-goal-marker="active"]').isVisible(), true);
+        assert.equal(await header.locator(".status-dot").isVisible(), true);
+        assert.equal(
+          await header.locator("[data-titlebar-task-count]").isVisible(),
+          viewport.width > 420,
+          `${config.name} task count collapses before essential active-chat controls overlap`,
+        );
+        assert.ok(
+          (await header.locator('button:has([data-goal-marker="active"])').textContent()).includes(
+            "2/3",
+          ),
+          `${config.name} exercises the active goal and task-progress chip`,
+        );
+      }
+    }
     const chat = await page.locator("[data-fixture-chat]").boundingBox();
     const sidebar = page.locator('[data-theme-surface="sidebar"]');
     if (config.collapsed) {
@@ -296,7 +528,11 @@ try {
       true,
       `${config.name} app shell does not overflow`,
     );
-    if (config.name === "mac-image-frame-2") {
+    if (
+      config.name === "mac-image-frame-2" ||
+      config.name === "windows-light" ||
+      config.name === "windows-fullscreen-scale-200"
+    ) {
       await page.evaluate(() => window.setFixtureSettings(true));
       const settings = page.locator("[data-fixture-settings]");
       await settings.waitFor();
@@ -306,9 +542,84 @@ try {
       near(box.y, content.y, "settings overlay follows the inner frame top edge");
       near(box.width, content.width, "settings overlay follows the inner frame width");
       near(box.height, content.height, "settings overlay follows the inner frame height");
+      const settingsTitlebar = settings.locator("[data-window-titlebar]");
+      const settingsBody = await settings.locator("[data-fixture-settings-body]").boundingBox();
+      if (config.platform === "win32") {
+        await settingsTitlebar.waitFor();
+        const row = await settingsTitlebar.boundingBox();
+        near(row.x, content.x, "Windows settings titlebar follows the inner frame");
+        near(row.width, content.width, "Windows settings titlebar spans the inner frame");
+        near(row.height, 44, "Windows settings retains a drag row");
+        near(
+          settingsBody.y,
+          row.y + row.height,
+          "Windows settings content starts below native controls",
+        );
+        await titlebarControlsFit(settingsTitlebar, safeLeft, safeRight, `${config.name} settings`);
+        await page.screenshot({ path: path.join(screenshots, `${config.name}-settings.png`) });
+      } else {
+        assert.equal(
+          await settingsTitlebar.count(),
+          0,
+          "macOS settings keeps its native titlebar layout",
+        );
+        near(settingsBody.y, content.y, "macOS settings does not reserve a Windows drag row");
+      }
       await page.evaluate(() => window.setFixtureSettings(false));
       await settings.waitFor({ state: "hidden" });
       await header.waitFor();
+    }
+    if (config.name === "windows-dark-scale-125") {
+      const shellNode = await shell.elementHandle();
+      for (const fullscreen of [true, false]) {
+        await page.evaluate((props) => window.renderFixture(props), {
+          ...fixtureConfig,
+          fullscreen,
+        });
+        await page.waitForFunction(
+          (state) =>
+            window.document.querySelector("[data-app-shell]").dataset.windowState === state,
+          fullscreen ? "fullscreen" : "windowed",
+        );
+        assert.equal(
+          await shell.evaluate((element, previous) => element === previous, shellNode),
+          true,
+          "Windows fullscreen transition updates the mounted shell",
+        );
+        const transitionInset = fullscreen ? 0 : config.frame;
+        const transitionFrame = await shell.evaluate((element) => {
+          const stroke = window.getComputedStyle(element, "::after");
+          const content = window.getComputedStyle(
+            element.querySelector("[data-app-shell-content]"),
+          );
+          return {
+            width: Number.parseFloat(stroke.borderTopWidth),
+            outerRadius: Number.parseFloat(stroke.borderTopLeftRadius),
+            innerRadius: Number.parseFloat(content.borderTopLeftRadius),
+          };
+        });
+        assert.deepEqual(
+          transitionFrame,
+          { width: transitionInset, outerRadius: 0, innerRadius: 0 },
+          "Windows fullscreen transition restores the theme width and keeps square corners",
+        );
+        const transitionHeader = await header.boundingBox();
+        near(transitionHeader.x, transitionInset, "Windows transition titlebar left inset");
+        near(transitionHeader.y, transitionInset, "Windows transition titlebar top inset");
+        const transitionBody = await page.locator("[data-fixture-body]").boundingBox();
+        near(
+          transitionBody.y + transitionBody.height,
+          viewport.height - transitionInset,
+          "Windows transition body bottom inset",
+        );
+        await titlebarControlsFit(
+          header,
+          transitionInset,
+          fullscreen ? viewport.width : viewport.width - 138,
+          "Windows fullscreen transition",
+        );
+      }
+      await shellNode.dispose();
     }
     const output = path.join(screenshots, `${config.name}.png`);
     await page.screenshot({ path: output });
@@ -325,6 +636,38 @@ try {
         await toggle.evaluate((element) => window.document.activeElement === element),
         true,
         "drawer close restores the persistent titlebar trigger",
+      );
+      if (config.platform === "win32") {
+        await titlebarControlsFit(header, safeLeft, safeRight, `${config.name} after drawer close`);
+      }
+      if (config.name === "windows-active-chat-350") {
+        await header.locator('button:has([data-goal-marker="active"])').focus();
+        const status = page.locator("[data-status-popover]");
+        await status.waitFor();
+        assert.equal(
+          await status.getByText("检查窗口安全区", { exact: true }).isVisible(),
+          true,
+          "compact Windows status keeps task details accessible",
+        );
+        await page.screenshot({ path: path.join(screenshots, `${config.name}-status.png`) });
+        await page.keyboard.press("Escape");
+        await status.waitFor({ state: "hidden" });
+      }
+    }
+    if (config.name === "windows-light") {
+      await page.evaluate(() => window.renderStandaloneTitlebar(false));
+      await page.locator("[data-window-titlebar]").waitFor({ state: "hidden" });
+      assert.equal(
+        await page.locator("[data-window-titlebar]").count(),
+        0,
+        "Windows pet and child windows without native overlays do not gain a startup titlebar",
+      );
+      await page.evaluate(() => window.renderStandaloneTitlebar(true));
+      await page.locator("[data-window-titlebar]").waitFor();
+      assert.equal(
+        await page.locator("[data-window-titlebar]").count(),
+        1,
+        "main Windows startup retains the native overlay drag row",
       );
     }
     assert.deepEqual(errors, [], `${config.name} has no browser page errors`);

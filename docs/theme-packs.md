@@ -81,7 +81,11 @@ ZIP 内的 `.cs-theme.json` 可以直接位于压缩包根目录，也可以位�
 | `background.light` / `background.dark` | 不带 `hsl()` 的 HSL 三元组 | 区域底色；深色未配置时使用浅色值 |
 | `backgroundOpacity` | 0–1 | 显式底色默认 1；未指定底色时沿用区域默认透明度 |
 
-`frame` 的 `light` / `dark` 为相同格式的 HSL 颜色，`width` 为 0–8px，`radius` 为 0–24px；宽度和圆角未配置时均为 0。外框不占用布局空间，也不拦截点击。Mimi 独立悬浮窗保持透明。显式 `surfaces.window` 会替代传统 `wallpaper`，包括只声明底色、不显示图片的情况。
+`frame` 的 `light` / `dark` 为相同格式的 HSL 颜色，`width` 为 0–8px，`radius` 为 0–24px；宽度和圆角未配置时均为 0。
+
+内容区会为外框预留同宽的内缩空间，外框不拦截点击。Windows 的主题外框和内容区采用直角，标题栏直接显示主题背景，同时保留系统原生窗口按钮并为其预留空间；全屏时隐藏主题外框并取消圆角。
+
+Mimi 独立悬浮窗保持透明。显式 `surfaces.window` 会替代传统 `wallpaper`，包括只声明底色、不显示图片的情况。
 
 图片支持 PNG/APNG、JPEG、WebP、GIF，单张上限 8MiB，最大边长 8192px、总像素不超过四千万。图片路径必须指向包内文件；图片不接受远程 URL，主题不接受 CSS 或脚本。所有区域图片都会参与安装确认摘要，确认期间修改图片需要重新预览。
 

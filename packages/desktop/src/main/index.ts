@@ -37,10 +37,12 @@ import {
   webContents,
   Notification,
   screen,
+  nativeTheme,
   type OpenDialogOptions,
   type SaveDialogOptions,
   type IpcMainInvokeEvent,
 } from "electron";
+import { mainWindowTitleBarOptions, registerWindowTitleBarIpc } from "./window-titlebar.js";
 import {
   openCloudWorkbench,
   openManagedCloudWorkbench,
@@ -1443,12 +1445,9 @@ async function createWindow(): Promise<BrowserWindow> {
     x: ws.x,
     y: ws.y,
     icon: resolve(__dirname, "..", "..", "build", "icon.png"),
-    // Codex-style single-row header: hide the native macOS title bar
-    // (keeps traffic-light), let renderer content flow under the
-    // buttons. The .topbar element reserves a 70px gutter so its
-    // contents don't sit underneath the traffic-light cluster.
-    // Other platforms get the standard window frame (no-op there).
-    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
+    // macOS retains its traffic lights; Windows overlays native caption
+    // buttons on the themed header instead of adding a second system bar.
+    ...mainWindowTitleBarOptions(process.platform, nativeTheme.shouldUseDarkColors),
     // Windows/Linux: hide the native menu bar (文件/编辑/视图) by default so it
     // doesn't clutter the window — it looked out of place jammed inside the
     // frame (macOS has a global menu bar; win/linux render it in-window). Still
@@ -1457,6 +1456,7 @@ async function createWindow(): Promise<BrowserWindow> {
     autoHideMenuBar: process.platform !== "darwin",
     webPreferences: {
       preload: resolve(__dirname, "..", "preload", "index.cjs"),
+      additionalArguments: process.platform === "win32" ? ["--codeshell-titlebar-overlay"] : [],
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -5943,6 +5943,8 @@ ipcMain.handle("window:new", async () => {
 ipcMain.handle("window:isFullscreen", async (e): Promise<boolean> => {
   return BrowserWindow.fromWebContents(e.sender)?.isFullScreen() ?? false;
 });
+
+registerWindowTitleBarIpc({ ipcMain, platform: process.platform, windows: () => mainWindows });
 
 ipcMain.handle("pet:widget-visible-get", () => {
   return petWidgetShouldBeVisible && Boolean(petWidgetWindow && !petWidgetWindow.isDestroyed());

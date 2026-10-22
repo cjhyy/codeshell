@@ -1076,6 +1076,8 @@ export interface CodeshellApi
   computerUse: ComputerUseSettingsApi;
   /** Main-process platform (`process.platform`), used for window chrome layout. */
   platform: string;
+  /** This window owns the native caption-button overlay (main Windows windows only). */
+  hasWindowTitleBarOverlay: boolean;
   /** Absolute local path for a File explicitly selected or dropped by the user. */
   getPathForFile(file: File): string;
   /** Forward a structured log line to ~/.code-shell/logs/desktop-*.log via main. */
@@ -2353,6 +2355,10 @@ export interface CodeshellApi
   recents(): Promise<{ path: string; name: string; lastOpenedAt: number }[]>;
   notify(opts: { title: string; body?: string; subtitle?: string }): Promise<void>;
   isWindowFullscreen(): Promise<boolean>;
+  getWindowZoomFactor(): number;
+  setWindowTitleBarOverlay(
+    appearance: import("../shared/window-titlebar").WindowTitleBarOverlay,
+  ): Promise<void>;
   onWindowFullscreenChange(cb: (state: { fullscreen: boolean }) => void): Unsubscribe;
   setBadgeCount(count: number): Promise<void>;
   onMenuEvent(cb: (event: string, payload?: unknown) => void): Unsubscribe;

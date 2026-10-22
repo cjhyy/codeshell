@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useT } from "./i18n";
+import { WindowTitleBar } from "./app/WindowTitleBar";
 import {
   flushSessionPersistence,
   initializeSessionPersistence,
@@ -54,11 +55,14 @@ export function SessionPersistenceGate({ children }: { children: ReactNode }) {
   );
   if (!ready) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-sm text-foreground">
-        <p role={failed ? "alert" : "status"}>
-          {t(failed ? "misc.session.loadFailed" : "misc.session.loading")}
-        </p>
-        {failed && retryButton}
+      <div className="flex h-screen flex-col bg-background text-sm text-foreground">
+        <WindowTitleBar />
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-6">
+          <p role={failed ? "alert" : "status"}>
+            {t(failed ? "misc.session.loadFailed" : "misc.session.loading")}
+          </p>
+          {failed && retryButton}
+        </div>
       </div>
     );
   }
@@ -68,7 +72,8 @@ export function SessionPersistenceGate({ children }: { children: ReactNode }) {
       {failed && (
         <div
           role="alert"
-          className="fixed inset-x-4 top-12 z-[90] flex items-center justify-center gap-3 rounded-md border border-border bg-popover p-3 text-sm text-popover-foreground shadow-lg"
+          className="fixed inset-x-4 z-[90] flex items-center justify-center gap-3 rounded-md border border-border bg-popover p-3 text-sm text-popover-foreground shadow-lg"
+          style={{ top: "max(3rem, env(titlebar-area-height, 0px))" }}
         >
           <span>{t("misc.session.saveFailed")}</span>
           {retryButton}
