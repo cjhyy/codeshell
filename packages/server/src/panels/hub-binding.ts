@@ -7,7 +7,7 @@ import {
   openSync,
   readFileSync,
   realpathSync,
-  type Stats,
+  type BigIntStats,
 } from "node:fs";
 import { devNull } from "node:os";
 import { basename, dirname, join, resolve, sep } from "node:path";
@@ -28,9 +28,9 @@ function refused(): never {
   );
 }
 
-function metadata(file: string): Stats | undefined {
+function metadata(file: string): BigIntStats | undefined {
   try {
-    return lstatSync(file);
+    return lstatSync(file, { bigint: true });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
     throw error;
@@ -43,8 +43,8 @@ function readPointer(file: string): { content: string; identity: string } {
     constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
   );
   try {
-    const info = fstatSync(descriptor);
-    if (!info.isFile() || info.size > 8192) refused();
+    const info = fstatSync(descriptor, { bigint: true });
+    if (!info.isFile() || info.size > 8192n) refused();
     const content = readFileSync(descriptor, "utf8");
     if (Buffer.byteLength(content) > 8192 || content.includes("\0")) refused();
     return { content, identity: `${info.dev}:${info.ino}` };
@@ -53,7 +53,7 @@ function readPointer(file: string): { content: string; identity: string } {
   }
 }
 
-function nearestGit(cwd: string): { root: string; path: string; info: Stats } | undefined {
+function nearestGit(cwd: string): { root: string; path: string; info: BigIntStats } | undefined {
   let current = cwd;
   for (let depth = 0; depth < 256; depth++) {
     const path = join(current, ".git");
@@ -69,17 +69,17 @@ function nearestGit(cwd: string): { root: string; path: string; info: Stats } | 
   return refused();
 }
 
-function sameIdentity(actual: Stats, expected: Stats) {
+function sameIdentity(actual: BigIntStats, expected: BigIntStats) {
   return actual.dev === expected.dev && actual.ino === expected.ino;
 }
 
 function directoryGuard(path: string): () => void {
   const canonical = realpathSync(path);
-  const info = lstatSync(canonical);
+  const info = lstatSync(canonical, { bigint: true });
   if (!info.isDirectory() || info.isSymbolicLink()) refused();
   return () => {
     if (realpathSync(path) !== canonical) refused();
-    const current = lstatSync(canonical);
+    const current = lstatSync(canonical, { bigint: true });
     if (!current.isDirectory() || current.isSymbolicLink() || !sameIdentity(current, info))
       refused();
   };
