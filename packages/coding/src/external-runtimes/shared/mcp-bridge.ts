@@ -35,7 +35,60 @@ export interface BridgeToolHost {
     result?: string;
     error?: string;
     isError?: boolean;
+    /** Structured blocks (images) a tool returned alongside its text. */
+    contentBlocks?: readonly BridgeContentBlock[];
   }>;
+}
+
+/** The subset of core's `ContentBlock` the bridge reads. Structural, like
+ *  {@link BridgeToolHost}, so this module stays independent of core. */
+export interface BridgeContentBlock {
+  type: string;
+  text?: string;
+  source?: { type?: string; media_type?: string; data?: string };
+}
+
+type McpContent =
+  | { type: "text"; text: string }
+  | { type: "image"; data: string; mimeType: string };
+
+/**
+ * MCP `tools/call` content for a host result.
+ *
+ * The text always comes first and is always present: it is the tool's own
+ * summary of what it loaded, and a client that drops images still gets it.
+ * Image blocks then follow as MCP image content. Without them a browser
+ * screenshot reached the external model only as "[screenshot loaded]".
+ *
+ * Only well-formed base64 `image/*` blocks are forwarded; anything else a tool
+ * puts into `contentBlocks` is dropped rather than passed through in a shape
+ * the client never agreed to. An error result stays text-only.
+ */
+export function mcpContentForResult(
+  outcome: Awaited<ReturnType<BridgeToolHost["execute"]>>,
+): McpContent[] {
+  const content: McpContent[] = [
+    { type: "text", text: String(outcome.result ?? outcome.error ?? "") },
+  ];
+  if (outcome.isError || outcome.error !== undefined) return content;
+  for (const block of outcome.contentBlocks ?? []) {
+    if (block.type === "text" && typeof block.text === "string") {
+      content.push({ type: "text", text: block.text });
+      continue;
+    }
+    const source = block.source;
+    if (
+      block.type === "image" &&
+      source?.type === "base64" &&
+      typeof source.data === "string" &&
+      source.data.length > 0 &&
+      typeof source.media_type === "string" &&
+      source.media_type.startsWith("image/")
+    ) {
+      content.push({ type: "image", data: source.data, mimeType: source.media_type });
+    }
+  }
+  return content;
 }
 
 export interface McpBridgeOptions {
@@ -402,10 +455,7 @@ export async function startLoopbackMcpBridge(options: McpBridgeOptions): Promise
         resultStatus: outcome.isError ? "error" : "ok",
         durationMs: Date.now() - started,
       });
-      reply({
-        content: [{ type: "text", text: String(outcome.result ?? outcome.error ?? "") }],
-        isError: Boolean(outcome.isError),
-      });
+      reply({ content: mcpContentForResult(outcome), isError: Boolean(outcome.isError) });
       return;
     }
 
