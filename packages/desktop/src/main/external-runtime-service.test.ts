@@ -5,7 +5,7 @@
  * `startExternalRuntimeSession` is stubbed via module mocking, because the point
  * here is what Desktop passes down — not whether a Codex binary is installed.
  */
-import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import {
   mkdirSync,
   mkdtempSync,
@@ -686,6 +686,8 @@ describe("ExternalRuntimeService", () => {
             return result;
           },
           hasPending: () => pending !== undefined,
+          // Another job may still be running: queued results take precedence.
+          hasRunning: () => true,
           dropSession: () => {
             pending = undefined;
           },
@@ -751,6 +753,213 @@ describe("ExternalRuntimeService", () => {
       await svc.stopAll();
     },
   );
+
+  test.each(["completed", "failed", "cancelled"] as const)(
+    "parks a Goal until background work is %s, then wakes exactly once",
+    async (status) => {
+      let listener: ((sessionId: string, event: StreamEvent) => void) | undefined;
+      let running = true;
+      let pending: string | undefined;
+      let finish!: () => void;
+      const finished = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+        backgroundWork: {
+          subscribe: (next: typeof listener) => {
+            listener = next;
+            return () => {
+              listener = undefined;
+            };
+          },
+          drainMessage: () => {
+            const message = pending;
+            pending = undefined;
+            return message;
+          },
+          hasPending: () => pending !== undefined,
+          hasRunning: (sessionId: string) => sessionId === request.sessionId && running,
+          dropSession: () => {
+            pending = undefined;
+          },
+        },
+      });
+      await svc.start(request);
+      const manager = new SessionManager();
+      providerSend = async (args, input) => {
+        if (providerInputs.length === 1) return;
+        expect(input.text).toContain(`后台任务结果：${status}`);
+        expect(manager.readSessionState(request.sessionId)?.goalLifecycle?.phase).toBe("active");
+        const goal = svc.getGoal(request.sessionId);
+        await (args.registry as ToolRegistry).executeTool("complete_goal", {
+          goalId: goal.goalId,
+          revision: goal.revision,
+        });
+        finish();
+      };
+      try {
+        const outcome = await svc.send(request.sessionId, {
+          text: "启动后台任务",
+          goal: "处理方案",
+        });
+        expect(outcome).toMatchObject({ reason: "completed", completionKind: "background_wait" });
+        expect(providerInputs).toHaveLength(1);
+        expect(svc.isSessionRunning(request.sessionId)).toBe(false);
+        const identity = svc.getGoal(request.sessionId);
+        expect(identity).toMatchObject({ goal: "处理方案", paused: false });
+        expect(manager.readSessionState(request.sessionId)).toMatchObject({
+          lastCompletionKind: "background_wait",
+          goalLifecycle: { phase: "waiting" },
+        });
+        expect(streamEvents.filter((event) => event.type === "turn_complete")).toMatchObject([
+          { reason: "completed", completionKind: "background_wait" },
+        ]);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(providerInputs).toHaveLength(1);
+
+        running = false;
+        pending = `后台任务结果：${status}`;
+        const event: StreamEvent = {
+          type: "background_agent_completed",
+          agentId: "cc-plan-job",
+          description: "CC 方案",
+          status,
+          enqueuedAt: Date.now(),
+        };
+        listener?.(request.sessionId, event);
+        listener?.(request.sessionId, event);
+        await finished;
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(providerInputs).toHaveLength(2);
+        expect(pending).toBeUndefined();
+        expect(svc.getGoal(request.sessionId).goal).toBeNull();
+        expect(manager.readSessionState(request.sessionId)).toMatchObject({
+          goalLifecycle: { goalId: identity.goalId, phase: "terminal" },
+        });
+        expect(manager.readSessionState(request.sessionId)?.lastCompletionKind).toBeUndefined();
+      } finally {
+        await svc.stopAll();
+      }
+    },
+  );
+
+  test("a paused waiting Goal retains its completion until the user resumes it", async () => {
+    let listener: ((sessionId: string, event: StreamEvent) => void) | undefined;
+    let pending: string | undefined;
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: {
+        subscribe: (next: typeof listener) => {
+          listener = next;
+          return () => {};
+        },
+        drainMessage: () => {
+          const message = pending;
+          pending = undefined;
+          return message;
+        },
+        hasPending: () => pending !== undefined,
+        hasRunning: () => true,
+        dropSession: () => {},
+      },
+    });
+    await svc.start(request);
+    try {
+      await svc.send(request.sessionId, { text: "执行", goal: "等待方案" });
+      expect(providerInputs).toHaveLength(1);
+      await svc.interrupt(request.sessionId, 77);
+      pending = "方案已完成";
+      listener?.(request.sessionId, {
+        type: "background_agent_completed",
+        agentId: "cc-plan",
+        description: "方案",
+        status: "completed",
+        enqueuedAt: Date.now(),
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(providerInputs).toHaveLength(1);
+      expect(pending).toBe("方案已完成");
+      const goal = svc.getGoal(request.sessionId);
+      expect(goal.paused).toBe(true);
+      providerSend = async (args, input) => {
+        expect(input.text).toContain("方案已完成");
+        const current = svc.getGoal(request.sessionId);
+        await (args.registry as ToolRegistry).executeTool("complete_goal", {
+          goalId: current.goalId,
+          revision: current.revision,
+        });
+      };
+      await svc.updateGoal(
+        request.sessionId,
+        {
+          paused: false,
+          expectedGoalId: goal.goalId!,
+          expectedRevision: goal.revision!,
+        },
+        77,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(providerInputs).toHaveLength(2);
+      expect(pending).toBeUndefined();
+    } finally {
+      await svc.stopAll();
+    }
+  });
+
+  test("interrupt-and-send during a background wait keeps the Goal active", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: {
+        subscribe: () => () => {},
+        drainMessage: () => undefined,
+        hasPending: () => false,
+        hasRunning: () => true,
+        dropSession: () => {},
+      },
+    });
+    await svc.start(request);
+    try {
+      await svc.send(request.sessionId, { text: "执行", goal: "等待方案" });
+      expect(providerInputs).toHaveLength(1);
+      await svc.interrupt(request.sessionId, 77, undefined, { keepGoal: true });
+      expect(svc.getGoal(request.sessionId)).toMatchObject({ goal: "等待方案", paused: false });
+    } finally {
+      await svc.stopAll();
+    }
+  });
+
+  test("failed waiting persistence reports an error without busy-looping or claiming a wait", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: {
+        subscribe: () => () => {},
+        drainMessage: () => undefined,
+        hasPending: () => false,
+        hasRunning: () => true,
+        dropSession: () => {},
+      },
+    });
+    await svc.start(request);
+    const persist = spyOn(SessionManager.prototype, "markGoalWaiting").mockReturnValue(false);
+    try {
+      const outcome = await svc.send(request.sessionId, { text: "执行", goal: "等待方案" });
+      expect(outcome.reason).toBe("model_error");
+      expect(providerInputs).toHaveLength(1);
+      expect(svc.canResumeGoal(request.sessionId, 77)).toBe(false);
+      expect(new SessionManager().readSessionState(request.sessionId)?.goalLifecycle?.phase).toBe(
+        "active",
+      );
+      expect(streamEvents).toContainEqual(
+        expect.objectContaining({
+          type: "error",
+          error: expect.stringContaining("Could not persist"),
+        }),
+      );
+      expect(streamEvents.filter((event) => event.type === "turn_complete")).toMatchObject([
+        { reason: "model_error" },
+      ]);
+    } finally {
+      persist.mockRestore();
+      await svc.stopAll();
+    }
+  });
 
   test("passes the preflight executable and environment to the actual runtime", async () => {
     const launch = { command: "/custom/version/bin/codex", env: { PATH: "/custom/version/bin" } };
@@ -1537,6 +1746,7 @@ describe("ExternalRuntimeService", () => {
           return message;
         },
         hasPending: (sessionId: string) => pending.has(sessionId),
+        hasRunning: () => false,
         dropSession: (sessionId: string) => {
           dropped.push(sessionId);
           pending.delete(sessionId);

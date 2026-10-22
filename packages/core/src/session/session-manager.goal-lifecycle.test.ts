@@ -110,9 +110,42 @@ describe("SessionManager GoalLifecycleV1 migration", () => {
       goalLifecycle: { phase: "waiting", goalId: "goal-wait", revision: 4 },
     });
 
-    expect(manager.saveActiveGoal(state, goal)).toBe(true);
+    expect(
+      manager.saveActiveGoal(state, goal, {
+        expectedGoalId: goal.goalId,
+        expectedRevision: goal.revision,
+      }),
+    ).toBe(true);
     expect(raw("waiting")).toMatchObject({
       goalLifecycle: { phase: "active", goalId: "goal-wait", revision: 4 },
+    });
+  });
+
+  test("a fenced waiting re-arm cannot overwrite a newer revision of the same Goal", () => {
+    const { state } = manager.create("/repo", "model", "provider", "waiting-edited");
+    const goal = { objective: "wait for render", goalId: "goal-wait", revision: 4 };
+    expect(manager.saveActiveGoal(state, goal)).toBe(true);
+    expect(manager.markGoalWaiting(state, goal)).toBe(true);
+    expect(
+      manager.updateActiveGoal("waiting-edited", {
+        objective: "revised render",
+        expectedGoalId: goal.goalId,
+        expectedRevision: goal.revision,
+      }),
+    ).toBeDefined();
+    const before = readFileSync(statePath("waiting-edited"), "utf8");
+
+    expect(
+      manager.saveActiveGoal(state, goal, {
+        expectedGoalId: goal.goalId,
+        expectedRevision: goal.revision,
+      }),
+    ).toBe(false);
+    expect(readFileSync(statePath("waiting-edited"), "utf8")).toBe(before);
+    expect(state.goalLifecycle).toMatchObject({
+      phase: "active",
+      revision: 5,
+      config: { objective: "revised render" },
     });
   });
 

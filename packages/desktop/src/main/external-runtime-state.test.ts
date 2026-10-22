@@ -442,6 +442,70 @@ test("one logical Goal run keeps its actual first user anchor and one terminal",
   expect(raw).toContain('"injected":true');
 });
 
+test("background waiting has one durable receipt and a safe completed provider boundary", () => {
+  const recorder = new ExternalRuntimeSessionRecorder(
+    "goal-background-wait",
+    "/tmp/project",
+    "fixture",
+    "codex",
+  );
+  recorder.beginTurn({ text: "collect background result" });
+  recorder.onEvent({ type: "text_delta", text: "后台检查正在运行。" });
+  recorder.onEvent({ type: "turn_complete", reason: "completed" }, true);
+
+  const terminal = recorder.completeRun("completed", "background_wait");
+  expect(terminal).toMatchObject({
+    type: "turn_complete",
+    reason: "completed",
+    completionKind: "background_wait",
+  });
+  expect(recorder.finishIfMissing()).toMatchObject({
+    ok: true,
+    reason: "completed",
+    completionKind: "background_wait",
+    text: "后台检查正在运行。",
+  });
+  const manager = new SessionManager();
+  const state = manager.readSessionState("goal-background-wait")!;
+  expect(state).toMatchObject({ status: "completed", lastCompletionKind: "background_wait" });
+  expect(state.completedSnapshotVersion).toBe(1);
+  expect(state.completedThroughEventId).toBe(
+    manager.resume("goal-background-wait").transcript.getEvents().at(-1)?.id,
+  );
+  const page = readOutputJournal(manager.getStorageDir(), "goal-background-wait");
+  expect(page.frames.filter((frame) => frame.event.type === "turn_complete")).toHaveLength(1);
+  expect(page.frames.at(-1)?.event).toMatchObject({ completionKind: "background_wait" });
+
+  recorder.beginTurn({ text: "background check finished", injected: true });
+  expect(manager.readSessionState("goal-background-wait")!.lastCompletionKind).toBeUndefined();
+  recorder.onEvent({ type: "text_delta", text: "检查已通过。" });
+  recorder.onEvent({ type: "turn_complete", reason: "completed" }, true);
+  expect(recorder.completeRun("completed")).not.toHaveProperty("completionKind");
+  expect(manager.readSessionState("goal-background-wait")).toMatchObject({
+    status: "completed",
+    completedSnapshotVersion: 1,
+  });
+  expect(recorder.finishIfMissing()).not.toHaveProperty("completionKind");
+});
+
+test("a failed logical run cannot retain a background-wait completion marker", () => {
+  const recorder = new ExternalRuntimeSessionRecorder(
+    "goal-background-failure",
+    "/tmp/project",
+    "fixture",
+    "codex",
+  );
+  recorder.beginTurn({ text: "collect background result" });
+  recorder.onEvent({ type: "turn_complete", reason: "model_error" }, true);
+  const terminal = recorder.completeRun("model_error", "background_wait");
+  expect(terminal).not.toHaveProperty("completionKind");
+  expect(recorder.finishIfMissing()).toMatchObject({ ok: false, reason: "model_error" });
+  expect(recorder.finishIfMissing()).not.toHaveProperty("completionKind");
+  expect(
+    new SessionManager().readSessionState("goal-background-failure")!.lastCompletionKind,
+  ).toBeUndefined();
+});
+
 test("external timing spans Goal rounds and resets for the next submitted run", () => {
   const recorder = new ExternalRuntimeSessionRecorder(
     "timed-goal-journal",

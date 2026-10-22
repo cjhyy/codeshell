@@ -14,6 +14,7 @@
 
 ## 本轮 P0 / P1：待核查与继续交付
 
+- [ ] **外部运行时可靠性与能力补齐（2026-10-21 核对）。** 优先处理 Codex 崩溃挂起/启动期 Stop、Claude 退出确认、首次 Profile 授权、renderer 刷新后的 Stop 归属和后台通知排队竞态；随后补 Claude 指令/权限、图像回包、缓存用量、单次取消、真实 compact、Host Hook、后台 Shell 等待与调度边界。DriveAgent 等待循环已有本地任务分支修复，尚未合入或更新运行中的应用；不把源码修复当成生产验收。逐项证据、已支持项和实施顺序见[专项核对](docs/todo/external-runtime-parity-audit-20261021.md)。
 - [ ] **P0.1 — 完整候选与正式发版。** 当前源码版本 `0.9.45`，最新正式发行 `v0.9.44`；最终收敛提交仍须通过完整 CI、10 个公开包 smoke、三平台安装包及原生验收。CI40 的 Web/macOS/Linux 各自范围已通过，Windows 首窗、卸载身份与后续打包更新恢复未完成，此前 `0xC0000005` 尚未定位；签名/公证与跨版本升级也未完成本轮正式验收。准确输入、结果及后续收敛见[发布验收记录](docs/todo/release-real-operations-2026-10-16.md)。早期 Linux services 完整验收 [38384214542](https://github.com/cjhyy/codeshell-services/actions/runs/38384214542) 的 `page-errors` 与大工件上传问题仍保留其独立范围，不能用后来的 Host 子项通过替代。
 - [ ] **P0.2 — Panel 正式安装与生产更新。** 正式发布 Design 0.18.2、Quant 0.46.2、Download 0.22.7、Video 0.7.3、Starter 0.1.1；完成含 Job 4.2.1 在内六包的真实安装、更新、加载、项目版本绑定与权限验收。五包远端草稿、完整上传下载、194 文件核对及五轮自然 CI 已完成，正式发布与生产更新链未完成。按 2026-10-14 范围决定，生产更新链只要求 Desktop 与 Hub 上的安装、更新和加载，不再要求云端 Panel 运行时的生产更新。
 - [ ] **P0.3 — 正式包 Pet / Mimi 与插件可靠性。** 用最终正式包验证真实 Electron / worker / Keychain、固定版本真实插件安装审阅与初始化、同 Session 续办和冷重启；完成真实微信长回合、断线与图片验收。早期真实插件 SDK 和 SVG 两次冷启动已通过，保留各自旧输入，仍缺最终正式包证据。
