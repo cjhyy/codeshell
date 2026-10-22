@@ -232,7 +232,7 @@ function App() {
   const [unreadBuckets, setUnreadBuckets] = useState<Set<string>>(() => new Set());
   const [projects, setProjects] = useTrackedProjects();
   const [sessionWorkspaceProfiles, setSessionWorkspaceProfiles] = useState<
-    Array<{ name: string; label: string }>
+    Array<{ name: string; label: string; description?: string }>
   >([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() =>
     loadActiveProjectId(),
@@ -554,7 +554,11 @@ function App() {
       .then((profiles) => {
         if (cancelled) return;
         setSessionWorkspaceProfiles(
-          profiles.map((profile) => ({ name: profile.name, label: profile.label })),
+          profiles.map((profile) => ({
+            name: profile.name,
+            label: profile.label,
+            description: profile.description,
+          })),
         );
       })
       .catch(() => {
@@ -2223,9 +2227,11 @@ function App() {
               sessionChromeVisible && !cloudSelected ? sessionWorkspaceProfiles : []
             }
             workspaceProfileSwitchDisabled={busy || profileSwitchBusy}
-            onWorkspaceProfileChange={(profileName) => {
-              void handleSessionWorkspaceProfileChange(profileName);
-            }}
+            onWorkspaceProfileChange={
+              activeProjectId && sessionUiAuthority.configurationAvailable
+                ? handleSessionWorkspaceProfileChange
+                : undefined
+            }
             busy={isPetSurface ? false : cloudSelected ? !!cloudRuntime?.busy : busy}
             sidebarCollapsed={!sidebarVisible}
             onToggleSidebar={toggleSidebar}

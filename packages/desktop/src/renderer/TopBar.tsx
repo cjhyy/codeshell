@@ -3,14 +3,17 @@ import { createPortal } from "react-dom";
 import { useAnchoredPopover } from "./chat/useAnchoredPopover";
 import { StatusDot } from "./ui/StatusDot";
 import { IconButton } from "./ui/IconButton";
-import { CirclePause, Forward, PanelLeft, PanelRight, Target, UserRound } from "lucide-react";
+import { CirclePause, Forward, PanelLeft, PanelRight, Target } from "lucide-react";
 import { StatusPopover } from "./topbar/StatusPopover";
 import { WorkspaceIndicator } from "./topbar/WorkspaceIndicator";
+import {
+  SessionDigitalHumanControl,
+  type SessionDigitalHumanProfile,
+} from "./topbar/SessionDigitalHumanControl";
 import type { LiveActivity } from "./topbar/liveActivity";
 import type { ActiveGoal, TaskListMessage } from "./types";
 import { useT } from "./i18n";
 import { Button } from "@/components/ui/button";
-import { SimpleSelect } from "@/components/ui/simple-select";
 import { cn } from "@/lib/utils";
 import { NotificationHistory } from "./ui/NotificationHistory";
 
@@ -20,7 +23,7 @@ interface Props {
   sessionId?: string | null;
   sessionTitle: string | null;
   workspaceProfile?: string | null;
-  workspaceProfiles?: ReadonlyArray<{ name: string; label: string }>;
+  workspaceProfiles?: ReadonlyArray<SessionDigitalHumanProfile>;
   workspaceProfileSwitchDisabled?: boolean;
   onWorkspaceProfileChange?: (profileName: string) => void;
   busy: boolean;
@@ -181,53 +184,15 @@ function TopBarImpl({
               {sessionTitle}
             </span>
           )}
-          {(workspaceProfile || (sessionId && workspaceProfiles.length > 0)) && (
-            <span
-              className="flex min-w-0 max-w-40 items-center gap-1 rounded-full border border-primary/15 bg-primary/5 px-2 py-0.5 text-[11px] text-primary"
-              title={t("digitalHumans.sessionBinding.description")}
-              style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-            >
-              <UserRound size={11} className="shrink-0" />
-              {onWorkspaceProfileChange && workspaceProfiles.length > 0 ? (
-                <span data-session-profile-switch="true" className="min-w-0">
-                  <SimpleSelect
-                    size="sm"
-                    ariaLabel={t("digitalHumans.sessionBinding.label")}
-                    className="h-6 min-w-0 max-w-full border-0 bg-transparent px-1 text-[11px] font-medium text-primary shadow-none focus:ring-0"
-                    placeholder={t("digitalHumans.sessionBinding.pick")}
-                    value={workspaceProfile ?? ""}
-                    disabled={workspaceProfileSwitchDisabled}
-                    onChange={onWorkspaceProfileChange}
-                    options={[
-                      // A session may point at a profile that is no longer in the
-                      // library; keep it selectable so switching away is possible.
-                      ...(workspaceProfile &&
-                      !workspaceProfiles.some((profile) => profile.name === workspaceProfile)
-                        ? [{ value: workspaceProfile, label: workspaceProfile }]
-                        : []),
-                      ...workspaceProfiles.map((profile) => ({
-                        value: profile.name,
-                        label: profile.label,
-                      })),
-                      // Binding was one-way — once a Session had a digital human
-                      // you could only swap it, never return to the project default.
-                      ...(workspaceProfile
-                        ? [
-                            {
-                              value: "",
-                              label: t("digitalHumans.sessionBinding.clear"),
-                              description: t("digitalHumans.sessionBinding.clearHint"),
-                            },
-                          ]
-                        : []),
-                    ]}
-                  />
-                </span>
-              ) : (
-                <span className="truncate">{workspaceProfile}</span>
-              )}
-            </span>
-          )}
+          <span className="min-w-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+            <SessionDigitalHumanControl
+              sessionId={sessionId}
+              profile={workspaceProfile}
+              profiles={workspaceProfiles}
+              disabled={workspaceProfileSwitchDisabled}
+              onProfileChange={onWorkspaceProfileChange}
+            />
+          </span>
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1 border-l border-border/60 pl-2">
@@ -465,6 +430,10 @@ function topBarPropsEqual(a: Props, b: Props): boolean {
     a.projectPath === b.projectPath &&
     a.sessionId === b.sessionId &&
     a.sessionTitle === b.sessionTitle &&
+    a.workspaceProfile === b.workspaceProfile &&
+    a.workspaceProfiles === b.workspaceProfiles &&
+    a.workspaceProfileSwitchDisabled === b.workspaceProfileSwitchDisabled &&
+    a.onWorkspaceProfileChange === b.onWorkspaceProfileChange &&
     a.busy === b.busy &&
     a.sidebarCollapsed === b.sidebarCollapsed &&
     a.isMac === b.isMac &&

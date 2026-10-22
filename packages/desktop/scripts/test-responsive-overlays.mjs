@@ -37,6 +37,7 @@ const fixtures = [
   "chat/PermissionPill.browser.fixture.mjs",
   "chat/ProjectPicker.browser.fixture.mjs",
   "topbar/WorkspaceIndicator.browser.fixture.mjs",
+  "topbar/SessionDigitalHumanControl.browser.fixture.mjs",
   "ui/ContextMenu.browser.fixture.mjs",
   "ChatView.autocomplete.browser.fixture.mjs",
   "ChatView.submit.browser.fixture.mjs",

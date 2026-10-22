@@ -1231,32 +1231,27 @@ require("node:module").syncBuiltinESMExports();
   await researcherCard.waitFor({ state: "visible" });
 
   await researcherCard.getByRole("button", { name: /^开始使用$|^Start using$/i }).click();
-  const sessionProfileSwitch = win.getByRole("combobox", {
-    name: /切换 Session 数字人|Switch Session digital human/i,
+  const sessionProfileIdentity = win.getByRole("button", {
+    name: /查看当前数字人：Research Analyst|View current digital human: Research Analyst/i,
   });
-  await sessionProfileSwitch.waitFor({ state: "visible" });
-  await sessionProfileSwitch.getByText("Research Analyst", { exact: true }).waitFor({
-    state: "visible",
-  });
+  await sessionProfileIdentity.waitFor({ state: "visible" });
   await screenshot(win, "digital-human-session-bound.png");
 
-  await sessionProfileSwitch.click();
-  await win.getByRole("option", { name: "Critical Reviewer", exact: true }).click();
+  await sessionProfileIdentity.click();
+  await win.getByRole("menuitem", { name: /更换数字人|Change digital human/i }).hover();
+  await win.getByRole("menuitemradio", { name: "Critical Reviewer", exact: true }).click();
   const switchInstallReview = win
     .getByRole("dialog")
     .filter({ has: win.getByRole("heading", { name: /补齐数字人依赖|Install digital-human/i }) });
   await switchInstallReview.waitFor({ state: "visible" });
   await switchInstallReview.getByRole("button", { name: /^取消$|^Cancel$/i }).click();
   await switchInstallReview.waitFor({ state: "hidden" });
-  await sessionProfileSwitch.getByText("Research Analyst", { exact: true }).waitFor({
-    state: "visible",
-  });
+  await sessionProfileIdentity.waitFor({ state: "visible" });
 
-  await sessionProfileSwitch.click();
-  await win.getByRole("option", { name: /取消数字人绑定|Unbind digital human/i }).click();
-  await sessionProfileSwitch.getByText(/选择数字人|Choose digital human/i).waitFor({
-    state: "visible",
-  });
+  await sessionProfileIdentity.click();
+  await win.getByRole("menuitem", { name: /^使用项目默认|^Use project default/i }).click();
+  await sessionProfileIdentity.waitFor({ state: "hidden" });
+  await win.getByRole("button", { name: /^会话操作$|^Session actions$/i }).waitFor();
   await screenshot(win, "digital-human-session-unbound.png");
 
   for (const [name, description] of [
@@ -1276,9 +1271,7 @@ require("node:module").syncBuiltinESMExports();
   await navButton.click();
   await win.getByRole("tab", { name: /数字人团队|Teams/i }).click();
   await teamCard.getByRole("button", { name: /^开始使用团队$|^Start using team$/i }).click();
-  await sessionProfileSwitch.getByText("Research Analyst", { exact: true }).waitFor({
-    state: "visible",
-  });
+  await sessionProfileIdentity.waitFor({ state: "visible" });
   const projectSessionList = win.locator("aside");
   const firstTeamSession = projectSessionList.getByRole("button", {
     name: /Research & Review · Research Analyst/,

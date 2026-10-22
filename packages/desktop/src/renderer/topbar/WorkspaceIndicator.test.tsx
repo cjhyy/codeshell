@@ -2056,7 +2056,7 @@ describe("TopBar workspace label", () => {
     expect(html).not.toContain(">转发到新会话<");
   });
 
-  test("renders the current Session digital human as a switcher", () => {
+  test("renders the current Session digital human as an identity badge", () => {
     const html = renderToStaticMarkup(
       <TopBar
         projectName="codeshell"
@@ -2079,14 +2079,11 @@ describe("TopBar workspace label", () => {
       />,
     );
 
-    expect(html).toContain('data-session-profile-switch="true"');
-    // Rendered by shadcn SimpleSelect, not a native <select>: the trigger shows
-    // the active profile's LABEL, and the option list lives in a portal that
-    // only mounts once opened — so静态 markup carries the selection, not the
-    // full option set.
+    expect(html).toContain('data-session-profile="true"');
     expect(html).toContain("产品经理");
-    expect(html).toContain('role="combobox"');
-    expect(html).toContain('aria-label="切换 Session 数字人"');
+    expect(html).not.toContain('role="combobox"');
+    expect(html).toContain('aria-label="查看当前数字人：产品经理"');
+    expect(html).not.toContain('data-session-actions="true"');
   });
 
   test("the status dot advertises no popover when there is nothing to show", () => {
@@ -2136,7 +2133,7 @@ describe("TopBar workspace label", () => {
     expect(html).toContain('aria-haspopup="dialog"');
   });
 
-  test("offers an unbind option once a digital human is bound", () => {
+  test("keeps the identity visible when a digital human is bound", () => {
     const html = renderToStaticMarkup(
       <TopBar
         projectName="codeshell"
@@ -2155,13 +2152,12 @@ describe("TopBar workspace label", () => {
         isFullscreen={false}
       />,
     );
-    // Radix keeps options in a portal, so assert the trigger still renders the
-    // bound profile; the unbind entry is covered by the source contract below.
+    // Menu actions are exercised with real Radix in the browser fixture.
     expect(html).toContain("产品经理");
-    expect(html).toContain('data-session-profile-switch="true"');
+    expect(html).toContain('data-session-profile="true"');
   });
 
-  test("hides the switcher entirely when no profiles and none bound", () => {
+  test("hides digital-human controls when no profiles and none bound", () => {
     const html = renderToStaticMarkup(
       <TopBar
         projectName="codeshell"
@@ -2182,7 +2178,32 @@ describe("TopBar workspace label", () => {
     );
     // App passes empty props on non-chat views, so the whole pill disappears
     // instead of lingering as a disabled control.
-    expect(html).not.toContain('data-session-profile-switch="true"');
+    expect(html).not.toContain('data-session-profile="true"');
+    expect(html).not.toContain('data-session-actions="true"');
+  });
+
+  test("downloading profiles adds a menu action without turning ordinary Sessions into roles", () => {
+    const html = renderToStaticMarkup(
+      <TopBar
+        projectName="codeshell"
+        sessionId="session"
+        sessionTitle="Ordinary conversation"
+        workspaceProfiles={[{ name: "product-manager", label: "产品经理" }]}
+        onWorkspaceProfileChange={() => {}}
+        busy={false}
+        sidebarCollapsed={false}
+        onToggleSidebar={() => {}}
+        panelOpen={false}
+        onTogglePanel={() => {}}
+        isMac={false}
+        isFullscreen={false}
+      />,
+    );
+
+    expect(html).not.toContain('data-session-profile="true"');
+    expect(html).not.toContain('role="combobox"');
+    expect(html).not.toContain("选择数字人");
+    expect(html).toContain('aria-label="会话操作"');
   });
 
   test("keeps a session's profile selectable after it leaves the library", () => {

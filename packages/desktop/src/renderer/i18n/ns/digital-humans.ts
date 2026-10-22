@@ -111,6 +111,14 @@ export const digitalHumans = {
       capabilityCount: "{count} 项能力",
       portableMemory: "可移植记忆",
       sessionBinding: {
+        actions: "会话操作",
+        view: "查看当前数字人：{name}",
+        current: "当前数字人",
+        use: "使用数字人继续…",
+        change: "更换数字人",
+        changeHint: "更换从下一轮生效；已有会话历史和产物会保留。",
+        followDefault: "使用项目默认",
+        unavailable: "该数字人的定义已不可用，可更换数字人或使用项目默认。",
         label: "切换 Session 数字人",
         description: "数字人绑定可切换；Session 历史和产物保持不变。",
         pick: "选择数字人",
@@ -602,6 +610,15 @@ export const digitalHumans = {
       capabilityCount: "{count} capabilities",
       portableMemory: "Portable memory",
       sessionBinding: {
+        actions: "Session actions",
+        view: "View current digital human: {name}",
+        current: "Current digital human",
+        use: "Continue with a digital human…",
+        change: "Change digital human",
+        changeHint: "Changes apply next turn. Existing history and artifacts stay intact.",
+        followDefault: "Use project default",
+        unavailable:
+          "This definition is unavailable. Choose another digital human or use the project default.",
         label: "Switch Session digital human",
         description:
           "The digital-human binding is switchable; Session history and artifacts stay intact.",

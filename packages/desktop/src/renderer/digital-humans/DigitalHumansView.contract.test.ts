@@ -19,6 +19,10 @@ const memorySection = readFileSync(
 const libraryHook = readFileSync(join(import.meta.dir, "useDigitalHumansLibrary.ts"), "utf-8");
 const app = readFileSync(join(import.meta.dir, "..", "App.tsx"), "utf-8");
 const topBar = readFileSync(join(import.meta.dir, "..", "TopBar.tsx"), "utf-8");
+const sessionIdentity = readFileSync(
+  join(import.meta.dir, "..", "topbar", "SessionDigitalHumanControl.tsx"),
+  "utf-8",
+);
 const runController = readFileSync(
   join(import.meta.dir, "..", "app", "useRunController.ts"),
   "utf-8",
@@ -317,9 +321,9 @@ describe("DigitalHumansView contract", () => {
     expect(preloadTypes).toContain("previewProfileDeletion");
   });
 
-  test("a session's digital human can be unbound, and the switcher is chat-only", () => {
+  test("a session can follow the project default, and identity controls are chat-only", () => {
     // Binding used to be one-way: swap yes, return to the project default no.
-    expect(topBar).toContain("digitalHumans.sessionBinding.clear");
+    expect(sessionIdentity).toContain("digitalHumans.sessionBinding.followDefault");
     expect(app).toContain("digitalHumans.sessionBinding.cleared");
     // Non-chat full-screen views (sessions / approvals / runs / settings) reuse
     // this TopBar; session chrome must be absent there, not merely disabled.
