@@ -16,8 +16,10 @@ import { join } from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import {
+  assertOfflinePluginBootstrapHeld,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
+  seedOfflinePluginBootstrap,
   waitForAsyncFunction,
 } from "./electron-harness.mjs";
 import {
@@ -25,6 +27,49 @@ import {
   getElectronKeychainPreflightDiagnostic,
 } from "./electron-keychain-preflight.mjs";
 import { keychainPreferenceXml } from "./macos-keychain-context.mjs";
+
+test("offline plugin bootstrap seed holds and detects a real install or marketplace", async () => {
+  const codeShellHome = mkdtempSync(join(tmpdir(), "codeshell-offline-bootstrap-"));
+  try {
+    await seedOfflinePluginBootstrap(codeShellHome);
+    const pluginsDir = join(codeShellHome, "plugins");
+    // Main's bootstrap skips exactly these keys and marketplace names.
+    deepStrictEqual(
+      Object.keys(
+        JSON.parse(readFileSync(join(pluginsDir, "core_plugins_installed.json"), "utf8")),
+      ),
+      ["skill-creator@mimi-plugins", "model-fact-finder@mimi-plugins"],
+    );
+    deepStrictEqual(
+      Object.keys(JSON.parse(readFileSync(join(pluginsDir, "known_marketplaces.json"), "utf8"))),
+      Object.keys(
+        JSON.parse(
+          readFileSync(
+            new URL("../resources/known-marketplaces-seed.json", import.meta.url),
+            "utf8",
+          ),
+        ),
+      ),
+    );
+    await assertOfflinePluginBootstrapHeld(codeShellHome);
+
+    const installedPath = join(pluginsDir, "installed_plugins.json");
+    writeFileSync(
+      installedPath,
+      JSON.stringify({ version: 2, plugins: { "skill-creator@mimi-plugins": [{}] } }),
+    );
+    await rejects(assertOfflinePluginBootstrapHeld(codeShellHome), /installed plugins/);
+    writeFileSync(installedPath, JSON.stringify({ version: 2, plugins: {} }));
+
+    const knownPath = join(pluginsDir, "known_marketplaces.json");
+    const known = JSON.parse(readFileSync(knownPath, "utf8"));
+    known.official.source = { source: "github", repo: "obra/superpowers-marketplace" };
+    writeFileSync(knownPath, JSON.stringify(known));
+    await rejects(assertOfflinePluginBootstrapHeld(codeShellHome), /real marketplace/);
+  } finally {
+    rmSync(codeShellHome, { recursive: true, force: true });
+  }
+});
 
 test("async condition polling awaits false results instead of accepting their Promise", async () => {
   let calls = 0;

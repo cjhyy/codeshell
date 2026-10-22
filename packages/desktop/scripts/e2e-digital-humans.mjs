@@ -13,11 +13,13 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assert,
+  assertOfflinePluginBootstrapHeld,
   captureRendererErrors,
   findCodeShellWindow,
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   navigateSettingsMenu,
+  seedOfflinePluginBootstrap,
 } from "./electron-harness.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -94,6 +96,11 @@ async function seedFixture() {
     `${JSON.stringify({ autoUpdates: false }, null, 2)}\n`,
     { mode: 0o600 },
   );
+  // Main otherwise clones the seed marketplaces and installs core plugins
+  // (git subprocesses the fixture network guard cannot stop). Landing during
+  // the recovery review, that changes the capability inventory, the adopt CAS
+  // correctly reports "stale", and the review dialog stays open.
+  await seedOfflinePluginBootstrap(isolated.codeShellHome);
   const desktopStateDirectory = join(isolated.codeShellHome, "desktop");
   await mkdir(desktopStateDirectory, { recursive: true });
   await writeFile(
@@ -1346,6 +1353,7 @@ require("node:module").syncBuiltinESMExports();
   await screenshot(win, "digital-human-settings.png");
 
   assert(rendererErrors.length === 0, `renderer emitted ${rendererErrors.length} page error(s)`);
+  await assertOfflinePluginBootstrapHeld(isolated.codeShellHome);
   console.log("CodeShell Electron digital-human E2E: passed");
 } catch (error) {
   if (win) {

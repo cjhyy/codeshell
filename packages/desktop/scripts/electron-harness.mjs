@@ -1,5 +1,5 @@
 /* global document, window */
-import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { createRequire, syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -184,6 +184,64 @@ export async function makeIsolatedElectronHome(prefix = "codeshell-electron-e2e-
     userDataDir: join(home, "electron-user-data"),
     cleanup: () => rm(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }),
   };
+}
+
+/**
+ * Freeze Main's first-run plugin bootstrap through its persisted seam.
+ *
+ * On every fresh HOME, Main registers the seed marketplaces and installs the
+ * core plugins in the background. Those are `git clone` subprocesses, so a
+ * fixture's in-process fetch/http deny guard does not stop them; on a networked
+ * host they land seconds after launch and rewrite the installed capability
+ * inventory mid-test (a reviewed Profile switch then correctly turns stale).
+ * Marking every seed entry as already handled keeps the inventory to exactly
+ * what the fixture seeded. Call before launch; check with
+ * `assertOfflinePluginBootstrapHeld` before cleanup.
+ */
+export async function seedOfflinePluginBootstrap(codeShellHome) {
+  const pluginsDir = join(codeShellHome, "plugins");
+  await mkdir(pluginsDir, { recursive: true });
+  await writeFile(
+    join(pluginsDir, "installed_plugins.json"),
+    JSON.stringify({ version: 2, plugins: {} }),
+  );
+  await writeFile(
+    join(pluginsDir, "core_plugins_installed.json"),
+    JSON.stringify({
+      "skill-creator@mimi-plugins": "synthetic-offline-fixture",
+      "model-fact-finder@mimi-plugins": "synthetic-offline-fixture",
+    }),
+  );
+  await writeFile(
+    join(pluginsDir, "known_marketplaces.json"),
+    JSON.stringify(
+      Object.fromEntries(
+        ["official", "mimi-plugins"].map((name) => [
+          name,
+          {
+            source: { source: "github", repo: "synthetic/offline" },
+            installLocation: join(pluginsDir, "offline", name),
+            lastUpdated: "2026-10-09T00:00:00Z",
+          },
+        ]),
+      ),
+    ),
+  );
+}
+
+/** Fail loudly if Main still cloned or installed anything during the fixture. */
+export async function assertOfflinePluginBootstrapHeld(codeShellHome) {
+  const pluginsDir = join(codeShellHome, "plugins");
+  const installed = JSON.parse(await readFile(join(pluginsDir, "installed_plugins.json"), "utf8"));
+  assert(
+    Object.keys(installed.plugins ?? {}).length === 0,
+    `First-run plugin bootstrap installed plugins during the fixture: ${Object.keys(installed.plugins).join(", ")}`,
+  );
+  const known = JSON.parse(await readFile(join(pluginsDir, "known_marketplaces.json"), "utf8"));
+  assert(
+    Object.values(known).every((entry) => entry?.source?.repo === "synthetic/offline"),
+    "First-run plugin bootstrap registered a real marketplace during the fixture",
+  );
 }
 
 /** A launcher PID is not evidence that the connected Electron Main owns it. */
