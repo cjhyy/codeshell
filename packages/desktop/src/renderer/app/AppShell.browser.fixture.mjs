@@ -48,18 +48,18 @@ const source = String.raw`
     onTogglePetWidget:noop,onLoadMoreSessionHistory:noop,onRenameSession:noop,
     onPinSession:noop,onArchiveSession:noop,onDeleteSession:noop,
   };
-  function Fixture({narrow,fullscreen,collapsed,panel,music}) {
+  function Fixture({platform,narrow,fullscreen,collapsed,panel,music}) {
     const [sidebarOpen,setSidebarOpen]=React.useState(!collapsed);
     const [panelOpen,setPanelOpen]=React.useState(panel);
     const [settingsOpen,setSettingsOpen]=React.useState(false);
     React.useEffect(()=>{window.setFixtureSettings=setSettingsOpen},[]);
     const toggleRef=React.useRef(null);
-    return <AppShell platformClass="platform-mac" sidebarCollapsed={!sidebarOpen} sidebarIsDialog={narrow} isFullscreen={fullscreen}>
+    return <AppShell platform={platform} platformClass={platform==='darwin'?'platform-darwin':''} sidebarCollapsed={!sidebarOpen} sidebarIsDialog={narrow} isFullscreen={fullscreen}>
       <TopBar projectName="Demo" sessionTitle="界面对齐检查" busy={false}
         sidebarCollapsed={!sidebarOpen} onToggleSidebar={()=>setSidebarOpen(value=>!value)}
         sidebarToggleRef={toggleRef} sidebarControlsId={SIDEBAR_NAVIGATION_ID} sidebarIsDialog={narrow}
         panelOpen={panelOpen} onTogglePanel={()=>setPanelOpen(value=>!value)}
-        isMac isFullscreen={fullscreen} statusAvailable={false}/>
+        isMac={platform==='darwin'} isFullscreen={fullscreen} statusAvailable={false}/>
       {music&&<div data-fixture-music className="h-9 shrink-0 border-b border-border/70 px-3 py-2 text-[11px] text-muted-foreground">演示音乐条</div>}
       <div data-app-body data-fixture-body className="relative flex min-h-0 flex-1">
         <ResponsiveSidebar narrow={narrow} open={sidebarOpen} onClose={()=>setSidebarOpen(false)} onAfterClose={noop} toggleRef={toggleRef}>
@@ -96,7 +96,7 @@ const source = String.raw`
     html.style.setProperty('--cs-surface-window-opacity',config.image?'0.3':'0');
     saveUILanguage('zh');
     root.render(<React.StrictMode><I18nProvider><ToastProvider><DialogProvider>
-      <Fixture key={JSON.stringify(config)} {...config}/>
+      <Fixture key={config.name} {...config}/>
     </DialogProvider></ToastProvider></I18nProvider></React.StrictMode>);
   };
 `;
@@ -144,13 +144,55 @@ const cases = [
     panel: false,
     music: true,
   },
-];
+  { name: "windows-light", platform: "win32", frame: 2, radius: 14, dark: false, panel: true },
+  {
+    name: "windows-dark-scale-125",
+    platform: "win32",
+    frame: 3,
+    radius: 16,
+    dark: true,
+    panel: true,
+    scale: 1.25,
+  },
+  {
+    name: "windows-max-frame-scale-150",
+    platform: "win32",
+    frame: 8,
+    radius: 24,
+    dark: false,
+    panel: true,
+    image: true,
+    scale: 1.5,
+  },
+  {
+    name: "windows-fullscreen-scale-200",
+    platform: "win32",
+    frame: 8,
+    radius: 24,
+    dark: true,
+    fullscreen: true,
+    panel: true,
+    scale: 2,
+  },
+  {
+    name: "windows-narrow-drawer",
+    platform: "win32",
+    frame: 2,
+    radius: 16,
+    dark: true,
+    narrow: true,
+    panel: false,
+    music: true,
+    scale: 1.25,
+  },
+  { name: "linux-rounded", platform: "linux", frame: 2, radius: 14, dark: true, panel: true },
+].map((config) => ({ platform: "darwin", ...config }));
 const near = (actual, expected, label) =>
   assert.ok(Math.abs(actual - expected) <= 1, `${label}: ${actual} should equal ${expected}`);
 try {
   for (const config of cases) {
     const viewport = { width: config.narrow ? 390 : 1100, height: 720 };
-    const page = await browser.newPage({ viewport });
+    const page = await browser.newPage({ viewport, deviceScaleFactor: config.scale ?? 1 });
     page.setDefaultTimeout(5000);
     const errors = [];
     page.on("pageerror", (error) => {
@@ -172,6 +214,32 @@ try {
     const header = page.locator('[data-theme-surface="titlebar"]');
     await header.waitFor();
     const inset = config.fullscreen ? 0 : config.frame;
+    const expectedRadius = config.fullscreen || config.platform === "win32" ? 0 : config.radius;
+    const shell = page.locator("[data-app-shell]");
+    assert.equal(await shell.getAttribute("data-platform"), config.platform);
+    const frame = await shell.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      const stroke = window.getComputedStyle(element, "::after");
+      return {
+        radius: Number.parseFloat(style.borderTopLeftRadius),
+        strokeRadius: Number.parseFloat(stroke.borderTopLeftRadius),
+        widths: [
+          stroke.borderTopWidth,
+          stroke.borderRightWidth,
+          stroke.borderBottomWidth,
+          stroke.borderLeftWidth,
+        ].map(Number.parseFloat),
+        pointerEvents: stroke.pointerEvents,
+      };
+    });
+    near(frame.radius, expectedRadius, `${config.name} outer corner radius`);
+    near(frame.strokeRadius, expectedRadius, `${config.name} decorative stroke corner radius`);
+    assert.deepEqual(
+      frame.widths,
+      [inset, inset, inset, inset],
+      `${config.name} frame stroke width`,
+    );
+    assert.equal(frame.pointerEvents, "none", `${config.name} frame leaves controls clickable`);
     const head = await header.boundingBox();
     near(head.x, inset, `${config.name} titlebar left inset`);
     near(head.y, inset, `${config.name} titlebar top inset`);
@@ -193,7 +261,7 @@ try {
       );
     near(
       innerRadius,
-      config.fullscreen ? 0 : Math.max(0, config.radius - inset),
+      Math.max(0, expectedRadius - inset),
       `${config.name} content radius follows frame inset`,
     );
     assert.equal(
@@ -203,9 +271,15 @@ try {
     );
     const toggle = page.locator('[data-sidebar-action="toggle"]');
     const toggleBox = await toggle.boundingBox();
+    const hasNativeGutter = config.platform === "darwin" && !config.fullscreen;
+    assert.equal(
+      await page.locator("[data-native-controls-gutter]").count(),
+      hasNativeGutter ? 1 : 0,
+      `${config.name} only macOS reserves traffic-light space`,
+    );
     assert.ok(
-      config.fullscreen ? toggleBox.x < 40 : toggleBox.x >= 80,
-      `${config.name} macOS traffic-light safe area follows fullscreen state`,
+      hasNativeGutter ? toggleBox.x >= 80 : toggleBox.x < 40,
+      `${config.name} toggle follows the platform native-control safe area`,
     );
     const chat = await page.locator("[data-fixture-chat]").boundingBox();
     const sidebar = page.locator('[data-theme-surface="sidebar"]');
@@ -309,6 +383,49 @@ try {
       await page.evaluate(() => window.setFixtureSettings(false));
       await settings.waitFor({ state: "hidden" });
       await header.waitFor();
+    }
+    if (config.name === "windows-dark-scale-125") {
+      const shellNode = await shell.elementHandle();
+      for (const fullscreen of [true, false]) {
+        await page.evaluate((props) => window.renderFixture(props), { ...config, fullscreen });
+        await page.waitForFunction(
+          (state) =>
+            window.document.querySelector("[data-app-shell]").dataset.windowState === state,
+          fullscreen ? "fullscreen" : "windowed",
+        );
+        assert.equal(
+          await shell.evaluate((element, previous) => element === previous, shellNode),
+          true,
+          "Windows fullscreen transition updates the mounted shell",
+        );
+        const transitionInset = fullscreen ? 0 : config.frame;
+        const transitionFrame = await shell.evaluate((element) => {
+          const stroke = window.getComputedStyle(element, "::after");
+          const content = window.getComputedStyle(
+            element.querySelector("[data-app-shell-content]"),
+          );
+          return {
+            width: Number.parseFloat(stroke.borderTopWidth),
+            outerRadius: Number.parseFloat(stroke.borderTopLeftRadius),
+            innerRadius: Number.parseFloat(content.borderTopLeftRadius),
+          };
+        });
+        assert.deepEqual(
+          transitionFrame,
+          { width: transitionInset, outerRadius: 0, innerRadius: 0 },
+          "Windows fullscreen transition restores the theme width and keeps square corners",
+        );
+        const transitionHeader = await header.boundingBox();
+        near(transitionHeader.x, transitionInset, "Windows transition titlebar left inset");
+        near(transitionHeader.y, transitionInset, "Windows transition titlebar top inset");
+        const transitionBody = await page.locator("[data-fixture-body]").boundingBox();
+        near(
+          transitionBody.y + transitionBody.height,
+          viewport.height - transitionInset,
+          "Windows transition body bottom inset",
+        );
+      }
+      await shellNode.dispose();
     }
     const output = path.join(screenshots, `${config.name}.png`);
     await page.screenshot({ path: output });

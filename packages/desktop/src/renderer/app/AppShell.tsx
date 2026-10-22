@@ -2,12 +2,14 @@ import type { ReactNode } from "react";
 
 export function AppShell({
   platformClass,
+  platform,
   sidebarCollapsed,
   isFullscreen = false,
   sidebarIsDialog = false,
   children,
 }: {
   platformClass: string;
+  platform?: string;
   sidebarCollapsed: boolean;
   isFullscreen?: boolean;
   sidebarIsDialog?: boolean;
@@ -18,6 +20,7 @@ export function AppShell({
       className={`relative flex h-screen flex-col overflow-hidden text-foreground ${platformClass}`.trim()}
       data-theme-surface="window"
       data-app-shell
+      data-platform={platform}
       data-window-state={isFullscreen ? "fullscreen" : "windowed"}
       data-sidebar-mode={sidebarIsDialog ? "drawer" : "inline"}
       data-sidebar={sidebarCollapsed ? "collapsed" : "open"}

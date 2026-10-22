@@ -185,6 +185,13 @@
     border-radius: max(0px, calc(var(--cs-shell-frame-radius) - var(--cs-shell-frame-width)));
   }
 
+  /* Windows keeps its native title bar and outer window frame. The client
+     area meets that chrome with square corners, including when maximized;
+     another rounded silhouette here exposes the body behind the shell. */
+  [data-app-shell][data-platform="win32"] {
+    --cs-shell-frame-radius: 0px;
+  }
+
   [data-app-shell][data-window-state="fullscreen"] {
     --cs-shell-frame-width: 0px;
     --cs-shell-frame-radius: 0px;

@@ -2192,6 +2192,7 @@ function App() {
   return (
     <AppShell
       platformClass={platformClass}
+      platform={platform}
       sidebarCollapsed={!sidebarVisible}
       isFullscreen={isFullscreen}
       sidebarIsDialog={isNarrowWindow}
