@@ -295,6 +295,15 @@ export class ExternalRuntimeService {
     return this.sessions.has(sessionId);
   }
 
+  /** Live runtimes a renderer owns, replayed to it after a reload. */
+  ownedSessionIds(ownerWebContentsId: number): string[] {
+    return [...this.sessions]
+      .filter(
+        ([, entry]) => entry.lifecycle.active && entry.ownerWebContentsId === ownerWebContentsId,
+      )
+      .map(([sessionId]) => sessionId);
+  }
+
   /** Allocation alone is not live work; task projections need the authoritative turn state. */
   isSessionRunning(sessionId: string): boolean {
     const entry = this.sessions.get(sessionId);

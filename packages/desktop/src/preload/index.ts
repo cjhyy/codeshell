@@ -23,7 +23,10 @@ import { mobileRemoteApi } from "./mobile-remote-api.js";
 
 import { normalizeStreamEnvelope } from "../shared/stream-envelope";
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from "electron";
-import { subscribeExternalRuntimeSessionState } from "./external-runtime-session-state";
+import {
+  cancelSessionRun,
+  subscribeExternalRuntimeSessionState,
+} from "./external-runtime-session-state";
 import { createTaskInboxApi } from "./task-inbox-api";
 import { createNotificationNavigationApi } from "./notification-navigation-api";
 import { createOperationResolutionApi } from "./operation-resolution-api";
@@ -459,13 +462,9 @@ ipcRenderer.on("externalRuntime:event", (_e, payload: { sessionId?: unknown; eve
 const externalApprovalIds = new Set<string>();
 
 /**
- * Sessions currently backed by an external runtime.
- *
- * `cancel()` (the Stop button) normally sends `agent/cancel` to the worker.
- * An external session has no worker, so without this the button is a silent
- * no-op — the model keeps streaming and Stop looks broken. Recording the
- * session here lets `cancel` route to the runtime's own interrupt instead,
- * which keeps the renderer's Stop handler untouched.
+ * Sessions currently backed by an external runtime, as last reported by Main.
+ * It only replays ownership to late `onSessionState` subscribers; Main replays
+ * it after a reload, and Stop asks Main directly (see `cancelSessionRun`).
  */
 const externalRuntimeSessions = new Set<string>();
 const externalRuntimeSessionStateListeners = new Set<
@@ -559,21 +558,14 @@ contextBridge.exposeInMainWorld("codeshell", {
    * multi-session worker; legacy callers that omitted it routed through
    * the (now-removed) single-flag path — multi-session always wants the id.
    */
-  cancel: (sessionId?: string, options?: { keepGoal?: boolean }) => {
-    // The Stop button. An external-runtime session has no worker to receive
-    // `agent/cancel`, so routing it there would make Stop a silent no-op while
-    // the model kept streaming. Interrupting the runtime is the equivalent
-    // action, and intercepting here keeps the renderer's Stop handler identical
-    // for both backends.
-    // `keepGoal` (interrupt-and-send) only matters there: the native Engine
-    // never pauses a Goal on cancel.
-    if (sessionId && externalRuntimeSessions.has(sessionId)) {
-      return ipcRenderer.invoke("externalRuntime:interrupt", sessionId, {
-        keepGoal: options?.keepGoal === true,
-      });
-    }
-    return rpc("agent/cancel", { sessionId });
-  },
+  cancel: (sessionId?: string, options?: { keepGoal?: boolean }) =>
+    // Main answers for the external runtimes it owns, including after a reload.
+    cancelSessionRun(
+      ipcRenderer,
+      (id) => rpc("agent/cancel", { sessionId: id }),
+      sessionId,
+      options,
+    ),
   /**
    * Steer an in-flight run: queue a user message that the running turn loop
    * splices into its NEXT step — 不打断 (vs cancel, which aborts). For 引导 (gentle
@@ -1616,8 +1608,6 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer
         .invoke("externalRuntime:start", payload)
         .then((result: { kind: string; runtimeSessionId: string | null; tools: string[] }) => {
-          // Remember it so `cancel()` (Stop) knows to interrupt the runtime
-          // rather than sending agent/cancel to a worker that does not exist.
           externalRuntimeSessions.add(payload.sessionId);
           return result;
         }),

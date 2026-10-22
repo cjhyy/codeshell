@@ -1629,6 +1629,11 @@ async function createWindow(): Promise<BrowserWindow> {
   win.webContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace) mediaPreviewService.releaseOwner(ownerWebContentsId);
   });
+  // A reload starts with empty preload state; replay the runtimes Main still owns.
+  win.webContents.on("did-finish-load", () => {
+    for (const sessionId of externalRuntimeService?.ownedSessionIds(ownerWebContentsId) ?? [])
+      win.webContents.send("externalRuntime:sessionState", { sessionId, active: true });
+  });
   win.on("closed", () => {
     externalRuntimeApprovals?.cancelWindow(ownerWebContentsId);
     void externalRuntimeService?.stopOwnedBy(ownerWebContentsId);
@@ -6255,11 +6260,17 @@ ipcMain.handle(
 
 ipcMain.handle(
   "externalRuntime:interrupt",
-  async (event, sessionId: unknown, options?: { keepGoal?: unknown }) => {
+  async (event, sessionId: unknown, options?: { keepGoal?: unknown; ifOwned?: unknown }) => {
     assertDesktopSessionId(sessionId);
-    await externalRuntimeService?.interrupt(sessionId, event.sender.id, undefined, {
+    // Stop asks with ifOwned: Main, not preload memory, decides which backend
+    // runs the session, so a reloaded renderer still interrupts the provider.
+    const service = externalRuntimeService;
+    if (!service || (options?.ifOwned === true && !service.hasSession(sessionId)))
+      return { handled: false };
+    await service.interrupt(sessionId, event.sender.id, undefined, {
       keepGoal: options?.keepGoal === true,
     });
+    return { handled: true };
   },
 );
 

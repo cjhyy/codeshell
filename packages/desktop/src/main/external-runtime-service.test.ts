@@ -2169,6 +2169,15 @@ describe("ExternalRuntimeService", () => {
     });
   }
 
+  test("lists the live runtimes a window owns so a reloaded renderer can recover Stop", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    expect(svc.ownedSessionIds(77)).toEqual([request.sessionId]);
+    expect(svc.ownedSessionIds(78)).toEqual([]);
+    await svc.stop(request.sessionId, 77);
+    expect(svc.ownedSessionIds(77)).toEqual([]);
+  });
+
   test("a background wake keeps its queue position ahead of later user input", async () => {
     const background = backgroundDelivery();
     const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
