@@ -56,8 +56,8 @@ interface ExecutableGrant extends OwnedGrant {
 
 interface DirectoryGrant extends OwnedGrant {
   path: string;
-  dev: number;
-  ino: number;
+  dev: bigint;
+  ino: bigint;
 }
 
 interface FileArgumentGrant extends OwnedGrant {
@@ -384,7 +384,7 @@ export class PanelAppProcessService {
     options.assertCurrent?.();
     await this.authorize(owner, epoch);
     options.assertCurrent?.();
-    const info = await stat(resolved);
+    const info = await stat(resolved, { bigint: true });
     options.assertCurrent?.();
     await this.authorize(owner, epoch);
     options.assertCurrent?.();
@@ -492,7 +492,7 @@ export class PanelAppProcessService {
     }
     // Final synchronous identity check preserves the existing handle API and avoids
     // an await between validating a cwd and spawning the child into that directory.
-    const current = lstatSync(grant.path);
+    const current = lstatSync(grant.path, { bigint: true });
     if (
       !current.isDirectory() ||
       current.isSymbolicLink() ||

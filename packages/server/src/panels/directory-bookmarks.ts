@@ -36,7 +36,7 @@ export function createPanelDirectoryProjectScope(
   const binding = createHubPanelBinding(workspacePath);
   binding.assertBinding();
   const projectPath = realpathSync(expectedProjectPath);
-  const identity = lstatSync(projectPath);
+  const identity = lstatSync(projectPath, { bigint: true });
   if (
     !identity.isDirectory() ||
     identity.isSymbolicLink() ||
@@ -45,7 +45,7 @@ export function createPanelDirectoryProjectScope(
     throw new Error("Panel directory project scope is unavailable");
   const assertCurrent = () => {
     binding.assertBinding();
-    const current = lstatSync(projectPath);
+    const current = lstatSync(projectPath, { bigint: true });
     if (
       !current.isDirectory() ||
       current.isSymbolicLink() ||
@@ -100,29 +100,64 @@ interface Bookmark {
   appId: string;
   projectPath: string;
   path: string;
-  dev: number;
-  ino: number;
+  // Decimal strings preserve Windows file IDs beyond Number.MAX_SAFE_INTEGER.
+  // A null pair revokes a v1 identity whose numeric precision was already lost.
+  dev: string | null;
+  ino: string | null;
   savedAt: number;
 }
 
-function valid(record: unknown): record is Bookmark {
-  if (!record || typeof record !== "object" || Array.isArray(record)) return false;
+function parseBookmark(record: unknown, version: number): Bookmark {
+  const invalid = () => {
+    throw new Error("Invalid Panel directory bookmarks");
+  };
+  if (!record || typeof record !== "object" || Array.isArray(record)) return invalid();
   const item = record as Partial<Bookmark>;
-  return (
-    typeof item.id === "string" &&
-    ID.test(item.id) &&
-    typeof item.appId === "string" &&
-    /^[a-z][a-z0-9-]{0,63}$/.test(item.appId) &&
-    typeof item.projectPath === "string" &&
-    isAbsolute(item.projectPath) &&
-    typeof item.path === "string" &&
-    isAbsolute(item.path) &&
-    item.path.length <= 32_768 &&
-    item.projectPath.length <= 32_768 &&
-    Number.isSafeInteger(item.dev) &&
-    Number.isSafeInteger(item.ino) &&
-    Number.isSafeInteger(item.savedAt)
-  );
+  if (
+    !(
+      typeof item.id === "string" &&
+      ID.test(item.id) &&
+      typeof item.appId === "string" &&
+      /^[a-z][a-z0-9-]{0,63}$/.test(item.appId) &&
+      typeof item.projectPath === "string" &&
+      isAbsolute(item.projectPath) &&
+      typeof item.path === "string" &&
+      isAbsolute(item.path) &&
+      item.path.length <= 32_768 &&
+      item.projectPath.length <= 32_768 &&
+      Number.isSafeInteger(item.savedAt)
+    )
+  )
+    return invalid();
+  let dev: string | null, ino: string | null;
+  if (version === 1) {
+    const legacy = record as { dev?: unknown; ino?: unknown };
+    if (
+      typeof legacy.dev !== "number" ||
+      !Number.isInteger(legacy.dev) ||
+      legacy.dev < 0 ||
+      typeof legacy.ino !== "number" ||
+      !Number.isInteger(legacy.ino) ||
+      legacy.ino < 0
+    )
+      return invalid();
+    // Never recover an authorization by rounding a file ID. Retain a tombstone
+    // so this UUID cannot fall back to a different grant in the legacy file.
+    if (!Number.isSafeInteger(legacy.dev) || !Number.isSafeInteger(legacy.ino)) {
+      dev = ino = null;
+    } else {
+      dev = String(legacy.dev);
+      ino = String(legacy.ino);
+    }
+  } else {
+    const exact = (value: unknown): value is string =>
+      typeof value === "string" && /^(0|[1-9][0-9]{0,19})$/.test(value);
+    if (!(item.dev === null && item.ino === null) && !(exact(item.dev) && exact(item.ino)))
+      return invalid();
+    dev = item.dev!;
+    ino = item.ino!;
+  }
+  return { ...item, dev, ino } as Bookmark;
 }
 
 function read(file: string): Bookmark[] {
@@ -140,13 +175,12 @@ function read(file: string): Bookmark[] {
       throw new Error("Invalid Panel directory bookmarks");
     const value = document as { version?: unknown; bookmarks?: unknown };
     if (
-      value.version !== 1 ||
+      (value.version !== 1 && value.version !== 2) ||
       !Array.isArray(value.bookmarks) ||
-      value.bookmarks.length > MAX_RECORDS ||
-      !value.bookmarks.every(valid)
+      value.bookmarks.length > MAX_RECORDS
     )
       throw new Error("Invalid Panel directory bookmarks");
-    return value.bookmarks;
+    return value.bookmarks.map((record) => parseBookmark(record, value.version as number));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw error;
@@ -168,7 +202,7 @@ function write(file: string, bookmarks: Bookmark[]): void {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
-  const serialized = JSON.stringify({ version: 1, bookmarks });
+  const serialized = JSON.stringify({ version: 2, bookmarks });
   if (Buffer.byteLength(serialized) > MAX_BYTES)
     throw new Error("Panel directory bookmarks are full");
   const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
@@ -195,7 +229,7 @@ export class PanelAppDirectoryBookmarks {
   remember(appId: string, projectPath: string, path: string): string {
     if (!/^[a-z][a-z0-9-]{0,63}$/.test(appId) || !isAbsolute(projectPath) || !isAbsolute(path))
       throw new Error("Invalid Panel directory bookmark scope");
-    const info = lstatSync(path);
+    const info = lstatSync(path, { bigint: true });
     if (!info.isDirectory() || info.isSymbolicLink() || realpathSync(path) !== path)
       throw new Error("Selected directory changed; choose it again");
     const bookmark: Bookmark = {
@@ -203,8 +237,8 @@ export class PanelAppDirectoryBookmarks {
       appId,
       projectPath,
       path,
-      dev: info.dev,
-      ino: info.ino,
+      dev: info.dev.toString(),
+      ino: info.ino.toString(),
       savedAt: Date.now(),
     };
     mkdirSync(dirname(this.file), { recursive: true, mode: 0o700 });
@@ -216,25 +250,31 @@ export class PanelAppDirectoryBookmarks {
           item.appId === appId &&
           item.projectPath === projectPath &&
           item.path === path &&
-          item.dev === info.dev &&
-          item.ino === info.ino,
+          item.dev === bookmark.dev &&
+          item.ino === bookmark.ino,
       );
       if (existing) bookmark.id = existing.id;
+      const retained = previous.filter(
+        (item) =>
+          item.id !== bookmark.id &&
+          !(
+            item.dev !== null &&
+            item.appId === appId &&
+            item.projectPath === projectPath &&
+            item.path === path &&
+            (item.dev !== bookmark.dev || item.ino !== bookmark.ino)
+          ),
+      );
+      // Keep revocations even when the bounded store evicts older live grants:
+      // forgetting one could resurrect that UUID through a legacy-file fallback.
+      const revoked = retained.filter((item) => item.dev === null);
+      if (revoked.length >= MAX_RECORDS) throw new Error("Panel directory bookmarks are full");
       write(
         this.file,
-        [
-          bookmark,
-          ...previous.filter(
-            (item) =>
-              item.id !== bookmark.id &&
-              !(
-                item.appId === appId &&
-                item.projectPath === projectPath &&
-                item.path === path &&
-                (item.dev !== info.dev || item.ino !== info.ino)
-              ),
-          ),
-        ].slice(0, MAX_RECORDS),
+        [bookmark, ...revoked, ...retained.filter((item) => item.dev !== null)].slice(
+          0,
+          MAX_RECORDS,
+        ),
       );
     } finally {
       release();
@@ -269,12 +309,12 @@ export class PanelAppDirectoryBookmarks {
     };
     assertProjectScope();
     try {
-      const info = lstatSync(bookmark.path);
+      const info = lstatSync(bookmark.path, { bigint: true });
       if (
         !info.isDirectory() ||
         info.isSymbolicLink() ||
-        info.dev !== bookmark.dev ||
-        info.ino !== bookmark.ino ||
+        info.dev.toString() !== bookmark.dev ||
+        info.ino.toString() !== bookmark.ino ||
         realpathSync(bookmark.path) !== bookmark.path
       )
         throw new Error("Saved directory changed");

@@ -251,7 +251,7 @@ test("a conflicting current ID cannot be replaced by a legacy worktree record", 
   const f = fixture();
   const id = new PanelAppDirectoryBookmarks(f.legacy).remember("download", f.worktree, f.output);
   const legacy = JSON.parse(readFileSync(f.legacy, "utf8"));
-  const current = { version: 1, bookmarks: [{ ...legacy.bookmarks[0], appId: "other-panel" }] };
+  const current = { ...legacy, bookmarks: [{ ...legacy.bookmarks[0], appId: "other-panel" }] };
   writeFileSync(f.current, JSON.stringify(current));
   const before = readFileSync(f.current, "utf8");
   expect(() => desktopPanelDirectoryBookmarks(f.data).restore("download", f.main, id)).toThrow(
