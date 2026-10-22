@@ -137,9 +137,13 @@ jobs:
             # knownMarketplaces spawns 16 concurrent children; late in this shard's Bun
             # process the same Bun 1.3.11 Linux spawn bug as the Hub suite below fails
             # `child.exited` with EBADF epoll_ctl. It runs alone in its own step.
+            # gitOps.lsremote hits the same bug from the other side: git finishes the
+            # whole ls-remote exchange, then dies of SIGPIPE writing its one stdout
+            # line because Bun already closed the read end. It also runs alone.
             ignore: >-
               --path-ignore-patterns **/src/engine/** --path-ignore-patterns **/src/tool-system/**
               --path-ignore-patterns '**/src/plugins/knownMarketplaces.test.ts'
+              --path-ignore-patterns '**/src/plugins/gitOps.lsremote.test.ts'
           - shard: desktop
             paths: packages/desktop
             # The issuer proof runs alone above so its receipt precedes the first SDK/Core import.
@@ -173,6 +177,10 @@ jobs:
             # (thousands of descriptors and spawns in), Bun 1.3.11 on Linux closes a just-created
             # child descriptor during spawn: the pidfd (epoll_ctl EBADF, a child reported as
             # failed while it still runs) or a stdio socket (stdin EOF before the request).
+            # Measured per file on this runner, 3,874 of the final 3,899 descriptors are `bun test`'s own
+            # resolver cache (one directory or module file per path it resolved, 2,950 of them
+            # under node_modules/.bun), which it keeps for the life of the process. Sockets,
+            # pipes and live children stay in single digits throughout the shard.
             ignore: "--path-ignore-patterns '**/server/src/panels/project-packages.test.ts'"
     steps:
       - uses: actions/checkout@v7
@@ -254,6 +262,9 @@ jobs:
       - name: test known marketplaces in their own Bun process
         if: matrix.shard == 'core-rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/plugins/knownMarketplaces.test.ts
+      - name: test git ls-remote in its own Bun process
+        if: matrix.shard == 'core-rest'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/plugins/gitOps.lsremote.test.ts
       - name: Compiled isolated instruction adoption lifecycle
         if: matrix.shard == 'rest'
         run: |

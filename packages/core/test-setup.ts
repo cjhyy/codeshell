@@ -42,3 +42,10 @@ if (!process.env.CODE_SHELL_HOME) {
 // active. Publish the sandbox separately under a name no test manages, so
 // sessionsRoot() can fall back to it instead of the developer's real store.
 process.env.CODE_SHELL_TEST_HOME = process.env.CODE_SHELL_HOME;
+
+// The TUI's UpdateBanner runs `npm view @cjhyy/code-shell@latest` on every App
+// mount (and could register an on-exit `npm i -g`). Under test that is a real
+// registry request per rendered App: each one leaves an npm child and its
+// stdio sockets alive for up to 5s after the suite unmounts, so they pile up
+// in the shared Bun process. Tests must never query npm or self-update.
+process.env.DISABLE_AUTOUPDATER ??= "1";

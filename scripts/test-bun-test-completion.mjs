@@ -1,10 +1,22 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { assertBunTestCompletion, createBunTestEnvironment } from "./bun-test-completion.mjs";
+import {
+  assertBunTestCompletion,
+  createBunTestEnvironment,
+  explicitBunTestPaths,
+} from "./bun-test-completion.mjs";
 
 const directory = mkdtempSync(join(tmpdir(), "codeshell-bun-completion-test-"));
 const wrapper = fileURLToPath(new URL("./run-bun-test-shard.mjs", import.meta.url));
@@ -48,6 +60,42 @@ try {
   ])
     assert.equal(environment[key], undefined);
   console.log("✓ Bun completion: private HOME and inherited credentials isolated");
+  // Existing paths reach Bun as paths, never as whole-checkout substring filters.
+  const pathRoot = join(directory, "path-check");
+  mkdirSync(join(pathRoot, "tests"), { recursive: true });
+  writeFileSync(join(pathRoot, "tests", "one.test.ts"), "");
+  assert.deepEqual(
+    explicitBunTestPaths(
+      [
+        "--timeout",
+        "30000",
+        "--path-ignore-patterns",
+        "tests",
+        "-t",
+        "tests",
+        "tests",
+        "tests/one.test.ts",
+        "./tests",
+        join(pathRoot, "tests"),
+        "missing-filter",
+      ],
+      pathRoot,
+    ),
+    [
+      "--timeout",
+      "30000",
+      "--path-ignore-patterns",
+      "tests",
+      "-t",
+      "tests",
+      "./tests",
+      "./tests/one.test.ts",
+      "./tests",
+      join(pathRoot, "tests"),
+      "missing-filter",
+    ],
+  );
+  console.log("✓ Bun completion: existing test paths are passed as paths, not filters");
   const alias = join(directory, "entry-alias.mjs");
   if (process.platform !== "win32") symlinkSync(wrapper, alias);
   const cases = [

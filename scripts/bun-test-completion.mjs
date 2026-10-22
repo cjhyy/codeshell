@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 
 /** Unit shards never inherit the operator's application state or credentials. */
 export function createBunTestEnvironment(base, directory) {
@@ -43,6 +43,62 @@ export function createBunTestEnvironment(base, directory) {
     NODE_USE_ENV_PROXY: "0",
     NODE_ENV: "test",
   };
+}
+
+// Bun flags whose value is the next argument. Their values are never test paths.
+const BUN_TEST_VALUE_FLAGS = new Set([
+  "--timeout",
+  "--rerun-each",
+  "--retry",
+  "--seed",
+  "--coverage-reporter",
+  "--coverage-dir",
+  "-t",
+  "--test-name-pattern",
+  "--max-concurrency",
+  "--path-ignore-patterns",
+  "--preload",
+  "-r",
+  "--require",
+  "--import",
+  "--tsconfig-override",
+  "--config",
+  "-c",
+  "--env-file",
+  "--cwd",
+]);
+
+/**
+ * Pass every positional argument that names an existing file or directory to
+ * Bun as an explicit path.
+ *
+ * `bun test packages/web` treats `packages/web` as a substring FILTER: Bun first
+ * walks the whole checkout (docs/, examples/, every package), then keeps files
+ * whose path contains the text. That walk leaves one cached directory
+ * descriptor per scanned directory open for the rest of the run (~1,000 on CI
+ * before the first test starts), and the filter silently selects unrelated
+ * files: `tests` also matched every Core `__tests__` directory and
+ * `packages/desktop/tests`. `./packages/web` is scanned and selected as a path.
+ */
+export function explicitBunTestPaths(args, cwd = process.cwd()) {
+  return args.map((arg, index) => {
+    if (
+      arg.startsWith("-") ||
+      BUN_TEST_VALUE_FLAGS.has(args[index - 1]) ||
+      arg.startsWith("./") ||
+      arg.startsWith("../") ||
+      arg.startsWith(".\\") ||
+      arg.startsWith("..\\") ||
+      isAbsolute(arg)
+    )
+      return arg;
+    try {
+      lstatSync(join(cwd, arg));
+    } catch {
+      return arg;
+    }
+    return `./${arg}`;
+  });
 }
 
 /** Validate Bun's completed JUnit document, independently of its process exit code. */
@@ -122,7 +178,14 @@ export async function runBunTestShard(args, options = {}) {
   try {
     const child = spawn(
       options.bun ?? "bun",
-      ["test", ...args, "--reporter", "junit", "--reporter-outfile", report],
+      [
+        "test",
+        ...explicitBunTestPaths(args, options.cwd ?? process.cwd()),
+        "--reporter",
+        "junit",
+        "--reporter-outfile",
+        report,
+      ],
       {
         cwd: options.cwd ?? process.cwd(),
         env: createBunTestEnvironment(options.env ?? process.env, directory),
