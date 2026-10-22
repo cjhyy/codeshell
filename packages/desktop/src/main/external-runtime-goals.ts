@@ -5,7 +5,13 @@ import { SessionManager, type GoalConfig, type StreamEvent } from "@cjhyy/code-s
 export const EXTERNAL_GOAL_DEFAULT_TURNS = 12;
 export const EXTERNAL_GOAL_DEFAULT_STOP_BLOCKS = 3;
 export const EXTERNAL_GOAL_DEFAULT_TIME_MS = 30 * 60_000;
-export const EXTERNAL_GOAL_TOOLS = ["get_goal", "complete_goal", "cancel_goal"] as const;
+export const EXTERNAL_GOAL_TOOLS = [
+  "get_goal",
+  "complete_goal",
+  "cancel_goal",
+  "wait_for_user",
+] as const;
+const MAX_QUESTION_CHARS = 2_000;
 
 export interface ExternalGoalUpdate {
   objective?: string;
@@ -36,6 +42,8 @@ export interface ExternalGoalRun {
   stopped: boolean;
   /** End after the current provider turn without pausing (the user has input queued). */
   yieldRequested?: boolean;
+  /** The model called wait_for_user this turn; end the run and wait for a reply. */
+  awaitingUser?: boolean;
 }
 
 function positiveInteger(value: unknown): value is number {
@@ -72,6 +80,8 @@ function goalInput(raw: string | GoalConfig): GoalConfig {
 export class ExternalRuntimeGoals {
   private readonly manager = new SessionManager();
   private readonly runs = new Map<string, ExternalGoalRun>();
+  /** Questions the model is waiting on, per Session, until the user replies. */
+  private readonly pendingQuestions = new Map<string, string>();
 
   constructor(
     private readonly emit: (sessionId: string, event: StreamEvent) => void,
@@ -180,6 +190,55 @@ export class ExternalRuntimeGoals {
     return true;
   }
 
+  /**
+   * The model needs the user's answer before it can continue (an approval,
+   * a choice, missing information). The run ends after this provider turn
+   * without pausing the Goal; automatic continuations do not drive it until
+   * the user replies, and every later instruction repeats the open question.
+   */
+  waitForUser(sessionId: string, args: Record<string, unknown>) {
+    const run = this.runs.get(sessionId);
+    if (
+      !run ||
+      !this.isCurrent(run) ||
+      args.goalId !== run.goal.goalId ||
+      args.revision !== run.goal.revision
+    ) {
+      return {
+        ok: false,
+        message: "Goal changed or is not running; read get_goal before retrying.",
+      };
+    }
+    const question = typeof args.question === "string" ? args.question.trim() : "";
+    if (!question || question.length > MAX_QUESTION_CHARS) {
+      return { ok: false, message: "wait_for_user needs the question you are asking the user." };
+    }
+    run.awaitingUser = true;
+    this.pendingQuestions.set(sessionId, question);
+    this.emit(sessionId, {
+      type: "goal_progress",
+      goalId: run.goal.goalId,
+      revision: run.goal.revision,
+      status: "not_met",
+      round: run.turns,
+      gaps: `等待你的回复：${question}`,
+      waitingForUser: question,
+    });
+    return {
+      ok: true,
+      message: "The goal will wait for the user's reply. End your turn with the question.",
+    };
+  }
+
+  pendingQuestion(sessionId: string): string | undefined {
+    return this.pendingQuestions.get(sessionId);
+  }
+
+  /** A real user message (not an automatic continuation) answers the open question. */
+  userReplied(sessionId: string): void {
+    this.pendingQuestions.delete(sessionId);
+  }
+
   end(run: ExternalGoalRun): void {
     if (this.runs.get(run.sessionId) === run) this.runs.delete(run.sessionId);
   }
@@ -217,6 +276,7 @@ export class ExternalRuntimeGoals {
     });
     if (cleared) {
       this.stop(sessionId);
+      this.pendingQuestions.delete(sessionId);
       this.emit(sessionId, {
         type: "goal_cleared",
         goalId: goal?.goalId,
@@ -286,7 +346,7 @@ export class ExternalRuntimeGoals {
     if (Number.isFinite(tokens) && tokens > 0) run.tokensUsed += tokens;
     run.stopBlocks = run.lastOutput === output ? run.stopBlocks + 1 : 0;
     run.lastOutput = output;
-    if (!this.isCurrent(run) || run.yieldRequested) return false;
+    if (!this.isCurrent(run) || run.yieldRequested || run.awaitingUser) return false;
     const limit =
       run.tokenBudget !== undefined && run.tokensUsed >= run.tokenBudget
         ? "达到本轮 token 预算"
@@ -358,6 +418,7 @@ export class ExternalRuntimeGoals {
       return { ok: false, message: "Goal changed or could not be saved; no completion recorded." };
     }
     run.stopped = true;
+    this.pendingQuestions.delete(sessionId);
     if (status === "completed") {
       this.emit(sessionId, {
         type: "goal_progress",
@@ -388,6 +449,12 @@ export class ExternalRuntimeGoals {
       "Use mcp__codeshell_tools__get_goal to check the current identity. Do not call the runtime's separate create_goal/update_goal tools for this CodeShell goal.",
       `This run allows ${run.maxTurns} provider turns and ${run.timeBudgetMs} ms${run.tokenBudget ? `, with ${run.tokenBudget} tokens` : ""}. If it pauses, do not claim completion.`,
       "CodeShell sends automatic continuation messages (such as 继续处理尚未完成的目标 or 继续执行已保存的目标) to keep this goal moving. Such a message is not a reply from the user: it never answers a question you asked and never grants an approval you requested. If you are waiting for the user's decision (new permissions, installs, payments, deletion, publishing or other outward actions), do not proceed on that step; do other safe work or end your reply by restating the pending question.",
+      "When you need the user's decision or information to continue, ask it in your reply and call mcp__codeshell_tools__wait_for_user with this goalId, revision and the question. The goal then stops until the user replies instead of continuing automatically.",
+      ...(this.pendingQuestions.has(run.sessionId)
+        ? [
+            `The user has not yet answered your question: ${this.pendingQuestions.get(run.sessionId)} Do not proceed with anything that depends on that answer.`,
+          ]
+        : []),
       "</codeshell_goal>",
     ].join("\n");
   }

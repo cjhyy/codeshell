@@ -582,7 +582,10 @@ export class ExternalRuntimeService {
       !!entry?.lifecycle.active &&
       !entry.lifecycle.faulted &&
       this.authorityStillCurrent(entry.cwd, entry.authority) &&
-      !this.goals.read(sessionId)?.paused
+      !this.goals.read(sessionId)?.paused &&
+      // A Goal waiting on the user's answer is not driven by background
+      // results; they stay queued and arrive with the user's reply.
+      this.goals.pendingQuestion(sessionId) === undefined
     );
   }
 
@@ -852,7 +855,9 @@ export class ExternalRuntimeService {
               ? "Read this CodeShell session's persisted goal and its goalId/revision."
               : name === "complete_goal"
                 ? "Declare the CodeShell goal fully achieved. Supply its current goalId and revision."
-                : "Cancel a CodeShell goal ONLY when the user explicitly requests cancellation. Include the user's reason.",
+                : name === "wait_for_user"
+                  ? "Stop the CodeShell goal until the user replies, when you need their decision, approval or missing information. Ask the same question in your reply."
+                  : "Cancel a CodeShell goal ONLY when the user explicitly requests cancellation. Include the user's reason.",
           inputSchema: {
             type: "object",
             properties:
@@ -863,12 +868,22 @@ export class ExternalRuntimeService {
                     revision: { type: "integer", minimum: 1 },
                     ...(name === "complete_goal"
                       ? { summary: { type: "string" } }
-                      : { confirm: { type: "boolean" }, reason: { type: "string" } }),
+                      : name === "wait_for_user"
+                        ? { question: { type: "string" } }
+                        : { confirm: { type: "boolean" }, reason: { type: "string" } }),
                   },
             required:
               name === "get_goal"
                 ? []
-                : ["goalId", "revision", ...(name === "cancel_goal" ? ["confirm", "reason"] : [])],
+                : [
+                    "goalId",
+                    "revision",
+                    ...(name === "cancel_goal"
+                      ? ["confirm", "reason"]
+                      : name === "wait_for_user"
+                        ? ["question"]
+                        : []),
+                  ],
           },
           source: "builtin",
           permissionDefault: "allow",
@@ -883,11 +898,13 @@ export class ExternalRuntimeService {
             JSON.stringify(
               name === "get_goal"
                 ? this.goals.get(request.sessionId)
-                : this.goals.settle(
-                    request.sessionId,
-                    name === "complete_goal" ? "completed" : "cancelled",
-                    args,
-                  ),
+                : name === "wait_for_user"
+                  ? this.goals.waitForUser(request.sessionId, args)
+                  : this.goals.settle(
+                      request.sessionId,
+                      name === "complete_goal" ? "completed" : "cancelled",
+                      args,
+                    ),
             );
           return context?.streamCallback
             ? this.withGoalOutput(
@@ -1291,6 +1308,9 @@ export class ExternalRuntimeService {
       }
       // Application conflicts are rejected before mutating any run buffers or Goal.
       entry.recorder.assertNewSubmission(turnInput);
+      // Only a message the user sent answers a wait_for_user question; resume
+      // and background continuations are injected and leave it open.
+      if (!turnInput.injected) this.goals.userReplied(sessionId);
       const initialGoalEvents: StreamEvent[] = [];
       const goalRun = this.withGoalOutput(
         sessionId,
