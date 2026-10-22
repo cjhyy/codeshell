@@ -153,6 +153,10 @@ async function geometry(locator) {
   });
 }
 async function mount({ width = 390, height = 360, readFail = false, theme = "light" } = {}) {
+  // Like the real Host, derive the attempt and its step from one instant. Two
+  // Date.now() reads can straddle a millisecond, making the step outlive the
+  // attempt; the client then correctly rejects the authorization as invalid.
+  const expiresAt = new Date(Date.now() + 600000).toISOString();
   const host = {
     snapshot: snapshot(),
     readFail,
@@ -172,12 +176,12 @@ async function mount({ width = 390, height = 360, readFail = false, theme = "lig
       methodId: "owned-local-token",
       authModeId: "owned-credential",
       state: "pending",
-      expiresAt: new Date(Date.now() + 600000).toISOString(),
+      expiresAt,
       step: {
         id: "owned-step",
         kind: "credential-input",
         purpose: "credential",
-        expiresAt: new Date(Date.now() + 600000).toISOString(),
+        expiresAt,
         fields: [
           { id: "token", label: "Owned token", secret: true, required: true, maxLength: 16384 },
         ],
