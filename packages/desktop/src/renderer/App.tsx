@@ -126,6 +126,7 @@ import { useSessionNavigation } from "./app/useSessionNavigation";
 import { useNewProjectDialog } from "./projects/NewProjectDialog";
 import { useNotificationSessionNavigation } from "./app/useNotificationSessionNavigation";
 import { useSessionHistorySync } from "./app/useSessionHistorySync";
+import { useSessionWorkspaceProfiles } from "./app/useSessionWorkspaceProfiles";
 import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
 import { useGoalPendingBuckets } from "./app/useGoalPendingBuckets";
@@ -232,9 +233,6 @@ function App() {
   // Not persisted — purely a live "did something finish off-screen" hint.
   const [unreadBuckets, setUnreadBuckets] = useState<Set<string>>(() => new Set());
   const [projects, setProjects] = useTrackedProjects();
-  const [sessionWorkspaceProfiles, setSessionWorkspaceProfiles] = useState<
-    Array<{ name: string; label: string; description?: string }>
-  >([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() =>
     loadActiveProjectId(),
   );
@@ -540,39 +538,11 @@ function App() {
   const permissionOverrideForBucketRef = useRef<(bucket: string) => PermissionMode | null>(
     () => null,
   );
-  useEffect(() => {
-    let cancelled = false;
-    if (!sessionUiAuthority.configurationAvailable) {
-      setSessionWorkspaceProfiles([]);
-      return;
-    }
-    const listProfiles = window.codeshell.listProfiles;
-    if (typeof listProfiles !== "function") {
-      setSessionWorkspaceProfiles([]);
-      return;
-    }
-    void listProfiles(sessionUiAuthority.configurationTarget)
-      .then((profiles) => {
-        if (cancelled) return;
-        setSessionWorkspaceProfiles(
-          profiles.map((profile) => ({
-            name: profile.name,
-            label: profile.label,
-            description: profile.description,
-          })),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) setSessionWorkspaceProfiles([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    sessionUiAuthority.configurationAvailable,
-    sessionUiAuthority.configurationTarget,
-    view.viewMode,
-  ]);
+  const sessionWorkspaceProfiles = useSessionWorkspaceProfiles({
+    configurationAvailable: sessionUiAuthority.configurationAvailable,
+    configurationTarget: sessionUiAuthority.configurationTarget,
+    refreshKey: view.viewMode,
+  });
 
   // A persisted project-config route can outlive a removed project. Fail back
   // to chat instead of leaving a full-page overlay with no project to render.
