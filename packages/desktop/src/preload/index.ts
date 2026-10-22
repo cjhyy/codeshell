@@ -22,7 +22,7 @@ import { mobileRemoteApi } from "./mobile-remote-api.js";
  */
 
 import { normalizeStreamEnvelope } from "../shared/stream-envelope";
-import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from "electron";
+import { contextBridge, ipcRenderer, webFrame, webUtils, type IpcRendererEvent } from "electron";
 import {
   cancelSessionRun,
   subscribeExternalRuntimeSessionState,
@@ -47,6 +47,7 @@ import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/p
 import type { PluginMediaDto } from "../shared/plugin-media";
 import type { MediaPreviewRequest, MediaPreviewResult } from "../shared/media-preview";
 import type { InstalledThemePack, ThemeImportKind, ThemePickPreview } from "../shared/theme-packs";
+import type { WindowTitleBarOverlay } from "../shared/window-titlebar";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
 import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models";
 import type { PanelAppWindowTarget } from "../shared/panel-apps";
@@ -506,6 +507,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   ...createProfileMemoryPromotionApi(ipcRenderer),
   /** Main-process platform, exposed explicitly so renderer layout doesn't infer it from UA strings. */
   platform: process.platform,
+  hasWindowTitleBarOverlay:
+    process.platform === "win32" && process.argv.includes("--codeshell-titlebar-overlay"),
   sessionCatalog: createSessionCatalogApi(ipcRenderer),
   /**
    * Resolve a browser File created by an explicit picker/drop to its local
@@ -1411,6 +1414,9 @@ contextBridge.exposeInMainWorld("codeshell", {
   notify: (opts: { title: string; body?: string; subtitle?: string }) =>
     ipcRenderer.invoke("notify:show", opts),
   isWindowFullscreen: () => ipcRenderer.invoke("window:isFullscreen"),
+  getWindowZoomFactor: (): number => webFrame.getZoomFactor(),
+  setWindowTitleBarOverlay: (appearance: WindowTitleBarOverlay): Promise<void> =>
+    ipcRenderer.invoke("window:titleBarOverlay", appearance),
   onWindowFullscreenChange: (cb: (state: { fullscreen: boolean }) => void): (() => void) => {
     const h = (_e: IpcRendererEvent, state: { fullscreen: boolean }) => cb(state);
     ipcRenderer.on("window:fullscreen", h);

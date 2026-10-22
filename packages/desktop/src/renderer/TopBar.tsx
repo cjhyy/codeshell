@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { cn } from "@/lib/utils";
 import { NotificationHistory } from "./ui/NotificationHistory";
+import { useWindowTitleBar } from "./app/useWindowTitleBar";
 
 interface Props {
   projectName: string | null;
@@ -108,166 +109,183 @@ function TopBarImpl({
   onDeleteGoal,
 }: Props) {
   const { t } = useT();
+  const headerRef = useRef<HTMLElement | null>(null);
+  useWindowTitleBar(headerRef);
   return (
-    // The window is frameless on macOS (titleBarStyle: "hiddenInset"),
-    // so the only thing that lets the user drag it is a
+    // macOS and Windows share the app's header with native window controls,
+    // so the surface that lets the user drag it is a
     // -webkit-app-region: drag surface. Tailwind v4 has no utility for
     // that property, so set it inline on the header. Interactive
     // children (the sidebar toggle, the status badge) must opt back out
     // with `no-drag`, otherwise the drag region swallows their clicks.
     <header
-      className="flex h-[var(--cs-titlebar-height,2.75rem)] shrink-0 items-center justify-between gap-2 border-b border-border/70 pr-3 text-[13px]"
+      ref={headerRef}
+      className="flex h-[var(--cs-titlebar-height,2.75rem)] shrink-0 flex-col border-b border-border/70 text-[13px]"
+      data-window-titlebar
       data-theme-surface="titlebar"
       style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
     >
-      <div className="flex h-full min-w-0 flex-1 items-center">
-        <div
-          data-titlebar-sidebar
-          className={cn(
-            "flex h-full shrink-0 items-center gap-2 px-3",
-            !sidebarCollapsed &&
-              !sidebarIsDialog &&
-              "w-[var(--cs-sidebar-width,15rem)] border-r border-border/70",
-          )}
-        >
-          {isMac && !isFullscreen && (
-            <span data-native-controls-gutter className="w-[68px] shrink-0" aria-hidden="true" />
-          )}
-          <span className="shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-            <IconButton
-              ref={sidebarToggleRef}
-              label={sidebarCollapsed ? t("topbar.expandSidebar") : t("topbar.collapseSidebar")}
-              active={!sidebarCollapsed}
-              aria-expanded={!sidebarCollapsed}
-              aria-controls={sidebarControlsId}
-              aria-haspopup={sidebarIsDialog ? "dialog" : undefined}
-              data-sidebar-action="toggle"
-              onClick={onToggleSidebar}
-            >
-              <PanelLeft size={14} />
-            </IconButton>
-          </span>
-          <span className="shrink-0 text-xs font-semibold tracking-tight">code-shell</span>
-        </div>
-        <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
-          {projectName && (
-            <span
-              className="min-w-0 max-w-[18vw] truncate font-medium text-foreground"
-              title={projectName}
-            >
-              {projectName}
-            </span>
-          )}
-          {projectName && sessionId && projectPath && (
+      <div
+        data-window-titlebar-content
+        className="flex min-h-0 min-w-0 flex-1 items-center justify-between gap-2"
+      >
+        <div className="flex h-full min-w-0 flex-1 items-center">
+          <div
+            data-titlebar-sidebar
+            className={cn(
+              "flex h-full min-w-0 items-center gap-2 px-3",
+              !sidebarCollapsed &&
+                !sidebarIsDialog &&
+                "w-[calc(var(--cs-sidebar-width,15rem)-var(--cs-titlebar-safe-start,0px))] shrink-0 border-r border-border/70",
+            )}
+          >
+            {isMac && !isFullscreen && (
+              <span data-native-controls-gutter className="w-[68px] shrink-0" aria-hidden="true" />
+            )}
             <span
               className="shrink-0"
               style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
             >
-              <WorkspaceIndicator
-                sessionId={sessionId}
-                projectPath={projectPath}
-                projectName={projectName}
-                sessionBusy={busy}
-                includeProjectNameInLabel={false}
-                iconOnly
-              />
+              <IconButton
+                ref={sidebarToggleRef}
+                label={sidebarCollapsed ? t("topbar.expandSidebar") : t("topbar.collapseSidebar")}
+                active={!sidebarCollapsed}
+                aria-expanded={!sidebarCollapsed}
+                aria-controls={sidebarControlsId}
+                aria-haspopup={sidebarIsDialog ? "dialog" : undefined}
+                data-sidebar-action="toggle"
+                onClick={onToggleSidebar}
+              >
+                <PanelLeft size={14} />
+              </IconButton>
             </span>
-          )}
-          {sessionTitle && <span className="shrink-0 text-border">/</span>}
-          {/* Both identity labels may shrink so long project names leave room
-            for the session title and the fixed right-side controls. */}
-          {sessionTitle && (
-            <span className="min-w-0 truncate text-muted-foreground" title={sessionTitle}>
-              {sessionTitle}
-            </span>
-          )}
-          {(workspaceProfile || (sessionId && workspaceProfiles.length > 0)) && (
             <span
-              className="flex min-w-0 max-w-40 items-center gap-1 rounded-full border border-primary/15 bg-primary/5 px-2 py-0.5 text-[11px] text-primary"
-              title={t("digitalHumans.sessionBinding.description")}
-              style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+              data-window-titlebar-brand
+              className="min-w-0 truncate text-xs font-semibold tracking-tight"
             >
-              <UserRound size={11} className="shrink-0" />
-              {onWorkspaceProfileChange && workspaceProfiles.length > 0 ? (
-                <span data-session-profile-switch="true" className="min-w-0">
-                  <SimpleSelect
-                    size="sm"
-                    ariaLabel={t("digitalHumans.sessionBinding.label")}
-                    className="h-6 min-w-0 max-w-full border-0 bg-transparent px-1 text-[11px] font-medium text-primary shadow-none focus:ring-0"
-                    placeholder={t("digitalHumans.sessionBinding.pick")}
-                    value={workspaceProfile ?? ""}
-                    disabled={workspaceProfileSwitchDisabled}
-                    onChange={onWorkspaceProfileChange}
-                    options={[
-                      // A session may point at a profile that is no longer in the
-                      // library; keep it selectable so switching away is possible.
-                      ...(workspaceProfile &&
-                      !workspaceProfiles.some((profile) => profile.name === workspaceProfile)
-                        ? [{ value: workspaceProfile, label: workspaceProfile }]
-                        : []),
-                      ...workspaceProfiles.map((profile) => ({
-                        value: profile.name,
-                        label: profile.label,
-                      })),
-                      // Binding was one-way — once a Session had a digital human
-                      // you could only swap it, never return to the project default.
-                      ...(workspaceProfile
-                        ? [
-                            {
-                              value: "",
-                              label: t("digitalHumans.sessionBinding.clear"),
-                              description: t("digitalHumans.sessionBinding.clearHint"),
-                            },
-                          ]
-                        : []),
-                    ]}
-                  />
-                </span>
-              ) : (
-                <span className="truncate">{workspaceProfile}</span>
-              )}
+              code-shell
+            </span>
+          </div>
+          <div data-titlebar-identity className="min-w-0 flex-1 items-center gap-2 px-3">
+            {projectName && (
+              <span
+                className="min-w-0 max-w-[18vw] truncate font-medium text-foreground"
+                title={projectName}
+              >
+                {projectName}
+              </span>
+            )}
+            {projectName && sessionId && projectPath && (
+              <span
+                className="shrink-0"
+                style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+              >
+                <WorkspaceIndicator
+                  sessionId={sessionId}
+                  projectPath={projectPath}
+                  projectName={projectName}
+                  sessionBusy={busy}
+                  includeProjectNameInLabel={false}
+                  iconOnly
+                />
+              </span>
+            )}
+            {sessionTitle && <span className="shrink-0 text-border">/</span>}
+            {/* Both identity labels may shrink so long project names leave room
+            for the session title and the fixed right-side controls. */}
+            {sessionTitle && (
+              <span className="min-w-0 truncate text-muted-foreground" title={sessionTitle}>
+                {sessionTitle}
+              </span>
+            )}
+            {(workspaceProfile || (sessionId && workspaceProfiles.length > 0)) && (
+              <span
+                className="flex min-w-0 max-w-40 items-center gap-1 rounded-full border border-primary/15 bg-primary/5 px-2 py-0.5 text-[11px] text-primary"
+                title={t("digitalHumans.sessionBinding.description")}
+                style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+              >
+                <UserRound size={11} className="shrink-0" />
+                {onWorkspaceProfileChange && workspaceProfiles.length > 0 ? (
+                  <span data-session-profile-switch="true" className="min-w-0">
+                    <SimpleSelect
+                      size="sm"
+                      ariaLabel={t("digitalHumans.sessionBinding.label")}
+                      className="h-6 min-w-0 max-w-full border-0 bg-transparent px-1 text-[11px] font-medium text-primary shadow-none focus:ring-0"
+                      placeholder={t("digitalHumans.sessionBinding.pick")}
+                      value={workspaceProfile ?? ""}
+                      disabled={workspaceProfileSwitchDisabled}
+                      onChange={onWorkspaceProfileChange}
+                      options={[
+                        // A session may point at a profile that is no longer in the
+                        // library; keep it selectable so switching away is possible.
+                        ...(workspaceProfile &&
+                        !workspaceProfiles.some((profile) => profile.name === workspaceProfile)
+                          ? [{ value: workspaceProfile, label: workspaceProfile }]
+                          : []),
+                        ...workspaceProfiles.map((profile) => ({
+                          value: profile.name,
+                          label: profile.label,
+                        })),
+                        // Binding was one-way — once a Session had a digital human
+                        // you could only swap it, never return to the project default.
+                        ...(workspaceProfile
+                          ? [
+                              {
+                                value: "",
+                                label: t("digitalHumans.sessionBinding.clear"),
+                                description: t("digitalHumans.sessionBinding.clearHint"),
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
+                  </span>
+                ) : (
+                  <span className="truncate">{workspaceProfile}</span>
+                )}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1 border-l border-border/60 pl-2">
+          <NotificationHistory />
+          {contextSelectionAvailable && onSelectContext && (
+            <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+              <IconButton
+                label={t("chat.contextPackage.select")}
+                data-context-action="open"
+                onClick={onSelectContext}
+              >
+                <Forward size={14} />
+              </IconButton>
+            </span>
+          )}
+          {statusAvailable && (
+            <StatusBadge
+              busy={busy}
+              activity={activity}
+              tasks={tasks ?? null}
+              activeGoal={activeGoal ?? null}
+              onClearGoal={onClearGoal}
+              onUpdateGoal={onUpdateGoal}
+              onGoalPausedChange={onGoalPausedChange}
+              onDeleteGoal={onDeleteGoal}
+            />
+          )}
+          {panelAvailable && (
+            <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+              <IconButton
+                ref={panelToggleRef}
+                label={panelOpen ? t("topbar.closePanel") : t("topbar.openPanel")}
+                data-panel-action="toggle"
+                onClick={onTogglePanel}
+                active={panelOpen}
+              >
+                <PanelRight size={14} />
+              </IconButton>
             </span>
           )}
         </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-1 border-l border-border/60 pl-2">
-        <NotificationHistory />
-        {contextSelectionAvailable && onSelectContext && (
-          <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-            <IconButton
-              label={t("chat.contextPackage.select")}
-              data-context-action="open"
-              onClick={onSelectContext}
-            >
-              <Forward size={14} />
-            </IconButton>
-          </span>
-        )}
-        {statusAvailable && (
-          <StatusBadge
-            busy={busy}
-            activity={activity}
-            tasks={tasks ?? null}
-            activeGoal={activeGoal ?? null}
-            onClearGoal={onClearGoal}
-            onUpdateGoal={onUpdateGoal}
-            onGoalPausedChange={onGoalPausedChange}
-            onDeleteGoal={onDeleteGoal}
-          />
-        )}
-        {panelAvailable && (
-          <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-            <IconButton
-              ref={panelToggleRef}
-              label={panelOpen ? t("topbar.closePanel") : t("topbar.openPanel")}
-              data-panel-action="toggle"
-              onClick={onTogglePanel}
-              active={panelOpen}
-            >
-              <PanelRight size={14} />
-            </IconButton>
-          </span>
-        )}
       </div>
     </header>
   );
@@ -395,7 +413,8 @@ function StatusBadge({
             full list. Hidden when there are no tasks. */}
         {tasks && tasks.tasks.length > 0 && (
           <span
-            className="flex items-center gap-0.5 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
+            data-titlebar-task-count
+            className="items-center gap-0.5 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
             title={t("topbar.tasksTip")}
           >
             <span className="text-status-ok">☑</span>

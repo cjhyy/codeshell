@@ -131,6 +131,8 @@
   :root {
     --cs-titlebar-height: 2.75rem;
     --cs-sidebar-width: 15rem;
+    --cs-native-titlebar-x: env(titlebar-area-x, 0px);
+    --cs-native-titlebar-width: env(titlebar-area-width, calc(100vw - 138px));
   }
 
   /* Each host surface owns its image above its base color and below content.
@@ -185,11 +187,67 @@
     border-radius: max(0px, calc(var(--cs-shell-frame-radius) - var(--cs-shell-frame-width)));
   }
 
-  /* Windows keeps its native title bar and outer window frame. The client
-     area meets that chrome with square corners, including when maximized;
+  /* Windows shares the themed header with native caption buttons. Keep the
+     shell square against the native outer frame, including when maximized;
      another rounded silhouette here exposes the body behind the shell. */
   [data-app-shell][data-platform="win32"] {
     --cs-shell-frame-radius: 0px;
+  }
+
+  /* Native caption buttons occupy viewport coordinates. Account for the
+     theme frame before reserving that region inside each titlebar row. */
+  [data-window-titlebar-content] {
+    padding-right: 0.75rem;
+  }
+
+  [data-window-titlebar] {
+    min-height: var(--cs-window-titlebar-min-height, 0px);
+  }
+
+  [data-titlebar-identity] {
+    display: flex;
+  }
+
+  [data-titlebar-task-count] {
+    display: flex;
+  }
+
+  [data-platform="win32"] [data-window-titlebar-content] {
+    --cs-titlebar-safe-start: max(
+      0px,
+      calc(var(--cs-native-titlebar-x) - var(--cs-shell-frame-width, 0px))
+    );
+    padding-left: var(--cs-titlebar-safe-start);
+    padding-right: calc(
+      0.75rem +
+        max(
+          0px,
+          calc(
+            100vw - var(--cs-native-titlebar-x) - var(--cs-native-titlebar-width) -
+              var(--cs-shell-frame-width, 0px)
+          )
+        )
+    );
+  }
+
+  [data-platform="win32"][data-window-state="fullscreen"] [data-window-titlebar-content] {
+    --cs-titlebar-safe-start: 0px;
+    padding-left: 0px;
+    padding-right: 0.75rem;
+  }
+
+  @media (max-width: 600px) {
+    [data-platform="win32"] [data-titlebar-identity] {
+      display: none;
+    }
+  }
+
+  @media (max-width: 420px) {
+    /* The progress details remain in the status popover. Keep the native
+       controls and each app button reachable in very narrow Windows chats. */
+    [data-platform="win32"] [data-titlebar-task-count] {
+      display: none;
+    }
   }
 
   [data-app-shell][data-window-state="fullscreen"] {
