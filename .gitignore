@@ -85,6 +85,19 @@ packages/desktop/.preview/
 /.claude/skills/archify
 /data/skills/archify
 /skills-lock.json
+# HyperFrames and media-use are installed the same way. Their copies carry
+# their own *.test.* files, which a bare `bun test` at the repo root would run.
+/.agents/skills/hyperframes/
+/.agents/skills/media-use/
+/agent/skills/hyperframes/
+/agent/skills/media-use/
+/.claude/skills/hyperframes
+/.claude/skills/media-use
+/data/skills/hyperframes
+/data/skills/media-use
+
+# Mimi Download CLI's local queue and environment snapshots.
+/.mimi-download-cli/
 
 # Renderer source 'logs/' view dir is NOT a runtime-logs dir — keep it tracked
 !packages/desktop/src/renderer/logs/
