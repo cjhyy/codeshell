@@ -142,7 +142,13 @@ export async function bashTool(
   // Preserve the historical exit-wait boundary for callers that omit the mode.
   if (args.run_in_background === true) {
     const backgroundBehavior = args.background_behavior ?? "wait_for_exit";
-    const backgroundResult = runInBackground(command, ctx);
+    // Only an explicit declaration marks finite work a Goal may wait on; the
+    // legacy omitted default is too often a dev server to park on its exit.
+    const backgroundResult = runInBackground(
+      command,
+      ctx,
+      args.background_behavior === "wait_for_exit",
+    );
     if (backgroundResult.startsWith("Error:")) return fail(backgroundResult);
     if (backgroundBehavior === "wait_for_exit") {
       ctx?.runYield?.request("background_notification");
@@ -227,7 +233,7 @@ export async function bashTool(
  * the foreground path (D8). Rejected in unattended automation runs (§5.5)
  * because no one is there to reap a dev server.
  */
-function runInBackground(command: string, ctx?: ToolContext): string {
+function runInBackground(command: string, ctx?: ToolContext, waitForExit = false): string {
   if (ctx?.allowBackgroundShells === false) {
     return "Error: background shells are not available in automation/headless runs. Run the command in the foreground, or have a human start the dev server.";
   }
@@ -248,6 +254,7 @@ function runInBackground(command: string, ctx?: ToolContext): string {
       CODESHELL_MODEL_TRACE_FD: diagnosticPipe ? "3" : "",
     },
     diagnosticPipe,
+    waitForExit,
   });
   if (!r.ok) {
     return `Error: ${r.error}`;

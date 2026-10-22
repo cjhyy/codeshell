@@ -19,6 +19,7 @@ describe("first-phase external tool exposure", () => {
     expect([...FIRST_PHASE_EXPOSURE.toolNames].sort()).toEqual(
       [
         "Bash",
+        "BashOutput",
         "browser_act",
         "browser_inspect",
         "browser_navigate",
@@ -29,7 +30,9 @@ describe("first-phase external tool exposure", () => {
         "Glob",
         "Grep",
         "InjectCredential",
+        "KillShell",
         "LinkAction",
+        "ListShells",
         "ListSources",
         "MemoryDelete",
         "MemoryList",

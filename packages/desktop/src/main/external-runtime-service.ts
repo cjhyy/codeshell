@@ -856,6 +856,8 @@ export class ExternalRuntimeService {
         "When DriveAgent returns a background jobId, do not poll it or duplicate its work " +
         "locally. Unless the user explicitly requested concurrent work, finish the current " +
         "turn; CodeShell will inject the completion and continue this same task automatically. " +
+        "The same holds for host Bash with run_in_background=true and " +
+        "background_behavior=wait_for_exit: end the turn instead of polling BashOutput. " +
         "Start other agent CLIs only through DriveAgent: never launch codex exec, claude -p or " +
         "a similar agent from a shell, because CodeShell cannot track, stop, notify on or " +
         "account for such a process. Use background=true for anything that may take more " +

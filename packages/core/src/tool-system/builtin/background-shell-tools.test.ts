@@ -91,6 +91,36 @@ describe("Bash run_in_background", () => {
     expect(pending.has("background_notification")).toBe(true);
   });
 
+  test("only an explicit wait_for_exit shell is finite work the session waits on", async () => {
+    // External runtimes cannot yield a provider turn, so their Goal consults
+    // this instead of runYield. A service (continue) or a legacy omitted mode
+    // must never park the Goal until a dev server exits.
+    await bashTool(
+      { command: "sleep 100", run_in_background: true, background_behavior: "continue" },
+      ctx(),
+    );
+    await bashTool({ command: "sleep 100", run_in_background: true }, ctx());
+    expect(mgr.hasExitWaitForSession("sessA")).toBe(false);
+    const out = await bashTool(
+      { command: "sleep 100", run_in_background: true, background_behavior: "wait_for_exit" },
+      ctx(),
+    );
+    const shellId = /shell_id: (\S+)/.exec(text(out))![1]!;
+    expect(mgr.hasExitWaitForSession("sessA")).toBe(true);
+    expect(mgr.hasExitWaitForSession("sessB")).toBe(false);
+    await mgr.kill(shellId, "sessA");
+    expect(mgr.hasExitWaitForSession("sessA")).toBe(false);
+  });
+
+  test("a finished wait_for_exit shell stops counting as running work", async () => {
+    await bashTool(
+      { command: "exit 0", run_in_background: true, background_behavior: "wait_for_exit" },
+      ctx(),
+    );
+    await until(() => !mgr.hasExitWaitForSession("sessA"));
+    expect(mgr.listForSession("sessA")[0]!.status).toBe("exited");
+  });
+
   test.each(["wait", null, true])(
     "rejects invalid behavior %p before spawning",
     async (behavior) => {

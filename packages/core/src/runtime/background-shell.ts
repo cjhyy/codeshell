@@ -132,6 +132,11 @@ export interface SpawnBackgroundOptions {
    */
   shellEnv?: Record<string, string>;
   diagnosticPipe?: { data(chunk: Uint8Array): void; finish(status: "failed" | "cancelled"): void };
+  /**
+   * The caller explicitly declared this a finite command whose exit the turn
+   * waits for (Bash background_behavior=wait_for_exit). Services never set it.
+   */
+  waitForExit?: boolean;
 }
 
 export type SpawnResult = { ok: true; shellId: string } | { ok: false; error: string };
@@ -152,6 +157,7 @@ interface InternalShell extends Omit<BgShell, "totalBytes"> {
   stderrDec: StringDecoder;
   /** Accumulated raw (un-stripped) text, for port detection scanning window. */
   portScanBuf: string;
+  waitForExit: boolean;
 }
 
 let shellCounter = 0;
@@ -357,6 +363,7 @@ export class BackgroundShellManager {
       stdoutDec: new StringDecoder("utf-8"),
       stderrDec: new StringDecoder("utf-8"),
       portScanBuf: "",
+      waitForExit: opts.waitForExit === true,
     };
     this.shells.set(shellId, sh);
 
@@ -458,6 +465,24 @@ export class BackgroundShellManager {
   /** Raw retained output (no cleaning) — test/UI helper. */
   readOutputRaw(shellId: string): string | undefined {
     return this.shells.get(shellId)?.ring.readAll();
+  }
+
+  /**
+   * Whether the session still has an explicitly declared wait_for_exit shell
+   * running. Its exit publishes a completion notification; a host that cannot
+   * yield a provider turn (external runtimes) waits on this instead of
+   * continuing a Goal while it runs. Services (continue) never count.
+   */
+  hasExitWaitForSession(sessionId: string): boolean {
+    for (const shell of this.shells.values()) {
+      if (
+        shell.sessionId === sessionId &&
+        shell.waitForExit &&
+        (shell.status === "running" || shell.status === "starting")
+      )
+        return true;
+    }
+    return false;
   }
 
   listForSession(sessionId: string): BgShell[] {
@@ -692,6 +717,8 @@ export class BackgroundShellManager {
       stdoutDec: new StringDecoder("utf-8"),
       stderrDec: new StringDecoder("utf-8"),
       portScanBuf: "",
+      // A recovered orphan's exit is not observable, so nothing may wait on it.
+      waitForExit: false,
     };
     this.shells.set(rec.shellId, sh);
   }

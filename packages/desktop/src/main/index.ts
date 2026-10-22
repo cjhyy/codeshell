@@ -101,9 +101,6 @@ import {
   CronStore,
   defaultCronStorePath,
   agentNotificationBus,
-  backgroundJobRegistry,
-  buildNotificationMessage,
-  notificationQueue,
   type AutomationHandle,
   getMergedCatalog,
   saveCatalogEntry,
@@ -147,6 +144,7 @@ import { initializeDesktopComputerUse } from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
 import { assertWorkspaceProfileName } from "./external-runtime-profile.js";
+import { createExternalRuntimeBackgroundWork } from "./external-runtime-background-work.js";
 import { setProjectTrustWithRevocation } from "./project-trust-lifecycle.js";
 import {
   createExternalGoalRpcHandler,
@@ -1759,19 +1757,7 @@ async function createWindow(): Promise<BrowserWindow> {
       }),
       requestApproval: (sessionId, request) => approvals.request(sessionId, request),
       cancelApprovals: (sessionId) => approvals.cancelSession(sessionId),
-      backgroundWork: {
-        subscribe: (listener) => agentNotificationBus.subscribe(listener),
-        drainMessage: (sessionId) => {
-          const pending = notificationQueue.drainAll(sessionId);
-          return pending.length > 0 ? buildNotificationMessage(pending) : undefined;
-        },
-        hasPending: (sessionId) => notificationQueue.getSnapshot(sessionId).length > 0,
-        hasRunning: (sessionId) => backgroundJobRegistry.hasRunningForSession(sessionId),
-        dropSession: (sessionId) => {
-          backgroundJobRegistry.dropForSession(sessionId);
-          notificationQueue.reset(sessionId);
-        },
-      },
+      backgroundWork: createExternalRuntimeBackgroundWork(),
     });
 
     const externalGoalSessions = new SessionManager();
