@@ -136,6 +136,7 @@ describe("theme packs (theme.ts)", () => {
     );
     expect(text.match(/--cs-surface-composer-background: 350 80% 99%;/g)?.length).toBe(2);
     expect(text).toContain("--cs-frame-color: 350 80% 75%;");
+    expect(text.match(/--cs-frame-corner-fill: hsl\(var\(--cs-frame-color\)\);/g)?.length).toBe(2);
     expect(text).toContain("--cs-frame-width: 3px;");
     expect(text).toContain("--cs-frame-radius: 16px;");
   });
@@ -174,6 +175,21 @@ describe("theme packs (theme.ts)", () => {
     expect(text).toContain("--cs-surface-composer-background: var(--cs-card);");
     expect(text).toContain("--cs-frame-width: 0px;");
     expect(text).toContain("--cs-frame-radius: 0px;");
+    expect(text.match(/--cs-frame-corner-fill: transparent;/g)?.length).toBe(2);
+  });
+
+  test("disabling a frame with a retained radius clears the native corner fill", () => {
+    const pack: ThemePack = {
+      id: "rounded",
+      name: "Rounded",
+      swatch: "350 70% 50%",
+      colors: { light: {}, dark: {} },
+      frame: { light: "350 70% 50%", width: 2, radius: 24 },
+    };
+    applyThemePack(pack.id, () => pack);
+    applyThemePack(pack.id, () => ({ ...pack, frame: { ...pack.frame!, width: 0 } }));
+    expect(packStyleText()).toContain("--cs-frame-radius: 24px;");
+    expect(packStyleText().match(/--cs-frame-corner-fill: transparent;/g)?.length).toBe(2);
   });
 
   test("applyThemePack reuses one managed node and the latest apply wins", () => {

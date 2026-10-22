@@ -187,6 +187,13 @@
     border-radius: max(0px, calc(var(--cs-shell-frame-radius) - var(--cs-shell-frame-width)));
   }
 
+  /* NSWindow clips the outer corner independently of a theme's radius.
+     Fill the area outside the CSS curve with the frame color so the page's
+     background cannot show through between the two silhouettes. */
+  [data-app-shell][data-platform="darwin"][data-window-state="windowed"] {
+    box-shadow: 0 0 0 var(--cs-shell-frame-radius) var(--cs-frame-corner-fill, transparent);
+  }
+
   /* Windows shares the themed header with native caption buttons. Keep the
      shell square against the native outer frame, including when maximized;
      another rounded silhouette here exposes the body behind the shell. */

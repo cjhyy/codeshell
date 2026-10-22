@@ -112,6 +112,8 @@ function decorationVars(pack: ThemePack, mode: "light" | "dark"): Record<string,
     vars[`${prefix}-background-opacity`] = String(surface.backgroundOpacity);
   }
   vars["--cs-frame-color"] = pack.frame?.[mode] ?? pack.frame?.light ?? "var(--cs-border)";
+  vars["--cs-frame-corner-fill"] =
+    (pack.frame?.width ?? 0) > 0 ? "hsl(var(--cs-frame-color))" : "transparent";
   vars["--cs-frame-width"] = `${pack.frame?.width ?? 0}px`;
   vars["--cs-frame-radius"] = `${pack.frame?.radius ?? 0}px`;
   return vars;

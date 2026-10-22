@@ -27,6 +27,7 @@ const source = String.raw`
   import {ToastProvider} from './ui/ToastProvider';
   import {DialogProvider} from './ui/DialogProvider';
   import {saveUILanguage} from './uiLanguage';
+  import {applyThemePack} from './theme';
   const noop=()=>{};
   window.codeshell={
     cloudAccount:{status:async()=>({state:'signed-out'}),onStatus:()=>noop},
@@ -109,18 +110,30 @@ const source = String.raw`
     </AppShell>;
   }
   const root=createRoot(window.document.getElementById('root'));
+  window.applyFixtureTheme=config=>{
+    const html=window.document.documentElement;
+    html.classList.toggle('dark',config.dark);
+    if(config.resetTheme){
+      applyThemePack('default');
+      html.style.removeProperty('--cs-surface-window-image');
+      html.style.removeProperty('--cs-surface-window-opacity');
+      return;
+    }
+    const color=config.image?'var(--cs-primary)':'var(--cs-border)';
+    applyThemePack('app-shell-fixture',()=>({
+      id:'app-shell-fixture',name:'App shell fixture',swatch:'340 75% 45%',
+      colors:{light:{},dark:{}},
+      frame:{light:config.frameLight??color,dark:config.frameDark??color,width:config.frame,radius:config.radius},
+    }));
+    const svg='<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><defs><linearGradient id="g"><stop stop-color="#dbeafe"/><stop offset="1" stop-color="#fde68a"/></linearGradient></defs><path fill="url(#g)" d="M0 0h1200v800H0z"/></svg>';
+    html.style.setProperty('--cs-surface-window-image',config.image?'url("data:image/svg+xml,'+encodeURIComponent(svg)+'")':'none');
+    html.style.setProperty('--cs-surface-window-opacity',config.image?'0.3':'0');
+  };
   window.renderFixture=config=>{
     window.fixtureZoom=config.zoom??1;
     window.codeshell.platform=config.platform;
     window.codeshell.hasWindowTitleBarOverlay=config.platform==='win32';
-    const html=window.document.documentElement;
-    html.classList.toggle('dark',config.dark);
-    html.style.setProperty('--cs-frame-width',config.frame+'px');
-    html.style.setProperty('--cs-frame-radius',config.radius+'px');
-    html.style.setProperty('--cs-frame-color',config.image?'var(--cs-primary)':'var(--cs-border)');
-    const svg='<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><defs><linearGradient id="g"><stop stop-color="#dbeafe"/><stop offset="1" stop-color="#fde68a"/></linearGradient></defs><path fill="url(#g)" d="M0 0h1200v800H0z"/></svg>';
-    html.style.setProperty('--cs-surface-window-image',config.image?'url("data:image/svg+xml,'+encodeURIComponent(svg)+'")':'none');
-    html.style.setProperty('--cs-surface-window-opacity',config.image?'0.3':'0');
+    window.applyFixtureTheme(config);
     saveUILanguage('zh');
     root.render(<React.StrictMode><I18nProvider><ToastProvider><DialogProvider>
       <Fixture key={config.name} {...config}/>
@@ -164,6 +177,16 @@ const cases = [
   { name: "mac-light", frame: 0, radius: 12, dark: false, panel: true },
   { name: "mac-image-frame-2", frame: 2, radius: 12, dark: false, panel: true, image: true },
   { name: "mac-dark-frame-3", frame: 3, radius: 16, dark: true, panel: true },
+  ...[false, true].map((dark) => ({
+    name: `mac-corner-fill-${dark ? "dark" : "light"}`,
+    frame: 1,
+    radius: 48,
+    dark,
+    panel: true,
+    frameLight: "340 75% 45%",
+    frameDark: "340 80% 70%",
+    cornerPixels: "frame",
+  })),
   { name: "mac-fullscreen", frame: 3, radius: 16, dark: true, fullscreen: true, panel: true },
   { name: "mac-collapsed", frame: 2, radius: 12, dark: false, collapsed: true, panel: false },
   {
@@ -259,9 +282,70 @@ const cases = [
     activeChat: true,
   })),
   { name: "linux-rounded", platform: "linux", frame: 2, radius: 14, dark: true, panel: true },
+  ...["win32", "linux"].map((platform) => ({
+    name: `${platform}-corner-fill-excluded`,
+    platform,
+    frame: 1,
+    radius: 48,
+    dark: true,
+    panel: true,
+    frameLight: "340 75% 45%",
+    frameDark: "340 80% 70%",
+    cornerPixels: "not-frame",
+  })),
 ].map((config) => ({ platform: "darwin", ...config }));
 const near = (actual, expected, label) =>
   assert.ok(Math.abs(actual - expected) <= 1, `${label}: ${actual} should equal ${expected}`);
+async function assertCornerPixels(page, label, expected) {
+  // CSS-scale screenshots keep the sampled coordinates independent of display DPR.
+  // The points are outside the large theme radius, inside a native-sized corner.
+  const screenshot = await page.screenshot({
+    path: path.join(screenshots, `${label}-corners.png`),
+    scale: "css",
+  });
+  const result = await page.evaluate(async (base64) => {
+    const image = new window.Image();
+    image.src = `data:image/png;base64,${base64}`;
+    await image.decode();
+    const canvas = window.document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d");
+    context.drawImage(image, 0, 0);
+    const points = [
+      [5, 5],
+      [image.width - 6, 5],
+      [5, image.height - 6],
+      [image.width - 6, image.height - 6],
+    ];
+    const pixels = points.map(([x, y]) => ({
+      x,
+      y,
+      color: [...context.getImageData(x, y, 1, 1).data],
+    }));
+    const shell = window.document.querySelector("[data-app-shell]");
+    const color = window.getComputedStyle(shell, "::after").borderTopColor;
+    context.clearRect(0, 0, 1, 1);
+    context.fillStyle = color;
+    context.fillRect(0, 0, 1, 1);
+    const frame = [...context.getImageData(0, 0, 1, 1).data];
+    context.clearRect(0, 0, 1, 1);
+    context.fillStyle = window.getComputedStyle(window.document.body).backgroundColor;
+    context.fillRect(0, 0, 1, 1);
+    const body = [...context.getImageData(0, 0, 1, 1).data];
+    return { pixels, frame, body };
+  }, screenshot.toString("base64"));
+  for (const pixel of result.pixels) {
+    const color = expected === "body" ? result.body : result.frame;
+    const difference = Math.max(
+      ...pixel.color.map((channel, index) => Math.abs(channel - color[index])),
+    );
+    assert.ok(
+      expected === "not-frame" ? difference > 10 : difference <= 2,
+      `${label} corner (${pixel.x},${pixel.y}) ${JSON.stringify(pixel.color)} should ${expected === "not-frame" ? "differ from" : "match"} ${expected === "body" ? "body" : "frame"} ${JSON.stringify(color)}`,
+    );
+  }
+}
 try {
   for (const config of cases) {
     const viewport = { width: config.width ?? (config.narrow ? 390 : 1100), height: 720 };
@@ -287,6 +371,7 @@ try {
     await page.evaluate((props) => window.renderFixture(props), fixtureConfig);
     const header = page.locator('[data-theme-surface="titlebar"]');
     await header.waitFor();
+    if (config.cornerPixels) await assertCornerPixels(page, config.name, config.cornerPixels);
     const expectedHeaderHeight = Math.max(44, 32 / (config.zoom ?? 1));
     if (config.zoom) {
       await page.waitForFunction(
@@ -617,6 +702,48 @@ try {
           transitionInset,
           fullscreen ? viewport.width : viewport.width - 138,
           "Windows fullscreen transition",
+        );
+      }
+      await shellNode.dispose();
+    }
+    if (config.name === "mac-corner-fill-light") {
+      const shellNode = await shell.elementHandle();
+      for (const transition of [
+        { name: "dark", dark: true, frame: 1, expected: "frame" },
+        { name: "zero-width", dark: true, frame: 0, expected: "body" },
+        { name: "restored", dark: false, frame: 1, expected: "frame" },
+        { name: "default-reset", dark: false, resetTheme: true, expected: "body" },
+      ]) {
+        await page.evaluate((props) => window.applyFixtureTheme(props), {
+          ...fixtureConfig,
+          ...transition,
+        });
+        assert.equal(
+          await shell.evaluate((element, previous) => element === previous, shellNode),
+          true,
+          "theme changes update the mounted macOS shell",
+        );
+        await assertCornerPixels(page, `${config.name}-${transition.name}`, transition.expected);
+      }
+      for (const fullscreen of [true, false]) {
+        await page.evaluate((props) => window.renderFixture(props), {
+          ...fixtureConfig,
+          fullscreen,
+        });
+        await page.waitForFunction(
+          (state) =>
+            window.document.querySelector("[data-app-shell]").dataset.windowState === state,
+          fullscreen ? "fullscreen" : "windowed",
+        );
+        assert.equal(
+          await shell.evaluate((element, previous) => element === previous, shellNode),
+          true,
+          "fullscreen changes update the mounted macOS shell",
+        );
+        await assertCornerPixels(
+          page,
+          `${config.name}-${fullscreen ? "fullscreen" : "windowed"}`,
+          fullscreen ? "not-frame" : "frame",
         );
       }
       await shellNode.dispose();
