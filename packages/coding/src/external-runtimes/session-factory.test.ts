@@ -298,6 +298,131 @@ describe("startExternalRuntimeSession", () => {
     expect(turn!.argv).not.toContain("--append-system-prompt");
   });
 
+  test.each([
+    { label: "default", extra: {}, expected: "default" },
+    { label: "plan", extra: { planMode: true }, expected: "plan" },
+    {
+      label: "acceptEdits",
+      extra: { permissionMode: "acceptEdits" as const },
+      expected: "acceptEdits",
+    },
+    {
+      label: "explicit full access",
+      extra: { claudePermissionMode: "bypassPermissions" as const },
+      expected: "bypassPermissions",
+    },
+  ])("Claude's native permission mode follows the host selection: $label (E08)", async (row) => {
+    // Omitting --permission-mode is not neutral: the CLI would fall back to the
+    // user's own ~/.claude/settings.json defaultMode.
+    const fake = fakeClaudeCli();
+    const session = await startExternalRuntimeSession({
+      ...BASE,
+      ...row.extra,
+      kind: "claude-code",
+      registry: registry(),
+      claudeCommand: fake.command,
+    });
+    sessions.push(session);
+    await (
+      await session.send({ text: "hi" })
+    ).done;
+    const [turn] = readCaptures(fake.capture);
+    const index = turn!.argv.indexOf("--permission-mode");
+    expect(index).toBeGreaterThan(-1);
+    expect(turn!.argv[index + 1]).toBe(row.expected);
+    expect(turn!.argv.filter((arg) => arg === "--permission-mode")).toHaveLength(1);
+    expect(index).toBeLessThan(turn!.argv.indexOf("--mcp-config"));
+  });
+
+  test("Claude's native asks reach the host approval hook over the bridge (E08)", async () => {
+    // The fake CLI does what the real one does with --permission-prompt-tool: it
+    // calls that MCP tool on the configured server with { tool_name, input }.
+    const fake = fakeClaudeCli(`
+const tool = argv[argv.indexOf("--permission-prompt-tool") + 1];
+const config = JSON.parse(readFileSync(argv[argv.indexOf("--mcp-config") + 1], "utf8"));
+const [server, entry] = Object.entries(config.mcpServers)[0];
+if (!tool.startsWith("mcp__" + server + "__")) throw new Error("unexpected prompt tool " + tool);
+const url = new URL(entry.url);
+if (url.protocol !== "http:" || url.hostname !== "127.0.0.1") throw new Error("unexpected origin");
+const call = async (id, input) => {
+  const response = await fetch(url, { method: "POST", headers: {
+    ...entry.headers, "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call",
+      params: { name: tool.slice(("mcp__" + server + "__").length), arguments: input } }) });
+  return JSON.parse((await response.json()).result.content[0].text);
+};
+const verdicts = [
+  await call(1, { tool_name: "Bash", input: { command: "make test" }, tool_use_id: "toolu_1" }),
+  await call(2, { tool_name: "Write", input: { file_path: "/tmp/x" }, tool_use_id: "toolu_2" }),
+];
+appendFileSync(${JSON.stringify("VERDICTS")}, JSON.stringify(verdicts));
+`);
+    const verdictFile = join(fake.capture + ".verdicts");
+    writeFileSync(
+      fake.command,
+      readFileSync(fake.command, "utf8").replace('"VERDICTS"', JSON.stringify(verdictFile)),
+    );
+    const asked: Array<{ toolName: string; input: Record<string, unknown> }> = [];
+    const session = await startExternalRuntimeSession({
+      ...BASE,
+      kind: "claude-code",
+      registry: registry(),
+      claudeCommand: fake.command,
+      hooks: {
+        onClaudePermissionPrompt: async (request) => {
+          asked.push({ toolName: request.toolName, input: request.input });
+          return request.toolName === "Bash"
+            ? { approved: true }
+            : { approved: false, reason: "no writes today" };
+        },
+      },
+    });
+    sessions.push(session);
+    // The prompt tool is not a model-facing grant.
+    await (
+      await session.send({ text: "hi" })
+    ).done;
+    const [turn] = readCaptures(fake.capture);
+    const allowed = turn!.argv[turn!.argv.indexOf("--allowed-tools") + 1]!;
+    expect(allowed).not.toContain("CodeShellPermissionPrompt");
+    expect(asked).toEqual([
+      { toolName: "Bash", input: { command: "make test" } },
+      { toolName: "Write", input: { file_path: "/tmp/x" } },
+    ]);
+    expect(JSON.parse(readFileSync(verdictFile, "utf8"))).toEqual([
+      { behavior: "allow", updatedInput: { command: "make test" } },
+      { behavior: "deny", message: "no writes today" },
+    ]);
+  });
+
+  test.each([
+    { label: "plan", extra: { planMode: true } },
+    { label: "dontAsk", extra: { claudePermissionMode: "dontAsk" as const } },
+    { label: "bypassPermissions", extra: { claudePermissionMode: "bypassPermissions" as const } },
+    { label: "no approval hook", extra: {}, noHook: true },
+  ])("no permission prompt tool for $label (E08)", async (row) => {
+    // Plan must stay read-only (an approved ExitPlanMode would leave it), and a
+    // mode that never asks — or a host that cannot answer — gets no prompt tool.
+    const fake = fakeClaudeCli();
+    const session = await startExternalRuntimeSession({
+      ...BASE,
+      ...row.extra,
+      kind: "claude-code",
+      registry: registry(),
+      claudeCommand: fake.command,
+      ...("noHook" in row
+        ? {}
+        : { hooks: { onClaudePermissionPrompt: async () => ({ approved: true }) } }),
+    });
+    sessions.push(session);
+    await (
+      await session.send({ text: "hi" })
+    ).done;
+    const [turn] = readCaptures(fake.capture);
+    expect(turn!.argv).not.toContain("--permission-prompt-tool");
+    expect(session.listTools().map((tool) => tool.name)).not.toContain("CodeShellPermissionPrompt");
+  });
+
   test("close() releases the bridge port", async () => {
     // An orphaned bridge holds a port and a live token for the process lifetime.
     const session = await startExternalRuntimeSession({

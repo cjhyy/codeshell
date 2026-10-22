@@ -24,6 +24,11 @@ import {
   writeClaudeSystemPromptFile,
 } from "./mcp-config.js";
 import { buildRuntimeSpawnEnv } from "../shared/spawn-env.js";
+import {
+  CLAUDE_PERMISSION_MODES,
+  type ClaudePermissionMode,
+  type ClaudePermissionPromptDecider,
+} from "./permissions.js";
 import type { McpBridgeHandle } from "../shared/mcp-bridge.js";
 import { textWithAttachmentReferences, type ExternalRuntimeTurnInput } from "../turn-input.js";
 
@@ -47,6 +52,16 @@ export interface ClaudeRuntimeOptions {
    * `initialContext`, a one-time transcript replay for a fresh conversation.
    */
   developerInstructions?: string;
+  /**
+   * `--permission-mode` for Claude's NATIVE tools. Derive it with
+   * `claudePermissionModeFor`; see `permissions.ts` for why it is always sent.
+   */
+  permissionMode?: ClaudePermissionMode;
+  /**
+   * Plain name of the bridge tool that answers Claude's permission prompts
+   * (`withClaudePermissionPrompt`). Qualified here as `mcp__<server>__<name>`.
+   */
+  permissionPromptTool?: string;
   serverName?: string;
   /**
    * How long `interrupt()`/`close()` wait after SIGTERM before SIGKILL.
@@ -88,6 +103,12 @@ function settlesWithin(promise: Promise<void>, ms: number): Promise<boolean> {
 
 export interface ClaudeRuntimeHooks {
   onEvent?: (event: StreamEvent) => void;
+  /**
+   * Answer Claude's permission prompts for its NATIVE tools (Bash, Edit, …).
+   * Wired by the session factory through the bridge's permission-prompt tool;
+   * without it every native ask is denied. CodeShell Host Tools never reach it.
+   */
+  onClaudePermissionPrompt?: ClaudePermissionPromptDecider;
 }
 
 export interface ClaudeTurnHandle {
@@ -107,6 +128,20 @@ export class ClaudeCodeRuntime {
     private readonly options: ClaudeRuntimeOptions,
     private readonly hooks: ClaudeRuntimeHooks = {},
   ) {
+    // Typed, but also reachable from untyped callers: an unknown mode must not
+    // reach the CLI, where e.g. `auto` would mean classifier auto-approval.
+    if (
+      options.permissionMode !== undefined &&
+      !(CLAUDE_PERMISSION_MODES as readonly string[]).includes(options.permissionMode)
+    ) {
+      throw new Error(`Unsupported Claude permission mode: ${String(options.permissionMode)}`);
+    }
+    if (
+      options.permissionPromptTool !== undefined &&
+      !/^[A-Za-z][A-Za-z0-9_]*$/.test(options.permissionPromptTool)
+    ) {
+      throw new Error("permissionPromptTool must be a plain bridge tool name");
+    }
     this.log = options.log ?? (() => {});
     this.claudeSessionId = options.resumeRuntimeSessionId;
   }
@@ -166,6 +201,13 @@ export class ClaudeCodeRuntime {
       // the only thread of memory.
       ...(this.claudeSessionId ? ["--resume", this.claudeSessionId] : []),
       ...(systemPrompt ? ["--append-system-prompt-file", systemPrompt.path] : []),
+      ...(this.options.permissionMode ? ["--permission-mode", this.options.permissionMode] : []),
+      ...(this.options.permissionPromptTool
+        ? [
+            "--permission-prompt-tool",
+            `mcp__${this.options.serverName ?? CLAUDE_MCP_SERVER_NAME}__${this.options.permissionPromptTool}`,
+          ]
+        : []),
       ...(this.options.extraArgs ?? []),
       ...wiring.args,
     ];

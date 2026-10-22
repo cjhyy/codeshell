@@ -17,7 +17,10 @@
  *     so it resolves the real value rather than letting a default decide.
  */
 import type { BrowserWindow } from "electron";
-import { startExternalRuntimeSession } from "@cjhyy/code-shell-capability-coding/external-runtimes";
+import {
+  claudePermissionModeFor,
+  startExternalRuntimeSession,
+} from "@cjhyy/code-shell-capability-coding/external-runtimes";
 import type {
   ExternalRuntimeTurnInput,
   ExternalRuntimeKind,
@@ -756,6 +759,13 @@ export class ExternalRuntimeService {
         : "workspace-write";
     const approvalPolicy =
       fullAccess || request.permissionMode === "dontAsk" ? "never" : "on-request";
+    // Claude Code's NATIVE tools follow the user's selection directly; host tools
+    // keep hostPermissionMode above. Plan → plan, full access → bypassPermissions,
+    // and nothing else escalates.
+    const claudePermissionMode = claudePermissionModeFor({
+      permissionMode: request.permissionMode,
+      planMode: request.planMode === true,
+    });
     const toolApprovalBackend = fullAccess
       ? { requestApproval: async () => ({ approved: true }) }
       : request.permissionMode !== "dontAsk" && this.deps.requestApproval
@@ -1059,6 +1069,7 @@ export class ExternalRuntimeService {
         developerInstructions,
         sandbox,
         approvalPolicy,
+        ...(request.kind === "claude-code" ? { claudePermissionMode } : {}),
         ...(toolApprovalBackend
           ? {
               approvalBackend: {
@@ -1111,6 +1122,28 @@ export class ExternalRuntimeService {
                     decision.approved
                     ? "accept"
                     : "decline";
+                },
+                onClaudePermissionPrompt: async (prompt) => {
+                  const revoked = {
+                    approved: false,
+                    reason: "External runtime authority was revoked",
+                  };
+                  if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
+                    return revoked;
+                  // A distinct name, so the card is not mistaken for (or remembered
+                  // as) CodeShell's own governed tool of the same name.
+                  const decision: { approved: boolean; reason?: string } =
+                    await toolApprovalBackend.requestApproval({
+                      toolName: `Claude Code ${prompt.toolName}`,
+                      args: prompt.input,
+                      description: `Claude Code wants to use its native ${prompt.toolName} tool.`,
+                      riskLevel: "high",
+                    });
+                  if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
+                    return revoked;
+                  return decision.approved
+                    ? { approved: true }
+                    : { approved: false, ...(decision.reason ? { reason: decision.reason } : {}) };
                 },
               }
             : {}),

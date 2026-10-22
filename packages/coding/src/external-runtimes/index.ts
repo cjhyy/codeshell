@@ -55,6 +55,18 @@ export { writeClaudeMcpConfigFile } from "./claude-code/mcp-config.js";
 export { ClaudeEventTranslator } from "./claude-code/event-translator.js";
 export type { ClaudeEventTranslatorOptions } from "./claude-code/event-translator.js";
 export { ClaudeCodeRuntime } from "./claude-code/runtime.js";
+export {
+  CLAUDE_PERMISSION_MODES,
+  CLAUDE_PERMISSION_PROMPT_TOOL,
+  claudeModeUsesPermissionPrompt,
+  claudePermissionModeFor,
+  withClaudePermissionPrompt,
+} from "./claude-code/permissions.js";
+export type {
+  ClaudePermissionMode,
+  ClaudePermissionPromptDecider,
+  ClaudePermissionPromptRequest,
+} from "./claude-code/permissions.js";
 export type {
   ClaudeRuntimeOptions,
   ClaudeRuntimeHooks,
