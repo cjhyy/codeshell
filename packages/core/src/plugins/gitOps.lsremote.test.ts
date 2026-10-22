@@ -29,8 +29,8 @@ describe("gitLsRemote", () => {
       .toString()
       .trim();
     const r = await gitLsRemote(`file://${repo}`);
-    expect(r.ok).toBe(true);
-    if (r.ok) expect(r.stdout).toBe(head);
+    // Compare the whole result so a failure prints git's error, not just `false`.
+    expect(r).toEqual({ ok: true, stdout: head });
   });
 
   test("a bogus url returns ok:false", async () => {
