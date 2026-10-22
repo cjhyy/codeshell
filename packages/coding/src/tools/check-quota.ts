@@ -19,7 +19,9 @@ export const checkQuotaToolDef: ToolDefinition = {
     "Check remaining usage/rate-limit quota for the external coding-agent CLIs (Claude Code and/or " +
     "Codex) — the same subscription windows their status lines show. Use before or during " +
     "orchestration (DriveAgent) to plan how much work to hand off, whether to wait for a reset, or " +
-    "which provider to use. Returns each window's used-% and reset time. Codex reports 5h/7d; " +
+    "which provider to use. Returns each window's used-% and reset time. " +
+    "Codex labels each window by its reported duration (e.g. 5h, 7d; 'primary'/'secondary' if " +
+    "the duration is missing); " +
     "Claude reports whichever windows apply to the account (5h/7d normally, 'overage' when the " +
     "account is running on overage), and marks the currently binding window with '*'. " +
     "COST: 'codex' is free (reads a usage endpoint). 'claude' costs ~1 token (Anthropic exposes " +

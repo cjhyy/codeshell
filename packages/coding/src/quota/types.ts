@@ -19,10 +19,13 @@
  * "overage" window INSTEAD of those (verified 2026-09-06 against a team /
  * default_claude_max_5x account). New window names appear without notice, so
  * the parser discovers them from the header prefix rather than matching a
- * hardcoded list. Renderers must treat `kind` as an opaque label.
+ * hardcoded list. Codex windows are labelled from their reported duration
+ * ("5h", "7d", "1h", …), falling back to the slot name ("primary" /
+ * "secondary") when the backend omits it. Renderers must treat `kind` as an
+ * opaque label.
  */
 export interface QuotaWindow {
-  /** Which window this is: "5h" | "7d" | "overage" | any future name. */
+  /** Which window this is: "5h" | "7d" | "overage" | "primary" | any future name. */
   kind: string;
   /** Percent of the window's limit already used, 0–100. */
   usedPercent: number;
