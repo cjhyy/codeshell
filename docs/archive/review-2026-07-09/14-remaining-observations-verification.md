@@ -197,7 +197,7 @@ P2。它不是当前权限绕过：PowerShell 仍走工具权限审批；但当�
 - TurnLoop 工具结果回填用的是 `toolResultToBlock(result)`，同时写 transcript 并发 `StreamEvent.tool_result`：`packages/core/src/engine/turn-loop.ts:1019`、`packages/core/src/engine/turn-loop.ts:1023`、`packages/core/src/engine/turn-loop.ts:1024`、`packages/core/src/engine/turn-loop.ts:1026`、`packages/core/src/engine/turn-loop.ts:1034`。
 - TurnLoop 随后把 `resultBlocks` push 回 messages，形成下一次模型请求上下文：`packages/core/src/engine/turn-loop.ts:1061`、`packages/core/src/engine/turn-loop.ts:1062`。
 - `toolResultToBlock(` 在 production 源码的主调用只有 TurnLoop；其它命中是测试：`packages/core/src/engine/turn-loop.ts:177`、`packages/core/src/engine/turn-loop.ts:1024`、`packages/core/src/engine/turn-loop-image-result.test.ts:15`。
-- 旧架构文档仍写 `returns ToolResult -> resultsToMessages(...) executor.ts:638`：`docs/architecture/02-tool-system.md:44`、`docs/architecture/02-tool-system.md:49`。
+- 旧架构文档仍写 `returns ToolResult -> resultsToMessages(...) executor.ts:638`：`docs/archive/architecture-2026-07/02-tool-system.md:44`、`docs/archive/architecture-2026-07/02-tool-system.md:49`。
 
 ### 4. 结论
 
@@ -207,7 +207,7 @@ P2。它不是当前权限绕过：PowerShell 仍走工具权限审批；但当�
 
 P3。不是当前 runtime bug，不能列 P1/P2；但 stale helper 和旧架构文档会误导后续重构，把 image result 或 error semantics 回退成旧形状，仍应作为维护债处理。
 
-修复方向：删除 `resultsToMessages()`，或让它委托 `toolResultToBlock()` / 共享转换函数；同步更新 `docs/architecture/02-tool-system.md`。
+修复方向：删除 `resultsToMessages()`，或让它委托 `toolResultToBlock()` / 共享转换函数；同步更新 `docs/archive/architecture-2026-07/02-tool-system.md`。
 
 ## 自查
 

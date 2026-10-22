@@ -31,7 +31,7 @@ Blocker 2 · Major 4。
 
 ## Minor/Nit
 - tui 缺 `engines.node`（root/core/cdp 都有 >=20.10）。
-- `docs/architecture/00-overview.md:14` 仍提 rc.12。
+- `docs/archive/architecture-2026-07/00-overview.md:14` 仍提 rc.12。
 - `release.yml:3-7` 注释只写 rc 示例，未同步 beta 支持。
 
 ## 已确认 OK

@@ -2,7 +2,7 @@
 
 > The transport-agnostic RPC boundary between clients and the engine, plus the on-disk session/replay layer that makes runs durable and resumable. Source-mapped against the current tree under `packages/core/src/protocol/`, `packages/core/src/session/`, the engine's session boundary, and the desktop replay reader.
 
-![Protocol stream event flow](images/protocol-stream-events.png)
+![Protocol stream event flow](../../architecture/images/protocol-stream-events.png)
 
 ## 1. Why a protocol at all
 
@@ -87,7 +87,7 @@ Headless runs are the exception because there may be no later interactive turn t
 
 ## 7. Sessions on disk and replay
 
-![Session persistence and replay](images/session-persistence-replay.png)
+![Session persistence and replay](../../architecture/images/session-persistence-replay.png)
 
 `SessionManager` stores durable sessions under `${CODE_SHELL_HOME:-~/.code-shell}/sessions` (`packages/core/src/session/session-manager.ts:68`, `packages/core/src/session/session-manager.ts:82`). Every public session id is validated before it is joined into a path: empty ids, separators, `..`, unexpected characters, and ids longer than 128 chars are rejected (`packages/core/src/session/session-manager.ts:43`). A current session directory contains:
 

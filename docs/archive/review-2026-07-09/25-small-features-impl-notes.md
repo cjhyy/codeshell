@@ -190,7 +190,7 @@ Removed the unused helper after verifying there are no source callers.
 Files:
 
 - `packages/core/src/tool-system/executor.ts`
-- `docs/architecture/02-tool-system.md`
+- `docs/archive/architecture-2026-07/02-tool-system.md`
 
 Verification:
 

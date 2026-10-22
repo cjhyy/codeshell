@@ -6,7 +6,7 @@
 
 Every LLM-facing capability — reading a file, running a shell command, spawning a sub-agent, calling an MCP server, driving the browser, or generating media — flows through the same control surface: **preset visibility → executor gates → hooks → path policy → permission → registry → handler → normalized result**. The executor is the runtime choke point; the registry is the handler/timeout/cancellation wrapper.
 
-![Tool execution pipeline](images/tool-execution-pipeline.png)
+![Tool execution pipeline](../../architecture/images/tool-execution-pipeline.png)
 
 | File                        | Role                                                                                                                | ~LOC   |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------ |

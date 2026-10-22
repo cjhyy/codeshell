@@ -84,12 +84,12 @@
 ### 阶段一：讲清架构（先做架构）
 
 **任务 A1 — Core 引擎结构说明**
-- 读：`docs/architecture/01-engine-and-turn-loop.md`、`docs/architecture/02-tool-system.md`、`docs/architecture/03-llm-and-model-layer.md`、`docs/architecture/04-protocol-and-sessions.md`、`docs/core-deep-dive/v2-02/03/05`、以及 §2A 的源码锚点。
+- 读：`docs/archive/architecture-2026-07/01-engine-and-turn-loop.md`、`docs/archive/architecture-2026-07/02-tool-system.md`、`docs/archive/architecture-2026-07/03-llm-and-model-layer.md`、`docs/archive/architecture-2026-07/04-protocol-and-sessions.md`、`docs/core-deep-dive/v2-02/03/05`、以及 §2A 的源码锚点。
 - 写：`docs/archive/review-2026-07-09/01-core-engine-structure.md`
 - 内容：按 engine / tool-system / protocol 三大块，每块给出 §1 的三层（结构 / 设计 / 为什么）。每个子模块配真实 `文件路径:行号` 锚点。Why 无据处标「推测」。
 
 **任务 A2 — 桌面流端到端步骤说明**
-- 读：`docs/architecture/10-desktop-and-mobile.md`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md`、§2B 的源码锚点。
+- 读：`docs/archive/architecture-2026-07/10-desktop-and-mobile.md`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md`、§2B 的源码锚点。
 - 写：`docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md`
 - 内容：**一条有编号的端到端步骤链**，从「turn-loop.ts 产出一个 token/StreamEvent」到「屏幕上出现并最终折叠进 TurnProcessGroupCard」，每一步标注：这一步在哪个文件做、输入是什么、输出是什么、为什么需要这一步（例如为什么要 coalesce、为什么要 snapshot store、折叠判定的规则）。这份文档同时是 §5 可视化视频的**分镜脚本源**。
 

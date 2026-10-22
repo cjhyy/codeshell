@@ -37,7 +37,7 @@
 
 ## 证据与验收
 
-结构事实以 `CODESHELL.md`、根 `package.json`、`docs/architecture/00-overview.md`、`docs/architecture/12-package-boundaries-and-release-units.md` 及对应 package manifest 为依据。
+结构事实以 `CODESHELL.md`、根 `package.json`、`docs/archive/architecture-2026-07/00-overview.md`、`docs/architecture/12-package-boundaries-and-release-units.md` 及对应 package manifest 为依据。
 
 验收标准：
 

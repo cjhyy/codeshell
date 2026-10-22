@@ -2,7 +2,7 @@
 
 > The heart of CodeShell. Everything else — tools, sessions, models, presets, hooks, and context management — exists to feed or be driven by the turn loop. Source-mapped against the current tree under `packages/core/src/engine/`, `packages/core/src/context/`, and the adjacent session/protocol seams.
 
-![Engine turn-loop flow](images/engine-turn-loop.png)
+![Engine turn-loop flow](../../architecture/images/engine-turn-loop.png)
 
 ## 1. What this layer is
 
@@ -137,7 +137,7 @@ Cancellation has three layers:
 - **Turn-loop layer:** checks occur at loop top, after context management, after model return, inside continuation loops, and in the outer catch (`packages/core/src/engine/turn-loop.ts:550`, `packages/core/src/engine/turn-loop.ts:638`, `packages/core/src/engine/turn-loop.ts:823`, `packages/core/src/engine/turn-loop.ts:773`, `packages/core/src/engine/turn-loop.ts:1189`).
 - **Model/tool layer:** `callModelWithFallback()` refuses to retry a cancelled streaming request as non-streaming (`packages/core/src/engine/turn-loop.ts:1298`), while `ToolExecutor.executeSingle()` returns an error result immediately if the signal is already aborted (`packages/core/src/tool-system/executor.ts:123`).
 
-![Context and cancellation state](images/context-cancellation.png)
+![Context and cancellation state](../../architecture/images/context-cancellation.png)
 
 ## 5. Context management (`context/`)
 

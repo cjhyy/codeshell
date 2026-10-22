@@ -35,7 +35,7 @@
 - Reference: `.agents/skills/archify/schemas/common.schema.json`
 - Reference: `.agents/skills/archify/schemas/architecture.schema.json`
 - Reference: `.agents/skills/archify/examples/architecture.json`
-- Reference: `docs/architecture/00-overview.md`
+- Reference: `docs/archive/architecture-2026-07/00-overview.md`
 - Reference: `docs/architecture/12-package-boundaries-and-release-units.md`
 
 **Interfaces:**

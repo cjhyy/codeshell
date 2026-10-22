@@ -2,7 +2,7 @@
 
 > The optional multi-model reasoning package (Arena), the external-agent CLI integrations (DriveAgent, Claude Code rooms, Codex rooms), and smaller integration surfaces (STT, code review, external-agent config). Source-mapped against `packages/arena/src/`, `packages/core/src/tool-system/builtin/{drive-claude-code,check-quota}.ts`, `packages/core/src/cc-orchestrator/`, `packages/desktop/src/main/mobile-remote/`, `packages/core/src/stt/`, `packages/core/src/review/`, and `packages/core/src/external-agents/`.
 
-![Arena evidence and claim flow](images/arena-flow.png)
+![Arena evidence and claim flow](../../architecture/images/arena-flow.png)
 
 ## 1. Arena (`packages/arena/src/`)
 
@@ -49,7 +49,7 @@ Planning mode takes a lighter path: after research and claim registration, it ru
 
 ## 2. External CLI orchestration (`cc-orchestrator/`, 10 non-test TS files, ~1,100 LOC)
 
-![DriveAgent and room orchestration](images/driveagent-orchestration.png)
+![DriveAgent and room orchestration](../../architecture/images/driveagent-orchestration.png)
 
 There are two distinct integration paths:
 - **DriveAgent** is a builtin tool that launches one headless external CLI turn and returns inline or via a background completion notification (`packages/core/src/tool-system/builtin/drive-claude-code.ts:17`, `packages/core/src/tool-system/builtin/drive-claude-code.ts:67`).

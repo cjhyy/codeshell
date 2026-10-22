@@ -38,7 +38,7 @@
 
 ## 未发Input的自然等待为何不是回滚要求
 
-项目的[架构合同01:110](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/docs/architecture/01-engine-and-turn-loop.md:110)写明“Abort is terminal, not retryable”，用户Stop的AbortSignal经ChatSession、Engine、TurnLoop、ToolExecutor至tool handlers。实际`packages/core/src/tool-system/registry.ts:201`传播parent abort、`:210`给ctx.signal，`:240`将executor与abort竞争。这是协作取消，race不会自动终止不观察signal的底层promise。
+项目的[架构合同01:110](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/docs/archive/architecture-2026-07/01-engine-and-turn-loop.md:110)写明“Abort is terminal, not retryable”，用户Stop的AbortSignal经ChatSession、Engine、TurnLoop、ToolExecutor至tool handlers。实际`packages/core/src/tool-system/registry.ts:201`传播parent abort、`:210`给ctx.signal，`:240`将executor与abort竞争。这是协作取消，race不会自动终止不观察signal的底层promise。
 
 Browser工具的实际click在`packages/core/src/tool-system/builtin/browser-tools.ts:459`直接`await b.click(ref)`，没有传ctx.signal。`protocol/server.ts:1032`给普通parent安装makeBrowserBridge；`:4398`的bridge方法只有动作参数，`:4427`请求把action注册并发到Main，没有普通parent请求取消通道。Main `packages/desktop/src/main/agent-bridge.ts:993`另启async处理；`:1026`调用dispatch只传sessionId/request/childHost，**不传requestId/turn取消信号**；`:1039`等动作完成后再回approve。
 

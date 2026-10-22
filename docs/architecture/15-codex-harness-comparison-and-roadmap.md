@@ -417,7 +417,7 @@ Codex harness 驱动官方 App，不代表官方桌面 Shell/UI 已作为同一�
 - SessionManager 抽出 state repository、fork service、goal repository 和 lineage query；
 - Permission 保留统一判定入口，内部拆分 command、path、network 和 persisted rule evaluator。
 
-另一个风险是文档与源码漂移。比如 `packages/core/src/composition/types.ts:4` 仍称 ResolvedComposition 处于早期阶段且没有生产调用，但当前 Engine、AgentServer、stdio、TUI 和 Desktop 已经消费 composition。`docs/architecture/01-engine-and-turn-loop.md` 中的文件行数也落后于当前源码。协议 Schema 与可执行架构检查应承担更多事实校验，减少手工文档成为旧状态快照。
+另一个风险是文档与源码漂移。比如 `packages/core/src/composition/types.ts:4` 仍称 ResolvedComposition 处于早期阶段且没有生产调用，但当前 Engine、AgentServer、stdio、TUI 和 Desktop 已经消费 composition。`docs/archive/architecture-2026-07/01-engine-and-turn-loop.md` 中的文件行数也落后于当前源码。协议 Schema 与可执行架构检查应承担更多事实校验，减少手工文档成为旧状态快照。
 
 ## 13. 分阶段路线图
 

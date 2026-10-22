@@ -40,7 +40,7 @@
 - 文件：`packages/core/src/cli/agent-server-stdio.ts:1`、`packages/core/src/cli/agent-server-stdio.ts:307`、`packages/core/src/protocol/transport.ts:72`、`packages/core/src/protocol/transport.ts:98`
 - 输入：`RpcNotification{ method:"agent/streamEvent", params:{sessionId,event} }`。
 - 输出：worker stdout 上的一行 NDJSON。
-- 为什么需要：desktop 架构文档规定 Electron main 是 IPC service broker，不是 Engine host；core worker 通过 stdio NDJSON 被 main 驱动（`docs/architecture/10-desktop-and-mobile.md:9`、`docs/architecture/10-desktop-and-mobile.md:12`）。
+- 为什么需要：desktop 架构文档规定 Electron main 是 IPC service broker，不是 Engine host；core worker 通过 stdio NDJSON 被 main 驱动（`docs/archive/architecture-2026-07/10-desktop-and-mobile.md:9`、`docs/archive/architecture-2026-07/10-desktop-and-mobile.md:12`）。
 
 ### 7. Electron main 读取 worker stdout 并识别可快照事件
 - 文件：`packages/desktop/src/main/agent-bridge.ts:178`、`packages/desktop/src/main/agent-bridge.ts:201`、`packages/desktop/src/main/parseStreamLine.ts:15`、`packages/desktop/src/main/parseStreamLine.ts:22`

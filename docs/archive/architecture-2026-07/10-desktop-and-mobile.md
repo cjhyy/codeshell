@@ -4,7 +4,7 @@
 
 ## 1. Runtime boundary
 
-![Electron main, renderer, preload, worker, and mobile WebSocket boundaries](images/desktop-main-renderer-ipc.png)
+![Electron main, renderer, preload, worker, and mobile WebSocket boundaries](../../architecture/images/desktop-main-renderer-ipc.png)
 
 The invariant: **Electron main is an IPC service broker, not the `Engine` host**. It owns BrowserWindows, OS/filesystem/native services, hardened webviews, mobile HTTP/WS, and the stdio pipe to the core worker. The renderer and the phone are clients of that broker.
 
@@ -33,7 +33,7 @@ The recurring performance rule remains: main-side operations should avoid synchr
 
 ## 3. Renderer and panels (`src/renderer/`)
 
-![Desktop panel dock, webview, CDP driver, and browser-action path](images/desktop-panel-browser-cdp.png)
+![Desktop panel dock, webview, CDP driver, and browser-action path](../../architecture/images/desktop-panel-browser-cdp.png)
 
 React owns UI state, routing, and presentation; main owns capabilities. `App.tsx` is now the composition root rather than the sole owner of every renderer concern: bucket override/transcript hydration, automation import, session navigation, host subscriptions, run control, and panel buckets live in focused hooks under `packages/desktop/src/renderer/app/`. `AppShell.tsx` and `SessionPanelDock.tsx` own the large JSX shells. Incoming `StreamEvent` envelopes are still routed by `sessionId`, coalesced for noisy deltas, and reduced into the correct bucket. Sends still go through `window.codeshell.run`, with cwd, model, goal, and session metadata pinned at dispatch time.
 
@@ -47,7 +47,7 @@ Mobile-originated and automation-originated events land in the same bucket model
 
 ## 4. Mobile remote (`src/mobile/` and `src/main/mobile-remote/`)
 
-![Mobile remote HTTP/WS host, pairing, trusted devices, project chat, and rooms](images/mobile-remote-room-transport.png)
+![Mobile remote HTTP/WS host, pairing, trusted devices, project chat, and rooms](../../architecture/images/mobile-remote-room-transport.png)
 
 The phone app is a separate Vite build rooted at `src/mobile`, served under `/mobile/`, and it talks to desktop through HTTP and WebSocket rather than Electron preload (`packages/desktop/vite.mobile.config.ts:6`, `packages/desktop/vite.mobile.config.ts:18`, `packages/desktop/vite.mobile.config.ts:38`). In production the main process serves `out/mobile`; in development it can proxy to the mobile Vite server, while preserving the `/mobile` prefix and SPA fallback (`packages/desktop/src/main/mobile-remote/mobile-static.ts:5`, `packages/desktop/src/main/mobile-remote/mobile-static.ts:100`).
 

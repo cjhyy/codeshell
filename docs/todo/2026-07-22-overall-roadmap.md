@@ -1,7 +1,7 @@
 # 全局架构图与分步路线图
 
 > 2026-07-22。目的:一张整体架构图 + 由它拆解出的分阶段执行计划(Pet 能力优先)。
-> 现状事实以 `docs/architecture/00-overview.md`(as-built)与 `TODO.md`(在途/待办)为准;
+> 现状事实以 `docs/archive/architecture-2026-07/00-overview.md`(as-built)与 `TODO.md`(在途/待办)为准;
 > 本文只做「全局对齐 + 排序」,不重复各章细节。
 > 图例:✅ 已稳定 · 🚧 工作树在途(未 commit)· ⬜ 缺口(未开工)
 

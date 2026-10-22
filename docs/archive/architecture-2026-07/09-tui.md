@@ -2,7 +2,7 @@
 
 > The `code-shell` terminal client: Commander entry points, an Ink-style React REPL, a headless `run` renderer, and a first-party terminal render engine. Source-mapped against the current `packages/tui/src/` tree (~42,147 TS/TSX LOC). The TUI is a protocol client: it creates the protocol/runtime host in-process, but UI code talks through `AgentClient`, not through `Engine.run()` directly.
 
-![TUI protocol flow](images/tui-protocol-flow.png)
+![TUI protocol flow](../../architecture/images/tui-protocol-flow.png)
 
 ## 1. Shape of the package
 
@@ -77,7 +77,7 @@ The fullscreen body is a constrained column: scrollable messages, optional overl
 
 ## 7. Render engine
 
-![TUI render pipeline](images/tui-render-pipeline.png)
+![TUI render pipeline](../../architecture/images/tui-render-pipeline.png)
 
 `src/render/` is the in-tree terminal runtime. The public surface is intentionally narrow (`Box`, `Text`, `ScrollBox`, `AlternateScreen`, `Ansi`, hooks, `render`, `createRoot`, etc.), and the README marks everything else as internal (`packages/tui/src/render/README.md:13`, `packages/tui/src/render/README.md:27`, `packages/tui/src/render/README.md:43`, `packages/tui/src/render/README.md:52`, `packages/tui/src/render/README.md:67`). `startInkRepl()` calls `render()` with `stdout`, `stdin`, `stderr`, `exitOnCtrlC`, and an `onFrame` probe that feeds UI perf/devtools (`packages/tui/src/ui/index.tsx:65`, `packages/tui/src/ui/index.tsx:78`, `packages/tui/src/ui/index.tsx:84`, `packages/tui/src/ui/index.tsx:95`).
 
