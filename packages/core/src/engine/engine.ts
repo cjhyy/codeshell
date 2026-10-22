@@ -67,7 +67,7 @@ import {
 } from "../goal/lifecycle.js";
 import { loadPluginHooks } from "../plugins/loadPluginHooks.js";
 import { pluginAgentDirs } from "../plugins/installer/loadPluginAgents.js";
-import { runShellHook, shellHookMatches } from "../hooks/shell-runner.js";
+import { registerSettingsShellHooks } from "../hooks/register-configured-hooks.js";
 import { ContextManager, type CompactStrategy } from "../context/manager.js";
 import { SessionContextNotes } from "../context/notes.js";
 import { loadSection } from "../prompt/section-loader.js";
@@ -572,25 +572,10 @@ export class Engine {
     } catch {
       return;
     }
-    const entries = settings.hooks ?? [];
-    for (const entry of entries) {
-      // Soft off-switch (settings hooks UI): the entry stays in the file but
-      // doesn't register. reloadHooks() re-runs this, so toggling is hot.
-      if (entry.disabled === true) continue;
-      const event = entry.event as HookEventName;
-      const handler: HookHandler = async (ctx) => {
-        if (!shellHookMatches(entry, ctx)) return {};
-        return runShellHook(entry, ctx);
-      };
-      this.settingsHookScope.own(
-        this.hooks.register(
-          event,
-          handler,
-          50,
-          `shell:${entry.event}:${entry.command.slice(0, 32)}`,
-        ),
-      );
-    }
+    // Shared with SessionToolHost so external runtimes register the same
+    // hooks. Disabled entries are skipped there; reloadHooks() re-runs this,
+    // so toggling is hot.
+    registerSettingsShellHooks(this.hooks, settings.hooks ?? [], this.settingsHookScope);
   }
 
   /**

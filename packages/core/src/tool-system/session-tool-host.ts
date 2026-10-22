@@ -23,6 +23,8 @@ import { ToolExecutor } from "./executor.js";
 import { ToolRegistry } from "./registry.js";
 import { PermissionClassifier, type ApprovalBackend } from "./permission.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { registerConfiguredHooks } from "../hooks/register-configured-hooks.js";
+import { SettingsManager } from "../settings/manager.js";
 import { buildToolVisibility, type ToolVisibilityInputs } from "../engine/run-tooling.js";
 import { composePermissionRules } from "../engine/permission-controller.js";
 import { PLAN_MODE_ALLOWED_TOOLS } from "./plan-mode-allowlist.js";
@@ -162,7 +164,29 @@ export interface CreateSessionToolHostOptions {
    */
   visibility: ToolVisibilityInputs;
   approvalBackend?: ApprovalBackend;
+  /**
+   * Tool hooks for this session. When absent — the production path — the host
+   * loads the SAME configured hooks a top-level Native Engine registers for
+   * `cwd`: approved installed-plugin hooks plus `settings.hooks`, read through
+   * `settingsScope` and `projectTrusted`, so an untrusted project's own hooks
+   * are stripped exactly as they are for the Engine.
+   *
+   * An empty default used to mean `pre_tool_use` / `post_tool_use` were emitted
+   * into nothing: every external-runtime call passed through ToolExecutor, yet
+   * a user's deny hook never ran. Pass a registry only to replace that set
+   * (tests, SDK embedders that own their hooks).
+   */
   hooks?: HookRegistry;
+  /**
+   * Whether the model that will read this session's tool results accepts image
+   * input. Tools such as browser_observe skip loading pixels otherwise.
+   *
+   * An external runtime has no CodeShell `llmConfig` to infer this from — its
+   * model is chosen and called by the runtime — so the host declares it. Absent
+   * falls back to `llmConfig`, which itself fails closed to "no vision".
+   * Decided here, not through `contextOverrides`.
+   */
+  modelSupportsVision?: boolean;
   /** Extra ToolContext seams the host supplies (panels, browser, askUser, …). */
   contextOverrides?: Partial<ToolContext>;
   /** Capture a concrete output owner once per tool invocation, before awaits. */
@@ -223,6 +247,22 @@ function argsPatternMatches(
   return true;
 }
 
+/**
+ * The configured hooks for this session, loaded the way a top-level Native
+ * Engine loads them: same SettingsManager inputs (scope + trust) and the same
+ * registration helper.
+ */
+function configuredHooks(options: CreateSessionToolHostOptions): HookRegistry {
+  const hooks = new HookRegistry();
+  const settings = new SettingsManager(
+    options.cwd,
+    options.settingsScope ?? "project",
+    options.projectTrusted,
+  );
+  registerConfiguredHooks(hooks, settings, options.cwd);
+  return hooks;
+}
+
 export function createSessionToolHost(options: CreateSessionToolHostOptions): SessionToolHost {
   if (FORBIDDEN_MODES.has(options.permissionMode)) {
     throw new Error(
@@ -233,7 +273,8 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
   }
 
   const { registry, exposure } = options;
-  const hooks = options.hooks ?? new HookRegistry();
+  const ownsHooks = options.hooks === undefined;
+  const hooks = options.hooks ?? configuredHooks(options);
   // Composed HERE, by the same function the Native Engine uses, so the two paths
   // cannot drift. In particular this is what pulls in the user's own
   // `settings.permissions.rules` — a deny the user wrote must bind an external
@@ -273,6 +314,7 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
     sessionId: options.businessSessionId,
     settingsScope: options.settingsScope ?? "project",
     externalRuntime: true,
+    modelSupportsVision: options.modelSupportsVision,
     // This bridge owns tool calls, not a native model loop that can apply a
     // context rollover. Never expose native working-memory controls here.
     contextStrategy: undefined,
@@ -430,6 +472,7 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
       disposed = true;
       lifetime.abort();
       executor.setContext(undefined);
+      if (ownsHooks) hooks.clear();
     },
   };
 }
