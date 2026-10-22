@@ -205,6 +205,8 @@ import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
 import { PetMemoryStore } from "./pet/pet-memory-store.js";
 import { createPetMemoryHost, createPetMemoryWorldContext } from "./pet/pet-memory-host.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
+import { PetChatAttachmentContext } from "./pet/pet-chat-attachment-context.js";
+import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
@@ -1855,6 +1857,10 @@ async function createWindow(): Promise<BrowserWindow> {
     const petWorkDelegationHost = new PetWorkDelegationHost({
       bridge,
       noWorkspaceCwd: resolveNoRepoCwd(),
+      resolveSessionCwd: async (sessionId) => {
+        const entry = await getSessionCwdIndex().refresh(sessionId);
+        return entry?.status === "confirmed" ? (entry.workspaceRoot ?? entry.cwd) : undefined;
+      },
     });
     const petWorkMemory = new PetWorkMemoryStore(
       resolve(app.getPath("userData"), "pet", "work-memory.json"),
@@ -2211,6 +2217,7 @@ async function createWindow(): Promise<BrowserWindow> {
       aggregator,
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
+      attachmentContext: new PetChatAttachmentContext(resolve(app.getPath("userData"), "pet")),
       sessionsRootDir: petSessionsRootDir,
       managerModel: async () =>
         petChatModelKeyFromSettings(await readSettings("user").catch(() => null)),

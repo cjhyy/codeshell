@@ -36,6 +36,10 @@ import type { PetHostActionReceiptStore } from "./pet-host-action-receipts.js";
 import type { PetPersonalization } from "../../shared/pet-settings.js";
 import type { PetSegmentClosed, PetSegmentTurnStart } from "./pet-segment-controller.js";
 import type { PetChatAttachment } from "../../shared/pet-chat-attachments.js";
+import {
+  selectPetChatAttachments,
+  type PetChatAttachmentContext,
+} from "./pet-chat-attachment-context.js";
 import type { TaskInboxPetView } from "../task-inbox/task-inbox-pet-view.js";
 import type { PetContextOriginRef, PetGroundedTaskRef } from "@cjhyy/code-shell-pet";
 import {
@@ -68,6 +72,12 @@ export interface PetAutoDelegation {
   clientMessageId: string;
   task: string;
   workspacePath: string | null;
+  /** Host-selected source attachments; model-provided paths never grant access. */
+  inputAttachments?: {
+    cwd: string;
+    sessionId: string;
+    attachments: InputAttachmentMeta[];
+  };
   /** Explicit backend selected from DelegateWork; omitted means CodeShell. */
   executionBackend?: PetWorkExecutionBackend;
   /** Existing host-validated Work Session to continue; absent means create. */
@@ -92,6 +102,7 @@ export type PetStartedDelegation = Omit<
   | "goalContinuation"
   | "completionTarget"
   | "continuationDepth"
+  | "inputAttachments"
 > & {
   sessionId: string;
   taskId?: string;
@@ -301,6 +312,8 @@ interface PetDispatchOptions {
     ): () => void;
   };
   hostCwd: string;
+  /** Bounded source-scoped attachment context retained across follow-up messages. */
+  attachmentContext?: Pick<PetChatAttachmentContext, "remember" | "list" | "clear">;
   /** On-disk sessions root backing Mimi's read-only Sessions disclosure tool. */
   sessionsRootDir?: string;
   /** Mimi manager model used when a channel does not provide an explicit override. */
@@ -770,6 +783,7 @@ function replaceRunResultText(result: unknown, text: string): unknown {
 interface PetQueuedSteer {
   id: string;
   injected: boolean;
+  attachments?: InputAttachmentMeta[];
 }
 
 interface PetActiveChatTurn {
@@ -785,6 +799,8 @@ interface PetActiveChatTurn {
   steersDrained: Promise<void>;
   resolveSteersDrained?: () => void;
   steers: Map<string, PetQueuedSteer>;
+  /** Only admitted input and worker-confirmed consumed steers may cross to Work. */
+  inputAttachments: InputAttachmentMeta[];
   runDone: Promise<void>;
   resolveRunDone: () => void;
   fullyDone: Promise<void>;
@@ -848,7 +864,10 @@ export class PetDispatchService {
       const record = event as Record<string, unknown>;
       if (record.type !== "steer_injected" || typeof record.id !== "string") return;
       const steer = active.steers.get(record.id);
-      if (steer) steer.injected = true;
+      if (steer && !steer.injected) {
+        steer.injected = true;
+        active.inputAttachments.push(...(steer.attachments ?? []));
+      }
     });
   }
 
@@ -884,6 +903,7 @@ export class PetDispatchService {
       followerCount: 0,
       steersDrained: Promise.resolve(),
       steers: new Map(),
+      inputAttachments: [],
       runDone: new Promise<void>((resolve) => {
         resolveRunDone = resolve;
       }),
@@ -949,7 +969,13 @@ export class PetDispatchService {
           !isPetContextControl(command)
         ) {
           const id = command.clientMessageId ?? `pet-steer-${randomUUID()}`;
-          const steer = { id, injected: false };
+          const steer: PetQueuedSteer = {
+            id,
+            injected: false,
+            ...(command.attachments?.length
+              ? { attachments: structuredClone(command.attachments) }
+              : {}),
+          };
           if (active.followerCount === 0) {
             active.steersDrained = new Promise<void>((resolve) => {
               active.resolveSteersDrained = resolve;
@@ -1035,6 +1061,10 @@ export class PetDispatchService {
       const consumed = outcome === "consumed";
 
       await this.withChatAdmission(() => {
+        if (consumed && !admission.steer.injected) {
+          admission.steer.injected = true;
+          admission.active.inputAttachments.push(...(admission.steer.attachments ?? []));
+        }
         admission.active.steers.delete(admission.steer.id);
         admission.active.followerCount = Math.max(0, admission.active.followerCount - 1);
         this.finishActiveChatTurnIfDrained(admission.active);
@@ -1098,12 +1128,43 @@ export class PetDispatchService {
         // Revoke accepted but unused steers before a host receipt run can
         // consume them with its different prompt and capability set.
         await active.steersDrained;
+        // Persist only inputs consumed by this run, before admitting its queued
+        // successor. Post-run model/launch work must never overwrite newer input.
+        // Retention is best effort: a failed write must not leave this turn
+        // unsettled and wedge every later chat behind it.
+        await this.options.attachmentContext
+          ?.remember({
+            routeKey: active.routeKey,
+            sessionId: active.sessionId,
+            attachments: active.inputAttachments,
+          })
+          .catch(() => undefined);
         await this.withChatAdmission(() => {
           active.runSettled = true;
           this.finishActiveChatTurnIfDrained(active);
         });
       }
     }
+  }
+
+  /**
+   * Remember this turn's host-staged attachments and return the route's recent
+   * candidates. Retention is best effort: a context failure must not drop the
+   * user's message, and the current turn's own attachments always remain.
+   */
+  private async recentChatAttachments(
+    scope: { routeKey: string; sessionId: string },
+    attachments: InputAttachmentMeta[],
+  ): Promise<InputAttachmentMeta[]> {
+    const context = this.options.attachmentContext;
+    if (!context) return attachments;
+    await context.remember({ ...scope, attachments }).catch(() => undefined);
+    const retained = await context.list(scope).catch(() => []);
+    return [
+      ...new Map(
+        [...retained, ...attachments].map((attachment) => [attachment.id, attachment]),
+      ).values(),
+    ];
   }
 
   private requestManagerRun(params: Record<string, unknown>, producer: string) {
@@ -2018,6 +2079,10 @@ export class PetDispatchService {
           return { ok: false, code: "invalid-command" };
         }
         const metadata = await this.options.metadata.ensure();
+        const attachmentScope = {
+          routeKey: petChatRouteKey(command),
+          sessionId: metadata.petSessionId,
+        };
         if (command.message.trim().toLowerCase() === "/clear") {
           if (attachments.length > 0) {
             return {
@@ -2034,6 +2099,7 @@ export class PetDispatchService {
             };
           }
           await this.options.segmentController.requestContextClear();
+          await this.options.attachmentContext?.clear(attachmentScope);
           return {
             ok: true,
             type: "chat",
@@ -2043,6 +2109,19 @@ export class PetDispatchService {
             contextCleared: true,
           };
         }
+        // A host wake is not user input: it neither contributes nor inherits
+        // the conversation's attachments, so it can never forward an image.
+        const leaderTurn = this.activeChatTurn;
+        if (
+          !command.hostWake &&
+          leaderTurn &&
+          leaderTurn.clientMessageId === command.clientMessageId
+        ) {
+          leaderTurn.inputAttachments = structuredClone(attachments);
+        }
+        const recentInputAttachments = command.hostWake
+          ? []
+          : await this.recentChatAttachments(attachmentScope, attachments);
         const [
           listedWorkspaces,
           listedReusableSessions,
@@ -2259,6 +2338,7 @@ export class PetDispatchService {
           "outboundTargets",
           "hostWake",
           "contextAssociation",
+          "inputAttachments",
         ]);
         const remainingWorldExtras = Object.fromEntries(
           Object.entries(worldExtras)
@@ -2317,6 +2397,16 @@ export class PetDispatchService {
                       }
                     : {}),
                 },
+              }
+            : {}),
+          ...(recentInputAttachments.length
+            ? {
+                inputAttachments: recentInputAttachments.map(({ id, path, absPath, mime }) => ({
+                  id,
+                  path,
+                  absPath,
+                  mime,
+                })),
               }
             : {}),
           // Memory is newest-first and gets a deterministic budget before the
@@ -2396,6 +2486,15 @@ export class PetDispatchService {
         if (!response.ok) {
           return { ok: false, code: "worker-error", message: response.message };
         }
+        // requestChatRun releases admission before launch receipt handling. Freeze
+        // this turn's candidates; a queued successor can now replace route state.
+        const consumedAttachments = [
+          ...new Map(
+            [...recentInputAttachments, ...(activeChat?.inputAttachments ?? attachments)].map(
+              (attachment) => [attachment.id, attachment],
+            ),
+          ).values(),
+        ];
         const responseReason = (response.result as { reason?: unknown } | undefined)?.reason;
         if (
           responseReason === "aborted_streaming" ||
@@ -2482,19 +2581,46 @@ export class PetDispatchService {
         let delegationError: string | undefined;
         const delegationClientMessageId = command.clientMessageId ?? `pet-${randomUUID()}`;
         if (resolvedDelegations.length > 0) {
+          // Selection only narrows host-staged candidates by exact path aliases in
+          // the objective. A refused selection fails that launch, never the turn.
+          const selectionErrors: Array<Error | undefined> = [];
           const requests: PetAutoDelegation[] = resolvedDelegations.map(
-            ({ entry, reusableSession }, index) => ({
-              clientMessageId:
-                resolvedDelegations.length === 1
-                  ? delegationClientMessageId
-                  : `${delegationClientMessageId}:${index}:work`,
-              task: entry.objective,
-              workspacePath: workspacePathById.get(entry.workspaceId) ?? null,
-              ...(entry.executionBackend === "codex" ? { executionBackend: "codex" as const } : {}),
-              ...(reusableSession ? { targetSessionId: reusableSession.sessionId } : {}),
-              ...(currentCompletionTarget ? { completionTarget: currentCompletionTarget } : {}),
-              ...(command.source?.senderId ? { senderId: command.source.senderId } : {}),
-            }),
+            ({ entry, reusableSession }, index) => {
+              let selectedAttachments: InputAttachmentMeta[] = [];
+              try {
+                selectedAttachments = selectPetChatAttachments(
+                  consumedAttachments,
+                  entry.objective,
+                );
+              } catch (error) {
+                selectionErrors[index] = new Error(
+                  `Mimi image handoff failed: ${error instanceof Error ? error.message : String(error)}`,
+                );
+              }
+              return {
+                clientMessageId:
+                  resolvedDelegations.length === 1
+                    ? delegationClientMessageId
+                    : `${delegationClientMessageId}:${index}:work`,
+                task: entry.objective,
+                workspacePath: workspacePathById.get(entry.workspaceId) ?? null,
+                ...(selectedAttachments.length
+                  ? {
+                      inputAttachments: {
+                        cwd: this.options.hostCwd,
+                        sessionId: metadata.petSessionId,
+                        attachments: selectedAttachments,
+                      },
+                    }
+                  : {}),
+                ...(entry.executionBackend === "codex"
+                  ? { executionBackend: "codex" as const }
+                  : {}),
+                ...(reusableSession ? { targetSessionId: reusableSession.sessionId } : {}),
+                ...(currentCompletionTarget ? { completionTarget: currentCompletionTarget } : {}),
+                ...(command.source?.senderId ? { senderId: command.source.senderId } : {}),
+              };
+            },
           );
           // Launch failures remain non-fatal. Once the outcomes are known, a
           // read-only receipt turn lets Mimi explain them in her own words.
@@ -2502,7 +2628,9 @@ export class PetDispatchService {
             delegationError = "Mimi work delegation host is unavailable";
           } else {
             const outcomes = await Promise.allSettled(
-              requests.map(async (request) => {
+              requests.map(async (request, index) => {
+                const selectionError = selectionErrors[index];
+                if (selectionError) throw selectionError;
                 if (command.hostWake) {
                   const source = this.options.aggregator
                     .getSnapshot()
