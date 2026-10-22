@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   createExternalGoalRpcHandler,
+  EXTERNAL_COMPACT_UNSUPPORTED,
   parseExternalGoalInput,
 } from "./external-runtime-goal-rpc.js";
 
@@ -64,7 +65,19 @@ describe("external Goal RPC routing", () => {
     const f = fixture();
     expect(f.request("agent/goalGet", { sessionId: "native-task" })).toBeUndefined();
     expect(f.request("agent/run")).toBeUndefined();
+    expect(f.request("agent/query", { type: "compact", sessionId: "native-task" })).toBeUndefined();
+    expect(f.request("agent/query", { type: "backgroundWork" })).toBeUndefined();
     expect(f.calls).toEqual([]);
+  });
+
+  test("refuses native compaction for an external session without touching its runtime", async () => {
+    const { calls, request } = fixture();
+    expect(await request("agent/query", { type: "compact" })).toEqual({
+      jsonrpc: "2.0",
+      id: "request-1",
+      error: { code: -32601, message: EXTERNAL_COMPACT_UNSUPPORTED },
+    });
+    expect(calls).toEqual([]);
   });
 
   test("reads a cold external goal without starting either runtime", async () => {

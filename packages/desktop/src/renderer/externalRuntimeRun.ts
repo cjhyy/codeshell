@@ -25,6 +25,7 @@ export interface ExternalRuntimeBridge {
     hasGoal?: boolean;
     initialContext?: string;
     developerInstructions?: string;
+    workspaceProfile?: string;
   }): Promise<{ kind: string; runtimeSessionId: string | null; tools: string[] }>;
   send(payload: {
     sessionId: string;
@@ -52,6 +53,8 @@ export interface ExternalRuntimeTurnArgs {
   hasGoal?: boolean;
   initialContext?: string;
   developerInstructions?: string;
+  /** Digital human selected for this Session; Main pins it on the canonical Session. */
+  workspaceProfile?: string;
   runtime: ExternalRuntimeBridge;
 }
 
@@ -205,6 +208,7 @@ async function runExternalRuntimeTurnExclusive(
     hasGoal,
     initialContext,
     developerInstructions,
+    workspaceProfile,
     runtime,
   }: ExternalRuntimeTurnArgs,
   epoch: number,
@@ -227,6 +231,7 @@ async function runExternalRuntimeTurnExclusive(
       planMode,
       hasGoal,
       developerInstructions,
+      workspaceProfile,
     });
     if (startedSessions.get(sessionId) !== configurationKey) {
       await runtime.start({
@@ -238,6 +243,7 @@ async function runExternalRuntimeTurnExclusive(
         ...(hasGoal !== undefined ? { hasGoal } : {}),
         ...(initialContext ? { initialContext } : {}),
         ...(developerInstructions ? { developerInstructions } : {}),
+        ...(workspaceProfile ? { workspaceProfile } : {}),
       });
       if ((sessionEpochs.get(sessionId) ?? 0) !== epoch) {
         return {

@@ -23,7 +23,11 @@ import {
   type StreamEvent,
   type ToolRegistry,
 } from "@cjhyy/code-shell-core";
-import { backgroundJobRegistry, ModelTraceStore } from "@cjhyy/code-shell-core/internal";
+import {
+  backgroundJobRegistry,
+  ModelTraceStore,
+  saveWorkspaceProfile,
+} from "@cjhyy/code-shell-core/internal";
 import { createSessionToolHost, FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
 import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { EXTERNAL_GOAL_TOOLS } from "./external-runtime-goals.js";
@@ -31,6 +35,7 @@ import type { ExternalRuntimeServiceDeps } from "./external-runtime-service.js";
 import { getProjectStore } from "./project-store.js";
 import { mobileSessionCommandAuthority } from "./mobile-remote/output-recovery-authority.js";
 import { setProjectTrustWithRevocation } from "./project-trust-lifecycle.js";
+import { createExternalRuntimeSourceContext } from "./external-runtime-source-context.js";
 
 type StartArgs = Record<string, unknown>;
 const starts: StartArgs[] = [];
@@ -2168,6 +2173,159 @@ describe("ExternalRuntimeService", () => {
       expect(background.dropped).toHaveLength(1);
     });
   }
+
+  test("a new Session's first run pins its digital human for instructions, memory and sources", async () => {
+    saveWorkspaceProfile({
+      name: "reviewer",
+      label: "Reviewer",
+      basePreset: "general",
+      mainInstruction: "Review every change against the spec.",
+      portableMemory: true,
+    });
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.ensure({ ...request, workspaceProfile: "reviewer" });
+    const sessions = new SessionManager();
+    expect(sessions.readSessionState(request.sessionId)?.workspaceProfile).toBe("reviewer");
+    expect(String(starts[0]!.developerInstructions)).toContain(
+      "Review every change against the spec.",
+    );
+    expect(
+      (starts[0]!.contextOverrides as { profileMemoryDir?: string }).profileMemoryDir,
+    ).toContain("reviewer");
+    const source = createExternalRuntimeSourceContext({
+      sessionId: request.sessionId,
+      cwd: request.cwd,
+    });
+    expect(source.workspaceProfileName).toBe("reviewer");
+
+    // Main-originated callers carry no Profile; the persisted pin keeps the runtime.
+    expect(svc.isCompatible(request)).toBe(true);
+    await svc.ensure(request);
+    expect(starts).toHaveLength(1);
+
+    // An explicit switch persisted elsewhere rebuilds the runtime with the new role.
+    saveWorkspaceProfile({ name: "writer", label: "Writer", basePreset: "general" });
+    const state = sessions.readSessionState(request.sessionId)!;
+    sessions.saveStateOrUpdateFields(state, { workspaceProfile: "writer" });
+    expect(svc.isCompatible(request)).toBe(false);
+    await svc.ensure(request);
+    expect(starts).toHaveLength(2);
+    expect(String(starts[1]!.developerInstructions)).toContain("writer");
+    await svc.stopAll();
+  });
+
+  test("an unavailable digital human fails the start instead of widening to the default", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await expect(svc.ensure({ ...request, workspaceProfile: "missing-human" })).rejects.toThrow(
+      /unavailable/,
+    );
+    expect(starts).toHaveLength(0);
+    expect(svc.get(request.sessionId)).toBeUndefined();
+  });
+
+  test("lists the live runtimes a window owns so a reloaded renderer can recover Stop", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    expect(svc.ownedSessionIds(77)).toEqual([request.sessionId]);
+    expect(svc.ownedSessionIds(78)).toEqual([]);
+    await svc.stop(request.sessionId, 77);
+    expect(svc.ownedSessionIds(77)).toEqual([]);
+  });
+
+  test("a background wake keeps its queue position ahead of later user input", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    providerSend = async (_args, input) => {
+      if (input.text.startsWith("first turn")) await gate;
+    };
+    const first = svc.send(request.sessionId, "first turn");
+    await settleBackgroundWakeup();
+    background.complete(request.sessionId);
+    const followUp = svc.send(request.sessionId, "follow-up");
+    release();
+    await first;
+    await followUp;
+    await settleBackgroundWakeup();
+    // The result was drained for the wake; it must reach the provider before
+    // the user's later turn, not be held in a turn queued behind it.
+    const delivered = providerInputs.findIndex((input) => input.text.includes("delegated result"));
+    const userTurn = providerInputs.findIndex((input) => input.text === "follow-up");
+    expect(delivered).toBeGreaterThan(0);
+    expect(delivered).toBeLessThan(userTurn);
+    expect(background.pending.size).toBe(0);
+    await svc.stopAll();
+  });
+
+  async function goalWaitingForBackgroundWork() {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start(request);
+    background.running.add(request.sessionId);
+    await svc.send(request.sessionId, {
+      text: "first turn",
+      goal: { objective: "wait for delegated work", maxTurns: 5 },
+    });
+    expect(svc.getGoal(request.sessionId).paused).toBeFalsy();
+    const gates = new Map<string, () => void>();
+    providerSend = async (_args, input) => {
+      const name = input.text.split("\n")[0]!;
+      if (name.endsWith("gated")) await new Promise<void>((resolve) => gates.set(name, resolve));
+    };
+    const pause = async () => {
+      const goal = svc.getGoal(request.sessionId);
+      await svc.updateGoal(request.sessionId, {
+        paused: true,
+        expectedGoalId: goal.goalId!,
+        expectedRevision: goal.revision!,
+      });
+    };
+    return { background, svc, gates, pause };
+  }
+
+  test("a Goal paused before a queued background wake runs keeps the result queued", async () => {
+    const { background, svc, gates, pause } = await goalWaitingForBackgroundWork();
+    const second = svc.send(request.sessionId, { text: "second gated", disableGoal: true });
+    await settleBackgroundWakeup();
+    background.complete(request.sessionId);
+    await pause();
+    gates.get("second gated")!();
+    await second;
+    await settleBackgroundWakeup();
+    expect(svc.getGoal(request.sessionId).paused).toBe(true);
+    expect(providerInputs.some((input) => input.text.includes("delegated result"))).toBe(false);
+    expect(background.pending.get(request.sessionId)).toBe("delegated result");
+    await svc.stopAll();
+  });
+
+  test("a background wake never delivers after a pause made while later input ran", async () => {
+    const { background, svc, gates, pause } = await goalWaitingForBackgroundWork();
+    const second = svc.send(request.sessionId, { text: "second gated", disableGoal: true });
+    await settleBackgroundWakeup();
+    background.complete(request.sessionId);
+    const third = svc.send(request.sessionId, { text: "third gated", disableGoal: true });
+    gates.get("second gated")!();
+    await second;
+    await settleBackgroundWakeup();
+    const pausedAt = providerInputs.length;
+    await pause();
+    gates.get("third gated")!();
+    await third;
+    await settleBackgroundWakeup();
+    expect(svc.getGoal(request.sessionId).paused).toBe(true);
+    expect(
+      providerInputs.slice(pausedAt).some((input) => input.text.includes("delegated result")),
+    ).toBe(false);
+    await svc.stopAll();
+  });
 
   test("a paused Goal remains paused when its runtime is replaced and a result arrives", async () => {
     const background = backgroundDelivery();

@@ -9,6 +9,8 @@ const GOAL_METHODS = new Set([
   "agent/goalExtend",
 ]);
 const MAX_OBJECTIVE_CHARS = 64 * 1024;
+export const EXTERNAL_COMPACT_UNSUPPORTED =
+  "Codex and Claude Code sessions manage their own context; CodeShell cannot compact them.";
 
 export interface GoalRpcRequest {
   id?: number | string;
@@ -65,8 +67,9 @@ function expectedVersion(params: Record<string, unknown>) {
 }
 
 /**
- * Consume external Goal RPCs before the native worker sees them. A handled
- * failure is still a reply: falling through could resume the wrong runtime.
+ * Consume external Goal RPCs (and refuse native compaction) before the native
+ * worker sees them. A handled failure is still a reply: falling through could
+ * resume the wrong runtime or misreport a compaction.
  */
 export function createExternalGoalRpcHandler(deps: {
   isExternalSession(sessionId: string): boolean;
@@ -75,10 +78,21 @@ export function createExternalGoalRpcHandler(deps: {
   service(): Pick<ExternalRuntimeService, "getGoal" | "updateGoal" | "deleteGoal" | "extendGoal">;
 }): ExternalGoalRpcHandler {
   return (request, callerWebContentsId) => {
-    if (!GOAL_METHODS.has(request.method ?? "")) return undefined;
     const params = request.params ?? {};
     const sessionId = params.sessionId;
+    const compact = request.method === "agent/query" && params.type === "compact";
+    if (!compact && !GOAL_METHODS.has(request.method ?? "")) return undefined;
     if (typeof sessionId !== "string" || !deps.isExternalSession(sessionId)) return undefined;
+    // The native Engine would "compact" a transcript the Codex / Claude thread
+    // never reads, reporting success while the provider keeps its context.
+    // Neither adapter exposes provider-side compaction, so refuse honestly.
+    if (compact) {
+      return Promise.resolve({
+        jsonrpc: "2.0",
+        id: request.id,
+        error: { code: -32601, message: EXTERNAL_COMPACT_UNSUPPORTED },
+      });
+    }
     return (async () => {
       try {
         await deps.authorize(sessionId, callerWebContentsId);

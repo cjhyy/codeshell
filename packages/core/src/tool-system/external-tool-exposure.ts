@@ -243,6 +243,36 @@ export const FIRST_PHASE_EXPOSURE_RATIONALE: readonly ExposureRationale[] = [
       "approval UI. Note this does NOT remove the runtime's own shell — it adds a " +
       "governed alternative.",
   },
+  // Bash(run_in_background) returns a shell_id and tells the model to manage it
+  // with these three. Without them the only way to inspect or stop a managed
+  // background shell is raw ps/kill through Bash, which loses the intentional-
+  // stop record and the whole-process-group termination.
+  {
+    tool: "BashOutput",
+    kind: "self-contained",
+    status: "exposed",
+    reason:
+      "Reads retained output of a background shell this same Session started. The " +
+      "manager scopes lookups to ctx.sessionId, so another Session's shell_id reads " +
+      "as unknown. Read-only; no new capability beyond the exposed Bash.",
+  },
+  {
+    tool: "KillShell",
+    kind: "self-contained",
+    status: "exposed",
+    reason:
+      "Terminates a background shell (and its process group) that this same Session " +
+      "started; cross-Session ids are refused by the manager. Strictly narrower than " +
+      "kill through the exposed Bash, and it records the stop as intentional.",
+  },
+  {
+    tool: "ListShells",
+    kind: "self-contained",
+    status: "exposed",
+    reason:
+      "Lists this Session's background shells with status and detected port. " +
+      "Session-scoped and read-only.",
+  },
   // ── Skills, memory and planning ──────────────────────────────────
   // These are the reason someone runs a model inside CodeShell rather than in a
   // bare terminal. A runtime that cannot reach them is a stranger in the app: it

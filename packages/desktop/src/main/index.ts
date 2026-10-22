@@ -101,9 +101,6 @@ import {
   CronStore,
   defaultCronStorePath,
   agentNotificationBus,
-  backgroundJobRegistry,
-  buildNotificationMessage,
-  notificationQueue,
   type AutomationHandle,
   getMergedCatalog,
   saveCatalogEntry,
@@ -146,6 +143,8 @@ import { getCuaDriverHost } from "./computer-use/service.js";
 import { initializeDesktopComputerUse } from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
+import { assertWorkspaceProfileName } from "./external-runtime-profile.js";
+import { createExternalRuntimeBackgroundWork } from "./external-runtime-background-work.js";
 import { setProjectTrustWithRevocation } from "./project-trust-lifecycle.js";
 import {
   createExternalGoalRpcHandler,
@@ -1629,6 +1628,11 @@ async function createWindow(): Promise<BrowserWindow> {
   win.webContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace) mediaPreviewService.releaseOwner(ownerWebContentsId);
   });
+  // A reload starts with empty preload state; replay the runtimes Main still owns.
+  win.webContents.on("did-finish-load", () => {
+    for (const sessionId of externalRuntimeService?.ownedSessionIds(ownerWebContentsId) ?? [])
+      win.webContents.send("externalRuntime:sessionState", { sessionId, active: true });
+  });
   win.on("closed", () => {
     externalRuntimeApprovals?.cancelWindow(ownerWebContentsId);
     void externalRuntimeService?.stopOwnedBy(ownerWebContentsId);
@@ -1753,19 +1757,7 @@ async function createWindow(): Promise<BrowserWindow> {
       }),
       requestApproval: (sessionId, request) => approvals.request(sessionId, request),
       cancelApprovals: (sessionId) => approvals.cancelSession(sessionId),
-      backgroundWork: {
-        subscribe: (listener) => agentNotificationBus.subscribe(listener),
-        drainMessage: (sessionId) => {
-          const pending = notificationQueue.drainAll(sessionId);
-          return pending.length > 0 ? buildNotificationMessage(pending) : undefined;
-        },
-        hasPending: (sessionId) => notificationQueue.getSnapshot(sessionId).length > 0,
-        hasRunning: (sessionId) => backgroundJobRegistry.hasRunningForSession(sessionId),
-        dropSession: (sessionId) => {
-          backgroundJobRegistry.dropForSession(sessionId);
-          notificationQueue.reset(sessionId);
-        },
-      },
+      backgroundWork: createExternalRuntimeBackgroundWork(),
     });
 
     const externalGoalSessions = new SessionManager();
@@ -6097,6 +6089,7 @@ ipcMain.handle(
       hasGoal?: unknown;
       initialContext?: unknown;
       developerInstructions?: unknown;
+      workspaceProfile?: unknown;
     },
   ) => {
     const service = externalRuntimeService;
@@ -6145,6 +6138,7 @@ ipcMain.handle(
       ...(initialContext ? { initialContext } : {}),
       ...(developerInstructions ? { developerInstructions } : {}),
       ...(parsed.model ? { model: parsed.model } : {}),
+      workspaceProfile: assertWorkspaceProfileName(payload?.workspaceProfile),
       ownerWindow,
     });
     return {
@@ -6255,11 +6249,17 @@ ipcMain.handle(
 
 ipcMain.handle(
   "externalRuntime:interrupt",
-  async (event, sessionId: unknown, options?: { keepGoal?: unknown }) => {
+  async (event, sessionId: unknown, options?: { keepGoal?: unknown; ifOwned?: unknown }) => {
     assertDesktopSessionId(sessionId);
-    await externalRuntimeService?.interrupt(sessionId, event.sender.id, undefined, {
+    // Stop asks with ifOwned: Main, not preload memory, decides which backend
+    // runs the session, so a reloaded renderer still interrupts the provider.
+    const service = externalRuntimeService;
+    if (!service || (options?.ifOwned === true && !service.hasSession(sessionId)))
+      return { handled: false };
+    await service.interrupt(sessionId, event.sender.id, undefined, {
       keepGoal: options?.keepGoal === true,
     });
+    return { handled: true };
   },
 );
 

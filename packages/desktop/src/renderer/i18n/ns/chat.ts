@@ -95,6 +95,8 @@ export const chat = {
         running: "当前会话正在运行,请先停止或等这一轮结束后再压缩。",
         inProgress: "上下文正在压缩，请稍候。",
         noSession: "当前还没有可压缩的会话。",
+        externalUnsupported:
+          "Codex / Claude Code 会话由其运行时自行管理上下文，CodeShell 无法压缩。如需释放上下文，请新建会话。",
         done: "已压缩：{before} → {after} tokens（省 {percent}%）· 策略：{strategy}",
         unchanged: "上下文已是最简，无需压缩（当前约 {tokens} tokens）。",
         boundaryTitle: "上下文已压缩",
@@ -417,6 +419,8 @@ export const chat = {
           "This conversation is running. Stop or wait for this turn to finish before compacting.",
         inProgress: "Context compaction is already in progress.",
         noSession: "There is no active conversation to compact yet.",
+        externalUnsupported:
+          "Codex and Claude Code sessions manage their own context, so CodeShell cannot compact them. Start a new session to free context.",
         done: "Context compacted: {before} → {after} tokens · saved {percent}% · strategy: {strategy}.",
         unchanged: "Context is already minimal; nothing to compact (about {tokens} tokens).",
         boundaryTitle: "Context compacted",

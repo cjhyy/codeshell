@@ -15,15 +15,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-/** The routing rule as implemented in preload's `cancel`. */
-function routeCancel(
-  sessionId: string | undefined,
-  externalSessions: Set<string>,
-): "runtime-interrupt" | "worker-cancel" {
-  if (sessionId && externalSessions.has(sessionId)) return "runtime-interrupt";
-  return "worker-cancel";
-}
-
 /** The routing rule as implemented in preload's `approve`. */
 function routeApprove(
   requestId: string,
@@ -33,35 +24,6 @@ function routeApprove(
     ? "main-decision"
     : "worker-approve";
 }
-
-describe("preload cancel routing", () => {
-  test("an external session's Stop interrupts the runtime", () => {
-    // The bug this guards: agent/cancel goes to a worker that does not exist,
-    // so Stop is a no-op and the model keeps streaming.
-    const external = new Set(["sess-codex"]);
-    expect(routeCancel("sess-codex", external)).toBe("runtime-interrupt");
-  });
-
-  test("a native session's Stop still goes to the worker", () => {
-    // The other direction matters just as much — misrouting a native Stop
-    // would break the feature everyone uses.
-    expect(routeCancel("sess-native", new Set(["sess-codex"]))).toBe("worker-cancel");
-  });
-
-  test("no session id falls through to the worker", () => {
-    // Legacy single-session callers pass undefined.
-    expect(routeCancel(undefined, new Set(["sess-codex"]))).toBe("worker-cancel");
-  });
-
-  test("a stopped session stops being routed to the runtime", () => {
-    // `stop()` removes the id. Leaving it would send interrupts to a runtime
-    // that is gone, and — worse — never fall back to the worker if the id is
-    // later reused by a native session.
-    const external = new Set(["sess-codex"]);
-    external.delete("sess-codex");
-    expect(routeCancel("sess-codex", external)).toBe("worker-cancel");
-  });
-});
 
 describe("preload approve routing", () => {
   test("an external prompt is answered to main", () => {
@@ -93,23 +55,17 @@ describe("preload approve routing", () => {
 describe("the shipped preload actually routes", () => {
   const source = readFileSync(new URL("./index.ts", import.meta.url), "utf8");
 
-  test("cancel checks the external-session set before falling back to the worker", () => {
+  test("cancel asks Main which backend owns the session before the worker rpc", () => {
+    // Behaviour is covered in external-runtime-cancel.test.ts; this pins the
+    // wiring, so Stop cannot silently regress to preload-memory routing that
+    // a renderer reload empties (E05).
     const start = source.indexOf("  cancel: (sessionId?: string");
-    // Anchor the end on the rpc CALL, not the string "agent/cancel" — that also
-    // appears in the explanatory comment above it, which would truncate the
-    // slice before the branch and make this test fail on correct code.
     const cancelBody = source.slice(start, source.indexOf('rpc("agent/cancel"', start) + 40);
-    expect(cancelBody).toContain("externalRuntimeSessions.has(sessionId)");
-    expect(cancelBody).toContain("externalRuntime:interrupt");
-    // The membership check must come FIRST; after the rpc it is dead code.
-    expect(cancelBody.indexOf("externalRuntimeSessions.has")).toBeLessThan(
-      cancelBody.indexOf('rpc("agent/cancel"'),
-    );
+    expect(cancelBody.replace(/\s+/g, " ")).toContain("cancelSessionRun( ipcRenderer,");
+    expect(cancelBody).not.toContain("externalRuntimeSessions.has");
   });
 
-  test("start records the session, or cancel can never match it", () => {
-    // The pairing is the load-bearing part: a `start` that forgets to record
-    // leaves Stop broken with no other symptom.
+  test("start and stop keep the replay set for late session-state subscribers", () => {
     expect(source).toContain("externalRuntimeSessions.add(payload.sessionId)");
     expect(source).toContain("externalRuntimeSessions.delete(sessionId)");
   });

@@ -64,6 +64,11 @@ import {
   EXTERNAL_UNVERIFIED_WRITE_NOTICE,
 } from "./external-runtime-operations.js";
 import { createExternalRuntimeSourceContext } from "./external-runtime-source-context.js";
+import {
+  bindExternalRuntimeProfile,
+  externalRuntimeProfileInstructions,
+  requestedExternalRuntimeProfile,
+} from "./external-runtime-profile.js";
 import { startExternalRuntimeTrace } from "./external-runtime-tracing.js";
 
 export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
@@ -106,6 +111,11 @@ export interface ExternalRuntimeStartRequest {
   hasGoal?: boolean;
   initialContext?: string;
   developerInstructions?: string;
+  /**
+   * Digital human to pin on the canonical Session (a new Session's first run).
+   * Omitted means "keep the persisted pin"; Main resolves it either way.
+   */
+  workspaceProfile?: string;
   /** The renderer window that owns this session's host-loopback surface. */
   ownerWindow?: BrowserWindow;
 }
@@ -199,6 +209,8 @@ export class ExternalRuntimeService {
       model?: string;
       developerInstructions: string;
       initialContext?: string;
+      /** Persisted Profile pin this runtime's instructions and tools were built for. */
+      workspaceProfile?: string;
       routingKey: string;
       configurationKey: string;
       authority: ExternalRuntimeAuthority;
@@ -293,6 +305,15 @@ export class ExternalRuntimeService {
 
   hasSession(sessionId: string): boolean {
     return this.sessions.has(sessionId);
+  }
+
+  /** Live runtimes a renderer owns, replayed to it after a reload. */
+  ownedSessionIds(ownerWebContentsId: number): string[] {
+    return [...this.sessions]
+      .filter(
+        ([, entry]) => entry.lifecycle.active && entry.ownerWebContentsId === ownerWebContentsId,
+      )
+      .map(([sessionId]) => sessionId);
   }
 
   /** Allocation alone is not live work; task projections need the authoritative turn state. */
@@ -399,7 +420,9 @@ export class ExternalRuntimeService {
       entry !== undefined &&
       !entry.lifecycle.faulted &&
       this.authorityStillCurrent(entry.cwd, entry.authority) &&
-      entry.routingKey === this.routingKey(request)
+      entry.routingKey === this.routingKey(request) &&
+      entry.workspaceProfile ===
+        requestedExternalRuntimeProfile(request.sessionId, request.workspaceProfile)
     );
   }
 
@@ -596,14 +619,20 @@ export class ExternalRuntimeService {
     const entry = this.sessions.get(sessionId);
     if (!entry || !entry.lifecycle.active || !this.deps.backgroundWork) return;
     // A completion can arrive before the launching turn reaches its terminal
-    // callback. Never overlap recorder state or provider turns.
-    await entry.turnTail;
-    if (this.sessions.get(sessionId) !== entry || !this.mayWakeForBackgroundWork(sessionId)) return;
-    const message = this.deps.backgroundWork.drainMessage(sessionId);
-    if (!message) return;
-    await this.send(sessionId, {
-      text: `<system-reminder>\n${message}\n</system-reminder>`,
-      injected: true,
+    // callback, and user input can queue behind it. Drain and recheck Goal
+    // pause/question state only in the serialized slot that actually runs: a
+    // user turn ahead of this one consumes the results itself, and a refusal
+    // leaves them queued for the next resume.
+    await this.submit(sessionId, () => {
+      if (this.sessions.get(sessionId) !== entry || !this.mayWakeForBackgroundWork(sessionId))
+        return undefined;
+      const message = this.deps.backgroundWork?.drainMessage(sessionId);
+      return message
+        ? { text: `<system-reminder>\n${message}\n</system-reminder>`, injected: true }
+        : undefined;
+    }).catch((error) => {
+      // A replaced runtime never drained; its successor wakes on the queue.
+      if (this.sessions.get(sessionId) === entry) throw error;
     });
   }
 
@@ -647,7 +676,9 @@ export class ExternalRuntimeService {
         entry &&
         !entry.lifecycle.faulted &&
         this.authorityStillCurrent(entry.cwd, entry.authority) &&
-        entry.configurationKey === this.configurationKey(request)
+        entry.configurationKey === this.configurationKey(request) &&
+        entry.workspaceProfile ===
+          requestedExternalRuntimeProfile(request.sessionId, request.workspaceProfile)
       ) {
         return entry.session;
       }
@@ -774,6 +805,27 @@ export class ExternalRuntimeService {
               this.deps.requestApproval!(request.sessionId, approvalRequest),
           }
         : undefined;
+    const persisted = readExternalRuntimeBinding(request.sessionId);
+    const resumeRuntimeSessionId =
+      persisted?.kind === request.kind &&
+      persisted.cwd === request.cwd &&
+      persisted.model === request.model
+        ? persisted.runtimeSessionId
+        : undefined;
+    const recorder = new ExternalRuntimeSessionRecorder(
+      request.sessionId,
+      request.cwd,
+      request.modelKey ?? `${request.kind}/${request.model ?? "default"}`,
+      request.kind,
+      authority.projectBinding,
+    );
+    // The recorder materializes the canonical Session, so the Profile pin can
+    // be bound and resolved before instructions, tools or source access use it.
+    const profile = bindExternalRuntimeProfile({
+      sessionId: request.sessionId,
+      cwd: request.cwd,
+      requested: request.workspaceProfile,
+    });
     // The same guidance reaches both runtimes (Codex as developer instructions,
     // Claude Code as an appended system prompt), so name the one actually running.
     const runtimeLabel = request.kind === "codex" ? "Codex" : "Claude Code";
@@ -804,6 +856,8 @@ export class ExternalRuntimeService {
         "When DriveAgent returns a background jobId, do not poll it or duplicate its work " +
         "locally. Unless the user explicitly requested concurrent work, finish the current " +
         "turn; CodeShell will inject the completion and continue this same task automatically. " +
+        "The same holds for host Bash with run_in_background=true and " +
+        "background_behavior=wait_for_exit: end the turn instead of polling BashOutput. " +
         "Start other agent CLIs only through DriveAgent: never launch codex exec, claude -p or " +
         "a similar agent from a shell, because CodeShell cannot track, stop, notify on or " +
         "account for such a process. Use background=true for anything that may take more " +
@@ -819,24 +873,11 @@ export class ExternalRuntimeService {
         "Use LinkAction discovery for connected services and ListSources/ReadSource for " +
           "workspace data. These CodeShell host tools use normal authorization and approval; " +
           "do not claim a service is unsupported because this runtime has no native connector.",
+      externalRuntimeProfileInstructions(profile),
       request.developerInstructions,
     ]
       .filter(Boolean)
       .join("\n\n");
-    const persisted = readExternalRuntimeBinding(request.sessionId);
-    const resumeRuntimeSessionId =
-      persisted?.kind === request.kind &&
-      persisted.cwd === request.cwd &&
-      persisted.model === request.model
-        ? persisted.runtimeSessionId
-        : undefined;
-    const recorder = new ExternalRuntimeSessionRecorder(
-      request.sessionId,
-      request.cwd,
-      request.modelKey ?? `${request.kind}/${request.model ?? "default"}`,
-      request.kind,
-      authority.projectBinding,
-    );
     const lifecycle = {
       active: true,
       turnActive: false,
@@ -1013,6 +1054,7 @@ export class ExternalRuntimeService {
     };
     const contextOverrides = {
       ...(this.deps.toolContextOverrides?.(request.sessionId) ?? {}),
+      ...(profile.profileMemoryDir ? { profileMemoryDir: profile.profileMemoryDir } : {}),
       streamCallback: forwardEvent,
       externalRuntimeBackgroundDelivery: this.deps.backgroundWork !== undefined,
       ...(this.deps.requestApproval
@@ -1243,6 +1285,7 @@ export class ExternalRuntimeService {
       cwd: request.cwd,
       developerInstructions,
       initialContext: request.initialContext,
+      ...(profile.pinned ? { workspaceProfile: profile.pinned } : {}),
       routingKey: this.routingKey(request),
       configurationKey: this.configurationKey(request),
       authority,
@@ -1282,9 +1325,25 @@ export class ExternalRuntimeService {
     return session;
   }
 
-  async send(
+  send(
     sessionId: string,
     input: DesktopExternalRuntimeTurnInput | string,
+    callerWebContentsId?: number,
+    expectedGoal?: { goalId: string; revision: number },
+    hooks?: ExternalRuntimeSubmissionHooks,
+  ): Promise<ExternalRuntimeTurnOutcome> {
+    const turnInput = typeof input === "string" ? { text: input } : input;
+    return this.submit(sessionId, () => turnInput, callerWebContentsId, expectedGoal, hooks);
+  }
+
+  /**
+   * Queue one turn whose input is resolved inside its serialized slot. A
+   * resolver returning undefined skips the slot without touching the provider,
+   * the recorder or the Goal (an unneeded or refused background wake).
+   */
+  private async submit(
+    sessionId: string,
+    resolveInput: () => DesktopExternalRuntimeTurnInput | undefined,
     callerWebContentsId?: number,
     expectedGoal?: { goalId: string; revision: number },
     hooks?: ExternalRuntimeSubmissionHooks,
@@ -1292,7 +1351,7 @@ export class ExternalRuntimeService {
     this.assertOwner(sessionId, callerWebContentsId);
     const entry = this.sessions.get(sessionId);
     if (!entry) throw new Error(`no external runtime session for ${sessionId}`);
-    const turnInput = typeof input === "string" ? { text: input } : input;
+    let turnInput!: DesktopExternalRuntimeTurnInput;
     const acceptedGeneration = entry.lifecycle.interruptGeneration;
     let accountingRejected = false;
     const runTurnExclusive = async (): Promise<ExternalRuntimeTurnOutcome> => {
@@ -1304,6 +1363,9 @@ export class ExternalRuntimeService {
       if (acceptedGeneration !== entry.lifecycle.interruptGeneration) {
         return { ok: false, reason: "aborted_streaming", streamed: true };
       }
+      const resolved = resolveInput();
+      if (!resolved) return { ok: true, reason: "completed", streamed: true };
+      turnInput = resolved;
       if (expectedGoal) {
         const current = this.goals.read(sessionId);
         if (
