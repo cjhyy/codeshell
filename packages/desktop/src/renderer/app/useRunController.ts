@@ -455,9 +455,6 @@ export function useRunController({
       (!!opts.goal || (bucket === activeBucket && !!state.activeGoal && !state.activeGoal.paused));
     const externalDeveloperInstructions = [
       opts.sessionBrief ? `CodeShell Session brief:\n${opts.sessionBrief}` : undefined,
-      opts.workspaceProfile
-        ? `Active CodeShell workspace profile: ${opts.workspaceProfile}`
-        : undefined,
       opts.sessionMessageTargets?.length
         ? `Related CodeShell Sessions:\n${opts.sessionMessageTargets
             .map((target) => `- ${target.title}: ${target.sessionId} (${target.workspaceRoot})`)
@@ -491,6 +488,9 @@ export function useRunController({
             ...(externalDeveloperInstructions
               ? { developerInstructions: externalDeveloperInstructions }
               : {}),
+            // Main pins and resolves the Profile; its role text no longer rides
+            // in renderer-built instructions.
+            ...(opts.workspaceProfile ? { workspaceProfile: opts.workspaceProfile } : {}),
             runtime: window.codeshell.externalRuntime,
           })
         : runAfterModelSwitch({

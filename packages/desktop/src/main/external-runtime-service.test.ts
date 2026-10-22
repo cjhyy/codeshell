@@ -23,7 +23,11 @@ import {
   type StreamEvent,
   type ToolRegistry,
 } from "@cjhyy/code-shell-core";
-import { backgroundJobRegistry, ModelTraceStore } from "@cjhyy/code-shell-core/internal";
+import {
+  backgroundJobRegistry,
+  ModelTraceStore,
+  saveWorkspaceProfile,
+} from "@cjhyy/code-shell-core/internal";
 import { createSessionToolHost, FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
 import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { EXTERNAL_GOAL_TOOLS } from "./external-runtime-goals.js";
@@ -31,6 +35,7 @@ import type { ExternalRuntimeServiceDeps } from "./external-runtime-service.js";
 import { getProjectStore } from "./project-store.js";
 import { mobileSessionCommandAuthority } from "./mobile-remote/output-recovery-authority.js";
 import { setProjectTrustWithRevocation } from "./project-trust-lifecycle.js";
+import { createExternalRuntimeSourceContext } from "./external-runtime-source-context.js";
 
 type StartArgs = Record<string, unknown>;
 const starts: StartArgs[] = [];
@@ -2168,6 +2173,55 @@ describe("ExternalRuntimeService", () => {
       expect(background.dropped).toHaveLength(1);
     });
   }
+
+  test("a new Session's first run pins its digital human for instructions, memory and sources", async () => {
+    saveWorkspaceProfile({
+      name: "reviewer",
+      label: "Reviewer",
+      basePreset: "general",
+      mainInstruction: "Review every change against the spec.",
+      portableMemory: true,
+    });
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.ensure({ ...request, workspaceProfile: "reviewer" });
+    const sessions = new SessionManager();
+    expect(sessions.readSessionState(request.sessionId)?.workspaceProfile).toBe("reviewer");
+    expect(String(starts[0]!.developerInstructions)).toContain(
+      "Review every change against the spec.",
+    );
+    expect(
+      (starts[0]!.contextOverrides as { profileMemoryDir?: string }).profileMemoryDir,
+    ).toContain("reviewer");
+    const source = createExternalRuntimeSourceContext({
+      sessionId: request.sessionId,
+      cwd: request.cwd,
+    });
+    expect(source.workspaceProfileName).toBe("reviewer");
+
+    // Main-originated callers carry no Profile; the persisted pin keeps the runtime.
+    expect(svc.isCompatible(request)).toBe(true);
+    await svc.ensure(request);
+    expect(starts).toHaveLength(1);
+
+    // An explicit switch persisted elsewhere rebuilds the runtime with the new role.
+    saveWorkspaceProfile({ name: "writer", label: "Writer", basePreset: "general" });
+    const state = sessions.readSessionState(request.sessionId)!;
+    sessions.saveStateOrUpdateFields(state, { workspaceProfile: "writer" });
+    expect(svc.isCompatible(request)).toBe(false);
+    await svc.ensure(request);
+    expect(starts).toHaveLength(2);
+    expect(String(starts[1]!.developerInstructions)).toContain("writer");
+    await svc.stopAll();
+  });
+
+  test("an unavailable digital human fails the start instead of widening to the default", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await expect(svc.ensure({ ...request, workspaceProfile: "missing-human" })).rejects.toThrow(
+      /unavailable/,
+    );
+    expect(starts).toHaveLength(0);
+    expect(svc.get(request.sessionId)).toBeUndefined();
+  });
 
   test("lists the live runtimes a window owns so a reloaded renderer can recover Stop", async () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true });

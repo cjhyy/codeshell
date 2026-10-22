@@ -146,6 +146,7 @@ import { getCuaDriverHost } from "./computer-use/service.js";
 import { initializeDesktopComputerUse } from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
+import { assertWorkspaceProfileName } from "./external-runtime-profile.js";
 import { setProjectTrustWithRevocation } from "./project-trust-lifecycle.js";
 import {
   createExternalGoalRpcHandler,
@@ -6102,6 +6103,7 @@ ipcMain.handle(
       hasGoal?: unknown;
       initialContext?: unknown;
       developerInstructions?: unknown;
+      workspaceProfile?: unknown;
     },
   ) => {
     const service = externalRuntimeService;
@@ -6150,6 +6152,7 @@ ipcMain.handle(
       ...(initialContext ? { initialContext } : {}),
       ...(developerInstructions ? { developerInstructions } : {}),
       ...(parsed.model ? { model: parsed.model } : {}),
+      workspaceProfile: assertWorkspaceProfileName(payload?.workspaceProfile),
       ownerWindow,
     });
     return {

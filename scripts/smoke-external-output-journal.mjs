@@ -27,7 +27,8 @@ const identity = () => ({
 const adapters = process.env.CODESHELL_OUTPUT_ADAPTERS;
 assert(adapters);
 const core = await import("@cjhyy/code-shell-core");
-const { SessionOutputCoverageStore } = await import("@cjhyy/code-shell-core/internal");
+const { SessionOutputCoverageStore, saveWorkspaceProfile } =
+  await import("@cjhyy/code-shell-core/internal");
 const coding = await import(
   pathToFileURL(join(repo, "packages/coding/dist/external-runtimes/index.js"))
 );
@@ -246,6 +247,9 @@ process.env.CODESHELL_OUTPUT_PARTS = "1";
 // own thread total. Those domains must never become each other's baseline.
 {
   const id = "cold-aux-accounting";
+  // External starts resolve a Session's pinned digital human like the native
+  // Engine and refuse an unavailable one, so the retained pin must exist.
+  saveWorkspaceProfile({ name: "fixture-profile", label: "Fixture", basePreset: "general" });
   const manager = new core.SessionManager();
   manager.create(workspace, "codex/synthetic", "codex", id);
   manager.updateSessionState(id, {

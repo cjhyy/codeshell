@@ -64,6 +64,11 @@ import {
   EXTERNAL_UNVERIFIED_WRITE_NOTICE,
 } from "./external-runtime-operations.js";
 import { createExternalRuntimeSourceContext } from "./external-runtime-source-context.js";
+import {
+  bindExternalRuntimeProfile,
+  externalRuntimeProfileInstructions,
+  requestedExternalRuntimeProfile,
+} from "./external-runtime-profile.js";
 import { startExternalRuntimeTrace } from "./external-runtime-tracing.js";
 
 export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
@@ -106,6 +111,11 @@ export interface ExternalRuntimeStartRequest {
   hasGoal?: boolean;
   initialContext?: string;
   developerInstructions?: string;
+  /**
+   * Digital human to pin on the canonical Session (a new Session's first run).
+   * Omitted means "keep the persisted pin"; Main resolves it either way.
+   */
+  workspaceProfile?: string;
   /** The renderer window that owns this session's host-loopback surface. */
   ownerWindow?: BrowserWindow;
 }
@@ -199,6 +209,8 @@ export class ExternalRuntimeService {
       model?: string;
       developerInstructions: string;
       initialContext?: string;
+      /** Persisted Profile pin this runtime's instructions and tools were built for. */
+      workspaceProfile?: string;
       routingKey: string;
       configurationKey: string;
       authority: ExternalRuntimeAuthority;
@@ -408,7 +420,9 @@ export class ExternalRuntimeService {
       entry !== undefined &&
       !entry.lifecycle.faulted &&
       this.authorityStillCurrent(entry.cwd, entry.authority) &&
-      entry.routingKey === this.routingKey(request)
+      entry.routingKey === this.routingKey(request) &&
+      entry.workspaceProfile ===
+        requestedExternalRuntimeProfile(request.sessionId, request.workspaceProfile)
     );
   }
 
@@ -662,7 +676,9 @@ export class ExternalRuntimeService {
         entry &&
         !entry.lifecycle.faulted &&
         this.authorityStillCurrent(entry.cwd, entry.authority) &&
-        entry.configurationKey === this.configurationKey(request)
+        entry.configurationKey === this.configurationKey(request) &&
+        entry.workspaceProfile ===
+          requestedExternalRuntimeProfile(request.sessionId, request.workspaceProfile)
       ) {
         return entry.session;
       }
@@ -789,6 +805,27 @@ export class ExternalRuntimeService {
               this.deps.requestApproval!(request.sessionId, approvalRequest),
           }
         : undefined;
+    const persisted = readExternalRuntimeBinding(request.sessionId);
+    const resumeRuntimeSessionId =
+      persisted?.kind === request.kind &&
+      persisted.cwd === request.cwd &&
+      persisted.model === request.model
+        ? persisted.runtimeSessionId
+        : undefined;
+    const recorder = new ExternalRuntimeSessionRecorder(
+      request.sessionId,
+      request.cwd,
+      request.modelKey ?? `${request.kind}/${request.model ?? "default"}`,
+      request.kind,
+      authority.projectBinding,
+    );
+    // The recorder materializes the canonical Session, so the Profile pin can
+    // be bound and resolved before instructions, tools or source access use it.
+    const profile = bindExternalRuntimeProfile({
+      sessionId: request.sessionId,
+      cwd: request.cwd,
+      requested: request.workspaceProfile,
+    });
     // The same guidance reaches both runtimes (Codex as developer instructions,
     // Claude Code as an appended system prompt), so name the one actually running.
     const runtimeLabel = request.kind === "codex" ? "Codex" : "Claude Code";
@@ -834,24 +871,11 @@ export class ExternalRuntimeService {
         "Use LinkAction discovery for connected services and ListSources/ReadSource for " +
           "workspace data. These CodeShell host tools use normal authorization and approval; " +
           "do not claim a service is unsupported because this runtime has no native connector.",
+      externalRuntimeProfileInstructions(profile),
       request.developerInstructions,
     ]
       .filter(Boolean)
       .join("\n\n");
-    const persisted = readExternalRuntimeBinding(request.sessionId);
-    const resumeRuntimeSessionId =
-      persisted?.kind === request.kind &&
-      persisted.cwd === request.cwd &&
-      persisted.model === request.model
-        ? persisted.runtimeSessionId
-        : undefined;
-    const recorder = new ExternalRuntimeSessionRecorder(
-      request.sessionId,
-      request.cwd,
-      request.modelKey ?? `${request.kind}/${request.model ?? "default"}`,
-      request.kind,
-      authority.projectBinding,
-    );
     const lifecycle = {
       active: true,
       turnActive: false,
@@ -1028,6 +1052,7 @@ export class ExternalRuntimeService {
     };
     const contextOverrides = {
       ...(this.deps.toolContextOverrides?.(request.sessionId) ?? {}),
+      ...(profile.profileMemoryDir ? { profileMemoryDir: profile.profileMemoryDir } : {}),
       streamCallback: forwardEvent,
       externalRuntimeBackgroundDelivery: this.deps.backgroundWork !== undefined,
       ...(this.deps.requestApproval
@@ -1258,6 +1283,7 @@ export class ExternalRuntimeService {
       cwd: request.cwd,
       developerInstructions,
       initialContext: request.initialContext,
+      ...(profile.pinned ? { workspaceProfile: profile.pinned } : {}),
       routingKey: this.routingKey(request),
       configurationKey: this.configurationKey(request),
       authority,

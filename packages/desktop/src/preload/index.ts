@@ -1604,6 +1604,7 @@ contextBridge.exposeInMainWorld("codeshell", {
       hasGoal?: boolean;
       initialContext?: string;
       developerInstructions?: string;
+      workspaceProfile?: string;
     }): Promise<{ kind: string; runtimeSessionId: string | null; tools: string[] }> =>
       ipcRenderer
         .invoke("externalRuntime:start", payload)

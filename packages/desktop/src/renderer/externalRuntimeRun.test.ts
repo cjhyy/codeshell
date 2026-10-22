@@ -15,11 +15,11 @@ import {
 } from "./externalRuntimeRun.js";
 
 function bridge(overrides: Partial<ExternalRuntimeBridge> = {}) {
-  const starts: Array<{ sessionId: string; modelKey: string }> = [];
+  const starts: Array<{ sessionId: string; modelKey: string; workspaceProfile?: string }> = [];
   const sends: Array<{ sessionId: string; text: string }> = [];
   const impl: ExternalRuntimeBridge = {
-    start: async ({ sessionId, modelKey }) => {
-      starts.push({ sessionId, modelKey });
+    start: async ({ sessionId, modelKey, workspaceProfile }) => {
+      starts.push({ sessionId, modelKey, ...(workspaceProfile ? { workspaceProfile } : {}) });
       return { kind: "codex", runtimeSessionId: "t-1", tools: [] };
     },
     send: async ({ sessionId, text }) => {
@@ -119,6 +119,29 @@ describe("runExternalRuntimeTurn", () => {
       runtime: impl,
     });
     expect(starts).toHaveLength(2);
+  });
+
+  test("passes the Session's digital human to start and restarts when it changes", async () => {
+    const { impl, starts } = bridge();
+    await runExternalRuntimeTurn({
+      ...base,
+      text: "one",
+      workspaceProfile: "reviewer",
+      runtime: impl,
+    });
+    await runExternalRuntimeTurn({
+      ...base,
+      text: "two",
+      workspaceProfile: "reviewer",
+      runtime: impl,
+    });
+    await runExternalRuntimeTurn({
+      ...base,
+      text: "three",
+      workspaceProfile: "writer",
+      runtime: impl,
+    });
+    expect(starts.map((start) => start.workspaceProfile)).toEqual(["reviewer", "writer"]);
   });
 
   test("sends explicit goal changes per turn without recreating them on ordinary follow-ups", async () => {
