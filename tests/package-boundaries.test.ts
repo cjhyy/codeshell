@@ -206,7 +206,10 @@ describe("workspace package boundaries", () => {
     ]);
     // Use Desktop's declared bundler dependency, as its production build does.
     const desktopRequire = createRequire(join(repoRoot, "packages/desktop/package.json"));
-    const { build } = await import(pathToFileURL(desktopRequire.resolve("esbuild")).href);
+    const { build, stop } = await import(pathToFileURL(desktopRequire.resolve("esbuild")).href);
+    // esbuild's JS API keeps one `esbuild --service` child (and its two stdio
+    // descriptors) alive for the rest of the process until stop() is called.
+    // Every later suite in this shared Bun process would otherwise inherit it.
     const result = await build({
       entryPoints: [join(repoRoot, "packages/server/src/index.storage.ts")],
       bundle: true,
@@ -215,7 +218,7 @@ describe("workspace package boundaries", () => {
       format: "esm",
       metafile: true,
       external: ["@cjhyy/code-shell-core", "@cjhyy/code-shell-core/*"],
-    });
+    }).finally(() => stop());
     const hostInputs = Object.keys(result.metafile!.inputs).filter((file) =>
       file.includes("packages/host/"),
     );
