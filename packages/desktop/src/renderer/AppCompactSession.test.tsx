@@ -349,6 +349,32 @@ describe("App compact session UI", () => {
     expect(reactPropsOf(composer).disabled).toBe(false);
   });
 
+  test("refuses /compact for a Codex / Claude Code session instead of compacting the native Engine", async () => {
+    await act(async () => {
+      root?.unmount();
+      await flushMicrotasks();
+    });
+    localStorageMock.setItem(
+      "codeshell.overrides.model",
+      JSON.stringify({ "repoA::session-a": "codex/gpt-5.6-sol" }),
+    );
+    root = createRoot(container!);
+    await act(async () => {
+      root?.render(<App />);
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      chatProps?.onCompactCommand?.();
+      await flushMicrotasks();
+    });
+
+    // The native compact would report success while the provider thread keeps
+    // its whole context; it must not be sent at all.
+    expect(compactCalls).toEqual([]);
+    expect(chatProps?.compacting).toBe(false);
+  });
+
   test("keeps every Session UI/config consumer on its authoritative root after Make primary", async () => {
     await act(async () => {
       root?.unmount();

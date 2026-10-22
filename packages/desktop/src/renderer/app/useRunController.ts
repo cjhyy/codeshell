@@ -1131,6 +1131,12 @@ export function useRunController({
       return;
     }
     const bucket = activeBucket;
+    // A Codex / Claude Code thread is not the native transcript; compacting the
+    // Engine would report success while the provider keeps its whole context.
+    if (parseExternalRuntimeModelKey(modelOverrides[bucket] ?? defaultActiveModelKey)) {
+      toast({ message: t("chat.compact.externalUnsupported"), variant: "error" });
+      return;
+    }
     const engineSessionId = resolveEngineSessionIdForBucket(bucket);
     if (!engineSessionId) {
       toast({ message: t("chat.compact.noSession"), variant: "error" });
