@@ -134,7 +134,12 @@ jobs:
           # bun errors out entirely if one listed path has no tests.
           - shard: core-rest
             paths: packages/core
-            ignore: "--path-ignore-patterns **/src/engine/** --path-ignore-patterns **/src/tool-system/**"
+            # knownMarketplaces spawns 16 concurrent children; late in this shard's Bun
+            # process the same Bun 1.3.11 Linux spawn bug as the Hub suite below fails
+            # `child.exited` with EBADF epoll_ctl. It runs alone in its own step.
+            ignore: >-
+              --path-ignore-patterns **/src/engine/** --path-ignore-patterns **/src/tool-system/**
+              --path-ignore-patterns '**/src/plugins/knownMarketplaces.test.ts'
           - shard: desktop
             paths: packages/desktop
             # The issuer proof runs alone above so its receipt precedes the first SDK/Core import.
@@ -246,6 +251,9 @@ jobs:
       - name: test real Hub project packages in their own Bun process
         if: matrix.shard == 'rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/server/src/panels/project-packages.test.ts
+      - name: test known marketplaces in their own Bun process
+        if: matrix.shard == 'core-rest'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/plugins/knownMarketplaces.test.ts
       - name: Compiled isolated instruction adoption lifecycle
         if: matrix.shard == 'rest'
         run: |
