@@ -18,7 +18,11 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createInterface } from "node:readline";
 import type { StreamEvent } from "@cjhyy/code-shell-core/extension";
 import { ClaudeEventTranslator } from "./event-translator.js";
-import { claudeBridgeArgs, CLAUDE_MCP_SERVER_NAME } from "./mcp-config.js";
+import {
+  claudeBridgeArgs,
+  CLAUDE_MCP_SERVER_NAME,
+  writeClaudeSystemPromptFile,
+} from "./mcp-config.js";
 import { buildRuntimeSpawnEnv } from "../shared/spawn-env.js";
 import type { McpBridgeHandle } from "../shared/mcp-bridge.js";
 import { textWithAttachmentReferences, type ExternalRuntimeTurnInput } from "../turn-input.js";
@@ -37,6 +41,12 @@ export interface ClaudeRuntimeOptions {
   model?: string;
   resumeRuntimeSessionId?: string;
   initialContext?: string;
+  /**
+   * Stable host guidance, appended to Claude's system prompt on EVERY turn —
+   * new and resumed alike, because each turn is a new process. Contrast
+   * `initialContext`, a one-time transcript replay for a fresh conversation.
+   */
+  developerInstructions?: string;
   serverName?: string;
   /**
    * How long `interrupt()`/`close()` wait after SIGTERM before SIGKILL.
@@ -134,6 +144,16 @@ export class ClaudeCodeRuntime {
       ...(this.options.serverName ? { serverName: this.options.serverName } : {}),
     });
 
+    // Per turn: each `claude -p` is a new process, and `--resume` does not carry a
+    // previous invocation's appended system prompt forward.
+    const systemPrompt = this.options.developerInstructions?.trim()
+      ? writeClaudeSystemPromptFile(this.options.developerInstructions)
+      : undefined;
+    const cleanupTurnFiles = (): void => {
+      wiring.cleanup();
+      systemPrompt?.cleanup();
+    };
+
     const args = [
       "-p",
       "--output-format",
@@ -145,21 +165,29 @@ export class ClaudeCodeRuntime {
       // Continuity across turns: a fresh process per turn means the session id is
       // the only thread of memory.
       ...(this.claudeSessionId ? ["--resume", this.claudeSessionId] : []),
+      ...(systemPrompt ? ["--append-system-prompt-file", systemPrompt.path] : []),
       ...(this.options.extraArgs ?? []),
       ...wiring.args,
     ];
 
-    const child = spawn(this.options.command ?? "claude", args, {
-      cwd: this.options.cwd,
-      env: buildRuntimeSpawnEnv({
-        bridgeToken: {
-          name: this.options.bridge.tokenEnvVar,
-          value: this.options.bridge.token,
-        },
-      }),
-      stdio: ["pipe", "pipe", "pipe"],
-      shell: false,
-    }) as ChildProcessWithoutNullStreams;
+    let child: ChildProcessWithoutNullStreams;
+    try {
+      child = spawn(this.options.command ?? "claude", args, {
+        cwd: this.options.cwd,
+        env: buildRuntimeSpawnEnv({
+          bridgeToken: {
+            name: this.options.bridge.tokenEnvVar,
+            value: this.options.bridge.token,
+          },
+        }),
+        stdio: ["pipe", "pipe", "pipe"],
+        shell: false,
+      }) as ChildProcessWithoutNullStreams;
+    } catch (error) {
+      // A synchronous spawn failure never reaches the exit/error handlers below.
+      cleanupTurnFiles();
+      throw error;
+    }
 
     child.stdout.setEncoding("utf8");
     const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
@@ -197,8 +225,9 @@ export class ClaudeCodeRuntime {
         if (finished) return;
         finished = true;
         lines.close();
-        // Clean up the config file that carried the bearer token.
-        wiring.cleanup();
+        // Clean up the config file that carried the bearer token, and the
+        // system-prompt file.
+        cleanupTurnFiles();
         if (this.active === active) this.active = undefined;
         if (!terminalSeen) {
           if (active.interrupted) {

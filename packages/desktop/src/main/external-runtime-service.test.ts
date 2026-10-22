@@ -1160,6 +1160,20 @@ describe("ExternalRuntimeService", () => {
     expect(starts[0]!.developerInstructions).toContain("never launch codex exec");
   });
 
+  test("Claude Code gets guidance naming its own runtime and CLI (E07)", async () => {
+    // The guidance is no longer Codex-only: Claude now receives it as an appended
+    // system prompt, so it must not tell Claude it is a Codex runtime.
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start({ ...request, kind: "claude-code", developerInstructions: "renderer ctx" });
+    const text = starts[0]!.developerInstructions as string;
+    expect(text).toContain('DriveAgent with cli="claude"');
+    expect(text).toContain("this Claude Code runtime");
+    expect(text).not.toContain("Codex runtime");
+    expect(text).not.toContain("in-app-browser plugin");
+    expect(text).toContain("never launch codex exec");
+    expect(text.endsWith("renderer ctx")).toBe(true);
+  });
+
   test("dontAsk disables approval prompts but preserves user questions", async () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true }, async () => ({
       approved: true,

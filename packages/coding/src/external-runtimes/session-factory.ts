@@ -217,6 +217,9 @@ export async function startExternalRuntimeSession(
             ? { resumeRuntimeSessionId: options.resumeRuntimeSessionId }
             : {}),
           ...(options.initialContext ? { initialContext: options.initialContext } : {}),
+          ...(options.developerInstructions
+            ? { developerInstructions: options.developerInstructions }
+            : {}),
           ...(options.claudeExtraArgs ? { extraArgs: options.claudeExtraArgs } : {}),
           ...(options.claudeCommand ? { command: options.claudeCommand } : {}),
           log,

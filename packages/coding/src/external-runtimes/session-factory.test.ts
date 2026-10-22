@@ -8,7 +8,15 @@
  * real-binary proof lives in `docs/todo/evidence/`.
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ToolRegistry } from "@cjhyy/code-shell-core";
@@ -40,6 +48,50 @@ createInterface({ input: process.stdin }).on("line", (l) => {
 `,
   );
   return [file];
+}
+
+/**
+ * A fake `claude` executable. Each turn appends what it received — argv, the
+ * contents of the system-prompt file it was pointed at, and stdin — to a JSONL
+ * capture file, then runs `body` (which may emit stream-json lines) and exits.
+ */
+function fakeClaudeCli(body = ""): { command: string; capture: string } {
+  const dir = mkdtempSync(join(tmpdir(), "codeshell-factory-claude-"));
+  dirs.push(dir);
+  const command = join(dir, "claude.mjs");
+  const capture = join(dir, "capture.jsonl");
+  writeFileSync(
+    command,
+    `#!${process.execPath}
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
+const argv = process.argv.slice(2);
+const send = (value) => process.stdout.write(JSON.stringify(value) + "\\n");
+const flag = argv.indexOf("--append-system-prompt-file");
+const promptFile = flag >= 0 ? argv[flag + 1] : undefined;
+const systemPrompt = promptFile && existsSync(promptFile) ? readFileSync(promptFile, "utf8") : undefined;
+const stdin = readFileSync(0, "utf8");
+appendFileSync(${JSON.stringify(capture)}, JSON.stringify({ argv, promptFile, systemPrompt, stdin }) + "\\n");
+send({ type: "system", subtype: "init", session_id: "claude-fake-session" });
+${body}
+send({ type: "result", subtype: "success", is_error: false });
+`,
+  );
+  chmodSync(command, 0o755);
+  return { command, capture };
+}
+
+interface ClaudeCapture {
+  argv: string[];
+  promptFile?: string;
+  systemPrompt?: string;
+  stdin: string;
+}
+
+function readCaptures(capture: string): ClaudeCapture[] {
+  return readFileSync(capture, "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as ClaudeCapture);
 }
 
 const BASE = {
@@ -184,6 +236,66 @@ describe("startExternalRuntimeSession", () => {
     expect(session.kind).toBe("claude-code");
     expect(session.runtimeSessionId).toBeUndefined();
     expect(session.listTools().map((tool) => tool.name)).toEqual(["Panel"]);
+  });
+
+  test("Claude receives developerInstructions as system context on every turn (E07)", async () => {
+    // Desktop's host-tool, delegation and waiting guidance — and the renderer's
+    // developer context — travel as `developerInstructions`. Codex has a protocol
+    // field for them; Claude used to drop them on the floor.
+    const fake = fakeClaudeCli();
+    const developerInstructions = "Prefer mcp__codeshell_tools__* host tools.\n\nSession brief: X";
+    const session = await startExternalRuntimeSession({
+      ...BASE,
+      kind: "claude-code",
+      registry: registry(),
+      developerInstructions,
+      initialContext: "earlier transcript",
+      claudeCommand: fake.command,
+    });
+    sessions.push(session);
+
+    await (
+      await session.send({ text: "first" })
+    ).done;
+    // A resumed turn is a new process: the guidance must be re-applied, unlike the
+    // one-shot initialContext replay.
+    await (
+      await session.send({ text: "second" })
+    ).done;
+
+    const [first, second] = readCaptures(fake.capture);
+    for (const turn of [first!, second!]) {
+      expect(turn.systemPrompt).toBe(developerInstructions);
+      // Out of argv (visible to every local user via ps) and out of the prompt.
+      expect(turn.argv.join(" ")).not.toContain("Session brief");
+      expect(turn.stdin).not.toContain("Session brief");
+      // Removed once the turn ends.
+      expect(existsSync(turn.promptFile!)).toBe(false);
+    }
+    expect(first!.stdin).toContain("earlier transcript");
+    expect(second!.argv).toContain("--resume");
+    expect(second!.stdin).toBe("second");
+    // Must precede the variadic --mcp-config/--allowed-tools, which would
+    // otherwise swallow it as another value.
+    const flagIndex = first!.argv.indexOf("--append-system-prompt-file");
+    expect(flagIndex).toBeLessThan(first!.argv.indexOf("--mcp-config"));
+  });
+
+  test("Claude without developerInstructions gets no system-prompt flag", async () => {
+    const fake = fakeClaudeCli();
+    const session = await startExternalRuntimeSession({
+      ...BASE,
+      kind: "claude-code",
+      registry: registry(),
+      claudeCommand: fake.command,
+    });
+    sessions.push(session);
+    await (
+      await session.send({ text: "hi" })
+    ).done;
+    const [turn] = readCaptures(fake.capture);
+    expect(turn!.argv).not.toContain("--append-system-prompt-file");
+    expect(turn!.argv).not.toContain("--append-system-prompt");
   });
 
   test("close() releases the bridge port", async () => {

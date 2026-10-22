@@ -764,14 +764,20 @@ export class ExternalRuntimeService {
               this.deps.requestApproval!(request.sessionId, approvalRequest),
           }
         : undefined;
+    // The same guidance reaches both runtimes (Codex as developer instructions,
+    // Claude Code as an appended system prompt), so name the one actually running.
+    const runtimeLabel = request.kind === "codex" ? "Codex" : "Claude Code";
+    const sameCli = request.kind === "codex" ? "codex" : "claude";
+    const otherRuntime = request.kind === "codex" ? "Claude" : "Codex";
     const developerInstructions = [
       "You are running as an Agent Runtime inside CodeShell. Prefer the " +
         "mcp__codeshell_tools__* host tools for CodeShell panels, browser state, " +
         "credentials, memory, skills, and DriveAgent delegation. It is supported " +
-        "and often useful for this Codex runtime to delegate a bounded independent " +
-        'coding task through DriveAgent with cli="codex"; that launches a fresh ' +
-        "Codex worker rather than asking CodeShell's native Agent to redo the work. " +
-        'From a Codex runtime, use cli="codex" by default and choose Claude only ' +
+        `and often useful for this ${runtimeLabel} runtime to delegate a bounded independent ` +
+        `coding task through DriveAgent with cli="${sameCli}"; that launches a fresh ` +
+        `${runtimeLabel} worker rather than asking CodeShell's native Agent to redo the work. ` +
+        `From a ${runtimeLabel} runtime, use cli="${sameCli}" by default and choose ` +
+        `${otherRuntime} only ` +
         "when the user explicitly asks for it. For delegated tasks that require " +
         'edits, pass permissionMode="acceptEdits" when the current CodeShell ' +
         "permission allows edits; never request bypassPermissions unless the user " +
@@ -779,7 +785,10 @@ export class ExternalRuntimeService {
         "Give that worker a self-contained prompt because it does not inherit this " +
         "runtime's conversation or host bridge. Default to one worker and use more " +
         "only for truly independent workstreams. Do not use the " +
-        "Codex desktop in-app-browser plugin: this host provides browser_navigate, " +
+        (request.kind === "codex"
+          ? "Codex desktop in-app-browser plugin"
+          : "a browser of your own (extension or MCP server)") +
+        ": this host provides browser_navigate, " +
         "browser_observe, and browser_act with the owning CodeShell session. Never " +
         "claim that a sub-agent was dispatched unless DriveAgent returned success. " +
         "When DriveAgent returns a background jobId, do not poll it or duplicate its work " +
