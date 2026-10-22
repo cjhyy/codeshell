@@ -15,7 +15,7 @@ import type {
   ListResourceTemplatesResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { ContentBlock, MCPServerConfig, RegisteredTool } from "../types.js";
-import { capabilitiesForConfig } from "../llm/capabilities/index.js";
+import { toolContextSupportsVision } from "./model-vision.js";
 import type { CredentialType } from "../credentials/types.js";
 import { ToolRegistry } from "./registry.js";
 import { logger } from "../logging/logger.js";
@@ -492,8 +492,10 @@ export function inlineMcpImageBlock(base64: string, mimeType: string): InlineIma
 }
 
 /** Fail closed like view_image: no llmConfig means no vision. */
-function mcpContextSupportsVision(ctx?: Partial<Pick<ToolContext, "llmConfig">>): boolean {
-  return capabilitiesForConfig(ctx?.llmConfig).supportsVision;
+function mcpContextSupportsVision(
+  ctx?: Partial<Pick<ToolContext, "llmConfig" | "modelSupportsVision">>,
+): boolean {
+  return toolContextSupportsVision(ctx);
 }
 
 function spillTimestamp(filename: string, prefix: string): number {

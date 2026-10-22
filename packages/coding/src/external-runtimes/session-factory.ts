@@ -40,6 +40,19 @@ import type { ExternalRuntimeTurnInput } from "./turn-input.js";
 export type ExternalRuntimeKind = "codex" | "claude-code";
 
 /**
+ * Whether each runtime's model receives MCP image content from a tool result.
+ *
+ * Both runtimes drive vision-capable model families and forward MCP `image`
+ * content to the model. Without a declaration the host has no `llmConfig` to
+ * infer this from (the runtime picks and calls its own model), so image tools
+ * such as browser_observe(vision) failed closed and never captured pixels.
+ */
+const RUNTIME_ACCEPTS_TOOL_IMAGES: Readonly<Record<ExternalRuntimeKind, boolean>> = Object.freeze({
+  codex: true,
+  "claude-code": true,
+});
+
+/**
  * Everything the host must decide. Deliberately no defaults for the
  * security-relevant fields: see `CreateSessionToolHostOptions`, where the same
  * rule is enforced and tested. A default here would reintroduce the fail-open
@@ -69,6 +82,11 @@ export interface ExternalRuntimeSessionOptions {
   contextOverrides?: Parameters<typeof createSessionToolHost>[0]["contextOverrides"];
   captureRunContext?: Parameters<typeof createSessionToolHost>[0]["captureRunContext"];
   settingsScope?: Parameters<typeof createSessionToolHost>[0]["settingsScope"];
+  /**
+   * Override the runtime's declared image capability (e.g. a host that knows
+   * the selected model is text-only). Defaults per runtime kind.
+   */
+  modelSupportsVision?: boolean;
   model?: string;
   /** Runtime thread/session id recovered from durable Desktop state. */
   resumeRuntimeSessionId?: string;
@@ -172,6 +190,11 @@ export async function startExternalRuntimeSession(
       getStreamCallback: () => turnSink,
       ...(options.captureRunContext ? { captureRunContext: options.captureRunContext } : {}),
       ...(options.settingsScope ? { settingsScope: options.settingsScope } : {}),
+      modelSupportsVision: options.modelSupportsVision ?? RUNTIME_ACCEPTS_TOOL_IMAGES[options.kind],
+      // `hooks` is deliberately not passed: the host then loads the same
+      // settings/plugin tool hooks a Native Engine registers for this cwd,
+      // filtered by `projectTrusted` and `settingsScope`. The runtime's own
+      // native hooks (Codex/Claude config) are separate and unaffected.
     });
 
     // 3. Register before the runtime starts, so a tool call on the very first

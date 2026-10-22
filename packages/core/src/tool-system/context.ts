@@ -347,6 +347,13 @@ export interface ToolContext {
   setSessionWorkspace?(workspace: SessionWorkspace, stateRevision?: number): void;
   /** LLM credentials/endpoint for tools that need to make their own calls. */
   llmConfig: LLMConfig;
+  /**
+   * Host-declared image-input capability of the model reading tool results.
+   * Set by a host whose model is not described by `llmConfig` (an external
+   * Agent Runtime). Absent → derive from `llmConfig`. Read it through
+   * `toolContextSupportsVision()`, never directly.
+   */
+  modelSupportsVision?: boolean;
   /** Active model pool for model-aware tools and product capabilities. */
   modelPool?: ModelPool;
   /** Tool registry (ToolSearch reads this to enumerate available tools). */

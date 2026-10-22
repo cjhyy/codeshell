@@ -34,7 +34,7 @@ import type {
   BrowserWaitCondition,
 } from "../browser-bridge.js";
 import { renderElementList } from "../browser-bridge.js";
-import { capabilitiesForConfig } from "../../llm/capabilities/index.js";
+import { toolContextSupportsVision } from "../model-vision.js";
 import type { ContentBlock } from "../../types.js";
 
 const NO_BROWSER = "Error: browser automation runtime is not available in this host session.";
@@ -130,9 +130,10 @@ function renderObservationWarnings(warnings?: string[]): string {
 }
 
 /** Vision gate: only show images to a vision-capable model. Mirrors view_image —
- *  no vision → never read pixels into context (your rule: 不支持就不给看). */
+ *  no vision → never read pixels into context (your rule: 不支持就不给看). An
+ *  external Agent Runtime's host declares its model's capability explicitly. */
 function modelSupportsVision(ctx?: ToolContext): boolean {
-  return capabilitiesForConfig(ctx?.llmConfig).supportsVision;
+  return toolContextSupportsVision(ctx);
 }
 
 /** Wrap captured image data into a vision ContentBlock (or null if not usable). */

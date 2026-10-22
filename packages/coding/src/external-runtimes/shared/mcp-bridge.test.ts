@@ -247,6 +247,98 @@ describe("Codex MCP bridge", () => {
     expect(new Set(calls.map((call) => call.id)).size).toBe(3);
   });
 
+  describe("image results", () => {
+    const PNG = Buffer.from("not really a png").toString("base64");
+    const imageHost = (outcome: Awaited<ReturnType<BridgeToolHost["execute"]>>) => ({
+      ...fakeHost("sess-a", []),
+      execute: async () => outcome,
+    });
+    const observe = {
+      id: 9,
+      method: "tools/call",
+      params: { name: "browser_observe", arguments: {}, _meta: { threadId: "thread-a" } },
+    };
+
+    test("returns image content blocks as MCP image content, keeping the text", async () => {
+      // A text-only reply silently dropped a browser screenshot: the external
+      // model was told "[screenshot loaded]" and never received the pixels.
+      const { handle, store } = await boot();
+      store.register(
+        "thread-a",
+        imageHost({
+          result: "[screenshot loaded]",
+          contentBlocks: [
+            { type: "image", source: { type: "base64", media_type: "image/png", data: PNG } },
+          ],
+        }),
+      );
+      const { json } = await rpc(handle, observe);
+      expect(json.result).toEqual({
+        content: [
+          { type: "text", text: "[screenshot loaded]" },
+          { type: "image", data: PNG, mimeType: "image/png" },
+        ],
+        isError: false,
+      });
+    });
+
+    test("keeps several images and text blocks in order", async () => {
+      const { handle, store } = await boot();
+      store.register(
+        "thread-a",
+        imageHost({
+          result: "[loaded 2 image(s)]",
+          contentBlocks: [
+            { type: "image", source: { type: "base64", media_type: "image/jpeg", data: PNG } },
+            { type: "text", text: "caption" },
+            { type: "image", source: { type: "base64", media_type: "image/webp", data: PNG } },
+          ],
+        }),
+      );
+      const { json } = await rpc(handle, observe);
+      expect(json.result.content).toEqual([
+        { type: "text", text: "[loaded 2 image(s)]" },
+        { type: "image", data: PNG, mimeType: "image/jpeg" },
+        { type: "text", text: "caption" },
+        { type: "image", data: PNG, mimeType: "image/webp" },
+      ]);
+    });
+
+    test("drops a malformed or non-image block instead of forwarding it", async () => {
+      const { handle, store } = await boot();
+      store.register(
+        "thread-a",
+        imageHost({
+          result: "partial",
+          contentBlocks: [
+            { type: "image", source: { type: "base64", media_type: "image/png", data: "" } },
+            { type: "image", source: { type: "base64", media_type: "text/html", data: PNG } },
+            { type: "image" },
+            { type: "tool_use", name: "x" },
+          ],
+        }),
+      );
+      const { json } = await rpc(handle, observe);
+      expect(json.result.content).toEqual([{ type: "text", text: "partial" }]);
+    });
+
+    test("an error result stays text-only", async () => {
+      const { handle, store } = await boot();
+      store.register(
+        "thread-a",
+        imageHost({
+          error: "boom",
+          isError: true,
+          contentBlocks: [
+            { type: "image", source: { type: "base64", media_type: "image/png", data: PNG } },
+          ],
+        }),
+      );
+      const { json } = await rpc(handle, observe);
+      expect(json.result).toEqual({ content: [{ type: "text", text: "boom" }], isError: true });
+    });
+  });
+
   test("a thread id in ARGUMENTS cannot redirect the call", async () => {
     // §22.4: the model controls arguments and cannot touch `_meta`.
     const calls: string[] = [];
