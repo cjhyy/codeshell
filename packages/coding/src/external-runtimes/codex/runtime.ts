@@ -78,6 +78,37 @@ export interface CodexRuntimeHooks {
   onUserInput?: (request: { method: string; params: unknown }) => Promise<unknown> | unknown;
 }
 
+/** A Stop requested while the turn id was still unknown. */
+interface DeferredInterrupt {
+  readonly promise: Promise<void>;
+  resolve: () => void;
+  reject: (error: Error) => void;
+}
+
+/** The one turn this runtime is driving. */
+interface ActiveTurn {
+  /** Codex turn id — from `turn/started` or the `turn/start` response, whichever lands first. */
+  id?: string;
+  resolve: () => void;
+  onEvent?: (event: StreamEvent) => void;
+  /** `turn/start` has been sent and not yet answered. */
+  starting: boolean;
+  /** Stop arrived before the id; sent as soon as the id is known. */
+  pendingInterrupt?: DeferredInterrupt;
+  /** The deferred Stop has been sent; it must not be sent a second time. */
+  interruptSent: boolean;
+}
+
+/** Read a turn id from a `turn/started` / `turn/completed` notification. */
+function notificationTurnId(params: unknown): string | undefined {
+  if (!params || typeof params !== "object") return undefined;
+  const record = params as Record<string, unknown>;
+  const turn =
+    record.turn && typeof record.turn === "object" ? (record.turn as Record<string, unknown>) : {};
+  if (typeof turn.id === "string" && turn.id) return turn.id;
+  return typeof record.turnId === "string" && record.turnId ? record.turnId : undefined;
+}
+
 export class CodexRuntime {
   readonly kind = "codex" as const;
   private readonly client: CodexAppServerClient;
@@ -87,7 +118,7 @@ export class CodexRuntime {
   private started = false;
   private resumed = false;
   private firstTurn = true;
-  private activeTurn?: { id?: string; resolve: () => void; onEvent?: (event: StreamEvent) => void };
+  private activeTurn?: ActiveTurn;
 
   constructor(
     private readonly options: CodexRuntimeOptions,
@@ -128,6 +159,7 @@ export class CodexRuntime {
 
     this.client.onNotification((method, params) => this.onNotification(method, params));
     this.client.onServerRequest((method, params) => this.onServerRequest(method, params));
+    this.client.onClose((reason) => this.onTransportClosed(reason));
     this.client.start();
 
     await this.client.request(
@@ -215,9 +247,23 @@ export class CodexRuntime {
     onEvent?: (event: StreamEvent) => void,
   ): Promise<CodexTurnHandle> {
     if (!this.threadId) throw new Error("CodexRuntime.send() before start()");
+    // A dead app-server can never run another turn. Fail now, before any turn
+    // state exists, so the host rebuilds the runtime instead of waiting.
+    if (this.client.isClosed) {
+      throw new Error(
+        `Codex app-server is not running (${this.client.closedReason ?? "closed"}); ` +
+          `the runtime must be restarted`,
+      );
+    }
     let resolveDone!: () => void;
     const done = new Promise<void>((resolve) => (resolveDone = resolve));
-    this.activeTurn = { resolve: resolveDone, onEvent };
+    const turn: ActiveTurn = {
+      resolve: resolveDone,
+      onEvent,
+      starting: true,
+      interruptSent: false,
+    };
+    this.activeTurn = turn;
 
     let text = textWithAttachmentReferences(input);
     if (this.firstTurn && !this.resumed && this.options.initialContext) {
@@ -236,22 +282,38 @@ export class CodexRuntime {
           ? { detail: attachment.detail }
           : {}),
       }));
-    const response = (await this.client.request(
-      "turn/start",
-      {
-        threadId: this.threadId,
-        ...(input.clientMessageId ? { clientUserMessageId: input.clientMessageId } : {}),
-        // `text_elements` is required by the protocol even when empty.
-        input: [{ type: "text", text, text_elements: [] }, ...imageInputs],
-      },
-      CRITICAL_RPC_TIMEOUT_MS,
-    )) as { turn?: { id?: string } };
+    let response: { turn?: { id?: string } } | undefined;
+    try {
+      response = (await this.client.request(
+        "turn/start",
+        {
+          threadId: this.threadId,
+          ...(input.clientMessageId ? { clientUserMessageId: input.clientMessageId } : {}),
+          // `text_elements` is required by the protocol even when empty.
+          input: [{ type: "text", text, text_elements: [] }, ...imageInputs],
+        },
+        CRITICAL_RPC_TIMEOUT_MS,
+      )) as { turn?: { id?: string } } | undefined;
+    } catch (error) {
+      // The rejection is the caller's terminal signal for this turn. Release the
+      // turn state so a Stop waiting on its id, or a later close, does not hang
+      // on a turn the caller never received.
+      turn.starting = false;
+      if (this.activeTurn === turn) this.activeTurn = undefined;
+      turn.pendingInterrupt?.resolve();
+      turn.pendingInterrupt = undefined;
+      turn.resolve();
+      throw error;
+    }
+    turn.starting = false;
 
+    // The response is authoritative for the id, but `turn/started` may already
+    // have supplied it (and already delivered a deferred Stop).
     const turnId = response?.turn?.id;
-    if (this.activeTurn) this.activeTurn.id = turnId;
+    if (turnId) this.bindTurnId(turn, turnId);
     return {
       get turnId() {
-        return turnId;
+        return turn.id;
       },
       done,
     };
@@ -266,8 +328,50 @@ export class CodexRuntime {
    * that no further step starts (§13.3).
    */
   async interrupt(): Promise<void> {
-    const turnId = this.activeTurn?.id;
-    if (!this.threadId || !turnId) return;
+    const turn = this.activeTurn;
+    if (!this.threadId || !turn) return;
+    if (turn.id) return this.requestInterrupt(turn.id);
+    // Stop between sending turn/start and learning the turn id: Codex may
+    // already be running the turn, so returning here would silently drop the
+    // Stop. Remember it, and send turn/interrupt the moment the id is known.
+    if (!turn.starting) return;
+    if (!turn.pendingInterrupt) {
+      let resolve!: () => void;
+      let reject!: (error: Error) => void;
+      const promise = new Promise<void>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      // Every caller awaits through the bounded race below; this only keeps a
+      // rejection that arrives after that race from becoming unhandled.
+      promise.catch(() => {});
+      turn.pendingInterrupt = { promise, resolve, reject };
+    }
+    // Bounded like the RPC itself. A timeout leaves the Stop recorded: it is
+    // still delivered if the id arrives later, but the caller learns now that
+    // the stop has not landed.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () =>
+          reject(
+            new Error(
+              `Codex did not report the turn id within ${INTERRUPT_TIMEOUT_MS}ms; ` +
+                `the interrupt has not been delivered yet`,
+            ),
+          ),
+        INTERRUPT_TIMEOUT_MS,
+      );
+    });
+    try {
+      await Promise.race([turn.pendingInterrupt.promise, timeout]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  private async requestInterrupt(turnId: string): Promise<void> {
+    if (!this.threadId) return;
     try {
       await this.client.request(
         "turn/interrupt",
@@ -287,25 +391,79 @@ export class CodexRuntime {
   async close(): Promise<void> {
     // Settle any waiter first, so a close during a live turn cannot leave the
     // caller awaiting forever (§13.4).
-    this.activeTurn?.resolve();
+    const turn = this.activeTurn;
     this.activeTurn = undefined;
+    turn?.pendingInterrupt?.resolve();
+    turn?.resolve();
     await this.client.close();
+  }
+
+  /** Learn the active turn's id; deliver a Stop that was waiting for it, once. */
+  private bindTurnId(turn: ActiveTurn, turnId: string): void {
+    turn.id = turnId;
+    const waiter = turn.pendingInterrupt;
+    if (!waiter || turn.interruptSent) return;
+    turn.interruptSent = true;
+    turn.pendingInterrupt = undefined;
+    this.requestInterrupt(turnId).then(waiter.resolve, waiter.reject);
+  }
+
+  /**
+   * The app-server is gone (exited, failed, broken stream). A turn Codex already
+   * accepted would otherwise wait forever for a `turn/completed` that can never
+   * arrive, so report it terminal now as a model error. A turn whose
+   * `turn/start` is still unanswered is NOT reported here: that RPC rejects, and
+   * the rejected `send()` is its caller's terminal signal.
+   */
+  private onTransportClosed(reason: string): void {
+    const turn = this.activeTurn;
+    if (!turn) return;
+    this.activeTurn = undefined;
+    turn.pendingInterrupt?.resolve();
+    turn.pendingInterrupt = undefined;
+    if (!turn.starting) {
+      this.log("runtime.turn_lost", {
+        businessSessionId: this.options.businessSessionId,
+        reason: reason.slice(0, 200),
+      });
+      const sink = turn.onEvent ?? this.hooks.onEvent;
+      this.emitEvent(
+        { type: "error", error: `Codex app-server stopped before the turn finished: ${reason}` },
+        sink,
+      );
+      this.emitEvent({ type: "turn_complete", reason: "model_error" }, sink);
+    }
+    turn.resolve();
   }
 
   private onNotification(method: string, params: unknown): void {
     const events = this.translator?.translate({ method, params }) ?? [];
     for (const event of events) {
+      // A fresh turn announced while ours has no id yet IS ours: the translator
+      // already discarded orphans of finished turns. This is the earliest point
+      // the id is known, and a Stop pressed before the RPC answers depends on it.
+      if (event.type === "stream_request_start" && method === "turn/started") {
+        const turn = this.activeTurn;
+        const turnId = notificationTurnId(params);
+        if (turn && !turn.id && turnId) this.bindTurnId(turn, turnId);
+      }
       this.emitEvent(event);
       if (event.type === "turn_complete") {
-        this.activeTurn?.resolve();
+        const turn = this.activeTurn;
         this.activeTurn = undefined;
+        turn?.pendingInterrupt?.resolve();
+        turn?.resolve();
       }
     }
   }
 
-  private emitEvent(event: StreamEvent): void {
+  private emitEvent(
+    event: StreamEvent,
+    sink: ((event: StreamEvent) => void) | undefined = this.activeTurn?.onEvent ??
+      this.hooks.onEvent,
+  ): void {
     try {
-      (this.activeTurn?.onEvent ?? this.hooks.onEvent)?.(event);
+      sink?.(event);
     } catch (error) {
       this.log("runtime.event_handler_failed", {
         error: error instanceof Error ? error.name : "unknown",

@@ -223,6 +223,18 @@ describe("CodexAppServerClient", () => {
     expect(closed[0]).toMatchObject({ code: 23, signal: null, command: process.execPath });
   });
 
+  test("tells the close handler once, after pending requests are rejected", async () => {
+    const reasons: string[] = [];
+    const client = inlineClient(`setOnLine(() => { process.exit(9); });`);
+    client.onNotification(() => {});
+    client.onClose((reason) => reasons.push(reason));
+    client.start();
+    await expect(client.request("turn/start")).rejects.toThrow(/app-server exited \(code 9\)/);
+    await client.close();
+    expect(reasons).toEqual(["app-server exited (code 9)"]);
+    expect(client.closedReason).toBe("app-server exited (code 9)");
+  });
+
   test("a timeout says the request may still have taken effect", async () => {
     // A timed-out turn/start does NOT mean the turn was not created; the message
     // has to say so or a caller will assume the opposite.
