@@ -205,16 +205,139 @@ describe("ClaudeEventTranslator", () => {
     ).toEqual([
       {
         type: "usage_update",
-        promptTokens: 20,
+        // Anthropic's counters are disjoint; the whole prompt is their sum.
+        promptTokens: 32,
+        singleTurnPromptTokens: 32,
         completionTokens: 3,
         cacheReadTokens: 10,
+        singleTurnCacheReadTokens: 10,
         cacheCreationTokens: 2,
+        singleTurnCacheCreationTokens: 2,
         promptTokensSource: "provider_usage",
         promptTokensConfidence: "high",
       },
       { type: "error", error: "permission denied" },
       { type: "turn_complete", reason: "model_error" },
     ]);
+  });
+
+  test("promptTokens includes cache reads and writes, like the native Anthropic client", () => {
+    // E10: new input 20 + cache read 100 + cache write 2 is a 122-token prompt.
+    // Reporting only the uncached 20 understates context and budget by 6x.
+    const t = translator();
+    const events = t.translate({
+      ...result("success"),
+      usage: {
+        input_tokens: 20,
+        output_tokens: 7,
+        cache_read_input_tokens: 100,
+        cache_creation_input_tokens: 2,
+      },
+    });
+    expect(events[0]).toEqual({
+      type: "usage_update",
+      promptTokens: 122,
+      singleTurnPromptTokens: 122,
+      completionTokens: 7,
+      cacheReadTokens: 100,
+      singleTurnCacheReadTokens: 100,
+      cacheCreationTokens: 2,
+      singleTurnCacheCreationTokens: 2,
+      promptTokensSource: "provider_usage",
+      promptTokensConfidence: "high",
+    });
+  });
+
+  test("absent cache counters are omitted and do not change promptTokens", () => {
+    const t = translator();
+    const [usage] = t.translate({
+      ...result("success"),
+      usage: { input_tokens: 20, output_tokens: 7 },
+    });
+    expect(usage).toEqual({
+      type: "usage_update",
+      promptTokens: 20,
+      singleTurnPromptTokens: 20,
+      completionTokens: 7,
+      promptTokensSource: "provider_usage",
+      promptTokensConfidence: "high",
+    });
+  });
+
+  test("a multi-request turn anchors context on the last request and accounts the aggregate", () => {
+    // `result.usage` sums every model request in the `claude -p` process. As the
+    // context size that overstates the prompt N-fold, because each request
+    // re-reads the cache; the last top-level request's own prompt is the context,
+    // while the aggregate is this submission's accounting (singleTurn*).
+    const t = translator();
+    const start = (usage: Record<string, number>, parent: string | null = null) => ({
+      type: "stream_event",
+      parent_tool_use_id: parent,
+      event: { type: "message_start", message: { usage } },
+    });
+    t.translate(
+      start({ input_tokens: 10, cache_read_input_tokens: 50, cache_creation_input_tokens: 2 }),
+    );
+    t.translate(
+      start({ input_tokens: 10, cache_read_input_tokens: 50, cache_creation_input_tokens: 0 }),
+    );
+    // A sub-agent's request is not this conversation's context.
+    t.translate(start({ input_tokens: 999, cache_read_input_tokens: 0 }, "toolu_task"));
+    const [usage] = t.translate({
+      ...result("success"),
+      usage: {
+        input_tokens: 20,
+        output_tokens: 7,
+        cache_read_input_tokens: 100,
+        cache_creation_input_tokens: 2,
+      },
+    });
+    expect(usage).toEqual({
+      type: "usage_update",
+      promptTokens: 60,
+      singleTurnPromptTokens: 122,
+      completionTokens: 7,
+      cacheReadTokens: 50,
+      singleTurnCacheReadTokens: 100,
+      cacheCreationTokens: 0,
+      singleTurnCacheCreationTokens: 2,
+      promptTokensSource: "provider_usage",
+      promptTokensConfidence: "high",
+    });
+
+    // Turn-scoped: the next turn must not reuse the previous request's anchor.
+    t.beginTurn();
+    const [next] = t.translate({
+      ...result("success"),
+      usage: { input_tokens: 5, output_tokens: 1, cache_read_input_tokens: 60 },
+    });
+    expect(next).toMatchObject({ promptTokens: 65, singleTurnPromptTokens: 65 });
+  });
+
+  test("thinking deltas become the native thinking stream event", () => {
+    // E15: dropping these made Claude's thinking disappear from the UI.
+    const t = translator();
+    expect(
+      t.translate({
+        type: "stream_event",
+        event: {
+          type: "content_block_delta",
+          index: 0,
+          delta: { type: "thinking_delta", thinking: "Weighing the options" },
+        },
+      }),
+    ).toEqual([{ type: "thinking_delta", text: "Weighing the options" }]);
+    // The signature is an opaque integrity token, not text for the user.
+    expect(
+      t.translate({
+        type: "stream_event",
+        event: {
+          type: "content_block_delta",
+          index: 0,
+          delta: { type: "signature_delta", signature: "EqQBCkYIBRgCKkA" },
+        },
+      }),
+    ).toEqual([]);
   });
 
   test("unknown and malformed lines are ignored rather than throwing", () => {

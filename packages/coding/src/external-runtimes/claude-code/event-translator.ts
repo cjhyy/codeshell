@@ -37,6 +37,37 @@ function str(value: unknown): string | undefined {
   return typeof value === "string" && value ? value : undefined;
 }
 
+function count(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+/**
+ * One Anthropic usage object, normalised to CodeShell's contract.
+ *
+ * Anthropic reports uncached input, cache reads and cache writes as three
+ * DISJOINT counters, while `promptTokens` is the whole prompt everywhere in
+ * CodeShell — the same normalisation the native Anthropic client performs
+ * (`tokenUsageFromAnthropic` in core). Without it a prompt served mostly from
+ * cache looks almost empty to context, budget and cost accounting.
+ */
+interface NormalisedUsage {
+  promptTokens: number;
+  cacheReadTokens?: number;
+  cacheCreationTokens?: number;
+}
+
+function normaliseUsage(usage: Record<string, unknown> | undefined): NormalisedUsage | undefined {
+  const input = count(usage?.input_tokens);
+  if (input === undefined) return undefined;
+  const cacheReadTokens = count(usage?.cache_read_input_tokens);
+  const cacheCreationTokens = count(usage?.cache_creation_input_tokens);
+  return {
+    promptTokens: input + (cacheReadTokens ?? 0) + (cacheCreationTokens ?? 0),
+    ...(cacheReadTokens !== undefined ? { cacheReadTokens } : {}),
+    ...(cacheCreationTokens !== undefined ? { cacheCreationTokens } : {}),
+  };
+}
+
 /**
  * Map Claude's terminal reason onto CodeShell's.
  *
@@ -56,6 +87,13 @@ export class ClaudeEventTranslator {
   private terminal = false;
   /** Accumulates `input_json_delta` per tool block so args land as one object. */
   private readonly toolInput = new Map<string, { name: string; json: string }>();
+  /**
+   * Prompt usage of the latest top-level model request in this turn. The
+   * terminal `result.usage` sums every request of the process, which is right
+   * for accounting but overstates the context N-fold (each request re-reads the
+   * cache), so the context anchor comes from here.
+   */
+  private lastRequestUsage?: NormalisedUsage;
 
   constructor(private readonly options: ClaudeEventTranslatorOptions) {
     this.codeshellServer = options.codeshellServerName ?? "codeshell_tools";
@@ -65,6 +103,7 @@ export class ClaudeEventTranslator {
   beginTurn(): void {
     this.terminal = false;
     this.toolInput.clear();
+    this.lastRequestUsage = undefined;
   }
 
   /** Claude session id, learned from the `system/init` line. */
@@ -115,6 +154,12 @@ export class ClaudeEventTranslator {
     if (!event || !type) return [];
 
     if (type === "message_start") {
+      // A sub-agent's request (Task tool) carries its parent tool id; its prompt
+      // is not this conversation's context.
+      if (message.parent_tool_use_id == null) {
+        const usage = normaliseUsage(asRecord(asRecord(event.message)?.usage));
+        if (usage) this.lastRequestUsage = usage;
+      }
       this.turnNumber += 1;
       return [{ type: "stream_request_start", turnNumber: this.turnNumber }];
     }
@@ -138,6 +183,12 @@ export class ClaudeEventTranslator {
       if (deltaType === "text_delta") {
         const text = str(delta?.text);
         return text ? [{ type: "text_delta", text }] : [];
+      }
+      if (deltaType === "thinking_delta") {
+        // Same event the native engine emits for extended thinking. The
+        // accompanying `signature_delta` is an opaque integrity token, not text.
+        const text = str(delta?.thinking);
+        return text ? [{ type: "thinking_delta", text }] : [];
       }
       if (deltaType === "input_json_delta") {
         // Arguments stream as JSON fragments; buffer and emit once complete.
@@ -223,21 +274,33 @@ export class ClaudeEventTranslator {
     this.terminal = true;
     const events: StreamEvent[] = [];
     const usage = asRecord(message.usage);
-    const number = (value: unknown): number | undefined =>
-      typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
-    const promptTokens = number(usage?.input_tokens);
-    if (promptTokens !== undefined) {
-      const completionTokens = number(usage?.output_tokens);
-      const cacheReadTokens = number(usage?.cache_read_input_tokens);
-      const cacheCreationTokens = number(usage?.cache_creation_input_tokens);
+    const total = normaliseUsage(usage);
+    if (total) {
+      // `promptTokens`/`cache*` describe the latest request (the context, as in
+      // the native stream); `singleTurn*` carry this submission's aggregate, which
+      // is what accounting adds up. Without a per-request reading the aggregate is
+      // the best available context estimate.
+      const latest = this.lastRequestUsage ?? total;
+      const completionTokens = count(usage?.output_tokens);
       events.push({
         type: "usage_update",
-        promptTokens,
+        promptTokens: latest.promptTokens,
+        singleTurnPromptTokens: total.promptTokens,
         promptTokensSource: "provider_usage",
         promptTokensConfidence: "high",
         ...(completionTokens !== undefined ? { completionTokens } : {}),
-        ...(cacheReadTokens !== undefined ? { cacheReadTokens } : {}),
-        ...(cacheCreationTokens !== undefined ? { cacheCreationTokens } : {}),
+        ...(latest.cacheReadTokens !== undefined
+          ? { cacheReadTokens: latest.cacheReadTokens }
+          : {}),
+        ...(total.cacheReadTokens !== undefined
+          ? { singleTurnCacheReadTokens: total.cacheReadTokens }
+          : {}),
+        ...(latest.cacheCreationTokens !== undefined
+          ? { cacheCreationTokens: latest.cacheCreationTokens }
+          : {}),
+        ...(total.cacheCreationTokens !== undefined
+          ? { singleTurnCacheCreationTokens: total.cacheCreationTokens }
+          : {}),
       });
     }
     const reason = terminalReasonFor(str(message.subtype), message.is_error === true);

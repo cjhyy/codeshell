@@ -35,6 +35,14 @@ import {
 import { SessionContextStore } from "./shared/session-context-store.js";
 import { CodexRuntime, type CodexRuntimeHooks, type CodexRuntimeOptions } from "./codex/runtime.js";
 import { ClaudeCodeRuntime, type ClaudeRuntimeHooks } from "./claude-code/runtime.js";
+import { CLAUDE_MCP_SERVER_NAME } from "./claude-code/mcp-config.js";
+import {
+  CLAUDE_PERMISSION_PROMPT_TOOL,
+  claudeModeUsesPermissionPrompt,
+  claudePermissionModeFor,
+  withClaudePermissionPrompt,
+  type ClaudePermissionMode,
+} from "./claude-code/permissions.js";
 import type { ExternalRuntimeTurnInput } from "./turn-input.js";
 
 export type ExternalRuntimeKind = "codex" | "claude-code";
@@ -100,6 +108,14 @@ export interface ExternalRuntimeSessionOptions {
   approvalPolicy?: string;
   /** Claude Code only: extra CLI args. */
   claudeExtraArgs?: readonly string[];
+  /**
+   * Claude Code only: `--permission-mode` for its native tools. Defaults to
+   * `claudePermissionModeFor({ permissionMode, planMode })`. A host whose
+   * user-facing selection differs from the host-tool `permissionMode` it passes
+   * (Desktop maps full access to `acceptEdits` for host tools) passes it
+   * explicitly.
+   */
+  claudePermissionMode?: ClaudePermissionMode;
   /**
    * Override how the runtime process is launched (Codex: app-server client
    * options; Claude: the `claude` binary). Exists so the assembly can be tested
@@ -197,9 +213,30 @@ export async function startExternalRuntimeSession(
       // native hooks (Codex/Claude config) are separate and unaffected.
     });
 
+    // Claude's NATIVE tools: an explicit mode always, and — only where the mode
+    // asks and the host can answer — a prompt tool on this session's bridge.
+    const claudePermissionMode =
+      options.claudePermissionMode ??
+      claudePermissionModeFor({
+        permissionMode: options.permissionMode,
+        planMode: options.planMode,
+      });
+    const onClaudePermissionPrompt = options.hooks?.onClaudePermissionPrompt;
+    const claudePromptTool =
+      options.kind === "claude-code" &&
+      onClaudePermissionPrompt &&
+      claudeModeUsesPermissionPrompt(claudePermissionMode)
+        ? CLAUDE_PERMISSION_PROMPT_TOOL
+        : undefined;
+
     // 3. Register before the runtime starts, so a tool call on the very first
     //    turn is already routable (§13.1).
-    store.register(pinnedThreadId, host);
+    store.register(
+      pinnedThreadId,
+      claudePromptTool && onClaudePermissionPrompt
+        ? withClaudePermissionPrompt(host, onClaudePermissionPrompt, CLAUDE_MCP_SERVER_NAME)
+        : host,
+    );
 
     // 4. Runtime.
     const exposedToolNames = host.listTools().map((definition) => definition.name);
@@ -240,6 +277,11 @@ export async function startExternalRuntimeSession(
             ? { resumeRuntimeSessionId: options.resumeRuntimeSessionId }
             : {}),
           ...(options.initialContext ? { initialContext: options.initialContext } : {}),
+          ...(options.developerInstructions
+            ? { developerInstructions: options.developerInstructions }
+            : {}),
+          permissionMode: claudePermissionMode,
+          ...(claudePromptTool ? { permissionPromptTool: claudePromptTool } : {}),
           ...(options.claudeExtraArgs ? { extraArgs: options.claudeExtraArgs } : {}),
           ...(options.claudeCommand ? { command: options.claudeCommand } : {}),
           log,

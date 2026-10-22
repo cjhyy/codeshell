@@ -75,9 +75,24 @@ export interface ClaudeMcpConfigFile {
  * files", it was "avoid mutating persistent user config".
  */
 export function writeClaudeMcpConfigFile(options: ClaudeMcpConfigOptions): ClaudeMcpConfigFile {
-  const dir = mkdtempSync(join(tmpdir(), "codeshell-mcp-"));
-  const path = join(dir, "mcp-config.json");
-  writeFileSync(path, buildClaudeMcpConfig(options), { mode: 0o600 });
+  return writePrivateTempFile("codeshell-mcp-", "mcp-config.json", buildClaudeMcpConfig(options));
+}
+
+/**
+ * Write per-invocation host guidance for `--append-system-prompt-file`.
+ *
+ * A file rather than `--append-system-prompt <text>`: the guidance includes the
+ * renderer's session brief and related-session list, and argv is readable by
+ * every local user (see {@link buildClaudeMcpConfig}).
+ */
+export function writeClaudeSystemPromptFile(text: string): ClaudeMcpConfigFile {
+  return writePrivateTempFile("codeshell-claude-prompt-", "append-system-prompt.md", text);
+}
+
+function writePrivateTempFile(prefix: string, name: string, content: string): ClaudeMcpConfigFile {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  const path = join(dir, name);
+  writeFileSync(path, content, { mode: 0o600 });
   // Set explicitly as well: writeFileSync's mode is subject to umask.
   chmodSync(path, 0o600);
   return {

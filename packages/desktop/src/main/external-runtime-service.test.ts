@@ -1160,6 +1160,20 @@ describe("ExternalRuntimeService", () => {
     expect(starts[0]!.developerInstructions).toContain("never launch codex exec");
   });
 
+  test("Claude Code gets guidance naming its own runtime and CLI (E07)", async () => {
+    // The guidance is no longer Codex-only: Claude now receives it as an appended
+    // system prompt, so it must not tell Claude it is a Codex runtime.
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start({ ...request, kind: "claude-code", developerInstructions: "renderer ctx" });
+    const text = starts[0]!.developerInstructions as string;
+    expect(text).toContain('DriveAgent with cli="claude"');
+    expect(text).toContain("this Claude Code runtime");
+    expect(text).not.toContain("Codex runtime");
+    expect(text).not.toContain("in-app-browser plugin");
+    expect(text).toContain("never launch codex exec");
+    expect(text.endsWith("renderer ctx")).toBe(true);
+  });
+
   test("dontAsk disables approval prompts but preserves user questions", async () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true }, async () => ({
       approved: true,
@@ -1190,6 +1204,78 @@ describe("ExternalRuntimeService", () => {
       expect(starts[0]!.pathAccess).toBe(pathAccess);
     },
   );
+
+  test.each([
+    { permissionMode: "default", planMode: false, claudeMode: "default" },
+    { permissionMode: "acceptEdits", planMode: false, claudeMode: "acceptEdits" },
+    { permissionMode: "bypassPermissions", planMode: false, claudeMode: "bypassPermissions" },
+    { permissionMode: "dontAsk", planMode: false, claudeMode: "dontAsk" },
+    { permissionMode: "auto", planMode: false, claudeMode: "default" },
+    { permissionMode: "default", planMode: true, claudeMode: "plan" },
+    { permissionMode: "bypassPermissions", planMode: true, claudeMode: "plan" },
+  ] as const)(
+    "maps $permissionMode (plan=$planMode) to Claude's native $claudeMode mode (E08)",
+    async ({ permissionMode, planMode, claudeMode }) => {
+      const svc = service({ external_agent_runtime: true, external_host_tools: true });
+      await svc.start({ ...request, kind: "claude-code", permissionMode, planMode });
+      expect(starts[0]!.claudePermissionMode).toBe(claudeMode);
+    },
+  );
+
+  test("Codex sessions carry no Claude permission mode", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    expect(starts[0]!.claudePermissionMode).toBeUndefined();
+  });
+
+  test("Claude's native permission prompts use the session's approval UI (E08)", async () => {
+    const approvalRequests: Array<Record<string, unknown>> = [];
+    const svc = service(
+      { external_agent_runtime: true, external_host_tools: true },
+      async (_sessionId, approvalRequest) => {
+        approvalRequests.push(approvalRequest);
+        return { approved: false, reason: "user said no" };
+      },
+    );
+    await svc.start({ ...request, kind: "claude-code" });
+    const hooks = starts[0]!.hooks as {
+      onClaudePermissionPrompt?: (request: {
+        toolName: string;
+        input: Record<string, unknown>;
+      }) => Promise<{ approved: boolean; reason?: string }>;
+    };
+    expect(hooks.onClaudePermissionPrompt).toBeFunction();
+    expect(
+      await hooks.onClaudePermissionPrompt!({
+        toolName: "Bash",
+        input: { command: "rm -rf build" },
+      }),
+    ).toEqual({ approved: false, reason: "user said no" });
+    expect(approvalRequests).toEqual([
+      {
+        toolName: "Claude Code Bash",
+        args: { command: "rm -rf build" },
+        description: "Claude Code wants to use its native Bash tool.",
+        riskLevel: "high",
+      },
+    ]);
+
+    // After the session closes, nothing more is asked and the prompt fails closed.
+    await svc.stop(request.sessionId);
+    expect(
+      await hooks.onClaudePermissionPrompt!({ toolName: "Bash", input: { command: "ls" } }),
+    ).toMatchObject({ approved: false });
+    expect(approvalRequests).toHaveLength(1);
+  });
+
+  test("dontAsk gives Claude no permission prompt hook", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, async () => ({
+      approved: true,
+    }));
+    await svc.start({ ...request, kind: "claude-code", permissionMode: "dontAsk" });
+    const hooks = starts[0]!.hooks as Record<string, unknown>;
+    expect(hooks.onClaudePermissionPrompt).toBeUndefined();
+  });
 
   test.each(["default", "acceptEdits", "bypassPermissions"] as const)(
     "%s propagates the selected file access to host tool execution",

@@ -17,7 +17,10 @@
  *     so it resolves the real value rather than letting a default decide.
  */
 import type { BrowserWindow } from "electron";
-import { startExternalRuntimeSession } from "@cjhyy/code-shell-capability-coding/external-runtimes";
+import {
+  claudePermissionModeFor,
+  startExternalRuntimeSession,
+} from "@cjhyy/code-shell-capability-coding/external-runtimes";
 import type {
   ExternalRuntimeTurnInput,
   ExternalRuntimeKind,
@@ -756,6 +759,13 @@ export class ExternalRuntimeService {
         : "workspace-write";
     const approvalPolicy =
       fullAccess || request.permissionMode === "dontAsk" ? "never" : "on-request";
+    // Claude Code's NATIVE tools follow the user's selection directly; host tools
+    // keep hostPermissionMode above. Plan → plan, full access → bypassPermissions,
+    // and nothing else escalates.
+    const claudePermissionMode = claudePermissionModeFor({
+      permissionMode: request.permissionMode,
+      planMode: request.planMode === true,
+    });
     const toolApprovalBackend = fullAccess
       ? { requestApproval: async () => ({ approved: true }) }
       : request.permissionMode !== "dontAsk" && this.deps.requestApproval
@@ -764,14 +774,20 @@ export class ExternalRuntimeService {
               this.deps.requestApproval!(request.sessionId, approvalRequest),
           }
         : undefined;
+    // The same guidance reaches both runtimes (Codex as developer instructions,
+    // Claude Code as an appended system prompt), so name the one actually running.
+    const runtimeLabel = request.kind === "codex" ? "Codex" : "Claude Code";
+    const sameCli = request.kind === "codex" ? "codex" : "claude";
+    const otherRuntime = request.kind === "codex" ? "Claude" : "Codex";
     const developerInstructions = [
       "You are running as an Agent Runtime inside CodeShell. Prefer the " +
         "mcp__codeshell_tools__* host tools for CodeShell panels, browser state, " +
         "credentials, memory, skills, and DriveAgent delegation. It is supported " +
-        "and often useful for this Codex runtime to delegate a bounded independent " +
-        'coding task through DriveAgent with cli="codex"; that launches a fresh ' +
-        "Codex worker rather than asking CodeShell's native Agent to redo the work. " +
-        'From a Codex runtime, use cli="codex" by default and choose Claude only ' +
+        `and often useful for this ${runtimeLabel} runtime to delegate a bounded independent ` +
+        `coding task through DriveAgent with cli="${sameCli}"; that launches a fresh ` +
+        `${runtimeLabel} worker rather than asking CodeShell's native Agent to redo the work. ` +
+        `From a ${runtimeLabel} runtime, use cli="${sameCli}" by default and choose ` +
+        `${otherRuntime} only ` +
         "when the user explicitly asks for it. For delegated tasks that require " +
         'edits, pass permissionMode="acceptEdits" when the current CodeShell ' +
         "permission allows edits; never request bypassPermissions unless the user " +
@@ -779,7 +795,10 @@ export class ExternalRuntimeService {
         "Give that worker a self-contained prompt because it does not inherit this " +
         "runtime's conversation or host bridge. Default to one worker and use more " +
         "only for truly independent workstreams. Do not use the " +
-        "Codex desktop in-app-browser plugin: this host provides browser_navigate, " +
+        (request.kind === "codex"
+          ? "Codex desktop in-app-browser plugin"
+          : "a browser of your own (extension or MCP server)") +
+        ": this host provides browser_navigate, " +
         "browser_observe, and browser_act with the owning CodeShell session. Never " +
         "claim that a sub-agent was dispatched unless DriveAgent returned success. " +
         "When DriveAgent returns a background jobId, do not poll it or duplicate its work " +
@@ -1050,6 +1069,7 @@ export class ExternalRuntimeService {
         developerInstructions,
         sandbox,
         approvalPolicy,
+        ...(request.kind === "claude-code" ? { claudePermissionMode } : {}),
         ...(toolApprovalBackend
           ? {
               approvalBackend: {
@@ -1102,6 +1122,28 @@ export class ExternalRuntimeService {
                     decision.approved
                     ? "accept"
                     : "decline";
+                },
+                onClaudePermissionPrompt: async (prompt) => {
+                  const revoked = {
+                    approved: false,
+                    reason: "External runtime authority was revoked",
+                  };
+                  if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
+                    return revoked;
+                  // A distinct name, so the card is not mistaken for (or remembered
+                  // as) CodeShell's own governed tool of the same name.
+                  const decision: { approved: boolean; reason?: string } =
+                    await toolApprovalBackend.requestApproval({
+                      toolName: `Claude Code ${prompt.toolName}`,
+                      args: prompt.input,
+                      description: `Claude Code wants to use its native ${prompt.toolName} tool.`,
+                      riskLevel: "high",
+                    });
+                  if (!lifecycle.active || !this.authorityStillCurrent(request.cwd, authority))
+                    return revoked;
+                  return decision.approved
+                    ? { approved: true }
+                    : { approved: false, ...(decision.reason ? { reason: decision.reason } : {}) };
                 },
               }
             : {}),
