@@ -1,4 +1,9 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { listRecentAttachments, stageImageBytes } from "@cjhyy/code-shell-server/storage";
+import { buildInputAttachmentContext } from "../../../../core/src/engine/input-attachments.js";
 import { PetWorkDelegationHost, petDelegationSessionId } from "./pet-work-delegation-host";
 
 function fakeBridge(
@@ -52,6 +57,143 @@ function fakeBridge(
 }
 
 describe("PetWorkDelegationHost", () => {
+  const roots: string[] = [];
+  afterEach(async () => {
+    await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+  });
+
+  async function stagedInput() {
+    const root = await realpath(await mkdtemp(join(tmpdir(), "pet-work-image-host-")));
+    roots.push(root);
+    const managerCwd = join(root, "no-repo");
+    const workCwd = join(root, "workspace");
+    await Promise.all([mkdir(managerCwd), mkdir(workCwd)]);
+    const image = await stageImageBytes({
+      cwd: managerCwd,
+      sessionId: "pet-manager",
+      name: "wechat.png",
+      mime: "image/png",
+      bytes: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+        "base64",
+      ),
+      origin: "im-gateway",
+    });
+    return {
+      image,
+      workCwd,
+      inputAttachments: { cwd: managerCwd, sessionId: "pet-manager", attachments: [image] },
+    };
+  }
+
+  test("sends target-owned images with the accepted Work run and retains them as sent", async () => {
+    const fixture = await stagedInput();
+    const fake = fakeBridge();
+    const host = new PetWorkDelegationHost({ bridge: fake.bridge, noWorkspaceCwd: "/unused" });
+    const launched = await host.start({
+      clientMessageId: "wechat:with-image",
+      task: `Diagnose the screenshot ${fixture.image.path}`,
+      workspacePath: fixture.workCwd,
+      inputAttachments: fixture.inputAttachments,
+    });
+    const params = JSON.parse(fake.lines[0]!).params;
+    expect(params.attachments).toHaveLength(1);
+    expect(params.attachments[0].sessionId).toBe(launched.sessionId);
+    expect(params.attachments[0].absPath).toStartWith(fixture.workCwd);
+    expect(params.task).toContain(params.attachments[0].absPath);
+    expect(fake.announcements).toEqual([expect.objectContaining({ prompt: params.task })]);
+    const sent = await listRecentAttachments({
+      cwd: fixture.workCwd,
+      sessionId: launched.sessionId,
+    });
+    expect(sent.map((image) => image.absPath)).toEqual([params.attachments[0].absPath]);
+  });
+
+  test.each([false, true])(
+    "fails a missing selected image before worker launch and preserves existing reservation=%s",
+    async (known) => {
+      const fixture = await stagedInput();
+      await rm(fixture.image.absPath);
+      const id = "wechat:missing-image";
+      const sessionId = petDelegationSessionId(id);
+      const fake = fakeBridge("accepted", known ? [sessionId] : []);
+      const host = new PetWorkDelegationHost({ bridge: fake.bridge, noWorkspaceCwd: "/unused" });
+      const request = {
+        clientMessageId: id,
+        task: `Read ${fixture.image.path}`,
+        workspacePath: fixture.workCwd,
+        inputAttachments: fixture.inputAttachments,
+      };
+      await expect(host.start(request)).rejects.toThrow();
+      expect(fake.lines).toEqual([]);
+      expect(fake.announcements).toEqual([]);
+      expect(fake.forgotten).toEqual(known ? [] : [sessionId]);
+      expect(fake.reserved).toEqual(known ? [] : [[sessionId, fixture.workCwd]]);
+    },
+  );
+
+  test("stages reused Session images in its actual worktree rather than the main project", async () => {
+    const fixture = await stagedInput();
+    const actualCwd = join(fixture.workCwd, "actual-worktree");
+    await mkdir(actualCwd);
+    const fake = fakeBridge("accepted", ["existing-work"]);
+    const resolved: string[] = [];
+    const host = new PetWorkDelegationHost({
+      bridge: fake.bridge,
+      noWorkspaceCwd: "/unused",
+      resolveSessionCwd: async (sessionId) => {
+        resolved.push(sessionId);
+        return actualCwd;
+      },
+    });
+    const launched = await host.start({
+      clientMessageId: "wechat:reuse-image",
+      targetSessionId: "existing-work",
+      task: `Read ${fixture.image.path}`,
+      workspacePath: fixture.workCwd,
+      inputAttachments: fixture.inputAttachments,
+    });
+    expect(resolved).toEqual(["existing-work"]);
+    expect(launched.cwd).toBe(actualCwd);
+    const params = JSON.parse(fake.lines[0]!).params;
+    expect(params.cwd).toBe(actualCwd);
+    expect(params.attachments[0].absPath).toStartWith(
+      join(actualCwd, ".code-shell", "attachments", "existing-work"),
+    );
+    const context = await buildInputAttachmentContext(params.attachments, actualCwd, {
+      expectedSessionId: "existing-work",
+    });
+    expect(context.errors).toEqual([]);
+    expect(context.images).toHaveLength(1);
+    expect(fake.reserved).toEqual([]);
+    expect(fake.forgotten).toEqual([]);
+  });
+
+  test("refuses reused Session images when its actual directory cannot be resolved", async () => {
+    const fixture = await stagedInput();
+    for (const resolveSessionCwd of [undefined, async () => undefined]) {
+      const fake = fakeBridge("accepted", ["existing-work"]);
+      const host = new PetWorkDelegationHost({
+        bridge: fake.bridge,
+        noWorkspaceCwd: "/unused",
+        resolveSessionCwd,
+      });
+      await expect(
+        host.start({
+          clientMessageId: "wechat:unknown-worktree",
+          targetSessionId: "existing-work",
+          task: `Read ${fixture.image.path}`,
+          workspacePath: fixture.workCwd,
+          inputAttachments: fixture.inputAttachments,
+        }),
+      ).rejects.toThrow("existing Work Session directory is unavailable");
+      expect(fake.lines).toEqual([]);
+      expect(fake.reserved).toEqual([]);
+      expect(fake.forgotten).toEqual([]);
+      expect(fake.announcements).toEqual([]);
+    }
+  });
+
   test("automatic Goal continuation inherits its version without submitting a new Goal", async () => {
     const fake = fakeBridge("accepted", ["existing"]);
     const host = new PetWorkDelegationHost({ bridge: fake.bridge, noWorkspaceCwd: "/safe" });

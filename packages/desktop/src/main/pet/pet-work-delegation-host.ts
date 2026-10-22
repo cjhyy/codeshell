@@ -1,8 +1,11 @@
 import { createHash } from "node:crypto";
+import { isAbsolute } from "node:path";
 import {
   injectMobileRunAndAwaitAcceptance,
   type MobileRunBridge,
 } from "@cjhyy/code-shell-server/mobile-remote";
+import { markAttachmentsSent } from "@cjhyy/code-shell-server/storage";
+import { preparePetDelegationAttachments } from "./pet-delegation-attachments.js";
 import type { PetAutoDelegation } from "./pet-dispatch-service.js";
 
 export interface PetWorkDelegationLaunch {
@@ -51,6 +54,8 @@ export class PetWorkDelegationHost {
     private readonly options: {
       bridge: PetWorkDelegationBridge;
       noWorkspaceCwd: string;
+      /** Persisted effective workspace of an existing Session, supplied by the Host. */
+      resolveSessionCwd?: (sessionId: string) => Promise<string | undefined>;
     },
   ) {}
 
@@ -77,7 +82,18 @@ export class PetWorkDelegationHost {
     }
     const sessionId =
       delegation.targetSessionId ?? petDelegationSessionId(delegation.clientMessageId);
-    const cwd = delegation.workspacePath ?? this.options.noWorkspaceCwd;
+    let cwd = delegation.workspacePath ?? this.options.noWorkspaceCwd;
+    if (delegation.targetSessionId && delegation.inputAttachments) {
+      // Core resumes an existing Session in its persisted workspace. A main
+      // project selector is insufficient when that Session uses a worktree.
+      const existingCwd = await this.options.resolveSessionCwd?.(sessionId);
+      if (!existingCwd || !isAbsolute(existingCwd)) {
+        throw new Error(
+          "Mimi image handoff failed: the existing Work Session directory is unavailable",
+        );
+      }
+      cwd = existingCwd;
+    }
     const runId = `pet-delegation-run-${delegationKey(delegation.clientMessageId)}`;
     const workClientMessageId = petDelegationClientMessageId(delegation.clientMessageId);
     const wasKnownToHost = this.options.bridge.hasKnownSession(sessionId);
@@ -87,42 +103,55 @@ export class PetWorkDelegationHost {
     // (credentials, browser partition) — especially if the reuse run is then
     // rejected and the entry is intentionally kept.
     if (!wasKnownToHost) this.options.bridge.reserveHostSession(sessionId, cwd);
-    const acceptance = await injectMobileRunAndAwaitAcceptance(
-      this.options.bridge,
-      {
-        id: runId,
-        params: {
-          task: delegation.task,
-          sessionId,
-          cwd,
-          clientMessageId: workClientMessageId,
-          // Delegation does not grant Mimi authority to bypass the user's normal
-          // permission and sensitive-path boundaries. A run that needs approval
-          // remains visible as waiting instead of silently receiving full access.
-          permissionMode: "default",
-          // Goal is opt-in. Ordinary Work Sessions can still use tools, span many
-          // model/tool steps, and resume from async notifications; forcing every
-          // loosely-worded delegation into persistent Goal mode caused ambiguous
-          // objectives to keep re-driving instead of returning a useful result.
-          ...(delegation.goalContinuation
-            ? { goalContinuation: delegation.goalContinuation }
-            : delegation.goalObjective
-              ? { goal: delegation.goalObjective }
-              : {}),
-          ...(delegation.targetSessionId ? { requireExisting: true } : {}),
+    let prepared: Awaited<ReturnType<typeof preparePetDelegationAttachments>>;
+    try {
+      prepared = await preparePetDelegationAttachments({
+        task: delegation.task,
+        cwd,
+        sessionId,
+        inputAttachments: delegation.inputAttachments,
+      });
+      const acceptance = await injectMobileRunAndAwaitAcceptance(
+        this.options.bridge,
+        {
+          id: runId,
+          params: {
+            task: prepared.task,
+            sessionId,
+            cwd,
+            clientMessageId: workClientMessageId,
+            ...(prepared.attachments.length > 0 ? { attachments: prepared.attachments } : {}),
+            // Delegation does not grant Mimi authority to bypass the user's normal
+            // permission and sensitive-path boundaries. A run that needs approval
+            // remains visible as waiting instead of silently receiving full access.
+            permissionMode: "default",
+            // Goal is opt-in. Ordinary Work Sessions can still use tools, span many
+            // model/tool steps, and resume from async notifications; forcing every
+            // loosely-worded delegation into persistent Goal mode caused ambiguous
+            // objectives to keep re-driving instead of returning a useful result.
+            ...(delegation.goalContinuation
+              ? { goalContinuation: delegation.goalContinuation }
+              : delegation.goalObjective
+                ? { goal: delegation.goalObjective }
+                : {}),
+            ...(delegation.targetSessionId ? { requireExisting: true } : {}),
+          },
         },
-      },
-      { origin: "host", producer: "pet-work-delegation" },
-    );
-    if (!acceptance.ok) {
+        { origin: "host", producer: "pet-work-delegation" },
+      );
+      if (!acceptance.ok) throw new Error(acceptance.message);
+    } catch (error) {
       if (!wasKnownToHost) this.options.bridge.forgetSession(sessionId);
-      throw new Error(acceptance.message);
+      throw error;
     }
+    // Acceptance owns the run now. A retention-write failure must not turn an
+    // accepted launch into a retry that could execute the same task twice.
+    await markAttachmentsSent(cwd, sessionId, prepared.attachments).catch(() => undefined);
     this.options.bridge.broadcastPetDelegationSession({
       sessionId,
       cwd,
       title: delegationTitle(delegation.task),
-      prompt: delegation.task,
+      prompt: prepared.task,
       clientMessageId: workClientMessageId,
     });
     return { sessionId, cwd };
