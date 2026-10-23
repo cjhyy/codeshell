@@ -140,7 +140,11 @@ export async function openBrowserHost(opts: BrowserHostOpenOptions): Promise<Bro
   // 真正的加载失败由 did-fail-load(onFailLoad)上报。
   await win.loadURL(opts.url).catch((e: unknown) => {
     const msg = String((e as { message?: unknown })?.message ?? e);
-    if (!/ERR_ABORTED|-3\b/.test(msg)) throw e;
+    if (!/ERR_ABORTED|-3\b/.test(msg)) {
+      // No handle is returned on failure, so the caller cannot close our window.
+      if (!win.isDestroyed()) win.destroy();
+      throw e;
+    }
   });
 
   const sess = session.fromPartition(opts.partition);
