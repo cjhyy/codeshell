@@ -1,9 +1,9 @@
 # 2026-10-26 审计前三节修复交付
 
-状态：原 CC 第二轮验收 **PASS**；I1/I2 修复与 M1–M3 已接受，准备按用户授权集成本轮实施范围。分支
+状态：原 CC 第二轮验收 **PASS**；I1/I2 修复与 M1–M3 已接受，本轮源码已按授权集成本地 main；未远端合并或发行。任务分支
 `codex/core/recovery-windows-audit-20261026`，基线 `2661eb04d`（当前 origin/main）。
 发行审计基线为 v0.9.46 / `c7f108ee4`；不能把本轮修复算进已发行包。
-本轮实施范围已获用户合并授权；集成进度与最终验证见文末。本轮不发版、不改 workflow、不做生产操作；secondary 两仓只读。
+本轮实施范围已获用户合并授权并完成本地代码集成；最终组合验证与远端边界见文末。本轮不发版、不改 workflow、不做生产操作；secondary 两仓只读。
 未触碰真实 Keychain、secrets、旧 HOME、生产迁移或付费实验。
 
 ## 历史恢复实现与方案差异
@@ -286,7 +286,7 @@ packaged-pet-fixture、packaged-startup-observation 及两个 Node 合同文件�
 M1 保留并说明，M2/M3 已在文档收尾。未关闭项目、原失败记录与本地范围限制不变。
 
 第二轮提交前的历史 `git diff --stat`（当时25个已跟踪文件，两个新增文件不在该命令统计内；
-正式任务提交将包含全部27个路径）：
+任务提交 `50e93ac71` 实际包含全部27个路径）：
 
 ```text
  TODO.md                                            |  26 ++-
@@ -320,14 +320,73 @@ M1 保留并说明，M2/M3 已在文档收尾。未关闭项目、原失败记�
 
 ## 用户授权后的集成记录
 
-用户已授权合并通过验收的本轮实施范围，不发版。2026-10-26 重新 fetch 后
-origin/main 仍为 `2661eb04da4266c532464bc8bd9223aeba0d9caa`；GitHub main protected=false。
-本地 main 干净，头为 `29a96c1de`，其独立前置提交 `54afce1fe`（credentials）与
-`29a96c1de`（cc-room）均不在远端；两提交路径与本任务27个路径无交集。
-任务提交后将在任务分支正常吸收本地主线，再串行验证最终组合；如保持无实质冲突，
-仅快进本地 main。由于正常远端推送会附带上述未授权独立提交，本轮不推送它们，
-也不为绕过此边界额外创建 PR。没有改写任何已有提交。
+用户授权合并通过验收的本轮实施范围，不发版；不将本次合并称为审计前三节全部清零。
+原 CC 二轮 PASS session 为 `3e34f601-e67b-4de4-a43f-eba9cf0283f3`，独立554/0/0及
+追加/篡改独立4/0保留其已审输入。以下为吸收本地主线后的最终组合验证。
 
-本地合并与最终组合验证结果将在交付收尾更新。当前工作目录仍有运行中的外部 resume
-进程，完成合并后保留 worktree/任务分支，由主代理确认无使用后清理；交接正文使用仓库
-`docs/todo/recovery-windows-audit-20261026.md` 路径，不依赖该临时目录。
+- 任务提交：`50e93ac7171dc8af7727c3362b966d4ae5d16299`，只包含本任务27个路径。
+- 正常 merge 节点：`0920af53d0c8ba8f6e15a83b1a8d5865b9fff444`，吸收本地主线
+  `29a96c1de28fbdb754fca39e5254cd1c218edcd8`，没有冲突、没有改写任何已有提交。
+  两个独立提交 `54afce1fe`（credentials）与 `29a96c1de`（cc-room）原样保留为祖先。
+  两提交路径与任务27路径无交集；CC已审任务路径在组合树中逐文件不变。
+- 主仓 main 在干净且仍为预期 `29a96c1de` 时执行 `git merge --ff-only`，已快进至
+  上述代码集成节点。本文收尾只更新交付状态与证据，不改变已验证源码。
+- 重新 fetch 两次，origin/main 均为 `2661eb04da4266c532464bc8bd9223aeba0d9caa`。
+  GitHub main protected=false，普通CI仅在main push/PR等既定事件运行，原生验收另行触发。
+  两个独立本地提交均不在 origin/main；正常推送组合头会把它们一起发布，因此按用户
+  边界仅完成本地合并，**未推送任何分支、未创建PR、未远端合并**。未触发CI、发版或生产部署。
+
+### 最终组合验证
+
+对代码节点 `0920af53d` 串行完成依赖同步、原四组554项、两个独立提交相关回归、
+build/typecheck/lint/源文件格式与diff检查；没有与其他dist读写检查并发。
+`bun install --frozen-lockfile` exit 0，锁文件保持合入版本，没有额外依赖改动。
+
+| 检查 | 结果 | 日志 |
+| --- | --- | --- |
+| Core 五文件 | 105 pass / 0 fail / 0 skipped | `/tmp/recovery-merge-core.log` |
+| bun run build | exit 0 | `/tmp/recovery-merge-build.log` |
+| 消费者九文件 | 134 pass / 0 fail / 0 skipped | `/tmp/recovery-merge-consumers.log` |
+| Node 十八文件 | 252 pass / 0 fail / 0 skipped | `/tmp/recovery-merge-node.log` |
+| packaged Bun 九文件 | 63 pass / 0 fail / 0 skipped | `/tmp/recovery-merge-packaged-bun.log` |
+| Cookie 域/持久 jar/Server 三文件 | 26 pass / 0 fail / 0 skipped | `/tmp/recovery-merge-cookie.log` |
+| Desktop browser-host（独立 shard） | 7 pass / 0 fail / 0 skipped | `/tmp/recovery-merge-browser-host.log` |
+| Desktop credentials-login（独立 shard） | 25 pass / 0 fail / 0 skipped | `/tmp/recovery-merge-credentials-login.log` |
+| linked-session/worktree/RoomManager 五文件 | 86 pass / 0 fail / 0 skipped | `/tmp/recovery-merge-cc-room.log` |
+| bun run typecheck（含完整build和14 workspace） | exit 0 | `/tmp/recovery-merge-typecheck.log` |
+| bun run lint | exit 0，0 errors / 99 warnings | `/tmp/recovery-merge-lint.log` |
+| 20个任务源文件 Prettier | exit 0 | `/tmp/recovery-merge-prettier.log` |
+| git diff --check origin/main..HEAD | exit 0 | `/tmp/recovery-merge-diff-check.log` |
+
+八个 guarded 单测命令合计 **698 pass / 0 fail / 0 skipped**：原四组554 + 新增144。
+这些是源码及隔离夹具组合验证，不关闭 Windows 原生/正式包、mobile 大旧基线或业务决策。
+最终命令（全部顺序执行；普通单测经隔离 HOME runner）：
+
+```sh
+bun install --frozen-lockfile
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/core/src/session/output-journal.test.ts ./packages/core/src/session/output-journal-identity-migration.test.ts ./packages/core/src/session/output-journal-persistent-identity.test.ts ./packages/core/src/session/output-journal-storage.test.ts ./packages/core/src/session/output-journal-legacy-base.test.ts
+bun run build
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/desktop/src/main/session-transcript-ipc.test.ts ./packages/desktop/src/main/external-runtime-state.test.ts ./packages/desktop/src/main/mobile-remote/output-recovery.test.ts ./packages/desktop/src/main/output-journal-recovery.test.ts ./packages/desktop/src/renderer/app/useTranscriptBuckets.test.tsx ./packages/server/src/serve/headless-server.test.ts ./packages/web/src/lib/outputJournalRecovery.test.ts ./packages/web/src/hooks/mobileOutputClient.test.ts ./packages/web/app/chat.test.ts
+node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/electron-test-watchdog.test.mjs packages/desktop/scripts/electron-test-process-snapshot.test.mjs packages/desktop/scripts/windows-source-harness.test.mjs packages/desktop/scripts/electron-harness.test.mjs packages/desktop/scripts/nsis-initial-identity-observation.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/e2e-startup-operation-cycles.test.mjs packages/desktop/scripts/process-custody.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs packages/desktop/scripts/windows-nsis-process-roles.test.mjs packages/desktop/scripts/panel-operation-diagnostics.test.mjs packages/desktop/scripts/macos-dmg-custody.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs packages/desktop/scripts/composer-operation-diagnostics.test.mjs packages/desktop/scripts/packaged-startup-observation.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/packaged-appimage-runtime.test.mjs
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/desktop/scripts/packaged-pet-shutdown.test.mjs ./packages/desktop/scripts/packaged-main-preload.test.mjs ./packages/desktop/scripts/packaged-chromium-guard.test.mjs ./packages/desktop/scripts/packaged-app-layout.test.mjs ./packages/desktop/scripts/packaged-linux-environment.test.mjs ./packages/desktop/scripts/packaged-process-exits.test.mjs ./packages/desktop/scripts/packaged-pet-bootstrap.test.mjs ./packages/desktop/scripts/packaged-app-integrity.test.mjs ./packages/desktop/scripts/run-packaged-ui-acceptance.test.mjs
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/core/src/credentials/cookie-domain.test.ts ./packages/core/src/credentials/cookie-jar.test.ts ./packages/server/src/panels/task-cookies.test.ts
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/desktop/src/main/browser-host/index.test.ts
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/desktop/src/main/credentials-login/index.test.ts
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/desktop/src/main/renderer-project-path.test.ts ./packages/desktop/src/main/cc-room/linked-session-resolver.test.ts ./packages/desktop/src/main/cc-room/linked-session-ipc.test.ts ./packages/desktop/src/main/cc-room/transcript-subscriptions.test.ts ./packages/server/src/mobile-remote/room-manager.test.ts
+bun run typecheck
+bun run lint
+bunx prettier --check packages/core/src/session/output-journal.ts packages/core/src/session/output-journal-legacy-base.test.ts packages/desktop/scripts/e2e-ui-packaged.mjs packages/desktop/scripts/electron-harness.mjs packages/desktop/scripts/electron-test-process-snapshot.mjs packages/desktop/scripts/electron-test-process-snapshot.test.mjs packages/desktop/scripts/electron-test-watchdog.mjs packages/desktop/scripts/electron-test-watchdog.test.mjs packages/desktop/scripts/packaged-pet-fixture.mjs packages/desktop/scripts/packaged-startup-observation.mjs packages/desktop/scripts/packaged-startup-observation.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs packages/desktop/scripts/windows-source-harness.test.mjs packages/desktop/src/main/external-runtime-state.test.ts packages/desktop/src/main/mobile-remote/output-recovery.test.ts packages/desktop/src/main/mobile-remote/output-recovery.ts packages/desktop/src/main/output-journal-recovery.test.ts packages/desktop/src/renderer/app/outputJournalRecovery.ts packages/server/src/serve/headless-server.test.ts packages/web/app/chat.test.ts
+git diff --check origin/main..HEAD
+```
+
+### 保留与后续清理
+
+主仓与任务 worktree 的源码/文档提交均保持 clean。工作目录有外部 resume 进程仍在使用，
+因此暂留 `codeshell/.worktrees/recovery-windows-audit-20261026` 与
+`codex/core/recovery-windows-audit-20261026`；由主代理确认无人使用后清理。
+交付记录在主仓 `docs/todo/recovery-windows-audit-20261026.md`，不依赖临时 worktree。
+
+NSIS A holder契约、`0xC0000005` dump定位、Windows真机、签名/公证/证书、跨版升级回滚、
+Linux services重跑、mobile大旧基线与真包冷重启仍未关闭。六Panel重新冻结、恢复演练目标、
+其他八家Link暂停、旧owner迁移、dream/portable memory归属审批、runtime新能力与lab预算
+继续保持原待决策边界；本次未修改这些生产行为。
