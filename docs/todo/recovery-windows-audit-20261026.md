@@ -394,7 +394,7 @@ Linux services重跑、mobile大旧基线与真包冷重启仍未关闭。六Pan
 ## 批次1来源交付历史：NSIS 卸载 holder（2026-10-26）
 
 当前补记：来源已获原 CC 二轮 PASS 196/0，已转入[组合候选](audit-integration-20261027.md)，
-待最终组合验收；以下未提交、BLOCKED 与待复验文字仅保存各来源阶段历史。
+已通过最终组合验收并合入本地 main；以下未提交、BLOCKED 与待复验文字仅保存各来源阶段历史。
 
 本节追加候选实施证据，不改写上轮已经合入及原 CC PASS 的历史事实。用户授权继续原审计
 前三节剩余项，流程固定为 **CC 方案 → Codex 隔离 TDD → 原 CC 验收**；本次只做第一批
@@ -598,5 +598,5 @@ git diff --check
 上文批 1 BLOCKED、C1 整改及待复验文字保留来源历史。用户交接确认原 CC 二轮已 PASS：
 **196 pass / 0 fail**。A 代码与两个新 holder 文件逐字节转入[2026-10-27 组合候选](audit-integration-20261027.md)，
 原 runner、normal assertion、卸载 catch、final-integrity 和 H11 保持不变。
-本轮去重组合回归与候选提交见该记录；待原 CC 最终组合验收，未合 main、未推送、
-未发布。Windows 真原生、M1/M2、真实卸载及首窗/dump 的未完成边界保持开放。
+本轮去重组合回归与候选提交见该记录；原 CC 最终组合验收已 PASS，已快进合入本地 main；
+未推送、未发布。Windows 真原生、M1/M2、真实卸载及首窗/dump 的未完成边界保持开放。

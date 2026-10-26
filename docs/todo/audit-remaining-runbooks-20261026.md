@@ -1,7 +1,7 @@
 # 原 CC 批 4：剩余验收 runbook 与决策清单
 
 2026-10-26；交回原 CC `3e34f601-e67b-4de4-a43f-eba9cf0283f3`。
-当前四批已转入[2026-10-27 组合候选](audit-integration-20261027.md)，待原 CC 最终组合验收；未合 main、未推送。
+当前四批[2026-10-27 组合](audit-integration-20261027.md)已获原 CC 最终组合验收 PASS，已快进合入本地 main；未推送、未发布。
 本批来源阶段只完成本地技术准备，保留以下历史事实；不批准版本选择、生产迁移、预算或解冻
 2026-10-09 的 Link 暂停。本文给出下一次执行所需输入、步骤、通过判据和失败回执，
 不是已经执行这些操作的记录。
@@ -19,7 +19,7 @@ memory 的本地集成；后者见[准确交付](external-runtime-memory-2026102
 | 1 NSIS holder | 独立 `codex/desktop/nsis-uninstall-holder-20261026`；原 CC PASS 196 | 来源未提交，代码已转入组合候选；不是 Windows 16 阶段或正式安装证据 |
 | 2 Mobile 大旧基线分页 | 独立 `codex/web/mobile-legacy-base-pages-20261026`；PASS 361 | 来源未提交，代码已转入组合候选；不是实体手机、真包冷启动证据 |
 | 3 首窗 probe / 本地 WER collector | 独立 `codex/desktop/windows-launch-diagnostics-20261026`；PASS 161 | 来源未提交，代码已转入组合候选；不是已有 dump 或 `0xC0000005` 定位结论 |
-| 4 本文 + Panel ZIP 工具 | Panel 基线 `84348855be8ae4e5a31936b3c2b0d1d21410bd64`，独立 `codex/panel-shared/verify-release-zip-20261026` | 来源只读技术核对；主仓仅文档；原 CC 二轮 PASS 52/0，当前组合待最终验收 |
+| 4 本文 + Panel ZIP 工具 | Panel 基线 `84348855be8ae4e5a31936b3c2b0d1d21410bd64`，独立 `codex/panel-shared/verify-release-zip-20261026` | 来源只读技术核对；主仓仅文档；原 CC 二轮 PASS 52/0，当前组合已获最终验收 PASS 并合入本地 main，未推送或发布 |
 
 表中独立 PASS 保留来源历史，不能相加作本轮组合结果。当前 Host 组合基线为
 `2035c0a30f51c37415814b340c364fee490e667f`，分支

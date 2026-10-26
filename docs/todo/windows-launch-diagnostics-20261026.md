@@ -1,6 +1,6 @@
 # Windows 启动诊断：批次 3 本地交接（2026-10-26）
 
-当前状态（2026-10-27）：来源批次已获原 CC **161 pass / 0 fail**，现已精确转入[2026-10-27 组合候选](audit-integration-20261027.md)，待原 CC session `3e34f601-e67b-4de4-a43f-eba9cf0283f3` 最终组合验收；未合 main、未推送。
+当前状态（2026-10-27）：来源批次已获原 CC **161 pass / 0 fail**，现已精确转入[2026-10-27 组合候选](audit-integration-20261027.md)，原 CC session `3e34f601-e67b-4de4-a43f-eba9cf0283f3` 最终组合验收已 PASS，已快进合入本地 main；未推送、未发布。
 以下独立 worktree、执行与安全回执均为来源阶段历史。此处 done 仅指一次有界首窗状态 probe
 和显式本地 dump 收集工具；Windows 首窗超时、`0xC0000005` 和原生验收仍未关闭。
 

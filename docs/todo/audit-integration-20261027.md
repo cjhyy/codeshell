@@ -1,8 +1,9 @@
 # 四批审计组合候选：2026-10-27
 
-当前阶段：完成组合、串行回归与任务提交后，停供原 CC session
-`3e34f601-e67b-4de4-a43f-eba9cf0283f3` 最终组合验收。本轮不合 main、不 push，
-不调用外部 CC 写手或远程验收；等待主代理 resume 才继续已授权的最终交付合并。
+当前状态（2026-10-27）：原 CC session `3e34f601-e67b-4de4-a43f-eba9cf0283f3`
+最终独立组合验收 PASS：Host 111 files、1628/0/0，Panel 完整 check 52/0/0、三 ZIP equal，
+无 Critical / Important。主代理已 resume；两仓受审候选已快进合入各 root 的本地 main。
+随后仅在任务分支补交付文档再快进 main，受审源码不变；未 push、发布或执行原生验收。
 
 ## 基线与候选
 
@@ -11,9 +12,11 @@
 | Host  | `2035c0a30f51c37415814b340c364fee490e667f` | `codex/core/audit-integration-20261027`，受测代码候选 `2d031febea54a138d7e14de4a778da3f38dcde26`  |
 | Panel | `d15a35bec1910c0a55be7b737a5343314635d4a2` | `codex/panel-shared/release-zip-integration-20261027`，`c6dbba4272a7e15de58c46a0624e774c17264aed` |
 
-本地已记录的 origin/main 仍分别为 `2661eb04da4266c532464bc8bd9223aeba0d9caa` /
-`84348855be8ae4e5a31936b3c2b0d1d21410bd64`。按本轮指定基线与停止边界未 fetch；
-这些是本地 ref 读数，不声称重新查询远端。当前本地 main 的其他独立任务保留，不搭车 push。
+候选冻结阶段按指定边界未 fetch；本轮 resume 已对两仓执行 `git fetch --no-tags origin`，
+origin/main 仍分别为 `2661eb04da4266c532464bc8bd9223aeba0d9caa` /
+`84348855be8ae4e5a31936b3c2b0d1d21410bd64`。合并前核对两个 root 均 clean、main 仍为指定基线，
+且 origin/main 是各基线祖先。基线各含 18 / 5 个远端尚无的本地提交，包含其他独立任务；
+全部保留，不搭车 push。
 
 ## 来源、原验收与转入方法
 
@@ -45,7 +48,7 @@ final-integrity→EOF 与 H11 整文件均与旧基线、main 三方逐字节一
 WMI→句柄的单向微秒 helper、原句柄 100ns 身份及全部原生未验边界原样保留。
 
 交付文档仅更新当前组合指向、来源历史 PASS 和精确 probe/collector usage；保留原
-BLOCKED→C1、软链假差异→独立依赖修复与各次红绿日志，不冒充已合 main/发布/真机验收。
+BLOCKED→C1、软链假差异→独立依赖修复与各次红绿日志，不外推为已发布或真机验收。
 
 ## 隔离、失败调查与最终串行回归
 
@@ -127,20 +130,53 @@ Design145文件，全部 equal / 0 differences，ZIP SHA-256 与来源一致，�
 `docs/acceptance/panel-release-zip-20261026.{md,evidence.json}` 的组合补记；本轮日志在该目标
 ignored `artifacts/release-zip-integration-20261027/`。旧8434885目录比较保留为历史测量。
 
-仍未完成：原 CC 最终组合验收、主代理 resume 后本地最终合并；Windows 真实 retained-handle /
+仍未完成：Windows 真实 retained-handle /
 NSIS16阶段、M1/M2、首窗真包与真实dump/符号根因，实体手机/弱网/真包冷重启，签名/公证/
 跨版升级回滚，六Panel版本freeze/正式安装，runbook中的真实账号、owner迁移、薄云端恢复与
-业务决策。来源工作树完整保留至最终合并后再处理。此次只提交两仓任务候选，工作树收尾干净，
-不合 main、不 push、不清理，交回上述原 CC session。
+业务决策。最终组合 review 和本地合并已经完成，不关闭上述真实环境或决策项。
+来源工作树与原始证据完整保留，不为清理丢失未提交内容；本轮不 push、不发布。
 
-## 任务提交收尾
+## 候选冻结阶段任务提交收尾
 
 Host 受测代码候选：`2d031febea54a138d7e14de4a778da3f38dcde26`；Panel 候选：
 `c6dbba4272a7e15de58c46a0624e774c17264aed`。本次随后仅补本文件回执，受测代码不变。
 两仓只按明确任务路径 staging，未 stage artifacts、依赖、生成包或 workflow；来源均未提交。
-两个本地 main 与 origin/main refs 保持本记录基线，最终两候选工作树 clean。
+候选冻结时两个本地 main 与 origin/main refs 保持本记录基线，两候选工作树 clean。
 
-| 合 main 前相对指定本地主线的最终 stat | 文件 | 新增 / 删除 |
+| 原 CC 受审候选相对指定本地主线的 stat | 文件 | 新增 / 删除 |
 | ------------------------------------- | ---- | ----------- |
 | Host（包含本回执）                    | 36   | 6120 / 94   |
 | Panel                                 | 6    | 3763 / 0    |
+
+## 最终 CC PASS 与本地合并交付回执
+
+2026-10-27，主代理转交原 CC 最终独立验收 PASS：Host 111 文件、1628 pass / 0 fail /
+0 skipped；Panel `npm run check -- --suite release-zip` 为52/0/0，三真实 ZIP equal。
+原 CC 逐字节确认所有来源代码无漏修，`index.ts` 只新增 `legacyBasePages: true` 并保留
+main memory，未发现 Critical / Important。build、typecheck、lint 使用上文已通过日志。
+
+刷新 origin 并重新核对两个 root 干净、仍在 main、HEAD 未偏离指定基线后，已实际执行：
+
+- Host root `/Users/admin/Documents/个人学习/代码学习/codeshell`：
+  `git merge --ff-only 78ffd848a02536e5aafe9ee9997c4d5e10d3ee17`，由 `2035c0a30` 快进成功。
+- Panel root `/Users/admin/Documents/个人学习/代码学习/codeshell-panel-apps`：
+  `git merge --ff-only c6dbba4272a7e15de58c46a0624e774c17264aed`，由 `d15a35b` 快进成功。
+
+两次受审候选合入后 root 均 clean。此后仅在各任务分支提交交付文档，再对 root main
+执行 `--ff-only`；最终文档提交与 main SHA 由外部交付报告列出，不自引用本文件提交。
+所有非文档路径与原 CC 候选逐字节相同，只做文档/diff/链接验证，不重复全套单测。
+未推送任何分支，未改 workflow、账号/Secrets、生产、真实 HOME、已安装应用或发布状态。
+
+未做 worktree/分支清理：两个 integration worktree 仍有本轮/外部 agent 的 cwd 使用且保留
+组合日志，交主代理退出后处理。以下五个来源保持原始 dirty、未提交；42项交付 bytes、
+完整 status 与 binary patch SHA 均未变化，无陌生改动。没有把它们 checkpoint、重置或删除：
+
+- `/Users/admin/Documents/个人学习/代码学习/codeshell/.worktrees/nsis-uninstall-holder-20261026`
+- `/Users/admin/Documents/个人学习/代码学习/codeshell/.worktrees/mobile-legacy-base-pages-20261026`
+- `/Users/admin/Documents/个人学习/代码学习/codeshell/.worktrees/windows-launch-diagnostics-20261026`
+- `/Users/admin/Documents/个人学习/代码学习/codeshell/.worktrees/audit-remaining-runbooks-20261026`
+- `/Users/admin/Documents/个人学习/代码学习/codeshell-panel-apps/.worktrees/verify-release-zip-20261026`
+
+Panel 来源保留三个真实 ZIP、原始核对 JSON、I1 成功与旧失败日志；Host/Panel 目标保留
+组合日志与 manifest。尚未完成全部进程 cwd 释放和必要 ignored 证据独立归档核验，因此
+不尝试将 dirty 来源变 clean 后移除。未触碰其他 worktree，尤其未触碰 `~/.codex` 下任务。
