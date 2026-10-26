@@ -9,6 +9,110 @@ const birth = (second) => `Sat Oct 17 13:40:${String(second).padStart(2, "0")} 2
 const root = { pid: 10, ppid: 99, birth: birth(0) };
 const descendant = { pid: 11, ppid: 10, birth: birth(1) };
 
+test("periodic snapshots yield to other timers, never overlap, and discard results after stop", async () => {
+  const f = fixture();
+  let resolve,
+    calls = 0;
+  const stop = watchElectronTestProcess(f.child, {
+    ...f.options,
+    snapshotProcessesAsync: () => {
+      calls++;
+      return new Promise((done) => {
+        resolve = done;
+      });
+    },
+  });
+  f.tick();
+  f.tick();
+  await new Promise((done) => setTimeout(done, 0));
+  equal(calls, 1);
+  f.tick();
+  equal(calls, 1);
+  stop();
+  const before = stop.snapshotTiming;
+  resolve([root, descendant]);
+  await new Promise(setImmediate);
+  deepStrictEqual(stop.snapshotTiming, before);
+  equal((await stop.completed).ownedCount, 1);
+  deepStrictEqual(f.signals, []);
+});
+
+test("cleanup does not wait for a pending poll and its late rejection cannot regain authority", async () => {
+  const f = fixture();
+  let reject;
+  const stop = watchElectronTestProcess(f.child, {
+    ...f.options,
+    snapshotProcessesAsync: () =>
+      new Promise((_, fail) => {
+        reject = fail;
+      }),
+  });
+  f.tick();
+  await new Promise(setImmediate);
+  f.setProcesses([]);
+  f.child.emit("exit", 0, null);
+  equal((await stop.completed).status, "cleaned");
+  reject(new Error("late poll"));
+  await new Promise(setImmediate);
+  deepStrictEqual(f.failures, []);
+  deepStrictEqual(f.signals, []);
+});
+
+test("snapshot timing counts failures, bounds recent samples at 32 and returns copies", () => {
+  const f = fixture();
+  let clock = 0,
+    broken = false;
+  const stop = watchElectronTestProcess(f.child, {
+    ...f.options,
+    timingNow: () => ++clock,
+    snapshotProcesses: () => {
+      if (broken) throw new Error("failed");
+      return [root];
+    },
+  });
+  for (let i = 0; i < 40; i++) f.tick();
+  const timing = stop.snapshotTiming;
+  equal(timing.count, 41);
+  equal(timing.totalMs, 41);
+  equal(timing.maxMs, 1);
+  equal(timing.recent.length, 32);
+  equal(timing.maxTickGapMs > 0, true);
+  timing.recent[0] = -100;
+  equal(stop.snapshotTiming.recent[0], 1);
+  broken = true;
+  f.tick();
+  equal(stop.snapshotTiming.count, 42);
+  equal(f.failures.length, 1);
+  stop();
+});
+
+test("settled periodic polls can adopt observed descendants and report a query failure once", async () => {
+  const f = fixture();
+  let broken = false;
+  const stop = watchElectronTestProcess(f.child, {
+    ...f.options,
+    snapshotProcessesAsync: async () => {
+      if (broken) throw new Error("periodic failure");
+      return [root, descendant];
+    },
+  });
+  f.tick();
+  await new Promise(setImmediate);
+  equal(stop.snapshotTiming.count, 2);
+  broken = true;
+  f.tick();
+  await new Promise(setImmediate);
+  f.tick();
+  await new Promise(setImmediate);
+  equal(f.failures.length, 1);
+  equal(stop.snapshotTiming.count, 4);
+  stop();
+  const evidence = await stop.completed;
+  equal(evidence.ownedCount, 2);
+  equal(evidence.queryFailed, true);
+  deepStrictEqual(f.signals, []);
+});
+
 function fixture(initial = [root]) {
   const child = Object.assign(new EventEmitter(), { pid: 10, exitCode: null, signalCode: null });
   const timeouts = new Map();

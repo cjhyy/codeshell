@@ -151,6 +151,9 @@ export async function preparePackagedPetFixture({
     env: environment,
     managedNode,
     managedNodeVersion: before.managedNode.version,
+    recordLaunchFailure() {
+      passiveLaunchDiagnostics?.failed();
+    },
     diagnosticContext() {
       return {
         root: fixtureRoot,
@@ -200,6 +203,7 @@ export async function preparePackagedPetFixture({
               }
             : {}),
         });
+        passiveLaunchDiagnostics?.watchdog(child, monitor);
         processMonitors.push(monitor);
         monitorsByChild.set(child, monitor);
         startupRecord = startupObservation.captured(child.pid);
@@ -371,6 +375,7 @@ export async function preparePackagedPetFixture({
         } catch (failure) {
           diagnosticError = failure;
         }
+        passiveLaunchDiagnostics?.failed();
         startupObservation.failed(startupRecord, launchPhase);
         if (preload)
           await preload.catch((failure) => {
@@ -511,6 +516,7 @@ export async function preparePackagedPetFixture({
       const observedProcessSettlements = await Promise.all(
         processMonitors.map((monitor) => monitor.completed),
       );
+      passiveLaunchDiagnostics?.settled();
       const after = await capturePackagedAppIntegrity(officialApp);
       assert.equal(after.appTreeSHA256, before.appTreeSHA256, "official signed app changed");
       const runtime = appImageRuntime && (await appImageRuntime.verifyUnchanged());

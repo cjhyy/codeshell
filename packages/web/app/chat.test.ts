@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { initialChatState, reduceStream } from "../src/lib/streamReducer.js";
 import {
   chatFromOutputJournal,
@@ -10,12 +13,60 @@ import {
 import {
   readOutputJournal,
   readOutputJournalLegacyBase,
+  SessionOutputJournal,
 } from "../../core/src/session/output-journal.js";
+import { SessionManager } from "../../core/src/session/session-manager.js";
 import { SessionOutputCoverageStore } from "../../core/src/session/output-coverage-state.js";
 import {
   outputUserInputFixture,
   outputForwardedInputFixture,
 } from "../../../tests/fixtures/output-journal-user-input.js";
+
+test("Hub folds a large legacy base before new journal output across cold reads", async () => {
+  const root = mkdtempSync(join(tmpdir(), "hub-large-base-"));
+  try {
+    const manager = new SessionManager(root),
+      session = manager.create(root, "fixture", "fixture", "saved");
+    for (let i = 0; i < 3; i++) session.transcript.appendMessage("assistant", "中".repeat(220000));
+    manager.startSessionRun(session.state, "run");
+    const writer = new SessionOutputJournal(
+      root,
+      "saved",
+      "run",
+      session.transcript.getEvents().at(-1)!.id,
+    );
+    writer.append({
+      type: "session_user_message",
+      text: "new input",
+      clientMessageId: "new-input",
+    });
+    writer.append({ type: "text_delta", text: "new reply" });
+    writer.append({ type: "turn_complete", reason: "completed" });
+    const read = (options = {}) => readOutputJournal(root, "saved", { ...options, maxFrames: 1 });
+    const page = read();
+    const base = readOutputJournalLegacyBase(root, "saved", page.legacyBaseThroughEventId);
+    expect(base.complete).toBe(true);
+    for (let cold = 0; cold < 2; cold++) {
+      const result = await chatFromOutputJournal(
+        {
+          state: {},
+          transcript: base.events,
+          outputJournal: read(),
+          outputCoverage: new SessionOutputCoverageStore(() => root).read("saved"),
+        },
+        async (options) => read(options),
+        [],
+      );
+      expect(result?.chat.items.filter((item) => item.kind === "assistant")).toHaveLength(4);
+      expect(
+        result?.chat.items.some((item) => item.kind === "assistant" && item.text === "new reply"),
+      ).toBe(true);
+      expect(result?.outputCursor).toBe(page.through);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 for (const mode of [
   "normal",

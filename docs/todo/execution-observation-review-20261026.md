@@ -40,3 +40,5 @@
 - 格式与 `git diff --check` 通过；修复经过交叉代码复核。
 
 源码提交（均为本轮汇总分支的提交）：`3ace28b3e`（此前 Bash 诊断）、`75ab73938`（流取消/委派分类）、`9dadb9ae4`（记忆）、`f6a07886e`（原生命令状态）、`f389d2b91`（Grep）、`8a1725216`（Host 观测归属）。测试日志留在本地台账目录 `combined-tests.log`。没有推送、合并 main 或发布应用。
+
+后续集成：以上修复已由外部运行时记忆任务一并纳入本地 `main`，并在保留主线既有改动后完成 60 个文件、828 项组合回归；详见[集成交付](external-runtime-memory-20261026.md#验证与交付)。本地台账已保留到主检出目录的 `.code-shell/reviews/integration-external-runtime-memory-20261026/observation-review/`；没有推送或发布应用。

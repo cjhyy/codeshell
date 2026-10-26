@@ -42,6 +42,7 @@ async function fakeLaunch(t, mode = "success") {
   const diagnostics = createElectronTestDiagnostics({ ownedRoots: [root] });
   const settlement = { status: "cleaned", queryFailed: false, remainingCount: 0 };
   const monitor = Object.assign(() => {}, {
+    snapshotTiming: { count: 3, totalMs: 40, maxMs: 20, recent: [10, 10, 20], maxTickGapMs: 1001 },
     completed: Promise.resolve(settlement),
     terminate() {
       terminations++;
@@ -200,6 +201,28 @@ async function fakeLaunch(t, mode = "success") {
     state: () => ({ unrefs, quits, terminations, spawns, protocolReads, publicEvaluations }),
   };
 }
+
+test("a first-window failure sidecar captures the registered watchdog timing", async (t) => {
+  const fixture = await fakeLaunch(t, "normal");
+  await fixture.run();
+  fixture.observer.error(new Error("first-window timeout"), fixture.child);
+  assert.deepEqual(fixture.diagnostics.snapshotTiming, fixture.monitor.snapshotTiming);
+  fixture.diagnostics.snapshotTiming.recent[0] = -1;
+  assert.equal(fixture.monitor.snapshotTiming.recent[0], 10);
+});
+
+test("a throwing timing getter cannot replace the error or interrupt custody cleanup", async (t) => {
+  const fixture = await fakeLaunch(t, "evaluate rejection");
+  Object.defineProperty(fixture.monitor, "snapshotTiming", {
+    get() {
+      throw Error("Private timing getter");
+    },
+  });
+  await assert.rejects(fixture.run(), /Resulting promise was garbage collected/);
+  assert.equal(fixture.state().terminations, 1);
+  assert.equal(fixture.diagnostics.firstError.phase, "harness-main-identity");
+  assert.equal(fixture.diagnostics.snapshotTiming, undefined);
+});
 
 test("source Windows launch normalizes the installed loader vector before existing early custody", async (t) => {
   const fixture = await fakeLaunch(t);

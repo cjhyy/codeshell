@@ -4,7 +4,7 @@ import { isAbsolute, join, resolve } from "node:path";
 import { encodeCwd } from "@cjhyy/code-shell-capability-coding/orchestration";
 import type { LinkedSessionTarget, RoomKind } from "@cjhyy/code-shell-server/mobile-remote";
 
-const MAX_CLAUDE_IDENTITY_BYTES = 4 * 1024;
+const MAX_CLAUDE_IDENTITY_BYTES = 256 * 1024;
 const MAX_CODEX_META_BYTES = 64 * 1024;
 const SAFE_EXTERNAL_SESSION_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,255}$/u;
 
@@ -74,14 +74,16 @@ function resolveClaudeIdentity(
   const prefix = readBoundedPrefix(file, MAX_CLAUDE_IDENTITY_BYTES);
   if (prefix === null) return null;
 
-  // Claude writes cwd/sessionId before the potentially large message payload.
-  // Do not scan into message content merely to make a stale locator succeed.
-  const messageIndex = prefix.indexOf('"message"');
-  const identityPrefix = messageIndex >= 0 ? prefix.slice(0, messageIndex) : prefix;
-  const cwd = jsonStringField(identityPrefix, "cwd");
-  const sessionId = jsonStringField(identityPrefix, "sessionId");
+  // Claude opens transcripts with records that carry no cwd (mode,
+  // last-prompt, permission-mode, queue-operation, file-history-snapshot) and
+  // SessionStart hook attachments that can run to several KB. The identity is
+  // the first complete record that has a cwd; one cut off by the bound fails
+  // closed instead of being pattern-matched.
+  const record = firstRecordWithCwd(prefix, MAX_CLAUDE_IDENTITY_BYTES);
+  if (!record) return null;
+  const { cwd, sessionId } = record;
   if (
-    cwd === null ||
+    typeof cwd !== "string" ||
     sessionId !== externalSessionId ||
     !isAbsolute(cwd) ||
     resolve(cwd) !== requestedCwd
@@ -178,17 +180,24 @@ function readFirstLine(file: string, maximum: number): string | null {
   return (newline < 0 ? prefix : prefix.slice(0, newline)).trim();
 }
 
-function jsonStringField(prefix: string, field: "cwd" | "sessionId"): string | null {
-  const marker = `"${field}"`;
-  const start = prefix.indexOf(marker);
-  if (start < 0) return null;
-  const tail = prefix.slice(start + marker.length);
-  const match = tail.match(/^\s*:\s*("(?:\\.|[^"\\])*")/u);
-  if (!match) return null;
-  try {
-    const value = JSON.parse(match[1]!) as unknown;
-    return typeof value === "string" ? value : null;
-  } catch {
-    return null;
+function firstRecordWithCwd(
+  prefix: string,
+  maximum: number,
+): { cwd: unknown; sessionId: unknown } | null {
+  const lines = prefix.split("\n");
+  // Without a trailing newline the last line is complete only at EOF.
+  if (Buffer.byteLength(prefix, "utf-8") >= maximum) lines.pop();
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    let record: unknown;
+    try {
+      record = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (!record || typeof record !== "object" || Array.isArray(record)) continue;
+    const { cwd, sessionId } = record as { cwd?: unknown; sessionId?: unknown };
+    if (cwd !== undefined) return { cwd, sessionId };
   }
+  return null;
 }

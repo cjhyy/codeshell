@@ -8,6 +8,41 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
+## 2026-10-26 — subsequent release facts and local repair review
+
+This is a later factual acknowledgment, not retroactive approval or a rewrite of
+the October 19/20 recommendation below. [v0.9.46](https://github.com/cjhyy/codeshell/releases/tag/v0.9.46)
+was formally published on October 22 at 09:51:40 UTC, tag source `c7f108ee4`.
+[Release run 39755931851](https://github.com/cjhyy/codeshell/actions/runs/39755931851)
+passed all three platform packages, npm publication and GitHub Release. Its
+[smoke job](https://github.com/cjhyy/codeshell/actions/runs/39755931851/job/119747953811)
+reports **10 tarballs, 49 typed entries, 47 runtime entries**. The workflow's
+stale `nine tarballs` label remains a separate pending correction; this task does
+not edit workflows. Registry readback confirms all ten public packages at
+0.9.46; it supplies no `gitHead` source proof. macOS uses fixed-requirement ad-hoc
+signing, not Developer ID/notarization, as the release notes state.
+
+Current `origin/main` is `2661eb04d`, with all twelve jobs successful in
+[ordinary CI 39771531242](https://github.com/cjhyy/codeshell/actions/runs/39771531242).
+The release source's [ordinary CI 39751489276](https://github.com/cjhyy/codeshell/actions/runs/39751489276)
+also passed. Neither closes the retained CI40 Windows first-window/uninstall
+failures, earlier unexplained `0xC0000005`, native signing, real 0.9.44→0.9.46
+upgrade/rollback, or the independent Linux services rerun.
+
+PRs #195 and #211–#214 are merged and included in v0.9.46. E05 real Electron
+reload and E08 real-account approval remain unverified, alongside the separate
+capability boundaries in the [runtime audit](external-runtime-parity-audit-20261021.md).
+Old six-Panel draft versions require a new user freeze; actual current versions,
+tag differences and Account/Link deployment evidence are recorded in the
+[October 26 local review handoff](recovery-windows-audit-20261026.md).
+
+That handoff also records the CC-accepted Desktop/Hub legacy-base repair and
+watchdog timing/async periodic observation. These are local source/test changes,
+not released fixes or Windows native passes. NSIS holder custody remains an
+explicit blocked design; late zero exit still cannot establish initial identity.
+
+The following CI40 and dated October records retain their original scope.
+
 The latest completed native UI acceptance run, CI40 (`39104976943`, head `01757d1796c6d08b4e81423632eace07f508d281`), **FAILED** overall.
 Web, macOS and Linux pass their recorded scoped audits. The Windows matrix fails
 its 20-second first-window wait after SDK readiness; Main PID 1152 later exits

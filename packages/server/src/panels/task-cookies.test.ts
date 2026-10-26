@@ -93,6 +93,80 @@ describe("background task Cookie custody", () => {
     f.state.credentials[0].meta!.domain = "com";
     expect((await f.service.list(scope, "https://example.com")).accounts).toEqual([]);
   });
+  test("a www login exports applicable parent-domain cookies without widening its account root", async () => {
+    const f = await fixture();
+    const login = f.state.credentials[0];
+    login.meta = { domain: "www.example.com", appUrl: "https://www.example.com/", scope: "all" };
+    login.secret = JSON.stringify([
+      { ...jar[0], name: "parent-session", hostOnly: false },
+      { domain: "www.example.com", name: "exact-session", value: "exact", hostOnly: true },
+      { domain: "login.example.com", name: "sibling-session", value: "sibling", hostOnly: true },
+      { domain: "example.com", name: "host-only-parent", value: "parent", hostOnly: true },
+      { ...jar[0], name: "expired", expirationDate: 500 },
+      { ...jar[0], name: "public-suffix", domain: ".com" },
+      { ...jar[0], name: "lookalike", domain: ".notexample.com" },
+      jar[2],
+    ]);
+    const url = "https://www.example.com/watch";
+    const account = (await f.service.list(scope, url)).accounts[0];
+    expect(account.domain).toBe("www.example.com");
+    const file = await f.service.materialize(scope, {
+      credentialId: account.id,
+      revision: account.revision,
+      url,
+    });
+    expect(file.count).toBe(2);
+    const text = await readFile(file.path, "utf8");
+    expect(text).toContain(".example.com\tTRUE\t/\tTRUE\t0\tparent-session\t");
+    expect(text).toContain("www.example.com\tFALSE\t/\tFALSE\t0\texact-session\t");
+    for (const name of [
+      "sibling-session",
+      "host-only-parent",
+      "expired",
+      "public-suffix",
+      "lookalike",
+      "other",
+    ])
+      expect(text).not.toContain(`\t${name}\t`);
+    for (const other of ["https://example.com/", "https://api.example.com/"])
+      expect((await f.service.list(scope, other)).accounts).toEqual([]);
+    await file.cleanup();
+  });
+  test("legacy root accounts retain subdomain access while excluding unrelated host-only cookies", async () => {
+    const f = await fixture();
+    const url = "https://www.example.com/watch";
+    const account = (await f.service.list(scope, url)).accounts[0];
+    const file = await f.service.materialize(scope, {
+      credentialId: account.id,
+      revision: account.revision,
+      url,
+    });
+    expect(file.count).toBe(1);
+    const text = await readFile(file.path, "utf8");
+    expect(text).toContain("private-cookie");
+    expect(text).not.toContain("also-private");
+    await file.cleanup();
+  });
+  test("multi-label public/private suffixes cannot become credential or Cookie roots", async () => {
+    const f = await fixture();
+    for (const [suffix, host] of [
+      ["co.uk", "www.example.co.uk"],
+      ["github.io", "account.github.io"],
+    ]) {
+      f.state.credentials[0].meta!.domain = host;
+      f.state.credentials[0].secret = JSON.stringify([
+        {
+          domain: `.${suffix}`,
+          name: "poisoned-parent",
+          value: "must-not-export",
+          hostOnly: false,
+        },
+      ]);
+      expect((await f.service.list(scope, `https://${host}/`)).accounts).toEqual([]);
+      f.state.credentials[0].meta!.domain = suffix;
+      expect((await f.service.list(scope, `https://${host}/`)).accounts).toEqual([]);
+    }
+  });
   test("changed, missing, duplicate or corrupted accounts cannot silently replace the selected login", async () => {
     const f = await fixture();
     for (const credentials of [

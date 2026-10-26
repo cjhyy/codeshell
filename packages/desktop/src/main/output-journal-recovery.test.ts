@@ -12,8 +12,15 @@ test("actual Main IPC recovers output evicted from the snapshot and survives Mai
   const id = `journal-main-${Date.now()}-${Math.floor(Math.random() * 1e8)}`;
   const manager = new SessionManager(root);
   const session = manager.create(root, "fixture", "fixture", id);
+  for (let index = 0; index < 3; index++)
+    session.transcript.appendMessage("assistant", `legacy-${index}:` + "中".repeat(220000));
   manager.startSessionRun(session.state, "run");
-  const writer = new SessionOutputJournal(root, id, "run", session.transcript.getEvents()[0].id);
+  const writer = new SessionOutputJournal(
+    root,
+    id,
+    "run",
+    session.transcript.getEvents().at(-1)!.id,
+  );
   const snapshots = new SessionSnapshotStore({
     maxPerSession: 2,
     coverage: new SessionOutputCoverageStore(() => root),
@@ -40,6 +47,7 @@ test("actual Main IPC recovers output evicted from the snapshot and survives Mai
         latestObservedCursor: () => undefined,
       });
     const before = await recover(snapshots);
+    expect(before?.state.messages.filter((item) => item.kind === "assistant")).toHaveLength(4);
     expect(before?.state.messages).toContainEqual(
       expect.objectContaining({
         kind: "assistant",

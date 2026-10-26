@@ -690,6 +690,8 @@ export {
   type OAuthRefreshHandler,
   type OAuthRefreshRequest,
   formatNetscapeCookies,
+  normalizeCookieDomain,
+  cookieAppliesToHost,
   parseCookieJar,
   summarizeCookieExpiry,
   type CookieLike,

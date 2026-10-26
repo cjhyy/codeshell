@@ -35,4 +35,6 @@
 
 最终组合 guarded tests：29 个文件，534 通过、0 失败、0 跳过。`bun run typecheck` 完成完整构建及 14 个 workspace 的检查；最后的后台清理改动另通过 Desktop 类型检查。`bun run lint` 为 0 errors / 99 warnings，新增代码的定向 lint、格式与 diff 检查通过。模型适配、归属保护、路由和配置边界分别经过交叉只读复核。
 
-源码位于任务分支 `codex/desktop/external-runtime-memory`，尚未合并、推送或更新已安装应用。本地验证日志位于当前工作区 `.code-shell/external-memory-validation/`，不进入 Git。
+2026-10-26 按用户要求集成到本地 `main`。先在任务分支合入本地 `main` 基线 `55dce4044`，完整保留其 5 个独有提交；TODO 保留主线最新的大历史恢复状态，外部会话状态测试保留双方新增用例。最终组合 guarded tests 为 60 个文件、828 通过、0 失败、0 跳过；完整构建及 14 个 workspace 类型检查通过，全仓 lint 为 0 errors / 99 warnings，格式与 diff 检查通过。
+
+本轮没有推送或更新已安装应用。集成验证日志和此前观测复核的本地台账保留在主检出目录的 `.code-shell/reviews/integration-external-runtime-memory-20261026/`，不进入 Git。

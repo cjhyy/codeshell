@@ -282,6 +282,22 @@ test("legacy cutover wire contains display-only history, no hidden inputs or ima
   expect(restored?.chat.items.filter((item) => item.kind === "user")).toHaveLength(2);
 });
 
+test("mobile keeps its 1 MiB raw base budget even when display projection would be tiny", async () => {
+  const f = fixture(
+    Array.from({ length: 3 }, () => ({
+      role: "user",
+      injected: true,
+      content: "x".repeat(650000),
+    })),
+  );
+  await f.select();
+  const wire = await f.read();
+  expect(wire.page.status).toBe("ok");
+  expect(wire.legacyBaseComplete).toBe(false);
+  expect(wire.legacyBase?.events).toEqual([]);
+  expect(Buffer.byteLength(JSON.stringify(wire))).toBeLessThan(2 * 1024 * 1024);
+});
+
 test("actual Main handler cannot restore a selection revoked during authority resolution", async () => {
   const { handleClientEvent } = await import("./handle-client-event.js");
   const f = fixture();

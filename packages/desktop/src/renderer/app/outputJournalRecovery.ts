@@ -53,7 +53,14 @@ export async function recoverDesktopOutputJournal(args: {
     while (true) {
       if (!args.canContinue() || ++pages > 2048)
         throw new Error("Output recovery stopped within its bound");
-      const complete = applyOutputJournalPage(recovery, page, (event) => {
+      // The IPC envelope carries the separately bounded legacy base. Validate
+      // only the journal page against the shared 1 MiB transport-page limit.
+      const {
+        legacyBaseComplete: _baseComplete,
+        legacyBaseItems: _baseItems,
+        ...journalPage
+      } = page;
+      const complete = applyOutputJournalPage(recovery, journalPage, (event) => {
         state = applyTranscriptStreamEvent(state, event);
       });
       if (recovery.incomplete) throw new Error("Output recovery is incomplete");

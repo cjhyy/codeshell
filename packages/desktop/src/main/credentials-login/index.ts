@@ -26,6 +26,7 @@ import {
   type LoginCheck,
 } from "./login-state.js";
 import { dlog } from "../desktop-logger.js";
+import { cookieAppliesToHost } from "@cjhyy/code-shell-core";
 
 /**
  * Stable PREFIXES for the two control signals. The full token a button prints
@@ -167,19 +168,15 @@ export function hostnameOf(url: string): string {
 
 /**
  * Does a cookie's domain apply to the target host we're capturing for?
- * Standard cookie-domain match: the cookie domain (leading dot stripped) must
- * be the host itself, or a registrable parent of it. We require the parent to
- * contain a dot so a bare public-suffix label (e.g. "co" / "com") can NOT match
- * an unrelated host via `host.endsWith(".co")` — defense-in-depth on top of
- * Electron's own per-domain getCookies filter. Empty cookie domains never match.
+ * Uses the same host-only/Domain and public-suffix checks as native task export,
+ * in addition to Electron's own per-domain getCookies filter.
  */
-export function cookieDomainMatches(cookieDomain: string | undefined, targetDomain: string): boolean {
-  const d = (cookieDomain ?? "").replace(/^\./, "");
-  if (!d || !targetDomain) return false;
-  if (d === targetDomain) return true;
-  // d is a parent of targetDomain (e.g. d="github.com", target="api.github.com").
-  // Reject bare single-label parents (TLD/public suffix) by requiring a dot in d.
-  return d.includes(".") && targetDomain.endsWith("." + d);
+export function cookieDomainMatches(
+  cookieDomain: string | undefined,
+  targetDomain: string,
+  hostOnly?: boolean,
+): boolean {
+  return cookieAppliesToHost({ domain: cookieDomain, hostOnly }, targetDomain);
 }
 
 /**
@@ -287,7 +284,7 @@ export async function loginAndCaptureCookies(
             const all = await handle.getCookies(req.fullCapture ? undefined : targetDomain);
             const jar = req.fullCapture
               ? all
-              : all.filter((c) => cookieDomainMatches(c.domain, targetDomain));
+              : all.filter((c) => cookieDomainMatches(c.domain, targetDomain, c.hostOnly));
             let suggestedLabel: string | undefined;
             const script = usernameScriptFor(targetDomain);
             if (script) {

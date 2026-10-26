@@ -12,6 +12,64 @@ const windowsRows = [
 ];
 const posixRows = "   10 1 Fri Oct 16 05:06:07 2026\n11 10 Fri Oct 16 05:06:08 2026\n";
 
+test("async snapshots use the same fixed Windows query and sanitize native failures", async () => {
+  const { snapshotElectronTestProcessesAsync } =
+    await import("./electron-test-process-snapshot.mjs");
+  let expected;
+  const options = { platform: "win32", environment: { SystemRoot: "C:\\Windows" } };
+  const rows = snapshotElectronTestProcesses({
+    ...options,
+    execFile: (...args) => {
+      expected = args;
+      return JSON.stringify(windowsRows);
+    },
+  });
+  const actual = await snapshotElectronTestProcessesAsync({
+    ...options,
+    execFile: (...args) => {
+      const callback = args.pop();
+      deepStrictEqual(args, expected);
+      setImmediate(() => callback(null, JSON.stringify(windowsRows), "PRIVATE_STDERR"));
+    },
+  });
+  deepStrictEqual(actual, rows);
+  let error;
+  try {
+    await snapshotElectronTestProcessesAsync({
+      ...options,
+      execFile: (_exe, _args, _opts, callback) =>
+        callback(Object.assign(new Error("PRIVATE"), { code: "ETIMEDOUT", stderr: "PRIVATE" })),
+    });
+  } catch (caught) {
+    error = caught;
+  }
+  equal(error?.reason, "timeout");
+  equal(error?.code, "ELECTRON_TEST_PROCESS_QUERY_FAILED");
+  doesNotMatch(error.message, /PRIVATE/);
+  equal(error.stderr, undefined);
+  equal(error.cause, undefined);
+  for (const [native, reason] of [
+    [{ code: null, killed: true, signal: "SIGTERM" }, "timeout"],
+    [{ code: 1 }, "native-exit"],
+    [
+      { code: "ERR_CHILD_PROCESS_STDIO_MAXBUFFER", killed: true, signal: "SIGTERM" },
+      "output-limit",
+    ],
+  ]) {
+    try {
+      await snapshotElectronTestProcessesAsync({
+        ...options,
+        execFile: (_exe, _args, _opts, callback) =>
+          callback(Object.assign(new Error("PRIVATE"), native)),
+      });
+    } catch (caught) {
+      error = caught;
+    }
+    equal(error.reason, reason);
+    doesNotMatch(error.message, /PRIVATE/);
+  }
+});
+
 test("Windows metadata parsing preserves full creation precision and only identity fields", () => {
   deepStrictEqual(parseWindowsProcessSnapshot(`\uFEFF${JSON.stringify(windowsRows)}`), [
     { pid: 10, ppid: 1, birth: windowsRows[0].CreationDate },

@@ -655,6 +655,7 @@ const runCatch = new AsyncFunction(
   "process",
   "startupObservation",
   "startupRecord",
+  "passiveLaunchDiagnostics",
   `
   let launchFailed = false, preloadFailure;
   const launchPhase = "playwright-launch";
