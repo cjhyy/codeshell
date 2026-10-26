@@ -13,6 +13,7 @@ import {
   renameSync,
   unlinkSync,
   writeSync,
+  type BigIntStats,
 } from "node:fs";
 import { join } from "node:path";
 import type { StreamEvent, TranscriptEvent } from "../types.js";
@@ -55,6 +56,9 @@ const MAX_EVENT_BYTES = 16 * 1024 * 1024;
 const CHUNK_BYTES = 64 * 1024;
 const MAX_PAGE_BYTES = 1024 * 1024;
 const MAX_PAGE_FRAMES = 512;
+// A frozen transcript base has its own budget; transport pages/cutover stay small.
+const LEGACY_BASE_MAX_BYTES = 32 * 1024 * 1024;
+const LEGACY_BASE_MAX_EVENTS = 262144;
 const SAFE_ID = /^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,127}$/;
 const digest = (value: string) => createHash("sha256").update(value).digest("hex");
 
@@ -66,6 +70,8 @@ interface Header {
   sessionId: string;
   startedAt: number;
   legacyBaseThroughEventId?: string;
+  legacyBaseEndOffset?: number;
+  legacyBaseSha256?: string;
   durableHead?: 1;
 }
 interface Position {
@@ -282,7 +288,7 @@ function* lines(
   start: number,
   end: number,
   maxRecordBytes = MAX_RECORD_BYTES,
-): Generator<{ text: string; end: number }> {
+): Generator<{ text: string; end: number; raw: Buffer }> {
   let offset = start;
   let pending = Buffer.alloc(0);
   while (offset < end) {
@@ -301,11 +307,122 @@ function* lines(
         throw new JournalError("incomplete", "Output record exceeds its bound");
       // Fatal decoding prevents a split/corrupt UTF-8 record from changing its identity.
       const text = new TextDecoder("utf-8", { fatal: true }).decode(record);
+      const raw = pending.subarray(0, newline + 1);
       pending = pending.subarray(newline + 1);
-      yield { text, end: offset - pending.length };
+      yield { text, end: offset - pending.length, raw };
     }
     if (pending.length > maxRecordBytes)
       throw new JournalError("incomplete", "Output record exceeds its bound");
+  }
+}
+/** Includes BOM, CR and LF exactly as stored. Never decodes a partial record. */
+function scanLegacyBase(fd: number, end: number, throughId: string) {
+  const events: TranscriptEvent[] = [];
+  const sha = createHash("sha256");
+  for (const line of lines(fd, 0, end, MAX_PAGE_BYTES)) {
+    const event = JSON.parse(line.text) as TranscriptEvent;
+    if (
+      !event ||
+      typeof event.id !== "string" ||
+      !event.id.length ||
+      event.id.length > 512 ||
+      typeof event.type !== "string" ||
+      !event.type.length ||
+      !event.data ||
+      typeof event.data !== "object" ||
+      Array.isArray(event.data) ||
+      (!events.length && event.type !== "session_meta") ||
+      events.length >= LEGACY_BASE_MAX_EVENTS
+    )
+      invalid("Invalid legacy base event");
+    events.push(event);
+    sha.update(line.raw);
+    if (event.id === throughId) return { events, endOffset: line.end, sha256: sha.digest("hex") };
+  }
+  invalid("Legacy base prefix is incomplete");
+}
+function assertNamedRegular(path: string, fd: number) {
+  const named = lstatSync(path),
+    opened = fstatSync(fd);
+  if (
+    !named.isFile() ||
+    named.isSymbolicLink() ||
+    named.dev !== opened.dev ||
+    named.ino !== opened.ino
+  )
+    invalid("Legacy base file was replaced");
+}
+function assertLegacyLocation(location: ReturnType<typeof sessionLocation>, fd: number) {
+  const final = sessionLocation(location.root, location.state.sessionId!);
+  if (
+    final.stat.dev !== location.stat.dev ||
+    final.stat.ino !== location.stat.ino ||
+    final.state.startedAt !== location.state.startedAt
+  )
+    invalid("Legacy base Session was replaced");
+  assertNamedRegular(join(location.directory, "transcript.jsonl"), fd);
+  return final;
+}
+/** A live transcript may grow. Only the frozen prefix must remain unchanged. */
+function verifyLegacyPrefix(
+  fd: number,
+  before: BigIntStats,
+  base: { endOffset: number; sha256: string },
+) {
+  const assertFile = (stat: BigIntStats) => {
+    if (stat.dev !== before.dev || stat.ino !== before.ino || stat.size < BigInt(base.endOffset))
+      invalid("Legacy base was replaced or truncated");
+  };
+  const current = fstatSync(fd, { bigint: true });
+  assertFile(current);
+  if (
+    current.size === before.size &&
+    current.mtimeNs === before.mtimeNs &&
+    current.ctimeNs === before.ctimeNs
+  )
+    return;
+  // Metadata changes trigger a bounded raw-prefix recheck, not a rejection of
+  // legitimate tail appends. This also detects a rewrite after a chunk was read,
+  // including equal-length edits and edits followed by growth, on old headers.
+  const sha = createHash("sha256"),
+    buffer = Buffer.alloc(CHUNK_BYTES);
+  for (let offset = 0; offset < base.endOffset; ) {
+    const n = readSync(fd, buffer, 0, Math.min(buffer.length, base.endOffset - offset), offset);
+    if (!n) invalid("Legacy base was truncated");
+    sha.update(buffer.subarray(0, n));
+    offset += n;
+  }
+  if (sha.digest("hex") !== base.sha256) invalid("Legacy base changed during recovery");
+  assertFile(fstatSync(fd, { bigint: true }));
+}
+/** Best effort only, before taking the short state lock. Existing journals never rescan. */
+function captureLegacyBase(location: ReturnType<typeof sessionLocation>, throughId?: string) {
+  let fd: number | undefined;
+  try {
+    if (!throughId || throughId.length > 512 || location.state.outputJournalIdentity) return;
+    try {
+      lstatSync(location.file);
+      return;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") return;
+    }
+    fd = openRegular(join(location.directory, "transcript.jsonl"), constants.O_RDONLY);
+    assertLegacyLocation(location, fd);
+    const before = fstatSync(fd, { bigint: true });
+    const scanned = scanLegacyBase(
+      fd,
+      Math.min(fstatSync(fd).size, LEGACY_BASE_MAX_BYTES),
+      throughId,
+    );
+    verifyLegacyPrefix(fd, before, scanned);
+    assertLegacyLocation(location, fd);
+    const result = { fd, endOffset: scanned.endOffset, sha256: scanned.sha256 };
+    fd = undefined;
+    return result;
+  } catch {
+    // Failure cannot prevent a new Run. Old headers remain recoverable within the same bound.
+  } finally {
+    if (fd !== undefined) closeSync(fd);
   }
 }
 /** First independent producer uses an exact existing, bounded transcript cutover. */
@@ -365,35 +482,46 @@ export function readOutputJournalLegacyBase(
   root: string,
   sessionId: string,
   throughEventId: string | undefined,
+  options: { maxBytes?: number } = {},
 ): { complete: boolean; events: TranscriptEvent[] } {
   let fd: number | undefined;
+  let journalFd: number | undefined;
   try {
+    const maxBytes = boundedInt(options.maxBytes, LEGACY_BASE_MAX_BYTES, LEGACY_BASE_MAX_BYTES);
     if (!throughEventId || throughEventId.length > 512) return { complete: false, events: [] };
     const location = sessionLocation(root, sessionId);
+    journalFd = openRegular(location.file, constants.O_RDONLY);
+    assertNamedRegular(location.file, journalFd);
+    const loaded = readHeader(journalFd, location);
+    const { header } = loaded;
+    if (header.legacyBaseThroughEventId !== throughEventId) invalid("Legacy base id changed");
     fd = openRegular(join(location.directory, "transcript.jsonl"), constants.O_RDONLY);
-    const events: TranscriptEvent[] = [];
-    for (const line of lines(fd, 0, Math.min(fstatSync(fd).size, MAX_PAGE_BYTES), MAX_PAGE_BYTES)) {
-      const event = JSON.parse(line.text) as TranscriptEvent;
-      if (
-        !event ||
-        typeof event.id !== "string" ||
-        typeof event.type !== "string" ||
-        !event.data ||
-        typeof event.data !== "object"
-      )
-        throw new Error("Invalid legacy event");
-      events.push(event);
-      if (events.length > 4096 || events[0].type !== "session_meta") break;
-      if (event.id === throughEventId) {
-        const final = lstatSync(location.directory);
-        if (final.ino !== location.stat.ino || final.dev !== location.stat.dev) break;
-        return { complete: true, events };
-      }
-    }
+    assertLegacyLocation(location, fd);
+    const offset = header.legacyBaseEndOffset;
+    if (offset !== undefined && (offset > maxBytes || offset > fstatSync(fd).size))
+      invalid("Legacy base offset exceeds its bound");
+    const before = fstatSync(fd, { bigint: true });
+    const base = scanLegacyBase(
+      fd,
+      offset ?? Math.min(fstatSync(fd).size, maxBytes),
+      throughEventId,
+    );
+    if (
+      offset !== undefined &&
+      (base.endOffset !== offset || base.sha256 !== header.legacyBaseSha256)
+    )
+      invalid("Legacy base prefix changed");
+    verifyLegacyPrefix(fd, before, base);
+    const final = assertLegacyLocation(location, fd);
+    assertNamedRegular(location.file, journalFd);
+    if (readHeader(journalFd, final).start.hash !== loaded.start.hash)
+      invalid("Legacy base journal changed during recovery");
+    return { complete: true, events: base.events };
   } catch {
     /* A partial base never releases the recovery barrier. */
   } finally {
     if (fd !== undefined) closeSync(fd);
+    if (journalFd !== undefined) closeSync(journalFd);
   }
   return { complete: false, events: [] };
 }
@@ -408,7 +536,18 @@ function readHeader(fd: number, location: ReturnType<typeof sessionLocation>) {
     !/^[a-f0-9]{64}$/.test(header.storageScope) ||
     typeof header.sessionIncarnation !== "string" ||
     typeof header.journalId !== "string" ||
-    (header.durableHead !== undefined && header.durableHead !== 1)
+    (header.durableHead !== undefined && header.durableHead !== 1) ||
+    (header.legacyBaseThroughEventId !== undefined &&
+      (typeof header.legacyBaseThroughEventId !== "string" ||
+        !header.legacyBaseThroughEventId.length ||
+        header.legacyBaseThroughEventId.length > 512)) ||
+    ((header.legacyBaseEndOffset !== undefined || header.legacyBaseSha256 !== undefined) &&
+      (!header.legacyBaseThroughEventId ||
+        !Number.isSafeInteger(header.legacyBaseEndOffset) ||
+        header.legacyBaseEndOffset! < 1 ||
+        header.legacyBaseEndOffset! > LEGACY_BASE_MAX_BYTES ||
+        typeof header.legacyBaseSha256 !== "string" ||
+        !/^[a-f0-9]{64}$/.test(header.legacyBaseSha256)))
   )
     invalid("Output journal identity changed");
   const file = fstatSync(fd);
@@ -907,11 +1046,13 @@ export class SessionOutputJournal {
   ) {
     if (typeof owner !== "string" && !validProducer(owner)) invalid("Invalid output producer");
     this.location = sessionLocation(root, sessionId);
-    const release = lockSync(this.location.statePath, { realpath: false, retries: 0 });
+    const base = captureLegacyBase(this.location, legacyBaseThroughEventId);
+    let release: (() => void) | undefined;
     let fd: number | undefined;
     let storage: SegmentedOutputFile | undefined;
     let created = false;
     try {
+      release = lockSync(this.location.statePath, { realpath: false, retries: 0 });
       this.location.state = this.assertOwner(true).state;
       // Resolve the volume before materializing any output file. A platform
       // lookup failure must not strand a newly created, unadmitted journal.
@@ -935,6 +1076,16 @@ export class SessionOutputJournal {
       if (!fstatSync(fd).size) {
         if (this.location.state.outputJournalIdentity)
           throw new JournalError("incomplete", "Pinned output journal was lost or truncated");
+        let proof: Pick<Header, "legacyBaseEndOffset" | "legacyBaseSha256"> | undefined;
+        if (base) {
+          try {
+            assertLegacyLocation(this.location, base.fd);
+            if (fstatSync(base.fd).size < base.endOffset) invalid("Legacy base was truncated");
+            proof = { legacyBaseEndOffset: base.endOffset, legacyBaseSha256: base.sha256 };
+          } catch {
+            // Capture is optional; retain the old base id if its named file changed.
+          }
+        }
         const header: Header = {
           version: 1,
           durableHead: 1,
@@ -944,6 +1095,7 @@ export class SessionOutputJournal {
           sessionId,
           startedAt: this.location.state.startedAt!,
           ...(legacyBaseThroughEventId ? { legacyBaseThroughEventId } : {}),
+          ...proof,
         };
         this.write(fd, JSON.stringify(header) + "\n", 0);
         created = true;
@@ -1079,7 +1231,8 @@ export class SessionOutputJournal {
     } finally {
       storage?.close();
       if (fd !== undefined) closeSync(fd);
-      release();
+      if (base) closeSync(base.fd);
+      release?.();
     }
   }
   private assertOwner(allowUnpinned = false): ReturnType<typeof sessionLocation> {

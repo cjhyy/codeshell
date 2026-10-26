@@ -1,7 +1,9 @@
 # 独立 Link Server：第三方连接与外部应用 OAuth2 接入
 
-状态：2026-09-09，需求已确认，实施设计；**独立服务尚未实现或部署**。
-现有宿主 Link 能力见 [现状说明](link-headless-server-feasibility.md)。
+历史设计基线：2026-09-09，当时独立服务尚未实现或部署。本文保留设计语境，
+不能用该旧状态判断当前生产。2026-10-26 只读复核确认 Account/Link 已有部署，
+Link 后续为 `da73ce5` / schema 3；见[部署追认与剩余验收](../remote-link-host.md#2026-10-26-后续部署追认)。
+原宿主 Link 分析见 [历史现状说明](link-headless-server-feasibility.md)。
 
 ## 1. 产品边界
 

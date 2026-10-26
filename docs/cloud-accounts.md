@@ -23,4 +23,8 @@ access 过期后 main 单次刷新，refresh 轮换并持久保存。连接器�
 schema 2 和明确的新目录／重新登记。Cloud/Link 旧管理员入口、多用户云端 Runtime、
 跨进程账号验证和账号模式备份恢复须另外实施，不能从账号登录推断这些能力已完成。
 
-本次只修改源码和受控测试，没有替换生产服务、配置真实 GitHub App 或发布新包。
+**2026-10-09 源码实施阶段的历史说明：** 当时只修改源码和受控测试，没有替换生产服务、
+配置真实 GitHub App 或发布新包。此句不描述后续部署现状。2026-10-26 只读复核确认
+Account 已有后续部署与 GitHub 登录/consent/native callback 证据，Link 已升级至
+`da73ce5` / schema 3；见[部署追认及未完成边界](remote-link-host.md#2026-10-26-后续部署追认)。
+登录成功不能关闭严格单仓读取、OS Keychain、旧 owner 迁移或薄云端恢复演练。

@@ -2,6 +2,14 @@
 
 核对日期：2026-10-21。基线：`origin/main eaa5e2d6f`，修复分支：`codex/desktop/external-goal-background-wait`。
 
+**2026-10-26 追认：** PR [#195](https://github.com/cjhyy/codeshell/pull/195)、
+[#211](https://github.com/cjhyy/codeshell/pull/211)、[#212](https://github.com/cjhyy/codeshell/pull/212)、
+[#213](https://github.com/cjhyy/codeshell/pull/213)、[#214](https://github.com/cjhyy/codeshell/pull/214)
+均已合入，merge commit 均为 v0.9.46（`c7f108ee4`）祖先。以下保留当时复现和实现细节，
+“本分支/本地修复”不再表示尚未合入。尚缺 E05 真实 Electron reload、E08 真实账号审批；
+24h 调度、外部 runtime 原生 MCP、扩权、逐请求成本等能力边界继续保留，不能因发布而算已实现。
+本轮没有替换运行中的应用或触发真实账号操作。
+
 范围为 Desktop 外部 Codex / Claude Code 的启动、工具桥、后台任务、Goal、权限、Profile、停止、恢复、界面和用量。结论是：基本交互和持久化已经接通，但仍有多处生命周期和上下文漏接，不能视为与原生 Engine 能力等价。下列“本地修复”仅指本分支源码，当前运行的应用没有替换或重启。
 
 ## 本次循环问题

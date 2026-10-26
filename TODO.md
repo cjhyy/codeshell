@@ -2,37 +2,33 @@
 
 > 本文件只保留**未完成**的待办；已完成实现与历史验收见 Git 历史和 [能力盘点](docs/architecture/11-feature-inventory.md)。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> **当前发布核对：2026-10-20。** 开发版本为 `0.9.45`，GitHub 最新正式发行仍为 `v0.9.44`。最新 [CI40](https://github.com/cjhyy/codeshell/actions/runs/39104976943) 整体失败：Windows 首窗超时和 NSIS 卸载身份校验未通过；此前原生异常、最终包更新/升级等范围尚未关闭。准确范围及本次分支收敛见[当前发布验收记录](docs/todo/release-real-operations-2026-10-16.md)。以下 2026-10-14 段落保留历史基线，不能代表今天未发行 0.9.41 或尚未执行后续三平台验收。
+> **当前发布核对：2026-10-26。** 当前 `origin/main` 为 `2661eb04d`，源码版本 `0.9.46`；[v0.9.46](https://github.com/cjhyy/codeshell/releases/tag/v0.9.46) 已于 2026-10-22 正式发布，审计发行基线为 `c7f108ee4`。[发行流程](https://github.com/cjhyy/codeshell/actions/runs/39755931851) 三平台打包及 10 个公开包 smoke 已通过（49 typed entries / 47 runtime entries）；当前主线[普通 CI](https://github.com/cjhyy/codeshell/actions/runs/39771531242) 十二项成功。源码、发行与原生/真实环境验收分别记录，不能继续表述为尚未打包或未发行。
 >
-> 历史核对：2026-10-14。已完成的 Hook 路径、静态 Composer SVG 和 0.9.41 版本准备已随 PR #176/#177/#178 合入。早先验收的产品基线为 `bfebd1a4`（首轮自然 [CI 38503640164](https://github.com/cjhyy/codeshell/actions/runs/38503640164) 十二项全部成功）；PR #181 合入后 main head 已为 `7047ace6`，其推送 [CI 38534752446](https://github.com/cjhyy/codeshell/actions/runs/38534752446) 十二项全部成功，`bfebd1a4` 的 CI 结论不能沿用。源码合入、正式发行及真实环境验收分别记录；本轮尚未正式发布 0.9.41。完整标准与历史原件见[交付检查点](docs/todo/p0-p1-release-2026-10-12.md)。
+> [CI40](https://github.com/cjhyy/codeshell/actions/runs/39104976943) 的 Windows 首窗超时、NSIS 卸载初始身份失败及此前未定位的 `0xC0000005` 仍未关闭；后续普通 CI 和发布成功不能替代这些门禁。历史判断与 2026-10-26 追认见[发布验收记录](docs/todo/release-real-operations-2026-10-16.md)，本轮源码修复与剩余阻塞见[审查交付记录](docs/todo/recovery-windows-audit-20261026.md)。
 >
-> 按本次核查要求，先收口已完成和进行中的工作，新的完整 Linux 候选、三平台打包、Panel 正式发布及目标部署保持未启动，供用户核查下列剩余项。原 **3 P0 + 7 P1** 完整保留，不把某个已通过子项算作整项完成。
->
-> **2026-10-14 云端范围决定：** 按[第 16 章](docs/architecture/16-platform-consolidation.md)决策 7，云端只做薄云端（配对、中继、推送、Link OAuth 回调）加一任务一容器的沙箱任务，**不做常驻云端工作台、持久云端工作区和云端 Panel 运行时**；沙箱里的 Panel 与电脑上的走同一条查看路径。P0.2、P1.1、P1.4 及下方相关大项按此收窄，条目编号保留，收窄内容逐项写明，已取得的证据不作废。
->
-> **本地 main 的产品修复已合入（2026-10-14 核对）：** 原本地 main 未推送的 `0b95244f`（设置页能力概览，core settings / skills scanner / desktop capabilities 与 SettingsPage）和 `e0121758`（数据源与资料集添加入口）已从 `origin/main` 以 cherry-pick（`6f968c65`、`19c278d1`，tree 与本地合并 `fe291922` 一致）经 [PR #181](https://github.com/cjhyy/codeshell/pull/181) 合入，[PR CI 38533466752](https://github.com/cjhyy/codeshell/actions/runs/38533466752) 十二项全部成功；文档收口随 [PR #180](https://github.com/cjhyy/codeshell/pull/180) 合入。合入后 main head 为 `7047ace6ea60e893b7908d88b60e56ed6ffeffc7`，推送 [CI 38534752446](https://github.com/cjhyy/codeshell/actions/runs/38534752446) 十二项全部成功。P0.1 验收基线改为该 head，`bfebd1a4` 的 CI 结论不能沿用。本地 main 上另有其他任务的未推送提交（小窗 overlays、linked-focus-sources、responsive-ui-review），不属于本次合入；这三个提交已按同样方式 cherry-pick 整理为 [PR #184](https://github.com/cjhyy/codeshell/pull/184)（tree 与本地 main `c78adcd0` 的代码一致），合入后 P0.1 基线需再次改到新 head。
+> 原 **3 P0 + 7 P1** 剩余验收范围保留。**2026-10-14 云端范围决定**继续有效：按[第 16 章](docs/architecture/16-platform-consolidation.md)决策 7，只做薄云端（配对、中继、推送、Link OAuth 回调）与一任务一容器沙箱，不扩展常驻云端工作台、持久云端工作区或云端 Panel 运行时。已有云端证据保留其历史范围。
 
 ## 本轮 P0 / P1：待核查与继续交付
 
-- [ ] **外部运行时可靠性与能力补齐（2026-10-21 核对）。** 优先处理 Codex 崩溃挂起/启动期 Stop、Claude 退出确认、首次 Profile 授权、renderer 刷新后的 Stop 归属和后台通知排队竞态；随后补 Claude 指令/权限、图像回包、缓存用量、单次取消、真实 compact、Host Hook、后台 Shell 等待与调度边界。DriveAgent 等待循环已有本地任务分支修复，尚未合入或更新运行中的应用；不把源码修复当成生产验收。逐项证据、已支持项和实施顺序见[专项核对](docs/todo/external-runtime-parity-audit-20261021.md)。
-- [ ] **P0.1 — 完整候选与正式发版。** 当前源码版本 `0.9.45`，最新正式发行 `v0.9.44`；最终收敛提交仍须通过完整 CI、10 个公开包 smoke、三平台安装包及原生验收。CI40 的 Web/macOS/Linux 各自范围已通过，Windows 首窗、卸载身份与后续打包更新恢复未完成，此前 `0xC0000005` 尚未定位；签名/公证与跨版本升级也未完成本轮正式验收。准确输入、结果及后续收敛见[发布验收记录](docs/todo/release-real-operations-2026-10-16.md)。早期 Linux services 完整验收 [38384214542](https://github.com/cjhyy/codeshell-services/actions/runs/38384214542) 的 `page-errors` 与大工件上传问题仍保留其独立范围，不能用后来的 Host 子项通过替代。
-- [ ] **P0.2 — Panel 正式安装与生产更新。** 正式发布 Design 0.18.2、Quant 0.46.2、Download 0.22.7、Video 0.7.3、Starter 0.1.1；完成含 Job 4.2.1 在内六包的真实安装、更新、加载、项目版本绑定与权限验收。五包远端草稿、完整上传下载、194 文件核对及五轮自然 CI 已完成，正式发布与生产更新链未完成。按 2026-10-14 范围决定，生产更新链只要求 Desktop 与 Hub 上的安装、更新和加载，不再要求云端 Panel 运行时的生产更新。
+- [ ] **外部运行时剩余真实验收与能力边界（2026-10-26 核对）。** PR #195、#211–#214 已合入并包含于 v0.9.46。仍缺 E05 真实 Electron reload 后 Stop 归属验收、E08 真实账号审批验证。24h 调度、外部 runtime 原生 MCP、扩权与逐请求成本等边界继续独立待决，不因生命周期修复变为已实现；见[专项核对](docs/todo/external-runtime-parity-audit-20261021.md)。
+- [ ] **P0.1 — 最终正式候选的原生、签名与升级门禁。** v0.9.46 已发行，10 包 smoke 与普通 CI 已通过；仍需准确最终候选的三平台原生验收。CI40 的 Web/macOS/Linux 仅覆盖各自已记录范围，Windows 首窗、卸载身份与后续打包更新恢复未完成，旧 `0xC0000005` 无 dump 不得定位。Developer ID/公证及 Windows 签名证书/Apple 账号、真实 `0.9.44→0.9.46` 升级回滚留待完成；v0.9.46 macOS 实际为固定 requirement 的 ad-hoc 签名。早期 Linux services 完整验收 [38384214542](https://github.com/cjhyy/codeshell-services/actions/runs/38384214542) 的 page-errors/大工件上传仍须独立重跑，不删工件或触发远端。见[发布验收记录](docs/todo/release-real-operations-2026-10-16.md)。
+- [ ] **P0.2 — 重新冻结 Panel 版本并验收正式安装更新。** 旧六包草稿版本已过期，需用户重新决定准确版本与包摘要，不能直接选旧草稿发布。2026-10-26 只读 manifest 为 Design 0.22.0、Job 5.1.0、Quant 0.47.0、Download 0.24.1、Video 0.8.0、Starter 0.1.1；Download 0.24.1 与 Video 0.8.0 已有正式发行，当前包目录与同版本 tag 的差异、缺 tag 项及六包真实安装/更新/加载/项目绑定/权限仍须验收，见[核查边界](docs/todo/recovery-windows-audit-20261026.md)。生产更新链范围为 Desktop 与 Hub，不扩展云端 Panel 运行时。
 - [ ] **P0.3 — 正式包 Pet / Mimi 与插件可靠性。** 用最终正式包验证真实 Electron / worker / Keychain、固定版本真实插件安装审阅与初始化、同 Session 续办和冷重启；完成真实微信长回合、断线与图片验收。早期真实插件 SDK 和 SVG 两次冷启动已通过，保留各自旧输入，仍缺最终正式包证据。
 - [ ] **P1.1 — 六 Panel 的 12 组合完整业务（原 24 组合）。** 补齐电脑 / 手机 × 本地两组合的完整领域流程、真实服务商与项目隔离；实体设备证据单独记录。按 2026-10-14 范围决定，电脑 / 手机 × 云端两组合移出，手机经中继查看电脑上的 Panel；已有的云端组合证据保留为历史记录。受控 CI、窄屏浏览器和局部通过项不关闭完整矩阵。
 - [ ] **P1.2 — 真实旧数据迁移、升级与回滚。** 用真实旧版本数据完成审阅、取消、执行、冲突、失败保全、重启和回滚，确认其他项目不受影响。现有 Job 迁移与受控快照恢复保留，其他完整领域和真实数据验收仍缺。
-- [ ] **P1.3 — Hub / Account / Link 三仓正式兼容。** 完成版本固定的正式包 / 镜像或正式私有交付、已有 GitHub 授权的严格单仓库读取、旧 owner 显式迁移、账号 / 设备统一 authority 及正式原生 Keychain 验收。Services 三 Node CI 已通过，不等于真实账号及目标部署验收。
-- [ ] **P1.4 — 目标部署、备份恢复与保留最新数据回滚。** 固定可信目标入口及最终源码 / 配置，实际验证镜像与 volume 备份、新目录恢复、项目持久化、恢复后旧授权撤销，以及兼容代码回滚仍保留最新数据。目标可信 SSH / 部署入口仍待确认；HTTPS 200 和历史备份不能关闭本项。按 2026-10-14 范围决定，范围收窄为薄云端（Account、Link、设备中继、推送）的备份恢复与回滚；云端项目持久化与项目 volume 恢复随云端工作区冻结移出。
+- [ ] **P1.3 — Hub / Account / Link 三仓正式兼容。** 完成版本固定的正式包 / 镜像或正式私有交付、已有 GitHub 授权的严格单仓库读取、旧 owner 显式迁移、账号 / 设备统一 authority 及正式原生 Keychain 验收。Account/Link 已有生产部署记录；Link 后续为 `da73ce5` / schema 3，见[现状追认](docs/remote-link-host.md#2026-10-26-后续部署追认)。已有 GitHub 登录/consent/native callback 证据不替代严格单仓读取、OS Keychain、旧 owner 迁移与三仓正式兼容验收。
+- [ ] **P1.4 — 目标部署、备份恢复与保留最新数据回滚。** 固定可信目标入口及最终源码 / 配置，实际验证镜像与 volume 备份、新目录恢复、项目持久化、恢复后旧授权撤销，以及兼容代码回滚仍保留最新数据。Account/Link 既有部署已执行，不能再写“部署入口待确认”；本轮恢复演练的目标与范围仍待用户决定。HTTPS 200 和历史备份不能关闭本项，推送网关尚无已部署证据。按 2026-10-14 范围决定，范围收窄为薄云端（Account、Link、设备中继、推送）的备份恢复与回滚；云端项目持久化与项目 volume 恢复随云端工作区冻结移出。
 - [ ] **P1.5 — 实体手机弱网与后台恢复。** 验证断网 / 重连、后台 / 前台、审批、应用内通知和补收。实体 iOS / Android 环境仍待接入；本项不新增 OS push 功能。
 - [ ] **P1.6 — 输出持久恢复的正式消费者验收。** 主体与已覆盖 producer 的修复已合入；仍需最终正式包的 Desktop / Hub / Mobile，覆盖后台 / 无 Run、正确 Session / producer 身份、冷重启、并发和删除重用。
 - [ ] **P1.7 — 日志轮转与显式损坏修复验收。** 主体与竞态修复已合入；仍需最终正式消费者验证游标 / 恢复身份、原证据保全、容量、取消与失败路径。
 
-P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 接入继续后置；具体未完成路线图保留在下方分区。完整 Linux 与安装包触发工具已封存为准备产物，实际运行仍是 P0.1 的未完成项。小工件上传成功不证明大包容量充足；实际上传结果为准，未获授权不删除旧工件。
+P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 接入继续后置；具体未完成路线图保留在下方分区。既有三平台发行不替代完整 Linux services 与原生安装升级的剩余验收。小工件上传成功不证明大包容量充足；实际上传结果为准，未获授权不删除旧工件。
 
 > Panel runtime 专项核对：2026-09-13。API 14 通用资源、包内工具、进程回执与 Desktop 后台任务已实现，视频处理业务已迁到面板；本次发布与最终 CI 仍见 [验收矩阵](docs/todo/panel-plugin-runtime-implementation.md)。旧 Host TTS 测试随业务迁至面板，不再作为 Host 功能待办。
 
 ## 小 feature（体量 M 及以下）
 
-- **Desktop 旧聊天历史恢复基线超限**（M，待修复）。2026-10-14 18:51–18:56（UTC+08:00），0.9.40 主聊天页反复记录 `Output recovery has no exact legacy base`；已核实真实样本的旧基线标记位于 transcript 第 1200 行、结束字节 1,963,815，超过 `readOutputJournalLegacyBase` 的 1 MiB 扫描上限，导致历史恢复失败。当前仓库源码仍有同一限制；本次采样未确认整页主线程卡死，18:56 已收到完整回复并回到空闲。修复需保留有界读取与完整基线校验，验收覆盖标记位于 1 MiB 边界前后、单条记录跨界、失败重试、历史与后续流式输出衔接、刷新及冷重启恢复；损坏基线继续显式失败并保全原数据。原始日志与个人会话标识保留在本次排查聊天，不写入公开待办。
+- **Desktop / Hub 大历史恢复的正式包验收**（S，本轮源码修复已通过原 CC 二轮验收，待正式包/原生验收）。真实旧 anchor 结束于 1,963,815 字节，原读端仅扫描 1 MiB/4096 事件，与任意长度历史末 ID 的写端不匹配。本轮实现已通过原 CC 二轮验收，正式包/原生环境验收仍未完成；实现包含独立 32 MiB/262144 事件预算、每记录 1 MiB 上限、新 header 原始前缀偏移/SHA-256 和身份复核；Desktop 另将旧基线从共享分页校验中分离。普通分页与独立 cutover 上限不变。源码与隔离回归不是正式包冷重启证据，仍需最终包的刷新、冷重启、失败重试与后续流式衔接验收；mobile 原始扫描与 wire 仍限 1 MiB，client 保留 1 MiB + 4096 字节断言，尚不支持大旧基线。损坏基线失败关闭并保全原数据。详见[本轮交付](docs/todo/recovery-windows-audit-20261026.md)。
 - **Pet 可靠性修复的真实环境验收**（S，部署验证；正式包部分与 P0.3 同一验收，状态以 P0.3 为准）。续办、插件初始化/故障反馈、预算终态、图片保留和提示约束已修复并做本地回归；9 月 21 日补齐微信纯图片路由、Mimi 长回合等待、断线保留消息与工具参数损坏反馈。10 月 12 日已用新构建的真实 Electron／stdio worker 验证 Pet 同 Session 连续输入、普通 Work 同 Session 续办、冷启动聊天／记忆恢复、合成固定版本插件初始化和原生 safeStorage，见[运行时验收与回执](docs/todo/pet-built-runtime-acceptance-2026-10-12.md)。仍需真实插件与固定版本／预安装发行入口、真实微信长回合及该环境的自动 Pet Work 续办、正式安装包验收。详见 [逐项 TODO 与证据](docs/todo/pet-work-reliability-audit-2026-09-20.md)、[技术方案](docs/todo/pet-work-reliability-design-2026-09-20.md) 和 [微信回合修复与回归](docs/todo/mimi-wechat-turn-lifecycle-2026-09-21.md)。不把本机隔离验收当作已部署，不重放真实账号写操作。
 - **Link 真账号 / 真 token 验证**（S，验证任务；GitHub 严格单仓库读取与账号 authority 归 P1.3，其余 provider 留在此项）。按 2026-10-09 用户要求，新增第三方应用、OAuth 授权、token 配置与接入部署暂缓，继续保留未完成。各 provider 仍需授权账号验证 action 响应与错误形状；现有 stub、契约和本地 CLI 测试不能代替真实账号验收。执行时按 provider 单独记录，不写入用户真实数据来代替只读验证。
 
@@ -42,7 +38,7 @@ P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 
 
 - **Link 连接器契约与运行时重构**（L，2026-10-16 实施中）。首批增加统一 Operation 契约、五种 recipe、完整快照 CI 门禁、Figma 新旧动作分离、刷新消费错误分类、各入口状态回执、HTTP provider 注册抽取与跨会话未决写屏障；新记录按 recipe 建立，旧连接可由精确离线工具清理。剩余纯领域 helpers/CLI/MCP/verified-write 的完整迁出、在线清理收口、正式契约包与部署兼容验收。同步/Webhook/浏览器会话继续后置。见[重构方案](docs/todo/link-connector-refactor-plan-2026-10-16.md)与[准确实施边界](docs/todo/link-connector-refactor-delivery-2026-10-16.md)。
 
-- **运行时等待与交互延迟优化**（L，2026-10-15 技术方案，后续实施未启动）。参考 Codex 的句柄、显式等待、工具合批和事件流机制，先建立耗时基线，再补指定对象的等待与逐工具状态，随后治理可选辅助请求、上下文预算和缓存代次。既有按需工具面、notes、输出 journal 与平台 W3 ExecutionService 继续复用。局部修复 `37b390787` 已适配到本轮收敛分支并通过 135 项定向及相邻守护回归；最终主线组合回归、正式消费者验收，以及 A 批计时基线和 B–F 后续工作仍未完成，尚未正式发布。见[实施接口与验收方案](docs/todo/agent-runtime-performance-plan-20261015.md)。
+- **运行时等待与交互延迟优化**（L，2026-10-15 技术方案，后续实施未启动）。参考 Codex 的句柄、显式等待、工具合批和事件流机制，先建立耗时基线，再补指定对象的等待与逐工具状态，随后治理可选辅助请求、上下文预算和缓存代次。既有按需工具面、notes、输出 journal 与平台 W3 ExecutionService 继续复用。局部修复 `37b390787` 已适配到本轮收敛分支并通过 135 项定向及相邻守护回归；最终主线组合回归、正式消费者验收，以及 A 批计时基线和 B–F 后续工作仍未完成；当前发行状态以本文顶部核对为准。见[实施接口与验收方案](docs/todo/agent-runtime-performance-plan-20261015.md)。
 
 - **Figma Link：MCP 与 REST 统一能力**（L，2026-10-15 重新规划，新增部分尚未实施）。已有 REST 按需节点、导出、素材与评论读取保留；设计上下文、截图、变量和 Make resources 规划接入官方 MCP，独立 OAuth 与连接状态。先验证 CodeShell 客户端合法准入、补每次发送的 endpoint/credential 绑定及通用 MCP 资源协议，再做能力路由和新文件授权优化；不把已有 Link downstream grant 当作 MCP token，不自动启用画布写入。见[能力与分期规划](docs/todo/figma-link-mcp-plan.md)。本项不启动其他 provider 接入或正式发布。
 

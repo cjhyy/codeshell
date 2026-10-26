@@ -63,6 +63,35 @@ const copyResult = (result) =>
     pausedLocation: { ...result.pausedLocation },
   };
 
+function projectSnapshotTiming(value) {
+  const finite = (number) => {
+    if (
+      typeof number !== "number" ||
+      !Number.isFinite(number) ||
+      number < 0 ||
+      number > Number.MAX_SAFE_INTEGER
+    )
+      throw Error(FAILURE);
+    return number;
+  };
+  const count = integer(field(value, "count"));
+  const totalMs = finite(field(value, "totalMs")),
+    maxMs = finite(field(value, "maxMs"));
+  const recent = field(value, "recent");
+  if (!Array.isArray(recent)) throw Error(FAILURE);
+  const length = integer(field(recent, "length"), 0, Math.min(count, 32));
+  const samples = Array.from({ length }, (_, index) => finite(field(recent, String(index))));
+  if (maxMs > totalMs || samples.some((sample) => sample > maxMs)) throw Error(FAILURE);
+  return {
+    count,
+    totalMs,
+    maxMs,
+    recent: samples,
+    maxTickGapMs: finite(field(value, "maxTickGapMs")),
+  };
+}
+const copyTiming = (value) => value && { ...value, recent: [...value.recent] };
+
 export function createPackagedStartupObservation() {
   const launches = [];
   const records = new WeakMap();
@@ -219,7 +248,8 @@ export function hostedWindowsLaunchDiagnosticsEnabled(platform, arch, ci) {
 
 /** Bounded, passive callbacks on the very same captured ChildProcess.
  * Cached properties and text are observations, never OS liveness or fault proof.
- * No file reads, timers, process methods, ordinary error listeners or new await. */
+ * Reads only an explicitly bound watchdog's bounded diagnostic getter; no file
+ * reads, timers, process methods, ordinary error listeners or new await. */
 export function createPackagedLaunchDiagnostics({
   redactRoots = [],
   now = () => performance.now(),
@@ -351,6 +381,8 @@ export function createPackagedLaunchDiagnostics({
         "Redacted UTF-8 rendering of bounded fixture log bytes; not a universal secret scrub or raw-byte reproduction",
     };
   };
+  const captureTiming = (record) =>
+    record.monitor ? attempt(() => projectSnapshotTiming(record.monitor.snapshotTiming)) : null;
   return {
     captured(child) {
       return attempt(() => {
@@ -365,6 +397,9 @@ export function createPackagedLaunchDiagnostics({
           events: [],
           droppedEvents: 0,
           listenerSetupFailed: false,
+          monitor: null,
+          failureTimingCaptured: false,
+          snapshotTiming: { atFailure: null, settled: null },
           stdout: streamState(),
           stderr: streamState(),
         };
@@ -417,6 +452,30 @@ export function createPackagedLaunchDiagnostics({
         return record.launch;
       });
     },
+    watchdog(child, monitor) {
+      return attempt(() => {
+        const record = records.get(child);
+        if (
+          !record ||
+          record.monitor ||
+          !monitor ||
+          !["object", "function"].includes(typeof monitor)
+        )
+          throw Error(FAILURE);
+        record.monitor = monitor;
+        return true;
+      });
+    },
+    failed() {
+      for (const record of launches) {
+        if (record.failureTimingCaptured) continue;
+        record.failureTimingCaptured = true;
+        record.snapshotTiming.atFailure = captureTiming(record);
+      }
+    },
+    settled() {
+      for (const record of launches) record.snapshotTiming.settled = captureTiming(record);
+    },
     appended(child, name, chunk) {
       // Called only after the existing appendFileSync succeeded. Keep a copy,
       // never a subarray retaining an arbitrarily large chunk's backing store.
@@ -452,6 +511,10 @@ export function createPackagedLaunchDiagnostics({
           launch: record.launch,
           childPid: record.childPid,
           listenerSetupFailed: record.listenerSetupFailed,
+          snapshotTiming: {
+            atFailure: copyTiming(record.snapshotTiming.atFailure),
+            settled: copyTiming(record.snapshotTiming.settled),
+          },
           droppedEvents: record.droppedEvents,
           events: record.events.map((item) => ({
             ...item,

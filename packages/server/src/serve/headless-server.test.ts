@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { WebSocket } from "ws";
 import { startHeadlessServer, type HeadlessServer } from "./headless-server.js";
+import { SessionOutputJournal } from "@cjhyy/code-shell-core/internal";
 
 const WORKER_SCRIPT = `
 let buf = "";
@@ -62,6 +63,7 @@ afterEach(async () => {
 async function boot(
   options: {
     seedSession?: boolean;
+    largeHistory?: boolean;
     workerEntryPath?: string;
     pendingWorkerResponseTtlMs?: number;
     pendingWorkerResponseReaperMs?: number;
@@ -82,6 +84,7 @@ async function boot(
         model: "test-model",
         status: "completed",
         turnCount: 1,
+        runId: "run",
       }),
     );
     writeFileSync(
@@ -94,6 +97,30 @@ async function boot(
         data: { role: "user", content: "Readable session title" },
       })}\n`,
     );
+    if (options.largeHistory) {
+      const legacy = [
+        {
+          id: "meta",
+          type: "session_meta",
+          timestamp: 123,
+          data: { sessionId: "session-in-workspace" },
+        },
+        ...Array.from({ length: 3 }, (_, i) => ({
+          id: `old-${i}`,
+          type: "message",
+          timestamp: 123,
+          data: { role: "assistant", content: "中".repeat(220000) },
+        })),
+      ];
+      writeFileSync(
+        join(sessionDir, "transcript.jsonl"),
+        legacy.map((event) => JSON.stringify(event) + "\n").join(""),
+      );
+      new SessionOutputJournal(sessionRootDir, "session-in-workspace", "run", "old-2").append({
+        type: "text_delta",
+        text: "new reply",
+      });
+    }
     const otherSessionDir = join(sessionRootDir, "session-outside-workspace");
     mkdirSync(otherSessionDir, { recursive: true });
     writeFileSync(
@@ -329,6 +356,36 @@ describe("headless serve — WS pipe", () => {
     const detailReply = await nextMessage(ws, (m) => m.id === "s2");
     expect((detailReply.result as { type: string }).type).toBe("session_detail");
     ws.close();
+  });
+
+  test("Hub output recovery returns the large frozen legacy base with its journal", async () => {
+    const server = await boot({ seedSession: true, largeHistory: true });
+    const ws = await openWs(server, { "x-access-passcode": PASSCODE });
+    try {
+      ws.send(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: "large-base",
+          method: "agent/query",
+          params: {
+            type: "session_detail",
+            sessionId: "session-in-workspace",
+            outputRecovery: true,
+          },
+        }),
+      );
+      const reply = await nextMessage(ws, (m) => m.id === "large-base");
+      expect(reply.result).toMatchObject({
+        type: "session_detail",
+        data: {
+          legacyBaseComplete: true,
+          outputJournal: { status: "ok", legacyBaseThroughEventId: "old-2" },
+        },
+      });
+      expect(JSON.stringify(reply.result)).toContain("中".repeat(220000));
+    } finally {
+      ws.close();
+    }
   });
 
   test("worker notifications broadcast to every connected tab", async () => {

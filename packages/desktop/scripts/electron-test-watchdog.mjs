@@ -1,4 +1,8 @@
-import { snapshotElectronTestProcesses } from "./electron-test-process-snapshot.mjs";
+import { performance } from "node:perf_hooks";
+import {
+  snapshotElectronTestProcesses,
+  snapshotElectronTestProcessesAsync,
+} from "./electron-test-process-snapshot.mjs";
 import { rememberOwnedProcesses } from "./process-custody.mjs";
 
 function reportFailure(message) {
@@ -48,25 +52,55 @@ export function watchElectronTestProcess(child, options = {}) {
     clearInterval: cancelInterval = clearInterval,
     reportFailure: fail = reportFailure,
     now = Date.now,
+    timingNow = () => performance.now(),
     onOwnedSnapshot,
     onInitialIdentityFailure,
   } = options;
+  // Custom synchronous adapters may bind an advisory sidecar to that exact
+  // query. Keep them paired unless they explicitly supply an async equivalent.
+  const snapshotAsync =
+    options.snapshotProcessesAsync ??
+    (options.snapshotProcesses
+      ? undefined
+      : () => snapshotElectronTestProcessesAsync({ platform }));
+  const timing = { count: 0, totalMs: 0, maxMs: 0, recent: [], maxTickGapMs: 0 };
+  const snapshotTiming = () => ({ ...timing, recent: [...timing.recent] });
+  const recordTiming = (started) => {
+    const elapsed = Math.max(0, timingNow() - started);
+    timing.count++;
+    timing.totalMs += elapsed;
+    timing.maxMs = Math.max(timing.maxMs, elapsed);
+    timing.recent.push(elapsed);
+    if (timing.recent.length > 32) timing.recent.shift();
+  };
+  const timedSnapshot = () => {
+    const started = timingNow();
+    try {
+      return snapshot();
+    } finally {
+      recordTiming(started);
+    }
+  };
+  const withTiming = (monitor) =>
+    Object.defineProperty(monitor, "snapshotTiming", { get: snapshotTiming });
   if (!Number.isInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2_147_483_647)
     throw new Error("Electron test timeoutMs must be an integer between 1 and 2147483647");
   if (child.exitCode != null || child.signalCode != null) {
     const completed = Promise.resolve(completionEvidence("unproven", new Map(), null, false));
-    return Object.assign(() => {}, {
-      completed,
-      terminate: () => completed,
-      bindObservedDescendant: () => undefined,
-    });
+    return withTiming(
+      Object.assign(() => {}, {
+        completed,
+        terminate: () => completed,
+        bindObservedDescendant: () => undefined,
+      }),
+    );
   }
   if (!["darwin", "linux", "win32"].includes(platform))
     throw new Error("Unsupported Electron test watchdog platform");
 
   let initial;
   try {
-    initial = snapshot();
+    initial = timedSnapshot();
   } catch (error) {
     throw new Error(`Cannot establish Electron test process identity: ${error.message}`, {
       cause: error,
@@ -119,6 +153,9 @@ export function watchElectronTestProcess(child, options = {}) {
   const owned = new Map([[root.pid, root]]);
   rememberOwnedProcesses(owned, initial);
   let state = "watching";
+  let generation = 0,
+    inFlight = false,
+    lastTick = timingNow();
   const notifyOwnedSnapshot = (current, phase) => {
     if (typeof onOwnedSnapshot !== "function") return;
     try {
@@ -145,19 +182,53 @@ export function watchElectronTestProcess(child, options = {}) {
     resolveCompleted(completionEvidence(status, owned, remaining, snapshotFailureReported));
   };
 
+  const observationFailed = (error) => {
+    if (!snapshotFailureReported) {
+      snapshotFailureReported = true;
+      fail(`Cannot inspect Electron test processes; unsafe cleanup skipped: ${error.message}`);
+    }
+  };
   const observe = () => {
     try {
-      const current = snapshot();
+      const current = timedSnapshot();
       rememberOwnedProcesses(owned, current);
       notifyOwnedSnapshot(current, state);
       return new Map(current.map((item) => [item.pid, item]));
     } catch (error) {
-      if (!snapshotFailureReported) {
-        snapshotFailureReported = true;
-        fail(`Cannot inspect Electron test processes; unsafe cleanup skipped: ${error.message}`);
-      }
+      observationFailed(error);
       return null;
     }
+  };
+  const poll = () => {
+    if (state !== "watching") return;
+    const tick = timingNow();
+    timing.maxTickGapMs = Math.max(timing.maxTickGapMs, tick - lastTick);
+    lastTick = tick;
+    if (inFlight) return;
+    if (!snapshotAsync) {
+      observe();
+      return;
+    }
+    inFlight = true;
+    const currentGeneration = generation,
+      started = timingNow();
+    // Never await this query during cleanup. A stopped generation has no right
+    // to adopt descendants, notify an observer or fail a settled monitor.
+    void (async () => {
+      try {
+        const current = await snapshotAsync();
+        if (generation !== currentGeneration || state !== "watching") return;
+        rememberOwnedProcesses(owned, current);
+        notifyOwnedSnapshot(current, state);
+      } catch (error) {
+        if (generation === currentGeneration && state === "watching") observationFailed(error);
+      } finally {
+        if (generation === currentGeneration && state === "watching") {
+          recordTiming(started);
+          inFlight = false;
+        }
+      }
+    })();
   };
   const signalOwned = (signal, includeRoot) => {
     const candidates = observe();
@@ -187,6 +258,7 @@ export function watchElectronTestProcess(child, options = {}) {
     return count;
   };
   const disarm = () => {
+    generation++;
     cancelInterval(interval);
     cancelTimeout(deadline);
     child.removeListener("exit", onExit);
@@ -224,7 +296,7 @@ export function watchElectronTestProcess(child, options = {}) {
     if (state === "watching") cleanup(false);
   };
   child.once("exit", onExit);
-  const interval = scheduleInterval(observe, 1_000);
+  const interval = scheduleInterval(poll, 1_000);
   const deadline = scheduleTimeout(() => {
     if (state !== "watching") return;
     fail(
@@ -264,5 +336,5 @@ export function watchElectronTestProcess(child, options = {}) {
       return undefined;
     return { pid: fresh.pid, ppid: fresh.ppid, birth: fresh.birth };
   };
-  return Object.assign(stop, { completed, terminate, bindObservedDescendant });
+  return withTiming(Object.assign(stop, { completed, terminate, bindObservedDescendant }));
 }

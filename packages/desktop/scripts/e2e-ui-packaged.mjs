@@ -80,6 +80,7 @@ const diagnosticRecordingFailures = [];
 const recordFirstError = (error, details) => {
   if (firstError) return;
   firstError = recordPackagedMainFirstError(join(evidence, "first-error.json"), error, details);
+  fixture?.recordLaunchFailure();
   if (!firstError.written)
     diagnosticRecordingFailures.push(Error("Original packaged UI error recording failed"));
 };

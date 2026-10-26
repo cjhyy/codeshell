@@ -236,7 +236,12 @@ export class MobileOutputRecovery {
       });
       const base =
         page.status === "ok" && event.after === undefined
-          ? readOutputJournalLegacyBase(root, event.sessionId, page.legacyBaseThroughEventId)
+          ? // TODO: large legacy bases need a paged mobile protocol. Keep the eight
+            // concurrent reads at 1 MiB raw, the wire at 1 MiB, and the client's
+            // existing 1 MiB + 4096-byte serialized-base assertion unchanged.
+            readOutputJournalLegacyBase(root, event.sessionId, page.legacyBaseThroughEventId, {
+              maxBytes: 1024 * 1024,
+            })
           : undefined;
       if ((await this.deps.authority(event.sessionId)) !== binding!.authority || !valid())
         throw new Error("read grant revoked");

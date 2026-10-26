@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readOutputJournal } from "@cjhyy/code-shell-core/internal";
+import { readOutputJournal, readOutputJournalLegacyBase } from "@cjhyy/code-shell-core/internal";
 import { SessionManager } from "@cjhyy/code-shell-core";
 import {
   ExternalRuntimeSessionRecorder,
@@ -35,6 +35,31 @@ afterEach(() => {
 });
 
 describe("external runtime durable state", () => {
+  test("beginTurn seals a large existing history and a cold reader joins the new turn", () => {
+    const manager = new SessionManager();
+    const session = manager.create(testHome, "fixture", "fixture", "external-large-history");
+    for (let i = 0; i < 3; i++) session.transcript.appendMessage("assistant", "中".repeat(220000));
+    const throughId = session.transcript.getEvents().at(-1)!.id;
+    const recorder = new ExternalRuntimeSessionRecorder(
+      "external-large-history",
+      testHome,
+      "codex/test",
+      "codex",
+    );
+    recorder.beginTurn({ text: "new input", clientMessageId: "large-history-input" });
+    recorder.onEvent({ type: "text_delta", text: "new reply" });
+    recorder.onEvent({ type: "turn_complete", reason: "completed" });
+    const page = readOutputJournal(manager.getStorageDir(), session.state.sessionId);
+    expect(page.legacyBaseThroughEventId).toBe(throughId);
+    const base = readOutputJournalLegacyBase(
+      manager.getStorageDir(),
+      session.state.sessionId,
+      throughId,
+    );
+    expect(base.complete).toBe(true);
+    expect(base.events).toHaveLength(4);
+    expect(page.frames.some((frame) => frame.event?.type === "session_user_message")).toBe(true);
+  });
   test("records one canonical turn with attachments, tools, usage, and completion", () => {
     const recorder = new ExternalRuntimeSessionRecorder(
       "external-state-test",

@@ -86,6 +86,15 @@ export function createElectronTestDiagnostics({ ownedRoots = [], additionalPhase
   };
   const started = performance.now();
   let sequence = 0;
+  let monitor;
+  const captureTiming = () => {
+    try {
+      const timing = monitor?.snapshotTiming;
+      if (timing) receipt.snapshotTiming = { ...timing, recent: timing.recent.slice(0, 32) };
+    } catch {
+      // A diagnostic getter never interferes with failure handling or custody.
+    }
+  };
   const event = (kind, fields) => {
     const record = {
       sequence: ++sequence,
@@ -99,12 +108,16 @@ export function createElectronTestDiagnostics({ ownedRoots = [], additionalPhase
   };
   return {
     receipt,
+    watchdog(value) {
+      monitor = value;
+    },
     phase(phase) {
       assert(allowedPhases.has(phase), "Unknown Electron diagnostic phase");
       receipt.phase = phase;
       event("phase", { phase });
     },
     error(error, child) {
+      captureTiming();
       if (receipt.firstError) return;
       let keychainDiagnostic, name, message, stack;
       try {
@@ -161,6 +174,7 @@ export function createElectronTestDiagnostics({ ownedRoots = [], additionalPhase
       else receipt.truncated = true;
     },
     settled(cleanup, child) {
+      captureTiming();
       cleanup.after = electronChildExitState(child);
       event("cleanup-settled", { trigger: cleanup.trigger, after: cleanup.after });
     },
@@ -430,6 +444,7 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
         captured = child;
         child.__sourceWindowsTransportRead = () => transport.receipt();
         custody = watch(child, { timeoutMs: runtimeTimeoutMs, reportFailure });
+        observeElectronDiagnostic(diagnostics, "watchdog", custody);
         assert(
           typeof custody?.terminate === "function" &&
             typeof custody?.completed?.then === "function",
@@ -496,7 +511,8 @@ appendFileSync(${JSON.stringify(join(home, "real-keyring-bootstrap.jsonl"))}, JS
   const application = await launch(options);
   try {
     diagnostics?.phase("harness-watch");
-    watch(application.process(), { timeoutMs: runtimeTimeoutMs, reportFailure });
+    const monitor = watch(application.process(), { timeoutMs: runtimeTimeoutMs, reportFailure });
+    observeElectronDiagnostic(diagnostics, "watchdog", monitor);
   } catch (error) {
     // An unsuccessful birth query grants no quit/signal authority.
     const child = application.process();

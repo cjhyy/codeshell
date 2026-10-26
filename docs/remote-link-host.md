@@ -136,6 +136,22 @@ journalctl --utc -u <host-unit> --since '<UTC start>' --until '<UTC end>' \
 本地 Host 进程；独立 `codeshell-link.service` 不负责这条管理 API，不能仅在该 unit
 中查找这组事件。
 
+## 2026-10-26 后续部署追认
+
+以下通过 services 仓库的本地发布文档及 commit 只读复核，未连接生产，
+不是 10 月 26 日在线健康或证书有效性证明。下节的 `c892b91b` 是 10 月 16 日较早快照：
+随后先升级到 `195e16a`，再于 08:48:42–08:48:44 UTC 升级至
+`da73ce588cd55cd56604c2f5fb83fa436d20c7cd`（tree `b1eed4e09943fccdf17d8dfa7b856f1af1ac8988`）。
+后一次发布文档记录 health 200、schema 3、`NRestarts=0`，Account/Cloud/个人 Hub 未变，
+未新增真实授权或第三方调用。证据为 services 的
+[内容读取升级](https://github.com/cjhyy/codeshell-services/blob/0245869/docs/link-production-figma-content-upgrade-2026-10-16.md)
+及[权限选择部署记录](https://github.com/cjhyy/codeshell-services/blob/0245869/docs/link-production-permission-selection-2026-10-16.md)
+（后者链接机器 receipt）。不能再把 `c892b91b` 写作最新部署。
+
+Account 另有 10 月 9/12/13 日部署与真实 GitHub 登录、consent、native callback 保存证据；
+严格单仓库读取、OS Keychain 持久化、旧 owner 显式迁移仍需专项验收。
+这些证据不外推为设备中继、推送网关或整个薄云端已完成部署与恢复演练。
+
 ## 2026-10-16 生产只读核查
 
 通过腾讯云实例控制台的现有 OrcaTerm 免密会话检查 `115.159.45.55`：

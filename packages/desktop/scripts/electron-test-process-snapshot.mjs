@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { win32 } from "node:path";
 import { performance } from "node:perf_hooks";
 
@@ -91,11 +91,7 @@ export function parseWindowsProcessSnapshot(output) {
 }
 
 /** Fixed commands query finite process identity only, never command lines or environments. */
-export function snapshotElectronTestProcesses({
-  platform = process.platform,
-  environment = process.env,
-  execFile = execFileSync,
-} = {}) {
+function queryConfiguration(platform, environment) {
   let executable, args, env, timeout, parse;
   if (platform === "darwin" || platform === "linux") {
     executable = "/bin/ps";
@@ -121,36 +117,74 @@ export function snapshotElectronTestProcesses({
     timeout = 5_000;
     parse = parseWindowsProcessSnapshot;
   } else throw new Error("Unsupported Electron test process metadata platform");
-  let output;
-  const started = performance.now();
-  try {
-    output = execFile(executable, args, {
+  return {
+    executable,
+    args,
+    parse,
+    options: {
       env,
       encoding: "utf8",
       timeout,
       maxBuffer: MAX_BYTES,
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
-    });
-  } catch (error) {
-    // Never forward native stderr or a command's raw error into acceptance logs.
-    const reason =
-      error?.code === "ETIMEDOUT"
+    },
+  };
+}
+function queryFailure(error, started) {
+  // Never forward native stderr or a command's raw error into acceptance logs.
+  const reason =
+    error?.code === "ENOBUFS" || error?.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER"
+      ? "output-limit"
+      : error?.code === "ETIMEDOUT" || (error?.killed === true && error?.signal === "SIGTERM")
         ? "timeout"
         : error?.code === "ENOENT"
           ? "unavailable"
           : error?.code === "EACCES"
             ? "permission"
-            : error?.code === "ENOBUFS"
-              ? "output-limit"
-              : Number.isInteger(error?.status)
-                ? "native-exit"
-                : "unknown";
-    const elapsedMs = Math.round(performance.now() - started);
-    throw Object.assign(
-      new Error(`Cannot query Electron test process metadata (${reason}, ${elapsedMs}ms)`),
-      { code: "ELECTRON_TEST_PROCESS_QUERY_FAILED", reason, elapsedMs },
-    );
+            : Number.isInteger(error?.status) || Number.isInteger(error?.code)
+              ? "native-exit"
+              : "unknown";
+  const elapsedMs = Math.round(performance.now() - started);
+  return Object.assign(
+    new Error(`Cannot query Electron test process metadata (${reason}, ${elapsedMs}ms)`),
+    { code: "ELECTRON_TEST_PROCESS_QUERY_FAILED", reason, elapsedMs },
+  );
+}
+export function snapshotElectronTestProcesses({
+  platform = process.platform,
+  environment = process.env,
+  execFile = execFileSync,
+} = {}) {
+  const query = queryConfiguration(platform, environment);
+  const started = performance.now();
+  let output;
+  try {
+    output = execFile(query.executable, query.args, query.options);
+  } catch (error) {
+    throw queryFailure(error, started);
   }
-  return parse(output);
+  return query.parse(output);
+}
+
+/** Periodic observation only. Safety-critical identity checks keep the sync query. */
+export async function snapshotElectronTestProcessesAsync({
+  platform = process.platform,
+  environment = process.env,
+  execFile: run = execFile,
+} = {}) {
+  const query = queryConfiguration(platform, environment);
+  const started = performance.now();
+  let output;
+  try {
+    output = await new Promise((resolve, reject) => {
+      run(query.executable, query.args, query.options, (error, stdout) => {
+        if (error) reject(error);
+        else resolve(stdout);
+      });
+    });
+  } catch (error) {
+    throw queryFailure(error, started);
+  }
+  return query.parse(output);
 }

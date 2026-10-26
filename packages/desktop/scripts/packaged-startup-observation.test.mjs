@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import children from "node:child_process";
 import { syncBuiltinESMExports } from "node:module";
+import { readFileSync } from "node:fs";
 
 // The initial repository imports are dependency-free observation and shutdown leaves.
 // Refuse any unexpected real process effect before any repository import.
@@ -316,6 +317,184 @@ const diagnosticFixture = (options = {}) => {
   return { observation, child };
 };
 const tailHash = (bytes) => createHash("sha256").update(bytes).digest("hex");
+
+const timingSample = (count = 2) => ({
+  count,
+  totalMs: count * 5,
+  maxMs: 5,
+  recent: Array(Math.min(count, 32)).fill(5),
+  maxTickGapMs: 1001,
+});
+const packagedDriverSource = readFileSync(
+  new URL("./e2e-ui-packaged.mjs", import.meta.url),
+  "utf8",
+);
+const firstErrorStart = packagedDriverSource.indexOf("const recordFirstError =");
+const firstErrorEnd = packagedDriverSource.indexOf("const put =", firstErrorStart);
+const actualFirstErrorRecorder = new Function(
+  "fixture",
+  "recordPackagedMainFirstError",
+  "join",
+  "evidence",
+  `let firstError; const diagnosticRecordingFailures = []; ${packagedDriverSource.slice(firstErrorStart, firstErrorEnd)} return recordFirstError;`,
+);
+const packagedFixtureSource = readFileSync(
+  new URL("./packaged-pet-fixture.mjs", import.meta.url),
+  "utf8",
+);
+const bindingStart = packagedFixtureSource.indexOf(
+  "passiveLaunchDiagnostics?.watchdog(child, monitor);",
+);
+const bindingEnd = packagedFixtureSource.indexOf("processMonitors.push(monitor);", bindingStart);
+assert.ok(bindingStart >= 0 && bindingEnd > bindingStart);
+const actualWatchdogBinding = new Function(
+  "passiveLaunchDiagnostics",
+  "child",
+  "monitor",
+  packagedFixtureSource.slice(bindingStart, bindingEnd),
+);
+const settledStart = packagedFixtureSource.indexOf(
+  "const observedProcessSettlements = await Promise.all(",
+);
+const settledEnd = packagedFixtureSource.indexOf("const after =", settledStart);
+assert.ok(settledStart >= 0 && settledEnd > settledStart);
+const actualSettledCapture = new (Object.getPrototypeOf(async function () {}).constructor)(
+  "processMonitors",
+  "passiveLaunchDiagnostics",
+  packagedFixtureSource.slice(settledStart, settledEnd) + "return observedProcessSettlements;",
+);
+
+test("actual packaged fixture captures settled timing only after the original monitor completes", async () => {
+  const { observation, child } = diagnosticFixture();
+  let complete,
+    reads = 0;
+  const completed = new Promise((resolve) => {
+    complete = resolve;
+  });
+  const monitor = {
+    completed,
+    get snapshotTiming() {
+      reads++;
+      return timingSample();
+    },
+  };
+  actualWatchdogBinding(observation, child, monitor);
+  const pending = actualSettledCapture([monitor], observation);
+  await Promise.resolve();
+  assert.equal(reads, 0);
+  assert.equal(observation.snapshot().launches[0].snapshotTiming.settled, null);
+  const settlement = { status: "cleaned" };
+  complete(settlement);
+  assert.strictEqual((await pending)[0], settlement);
+  assert.equal(reads, 1);
+  assert.deepEqual(observation.snapshot().launches[0].snapshotTiming.settled, timingSample());
+});
+
+for (const throwing of [false, true])
+  test(`actual packaged first-window timeout captures watchdog timing; throwing getter=${throwing} preserves error and cleanup`, async () => {
+    const { observation, child } = diagnosticFixture();
+    let current = timingSample(),
+      reads = 0,
+      cleanups = 0;
+    const monitor = Object.defineProperty(() => {}, "snapshotTiming", {
+      get() {
+        reads++;
+        if (throwing) throw Error("PRIVATE getter detail");
+        return current;
+      },
+    });
+    actualWatchdogBinding(observation, child, monitor);
+    const original = Error("electronApplication.firstWindow: Timeout 20000ms exceeded");
+    const recorded = [];
+    const recordFirstError = actualFirstErrorRecorder(
+      { recordLaunchFailure: () => observation.failed() },
+      (_path, error) => {
+        recorded.push(error);
+        return { written: true };
+      },
+      (...paths) => paths.join("/"),
+      "owned-evidence",
+    );
+    recordFirstError(original, { phase: "ui-operation", pid: child.pid });
+    const first = observation.snapshot().launches[0].snapshotTiming.atFailure;
+    assert.deepEqual(first, throwing ? null : timingSample());
+    current.recent.fill(999);
+    current = timingSample(3);
+    recordFirstError(Error("later error"));
+    const result = await settlePackagedPet({
+      failures: [original],
+      closeApp: async () => {},
+      closeModel: async () => {},
+      verifyUnchanged: async () => {
+        observation.settled();
+        return { packagedLaunchDiagnostics: observation.snapshot() };
+      },
+      readNativeCalls: async () => [],
+      canCleanup: async () => true,
+      cleanup: async () => {
+        cleanups++;
+      },
+      retainedHome: "owned-home",
+    });
+    assert.strictEqual(result.errors[0], original);
+    assert.deepEqual(recorded, [original]);
+    assert.equal(cleanups, 1);
+    assert.equal(reads, 2);
+    const sidecar = result.artifacts.packagedLaunchDiagnostics;
+    assert.deepEqual(sidecar.launches[0].snapshotTiming, {
+      atFailure: throwing ? null : timingSample(),
+      settled: throwing ? null : timingSample(3),
+    });
+    assert.equal(sidecar.recordingFailed, throwing);
+    assert.doesNotMatch(JSON.stringify(sidecar), /PRIVATE/);
+  });
+
+test("packaged watchdog timing accepts 32 copied samples and only its captured child", () => {
+  const { observation, child } = diagnosticFixture();
+  const sample = { ...timingSample(32), secret: "PRIVATE" };
+  const monitor = Object.defineProperty(() => {}, "snapshotTiming", { get: () => sample });
+  observation.watchdog(child, monitor);
+  observation.failed();
+  observation.settled();
+  sample.recent[0] = 999;
+  const value = observation.snapshot();
+  assert.deepEqual(value.launches[0].snapshotTiming.atFailure, timingSample(32));
+  assert.deepEqual(value.launches[0].snapshotTiming.settled, timingSample(32));
+  value.launches[0].snapshotTiming.atFailure.recent[0] = -1;
+  assert.equal(observation.snapshot().launches[0].snapshotTiming.atFailure.recent[0], 5);
+  assert.equal(value.recordingFailed, false);
+  assert.doesNotMatch(JSON.stringify(value), /PRIVATE/);
+  assert.equal(observation.watchdog(diagnosticChild(child.pid), monitor), null);
+  assert.equal(observation.snapshot().recordingFailed, true);
+});
+
+test("invalid packaged timing metadata and field getters are refused without being serialized", () => {
+  for (const sample of [
+    { ...timingSample(), count: -1 },
+    { ...timingSample(), count: 1.5 },
+    { ...timingSample(), totalMs: Infinity },
+    { ...timingSample(), maxMs: NaN },
+    { ...timingSample(), maxTickGapMs: -1 },
+    { ...timingSample(), recent: Array(33).fill(5) },
+    { ...timingSample(), recent: [NaN] },
+    Object.defineProperty(timingSample(), "recent", {
+      get() {
+        throw Error("PRIVATE field getter");
+      },
+    }),
+  ]) {
+    const { observation, child } = diagnosticFixture();
+    observation.watchdog(child, { snapshotTiming: sample });
+    assert.doesNotThrow(() => {
+      observation.failed();
+      observation.settled();
+    });
+    const value = observation.snapshot();
+    assert.equal(value.recordingFailed, true);
+    assert.deepEqual(value.launches[0].snapshotTiming, { atFailure: null, settled: null });
+    assert.doesNotMatch(JSON.stringify(value), /PRIVATE/);
+  }
+});
 
 test("passive launch diagnostics opt in only to the existing hosted Windows CI identity", () => {
   const ci = {
