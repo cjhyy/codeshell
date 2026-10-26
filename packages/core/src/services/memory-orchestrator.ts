@@ -44,6 +44,8 @@ import {
 import { logger } from "../logging/logger.js";
 
 export interface MemoryOrchestratorOptions {
+  /** Revalidate the background task's session/ownership before calls and mutations. */
+  assertCurrent?: () => void;
   /** Lightweight LLM call — must be a non-streaming summarisation call. */
   callLLM: (
     systemPrompt: string,
@@ -129,9 +131,36 @@ interface MemoryCandidateSummary extends ExistingMemorySummary {
 const MAX_DECISION_BODY_CHARS = 1_500;
 const MAX_DECISION_TOTAL_BODY_CHARS = 8_000;
 
+class MemoryMaintenanceCustodyError extends Error {
+  constructor(cause: unknown) {
+    super("Memory maintenance is no longer current", { cause });
+    this.name = "MemoryMaintenanceCustodyError";
+  }
+}
+
 export class MemoryOrchestrator {
   private readonly projectDir?: string;
   private readonly baseDir?: string;
+
+  private assertCurrent(): void {
+    try {
+      this.options.assertCurrent?.();
+    } catch (error) {
+      throw new MemoryMaintenanceCustodyError(error);
+    }
+  }
+
+  private readonly callLLM: MemoryOrchestratorOptions["callLLM"] = async (...args) => {
+    this.assertCurrent();
+    try {
+      const response = await this.options.callLLM(...args);
+      this.assertCurrent();
+      return response;
+    } catch (error) {
+      this.assertCurrent();
+      throw error;
+    }
+  };
 
   constructor(private readonly options: MemoryOrchestratorOptions) {
     const storage = options.memoryManager?.getStorageContext();
@@ -166,6 +195,7 @@ export class MemoryOrchestrator {
     transcript: Array<{ role: string; content: string }>,
     sessionId: string,
   ): Promise<MemoryOrchestratorResult> {
+    this.assertCurrent();
     const mm =
       this.options.memoryManager ??
       new MemoryManager({ projectDir: this.projectDir, baseDir: this.baseDir });
@@ -187,7 +217,7 @@ export class MemoryOrchestrator {
         const extractionPrompt = buildExtractionPrompt(transcript, existing);
         const promptMs = Date.now() - t;
         t = Date.now();
-        const response = await this.options.callLLM(
+        const response = await this.callLLM(
           "You are a memory extraction assistant. Extract only durable, reusable information worth carrying into future sessions.",
           extractionPrompt,
           { maxTokens: 3072 },
@@ -221,16 +251,14 @@ export class MemoryOrchestrator {
             description: redactSecrets(entry.description),
             content: redactSecrets(entry.content),
           };
-          const decision = await decideWriteAction(
-            redactedEntry,
-            decisionContext,
-            this.options.callLLM,
-          );
+          const decision = await decideWriteAction(redactedEntry, decisionContext, this.callLLM);
+          this.assertCurrent();
 
           switch (decision.action) {
             case "ADD": {
               const isGlobal = redactedEntry.scope === "global";
               if (isGlobal) {
+                this.assertCurrent();
                 const promotion = applyGlobalDreamPromotionGate({
                   ...storage,
                   candidate: redactedEntry,
@@ -244,6 +272,7 @@ export class MemoryOrchestrator {
                 break;
               }
               const target = memoryManagerForDecision("project", "dream", storage);
+              this.assertCurrent();
               target.save(
                 {
                   type: redactedEntry.type,
@@ -275,6 +304,7 @@ export class MemoryOrchestrator {
                 guardedManualCount += existingTarget?.origin === "manual" ? 1 : 0;
                 break;
               }
+              this.assertCurrent();
               target.save(
                 {
                   id: targetId,
@@ -305,6 +335,7 @@ export class MemoryOrchestrator {
                 noopCount++;
                 break;
               }
+              this.assertCurrent();
               const deleteResult = target.deleteIfOwned(targetId, ["auto", "dream"]);
               if (deleteResult === "deleted") {
                 memoryChanged = true;
@@ -346,6 +377,8 @@ export class MemoryOrchestrator {
           responseChars: response.length,
         });
       } catch (err) {
+        if (err instanceof MemoryMaintenanceCustodyError) throw err;
+        this.assertCurrent();
         logger.warn("memory.extraction_failed", {
           sessionId,
           error: (err as Error).message,
@@ -358,7 +391,7 @@ export class MemoryOrchestrator {
       const messageCount = transcript.filter((m) => m.role !== "system").length;
       if (messageCount >= 3) {
         const smPrompt = buildSessionMemoryPrompt(transcript);
-        const smResponse = await this.options.callLLM(
+        const smResponse = await this.callLLM(
           "You are a session summariser. Output only valid JSON.",
           smPrompt,
           { maxTokens: 3072 },
@@ -378,6 +411,7 @@ export class MemoryOrchestrator {
           }
         }
         if (parsed) {
+          this.assertCurrent();
           saveSessionMemory(
             {
               sessionId,
@@ -391,6 +425,8 @@ export class MemoryOrchestrator {
         }
       }
     } catch (err) {
+      if (err instanceof MemoryMaintenanceCustodyError) throw err;
+      this.assertCurrent();
       logger.warn("memory.session_memory_failed", {
         sessionId,
         error: (err as Error).message,
@@ -398,6 +434,7 @@ export class MemoryOrchestrator {
     }
 
     // --------------- 3. Record session for auto-dream tracking ---------------
+    this.assertCurrent();
     recordSession(storage.baseDir);
 
     // --------------- 4. Auto-dream consolidation ---------------
@@ -422,13 +459,16 @@ export class MemoryOrchestrator {
           // finish while it is in flight are carried into the next cycle rather
           // than being zeroed away on completion.
           const consumed = sessionsSinceLastDream(storage.baseDir);
+          this.assertCurrent();
           const ran = await this.options.runDream({
             systemPrompt: buildDreamSystemPrompt(),
             userPrompt: buildDreamUserPrompt(userMems, dreamMems, globalDreamMems),
             projectDir: this.projectDir,
             baseDir: storage.baseDir,
           });
+          this.assertCurrent();
           if (ran) {
+            this.assertCurrent();
             recordDreamComplete(consumed, storage.baseDir);
             dreamTriggered = true;
             logger.info("memory.auto_dream_done", {
@@ -441,6 +481,8 @@ export class MemoryOrchestrator {
         }
       }
     } catch (err) {
+      if (err instanceof MemoryMaintenanceCustodyError) throw err;
+      this.assertCurrent();
       logger.warn("memory.auto_dream_failed", {
         sessionId,
         error: (err as Error).message,
@@ -455,9 +497,11 @@ export class MemoryOrchestrator {
     try {
       const ttl = this.options.recallTtlDays;
       if (ttl && ttl > 0) {
+        this.assertCurrent();
         pruned.push(...mm.pruneByRecall(ttl));
         // Only sweep the global store when we're not already it (projectDir set).
         if (this.projectDir) {
+          this.assertCurrent();
           pruned.push(...memoryManagerForDecision("global", "user", storage).pruneByRecall(ttl));
         }
         if (pruned.length > 0) {
@@ -465,6 +509,8 @@ export class MemoryOrchestrator {
         }
       }
     } catch (err) {
+      if (err instanceof MemoryMaintenanceCustodyError) throw err;
+      this.assertCurrent();
       logger.warn("memory.recall_ttl_failed", {
         sessionId,
         error: (err as Error).message,
@@ -643,7 +689,8 @@ async function askLLMForWriteDecision(
       memory: candidate,
       reason: typeof parsed.reason === "string" ? parsed.reason : "llm decision",
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof MemoryMaintenanceCustodyError) throw error;
     return null;
   }
 }
