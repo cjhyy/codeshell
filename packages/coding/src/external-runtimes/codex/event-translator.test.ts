@@ -180,6 +180,129 @@ describe("CodexEventTranslator", () => {
     ]);
   });
 
+  test.each([1, 2, 127])(
+    "a command exit %i is a failed result with its full output",
+    (exitCode) => {
+      const t = translator();
+      const output = "partial stdout\nSTDERR: command diagnostic\n";
+      const events = t.translate({
+        method: "item/completed",
+        params: {
+          threadId: "thread-a",
+          turnId: "t1",
+          item: {
+            id: "command-failed",
+            type: "commandExecution",
+            status: "completed",
+            exitCode,
+            aggregatedOutput: output,
+          },
+        },
+      });
+      expect(events).toEqual([
+        {
+          type: "tool_result",
+          result: {
+            id: "command-failed",
+            toolName: "commandExecution",
+            result: output,
+            error: `Command exited with code ${exitCode}.`,
+            isError: true,
+          },
+        },
+      ]);
+    },
+  );
+
+  test.each([0, null, undefined])("a command exit %p does not invent a failure", (exitCode) => {
+    const events = translator().translate({
+      method: "item/completed",
+      params: {
+        threadId: "thread-a",
+        turnId: "t1",
+        item: { id: "command-ok", type: "commandExecution", exitCode, aggregatedOutput: "ok" },
+      },
+    });
+    expect(events).toEqual([
+      {
+        type: "tool_result",
+        result: { id: "command-ok", toolName: "commandExecution", result: "ok" },
+      },
+    ]);
+  });
+
+  test.each(["commandExecution", "fileChange", "mcpToolCall"])(
+    "a failed %s status cannot become a successful result without an error object",
+    (type) => {
+      const events = translator().translate({
+        method: "item/completed",
+        params: {
+          threadId: "thread-a",
+          turnId: "t1",
+          item: { id: "failed-item", type, status: "failed" },
+        },
+      });
+      expect(events).toEqual([
+        {
+          type: "tool_result",
+          result: { id: "failed-item", toolName: type, error: `${type} failed.`, isError: true },
+        },
+      ]);
+    },
+  );
+
+  test.each(["commandExecution", "fileChange"])("a declined %s preserves denial", (type) => {
+    const events = translator().translate({
+      method: "item/completed",
+      params: {
+        threadId: "thread-a",
+        turnId: "t1",
+        item: { id: "declined-item", type, status: "declined", exitCode: null },
+      },
+    });
+    expect(events).toEqual([
+      {
+        type: "tool_result",
+        result: {
+          id: "declined-item",
+          toolName: type,
+          error: `${type} was declined.`,
+          isError: true,
+        },
+      },
+    ]);
+  });
+
+  test("provider error detail takes precedence over status and exit-code summaries", () => {
+    const events = translator().translate({
+      method: "item/completed",
+      params: {
+        threadId: "thread-a",
+        turnId: "t1",
+        item: {
+          id: "command-error",
+          type: "commandExecution",
+          status: "failed",
+          exitCode: 127,
+          aggregatedOutput: "partial output",
+          error: { message: "executable is unavailable" },
+        },
+      },
+    });
+    expect(events).toEqual([
+      {
+        type: "tool_result",
+        result: {
+          id: "command-error",
+          toolName: "commandExecution",
+          result: "partial output",
+          error: "executable is unavailable",
+          isError: true,
+        },
+      },
+    ]);
+  });
+
   test("reasoning and agent messages are prose, not fake tool cards", () => {
     const t = translator();
     t.translate({ method: "turn/started", params: { threadId: "thread-a", turn: { id: "t1" } } });

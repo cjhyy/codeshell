@@ -96,6 +96,19 @@ function toolArgsOf(item: Record<string, unknown>): Record<string, unknown> {
   return args;
 }
 
+function toolErrorOf(item: Record<string, unknown>, type: string): string | undefined {
+  const detail = str(asRecord(item.error)?.message) ?? str(item.error);
+  if (detail) return detail;
+  // A completed app-server item means the operation settled, not that its
+  // command succeeded. In particular, nonzero exits often have no error object.
+  if (type === "commandExecution" && Number.isInteger(item.exitCode) && item.exitCode !== 0) {
+    return `Command exited with code ${item.exitCode}.`;
+  }
+  if (item.status === "failed") return `${type} failed.`;
+  if (item.status === "declined") return `${type} was declined.`;
+  return undefined;
+}
+
 /**
  * Map a Codex turn status onto a CodeShell `TerminalReason`.
  *
@@ -404,8 +417,7 @@ export class CodexEventTranslator {
         output = String(rawOutput);
       }
     }
-    const error = asRecord(item.error);
-    const errorMessage = str(error?.message) ?? str(item.error);
+    const errorMessage = toolErrorOf(item, type);
     const events: StreamEvent[] = [];
     // Correct the arguments first when they only materialized now, so the
     // recorded call shows what actually ran before its result.
