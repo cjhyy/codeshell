@@ -97,6 +97,67 @@ describe("resolveLinkedSessionFromDisk", () => {
     ).toBeNull();
   });
 
+  test("finds the Claude identity after cwd-less metadata and large hook records", () => {
+    const root = fixtureRoot();
+    const claudeHome = join(root, "claude");
+    const cwd = "/tmp/项目/codeshell";
+    const dir = join(claudeHome, "projects", encodeCwd(cwd));
+    mkdirSync(dir, { recursive: true });
+    const lines = (sessionId: string, identitySessionId: string, hookBytes: number) =>
+      [
+        { type: "last-prompt", leafUuid: "leaf", sessionId },
+        { type: "mode", mode: "normal", sessionId },
+        { type: "permission-mode", permissionMode: "default", sessionId },
+        { type: "file-history-snapshot", messageId: "m1", snapshot: { messageId: "m1" } },
+        {
+          attachment: { type: "hook_success", hookName: "SessionStart:startup" },
+          content: "x".repeat(hookBytes),
+          sessionId,
+        },
+        {
+          type: "user",
+          cwd,
+          sessionId: identitySessionId,
+          message: { role: "user", content: "hi" },
+        },
+      ]
+        .map((record) => JSON.stringify(record))
+        .join("\n");
+    writeFileSync(
+      join(dir, "claude-hooked.jsonl"),
+      `${lines("claude-hooked", "claude-hooked", 8 * 1024)}\n`,
+    );
+    writeFileSync(
+      join(dir, "claude-forked.jsonl"),
+      `${lines("claude-forked", "claude-other", 16)}\n`,
+    );
+    writeFileSync(
+      join(dir, "claude-huge.jsonl"),
+      `${lines("claude-huge", "claude-huge", 300 * 1024)}\n`,
+    );
+
+    expect(
+      resolveLinkedSessionFromDisk(
+        { externalSessionId: "claude-hooked", cwd, kind: "claude-code" },
+        { claudeHome },
+      ),
+    ).toEqual({ externalSessionId: "claude-hooked", cwd, kind: "claude-code" });
+    // The first cwd-bearing record is authoritative; later records cannot rescue it.
+    expect(
+      resolveLinkedSessionFromDisk(
+        { externalSessionId: "claude-forked", cwd, kind: "claude-code" },
+        { claudeHome },
+      ),
+    ).toBeNull();
+    // An identity beyond the read bound fails closed.
+    expect(
+      resolveLinkedSessionFromDisk(
+        { externalSessionId: "claude-huge", cwd, kind: "claude-code" },
+        { claudeHome },
+      ),
+    ).toBeNull();
+  });
+
   test("maps codex to rollout metadata and rejects cwd or kind mismatches", () => {
     const root = fixtureRoot();
     const claudeHome = join(root, "claude");

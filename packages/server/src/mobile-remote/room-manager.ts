@@ -1077,8 +1077,10 @@ export class RoomManager {
     } catch {
       throw new Error("linked session transcript is unavailable");
     }
+    if (!resolvedTarget) {
+      throw new Error("linked session transcript was not found for the requested session");
+    }
     if (
-      !resolvedTarget ||
       typeof resolvedTarget.externalSessionId !== "string" ||
       typeof resolvedTarget.cwd !== "string" ||
       resolvedTarget.externalSessionId !== target.externalSessionId ||

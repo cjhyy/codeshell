@@ -1,5 +1,5 @@
-import { realpath, stat } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { lstat, readFile, realpath, stat } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { homedir } from "node:os";
 import { getProjectStore, type LocalProject, type LocalProjectRoot } from "./project-store.js";
 import { requireMountedProjectRoot, validateMountedProjectRoot } from "./mounted-project-root.js";
@@ -103,10 +103,7 @@ export async function requireRendererProjectRootEntry(
   if (!entry) throw new Error("project entry must be an existing absolute file or directory");
   for (const root of project.roots) {
     const canonicalRoot = requireMountedProjectRoot(root);
-    const rel = relative(canonicalRoot, entry);
-    if (rel === "" || (!!rel && !rel.startsWith("..") && !isAbsolute(rel))) {
-      return { entry, rootId: root.id };
-    }
+    if (isWithin(canonicalRoot, entry)) return { entry, rootId: root.id };
   }
   throw new Error("project entry is outside the authorized project roots");
 }
@@ -130,19 +127,100 @@ export async function requireRendererProjectPath(
   );
   if (requested === noRepo) return requested;
 
-  if (options.registeredPaths) {
-    for (const path of options.registeredPaths) {
-      if ((await canonicalDirectory(path)) === requested) return requested;
-    }
-  } else {
-    const roots = (await getProjectStore().list()).flatMap((project) => project.roots);
-    for (const root of roots) {
-      const validated = validateMountedProjectRoot(root);
-      if (validated.status === "ok" && validated.path === requested) return requested;
-    }
-  }
+  if ((await registeredRootPaths(options)).includes(requested)) return requested;
 
   throw new Error(`project path is not registered with CodeShell: ${String(input)}`);
+}
+
+/**
+ * Validate the cwd of an external CLI session opened from a Pet/DriveAgent
+ * link. External CLIs routinely run in a git worktree or a subdirectory of a
+ * registered project, so beyond the exact roots accepted above this admits a
+ * directory inside a live root, or inside a linked worktree whose repository
+ * is a live root. Worktree membership is proven from git's metadata in both
+ * directions without spawning git: navigation stays zero-spawn until the user
+ * explicitly takes over.
+ */
+export async function requireRendererLinkedSessionPath(
+  input: unknown,
+  options: RendererProjectPathOptions = {},
+): Promise<string> {
+  const requested = await canonicalDirectory(input);
+  if (!requested) throw new Error("project path must be an existing absolute directory");
+
+  const noRepo = await canonicalDirectory(
+    options.noRepoPath ?? join(homedir(), ".code-shell", "no-repo"),
+  );
+  if (requested === noRepo) return requested;
+
+  const roots = await registeredRootPaths(options);
+  if (roots.some((root) => isWithin(root, requested))) return requested;
+  const repository = await linkedWorktreeRepository(requested);
+  if (repository && roots.includes(repository)) return requested;
+
+  throw new Error(`project path is not registered with CodeShell: ${String(input)}`);
+}
+
+async function registeredRootPaths(options: RendererProjectPathOptions): Promise<string[]> {
+  if (options.registeredPaths) {
+    const paths: string[] = [];
+    for (const path of options.registeredPaths) {
+      const canonical = await canonicalDirectory(path);
+      if (canonical) paths.push(canonical);
+    }
+    return paths;
+  }
+  return (await getProjectStore().list()).flatMap((project) =>
+    project.roots.flatMap((root) => {
+      const validated = validateMountedProjectRoot(root);
+      return validated.status === "ok" ? [validated.path] : [];
+    }),
+  );
+}
+
+function isWithin(root: string, entry: string): boolean {
+  const rel = relative(root, entry);
+  return rel === "" || (!!rel && !rel.startsWith("..") && !isAbsolute(rel));
+}
+
+/**
+ * Return the canonical main checkout of the linked git worktree containing
+ * `dir`, or undefined. The worktree's `.git` file names an admin directory
+ * under `<repo>/.git/worktrees/`, and that admin directory's `gitdir` file
+ * must point back at the same `.git` file, so a directory cannot claim a
+ * repository that does not list it as a worktree.
+ */
+async function linkedWorktreeRepository(dir: string): Promise<string | undefined> {
+  let top = dir;
+  while (true) {
+    const dotGit = join(top, ".git");
+    const info = await lstat(dotGit).catch(() => undefined);
+    if (info) {
+      if (!info.isFile()) return undefined;
+      try {
+        const match = /^gitdir:\s*(.+?)\s*$/u.exec(await readFile(dotGit, "utf8"));
+        if (!match) return undefined;
+        const adminDir = await realpath(resolve(top, match[1]!));
+        const commonDir = await realpath(
+          resolve(adminDir, (await readFile(join(adminDir, "commondir"), "utf8")).trim()),
+        );
+        if (basename(commonDir) !== ".git" || dirname(adminDir) !== join(commonDir, "worktrees")) {
+          return undefined;
+        }
+        // worktree.useRelativePaths writes this relative to the admin dir.
+        const backPointer = (await readFile(join(adminDir, "gitdir"), "utf8")).trim();
+        if ((await realpath(resolve(adminDir, backPointer))) !== (await realpath(dotGit))) {
+          return undefined;
+        }
+        return dirname(commonDir);
+      } catch {
+        return undefined;
+      }
+    }
+    const parent = dirname(top);
+    if (parent === top) return undefined;
+    top = parent;
+  }
 }
 
 /**

@@ -167,6 +167,7 @@ import type { ExternalRuntimeAttachment } from "@cjhyy/code-shell-capability-cod
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import {
   requireRendererProject,
+  requireRendererLinkedSessionPath,
   requireRendererProjectEntryPath,
   requireRendererProjectPath,
   requireRendererProjectPrimary,
@@ -5760,7 +5761,7 @@ ipcMain.handle(
     openLinkedSessionFromIpc(
       roomManager,
       externalSessionId,
-      await requireRendererProjectPath(cwd),
+      await requireRendererLinkedSessionPath(cwd),
       kind,
     ),
 );
@@ -5771,7 +5772,7 @@ ipcMain.handle(
       roomManager,
       roomId,
       externalSessionId,
-      await requireRendererProjectPath(cwd),
+      await requireRendererLinkedSessionPath(cwd),
       kind,
     ),
 );
@@ -5786,7 +5787,9 @@ ipcMain.handle(
     kind: "claude-code" | "codex",
     limit: number,
   ) => {
-    cwd = await requireRendererProjectPath(cwd);
+    // Linked rooms may live in a worktree of a registered root; the opened-room
+    // match below is what binds this subscription.
+    cwd = await requireRendererLinkedSessionPath(cwd);
     if (!mobileOrchestrator.roomMatchesTranscript(roomId, cwd, sessionId, kind)) {
       throw new Error("cc-room transcript subscription does not match the opened room");
     }
