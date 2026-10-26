@@ -192,18 +192,23 @@ export class AuxiliaryPipeline {
       });
       const memories = this.readMemoriesConfig();
       const orchestrator = new MemoryOrchestrator({
-        callLLM: async (systemPrompt, userMessage) => {
+        callLLM: async (systemPrompt, userMessage, options) => {
           const response = await llmClient.createMessage({
             systemPrompt,
             messages: [{ role: "user", content: userMessage }],
             tools: [],
-            maxTokens: 1024,
+            maxTokens: options?.maxTokens ?? 1024,
             billingEnabled: true,
             requestVisible: false,
             usagePurpose: "aux_summary",
             reasoning: { mode: "off" },
           });
           if (response.usage) recordBilledUsage?.(response.usage);
+          if (response.stopReason === "length" || response.stopReason === "max_tokens") {
+            throw new Error(
+              "Memory response exceeded its output token budget; discarded partial JSON",
+            );
+          }
           return response.text;
         },
         runDream: async ({ projectDir, baseDir }) =>

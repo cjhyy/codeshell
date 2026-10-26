@@ -23,6 +23,7 @@ import {
 import { join } from "node:path";
 import { userHome } from "../settings/manager.js";
 import { sortSessionMemoriesByRecency } from "./session-memory-sort.js";
+import { formatMemoryTranscript } from "./memory-transcript.js";
 
 export interface SessionMemoryEntry {
   sessionId: string;
@@ -82,7 +83,8 @@ export function loadSessionMemory(sessionId: string, baseDir?: string): SessionM
     const dirInfo = lstatSync(memoryDir(baseDir));
     if (dirInfo.isSymbolicLink() || !dirInfo.isDirectory()) return null;
     const entry = lstatSync(file);
-    if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_MEMORY_FILE_BYTES) return null;
+    if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_MEMORY_FILE_BYTES)
+      return null;
     fd = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
     const opened = fstatSync(fd);
     if (!opened.isFile() || opened.size > MAX_MEMORY_FILE_BYTES) return null;
@@ -147,7 +149,9 @@ function validSessionMemoryEntry(value: unknown): value is SessionMemoryEntry {
     entry.createdAt.length <= 64 &&
     Number.isFinite(Date.parse(entry.createdAt)) &&
     (entry.tokenCount === undefined ||
-      (Number.isSafeInteger(entry.tokenCount) && entry.tokenCount >= 0 && entry.tokenCount <= 10_000_000))
+      (Number.isSafeInteger(entry.tokenCount) &&
+        entry.tokenCount >= 0 &&
+        entry.tokenCount <= 10_000_000))
   );
 }
 
@@ -203,13 +207,11 @@ export function searchSessionMemories(query: string, baseDir?: string): SessionM
 export function buildSessionMemoryPrompt(
   messages: Array<{ role: string; content: string }>,
 ): string {
-  const text = messages
-    .map((m) => `[${m.role}]: ${m.content.slice(0, 2000)}`)
-    .join("\n\n");
+  const text = formatMemoryTranscript(messages, 2000);
 
   return `Extract a concise session memory from this conversation:
 
-${text.slice(0, 30000)}
+${text}
 
 Respond with ONLY a single JSON object — no markdown code fence, no text before
 or after. Keep every value on one line (escape any newline as \\n) and escape
@@ -218,5 +220,8 @@ any double quote inside a string as \\". Shape:
   "summary": "One paragraph summarizing what was discussed and accomplished",
   "keyTopics": ["topic1", "topic2"],
   "decisions": ["decision1", "decision2"]
-}`;
+}
+Keep the response concise: summary at most 500 characters, at most 8 keyTopics
+of 40 characters each, and at most 8 decisions of 80 characters each. Preserve
+the latest corrections and final outcomes; omitted material is unavailable.`;
 }

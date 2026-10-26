@@ -45,7 +45,11 @@ import { logger } from "../logging/logger.js";
 
 export interface MemoryOrchestratorOptions {
   /** Lightweight LLM call — must be a non-streaming summarisation call. */
-  callLLM: (systemPrompt: string, userMsg: string) => Promise<string>;
+  callLLM: (
+    systemPrompt: string,
+    userMsg: string,
+    options?: { maxTokens: number },
+  ) => Promise<string>;
   /**
    * Auto-dream consolidation driver. Called when the dream cadence is due
    * (every N sessions, no more than once per 24h). Returns true if the dream
@@ -186,6 +190,7 @@ export class MemoryOrchestrator {
         const response = await this.options.callLLM(
           "You are a memory extraction assistant. Extract only durable, reusable information worth carrying into future sessions.",
           extractionPrompt,
+          { maxTokens: 3072 },
         );
         const llmMs = Date.now() - t;
         t = Date.now();
@@ -356,6 +361,7 @@ export class MemoryOrchestrator {
         const smResponse = await this.options.callLLM(
           "You are a session summariser. Output only valid JSON.",
           smPrompt,
+          { maxTokens: 3072 },
         );
         // LLM 摘要常带 markdown 围栏 / 围栏外解释文字 / 末尾逗号 → 裸 JSON.parse 易碎。
         // 复用 utils/json 的 extractJSON(剥围栏 + 花括号配平,识别字符串/转义)拿到候选,

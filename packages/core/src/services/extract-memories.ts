@@ -5,6 +5,8 @@
  * worth persisting across sessions.
  */
 
+import { formatMemoryTranscript } from "./memory-transcript.js";
+
 export interface ExtractedMemory {
   type: "user" | "feedback" | "project" | "reference";
   /**
@@ -41,9 +43,7 @@ export function buildExtractionPrompt(
   transcript: Array<{ role: string; content: string }>,
   existingMemories: ExistingMemorySummary[],
 ): string {
-  const conversationText = transcript
-    .map((m) => `[${m.role}]: ${m.content.slice(0, 3000)}`)
-    .join("\n\n");
+  const conversationText = formatMemoryTranscript(transcript, 3000);
 
   const existingList =
     existingMemories.length > 0
@@ -70,7 +70,7 @@ export function buildExtractionPrompt(
 ${existingList}
 
 ## Conversation
-${conversationText.slice(0, 30000)}
+${conversationText}
 
 ## Instructions
 Identify candidate information that may be saved as persistent memories. The extractor only proposes candidates; code will route automatic candidates into dream memory first, never directly into user memory. Categories (type):
@@ -87,6 +87,8 @@ Also decide each memory's storage SCOPE. **Be VERY conservative about "global" â
 
 Rules:
 - Extract AT MOST 2 memories per session. Prefer 0 to a marginal one â€” most sessions are noise.
+- Keep each memory concise: name at most 80 characters, description at most 120 characters, and content at most 400 characters. Complete the JSON array within the response budget.
+- Respect the latest corrections and outcomes in the conversation. Omitted material is unavailable; do not reconstruct it.
 - AT MOST 1 of the extracted memories may be "global". The global layer is injected every session, so keep it tiny and high-value. If two candidates both seem global, keep the single most universal one global and make the other "project".
 - Only extract information that would be useful in FUTURE conversations
 - Do not duplicate existing memories (re-read the "Existing Memories" list above carefully).
