@@ -42,7 +42,7 @@ import {
   isFeatureEnabled,
   type FeatureFlagOverrides,
 } from "@cjhyy/code-shell-core/extension";
-import { canonicalKey } from "@cjhyy/code-shell-core/internal";
+import { canonicalKey, withModelTraceContext } from "@cjhyy/code-shell-core/internal";
 import { getTrustCachedSync } from "./trust-store.js";
 import { dlog } from "./desktop-logger.js";
 import { createCodexLaunchResolver, type CodexLaunch } from "./external-runtime-launch.js";
@@ -221,6 +221,7 @@ export class ExternalRuntimeService {
       finalizeOperations: (reason: TerminalReason) => TerminalReason;
       toolTurnAbort?: AbortController;
       providerTurn?: symbol;
+      modelTrace?: ReturnType<typeof startExternalRuntimeTrace>;
       /** Serializes turns so one recorder can never be reset by an overlapping send. */
       turnTail: Promise<void>;
       /**
@@ -1135,11 +1136,21 @@ export class ExternalRuntimeService {
             return undefined;
           const run = operations.current?.capture();
           const physicalTurn = entry.providerTurn;
+          const modelTrace = entry.modelTrace;
+          const traceContext = {
+            sessionId: request.sessionId,
+            runId: entry.recorder.outputRunId,
+            workspacePath: entry.cwd,
+          };
           const turnSignal = entry.toolTurnAbort?.signal;
           if (!run || !physicalTurn || !turnSignal) return undefined;
           return {
             ...run,
             signal: AbortSignal.any([run.signal, turnSignal]),
+            runToolWithTrace: (toolCallId, operation) =>
+              modelTrace
+                ? modelTrace.runHostTool(toolCallId, operation)
+                : withModelTraceContext(traceContext, operation),
             assertCurrent: () => {
               run.assertCurrent();
               if (!lifecycle.turnActive || entry.providerTurn !== physicalTurn)
@@ -1560,6 +1571,7 @@ export class ExternalRuntimeService {
                   source: turnInput.modelTraceSource,
                 });
               }
+              entry.modelTrace = trace;
               const turn = await entry.session.send(nextInput, onEvent);
               await turn.done;
             } catch (error) {
@@ -1583,6 +1595,7 @@ export class ExternalRuntimeService {
                     ? "replay_incomplete"
                     : undefined,
               );
+              if (entry.modelTrace === trace) entry.modelTrace = undefined;
             }
             if (!entry.lifecycle.active || this.sessions.get(sessionId) !== entry) {
               return entry.recorder.finishIfMissing();

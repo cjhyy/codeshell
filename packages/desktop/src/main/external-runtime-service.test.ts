@@ -239,6 +239,48 @@ afterEach(() => {
 });
 
 describe("ExternalRuntimeService", () => {
+  test("Host tool execution records one canonical span in the active physical trace", async () => {
+    const cwd = join(testHome, "trace-workspace");
+    mkdirSync(cwd);
+    const file = join(cwd, "fixture.txt");
+    writeFileSync(file, "synthetic file content");
+    const store = new ModelTraceStore({ storageDir: join(sessionsRoot(), ".model-traces") });
+    store.setConfig({ captureContent: true });
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start({ ...request, cwd });
+    const { hooks: _runtimeHooks, ...hostOptions } = starts[0]!;
+    let sink: ((event: StreamEvent) => void) | undefined;
+    const host = createSessionToolHost({
+      ...(hostOptions as unknown as Parameters<typeof createSessionToolHost>[0]),
+      getStreamCallback: () => sink,
+    });
+    try {
+      providerSend = async (args) => {
+        sink = (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent;
+        expect(
+          (await host.execute({ id: "host-read", name: "Read", input: { file_path: file } }))
+            .isError,
+        ).toBe(false);
+        sink({ type: "turn_complete", reason: "completed" });
+      };
+      await svc.send(request.sessionId, { text: "Read the fixture", disableGoal: true });
+      const record = store.list().items[0]!;
+      const events = store.events(record.traceId).filter((event) => event.kind === "tool");
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        sessionId: request.sessionId,
+        runId: record.runId,
+        workspacePath: cwd,
+        status: "completed",
+        name: "Read",
+        input: { toolCallId: "host-read", args: { file_path: file } },
+      });
+    } finally {
+      await host.dispose();
+      await svc.stopAll();
+    }
+  });
+
   test("records the actual CLI submission and composed Host instructions without claiming provider wire coverage", async () => {
     const store = new ModelTraceStore({ storageDir: join(sessionsRoot(), ".model-traces") });
     store.setConfig({ captureContent: true });

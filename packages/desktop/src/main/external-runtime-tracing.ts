@@ -98,6 +98,9 @@ export function startExternalRuntimeTrace(options: {
   let terminal: TerminalReason | undefined;
   let finished = false;
   const tools = new Map<string, ModelTraceEvent>();
+  // Claimed by the trusted Host invocation, never inferred from tool names or
+  // argument contents. Its ToolExecutor already records the canonical span.
+  const hostTools = new Set<string>();
   const span = (input: Parameters<typeof recordModelTraceEvent>[0]) =>
     withModelTraceContext(context, () =>
       recordModelTraceEvent({
@@ -113,6 +116,14 @@ export function startExternalRuntimeTrace(options: {
     );
 
   return {
+    async runHostTool<T>(toolCallId: string, operation: () => Promise<T>): Promise<T> {
+      if (!finished) hostTools.add(toolCallId);
+      try {
+        return await withModelTraceContext(context, operation);
+      } finally {
+        hostTools.delete(toolCallId);
+      }
+    },
     observe(event: StreamEvent) {
       if (finished) return;
       switch (event.type) {
@@ -137,6 +148,7 @@ export function startExternalRuntimeTrace(options: {
           if (contentEnabled() && !text && event.text) text = event.text.slice(0, MAX_OUTPUT);
           break;
         case "tool_use_start": {
+          if (hostTools.has(event.toolCall.id)) break;
           if (tools.size >= MAX_TOOLS) break;
           const tool = span({
             id: randomUUID(),
@@ -197,6 +209,7 @@ export function startExternalRuntimeTrace(options: {
         span({ ...tool, endedAt, status: status === "failed" ? "failed" : "cancelled" });
       }
       tools.clear();
+      hostTools.clear();
       recordExternalModelTrace({
         ...common,
         id: initial.id,

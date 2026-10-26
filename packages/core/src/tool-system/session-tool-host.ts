@@ -105,6 +105,8 @@ export interface SessionToolHostRunContext {
   originClientMessageId: string;
   signal: AbortSignal;
   assertCurrent(): void;
+  /** Pin observational recording to this invocation's captured submission owner. */
+  runToolWithTrace?(toolCallId: string, operation: () => Promise<ToolResult>): Promise<ToolResult>;
   workspaceProfileName?: ToolContext["workspaceProfileName"];
   isSourceProfileCurrent?: ToolContext["isSourceProfileCurrent"];
 }
@@ -418,50 +420,53 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
             }
           : {}),
       };
-      const emit = async (event: import("../types.js").StreamEvent): Promise<void> => {
-        try {
-          await callContext.streamCallback?.(event);
-        } catch {
-          // Stream projection is observational; a broken renderer/recorder must
-          // not turn an authorized tool execution into an unrelated failure.
-        }
-      };
-      await emit({
-        type: "tool_use_start",
-        toolCall: { id: call.id, toolName: call.name, args: input },
-      });
-
-      // Forward the per-call signal rather than only checking it at entry: an MCP
-      // cancellation arriving mid-flight has to actually stop the work.
-      //
-      // A `ToolExecutor` holds exactly one signal, and swapping it per call would
-      // race with concurrent calls carrying different signals. So a call that
-      // brings its own signal gets its own executor — cheap (it is a thin wrapper
-      // over the shared registry/permission/hooks) and free of shared mutable
-      // state. Calls without one use the shared executor unchanged.
-      if (!callSignal && !options.getStreamCallback && !run) {
-        // The one authorized path. Everything above only NARROWS what may reach it.
-        const result = await executor.executeSingle({
-          id: call.id,
-          toolName: call.name,
-          args: input,
+      const execute = async (): Promise<ToolResult> => {
+        const emit = async (event: import("../types.js").StreamEvent): Promise<void> => {
+          try {
+            await callContext.streamCallback?.(event);
+          } catch {
+            // Stream projection is observational; a broken renderer/recorder must
+            // not turn an authorized tool execution into an unrelated failure.
+          }
+        };
+        await emit({
+          type: "tool_use_start",
+          toolCall: { id: call.id, toolName: call.name, args: input },
         });
+
+        // Forward the per-call signal rather than only checking it at entry: an MCP
+        // cancellation arriving mid-flight has to actually stop the work.
+        //
+        // A `ToolExecutor` holds exactly one signal, and swapping it per call would
+        // race with concurrent calls carrying different signals. So a call that
+        // brings its own signal gets its own executor — cheap (it is a thin wrapper
+        // over the shared registry/permission/hooks) and free of shared mutable
+        // state. Calls without one use the shared executor unchanged.
+        if (!callSignal && !options.getStreamCallback && !run) {
+          // The one authorized path. Everything above only NARROWS what may reach it.
+          const result = await executor.executeSingle({
+            id: call.id,
+            toolName: call.name,
+            args: input,
+          });
+          await emit({ type: "tool_result", result });
+          return result;
+        }
+        const scoped = new ToolExecutor(registry, permission, hooks);
+        scoped.setContext(callContext);
+        scoped.setSignal(signal);
+        const result = await scoped.executeSingle(
+          {
+            id: call.id,
+            toolName: call.name,
+            args: input,
+          },
+          run ? { assertAuthorized: run.assertCurrent } : undefined,
+        );
         await emit({ type: "tool_result", result });
         return result;
-      }
-      const scoped = new ToolExecutor(registry, permission, hooks);
-      scoped.setContext(callContext);
-      scoped.setSignal(signal);
-      const result = await scoped.executeSingle(
-        {
-          id: call.id,
-          toolName: call.name,
-          args: input,
-        },
-        run ? { assertAuthorized: run.assertCurrent } : undefined,
-      );
-      await emit({ type: "tool_result", result });
-      return result;
+      };
+      return run?.runToolWithTrace ? run.runToolWithTrace(call.id, execute) : execute();
     },
 
     async dispose(): Promise<void> {

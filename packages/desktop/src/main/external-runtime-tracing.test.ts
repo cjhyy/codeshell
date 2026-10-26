@@ -2,24 +2,36 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { HookRegistry, ToolRegistry } from "@cjhyy/code-shell-core";
+import { createSessionToolHost, type SessionToolHost } from "@cjhyy/code-shell-core/extension";
 import { ModelTraceStore } from "@cjhyy/code-shell-core/internal";
 import { startExternalRuntimeTrace } from "./external-runtime-tracing.js";
 
 const directories: string[] = [];
-afterEach(() => {
+const hosts: SessionToolHost[] = [];
+type SessionToolHostRunContext = NonNullable<
+  ReturnType<NonNullable<Parameters<typeof createSessionToolHost>[0]["captureRunContext"]>>
+>;
+afterEach(async () => {
+  await Promise.all(hosts.splice(0).map((host) => host.dispose()));
   for (const directory of directories.splice(0))
     rmSync(directory, { recursive: true, force: true });
 });
-function fixture(captureContent = true, source?: string) {
-  const storageDir = mkdtempSync(join(tmpdir(), "external-model-trace-"));
-  directories.push(storageDir);
+function fixture(
+  captureContent = true,
+  source?: string,
+  sharedStorage?: string,
+  runId = "run-cli",
+) {
+  const storageDir = sharedStorage ?? mkdtempSync(join(tmpdir(), "external-model-trace-"));
+  if (!sharedStorage) directories.push(storageDir);
   const store = new ModelTraceStore({ storageDir });
   store.setConfig({ captureContent });
   const trace = startExternalRuntimeTrace({
     storageDir,
     source,
     sessionId: "session-cli",
-    runId: "run-cli",
+    runId,
     workspacePath: "/workspace/cli",
     kind: "codex",
     model: "selected-cli-model",
@@ -30,7 +42,174 @@ function fixture(captureContent = true, source?: string) {
   return { store, trace };
 }
 
+function tracedHost(
+  captureRunContext: () => SessionToolHostRunContext,
+  currentTrace: () => ReturnType<typeof fixture>["trace"],
+) {
+  const hooks = new HookRegistry();
+  const registry = new ToolRegistry({ builtinTools: [] });
+  registry.registerTool(
+    {
+      name: "HostProbe",
+      description: "Synthetic Host tool with a sensitive result",
+      source: "builtin",
+      permissionDefault: "allow",
+      inputSchema: { type: "object", properties: { value: { type: "string" } } },
+    },
+    () => ({
+      ok: true,
+      result: "NEVER_CAPTURE_HOST_SECRET",
+      sensitive: true,
+      transcriptResult: "[Host result hidden]",
+    }),
+  );
+  const host = createSessionToolHost({
+    businessSessionId: "session-cli",
+    cwd: process.cwd(),
+    registry,
+    hooks,
+    permissionMode: "default",
+    presetRules: [{ tool: "HostProbe", decision: "allow" }],
+    projectTrusted: false,
+    planMode: false,
+    exposure: { mode: "allowlist", toolNames: new Set(["HostProbe"]) },
+    visibility: { cwd: process.cwd(), host: "desktop", isSubAgent: false },
+    captureRunContext,
+    getStreamCallback: () => {
+      const trace = currentTrace();
+      return (event) => trace.observe(event);
+    },
+  });
+  hosts.push(host);
+  return { host, hooks };
+}
+
+function tracedRun(trace: ReturnType<typeof fixture>["trace"]): SessionToolHostRunContext {
+  return {
+    operations: undefined,
+    originClientMessageId: "fixture-user",
+    signal: new AbortController().signal,
+    assertCurrent() {},
+    runToolWithTrace: (id, operation) => trace.runHostTool(id, operation),
+  };
+}
+
 describe("external CLI model history", () => {
+  test("Host executor owns exactly one attributed span and native tools keep their own spans", async () => {
+    const { store, trace } = fixture();
+    const { host, hooks } = tracedHost(
+      () => tracedRun(trace),
+      () => trace,
+    );
+    hooks.register("pre_tool_use", () => ({ updatedInput: { value: "sanitized" } }));
+    const result = await host.execute({
+      id: "host-call",
+      name: "HostProbe",
+      input: { value: "original" },
+    });
+    expect(result.result).toBe("NEVER_CAPTURE_HOST_SECRET");
+    // A native tool with the same name is not the explicitly claimed Host call.
+    trace.observe({
+      type: "tool_use_start",
+      toolCall: { id: "third-party-call", toolName: "HostProbe", args: { source: "native" } },
+    });
+    trace.observe({
+      type: "tool_result",
+      result: { id: "third-party-call", toolName: "HostProbe", result: "third-party output" },
+    });
+    trace.observe({
+      type: "tool_use_start",
+      toolCall: {
+        id: "third-party-mcp",
+        toolName: "mcpToolCall",
+        args: { server: "third-party", tool: "Read" },
+      },
+    });
+    trace.observe({
+      type: "tool_result",
+      result: { id: "third-party-mcp", toolName: "mcpToolCall", result: "MCP output" },
+    });
+    trace.finish();
+    const events = store.events("run-cli");
+    expect(events).toHaveLength(3);
+    expect(
+      events.find((event) => (event.input as { toolCallId?: string })?.toolCallId === "host-call"),
+    ).toMatchObject({
+      sessionId: "session-cli",
+      runId: "run-cli",
+      workspacePath: "/workspace/cli",
+      input: { toolCallId: "host-call", args: { value: "sanitized" } },
+      status: "completed",
+      outputState: "redacted",
+      output: "[Host result hidden]",
+    });
+    expect(
+      events.find((event) => (event.input as { source?: string })?.source === "native"),
+    ).toMatchObject({
+      status: "completed",
+      output: "third-party output",
+    });
+    expect(events.find((event) => event.name === "mcpToolCall")).toMatchObject({
+      input: { server: "third-party", tool: "Read" },
+      status: "completed",
+      output: "MCP output",
+    });
+    expect(JSON.stringify(events)).not.toContain("NEVER_CAPTURE_HOST_SECRET");
+  });
+
+  test("a Host call keeps its captured trace after finish and a replacement submission", async () => {
+    const first = fixture();
+    const second = fixture(true, undefined, first.store.storageDir, "run-next");
+    let active = first.trace;
+    let current = true;
+    let entered!: () => void;
+    let release!: () => void;
+    const waiting = new Promise<void>((resolve) => (entered = resolve));
+    const barrier = new Promise<void>((resolve) => (release = resolve));
+    const { host, hooks } = tracedHost(
+      () => {
+        const run = tracedRun(active);
+        if (active === first.trace)
+          run.assertCurrent = () => {
+            if (!current) throw new Error("Old submission ended");
+          };
+        return run;
+      },
+      () => active,
+    );
+    hooks.register("pre_tool_use", async (context) => {
+      if (context.data.toolCallId === "old-host-call") {
+        entered();
+        await barrier;
+      }
+      return {};
+    });
+    const old = host.execute({ id: "old-host-call", name: "HostProbe", input: {} });
+    await waiting;
+    first.trace.finish("aborted_streaming");
+    current = false;
+    active = second.trace;
+    expect(
+      (await host.execute({ id: "next-host-call", name: "HostProbe", input: {} })).isError,
+    ).toBe(false);
+    release();
+    expect((await old).isError).toBe(true);
+    second.trace.finish();
+    expect(first.store.events("run-cli")).toHaveLength(1);
+    expect(first.store.events("run-cli")[0]).toMatchObject({
+      runId: "run-cli",
+      status: "failed",
+      input: { toolCallId: "old-host-call" },
+      error: "Bound tool authority or input changed before execution.",
+    });
+    expect(second.store.events("run-next")).toHaveLength(1);
+    expect(second.store.events("run-next")[0]).toMatchObject({
+      runId: "run-next",
+      status: "completed",
+      input: { toolCallId: "next-host-call" },
+    });
+  });
+
   test("one physical CLI submission retains its exact owner and finite coverage, with correlated visible tool events", () => {
     const { store, trace } = fixture();
     const initial = store.list().items[0]!;
