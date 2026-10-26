@@ -6,7 +6,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CodexRuntime } from "./runtime.js";
+import { CodexRuntime, type CodexRuntimeOptions } from "./runtime.js";
 import type { StreamEvent } from "@cjhyy/code-shell-core/extension";
 import type { McpBridgeHandle } from "../shared/mcp-bridge.js";
 
@@ -61,7 +61,11 @@ setOnLine((m) => {
 });
 `;
 
-function makeRuntime(script: string, onEvent?: (event: StreamEvent) => void): CodexRuntime {
+function makeRuntime(
+  script: string,
+  onEvent?: (event: StreamEvent) => void,
+  extra: Partial<CodexRuntimeOptions> = {},
+): CodexRuntime {
   const file = fakeServerScript(script);
   const runtime = new CodexRuntime(
     {
@@ -69,6 +73,7 @@ function makeRuntime(script: string, onEvent?: (event: StreamEvent) => void): Co
       businessSessionId: "sess-runtime",
       bridge,
       client: { command: process.execPath, args: [file] },
+      ...extra,
     },
     onEvent ? { onEvent } : {},
   );
@@ -77,6 +82,47 @@ function makeRuntime(script: string, onEvent?: (event: StreamEvent) => void): Co
 }
 
 describe("CodexRuntime", () => {
+  test.each(["thread/start", "thread/resume"])(
+    "%s exposes the reported model instead of the requested alias",
+    async (method) => {
+      const runtime = makeRuntime(
+        `
+setOnLine((m) => {
+  if (m.method === "initialize") return send({ id: m.id, result: {} });
+  if (m.method === ${JSON.stringify(method)}) {
+    if (m.params.model !== "requested-alias") throw new Error("requested model changed");
+    return send({ id: m.id, result: { thread: { id: "resolved-thread" }, model: "actual-model" } });
+  }
+});`,
+        undefined,
+        {
+          model: "requested-alias",
+          ...(method === "thread/resume" ? { resumeRuntimeSessionId: "existing-thread" } : {}),
+        },
+      );
+      expect(runtime.resolvedModel).toBe("requested-alias");
+      await runtime.start();
+      expect(runtime.resolvedModel).toBe("actual-model");
+    },
+  );
+
+  test("model identity stays local to each runtime and missing CLI identity stays unknown", async () => {
+    const reported = makeRuntime(
+      HAPPY_PATH.replace(
+        "{ thread: { id: threadId } }",
+        '{ thread: { id: threadId }, model: "first-model" }',
+      ),
+    );
+    const unknown = makeRuntime(HAPPY_PATH);
+    const requested = makeRuntime(HAPPY_PATH, undefined, { model: "requested-model" });
+    await reported.start();
+    await unknown.start();
+    await requested.start();
+    expect(reported.resolvedModel).toBe("first-model");
+    expect(unknown.resolvedModel).toBeUndefined();
+    expect(requested.resolvedModel).toBe("requested-model");
+  });
+
   test("starts a thread and reports the runtime session id", async () => {
     const events: StreamEvent[] = [];
     const runtime = makeRuntime(HAPPY_PATH, (event) => events.push(event));

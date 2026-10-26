@@ -133,6 +133,8 @@ export interface ExternalRuntimeSession {
   readonly businessSessionId: string;
   /** Runtime-side id (Codex thread / Claude session). Resume + routing only. */
   readonly runtimeSessionId: string | undefined;
+  /** Latest CLI-reported model; requested model is the fallback when unavailable. */
+  readonly resolvedModel?: string;
   /** Tools actually exposed, after the allowlist and visibility guards. */
   listTools(): readonly ToolDefinition[];
   send(
@@ -304,6 +306,9 @@ export async function startExternalRuntimeSession(
     businessSessionId: options.businessSessionId,
     get runtimeSessionId() {
       return activeRuntime.runtimeSessionId;
+    },
+    get resolvedModel() {
+      return activeRuntime.resolvedModel;
     },
     listTools: () => activeHost.listTools(),
     send: async (input, onEvent) => {

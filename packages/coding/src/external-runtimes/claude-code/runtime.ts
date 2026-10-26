@@ -120,6 +120,7 @@ export class ClaudeCodeRuntime {
   private readonly log: (event: string, data: Record<string, unknown>) => void;
   private active?: ActiveTurn;
   private claudeSessionId?: string;
+  private reportedModel?: string;
   private closed = false;
   private firstTurn = true;
   private turnCount = 0;
@@ -149,6 +150,11 @@ export class ClaudeCodeRuntime {
   /** Claude session id, once the first turn has reported it. Resume key only. */
   get runtimeSessionId(): string | undefined {
     return this.claudeSessionId;
+  }
+
+  /** CLI-reported model, falling back to the requested model until reported. */
+  get resolvedModel(): string | undefined {
+    return this.reportedModel ?? this.options.model;
   }
 
   /**
@@ -310,6 +316,26 @@ export class ClaudeCodeRuntime {
       // The CLI may print non-JSON diagnostics; one bad line is not fatal.
       this.log("claude.unparsable_line", { bytes: line.length });
       return;
+    }
+    // Capture identity before publishing terminal output so post-turn work sees
+    // the model this process actually used, including aliases resolved by Claude.
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const message = parsed as Record<string, any>;
+      // Sub-agent assistant output can name a different model from the root CLI.
+      if (message.parent_tool_use_id == null) {
+        const model =
+          message.type === "system" && message.subtype === "init"
+            ? message.model
+            : message.type === "assistant"
+              ? message.message?.model
+              : message.type === "stream_event" && message.event?.type === "message_start"
+                ? message.event.message?.model
+                : undefined;
+        if (typeof model === "string") {
+          const identity = model.trim();
+          if (identity && identity !== "<synthetic>") this.reportedModel = identity;
+        }
+      }
     }
     for (const event of translator.translate(parsed)) emit(event);
     if (!this.claudeSessionId && translator.runtimeSessionId) {

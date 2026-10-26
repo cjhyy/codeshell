@@ -102,6 +102,66 @@ setInterval(() => {}, 1_000);
 `;
 
 describe("ClaudeCodeRuntime lifecycle (E03)", () => {
+  test("init and assistant identity resolve aliases before the terminal event is published", async () => {
+    const fake = fakeClaude(`
+const send = (value) => process.stdout.write(JSON.stringify(value) + "\\n");
+send({ type: "system", subtype: "init", session_id: "model-session", model: "init-model" });
+send({ type: "assistant", message: { model: "actual-assistant-model", content: [] } });
+send({ type: "result", subtype: "success", is_error: false });
+`);
+    const claude = runtime(fake.command, { model: "requested-alias" });
+    const observed: Array<string | undefined> = [];
+    expect(claude.resolvedModel).toBe("requested-alias");
+    const turn = await claude.send({ text: "hello" }, (event) => {
+      if (event.type === "session_started" || event.type === "turn_complete") {
+        observed.push(claude.resolvedModel);
+      }
+    });
+    await turn.done;
+    expect(claude.resolvedModel).toBe("actual-assistant-model");
+    expect(observed).toContain("init-model");
+    expect(observed.at(-1)).toBe("actual-assistant-model");
+  });
+
+  test("streamed root identity is retained across turns while sub-agent and synthetic models are ignored", async () => {
+    const fake = fakeClaude(`
+const send = (value) => process.stdout.write(JSON.stringify(value) + "\\n");
+send({ type: "system", subtype: "init", session_id: "model-session" });
+if (!process.argv.includes("--resume")) {
+  send({ type: "stream_event", event: { type: "message_start", message: { model: "root-model" } } });
+}
+send({ type: "assistant", parent_tool_use_id: "child-call", message: { model: "child-model", content: [] } });
+send({ type: "assistant", message: { model: "<synthetic>", content: [] } });
+send({ type: "result", subtype: "success", is_error: false });
+`);
+    const claude = runtime(fake.command);
+    expect(claude.resolvedModel).toBeUndefined();
+    await (
+      await claude.send({ text: "one" })
+    ).done;
+    expect(claude.resolvedModel).toBe("root-model");
+    await (
+      await claude.send({ text: "two" })
+    ).done;
+    expect(claude.resolvedModel).toBe("root-model");
+    const replacement = runtime(fake.command, { model: "replacement-model" });
+    expect(replacement.resolvedModel).toBe("replacement-model");
+  });
+
+  test("missing or malformed identity preserves the configured fallback", async () => {
+    const fake = fakeClaude(`
+const send = (value) => process.stdout.write(JSON.stringify(value) + "\\n");
+send({ type: "system", subtype: "init", session_id: "model-session", model: " " });
+send({ type: "assistant", message: { model: 123, content: [] } });
+send({ type: "result", subtype: "success", is_error: false });
+`);
+    const claude = runtime(fake.command, { model: "configured-model" });
+    await (
+      await claude.send({ text: "hello" })
+    ).done;
+    expect(claude.resolvedModel).toBe("configured-model");
+  });
+
   test.each(["close", "interrupt"] as const)(
     "%s() escalates to SIGKILL when the CLI ignores SIGTERM, and settles the turn",
     async (method) => {

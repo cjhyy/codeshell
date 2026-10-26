@@ -31,7 +31,7 @@ afterEach(async () => {
 });
 
 /** A fake `codex app-server` that answers the handshake and nothing else. */
-function fakeCodex(body = ""): string[] {
+function fakeCodex(body = "", resolvedModel?: string): string[] {
   const dir = mkdtempSync(join(tmpdir(), "codeshell-factory-"));
   dirs.push(dir);
   const file = join(dir, "server.mjs");
@@ -42,7 +42,7 @@ const send = (o) => process.stdout.write(JSON.stringify(o) + "\\n");
 createInterface({ input: process.stdin }).on("line", (l) => {
   let m; try { m = JSON.parse(l); } catch { return; }
   if (m.method === "initialize") return send({ id: m.id, result: {} });
-  if (m.method === "thread/start") return send({ id: m.id, result: { thread: { id: "t-fake" } } });
+  if (m.method === "thread/start") return send({ id: m.id, result: { thread: { id: "t-fake" }, model: ${JSON.stringify(resolvedModel)} } });
   ${body}
 });
 `,
@@ -114,6 +114,46 @@ function registry(): ToolRegistry {
 }
 
 describe("startExternalRuntimeSession", () => {
+  test("forwards Codex's resolved model and leaves another session's default unknown", async () => {
+    const resolved = await startExternalRuntimeSession({
+      ...BASE,
+      kind: "codex",
+      model: "requested-alias",
+      registry: registry(),
+      codexClient: { command: process.execPath, args: fakeCodex("", "actual-model") },
+    });
+    sessions.push(resolved);
+    const other = await startExternalRuntimeSession({
+      ...BASE,
+      businessSessionId: "different-model-session",
+      kind: "codex",
+      registry: registry(),
+      codexClient: { command: process.execPath, args: fakeCodex() },
+    });
+    sessions.push(other);
+    expect(resolved.resolvedModel).toBe("actual-model");
+    expect(other.resolvedModel).toBeUndefined();
+  });
+
+  test("the session model getter follows Claude's actual streamed identity", async () => {
+    const fake = fakeClaudeCli(`
+send({ type: "assistant", message: { model: "actual-claude-model", content: [] } });
+`);
+    const session = await startExternalRuntimeSession({
+      ...BASE,
+      kind: "claude-code",
+      model: "requested-alias",
+      registry: registry(),
+      claudeCommand: fake.command,
+    });
+    sessions.push(session);
+    expect(session.resolvedModel).toBe("requested-alias");
+    await (
+      await session.send({ text: "hello" })
+    ).done;
+    expect(session.resolvedModel).toBe("actual-claude-model");
+  });
+
   test("assembles a Codex session that exposes only the allowlisted tools", async () => {
     const session = await startExternalRuntimeSession({
       ...BASE,

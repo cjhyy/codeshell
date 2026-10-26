@@ -115,6 +115,7 @@ export class CodexRuntime {
   private readonly log: (event: string, data: Record<string, unknown>) => void;
   private translator?: CodexEventTranslator;
   private threadId?: string;
+  private reportedModel?: string;
   private started = false;
   private resumed = false;
   private firstTurn = true;
@@ -146,6 +147,11 @@ export class CodexRuntime {
     return this.threadId;
   }
 
+  /** CLI-reported model, falling back to the requested model until reported. */
+  get resolvedModel(): string | undefined {
+    return this.reportedModel ?? this.options.model;
+  }
+
   /**
    * Spawn the app-server, handshake, and open a thread.
    *
@@ -171,7 +177,7 @@ export class CodexRuntime {
       CRITICAL_RPC_TIMEOUT_MS,
     );
 
-    let thread: { thread?: { id?: string } } | undefined;
+    let thread: { thread?: { id?: string }; model?: unknown } | undefined;
     if (this.options.resumeRuntimeSessionId) {
       try {
         thread = (await this.client.request(
@@ -187,7 +193,7 @@ export class CodexRuntime {
               : {}),
           },
           CRITICAL_RPC_TIMEOUT_MS,
-        )) as { thread?: { id?: string } };
+        )) as { thread?: { id?: string }; model?: unknown };
         this.resumed = true;
       } catch (error) {
         this.log("runtime.thread_resume_failed", {
@@ -208,13 +214,17 @@ export class CodexRuntime {
           : {}),
       },
       CRITICAL_RPC_TIMEOUT_MS,
-    )) as { thread?: { id?: string } };
+    )) as { thread?: { id?: string }; model?: unknown };
 
     const threadId = thread?.thread?.id;
     if (!threadId) {
       throw new Error(`${this.resumed ? "thread/resume" : "thread/start"} returned no thread id`);
     }
     this.threadId = threadId;
+    const reportedModel = thread?.model;
+    if (typeof reportedModel === "string" && reportedModel.trim()) {
+      this.reportedModel = reportedModel.trim();
+    }
     this.translator = new CodexEventTranslator({
       threadId,
       sessionId: this.options.businessSessionId,
