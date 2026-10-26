@@ -1,10 +1,19 @@
 import { spawn } from "node:child_process";
 import { readFile, stat, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 
 const args = process.argv.slice(2);
 const systemPromptFile = args[args.indexOf("--system-prompt-file") + 1];
 let input = "";
 for await (const chunk of process.stdin) input += chunk.toString("utf8");
+let projectSettings;
+try {
+  projectSettings = JSON.parse(
+    await readFile(join(process.cwd(), ".claude", "settings.local.json"), "utf8"),
+  );
+} catch {
+  // No project settings are expected when the standalone helper uses its temp cwd.
+}
 const report = {
   args,
   input,
@@ -21,6 +30,7 @@ const report = {
   bridgeToken: process.env.CODESHELL_CODEX_MCP_TOKEN,
   hostMcp: process.env.CODE_SHELL_HOST_MCP_SERVERS,
   traceFd: process.env.CODESHELL_MODEL_TRACE_FD,
+  projectSettings,
 };
 const mode = process.env.CODESHELL_TEST_CLAUDE_MODE ?? "success";
 let descendant;

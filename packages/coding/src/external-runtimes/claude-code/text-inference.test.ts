@@ -1,8 +1,17 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runClaudeTextInference, type ClaudeTextInferenceOptions } from "./text-inference.js";
 
@@ -113,6 +122,35 @@ test("uses a fresh tool-less CLI, private prompt file and stdin with the selecte
   expect(existsSync(actual.cwd)).toBe(false);
   expect(isAlive(actual.pid)).toBe(false);
 });
+
+test.each(["success", "tool"])(
+  "preserves the foreground settings boundary and private prompt cleanup for %s",
+  async (mode) => {
+    const cwd = join(root, "foreground");
+    mkdirSync(join(cwd, ".claude"), { recursive: true });
+    const projectSettings = {
+      env: { ANTHROPIC_BASE_URL: "https://project-provider.fixture.invalid" },
+      apiKeyHelper: "./project-account-fixture",
+    };
+    const configPath = join(cwd, ".claude", "settings.local.json");
+    const config = JSON.stringify(projectSettings);
+    writeFileSync(configPath, config);
+    const before = readdirSync(cwd);
+    const pending = runClaudeTextInference(options(mode, { cwd }), dependencies);
+    if (mode === "success") expect((await pending).text).toBe("最近的结论 🙂");
+    else await expect(pending).rejects.toThrow("tools");
+
+    const actual = report();
+    const promptFile = actual.args[actual.args.indexOf("--system-prompt-file") + 1];
+    expect(actual.cwd).toBe(realpathSync(cwd));
+    expect(actual.projectSettings).toEqual(projectSettings);
+    expect(relative(cwd, promptFile)).toStartWith("..");
+    expect(existsSync(dirname(promptFile))).toBe(false);
+    expect(existsSync(cwd)).toBe(true);
+    expect(readdirSync(cwd)).toEqual(before);
+    expect(readFileSync(configPath, "utf8")).toBe(config);
+  },
+);
 
 test.each([
   ["tool", "tools"],

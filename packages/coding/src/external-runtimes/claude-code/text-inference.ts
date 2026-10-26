@@ -7,6 +7,8 @@ import { killProcessGroup, type TokenUsage } from "@cjhyy/code-shell-core/extens
 export interface ClaudeTextInferenceOptions {
   systemPrompt: string;
   userMessage: string;
+  /** Trusted foreground directory, preserving the CLI's project auth/provider settings. */
+  cwd?: string;
   model?: string;
   signal?: AbortSignal;
   maxTokens?: number;
@@ -66,10 +68,10 @@ export async function runClaudeTextInference(
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 3_600_000)
     throw new Error("Invalid Claude text inference timeout");
 
-  const cwd = await mkdtemp(join(tmpdir(), "codeshell-claude-text-"));
+  const privateDir = await mkdtemp(join(tmpdir(), "codeshell-claude-text-"));
   try {
-    await chmod(cwd, 0o700);
-    const systemPromptFile = join(cwd, "system-prompt.txt");
+    await chmod(privateDir, 0o700);
+    const systemPromptFile = join(privateDir, "system-prompt.txt");
     await writeFile(systemPromptFile, options.systemPrompt, { mode: 0o600 });
     await chmod(systemPromptFile, 0o600);
     options.signal?.throwIfAborted();
@@ -119,7 +121,7 @@ export async function runClaudeTextInference(
     return await new Promise((resolve, reject) => {
       const launch = dependencies.spawn ?? spawn;
       const child = launch(options.command ?? "claude", args, {
-        cwd,
+        cwd: options.cwd ?? privateDir,
         env,
         shell: false,
         detached: process.platform !== "win32",
@@ -252,6 +254,6 @@ export async function runClaudeTextInference(
       else child.stdin.end(options.userMessage);
     });
   } finally {
-    await rm(cwd, { recursive: true, force: true });
+    await rm(privateDir, { recursive: true, force: true });
   }
 }
