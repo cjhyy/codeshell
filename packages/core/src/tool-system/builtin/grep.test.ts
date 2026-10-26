@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import * as fsPromises from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { grepTool, _setGrepExecFileForTest } from "./grep.js";
@@ -115,6 +116,147 @@ describe("grepTool", () => {
     setTimeout(() => controller.abort(), 20);
 
     await expect(pending).rejects.toMatchObject({ name: "AbortError" });
-    expect(receivedSignals).toEqual([controller.signal]);
+    expect(receivedSignals).toHaveLength(1);
+    expect(receivedSignals[0]?.aborted).toBe(true);
+    expect(receivedSignals[0]?.reason).toBe(controller.signal.reason);
+  });
+
+  for (const code of ["ETIMEDOUT", "EACCES", 2]) {
+    it(`preserves ripgrep failure ${code} instead of trying a different backend`, async () => {
+      const error = Object.assign(new Error("ripgrep search failed"), { code });
+      const calls: string[] = [];
+      _setGrepExecFileForTest(async (file) => {
+        calls.push(file);
+        if (file === "rg") throw error;
+        return { stdout: "unexpected fallback result", stderr: "" };
+      });
+
+      await expect(grepTool({ pattern: "needle" }, ctx())).rejects.toBe(error);
+      expect(calls).toEqual(["rg"]);
+    });
+  }
+
+  for (const code of ["ETIMEDOUT", "EACCES", 2]) {
+    it(`does not start the Node scanner after grep failure ${code}`, async () => {
+      const error = Object.assign(new Error("grep search failed"), { code });
+      const calls: string[] = [];
+      _setGrepExecFileForTest(async (file) => {
+        calls.push(file);
+        if (file === "rg") throw Object.assign(new Error("rg missing"), { code: "ENOENT" });
+        throw error;
+      });
+
+      await expect(grepTool({ pattern: "needle" }, ctx())).rejects.toBe(error);
+      expect(calls).toEqual(["rg", "grep"]);
+    });
+  }
+
+  it("falls back to grep only when ripgrep is unavailable", async () => {
+    const calls: string[] = [];
+    _setGrepExecFileForTest(async (file) => {
+      calls.push(file);
+      if (file === "rg") throw Object.assign(new Error("rg missing"), { code: "ENOENT" });
+      return { stdout: `${join(dir, "a.ts")}\n`, stderr: "" };
+    });
+
+    expect(await grepTool({ pattern: "needle" }, ctx())).toBe("a.ts");
+    expect(calls).toEqual(["rg", "grep"]);
+  });
+
+  it("uses the remaining overall timeout when switching search backends", async () => {
+    let now = Date.now();
+    const clock = spyOn(Date, "now").mockImplementation(() => now);
+    const timeouts: number[] = [];
+    _setGrepExecFileForTest(async (file, _args, options) => {
+      timeouts.push(options.timeout);
+      if (file === "rg") {
+        now += 10_000;
+        throw Object.assign(new Error("rg missing"), { code: "ENOENT" });
+      }
+      return { stdout: "a.ts\n", stderr: "" };
+    });
+    try {
+      expect(await grepTool({ pattern: "needle" }, ctx())).toBe("a.ts");
+      expect(timeouts).toEqual([30_000, 20_000]);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("does not begin the Node fallback after the overall deadline", async () => {
+    let now = Date.now();
+    const clock = spyOn(Date, "now").mockImplementation(() => now);
+    _setGrepExecFileForTest(async () => {
+      now += 20_000;
+      throw Object.assign(new Error("search executable missing"), { code: "ENOENT" });
+    });
+    try {
+      await expect(grepTool({ pattern: "needle" }, ctx())).rejects.toMatchObject({
+        code: "ETIMEDOUT",
+      });
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("checks the shared deadline while traversing the Node fallback", async () => {
+    let now = Date.now();
+    const clock = spyOn(Date, "now").mockImplementation(() => now);
+    _setGrepExecFileForTest(async () => {
+      throw Object.assign(new Error("search executable missing"), { code: "ENOENT" });
+    });
+    const originalReaddir = fsPromises.readdir;
+    const readDirectory = spyOn(fsPromises, "readdir").mockImplementation(async (...args) => {
+      const entries = await (originalReaddir as any)(...args);
+      now += 31_000;
+      return entries;
+    });
+    try {
+      await expect(grepTool({ pattern: "needle" }, ctx())).rejects.toMatchObject({
+        code: "ETIMEDOUT",
+      });
+    } finally {
+      clock.mockRestore();
+      readDirectory.mockRestore();
+    }
+  });
+
+  it("does not swallow cancellation during a Node fallback file read", async () => {
+    const controller = new AbortController();
+    _setGrepExecFileForTest(async () => {
+      throw Object.assign(new Error("search executable missing"), { code: "ENOENT" });
+    });
+    const read = spyOn(fsPromises, "readFile").mockImplementation(async () => {
+      controller.abort();
+      throw controller.signal.reason;
+    });
+    try {
+      await expect(
+        grepTool({ pattern: "needle" }, { ...ctx(), signal: controller.signal }),
+      ).rejects.toMatchObject({ name: "AbortError" });
+    } finally {
+      read.mockRestore();
+    }
+  });
+
+  it("stops walking directories once the Node fallback has enough results", async () => {
+    _setGrepExecFileForTest(async () => {
+      throw Object.assign(new Error("search executable missing"), { code: "ENOENT" });
+    });
+    mkdirSync(join(dir, "z-later"));
+    writeFileSync(join(dir, "z-later", "late.ts"), "needle later\n");
+    const originalReaddir = fsPromises.readdir;
+    const readDirectory = spyOn(fsPromises, "readdir").mockImplementation(async (...args) => {
+      const entries = await (originalReaddir as any)(...args);
+      return entries.sort((a: { name: string }, b: { name: string }) =>
+        a.name.localeCompare(b.name),
+      );
+    });
+    try {
+      expect(await grepTool({ pattern: "needle", max_results: 1 }, ctx())).toBe("a.ts");
+      expect(readDirectory.mock.calls.map(([path]) => path)).toEqual([dir]);
+    } finally {
+      readDirectory.mockRestore();
+    }
   });
 });
