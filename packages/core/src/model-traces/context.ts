@@ -652,10 +652,13 @@ export function modelTraceFetch(underlying: typeof globalThis.fetch): typeof glo
       }
     };
     const reader = response.body.getReader();
+    let settled = false;
     const observed = new ReadableStream<Uint8Array>({
       async pull(controller) {
         try {
           const next = await reader.read();
+          // cancel() closes the wrapper while this read may still be pending.
+          if (settled) return;
           if (next.done) {
             const tail = decoder.decode();
             if (stream) {
@@ -665,6 +668,7 @@ export function modelTraceFetch(underlying: typeof globalThis.fetch): typeof glo
             attempt.endedAt = Date.now();
             if (attempt.status === "running") attempt.status = response.ok ? "completed" : "failed";
             persist(call, true);
+            settled = true;
             controller.close();
           } else {
             try {
@@ -675,6 +679,8 @@ export function modelTraceFetch(underlying: typeof globalThis.fetch): typeof glo
             controller.enqueue(next.value);
           }
         } catch (error) {
+          if (settled) return;
+          settled = true;
           attempt.status = cancelled(error) ? "cancelled" : "failed";
           attempt.error = errorText(call, error);
           attempt.endedAt = Date.now();
@@ -683,6 +689,7 @@ export function modelTraceFetch(underlying: typeof globalThis.fetch): typeof glo
         }
       },
       async cancel(reason) {
+        settled = true;
         attempt.status = "cancelled";
         attempt.endedAt = Date.now();
         persist(call, true);

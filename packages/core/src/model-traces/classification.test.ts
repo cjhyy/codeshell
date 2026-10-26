@@ -26,6 +26,7 @@ test("classifies actual execution, auxiliary, media and external purposes from m
     "voice-separation": "audio",
     external: "external",
     "external-runtime": "external",
+    external_delegation: "external",
   };
   for (const [purpose, expected] of Object.entries(cases))
     expect(deriveModelTraceCallType({ purpose, source: "desktop" })).toBe(expected);
@@ -41,6 +42,7 @@ test("specific purpose survives Panel namespaces and enclosing task attribution"
     ["transcribe", "transcription"],
     ["voice-separation", "audio"],
     ["external-runtime", "external"],
+    ["external_delegation", "external"],
   ]) {
     expect(
       deriveModelTraceCallType({ purpose, source: "panel:fixture", parentSessionId: "parent" }),

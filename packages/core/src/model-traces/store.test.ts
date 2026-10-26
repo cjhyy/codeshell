@@ -163,6 +163,26 @@ describe("ModelTraceStore", () => {
     for (const callType of ["main", "SUMMARY", "", null, 1, []])
       expect(() => store.list({ callType } as any)).toThrow("query");
   });
+  test("external filters include historical delegated CLI requests and their session counts", () => {
+    const store = new ModelTraceStore({ storageDir: directory });
+    for (const cli of ["codex", "claude"])
+      store.write(
+        record(`delegate-${cli}`, {
+          source: `drive-agent-${cli}-cli`,
+          purpose: "external_delegation",
+          sessionId: "delegating-session",
+        }),
+      );
+    store.write(record("ordinary-request", { sessionId: "delegating-session" }));
+
+    const requests = store.list({ callType: "external" });
+    expect(requests.total).toBe(2);
+    expect(requests.items.every((item) => item.purpose === "external_delegation")).toBe(true);
+    expect(store.sessions({ callType: "external" }).items).toMatchObject([
+      { sessionId: "delegating-session", callCount: 2 },
+    ]);
+    expect(store.list({ purpose: "external_delegation", callType: "other" }).total).toBe(0);
+  });
   test("Host workspace scopes union exact and prefix-limited sources before stable pagination", () => {
     const store = new ModelTraceStore({ storageDir: directory });
     const startedAt = Date.now();

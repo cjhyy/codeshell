@@ -40,6 +40,7 @@ const purposes: Readonly<Record<string, ModelTraceCallType>> = Object.freeze({
   "voice-separation": "audio",
   external: "external",
   "external-runtime": "external",
+  external_delegation: "external",
 });
 
 /**
