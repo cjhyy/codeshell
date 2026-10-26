@@ -456,3 +456,19 @@ test("wrapped Engine publication seals a large pre-run base and cold recovery jo
     "turn_complete",
   ]);
 });
+
+for (const sealed of [false, true])
+  test(`${sealed ? "sealed" : "old"} complete base exposes its exact raw prefix identity only on success`, () => {
+    const data = prefix(3 * MiB),
+      f = fixture(data, "base", !sealed);
+    if (sealed) new SessionOutputJournal(f.root, f.id, "run", "base");
+    const base = f.read();
+    expect(base.complete).toBe(true);
+    expect((base as any).identity).toEqual({
+      endOffset: Buffer.byteLength(data),
+      sha256: hash(data),
+    });
+    fs.appendFileSync(f.transcript, record("later"));
+    expect((f.read() as any).identity).toEqual((base as any).identity);
+    expect(f.read(MiB)).toEqual({ complete: false, events: [] });
+  });

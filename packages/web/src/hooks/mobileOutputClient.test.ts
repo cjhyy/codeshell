@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -16,7 +16,14 @@ const cleanup: Array<() => void> = [];
 afterEach(() => {
   for (const fn of cleanup.splice(0)) fn();
 });
-function fixture(id = "external", pendingJournal = false) {
+function fixture(
+  id = "external",
+  pendingJournal = false,
+  baseOptions?: {
+    capability?: boolean;
+    reply?: (request: any, reply: any, count: number) => any;
+  },
+) {
   const root = mkdtempSync(join(tmpdir(), "mobile-pointer-"));
   cleanup.push(() => rmSync(root, { recursive: true, force: true }));
   const manager = new SessionManager(root);
@@ -35,7 +42,25 @@ function fixture(id = "external", pendingJournal = false) {
   const sent: MobileClientEvent[] = [],
     commits: string[] = [];
   let failures = 0,
-    pageCount = 0;
+    pageCount = 0,
+    baseCount = 0;
+  const baseEvents = [
+    ...legacyEvents,
+    { type: "stream_request_start" },
+    { type: "text_delta", text: "legacy" },
+  ];
+  const baseReply = (event: any) => ({
+    type: "session.legacyBase",
+    sessionId: id,
+    recoveryId: event.recoveryId,
+    requestId: event.requestId,
+    ok: true,
+    throughEventId: baseId,
+    index: event.cursor ? 1 : 0,
+    events: event.cursor ? baseEvents.slice(1) : baseEvents.slice(0, 1),
+    complete: !!event.cursor,
+    ...(!event.cursor ? { next: "next" } : {}),
+  });
   let beforePageReply: ((count: number) => void) | undefined;
   const client = new MobileOutputClient({
     current: () => ({ sessionId: id, revision: 1 }),
@@ -59,8 +84,8 @@ function fixture(id = "external", pendingJournal = false) {
             recoveryId: event.recoveryId,
             requestId: event.requestId,
             page,
-            legacyBaseComplete: true,
-            legacyBase: { throughEventId: baseId, events: legacyEvents },
+            legacyBaseComplete: !baseOptions,
+            legacyBase: { throughEventId: baseId, events: baseOptions ? [] : legacyEvents },
             snapshot: {
               ...new SessionOutputCoverageStore(() => root).read(id),
               epoch: "main",
@@ -69,6 +94,12 @@ function fixture(id = "external", pendingJournal = false) {
               unpaired: false,
             },
           });
+        }
+        if ((event as any).type === "session.legacyBase") {
+          const reply = baseOptions?.reply
+            ? baseOptions.reply(event, baseReply(event), ++baseCount)
+            : baseReply(event);
+          if (reply) client.observe(reply as any);
         }
       });
       return true;
@@ -90,11 +121,15 @@ function fixture(id = "external", pendingJournal = false) {
   cleanup.push(() => client.cancel(false));
   client.observe({
     type: "auth.ok",
-    capabilities: { outputJournal: 1 },
+    capabilities: {
+      outputJournal: 1,
+      ...(baseOptions && baseOptions.capability !== false ? { legacyBasePages: 1 } : {}),
+    },
     device: { id: "phone", name: "fixture" },
   } as MobileServerEvent);
   return {
     client,
+    baseReply,
     openJournal,
     removeJournal: () => unlinkSync(join(root, id, "output-journal.jsonl")),
     commits,
@@ -307,4 +342,148 @@ test("published journal loss never uses the initial passive wait exception", asy
   expect(f.commits).toEqual([]);
   f.client.advanceSnapshot("external", f.cursor());
   expect(f.failures()).toBe(1);
+});
+
+test("negotiated base pages use the single transport waiter and join the existing journal", async () => {
+  const f = fixture("external", false, {});
+  f.client.begin("external");
+  await settled(() => f.commits.length > 0 || f.failures() > 0);
+  expect(f.commits).toEqual(["legacyfirst"]);
+  expect(f.sent.filter((event: any) => event.type === "session.legacyBase")).toHaveLength(2);
+});
+test("old host without the base capability fails at the old barrier with no base requests", async () => {
+  const f = fixture("external", false, { capability: false });
+  f.client.begin("external");
+  await settled(() => f.failures() > 0);
+  expect(f.commits).toEqual([]);
+  expect(f.sent.some((event: any) => event.type === "session.legacyBase")).toBe(false);
+});
+test("base replies require both matching requestId and event type, ignoring late foreign replies", async () => {
+  const f = fixture("external", false, {
+    reply: (request, reply) => {
+      f.client.observe({ ...reply, requestId: "wrong" });
+      f.client.observe({
+        ...reply,
+        type: "session.outputJournal",
+        page: { status: "incomplete" },
+      } as any);
+      return reply;
+    },
+  });
+  f.client.begin("external");
+  await settled(() => f.commits.length > 0 || f.failures() > 0);
+  expect(f.commits).toEqual(["legacyfirst"]);
+  expect(f.failures()).toBe(0);
+});
+test("cancel during a base request stops subsequent reads and isolates a late reply from reselection", async () => {
+  const f = fixture("external", false, { reply: () => undefined });
+  f.client.begin("external");
+  await settled(
+    () => f.sent.some((event: any) => event.type === "session.legacyBase") || f.failures() > 0,
+  );
+  const request = f.sent.find((event: any) => event.type === "session.legacyBase");
+  expect(request).toBeDefined();
+  f.client.cancel();
+  f.client.begin("external");
+  await settled(
+    () => f.sent.filter((event: any) => event.type === "session.legacyBase").length === 2,
+  );
+  f.client.observe(f.baseReply(request) as any);
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+  expect(f.commits).toEqual([]);
+  expect(f.failures()).toBe(0);
+  expect(f.sent.filter((event: any) => event.type === "session.legacyBase")).toHaveLength(2);
+});
+for (const forever of [false, true])
+  test(`busy base requests back off 25ms at most eight retries (${forever ? "exhaust" : "recover"})`, async () => {
+    const f = fixture("external", false, {
+      reply: (_request, reply, count) =>
+        forever || count <= 8
+          ? {
+              type: reply.type,
+              sessionId: reply.sessionId,
+              recoveryId: reply.recoveryId,
+              requestId: reply.requestId,
+              ok: false,
+              reason: "busy",
+            }
+          : reply,
+    });
+    f.client.begin("external");
+    await new Promise((resolve) => setTimeout(resolve, 280));
+    expect(f.sent.filter((event: any) => event.type === "session.legacyBase")).toHaveLength(
+      forever ? 9 : 10,
+    );
+    expect(f.commits).toEqual(forever ? [] : ["legacyfirst"]);
+    expect(f.failures()).toBe(forever ? 1 : 0);
+  });
+test("cancel clears a busy retry timer and does not issue a later base request", async () => {
+  const f = fixture("external", false, {
+    reply: (_request, reply) => ({
+      type: reply.type,
+      sessionId: reply.sessionId,
+      recoveryId: reply.recoveryId,
+      requestId: reply.requestId,
+      ok: false,
+      reason: "busy",
+    }),
+  });
+  f.client.begin("external");
+  await settled(
+    () => f.sent.some((event: any) => event.type === "session.legacyBase") || f.failures() > 0,
+  );
+  expect(f.sent.some((event: any) => event.type === "session.legacyBase")).toBe(true);
+  f.client.cancel();
+  const count = f.sent.length;
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  expect(f.sent.length).toBe(count);
+  expect(f.commits).toEqual([]);
+});
+
+for (const malformed of ["oversize", "mixed"] as const)
+  test(`invalid ${malformed} busy reply fails before backoff`, async () => {
+    const f = fixture("external", false, {
+      reply: (request, reply) =>
+        malformed === "mixed"
+          ? { ...reply, ok: false, reason: "busy" }
+          : {
+              type: "session.legacyBase",
+              sessionId: "external",
+              recoveryId: request.recoveryId,
+              requestId: request.requestId,
+              ok: false,
+              reason: "busy",
+              padding: "汉".repeat(400_000),
+            },
+    });
+    f.client.begin("external");
+    await settled(() => f.sent.some((event: any) => event.type === "session.legacyBase"));
+    for (let i = 0; i < 30; i++) await Promise.resolve();
+    expect(f.failures()).toBe(1);
+    expect(f.sent.filter((event: any) => event.type === "session.legacyBase")).toHaveLength(1);
+  });
+
+test("a base request keeps the ten-second timeout and releases its waiter after timeout", async () => {
+  const f = fixture("external", false, { reply: () => undefined });
+  const real = globalThis.setTimeout;
+  const delays: number[] = [];
+  const timer = spyOn(globalThis, "setTimeout").mockImplementation(((
+    callback: (...args: any[]) => void,
+    delay: number,
+    ...args: any[]
+  ) => {
+    delays.push(delay);
+    return real(callback, delay === 10_000 ? 1 : delay, ...args);
+  }) as typeof setTimeout);
+  try {
+    f.client.begin("external");
+    await new Promise((resolve) => real(resolve, 20));
+    expect(delays.filter((delay) => delay === 10_000)).toHaveLength(3); // ready, journal, base
+    expect(f.failures()).toBe(1);
+    expect(f.commits).toEqual([]);
+    expect((f.client as any).selection.waiter).toBeUndefined();
+  } finally {
+    timer.mockRestore();
+    f.client.cancel(false);
+  }
 });

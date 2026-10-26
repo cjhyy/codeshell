@@ -390,3 +390,213 @@ NSIS A holder契约、`0xC0000005` dump定位、Windows真机、签名/公证/�
 Linux services重跑、mobile大旧基线与真包冷重启仍未关闭。六Panel重新冻结、恢复演练目标、
 其他八家Link暂停、旧owner迁移、dream/portable memory归属审批、runtime新能力与lab预算
 继续保持原待决策边界；本次未修改这些生产行为。
+
+## 批次1来源交付历史：NSIS 卸载 holder（2026-10-26）
+
+当前补记：来源已获原 CC 二轮 PASS 196/0，已转入[组合候选](audit-integration-20261027.md)，
+待最终组合验收；以下未提交、BLOCKED 与待复验文字仅保存各来源阶段历史。
+
+本节追加候选实施证据，不改写上轮已经合入及原 CC PASS 的历史事实。用户授权继续原审计
+前三节剩余项，流程固定为 **CC 方案 → Codex 隔离 TDD → 原 CC 验收**；本次只做第一批
+NSIS 卸载 holder，后续批次、mobile 与业务决策未推进。交付给原 CC session
+`3e34f601-e67b-4de4-a43f-eba9cf0283f3`，**未提交，未验收通过**。
+
+- 指定 worktree：`codeshell/.worktrees/nsis-uninstall-holder-20261026`。
+- 分支：`codex/desktop/nsis-uninstall-holder-20261026`；HEAD/本地 main 基线均为
+  `55dce40442926c83995d1c76c78e47f10d71c625`，包含上轮恢复、Windows async watchdog 与 timing。
+  本地记录的 `origin/main` 为旧 `2661eb04da4266c532464bc8bd9223aeba0d9caa`；没有 fetch、回退或切换基线。
+- 只编辑该 worktree 七个路径；未触碰主仓或其他活跃任务，未提交/push/合并、修改 workflow、
+  触发 CI/生产、调用外部 CLI 写手或安装系统 pwsh。进程合同均用假进程、内存快照/日志与计时器；
+  Node 测试经现有隔离 HOME runner，不运行真实卸载器。
+
+### 实现与固定方案的关系
+
+新增 `windows-nsis-uninstall-holder.ps1`，只接受 Nonce/Target/InstallDir，目标参数固定为
+`/S /currentuser _?=dir`。ready JSON flush 后同步等待严格 START nonce；初始 EOF 输出
+aborted/退出4，坏指令输出 protocol/退出2。目标以 `UseShellExecute=false`、ArgumentList、
+CreateNoWindow 和三路重定向启动，立即关闭 stdin；两条输出经异步 CopyToAsync(Stream.Null)
+丢弃，异常由固定 C# async helper 捕获观察，不使用线程池上的 PowerShell scriptblock。
+控制通道只输出有限 JSON，错误只有固定枚举，不包含目标路径或原异常内容。
+
+Start 成功后保留同一 Process/SafeHandle，检查 handle 有效，读取 Id 与 StartTime UTC 七位
+`o`，ppid 为 holder `$PID`，再输出 target。运行期共用一个普通 StreamReader 和 ReadLineAsync，
+配合 WaitForExit(200)；STOP/EOF 无条件尝试同一 Process 的 Kill(true)，最多 WaitForExit(5000)，
+输出 stopped/退出3。读取异常与真正 EOF 区分；已启动后的异常先清目标，再输出枚举 error。
+正常输出目标 exit code，holder 自身退出0；非0目标仍由 Node wrapper 判失败。Process/reader Dispose。
+
+新增 `windows-nsis-uninstall-holder.mjs`：固定同 process-snapshot 的 PowerShell 7 路径，
+verifyExecutable 使用同 crash-evidence 的 plain-file/realpath 检查方式。通过 spawn 包装添加
+stdin pipe 和 stdout parser，通过 watch 包装在原 watchdog 成功证明 holder pid/ppid/birth 后
+才 START。初始失败先锁定原错，只 EOF、无 START/信号；即使 EOF 同步抛出第二个错误，也保留原错。
+原 watchdog API/初始快照失败行为与 `runNsisOwnedProcess` 函数体均未修改。
+
+协议总 stdout 上限16 KiB、单行1 KiB、事件最多6；严格检查类型、唯一字面键、nonce、顺序和
+pid/ppid/完整有效 birth。正常仅接受 ready→target→exit0。运行后协议错误先 STOP，最多等15秒
+stopped，再交原 monitor 清理 holder；原始错误不会被清理失败覆盖。协议已失败后仅允许有界回收
+匹配 nonce/顺序的 stopped 或 target exit 作为清理旁证，不能升绿。timeoutMs−20秒开始 STOP，
+保留原 watchdog deadline；timeoutMs≤20秒、非整数或超 Node timer 上限在 IO/spawn 前拒绝。
+holder 先死、start-failed 或其他缺少可信目标退出证明的路径标记 `unprovenProcess`。
+
+`operation.holder` 保存 schemaVersion/script path+SHA256/nonce/有限 events/target（source 为
+holder-handle）/targetExit/stopped。watchdog settlement 若观察过同 target PID，其 ppid 和七位
+birth 按后述 C1 规则交叉核对：ppid 精确相同，WMI 第七位0，并与句柄时间的微秒桶相等。
+新 `assertHolderUninstallTarget` 先执行未修改的 assertNormalNsisProcess，
+再重放协议、复核零退出、无 stopped、固定脚本路径及当前字节 SHA 与 fixtureSHA256 的关联；
+不能仅附加任意 holder 对象便通过。driver 的 fixtureSHA256 增加新 mjs/ps1，copied 卸载器仍保留
+运行前后同一 SHA/size 校验。
+
+**六个 controller roots 的 label 统计不变**，第六个仍叫 uninstall；其 operation.child 与
+operation.command 现在分别指 holder 身份与固定 pwsh，不能再当作卸载器身份。真实卸载器在
+holder.target 中由句柄证明，不新增第七个 controller root。checkpoint kind/label 均未增加。
+全仓检索真正严格 reader/collector：通用严格 reader 为 assertNormalNsisProcess，UI reader
+只消费 UI Main；crash collector 与调用点均限定 install，replace roles 也不消费 uninstall。
+未发现另一个硬编码六 roots 的严格汇总 reader。workflow 已上传 receipt 与 uninstall.stdout.log，
+测试追加在已有 workflow 清单的两个 test 文件内，无 workflow 改动。
+
+逐字比较 HEAD 已确认：runNsisOwnedProcess、assertNormalNsisProcess、卸载 absent(installation)
+的 try/catch、final-integrity 至文件末尾，以及 nsis-initial-identity-observation.test.mjs 全文
+保持相同，包含原221/286提取合同的固定15自由名。
+
+### .NET 快退语义证明与原生边界
+
+已核实微软 [StartTime 文档](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.starttime?view=net-10.0)
+及 [.NET 8 固定源码](https://github.com/dotnet/runtime/blob/v8.0.0/src/libraries/System.Diagnostics.Process/src/System/Diagnostics/Process.Windows.cs#L534-L717)：
+Windows StartWithCreateProcess 成功返回前保存 CreateProcess 的原 hProcess 和 PID，StartTime 的
+GetProcessTimes 使用该句柄且 throwIfExited=false；退出后持有句柄仍能读取创建时间。只读审查还
+对照 .NET 6/9/10 的同一路径。实现没有按 PID reopen、WMI 补身份、迟到 exit0 补身份或身份重试。
+这证明成功 Start 后0ms快退的 API 语义可成立，**不是本机已执行 Windows/PowerShell 的证据**。
+
+两个必要实现细化：一是不能直接使用 Console.In.ReadLineAsync，微软
+[SyncTextReader 源码](https://github.com/dotnet/runtime/blob/v8.0.0/src/libraries/System.Console/src/System/IO/SyncTextReader.cs#L82-L95)
+显示其实际同步 ReadLine；因此首次 START 与后续 STOP 共用 OpenStandardInput 上的普通 reader。
+二是 C# helper 只负责异步读取/丢弃并观察错误，不增加目标命令、args 或执行权限。
+
+保守边界：.NET Start 内部在 native 创建后、Process 关联原句柄前还构造重定向流；Start 抛错
+不能绝对证明 OS 从未创建目标。该窄窗口不能安全按 PID/WMI 补救；START 后没有可信 exit/stopped
+时一律 unproven，绝不报告清理成功。Kill(true)+WaitForExit 只证明目标退出，不能代替原 watchdog
+对已观察 descendants 的 settlement，也不证明所有 OS descendants 都被观察到。
+
+### 红绿与最终检查
+
+新增21个顶层测试，覆盖 H1–H10/H12、运行中各类坏消息的 STOP、真实 watchdog+假快退快照、
+15秒 STOP 无确认上限、初始任意原错及 EOF 同步错误竞态；H11 原测试全文保留并复跑。
+H2 是0ms假目标合同，H12 是静态 guard，均不能记为原生 Windows 已通过。
+
+| 检查 | 确切结果 | 日志 |
+| --- | --- | --- |
+| 首次两文件尝试（依赖未装） | 12 pass / 5 fail；含 smoke import 缺 electron-builder，不作功能红灯 | `/tmp/nsis-holder-b1-red.log` |
+| bun install --frozen-lockfile | exit 0，2099 packages，锁文件不变 | `/tmp/nsis-holder-b1-install.log` |
+| 两文件基线红灯回放（当时新增16项） | 30 pass / 16 fail；HEAD源码+无holder模块，finally恢复候选实现 | `/tmp/nsis-holder-b1-baseline-red.log` |
+| 首次两文件功能绿灯 | 46 pass / 0 fail | `/tmp/nsis-holder-b1-green-first.log` |
+| EOF 同步错误竞态红灯 | 50 pass / 1 fail，第二个 protocol 错误覆盖初始身份错误 | `/tmp/nsis-holder-b1-eof-red.log` |
+| 竞态修复后两文件 | 51 pass / 0 fail / 0 skipped | `/tmp/nsis-holder-b1-green-extended.log` |
+| 指定十一文件最终隔离 Node | **191 pass / 0 fail / 0 skipped** | `/tmp/nsis-holder-b1-node.log` |
+| check-workflow-test-paths | exit 0，97 literal paths 全存在 | `/tmp/nsis-holder-b1-workflow-paths.log` |
+| bun run lint | exit 0，0 errors / 99 warnings | `/tmp/nsis-holder-b1-lint.log` |
+| 五个改动 mjs 的 Prettier check | exit 0；无 PS1 parser，不将静态 PS1 记为格式/原生执行通过 | `/tmp/nsis-holder-b1-prettier.log` |
+| git diff --check | exit 0 | `/tmp/nsis-holder-b1-diff-check.log` |
+
+红绿两文件使用以下命令（基线回放临时恢复 HEAD 的 driver/acceptance 并移除两新模块，内存保留
+实现且 try/finally 恢复，未重置工作树或改动其他任务；EOF 红灯直接运行当时实现）：
+
+```sh
+node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-acceptance.test.mjs
+```
+
+最终实际命令（测试11个路径已核实存在）：
+
+```sh
+bun install --frozen-lockfile
+node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/nsis-initial-identity-observation.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs packages/desktop/scripts/windows-nsis-process-roles.test.mjs packages/desktop/scripts/windows-nsis-desktop-observation.test.mjs packages/desktop/scripts/nsis-safe-per-user-install-mode.test.mjs packages/desktop/scripts/electron-test-watchdog.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs
+node scripts/check-workflow-test-paths.mjs
+bun run lint
+bunx prettier --check packages/desktop/scripts/smoke-windows-nsis-install.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-acceptance.mjs packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/windows-nsis-uninstall-holder.mjs
+git diff --check
+```
+
+### 原生 Windows 关闭条件
+
+当前只是 macOS 上源码、纯 Node 与静态守卫候选。原 CC 必须验收本批后才可推进下一批；Windows
+实际关闭仍需在原获准的 fresh exclusive github-hosted/windows-2022/x64 边界内验证固定 pwsh 版本、
+真实0ms目标的 retained-handle PID/ppid/七位 birth 与零退出、正常 NSIS 卸载/剩余路径检查、
+START 前 EOF/坏 nonce 不启动目标、运行后 STOP/EOF/坏指令清理、stdout/stderr 洪泛不阻塞、
+超时 stopped/owned settlement、holder 先死或 Start 异常绝不伪造退出证明，并留 receipt/logs 与
+对应 fixture SHA。需独立核对已观察 target 的 PID/PPID 和 WMI→句柄的定向微秒投影，保留完整
+句柄100ns birth；跨微秒或 WMI 第七位非0须拒绝。原 watchdog 同源身份比较仍须完全一致。
+本批没有触发上述原生执行；`0xC0000005` 定位、其他平台/后续批次及上文未关闭项仍保留。
+
+### 第一批 CC BLOCKED 后的 C1 整改交接（待原 CC 复验）
+
+原 CC 独立复跑第一批191/0，但复现 C1 并判 BLOCKED：holder 的 GetProcessTimes birth 有100ns
+七位精度，WMI CreationDate 只有微秒且第七位0。旧 wrapper/acceptance 全等比较将合法的
+handle `…7654321Z` 与 WMI `…7654320Z` 拒绝，旧 H9 还把这一截断误写成应失败的测试。
+本节修正该候选规则，以上候选说明及原生关闭条件已同步；上轮已合入历史事实、CC191/0及
+本批 BLOCKED 状态保留，当前依然是**未提交、未合入、待复验候选**。
+
+本次只改五个已有候选路径，没有新增文件或依赖：
+
+- `windows-nsis-uninstall-holder.mjs`：新增共享纯 helper `wmiRowMatchesNsisHolderTarget(row, target)`，
+  替换卸载结算后的 observed-target 比较并移除一般 `same`。helper 参数方向固定为 WMI row→
+  holder handle target：pid/ppid 必须是相同的正整数；WMI birth 末位必须0；两边通过现有
+  windowsBirthToFileTime 验证合法完整 UTC 时间后，以 BigInt 比较
+  `rowFiletime === handleFiletime / 10n * 10n`。只对句柄值计算微秒桶，不同时截断两边，
+  不使用邻近 tick 容差、四舍五入或毫秒精度。
+- `windows-nsis-acceptance.mjs`：同 target PID 的 settlement row 使用同一 helper。复用原有
+  acceptance→holder→crash-parser 依赖链，没有增加循环依赖。
+- `smoke-windows-nsis-install.test.mjs`：H9 改为正确截断通过；增加异微秒/非0末位/ppid拒绝、
+  helper 方向及非法时间矩阵、真实 watchdog+假进程周期观察目标的完整成功合同。
+- `windows-nsis-acceptance.test.mjs`：同样覆盖 handle 最后位0–9、前后微秒、非0 WMI 第七位
+  （即使等于句柄）、拒绝 round-up/毫秒降精度、跨秒/跨日、pid/ppid类型和非法日历/形状。
+  验证断言前后 receipt 完全不变。
+- 本文：精确记录整改及红绿证据，不重排历史 Markdown。
+
+handle 的七位 birth 仍是唯一 target 身份来源，协议/receipt 中的值没有被截断或替换。WMI row
+保留原观察值，只在卸载结算交叉核对中使用此投影；没有据此增加任何信号授权。holder root
+仍由同一 WMI 源严格比较。PS1、driver（含整个 runner、指定 catch 与 final-integrity）、
+原 assertNormalNsisProcess、H11 initial-identity 测试、全局 watchdog/process-custody/snapshot
+及 crash 精确事件关联均逐字未改。没有读取 CC 的临时 repro，正式测试自行复现等价场景。
+
+周期合同使用真实 watchElectronTestProcess 和 parseWindowsProcessSnapshot，初始仅看到 holder，
+START 后保持目标运行并调用原1秒轮询，实际采纳同 pid/ppid、birth末0的 target row。随后目标
+exit0、holder close0，原 watchdog 正常结算，完整 wrapper 与 acceptance 均通过；settlement
+仍保留 WMI `…7654320Z`，holder.target 仍保留 `…7654321Z`，没有信号、unproven 标记或残留计时器。
+全部进程/快照/计时器及 runner 日志写入适配器为夹具，没有真实 spawn/pwsh/卸载器执行。
+
+先修改测试，保持旧比较运行红灯，再实现 helper 与两处接线。相对第一批191基组新增5个顶层测试
+（矩阵子场景在各顶层测试内循环），并修正 H9 与 acceptance 原错误期望；最终为196项。
+
+| C1 检查 | 确切结果 | 日志 |
+| --- | --- | --- |
+| 两文件 TDD 红灯 | 49 pass / 7 fail / 0 skipped；合法截断被拒、伪 WMI 被接受及 helper 尚未实现 | `/tmp/nsis-holder-c1-red.log` |
+| 两文件绿灯 | 56 pass / 0 fail / 0 skipped | `/tmp/nsis-holder-c1-green.log` |
+| 原十一文件最终隔离回归 | **196 pass / 0 fail / 0 skipped** | `/tmp/nsis-holder-c1-node.log` |
+| workflow test paths | exit 0，97 literal paths 全存在 | `/tmp/nsis-holder-c1-workflow-paths.log` |
+| bun run lint | exit 0，0 errors / 99 warnings | `/tmp/nsis-holder-c1-lint.log` |
+| 候选五个 mjs 的源 Prettier | exit 0 | `/tmp/nsis-holder-c1-prettier.log` |
+| git diff --check | exit 0 | `/tmp/nsis-holder-c1-diff-check.log` |
+
+两文件红绿命令及最终完整命令如下；依赖沿用第一批安装结果，本轮没有 install：
+
+```sh
+node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-acceptance.test.mjs
+node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/nsis-initial-identity-observation.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs packages/desktop/scripts/windows-nsis-process-roles.test.mjs packages/desktop/scripts/windows-nsis-desktop-observation.test.mjs packages/desktop/scripts/nsis-safe-per-user-install-mode.test.mjs packages/desktop/scripts/electron-test-watchdog.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs
+node scripts/check-workflow-test-paths.mjs
+bun run lint
+bunx prettier --check packages/desktop/scripts/smoke-windows-nsis-install.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-acceptance.mjs packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/windows-nsis-uninstall-holder.mjs
+git diff --check
+```
+
+**仍无 pwsh/原生 Windows 执行证据**。M1（StartTime 本地时间转 UTC 的 DST 风险）仍待原生
+针对场景核实，本次未改 PS1、未宣称关闭或推广结论；M2（Add-Type async helper 的原生运行）
+也保持未验。C1 的 fake 周期只验证微秒投影与现有 watchdog 的组合合同，不替代 M1/M2、真实
+0ms句柄、NSIS 卸载、STOP/EOF/洪泛或其他原生关闭条件。工作仍限定原指定 worktree/分支及
+`55dce4044` 基线；未提交/push/合并/触发 CI，未推进 mobile 或其他批次，供原 CC session
+`3e34f601-e67b-4de4-a43f-eba9cf0283f3` 复验。
+
+## 2026-10-27 批 1 当前组合状态
+
+上文批 1 BLOCKED、C1 整改及待复验文字保留来源历史。用户交接确认原 CC 二轮已 PASS：
+**196 pass / 0 fail**。A 代码与两个新 holder 文件逐字节转入[2026-10-27 组合候选](audit-integration-20261027.md)，
+原 runner、normal assertion、卸载 catch、final-integrity 和 H11 保持不变。
+本轮去重组合回归与候选提交见该记录；待原 CC 最终组合验收，未合 main、未推送、
+未发布。Windows 真原生、M1/M2、真实卸载及首窗/dump 的未完成边界保持开放。

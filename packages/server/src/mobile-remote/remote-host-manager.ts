@@ -70,6 +70,8 @@ export interface RemoteHostStarted {
 export interface RemoteHostManagerOptions {
   devices: TrustedDeviceStore;
   outputJournal?: boolean;
+  /** Enable only when the attached selected-session host implements legacy base pages. */
+  legacyBasePages?: boolean;
   onClientEvent: (event: unknown, ws: WebSocket) => void | Promise<void>;
   /**
    * Absolute path to the built mobile app (out/mobile). Defaults to the
@@ -463,7 +465,14 @@ export class RemoteHostManager extends EventEmitter {
       return {
         type: "pair.ok",
         device,
-        ...(this.opts.outputJournal ? { capabilities: { outputJournal: 1 as const } } : {}),
+        ...(this.opts.outputJournal
+          ? {
+              capabilities: {
+                outputJournal: 1 as const,
+                ...(this.opts.legacyBasePages ? { legacyBasePages: 1 as const } : {}),
+              },
+            }
+          : {}),
       };
     }
     if (event.type === "auth.device") {
@@ -477,7 +486,14 @@ export class RemoteHostManager extends EventEmitter {
       return {
         type: "auth.ok",
         device,
-        ...(this.opts.outputJournal ? { capabilities: { outputJournal: 1 as const } } : {}),
+        ...(this.opts.outputJournal
+          ? {
+              capabilities: {
+                outputJournal: 1 as const,
+                ...(this.opts.legacyBasePages ? { legacyBasePages: 1 as const } : {}),
+              },
+            }
+          : {}),
       };
     }
     return undefined;

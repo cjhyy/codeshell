@@ -2051,7 +2051,28 @@ test("the actual Desktop hook/controller pair keeps drafts through create and se
 });
 
 describe("useRemoteApp native output journal", () => {
-  async function connectedJournal() {
+  test("3 MiB legacy base crosses the real hook socket and selected MobileOutputRecovery host", async () => {
+    const f = await connectedJournal(true);
+    try {
+      await f.pump();
+      const assistants = f.hook.result.current.chat.items.filter(
+        (item) => item.kind === "assistant",
+      );
+      expect(assistants.map((item) => item.text).join("")).toBe(
+        Array.from({ length: 7 }, (_, index) => `${index}:` + "汉🙂".repeat(70_000)).join("") +
+          "汉🙂".repeat(12_000 * 30),
+      );
+      const basePages = f.replies.filter((event: any) => event.type === "session.legacyBase");
+      expect(basePages.length).toBeGreaterThan(1);
+      expect(
+        basePages.every((event) => Buffer.byteLength(JSON.stringify(event)) <= 1024 * 1024),
+      ).toBe(true);
+      expect(f.hook.result.current.chat.run).toBe("running");
+    } finally {
+      await f.cleanup();
+    }
+  });
+  async function connectedJournal(largeBase = false) {
     const { SessionManager } = await import("@cjhyy/code-shell-core");
     const { SessionOutputJournal, SessionOutputCoverageStore } =
       await import("@cjhyy/code-shell-core/internal");
@@ -2065,12 +2086,18 @@ describe("useRemoteApp native output journal", () => {
     const root = mkdtempSync(join(tmpdir(), "mobile-hook-journal-"));
     const manager = new SessionManager(root);
     const session = manager.create(root, "fixture", "fixture", "native");
+    if (largeBase)
+      for (let index = 0; index < 7; index++)
+        session.transcript.append("message", {
+          role: "assistant",
+          content: `${index}:` + "汉🙂".repeat(70_000),
+        });
     manager.startSessionRun(session.state, "run");
     let writer = new SessionOutputJournal(
       root,
       "native",
       "run",
-      session.transcript.getEvents()[0].id,
+      session.transcript.getEvents().at(-1)!.id,
     );
     const createSnapshots = () =>
       new SessionSnapshotStore({
@@ -2117,7 +2144,7 @@ describe("useRemoteApp native output journal", () => {
       ws.message({
         type: "auth.ok",
         device: { id: "device-1", name: "Phone" },
-        capabilities: { outputJournal: 1 },
+        capabilities: { outputJournal: 1, ...(largeBase ? { legacyBasePages: 1 } : {}) },
       });
       await flushMicrotasks();
       hook.result.current.selectSession("native");
@@ -2138,6 +2165,7 @@ describe("useRemoteApp native output journal", () => {
               [
                 "session.select",
                 "session.outputJournal",
+                "session.legacyBase",
                 "session.recovery.cancel",
                 "ccRoom.openSession",
               ].includes(event.type)

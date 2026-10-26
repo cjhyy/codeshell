@@ -27,6 +27,7 @@ import { snapshotElectronTestProcesses } from "./electron-test-process-snapshot.
 import { createNsisCheckpointDiagnostics } from "./windows-nsis-checkpoint-diagnostics.mjs";
 import { collectNsisCrashEvidence } from "./windows-nsis-crash-evidence.mjs";
 import { observeNsisUninstallLeftovers } from "./windows-nsis-leftover-metadata.mjs";
+import { runNsisGatedUninstall } from "./windows-nsis-uninstall-holder.mjs";
 import { createNsisReplacementRoleObserver } from "./windows-nsis-process-roles.mjs";
 import { localPackageConfiguration } from "./smoke-local-package.mjs";
 import { readPackagedUiBuildReceipt } from "./run-packaged-ui-acceptance.mjs";
@@ -44,7 +45,6 @@ import {
   windowsInside,
   nsisBuildArguments,
   nsisInstallArguments,
-  nsisUninstallArguments,
   assertNsisPreflight,
   assertNoNamedApp,
   assertInstalledRegistration,
@@ -54,6 +54,7 @@ import {
   assertInstalledPayload,
   assertOwnedNsisCache,
   assertNormalNsisProcess,
+  assertHolderUninstallTarget,
   assertNsisInstalledUi,
 } from "./windows-nsis-acceptance.mjs";
 
@@ -533,6 +534,8 @@ export async function runWindowsNsisAcceptance(args) {
             "windows-nsis-crash-evidence.ps1",
             "windows-nsis-leftover-metadata.mjs",
             "windows-nsis-process-roles.mjs",
+            "windows-nsis-uninstall-holder.mjs",
+            "windows-nsis-uninstall-holder.ps1",
           ].map(async (file) => [file, sha256(await readFile(join(here, file)))]),
         ),
       ),
@@ -777,13 +780,18 @@ export async function runWindowsNsisAcceptance(args) {
       const copied = join(root, "owned-uninstaller.exe");
       await cp(uninstaller, copied, { errorOnExist: true, force: false });
       assert.deepEqual(await plainFile(copied), pin);
-      await processStep(
-        "uninstall",
-        copied,
-        nsisUninstallArguments(installation, root),
+      const uninstall = await runNsisGatedUninstall({
+        target: copied,
+        installDir: installation,
+        root,
         environment,
-        BUDGETS.installer,
-      );
+        timeoutMs: BUDGETS.installer,
+        report,
+        checkpoint,
+        runProcess: runNsisOwnedProcess,
+      });
+      assertHolderUninstallTarget(uninstall, report.source);
+      assert.deepEqual(await plainFile(copied), pin);
       try {
         await absent(installation);
       } catch (error) {

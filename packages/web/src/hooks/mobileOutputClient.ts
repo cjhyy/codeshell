@@ -4,10 +4,14 @@ import {
   MobilePendingInput,
   MobileOutputCatchupPending,
   MobileAwaitingJournal,
+  type MobileLegacyBaseOptions,
 } from "../lib/mobileOutputRecovery.js";
+import type { OutputJournalOptions } from "@cjhyy/code-shell-core/internal";
 import { compareOutputCursors } from "../lib/outputJournalRecovery.js";
 
 type Page = Extract<MobileServerEvent, { type: "session.outputJournal" }>;
+type BasePage = Extract<MobileServerEvent, { type: "session.legacyBase" }>;
+type RecoveryReply = Page | BasePage;
 type Result = NonNullable<Awaited<ReturnType<typeof recoverMobileOutput>>>;
 interface Selection {
   id: string;
@@ -27,9 +31,11 @@ interface Selection {
   capacityTimer?: ReturnType<typeof setTimeout>;
   capacityPending?: boolean;
   capacityCursor?: string;
+  retry?: { timer: ReturnType<typeof setTimeout>; reject: (error: Error) => void };
   waiter?: {
     id: string;
-    resolve: (page: Page) => void;
+    type: RecoveryReply["type"];
+    resolve: (page: RecoveryReply) => void;
     reject: (error: Error) => void;
     timer: ReturnType<typeof setTimeout>;
   };
@@ -38,6 +44,7 @@ interface Selection {
 /** One bounded recovery request per selected conversation, tied to this authenticated socket. */
 export class MobileOutputClient {
   private enabled = false;
+  private basePages = false;
   private auth = 0;
   private sequence = 0;
   private selection?: Selection;
@@ -57,11 +64,23 @@ export class MobileOutputClient {
     this.selection = undefined;
     if (old?.readyTimer) clearTimeout(old.readyTimer);
     if (old?.capacityTimer) clearTimeout(old.capacityTimer);
-    if (old?.waiter) {
-      clearTimeout(old.waiter.timer);
-      old.waiter.reject(new Error("Recovery cancelled"));
-    }
+    if (old) this.clearPending(old, "Recovery cancelled");
     if (notify && old) this.deps.send({ type: "session.recovery.cancel" });
+  }
+
+  private clearPending(selection: Selection, message: string): void {
+    if (selection.waiter) {
+      const waiter = selection.waiter;
+      selection.waiter = undefined;
+      clearTimeout(waiter.timer);
+      waiter.reject(new Error(message));
+    }
+    if (selection.retry) {
+      const retry = selection.retry;
+      selection.retry = undefined;
+      clearTimeout(retry.timer);
+      retry.reject(new Error(message));
+    }
   }
 
   begin(sessionId: string): boolean {
@@ -102,7 +121,7 @@ export class MobileOutputClient {
     return true;
   }
   private fail(selection: Selection): void {
-    if (!this.current(selection)) return;
+    if (!this.current(selection) || selection.failed) return;
     if (selection.readyTimer) clearTimeout(selection.readyTimer);
     if (selection.capacityTimer) clearTimeout(selection.capacityTimer);
     selection.capacityTimer = undefined;
@@ -110,6 +129,7 @@ export class MobileOutputClient {
     selection.readyTimer = undefined;
     selection.recovering = false;
     selection.failed = true;
+    this.clearPending(selection, "Recovery failed");
     this.deps.failed(selection.sessionId);
   }
 
@@ -118,9 +138,14 @@ export class MobileOutputClient {
       this.cancel(false);
       this.auth++;
       this.enabled = event.capabilities?.outputJournal === 1;
+      this.basePages = this.enabled && event.capabilities?.legacyBasePages === 1;
       return false;
     }
-    if (event.type !== "session.recovery.ready" && event.type !== "session.outputJournal")
+    if (
+      event.type !== "session.recovery.ready" &&
+      event.type !== "session.outputJournal" &&
+      event.type !== "session.legacyBase"
+    )
       return false;
     const selection = this.selection;
     if (
@@ -143,13 +168,81 @@ export class MobileOutputClient {
       selection.readyTimer = undefined;
       if (!event.ok) this.fail(selection);
       else void this.recover(selection);
-    } else if (selection.waiter?.id === event.requestId) {
+    } else if (selection.waiter?.id === event.requestId && selection.waiter.type === event.type) {
       const waiter = selection.waiter;
       selection.waiter = undefined;
       clearTimeout(waiter.timer);
       waiter.resolve(event);
     }
     return true;
+  }
+
+  private request<T extends RecoveryReply["type"]>(
+    selection: Selection,
+    type: T,
+    options: T extends "session.outputJournal" ? OutputJournalOptions : MobileLegacyBaseOptions,
+  ): Promise<Extract<RecoveryReply, { type: T }>> {
+    return new Promise((resolve, reject) => {
+      if (!this.current(selection) || selection.failed || selection.waiter || selection.retry)
+        return reject(new Error("Recovery cancelled"));
+      const id = `page-${this.auth}-${++this.sequence}`;
+      const timer = setTimeout(() => {
+        selection.waiter = undefined;
+        reject(new Error("Recovery timed out"));
+      }, 10_000);
+      selection.waiter = {
+        id,
+        type,
+        timer,
+        reject,
+        resolve: (page) => resolve(page as Extract<RecoveryReply, { type: T }>),
+      };
+      try {
+        if (
+          !this.deps.send({
+            ...options,
+            type,
+            sessionId: selection.sessionId,
+            recoveryId: selection.id,
+            requestId: id,
+          } as MobileClientEvent)
+        )
+          throw new Error("Recovery disconnected");
+      } catch (error) {
+        clearTimeout(timer);
+        selection.waiter = undefined;
+        reject(error);
+      }
+    });
+  }
+
+  private async readBase(
+    selection: Selection,
+    options: MobileLegacyBaseOptions,
+  ): Promise<BasePage> {
+    for (let retries = 0; ; retries++) {
+      const reply = await this.request(selection, "session.legacyBase", options);
+      if (
+        new TextEncoder().encode(JSON.stringify(reply)).length > 1024 * 1024 + 4096 ||
+        (reply.ok === false &&
+          ((reply.reason !== "busy" && reply.reason !== "incomplete") ||
+            Object.keys(reply).some(
+              (key) =>
+                !["type", "sessionId", "recoveryId", "requestId", "ok", "reason"].includes(key),
+            )))
+      )
+        throw new Error("Invalid recovery base reply");
+      if (reply.ok !== false || reply.reason !== "busy" || retries >= 8) return reply;
+      await new Promise<void>((resolve, reject) => {
+        if (!this.current(selection) || selection.failed)
+          return reject(new Error("Recovery cancelled"));
+        const timer = setTimeout(() => {
+          selection.retry = undefined;
+          resolve();
+        }, 25);
+        selection.retry = { timer, reject };
+      });
+    }
   }
 
   private async recover(selection: Selection, resume?: () => Promise<Result>): Promise<void> {
@@ -160,31 +253,12 @@ export class MobileOutputClient {
             requireJournal: selection.journalRequired,
             canContinue: () => this.current(selection) && !selection.failed,
             latestCursor: () => selection.latest,
-            read: (options) =>
-              new Promise<Page>((resolve, reject) => {
-                if (!this.current(selection) || selection.waiter)
-                  return reject(new Error("Recovery cancelled"));
-                const id = `page-${this.auth}-${++this.sequence}`;
-                const timer = setTimeout(() => {
-                  selection.waiter = undefined;
-                  reject(new Error("Recovery timed out"));
-                }, 10_000);
-                selection.waiter = { id, resolve, reject, timer };
-                if (
-                  !this.deps.send({
-                    type: "session.outputJournal",
-                    sessionId: selection.sessionId,
-                    recoveryId: selection.id,
-                    requestId: id,
-                    after: options.after,
-                    through: options.through,
-                  })
-                ) {
-                  clearTimeout(timer);
-                  selection.waiter = undefined;
-                  reject(new Error("Recovery disconnected"));
+            read: (options) => this.request(selection, "session.outputJournal", options),
+            ...(this.basePages
+              ? {
+                  readBase: (options: MobileLegacyBaseOptions) => this.readBase(selection, options),
                 }
-              }),
+              : {}),
           }));
       if (!this.current(selection)) return;
       if (!result) {

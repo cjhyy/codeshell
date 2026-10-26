@@ -3,6 +3,7 @@ import { after, test } from "node:test";
 import children from "node:child_process";
 import { syncBuiltinESMExports } from "node:module";
 import { readFileSync } from "node:fs";
+import { performance } from "node:perf_hooks";
 
 // The initial repository imports are dependency-free observation and shutdown leaves.
 // Refuse any unexpected real process effect before any repository import.
@@ -318,6 +319,311 @@ const diagnosticFixture = (options = {}) => {
 };
 const tailHash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
+const { findCodeShellWindow } = await import("./electron-harness.mjs");
+const electronWindow = (id, url = "file:///PRIVATE/renderer/index.html?secret=PRIVATE") => ({
+  id,
+  isDestroyed: () => false,
+  isVisible: () => true,
+  webContents: {
+    isDestroyed: () => false,
+    isCrashed: () => false,
+    isLoading: () => true,
+    getURL: () => url,
+  },
+});
+const probeApp = (child, windows = [electronWindow(1)]) => ({
+  process: () => child,
+  windows: () => [],
+  evaluate: async (callback) =>
+    callback({ app: { isReady: () => true }, BrowserWindow: { getAllWindows: () => windows } }),
+});
+
+test("window probe separates Playwright count, bounds Electron windows and redacts before transport", async () => {
+  const { observation, child } = diagnosticFixture();
+  const windows = Array.from({ length: 12 }, (_, index) => electronWindow(index + 1));
+  const app = probeApp(child, windows);
+  const evaluate = app.evaluate;
+  let calls = 0;
+  app.windows = () => [{}, {}, {}];
+  app.evaluate = async (callback) => {
+    calls++;
+    const transported = await evaluate(callback);
+    assert.doesNotMatch(JSON.stringify(transported), /PRIVATE|secret|\/renderer/);
+    return transported;
+  };
+  await observation.probeWindows(app);
+  await observation.probeWindows(app);
+  const value = observation.snapshot();
+  const probe = value.launches[0].windowProbe;
+  assert.equal(calls, 1);
+  assert.equal(probe.status, "observed");
+  assert.equal(probe.timeoutMs, 3000);
+  assert.equal(probe.playwrightWindowCount, 3);
+  assert.equal(probe.appReady, true);
+  assert.equal(probe.browserWindowCount, 12);
+  assert.equal(probe.truncated, true);
+  assert.equal(probe.windows.length, 8);
+  assert.deepEqual(probe.windows[0], {
+    id: 1,
+    visible: true,
+    destroyed: false,
+    crashed: false,
+    loading: true,
+    urlKind: "file:index.html",
+  });
+  probe.windows[0].id = 999;
+  assert.equal(observation.snapshot().launches[0].windowProbe.windows[0].id, 1);
+});
+
+test("destroyed BrowserWindow and webContents never receive unsafe calls", async () => {
+  const { observation, child } = diagnosticFixture();
+  const destroyed = {
+    isDestroyed: () => true,
+    get id() {
+      throw Error("PRIVATE destroyed id");
+    },
+    get webContents() {
+      throw Error("PRIVATE destroyed contents");
+    },
+    isVisible() {
+      throw Error("PRIVATE destroyed visible");
+    },
+  };
+  const live = electronWindow(2);
+  live.webContents = { isDestroyed: () => true };
+  await observation.probeWindows(probeApp(child, [destroyed, live]));
+  const probe = observation.snapshot().launches[0].windowProbe;
+  assert.equal(probe.status, "observed");
+  assert.deepEqual(probe.windows[0], {
+    id: null,
+    visible: null,
+    destroyed: true,
+    crashed: null,
+    loading: null,
+    urlKind: "unavailable",
+  });
+  assert.equal(probe.windows[1].crashed, null);
+  assert.equal(probe.windows[1].urlKind, "unavailable");
+});
+
+test("probe handles rejection, hostile projection and timeout with cleared timer and late rejection", async () => {
+  for (const mode of ["reject", "getter", "invalid", "timeout"]) {
+    let fire,
+      timerMs,
+      cleared = 0,
+      rejectLate;
+    const observation = createPackagedLaunchDiagnostics({
+      setTimer(callback, ms) {
+        fire = callback;
+        timerMs = ms;
+        return 17;
+      },
+      clearTimer(timer) {
+        assert.equal(timer, 17);
+        cleared++;
+      },
+    });
+    const child = diagnosticChild();
+    observation.captured(child);
+    const app = probeApp(child);
+    app.evaluate = () => {
+      if (mode === "reject") return Promise.reject(Error("PRIVATE evaluate"));
+      if (mode === "getter")
+        return Promise.resolve(
+          Object.defineProperty({}, "appReady", {
+            get() {
+              throw Error("PRIVATE getter");
+            },
+          }),
+        );
+      if (mode === "invalid")
+        return Promise.resolve({ appReady: true, browserWindowCount: Infinity, windows: [] });
+      return new Promise((_, reject) => {
+        rejectLate = reject;
+      });
+    };
+    const pending = observation.probeWindows(app);
+    if (mode === "timeout") {
+      fire();
+      rejectLate(Error("PRIVATE late rejection"));
+    }
+    await pending;
+    await new Promise((resolve) => setImmediate(resolve));
+    const value = observation.snapshot();
+    const probe = value.launches[0].windowProbe;
+    assert.equal(timerMs, 3000);
+    assert.equal(cleared, 1);
+    assert.equal(probe.status, mode === "timeout" ? "timeout" : "failed");
+    assert.equal(value.recordingFailed, mode === "getter" || mode === "invalid");
+    assert.doesNotMatch(JSON.stringify(value), /PRIVATE|Infinity/);
+  }
+});
+
+test("probe uses fixed URL classifications including credentials, query and non-file schemes", async () => {
+  const { observation, child } = diagnosticFixture();
+  const urls = [
+    "https://PRIVATE:SECRET@host/x?PRIVATE",
+    "http://host/PRIVATE",
+    "data:PRIVATE",
+    "about:blank",
+    "file:///PRIVATE/other.html",
+    "not a PRIVATE URL",
+    "",
+    "custom:PRIVATE",
+  ];
+  await observation.probeWindows(
+    probeApp(
+      child,
+      urls.map((url, id) => electronWindow(id + 1, url)),
+    ),
+  );
+  assert.deepEqual(
+    observation.snapshot().launches[0].windowProbe.windows.map((row) => row.urlKind),
+    ["https", "http", "data", "about:blank", "file:other", "invalid", "empty", "other"],
+  );
+});
+
+test("timeout stays frozen after late success, settled timing and a second probe request", async () => {
+  let fire,
+    resolveLate,
+    evaluations = 0;
+  const { observation, child } = diagnosticFixture({
+    setTimer(callback) {
+      fire = callback;
+      return 19;
+    },
+    clearTimer() {},
+  });
+  observation.watchdog(child, { snapshotTiming: timingSample() });
+  observation.failed();
+  const app = probeApp(child);
+  app.evaluate = () => {
+    evaluations++;
+    return new Promise((resolve) => {
+      resolveLate = resolve;
+    });
+  };
+  const pending = observation.probeWindows(app);
+  fire();
+  await pending;
+  const first = observation.snapshot().launches[0].windowProbe;
+  resolveLate({ appReady: true, browserWindowCount: 0, windows: [] });
+  await new Promise((resolve) => setImmediate(resolve));
+  observation.settled();
+  await observation.probeWindows(app);
+  assert.deepEqual(observation.snapshot().launches[0].windowProbe, first);
+  assert.equal(first.status, "timeout");
+  assert.equal(evaluations, 1);
+  assert.deepEqual(observation.snapshot().launches[0].snapshotTiming, {
+    atFailure: timingSample(),
+    settled: timingSample(),
+  });
+});
+
+test("window probe refuses hostile fields and nonfinite/fractional counts without executing getters", async () => {
+  const row = {
+    id: 1,
+    visible: true,
+    destroyed: false,
+    crashed: false,
+    loading: false,
+    urlKind: "empty",
+  };
+  const sample = () => ({ appReady: true, browserWindowCount: 1, windows: [{ ...row }] });
+  let getters = 0;
+  const badRow = Object.defineProperty({ ...row }, "id", {
+    get() {
+      getters++;
+      throw Error("PRIVATE getter");
+    },
+  });
+  const badArray = [{ ...row }];
+  Object.defineProperty(badArray, "0", {
+    get() {
+      getters++;
+      throw Error("PRIVATE array getter");
+    },
+  });
+  for (const result of [
+    ...[NaN, Infinity, -1, 0.5, Number.MAX_SAFE_INTEGER + 1].map((browserWindowCount) => ({
+      ...sample(),
+      browserWindowCount,
+    })),
+    ...[NaN, Infinity, -1, 0.5].map((id) => ({ ...sample(), windows: [{ ...row, id }] })),
+    { ...sample(), windows: [badRow] },
+    { ...sample(), windows: badArray },
+    { ...sample(), windows: Array(9).fill(row) },
+    { ...sample(), windows: [{ ...row, urlKind: "https://PRIVATE" }] },
+  ]) {
+    const { observation, child } = diagnosticFixture();
+    const app = probeApp(child);
+    app.evaluate = async () => result;
+    await observation.probeWindows(app);
+    assert.equal(observation.snapshot().recordingFailed, true);
+    assert.equal(observation.snapshot().launches[0].windowProbe.status, "failed");
+    assert.doesNotMatch(JSON.stringify(observation.snapshot()), /PRIVATE/);
+  }
+  assert.equal(getters, 0);
+  const { observation, child } = diagnosticFixture();
+  const good = Object.defineProperty(sample(), "secret", {
+    get() {
+      throw Error("unread dynamic property");
+    },
+  });
+  const app = probeApp(child);
+  app.evaluate = async () => good;
+  await observation.probeWindows(app);
+  good.windows[0].id = 99;
+  assert.equal(observation.snapshot().launches[0].windowProbe.windows[0].id, 1);
+  assert.equal(observation.snapshot().recordingFailed, false);
+});
+
+test("native destruction races and synchronous evaluation failures stay bounded", async () => {
+  for (const mode of ["window-race", "contents-race", "sync-throw"]) {
+    const { observation, child } = diagnosticFixture();
+    const window = electronWindow(1);
+    let destroyed = false;
+    if (mode === "window-race") {
+      window.isDestroyed = () => destroyed;
+      window.isVisible = () => {
+        destroyed = true;
+        throw Error("PRIVATE window gone");
+      };
+    }
+    if (mode === "contents-race")
+      window.webContents.getURL = () => {
+        throw Error("PRIVATE contents gone");
+      };
+    const app = probeApp(child, [window]);
+    if (mode === "sync-throw")
+      app.evaluate = () => {
+        throw Error("PRIVATE synchronous failure");
+      };
+    await assert.doesNotReject(observation.probeWindows(app));
+    const value = observation.snapshot().launches[0].windowProbe;
+    assert.equal(value.status, mode === "window-race" ? "observed" : "failed");
+    if (mode === "window-race") assert.equal(value.windows[0].destroyed, true);
+    assert.doesNotMatch(JSON.stringify(value), /PRIVATE/);
+  }
+});
+
+test("real 3s deadline releases pending evaluate without awaiting it or delaying settlement", async () => {
+  const { observation, child } = diagnosticFixture();
+  const app = probeApp(child);
+  let rejectLate;
+  app.evaluate = () =>
+    new Promise((_, reject) => {
+      rejectLate = reject;
+    });
+  const started = performance.now();
+  await observation.probeWindows(app);
+  const elapsed = performance.now() - started;
+  assert.ok(elapsed >= 2900 && elapsed < 4500, `controller deadline elapsed=${elapsed}`);
+  assert.equal(observation.snapshot().launches[0].windowProbe.status, "timeout");
+  rejectLate(Error("PRIVATE late transport close"));
+  await new Promise((resolve) => setImmediate(resolve));
+});
+
 const timingSample = (count = 2) => ({
   count,
   totalMs: count * 5,
@@ -363,6 +669,199 @@ const actualSettledCapture = new (Object.getPrototypeOf(async function () {}).co
   "passiveLaunchDiagnostics",
   packagedFixtureSource.slice(settledStart, settledEnd) + "return observedProcessSettlements;",
 );
+const actualFixtureProbe = new Function(
+  "passiveLaunchDiagnostics",
+  `return ({${packagedFixtureSource.slice(packagedFixtureSource.indexOf("    async probeFirstWindow("), packagedFixtureSource.indexOf("    diagnosticContext()"))}}).probeFirstWindow;`,
+);
+const actualDriverRoute = (afterWindow = "") => {
+  const start = packagedDriverSource.indexOf("      app = await fixture.launch();");
+  const end = packagedDriverSource.indexOf("      win = app.windows().find", start);
+  const catchStart = packagedDriverSource.indexOf(
+    '  recordFirstError(error, { phase: "ui-operation"',
+  );
+  const catchEnd = packagedDriverSource.indexOf(
+    "\nconst result = await settlePackagedPet",
+    catchStart,
+  );
+  return new (Object.getPrototypeOf(async function () {}).constructor)(
+    "fixture",
+    "findCodeShellWindow",
+    "recordFirstError",
+    "process",
+    "failures",
+    "diagnosticRecordingFailures",
+    `let app, win, identity; let firstWindowPending = false; try { ${packagedDriverSource.slice(start, end)} ${afterWindow} } catch(error) { ${packagedDriverSource.slice(catchStart, catchEnd)}`,
+  );
+};
+
+test("probe timer cleanup failure cannot escape observation", async () => {
+  const { observation, child } = diagnosticFixture({
+    clearTimer() {
+      throw Error("PRIVATE timer");
+    },
+  });
+  await assert.doesNotReject(observation.probeWindows(probeApp(child)));
+  assert.equal(observation.snapshot().recordingFailed, true);
+});
+
+test("actual driver retains original error and reaches cleanup even if probe unexpectedly rejects", async () => {
+  const original = Error("first-window timeout");
+  const app = {
+    firstWindow: async () => {
+      throw original;
+    },
+    process: () => ({ pid: 17 }),
+  };
+  const fixture = {
+    launch: async () => app,
+    probeFirstWindow: async () => {
+      throw Error("PRIVATE probe failure");
+    },
+  };
+  const failures = [],
+    diagnostics = [];
+  await assert.doesNotReject(
+    actualDriverRoute()(fixture, findCodeShellWindow, () => {}, { pid: 23 }, failures, diagnostics),
+  );
+  let cleanups = 0;
+  const result = await settlePackagedPet({
+    failures,
+    closeApp: async () => {},
+    closeModel: async () => {},
+    verifyUnchanged: async () => ({}),
+    readNativeCalls: async () => [],
+    canCleanup: async () => true,
+    cleanup: async () => {
+      cleanups++;
+    },
+    retainedHome: "owned-home",
+  });
+  assert.strictEqual(result.errors[0], original);
+  assert.equal(cleanups, 1);
+  assert.doesNotMatch(JSON.stringify(diagnostics.map((error) => error.message)), /PRIVATE/);
+});
+
+test("actual driver never probes a later UI error after first-window success", async () => {
+  let probes = 0;
+  const failures = [];
+  const fixture = {
+    launch: async () => ({ process: () => ({ pid: 17 }) }),
+    probeFirstWindow: async () => {
+      probes++;
+    },
+  };
+  await actualDriverRoute('throw Error("later UI error");')(
+    fixture,
+    async () => {},
+    () => {},
+    { pid: 23 },
+    failures,
+    [],
+  );
+  assert.equal(failures[0].message, "later UI error");
+  assert.equal(probes, 0);
+});
+
+test("appReady=false still samples actual Electron windows without inventing a zero", async () => {
+  const { observation, child } = diagnosticFixture();
+  const app = probeApp(child);
+  app.evaluate = async (callback) =>
+    callback({
+      app: { isReady: () => false },
+      BrowserWindow: { getAllWindows: () => [electronWindow(1)] },
+    });
+  await observation.probeWindows(app);
+  const value = observation.snapshot().launches[0].windowProbe;
+  assert.equal(value.appReady, false);
+  assert.equal(value.browserWindowCount, 1);
+});
+
+test("real packaged driver findCodeShellWindow failure freezes first error before one probe and cleanup", async () => {
+  const { observation, child } = diagnosticFixture();
+  let current = timingSample(),
+    cleanups = 0,
+    probes = 0;
+  observation.watchdog(child, {
+    get snapshotTiming() {
+      return current;
+    },
+  });
+  const original = Error("electronApplication.firstWindow: Timeout 20000ms exceeded");
+  const app = probeApp(child);
+  app.firstWindow = async () => {
+    throw original;
+  };
+  const evaluate = app.evaluate;
+  app.evaluate = async (callback) => {
+    probes++;
+    assert.deepEqual(observation.snapshot().launches[0].snapshotTiming.atFailure, timingSample());
+    current = timingSample(3);
+    return evaluate(callback);
+  };
+  const fixture = {
+    launch: async () => app,
+    recordLaunchFailure: () => observation.failed(),
+    probeFirstWindow: actualFixtureProbe(observation),
+  };
+  const recorded = [];
+  const recordFirstError = actualFirstErrorRecorder(
+    fixture,
+    (_path, error) => {
+      recorded.push(error);
+      return { written: true };
+    },
+    (...paths) => paths.join("/"),
+    "owned-evidence",
+  );
+  const launchStart = packagedDriverSource.indexOf("      app = await fixture.launch();");
+  const launchEnd = packagedDriverSource.indexOf("      win = app.windows().find", launchStart);
+  const catchStart = packagedDriverSource.indexOf(
+    '  recordFirstError(error, { phase: "ui-operation"',
+  );
+  const catchEnd = packagedDriverSource.indexOf(
+    "\nconst result = await settlePackagedPet",
+    catchStart,
+  );
+  assert.ok(launchStart > 0 && launchEnd > launchStart && catchEnd > catchStart);
+  const run = new (Object.getPrototypeOf(async function () {}).constructor)(
+    "fixture",
+    "findCodeShellWindow",
+    "recordFirstError",
+    "process",
+    "failures",
+    "diagnosticRecordingFailures",
+    `let app, win, identity; let firstWindowPending = false; try { ${packagedDriverSource.slice(launchStart, launchEnd)} } catch(error) { ${packagedDriverSource.slice(catchStart, catchEnd)}`,
+  );
+  const failures = [];
+  await run(fixture, findCodeShellWindow, recordFirstError, { pid: 23 }, failures, []);
+  const result = await settlePackagedPet({
+    failures,
+    closeApp: async () => {},
+    closeModel: async () => {},
+    verifyUnchanged: async () => {
+      observation.settled();
+      return { packagedLaunchDiagnostics: observation.snapshot() };
+    },
+    readNativeCalls: async () => [],
+    canCleanup: async () => true,
+    cleanup: async () => {
+      cleanups++;
+    },
+    retainedHome: "owned-home",
+  });
+  assert.strictEqual(result.errors[0], original);
+  assert.deepEqual(recorded, [original]);
+  assert.equal(probes, 1);
+  assert.equal(cleanups, 1);
+  assert.deepEqual(result.artifacts.packagedLaunchDiagnostics.launches[0].snapshotTiming, {
+    atFailure: timingSample(),
+    settled: timingSample(3),
+  });
+  assert.equal(
+    result.artifacts.packagedLaunchDiagnostics.launches[0].windowProbe.status,
+    "observed",
+  );
+});
 
 test("actual packaged fixture captures settled timing only after the original monitor completes", async () => {
   const { observation, child } = diagnosticFixture();

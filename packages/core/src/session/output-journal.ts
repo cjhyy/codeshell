@@ -483,7 +483,11 @@ export function readOutputJournalLegacyBase(
   sessionId: string,
   throughEventId: string | undefined,
   options: { maxBytes?: number } = {},
-): { complete: boolean; events: TranscriptEvent[] } {
+): {
+  complete: boolean;
+  events: TranscriptEvent[];
+  identity?: { endOffset: number; sha256: string };
+} {
   let fd: number | undefined;
   let journalFd: number | undefined;
   try {
@@ -516,7 +520,11 @@ export function readOutputJournalLegacyBase(
     assertNamedRegular(location.file, journalFd);
     if (readHeader(journalFd, final).start.hash !== loaded.start.hash)
       invalid("Legacy base journal changed during recovery");
-    return { complete: true, events: base.events };
+    return {
+      complete: true,
+      events: base.events,
+      identity: { endOffset: base.endOffset, sha256: base.sha256 },
+    };
   } catch {
     /* A partial base never releases the recovery barrier. */
   } finally {

@@ -496,3 +496,40 @@ describe("mobile snapshot epoch recovery", () => {
     });
   });
 });
+
+test("legacy base dispatch awaits the selected recovery host without entering worker command routing", async () => {
+  const { ctx, metas } = createHarness({
+    requestedWorkspaceRoot: "/fixture",
+    lookupSession: () => undefined,
+  });
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const seen: unknown[] = [];
+  ctx.outputRecovery = {
+    handle: async (event: unknown) => {
+      seen.push(event);
+      await pending;
+      return false;
+    },
+  } as any;
+  let finished = false;
+  const work = handleClientEvent(ctx, {
+    type: "session.legacyBase",
+    sessionId: "s",
+    recoveryId: "r",
+    requestId: "p",
+    throughEventId: "base",
+    deviceId: "phone",
+    viewerId: "tab",
+  } as any).then(() => {
+    finished = true;
+  });
+  await Promise.resolve();
+  expect(finished).toBe(false);
+  expect(seen).toHaveLength(1);
+  release();
+  await work;
+  expect(metas).toEqual([]);
+});

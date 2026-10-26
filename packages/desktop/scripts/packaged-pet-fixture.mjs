@@ -154,6 +154,9 @@ export async function preparePackagedPetFixture({
     recordLaunchFailure() {
       passiveLaunchDiagnostics?.failed();
     },
+    async probeFirstWindow(application) {
+      await passiveLaunchDiagnostics?.probeWindows(application);
+    },
     diagnosticContext() {
       return {
         root: fixtureRoot,

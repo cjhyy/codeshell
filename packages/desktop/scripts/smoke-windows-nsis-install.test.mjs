@@ -743,3 +743,654 @@ test("production replacement forwards the exact role observer without a desktop 
   assert.equal(report.unprovenProcess, undefined);
   assert.equal(logFiles.size, 2, "Only the two inert initial logs are recorded");
 });
+
+// Holder contracts execute the complete unchanged runner with in-memory IO and
+// fake process events. They never spawn PowerShell, an installer or a signal.
+const holderNonce = "0123456789abcdef0123456789abcdef";
+const holderBirth = "2026-10-26T01:02:03.1234567Z";
+const targetBirth = "2026-10-26T01:02:04.7654321Z";
+const holderModule = () => import("./windows-nsis-uninstall-holder.mjs");
+const wire = (event, fields = {}) =>
+  JSON.stringify({ v: 1, event, nonce: holderNonce, ...fields }) + "\n";
+
+async function gatedFixture({
+  initialError,
+  targetCode = 0,
+  onStart,
+  onStop,
+  ownedTarget,
+  terminateError,
+} = {}) {
+  const source = await readFile(
+    new URL("./smoke-windows-nsis-install.mjs", import.meta.url),
+    "utf8",
+  );
+  const begin = source.indexOf("export async function runNsisOwnedProcess({");
+  const end = source.indexOf("\nexport async function runWindowsNsisAcceptance(args) {");
+  const names = [
+    "assert",
+    "spawn",
+    "watchElectronTestProcess",
+    "snapshotElectronTestProcesses",
+    "createNsisReplacementRoleObserver",
+    "MAX_LOG",
+    "BUDGETS",
+    "join",
+    "writeFileSync",
+    "plainFile",
+    "safeError",
+    "assertNormalNsisProcess",
+    "process",
+    "setTimeout",
+    "clearTimeout",
+  ];
+  const denied = () => assert.fail("No real transport, query or signal is permitted");
+  const { assertNormalNsisProcess } = await import("./windows-nsis-acceptance.mjs");
+  const runner = new Function(...names, `return (${source.slice(begin + 7, end)});`)(
+    assert,
+    denied,
+    denied,
+    denied,
+    denied,
+    1024 * 1024,
+    { closeAfterCustody: 5000 },
+    join,
+    () => {},
+    async () => ({ size: 1, sha256: "a".repeat(64) }),
+    (error) => {
+      try {
+        return {
+          name: error?.name ?? "Error",
+          message: String(error?.message ?? error ?? "Unknown caught value"),
+        };
+      } catch {
+        return { name: "Error", message: "Caught value could not be described" };
+      }
+    },
+    assertNormalNsisProcess,
+    { pid: 99, kill: denied },
+    () => 0,
+    () => {},
+  );
+  const child = Object.assign(new EventEmitter(), {
+    pid: 42,
+    exitCode: null,
+    signalCode: null,
+    stdin: new PassThrough(),
+    stdout: new PassThrough(),
+    stderr: new PassThrough(),
+    unref() {
+      this.unreferenced = true;
+    },
+  });
+  const rootIdentity = { pid: 42, ppid: 99, birth: holderBirth };
+  const targetIdentity = { pid: 43, ppid: 42, birth: targetBirth };
+  const settlement = {
+    status: "cleaned",
+    owned: [rootIdentity, ...(ownedTarget ? [ownedTarget] : [])],
+    ownedCount: ownedTarget ? 2 : 1,
+    remaining: [],
+    remainingCount: 0,
+    queryFailed: false,
+    evidenceTruncated: false,
+  };
+  const order = [],
+    timers = new Map(),
+    inputs = [];
+  let resolveCompleted,
+    terminated = 0,
+    started = false,
+    spawnOptions;
+  const completed = new Promise((resolve) => (resolveCompleted = resolve));
+  const emit = (value) => child.stdout.write(value);
+  const close = (code = 0) => {
+    child.stdout.end();
+    child.stderr.end();
+    child.exitCode = code;
+    child.emit("exit", code, null);
+    child.emit("close", code, null);
+    resolveCompleted(settlement);
+  };
+  child.stdin.on("data", (bytes) => {
+    const input = bytes.toString();
+    inputs.push(input);
+    order.push(input.trim().split(" ")[0]);
+    if (input === `START ${holderNonce}\n`) {
+      started = true;
+      if (onStart) onStart({ emit, close, child, targetIdentity });
+      else {
+        emit(wire("target", targetIdentity));
+        emit(wire("exit", { code: targetCode }));
+        queueMicrotask(() => close()); // 0ms target exit precedes the next snapshot.
+      }
+    }
+    if (input === `STOP ${holderNonce}\n`) {
+      if (onStop) {
+        onStop({ emit, close, child, targetIdentity });
+        return;
+      }
+      emit(wire("stopped", { reason: "stop", targetExited: true }));
+      queueMicrotask(() => close(3));
+    }
+  });
+  child.stdin.on("finish", () => order.push("EOF"));
+  const report = { processes: [] };
+  const options = {
+    target: "D:\\owned\\owned-uninstaller.exe",
+    installDir: "D:\\owned\\code-shell",
+    root: "D:\\owned",
+    environment: { SystemRoot: "C:\\Windows" },
+    timeoutMs: 180_000,
+    report,
+    checkpoint: () => {},
+    runProcess: runner,
+  };
+  const deps = {
+    platform: "win32",
+    parentPid: 99,
+    makeNonce: () => holderNonce,
+    verifyExecutable: (path) => assert.equal(path, "C:\\Program Files\\PowerShell\\7\\pwsh.exe"),
+    spawnProcess: (_file, args, opts) => {
+      spawnOptions = opts;
+      assert.deepEqual(opts.stdio, ["pipe", "pipe", "pipe"]);
+      assert.deepEqual(args.slice(-6), [
+        "-Nonce",
+        holderNonce,
+        "-Target",
+        options.target,
+        "-InstallDir",
+        options.installDir,
+      ]);
+      queueMicrotask(() => emit(wire("ready", { pid: 42 })));
+      return child;
+    },
+    takeSnapshot: () => [rootIdentity],
+    watch: (_child, opts) => {
+      order.push("initial-snapshot");
+      opts.snapshotProcesses();
+      if (initialError) throw initialError;
+      order.push("holder-proven");
+      return Object.assign(() => {}, {
+        completed,
+        terminate: async () => {
+          terminated++;
+          order.push("cleanup-holder");
+          if (terminateError) throw terminateError;
+          if (child.exitCode === null) queueMicrotask(() => close(3));
+          resolveCompleted(settlement);
+          return settlement;
+        },
+      });
+    },
+    schedule: (callback, delay) => {
+      const id = {};
+      timers.set(id, { callback, delay });
+      return id;
+    },
+    cancel: (id) => timers.delete(id),
+  };
+  return {
+    options,
+    deps,
+    report,
+    order,
+    inputs,
+    timers,
+    child,
+    emit,
+    close,
+    targetIdentity,
+    terminated: () => terminated,
+    started: () => started,
+    spawnOptions: () => spawnOptions,
+  };
+}
+
+test("H1/H2 gated uninstall proves holder before START and retains 0ms handle identity", async () => {
+  const value = await gatedFixture();
+  const { runNsisGatedUninstall } = await holderModule();
+  const operation = await runNsisGatedUninstall(value.options, value.deps);
+  assert.deepEqual(value.order.slice(0, 3), ["initial-snapshot", "holder-proven", "START"]);
+  assert.equal(operation.label, "uninstall");
+  assert.equal(operation.child.pid, 42);
+  assert.equal(operation.holder.schemaVersion, 1);
+  assert.deepEqual(operation.holder.target, { ...value.targetIdentity, source: "holder-handle" });
+  assert.deepEqual(operation.holder.targetExit, { code: 0 });
+  assert.equal(operation.holder.stopped, null);
+  assert.deepEqual(
+    operation.holder.events.map((row) => row.event),
+    ["ready", "target", "exit"],
+  );
+  assert.equal(value.terminated(), 0);
+  assert.equal(value.report.unprovenProcess, undefined);
+  assert.equal(value.timers.size, 0);
+});
+
+test("H3 initial holder failure closes EOF with no START, signal or late exit promotion", async () => {
+  const original = Error("original missing holder identity");
+  const value = await gatedFixture({ initialError: original });
+  const { runNsisGatedUninstall } = await holderModule();
+  await assert.rejects(
+    runNsisGatedUninstall(value.options, value.deps),
+    (error) => error === original,
+  );
+  await new Promise((resolve) => setImmediate(resolve));
+  value.close(0);
+  assert.deepEqual(value.inputs, []);
+  assert.ok(value.child.stdin.writableEnded);
+  assert.equal(value.terminated(), 0);
+  assert.equal(value.report.processes[0].status, "failed");
+  assert.equal(value.report.processes[0].failure.message, original.message);
+  assert.equal(value.report.unprovenProcess, true);
+});
+
+test("H4 parser rejects wrong nonce, duplicate events/keys, non-JSON and byte/line excess", async () => {
+  const { parseHolderProtocol } = await holderModule();
+  const ready = wire("ready", { pid: 42 });
+  for (const output of [
+    ready.replace(holderNonce, "f".repeat(32)),
+    ready + ready,
+    ready.replace('"v":1', '"v":1,"v":1'),
+    ready.replace('"pid":42', '"pid":42,"extra":1'),
+    "not JSON\n",
+    "x".repeat(1025),
+    ready + " ".repeat(16 * 1024),
+    wire("unknown"),
+    ready + wire("exit", { code: 0 }),
+    ready + wire("aborted") + ready,
+  ])
+    assert.throws(() => parseHolderProtocol(output, { nonce: holderNonce, holderPid: 42 }));
+});
+
+test("H5 parser enforces full holder/target PID, PPID and real seven-digit UTC birth", async () => {
+  const { parseHolderProtocol } = await holderModule();
+  for (const target of [
+    { pid: 0 },
+    { pid: 42 },
+    { pid: 2 ** 32 },
+    { pid: 43.5 },
+    { ppid: 99 },
+    { birth: "2026-02-30T01:02:03.1234567Z" },
+    { birth: targetBirth.slice(0, -2) + "Z" },
+    { birth: "2026-10-26T01:02:03.1234567+00:00" },
+  ])
+    assert.throws(() =>
+      parseHolderProtocol(
+        wire("ready", { pid: 42 }) +
+          wire("target", { pid: 43, ppid: 42, birth: targetBirth, ...target }),
+        { nonce: holderNonce, holderPid: 42 },
+      ),
+    );
+  assert.throws(() =>
+    parseHolderProtocol(wire("ready", { pid: 41 }), { nonce: holderNonce, holderPid: 42 }),
+  );
+});
+
+test("H6 target nonzero is the original failure even if holder exits zero and cleanup fails", async () => {
+  const value = await gatedFixture({
+    targetCode: 7,
+    terminateError: Error("secondary cleanup error"),
+  });
+  const { runNsisGatedUninstall } = await holderModule();
+  await assert.rejects(
+    runNsisGatedUninstall(value.options, value.deps),
+    /target exited with code 7/,
+  );
+  assert.equal(value.report.processes[0].status, "failed");
+  assert.match(value.report.processes[0].failure.message, /target exited with code 7/);
+  assert.deepEqual(value.report.processes[0].holder.targetExit, { code: 7 });
+  assert.equal(value.report.unprovenProcess, undefined);
+});
+
+test("real watchdog with fake snapshots proves the holder and never needs to observe a 0ms target", async () => {
+  const value = await gatedFixture();
+  const { runNsisGatedUninstall } = await holderModule();
+  const { watchElectronTestProcess } = await import("./electron-test-watchdog.mjs");
+  value.deps.takeSnapshot = () =>
+    value.child.exitCode === null ? [{ pid: 42, ppid: 99, birth: holderBirth }] : [];
+  value.deps.watch = (child, options) => {
+    value.order.push("initial-snapshot");
+    const monitor = watchElectronTestProcess(child, {
+      ...options,
+      platform: "win32",
+      parentPid: 99,
+      signalProcess: () => assert.fail("No real or unobserved target signal"),
+      setTimeout: value.deps.schedule,
+      clearTimeout: value.deps.cancel,
+      setInterval: value.deps.schedule,
+      clearInterval: value.deps.cancel,
+    });
+    value.order.push("holder-proven");
+    return monitor;
+  };
+  const operation = await runNsisGatedUninstall(value.options, value.deps);
+  assert.deepEqual(operation.settlement.owned, [{ pid: 42, ppid: 99, birth: holderBirth }]);
+  assert.deepEqual(value.order.slice(0, 3), ["initial-snapshot", "holder-proven", "START"]);
+  assert.deepEqual(operation.holder.targetExit, { code: 0 });
+});
+
+test("STOP has a 15 second bound and missing acknowledgement never proves target exit", async () => {
+  const value = await gatedFixture({
+    onStart: ({ emit, targetIdentity }) => emit(wire("target", targetIdentity)),
+    onStop: () => {},
+  });
+  const { runNsisGatedUninstall } = await holderModule();
+  const rejected = assert.rejects(
+    runNsisGatedUninstall(value.options, value.deps),
+    /uninstall holder timeout/,
+  );
+  while (!value.started()) await new Promise((resolve) => setImmediate(resolve));
+  [...value.timers.values()].find((row) => row.delay === 160_000).callback();
+  while (![...value.timers.values()].some((row) => row.delay === 15_000))
+    await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(value.terminated(), 0);
+  [...value.timers.values()].find((row) => row.delay === 15_000).callback();
+  await rejected;
+  assert.equal(value.report.unprovenProcess, true);
+  assert.equal(value.report.processes[0].holder.stopped, null);
+  assert.equal(value.terminated(), 1);
+});
+
+test("all malformed running messages retain the original error and request target STOP", async () => {
+  for (const corrupt of [
+    wire("target", { pid: 43, ppid: 42, birth: targetBirth }),
+    wire("exit", { code: 0 }).replace(holderNonce, "a".repeat(32)),
+    wire("exit", { code: 0, extra: true }),
+    "[]\n",
+    "x".repeat(1025) + "\n",
+    "x".repeat(17 * 1024) + "\n",
+  ]) {
+    const value = await gatedFixture({
+      onStart: ({ emit, targetIdentity }) => {
+        emit(wire("target", targetIdentity));
+        emit(corrupt);
+      },
+    });
+    const { runNsisGatedUninstall } = await holderModule();
+    await assert.rejects(runNsisGatedUninstall(value.options, value.deps), /holder protocol/);
+    assert.ok(value.inputs.includes(`STOP ${holderNonce}\n`));
+    assert.equal(value.report.processes[0].holder.stopped.targetExited, true);
+    assert.equal(value.report.processes[0].status, "failed");
+    assert.equal(value.report.unprovenProcess, undefined);
+  }
+});
+
+test("initial arbitrary caught values survive EOF cleanup unchanged", async () => {
+  for (const original of [
+    undefined,
+    null,
+    "original",
+    {
+      get name() {
+        throw Error("secondary getter");
+      },
+    },
+  ]) {
+    const value = await gatedFixture();
+    value.deps.watch = () => {
+      throw original;
+    };
+    const { runNsisGatedUninstall } = await holderModule();
+    let caught = false;
+    try {
+      await runNsisGatedUninstall(value.options, value.deps);
+    } catch (error) {
+      caught = true;
+      assert.equal(error, original);
+    }
+    assert.ok(caught);
+    assert.deepEqual(value.inputs, []);
+    assert.equal(value.terminated(), 0);
+    assert.ok(value.child.stdin.writableEnded);
+  }
+});
+
+test("initial identity error wins even if EOF synchronously raises a stdin error", async () => {
+  const original = Error("original initial snapshot failure");
+  const value = await gatedFixture({ initialError: original });
+  const end = value.child.stdin.end.bind(value.child.stdin);
+  value.child.stdin.end = (...args) => {
+    value.child.stdin.emit("error", Error("secondary EOF error"));
+    return end(...args);
+  };
+  const { runNsisGatedUninstall } = await holderModule();
+  await assert.rejects(
+    runNsisGatedUninstall(value.options, value.deps),
+    (error) => error === original,
+  );
+  assert.deepEqual(value.inputs, []);
+  assert.equal(value.terminated(), 0);
+});
+
+test("H7 timeout sends STOP, observes stopped, then delegates original holder cleanup", async () => {
+  const value = await gatedFixture({
+    onStart: ({ emit, targetIdentity }) => emit(wire("target", targetIdentity)),
+  });
+  const { runNsisGatedUninstall } = await holderModule();
+  const pending = runNsisGatedUninstall(value.options, value.deps);
+  const rejected = assert.rejects(pending, /uninstall holder timeout/);
+  while (!value.started()) await new Promise((resolve) => setImmediate(resolve));
+  const timeout = [...value.timers.values()].find((row) => row.delay === 160_000);
+  assert.ok(timeout);
+  timeout.callback();
+  await rejected;
+  assert.ok(value.order.indexOf("STOP") < value.order.indexOf("cleanup-holder"));
+  assert.equal(value.report.processes[0].holder.stopped.targetExited, true);
+  assert.equal(value.report.unprovenProcess, undefined);
+  assert.equal(value.timers.size, 0);
+});
+
+test("H8 holder death without target exit/stopped is unproven even after cleaned settlement", async () => {
+  const value = await gatedFixture({
+    onStart: ({ emit, close, targetIdentity }) => {
+      emit(wire("target", targetIdentity));
+      queueMicrotask(() => close(0));
+    },
+  });
+  const { runNsisGatedUninstall } = await holderModule();
+  await assert.rejects(runNsisGatedUninstall(value.options, value.deps));
+  assert.equal(value.report.unprovenProcess, true);
+  assert.equal(value.report.processes[0].status, "failed");
+});
+
+test("H9 observed WMI target accepts the handle's truncated microsecond for all 100ns digits", async () => {
+  const birth = targetBirth.replace("7654321", "7654320");
+  for (let digit = 0; digit < 10; digit++) {
+    const row = { pid: 43, ppid: 42, birth };
+    const value = await gatedFixture({ ownedTarget: row });
+    const handleBirth = targetBirth.replace("7654321", `765432${digit}`);
+    value.targetIdentity.birth = handleBirth;
+    const { runNsisGatedUninstall } = await holderModule();
+    const operation = await runNsisGatedUninstall(value.options, value.deps);
+    assert.equal(operation.status, "passed");
+    assert.equal(operation.holder.target.birth, handleBirth, "Keep the handle's full identity");
+    assert.deepEqual(operation.settlement.owned[1], row, "Keep the WMI observation unchanged");
+  }
+});
+
+test("H9 rejects different WMI microseconds, nonzero final digits and a different parent", async () => {
+  for (const mismatch of [
+    { ppid: 99 },
+    { birth: targetBirth.replace("7654321", "7654310") },
+    { birth: targetBirth.replace("7654321", "7654330") },
+    { birth: targetBirth.replace("7654321", "7650000") },
+    { birth: targetBirth }, // An equal 100ns value is not a valid WMI microsecond row.
+    { birth: targetBirth.replace("7654321", "7654322") },
+  ]) {
+    const value = await gatedFixture({
+      ownedTarget: {
+        pid: 43,
+        ppid: 42,
+        birth: targetBirth.replace("7654321", "7654320"),
+        ...mismatch,
+      },
+    });
+    const { runNsisGatedUninstall } = await holderModule();
+    await assert.rejects(runNsisGatedUninstall(value.options, value.deps), /identity/);
+    assert.equal(value.report.processes[0].status, "failed");
+  }
+});
+
+test("WMI-to-handle comparison is directional and validates both complete UTC times", async () => {
+  const { wmiRowMatchesNsisHolderTarget } = await holderModule();
+  const row = { pid: 43, ppid: 42, birth: targetBirth.replace("7654321", "7654320") };
+  const handle = { pid: 43, ppid: 42, birth: targetBirth };
+  assert.equal(wmiRowMatchesNsisHolderTarget(row, handle), true);
+  assert.equal(wmiRowMatchesNsisHolderTarget(handle, row), false, "Do not floor both sides");
+  for (const mismatch of [{ pid: 44 }, { pid: "43" }, { ppid: 99 }, { ppid: "42" }])
+    assert.equal(wmiRowMatchesNsisHolderTarget({ ...row, ...mismatch }, handle), false);
+  for (const birth of [
+    "2026-02-30T01:02:04.7654320Z",
+    "2026-10-26T01:02:04.765432Z",
+    "2026-10-26T01:02:04.76543200Z",
+    "2026-10-26T01:02:04.7654320+00:00",
+    null,
+  ]) {
+    assert.equal(wmiRowMatchesNsisHolderTarget({ ...row, birth }, handle), false);
+    assert.equal(wmiRowMatchesNsisHolderTarget(row, { ...handle, birth }), false);
+  }
+  for (const [observed, retained, expected] of [
+    ["2026-10-26T01:02:04.9999990Z", "2026-10-26T01:02:04.9999999Z", true],
+    ["2026-10-26T01:02:05.0000000Z", "2026-10-26T01:02:04.9999999Z", false],
+    ["2026-10-26T01:02:04.7654330Z", "2026-10-26T01:02:04.7654329Z", false],
+    ["2026-10-26T23:59:59.9999990Z", "2026-10-26T23:59:59.9999999Z", true],
+    ["2026-10-27T00:00:00.0000000Z", "2026-10-26T23:59:59.9999999Z", false],
+  ])
+    assert.equal(
+      wmiRowMatchesNsisHolderTarget({ ...row, birth: observed }, { ...handle, birth: retained }),
+      expected,
+    );
+});
+
+test("real watchdog periodic snapshot observes a WMI target while retaining the handle's 100ns identity", async () => {
+  let targetRunning = false;
+  const value = await gatedFixture({
+    onStart: ({ emit, targetIdentity }) => {
+      targetRunning = true;
+      emit(wire("target", targetIdentity));
+    },
+  });
+  const { runNsisGatedUninstall, readNsisHolderScriptPin } = await holderModule();
+  const { watchElectronTestProcess } = await import("./electron-test-watchdog.mjs");
+  const { parseWindowsProcessSnapshot } = await import("./electron-test-process-snapshot.mjs");
+  const { assertHolderUninstallTarget } = await import("./windows-nsis-acceptance.mjs");
+  const holderRow = { pid: 42, ppid: 99, birth: holderBirth.replace("1234567", "1234560") };
+  const targetRow = { pid: 43, ppid: 42, birth: targetBirth.replace("7654321", "7654320") };
+  let poll;
+  value.deps.takeSnapshot = () =>
+    parseWindowsProcessSnapshot(
+      JSON.stringify(
+        (value.child.exitCode === null
+          ? [holderRow, ...(targetRunning ? [targetRow] : [])]
+          : []
+        ).map(({ pid, ppid, birth }) => ({
+          ProcessId: pid,
+          ParentProcessId: ppid,
+          CreationDate: birth,
+        })),
+      ),
+    );
+  value.deps.watch = (child, options) =>
+    watchElectronTestProcess(child, {
+      ...options,
+      platform: "win32",
+      parentPid: 99,
+      signalProcess: () => assert.fail("The observed target exited without any signal"),
+      setTimeout: value.deps.schedule,
+      clearTimeout: value.deps.cancel,
+      setInterval: (callback, delay) => {
+        poll = callback;
+        return value.deps.schedule(callback, delay);
+      },
+      clearInterval: value.deps.cancel,
+    });
+  const pending = runNsisGatedUninstall(value.options, value.deps);
+  pending.catch(() => {});
+  while (!value.started()) await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(value.child.exitCode, null);
+  poll(); // Original watchdog actually adopts the running target from this WMI snapshot.
+  targetRunning = false;
+  value.emit(wire("exit", { code: 0 }));
+  value.close(0);
+  const operation = await pending;
+  assertHolderUninstallTarget(operation, {
+    fixtureSHA256: { "windows-nsis-uninstall-holder.ps1": readNsisHolderScriptPin().sha256 },
+  });
+  assert.deepEqual(operation.settlement.owned, [holderRow, targetRow]);
+  assert.equal(operation.holder.target.birth, targetBirth);
+  assert.deepEqual(operation.holder.targetExit, { code: 0 });
+  assert.deepEqual(operation.signalRequests, []);
+  assert.equal(value.report.unprovenProcess, undefined);
+  assert.equal(value.timers.size, 0);
+});
+
+test("H10 error/aborted never authorize a target signal or fabricate exit proof", async () => {
+  for (const event of [wire("error", { code: "start-failed" }), wire("aborted")]) {
+    const value = await gatedFixture({
+      onStart: ({ emit, close }) => {
+        emit(event);
+        queueMicrotask(() => close(4));
+      },
+    });
+    const { runNsisGatedUninstall } = await holderModule();
+    await assert.rejects(runNsisGatedUninstall(value.options, value.deps));
+    assert.equal(value.report.processes[0].holder.target, null);
+    assert.equal(value.report.processes[0].holder.targetExit, null);
+    assert.deepEqual(value.report.processes[0].signalRequests, []);
+    assert.equal(value.report.unprovenProcess, true);
+  }
+});
+
+test("running protocol corruption requests handle STOP before holder cleanup and preserves first error", async () => {
+  const value = await gatedFixture({
+    onStart: ({ emit, targetIdentity }) => {
+      emit(wire("target", targetIdentity));
+      emit("bad-json\n");
+    },
+  });
+  const { runNsisGatedUninstall } = await holderModule();
+  await assert.rejects(runNsisGatedUninstall(value.options, value.deps), /holder protocol/);
+  assert.ok(value.inputs.includes(`STOP ${holderNonce}\n`));
+  assert.equal(value.report.processes[0].holder.stopped.targetExited, true);
+  assert.equal(value.report.unprovenProcess, undefined);
+});
+
+test("small or invalid timeout refuses before executable verification or spawn", async () => {
+  const { runNsisGatedUninstall } = await holderModule();
+  for (const timeoutMs of [0, 20_000, -1, 20_001.5, Infinity, 2 ** 31]) {
+    const value = await gatedFixture();
+    value.options.timeoutMs = timeoutMs;
+    value.deps.verifyExecutable = () => assert.fail("Refuse before IO");
+    await assert.rejects(runNsisGatedUninstall(value.options, value.deps), /timeout/);
+    assert.deepEqual(value.report.processes, []);
+  }
+});
+
+test("H12 PS holder uses fixed args, retained handle, async drains and bounded handle kill", async () => {
+  const source = await readFile(
+    new URL("./windows-nsis-uninstall-holder.ps1", import.meta.url),
+    "utf8",
+  );
+  for (const guard of [
+    /UseShellExecute\s*=\s*\$false/,
+    /ArgumentList\.Add\('\/S'\)/,
+    /ArgumentList\.Add\('\/currentuser'\)/,
+    /ArgumentList\.Add\("_\?=\$InstallDir"\)/,
+    /CreateNoWindow\s*=\s*\$true/,
+    /\.SafeHandle/,
+    /\.StartTime\.ToUniversalTime\(\)\.ToString\('o'/,
+    /\.Kill\(\$true\)/,
+    /CopyToAsync\((?:System\.)?IO\.Stream\.Null\)/,
+    /ReadLineAsync/,
+    /WaitForExit\(200\)/,
+    /\[Console\]::Out\.Flush\(\)/,
+    /OpenStandardInput/,
+    /\.Dispose\(\)/,
+  ])
+    assert.match(source, guard);
+  assert.doesNotMatch(
+    source,
+    /\b(?:Invoke-Expression|iex|EncodedCommand|Start-Process|Get-CimInstance|GetProcessById)\b/i,
+  );
+  assert.doesNotMatch(source, /\[Console\]::In\.ReadLineAsync/);
+});

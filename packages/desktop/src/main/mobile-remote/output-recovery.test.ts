@@ -1,5 +1,18 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, truncateSync } from "node:fs";
+import {
+  mkdtempSync,
+  rmSync,
+  truncateSync,
+  writeFileSync,
+  readFileSync,
+  realpathSync,
+  appendFileSync,
+  renameSync,
+  cpSync,
+} from "node:fs";
+import { createHash, createHmac } from "node:crypto";
+import { initialChatState, reduceStream } from "../../../../web/src/lib/streamReducer.js";
+import { transcriptToStreamEvents } from "../../../../web/src/lib/transcriptReplay.js";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager, type MobileServerEvent, type StreamEvent } from "@cjhyy/code-shell-core";
@@ -15,13 +28,28 @@ afterEach(() => {
 function fixture(
   legacy: Record<string, unknown>[] = [],
   preliminary: Record<string, unknown>[] = [],
+  oldHeader = false,
 ) {
   const root = mkdtempSync(join(tmpdir(), "mobile-journal-"));
   roots.push(root);
   const manager = new SessionManager(root);
   const session = manager.create(root, "fixture", "fixture", "native");
   for (const message of legacy) session.transcript.append("message", message);
+  const transcript = session.transcript.getEvents();
   manager.startSessionRun(session.state, "run");
+  if (oldHeader)
+    writeFileSync(
+      join(root, "native", "output-journal.jsonl"),
+      JSON.stringify({
+        version: 1,
+        storageScope: createHash("sha256").update(realpathSync(root)).digest("hex"),
+        sessionIncarnation: "old-incarnation",
+        journalId: "old-journal",
+        sessionId: "native",
+        startedAt: session.state.startedAt,
+        legacyBaseThroughEventId: transcript.at(-1)!.id,
+      }) + "\n",
+    );
   let writer = new SessionOutputJournal(
     root,
     "native",
@@ -32,8 +60,11 @@ function fixture(
     maxPerSession: 2,
     coverage: new SessionOutputCoverageStore(() => root),
   });
-  const publish = (event: StreamEvent) =>
-    snapshots.append("native", { ...event, outputCursor: writer.append(event) });
+  const published: StreamEvent[] = [];
+  const publish = (event: StreamEvent) => {
+    published.push(event);
+    return snapshots.append("native", { ...event, outputCursor: writer.append(event) });
+  };
   for (const event of preliminary) snapshots.append("native", event);
   publish({ type: "session_user_message", text: "question", clientMessageId: "submit-1" });
   publish({
@@ -74,8 +105,30 @@ function fixture(
     });
     return replies.at(-1)!.event as Extract<MobileServerEvent, { type: "session.outputJournal" }>;
   };
+  let baseRequests = 0;
   return {
     root,
+    transcript,
+    published,
+    readBase: async (options: { throughEventId?: string; cursor?: string }, override = {}) => {
+      const before = replies.length;
+      const requestId = `base-page-${++baseRequests}`;
+      await service.handle({
+        type: "session.legacyBase",
+        sessionId: "native",
+        recoveryId: "selection",
+        requestId,
+        viewerId: "tab",
+        deviceId: "device",
+        ...options,
+        ...override,
+      } as any);
+      const reply = replies
+        .slice(before)
+        .find(({ event }) => event.type === "session.legacyBase" && event.requestId === requestId);
+      if (!reply) throw new Error("legacy base dispatch returned no reply");
+      return reply.event as any;
+    },
     service,
     select,
     read,
@@ -679,4 +732,384 @@ test("owned mirror has eight active authority reads and only one coalesced heade
   expect(
     f.replies.filter((row) => row.event.type === "session.recovery.ready" && !row.event.ok),
   ).toHaveLength(8);
+});
+
+const largeLegacy = () => [
+  { role: "tool", tool_call_id: "future-tool", content: "result before its definition" },
+  ...Array.from({ length: 7 }, (_, index) => ({
+    role: "assistant",
+    content: [{ type: "text", text: `${index}:` + "汉🙂".repeat(70_000) }],
+  })),
+  {
+    role: "assistant",
+    content: [{ type: "tool_use", id: "future-tool", name: "Read", input: { path: "fixture" } }],
+  },
+];
+for (const oldHeader of [false, true])
+  test(`${oldHeader ? "old" : "sealed"} 3 MiB base pages concatenate to the whole projection within 1 MiB replies`, async () => {
+    const f = fixture(largeLegacy(), [], oldHeader);
+    await f.select();
+    const first = await f.read();
+    expect(first.page.status).toBe("ok");
+    expect(first.legacyBaseComplete).toBe(false);
+    const events: unknown[] = [];
+    let cursor: string | undefined;
+    for (let page = 0; page < 40; page++) {
+      const reply = await f.readBase(
+        cursor ? { cursor } : { throughEventId: first.page.legacyBaseThroughEventId },
+      );
+      expect(reply.ok).toBe(true);
+      expect(reply.index).toBe(events.length);
+      expect(Buffer.byteLength(JSON.stringify(reply))).toBeLessThanOrEqual(1024 * 1024);
+      events.push(...reply.events);
+      if (reply.complete) {
+        expect(reply.next).toBeUndefined();
+        break;
+      }
+      expect(reply.next).not.toBe(cursor);
+      cursor = reply.next;
+    }
+    expect(events).toEqual(transcriptToStreamEvents(f.transcript));
+    expect(events.filter((event: any) => event.type === "session_started")).toHaveLength(1);
+    const restored = await recoverMobileOutput({
+      read: f.read,
+      readBase: f.readBase,
+      canContinue: () => true,
+      latestCursor: () => undefined,
+    });
+    let expected = initialChatState();
+    for (const event of transcriptToStreamEvents(f.transcript))
+      expected = reduceStream(expected, event);
+    expected = { ...expected, run: expected.run === "error" ? "error" : "idle", liveByAgent: {} };
+    for (const event of f.published) expected = reduceStream(expected, event);
+    expect(restored?.chat).toEqual(expected);
+    expect(restored?.chat.items.find((item) => item.kind === "tool")).toMatchObject({
+      id: "future-tool",
+      name: "Read",
+      args: { path: "fixture" },
+      result: "result before its definition",
+      done: true,
+    });
+  });
+
+for (const damage of [
+  "mac",
+  "index",
+  "total",
+  "recovery",
+  "session",
+  "cancel",
+  "reselect",
+  "project",
+  "rewrite",
+  "truncate",
+  "directory",
+] as const)
+  test(`legacy continuation fails closed on ${damage} without releasing events`, async () => {
+    const f = fixture(largeLegacy());
+    await f.select();
+    const first = await f.read();
+    const page = await f.readBase({ throughEventId: first.page.legacyBaseThroughEventId });
+    expect(page.ok).toBe(true);
+    let cursor = page.next;
+    let override = {};
+    if (["mac", "index", "total"].includes(damage)) {
+      const [payload, mac] = cursor.split(".");
+      if (damage === "mac") cursor = payload + "." + (mac[0] === "a" ? "b" : "a") + mac.slice(1);
+      else {
+        const json = JSON.parse(Buffer.from(payload, "base64url").toString());
+        json[damage] += 1;
+        cursor = Buffer.from(JSON.stringify(json)).toString("base64url") + "." + mac;
+      }
+    } else if (damage === "recovery") override = { recoveryId: "other" };
+    else if (damage === "session") override = { sessionId: "other" };
+    else if (damage === "cancel") f.service.revoke("tab");
+    else if (damage === "reselect") await f.select();
+    else if (damage === "project") f.revokeProject();
+    else if (damage === "rewrite") {
+      const file = join(f.root, "native", "transcript.jsonl");
+      writeFileSync(file, readFileSync(file, "utf8").replace("0:", "X:"));
+    } else if (damage === "truncate") truncateSync(join(f.root, "native", "transcript.jsonl"), 100);
+    else renameSync(join(f.root, "native"), join(f.root, "retired"));
+    expect(await f.readBase({ cursor }, override)).toMatchObject({
+      ok: false,
+      reason: "incomplete",
+    });
+  });
+
+for (const oldHeader of [false, true])
+  test(`${oldHeader ? "old" : "sealed"} legacy pages keep the frozen prefix across legal transcript append`, async () => {
+    const f = fixture(largeLegacy(), [], oldHeader);
+    await f.select();
+    const first = await f.read();
+    let page = await f.readBase({ throughEventId: first.page.legacyBaseThroughEventId });
+    expect(page.ok).toBe(true);
+    const events = [...page.events];
+    appendFileSync(
+      join(f.root, "native", "transcript.jsonl"),
+      JSON.stringify({
+        id: "later",
+        type: "message",
+        timestamp: 1,
+        data: { role: "assistant", content: "not in prefix" },
+      }) + "\n",
+    );
+    for (let i = 0; !page.complete && i < 40; i++) {
+      page = await f.readBase({ cursor: page.next });
+      expect(page.ok).toBe(true);
+      events.push(...page.events);
+    }
+    expect(events).toEqual(transcriptToStreamEvents(f.transcript));
+  });
+
+test("legacy rejects arbitrary prefixes and a single projected event exceeding the page budget", async () => {
+  const f = fixture([{ role: "assistant", content: "x".repeat(1024 * 1024 - 20_000) }]);
+  await f.select();
+  const first = await f.read();
+  expect(first.page.status).toBe("ok");
+  expect(first.legacyBaseComplete).toBe(true); // The original 1 MiB inline path still fits.
+  expect(await f.readBase({ throughEventId: f.transcript[0].id })).toMatchObject({
+    ok: false,
+    reason: "incomplete",
+  });
+  expect(await f.readBase({ throughEventId: first.page.legacyBaseThroughEventId })).toMatchObject({
+    ok: false,
+    reason: "incomplete",
+  });
+});
+
+test("base read has a global single-reader busy gate and releases it after revoke or authority throws", async () => {
+  const f = fixture(largeLegacy());
+  await f.select();
+  const first = await f.read();
+  await f.service.handle({
+    type: "session.select",
+    sessionId: "native",
+    recoveryId: "second",
+    viewerId: "second-tab",
+    deviceId: "device",
+  });
+  let release!: (value: string) => void;
+  f.blockAuthority(
+    () =>
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+  );
+  const pending = f.readBase({ throughEventId: first.page.legacyBaseThroughEventId });
+  expect(
+    await f.readBase(
+      { throughEventId: first.page.legacyBaseThroughEventId },
+      { viewerId: "second-tab", recoveryId: "second" },
+    ),
+  ).toMatchObject({ ok: false, reason: "busy" });
+  f.service.revoke("tab");
+  release("mounted-project-root-incarnation");
+  expect(await pending).toMatchObject({ ok: false, reason: "incomplete" });
+  f.blockAuthority(async () => {
+    throw new Error("gone");
+  });
+  expect(
+    await f.readBase(
+      { throughEventId: first.page.legacyBaseThroughEventId },
+      { viewerId: "second-tab", recoveryId: "second" },
+    ),
+  ).toMatchObject({ ok: false, reason: "incomplete" });
+  f.blockAuthority(async () => "mounted-project-root-incarnation");
+  expect(
+    await f.readBase(
+      { throughEventId: first.page.legacyBaseThroughEventId },
+      { viewerId: "second-tab", recoveryId: "second" },
+    ),
+  ).toMatchObject({ ok: true });
+});
+
+for (const oldHeader of [false, true])
+  for (const damage of ["rewrite", "truncate"] as const)
+    test(`${oldHeader ? "old" : "sealed"} cursor rejects ${damage} between pages and retains original evidence`, async () => {
+      const f = fixture(largeLegacy(), [], oldHeader);
+      await f.select();
+      const first = await f.read();
+      const page = await f.readBase({ throughEventId: first.page.legacyBaseThroughEventId });
+      const file = join(f.root, "native", "transcript.jsonl");
+      if (damage === "rewrite") writeFileSync(file, readFileSync(file, "utf8").replace("0:", "X:"));
+      else truncateSync(file, 100);
+      const damaged = readFileSync(file);
+      expect(await f.readBase({ cursor: page.next })).toMatchObject({
+        ok: false,
+        reason: "incomplete",
+      });
+      expect(readFileSync(file)).toEqual(damaged);
+    });
+
+test("signed but malformed cursor payloads cannot expand the selected cutover", async () => {
+  const f = fixture(largeLegacy());
+  await f.select();
+  const first = await f.read();
+  const page = await f.readBase({ throughEventId: first.page.legacyBaseThroughEventId });
+  const payload = JSON.parse(Buffer.from(page.next.split(".")[0], "base64url").toString());
+  // White-box signing exercises decoder checks independently of the MAC check.
+  const key = (f.service as any).bindings.get("tab").cursorKey;
+  for (const patch of [
+    { v: 2 },
+    { path: "../outside" },
+    { sessionId: "other" },
+    { recoveryId: "other" },
+    { throughEventId: f.transcript[0].id },
+    { endOffset: 0 },
+    { endOffset: 32 * 1024 * 1024 + 1 },
+    { sha256: "f".repeat(64) },
+    { sha256: "F".repeat(64) },
+    { index: 0 },
+    { index: -1 },
+    { index: 1.5 },
+    { index: "1" },
+    { index: payload.total },
+    { total: payload.total + 1 },
+    { total: "100" },
+    { total: Number.MAX_SAFE_INTEGER + 1 },
+  ]) {
+    const body = Buffer.from(JSON.stringify({ ...payload, ...patch })).toString("base64url");
+    const token = body + "." + createHmac("sha256", key).update(body).digest("base64url");
+    expect(await f.readBase({ cursor: token })).toMatchObject({ ok: false, reason: "incomplete" });
+  }
+  for (const cursor of ["", "x".repeat(2049), page.next + "=", "e30.invalid", "é.bad", null, 1])
+    expect(await f.readBase({ cursor } as any)).toMatchObject({ ok: false, reason: "incomplete" });
+  // An independent viewer has a different key even on the same recovery/session.
+  await f.service.handle({
+    type: "session.select",
+    sessionId: "native",
+    recoveryId: "selection",
+    viewerId: "other-tab",
+    deviceId: "device",
+  });
+  expect(await f.readBase({ cursor: page.next }, { viewerId: "other-tab" })).toMatchObject({
+    ok: false,
+    reason: "incomplete",
+  });
+});
+
+test("base pages share the original eight-global and per-viewer journal read limits", async () => {
+  const f = fixture(largeLegacy());
+  for (let index = 0; index < 9; index++)
+    await f.service.handle({
+      type: "session.select",
+      sessionId: "native",
+      recoveryId: `s-${index}`,
+      viewerId: `v-${index}`,
+      deviceId: "device",
+    });
+  const throughEventId = f.transcript.at(-1)!.id;
+  let release!: (value: string) => void;
+  const blocked = new Promise<string>((resolve) => {
+    release = resolve;
+  });
+  f.blockAuthority(() => blocked);
+  const journal = (index: number) =>
+    f.service.handle({
+      type: "session.outputJournal",
+      sessionId: "native",
+      recoveryId: `s-${index}`,
+      requestId: `p-${index}`,
+      viewerId: `v-${index}`,
+      deviceId: "device",
+    });
+  const pending = Array.from({ length: 8 }, (_, index) => journal(index));
+  expect(
+    await f.readBase({ throughEventId }, { viewerId: "v-8", recoveryId: "s-8" }),
+  ).toMatchObject({ ok: false, reason: "busy" });
+  expect(
+    await f.readBase({ throughEventId }, { viewerId: "v-0", recoveryId: "s-0" }),
+  ).toMatchObject({ ok: false, reason: "busy" });
+  release("mounted-project-root-incarnation");
+  await Promise.all(pending);
+  f.blockAuthority(async () => "mounted-project-root-incarnation");
+  expect(
+    await f.readBase({ throughEventId }, { viewerId: "v-8", recoveryId: "s-8" }),
+  ).toMatchObject({ ok: true });
+});
+
+for (const action of ["revoke", "throw"] as const)
+  test(`${action} after the raw read and projection still prevents any events and releases the large-read slot`, async () => {
+    const f = fixture(largeLegacy());
+    await f.select();
+    const first = await f.read();
+    let checks = 0;
+    f.blockAuthority(async () => {
+      if (++checks === 2) {
+        if (action === "throw") throw new Error("authority revoked after projection");
+        f.service.revoke("tab");
+      }
+      return "mounted-project-root-incarnation";
+    });
+    expect(await f.readBase({ throughEventId: first.page.legacyBaseThroughEventId })).toMatchObject(
+      {
+        ok: false,
+        reason: "incomplete",
+      },
+    );
+    expect(checks).toBe(2);
+    f.blockAuthority(async () => "mounted-project-root-incarnation");
+    await f.select();
+    expect(await f.readBase({ throughEventId: first.page.legacyBaseThroughEventId })).toMatchObject(
+      {
+        ok: true,
+      },
+    );
+  });
+
+test("one base and seven journal reads fill eight shared slots, including the base viewer", async () => {
+  const f = fixture(largeLegacy());
+  for (let index = 0; index < 9; index++)
+    await f.service.handle({
+      type: "session.select",
+      sessionId: "native",
+      recoveryId: `s-${index}`,
+      viewerId: `v-${index}`,
+      deviceId: "device",
+    });
+  const throughEventId = f.transcript.at(-1)!.id;
+  let release!: (value: string) => void;
+  const blocked = new Promise<string>((resolve) => {
+    release = resolve;
+  });
+  f.blockAuthority(() => blocked);
+  const base = f.readBase({ throughEventId }, { viewerId: "v-0", recoveryId: "s-0" });
+  const journal = (index: number) =>
+    f.service.handle({
+      type: "session.outputJournal",
+      sessionId: "native",
+      recoveryId: `s-${index}`,
+      requestId: `p-${index}`,
+      viewerId: `v-${index}`,
+      deviceId: "device",
+    });
+  const pending = Array.from({ length: 7 }, (_, index) => journal(index + 1));
+  const before = f.replies.length;
+  await journal(0);
+  await journal(8);
+  expect(f.replies.slice(before).map(({ event }) => event)).toMatchObject([
+    { type: "session.outputJournal", page: { status: "incomplete" } },
+    { type: "session.outputJournal", page: { status: "incomplete" } },
+  ]);
+  release("mounted-project-root-incarnation");
+  await Promise.all(pending);
+  expect(await base).toMatchObject({ ok: true });
+});
+
+test("replacing the Session directory between pages rejects the old cursor and preserves the retired files", async () => {
+  const f = fixture(largeLegacy(), [], true);
+  await f.select();
+  const first = await f.read();
+  const page = await f.readBase({ throughEventId: first.page.legacyBaseThroughEventId });
+  const original = join(f.root, "native"),
+    retired = join(f.root, "retired");
+  renameSync(original, retired);
+  cpSync(retired, original, { recursive: true });
+  const evidence = readFileSync(join(retired, "transcript.jsonl"));
+  expect(await f.readBase({ cursor: page.next })).toMatchObject({
+    ok: false,
+    reason: "incomplete",
+  });
+  expect(readFileSync(join(retired, "transcript.jsonl"))).toEqual(evidence);
 });

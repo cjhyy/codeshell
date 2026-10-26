@@ -963,9 +963,19 @@ describe("RemoteHostManager", () => {
 
 test("output journal is explicitly negotiated on first pairing and subsequent auth only by enabled hosts", async () => {
   dir = mkdtempSync(join(tmpdir(), "mobile-recovery-capability-"));
-  for (const enabled of [false, true]) {
-    const devices = new TrustedDeviceStore(join(dir, `devices-${enabled}.json`));
-    const host = new RemoteHostManager({ devices, outputJournal: enabled, onClientEvent() {} });
+  for (const [enabled, basePages] of [
+    [false, false],
+    [false, true],
+    [true, false],
+    [true, true],
+  ]) {
+    const devices = new TrustedDeviceStore(join(dir, `devices-${enabled}-${basePages}.json`));
+    const host = new RemoteHostManager({
+      devices,
+      outputJournal: enabled,
+      legacyBasePages: basePages,
+      onClientEvent() {},
+    } as any);
     await host.start({ host: "127.0.0.1", port: 0 });
     try {
       const pairing = host.createPairingUrl();
@@ -984,10 +994,81 @@ test("output journal is explicitly negotiated on first pairing and subsequent au
       });
       expect(authenticated?.type).toBe("auth.ok");
       if (authenticated?.type !== "auth.ok") throw new Error("auth failed");
-      expect(paired.capabilities).toEqual(enabled ? { outputJournal: 1 } : undefined);
+      expect(paired.capabilities).toEqual(
+        enabled ? { outputJournal: 1, ...(basePages ? { legacyBasePages: 1 } : {}) } : undefined,
+      );
       expect(authenticated.capabilities).toEqual(paired.capabilities);
     } finally {
       await host.stop();
     }
+  }
+});
+
+test("legacy base requests pass the real WebSocket validator with socket-owned identities", async () => {
+  dir = mkdtempSync(join(tmpdir(), "mobile-base-transport-"));
+  const devices = new TrustedDeviceStore(join(dir, "devices.json"));
+  const device = devices.addDevice({ name: "fixture", secretHash: "synthetic" });
+  const events: any[] = [];
+  let delivered!: () => void;
+  const delivery = new Promise<void>((resolve) => {
+    delivered = resolve;
+  });
+  const host = new RemoteHostManager({
+    devices,
+    outputJournal: true,
+    legacyBasePages: true,
+    onClientEvent(event: unknown) {
+      events.push(event);
+      delivered();
+    },
+  } as any);
+  const started = await host.start({ host: "127.0.0.1", port: 0 });
+  const { WebSocket: WS } = await import("ws");
+  const socket = new WS(started.url.replace(/^http/, "ws") + "/ws");
+  try {
+    await new Promise<void>((resolve, reject) => {
+      socket.once("error", reject);
+      socket.on("message", (raw) => {
+        if (JSON.parse(String(raw)).type === "auth.ok") resolve();
+      });
+      socket.once("open", () =>
+        socket.send(
+          JSON.stringify({ type: "auth.device", deviceId: device.id, secretHash: "synthetic" }),
+        ),
+      );
+    });
+    socket.send(
+      JSON.stringify({
+        type: "session.legacyBase",
+        sessionId: "native",
+        recoveryId: "selection",
+        requestId: "base",
+        throughEventId: "anchor",
+        deviceId: "spoofed",
+        viewerId: "spoofed",
+      }),
+    );
+    let deadline: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        delivery,
+        new Promise((_, reject) => {
+          deadline = setTimeout(() => reject(new Error("base request was not dispatched")), 1000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(deadline);
+    }
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      type: "session.legacyBase",
+      throughEventId: "anchor",
+      deviceId: device.id,
+    });
+    expect(events[0].viewerId).not.toBe("spoofed");
+    expect(typeof events[0].viewerId).toBe("string");
+  } finally {
+    socket.close();
+    await host.stop();
   }
 });

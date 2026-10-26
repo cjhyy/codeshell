@@ -1,3 +1,4 @@
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { readOutputJournal, readOutputJournalLegacyBase } from "@cjhyy/code-shell-core/internal";
 import type { MobileServerEvent } from "@cjhyy/code-shell-core";
 import { transcriptToStreamEvents } from "@cjhyy/code-shell-web";
@@ -11,6 +12,7 @@ interface Binding {
   sessionId: string;
   recoveryId: string;
   authority?: string;
+  cursorKey: Buffer;
   pending?: {
     seq: number;
     epoch: string;
@@ -20,10 +22,75 @@ interface Binding {
   mirroring?: boolean;
 }
 
+const MiB = 1024 * 1024;
+const BASE_PAGE_BYTES = MiB - 32 * 1024;
+type BaseRequest = Extract<AuthenticatedMobileClientEvent, { type: "session.legacyBase" }>;
+type BaseReply = Extract<MobileServerEvent, { type: "session.legacyBase" }>;
+interface BaseCursor {
+  v: 1;
+  sessionId: string;
+  recoveryId: string;
+  throughEventId: string;
+  endOffset: number;
+  sha256: string;
+  index: number;
+  total: number;
+}
+function boundedText(value: unknown, limit: number): value is string {
+  return typeof value === "string" && value.length > 0 && value.length <= limit;
+}
+function encodeBaseCursor(payload: BaseCursor, key: Buffer): string {
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const mac = createHmac("sha256", key).update(body).digest("base64url");
+  const cursor = `${body}.${mac}`;
+  if (cursor.length > 2048) throw new Error("base cursor exceeds its bound");
+  return cursor;
+}
+function decodeBaseCursor(token: string, binding: Binding): BaseCursor {
+  if (!boundedText(token, 2048) || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$/.test(token))
+    throw new Error("invalid base cursor");
+  const [body, mac] = token.split(".");
+  const supplied = Buffer.from(mac, "base64url");
+  const expected = createHmac("sha256", binding.cursorKey).update(body).digest();
+  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected))
+    throw new Error("invalid base cursor");
+  const bytes = Buffer.from(body, "base64url");
+  if (
+    bytes.length > 1400 ||
+    bytes.toString("base64url") !== body ||
+    supplied.toString("base64url") !== mac
+  )
+    throw new Error("invalid base cursor");
+  const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    Object.keys(value).sort().join(",") !==
+      "endOffset,index,recoveryId,sessionId,sha256,throughEventId,total,v" ||
+    value.v !== 1 ||
+    value.sessionId !== binding.sessionId ||
+    value.recoveryId !== binding.recoveryId ||
+    !boundedText(value.throughEventId, 512) ||
+    !Number.isSafeInteger(value.endOffset) ||
+    value.endOffset < 1 ||
+    value.endOffset > 32 * MiB ||
+    typeof value.sha256 !== "string" ||
+    !/^[a-f0-9]{64}$/.test(value.sha256) ||
+    !Number.isSafeInteger(value.index) ||
+    !Number.isSafeInteger(value.total) ||
+    value.index <= 0 ||
+    value.index >= value.total
+  )
+    throw new Error("invalid base cursor");
+  return value;
+}
+
 /** A selected tab owns a read grant, never a caller supplied storage root or an arbitrary Session. */
 export class MobileOutputRecovery {
   private readonly bindings = new Map<string, Binding>();
   private activeReads = 0;
+  private activeBaseReads = 0;
   private readonly readingViewers = new Set<string>();
   private readonly pendingMirrors = new Set<Binding>();
   private activeMirrors = 0;
@@ -41,7 +108,10 @@ export class MobileOutputRecovery {
 
   revoke(viewerId: string): void {
     const old = this.bindings.get(viewerId);
-    if (old) this.pendingMirrors.delete(old);
+    if (old) {
+      this.pendingMirrors.delete(old);
+      old.cursorKey.fill(0);
+    }
     this.bindings.delete(viewerId);
   }
 
@@ -158,9 +228,15 @@ export class MobileOutputRecovery {
         recoveryId: event.recoveryId,
         viewerId: viewer,
         deviceId: event.deviceId,
+        cursorKey: randomBytes(32),
       };
       if (this.bindings.size >= 128) {
-        this.deps.reply(viewer, { type: "session.recovery.ready", ...binding, ok: false });
+        this.deps.reply(viewer, {
+          type: "session.recovery.ready",
+          sessionId: event.sessionId,
+          recoveryId: event.recoveryId,
+          ok: false,
+        });
         return false;
       }
       this.bindings.set(viewer, binding);
@@ -195,6 +271,7 @@ export class MobileOutputRecovery {
         return false;
       }
     }
+    if (event.type === "session.legacyBase") return this.readBase(event);
     if (event.type !== "session.outputJournal") return true;
     const binding = this.bindings.get(viewer);
     const valid = () =>
@@ -236,9 +313,7 @@ export class MobileOutputRecovery {
       });
       const base =
         page.status === "ok" && event.after === undefined
-          ? // TODO: large legacy bases need a paged mobile protocol. Keep the eight
-            // concurrent reads at 1 MiB raw, the wire at 1 MiB, and the client's
-            // existing 1 MiB + 4096-byte serialized-base assertion unchanged.
+          ? // Preserve the original small inline fast path, including its raw budget.
             readOutputJournalLegacyBase(root, event.sessionId, page.legacyBaseThroughEventId, {
               maxBytes: 1024 * 1024,
             })
@@ -253,11 +328,14 @@ export class MobileOutputRecovery {
             events: base.complete ? transcriptToStreamEvents(base.events) : [],
           }
         : undefined;
-      if (legacyBase && Buffer.byteLength(JSON.stringify(legacyBase)) > 1024 * 1024)
-        throw new Error("display base exceeds its bound");
+      let legacyBaseComplete = base?.complete;
+      if (legacyBase && Buffer.byteLength(JSON.stringify(legacyBase)) > MiB) {
+        legacyBase.events = [];
+        legacyBaseComplete = false;
+      }
       reply({
         page,
-        ...(base ? { legacyBase, legacyBaseComplete: base.complete } : {}),
+        ...(base ? { legacyBase, legacyBaseComplete } : {}),
         snapshot: {
           epoch: snapshot.epoch,
           nextSeq: snapshot.nextSeq,
@@ -278,6 +356,128 @@ export class MobileOutputRecovery {
     } finally {
       this.readingViewers.delete(viewer);
       this.activeReads--;
+    }
+    return false;
+  }
+
+  private async readBase(event: BaseRequest): Promise<boolean> {
+    const viewer = event.viewerId!;
+    const binding = this.bindings.get(viewer);
+    const valid = () =>
+      binding &&
+      this.bindings.get(viewer) === binding &&
+      binding.deviceId === event.deviceId &&
+      (!this.deps.authenticated || this.deps.authenticated(viewer, event.deviceId!)) &&
+      binding.sessionId === event.sessionId &&
+      binding.recoveryId === event.recoveryId &&
+      binding.authority !== undefined;
+    const envelope = {
+      type: "session.legacyBase" as const,
+      sessionId: event.sessionId,
+      recoveryId: event.recoveryId,
+      requestId: event.requestId,
+    };
+    const fail = (reason: "busy" | "incomplete") =>
+      this.deps.reply(viewer, { ...envelope, ok: false, reason });
+    if (
+      !valid() ||
+      !boundedText(event.sessionId, 128) ||
+      !boundedText(event.recoveryId, 128) ||
+      !boundedText(event.requestId, 128) ||
+      !(
+        (boundedText(event.throughEventId, 512) && event.cursor === undefined) ||
+        (boundedText(event.cursor, 2048) && event.throughEventId === undefined)
+      )
+    ) {
+      fail("incomplete");
+      return false;
+    }
+    // No queue or transcript cache: one large projection globally, sharing the
+    // existing per-viewer and eight-global slots with ordinary journal reads.
+    if (this.readingViewers.has(viewer) || this.activeReads >= 8 || this.activeBaseReads >= 1) {
+      fail("busy");
+      return false;
+    }
+    this.readingViewers.add(viewer);
+    this.activeReads++;
+    this.activeBaseReads++;
+    try {
+      if (
+        !valid() ||
+        (await this.deps.authority(event.sessionId)) !== binding!.authority ||
+        !valid()
+      )
+        throw new Error("read grant revoked");
+      const cursor = event.cursor ? decodeBaseCursor(event.cursor, binding!) : undefined;
+      const throughEventId = cursor?.throughEventId ?? event.throughEventId!;
+      const root = this.deps.root();
+      const journal = readOutputJournal(root, event.sessionId, { maxFrames: 1 });
+      if (journal.status !== "ok" || journal.legacyBaseThroughEventId !== throughEventId)
+        throw new Error("base is not the journal cutover");
+      const base = readOutputJournalLegacyBase(root, event.sessionId, throughEventId);
+      if (
+        !base.complete ||
+        !base.identity ||
+        (cursor &&
+          (base.identity.endOffset !== cursor.endOffset || base.identity.sha256 !== cursor.sha256))
+      )
+        throw new Error("base identity changed");
+      // Tool pre-scan and cross-record state belong to a single whole projection.
+      const events = transcriptToStreamEvents(base.events);
+      if (
+        !events.length ||
+        events[0].type !== "session_started" ||
+        events.slice(1).some((event) => event.type === "session_started") ||
+        (cursor && cursor.total !== events.length)
+      )
+        throw new Error("base projection changed");
+      // Serialize each event once per read; avoid repeated whole-array stringify.
+      const sizes = events.map((event) => Buffer.byteLength(JSON.stringify(event)));
+      if (sizes.some((size) => size + 2 > BASE_PAGE_BYTES))
+        throw new Error("base event exceeds its bound");
+      const index = cursor?.index ?? 0;
+      let end = index,
+        bytes = 2;
+      while (end < events.length && bytes + sizes[end] + (end > index ? 1 : 0) <= BASE_PAGE_BYTES) {
+        bytes += sizes[end] + (end > index ? 1 : 0);
+        end++;
+      }
+      if (end === index) throw new Error("base page made no progress");
+      const reply: BaseReply = {
+        ...envelope,
+        ok: true,
+        throughEventId,
+        index,
+        events: events.slice(index, end),
+        ...(end === events.length
+          ? { complete: true as const }
+          : {
+              complete: false as const,
+              next: encodeBaseCursor(
+                {
+                  v: 1,
+                  sessionId: event.sessionId,
+                  recoveryId: event.recoveryId,
+                  throughEventId,
+                  ...base.identity,
+                  index: end,
+                  total: events.length,
+                },
+                binding!.cursorKey,
+              ),
+            }),
+      };
+      if (Buffer.byteLength(JSON.stringify(reply)) > MiB)
+        throw new Error("base reply exceeds its bound");
+      if ((await this.deps.authority(event.sessionId)) !== binding!.authority || !valid())
+        throw new Error("read grant revoked");
+      this.deps.reply(viewer, reply);
+    } catch {
+      fail("incomplete");
+    } finally {
+      this.readingViewers.delete(viewer);
+      this.activeReads--;
+      this.activeBaseReads--;
     }
     return false;
   }

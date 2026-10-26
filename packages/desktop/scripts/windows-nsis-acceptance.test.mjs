@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { win32 } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
+import * as acceptance from "./windows-nsis-acceptance.mjs";
 import {
   NSIS_IDENTITY,
   NSIS_UI_ACTIONS,
@@ -112,6 +115,164 @@ const normal = () => ({
     ownedCount: 1,
     remaining: [],
   },
+});
+
+function holderReceipt() {
+  const operation = normal();
+  const nonce = "0123456789abcdef0123456789abcdef";
+  const script = new URL("./windows-nsis-uninstall-holder.ps1", import.meta.url);
+  const sha256 = createHash("sha256").update(readFileSync(script)).digest("hex");
+  const target = { pid: 43, ppid: 42, birth: "2026-10-26T02:03:04.7654321Z" };
+  operation.label = "uninstall";
+  operation.command = {
+    executable: "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+    size: 1,
+    sha256: sha,
+  };
+  operation.holder = {
+    schemaVersion: 1,
+    script: { path: fileURLToPath(script), sha256 },
+    nonce,
+    events: [
+      { v: 1, event: "ready", nonce, pid: 42 },
+      { v: 1, event: "target", nonce, ...target },
+      { v: 1, event: "exit", nonce, code: 0 },
+    ],
+    target: { ...target, source: "holder-handle" },
+    targetExit: { code: 0 },
+    stopped: null,
+  };
+  return { operation, source: { fixtureSHA256: { "windows-nsis-uninstall-holder.ps1": sha256 } } };
+}
+
+test("holder acceptance replays the complete protocol and accepts an unobserved fast target", () => {
+  const { operation, source } = holderReceipt();
+  acceptance.assertHolderUninstallTarget(operation, source);
+  operation.settlement.owned.push({
+    pid: 43,
+    ppid: 42,
+    birth: operation.holder.target.birth.replace("7654321", "7654320"),
+  });
+  operation.settlement.ownedCount++;
+  acceptance.assertHolderUninstallTarget(operation, source);
+});
+
+test("holder acceptance requires normal root and target zero exits with no stopped path", () => {
+  for (const mutate of [
+    (o) => (o.result.code = 3),
+    (o) => (o.settlement.status = "unproven"),
+    (o) => (o.holder.targetExit.code = 1),
+    (o) => (o.holder.target.source = "snapshot"),
+    (o) => (o.holder.target.ppid = 99),
+    (o) => (o.holder.stopped = { reason: "stop", targetExited: true }),
+    (o) => o.holder.events.pop(),
+    (o) => o.holder.events.push(o.holder.events[0]),
+    (o) => (o.label = "install"),
+    (o) => (o.command.executable = "C:\\unreviewed\\pwsh.exe"),
+  ]) {
+    const { operation, source } = holderReceipt();
+    mutate(operation);
+    assert.throws(() => acceptance.assertHolderUninstallTarget(operation, source));
+  }
+});
+
+test("holder acceptance binds script path/hash to actual fixed source and fixture manifest", () => {
+  for (const mutate of [
+    (o) => (o.holder.script.path = "C:\\foreign\\windows-nsis-uninstall-holder.ps1"),
+    (o) => (o.holder.script.sha256 = "b".repeat(64)),
+    (_o, source) => (source.fixtureSHA256["windows-nsis-uninstall-holder.ps1"] = "b".repeat(64)),
+    (o, source) => {
+      o.holder.script.sha256 = "b".repeat(64);
+      source.fixtureSHA256["windows-nsis-uninstall-holder.ps1"] = "b".repeat(64);
+    },
+  ]) {
+    const { operation, source } = holderReceipt();
+    mutate(operation, source);
+    assert.throws(() => acceptance.assertHolderUninstallTarget(operation, source));
+  }
+  const { operation } = holderReceipt();
+  assert.throws(() => acceptance.assertHolderUninstallTarget(operation));
+});
+
+test("holder acceptance projects full handle time onto a WMI microsecond without altering the receipt", () => {
+  for (const [retained, observed] of [
+    ...Array.from({ length: 10 }, (_, digit) => [
+      `2026-10-26T02:03:04.765432${digit}Z`,
+      "2026-10-26T02:03:04.7654320Z",
+    ]),
+    ["2026-10-26T02:03:04.9999999Z", "2026-10-26T02:03:04.9999990Z"],
+    ["2026-10-26T23:59:59.9999999Z", "2026-10-26T23:59:59.9999990Z"],
+  ]) {
+    const { operation, source } = holderReceipt();
+    operation.holder.target.birth = retained;
+    operation.holder.events[1].birth = retained;
+    operation.settlement.owned.push({ pid: 43, ppid: 42, birth: observed });
+    operation.settlement.ownedCount++;
+    const before = clone(operation);
+    acceptance.assertHolderUninstallTarget(operation, source);
+    assert.deepEqual(operation, before);
+  }
+});
+
+test("holder acceptance rejects different WMI microseconds and every nonzero seventh digit", () => {
+  for (const mismatch of [
+    { ppid: 99 },
+    { ppid: "42" },
+    { pid: "43" },
+    { birth: "2026-10-26T02:03:04.7654310Z" },
+    { birth: "2026-10-26T02:03:04.7654330Z" },
+    { birth: "2026-10-26T02:03:04.7650000Z" },
+    ...Array.from({ length: 9 }, (_, index) => ({
+      birth: `2026-10-26T02:03:04.765432${index + 1}Z`,
+    })),
+  ]) {
+    const { operation, source } = holderReceipt();
+    operation.settlement.owned.push({
+      pid: 43,
+      ppid: 42,
+      birth: "2026-10-26T02:03:04.7654320Z",
+      ...mismatch,
+    });
+    operation.settlement.ownedCount++;
+    assert.throws(() => acceptance.assertHolderUninstallTarget(operation, source));
+  }
+  for (const [retained, observed] of [
+    ["2026-10-26T02:03:04.7654329Z", "2026-10-26T02:03:04.7654330Z"],
+    ["2026-10-26T02:03:04.9999999Z", "2026-10-26T02:03:05.0000000Z"],
+    ["2026-10-26T23:59:59.9999999Z", "2026-10-27T00:00:00.0000000Z"],
+  ]) {
+    const { operation, source } = holderReceipt();
+    operation.holder.target.birth = retained;
+    operation.holder.events[1].birth = retained;
+    operation.settlement.owned.push({ pid: 43, ppid: 42, birth: observed });
+    operation.settlement.ownedCount++;
+    assert.throws(() => acceptance.assertHolderUninstallTarget(operation, source));
+  }
+});
+
+test("holder acceptance validates both WMI and handle UTC calendars and seven-digit shapes", () => {
+  for (const birth of [
+    "2026-02-30T02:03:04.7654320Z",
+    "2026-10-26T02:03:04.765432Z",
+    "2026-10-26T02:03:04.76543200Z",
+    "2026-10-26T02:03:04.7654320+00:00",
+    null,
+  ]) {
+    for (const side of ["wmi", "handle"]) {
+      const { operation, source } = holderReceipt();
+      operation.settlement.owned.push({
+        pid: 43,
+        ppid: 42,
+        birth: side === "wmi" ? birth : "2026-10-26T02:03:04.7654320Z",
+      });
+      operation.settlement.ownedCount++;
+      if (side === "handle") {
+        operation.holder.target.birth = birth;
+        operation.holder.events[1].birth = birth;
+      }
+      assert.throws(() => acceptance.assertHolderUninstallTarget(operation, source));
+    }
+  }
 });
 
 test("PowerShell uninstall field selection uses the full literal key, without C/JS slash escaping", () => {

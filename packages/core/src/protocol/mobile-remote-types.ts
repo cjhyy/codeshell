@@ -124,6 +124,12 @@ export type MobileClientEvent =
     }
   | { type: "session.select"; sessionId: string; recoveryId?: string }
   | { type: "session.recovery.cancel" }
+  | ({
+      type: "session.legacyBase";
+      sessionId: string;
+      recoveryId: string;
+      requestId: string;
+    } & ({ throughEventId: string; cursor?: never } | { cursor: string; throughEventId?: never }))
   | {
       type: "session.outputJournal";
       sessionId: string;
@@ -243,9 +249,17 @@ export type MobileClientEvent =
     };
 
 export type MobileServerEvent =
-  | { type: "auth.ok"; device: TrustedDevicePublic; capabilities?: { outputJournal?: 1 } }
+  | {
+      type: "auth.ok";
+      device: TrustedDevicePublic;
+      capabilities?: { outputJournal?: 1; legacyBasePages?: 1 };
+    }
   | { type: "auth.failed"; message: string }
-  | { type: "pair.ok"; device: TrustedDevicePublic; capabilities?: { outputJournal?: 1 } }
+  | {
+      type: "pair.ok";
+      device: TrustedDevicePublic;
+      capabilities?: { outputJournal?: 1; legacyBasePages?: 1 };
+    }
   | { type: "pair.failed"; message: string }
   | {
       type: "chat.accepted";
@@ -307,6 +321,21 @@ export type MobileServerEvent =
         journalIdentity?: string;
       };
     }
+  | ({
+      type: "session.legacyBase";
+      sessionId: string;
+      recoveryId: string;
+      requestId: string;
+    } & (
+      | { ok: false; reason: "busy" | "incomplete" }
+      | ({
+          ok: true;
+          throughEventId: string;
+          /** Starting offset in the host's whole-transcript projection. */
+          index: number;
+          events: Record<string, unknown>[];
+        } & ({ complete: true; next?: never } | { complete: false; next: string }))
+    ))
   // ── Sessions ──────────────────────────────────────────────────────────
   | { type: "session.list.ok"; sessions: MobileSessionMeta[]; activeSessionId?: string }
   | { type: "session.history.ok"; sessionId: string; events: unknown[] }

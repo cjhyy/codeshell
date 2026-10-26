@@ -67,6 +67,7 @@ let fixture;
 let model;
 let app;
 let win;
+let firstWindowPending = false;
 let keychainReference;
 let keychainContext;
 const failures = [];
@@ -237,7 +238,9 @@ try {
     async () => {
       app = await fixture.launch();
       identity = { ...app.__packagedIdentity, startupPause: app.__startupPause };
+      firstWindowPending = true;
       await findCodeShellWindow(app);
+      firstWindowPending = false;
       win = app.windows().find((page) => {
         const url = new URL(page.url());
         return url.pathname.endsWith("/renderer/index.html") && !url.searchParams.has("popout");
@@ -414,6 +417,13 @@ try {
 } catch (error) {
   recordFirstError(error, { phase: "ui-operation", pid: app?.process().pid, ppid: process.pid });
   failures.push(error);
+  if (firstWindowPending) {
+    try {
+      await fixture.probeFirstWindow(app);
+    } catch {
+      diagnosticRecordingFailures.push(Error("Packaged first-window probe recording failed"));
+    }
+  }
   failures.push(...diagnosticRecordingFailures);
   if (win) {
     try {

@@ -57,6 +57,14 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
     case "session.recovery.cancel":
       valid = true;
       break;
+    case "session.legacyBase":
+      valid =
+        boundedString(event.sessionId, 128) &&
+        boundedString(event.recoveryId, 128) &&
+        boundedString(event.requestId, 128) &&
+        ((boundedString(event.throughEventId, 512) && event.cursor === undefined) ||
+          (boundedString(event.cursor, 2048) && event.throughEventId === undefined));
+      break;
     case "session.outputJournal":
       valid =
         boundedString(event.sessionId, 128) &&

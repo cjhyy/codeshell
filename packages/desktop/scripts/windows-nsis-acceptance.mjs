@@ -2,6 +2,11 @@
  * Environment checks are a launch refusal policy, not OS sandbox attestation. */
 import assert from "node:assert/strict";
 import { win32 } from "node:path";
+import {
+  parseHolderProtocol,
+  readNsisHolderScriptPin,
+  wmiRowMatchesNsisHolderTarget,
+} from "./windows-nsis-uninstall-holder.mjs";
 
 export const NSIS_IDENTITY = Object.freeze({
   appId: "com.cjhyy.codeshell",
@@ -316,6 +321,62 @@ export function assertNormalNsisProcess(operation) {
     ).length,
     1,
   );
+}
+
+/** The sixth controller root is now the gated holder. Its own zero exit and
+ * watchdog settlement cannot substitute for the target handle's zero exit. */
+export function assertHolderUninstallTarget(operation, source) {
+  assertNormalNsisProcess(operation);
+  assert.equal(operation.label, "uninstall");
+  const holder = operation.holder;
+  assert.deepEqual(Object.keys(holder).sort(), [
+    "events",
+    "nonce",
+    "schemaVersion",
+    "script",
+    "stopped",
+    "target",
+    "targetExit",
+  ]);
+  assert.equal(holder.schemaVersion, 1);
+  const script = readNsisHolderScriptPin();
+  assert.deepEqual(holder.script, script, "Holder script path/hash differs from fixed source");
+  assert.equal(
+    source?.fixtureSHA256?.["windows-nsis-uninstall-holder.ps1"],
+    script.sha256,
+    "Holder script differs from fixture manifest",
+  );
+  const command = operation.command?.executable;
+  assert.ok(typeof command === "string" && /^[a-z]:\\/i.test(command));
+  assert.equal(
+    command,
+    win32.join(win32.parse(command).root, "Program Files", "PowerShell", "7", "pwsh.exe"),
+  );
+  assert.ok(Array.isArray(holder.events) && holder.events.length === 3);
+  const parsed = parseHolderProtocol(
+    holder.events.map((row) => JSON.stringify(row)).join("\n") + "\n",
+    {
+      nonce: holder.nonce,
+      holderPid: operation.child.pid,
+      complete: true,
+    },
+  );
+  assert.deepEqual(
+    parsed.events.map((row) => row.event),
+    ["ready", "target", "exit"],
+  );
+  assert.deepEqual(holder.target, parsed.target);
+  assert.deepEqual(holder.targetExit, { code: 0 });
+  assert.deepEqual(parsed.targetExit, holder.targetExit);
+  assert.equal(holder.stopped, null);
+  assert.equal(parsed.stopped, null);
+  assert.notEqual(holder.target.pid, operation.child.ppid);
+  for (const row of operation.settlement.owned)
+    if (row.pid === holder.target.pid)
+      assert.ok(
+        wmiRowMatchesNsisHolderTarget(row, holder.target),
+        "Observed uninstall target identity differs from retained handle",
+      );
 }
 
 export function assertNsisInstalledUi(receipt, installed, { controllerPid }) {

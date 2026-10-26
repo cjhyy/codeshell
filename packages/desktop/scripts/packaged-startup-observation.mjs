@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { errorMonitor } from "node:events";
 import { performance } from "node:perf_hooks";
 
-/** Passive projection of callbacks that the packaged fixture already awaits.
- * This module performs no I/O and grants no launch, query or cleanup authority. */
+/** Startup receipt projection does no I/O and grants no process authority.
+ * The opt-in launch diagnostics below also provide one bounded window-state query. */
 const MAX_LAUNCHES = 8;
 const METHOD = "inspect-brk first-JavaScript pause, synchronous CJS require, then resume";
 const PHASES = ["playwright-launch", "startup-barrier", "identity-read", "ready"];
@@ -91,6 +91,112 @@ function projectSnapshotTiming(value) {
   };
 }
 const copyTiming = (value) => value && { ...value, recent: [...value.recent] };
+
+const URL_KINDS = [
+  "empty",
+  "file:index.html",
+  "file:other",
+  "http",
+  "https",
+  "about:blank",
+  "data",
+  "other",
+  "invalid",
+  "unavailable",
+];
+function projectWindowProbe(value, playwrightWindowCount) {
+  const boolean = (value) => {
+    if (typeof value !== "boolean") throw Error(FAILURE);
+    return value;
+  };
+  const nullableBoolean = (value) => (value === null ? null : boolean(value));
+  const appReady = boolean(field(value, "appReady"));
+  const browserWindowCount = integer(field(value, "browserWindowCount"));
+  const windows = field(value, "windows");
+  if (!Array.isArray(windows)) throw Error(FAILURE);
+  const length = integer(field(windows, "length"), 0, 8);
+  if (length !== Math.min(browserWindowCount, 8)) throw Error(FAILURE);
+  return {
+    status: "observed",
+    timeoutMs: 3_000,
+    playwrightWindowCount,
+    appReady,
+    browserWindowCount,
+    truncated: browserWindowCount > 8,
+    windows: Array.from({ length }, (_, index) => {
+      const window = field(windows, String(index));
+      const id = field(window, "id"),
+        urlKind = field(window, "urlKind");
+      if (!URL_KINDS.includes(urlKind)) throw Error(FAILURE);
+      return {
+        id: id === null ? null : integer(id, 1),
+        visible: nullableBoolean(field(window, "visible")),
+        destroyed: boolean(field(window, "destroyed")),
+        crashed: nullableBoolean(field(window, "crashed")),
+        loading: nullableBoolean(field(window, "loading")),
+        urlKind,
+      };
+    }),
+  };
+}
+const copyWindowProbe = (value) =>
+  value && { ...value, windows: value.windows.map((row) => ({ ...row })) };
+
+// Serialized by Playwright into Electron's Main context: no closure dependencies.
+// URL bytes never cross the evaluate boundary; only fixed classifications do.
+function evaluateWindowProbe({ app, BrowserWindow }) {
+  const urlKind = (value) => {
+    if (value === "") return "empty";
+    try {
+      const url = new URL(value);
+      if (url.protocol === "file:")
+        return url.pathname.endsWith("/index.html") ? "file:index.html" : "file:other";
+      if (url.protocol === "http:") return "http";
+      if (url.protocol === "https:") return "https";
+      if (url.protocol === "data:") return "data";
+      if (value === "about:blank") return "about:blank";
+      return "other";
+    } catch {
+      return "invalid";
+    }
+  };
+  const appReady = app.isReady();
+  const all = BrowserWindow.getAllWindows();
+  return {
+    appReady,
+    browserWindowCount: all.length,
+    windows: all.slice(0, 8).map((window) => {
+      const unavailable = {
+        id: null,
+        visible: null,
+        destroyed: true,
+        crashed: null,
+        loading: null,
+        urlKind: "unavailable",
+      };
+      if (window.isDestroyed()) return unavailable;
+      try {
+        const id = window.id,
+          visible = window.isVisible(),
+          contents = window.webContents;
+        if (contents.isDestroyed()) return { ...unavailable, id, visible, destroyed: false };
+        return {
+          id,
+          visible,
+          destroyed: false,
+          crashed: contents.isCrashed(),
+          loading: contents.isLoading(),
+          urlKind: urlKind(contents.getURL()),
+        };
+      } catch (error) {
+        // A native window can disappear between the checks. Other API failures
+        // reject the probe, retaining no exception text in the sidecar.
+        if (window.isDestroyed()) return unavailable;
+        throw error;
+      }
+    }),
+  };
+}
 
 export function createPackagedStartupObservation() {
   const launches = [];
@@ -246,13 +352,16 @@ export function hostedWindowsLaunchDiagnosticsEnabled(platform, arch, ci) {
   }
 }
 
-/** Bounded, passive callbacks on the very same captured ChildProcess.
+/** Bounded callbacks on the very same captured ChildProcess.
  * Cached properties and text are observations, never OS liveness or fault proof.
  * Reads only an explicitly bound watchdog's bounded diagnostic getter; no file
- * reads, timers, process methods, ordinary error listeners or new await. */
+ * reads, process control or ordinary error listeners. Opt-in first-window
+ * failure adds one Main state evaluate, raced against a cleared 3s timer. */
 export function createPackagedLaunchDiagnostics({
   redactRoots = [],
   now = () => performance.now(),
+  setTimer = setTimeout,
+  clearTimer = clearTimeout,
 } = {}) {
   const maxEvents = 64;
   const maxTailBytes = 64 * 1024;
@@ -400,6 +509,8 @@ export function createPackagedLaunchDiagnostics({
           monitor: null,
           failureTimingCaptured: false,
           snapshotTiming: { atFailure: null, settled: null },
+          windowProbe: null,
+          windowProbeStarted: false,
           stdout: streamState(),
           stderr: streamState(),
         };
@@ -476,6 +587,55 @@ export function createPackagedLaunchDiagnostics({
     settled() {
       for (const record of launches) record.snapshotTiming.settled = captureTiming(record);
     },
+    async probeWindows(application) {
+      const record = attempt(() => {
+        const record = records.get(application.process());
+        if (!record) throw Error(FAILURE);
+        return record;
+      });
+      if (!record || record.windowProbeStarted) return;
+      record.windowProbeStarted = true;
+      let timer,
+        playwrightWindowCount = null;
+      const unavailable = (status) => ({
+        status,
+        timeoutMs: 3_000,
+        playwrightWindowCount,
+        appReady: null,
+        browserWindowCount: null,
+        truncated: false,
+        windows: [],
+      });
+      try {
+        // Renderer Page[] count is deliberately separate from BrowserWindow[].
+        playwrightWindowCount = integer(application.windows().length);
+        const evaluated = Promise.resolve(application.evaluate(evaluateWindowProbe)).then(
+          (value) => ({ status: "observed", value }),
+          () => ({ status: "failed" }),
+        );
+        const result = await Promise.race([
+          evaluated,
+          new Promise((resolve) => {
+            timer = setTimer(() => resolve({ status: "timeout" }), 3_000);
+          }),
+        ]);
+        record.windowProbe =
+          result.status === "observed"
+            ? (attempt(() => projectWindowProbe(result.value, playwrightWindowCount)) ??
+              unavailable("failed"))
+            : unavailable(result.status);
+      } catch {
+        record.windowProbe = unavailable("failed");
+      } finally {
+        if (
+          attempt(() => {
+            clearTimer(timer);
+            return true;
+          }) !== true
+        )
+          clearTimeout(timer);
+      }
+    },
     appended(child, name, chunk) {
       // Called only after the existing appendFileSync succeeded. Keep a copy,
       // never a subarray retaining an arbitrarily large chunk's backing store.
@@ -511,6 +671,7 @@ export function createPackagedLaunchDiagnostics({
           launch: record.launch,
           childPid: record.childPid,
           listenerSetupFailed: record.listenerSetupFailed,
+          windowProbe: copyWindowProbe(record.windowProbe),
           snapshotTiming: {
             atFailure: copyTiming(record.snapshotTiming.atFailure),
             settled: copyTiming(record.snapshotTiming.settled),
@@ -533,7 +694,7 @@ export function createPackagedLaunchDiagnostics({
         truncated,
         launches: value,
         boundary:
-          "Passive same-child callback order and cached properties, plus successful private-log append tails; not kernel event order, OS liveness, fault causality or cleanup authority",
+          "Same-child callback order, cached properties, private-log append tails and one opt-in 3s first-window Main state probe; not kernel event order, OS liveness, fault causality or cleanup authority",
       };
     },
   };

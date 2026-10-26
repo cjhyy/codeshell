@@ -270,3 +270,24 @@ test("Panel source labels are bounded observation metadata on chat.send", () => 
       parseMobileClientEvent({ type: "chat.send", text: "hello", modelTraceSource: source }),
     ).toBeUndefined();
 });
+
+test("legacy base pages require bounded identities and exactly one typed anchor or cursor", () => {
+  const event = {
+    type: "session.legacyBase",
+    sessionId: "s".repeat(128),
+    recoveryId: "r".repeat(128),
+    requestId: "q".repeat(128),
+    throughEventId: "t".repeat(512),
+  };
+  expect(parseMobileClientEvent(event)).toEqual(event);
+  const next = { ...event, throughEventId: undefined, cursor: "c".repeat(2048) };
+  expect(parseMobileClientEvent(next)).toEqual(next);
+  for (const field of ["sessionId", "recoveryId", "requestId", "throughEventId", "cursor"]) {
+    const base = field === "cursor" ? next : event;
+    const limit = field === "cursor" ? 2048 : field === "throughEventId" ? 512 : 128;
+    for (const value of ["", "x".repeat(limit + 1), null, 1, {}, []])
+      expect(parseMobileClientEvent({ ...base, [field]: value })).toBeUndefined();
+  }
+  expect(parseMobileClientEvent({ ...event, cursor: "both" })).toBeUndefined();
+  expect(parseMobileClientEvent({ ...event, throughEventId: undefined })).toBeUndefined();
+});

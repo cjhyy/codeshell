@@ -1016,6 +1016,7 @@ const mobileUploads = new MobileUploadService({
 });
 const mobileRemote = new RemoteHostManager({
   outputJournal: true,
+  legacyBasePages: true,
   devices: mobileDevices,
   uploads: mobileUploads,
   webApi: createDesktopWebService({
