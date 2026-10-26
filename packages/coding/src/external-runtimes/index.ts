@@ -55,6 +55,8 @@ export { writeClaudeMcpConfigFile } from "./claude-code/mcp-config.js";
 export { ClaudeEventTranslator } from "./claude-code/event-translator.js";
 export type { ClaudeEventTranslatorOptions } from "./claude-code/event-translator.js";
 export { ClaudeCodeRuntime } from "./claude-code/runtime.js";
+export { runClaudeTextInference } from "./claude-code/text-inference.js";
+export type { ClaudeTextInferenceOptions } from "./claude-code/text-inference.js";
 export {
   CLAUDE_PERMISSION_MODES,
   CLAUDE_PERMISSION_PROMPT_TOOL,

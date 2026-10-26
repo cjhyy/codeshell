@@ -123,6 +123,7 @@ const expectedRuntimeExportsByPartition = {
     "restoreProjectSettings",
   ],
   sessionUsageAccounting: ["normalizeCumulativeUsageCounters"],
+  memoryMaintenance: ["MemoryOrchestrator", "isEphemeralSessionState", "sanitizeContent"],
   sessionOutputRecovery: [
     "SessionOutputJournal",
     "SessionOutputPublisher",

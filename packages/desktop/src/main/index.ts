@@ -145,6 +145,7 @@ import { getCuaDriverHost } from "./computer-use/service.js";
 import { initializeDesktopComputerUse } from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
+import { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertWorkspaceProfileName } from "./external-runtime-profile.js";
 import { createExternalRuntimeBackgroundWork } from "./external-runtime-background-work.js";
 import { setProjectTrustWithRevocation } from "./project-trust-lifecycle.js";
@@ -1716,6 +1717,7 @@ async function createWindow(): Promise<BrowserWindow> {
     });
     const approvals = externalRuntimeApprovals;
     externalRuntimeService = new ExternalRuntimeService({
+      memory: new ExternalRuntimeMemory(),
       featureFlags: () => {
         const cwd = resolveNoRepoCwd();
         const settings = new SettingsManager(cwd, "full").getForScope("user") as {

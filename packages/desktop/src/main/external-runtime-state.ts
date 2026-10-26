@@ -26,7 +26,10 @@ import {
   outputUserMessage,
   createRunTiming,
   normalizeCumulativeUsageCounters,
+  isEphemeralSessionState,
+  sanitizeContent,
 } from "@cjhyy/code-shell-core/internal";
+import type { ExternalMemorySnapshot } from "./external-runtime-memory.js";
 import {
   textWithAttachmentReferences,
   type ExternalRuntimeKind,
@@ -386,6 +389,54 @@ export class ExternalRuntimeSessionRecorder {
   }
   get outputRunId(): string | undefined {
     return this.runId;
+  }
+
+  /** Freeze the completed transcript before another foreground submission can append. */
+  memorySnapshot(): Omit<ExternalMemorySnapshot, "kind" | "model"> | undefined {
+    this.assertOwner();
+    const state = this.manager.readSessionState(this.sessionId);
+    if (!state || !this.runClosed || this.persistenceFailed || isEphemeralSessionState(state))
+      return undefined;
+    const runId = this.runId!;
+    const sourceKey = (current: typeof state) =>
+      JSON.stringify([
+        current.cwd,
+        current.workspace,
+        current.project,
+        current.workspaceProfile,
+        current.costState?.namespace,
+        current.costState?.sessionScopeId,
+        current.costState?.accountingSessionId,
+      ]);
+    const capturedSource = sourceKey(state);
+    const messages = this.transcript
+      .toMessages()
+      .filter((message) => message.role === "user" || message.role === "assistant")
+      .map((message) => {
+        const content = sanitizeContent(message.content);
+        return Object.freeze({
+          role: message.role,
+          content: typeof content === "string" ? content : JSON.stringify(content),
+        });
+      });
+    return Object.freeze({
+      sessionId: this.sessionId,
+      runId,
+      cwd: this.cwd,
+      messages: Object.freeze(messages),
+      assertCurrent: () => {
+        this.assertOwner();
+        const current = this.manager.readSessionState(this.sessionId);
+        if (
+          this.runId !== runId ||
+          !this.runClosed ||
+          !current ||
+          sourceKey(current) !== capturedSource ||
+          isEphemeralSessionState(current)
+        )
+          throw new Error("Memory snapshot no longer owns the completed session");
+      },
+    });
   }
 
   /** Automatic wakeups continue the last real user intent, including after restart. */

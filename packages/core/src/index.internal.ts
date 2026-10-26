@@ -46,6 +46,10 @@ export {
 export { outputUserMessage } from "./engine/run-output-user-message.js";
 export { createRunTiming } from "./session/stream-timing.js";
 export { normalizeCumulativeUsageCounters } from "./session/usage.js";
+export { MemoryOrchestrator } from "./services/memory-orchestrator.js";
+export type { MemoryOrchestratorOptions } from "./services/memory-orchestrator.js";
+export { isEphemeralSessionState } from "./session/session-manager.js";
+export { sanitizeContent } from "./logging/sanitize-messages.js";
 export { McpResponseTooLargeError } from "./tool-system/mcp-results.js";
 export {
   assertMcpOAuthCredentialBinding,

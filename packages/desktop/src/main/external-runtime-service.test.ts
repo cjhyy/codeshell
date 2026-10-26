@@ -239,6 +239,57 @@ afterEach(() => {
 });
 
 describe("ExternalRuntimeService", () => {
+  test("completed logical turns schedule captured memory and replacement cancels its ownership", async () => {
+    const snapshots: import("./external-runtime-memory.js").ExternalMemorySnapshot[] = [];
+    const cancelled: string[] = [];
+    let disposed = false;
+    const svc = service({ external_agent_runtime: true }, undefined, {
+      memory: {
+        schedule: (snapshot: (typeof snapshots)[number]) => snapshots.push(snapshot),
+        cancel: (id: string) => cancelled.push(id),
+        dispose: async () => {
+          disposed = true;
+        },
+      },
+    });
+    await svc.start({ ...request, model: "selected-cli-model" });
+    const initialCancels = cancelled.length;
+    providerSend = async (args) => {
+      const emit = (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent;
+      emit({ type: "text_delta", text: "done" });
+      emit({ type: "turn_complete", reason: "completed" });
+    };
+    await svc.send(request.sessionId, { text: "first intent", disableGoal: true }, 77);
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0]).toMatchObject({
+      model: "selected-cli-model",
+      kind: "codex",
+      sessionId: request.sessionId,
+    });
+    expect(() => snapshots[0]!.assertCurrent()).not.toThrow();
+    await svc.send(request.sessionId, { text: "new intent", disableGoal: true }, 77);
+    expect(snapshots).toHaveLength(2);
+    expect(() => snapshots[0]!.assertCurrent()).toThrow();
+    expect(cancelled).toHaveLength(initialCancels + 2);
+    await expect(svc.interrupt(request.sessionId, 999)).rejects.toThrow();
+    expect(cancelled).toHaveLength(initialCancels + 2);
+    await svc.stopAll();
+    expect(disposed).toBe(true);
+    expect(() => snapshots[1]!.assertCurrent()).toThrow();
+  });
+
+  test("failed external turns never schedule memory", async () => {
+    let scheduled = 0;
+    const svc = service({ external_agent_runtime: true }, undefined, {
+      memory: { schedule: () => scheduled++, cancel() {}, async dispose() {} },
+    });
+    await svc.start(request);
+    failNextSend = true;
+    await svc.send(request.sessionId, { text: "fails", disableGoal: true }, 77);
+    expect(scheduled).toBe(0);
+    await svc.stopAll();
+  });
+
   test("Host tool execution records one canonical span in the active physical trace", async () => {
     const cwd = join(testHome, "trace-workspace");
     mkdirSync(cwd);

@@ -70,6 +70,7 @@ import {
   requestedExternalRuntimeProfile,
 } from "./external-runtime-profile.js";
 import { startExternalRuntimeTrace } from "./external-runtime-tracing.js";
+import type { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 
 export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
   goal?: string | GoalConfig;
@@ -180,6 +181,8 @@ export interface ExternalRuntimeServiceDeps {
   writeBinding?: typeof writeExternalRuntimeBinding;
   /** Resolve the executable before reserving resources; injectable for tests. */
   prepareCodexLaunch?: (cwd: string) => Promise<CodexLaunch>;
+  /** Separate background maintenance; never lends the foreground CLI or tool lease. */
+  memory?: Pick<ExternalRuntimeMemory, "schedule" | "cancel" | "dispose">;
 }
 
 interface ExternalRuntimeAuthority {
@@ -1692,7 +1695,43 @@ export class ExternalRuntimeService {
         : outcome;
     };
     const runTurn = async (): Promise<ExternalRuntimeTurnOutcome> => {
+      this.deps.memory?.cancel(sessionId);
       const outcome = await runTurnExclusive();
+      if (
+        this.deps.memory &&
+        outcome.reason === "completed" &&
+        !entry.recorder.outputFailed &&
+        this.sessions.get(sessionId) === entry &&
+        entry.lifecycle.active &&
+        entry.authority.projectTrusted
+      ) {
+        try {
+          const snapshot = entry.recorder.memorySnapshot();
+          const source = createExternalRuntimeSourceContext({
+            sessionId,
+            cwd: entry.cwd,
+            settingsScope: "full",
+          });
+          if (snapshot)
+            this.deps.memory?.schedule({
+              ...snapshot,
+              kind: entry.kind,
+              model: entry.session.resolvedModel ?? entry.model,
+              assertCurrent: () => {
+                snapshot.assertCurrent();
+                if (
+                  this.sessions.get(sessionId) !== entry ||
+                  !entry.lifecycle.active ||
+                  (this.deps.projectTrust ?? getTrustCachedSync)(entry.cwd) !== "trusted" ||
+                  !source.isSourceProfileCurrent()
+                )
+                  throw new Error("External memory source was replaced or revoked");
+              },
+            });
+        } catch (error) {
+          dlog("external-runtime", "memory.snapshot_failed", { sessionId, error: String(error) });
+        }
+      }
       // The renderer drops its start binding on a provider error and expects the
       // next start to replace the runtime. Record that here so ensure() cannot
       // hand the broken provider back as "already compatible".
@@ -1747,6 +1786,7 @@ export class ExternalRuntimeService {
         !entry.recorder.hasOpenRun)
     )
       throw new Error("External run changed before cancellation");
+    this.deps.memory?.cancel(sessionId);
     if (entry) {
       try {
         entry.finalizeOperations("aborted_streaming");
@@ -1841,6 +1881,7 @@ export class ExternalRuntimeService {
     const failures: unknown[] = [];
     const interrupts: Promise<void>[] = [];
     for (const sessionId of ids) {
+      this.deps.memory?.cancel(sessionId);
       const entry = this.sessions.get(sessionId);
       entry?.toolTurnAbort?.abort("Project trust revoked");
       if (entry) {
@@ -1909,6 +1950,7 @@ export class ExternalRuntimeService {
   }
 
   private async stopExclusive(sessionId: string, preserveBackgroundWork = false): Promise<void> {
+    this.deps.memory?.cancel(sessionId);
     const entry = this.sessions.get(sessionId);
     if (!entry) {
       // A failed replacement can leave background work without a live provider.
@@ -1969,6 +2011,7 @@ export class ExternalRuntimeService {
       ]),
     ];
     const results = await Promise.allSettled(ids.map((id) => this.stop(id)));
+    await this.deps.memory?.dispose();
     this.backgroundWorkUnsubscribe?.();
     this.backgroundWorkUnsubscribe = undefined;
     const failures = results.flatMap((result) =>

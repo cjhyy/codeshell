@@ -519,7 +519,8 @@ export const settingsNs = {
         auxHint: "记忆提取、自动标题等后台调用用此模型。",
         followCurrent: "跟随当前模型",
         followCurrentDefault: "跟随当前模型（默认）",
-        auxDesc: "选个便宜快的模型处理后台任务，默认跟随当前聊天模型。",
+        auxDesc:
+          "选择后台任务模型，留空则跟随当前聊天模型。Claude 外部运行时支持自动记忆；Codex 外部运行时需要显式选择 API 后台或记忆提取模型。",
         emptyHint: "还没有{heading}。点「添加模型」从模板挑一家、选模型、填 key。",
         current: "当前",
         setCurrent: "设为当前",
@@ -1726,7 +1727,7 @@ export const settingsNs = {
         followCurrent: "Follow current model",
         followCurrentDefault: "Follow current model (default)",
         auxDesc:
-          "Pick a cheap, fast model for background tasks; follows the current chat model by default.",
+          "Choose a background model, or follow the current chat model. Claude runtime supports automatic memory; Codex runtime requires an explicit API background or memory-extraction model.",
         emptyHint:
           'No {heading} yet. Click "Add model" to pick a provider from a template, choose a model, and enter a key.',
         current: "Current",

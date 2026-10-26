@@ -11,7 +11,8 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readOutputJournal } from "@cjhyy/code-shell-core/internal";
-import { SessionManager } from "@cjhyy/code-shell-core";
+import { SessionManager, UsageLedger, sessionsRoot } from "@cjhyy/code-shell-core";
+import { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import {
   ExternalRuntimeSessionRecorder,
   readExternalRuntimeBinding,
@@ -35,6 +36,97 @@ afterEach(() => {
 });
 
 describe("external runtime durable state", () => {
+  test("memory snapshots are immutable and cannot borrow a newer run or accounting owner", () => {
+    const recorder = new ExternalRuntimeSessionRecorder(
+      "memory-snapshot",
+      "/tmp/project",
+      "model",
+      "claude-code",
+    );
+    recorder.beginTurn({ text: "old user intent" });
+    recorder.onEvent({ type: "text_delta", text: "old completed outcome" });
+    recorder.onEvent({ type: "turn_complete", reason: "completed" });
+    recorder.finishIfMissing();
+    const snapshot = recorder.memorySnapshot()!;
+    expect(snapshot.messages.map((message) => message.content)).toEqual([
+      "old user intent",
+      "old completed outcome",
+    ]);
+    expect(() => snapshot.assertCurrent()).not.toThrow();
+    const sessions = new SessionManager();
+    const state = sessions.readSessionState("memory-snapshot")!;
+    sessions.updateSessionState("memory-snapshot", {
+      costState: { ...state.costState, accountingSessionId: "replacement-accounting-owner" },
+    });
+    expect(() => snapshot.assertCurrent()).toThrow();
+    sessions.updateSessionState("memory-snapshot", { costState: state.costState });
+    recorder.beginTurn({ text: "new user correction" });
+    expect(() => snapshot.assertCurrent()).toThrow();
+    expect(snapshot.messages.map((message) => message.content)).not.toContain(
+      "new user correction",
+    );
+  });
+
+  test("ephemeral external sessions do not expose a durable memory snapshot", () => {
+    const recorder = new ExternalRuntimeSessionRecorder(
+      "external-no-memory",
+      "/tmp/project",
+      "model",
+      "claude-code",
+    );
+    recorder.beginTurn({ text: "temporary question" });
+    recorder.onEvent({ type: "turn_complete", reason: "completed" });
+    recorder.finishIfMissing();
+    const statePath = join(testHome, "sessions", "external-no-memory", "state.json");
+    const state = JSON.parse(readFileSync(statePath, "utf8"));
+    writeFileSync(statePath, JSON.stringify({ ...state, ephemeral: true }));
+    expect(recorder.memorySnapshot()).toBeUndefined();
+  });
+
+  test("a first-session accounting replacement during inference blocks the late summary", async () => {
+    const recorder = new ExternalRuntimeSessionRecorder(
+      "late-memory-owner",
+      "/tmp/project",
+      "model",
+      "claude-code",
+    );
+    for (let turn = 0; turn < 4; turn++) {
+      recorder.beginTurn({ text: `user ${turn}` });
+      recorder.onEvent({ type: "text_delta", text: `answer ${turn}` });
+      recorder.onEvent({ type: "turn_complete", reason: "completed" });
+      recorder.finishIfMissing();
+    }
+    const sessions = new SessionManager();
+    const ledger = new UsageLedger({ storageDir: join(sessionsRoot(), ".usage-ledger") });
+    sessions.updateSessionState("late-memory-owner", {
+      costState: ledger.sessionState("late-memory-owner", sessionsRoot()),
+    });
+    const input = recorder.memorySnapshot()!;
+    let calls = 0;
+    const memory = new ExternalRuntimeMemory({
+      storageDir: sessionsRoot(),
+      readSettings: () => ({ memories: { autoExtract: false } }) as never,
+      infer: async () => {
+        calls++;
+        const state = sessions.readSessionState("late-memory-owner")!;
+        sessions.updateSessionState("late-memory-owner", {
+          costState: { ...state.costState, accountingSessionId: "replacement-owner" },
+        });
+        return {
+          text: JSON.stringify({ summary: "must not persist", keyTopics: [], decisions: [] }),
+        };
+      },
+      onError() {},
+    });
+    memory.schedule({ ...input, kind: "claude-code", model: "captured" });
+    await memory.idle(input.sessionId);
+    expect(calls).toBe(1);
+    expect(() =>
+      readFileSync(join(testHome, "session-memories", "late-memory-owner.json")),
+    ).toThrow();
+    await memory.dispose();
+  });
+
   test("records one canonical turn with attachments, tools, usage, and completion", () => {
     const recorder = new ExternalRuntimeSessionRecorder(
       "external-state-test",
