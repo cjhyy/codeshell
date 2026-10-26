@@ -8,7 +8,7 @@
 
 | 仓库  | 组合前本地主线                             | 任务分支 / 候选                                                                                   |
 | ----- | ------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| Host  | `2035c0a30f51c37415814b340c364fee490e667f` | `codex/core/audit-integration-20261027`，代码候选提交在收尾补记                                   |
+| Host  | `2035c0a30f51c37415814b340c364fee490e667f` | `codex/core/audit-integration-20261027`，受测代码候选 `2d031febea54a138d7e14de4a778da3f38dcde26`  |
 | Panel | `d15a35bec1910c0a55be7b737a5343314635d4a2` | `codex/panel-shared/release-zip-integration-20261027`，`c6dbba4272a7e15de58c46a0624e774c17264aed` |
 
 本地已记录的 origin/main 仍分别为 `2661eb04da4266c532464bc8bd9223aeba0d9caa` /
@@ -132,3 +132,15 @@ NSIS16阶段、M1/M2、首窗真包与真实dump/符号根因，实体手机/弱
 跨版升级回滚，六Panel版本freeze/正式安装，runbook中的真实账号、owner迁移、薄云端恢复与
 业务决策。来源工作树完整保留至最终合并后再处理。此次只提交两仓任务候选，工作树收尾干净，
 不合 main、不 push、不清理，交回上述原 CC session。
+
+## 任务提交收尾
+
+Host 受测代码候选：`2d031febea54a138d7e14de4a778da3f38dcde26`；Panel 候选：
+`c6dbba4272a7e15de58c46a0624e774c17264aed`。本次随后仅补本文件回执，受测代码不变。
+两仓只按明确任务路径 staging，未 stage artifacts、依赖、生成包或 workflow；来源均未提交。
+两个本地 main 与 origin/main refs 保持本记录基线，最终两候选工作树 clean。
+
+| 合 main 前相对指定本地主线的最终 stat | 文件 | 新增 / 删除 |
+| ------------------------------------- | ---- | ----------- |
+| Host（包含本回执）                    | 36   | 6120 / 94   |
+| Panel                                 | 6    | 3763 / 0    |
