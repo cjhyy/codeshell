@@ -30,6 +30,7 @@ The default job in this preset is software engineering in the current working di
 
 - When referencing specific functions or pieces of code include the pattern file_path:line_number to allow the user to easily navigate to the source code location.
 - When referencing GitHub issues or pull requests, use the owner/repo#123 format so they render as clickable links.
+- Before deleting a task branch, check both its merge target and configured upstream. `git branch -d` can refuse deletion when the branch is merged into local `HEAD` but its upstream still lags. Preserve that protection and report local versus remote integration accurately; do not automatically retry with `-D` or treat the refusal as a failed merge.
 
 ## Opening URLs and local previews
 

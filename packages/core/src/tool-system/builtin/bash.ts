@@ -40,7 +40,12 @@ export const bashToolDef: ToolDefinition = {
     "Execute a shell command and return its output. " +
     "Use for ordinary shell commands, system operations, version-control commands, " +
     "package-manager commands, running tests, installing packages, etc. Prefer Bash " +
-    "over PowerShell unless the task needs PowerShell-specific syntax or APIs.",
+    "over PowerShell unless the task needs PowerShell-specific syntax or APIs. " +
+    "A nonzero exit is a command status, not necessarily a tool malfunction. Query commands " +
+    "can use exit 1 for no matches; handle documented expected statuses with an explicit " +
+    "conditional and preserve unexpected failures instead of adding blanket `|| true`. " +
+    "Use separate calls for independent checks. In an `&&` chain, a nonzero status stops " +
+    "later commands, but earlier side effects remain; inspect state before retrying mutations.",
   inputSchema: {
     type: "object",
     properties: {
@@ -195,7 +200,7 @@ export async function bashTool(
   let body = "";
   if (result.stdout) body += result.stdout;
   if (result.stderr) body += (body ? "\n" : "") + `STDERR:\n${result.stderr}`;
-  if (!body) body = "(command completed with no output)";
+  if (!body) body = "(command produced no output)";
 
   // Truncate the OUTPUT body head+tail (TODO 2.11) — the tail of a failing
   // command (the error / final summary) is usually the most useful part, so we
@@ -220,6 +225,13 @@ export async function bashTool(
 
   const hint = backend.hintForBlockedOutput?.(result.stderr);
   if (hint) output += hint;
+
+  if (code === 1 && !result.stderr && !hint) {
+    output +=
+      '\nHint: No stderr was produced. Exit code 1 can mean "no matches" for a query or ' +
+      "condition, or a command error. Check the command's documented exit-status meaning; " +
+      "handle only expected statuses and preserve other failures.";
+  }
 
   if ((code !== 0 && code !== null) || (code === null && sig)) {
     return fail(output, { exitCode: code, signal: sig, stderr: result.stderr });
