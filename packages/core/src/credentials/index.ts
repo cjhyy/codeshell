@@ -30,6 +30,7 @@ export type {
   OAuthTokenResponse,
 } from "./types.js";
 export { credentialAllowsEnvExposure, credentialSecretHint } from "./types.js";
+export { normalizeCookieDomain, cookieAppliesToHost } from "./cookie-domain.js";
 export {
   buildOAuthRefreshRequest,
   isBrowserOAuthLinkCredential,

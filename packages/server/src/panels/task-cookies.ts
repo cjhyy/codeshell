@@ -3,6 +3,8 @@ import { chmod, lstat, mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/p
 import { isAbsolute, join } from "node:path";
 import {
   formatNetscapeCookies,
+  normalizeCookieDomain,
+  cookieAppliesToHost,
   parseCookieJar,
   type Credential,
   type CookieLike,
@@ -49,17 +51,6 @@ function targetUrl(raw: unknown): URL {
   if (url.protocol !== "https:" || url.username || url.password || !url.hostname)
     throw new Error("Cookie selection requires an HTTPS URL");
   return url;
-}
-function domain(raw: unknown): string | undefined {
-  if (typeof raw !== "string") return;
-  const value = raw.toLowerCase().replace(/^\./, "");
-  if (
-    value.length > 253 ||
-    !value.includes(".") ||
-    !value.split(".").every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label))
-  )
-    return;
-  return value;
 }
 function beneath(host: string, root: string) {
   return host === root || host.endsWith(`.${root}`);
@@ -124,7 +115,7 @@ export class PanelTaskCookieService {
       )
       .digest("hex");
   }
-  private cookies(credential: Credential, root: string): CookieLike[] {
+  private cookies(credential: Credential, host: string): CookieLike[] {
     const now = (this.options.now?.() ?? Date.now()) / 1000;
     if (
       typeof credential.secret !== "string" ||
@@ -147,8 +138,10 @@ export class PanelTaskCookieService {
             /[\x00-\x1f\x7f]/.test(cookie.path)))
       )
         return false;
-      const cookieDomain = domain(cookie.domain);
-      if (!cookieDomain || !beneath(cookieDomain, root)) return false;
+      // Account eligibility and actual Cookie scope are different fences:
+      // a login captured on www.example.com can carry .example.com cookies,
+      // but must not export host-only cookies from a sibling login host.
+      if (!cookieAppliesToHost(cookie, host)) return false;
       if (
         cookie.expirationDate !== undefined &&
         (typeof cookie.expirationDate !== "number" ||
@@ -162,10 +155,10 @@ export class PanelTaskCookieService {
   private async snapshot(scope: TaskCookieScope, url: URL) {
     await this.options.authorize(scope);
     const result = (await this.options.credentials(scope)).flatMap((credential) => {
-      const root = domain(credential.meta?.domain);
+      const root = normalizeCookieDomain(credential.meta?.domain);
       if (credential.type !== "cookie" || !root || !beneath(url.hostname.toLowerCase(), root))
         return [];
-      const cookies = this.cookies(credential, root);
+      const cookies = this.cookies(credential, url.hostname);
       if (!cookies.length) return [];
       return [
         {

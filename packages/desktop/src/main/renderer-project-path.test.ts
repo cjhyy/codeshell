@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  requireRendererLinkedSessionPath,
   requireRendererProject,
   requireRendererProjectEntryPath,
   requireRendererProjectPath,
@@ -246,5 +247,75 @@ describe("requireRendererProjectPath", () => {
         /outside/,
       );
     }
+  });
+});
+
+/** Lay out a linked worktree exactly as `git worktree add` records it. */
+async function linkWorktree(repository: string, worktree: string, name: string): Promise<void> {
+  const adminDir = join(repository, ".git", "worktrees", name);
+  await mkdir(adminDir, { recursive: true });
+  await mkdir(worktree, { recursive: true });
+  await writeFile(join(adminDir, "commondir"), "../..\n");
+  await writeFile(join(adminDir, "gitdir"), `${join(worktree, ".git")}\n`);
+  await writeFile(join(worktree, ".git"), `gitdir: ${adminDir}\n`);
+}
+
+describe("requireRendererLinkedSessionPath", () => {
+  test("accepts registered roots, directories inside them, and their in-tree worktrees", async () => {
+    const { root, project } = await fixture();
+    await mkdir(join(project, ".git"));
+    const nested = join(project, "packages", "app");
+    await mkdir(nested, { recursive: true });
+    const inTree = join(project, ".worktrees", "feature");
+    await linkWorktree(project, inTree, "feature");
+    const options = { registeredPaths: [project], noRepoPath: join(root, "no-repo") };
+
+    for (const path of [project, nested, inTree]) {
+      await expect(requireRendererLinkedSessionPath(path, options)).resolves.toBe(
+        await realpath(path),
+      );
+    }
+  });
+
+  test("accepts a worktree outside the root only when the repository lists it back", async () => {
+    const { root, project } = await fixture();
+    await mkdir(join(project, ".git"));
+    const worktree = join(root, "codex-worktrees", "job");
+    await linkWorktree(project, worktree, "job");
+    const nested = join(worktree, "src");
+    await mkdir(nested);
+    const options = { registeredPaths: [project], noRepoPath: join(root, "no-repo") };
+
+    await expect(requireRendererLinkedSessionPath(worktree, options)).resolves.toBe(
+      await realpath(worktree),
+    );
+    await expect(requireRendererLinkedSessionPath(nested, options)).resolves.toBe(
+      await realpath(nested),
+    );
+    // Strict project-root authorization is unchanged for every other IPC.
+    await expect(requireRendererProjectPath(worktree, options)).rejects.toThrow(/not registered/);
+
+    // A forged .git file naming the repository's admin dir is not listed back.
+    const forged = join(root, "forged");
+    await mkdir(forged);
+    await writeFile(join(forged, ".git"), `gitdir: ${join(project, ".git", "worktrees", "job")}\n`);
+    await expect(requireRendererLinkedSessionPath(forged, options)).rejects.toThrow(
+      /not registered/,
+    );
+  });
+
+  test("rejects worktrees of unregistered repositories and unrelated directories", async () => {
+    const { root, project } = await fixture();
+    const other = join(root, "other-repo");
+    await mkdir(join(other, ".git"), { recursive: true });
+    const worktree = join(root, "other-worktree");
+    await linkWorktree(other, worktree, "wt");
+    const options = { registeredPaths: [project], noRepoPath: join(root, "no-repo") };
+
+    await expect(requireRendererLinkedSessionPath(worktree, options)).rejects.toThrow(
+      /not registered/,
+    );
+    await expect(requireRendererLinkedSessionPath(root, options)).rejects.toThrow(/not registered/);
+    await expect(requireRendererLinkedSessionPath("relative", options)).rejects.toThrow(/absolute/);
   });
 });

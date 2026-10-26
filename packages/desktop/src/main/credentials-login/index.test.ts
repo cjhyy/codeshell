@@ -379,4 +379,14 @@ describe("cookieDomainMatches (capture domain fence)", () => {
     expect(cookieDomainMatches(".bbc.co.uk", "www.bbc.co.uk")).toBe(true);
     expect(cookieDomainMatches("bbc.co.uk", "bbc.co.uk")).toBe(true);
   });
+  test("host-only cookies do not cover child or sibling hosts", () => {
+    expect(cookieDomainMatches("example.com", "www.example.com", true)).toBe(false);
+    expect(cookieDomainMatches("login.example.com", "www.example.com", true)).toBe(false);
+    expect(cookieDomainMatches("www.example.com", "www.example.com", true)).toBe(true);
+    expect(cookieDomainMatches("example.com", "www.example.com", false)).toBe(true);
+  });
+  test("rejects multi-label public and private suffixes", () => {
+    expect(cookieDomainMatches(".co.uk", "www.bbc.co.uk", false)).toBe(false);
+    expect(cookieDomainMatches(".github.io", "account.github.io", false)).toBe(false);
+  });
 });

@@ -16,6 +16,8 @@ type ElectronMockState = {
   openExternal: (...args: unknown[]) => Promise<void>;
   openPath: (...args: unknown[]) => Promise<string>;
   showItemInFolder: (...args: unknown[]) => void;
+  browserLoadError?: Error;
+  browserWindows?: MockBrowserWindow[];
 };
 
 const electronMockGlobal = globalThis as typeof globalThis & {
@@ -56,9 +58,34 @@ const electronSessionMock = {
   },
 };
 
+class MockBrowserWindow {
+  closed = false;
+  readonly webContents = {
+    on: () => undefined,
+    setWindowOpenHandler: () => undefined,
+    setUserAgent: () => undefined,
+  };
+  constructor(_options: unknown) {
+    (electronMockState().browserWindows ??= []).push(this);
+  }
+  async loadURL(_url: string) {
+    if (electronMockState().browserLoadError) throw electronMockState().browserLoadError;
+  }
+  isDestroyed() {
+    return this.closed;
+  }
+  close() {
+    this.closed = true;
+  }
+  destroy() {
+    this.closed = true;
+  }
+}
+
 function installElectronMock(): void {
   electronMockState();
   mock.module("electron", () => ({
+    BrowserWindow: MockBrowserWindow,
     app: { isPackaged: false },
     safeStorage: {
       isEncryptionAvailable: () => false,
@@ -92,6 +119,8 @@ beforeAll(() => {
 
 afterEach(() => {
   clearRegisteredElectronSessions();
+  delete electronMockState().browserLoadError;
+  electronMockState().browserWindows = [];
 });
 
 describe("buildWindowOptions", () => {
@@ -144,6 +173,26 @@ describe("openBrowserHost", () => {
     await expect(
       openBrowserHost({ kind: "webview", url: "https://x", partition: "p" }),
     ).rejects.toThrow(/not implemented/);
+  });
+  test("closes its window before propagating an initial navigation failure", async () => {
+    const error = new Error("ERR_CONNECTION_CLOSED (-100)");
+    electronMockState().browserLoadError = error;
+    await expect(
+      openBrowserHost({ kind: "window", url: "https://example.com", partition: "login-failed" }),
+    ).rejects.toBe(error);
+    expect(electronMockState().browserWindows).toHaveLength(1);
+    expect(electronMockState().browserWindows![0].closed).toBe(true);
+  });
+  test("an aborted initial redirect still returns the live window to its owner", async () => {
+    electronMockState().browserLoadError = new Error("ERR_ABORTED (-3)");
+    const handle = await openBrowserHost({
+      kind: "window",
+      url: "https://example.com",
+      partition: "login-redirect",
+    });
+    expect(electronMockState().browserWindows![0].closed).toBe(false);
+    handle.close();
+    expect(electronMockState().browserWindows![0].closed).toBe(true);
   });
 });
 
