@@ -154,6 +154,8 @@ jobs:
             # before restore hooks and drops setuid modes), the rest in their own Bun run.
             # The 62 MiB live-writer capture proof runs alone: in the shared shard its event
             # loop stalled on CI after earlier suites, timing out without a diagnostic.
+            # browser-host's Electron mock needs BrowserWindow; an earlier file's electron
+            # mock wins in a shared process (54afce1fe), so it also runs alone.
             ignore: >-
               --path-ignore-patterns '**/browser-driver/cdp-actions.integration.test.ts'
               --path-ignore-patterns '**/browser-runtime/playwright-driver.test.ts'
@@ -167,6 +169,7 @@ jobs:
               --path-ignore-patterns '**/renderer/ChatView.ephemeral-lifecycle.test.tsx'
               --path-ignore-patterns '**/desktop/scripts/*.test.mjs'
               --path-ignore-patterns '**/cc-room/transcript-recovery.test.ts'
+              --path-ignore-patterns '**/src/main/browser-host/index.test.ts'
           - shard: rest
             paths: >-
               tests packages/coding packages/tui packages/pet packages/server
@@ -234,6 +237,7 @@ jobs:
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/ChatView.attachment-quantity-fallback.test.tsx
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/ChatView.ephemeral-lifecycle.test.tsx
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/cc-room/transcript-recovery.test.ts
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/browser-host/index.test.ts
       - name: test Desktop script suites with their own runners
         if: matrix.shard == 'desktop'
         run: |
