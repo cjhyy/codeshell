@@ -20,6 +20,7 @@ import {
 } from "./http.js";
 import { getLocalLinkProvider } from "./providers.js";
 import type { LocalLinkIdentity, LocalLinkValidationResult } from "./types.js";
+import { killChildTree } from "../runtime/spawn-common.js";
 
 export type CliLinkProviderId = "github" | "gitlab" | "notion" | "todoist" | "vercel";
 
@@ -159,6 +160,7 @@ function isMissingExecutable(error: unknown): boolean {
 
 export const runCliLinkCommand: CliLinkCommandRunner = (providerId, command, args, options) =>
   new Promise((resolve, reject) => {
+    let inputError: Error | undefined;
     const env = { ...process.env };
     for (const name of CONFIG[providerId].tokenEnv) delete env[name];
     const child = execFile(
@@ -174,21 +176,32 @@ export const runCliLinkCommand: CliLinkCommandRunner = (providerId, command, arg
         signal: options.signal,
       },
       (error, stdout, stderr) => {
-        if (error) {
-          Object.assign(error, { stdout, stderr });
-          reject(error);
+        const failure = error && options.signal?.aborted ? error : (inputError ?? error);
+        if (failure) {
+          Object.assign(failure, { stdout, stderr });
+          reject(failure);
           return;
         }
         resolve({ stdout: String(stdout), stderr: String(stderr) });
       },
     );
-    if (options.input !== undefined) child.stdin?.write(options.input);
+    const onInputError = (error: Error): void => {
+      if (inputError) return;
+      inputError = error;
+      killChildTree(child, 1000);
+    };
+    child.stdin?.on("error", onInputError);
     // API calls consume a complete JSON body and must see EOF. Browser/device
     // login is different: gh/glab prompt before opening the browser and some
     // versions of Vercel first present a default login method. Feed one Enter
     // below, but keep the pipe alive so those CLIs do not fail immediately with
     // EOF while the browser authorization is still in progress.
-    if (!options.keepStdinOpen) child.stdin?.end();
+    try {
+      if (options.input !== undefined) child.stdin?.write(options.input);
+      if (!options.keepStdinOpen) child.stdin?.end();
+    } catch (error) {
+      onInputError(error as Error);
+    }
   });
 
 function parseJson(result: CliLinkCommandResult, providerId: CliLinkProviderId): unknown {

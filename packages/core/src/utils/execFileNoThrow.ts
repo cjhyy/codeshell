@@ -4,13 +4,15 @@
  * Distinguishes between:
  * - Spawn failure (file not found, permission denied) → code = null
  * - Non-zero exit (process ran but returned error) → code = exit code
+ * - Failed stdin delivery or signal termination → code = non-zero
  * - Success → code = 0
  */
 
 import { execFile, type ExecFileOptions } from "node:child_process";
+import { killChildTree } from "../runtime/spawn-common.js";
 
 export interface ExecFileNoThrowResult {
-  /** Process exit code (0 = success, null = spawn failed). */
+  /** Exit code, or 1 for input/signal failure (0 = success, null = spawn failed). */
   code: number | null;
   stdout: string;
   stderr: string;
@@ -39,6 +41,7 @@ export function execFileNoThrow(
   options?: ExecFileNoThrowOptions,
 ): Promise<ExecFileNoThrowResult> {
   return new Promise((resolve) => {
+    let inputError: Error | undefined;
     const execOpts: ExecFileOptions = {
       timeout: options?.timeout ?? 10_000,
       maxBuffer: 10 * 1024 * 1024, // 10MB
@@ -50,6 +53,9 @@ export function execFileNoThrow(
     if (options?.shell) execOpts.shell = options.shell === true ? undefined : options.shell;
 
     const child = execFile(file, args, execOpts, (error, stdout, stderr) => {
+      const outputError = [String(stderr ?? ""), inputError && `stdin: ${inputError.message}`]
+        .filter(Boolean)
+        .join("\n");
       if (error) {
         // Distinguish spawn failure vs non-zero exit
         const errno = error as NodeJS.ErrnoException;
@@ -65,22 +71,32 @@ export function execFileNoThrow(
           resolve({
             code: error.code != null ? (typeof error.code === "number" ? error.code : 1) : 1,
             stdout: String(stdout ?? ""),
-            stderr: String(stderr ?? ""),
+            stderr: outputError,
           });
         }
       } else {
         resolve({
-          code: 0,
+          code: inputError ? 1 : 0,
           stdout: String(stdout ?? ""),
-          stderr: String(stderr ?? ""),
+          stderr: outputError,
         });
       }
     });
 
-    // Pipe stdin if provided
-    if (options?.input && child.stdin) {
-      child.stdin.write(options.input);
-      child.stdin.end();
+    // The writable emits its own error even when execFile owns process errors.
+    // Failed input delivery is not a successful command, including exit 0.
+    const onInputError = (error: Error): void => {
+      if (inputError) return;
+      inputError = error;
+      killChildTree(child, 1000);
+    };
+    child.stdin?.on("error", onInputError);
+    if (options?.input !== undefined && child.stdin) {
+      try {
+        child.stdin.end(options.input);
+      } catch (error) {
+        onInputError(error as Error);
+      }
     }
   });
 }

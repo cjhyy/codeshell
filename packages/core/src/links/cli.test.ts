@@ -391,3 +391,26 @@ test("CLI query parameters and deployment project IDs match the reviewed HTTP co
     deployments: [{ projectId: "prj_selected" }],
   });
 });
+
+test("CLI stdin closure rejects failed input instead of crashing the Host", async () => {
+  await expect(
+    runCliLinkCommand(
+      "github",
+      "node",
+      ["-e", "require('node:fs').closeSync(0); setTimeout(() => {}, 5000)"],
+      { timeoutMs: 2000, input: "x".repeat(8 * 1024 * 1024) },
+    ),
+  ).rejects.toMatchObject({ code: "EPIPE" });
+});
+
+test("cancellation retains AbortError when closing a pending stdin write", async () => {
+  const controller = new AbortController();
+  const running = runCliLinkCommand("github", "node", ["-e", "setTimeout(() => {}, 5000)"], {
+    timeoutMs: 2000,
+    input: "x".repeat(8 * 1024 * 1024),
+    signal: controller.signal,
+  });
+  const cancellation = running.catch((error: unknown) => error);
+  controller.abort();
+  expect(await cancellation).toMatchObject({ name: "AbortError" });
+});
