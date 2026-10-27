@@ -109,7 +109,11 @@ export function LinkAuthorizationStepView(props: LinkAuthorizationStepViewProps)
     setNow(Date.now());
     const timers = [deadline, qrDeadline]
       .filter((expires) => Number.isFinite(expires) && expires > Date.now())
-      .map((expires) => setTimeout(() => setNow(Date.now()), expires - Date.now() + 1));
+      // The timer fires because `expires` was reached. A clock read that still trails it
+      // must not leave the step looking live: no later timer would ever re-check.
+      .map((expires) =>
+        setTimeout(() => setNow(Math.max(Date.now(), expires)), expires - Date.now() + 1),
+      );
     return () => {
       for (const timer of timers) clearTimeout(timer);
     };

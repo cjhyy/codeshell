@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, setSystemTime, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import type { LinkAuthorization, LinkAuthorizationResponse } from "@cjhyy/code-shell-link";
@@ -52,6 +52,19 @@ async function fixture(authorization: LinkAuthorization) {
     },
     responses,
   };
+}
+/**
+ * Let real timers and the renders they schedule run until `ready`, within a bound.
+ * Uses the monotonic clock, which `setSystemTime` does not freeze.
+ */
+async function waitForTree(ready: () => boolean, timeoutMs = 2_000): Promise<void> {
+  const deadline = performance.now() + timeoutMs;
+  while (!ready()) {
+    if (performance.now() > deadline) return;
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    });
+  }
 }
 function authorization(step: LinkAuthorization["step"]): LinkAuthorization {
   return { id: "attempt", providerId: "fixture", state: "pending", step };
@@ -148,10 +161,14 @@ test("unsafe redirect is inert and consent remains blocked until required resour
 });
 
 test("QR challenge expiry clears the code and the later task expiry removes refresh", async () => {
+  // Poll for each stage instead of sleeping a fixed margin: a slow first render
+  // on CI used to consume the 20ms between the challenge expiry and the check.
+  // The task outlives the challenge by far more than any render, so the
+  // intermediate state stays observable.
   const view = await fixture(
     authorization({
       id: "qr-step",
-      expiresAt: new Date(Date.now() + 180).toISOString(),
+      expiresAt: new Date(Date.now() + 1_000).toISOString(),
       kind: "qr-code",
       phase: "awaiting-scan",
       canRefresh: true,
@@ -162,15 +179,39 @@ test("QR challenge expiry clears the code and the later task expiry removes refr
       },
     }),
   );
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 90));
-  });
+  await waitForTree(() => text(view.tree).includes("二维码已过期"));
   expect(text(view.tree)).toContain("二维码已过期");
   expect(elements(view.tree).some((element) => element.type === "img")).toBe(false);
   expect(elements(view.tree).some((element) => element.type === "button")).toBe(true);
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 110));
-  });
+  await waitForTree(() => text(view.tree).includes("授权已过期"));
   expect(text(view.tree)).toContain("授权已过期");
   expect(elements(view.tree).some((element) => element.type === "button")).toBe(false);
+});
+
+test("a QR expiry timer that fires before the clock reaches its deadline still expires the code", async () => {
+  // Freeze the wall clock so the timer fires while Date.now() still trails the
+  // deadline, as a coarse or skewed runner clock can.
+  const frozen = Date.now();
+  setSystemTime(new Date(frozen));
+  try {
+    const view = await fixture(
+      authorization({
+        id: "qr-step",
+        expiresAt: new Date(frozen + 60_000).toISOString(),
+        kind: "qr-code",
+        phase: "awaiting-scan",
+        canRefresh: true,
+        qr: {
+          payload: "fixture-challenge",
+          challengeExpiresAt: new Date(frozen + 30).toISOString(),
+          instructions: [],
+        },
+      }),
+    );
+    await waitForTree(() => text(view.tree).includes("二维码已过期"), 500);
+    expect(text(view.tree)).toContain("二维码已过期");
+    expect(text(view.tree)).not.toContain("授权已过期");
+  } finally {
+    setSystemTime();
+  }
 });
