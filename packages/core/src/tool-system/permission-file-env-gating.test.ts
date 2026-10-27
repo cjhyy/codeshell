@@ -26,6 +26,12 @@ const gated = [
   "file -\\C -m review.magic",
   "file --com''pile -m review.magic",
   "file -bC -m review.magic",
+  "file -m -- *C",
+  "file -m '--' *C",
+  "file --magic-file -- *C",
+  "file -F -- *C -m review.magic",
+  "file --separator -- *C -m review.magic",
+  "file -m --magic-file *C",
   "file --unknown README",
   "file $FLAGS README",
   "file *",
@@ -88,6 +94,11 @@ for (const mode of ["default", "plan"] as const) {
     try {
       writeFileSync(join(cwd, "review.magic"), "0 string REVIEW fixture\n");
       writeFileSync(join(cwd, "review.magic.mgc"), "original data");
+      // A glob must not turn this filename into file's compile option when
+      // -- was consumed as -m's value rather than an option terminator.
+      writeFileSync(join(cwd, "--"), "0 string REVIEW fixture\n");
+      writeFileSync(join(cwd, "-C"), "");
+      writeFileSync(join(cwd, "--.mgc"), "original magic data");
       const registry = new ToolRegistry({ builtinTools: [] });
       registry.registerTool(
         { ...bashToolDef, source: "builtin", permissionDefault: "ask" },
@@ -105,7 +116,12 @@ for (const mode of ["default", "plan"] as const) {
         planMode: mode === "plan",
         shellEnv: { REVIEW_SECRET: "synthetic-private-value" },
       } as never);
-      for (const command of ["printenv 'REVIEW_SECRET'", "file -C -m review.magic"]) {
+      for (const command of [
+        "printenv 'REVIEW_SECRET'",
+        "file -C -m review.magic",
+        "file -m -- *C",
+        "file -F -- *C -m review.magic",
+      ]) {
         const result = await executor.executeSingle({
           id: "builtin-probe",
           toolName: "Bash",
@@ -115,6 +131,7 @@ for (const mode of ["default", "plan"] as const) {
         expect(JSON.stringify(result)).not.toContain("synthetic-private-value");
       }
       expect(readFileSync(join(cwd, "review.magic.mgc"), "utf8")).toBe("original data");
+      expect(readFileSync(join(cwd, "--.mgc"), "utf8")).toBe("original magic data");
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

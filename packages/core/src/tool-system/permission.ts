@@ -1368,6 +1368,9 @@ function isSafeReadFileCommand(segment: string): boolean {
     if (flags.has(word) || /^-[biIkLhnN0rsv]+$/.test(word)) continue;
     if (valueFlags.has(word)) {
       if (++i >= words.length) return false;
+      // The tokenizer treats -- as ending option expansion checks. Here it is
+      // only an option value, so later globs could still introduce -C.
+      if (words[i] === "--") return false;
       continue;
     }
     if (/^-[mMfFeP].+/.test(word)) continue;
