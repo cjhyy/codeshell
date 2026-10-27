@@ -536,6 +536,10 @@ export class BackgroundShellManager {
     //
     // Absolute stream cursor — survives ring wraparound (a window-relative
     // offset would silently skip new bytes once the window slides).
+    sh.agentReadOffset = Math.max(
+      sh.agentReadOffset,
+      sh.ring.totalWritten() - sh.ring.byteLength(),
+    );
     const sliceBuf = sh.ring.sliceFromAbsolute(sh.agentReadOffset);
     // A live stream may currently end inside a character. Leave its bytes at
     // the absolute cursor until more arrive. Terminal/orphan snapshots consume
