@@ -45,6 +45,60 @@ test("execution stays occupied while its promise settles, including failed prepa
   await gate.mutate(matches, async () => {});
 });
 
+test("draining a reviewed change fences new work through cancellation and commit", async () => {
+  const gate = new PanelExecutionGate();
+  const release = gate.enter(scope);
+  const drained = deferred();
+  let writes = 0;
+  const changing = gate.mutate(
+    matches,
+    async () => {
+      expect(() => gate.enter(scope)).toThrow("正在更新");
+      writes++;
+    },
+    async () => {
+      expect(() => gate.enter(scope)).toThrow("正在更新");
+      gate.enter({ ...scope, projectPath: "/unaffected" })();
+      await drained.promise;
+      release();
+    },
+  );
+  await expect(gate.mutate(matches, async () => {})).rejects.toThrow("修改正在进行");
+  drained.resolve();
+  await changing;
+  expect(writes).toBe(1);
+  gate.enter(scope)();
+});
+
+test("draining must release every holder and a failed validation restores admission", async () => {
+  const gate = new PanelExecutionGate();
+  const release = gate.enter(scope);
+  let writes = 0;
+  await expect(
+    gate.mutate(
+      matches,
+      async () => {
+        writes++;
+      },
+      async () => {},
+    ),
+  ).rejects.toThrow("正在提交");
+  await expect(
+    gate.mutate(
+      matches,
+      async () => {
+        writes++;
+      },
+      async () => {
+        throw new Error("stale review");
+      },
+    ),
+  ).rejects.toThrow("stale review");
+  expect(writes).toBe(0);
+  gate.enter(scope)();
+  release();
+});
+
 test("paused durable work and terminal cleanup remain occupied through registered activity", async () => {
   const gate = new PanelExecutionGate();
   const queued = [scope];
