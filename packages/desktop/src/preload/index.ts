@@ -1331,8 +1331,16 @@ contextBridge.exposeInMainWorld("codeshell", {
     cwd: string;
     id: string;
     reviewToken: string;
-  }): Promise<{ ok: true; id: string } | { ok: false; previewChanged?: true; error: string }> =>
-    ipcRenderer.invoke("panel-apps:installUpdate", input),
+    force?: boolean;
+  }): Promise<
+    | { ok: true; id: string }
+    | {
+        ok: false;
+        previewChanged?: true;
+        error: string;
+        blockers?: import("../shared/panel-apps").PanelAppChangeBlocker[];
+      }
+  > => ipcRenderer.invoke("panel-apps:installUpdate", input),
   uninstallPanelApp: (id: string, cwd?: string): Promise<void> =>
     ipcRenderer.invoke("panel-apps:uninstall", id, cwd),
   readSkillBody: (target: RendererConfigurationTarget | null, filePath: string) =>

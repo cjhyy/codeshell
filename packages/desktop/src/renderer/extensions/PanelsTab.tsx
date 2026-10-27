@@ -26,6 +26,7 @@ import type {
   PanelAppPreview,
   PanelAppSourceInput,
 } from "../../preload/types";
+import type { PanelAppChangeBlocker } from "../../shared/panel-apps";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,7 +100,14 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [checkingUpdate, setCheckingUpdate] = useState<string | null>(null);
-  const [updateError, setUpdateError] = useState<{ appId: string; message: string } | null>(null);
+  const [updateError, setUpdateError] = useState<{
+    appId: string;
+    message: string;
+    /** Open instances and work that hold the update; offered for a forced retry. */
+    blockers?: PanelAppChangeBlocker[];
+    retry?: { cwd: string; reviewToken: string; name: string };
+  } | null>(null);
+  const [sessionTitles, setSessionTitles] = useState<ReadonlyMap<string, string>>(new Map());
   const updateRequestRef = useRef<object | null>(null);
   const [installBusy, setInstallBusy] = useState<"dir" | "zip" | "git" | null>(null);
   const [gitOpen, setGitOpen] = useState(false);
@@ -360,6 +368,81 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     await discoverGitSource({ kind: "git", url: OFFICIAL_PANEL_APP_REPOSITORY });
   };
 
+  /** Closes what holds a refused update in that project, then applies the same review. */
+  const forceUpdate = async () => {
+    const failure = updateError;
+    if (!failure?.retry || updateRequestRef.current) return;
+    const accepted = await confirm({
+      title: t("ext.panels.forceUpdateTitle"),
+      message: t("ext.panels.forceUpdateConfirm", { name: failure.retry.name }),
+      confirmLabel: t("ext.panels.forceUpdateConfirmLabel"),
+    });
+    if (!accepted) return;
+    const request = {};
+    updateRequestRef.current = request;
+    setBusy(failure.appId);
+    try {
+      const result = await window.codeshell.installPanelAppUpdate({
+        id: failure.appId,
+        cwd: failure.retry.cwd,
+        reviewToken: failure.retry.reviewToken,
+        force: true,
+      });
+      if (updateRequestRef.current !== request) return;
+      if (!result.ok) {
+        setUpdateError({
+          appId: failure.appId,
+          message: result.error,
+          ...(result.blockers?.length ? { blockers: result.blockers, retry: failure.retry } : {}),
+        });
+        return;
+      }
+      setUpdateError(null);
+      invalidateUpdates();
+      setReloadKey((key) => key + 1);
+      toast({
+        message: t("ext.panels.updatedToast", { name: failure.retry.name }),
+        variant: "success",
+      });
+    } catch (cause) {
+      if (updateRequestRef.current !== request) return;
+      setUpdateError({ appId: failure.appId, message: String((cause as Error)?.message ?? cause) });
+    } finally {
+      if (updateRequestRef.current === request) {
+        updateRequestRef.current = null;
+        setBusy(null);
+      }
+    }
+  };
+  /** One line per open tab (whatever work it holds), then Host work by kind. */
+  const blockerLines = (blockers: PanelAppChangeBlocker[]): string[] => {
+    const lines = new Map<string, string>();
+    for (const blocker of blockers) {
+      if (blocker.tabId || blocker.bucket) {
+        const session = blocker.sessionId
+          ? sessionTitles.get(blocker.sessionId) || blocker.sessionId
+          : undefined;
+        lines.set(
+          `tab:${blocker.bucket ?? ""}:${blocker.tabId ?? ""}`,
+          session ? t("ext.panels.blockerSession", { session }) : t("ext.panels.blockerTab"),
+        );
+        continue;
+      }
+      const line =
+        blocker.kind === "tool-job"
+          ? t("ext.panels.blockerJob", { name: blocker.label ?? "" }).trim()
+          : blocker.kind === "agent-task"
+            ? t("ext.panels.blockerAgentTask")
+            : blocker.kind === "automation"
+              ? t("ext.panels.blockerAutomation")
+              : blocker.kind === "process"
+                ? t("ext.panels.blockerProcess")
+                : t("ext.panels.blockerTab");
+      lines.set(`${blocker.kind}:${line}`, line);
+    }
+    return [...lines.values()];
+  };
+
   const installReviewed = async () => {
     if (!review) return;
     const { preview } = review;
@@ -384,7 +467,28 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         if (!isCurrent()) return;
         if (!result.ok) {
           setReview(null);
-          setUpdateError({ appId: review.appId, message: result.error });
+          setUpdateError({
+            appId: review.appId,
+            message: result.error,
+            ...(result.blockers?.length
+              ? {
+                  blockers: result.blockers,
+                  retry: {
+                    cwd: projectPath,
+                    reviewToken: preview.reviewToken,
+                    name: preview.title.default,
+                  },
+                }
+              : {}),
+          });
+          if (result.blockers?.some((blocker) => blocker.sessionId))
+            void window.codeshell.listSessions().then(
+              (sessions) =>
+                setSessionTitles(
+                  new Map(sessions.map((session) => [session.id, session.title ?? ""])),
+                ),
+              () => {},
+            );
           return;
         }
         setReview(null);
@@ -1280,7 +1384,27 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                     role="alert"
                     className="mt-2 rounded-md border border-status-err/30 bg-status-err/5 px-3 py-2 text-xs text-status-err"
                   >
-                    {updateError.message}
+                    {updateError.blockers?.length ? (
+                      <>
+                        <p>{t("ext.panels.updateBlockedBy")}</p>
+                        <ul className="mt-1 list-disc pl-4">
+                          {blockerLines(updateError.blockers).map((line) => (
+                            <li key={line}>{line}</li>
+                          ))}
+                        </ul>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-2"
+                          disabled={busy === app.appId}
+                          onClick={() => void forceUpdate()}
+                        >
+                          {t("ext.panels.forceUpdate")}
+                        </Button>
+                      </>
+                    ) : (
+                      updateError.message
+                    )}
                   </div>
                 )}
               </div>

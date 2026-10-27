@@ -130,6 +130,7 @@ export function createHubPanelAutomationHost(options: HubPanelAutomationOptions)
         releaseExecution = panelExecutionGate.enter({
           appId: job.panelSource.appId,
           projectPath: options.bindingCwd ?? cwd,
+          holder: { kind: "automation" },
         });
       }
       try {

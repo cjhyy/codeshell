@@ -1,4 +1,4 @@
-import { panelExecutionGate } from "./execution-gate.js";
+import { panelExecutionGate, panelExecutionProject } from "./execution-gate.js";
 import { randomUUID } from "node:crypto";
 
 export type PanelAgentTaskStatus =
@@ -250,7 +250,11 @@ export class PanelAppAgentTaskService {
       cancelRequested: false,
       activity: [],
     };
-    const release = panelExecutionGate.enter(owner);
+    const release = panelExecutionGate.enter({
+      appId: owner.appId,
+      projectPath: owner.projectPath,
+      holder: { kind: "agent-task", guestId: owner.guestId },
+    });
     this.tasks.set(task.id, task);
     this.trimHistory();
     this.emit(task);
@@ -295,9 +299,11 @@ export class PanelAppAgentTaskService {
     }
   }
 
-  cancelApp(appId: string): void {
+  /** `projects` limits cancellation to tasks bound to those (canonical) projects. */
+  cancelApp(appId: string, projects?: ReadonlySet<string>): void {
     for (const task of this.tasks.values()) {
       if (task.owner.appId !== appId || TERMINAL_STATUSES.has(task.status)) continue;
+      if (projects && !projects.has(panelExecutionProject(task.owner.projectPath))) continue;
       task.cancelRequested = true;
       task.status = "cancelling";
       task.updatedAt = this.now();

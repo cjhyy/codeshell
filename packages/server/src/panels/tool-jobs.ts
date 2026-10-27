@@ -1,4 +1,4 @@
-import { panelExecutionGate } from "./execution-gate.js";
+import { panelExecutionGate, type PanelExecutionScope } from "./execution-gate.js";
 import { createHash, randomUUID } from "node:crypto";
 import { opendir } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
@@ -319,12 +319,17 @@ export class PanelToolJobService {
       this.listeners.delete(listener);
     };
   }
-  private executionScopes(): ToolJobScope[] {
+  private executionScopes(): PanelExecutionScope[] {
+    const held = (scope: ToolJobScope, label?: string): PanelExecutionScope => ({
+      appId: scope.appId,
+      projectPath: scope.projectPath,
+      holder: { kind: "tool-job", ...(label ? { label } : {}) },
+    });
     return [
-      ...[...this.preparing.values()].map((item) => item.scope),
+      ...[...this.preparing.values()].map((item) => held(item.scope)),
       ...[...this.jobs.values()]
         .filter((job) => !TERMINAL.has(job.status) || this.active.has(job.id))
-        .map((job) => job.scope),
+        .map((job) => held(job.scope, job.entry.name)),
     ];
   }
   activeCount(projectPath?: string): number {

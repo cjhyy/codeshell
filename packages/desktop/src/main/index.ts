@@ -4129,6 +4129,8 @@ registerProjectPanelIpc({
     bridge ? bridge.withWebConfigurationMutation(cwd, write) : write(),
   onChanged: () => broadcastPanelAppsChanged(mainWindows),
   revokeAppId: (id) => panelAppBridge.revokeAppId(id),
+  describeGuest: (guestId) => panelAppBridge.describeGuest(guestId),
+  closeForPackageChange: (appId, matches) => panelAppBridge.closeForPackageChange(appId, matches),
   onCleanupError: (id, error) =>
     dlog("main", "panel_app.settings_cleanup_failed", {
       id,

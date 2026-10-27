@@ -704,6 +704,75 @@ describe("Panel App update controls", () => {
     });
   }
 
+  test("a blocked update names its open tabs and closes them only on an explicit forced retry", async () => {
+    const blocked = {
+      ok: false,
+      error: "面板还有正在提交、排队或运行的任务，请结束后再修改。",
+      blockers: [
+        {
+          kind: "panel-call",
+          count: 2,
+          tabId: "tab-1",
+          bucket: "p::session-7",
+          sessionId: "session-7",
+        },
+        {
+          kind: "agent-tool",
+          count: 1,
+          tabId: "tab-1",
+          bucket: "p::session-7",
+          sessionId: "session-7",
+        },
+        { kind: "tool-job", count: 1, label: "editor-runtime" },
+      ],
+    };
+    Object.assign(window.codeshell, {
+      listSessions: async () => [
+        { id: "session-7", title: "视频剪辑评审", file: "", size: 0, createdAt: 0, updatedAt: 0 },
+      ],
+      installPanelAppUpdate: async (input: { force?: boolean }) => {
+        installs.push(input);
+        return input.force ? { ok: true, id: "video-studio" } : blocked;
+      },
+    });
+    // The confirmation dialog focuses its action on the next frame.
+    const frame = Object.getOwnPropertyDescriptor(window, "requestAnimationFrame"),
+      cancelFrame = Object.getOwnPropertyDescriptor(window, "cancelAnimationFrame");
+    Object.defineProperty(window, "requestAnimationFrame", {
+      configurable: true,
+      value: (callback: FrameRequestCallback) => setTimeout(() => callback(0), 0),
+    });
+    Object.defineProperty(window, "cancelAnimationFrame", {
+      configurable: true,
+      value: clearTimeout,
+    });
+    try {
+      await render();
+      await click("更新到 v0.6.3");
+      await click("确认并更新");
+      const alert = textOf(updateAlert());
+      // One line per open tab, whatever work it holds, then Host work by kind.
+      expect(alert).toContain("会话「视频剪辑评审」中的面板标签");
+      expect(alert.split("视频剪辑评审")).toHaveLength(2);
+      expect(alert).toContain("原生任务 editor-runtime");
+      expect(installs).toHaveLength(1);
+      await click("关闭这些并更新");
+      expect(textOf(document.body)).toContain("会关闭这个项目里打开的「视频工作台」");
+      expect(installs).toHaveLength(1);
+      await click("关闭并更新");
+      expect(installs).toEqual([
+        { cwd: "/tmp/project", id: "video-studio", reviewToken: preview.reviewToken },
+        { cwd: "/tmp/project", id: "video-studio", reviewToken: preview.reviewToken, force: true },
+      ]);
+      expect(updateAlert()).toBeUndefined();
+    } finally {
+      if (frame) Object.defineProperty(window, "requestAnimationFrame", frame);
+      else Reflect.deleteProperty(window, "requestAnimationFrame");
+      if (cancelFrame) Object.defineProperty(window, "cancelAnimationFrame", cancelFrame);
+      else Reflect.deleteProperty(window, "cancelAnimationFrame");
+    }
+  });
+
   test("a late update installation failure cannot clear another project's preview progress", async () => {
     const installation = deferred<{ ok: false; error: string }>();
     const nextPreview = deferred<UpdatePreviewResult>();

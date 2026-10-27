@@ -45,6 +45,8 @@ import {
 } from "./panel-app-protocol.js";
 import {
   panelExecutionGate,
+  panelExecutionProject,
+  type PanelExecutionScope,
   PanelModelTraceService,
   PanelToolJobService,
   PanelTaskCookieHost,
@@ -544,7 +546,14 @@ export class PanelAppBridge {
           this.guests.get(owner.guestId)?.projectPath;
         if (!projectPath)
           throw new PanelBridgeError("REVOKED", "Panel execution owner is unavailable");
-        return panelExecutionGate.enter({ appId: owner.appId, projectPath });
+        // A native task's process has no Panel instance; a guest's process names its guest.
+        return panelExecutionGate.enter({
+          appId: owner.appId,
+          projectPath,
+          holder: this.guests.has(owner.guestId)
+            ? { kind: "process", guestId: owner.guestId }
+            : { kind: "process" },
+        });
       },
       allowAuthorizedProcessWithoutPrompt: true,
       isOwnerAuthorized: async (owner) => {
@@ -825,6 +834,48 @@ export class PanelAppBridge {
     }
   }
 
+  /** Where a Panel instance lives, so a refused change can name it. Trusted main data. */
+  describeGuest(
+    guestId: number,
+  ): { tabId?: string; bucket?: string; sessionId?: string } | undefined {
+    const binding = this.guests.get(guestId);
+    if (!binding) return undefined;
+    const sessionId = binding.lastBindInput?.sessionId;
+    return {
+      ...(binding.tabId ? { tabId: binding.tabId } : {}),
+      ...(binding.bucket ? { bucket: binding.bucket } : {}),
+      ...(typeof sessionId === "string" && sessionId ? { sessionId } : {}),
+    };
+  }
+
+  /**
+   * Before a reviewed package change: close every instance of this app in the projects the
+   * change affects (idle ones too, or their polling re-enters the gate) and stop their Host
+   * work. Open tabs reload into the new package once the update changes their revision.
+   */
+  async closeForPackageChange(
+    appId: string,
+    matches: (scope: PanelExecutionScope) => boolean,
+  ): Promise<void> {
+    const projects = new Set(
+      panelExecutionGate.blockers(matches).map((blocker) => blocker.projectPath),
+    );
+    for (const [guestId, binding] of this.guests) {
+      if (binding.resource.descriptor.appId !== appId) continue;
+      const projectPath = panelExecutionProject(binding.projectPath);
+      if (!matches({ appId, projectPath })) continue;
+      projects.add(projectPath);
+      this.revokeGuest(guestId);
+      if (!binding.guest.isDestroyed()) binding.guest.stop();
+    }
+    this.agentTaskService.cancelApp(appId, projects);
+    await Promise.all(
+      [...projects].map((project) =>
+        this.toolJobService?.cancelApp(appId, project).catch(() => {}),
+      ),
+    );
+  }
+
   revokeAppId(appId: string): void {
     revokePanelAppMediaReads(appId);
     this.agentTaskService.cancelApp(appId);
@@ -1096,6 +1147,7 @@ export class PanelAppBridge {
     const releaseExecution = panelExecutionGate.enter({
       appId: binding.resource.descriptor.appId,
       projectPath: binding.projectPath,
+      holder: { kind: "agent-tool", guestId: binding.guest.id },
     });
     const requestId = randomUUID();
     const result = await new Promise<unknown>((resolveResult, reject) => {
@@ -1435,7 +1487,11 @@ export class PanelAppBridge {
     // cancellable so a deadline or revoked guest cannot leave a copy running.
     const transfer = RESOURCE_TRANSFER_METHODS.has(method) ? new AbortController() : undefined;
     const operation = panelExecutionGate.run(
-      { appId: binding.resource.descriptor.appId, projectPath: binding.projectPath },
+      {
+        appId: binding.resource.descriptor.appId,
+        projectPath: binding.projectPath,
+        holder: { kind: "panel-call", guestId: binding.guest.id },
+      },
       () => this.dispatch(binding, method, params, transfer?.signal),
     );
     if (transfer) {

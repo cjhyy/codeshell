@@ -192,3 +192,15 @@ export interface PanelAppCookieCredential {
     expiredCount: number;
   };
 }
+
+/** Work that holds a reviewed Panel package change, as the Host can name it. */
+export interface PanelAppChangeBlocker {
+  kind: "panel-call" | "agent-tool" | "process" | "agent-task" | "tool-job" | "automation";
+  count: number;
+  /** Trusted Host description, such as a native tool entry name. */
+  label?: string;
+  /** Present when an open Panel instance owns the work. */
+  tabId?: string;
+  bucket?: string;
+  sessionId?: string;
+}

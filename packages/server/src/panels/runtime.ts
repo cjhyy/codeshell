@@ -685,6 +685,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       panelExecutionGate.enter({
         appId: owner.appId,
         projectPath: options.bindingCwd ?? options.cwd,
+        holder: { kind: "process" },
       }),
     approvalScope: "guest",
     resolvePackageEntry: async (owner, name) => {
@@ -1092,7 +1093,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     input: Record<string, unknown>,
   ): Promise<unknown> {
     return panelExecutionGate.run(
-      { appId: scope.appId, projectPath: options.bindingCwd ?? options.cwd },
+      {
+        appId: scope.appId,
+        projectPath: options.bindingCwd ?? options.cwd,
+        holder: { kind: "panel-call" },
+      },
       () => onPanelActionAdmitted(scope, input),
     );
   }
@@ -1145,6 +1150,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     const releaseExecution = panelExecutionGate.enter({
       appId: grant.app.id,
       projectPath: options.bindingCwd ?? options.cwd,
+      holder: { kind: "agent-tool" },
     });
     const requestId = randomBytes(18).toString("base64url");
     const value = await new Promise<{ result?: unknown; error?: string }>((done) => {
@@ -1492,7 +1498,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
   }
   async function call(grant: Grant, input: Record<string, unknown>) {
     return panelExecutionGate.run(
-      { appId: grant.app.id, projectPath: options.bindingCwd ?? options.cwd },
+      {
+        appId: grant.app.id,
+        projectPath: options.bindingCwd ?? options.cwd,
+        holder: { kind: "panel-call" },
+      },
       () => callAdmitted(grant, input),
     );
   }

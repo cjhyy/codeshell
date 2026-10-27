@@ -6,6 +6,10 @@ import { isDeepStrictEqual } from "node:util";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { PanelBridgeError } from "../../../server/src/panels/bridge-contract.js";
+import {
+  PanelExecutionGate,
+  panelExecutionProject,
+} from "../../../server/src/panels/execution-gate.js";
 import { PANEL_APP_API_VERSION } from "../shared/panel-apps.js";
 import { claimPanelHostOwnerForRun } from "./panel-host-routing.js";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
@@ -37,6 +41,8 @@ const names = [
   "assertSessionBinding",
   "agentTaskOwner",
   "submitPrompt",
+  "describeGuest",
+  "closeForPackageChange",
 ];
 const methods = names.map((name) => {
   const method = declaration.members.find(
@@ -66,7 +72,10 @@ class Guest extends EventEmitter {
     this.sent.push(args);
   }
   setWindowOpenHandler() {}
-  stop() {}
+  stopped = 0;
+  stop() {
+    this.stopped++;
+  }
 }
 
 async function fixture() {
@@ -93,6 +102,9 @@ async function fixture() {
   const releases: Array<(result: { ok: boolean }) => void> = [];
   const errors: unknown[] = [];
   const revoked: number[] = [];
+  const cancelledTasks: unknown[][] = [];
+  const cancelledJobs: unknown[][] = [];
+  const gate = new PanelExecutionGate();
   let selected = true;
   let bound = true;
   const agent = {
@@ -121,6 +133,8 @@ async function fixture() {
     randomUUID,
     parseExternalRuntimeModelKey,
     claimPanelHostOwnerForRun,
+    panelExecutionGate: gate,
+    panelExecutionProject,
   });
   const bridge = new Bridge();
   bridge.options = {
@@ -135,7 +149,13 @@ async function fixture() {
   bridge.pendingAgentToolCalls = new Map();
   bridge.modelTraces = { cancelOwner() {} };
   bridge.processService = { revokeGuest: (id: number) => revoked.push(id) };
-  bridge.agentTaskService = { rebind() {} };
+  bridge.agentTaskService = {
+    rebind() {},
+    cancelApp: (...args: unknown[]) => cancelledTasks.push(args),
+  };
+  bridge.toolJobService = {
+    cancelApp: async (...args: unknown[]) => void cancelledJobs.push(args),
+  };
   bridge.capabilitiesFor = () => ({});
   const resource = {
     descriptor: {
@@ -186,6 +206,9 @@ async function fixture() {
     target,
     resource,
     revoked,
+    gate,
+    cancelledTasks,
+    cancelledJobs,
     claims,
     runs,
     releases,
@@ -194,6 +217,46 @@ async function fixture() {
     setBound: (value: boolean) => (bound = value),
   };
 }
+
+describe("Panel package changes that open instances hold", () => {
+  test("a blocker names its tab and session, and force closing releases every instance in the project", async () => {
+    const f = await fixture();
+    expect(f.bridge.describeGuest(f.dock.id)).toEqual({
+      tabId: "fixture-1",
+      bucket: "project::session",
+      sessionId: "session-1",
+    });
+    expect(f.bridge.describeGuest(999)).toBeUndefined();
+    const release = f.gate.enter({
+      appId: "fixture",
+      projectPath: "/project",
+      holder: { kind: "agent-tool", guestId: f.dock.id },
+    });
+    const matches = (scope: { appId: string; projectPath: string }) =>
+      scope.appId === "fixture" && scope.projectPath === "/project";
+    expect(f.gate.blockers(matches)).toHaveLength(1);
+    await f.bridge.closeForPackageChange("fixture", matches);
+    // The idle detached view is closed too, so its polling cannot re-enter the gate.
+    expect([...f.bridge.guests.keys()]).toEqual([]);
+    expect([f.dock.stopped, f.detached.stopped]).toEqual([1, 1]);
+    expect(f.revoked).toEqual([f.dock.id, f.detached.id]);
+    expect(f.cancelledTasks).toEqual([["fixture", new Set(["/project"])]]);
+    expect(f.cancelledJobs).toEqual([["fixture", "/project"]]);
+    release();
+    expect(f.gate.blockers(matches)).toEqual([]);
+  });
+
+  test("instances bound to unaffected projects keep running", async () => {
+    const f = await fixture();
+    await f.bridge.closeForPackageChange(
+      "fixture",
+      (scope: { projectPath: string }) => scope.projectPath === "/elsewhere",
+    );
+    expect(f.bridge.guests.size).toBe(2);
+    expect([f.dock.stopped, f.detached.stopped]).toEqual([0, 0]);
+    expect(f.cancelledJobs).toEqual([]);
+  });
+});
 
 describe("Panel App standalone window authority", () => {
   test("only the source owner can resolve an exact bound dock target", async () => {
