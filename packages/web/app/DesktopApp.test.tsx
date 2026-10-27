@@ -15,6 +15,7 @@ const session = { id: "paired-session", username: "synthetic", deviceName: "Fixt
 function remoteApp(patch: Partial<RemoteApp> = {}): RemoteApp {
   return {
     status: "online",
+    conversationRevision: 0,
     deviceName: "Fixture",
     chat: initialChatState(),
     sessions: [],

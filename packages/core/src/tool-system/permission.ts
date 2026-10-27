@@ -827,7 +827,7 @@ const DANGEROUS_PATTERNS = [
 ];
 
 const SAFE_READ_PATTERNS = [
-  /^(cat|head|tail|less|more|wc|file|stat|du|df)\s/,
+  /^(cat|head|tail|less|more|wc|stat|du|df)\s/,
   /^(ls|tree|locate|which|whereis|type)\s/,
   /^(grep|ag|ack|fgrep|egrep)\s/,
   /^(node|python|ruby|go|rustc|java|javac)\s+--version/,
@@ -838,7 +838,6 @@ const SAFE_READ_PATTERNS = [
   /^(uname|hostname|id)\b/,
   /^echo\s/,
   /^env$/,
-  /^printenv/,
 ];
 
 /** Split a command conservatively enough to validate read-only argument shapes. */
@@ -1327,8 +1326,64 @@ function isSafeReadSedCommand(segment: string): boolean {
   return files.every((file) => file === "-" || (!file.startsWith("-") && !/[*?[\]{}]/.test(file)));
 }
 
+/** file can also compile and overwrite a magic database; only vetted reads are safe. */
+function isSafeReadFileCommand(segment: string): boolean {
+  const words = splitShellWords(segment.trim(), true);
+  if (!words || words[0] !== "file" || words.length < 2) return false;
+  const flags = new Set([
+    "--brief",
+    "--mime",
+    "--mime-type",
+    "--mime-encoding",
+    "--extension",
+    "--keep-going",
+    "--dereference",
+    "--no-dereference",
+    "--no-buffer",
+    "--no-pad",
+    "--print0",
+    "--raw",
+    "--special-files",
+    "--help",
+    "--version",
+  ]);
+  const valueFlags = new Set([
+    "-m",
+    "-M",
+    "-f",
+    "-F",
+    "-e",
+    "-P",
+    "--magic-file",
+    "--files-from",
+    "--separator",
+    "--exclude",
+    "--exclude-quiet",
+    "--parameter",
+  ]);
+  for (let i = 1; i < words.length; i++) {
+    const word = words[i];
+    if (word === "--") return true;
+    if (word === "-" || !word.startsWith("-")) continue;
+    if (flags.has(word) || /^-[biIkLhnN0rsv]+$/.test(word)) continue;
+    if (valueFlags.has(word)) {
+      if (++i >= words.length) return false;
+      // The tokenizer treats -- as ending option expansion checks. Here it is
+      // only an option value, so later globs could still introduce -C.
+      if (words[i] === "--") return false;
+      continue;
+    }
+    if (/^-[mMfFeP].+/.test(word)) continue;
+    const equals = word.indexOf("=");
+    if (equals > 0 && valueFlags.has(word.slice(0, equals))) continue;
+    return false;
+  }
+  return true;
+}
+
 function matchesSafeReadPattern(segment: string, allowArgumentless = false): boolean {
   return (
+    isSafeReadFileCommand(segment) ||
     isSafeReadGitCommand(segment) ||
     isSafeReadFindCommand(segment) ||
     isSafeReadSedCommand(segment) ||
@@ -1349,11 +1404,6 @@ function matchesSafeReadPattern(segment: string, allowArgumentless = false): boo
 // ask) when it dumps the process env or its arguments touch a sensitive path.
 // Conservative-and-narrow: only known credential/secret shapes trip it, so
 // ordinary reads (README.md, src/*.ts) stay safe-read.
-
-// Whole-command env dumps that leak Credential.exposeAsEnv / top-level `env`
-// API keys. `env FOO=bar cmd` (env used as a launcher) is intentionally NOT
-// matched — only a bare dump.
-const ENV_DUMP_RE = /^(env|printenv)(\s+[A-Za-z_][A-Za-z0-9_]*)*\s*$/;
 
 const SENSITIVE_PATH_PATTERNS = [
   /\.ssh\//, // ~/.ssh/id_rsa, authorized_keys, known_hosts
@@ -1379,7 +1429,9 @@ const SENSITIVE_PATH_PATTERNS = [
  */
 export function segmentIsSensitiveRead(segment: string): boolean {
   const s = segment.trim();
-  if (ENV_DUMP_RE.test(s)) return true;
+  // Environment readers expose injected credentials, including quoted names and options.
+  // printenv is deliberately absent from the safe-read allowlist as well.
+  if (s === "env" || splitShellWords(s)?.[0] === "printenv") return true;
   if (SENSITIVE_PATH_PATTERNS.some((re) => re.test(s))) return true;
   // Limit the shared basename check to readers with known file operands.
   // Search patterns/options (`rg token SKILL.md`) are not credential paths.

@@ -9,6 +9,8 @@ const { CodexRoomAgent } =
   await import("../../packages/server/src/mobile-remote/codex-room-agent.ts");
 const { CodexAppServerClient } =
   await import("../../packages/coding/src/external-runtimes/codex/app-server-client.ts");
+const { ClaudeCodeRuntime } =
+  await import("../../packages/coding/src/external-runtimes/claude-code/runtime.ts");
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const waitFor = async (predicate, timeout = 5000) => {
   const deadline = Date.now() + timeout;
@@ -37,6 +39,11 @@ if (!existsSync("healthy")) {
   process.on("SIGTERM", () => {});
   closeSync(0);
   setInterval(() => {}, 1000);
+} else if (process.argv.includes("-p")) {
+  process.stdin.resume();
+  process.stdin.on("end", () => {
+    console.log(JSON.stringify({type:"result",subtype:"success",is_error:false,result:"recovered"}));
+  });
 } else if (process.argv.includes("exec")) {
   process.stdin.resume();
   process.stdin.on("end", () => {
@@ -120,7 +127,52 @@ try {
   replacement.start();
   assert.deepEqual(await replacement.request("ping"), { pong: true });
   await replacement.close();
-  console.log(JSON.stringify({ ok: true, roomRetries: 2, pendingRejected: results.length }));
+  rmSync(marker, { force: true });
+  const claudePrevious = children().length;
+  const claudeEvents = [];
+  const claude = new ClaudeCodeRuntime({
+    command,
+    cwd: root,
+    businessSessionId: "native-stdin-review",
+    exposedToolNames: [],
+    interruptGraceMs: 50,
+    developerInstructions: "fixture system prompt",
+    bridge: {
+      url: "http://127.0.0.1:9/mcp",
+      token: "fixture",
+      tokenEnvVar: "FIXTURE_TOKEN",
+      close: async () => {},
+    },
+  });
+  try {
+    const turn = await claude.send({ text: "x".repeat(8 * 1024 * 1024) }, (event) =>
+      claudeEvents.push(event),
+    );
+    await turn.done;
+    assert.equal(children().length, claudePrevious + 1);
+    assert.equal(alive(children()[claudePrevious]), false, "failed input must reap a stubborn CLI");
+    assert.equal(claudeEvents.filter((event) => event.type === "error").length, 1);
+    assert.match(claudeEvents.find((event) => event.type === "error").error, /input pipe closed/);
+    assert.deepEqual(
+      claudeEvents.filter((event) => event.type === "turn_complete").map((event) => event.reason),
+      ["model_error"],
+    );
+    writeFileSync(marker, "yes");
+    const retryEvents = [];
+    await (
+      await claude.send({ text: "retry" }, (event) => retryEvents.push(event))
+    ).done;
+    assert.equal(
+      retryEvents.some((event) => event.type === "error"),
+      false,
+    );
+    assert.equal(retryEvents.filter((event) => event.type === "turn_complete").length, 1);
+  } finally {
+    await claude.close();
+  }
+  console.log(
+    JSON.stringify({ ok: true, roomRetries: 2, pendingRejected: results.length, claudeRetries: 1 }),
+  );
 } finally {
   for (const pid of children()) {
     try {

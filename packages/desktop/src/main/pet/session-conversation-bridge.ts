@@ -32,6 +32,7 @@ export interface BoundSessionInbound {
   senderId: string;
   messageId?: string;
   text: string;
+  hasAttachments?: boolean;
   isDirectMessage: boolean;
 }
 
@@ -155,10 +156,10 @@ export class SessionConversationBridge {
       ? boundSessionStalePrompt(route.sessionTitle).hint
       : undefined;
 
-    if (!inbound.text.trim()) {
+    if (inbound.hasAttachments || !inbound.text.trim()) {
       return {
         kind: "suspended",
-        text: "当前 Session 入口只支持文字消息，请输入文字后重试。",
+        text: "当前 Session 入口只支持纯文字，这条消息未发送。请移除附件后重试，或发送 /mimi 退出 Session 后发送附件。",
       };
     }
 

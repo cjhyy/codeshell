@@ -12,9 +12,12 @@ test("failed stdin delivery is reported instead of crashing or succeeding", asyn
 });
 
 test("an explicitly empty stdin closes the pipe and succeeds", async () => {
+  // Keep the consumer native: process.execPath is Bun in this suite, whose
+  // Linux stdin stream can defer EOF until execFile's timeout closes stdout.
+  // The utility still runs under Bun here; its Node host is covered separately.
   const result = await execFileNoThrow(
-    process.execPath,
-    ["-e", "process.stdin.resume(); process.stdin.on('end', () => process.stdout.write('EOF'))"],
+    "node",
+    ["-e", "process.stdin.on('end', () => process.stdout.write('EOF')); process.stdin.resume()"],
     { input: "", timeout: 2000 },
   );
   expect(result).toEqual({ code: 0, stdout: "EOF", stderr: "" });

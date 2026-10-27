@@ -1,7 +1,5 @@
-import { resolvePanelAppBindingProjectPath } from "@cjhyy/code-shell-core";
 import {
   panelExecutionGate,
-  panelPackageMutationMatches,
   PanelExecutionBusyError,
   type PanelExecutionScope,
 } from "@cjhyy/code-shell-server/panels";
@@ -14,6 +12,24 @@ export type ClosePanelForUpdate = (
   appId: string,
   matches: (scope: PanelExecutionScope) => boolean,
 ) => Promise<void>;
+
+/** Prepare a lazy release callback; management validates the review before invoking it. */
+export function panelUpdateApproval(
+  appId: string,
+  force: boolean | undefined,
+  close: ClosePanelForUpdate,
+) {
+  return {
+    overwrite: true,
+    expectedId: appId,
+    ...(force
+      ? {
+          releaseExecutions: (id: string, matches: (scope: PanelExecutionScope) => boolean) =>
+            releasePanelForUpdate(id, matches, close),
+        }
+      : {}),
+  };
+}
 
 /** Result fields for a refused Panel change; empty unless executions hold it. */
 export function panelChangeFailure(
@@ -43,21 +59,15 @@ export function panelChangeBlockers(
 }
 
 /**
- * Before a forced update: close what would hold the update in `cwd`, then wait for those
- * executions to actually exit. The update's own admission check reports anything left.
+ * After review validation and admission fencing: close matching holders, then wait for
+ * their real exits. The update's final admission check reports anything left.
  */
 export async function releasePanelForUpdate(
   appId: string,
-  cwd: string,
+  matches: (scope: PanelExecutionScope) => boolean,
   close: ClosePanelForUpdate,
   timeoutMs = 15_000,
 ): Promise<void> {
-  // The same executions the update's admission check would wait for.
-  const matches = panelPackageMutationMatches({
-    appId,
-    kind: "update",
-    projectPath: resolvePanelAppBindingProjectPath(cwd),
-  });
   await close(appId, matches);
   const deadline = Date.now() + timeoutMs;
   while (panelExecutionGate.blockers(matches).length && Date.now() < deadline)

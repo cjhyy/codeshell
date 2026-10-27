@@ -22,12 +22,20 @@ function formatSize(size: number): string {
 export function Composer({
   disabled,
   running,
+  conversationKey,
   onSend,
   onStop,
 }: {
   disabled: boolean;
   running: boolean;
-  onSend: (input: { text: string; attachments: MobileComposerAttachment[] }) => Promise<boolean>;
+  /** User navigation identity; automatic session ID binding must preserve it. */
+  conversationKey?: string;
+  onSend: (input: {
+    text: string;
+    attachments: MobileComposerAttachment[];
+    clientMessageId?: string;
+    onUncertain?: (clientMessageId: string) => void;
+  }) => Promise<boolean>;
   onStop: () => void;
 }) {
   const { t } = useT();
@@ -38,6 +46,15 @@ export function Composer({
   // React state does not update until the next render, so two taps in the same
   // frame can both see pending=false. This ref closes that tiny upload window.
   const submitInFlightRef = useRef(false);
+  const uncertainIntentRef = useRef<
+    | {
+        conversationKey?: string;
+        text: string;
+        attachments: DraftAttachment[];
+        clientMessageId: string;
+      }
+    | undefined
+  >(undefined);
   const [attachments, setAttachments] = useState<DraftAttachment[]>([]);
   const [pending, setPending] = useState(false);
   const [queued, setQueued] = useState(false);
@@ -110,15 +127,35 @@ export function Composer({
     submitInFlightRef.current = true;
     setPending(true);
     setError(null);
+    const previous = uncertainIntentRef.current;
+    const retryId =
+      previous &&
+      previous.conversationKey === conversationKey &&
+      previous.text === text &&
+      previous.attachments.length === attachments.length &&
+      previous.attachments.every(
+        (item, index) =>
+          item.clientId === attachments[index]?.clientId && item.file === attachments[index]?.file,
+      )
+        ? previous.clientMessageId
+        : undefined;
+    uncertainIntentRef.current = retryId ? previous : undefined;
+    let uncertainId: string | undefined = retryId;
     try {
       const sent = await onSend({
         text,
         attachments: attachments.map(({ clientId, file }) => ({ clientId, file })),
+        ...(retryId ? { clientMessageId: retryId } : {}),
+        onUncertain: (clientMessageId) => {
+          uncertainId = clientMessageId;
+          uncertainIntentRef.current = { conversationKey, text, attachments, clientMessageId };
+        },
       });
       if (!sent) {
-        setError(t("mobile.composer.sendFailed"));
+        setError(t(uncertainId ? "mobile.composer.sendUncertain" : "mobile.composer.sendFailed"));
         return;
       }
+      uncertainIntentRef.current = undefined;
       setQueued(true);
       for (const attachment of attachments) {
         URL.revokeObjectURL(attachment.previewUrl);
@@ -130,7 +167,7 @@ export function Composer({
     } catch {
       // Keep both text and image drafts intact so a transient socket/upload
       // failure can be retried without re-selecting anything.
-      setError(t("mobile.composer.sendFailed"));
+      setError(t(uncertainId ? "mobile.composer.sendUncertain" : "mobile.composer.sendFailed"));
     } finally {
       submitInFlightRef.current = false;
       setPending(false);

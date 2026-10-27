@@ -13,7 +13,7 @@ import {
 } from "./panel-apps-service.js";
 import { discoverGitPanelAppsForUi, uninstallPanelAppForUi } from "./panel-app-install-service.js";
 import { createDesktopPanelManagement } from "./panel-app-management.js";
-import { panelChangeFailure, releasePanelForUpdate } from "./panel-update-blockers.js";
+import { panelChangeFailure, panelUpdateApproval } from "./panel-update-blockers.js";
 import type { ClosePanelForUpdate, DescribePanelGuest } from "./panel-update-blockers.js";
 import { registerProjectPanelVersionIpc } from "./project-panel-version-ipc.js";
 import {
@@ -247,11 +247,10 @@ export function registerProjectPanelIpc(deps: {
         )
           throw new Error("panel-apps:installUpdate requires a project and reviewed token");
         const cwd = await requireRendererProjectPath(input.cwd);
-        if (input.force) await releasePanelForUpdate(input.id, cwd, deps.closeForPackageChange);
         return desktopPanelManager(cwd).management.install(
           desktopPanelContext(event, cwd),
           input.reviewToken,
-          { overwrite: true, expectedId: input.id },
+          panelUpdateApproval(input.id, input.force, deps.closeForPackageChange),
         );
       }),
   );

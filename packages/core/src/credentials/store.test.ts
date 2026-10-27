@@ -118,7 +118,12 @@ describe("CredentialStore", () => {
       );
       const masked = localCredentialAccess.listMaskedWithStatus!(cwd, "full");
       expect(masked.readable).toBe(false);
-      expect(masked.credentials).toEqual(store.listMasked("full"));
+      expect(
+        masked.credentials.map(({ approvalIdentity, ...credential }) => {
+          expect(approvalIdentity).toEqual(expect.any(String));
+          return credential;
+        }),
+      ).toEqual(store.listMasked("full"));
       expect(JSON.stringify(masked)).not.toContain("fake-readable-token");
       expect(readFileSync(corruptPath, "utf8")).toBe(corruptContents);
     },
@@ -398,7 +403,12 @@ describe("CredentialStore", () => {
 
     const masked = store.listMasked();
     expect(masked).toHaveLength(5);
-    expect(masked).toEqual(localCredentialAccess.listMasked(cwd, "full"));
+    expect(masked).toEqual(
+      localCredentialAccess.listMasked(cwd, "full").map(({ approvalIdentity, ...credential }) => {
+        expect(approvalIdentity).toEqual(expect.any(String));
+        return credential;
+      }),
+    );
     for (const credential of masked.filter((entry) => entry.id.startsWith("unreadable-"))) {
       expect(credential.hasSecret).toBe(false);
       expect(credential.secretHint).toBeUndefined();

@@ -96,18 +96,29 @@ export class PanelExecutionGate {
   async mutate<T>(
     matches: (scope: PanelExecutionScope) => boolean,
     work: () => Promise<T>,
+    /** Trusted Host preparation that validates a review before draining existing work. */
+    drain?: () => Promise<void>,
   ): Promise<T> {
     if (this.mutations.size)
       throw new PanelExecutionBusyError("另一个面板修改正在进行，请稍后重试。");
     // No await between the snapshot and installing the admission barrier.
     const blockers = this.blockers(matches);
-    if (blockers.length)
+    if (blockers.length && !drain)
       throw new PanelExecutionBusyError(
         "面板还有正在提交、排队或运行的任务，请结束后再修改。",
         blockers,
       );
     this.mutations.add(matches);
     try {
+      if (drain) {
+        await drain();
+        const remaining = this.blockers(matches);
+        if (remaining.length)
+          throw new PanelExecutionBusyError(
+            "面板还有正在提交、排队或运行的任务，请结束后再修改。",
+            remaining,
+          );
+      }
       return await work();
     } finally {
       this.mutations.delete(matches);

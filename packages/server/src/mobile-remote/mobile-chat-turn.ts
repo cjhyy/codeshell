@@ -42,7 +42,8 @@ export type DispatchMobileChatTurnResult =
       metas: InputAttachmentMeta[];
       summaries: MobileAttachmentSummary[];
     }
-  | { ok: false; message: string };
+  | { ok: false; message: string; uncertain?: false }
+  | { ok: false; message: string; uncertain: true; clientMessageId: string };
 
 async function settleClaims(
   uploads: ChatTurnUploads,
@@ -115,11 +116,26 @@ export async function dispatchMobileChatTurn(
       ? await input.submit(request)
       : await injectMobileRunAndAwaitAcceptance(input.bridge, request, input.meta);
   } catch {
-    acceptance = { ok: false, message: "The selected runtime rejected the submission" };
+    acceptance = {
+      ok: false,
+      uncertain: true,
+      message: "The selected runtime did not confirm the submission",
+    };
   }
   if (!acceptance.ok) {
+    // Worker input refers to the canonical staged files, not these temporary
+    // upload spools. Keep the staged files for a possibly accepted run and
+    // release only the claims so the same intent can retry its attachments.
+    // A late acceptance may never be observed, so uncertain files also need
+    // sent retention rather than expiring as abandoned drafts after one day.
+    if (acceptance.uncertain)
+      await (input.markSent ?? markAttachmentsSent)(cwd, input.sessionId, materialized.metas).catch(
+        () => undefined,
+      );
     await settleClaims(input.uploads, input.deviceId, materialized.claims, "release");
-    return { ok: false, message: acceptance.message };
+    return acceptance.uncertain
+      ? { ok: false, message: acceptance.message, uncertain: true, clientMessageId }
+      : { ok: false, message: acceptance.message };
   }
 
   await (input.markSent ?? markAttachmentsSent)(cwd, input.sessionId, materialized.metas).catch(

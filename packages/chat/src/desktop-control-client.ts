@@ -142,6 +142,7 @@ export class DesktopControlClient {
     senderId: string;
     messageId?: string;
     text: string;
+    hasAttachments?: boolean;
     isDirectMessage: boolean;
   }): Promise<BoundSessionDisposition> {
     await this.ensureDesktopAvailable();

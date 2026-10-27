@@ -68,6 +68,7 @@ export const mobile = {
         tooManyImages: "每条消息最多发送 4 张图片",
         unsupportedImage: "不支持此图片格式",
         sendFailed: "图片发送失败，请重试",
+        sendUncertain: "无法确认消息是否已送达。直接重试会使用同一消息标识，避免重复执行。",
       },
       connection: {
         connectingTitle: "正在连接…",
@@ -236,6 +237,8 @@ export const mobile = {
         tooManyImages: "Up to 4 images can be sent per message",
         unsupportedImage: "This image format is not supported",
         sendFailed: "Could not send images; try again",
+        sendUncertain:
+          "Delivery is uncertain. Retrying unchanged input uses the same message ID to avoid duplicate execution.",
       },
       connection: {
         connectingTitle: "Connecting…",

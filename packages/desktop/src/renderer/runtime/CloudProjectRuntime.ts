@@ -532,7 +532,9 @@ export class CloudProjectRuntime {
   private async loadSession(id: string): Promise<void> {
     const connection = this.connection;
     if (!connection || this.value.status !== "connected") return;
-    const selection = ++this.selectionGeneration;
+    // Reloading this Session does not change the owner of an in-flight upload.
+    // The load object below independently retires older history requests.
+    const selection = this.selectionGeneration;
     const load = {
       id,
       events: [] as CloudStreamPayload[],

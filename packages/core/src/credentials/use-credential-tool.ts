@@ -191,7 +191,7 @@ export async function useCredentialTool(
     ? (q, opts) => ctx.askUser!(q, opts)
     : undefined;
   const decision = await credentialUseGate(
-    { id: cred.id, label: cred.label, purpose },
+    { id: cred.id, label: cred.label, purpose, approvalIdentity: cred.approvalIdentity },
     {
       autoApprove: readAutoApprove(cwd, scope),
       credentialAutoUse: cred.autoUseByAI === true,
@@ -207,13 +207,27 @@ export async function useCredentialTool(
     return json({ kind: "error", error: msg });
   }
 
+  ctx?.signal?.throwIfAborted();
+  if (
+    cred.approvalIdentity &&
+    access.resolveMeta(cwd, id, scope)?.approvalIdentity !== cred.approvalIdentity
+  ) {
+    return json({ kind: "error", error: "凭证在审批后发生变化，请重新取用并审批。" });
+  }
+
   // token/link → 直接返回值
   if (cred.type === "token" || cred.type === "link") {
     if (!cred.hasSecret || !access.resolveValue) {
       return json({ kind: "error", error: `凭证「${cred.label}」没有可用的值。` });
     }
     try {
-      const value = await access.resolveValue({ cwd, id: cred.id, scope, purpose: "use" });
+      const value = await access.resolveValue({
+        cwd,
+        id: cred.id,
+        scope,
+        purpose: "use",
+        expectedApprovalIdentity: cred.approvalIdentity,
+      });
       return json({ kind: "value", value });
     } catch {
       return json({ kind: "error", error: `凭证「${cred.label}」没有可用的值。` });
@@ -235,10 +249,21 @@ export async function useCredentialTool(
     // Prefix is unchanged so the 30-min startup sweep still matches & cleans them.
     try {
       const materialized = access.materializeCookie
-        ? await access.materializeCookie({ cwd, id: cred.id, scope })
+        ? await access.materializeCookie({
+            cwd,
+            id: cred.id,
+            scope,
+            expectedApprovalIdentity: cred.approvalIdentity,
+          })
         : materializeCookieSecret(
             cred.id,
-            await access.resolveValue!({ cwd, id: cred.id, scope, purpose: "use" }),
+            await access.resolveValue!({
+              cwd,
+              id: cred.id,
+              scope,
+              purpose: "use",
+              expectedApprovalIdentity: cred.approvalIdentity,
+            }),
           );
       return json({
         kind: "cookie",

@@ -65,7 +65,7 @@ export function createDesktopPanelManagement(
     install: (
       context: PanelOperationContext,
       token: string,
-      approval?: { overwrite?: boolean; expectedId?: string },
+      approval?: Parameters<typeof management.install>[3],
     ) => management.install(context, token, true, approval),
     async snapshot() {
       return states(await management.snapshot());

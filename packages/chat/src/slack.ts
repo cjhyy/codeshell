@@ -65,11 +65,9 @@ export class SlackAdapter implements ChannelAdapter {
         await ack();
         return;
       }
-      // dispatchSafely so a rejected delivery (e.g. inbox backpressure) never
-      // escapes this SocketMode listener as an unhandled rejection — emit does
-      // not await listeners, so an unhandled rejection would crash the process
-      // and skip the ack below.
-      await dispatchSafely(handler, {
+      // SocketMode does not await listeners. Catch admission errors without
+      // acknowledging them: Slack must be able to retry an unpersisted event.
+      const accepted = await dispatchSafely(handler, {
         channel: this.channel,
         target: event.channel,
         senderId: event.user,
@@ -85,7 +83,7 @@ export class SlackAdapter implements ChannelAdapter {
           : {}),
         ...(attachments.length > 0 ? { attachments } : {}),
       });
-      await ack();
+      if (accepted) await ack();
     };
     const onCommand = async ({ body, ack }: any): Promise<void> => {
       if (
@@ -102,7 +100,7 @@ export class SlackAdapter implements ChannelAdapter {
         .info({ channel: body.channel_id })
         .then(({ channel }) => channel?.is_im === true)
         .catch(() => false);
-      await dispatchSafely(handler, {
+      const accepted = await dispatchSafely(handler, {
         channel: this.channel,
         target: body.channel_id,
         senderId: body.user_id,
@@ -112,7 +110,7 @@ export class SlackAdapter implements ChannelAdapter {
           .join(" "),
         ...(body.trigger_id ? { messageId: String(body.trigger_id) } : {}),
       });
-      await ack();
+      if (accepted) await ack();
     };
     this.socket.on("events_api", onEvent);
     this.socket.on("slash_commands", onCommand);

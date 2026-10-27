@@ -36,18 +36,27 @@ for (const name of ["spawn", "spawnSync", "execFile", "execFileSync"]) {
   const original = children[name];
   children[name] = function (command, ...args) {
     if (
-      name === "execFileSync" &&
+      (name === "execFileSync" || name === "execFile") &&
       command === "/bin/ps" &&
       JSON.stringify(args[0]) === JSON.stringify(["-axo", "pid=,ppid=,lstart="])
     ) {
-      // The parent Electron watchdog needs only process incarnation metadata.
-      // Fix both arguments and environment; other ps modes remain blocked.
-      return original.call(this, "/bin/ps", args[0], {
+      // The parent watchdog uses async observation and sync pre-signal checks.
+      // Fix arguments, options and environment; other ps modes remain blocked.
+      const options = {
         encoding: "utf8",
         timeout: 1_500,
         maxBuffer: 8 * 1024 * 1024,
         env: { HOME: home, PATH: "/usr/bin:/bin", LC_ALL: "C" },
-      });
+      };
+      return name === "execFile"
+        ? original.call(
+            this,
+            "/bin/ps",
+            args[0],
+            options,
+            typeof args[1] === "function" ? args[1] : args[2],
+          )
+        : original.call(this, "/bin/ps", args[0], options);
     }
     const query = ["rev-parse", "--path-format=absolute", "--git-common-dir"];
     if (

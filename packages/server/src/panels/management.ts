@@ -1,4 +1,4 @@
-import { panelExecutionGate } from "./execution-gate.js";
+import { panelExecutionGate, type PanelExecutionScope } from "./execution-gate.js";
 import { panelPackageMutationMatches, type PanelPackageMutation } from "./package-mutation.js";
 import { createHash, randomBytes } from "node:crypto";
 import { lstatSync, mkdirSync, statSync } from "node:fs";
@@ -668,6 +668,10 @@ export function createPanelManagement(options: PanelManagementOptions) {
     context: PanelOperationContext,
     change: Pick<PanelPackageMutation, "appId" | "kind">,
     work: (guard: () => Promise<void>) => Promise<T>,
+    prepare?: (
+      guard: () => Promise<void>,
+      matches: (scope: PanelExecutionScope) => boolean,
+    ) => Promise<void>,
   ): Promise<T> {
     const expected = generation(context.ownerId);
     const guard = () => assertAuthorized(context, expected);
@@ -677,9 +681,14 @@ export function createPanelManagement(options: PanelManagementOptions) {
         await guard();
         return work(guard);
       };
+      const matches = panelPackageMutationMatches({
+        ...change,
+        projectPath: options.bindingCwd ?? options.cwd,
+      });
       return panelExecutionGate.mutate(
-        panelPackageMutationMatches({ ...change, projectPath: options.bindingCwd ?? options.cwd }),
+        matches,
         () => (options.withMutation ? options.withMutation(write) : write()),
+        prepare ? () => prepare(guard, matches) : undefined,
       );
     };
     const next = catalogMutation.then(run, run);
@@ -931,7 +940,15 @@ export function createPanelManagement(options: PanelManagementOptions) {
       context: PanelOperationContext,
       token: unknown,
       bind = true,
-      approval?: { overwrite?: boolean; expectedId?: string },
+      approval?: {
+        overwrite?: boolean;
+        expectedId?: string;
+        /** Trusted Host callback, never supplied by an HTTP request body. */
+        releaseExecutions?: (
+          appId: string,
+          matches: (scope: PanelExecutionScope) => boolean,
+        ) => Promise<void>;
+      },
     ) {
       if (typeof token !== "string" || typeof bind !== "boolean") invalid();
       prune();
@@ -942,36 +959,46 @@ export function createPanelManagement(options: PanelManagementOptions) {
         throw new PanelManagementError(403, "review_owner", "请在当前设备重新预览这个来源。");
       await assertAuthorized(context, held.generation);
       if (approval?.expectedId && approval.expectedId !== held.public.preview.id) invalid();
+      if (approval?.releaseExecutions && held.public.kind !== "update") invalid();
       if (approval && held.public.kind === "update" && !approval.overwrite)
         throw new PanelManagementError(
           409,
           "already_installed",
           "这个面板已经安装，请确认项目更新。",
         );
+      let admitted = false;
+      const assertReviewLease = () => {
+        if (!admitted && (reviews.get(token) !== held || held.public.expiresAt <= now()))
+          throw new PanelManagementError(409, "review_expired", "预览已失效，请重新检查来源。");
+      };
+      const validateReview = async (guard: () => Promise<void>) => {
+        await assertAuthorized(context, held.generation);
+        assertReviewLease();
+        const id = held.public.preview.id;
+        if (held.public.kind === "update") {
+          const current = await selectedApp(id);
+          if (
+            revision(current.app, current.digest) !== held.public.expectedRevision ||
+            (await catalogState(id)) !== held.catalogState
+          )
+            throw new PanelManagementError(409, "conflict", "面板已改变，请重新检查更新。");
+        } else if ((await listInstalledPanelApps()).some((item) => item.id === id))
+          throw new PanelManagementError(
+            409,
+            "already_installed",
+            "这个面板已经安装，请检查更新。",
+          );
+        if (projectState(id) !== held.projectState)
+          throw new PanelManagementError(409, "conflict", "项目面板配置已改变，请重新预览。");
+        await guard();
+        assertReviewLease();
+      };
       return mutate(
         context,
         { appId: held.public.preview.id, kind: held.public.kind },
         async (guard) => {
-          await assertAuthorized(context, held.generation);
-          if (reviews.get(token) !== held || held.public.expiresAt <= now())
-            throw new PanelManagementError(409, "review_expired", "预览已失效，请重新检查来源。");
+          await validateReview(guard);
           const id = held.public.preview.id;
-          if (held.public.kind === "update") {
-            const current = await selectedApp(id);
-            if (
-              revision(current.app, current.digest) !== held.public.expectedRevision ||
-              (await catalogState(id)) !== held.catalogState
-            )
-              throw new PanelManagementError(409, "conflict", "面板已改变，请重新检查更新。");
-          } else if ((await listInstalledPanelApps()).some((item) => item.id === id))
-            throw new PanelManagementError(
-              409,
-              "already_installed",
-              "这个面板已经安装，请检查更新。",
-            );
-          if (projectState(id) !== held.projectState)
-            throw new PanelManagementError(409, "conflict", "项目面板配置已改变，请重新预览。");
-          await guard();
           const installed = await installReviewedLocalPanelApp(
             held.source,
             held.digest,
@@ -1012,6 +1039,24 @@ export function createPanelManagement(options: PanelManagementOptions) {
           await options.onChanged?.(id, held.public.kind);
           return { id, packageDigest: installed.packageDigest };
         },
+        approval?.releaseExecutions
+          ? async (guard, matches) => {
+              await validateReview(guard);
+              // A local directory/ZIP may have changed since preview. Check its
+              // reviewed bytes before cancelling work, then recheck mutable
+              // project/catalog authority after the source read.
+              const preview = await previewLocalPanelApp(held.source);
+              if (preview.id !== held.public.preview.id || preview.reviewToken !== held.digest)
+                throw new PanelManagementError(409, "conflict", "来源已改变，请重新检查更新。");
+              await validateReview(guard);
+              // This admitted operation owns the review while its holders exit.
+              // TTL expiry during cancellation must not invalidate that consent;
+              // owner revocation and package/project changes are still checked.
+              admitted = true;
+              reviews.delete(token);
+              await approval.releaseExecutions!(held.public.preview.id, matches);
+            }
+          : undefined,
       );
     },
     async binding(

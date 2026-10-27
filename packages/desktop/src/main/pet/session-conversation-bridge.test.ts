@@ -131,6 +131,20 @@ describe("unbound conversations", () => {
 });
 
 describe("delivering into a Session", () => {
+  test.each(["", "请分析这张图片"])(
+    "attachments with caption %j are rejected before running or queueing a turn",
+    async (text) => {
+      for (const running of [false, true]) {
+        const { bridge, routes, calls } = harness({ isRunning: async () => running });
+        await bind(routes);
+        const result = await bridge.accept({ ...INBOUND, text, hasAttachments: true });
+        expect(result).toMatchObject({ kind: "suspended" });
+        expect("text" in result && result.text).toContain("这条消息未发送");
+        expect(calls).toEqual([]);
+      }
+    },
+  );
+
   test("an idle Session starts a turn", async () => {
     const { bridge, routes, calls } = harness();
     await bind(routes);

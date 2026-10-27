@@ -2,8 +2,69 @@ import { describe, expect, test } from "bun:test";
 import { ChatGateway } from "./chat-gateway.js";
 import type { ChannelMessage } from "./channel.js";
 import { SlackAdapter } from "./slack.js";
+import { DeliveryBackpressureError } from "./delivery-queue.js";
 
 describe("Slack adapter", () => {
+  for (const kind of ["event", "command"] as const) {
+    for (const error of [
+      new DeliveryBackpressureError(1),
+      new Error("ENOSPC: inbox persistence failed"),
+    ]) {
+      test(`${kind} leaves a rejected delivery unacknowledged and accepts its retry: ${error.message}`, async () => {
+        const { adapter, emit, emitCommand, stop } = await startSlack();
+        let attempts = 0;
+        let acknowledgements = 0;
+        adapter.onMessage = async () => {
+          if (++attempts === 1) throw error;
+        };
+        const ack = async () => {
+          acknowledgements++;
+        };
+        const deliver = () =>
+          kind === "event"
+            ? emit({ text: "persist me", client_msg_id: "retry-id" }, ack)
+            : emitCommand(
+                { command: "/codeshell", text: "persist me", trigger_id: "retry-id" },
+                ack,
+              );
+        try {
+          await deliver();
+          expect(acknowledgements).toBe(0);
+          await deliver();
+          expect(attempts).toBe(2);
+          expect(acknowledgements).toBe(1);
+        } finally {
+          await stop();
+        }
+      });
+    }
+    test(`${kind} waits for durable admission before acknowledgement`, async () => {
+      const { adapter, emit, emitCommand, stop } = await startSlack();
+      let release!: () => void;
+      const admitted = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      adapter.onMessage = () => admitted;
+      let acknowledged = false;
+      const ack = async () => {
+        acknowledged = true;
+      };
+      const delivery =
+        kind === "event"
+          ? emit({ text: "pending" }, ack)
+          : emitCommand({ command: "/codeshell", text: "pending" }, ack);
+      try {
+        await Promise.resolve();
+        expect(acknowledged).toBe(false);
+        release();
+        await delivery;
+        expect(acknowledged).toBe(true);
+      } finally {
+        release();
+        await stop();
+      }
+    });
+  }
   test("keeps thread identity so replies stay in the originating thread", async () => {
     const { adapter, emit, posted, stop } = await startSlack();
     const seen: ChannelMessage[] = [];
@@ -62,17 +123,23 @@ async function startSlack() {
     posted.push(payload);
     return { ok: true };
   };
+  (adapter as any).web.conversations.info = async () => ({ channel: { is_im: true } });
   const abort = new AbortController();
   const running = adapter.run((message) => adapter.onMessage!(message), abort.signal);
   await Promise.resolve();
   return {
     adapter,
     posted,
-    emit: (event: Record<string, unknown>) =>
+    emit: (event: Record<string, unknown>, ack: () => Promise<void> = async () => undefined) =>
       listeners.get("events_api")!({
         event: { type: "message", channel: "C1", user: "U1", channel_type: "channel", ...event },
-        ack: async () => undefined,
+        ack,
       }),
+    emitCommand: (
+      body: Record<string, unknown>,
+      ack: () => Promise<void> = async () => undefined,
+    ) =>
+      listeners.get("slash_commands")!({ body: { channel_id: "C1", user_id: "U1", ...body }, ack }),
     stop: async () => {
       abort.abort();
       await running;

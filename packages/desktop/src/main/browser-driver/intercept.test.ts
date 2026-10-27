@@ -179,6 +179,17 @@ describe("parseCredentialActionLine", () => {
     });
   });
 
+  test("preserves the exact credential identity approved in the worker", () => {
+    const parsed = parseCredentialActionLine(
+      credActionLine({
+        action: "injectCookie",
+        credentialId: "same",
+        expectedApprovalIdentity: "opaque-host-identity",
+      }),
+    );
+    expect(parsed?.expectedApprovalIdentity).toBe("opaque-host-identity");
+  });
+
   test("parses credentialScope for project-scoped injection", () => {
     const p = parseCredentialActionLine(
       credActionLine({

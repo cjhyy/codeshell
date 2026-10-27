@@ -144,7 +144,7 @@ export async function injectCredentialTool(
     ? (q, opts) => ctx.askUser!(q, opts)
     : undefined;
   const decision = await credentialUseGate(
-    { id: cred.id, label: cred.label, purpose },
+    { id: cred.id, label: cred.label, purpose, approvalIdentity: cred.approvalIdentity },
     {
       autoApprove: readAutoApprove(cwd, scope),
       credentialAutoUse: cred.autoInjectByAI === true,
@@ -160,8 +160,16 @@ export async function injectCredentialTool(
     return json({ kind: "error", error: msg });
   }
 
+  ctx?.signal?.throwIfAborted();
+  if (
+    cred.approvalIdentity &&
+    getCredentialAccess().resolveMeta(cwd, id, scope)?.approvalIdentity !== cred.approvalIdentity
+  ) {
+    return json({ kind: "error", error: "凭证在审批后发生变化，请重新取用并审批。" });
+  }
+
   // 跨进程触发宿主注入。
-  const res = await ctx.injectCredentialToBrowser(cred.id, scope);
+  const res = await ctx.injectCredentialToBrowser(cred.id, scope, cred.approvalIdentity);
   if (!res.ok) {
     return json({ kind: "error", error: res.error ?? "注入浏览器失败(宿主未返回成功)。" });
   }
