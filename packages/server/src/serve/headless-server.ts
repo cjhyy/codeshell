@@ -772,6 +772,10 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   };
 
   const handleHttp = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    if (closing) {
+      hubJson(res, 503, { error: "server is closing" });
+      return;
+    }
     const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
     res.setHeader("x-content-type-options", "nosniff");
     res.setHeader("referrer-policy", "no-referrer");
@@ -792,21 +796,18 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       return;
     }
     if (hubAuth) {
-      if (await links?.handlePublic(req, res)) return;
-      if (await panels?.handleAssets(req, res)) return;
-      if (await hubAuth.handle(req, res)) return;
+      if ((await links?.handlePublic(req, res)) || closing || res.destroyed) return;
+      if ((await panels?.handleAssets(req, res)) || closing || res.destroyed) return;
+      if ((await hubAuth.handle(req, res)) || closing || res.destroyed) return;
       if (pathname.startsWith("/api/")) {
         const session = await hubAuth.authenticate(req);
+        if (closing || res.destroyed) return;
         if (!session) {
           hubJson(res, 401, { error: "login required" });
           return;
         }
         if (!hubAuth.isOriginAllowed(req)) {
           hubJson(res, 403, { error: "origin rejected" });
-          return;
-        }
-        if (closing) {
-          hubJson(res, 503, { error: "server is closing" });
           return;
         }
         responses.track(session.id, res);
@@ -856,11 +857,27 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   const server: Server = createServer((req, res) => {
     void handleHttp(req, res).catch(() => hubJson(res, 500, { error: "server request failed" }));
   });
+  // HTTP closeAllConnections excludes an upgrade awaiting authentication.
+  // Own accepted sockets until close or a completed transfer to WebSocket.
+  const connections = new Set<Duplex>();
+  server.on("connection", (socket) => {
+    connections.add(socket);
+    socket.once("close", () => connections.delete(socket));
+    if (closing) socket.destroy();
+  });
 
   const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 });
   const upgrade = async (req: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> => {
+    if (closing || socket.destroyed) {
+      socket.destroy();
+      return;
+    }
     const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
     const session = hubAuth ? await hubAuth.authenticate(req) : undefined;
+    if (closing || socket.destroyed) {
+      socket.destroy();
+      return;
+    }
     const allowed = hubAuth
       ? !!session && hubAuth.isOriginAllowed(req)
       : passcode.allows(req as never);
@@ -876,6 +893,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     }
     const tabId = nextTabId++;
     wss.handleUpgrade(req, socket, head, (ws) => {
+      connections.delete(socket);
       tabs.add(ws);
       if (session) tabAuth.set(ws, { sessionId: session.id, request: req });
       const holderId = String(tabId);
@@ -907,7 +925,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           ws.close(1009, "payload too large");
           return;
         }
-        if (closing) {
+        if (closing || ws.readyState !== ws.OPEN) {
           ws.close(1012, "server stopping");
           return;
         }
@@ -1136,8 +1154,10 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
               );
               return;
             }
-            if (ws.readyState !== ws.OPEN || !(await hubAuth.authenticate(req))) return;
+            if (closing || ws.readyState !== ws.OPEN) return;
+            if (!(await hubAuth.authenticate(req))) return;
           }
+          if (closing || ws.readyState !== ws.OPEN) return;
           // Recheck after asynchronous staging/authentication; other tabs may
           // have filled the runtime's capacity while this request was suspended.
           if (hubAuth && parsed.method === "agent/run" && runningSessions.size >= 64) {
@@ -1289,6 +1309,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           const workerLine = JSON.stringify(workerMessage);
           // Spawn-on-first-frame (idempotent): the browser's first request wakes
           // the worker, mirroring the renderer's spawn-on-agent/run semantics.
+          if (closing || ws.readyState !== ws.OPEN) return;
           bridge.ensureWorker(opts.cwd);
           if (!bridge.canSend()) {
             workerUnavailable("agent worker is unavailable");
@@ -1340,6 +1361,57 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   server.on("upgrade", (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     void upgrade(req, socket, head).catch(() => socket.destroy());
   });
+
+  let closePromise: Promise<void> | undefined;
+  const close = (): Promise<void> => {
+    if (closePromise) return closePromise;
+    closing = true;
+    closePromise = Promise.resolve().then(async () => {
+      // Stop admission before any asynchronous resource/worker cleanup. A
+      // reconnect during a slow worker exit must not prolong server shutdown.
+      const webSocketsClosed = new Promise<void>((resolve) => wss.close(() => resolve()));
+      // Finish WebSocket teardown before the HTTP close callback, including on
+      // Bun where closing HTTP before its upgraded sockets can strand it.
+      const httpClosed = webSocketsClosed.then(
+        () =>
+          new Promise<void>((resolve) => {
+            server.closeAllConnections?.();
+            server.close(() => resolve());
+          }),
+      );
+      for (const tab of tabs) tab.terminate();
+      for (const socket of connections) socket.destroy();
+      tabs.clear();
+      responses.clear();
+      clearInterval(pendingResponseReaper);
+      if (authReaper) clearInterval(authReaper);
+
+      // A failed cleanup must not leave the remaining services or worker alive.
+      const errors: unknown[] = [];
+      const clean = async (action: () => void | Promise<void>): Promise<void> => {
+        try {
+          await action();
+        } catch (error) {
+          errors.push(error);
+        }
+      };
+      await clean(() => panelAutomations?.close());
+      await clean(() => {
+        hostRuntime.stop();
+      });
+      await clean(() => uploads?.close());
+      await clean(() => skills?.close());
+      await clean(() => mcp?.close());
+      await clean(() => configuration?.close());
+      await clean(() => links?.close());
+      await clean(() => panels?.close());
+      await clean(() => files?.close());
+      await clean(() => bridge.stopAndWait());
+      await Promise.all([httpClosed, webSocketsClosed]);
+      if (errors.length) throw new AggregateError(errors, "Headless server shutdown failed");
+    });
+    return closePromise;
+  };
 
   try {
     if (hubAuth) {
@@ -1419,22 +1491,17 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       });
     });
   } catch (error) {
-    closing = true;
-    responses.clear();
-    await panelAutomations?.close();
-    clearInterval(pendingResponseReaper);
-    hostRuntime.stop();
-    if (authReaper) clearInterval(authReaper);
-    await uploads?.close();
-    await skills?.close();
-    await mcp?.close();
-    configuration?.close();
-    links?.close();
-    await panels?.close();
-    files?.close();
-    await bridge.stopAndWait();
-    wss.close();
-    server.close();
+    const failures = [error];
+    try {
+      await close();
+    } catch (cleanupError) {
+      failures.push(cleanupError);
+    }
+    if (failures.length > 1) {
+      throw new AggregateError(failures, "Headless server startup and shutdown failed", {
+        cause: error,
+      });
+    }
     throw error;
   }
   const address = server.address();
@@ -1452,37 +1519,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     bridge,
     tabCount: () => tabs.size,
     pendingResponseCount: () => pendingWorkerResponses.size,
-    close: async () => {
-      closing = true;
-      responses.clear();
-      await panelAutomations?.close();
-      clearInterval(pendingResponseReaper);
-      if (authReaper) clearInterval(authReaper);
-      await uploads?.close();
-      await skills?.close();
-      await mcp?.close();
-      configuration?.close();
-      links?.close();
-      await panels?.close();
-      files?.close();
-      for (const tab of tabs) {
-        try {
-          tab.terminate();
-        } catch {
-          /* ignore */
-        }
-      }
-      tabs.clear();
-      await bridge.stopAndWait();
-      await new Promise<void>((resolve) => {
-        wss.close(() => {
-          server.close(() => resolve());
-        });
-        // server.close() alone waits out keep-alive HTTP sockets forever;
-        // drop them so shutdown is prompt.
-        server.closeAllConnections?.();
-      });
-    },
+    close,
   };
 }
 
