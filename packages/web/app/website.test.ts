@@ -4,6 +4,8 @@ import {
   accountError,
   parseAccountSession,
   parseAccountOverview,
+  validWebsiteProfile,
+  validWebsiteAccount,
 } from "./account-api.js";
 import {
   detectWebsiteCloud,
@@ -31,6 +33,22 @@ const webSession = () => ({
   cloudTarget: { enabled: true, ...target },
 });
 const capability = { ...target, version: 1 as const, mode: "cloud-browser" as const };
+
+test("profile DTOs carry display fields while account authority still requires a valid role", () => {
+  const profile = { id, username: account.username, displayName: account.displayName };
+  expect(validWebsiteProfile(profile)).toBe(true);
+  expect(validWebsiteAccount(profile)).toBe(false);
+  expect(() => parseAccountSession({ ...webSession(), account: profile })).toThrow();
+  expect(() => parseAccountOverview({ ...overview, account: profile }, id)).toThrow();
+  for (const invalid of [
+    { ...profile, id: "invalid" },
+    { ...profile, username: "bad username" },
+    { ...profile, displayName: null },
+    { ...profile, displayName: "" },
+    { ...profile, displayName: "\u0000" },
+  ])
+    expect(validWebsiteProfile(invalid)).toBe(false);
+});
 
 test("account settings and administrator URLs restore the selected page and preserve only public project context", () => {
   for (const section of ["profile", "security", "sessions", "connections"] as const)

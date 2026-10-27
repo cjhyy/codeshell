@@ -2495,6 +2495,15 @@ export function listSessionEntries(
   for (const c of candidates) {
     if (sessions.length >= limit) break;
     try {
+      // The cursor uses candidate metadata only. Older pages must not reopen
+      // every preceding state file before reaching their first eligible row.
+      if (
+        opts?.before &&
+        (c.lastActiveAt > opts.before.lastActiveAt ||
+          (c.lastActiveAt === opts.before.lastActiveAt &&
+            c.dir.localeCompare(opts.before.sessionId) <= 0))
+      )
+        continue;
       const state = storage
         ? parseSessionListState(storage.readState(c.dir, MAX_LIST_STATE_BYTES), c.dir)
         : readSessionListState(c.stateFile, c.dir);
@@ -2504,13 +2513,6 @@ export function listSessionEntries(
       if (opts?.cwd !== undefined && resolve(state.cwd) !== resolve(opts.cwd)) continue;
       if (opts?.archived !== undefined && Boolean(state.archivedAt) !== opts.archived) continue;
       if (opts?.rootsOnly && state.parentSessionId) continue;
-      if (
-        opts?.before &&
-        (c.lastActiveAt > opts.before.lastActiveAt ||
-          (c.lastActiveAt === opts.before.lastActiveAt &&
-            c.dir.localeCompare(opts.before.sessionId) <= 0))
-      )
-        continue;
       const preview = c.transcriptExists ? readLastUserMessage(c.transcriptFile) : undefined;
       const entry = { ...state, preview, lastActiveAt: c.lastActiveAt };
       if (opts?.filter && !opts.filter(entry)) continue;

@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, utimesSync, writeFileSync, symlinkSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SessionManager } from "./session-manager.js";
+import { listSessionEntries, SessionManager } from "./session-manager.js";
 
 const roots: string[] = [];
 afterEach(() => {
@@ -56,6 +56,46 @@ test("stable activity cursor does not repeat tied sessions and supports host tit
   expect(first).toHaveLength(2);
   expect(second).toHaveLength(1);
   expect(new Set([...first, ...second].map((entry) => entry.sessionId)).size).toBe(3);
+});
+
+test("deep pages read only remaining candidates while preserving workspace and visibility filters", () => {
+  const root = mkdtempSync(join(tmpdir(), "cs-session-list-deep-page-"));
+  roots.push(root);
+  const cwd = join(root, "workspace");
+  const candidates = Array.from({ length: 1_000 }, (_, index) => ({
+    dir: `session-${String(index).padStart(4, "0")}`,
+    lastActiveAt: 2_000,
+    transcriptExists: false,
+  }));
+  const reads: string[] = [];
+  const page = listSessionEntries(
+    root,
+    2,
+    {
+      cwd,
+      archived: false,
+      rootsOnly: true,
+      before: { lastActiveAt: 2_000, sessionId: "session-0899" },
+      filter: (entry) => entry.title === "match",
+    },
+    {
+      candidates: () => candidates,
+      readState: (sessionId) => {
+        reads.push(sessionId);
+        const index = Number(sessionId.slice(-4));
+        if (index === 903) return "invalid state";
+        return JSON.stringify({
+          sessionId,
+          cwd: index === 900 ? join(root, "other-workspace") : cwd,
+          ...(index === 901 ? { archivedAt: 1 } : {}),
+          ...(index === 902 ? { parentSessionId: "parent" } : {}),
+          title: index === 904 ? "hidden" : "match",
+        });
+      },
+    },
+  );
+  expect(page.map((entry) => entry.sessionId)).toEqual(["session-0905", "session-0906"]);
+  expect(reads).toEqual(candidates.slice(900, 907).map((candidate) => candidate.dir));
 });
 
 test("listing rejects linked, oversized and mismatched session metadata before returning private previews", () => {

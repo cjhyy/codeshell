@@ -5,7 +5,9 @@ import {
   parseAccountOverview,
   type AccountOverview,
   type WebsiteAccount,
+  type WebsiteProfile,
   validWebsiteAccount,
+  validWebsiteProfile,
 } from "./account-api.js";
 import type { WebsiteRoute } from "./website-routes.js";
 
@@ -112,6 +114,9 @@ function ProfileSettings({ profile }: { profile: WebsiteAccount }) {
   const account = useAccountSession();
   const [displayName, setDisplayName] = React.useState(profile.displayName);
   const [username, setUsername] = React.useState(profile.username);
+  // The overview prop is the page's initial snapshot. Each successful save
+  // becomes the baseline for the next edit, including reverting to old values.
+  const [savedProfile, setSavedProfile] = React.useState<WebsiteProfile>(profile);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const [status, setStatus] = React.useState("");
@@ -139,17 +144,24 @@ function ProfileSettings({ profile }: { profile: WebsiteAccount }) {
       return;
     }
     const patch = {
-      ...(nickname === profile.displayName ? {} : { displayName: nickname }),
-      ...(name === profile.username ? {} : { username: name }),
+      ...(nickname === savedProfile.displayName ? {} : { displayName: nickname }),
+      ...(name === savedProfile.username ? {} : { username: name }),
     };
     if (busy || !Object.keys(patch).length) return;
     setBusy(true);
     setError("");
     setStatus("");
     try {
-      const value = await account.request<{ account: WebsiteAccount }>("/profile", "PATCH", patch);
-      if (value.account?.id !== profile.id)
+      const value = await account.request<{ account: WebsiteProfile }>("/profile", "PATCH", patch);
+      if (!live.current) return;
+      if (!validWebsiteProfile(value?.account) || value.account.id !== profile.id)
         throw new AccountWebError("账号资料结果无效，请刷新后重试。");
+      // Profile responses contain display fields only; role remains owned by
+      // the authoritative session and overview returned during restore.
+      const { id, username, displayName } = value.account;
+      setSavedProfile({ id, username, displayName });
+      setDisplayName(value.account.displayName);
+      setUsername(value.account.username);
       await account.restore();
       if (live.current) setStatus("账号资料已保存。");
     } catch (cause) {
