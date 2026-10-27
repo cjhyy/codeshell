@@ -1,7 +1,7 @@
-import { createReadStream, existsSync, realpathSync, statSync } from "node:fs";
+import { existsSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, normalize, relative, resolve, sep, extname } from "node:path";
 import { request as httpRequest, type IncomingMessage, type ServerResponse } from "node:http";
-import { contentTypeFor } from "../static-files.js";
+import { contentTypeFor, streamStaticFile } from "../static-files.js";
 
 /**
  * Serves the built mobile web app (out/mobile) as static assets for the
@@ -64,12 +64,11 @@ function isContained(root: string, target: string): boolean {
  *  can see through it. Guarding that would need inode/device policy, and anyone
  *  able to hardlink into the served root can already write files there.
  *
- *  The returned path is the REQUESTED one, not the realpath: callers stream it
- *  directly and the resolved-name contract is relied on elsewhere (on macOS the
- *  realpath of a /var root is /private/var, which would change every result).
- *  That leaves the same synchronous stat-then-read window this module always
- *  had; closing it properly needs an open-then-fstat rework of both callers,
- *  which is out of scope for this fix. */
+ *  The returned path is the REQUESTED one, not the realpath: the resolved-name
+ *  contract is relied on elsewhere (on macOS the realpath of a /var root is
+ *  /private/var, which would change every result). This is only a routing check;
+ *  both HTTP callers open and revalidate the selected file through
+ *  streamStaticFile before returning bytes. */
 export function resolveSafe(root: string, subPath: string): string | null {
   const rootResolved = resolve(root);
   const rel = normalize(subPath || "index.html");
@@ -79,10 +78,10 @@ export function resolveSafe(root: string, subPath: string): string | null {
   }
   const full = resolve(join(rootResolved, rel));
   if (!isContained(rootResolved, full)) return null;
-  if (!existsSync(full) || !statSync(full).isFile()) return null;
   // realpathSync throws on a dangling link or a race-deleted file; a missing
   // target is a 404 through the normal contract, never a 500.
   try {
+    if (!existsSync(full) || !statSync(full).isFile()) return null;
     if (!isContained(realpathSync(rootResolved), realpathSync(full))) return null;
   } catch {
     return null;
@@ -155,15 +154,15 @@ export function serveMobile(
   // stale index.html would reference deleted assets → 404 → blank page until a
   // hard refresh.
   const isHtml = type.startsWith("text/html");
-  res.writeHead(200, {
-    "content-type": type,
-    "cache-control": isHtml
+  void streamStaticFile(req, res, {
+    rootDir: opts.rootDir,
+    filePath: file,
+    cacheControl: isHtml
       ? "no-store"
       : sub.startsWith("assets/")
         ? "public, max-age=31536000, immutable"
         : "no-cache",
   });
-  createReadStream(file).pipe(res);
 }
 
 /** Dev-only: forward the request to the mobile vite dev server. The mobile vite

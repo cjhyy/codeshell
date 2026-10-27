@@ -344,7 +344,20 @@ async function matrix(page, lang) {
       if (status === "connected-error" || status === "disconnected") {
         assert.equal(await region.getByRole("alert").textContent(), failure);
         await region.focus();
+        // With only 2px of overflow, the 1px endpoint tolerance can pass
+        // halfway through End's native scroll animation. Wait for scrollend
+        // before sending a wheel event so the keyboard scroll cannot overtake it.
+        const willScroll = await region.evaluate((node) => {
+          const willScroll = node.scrollTop < node.scrollHeight - node.clientHeight - 1;
+          window.metadataScrollEnded = !willScroll;
+          if (willScroll)
+            node.addEventListener("scrollend", () => (window.metadataScrollEnded = true), {
+              once: true,
+            });
+          return willScroll;
+        });
         await page.keyboard.press("End");
+        if (willScroll) await page.waitForFunction(() => window.metadataScrollEnded);
         await page.waitForFunction(() => {
           const node = document.querySelector('[data-runtime="cloud"] > [role="region"]');
           return node.scrollTop >= node.scrollHeight - node.clientHeight - 1;

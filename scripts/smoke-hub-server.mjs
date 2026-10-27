@@ -2,13 +2,14 @@
  * Native Node deployment check against the built CLI and the real Core worker.
  * The only model endpoint is an in-process loopback fixture. All settings,
  * credentials, sessions and tool writes are confined to a fresh temporary tree.
- * Run `bun run build:server` first, then `node scripts/smoke-hub-server.mjs`.
+ * Run `bun run build:server` first, then `bun run test:server-smoke`.
  */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { once } from "node:events";
-import { createServer } from "node:http";
-import { createRequire } from "node:module";
+import http, { createServer } from "node:http";
+import { createRequire, syncBuiltinESMExports } from "node:module";
 import {
   existsSync,
   mkdirSync,
@@ -21,8 +22,18 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CONTRACTS } from "../packages/core/dist/index.js";
-import { applyOutputJournalPage } from "../packages/web/dist/index.js";
+import { createBunTestEnvironment } from "./bun-test-completion.mjs";
+import {
+  confinedWorkerEnvironment,
+  installLocalNetworkGuard,
+} from "./runtime-cost-smoke-isolation.mjs";
+import { stopSmokeProcess } from "./fixtures/hub-smoke-lifecycle.mjs";
+
+assert.ok(
+  process.env.CODE_SHELL_TEST_HOME &&
+    process.env.CODE_SHELL_TEST_HOME === process.env.CODE_SHELL_HOME,
+  "Run through bun run test:server-smoke to isolate the driver before importing Core",
+);
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const entry = join(root, "packages/server/dist/bin/code-shell-serve.js");
@@ -42,6 +53,16 @@ const approvalReply = "The approved write completed.";
 const modelRequests = [];
 const sockets = new Set();
 const processes = new Set();
+const hostPids = [];
+const controlNonce = randomUUID();
+let modelOrigin;
+let serverPort = 0;
+let contracts;
+let driverGuardInstalled = false;
+// ws always passes createConnection, which the shared guard correctly rejects.
+// This private identity requests Node's standard transport through that guard;
+// it never opens a socket or authorizes another custom connection callback.
+const fixtureWebSocketTransport = () => assert.fail("Use the guarded standard HTTP transport");
 let lastLogs = "";
 let lastRpc;
 
@@ -211,31 +232,20 @@ class RpcClient {
 
 async function boot() {
   const needsSetup = !existsSync(join(dataDir, "hub/auth.json"));
-  // Do not inherit user API keys, Node preload hooks, proxy settings or tool configuration.
-  const env = {};
-  for (const key of [
-    "PATH",
-    "Path",
-    "SystemRoot",
-    "COMSPEC",
-    "PATHEXT",
-    "LANG",
-    "LC_ALL",
-    "TMPDIR",
-    "TMP",
-    "TEMP",
-  ]) {
-    if (process.env[key]) env[key] = process.env[key];
-  }
-  Object.assign(env, {
-    HOME: isolatedHome,
-    USERPROFILE: isolatedHome,
-    CODE_SHELL_HOME: join(isolatedHome, ".code-shell"),
-    XDG_CONFIG_HOME: join(isolatedHome, ".config"),
-    XDG_DATA_HOME: join(isolatedHome, ".local/share"),
+  // Only the owned model origin is reachable from the Host and its workers.
+  // The inherited preload runs before either process imports production code.
+  const env = {
+    ...confinedWorkerEnvironment(
+      createBunTestEnvironment(process.env, scratch),
+      isolatedHome,
+      modelOrigin,
+      new URL("./fixtures/hub-smoke-guard.mjs", import.meta.url).href,
+    ),
     NODE_ENV: "production",
     DISABLE_AUTOUPDATER: "1",
-  });
+    CODESHELL_SELF_UPDATE_CHECK: "0",
+    CODESHELL_HUB_SMOKE_CONTROL: controlNonce,
+  };
   const child = spawn(
     process.execPath,
     [
@@ -245,7 +255,7 @@ async function boot() {
       "--host",
       "127.0.0.1",
       "--port",
-      "0",
+      String(serverPort),
       "--cwd",
       workspace,
       "--data-dir",
@@ -254,15 +264,17 @@ async function boot() {
     {
       cwd: root,
       env,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ["ignore", "pipe", "pipe", "ipc"],
       detached: process.platform !== "win32",
     },
   );
   processes.add(child);
+  hostPids.push(child.pid);
   let logs = "";
   const ready = new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("Node Hub startup timed out")), 20_000);
     child.on("error", (error) => {
+      processes.delete(child);
       clearTimeout(timer);
       reject(error);
     });
@@ -284,39 +296,63 @@ async function boot() {
     child.stderr.on("data", receive);
   });
   const server = await ready;
+  // Reuse this exact owned endpoint across restart, without widening the guard
+  // to other loopback ports. Core imports happen only after driver confinement.
+  serverPort = Number(new URL(server.url).port);
+  installLocalNetworkGuard(server.url);
+  if (!driverGuardInstalled) {
+    const guardedRequest = http.request;
+    http.request = function (input, ...args) {
+      const options =
+        input?.createConnection === fixtureWebSocketTransport
+          ? { ...input, createConnection: undefined }
+          : input;
+      return guardedRequest.call(this, options, ...args);
+    };
+    syncBuiltinESMExports();
+    driverGuardInstalled = true;
+  }
+  assert.throws(() => fetch(modelOrigin), /refused a non-fixture request/);
+  assert.throws(() => fetch("https://example.invalid/denied"), /refused a non-fixture request/);
+  assert.throws(
+    () => http.request(server.url, { createConnection: () => {} }),
+    /refused a custom HTTP transport/,
+  );
+  contracts ??= (await import("../packages/core/dist/index.js")).CONTRACTS;
   const health = await (await fetch(`${server.url}/health`)).json();
   assert.deepEqual(
     { status: health.status, mode: health.mode, keys: Object.keys(health).sort() },
     { status: "ok", mode: "hub", keys: ["contracts", "mode", "status"] },
   );
-  assert.deepEqual(health.contracts, JSON.parse(JSON.stringify(CONTRACTS)));
+  assert.deepEqual(health.contracts, JSON.parse(JSON.stringify(contracts)));
   return server;
 }
 
-async function stop(child) {
-  if (!processes.has(child)) return;
-  const exited = once(child, "exit");
-  const timer = setTimeout(() => {
-    if (process.platform === "win32") child.kill("SIGKILL");
-    else {
-      try {
-        process.kill(-child.pid, "SIGKILL");
-      } catch {
-        /* Already stopped. */
+async function stop(child, cleanup = false) {
+  await stopSmokeProcess(child, {
+    cleanup,
+    requestStop: () =>
+      process.platform === "win32"
+        ? child.send({ action: "hub-smoke-shutdown", nonce: controlNonce })
+        : child.kill("SIGTERM"),
+    forceStop: () => {
+      if (process.platform === "win32") child.kill("SIGKILL");
+      else {
+        try {
+          process.kill(-child.pid, "SIGKILL");
+        } catch (error) {
+          if (error.code !== "ESRCH") throw error;
+        }
       }
-    }
-  }, 10_000);
-  child.kill("SIGTERM");
-  try {
-    await exited;
-  } finally {
-    clearTimeout(timer);
-  }
+    },
+  });
 }
 
 async function connect(server, cookie) {
   const ws = new WebSocket(`${server.url.replace("http:", "ws:")}/ws`, {
     headers: { cookie, origin: server.url },
+    createConnection: fixtureWebSocketTransport,
+    followRedirects: false,
   });
   sockets.add(ws);
   const rpc = new RpcClient(ws);
@@ -343,9 +379,10 @@ try {
   modelServer.listen(0, "127.0.0.1");
   await once(modelServer, "listening");
   const modelPort = modelServer.address().port;
+  modelOrigin = `http://127.0.0.1:${modelPort}`;
   const settings = JSON.parse(readFileSync(join(root, "deploy/settings.example.json"), "utf8"));
   settings.credentials[0].apiKey = fixtureKey;
-  settings.credentials[0].baseUrl = `http://127.0.0.1:${modelPort}/v1`;
+  settings.credentials[0].baseUrl = `${modelOrigin}/v1`;
   settings.modelConnections[0].model = "gpt-4o-mini";
   settings.permissions.rules = [{ tool: "Write", decision: "ask" }];
   writeFileSync(join(workspace, ".code-shell/settings.local.json"), JSON.stringify(settings), {
@@ -359,6 +396,7 @@ try {
   );
 
   let server = await boot();
+  const { applyOutputJournalPage } = await import("../packages/web/dist/index.js");
   const token = /#setup=([A-Za-z0-9_-]+)/.exec(server.logs())?.[1];
   assert.ok(token, "First launch must print an administrator initialization link");
   const cookie = await auth(server, "setup", { token, username: "smoke-admin", password });
@@ -569,6 +607,28 @@ try {
   console.log(
     "PASS: restart preserves administrator, login sessions and conversation history; real Worker resumes it",
   );
+  rpc.ws.close();
+  await stop(server.child);
+  const guards = readFileSync(join(isolatedHome, "hub-smoke-guards.jsonl"), "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  for (const pid of hostPids) {
+    assert.ok(
+      guards.some((guard) => guard.pid === pid && guard.origin === modelOrigin),
+      "Every native Hub must install its guard before importing production code",
+    );
+    assert.ok(
+      guards.some(
+        (guard) =>
+          guard.ppid === pid &&
+          guard.origin === modelOrigin &&
+          /agent-server-stdio\.[cm]?js$/.test(guard.entry),
+      ),
+      "Every restarted Hub must launch a real worker with the inherited guard",
+    );
+  }
+  console.log("PASS: both native Hubs and workers are confined; both shutdowns exit cleanly");
   console.log("Native Hub deployment smoke passed. No external model service was used.");
 } catch (error) {
   console.error(`Native Hub deployment smoke failed: ${error.stack ?? error}`);
@@ -577,7 +637,13 @@ try {
   process.exitCode = 1;
 } finally {
   for (const socket of sockets) socket.terminate();
-  await Promise.all([...processes].map(stop));
+  const cleanup = await Promise.allSettled([...processes].map((child) => stop(child, true)));
+  for (const result of cleanup) {
+    if (result.status === "rejected") {
+      console.error(`Hub cleanup failed: ${result.reason}`);
+      process.exitCode = 1;
+    }
+  }
   modelServer.closeAllConnections();
   await new Promise((resolve) => modelServer.close(resolve));
   rmSync(scratch, { recursive: true, force: true });
