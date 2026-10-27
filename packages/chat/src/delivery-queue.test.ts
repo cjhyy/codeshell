@@ -116,6 +116,36 @@ describe("durable delivery queue", () => {
     }
   });
 
+  test("a record that keeps failing stops holding its target but keeps retrying", async () => {
+    const delivered: string[] = [];
+    let poisonAttempts = 0;
+    let poisonAttemptsBeforeNext = -1;
+    const queue = new DeliveryQueue(
+      { ...config(undefined), retryBaseMs: 20, retryMaxMs: 20, retryHoldAttempts: 2 },
+      async (_adapter, message) => {
+        if (message.text === "poison") {
+          poisonAttempts++;
+          throw new Error("permanent delivery failure");
+        }
+        if (message.text === "next") poisonAttemptsBeforeNext = poisonAttempts;
+        delivered.push(message.text);
+      },
+      () => undefined,
+    );
+    await queue.start();
+    try {
+      await queue.enqueue("line:0", incoming("poison", "poison"));
+      await queue.enqueue("line:0", incoming("next", "next"));
+      await waitUntil(() => delivered.includes("next"));
+      // Held for exactly the configured failures before the follower ran.
+      expect(poisonAttemptsBeforeNext).toBe(2);
+      await waitUntil(() => poisonAttempts >= 4);
+      expect(queue.status().pending).toBe(1);
+    } finally {
+      await queue.stop();
+    }
+  });
+
   test("rejects new work at the configured backpressure boundary", async () => {
     const blocker = deferred<void>();
     const queue = new DeliveryQueue(
