@@ -829,11 +829,6 @@ const DANGEROUS_PATTERNS = [
 const SAFE_READ_PATTERNS = [
   /^(cat|head|tail|less|more|wc|file|stat|du|df)\s/,
   /^(ls|tree|locate|which|whereis|type)\s/,
-  // `find` is read-only ONLY without an action that executes or mutates:
-  // -delete, -exec/-execdir/-ok/-okdir run commands; -fprint/-fprintf/-fls
-  // write files. Reject those so `find . -delete` / `find . -exec rm {} +`
-  // are NOT classified safe-read. Plain predicates (-name, -type, -print) stay.
-  /^find\s(?!.*\s-(delete|exec(dir)?|ok(dir)?|fprintf?|fls)\b)/,
   /^(grep|ag|ack|fgrep|egrep)\s/,
   /^(node|python|ruby|go|rustc|java|javac)\s+--version/,
   /^(npm|pnpm|yarn|cargo|pip|gem|brew)\s+(list|ls|info|show|view|outdated)(?:\s|$)/,
@@ -900,6 +895,117 @@ function splitShellWords(input: string, rejectOptionExpansion = false): string[]
   if (quote !== null) return null;
   if (hasWord) words.push(word);
   return words;
+}
+
+const FIND_READ_FLAGS = new Set([
+  "-H",
+  "-L",
+  "-P",
+  "-E",
+  "-X",
+  "-d",
+  "-s",
+  "-follow",
+  "-daystart",
+  "-depth",
+  "-xdev",
+  "-mount",
+  "-noleaf",
+  "-ignore_readdir_race",
+  "-noignore_readdir_race",
+  "-warn",
+  "-nowarn",
+  "-empty",
+  "-false",
+  "-true",
+  "-nouser",
+  "-nogroup",
+  "-readable",
+  "-writable",
+  "-executable",
+  "-print",
+  "-print0",
+  "-ls",
+  "-prune",
+  "-quit",
+  "!",
+  "(",
+  ")",
+  ",",
+  "-a",
+  "-and",
+  "-o",
+  "-or",
+  "-not",
+]);
+const FIND_ROOT_FLAGS = new Set(["-H", "-L", "-P", "-E", "-X", "-d", "-s"]);
+const FIND_READ_VALUES = new Set([
+  "-f",
+  "-maxdepth",
+  "-mindepth",
+  "-regextype",
+  "-name",
+  "-iname",
+  "-path",
+  "-ipath",
+  "-wholename",
+  "-iwholename",
+  "-lname",
+  "-ilname",
+  "-regex",
+  "-iregex",
+  "-type",
+  "-xtype",
+  "-perm",
+  "-uid",
+  "-gid",
+  "-user",
+  "-group",
+  "-inum",
+  "-links",
+  "-size",
+  "-fstype",
+  "-amin",
+  "-atime",
+  "-cmin",
+  "-ctime",
+  "-mmin",
+  "-mtime",
+  "-newer",
+  "-anewer",
+  "-cnewer",
+  "-samefile",
+  "-printf",
+  "-files0-from",
+]);
+
+/** Normalize shell spelling before accepting a closed set of read-only find predicates. */
+function isSafeReadFindCommand(segment: string): boolean {
+  const words = splitShellWords(segment.trim(), true);
+  if (!words || words[0] !== "find" || words.includes("--")) return false;
+  // Unknown actions fail closed, including quoted/escaped/fragmented -exec,
+  // -delete and every file-output action. Dynamic option expansion also asks.
+  let expressionStarted = false;
+  for (let i = 1; i < words.length; i++) {
+    const word = words[i];
+    if (!expressionStarted && FIND_ROOT_FLAGS.has(word)) continue;
+    if (!expressionStarted && word === "-f") {
+      if (++i >= words.length) return false;
+      continue;
+    }
+    if (FIND_READ_FLAGS.has(word)) {
+      expressionStarted = true;
+      continue;
+    }
+    if (FIND_READ_VALUES.has(word) || /^-newer[acmB][acmBt]$/.test(word)) {
+      expressionStarted = true;
+      if (++i >= words.length) return false;
+      continue;
+    }
+    if (word.startsWith("-") || expressionStarted) return false;
+    // Before the expression, ordinary operands are search roots.
+  }
+  return true;
 }
 
 const RG_READ_FLAGS = new Set([
@@ -1224,6 +1330,7 @@ function isSafeReadSedCommand(segment: string): boolean {
 function matchesSafeReadPattern(segment: string, allowArgumentless = false): boolean {
   return (
     isSafeReadGitCommand(segment) ||
+    isSafeReadFindCommand(segment) ||
     isSafeReadSedCommand(segment) ||
     isSafeReadRgCommand(segment, allowArgumentless) ||
     isSafeReadAuditCommand(segment) ||

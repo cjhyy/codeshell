@@ -61,3 +61,81 @@ describe("RemoteBridge connect lifecycle", () => {
     await expect(p).rejects.toThrow(/exited/);
   });
 });
+
+describe("RemoteBridge stdin errors", () => {
+  test("rejects connection and terminates the child on an early pipe error", async () => {
+    const child = makeFakeChild();
+    let kills = 0;
+    child.kill = () => {
+      kills++;
+    };
+    const bridge = new RemoteBridge({ host: "owned-fixture" }, () => child as never);
+    const connecting = bridge.connect();
+    const error = Object.assign(new Error("owned EPIPE"), { code: "EPIPE" });
+    expect(() => child.stdin.emit("error", error)).not.toThrow();
+    await expect(connecting).rejects.toBe(error);
+    expect(bridge.isConnected).toBe(false);
+    expect(kills).toBe(1);
+  });
+
+  test("disconnects, wakes pending readers, and reports the write failure once", async () => {
+    const child = makeFakeChild();
+    let kills = 0;
+    child.kill = () => {
+      kills++;
+    };
+    const bridge = new RemoteBridge({ host: "owned-fixture" }, () => child as never);
+    const connecting = bridge.connect();
+    child.stdout.write("ready\n");
+    await connecting;
+    const iterator = bridge.messages();
+    const pending = iterator.next();
+    const error = Object.assign(new Error("owned EPIPE"), { code: "EPIPE" });
+    // An actual Writable write failure emits both its callback and error event.
+    child.stdin._write = (_chunk, _encoding, callback) => callback(error);
+    bridge.send({ type: "owned-message" });
+    await expect(pending).rejects.toBe(error);
+    expect(bridge.isConnected).toBe(false);
+    expect(() => bridge.send({ type: "later" })).toThrow("owned EPIPE");
+    expect(kills).toBe(1);
+  });
+});
+
+test("invalid message serialization does not close a healthy SSH transport", async () => {
+  const child = makeFakeChild();
+  let kills = 0;
+  child.kill = () => {
+    kills++;
+  };
+  const bridge = new RemoteBridge({ host: "owned-fixture" }, () => child as never);
+  const connecting = bridge.connect();
+  child.stdout.write("ready\n");
+  await connecting;
+  const cyclic: Record<string, unknown> = {};
+  cyclic.self = cyclic;
+  expect(() => bridge.send(cyclic)).toThrow();
+  expect(bridge.isConnected).toBe(true);
+  expect(kills).toBe(0);
+  bridge.send({ message: "still connected" });
+  expect(child.stdin.read()?.toString()).toBe('{"message":"still connected"}\n');
+  bridge.disconnect();
+});
+
+test("reconnecting cannot erase a failed reader's transport error", async () => {
+  const first = makeFakeChild();
+  const second = makeFakeChild();
+  const children = [first, second];
+  const bridge = new RemoteBridge({ host: "owned-fixture" }, () => children.shift() as never);
+  const connected = bridge.connect();
+  first.stdout.write("ready\n");
+  await connected;
+  const pending = bridge.messages().next();
+  const error = new Error("first transport failed");
+  first.stdin.emit("error", error);
+  const reconnected = bridge.connect();
+  second.stdout.write("ready\n");
+  await reconnected;
+  await expect(pending).rejects.toBe(error);
+  expect(bridge.isConnected).toBe(true);
+  bridge.disconnect();
+});

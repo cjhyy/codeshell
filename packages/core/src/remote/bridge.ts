@@ -6,7 +6,7 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { createInterface } from "node:readline";
+import { createInterface, type Interface } from "node:readline";
 
 export interface BridgeConfig {
   host: string;
@@ -35,13 +35,16 @@ export function buildSSHArgs(config: BridgeConfig): string[] {
 export class RemoteBridge {
   private ssh: ChildProcess | undefined;
   private connected = false;
+  private readonly transportErrors = new WeakMap<ChildProcess, Error>();
+  private readonly readers = new Set<Interface>();
   private readonly spawnFn: SpawnFn;
 
   constructor(
     private readonly config: BridgeConfig,
     spawnFn?: SpawnFn,
   ) {
-    this.spawnFn = spawnFn ?? ((cmd, args) => spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"] }));
+    this.spawnFn =
+      spawnFn ?? ((cmd, args) => spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"] }));
   }
 
   /**
@@ -51,7 +54,8 @@ export class RemoteBridge {
     const sshArgs = buildSSHArgs(this.config);
     const remoteCmd = this.config.remoteCommand ?? "code-shell run --output stream-json";
 
-    this.ssh = this.spawnFn("ssh", [...sshArgs, remoteCmd]);
+    const ssh = this.spawnFn("ssh", [...sshArgs, remoteCmd]);
+    this.ssh = ssh;
 
     return new Promise((resolve, reject) => {
       // Settle exactly once: the first stdout resolves; an error/early-exit
@@ -66,7 +70,7 @@ export class RemoteBridge {
         this.disconnect();
       }, 30000);
 
-      this.ssh!.stdout?.once("data", () => {
+      ssh.stdout?.once("data", () => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
@@ -74,14 +78,20 @@ export class RemoteBridge {
         resolve();
       });
 
-      this.ssh!.on("error", (err) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        reject(err);
-      });
+      const onError = (err: Error): void => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          reject(err);
+        }
+        this.failTransport(ssh, err);
+      };
+      ssh.on("error", onError);
+      // A write callback does not consume the writable's error event.
+      ssh.stdin?.on("error", onError);
 
-      this.ssh!.on("exit", (code) => {
+      ssh.on("exit", (code) => {
+        if (this.ssh !== ssh) return;
         this.connected = false;
         if (settled) return;
         settled = true;
@@ -96,24 +106,40 @@ export class RemoteBridge {
    */
   send(message: Record<string, unknown>): void {
     if (!this.connected || !this.ssh?.stdin) {
-      throw new Error("Not connected");
+      throw (this.ssh && this.transportErrors.get(this.ssh)) ?? new Error("Not connected");
     }
-    this.ssh.stdin.write(JSON.stringify(message) + "\n", (err) => {
-      if (err) {
-        // A broken pipe means the remote is gone — surface it as a
-        // disconnect rather than swallowing the failed write.
-        this.connected = false;
-      }
-    });
+    const ssh = this.ssh;
+    const payload = JSON.stringify(message) + "\n";
+    try {
+      ssh.stdin!.write(payload, (err) => {
+        if (err) this.failTransport(ssh, err);
+      });
+    } catch (error) {
+      this.failTransport(ssh, error as Error);
+      throw error;
+    }
+  }
+
+  private failTransport(ssh: ChildProcess, error: Error): void {
+    if (this.ssh !== ssh || this.transportErrors.has(ssh)) return;
+    this.transportErrors.set(ssh, error);
+    this.connected = false;
+    ssh.kill();
+    // Wake a pending messages() reader; it reports the transport error below.
+    for (const reader of this.readers) reader.close();
+    ssh.stdout?.destroy();
   }
 
   /**
    * Async iterator for messages from the remote code-shell.
    */
   async *messages(): AsyncGenerator<Record<string, unknown>> {
-    if (!this.ssh?.stdout) return;
+    const ssh = this.ssh;
+    if (!ssh?.stdout) return;
+    if (this.transportErrors.has(ssh)) throw this.transportErrors.get(ssh);
 
-    const rl = createInterface({ input: this.ssh.stdout, crlfDelay: Infinity });
+    const rl = createInterface({ input: ssh.stdout, crlfDelay: Infinity });
+    this.readers.add(rl);
     try {
       for await (const line of rl) {
         const trimmed = line.trim();
@@ -124,10 +150,12 @@ export class RemoteBridge {
           // Skip malformed
         }
       }
+      if (this.transportErrors.has(ssh)) throw this.transportErrors.get(ssh);
     } finally {
       // Close the interface if the consumer breaks/returns early — otherwise
       // it (and its stdout listener) leaks.
       rl.close();
+      this.readers.delete(rl);
     }
   }
 
@@ -136,6 +164,7 @@ export class RemoteBridge {
    */
   disconnect(): void {
     this.connected = false;
+    for (const reader of this.readers) reader.close();
     if (this.ssh) {
       this.ssh.kill();
       this.ssh = undefined;

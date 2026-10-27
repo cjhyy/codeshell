@@ -332,3 +332,27 @@ test("a starting stream retains its incomplete frontier until it becomes complet
   expect(await peek()).toBe("\u0080");
   expect(record.agentReadOffset).toBe(2);
 });
+
+test("incremental pages advance from the actual 8MiB retained window after wrapping", async () => {
+  const { ring, record, peek } = fixture();
+  const cap = 8 * 1024 * 1024;
+  const page = 16 * 1024;
+  ring.write(Buffer.alloc(cap, 120));
+  ring.write(
+    Buffer.concat([
+      Buffer.alloc(page, 65),
+      Buffer.alloc(page, 66),
+      Buffer.alloc(cap - 2 * page, 67),
+    ]),
+  );
+  record.didWrap = ring.didWrap();
+  expect(record.didWrap).toBe(true);
+  expect(await peek()).toBe("A".repeat(page));
+  expect(record.agentReadOffset).toBe(cap + page);
+  expect(await peek()).toBe("B".repeat(page));
+  expect(record.agentReadOffset).toBe(cap + 2 * page);
+  // A further wrap can overtake a reader that already consumed some pages.
+  ring.write(Buffer.alloc(cap, 68));
+  expect(await peek()).toBe("D".repeat(page));
+  expect(record.agentReadOffset).toBe(2 * cap + page);
+});
