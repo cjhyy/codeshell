@@ -272,6 +272,13 @@ jobs:
       - name: test Hub panels in their own Bun process
         if: matrix.shard == 'rest-server'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/server/src/panels
+      - name: Native Hub lifecycle gate and deployment smoke
+        if: matrix.shard == 'rest-server'
+        # Reuse this job's completed workspace build. The driver, native Host and
+        # real worker use fresh HOME directories and exact fixture-only origins.
+        run: |
+          node scripts/run-isolated-node-smoke.mjs scripts/test-hub-smoke-lifecycle.mjs
+          bun run test:server-smoke
       - name: test core plugins in their own Bun process
         if: matrix.shard == 'core-rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/plugins
