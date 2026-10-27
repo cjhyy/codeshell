@@ -198,13 +198,17 @@ jobs:
             # (model-trace-process, worktree bookmarks, process protocol); the whole dir
             # alone and the shard without it each passed 8/8 on the runner.
             ignore: "--path-ignore-patterns '**/server/src/panels/**'"
+          # Browser fixtures, not a Bun shard. The overlay and Web suites took 28 of the
+          # desktop shard's 44 minutes (2026-10-22) and share nothing with its Bun tests,
+          # so they run beside it instead of after it.
+          - shard: desktop-ui
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.11"
       - uses: actions/setup-node@v7
-        if: matrix.shard == 'desktop'
+        if: matrix.shard == 'desktop' || matrix.shard == 'desktop-ui'
         with:
           node-version: "22.16.0"
       - name: install
@@ -223,7 +227,7 @@ jobs:
       # The runner's /usr/bin/chromium has repeatedly stalled at --version or
       # before exposing its debugging endpoint, before test assertions run.
       - name: install locked desktop test browser
-        if: matrix.shard == 'desktop'
+        if: matrix.shard == 'desktop' || matrix.shard == 'desktop-ui'
         working-directory: packages/desktop
         run: |
           node node_modules/playwright/cli.js install --with-deps chromium
@@ -238,6 +242,7 @@ jobs:
       - name: build workspace packages
         run: bun run build
       - name: test shard
+        if: matrix.paths
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 ${{ matrix.ignore }} ${{ matrix.paths }}
       - name: test Desktop suites that need their own Bun process
         if: matrix.shard == 'desktop'
@@ -257,10 +262,10 @@ jobs:
           node scripts/run-isolated-node-smoke.mjs --test $node_suites
           node scripts/run-bun-test-shard.mjs --timeout 30000 $bun_suites
       - name: test responsive overlays and settings menus
-        if: matrix.shard == 'desktop'
+        if: matrix.shard == 'desktop-ui'
         run: bun run --cwd packages/desktop test:ui:overlays
       - name: test Web navigation, conversations and settings recovery
-        if: matrix.shard == 'desktop'
+        if: matrix.shard == 'desktop-ui'
         run: |
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-file-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-latest-messages.mjs
