@@ -32,7 +32,12 @@ test.skipIf(process.platform === "win32")(
           child.exited,
         ]);
         expect(code, stderr).toBe(0);
-        expect(JSON.parse(stdout)).toEqual({ ok: true, roomRetries: 2, pendingRejected: 2 });
+        expect(JSON.parse(stdout)).toEqual({
+          ok: true,
+          roomRetries: 2,
+          pendingRejected: 2,
+          claudeRetries: 1,
+        });
       } finally {
         clearTimeout(timer);
       }

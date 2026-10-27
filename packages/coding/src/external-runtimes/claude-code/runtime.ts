@@ -88,6 +88,7 @@ interface ActiveTurn {
   finish(code?: number | null, error?: Error): void;
   /** Set by interrupt()/close(): the exit was requested, not a failure. */
   interrupted: boolean;
+  failure?: Error;
   stopping?: Promise<void>;
 }
 
@@ -260,8 +261,6 @@ export class ClaudeCodeRuntime {
       text = `${this.options.initialContext}\n\n<current_user_request>\n${text}\n</current_user_request>`;
     }
     this.firstTurn = false;
-    child.stdin.end(text);
-
     let resolveSettled!: () => void;
     const settled = new Promise<void>((resolve) => (resolveSettled = resolve));
     let finished = false;
@@ -284,7 +283,7 @@ export class ClaudeCodeRuntime {
             this.emit({ type: "turn_complete", reason: "aborted_streaming" }, onEvent);
           } else {
             const detail =
-              error?.message ??
+              (error ?? active.failure)?.message ??
               `Claude Code exited without a terminal result (code ${code ?? "unknown"})`;
             this.emit({ type: "error", error: detail }, onEvent);
             this.emit({ type: "turn_complete", reason: "model_error" }, onEvent);
@@ -299,6 +298,16 @@ export class ClaudeCodeRuntime {
       this.log("claude.spawn_failed", { error: error.message.slice(0, 200) });
       active.finish(undefined, error);
     });
+    // ChildProcess's error event does not own stdin's asynchronous EPIPE. Keep
+    // this listener after exit too: buffered writes can fail during teardown.
+    child.stdin.on("error", (error) => {
+      if (finished) return;
+      active.failure ??= new Error(`Claude Code input pipe closed: ${error.message}`);
+      // A broken input transport cannot finish this turn. Reap even a CLI that
+      // ignores SIGTERM before releasing the turn to a retry.
+      active.stopping ??= this.terminate(active);
+    });
+    child.stdin.end(text);
 
     return { done: settled };
   }
