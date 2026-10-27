@@ -107,11 +107,18 @@ Root package `@cjhyy/code-shell` is the meta package that installs core + tui an
   repository's PR workflow; never discard unknown changes with an `ours` merge.
   Honor branch protection. When delivery/merge is authorized, complete that
   workflow without requesting routine confirmation again.
+- `main` accepts only commits whose `ci.yml` checks already passed (ruleset
+  "main requires green CI"; force pushes and deletion are blocked). Push the task
+  branch, run `gh workflow run ci.yml --ref <branch>` or open a PR, and once that
+  exact commit is green push it to `main` as a fast-forward. A merge commit made
+  locally is a new commit with no checks: rebase onto `origin/main`, or run CI on
+  the merge commit's branch first.
 - Integrate through a clean checkout. A dirty primary checkout may only be
   fast-forwarded when all incoming paths are disjoint from existing changes and
   those changes are verified preserved; otherwise leave it untouched and report
   the pending synchronization. Never force-update a branch checked out elsewhere.
-- Release only an authorized, verified merged commit. After integration is
+- Release only an authorized, verified merged commit. `release.yml` refuses a tag
+  whose commit has no passing `ci.yml` run. After integration is
   confirmed, remove the task's clean, unused worktree and merged branch. Keep
   unfinished changes and active tasks; do not remove them merely to reduce the
   worktree count. Installed Panels must not depend on a disposable task worktree.
