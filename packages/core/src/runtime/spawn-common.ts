@@ -345,6 +345,14 @@ export function resolveSpawnTarget(
 }
 
 /**
+ * A child that exits 0 without reading all of its input closes the pipe under a
+ * pending write. Like a shell pipeline ignoring SIGPIPE, that is not a failure.
+ */
+export function isBrokenPipeError(error: unknown): boolean {
+  return (error as NodeJS.ErrnoException | undefined)?.code === "EPIPE";
+}
+
+/**
  * Terminate a single (non-detached) foreground child + its tree.
  *
  *  - POSIX: SIGTERM, then SIGKILL after `graceMs` if it ignored the term.
