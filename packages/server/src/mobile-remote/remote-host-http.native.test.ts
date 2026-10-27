@@ -3,6 +3,7 @@ import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { bundleInSubprocess } from "../../../../tests/helpers/bundle-in-subprocess.ts";
 
 // The Node HTTP parser accepts targets that WHATWG URL parsing rejects.
 // Exercise raw requests through the production Host, before authentication.
@@ -11,18 +12,15 @@ test("native remote Host returns 400 for malformed targets and remains healthy",
   try {
     const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
     await symlink(join(packageRoot, "node_modules"), join(temporary, "node_modules"));
-    const build = await Bun.build({
-      entrypoints: [
+    bundleInSubprocess(
+      [
         fileURLToPath(new URL("remote-host-manager.ts", import.meta.url)),
         fileURLToPath(new URL("trusted-device-store.ts", import.meta.url)),
         resolve(packageRoot, "../../tests/helpers/network-fixture.ts"),
       ],
-      naming: "[name].js",
-      outdir: temporary,
-      target: "node",
-      external: ["ws"],
-    });
-    expect(build.success).toBe(true);
+      temporary,
+      { naming: "[name].js", external: ["ws"] },
+    );
     await writeFile(join(temporary, "package.json"), '{"type":"module"}');
     await writeFile(
       join(temporary, "fixture.mjs"),
