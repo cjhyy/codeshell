@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { bundleInSubprocess } from "./helpers/bundle-in-subprocess.js";
 
 // Bun neither reports EPIPE for these writes nor matches Node's stdio `close`
 // accounting, so the fixture runs the real transports in native Node: a child
@@ -13,15 +14,11 @@ test.skipIf(process.platform === "win32")(
   async () => {
     const temporary = await mkdtemp(join(tmpdir(), "codeshell-pipe-exit-native-"));
     try {
-      const build = await Bun.build({
-        entrypoints: [
-          fileURLToPath(new URL("./fixtures/process-pipe-exit-native.mjs", import.meta.url)),
-        ],
-        naming: "fixture.mjs",
-        outdir: temporary,
-        target: "node",
-      });
-      expect(build.success).toBe(true);
+      bundleInSubprocess(
+        [fileURLToPath(new URL("./fixtures/process-pipe-exit-native.mjs", import.meta.url))],
+        temporary,
+        { naming: "fixture.mjs" },
+      );
       await writeFile(join(temporary, "package.json"), '{"type":"module"}');
       const child = Bun.spawn(["node", join(temporary, "fixture.mjs")], {
         cwd: temporary,
