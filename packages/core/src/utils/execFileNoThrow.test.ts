@@ -49,3 +49,11 @@ test("a stdin-dead child that ignores SIGTERM is forcibly reaped", async () => {
   expect(result.code).not.toBe(0);
   expect(result.stderr).toContain("stdin:");
 }, 5000);
+
+test("a child that exits 0 without reading its input still succeeds", async () => {
+  const result = await execFileNoThrow(process.execPath, ["-e", "process.stdout.write('done')"], {
+    input: "x".repeat(8 * 1024 * 1024),
+    timeout: 5000,
+  });
+  expect(result).toEqual({ code: 0, stdout: "done", stderr: "" });
+});
