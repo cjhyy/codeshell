@@ -17,12 +17,14 @@ export function formatOutgoingMarkdown(
 export async function dispatchSafely(
   handler: ChannelMessageHandler,
   message: ChannelMessage,
-): Promise<void> {
+): Promise<boolean> {
   try {
     await handler(message);
+    return true;
   } catch (error) {
     console.error(
       `[chat] ${message.channel} 消息处理失败：${error instanceof Error ? error.message : String(error)}`,
     );
+    return false;
   }
 }
