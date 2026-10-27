@@ -100,17 +100,41 @@ test("settled periodic polls can adopt observed descendants and report a query f
   await new Promise(setImmediate);
   equal(stop.snapshotTiming.count, 2);
   broken = true;
-  f.tick();
-  await new Promise(setImmediate);
-  f.tick();
-  await new Promise(setImmediate);
+  // Three consecutive periodic failures are one persistent failure, reported once.
+  for (let poll = 0; poll < 4; poll++) {
+    f.tick();
+    await new Promise(setImmediate);
+  }
   equal(f.failures.length, 1);
-  equal(stop.snapshotTiming.count, 4);
+  equal(stop.snapshotTiming.count, 6);
   stop();
   const evidence = await stop.completed;
   equal(evidence.ownedCount, 2);
   equal(evidence.queryFailed, true);
   deepStrictEqual(f.signals, []);
+});
+
+test("a transient periodic query failure is retried instead of failing the run", async () => {
+  const f = fixture();
+  let failures = 0;
+  const stop = watchElectronTestProcess(f.child, {
+    ...f.options,
+    snapshotProcessesAsync: async () => {
+      // Two failures, a success, then two more: never three in a row.
+      if ([1, 2, 4, 5].includes(++failures)) throw new Error("temporarily unavailable");
+      return [root, descendant];
+    },
+  });
+  for (let poll = 0; poll < 6; poll++) {
+    f.tick();
+    await new Promise(setImmediate);
+  }
+  deepStrictEqual(f.failures, []);
+  stop();
+  const evidence = await stop.completed;
+  equal(evidence.queryFailed, false);
+  // The successful poll between the failures still adopted the descendant.
+  equal(evidence.ownedCount, 2);
 });
 
 function fixture(initial = [root]) {

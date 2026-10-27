@@ -269,6 +269,13 @@ test("query diagnostics expose fixed failure labels and elapsed time without nat
     [{ code: "EACCES" }, "permission"],
     [{ code: "ENOBUFS" }, "output-limit"],
     [{ status: 1 }, "native-exit"],
+    // A loaded runner can briefly refuse to start the query; name that class, not the code.
+    [{ code: "EAGAIN" }, "resource-limit"],
+    [{ code: "EMFILE" }, "resource-limit"],
+    [{ code: "ENFILE" }, "resource-limit"],
+    [{ code: "ENOMEM" }, "resource-limit"],
+    [{ code: "EBADF" }, "descriptor"],
+    [{ code: "EINTR" }, "interrupted"],
     [{ code: "PRIVATE_SYNTHETIC_CODE" }, "unknown"],
   ])
     throws(

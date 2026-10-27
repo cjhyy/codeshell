@@ -142,9 +142,16 @@ function queryFailure(error, started) {
           ? "unavailable"
           : error?.code === "EACCES"
             ? "permission"
-            : Number.isInteger(error?.status) || Number.isInteger(error?.code)
-              ? "native-exit"
-              : "unknown";
+            : // A loaded runner can briefly refuse to start a process.
+              ["EAGAIN", "EMFILE", "ENFILE", "ENOMEM"].includes(error?.code)
+              ? "resource-limit"
+              : error?.code === "EBADF"
+                ? "descriptor"
+                : error?.code === "EINTR"
+                  ? "interrupted"
+                  : Number.isInteger(error?.status) || Number.isInteger(error?.code)
+                    ? "native-exit"
+                    : "unknown";
   const elapsedMs = Math.round(performance.now() - started);
   return Object.assign(
     new Error(`Cannot query Electron test process metadata (${reason}, ${elapsedMs}ms)`),
