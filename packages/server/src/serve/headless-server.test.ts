@@ -235,6 +235,35 @@ describe("headless serve — HTTP gate + static", () => {
     expect(missing.status).toBe(404);
   });
 
+  test("authenticated static revalidation preserves no-cache and cannot bypass the access gate", async () => {
+    const server = await boot();
+    const cookie = await authenticate(server);
+    const asset = await fetch(`${server.url}/app.js`, { headers: { cookie } });
+    const etag = asset.headers.get("etag")!;
+    expect(etag).toStartWith('W/"');
+    expect(await asset.text()).toBe("// app js");
+    for (const method of ["GET", "HEAD"]) {
+      const cached = await fetch(`${server.url}/app.js`, {
+        method,
+        headers: { cookie, "if-none-match": etag },
+      });
+      expect(cached.status).toBe(304);
+      expect(cached.headers.get("etag")).toBe(etag);
+      expect(cached.headers.get("cache-control")).toBe("no-cache");
+      // Bun's HTTP adapter inserts content-length: 0 for an empty 304. The
+      // native Node fixture verifies deployment framing without this header.
+      expect(await cached.text()).toBe("");
+    }
+    const unauthenticated = await fetch(`${server.url}/app.js`, {
+      headers: { "if-none-match": etag },
+    });
+    expect(unauthenticated.status).toBe(401);
+    const missing = await fetch(`${server.url}/missing.js`, {
+      headers: { cookie, "if-none-match": "*" },
+    });
+    expect(missing.status).toBe(404);
+  });
+
   test("remember cookie works for subsequent asset requests; traversal is blocked", async () => {
     const server = await boot();
     const cookie = await authenticate(server);
