@@ -204,3 +204,20 @@ export interface PanelAppChangeBlocker {
   bucket?: string;
   sessionId?: string;
 }
+
+export interface PanelAppUpdateInput {
+  cwd: string;
+  id: string;
+  reviewToken: string;
+  /** Close this app's instances in the affected projects and stop their work first. */
+  force?: boolean;
+}
+export type PanelAppUpdateResult =
+  | { ok: true; id: string }
+  | {
+      ok: false;
+      previewChanged?: true;
+      error: string;
+      /** What still holds the change; offer to close it and retry with `force`. */
+      blockers?: PanelAppChangeBlocker[];
+    };

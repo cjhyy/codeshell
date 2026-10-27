@@ -154,6 +154,8 @@ jobs:
             # before restore hooks and drops setuid modes), the rest in their own Bun run.
             # The 62 MiB live-writer capture proof runs alone: in the shared shard its event
             # loop stalled on CI after earlier suites, timing out without a diagnostic.
+            # browser-host's Electron mock needs BrowserWindow; an earlier file's electron
+            # mock wins in a shared process (54afce1fe), so it also runs alone.
             ignore: >-
               --path-ignore-patterns '**/browser-driver/cdp-actions.integration.test.ts'
               --path-ignore-patterns '**/browser-runtime/playwright-driver.test.ts'
@@ -167,11 +169,19 @@ jobs:
               --path-ignore-patterns '**/renderer/ChatView.ephemeral-lifecycle.test.tsx'
               --path-ignore-patterns '**/desktop/scripts/*.test.mjs'
               --path-ignore-patterns '**/cc-room/transcript-recovery.test.ts'
+              --path-ignore-patterns '**/src/main/browser-host/index.test.ts'
+          # rest is split in two for the Bun 1.3.11 descriptor exhaustion described under rest-server.
+          # With 591 files in one process the late suites lost modules mid-run: six tests/
+          # files could not resolve @cjhyy/code-shell-capability-coding and the native remote
+          # host could not read packages/core/dist/index.internal.js, beside Bun's own
+          # "directory mismatch … fd" internal error; each of them passes in a smaller process.
+          # Together the two path lists are the previous single list.
           - shard: rest
             paths: >-
-              tests packages/coding packages/tui packages/pet packages/server
-              packages/chat packages/web packages/arena packages/cdp
+              tests packages/coding packages/pet packages/chat packages/arena packages/cdp
               packages/link packages/optimization-lab packages/browser-devtools packages/host
+          - shard: rest-server
+            paths: packages/server packages/web packages/tui
             # The Hub panels dir runs in its own Bun process below. Late in this shard's Bun process
             # (thousands of descriptors and spawns in), Bun 1.3.11 on Linux closes a just-created
             # child descriptor during spawn: the pidfd (epoll_ctl EBADF, a child reported as
@@ -234,6 +244,7 @@ jobs:
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/ChatView.attachment-quantity-fallback.test.tsx
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/ChatView.ephemeral-lifecycle.test.tsx
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/cc-room/transcript-recovery.test.ts
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/browser-host/index.test.ts
       - name: test Desktop script suites with their own runners
         if: matrix.shard == 'desktop'
         run: |
@@ -259,7 +270,7 @@ jobs:
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-sidebar-focus-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-devices-browser.mjs
       - name: test Hub panels in their own Bun process
-        if: matrix.shard == 'rest'
+        if: matrix.shard == 'rest-server'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/server/src/panels
       - name: test core plugins in their own Bun process
         if: matrix.shard == 'core-rest'

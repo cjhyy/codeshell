@@ -1327,20 +1327,10 @@ contextBridge.exposeInMainWorld("codeshell", {
     | { ok: true; id: string }
     | { ok: false; alreadyInstalled?: true; previewChanged?: true; error: string }
   > => ipcRenderer.invoke("panel-apps:installLocal", input),
-  installPanelAppUpdate: (input: {
-    cwd: string;
-    id: string;
-    reviewToken: string;
-    force?: boolean;
-  }): Promise<
-    | { ok: true; id: string }
-    | {
-        ok: false;
-        previewChanged?: true;
-        error: string;
-        blockers?: import("../shared/panel-apps").PanelAppChangeBlocker[];
-      }
-  > => ipcRenderer.invoke("panel-apps:installUpdate", input),
+  installPanelAppUpdate: (
+    input: import("../shared/panel-apps").PanelAppUpdateInput,
+  ): Promise<import("../shared/panel-apps").PanelAppUpdateResult> =>
+    ipcRenderer.invoke("panel-apps:installUpdate", input),
   uninstallPanelApp: (id: string, cwd?: string): Promise<void> =>
     ipcRenderer.invoke("panel-apps:uninstall", id, cwd),
   readSkillBody: (target: RendererConfigurationTarget | null, filePath: string) =>

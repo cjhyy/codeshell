@@ -13,6 +13,13 @@ export interface DeliveryQueueConfig {
   retryMaxMs: number;
   completedTtlMs: number;
   /**
+   * Failed attempts during which a retrying record keeps later same-target
+   * messages waiting. Past this, it keeps retrying without holding its target,
+   * so one message that always fails cannot block a conversation forever.
+   * Defaults to {@link DEFAULT_RETRY_HOLD_ATTEMPTS}.
+   */
+  retryHoldAttempts?: number;
+  /**
    * Directory for spooled attachment bytes. Defaults to `<path>.attachments`.
    *
    * Without a spool, a message carrying attachments could not be persisted (its
@@ -63,6 +70,8 @@ interface DeliveryPreparation {
   reject(error: unknown): void;
 }
 
+/** With default backoff (1s doubling to 30s) this holds a target for about two minutes. */
+export const DEFAULT_RETRY_HOLD_ATTEMPTS = 8;
 const MAX_DELIVERY_STATE_BYTES = 64 * 1024 * 1024;
 const MAX_COMPLETED_KEYS = 100_000;
 const MAX_SPOOLED_ATTACHMENTS = 32;
@@ -300,6 +309,7 @@ export class DeliveryQueue {
     if (this.retryTimer) clearTimeout(this.retryTimer);
     this.retryTimer = undefined;
     const now = Date.now();
+    const holdAttempts = this.config.retryHoldAttempts ?? DEFAULT_RETRY_HOLD_ATTEMPTS;
     while (this.inFlight.size < this.config.maxConcurrent) {
       const delayedTargets = new Set<string>();
       const entry = this.pending.find((candidate) => {
@@ -307,7 +317,9 @@ export class DeliveryQueue {
         const key = targetKey(candidate.message);
         if (delayedTargets.has(key)) return false;
         if (candidate.nextAttemptAt > now) {
-          delayedTargets.add(key);
+          // Bounded hold: a record that keeps failing stops blocking its
+          // conversation but stays queued for its own retries.
+          if (candidate.attempts < holdAttempts) delayedTargets.add(key);
           return false;
         }
         // Already-running peers may share a target when configured, but a

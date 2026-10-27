@@ -2209,22 +2209,9 @@ export interface CodeshellApi
     | { ok: false; alreadyInstalled?: true; previewChanged?: true; error: string }
   >;
   /** Apply an explicitly reviewed update from the app's remembered source. */
-  installPanelAppUpdate(input: {
-    cwd: string;
-    id: string;
-    reviewToken: string;
-    /** Close this app's instances in the affected projects and stop their work first. */
-    force?: boolean;
-  }): Promise<
-    | { ok: true; id: string }
-    | {
-        ok: false;
-        previewChanged?: true;
-        error: string;
-        /** What still holds the change; offer to close it and retry with `force`. */
-        blockers?: import("../shared/panel-apps").PanelAppChangeBlocker[];
-      }
-  >;
+  installPanelAppUpdate(
+    input: import("../shared/panel-apps").PanelAppUpdateInput,
+  ): Promise<import("../shared/panel-apps").PanelAppUpdateResult>;
   /** Remove one independently installed Panel App. */
   uninstallPanelApp(id: string, cwd?: string): Promise<void>;
   /** Bounded full-text search over on-disk session transcripts (session switcher). */

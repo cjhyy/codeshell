@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-browser-devtools",
-  "version": "0.9.46",
+  "version": "0.9.47",
   "private": true,
   "description": "Host-independent bounded browser diagnostics through an injected page surface.",
   "type": "module",

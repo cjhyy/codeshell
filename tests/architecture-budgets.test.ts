@@ -498,7 +498,10 @@ describe("architecture growth budgets", () => {
       // +2 Host 1.2 internal seams: SDK-only bounded MCP connect/list/close,
       // and the existing session listing algorithm with Host filesystem custody.
       // Neither is exported by the stable public SDK or extension entry.
-      "packages/core/src/index.internal.ts": 123,
+      // +4 Host-only memory seams (d93a3ab9e) so Desktop maintains memory for external
+      // runtime sessions: MemoryOrchestrator (+ options type), the ephemeral-session check
+      // and the shared content sanitizer. None reaches the public SDK or extension entry.
+      "packages/core/src/index.internal.ts": 127,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
