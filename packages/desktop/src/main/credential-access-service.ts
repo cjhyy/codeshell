@@ -20,12 +20,14 @@ export interface CredentialResolveRequest {
   id: string;
   scope: CredentialAccessScope;
   purpose: "use" | "mcp" | "link";
+  expectedApprovalIdentity?: string;
 }
 
 export interface CredentialMaterializeCookieRequest {
   cwd?: string;
   id: string;
   scope: CredentialAccessScope;
+  expectedApprovalIdentity?: string;
 }
 
 export function buildCredentialSnapshot(
@@ -44,7 +46,10 @@ export function buildCredentialSnapshot(
 }
 
 export function resolveCredentialValueForWorker(req: CredentialResolveRequest): { value: string } {
-  const cred = new CredentialStore(req.cwd).resolve(req.id, req.scope);
+  const record = new CredentialStore(req.cwd).resolveForApproval(req.id, req.scope);
+  if (req.expectedApprovalIdentity && record?.approvalIdentity !== req.expectedApprovalIdentity)
+    throw new Error("credential changed after approval");
+  const cred = record?.credential;
   if (!cred || !isCredentialSecretAvailable(cred.secret)) {
     throw new Error(`credential "${req.id}" is unavailable`);
   }
@@ -84,7 +89,10 @@ export function materializeCredentialCookieForWorker(req: CredentialMaterializeC
   cookiesFile: string;
   count: number;
 } {
-  const cred = new CredentialStore(req.cwd).resolve(req.id, req.scope);
+  const record = new CredentialStore(req.cwd).resolveForApproval(req.id, req.scope);
+  if (req.expectedApprovalIdentity && record?.approvalIdentity !== req.expectedApprovalIdentity)
+    throw new Error("credential changed after approval");
+  const cred = record?.credential;
   if (!cred || cred.type !== "cookie" || !isCredentialSecretAvailable(cred.secret)) {
     throw new Error(`cookie credential "${req.id}" is unavailable`);
   }
@@ -93,16 +101,20 @@ export function materializeCredentialCookieForWorker(req: CredentialMaterializeC
 
 function buildCredentialSnapshotEntry(cwd: string | undefined): CredentialSnapshotEntry {
   const store = new CredentialStore(cwd);
-  const full = store.listWithStatus("full");
-  const project = store.listWithStatus("project");
+  const full = store.listWithSources("full");
+  const project = store.listWithSources("project");
   return {
     cwd,
-    full: full.credentials.map(toMetadata),
-    project: project.credentials.map(toMetadata),
+    full: full.credentials.map(({ credential, source }) =>
+      toMetadata(credential, store.approvalIdentity(source, credential)),
+    ),
+    project: project.credentials.map(({ credential, source }) =>
+      toMetadata(credential, store.approvalIdentity(source, credential)),
+    ),
     readableFull: full.readable,
     readableProject: project.readable,
-    envFull: envExposures(full.credentials),
-    envProject: envExposures(project.credentials),
+    envFull: envExposures(full.credentials.map(({ credential }) => credential)),
+    envProject: envExposures(project.credentials.map(({ credential }) => credential)),
   };
 }
 
@@ -118,12 +130,13 @@ function envExposures(credentials: Credential[]): Record<string, string> {
   return out;
 }
 
-function toMetadata(cred: Credential): CredentialMetadata {
+function toMetadata(cred: Credential, approvalIdentity: string): CredentialMetadata {
   const { id, type, label, autoUseByAI, autoInjectByAI, meta } = cred;
   const secret = cred.secret;
   const hasSecret = isCredentialSecretAvailable(secret);
   return {
     id,
+    approvalIdentity,
     type,
     label,
     autoUseByAI,

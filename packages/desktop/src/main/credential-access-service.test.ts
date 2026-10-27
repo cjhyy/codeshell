@@ -66,6 +66,77 @@ describe("desktop credential access service", () => {
     rmSync(cwd, { recursive: true, force: true });
   });
 
+  test("Host snapshots pin the winning source and reject stale worker resolutions", async () => {
+    const store = new CredentialStore(cwd);
+    const token = { id: "same", type: "token" as const, label: "Same", secret: "same-value" };
+    store.save("user", token);
+    store.save("project", token);
+    const snapshot = buildCredentialSnapshot([cwd], 1);
+    const projectIdentity = snapshot.entries.find((entry) => entry.cwd === cwd)!.full[0]!
+      .approvalIdentity!;
+    const userIdentity = snapshot.entries.find((entry) => entry.cwd === undefined)!.full[0]!
+      .approvalIdentity!;
+    expect(projectIdentity).toMatch(/^[a-f0-9]{64}$/);
+    expect(projectIdentity).not.toBe(userIdentity);
+    expect(JSON.stringify(snapshot.entries.map((entry) => entry.full))).not.toContain("same-value");
+    const [main, worker] = createInProcessTransport();
+    const access = createIpcCredentialAccess(worker);
+    try {
+      main.send({ jsonrpc: "2.0", method: "desktop/credentialSnapshot", params: snapshot });
+      expect(access.resolveMeta(cwd, "same", "full")?.approvalIdentity).toBe(projectIdentity);
+      main.onMessage((message) => {
+        if (
+          !("method" in message) ||
+          message.method !== "desktop/credentialResolve" ||
+          !("id" in message)
+        )
+          return;
+        try {
+          const result = resolveCredentialValueForWorker(message.params as never);
+          main.send({ jsonrpc: "2.0", id: message.id!, result });
+        } catch (error) {
+          main.send({
+            jsonrpc: "2.0",
+            id: message.id!,
+            error: { code: -32000, message: String(error) },
+          });
+        }
+      });
+      const request = {
+        cwd,
+        id: "same",
+        scope: "full" as const,
+        purpose: "use" as const,
+        expectedApprovalIdentity: projectIdentity,
+      };
+      expect(await access.resolveValue!(request)).toBe("same-value");
+      store.remove("project", "same");
+      await expect(access.resolveValue!(request)).rejects.toThrow("changed after approval");
+    } finally {
+      main.close();
+      worker.close();
+    }
+    const cookie = (value: string) => ({
+      id: "cookie",
+      type: "cookie" as const,
+      label: "Same",
+      secret: JSON.stringify([{ name: "sid", value, domain: "example.com", path: "/" }]),
+    });
+    store.save("project", cookie("old"));
+    const cookieIdentity = buildCredentialSnapshot([cwd], 2).entries.find(
+      (entry) => entry.cwd === cwd,
+    )!.project[0]!.approvalIdentity;
+    store.save("project", cookie("new"));
+    expect(() =>
+      materializeCredentialCookieForWorker({
+        cwd,
+        id: "cookie",
+        scope: "full",
+        expectedApprovalIdentity: cookieIdentity,
+      }),
+    ).toThrow("changed after approval");
+  });
+
   test("snapshot is metadata-only while resolver/materializer return plaintext-derived values", () => {
     const store = new CredentialStore(cwd);
     store.save("user", {
@@ -137,6 +208,7 @@ describe("desktop credential access service", () => {
         type: "token",
         label: "Figma",
         exposeAsEnv: "FIGMA_TOKEN",
+        approvalIdentity: expect.any(String),
         autoUseByAI: undefined,
         autoInjectByAI: undefined,
         meta: undefined,

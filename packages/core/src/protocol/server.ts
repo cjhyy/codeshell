@@ -901,8 +901,15 @@ export class AgentServer {
       this.requestAskUserAsyncForSession(session, sid, question, opts),
     );
     session.engine.setBrowserBridge(this.makeBrowserBridge(session, sid));
-    session.engine.setInjectCredential((credentialId, credentialScope) =>
-      this.requestCredentialInjectForSession(session, sid, credentialId, credentialScope),
+    session.engine.setInjectCredential((credentialId, credentialScope, expectedApprovalIdentity) =>
+      this.requestCredentialInjectForSession(
+        session,
+        sid,
+        credentialId,
+        credentialScope,
+        undefined,
+        expectedApprovalIdentity,
+      ),
     );
     session.engine.setChildHostBindings?.((input) => {
       if (input.parentSessionId !== sid) throw new Error("child host parent identity mismatch");
@@ -1041,8 +1048,15 @@ export class AgentServer {
         browserBridge: this.makeBrowserBridge(session, sid, scope),
         askUser: (question, opts) =>
           this.requestAskUserForSession(session, sid, question, opts, scope),
-        injectCredentialToBrowser: (id, credentialScope) =>
-          this.requestCredentialInjectForSession(session, sid, id, credentialScope, scope),
+        injectCredentialToBrowser: (id, credentialScope, expectedApprovalIdentity) =>
+          this.requestCredentialInjectForSession(
+            session,
+            sid,
+            id,
+            credentialScope,
+            scope,
+            expectedApprovalIdentity,
+          ),
         dispose,
       };
     });
@@ -4241,6 +4255,7 @@ export class AgentServer {
     credentialId: string,
     credentialScope: "full" | "project" = "full",
     scope?: ChildHostScope,
+    expectedApprovalIdentity?: string,
   ): Promise<{ ok: boolean; count?: number; error?: string }> {
     const failure = scope?.failure();
     if (failure)
@@ -4282,7 +4297,12 @@ export class AgentServer {
         ...(scope ? { sourceSessionId: scope.sourceSessionId } : {}),
         request: {
           toolName: "__credential_action__",
-          args: { action: "injectCookie", credentialId, credentialScope },
+          args: {
+            action: "injectCookie",
+            credentialId,
+            credentialScope,
+            ...(expectedApprovalIdentity ? { expectedApprovalIdentity } : {}),
+          },
           description: `credential:inject:${credentialId}`,
           riskLevel: "low" as const,
         },

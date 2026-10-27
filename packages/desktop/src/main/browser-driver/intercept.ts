@@ -143,6 +143,7 @@ export interface ParsedCredentialAction {
   action: string;
   credentialId: string;
   credentialScope: "full" | "project";
+  expectedApprovalIdentity?: string;
 }
 
 /**
@@ -171,6 +172,9 @@ export function parseCredentialActionLine(line: string): ParsedCredentialAction 
     action: a.action,
     credentialId: a.credentialId,
     credentialScope: a.credentialScope === "project" ? "project" : "full",
+    ...(typeof a.expectedApprovalIdentity === "string"
+      ? { expectedApprovalIdentity: a.expectedApprovalIdentity }
+      : {}),
   };
 }
 

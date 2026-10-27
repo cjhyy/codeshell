@@ -21,7 +21,7 @@ function storedCookieCredential(
   sessionCwd: string | undefined,
   credentialId: string,
   credentialScope: DesktopCredentialScope,
-): { credential: Credential; storeScope: CredentialScope } | null {
+): { credential: Credential; storeScope: CredentialScope; approvalIdentity: string } | null {
   // Determine ownership from the same record read, not a second list that may
   // observe a later project shadow being created/deleted in another process.
   const project = new CredentialStore(sessionCwd).resolve(credentialId, "project");
@@ -29,18 +29,26 @@ function storedCookieCredential(
     project ??
     (credentialScope === "full" ? new CredentialStore().resolve(credentialId) : undefined);
   if (!credential || credential.type !== "cookie") return null;
-  return { credential, storeScope: project ? "project" : "user" };
+  const storeScope = project ? "project" : "user";
+  return {
+    credential,
+    storeScope,
+    approvalIdentity: new CredentialStore(sessionCwd).approvalIdentity(storeScope, credential),
+  };
 }
 
 export function resolveCookieCredentialForBrowser(
   sessionCwd: string | undefined,
   credentialId: string,
   credentialScope: DesktopCredentialScope,
+  expectedApprovalIdentity?: string,
 ): ResolvedCookieCredential {
   const stored = storedCookieCredential(sessionCwd, credentialId, credentialScope);
   if (!stored) {
     return { ok: false, error: `无 cookie 凭证: "${credentialId}"` };
   }
+  if (expectedApprovalIdentity && stored.approvalIdentity !== expectedApprovalIdentity)
+    return { ok: false, error: "凭证在审批后发生变化，请重新审批。" };
   const cred = stored.credential;
 
   let jar: unknown[] = [];

@@ -49,6 +49,8 @@ import {
 export type CredentialAccessScope = "full" | "project";
 
 export interface CredentialMetadata {
+  /** Opaque Host/store identity of the exact record approved for this process lifetime. */
+  approvalIdentity?: string;
   id: string;
   type: CredentialType;
   label: string;
@@ -97,6 +99,7 @@ export interface CredentialAccess {
     id: string;
     scope: CredentialAccessScope;
     purpose: "use" | "mcp" | "link";
+    expectedApprovalIdentity?: string;
   }): Promise<string>;
   /** Resolve only the bearer material needed by an MCP request. */
   resolveOAuthAccess?(req: {
@@ -109,6 +112,7 @@ export interface CredentialAccess {
     cwd?: string;
     id: string;
     scope: CredentialAccessScope;
+    expectedApprovalIdentity?: string;
   }): Promise<{ cookiesFile: string; count: number }>;
 }
 
@@ -439,12 +443,13 @@ export function credentialAccessScope(scope: SettingsScope | undefined): Credent
 
 export { isCredentialSecretAvailable } from "./types.js";
 
-function toMetadata(cred: Credential): CredentialMetadata {
+function toMetadata(cred: Credential, approvalIdentity: string): CredentialMetadata {
   const secret = cred.secret;
   const available = isCredentialSecretAvailable(secret);
   const { secret: _secret, ...rest } = cred;
   return {
     ...rest,
+    approvalIdentity,
     meta: cred.meta ? linkConnectionMetadata(cred.meta) : undefined,
     ...(credentialAllowsEnvExposure(cred.type) ? {} : { exposeAsEnv: undefined }),
     hasSecret: available,
@@ -483,15 +488,21 @@ export const localCredentialAccess: CredentialAccess = {
     return subscribeToLocalCredentialChanges(listener, context);
   },
   listMasked(cwd, scope) {
-    return storeFor(cwd).list(scope).map(toMetadata);
+    return localCredentialAccess.listMaskedWithStatus!(cwd, scope).credentials;
   },
   listMaskedWithStatus(cwd, scope) {
-    const result = storeFor(cwd).listWithStatus(scope);
-    return { credentials: result.credentials.map(toMetadata), readable: result.readable };
+    const store = storeFor(cwd);
+    const result = store.listWithSources(scope);
+    return {
+      credentials: result.credentials.map(({ credential, source }) =>
+        toMetadata(credential, store.approvalIdentity(source, credential)),
+      ),
+      readable: result.readable,
+    };
   },
   resolveMeta(cwd, id, scope) {
-    const cred = storeFor(cwd).resolve(id, scope);
-    return cred ? toMetadata(cred) : undefined;
+    const record = storeFor(cwd).resolveForApproval(id, scope);
+    return record ? toMetadata(record.credential, record.approvalIdentity) : undefined;
   },
   envExposures(cwd, scope) {
     const out: Record<string, string> = {};
@@ -504,7 +515,10 @@ export const localCredentialAccess: CredentialAccess = {
     return out;
   },
   async resolveValue(req) {
-    const cred = storeFor(req.cwd).resolve(req.id, req.scope);
+    const record = storeFor(req.cwd).resolveForApproval(req.id, req.scope);
+    if (req.expectedApprovalIdentity && record?.approvalIdentity !== req.expectedApprovalIdentity)
+      throw new Error("credential changed after approval");
+    const cred = record?.credential;
     if (!cred || !isCredentialSecretAvailable(cred.secret)) {
       throw new Error(`credential "${req.id}" is unavailable`);
     }
@@ -529,7 +543,10 @@ export const localCredentialAccess: CredentialAccess = {
     return resolveLocalOAuthAccess(req.id, req.serverUrl, Boolean(req.forceRefresh));
   },
   async materializeCookie(req) {
-    const cred = storeFor(req.cwd).resolve(req.id, req.scope);
+    const record = storeFor(req.cwd).resolveForApproval(req.id, req.scope);
+    if (req.expectedApprovalIdentity && record?.approvalIdentity !== req.expectedApprovalIdentity)
+      throw new Error("credential changed after approval");
+    const cred = record?.credential;
     if (!cred || cred.type !== "cookie" || !isCredentialSecretAvailable(cred.secret)) {
       throw new Error(`cookie credential "${req.id}" is unavailable`);
     }
