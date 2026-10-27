@@ -1,7 +1,16 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { acquireFileLock } from "@cjhyy/code-shell-core/internal";
 import { HubAuthStore } from "./auth-store.js";
 
 const directories: string[] = [];
@@ -18,6 +27,45 @@ afterEach(() => {
 });
 
 describe("HubAuthStore", () => {
+  test("recent session validation reads committed state without waiting for a writer", async () => {
+    const dataDir = directory();
+    const store = new HubAuthStore({ dataDir, now: () => 10_000 });
+    const grant = await store.setup({ ...credentials, token: store.initialize()! });
+    const modulePath = join(import.meta.dir, "auth-store.ts");
+    const script = `import {HubAuthStore} from ${JSON.stringify(modulePath)};
+      const store = new HubAuthStore({dataDir:process.argv[1],now:()=>10000});
+      process.stdout.write(JSON.stringify(store.authenticate(process.argv[2])));`;
+    const release = acquireFileLock(store.filePath);
+    const child = Bun.spawn([process.execPath, "--eval", script, dataDir, grant.token], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const result = Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+      child.exited,
+    ]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let completedWhileLocked: boolean;
+    try {
+      completedWhileLocked = await Promise.race([
+        result.then(() => true),
+        new Promise<boolean>((resolve) => {
+          timer = setTimeout(() => resolve(false), 2_000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+      release();
+    }
+    const [output, errors, code] = await result;
+    expect({ code, errors }).toEqual({ code: 0, errors: "" });
+    expect(JSON.parse(output).id).toBe(grant.session.id);
+    expect(completedWhileLocked).toBe(true);
+    store.revoke(grant.session.id);
+    expect(store.authenticate(grant.token)).toBeNull();
+  });
+
   test("bootstrap survives restart, is disclosed once, and cannot be reused", async () => {
     const dataDir = directory();
     const store = new HubAuthStore({ dataDir });
@@ -43,6 +91,44 @@ describe("HubAuthStore", () => {
     expect(statSync(store.filePath).mode & 0o777).toBe(0o600);
     expect(statSync(join(dataDir, "hub")).mode & 0o777).toBe(0o700);
     expect(store.listSessions()[0]).not.toHaveProperty("tokenHash");
+  });
+
+  test("activity refresh rechecks revocation before writing and never resurrects a session", async () => {
+    const dataDir = directory();
+    let now = 10_000;
+    let revokeBeforeRefresh: (() => void) | undefined;
+    const store = new HubAuthStore({
+      dataDir,
+      now: () => {
+        const revoke = revokeBeforeRefresh;
+        revokeBeforeRefresh = undefined;
+        revoke?.();
+        return now;
+      },
+    });
+    const grant = await store.setup({ ...credentials, token: store.initialize()! });
+    now += 59_999;
+    expect(store.authenticate(grant.token)?.lastSeenAt).toBe(10_000);
+    now += 1;
+    expect(store.authenticate(grant.token)?.lastSeenAt).toBe(now);
+    expect(JSON.parse(readFileSync(store.filePath, "utf8")).sessions[0].lastSeenAt).toBe(now);
+    now += 60_000;
+    const peer = new HubAuthStore({ dataDir, now: () => now });
+    revokeBeforeRefresh = () => {
+      peer.revoke(grant.session.id);
+    };
+    expect(store.authenticate(grant.token)).toBeNull();
+    expect(peer.listSessions()).toEqual([]);
+  });
+
+  test("recent validation still refuses a replaced auth directory", async () => {
+    const dataDir = directory();
+    const store = new HubAuthStore({ dataDir, now: () => 10_000 });
+    const grant = await store.setup({ ...credentials, token: store.initialize()! });
+    const original = join(dataDir, "original-hub");
+    renameSync(join(dataDir, "hub"), original);
+    symlinkSync(original, join(dataDir, "hub"), process.platform === "win32" ? "junction" : "dir");
+    expect(() => store.authenticate(grant.token)).toThrow("Invalid Hub auth directory");
   });
 
   test("concurrent setup has exactly one winner and concurrent logins preserve sessions", async () => {
