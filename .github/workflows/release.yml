@@ -33,6 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -41,6 +42,13 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.11"
+
+      # Every later job needs this one, so a tag on a commit CI has not passed
+      # publishes nothing. It waits while that commit's CI is still running.
+      - name: assert ci.yml passed on the tagged commit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/require-green-ci.mjs "$GITHUB_SHA"
 
       - name: assert version == tag
         shell: bash

@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { bundleInSubprocess } from "./helpers/bundle-in-subprocess.ts";
 
 // Bun can mask Node's asynchronous pipe errors. The fixture runs the actual
 // adapters in native Node with CLIs that close stdin but ignore SIGTERM.
@@ -12,15 +13,11 @@ test.skipIf(process.platform === "win32")(
   async () => {
     const temporary = await mkdtemp(join(tmpdir(), "codeshell-stdin-native-"));
     try {
-      const build = await Bun.build({
-        entrypoints: [
-          fileURLToPath(new URL("./fixtures/external-runtime-stdin-native.mjs", import.meta.url)),
-        ],
-        naming: "fixture.mjs",
-        outdir: temporary,
-        target: "node",
-      });
-      expect(build.success).toBe(true);
+      bundleInSubprocess(
+        [fileURLToPath(new URL("./fixtures/external-runtime-stdin-native.mjs", import.meta.url))],
+        temporary,
+        { naming: "fixture.mjs" },
+      );
       await writeFile(join(temporary, "package.json"), '{"type":"module"}');
       const child = Bun.spawn(["node", join(temporary, "fixture.mjs")], {
         cwd: temporary,

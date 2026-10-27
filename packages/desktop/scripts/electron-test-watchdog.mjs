@@ -173,6 +173,11 @@ export function watchElectronTestProcess(child, options = {}) {
   };
   notifyOwnedSnapshot(initial, "initial");
   let snapshotFailureReported = false;
+  // A periodic query can fail transiently on a loaded runner. Only consecutive failures
+  // mean the tree can no longer be observed; any success re-observes it. Checks made
+  // immediately before signaling keep their single fresh query and fail at once.
+  const PERIODIC_FAILURE_LIMIT = 3;
+  let periodicFailures = 0;
   let resolveCompleted;
   const completed = new Promise((resolve) => {
     resolveCompleted = resolve;
@@ -218,10 +223,16 @@ export function watchElectronTestProcess(child, options = {}) {
       try {
         const current = await snapshotAsync();
         if (generation !== currentGeneration || state !== "watching") return;
+        periodicFailures = 0;
         rememberOwnedProcesses(owned, current);
         notifyOwnedSnapshot(current, state);
       } catch (error) {
-        if (generation === currentGeneration && state === "watching") observationFailed(error);
+        if (
+          generation === currentGeneration &&
+          state === "watching" &&
+          ++periodicFailures >= PERIODIC_FAILURE_LIMIT
+        )
+          observationFailed(error);
       } finally {
         if (generation === currentGeneration && state === "watching") {
           recordTiming(started);

@@ -5,16 +5,19 @@ import {
   finishWebHostOperations,
 } from "./web-host-process-custody.mjs";
 
+// Births use the `ps -o lstart` form custody validates; later seconds mean a later process.
+const born = (second) => `Tue Oct 27 10:00:${String(second).padStart(2, "0")} 2026`;
+
 test("reused Host PID cannot authorize or signal a new incarnation or its child", () => {
-  let rows = [{ pid: 10, ppid: 1, pgid: 10, birth: "first" }];
+  let rows = [{ pid: 10, ppid: 1, pgid: 10, birth: born(0) }];
   const calls = [];
   const custody = createWebHostProcessCustody(
     { pid: 10 },
     { parentPid: 1, snapshot: () => rows, signalProcess: (...args) => calls.push(args) },
   );
   rows = [
-    { pid: 10, ppid: 1, pgid: 10, birth: "second" },
-    { pid: 11, ppid: 10, pgid: 10, birth: "other-child" },
+    { pid: 10, ppid: 1, pgid: 10, birth: born(5) },
+    { pid: 11, ppid: 10, pgid: 10, birth: born(6) },
   ];
   custody.signal("SIGKILL");
   assert.deepEqual(calls, []);
@@ -24,22 +27,22 @@ test("reused Host PID cannot authorize or signal a new incarnation or its child"
 
 test("an observed Worker survives reparenting but every signal rechecks its birth and group", () => {
   let rows = [
-    { pid: 10, ppid: 1, pgid: 10, birth: "host" },
-    { pid: 11, ppid: 10, pgid: 10, birth: "worker" },
+    { pid: 10, ppid: 1, pgid: 10, birth: born(0) },
+    { pid: 11, ppid: 10, pgid: 10, birth: born(1) },
   ];
   const calls = [];
   const custody = createWebHostProcessCustody(
     { pid: 10 },
     { parentPid: 1, snapshot: () => rows, signalProcess: (...args) => calls.push(args) },
   );
-  rows = [{ pid: 11, ppid: 1, pgid: 10, birth: "worker" }];
+  rows = [{ pid: 11, ppid: 1, pgid: 10, birth: born(1) }];
   custody.signal("SIGTERM");
   assert.deepEqual(calls, [[11, "SIGTERM"]]);
-  rows = [{ pid: 11, ppid: 1, pgid: 50, birth: "worker" }];
+  rows = [{ pid: 11, ppid: 1, pgid: 50, birth: born(1) }];
   custody.signal("SIGKILL");
   assert.deepEqual(calls, [[11, "SIGTERM"]]);
   assert.equal(custody.remaining().length, 1, "Changed group stays an explicit unresolved cleanup");
-  rows = [{ pid: 11, ppid: 1, pgid: 10, birth: "replacement" }];
+  rows = [{ pid: 11, ppid: 1, pgid: 10, birth: born(9) }];
   custody.signal("SIGKILL");
   assert.deepEqual(calls, [[11, "SIGTERM"]]);
 });
