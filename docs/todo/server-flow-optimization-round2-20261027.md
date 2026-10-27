@@ -67,6 +67,10 @@ Chrome + 真实 `codeshell-services@0245869b5a092fc8312a5d023538ed69c66f82fd` Ac
 Docker daemon 未运行，本轮未声称完成本地 Linux Docker 验收；远端平台结果按 CI 实际
 完成范围记录，不替代 Windows Server 正式包、反代或实体手机验收。
 
+集成时确认手动 CI `40482070888` 的 14 项虽然全部通过，GitHub ruleset 仍不接受
+`workflow_dispatch` 作为必需检查。已修正 `CODESHELL.md`，改走 PR 触发的正常检查，
+保留原有 14 项保护规则；不把该手动运行当作完成合入的证明。
+
 ## 后续
 
 - 按账号上下文设计分阶段实现，先打通 Account 存储/恢复/CAS 与 Web 实际偏好消费。

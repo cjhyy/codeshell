@@ -107,12 +107,15 @@ Root package `@cjhyy/code-shell` is the meta package that installs core + tui an
   repository's PR workflow; never discard unknown changes with an `ours` merge.
   Honor branch protection. When delivery/merge is authorized, complete that
   workflow without requesting routine confirmation again.
-- `main` accepts only commits whose `ci.yml` checks already passed (ruleset
-  "main requires green CI"; force pushes and deletion are blocked). Push the task
-  branch, run `gh workflow run ci.yml --ref <branch>` or open a PR, and once that
-  exact commit is green push it to `main` as a fast-forward. A merge commit made
-  locally is a new commit with no checks: rebase onto `origin/main`, or run CI on
-  the merge commit's branch first.
+- `main` accepts only commits whose required `ci.yml` checks already passed
+  (ruleset "main requires green CI"; force pushes and deletion are blocked).
+  Push the task branch and open a PR to trigger the required checks, then use
+  the normal protected integration workflow. A `workflow_dispatch` run is
+  useful for diagnostics but does **not** satisfy GitHub's required status
+  checks, even when all its jobs pass. Verify the exact candidate and its
+  eligible checks before a fast-forward push. A merge commit made locally is
+  a new commit with no checks: update the task branch and rerun PR checks first.
+  See [GitHub's event eligibility rules](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks#checks-from-some-workflow-jobs-are-not-evaluated).
 - Integrate through a clean checkout. A dirty primary checkout may only be
   fast-forwarded when all incoming paths are disjoint from existing changes and
   those changes are verified preserved; otherwise leave it untouched and report
