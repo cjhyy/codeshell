@@ -96,6 +96,7 @@ async function fixture({
   });
   const popup = { location: { href: "" }, opener: undefined, close() {} };
   let authenticated = true;
+  let currentSessionId = sessionId;
   let profile = { id: accountId, username: "fixture-user", displayName: "原昵称", role };
   let sessions = [
     {
@@ -134,7 +135,7 @@ async function fixture({
           csrfToken: "C".repeat(43),
           account: profile,
           overview: overview(),
-          session: { id: sessionId, expiresAt: Date.now() + 600000 },
+          session: { id: currentSessionId, expiresAt: Date.now() + 600000 },
         }
       : { refreshRequired: false }),
   });
@@ -189,7 +190,14 @@ async function fixture({
     const route: WebsiteRoute = admin
       ? { kind: "admin", section: "users" }
       : { kind: "account", section: section as any };
-    return context.session?.authenticated ? <AccountSettings route={route} /> : <p>请登录</p>;
+    return context.session?.authenticated ? (
+      <AccountSettings
+        key={`${context.session.account!.id}:${context.session.session!.id}`}
+        route={route}
+      />
+    ) : (
+      <p>请登录</p>
+    );
   }
   const container = document.createElement("div");
   const root = createRoot(container);
@@ -212,6 +220,15 @@ async function fixture({
     calls,
     overrides,
     snapshot,
+    switchIdentity() {
+      profile = {
+        id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        username: "next-user",
+        displayName: "新账号昵称",
+        role,
+      };
+      currentSessionId = otherSessionId;
+    },
     get context() {
       return context;
     },
@@ -242,6 +259,100 @@ test("profile changes preserve separate username and nickname fields and fixed c
   expect(new Headers(patch.init?.headers).has("Authorization")).toBe(false);
   expect(text(view.container)).toContain("账号资料已保存");
   expect(all(view.container).some((node) => node.tagName === "SCRIPT")).toBe(false);
+});
+
+test.each([
+  { field: "displayName", input: "nickname", original: "原昵称", next: "修改后的昵称" },
+  { field: "username", input: "username", original: "fixture-user", next: "renamed-user" },
+])("a saved $field can be changed back without leaving the settings page", async (change) => {
+  const view = await fixture();
+  const edit = async (value: string) => {
+    await action(() =>
+      control(
+        view.container,
+        "INPUT",
+        (node) => props(node).autoComplete === change.input,
+      ).onChange({
+        target: { value },
+      }),
+    );
+    await action(() =>
+      control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }),
+    );
+  };
+  await edit(change.next);
+  await until(() => !view.context.busy);
+  expect(view.snapshot().account?.[change.field as "displayName" | "username"]).toBe(change.next);
+  await edit(change.original);
+  await until(() => !view.context.busy);
+  expect(
+    view.calls.filter((call) => call.init?.method === "PATCH").map((call) => call.body),
+  ).toEqual([{ [change.field]: change.next }, { [change.field]: change.original }]);
+  expect(view.snapshot().account?.[change.field as "displayName" | "username"]).toBe(
+    change.original,
+  );
+  expect(text(view.container)).toContain("账号资料已保存");
+});
+
+test("a malformed profile result cannot replace the saved form baseline", async () => {
+  const view = await fixture();
+  view.overrides.set("PATCH /api/v1/account/web/profile", () =>
+    Response.json({
+      account: { id: accountId, username: "bad username", displayName: null, role: "member" },
+    }),
+  );
+  await action(() =>
+    control(view.container, "INPUT", (node) => props(node).autoComplete === "nickname").onChange({
+      target: { value: "未确认的昵称" },
+    }),
+  );
+  await action(() => control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }));
+  expect(text(view.container)).toContain("账号资料结果无效");
+  expect(text(view.container)).not.toContain("账号资料已保存");
+  expect(
+    control(view.container, "INPUT", (node) => props(node).autoComplete === "nickname").value,
+  ).toBe("未确认的昵称");
+  view.overrides.delete("PATCH /api/v1/account/web/profile");
+  await action(() => control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }));
+  expect(view.snapshot().account?.displayName).toBe("未确认的昵称");
+  expect(text(view.container)).toContain("账号资料已保存");
+});
+
+test("a delayed profile save cannot update the new account after its session changes", async () => {
+  const view = await fixture();
+  const late = deferred<Response>();
+  view.overrides.set("PATCH /api/v1/account/web/profile", () => late.promise);
+  await action(() =>
+    control(view.container, "INPUT", (node) => props(node).autoComplete === "nickname").onChange({
+      target: { value: "旧账号晚到的修改" },
+    }),
+  );
+  await action(() => control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }));
+  await until(() => view.calls.some((call) => call.init?.method === "PATCH"));
+  view.switchIdentity();
+  await action(() => view.context.restore());
+  await until(() => !view.context.busy);
+  const restoredRequests = view.calls.filter((call) => call.path.endsWith("/web/session")).length;
+  late.resolve(
+    Response.json({
+      account: {
+        id: accountId,
+        username: "fixture-user",
+        displayName: "旧账号晚到的修改",
+        role: "member",
+      },
+    }),
+  );
+  await action(() => {});
+  expect(view.context.session?.account?.username).toBe("next-user");
+  expect(
+    control(view.container, "INPUT", (node) => props(node).autoComplete === "nickname").value,
+  ).toBe("新账号昵称");
+  expect(text(view.container)).not.toContain("账号资料已保存");
+  expect(text(view.container)).not.toContain("旧账号晚到的修改");
+  expect(view.calls.filter((call) => call.path.endsWith("/web/session"))).toHaveLength(
+    restoredRequests,
+  );
 });
 
 test("a member administrator URL never requests administrator data", async () => {
