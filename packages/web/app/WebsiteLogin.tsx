@@ -9,6 +9,13 @@ export function WebsiteLogin() {
   const [password, setPassword] = React.useState("");
   const [confirmation, setConfirmation] = React.useState("");
   const [validation, setValidation] = React.useState("");
+  React.useEffect(() => {
+    if (register && !account.registrationAllowed && !account.loginCapabilitiesLoading) {
+      setRegister(false);
+      setValidation("");
+      setConfirmation("");
+    }
+  }, [register, account.registrationAllowed, account.loginCapabilitiesLoading]);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setValidation("");
@@ -79,12 +86,27 @@ export function WebsiteLogin() {
           <p className="website-muted">登录后进入你的工作台。</p>
           <button
             className="website-button website-wide"
-            disabled={account.busy || !account.githubEnabled}
+            disabled={account.busy || account.loginCapabilitiesLoading || !account.githubEnabled}
             onClick={() => void account.github("login")}
           >
             使用 GitHub 继续
           </button>
           <p className="website-hint">首次使用 GitHub 登录会按服务设置创建账号。</p>
+          {account.loginCapabilitiesLoading ? <p role="status">正在读取登录方式…</p> : null}
+          {account.loginCapabilitiesError ? (
+            <div>
+              <p role="alert" className="form-error">
+                {account.loginCapabilitiesError}
+              </p>
+              <button
+                className="website-button"
+                disabled={account.loginCapabilitiesLoading}
+                onClick={() => void account.refreshLoginCapabilities()}
+              >
+                重试读取登录方式
+              </button>
+            </div>
+          ) : null}
           <div className="website-divider">或使用用户名和密码</div>
           <form onSubmit={(event) => void submit(event)}>
             {register ? (
@@ -140,7 +162,9 @@ export function WebsiteLogin() {
             ) : null}
             <button
               className="send website-wide"
-              disabled={account.busy || !account.ready}
+              disabled={
+                account.busy || !account.ready || (register && account.loginCapabilitiesLoading)
+              }
               type="submit"
             >
               {account.busy ? "正在连接…" : register ? "创建账号" : "登录"}
@@ -149,7 +173,7 @@ export function WebsiteLogin() {
           {account.registrationAllowed ? (
             <button
               className="ghost website-wide"
-              disabled={account.busy}
+              disabled={account.busy || account.loginCapabilitiesLoading}
               onClick={() => {
                 setRegister(!register);
                 setConfirmation("");

@@ -28,3 +28,26 @@ schema 2 和明确的新目录／重新登记。Cloud/Link 旧管理员入口、
 Account 已有后续部署与 GitHub 登录/consent/native callback 证据，Link 已升级至
 `da73ce5` / schema 3；见[部署追认及未完成边界](remote-link-host.md#2026-10-26-后续部署追认)。
 登录成功不能关闭严格单仓读取、OS Keychain、旧 owner 迁移或薄云端恢复演练。
+
+## 统一网站的账号管理与登录下发
+
+统一网站已有账号资料、安全、登录会话和连接页面；管理员另有用户管理、概览和审计。
+页面位于 `packages/web/app/AccountSettings.tsx`，账号数据库、资料修改、角色和会话权限
+由独立 `codeshell-services/apps/account-server` 提供。独立 Hub 的 `/api/v1/auth/*`
+仍是单 owner 认证，不把它扩展成网站多用户账号库。
+
+网站先通过匿名、禁止缓存的 `/api/v1/account/status` 读取注册及 GitHub 登录开关。
+登录或恢复会话后，`/api/v1/account/web/session` 返回公开账号资料与角色、会话元数据、
+CSRF、账号概览中的安全状态和可用功能，以及管理员配置的固定 `cloudTarget`。
+原生登录取得的短暂 grant 随即交换为窄路径的 Secure/HttpOnly Cookie；页面不持久保存
+root token。模型密钥、MCP 秘密、Workspace 配置和项目历史不随此响应同步。
+
+公开登录方式读取失败会单独显示错误与重试，密码登录仍可使用。恢复会话、切回窗口、
+完成登录和退出时重新读取服务开关；过期请求不能覆盖新结果。资料保存采用服务端
+返回的最新资料作为下一次比较基线，连续修改和恢复旧值都能提交。资料修改响应只有
+`id`、`username`、`displayName`，权限与角色继续从 session/overview 获取。
+
+账号范围的偏好与后续模块采用[账号上下文机制设计](todo/account-context-distribution-design.md)：
+独立模块注册、schema/revision、作用域、CAS 冲突、会话代次和偏好覆盖层；首批拟支持
+资料、主题/语言偏好、可用功能。该同步协议尚未实现，现有登录不会自动覆盖本地设置。
+2026-10-27 的本轮范围及实际验收见 [Server 第二轮记录](todo/server-flow-optimization-round2-20261027.md)。

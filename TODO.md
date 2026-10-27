@@ -30,7 +30,8 @@ P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 
 
 ## 小 feature（体量 M 及以下）
 
-- **Server 部署性能与跨平台复验**（M）。[2026-10-27 首轮](docs/todo/server-flow-optimization-20261027.md)已完成认证热路径、静态传输与关闭竞态修复，本地 Server/Web 2012 项测试和真实 Node 流程通过，原生门禁已接 CI。后续在固定部署候选测端到端延迟，补 Linux/Windows、反向代理与实体手机弱网；条件请求和 Web bundle 拆分独立评估，当前结果不替代正式发布验收。
+- **Server 部署性能与跨平台复验**（M）。[2026-10-27 首轮](docs/todo/server-flow-optimization-20261027.md)完成认证热路径、静态传输、关闭竞态与原生门禁；[第二轮](docs/todo/server-flow-optimization-round2-20261027.md)补静态 ETag/304、深页历史读取与账号页面恢复。后续在固定部署候选测端到端延迟，补 Linux/Windows 正式包、反向代理与实体手机弱网，评估历史索引与 Web bundle 拆分；受控源码/CI 验证不替代正式发布验收。
+- **账号上下文与跨端偏好**（M，跨仓）。已完成[可扩展模块机制设计](docs/todo/account-context-distribution-design.md)，尚未实现 context API 与同步。按 Account 注册表/存储/CAS/备份恢复 → Web 主题语言消费 → Desktop 覆盖层推进；首批资料、偏好、可用功能，后续模型/技能/MCP/策略分别接入。保留本机设置优先级、账号切换隔离和秘密引用边界，不把下发配置视为执行授权。
 
 - **Codex 无工具辅助推理契约**（M，等待可验证的上游接口）。外部会话已可显式选择 API 辅助模型进行记忆提取/摘要；Claude CLI 可跟随当前模型。Codex CLI 0.162.0 尚无可验证的全工具禁用入口，默认跟随路径明确拒绝，不用只读 sandbox 或提示词伪装。后续在获得受支持的能力合同后接入独立、临时、可取消的辅助调用；见[实施边界](docs/todo/external-runtime-memory-20261026.md)。
 - **无模型请求的执行观测入口**（M，2026-10-26 观测复核）。真实积累中有 4 次执行只留下 lifecycle 事件，没有模型请求记录；其中 3 次在恢复门禁失败，1 次因输出 owner 被替代而取消。当前执行观测从模型摘要进入，无法打开这些运行。后续增加独立执行记录的查询与展示，保留会话/项目授权和有界分页，不伪造模型请求、用量或费用；见[本轮复核](docs/todo/execution-observation-review-20261026.md)。

@@ -24,6 +24,9 @@ interface AccountSessionContext {
   status: string;
   registrationAllowed: boolean;
   githubEnabled: boolean;
+  loginCapabilitiesLoading: boolean;
+  loginCapabilitiesError: string;
+  refreshLoginCapabilities: () => Promise<void>;
   oauthPending: boolean;
   restore: () => Promise<void>;
   signIn: (
@@ -61,10 +64,56 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
     registrationAllowed: false,
     githubEnabled: false,
   });
+  const [loginCapabilitiesLoading, setLoginCapabilitiesLoading] = React.useState(false);
+  const [loginCapabilitiesError, setLoginCapabilitiesError] = React.useState("");
+  const capabilityRequest = React.useRef<AbortController | null>(null);
   const [oauthPending, setOAuthPending] = React.useState(false);
   const pending = React.useRef<OAuthFlow | null>(null);
   const revision = React.useRef(0);
   const mounted = React.useRef(false);
+  const refreshLoginCapabilities = React.useCallback(async () => {
+    capabilityRequest.current?.abort();
+    const controller = new AbortController();
+    capabilityRequest.current = controller;
+    const live = () =>
+      mounted.current && capabilityRequest.current === controller && !controller.signal.aborted;
+    setLoginCapabilitiesLoading(true);
+    setLoginCapabilitiesError("");
+    try {
+      const response = await fetch("/api/v1/account/status", {
+        credentials: "omit",
+        cache: "no-store",
+        redirect: "error",
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]),
+      });
+      if (!response.ok) throw new Error("登录方式暂时无法读取，请重试。用户名密码登录仍可使用。");
+      const value = await response.json();
+      if (
+        typeof value?.registrationAllowed !== "boolean" ||
+        typeof value?.githubEnabled !== "boolean"
+      )
+        throw new Error("登录方式数据无效，请重试读取。");
+      if (live())
+        setCapabilities({
+          registrationAllowed: value.registrationAllowed,
+          githubEnabled: value.githubEnabled,
+        });
+    } catch (cause) {
+      if (live()) {
+        setCapabilities({ registrationAllowed: false, githubEnabled: false });
+        setLoginCapabilitiesError(
+          cause instanceof Error && cause.name !== "TimeoutError"
+            ? cause.message
+            : "读取登录方式超时，请重试。",
+        );
+      }
+    } finally {
+      if (live()) {
+        capabilityRequest.current = null;
+        setLoginCapabilitiesLoading(false);
+      }
+    }
+  }, []);
   const active = (epoch: number) => mounted.current && epoch === revision.current;
   const setWorking = (value: boolean) => {
     busyRef.current = value;
@@ -118,6 +167,9 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
   };
   const restore = React.useCallback(async () => {
     if (busyRef.current) return;
+    // Public login options can recover independently of the private session.
+    // A failed capability request must never sign out an authenticated account.
+    void refreshLoginCapabilities();
     const epoch = ++revision.current;
     setWorking(true);
     setError("");
@@ -134,7 +186,7 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
     } finally {
       if (active(epoch)) setWorking(false);
     }
-  }, [api]);
+  }, [api, refreshLoginCapabilities]);
   React.useEffect(() => {
     mounted.current = true;
     api.onSessionLost = () => {
@@ -154,30 +206,9 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
       setStatus("");
       setError("登录已过期，请重新登录。");
       setWorking(false);
+      void refreshLoginCapabilities();
     };
     void restore();
-    const controller = new AbortController();
-    void fetch("/api/v1/account/status", {
-      credentials: "omit",
-      cache: "no-store",
-      redirect: "error",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("登录方式暂时无法读取。");
-        const value = await response.json();
-        if (
-          typeof value.registrationAllowed !== "boolean" ||
-          typeof value.githubEnabled !== "boolean"
-        )
-          throw new Error("登录方式数据无效。");
-        if (!controller.signal.aborted)
-          setCapabilities({
-            registrationAllowed: value.registrationAllowed,
-            githubEnabled: value.githubEnabled,
-          });
-      })
-      .catch(() => {});
     const focus = () => {
       if (!pending.current) void restore();
     };
@@ -192,10 +223,11 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
         pending.current = null;
       }
       api.invalidate();
-      controller.abort();
+      capabilityRequest.current?.abort();
+      capabilityRequest.current = null;
       window.removeEventListener("focus", focus);
     };
-  }, [api, restore]);
+  }, [api, restore, refreshLoginCapabilities]);
   React.useEffect(() => {
     if (!session?.authenticated || !session.session) return;
     let timer: ReturnType<typeof setTimeout>;
@@ -221,6 +253,10 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
 
   const signIn: AccountSessionContext["signIn"] = async (mode, values) => {
     if (busyRef.current || !ready) return false;
+    if (mode === "register" && (!capabilities.registrationAllowed || loginCapabilitiesLoading)) {
+      setError("当前服务未开放注册，请使用已有账号登录或重试读取登录方式。");
+      return false;
+    }
     const epoch = ++revision.current;
     api.invalidate();
     setWorking(true);
@@ -239,6 +275,7 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
         const value = await api.exchangeGrant(grant, () => active(epoch));
         if (!active(epoch)) return false;
         accept(value);
+        void refreshLoginCapabilities();
       } catch (cause) {
         void api.revokeTransient(grant);
         throw cause;
@@ -253,6 +290,7 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
   };
   const logout = async () => {
     cancelGithub();
+    void refreshLoginCapabilities();
     const epoch = ++revision.current;
     api.invalidate();
     setWorking(true);
@@ -287,6 +325,7 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
     if (
       busyRef.current ||
       !ready ||
+      loginCapabilitiesLoading ||
       !capabilities.githubEnabled ||
       (mode === "link" && !sessionRef.current?.authenticated)
     )
@@ -395,6 +434,7 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
               const next = await api.exchangeGrant(result, live);
               if (live()) {
                 accept(next);
+                void refreshLoginCapabilities();
                 setStatus("");
               }
             } catch (cause) {
@@ -436,6 +476,9 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
         error,
         status,
         ...capabilities,
+        loginCapabilitiesLoading,
+        loginCapabilitiesError,
+        refreshLoginCapabilities,
         oauthPending,
         restore,
         signIn,

@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../src/test-utils/renderHook.js";
 import { AccountSessionProvider, useAccountSession } from "./AccountSessionProvider.js";
 import { AccountSettings } from "./AccountSettings.js";
+import { WebsiteLogin } from "./WebsiteLogin.js";
 import type { WebsiteRoute } from "./website-routes.js";
 
 const accountId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -59,6 +60,9 @@ async function fixture({
   hasPassword = true,
   section = "profile",
   admin = false,
+  signedIn = true,
+  renderLogin = false,
+  capabilityResponse = undefined as (() => Response | Promise<Response>) | undefined,
 } = {}) {
   ensureMiniDom();
   for (const [name, value] of [
@@ -95,7 +99,8 @@ async function fixture({
     else delete (globalThis as any).navigator;
   });
   const popup = { location: { href: "" }, opener: undefined, close() {} };
-  let authenticated = true;
+  let authenticated = signedIn;
+  let currentSessionId = sessionId;
   let profile = { id: accountId, username: "fixture-user", displayName: "原昵称", role };
   let sessions = [
     {
@@ -134,7 +139,7 @@ async function fixture({
           csrfToken: "C".repeat(43),
           account: profile,
           overview: overview(),
-          session: { id: sessionId, expiresAt: Date.now() + 600000 },
+          session: { id: currentSessionId, expiresAt: Date.now() + 600000 },
         }
       : { refreshRequired: false }),
   });
@@ -151,7 +156,9 @@ async function fixture({
     const override = overrides.get(`${init?.method ?? "GET"} ${path}`);
     if (override) return override(call);
     if (path === "/api/v1/account/status")
-      return Response.json({ registrationAllowed: true, githubEnabled: true });
+      return (
+        capabilityResponse?.() ?? Response.json({ registrationAllowed: true, githubEnabled: true })
+      );
     if (path === "/api/v1/account/web/session") {
       if (init?.method === "POST") authenticated = true;
       return Response.json(snapshot());
@@ -166,9 +173,10 @@ async function fixture({
         refreshTokenExpiresAt: Date.now() + 86400000,
       });
     if (path === "/api/v1/account/web/overview") return Response.json(overview());
-    if (path === "/api/v1/account/web/profile" && init?.method === "PATCH") {
-      profile = { ...profile, ...call.body };
-      return Response.json({ account: profile });
+    if (path === "/api/v1/account/web/profile") {
+      if (init?.method === "PATCH") profile = { ...profile, ...call.body };
+      const { id, username, displayName } = profile;
+      return Response.json({ account: { id, username, displayName } });
     }
     if (path === "/api/v1/account/web/sessions")
       return Response.json({ sessions, total: sessions.length, hasMore: false });
@@ -189,7 +197,16 @@ async function fixture({
     const route: WebsiteRoute = admin
       ? { kind: "admin", section: "users" }
       : { kind: "account", section: section as any };
-    return context.session?.authenticated ? <AccountSettings route={route} /> : <p>请登录</p>;
+    return context.session?.authenticated ? (
+      <AccountSettings
+        key={`${context.session.account!.id}:${context.session.session!.id}`}
+        route={route}
+      />
+    ) : renderLogin ? (
+      <WebsiteLogin />
+    ) : (
+      <p>请登录</p>
+    );
   }
   const container = document.createElement("div");
   const root = createRoot(container);
@@ -212,6 +229,15 @@ async function fixture({
     calls,
     overrides,
     snapshot,
+    switchIdentity() {
+      profile = {
+        id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        username: "next-user",
+        displayName: "新账号昵称",
+        role,
+      };
+      currentSessionId = otherSessionId;
+    },
     get context() {
       return context;
     },
@@ -228,20 +254,121 @@ test("a restored website cookie opens account settings without another login or 
   expect(view.calls.every((call) => call.path.startsWith("/api/v1/account/"))).toBe(true);
 });
 
-test("profile changes preserve separate username and nickname fields and fixed cookie authority", async () => {
+test.each([{ role: "member" }, { role: "admin" }])(
+  "profile edits preserve $role role from the authoritative session",
+  async ({ role }) => {
+    const view = await fixture({ role });
+    const profile = await view.context.request<{ account: Record<string, unknown> }>("/profile");
+    expect(Object.keys(profile.account).sort()).toEqual(["displayName", "id", "username"]);
+    await action(() =>
+      control(view.container, "INPUT", (node) => props(node).autoComplete === "nickname").onChange({
+        target: { value: "新昵称 <script>" },
+      }),
+    );
+    await action(() =>
+      control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }),
+    );
+    const patch = view.calls.find((call) => call.init?.method === "PATCH")!;
+    expect(patch.body).toEqual({ displayName: "新昵称 <script>" });
+    expect(new Headers(patch.init?.headers).get("X-CodeShell-CSRF")).toBe("C".repeat(43));
+    expect(new Headers(patch.init?.headers).has("Authorization")).toBe(false);
+    expect(text(view.container)).toContain("账号资料已保存");
+    expect(view.context.session?.account?.role).toBe(role);
+    expect(all(view.container).some((node) => node.tagName === "SCRIPT")).toBe(false);
+  },
+);
+
+test.each([
+  { field: "displayName", input: "nickname", original: "原昵称", next: "修改后的昵称" },
+  { field: "username", input: "username", original: "fixture-user", next: "renamed-user" },
+])("a saved $field can be changed back without leaving the settings page", async (change) => {
   const view = await fixture();
+  const edit = async (value: string) => {
+    await action(() =>
+      control(
+        view.container,
+        "INPUT",
+        (node) => props(node).autoComplete === change.input,
+      ).onChange({
+        target: { value },
+      }),
+    );
+    await action(() =>
+      control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }),
+    );
+  };
+  await edit(change.next);
+  await until(() => !view.context.busy);
+  expect(view.snapshot().account?.[change.field as "displayName" | "username"]).toBe(change.next);
+  await edit(change.original);
+  await until(() => !view.context.busy);
+  expect(
+    view.calls.filter((call) => call.init?.method === "PATCH").map((call) => call.body),
+  ).toEqual([{ [change.field]: change.next }, { [change.field]: change.original }]);
+  expect(view.snapshot().account?.[change.field as "displayName" | "username"]).toBe(
+    change.original,
+  );
+  expect(text(view.container)).toContain("账号资料已保存");
+});
+
+test("a malformed profile result cannot replace the saved form baseline", async () => {
+  const view = await fixture();
+  view.overrides.set("PATCH /api/v1/account/web/profile", () =>
+    Response.json({
+      account: { id: accountId, username: "bad username", displayName: null },
+    }),
+  );
   await action(() =>
     control(view.container, "INPUT", (node) => props(node).autoComplete === "nickname").onChange({
-      target: { value: "新昵称 <script>" },
+      target: { value: "未确认的昵称" },
     }),
   );
   await action(() => control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }));
-  const patch = view.calls.find((call) => call.init?.method === "PATCH")!;
-  expect(patch.body).toEqual({ displayName: "新昵称 <script>" });
-  expect(new Headers(patch.init?.headers).get("X-CodeShell-CSRF")).toBe("C".repeat(43));
-  expect(new Headers(patch.init?.headers).has("Authorization")).toBe(false);
+  expect(text(view.container)).toContain("账号资料结果无效");
+  expect(text(view.container)).not.toContain("账号资料已保存");
+  expect(
+    control(view.container, "INPUT", (node) => props(node).autoComplete === "nickname").value,
+  ).toBe("未确认的昵称");
+  view.overrides.delete("PATCH /api/v1/account/web/profile");
+  await action(() => control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }));
+  expect(view.snapshot().account?.displayName).toBe("未确认的昵称");
   expect(text(view.container)).toContain("账号资料已保存");
-  expect(all(view.container).some((node) => node.tagName === "SCRIPT")).toBe(false);
+});
+
+test("a delayed profile save cannot update the new account after its session changes", async () => {
+  const view = await fixture();
+  const late = deferred<Response>();
+  view.overrides.set("PATCH /api/v1/account/web/profile", () => late.promise);
+  await action(() =>
+    control(view.container, "INPUT", (node) => props(node).autoComplete === "nickname").onChange({
+      target: { value: "旧账号晚到的修改" },
+    }),
+  );
+  await action(() => control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }));
+  await until(() => view.calls.some((call) => call.init?.method === "PATCH"));
+  view.switchIdentity();
+  await action(() => view.context.restore());
+  await until(() => !view.context.busy);
+  const restoredRequests = view.calls.filter((call) => call.path.endsWith("/web/session")).length;
+  late.resolve(
+    Response.json({
+      account: {
+        id: accountId,
+        username: "fixture-user",
+        displayName: "旧账号晚到的修改",
+      },
+    }),
+  );
+  await action(() => {});
+  expect(view.context.session?.account?.username).toBe("next-user");
+  expect(
+    control(view.container, "INPUT", (node) => props(node).autoComplete === "nickname").value,
+  ).toBe("新账号昵称");
+  expect(text(view.container)).not.toContain("账号资料已保存");
+  expect(text(view.container)).not.toContain("旧账号晚到的修改");
+  expect(view.calls.filter((call) => call.path.endsWith("/web/session"))).toHaveLength(
+    restoredRequests,
+  );
 });
 
 test("a member administrator URL never requests administrator data", async () => {
@@ -418,4 +545,144 @@ test("successful GitHub login exchanges its grant and becomes usable without wai
   expect(view.context.busy).toBe(false);
   expect(view.calls.some((call) => call.path === "/api/v1/account/web/github/start")).toBe(false);
   cleanupResponse.resolve(Response.json({ ok: true }));
+});
+
+test("restoring a live account retries failed login capabilities without signing it out", async () => {
+  let unavailable = true;
+  const view = await fixture({
+    capabilityResponse: () =>
+      unavailable
+        ? Response.json({}, { status: 503 })
+        : Response.json({ registrationAllowed: true, githubEnabled: true }),
+  });
+  expect(view.context.githubEnabled).toBe(false);
+  expect(view.context.session?.account?.id).toBe(accountId);
+  unavailable = false;
+  await action(() => view.context.restore());
+  await until(() => !view.context.busy);
+  expect(view.context.githubEnabled).toBe(true);
+  expect(view.context.registrationAllowed).toBe(true);
+  expect(view.context.session?.account?.id).toBe(accountId);
+  const reads = view.calls.filter((call) => call.path === "/api/v1/account/status");
+  expect(reads.length).toBeGreaterThanOrEqual(2);
+  for (const call of reads) {
+    expect(call.init?.credentials).toBe("omit");
+    expect(call.init?.redirect).toBe("error");
+    expect(call.init?.cache).toBe("no-store");
+    expect(call.init?.headers).toBeUndefined();
+  }
+});
+
+test("the login page distinguishes unavailable capabilities and retries without reloading its session", async () => {
+  let unavailable = true;
+  const view = await fixture({
+    signedIn: false,
+    renderLogin: true,
+    capabilityResponse: () =>
+      unavailable
+        ? Response.json({}, { status: 503 })
+        : Response.json({ registrationAllowed: true, githubEnabled: true }),
+  });
+  expect(view.context.ready).toBe(true);
+  expect(view.context.loginCapabilitiesError).toContain("登录方式暂时无法读取");
+  expect(text(view.container)).toContain("重试读取登录方式");
+  const sessionReads = view.calls.filter((call) => call.path.endsWith("/web/session")).length;
+  unavailable = false;
+  await action(() =>
+    control(view.container, "BUTTON", (node) => text(node) === "重试读取登录方式").onClick(),
+  );
+  await until(() => !view.context.loginCapabilitiesLoading);
+  expect(view.context.loginCapabilitiesError).toBe("");
+  expect(view.context.githubEnabled).toBe(true);
+  expect(text(view.container)).toContain("没有账号？创建账号");
+  expect(view.calls.filter((call) => call.path.endsWith("/web/session"))).toHaveLength(
+    sessionReads,
+  );
+});
+
+test("focus rereads operator login options and leaves the active account intact", async () => {
+  const view = await fixture();
+  view.overrides.set("GET /api/v1/account/status", () =>
+    Response.json({ registrationAllowed: false, githubEnabled: false }),
+  );
+  await action(() => window.dispatchEvent({ type: "focus" } as Event));
+  await until(() => !view.context.busy && !view.context.loginCapabilitiesLoading);
+  expect(view.context.registrationAllowed).toBe(false);
+  expect(view.context.githubEnabled).toBe(false);
+  expect(view.context.loginCapabilitiesError).toBe("");
+  expect(view.context.session?.account?.id).toBe(accountId);
+  expect(view.calls.some((call) => call.path.endsWith("/logout"))).toBe(false);
+});
+
+test("closing registration returns to login without obsolete registration errors", async () => {
+  const view = await fixture({ signedIn: false, renderLogin: true });
+  await action(() =>
+    control(view.container, "BUTTON", (node) => text(node) === "没有账号？创建账号").onClick(),
+  );
+  await action(() => {
+    control(view.container, "INPUT", (node) => props(node).autoComplete === "username").onChange({
+      target: { value: "fixture-user" },
+    });
+    control(
+      view.container,
+      "INPUT",
+      (node) => props(node).autoComplete === "new-password",
+    ).onChange({
+      target: { value: "fixture-password-12345" },
+    });
+  });
+  await action(() => control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }));
+  expect(text(view.container)).toContain("两次输入的密码不一致。");
+  view.overrides.set("GET /api/v1/account/status", () =>
+    Response.json({ registrationAllowed: false, githubEnabled: false }),
+  );
+  await action(() => window.dispatchEvent({ type: "focus" } as Event));
+  await until(() => !view.context.busy && !view.context.loginCapabilitiesLoading);
+  expect(text(view.container)).not.toContain("两次输入的密码不一致。");
+  expect(text(view.container)).not.toContain("确认密码");
+  expect(
+    control(view.container, "INPUT", (node) => props(node).autoComplete === "current-password")
+      .value,
+  ).toBe("fixture-password-12345");
+  await action(() => control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }));
+  await until(() => !view.context.busy);
+  expect(view.context.session?.authenticated).toBe(true);
+  expect(view.calls.some((call) => call.path.endsWith("/register"))).toBe(false);
+});
+
+test("late capability failure from an older operation cannot overwrite logout discovery", async () => {
+  const view = await fixture();
+  const old = deferred<Response>();
+  view.overrides.set("GET /api/v1/account/status", () => old.promise);
+  await action(() => view.context.refreshLoginCapabilities());
+  expect(view.context.loginCapabilitiesLoading).toBe(true);
+  view.overrides.set("GET /api/v1/account/status", () =>
+    Response.json({ registrationAllowed: false, githubEnabled: true }),
+  );
+  await action(() => view.context.logout());
+  await until(() => !view.context.busy && !view.context.loginCapabilitiesLoading);
+  expect(view.context.session?.authenticated).toBe(false);
+  old.resolve(Response.json({}, { status: 503 }));
+  await action(() => {});
+  expect(view.context.loginCapabilitiesError).toBe("");
+  expect(view.context.githubEnabled).toBe(true);
+  expect(view.context.registrationAllowed).toBe(false);
+  expect(view.context.session?.authenticated).toBe(false);
+});
+
+test("unavailable or malformed login options do not block an existing password account", async () => {
+  const view = await fixture({
+    signedIn: false,
+    capabilityResponse: () => Response.json({ registrationAllowed: "yes", githubEnabled: true }),
+  });
+  expect(view.context.loginCapabilitiesError).toContain("登录方式数据无效");
+  expect(view.context.ready).toBe(true);
+  await action(() =>
+    view.context.signIn("login", { username: "fixture-user", password: "fixture-password-12345" }),
+  );
+  await until(() => !view.context.busy && !view.context.loginCapabilitiesLoading);
+  expect(view.context.session?.account?.id).toBe(accountId);
+  expect(view.context.session?.authenticated).toBe(true);
+  expect(view.context.githubEnabled).toBe(false);
+  expect(view.context.error).toBe("");
 });

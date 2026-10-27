@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { bundleInSubprocess } from "./helpers/bundle-in-subprocess.ts";
+import { bundleInSubprocess } from "./helpers/bundle-in-subprocess.js";
 
 // Bun neither reports EPIPE for these writes nor matches Node's stdio `close`
 // accounting, so the fixture runs the real transports in native Node: a child
