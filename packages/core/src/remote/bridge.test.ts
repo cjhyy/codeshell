@@ -60,6 +60,18 @@ describe("RemoteBridge connect lifecycle", () => {
     child.emit("exit", 255);
     await expect(p).rejects.toThrow(/exited/);
   });
+
+  test("disconnect before the first stdout settles the pending connect", async () => {
+    const child = makeFakeChild();
+    const bridge = new RemoteBridge({ host: "h" }, () => child as never);
+    const p = bridge.connect();
+    bridge.disconnect();
+    await expect(p).rejects.toThrow(/closed before it was ready/);
+    // The detached process's late exit and stdout are ignored.
+    expect(() => child.emit("exit", 143)).not.toThrow();
+    child.stdout.write("late\n");
+    expect(bridge.isConnected).toBe(false);
+  });
 });
 
 describe("RemoteBridge stdin errors", () => {
