@@ -55,6 +55,7 @@ export function watchElectronTestProcess(child, options = {}) {
     timingNow = () => performance.now(),
     onOwnedSnapshot,
     onInitialIdentityFailure,
+    pauseSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms),
   } = options;
   // Custom synchronous adapters may bind an advisory sidecar to that exact
   // query. Keep them paired unless they explicitly supply an async equivalent.
@@ -174,9 +175,13 @@ export function watchElectronTestProcess(child, options = {}) {
   notifyOwnedSnapshot(initial, "initial");
   let snapshotFailureReported = false;
   // A periodic query can fail transiently on a loaded runner. Only consecutive failures
-  // mean the tree can no longer be observed; any success re-observes it. Checks made
-  // immediately before signaling keep their single fresh query and fail at once.
+  // mean the tree can no longer be observed; any success re-observes it.
   const PERIODIC_FAILURE_LIMIT = 3;
+  // A fresh query before a signal can fail the same way ("unknown, 0ms" on Linux). It is
+  // retried briefly in place: every signal still needs a successful snapshot taken just
+  // before it, and once a failure is reported the watcher never regains authority.
+  const FRESH_QUERY_ATTEMPTS = 3;
+  const FRESH_QUERY_RETRY_MS = 50;
   let periodicFailures = 0;
   let resolveCompleted;
   const completed = new Promise((resolve) => {
@@ -194,14 +199,20 @@ export function watchElectronTestProcess(child, options = {}) {
     }
   };
   const observe = () => {
-    try {
-      const current = timedSnapshot();
-      rememberOwnedProcesses(owned, current);
-      notifyOwnedSnapshot(current, state);
-      return new Map(current.map((item) => [item.pid, item]));
-    } catch (error) {
-      observationFailed(error);
-      return null;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const current = timedSnapshot();
+        rememberOwnedProcesses(owned, current);
+        notifyOwnedSnapshot(current, state);
+        return new Map(current.map((item) => [item.pid, item]));
+      } catch (error) {
+        if (attempt < FRESH_QUERY_ATTEMPTS) {
+          pauseSync(FRESH_QUERY_RETRY_MS);
+          continue;
+        }
+        observationFailed(error);
+        return null;
+      }
     }
   };
   const poll = () => {
