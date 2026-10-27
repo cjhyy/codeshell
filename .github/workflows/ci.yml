@@ -396,8 +396,10 @@ jobs:
           xvfb-run -a bun run --cwd packages/desktop test:e2e:cloud-workbench
       - name: Native built-in theme and surface backgrounds with private SecretService
         run: xvfb-run -a bun run --cwd packages/desktop test:e2e:themes
+      # Same commands as packages/desktop test:e2e, each in its own log group: a failing
+      # suite is named in an annotation and the step summary, and later suites still run.
       - name: real Electron E2E
-        run: bash scripts/run-electron-e2e-keyring.sh
+        run: bash scripts/run-electron-e2e-keyring.sh xvfb-run -a node packages/desktop/scripts/run-e2e-suite.mjs
       - name: Preserve Profile memory copy Electron evidence
         if: always()
         uses: actions/upload-artifact@v4
