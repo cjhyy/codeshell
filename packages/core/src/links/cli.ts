@@ -20,7 +20,7 @@ import {
 } from "./http.js";
 import { getLocalLinkProvider } from "./providers.js";
 import type { LocalLinkIdentity, LocalLinkValidationResult } from "./types.js";
-import { killChildTree } from "../runtime/spawn-common.js";
+import { isBrokenPipeError, killChildTree } from "../runtime/spawn-common.js";
 
 export type CliLinkProviderId = "github" | "gitlab" | "notion" | "todoist" | "vercel";
 
@@ -176,7 +176,10 @@ export const runCliLinkCommand: CliLinkCommandRunner = (providerId, command, arg
         signal: options.signal,
       },
       (error, stdout, stderr) => {
-        const failure = error && options.signal?.aborted ? error : (inputError ?? error);
+        // A CLI that exits 0 before reading its input (already logged in, say)
+        // succeeded; only a failed or killed run reports the pipe error.
+        const inputFailure = !error && isBrokenPipeError(inputError) ? undefined : inputError;
+        const failure = error && options.signal?.aborted ? error : (inputFailure ?? error);
         if (failure) {
           Object.assign(failure, { stdout, stderr });
           reject(failure);

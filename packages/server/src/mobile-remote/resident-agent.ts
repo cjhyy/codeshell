@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { stopRoomProcess } from "./room-process-stop.js";
+import { releaseStdioAfterExit, stopRoomProcess } from "./room-process-stop.js";
 import { createInterface } from "node:readline";
 import { pathWithCommonBins } from "./path-bins.js";
 
@@ -193,6 +193,8 @@ export class ResidentAgentProcess {
       stdio: ["pipe", "pipe", "pipe"],
     });
     this.child = child;
+    // Settle on `close` so trailing output is read, without waiting on grandchildren.
+    releaseStdioAfterExit(child);
 
     if (child.stdout) {
       const rl = createInterface({ input: child.stdout });
