@@ -81,7 +81,9 @@ test("snapshot timing counts failures, bounds recent samples at 32 and returns c
   equal(stop.snapshotTiming.recent[0], 1);
   broken = true;
   f.tick();
-  equal(stop.snapshotTiming.count, 42);
+  // A synchronous observation retries in place before it reports one failure.
+  equal(stop.snapshotTiming.count, 44);
+  deepStrictEqual(f.pauses, [50, 50]);
   equal(f.failures.length, 1);
   stop();
 });
@@ -143,6 +145,7 @@ function fixture(initial = [root]) {
   const intervals = new Map();
   const signals = [];
   const failures = [];
+  const pauses = [];
   let processes = initial;
   let elapsed = 0;
   let nextTimer = 1;
@@ -157,6 +160,7 @@ function fixture(initial = [root]) {
     intervals,
     signals,
     failures,
+    pauses,
     options: {
       platform: "darwin",
       parentPid: 99,
@@ -172,10 +176,12 @@ function fixture(initial = [root]) {
       clearTimeout: (id) => timeouts.delete(id),
       setInterval: (callback, delay) => add(intervals, callback, delay),
       clearInterval: (id) => intervals.delete(id),
+      pauseSync: (ms) => pauses.push(ms),
     },
     setProcesses: (current) => {
       processes = current;
     },
+    currentProcesses: () => processes,
     tick: () => {
       for (const timer of intervals.values()) timer.callback();
     },
@@ -464,13 +470,14 @@ test("terminate cannot regain authority after a manual disarm", async () => {
   equal(f.intervals.size, 0);
 });
 
-test("terminate fails closed after a query failure even if a later query could recover", async () => {
+test("terminate fails closed after a reported query failure even if a later query could recover", async () => {
   const f = fixture();
   let reads = 0;
   const stop = watchElectronTestProcess(f.child, {
     ...f.options,
     snapshotProcesses() {
-      if (++reads === 2) throw new Error("fixed query failure");
+      // Every in-place attempt of the pre-signal observation fails.
+      if (++reads >= 2 && reads <= 4) throw new Error("fixed query failure");
       return [root];
     },
   });
@@ -478,12 +485,31 @@ test("terminate fails closed after a query failure even if a later query could r
   equal(receipt.status, "unproven");
   equal(receipt.queryFailed, true);
   equal(receipt.remaining, null);
-  equal(reads, 2, "Failed identity observation cannot be retried into signaling authority");
+  equal(reads, 4, "One initial read plus three bounded attempts");
+  deepStrictEqual(f.pauses, [50, 50]);
   deepStrictEqual(f.signals, []);
   equal(f.failures.length, 1);
   equal(stop.terminate(), stop.completed);
-  equal(reads, 2);
+  equal(reads, 4, "A reported failure is never retried into signaling authority");
   equal(f.timeouts.size, 0);
+});
+
+test("a transient pre-signal query failure is retried before the identity-checked signal", () => {
+  const f = fixture([root, descendant]);
+  let reads = 0;
+  const stop = watchElectronTestProcess(f.child, {
+    ...f.options,
+    snapshotProcesses() {
+      // The first pre-signal discovery fails once ("unknown, 0ms" on Linux runners).
+      if (++reads === 2) throw new Error("transient query failure");
+      return f.currentProcesses();
+    },
+  });
+  f.child.emit("exit", 0, null);
+  deepStrictEqual(f.pauses, [50]);
+  deepStrictEqual(f.failures, []);
+  deepStrictEqual(f.signals, [[descendant.pid, "SIGTERM"]]);
+  stop();
 });
 
 test("already exited children expose terminate without acquiring identity or authority", async () => {
