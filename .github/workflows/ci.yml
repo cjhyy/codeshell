@@ -36,6 +36,12 @@ jobs:
         run: bun scripts/check-link-contracts.ts
       - name: Bun test completion guard self-test
         run: node scripts/test-bun-test-completion.mjs
+      # Every Bun test file runs in some CI Bun process, and no shard grows past the
+      # size it was last green at (Bun 1.3.11 loses modules in oversized processes).
+      - name: test shard coverage and budgets
+        run: bun run lint:test-shards
+      - name: root script suites
+        run: node scripts/run-isolated-node-smoke.mjs --test $(git ls-files 'scripts/*.test.mjs')
       - name: engine-bypass guard
         run: bash scripts/check-no-engine-bypass.sh
       - name: lint
@@ -170,12 +176,10 @@ jobs:
               --path-ignore-patterns '**/desktop/scripts/*.test.mjs'
               --path-ignore-patterns '**/cc-room/transcript-recovery.test.ts'
               --path-ignore-patterns '**/src/main/browser-host/index.test.ts'
-          # rest is split in two for the Bun 1.3.11 descriptor exhaustion described under rest-server.
-          # With 591 files in one process the late suites lost modules mid-run: six tests/
-          # files could not resolve @cjhyy/code-shell-capability-coding and the native remote
-          # host could not read packages/core/dist/index.internal.js, beside Bun's own
-          # "directory mismatch … fd" internal error; each of them passes in a smaller process.
-          # Together the two path lists are the previous single list.
+          # rest is split in two only for wall time (470s as one shard). Together the two
+          # path lists are the previous single list. The module losses seen when it was split
+          # were not size: two suites bundled with an in-process Bun.build, which shares the
+          # runner's resolver cache (see tests/helpers/bundle-in-subprocess.ts).
           - shard: rest
             paths: >-
               tests packages/coding packages/pet packages/chat packages/arena packages/cdp
