@@ -17,6 +17,7 @@ interface ManagedServer {
   client: LSPClient | undefined;
   state: ServerState;
   error?: string;
+  starting?: Promise<LSPClient | undefined>;
 }
 
 export class LSPServerManager {
@@ -43,14 +44,14 @@ export class LSPServerManager {
       return managed.client;
     }
 
-    if (managed.state === "starting") {
-      // Wait for it to be ready
-      await new Promise((r) => setTimeout(r, 2000));
-      return managed.client;
+    if (managed.starting) return managed.starting;
+    const starting = this.startServer(serverName);
+    managed.starting = starting;
+    try {
+      return await starting;
+    } finally {
+      if (managed.starting === starting) managed.starting = undefined;
     }
-
-    // Try to start
-    return this.startServer(serverName);
   }
 
   /**
@@ -68,22 +69,39 @@ export class LSPServerManager {
     }
 
     managed.state = "starting";
-
+    managed.error = undefined;
+    const client = new LSPClient(
+      managed.config.command,
+      managed.config.args,
+      rootUriToPath(this.rootUri),
+    );
+    managed.client = client;
+    client.on("failure", (error: Error) => {
+      if (managed.client !== client) return;
+      managed.state = "error";
+      managed.error = error.message;
+    });
     try {
-      const client = new LSPClient(
-        managed.config.command,
-        managed.config.args,
-        rootUriToPath(this.rootUri),
-      );
       await client.start();
+      if (managed.client !== client) {
+        await client.shutdown();
+        return undefined;
+      }
       await client.initialize(this.rootUri);
-
-      managed.client = client;
+      // Shutdown can retire a startup while initialize is in flight.
+      if (managed.client !== client) {
+        await client.shutdown();
+        return undefined;
+      }
       managed.state = "ready";
       return client;
     } catch (err) {
-      managed.state = "error";
-      managed.error = (err as Error).message;
+      if (managed.client === client) {
+        managed.state = "error";
+        managed.error = (err as Error).message;
+        managed.client = undefined;
+      }
+      await client.shutdown();
       return undefined;
     }
   }
@@ -115,15 +133,16 @@ export class LSPServerManager {
    */
   async shutdownAll(): Promise<void> {
     for (const server of this.servers.values()) {
-      if (server.client?.isAlive) {
+      const client = server.client;
+      server.state = "stopped";
+      server.client = undefined;
+      if (client) {
         try {
-          await server.client.shutdown();
+          await client.shutdown();
         } catch {
           // Force killed
         }
       }
-      server.state = "stopped";
-      server.client = undefined;
     }
   }
 }
