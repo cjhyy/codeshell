@@ -5,7 +5,9 @@ import {
   parseAccountOverview,
   type AccountOverview,
   type WebsiteAccount,
+  type WebsiteProfile,
   validWebsiteAccount,
+  validWebsiteProfile,
 } from "./account-api.js";
 import type { WebsiteRoute } from "./website-routes.js";
 
@@ -114,7 +116,7 @@ function ProfileSettings({ profile }: { profile: WebsiteAccount }) {
   const [username, setUsername] = React.useState(profile.username);
   // The overview prop is the page's initial snapshot. Each successful save
   // becomes the baseline for the next edit, including reverting to old values.
-  const [savedProfile, setSavedProfile] = React.useState(profile);
+  const [savedProfile, setSavedProfile] = React.useState<WebsiteProfile>(profile);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const [status, setStatus] = React.useState("");
@@ -150,11 +152,14 @@ function ProfileSettings({ profile }: { profile: WebsiteAccount }) {
     setError("");
     setStatus("");
     try {
-      const value = await account.request<{ account: WebsiteAccount }>("/profile", "PATCH", patch);
+      const value = await account.request<{ account: WebsiteProfile }>("/profile", "PATCH", patch);
       if (!live.current) return;
-      if (!validWebsiteAccount(value?.account) || value.account.id !== profile.id)
+      if (!validWebsiteProfile(value?.account) || value.account.id !== profile.id)
         throw new AccountWebError("账号资料结果无效，请刷新后重试。");
-      setSavedProfile(value.account);
+      // Profile responses contain display fields only; role remains owned by
+      // the authoritative session and overview returned during restore.
+      const { id, username, displayName } = value.account;
+      setSavedProfile({ id, username, displayName });
       setDisplayName(value.account.displayName);
       setUsername(value.account.username);
       await account.restore();

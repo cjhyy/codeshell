@@ -3,10 +3,12 @@ export const ACCOUNT_WEB_PREFIX = "/api/v1/account/web";
 const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;
 const OPAQUE = /^[A-Za-z0-9_-]{43}$/;
 
-export interface WebsiteAccount {
+export interface WebsiteProfile {
   id: string;
   username: string;
   displayName: string;
+}
+export interface WebsiteAccount extends WebsiteProfile {
   role: "member" | "admin";
 }
 export interface CloudWebsiteTarget {
@@ -102,8 +104,8 @@ export function canonicalWebsiteOrigin(value: unknown): value is string {
     return false;
   }
 }
-export function validWebsiteAccount(value: unknown): value is WebsiteAccount {
-  const account = value as WebsiteAccount | undefined;
+export function validWebsiteProfile(value: unknown): value is WebsiteProfile {
+  const account = value as WebsiteProfile | undefined;
   return (
     !!account &&
     UUID.test(account.id) &&
@@ -112,9 +114,11 @@ export function validWebsiteAccount(value: unknown): value is WebsiteAccount {
     typeof account.displayName === "string" &&
     [...account.displayName].length >= 1 &&
     [...account.displayName].length <= 64 &&
-    !/[\p{Cc}\p{Cs}]/u.test(account.displayName) &&
-    ["member", "admin"].includes(account.role)
+    !/[\p{Cc}\p{Cs}]/u.test(account.displayName)
   );
+}
+export function validWebsiteAccount(value: unknown): value is WebsiteAccount {
+  return validWebsiteProfile(value) && ["member", "admin"].includes((value as WebsiteAccount).role);
 }
 export function validCloudTarget(value: unknown): value is CloudWebsiteTarget {
   const target = value as CloudWebsiteTarget | undefined;

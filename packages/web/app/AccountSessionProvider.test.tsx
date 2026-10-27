@@ -173,9 +173,10 @@ async function fixture({
         refreshTokenExpiresAt: Date.now() + 86400000,
       });
     if (path === "/api/v1/account/web/overview") return Response.json(overview());
-    if (path === "/api/v1/account/web/profile" && init?.method === "PATCH") {
-      profile = { ...profile, ...call.body };
-      return Response.json({ account: profile });
+    if (path === "/api/v1/account/web/profile") {
+      if (init?.method === "PATCH") profile = { ...profile, ...call.body };
+      const { id, username, displayName } = profile;
+      return Response.json({ account: { id, username, displayName } });
     }
     if (path === "/api/v1/account/web/sessions")
       return Response.json({ sessions, total: sessions.length, hasMore: false });
@@ -253,21 +254,29 @@ test("a restored website cookie opens account settings without another login or 
   expect(view.calls.every((call) => call.path.startsWith("/api/v1/account/"))).toBe(true);
 });
 
-test("profile changes preserve separate username and nickname fields and fixed cookie authority", async () => {
-  const view = await fixture();
-  await action(() =>
-    control(view.container, "INPUT", (node) => props(node).autoComplete === "nickname").onChange({
-      target: { value: "新昵称 <script>" },
-    }),
-  );
-  await action(() => control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }));
-  const patch = view.calls.find((call) => call.init?.method === "PATCH")!;
-  expect(patch.body).toEqual({ displayName: "新昵称 <script>" });
-  expect(new Headers(patch.init?.headers).get("X-CodeShell-CSRF")).toBe("C".repeat(43));
-  expect(new Headers(patch.init?.headers).has("Authorization")).toBe(false);
-  expect(text(view.container)).toContain("账号资料已保存");
-  expect(all(view.container).some((node) => node.tagName === "SCRIPT")).toBe(false);
-});
+test.each([{ role: "member" }, { role: "admin" }])(
+  "profile edits preserve $role role from the authoritative session",
+  async ({ role }) => {
+    const view = await fixture({ role });
+    const profile = await view.context.request<{ account: Record<string, unknown> }>("/profile");
+    expect(Object.keys(profile.account).sort()).toEqual(["displayName", "id", "username"]);
+    await action(() =>
+      control(view.container, "INPUT", (node) => props(node).autoComplete === "nickname").onChange({
+        target: { value: "新昵称 <script>" },
+      }),
+    );
+    await action(() =>
+      control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }),
+    );
+    const patch = view.calls.find((call) => call.init?.method === "PATCH")!;
+    expect(patch.body).toEqual({ displayName: "新昵称 <script>" });
+    expect(new Headers(patch.init?.headers).get("X-CodeShell-CSRF")).toBe("C".repeat(43));
+    expect(new Headers(patch.init?.headers).has("Authorization")).toBe(false);
+    expect(text(view.container)).toContain("账号资料已保存");
+    expect(view.context.session?.account?.role).toBe(role);
+    expect(all(view.container).some((node) => node.tagName === "SCRIPT")).toBe(false);
+  },
+);
 
 test.each([
   { field: "displayName", input: "nickname", original: "原昵称", next: "修改后的昵称" },
@@ -306,7 +315,7 @@ test("a malformed profile result cannot replace the saved form baseline", async 
   const view = await fixture();
   view.overrides.set("PATCH /api/v1/account/web/profile", () =>
     Response.json({
-      account: { id: accountId, username: "bad username", displayName: null, role: "member" },
+      account: { id: accountId, username: "bad username", displayName: null },
     }),
   );
   await action(() =>
@@ -347,7 +356,6 @@ test("a delayed profile save cannot update the new account after its session cha
         id: accountId,
         username: "fixture-user",
         displayName: "旧账号晚到的修改",
-        role: "member",
       },
     }),
   );
