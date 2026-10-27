@@ -1,7 +1,16 @@
 import { describe, test, expect } from "bun:test";
-import { credentialUseGate, type CredentialAskFn, type SessionCredentialAllow } from "./use-gate.js";
+import {
+  credentialUseGate,
+  type CredentialAskFn,
+  type SessionCredentialAllow,
+} from "./use-gate.js";
 
-const REQ = { id: "xhs__a", label: "账号A", purpose: "拉小红书内容" };
+const REQ = {
+  approvalIdentity: "opaque-record-a",
+  id: "xhs__a",
+  label: "账号A",
+  purpose: "拉小红书内容",
+};
 
 describe("credentialUseGate", () => {
   test("autoApprove=true skips the prompt", async () => {
@@ -15,13 +24,13 @@ describe("credentialUseGate", () => {
     expect(asked).toBe(false);
   });
 
-  test("session-remembered id skips the prompt", async () => {
+  test("session-remembered record identity skips the prompt", async () => {
     let asked = false;
     const ask: CredentialAskFn = async () => {
       asked = true;
       return "拒绝";
     };
-    const sessionAllow: SessionCredentialAllow = new Set(["xhs__a"]);
+    const sessionAllow: SessionCredentialAllow = new Set(["opaque-record-a"]);
     const d = await credentialUseGate(REQ, { autoApprove: false, sessionAllow, ask });
     expect(d.allowed).toBe(true);
     expect(asked).toBe(false);
@@ -32,16 +41,16 @@ describe("credentialUseGate", () => {
     const sessionAllow: SessionCredentialAllow = new Set();
     const d = await credentialUseGate(REQ, { autoApprove: false, sessionAllow, ask });
     expect(d.allowed).toBe(true);
-    expect(sessionAllow.has("xhs__a")).toBe(false); // 不记住
+    expect(sessionAllow.has("opaque-record-a")).toBe(false); // 不记住
   });
 
-  test("prompt: 本会话都允许 allows AND remembers by id", async () => {
+  test("prompt: 本会话都允许 allows AND remembers by record identity", async () => {
     const ask: CredentialAskFn = async () => "本会话都允许";
     const sessionAllow: SessionCredentialAllow = new Set();
     const d = await credentialUseGate(REQ, { autoApprove: false, sessionAllow, ask });
     expect(d.allowed).toBe(true);
-    expect(sessionAllow.has("xhs__a")).toBe(true); // 记住的是 id
-    // 记住的是该 id，不会放行别的凭证
+    expect(sessionAllow.has("opaque-record-a")).toBe(true); // 记住的是已审批的记录身份
+    // 不会放行同 ID 的另一个来源或记录
     expect(sessionAllow.has("youtube__main")).toBe(false);
   });
 

@@ -610,6 +610,7 @@ export interface ToolContext {
 export type InjectCredentialFn = (
   credentialId: string,
   credentialScope?: "full" | "project",
+  expectedApprovalIdentity?: string,
 ) => Promise<{ ok: boolean; count?: number; error?: string }>;
 
 /**

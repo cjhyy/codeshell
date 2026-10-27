@@ -48,6 +48,26 @@ afterEach(() => {
 });
 
 describe("resolveCookieCredentialForBrowser", () => {
+  test("a cookie injection pinned to a project account cannot switch to a user account", () => {
+    previousHome = process.env.HOME;
+    process.env.HOME = tempDir("cs-desktop-approval-home-");
+    const cwd = tempDir("cs-desktop-approval-cwd-");
+    const store = new CredentialStore(cwd);
+    const cookie = (value: string) => ({
+      id: "cookie",
+      type: "cookie" as const,
+      label: "Same",
+      secret: JSON.stringify([{ name: "sid", value, domain: "example.com", path: "/" }]),
+    });
+    store.save("user", cookie("user-account"));
+    store.save("project", cookie("project-account"));
+    const identity = store.resolveForApproval("cookie", "full")!.approvalIdentity;
+    expect(resolveCookieCredentialForBrowser(cwd, "cookie", "full", identity).ok).toBe(true);
+    store.remove("project", "cookie");
+    expect(resolveCookieCredentialForBrowser(cwd, "cookie", "full", identity).ok).toBe(false);
+    expect(resolveCookieCredentialForBrowser(cwd, "cookie", "full").ok).toBe(true);
+  });
+
   test("project scope does not fall back to a same-id user credential", () => {
     previousHome = process.env.HOME;
     process.env.HOME = tempDir("cs-desktop-cred-home-");

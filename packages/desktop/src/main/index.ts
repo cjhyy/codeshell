@@ -1756,8 +1756,17 @@ async function createWindow(): Promise<BrowserWindow> {
       toolContextOverrides: (sessionId) => ({
         panels: externalBridge.panelBridgeForSession(sessionId),
         browser: interactiveBrowserBridgeForSession(sessionId),
-        injectCredentialToBrowser: (credentialId: string, scope?: "full" | "project") =>
-          externalBridge.injectCredentialForSession(sessionId, credentialId, scope),
+        injectCredentialToBrowser: (
+          credentialId: string,
+          scope?: "full" | "project",
+          expectedApprovalIdentity?: string,
+        ) =>
+          externalBridge.injectCredentialForSession(
+            sessionId,
+            credentialId,
+            scope,
+            expectedApprovalIdentity,
+          ),
       }),
       requestApproval: (sessionId, request) => approvals.request(sessionId, request),
       cancelApprovals: (sessionId) => approvals.cancelSession(sessionId),

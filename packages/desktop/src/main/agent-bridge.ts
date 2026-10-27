@@ -225,6 +225,7 @@ function normalizeCredentialResolveParams(params: Record<string, unknown> | unde
   id: string;
   scope: "full" | "project";
   purpose: "use" | "mcp" | "link";
+  expectedApprovalIdentity?: string;
 } {
   const id = typeof params?.id === "string" ? params.id : "";
   if (!id) throw new Error("credentialResolve requires id");
@@ -235,6 +236,10 @@ function normalizeCredentialResolveParams(params: Record<string, unknown> | unde
     id,
     scope,
     purpose,
+    expectedApprovalIdentity:
+      typeof params?.expectedApprovalIdentity === "string"
+        ? params.expectedApprovalIdentity
+        : undefined,
   };
 }
 
@@ -242,6 +247,7 @@ function normalizeCredentialMaterializeParams(params: Record<string, unknown> | 
   cwd?: string;
   id: string;
   scope: "full" | "project";
+  expectedApprovalIdentity?: string;
 } {
   const id = typeof params?.id === "string" ? params.id : "";
   if (!id) throw new Error("credentialMaterializeCookie requires id");
@@ -249,6 +255,10 @@ function normalizeCredentialMaterializeParams(params: Record<string, unknown> | 
     cwd: typeof params?.cwd === "string" ? params.cwd : undefined,
     id,
     scope: params?.scope === "project" ? "project" : "full",
+    expectedApprovalIdentity:
+      typeof params?.expectedApprovalIdentity === "string"
+        ? params.expectedApprovalIdentity
+        : undefined,
   };
 }
 
@@ -1535,6 +1545,7 @@ export class AgentBridge implements PetStateBridge {
           sessionCwd,
           parsed.credentialId,
           parsed.credentialScope,
+          parsed.expectedApprovalIdentity,
         );
         if (!resolved.ok) {
           resultJson = JSON.stringify({ ok: false, error: resolved.error });
@@ -2240,12 +2251,18 @@ export class AgentBridge implements PetStateBridge {
     sessionId: string,
     credentialId: string,
     credentialScope: "full" | "project" = "full",
+    expectedApprovalIdentity?: string,
   ): Promise<{ ok: boolean; count?: number; error?: string }> {
     try {
       const bucket = bucketForSession(sessionId);
       if (!bucket) throw new Error(`no browser bucket registered for session ${sessionId}`);
       const sessionCwd = this.cwdForSessionOrThrow(sessionId);
-      const resolved = resolveCookieCredentialForBrowser(sessionCwd, credentialId, credentialScope);
+      const resolved = resolveCookieCredentialForBrowser(
+        sessionCwd,
+        credentialId,
+        credentialScope,
+        expectedApprovalIdentity,
+      );
       if (!resolved.ok) return { ok: false, error: resolved.error };
       const target = activeGuestForSession(sessionId);
       const targetPartition = partitionForSession(sessionId);

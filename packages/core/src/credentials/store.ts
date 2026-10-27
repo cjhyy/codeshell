@@ -9,7 +9,7 @@ import {
   realpathSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { createHash } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 import { homedir } from "node:os";
 import {
   credentialAllowsEnvExposure,
@@ -35,6 +35,9 @@ import {
   retirementId,
   type RemoteLinkRetirementClaim,
 } from "./remote-link-retirement.js";
+
+// Process-local keyed identities cannot reveal low-entropy credential values in metadata.
+const approvalIdentityKey = randomBytes(32);
 
 const MAX_CREDENTIALS = 4_096;
 const MAX_CREDENTIAL_FILE_BYTES = 32 * 1024 * 1024;
@@ -190,6 +193,31 @@ export class CredentialStore {
       .update("\0")
       .update(id)
       .digest("hex");
+  }
+
+  /** Bind approval to the actual store layer and exact record, without exposing a secret hash. */
+  approvalIdentity(source: CredentialScope, credential: Credential): string {
+    return createHmac("sha256", approvalIdentityKey)
+      .update(this.recordIdentity(source, credential.id))
+      .update("\0")
+      .update(JSON.stringify(credential))
+      .digest("hex");
+  }
+
+  /** Resolve once so callers can check approval and consume the same record. */
+  resolveForApproval(
+    id: string,
+    scope: "full" | "project" = "full",
+  ): { credential: Credential; approvalIdentity: string } | undefined {
+    const record = this.listWithSources(scope).credentials.find(
+      ({ credential }) => credential.id === id,
+    );
+    return (
+      record && {
+        credential: record.credential,
+        approvalIdentity: this.approvalIdentity(record.source, record.credential),
+      }
+    );
   }
 
   /**
@@ -573,13 +601,26 @@ export class CredentialStore {
     credentials: Credential[];
     readable: boolean;
   } {
-    const byId = new Map<string, Credential>();
+    const result = this.listWithSources(scope);
+    return {
+      credentials: result.credentials.map(({ credential }) => credential),
+      readable: result.readable,
+    };
+  }
+
+  /** Preserve the winning store layer for approval identities and Host snapshots. */
+  listWithSources(scope: "full" | "project" = "full"): {
+    credentials: { credential: Credential; source: CredentialScope }[];
+    readable: boolean;
+  } {
+    const byId = new Map<string, { credential: Credential; source: CredentialScope }>();
     let readable = true;
     const scopes: CredentialScope[] = scope === "full" ? ["user", "project"] : ["project"];
-    for (const layer of scopes) {
-      const result = this.readGuarded(layer);
+    for (const source of scopes) {
+      const result = this.readGuarded(source);
       readable = readable && result.readable;
-      for (const credential of result.file.credentials) byId.set(credential.id, credential);
+      for (const credential of result.file.credentials)
+        byId.set(credential.id, { credential, source });
     }
     return { credentials: [...byId.values()], readable };
   }
