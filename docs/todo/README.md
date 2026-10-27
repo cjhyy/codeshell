@@ -13,6 +13,7 @@
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | [电脑 Web 手机与云端统一工作台](unified-desktop-web-mobile-workbench-plan.md) | 2026-10-09 整体规划；统一目录、选择性共享、三端操作与云端委派电脑尚待分期实施，复用已实现的本地 task-inbox 与设备中继 |
 | [独立 Link Server](link-server-oauth-architecture.md)                                                                                        | 独立服务与双向 OAuth 已实现并通过受控上游验证；真实账号、正式发布与生产部署仍待验收                                                       |
+| [Server 全流程优化首轮](server-flow-optimization-20261027.md) | 认证热路径、静态传输、关闭竞态与原生 CI 门禁已修复；本地 2012 项回归通过，部署性能与跨平台候选验收另列 |
 | [Hub 迭代](codeshell-hub-iteration-design.md) / [远程服务架构](codeshell-hub-remote-service-architecture.md)                                 | 原生云端窗口、设备目录／中继及 Linux 候选已验证；正式部署、实体手机、完整 Panel 适配与多用户边界另列                      |
 | [AgentModule / ResolvedComposition](agent-module-resolved-composition-design.md)                                                             | Phase A/B 已实现；Phase C lifetime/disposer 与 Phase D 请求边界仍待做                                                     |
 | [Agent 可靠性与上下文](agent-reliability-and-context-optimization.md)                                                                        | 大部分 Operation/Capability/评测设计仍待实现；09-03 缓存与若干旧缺口已被后续修复覆盖                                      |

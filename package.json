@@ -21,7 +21,7 @@
     "build:server": "bun run --filter '@cjhyy/code-shell-link' build && bun run --filter '@cjhyy/code-shell-core' build && bun run --filter '@cjhyy/code-shell-host' build && bun run --filter '@cjhyy/code-shell-capability-coding' build && bun run --filter '@cjhyy/code-shell-web' build && bun run --filter '@cjhyy/code-shell-server' build",
     "serve:server": "node packages/server/dist/bin/code-shell-serve.js",
     "test:server-panel-recovery": "node scripts/smoke-web-panel-recovery.mjs",
-    "test:server-smoke": "node scripts/smoke-hub-server.mjs",
+    "test:server-smoke": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-hub-server.mjs",
     "dev": "bun run dev:desktop",
     "dev:desktop": "bun run --filter '@cjhyy/code-shell-desktop' dev",
     "dev:tui": "CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 bun run packages/tui/src/cli/main.ts",
