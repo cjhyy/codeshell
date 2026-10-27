@@ -175,6 +175,15 @@ export class RemoteHostManager extends EventEmitter {
     const gate = this.passcode;
     this.opts.webApi?.start();
     const server = createServer((req, res) => {
+      let pathname: string;
+      try {
+        pathname = new URL(req.url ?? "/", "http://localhost").pathname;
+      } catch {
+        res.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+        res.end("invalid request target");
+        req.resume();
+        return;
+      }
       // Tunnel mode: a passcode gate sits in front of EVERY route. The gate
       // either allows (returns true) or writes its own 401/403 challenge.
       if (gate && !gate.gate(req, res)) return;
@@ -204,11 +213,7 @@ export class RemoteHostManager extends EventEmitter {
           });
         return;
       }
-      const uploadPath = req.url
-        ? new URL(req.url, "http://localhost").pathname.match(
-            /^\/api\/mobile\/uploads\/([A-Za-z0-9_-]+)$/,
-          )
-        : null;
+      const uploadPath = pathname.match(/^\/api\/mobile\/uploads\/([A-Za-z0-9_-]+)$/);
       if (uploadPath && this.opts.uploads) {
         void this.opts.uploads.acceptPut(uploadPath[1]!, req, res);
         return;
