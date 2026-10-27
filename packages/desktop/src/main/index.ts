@@ -145,6 +145,7 @@ import { getCuaDriverHost } from "./computer-use/service.js";
 import { initializeDesktopComputerUse } from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
+import { externalRuntimeToolContextForSession } from "./external-runtime-tool-context.js";
 import { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertWorkspaceProfileName } from "./external-runtime-profile.js";
 import { createExternalRuntimeBackgroundWork } from "./external-runtime-background-work.js";
@@ -1753,21 +1754,12 @@ async function createWindow(): Promise<BrowserWindow> {
       // requestPanelHost the native protocol line reaches, so owner routing,
       // the timeout and invoke's fail-closed behaviour are shared rather than
       // reimplemented.
-      toolContextOverrides: (sessionId) => ({
-        panels: externalBridge.panelBridgeForSession(sessionId),
-        browser: interactiveBrowserBridgeForSession(sessionId),
-        injectCredentialToBrowser: (
-          credentialId: string,
-          scope?: "full" | "project",
-          expectedApprovalIdentity?: string,
-        ) =>
-          externalBridge.injectCredentialForSession(
-            sessionId,
-            credentialId,
-            scope,
-            expectedApprovalIdentity,
-          ),
-      }),
+      toolContextOverrides: (sessionId) =>
+        externalRuntimeToolContextForSession(
+          externalBridge,
+          sessionId,
+          interactiveBrowserBridgeForSession(sessionId),
+        ),
       requestApproval: (sessionId, request) => approvals.request(sessionId, request),
       cancelApprovals: (sessionId) => approvals.cancelSession(sessionId),
       backgroundWork: createExternalRuntimeBackgroundWork(),

@@ -7,7 +7,7 @@ import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { resolvePanelAppBindingProjectPath } from "@cjhyy/code-shell-core";
 import { createDesktopPanelManagement } from "./panel-app-management.js";
-import { panelChangeFailure, releasePanelForUpdate } from "./panel-update-blockers.js";
+import { panelChangeFailure, panelUpdateApproval } from "./panel-update-blockers.js";
 
 // Exercise the actual registrar without loading Electron's composition root.
 // Unrelated route providers are adapters; review validation and cancellation use
@@ -24,7 +24,7 @@ const compiled = ts.transpileModule(
 ).outputText;
 const register = runInNewContext(`${compiled}\nregisterProjectPanelIpc`, {
   createDesktopPanelManagement,
-  releasePanelForUpdate,
+  panelUpdateApproval,
   panelChangeFailure,
   resolvePanelAppBindingProjectPath,
   createProjectPanelAppUpdateService: () => ({ invalidate() {} }),
