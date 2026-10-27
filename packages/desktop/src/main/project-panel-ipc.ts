@@ -1,12 +1,5 @@
 import type { IpcMain, IpcMainInvokeEvent } from "electron";
-import {
-  panelExecutionGate,
-  panelPackageMutationMatches,
-  PanelExecutionBusyError,
-  type PanelExecutionBlocker,
-  type PanelExecutionScope,
-} from "@cjhyy/code-shell-server/panels";
-import type { PanelAppChangeBlocker } from "../shared/panel-apps.js";
+import { panelExecutionGate } from "@cjhyy/code-shell-server/panels";
 import {
   resolvePanelAppBindingProjectPath,
   type GitPanelAppSourceInput,
@@ -20,6 +13,8 @@ import {
 } from "./panel-apps-service.js";
 import { discoverGitPanelAppsForUi, uninstallPanelAppForUi } from "./panel-app-install-service.js";
 import { createDesktopPanelManagement } from "./panel-app-management.js";
+import { panelChangeFailure, releasePanelForUpdate } from "./panel-update-blockers.js";
+import type { ClosePanelForUpdate, DescribePanelGuest } from "./panel-update-blockers.js";
 import { registerProjectPanelVersionIpc } from "./project-panel-version-ipc.js";
 import {
   panelAppUpdateService,
@@ -34,13 +29,8 @@ export function registerProjectPanelIpc(deps: {
   onChanged: () => void;
   revokeAppId: (id: string) => void;
   onCleanupError: (id: string, error: unknown) => void;
-  describeGuest: (
-    guestId: number,
-  ) => { tabId?: string; bucket?: string; sessionId?: string } | undefined;
-  closeForPackageChange: (
-    appId: string,
-    matches: (scope: PanelExecutionScope) => boolean,
-  ) => Promise<void>;
+  describeGuest: DescribePanelGuest;
+  closeForPackageChange: ClosePanelForUpdate;
 }) {
   const { ipcMain, requireRendererProjectPath } = deps;
   const desktopPanelManagers = new Map<
@@ -94,16 +84,6 @@ export function registerProjectPanelIpc(deps: {
         !event.sender.isDestroyed() && (await requireRendererProjectPath(cwd)) === cwd,
     };
   }
-  function describeBlocker(blocker: PanelExecutionBlocker): PanelAppChangeBlocker {
-    const holder = blocker.holder,
-      guest = holder?.guestId === undefined ? undefined : deps.describeGuest(holder.guestId);
-    return {
-      kind: holder?.kind ?? "panel-call",
-      count: blocker.count,
-      ...(holder?.label ? { label: holder.label } : {}),
-      ...guest,
-    };
-  }
   async function desktopPanelOperation<T>(work: () => Promise<T>) {
     try {
       return { ok: true as const, ...(await work()) };
@@ -114,9 +94,7 @@ export function registerProjectPanelIpc(deps: {
         ...((error as { code?: string })?.code === "already_installed"
           ? { alreadyInstalled: true as const }
           : {}),
-        ...(error instanceof PanelExecutionBusyError && error.blockers.length
-          ? { blockers: error.blockers.map(describeBlocker) }
-          : {}),
+        ...panelChangeFailure(error, deps.describeGuest),
       };
     }
   }
@@ -269,18 +247,7 @@ export function registerProjectPanelIpc(deps: {
         )
           throw new Error("panel-apps:installUpdate requires a project and reviewed token");
         const cwd = await requireRendererProjectPath(input.cwd);
-        if (input.force) {
-          // The same executions the update's own admission check would wait for.
-          const matches = panelPackageMutationMatches({
-            appId: input.id,
-            kind: "update",
-            projectPath: resolvePanelAppBindingProjectPath(cwd),
-          });
-          await deps.closeForPackageChange(input.id, matches);
-          // Cancelled work releases as it actually exits; a holder that remains is reported.
-          for (let wait = 0; wait < 150 && panelExecutionGate.blockers(matches).length; wait++)
-            await new Promise((resolve) => setTimeout(resolve, 100));
-        }
+        if (input.force) await releasePanelForUpdate(input.id, cwd, deps.closeForPackageChange);
         return desktopPanelManager(cwd).management.install(
           desktopPanelContext(event, cwd),
           input.reviewToken,
