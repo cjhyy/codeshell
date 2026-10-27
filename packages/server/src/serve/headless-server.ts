@@ -19,8 +19,8 @@ import { describeEnvironment, environmentIdentity } from "../environment-identit
 // browser re-lists sessions over the same protocol.
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { readFileSync, existsSync } from "node:fs";
-import { basename, dirname, extname, join, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import type { Duplex } from "node:stream";
 import { randomBytes, randomUUID } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
@@ -32,7 +32,7 @@ import {
 } from "@cjhyy/code-shell-core/internal";
 import { AccessPasscode } from "../mobile-remote/access-passcode.js";
 import { resolveSafe } from "../mobile-remote/mobile-static.js";
-import { contentTypeFor } from "../static-files.js";
+import { streamStaticFile } from "../static-files.js";
 import { createHubAuth } from "../hub/auth-http.js";
 import { ApprovalLeases, type HubApproval } from "../hub/approval-lease.js";
 import { HubUploads, hubJson, type PreparedHubUploads } from "../hub/uploads.js";
@@ -733,7 +733,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       })
     : undefined;
 
-  const serveStatic = (req: IncomingMessage, res: ServerResponse): void => {
+  const serveStatic = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const root = opts.staticRootDir;
     if (!root) {
       res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
@@ -757,24 +757,18 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         res.end("not found");
         return;
       }
-      filePath = join(root, "index.html");
-      if (!existsSync(filePath)) {
+      filePath = resolveSafe(root, "index.html");
+      if (!filePath) {
         res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
         res.end("web app not built");
         return;
       }
     }
-    try {
-      const body = readFileSync(filePath);
-      res.writeHead(200, {
-        "content-type": contentTypeFor(extname(filePath)),
-        "cache-control": "no-cache",
-      });
-      res.end(body);
-    } catch {
-      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-      res.end("not found");
-    }
+    await streamStaticFile(req, res, {
+      rootDir: root,
+      filePath,
+      cacheControl: "no-cache",
+    });
   };
 
   const handleHttp = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
@@ -853,11 +847,11 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         return;
       }
       // Public static shell contains no user data and supplies the setup/login page.
-      serveStatic(req, res);
+      await serveStatic(req, res);
       return;
     }
     if (!passcode.gate(req, res)) return;
-    serveStatic(req, res);
+    await serveStatic(req, res);
   };
   const server: Server = createServer((req, res) => {
     void handleHttp(req, res).catch(() => hubJson(res, 500, { error: "server request failed" }));
