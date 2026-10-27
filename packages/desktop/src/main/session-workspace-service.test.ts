@@ -609,6 +609,83 @@ describe("cleanupSessionWorktreeForUi", () => {
     expect(list.current).toEqual({ root: repo, kind: "main" });
   });
 
+  for (const action of ["detach", "discard"] as const) {
+    test(`${action} reserves the repository until removal so another Session cannot enter`, async () => {
+      const sm = new SessionManager(sessionsDir);
+      sm.create(repo, "m", "p", "cleanup-owner");
+      // Different root spellings inside the same repository need one reservation.
+      const otherRoot = action === "detach" ? join(repo, "subdirectory") : repo;
+      mkdirSync(otherRoot, { recursive: true });
+      sm.create(otherRoot, "m", "p", "switching-owner");
+      const wt = await createWorktree(repo, "cleanup-race", "cleanup-owner");
+      await switchSessionWorkspaceForUi("cleanup-owner", repo, wt.worktreePath);
+      let rebaseStarted!: () => void;
+      const rebasing = new Promise<void>((resolve) => (rebaseStarted = resolve));
+      let resumeRebase!: () => void;
+      const release = new Promise<void>((resolve) => (resumeRebase = resolve));
+      const cleanup = cleanupSessionWorktreeForUi("cleanup-owner", repo, wt.worktreePath, action, {
+        setLiveWorkspace: async (id, workspace) => {
+          rebaseStarted();
+          await release;
+          sm.setSessionWorkspace(id, workspace);
+        },
+      });
+      await rebasing;
+      const otherSwitch = switchSessionWorkspaceForUi(
+        "switching-owner",
+        repo,
+        wt.worktreePath,
+      ).then(
+        () => {
+          writeFileSync(join(wt.worktreePath, "other-session-work.txt"), "must not be deleted");
+          return "entered";
+        },
+        () => "rejected",
+      );
+      // Give an unreserved switch time to reach its worker/persistence boundary.
+      // With the reservation it remains pending until cleanup has completed.
+      await Promise.race([otherSwitch, new Promise((resolve) => setTimeout(resolve, 500))]);
+      resumeRebase();
+      await cleanup;
+      expect(await otherSwitch).toBe("rejected");
+      expect(sm.getSessionWorkspace("switching-owner")).toEqual({ root: otherRoot, kind: "main" });
+      expect(existsSync(wt.worktreePath)).toBe(false);
+    });
+  }
+
+  test("idle Sessions can still share a worktree while cleanup refuses the shared owner", async () => {
+    const sm = new SessionManager(sessionsDir);
+    sm.create(repo, "m", "p", "sharing-a");
+    sm.create(repo, "m", "p", "sharing-b");
+    const wt = await createWorktree(repo, "shared", "sharing-a");
+    await switchSessionWorkspaceForUi("sharing-a", repo, wt.worktreePath);
+    await switchSessionWorkspaceForUi("sharing-b", repo, wt.worktreePath);
+    expect(sm.getSessionWorkspace("sharing-a")?.root).toBe(wt.worktreePath);
+    expect(sm.getSessionWorkspace("sharing-b")?.root).toBe(wt.worktreePath);
+    await expect(
+      cleanupSessionWorktreeForUi("sharing-a", repo, wt.worktreePath, "discard"),
+    ).rejects.toThrow(/occupied/);
+    expect(existsSync(wt.worktreePath)).toBe(true);
+  });
+
+  test("detach preserves changes created after its clean preflight", async () => {
+    const sm = new SessionManager(sessionsDir);
+    sm.create(repo, "m", "p", "detach-late-edit");
+    const wt = await createWorktree(repo, "late-edit", "detach-late-edit");
+    await switchSessionWorkspaceForUi("detach-late-edit", repo, wt.worktreePath);
+    const editedFile = join(wt.worktreePath, "late-uncommitted.txt");
+    await expect(
+      cleanupSessionWorktreeForUi("detach-late-edit", repo, wt.worktreePath, "detach", {
+        setLiveWorkspace: async (id, workspace) => {
+          writeFileSync(editedFile, "new work after preflight");
+          sm.setSessionWorkspace(id, workspace);
+        },
+      }),
+    ).rejects.toThrow(/failed to remove worktree/);
+    expect(readFileSync(editedFile, "utf8")).toBe("new work after preflight");
+    expect(git(repo, ["branch", "--list", wt.worktreeBranch])).toContain(wt.worktreeBranch);
+  });
+
   test("rejects cleanup for an external worktree", async () => {
     const sessionId = "desktopexternal";
     const sm = new SessionManager(sessionsDir);

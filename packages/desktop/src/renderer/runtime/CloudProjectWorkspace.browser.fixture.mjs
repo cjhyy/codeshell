@@ -98,6 +98,8 @@ function Fixture(initial) {
     error,
     draft,
     uploads: [],
+    failedSubmissions: options.failedSubmissions || [],
+    restoreFailedSubmission: (id) => action("restore:" + id),
     uploading: options.uploading || false,
     pendingApproval: null,
     approvalVersion: 0,
@@ -425,6 +427,34 @@ async function matrix(page, lang) {
     }
 }
 async function recoveryStates(page, lang) {
+  await render(page, {
+    status: "connected",
+    lang,
+    failedSubmissions: [
+      {
+        clientMessageId: "failed-input",
+        text: "Preserved rejected request",
+        uploads: [{ id: "file", name: "original.txt", mimeType: "text/plain", size: 1 }],
+      },
+    ],
+  });
+  await bounded(page, lang);
+  assert.equal(await page.locator("textarea").inputValue(), "Draft preserved");
+  assert.equal(
+    await metadata(page).getByText("Preserved rejected request", { exact: true }).count(),
+    1,
+  );
+  assert.equal(await metadata(page).getByText("original.txt", { exact: true }).count(), 1);
+  const restore = page.getByRole("button", {
+    name: lang === "zh" ? "添加到输入框" : "Add to composer",
+    exact: true,
+  });
+  await restore.focus();
+  assert.equal(await hit(restore), true);
+  await page.keyboard.press("Enter");
+  assert.deepEqual(await page.evaluate(() => window.calls), [
+    ["restore:failed-input", "owned-binding", "owned-environment", "remote-project"],
+  ]);
   for (const flags of [
     { historyFailed: true },
     { uncertain: true },
@@ -600,9 +630,9 @@ if (!process.argv.includes("--electron-zoom")) {
           (scheme) => document.documentElement.classList.toggle("dark", scheme === "dark"),
           scheme,
         );
-        await matrix(page, lang);
+        if (!process.argv.includes("--recovery-only")) await matrix(page, lang);
         await recoveryStates(page, lang);
-        if (width === 800) {
+        if (width === 800 && !process.argv.includes("--recovery-only")) {
           await resizeAndOwnership(page, lang);
           await staleObserver(page, lang);
         }
@@ -618,7 +648,9 @@ if (!process.argv.includes("--electron-zoom")) {
             lang +
             "/" +
             scheme +
-            ": complete cloud identity/error, bounded chat, keyboard/wheel actions, focus ownership",
+            (process.argv.includes("--recovery-only")
+              ? ": preserved messages/files, recovery actions, bounded chat"
+              : ": complete cloud identity/error, bounded chat, keyboard/wheel actions, focus ownership"),
         );
         await page.close();
       }

@@ -472,6 +472,147 @@ describe("native cloud project runtime", () => {
     f.runtime.disconnect();
   });
 
+  test("rejected text and files remain recoverable beside a newer draft", async () => {
+    const f = setup();
+    await selected(f);
+    f.runtime.setDraft("original request");
+    await f.runtime.addFiles([new File(["attachment"], "original.txt", { type: "text/plain" })]);
+    const originalUploads = f.runtime.getSnapshot().uploads;
+    const send = f.runtime.send("original request");
+    f.runtime.setDraft("new follow-up");
+    f.runs[0].reject(Object.assign(new Error("rejected"), { kind: "response" }));
+    await send;
+    const snapshot = f.runtime.getSnapshot();
+    expect(snapshot.draft).toBe("new follow-up");
+    expect(snapshot.failedSubmissions).toEqual([
+      { clientMessageId: expect.any(String), text: "original request", uploads: originalUploads },
+    ]);
+    f.runtime.restoreFailedSubmission(snapshot.failedSubmissions[0]!.clientMessageId);
+    expect(f.runtime.getSnapshot().draft).toBe("original request\n\nnew follow-up");
+    expect(f.runtime.getSnapshot().uploads).toEqual(originalUploads);
+    expect(f.runtime.getSnapshot().failedSubmissions).toEqual([]);
+    expect(f.calls.filter((call) => call.method === "agent/run")).toHaveLength(1);
+    f.runtime.disconnect();
+  });
+
+  test("restoring a rejected upload never drops files to fit the composer limit", async () => {
+    const f = setup();
+    await selected(f);
+    let next = 0;
+    f.api.upload = async (input) => ({
+      id: `upload-${++next}`,
+      name: input.name,
+      mimeType: input.mimeType,
+      size: input.bytes.length,
+    });
+    await f.runtime.addFiles([new File(["old"], "original.txt")]);
+    const send = f.runtime.send("original request");
+    f.runtime.setDraft("new draft");
+    f.runs[0].reject(Object.assign(new Error("rejected"), { kind: "response" }));
+    await send;
+    await f.runtime.addFiles(
+      Array.from({ length: 16 }, (_, i) => new File(["new"], `new-${i}.txt`)),
+    );
+    const id = f.runtime.getSnapshot().failedSubmissions[0]!.clientMessageId;
+    f.runtime.restoreFailedSubmission(id);
+    expect(f.runtime.getSnapshot().failedSubmissions).toHaveLength(1);
+    expect(f.runtime.getSnapshot().uploads).toHaveLength(16);
+    expect(f.runtime.getSnapshot().draft).toBe("new draft");
+    f.runtime.removeUpload(f.runtime.getSnapshot().uploads[0]!.id);
+    f.runtime.restoreFailedSubmission(id);
+    expect(f.runtime.getSnapshot().failedSubmissions).toEqual([]);
+    expect(f.runtime.getSnapshot().uploads).toHaveLength(16);
+    expect(f.runtime.getSnapshot().uploads[0]?.name).toBe("original.txt");
+    f.runtime.disconnect();
+  });
+
+  test("offscreen rejection restores its own Session and preserves a newer draft there", async () => {
+    const f = setup();
+    f.rows([
+      { sessionId: "session-alpha", running: false },
+      { sessionId: "session-beta", running: false },
+    ]);
+    await f.runtime.connect();
+    f.runtime.selectSession(cloudSessionUiId(binding.id, "session-alpha"));
+    await pause();
+    f.runtime.setDraft("original request");
+    const send = f.runtime.send("original request");
+    f.runtime.setDraft("alpha follow-up");
+    f.runtime.selectSession(cloudSessionUiId(binding.id, "session-beta"));
+    await pause();
+    f.runtime.setDraft("beta draft");
+    f.runs[0].reject(Object.assign(new Error("rejected"), { kind: "response" }));
+    await send;
+    expect(f.runtime.getSnapshot().draft).toBe("beta draft");
+    expect(f.runtime.getSnapshot().failedSubmissions).toEqual([]);
+    f.runtime.selectSession(cloudSessionUiId(binding.id, "session-alpha"));
+    await pause();
+    expect(f.runtime.getSnapshot().draft).toBe("alpha follow-up");
+    expect(f.runtime.getSnapshot().failedSubmissions[0]?.text).toBe("original request");
+    f.runtime.disconnect();
+  });
+
+  test("an offscreen new Session rejected before persistence remains listed with its restored input", async () => {
+    const f = setup();
+    await f.runtime.connect();
+    f.runtime.setDraft("new session request");
+    const send = f.runtime.send("new session request");
+    const originalId = f.runtime.getSnapshot().activeSessionId!;
+    f.runtime.newSession();
+    f.runtime.setDraft("unrelated draft");
+    f.runs[0].reject(Object.assign(new Error("rejected"), { kind: "response" }));
+    await send;
+    await f.runtime.refresh();
+    expect(f.runtime.getSnapshot().sessions.map((session) => session.id)).toContain(originalId);
+    expect(f.runtime.getSnapshot().draft).toBe("unrelated draft");
+    f.runtime.selectSession(originalId);
+    await pause();
+    expect(f.runtime.getSnapshot().draft).toBe("new session request");
+    f.runtime.disconnect();
+  });
+
+  test("uncertain absent input preserves both the submitted text and a newer draft", async () => {
+    const f = setup();
+    await selected(f);
+    const send = f.runtime.send("uncertain request");
+    f.runtime.setDraft("newer draft");
+    f.status("disconnected");
+    f.runs[0].reject(Object.assign(new Error("transport"), { kind: "transport" }));
+    await send;
+    f.status("connected");
+    await pause();
+    expect(f.runtime.getSnapshot().draft).toBe("newer draft");
+    expect(f.runtime.getSnapshot().failedSubmissions[0]?.text).toBe("uncertain request");
+    f.runtime.disconnect();
+  });
+
+  test("automatic reconnect retires an interrupted upload and ignores its late completion", async () => {
+    const f = setup();
+    await selected(f);
+    const first = deferred<any>();
+    const second = deferred<any>();
+    let uploads = 0;
+    f.api.upload = () => (++uploads === 1 ? first.promise : second.promise);
+    const oldUpload = f.runtime.addFiles([new File(["old"], "old.txt")]);
+    await pause();
+    expect(f.runtime.getSnapshot().uploading).toBe(true);
+    f.status("disconnected");
+    expect(f.runtime.getSnapshot().uploading).toBe(false);
+    f.status("connected");
+    await pause();
+    const freshUpload = f.runtime.addFiles([new File(["new"], "new.txt")]);
+    await pause();
+    first.resolve({ id: "old", name: "old.txt", mimeType: "text/plain", size: 3 });
+    await oldUpload;
+    expect(f.runtime.getSnapshot().uploading).toBe(true);
+    expect(f.runtime.getSnapshot().uploads).toEqual([]);
+    second.resolve({ id: "new", name: "new.txt", mimeType: "text/plain", size: 3 });
+    await freshUpload;
+    expect(f.runtime.getSnapshot().uploading).toBe(false);
+    expect(f.runtime.getSnapshot().uploads.map((upload) => upload.id)).toEqual(["new"]);
+    f.runtime.disconnect();
+  });
+
   test("stop waits for remote authority instead of claiming local cancellation", async () => {
     const f = setup();
     await f.runtime.connect();
