@@ -32,6 +32,29 @@
 这是固定数据的小基准，其他本地任务并行运行；不代表部署吞吐、长尾延迟或多用户性能。
 静态资源主要验收内存与生命周期语义，没有用单机吞吐数字代替压力验收。
 
+## 最终验证
+
+最终源码组合为 `83bac2b99`，包含本地 `main` 已有的浏览器测试修复。
+使用 `scripts/run-bun-test-shard.mjs --timeout 30000` 分进程执行，均有完整零失败 JUnit：
+
+| 分组 | 测试数 | 文件数 |
+| --- | ---: | ---: |
+| Server 根目录、Hub、Serve、Desktop Web | 366 | 43 |
+| Project Runtime | 126 | 19 |
+| Mobile Remote、Remote Relay、Link | 460 | 40 |
+| Panel Host | 364 | 33 |
+| Web | 696 | 64 |
+| **合计** | **2012** | **199** |
+
+全部通过，0 跳过。全仓 `bun run typecheck` 完成构建与 14 个工作区检查；最后的
+关闭修复集成后重新构建 Server，并再次通过 `bun run typecheck:workspaces`。
+变更文件 ESLint、Prettier、workflow 测试路径、Engine 构造边界和 `git diff --check` 通过。
+
+最终组合的 `bun run test:server-smoke` 九阶段全部通过，包含两次真正的正常退出和
+两轮 Hub/Worker guard 回执；生命周期门禁自检也通过，确认非零退出、强杀与清理异常
+不能伪装成成功。此处是本机 Node 源码构建验收；CI 接线已加入，尚未以远端 CI 结果
+或 Linux/Windows 正式包验收替代描述。
+
 ## 后续迭代
 
 - 在固定部署候选上补 Linux/Windows、反向代理和实体手机弱网验收。
