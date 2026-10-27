@@ -132,6 +132,23 @@ describe("CodexAppServerClient", () => {
     await expect(client.request("ping")).resolves.toEqual({ pong: true });
   });
 
+  test("invalid request data rejects only its caller and preserves the healthy transport", async () => {
+    const client = inlineClient(`
+      setOnLine((m) => send({ id: m.id, result: { pong: true } }));
+    `);
+    const closed: string[] = [];
+    client.onClose((reason) => closed.push(reason));
+    client.start();
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    await expect(client.request("invalid", circular, 50)).rejects.toThrow();
+    expect(client.isClosed).toBe(false);
+    await expect(client.request("ping", {}, 1_000)).resolves.toEqual({ pong: true });
+    await Bun.sleep(75);
+    expect(closed).toEqual([]);
+    await expect(client.request("ping", {}, 1_000)).resolves.toEqual({ pong: true });
+  });
+
   test("delivers notifications, including ones pushed before the first request", async () => {
     const seen: string[] = [];
     const client = inlineClient(
