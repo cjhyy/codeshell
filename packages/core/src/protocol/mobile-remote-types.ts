@@ -273,6 +273,13 @@ export type MobileServerEvent =
     }
   | { type: "room.accepted"; roomId: string; clientMessageId: string }
   | {
+      /** Admission was not confirmed; retry the same intent with this ID. */
+      type: "chat.uncertain";
+      sessionId: string;
+      clientMessageId: string;
+      message: string;
+    }
+  | {
       type: "attachment.upload.ready";
       clientId: string;
       uploadId: string;

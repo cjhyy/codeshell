@@ -161,3 +161,101 @@ test("Composer keeps text and image drafts after rejection and retries the same 
     URL.revokeObjectURL = originalRevokeObjectURL;
   }
 });
+
+test("Composer retains an uncertain message ID across an unsuccessful retry", async () => {
+  const container = document.createElement("div") as unknown as HTMLElement;
+  mountedRoot = createRoot(container);
+  const ids: Array<string | undefined> = [];
+  await act(async () => {
+    mountedRoot?.render(
+      <Composer
+        disabled={false}
+        running={false}
+        conversationKey="session-a"
+        onSend={async (input) => {
+          ids.push(input.clientMessageId);
+          if (ids.length === 1) input.onUncertain?.("uncertain-message");
+          return ids.length === 3;
+        }}
+        onStop={() => undefined}
+      />,
+    );
+    await flushMicrotasks();
+  });
+  const textarea = findElements(container, "TEXTAREA")[0];
+  textarea.value = "retry without duplication";
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await act(async () => {
+      reactPropsOf(findElements(container, "BUTTON").at(-1)).onClick();
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+    expect(textarea.value).toBe(attempt < 2 ? "retry without duplication" : "");
+  }
+  expect(ids).toEqual([undefined, "uncertain-message", "uncertain-message"]);
+});
+
+for (const change of ["text", "attachment", "conversation"] as const) {
+  test(`Composer starts a new intent after an uncertain submission changes ${change}`, async () => {
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    URL.createObjectURL = () => "blob:changed-intent";
+    URL.revokeObjectURL = () => undefined;
+    const container = document.createElement("div") as unknown as HTMLElement;
+    mountedRoot = createRoot(container);
+    const ids: Array<string | undefined> = [];
+    const render = (conversationKey: string) =>
+      mountedRoot?.render(
+        <Composer
+          disabled={false}
+          running={false}
+          conversationKey={conversationKey}
+          onSend={async (input) => {
+            ids.push(input.clientMessageId);
+            if (ids.length === 1) input.onUncertain?.("previous-intent");
+            return false;
+          }}
+          onStop={() => undefined}
+        />,
+      );
+    try {
+      await act(async () => {
+        render("session-a");
+        await flushMicrotasks();
+      });
+      const textarea = findElements(container, "TEXTAREA")[0];
+      textarea.value = "original intent";
+      await act(async () => {
+        reactPropsOf(findElements(container, "BUTTON").at(-1)).onClick();
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        if (change === "text") textarea.value = "different intent";
+        if (change === "conversation") render("session-b");
+        if (change === "attachment") {
+          reactPropsOf(findElements(container, "INPUT")[0]).onChange({
+            target: {
+              files: [new File([new Uint8Array([1])], "extra.png", { type: "image/png" })],
+              value: "extra.png",
+            },
+          });
+        }
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        reactPropsOf(findElements(container, "BUTTON").at(-1)).onClick();
+        await flushMicrotasks();
+        await flushMicrotasks();
+      });
+      expect(ids).toEqual([undefined, undefined]);
+    } finally {
+      await act(async () => {
+        mountedRoot?.unmount();
+        mountedRoot = null;
+      });
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+    }
+  });
+}

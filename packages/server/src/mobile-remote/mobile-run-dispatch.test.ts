@@ -95,4 +95,56 @@ describe("injectMobileRunAndAwaitAcceptance", () => {
       code: -32602,
     });
   });
+
+  test("an injected run with a delayed acknowledgement is uncertain, never rejected", async () => {
+    let acknowledge!: () => void;
+    const fake = fakeBridge((line, emit) => {
+      const request = JSON.parse(line);
+      acknowledge = () =>
+        emit(JSON.stringify({ method: "agent/runAccepted", params: { requestId: request.id } }));
+    });
+    const result = await injectMobileRunAndAwaitAcceptance(
+      fake.bridge,
+      { id: "slow-run", params: { task: "run once", clientMessageId: "same-intent" } },
+      { origin: "mobile", producer: "mobile-chat" },
+      10,
+    );
+    expect(result).toEqual({
+      ok: false,
+      uncertain: true,
+      message: "worker did not acknowledge the run",
+    });
+    expect(fake.injected).toHaveLength(1);
+    expect(fake.unsubscribed).toBe(true);
+    // The worker can still accept this input; the expired listener cannot
+    // convert the already returned uncertainty into rejection or acceptance.
+    acknowledge();
+    expect(result).toHaveProperty("uncertain", true);
+    expect(fake.injected).toHaveLength(1);
+  });
+
+  test("an injection failure may have queued input, while invalid JSON was never sent", async () => {
+    const fake = fakeBridge(() => {
+      throw new Error("transport failed after writing");
+    });
+    const result = await injectMobileRunAndAwaitAcceptance(
+      fake.bridge,
+      { id: "failed-write", params: { task: "run once" } },
+      { origin: "mobile", producer: "mobile-chat" },
+    );
+    expect(result).toMatchObject({ ok: false, uncertain: true });
+    expect(fake.injected).toHaveLength(1);
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    const invalid = fakeBridge(() => {});
+    const notSent = await injectMobileRunAndAwaitAcceptance(
+      invalid.bridge,
+      { id: "invalid", params: circular },
+      { origin: "mobile", producer: "mobile-chat" },
+    );
+    expect(notSent.ok).toBe(false);
+    expect(notSent).not.toHaveProperty("uncertain");
+    expect(invalid.injected).toHaveLength(0);
+    expect(invalid.unsubscribed).toBe(true);
+  });
 });

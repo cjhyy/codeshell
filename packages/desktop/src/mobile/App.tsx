@@ -119,6 +119,7 @@ export function App() {
             </div>
           )}
           <Composer
+            conversationKey={String(app.conversationRevision)}
             disabled={app.status !== "online" || app.activeRoom?.observing === true}
             running={app.chat.run === "running" || app.chat.run === "waiting"}
             onSend={app.sendChat}

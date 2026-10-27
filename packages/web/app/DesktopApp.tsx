@@ -220,7 +220,7 @@ export function useDesktopController(
   const pendingNewSend = React.useRef<{
     draftId: string;
     navigationRevision: number;
-    accepted: boolean;
+    settled: boolean;
   } | null>(null);
   const pendingCreate = React.useRef<{
     draftId: string;
@@ -244,7 +244,7 @@ export function useDesktopController(
   // draft after explicit navigation or overwrite an already edited destination.
   React.useLayoutEffect(() => {
     const pending = pendingNewSend.current;
-    if (!pending?.accepted || !app.activeSessionId) return;
+    if (!pending?.settled || !app.activeSessionId) return;
     pendingNewSend.current = null;
     if (pending.navigationRevision !== navigationRevision.current || app.activeRoom) return;
     if (drafts.current.get(app.activeSessionId).revision !== 0) return;
@@ -253,6 +253,14 @@ export function useDesktopController(
     const moved = drafts.current.take(pending.draftId).draft;
     drafts.current.setText(app.activeSessionId, moved.text);
     for (const file of moved.files) drafts.current.addFile(app.activeSessionId, file);
+    const uncertain = uncertainIntents.current.get(pending.draftId);
+    if (uncertain) {
+      uncertainIntents.current.delete(pending.draftId);
+      uncertainIntents.current.set(app.activeSessionId, {
+        ...uncertain,
+        revision: drafts.current.get(app.activeSessionId).revision,
+      });
+    }
     changed();
   }, [app.activeSessionId, app.activeRoom, draftRevision]);
   React.useLayoutEffect(() => {
@@ -382,7 +390,7 @@ export function useDesktopController(
     }
     const pending =
       !app.activeSessionId && !app.activeRoom
-        ? { draftId: id, navigationRevision: navigationRevision.current, accepted: false }
+        ? { draftId: id, navigationRevision: navigationRevision.current, settled: false }
         : null;
     pendingNewSend.current = pending;
     const retry = uncertainIntents.current.get(id);
@@ -393,7 +401,9 @@ export function useDesktopController(
     sendingRef.current = id;
     setSendingId(id);
     setError("");
-    let uncertainId: string | undefined;
+    // A failed retry (including upload/offline failure before send) cannot
+    // prove that the original uncertain submission was never admitted.
+    let uncertainId: string | undefined = retryId;
     void app
       .sendChat({
         text: submitted.draft.text,
@@ -406,7 +416,10 @@ export function useDesktopController(
       })
       .then((accepted) => {
         if (!accepted) {
-          if (pendingNewSend.current === pending) pendingNewSend.current = null;
+          if (pendingNewSend.current === pending) {
+            if (pending && uncertainId) pending.settled = true;
+            else pendingNewSend.current = null;
+          }
           const restored = drafts.current.restore(submitted);
           // Only an untouched draft can be the same intent; merged text with
           // later typing is a new message when the user sends it.
@@ -419,7 +432,7 @@ export function useDesktopController(
             changed();
             setError(
               uncertainId
-                ? "连接中断，无法确认消息是否已送达。内容已放回输入框；直接重试不会重复执行同一条消息。"
+                ? "无法确认消息是否已送达。内容已放回输入框；直接重试不会重复执行同一条消息。"
                 : restored === "merged"
                   ? "消息未送达。原内容和附件已放回输入框，之后输入的内容也已保留。"
                   : "消息未送达，内容和附件已保留。请检查连接后重试。",
@@ -427,7 +440,7 @@ export function useDesktopController(
           }
         } else {
           for (const file of submitted.draft.files) localFiles.current.delete(file.id);
-          if (pending) pending.accepted = true;
+          if (pending) pending.settled = true;
           if (mounted.current) changed();
         }
       })
