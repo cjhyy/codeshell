@@ -13,7 +13,7 @@ import {
 } from "./panel-apps-service.js";
 import { discoverGitPanelAppsForUi, uninstallPanelAppForUi } from "./panel-app-install-service.js";
 import { createDesktopPanelManagement } from "./panel-app-management.js";
-import { panelChangeFailure, releasePanelForUpdate } from "./panel-update-blockers.js";
+import { panelChangeFailure, panelUpdateApproval } from "./panel-update-blockers.js";
 import type { ClosePanelForUpdate, DescribePanelGuest } from "./panel-update-blockers.js";
 import { registerProjectPanelVersionIpc } from "./project-panel-version-ipc.js";
 import {
@@ -250,16 +250,7 @@ export function registerProjectPanelIpc(deps: {
         return desktopPanelManager(cwd).management.install(
           desktopPanelContext(event, cwd),
           input.reviewToken,
-          {
-            overwrite: true,
-            expectedId: input.id,
-            ...(input.force
-              ? {
-                  releaseExecutions: (id, matches) =>
-                    releasePanelForUpdate(id, matches, deps.closeForPackageChange),
-                }
-              : {}),
-          },
+          panelUpdateApproval(input.id, input.force, deps.closeForPackageChange),
         );
       }),
   );

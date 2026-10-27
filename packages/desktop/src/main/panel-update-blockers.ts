@@ -13,6 +13,24 @@ export type ClosePanelForUpdate = (
   matches: (scope: PanelExecutionScope) => boolean,
 ) => Promise<void>;
 
+/** Prepare a lazy release callback; management validates the review before invoking it. */
+export function panelUpdateApproval(
+  appId: string,
+  force: boolean | undefined,
+  close: ClosePanelForUpdate,
+) {
+  return {
+    overwrite: true,
+    expectedId: appId,
+    ...(force
+      ? {
+          releaseExecutions: (id: string, matches: (scope: PanelExecutionScope) => boolean) =>
+            releasePanelForUpdate(id, matches, close),
+        }
+      : {}),
+  };
+}
+
 /** Result fields for a refused Panel change; empty unless executions hold it. */
 export function panelChangeFailure(
   error: unknown,
