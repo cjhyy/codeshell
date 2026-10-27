@@ -115,6 +115,7 @@ export function __setSessionWorkspaceServiceProjectStoreForTests(
 
 /** Tail of the pending workspace mutations per Session. */
 const sessionMutationQueues = new Map<string, Promise<void>>();
+const repositoryMutationQueues = new Map<string, Promise<void>>();
 
 /**
  * Run one workspace mutation at a time per Session. A repeated create/switch
@@ -125,18 +126,35 @@ async function withSessionWorkspaceMutation<T>(
   sessionId: string,
   run: () => Promise<T>,
 ): Promise<T> {
-  const previous = sessionMutationQueues.get(sessionId) ?? Promise.resolve();
+  return withMutationQueue(sessionMutationQueues, sessionId, async () => {
+    // Different Sessions may share a worktree, but switching into one must
+    // never race its occupancy/dirty checks and removal. Keep the repository
+    // reservation across the live worker round-trip as well as Git operations.
+    const sm = sessions();
+    requireKnownSession(sm, sessionId);
+    const mainRoot = await mainRootFor(sm, sessionId);
+    const repositoryRoot = (await findMainWorktreeRootIfUsable(mainRoot)) ?? mainRoot;
+    return withMutationQueue(repositoryMutationQueues, canonicalKey(repositoryRoot), run);
+  });
+}
+
+async function withMutationQueue<T>(
+  queues: Map<string, Promise<void>>,
+  key: string,
+  run: () => Promise<T>,
+): Promise<T> {
+  const previous = queues.get(key) ?? Promise.resolve();
   let release!: () => void;
   const tail = previous.then(
     () => new Promise<void>((resolveRelease) => (release = resolveRelease)),
   );
-  sessionMutationQueues.set(sessionId, tail);
+  queues.set(key, tail);
   await previous;
   try {
     return await run();
   } finally {
     release();
-    if (sessionMutationQueues.get(sessionId) === tail) sessionMutationQueues.delete(sessionId);
+    if (queues.get(key) === tail) queues.delete(key);
   }
 }
 
@@ -707,7 +725,7 @@ async function cleanupSessionWorktree(
     getSessionCwdIndex().setWorkspaceRoot(sessionId, mainWorkspace.root);
     sm.recordWorkspaceHandoff(sessionId, current, mainWorkspace);
   }
-  removeWorktree(match.path, action === "discard", { prefix });
+  removeWorktree(match.path, action === "discard", { prefix, force: action === "discard" });
   return await listSessionWorktreesForUi(sessionId, mainRoot);
 }
 

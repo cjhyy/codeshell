@@ -33,6 +33,11 @@ export interface CloudUpload {
   mimeType: string;
   size: number;
 }
+export interface CloudFailedSubmission {
+  clientMessageId: string;
+  text: string;
+  uploads: CloudUpload[];
+}
 export type CloudRuntimeStatus =
   | "idle"
   | "connecting"
@@ -55,6 +60,7 @@ export interface CloudRuntimeSnapshot {
   error: string;
   draft: string;
   uploads: CloudUpload[];
+  failedSubmissions: CloudFailedSubmission[];
   uploading: boolean;
   pendingApproval: ApprovalRequestEnvelope | null;
   approvalVersion: number;
@@ -106,6 +112,7 @@ export class CloudProjectRuntime {
   private earlyBytes = 0;
   private memories = new Map<string, SessionMemory>();
   private submissions = new Map<string, Submission>();
+  private failedSubmissions = new Map<string, CloudFailedSubmission[]>();
   private approvals = new Map<string, PendingApproval>();
   private running = new Set<string>();
   private loading: {
@@ -138,6 +145,7 @@ export class CloudProjectRuntime {
       error: "",
       draft: "",
       uploads: [],
+      failedSubmissions: [],
       uploading: false,
       pendingApproval: null,
       approvalVersion: 0,
@@ -193,6 +201,57 @@ export class CloudProjectRuntime {
     this.remember();
   };
 
+  /** Preserve a rejected request under its own Session, even when it is offscreen. */
+  private retainUnsent(id: string, submission: Submission): void {
+    const memory = this.memories.get(id) ?? { draft: "", uploads: [] };
+    if (!memory.draft && !memory.uploads.length) {
+      this.memories.set(id, { draft: submission.text, uploads: submission.uploads });
+    } else {
+      const failed = this.failedSubmissions.get(id) ?? [];
+      if (!failed.some((entry) => entry.clientMessageId === submission.clientMessageId))
+        this.failedSubmissions.set(id, [
+          ...failed,
+          {
+            clientMessageId: submission.clientMessageId,
+            text: submission.text,
+            uploads: submission.uploads,
+          },
+        ]);
+    }
+    if (this.value.remoteSessionId === id)
+      this.publish({
+        ...this.memories.get(id),
+        failedSubmissions: this.failedSubmissions.get(id) ?? [],
+      });
+  }
+
+  restoreFailedSubmission = (clientMessageId: string): void => {
+    const id = this.value.remoteSessionId;
+    if (!id || this.value.busy || this.value.uploading) return;
+    const failed = this.failedSubmissions.get(id) ?? [];
+    const submission = failed.find((entry) => entry.clientMessageId === clientMessageId);
+    if (!submission) return;
+    const uploads = [...submission.uploads, ...this.value.uploads].filter(
+      (upload, index, entries) => entries.findIndex((entry) => entry.id === upload.id) === index,
+    );
+    if (uploads.length > 16) {
+      this.publish({
+        error: "Remove some composer files before restoring this unsent message (16 files maximum)",
+      });
+      return;
+    }
+    const remaining = failed.filter((entry) => entry !== submission);
+    if (remaining.length) this.failedSubmissions.set(id, remaining);
+    else this.failedSubmissions.delete(id);
+    this.publish({
+      draft: [submission.text, this.value.draft].filter(Boolean).join("\n\n"),
+      uploads,
+      failedSubmissions: remaining,
+      error: "",
+    });
+    this.remember();
+  };
+
   connect = async (): Promise<void> => {
     if (this.connection || this.value.status === "connecting") return;
     const generation = ++this.generation;
@@ -240,6 +299,7 @@ export class CloudProjectRuntime {
         this.publish({
           status: status.status === "auth-required" ? "auth-required" : "disconnected",
           loading: false,
+          uploading: false,
           pendingApproval: null,
           error: status.error ?? "",
         });
@@ -380,13 +440,15 @@ export class CloudProjectRuntime {
       }
       sessions.sort((a, b) => b.updatedAt - a.updatedAt);
       const activeId = this.value.remoteSessionId;
-      if (activeId && !sessions.some((session) => session.engineSessionId === activeId)) {
-        const previous = this.value.sessions.find(
-          (session) => session.engineSessionId === activeId,
-        );
+      for (const previous of this.value.sessions) {
+        const id = previous.engineSessionId;
+        if (!id || sessions.some((session) => session.engineSessionId === id)) continue;
+        const memory = this.memories.get(id);
         if (
-          previous &&
-          (this.submissions.has(activeId) || this.value.uploads.length || this.value.draft)
+          this.submissions.has(id) ||
+          this.failedSubmissions.has(id) ||
+          memory?.uploads.length ||
+          memory?.draft
         )
           sessions.unshift(previous);
       }
@@ -412,6 +474,7 @@ export class CloudProjectRuntime {
       state: INITIAL_STATE,
       draft: memory?.draft ?? "",
       uploads: memory?.uploads ?? [],
+      failedSubmissions: this.failedSubmissions.get(id) ?? [],
       uploading: false,
       pendingApproval: null,
       error: "",
@@ -433,6 +496,7 @@ export class CloudProjectRuntime {
       state: INITIAL_STATE,
       draft: "",
       uploads: [],
+      failedSubmissions: [],
       uploading: false,
       busy: false,
       loading: false,
@@ -513,13 +577,7 @@ export class CloudProjectRuntime {
         );
       if (submission && (consumed || !this.running.has(id))) {
         this.submissions.delete(id);
-        if (!consumed) {
-          this.publish({
-            draft: this.value.draft || submission.text,
-            uploads: this.value.uploads.length ? this.value.uploads : submission.uploads,
-          });
-          this.remember();
-        }
+        if (!consumed) this.retainUnsent(id, submission);
       }
       this.publish({
         state: restored.state,
@@ -539,17 +597,12 @@ export class CloudProjectRuntime {
         this.submissions.delete(id);
         this.running.delete(id);
         this.blockedHistory = false;
+        if (submission) this.retainUnsent(id, submission);
         this.publish({
           state: INITIAL_STATE,
           loading: false,
           historyFailed: false,
           uncertain: false,
-          ...(submission
-            ? {
-                draft: this.value.draft || submission.text,
-                uploads: this.value.uploads.length ? this.value.uploads : submission.uploads,
-              }
-            : {}),
         });
         this.remember();
         this.updateBusy();
@@ -794,6 +847,7 @@ export class CloudProjectRuntime {
       if (certain) {
         this.submissions.delete(id);
         this.running.delete(id);
+        this.retainUnsent(id, submission);
       }
       if (!this.current(connection) || this.value.remoteSessionId !== id) return;
       this.publish({ error: errorText(cause), uncertain: !certain });
@@ -808,8 +862,6 @@ export class CloudProjectRuntime {
                 ),
             ),
           },
-          draft: this.value.draft || submission.text,
-          uploads: this.value.uploads.length ? this.value.uploads : submission.uploads,
         });
         this.remember();
       } else if (this.value.status === "connected") void this.loadSession(id);

@@ -439,6 +439,8 @@ export interface RemoveWorktreeResult {
 
 export interface RemoveWorktreeOptions {
   prefix?: string;
+  /** False lets Git reject working-tree changes made after the caller's preflight. */
+  force?: boolean;
 }
 
 export interface WorktreeChangeState {
@@ -529,7 +531,11 @@ export function removeWorktree(
   }
 
   try {
-    execGitSync(mainRoot, ["worktree", "remove", worktreePath, "--force"], 30000);
+    execGitSync(
+      mainRoot,
+      ["worktree", "remove", worktreePath, ...(opts.force === false ? [] : ["--force"])],
+      30000,
+    );
   } catch (err) {
     throw new Error(`failed to remove worktree ${worktreePath}: ${gitErrorMessage(err)}`, {
       cause: err,
