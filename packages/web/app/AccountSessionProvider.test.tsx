@@ -614,6 +614,42 @@ test("focus rereads operator login options and leaves the active account intact"
   expect(view.calls.some((call) => call.path.endsWith("/logout"))).toBe(false);
 });
 
+test("closing registration returns to login without obsolete registration errors", async () => {
+  const view = await fixture({ signedIn: false, renderLogin: true });
+  await action(() =>
+    control(view.container, "BUTTON", (node) => text(node) === "没有账号？创建账号").onClick(),
+  );
+  await action(() => {
+    control(view.container, "INPUT", (node) => props(node).autoComplete === "username").onChange({
+      target: { value: "fixture-user" },
+    });
+    control(
+      view.container,
+      "INPUT",
+      (node) => props(node).autoComplete === "new-password",
+    ).onChange({
+      target: { value: "fixture-password-12345" },
+    });
+  });
+  await action(() => control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }));
+  expect(text(view.container)).toContain("两次输入的密码不一致。");
+  view.overrides.set("GET /api/v1/account/status", () =>
+    Response.json({ registrationAllowed: false, githubEnabled: false }),
+  );
+  await action(() => window.dispatchEvent({ type: "focus" } as Event));
+  await until(() => !view.context.busy && !view.context.loginCapabilitiesLoading);
+  expect(text(view.container)).not.toContain("两次输入的密码不一致。");
+  expect(text(view.container)).not.toContain("确认密码");
+  expect(
+    control(view.container, "INPUT", (node) => props(node).autoComplete === "current-password")
+      .value,
+  ).toBe("fixture-password-12345");
+  await action(() => control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }));
+  await until(() => !view.context.busy);
+  expect(view.context.session?.authenticated).toBe(true);
+  expect(view.calls.some((call) => call.path.endsWith("/register"))).toBe(false);
+});
+
 test("late capability failure from an older operation cannot overwrite logout discovery", async () => {
   const view = await fixture();
   const old = deferred<Response>();

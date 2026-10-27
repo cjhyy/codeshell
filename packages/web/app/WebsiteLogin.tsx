@@ -10,8 +10,12 @@ export function WebsiteLogin() {
   const [confirmation, setConfirmation] = React.useState("");
   const [validation, setValidation] = React.useState("");
   React.useEffect(() => {
-    if (!account.registrationAllowed && !account.loginCapabilitiesLoading) setRegister(false);
-  }, [account.registrationAllowed, account.loginCapabilitiesLoading]);
+    if (register && !account.registrationAllowed && !account.loginCapabilitiesLoading) {
+      setRegister(false);
+      setValidation("");
+      setConfirmation("");
+    }
+  }, [register, account.registrationAllowed, account.loginCapabilitiesLoading]);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setValidation("");
