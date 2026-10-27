@@ -184,7 +184,6 @@ export class LSPClient extends EventEmitter {
     if (this.process !== child) return;
     this.fail(new Error("LSP server shut down"));
     this.process = undefined;
-    if (child.pid && child.exitCode === null && child.signalCode === null) child.kill();
     child.stdin?.destroy();
     child.stdout?.destroy();
     child.stderr?.destroy();
@@ -215,7 +214,14 @@ export class LSPClient extends EventEmitter {
     this.initialized = false;
     this.rejectAll(error);
     const child = this.process;
-    if (child?.pid && child.exitCode === null && child.signalCode === null) child.kill();
+    if (child?.pid && child.exitCode === null && child.signalCode === null) {
+      child.kill();
+      const timer = setTimeout(() => {
+        if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+      }, 500);
+      timer.unref();
+      child.once("exit", () => clearTimeout(timer));
+    }
     this.emit("failure", error);
   }
 

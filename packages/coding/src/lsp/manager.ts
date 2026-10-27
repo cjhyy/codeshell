@@ -23,6 +23,7 @@ interface ManagedServer {
 export class LSPServerManager {
   private servers = new Map<string, ManagedServer>();
   private rootUri: string;
+  private stopping: Promise<void> | undefined;
 
   constructor(cwd: string) {
     this.rootUri = pathToFileURL(cwd).href;
@@ -37,6 +38,7 @@ export class LSPServerManager {
    * Get or start a language server by name.
    */
   async getClient(serverName: string): Promise<LSPClient | undefined> {
+    if (this.stopping) return undefined;
     const managed = this.servers.get(serverName);
     if (!managed) return undefined;
 
@@ -131,7 +133,21 @@ export class LSPServerManager {
   /**
    * Shutdown all servers.
    */
-  async shutdownAll(): Promise<void> {
+  shutdownAll(): Promise<void> {
+    // Fence new starts for the entire sweep, including while a previous
+    // server's shutdown handshake is pending. Registry eviction must not leave
+    // a replacement process in a manager that no longer has an owner.
+    if (!this.stopping) {
+      this.stopping = Promise.resolve()
+        .then(() => this.stopServers())
+        .finally(() => {
+          this.stopping = undefined;
+        });
+    }
+    return this.stopping;
+  }
+
+  private async stopServers(): Promise<void> {
     for (const server of this.servers.values()) {
       const client = server.client;
       server.state = "stopped";

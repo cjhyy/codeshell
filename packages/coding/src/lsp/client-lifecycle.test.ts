@@ -33,7 +33,12 @@ beforeAll(async () => {
         if (message.method === 'exit') process.exit(0);
         if (message.id !== undefined) {
           const body = JSON.stringify({jsonrpc: '2.0', id: message.id, result: {pid: process.pid, capabilities: {}}});
-          process.stdout.write('Content-Length: ' + Buffer.byteLength(body) + '\\r\\n\\r\\n' + body);
+          const reply = () => process.stdout.write('Content-Length: ' + Buffer.byteLength(body) + '\\r\\n\\r\\n' + body);
+          if (message.method === 'shutdown' && process.argv.includes('--delay-shutdown')) {
+            const notice = JSON.stringify({jsonrpc: '2.0', method: 'shutdown-started'});
+            process.stdout.write('Content-Length: ' + Buffer.byteLength(notice) + '\\r\\n\\r\\n' + notice);
+            setTimeout(reply, 150);
+          } else reply();
         }
       }
     });
@@ -150,3 +155,48 @@ test("shutdown during startup cannot publish a ready client afterward", async ()
   `,
   );
 });
+
+test("shutdown fences replacement starts and concurrent shutdown callers share completion", async () => {
+  await nativeFixture(
+    "shutdown-fence",
+    `
+    const m = manager();
+    m.servers.get('typescript').config.args.push('--delay-shutdown');
+    const first = await m.getClient('typescript');
+    const reached = new Promise(resolve => first.once('notification', resolve));
+    const stopping = m.shutdownAll();
+    await reached;
+    assert.equal(await m.getClient('typescript'), undefined);
+    assert.equal(m.shutdownAll(), stopping);
+    await stopping;
+    assert.equal(m.isConnected(), false);
+    assert.equal(m.listServers().find(s => s.name === 'typescript').state, 'stopped');
+  `,
+  );
+});
+
+test.skipIf(process.platform === "win32")(
+  "a broken-input server ignoring SIGTERM is forcibly reaped",
+  async () => {
+    await nativeFixture(
+      "stubborn-pipe",
+      `
+    const client = new LSPClient(process.execPath, ['-e',
+      "process.on('SIGTERM',()=>{});require('node:fs').closeSync(0);process.stderr.write('READY');setInterval(()=>{},1000)"
+    ]);
+    const starting = client.start();
+    const child = client.process;
+    const ready = new Promise(resolve => child.stderr.once('data', resolve));
+    const exited = new Promise(resolve => child.once('exit', resolve));
+    try {
+      await starting;
+      await ready;
+      await assert.rejects(client.request('initialize', {text: 'x'.repeat(2 * 1024 * 1024)}));
+      await exited;
+      assert.equal(child.signalCode, 'SIGKILL');
+      assert.equal(client.isAlive, false);
+    } finally { await client.shutdown(); }
+  `,
+    );
+  },
+);
