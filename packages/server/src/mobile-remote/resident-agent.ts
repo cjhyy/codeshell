@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { stopRoomProcess } from "./room-process-stop.js";
 import { createInterface } from "node:readline";
 import { pathWithCommonBins } from "./path-bins.js";
 
@@ -196,10 +197,12 @@ export class ResidentAgentProcess {
     if (child.stdout) {
       const rl = createInterface({ input: child.stdout });
       rl.on("line", (line) => {
+        if (this.child !== child) return;
         for (const ev of parseStreamJsonLine(line)) this.opts.onEvent(ev);
       });
     }
     child.stderr?.on("data", (chunk) => {
+      if (this.child !== child) return;
       // claude prints non-fatal warnings to stderr; surface as error events
       // only if they look like real errors (cheap heuristic).
       const text = String(chunk);
@@ -210,10 +213,12 @@ export class ResidentAgentProcess {
     const finish = (code: number | null, signal: NodeJS.Signals | null): void => {
       if (exited) return;
       exited = true;
-      if (this.child === child) this.child = undefined;
+      if (this.child !== child) return;
+      this.child = undefined;
       this.opts.onEvent({ type: "exit", code, signal });
     };
     child.on("error", (err) => {
+      if (this.child !== child) return;
       const isMissing = (err as NodeJS.ErrnoException).code === "ENOENT";
       this.opts.onEvent({
         type: "error",
@@ -225,7 +230,18 @@ export class ResidentAgentProcess {
       // `exit`. Retire that child so the room can start a replacement.
       if (child.pid === undefined) finish(null, null);
     });
-    child.on("exit", (code, signal) => finish(code, signal));
+    child.stdin?.on("error", (error: NodeJS.ErrnoException) => {
+      if (this.child !== child) return;
+      // Pipe errors are emitted by stdin, separately from ChildProcess.error.
+      // Retire this room immediately; its eventual exit must not close a retry.
+      stopRoomProcess(child);
+      this.opts.onEvent({
+        type: "error",
+        error: `Claude Code input pipe closed${error.code ? ` (${error.code})` : ""}`,
+      });
+      finish(null, null);
+    });
+    child.on("close", (code, signal) => finish(code, signal));
   }
 
   /** Feed one user turn. Returns false if the process isn't running. */
@@ -249,22 +265,6 @@ export class ResidentAgentProcess {
   stop(): void {
     const child = this.child;
     this.child = undefined;
-    // Guard pid > 1: process.kill(-1) would SIGTERM every process the user can
-    // reach, and -0 the caller's own group. `!child?.pid` already catches
-    // undefined/0; the `> 1` also rules out the (theoretical) pid-1 case so this
-    // negative-pid group kill is consistent with killProcessGroup's guard.
-    if (!child?.pid || child.pid <= 1) {
-      child?.kill("SIGTERM");
-      return;
-    }
-    try {
-      process.kill(-child.pid, "SIGTERM");
-    } catch {
-      try {
-        child.kill("SIGTERM");
-      } catch {
-        /* already gone */
-      }
-    }
+    if (child) stopRoomProcess(child);
   }
 }

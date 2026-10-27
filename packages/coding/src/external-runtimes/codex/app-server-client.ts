@@ -81,6 +81,7 @@ export class CodexAppServerClient {
   private requestHandler?: ServerRequestHandler;
   private closeHandler?: CloseHandler;
   private closed = false;
+  private closing?: Promise<void>;
   private closeReason?: string;
   /** Buffer lines that arrive before a handler exists, then drain in order. */
   private readonly preHandlerLines: string[] = [];
@@ -109,6 +110,7 @@ export class CodexAppServerClient {
 
   /** Spawn the app-server. Handlers must already be registered. */
   start(): void {
+    if (this.closed) throw new Error(this.closeReason ?? "app-server client is closed");
     if (this.child) return;
     const command = this.options.command ?? "codex";
     const args = [...(this.options.args ?? ["app-server"])];
@@ -121,6 +123,11 @@ export class CodexAppServerClient {
       shell: false,
     }) as ChildProcessWithoutNullStreams;
 
+    this.child.stdin.on("error", (error: NodeJS.ErrnoException) => {
+      // Failed spawns have no pid; ChildProcess.error owns their OS diagnostic.
+      if (this.child?.pid === undefined) return;
+      this.failInput(error);
+    });
     this.child.stdout.setEncoding("utf8");
     this.lines = createInterface({ input: this.child.stdout, crlfDelay: Infinity });
     this.lines.on("line", (line) => this.acceptLine(line));
@@ -170,6 +177,7 @@ export class CodexAppServerClient {
   }
 
   private handleLine(line: string): void {
+    if (this.closed) return;
     if (line.length > MAX_LINE_BYTES) {
       // Oversized is a transport failure: parsing it would stall the event loop.
       this.failAll("app-server sent an oversized line");
@@ -279,8 +287,26 @@ export class CodexAppServerClient {
 
   private write(payload: Record<string, unknown>): void {
     const child = this.child;
-    if (!child || child.stdin.destroyed) return;
-    child.stdin.write(`${JSON.stringify(payload)}\n`);
+    if (this.closed) return;
+    if (child && child.pid === undefined) return;
+    if (!child || child.stdin.destroyed || !child.stdin.writable) {
+      this.failInput();
+      return;
+    }
+    try {
+      child.stdin.write(`${JSON.stringify(payload)}\n`);
+    } catch (error) {
+      this.failInput(error as NodeJS.ErrnoException);
+    }
+  }
+
+  private failInput(error?: NodeJS.ErrnoException): void {
+    this.failAll(
+      `app-server input pipe closed${error?.code ? ` (${diagnosticText(error.code)})` : ""}`,
+    );
+    // Reject outstanding RPCs now and terminate even when the process keeps
+    // running after closing fd 0. close() owns one bounded cleanup sequence.
+    void this.close();
   }
 
   private failAll(reason: string, details: Record<string, unknown> = {}): void {
@@ -312,10 +338,19 @@ export class CodexAppServerClient {
   }
 
   /** Stop via stdin EOF, then SIGTERM and SIGKILL if the server does not exit. */
-  async close(): Promise<void> {
+  close(): Promise<void> {
+    if (!this.closing) {
+      // Publish cleanup ownership before notifying callers, whose onClose may
+      // itself call close(). One process must have only one escalation timer.
+      this.closing = Promise.resolve().then(() => this.stop());
+      this.failAll("app-server client closed");
+      this.lines?.close();
+    }
+    return this.closing;
+  }
+
+  private async stop(): Promise<void> {
     const child = this.child;
-    this.failAll("app-server client closed");
-    this.lines?.close();
     // Failed spawns have no pid and never emit `exit`. A process already killed
     // by a signal likewise has no numeric exitCode and will not emit it again.
     if (!child || !child.pid || child.exitCode !== null || child.signalCode !== null) return;

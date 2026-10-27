@@ -294,12 +294,19 @@ export class ResourceUploadIngest {
   }
   async cleanupExpired(): Promise<void> {
     await this.initialize();
-    for (const record of [...this.records.values()])
-      if (record.expiresAt <= this.options.now()) {
-        const key = this.key(record.scope, record.sessionId);
-        this.finishes.get(key)?.abort();
-        await this.locked(key, () => this.remove(record));
-      }
+    for (const key of [...this.records.keys()]) {
+      // Another upload may have renewed while cleanup waited on an earlier
+      // entry. Only the current expired record can cancel a running finish.
+      const record = this.records.get(key);
+      if (!record || record.expiresAt > this.options.now()) continue;
+      this.finishes.get(key)?.abort();
+      await this.locked(key, async () => {
+        // A write already holding this lock may acknowledge a chunk and renew
+        // the lease before cleanup enters. Never delete that renewed upload.
+        const current = this.records.get(key);
+        if (current && current.expiresAt <= this.options.now()) await this.remove(current);
+      });
+    }
   }
   async begin(scope: MediaScope, raw: unknown): Promise<ResourceUploadSession> {
     await this.authorize(scope);
