@@ -106,6 +106,40 @@ async function sendChat(ctx: OrchestratorCtx): Promise<void> {
   });
 }
 
+test("ambiguous Mobile admission emits chat.uncertain instead of a definite error", async () => {
+  const harness = createHarness({
+    requestedWorkspaceRoot: "/worktree",
+    lookupSession: () => undefined,
+  });
+  harness.ctx.externalCommands = {
+    observe: () => undefined,
+    isExternal: () => true,
+    prepare: async () => ({
+      cwd: "/worktree",
+      submit: async () => ({ ok: false, uncertain: true, message: "Admission not confirmed" }),
+    }),
+  } as unknown as MobileExternalRuntimeCommands;
+  (harness.ctx.remote as any).sendToViewer = (_viewer: string, event: Record<string, unknown>) =>
+    harness.replies.push(event);
+  await handleClientEvent(harness.ctx, {
+    type: "chat.send",
+    deviceId: "phone-1",
+    viewerId: "tab",
+    sessionId: "session-1",
+    text: "run once",
+    clientMessageId: "stable-intent",
+  });
+  expect(harness.replies).toEqual([
+    {
+      type: "chat.uncertain",
+      sessionId: "session-1",
+      clientMessageId: "stable-intent",
+      message: "Admission not confirmed",
+    },
+  ]);
+  expect(harness.preparedRuns).toHaveLength(0);
+});
+
 test("actual Mobile dispatcher preserves the selected native producer and rejects an unselected explicit Session", async () => {
   const harness = createHarness({
     requestedWorkspaceRoot: "/worktree",

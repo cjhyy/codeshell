@@ -85,6 +85,8 @@ export interface RemoteApp {
   sessions: MobileSessionMeta[];
   unreadSessionIds: ReadonlySet<string>;
   activeSessionId?: string;
+  /** User navigation changes this; asynchronously binding a new session does not. */
+  conversationRevision: number;
   activeCwd?: string | null;
   projects: MobileProjectMeta[];
   /** The bound room — for the user this is always an external CC (Claude Code)
@@ -311,6 +313,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     >(),
   );
   const conversationRevisionRef = useRef(0);
+  // A first send can use the Host's implicit session. Once an uncertain reply
+  // identifies it, pin retries to that session even if the Host's selection moves.
+  const uncertainMessageSessionsRef = useRef(new Map<string, string>());
   const pendingCreateRef = useRef<{
     clientRequestId: string;
     conversationRevision: number;
@@ -663,6 +668,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           if (event.clientRequestId && creation?.clientRequestId === event.clientRequestId)
             pendingCreateRef.current = null;
           if (event.clientMessageId) {
+            if (waiter) uncertainMessageSessionsRef.current.delete(event.clientMessageId);
             settleMessageAck(
               event.clientMessageId,
               waiter && waiter.connectionGeneration !== connectionGenerationRef.current
@@ -711,6 +717,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           );
           break;
         }
+        case "chat.uncertain":
+          if (messageAckWaitersRef.current.has(event.clientMessageId))
+            uncertainMessageSessionsRef.current.set(event.clientMessageId, event.sessionId);
+          settleMessageAck(event.clientMessageId, new Error(event.message));
+          setNotice(event.message);
+          break;
         case "session.list.ok":
           setSessions(event.sessions);
           setUnreadSessionIds((prev) => {
@@ -1090,7 +1102,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             }
           }
           if (event.clientMessageId) {
-            settleMessageAck(event.clientMessageId, new MessageRejectedError(event.message));
+            // Older Hosts sent a generic error for this ambiguous timeout.
+            // Preserve its intent ID just as for the additive chat.uncertain event.
+            settleMessageAck(
+              event.clientMessageId,
+              event.message === "worker did not acknowledge the run"
+                ? new Error(event.message)
+                : new MessageRejectedError(event.message),
+            );
           }
           setNotice(event.message);
           setLoading({
@@ -1462,7 +1481,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       const connectionGeneration = socket.connectionGeneration;
       const conversationRevision = conversationRevisionRef.current;
       const roomId = activeRoomIdRef.current;
-      const sessionId = boundSessionRef.current;
+      const sessionId =
+        (input.clientMessageId
+          ? uncertainMessageSessionsRef.current.get(input.clientMessageId)
+          : undefined) ?? boundSessionRef.current;
       const clientMessageId =
         input.clientMessageId ??
         globalThis.crypto?.randomUUID?.() ??
@@ -1535,11 +1557,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         await acknowledged;
       } catch (error) {
         // Only an explicit host rejection proves the message was not admitted.
-        if (!(error instanceof MessageRejectedError)) input.onUncertain?.(clientMessageId);
+        const uncertain = !(error instanceof MessageRejectedError);
+        if (uncertain) input.onUncertain?.(clientMessageId);
         setNotice(
-          t("mobile.notice.attachmentSendFailed", {
-            error: error instanceof Error ? error.message : String(error),
-          }),
+          uncertain
+            ? t("mobile.composer.sendUncertain")
+            : t("mobile.notice.attachmentSendFailed", {
+                error: error instanceof Error ? error.message : String(error),
+              }),
         );
         return false;
       }
@@ -1884,6 +1909,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     sessions,
     unreadSessionIds,
     activeSessionId,
+    conversationRevision: conversationRevisionRef.current,
     activeCwd,
     projects,
     activeRoom,

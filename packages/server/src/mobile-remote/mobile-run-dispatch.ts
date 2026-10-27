@@ -10,7 +10,9 @@ export interface MobileRunRequest {
   params: Record<string, unknown>;
 }
 
-export type MobileRunAcceptance = { ok: true } | { ok: false; message: string; code?: number };
+export type MobileRunAcceptance =
+  | { ok: true }
+  | { ok: false; message: string; code?: number; uncertain?: true };
 
 /** Inject agent/run and wait for its request-correlated validation/queue acknowledgement. */
 export function injectMobileRunAndAwaitAcceptance(
@@ -21,7 +23,6 @@ export function injectMobileRunAndAwaitAcceptance(
 ): Promise<MobileRunAcceptance> {
   return new Promise((resolve) => {
     let settled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
     const finish = (result: MobileRunAcceptance): void => {
       if (settled) return;
       settled = true;
@@ -61,22 +62,28 @@ export function injectMobileRunAndAwaitAcceptance(
         // Not JSON or not part of this request.
       }
     });
-    timer = setTimeout(
-      () => finish({ ok: false, message: "worker did not acknowledge the run" }),
+    const timer = setTimeout(
+      () => finish({ ok: false, uncertain: true, message: "worker did not acknowledge the run" }),
       timeoutMs,
     );
+    let injecting = false;
     try {
-      bridge.injectWorkerMessage(
-        JSON.stringify({
-          jsonrpc: "2.0",
-          id: request.id,
-          method: "agent/run",
-          params: request.params,
-        }),
-        meta,
-      );
+      const line = JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        method: "agent/run",
+        params: request.params,
+      });
+      injecting = true;
+      bridge.injectWorkerMessage(line, meta);
     } catch (error) {
-      finish({ ok: false, message: error instanceof Error ? error.message : String(error) });
+      // An injection can fail after queuing bytes. Only serialization failure
+      // proves that this request never reached the transport.
+      finish({
+        ok: false,
+        message: error instanceof Error ? error.message : String(error),
+        ...(injecting ? { uncertain: true } : {}),
+      });
     }
   });
 }

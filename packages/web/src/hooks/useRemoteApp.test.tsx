@@ -2050,6 +2050,211 @@ test("the actual Desktop hook/controller pair keeps drafts through create and se
   restoreFetch();
 });
 
+for (const outcome of ["uncertain", "legacy-timeout", "rejected"] as const) {
+  test(`Desktop retries ${outcome} admission with the appropriate intent identity`, async () => {
+    setupBrowser();
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async () => {
+        throw new Error("no image requests expected");
+      },
+      writable: true,
+    });
+    const hook = await renderHook(() => useDesktopController(useRemoteApp(), undefined, () => {}));
+    const ws = FakeWebSocket.instances[0]!;
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.newSession();
+        await flushMicrotasks();
+      });
+      const creation = ws.sent
+        .map((line) => JSON.parse(line))
+        .find((event) => event.type === "session.create");
+      await act(async () => {
+        ws.message({
+          type: "chat.accepted",
+          clientRequestId: creation.clientRequestId,
+          sessionId: "slow-session",
+          cwd: null,
+        });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.setDraft("perform operation once");
+      });
+      await act(async () => {
+        expect(hook.result.current.send()).toBe(true);
+        await flushMicrotasks();
+      });
+      const first = ws.sent
+        .map((line) => JSON.parse(line))
+        .find((event) => event.type === "chat.send");
+      await act(async () => {
+        ws.message({
+          type: outcome === "uncertain" ? "chat.uncertain" : "error",
+          sessionId: "slow-session",
+          clientMessageId: first.clientMessageId,
+          message: outcome === "rejected" ? "invalid input" : "worker did not acknowledge the run",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.draft).toBe("perform operation once");
+      expect(hook.result.current.error).toContain(
+        outcome === "rejected" ? "消息未送达" : "无法确认消息是否已送达",
+      );
+      if (outcome === "uncertain") {
+        // Failure before the retry frame is sent must not forget the original
+        // uncertainty and manufacture a new ID for the next attempt.
+        ws.readyState = FakeWebSocket.CLOSED;
+        await act(async () => {
+          expect(hook.result.current.send()).toBe(true);
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.draft).toBe("perform operation once");
+        ws.readyState = FakeWebSocket.OPEN;
+      }
+      await act(async () => {
+        expect(hook.result.current.send()).toBe(true);
+        await flushMicrotasks();
+      });
+      const sends = ws.sent
+        .map((line) => JSON.parse(line))
+        .filter((event) => event.type === "chat.send");
+      expect(sends).toHaveLength(2);
+      expect(sends[1].text).toBe(sends[0].text);
+      expect(sends[1].sessionId).toBe(sends[0].sessionId);
+      if (outcome === "rejected")
+        expect(sends[1].clientMessageId).not.toBe(sends[0].clientMessageId);
+      else expect(sends[1].clientMessageId).toBe(sends[0].clientMessageId);
+      await act(async () => {
+        ws.message({
+          type: "chat.accepted",
+          clientMessageId: sends[1].clientMessageId,
+          sessionId: "slow-session",
+          cwd: null,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.draft).toBe("");
+      expect(hook.result.current.chat.items.filter((item) => item.kind === "user")).toHaveLength(1);
+    } finally {
+      await hook.unmount();
+      restoreFetch();
+    }
+  });
+}
+
+for (const bindBeforeTimeout of [false, true]) {
+  test(`an uncertain first send pins its Host session and retains its intent (early binding: ${bindBeforeTimeout})`, async () => {
+    setupBrowser();
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async () => {
+        throw new Error("no image requests expected");
+      },
+      writable: true,
+    });
+    const hook = await renderHook(() => {
+      const app = useRemoteApp();
+      return { app, controller: useDesktopController(app, undefined, () => {}) };
+    });
+    const ws = FakeWebSocket.instances[0]!;
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.app.activeSessionId).toBeUndefined();
+      const navigation = hook.result.current.app.conversationRevision;
+      await act(async () => {
+        hook.result.current.controller.setDraft("first operation once");
+      });
+      await act(async () => {
+        hook.result.current.controller.send();
+        await flushMicrotasks();
+      });
+      const first = ws.sent
+        .map((line) => JSON.parse(line))
+        .find((event) => event.type === "chat.send");
+      expect(first.sessionId).toBeUndefined();
+      if (bindBeforeTimeout) {
+        await act(async () => {
+          ws.message({
+            type: "session.stream",
+            sessionId: "host-chosen-session",
+            seq: 1,
+            event: { type: "session_title", title: "First operation" },
+          });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.app.activeSessionId).toBe("host-chosen-session");
+        expect(hook.result.current.app.conversationRevision).toBe(navigation);
+      }
+      await act(async () => {
+        ws.message({
+          type: "chat.uncertain",
+          sessionId: "host-chosen-session",
+          clientMessageId: first.clientMessageId,
+          message: "worker did not acknowledge the run",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.controller.draft).toBe("first operation once");
+      expect(hook.result.current.controller.uncertain).toBe(true);
+      expect(hook.result.current.app.notice).toContain("无法确认消息是否已送达");
+      if (!bindBeforeTimeout) {
+        // A late acknowledgement has no waiter to bind the UI. It must not
+        // discard the pinned retry session while the restored draft remains.
+        await act(async () => {
+          ws.message({
+            type: "chat.accepted",
+            sessionId: "host-chosen-session",
+            clientMessageId: first.clientMessageId,
+            cwd: null,
+          });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.app.activeSessionId).toBeUndefined();
+      }
+      await act(async () => {
+        hook.result.current.controller.send();
+        await flushMicrotasks();
+      });
+      const sends = ws.sent
+        .map((line) => JSON.parse(line))
+        .filter((event) => event.type === "chat.send");
+      expect(sends).toHaveLength(2);
+      expect(sends[1].clientMessageId).toBe(first.clientMessageId);
+      expect(sends[1].sessionId).toBe("host-chosen-session");
+      await act(async () => {
+        ws.message({
+          type: "chat.accepted",
+          sessionId: "host-chosen-session",
+          clientMessageId: first.clientMessageId,
+          cwd: null,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.controller.draft).toBe("");
+      expect(
+        hook.result.current.app.chat.items.filter((item) => item.kind === "user"),
+      ).toHaveLength(1);
+      await act(async () => {
+        hook.result.current.app.selectSession("another-session");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.app.conversationRevision).not.toBe(navigation);
+    } finally {
+      await hook.unmount();
+      restoreFetch();
+    }
+  });
+}
+
 describe("useRemoteApp native output journal", () => {
   test("3 MiB legacy base crosses the real hook socket and selected MobileOutputRecovery host", async () => {
     const f = await connectedJournal(true);

@@ -1,11 +1,17 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { createServer } from "node:http";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
-import { markAttachmentsSent } from "../attachment-service.js";
-import { dispatchMobileChatTurn } from "./mobile-chat-turn.js";
-import { MobileUploadService } from "./mobile-upload-service.js";
+import { installFixtureNetworkGuard } from "../../../../tests/helpers/network-fixture.js";
+const guard = installFixtureNetworkGuard();
+const { markAttachmentsSent, cleanupAttachments, DRAFT_ATTACHMENT_TTL_MS } =
+  await import("../attachment-service.js");
+const { dispatchMobileChatTurn } = await import("./mobile-chat-turn.js");
+const { injectMobileRunAndAwaitAcceptance } = await import("./mobile-run-dispatch.js");
+const { MobileUploadService } = await import("./mobile-upload-service.js");
+type MobileUploadService = InstanceType<typeof MobileUploadService>;
+afterAll(() => guard.restore());
 
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -32,7 +38,10 @@ async function uploadedFixture(service: MobileUploadService) {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("missing upload server address");
-  const response = await fetch(`http://127.0.0.1:${address.port}${ticket.putUrl}`, {
+  const origin = `http://127.0.0.1:${address.port}`;
+  guard.allowOrigin(origin);
+  const response = await fetch(`${origin}${ticket.putUrl}`, {
+    redirect: "error",
     method: "PUT",
     headers: { "content-type": "image/png" },
     body: PNG,
@@ -203,6 +212,96 @@ describe("dispatchMobileChatTurn", () => {
     await service.finalize("device-1", ticket.uploadId, retried.claimId);
   });
 
+  test("uncertain admission preserves staged attachments and releases only retryable spool claims", async () => {
+    const root = mkdtempSync(join(tmpdir(), "cs-mobile-uncertain-"));
+    roots.push(root);
+    mkdirSync(join(root, "workspace"));
+    const cwd = realpathSync(join(root, "workspace"));
+    const uploads = new MobileUploadService({ rootDir: join(root, "spool"), cleanupIntervalMs: 0 });
+    services.push(uploads);
+    const ticket = await uploadedFixture(uploads);
+    const injected: any[] = [];
+    let outbound: ((line: string) => void) | undefined;
+    let acknowledge = false;
+    let marked = 0;
+    const bridge = {
+      subscribeOutbound(listener: (line: string) => void) {
+        outbound = listener;
+        return () => {
+          outbound = undefined;
+        };
+      },
+      injectWorkerMessage(line: string) {
+        const request = JSON.parse(line);
+        injected.push(request);
+        if (acknowledge)
+          queueMicrotask(() =>
+            outbound?.(
+              JSON.stringify({ method: "agent/runAccepted", params: { requestId: request.id } }),
+            ),
+          );
+      },
+    };
+    const meta = { origin: "mobile" as const, producer: "mobile-chat" };
+    const input = {
+      deviceId: "device-1",
+      sessionId: "slow-session",
+      fallbackCwd: cwd,
+      text: "only once",
+      clientMessageId: "stable-intent",
+      runId: "initial-run",
+      attachments: [
+        {
+          transport: "upload" as const,
+          uploadId: ticket.uploadId,
+          clientId: "image-1",
+          name: "phone.png",
+          mime: "image/png" as const,
+          size: PNG.length,
+        },
+      ],
+      uploads,
+      bridge,
+      meta,
+      resolveWorkspace: async () => cwd,
+      markSent: async (...args: Parameters<typeof markAttachmentsSent>) => {
+        marked++;
+        await markAttachmentsSent(...args);
+      },
+      submit: (request: Parameters<typeof injectMobileRunAndAwaitAcceptance>[1]) =>
+        injectMobileRunAndAwaitAcceptance(bridge, request, meta, 10),
+    };
+    expect(await dispatchMobileChatTurn(input)).toEqual({
+      ok: false,
+      uncertain: true,
+      clientMessageId: "stable-intent",
+      message: "worker did not acknowledge the run",
+    });
+    expect(marked).toBe(1);
+    const canonical = injected[0].params.attachments[0];
+    expect(readFileSync(canonical.absPath)).toEqual(PNG);
+    await cleanupAttachments({
+      cwd,
+      now: Date.now() + DRAFT_ATTACHMENT_TTL_MS + 1000,
+    });
+    expect(readFileSync(canonical.absPath)).toEqual(PNG);
+    // The first worker still owns canonical bytes. Retrying need not reupload
+    // and cannot finalize/delete the upload before acceptance is known.
+    const claim = uploads.claim("device-1", ticket.uploadId);
+    await uploads.release("device-1", ticket.uploadId, claim.claimId);
+    acknowledge = true;
+    const retried = await dispatchMobileChatTurn({ ...input, runId: "retry-run" });
+    expect(retried.ok).toBe(true);
+    expect(injected.map((request) => request.params.clientMessageId)).toEqual([
+      "stable-intent",
+      "stable-intent",
+    ]);
+    expect(injected[1].params.attachments[0].sha256).toBe(canonical.sha256);
+    expect(readFileSync(canonical.absPath)).toEqual(PNG);
+    expect(marked).toBe(2);
+    expect(() => uploads.claim("device-1", ticket.uploadId)).toThrow();
+  });
+
   for (const accepted of [false, true]) {
     test(`alternative producer ${accepted ? "committed input survives mark-sent failure" : "ambiguous pre-ack timeout releases claims"} without a native request`, async () => {
       const root = mkdtempSync(join(tmpdir(), "cs-mobile-alternative-"));
@@ -258,6 +357,8 @@ describe("dispatchMobileChatTurn", () => {
         },
       });
       expect(result.ok).toBe(accepted);
+      if (!accepted)
+        expect(result).toMatchObject({ uncertain: true, clientMessageId: "stable-mobile-id" });
       expect(submissions).toBe(1);
       expect(native).toBe(0);
       if (accepted) expect(() => uploads.claim("device-1", ticket.uploadId)).toThrow();

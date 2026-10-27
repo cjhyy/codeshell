@@ -410,6 +410,18 @@ export async function handleClientEvent(
         ? (e: MobileServerEvent) => ctx.remote.sendToViewer(event.viewerId!, e)
         : reply;
     if (!dispatched.ok) {
+      if (dispatched.uncertain) {
+        // Older clients ignore this additive event and keep waiting for their
+        // existing acknowledgement timeout. A correlated
+        // generic error would incorrectly tell them the run was rejected.
+        chatReply({
+          type: "chat.uncertain",
+          sessionId,
+          clientMessageId: dispatched.clientMessageId,
+          message: dispatched.message,
+        });
+        return;
+      }
       chatReply({
         type: "error",
         message: dispatched.message,

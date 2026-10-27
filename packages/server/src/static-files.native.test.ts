@@ -3,20 +3,20 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { bundleInSubprocess } from "../../../tests/helpers/bundle-in-subprocess.js";
 
 test("native static delivery bounds reads and releases files on HEAD, errors, and disconnects", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "static-delivery-native-"));
   try {
-    const build = await Bun.build({
-      entrypoints: [
+    bundleInSubprocess(
+      [
         fileURLToPath(new URL("static-files.ts", import.meta.url)),
         fileURLToPath(new URL("mobile-remote/mobile-static.ts", import.meta.url)),
+        fileURLToPath(new URL("../../../tests/helpers/network-fixture.ts", import.meta.url)),
       ],
-      naming: "[name].js",
-      outdir: temporary,
-      target: "node",
-    });
-    expect(build.success).toBe(true);
+      temporary,
+      { naming: "[name].js" },
+    );
     await writeFile(join(temporary, "package.json"), '{"type":"module"}');
     await writeFile(
       join(temporary, "fixture.mjs"),
@@ -26,8 +26,10 @@ import { appendFileSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "n
 import { open } from "node:fs/promises";
 import { createServer, get } from "node:http";
 import { join } from "node:path";
-import { streamStaticFile } from "./static-files.js";
-import { serveMobile } from "./mobile-static.js";
+import { installFixtureNetworkGuard } from "./network-fixture.js";
+const guard = installFixtureNetworkGuard();
+const { streamStaticFile } = await import("./static-files.js");
+const { serveMobile } = await import("./mobile-static.js");
 
 const root = join(process.cwd(), "app");
 mkdirSync(join(root, "assets"), { recursive: true });
@@ -66,8 +68,10 @@ const server = createServer((req, res) => {
 });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const origin = "http://127.0.0.1:" + server.address().port;
+guard.allowOrigin(origin);
+const fixtureFetch = (url, options) => fetch(url, { ...options, redirect: "error" });
 try {
-  const head = await fetch(origin + "/large.bin", { method: "HEAD" });
+  const head = await fixtureFetch(origin + "/large.bin", { method: "HEAD" });
   await completed;
   assert.equal(head.status, 200);
   assert.equal(head.headers.get("content-length"), String(32 * 1024 * 1024));
@@ -75,12 +79,12 @@ try {
   assert.equal(reads.length, 0, "HEAD must not create a file reader");
 
   beforeHeaders = () => appendFileSync(join(root, "assets/app.js"), " appended");
-  assert.equal(await (await fetch(origin + "/assets/app.js")).text(), "original bytes");
+  assert.equal(await (await fixtureFetch(origin + "/assets/app.js")).text(), "original bytes");
   await completed;
   assert.equal(reads.at(-1).fd, -1, "completed body must close its file");
   beforeHeaders = undefined;
 
-  const missing = await fetch(origin + "/missing.js");
+  const missing = await fixtureFetch(origin + "/missing.js");
   await completed;
   assert.equal(missing.status, 404);
 
@@ -88,15 +92,15 @@ try {
     const outside = join(process.cwd(), "outside.txt");
     writeFileSync(outside, "private bytes");
     symlinkSync(outside, join(root, "escape.txt"));
-    assert.equal((await fetch(origin + "/escape.txt")).status, 404);
+    assert.equal((await fixtureFetch(origin + "/escape.txt")).status, 404);
     symlinkSync(join(root, "assets/app.js"), join(root, "alias.js"));
-    assert.equal(await (await fetch(origin + "/alias.js")).text(), "original bytes appended");
+    assert.equal(await (await fixtureFetch(origin + "/alias.js")).text(), "original bytes appended");
     await completed;
   }
 
   injectReadError = true;
   await assert.rejects(async () => {
-    const response = await fetch(origin + "/large.bin");
+    const response = await fixtureFetch(origin + "/large.bin");
     await response.arrayBuffer();
   });
   await completed;
@@ -117,13 +121,13 @@ try {
   // this point emitted an unhandled stream error. The fixed FD remains usable.
   writeFileSync(join(root, "assets/app.js"), "pinned mobile bytes");
   beforeHeaders = () => rmSync(join(root, "assets/app.js"));
-  const mobile = await fetch(origin + "/mobile/assets/app.js");
+  const mobile = await fixtureFetch(origin + "/mobile/assets/app.js");
   assert.equal(mobile.status, 200);
   assert.equal(mobile.headers.get("cache-control"), "public, max-age=31536000, immutable");
   assert.equal(await mobile.text(), "pinned mobile bytes");
   beforeHeaders = undefined;
-  assert.equal((await fetch(origin + "/mobile/missing.js")).status, 404);
-  const shell = await fetch(origin + "/mobile/route", { headers: { accept: "text/html" } });
+  assert.equal((await fixtureFetch(origin + "/mobile/missing.js")).status, 404);
+  const shell = await fixtureFetch(origin + "/mobile/route", { headers: { accept: "text/html" } });
   assert.equal(shell.headers.get("cache-control"), "no-store");
   assert.equal(await shell.text(), "app shell");
   console.log("PASS native static delivery");
@@ -131,6 +135,7 @@ try {
   beforeHeaders = undefined;
   prototype.createReadStream = originalCreateReadStream;
   await new Promise(resolve => { server.close(resolve); server.closeAllConnections(); });
+  guard.restore();
 }
 `,
     );
