@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../src/test-utils/renderHook.js";
 import { AccountSessionProvider, useAccountSession } from "./AccountSessionProvider.js";
 import { AccountSettings } from "./AccountSettings.js";
+import { WebsiteLogin } from "./WebsiteLogin.js";
 import type { WebsiteRoute } from "./website-routes.js";
 
 const accountId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -59,6 +60,9 @@ async function fixture({
   hasPassword = true,
   section = "profile",
   admin = false,
+  signedIn = true,
+  renderLogin = false,
+  capabilityResponse = undefined as (() => Response | Promise<Response>) | undefined,
 } = {}) {
   ensureMiniDom();
   for (const [name, value] of [
@@ -95,7 +99,7 @@ async function fixture({
     else delete (globalThis as any).navigator;
   });
   const popup = { location: { href: "" }, opener: undefined, close() {} };
-  let authenticated = true;
+  let authenticated = signedIn;
   let currentSessionId = sessionId;
   let profile = { id: accountId, username: "fixture-user", displayName: "原昵称", role };
   let sessions = [
@@ -152,7 +156,9 @@ async function fixture({
     const override = overrides.get(`${init?.method ?? "GET"} ${path}`);
     if (override) return override(call);
     if (path === "/api/v1/account/status")
-      return Response.json({ registrationAllowed: true, githubEnabled: true });
+      return (
+        capabilityResponse?.() ?? Response.json({ registrationAllowed: true, githubEnabled: true })
+      );
     if (path === "/api/v1/account/web/session") {
       if (init?.method === "POST") authenticated = true;
       return Response.json(snapshot());
@@ -195,6 +201,8 @@ async function fixture({
         key={`${context.session.account!.id}:${context.session.session!.id}`}
         route={route}
       />
+    ) : renderLogin ? (
+      <WebsiteLogin />
     ) : (
       <p>请登录</p>
     );
@@ -529,4 +537,108 @@ test("successful GitHub login exchanges its grant and becomes usable without wai
   expect(view.context.busy).toBe(false);
   expect(view.calls.some((call) => call.path === "/api/v1/account/web/github/start")).toBe(false);
   cleanupResponse.resolve(Response.json({ ok: true }));
+});
+
+test("restoring a live account retries failed login capabilities without signing it out", async () => {
+  let unavailable = true;
+  const view = await fixture({
+    capabilityResponse: () =>
+      unavailable
+        ? Response.json({}, { status: 503 })
+        : Response.json({ registrationAllowed: true, githubEnabled: true }),
+  });
+  expect(view.context.githubEnabled).toBe(false);
+  expect(view.context.session?.account?.id).toBe(accountId);
+  unavailable = false;
+  await action(() => view.context.restore());
+  await until(() => !view.context.busy);
+  expect(view.context.githubEnabled).toBe(true);
+  expect(view.context.registrationAllowed).toBe(true);
+  expect(view.context.session?.account?.id).toBe(accountId);
+  const reads = view.calls.filter((call) => call.path === "/api/v1/account/status");
+  expect(reads.length).toBeGreaterThanOrEqual(2);
+  for (const call of reads) {
+    expect(call.init?.credentials).toBe("omit");
+    expect(call.init?.redirect).toBe("error");
+    expect(call.init?.cache).toBe("no-store");
+    expect(call.init?.headers).toBeUndefined();
+  }
+});
+
+test("the login page distinguishes unavailable capabilities and retries without reloading its session", async () => {
+  let unavailable = true;
+  const view = await fixture({
+    signedIn: false,
+    renderLogin: true,
+    capabilityResponse: () =>
+      unavailable
+        ? Response.json({}, { status: 503 })
+        : Response.json({ registrationAllowed: true, githubEnabled: true }),
+  });
+  expect(view.context.ready).toBe(true);
+  expect(view.context.loginCapabilitiesError).toContain("登录方式暂时无法读取");
+  expect(text(view.container)).toContain("重试读取登录方式");
+  const sessionReads = view.calls.filter((call) => call.path.endsWith("/web/session")).length;
+  unavailable = false;
+  await action(() =>
+    control(view.container, "BUTTON", (node) => text(node) === "重试读取登录方式").onClick(),
+  );
+  await until(() => !view.context.loginCapabilitiesLoading);
+  expect(view.context.loginCapabilitiesError).toBe("");
+  expect(view.context.githubEnabled).toBe(true);
+  expect(text(view.container)).toContain("没有账号？创建账号");
+  expect(view.calls.filter((call) => call.path.endsWith("/web/session"))).toHaveLength(
+    sessionReads,
+  );
+});
+
+test("focus rereads operator login options and leaves the active account intact", async () => {
+  const view = await fixture();
+  view.overrides.set("GET /api/v1/account/status", () =>
+    Response.json({ registrationAllowed: false, githubEnabled: false }),
+  );
+  await action(() => window.dispatchEvent({ type: "focus" } as Event));
+  await until(() => !view.context.busy && !view.context.loginCapabilitiesLoading);
+  expect(view.context.registrationAllowed).toBe(false);
+  expect(view.context.githubEnabled).toBe(false);
+  expect(view.context.loginCapabilitiesError).toBe("");
+  expect(view.context.session?.account?.id).toBe(accountId);
+  expect(view.calls.some((call) => call.path.endsWith("/logout"))).toBe(false);
+});
+
+test("late capability failure from an older operation cannot overwrite logout discovery", async () => {
+  const view = await fixture();
+  const old = deferred<Response>();
+  view.overrides.set("GET /api/v1/account/status", () => old.promise);
+  await action(() => view.context.refreshLoginCapabilities());
+  expect(view.context.loginCapabilitiesLoading).toBe(true);
+  view.overrides.set("GET /api/v1/account/status", () =>
+    Response.json({ registrationAllowed: false, githubEnabled: true }),
+  );
+  await action(() => view.context.logout());
+  await until(() => !view.context.busy && !view.context.loginCapabilitiesLoading);
+  expect(view.context.session?.authenticated).toBe(false);
+  old.resolve(Response.json({}, { status: 503 }));
+  await action(() => {});
+  expect(view.context.loginCapabilitiesError).toBe("");
+  expect(view.context.githubEnabled).toBe(true);
+  expect(view.context.registrationAllowed).toBe(false);
+  expect(view.context.session?.authenticated).toBe(false);
+});
+
+test("unavailable or malformed login options do not block an existing password account", async () => {
+  const view = await fixture({
+    signedIn: false,
+    capabilityResponse: () => Response.json({ registrationAllowed: "yes", githubEnabled: true }),
+  });
+  expect(view.context.loginCapabilitiesError).toContain("登录方式数据无效");
+  expect(view.context.ready).toBe(true);
+  await action(() =>
+    view.context.signIn("login", { username: "fixture-user", password: "fixture-password-12345" }),
+  );
+  await until(() => !view.context.busy && !view.context.loginCapabilitiesLoading);
+  expect(view.context.session?.account?.id).toBe(accountId);
+  expect(view.context.session?.authenticated).toBe(true);
+  expect(view.context.githubEnabled).toBe(false);
+  expect(view.context.error).toBe("");
 });
