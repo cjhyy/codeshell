@@ -276,7 +276,15 @@ export class CodexAppServerClient {
         }, timeoutMs);
       }
       this.pending.set(id, entry);
-      this.write({ id, method, params: params ?? {} });
+      try {
+        this.write({ id, method, params: params ?? {} });
+      } catch (error) {
+        // Invalid caller data was never written. Release only this request;
+        // serialization failures say nothing about the transport's health.
+        this.pending.delete(id);
+        if (entry.timer) clearTimeout(entry.timer);
+        reject(error);
+      }
     });
   }
 
@@ -293,8 +301,9 @@ export class CodexAppServerClient {
       this.failInput();
       return;
     }
+    const line = `${JSON.stringify(payload)}\n`;
     try {
-      child.stdin.write(`${JSON.stringify(payload)}\n`);
+      child.stdin.write(line);
     } catch (error) {
       this.failInput(error as NodeJS.ErrnoException);
     }
