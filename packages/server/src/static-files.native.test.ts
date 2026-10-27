@@ -3,20 +3,19 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { bundleInSubprocess } from "../../../tests/helpers/bundle-in-subprocess.ts";
 
 test("native static delivery bounds reads and releases files on HEAD, errors, and disconnects", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "static-delivery-native-"));
   try {
-    const build = await Bun.build({
-      entrypoints: [
+    bundleInSubprocess(
+      [
         fileURLToPath(new URL("static-files.ts", import.meta.url)),
         fileURLToPath(new URL("mobile-remote/mobile-static.ts", import.meta.url)),
       ],
-      naming: "[name].js",
-      outdir: temporary,
-      target: "node",
-    });
-    expect(build.success).toBe(true);
+      temporary,
+      { naming: "[name].js" },
+    );
     await writeFile(join(temporary, "package.json"), '{"type":"module"}');
     await writeFile(
       join(temporary, "fixture.mjs"),
