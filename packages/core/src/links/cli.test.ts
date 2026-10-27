@@ -414,3 +414,12 @@ test("cancellation retains AbortError when closing a pending stdin write", async
   controller.abort();
   expect(await cancellation).toMatchObject({ name: "AbortError" });
 });
+
+test("a CLI that exits 0 before reading its input resolves", async () => {
+  await expect(
+    runCliLinkCommand("github", process.execPath, ["-e", "process.stdout.write('ok')"], {
+      timeoutMs: 5000,
+      input: "x".repeat(8 * 1024 * 1024),
+    }),
+  ).resolves.toMatchObject({ stdout: "ok" });
+});
