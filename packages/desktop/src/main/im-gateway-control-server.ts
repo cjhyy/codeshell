@@ -1485,6 +1485,7 @@ export interface SessionRouteControlRequest {
   senderId: string;
   messageId?: string;
   text: string;
+  hasAttachments?: boolean;
   isDirectMessage: boolean;
 }
 
@@ -1506,6 +1507,9 @@ function parseSessionRouteRequest(body: unknown): SessionRouteControlRequest {
   if (input.messageId !== undefined && typeof input.messageId !== "string") {
     throw new GatewayControlRequestError("invalid session route request", 400);
   }
+  if (input.hasAttachments !== undefined && typeof input.hasAttachments !== "boolean") {
+    throw new GatewayControlRequestError("invalid session route request", 400);
+  }
   // Attachment-only messages also probe routing before reaching their destination.
   // Their bytes remain in the gateway; the bound runner validates supported content.
   if (typeof input.text !== "string" || input.text.length > 32_000) {
@@ -1517,6 +1521,7 @@ function parseSessionRouteRequest(body: unknown): SessionRouteControlRequest {
     senderId: boundedField(input.senderId, 256),
     ...(input.messageId ? { messageId: input.messageId.slice(0, 256) } : {}),
     text: input.text,
+    ...(input.hasAttachments === true ? { hasAttachments: true } : {}),
     isDirectMessage: input.isDirectMessage,
   };
 }

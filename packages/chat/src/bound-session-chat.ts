@@ -40,6 +40,8 @@ export interface BoundSessionControlClient {
     senderId: string;
     messageId?: string;
     text: string;
+    /** Attachment bytes stay with the gateway until the destination is known. */
+    hasAttachments?: boolean;
     isDirectMessage: boolean;
   }): Promise<BoundSessionDisposition>;
 }
@@ -78,6 +80,7 @@ export function createBoundSessionChat(options: BoundSessionChatOptions): ChatMi
       senderId: message.senderId,
       ...(message.messageId ? { messageId: message.messageId } : {}),
       text: message.text,
+      ...(message.attachments?.length ? { hasAttachments: true } : {}),
       isDirectMessage: isDirectMessage(message),
     });
 

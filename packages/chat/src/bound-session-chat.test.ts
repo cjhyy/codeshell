@@ -103,6 +103,32 @@ describe("routing into the Session", () => {
     });
   });
 
+  test("forwards attachment presence without loading bytes, preserving unbound fallthrough", async () => {
+    let loads = 0;
+    for (const text of ["", "请分析这张图片"]) {
+      const result = await run(
+        { kind: "not-bound" },
+        {
+          text,
+          attachments: [
+            {
+              id: "image",
+              kind: "image",
+              load: async () => {
+                loads++;
+                return new Uint8Array([1]);
+              },
+            },
+          ],
+        },
+      );
+      expect(result.seen[0]).toMatchObject({ text, hasAttachments: true });
+      expect(result.nextCalled).toBe(true);
+      expect(result.replies).toEqual([]);
+    }
+    expect(loads).toBe(0);
+  });
+
   test("reports a group chat so the host can refuse to bind it", async () => {
     const { seen } = await run({ kind: "not-bound" }, { isDirectMessage: false });
     expect(seen[0]).toMatchObject({ isDirectMessage: false });
