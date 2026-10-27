@@ -56,6 +56,13 @@ interface DeliveryStateFile {
   completed: Record<string, number>;
 }
 
+interface DeliveryPreparation {
+  dedupeKey?: string;
+  accepted: Promise<void>;
+  resolve(): void;
+  reject(error: unknown): void;
+}
+
 const MAX_DELIVERY_STATE_BYTES = 64 * 1024 * 1024;
 const MAX_COMPLETED_KEYS = 100_000;
 const MAX_SPOOLED_ATTACHMENTS = 32;
@@ -96,7 +103,7 @@ export class UnroutableDeliveryError extends Error {
 export class DeliveryQueue {
   private readonly pending: DeliveryRecord[] = [];
   /** Enqueues that reserved capacity while attachments are materialized outside the mutation lock. */
-  private readonly preparing = new Map<string, string | undefined>();
+  private readonly preparing = new Map<string, DeliveryPreparation>();
   /** Same-target inputs enter the queue in arrival order, even when media loads slowly. */
   private readonly preparationByTarget = new Map<string, Promise<void>>();
   private readonly completed = new Map<string, number>();
@@ -136,6 +143,11 @@ export class DeliveryQueue {
    */
   async stop(): Promise<void> {
     this.stopped = true;
+    // A duplicate must not be acknowledged while the original is still loading
+    // attachments. Wake those waiters without waiting on unbounded media I/O.
+    for (const preparation of this.preparing.values()) {
+      preparation.reject(new Error("Chat Gateway inbox is stopped"));
+    }
     if (this.retryTimer) clearTimeout(this.retryTimer);
     this.retryTimer = undefined;
     if (this.persistRetryTimer) clearTimeout(this.persistRetryTimer);
@@ -165,6 +177,8 @@ export class DeliveryQueue {
     let previousPreparation: Promise<void> | undefined;
     let preparation: Promise<void> | undefined;
     let releasePreparation: (() => void) | undefined;
+    let acceptance: DeliveryPreparation | undefined;
+    let duplicateAcceptance: Promise<void> | undefined;
     const reserved = await this.withMutation(async () => {
       if (this.stopped) throw new Error("Chat Gateway inbox is stopped");
       this.pruneCompleted();
@@ -174,15 +188,32 @@ export class DeliveryQueue {
           // Completed keys persisted before keys named the account cannot say
           // which account accepted them; stay conservative until they expire.
           (legacyDedupeKey !== undefined && this.completed.has(legacyDedupeKey)) ||
-          this.pending.some((entry) => entry.dedupeKey === dedupeKey) ||
-          [...this.preparing.values()].some((candidate) => candidate === dedupeKey))
+          this.pending.some((entry) => entry.dedupeKey === dedupeKey))
       ) {
         return false;
+      }
+      if (dedupeKey) {
+        const duplicate = [...this.preparing.values()].find(
+          (candidate) => candidate.dedupeKey === dedupeKey,
+        );
+        if (duplicate) {
+          duplicateAcceptance = duplicate.accepted;
+          return false;
+        }
       }
       if (this.pending.length + this.preparing.size >= this.config.maxPending) {
         throw new DeliveryBackpressureError(this.config.maxPending);
       }
-      this.preparing.set(id, dedupeKey);
+      let resolve!: () => void;
+      let reject!: (error: unknown) => void;
+      const accepted = new Promise<void>((yes, no) => {
+        resolve = yes;
+        reject = no;
+      });
+      // The original enqueue may have no duplicate waiting on this promise.
+      void accepted.catch(() => undefined);
+      acceptance = { dedupeKey, accepted, resolve, reject };
+      this.preparing.set(id, acceptance);
       previousPreparation = this.preparationByTarget.get(target);
       preparation = new Promise<void>((resolve) => {
         releasePreparation = resolve;
@@ -190,7 +221,11 @@ export class DeliveryQueue {
       this.preparationByTarget.set(target, preparation);
       return true;
     });
-    if (!reserved) return "duplicate";
+    if (!reserved) {
+      // Never hold the mutation lock while waiting for the original to persist.
+      await duplicateAcceptance;
+      return "duplicate";
+    }
 
     let spooled: SpooledAttachment[] | undefined;
     let record: DeliveryRecord | undefined;
@@ -221,6 +256,7 @@ export class DeliveryQueue {
           };
           this.pending.push(record);
           if (persistent) await this.persist();
+          acceptance!.resolve();
         } catch (error) {
           if (record) {
             const index = this.pending.findIndex((candidate) => candidate.id === record?.id);
@@ -232,6 +268,7 @@ export class DeliveryQueue {
         }
       });
     } catch (error) {
+      acceptance!.reject(error);
       this.preparing.delete(id);
       await this.discardSpool(
         record ?? {
@@ -264,11 +301,18 @@ export class DeliveryQueue {
     this.retryTimer = undefined;
     const now = Date.now();
     while (this.inFlight.size < this.config.maxConcurrent) {
+      const delayedTargets = new Set<string>();
       const entry = this.pending.find((candidate) => {
-        if (this.inFlight.has(candidate.id) || candidate.nextAttemptAt > now) return false;
-        return (
-          (this.targetInFlight.get(targetKey(candidate.message)) ?? 0) < this.config.maxPerTarget
-        );
+        if (this.inFlight.has(candidate.id)) return false;
+        const key = targetKey(candidate.message);
+        if (delayedTargets.has(key)) return false;
+        if (candidate.nextAttemptAt > now) {
+          delayedTargets.add(key);
+          return false;
+        }
+        // Already-running peers may share a target when configured, but a
+        // queued retry must not be overtaken by later messages for that target.
+        return (this.targetInFlight.get(key) ?? 0) < this.config.maxPerTarget;
       });
       if (!entry) break;
       this.inFlight.add(entry.id);

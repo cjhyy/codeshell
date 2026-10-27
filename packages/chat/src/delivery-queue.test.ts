@@ -86,6 +86,36 @@ describe("durable delivery queue", () => {
     recovered.stop();
   });
 
+  test("a delayed retry blocks later same-target messages but not other targets", async () => {
+    const firstAttempt = deferred<void>();
+    const delivered: string[] = [];
+    let attempts = 0;
+    const queue = new DeliveryQueue(
+      { ...config(undefined), retryBaseMs: 200, retryMaxMs: 200 },
+      async (_adapter, message) => {
+        if (message.text === "one" && attempts++ === 0) {
+          await firstAttempt.promise;
+          throw new Error("temporary delivery failure");
+        }
+        delivered.push(message.text);
+      },
+      () => undefined,
+    );
+    await queue.start();
+    try {
+      await queue.enqueue("line:0", incoming("one", "one"));
+      await queue.enqueue("line:0", incoming("two", "two"));
+      await queue.enqueue("line:0", { ...incoming("other", "other"), target: "other-room" });
+      firstAttempt.resolve(undefined);
+      await waitUntil(() => queue.status().delayed === 1 && delivered.includes("other"));
+      expect(delivered).toEqual(["other"]);
+      await waitUntil(() => delivered.length === 3);
+      expect(delivered).toEqual(["other", "one", "two"]);
+    } finally {
+      await queue.stop();
+    }
+  });
+
   test("rejects new work at the configured backpressure boundary", async () => {
     const blocker = deferred<void>();
     const queue = new DeliveryQueue(
@@ -428,6 +458,80 @@ describe("attachment durability", () => {
     expect(persistedPending(path)).toBe(2);
     queue.stop();
   });
+
+  for (const outcome of ["accept", "persist-failure", "stop"] as const) {
+    test(`duplicate attachment delivery awaits original acceptance: ${outcome}`, async () => {
+      const path = inboxPath();
+      const loading = deferred<void>();
+      const release = deferred<Uint8Array>();
+      const message = withAttachment("duplicate-preparation", [1]);
+      let loads = 0;
+      message.attachments![0]!.load = async () => {
+        loads++;
+        loading.resolve(undefined);
+        return release.promise;
+      };
+      const queue = new DeliveryQueue(
+        { ...config(path), maxConcurrent: 0 },
+        async () => undefined,
+        () => undefined,
+      );
+      await queue.start();
+      const original = queue.enqueue("line:0", message);
+      // Observe failures immediately; neither a stopped queue nor a failed
+      // persist may leave a duplicate with a successful platform ACK.
+      const originalResult = original.then(
+        (value) => ({ value }),
+        (error) => ({ error }),
+      );
+      await loading.promise;
+      let settled = false;
+      const duplicate = queue.enqueue("line:0", message);
+      const duplicateResult = duplicate.then(
+        (value) => {
+          settled = true;
+          return { value };
+        },
+        (error) => {
+          settled = true;
+          return { error };
+        },
+      );
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        expect(settled).toBe(false);
+        expect(existsSync(path)).toBe(false);
+        if (outcome === "persist-failure") mkdirSync(path);
+        if (outcome === "stop") {
+          await queue.stop();
+          expect(await duplicateResult).toHaveProperty("error");
+        }
+        release.resolve(Uint8Array.from([1]));
+        const [first, second] = await Promise.all([originalResult, duplicateResult]);
+        expect(loads).toBe(1);
+        if (outcome === "accept") {
+          expect(first).toEqual({ value: "queued" });
+          expect(second).toEqual({ value: "duplicate" });
+          expect(persistedPending(path)).toBe(1);
+        } else {
+          expect(first).toHaveProperty("error");
+          expect(second).toHaveProperty("error");
+          expect(queue.status().pending).toBe(0);
+          if (outcome === "persist-failure") {
+            rmSync(path, { recursive: true });
+            expect(
+              await queue.enqueue("line:0", withAttachment("duplicate-preparation", [2])),
+            ).toBe("queued");
+            expect(persistedPending(path)).toBe(1);
+          }
+        }
+      } finally {
+        release.resolve(Uint8Array.from([1]));
+        await Promise.all([originalResult, duplicateResult]);
+        await queue.stop();
+      }
+    });
+  }
 
   test("text cannot overtake an earlier attachment in the same conversation", async () => {
     const loadStarted = deferred<void>();
