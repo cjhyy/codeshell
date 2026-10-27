@@ -247,11 +247,19 @@ export function registerProjectPanelIpc(deps: {
         )
           throw new Error("panel-apps:installUpdate requires a project and reviewed token");
         const cwd = await requireRendererProjectPath(input.cwd);
-        if (input.force) await releasePanelForUpdate(input.id, cwd, deps.closeForPackageChange);
         return desktopPanelManager(cwd).management.install(
           desktopPanelContext(event, cwd),
           input.reviewToken,
-          { overwrite: true, expectedId: input.id },
+          {
+            overwrite: true,
+            expectedId: input.id,
+            ...(input.force
+              ? {
+                  releaseExecutions: (id, matches) =>
+                    releasePanelForUpdate(id, matches, deps.closeForPackageChange),
+                }
+              : {}),
+          },
         );
       }),
   );

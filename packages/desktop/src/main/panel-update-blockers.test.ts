@@ -29,10 +29,11 @@ test("blockers name the open instance's tab and session and keep Host work by ki
 
 test("a forced update waits until closing actually releases the gate, and gives up at its deadline", async () => {
   const project = "/tmp/panel-update-blockers-fixture";
+  const matches = (scope: { appId: string }) => scope.appId === "fixture";
   let release = panelExecutionGate.enter({ appId: "fixture", projectPath: project });
   let closed = 0;
   // Release happens as the work exits, after close() itself returns.
-  await releasePanelForUpdate("fixture", project, async () => {
+  await releasePanelForUpdate("fixture", matches, async () => {
     closed++;
     setTimeout(release, 150);
   });
@@ -40,7 +41,7 @@ test("a forced update waits until closing actually releases the gate, and gives 
   expect(panelExecutionGate.blockers((scope) => scope.appId === "fixture")).toEqual([]);
   release = panelExecutionGate.enter({ appId: "fixture", projectPath: project });
   const started = Date.now();
-  await releasePanelForUpdate("fixture", project, async () => {}, 300);
+  await releasePanelForUpdate("fixture", matches, async () => {}, 300);
   expect(Date.now() - started).toBeGreaterThanOrEqual(250);
   expect(panelExecutionGate.blockers((scope) => scope.appId === "fixture")).toHaveLength(1);
   release();

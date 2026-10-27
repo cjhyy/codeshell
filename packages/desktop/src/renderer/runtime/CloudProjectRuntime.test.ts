@@ -586,6 +586,67 @@ describe("native cloud project runtime", () => {
     f.runtime.disconnect();
   });
 
+  test("send-completion history refresh preserves the next message's in-flight uploads", async () => {
+    const f = setup();
+    await selected(f);
+    f.runtime.setDraft("first message");
+    const sending = f.runtime.send("first message");
+    const rows = deferred<unknown[]>();
+    f.api.listSessions = () => rows.promise;
+    f.runs[0]!.resolve({});
+    await pause();
+    expect(f.runtime.getSnapshot().busy).toBe(false);
+    expect(f.runtime.getSnapshot().loading).toBe(false);
+
+    const remoteUpload = deferred<any>();
+    f.api.upload = () => remoteUpload.promise;
+    const uploading = f.runtime.addFiles([new File(["next file"], "next.txt")]);
+    await pause();
+    expect(f.runtime.getSnapshot().uploading).toBe(true);
+    rows.resolve([{ sessionId: "session-alpha", running: false }]);
+    await sending;
+    expect(f.runtime.getSnapshot().loading).toBe(false);
+    expect(f.runtime.getSnapshot().uploading).toBe(true);
+    const uploaded = { id: "next-file", name: "next.txt", mimeType: "text/plain", size: 9 };
+    remoteUpload.resolve(uploaded);
+    await uploading;
+    expect(f.runtime.getSnapshot().uploading).toBe(false);
+    expect(f.runtime.getSnapshot().uploads).toEqual([uploaded]);
+
+    const next = f.runtime.send("next message");
+    expect(f.calls.filter((call) => call.method === "agent/run")[1]?.params.uploadIds).toEqual([
+      "next-file",
+    ]);
+    f.runs[1]!.resolve({});
+    await next;
+    f.runtime.disconnect();
+  });
+
+  test("a newer history refresh retires an older load without changing the selected Session", async () => {
+    const f = setup();
+    await selected(f);
+    const earlier = deferred<any>();
+    f.details.set("session-alpha", earlier.promise);
+    const oldRefresh = f.runtime.refresh();
+    await pause();
+    f.details.set("session-alpha", {
+      transcript: [{ type: "message", data: { role: "assistant", content: "Newest history" } }],
+      running: false,
+    });
+    await f.runtime.refresh();
+    earlier.resolve({
+      data: {
+        transcript: [{ type: "message", data: { role: "assistant", content: "Old history" } }],
+        running: false,
+      },
+    });
+    await oldRefresh;
+    expect(JSON.stringify(f.runtime.getSnapshot().state)).toContain("Newest history");
+    expect(JSON.stringify(f.runtime.getSnapshot().state)).not.toContain("Old history");
+    expect(f.runtime.getSnapshot().loading).toBe(false);
+    f.runtime.disconnect();
+  });
+
   test("automatic reconnect retires an interrupted upload and ignores its late completion", async () => {
     const f = setup();
     await selected(f);
