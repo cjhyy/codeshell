@@ -224,6 +224,17 @@ describe("headless serve — HTTP gate + static", () => {
     expect(await res.text()).toContain("ROOT_OK");
   });
 
+  test("HEAD returns asset metadata without a body and missing assets do not fall back", async () => {
+    const server = await boot();
+    const cookie = await authenticate(server);
+    const head = await fetch(`${server.url}/app.js`, { method: "HEAD", headers: { cookie } });
+    expect(head.status).toBe(200);
+    expect(head.headers.get("content-length")).toBe(String(Buffer.byteLength("// app js")));
+    expect(await head.text()).toBe("");
+    const missing = await fetch(`${server.url}/missing.js`, { headers: { cookie } });
+    expect(missing.status).toBe(404);
+  });
+
   test("remember cookie works for subsequent asset requests; traversal is blocked", async () => {
     const server = await boot();
     const cookie = await authenticate(server);
@@ -252,6 +263,30 @@ describe("headless serve — HTTP gate + static", () => {
     } finally {
       rmSync(link, { force: true });
       rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test("the root and SPA fallback reject an index symlink outside the static root", async () => {
+    if (process.platform === "win32") return; // symlink creation needs elevation
+    const outside = join(dir, "private-index.html");
+    const index = join(staticDir, "index.html");
+    writeFileSync(outside, "PRIVATE_INDEX_VALUE");
+    rmSync(index);
+    symlinkSync(outside, index);
+    try {
+      const server = await boot();
+      const cookie = await authenticate(server);
+      for (const path of ["/", "/sessions/missing"]) {
+        const response = await fetch(`${server.url}${path}`, {
+          headers: { cookie, accept: "text/html" },
+        });
+        expect(response.status).toBe(404);
+        expect(await response.text()).not.toContain("PRIVATE_INDEX_VALUE");
+      }
+    } finally {
+      rmSync(index, { force: true });
+      writeFileSync(index, "<!doctype html><title>cs web</title>ROOT_OK");
+      rmSync(outside, { force: true });
     }
   });
 

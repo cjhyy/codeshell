@@ -160,18 +160,32 @@ export class HubAuthStore {
 
   authenticate(token: string | undefined): HubSession | null {
     if (!token || !TOKEN_PATTERN.test(token)) return null;
+    // Writers publish by atomic rename. Read the committed record on every
+    // request, but only contend for the writer lock when activity needs saving.
+    this.assertDirectory();
+    const tokenHash = hashToken(token);
+    const record = this.read()!;
+    const now = this.now();
+    const session = this.findSession(record, tokenHash, now);
+    if (!session) return null;
+    if (now - session.lastSeenAt < 60_000) return this.toPublic(record, session);
+
     return this.mutate((record) => {
       const now = this.now();
-      const tokenHash = hashToken(token);
-      const session = record.sessions.find((row) => safeHashEqual(row.tokenHash, tokenHash));
-      if (!record.account || !session || session.expiresAt <= now || session.createdAt > now) {
-        return { result: null, changed: false };
-      }
-      // Persist activity at most once per minute; validation always reads disk.
+      // Recheck after taking the lock: a peer may have revoked, replaced or
+      // refreshed the session since the unlocked read. Never write that snapshot.
+      const session = this.findSession(record, tokenHash, now);
+      if (!session) return { result: null, changed: false };
       const changed = now - session.lastSeenAt >= 60_000;
       if (changed) session.lastSeenAt = now;
       return { result: this.toPublic(record, session), changed };
     });
+  }
+
+  private findSession(record: AuthRecord, tokenHash: string, now: number): SessionRecord | null {
+    if (!record.account) return null;
+    const session = record.sessions.find((row) => safeHashEqual(row.tokenHash, tokenHash));
+    return session && session.expiresAt > now && session.createdAt <= now ? session : null;
   }
 
   listSessions(): HubSession[] {
@@ -267,10 +281,14 @@ export class HubAuthStore {
   private ensureDirectory(): void {
     const parent = dirname(this.filePath);
     mkdirSync(parent, { recursive: true, mode: 0o700 });
-    const metadata = lstatSync(parent);
+    this.assertDirectory();
+    chmodSync(parent, 0o700);
+  }
+
+  private assertDirectory(): void {
+    const metadata = lstatSync(dirname(this.filePath));
     if (!metadata.isDirectory() || metadata.isSymbolicLink())
       throw new Error("Invalid Hub auth directory");
-    chmodSync(parent, 0o700);
   }
 
   private read(allowMissing = false): AuthRecord | undefined {

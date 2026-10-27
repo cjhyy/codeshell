@@ -37,6 +37,8 @@ export class RemoteBridge {
   private connected = false;
   private readonly transportErrors = new WeakMap<ChildProcess, Error>();
   private readonly readers = new Set<Interface>();
+  /** Rejects the in-flight connect(); cleared once it settles. */
+  private abortConnect: ((error: Error) => void) | undefined;
   private readonly spawnFn: SpawnFn;
 
   constructor(
@@ -63,27 +65,32 @@ export class RemoteBridge {
       // code re-rejected an already-settled promise and used a dead
       // `if (!this.connected)` guard that was always true).
       let settled = false;
-      const timer = setTimeout(() => {
+      const fail = (err: Error): void => {
         if (settled) return;
         settled = true;
-        reject(new Error("SSH connection timed out"));
+        clearTimeout(timer);
+        if (this.abortConnect === fail) this.abortConnect = undefined;
+        reject(err);
+      };
+      const timer = setTimeout(() => {
+        fail(new Error("SSH connection timed out"));
         this.disconnect();
       }, 30000);
+      // disconnect() during the handshake detaches this process before its
+      // exit arrives; it settles the attempt through this hook instead.
+      this.abortConnect = fail;
 
       ssh.stdout?.once("data", () => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        if (this.abortConnect === fail) this.abortConnect = undefined;
         this.connected = true;
         resolve();
       });
 
       const onError = (err: Error): void => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timer);
-          reject(err);
-        }
+        fail(err);
         this.failTransport(ssh, err);
       };
       ssh.on("error", onError);
@@ -91,12 +98,10 @@ export class RemoteBridge {
       ssh.stdin?.on("error", onError);
 
       ssh.on("exit", (code) => {
-        if (this.ssh !== ssh) return;
-        this.connected = false;
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        reject(new Error(`SSH exited with code ${code}`));
+        // A replaced process must not mark its successor disconnected, but its
+        // own pending connect() still settles.
+        if (this.ssh === ssh) this.connected = false;
+        fail(new Error(`SSH exited with code ${code}`));
       });
     });
   }
@@ -164,6 +169,7 @@ export class RemoteBridge {
    */
   disconnect(): void {
     this.connected = false;
+    this.abortConnect?.(new Error("SSH connection closed before it was ready"));
     for (const reader of this.readers) reader.close();
     if (this.ssh) {
       this.ssh.kill();

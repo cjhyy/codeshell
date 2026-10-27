@@ -4,12 +4,13 @@
  * Distinguishes between:
  * - Spawn failure (file not found, permission denied) → code = null
  * - Non-zero exit (process ran but returned error) → code = exit code
- * - Failed stdin delivery or signal termination → code = non-zero
+ * - Failed stdin delivery or signal termination → code = non-zero (a child
+ *   that exits 0 without reading all of its input still succeeds)
  * - Success → code = 0
  */
 
 import { execFile, type ExecFileOptions } from "node:child_process";
-import { killChildTree } from "../runtime/spawn-common.js";
+import { isBrokenPipeError, killChildTree } from "../runtime/spawn-common.js";
 
 export interface ExecFileNoThrowResult {
   /** Exit code, or 1 for input/signal failure (0 = success, null = spawn failed). */
@@ -53,6 +54,8 @@ export function execFileNoThrow(
     if (options?.shell) execOpts.shell = options.shell === true ? undefined : options.shell;
 
     const child = execFile(file, args, execOpts, (error, stdout, stderr) => {
+      // Exit 0 proves the child chose to stop reading; EPIPE is then expected.
+      if (!error && isBrokenPipeError(inputError)) inputError = undefined;
       const outputError = [String(stderr ?? ""), inputError && `stdin: ${inputError.message}`]
         .filter(Boolean)
         .join("\n");
@@ -84,7 +87,8 @@ export function execFileNoThrow(
     });
 
     // The writable emits its own error even when execFile owns process errors.
-    // Failed input delivery is not a successful command, including exit 0.
+    // Failed input delivery is not a successful command unless the child still
+    // exits 0 on its own (checked above). A stdin-dead child is reaped here.
     const onInputError = (error: Error): void => {
       if (inputError) return;
       inputError = error;
