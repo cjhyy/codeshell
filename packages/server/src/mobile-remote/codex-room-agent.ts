@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { stopRoomProcess } from "./room-process-stop.js";
 import { createInterface } from "node:readline";
 import type { ResidentAgentEvent } from "./resident-agent.js";
 import { pathWithCommonBins } from "./path-bins.js";
@@ -9,7 +10,10 @@ type RoomPermissionMode = "default" | "acceptEdits" | "bypassPermissions";
 
 /** Map a room permission mode to codex's spawn-time sandbox tier. codex has no
  *  per-tool approval; the tier IS the guardrail. (Mirrors core's codexAdapter.) */
-export function sandboxForMode(mode: RoomPermissionMode): { bypass: boolean; sandbox?: "read-only" | "workspace-write" } {
+export function sandboxForMode(mode: RoomPermissionMode): {
+  bypass: boolean;
+  sandbox?: "read-only" | "workspace-write";
+} {
   if (mode === "bypassPermissions") return { bypass: true, sandbox: undefined };
   return { bypass: false, sandbox: mode === "acceptEdits" ? "workspace-write" : "read-only" };
 }
@@ -105,12 +109,6 @@ export class CodexRoomAgent implements RoomAgent {
   private child?: ChildProcess;
   private threadId?: string;
   private started = false;
-  /** True once the CURRENT turn emitted a sealing event (turn_end via
-   *  turn.completed, or an error). Reset at the start of each send(). */
-  private turnSealed = false;
-  /** True while stop() is tearing the room down, so the exit handler doesn't
-   *  mistake an intentional SIGTERM for a crash. */
-  private stopping = false;
 
   constructor(private readonly opts: CodexRoomAgentOptions) {
     this.threadId = opts.resumeThreadId;
@@ -124,7 +122,7 @@ export class CodexRoomAgent implements RoomAgent {
   send(text: string): boolean {
     if (!this.started) return false;
     if (this.child) return false; // a turn is already running; one turn at a time
-    this.turnSealed = false; // fresh turn — not yet sealed
+    let turnSealed = false; // This child owns only its own turn and callbacks.
     const args = codexArgsForTurn({ mode: this.opts.permissionMode, threadId: this.threadId });
     const child = spawn(this.opts.command, args, {
       cwd: this.opts.cwd,
@@ -133,12 +131,10 @@ export class CodexRoomAgent implements RoomAgent {
       stdio: ["pipe", "pipe", "pipe"],
     });
     this.child = child;
-    // Feed the user's prompt over stdin (codex exec reads it because argv ends `-`).
-    child.stdin?.end(text);
-
     if (child.stdout) {
       const rl = createInterface({ input: child.stdout });
       rl.on("line", (line) => {
+        if (this.child !== child) return;
         // Capture the thread id (parseCodexJsonLine intentionally drops
         // thread.started — it's resume-control info, not a render event) so we
         // can resume on the next turn and persist it across restarts.
@@ -150,7 +146,7 @@ export class CodexRoomAgent implements RoomAgent {
         for (const ev of parseCodexJsonLine(line)) {
           // turn_end / error are the reducer's sealing events — once one fires
           // for this turn, the exit handler need not synthesize a fallback.
-          if (ev.type === "turn_end" || ev.type === "error") this.turnSealed = true;
+          if (ev.type === "turn_end" || ev.type === "error") turnSealed = true;
           this.opts.onEvent(ev);
         }
       });
@@ -165,17 +161,29 @@ export class CodexRoomAgent implements RoomAgent {
       errRl.on("line", (line) => stderrLines.push(line));
     }
     child.on("error", (err) => {
+      if (this.child !== child) return;
+      this.child = undefined;
       const isMissing = (err as NodeJS.ErrnoException).code === "ENOENT";
-      this.turnSealed = true; // this error seals the run in the reducer
+      turnSealed = true; // this error seals the run in the reducer
       this.opts.onEvent({
         type: "error",
         error: isMissing
           ? `未找到命令 "${this.opts.command}"。请先安装 Codex CLI 并确保它在 PATH 中。`
           : err.message,
       });
-      this.child = undefined;
     });
-    child.on("exit", (code, signal) => {
+    child.stdin?.on("error", (error: NodeJS.ErrnoException) => {
+      if (this.child !== child) return;
+      this.child = undefined;
+      stopRoomProcess(child);
+      this.opts.onEvent({
+        type: "error",
+        error: `Codex input pipe closed${error.code ? ` (${error.code})` : ""}`,
+      });
+    });
+    child.on("close", (code, signal) => {
+      if (this.child !== child) return;
+      this.child = undefined;
       // The turn's process is done; the room stays "running" (ready for the next
       // turn). We do NOT emit `exit` here — that would tear the room down in the
       // UI after every turn. turn.completed already produced a `turn_end`.
@@ -183,7 +191,7 @@ export class CodexRoomAgent implements RoomAgent {
       // is surfaced now so the room shows *why* it failed.
       const stderrErr = codexStderrError(stderrLines, code);
       if (stderrErr) {
-        this.turnSealed = true;
+        turnSealed = true;
         this.opts.onEvent({ type: "error", error: stderrErr });
       }
       // FALLBACK SEAL (#6): if the process died without ever sealing the turn
@@ -193,13 +201,15 @@ export class CodexRoomAgent implements RoomAgent {
       const seal = sealEventOnExit({
         code,
         signal,
-        turnSealed: this.turnSealed,
-        stopping: this.stopping,
+        turnSealed,
+        stopping: false,
         hasStderrError: stderrErr != null,
       });
       if (seal) this.opts.onEvent(seal);
-      this.child = undefined;
     });
+    // Register stdin's error owner before writing: early CLI exits fail writes
+    // asynchronously even when end() itself returns successfully.
+    child.stdin?.end(text);
     return true;
   }
 
@@ -211,21 +221,8 @@ export class CodexRoomAgent implements RoomAgent {
 
   stop(): void {
     this.started = false;
-    this.stopping = true; // the upcoming SIGTERM exit is intentional, not a crash
     const child = this.child;
     this.child = undefined;
-    if (!child?.pid || child.pid <= 1) {
-      child?.kill("SIGTERM");
-      return;
-    }
-    try {
-      process.kill(-child.pid, "SIGTERM");
-    } catch {
-      try {
-        child.kill("SIGTERM");
-      } catch {
-        /* already gone */
-      }
-    }
+    if (child) stopRoomProcess(child);
   }
 }
