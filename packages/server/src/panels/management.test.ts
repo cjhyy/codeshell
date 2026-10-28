@@ -304,6 +304,23 @@ describe("shared Web panel management with the real Core installer", () => {
     }
   });
 
+  test("rebinding the package a current pin selects leaves settings and a pending review intact", async () => {
+    const api = service({ projectPackages: true });
+    await api.install(owner, (await api.preview(owner, input)).reviewToken);
+    const bound = (await api.snapshot()).panels[0]!;
+    const storedPins = () =>
+      new SettingsManager(cwd, "full").getRawForScope("project", cwd, { strict: true })
+        .panelAppPins;
+    const before = storedPins();
+    writePanel("2.0.0");
+    const review = await api.previewUpdate(owner, bound.id, bound.revision);
+    await api.binding(owner, bound.id, true, bound.revision);
+    expect(storedPins()).toEqual(before);
+    expect((await api.snapshot()).panels[0]?.revision).toBe(bound.revision);
+    await api.install(owner, review.reviewToken);
+    expect((await api.snapshot()).panels[0]?.version).toBe("2.0.0");
+  });
+
   test("scoped management snapshots keep current authorization and do not return another app", async () => {
     const api = service({ projectPackages: true });
     await api.install(owner, (await api.preview(owner, input)).reviewToken);
