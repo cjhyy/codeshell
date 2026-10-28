@@ -108,7 +108,8 @@ interface RecordState extends BackgroundServiceState {
 export interface BackgroundServiceDescription {
   revision: string;
   definition: BackgroundServiceDefinition;
-  executable: string;
+  /** Resolve verified Host runtimes only at launch, never during read-only discovery. */
+  executable: string | (() => Promise<string>);
   entry: string;
   sha256: string;
   packageRoot: string;
@@ -848,6 +849,10 @@ export class PanelBackgroundService {
       const generation = record.generation;
       const process = await (this.options.spawn ?? spawnServiceProcess)({
         ...description,
+        executable:
+          typeof description.executable === "function"
+            ? await description.executable()
+            : description.executable,
         maxLineBytes:
           Math.max(
             ...Object.values(description.definition.channels).map((channel) => channel.maxBytes),

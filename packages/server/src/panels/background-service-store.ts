@@ -26,6 +26,37 @@ export interface ServiceIdentityInspector {
   current(pid: number): ServiceProcessIdentity | null;
   status(identity: ServiceProcessIdentity): "alive" | "dead" | "unknown";
 }
+/** A live Host cannot cross OS boots. Only this constant is cached; PID/start
+ * identity and process/group liveness must always be inspected afresh. */
+export function createBootSessionReader(
+  read: () => string,
+  now: () => number = () => performance.now(),
+): () => string | null {
+  let boot: string | null = null;
+  let retryAt = -Infinity;
+  return () => {
+    if (boot) return boot;
+    if (now() < retryAt) return null;
+    try {
+      const value = read().trim();
+      if (/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value)) {
+        boot = value;
+        return boot;
+      }
+    } catch {
+      // Failed inspection proves neither ownership nor death.
+    }
+    retryAt = now() + 1000;
+    return null;
+  };
+}
+const darwinBootSession = createBootSessionReader(() =>
+  execFileSync("/usr/sbin/sysctl", ["-n", "kern.bootsessionuuid"], {
+    encoding: "utf8",
+    timeout: 2000,
+    stdio: ["ignore", "pipe", "ignore"],
+  }),
+);
 export function processIdentity(pid: number): ServiceProcessIdentity | null {
   if (!Number.isSafeInteger(pid) || pid <= 0) return null;
   try {
@@ -38,11 +69,8 @@ export function processIdentity(pid: number): ServiceProcessIdentity | null {
     }
     if (process.platform !== "darwin") return null;
     // bootsessionuuid is stable under wall-clock/NTP adjustment; boottime is not.
-    const boot = execFileSync("/usr/sbin/sysctl", ["-n", "kern.bootsessionuuid"], {
-      encoding: "utf8",
-      timeout: 2000,
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
+    const boot = darwinBootSession();
+    if (!boot) return null;
     const start = darwinProcessStart(pid);
     return boot && start ? { pid, start, boot, host: hostname() } : null;
   } catch {

@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { bundleInSubprocess } from "../../../../tests/helpers/bundle-in-subprocess.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtemp, mkdir, writeFile, rm, realpath } from "node:fs/promises";
@@ -8,6 +9,7 @@ import { hostname, tmpdir } from "node:os";
 import { spawnServiceProcess, type ServiceProcess } from "./background-service-process.js";
 import {
   darwinProcessStart,
+  createBootSessionReader,
   identityStatus,
   processIdentity,
   groupStatus,
@@ -88,14 +90,9 @@ test("spawn failure observes custody rejection before close", async () => {
     await writeFile(entry, source);
     // Execute this failure under Node, matching Electron's child_process event
     // ordering. Bun throws invalid-cwd spawn failures before a child is returned.
-    const built = await Bun.build({
-      entrypoints: [join(import.meta.dir, "background-service-process.ts")],
-      outdir: root,
-      target: "node",
-      format: "esm",
+    bundleInSubprocess([join(import.meta.dir, "background-service-process.ts")], root, {
       naming: "process.mjs",
     });
-    expect(built.success).toBe(true);
     const executable = (await resolvePanelExecutable("node"))!;
     const input = {
       executable,
@@ -124,4 +121,77 @@ await closeSignal;
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+for (const [name, source] of [
+  [
+    "plain data listener",
+    `process.stdin.once('data',chunk=>{const hello=JSON.parse(chunk);console.log(JSON.stringify({t:'ready',echo:hello.marker}));process.exit(0)});`,
+  ],
+  [
+    "top-level await data listener",
+    `const chunk=await new Promise(resolve=>process.stdin.once('data',resolve));const hello=JSON.parse(chunk);console.log(JSON.stringify({t:'ready',echo:hello.marker}));process.exit(0);`,
+  ],
+  [
+    "top-level await readline iterator",
+    `import{createInterface}from'node:readline';for await(const line of createInterface({input:process.stdin})){const hello=JSON.parse(line);console.log(JSON.stringify({t:'ready',echo:hello.marker}));break;}process.exit(0);`,
+  ],
+]) {
+  test(`held native bootstrap delivers hello to ${name}`, async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), "service-bootstrap-input-")));
+    let actual: ServiceProcess | undefined;
+    try {
+      const entry = join(root, "entry.mjs");
+      await writeFile(entry, source!);
+      const messages: unknown[] = [];
+      actual = await spawnServiceProcess(
+        {
+          executable: (await resolvePanelExecutable("node"))!,
+          entry,
+          packageRoot: root,
+          cwd: root,
+          sha256: createHash("sha256").update(source!).digest("hex"),
+          maxLineBytes: 4096,
+          onLine(message) {
+            messages.push(message);
+          },
+          onExit() {},
+        },
+        { identities },
+      );
+      // The actual patched Node is probed and permission flags are not overridden.
+      await actual.prepare();
+      actual.activate({ t: "hello", marker: "buffered-exactly-once" });
+      await actual.exited;
+      expect(messages).toEqual([{ t: "ready", echo: "buffered-exactly-once" }]);
+    } finally {
+      await actual?.terminate(0);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+}
+
+test("OS boot constant caches success but failed reads back off without asserting identity", () => {
+  let clock = 0,
+    calls = 0;
+  const uuid = "01234567-89ab-cdef-0123-456789abcdef";
+  const read = createBootSessionReader(
+    () => {
+      calls++;
+      if (calls === 1) throw new Error("OS inspection unavailable");
+      if (calls === 2) return "not-a-boot-uuid";
+      return uuid;
+    },
+    () => clock,
+  );
+  expect(read()).toBeNull();
+  expect(read()).toBeNull();
+  expect(calls).toBe(1);
+  clock = 1000;
+  expect(read()).toBeNull();
+  clock = 2000;
+  expect(read()).toBe(uuid);
+  clock = 3000;
+  expect(read()).toBe(uuid);
+  expect(calls).toBe(3);
 });

@@ -703,6 +703,14 @@ const panelAppBridge = new PanelAppBridge({
   isProjectRoot: (projectPath, rootPath) =>
     isRegisteredPanelProjectRoot(getProjectStore(), projectPath, rootPath),
   resolveProjectScope: resolvePanelProjectScope,
+  resolveBackgroundServiceNode: async () =>
+    (
+      await createDesktopManagedRuntimeProvider({
+        isPackaged: app.isPackaged,
+        resourcesPath: process.resourcesPath,
+        appPath: app.getAppPath(),
+      }).resolve("node")
+    )?.executablePath ?? null,
   getAgentBridge: () => bridge,
   getExternalRuntimeService: () => externalRuntimeService,
   externalRuntimeInitialContext: async (sessionId) =>

@@ -677,6 +677,14 @@ ticks; Darwin uses boot-session UUID plus libproc unique process ID/exec version
 read with the system JXA C-function bridge. Unlike `ps lstart`, the kernel ID
 distinguishes PID reuse in the same second. Missing OS inspection, remote-host
 owners and legacy nonce-only identity records remain unknown and are never killed.
+The boot UUID is cached for this Host process lifetime, with one-second backoff
+on unavailable boot inspection. Every process identity comparison still reads a
+fresh kernel unique ID; no PID ownership or liveness conclusion is cached. Normal
+service ticks use group liveness and do not invoke JXA. A new coordinator plus one
+launch performs three identity reads (Host, guardian, native member); subsequent
+launches perform two. Stop may need fresh member identity if its guardian already
+exited. These bounded synchronous OS probes can still delay the Host event loop;
+platform latency must be measured separately from Panel startup performance.
 
 Each launch uses a Host-owned supervisor group. FD 3 carries a Host-only custody
 handshake; normal package stdout cannot forge it. The supervisor cannot spawn a
@@ -687,7 +695,11 @@ native identity proves group ownership; unknown membership stays stop-unconfirme
 
 The runtime requires a supported security-patched Node (22.23.4+, 24.22.1+, or
 26.12.1+ within those major lines; [October 2026 security release](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases)).
-Version/permission probes are asynchronous, bounded and cache failures. Consecutive
+Desktop explicitly resolves its application-owned, hash-verified Node at each
+service launch. A user-installed or PATH Node never overrides that selection;
+missing/invalid managed runtimes fail closed. Read-only discovery and snapshots
+do not hash the runtime binary. Version/permission probes are asynchronous,
+bounded and cache failures. Consecutive
 startup/exit failures back off and stop after five attempts; a healthy interval
 resets the counter. A temporary package lookup failure retains desired state;
 only explicit authorization revocation changes it to off. Desktop restores tasks,
@@ -700,7 +712,11 @@ required; signals such as `process.kill` are not blocked by permission flags.
 The supervisor remains attached to Host stdin and is never unref'd. Restart never
 assumes EOF succeeded: any persisted live or uninspectable group stays
 `stop-unconfirmed`, with its original PID in diagnostics and no replacement.
-Only confirmed group disappearance permits a new generation. Publication uses the
+Restart does not use a retained member PID to kill or adopt a surviving group:
+PGID membership may have changed across Host death. Recovery therefore remains
+conservative and can require the old group to exit externally before service
+updates resume. Only confirmed group disappearance permits a new generation.
+Publication uses the
 actual Host process reference and generation, never worker-supplied identity.
 
 The worker protocol is bounded NDJSON (`hello`, `config`, `poke`, `drain` to the

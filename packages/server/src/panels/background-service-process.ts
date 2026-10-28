@@ -94,7 +94,22 @@ export async function probeServiceRuntime(executable: string): Promise<string[]>
   return entry.result;
 }
 // The package cannot run before its second, native member identity is durable.
-const BOOTSTRAP = String.raw`let bytes=Buffer.alloc(0);const begin=chunk=>{bytes=Buffer.concat([bytes,chunk]);const end=bytes.indexOf(10);if(end<0){if(bytes.length>4096)process.exit(2);return;}process.stdin.off('data',begin);process.stdin.pause();if(JSON.parse(bytes.subarray(0,end)).t!=='start')process.exit(2);const rest=bytes.subarray(end+1);if(rest.length)process.stdin.unshift(rest);import(require('node:url').pathToFileURL(process.argv[1]).href).catch(error=>{console.error(error);process.exit(2)});};process.stdin.on('data',begin);`;
+// Keep hello buffered until the reviewed entry has an actual consumer. Explicit
+// pause survives adding a data listener, including one before a top-level await;
+// waiting for import() to finish before resuming would deadlock that entry.
+const BOOTSTRAP = String.raw`let bytes=Buffer.alloc(0);const begin=chunk=>{
+bytes=Buffer.concat([bytes,chunk]);const end=bytes.indexOf(10);
+if(end<0){if(bytes.length>4096)process.exit(2);return;}
+process.stdin.off('data',begin);process.stdin.pause();
+if(JSON.parse(bytes.subarray(0,end)).t!=='start')process.exit(2);
+const rest=bytes.subarray(end+1);if(rest.length)process.stdin.unshift(rest);
+const resumeForData=event=>{if(event==='data')queueMicrotask(()=>{
+if(process.stdin.listenerCount('data')){process.stdin.off('newListener',resumeForData);process.stdin.resume();}
+});};
+process.stdin.on('newListener',resumeForData);
+process.stdin.once('close',()=>process.stdin.off('newListener',resumeForData));
+import(require('node:url').pathToFileURL(process.argv[1]).href).catch(error=>{console.error(error);process.exit(2)});
+};process.stdin.on('data',begin);`;
 export interface ServiceProcess {
   identity: ServiceProcessIdentity;
   send(message: unknown): void;

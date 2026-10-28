@@ -85,7 +85,6 @@ import {
   PanelAppProcessService,
   panelExecutableDirectories,
   panelProcessInfo,
-  resolvePanelExecutable,
   type PanelProcessOwner,
 } from "./panel-app-process-service.js";
 import {
@@ -245,6 +244,8 @@ export interface PanelAppBridgeOptions {
     projectPath: string,
     cwd: string,
   ): Promise<PanelProjectScopeBinding | undefined>;
+  /** Verified application-owned Node; services never select a user PATH runtime. */
+  resolveBackgroundServiceNode?(): Promise<string | null>;
   getAgentBridge(): AgentBridge | null;
   getExternalRuntimeService?(): ExternalRuntimeService | null;
   /** Canonical transcript handoff used only when a fresh external thread starts. */
@@ -1876,16 +1877,15 @@ export class PanelAppBridge {
         const entry = installed.nativeEntries?.[definition.entry];
         if (!entry)
           throw new PanelBridgeError("REVOKED", "Reviewed background service entry is missing");
-        const executable = await resolvePanelExecutable("node", {
-          extraPathDirectories: panelExecutableDirectories(this.managedBinDirectory(), {
-            home: app.getPath("home"),
-          }),
-        });
-        if (!executable)
-          throw new PanelBridgeError(
-            "NOT_SUPPORTED",
-            "Background services require Node.js with native permissions",
-          );
+        const executable = async () => {
+          const path = await this.options.resolveBackgroundServiceNode?.();
+          if (!path)
+            throw new PanelBridgeError(
+              "NOT_SUPPORTED",
+              "Background services require the verified Host-managed Node runtime",
+            );
+          return path;
+        };
         // Subscription/config work directories are project-private; never app-global.
         const projectKey = createHash("sha256")
           .update(panelExecutionProject(scope.projectPath))

@@ -1,20 +1,18 @@
 import { expect, test } from "bun:test";
-import { readFile, mkdtemp, realpath, mkdir, writeFile, rm } from "node:fs/promises";
+import { readFile, mkdtemp, realpath, mkdir, writeFile, rm, copyFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import { createDesktopManagedRuntimeProvider } from "./managed-runtime-service.js";
 import { PanelAppInspectionCache } from "./panel-app-inspection-cache.js";
 import { PanelBackgroundService } from "../../../server/src/panels/background-services.js";
 import {
   PanelExecutionGate,
   panelExecutionProject,
 } from "../../../server/src/panels/execution-gate.js";
-import {
-  panelExecutableDirectories,
-  resolvePanelExecutable,
-} from "../../../server/src/panels/process-service.js";
+import { resolvePanelExecutable } from "../../../server/src/panels/process-service.js";
 import { PanelBridgeError } from "../../../server/src/panels/bridge-contract.js";
 
 // Execute production Desktop boundary methods with explicit Electron/trust adapters;
@@ -69,6 +67,36 @@ test("Desktop authorization/dispatch/events survive closing all guests and selec
       },
     },
   };
+  // A system/user Node may be older or an unsupported major even when PATH has
+  // a patched Node first. Services must use the verified app-owned provider.
+  const runtimeRoot = join(root, "resources", "runtimes", "node");
+  await mkdir(join(runtimeRoot, "bin"), { recursive: true });
+  const safeNode = (await resolvePanelExecutable("node"))!;
+  const managedNode = join(runtimeRoot, "bin", "node");
+  await copyFile(safeNode, managedNode);
+  await writeFile(
+    join(runtimeRoot, "manifest.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      id: "node",
+      version: "fixture-safe-node",
+      platform: process.platform,
+      arch: process.arch,
+      executable: "bin/node",
+      sha256: createHash("sha256")
+        .update(await readFile(managedNode))
+        .digest("hex"),
+      source: { url: "https://nodejs.org/dist/fixture.tar.gz", archiveSha256: "a".repeat(64) },
+    }),
+  );
+  await mkdir(join(root, "bin"));
+  await writeFile(join(root, "bin", "node"), "#!/bin/sh\necho v25.8.1\n", { mode: 0o755 });
+  const provider = createDesktopManagedRuntimeProvider({
+    isPackaged: true,
+    resourcesPath: join(root, "resources"),
+    appPath: root,
+  });
+  const resolutions: string[] = [];
   const gate = new PanelExecutionGate();
   // Desktop's shared singleton gate is supplied as an explicit boundary adapter.
   class ScopedService extends PanelBackgroundService {
@@ -85,8 +113,7 @@ test("Desktop authorization/dispatch/events survive closing all guests and selec
     panelExecutionProject,
     panelExecutionGate: gate,
     installedPanelAppRevision: (value: any) => value.revision,
-    panelExecutableDirectories,
-    resolvePanelExecutable,
+
     process,
     Promise,
     Set,
@@ -97,7 +124,15 @@ test("Desktop authorization/dispatch/events survive closing all guests and selec
   let bound = true;
   const noService = { initialize: async () => {}, shutdown: async () => {} };
   Object.assign(bridge, {
-    options: { isPanelAppBound: () => bound, isWorkspaceTrusted: () => true },
+    options: {
+      isPanelAppBound: () => bound,
+      isWorkspaceTrusted: () => true,
+      resolveBackgroundServiceNode: async () => {
+        const runtime = await provider.resolve("node");
+        if (runtime) resolutions.push(runtime.executablePath);
+        return runtime?.executablePath ?? null;
+      },
+    },
     guests: new Map(),
     resourceTransfers: new Map(),
     windowSourceListeners: new Map(),
@@ -161,12 +196,14 @@ test("Desktop authorization/dispatch/events survive closing all guests and selec
           ...input,
         });
     await Promise.all([call(a.binding, "attach"), call(b.binding, "attach")]);
+    expect(resolutions).toEqual([]);
     await call(a.binding, "setDesired", {
       desired: "always",
       expectedRevision: 0,
       requestKey: "enable",
     });
     await next((event) => event.seq === 1);
+    expect(resolutions).toEqual([managedNode]);
     expect(
       a.sent.some((event) => event.event === "services.changed" && event.payload.seq === 1),
     ).toBe(true);
@@ -184,6 +221,7 @@ test("Desktop authorization/dispatch/events survive closing all guests and selec
       generation: 1,
       seq: 2,
     });
+    expect(resolutions).toEqual([managedNode]);
     const matches = (scope: any) => scope.appId === "fixture";
     await gate.mutate(
       matches,
@@ -194,6 +232,7 @@ test("Desktop authorization/dispatch/events survive closing all guests and selec
     );
     await service.tick();
     expect((await service.get(scope)).revision).toBe("r2");
+    expect(resolutions).toEqual([managedNode, managedNode]);
     bound = false;
     await service.tick();
     expect(gate.blockers(matches)).toHaveLength(0);
@@ -279,8 +318,6 @@ test("H-I3 actual Desktop describe and inspection cache distinguish IO absence f
       createHash,
       panelExecutionProject,
       installedPanelAppRevision: () => "r1",
-      panelExecutableDirectories: () => [],
-      resolvePanelExecutable: async () => process.execPath,
     });
     const bridge = new Bridge();
     Object.assign(bridge, {
@@ -294,7 +331,11 @@ test("H-I3 actual Desktop describe and inspection cache distinguish IO absence f
       "SERVICE_PACKAGE_INSPECTION_UNAVAILABLE",
     );
     unavailable = false;
-    expect((await captured.describe(scope)).revision).toBe("r1");
+    const description = await captured.describe(scope);
+    expect(description.revision).toBe("r1");
+    // Discovery remains available; execution cannot silently use PATH if Main
+    // cannot supply the hash-verified application runtime.
+    await expect(description.executable()).rejects.toMatchObject({ code: "NOT_SUPPORTED" });
     installed.permissions = [];
     await expect(captured.describe(scope)).rejects.toMatchObject({ code: "REVOKED" });
   } finally {

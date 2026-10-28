@@ -51,7 +51,7 @@ async function fixture(
   await writeFile(entry, source);
   const executable = await resolvePanelExecutable("node");
   if (!executable) throw new Error("Node required");
-  const description: BackgroundServiceDescription = {
+  const description = {
     revision: "r1",
     executable,
     entry,
@@ -64,7 +64,7 @@ async function fixture(
       maxLifetimeMs: 60_000,
       idleGraceMs: 0,
     },
-  };
+  } satisfies BackgroundServiceDescription;
   const events: any[] = [];
   const waiters: Array<{ match: (event: any) => boolean; resolve: (event: any) => void }> = [];
   const next = (match: (event: any) => boolean) => {
