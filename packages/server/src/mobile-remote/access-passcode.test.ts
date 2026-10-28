@@ -205,6 +205,32 @@ describe("AccessPasscode", () => {
     expect(ap.verifyToken(token)).toBe(false);
   });
 
+  test("captured validity follows the original passcode generation without spending attempts", () => {
+    const file = freshFile();
+    const ap = new AccessPasscode({ filePath: file, maxAttempts: 1 });
+    const unset = ap.captureValidity();
+    expect(unset()).toBe(false);
+    ap.set("first");
+    expect(unset()).toBe(false);
+    const original = ap.captureValidity();
+    expect(original()).toBe(true);
+
+    // Rotating to the same plaintext must still invalidate old derived grants,
+    // including when another manager instance writes the shared record.
+    new AccessPasscode({ filePath: file }).set("first");
+    for (let i = 0; i < 100; i++) expect(original()).toBe(false);
+    expect(ap.verify("first")).toBeString();
+    const current = ap.captureValidity();
+    expect(current()).toBe(true);
+    rmSync(file);
+    expect(current()).toBe(false);
+    writeFileSync(file, "malformed");
+    expect(current()).toBe(false);
+    ap.set("next");
+    expect(current()).toBe(false);
+    expect(ap.captureValidity()()).toBe(true);
+  });
+
   test("rate limit: 5 wrong attempts lock out even a correct passcode; recovers after window", () => {
     let now = 1_000_000;
     const ap = new AccessPasscode({

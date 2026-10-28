@@ -5,6 +5,7 @@ import { apiUrl, getApiWorkspace, getApiProject } from "./api-context.js";
 import { connectPanelRuntime, type PanelRuntimeEvent } from "./panel-runtime-connection.js";
 import { PanelAudioDialog, type PanelAudioRequest } from "./PanelAudioDialog.js";
 import { PanelVideoDialog, type PanelVideoRequest } from "./PanelVideoDialog.js";
+import { CopyDownloadLink } from "./CopyDownloadLink.js";
 import { panelVideoCapabilities } from "./panel-video-capture.js";
 import { panelVideoOptions } from "../../server/src/panels/browser-capture.js";
 import "./panel-host.css";
@@ -914,11 +915,22 @@ export function PanelHost({
       )}
       {directory && (
         <div className="panel-host-notice panel-host-directory" role="status">
-          <p>文件保存在服务器目录：{directory.path}</p>
+          <p>
+            文件保存在{prepared?.context.host === "desktop" ? "电脑" : "服务器"}目录：
+            {directory.path}
+          </p>
           {directory.url && (
-            <a href={directory.url} target="_blank" rel="noopener noreferrer">
-              查看并下载文件
-            </a>
+            <>
+              <div className="panel-host-actions panel-host-download-actions">
+                <a href={directory.url} target="_blank" rel="noopener noreferrer">
+                  查看并下载文件
+                </a>
+                <CopyDownloadLink key={directory.url} url={directory.url} />
+              </div>
+              <p className="panel-host-download-help">
+                下载链接仅供当前已登录的浏览器使用，关闭面板后失效。
+              </p>
+            </>
           )}
         </div>
       )}
@@ -965,9 +977,15 @@ export function PanelHost({
               当前浏览器无法预览此文件。可以保存后打开；若保存失败，请重新打开面板检查访问权限。
             </p>
           )}
-          <a href={preview.downloadUrl} download={preview.name}>
-            保存到此设备
-          </a>
+          <div className="panel-host-actions panel-host-download-actions">
+            <a href={preview.downloadUrl} download={preview.name}>
+              保存到此设备
+            </a>
+            <CopyDownloadLink key={preview.downloadUrl} url={preview.downloadUrl} />
+          </div>
+          <p className="panel-host-download-help">
+            下载链接仅供当前已登录的浏览器使用，关闭面板后失效。
+          </p>
         </section>
       )}
       {connectionStatus && (

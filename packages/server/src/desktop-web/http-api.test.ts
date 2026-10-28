@@ -439,6 +439,64 @@ test("the tunnel passcode still gates auth exchange, including secure public-ori
   expect(authorized.headers.get("set-cookie")).toContain("; Secure");
 });
 
+test("passcode rotation revokes original request authority and admission across workspace awaits", async () => {
+  const entered = deferred();
+  const resume = deferred();
+  let waitForWorkspace = false;
+  const authorities: Array<() => Promise<boolean>> = [];
+  const f = await fixture({
+    resolveWorkspace: async (cwd) => {
+      if (waitForWorkspace) {
+        entered.resolve();
+        await resume.promise;
+      }
+      return cwd;
+    },
+    handleExtra: async (_req, res, context) => {
+      authorities.push(context.isAuthorized);
+      res.end("derived grant");
+      return true;
+    },
+  });
+  await f.host.stop();
+  const passcode = new AccessPasscode({ filePath: join(f.root, "passcode.json") });
+  passcode.set("original-passcode");
+  const started = await f.host.start({ host: "127.0.0.1", port: 0, mode: "tunnel", passcode });
+  const entrance = `cs_access=${passcode.verify("original-passcode")!}`;
+  const login = await fetch(started.url + "/api/v1/desktop/session", {
+    method: "POST",
+    headers: { origin: started.url, cookie: entrance, "content-type": "application/json" },
+    body: JSON.stringify({ deviceId: f.device.id, secretHash: "synthetic-pairing-secret" }),
+  });
+  expect(login.status).toBe(200);
+  const paired = login.headers.get("set-cookie")!.split(";", 1)[0]!;
+  const request = (access: string) =>
+    fetch(started.url + "/api/v1/derived-grant", {
+      headers: {
+        origin: started.url,
+        cookie: `${paired}; ${access}`,
+        "x-codeshell-workspace": encodeURIComponent(f.cwd),
+      },
+    });
+  expect((await request(entrance)).status).toBe(200);
+  expect(await authorities[0]!()).toBe(true);
+  waitForWorkspace = true;
+  const pending = request(entrance);
+  try {
+    await entered.promise;
+    passcode.set("rotated-passcode");
+  } finally {
+    waitForWorkspace = false;
+    resume.resolve();
+  }
+  expect((await pending).status).toBe(401);
+  expect(authorities).toHaveLength(1);
+  expect(await authorities[0]!()).toBe(false);
+  expect((await request(`cs_access=${passcode.verify("rotated-passcode")!}`)).status).toBe(200);
+  expect(await authorities[1]!()).toBe(true);
+  expect(await authorities[0]!()).toBe(false);
+});
+
 test("logout cancels a real local model probe and forwards extra-route lifecycle ownership", async () => {
   const entered = deferred();
   const model: Server = createServer((req, res) => {

@@ -494,6 +494,16 @@ export function HubPanels({
         </button>
       </header>
       <p className="panels-muted">面板安装在{hostLabel}上，文件和任务操作使用当前工作区。</p>
+      {snapshot?.hasProject && (
+        <div className="panels-muted">
+          <p>
+            绑定项目：<code>{snapshot.workspace}</code>
+          </p>
+          {hostLabel === "桌面" && (
+            <p>同一项目与电脑共用面板绑定，已绑定的面板可直接打开。不同项目的绑定独立。</p>
+          )}
+        </div>
+      )}
       {snapshot && !snapshot.hasProject && (
         <div className="panels-warning">请先选择一个项目，才能绑定和打开面板。</div>
       )}

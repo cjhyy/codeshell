@@ -52,7 +52,8 @@ export interface RemoteHostStartOptions {
   /**
    * "lan" (default) keeps the existing LAN behaviour unchanged. "tunnel" binds
    * 127.0.0.1 (cloudflared connects to loopback) and inserts a passcode gate in
-   * front of every HTTP route and the WS upgrade. "relay" also requires an
+   * front of ordinary HTTP routes and the WS upgrade. Host-verified Panel asset
+   * capabilities use their own short-lived authorization. "relay" also requires an
    * initialized passcode and a stable HTTPS origin before pairing/WS upgrades.
    */
   mode?: "lan" | "tunnel" | "relay";
@@ -184,57 +185,78 @@ export class RemoteHostManager extends EventEmitter {
         req.resume();
         return;
       }
-      // Tunnel mode: a passcode gate sits in front of EVERY route. The gate
-      // either allows (returns true) or writes its own 401/403 challenge.
-      if (gate && !gate.gate(req, res)) return;
-      if (req.url === "/health") {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ ok: true }));
-        return;
-      }
-      if (req.url?.startsWith("/api/v1/") && this.opts.webApi) {
-        const baseUrl = this.publicBaseUrl ?? this.started?.url;
-        if (!baseUrl) {
-          res.writeHead(503);
-          res.end("remote host is starting");
+      const serve = () => {
+        // All ordinary routes retain the tunnel passcode gate. Only a Host-verified
+        // short-lived Panel asset capability may use independent authorization.
+        if (gate && !gate.gate(req, res)) return;
+        if (req.url === "/health") {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ ok: true }));
           return;
         }
-        void this.opts.webApi
-          .handle(req, res, { baseUrl })
-          .then((handled) => {
-            if (!handled && !res.writableEnded) {
-              res.writeHead(404);
-              res.end("not found");
-            }
-          })
-          .catch(() => {
-            if (!res.headersSent) res.writeHead(500);
-            if (!res.writableEnded) res.end("remote request failed");
+        if (req.url?.startsWith("/api/v1/") && this.opts.webApi) {
+          const baseUrl = this.publicBaseUrl ?? this.started?.url;
+          if (!baseUrl) {
+            res.writeHead(503);
+            res.end("remote host is starting");
+            return;
+          }
+          void this.opts.webApi
+            .handle(req, res, { baseUrl, isAccessAuthorized: gate?.captureValidity() })
+            .then((handled) => {
+              if (!handled && !res.writableEnded) {
+                res.writeHead(404);
+                res.end("not found");
+              }
+            })
+            .catch(() => {
+              if (!res.headersSent) res.writeHead(500);
+              if (!res.writableEnded) res.end("remote request failed");
+            });
+          return;
+        }
+        const uploadPath = pathname.match(/^\/api\/mobile\/uploads\/([A-Za-z0-9_-]+)$/);
+        if (uploadPath && this.opts.uploads) {
+          void this.opts.uploads.acceptPut(uploadPath[1]!, req, res);
+          return;
+        }
+        // The mobile app is built/served with vite base "/mobile/", so ALL of its
+        // assets — and in dev, vite's HMR/module URLs — live under the /mobile
+        // prefix. A single prefix route serves prod (static out/mobile) and dev
+        // (proxy to the mobile vite server) symmetrically. Tunnel mode never
+        // proxies dev: Vite's HMR socket and @fs module URLs don't survive a
+        // public trycloudflare hop, so a public tunnel always serves the build.
+        // Match the route family exactly ("/mobile", "/mobile/…", "/mobile?…",
+        // "/mobile#…") — NOT a sibling like "/mobilexyz", which falls to 404.
+        if (req.url && /^\/mobile(?:[/?#]|$)/.test(req.url)) {
+          serveMobile(req, res, {
+            rootDir: this.mobileRootDir,
+            devUrl: publicAccess ? undefined : this.mobileDevUrl,
           });
+          return;
+        }
+        res.writeHead(404);
+        res.end("not found");
+      };
+      const webApi = this.opts.webApi;
+      if (
+        gate?.isSet() &&
+        ["GET", "HEAD"].includes(req.method ?? "") &&
+        pathname.startsWith("/api/v1/panel-assets/") &&
+        webApi?.handleCapabilityAsset
+      ) {
+        void webApi.handleCapabilityAsset(req, res).then(
+          (handled) => {
+            if (!handled && !res.writableEnded) serve();
+          },
+          () => {
+            if (!res.headersSent) res.writeHead(500);
+            if (!res.writableEnded) res.end("remote asset request failed");
+          },
+        );
         return;
       }
-      const uploadPath = pathname.match(/^\/api\/mobile\/uploads\/([A-Za-z0-9_-]+)$/);
-      if (uploadPath && this.opts.uploads) {
-        void this.opts.uploads.acceptPut(uploadPath[1]!, req, res);
-        return;
-      }
-      // The mobile app is built/served with vite base "/mobile/", so ALL of its
-      // assets — and in dev, vite's HMR/module URLs — live under the /mobile
-      // prefix. A single prefix route serves prod (static out/mobile) and dev
-      // (proxy to the mobile vite server) symmetrically. Tunnel mode never
-      // proxies dev: Vite's HMR socket and @fs module URLs don't survive a
-      // public trycloudflare hop, so a public tunnel always serves the build.
-      // Match the route family exactly ("/mobile", "/mobile/…", "/mobile?…",
-      // "/mobile#…") — NOT a sibling like "/mobilexyz", which falls to 404.
-      if (req.url && /^\/mobile(?:[/?#]|$)/.test(req.url)) {
-        serveMobile(req, res, {
-          rootDir: this.mobileRootDir,
-          devUrl: publicAccess ? undefined : this.mobileDevUrl,
-        });
-        return;
-      }
-      res.writeHead(404);
-      res.end("not found");
+      serve();
     });
     // In tunnel mode we must gate the WS handshake too. `noServer` lets us run
     // the passcode check during the HTTP `upgrade` event before completing the

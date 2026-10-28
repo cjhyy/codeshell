@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import type { IncomingMessage } from "node:http";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { app } from "electron";
 import {
   codeShellHome,
@@ -190,29 +190,38 @@ export function createDesktopWebService(options: {
       }
     },
   });
+  const handlePanelAsset = async (request: IncomingMessage, response: ServerResponse) => {
+    const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+    if (!pathname.startsWith("/api/v1/panel-assets/")) return false;
+    // Opaque-origin modules cannot send the Desktop or public-access cookies.
+    // Match an existing capability before the outer gate can delegate here;
+    // handleAssets rechecks the original paired owner and binding on every read.
+    const entry = [...panels.values()].find((value) => value.handler.ownsAssets(request));
+    if (!entry) return false;
+    entry.active++;
+    try {
+      return await entry.handler.handleAssets(request, response);
+    } finally {
+      entry.active--;
+    }
+  };
   return {
     ...api,
+    async handleCapabilityAsset(request, response) {
+      if (!["GET", "HEAD"].includes(request.method ?? "")) return false;
+      return handlePanelAsset(request, response);
+    },
     async handle(request, response, context) {
       const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
       if (pathname.startsWith("/api/v1/panel-assets/")) {
-        // Opaque-origin modules cannot send the Desktop cookie. The random asset
-        // capability identifies its existing workspace handler; that handler
-        // still rechecks the original paired owner and current binding per read.
-        const entry = [...panels.values()].find((value) => value.handler.ownsAssets(request));
-        if (!entry) {
+        if (!(await handlePanelAsset(request, response))) {
           response.writeHead(404, {
             "Content-Type": "application/json; charset=utf-8",
             "Cache-Control": "no-store",
           });
           response.end(JSON.stringify({ error: "面板资源授权不存在或已失效。" }));
-          return true;
         }
-        entry.active++;
-        try {
-          return await entry.handler.handleAssets(request, response);
-        } finally {
-          entry.active--;
-        }
+        return true;
       }
       return api.handle(request, response, context);
     },

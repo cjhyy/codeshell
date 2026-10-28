@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { extname, isAbsolute, join, resolve } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { rangeBounds } from "./resources/library.js";
 
 const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 * 1024;
 const MAX_ENTRIES = 200;
@@ -267,20 +268,45 @@ export async function handlePanelProcessDirectory(
     if (current.isSymbolicLink() || !sameFile(metadata, current)) fail(404, "下载文件已经改变。");
     await verifyDirectory();
     await authorize();
-    response.writeHead(200, {
+    // Directory outputs are mutable and have no stable representation validator.
+    // An If-Range condition cannot be confirmed, so return the complete file.
+    const range = request.headers["if-range"] === undefined ? request.headers.range : undefined;
+    const bounds =
+      range === undefined
+        ? { start: 0, end: metadata.size - 1 }
+        : metadata.size > 0
+          ? rangeBounds(range, metadata.size)
+          : null;
+    const headers = {
       "Content-Type": "application/octet-stream",
       "Content-Disposition": disposition(name),
-      "Content-Length": metadata.size,
+      "Accept-Ranges": "bytes",
       "Content-Security-Policy": "default-src 'none'; sandbox",
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "no-referrer",
+    };
+    if (!bounds) {
+      response.writeHead(416, {
+        ...headers,
+        "Content-Range": `bytes */${metadata.size}`,
+        "Content-Length": 0,
+      });
+      response.end();
+      return;
+    }
+    response.writeHead(range === undefined ? 200 : 206, {
+      ...headers,
+      "Content-Length": bounds.end - bounds.start + 1,
+      ...(range === undefined
+        ? {}
+        : { "Content-Range": `bytes ${bounds.start}-${bounds.end}/${metadata.size}` }),
     });
     if (request.method === "HEAD" || metadata.size === 0) {
       response.end();
       return;
     }
-    const input = file.createReadStream({ autoClose: false, start: 0, end: metadata.size - 1 });
+    const input = file.createReadStream({ autoClose: false, ...bounds });
     let checking = false;
     const timer = setInterval(() => {
       if (checking) return;

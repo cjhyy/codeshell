@@ -100,6 +100,15 @@ export class AccessPasscode {
     return this.read() !== undefined;
   }
 
+  /**
+   * After a successful gate, retain its passcode generation for derived grants.
+   * Rechecks never retain/retry the plaintext or spend the verification budget.
+   */
+  captureValidity(): () => boolean {
+    const secret = this.read()?.secret;
+    return () => secret !== undefined && this.read()?.secret === secret;
+  }
+
   /** Set (or rotate) the passcode. Rotating `secret` invalidates old tokens. */
   set(passcode: string): void {
     if (!isValidPasscode(passcode)) {
