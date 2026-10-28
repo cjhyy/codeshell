@@ -21,6 +21,11 @@ const record = (event, details = {}) =>
   );
 const part = (index) => `${index.toString().padStart(4, "0")}-汉🙂${"x".repeat(48 * 1024)}\n`;
 const count = Number(process.env.CODESHELL_OUTPUT_PARTS ?? "1");
+if (process.argv.includes("--input-format") || process.argv[2] === "exec") {
+  const { runLegacyCli } = await import("./mobile-legacy-cli.mjs");
+  await runLegacyCli(kind, send, record);
+  process.exit(0);
+}
 if (kind === "claude-code") {
   let input = "";
   for await (const chunk of process.stdin) input += chunk;

@@ -36,6 +36,8 @@ import { MobileOutputClient } from "../../packages/web/src/hooks/mobileOutputCli
 import { useRemoteApp } from "../../packages/web/src/hooks/useRemoteApp.js";
 import { runRuntimeLifecycle } from "./mobile-runtime-lifecycle.js";
 export { runRuntimeLifecycle };
+import { runLegacyLifecycle } from "./mobile-legacy-lifecycle.js";
+export { runLegacyLifecycle };
 
 const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
@@ -769,6 +771,7 @@ export async function run(root: string, port: number) {
     await remote.stop();
   }
   await runRuntimeLifecycle(root);
+  await runLegacyLifecycle(root);
 }
 
 /** Second actual Node Main: empty RAM, real paired WS, production page authority, no runtime construction. */

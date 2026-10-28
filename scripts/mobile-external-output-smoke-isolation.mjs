@@ -117,9 +117,19 @@ export function installExternalOutputGuard() {
     return true;
   };
   const originalSpawn = childProcess.spawn;
+  const detachedChildren = new Set();
+  process.once("exit", () => {
+    for (const pid of detachedChildren) {
+      try {
+        process.kill(process.platform === "win32" ? pid : -pid, "SIGKILL");
+      } catch {
+        /* already exited */
+      }
+    }
+  });
   childProcess.spawn = function (command, args = [], options = {}) {
     if (checkGit(command, args, options)) return originalSpawn.call(this, command, args, options);
-    if (options.shell || options.detached) deny();
+    if (options.shell) deny();
     const env = options.env ?? process.env;
     if (
       env.HOME !== home ||
@@ -130,15 +140,26 @@ export function installExternalOutputGuard() {
     const fixture = children.find((entry) => command === entry.path || command === entry.command);
     let kind;
     if (fixture) {
+      const legacy =
+        process.env.CODESHELL_OUTPUT_LEGACY === "1" &&
+        command === fixture.path &&
+        options.detached === true &&
+        realpathSync(options.cwd) === `${process.env.CODESHELL_OUTPUT_ROOT}/legacy-workspace` &&
+        (args[0] === "exec" ||
+          (args.includes("--input-format") &&
+            args[args.indexOf("--input-format") + 1] === "stream-json"));
       if (
         lstatSync(fixture.path).isSymbolicLink() ||
         hashFile(fixture.path) !== fixture.hash ||
-        env.PATH.split(":")[0] !== `${process.env.CODESHELL_OUTPUT_ROOT}/bin`
+        (!legacy &&
+          (options.detached ||
+            env.PATH.split(":")[0] !== `${process.env.CODESHELL_OUTPUT_ROOT}/bin`))
       )
         deny();
       kind = fixture.command;
     } else {
       if (
+        options.detached ||
         command !== process.execPath ||
         args.length !== 3 ||
         args[0] !== process.env.CODESHELL_OUTPUT_COLD_ENTRY ||
@@ -150,7 +171,17 @@ export function installExternalOutputGuard() {
       kind = "cold-main";
     }
     record("allowed-spawn", { kind });
-    return originalSpawn.call(this, command, args, options);
+    const child = originalSpawn.call(this, command, args, options);
+    if (options.detached && child.pid) {
+      const pid = child.pid;
+      detachedChildren.add(pid);
+      record("spawned-detached", { childPid: pid });
+      child.once("exit", () => {
+        detachedChildren.delete(pid);
+        record("exited-detached", { childPid: pid });
+      });
+    }
+    return child;
   };
   for (const name of ["execFile", "execFileSync"]) {
     const original = childProcess[name];
@@ -235,6 +266,7 @@ export function installExternalOutputGuard() {
     () => http.get("http://127.0.0.1:1/"),
     () => net.connect({ host: "127.0.0.1", port: 2 }),
     () => childProcess.spawn("sh", ["-c", "exit 0"]),
+    () => childProcess.spawn(children[0].path, ["exec"], { cwd: home, detached: true }),
     () =>
       childProcess.execFileSync("/usr/sbin/diskutil", [
         "eraseVolume",
