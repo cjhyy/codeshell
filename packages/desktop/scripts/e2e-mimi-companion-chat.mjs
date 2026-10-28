@@ -316,6 +316,23 @@ try {
   receipt.checks.push(
     "companion click opens real Mimi chat; two UI inputs reach the actual worker in one session",
   );
+  await overlay.waitForFunction(async () => (await window.mimiCompanion.getState()).humanActive);
+  const mainWindowId = await app.evaluate(({ BrowserWindow }) => {
+    const win = BrowserWindow.getAllWindows().find((candidate) => {
+      const url = new URL(candidate.webContents.getURL());
+      return url.pathname.endsWith("/renderer/index.html") && !url.searchParams.has("popout");
+    });
+    win.hide();
+    return win.id;
+  });
+  await overlay.waitForFunction(async () => !(await window.mimiCompanion.getState()).humanActive);
+  await app.evaluate(({ BrowserWindow }, id) => {
+    const win = BrowserWindow.fromId(id);
+    win.show();
+    win.focus();
+  }, mainWindowId);
+  await overlay.waitForFunction(async () => (await window.mimiCompanion.getState()).humanActive);
+  receipt.checks.push("chat focus holds presentation and switching away releases it");
   receipt.passed = true;
   await put(join(isolated.home, "companion-trial-state.json"), receipt);
   console.log(JSON.stringify({ phase: "companion-chat-passed", ...receipt }));

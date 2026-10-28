@@ -17,6 +17,7 @@ export function SpriteActor({
   const animation = spriteAnimation(state, moving, cueActive);
   const { row, frames } = SPRITE_ANIMATIONS[animation];
   const typing = animation === "typing";
+  const gestureId = typing ? undefined : state.activity.id;
   const playing =
     (state.enabled || state.preview) &&
     state.visible &&
@@ -45,7 +46,7 @@ export function SpriteActor({
       typing ? 260 : 100,
     );
     return () => window.clearInterval(timer);
-  }, [animation, frames, playing, moving, typing, state.activity.id]);
+  }, [animation, frames, playing, moving, typing, gestureId]);
 
   // Reuse the small paw lift, alternating its middle poses instead of cycling
   // the full-body working atlas row. No transform moves the whole character.

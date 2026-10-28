@@ -25,3 +25,20 @@ test("placement stays inside the display at edges and with invalid sizes", () =>
     }
   }
 });
+
+test("a wide input on the right external display is left entirely unobscured", () => {
+  const display = { x: 1512, y: -174, width: 2560, height: 1440 };
+  const field = { x: 1920, y: 90, width: 416, height: 38 };
+  const result = companionPlacement(display, 320, { x: 2128, y: 109 }, field);
+  expect(result.obstructed).not.toBe(true);
+  expect(result.position.x + display.x + 224).toBeLessThanOrEqual(field.x - 24);
+});
+
+test("a full-width input uses vertical free space, and a full-screen editor cannot be covered", () => {
+  const display = { x: 1512, y: -174, width: 2560, height: 1440 };
+  const field = { x: 1512, y: 0, width: 2560, height: 60 };
+  const result = companionPlacement(display, 320, { x: 2100, y: 30 }, field);
+  expect(result.obstructed).not.toBe(true);
+  expect(result.position.y + display.y).toBeGreaterThanOrEqual(84);
+  expect(companionPlacement(display, 320, { x: 2100, y: 30 }, display).obstructed).toBe(true);
+});

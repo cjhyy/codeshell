@@ -25,8 +25,8 @@ export function spriteAnimation(
     case "observe":
       return "review";
     case "click":
-    case "key":
       return "waving";
+    case "key":
     case "type":
       return "typing";
     case "scroll":

@@ -334,9 +334,11 @@ export class CuaActivityTracker {
     }
     // macOS AX frame is global screen points. screenshot_frame (when present)
     // is a different, window-local pixel frame and must never be substituted.
-    for (const raw of Array.isArray(value.elements)
-      ? value.elements.slice(0, MAX_TOKENS_PER_WINDOW)
-      : []) {
+    const elements = Array.isArray(value.elements)
+      ? value.elements.slice(0, MAX_TOKENS_PER_WINDOW).map(record).filter(Boolean)
+      : [];
+    const byIndex = new Map(elements.map((item) => [item!.element_index, item!]));
+    for (const raw of elements) {
       const element = record(raw);
       const frame = record(element?.frame);
       if (typeof element?.element_token !== "string" || !TOKEN_PATTERN.test(element.element_token))
@@ -349,10 +351,42 @@ export class CuaActivityTracker {
         !positive(frame.h)
       )
         continue;
+      let inputFrame = frame;
+      // Code editors can expose a tiny backing textarea while rendering the
+      // text in its enclosing scroll region. Reserve that visible region.
+      if (/text.?area|text.?field/i.test(String(element.role)) && (frame.w < 8 || frame.h < 8)) {
+        let parent = byIndex.get(element.parent_index);
+        for (let depth = 0; parent && depth < 6; depth++) {
+          if (/webarea|window|application/i.test(String(parent.role))) break;
+          const box = record(parent.frame);
+          if (
+            box &&
+            finite(box.x) &&
+            finite(box.y) &&
+            positive(box.w) &&
+            positive(box.h) &&
+            box.w >= 80 &&
+            box.h >= 80 &&
+            box.x <= frame.x &&
+            box.y <= frame.y &&
+            box.x + box.w >= frame.x + frame.w &&
+            box.y + box.h >= frame.y + frame.h
+          ) {
+            inputFrame = box;
+            break;
+          }
+          parent = byIndex.get(parent.parent_index);
+        }
+      }
       geometry.tokens.set(element.element_token, {
         x: frame.x + frame.w / 2,
         y: frame.y + frame.h / 2,
-        avoidRect: parseCuaAvoidRect({ x: frame.x, y: frame.y, width: frame.w, height: frame.h }),
+        avoidRect: parseCuaAvoidRect({
+          x: inputFrame.x,
+          y: inputFrame.y,
+          width: inputFrame.w,
+          height: inputFrame.h,
+        }),
       });
     }
     this.windows.set(key, geometry);

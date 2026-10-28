@@ -15,6 +15,7 @@ test("computer use preload offers only bounded desktop setup channels", async ()
   await api.restart();
   await api.setCompanion({ enabled: true, size: 320 });
   await api.previewCompanion();
+  await api.setCompanionChatActive?.(true);
   expect(calls).toEqual([
     ["computerUse:status"],
     ["computerUse:setEnabled", true],
@@ -23,6 +24,7 @@ test("computer use preload offers only bounded desktop setup channels", async ()
     ["computerUse:restart"],
     ["computerUse:setCompanion", { enabled: true, size: 320 }],
     ["computerUse:previewCompanion"],
+    ["mimiCompanion:chatActive", true],
   ]);
   expect(Object.keys(api).sort()).toEqual([
     "openSettings",
@@ -30,6 +32,7 @@ test("computer use preload offers only bounded desktop setup channels", async ()
     "requestPermission",
     "restart",
     "setCompanion",
+    "setCompanionChatActive",
     "setEnabled",
     "status",
   ]);

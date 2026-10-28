@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, screen, session, type WebContents } from "electron";
+import { app, BrowserWindow, ipcMain, screen, session, type WebContents } from "electron";
 import { readFile, writeFile, mkdir, rename, realpath } from "node:fs/promises";
 import { dirname, extname, join, resolve, sep } from "node:path";
 import {
@@ -34,6 +34,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   let pinned = false;
   let humanActive = false;
   let chatting = false;
+  const chatSurfaces = new Set<WebContents>();
   let dragging = false;
   try {
     const saved = JSON.parse(await readFile(prefsPath, "utf8"));
@@ -63,6 +64,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   let display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   if (anchor) display = screen.getDisplayNearestPoint(anchor);
   let target: { x: number; y: number } | undefined;
+  let avoidRect: { x: number; y: number; width: number; height: number } | undefined;
   let activity: MimiCompanionState["activity"] = {
     id: "idle",
     action: "idle",
@@ -89,12 +91,20 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
 
   const state = (): MimiCompanionState => {
     const bounds = window && !window.isDestroyed() ? window.getContentBounds() : display.bounds;
-    const placement = companionPlacement(bounds, size, target);
+    const placement = companionPlacement(
+      bounds,
+      size,
+      target,
+      humanActive || chatting || pinned ? undefined : avoidRect,
+    );
     if (anchor) placement.position = { x: anchor.x - bounds.x, y: anchor.y - bounds.y };
     return {
       enabled,
       visible:
-        (enabled || preview) && (captures.size === 0 || humanActive || chatting) && !disposed,
+        (enabled || preview) &&
+        (captures.size === 0 || humanActive || chatting) &&
+        !placement.obstructed &&
+        !disposed,
       appearance: "mimi-sprite",
       size,
       modelUrl: `${MIMI_COMPANION_SCHEME}://assets/Hiyori/Hiyori.model3.json`,
@@ -102,6 +112,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       ...placement,
       windowOrigin: { x: bounds.x, y: bounds.y },
       humanActive: humanActive || chatting,
+      avoidInput: !!avoidRect && !humanActive && !chatting && !pinned,
       pinned,
       activity,
       preview,
@@ -202,6 +213,9 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       if (disposed || (!enabled && !preview)) return;
       const win = new BrowserWindow({
         ...display.bounds,
+        // NSPanel participates in other apps' fullscreen Spaces without
+        // activating this app or taking keyboard focus from their editors.
+        ...(process.platform === "darwin" ? { type: "panel" as const } : {}),
         show: false,
         transparent: true,
         backgroundColor: "#00000000",
@@ -220,7 +234,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
           contextIsolation: true,
           nodeIntegration: false,
           sandbox: true,
-          backgroundThrottling: true,
+          backgroundThrottling: false,
         },
       });
       window = win;
@@ -268,10 +282,58 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     preview = false;
   }
 
+  function placeAt(
+    point: { x: number; y: number } | undefined,
+    reserved?: { x: number; y: number; width: number; height: number },
+  ) {
+    // Unknown agent coordinates never mean the human's system pointer.
+    if (!point && !anchor) {
+      const current = state();
+      anchor = {
+        x: current.windowOrigin!.x + current.position.x,
+        y: current.windowOrigin!.y + current.position.y,
+      };
+    }
+    target = point;
+    avoidRect = reserved;
+    if (!target || pinned) return;
+    anchor = undefined;
+    const next = screen.getDisplayNearestPoint({
+      x: Math.round(target.x),
+      y: Math.round(target.y),
+    });
+    if (next.id !== display.id) {
+      display = next;
+      window?.setBounds(display.bounds);
+    }
+  }
+
   async function receive(event: CompanionOperation) {
     if (disposed) return;
+    if (event.phase === "update") {
+      const previous = active.get(event.id);
+      if (!previous || previous.capture || !event.target) return;
+      active.set(event.id, { ...previous, target: event.target, avoidRect: event.avoidRect });
+      if (humanActive || chatting || activity.id !== event.id) return;
+      // Native cursor snapshots refine the existing operation's target; they
+      // must not replay its gesture or release a capture held by another call.
+      const retainedInput =
+        event.action === "key" &&
+        target &&
+        avoidRect &&
+        target.x === event.target.x &&
+        target.y === event.target.y
+          ? avoidRect
+          : undefined;
+      placeAt(event.target, event.avoidRect ?? retainedInput);
+      publish();
+      return;
+    }
     if (event.phase === "start") {
-      active.set(event.id, event);
+      active.set(event.id, {
+        ...event,
+        target: event.targetSource === "native-cursor" ? event.target : undefined,
+      });
       if (event.capture) {
         const wasVisible = window?.isVisible() ?? false;
         captures.add(event.id);
@@ -282,30 +344,16 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
         await captureBarrier;
         return;
       }
+      // Read-only metadata probes must not erase the input target or cut off
+      // the gesture that the input is still completing.
+      if (event.action === "observe") return;
       if (humanActive || chatting) return;
       cancelPreview();
       if (idleTimer) clearTimeout(idleTimer);
-      // Unknown agent coordinates never mean the human's system pointer.
-      // Keep the last character position until a reliable target is observed.
-      if (!event.target && !anchor) {
-        const current = state();
-        anchor = {
-          x: current.windowOrigin!.x + current.position.x,
-          y: current.windowOrigin!.y + current.position.y,
-        };
-      }
-      target = event.target;
-      if (target && !pinned) {
-        anchor = undefined;
-        const next = screen.getDisplayNearestPoint({
-          x: Math.round(target.x),
-          y: Math.round(target.y),
-        });
-        if (next.id !== display.id) {
-          display = next;
-          window?.setBounds(display.bounds);
-        }
-      }
+      // Cached AX/screenshot geometry may already be stale when input starts.
+      // Wait for this operation's native cursor update before following it.
+      if (event.action !== "key")
+        placeAt(event.targetSource === "native-cursor" ? event.target : undefined);
       activity = { id: event.id, action: event.action, phase: "start", startedAt: Date.now() };
       if (enabled)
         void ensureWindow().catch((failure) => {
@@ -319,11 +367,13 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
         idleTimer = setTimeout(
           () => {
             if (activity.id !== event.id || disposed) return;
-            const next = [...active.values()].reverse().find((candidate) => !candidate.capture);
+            const next = [...active.values()]
+              .reverse()
+              .find((candidate) => !candidate.capture && candidate.action !== "observe");
             activity = next
               ? { id: next.id, action: next.action, phase: "start", startedAt: Date.now() }
               : { id: "idle", action: "idle", phase: "end", startedAt: Date.now() };
-            if (next && !humanActive) target = next.target;
+            if (next && !humanActive && !chatting) placeAt(next.target, next.avoidRect);
             publish();
           },
           event.failed ? 2000 : 700,
@@ -353,7 +403,38 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     if (idleTimer) clearTimeout(idleTimer);
     activity = { id: "human", action: "idle", phase: "end", startedAt: Date.now() };
     target = undefined;
+    avoidRect = undefined;
   };
+  const syncChatFocus = () => {
+    if (disposed) return;
+    for (const contents of chatSurfaces) {
+      if (contents.isDestroyed()) chatSurfaces.delete(contents);
+    }
+    const focused = BrowserWindow.getFocusedWindow();
+    const next = !!focused && chatSurfaces.has(focused.webContents);
+    if (chatting === next) return;
+    chatting = next;
+    if (chatting) stopPresentation();
+    publish();
+  };
+  // A chat hold belongs to the visible, focused chat page. Leaving the page or
+  // switching back to work releases it; dragging still keeps the saved anchor.
+  ipcMain.handle("mimiCompanion:chatActive", (event, value: unknown) => {
+    if (
+      event.sender.isDestroyed() ||
+      event.senderFrame !== event.sender.mainFrame ||
+      !options.isMainWindow(event.sender) ||
+      typeof value !== "boolean"
+    ) {
+      throw new Error("Invalid companion chat surface");
+    }
+    if (value) chatSurfaces.add(event.sender);
+    else chatSurfaces.delete(event.sender);
+    syncChatFocus();
+  });
+  const onChatWindowFocus = () => setImmediate(syncChatFocus);
+  app.on("browser-window-focus", onChatWindowFocus);
+  app.on("browser-window-blur", onChatWindowFocus);
   const onInteraction = (event: Electron.IpcMainEvent, phase: unknown) => {
     if (
       !ownOverlay(event.sender, event.senderFrame) ||
@@ -435,8 +516,10 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       await options.openChat();
     } catch (failure) {
       chatting = false;
+      publish();
       throw failure;
     }
+    syncChatFocus();
     publish();
   });
   const onDisplaysChanged = () => {
@@ -475,6 +558,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       await persist();
       cancelPreview();
       if (!enabled) {
+        stopPresentation();
         humanActive = false;
         chatting = false;
         dragging = false;
@@ -564,6 +648,10 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       ipcMain.removeListener("mimiCompanion:move", onMove);
       ipcMain.removeListener("mimiCompanion:follow", onFollow);
       ipcMain.removeHandler("mimiCompanion:chat");
+      ipcMain.removeHandler("mimiCompanion:chatActive");
+      app.removeListener("browser-window-focus", onChatWindowFocus);
+      app.removeListener("browser-window-blur", onChatWindowFocus);
+      chatSurfaces.clear();
       screen.removeListener("display-metrics-changed", onDisplaysChanged);
       screen.removeListener("display-removed", onDisplaysChanged);
       await activityServer.close();

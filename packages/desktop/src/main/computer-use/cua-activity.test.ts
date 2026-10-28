@@ -39,6 +39,43 @@ function observe(tracker: CuaActivityTracker, id: string | number = 1, overrides
 }
 
 describe("CuaActivityTracker", () => {
+  test("reserves a code editor's enclosing region without moving its native AX target", () => {
+    const tracker = new CuaActivityTracker("proxy");
+    observe(tracker, 1, {
+      elements: [
+        { element_index: 1, role: "AXGroup", frame: { x: 200, y: 210, w: 600, h: 350 } },
+        {
+          element_index: 2,
+          parent_index: 1,
+          role: "AXTextArea",
+          element_token: "s12345678:2",
+          frame: { x: 790, y: 220, w: 2, h: 23 },
+        },
+      ],
+    });
+    const event = tracker.begin(
+      request(2, "click", { pid: 10, window_id: 20, element_token: "s12345678:2" }),
+    );
+    expect(event?.target).toEqual({ x: 791, y: 231.5 });
+    expect(event?.avoidRect).toEqual({ x: 200, y: 210, width: 600, height: 350 });
+    observe(tracker, 3, {
+      elements: [
+        { element_index: 1, role: "AXWebArea", frame: { x: 100, y: 200, w: 800, h: 600 } },
+        {
+          element_index: 2,
+          parent_index: 1,
+          role: "AXTextArea",
+          element_token: "s12345678:2",
+          frame: { x: 790, y: 220, w: 2, h: 23 },
+        },
+      ],
+    });
+    expect(
+      tracker.begin(request(4, "click", { pid: 10, window_id: 20, element_token: "s12345678:2" }))
+        ?.avoidRect,
+    ).toEqual({ x: 790, y: 220, width: 2, height: 23 });
+  });
+
   test("uses returned window geometry including image downscale, not only Retina scale", () => {
     const tracker = new CuaActivityTracker("proxy");
     observe(tracker);

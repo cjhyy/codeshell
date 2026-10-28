@@ -5,6 +5,28 @@ renderer. The first effect set uses Mimi's bundled full-body sprite atlas. A
 Live2D adapter is reserved behind the same presentation contract; it is not
 enabled by the settings UI and has not been validated with Cubism Core.
 
+## Acceptance status — 2026-10-28
+
+The user confirmed that Mimi is visible above Chrome's native fullscreen Space
+on the right 2560×1440 display after using a macOS nonactivating panel and
+disabling background renderer throttling. This confirms fullscreen visibility,
+not correctness of native input.
+
+The Chrome coding exercise **failed**: a per-character foreground-key fixture
+repeatedly took focus, interacted with the input method, and produced malformed
+code. It had no immediate cancellation path. The fixture and its UI/IPC entry
+have been removed; `--practice` now refuses to start. Do not reuse it or report
+animation-frame samples as evidence that an exercise passed. The user's browser
+must not be automatically relaunched or re-controlled to repeat that failed demo.
+
+The separate opt-in native form fixture now has a stop button and
+Command/Ctrl+Shift+Escape while running. Stop or timeout rejects pending and new
+requests, kills only its own input daemon, and makes that fixture instance
+unusable until reopened. Cancellation and timeout have isolated process-mock
+tests; this revision has not been rerun against the user's desktop. It sends
+complete field strings without artificial character delays. Animation must
+follow normal input speed, never slow real work to extend a gesture.
+
 ## Interaction contract
 
 - Hover takes priority over automatic movement and working gestures.
@@ -13,8 +35,9 @@ enabled by the settings UI and has not been validated with Cubism Core.
 - Click opens the existing Mimi chat page in the main application. The floating
   pet does not take keyboard focus away from another application.
 - The context menu can resume following CUA actions after manual placement.
-- Idle is still. An operation gets a short gesture, then returns to a resting
-  pose. Reduced-motion mode also suppresses gesture playback and movement easing.
+- Idle is still. Text input follows the real operation with a short completion
+  tail; consecutive key input retains its animation phase. Reduced-motion mode
+  suppresses gesture playback and movement easing.
 - The character's body accepts pointer interaction; the rest of the transparent
   surface passes input through. A human interaction suppresses incoming CUA
   animation and movement. It does not cancel the underlying CUA operation.
@@ -31,7 +54,7 @@ bun run build:main
 bun run preview:companion
 ```
 
-The isolated experiment has its own temporary preferences and does not start a
+The default isolated experiment has its own temporary preferences and does not start a
 worker, request OS permissions, or issue computer input. Its chat callback only
 shows a receipt; the normal application callback opens the actual Mimi page.
 Closing the experiment window exits it. Native interaction smoke:
@@ -39,6 +62,11 @@ Closing the experiment window exits it. Native interaction smoke:
 ```sh
 bun run preview:companion --smoke
 ```
+
+`--native-cua <installed-official-driver-path>` explicitly enables a separate
+public form fixture in a newly created window. It never submits the form and
+does not control an existing user browser. This optional fixture remains subject
+to the acceptance limits above.
 
 For the full application path, after building Desktop run from
 `packages/desktop`:

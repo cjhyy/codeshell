@@ -12,5 +12,6 @@ export function createComputerUseSettingsApi(
     restart: () => ipc.invoke("computerUse:restart"),
     setCompanion: (value) => ipc.invoke("computerUse:setCompanion", value),
     previewCompanion: () => ipc.invoke("computerUse:previewCompanion"),
+    setCompanionChatActive: (active) => ipc.invoke("mimiCompanion:chatActive", active),
   };
 }

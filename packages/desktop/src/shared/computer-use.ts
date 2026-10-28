@@ -30,4 +30,5 @@ export interface ComputerUseSettingsApi {
   restart(): Promise<void>;
   setCompanion(value: { enabled?: boolean; size?: number }): Promise<ComputerUseSettingsStatus>;
   previewCompanion(): Promise<ComputerUseSettingsStatus>;
+  setCompanionChatActive?(active: boolean): Promise<void>;
 }

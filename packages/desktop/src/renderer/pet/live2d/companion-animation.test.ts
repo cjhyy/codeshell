@@ -47,6 +47,9 @@ describe("companion action presentation", () => {
     ).toBe("left");
     expect(spriteAnimation(state, null, false)).toBe("idle");
     expect(
+      spriteAnimation({ ...state, activity: { ...state.activity, action: "key" } }, null),
+    ).toBe("typing");
+    expect(
       spriteAnimation({ ...state, activity: { ...state.activity, action: "drag" } }, null),
     ).toBe("running");
     expect(companionCueDuration(state)).toBe(400);
