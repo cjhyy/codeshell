@@ -219,6 +219,7 @@ export function MimiCompanionWindow() {
               dragged: false,
             };
             event.currentTarget.setPointerCapture(event.pointerId);
+            setDragPosition({ x: bounds.left, y: bounds.top });
             setHeld(true);
             setMenuOpen(false);
             window.mimiCompanion.interaction("begin");
