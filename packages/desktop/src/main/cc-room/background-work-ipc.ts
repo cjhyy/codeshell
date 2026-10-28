@@ -3,20 +3,28 @@ import {
   findActiveBackgroundJobForExternalSession,
   markBackgroundJobInterruptedForUI,
 } from "@cjhyy/code-shell-core/internal";
+import { createTaskInboxBackgroundHost } from "../task-inbox/task-inbox-background-host.js";
 import type { TaskInboxSourcesDeps } from "../task-inbox/task-inbox-sources.js";
 
 type BackgroundHost = NonNullable<TaskInboxSourcesDeps["background"]>;
 
 /** Share the existing host-authorized controllers with the external task page. */
 export function registerBackgroundWorkIpc(
-  ipc: Pick<IpcMain, "handle">,
-  windows: () => BrowserWindow[],
-  host: BackgroundHost,
-  markInterrupted: typeof markBackgroundJobInterruptedForUI = markBackgroundJobInterruptedForUI,
+  ipcMain: Pick<IpcMain, "handle">,
+  windows: Iterable<BrowserWindow>,
+  worker: Parameters<typeof createTaskInboxBackgroundHost>[0]["worker"],
+  deps: {
+    host?: BackgroundHost;
+    markInterrupted?: typeof markBackgroundJobInterruptedForUI;
+  } = {},
 ): void {
+  const host = deps.host ?? createTaskInboxBackgroundHost({ worker });
+  const markInterrupted = deps.markInterrupted ?? markBackgroundJobInterruptedForUI;
   const requireWindow = (event: IpcMainInvokeEvent) => {
     if (
-      !windows().some((window) => !window.isDestroyed() && window.webContents === event.sender) ||
+      ![...windows].some(
+        (window) => !window.isDestroyed() && window.webContents === event.sender,
+      ) ||
       event.senderFrame !== event.sender.mainFrame
     )
       throw new Error("Background work requires an application window");
@@ -26,7 +34,7 @@ export function registerBackgroundWorkIpc(
       throw new Error("Invalid background work identity");
     return id;
   };
-  ipc.handle(
+  ipcMain.handle(
     "backgroundWork:list",
     async (event, sessionId: unknown, options?: { scope?: unknown }) => {
       requireWindow(event);
@@ -47,7 +55,7 @@ export function registerBackgroundWorkIpc(
       };
     },
   );
-  ipc.handle(
+  ipcMain.handle(
     "backgroundWork:cancelJob",
     async (event, sessionId: unknown, jobId: unknown, expectedStartedAt: unknown) => {
       requireWindow(event);
@@ -67,7 +75,7 @@ export function registerBackgroundWorkIpc(
       return { cancelled: await host.cancel(job, { webContentsId: event.sender.id }) };
     },
   );
-  ipc.handle(
+  ipcMain.handle(
     "backgroundWork:markInterrupted",
     async (event, sessionId: unknown, jobId: unknown, expectedStartedAt: unknown) => {
       requireWindow(event);

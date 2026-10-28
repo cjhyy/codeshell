@@ -411,6 +411,10 @@ export interface RoomManagerOptions {
   resolveLinkedSession?: (
     target: Readonly<LinkedSessionTarget>,
   ) => LinkedSessionTarget | null | undefined;
+  /** Throws while a background task (DriveAgent) may still be writing this
+   * external session. Checked before any resident agent can start on it, so
+   * desktop and phone entry points share one ownership gate. */
+  assertExternalSessionAvailable?: (externalSessionId: string, kind: RoomKind) => void;
   /** Called whenever a room gains a new persisted message (push to phone). */
   onMessage: (roomId: string, msg: RoomMessage) => void;
   /** Called when a room's resident agent requests tool-use approval. For
@@ -936,6 +940,7 @@ export class RoomManager {
     mode: RoomPermissionMode,
     kind: RoomKind = "claude-code",
   ): { roomId: string; status: RoomOpenStatus } {
+    if (claudeSessionId) this.opts.assertExternalSessionAvailable?.(claudeSessionId, kind);
     // Reuse must match BOTH id and kind: a codex thread id and a claude session
     // id live in the same `claudeSessionId` field, so a bare id match could
     // otherwise hand back a claude room when a codex room was asked for.
@@ -1033,6 +1038,7 @@ export class RoomManager {
     cwd: string;
   } {
     const target = this.requireLinkedSessionTarget({ externalSessionId, cwd, kind });
+    this.opts.assertExternalSessionAvailable?.(target.externalSessionId, target.kind);
     const meta = this.getRoom(roomId);
     if (
       !meta ||
@@ -1172,6 +1178,8 @@ export class RoomManager {
     if (!meta) return { status: "missing" };
     if (meta.linkedSessionMode === "observe-only") return { status: "observing" };
     if (!this.agents.has(id)) {
+      if (meta.claudeSessionId)
+        this.opts.assertExternalSessionAvailable?.(meta.claudeSessionId, meta.kind);
       let agent: RoomAgent | undefined = undefined;
       agent = this.opts.createAgent(meta, (event) => {
         // stop() sends a signal; an old process can still drain output or emit

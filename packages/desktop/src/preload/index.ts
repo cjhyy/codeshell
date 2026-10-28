@@ -33,6 +33,7 @@ import { createOperationResolutionApi } from "./operation-resolution-api";
 import { createOptimizationLabApi } from "./optimization-lab-api";
 import { createComputerUseSettingsApi } from "./computer-use-api";
 import { createSessionTranscriptApi } from "./session-transcript-api";
+import { createBackgroundWorkApi, type BackgroundJobProgress } from "./background-work-api";
 import { createModelTraceApi } from "./model-trace-api";
 import { createProfilePluginExportApi } from "./profile-plugin-export-api";
 import { createProfileMemoryPromotionApi } from "./profile-memory-promotion-api";
@@ -85,14 +86,6 @@ export interface BackgroundWorkSourceSession {
   shortId: string;
   title?: string;
   current: boolean;
-}
-
-export interface BackgroundJobProgress {
-  lastActivityAt: number;
-  eventCount: number;
-  phase?: "starting" | "thinking" | "tool" | "responding";
-  summary?: string;
-  recentEvents?: Array<{ at: number; summary: string }>;
 }
 
 type BackgroundWorkWithSource<T> = T & { sourceSession: BackgroundWorkSourceSession };
@@ -689,23 +682,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ) as Promise<{
       ok: boolean;
     }>,
-  /** Unified background-work listing for the panel: shells + sub-agents + jobs. */
-  listBackgroundWork: (sessionId: string, opts?: { scope?: "session" | "all" }) =>
-    ipcRenderer.invoke("backgroundWork:list", sessionId, opts) as Promise<{
-      items: BackgroundWorkInfo[];
-    }>,
-  cancelBackgroundJob: (sessionId: string, jobId: string, expectedStartedAt: number) =>
-    ipcRenderer.invoke("backgroundWork:cancelJob", sessionId, jobId, expectedStartedAt) as Promise<{
-      cancelled: boolean;
-    }>,
-  /** Resolve a task no live process reports; it is recorded as interrupted. */
-  markBackgroundJobInterrupted: (sessionId: string, jobId: string, expectedStartedAt: number) =>
-    ipcRenderer.invoke(
-      "backgroundWork:markInterrupted",
-      sessionId,
-      jobId,
-      expectedStartedAt,
-    ) as Promise<{ marked: boolean }>,
+  ...createBackgroundWorkApi<BackgroundWorkInfo>(ipcRenderer),
   approve: (
     sessionIdOrRequestId: string,
     requestIdOrDecision: string | "approve" | "deny",

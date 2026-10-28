@@ -20,13 +20,16 @@ test("background listing and cancellation require application frame and exact jo
   let cancelled = 0;
   registerBackgroundWorkIpc(
     { handle: (name: string, fn: any) => handlers.set(name, fn) } as any,
-    () => [{ isDestroyed: () => false, webContents: sender }] as any,
+    [{ isDestroyed: () => false, webContents: sender }] as any,
+    () => null,
     {
-      available: () => true,
-      list: async () => [job],
-      cancel: async () => {
-        cancelled++;
-        return true;
+      host: {
+        available: () => true,
+        list: async () => [job],
+        cancel: async () => {
+          cancelled++;
+          return true;
+        },
       },
     },
   );
@@ -50,11 +53,14 @@ test("marking a task ended requires the exact attempt and a status no live proce
   const marks: unknown[] = [];
   registerBackgroundWorkIpc(
     { handle: (name: string, fn: any) => handlers.set(name, fn) } as any,
-    () => [{ isDestroyed: () => false, webContents: sender }] as any,
-    { available: () => true, list: async () => [listed as any], cancel: async () => true },
-    (input) => {
-      marks.push(input);
-      return true;
+    [{ isDestroyed: () => false, webContents: sender }] as any,
+    () => null,
+    {
+      host: { available: () => true, list: async () => [listed as any], cancel: async () => true },
+      markInterrupted: (input) => {
+        marks.push(input);
+        return true;
+      },
     },
   );
   const mark = handlers.get("backgroundWork:markInterrupted")!;
