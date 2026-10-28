@@ -302,6 +302,30 @@ describe("Panel App update controls", () => {
     ).toBe(false);
   });
 
+  test("structured service blockers reach the project toggle without reporting success", async () => {
+    const label = "feed: stop-unconfirmed; original process group 4242; exit unconfirmed";
+    window.codeshell.setPanelAppProjectBinding = async () => ({
+      ok: false,
+      error: "Service exit unconfirmed",
+      blockers: [{ kind: "service", count: 1, label }],
+    });
+    await render();
+    await click("展开");
+    const toggle = nodes(container).find((node) => props(node).role === "switch");
+    await act(async () => {
+      props(toggle).onClick({
+        stopPropagation() {},
+        isPropagationStopped: () => false,
+        defaultPrevented: false,
+      });
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain(label);
+    expect(
+      props(nodes(container).find((node) => props(node).role === "switch"))["aria-checked"],
+    ).toBe(false);
+  });
+
   test("a rejected project installation never reports success or attempts a separate binding", async () => {
     const writes: unknown[] = [];
     Object.assign(window.codeshell, {

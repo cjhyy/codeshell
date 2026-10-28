@@ -13,7 +13,7 @@ import {
 } from "./panel-apps-service.js";
 import { discoverGitPanelAppsForUi, uninstallPanelAppForUi } from "./panel-app-install-service.js";
 import { createDesktopPanelManagement } from "./panel-app-management.js";
-import { panelChangeFailure, panelUpdateApproval } from "./panel-update-blockers.js";
+import { panelChangeOperation, panelUpdateApproval } from "./panel-update-blockers.js";
 import type { ClosePanelForUpdate, DescribePanelGuest } from "./panel-update-blockers.js";
 import { registerProjectPanelVersionIpc } from "./project-panel-version-ipc.js";
 import {
@@ -84,20 +84,8 @@ export function registerProjectPanelIpc(deps: {
         !event.sender.isDestroyed() && (await requireRendererProjectPath(cwd)) === cwd,
     };
   }
-  async function desktopPanelOperation<T>(work: () => Promise<T>) {
-    try {
-      return { ok: true as const, ...(await work()) };
-    } catch (error) {
-      return {
-        ok: false as const,
-        error: error instanceof Error ? error.message : String(error),
-        ...((error as { code?: string })?.code === "already_installed"
-          ? { alreadyInstalled: true as const }
-          : {}),
-        ...panelChangeFailure(error, deps.describeGuest),
-      };
-    }
-  }
+  const desktopPanelOperation = <T>(work: () => Promise<T>) =>
+    panelChangeOperation(work, deps.describeGuest);
 
   ipcMain.handle("panel-apps:list", async (_e, cwd: string, locale: string) => {
     cwd = await requireRendererProjectPath(cwd);
@@ -125,15 +113,17 @@ export function registerProjectPanelIpc(deps: {
   });
   ipcMain.handle(
     "panel-apps:setProjectBinding",
-    async (event, cwd: string, id: string, bound: boolean, expectedRevision: string) => {
-      cwd = await requireRendererProjectPath(cwd);
-      return desktopPanelManager(cwd).management.binding(
-        desktopPanelContext(event, cwd),
-        id,
-        bound,
-        expectedRevision,
-      );
-    },
+    async (event, cwd: string, id: string, bound: boolean, expectedRevision: string) =>
+      desktopPanelOperation(async () => {
+        cwd = await requireRendererProjectPath(cwd);
+        const bindings = await desktopPanelManager(cwd).management.binding(
+          desktopPanelContext(event, cwd),
+          id,
+          bound,
+          expectedRevision,
+        );
+        return { bindings };
+      }),
   );
   ipcMain.handle(
     "panel-apps:listForProjects",
@@ -254,63 +244,72 @@ export function registerProjectPanelIpc(deps: {
         );
       }),
   );
-  ipcMain.handle("panel-apps:uninstall", async (_e, id: string, cwd?: string) => {
-    if (typeof id !== "string" || !id || id.length > 512 || id.includes("\0")) {
-      throw new Error("panel-apps:uninstall requires id");
-    }
-    if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
-      throw new Error("panel-apps:uninstall cwd must be a non-empty string");
-    }
-    const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
-    return panelExecutionGate.mutate(
-      (scope) => scope.appId === id,
-      async () => {
-        await uninstallPanelAppForUi(id);
-        deps.revokeAppId(id);
-        try {
-          const settings = (await readSettings("user")) ?? {};
-          const disabled = (settings as { disabledPanelApps?: unknown }).disabledPanelApps;
-          if (Array.isArray(disabled)) {
-            await writeSettings("user", {
-              disabledPanelApps: disabled.filter((candidate) => candidate !== id),
-            });
-          }
-          if (authorizedCwd) {
-            const projectSettings = (await readSettings("project", authorizedCwd)) ?? {};
-            const bindings = Array.isArray(projectSettings.panelAppBindings)
-              ? projectSettings.panelAppBindings.filter(
-                  (candidate): candidate is string =>
-                    typeof candidate === "string" && candidate !== id,
-                )
-              : [];
-            // Write the full surviving map, not `{[id]: null}`: deepMerge only honors
-            // a null delete when the key already exists, so on a project without
-            // panelAppOverrides the null lands in the file and the settings schema
-            // then rejects it wholesale.
-            const rawOverrides = projectSettings.panelAppOverrides;
-            const overrides: Record<string, "inherit" | "on" | "off"> = {};
-            if (rawOverrides && typeof rawOverrides === "object" && !Array.isArray(rawOverrides)) {
-              for (const [key, value] of Object.entries(rawOverrides as Record<string, unknown>)) {
-                if (key === id) continue;
-                if (value === "inherit" || value === "on" || value === "off")
-                  overrides[key] = value;
-              }
+  ipcMain.handle("panel-apps:uninstall", async (_e, id: string, cwd?: string) =>
+    desktopPanelOperation(async () => {
+      if (typeof id !== "string" || !id || id.length > 512 || id.includes("\0")) {
+        throw new Error("panel-apps:uninstall requires id");
+      }
+      if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
+        throw new Error("panel-apps:uninstall cwd must be a non-empty string");
+      }
+      const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
+      await panelExecutionGate.mutate(
+        (scope) => scope.appId === id,
+        async () => {
+          await uninstallPanelAppForUi(id);
+          deps.revokeAppId(id);
+          try {
+            const settings = (await readSettings("user")) ?? {};
+            const disabled = (settings as { disabledPanelApps?: unknown }).disabledPanelApps;
+            if (Array.isArray(disabled)) {
+              await writeSettings("user", {
+                disabledPanelApps: disabled.filter((candidate) => candidate !== id),
+              });
             }
-            await writeSettings(
-              "project",
-              {
-                panelAppBindings: bindings,
-                panelAppOverrides: overrides,
-              },
-              authorizedCwd,
-            );
+            if (authorizedCwd) {
+              const projectSettings = (await readSettings("project", authorizedCwd)) ?? {};
+              const bindings = Array.isArray(projectSettings.panelAppBindings)
+                ? projectSettings.panelAppBindings.filter(
+                    (candidate): candidate is string =>
+                      typeof candidate === "string" && candidate !== id,
+                  )
+                : [];
+              // Write the full surviving map, not `{[id]: null}`: deepMerge only honors
+              // a null delete when the key already exists, so on a project without
+              // panelAppOverrides the null lands in the file and the settings schema
+              // then rejects it wholesale.
+              const rawOverrides = projectSettings.panelAppOverrides;
+              const overrides: Record<string, "inherit" | "on" | "off"> = {};
+              if (
+                rawOverrides &&
+                typeof rawOverrides === "object" &&
+                !Array.isArray(rawOverrides)
+              ) {
+                for (const [key, value] of Object.entries(
+                  rawOverrides as Record<string, unknown>,
+                )) {
+                  if (key === id) continue;
+                  if (value === "inherit" || value === "on" || value === "off")
+                    overrides[key] = value;
+                }
+              }
+              await writeSettings(
+                "project",
+                {
+                  panelAppBindings: bindings,
+                  panelAppOverrides: overrides,
+                },
+                authorizedCwd,
+              );
+            }
+          } catch (error) {
+            deps.onCleanupError(id, error);
           }
-        } catch (error) {
-          deps.onCleanupError(id, error);
-        }
-        deps.onChanged();
-      },
-      () => deps.closeForPackageChange(id, (scope) => scope.appId === id),
-    );
-  });
+          deps.onChanged();
+        },
+        () => deps.closeForPackageChange(id, (scope) => scope.appId === id),
+      );
+      return {};
+    }),
+  );
 }

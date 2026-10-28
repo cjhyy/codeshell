@@ -151,6 +151,7 @@ test("Desktop authorization/dispatch/events survive closing all guests and selec
     managedBinDirectory: () => join(root, "bin"),
     trustedWorkspaceRoot: async () => root,
     revokeWindowSource() {},
+    assertLiveProjectBinding() {},
   });
   const guest = (id: number) => {
     const sent: any[] = [];

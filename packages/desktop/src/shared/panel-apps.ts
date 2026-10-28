@@ -229,6 +229,16 @@ export interface PanelAppUpdateInput {
   /** Close this app's instances in the affected projects and stop their work first. */
   force?: boolean;
 }
+export type PanelAppMutationFailure = {
+  ok: false;
+  error: string;
+  blockers?: PanelAppChangeBlocker[];
+};
+export type PanelAppBindingResult =
+  | { ok: true; bindings: PanelAppBindingState[] }
+  | PanelAppMutationFailure;
+export type PanelAppUninstallResult = { ok: true } | PanelAppMutationFailure;
+
 export type PanelAppUpdateResult =
   | { ok: true; id: string }
   | {

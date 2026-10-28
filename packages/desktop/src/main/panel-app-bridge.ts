@@ -50,6 +50,7 @@ import {
   PanelModelTraceService,
   PanelToolJobService,
   PanelBackgroundService,
+  backgroundServiceLimits,
   type BackgroundServiceScope,
   PanelTaskCookieHost,
   taskCookieFromInput,
@@ -756,13 +757,23 @@ export class PanelAppBridge {
 
   /** Restore durable media work after Host trust has been loaded, independent of guests. */
   async initializeMedia(): Promise<void> {
-    await this.getResourceService().initialize();
-    await this.getToolJobService().initialize();
-    await this.getMediaService().initialize();
-    // A damaged optional credential key must not prevent unrelated media recovery.
-    if (this.options.cookieCredentials?.taskCredentials)
-      await this.getTaskCookieHost().initialize();
-    if (process.platform !== "win32") {
+    const failures: unknown[] = [];
+    // Each component retains its original failure, but cannot prevent unrelated
+    // recovery. In particular, damaged Cookie state must not suppress services.
+    for (const component of [
+      () => this.getResourceService(),
+      () => this.getToolJobService(),
+      () => this.getMediaService(),
+      ...(this.options.cookieCredentials?.taskCredentials ? [() => this.getTaskCookieHost()] : []),
+    ]) {
+      if (this.resourceTransfersStopping) break;
+      try {
+        await component().initialize();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+    if (!this.resourceTransfersStopping && process.platform !== "win32") {
       try {
         await this.getBackgroundService().initialize();
         this.backgroundInitializationError = undefined;
@@ -771,6 +782,9 @@ export class PanelAppBridge {
         console.warn("Panel background services unavailable:", error);
       }
     }
+    if (failures.length === 1) throw failures[0];
+    if (failures.length)
+      throw new AggregateError(failures, "Panel component initialization failed");
   }
 
   async shutdownMedia(): Promise<void> {
@@ -1460,7 +1474,7 @@ export class PanelAppBridge {
     const binding = this.bindingFor(sender);
     const readContext = (bound: GuestBinding): PanelAppHostContext => {
       this.assertProjectBinding(bound);
-      return { ...bound.context };
+      return { ...bound.context, ...this.capabilitiesFor(bound) };
     };
     return binding.bucket
       ? readContext(binding)
@@ -1480,14 +1494,21 @@ export class PanelAppBridge {
         ? 2 * 1024 * 1024 + 8 * 1024
         : method.startsWith("modelTraces.")
           ? 256 * 1024
-          : method === "process.write" || method === "services.configure"
-            ? 128 * 1024
-            : method === "workspace.writeText"
-              ? MAX_WORKSPACE_WRITE_BYTES * 6 + 8 * 1024
-              : method === "storage.set" || method === "storage.compareAndSet"
-                ? this.storageQuotaBytes() + 8 * 1024
-                : MAX_PARAMS_BYTES);
-    if (jsonBytes(params) > paramsLimit) {
+          : method === "services.configure"
+            ? backgroundServiceLimits.maxConfigBytes + 4096
+            : method === "process.write"
+              ? 128 * 1024
+              : method === "workspace.writeText"
+                ? MAX_WORKSPACE_WRITE_BYTES * 6 + 8 * 1024
+                : method === "storage.set" || method === "storage.compareAndSet"
+                  ? this.storageQuotaBytes() + 8 * 1024
+                  : MAX_PARAMS_BYTES);
+    if (
+      jsonBytes(params) >
+      (method === "services.configure"
+        ? Math.min(paramsLimit, backgroundServiceLimits.maxConfigBytes + 4096)
+        : paramsLimit)
+    ) {
       throw new PanelBridgeError("PARAMS_TOO_LARGE", "Panel App params are too large");
     }
     const now = Date.now();
@@ -1643,7 +1664,8 @@ export class PanelAppBridge {
     return desktopPanelCapabilities(binding.resource.descriptor.permissions, {
       resources: this.getResourceService().capabilities(),
       services:
-        !this.backgroundInitializationError &&
+        !this.resourceTransfersStopping &&
+        this.backgroundService?.isAvailable() === true &&
         process.platform !== "win32" &&
         !!binding.resource.descriptor.backgroundServices,
       tasks: {
@@ -1931,10 +1953,31 @@ export class PanelAppBridge {
         "NOT_SUPPORTED",
         "Background services require verifiable POSIX process custody",
       );
-    if (this.backgroundInitializationError)
-      throw new PanelBridgeError("NOT_SUPPORTED", this.backgroundInitializationError);
+    if (this.resourceTransfersStopping || !this.backgroundService?.isAvailable())
+      throw new PanelBridgeError(
+        "NOT_SUPPORTED",
+        this.backgroundInitializationError ??
+          "Background services are not initialized or available",
+      );
     const input = (params ?? {}) as any;
     const service = this.getBackgroundService();
+    if (method !== "services.get" && method !== "services.read") {
+      const installed = await this.projectToolApps(binding.projectPath).get(
+        binding.resource.descriptor.appId,
+      );
+      if (
+        !installed ||
+        installedPanelAppRevision(installed) !== binding.resource.descriptor.revision ||
+        !["process", "background.services", "context.workspace"].every((permission) =>
+          installed.permissions.includes(permission as PanelAppPermission),
+        )
+      )
+        throw new PanelBridgeError(
+          "REVOKED",
+          "Installed background service revision or permissions changed",
+        );
+      this.assertLiveProjectBinding(binding);
+    }
     if (method === "services.detach") return service.detach(input.attachId, binding.guest.id);
     if (
       !binding.resource.descriptor.backgroundServices ||
