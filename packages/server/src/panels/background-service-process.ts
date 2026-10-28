@@ -142,6 +142,9 @@ export async function spawnServiceProcess(
     custodyResolve = resolve;
     custodyReject = reject;
   });
+  // Spawn can reject before the custody await is reached; close still rejects
+  // custody, so install its rejection handler before either event can fire.
+  void custody.catch(() => {});
   let memberResolve!: (identity: ServiceProcessIdentity) => void;
   let memberReject!: (error: Error) => void;
   const member = new Promise<ServiceProcessIdentity>((resolve, reject) => {

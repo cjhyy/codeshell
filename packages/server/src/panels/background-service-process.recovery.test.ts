@@ -1,4 +1,6 @@
 import { expect, test } from "bun:test";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { mkdtemp, mkdir, writeFile, rm, realpath } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
@@ -74,6 +76,52 @@ setInterval(()=>{},1000);createInterface({input:process.stdin}).on('line',line=>
     expect(await actual.terminate(0)).toBe(status === "dead");
   } finally {
     await actual?.terminate(0);
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("spawn failure observes custody rejection before close", async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "service-spawn-failure-")));
+  try {
+    const entry = join(root, "entry.mjs"),
+      source = "export {};";
+    await writeFile(entry, source);
+    // Execute this failure under Node, matching Electron's child_process event
+    // ordering. Bun throws invalid-cwd spawn failures before a child is returned.
+    const built = await Bun.build({
+      entrypoints: [join(import.meta.dir, "background-service-process.ts")],
+      outdir: root,
+      target: "node",
+      format: "esm",
+      naming: "process.mjs",
+    });
+    expect(built.success).toBe(true);
+    const executable = (await resolvePanelExecutable("node"))!;
+    const input = {
+      executable,
+      entry,
+      packageRoot: root,
+      cwd: join(root, "missing-directory"),
+      sha256: createHash("sha256").update(source).digest("hex"),
+      maxLineBytes: 4096,
+    };
+    const script = `
+import { spawnServiceProcess } from ${JSON.stringify(join(root, "process.mjs"))};
+let closed;const closeSignal=new Promise(resolve=>{closed=resolve});
+try {
+ await spawnServiceProcess({...${JSON.stringify(input)},onLine(){},onExit(){closed()}},{probeRuntime:async()=>["--permission"]});
+ throw Error('EXPECTED_SPAWN_FAILURE');
+} catch(error) { if(error.code!=='ENOENT')throw error; }
+await closeSignal;
+`;
+    const result = await promisify(execFile)(executable, [
+      "--unhandled-rejections=strict",
+      "--input-type=module",
+      "-e",
+      script,
+    ]);
+    expect(result.stderr).toBe("");
+  } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
