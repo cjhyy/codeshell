@@ -40,6 +40,33 @@ Closing the experiment window exits it. Native interaction smoke:
 bun run preview:companion --smoke
 ```
 
+For the full application path, after building Desktop run from
+`packages/desktop`:
+
+```sh
+bun run test:e2e:companion-chat --right-display
+```
+
+This opens an isolated production workbench and companion. It verifies menu
+dismissal releases the host's interaction hold, clicking the character opens the
+real Mimi page, and two composer messages pass through the actual Pet worker in
+the same session. Replies come from a local **mock model**; no real model
+credentials are imported. The test uses scripted renderer input, so it does not
+certify native mouse hit testing, real CUA execution or visibility above other
+applications. It closes its own app and verifies process cleanup before deleting
+its temporary HOME. A JSON receipt is written to `out/mimi-chat-<time>.json`.
+
+Add `--keep-open` to retain the verified app for native interaction checks. The
+console reports its PID, private HOME/userData and `companion-trial-state.json`.
+Type `exit` and Enter, close that app, or send Ctrl-C to finish and clean up; the
+session also expires after 30 minutes. `--right-display` requires the selected
+right-side 2560×1440 monitor rather than silently choosing another. Optional
+`--cua-driver <absolute-executable>` enables the real embedded driver in this
+temporary profile; the local mock model itself does not issue CUA operations.
+macOS uses the existing harness's Keychain metadata preflight and normal native
+safeStorage, without replacing the installed app or copying its stored provider
+credentials.
+
 `--external-cua` accepts JSON presentation events over stdin for a supervised
 demonstration with another CUA client. It does not automatically observe Codex
 tool calls. A caller sends start/end around the real action; only explicit,
