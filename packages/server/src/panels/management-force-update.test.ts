@@ -128,9 +128,9 @@ for (const invalid of [
   });
 }
 
-test("a valid forced update fences admission, preserves pinned projects and survives TTL during cancellation", async () => {
+test("a valid forced update fences admission in every project using the app and survives TTL during cancellation", async () => {
   const f = await fixture();
-  const elsewhere = join(directory, "unaffected-project");
+  const elsewhere = join(directory, "other-project");
   mkdirSync(elsewhere);
   const other = createPanelManagement({ cwd: elsewhere, projectPackages: true });
   cleanups.push(() => other.close());
@@ -138,27 +138,34 @@ test("a valid forced update fences admission, preserves pinned projects and surv
   await other.binding(owner, app.id, true, app.revision);
   const otherScope = { appId: app.id, projectPath: elsewhere };
   const otherRelease = panelExecutionGate.enter(otherScope);
-  cleanups.push(otherRelease);
+  let otherReleased = false;
+  const releaseOther = () => {
+    if (!otherReleased) otherRelease();
+    otherReleased = true;
+  };
+  cleanups.push(releaseOther);
   let closed = 0;
   const result = await f.api.install(owner, f.review.reviewToken, true, {
     ...f.approval,
     releaseExecutions: async (id, matches) => {
       closed++;
       expect(id).toBe(app.id);
+      // A catalog update supersedes every project's pin, so it reaches every project.
       expect(matches(f.scope)).toBe(true);
-      expect(matches(otherScope)).toBe(false);
+      expect(matches(otherScope)).toBe(true);
       expect(() => panelExecutionGate.enter(f.scope)).toThrow("正在更新");
-      panelExecutionGate.enter(otherScope)();
+      expect(() => panelExecutionGate.enter(otherScope)).toThrow("正在更新");
       f.advance();
       f.release();
+      releaseOther();
       await Promise.resolve();
     },
   });
   expect(result.id).toBe(app.id);
   expect(closed).toBe(1);
   expect((await f.api.snapshot()).panels[0]!.version).toBe("2.0.0");
-  expect((await other.snapshot()).panels[0]!.version).toBe("1.0.0");
-  expect(panelExecutionGate.blockers((scope) => scope.projectPath === elsewhere)).toHaveLength(1);
+  expect((await other.snapshot()).panels[0]!.version).toBe("2.0.0");
+  expect(panelExecutionGate.blockers((scope) => scope.projectPath === elsewhere)).toHaveLength(0);
   await expect(f.api.install(owner, f.review.reviewToken, true, f.approval)).rejects.toThrow(
     "预览已失效",
   );

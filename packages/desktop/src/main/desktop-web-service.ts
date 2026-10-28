@@ -3,7 +3,6 @@ import type { IncomingMessage } from "node:http";
 import { app } from "electron";
 import {
   codeShellHome,
-  projectPanelAppPackagePins,
   resolvePanelAppBindingProjectPath,
   sessionsRoot,
   type RemoteLinkConfiguration,
@@ -138,14 +137,8 @@ export function createDesktopWebService(options: {
                     .filter(([otherCwd]) => {
                       const otherProject = panelProjectPath(otherCwd);
                       if (kind === "remove" || otherProject === bindingCwd) return true;
-                      if (kind === "binding") return false;
-                      // Legacy projects still follow the catalog. Only a valid
-                      // explicit pin protects another project's running work.
-                      try {
-                        return !projectPanelAppPackagePins(otherProject, id)[id];
-                      } catch {
-                        return true;
-                      }
+                      // An install or update supersedes every project's pin.
+                      return kind !== "binding";
                     })
                     .map(([, value]) => value.handler.invalidate(id)),
                 );

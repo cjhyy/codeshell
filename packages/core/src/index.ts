@@ -478,6 +478,8 @@ export {
   inspectProjectPanelApps,
   type ProjectPanelAppIssue,
   projectPanelAppPackagePins,
+  currentPanelAppPackagePins,
+  installedPanelAppUpdatedAt,
   migrateProjectPanelAppPackagePins,
   selectProjectPanelAppPackage,
   parsePanelAppPackagePins,

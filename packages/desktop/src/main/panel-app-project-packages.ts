@@ -18,7 +18,13 @@ export function projectPanelAppInspectionCache(projectPath: string): PanelAppIns
       const selected = pin(id);
       return selected ? panelAppPackageDir(id, selected.packageDigest) : panelAppInstallDir(id);
     },
-    selectionKey: (id) => JSON.stringify(pin(id) ?? null),
+    // The selected package, not when it was pinned, decides cache identity.
+    selectionKey(id) {
+      const selected = pin(id);
+      return JSON.stringify(
+        selected ? { version: selected.version, packageDigest: selected.packageDigest } : null,
+      );
+    },
     registryPath: panelAppsRegistryPath,
     listInstalled: async () => (await inspectProjectPanelApps(projectPath)).apps,
   });
