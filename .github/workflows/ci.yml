@@ -469,6 +469,15 @@ jobs:
         run: bun scripts/run-isolated-node-smoke.mjs scripts/smoke-panel-inline-resources.mjs
       - name: Paired mobile tunnel Panel load and file download
         run: bun run test:mobile-panel-downloads
+      - name: Check out the reviewed Video Download consumer
+        uses: actions/checkout@v7
+        with:
+          repository: cjhyy/codeshell-panel-apps
+          ref: 36cb880540c7c6a4f83efda71e2ab6c1536c81bf
+          path: .mobile-panel-consumer
+          persist-credentials: false
+      - name: Real Video Download mobile task and exact file delivery
+        run: node scripts/run-isolated-node-smoke.mjs scripts/run-mobile-video-download.mjs .mobile-panel-consumer/apps/video-download
 
   tests-windows:
     name: tests (windows port — real win32)

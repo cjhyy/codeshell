@@ -76,3 +76,11 @@ real tunnel passcode gate in a 390px browser, saves synthetic computer bytes,
 checks copied URLs and clipboard fallback, and verifies range reads and access
 revocation. It uses a private HOME and makes no provider or video-site requests.
 Set `CODESHELL_TEST_CHROMIUM` to an installed Chromium executable when needed.
+
+For the reviewed Video Download 0.24.1 consumer, run
+`node scripts/run-isolated-node-smoke.mjs scripts/run-mobile-video-download.mjs /path/to/codeshell-panel-apps/apps/video-download`.
+It installs and binds the actual Panel in a private HOME, loads its opaque modules
+through the tunnel, approves its reviewed native entries, downloads deterministic
+local fixture bytes, and saves them from mobile history through the resource
+bridge. The Node runner verifies natural exit and cleanup. CI pins the consumer
+source commit; no real video site, model account or installed user Panel is used.
