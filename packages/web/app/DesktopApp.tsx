@@ -19,6 +19,7 @@ import { SessionDrafts } from "./drafts.js";
 import { sessionTitle } from "./chat.js";
 import { Workbench } from "./Workbench.js";
 import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopControls.js";
+import { DesktopModelPicker, desktopRuntimeModel } from "./DesktopModelPicker.js";
 import type { WorkbenchController } from "./workbench-types.js";
 import { DesktopAccessChallenge } from "./DesktopAccessChallenge.js";
 
@@ -172,6 +173,14 @@ export function useDesktopController(
     if (selectedSessionCwd != null) setWorkspaceOverride(selectedSessionCwd);
   }, [selectedSessionCwd]);
   const workspaceKey = workspaceCwd ?? "desktop-unbound";
+  const sessionProject = projectForCwd(workspaceCwd, app.projects);
+  const sessionScopeKey = JSON.stringify(
+    workspaceCwd
+      ? sessionProject?.roots?.length
+        ? sessionProject.roots.map((root) => root.path).sort()
+        : [sessionProject?.path ?? workspaceCwd]
+      : [],
+  );
   // Layout effects run before any keyed management view issues passive fetches.
   React.useLayoutEffect(() => {
     setApiWorkspace(workspaceCwd ?? undefined);
@@ -185,6 +194,8 @@ export function useDesktopController(
   workspaceRef.current = workspaceCwd;
   const appRef = React.useRef(app);
   appRef.current = app;
+  const onAuthLostRef = React.useRef(onAuthLost);
+  onAuthLostRef.current = onAuthLost;
   const mounted = React.useRef(false);
   React.useEffect(() => {
     mounted.current = true;
@@ -207,24 +218,27 @@ export function useDesktopController(
         setConfigurationVersion((value) => value + 1);
       }
     } catch (error) {
-      if (mounted.current && error instanceof ApiError && error.status === 401) onAuthLost();
+      if (mounted.current && error instanceof ApiError && error.status === 401)
+        onAuthLostRef.current();
     }
-  }, [session, onAuthLost]);
+  }, [session]);
   React.useEffect(() => {
     setConfiguration(null);
     void refreshConfiguration();
   }, [workspaceCwd, refreshConfiguration]);
   React.useEffect(() => {
     if (app.status === "online") {
-      appRef.current.refreshSessions();
+      appRef.current.refreshSessions(JSON.parse(sessionScopeKey));
+      appRef.current.refreshRuntimeModels?.();
       void refreshConfiguration();
     }
-  }, [app.status, refreshConfiguration]);
+  }, [app.status, sessionScopeKey, refreshConfiguration]);
   React.useEffect(() => {
     const refresh = () => {
       if (document.visibilityState !== "hidden") {
         void refreshConfiguration();
         appRef.current.refreshSessions();
+        appRef.current.refreshRuntimeModels?.();
         setSessionsVersion((value) => value + 1);
       }
     };
@@ -239,6 +253,10 @@ export function useDesktopController(
   const drafts = React.useRef(new SessionDrafts());
   const localFiles = React.useRef(new Map<string, File>());
   const draftWorkspaces = React.useRef(new Map<string, string | null>());
+  const modelChoices = React.useRef(new Map<string, string>());
+  const activeModelMetadata = React.useRef<{ sessionId: string; model: string } | undefined>(
+    undefined,
+  );
   const [draftRevision, setDraftRevision] = React.useState(0);
   const [newDraftId, setNewDraftId] = React.useState(() => `desktop-new-${browserId()}`);
   const activeId = app.activeRoom
@@ -254,7 +272,9 @@ export function useDesktopController(
     draftId: string;
     navigationRevision: number;
     previousSessionId?: string;
+    failureCount: number;
   } | null>(null);
+  const [creationNeedsRetry, setCreationNeedsRetry] = React.useState(false);
   const activeIdRef = React.useRef(activeId);
   activeIdRef.current = activeId;
   const [sendingId, setSendingId] = React.useState<string | null>(null);
@@ -266,7 +286,40 @@ export function useDesktopController(
   );
   const [error, setError] = React.useState("");
   const draft = drafts.current.get(activeId);
+  const activeMetadata = app.sessions.find((item) => item.id === activeId);
+  if (activeMetadata) {
+    activeModelMetadata.current = {
+      sessionId: activeId,
+      model: desktopRuntimeModel(activeMetadata),
+    };
+  }
+  // Refreshing page one does not change the producer of a selected older row.
+  const persistedModel =
+    activeModelMetadata.current?.sessionId === activeId ? activeModelMetadata.current.model : "";
+  const selectedModel = modelChoices.current.get(activeId) ?? persistedModel;
   const changed = () => setDraftRevision((value) => value + 1);
+  React.useLayoutEffect(() => {
+    const pending = pendingCreate.current;
+    if (!pending || (app.sessionCreationFailures ?? 0) <= pending.failureCount) return;
+    pendingCreate.current = null;
+    if (pending.navigationRevision !== navigationRevision.current || app.activeRoom) return;
+    if (
+      app.activeSessionId &&
+      app.activeSessionId === pending.previousSessionId &&
+      pending.draftId !== activeId
+    ) {
+      // A rejected socket send leaves the old conversation selected. Bring
+      // its moved draft back into the visible composer without losing text or
+      // attachments entered while creation was pending.
+      const moved = drafts.current.take(pending.draftId);
+      drafts.current.restore({ ...moved, sessionId: activeId });
+      modelChoices.current.set(activeId, modelChoices.current.get(pending.draftId) ?? "");
+      modelChoices.current.delete(pending.draftId);
+      changed();
+    }
+    setCreationNeedsRetry(true);
+    setError("新会话未建立。输入内容和模型选择已保留，请重试建立会话。");
+  }, [app.sessionCreationFailures]);
   // A new Desktop session gets its durable ID asynchronously. Carry text typed
   // while its first message was being accepted into that ID, but never move a
   // draft after explicit navigation or overwrite an already edited destination.
@@ -275,6 +328,11 @@ export function useDesktopController(
     if (!pending?.settled || !app.activeSessionId) return;
     pendingNewSend.current = null;
     if (pending.navigationRevision !== navigationRevision.current || app.activeRoom) return;
+    if (modelChoices.current.has(pending.draftId)) {
+      modelChoices.current.set(app.activeSessionId, modelChoices.current.get(pending.draftId)!);
+      modelChoices.current.delete(pending.draftId);
+      changed();
+    }
     if (drafts.current.get(app.activeSessionId).revision !== 0) return;
     const next = drafts.current.get(pending.draftId);
     if (!next.text && !next.files.length) return;
@@ -297,6 +355,11 @@ export function useDesktopController(
       return;
     pendingCreate.current = null;
     if (pending.navigationRevision !== navigationRevision.current || app.activeRoom) return;
+    if (modelChoices.current.has(pending.draftId)) {
+      modelChoices.current.set(app.activeSessionId, modelChoices.current.get(pending.draftId)!);
+      modelChoices.current.delete(pending.draftId);
+      changed();
+    }
     if (drafts.current.get(app.activeSessionId).revision !== 0) return;
     const next = drafts.current.get(pending.draftId);
     if (!next.text && !next.files.length) return;
@@ -339,7 +402,13 @@ export function useDesktopController(
       actions.newSession(targetForCwd(app, project?.path ?? id));
     },
     selectSession: (id) => {
+      if (app.status !== "online") {
+        setError("连接已断开，重新连接后才能切换会话。");
+        return;
+      }
       navigationRevision.current += 1;
+      pendingCreate.current = null;
+      setCreationNeedsRetry(false);
       setWorkspaceSessionId(id);
       const selected = app.sessions.find((item) => item.id === id);
       // Shared history is scoped to the current workspace and may contain
@@ -368,13 +437,21 @@ export function useDesktopController(
         draftId,
         navigationRevision: navigationRevision.current,
         previousSessionId: app.activeSessionId,
+        failureCount: app.sessionCreationFailures ?? 0,
       };
+      setCreationNeedsRetry(false);
       setNewDraftId(draftId);
       app.newSession(selected, name);
       setError("");
     },
     openCcSession: (id, cwd, mode) => {
+      if (app.status !== "online") {
+        setError("连接已断开，重新连接后才能打开 CLI 会话。");
+        return;
+      }
       navigationRevision.current += 1;
+      pendingCreate.current = null;
+      setCreationNeedsRetry(false);
       setWorkspaceSessionId(undefined);
       setWorkspaceOverride(cwd);
       app.openCcSession(id, cwd, mode);
@@ -394,7 +471,7 @@ export function useDesktopController(
     cwd: item.cwd,
     startedAt: item.updatedAt,
     lastActiveAt: item.updatedAt,
-    model: "",
+    model: item.model ?? "",
     status: item.id === app.activeSessionId ? app.chat.run : "saved",
     turnCount: 0,
   }));
@@ -405,6 +482,8 @@ export function useDesktopController(
   const send = (options?: { modelTraceSource?: string }): boolean => {
     if (sendingRef.current || app.status !== "online" || running || app.activeRoom?.observing)
       return false;
+    if (pendingCreate.current || creationNeedsRetry) return false;
+    if (selectedModel && (app.loading.sessionHistory || !app.activeSessionId)) return false;
     if ((app.activeCwd ?? app.activeProjectCwd ?? null) !== workspaceCwd) {
       setError("当前会话属于另一个工作区。请选择本项目的会话，或新建任务。");
       return false;
@@ -440,6 +519,7 @@ export function useDesktopController(
       .sendChat({
         text: submitted.draft.text,
         attachments,
+        ...(selectedModel && !app.activeRoomId ? { modelKey: selectedModel } : {}),
         ...(options?.modelTraceSource ? { modelTraceSource: options.modelTraceSource } : {}),
         ...(retryId ? { clientMessageId: retryId } : {}),
         onUncertain: (clientMessageId) => {
@@ -542,7 +622,9 @@ export function useDesktopController(
         draftId: id,
         navigationRevision: navigationRevision.current,
         previousSessionId: app.activeSessionId,
+        failureCount: app.sessionCreationFailures ?? 0,
       };
+      setCreationNeedsRetry(false);
       const cwd = draftWorkspaces.current.get(id) ?? null;
       setWorkspaceOverride(cwd);
       setNewDraftId(id);
@@ -557,6 +639,35 @@ export function useDesktopController(
     app.chat.title ||
     app.sessions.find((item) => item.id === app.activeSessionId)?.title ||
     sessionTitle(app.chat, activeId);
+  const chooseRuntimeModel = (modelKey: string, forceCreation = false) => {
+    if (
+      app.status !== "online" ||
+      running ||
+      sendingRef.current ||
+      app.loading.sessionHistory ||
+      uncertainIntents.current.has(activeId)
+    )
+      return;
+    if (modelKey && !app.runtimeModels?.some((model) => model.key === modelKey)) return;
+    if (
+      forceCreation ||
+      (modelKey && !app.activeSessionId && !pendingCreate.current) ||
+      (!modelKey && (persistedModel || (selectedModel && app.chat.items.length)))
+    ) {
+      // Returning from an external producer to Core creates an explicit
+      // native session; omitting modelKey must never silently reuse the CLI.
+      const previous = drafts.current.take(activeId).draft;
+      actions.newSession();
+      const nextId = pendingCreate.current!.draftId;
+      drafts.current.setText(nextId, previous.text);
+      for (const file of previous.files) drafts.current.addFile(nextId, file);
+      modelChoices.current.set(nextId, modelKey);
+      if (!modelKey) setError("已新建默认模型会话，输入内容已保留。");
+    } else {
+      modelChoices.current.set(activeId, modelKey);
+    }
+    changed();
+  };
   return {
     host: "desktop",
     workspaceApi: Boolean(session),
@@ -635,6 +746,30 @@ export function useDesktopController(
       />
     ),
     chatControls: <DesktopChatControls app={actions} />,
+    modelSelector: app.activeRoomId ? undefined : (
+      <DesktopModelPicker
+        models={app.runtimeModels ?? []}
+        value={selectedModel}
+        defaultLabel={
+          configuration?.connections.find((item) => item.id === configuration.defaults.text)
+            ?.model || "默认模型"
+        }
+        loading={app.runtimeModelsLoading}
+        error={app.runtimeModelsError}
+        disabled={
+          app.status !== "online" ||
+          running ||
+          sendingId !== null ||
+          app.loading.sessionHistory ||
+          uncertainIntents.current.has(activeId)
+        }
+        onRefresh={app.refreshRuntimeModels}
+        onChange={chooseRuntimeModel}
+        onRetryCreation={
+          creationNeedsRetry ? () => chooseRuntimeModel(selectedModel, true) : undefined
+        }
+      />
+    ),
     goalActions: app.activeSessionId ? (
       <>
         <button className="library-button" onClick={() => app.extendGoal(app.activeSessionId!)}>
@@ -645,7 +780,8 @@ export function useDesktopController(
         </button>
       </>
     ) : undefined,
-    loading: app.loading.sessionHistory || app.loading.roomHistory,
+    loading:
+      app.loading.sessionHistory || app.loading.roomHistory || Boolean(pendingCreate.current),
     readOnly: app.activeRoom?.observing,
     readOnlyNote: app.activeRoom?.observing
       ? "此 CLI 会话正在桌面运行，当前设备以只读方式查看。"

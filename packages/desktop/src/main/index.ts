@@ -145,6 +145,8 @@ import { getCuaDriverHost } from "./computer-use/service.js";
 import { initializeDesktopComputerUse } from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
+import { startMobileExternalRuntime } from "./mobile-remote/start-external-runtime.js";
+import { initializeMobileRemoteLifecycle } from "./mobile-remote/lifecycle.js";
 import { externalRuntimeToolContextForSession } from "./external-runtime-tool-context.js";
 import { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertWorkspaceProfileName } from "./external-runtime-profile.js";
@@ -370,14 +372,12 @@ import {
   CloudflaredBinary,
   CodexRoomAgent,
   MobileUploadService,
-  mobileTranscriptSubscriberId,
   PendingMobileApprovals,
   RemoteHostManager,
   ResidentAgentProcess,
   RoomManager,
   TrustedDeviceStore,
   TunnelManager,
-  type MobileViewerIdentity,
 } from "@cjhyy/code-shell-server/mobile-remote";
 import {
   MobileRemoteOrchestrator,
@@ -1297,6 +1297,17 @@ const mobileOrchestrator = new MobileRemoteOrchestrator({
   transcriptSubscriptions,
   getBridge: () => bridge,
   getExternalRuntimeService: () => externalRuntimeService,
+  getExternalRuntimeModels: () => externalRuntimeModelService.list(),
+  getExternalRuntimeApprovals: () => externalRuntimeApprovals,
+  startMobileRuntime: (request) =>
+    startMobileExternalRuntime(
+      {
+        service: () => externalRuntimeService,
+        bridge: () => bridge,
+        windows: () => mainWindows,
+      },
+      request,
+    ),
   broadcastToWindows: (channel, payload) => {
     for (const w of BrowserWindow.getAllWindows()) {
       if (!w.isDestroyed()) w.webContents.send(channel, payload);
@@ -1304,24 +1315,12 @@ const mobileOrchestrator = new MobileRemoteOrchestrator({
   },
 });
 
-// An abruptly closed phone tab has no chance to send unsubscribe. Release the
-// exact socket/viewer without disturbing another tab authenticated as the same
-// device.
-mobileRemote.on("viewer-offline", ({ viewerId }: MobileViewerIdentity) => {
-  mobileOrchestrator.releaseViewer(viewerId);
-  transcriptSubscriptions?.unsubscribeSubscriber(mobileTranscriptSubscriberId(viewerId));
-});
-
-// Idle-based room GC: rooms untouched for longer than this are reaped at
-// startup (a running room is never reaped). Replaces the cleanup the removed
-// one-shot /cc path never had.
-const ROOM_MAX_IDLE_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
-try {
-  const reaped = roomManager.pruneStaleRooms(ROOM_MAX_IDLE_MS);
-  if (reaped.length) console.log(`[rooms] pruned ${reaped.length} stale room(s)`);
-} catch {
-  /* GC is best-effort; never block startup */
-}
+initializeMobileRemoteLifecycle(
+  mobileRemote,
+  mobileOrchestrator,
+  transcriptSubscriptions,
+  roomManager,
+);
 
 /**
  * Harden the browser-panel <webview> guests hosted in `win`: no node, sandboxed,
@@ -1719,6 +1718,7 @@ async function createWindow(): Promise<BrowserWindow> {
     externalRuntimeApprovals = new ExternalRuntimeApprovals({
       windows: () => mainWindows,
       ownerWebContentsId: (sessionId) => externalBridge.panelOwnerWebContentsId(sessionId),
+      onPendingChange: (event) => mobileOrchestrator.mirrorExternalApproval(event),
     });
     const approvals = externalRuntimeApprovals;
     externalRuntimeService = new ExternalRuntimeService({

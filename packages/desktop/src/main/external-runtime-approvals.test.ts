@@ -7,6 +7,7 @@ import { describe, expect, test } from "bun:test";
 import {
   ExternalRuntimeApprovals,
   parseExternalApprovalDecision,
+  type ExternalApprovalEvent,
 } from "./external-runtime-approvals.js";
 
 interface FakeWindow {
@@ -32,6 +33,126 @@ function router(windows: FakeWindow[], owner?: (sessionId: string) => number | u
 const request = { toolName: "Bash", riskLevel: "high" as const };
 
 describe("ExternalRuntimeApprovals", () => {
+  test("paired replay and decisions require both the selected Session and its owner", async () => {
+    const owner = fakeWindow(1);
+    const other = fakeWindow(2);
+    const events: ExternalApprovalEvent[] = [];
+    const approvals = new ExternalRuntimeApprovals({
+      windows: () => [owner.window, other.window] as never,
+      ownerWebContentsId: (sessionId) => (sessionId === "other-owner" ? 2 : 1),
+      onPendingChange: (event) => events.push(event),
+    });
+    const selected = approvals.request("selected", request);
+    const sameOwner = approvals.request("same-owner", request);
+    const otherOwner = approvals.request("other-owner", request);
+    const selectedId = (owner.sent[0]!.payload as { requestId: string }).requestId;
+    const sameOwnerId = (owner.sent[1]!.payload as { requestId: string }).requestId;
+    const otherOwnerId = (other.sent[0]!.payload as { requestId: string }).requestId;
+    expect(approvals.pendingForSession("selected", 1)).toEqual([
+      { sessionId: "selected", requestId: selectedId, request, source: "external-runtime" },
+    ]);
+    expect(approvals.pendingForSession("selected", 2)).toEqual([]);
+    expect(approvals.settleForSession("selected", sameOwnerId, { approved: true }, 1)).toBe(false);
+    expect(approvals.settleForSession("selected", otherOwnerId, { approved: true }, 1)).toBe(false);
+    expect(approvals.settleForSession("selected", selectedId, { approved: true }, 2)).toBe(false);
+    expect(approvals.pendingCount).toBe(3);
+    expect(
+      approvals.settleForSession("selected", selectedId, { approved: true, answer: "Yes" }, 1),
+    ).toBe(true);
+    await expect(selected).resolves.toEqual({ approved: true, answer: "Yes" });
+    expect(approvals.pendingForSession("selected", 1)).toEqual([]);
+    expect(events[0]).toEqual({
+      type: "requested",
+      sessionId: "selected",
+      requestId: selectedId,
+      ownerWebContentsId: 1,
+      request,
+    });
+    expect(events[3]).toEqual({
+      type: "resolved",
+      sessionId: "selected",
+      requestId: selectedId,
+      ownerWebContentsId: 1,
+      approved: true,
+      answer: "Yes",
+    });
+    approvals.cancelSession("same-owner");
+    approvals.cancelWindow(2);
+    await expect(sameOwner).resolves.toMatchObject({ approved: false });
+    await expect(otherOwner).resolves.toMatchObject({ approved: false });
+    expect(events.slice(4)).toEqual([
+      {
+        type: "resolved",
+        sessionId: "same-owner",
+        requestId: sameOwnerId,
+        ownerWebContentsId: 1,
+        approved: false,
+      },
+      {
+        type: "resolved",
+        sessionId: "other-owner",
+        requestId: otherOwnerId,
+        ownerWebContentsId: 2,
+        approved: false,
+      },
+    ]);
+    expect(approvals.settleForSession("selected", selectedId, { approved: false }, 1)).toBe(false);
+  });
+
+  test("observer failures cannot settle or strand the original approval", async () => {
+    const { window, sent } = fakeWindow(1);
+    const approvals = new ExternalRuntimeApprovals({
+      windows: () => [window] as never,
+      onPendingChange: () => {
+        throw new Error("phone disconnected");
+      },
+    });
+    const pending = approvals.request("selected", request);
+    const requestId = (sent[0]!.payload as { requestId: string }).requestId;
+    expect(approvals.pendingForSession("selected", 1)).toHaveLength(1);
+    expect(approvals.settleForSession("selected", requestId, { approved: false }, 1)).toBe(true);
+    await expect(pending).resolves.toEqual({ approved: false });
+    expect(approvals.pendingCount).toBe(0);
+  });
+
+  test("failed desktop delivery never advertises a mobile prompt", async () => {
+    const events: ExternalApprovalEvent[] = [];
+    const broken = fakeWindow(1);
+    broken.window.webContents.send = () => {
+      throw new Error("owner closed");
+    };
+    const approvals = new ExternalRuntimeApprovals({
+      windows: () => [broken.window] as never,
+      onPendingChange: (event) => events.push(event),
+    });
+    await expect(approvals.request("selected", request)).resolves.toMatchObject({
+      approved: false,
+    });
+    expect(events).toEqual([]);
+    expect(approvals.pendingForSession("selected", 1)).toEqual([]);
+  });
+
+  test("timed out prompts retire from mobile observers without a decision", async () => {
+    const { window, sent } = fakeWindow(1);
+    const events: ExternalApprovalEvent[] = [];
+    const approvals = new ExternalRuntimeApprovals({
+      windows: () => [window] as never,
+      timeoutMs: 5,
+      onPendingChange: (event) => events.push(event),
+    });
+    const pending = approvals.request("selected", request);
+    const requestId = (sent[0]!.payload as { requestId: string }).requestId;
+    await expect(pending).resolves.toEqual({ approved: false, reason: "approval timed out" });
+    expect(events[1]).toEqual({
+      type: "resolved",
+      sessionId: "selected",
+      requestId,
+      ownerWebContentsId: 1,
+    });
+    expect(approvals.pendingForSession("selected", 1)).toEqual([]);
+    expect(approvals.settleForSession("selected", requestId, { approved: true }, 1)).toBe(false);
+  });
+
   test("parses only the bounded renderer decision fields", () => {
     expect(
       parseExternalApprovalDecision({

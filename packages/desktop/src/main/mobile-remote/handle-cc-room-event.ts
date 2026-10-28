@@ -1,6 +1,7 @@
 import {
   DEFAULT_DISCOVER_LIMIT,
   DEFAULT_DISCOVER_SINCE_MS,
+  countRelatedSessions,
   discoverRelatedSessions,
   listRelatedCodexSessions,
   probeClaudeCli,
@@ -57,14 +58,27 @@ export async function handleCcRoomEvent(
     }
     if (event.type === "ccRoom.listSessions") {
       const kind = event.kind ?? "claude-code";
-      // Bound the mobile list too (recent 2 weeks AND ≤20) — phones especially
-      // shouldn't pull + deep-read an entire project's session history.
-      const opts = { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-      const sessions =
+      // Match Desktop's bounded default and explicit older-history action.
+      const opts = event.all
+        ? {}
+        : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
+      const result =
         kind === "codex"
-          ? (await listRelatedCodexSessions(event.cwd, opts)).sessions
-          : discoverRelatedSessions("claude", event.cwd, opts);
-      reply({ type: "ccRoom.listSessions.ok", cwd: event.cwd, sessions, kind });
+          ? await listRelatedCodexSessions(event.cwd, opts)
+          : (() => {
+              const sessions = discoverRelatedSessions("claude", event.cwd, opts);
+              return {
+                sessions,
+                total: event.all ? sessions.length : countRelatedSessions("claude", event.cwd),
+              };
+            })();
+      reply({
+        type: "ccRoom.listSessions.ok",
+        cwd: event.cwd,
+        ...result,
+        kind,
+        all: Boolean(event.all),
+      });
       return;
     }
     if (event.type === "ccRoom.openSession") {

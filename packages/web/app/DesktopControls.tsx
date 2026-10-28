@@ -122,10 +122,19 @@ export function DesktopSidebar({
         <button
           className="library-button"
           disabled={app.loading.sessions}
-          onClick={app.refreshSessions}
+          onClick={() => app.refreshSessions()}
         >
           刷新
         </button>
+        {app.sessionsHasMore ? (
+          <button
+            className="library-button"
+            disabled={app.loading.sessions}
+            onClick={() => app.loadMoreSessions?.()}
+          >
+            {app.loading.sessions ? "正在加载…" : "加载更多会话"}
+          </button>
+        ) : null}
       </div>
       {createOpen ? (
         <div className="desktop-root-picker">
@@ -241,6 +250,15 @@ export function DesktopSidebar({
             </button>
           ))
         )}
+        {(app.ccSessionsTotal ?? 0) > app.ccSessions.length ? (
+          <button
+            className="library-button"
+            disabled={app.loading.ccSessions}
+            onClick={() => app.loadAllCcSessions?.()}
+          >
+            {app.loading.ccSessions ? "正在读取…" : `查看全部 CLI 会话（${app.ccSessionsTotal}）`}
+          </button>
+        ) : null}
       </details>
       {picking ? (
         <CcModeDialog

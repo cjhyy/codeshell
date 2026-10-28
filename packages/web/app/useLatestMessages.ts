@@ -169,5 +169,19 @@ export function useLatestMessages({
     resume();
     listRef.current?.focus({ preventScroll: true });
   }, [resume]);
-  return { listRef, contentRef, onScroll, showJump, newOutputCount, jumpToLatest, resume };
+  const pauseFollowing = useCallback(() => {
+    following.current = false;
+    programmaticTop.current = null;
+    setShowJump(true);
+  }, []);
+  return {
+    listRef,
+    contentRef,
+    onScroll,
+    showJump,
+    newOutputCount,
+    jumpToLatest,
+    resume,
+    pauseFollowing,
+  };
 }

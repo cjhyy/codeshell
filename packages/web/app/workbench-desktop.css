@@ -135,3 +135,18 @@
   font-size: 11px;
   overflow-wrap: anywhere;
 }
+.desktop-model-picker {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+}
+
+.composer-toolbar.with-model-selector {
+  flex-wrap: wrap;
+}
+
+.desktop-model-picker select {
+  max-width: min(240px, 48vw);
+  text-overflow: ellipsis;
+}

@@ -34,6 +34,10 @@ import {
 } from "../../packages/web/src/test-utils/renderHook.js";
 import { MobileOutputClient } from "../../packages/web/src/hooks/mobileOutputClient.js";
 import { useRemoteApp } from "../../packages/web/src/hooks/useRemoteApp.js";
+import { runRuntimeLifecycle } from "./mobile-runtime-lifecycle.js";
+export { runRuntimeLifecycle };
+import { runLegacyLifecycle } from "./mobile-legacy-lifecycle.js";
+export { runLegacyLifecycle };
 
 const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
@@ -229,7 +233,7 @@ export async function run(root: string, port: number) {
       { text: "first", displayText: "first", clientMessageId: "desktop-first" },
       77,
     );
-    assert.equal(first.reason, "completed");
+    assert.equal(first.reason, "completed", first.text?.slice(0, 2000));
     const expected = Array.from({ length: 192 }, (_, index) => part(index)).join("");
     assert(Buffer.byteLength(expected) > 8 * 1024 * 1024);
     assert(snapshots.get("external-mobile").events[0]!.seq > 1, "actual snapshot eviction");
@@ -313,7 +317,9 @@ export async function run(root: string, port: number) {
           }),
       );
     };
-    await until(() => remote.onlineDeviceIds().includes(device.id));
+    await until(
+      () => remote.onlineDeviceIds().includes(device.id) && hook.result.current.status === "online",
+    );
     phase = "initial selection";
     await act(async () => {
       hook.result.current.selectSession("external-mobile");
@@ -604,6 +610,7 @@ export async function run(root: string, port: number) {
       "actual Mobile cancel targets only the captured existing external run with one aborted journal terminal",
     );
     await service.stop("external-held", 77);
+    delete process.env.CODESHELL_OUTPUT_HOLD;
     // Actual authenticated sockets exercise the bounded command/source maps.
     // No Runtime is constructed for this metadata-only capacity Session.
     const capacityId = "capacity-reused";
@@ -763,6 +770,8 @@ export async function run(root: string, port: number) {
     await service.stopAll();
     await remote.stop();
   }
+  await runRuntimeLifecycle(root);
+  await runLegacyLifecycle(root);
 }
 
 /** Second actual Node Main: empty RAM, real paired WS, production page authority, no runtime construction. */
