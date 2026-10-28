@@ -24,7 +24,8 @@ export function companionPose(
   const gazeX = state.target ? clamp((state.target.x - center.x) / state.size, -1, 1) : 0;
   const gazeY = state.target ? clamp((center.y - state.target.y) / state.size, -1, 1) : 0;
   const action = state.activity.action;
-  const active = state.activity.phase === "start";
+  // The host emits idle after its short completion dwell, so fast clicks remain legible.
+  const active = action !== "idle";
   const elapsed = Math.max(0, Number.isFinite(elapsedMs) ? elapsedMs : 0);
   const pulse = reducedMotion ? 0 : (1 - Math.cos(elapsed / 180)) / 2;
   const click = active && action === "click";
@@ -42,9 +43,6 @@ export function companionPose(
 }
 
 export function companionActionLabel(state: MimiCompanionState): string {
-  if (state.activity.phase === "end") {
-    return state.activity.action === "error" ? "操作遇到问题" : "等待下一步";
-  }
   const labels: Record<MimiCompanionState["activity"]["action"], string> = {
     idle: "等待下一步",
     observe: "观察界面",

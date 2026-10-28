@@ -15,7 +15,7 @@ export function SpriteActor({
   callbacks.current = { onReady, onError };
   const animation = spriteAnimation(state, moving);
   const { row, frames } = SPRITE_ANIMATIONS[animation];
-  const playing = state.enabled && state.visible && !reducedMotion;
+  const playing = (state.enabled || state.preview) && state.visible && !reducedMotion;
 
   useEffect(() => {
     const image = new Image();

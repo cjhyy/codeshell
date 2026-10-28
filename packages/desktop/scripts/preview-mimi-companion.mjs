@@ -11,9 +11,10 @@ import assert from "node:assert/strict";
 
 const desktop = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const out = resolve(desktop, "out/mimi-companion-preview");
+// The isolated smoke runner sets NODE_ENV=test; build every React module consistently.
+process.env.NODE_ENV = "production";
 await build({
   configFile: false,
-  define: { "process.env.NODE_ENV": JSON.stringify("production") },
   root: resolve(desktop, "src/renderer"),
   base: "./",
   plugins: [react()],
@@ -105,7 +106,10 @@ if (!process.argv.includes("--serve")) {
     });
     const errors = [];
     const requests = [];
-    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("pageerror", (error) => {
+      errors.push(error.message);
+      console.error("Preview page error:", error.message);
+    });
     await page.route("**/*", (route) => {
       const requestUrl = route.request().url();
       requests.push(requestUrl);
@@ -134,7 +138,13 @@ if (!process.argv.includes("--serve")) {
       first,
       "reduced motion pauses sprite frames",
     );
-    await page.evaluate(() => window.preview({ enabled: false, visible: false }));
+    await page.evaluate(() => window.preview({ enabled: false, visible: true, preview: true }));
+    assert.equal(
+      await page.locator(".mimi-scene").evaluate((element) => getComputedStyle(element).visibility),
+      "visible",
+      "one-shot preview does not require enabling the companion",
+    );
+    await page.evaluate(() => window.preview({ enabled: false, visible: true, preview: false }));
     assert.equal(
       await page.locator(".mimi-scene").evaluate((element) => getComputedStyle(element).visibility),
       "hidden",

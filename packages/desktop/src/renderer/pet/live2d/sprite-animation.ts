@@ -18,7 +18,7 @@ export function spriteAnimation(
 ): keyof typeof SPRITE_ANIMATIONS {
   if (state.activity.action === "error") return "failed";
   if (moving) return moving;
-  if (state.activity.phase === "end") return "waiting";
+  if (state.activity.action === "idle" && state.activity.phase === "end") return "waiting";
   switch (state.activity.action) {
     case "observe":
       return "review";

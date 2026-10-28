@@ -17,14 +17,17 @@ const state: MimiCompanionState = {
 };
 
 describe("companion action presentation", () => {
-  test("clamps an off-screen gaze and stops gestures when the operation ends", () => {
+  test("clamps gaze and retains a completed gesture until the host clears its dwell", () => {
     expect(companionPose(state, 180).gazeX).toBe(1);
     expect(companionPose(state, 180).gazeY).toBe(1);
     expect(companionPose(state, 180).reach).toBeGreaterThan(0);
     const ended = { ...state, activity: { ...state.activity, phase: "end" as const } };
-    expect(companionPose(ended, 180).reach).toBe(0);
-    expect(companionPose(ended, 180).handPulse).toBe(0);
-    expect(spriteAnimation(ended, null)).toBe("waiting");
+    expect(companionPose(ended, 180).reach).toBeGreaterThan(0);
+    expect(spriteAnimation(ended, null)).toBe("waving");
+    const idle = { ...ended, activity: { ...ended.activity, action: "idle" as const } };
+    expect(companionPose(idle, 180).reach).toBe(0);
+    expect(companionPose(idle, 180).handPulse).toBe(0);
+    expect(spriteAnimation(idle, null)).toBe("waiting");
   });
 
   test("reduced motion keeps a static pose without limb pulses", () => {

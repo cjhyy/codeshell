@@ -82,8 +82,8 @@ export function MimiCompanionWindow() {
 
   if (!state) return null;
   const { Actor } = CHARACTER_RENDERERS[state.appearance] ?? CHARACTER_RENDERERS["mimi-sprite"];
-  const visible = state.enabled && state.visible;
-  const active = state.activity.phase === "start";
+  const visible = (state.enabled || state.preview) && state.visible;
+  const active = state.activity.action !== "idle";
   const typing = active && (state.activity.action === "type" || state.activity.action === "key");
   const targetEffect = active && ["click", "scroll", "drag"].includes(state.activity.action);
   return (

@@ -120,7 +120,8 @@ export default function Live2DActor({
       pendingApp = null;
       model.update(0);
       app.render();
-      if (current.current?.enabled && current.current.visible && !reduced.current) app.start();
+      const latest = current.current;
+      if ((latest.enabled || latest.preview) && latest.visible && !reduced.current) app.start();
       callbacks.current.onReady();
     };
     void load().catch(() => {
@@ -145,11 +146,11 @@ export default function Live2DActor({
     const running = runtime.current;
     if (!running || !state) return;
     running.resize(state.size);
-    if (state.enabled && state.visible && !reducedMotion) {
+    if ((state.enabled || state.preview) && state.visible && !reducedMotion) {
       running.app.start();
     } else {
       running.app.stop();
-      if (state.enabled && state.visible) {
+      if ((state.enabled || state.preview) && state.visible) {
         running.model.update(0);
         running.app.render();
       }
