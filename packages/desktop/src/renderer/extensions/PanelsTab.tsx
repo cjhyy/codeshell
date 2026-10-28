@@ -433,11 +433,13 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
           ? t("ext.panels.blockerJob", { name: blocker.label ?? "" }).trim()
           : blocker.kind === "agent-task"
             ? t("ext.panels.blockerAgentTask")
-            : blocker.kind === "automation"
-              ? t("ext.panels.blockerAutomation")
-              : blocker.kind === "process"
-                ? t("ext.panels.blockerProcess")
-                : t("ext.panels.blockerTab");
+            : blocker.kind === "service"
+              ? t("ext.panels.blockerService", { name: blocker.label ?? "" }).trim()
+              : blocker.kind === "automation"
+                ? t("ext.panels.blockerAutomation")
+                : blocker.kind === "process"
+                  ? t("ext.panels.blockerProcess")
+                  : t("ext.panels.blockerTab");
       lines.set(`${blocker.kind}:${line}`, line);
     }
     return [...lines.values()];

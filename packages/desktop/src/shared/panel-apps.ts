@@ -15,6 +15,7 @@ export const PANEL_APP_PERMISSION_NAMES = [
   "credentials.cookies",
   "automations.manage",
   "process",
+  "background.services",
   "resources",
   "resources.directRead",
   "credentials.connections",
@@ -62,6 +63,15 @@ export interface PanelAppDescriptor {
   singleton: boolean;
   permissions: PanelAppPermission[];
   nativeEntries?: Record<string, { entry: string; sha256: string }>;
+  backgroundServices?: Record<
+    string,
+    {
+      entry: string;
+      channels: Record<string, { maxBytes: number }>;
+      maxLifetimeMs: number;
+      idleGraceMs: number;
+    }
+  >;
   agent?: {
     tools: PanelAppAgentToolDescriptor[];
     skills: string[];
@@ -195,7 +205,14 @@ export interface PanelAppCookieCredential {
 
 /** Work that holds a reviewed Panel package change, as the Host can name it. */
 export interface PanelAppChangeBlocker {
-  kind: "panel-call" | "agent-tool" | "process" | "agent-task" | "tool-job" | "automation";
+  kind:
+    | "panel-call"
+    | "agent-tool"
+    | "process"
+    | "agent-task"
+    | "tool-job"
+    | "automation"
+    | "service";
   count: number;
   /** Trusted Host description, such as a native tool entry name. */
   label?: string;
