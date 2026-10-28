@@ -70,6 +70,12 @@ export interface CuaDriverHostOptions {
   readonly readyTimeoutMs?: number;
   readonly maxRestarts?: number;
   readonly sleep?: (ms: number) => Promise<void>;
+  readonly mcpProxy?: {
+    readonly command: string;
+    readonly entryPath: string;
+    readonly socketPath: string;
+    readonly token: string;
+  };
 }
 
 /** Only these parent variables reach the daemon; API keys and tokens never do. */
@@ -198,6 +204,20 @@ export class CuaDriverHost {
    * daemon restarts (same socket path), so the worker env never goes stale.
    */
   mcpDeclaration(): CuaHostMcpDeclaration {
+    const proxy = this.options.mcpProxy;
+    if (proxy) {
+      return {
+        command: proxy.command,
+        args: [proxy.entryPath, "--driver", this.options.driverPath, "--socket", this.socketPath],
+        env: {
+          CUA_DRIVER_EMBEDDED: "1",
+          ELECTRON_RUN_AS_NODE: "1",
+          CODE_SHELL_CUA_ACTIVITY_SOCKET: proxy.socketPath,
+          CODE_SHELL_CUA_ACTIVITY_TOKEN: proxy.token,
+        },
+        inlineImages: true,
+      };
+    }
     return {
       command: this.options.driverPath,
       args: ["mcp", "--embedded", "--socket", this.socketPath],

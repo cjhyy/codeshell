@@ -91,6 +91,35 @@ function harness(
 }
 
 describe("CuaDriverHost", () => {
+  test("activity proxy preserves embedded transport and carries only host-owned endpoint configuration", () => {
+    const { host } = harness({
+      hostOptions: {
+        mcpProxy: {
+          command: "/app/electron",
+          entryPath: "/app/out/main/cua-activity-proxy.mjs",
+          socketPath: "/tmp/actor/activity.sock",
+          token: "host-token",
+        },
+      },
+    });
+    expect(host.mcpDeclaration()).toEqual({
+      command: "/app/electron",
+      args: [
+        "/app/out/main/cua-activity-proxy.mjs",
+        "--driver",
+        "/opt/cua/cua-driver",
+        "--socket",
+        "/tmp/codeshell-cua-test.sock",
+      ],
+      env: {
+        CUA_DRIVER_EMBEDDED: "1",
+        ELECTRON_RUN_AS_NODE: "1",
+        CODE_SHELL_CUA_ACTIVITY_SOCKET: "/tmp/actor/activity.sock",
+        CODE_SHELL_CUA_ACTIVITY_TOKEN: "host-token",
+      },
+      inlineImages: true,
+    });
+  });
   test("spawns the embedded daemon directly with an allowlisted env", async () => {
     const { host, spawns } = harness();
     await host.start();

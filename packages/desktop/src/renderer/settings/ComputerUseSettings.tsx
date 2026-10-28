@@ -180,6 +180,82 @@ export function ComputerUseSettings() {
           <p className="m-0 text-xs text-muted-foreground" role="status">
             {t(status.active ? "settingsX.computerUse.active" : "settingsX.computerUse.inactive")}
           </p>
+          {status.companion && (
+            <div
+              className="flex flex-col gap-3 rounded-lg border border-border p-3"
+              data-mimi-companion-settings
+            >
+              <label className="flex cursor-pointer items-center justify-between gap-3 text-sm">
+                {t("settingsX.computerUse.companionEnable")}
+                <Switch
+                  checked={status.companion.enabled}
+                  disabled={!!busy || !status.companion.available}
+                  onCheckedChange={(enabled) =>
+                    void perform("companion", () =>
+                      window.codeshell.computerUse.setCompanion({ enabled }),
+                    )
+                  }
+                />
+              </label>
+              <p className="m-0 text-xs text-muted-foreground">
+                {t("settingsX.computerUse.companionDescription")}
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-md border border-primary/40 bg-primary/5 p-3">
+                  <div className="font-medium">{t("settingsX.computerUse.companionSprite")}</div>
+                  <div className="mt-1 text-muted-foreground">
+                    {t("settingsX.computerUse.companionSpriteHint")}
+                  </div>
+                </div>
+                <div className="rounded-md border border-dashed border-border p-3">
+                  <div className="font-medium">Live2D</div>
+                  <div className="mt-1 text-muted-foreground">
+                    {t("settingsX.computerUse.companionLive2dHint")}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <label className="flex items-center gap-2 text-xs">
+                  {t("settingsX.computerUse.companionSize")}
+                  <select
+                    className="rounded-md border border-border bg-background px-2 py-1.5 text-foreground"
+                    value={status.companion.size}
+                    disabled={!!busy}
+                    onChange={(event) => {
+                      const size = Number(event.target.value);
+                      void perform("companion-size", () =>
+                        window.codeshell.computerUse.setCompanion({ size }),
+                      );
+                    }}
+                  >
+                    {[240, 320, 400, 480].map((size) => (
+                      <option key={size} value={size}>
+                        {size} px
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!!busy}
+                  onClick={() =>
+                    void perform("companion-preview", () =>
+                      window.codeshell.computerUse.previewCompanion(),
+                    )
+                  }
+                >
+                  {t("settingsX.computerUse.companionPreview")}
+                </Button>
+              </div>
+              {status.companion.error && (
+                <p className="m-0 text-xs text-status-err" role="alert">
+                  {status.companion.error}
+                </p>
+              )}
+            </div>
+          )}
           {!status.driverAvailable && (
             <p className="m-0 text-xs text-status-warn">
               {t("settingsX.computerUse.driverUnavailable")}

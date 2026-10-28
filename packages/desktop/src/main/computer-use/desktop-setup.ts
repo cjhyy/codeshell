@@ -12,10 +12,19 @@ import {
   type ComputerUseSettingsDependencies,
 } from "./settings-ipc.js";
 import { getCuaDriverHost, initCuaComputerUse, resetCuaComputerUse } from "./service.js";
+import { createMimiCompanionHost, type MimiCompanionHost } from "./mimi-companion-host.js";
+
+let companion: MimiCompanionHost | undefined;
+
+export async function closeMimiCompanion(): Promise<void> {
+  const previous = companion;
+  companion = undefined;
+  await previous?.close();
+}
 
 /** Compose the opt-in daemon and its desktop-only setup authority after app readiness. */
 export async function initializeDesktopComputerUse(options: {
-  app: Pick<App, "isPackaged" | "getAppPath" | "relaunch" | "quit">;
+  app: Pick<App, "isPackaged" | "getAppPath" | "getPath" | "relaunch" | "quit">;
   ipcMain: ComputerUseSettingsDependencies["ipcMain"];
   isMainWindow: ComputerUseSettingsDependencies["isMainWindow"];
   systemPreferences: ComputerUsePermissionsOptions["systemPreferences"];
@@ -25,7 +34,24 @@ export async function initializeDesktopComputerUse(options: {
   resourcesPath: string;
   env: NodeJS.ProcessEnv;
   log: NonNullable<CuaDriverHostOptions["log"]>;
+  openCompanionChat(): Promise<void>;
 }): Promise<void> {
+  if (options.platform === "darwin") {
+    companion = await createMimiCompanionHost({
+      appPath: options.app.getAppPath(),
+      resourcesPath: options.resourcesPath,
+      userDataPath: options.app.getPath("userData"),
+      executablePath: process.execPath,
+      packaged: options.app.isPackaged,
+      devUrl: options.env.VITE_DEV_URL,
+      isMainWindow: options.isMainWindow,
+      log: options.log,
+      openChat: options.openCompanionChat,
+    }).catch((error) => {
+      options.log("mimi_companion_setup_failed", { error: String(error) });
+      return undefined;
+    });
+  }
   const decision = initCuaComputerUse({
     flags: readUserFeatureFlags(options.cwd()),
     platform: options.platform,
@@ -33,6 +59,7 @@ export async function initializeDesktopComputerUse(options: {
     resourcesPath: options.resourcesPath,
     env: options.env,
     log: options.log,
+    mcpProxy: companion?.mcpProxy,
   });
   options.log("cua_driver_decision", decision.enabled ? { enabled: true } : decision);
   if (decision.enabled) {
@@ -74,6 +101,7 @@ export async function initializeDesktopComputerUse(options: {
       }),
     packaged: options.app.isPackaged,
     permissions,
+    companion,
     stop: resetCuaComputerUse,
     restart: () => {
       options.app.relaunch();

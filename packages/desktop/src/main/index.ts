@@ -142,7 +142,7 @@ import {
 import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { getCuaDriverHost } from "./computer-use/service.js";
-import { initializeDesktopComputerUse } from "./computer-use/desktop-setup.js";
+import { initializeDesktopComputerUse, closeMimiCompanion } from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
 import { externalRuntimeToolContextForSession } from "./external-runtime-tool-context.js";
@@ -3500,6 +3500,7 @@ app.whenReady().then(async () => {
   // Register the opt-in host before the first worker receives its MCP environment.
   await initializeDesktopComputerUse({
     app,
+    openCompanionChat: () => openPetOverviewFromWidget(),
     ipcMain,
     systemPreferences,
     openExternal: (url) => shell.openExternal(url),
@@ -7317,6 +7318,7 @@ app.on(
         panelAppBridge.shutdownMedia(),
         chromeExtensionRuntimeService.stop(),
         cuaDriverShutdown,
+        closeMimiCompanion(),
       ]);
       gatewayControlServer = undefined;
       await mobileUploads.dispose();

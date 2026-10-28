@@ -365,6 +365,7 @@ async function buildAndWatch(): Promise<void> {
 
   const preloadCtx = await esbuild.context({
     entryPoints: {
+      "mimi-companion": resolve(root, "src/preload/mimi-companion.ts"),
       index: resolve(root, "src/preload/index.ts"),
       "browser-guest": resolve(root, "src/preload/browser-guest.ts"),
       "panel-app": resolve(root, "src/preload/panel-app.ts"),

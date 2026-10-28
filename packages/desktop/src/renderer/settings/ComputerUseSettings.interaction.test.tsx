@@ -19,6 +19,7 @@ for (const scenario of [
   "read-retry",
   "english",
   "scope",
+  "companion",
 ]) {
   test(`computer use settings: ${scenario}`, () => {
     const result = Bun.spawnSync({

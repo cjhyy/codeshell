@@ -30,6 +30,7 @@ export interface CuaComputerUseInputs {
   readonly env?: NodeJS.ProcessEnv;
   readonly log?: CuaDriverHostOptions["log"];
   readonly createHost?: (options: CuaDriverHostOptions) => CuaDriverHost;
+  readonly mcpProxy?: CuaDriverHostOptions["mcpProxy"];
 }
 
 export type CuaComputerUseDecision =
@@ -73,6 +74,7 @@ export function initCuaComputerUse(inputs: CuaComputerUseInputs): CuaComputerUse
     hostBundleId: CODESHELL_BUNDLE_ID,
     parentEnv: inputs.env ?? process.env,
     log: inputs.log,
+    mcpProxy: inputs.mcpProxy,
   };
   host = (inputs.createHost ?? ((o) => new CuaDriverHost(o)))(options);
   return { enabled: true, host };

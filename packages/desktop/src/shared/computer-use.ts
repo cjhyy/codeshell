@@ -1,3 +1,5 @@
+import type { MimiCompanionSettings } from "./mimi-companion.js";
+
 export type ComputerUsePermissionKind = "accessibility" | "screenRecording";
 export type ComputerUsePermissionState = "granted" | "denied" | "unknown" | "unsupported";
 
@@ -17,6 +19,7 @@ export interface ComputerUseSettingsStatus {
   packaged: boolean;
   restartRequired: boolean;
   permissions: ComputerUsePermissionStatus;
+  companion?: MimiCompanionSettings;
 }
 
 export interface ComputerUseSettingsApi {
@@ -25,4 +28,6 @@ export interface ComputerUseSettingsApi {
   requestPermission(kind: ComputerUsePermissionKind): Promise<ComputerUseSettingsStatus>;
   openSettings(kind: ComputerUsePermissionKind): Promise<void>;
   restart(): Promise<void>;
+  setCompanion(value: { enabled?: boolean; size?: number }): Promise<ComputerUseSettingsStatus>;
+  previewCompanion(): Promise<ComputerUseSettingsStatus>;
 }

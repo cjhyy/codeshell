@@ -31,6 +31,14 @@ export const settingsNs = {
         checkFailed: "暂时无法确认系统权限，请重新检查或打开对应系统设置。",
         restartHint: "重启 CodeShell 后应用更改，并新建会话使用电脑操作。",
         restart: "重启 CodeShell",
+        companionEnable: "显示 Mimi 操作角色（试验）",
+        companionDescription:
+          "拖动放置，点击打开 Mimi 聊天，右键恢复跟随。人的交互优先，待机安静，工作动作短暂播放。预览持续 10 秒；实际联动需启用电脑操作。",
+        companionSprite: "Mimi 图片动画集",
+        companionSpriteHint: "当前效果 · 全身动作与操作反馈",
+        companionLive2dHint: "预留效果集接口 · 尚未启用模型",
+        companionSize: "角色大小",
+        companionPreview: "预览动作",
       },
       cloudAccount: {
         title: "CodeShell 云账号（可选）",
@@ -1194,6 +1202,14 @@ export const settingsNs = {
         restartHint:
           "Restart CodeShell to apply changes, then start a new conversation to use computer controls.",
         restart: "Restart CodeShell",
+        companionEnable: "Show Mimi computer companion (experimental)",
+        companionDescription:
+          "Drag to place, click for Mimi chat, and right-click to resume following. Your interaction takes priority. Idle stays still; work gestures are brief. Preview lasts 10 seconds; live reactions require computer use.",
+        companionSprite: "Mimi sprite animations",
+        companionSpriteHint: "Active pack · full character and action feedback",
+        companionLive2dHint: "Renderer slot reserved · model not enabled",
+        companionSize: "Character size",
+        companionPreview: "Preview actions",
       },
       cloudAccount: {
         title: "CodeShell cloud account (optional)",
