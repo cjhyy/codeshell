@@ -122,6 +122,7 @@ export interface PanelAppPreview {
   permissions: PanelAppManifest["permissions"];
   agent?: PanelAppAgentContribution;
   nativeEntries?: PanelAppManifest["nativeEntries"];
+  backgroundServices?: PanelAppManifest["backgroundServices"];
   alreadyInstalled: boolean;
   reviewToken: string;
   source: { kind: PanelAppSourceInput["kind"]; label: string };
@@ -161,6 +162,7 @@ export interface InstalledPanelApp {
   permissions: PanelAppManifest["permissions"];
   agent?: PanelAppAgentContribution;
   nativeEntries?: PanelAppManifest["nativeEntries"];
+  backgroundServices?: PanelAppManifest["backgroundServices"];
   installPath: string;
   /** Payload identity, excluding Host installation timestamps and source metadata. */
   packageDigest?: string;
@@ -591,6 +593,9 @@ function previewFrom(
     ...(manifest.description ? { description: manifest.description } : {}),
     entry: manifest.entry,
     ...(manifest.nativeEntries ? { nativeEntries: structuredClone(manifest.nativeEntries) } : {}),
+    ...(manifest.backgroundServices
+      ? { backgroundServices: structuredClone(manifest.backgroundServices) }
+      : {}),
     icon: manifest.icon,
     singleton: manifest.singleton,
     permissions: [...manifest.permissions],
@@ -1132,6 +1137,9 @@ function installedPanelApp(
     ...(manifest.description ? { description: manifest.description } : {}),
     entry: manifest.entry,
     ...(manifest.nativeEntries ? { nativeEntries: structuredClone(manifest.nativeEntries) } : {}),
+    ...(manifest.backgroundServices
+      ? { backgroundServices: structuredClone(manifest.backgroundServices) }
+      : {}),
     icon: manifest.icon,
     singleton: manifest.singleton,
     permissions: [...manifest.permissions],

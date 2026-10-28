@@ -74,3 +74,38 @@ test("direct read of originals is a separate grant that needs resources and proc
     ).toBe(false);
   }
 });
+
+test("background services are strict, permission-gated, bounded reviewed entry declarations", async () => {
+  const backgroundServices = {
+    feed: {
+      entry: "sample",
+      channels: { quotes: { maxBytes: 262144 } },
+      maxLifetimeMs: 60_000,
+      idleGraceMs: 5000,
+    },
+  };
+  const value = {
+    ...manifest(),
+    permissions: [...manifest().permissions, "background.services"],
+    backgroundServices,
+  };
+  expect(PanelAppManifest.safeParse(value).success).toBe(true);
+  for (const missing of ["process", "background.services", "context.workspace"])
+    expect(
+      PanelAppManifest.safeParse({
+        ...value,
+        permissions: value.permissions.filter((permission) => permission !== missing),
+      }).success,
+    ).toBe(false);
+  for (const service of [
+    { ...backgroundServices.feed, entry: "missing" },
+    { ...backgroundServices.feed, channels: {} },
+    { ...backgroundServices.feed, maxLifetimeMs: 21_600_001 },
+    { ...backgroundServices.feed, unknown: true },
+  ])
+    expect(
+      PanelAppManifest.safeParse({ ...value, backgroundServices: { feed: service } }).success,
+    ).toBe(false);
+  const preview = await previewLocalPanelApp({ kind: "dir", path: await fixture(value) });
+  expect(preview.backgroundServices).toEqual(backgroundServices);
+});

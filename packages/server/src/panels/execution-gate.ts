@@ -3,7 +3,14 @@ import { resolve } from "node:path";
 
 /** What holds an execution, so a refused change can name it. Host-assigned only. */
 export interface PanelExecutionHolder {
-  kind: "panel-call" | "agent-tool" | "process" | "agent-task" | "tool-job" | "automation";
+  kind:
+    | "panel-call"
+    | "agent-tool"
+    | "process"
+    | "agent-task"
+    | "tool-job"
+    | "automation"
+    | "service";
   /** Desktop WebContents id of the Panel instance that owns this execution. */
   guestId?: number;
   /** Trusted Host description, such as a native tool entry name. */
@@ -45,6 +52,13 @@ export class PanelExecutionBusyError extends Error {
 export class PanelExecutionGate {
   private readonly executions = new Set<PanelExecutionScope>();
   private readonly sources = new Set<() => Iterable<PanelExecutionScope>>();
+  private readonly settled = new Set<() => void>();
+  onMutationSettled(listener: () => void): () => void {
+    this.settled.add(listener);
+    return () => {
+      this.settled.delete(listener);
+    };
+  }
   private readonly mutations = new Set<(scope: PanelExecutionScope) => boolean>();
 
   enter(scope: PanelExecutionScope): () => void {
@@ -122,6 +136,7 @@ export class PanelExecutionGate {
       return await work();
     } finally {
       this.mutations.delete(matches);
+      for (const listener of this.settled) listener();
     }
   }
 }

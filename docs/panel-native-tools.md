@@ -630,3 +630,67 @@ while the global catalog contains distinct v2 HTML/program bytes. It verifies th
 v1 program result, shared tasks/queue/accounts, consent, logout and device
 revocation behavior, and native refresh notification after a phone binding
 change. This uses fixture programs/accounts, not a physical phone or provider.
+
+## Desktop background services (candidate contract 1)
+
+Desktop implements `services.get`, `setDesired`, `configure`, `attach`, `detach`,
+`read`, and `control`, advertised explicitly by `availableMethods` and
+`capabilities.services.version === 1`. Web/Hub and Windows do not advertise this
+capability. The strict `backgroundServices` manifest declaration references a
+reviewed `nativeEntries` entry and requires `background.services`, `process`, and
+`context.workspace`. Installation review displays the additional permission.
+Services execute the package currently selected in the canonical project;
+configuration, subscriptions, work directories and snapshots are isolated by
+app, project and service name. No global HOME package search is performed.
+
+`desired: "always"` survives closing all guests while Desktop is running.
+`on-demand` follows attached guests and the declared idle grace; `off` commits a
+stop tombstone. Guest close only detaches, and service custody never consumes a
+webview process quota or the two durable tool-job slots. Background services have
+a separate four-process/two-per-app budget. Package mutation drains service gate
+holders before replacement; after the gate settles the selected revision is
+re-authorized, including rollback to the old package on a failed mutation.
+Shutdown retains desired state, but publication is revoked before termination.
+
+Each service has one bounded authoritative `panel.background-service/1` record
+containing controls, generations, configuration and all channel snapshots. Commit
+order is temporary-file write, file fsync, rename, directory fsync, then receipt
+and event. Generation is committed before spawning; stop and channel updates use
+the same record. The read/write format sets are explicit. An uncertain write
+poisons the coordinator until restart; recovery reads only the authoritative
+record. Temporary payload files can be cleaned, but installation incarnations,
+stop tombstones and sequence counters are never deleted. Uninstall clears
+sensitive payloads/configuration while advancing counters.
+
+A process-lifetime directory lock elects one coordinator across Hosts. Its sole
+immutable owner token is reclaimed only after ESRCH, never by age or heartbeat.
+A reused live PID is retained conservatively. Each launch uses a Host-owned
+supervisor group and a startup nonce handshake. The supervisor cannot execute
+package code before its identity is committed and Host sends `go`; an orphaned
+supervisor that never received `go` cannot collect data. Package code runs in a
+Node permission sandbox permitting its package, private work directory and
+network, while denying child processes, worker threads, native addons and WASI.
+This prevents descendants escaping custody. The supervisor remains attached to
+Host stdin and is never unref'd. EOF requests exit and then kills its owned group.
+
+Restart does not assume EOF succeeded: any persisted group that is still live or
+cannot be inspected remains `stop-unconfirmed`; no replacement is started and
+no unknown group is killed. Only confirmed group disappearance permits a new
+generation. During the same Host lifetime the original, unreaped ChildProcess
+object authorizes termination of its exact group. Publication uses that Host
+process reference and generation, never a worker-supplied identity.
+
+The worker protocol is bounded NDJSON (`hello`, `config`, `poke`, `drain` to the
+worker; `ready`, `publish`, `progress`, `drained` from it). Output has a declared
+channel size plus 4 KiB line limit, 64 lines/second and 2 MiB/second limits,
+a 64 KiB stderr ring, bounded stdin backpressure and one coalesced pending payload
+per channel. Snapshots commit no faster than once per second. `configure` uses a
+revision CAS and canonical payload digest in its request receipt; identical
+configuration from multiple guests is a no-op. Unknown mutation receipts must be
+queried through `services.get().controls` before retrying with the same key.
+
+Local verification uses isolated fixtures and reviewed native workers. It does
+not imply that a real installed Desktop, live provider, Windows process custody,
+or cross-machine/shared-filesystem coordination has been validated. Historical
+Panel clients without these methods must use only a verified selected package
+entry and explicitly report their window-dependent compatibility mode.
