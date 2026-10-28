@@ -1009,7 +1009,7 @@ describe("useRemoteApp Main process epochs", () => {
           .filter((item) => item.kind === "assistant")
           .map((item) => item.text),
       ).toEqual(["old answer"]);
-      expect(hook.result.current.notice).toContain("开头尚未恢复");
+      expect(hook.result.current.notice).toContain("会话记录恢复未完成");
       await act(async () => {
         window.dispatchEvent(new Event("focus"));
         await flushMicrotasks();
