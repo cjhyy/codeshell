@@ -29,7 +29,7 @@ class FakeWebSocket {
   sent: string[] = [];
   onopen: (() => void) | null = null;
   onmessage: ((event: { data: string }) => void) | null = null;
-  onclose: (() => void) | null = null;
+  onclose: ((event?: { code: number }) => void) | null = null;
   onerror: (() => void) | null = null;
 
   constructor(readonly url: string) {
@@ -103,6 +103,49 @@ afterEach(() => {
 });
 
 describe("useRemoteSocket resync", () => {
+  test("passcode rotation offers HTTP verification without losing pairing or replaying writes", async () => {
+    setupBrowser();
+    const resyncs: ResyncReason[] = [];
+    const hook = await renderHook(() =>
+      useRemoteSocket({ onResyncNeeded: (reason) => resyncs.push(reason) }),
+    );
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+    const generation = hook.result.current.connectionGeneration;
+    await act(async () => {
+      ws.readyState = FakeWebSocket.CLOSED;
+      ws.onclose?.({ code: 4407 });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.status).toBe("offline");
+    expect(hook.result.current.accessRequired).toBe(true);
+    expect(localStorage.getItem("cs.deviceId")).toBe("device-1");
+    expect(localStorage.getItem("cs.deviceSecret")).toBe("secret-1");
+    expect(hook.result.current.send({ type: "chat.send", text: "pending draft" }, generation)).toBe(
+      false,
+    );
+    expect(
+      hook.result.current.send({
+        type: "approval.respond",
+        approvalId: "pending",
+        decision: "approve",
+      }),
+    ).toBe(false);
+    await act(async () => {
+      for (const name of ["online", "focus", "pageshow"]) window.dispatchEvent(new Event(name));
+      document.dispatchEvent(new Event("visibilitychange"));
+      await flushMicrotasks();
+    });
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(ws.sent.map((line) => JSON.parse(line).type)).toEqual(["auth.device"]);
+    expect(resyncs).toEqual(["online"]);
+    await hook.unmount();
+  });
+
   test("send reports failure unless the same authenticated connection generation is open", async () => {
     setupBrowser();
     const hook = await renderHook(() => useRemoteSocket({}));

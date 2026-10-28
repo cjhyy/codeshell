@@ -110,6 +110,8 @@ export class RemoteHostManager extends EventEmitter {
   private publicBaseUrl?: string;
   /** Passcode gate, present only in tunnel mode. */
   private passcode?: AccessPasscode;
+  private socketAccessValidity = new WeakMap<WebSocket, () => boolean>();
+  private accessSweep?: ReturnType<typeof setInterval>;
   /** Where the built mobile app lives (out/mobile). */
   private readonly mobileRootDir: string;
   /** Dev proxy target for /mobile (HMR); undefined in prod. */
@@ -168,8 +170,8 @@ export class RemoteHostManager extends EventEmitter {
   private async startOnce(options: RemoteHostStartOptions): Promise<RemoteHostStarted> {
     const relay = options.mode === "relay";
     const publicAccess = relay || options.mode === "tunnel";
-    if (relay && !options.passcode?.isSet()) {
-      throw new Error("Relay mode requires an initialized access passcode");
+    if (publicAccess && !options.passcode?.isSet()) {
+      throw new Error(`${relay ? "Relay" : "Tunnel"} mode requires an initialized access passcode`);
     }
     if (relay) this.publicBaseUrl = undefined;
     this.passcode = publicAccess ? options.passcode : undefined;
@@ -300,7 +302,9 @@ export class RemoteHostManager extends EventEmitter {
           socket.destroy();
           return;
         }
+        const isAccessAuthorized = gate.captureValidity();
         this.wss!.handleUpgrade(req, socket, head, (ws) => {
+          this.socketAccessValidity.set(ws, isAccessAuthorized);
           this.wss!.emit("connection", ws, req);
         });
       });
@@ -316,16 +320,17 @@ export class RemoteHostManager extends EventEmitter {
         this.emit("host-error", error);
       });
       ws.on("message", (raw) => {
+        if (!this.hasSocketAccess(ws)) return;
         let parsed: unknown;
         try {
           parsed = JSON.parse(String(raw));
         } catch {
-          ws.send(JSON.stringify({ type: "error", message: "Invalid JSON" }));
+          this.sendBounded(ws, JSON.stringify({ type: "error", message: "Invalid JSON" }));
           return;
         }
         const event = parseMobileClientEvent(parsed);
         if (!event) {
-          ws.send(JSON.stringify({ type: "error", message: "Invalid client event" }));
+          this.sendBounded(ws, JSON.stringify({ type: "error", message: "Invalid client event" }));
           return;
         }
         // Pairing/auth are handled inline and bind device identity to this
@@ -335,7 +340,7 @@ export class RemoteHostManager extends EventEmitter {
         try {
           reply = this.handleClientEvent(event);
         } catch {
-          ws.send(JSON.stringify({ type: "error", message: "Client event failed" }));
+          this.sendBounded(ws, JSON.stringify({ type: "error", message: "Client event failed" }));
           return;
         }
         if (event.type === "auth.device" && reply?.type === "auth.ok") {
@@ -346,11 +351,14 @@ export class RemoteHostManager extends EventEmitter {
           this.bindSocketDevice(ws, reply.device.id);
         }
         if (reply) {
-          ws.send(JSON.stringify(reply));
+          this.sendBounded(ws, JSON.stringify(reply));
           return;
         }
         if (!this.authed.has(ws)) {
-          ws.send(JSON.stringify({ type: "auth.failed", message: "Not authenticated" }));
+          this.sendBounded(
+            ws,
+            JSON.stringify({ type: "auth.failed", message: "Not authenticated" }),
+          );
           return;
         }
         // Authenticated, non-auth event → hand to the main dispatcher, which
@@ -362,11 +370,14 @@ export class RemoteHostManager extends EventEmitter {
           );
           void Promise.resolve(dispatched).catch(() => {
             if (ws.readyState === ws.OPEN) {
-              ws.send(JSON.stringify({ type: "error", message: "Client event failed" }));
+              this.sendBounded(
+                ws,
+                JSON.stringify({ type: "error", message: "Client event failed" }),
+              );
             }
           });
         } catch {
-          ws.send(JSON.stringify({ type: "error", message: "Client event failed" }));
+          this.sendBounded(ws, JSON.stringify({ type: "error", message: "Client event failed" }));
         }
       });
       ws.on("close", () => {
@@ -417,6 +428,16 @@ export class RemoteHostManager extends EventEmitter {
       url: `http://${bindHost}:${port}`,
       mode: options.mode ?? "lan",
     };
+    if (gate) {
+      const sockets = this.wss;
+      // Idle public tabs must also relinquish viewer-owned state after rotation.
+      // Traffic is checked synchronously in both directions, without rehashing
+      // any plaintext or spending the passcode attempt budget.
+      this.accessSweep = setInterval(() => {
+        for (const client of sockets?.clients ?? []) this.hasSocketAccess(client);
+      }, 1000);
+      this.accessSweep.unref();
+    }
     return this.started;
   }
 
@@ -548,7 +569,7 @@ export class RemoteHostManager extends EventEmitter {
   hasAuthenticatedViewer(viewerId: string, deviceId: string): boolean {
     for (const client of this.wss?.clients ?? []) {
       if (
-        client.readyState === client.OPEN &&
+        this.hasSocketAccess(client) &&
         this.authed.get(client) === deviceId &&
         this.viewers.get(client) === viewerId
       )
@@ -600,6 +621,7 @@ export class RemoteHostManager extends EventEmitter {
    * socket is still delivered. Returns false when retired.
    */
   private sendBounded(client: WebSocket, payload: string): boolean {
+    if (!this.hasSocketAccess(client)) return false;
     if (
       client.bufferedAmount > 0 &&
       client.bufferedAmount + Buffer.byteLength(payload) > MAX_SOCKET_BACKLOG_BYTES
@@ -610,6 +632,19 @@ export class RemoteHostManager extends EventEmitter {
     }
     client.send(payload);
     return true;
+  }
+
+  private hasSocketAccess(client: WebSocket): boolean {
+    if (client.readyState !== client.OPEN) return false;
+    if (this.socketAccessValidity.get(client)?.() !== false) return true;
+    this.releaseSocket(client);
+    // Distinct from paired-device rejection (4401/4403): the browser keeps its
+    // identity and offers a fresh HTTP challenge instead of silently retrying.
+    client.close(4407, "Access passcode changed");
+    const deadline = setTimeout(() => client.terminate(), 1000);
+    deadline.unref();
+    client.once("close", () => clearTimeout(deadline));
+    return false;
   }
 
   private releaseSocket(ws: WebSocket): void {
@@ -666,6 +701,8 @@ export class RemoteHostManager extends EventEmitter {
 
   private async stopOnce(): Promise<void> {
     if (this.starting) await this.starting.catch(() => undefined);
+    clearInterval(this.accessSweep);
+    this.accessSweep = undefined;
     this.relayLifetime?.abort();
     this.relayLifetime = undefined;
     const server = this.server;

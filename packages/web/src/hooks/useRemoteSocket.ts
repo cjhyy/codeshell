@@ -19,6 +19,8 @@ export type ResyncReason = "online" | "visible" | "focus" | "pageshow";
  *  state; raw lines drive the chat reducer. */
 export interface RemoteSocket {
   status: ConnStatus;
+  /** The public entrance passcode changed; revalidate HTTP without losing pairing. */
+  accessRequired?: boolean;
   deviceName: string;
   /** Monotonic id of the currently authenticated socket. */
   connectionGeneration: number;
@@ -42,6 +44,7 @@ const RECONNECT_MAX_MS = 8000;
 
 export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
   const [status, setStatus] = useState<ConnStatus>("connecting");
+  const [accessRequired, setAccessRequired] = useState(false);
   const [deviceName, setDeviceName] = useState<string>("");
   const [connectionGeneration, setConnectionGeneration] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
@@ -254,7 +257,12 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
 
       ws.onclose = (event) => {
         if (wsRef.current !== ws) return;
-        if (event?.code === 4401 || event?.code === 4403) {
+        if (event?.code === 4407) {
+          closedByUs.current = true;
+          statusRef.current = "offline";
+          setStatus("offline");
+          setAccessRequired(true);
+        } else if (event?.code === 4401 || event?.code === 4403) {
           closedByUs.current = true;
           deviceStore.clearId();
           statusRef.current = "unpaired";
@@ -317,5 +325,5 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
     };
   }, []);
 
-  return { status, deviceName, connectionGeneration, send, logout };
+  return { status, accessRequired, deviceName, connectionGeneration, send, logout };
 }

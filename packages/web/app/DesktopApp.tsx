@@ -20,6 +20,7 @@ import { sessionTitle } from "./chat.js";
 import { Workbench } from "./Workbench.js";
 import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopControls.js";
 import type { WorkbenchController } from "./workbench-types.js";
+import { DesktopAccessChallenge } from "./DesktopAccessChallenge.js";
 
 /** The Desktop adapter drives the already resident Desktop worker through its
  * paired-device protocol. It never starts a Hub ProtocolClient or another WS. */
@@ -52,7 +53,8 @@ export function DesktopApp() {
           setAuthError(error instanceof Error ? error.message : "无法完成桌面连接。");
           if (error instanceof ApiError && error.status === 401) {
             setSession(undefined);
-            app.logout();
+            // HTTP can reject a rotated entrance cookie while pairing is still
+            // valid. Only the socket's device-auth failure discards that identity.
           }
         }
       });
@@ -65,6 +67,19 @@ export function DesktopApp() {
   }, [app.status]);
   const controller = useDesktopController(app, session, retryAuth);
   notificationRef.current = controller.onHostNotification;
+  React.useEffect(() => {
+    if (!app.accessRequired || !controller.hasUnsent) return;
+    const guard = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [app.accessRequired, controller.hasUnsent]);
+  if (app.accessRequired)
+    return (
+      <DesktopAccessChallenge draft={controller.draft} onVerify={() => window.location.reload()} />
+    );
   if (!session) {
     const unpaired = app.status === "unpaired";
     return (
@@ -139,10 +154,23 @@ export function useDesktopController(
         : undefined;
     },
   );
+  const [workspaceSessionId, setWorkspaceSessionId] = React.useState<string>();
+  // Only an explicitly selected conversation owns this override. Link returns
+  // and pending new/CLI conversations keep their separately selected workspace.
+  const selectedSessionCwd =
+    workspaceSessionId === app.activeSessionId && workspaceSessionId && !app.activeRoomId
+      ? app.activeCwd
+      : undefined;
   const workspaceCwd =
-    workspaceOverride === undefined
+    selectedSessionCwd ??
+    (workspaceOverride === undefined
       ? (app.activeCwd ?? app.activeProjectCwd ?? null)
-      : workspaceOverride;
+      : workspaceOverride);
+  React.useLayoutEffect(() => {
+    // A paged or reconnecting catalog may temporarily omit the selected row.
+    // Keep its last authoritative root instead of falling back to an older one.
+    if (selectedSessionCwd != null) setWorkspaceOverride(selectedSessionCwd);
+  }, [selectedSessionCwd]);
   const workspaceKey = workspaceCwd ?? "desktop-unbound";
   // Layout effects run before any keyed management view issues passive fetches.
   React.useLayoutEffect(() => {
@@ -302,6 +330,7 @@ export function useDesktopController(
         return;
       }
       navigationRevision.current += 1;
+      setWorkspaceSessionId(undefined);
       const project = app.projects.find((item) => item.id === id || item.path === id);
       setWorkspaceOverride(project?.path ?? id);
       app.selectProject(id);
@@ -311,6 +340,7 @@ export function useDesktopController(
     },
     selectSession: (id) => {
       navigationRevision.current += 1;
+      setWorkspaceSessionId(id);
       const selected = app.sessions.find((item) => item.id === id);
       // Shared history is scoped to the current workspace and may contain
       // older rows absent from the paired protocol's recent-session cache.
@@ -329,6 +359,7 @@ export function useDesktopController(
         return;
       }
       navigationRevision.current += 1;
+      setWorkspaceSessionId(undefined);
       const selected = target === undefined ? targetForCwd(app, workspaceCwd) : target;
       setWorkspaceOverride(selectedTargetCwd(app, selected));
       const draftId = `desktop-new-${browserId()}`;
@@ -344,6 +375,7 @@ export function useDesktopController(
     },
     openCcSession: (id, cwd, mode) => {
       navigationRevision.current += 1;
+      setWorkspaceSessionId(undefined);
       setWorkspaceOverride(cwd);
       app.openCcSession(id, cwd, mode);
       setError("");
@@ -505,6 +537,7 @@ export function useDesktopController(
         return;
       }
       navigationRevision.current += 1;
+      setWorkspaceSessionId(undefined);
       pendingCreate.current = {
         draftId: id,
         navigationRevision: navigationRevision.current,

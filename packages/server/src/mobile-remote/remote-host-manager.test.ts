@@ -818,6 +818,38 @@ describe("RemoteHostManager", () => {
 
   // ── Tunnel mode ───────────────────────────────────────────────────────────
 
+  test.each(["tunnel", "relay"] as const)(
+    "%s mode refuses missing or uninitialized passcodes before opening a listener",
+    async (mode) => {
+      dir = mkdtempSync(join(tmpdir(), "remote-host-public-gate-"));
+      const passcode = new AccessPasscode({ filePath: join(dir, "access.json") });
+      const host = new RemoteHostManager({
+        devices: new TrustedDeviceStore(join(dir, "devices.json")),
+        onClientEvent: () => {},
+      });
+      try {
+        for (const gate of [undefined, passcode]) {
+          await expect(
+            host.start({ mode, host: "127.0.0.1", port: 0, passcode: gate }),
+          ).rejects.toThrow("requires an initialized access passcode");
+          expect(host.status()).toBeUndefined();
+        }
+        passcode.set("configured-passcode");
+        const started = await host.start({ mode, host: "127.0.0.1", port: 0, passcode });
+        expect((await fetch(started.url + "/health")).status).toBe(401);
+        expect(
+          (
+            await fetch(started.url + "/health", {
+              headers: { "X-Access-Passcode": "configured-passcode" },
+            })
+          ).status,
+        ).toBe(200);
+      } finally {
+        await host.stop();
+      }
+    },
+  );
+
   test("mode 'tunnel' binds 127.0.0.1 (never a LAN address)", async () => {
     dir = mkdtempSync(join(tmpdir(), "remote-host-"));
     const passcode = new AccessPasscode({ filePath: join(dir, "access.json") });
