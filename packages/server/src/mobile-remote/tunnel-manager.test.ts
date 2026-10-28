@@ -116,6 +116,34 @@ describe("TunnelManager", () => {
     expect(res.url).toBe("https://abc-def.trycloudflare.com");
   });
 
+  test.each(["stdout", "stderr"] as const)(
+    "extracts a URL split across %s chunks after a large log block",
+    async (stream) => {
+      const child = new FakeChild();
+      const mgr = makeManager(child);
+      const promise = mgr.start(12345);
+      try {
+        child[stream].emit("data", Buffer.from("x".repeat(8192) + " https://split-"));
+        for (const character of "stream.trycloudflare.com\n") {
+          child[stream].emit("data", Buffer.from(character));
+        }
+        expect((await promise).url).toBe("https://split-stream.trycloudflare.com");
+      } finally {
+        await mgr.stop();
+      }
+    },
+  );
+
+  test("does not join stdout and stderr fragments into a public URL", async () => {
+    const child = new FakeChild();
+    const mgr = makeManager(child, 20);
+    const promise = mgr.start(12345);
+    child.stdout.emit("data", Buffer.from("https://split-"));
+    child.stderr.emit("data", Buffer.from("stream.trycloudflare.com\n"));
+    await expect(promise).rejects.toThrow(/超时/);
+    await mgr.stop();
+  });
+
   test("times out and kills the child when no URL appears", async () => {
     const child = new FakeChild();
     const mgr = makeManager(child, 20);
@@ -281,6 +309,65 @@ describe("TunnelManager", () => {
     expect(res.url).toBe("https://new.trycloudflare.com");
 
     void mgr.stop();
+  });
+
+  test.each(["resolve", "reject"] as const)(
+    "a stopped readiness probe cannot %s into a replacement tunnel",
+    async (outcome) => {
+      const first = new FakeChild();
+      const second = new FakeChild();
+      let current = first;
+      let resolveReady!: (ready: boolean) => void;
+      let rejectReady!: (error: Error) => void;
+      const pendingReady = new Promise<boolean>((resolve, reject) => {
+        resolveReady = resolve;
+        rejectReady = reject;
+      });
+      let probes = 0;
+      const mgr = new TunnelManager({
+        binaryPath: () => "/fake/cloudflared",
+        spawn: () => current as unknown as import("node:child_process").ChildProcess,
+        checkReady: () => (++probes === 1 ? pendingReady : Promise.resolve(true)),
+        healthCheckIntervalMs: 0,
+      });
+      const connectedUrls: string[] = [];
+      mgr.on("status", (status, url) => {
+        if (status === "connected") connectedUrls.push(url);
+      });
+      try {
+        const oldStart = mgr.start(12345);
+        const canceled = oldStart.catch((error: Error) => error);
+        first.stderr.emit("data", "https://old.trycloudflare.com\n");
+        await mgr.stop();
+        expect(((await canceled) as Error).message).toMatch(/取消/);
+
+        current = second;
+        const newStart = mgr.start(12345);
+        second.stderr.emit("data", "https://new.trycloudflare.com\n");
+        await newStart;
+        if (outcome === "resolve") resolveReady(true);
+        else rejectReady(new Error("old readiness failed late"));
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        expect(mgr.publicUrl()).toBe("https://new.trycloudflare.com");
+        expect(mgr.isConnected()).toBe(true);
+        expect(second.killed).toBe(false);
+        expect(connectedUrls).toEqual(["https://new.trycloudflare.com"]);
+      } finally {
+        resolveReady(false);
+        await mgr.stop();
+      }
+    },
+  );
+
+  test("stop immediately rejects a start still waiting for its public URL", async () => {
+    const child = new FakeChild();
+    const mgr = makeManager(child, 1000);
+    const starting = mgr.start(12345);
+    const canceled = starting.catch((error: Error) => error);
+    await mgr.stop();
+    expect(((await canceled) as Error).message).toMatch(/取消/);
+    expect(mgr.isRunning()).toBe(false);
+    expect(mgr.publicUrl()).toBeUndefined();
   });
 
   test("retry after a failed start awaits the failed child's exit before re-spawning", async () => {
