@@ -17,8 +17,7 @@ import {
 } from "./electron-harness.mjs";
 
 const worktreeDirectories = process.argv.includes("--worktree-directories");
-const legacyProjects = process.argv.includes("--legacy-projects");
-const projectPins = legacyProjects || process.argv.includes("--project-pins");
+const projectPins = process.argv.includes("--project-pins");
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-shared-task-e2e-");
 // Native package authorization intentionally rejects symlinked install roots.
@@ -162,12 +161,14 @@ async function run() {
     ),
   ]);
   if (projectPins) {
-    // Retain the project's v1 package, then install a distinguishable v2 in the
-    // global catalog. Both the actual Electron guest and paired HTTP must keep v1.
+    // Retain the project's v1 package and install a distinguishable v2 in the global
+    // catalog, then roll the project back to v1. The rollback is chosen after the
+    // install, so both the actual Electron guest and paired HTTP must keep v1.
     const previousHome = process.env.HOME;
     process.env.HOME = isolated.home;
     try {
       const {
+        installedPanelAppUpdatedAt,
         listInstalledPanelApps,
         retainInstalledPanelApp,
         previewLocalPanelApp,
@@ -175,18 +176,7 @@ async function run() {
       } = await import("@cjhyy/code-shell-core");
       const current = (await listInstalledPanelApps()).find((item) => item.id === manifest.id);
       assert.ok(current?.packageDigest);
-      if (!legacyProjects) {
-        await retainInstalledPanelApp(manifest.id, current.packageDigest);
-        await writeFile(
-          join(project, ".code-shell/settings.json"),
-          JSON.stringify({
-            panelAppBindings: [manifest.id],
-            panelAppPins: {
-              [manifest.id]: { version: current.version, packageDigest: current.packageDigest },
-            },
-          }),
-        );
-      }
+      await retainInstalledPanelApp(manifest.id, current.packageDigest);
       const newer = join(isolated.home, "catalog-v2");
       await mkdir(join(newer, ".codeshell-panel"), { recursive: true });
       await mkdir(join(newer, "app/tools"), { recursive: true });
@@ -218,6 +208,21 @@ async function run() {
         overwrite: true,
       });
       assert.equal((await listInstalledPanelApps())[0].version, "2.0.0");
+      await writeFile(
+        join(project, ".code-shell/settings.json"),
+        JSON.stringify({
+          panelAppBindings: [manifest.id],
+          panelAppPins: {
+            [manifest.id]: {
+              version: current.version,
+              packageDigest: current.packageDigest,
+              pinnedAt: new Date(
+                Math.max(Date.now(), (installedPanelAppUpdatedAt(manifest.id) ?? 0) + 1),
+              ).toISOString(),
+            },
+          },
+        }),
+      );
     } finally {
       if (previousHome === undefined) delete process.env.HOME;
       else process.env.HOME = previousHome;
@@ -393,13 +398,8 @@ console.log(JSON.stringify({bookmark, device: devices.addDevice({name:"Shared ta
   assert.ok(panel, "Panel was not installed");
   assert.equal(panel.version, "1.0.0");
   if (projectPins) assert.equal(panel.packagePinned, true);
-  if (legacyProjects) {
-    const migrated = JSON.parse(await readFile(join(project, ".code-shell/settings.json"), "utf8"));
-    assert.equal(migrated.panelAppPins[manifest.id].version, "1.0.0");
-    assert.equal(migrated.panelAppPins[manifest.id].packageDigest, panel.packageDigest);
-  }
-  // The production native binding API materializes legacy pins and shares the
-  // exact conditional revision with paired Web. No raw project settings write.
+  // The production native binding API shares the exact conditional revision with
+  // paired Web. No raw project settings write.
   const bindingBefore = await win.evaluate(
     async (cwd) =>
       (await window.codeshell.getPanelAppBindings(cwd)).find(
@@ -1232,8 +1232,7 @@ console.log(JSON.stringify({bookmark, device: devices.addDevice({name:"Shared ta
       projectUpdateAfterActualTaskExit: projectPins,
       nativeReviewedPackageRestore: projectPins,
       nativeDamagedPackageRepair: projectPins,
-      projectPinnedAgainstNewerCatalog: projectPins,
-      legacyProjectAutomaticallyPinned: legacyProjects,
+      projectRollbackHoldsAgainstNewerCatalog: projectPins,
       sharedDirectoryBookmarks: true,
       backgroundDirectoryDelivery: true,
       sharedQueueControl: true,
