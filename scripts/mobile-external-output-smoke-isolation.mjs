@@ -71,7 +71,9 @@ export function installExternalOutputGuard() {
       options.shell ||
       options.detached ||
       !gitArgs.has(JSON.stringify(args)) ||
-      realpathSync(options.cwd) !== `${process.env.CODESHELL_OUTPUT_ROOT}/workspace` ||
+      !["workspace", "lifecycle-workspace"].some(
+        (name) => realpathSync(options.cwd) === `${process.env.CODESHELL_OUTPUT_ROOT}/${name}`,
+      ) ||
       env.HOME !== home ||
       env.NODE_OPTIONS !== process.env.NODE_OPTIONS ||
       env.PATH.split(":")[0] !== `${process.env.CODESHELL_OUTPUT_ROOT}/bin` ||

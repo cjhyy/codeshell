@@ -1,12 +1,12 @@
 // Synthetic stdio protocol backends. No installed/logged-in CLI or provider is used.
 import { createInterface } from "node:readline";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { once } from "node:events";
 const kind = process.env.CODESHELL_OUTPUT_KIND;
 const send = async (value) => {
   if (!process.stdout.write(JSON.stringify(value) + "\n")) await once(process.stdout, "drain");
 };
-const record = (event) =>
+const record = (event, details = {}) =>
   appendFileSync(
     process.env.CODESHELL_OUTPUT_REQUEST_LOG,
     JSON.stringify({
@@ -15,6 +15,7 @@ const record = (event) =>
       pid: process.pid,
       ppid: process.ppid,
       homeHash: process.env.CODESHELL_OUTPUT_HOME_HASH,
+      ...details,
     }) + "\n",
     { mode: 0o600 },
   );
@@ -23,8 +24,46 @@ const count = Number(process.env.CODESHELL_OUTPUT_PARTS ?? "1");
 if (kind === "claude-code") {
   let input = "";
   for await (const chunk of process.stdin) input += chunk;
-  record("physical-turn");
+  record("physical-turn", {
+    model: process.argv[process.argv.indexOf("--model") + 1],
+    resumed: process.argv.includes("--resume"),
+  });
   await send({ type: "system", subtype: "init", session_id: "fixture-claude" });
+  if (input.includes("lifecycle-approval")) {
+    const config = JSON.parse(
+      readFileSync(process.argv[process.argv.indexOf("--mcp-config") + 1], "utf8"),
+    );
+    const bridge = config.mcpServers.codeshell_tools;
+    const response = await fetch(bridge.url, {
+      method: "POST",
+      headers: {
+        ...bridge.headers,
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 901,
+        method: "tools/call",
+        params: {
+          name: "CodeShellPermissionPrompt",
+          arguments: {
+            tool_name: "Bash",
+            input: { command: "echo synthetic-approval-only" },
+            tool_use_id: "fixture-tool",
+          },
+        },
+      }),
+    });
+    if (response.status !== 200) throw new Error("Synthetic permission bridge refused");
+    const result = await response.json();
+    const decision = JSON.parse(result.result.content[0].text);
+    record("approval-answer", { decision: decision.behavior });
+  }
+  if (input.includes("lifecycle-hold")) {
+    record("turn-held");
+    await new Promise(() => setInterval(() => {}, 1000));
+  }
   await send({
     type: "stream_event",
     event: { type: "message_start", message: { id: "message" } },
@@ -50,12 +89,33 @@ if (kind === "claude-code") {
   }
 } else {
   let turns = 0;
+  const pendingApprovals = new Map();
   const input = createInterface({ input: process.stdin });
   input.on("close", () => process.exit(0));
   input.on("line", async (line) => {
     const request = JSON.parse(line);
+    if (pendingApprovals.has(request.id) && request.result) {
+      record("approval-answer", { answers: request.result.answers });
+      pendingApprovals.get(request.id)();
+      pendingApprovals.delete(request.id);
+      return;
+    }
     if (request.method === "initialize") return send({ id: request.id, result: {} });
+    if (request.method === "model/list") {
+      record("model-catalog");
+      return send({
+        id: request.id,
+        result: {
+          data: [{ model: "synthetic", displayName: "Synthetic", isDefault: true }],
+          nextCursor: null,
+        },
+      });
+    }
     if (request.method === "thread/start" || request.method === "thread/resume") {
+      record("thread-open", {
+        resumed: request.method === "thread/resume",
+        model: request.params?.model,
+      });
       await send({ id: request.id, result: { thread: { id: "fixture-thread" } } });
       if (process.env.CODESHELL_OUTPUT_DELAYED_TOOL) {
         const flag = process.argv.find((arg) => arg.startsWith("mcp_servers.codeshell_tools.url="));
@@ -90,6 +150,7 @@ if (kind === "claude-code") {
       return;
     }
     if (request.method === "turn/interrupt") {
+      record("turn-interrupted");
       await send({ id: request.id, result: {} });
       return send({
         method: "turn/completed",
@@ -121,6 +182,25 @@ if (kind === "claude-code") {
       method: "turn/started",
       params: { threadId: "fixture-thread", turn: { id: turnId } },
     });
+    const task = JSON.stringify(request.params?.input ?? []);
+    if (task.includes("lifecycle-approval")) {
+      const id = 9000 + number;
+      const answered = new Promise((resolve) => pendingApprovals.set(id, resolve));
+      await send({
+        id,
+        method: "item/tool/requestUserInput",
+        params: {
+          questions: [
+            {
+              id: "fixture",
+              question: "Choose synthetic target",
+              options: [{ label: "accept", description: "Synthetic only" }],
+            },
+          ],
+        },
+      });
+      await answered;
+    }
     if (number > 1) {
       await send({
         method: "item/agentMessage/delta",
@@ -173,7 +253,10 @@ if (kind === "claude-code") {
         },
       });
     }
-    if (process.env.CODESHELL_OUTPUT_HOLD) return;
+    if (process.env.CODESHELL_OUTPUT_HOLD || task.includes("lifecycle-hold")) {
+      record("turn-held");
+      return;
+    }
     await send({
       method: "turn/completed",
       params: { threadId: "fixture-thread", turn: { id: turnId, status: "completed" } },

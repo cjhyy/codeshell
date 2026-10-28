@@ -17,7 +17,8 @@ import { createBunTestEnvironment } from "./bun-test-completion.mjs";
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // Retention is explicit and task-owned. CI cleans only the directory it creates.
-const retain = process.argv[2] === "--retain";
+const retain = process.argv.includes("--retain");
+const lifecycleOnly = process.argv.includes("--lifecycle");
 const root = realpathSync(mkdtempSync(join(tmpdir(), "codeshell-external-output-native-")));
 chmodSync(root, 0o700);
 const cache = join(
@@ -111,12 +112,16 @@ try {
   env.CODESHELL_OUTPUT_COLD_HASH = hashFile(env.CODESHELL_OUTPUT_COLD_ENTRY);
   env.NODE_OPTIONS = `--import=${pathToFileURL(join(repo, "scripts/mobile-external-output-smoke-isolation.mjs")).href}`;
   if (failure) throw new Error(failure);
-  child = spawn(process.execPath, ["scripts/smoke-mobile-external-output.mjs"], {
-    cwd: repo,
-    env,
-    stdio: "inherit",
-    detached: process.platform !== "win32",
-  });
+  child = spawn(
+    process.execPath,
+    ["scripts/smoke-mobile-external-output.mjs", ...(lifecycleOnly ? ["lifecycle"] : [])],
+    {
+      cwd: repo,
+      env,
+      stdio: "inherit",
+      detached: process.platform !== "win32",
+    },
+  );
   timer = setTimeout(
     () => terminateOwned("native fixture total deadline exceeded"),
     Math.max(1, deadline - Date.now()),
