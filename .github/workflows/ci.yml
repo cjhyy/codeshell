@@ -456,14 +456,19 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import { chromium } from 'playwright';
-          import { writeFileSync } from 'node:fs';
+          import { writeFileSync, appendFileSync } from 'node:fs';
+          appendFileSync(process.env.GITHUB_ENV, `CODESHELL_TEST_CHROMIUM=${chromium.executablePath()}\n`);
           writeFileSync('/tmp/codeshell-audio-chromium.apparmor', `abi <abi/4.0>,\ninclude <tunables/global>\nprofile codeshell-audio-ci "${chromium.executablePath()}" flags=(unconfined) {\n  userns,\n}\n`);
           NODE
           sudo apparmor_parser -r /tmp/codeshell-audio-chromium.apparmor
       - name: Browser recording and interrupted upload recovery
-        run: bun scripts/smoke-panel-audio-capture.mjs
+        run: bun scripts/run-isolated-node-smoke.mjs scripts/smoke-panel-audio-capture.mjs
       - name: Browser video recording and interrupted upload recovery
-        run: bun scripts/smoke-panel-video-capture.mjs
+        run: bun scripts/run-isolated-node-smoke.mjs scripts/smoke-panel-video-capture.mjs
+      - name: Opaque iframe image and audio resources
+        run: bun scripts/run-isolated-node-smoke.mjs scripts/smoke-panel-inline-resources.mjs
+      - name: Paired mobile tunnel Panel load and file download
+        run: bun run test:mobile-panel-downloads
 
   tests-windows:
     name: tests (windows port — real win32)
