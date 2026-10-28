@@ -79,6 +79,38 @@ afterEach(() => {
 });
 
 describe("Desktop workbench controller", () => {
+  test("offline session and CLI navigation preserve the workspace and draft", async () => {
+    const calls: string[] = [];
+    const app = remoteApp({
+      status: "offline",
+      activeSessionId: "native-a",
+      activeCwd: "/a",
+      sessions: [{ id: "native-b", title: "B", cwd: "/b", updatedAt: 1 }],
+      selectProject: () => calls.push("project"),
+      selectSession: () => calls.push("session"),
+      openCcSession: () => calls.push("cli"),
+    });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      await act(async () => {
+        hook.result.current.setDraft("keep my unsent task");
+        hook.result.current.selectSession("native-b");
+      });
+      const sidebar = hook.result.current.renderSidebar!({
+        guard: noop,
+        conversation: noop,
+      }) as React.ReactElement<{ app: RemoteApp }>;
+      await act(async () => sidebar.props.app.openCcSession("cli-b", "/b", "default"));
+      expect(calls).toEqual([]);
+      expect(hook.result.current.workspaceCwd).toBe("/a");
+      expect(hook.result.current.activeId).toBe("native-a");
+      expect(hook.result.current.draft).toBe("keep my unsent task");
+      expect(hook.result.current.error).toContain("连接已断开");
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("new-session target and visible history use the remote Host case policy", async () => {
     const created: unknown[] = [];
     const projects = [

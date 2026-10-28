@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { act } from "react";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { useRemoteApp } from "./useRemoteApp";
@@ -101,6 +101,254 @@ afterEach(() => {
   restoreBrowserGlobals = undefined;
   FakeWebSocket.instances = [];
   visibilityState = "visible";
+});
+
+describe("useRemoteApp session switching recovery", () => {
+  async function connected(journal = false) {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", ...(journal ? { capabilities: { outputJournal: 1 } } : {}) });
+      await flushMicrotasks();
+    });
+    return { hook, ws, sent: () => ws.sent.map((line) => JSON.parse(line)) };
+  }
+
+  test("native history fallback keeps the verified selection until history arrives", async () => {
+    const { hook, ws, sent } = await connected(true);
+    try {
+      await act(async () => {
+        hook.result.current.selectSession("legacy-native");
+        await flushMicrotasks();
+        const select = sent().findLast((event) => event.type === "session.select");
+        ws.message({
+          type: "session.recovery.ready",
+          sessionId: select.sessionId,
+          recoveryId: select.recoveryId,
+          ok: true,
+        });
+        await flushMicrotasks();
+        const page = sent().findLast((event) => event.type === "session.outputJournal");
+        ws.message({
+          ...page,
+          page: { version: 1, status: "unavailable", frames: [], complete: false },
+          snapshot: { epoch: "host", nextSeq: 1, unpaired: false },
+        });
+        await flushMicrotasks();
+      });
+      expect(sent()).toContainEqual({ type: "session.history", sessionId: "legacy-native" });
+      expect(sent().some((event) => event.type === "session.recovery.cancel")).toBe(false);
+      expect(hook.result.current.loading.sessionHistory).toBe(true);
+      await act(async () => {
+        ws.message({
+          type: "session.history.ok",
+          sessionId: "legacy-native",
+          events: [
+            { type: "session_started", sessionId: "legacy-native" },
+            { type: "user_message", text: "older task" },
+            { type: "stream_request_start" },
+            { type: "text_delta", text: "saved answer" },
+          ],
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.loading.sessionHistory).toBe(false);
+      expect(
+        hook.result.current.chat.items.some(
+          (item) => item.kind === "assistant" && item.text === "saved answer",
+        ),
+      ).toBe(true);
+      await act(async () => {
+        hook.result.current.selectProject("/other");
+        await flushMicrotasks();
+      });
+      expect(sent().filter((event) => event.type === "session.recovery.cancel")).toHaveLength(1);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  for (const rejected of ["session.select", "session.history"] as const)
+    test(`a legacy ${rejected} send failure releases history loading`, async () => {
+      const { hook, ws, sent } = await connected();
+      try {
+        const send = ws.send.bind(ws);
+        ws.send = (payload) => {
+          if (JSON.parse(payload).type === rejected) throw new Error("socket send failed");
+          send(payload);
+        };
+        await act(async () => {
+          hook.result.current.selectSession("native");
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.loading.sessionHistory).toBe(false);
+        expect(hook.result.current.notice).toBeTruthy();
+        expect(sent().some((event) => event.type === "session.history")).toBe(false);
+      } finally {
+        await hook.unmount();
+      }
+    });
+
+  test("offline navigation after disconnect cleanup retains the selected conversation", async () => {
+    const { hook, ws, sent } = await connected();
+    try {
+      await act(async () => {
+        hook.result.current.selectSession("native");
+        ws.message({ type: "session.history.ok", sessionId: "native", events: [] });
+        await flushMicrotasks();
+        ws.close();
+        await flushMicrotasks();
+      });
+      const revision = hook.result.current.conversationRevision;
+      const requests = sent().length;
+      await act(async () => {
+        hook.result.current.selectSession("another");
+        hook.result.current.openCcSession("cli", "/other", "default");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeSessionId).toBe("native");
+      expect(hook.result.current.conversationRevision).toBe(revision);
+      expect(hook.result.current.loading.sessionHistory).toBe(false);
+      expect(hook.result.current.loading.roomHistory).toBe(false);
+      expect(sent()).toHaveLength(requests);
+      expect(hook.result.current.notice).toBeTruthy();
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("native and CLI switches discard the previous feed loading and late catchup", async () => {
+    const { hook, ws, sent } = await connected();
+    try {
+      await act(async () => {
+        hook.result.current.selectSession("native-a");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.loading.sessionHistory).toBe(true);
+      await act(async () => {
+        hook.result.current.openCcSession("cli", "/repo", "default");
+        ws.message({ type: "ccRoom.opened", sessionId: "cli", roomId: "room", status: "running" });
+        ws.message({
+          type: "ccRoom.transcriptSubscribed",
+          roomId: "room",
+          sessionId: "cli",
+          active: true,
+          messages: [],
+          roomCursor: 0,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.loading.sessionHistory).toBe(false);
+      expect(hook.result.current.loading.roomHistory).toBe(true);
+      const room = sent().findLast((event) => event.type === "room.history");
+      await act(async () => {
+        hook.result.current.selectSession("native-b");
+        ws.message({
+          type: "room.history.ok",
+          roomId: "room",
+          requestId: room.requestId,
+          messages: [],
+          page: { snapshotId: "old-room", throughSeq: 0, complete: true },
+        });
+        ws.message({ type: "session.history.ok", sessionId: "native-b", events: [] });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeSessionId).toBe("native-b");
+      expect(hook.result.current.loading.sessionHistory).toBe(false);
+      expect(hook.result.current.loading.roomHistory).toBe(false);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  for (const feed of ["native", "cli"] as const)
+    test(`disconnect clears cancelled ${feed} history loading`, async () => {
+      const { hook, ws } = await connected(true);
+      try {
+        await act(async () => {
+          if (feed === "native") hook.result.current.selectSession("native");
+          else {
+            hook.result.current.openCcSession("cli", "/repo", "default");
+            ws.message({
+              type: "ccRoom.opened",
+              sessionId: "cli",
+              roomId: "room",
+              status: "running",
+            });
+          }
+          await flushMicrotasks();
+        });
+        expect(
+          hook.result.current.loading[feed === "native" ? "sessionHistory" : "roomHistory"],
+        ).toBe(true);
+        await act(async () => {
+          ws.close();
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.loading.sessionHistory).toBe(false);
+        expect(hook.result.current.loading.roomHistory).toBe(false);
+      } finally {
+        await hook.unmount();
+      }
+    });
+
+  test("foreground event bursts retain the in-flight selected recovery", async () => {
+    const { hook, ws, sent } = await connected(true);
+    try {
+      await act(async () => {
+        hook.result.current.selectSession("native");
+        await flushMicrotasks();
+        window.dispatchEvent(new Event("focus"));
+        document.dispatchEvent(new Event("visibilitychange"));
+        window.dispatchEvent(new Event("pageshow"));
+        await flushMicrotasks();
+      });
+      expect(sent().filter((event) => event.type === "session.select")).toHaveLength(1);
+      expect(sent().some((event) => event.type === "session.recovery.cancel")).toBe(false);
+      expect(hook.result.current.loading.sessionHistory).toBe(true);
+      const select = sent().findLast((event) => event.type === "session.select");
+      await act(async () => {
+        ws.message({ ...select, type: "session.recovery.ready", ok: false });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.loading.sessionHistory).toBe(false);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  for (const source of ["foreground", "accepted"] as const)
+    test(`an immediate ${source} recovery send failure cannot leave loading true`, async () => {
+      const { hook, ws, sent } = await connected(true);
+      const now = spyOn(Date, "now").mockReturnValue(1000);
+      try {
+        await act(async () => {
+          hook.result.current.selectSession("native");
+          const select = sent().findLast((event) => event.type === "session.select");
+          ws.message({ ...select, type: "session.recovery.ready", ok: false });
+          await flushMicrotasks();
+        });
+        const send = ws.send.bind(ws);
+        ws.send = (payload) => {
+          if (JSON.parse(payload).type === "session.select") throw new Error("socket send failed");
+          send(payload);
+        };
+        now.mockReturnValue(2000);
+        await act(async () => {
+          if (source === "foreground") window.dispatchEvent(new Event("focus"));
+          else
+            ws.message({ type: "chat.accepted", sessionId: "external", modelKey: "codex:fixture" });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.loading.sessionHistory).toBe(false);
+        expect(hook.result.current.notice).toBeTruthy();
+      } finally {
+        now.mockRestore();
+        await hook.unmount();
+      }
+    });
 });
 
 describe("useRemoteApp session catalog pages", () => {

@@ -373,6 +373,10 @@ export function useDesktopController(
       actions.newSession(targetForCwd(app, project?.path ?? id));
     },
     selectSession: (id) => {
+      if (app.status !== "online") {
+        setError("连接已断开，重新连接后才能切换会话。");
+        return;
+      }
       navigationRevision.current += 1;
       pendingCreate.current = null;
       setCreationNeedsRetry(false);
@@ -410,6 +414,10 @@ export function useDesktopController(
       setError("");
     },
     openCcSession: (id, cwd, mode) => {
+      if (app.status !== "online") {
+        setError("连接已断开，重新连接后才能打开 CLI 会话。");
+        return;
+      }
       navigationRevision.current += 1;
       pendingCreate.current = null;
       setCreationNeedsRetry(false);

@@ -331,6 +331,8 @@ export type MobileServerEvent =
       recoveryId: string;
       requestId: string;
       page: import("../session/output-journal.js").OutputJournalPage;
+      /** A valid selection temporarily exceeded the bounded read slots; retry this request. */
+      busy?: true;
       /** Main's display-only projection after validating the exact raw cutover anchor. */
       legacyBase?: { throughEventId: string; events: Record<string, unknown>[] };
       legacyBaseComplete?: boolean;
