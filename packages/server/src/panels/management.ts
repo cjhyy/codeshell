@@ -734,15 +734,23 @@ export function createPanelManagement(options: PanelManagementOptions) {
         const pins = parsePanelAppPackagePins(current);
         if (bound) {
           if (!app.packageDigest) throw new Error("Cannot bind an unverified Panel package");
-          pins[app.id] = {
-            version: app.version,
-            packageDigest: app.packageDigest,
-            // Holds this project only until the next global install or update, so it
-            // must be strictly later than the install it was chosen after.
-            pinnedAt: new Date(
-              Math.max(now(), (installedPanelAppUpdatedAt(app.id) ?? 0) + 1),
-            ).toISOString(),
-          };
+          const existing = pins[app.id];
+          // Rebinding the package a current pin already selects changes nothing, so
+          // it must not invalidate other devices' revisions or pending reviews.
+          const unchanged =
+            existing?.version === app.version &&
+            existing.packageDigest === app.packageDigest &&
+            !!currentPanelAppPackagePins({ panelAppPins: { [app.id]: existing } })[app.id];
+          if (!unchanged)
+            pins[app.id] = {
+              version: app.version,
+              packageDigest: app.packageDigest,
+              // Holds this project only until the next global install or update, so it
+              // must be strictly later than the install it was chosen after.
+              pinnedAt: new Date(
+                Math.max(now(), (installedPanelAppUpdatedAt(app.id) ?? 0) + 1),
+              ).toISOString(),
+            };
         } else delete pins[app.id];
         current.panelAppPins = pins;
       }

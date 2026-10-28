@@ -249,9 +249,8 @@ test("same payload reuses its immutable directory despite changed installation m
   expect(next.packageDigest).toBe(first.packageDigest);
   expect((await stat(retained.installPath)).ino).toBe(before.ino);
   expect(await readFile(join(retained.installPath, ".cs-panel-app-meta.json"))).toEqual(metadata);
-  expect((await readdir(join(retained.installPath, ".."))).sort()).toEqual(
-    [first.packageDigest!, "legacy-projects.json"].sort(),
-  );
+  // Only the retained package itself; no legacy baseline ledger is written.
+  expect(await readdir(join(retained.installPath, ".."))).toEqual([first.packageDigest!]);
 });
 
 test("content changes cannot hide behind an unchanged semantic version", async () => {
