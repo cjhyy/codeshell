@@ -77,6 +77,8 @@ export type ToolJobStatus =
   | "interrupted";
 export interface ToolJob {
   id: string;
+  /** Caller-owned idempotency identity, returned with its authorized receipt. */
+  requestKey?: string;
   scope: ToolJobScope;
   entry: ToolJobEntry;
   package?: ToolJobPackage;
@@ -218,12 +220,7 @@ function progressValue(progress: ToolJobProgress): ToolJobProgress {
   );
 }
 function publicJob(job: StoredJob): ToolJob {
-  const {
-    version: _version,
-    requestKey: _requestKey,
-    requestDigest: _requestDigest,
-    ...value
-  } = job;
+  const { version: _version, requestDigest: _requestDigest, ...value } = job;
   return toolJobJson(value, toolJobLimits.maxRecordBytes);
 }
 function packageValue(value: ToolJobPackage): ToolJobPackage {
