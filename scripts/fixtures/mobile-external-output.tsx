@@ -229,7 +229,7 @@ export async function run(root: string, port: number) {
       { text: "first", displayText: "first", clientMessageId: "desktop-first" },
       77,
     );
-    assert.equal(first.reason, "completed");
+    assert.equal(first.reason, "completed", first.text?.slice(0, 2000));
     const expected = Array.from({ length: 192 }, (_, index) => part(index)).join("");
     assert(Buffer.byteLength(expected) > 8 * 1024 * 1024);
     assert(snapshots.get("external-mobile").events[0]!.seq > 1, "actual snapshot eviction");

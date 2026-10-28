@@ -103,6 +103,274 @@ afterEach(() => {
   visibilityState = "visible";
 });
 
+describe("useRemoteApp session catalog pages", () => {
+  test("appends pages, ignores health snapshots, and fences a late page after changing projects", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    const latestRequest = () =>
+      ws.sent
+        .map((line) => JSON.parse(line))
+        .filter((event) => event.type === "session.list" && event.requestId)
+        .at(-1)!;
+    const row = (id: string, cwd = "/a") => ({
+      id,
+      cwd,
+      title: id,
+      updatedAt: 1,
+      origin: "desktop",
+    });
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok" });
+        ws.message({
+          type: "room.projects.ok",
+          projects: [
+            {
+              id: "a",
+              path: "/a",
+              name: "A",
+              roots: [
+                { id: "a-main", path: "/a", name: "A", role: "primary" },
+                { id: "a-extra", path: "/extra", name: "extra", role: "secondary" },
+              ],
+            },
+          ],
+        });
+        await flushMicrotasks();
+        hook.result.current.refreshSessions(["/a", "/extra"]);
+        await flushMicrotasks();
+      });
+      const first = latestRequest();
+      expect(first.cwds).toEqual(["/a", "/extra"]);
+      await act(async () => {
+        ws.message({
+          type: "session.list.ok",
+          requestId: first.requestId,
+          sessions: [row("a1")],
+          nextCursor: "page-2",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.sessionsHasMore).toBe(true);
+      await act(async () => {
+        hook.result.current.loadMoreSessions!();
+        await flushMicrotasks();
+      });
+      const second = latestRequest();
+      expect(second.cursor).toBe("page-2");
+      await act(async () => {
+        ws.message({
+          type: "session.list.ok",
+          sessions: [row("health")],
+          nextCursor: "health-page",
+        });
+        ws.message({
+          type: "session.list.ok",
+          requestId: second.requestId,
+          sessions: [row("a1"), row("a2")],
+          nextCursor: "page-3",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.sessions.map((item) => item.id)).toEqual(["a1", "a2"]);
+      await act(async () => {
+        hook.result.current.selectProject("a");
+        await flushMicrotasks();
+      });
+      expect(latestRequest().requestId).toBe(second.requestId);
+      expect(hook.result.current.sessions.map((item) => item.id)).toEqual(["a1", "a2"]);
+      await act(async () => {
+        hook.result.current.loadMoreSessions!();
+        await flushMicrotasks();
+      });
+      const late = latestRequest();
+      await act(async () => {
+        hook.result.current.refreshSessions(["/b"]);
+        await flushMicrotasks();
+      });
+      const current = latestRequest();
+      expect(hook.result.current.sessions).toEqual([]);
+      await act(async () => {
+        ws.message({
+          type: "session.list.ok",
+          requestId: current.requestId,
+          sessions: [row("b1", "/b")],
+          nextCursor: null,
+        });
+        ws.message({
+          type: "session.list.ok",
+          requestId: late.requestId,
+          sessions: [row("a3")],
+          nextCursor: null,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.sessions.map((item) => item.id)).toEqual(["b1"]);
+      expect(hook.result.current.sessionsHasMore).toBe(false);
+      expect(hook.result.current.loading.sessions).toBe(false);
+    } finally {
+      await hook.unmount();
+    }
+  });
+});
+
+test("the initial active external session establishes viewer selection before its first send", async () => {
+  setupBrowser();
+  const hook = await renderHook(() => useRemoteApp());
+  try {
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({
+        type: "auth.ok",
+        device: { id: "device-1", name: "Phone" },
+        capabilities: { outputJournal: 1 },
+      });
+      await flushMicrotasks();
+      const list = ws.sent
+        .map((line) => JSON.parse(line))
+        .findLast((event) => event.type === "session.list");
+      ws.message({
+        type: "session.list.ok",
+        requestId: list?.requestId,
+        nextCursor: null,
+        activeSessionId: "saved-codex",
+        sessions: [
+          {
+            id: "saved-codex",
+            title: "Saved",
+            cwd: "/project",
+            updatedAt: 1,
+            provider: "codex",
+            model: "fixture",
+          },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.activeSessionId).toBe("saved-codex");
+    const selection = ws.sent
+      .map((line) => JSON.parse(line))
+      .findLast((event) => event.type === "session.select");
+    expect(selection).toMatchObject({ sessionId: "saved-codex", recoveryId: expect.any(String) });
+    expect(hook.result.current.loading.sessionHistory).toBe(true);
+    const before = ws.sent.length;
+    await act(async () => {
+      ws.message({
+        type: "session.list.ok",
+        nextCursor: null,
+        activeSessionId: "other-tab",
+        sessions: [],
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.activeSessionId).toBe("saved-codex");
+    expect(
+      ws.sent
+        .slice(before)
+        .map((line) => JSON.parse(line))
+        .some((event) => event.type === "session.select"),
+    ).toBe(false);
+  } finally {
+    await hook.unmount();
+  }
+});
+
+describe("useRemoteApp session creation failure recovery", () => {
+  for (const failure of ["rejected", "disconnected", "timeout"] as const) {
+    test(`a ${failure} creation can be retried without accepting its late acknowledgement`, async () => {
+      setupBrowser();
+      const originalSet = globalThis.setTimeout;
+      const creationTimeouts: Array<() => void> = [];
+      const restoreTimer = defineTestProperty(globalThis, "setTimeout", {
+        value: (callback: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) => {
+          if (delay === 30_000) creationTimeouts.push(() => callback(...args));
+          return originalSet(callback, delay, ...args);
+        },
+      });
+      const hook = await renderHook(() => useRemoteApp());
+      let ws = FakeWebSocket.instances[0]!;
+      const lastCreate = () =>
+        ws.sent
+          .map((line) => JSON.parse(line))
+          .filter((event) => event.type === "session.create")
+          .at(-1)!;
+      try {
+        await act(async () => {
+          ws.open();
+          ws.message({ type: "auth.ok" });
+          await flushMicrotasks();
+          hook.result.current.newSession({ projectId: null });
+          await flushMicrotasks();
+        });
+        const first = lastCreate();
+        expect(hook.result.current.sessionCreationFailures).toBe(0);
+        await act(async () => {
+          ws.message({
+            type: "error",
+            clientRequestId: "another-request",
+            message: "stale rejection",
+          });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.sessionCreationFailures).toBe(0);
+        await act(async () => {
+          if (failure === "rejected")
+            ws.message({
+              type: "error",
+              clientRequestId: first.clientRequestId,
+              message: "project removed",
+            });
+          else if (failure === "disconnected") ws.close();
+          else creationTimeouts.at(-1)!();
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.sessionCreationFailures).toBe(1);
+        if (failure === "disconnected") {
+          await act(async () => {
+            window.dispatchEvent(new Event("online"));
+            await flushMicrotasks();
+          });
+          ws = FakeWebSocket.instances.at(-1)!;
+          await act(async () => {
+            ws.open();
+            ws.message({ type: "auth.ok" });
+            await flushMicrotasks();
+          });
+        }
+        await act(async () => {
+          ws.message({
+            type: "chat.accepted",
+            clientRequestId: first.clientRequestId,
+            sessionId: "late-session",
+            cwd: null,
+          });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.activeSessionId).toBeUndefined();
+        await act(async () => {
+          hook.result.current.newSession({ projectId: null });
+          await flushMicrotasks();
+          ws.message({
+            type: "chat.accepted",
+            clientRequestId: lastCreate().clientRequestId,
+            sessionId: "retry-session",
+            cwd: null,
+          });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.activeSessionId).toBe("retry-session");
+        expect(hook.result.current.sessionCreationFailures).toBe(1);
+      } finally {
+        await hook.unmount();
+        restoreTimer();
+      }
+    });
+  }
+});
+
 describe("useRemoteApp notice lifetime", () => {
   function trackNoticeTimers() {
     const originalSet = globalThis.setTimeout;
@@ -2752,6 +3020,65 @@ describe("useRemoteApp CLI room controls", () => {
       });
     return { hook, ws, sent, approval };
   }
+
+  test("CLI history loads the full catalog and ignores a delayed default-window response", async () => {
+    const { hook, ws, sent } = await openRoom();
+    const row = (sessionId: string) => ({
+      sessionId,
+      cwd: "/repo",
+      firstMessage: sessionId,
+      lastModified: 1,
+      messageCount: 1,
+    });
+    try {
+      await act(async () => {
+        ws.message({
+          type: "ccRoom.listSessions.ok",
+          cwd: "/repo",
+          kind: "claude-code",
+          sessions: [row("recent")],
+          total: 2,
+          all: false,
+        });
+        await flushMicrotasks();
+        hook.result.current.loadAllCcSessions!();
+        await flushMicrotasks();
+      });
+      expect(sent().at(-1)).toMatchObject({
+        type: "ccRoom.listSessions",
+        cwd: "/repo",
+        kind: "claude-code",
+        all: true,
+      });
+      await act(async () => {
+        ws.message({
+          type: "ccRoom.listSessions.ok",
+          cwd: "/repo",
+          kind: "claude-code",
+          sessions: [row("recent"), row("old")],
+          total: 2,
+          all: true,
+        });
+        ws.message({
+          type: "ccRoom.listSessions.ok",
+          cwd: "/repo",
+          kind: "claude-code",
+          sessions: [row("recent")],
+          total: 2,
+          all: false,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.ccSessions.map((item) => item.sessionId)).toEqual([
+        "recent",
+        "old",
+      ]);
+      expect(hook.result.current.ccSessionsTotal).toBe(2);
+      expect(hook.result.current.loading.ccSessions).toBe(false);
+    } finally {
+      await hook.unmount();
+    }
+  });
 
   test("a multi-question CLI approval keeps every question for one response", async () => {
     const { hook, approval } = await openRoom();

@@ -9,6 +9,7 @@ import { useDesktopController } from "./DesktopApp.js";
 import { getApiWorkspace } from "./api-context.js";
 import { Workbench } from "./Workbench.js";
 import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopControls.js";
+import { DesktopModelPicker } from "./DesktopModelPicker.js";
 
 const noop = () => {};
 const session = { id: "paired-session", username: "synthetic", deviceName: "Fixture" };
@@ -665,5 +666,274 @@ test("Link return restores its original management workspace and cannot send int
     await hook.unmount();
     if (previous) Object.defineProperty(window, "location", previous);
     else Reflect.deleteProperty(window, "location");
+  }
+});
+
+const runtimeModels = [
+  {
+    key: "codex/fixture",
+    label: "Codex · Fixture",
+    provider: "codex",
+    kind: "codex" as const,
+    maxContextTokens: 1000,
+  },
+  {
+    key: "claude-code/sonnet",
+    label: "Claude Code · Sonnet",
+    provider: "claude-code",
+    kind: "claude-code" as const,
+    maxContextTokens: 1000,
+  },
+];
+function modelPicker(controller: ReturnType<typeof useDesktopController>) {
+  return (
+    controller.modelSelector as React.ReactElement<React.ComponentProps<typeof DesktopModelPicker>>
+  ).props;
+}
+
+test("external model selection waits for creation and follows the newly accepted session", async () => {
+  const sent: Array<Record<string, unknown>> = [];
+  let app = remoteApp({
+    runtimeModels,
+    sendChat: async (input) => {
+      sent.push(input);
+      return true;
+    },
+  });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    await act(async () => {
+      hook.result.current.setDraft("run with the chosen provider");
+      modelPicker(hook.result.current).onChange("codex/fixture");
+    });
+    await act(async () => {
+      expect(hook.result.current.send()).toBe(false);
+    });
+    app = { ...app, activeSessionId: "accepted-external" };
+    await hook.rerender();
+    await act(async () => {
+      expect(hook.result.current.send()).toBe(true);
+      await flushMicrotasks();
+    });
+    expect(sent[0].modelKey).toBe("codex/fixture");
+    expect(modelPicker(hook.result.current).value).toBe("codex/fixture");
+    app = { ...app, activeSessionId: "another-native" };
+    await hook.rerender();
+    expect(modelPicker(hook.result.current).value).toBe("");
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test("refreshing page one preserves an older external selection and choosing native retains its draft", async () => {
+  const creates: unknown[] = [];
+  const sent: Array<Record<string, unknown>> = [];
+  let app = remoteApp({
+    runtimeModels,
+    activeSessionId: "saved-codex",
+    sessions: [
+      {
+        id: "saved-codex",
+        title: "Saved",
+        cwd: null,
+        updatedAt: 1,
+        provider: "codex",
+        model: "fixture",
+      },
+    ],
+    newSession: (target) => creates.push(target),
+    sendChat: async (input) => {
+      sent.push(input);
+      return true;
+    },
+  });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    expect(modelPicker(hook.result.current).value).toBe("codex/fixture");
+    app = { ...app, sessions: [] };
+    await hook.rerender();
+    expect(modelPicker(hook.result.current).value).toBe("codex/fixture");
+    await act(async () => hook.result.current.setDraft("preserve this task"));
+    await act(async () => modelPicker(hook.result.current).onChange(""));
+    expect(creates).toEqual([{ projectId: null }]);
+    app = { ...app, activeSessionId: undefined };
+    await hook.rerender();
+    expect(hook.result.current.draft).toBe("preserve this task");
+    expect(modelPicker(hook.result.current).value).toBe("");
+    app = { ...app, activeSessionId: "new-native" };
+    await hook.rerender();
+    expect(hook.result.current.draft).toBe("preserve this task");
+    await act(async () => {
+      hook.result.current.send();
+      await flushMicrotasks();
+    });
+    expect(sent[0].modelKey).toBeUndefined();
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test("model controls refuse unadvertised choices and changes during an uncertain send", async () => {
+  const sent: Array<Record<string, unknown>> = [];
+  const app = remoteApp({
+    runtimeModels,
+    activeSessionId: "native",
+    sendChat: async (input) => {
+      sent.push(input);
+      input.onUncertain?.("unconfirmed-external");
+      return false;
+    },
+  });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    await act(async () => modelPicker(hook.result.current).onChange("codex/not-advertised"));
+    expect(modelPicker(hook.result.current).value).toBe("");
+    await act(async () => {
+      modelPicker(hook.result.current).onChange("codex/fixture");
+      hook.result.current.setDraft("send once");
+    });
+    await act(async () => {
+      hook.result.current.send();
+      await flushMicrotasks();
+    });
+    expect(modelPicker(hook.result.current).disabled).toBe(true);
+    await act(async () => modelPicker(hook.result.current).onChange("claude-code/sonnet"));
+    expect(modelPicker(hook.result.current).value).toBe("codex/fixture");
+    await act(async () => {
+      hook.result.current.send();
+      await flushMicrotasks();
+    });
+    expect(sent[1].modelKey).toBe("codex/fixture");
+    expect(sent[1].clientMessageId).toBe("unconfirmed-external");
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test("the mobile model selector exposes both external providers and a saved unavailable model", () => {
+  const html = renderToStaticMarkup(
+    <DesktopModelPicker
+      models={runtimeModels}
+      value="codex/old-saved"
+      defaultLabel="Default"
+      disabled={false}
+      onChange={noop}
+    />,
+  );
+  expect(html).toContain('label="Codex"');
+  expect(html).toContain('label="Claude Code"');
+  expect(html).toContain('value="codex/old-saved" selected=""');
+});
+
+test("failed session creation exposes a retry that retains the external model and draft", async () => {
+  let creates = 0;
+  const sent: Array<Record<string, unknown>> = [];
+  let app = remoteApp({
+    runtimeModels,
+    sessionCreationFailures: 0,
+    newSession: () => {
+      creates++;
+    },
+    sendChat: async (input) => {
+      sent.push(input);
+      return true;
+    },
+  });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    await act(async () => {
+      hook.result.current.setDraft("keep across a lost creation reply");
+      modelPicker(hook.result.current).onChange("codex/fixture");
+    });
+    expect(hook.result.current.loading).toBe(true);
+    app = { ...app, sessionCreationFailures: 1 };
+    await hook.rerender();
+    expect(hook.result.current.loading).toBe(false);
+    expect(hook.result.current.draft).toBe("keep across a lost creation reply");
+    expect(modelPicker(hook.result.current).value).toBe("codex/fixture");
+    expect(hook.result.current.send()).toBe(false);
+    await act(async () => modelPicker(hook.result.current).onRetryCreation!());
+    expect(creates).toBe(2);
+    expect(hook.result.current.draft).toBe("keep across a lost creation reply");
+    app = { ...app, activeSessionId: "retry-created" };
+    await hook.rerender();
+    await act(async () => {
+      expect(hook.result.current.send()).toBe(true);
+      await flushMicrotasks();
+    });
+    expect(sent[0].modelKey).toBe("codex/fixture");
+    expect(sent[0].text).toBe("keep across a lost creation reply");
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test("an immediately failed creation restores the visible draft and chosen model without overwriting later input", async () => {
+  let creates = 0;
+  const sent: Array<Record<string, unknown>> = [];
+  let app = remoteApp({
+    runtimeModels,
+    sessionCreationFailures: 0,
+    activeSessionId: "saved-external",
+    sessions: [
+      {
+        id: "saved-external",
+        cwd: "",
+        title: "Saved",
+        updatedAt: 1,
+        origin: "desktop",
+        provider: "codex",
+        model: "fixture",
+      },
+    ],
+    newSession: () => {
+      creates++;
+    },
+    sendChat: async (input) => {
+      sent.push(input);
+      return true;
+    },
+  });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  const firstFile = new File(["first"], "first.png", { type: "image/png" });
+  const secondFile = new File(["second"], "second.png", { type: "image/png" });
+  try {
+    await act(async () => {
+      hook.result.current.setDraft("original task");
+      hook.result.current.addFiles([firstFile] as unknown as FileList);
+    });
+    await act(async () => modelPicker(hook.result.current).onChange(""));
+    // The socket rejected the create before the hook cleared its previous ID.
+    expect(hook.result.current.activeId).toBe("saved-external");
+    await act(async () => {
+      hook.result.current.setDraft("later input");
+      hook.result.current.addFiles([secondFile] as unknown as FileList);
+    });
+    app = { ...app, sessionCreationFailures: 1 };
+    await hook.rerender();
+    expect(hook.result.current.draft).toBe("original task\n\nlater input");
+    expect(hook.result.current.files.map((file) => file.name)).toEqual(["first.png", "second.png"]);
+    expect(modelPicker(hook.result.current).value).toBe("");
+    expect(hook.result.current.localDrafts).toEqual([]);
+    expect(hook.result.current.send()).toBe(false);
+    await act(async () => modelPicker(hook.result.current).onRetryCreation!());
+    expect(creates).toBe(2);
+    app = { ...app, activeSessionId: undefined };
+    await hook.rerender();
+    expect(hook.result.current.draft).toBe("original task\n\nlater input");
+    app = { ...app, activeSessionId: "retry-native" };
+    await hook.rerender();
+    await act(async () => {
+      expect(hook.result.current.send()).toBe(true);
+      await flushMicrotasks();
+    });
+    expect(sent[0].text).toBe("original task\n\nlater input");
+    expect(sent[0].modelKey).toBeUndefined();
+    expect((sent[0].attachments as Array<{ file: File }>).map((item) => item.file.name)).toEqual([
+      "first.png",
+      "second.png",
+    ]);
+  } finally {
+    await hook.unmount();
   }
 });

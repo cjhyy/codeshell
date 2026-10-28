@@ -103,6 +103,10 @@ try {
   env.CODESHELL_OUTPUT_CHILDREN = JSON.stringify(children);
   env.CODESHELL_OUTPUT_GIT = gitPath;
   env.CODESHELL_OUTPUT_GIT_HASH = hashFile(gitPath);
+  if (process.platform === "darwin") {
+    env.CODESHELL_OUTPUT_DISKUTIL = realpathSync("/usr/sbin/diskutil");
+    env.CODESHELL_OUTPUT_DISKUTIL_HASH = hashFile(env.CODESHELL_OUTPUT_DISKUTIL);
+  }
   env.CODESHELL_OUTPUT_COLD_ENTRY = join(repo, "scripts/smoke-mobile-external-output.mjs");
   env.CODESHELL_OUTPUT_COLD_HASH = hashFile(env.CODESHELL_OUTPUT_COLD_ENTRY);
   env.NODE_OPTIONS = `--import=${pathToFileURL(join(repo, "scripts/mobile-external-output-smoke-isolation.mjs")).href}`;

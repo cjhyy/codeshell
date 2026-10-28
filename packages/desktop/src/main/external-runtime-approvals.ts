@@ -34,6 +34,24 @@ export interface ExternalApprovalDecision {
   pathScope?: "file" | "dir" | "tool";
 }
 
+/** Main-owned notifications; consumers still authorize each receiving viewer. */
+export type ExternalApprovalEvent =
+  | {
+      type: "requested";
+      sessionId: string;
+      requestId: string;
+      ownerWebContentsId: number;
+      request: ExternalApprovalRequest;
+    }
+  | {
+      type: "resolved";
+      sessionId: string;
+      requestId: string;
+      ownerWebContentsId: number;
+      approved?: boolean;
+      answer?: string;
+    };
+
 const MAX_APPROVAL_RESPONSE_CHARS = 512 * 1024;
 
 function boundedResponseText(value: unknown): value is string {
@@ -90,6 +108,8 @@ export class ExternalRuntimeApprovals {
       ownerWebContentsId?: (sessionId: string) => number | undefined;
       /** Test seam; production prompts retain the ten-minute deadline. */
       timeoutMs?: number;
+      /** Mirrors successful prompts and their retirement without granting response authority. */
+      onPendingChange?: (event: ExternalApprovalEvent) => void;
     },
   ) {}
 
@@ -149,6 +169,13 @@ export class ExternalRuntimeApprovals {
         resolve({ approved: false, reason: "approval prompt could not be delivered" });
         return;
       }
+      this.notify({
+        type: "requested",
+        sessionId,
+        requestId,
+        ownerWebContentsId: target.webContents.id,
+        request,
+      });
       dlog("external-runtime", "approval.requested", {
         sessionId,
         requestId,
@@ -176,6 +203,19 @@ export class ExternalRuntimeApprovals {
     this.finish(requestId, decision);
     dlog("external-runtime", "approval.settled", { requestId, approved: decision.approved });
     return true;
+  }
+
+  /** Paired clients may answer only the selected Session's current owner prompt. */
+  settleForSession(
+    sessionId: string,
+    requestId: string,
+    decision: ExternalApprovalDecision,
+    ownerWebContentsId: number,
+  ): boolean {
+    const entry = this.pending.get(requestId);
+    if (!entry || entry.sessionId !== sessionId || entry.targetWebContentsId !== ownerWebContentsId)
+      return false;
+    return this.settle(requestId, decision, ownerWebContentsId);
   }
 
   /**
@@ -220,6 +260,13 @@ export class ExternalRuntimeApprovals {
     );
   }
 
+  /** Reconnect replay must be scoped to both the selected Session and its owner. */
+  pendingForSession(sessionId: string, ownerWebContentsId: number) {
+    return this.pendingForWindow(ownerWebContentsId).filter(
+      (entry) => entry.sessionId === sessionId,
+    );
+  }
+
   private finish(requestId: string, decision: ExternalApprovalDecision, timedOut = false): boolean {
     const entry = this.pending.get(requestId);
     if (!entry) return false;
@@ -243,7 +290,27 @@ export class ExternalRuntimeApprovals {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+    this.notify({
+      type: "resolved",
+      sessionId: entry.sessionId,
+      requestId,
+      ownerWebContentsId: entry.targetWebContentsId,
+      ...(timedOut ? {} : { approved: decision.approved }),
+      ...(decision.answer !== undefined ? { answer: decision.answer } : {}),
+    });
     return true;
+  }
+
+  private notify(event: ExternalApprovalEvent): void {
+    try {
+      this.deps.onPendingChange?.(event);
+    } catch (error) {
+      // A disconnected phone cannot strand or change the original approval.
+      dlog("external-runtime", "approval.observer_failed", {
+        requestId: event.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   /** Live prompt count — for teardown assertions. */

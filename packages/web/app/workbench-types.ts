@@ -56,6 +56,7 @@ export interface WorkbenchController {
   /** Browser-safe controls for capabilities owned by the Desktop host. */
   renderSidebar?: (navigation: WorkbenchNavigation) => React.ReactNode;
   chatControls?: React.ReactNode;
+  modelSelector?: React.ReactNode;
   goalActions?: React.ReactNode;
   loading?: boolean;
   readOnly?: boolean;

@@ -83,6 +83,37 @@ export function installExternalOutputGuard() {
     record("allowed-git-metadata");
     return true;
   };
+  // Core binds journals to the actual APFS volume UUID on macOS. Permit only
+  // its bounded, read-only metadata lookup for the fixture's own volume.
+  const checkDiskInfo = (command, args, options = {}) => {
+    if (process.platform !== "darwin" || command !== "/usr/sbin/diskutil") return false;
+    const env = options.env ?? {};
+    if (
+      options.shell ||
+      options.detached ||
+      args.length !== 3 ||
+      args[0] !== "info" ||
+      args[1] !== "-plist" ||
+      !/^\/dev\/disk[0-9]+(?:s[0-9]+)*$/.test(args[2]) ||
+      !process.env.CODESHELL_OUTPUT_DISKUTIL_HASH ||
+      realpathSync(command) !== process.env.CODESHELL_OUTPUT_DISKUTIL ||
+      hashFile(command) !== process.env.CODESHELL_OUTPUT_DISKUTIL_HASH ||
+      options.encoding !== "utf8" ||
+      options.timeout !== 5000 ||
+      options.maxBuffer !== 256 * 1024 ||
+      JSON.stringify(options.stdio) !== JSON.stringify(["ignore", "pipe", "pipe"]) ||
+      Object.keys(env).length !== 3 ||
+      env.PATH !== "/usr/bin:/bin:/usr/sbin:/sbin" ||
+      env.LANG !== "C" ||
+      env.LC_ALL !== "C"
+    )
+      deny();
+    const device = lstatSync(args[2]);
+    if (!device.isBlockDevice() || device.rdev !== lstatSync(process.env.CODESHELL_OUTPUT_ROOT).dev)
+      deny();
+    record("allowed-volume-metadata");
+    return true;
+  };
   const originalSpawn = childProcess.spawn;
   childProcess.spawn = function (command, args = [], options = {}) {
     if (checkGit(command, args, options)) return originalSpawn.call(this, command, args, options);
@@ -122,7 +153,11 @@ export function installExternalOutputGuard() {
   for (const name of ["execFile", "execFileSync"]) {
     const original = childProcess[name];
     childProcess[name] = function (command, args = [], options = {}, ...rest) {
-      if (!checkGit(command, args, options)) deny();
+      if (
+        !checkGit(command, args, options) &&
+        !(name === "execFileSync" && checkDiskInfo(command, args, options))
+      )
+        deny();
       return original.call(
         this,
         command,
@@ -193,19 +228,32 @@ export function installExternalOutputGuard() {
   syncBuiltinESMExports();
   globalThis[marker] = true;
   let refused = 0;
-  for (const probe of [
+  const probes = [
     () => globalThis.fetch("https://example.invalid/"),
     () => http.get("http://127.0.0.1:1/"),
     () => net.connect({ host: "127.0.0.1", port: 2 }),
     () => childProcess.spawn("sh", ["-c", "exit 0"]),
-  ]) {
+    () =>
+      childProcess.execFileSync("/usr/sbin/diskutil", [
+        "eraseVolume",
+        "APFS",
+        "fixture",
+        "/dev/disk0",
+      ]),
+    () =>
+      childProcess.execFileSync("/usr/sbin/diskutil", ["info", "-plist", "/dev/disk0"], {
+        shell: true,
+      }),
+  ];
+  for (const probe of probes) {
     try {
       probe();
     } catch {
       refused++;
     }
   }
-  if (refused !== 4) throw new Error("External output confinement negative probe failed");
+  if (refused !== probes.length)
+    throw new Error("External output confinement negative probe failed");
   record("pre-core", {
     negativeProbes: refused,
     nodeVersion: process.versions.node,

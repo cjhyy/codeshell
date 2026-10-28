@@ -536,7 +536,11 @@ export class RemoteHostManager extends EventEmitter {
   }
 
   sendToViewer(viewerId: string, event: MobileServerEvent): void {
-    const payload = JSON.stringify(event);
+    this.sendRawToViewer(viewerId, JSON.stringify(event));
+  }
+
+  /** Preserve the full worker envelope while retaining exact authenticated-tab routing. */
+  sendRawToViewer(viewerId: string, payload: string): void {
     for (const client of this.wss?.clients ?? []) {
       if (
         client.readyState === client.OPEN &&

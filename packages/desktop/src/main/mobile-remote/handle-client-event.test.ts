@@ -409,6 +409,49 @@ test("session creation echoes optional browser correlation while legacy clients 
   );
 });
 
+test("session creation validation and authority failures retain correlation and the previous device selection", async () => {
+  for (const failure of ["target", "authority", "created"] as const) {
+    const harness = createHarness({
+      requestedWorkspaceRoot: "/primary",
+      lookupSession: () => undefined,
+    });
+    const previous = { ...harness.ctx.deviceState("phone-1") };
+    if (failure === "target") harness.ctx.validateMobileSessionCwd = async () => false;
+    else {
+      harness.ctx.externalCommands = {
+        observe: () => undefined,
+        created: () => {
+          if (failure === "created") throw new Error("creation revoked");
+        },
+      } as unknown as MobileExternalRuntimeCommands;
+      harness.ctx.newSessionAuthority = () => {
+        if (failure === "authority") throw new Error("project removed");
+        return {
+          cwd: "/primary",
+          stamp: "valid",
+          projectId: undefined,
+          rootId: undefined,
+          assertCurrent: () => {},
+        };
+      };
+    }
+    await handleClientEvent(harness.ctx, {
+      type: "session.create",
+      deviceId: "phone-1",
+      viewerId: "viewer-1",
+      cwd: "/primary",
+      clientRequestId: `failed-${failure}`,
+    });
+    expect(harness.replies).toHaveLength(1);
+    expect(harness.replies[0]).toMatchObject({
+      type: "error",
+      clientRequestId: `failed-${failure}`,
+    });
+    expect(harness.ctx.deviceState("phone-1")).toEqual(previous);
+    expect(harness.ctx.mobileSessionCwds.size).toBe(0);
+  }
+});
+
 describe("mobile snapshot epoch recovery", () => {
   function snapshotHarness(legacyServer = false) {
     const harness = createHarness({
@@ -566,4 +609,71 @@ test("legacy base dispatch awaits the selected recovery host without entering wo
   release();
   await work;
   expect(metas).toEqual([]);
+});
+
+test("explicit external model routes through external submit and advertises recovery without native dispatch", async () => {
+  const harness = createHarness({
+    requestedWorkspaceRoot: "/worktree",
+    lookupSession: () => undefined,
+  });
+  const prepared: unknown[] = [];
+  harness.ctx.externalCommands = {
+    observe: () => undefined,
+    isExternal: () => false,
+    prepare: async (...args: unknown[]) => {
+      prepared.push(args);
+      return { cwd: "/worktree", modelKey: "codex/test", submit: async () => ({ ok: true }) };
+    },
+  } as unknown as MobileExternalRuntimeCommands;
+  (harness.ctx.remote as any).sendToViewer = (_viewer: string, event: Record<string, unknown>) =>
+    harness.replies.push(event);
+  await handleClientEvent(harness.ctx, {
+    type: "chat.send",
+    viewerId: "tab",
+    deviceId: "phone-1",
+    sessionId: "session-1",
+    text: "continue",
+    clientMessageId: "runtime-input",
+    modelKey: "codex/test",
+  });
+  expect(prepared).toHaveLength(1);
+  expect(harness.preparedRuns).toHaveLength(0);
+  expect(harness.replies.find((event) => event.type === "chat.accepted")).toMatchObject({
+    modelKey: "codex/test",
+    clientMessageId: "runtime-input",
+  });
+});
+
+test("external model cannot be configured as the native worker's global model", async () => {
+  const harness = createHarness({
+    requestedWorkspaceRoot: "/worktree",
+    lookupSession: () => undefined,
+  });
+  await handleClientEvent(harness.ctx, {
+    type: "model.set",
+    deviceId: "phone-1",
+    model: "claude-code/sonnet",
+  });
+  expect(harness.preparedRuns).toHaveLength(0);
+  expect(harness.replies[0]?.type).toBe("error");
+});
+
+test("external model discovery answers failure with an empty bounded response", async () => {
+  const harness = createHarness({
+    requestedWorkspaceRoot: "/worktree",
+    lookupSession: () => undefined,
+  });
+  (harness.ctx.remote as any).hasAuthenticatedViewer = () => true;
+  (harness.ctx.remote as any).sendToViewer = (_viewer: string, event: Record<string, unknown>) =>
+    harness.replies.push(event);
+  harness.ctx.externalRuntimeModels = async () => {
+    throw new Error("unavailable");
+  };
+  await handleClientEvent(harness.ctx, {
+    type: "runtime.models",
+    viewerId: "tab",
+    deviceId: "phone-1",
+  });
+  expect(harness.replies).toHaveLength(1);
+  expect(harness.replies[0]).toMatchObject({ type: "runtime.models.ok", models: [] });
 });

@@ -937,7 +937,9 @@ export function Workbench({
                   }
                 }}
               />
-              <div className="composer-toolbar">
+              <div
+                className={`composer-toolbar${controller.modelSelector ? " with-model-selector" : ""}`}
+              >
                 {hub ? (
                   <>
                     <input
@@ -997,9 +999,14 @@ export function Workbench({
                       title="打开模型设置"
                       onClick={() => openSettings("models")}
                     >
-                      <span>{defaultConnection?.model || "配置模型"}</span>
+                      <span>
+                        {controller.modelSelector
+                          ? "模型设置"
+                          : defaultConnection?.model || "配置模型"}
+                      </span>
                       <WorkbenchIcon name="chevron" />
                     </button>
+                    {controller.modelSelector}
                   </>
                 ) : null}
                 <span className="composer-run-status" role="status">
