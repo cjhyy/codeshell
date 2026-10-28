@@ -3,9 +3,11 @@ import { lstat, open, opendir, realpath, type FileHandle } from "node:fs/promise
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { basename, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pipeline } from "node:stream/promises";
+import { Readable } from "node:stream";
+import { rangeBounds } from "../http-byte-range.js";
 import { hubJson } from "./uploads.js";
 
-const MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024;
+const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 * 1024;
 const MAX_PREVIEW_BYTES = 512 * 1024;
 const IMAGE_TYPES: Record<string, string> = {
   ".png": "image/png",
@@ -142,7 +144,8 @@ export function createHubFiles(options: {
     let release: (() => Promise<void>) | undefined;
     try {
       if (closed) throw new FileRequestError(503, "服务正在关闭。");
-      if (req.method !== "GET") throw new FileRequestError(405, "文件页面只支持读取。");
+      if (req.method !== "GET" && !(req.method === "HEAD" && url.pathname.endsWith("/content")))
+        throw new FileRequestError(405, "文件页面只支持读取。");
       if (!(await options.isAuthorized(req))) throw new FileRequestError(401, "请重新登录。");
       if (active.size >= 16) throw new FileRequestError(429, "正在读取的文件过多，请稍后重试。");
       active.add(res);
@@ -209,8 +212,6 @@ export function createHubFiles(options: {
         await opened.verify();
         hubJson(res, 200, { path: location.relativePath, files, truncated });
       } else {
-        if (info.size > MAX_DOWNLOAD_BYTES)
-          throw new FileRequestError(413, "文件超过 100 MB，请从服务器工作目录获取。");
         if (!(await options.isAuthorized(req))) throw new FileRequestError(401, "请重新登录。");
         await opened.verify();
         const imageType = IMAGE_TYPES[extname(location.path).toLowerCase()];
@@ -231,26 +232,83 @@ export function createHubFiles(options: {
               : {}),
           });
         } else {
+          if (info.size > MAX_DOWNLOAD_BYTES)
+            throw new FileRequestError(413, "文件超过 2 GiB 下载上限。");
           const inline = url.searchParams.get("inline") === "true" && !!imageType;
           const filename = basename(location.path);
           const encoded = encodeURIComponent(filename).replace(
             /[!'()*]/g,
             (value) => `%${value.charCodeAt(0).toString(16).toUpperCase()}`,
           );
-          res.writeHead(200, {
+          // Workspace outputs are mutable; without a matching validator an
+          // If-Range request must receive the complete current representation.
+          const range = req.headers["if-range"] === undefined ? req.headers.range : undefined;
+          const bounds =
+            range === undefined ? { start: 0, end: info.size - 1 } : rangeBounds(range, info.size);
+          const headers = {
             "content-type": inline ? imageType : "application/octet-stream",
-            "content-length": info.size,
             "content-disposition": `${inline ? "inline" : "attachment"}; filename="download${extname(filename).replace(/[^.A-Za-z0-9]/g, "")}"; filename*=UTF-8''${encoded}`,
+            "accept-ranges": "bytes",
             "cache-control": "no-store",
             "x-content-type-options": "nosniff",
             "content-security-policy": "default-src 'none'; sandbox",
+            "referrer-policy": "no-referrer",
+          };
+          if (!bounds) {
+            res.writeHead(416, {
+              ...headers,
+              "content-range": `bytes */${info.size}`,
+              "content-length": 0,
+            });
+            res.end();
+            return true;
+          }
+          res.writeHead(range === undefined ? 200 : 206, {
+            ...headers,
+            "content-length": bounds.end - bounds.start + 1,
+            ...(range === undefined
+              ? {}
+              : { "content-range": `bytes ${bounds.start}-${bounds.end}/${info.size}` }),
           });
-          if (info.size === 0) res.end();
-          else
-            await pipeline(
-              handle.createReadStream({ autoClose: false, end: Math.max(0, info.size - 1) }),
-              res,
-            );
+          if (req.method === "HEAD" || info.size === 0) res.end();
+          else {
+            const input = handle.createReadStream({ autoClose: false, ...bounds });
+            const authorize = async () => {
+              if (closed || res.destroyed || !(await options.isAuthorized(req)))
+                throw new FileRequestError(401, "下载授权已失效。");
+            };
+            let checking = false;
+            const timer = setInterval(() => {
+              if (checking) return;
+              checking = true;
+              void authorize()
+                .catch(() => {
+                  input.destroy();
+                  res.destroy();
+                })
+                .finally(() => {
+                  checking = false;
+                });
+            }, 250);
+            timer.unref();
+            try {
+              await pipeline(
+                Readable.from(
+                  (async function* () {
+                    for await (const chunk of input) {
+                      await authorize();
+                      yield chunk;
+                    }
+                  })(),
+                  { objectMode: false },
+                ),
+                res,
+              );
+            } finally {
+              clearInterval(timer);
+              input.destroy();
+            }
+          }
         }
       }
     } catch (cause) {

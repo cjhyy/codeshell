@@ -53,6 +53,11 @@ shows a selectable address. These links require the same signed-in browser and
 live Panel grant; closing the Panel or revoking access invalidates them. They
 are not public or permanent share links.
 
+The workspace **文件** page also supports authenticated GET/HEAD and single-range
+downloads up to 2 GiB. File information and text previews stay bounded to 512 KiB
+even for large outputs, so a video larger than 100 MiB still has a usable download
+entry. Streaming stops when the paired identity is revoked.
+
 `filesystem.openDirectory` exposes the currently authorized directory through
 **查看并下载文件**. Its file responses support GET/HEAD and single byte ranges,
 including suffix ranges, up to the existing 2 GiB per-file limit. Invalid ranges
