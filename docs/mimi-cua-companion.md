@@ -42,8 +42,9 @@ bun run preview:companion --smoke
 
 `--external-cua` accepts JSON presentation events over stdin for a supervised
 demonstration with another CUA client. It does not automatically observe Codex
-tool calls. A caller sends start/end around the real action; omitted start
-coordinates use the real pointer's current global logical position. The normal
+tool calls. A caller sends start/end around the real action; only explicit,
+authoritative global logical coordinates move the character. Without a target,
+the pet stays in place: the human pointer is not a proxy for a CUA target. The normal
 CodeShell integration observes its embedded CUA MCP transport automatically.
 
 ## Boundaries
@@ -70,3 +71,40 @@ more natural action assets are follow-up product work.
 See `packages/desktop/resources/mimi-live2d/README.md` for the optional official
 sample model, version pins, and separate Core/model licensing. Downloaded sample
 assets and Core are excluded from the application package by default.
+
+## Comparison with the pinned CUA virtual cursor
+
+Source review targets `trycua/cua` tag `cua-driver-rs-v0.34.1`, matching the
+desktop lockfile. This is an implementation comparison, not a measured latency
+or visual acceptance result.
+
+| Concern            | Native agent cursor                                                                       | Current companion and required change                                                                                            |
+| ------------------ | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Position authority | Window-scoped operations can move a virtual cursor without moving the human's OS pointer. | Never derive an operation target from the human pointer. Unknown targets leave the pet in place.                                 |
+| Execution timing   | The driver can await cursor arrival before input and supplies semantic begin/end events.  | The MCP observer sees request/response boundaries, not resolved input stages. Strict synchronization needs an additional bridge. |
+| Appearance         | The default 42-point theme is authored in dotLottie and compiled into a bounded artifact. | Keep the full character renderer and its sprite/Live2D adapter; use a separate exact action hotspot.                             |
+| Playback           | Native actions distinguish one-shot, held and loop playback, with end transitions.        | The current brief cues are an experiment. Authored gestures should follow the corresponding action lifecycle.                    |
+| Human interaction  | The native overlay passes mouse input through.                                            | The pet adds explicit drag/chat priority and must remain interactive.                                                            |
+| Multiple displays  | The pinned macOS overlay draws on `NSScreen.mainScreen`.                                  | Keep independent per-display placement and actual window-origin conversion; do not copy this limitation.                         |
+
+`get_agent_cursor_state` exposes the same-session registry's global-point
+`position`, `visual_state`, theme and motion settings. This is a last commanded
+target, not a stream of interpolated animation positions. It does not expose
+all display bounds and cannot inspect an unrelated Codex CUA connection. The
+native position and semantic hooks are in-process Rust interfaces; no public
+MCP event subscription was found in the reviewed transport surface.
+
+The next accurate integration is: resolved CUA target → approach/arrival →
+action begin/end → shared operation hotspot and character gesture. Merely
+changing the pet image or copying OS-pointer coordinates cannot establish that
+contract. Until this is connected and visibly checked on the selected external
+display, the experiment must not be reported as full visual acceptance.
+
+Official pinned sources:
+
+- [Window vs desktop cursor modes](https://github.com/trycua/cua/blob/cua-driver-rs-v0.34.1/libs/cua-driver/rust/crates/platform-macos/src/tools/move_cursor.rs)
+- [Public cursor snapshot](https://github.com/trycua/cua/blob/cua-driver-rs-v0.34.1/libs/cua-driver/rust/crates/platform-macos/src/tools/cursor_tools.rs)
+- [Theme and playback state](https://github.com/trycua/cua/blob/cua-driver-rs-v0.34.1/libs/cua-driver/rust/crates/cursor-overlay/src/theme.rs)
+- [Native overlay, coordinates and arrival](https://github.com/trycua/cua/blob/cua-driver-rs-v0.34.1/libs/cua-driver/rust/crates/platform-macos/src/cursor/overlay.rs)
+- [Position hook](https://github.com/trycua/cua/blob/cua-driver-rs-v0.34.1/libs/cua-driver/rust/crates/cua-driver-core/src/cursor_hook.rs)
+- [Action lifecycle hook](https://github.com/trycua/cua/blob/cua-driver-rs-v0.34.1/libs/cua-driver/rust/crates/cua-driver-core/src/cursor_events.rs)

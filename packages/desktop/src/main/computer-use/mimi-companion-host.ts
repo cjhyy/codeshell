@@ -21,6 +21,7 @@ export interface MimiCompanionHostOptions {
   devUrl?: string;
   isMainWindow(sender: WebContents): boolean;
   openChat(): Promise<void>;
+  holdForChat?: boolean;
   log(event: string, data?: Record<string, unknown>): void;
 }
 
@@ -52,6 +53,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   let ready = false;
   let error: string | undefined;
   let preview = false;
+  let previewSequence = 0;
   let previewTimers: Array<ReturnType<typeof setTimeout>> = [];
   let previewExpiry: ReturnType<typeof setTimeout> | undefined;
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
@@ -283,6 +285,15 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       if (humanActive || chatting) return;
       cancelPreview();
       if (idleTimer) clearTimeout(idleTimer);
+      // Unknown agent coordinates never mean the human's system pointer.
+      // Keep the last character position until a reliable target is observed.
+      if (!event.target && !anchor) {
+        const current = state();
+        anchor = {
+          x: current.windowOrigin!.x + current.position.x,
+          y: current.windowOrigin!.y + current.position.y,
+        };
+      }
       target = event.target;
       if (target && !pinned) {
         anchor = undefined;
@@ -413,7 +424,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   ipcMain.handle("mimiCompanion:chat", async (event) => {
     if (!ownOverlay(event.sender, event.senderFrame)) throw new Error("Invalid companion surface");
     pinned = true;
-    chatting = true;
+    chatting = options.holdForChat !== false;
     stopPresentation();
     humanActive = false;
     dragging = false;
@@ -472,16 +483,39 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       } else await ensureWindow();
       publish();
     },
-    async preview() {
+    async preview(displayId?: number) {
       cancelPreview();
       if (humanActive) return;
       chatting = false;
       preview = true;
-      normalizeAnchor();
-      display = screen.getDisplayNearestPoint(anchor ?? screen.getCursorScreenPoint());
+      if (displayId !== undefined) {
+        const selected = screen.getAllDisplays().find((item) => item.id === displayId);
+        if (!selected) {
+          preview = false;
+          throw new Error("所选屏幕已断开");
+        }
+        display = selected;
+        anchor = {
+          x: display.workArea.x + display.workArea.width * 0.68 - size * 0.35,
+          y: display.workArea.y + display.workArea.height * 0.5 - size / 2,
+        };
+        pinned = true;
+      } else {
+        normalizeAnchor();
+        display = screen.getDisplayNearestPoint(anchor ?? screen.getCursorScreenPoint());
+      }
       window?.setBounds(display.bounds);
       target = undefined;
       await ensureWindow();
+      const readyDeadline = Date.now() + 5000;
+      while (!ready && !error && !disposed && Date.now() < readyDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      if (!ready || disposed) {
+        cancelPreview();
+        throw new Error(error ?? "角色尚未准备好");
+      }
+      const runId = ++previewSequence;
       const steps = ["observe", "click", "type", "scroll", "idle"] as const;
       steps.forEach((action, index) => {
         previewTimers.push(
@@ -493,7 +527,12 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
               y: bounds.y + bounds.height * 0.52,
             };
             if (!pinned) anchor = undefined;
-            activity = { id: `preview-${index}`, action, phase: "start", startedAt: Date.now() };
+            activity = {
+              id: `preview-${runId}-${index}`,
+              action,
+              phase: "start",
+              startedAt: Date.now(),
+            };
             publish();
           }, index * 1800),
         );
