@@ -207,10 +207,12 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.11"
+      # Real background-service fixtures must execute a security-patched Node.
+      # Keep the unrelated renderer UI shard on its existing compatibility version.
       - uses: actions/setup-node@v7
-        if: matrix.shard == 'desktop' || matrix.shard == 'desktop-ui'
+        if: matrix.shard == 'desktop' || matrix.shard == 'desktop-ui' || matrix.shard == 'rest-server'
         with:
-          node-version: "22.16.0"
+          node-version: ${{ matrix.shard == 'desktop-ui' && '22.16.0' || '24.22.1' }}
       - name: install
         run: bun install --frozen-lockfile
       # Real conversion and cancellation tests require the same command-line
