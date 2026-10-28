@@ -18,7 +18,7 @@
     "dev": "bun run scripts/dev.ts",
     "build": "bun run scripts/build.ts",
     "build:main": "bun run scripts/build-main.ts",
-    "build:preload": "esbuild src/preload/index.ts src/preload/browser-guest.ts src/preload/panel-app.ts --bundle --platform=node --format=cjs --outdir=out/preload --out-extension:.js=.cjs --external:electron",
+    "build:preload": "esbuild src/preload/index.ts src/preload/browser-guest.ts src/preload/panel-app.ts src/preload/mimi-companion.ts --bundle --platform=node --format=cjs --outdir=out/preload --out-extension:.js=.cjs --external:electron",
     "build:renderer": "vite build",
     "build:mobile": "vite build -c vite.mobile.config.ts",
     "mock-provider": "bun run scripts/mock-provider-server.mjs",
