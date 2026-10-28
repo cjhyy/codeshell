@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, spyOn, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
@@ -10,6 +10,7 @@ import {
   listProjectPanelApps,
 } from "@cjhyy/code-shell-core";
 import { createPanelHttp } from "./http.js";
+import { PanelAppProcessService } from "./process-service.js";
 
 const cleanups: Array<() => void | Promise<void>> = [];
 afterEach(async () => {
@@ -17,6 +18,79 @@ afterEach(async () => {
 });
 
 test("real Hub HTTP moves every project on a catalog update and serves a rolled-back project's retained package across restart", async () => {
+  // The Linux Bun shard intermittently loses a process before Host stdin is sent.
+  // Distinguish early EOF with bounded, content-free evidence on assertion failure.
+  let lifecycle: Record<string, unknown>[] = [];
+  const record = (event: Record<string, unknown>) => {
+    lifecycle.push(event);
+    if (lifecycle.length > 64) lifecycle.shift();
+  };
+  function observe<T extends (...args: any[]) => Promise<any>>(method: string, original: T): T {
+    return async function (this: PanelAppProcessService, ...args: Parameters<T>) {
+      if (args[0].appId !== "version-fixture") return original.apply(this, args);
+      record({
+        method,
+        stage: "enter",
+        ...(method === "write" && {
+          bytes: Buffer.byteLength(args[1].text),
+        }),
+      });
+      if (method === "start") {
+        const owner = args[0];
+        let stderr = "";
+        args[0] = {
+          ...owner,
+          send(event: string, payload: Record<string, unknown>) {
+            if (event === "process.exit") {
+              record({ event, code: payload.code, signal: payload.signal });
+            } else {
+              const text = String(payload.text ?? "");
+              record({ event, stream: payload.stream, bytes: Buffer.byteLength(text) });
+              if (payload.stream === "stderr" && stderr.length < 2048) {
+                stderr = (stderr + text).slice(0, 2048);
+                const match = stderr.match(/fixture-input:(\d+):(true|false)\n/);
+                if (match) {
+                  record({
+                    event: "worker.eof",
+                    receivedBytes: Number(match[1]),
+                    requestComplete: match[2] === "true",
+                  });
+                  stderr = "";
+                }
+              }
+            }
+            owner.send(event, payload);
+          },
+        };
+      }
+      try {
+        const result = await original.apply(this, args);
+        record({
+          method,
+          stage: "resolved",
+          ...(method === "waitForExit" && {
+            code: result.code,
+            signal: result.signal,
+          }),
+        });
+        return result;
+      } catch (error) {
+        record({
+          method,
+          stage: "rejected",
+          errorType: error instanceof Error ? error.name : typeof error,
+        });
+        throw error;
+      }
+    } as T;
+  }
+  for (const method of ["start", "write", "end", "waitForExit"] as const) {
+    const original = PanelAppProcessService.prototype[method];
+    const observed = spyOn(PanelAppProcessService.prototype, method).mockImplementation(
+      observe(method, original),
+    );
+    cleanups.push(() => observed.mockRestore());
+  }
   const root = realpathSync(mkdtempSync(join(tmpdir(), "cs-project-packages-http-")));
   const previousHome = process.env.HOME;
   process.env.HOME = join(root, "home");
@@ -29,7 +103,7 @@ test("real Hub HTTP moves every project on a catalog update and serves a rolled-
   mkdirSync(join(source, ".codeshell-panel"), { recursive: true });
   mkdirSync(join(source, "app", "tools"), { recursive: true });
   async function install(version: string, overwrite = false) {
-    const script = `process.stdin.resume();process.stdin.on("end",()=>console.log(JSON.stringify({type:"result",result:{version:${JSON.stringify(version)}}})));`;
+    const script = `let input="";process.stdin.setEncoding("utf8");process.stdin.on("data",chunk=>input+=chunk);process.stdin.on("end",()=>{let requestComplete=false;try{const request=JSON.parse(input);requestComplete=typeof request.jobId==="string"&&typeof request.scopeKey==="string";}catch{}const receivedBytes=Buffer.byteLength(input);console.error("fixture-input:"+receivedBytes+":"+requestComplete);console.log(JSON.stringify({type:"result",result:{version:${JSON.stringify(version)},receivedBytes,requestComplete}}));});`;
     writeFileSync(join(source, "app/tools/version.mjs"), script);
     writeFileSync(join(source, "app/index.html"), `<!doctype html><body>Package ${version}</body>`);
     writeFileSync(
@@ -123,6 +197,8 @@ test("real Hub HTTP moves every project on a catalog update and serves a rolled-
       return response.text();
     }
     async function run(grant: { instanceId: string }, version: string) {
+      lifecycle = [];
+      record({ event: "tasks.start", project: name, version });
       const route = "/api/v1/panels/runtime/" + grant.instanceId;
       const pending = request(route + "/call", "POST", {
         method: "tasks.start",
@@ -155,6 +231,7 @@ test("real Hub HTTP moves every project on a catalog update and serves a rolled-
       const response = await pending;
       expect(response.status).toBe(200);
       const job = await response.json();
+      record({ event: "tasks.admitted", status: job.status });
       const selected = await catalog();
       expect(job.package).toEqual({ version, packageDigest: selected.packageDigest });
       let current;
@@ -168,11 +245,17 @@ test("real Hub HTTP moves every project on a catalog update and serves a rolled-
         if (["succeeded", "failed", "cancelled"].includes(current.status)) break;
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
-      expect(current).toMatchObject({
-        status: "succeeded",
-        result: { version },
-        package: job.package,
-      });
+      try {
+        expect(current).toMatchObject({
+          status: "succeeded",
+          result: { version, requestComplete: true },
+          package: job.package,
+        });
+        expect(current.result.receivedBytes).toBeGreaterThan(0);
+      } catch (error) {
+        console.error("Panel package fixture lifecycle:", JSON.stringify(lifecycle));
+        throw error;
+      }
       return job.id;
     }
     return { cwd, api, request, catalog, bind, prepare, page, run, close };
