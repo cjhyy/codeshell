@@ -34,7 +34,9 @@ export function MimiCompanionWindow() {
   const [held, setHeld] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
-  const [cueId, setCueId] = useState<string | null>(null);
+  const [cueActivity, setCueActivity] = useState<MimiCompanionState["activity"] | null>(null);
+  const currentCue = useRef<MimiCompanionState["activity"] | null>(null);
+  const cueTimer = useRef<number | undefined>(undefined);
   const seenActivities = useRef(new Set<string>());
   const gesture = useRef<Gesture | null>(null);
   const lastHoverAt = useRef(0);
@@ -72,6 +74,7 @@ export function MimiCompanionWindow() {
       alive = false;
       off();
       query.removeEventListener("change", changed);
+      window.clearTimeout(cueTimer.current);
       if (gesture.current) {
         window.mimiCompanion.interaction("end");
         window.mimiCompanion.interaction("leave");
@@ -80,21 +83,60 @@ export function MimiCompanionWindow() {
   }, []);
 
   useEffect(() => {
-    setCueId(null);
     if (!state) return;
-    const id = state.activity.id;
-    if (seenActivities.current.has(id)) return;
-    seenActivities.current.add(id);
-    if (seenActivities.current.size > 64)
-      seenActivities.current.delete(seenActivities.current.values().next().value!);
-    if (humanActive || !visible) return;
-    const remaining =
-      companionCueDuration(state) - Math.max(0, Date.now() - state.activity.startedAt);
-    if (remaining <= 0) return;
-    setCueId(id);
-    const timer = window.setTimeout(() => setCueId(null), remaining);
-    return () => window.clearTimeout(timer);
-  }, [state?.activity.id, humanActive, visible]);
+    const activity = state.activity;
+    const remember = () => {
+      seenActivities.current.add(activity.id);
+      if (seenActivities.current.size > 64)
+        seenActivities.current.delete(seenActivities.current.values().next().value!);
+    };
+    const stop = () => {
+      window.clearTimeout(cueTimer.current);
+      cueTimer.current = undefined;
+      currentCue.current = null;
+      setCueActivity(null);
+    };
+    const play = (duration?: number) => {
+      window.clearTimeout(cueTimer.current);
+      currentCue.current = activity;
+      setCueActivity(activity);
+      cueTimer.current = duration === undefined ? undefined : window.setTimeout(stop, duration);
+    };
+    if (humanActive || !visible) {
+      remember();
+      stop();
+      return;
+    }
+    const previous = currentCue.current;
+    if (activity.action === "idle") {
+      // The host may clear its completion dwell before our readable typing tail.
+      if (previous?.action === "type" && previous.phase === "end") return;
+      stop();
+      return;
+    }
+    if (previous?.id === activity.id) {
+      // A repeated end or stale start must not extend/restart the same gesture.
+      if (previous.phase === "end") return;
+      if (activity.action === "error") play(companionCueDuration(state));
+      else if (activity.action === "type" && activity.phase === "end") play(900);
+      else if (activity.phase === "end") {
+        currentCue.current = activity;
+        setCueActivity(activity);
+      }
+      return;
+    }
+    stop();
+    if (seenActivities.current.has(activity.id)) return;
+    remember();
+    if (activity.action === "type") {
+      // Fast input can begin/end within one React render; its real completion
+      // still receives a tail. An interrupted id is already consumed above.
+      play(activity.phase === "end" ? 900 : undefined);
+      return;
+    }
+    const remaining = companionCueDuration(state) - Math.max(0, Date.now() - activity.startedAt);
+    if (remaining > 0) play(remaining);
+  }, [state?.activity.id, state?.activity.action, state?.activity.phase, humanActive, visible]);
 
   const closeMenu = useCallback(() => {
     setMenuOpen(false);
@@ -163,9 +205,10 @@ export function MimiCompanionWindow() {
 
   if (!state) return null;
   const { Actor } = CHARACTER_RENDERERS[state.appearance] ?? CHARACTER_RENDERERS["mimi-sprite"];
-  const cueActive = cueId === state.activity.id && !humanActive;
-  const typing = cueActive && (state.activity.action === "type" || state.activity.action === "key");
-  const targetEffect = cueActive && ["click", "scroll", "drag"].includes(state.activity.action);
+  const cueActive = Boolean(cueActivity && !humanActive && visible);
+  const presented = cueActive && cueActivity ? { ...state, activity: cueActivity } : state;
+  const typing = cueActive && ["type", "key"].includes(presented.activity.action);
+  const targetEffect = cueActive && ["click", "scroll", "drag"].includes(presented.activity.action);
   const position = dragPosition ?? state.position;
   return (
     <div
@@ -185,11 +228,12 @@ export function MimiCompanionWindow() {
       <div
         className={`mimi-companion${held ? " mimi-companion--held" : ""}`}
         data-appearance={state.appearance}
-        data-action={cueActive ? state.activity.action : "idle"}
+        data-action={cueActive ? presented.activity.action : "idle"}
         style={{
           width: Math.round(state.size * 0.7),
           height: state.size,
           transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
+          transition: state.avoidInput ? "none" : undefined,
         }}
       >
         <button
@@ -277,7 +321,7 @@ export function MimiCompanionWindow() {
         >
           <Suspense fallback={null}>
             <Actor
-              state={state}
+              state={presented}
               reducedMotion={reducedMotion}
               moving={moving}
               cueActive={cueActive}
@@ -287,16 +331,24 @@ export function MimiCompanionWindow() {
           </Suspense>
         </button>
         {typing && (
-          <div className="mimi-keyboard" aria-label="输入动作提示">
+          <div
+            className={`mimi-keyboard${presented.activity.phase === "end" ? " mimi-keyboard--settling" : ""}`}
+            aria-label="输入动作提示"
+          >
             {Array.from({ length: 12 }, (_, index) => (
-              <i key={index} style={{ animationDelay: `${index * 25}ms` }} />
+              <i key={index} style={{ animationDelay: `${-index * 90}ms` }} />
             ))}
           </div>
         )}
         {state.preview && <div className="mimi-companion__preview">动作预览</div>}
         {(error || cueActive) && (
           <div className="mimi-companion__activity" role="status">
-            {error ?? companionActionLabel(state)}
+            {error ??
+              (presented.activity.action === "type"
+                ? presented.activity.phase === "start"
+                  ? "正在输入"
+                  : "输入完成"
+                : companionActionLabel(presented))}
           </div>
         )}
         {menuOpen && (

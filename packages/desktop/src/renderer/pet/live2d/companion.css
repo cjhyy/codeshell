@@ -133,21 +133,21 @@ body,
 
 .mimi-keyboard {
   position: absolute;
-  left: 28%;
-  bottom: 31px;
-  width: 44%;
-  height: 29px;
-  padding: 5px 6px;
+  left: 14%;
+  bottom: 34px;
+  width: 72%;
+  height: clamp(36px, 13%, 52px);
+  padding: 6px 7px;
   box-sizing: border-box;
   border-radius: 7px;
-  border: 1px solid #8a9bab;
-  background: #e8eef4;
+  border: 1px solid #6d879d;
+  background: #dfe9f1;
   box-shadow:
     0 3px 0 #aebdca,
     0 5px 8px #20324720;
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 3px;
+  gap: 4px;
   transform: perspective(120px) rotateX(18deg);
 }
 
@@ -155,7 +155,11 @@ body,
   border-radius: 2px;
   background: white;
   box-shadow: 0 1px 0 #b9c6d1;
-  animation: mimi-key 300ms ease-in-out both;
+  animation: mimi-key 780ms ease-in-out infinite;
+}
+
+.mimi-keyboard--settling {
+  opacity: 0.8;
 }
 
 .mimi-scene--still * {
@@ -178,9 +182,11 @@ body,
   60%,
   100% {
     background: white;
+    transform: translateY(0);
   }
   30% {
-    background: #f7bd66;
+    background: #f5ad40;
+    transform: translateY(2px);
   }
 }
 

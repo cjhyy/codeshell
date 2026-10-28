@@ -16,6 +16,7 @@ export function SpriteActor({
   callbacks.current = { onReady, onError };
   const animation = spriteAnimation(state, moving, cueActive);
   const { row, frames } = SPRITE_ANIMATIONS[animation];
+  const typing = animation === "typing";
   const playing =
     (state.enabled || state.preview) &&
     state.visible &&
@@ -37,11 +38,18 @@ export function SpriteActor({
     setFrame(0);
     if (!playing) return;
     const timer = window.setInterval(
-      () => setFrame((value) => (moving ? (value + 1) % frames : Math.min(value + 1, frames - 1))),
-      100,
+      () =>
+        setFrame((value) =>
+          moving || typing ? (value + 1) % frames : Math.min(value + 1, frames - 1),
+        ),
+      typing ? 260 : 100,
     );
     return () => window.clearInterval(timer);
-  }, [animation, frames, playing, moving, state.activity.id]);
+  }, [animation, frames, playing, moving, typing, state.activity.id]);
+
+  // Reuse the small paw lift, alternating its middle poses instead of cycling
+  // the full-body working atlas row. No transform moves the whole character.
+  const column = typing ? [0, 1, 2, 1][frame % frames] : frame % frames;
 
   return (
     <div
@@ -51,7 +59,7 @@ export function SpriteActor({
       data-animation={animation}
       style={{
         backgroundImage: `url(${atlas})`,
-        backgroundPosition: `${((reducedMotion || animation === "idle" ? 0 : frame % frames) / 7) * 100}% ${(row / 10) * 100}%`,
+        backgroundPosition: `${((reducedMotion || animation === "idle" ? 0 : column) / 7) * 100}% ${(row / 10) * 100}%`,
       }}
     />
   );

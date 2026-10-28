@@ -28,6 +28,8 @@ export interface MimiCompanionState {
   position: { x: number; y: number };
   windowOrigin?: { x: number; y: number };
   humanActive?: boolean;
+  /** Relocate immediately instead of easing across a field receiving input. */
+  avoidInput?: boolean;
   pinned?: boolean;
   target?: { x: number; y: number };
   activity: {

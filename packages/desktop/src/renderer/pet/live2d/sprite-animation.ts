@@ -5,6 +5,7 @@ export const SPRITE_ANIMATIONS = {
   right: { row: 1, frames: 8 },
   left: { row: 2, frames: 8 },
   waving: { row: 3, frames: 4 },
+  typing: { row: 3, frames: 4 },
   jumping: { row: 4, frames: 5 },
   failed: { row: 5, frames: 8 },
   waiting: { row: 6, frames: 6 },
@@ -27,6 +28,7 @@ export function spriteAnimation(
     case "key":
       return "waving";
     case "type":
+      return "typing";
     case "scroll":
     case "working":
     case "drag":
@@ -36,7 +38,7 @@ export function spriteAnimation(
   }
 }
 
-/** One authored frame cycle, bounded even when an operation remains in progress. */
+/** One-shot gesture budget. Typing instead follows the operation's start/end. */
 export function companionCueDuration(state: MimiCompanionState): number {
   return state.activity.action === "idle"
     ? 0

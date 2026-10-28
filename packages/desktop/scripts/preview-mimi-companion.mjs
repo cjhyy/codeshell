@@ -132,6 +132,114 @@ if (!process.argv.includes("--serve")) {
     await page.getByRole("button", { name: "输入", exact: true }).click();
     await page.waitForSelector(".mimi-keyboard");
     await page.screenshot({ path: resolve(out, "mimi-typing.png") });
+    const typingActivity = await page.evaluate(
+      async () => (await window.mimiCompanion.getState()).activity,
+    );
+    const typingPosition = await page.locator(".mimi-companion").getAttribute("style");
+    await page.waitForTimeout(1_100);
+    assert.equal(
+      await page.locator(".mimi-keyboard").count(),
+      1,
+      "typing stays visible beyond the old 800ms cap",
+    );
+    assert.equal(await page.locator('[data-animation="typing"]').count(), 1);
+    const typingFrame = await page.locator(".mimi-companion__sprite").getAttribute("style");
+    await page.waitForTimeout(300);
+    assert.notEqual(
+      await page.locator(".mimi-companion__sprite").getAttribute("style"),
+      typingFrame,
+      "typing paw rhythm continues after its first cycle",
+    );
+    assert.equal(
+      await page.locator(".mimi-companion").getAttribute("style"),
+      typingPosition,
+      "typing does not bounce the whole character",
+    );
+    await page.evaluate(() => window.preview({ avoidInput: true }));
+    assert.equal(
+      await page
+        .locator(".mimi-companion")
+        .evaluate((element) => getComputedStyle(element).transitionDuration),
+      "0s",
+      "field avoidance relocates immediately instead of easing through the input",
+    );
+    await page.evaluate(() => window.preview({ avoidInput: false }));
+    await page.evaluate(
+      (activity) => window.preview({ activity: { ...activity, phase: "end" } }),
+      typingActivity,
+    );
+    await page.waitForSelector(".mimi-keyboard--settling");
+    await page.waitForTimeout(600);
+    assert.equal(await page.locator(".mimi-keyboard").count(), 1, "completion has a readable tail");
+    await page.evaluate(
+      (activity) => window.preview({ activity: { ...activity, phase: "end" } }),
+      typingActivity,
+    );
+    await page.evaluate(() =>
+      window.preview({
+        activity: {
+          id: "host-idle-after-type",
+          action: "idle",
+          phase: "end",
+          startedAt: Date.now(),
+        },
+      }),
+    );
+    await page.waitForTimeout(150);
+    assert.equal(
+      await page.locator(".mimi-keyboard").count(),
+      1,
+      "early host idle does not truncate the typing tail",
+    );
+    await page.waitForSelector(".mimi-keyboard", { state: "hidden", timeout: 500 });
+    await page.evaluate(
+      (activity) => window.preview({ activity: { ...activity, phase: "end" } }),
+      typingActivity,
+    );
+    await page.waitForTimeout(100);
+    assert.equal(
+      await page.locator(".mimi-keyboard").count(),
+      0,
+      "a duplicate completion never replays or extends typing",
+    );
+    await page.evaluate(() =>
+      window.preview({
+        activity: { id: "typing-hover", action: "type", phase: "start", startedAt: Date.now() },
+      }),
+    );
+    await page.waitForSelector(".mimi-keyboard");
+    await page.getByRole("button", { name: "打开 Mimi 聊天，拖动可移动" }).hover();
+    await page.waitForSelector(".mimi-keyboard", { state: "hidden" });
+    await page.mouse.move(20, 80);
+    await page.evaluate(async () => {
+      const { activity } = await window.mimiCompanion.getState();
+      window.preview({ activity: { ...activity, phase: "end" } });
+    });
+    await page.waitForTimeout(100);
+    assert.equal(
+      await page.locator(".mimi-keyboard").count(),
+      0,
+      "hover cancels typing immediately and neither leave nor end replays it",
+    );
+    await page.evaluate(() =>
+      window.preview({
+        activity: { id: "fast-type", action: "type", phase: "end", startedAt: Date.now() },
+      }),
+    );
+    await page.waitForSelector(".mimi-keyboard--settling");
+    await page.getByRole("button", { name: "打开 Mimi 聊天，拖动可移动" }).hover();
+    await page.waitForSelector(".mimi-keyboard", { state: "hidden" });
+    await page.mouse.move(20, 80);
+    await page.evaluate(async () => {
+      const { activity } = await window.mimiCompanion.getState();
+      window.preview({ activity: { ...activity, phase: "start" } });
+    });
+    await page.waitForTimeout(100);
+    assert.equal(
+      await page.locator(".mimi-keyboard").count(),
+      0,
+      "fast input receives a completion tail, but a later stale start cannot replay it",
+    );
     await page.getByRole("button", { name: "点击", exact: true }).click();
     await page.waitForSelector(".mimi-target--click");
     await page.screenshot({ path: resolve(out, "mimi-click.png") });
@@ -140,6 +248,15 @@ if (!process.argv.includes("--serve")) {
       await page.locator(".mimi-target").count(),
       0,
       "click feedback expires without a host idle event",
+    );
+    await page.evaluate(async () => {
+      const { activity } = await window.mimiCompanion.getState();
+      window.preview({ activity: { ...activity, phase: "end" } });
+    });
+    assert.equal(
+      await page.locator(".mimi-target").count(),
+      0,
+      "click end does not replay its one-shot cue",
     );
     const idleStyle = await page.locator(".mimi-companion__sprite").getAttribute("style");
     await page.waitForTimeout(260);
