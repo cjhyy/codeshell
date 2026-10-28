@@ -5,10 +5,12 @@ import {
   normalizeCwdPath,
   notificationQueue,
   type BackgroundJobEntry,
+  type BackgroundJobProgress,
   type ToolContext,
   type ToolDefinition,
 } from "@cjhyy/code-shell-core/extension";
 import { runAgentOnce, type AgentRunResult } from "../cc-orchestrator/external-agent-driver.js";
+import { initialAgentProgress } from "../cc-orchestrator/external-agent-progress.js";
 import { claudeAdapter, codexAdapter } from "../cc-orchestrator/agent-adapter.js";
 import { readExternalChangedFiles } from "../cc-orchestrator/external-agent-changes.js";
 import { existsSync, realpathSync, statSync } from "node:fs";
@@ -170,6 +172,7 @@ type Runner = (opts: {
   imagePaths?: string[];
   additionalReadDirs?: string[];
   onSessionId?: (sessionId: string) => void;
+  onProgress?: (progress: BackgroundJobProgress) => void;
 }) => Promise<AgentRunResult>;
 type SessionStore = {
   get(cli: DriveCli, sessionId: string): ExternalAgentSessionBinding | undefined;
@@ -226,6 +229,7 @@ const defaultRunner: Runner = (opts) => {
       imagePaths: opts.imagePaths,
       additionalReadDirs: opts.additionalReadDirs,
       onSessionId: opts.onSessionId,
+      onProgress: opts.onProgress,
     },
     opts.signal,
   );
@@ -906,7 +910,11 @@ function trackBackgroundRun(params: {
   isolation: DriveIsolation;
   worktree?: ManagedDriveWorktree;
   promptSummary: string;
-  start: (onSessionId: (sessionId: string) => void) => Promise<AgentRunResult>;
+  initialProgress?: BackgroundJobProgress;
+  start: (
+    onSessionId: (sessionId: string) => void,
+    onProgress: (progress: BackgroundJobProgress) => void,
+  ) => Promise<AgentRunResult>;
   abort: () => void;
   sessionStore: SessionStore;
   writable: boolean;
@@ -939,6 +947,7 @@ function trackBackgroundRun(params: {
     // start notification; starting first would leave that process orphaned.
     backgroundJobRegistry.start(jobId, sessionId, params.label, {
       kind: "drive-agent",
+      persist: true,
       launchCwd: params.cwd,
       effectiveWorkspaceCwd: params.effectiveWorkspaceCwd,
       workspaceRoot: params.workspaceRoot,
@@ -969,10 +978,17 @@ function trackBackgroundRun(params: {
     return { error: "Error: DriveAgent owner session closed before the job could start." };
   }
   try {
-    run = params.start((externalSessionId) => {
-      if (!isValidSessionId(externalSessionId)) return;
-      backgroundJobRegistry.recordArtifacts(jobId, { ccSessionId: externalSessionId });
-    });
+    backgroundJobRegistry.updateProgress(
+      jobId,
+      params.initialProgress ?? initialAgentProgress(params.cli),
+    );
+    run = params.start(
+      (externalSessionId) => {
+        if (!isValidSessionId(externalSessionId)) return;
+        backgroundJobRegistry.recordArtifacts(jobId, { ccSessionId: externalSessionId });
+      },
+      (progress) => backgroundJobRegistry.updateProgress(jobId, progress),
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     backgroundJobRegistry.finish(jobId, { status: "failed", finalText: message });
@@ -1254,11 +1270,12 @@ export function makeDriveAgentTool(
         isolation,
         worktree: managedWorktree,
         promptSummary,
-        start: (onSessionId) =>
+        start: (onSessionId, onProgress) =>
           startRun(runner, {
             ...runOptsBase,
             signal: abortController.signal,
             onSessionId,
+            onProgress,
           }),
         abort: () => abortController.abort(),
         sessionStore,
@@ -1299,12 +1316,18 @@ export function makeDriveAgentTool(
     const foregroundAbort = makeAbortController(callerSignal, true);
     let liveExternalSessionId: string | undefined;
     let backgroundSessionIdSink: ((sessionId: string) => void) | undefined;
+    let liveProgress: BackgroundJobProgress | undefined;
+    let backgroundProgressSink: ((progress: BackgroundJobProgress) => void) | undefined;
     const run = startRun(runner, {
       ...runOptsBase,
       signal: foregroundAbort.signal,
       onSessionId: (sessionId) => {
         liveExternalSessionId = sessionId;
         backgroundSessionIdSink?.(sessionId);
+      },
+      onProgress: (progress) => {
+        liveProgress = progress;
+        backgroundProgressSink?.(progress);
       },
     });
     let result: Awaited<ReturnType<typeof waitForForegroundOrHandoff>>;
@@ -1347,11 +1370,14 @@ export function makeDriveAgentTool(
         isolation,
         worktree: managedWorktree,
         promptSummary,
-        start: (onSessionId) => {
+        start: (onSessionId, onProgress) => {
           backgroundSessionIdSink = onSessionId;
           if (liveExternalSessionId) onSessionId(liveExternalSessionId);
+          backgroundProgressSink = onProgress;
+          if (liveProgress) onProgress(liveProgress);
           return run;
         },
+        initialProgress: liveProgress,
         abort: () => foregroundAbort.abort(),
         sessionStore,
         writable: isWritableRun,
@@ -1531,6 +1557,21 @@ function inspectDriveAgentJob(jobId: string | undefined): string {
   if (job.worktreeLifecycle) lines.push(`worktreeLifecycle: ${job.worktreeLifecycle}`);
   if (job.finishedAt !== undefined)
     lines.push(`finishedAt: ${new Date(job.finishedAt).toISOString()}`);
+  if (job.progress) {
+    lines.push(
+      `lastActivityAt: ${new Date(job.progress.lastActivityAt).toISOString()}`,
+      `activityEvents: ${job.progress.eventCount}`,
+    );
+    if (job.progress.phase) lines.push(`phase: ${job.progress.phase}`);
+    if (job.progress.summary) lines.push(`activity: ${job.progress.summary}`);
+    if (job.progress.recentEvents?.length)
+      lines.push(
+        "recentActivity:",
+        ...job.progress.recentEvents.map(
+          (event) => `- ${new Date(event.at).toISOString()}: ${event.summary}`,
+        ),
+      );
+  }
   if (job.changedFiles && job.changedFiles.length > 0) {
     lines.push("changedFiles:", ...job.changedFiles.map((file) => `- ${file}`));
   } else {
@@ -1698,6 +1739,7 @@ type LegacyRunner = (opts: {
   permissionMode?: PermMode;
   signal?: AbortSignal;
   onSessionId?: (sessionId: string) => void;
+  onProgress?: (progress: BackgroundJobProgress) => void;
   // Newer optional fields the alias schema advertises; forwarded so a runner
   // that honors them receives them (older fakes simply ignore extra fields).
   additionalReadDirs?: string[];

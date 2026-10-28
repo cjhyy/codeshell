@@ -2,13 +2,19 @@ import { execFile, spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import type { AgentAdapter, BuildArgsOpts, PermissionMode } from "./agent-adapter.js";
 import { pathWithCommonBins } from "./cc-capability.js";
-import { killProcessGroup, recordExternalModelCall } from "@cjhyy/code-shell-core/extension";
+import {
+  killProcessGroup,
+  recordExternalModelCall,
+  type BackgroundJobProgress,
+} from "@cjhyy/code-shell-core/extension";
+import { advanceAgentProgress, initialAgentProgress } from "./external-agent-progress.js";
 
 export interface AgentRunResult {
   sessionId: string;
   finalText: string;
   isError: boolean;
   exitCode: number | null;
+  /** Complete CLI records; transient Claude token deltas are observed only. */
   lines: string[];
 }
 
@@ -27,6 +33,8 @@ export interface DriverRunOpts extends Omit<BuildArgsOpts, "permissionMode"> {
   /** Called once as soon as the external CLI reports its durable session/thread
    *  id. This normally happens near process startup, well before the turn exits. */
   onSessionId?: (sessionId: string) => void;
+  /** Bounded activity metadata; never a second transcript stream. */
+  onProgress?: (progress: BackgroundJobProgress) => void;
 }
 
 const codexImageFlagCache = new Map<string, Promise<boolean>>();
@@ -230,8 +238,35 @@ export function runAgentOnce(
 ): Promise<AgentRunResult> {
   return new Promise((resolve, reject) => {
     let finishTrace: (result?: AgentRunResult, error?: unknown) => void = () => {};
+    let progress = initialAgentProgress(adapter.kind);
+    let progressTimer: ReturnType<typeof setTimeout> | undefined;
+    let lastProgressReportAt = 0;
+    const publishProgress = () => {
+      if (progressTimer) clearTimeout(progressTimer);
+      progressTimer = undefined;
+      lastProgressReportAt = Date.now();
+      try {
+        opts.onProgress?.({
+          ...progress,
+          recentEvents: progress.recentEvents?.map((event) => ({ ...event })),
+        });
+      } catch {
+        // Observation must never stop the underlying CLI.
+      }
+    };
+    const observeOutput = (line: string) => {
+      if (!opts.onProgress || !line.trim()) return;
+      progress = advanceAgentProgress(progress, adapter.kind, line);
+      const delay = 250 - (Date.now() - lastProgressReportAt);
+      if (delay <= 0) publishProgress();
+      else progressTimer ??= setTimeout(publishProgress, delay);
+    };
+    const flushProgress = () => {
+      if (progressTimer) publishProgress();
+    };
     void (async () => {
       throwIfAborted(signal);
+      publishProgress();
       const codexImageInputSupported =
         adapter.kind === "codex" && (opts.imagePaths?.length ?? 0) > 0
           ? await detectCodexImageInput(opts.command, opts.cwd, signal).catch((err) => {
@@ -329,6 +364,7 @@ export function runAgentOnce(
       let termination: Promise<void> | undefined;
       const cleanup = () => {
         signal?.removeEventListener("abort", onAbort);
+        flushProgress();
       };
       const onAbort = () => {
         if (abortRequested) return;
@@ -344,7 +380,19 @@ export function runAgentOnce(
       if (child.stdout) {
         const rl = createInterface({ input: child.stdout });
         rl.on("line", (line) => {
-          lines.push(line);
+          if (!settled) observeOutput(line);
+          let partialMessage = false;
+          if (adapter.kind === "claude") {
+            try {
+              partialMessage = JSON.parse(line)?.type === "stream_event";
+            } catch {
+              // Preserve the legacy result parser's handling of non-JSON lines.
+            }
+          }
+          // Complete assistant/result records are authoritative for the final
+          // result. Keeping every partial token as well duplicates large runs
+          // in memory and retains reasoning deltas that the UI never needs.
+          if (!partialMessage) lines.push(line);
           if (!reportedSessionId) {
             try {
               reportSessionId(adapter.parseResult([line]).sessionId);
@@ -355,6 +403,11 @@ export function runAgentOnce(
           }
         });
       }
+      // Drain diagnostics so a full stderr pipe cannot stall an otherwise live
+      // CLI. Only its receipt is activity; stderr text never enters UI status.
+      child.stderr?.on("data", () => {
+        if (!settled) observeOutput("diagnostic output");
+      });
       child.on("error", (err) => {
         if (settled) return;
         settled = true;
@@ -373,7 +426,9 @@ export function runAgentOnce(
         }
         reject(err);
       });
-      child.on("exit", (code) => {
+      // exit can arrive before the final stdout/stderr data events. close
+      // ensures the result and final activity snapshot include those bytes.
+      child.on("close", (code) => {
         if (settled) return;
         settled = true;
         cleanup();
@@ -390,6 +445,7 @@ export function runAgentOnce(
           });
       });
     })().catch((error) => {
+      flushProgress();
       finishTrace(undefined, error);
       reject(error);
     });

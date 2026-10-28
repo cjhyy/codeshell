@@ -87,6 +87,14 @@ export interface BackgroundWorkSourceSession {
   current: boolean;
 }
 
+export interface BackgroundJobProgress {
+  lastActivityAt: number;
+  eventCount: number;
+  phase?: "starting" | "thinking" | "tool" | "responding";
+  summary?: string;
+  recentEvents?: Array<{ at: number; summary: string }>;
+}
+
 type BackgroundWorkWithSource<T> = T & { sourceSession: BackgroundWorkSourceSession };
 
 /** One unified background-work row for the background panel. Discriminated by
@@ -107,7 +115,9 @@ export type BackgroundWorkInfo =
       kind: "job";
       jobId: string;
       description: string;
-      status: "running" | "completed" | "failed" | "cancelled";
+      status: "running" | "cancelling" | "completed" | "failed" | "cancelled" | "unknown";
+      progress?: BackgroundJobProgress;
+      canCancel?: boolean;
       startedAt: number;
       finishedAt?: number;
       finalText?: string;
@@ -678,8 +688,12 @@ contextBridge.exposeInMainWorld("codeshell", {
     }>,
   /** Unified background-work listing for the panel: shells + sub-agents + jobs. */
   listBackgroundWork: (sessionId: string, opts?: { scope?: "session" | "all" }) =>
-    rpc("agent/backgroundWork", { sessionId, ...(opts ?? {}) }).then(rpcResult) as Promise<{
+    ipcRenderer.invoke("backgroundWork:list", sessionId, opts) as Promise<{
       items: BackgroundWorkInfo[];
+    }>,
+  cancelBackgroundJob: (sessionId: string, jobId: string, expectedStartedAt: number) =>
+    ipcRenderer.invoke("backgroundWork:cancelJob", sessionId, jobId, expectedStartedAt) as Promise<{
+      cancelled: boolean;
     }>,
   approve: (
     sessionIdOrRequestId: string,

@@ -214,7 +214,7 @@ export function BackgroundShellPanel({
   const anyRunning =
     shells.some((s) => s.shell.status === "running") ||
     agents.some((a) => a.status === "running") ||
-    jobs.some((j) => j.status === "running");
+    jobs.some((j) => j.status === "running" || j.status === "cancelling");
 
   // Mirror the latest shells + callbacks into refs so the poll interval below can
   // read them without listing them as effect deps. Otherwise `refresh`(dep
@@ -366,7 +366,7 @@ export function BackgroundShellPanel({
               <ul className="m-0 list-none p-0">
                 {jobs.map((j) => {
                   const cliLink = driveAgentLinkDetail(j);
-                  const done = j.status !== "running";
+                  const done = j.status !== "running" && j.status !== "cancelling";
                   const changed = j.changedFiles ?? [];
                   const expandable =
                     done && (!!j.finalText || changed.length > 0 || !!j.worktreePath);
@@ -378,7 +378,11 @@ export function BackgroundShellPanel({
                         ? t("panels.shells.jobFailed")
                         : j.status === "cancelled"
                           ? t("panels.shells.jobCancelled")
-                          : t("panels.shells.jobRunning");
+                          : j.status === "cancelling"
+                            ? t("panels.shells.jobCancelling")
+                            : j.status === "unknown"
+                              ? t("panels.shells.jobUnknown")
+                              : t("panels.shells.jobRunning");
                   return (
                     <li key={j.jobId} className="border-b border-border/60">
                       <div
@@ -387,11 +391,11 @@ export function BackgroundShellPanel({
                           expandable ? () => setExpandedJobId(isOpen ? null : j.jobId) : undefined
                         }
                       >
-                        {j.status === "running" ? (
+                        {j.status === "running" || j.status === "cancelling" ? (
                           <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-status-running" />
                         ) : j.status === "completed" ? (
                           <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-status-ok" />
-                        ) : j.status === "cancelled" ? (
+                        ) : j.status === "cancelled" || j.status === "unknown" ? (
                           <Ban className="h-3.5 w-3.5 shrink-0 text-status-warn" />
                         ) : (
                           <XCircle className="h-3.5 w-3.5 shrink-0 text-status-err" />

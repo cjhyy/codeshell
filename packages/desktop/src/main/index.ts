@@ -436,6 +436,10 @@ import { SessionCatalogStore } from "./session-catalog-store.js";
 import { createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
 import { createTaskInboxService } from "./task-inbox/task-inbox-service.js";
 import { createTaskInboxBackgroundHost } from "./task-inbox/task-inbox-background-host.js";
+import {
+  assertExternalSessionIdle,
+  registerBackgroundWorkIpc,
+} from "./cc-room/background-work-ipc.js";
 import { registerTaskInboxIpc } from "./task-inbox/task-inbox-ipc.js";
 import { registerOptimizationLabHost } from "./optimization-lab-host.js";
 import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
@@ -679,6 +683,7 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  * same worker" — not "extra concurrent agents".
  */
 let bridge: AgentBridge | null = null;
+const backgroundWorkHost = createTaskInboxBackgroundHost({ worker: () => bridge });
 let desktopNotifier: DesktopNotifier | null = null;
 let chromeNativeRegistration: ChromeNativeRegistrationResult | undefined;
 /**
@@ -5716,7 +5721,15 @@ ipcMain.handle(
     return mobileOrchestrator.roomToPublic(room);
   },
 );
-ipcMain.handle("rooms:open", async (_e, roomId: string) => roomManager.open(roomId));
+async function requireIdleRoomSession(roomId: string): Promise<void> {
+  const room = roomManager.getRoom(roomId);
+  if (room?.claudeSessionId)
+    await assertExternalSessionIdle(backgroundWorkHost, room.claudeSessionId, room.kind);
+}
+ipcMain.handle("rooms:open", async (_e, roomId: string) => {
+  await requireIdleRoomSession(roomId);
+  return roomManager.open(roomId);
+});
 ipcMain.handle("rooms:close", async (_e, roomId: string) => {
   roomManager.close(roomId);
 });
@@ -5724,6 +5737,7 @@ ipcMain.handle("rooms:send", async (_e, roomId: string, text: string) => {
   if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
     throw new Error("invalid room message");
   }
+  await requireIdleRoomSession(roomId);
   return roomManager.send(roomId, text);
 });
 ipcMain.handle("rooms:history", async (_e, roomId: string, sinceSeq?: number) =>
@@ -5758,6 +5772,7 @@ ipcMain.handle(
     kind?: "claude-code" | "codex",
   ) => {
     cwd = await requireRendererProjectPath(cwd);
+    await assertExternalSessionIdle(backgroundWorkHost, claudeSessionId, kind ?? "claude-code");
     return roomManager.openForSession(claudeSessionId, cwd, mode, kind ?? "claude-code");
   },
 );
@@ -5773,14 +5788,11 @@ ipcMain.handle(
 );
 ipcMain.handle(
   "ccRoom:takeOverLinkedSession",
-  async (_e, roomId: unknown, externalSessionId: unknown, cwd: unknown, kind: unknown) =>
-    takeOverLinkedSessionFromIpc(
-      roomManager,
-      roomId,
-      externalSessionId,
-      await requireRendererLinkedSessionPath(cwd),
-      kind,
-    ),
+  async (_e, roomId: unknown, externalSessionId: unknown, cwd: unknown, kind: unknown) => {
+    const verifiedCwd = await requireRendererLinkedSessionPath(cwd);
+    await assertExternalSessionIdle(backgroundWorkHost, externalSessionId, kind);
+    return takeOverLinkedSessionFromIpc(roomManager, roomId, externalSessionId, verifiedCwd, kind);
+  },
 );
 const transcriptCleanupSenders = new Set<number>();
 ipcMain.handle(
@@ -5821,6 +5833,7 @@ ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) => {
   if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
     throw new Error("invalid room message");
   }
+  await requireIdleRoomSession(roomId);
   return roomManager.send(roomId, text);
 });
 ipcMain.handle(
@@ -7054,7 +7067,7 @@ const taskInboxSources = createTaskInboxSources({
       await externalRuntimeService.interrupt(id);
     },
   },
-  background: createTaskInboxBackgroundHost({ worker: () => bridge }),
+  background: backgroundWorkHost,
 });
 const taskInboxService = createTaskInboxService({
   filePath: resolve(app.getPath("userData"), "task-inbox", "v1.json"),
@@ -7066,6 +7079,7 @@ taskInboxDisposers.push(
   registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled),
   sessionCatalogStore.onChanged(() => taskInboxService?.scheduleRefresh()),
 );
+registerBackgroundWorkIpc(ipcMain, () => [...mainWindows], backgroundWorkHost);
 const disposeOperationBatchHost = registerOperationBatchHost({
   windows: () => [...mainWindows],
   enabled: taskInboxEnabled,

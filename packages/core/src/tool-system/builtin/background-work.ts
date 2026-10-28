@@ -17,9 +17,11 @@ import { asyncAgentRegistry, type AsyncAgentStatus } from "./agent-registry.js";
 import {
   backgroundJobRegistry,
   type BackgroundJobKind,
+  type BackgroundJobProgress,
   type BackgroundJobStatus,
   type ExternalCliKind,
 } from "./background-jobs.js";
+import { backgroundJobHistory } from "./background-job-history.js";
 import { backgroundShellManager, type BgShell } from "../../runtime/background-shell.js";
 import { codeShellHome } from "../../session/session-manager.js";
 
@@ -112,7 +114,8 @@ export type BackgroundWorkEntry =
       jobId: string;
       canCancel?: boolean;
       description: string;
-      status: BackgroundJobStatus;
+      status: BackgroundJobStatus | "unknown";
+      progress?: BackgroundJobProgress;
       startedAt: number;
       finishedAt?: number;
       /** Result summary / error, once finished. */
@@ -235,14 +238,20 @@ export function listBackgroundWorkForUI(
     scope === "all"
       ? backgroundJobRegistry.list()
       : backgroundJobRegistry.listForSession(sessionId);
-  for (const j of jobs) {
+  const liveIds = new Set(jobs.map((job) => job.jobId));
+  const history = backgroundJobHistory
+    .list(scope === "all" ? undefined : sessionId)
+    .filter((job) => !liveIds.has(job.jobId));
+  for (const j of [...jobs, ...history]) {
     const launchCwd = j.launchCwd ?? j.cwd;
+    const live = liveIds.has(j.jobId);
     entries.push({
       kind: "job",
       jobId: j.jobId,
-      canCancel: j.status === "running" && typeof j.abort === "function",
+      canCancel: live && j.status === "running" && "abort" in j && typeof j.abort === "function",
       description: j.description,
-      status: j.status,
+      status: !live && (j.status === "running" || j.status === "cancelling") ? "unknown" : j.status,
+      ...(j.progress ? { progress: structuredClone(j.progress) } : {}),
       startedAt: j.startedAt,
       ...(j.finishedAt != null ? { finishedAt: j.finishedAt } : {}),
       ...(j.finalText != null ? { finalText: j.finalText } : {}),

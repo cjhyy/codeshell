@@ -76,3 +76,29 @@ test("main registry remains visible without a worker and worker read failure is 
   });
   await expect(failing.list()).rejects.toThrow("Worker disconnected");
 });
+
+test("read-only restored jobs do not shadow the live worker controller", async () => {
+  const retained = {
+    kind: "job" as const,
+    jobId: "persisted-job",
+    sourceSession: { sessionId: "owner" },
+    description: "task",
+    status: "unknown",
+    startedAt: 123,
+    canCancel: false,
+  };
+  const host = createTaskInboxBackgroundHost({
+    readMain: () => [retained] as any,
+    worker: () =>
+      ({
+        hasLiveWorker: () => true,
+        requestWorker: async () => ({
+          ok: true,
+          result: { items: [{ ...retained, status: "running", canCancel: true }] },
+        }),
+      }) as any,
+  });
+  expect(await host.list()).toEqual([
+    { ...retained, status: "running", canCancel: true, executionOrigin: "worker" },
+  ]);
+});

@@ -7,9 +7,14 @@ import { parsedArgs, truncate } from "./utils";
 import { detectAttachments, type AttachmentContext } from "./attachments";
 import { AttachmentCard } from "./AttachmentCard";
 import { Lightbox } from "../chat/Lightbox";
-import { driveAgentLinkDetailForToolMessage } from "../cc-room/driveAgentLink";
+import {
+  driveAgentJobIdFromToolMessage,
+  driveAgentLinkDetailForToolMessage,
+} from "../cc-room/driveAgentLink";
 import { DriveAgentLinkButton } from "../cc-room/DriveAgentLinkButton";
 import { useDriveAgentJobs } from "./DriveAgentJobsContext";
+import { useT } from "../i18n/I18nProvider";
+import { StatusDot } from "../ui/StatusDot";
 
 interface Props extends AttachmentContext {
   message: ToolMessage;
@@ -26,7 +31,10 @@ export function GenericToolCard({
   ...attachmentContext
 }: Props) {
   const backgroundJobs = useDriveAgentJobs();
+  const { t } = useT();
   const cliLink = driveAgentLinkDetailForToolMessage(message, backgroundJobs);
+  const jobId = driveAgentJobIdFromToolMessage(message);
+  const job = backgroundJobs.find((candidate) => candidate.jobId === jobId);
   // Use parsedArgs (argsLive ?? parsed message.args), NOT raw message.args —
   // message.args is the tool_use_start snapshot ("{}" while streaming); the real
   // args arrive via tool_use_args_delta and live in argsLive. Reading the raw
@@ -95,8 +103,49 @@ export function GenericToolCard({
         message={message}
         summary={summary}
         details={details}
+        preview={
+          job && (
+            <div data-drive-agent-progress="" className="flex min-w-0 items-center gap-2">
+              <StatusDot
+                status={
+                  job.status === "running"
+                    ? "running"
+                    : job.status === "completed"
+                      ? "ok"
+                      : job.status === "failed"
+                        ? "err"
+                        : "warn"
+                }
+              />
+              <span className="shrink-0 font-medium">
+                {job.cli === "codex" ? "Codex" : "Claude Code"}
+              </span>
+              <span className="shrink-0 text-muted-foreground">
+                {t(
+                  job.status === "running"
+                    ? "panels.shells.jobRunning"
+                    : job.status === "cancelling"
+                      ? "panels.shells.jobCancelling"
+                      : job.status === "completed"
+                        ? "panels.shells.jobCompleted"
+                        : job.status === "failed"
+                          ? "panels.shells.jobFailed"
+                          : job.status === "cancelled"
+                            ? "panels.shells.jobCancelled"
+                            : "panels.shells.jobUnknown",
+                )}
+              </span>
+              <span
+                className="min-w-0 flex-1 truncate text-muted-foreground"
+                title={job.progress?.summary}
+              >
+                {job.progress?.summary}
+              </span>
+              {cliLink && <DriveAgentLinkButton detail={cliLink} />}
+            </div>
+          )
+        }
         headerBadge={message.sandbox && <SandboxBadge sandbox={message.sandbox} />}
-        headerAction={cliLink && <DriveAgentLinkButton detail={cliLink} />}
         onSelect={onSelect}
         selected={selected}
         turnEpoch={turnEpoch}

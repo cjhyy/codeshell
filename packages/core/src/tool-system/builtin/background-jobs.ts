@@ -24,6 +24,7 @@
 import { normalizeCwdPath } from "../../utils/cwd-normalize.js";
 import { execFileSync } from "node:child_process";
 import { resolveGit } from "../../utils/exec.js";
+import { backgroundJobHistory } from "./background-job-history.js";
 
 function isValidSessionId(sid: unknown): sid is string {
   return typeof sid === "string" && sid.length > 0;
@@ -34,6 +35,15 @@ type Listener = () => void;
 export type BackgroundJobStatus = "running" | "cancelling" | "completed" | "failed" | "cancelled";
 export type BackgroundJobKind = "drive-agent" | "video" | "job";
 export type ExternalCliKind = "claude" | "codex";
+
+/** Observed activity, never a synthetic heartbeat or a completion estimate. */
+export interface BackgroundJobProgress {
+  lastActivityAt: number;
+  eventCount: number;
+  phase?: "starting" | "thinking" | "tool" | "responding";
+  summary?: string;
+  recentEvents?: Array<{ at: number; summary: string }>;
+}
 
 /** Generous per-session cap on retained terminal jobs — a leak backstop, not a
  *  UX limit; a human never spawns this many background jobs in one session. */
@@ -50,6 +60,7 @@ export interface BackgroundJobEntry {
   description: string;
   status: BackgroundJobStatus;
   startedAt: number;
+  progress?: BackgroundJobProgress;
   /** Set when status flips to a terminal state. */
   finishedAt?: number;
   /** Result summary (video URL, DriveAgent final text) or error message. */
@@ -110,6 +121,8 @@ export interface BackgroundJobOutcome {
 }
 
 export interface BackgroundJobStartOptions {
+  /** Retain a bounded, read-only snapshot for navigation after worker restart. */
+  persist?: boolean;
   kind?: BackgroundJobKind;
   /** Preferred name for the external process's launch directory. */
   launchCwd?: string;
@@ -198,6 +211,8 @@ async function waitForAbort(
 class BackgroundJobRegistry {
   private jobs = new Map<string, BackgroundJobEntry>(); // jobId -> entry (insertion-ordered)
   private listeners = new Set<Listener>();
+  private persisted = new Set<string>();
+  private lastPersistedAt = new Map<string, number>();
 
   /** Register a running job. Invalid sessionId is ignored (cannot be waited on). */
   start(
@@ -207,6 +222,7 @@ class BackgroundJobRegistry {
     options?: BackgroundJobStartOptions,
   ): void {
     if (!isValidSessionId(sessionId)) return;
+    if (options?.persist) this.persisted.add(jobId);
     const rawLaunchCwd = options?.launchCwd ?? options?.cwd;
     const launchCwd = rawLaunchCwd ? normalizeCwdPath(rawLaunchCwd) : undefined;
     const effectiveWorkspaceCwd = options?.effectiveWorkspaceCwd
@@ -250,6 +266,7 @@ class BackgroundJobRegistry {
         : {}),
       ...(options?.abort ? { abort: options.abort } : {}),
     });
+    this.persist(jobId);
     this.notify();
   }
 
@@ -267,12 +284,45 @@ class BackgroundJobRegistry {
     if (outcome?.worktreeLifecycle !== undefined) {
       entry.worktreeLifecycle = outcome.worktreeLifecycle;
     }
+    this.persist(jobId);
     this.evictTerminalOverCap(entry.sessionId);
     this.notify();
   }
 
   get(jobId: string): BackgroundJobEntry | undefined {
     return this.jobs.get(jobId);
+  }
+
+  /** Progress is polled by viewers; do not wake engine lifecycle waiters per token. */
+  updateProgress(jobId: string, progress: BackgroundJobProgress): void {
+    const entry = this.jobs.get(jobId);
+    if (!entry || !isActiveStatus(entry.status)) return;
+    if (!Number.isFinite(progress.lastActivityAt) || !Number.isSafeInteger(progress.eventCount))
+      return;
+    if (progress.eventCount < 0 || progress.lastActivityAt < (entry.progress?.lastActivityAt ?? 0))
+      return;
+    const clean = (text: string) => text.replace(/[\x00-\x1f\x7f]/g, " ").slice(0, 240);
+    entry.progress = {
+      lastActivityAt: Math.min(Date.now(), progress.lastActivityAt),
+      eventCount: Math.max(entry.progress?.eventCount ?? 0, progress.eventCount),
+      ...(progress.phase ? { phase: progress.phase } : {}),
+      ...(progress.summary ? { summary: clean(progress.summary) } : {}),
+      ...(progress.recentEvents
+        ? {
+            recentEvents: progress.recentEvents
+              .slice(-8)
+              .map((event) => ({ at: event.at, summary: clean(event.summary) })),
+          }
+        : {}),
+    };
+    if (Date.now() - (this.lastPersistedAt.get(jobId) ?? 0) >= 2_000) this.persist(jobId);
+  }
+
+  private persist(jobId: string): void {
+    const entry = this.jobs.get(jobId);
+    if (!entry || !this.persisted.has(jobId)) return;
+    backgroundJobHistory.write(entry);
+    this.lastPersistedAt.set(jobId, Date.now());
   }
 
   /** Persist artifacts discovered while a running job is winding down. */
@@ -284,6 +334,7 @@ class BackgroundJobRegistry {
     if (!entry || !isActiveStatus(entry.status)) return;
     if (artifacts.ccSessionId !== undefined) entry.ccSessionId = artifacts.ccSessionId;
     if (artifacts.changedFiles !== undefined) entry.changedFiles = artifacts.changedFiles;
+    this.persist(jobId);
   }
 
   /** Update retained DriveAgent lifecycle state after an explicit cleanup. */
@@ -297,6 +348,7 @@ class BackgroundJobRegistry {
     entry.worktreeLifecycle = lifecycle;
     if (note)
       entry.finalText = `${entry.finalText ? `${entry.finalText}\n\n` : ""}[worktree lifecycle] ${note}`;
+    this.persist(jobId);
     this.notify();
     return true;
   }
@@ -310,6 +362,7 @@ class BackgroundJobRegistry {
     // completed/failed, while cwd/session conflict checks must still see the
     // process as active until the abort hook confirms exit.
     entry.status = "cancelling";
+    this.persist(jobId);
     this.notify();
     const abortOutcome = entry.abort ? await waitForAbort(entry.abort) : undefined;
 
@@ -324,6 +377,7 @@ class BackgroundJobRegistry {
     if (finalText !== undefined) entry.finalText = finalText;
     if (ccSessionId !== undefined) entry.ccSessionId = ccSessionId;
     if (changedFiles !== undefined) entry.changedFiles = changedFiles;
+    this.persist(jobId);
     this.evictTerminalOverCap(entry.sessionId);
     this.notify();
     return true;
@@ -393,6 +447,8 @@ class BackgroundJobRegistry {
         // no live registry entry and cannot publish a late result for a closed
         // session. Terminal jobs have nothing left to stop.
         this.jobs.delete(id);
+        this.persisted.delete(id);
+        this.lastPersistedAt.delete(id);
         if (isActiveStatus(e.status) && e.abort) aborts.push(e.abort);
         removed = true;
       }
@@ -405,6 +461,7 @@ class BackgroundJobRegistry {
       }
     }
     if (removed) this.notify();
+    backgroundJobHistory.dropForSession(sessionId);
   }
 
   subscribe = (cb: Listener): (() => void) => {
@@ -416,10 +473,16 @@ class BackgroundJobRegistry {
 
   /** Test helper: drop all tracked jobs. */
   reset(): void {
+    for (const jobId of this.persisted) {
+      const entry = this.jobs.get(jobId);
+      if (entry) backgroundJobHistory.dropForSession(entry.sessionId);
+    }
     const aborts = [...this.jobs.values()].flatMap((entry) =>
       isActiveStatus(entry.status) && entry.abort ? [entry.abort] : [],
     );
     this.jobs.clear();
+    this.persisted.clear();
+    this.lastPersistedAt.clear();
     for (const abort of aborts) {
       try {
         void Promise.resolve(abort()).catch(() => undefined);
@@ -441,6 +504,8 @@ class BackgroundJobRegistry {
     // the oldest.
     for (let i = 0; i < over; i++) {
       this.jobs.delete(terminal[i].jobId);
+      this.persisted.delete(terminal[i].jobId);
+      this.lastPersistedAt.delete(terminal[i].jobId);
     }
   }
 
