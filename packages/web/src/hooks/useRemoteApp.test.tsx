@@ -649,27 +649,33 @@ describe("selected Desktop management workspace", () => {
       return { app, controller: useDesktopController(app, auth, noop) };
     });
     const ws = FakeWebSocket.instances[0]!;
+    const answeredLists = new Set<string>();
     const list = async (activeId: string, cwd: string, omit = false) => {
       await act(async () => {
+        let request = ws.sent
+          .map((line) => JSON.parse(line))
+          .findLast((event) => event.type === "session.list");
+        if (!request || answeredLists.has(request.requestId)) {
+          hook.result.current.app.refreshSessions();
+          await flushMicrotasks();
+          request = ws.sent
+            .map((line) => JSON.parse(line))
+            .findLast((event) => event.type === "session.list");
+        }
+        expect(request?.requestId).toBeString();
+        answeredLists.add(request.requestId);
+        const rows = [
+          { id: "s1", title: "First", cwd: activeId === "s1" ? cwd : "/primary", updatedAt: 1 },
+          { id: "s2", title: "Second", cwd: activeId === "s2" ? cwd : "/other", updatedAt: 2 },
+        ];
         ws.message({
           type: "session.list.ok",
+          requestId: request.requestId,
+          nextCursor: null,
           activeSessionId: activeId,
           sessions: omit
             ? []
-            : [
-                {
-                  id: "s1",
-                  title: "First",
-                  cwd: activeId === "s1" ? cwd : "/primary",
-                  updatedAt: 1,
-                },
-                {
-                  id: "s2",
-                  title: "Second",
-                  cwd: activeId === "s2" ? cwd : "/other",
-                  updatedAt: 2,
-                },
-              ],
+            : rows.filter((row) => !request.cwds || request.cwds.includes(row.cwd)),
         });
         await flushMicrotasks();
       });
@@ -719,7 +725,8 @@ describe("selected Desktop management workspace", () => {
       expect(f.hook.result.current.controller.workspaceCwd).toBe("/secondary");
       expect(getApiWorkspace()).toBe("/secondary");
       await f.list("s1", "/secondary", true);
-      expect(f.hook.result.current.app.activeCwd).toBeUndefined();
+      // A project page omitting a row is not evidence that its confirmed root changed.
+      expect(f.hook.result.current.app.activeCwd).toBe("/secondary");
       expect(f.hook.result.current.controller.workspaceCwd).toBe("/secondary");
       await act(async () => {
         visibilityState = "hidden";
@@ -741,7 +748,20 @@ describe("selected Desktop management workspace", () => {
       await act(async () => {
         reconnected.open();
         reconnected.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
-        reconnected.message({ type: "session.list.ok", activeSessionId: "s1", sessions: [] });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        const request = reconnected.sent
+          .map((line) => JSON.parse(line))
+          .findLast((event) => event.type === "session.list");
+        expect(request?.requestId).toBeString();
+        reconnected.message({
+          type: "session.list.ok",
+          requestId: request.requestId,
+          nextCursor: null,
+          activeSessionId: "s1",
+          sessions: [],
+        });
         await flushMicrotasks();
       });
       expect(f.hook.result.current.controller.workspaceCwd).toBe("/secondary");
@@ -751,10 +771,17 @@ describe("selected Desktop management workspace", () => {
     }
   });
 
-  test("rapid selection and pending creation keep their target when an earlier Session list arrives", async () => {
+  test("selection across scopes and pending creation keep their target when an earlier Session list arrives", async () => {
     const f = await fixture();
     try {
       await f.select("s1");
+      // Switching scope clears the old catalog. Reopen all-project history and
+      // receive its metadata before selecting a row from the other project.
+      await act(async () => {
+        f.hook.result.current.app.refreshSessions([]);
+        await flushMicrotasks();
+      });
+      await f.list("s1", "/primary");
       await f.select("s2");
       await f.list("s1", "/secondary");
       expect(f.hook.result.current.app.activeSessionId).toBe("s2");
@@ -775,6 +802,12 @@ describe("selected Desktop management workspace", () => {
   test("Link return and pending CLI selection keep their explicit management scope", async () => {
     const f = await fixture(true);
     try {
+      // The Link return initially scopes its catalog to /link-project. Explicit
+      // all-project history supplies the other Session's metadata before selection.
+      await act(async () => {
+        f.hook.result.current.app.refreshSessions([]);
+        await flushMicrotasks();
+      });
       await f.list("s1", "/secondary");
       expect(f.hook.result.current.app.activeCwd).toBe("/secondary");
       expect(f.hook.result.current.controller.workspaceCwd).toBe("/link-project");
