@@ -36,6 +36,52 @@ describe("listDiskSessions", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
+  it("filters project roots before paging and preserves external runtime identity", async () => {
+    const selected = path.join(dir, "project-a");
+    const secondary = path.join(dir, "project-extra");
+    const unrelated = path.join(dir, "project-a-other");
+    for (const cwd of [selected, secondary, unrelated]) fs.mkdirSync(cwd);
+    for (let index = 0; index < 105; index++) {
+      mkSession(
+        dir,
+        `unrelated-${index}`,
+        { cwd: unrelated, parentSessionId: null },
+        10_000 + index,
+      );
+    }
+    mkSession(
+      dir,
+      "claude",
+      {
+        cwd: selected,
+        parentSessionId: null,
+        provider: "claude-code",
+        model: "claude-code:sonnet",
+      },
+      3000,
+    );
+    mkSession(
+      dir,
+      "codex",
+      { cwd: secondary, parentSessionId: null, provider: "codex", model: "codex:gpt" },
+      2000,
+    );
+    mkSession(dir, "old", { cwd: selected, parentSessionId: null }, 1000);
+    const first = await listDiskSessions({ limit: 2, cwds: [selected, secondary] }, dir);
+    expect(first.sessions.map((entry) => entry.id)).toEqual(["claude", "codex"]);
+    expect(first.sessions[0]).toMatchObject({
+      provider: "claude-code",
+      model: "claude-code:sonnet",
+    });
+    expect(first.sessions[1]).toMatchObject({ provider: "codex", model: "codex:gpt" });
+    const second = await listDiskSessions(
+      { limit: 2, cwds: [selected, secondary], cursor: first.nextCursor! },
+      dir,
+    );
+    expect(second.sessions.map((entry) => entry.id)).toEqual(["old"]);
+    expect(second.nextCursor).toBeNull();
+  });
+
   it("returns top-level sessions (parentSessionId === null), newest first", async () => {
     mkSession(dir, "top-old", { cwd: "/p", summary: "老", parentSessionId: null }, 1000);
     mkSession(dir, "top-new", { cwd: "/p", summary: "新", parentSessionId: null }, 3000);

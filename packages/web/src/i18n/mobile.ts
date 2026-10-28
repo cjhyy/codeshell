@@ -92,7 +92,7 @@ export const mobile = {
       notice: {
         roomMissing: "会话不存在或未就绪",
         roomError: "会话错误",
-        sessionRecoveryIncomplete: "当前回复的开头尚未恢复，请重新打开会话以读取已保存的内容。",
+        sessionRecoveryIncomplete: "会话记录恢复未完成，请重新打开会话重试。",
         sessionRecoveryHistoryOnly:
           "已恢复保存的聊天记录。当前回复的实时部分暂时无法接续，请稍后重新打开会话。",
         goalExtendFailed: "延长目标失败",
@@ -264,7 +264,7 @@ export const mobile = {
         roomMissing: "Session does not exist or is not ready",
         roomError: "Session error",
         sessionRecoveryIncomplete:
-          "The beginning of this reply could not be restored. Reopen the conversation to read its saved content.",
+          "Conversation recovery did not finish. Reopen the conversation to retry.",
         sessionRecoveryHistoryOnly:
           "Saved chat history has been restored. Reopen the conversation later to see the rest of this reply.",
         goalExtendFailed: "Failed to extend goal",

@@ -17,7 +17,9 @@ import { createBunTestEnvironment } from "./bun-test-completion.mjs";
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // Retention is explicit and task-owned. CI cleans only the directory it creates.
-const retain = process.argv[2] === "--retain";
+const retain = process.argv.includes("--retain");
+const lifecycleOnly = process.argv.includes("--lifecycle");
+const legacyOnly = process.argv.includes("--legacy");
 const root = realpathSync(mkdtempSync(join(tmpdir(), "codeshell-external-output-native-")));
 chmodSync(root, 0o700);
 const cache = join(
@@ -68,7 +70,7 @@ try {
     const path = join(bin, name);
     writeFileSync(
       path,
-      `#!/usr/bin/env node\nprocess.env.CODESHELL_OUTPUT_KIND=${JSON.stringify(kind)};\nawait import(${JSON.stringify(pathToFileURL(join(repo, "scripts/fixtures/mobile-external-cli.mjs")).href)});\n`,
+      `#!${join(bin, "node")}\nprocess.env.CODESHELL_OUTPUT_KIND=${JSON.stringify(kind)};\nawait import(${JSON.stringify(pathToFileURL(join(repo, "scripts/fixtures/mobile-external-cli.mjs")).href)});\n`,
       { mode: 0o700 },
     );
     children.push({ command: name, path, hash: hashFile(path) });
@@ -103,16 +105,27 @@ try {
   env.CODESHELL_OUTPUT_CHILDREN = JSON.stringify(children);
   env.CODESHELL_OUTPUT_GIT = gitPath;
   env.CODESHELL_OUTPUT_GIT_HASH = hashFile(gitPath);
+  if (process.platform === "darwin") {
+    env.CODESHELL_OUTPUT_DISKUTIL = realpathSync("/usr/sbin/diskutil");
+    env.CODESHELL_OUTPUT_DISKUTIL_HASH = hashFile(env.CODESHELL_OUTPUT_DISKUTIL);
+  }
   env.CODESHELL_OUTPUT_COLD_ENTRY = join(repo, "scripts/smoke-mobile-external-output.mjs");
   env.CODESHELL_OUTPUT_COLD_HASH = hashFile(env.CODESHELL_OUTPUT_COLD_ENTRY);
   env.NODE_OPTIONS = `--import=${pathToFileURL(join(repo, "scripts/mobile-external-output-smoke-isolation.mjs")).href}`;
   if (failure) throw new Error(failure);
-  child = spawn(process.execPath, ["scripts/smoke-mobile-external-output.mjs"], {
-    cwd: repo,
-    env,
-    stdio: "inherit",
-    detached: process.platform !== "win32",
-  });
+  child = spawn(
+    process.execPath,
+    [
+      "scripts/smoke-mobile-external-output.mjs",
+      ...(legacyOnly ? ["legacy"] : lifecycleOnly ? ["lifecycle"] : []),
+    ],
+    {
+      cwd: repo,
+      env,
+      stdio: "inherit",
+      detached: process.platform !== "win32",
+    },
+  );
   timer = setTimeout(
     () => terminateOwned("native fixture total deadline exceeded"),
     Math.max(1, deadline - Date.now()),
@@ -134,6 +147,29 @@ try {
       process.kill(-child.pid, "SIGKILL");
     } catch (error) {
       if (error.code !== "ESRCH") throw error;
+    }
+  }
+  // Room transports intentionally start their own process groups. Reap only
+  // those minted by this launcher's hashed fixture guard and not observed exiting.
+  {
+    const owned = new Set();
+    try {
+      for (const line of readFileSync(join(root, "guard.jsonl"), "utf8").trim().split("\n")) {
+        const event = JSON.parse(line);
+        if (event.event === "spawned-detached") owned.add(event.childPid);
+        if (event.event === "exited-detached") owned.delete(event.childPid);
+      }
+      for (const pid of owned) {
+        if (!Number.isSafeInteger(pid) || pid <= 1)
+          throw new Error("Invalid owned fixture process");
+        try {
+          process.kill(process.platform === "win32" ? pid : -pid, "SIGKILL");
+        } catch (error) {
+          if (error.code !== "ESRCH") throw error;
+        }
+      }
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
     }
   }
   clearTimeout(timer);

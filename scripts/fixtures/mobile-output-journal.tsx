@@ -273,6 +273,7 @@ export async function run(origin: string, root: string, port: number) {
       join(sessionsRoot(), "native-mobile", "output-journal.jsonl"),
     ).size;
     const NativeEvent = globalThis.Event;
+    const NativeMessageEvent = globalThis.MessageEvent;
     ensureMiniDom();
     // This fixture shares a PID between a Node host and a tiny React DOM. The
     // real product uses separate host/browser contexts. Retain the Node SDK's
@@ -303,6 +304,18 @@ export async function run(origin: string, root: string, port: number) {
           "Non-fixture WebSocket refused",
         );
         super(url, protocols);
+        // The Host marks a device online before the browser consumes auth.ok.
+        // Delay that real reply to exercise this transport/UI scheduling gap.
+        let delayedAuthentication = false;
+        this.addEventListener("message", (event) => {
+          if (delayedAuthentication || JSON.parse(String(event.data)).type !== "auth.ok") return;
+          delayedAuthentication = true;
+          event.stopImmediatePropagation();
+          setTimeout(
+            () => this.dispatchEvent(new NativeMessageEvent("message", { data: event.data })),
+            100,
+          );
+        });
       }
     }
     assert.throws(() => new FixtureWebSocket("wss://example.com/ws"), /Non-fixture/);
@@ -330,13 +343,16 @@ export async function run(origin: string, root: string, port: number) {
       throw new Error(
         "Mobile fixture did not settle: " +
           JSON.stringify({
+            status: hook.result.current.status,
             notice: hook.result.current.notice,
             routed: routed.slice(-8),
             pages: pageRequests,
           }),
       );
     };
-    await until(() => remote.onlineDeviceIds().includes(device.id));
+    await until(
+      () => remote.onlineDeviceIds().includes(device.id) && hook.result.current.status === "online",
+    );
     await act(async () => {
       hook.result.current.selectSession("native-mobile");
       await flushMicrotasks();

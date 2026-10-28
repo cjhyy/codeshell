@@ -54,6 +54,10 @@ class MessageRejectedError extends Error {}
 
 /** Which external coding-CLI the CC pane drives. Mirrors desktop CCRoomView. */
 export type CcCliKind = "claude-code" | "codex";
+export type MobileRuntimeModel = Extract<
+  MobileServerEvent,
+  { type: "runtime.models.ok" }
+>["models"][number];
 
 export interface PendingApproval {
   requestId: string;
@@ -83,10 +87,14 @@ export interface RemoteApp {
   deviceName: string;
   chat: ChatState;
   sessions: MobileSessionMeta[];
+  sessionsHasMore?: boolean;
+  loadMoreSessions?: () => void;
   unreadSessionIds: ReadonlySet<string>;
   activeSessionId?: string;
   /** User navigation changes this; asynchronously binding a new session does not. */
   conversationRevision: number;
+  /** Increments when this browser's pending session creation fails or loses its connection. */
+  sessionCreationFailures?: number;
   activeCwd?: string | null;
   projects: MobileProjectMeta[];
   /** The bound room — for the user this is always an external CC (Claude Code)
@@ -96,6 +104,10 @@ export interface RemoteApp {
   activeRoomId?: string;
   approvals: PendingApproval[];
   permissionMode: PermissionMode;
+  runtimeModels?: MobileRuntimeModel[];
+  runtimeModelsLoading?: boolean;
+  runtimeModelsError?: string;
+  refreshRuntimeModels?: () => void;
   loading: {
     sessions: boolean;
     sessionHistory: boolean;
@@ -113,6 +125,7 @@ export interface RemoteApp {
   sendChat: (input: {
     text: string;
     attachments: MobileComposerAttachment[];
+    modelKey?: string;
     modelTraceSource?: string;
     /** Retry an earlier intent whose delivery could not be confirmed. The host
      *  ignores an ID it already recorded, so the task never runs twice. */
@@ -124,7 +137,8 @@ export interface RemoteApp {
   stopRun: () => void;
   selectSession: (id: string) => void;
   newSession: (target?: MobileSessionCreateTarget, name?: string) => void;
-  refreshSessions: () => void;
+  /** Omit roots to refresh the current scope; [] selects all projects. */
+  refreshSessions: (cwds?: string[]) => void;
   respondApproval: (
     requestId: string,
     decision: "approve" | "reject",
@@ -145,6 +159,8 @@ export interface RemoteApp {
   activeProjectId: string | null;
   selectProject: (projectIdOrCwd: string) => void;
   ccSessions: CcDiscoveredSession[];
+  ccSessionsTotal?: number;
+  loadAllCcSessions?: () => void;
   ccProbe: { available: boolean; reason?: string } | null;
   /** Selected CC CLI (Claude Code / Codex). Switching re-probes + re-lists. */
   ccCliKind: CcCliKind;
@@ -251,8 +267,20 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   optionsRef.current = options;
   const [chat, dispatchChat] = useReducer(chatReducer, undefined, initialChatState);
   const [sessions, setSessions] = useState<MobileSessionMeta[]>([]);
+  const [sessionsHasMore, setSessionsHasMore] = useState(false);
+  const sessionListCursorRef = useRef<string | null>(null);
+  const sessionListScopeRef = useRef<string[] | undefined>(undefined);
+  const sessionListSequenceRef = useRef(0);
+  const sessionListPagedRef = useRef(false);
+  const sessionListRequestRef = useRef<{ requestId: string; append: boolean } | undefined>(
+    undefined,
+  );
+  const [runtimeModels, setRuntimeModels] = useState<MobileRuntimeModel[]>([]);
+  const [runtimeModelsLoading, setRuntimeModelsLoading] = useState(false);
+  const [runtimeModelsError, setRuntimeModelsError] = useState<string>();
   const [unreadSessionIds, setUnreadSessionIds] = useState<Set<string>>(() => new Set());
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
+  const [sessionCreationFailures, setSessionCreationFailures] = useState(0);
   const [activeSessionCwd, setActiveSessionCwd] = useState<string | null | undefined>();
   const [rooms, setRooms] = useState<RoomPublic[]>([]);
   const roomsRef = useRef<RoomPublic[]>(rooms);
@@ -288,6 +316,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   ccCliKindRef.current = ccCliKind;
   // External-CLI sessions discovered for activeProjectCwd (under ccCliKind).
   const [ccSessions, setCcSessions] = useState<CcDiscoveredSession[]>([]);
+  const [ccSessionsTotal, setCcSessionsTotal] = useState(0);
+  const ccShowAllRef = useRef(false);
   const [ccProbe, setCcProbe] = useState<{ available: boolean; reason?: string } | null>(null);
   /** socket.send via ref — onServerEvent is created BEFORE the socket (it's the
    *  socket's callback), so it can't close over `socket` directly. */
@@ -313,6 +343,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     >(),
   );
   const conversationRevisionRef = useRef(0);
+  const socketOnlineRef = useRef(false);
   // A first send can use the Host's implicit session. Once an uncertain reply
   // identifies it, pin retries to that session even if the Host's selection moves.
   const uncertainMessageSessionsRef = useRef(new Map<string, string>());
@@ -320,6 +351,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     clientRequestId: string;
     conversationRevision: number;
     connectionGeneration: number;
+    timer?: ReturnType<typeof setTimeout>;
   } | null>(null);
   const messageAckWaitersRef = useRef(
     new Map<
@@ -355,6 +387,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       noticeTimer.current = undefined;
       setNoticeState(undefined);
     }, 5000);
+  }, []);
+  const failSessionCreation = useCallback((clientRequestId?: string): boolean => {
+    const pending = pendingCreateRef.current;
+    if (!pending || (clientRequestId && pending.clientRequestId !== clientRequestId)) return false;
+    clearTimeout(pending.timer);
+    pendingCreateRef.current = null;
+    setSessionCreationFailures((value) => value + 1);
+    return true;
   }, []);
   const beginMobileUpload = useCallback(
     (metadata: MobileImageBase, expectedGeneration: number): Promise<MobileUploadTicket> => {
@@ -423,6 +463,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
 
   useEffect(
     () => () => {
+      clearTimeout(pendingCreateRef.current?.timer);
+      pendingCreateRef.current = null;
       for (const upload of uploadAbortsRef.current) upload.abort(new Error("Remote app closed"));
       uploadAbortsRef.current.clear();
       for (const waiter of uploadWaitersRef.current.values()) {
@@ -499,6 +541,37 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const setLoadingKey = useCallback((key: keyof RemoteApp["loading"], value: boolean) => {
     setLoading((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
   }, []);
+
+  const requestSessionList = useCallback(
+    (append = false, cwds?: string[]) => {
+      if (append && (!sessionListCursorRef.current || sessionListRequestRef.current)) return;
+      if (cwds !== undefined) {
+        const next = cwds.length ? [...new Set(cwds)].sort() : undefined;
+        if (JSON.stringify(next) !== JSON.stringify(sessionListScopeRef.current)) setSessions([]);
+        sessionListScopeRef.current = next;
+      }
+      const cursor = append ? sessionListCursorRef.current : undefined;
+      const requestId = `sessions-${++sessionListSequenceRef.current}-${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
+      sessionListRequestRef.current = { requestId, append };
+      if (!append) {
+        sessionListCursorRef.current = null;
+        setSessionsHasMore(false);
+      }
+      setLoadingKey("sessions", true);
+      if (
+        !sendRef.current?.({
+          type: "session.list",
+          requestId,
+          ...(cursor ? { cursor } : {}),
+          ...(sessionListScopeRef.current ? { cwds: sessionListScopeRef.current } : {}),
+        })
+      ) {
+        sessionListRequestRef.current = undefined;
+        setLoadingKey("sessions", false);
+      }
+    },
+    [setLoadingKey],
+  );
 
   const clearApproval = useCallback((requestId: string) => {
     submittingAsyncApprovalsRef.current.delete(requestId);
@@ -601,6 +674,21 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     setApprovals((prev) => (prev.some((p) => p.requestId === a.requestId) ? prev : [...prev, a]));
   }, []);
 
+  const requestSessionHistory = useCallback(
+    (sessionId: string, select = false) => {
+      if (
+        (select && !sendRef.current?.({ type: "session.select", sessionId })) ||
+        !sendRef.current?.({ type: "session.history", sessionId })
+      ) {
+        setLoadingKey("sessionHistory", false);
+        setNotice(t("mobile.notice.sessionRecoveryIncomplete"));
+        return false;
+      }
+      return true;
+    },
+    [setLoadingKey, setNotice],
+  );
+
   const outputClientRef = useRef<MobileOutputClient | null>(null);
   const outputClient = (outputClientRef.current ??= new MobileOutputClient({
     send: (event) => sendRef.current?.(event) ?? false,
@@ -624,7 +712,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     legacy: (sessionId) => {
       epochHistorySessionRef.current = sessionId;
       sessionCursor(sessionId).historyUnpaired = true;
-      sendRef.current?.({ type: "session.history", sessionId });
+      requestSessionHistory(sessionId);
     },
     awaitingJournal: () => {
       // A selected live producer has no prior output. No read/request remains
@@ -645,6 +733,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       if (outputClient.observe(event)) return;
       switch (event.type) {
         case "auth.ok":
+          socketOnlineRef.current = true;
           // Pull the world on connect.
           break;
         case "chat.accepted": {
@@ -665,8 +754,19 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
                 waiter.conversationRevision === conversationRevisionRef.current &&
                 waiter.connectionGeneration === connectionGenerationRef.current,
               );
-          if (event.clientRequestId && creation?.clientRequestId === event.clientRequestId)
+          if (
+            creation &&
+            ((event.clientRequestId && creation.clientRequestId === event.clientRequestId) ||
+              (!event.clientRequestId &&
+                !event.clientMessageId &&
+                event.sessionId &&
+                mayBind &&
+                creation.conversationRevision === conversationRevisionRef.current &&
+                creation.connectionGeneration === connectionGenerationRef.current))
+          ) {
+            clearTimeout(creation.timer);
             pendingCreateRef.current = null;
+          }
           if (event.clientMessageId) {
             if (waiter) uncertainMessageSessionsRef.current.delete(event.clientMessageId);
             settleMessageAck(
@@ -682,9 +782,15 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             clearSessionUnread(event.sessionId);
           }
           if (mayBind && "cwd" in event) setActiveSessionCwd(event.cwd ?? null);
+          if (mayBind && event.sessionId && event.modelKey) {
+            // A newly started external producer has no old subscription. Recover
+            // its first journal entries and subscribe before live output continues.
+            if (outputClient.begin(event.sessionId))
+              setLoadingKey("sessionHistory", outputClient.pending(event.sessionId));
+          }
           // A freshly minted session won't be on disk until its first turn, so
           // pull the list now so the new conversation shows up as a row.
-          sendRef.current?.({ type: "session.list" });
+          requestSessionList();
           break;
         }
         case "attachment.upload.ready": {
@@ -723,15 +829,41 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           settleMessageAck(event.clientMessageId, new Error(event.message));
           setNotice(event.message);
           break;
-        case "session.list.ok":
-          setSessions(event.sessions);
-          setUnreadSessionIds((prev) => {
-            const pruned = pruneUnreadSessions(
-              prev,
-              event.sessions.map((s) => s.id),
-            );
-            return clearUnreadSession(pruned, event.activeSessionId);
-          });
+        case "session.list.ok": {
+          const pending = sessionListRequestRef.current;
+          if (event.requestId) {
+            if (event.requestId !== pending?.requestId) break;
+            sessionListPagedRef.current = true;
+          } else if (sessionListPagedRef.current || (pending && event.nextCursor !== undefined)) {
+            // Socket health probes have no request id and must not replace a
+            // selected project's list or discard already loaded pages.
+            break;
+          }
+          sessionListRequestRef.current = undefined;
+          sessionListCursorRef.current = event.nextCursor ?? null;
+          setSessionsHasMore(Boolean(event.nextCursor));
+          setSessions((previous) =>
+            pending?.append
+              ? [
+                  ...new Map(
+                    [...previous, ...event.sessions].map((session) => [session.id, session]),
+                  ).values(),
+                ]
+              : event.sessions,
+          );
+          // A page/project is only part of the catalog, so its missing ids do
+          // not prove that another conversation or its unread marker was deleted.
+          setUnreadSessionIds((prev) =>
+            clearUnreadSession(
+              event.nextCursor === undefined
+                ? pruneUnreadSessions(
+                    prev,
+                    event.sessions.map((session) => session.id),
+                  )
+                : prev,
+              event.activeSessionId,
+            ),
+          );
           setLoadingKey("sessions", false);
           if (
             event.activeSessionId &&
@@ -742,11 +874,23 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             // device selection. Only an explicit acknowledgement/select owns
             // navigation once this browser has chosen its conversation.
             setActiveSessionId(event.activeSessionId);
+            if (conversationRevisionRef.current === 0) {
+              // A displayed initial conversation needs the same per-viewer
+              // selection as a tapped row before it may receive commands.
+              conversationRevisionRef.current += 1;
+              boundSessionRef.current = event.activeSessionId;
+              setLoadingKey("sessionHistory", true);
+              if (!outputClient.begin(event.activeSessionId)) {
+                requestSessionHistory(event.activeSessionId, true);
+              }
+            }
             const active = event.sessions.find((s) => s.id === event.activeSessionId);
             if (active) setActiveSessionCwd(active.cwd || null);
-            else setActiveSessionCwd(undefined);
+            else if (!pending?.append && !sessionListScopeRef.current)
+              setActiveSessionCwd(undefined);
           }
           break;
+        }
         case "session.history.ok":
           if (outputClient.owns(event.sessionId)) break;
           // Only apply if it's the session we're currently viewing.
@@ -1093,6 +1237,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           setNotice(event.message || t("mobile.notice.roomError"));
           break;
         case "error":
+          if (event.clientRequestId && !failSessionCreation(event.clientRequestId)) break;
           if (event.approvalId) {
             submittingAsyncApprovalsRef.current.delete(event.approvalId);
             // The decision did not reach Core. The request may still be
@@ -1129,6 +1274,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           // The worker confirmed the model actually applied. (No model display in
           // the phone UI yet; handled explicitly so it isn't a silent default.)
           break;
+        case "runtime.models.ok":
+          setRuntimeModels(event.models);
+          setRuntimeModelsLoading(false);
+          setRuntimeModelsError(event.message);
+          break;
         case "approval.request": {
           // Legacy server-shaped approval (kept for back-compat).
           const { summary, risk } = summarizeApproval(undefined, event.risk);
@@ -1151,8 +1301,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           break;
         case "ccRoom.listSessions.ok":
           // cwd + kind echo guard: ignore a reply for a project/CLI we've left.
-          if (event.cwd === activeProjectCwdRef.current && event.kind === ccCliKindRef.current) {
+          if (
+            event.cwd === activeProjectCwdRef.current &&
+            event.kind === ccCliKindRef.current &&
+            Boolean(event.all) === ccShowAllRef.current
+          ) {
             setCcSessions(event.sessions);
+            setCcSessionsTotal(event.total ?? event.sessions.length);
             setLoadingKey("ccSessions", false);
           }
           break;
@@ -1198,7 +1353,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           ccHistoryCwdRef.current = request.cwd;
           ccBacklogLoadedRef.current = false;
           boundSessionRef.current = undefined;
+          roomCatchupRef.current = undefined;
           setApprovals([]);
+          setLoadingKey("sessionHistory", false);
           setLoadingKey("roomHistory", true);
           dispatchChat({ kind: "reset" });
           lastRoomSeqRef.current.set(event.roomId, 0);
@@ -1302,11 +1459,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     },
     [
       addApproval,
+      failSessionCreation,
       appendSessionEvents,
       clearApproval,
       clearSessionUnread,
       rememberRoomMessages,
       requestRoomCatchup,
+      requestSessionList,
+      requestSessionHistory,
       sessionCwdById,
       setLoadingKey,
       settleMessageAck,
@@ -1418,15 +1578,18 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     const sessionId = boundSessionRef.current;
     if (!sessionId) return;
     const cursor = sessionCursor(sessionId);
-    if (outputClient.begin(sessionId)) {
-      cursor.awaitingSnapshot = true;
-      setLoadingKey("sessionHistory", true);
+    const recovery = outputClient.resync(sessionId);
+    if (recovery) {
+      if (recovery === "started") {
+        cursor.awaitingSnapshot = outputClient.pending(sessionId);
+        setLoadingKey("sessionHistory", cursor.awaitingSnapshot);
+      }
       return;
     }
     if (epochHistorySessionRef.current === sessionId || cursor.historyUnpaired) {
       epochHistorySessionRef.current = sessionId;
       setLoadingKey("sessionHistory", true);
-      sendRef.current?.({ type: "session.history", sessionId });
+      requestSessionHistory(sessionId);
       return;
     }
     sendRef.current?.({
@@ -1435,7 +1598,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       sinceSeq: cursor.awaitingSnapshot ? 0 : cursor.appliedSeq,
       ...(cursor.epoch ? { epoch: cursor.epoch } : {}),
     });
-  }, [setLoadingKey, sessionCursor, requestRoomCatchup]);
+  }, [setLoadingKey, sessionCursor, requestRoomCatchup, requestSessionHistory]);
   requestActiveResyncRef.current = requestActiveResync;
 
   const socket = useRemoteSocket({
@@ -1447,8 +1610,15 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   connectionGenerationRef.current = socket.connectionGeneration;
 
   useEffect(() => {
-    if (socket.status === "online") return;
+    socketOnlineRef.current = socket.status === "online";
+    if (socketOnlineRef.current) return;
+    failSessionCreation();
+    sessionListRequestRef.current = undefined;
+    setLoadingKey("sessions", false);
     outputClient.cancel(false);
+    roomCatchupRef.current = undefined;
+    setLoadingKey("sessionHistory", false);
+    setLoadingKey("roomHistory", false);
     submittingAsyncApprovalsRef.current.clear();
     submittedApprovalsRef.current.clear();
     const error = new Error("Remote connection was lost");
@@ -1464,13 +1634,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       waiter.reject(error);
     }
     messageAckWaitersRef.current.clear();
-  }, [socket.status]);
+  }, [socket.status, failSessionCreation]);
 
   // ── actions ────────────────────────────────────────────────────────────
   const sendChat = useCallback(
     async (input: {
       text: string;
       attachments: MobileComposerAttachment[];
+      modelKey?: string;
       modelTraceSource?: string;
       clientMessageId?: string;
       onUncertain?: (clientMessageId: string) => void;
@@ -1539,6 +1710,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         queued = socket.send(
           {
             type: "chat.send",
+            ...(input.modelKey ? { modelKey: input.modelKey } : {}),
             ...(input.modelTraceSource ? { modelTraceSource: input.modelTraceSource } : {}),
             text,
             sessionId,
@@ -1595,13 +1767,20 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     socket.send({ type: "run.stop", sessionId: boundSessionRef.current });
   }, [socket]);
 
-  const refreshSessions = useCallback(() => {
-    setLoadingKey("sessions", true);
-    socket.send({ type: "session.list" });
-  }, [socket, setLoadingKey]);
+  const refreshSessions = useCallback(
+    (cwds?: string[]) => {
+      requestSessionList(false, cwds);
+    },
+    [requestSessionList],
+  );
+  const loadMoreSessions = useCallback(() => requestSessionList(true), [requestSessionList]);
 
   const selectSession = useCallback(
     (id: string) => {
+      if (!socketOnlineRef.current) {
+        setNotice(t("mobile.connection.offlineTitle"));
+        return;
+      }
       conversationRevisionRef.current += 1;
       if (activeRoomIdRef.current) {
         socket.send({
@@ -1619,17 +1798,26 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       ccHistorySessionRef.current = undefined;
       ccHistoryCwdRef.current = undefined;
       ccBacklogLoadedRef.current = false;
+      roomCatchupRef.current = undefined;
       setActiveRoomId(undefined);
       setApprovals([]);
+      setLoadingKey("roomHistory", false);
       setLoadingKey("sessionHistory", true);
       dispatchChat({ kind: "reset" });
       activeRoomIdRef.current = undefined;
       if (!outputClient.begin(id)) {
-        socket.send({ type: "session.select", sessionId: id });
-        socket.send({ type: "session.history", sessionId: id });
+        requestSessionHistory(id, true);
       }
     },
-    [clearSessionUnread, socket, sessionCwdById, setLoadingKey, sessionCursor],
+    [
+      clearSessionUnread,
+      socket,
+      sessionCwdById,
+      setLoadingKey,
+      sessionCursor,
+      requestSessionHistory,
+      setNotice,
+    ],
   );
 
   /** Select a project (like the desktop sidebar): set the one-true-source cwd and
@@ -1638,26 +1826,41 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     (projectIdOrCwd: string) => {
       outputClient.cancel();
       conversationRevisionRef.current += 1;
+      setLoadingKey("sessionHistory", false);
+      setLoadingKey("roomHistory", false);
+      roomCatchupRef.current = undefined;
       const project = projectsRef.current.find(
         (candidate) => candidate.id === projectIdOrCwd || candidate.path === projectIdOrCwd,
       );
       const cwd = project?.path ?? projectIdOrCwd;
       setActiveProjectId(project?.id ?? null);
       setActiveProjectCwd(cwd);
-      setLoadingKey("sessions", true);
-      socket.send({ type: "session.list" });
+      const roots = project?.roots?.length ? project.roots.map((root) => root.path) : [cwd];
+      // Selecting an older row in the current project must retain loaded pages
+      // and their provider metadata instead of immediately resetting to page 1.
+      if (
+        JSON.stringify([...new Set(roots)].sort()) !== JSON.stringify(sessionListScopeRef.current)
+      )
+        requestSessionList(false, roots);
       socket.send({ type: "room.projects" });
       // CC discovery (probe + listSessions) is driven by the auto-discover effect
       // keyed on the effective cwd — setting activeProjectCwd above triggers it.
       // Doing it here too would double-fetch.
     },
-    [socket, setLoadingKey],
+    [socket, requestSessionList, setLoadingKey],
   );
 
   const openCcSession = useCallback(
     (sessionId: string, cwd: string, mode: PermissionMode) => {
+      if (!socketOnlineRef.current) {
+        setNotice(t("mobile.connection.offlineTitle"));
+        return;
+      }
       outputClient.cancel();
       conversationRevisionRef.current += 1;
+      setLoadingKey("sessionHistory", false);
+      setLoadingKey("roomHistory", false);
+      roomCatchupRef.current = undefined;
       // Pin the CLI this session belongs to so its on-disk backlog is read with
       // the right reader even if the user switches the pane's CLI afterward.
       ccHistoryKindRef.current = ccCliKindRef.current;
@@ -1667,7 +1870,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       });
       socket.send({ type: "ccRoom.openSession", sessionId, cwd, mode, kind: ccCliKindRef.current });
     },
-    [socket],
+    [socket, setLoadingKey, setNotice],
   );
 
   const respondCcApproval = useCallback(
@@ -1712,15 +1915,20 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
               },
       );
       if (!created) {
+        if (!failSessionCreation()) setSessionCreationFailures((value) => value + 1);
         setNotice(t("mobile.notice.createOffline"));
         return;
       }
       outputClient.cancel();
       conversationRevisionRef.current += 1;
+      clearTimeout(pendingCreateRef.current?.timer);
       pendingCreateRef.current = {
         clientRequestId,
         conversationRevision: conversationRevisionRef.current,
         connectionGeneration: socket.connectionGeneration,
+        timer: setTimeout(() => {
+          if (failSessionCreation(clientRequestId)) setNotice("创建会话超时，请重试。");
+        }, 30_000),
       };
       if (activeRoomIdRef.current) {
         socket.send({
@@ -1758,6 +1966,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       ccHistorySessionRef.current = undefined;
       ccHistoryCwdRef.current = undefined;
       ccBacklogLoadedRef.current = false;
+      roomCatchupRef.current = undefined;
       // Enter a visible "fresh conversation" state immediately — clear the active
       // session + chat so the user sees the new-conversation surface right away
       // (the drawer closes after this; without it the screen looks unchanged and
@@ -1771,9 +1980,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       setActiveSessionCwd(nextCwd === undefined ? undefined : (nextCwd ?? null));
       setApprovals([]);
       setLoadingKey("sessionHistory", false);
+      setLoadingKey("roomHistory", false);
       dispatchChat({ kind: "reset" });
     },
-    [socket, setLoadingKey, setNotice],
+    [socket, setLoadingKey, setNotice, failSessionCreation],
   );
 
   const respondApproval = useCallback(
@@ -1855,12 +2065,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     ccHistorySessionRef.current = undefined;
     ccHistoryCwdRef.current = undefined;
     ccBacklogLoadedRef.current = false;
+    roomCatchupRef.current = undefined;
     // The room's cards belong to the conversation being left and must not
     // block other conversations. The host keeps the requests pending and
     // replays them when the room is opened again.
     approvalsRef.current = approvalsRef.current.filter((approval) => !approval.roomId);
     setApprovals((prev) => prev.filter((approval) => !approval.roomId));
     setLoadingKey("roomHistory", false);
+    setLoadingKey("sessionHistory", false);
     dispatchChat({ kind: "reset" });
   }, [setLoadingKey, socket]);
 
@@ -1869,6 +2081,22 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   // There is no rendered room list; this lookup is internal.
   const activeRoom = useMemo(() => rooms.find((r) => r.id === activeRoomId), [rooms, activeRoomId]);
   const activeCwd = activeRoom?.cwd || activeSessionCwd;
+  const refreshRuntimeModels = useCallback(() => {
+    if (socket.status !== "online") return;
+    setRuntimeModelsError(undefined);
+    setRuntimeModelsLoading(socket.send({ type: "runtime.models" }));
+  }, [socket.status, socket.send]);
+  useEffect(() => {
+    if (!runtimeModelsLoading) return;
+    const timeout = setTimeout(() => {
+      setRuntimeModelsLoading(false);
+      setRuntimeModelsError("无法读取外部模型，请重试或更新桌面端。");
+    }, 15_000);
+    return () => clearTimeout(timeout);
+  }, [runtimeModelsLoading]);
+  useEffect(() => {
+    if (socket.status !== "online") setRuntimeModelsLoading(false);
+  }, [socket.status]);
   const activeContextCwd = projectContextCwd(activeCwd, projects);
   activeCwdRef.current = activeContextCwd;
 
@@ -1888,6 +2116,15 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   // selectProject, so it hangs on "正在检测…" forever. selectProject still does an
   // eager refresh on explicit project switches; this covers the implicit cwd.
   const ccDiscoverCwd = activeProjectCwd ?? activeContextCwd ?? null;
+  const loadAllCcSessions = useCallback(() => {
+    if (socket.status !== "online" || !ccDiscoverCwd) return;
+    ccShowAllRef.current = true;
+    setLoadingKey("ccSessions", true);
+    if (
+      !socket.send({ type: "ccRoom.listSessions", cwd: ccDiscoverCwd, kind: ccCliKind, all: true })
+    )
+      setLoadingKey("ccSessions", false);
+  }, [socket, ccDiscoverCwd, ccCliKind, setLoadingKey]);
   useEffect(() => {
     if (socket.status !== "online" || !ccDiscoverCwd) return;
     // Adopt this cwd as the project context so the listSessions echo guard
@@ -1896,7 +2133,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     const project = projectForCwd(ccDiscoverCwd, projectsRef.current);
     if (project?.id) setActiveProjectId(project.id);
     setCcProbe(null);
+    ccShowAllRef.current = false;
     setCcSessions([]);
+    setCcSessionsTotal(0);
     setLoadingKey("ccSessions", true);
     socket.send({ type: "ccRoom.probe", kind: ccCliKind });
     socket.send({ type: "ccRoom.listSessions", cwd: ccDiscoverCwd, kind: ccCliKind });
@@ -1907,15 +2146,22 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     deviceName: socket.deviceName,
     chat,
     sessions,
+    sessionsHasMore,
+    loadMoreSessions,
     unreadSessionIds,
     activeSessionId,
     conversationRevision: conversationRevisionRef.current,
+    sessionCreationFailures,
     activeCwd,
     projects,
     activeRoom,
     activeRoomId,
     approvals,
     permissionMode,
+    runtimeModels,
+    runtimeModelsLoading,
+    runtimeModelsError,
+    refreshRuntimeModels,
     loading,
     notice,
     logout: socket.logout,
@@ -1933,6 +2179,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     activeProjectId,
     selectProject,
     ccSessions,
+    ccSessionsTotal,
+    loadAllCcSessions,
     ccProbe,
     ccCliKind,
     setCcCliKind,

@@ -25,6 +25,11 @@ if (process.argv[2] === "cold") {
       fixtureHash: hash(readFileSync(process.env.CODESHELL_OUTPUT_ADAPTERS)),
     }),
   );
-  const { run } = await import(pathToFileURL(process.env.CODESHELL_OUTPUT_ADAPTERS));
-  await run(process.env.CODESHELL_OUTPUT_ROOT, port);
+  const { run, runRuntimeLifecycle, runLegacyLifecycle } = await import(
+    pathToFileURL(process.env.CODESHELL_OUTPUT_ADAPTERS)
+  );
+  if (process.argv[2] === "legacy") await runLegacyLifecycle(process.env.CODESHELL_OUTPUT_ROOT);
+  else if (process.argv[2] === "lifecycle")
+    await runRuntimeLifecycle(process.env.CODESHELL_OUTPUT_ROOT);
+  else await run(process.env.CODESHELL_OUTPUT_ROOT, port);
 }

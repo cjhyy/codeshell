@@ -210,6 +210,8 @@ export interface DiskSessionMeta {
   engineSessionId: string; // == directory name; reused as the UI session id
   cwd: string;
   title: string;
+  model?: string;
+  provider?: string;
   updatedAt: number;
   /** Durable creation time, when supplied by the engine's state schema. */
   createdAt?: number;
@@ -269,6 +271,8 @@ export async function listDiskSessions(
   opts: {
     limit: number;
     cursor?: string;
+    /** Display-only project roots filter, applied before pagination. */
+    cwds?: readonly string[];
     includeArchived?: boolean;
     /** Host read models may include children; ordinary sidebar queries stay top-level. */
     includeSubagents?: boolean;
@@ -290,6 +294,13 @@ export async function listDiskSessions(
   // Preserve the public adapter's explicit relative-root form. Host receives
   // one absolute root; it never guesses a workspace for the caller.
   baseDir = path.resolve(baseDir);
+  const pathKey = (cwd: string) => {
+    const normalized = path.resolve(cwd);
+    return process.platform === "darwin" || process.platform === "win32"
+      ? normalized.toLocaleLowerCase("en-US")
+      : normalized;
+  };
+  const cwdRoots = opts.cwds?.map(pathKey);
   const dirs = (await scanSessionDirectories(baseDir)).filter(
     ({ id }) => !isInternalEphemeralSessionId(id),
   );
@@ -363,6 +374,18 @@ export async function listDiskSessions(
     // is intentionally NOT filtered here — the renderer handles that via
     // isNoRepoCwd. (deleted-project resurrection)
     const cwdStr = typeof state.cwd === "string" ? state.cwd : "";
+    if (
+      cwdRoots &&
+      (!cwdStr ||
+        !cwdRoots.some((root) => {
+          const candidate = pathKey(cwdStr);
+          return (
+            candidate === root ||
+            candidate.startsWith(root.endsWith(path.sep) ? root : root + path.sep)
+          );
+        }))
+    )
+      continue;
     // A child transcript remains useful after its temporary worktree is gone;
     // targeted reads do not rebuild projects in the sidebar.
     const childParentId =
@@ -403,6 +426,8 @@ export async function listDiskSessions(
         ? { clientMessageId: state.clientMessageId }
         : {}),
       engineSessionId: id,
+      ...(typeof state.model === "string" ? { model: state.model } : {}),
+      ...(typeof state.provider === "string" ? { provider: state.provider } : {}),
       cwd: typeof state.cwd === "string" ? state.cwd : "",
       // Prefer the LLM-generated title (now persisted to state); fall back to
       // the raw first-message summary, then the id. This lets the disk rebuild
