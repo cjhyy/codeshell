@@ -68,6 +68,8 @@ export interface BackgroundJobEntry {
   /** External CLI session id, when the job is a DriveAgent run — lets the host
    *  read that CLI's transcript to attribute file changes (#6). */
   ccSessionId?: string;
+  /** OS pid of the external CLI, so history can tell whether it outlived its owner. */
+  processId?: number;
   /** Files the external agent changed (parsed from its transcript, #6). */
   changedFiles?: string[];
   /** Directory in which the external job was launched. This is an audit/listing
@@ -328,11 +330,13 @@ class BackgroundJobRegistry {
   /** Persist artifacts discovered while a running job is winding down. */
   recordArtifacts(
     jobId: string,
-    artifacts: Pick<BackgroundJobOutcome, "ccSessionId" | "changedFiles">,
+    artifacts: Pick<BackgroundJobOutcome, "ccSessionId" | "changedFiles"> & { processId?: number },
   ): void {
     const entry = this.jobs.get(jobId);
     if (!entry || !isActiveStatus(entry.status)) return;
     if (artifacts.ccSessionId !== undefined) entry.ccSessionId = artifacts.ccSessionId;
+    if (Number.isSafeInteger(artifacts.processId) && artifacts.processId! > 0)
+      entry.processId = artifacts.processId;
     if (artifacts.changedFiles !== undefined) entry.changedFiles = artifacts.changedFiles;
     this.persist(jobId);
   }

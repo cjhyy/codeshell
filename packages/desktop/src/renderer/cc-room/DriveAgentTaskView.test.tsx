@@ -29,6 +29,7 @@ let reads: string[];
 let opens: unknown[][];
 let cancellations: unknown[][];
 let takeovers: unknown[][];
+let marks: unknown[][];
 function job(extra: Partial<Job> = {}): Job {
   return {
     kind: "job",
@@ -77,6 +78,7 @@ beforeEach(() => {
   opens = [];
   cancellations = [];
   takeovers = [];
+  marks = [];
   Object.assign(window, {
     codeshell: {
       listBackgroundWork: async (owner: string) => {
@@ -86,6 +88,11 @@ beforeEach(() => {
       cancelBackgroundJob: async (...args: unknown[]) => {
         cancellations.push(args);
         return { cancelled: true };
+      },
+      markBackgroundJobInterrupted: async (...args: unknown[]) => {
+        marks.push(args);
+        current = { ...current!, status: "failed", finalText: "[interrupted]" };
+        return { marked: true };
       },
       ccRoom: {
         openLinkedSession: async (...args: unknown[]) => {
@@ -180,6 +187,40 @@ describe("DriveAgentTaskView", () => {
     expect(text(container)).toContain("停止中");
     expect(conversation!.onTakeOver).toBeUndefined();
     expect(nodes(container, "BUTTON").some((node) => text(node) === "停止")).toBe(false);
+  });
+
+  test("an orphaned task explains why and can be marked ended after confirmation", async () => {
+    current = job({
+      status: "unknown",
+      unknownReason: "orphaned-process",
+      externalSessionId: "thread-1",
+      canCancel: false,
+      startedAt: 4321,
+    });
+    await render();
+    expect(text(container)).toContain("CLI 进程仍在运行");
+    const button = (label: string) =>
+      nodes(container, "BUTTON").find((node) => text(node) === label);
+    await act(async () => {
+      props(button("标记为已结束")).onClick();
+      await flushMicrotasks();
+    });
+    expect(marks).toEqual([]);
+    expect(text(container)).toContain("仅在确认 CLI 已不再运行时继续");
+    await act(async () => {
+      props(button("标记为已结束")).onClick();
+      await flushMicrotasks();
+    });
+    expect(marks).toEqual([["parent", "cc-job", 4321]]);
+    expect(text(container)).toContain("失败");
+    expect(button("标记为已结束")).toBeUndefined();
+    expect(typeof conversation!.onTakeOver).toBe("function");
+  });
+
+  test("a task owned by another process says so", async () => {
+    current = job({ status: "unknown", unknownReason: "other-process", canCancel: false });
+    await render();
+    expect(text(container)).toContain("另一个 CodeShell 进程");
   });
 
   test("stops through the owner and exact attempt fence", async () => {

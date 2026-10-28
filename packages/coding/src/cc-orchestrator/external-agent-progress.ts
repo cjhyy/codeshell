@@ -148,16 +148,28 @@ export function advanceAgentProgress(
   now = Date.now(),
 ): BackgroundJobProgress {
   if (!line.trim()) return previous;
-  let activity: Activity | undefined;
+  let data: unknown;
   try {
-    const data = JSON.parse(line);
-    if (data && typeof data === "object") {
-      activity =
-        cli === "claude" ? claudeActivity(data) : cli === "codex" ? codexActivity(data) : undefined;
-    }
+    data = JSON.parse(line);
   } catch {
     // Non-JSON stdout and diagnostic output prove activity but are not a
     // user-facing summary. No raw content is retained in progress metadata.
+  }
+  return advanceAgentProgressWith(previous, cli, data, now);
+}
+
+/** Same as advanceAgentProgress for a line the caller already parsed;
+ * `undefined` records activity without a summary. */
+export function advanceAgentProgressWith(
+  previous: BackgroundJobProgress,
+  cli: string,
+  data: unknown,
+  now = Date.now(),
+): BackgroundJobProgress {
+  let activity: Activity | undefined;
+  if (data && typeof data === "object") {
+    activity =
+      cli === "claude" ? claudeActivity(data) : cli === "codex" ? codexActivity(data) : undefined;
   }
   const recentEvents = [...(previous.recentEvents ?? [])];
   if (activity?.summary && activity.summary !== previous.summary)

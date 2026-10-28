@@ -118,6 +118,7 @@ import {
   isTranscribeAvailable,
   describeTranscribe,
   computeEffectiveDisabledLists,
+  dropBackgroundJobHistoryForSession,
 } from "@cjhyy/code-shell-core/internal";
 import {
   CC_COST_GUARD_PROMPT,
@@ -5721,13 +5722,12 @@ ipcMain.handle(
     return mobileOrchestrator.roomToPublic(room);
   },
 );
-async function requireIdleRoomSession(roomId: string): Promise<void> {
+function requireIdleRoomSession(roomId: string): void {
   const room = roomManager.getRoom(roomId);
-  if (room?.claudeSessionId)
-    await assertExternalSessionIdle(backgroundWorkHost, room.claudeSessionId, room.kind);
+  if (room?.claudeSessionId) assertExternalSessionIdle(room.claudeSessionId, room.kind);
 }
 ipcMain.handle("rooms:open", async (_e, roomId: string) => {
-  await requireIdleRoomSession(roomId);
+  requireIdleRoomSession(roomId);
   return roomManager.open(roomId);
 });
 ipcMain.handle("rooms:close", async (_e, roomId: string) => {
@@ -5737,7 +5737,7 @@ ipcMain.handle("rooms:send", async (_e, roomId: string, text: string) => {
   if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
     throw new Error("invalid room message");
   }
-  await requireIdleRoomSession(roomId);
+  requireIdleRoomSession(roomId);
   return roomManager.send(roomId, text);
 });
 ipcMain.handle("rooms:history", async (_e, roomId: string, sinceSeq?: number) =>
@@ -5772,7 +5772,7 @@ ipcMain.handle(
     kind?: "claude-code" | "codex",
   ) => {
     cwd = await requireRendererProjectPath(cwd);
-    await assertExternalSessionIdle(backgroundWorkHost, claudeSessionId, kind ?? "claude-code");
+    assertExternalSessionIdle(claudeSessionId, kind ?? "claude-code");
     return roomManager.openForSession(claudeSessionId, cwd, mode, kind ?? "claude-code");
   },
 );
@@ -5790,7 +5790,7 @@ ipcMain.handle(
   "ccRoom:takeOverLinkedSession",
   async (_e, roomId: unknown, externalSessionId: unknown, cwd: unknown, kind: unknown) => {
     const verifiedCwd = await requireRendererLinkedSessionPath(cwd);
-    await assertExternalSessionIdle(backgroundWorkHost, externalSessionId, kind);
+    assertExternalSessionIdle(externalSessionId, kind);
     return takeOverLinkedSessionFromIpc(roomManager, roomId, externalSessionId, verifiedCwd, kind);
   },
 );
@@ -5833,7 +5833,7 @@ ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) => {
   if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
     throw new Error("invalid room message");
   }
-  await requireIdleRoomSession(roomId);
+  requireIdleRoomSession(roomId);
   return roomManager.send(roomId, text);
 });
 ipcMain.handle(
@@ -6904,6 +6904,9 @@ async function deleteDesktopSession(id: string): Promise<void> {
     dlog("external-runtime", "session.delete.stop_failed", { id, error: String(error) });
   });
   removeExternalRuntimeBinding(id);
+  // Retained DriveAgent snapshots are shared files; release them here too,
+  // since closeSession is a no-op when no worker is running.
+  dropBackgroundJobHistoryForSession(id);
   await deleteSession(id);
   await cleanupKnownAttachments(id);
   // Drop any in-memory snapshot for the deleted session so it can't be

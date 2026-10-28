@@ -106,6 +106,14 @@ export const panels = {
         taskStopUnavailable: "任务状态已变化或当前无法停止，请刷新后重试。",
         taskRunningHint: "后台任务正在执行；完成或停止后才能继续对话。",
         taskUnknownTakeover: "任务状态尚未确认，暂时无法接管。",
+        taskUnknownOtherProcess:
+          "任务由另一个 CodeShell 进程控制。若该进程已退出，可将任务标记为已结束。",
+        taskUnknownOrphaned:
+          "控制该任务的进程已退出，但 CLI 进程仍在运行。确认它已退出后，再将任务标记为已结束。",
+        taskMarkEnded: "标记为已结束",
+        taskMarkConfirm: "仅在确认 CLI 已不再运行时继续；标记后即可接管该会话。",
+        taskMarkUnavailable: "任务状态已变化，请刷新后重试。",
+        taskMarkFailed: "标记失败：{error}",
         taskPhase: {
           starting: "启动中",
           thinking: "思考中",
@@ -464,6 +472,15 @@ export const panels = {
         taskStopUnavailable: "The task changed or cannot be stopped. Refresh and retry.",
         taskRunningHint: "The background task is running. Continue after it completes or stops.",
         taskUnknownTakeover: "The task status is unknown, so takeover is unavailable.",
+        taskUnknownOtherProcess:
+          "Another CodeShell process controls this task. If that process has exited, mark the task ended.",
+        taskUnknownOrphaned:
+          "The process that controlled this task exited, but its CLI is still running. Mark the task ended once the CLI has exited.",
+        taskMarkEnded: "Mark as ended",
+        taskMarkConfirm:
+          "Continue only if the CLI is no longer running; marking it ended allows takeover.",
+        taskMarkUnavailable: "The task changed. Refresh and retry.",
+        taskMarkFailed: "Could not mark the task ended: {error}",
         taskPhase: {
           starting: "Starting",
           thinking: "Thinking",

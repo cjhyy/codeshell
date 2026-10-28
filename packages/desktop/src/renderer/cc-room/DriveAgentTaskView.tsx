@@ -52,6 +52,8 @@ export function DriveAgentTaskView({
   const [connectionRevision, setConnectionRevision] = useState(0);
   const [takenOver, setTakenOver] = useState(false);
   const [stopping, setStopping] = useState(false);
+  const [confirmingMark, setConfirmingMark] = useState(false);
+  const [marking, setMarking] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now);
   const refresh = useCallback(() => setRefreshRevision((value) => value + 1), []);
@@ -66,7 +68,11 @@ export function DriveAgentTaskView({
     if (!active) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    // Both reset on a successful read: a long task survives sporadic worker
+    // timeouts, while a job that never appears or a host that stays
+    // unreachable stops polling after ten consecutive attempts.
     let missingAttempts = 0;
+    let failedAttempts = 0;
     let reading = false;
     const read = async () => {
       if (cancelled || reading) return;
@@ -88,6 +94,8 @@ export function DriveAgentTaskView({
         setJob(found);
         setReadFailed(false);
         setLoaded(true);
+        failedAttempts = 0;
+        if (found) missingAttempts = 0;
         shouldPoll = found
           ? found.status === "running" || found.status === "cancelling"
           : ++missingAttempts < 10;
@@ -95,7 +103,7 @@ export function DriveAgentTaskView({
         if (cancelled) return;
         setReadFailed(true);
         setLoaded(true);
-        shouldPoll = ++missingAttempts < 10;
+        shouldPoll = ++failedAttempts < 10;
       } finally {
         reading = false;
         if (!cancelled && shouldPoll) timer = setTimeout(() => void read(), 3000);
@@ -181,6 +189,29 @@ export function DriveAgentTaskView({
       );
     } finally {
       setStopping(false);
+      refresh();
+    }
+  };
+  const markInterrupted = async () => {
+    if (!job || marking || status !== "unknown") return;
+    setMarking(true);
+    setActionError(null);
+    try {
+      const result = await window.codeshell.markBackgroundJobInterrupted(
+        job.sourceSession.sessionId,
+        job.jobId,
+        job.startedAt,
+      );
+      if (!result.marked) setActionError(t("panels.shells.taskMarkUnavailable"));
+    } catch (error) {
+      setActionError(
+        t("panels.shells.taskMarkFailed", {
+          error: String(error instanceof Error ? error.message : error),
+        }),
+      );
+    } finally {
+      setMarking(false);
+      setConfirmingMark(false);
       refresh();
     }
   };
@@ -304,7 +335,39 @@ export function DriveAgentTaskView({
           <p className="text-status-warn">{t("panels.shells.taskStatusUnavailable")}</p>
         )}
         {loaded && status === "unknown" && !readFailed && (
-          <p className="text-muted-foreground">{t("panels.shells.taskUnknownHint")}</p>
+          <p className="text-muted-foreground">
+            {t(
+              job?.unknownReason === "other-process"
+                ? "panels.shells.taskUnknownOtherProcess"
+                : job?.unknownReason === "orphaned-process"
+                  ? "panels.shells.taskUnknownOrphaned"
+                  : "panels.shells.taskUnknownHint",
+            )}
+          </p>
+        )}
+        {loaded && status === "unknown" && !readFailed && job && (
+          <div className="flex flex-wrap items-center gap-2">
+            {confirmingMark ? (
+              <>
+                <span className="text-status-warn">{t("panels.shells.taskMarkConfirm")}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={marking}
+                  onClick={() => void markInterrupted()}
+                >
+                  {t("panels.shells.taskMarkEnded")}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmingMark(false)}>
+                  {t("panels.common.cancel")}
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setConfirmingMark(true)}>
+                {t("panels.shells.taskMarkEnded")}
+              </Button>
+            )}
+          </div>
         )}
         {actionError && (
           <p role="alert" className="text-status-err">

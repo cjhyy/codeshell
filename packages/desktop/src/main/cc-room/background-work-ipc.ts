@@ -1,4 +1,8 @@
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
+import {
+  findActiveBackgroundJobForExternalSession,
+  markBackgroundJobInterruptedForUI,
+} from "@cjhyy/code-shell-core/internal";
 import type { TaskInboxSourcesDeps } from "../task-inbox/task-inbox-sources.js";
 
 type BackgroundHost = NonNullable<TaskInboxSourcesDeps["background"]>;
@@ -8,6 +12,7 @@ export function registerBackgroundWorkIpc(
   ipc: Pick<IpcMain, "handle">,
   windows: () => BrowserWindow[],
   host: BackgroundHost,
+  markInterrupted: typeof markBackgroundJobInterruptedForUI = markBackgroundJobInterruptedForUI,
 ): void {
   const requireWindow = (event: IpcMainInvokeEvent) => {
     if (
@@ -62,27 +67,48 @@ export function registerBackgroundWorkIpc(
       return { cancelled: await host.cancel(job, { webContentsId: event.sender.id }) };
     },
   );
+  ipc.handle(
+    "backgroundWork:markInterrupted",
+    async (event, sessionId: unknown, jobId: unknown, expectedStartedAt: unknown) => {
+      requireWindow(event);
+      const owner = requireId(sessionId);
+      const id = requireId(jobId);
+      if (typeof expectedStartedAt !== "number" || !Number.isFinite(expectedStartedAt))
+        throw new Error("Invalid background work attempt");
+      // host.list throws when the worker cannot answer, so a job only that
+      // worker controls can never be resolved from a stale snapshot here.
+      const job = (await host.list()).find(
+        (entry) =>
+          entry.kind === "job" &&
+          entry.jobId === id &&
+          entry.sourceSession.sessionId === owner &&
+          entry.startedAt === expectedStartedAt,
+      );
+      if (!job || job.kind !== "job" || job.status !== "unknown") return { marked: false };
+      return {
+        marked: markInterrupted({ sessionId: owner, jobId: id, expectedStartedAt }),
+      };
+    },
+  );
 }
 
-/** Called before a new resident CLI can take over a DriveAgent-owned session. */
-export async function assertExternalSessionIdle(
-  host: BackgroundHost,
+/** Called before a new resident CLI can take over a DriveAgent-owned session.
+ * Every process persists its DriveAgent ownership, so this reads only local
+ * state and never waits on the worker (CC room sends call it per message). */
+export function assertExternalSessionIdle(
   externalSessionId: unknown,
   kind: unknown,
-): Promise<void> {
+  find: typeof findActiveBackgroundJobForExternalSession = findActiveBackgroundJobForExternalSession,
+): void {
   if (typeof externalSessionId !== "string" || (kind !== "claude-code" && kind !== "codex"))
     throw new Error("Invalid external session target");
-  const cli = kind === "claude-code" ? "claude" : "codex";
-  const jobs = await host.list();
-  const owned = jobs.some(
-    (entry) =>
-      entry.kind === "job" &&
-      entry.externalSessionId === externalSessionId &&
-      entry.cli === cli &&
-      ["running", "cancelling", "unknown"].includes(entry.status),
+  const owner = find(kind === "claude-code" ? "claude" : "codex", externalSessionId);
+  if (!owner) return;
+  throw new Error(
+    owner.unknownReason === "orphaned-process"
+      ? "This session's background task lost its controller, but its CLI process is still running. Open the task page and mark it ended once that process has exited."
+      : owner.unknownReason === "other-process"
+        ? "This session is owned by a background task in another CodeShell process. Wait for it to finish, or mark it ended from the task page if that process is gone."
+        : "This session is owned by a background task. Stop the task and wait for its exit before taking over.",
   );
-  if (owned)
-    throw new Error(
-      "This session is owned by a background task. Stop the task and wait for its exit before taking over; an unknown task status cannot confirm that it has exited.",
-    );
 }

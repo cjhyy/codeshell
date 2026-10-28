@@ -360,6 +360,9 @@ export type BackgroundWorkInfo =
       jobId: string;
       description: string;
       status: "running" | "cancelling" | "completed" | "failed" | "cancelled" | "unknown";
+      /** With status "unknown": a live process elsewhere owns it, or its owner
+       *  exited while the external CLI is still running. */
+      unknownReason?: "other-process" | "orphaned-process";
       progress?: BackgroundJobProgress;
       canCancel?: boolean;
       startedAt: number;
@@ -1223,6 +1226,12 @@ export interface CodeshellApi
     jobId: string,
     expectedStartedAt: number,
   ): Promise<{ cancelled: boolean }>;
+  /** Resolve a task no live process reports; it is recorded as interrupted. */
+  markBackgroundJobInterrupted(
+    sessionId: string,
+    jobId: string,
+    expectedStartedAt: number,
+  ): Promise<{ marked: boolean }>;
   /**
    * Multi-session form. The dual-arg legacy form is also supported at runtime.
    * `scope` (once/session/project) on an approve threads to the engine's

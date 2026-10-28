@@ -116,6 +116,9 @@ export type BackgroundWorkInfo =
       jobId: string;
       description: string;
       status: "running" | "cancelling" | "completed" | "failed" | "cancelled" | "unknown";
+      /** With status "unknown": a live process elsewhere owns it, or its owner
+       *  exited while the external CLI is still running. */
+      unknownReason?: "other-process" | "orphaned-process";
       progress?: BackgroundJobProgress;
       canCancel?: boolean;
       startedAt: number;
@@ -695,6 +698,14 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("backgroundWork:cancelJob", sessionId, jobId, expectedStartedAt) as Promise<{
       cancelled: boolean;
     }>,
+  /** Resolve a task no live process reports; it is recorded as interrupted. */
+  markBackgroundJobInterrupted: (sessionId: string, jobId: string, expectedStartedAt: number) =>
+    ipcRenderer.invoke(
+      "backgroundWork:markInterrupted",
+      sessionId,
+      jobId,
+      expectedStartedAt,
+    ) as Promise<{ marked: boolean }>,
   approve: (
     sessionIdOrRequestId: string,
     requestIdOrDecision: string | "approve" | "deny",

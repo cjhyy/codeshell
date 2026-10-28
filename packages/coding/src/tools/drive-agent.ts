@@ -173,6 +173,7 @@ type Runner = (opts: {
   additionalReadDirs?: string[];
   onSessionId?: (sessionId: string) => void;
   onProgress?: (progress: BackgroundJobProgress) => void;
+  onProcess?: (pid: number) => void;
 }) => Promise<AgentRunResult>;
 type SessionStore = {
   get(cli: DriveCli, sessionId: string): ExternalAgentSessionBinding | undefined;
@@ -230,6 +231,7 @@ const defaultRunner: Runner = (opts) => {
       additionalReadDirs: opts.additionalReadDirs,
       onSessionId: opts.onSessionId,
       onProgress: opts.onProgress,
+      onProcess: opts.onProcess,
     },
     opts.signal,
   );
@@ -898,6 +900,12 @@ function attachDriveCompletion(params: {
     });
 }
 
+interface DriveRunSinks {
+  onSessionId: (sessionId: string) => void;
+  onProgress: (progress: BackgroundJobProgress) => void;
+  onProcess: (pid: number) => void;
+}
+
 function trackBackgroundRun(params: {
   /** May be absent/invalid: registration below fails closed and returns an error. */
   sessionId: string | undefined;
@@ -911,10 +919,7 @@ function trackBackgroundRun(params: {
   worktree?: ManagedDriveWorktree;
   promptSummary: string;
   initialProgress?: BackgroundJobProgress;
-  start: (
-    onSessionId: (sessionId: string) => void,
-    onProgress: (progress: BackgroundJobProgress) => void,
-  ) => Promise<AgentRunResult>;
+  start: (sinks: DriveRunSinks) => Promise<AgentRunResult>;
   abort: () => void;
   sessionStore: SessionStore;
   writable: boolean;
@@ -982,13 +987,14 @@ function trackBackgroundRun(params: {
       jobId,
       params.initialProgress ?? initialAgentProgress(params.cli),
     );
-    run = params.start(
-      (externalSessionId) => {
+    run = params.start({
+      onSessionId: (externalSessionId) => {
         if (!isValidSessionId(externalSessionId)) return;
         backgroundJobRegistry.recordArtifacts(jobId, { ccSessionId: externalSessionId });
       },
-      (progress) => backgroundJobRegistry.updateProgress(jobId, progress),
-    );
+      onProgress: (progress) => backgroundJobRegistry.updateProgress(jobId, progress),
+      onProcess: (pid) => backgroundJobRegistry.recordArtifacts(jobId, { processId: pid }),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     backgroundJobRegistry.finish(jobId, { status: "failed", finalText: message });
@@ -1270,12 +1276,11 @@ export function makeDriveAgentTool(
         isolation,
         worktree: managedWorktree,
         promptSummary,
-        start: (onSessionId, onProgress) =>
+        start: (sinks) =>
           startRun(runner, {
             ...runOptsBase,
             signal: abortController.signal,
-            onSessionId,
-            onProgress,
+            ...sinks,
           }),
         abort: () => abortController.abort(),
         sessionStore,
@@ -1318,6 +1323,8 @@ export function makeDriveAgentTool(
     let backgroundSessionIdSink: ((sessionId: string) => void) | undefined;
     let liveProgress: BackgroundJobProgress | undefined;
     let backgroundProgressSink: ((progress: BackgroundJobProgress) => void) | undefined;
+    let liveProcessId: number | undefined;
+    let backgroundProcessSink: ((pid: number) => void) | undefined;
     const run = startRun(runner, {
       ...runOptsBase,
       signal: foregroundAbort.signal,
@@ -1328,6 +1335,10 @@ export function makeDriveAgentTool(
       onProgress: (progress) => {
         liveProgress = progress;
         backgroundProgressSink?.(progress);
+      },
+      onProcess: (pid) => {
+        liveProcessId = pid;
+        backgroundProcessSink?.(pid);
       },
     });
     let result: Awaited<ReturnType<typeof waitForForegroundOrHandoff>>;
@@ -1370,11 +1381,13 @@ export function makeDriveAgentTool(
         isolation,
         worktree: managedWorktree,
         promptSummary,
-        start: (onSessionId, onProgress) => {
-          backgroundSessionIdSink = onSessionId;
-          if (liveExternalSessionId) onSessionId(liveExternalSessionId);
-          backgroundProgressSink = onProgress;
-          if (liveProgress) onProgress(liveProgress);
+        start: (sinks) => {
+          backgroundSessionIdSink = sinks.onSessionId;
+          if (liveExternalSessionId) sinks.onSessionId(liveExternalSessionId);
+          backgroundProgressSink = sinks.onProgress;
+          if (liveProgress) sinks.onProgress(liveProgress);
+          backgroundProcessSink = sinks.onProcess;
+          if (liveProcessId) sinks.onProcess(liveProcessId);
           return run;
         },
         initialProgress: liveProgress,
@@ -1740,6 +1753,7 @@ type LegacyRunner = (opts: {
   signal?: AbortSignal;
   onSessionId?: (sessionId: string) => void;
   onProgress?: (progress: BackgroundJobProgress) => void;
+  onProcess?: (pid: number) => void;
   // Newer optional fields the alias schema advertises; forwarded so a runner
   // that honors them receives them (older fakes simply ignore extra fields).
   additionalReadDirs?: string[];

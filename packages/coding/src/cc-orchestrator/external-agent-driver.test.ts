@@ -192,6 +192,48 @@ describe.serial("external agent driver", () => {
       },
     );
 
+    it.serial(
+      "reports the CLI pid and settles when a backgrounded grandchild keeps stdio open",
+      async () => {
+        if (process.platform === "win32") return;
+        const dir = mkdtempSync(join(tmpdir(), "claude-held-stdio-"));
+        const script = join(dir, "fake-claude.sh");
+        const holderPidFile = join(dir, "holder.pid");
+        const pids: number[] = [];
+        try {
+          writeFileSync(
+            script,
+            [
+              "#!/bin/sh",
+              `echo '${JSON.stringify({ type: "result", session_id: "held", result: "done", is_error: false })}'`,
+              // Inherits stdout/stderr and outlives the CLI, like a dev server.
+              "sleep 30 &",
+              `echo $! > ${JSON.stringify(holderPidFile)}`,
+              "exit 0",
+            ].join("\n"),
+          );
+          chmodSync(script, 0o755);
+          const started = Date.now();
+          const result = await runAgentOnce(
+            { ...claudeAdapter, buildArgs: () => [] },
+            { command: script, prompt: "work", cwd: dir, onProcess: (pid) => pids.push(pid) },
+          );
+          expect(result.finalText).toBe("done");
+          expect(Date.now() - started).toBeLessThan(10_000);
+          expect(pids).toHaveLength(1);
+          expect(pids[0]).toBeGreaterThan(0);
+        } finally {
+          try {
+            process.kill(Number(readFileSync(holderPidFile, "utf8")), "SIGKILL");
+          } catch {
+            // already gone
+          }
+          rmSync(dir, { recursive: true, force: true });
+        }
+      },
+      20_000,
+    );
+
     // A fake adapter that drives `cat`: with promptViaStdin the driver must pipe
     // the prompt to the child's stdin, and `cat` echoes it back on stdout. This
     // exercises the real stdin-wiring code path without needing codex installed.

@@ -7,7 +7,7 @@ import {
   recordExternalModelCall,
   type BackgroundJobProgress,
 } from "@cjhyy/code-shell-core/extension";
-import { advanceAgentProgress, initialAgentProgress } from "./external-agent-progress.js";
+import { advanceAgentProgressWith, initialAgentProgress } from "./external-agent-progress.js";
 
 export interface AgentRunResult {
   sessionId: string;
@@ -35,7 +35,14 @@ export interface DriverRunOpts extends Omit<BuildArgsOpts, "permissionMode"> {
   onSessionId?: (sessionId: string) => void;
   /** Bounded activity metadata; never a second transcript stream. */
   onProgress?: (progress: BackgroundJobProgress) => void;
+  /** Called once with the CLI's OS pid so retained history can tell whether
+   *  the process outlived the worker that launched it. */
+  onProcess?: (pid: number) => void;
 }
+
+/** After the CLI exits, a grandchild it backgrounded with inherited stdio can
+ *  hold the pipes open forever, and `close` would never fire. */
+const STDIO_RELEASE_GRACE_MS = 1_000;
 
 const codexImageFlagCache = new Map<string, Promise<boolean>>();
 const CODEX_IMAGE_PROBE_TIMEOUT_MS = 5_000;
@@ -254,9 +261,9 @@ export function runAgentOnce(
         // Observation must never stop the underlying CLI.
       }
     };
-    const observeOutput = (line: string) => {
-      if (!opts.onProgress || !line.trim()) return;
-      progress = advanceAgentProgress(progress, adapter.kind, line);
+    const observeOutput = (data: unknown) => {
+      if (!opts.onProgress) return;
+      progress = advanceAgentProgressWith(progress, adapter.kind, data);
       const delay = 250 - (Date.now() - lastProgressReportAt);
       if (delay <= 0) publishProgress();
       else progressTimer ??= setTimeout(publishProgress, delay);
@@ -300,6 +307,13 @@ export function runAgentOnce(
         detached: false,
         stdio: [viaStdin ? "pipe" : "ignore", "pipe", "pipe"],
       });
+      if (child.pid) {
+        try {
+          opts.onProcess?.(child.pid);
+        } catch {
+          // Process observation is best-effort metadata, like onSessionId.
+        }
+      }
       const common = {
         provider: adapter.kind,
         model: opts.model ?? "CLI default",
@@ -380,18 +394,24 @@ export function runAgentOnce(
       if (child.stdout) {
         const rl = createInterface({ input: child.stdout });
         rl.on("line", (line) => {
-          if (!settled) observeOutput(line);
-          let partialMessage = false;
-          if (adapter.kind === "claude") {
-            try {
-              partialMessage = JSON.parse(line)?.type === "stream_event";
-            } catch {
-              // Preserve the legacy result parser's handling of non-JSON lines.
-            }
+          if (!line.trim()) {
+            lines.push(line);
+            return;
           }
+          let data: unknown;
+          try {
+            data = JSON.parse(line);
+          } catch {
+            // Non-JSON stdout still proves activity; the legacy result parser
+            // keeps its own handling of the raw line below.
+          }
+          if (!settled) observeOutput(data);
           // Complete assistant/result records are authoritative for the final
           // result. Keeping every partial token as well duplicates large runs
           // in memory and retains reasoning deltas that the UI never needs.
+          const partialMessage =
+            adapter.kind === "claude" &&
+            (data as { type?: unknown } | null | undefined)?.type === "stream_event";
           if (!partialMessage) lines.push(line);
           if (!reportedSessionId) {
             try {
@@ -406,7 +426,7 @@ export function runAgentOnce(
       // Drain diagnostics so a full stderr pipe cannot stall an otherwise live
       // CLI. Only its receipt is activity; stderr text never enters UI status.
       child.stderr?.on("data", () => {
-        if (!settled) observeOutput("diagnostic output");
+        if (!settled) observeOutput(undefined);
       });
       child.on("error", (err) => {
         if (settled) return;
@@ -427,7 +447,17 @@ export function runAgentOnce(
         reject(err);
       });
       // exit can arrive before the final stdout/stderr data events. close
-      // ensures the result and final activity snapshot include those bytes.
+      // ensures the result and final activity snapshot include those bytes;
+      // a grandchild holding the pipes only delays it by the grace period.
+      child.once("exit", () => {
+        const timer = setTimeout(() => {
+          child.stdout?.destroy();
+          child.stderr?.destroy();
+          child.stdin?.destroy();
+        }, STDIO_RELEASE_GRACE_MS);
+        timer.unref?.();
+        child.once("close", () => clearTimeout(timer));
+      });
       child.on("close", (code) => {
         if (settled) return;
         settled = true;

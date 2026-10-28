@@ -1,11 +1,23 @@
 import { afterEach, expect, test } from "bun:test";
 import { backgroundJobRegistry } from "./background-jobs.js";
 import { backgroundJobHistory } from "./background-job-history.js";
-import { listBackgroundWorkForUI } from "./background-work.js";
+import {
+  findActiveBackgroundJobForExternalSession,
+  listBackgroundWorkForUI,
+  markBackgroundJobInterruptedForUI,
+} from "./background-work.js";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BackgroundJobHistory } from "./background-job-history.js";
+
+/** A pid that existed moments ago and has exited. */
+function exitedPid(): number {
+  return spawnSync(process.execPath, ["-e", ""]).pid!;
+}
+/** A process other than this test runner that outlives the test. */
+const otherLivePid = process.ppid;
 
 afterEach(() => {
   backgroundJobRegistry.reset();
@@ -45,28 +57,35 @@ test("activity is bounded and detached, does not wake lifecycle waiters, and fre
 });
 
 test("cold history keeps exact external identity but never asserts a process is running", () => {
-  backgroundJobHistory.write({
-    jobId: "cold-job",
-    sessionId: "progress-history-test",
-    description: "delegate",
-    kind: "drive-agent",
-    cli: "codex",
-    ccSessionId: "thread-cold",
-    launchCwd: "/tmp/worktree-cold",
-    status: "running",
-    startedAt: 100,
-    abort() {
-      throw new Error("must not serialize");
+  const owner = { pid: otherLivePid };
+  backgroundJobHistory.write(
+    {
+      jobId: "cold-job",
+      sessionId: "progress-history-test",
+      description: "delegate",
+      kind: "drive-agent",
+      cli: "codex",
+      ccSessionId: "thread-cold",
+      launchCwd: "/tmp/worktree-cold",
+      status: "running",
+      startedAt: 100,
+      abort() {
+        throw new Error("must not serialize");
+      },
+      progress: { lastActivityAt: 200, eventCount: 4, summary: "Read a.ts" },
     },
-    progress: { lastActivityAt: 200, eventCount: 4, summary: "Read a.ts" },
-  });
-  backgroundJobHistory.write({
-    jobId: "cold-other",
-    sessionId: "progress-other-test",
-    description: "other",
-    status: "running",
-    startedAt: 100,
-  });
+    owner,
+  );
+  backgroundJobHistory.write(
+    {
+      jobId: "cold-other",
+      sessionId: "progress-other-test",
+      description: "other",
+      status: "running",
+      startedAt: 100,
+    },
+    owner,
+  );
   const jobs = listBackgroundWorkForUI("progress-history-test");
   expect(jobs).toHaveLength(1);
   expect(jobs[0]).toMatchObject({
@@ -74,6 +93,7 @@ test("cold history keeps exact external identity but never asserts a process is 
     externalSessionId: "thread-cold",
     cwd: "/tmp/worktree-cold",
     status: "unknown",
+    unknownReason: "other-process",
     canCancel: false,
     progress: { eventCount: 4 },
   });
@@ -142,8 +162,102 @@ test("malformed optional history fields cannot become renderer objects or unboun
         progress: { lastActivityAt: 2, eventCount: 3, summary: {}, recentEvents: "oops" },
       }),
     );
-    expect(store.list()).toEqual([{ ...value, progress: { lastActivityAt: 2, eventCount: 3 } }]);
+    // Owner identity is liveness bookkeeping, never a renderer field.
+    const { ownerPid: _pid, ownerToken: _token, ...visible } = value;
+    expect(store.list()).toEqual([{ ...visible, progress: { lastActivityAt: 2, eventCount: 3 } }]);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("a snapshot whose owner and CLI both exited is finalized instead of staying unknown", () => {
+  backgroundJobHistory.write(
+    {
+      jobId: "crashed-job",
+      sessionId: "progress-history-test",
+      description: "delegate",
+      kind: "drive-agent",
+      cli: "claude",
+      ccSessionId: "claude-crashed",
+      status: "running",
+      startedAt: 100,
+      processId: exitedPid(),
+      progress: { lastActivityAt: 500, eventCount: 3 },
+    },
+    { pid: exitedPid() },
+  );
+  const [job] = listBackgroundWorkForUI("progress-history-test");
+  expect(job).toMatchObject({ jobId: "crashed-job", status: "failed", finishedAt: 500 });
+  expect(job.kind === "job" && job.finalText).toContain("[interrupted]");
+  // The resolution is durable, so pid reuse later cannot revive the row.
+  expect(backgroundJobHistory.list("progress-history-test")[0].status).toBe("failed");
+  expect(findActiveBackgroundJobForExternalSession("claude", "claude-crashed")).toBeUndefined();
+});
+
+test("a CLI that outlived its owner stays owned until the user marks it ended", () => {
+  backgroundJobHistory.write(
+    {
+      jobId: "orphan-job",
+      sessionId: "progress-history-test",
+      description: "delegate",
+      kind: "drive-agent",
+      cli: "codex",
+      ccSessionId: "thread-orphan",
+      status: "running",
+      startedAt: 100,
+      processId: otherLivePid,
+    },
+    { pid: exitedPid() },
+  );
+  expect(listBackgroundWorkForUI("progress-history-test")[0]).toMatchObject({
+    status: "unknown",
+    unknownReason: "orphaned-process",
+  });
+  expect(findActiveBackgroundJobForExternalSession("codex", "thread-orphan")).toMatchObject({
+    jobId: "orphan-job",
+    unknownReason: "orphaned-process",
+  });
+  expect(findActiveBackgroundJobForExternalSession("claude", "thread-orphan")).toBeUndefined();
+  expect(
+    markBackgroundJobInterruptedForUI({
+      sessionId: "progress-history-test",
+      jobId: "orphan-job",
+      expectedStartedAt: 101,
+    }),
+  ).toBe(false);
+  expect(
+    markBackgroundJobInterruptedForUI({
+      sessionId: "progress-history-test",
+      jobId: "orphan-job",
+      expectedStartedAt: 100,
+    }),
+  ).toBe(true);
+  expect(listBackgroundWorkForUI("progress-history-test")[0]).toMatchObject({ status: "failed" });
+  expect(findActiveBackgroundJobForExternalSession("codex", "thread-orphan")).toBeUndefined();
+});
+
+test("ownership comes from this process's live jobs without reading a worker", () => {
+  backgroundJobRegistry.start("live-owner", "progress-history-test", "task", {
+    persist: true,
+    cli: "claude",
+  });
+  backgroundJobRegistry.recordArtifacts("live-owner", {
+    ccSessionId: "claude-live",
+    processId: process.pid,
+  });
+  expect(findActiveBackgroundJobForExternalSession("claude", "claude-live")).toEqual({
+    jobId: "live-owner",
+    sessionId: "progress-history-test",
+  });
+  // A live job is never finalized by this process's own history reads.
+  expect(backgroundJobHistory.list("progress-history-test")[0].status).toBe("running");
+  expect(
+    markBackgroundJobInterruptedForUI({
+      sessionId: "progress-history-test",
+      jobId: "live-owner",
+      expectedStartedAt: backgroundJobRegistry.get("live-owner")!.startedAt,
+    }),
+  ).toBe(false);
+  backgroundJobRegistry.finish("live-owner");
+  expect(findActiveBackgroundJobForExternalSession("claude", "claude-live")).toBeUndefined();
 });
