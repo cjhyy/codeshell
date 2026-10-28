@@ -103,7 +103,9 @@ describeIsolated("Panel App protocol", () => {
       corsEnabled: true,
     });
     for (const scheme of ["csmedia", "cstheme"])
-      expect(schemes.find((value) => value.scheme === scheme)?.privileges.supportFetchAPI).toBe(false);
+      expect(schemes.find((value) => value.scheme === scheme)?.privileges.supportFetchAPI).toBe(
+        false,
+      );
   });
 
   test("serves declared static assets with strict security headers", async () => {
@@ -3747,7 +3749,14 @@ describeIsolated("Desktop project package variants", () => {
         (settings) => {
           settings.panelAppBindings = [installed.id];
           settings.panelAppPins = {
-            [installed.id]: { version: installed.version, packageDigest: installed.packageDigest },
+            [installed.id]: {
+              version: installed.version,
+              packageDigest: installed.packageDigest,
+              // A pin holds only if chosen after the latest catalog install.
+              pinnedAt: new Date(
+                Math.max(Date.now(), (core.installedPanelAppUpdatedAt(installed.id) ?? 0) + 1),
+              ).toISOString(),
+            },
           };
         },
       );
@@ -3780,6 +3789,8 @@ describeIsolated("Desktop project package variants", () => {
       );
       await bindBridgeGuest(4802, { projectPath: b, cwd: b });
       const two = await install("2.0.0", true);
+      // The update supersedes both pins; B rolls back before anything reads it.
+      pin(b, one);
       pin(a, two);
       // Pin changes revoke the old A guest before a renderer/protocol refresh.
       await expect(

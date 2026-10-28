@@ -375,11 +375,18 @@ if (process.argv[2] === "--host") {
     await first.getByRole("button", { name: "确认更新", exact: true }).click();
     await version(0, "2.0.0");
     assert.equal((await panel(0)).source.commit, updatedCommit);
-    await version(1, "1.0.0");
+    // A catalog update reaches every project, not only the one that reviewed it.
+    await pages[1].getByRole("button", { name: "刷新", exact: true }).click();
+    await version(1, "2.0.0");
     await document(0, "2.0.0", "Project 0 edits");
-    await document(1, "1.0.0", "Project 1 edits");
+    await document(1, "2.0.0", "Project 1 edits");
     await restore(0, "1.0.0");
     await document(0, "1.0.0", "Project 0 edits");
+    // A rollback holds only its own project; roll project 1 back too so both
+    // select the shared retained 1.0.0 bytes for the corruption checks below.
+    assert.equal((await panel(1)).version, "2.0.0");
+    await restore(1, "1.0.0");
+    await document(1, "1.0.0", "Project 1 edits");
     await writeFile(
       join(
         scratch,
@@ -429,7 +436,7 @@ if (process.argv[2] === "--host") {
         reviewedInstallAndUpdate: true,
         reviewedCommitSurvivesUpstreamChange: true,
         fullHostProcessRestart: true,
-        twoProjectIsolation: true,
+        catalogUpdateReachesEveryProject: true,
         versionRollback: true,
         corruptedPackageRepair: true,
         sourceFailurePreservesPackage: true,

@@ -272,8 +272,9 @@ try {
   await first.getByRole("dialog").waitFor({ state: "hidden" });
   const updated = await expectVersion(first, projects[0], "2.0.0");
   assert.notEqual(updated.packageDigest, original.packageDigest);
-  await expectVersion(second, projects[1], "1.0.0");
-  assert.equal((await binding(second, projects[1])).packageDigest, original.packageDigest);
+  // A catalog update reaches every project, not only the one that reviewed it.
+  await expectVersion(second, projects[1], "2.0.0");
+  assert.equal((await binding(second, projects[1])).packageDigest, updated.packageDigest);
 
   await versionDialog(first, projects[0]);
   const rollback = await reviewRestore(first, "1.0.0");
@@ -293,7 +294,16 @@ try {
     (await expectVersion(first, projects[0], "1.0.0")).packageDigest,
     original.packageDigest,
   );
-  await expectVersion(second, projects[1], "1.0.0");
+  // A rollback holds only its own project.
+  await expectVersion(second, projects[1], "2.0.0");
+  // Roll B back too, so both projects select the same retained 1.0.0 bytes.
+  await versionDialog(second, projects[1]);
+  await reviewRestore(second, "1.0.0");
+  await confirmRestore(second);
+  assert.equal(
+    (await expectVersion(second, projects[1], "1.0.0")).packageDigest,
+    original.packageDigest,
+  );
 
   // Damage the shared retained bytes. Every project selecting those bytes must
   // report unavailability rather than silently execute the newer global package.
@@ -371,6 +381,7 @@ try {
       invalidSourceRetry: true,
       canceledUpdateAndRestoreReview: true,
       doubleClickInstall: true,
+      catalogUpdateReachesEveryProject: true,
       coldRestartPinnedPackages: true,
       documentBytesPreserved: true,
     }),

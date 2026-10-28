@@ -100,7 +100,7 @@ test("Desktop binds exact project bytes, preserves another device's unrelated ch
   expect((project.panelAppPins as Record<string, unknown>)[first.id]).toBeUndefined();
 });
 
-test("Desktop rebind keeps the project's older pin after a catalog upgrade; new projects select new bytes", async () => {
+test("a catalog upgrade moves a bound project to the new bytes and stales its old revision", async () => {
   const { cwd, install } = await fixture();
   const old = await install("test-panel");
   const desktop = createDesktopPanelManagement(cwd);
@@ -108,9 +108,13 @@ test("Desktop rebind keeps the project's older pin after a catalog upgrade; new 
   await desktop.binding(context, old.id, true, initial.revision);
   const pinned = (await desktop.snapshot())[0]!;
   const latest = await install(old.id, "2.0.0", true);
-  expect((await desktop.snapshot())[0]!.revision).toBe(pinned.revision);
-  await desktop.binding(context, old.id, true, pinned.revision);
-  expect((await listProjectPanelApps(cwd))[0]!.packageDigest).toBe(old.packageDigest);
+  const moved = (await desktop.snapshot())[0]!;
+  expect(moved.version).toBe("2.0.0");
+  expect(moved.revision).not.toBe(pinned.revision);
+  expect((await listProjectPanelApps(cwd))[0]!.packageDigest).toBe(latest.packageDigest);
+  await expect(desktop.binding(context, old.id, true, pinned.revision)).rejects.toThrow(
+    "配置已改变",
+  );
   const otherCwd = join(root, "other");
   mkdirSync(otherCwd);
   const other = createDesktopPanelManagement(otherCwd);
@@ -175,7 +179,7 @@ function changeSource(source: string, version: string) {
   writeFileSync(join(source, "app/index.html"), version);
 }
 
-test("a reviewed Desktop update uses the project's original source and only advances that project", async () => {
+test("a reviewed Desktop update uses the project's original source and advances every project", async () => {
   const { cwd, install } = await fixture();
   const old = await install("test-panel");
   const first = createDesktopPanelManagement(cwd);
@@ -183,13 +187,7 @@ test("a reviewed Desktop update uses the project's original source and only adva
   const secondCwd = join(root, "second");
   mkdirSync(secondCwd);
   const second = createDesktopPanelManagement(secondCwd);
-  // Another project installs a different source and fixes version 3.0.0.
-  const otherSource = join(root, "other-source");
-  cpSync(join(root, old.id), otherSource, { recursive: true });
-  changeSource(otherSource, "3.0.0");
-  const otherInput = { kind: "dir" as const, path: otherSource };
-  const otherReview = await second.previewSource(context, otherInput);
-  await second.install(context, otherReview.reviewToken, { overwrite: true });
+  await second.binding(context, old.id, true, (await second.snapshot())[0]!.revision);
   changeSource(join(root, old.id), "2.0.0");
   const displayed = (await first.snapshot())[0]!;
   const check = await createProjectPanelAppUpdateService(cwd).check(old.id);
@@ -217,7 +215,8 @@ test("a reviewed Desktop update uses the project's original source and only adva
   );
   await first.install(context, review.reviewToken, { overwrite: true, expectedId: old.id });
   expect((await first.snapshot())[0]!.version).toBe("2.0.0");
-  expect((await second.snapshot())[0]!.version).toBe("3.0.0");
+  // The catalog update reaches every bound project, not only the one that reviewed it.
+  expect((await second.snapshot())[0]!.version).toBe("2.0.0");
   expect((await listProjectPanelApps(cwd))[0]!.source).toBe(join(root, old.id));
   await expect(first.install(context, review.reviewToken, { overwrite: true })).rejects.toThrow(
     "预览已失效",
@@ -268,7 +267,8 @@ test("a new native project installation commits its exact reviewed pin and canno
     strict: true,
   });
   expect(settings.panelAppBindings).toEqual(["new-panel"]);
-  expect(settings.panelAppPins).toEqual({
+  expect(Object.keys(settings.panelAppPins as object)).toEqual(["new-panel"]);
+  expect(settings.panelAppPins).toMatchObject({
     "new-panel": { version: "1.0.0", packageDigest: result.packageDigest },
   });
 });
@@ -281,6 +281,14 @@ test("Desktop diagnoses a broken package separately and repairs its binding thro
   for (const state of await desktop.snapshot())
     await desktop.binding(context, state.appId, true, state.revision);
   const replacement = await install(first.id, "2.0.0", true);
+  // The update moved this project; roll it back so it selects the retained 1.0.0 bytes.
+  const moved = (await desktop.snapshot()).find((item) => item.appId === first.id)!;
+  expect(moved.version).toBe("2.0.0");
+  await desktop.restore(
+    context,
+    (await desktop.previewRestore(context, first.id, first.packageDigest, moved.revision))
+      .reviewToken,
+  );
   rmSync(panelAppPackageDir(first.id, first.packageDigest!), { recursive: true });
   const states = await desktop.snapshot();
   const issue = states.find((item) => item.appId === first.id)!;
