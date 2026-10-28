@@ -17,9 +17,11 @@ import { asyncAgentRegistry, type AsyncAgentStatus } from "./agent-registry.js";
 import {
   backgroundJobRegistry,
   type BackgroundJobKind,
+  type BackgroundJobProgress,
   type BackgroundJobStatus,
   type ExternalCliKind,
 } from "./background-jobs.js";
+import { backgroundJobHistory, type BackgroundJobUnknownReason } from "./background-job-history.js";
 import { backgroundShellManager, type BgShell } from "../../runtime/background-shell.js";
 import { codeShellHome } from "../../session/session-manager.js";
 
@@ -112,7 +114,11 @@ export type BackgroundWorkEntry =
       jobId: string;
       canCancel?: boolean;
       description: string;
-      status: BackgroundJobStatus;
+      status: BackgroundJobStatus | "unknown";
+      /** Set with status "unknown": another live process owns the job, or its
+       *  owner exited while the external CLI process is still alive. */
+      unknownReason?: BackgroundJobUnknownReason;
+      progress?: BackgroundJobProgress;
       startedAt: number;
       finishedAt?: number;
       /** Result summary / error, once finished. */
@@ -235,14 +241,23 @@ export function listBackgroundWorkForUI(
     scope === "all"
       ? backgroundJobRegistry.list()
       : backgroundJobRegistry.listForSession(sessionId);
-  for (const j of jobs) {
+  const liveIds = new Set(jobs.map((job) => job.jobId));
+  const history = backgroundJobHistory
+    .list(scope === "all" ? undefined : sessionId)
+    .filter((job) => !liveIds.has(job.jobId));
+  for (const j of [...jobs, ...history]) {
     const launchCwd = j.launchCwd ?? j.cwd;
+    const live = liveIds.has(j.jobId);
     entries.push({
       kind: "job",
       jobId: j.jobId,
-      canCancel: j.status === "running" && typeof j.abort === "function",
+      canCancel: live && j.status === "running" && "abort" in j && typeof j.abort === "function",
       description: j.description,
-      status: j.status,
+      status: !live && (j.status === "running" || j.status === "cancelling") ? "unknown" : j.status,
+      ...(!live && "unknownReason" in j && j.unknownReason
+        ? { unknownReason: j.unknownReason }
+        : {}),
+      ...(j.progress ? { progress: structuredClone(j.progress) } : {}),
       startedAt: j.startedAt,
       ...(j.finishedAt != null ? { finishedAt: j.finishedAt } : {}),
       ...(j.finalText != null ? { finalText: j.finalText } : {}),
@@ -262,6 +277,56 @@ export function listBackgroundWorkForUI(
   }
 
   return entries;
+}
+
+/**
+ * Background job that may still be writing an external CLI session, from this
+ * process's live registry or any other process's retained snapshot. Reads only
+ * local state, so a busy worker cannot block a CC room on this check.
+ */
+export function findActiveBackgroundJobForExternalSession(
+  cli: ExternalCliKind,
+  externalSessionId: string,
+): { jobId: string; sessionId: string; unknownReason?: BackgroundJobUnknownReason } | undefined {
+  const live = backgroundJobRegistry
+    .list()
+    .find(
+      (job) =>
+        (job.status === "running" || job.status === "cancelling") &&
+        job.cli === cli &&
+        job.ccSessionId === externalSessionId,
+    );
+  if (live) return { jobId: live.jobId, sessionId: live.sessionId };
+  const retained = backgroundJobHistory.findActiveForExternalSession(cli, externalSessionId);
+  return retained
+    ? {
+        jobId: retained.jobId,
+        sessionId: retained.sessionId,
+        ...(retained.unknownReason ? { unknownReason: retained.unknownReason } : {}),
+      }
+    : undefined;
+}
+
+/** The user's explicit resolution of a task whose status no live process
+ * reports. Refuses a job this process still controls. */
+export function markBackgroundJobInterruptedForUI(input: {
+  sessionId: string;
+  jobId: string;
+  expectedStartedAt: number;
+}): boolean {
+  const live = backgroundJobRegistry.get(input.jobId);
+  if (live && live.sessionId === input.sessionId) return false;
+  return backgroundJobHistory.markInterrupted(
+    input.jobId,
+    input.sessionId,
+    input.expectedStartedAt,
+  );
+}
+
+/** Deleting a Session must release its retained snapshots even when no worker
+ * is running to receive agent/closeSession. */
+export function dropBackgroundJobHistoryForSession(sessionId: string): void {
+  backgroundJobHistory.dropForSession(sessionId);
 }
 
 /** Main-owned control path. The host must authorize the source Session before

@@ -55,6 +55,9 @@ export const claudeAdapter: AgentAdapter = {
   buildArgs(opts) {
     // -p (print/headless) + stream-json REQUIRES --verbose (verified).
     const args = ["-p", opts.prompt, "--output-format", "stream-json", "--verbose"];
+    // Activity clocks must advance during long streamed responses, not only
+    // when Claude finally publishes the complete assistant message.
+    args.push("--include-partial-messages");
     if (opts.model) args.push("--model", opts.model);
     if (opts.resumeSessionId) args.push("--resume", opts.resumeSessionId);
     if (opts.additionalReadDirs?.length) {

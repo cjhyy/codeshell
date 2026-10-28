@@ -15,6 +15,7 @@ import {
   backgroundJobRegistry,
   notificationQueue,
   type BackgroundJobEntry,
+  type BackgroundJobProgress,
 } from "@cjhyy/code-shell-core/extension";
 import { agentNotificationBus } from "@cjhyy/code-shell-core/internal";
 import { makeDriveClaudeCodeTool as mkBg } from "./drive-agent.js";
@@ -47,6 +48,82 @@ function legacyDriveJobListLine(job: BackgroundJobEntry): string {
 }
 
 describe("DriveAgent tool", () => {
+  for (const background of [true, false]) {
+    it(`retains live activity for ${background ? "background launch" : "foreground handoff"} and exposes it to inspect`, async () => {
+      backgroundJobRegistry.reset();
+      const tmp = mkdtempSync(join(tmpdir(), "drive-progress-"));
+      let resolveRun!: (result: any) => void;
+      let report: ((progress: BackgroundJobProgress) => void) | undefined;
+      const progress: BackgroundJobProgress = {
+        lastActivityAt: Date.now() - 1_000,
+        eventCount: 4,
+        phase: "tool",
+        summary: "Running Read · src/main.ts",
+        recentEvents: [{ at: Date.now() - 1_000, summary: "Running Read · src/main.ts" }],
+      };
+      try {
+        const tool = makeDriveAgentTool(
+          (options) => {
+            report = options.onProgress;
+            progress.lastActivityAt = Date.now();
+            progress.recentEvents![0]!.at = progress.lastActivityAt;
+            report?.(progress);
+            options.onSessionId?.("progress-thread");
+            return new Promise((resolve) => {
+              resolveRun = resolve;
+            });
+          },
+          undefined,
+          {
+            foregroundHandoffMs: 0,
+            sessionStore: { get: () => undefined, record: () => undefined },
+          },
+        );
+        const output = await tool({ prompt: "read project", cli: "codex", cwd: tmp, background }, {
+          cwd: tmp,
+          sessionId: "S-PROGRESS",
+        } as any);
+        const jobId = output.match(/jobId ([A-Za-z0-9][A-Za-z0-9._:-]*)/)?.[1];
+        if (!jobId) throw new Error(`missing job id: ${output}`);
+        expect(backgroundJobRegistry.get(jobId)).toMatchObject({
+          status: "running",
+          ccSessionId: "progress-thread",
+          progress,
+        });
+        const next = {
+          ...progress,
+          eventCount: 5,
+          lastActivityAt: Date.now(),
+          summary: "Tool finished",
+        };
+        report?.(next);
+        expect(backgroundJobRegistry.get(jobId)?.progress).toEqual(next);
+        const inspected = await driveAgentJobsTool({ action: "inspect", jobId });
+        expect(inspected).toContain("activityEvents: 5");
+        expect(inspected).toContain("phase: tool");
+        expect(inspected).toContain("activity: Tool finished");
+        expect(inspected).toContain("recentActivity:");
+        resolveRun({
+          sessionId: "progress-thread",
+          finalText: "done",
+          isError: false,
+          exitCode: 0,
+          lines: [],
+        });
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        expect(backgroundJobRegistry.get(jobId)?.status).toBe("completed");
+        report?.({ ...next, eventCount: 6, summary: "Late output" });
+        expect(backgroundJobRegistry.get(jobId)?.progress).toEqual(next);
+      } finally {
+        resolveRun?.({ sessionId: "", finalText: "", isError: false, exitCode: 0, lines: [] });
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        backgroundJobRegistry.reset();
+        notificationQueue.reset("S-PROGRESS");
+        rmSync(tmp, { recursive: true, force: true });
+      }
+    });
+  }
+
   it("has a name and an inputSchema with prompt + background + cli", () => {
     expect(driveAgentToolDef.name).toBe("DriveAgent");
     expect((driveAgentToolDef.inputSchema as any).properties.prompt).toBeDefined();

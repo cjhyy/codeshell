@@ -51,6 +51,7 @@ import {
 } from "./appUtils";
 import { startPanelResize } from "./panelResize";
 import type { SubagentSelection } from "../subagents/SubagentNavigation";
+import { OPEN_NOTIFICATION_SESSION_EVENT } from "./notificationSessionNavigation";
 
 interface Params {
   sessions: {
@@ -873,8 +874,9 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     const onOpenCliSession = (event: Event): void => {
       const detail = (event as CustomEvent<Partial<OpenCliSessionEventDetail>>).detail;
       if (
-        typeof detail?.externalSessionId !== "string" ||
-        !detail.externalSessionId.trim() ||
+        !detail ||
+        (!(typeof detail.jobId === "string" && detail.jobId.trim()) &&
+          !(typeof detail.externalSessionId === "string" && detail.externalSessionId.trim())) ||
         typeof detail.cwd !== "string" ||
         !detail.cwd.trim() ||
         typeof detail.sourceSessionId !== "string" ||
@@ -883,6 +885,13 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
       ) {
         return;
       }
+      if (detail.jobId !== undefined && (typeof detail.jobId !== "string" || !detail.jobId.trim()))
+        return;
+      if (
+        detail.externalSessionId !== undefined &&
+        (typeof detail.externalSessionId !== "string" || !detail.externalSessionId.trim())
+      )
+        return;
       const targetBucket = resolveOpenCliSessionBucket(
         detail.sourceSessionId,
         engineToBucketRef.current,
@@ -896,22 +905,58 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
         return;
       }
       const nonce = nextOpenCliSessionNonce();
-      updatePanelBucket(targetBucket, (state) => ({
-        ...state,
-        open: true,
-        openCliSession: {
-          nonce,
-          externalSessionId: detail.externalSessionId!,
-          cliKind: detail.cliKind!,
-          cwd: detail.cwd!,
-        },
-        requestNonce: state.requestNonce + 1,
-        requestKind: "ccRoom",
-      }));
+      updatePanelBucket(targetBucket, (state) => {
+        // Background delegations may surface a closed dock once. They must not
+        // replace a page the user is reading, or navigate another chat's dock.
+        if (detail.autoOpen && (targetBucket !== activeBucketRef.current || state.open))
+          return state;
+        return {
+          ...state,
+          open: true,
+          openCliSession: {
+            nonce,
+            externalSessionId: detail.externalSessionId,
+            jobId: detail.jobId,
+            sourceSessionId: detail.sourceSessionId,
+            title: typeof detail.title === "string" ? detail.title : undefined,
+            cliKind: detail.cliKind!,
+            cwd: detail.cwd!,
+          },
+          requestNonce: state.requestNonce + 1,
+          requestKind: "ccRoom",
+        };
+      });
+      if (!detail.autoOpen && targetBucket !== activeBucketRef.current) {
+        // Global background listings can link a task owned by another chat.
+        // Use the existing authoritative session navigator after storing its page.
+        window.dispatchEvent(
+          new CustomEvent(OPEN_NOTIFICATION_SESSION_EVENT, {
+            detail: { sessionId: detail.sourceSessionId },
+          }),
+        );
+      }
     };
     window.addEventListener("codeshell:open-cli-session", onOpenCliSession);
     return () => window.removeEventListener("codeshell:open-cli-session", onOpenCliSession);
   }, [t, toast, updatePanelBucket]);
+
+  useEffect(() => {
+    const returnToChat = (event: Event) => {
+      const detail = (event as CustomEvent<{ sourceSessionId?: string; jobId?: string }>).detail;
+      if (typeof detail?.sourceSessionId !== "string" || typeof detail.jobId !== "string") return;
+      const bucket = resolveOpenCliSessionBucket(
+        detail.sourceSessionId,
+        engineToBucketRef.current,
+        sessionIndicesRef.current,
+      );
+      if (!bucket) return;
+      updatePanelBucket(bucket, (state) =>
+        state.openCliSession?.jobId === detail.jobId ? { ...state, open: false } : state,
+      );
+    };
+    window.addEventListener("codeshell:return-from-cli-task", returnToChat);
+    return () => window.removeEventListener("codeshell:return-from-cli-task", returnToChat);
+  }, [updatePanelBucket]);
 
   // A chat answer's file path link was clicked: open it in the in-app Files
   // panel. FilesPanel listens for the same event to select + reveal the file;

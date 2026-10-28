@@ -152,6 +152,7 @@ export { isExistingDirectory, normalizeCwdPath } from "./utils/cwd-normalize.js"
 export {
   backgroundJobRegistry,
   type BackgroundJobEntry,
+  type BackgroundJobProgress,
 } from "./tool-system/builtin/background-jobs.js";
 export type { SandboxBackend } from "./tool-system/sandbox/index.js";
 

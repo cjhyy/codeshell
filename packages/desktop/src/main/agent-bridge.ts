@@ -26,6 +26,7 @@ import {
 } from "./owned-external-stream.js";
 import {
   DESKTOP_OPERATION_BATCH_METHOD,
+  dropBackgroundJobHistoryForSession,
   executeFigmaMcpLinkAction,
   isFigmaMcpCredential,
   McpLinkActionError,
@@ -2366,9 +2367,11 @@ export class AgentBridge implements PetStateBridge {
    * worker's agent/closeSession handler reaps that session's background
    * shells (core design §6). No-op if no live worker — then there are no
    * shells to reap. With a live worker, resolve only after its close ACK so a
-   * caller can safely remove the session directory afterward.
+   * caller can safely remove the session directory afterward. Retained
+   * DriveAgent snapshots are shared files, released even with no worker.
    */
   async closeSession(sessionId: string): Promise<void> {
+    dropBackgroundJobHistoryForSession(sessionId);
     if (!this.core.canSend()) return;
     const id = `close-${sessionId}-${Date.now()}`;
     const outcome = await this.core.request(

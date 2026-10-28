@@ -37,7 +37,7 @@ function findElements(node: unknown, tagName: string): any[] {
 
 function cliLinkButton(container: HTMLElement): any {
   return findElements(container, "BUTTON").find(
-    (button) => reactPropsOf(button)["aria-label"] === "打开 Codex 会话",
+    (button) => reactPropsOf(button)["aria-label"] === "查看 Codex 进度",
   );
 }
 
@@ -134,6 +134,8 @@ describe("GenericToolCard DriveAgent CLI link", () => {
     window.removeEventListener("codeshell:open-cli-session", listener);
     expect(details).toEqual([
       {
+        jobId: "cc-abc123",
+        title: "DriveAgent(codex): delegate",
         externalSessionId: "thread-1",
         cliKind: "codex",
         cwd: "/repo/worktree",
@@ -142,8 +144,33 @@ describe("GenericToolCard DriveAgent CLI link", () => {
     ]);
   });
 
-  test("does not render the link before the job exposes an external session id", async () => {
+  test("renders a task progress entry before the external session id arrives", async () => {
     const container = await renderCard([{ ...job, externalSessionId: undefined }]);
-    expect(cliLinkButton(container)).toBeUndefined();
+    expect(cliLinkButton(container)).toBeDefined();
+  });
+
+  test("keeps the background status and latest activity visible while tool details are collapsed", () => {
+    const html = renderToStaticMarkup(
+      <DriveAgentJobsProvider
+        jobs={[
+          {
+            ...job,
+            status: "running",
+            progress: {
+              lastActivityAt: 1,
+              eventCount: 2,
+              phase: "tool",
+              summary: "Read README.md",
+            },
+          },
+        ]}
+      >
+        <GenericToolCard message={msg({ toolName: "DriveAgent", result: "jobId cc-abc123" })} />
+      </DriveAgentJobsProvider>,
+    );
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("进行中");
+    expect(html).toContain("Read README.md");
+    expect(html).toContain("查看 Codex 进度");
   });
 });

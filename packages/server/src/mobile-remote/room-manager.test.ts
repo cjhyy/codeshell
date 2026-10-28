@@ -111,6 +111,7 @@ function makeManager(options?: {
   resolveLinkedSession?: (
     target: Readonly<LinkedSessionTarget>,
   ) => LinkedSessionTarget | null | undefined;
+  assertExternalSessionAvailable?: (externalSessionId: string, kind: string) => void;
 }) {
   dir = mkdtempSync(join(tmpdir(), "rooms-"));
   const pushed: { roomId: string; msg: RoomMessage }[] = [];
@@ -135,12 +136,48 @@ function makeManager(options?: {
             candidate.cwd === target.cwd &&
             candidate.kind === target.kind,
         )),
+    assertExternalSessionAvailable: options?.assertExternalSessionAvailable,
     onMessage: (roomId, msg) => pushed.push({ roomId, msg }),
   });
   return { mgr, pushed, agents };
 }
 
 describe("RoomManager", () => {
+  test("no resident agent starts on an external session a background task still owns", () => {
+    const owned = new Set(["claude:busy-session"]);
+    const checks: string[] = [];
+    const { mgr, agents } = makeManager({
+      linkedSessions: [{ externalSessionId: "busy-session", cwd: "/repo", kind: "claude-code" }],
+      assertExternalSessionAvailable: (id, kind) => {
+        checks.push(`${kind}:${id}`);
+        if (owned.has(`${kind === "codex" ? "codex" : "claude"}:${id}`))
+          throw new Error("owned by a background task");
+      },
+    });
+    expect(() => mgr.openForSession("busy-session", "/repo", "default")).toThrow("background task");
+    // The same id under another CLI kind is a different session.
+    const codex = mgr.openForSession("busy-session", "/repo", "default", "codex");
+    expect(codex.status).toBe("running");
+    expect(agents).toHaveLength(1);
+
+    const linked = mgr.openLinkedSession("busy-session", "/repo", "claude-code");
+    expect(() =>
+      mgr.takeOverLinkedSession(linked.roomId, "busy-session", "/repo", "claude-code"),
+    ).toThrow("background task");
+    expect(agents).toHaveLength(1);
+
+    const room = mgr.createRoom({ cwd: "/repo", permissionMode: "default" });
+    mgr.setRoomSessionId(room.id, "busy-session");
+    expect(() => mgr.open(room.id)).toThrow("background task");
+    expect(() => mgr.send(room.id, "hello")).toThrow("background task");
+    expect(agents).toHaveLength(1);
+
+    owned.clear();
+    expect(mgr.send(room.id, "hello")).toBe(true);
+    expect(agents).toHaveLength(2);
+    expect(checks).toContain("claude-code:busy-session");
+  });
+
   test("create / list / get a room", () => {
     const { mgr } = makeManager();
     const room = mgr.createRoom({ cwd: "/Users/x/proj", permissionMode: "bypassPermissions" });

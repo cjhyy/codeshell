@@ -33,10 +33,22 @@ export function createTaskInboxBackgroundHost(options: {
       if (!result.ok) throw new Error(result.message);
       const value = result.result as { items?: TaskInboxBackgroundEntry[] };
       if (!Array.isArray(value?.items)) throw new Error("Invalid background task snapshot");
-      return [
+      const combined = [
         ...main,
         ...value.items.map((entry) => ({ ...entry, executionOrigin: "worker" as const })),
       ];
+      // Both processes can read retained snapshots. A live controller always
+      // wins over a read-only history row for the same job.
+      const jobs = new Map<string, TaskInboxBackgroundEntry>();
+      const other = combined.filter((entry) => entry.kind !== "job");
+      for (const entry of combined) {
+        if (entry.kind !== "job") continue;
+        const key = `${entry.sourceSession.sessionId}:${entry.jobId}`;
+        const prior = jobs.get(key);
+        if (!prior || entry.canCancel || (prior.kind === "job" && prior.status === "unknown"))
+          jobs.set(key, entry);
+      }
+      return [...other, ...jobs.values()];
     },
     cancel: async (entry) => {
       const params = {

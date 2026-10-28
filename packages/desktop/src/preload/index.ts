@@ -33,6 +33,7 @@ import { createOperationResolutionApi } from "./operation-resolution-api";
 import { createOptimizationLabApi } from "./optimization-lab-api";
 import { createComputerUseSettingsApi } from "./computer-use-api";
 import { createSessionTranscriptApi } from "./session-transcript-api";
+import { createBackgroundWorkApi, type BackgroundJobProgress } from "./background-work-api";
 import { createModelTraceApi } from "./model-trace-api";
 import { createProfilePluginExportApi } from "./profile-plugin-export-api";
 import { createProfileMemoryPromotionApi } from "./profile-memory-promotion-api";
@@ -107,7 +108,12 @@ export type BackgroundWorkInfo =
       kind: "job";
       jobId: string;
       description: string;
-      status: "running" | "completed" | "failed" | "cancelled";
+      status: "running" | "cancelling" | "completed" | "failed" | "cancelled" | "unknown";
+      /** With status "unknown": a live process elsewhere owns it, or its owner
+       *  exited while the external CLI is still running. */
+      unknownReason?: "other-process" | "orphaned-process";
+      progress?: BackgroundJobProgress;
+      canCancel?: boolean;
       startedAt: number;
       finishedAt?: number;
       finalText?: string;
@@ -676,11 +682,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ) as Promise<{
       ok: boolean;
     }>,
-  /** Unified background-work listing for the panel: shells + sub-agents + jobs. */
-  listBackgroundWork: (sessionId: string, opts?: { scope?: "session" | "all" }) =>
-    rpc("agent/backgroundWork", { sessionId, ...(opts ?? {}) }).then(rpcResult) as Promise<{
-      items: BackgroundWorkInfo[];
-    }>,
+  ...createBackgroundWorkApi<BackgroundWorkInfo>(ipcRenderer),
   approve: (
     sessionIdOrRequestId: string,
     requestIdOrDecision: string | "approve" | "deny",
