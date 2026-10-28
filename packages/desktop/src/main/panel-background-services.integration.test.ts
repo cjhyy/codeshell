@@ -75,6 +75,10 @@ test("Desktop authorization/dispatch/events survive closing all guests and selec
   const managedNode = join(runtimeRoot, "bin", "node");
   await copyFile(safeNode, managedNode);
   await writeFile(
+    join(runtimeRoot, "LICENSE"),
+    "Node.js executable copied solely for this temporary managed-runtime test fixture.\n",
+  );
+  await writeFile(
     join(runtimeRoot, "manifest.json"),
     JSON.stringify({
       schemaVersion: 1,
