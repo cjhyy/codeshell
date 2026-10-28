@@ -554,3 +554,26 @@ test("capacity rejection has a structured bridge code and does not enable a queu
     generation: 0,
   });
 });
+
+test("unknown persisted formats are never migrated or rewritten by this reader/writer", async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "panel-service-format-")));
+  roots.push(root);
+  const store = new BackgroundServiceStore<any>(root);
+  store.acquire();
+  const key = "b".repeat(64),
+    bytes = JSON.stringify({
+      format: "panel.background-service/2",
+      generation: 100,
+      desired: "off",
+    });
+  await writeFile(join(root, `${key}.json`), bytes);
+  try {
+    expect(() => store.read(key)).toThrow("SERVICE_FORMAT_UNSUPPORTED");
+    expect(() => store.commit(key, { format: "panel.background-service/2" })).toThrow(
+      "SERVICE_FORMAT_UNSUPPORTED",
+    );
+    expect(await readFile(join(root, `${key}.json`), "utf8")).toBe(bytes);
+  } finally {
+    store.release();
+  }
+});
