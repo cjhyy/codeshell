@@ -988,9 +988,9 @@ function broadcastPluginCommandsChanged(windows: Iterable<BrowserWindow>): void 
 }
 
 function broadcastPanelAppsChanged(windows: Iterable<BrowserWindow>): void {
-  // Project management and paired Web write bindings outside settings:set.
-  // Invalidate before notifying any client or awaiting another side effect.
+  // Invalidate before notifying native and paired Web clients of Panel changes.
   invalidatePanelAppBindingGuard();
+  bridge?.notifyWebConfigurationChanged();
   for (const window of windows) {
     if (window.isDestroyed()) continue;
     window.webContents.send("panel-apps:changed");

@@ -629,16 +629,15 @@ export function useDesktopController(
       void post("/api/v1/auth/logout").catch(() => undefined);
       app.logout();
     },
-    onHostNotification: (method, params) => {
+    onHostNotification: (method, _params) => {
       if (method === "serve/sessionsChanged") {
         appRef.current.refreshSessions();
         setSessionsVersion((value) => value + 1);
       }
-      if (
-        method === "serve/configurationChanged" &&
-        (!params.cwd || params.cwd === workspaceRef.current)
-      )
-        void refreshConfiguration();
+      // A Panel mutation names its binding project, while this view may execute
+      // in a secondary root or an external worktree. Treat this as invalidation
+      // only: reread the current authorized workspace, never the notified path.
+      if (method === "serve/configurationChanged") void refreshConfiguration();
     },
   };
 }

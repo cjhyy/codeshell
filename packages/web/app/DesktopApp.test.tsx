@@ -391,6 +391,82 @@ describe("Desktop workbench controller", () => {
     await hook.unmount();
   });
 
+  for (const workspace of [
+    "/project",
+    "/secondary-root",
+    "/project/.code-shell/worktrees/session",
+    "/external-worktrees/session",
+  ])
+    test(`configuration notifications refresh the current workspace at ${workspace}`, async () => {
+      ensureMiniDom();
+      const requests: string[] = [];
+      globalThis.fetch = (async (_path, init) => {
+        const cwd = decodeURIComponent(
+          new Headers(init?.headers).get("X-CodeShell-Workspace") ?? "",
+        );
+        requests.push(cwd);
+        return Response.json(configuration(cwd));
+      }) as typeof fetch;
+      const app = remoteApp({ activeCwd: workspace });
+      const hook = await renderHook(() => useDesktopController(app, session, noop));
+      try {
+        for (const params of [{ cwd: "/project" }, { cwd: "/other-project" }, {}]) {
+          const count = requests.length;
+          const revision = hook.result.current.configurationVersion;
+          await act(async () => {
+            hook.result.current.onHostNotification("serve/configurationChanged", params);
+            await flushMicrotasks();
+          });
+          expect(requests).toHaveLength(count + 1);
+          expect(requests.at(-1)).toBe(workspace);
+          expect(hook.result.current.workspaceCwd).toBe(workspace);
+          expect(hook.result.current.configuration?.workspace.path).toBe(workspace);
+          expect(hook.result.current.configurationVersion).toBeGreaterThan(revision);
+        }
+      } finally {
+        await hook.unmount();
+      }
+    });
+
+  test("a delayed configuration notification refresh cannot replace a newly selected workspace", async () => {
+    ensureMiniDom();
+    const old = deferred<Response>();
+    let holdOld = false;
+    let heldRequests = 0;
+    globalThis.fetch = (async (_path, init) => {
+      const cwd = decodeURIComponent(new Headers(init?.headers).get("X-CodeShell-Workspace") ?? "");
+      if (cwd === "/secondary-root" && holdOld) {
+        heldRequests++;
+        return old.promise;
+      }
+      return Response.json(configuration(cwd));
+    }) as typeof fetch;
+    let app = remoteApp({ activeCwd: "/secondary-root" });
+    const hook = await renderHook(() => useDesktopController(app, session, noop));
+    try {
+      holdOld = true;
+      await act(async () => {
+        hook.result.current.onHostNotification("serve/configurationChanged", { cwd: "/primary" });
+        await flushMicrotasks();
+      });
+      expect(heldRequests).toBe(1);
+      app = remoteApp({ activeCwd: "/new-project" });
+      await hook.rerender();
+      const revision = hook.result.current.configurationVersion;
+      expect(hook.result.current.configuration?.workspace.path).toBe("/new-project");
+      await act(async () => {
+        old.resolve(Response.json(configuration("/secondary-root")));
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.workspaceCwd).toBe("/new-project");
+      expect(getApiWorkspace()).toBe("/new-project");
+      expect(hook.result.current.configuration?.workspace.path).toBe("/new-project");
+      expect(hook.result.current.configurationVersion).toBe(revision);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("Desktop and Hub render the same conversation controls with host-specific capabilities", async () => {
     ensureMiniDom();
     Object.defineProperty(window, "matchMedia", {
