@@ -208,12 +208,14 @@ export function MimiCompanionWindow() {
             if (event.button !== 0) return;
             event.preventDefault();
             const origin = state.windowOrigin ?? { x: 0, y: 0 };
+            // Capture the visible position even if a follow transition is still in flight.
+            const bounds = event.currentTarget.getBoundingClientRect();
             gesture.current = {
               pointerId: event.pointerId,
               startX: event.screenX,
               startY: event.screenY,
               lastX: event.screenX,
-              origin: { x: origin.x + position.x, y: origin.y + position.y },
+              origin: { x: origin.x + bounds.left, y: origin.y + bounds.top },
               dragged: false,
             };
             event.currentTarget.setPointerCapture(event.pointerId);
