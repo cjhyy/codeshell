@@ -34,6 +34,65 @@ body,
   transition: none;
 }
 
+.mimi-companion--held {
+  transition: none;
+}
+
+.mimi-companion__body {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-app-region: no-drag;
+}
+
+.mimi-companion__body:focus-visible {
+  outline: 2px solid #7d9b89;
+  outline-offset: -8px;
+  border-radius: 30%;
+}
+
+.mimi-companion--held .mimi-companion__body {
+  cursor: grabbing;
+}
+
+.mimi-companion__menu {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 35px;
+  border-radius: 9px;
+  border: 1px solid #d5dce3;
+  padding: 4px;
+  background: #fffffff5;
+  box-shadow: 0 5px 18px #24304025;
+  pointer-events: auto;
+}
+
+.mimi-companion__menu button {
+  width: 100%;
+  padding: 9px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #374556;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mimi-companion__menu button:hover,
+.mimi-companion__menu button:focus-visible {
+  background: #edf2ee;
+}
+
 .mimi-companion canvas {
   display: block;
 }
@@ -57,7 +116,7 @@ body,
   border-radius: 50%;
   box-sizing: border-box;
   box-shadow: 0 0 0 5px #ffc77026;
-  animation: mimi-touch 800ms ease-out infinite;
+  animation: mimi-touch 500ms ease-out both;
 }
 
 .mimi-target--scroll {
@@ -96,7 +155,7 @@ body,
   border-radius: 2px;
   background: white;
   box-shadow: 0 1px 0 #b9c6d1;
-  animation: mimi-key 1.1s ease-in-out infinite;
+  animation: mimi-key 300ms ease-in-out both;
 }
 
 .mimi-scene--still * {

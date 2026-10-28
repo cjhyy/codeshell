@@ -6,6 +6,7 @@ export interface CharacterActorProps {
   state: MimiCompanionState;
   reducedMotion: boolean;
   moving: "left" | "right" | null;
+  cueActive: boolean;
   onReady(): void;
   onError(message: string): void;
 }

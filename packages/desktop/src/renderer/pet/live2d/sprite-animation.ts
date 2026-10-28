@@ -15,10 +15,11 @@ export const SPRITE_ANIMATIONS = {
 export function spriteAnimation(
   state: MimiCompanionState,
   moving: "left" | "right" | null,
+  cueActive = true,
 ): keyof typeof SPRITE_ANIMATIONS {
-  if (state.activity.action === "error") return "failed";
   if (moving) return moving;
-  if (state.activity.action === "idle" && state.activity.phase === "end") return "waiting";
+  if (!cueActive) return "idle";
+  if (state.activity.action === "error") return "failed";
   switch (state.activity.action) {
     case "observe":
       return "review";
@@ -28,10 +29,16 @@ export function spriteAnimation(
     case "type":
     case "scroll":
     case "working":
-      return "running";
     case "drag":
-      return state.target && state.target.x < state.position.x ? "left" : "right";
+      return "running";
     default:
       return "idle";
   }
+}
+
+/** One authored frame cycle, bounded even when an operation remains in progress. */
+export function companionCueDuration(state: MimiCompanionState): number {
+  return state.activity.action === "idle"
+    ? 0
+    : Math.min(800, SPRITE_ANIMATIONS[spriteAnimation(state, null)].frames * 100);
 }

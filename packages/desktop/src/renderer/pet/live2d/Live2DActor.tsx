@@ -13,17 +13,23 @@ interface Runtime {
 export default function Live2DActor({
   state,
   reducedMotion,
+  cueActive,
+  moving,
   onReady,
   onError,
 }: CharacterActorProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const current = useRef(state);
   const reduced = useRef(reducedMotion);
+  const active = useRef(cueActive || Boolean(moving));
+  const cue = useRef(cueActive);
   const callbacks = useRef({ onReady, onError });
   const runtime = useRef<Runtime | null>(null);
   const activityClock = useRef({ id: "", startedAt: performance.now() });
   current.current = state;
   reduced.current = reducedMotion;
+  active.current = cueActive || Boolean(moving);
+  cue.current = cueActive;
   callbacks.current = { onReady, onError };
   const { coreUrl, modelUrl } = state;
   useEffect(() => {
@@ -88,7 +94,13 @@ export default function Live2DActor({
         core.setParameterValueById(id, bounded);
       };
       model.internalModel.on("beforeModelUpdate", () => {
-        const value = current.current;
+        const value = cue.current
+          ? current.current
+          : {
+              ...current.current,
+              target: undefined,
+              activity: { ...current.current.activity, action: "idle" as const },
+            };
         if (!value) return;
         if (activityClock.current.id !== value.activity.id) {
           activityClock.current = { id: value.activity.id, startedAt: performance.now() };
@@ -121,7 +133,13 @@ export default function Live2DActor({
       model.update(0);
       app.render();
       const latest = current.current;
-      if ((latest.enabled || latest.preview) && latest.visible && !reduced.current) app.start();
+      if (
+        (latest.enabled || latest.preview) &&
+        latest.visible &&
+        !reduced.current &&
+        active.current
+      )
+        app.start();
       callbacks.current.onReady();
     };
     void load().catch(() => {
@@ -146,7 +164,7 @@ export default function Live2DActor({
     const running = runtime.current;
     if (!running || !state) return;
     running.resize(state.size);
-    if ((state.enabled || state.preview) && state.visible && !reducedMotion) {
+    if ((state.enabled || state.preview) && state.visible && !reducedMotion && active.current) {
       running.app.start();
     } else {
       running.app.stop();
@@ -155,7 +173,7 @@ export default function Live2DActor({
         running.app.render();
       }
     }
-  }, [state, reducedMotion]);
+  }, [state, reducedMotion, cueActive, moving]);
 
   return <canvas ref={canvas} aria-label="Hiyori Momose，Live2D 示例角色" />;
 }

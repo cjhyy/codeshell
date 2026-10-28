@@ -29,14 +29,22 @@ const listeners = new Set();
 let sequence = 0;
 let state = { enabled: true, visible: true, appearance: "mimi-sprite", size: 320,
   modelUrl: "csmimi://assets/Hiyori/Hiyori.model3.json", coreUrl: "csmimi://assets/Core/live2dcubismcore.min.js",
-  position: { x: 620, y: 230 }, target: { x: 520, y: 333 },
-  activity: { id: "preview-0", action: "observe", phase: "start", startedAt: Date.now() }, preview: true };
+  position: { x: 620, y: 230 }, windowOrigin: { x: 1440, y: -100 }, target: { x: 520, y: 333 },
+  activity: { id: "preview-0", action: "idle", phase: "start", startedAt: Date.now() }, preview: true };
 window.previewReceipts = [];
+window.previewInteractions = [];
+window.previewMoves = [];
+window.previewChats = 0;
+window.previewResumes = 0;
 window.preview = (patch) => { state = { ...state, ...patch }; for (const listener of listeners) listener(state); };
 window.mimiCompanion = {
   getState: async () => state,
   onState: (listener) => { listeners.add(listener); return () => listeners.delete(listener); },
   ready: (result) => window.previewReceipts.push(result || { ready: true }),
+  interaction: (phase) => window.previewInteractions.push(phase),
+  move: (position) => { window.previewMoves.push(position); window.preview({ position: { x: position.x - state.windowOrigin.x, y: position.y - state.windowOrigin.y }, pinned: true }); },
+  openChat: async () => { window.previewChats++; },
+  resumeFollowing: () => { window.previewResumes++; window.preview({ pinned: false }); },
 };
 document.querySelectorAll("[data-preview-action]").forEach((button) => button.addEventListener("click", () => {
   const action = button.dataset.previewAction;
@@ -118,6 +126,7 @@ if (!process.argv.includes("--serve")) {
     });
     await page.goto(url);
     await page.waitForFunction(() => window.previewReceipts.length === 1);
+    await page.getByRole("button", { name: "观察", exact: true }).click();
     await page.waitForFunction(() => document.querySelector('[data-animation="review"]'));
     await page.screenshot({ path: resolve(out, "mimi-observe.png") });
     await page.getByRole("button", { name: "输入", exact: true }).click();
@@ -126,9 +135,89 @@ if (!process.argv.includes("--serve")) {
     await page.getByRole("button", { name: "点击", exact: true }).click();
     await page.waitForSelector(".mimi-target--click");
     await page.screenshot({ path: resolve(out, "mimi-click.png") });
-    await page.evaluate(() => window.preview({ position: { x: 470, y: 230 } }));
+    await page.waitForSelector('[data-animation="idle"]');
+    assert.equal(
+      await page.locator(".mimi-target").count(),
+      0,
+      "click feedback expires without a host idle event",
+    );
+    const idleStyle = await page.locator(".mimi-companion__sprite").getAttribute("style");
+    await page.waitForTimeout(260);
+    assert.equal(
+      await page.locator(".mimi-companion__sprite").getAttribute("style"),
+      idleStyle,
+      "idle stays on frame zero",
+    );
+    await page.screenshot({ path: resolve(out, "mimi-idle.png") });
+    await page.evaluate(() =>
+      window.preview({
+        humanActive: true,
+        activity: { id: "human-priority", action: "type", phase: "start", startedAt: Date.now() },
+      }),
+    );
+    assert.equal(await page.locator(".mimi-keyboard").count(), 0);
+    assert.equal(await page.locator('[data-animation="idle"]').count(), 1);
+    await page.evaluate(() => window.preview({ humanActive: false }));
+    await page.waitForTimeout(100);
+    assert.equal(
+      await page.locator(".mimi-keyboard").count(),
+      0,
+      "suppressed work does not resume after human interaction",
+    );
+    const body = page.getByRole("button", { name: "打开 Mimi 聊天，拖动可移动" });
+    await body.click();
+    assert.equal(await page.evaluate(() => window.previewChats), 1, "click opens chat once");
+    assert.equal(await page.evaluate(() => window.previewMoves.length), 0);
+    const box = await body.boundingBox();
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 2, y + 1);
+    await page.mouse.up();
+    assert.equal(
+      await page.evaluate(() => window.previewChats),
+      2,
+      "sub-threshold jitter remains a click",
+    );
+    assert.equal(await page.evaluate(() => window.previewMoves.length), 0);
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x - 70, y - 35, { steps: 4 });
     await page.waitForSelector('[data-animation="left"]');
-    await page.waitForSelector('[data-animation="waving"]');
+    await page.mouse.up();
+    await page.waitForSelector('[data-animation="idle"]');
+    assert.equal(await page.evaluate(() => window.previewChats), 2, "drag must not open chat");
+    assert.deepEqual(
+      await page.evaluate(() => window.previewMoves.at(-1)),
+      { x: 1990, y: 95 },
+      "drag sends global logical coordinates including window origin",
+    );
+    await body.focus();
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Space");
+    assert.equal(
+      await page.evaluate(() => window.previewChats),
+      4,
+      "keyboard activation opens chat once per key",
+    );
+    await body.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "恢复跟随工作" }).click();
+    assert.equal(await page.evaluate(() => window.previewResumes), 1);
+    assert.equal(
+      await page.evaluate(() => window.previewChats),
+      4,
+      "menu and drag never trigger chat",
+    );
+    assert.equal(
+      await page.evaluate(
+        () =>
+          window.previewInteractions.includes("begin") &&
+          window.previewInteractions.includes("end"),
+      ),
+      true,
+    );
+    await page.mouse.move(20, 80);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.waitForSelector(".mimi-scene--still");
     const first = await page.locator(".mimi-companion__sprite").getAttribute("style");
@@ -156,7 +245,7 @@ if (!process.argv.includes("--serve")) {
       "default sprite must not load Live2D or Core",
     );
     console.log(
-      "PASS: sprites, action props, movement, reduced motion, hide, no Core request, no page errors.",
+      "PASS: one-shot cues, static idle, human priority, click/drag separation, global drag coordinates, keyboard/menu, reduced motion, hide, no Core request.",
     );
     console.log(`Screenshots: ${out}`);
   } finally {

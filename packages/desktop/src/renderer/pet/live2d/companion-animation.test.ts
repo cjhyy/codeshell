@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { MimiCompanionState } from "../../../shared/mimi-companion";
 import { companionPose } from "./companion-pose";
-import { spriteAnimation } from "./sprite-animation";
+import { companionCueDuration, spriteAnimation } from "./sprite-animation";
 
 const state: MimiCompanionState = {
   enabled: true,
@@ -27,7 +27,7 @@ describe("companion action presentation", () => {
     const idle = { ...ended, activity: { ...ended.activity, action: "idle" as const } };
     expect(companionPose(idle, 180).reach).toBe(0);
     expect(companionPose(idle, 180).handPulse).toBe(0);
-    expect(spriteAnimation(idle, null)).toBe("waiting");
+    expect(spriteAnimation(idle, null)).toBe("idle");
   });
 
   test("reduced motion keeps a static pose without limb pulses", () => {
@@ -38,12 +38,20 @@ describe("companion action presentation", () => {
     expect(Number.isFinite(companionPose(state, Number.NaN).handPulse)).toBe(true);
   });
 
-  test("movement selects directional full-body frames and errors take priority", () => {
+  test("human dragging takes priority and suppressed cues return to idle", () => {
     expect(spriteAnimation(state, "left")).toBe("left");
     expect(spriteAnimation(state, "right")).toBe("right");
     expect(spriteAnimation(state, null)).toBe("waving");
     expect(
       spriteAnimation({ ...state, activity: { ...state.activity, action: "error" } }, "left"),
-    ).toBe("failed");
+    ).toBe("left");
+    expect(spriteAnimation(state, null, false)).toBe("idle");
+    expect(
+      spriteAnimation({ ...state, activity: { ...state.activity, action: "drag" } }, null),
+    ).toBe("running");
+    expect(companionCueDuration(state)).toBe(400);
+    expect(
+      companionCueDuration({ ...state, activity: { ...state.activity, action: "error" } }),
+    ).toBeLessThanOrEqual(800);
   });
 });
