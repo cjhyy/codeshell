@@ -11,37 +11,49 @@ extended through actual Desktop/WS/CLI, browser and file-transfer boundaries.
 - Runtime/session fixes: PR #232, `codex/desktop/mobile-runtime-sessions`, separate
   worktree `mobile-runtime-sessions/codeshell`. Head `f63506c7a` includes the fixed
   client-authentication smoke race and all 29 real WS/canonical/legacy CLI
-  lifecycle scenarios. Latest-head CI is running.
+  lifecycle scenarios. These changes are now included in combined PR #233.
 - Panel/workspace/file/access fixes: PR #233, this worktree. Follow-up `e4b8310e9` added
   shared binding invalidation, authoritative session-root migration, 2 GiB
   workspace file transfers, post-I/O revocation checks, public socket passcode
-  rotation and explicit revalidation UI. Latest-head CI is running. Earlier
+  rotation and explicit revalidation UI. Earlier
   `24d558f40` passed all 14 CI checks; that does not certify later commits.
 - Combined merge `9df242ff5` incorporates both PRs, runtime `f63506c7a`,
   Web/download/access changes, and integration test contract fixes. Both navigation
   and test insertion conflicts preserve the two implementations.
 - Actual Video Download consumer acceptance passed in Node with natural exit 0.
   Fragmented Cloudflare URL and stale-start-result fixes are in `4c6f0d700`.
-  Final combined acceptance and latest-head CI remain in progress.
+  Final combined source acceptance passed: 896 relevant source tests, workspace
+  typecheck, full Desktop build, lint (0 errors / 98 existing warnings), 29 real
+  external-runtime scenarios, reviewed Video Download consumer, and real Electron
+  main/preload/guest plus paired HTTP worktree task execution.
+- PR CI run `40753298454` at `a41c1f2a4` passed the six separately guarded Panel
+  processes on Linux, including the formerly failing project-packages lifecycle.
+  Its Electron job failed while fetching the consumer source pin: GitHub returned
+  `upload-pack: not our ref`. The actual consumer stage was therefore not run in
+  that CI attempt. This is a delivery gate, not a product acceptance success.
+  The corrected pin `84348855be8ae4e5a31936b3c2b0d1d21410bd64` is the published
+  Panel repository HEAD. Its complete Video Download and shared trees are identical
+  to the locally reviewed source (respectively `bf646deffee5cc06f9d0c02a5bb2ccfd293b22e2`
+  and `820b4774ef66f2574c3bf881a95389a3e55f26e1`). Obtain eligible green CI before merge.
 - Neither PR is merged or released. `/Applications/code-shell.app` is still
   version **0.9.47**. The installed client has not been replaced.
 
 ## Acceptance scope
 
-| Flow                                                                  | Current evidence                                                                                                                                                                                                                                                                                                               | Remaining                                                                                           |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| Pairing, access passcode, LAN/tunnel/relay, logout, revoke, reconnect | 112 connection/device tests; 151 access-revalidation/socket/hook/UI tests; 48 public-start tests; real local TLS relay covers rotation and preserved pairing. Counts overlap.                                                                                                                                                  | Combined final source acceptance; Cloudflare runtime issue below                                    |
-| Native sessions and project selection                                 | Real socket + controller/hook regressions cover rapid selection, stale replies, reconnect, catalog gaps and root migration; explicit Link/pending/CLI scopes remain fixed                                                                                                                                                      | Re-run relevant acceptance after combining both PRs                                                 |
-| Claude Code and Codex                                                 | Default isolated Node smoke passes 29 scenarios: original 12, canonical 8 and legacy rooms 9. Real production dispatchers/services and physical synthetic child processes; 103 cold records paginate 100+3; selected models, resume, >1 MiB histories, approval ACK/replay, observing, stop/close and process cleanup verified | Latest-head CI; final combined-code smoke                                                           |
-| Chat and approvals                                                    | Browser mobile/chat-operations/latest-message suites; 138 reconnect/approval boundary tests; actual native output journal and external CLI smoke. Tests include uncertain sends, background/liveness, stale callbacks, scope, free text and pending replay.                                                                    | Final combined-code run; do not substitute legacy room success for canonical runtime success        |
-| Models/permission/goal controls                                       | Production model-actions browser (50 observations), native/CLI handlers, synthetic provider/worker service tests                                                                                                                                                                                                               | Verify combined code and retain explicit unsupported-method behavior                                |
-| Panel open/load/bind/install/update/remove                            | Real opaque iframe+tunnel capability smoke; shared native/primary/secondary/worktree bindings; native disable/uninstall notifications; actual Video Download reviewed install, native task, mobile history capture and exact 151552-byte save passed with natural Node exit 0                                                  | Final combined-code acceptance and CI                                                               |
-| Files and attachments                                                 | Production file browser at 320/390/760/1280px; 28 transfer tests; real paired Desktop HTTP >100 MiB preview/HEAD/range/revoke; 30 final file/auth/native-revocation tests                                                                                                                                                      | Final combined-code checks                                                                          |
-| Panel resources/media                                                 | 390px real MediaRecorder audio/camera/isolated-tab video tests pass, including lost upload acknowledgements, exact output and device cleanup. Inline image canvas/WAV seek/scoped fetch/revocation passes.                                                                                                                     | Final CI includes isolated browser stages                                                           |
-| Settings/MCP/Skills/Links/activity/history/devices                    | 11 production browser suites pass; real Desktop/HTTP/management service 6-file suite passes 70 tests. Additional devices browser has 30 observations.                                                                                                                                                                          | Final combined-code acceptance                                                                      |
-| Automation                                                            | Current phone UI has no standalone automation management route. Panel automation bridge is covered by real Desktop Web/automation fixture and shared task acceptance.                                                                                                                                                          | Do not claim the desktop automation page was tested on mobile                                       |
-| Layout/offline/long output                                            | Mobile 320px light/dark and short viewports; sidebar 14 layouts; service worker 11 cases; latest-message 8 layouts; real output journal and CLI multi-page histories                                                                                                                                                           | Final combined-code acceptance; physical phones have not been tested                                |
-| Integration/delivery                                                  | Workspace typecheck, full Desktop build plus final main build, lint baseline (0 errors/98 existing warnings), architecture/test-shard guards pass. Actual Electron main/preload/guest+paired HTTP executes an owned background task with exact output and primary-project bookmark/worktree execution scope preserved.         | Refresh main, integrate eligible green PRs, run final combined acceptance and record delivery state |
+| Flow                                                                  | Current evidence                                                                                                                                                                                                                                                                                                                | Remaining                                                                                          |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Pairing, access passcode, LAN/tunnel/relay, logout, revoke, reconnect | 112 connection/device tests; 151 access-revalidation/socket/hook/UI tests; 48 public-start tests; real local TLS relay covers rotation and preserved pairing. Counts overlap.                                                                                                                                                   | Actual installed-client recovery and delivery below                                                |
+| Native sessions and project selection                                 | Combined real socket + controller/hook regressions cover rapid selection, stale replies, reconnect, catalog gaps and root migration; explicit Link/pending/CLI scopes remain fixed                                                                                                                                              | Final eligible CI and installed-client delivery                                                    |
+| Claude Code and Codex                                                 | Combined isolated Node smoke passes 29 scenarios: original 12, canonical 8 and legacy rooms 9. Real production dispatchers/services and physical synthetic child processes; 103 cold records paginate 100+3; selected models, resume, >1 MiB histories, approval ACK/replay, observing, stop/close and process cleanup verified | Final eligible CI and installed-client delivery                                                    |
+| Chat and approvals                                                    | Combined browser mobile/chat-operations/latest-message suites; 138 reconnect/approval boundary tests; actual native output journal and external CLI smoke. Tests include uncertain sends, background/liveness, stale callbacks, scope, free text and pending replay.                                                            | Final eligible CI and installed-client delivery                                                    |
+| Models/permission/goal controls                                       | Combined production model-actions browser (50 observations), native/CLI handlers, synthetic provider/worker service tests                                                                                                                                                                                                       | Final eligible CI and installed-client delivery                                                    |
+| Panel open/load/bind/install/update/remove                            | Combined real opaque iframe+tunnel capability smoke; shared native/primary/secondary/worktree bindings; native disable/uninstall notifications; actual Video Download reviewed install, native task, mobile history capture and exact 151552-byte save passed with natural Node exit 0                                          | Correct consumer source reference; final eligible CI and installed-client delivery                 |
+| Files and attachments                                                 | Combined production file browser at 320/390/760/1280px; 28 transfer tests; real paired Desktop HTTP >100 MiB preview/HEAD/range/revoke; 30 final file/auth/native-revocation tests                                                                                                                                              | Final eligible CI and installed-client delivery                                                    |
+| Panel resources/media                                                 | 390px real MediaRecorder audio/camera/isolated-tab video tests pass, including lost upload acknowledgements, exact output and device cleanup. Inline image canvas/WAV seek/scoped fetch/revocation passes.                                                                                                                      | Final CI includes isolated browser stages                                                          |
+| Settings/MCP/Skills/Links/activity/history/devices                    | Combined 11 production browser suites pass; real Desktop/HTTP/management service 6-file suite passes 70 tests. Additional devices browser has 30 observations.                                                                                                                                                                  | Final eligible CI and installed-client delivery                                                    |
+| Automation                                                            | Current phone UI has no standalone automation management route. Panel automation bridge is covered by real Desktop Web/automation fixture and shared task acceptance.                                                                                                                                                           | Do not claim the desktop automation page was tested on mobile                                      |
+| Layout/offline/long output                                            | Combined mobile 320px light/dark and short viewports; sidebar 14 layouts; service worker 11 cases; latest-message 8 layouts; real output journal and CLI multi-page histories                                                                                                                                                   | Physical phones have not been tested                                                               |
+| Integration/delivery                                                  | Combined workspace typecheck, full Desktop build plus final main build, lint baseline (0 errors/98 existing warnings), architecture/test-shard guards pass. Actual Electron main/preload/guest+paired HTTP executes an owned background task with exact output and primary-project bookmark/worktree execution scope preserved. | Refresh main, integrate eligible green PR, build and verify local package, preserve live user work |
 
 ## Real installed tunnel observation
 
@@ -51,7 +63,7 @@ exposes metrics on `127.0.0.1:20741`. At inspection, `/ready` returned **503** a
 also failed DNS lookup (`ENOTFOUND`). No user process was restarted, no passcode
 was read or changed, and no public pairing identity was used.
 
-This is evidence of a current real transport failure, separate from the code bugs.
+This was evidence of a real transport failure, separate from the code bugs.
 Local TLS/browser/synthetic-cloudflared tests must not be reported as actual
 Cloudflare public connectivity or a physical Safari/Android acceptance. Keep
 the existing installed-client recovery pending. A separate private quick tunnel
@@ -59,7 +71,19 @@ subsequently established a real edge connection, passed system DNS and two publi
 DoH lookups, and served the exact owned HTTPS health marker in about seven seconds.
 Its child and temporary HOME were removed; original PID 50991 was not modified.
 This proves current network/public transport can work for a fresh tunnel; it does
-not prove the existing installed-client tunnel has recovered.
+not prove the existing installed-client tunnel had recovered.
+
+The actual installed app was subsequently recovered through its normal Settings
+UI: close the failed remote transport once, then enable the public Cloudflare
+transport once. Original PID 50991 exited; the new child reported `/ready` 200,
+one ready connection and `cloudflared_tunnel_ha_connections` 1. Its public hostname
+resolved and unauthenticated HTTPS `/mobile/` reached the Host passcode challenge.
+The configured passcode and all 11 trusted-device records remained intact; no
+phone was online during the operation. The new address/QR is displayed in the app.
+An existing Claude task was still alive after closing remote, then the app's
+execution observation recorded normal completion after 817.91 seconds. No App
+restart, model request, credential change or CLI stop was performed. An unsent
+Desktop draft remains, so package delivery must preserve live user work.
 
 ## Evidence logs
 
