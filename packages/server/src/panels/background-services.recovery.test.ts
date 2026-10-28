@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import {
   BackgroundServiceStore,
   identityStatus,
+  groupStatus,
   type ServiceIdentityInspector,
 } from "./background-service-store.js";
 import { PanelBackgroundService, type BackgroundServiceOptions } from "./background-services.js";
@@ -21,6 +22,7 @@ const identity = {
   host: hostname(),
   start: "test-os-start",
   boot: "test-os-boot",
+  machine: "test-local-machine",
 };
 const identities: ServiceIdentityInspector = {
   current: () => identity,
@@ -82,6 +84,7 @@ async function fixture(extra: Partial<BackgroundServiceOptions> = {}) {
         pid: 90_000_000 + processes.length,
         host: hostname(),
         boot: "fixture",
+        machine: "test-local-machine",
         start: "fixture",
       },
       onLine: input.onLine,
@@ -112,6 +115,7 @@ async function fixture(extra: Partial<BackgroundServiceOptions> = {}) {
   const options: BackgroundServiceOptions = {
     rootDir: join(root, "store"),
     identities,
+    groupStatus: (identity) => groupStatus(identity.pid),
     gate,
     now: () => now,
     describe,
@@ -500,4 +504,366 @@ test("shutdown preserves paused, revoked and failed phases when no executor rema
   instances.push(restored);
   await restored.initialize();
   expect(await restored.get(f.scope)).toMatchObject({ phase: "paused", desired: "always" });
+});
+
+test("I-1 delayed group death counts one unexpected exit and preserves its backoff", async () => {
+  let groupAlive = true;
+  const f = await fixture({ groupStatus: () => (groupAlive ? "alive" : "dead") });
+  await f.start();
+  await f.service.get(f.scope);
+  f.processes[0].exit();
+  await f.service.tick();
+  expect(await f.service.get(f.scope)).toMatchObject({
+    phase: "stop-unconfirmed",
+    restarts: 1,
+    lastError: "fixture exit",
+    generation: 1,
+  });
+  // A second close notification before group disappearance must not double count.
+  f.processes[0].exit();
+  await f.service.tick();
+  expect((await f.service.get(f.scope)).restarts).toBe(1);
+  groupAlive = false;
+  await f.service.tick();
+  expect(await f.service.get(f.scope)).toMatchObject({
+    phase: "backoff",
+    restarts: 1,
+    generation: 1,
+    lastError: "fixture exit",
+  });
+  f.clock(104_999);
+  await f.service.tick();
+  expect(f.processes).toHaveLength(1);
+  f.clock(105_000);
+  await f.service.tick();
+  expect(f.processes).toHaveLength(2);
+  // A former pause/stop phase must never bleed into a later generation's exit.
+  await f.service.control(f.scope, { action: "pause", requestKey: "pause" });
+  await f.service.control(f.scope, { action: "resume", requestKey: "resume" });
+  f.processes[2].exit();
+  await f.service.tick();
+  expect(await f.service.get(f.scope)).toMatchObject({
+    phase: "backoff",
+    restarts: 1,
+    generation: 3,
+  });
+});
+
+test("I-2 queued ready and publication cannot replace the first failed durable stop", async () => {
+  let armed = false;
+  const publishEntered = barrier(),
+    publishRelease = barrier(),
+    terminateEntered = barrier(),
+    terminateRelease = barrier();
+  const f = await fixture({
+    fault: (point) => {
+      if (armed && point === "directory-fsync") throw new Error("STOP_DIR_FSYNC_FAILED");
+    },
+    beforePublish: async () => {
+      publishEntered.resolve();
+      await publishRelease.promise;
+    },
+  });
+  const spawn = f.options.spawn!;
+  f.options.spawn = async (input) => {
+    const actual: any = await spawn({
+      ...input,
+      onLine: (message) => {
+        if (message.t !== "ready") input.onLine(message);
+      },
+    });
+    actual.onLine = input.onLine;
+    actual.terminate = async () => {
+      terminateEntered.resolve();
+      await terminateRelease.promise;
+      return true;
+    };
+    return actual;
+  };
+  await f.start();
+  f.processes[0].onLine({ t: "publish", channel: "a", value: "late" });
+  await publishEntered.promise;
+  armed = true;
+  await expect(
+    f.service.control(f.scope, { action: "stop", requestKey: "durable-stop" }),
+  ).rejects.toThrow("STOP_DIR_FSYNC_FAILED");
+  await terminateEntered.promise;
+  f.processes[0].onLine({ t: "ready" });
+  publishRelease.resolve();
+  await f.service.get(f.scope); // drains the ready callback while store is poisoned
+  const candidate = [...(f.service as any).failedCommits.values()][0];
+  try {
+    expect(candidate.desired).toBe("off");
+    expect(candidate.controls.some((item: any) => item.requestKey === "durable-stop")).toBe(true);
+  } finally {
+    armed = false;
+    terminateRelease.resolve();
+  }
+  await f.service.tick();
+  expect(await f.service.get(f.scope)).toMatchObject({
+    desired: "off",
+    phase: "stopped",
+    generation: 1,
+  });
+  f.clock(300_000);
+  await f.service.tick();
+  expect(f.processes).toHaveLength(1);
+  expect(await f.service.read(f.scope, "a")).toMatchObject({ seq: 0, value: null });
+});
+
+test("I-3 inactive records never describe on tick and enabling clears previous failure budget", async () => {
+  const f = await fixture();
+  await f.service.configure(f.scope, {
+    config: {},
+    expectedConfigRevision: 0,
+    requestKey: "create-off",
+  });
+  let calls = 0;
+  const describe = f.options.describe;
+  f.options.describe = async (scope) => {
+    calls++;
+    return describe(scope);
+  };
+  f.transient(new Error("offline catalog"));
+  for (let n = 0; n < 6; n++) {
+    f.clock(100_000 + n * 300_000);
+    await f.service.tick();
+  }
+  expect(calls).toBe(0);
+  f.transient();
+  await f.start();
+  await f.service.control(f.scope, { action: "pause", requestKey: "pause" });
+  calls = 0;
+  f.transient(new Error("offline catalog"));
+  await f.service.tick();
+  expect(calls).toBe(0);
+  f.transient();
+  await f.service.control(f.scope, { action: "resume", requestKey: "resume" });
+  for (let n = 0; n < 5; n++) {
+    f.processes.at(-1).exit();
+    await f.service.tick();
+    f.clock(2_000_000 + n * 300_000);
+    await f.service.tick();
+  }
+  expect(await f.service.get(f.scope)).toMatchObject({ phase: "failed", restarts: 5 });
+  calls = 0;
+  f.transient(new Error("offline catalog"));
+  await f.service.tick();
+  expect(calls).toBe(0);
+  f.transient();
+  const current = await f.service.get(f.scope);
+  await f.service.setDesired(f.scope, {
+    desired: "always",
+    expectedRevision: current.desiredRevision,
+    requestKey: "explicit-enable",
+  });
+  expect(await f.service.get(f.scope)).toMatchObject({ phase: "running", restarts: 0 });
+  await f.service.revoke(f.scope.appId);
+  calls = 0;
+  f.transient(new Error("removed catalog"));
+  await f.service.tick();
+  expect(calls).toBe(0);
+});
+
+test("I-5 initialization retries lock availability with bounded backoff and coalesces attempts", async () => {
+  const root = await mkdtemp(join(tmpdir(), "service-init-retry-"));
+  roots.push(root);
+  let clock = 0,
+    calls = 0;
+  const blocker = new BackgroundServiceStore(root, undefined, identities);
+  blocker.acquire();
+  const service = new PanelBackgroundService({
+    rootDir: root,
+    now: () => clock,
+    identities: {
+      ...identities,
+      current: (pid) => {
+        calls++;
+        return identities.current(pid);
+      },
+    },
+    describe: async () => {
+      throw new Error("no records");
+    },
+  });
+  instances.push(service);
+  await expect(service.initialize()).rejects.toThrow("SERVICE_COORDINATOR_BUSY");
+  expect(service.isAvailable()).toBe(false);
+  expect(calls).toBe(1);
+  await expect(service.tick()).rejects.toThrow("SERVICE_COORDINATOR_BUSY");
+  expect(calls).toBe(1);
+  clock = 5000;
+  const attempts = await Promise.allSettled([
+    service.initialize(),
+    service.initialize(),
+    service.tick(),
+  ]);
+  expect(attempts.every((value) => value.status === "rejected")).toBe(true);
+  expect(calls).toBe(2);
+  blocker.release();
+  clock = 14_999;
+  await expect(service.tick()).rejects.toThrow();
+  expect(calls).toBe(2);
+  clock = 15_000;
+  await service.tick();
+  expect(calls).toBe(3);
+  expect(service.isAvailable()).toBe(true);
+  const challenger = new BackgroundServiceStore(root, undefined, identities);
+  expect(() => challenger.acquire()).toThrow("SERVICE_COORDINATOR_BUSY");
+});
+
+for (const phase of ["paused", "failed", "revoked"] as const)
+  test(`storage recovery retains inactive ${phase} phase and counters`, async () => {
+    let armed = false;
+    const f = await fixture({
+      fault: () => {
+        if (armed) throw new Error("TEST_RECOVERY_FAULT");
+      },
+    });
+    await f.start();
+    if (phase === "paused")
+      await f.service.control(f.scope, { action: "pause", requestKey: "pause" });
+    else if (phase === "revoked") await f.service.revoke(f.scope.appId);
+    else
+      for (let n = 0; n < 5; n++) {
+        f.processes.at(-1).exit();
+        await f.service.tick();
+        f.clock(1_000_000 + n * 300_000);
+        await f.service.tick();
+      }
+    const before = await f.service.get(f.scope);
+    expect(before.phase).toBe(phase);
+    armed = true;
+    await expect(
+      f.service.configure(f.scope, {
+        config: { marker: phase },
+        expectedConfigRevision: before.configRevision,
+        requestKey: "failed-config",
+      }),
+    ).rejects.toThrow("TEST_RECOVERY_FAULT");
+    armed = false;
+    await f.service.tick();
+    expect(await f.service.get(f.scope)).toMatchObject({
+      phase,
+      restarts: before.restarts,
+      generation: before.generation,
+    });
+  });
+
+test("initialization racing shutdown never activates native code or releases existing custody early", async () => {
+  const f = await fixture();
+  await f.start();
+  await f.service.shutdown();
+  const entered = barrier(),
+    release = barrier();
+  let activated = 0;
+  const original = f.options.spawn!;
+  f.options.spawn = async (input) => {
+    entered.resolve();
+    await release.promise;
+    const actual = await original(input);
+    const activate = actual.activate;
+    actual.activate = (hello) => {
+      activated++;
+      activate(hello);
+    };
+    return actual;
+  };
+  const restored = new PanelBackgroundService(f.options);
+  instances.push(restored);
+  const initializing = restored.initialize();
+  await entered.promise;
+  const stopping = restored.shutdown();
+  expect(restored.isAvailable()).toBe(false);
+  const challenger = new BackgroundServiceStore(f.options.rootDir, undefined, identities);
+  expect(() => challenger.acquire()).toThrow("SERVICE_COORDINATOR_BUSY");
+  release.resolve();
+  await initializing;
+  await stopping;
+  expect(activated).toBe(0);
+  expect(restored.isAvailable()).toBe(false);
+  challenger.acquire();
+  challenger.release();
+});
+
+test("package drain starts all owned stops together and retains inactive paused state", async () => {
+  const f = await fixture();
+  await f.start();
+  const other = { ...f.scope, projectPath: join(f.root, "other") };
+  await f.start(other);
+  const entered = barrier(),
+    release = barrier();
+  let stopping = 0;
+  for (const actual of f.processes) {
+    const terminate = actual.terminate;
+    actual.terminate = async () => {
+      stopping++;
+      entered.resolve();
+      await release.promise;
+      return terminate(0);
+    };
+  }
+  const draining = f.service.drain(() => true);
+  await entered.promise;
+  try {
+    expect(stopping).toBe(2);
+  } finally {
+    release.resolve();
+    await draining;
+  }
+  await f.service.control(f.scope, { action: "pause", requestKey: "pause-without-worker" });
+  await f.service.drain(() => true);
+  expect(await f.service.get(f.scope)).toMatchObject({ phase: "paused", desired: "always" });
+});
+
+test("fifth internal failure with delayed group exit settles failed while explicit stop still wins", async () => {
+  let live = false;
+  const f = await fixture({ groupStatus: () => (live ? "alive" : "dead") });
+  await f.start();
+  for (let n = 1; n <= 5; n++) {
+    live = true;
+    f.processes.at(-1).terminate = async () => false;
+    f.transient(new Error("temporary describe failure"));
+    await f.service.tick();
+    f.transient();
+    expect(await f.service.get(f.scope)).toMatchObject({ phase: "stop-unconfirmed", restarts: n });
+    live = false;
+    await f.service.tick();
+    expect(await f.service.get(f.scope)).toMatchObject({
+      phase: n === 5 ? "failed" : "backoff",
+      restarts: n,
+    });
+    f.clock(100_000 + n * 300_000);
+    await f.service.tick();
+  }
+  expect(f.processes).toHaveLength(5);
+  expect((await f.service.get(f.scope)).lastError).toContain("temporary describe failure");
+  await f.service.control(f.scope, { action: "stop", requestKey: "explicit-off" });
+  expect(await f.service.get(f.scope)).toMatchObject({
+    phase: "stopped",
+    desired: "off",
+    restarts: 5,
+  });
+});
+
+test("legacy cross-boot custody without machine proof remains explicit and never restarts", async () => {
+  const f = await fixture({ groupStatus: () => "unknown" });
+  await f.start();
+  await f.service.get(f.scope);
+  const [key, record] = [...(f.service as any).records.entries()][0];
+  (f.service as any).commit(key, (next: any) => {
+    delete next.process.machine;
+    delete next.worker.machine;
+  });
+  f.processes[0].exit();
+  await f.service.get(f.scope);
+  await f.service.tick();
+  const stopped = await f.service.get(f.scope);
+  expect(stopped).toMatchObject({ phase: "stop-unconfirmed", generation: record.generation });
+  expect(stopped.lastError).toContain("SERVICE_LEGACY_LOCALITY_UNCONFIRMED");
+  expect(f.gate.blockers(() => true)[0]?.holder?.label).toContain("no machine proof across boots");
+  f.clock(1_000_000);
+  await f.service.tick();
+  expect(f.processes).toHaveLength(1);
+  expect((await f.service.get(f.scope)).phase).toBe("stop-unconfirmed");
 });

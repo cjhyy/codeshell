@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, realpath } from "node
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import {
   BackgroundServiceStore,
   type CommitBoundary,
@@ -31,6 +31,58 @@ function barrier<T = void>() {
   });
   return { resolve, promise };
 }
+// Plain pipe receipts avoid Bun/Node private IPC-channel interoperability. The
+// child writes one bounded JSON line; completion is an explicit IPC barrier.
+function receiveChildReceipt(child: ChildProcess, stderr: () => string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    let bytes = "";
+    const cleanup = () => {
+      child.stdout!.off("data", data);
+      child.off("exit", exited);
+      child.off("error", failed);
+    };
+    const failed = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+    const exited = (code: number | null) => failed(new Error(`host ${code}: ${stderr()}`));
+    const data = (chunk: Buffer) => {
+      bytes += chunk.toString();
+      if (Buffer.byteLength(bytes) > 8192) return failed(new Error("HOST_RECEIPT_LIMIT"));
+      const end = bytes.indexOf("\n");
+      if (end < 0) return;
+      try {
+        const receipt = JSON.parse(bytes.slice(0, end));
+        cleanup();
+        resolve(receipt);
+      } catch (error) {
+        failed(error as Error);
+      }
+    };
+    child.stdout!.on("data", data);
+    child.once("exit", exited);
+    child.once("error", failed);
+  });
+}
+test("native Node Host receipts use bounded pipes independently of Bun private IPC", async () => {
+  const executable = (await resolvePanelExecutable("node"))!;
+  const child = spawn(
+    executable,
+    ["-e", `process.stdout.write(JSON.stringify({ready:true})+'\\n');`],
+    { stdio: ["ignore", "pipe", "pipe"], env: { PATH: process.env.PATH } },
+  );
+  let stderr = "";
+  child.stderr!.on("data", (chunk) => {
+    stderr += chunk;
+  });
+  const exited = new Promise<number | null>((resolve) => child.once("exit", resolve));
+  try {
+    expect(await receiveChildReceipt(child, () => stderr)).toEqual({ ready: true });
+    expect(await exited).toBe(0);
+  } finally {
+    if (child.exitCode === null) child.kill("SIGKILL");
+  }
+});
 const source = `import {createInterface} from 'node:readline';
 let n=0; const send=x=>console.log(JSON.stringify(x));
 createInterface({input:process.stdin}).on('line',line=>{const x=JSON.parse(line);
@@ -309,6 +361,29 @@ test("publication paused before commit is atomically rejected after acknowledged
   expect(f.events.some((event) => event.channel)).toBe(false);
 });
 
+test("I-1 actual coordinator counts guardian loss once and backs off after group exit", async () => {
+  const f = await fixture();
+  const native = `import{createInterface}from'node:readline';setInterval(()=>{},1000);createInterface({input:process.stdin}).on('line',line=>{const x=JSON.parse(line);if(x.t==='hello'){console.log(JSON.stringify({t:'ready'}));console.log(JSON.stringify({t:'publish',channel:'quotes',value:{ready:true}}));}if(x.t==='poke')process.kill(process.ppid,'SIGKILL');if(x.t==='drain')process.exit(0);});`;
+  await writeFile(f.description.entry, native);
+  f.description.sha256 = createHash("sha256").update(native).digest("hex");
+  await f.service.setDesired(f.scope, {
+    desired: "always",
+    expectedRevision: 0,
+    requestKey: "enable",
+  });
+  await f.next((event) => event.seq === 1);
+  await f.service.control(f.scope, { action: "poke", requestKey: "kill-guardian" });
+  await f.next((event) => event.state.phase === "backoff");
+  expect(await f.service.get(f.scope)).toMatchObject({
+    phase: "backoff",
+    restarts: 1,
+    generation: 1,
+    lastError: "SERVICE_CUSTODY_LEADER_EXITED",
+  });
+  await f.service.tick();
+  expect((await f.service.get(f.scope)).generation).toBe(1);
+});
+
 test("Host SIGKILL with a stopped guardian cannot create a second executor; only proven group death permits recovery", async () => {
   const f = await fixture();
   await f.service.shutdown();
@@ -320,25 +395,21 @@ test("Host SIGKILL with a stopped guardian cannot create a second executor; only
     script,
     `import {PanelBackgroundService} from ${JSON.stringify(built)};
 const description=${JSON.stringify(f.description)};const scope=${JSON.stringify(f.scope)};
-const service=new PanelBackgroundService({rootDir:${JSON.stringify(f.options.rootDir)},describe:async()=>description,onEvent:(_scope,event)=>{if(event.seq===1)process.send({ready:true})}});
+const service=new PanelBackgroundService({rootDir:${JSON.stringify(f.options.rootDir)},describe:async()=>description,onEvent:(_scope,event)=>{if(event.seq===1)process.stdout.write(JSON.stringify({ready:true})+'\\n')}});
 await service.initialize();await service.setDesired(scope,{desired:'always',expectedRevision:0,requestKey:'start'});`,
   );
   const child = spawn(f.description.executable, [script], {
-    stdio: ["pipe", "pipe", "pipe", "ipc"],
+    stdio: ["pipe", "pipe", "pipe"],
     env: { PATH: process.env.PATH },
   });
   let stderr = "";
   child.stderr!.on("data", (chunk) => {
     stderr += chunk;
   });
-  const ready = new Promise<void>((resolve, reject) => {
-    child.once("message", () => resolve());
-    child.once("exit", (code) => reject(new Error(`host ${code}: ${stderr}`)));
-    child.once("error", reject);
-  });
+  const ready = receiveChildReceipt(child, () => stderr);
   let guardian = 0;
   try {
-    await ready;
+    expect(await ready).toEqual({ ready: true });
     const path = (await readdir(f.options.rootDir)).find((name) => name.endsWith(".json"))!;
     const record = JSON.parse(await readFile(join(f.options.rootDir, path), "utf8"));
     guardian = record.process.pid;
@@ -389,10 +460,10 @@ test("Host crash after guardian spawn but before PID commit cannot run uncommitt
   const built = new URL("../../dist/panels/background-services.js", import.meta.url).href;
   await writeFile(
     script,
-    `import {PanelBackgroundService} from ${JSON.stringify(built)};const service=new PanelBackgroundService({rootDir:${JSON.stringify(f.options.rootDir)},describe:async()=>(${JSON.stringify(f.description)}),afterSpawnBeforeIdentity:async(identity)=>{process.send(identity);await new Promise(()=>{})}});await service.initialize();await service.setDesired(${JSON.stringify(f.scope)},{desired:'always',expectedRevision:0,requestKey:'start'});`,
+    `import {PanelBackgroundService} from ${JSON.stringify(built)};const service=new PanelBackgroundService({rootDir:${JSON.stringify(f.options.rootDir)},describe:async()=>(${JSON.stringify(f.description)}),afterSpawnBeforeIdentity:async(identity)=>{await new Promise((resolve,reject)=>process.stdout.write(JSON.stringify(identity)+'\\n',error=>error?reject(error):resolve()));await new Promise(()=>{})}});await service.initialize();await service.setDesired(${JSON.stringify(f.scope)},{desired:'always',expectedRevision:0,requestKey:'start'});`,
   );
   const child = spawn(f.description.executable, [script], {
-    stdio: ["pipe", "pipe", "pipe", "ipc"],
+    stdio: ["pipe", "pipe", "pipe"],
     env: { PATH: process.env.PATH },
   });
   let stderr = "";
@@ -401,11 +472,7 @@ test("Host crash after guardian spawn but before PID commit cannot run uncommitt
   });
   let guardian = 0;
   try {
-    const identity: any = await new Promise((resolve, reject) => {
-      child.once("message", resolve);
-      child.once("exit", (code) => reject(new Error(`host ${code}: ${stderr}`)));
-      child.once("error", reject);
-    });
+    const identity = await receiveChildReceipt(child, () => stderr);
     guardian = identity.pid;
     await expect(readFile(join(f.description.cwd, "starts"))).rejects.toThrow();
     const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));

@@ -1,6 +1,7 @@
 import { spawn, execFile, type ChildProcess } from "node:child_process";
 import { promisify } from "node:util";
 import { stat } from "node:fs/promises";
+import type { Readable } from "node:stream";
 import { verifyProcessEntry } from "./process-entry.js";
 import {
   groupStatus,
@@ -14,8 +15,8 @@ import {
 const GUARDIAN = String.raw`
 const { spawn } = require('node:child_process');
 const nonce = require('node:crypto').randomUUID();
-const control = require('node:fs').createWriteStream(null,{fd:3});
-control.write(JSON.stringify({t:'custody',pid:process.pid,nonce})+'\n');
+const control = require('node:fs');
+control.writeSync(3,JSON.stringify({t:'custody',pid:process.pid,nonce})+'\n');
 let child, first = '', started = false, ending = false;
 const stop = () => {
   if (ending) return; ending = true;
@@ -35,8 +36,11 @@ process.stdin.on('data', (chunk) => {
   const command = JSON.parse(first.slice(0, end));
   if (command.t !== 'go') process.exit(2);
   started = true;
-  child = spawn(command.executable, command.args, { cwd: command.cwd, env: command.env, stdio: ['pipe','pipe','pipe'] });
-  control.write(JSON.stringify({t:'member',pid:child.pid})+'\n');
+  // FD 3 is custody-only. Explicit ignore prevents any inherited channel even
+  // on platforms whose spawn implementation keeps extra descriptors open.
+  child = spawn(command.executable, command.args, { cwd: command.cwd, env: command.env, stdio: ['pipe','pipe','pipe','ignore'] });
+  control.writeSync(3,JSON.stringify({t:'member',pid:child.pid})+'\n');
+  control.closeSync(3);
   child.stdout.pipe(process.stdout); child.stderr.pipe(process.stderr);
   child.stdin.on('error', () => {});
   child.on('error', () => process.exit(2));
@@ -118,6 +122,111 @@ export interface ServiceProcess {
   terminate(timeoutMs: number): Promise<boolean>;
   exited: Promise<void>;
 }
+/** This private guardian protocol has exactly two messages and one total byte
+ * budget, not an ever-growing line buffer. Reject before any identity syscall. */
+export function readServiceCustody(
+  stream: Readable,
+  guardianPid: number,
+  identities: ServiceIdentityInspector,
+) {
+  let custodyResolve!: (identity: ServiceProcessIdentity) => void;
+  let custodyReject!: (error: Error) => void;
+  let memberResolve!: (identity: ServiceProcessIdentity) => void;
+  let memberReject!: (error: Error) => void;
+  const custody = new Promise<ServiceProcessIdentity>((resolve, reject) => {
+    custodyResolve = resolve;
+    custodyReject = reject;
+  });
+  const member = new Promise<ServiceProcessIdentity>((resolve, reject) => {
+    memberResolve = resolve;
+    memberReject = reject;
+  });
+  void custody.catch(() => {});
+  void member.catch(() => {});
+  let phase: "custody" | "member" | "closed" = "custody";
+  let pending = Buffer.alloc(0),
+    total = 0;
+  let verifiedMember: ServiceProcessIdentity | undefined;
+  const close = (error?: Error) => {
+    if (phase === "closed") return;
+    phase = "closed";
+    pending = Buffer.alloc(0);
+    stream.off("data", receive);
+    stream.off("end", ended);
+    stream.off("close", ended);
+    // A destroy/error may already be queued by the pipe. Keep its single error
+    // consumer until close so rejecting custody cannot become an unhandled event.
+    stream.once("close", () => stream.off("error", failed));
+    if (error) {
+      custodyReject(error);
+      memberReject(error);
+    }
+    stream.destroy();
+  };
+  const ended = () => close(new Error("SERVICE_CUSTODY_EXITED"));
+  const failed = () => close(new Error("SERVICE_CUSTODY_IO"));
+  const receive = (chunk: Buffer) => {
+    if (phase === "closed") return;
+    const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    if (bytes.length > 8192 - total) {
+      close(new Error("SERVICE_CUSTODY_LIMIT"));
+      return;
+    }
+    total += bytes.length;
+    pending = Buffer.concat([pending, bytes]);
+    while (true) {
+      const end = pending.indexOf(10);
+      if (end < 0) break;
+      const line = pending.subarray(0, end);
+      pending = pending.subarray(end + 1);
+      try {
+        const value = JSON.parse(line.toString("utf8"));
+        if (
+          !value ||
+          !Number.isSafeInteger(value.pid) ||
+          value.pid <= 0 ||
+          (phase === "custody"
+            ? value.t !== "custody" ||
+              value.pid !== guardianPid ||
+              !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value.nonce) ||
+              Object.keys(value).length !== 3
+            : value.t !== "member" || value.pid === guardianPid || Object.keys(value).length !== 2)
+        )
+          throw new Error("SERVICE_CUSTODY_INVALID");
+        const identity = identities.current(value.pid);
+        if (!identity || identity.pid !== value.pid)
+          throw new Error("SERVICE_IDENTITY_UNAVAILABLE");
+        if (phase === "custody") {
+          phase = "member";
+          custodyResolve(identity);
+        } else {
+          verifiedMember = identity;
+          memberResolve(identity);
+          close();
+          return;
+        }
+      } catch (error) {
+        close(error instanceof Error ? error : new Error("SERVICE_CUSTODY_INVALID"));
+        return;
+      }
+    }
+  };
+  stream.on("data", receive);
+  stream.once("end", ended);
+  stream.once("close", ended);
+  stream.once("error", failed);
+  return {
+    custody,
+    member,
+    close,
+    get memberIdentity() {
+      return verifiedMember;
+    },
+    get retainedBytes() {
+      return pending.length;
+    },
+  };
+}
 export async function spawnServiceProcess(
   input: {
     executable: string;
@@ -151,50 +260,8 @@ export async function spawnServiceProcess(
     detached: true,
     stdio: ["pipe", "pipe", "pipe", "pipe"],
   });
-  let custodyResolve!: (identity: ServiceProcessIdentity) => void;
-  let custodyReject!: (error: Error) => void;
-  const custody = new Promise<ServiceProcessIdentity>((resolve, reject) => {
-    custodyResolve = resolve;
-    custodyReject = reject;
-  });
-  // Spawn can reject before the custody await is reached; close still rejects
-  // custody, so install its rejection handler before either event can fire.
-  void custody.catch(() => {});
-  let memberResolve!: (identity: ServiceProcessIdentity) => void;
-  let memberReject!: (error: Error) => void;
-  const member = new Promise<ServiceProcessIdentity>((resolve, reject) => {
-    memberResolve = resolve;
-    memberReject = reject;
-  });
-  void member.catch(() => {});
-  let memberIdentity: ServiceProcessIdentity | undefined;
-  let controlBytes = "";
-  (child.stdio[3] as NodeJS.ReadableStream).on("data", (chunk: Buffer) => {
-    controlBytes += chunk.toString();
-    if (controlBytes.length > 8192) {
-      custodyReject(new Error("SERVICE_CUSTODY_LIMIT"));
-      return;
-    }
-    let end: number;
-    while ((end = controlBytes.indexOf("\n")) >= 0) {
-      const line = controlBytes.slice(0, end);
-      controlBytes = controlBytes.slice(end + 1);
-      try {
-        const value = JSON.parse(line);
-        const identity = identities.current(value.pid);
-        if (!identity) throw new Error("SERVICE_IDENTITY_UNAVAILABLE");
-        if (value.t === "custody" && value.pid === child.pid && /^[a-f0-9-]{36}$/.test(value.nonce))
-          custodyResolve(identity);
-        else if (value.t === "member" && !memberIdentity) {
-          memberIdentity = identity;
-          memberResolve(identity);
-        } else throw new Error("SERVICE_CUSTODY_INVALID");
-      } catch (error) {
-        custodyReject(error as Error);
-        memberReject(error as Error);
-      }
-    }
-  });
+  const custodyChannel = readServiceCustody(child.stdio[3] as Readable, child.pid!, identities);
+  const { custody, member } = custodyChannel;
   let failure: string | undefined;
   let pending = Buffer.alloc(0),
     stderr = Buffer.alloc(0);
@@ -260,7 +327,10 @@ export async function spawnServiceProcess(
       input.onExit("SERVICE_CUSTODY_LEADER_EXITED");
     // A killed guardian does not release custody: the separately authenticated
     // native member proves this process group is still ours, even after leader reap.
-    if (memberIdentity && identities.status(memberIdentity) === "alive") {
+    if (
+      custodyChannel.memberIdentity &&
+      identities.status(custodyChannel.memberIdentity) === "alive"
+    ) {
       try {
         process.kill(-child.pid!, "SIGKILL");
       } catch {
@@ -270,8 +340,7 @@ export async function spawnServiceProcess(
   });
   child.on("close", (code) => {
     ended = true;
-    custodyReject(new Error("SERVICE_CUSTODY_EXITED"));
-    memberReject(new Error("SERVICE_CUSTODY_EXITED"));
+    custodyChannel.close(new Error("SERVICE_CUSTODY_EXITED"));
     exitResolve();
     input.onExit(
       failure ?? (code ? `Service exited ${code}: ${stderr.toString().slice(-2048)}` : undefined),
@@ -350,7 +419,7 @@ export async function spawnServiceProcess(
     },
     activate(hello) {
       if (activated) throw new Error("SERVICE_ALREADY_ACTIVATED");
-      if (!memberIdentity) throw new Error("SERVICE_MEMBER_UNCONFIRMED");
+      if (!custodyChannel.memberIdentity) throw new Error("SERVICE_MEMBER_UNCONFIRMED");
       activated = true;
       send({ t: "start" });
       send(hello);
@@ -376,7 +445,8 @@ export async function spawnServiceProcess(
       // identity cannot be checked, preserve stop-unconfirmed and never guess/kill.
       if (
         (leaderExited || ended || child.pid !== identity.pid) &&
-        (!memberIdentity || identities.status(memberIdentity) !== "alive")
+        (!custodyChannel.memberIdentity ||
+          identities.status(custodyChannel.memberIdentity) !== "alive")
       )
         return false;
       try {

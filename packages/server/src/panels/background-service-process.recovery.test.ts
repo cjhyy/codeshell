@@ -2,11 +2,16 @@ import { expect, test } from "bun:test";
 import { bundleInSubprocess } from "../../../../tests/helpers/bundle-in-subprocess.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtemp, mkdir, writeFile, rm, realpath } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, rm, realpath, stat } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { hostname, tmpdir } from "node:os";
-import { spawnServiceProcess, type ServiceProcess } from "./background-service-process.js";
+import { PassThrough } from "node:stream";
+import {
+  spawnServiceProcess,
+  readServiceCustody,
+  type ServiceProcess,
+} from "./background-service-process.js";
 import {
   darwinProcessStart,
   createBootSessionReader,
@@ -69,13 +74,132 @@ setInterval(()=>{},1000);createInterface({input:process.stdin}).on('line',line=>
     actual.send({ t: "poke" });
     await actual.exited;
     expect(exits).toContain("SERVICE_CUSTODY_LEADER_EXITED");
-    // Pipes closed and the previously observed kernel member identity disappeared.
+    // Pipes closed and the previously observed executable identity is dead.
+    // Linux may retain a zombie /proc entry until PID 1 reaps it; that terminal
+    // state is not a live identity and must not require arbitrary sleeps.
     // Restricted hosts may return EPERM rather than ESRCH for a negative PGID;
     // production must preserve unconfirmed state in that case, never assert death.
     expect(identities.current(member.pid)).toBeNull();
     const status = groupStatus(actual.identity.pid);
     expect(status).not.toBe("alive");
     expect(await actual.terminate(0)).toBe(status === "dead");
+  } finally {
+    await actual?.terminate(0);
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("I8 custody uses a strict total 8192-byte bound and releases listeners/buffer on limit", async () => {
+  const stream = new PassThrough();
+  let inspected = 0;
+  const reader = readServiceCustody(stream, 10, {
+    current: () => {
+      inspected++;
+      return null;
+    },
+    status: () => "unknown",
+  });
+  stream.write(Buffer.alloc(8192, 32));
+  expect(reader.retainedBytes).toBe(8192);
+  stream.write(Buffer.from("x"));
+  await expect(reader.custody).rejects.toThrow("SERVICE_CUSTODY_LIMIT");
+  await expect(reader.member).rejects.toThrow("SERVICE_CUSTODY_LIMIT");
+  expect(stream.destroyed).toBe(true);
+  expect(reader.retainedBytes).toBe(0);
+  expect(stream.listenerCount("data")).toBe(0);
+  stream.emit("data", Buffer.alloc(1024 * 1024));
+  expect(inspected).toBe(0);
+  expect(reader.retainedBytes).toBe(0);
+});
+
+test("I8 accepts only ordered custody/member, probes each identity once and closes after member", async () => {
+  const stream = new PassThrough(),
+    inspected: number[] = [];
+  const reader = readServiceCustody(stream, 10, {
+    current: (pid) => {
+      inspected.push(pid);
+      return { pid, start: "linux-ticks:1", host: "fixture", boot: "fixture" };
+    },
+    status: () => "alive",
+  });
+  const custody =
+    JSON.stringify({ t: "custody", pid: 10, nonce: "00000000-0000-0000-0000-000000000001" }) + "\n";
+  const member = JSON.stringify({ t: "member", pid: 11 }) + "\n";
+  const padding = " ".repeat(8192 - Buffer.byteLength(custody + member));
+  stream.write(Buffer.from(padding + custody + member));
+  expect((await reader.custody).pid).toBe(10);
+  expect((await reader.member).pid).toBe(11);
+  expect(inspected).toEqual([10, 11]);
+  expect(stream.destroyed).toBe(true);
+  expect(reader.retainedBytes).toBe(0);
+  stream.emit("data", Buffer.from(member.repeat(500)));
+  expect(inspected).toEqual([10, 11]);
+
+  const duplicate = new PassThrough(),
+    ids: number[] = [];
+  const rejected = readServiceCustody(duplicate, 10, {
+    current: (pid) => {
+      ids.push(pid);
+      return { pid, start: "linux-ticks:1", host: "fixture", boot: "fixture" };
+    },
+    status: () => "alive",
+  });
+  duplicate.write(custody + custody);
+  await expect(rejected.member).rejects.toThrow("SERVICE_CUSTODY_INVALID");
+  expect(ids).toEqual([10]);
+  expect(duplicate.destroyed).toBe(true);
+  expect(rejected.retainedBytes).toBe(0);
+});
+
+test("I8 actual native member cannot inherit the guardian custody FD", async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "service-custody-fd-")));
+  let actual: ServiceProcess | undefined;
+  try {
+    const entry = join(root, "entry.mjs");
+    const source = `import fs from'node:fs';process.stdin.once('data',()=>{try{fs.writeSync(3,JSON.stringify({t:'member',pid:process.pid})+'\\n');}catch{}console.log(JSON.stringify({t:'ready'}));process.exit(0)});`;
+    await writeFile(entry, source);
+    const messages: unknown[] = [],
+      inspected: number[] = [];
+    actual = await spawnServiceProcess(
+      {
+        executable: (await resolvePanelExecutable("node"))!,
+        entry,
+        packageRoot: root,
+        cwd: root,
+        sha256: createHash("sha256").update(source).digest("hex"),
+        maxLineBytes: 4096,
+        onLine: (message) => messages.push(message),
+        onExit() {},
+      },
+      {
+        identities: {
+          current: (pid) => {
+            inspected.push(pid);
+            return identities.current(pid);
+          },
+          status: identities.status,
+        },
+      },
+    );
+    // Linux can reuse FD number 3 for Node's own epoll/pipe. Compare the actual
+    // kernel object, not fstat's socket type or the mere presence of that number.
+    const custodyFd =
+      process.platform === "linux" ? await stat(`/proc/${actual.identity.pid}/fd/3`) : null;
+    const member = await actual.prepare();
+    if (custodyFd) {
+      const memberFd = await stat(`/proc/${member.pid}/fd/3`).catch((error) => {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+        throw error;
+      });
+      expect(memberFd && `${memberFd.dev}:${memberFd.ino}`).not.toBe(
+        `${custodyFd.dev}:${custodyFd.ino}`,
+      );
+    }
+    expect(inspected).toEqual([actual.identity.pid, member.pid]);
+    actual.activate({ t: "hello" });
+    await actual.exited;
+    expect(messages).toEqual([{ t: "ready" }]);
+    expect(inspected).toHaveLength(2);
   } finally {
     await actual?.terminate(0);
     await rm(root, { recursive: true, force: true });

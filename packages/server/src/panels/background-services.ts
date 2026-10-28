@@ -11,7 +11,9 @@ import {
 } from "./execution-gate.js";
 import {
   BackgroundServiceStore,
-  groupStatus,
+  identityGroupStatus,
+  serviceSystemIdentity,
+  upgradeLocalServiceIdentity,
   type CommitBoundary,
   type ServiceProcessIdentity,
   type ServiceIdentityInspector,
@@ -102,6 +104,8 @@ interface RecordState extends BackgroundServiceState {
   nextStartAt: number;
   paused: boolean;
   stopPhase?: Phase;
+  stopRequestedGeneration?: number;
+  failureGeneration?: number;
   worker?: ServiceProcessIdentity | null;
   compacted?: boolean;
 }
@@ -132,6 +136,7 @@ export interface BackgroundServiceOptions {
   now?: () => number;
   fault?: (boundary: CommitBoundary) => void;
   identities?: ServiceIdentityInspector;
+  groupStatus?: (identity: ServiceProcessIdentity) => "alive" | "dead" | "unknown";
   spawn?: typeof spawnServiceProcess;
   /** Tests can block exactly at the authoritative publication boundary. */
   beforePublish?: () => Promise<void>;
@@ -185,6 +190,9 @@ function validateRecord(record: RecordState): void {
       record.configRevision,
       record.restarts,
     ].every(counter) ||
+    [record.stopRequestedGeneration, record.failureGeneration].some(
+      (value) => value !== undefined && (!counter(value) || value > record.generation),
+    ) ||
     !["off", "on-demand", "always"].includes(record.desired) ||
     ![
       "stopped",
@@ -252,6 +260,10 @@ export class PanelBackgroundService {
   private tail: Promise<unknown> = Promise.resolve();
   private timer?: ReturnType<typeof setInterval>;
   private initialized = false;
+  private initialization?: Promise<void>;
+  private initializationRetryAt = 0;
+  private initializationFailures = 0;
+  private initializationError: unknown;
   private stopping = false;
   private ticking = false;
   private unregister?: () => void;
@@ -267,64 +279,113 @@ export class PanelBackgroundService {
     this.tail = result.catch(() => {});
     return result;
   }
+  isAvailable(): boolean {
+    return this.initialized && !this.stopping && this.store.available();
+  }
+  private groupStatus(identity: ServiceProcessIdentity) {
+    return (this.options.groupStatus ?? identityGroupStatus)(identity);
+  }
+  private legacyLocalityDiagnostic(identity: ServiceProcessIdentity): string | undefined {
+    const system = this.options.identities
+      ? this.options.identities.current(process.pid)
+      : serviceSystemIdentity();
+    if (!identity.machine && identity.boot && system?.boot && identity.boot !== system.boot)
+      return "SERVICE_LEGACY_LOCALITY_UNCONFIRMED; legacy process record has no machine proof across boots; ownership must be verified before retry";
+  }
+  private markStopUnconfirmed(key: string, record: RecordState): void {
+    const diagnostic = record.process && this.legacyLocalityDiagnostic(record.process);
+    if (record.phase !== "stop-unconfirmed" || (diagnostic && record.lastError !== diagnostic))
+      this.emit(
+        this.commit(key, (next) => {
+          next.activeGeneration = null;
+          next.phase = "stop-unconfirmed";
+          if (diagnostic) next.lastError = diagnostic;
+        }),
+      );
+  }
+  private startTimer(): void {
+    if (this.timer || this.stopping) return;
+    this.timer = setInterval(() => {
+      if (this.ticking) return;
+      this.ticking = true;
+      void this.tick()
+        .catch(() => {})
+        .finally(() => {
+          this.ticking = false;
+        });
+    }, 1000);
+    this.timer.unref();
+  }
   async initialize(): Promise<void> {
+    if (this.stopping) throw new Error("SERVICE_UNAVAILABLE");
     if (this.initialized) return;
-    this.store.acquire();
-    try {
-      for (const record of this.store.all()) {
-        validateRecord(record);
-        this.records.set(this.store.key(record.scope), record);
-      }
-      this.initialized = true;
-      this.unregister = (this.options.gate ?? panelExecutionGate).register(() =>
-        [...this.records.values()]
-          .filter((record) => record.process !== null)
-          .map((record) => ({
-            ...record.scope,
-            holder: {
-              kind: "service" as const,
-              label:
-                record.phase === "stop-unconfirmed"
-                  ? `${record.scope.name}: stop-unconfirmed; original process group ${record.process!.pid} must exit before retry`
-                  : record.scope.name,
-            },
-          })),
-      );
-      this.unregisterDrain = (this.options.gate ?? panelExecutionGate).registerServiceDrain(
-        (matches) => this.drain(matches),
-      );
-      this.unregisterMutation = (this.options.gate ?? panelExecutionGate).onMutationSettled(() =>
-        this.resumeAfterUpdate(),
-      );
-      await this.exclusive(async () => {
+    if (this.initialization) return this.initialization;
+    // One supervisor timer also retries transient lock/inspection failures. It
+    // never releases custody belonging to an already initialized coordinator.
+    this.startTimer();
+    if (this.now() < this.initializationRetryAt) throw this.initializationError;
+    const attempt = this.exclusive(async () => {
+      if (this.stopping) throw new Error("SERVICE_UNAVAILABLE");
+      try {
+        this.store.acquire();
+        const records = this.store.all();
+        for (const record of records) validateRecord(record);
+        for (const record of records) this.records.set(this.store.key(record.scope), record);
+        this.unregister = (this.options.gate ?? panelExecutionGate).register(() =>
+          [...this.records.values()]
+            .filter((record) => record.process !== null)
+            .map((record) => ({
+              ...record.scope,
+              holder: {
+                kind: "service" as const,
+                label:
+                  record.phase === "stop-unconfirmed"
+                    ? `${record.scope.name}: stop-unconfirmed; ${this.legacyLocalityDiagnostic(record.process!) ?? `original process group ${record.process!.pid} must exit before retry`}`
+                    : record.scope.name,
+              },
+            })),
+        );
+        this.unregisterDrain = (this.options.gate ?? panelExecutionGate).registerServiceDrain(
+          (matches) => this.drain(matches),
+        );
+        this.unregisterMutation = (this.options.gate ?? panelExecutionGate).onMutationSettled(() =>
+          this.resumeAfterUpdate(),
+        );
+        this.initialized = true;
+        this.initializationFailures = 0;
+        this.initializationRetryAt = 0;
+        this.initializationError = undefined;
         for (const key of this.records.keys()) {
           try {
             await this.reconcile(key);
           } catch {
-            /* failed scope remains supervised; others recover */
+            /* one scope cannot release other scopes' custody */
           }
         }
-      });
-      this.timer = setInterval(() => {
-        if (this.ticking) return;
-        this.ticking = true;
-        void this.tick()
-          .catch(() => {})
-          .finally(() => {
-            this.ticking = false;
-          });
-      }, 1000);
-      this.timer.unref();
-    } catch (error) {
-      this.initialized = false;
-      this.unregister?.();
-      this.unregisterMutation?.();
-      this.unregisterDrain?.();
-      this.store.release();
-      throw error;
+      } catch (error) {
+        if (!this.initialized && !this.processes.size) {
+          this.unregister?.();
+          this.unregisterMutation?.();
+          this.unregisterDrain?.();
+          this.store.release();
+          this.initializationError = error;
+          this.initializationFailures++;
+          this.initializationRetryAt =
+            this.now() +
+            Math.min(60_000, 5000 * 2 ** Math.min(16, this.initializationFailures - 1));
+        }
+        throw error;
+      }
+    });
+    this.initialization = attempt;
+    try {
+      await attempt;
+    } finally {
+      if (this.initialization === attempt) this.initialization = undefined;
     }
   }
   private commit(key: string, mutate: (record: RecordState) => void): RecordState {
+    if (!this.store.available()) throw new Error("SERVICE_STORAGE_UNAVAILABLE");
     const next = clone(this.records.get(key)!);
     mutate(next);
     next.commit++;
@@ -332,7 +393,7 @@ export class PanelBackgroundService {
     try {
       this.store.commit(key, next);
     } catch (error) {
-      this.failedCommits.set(key, next);
+      if (!this.failedCommits.has(key)) this.failedCommits.set(key, next);
       this.beginEmergencyStop();
       throw error;
     }
@@ -369,10 +430,10 @@ export class PanelBackgroundService {
       }
       for (const [key, candidate] of this.failedCommits) {
         const durable = this.records.get(key);
-        if (!durable || candidate.commit >= durable.commit) this.records.set(key, candidate);
+        if (!durable || candidate.commit > durable.commit) this.records.set(key, candidate);
       }
       for (const [key, record] of this.records) {
-        const unconfirmed = record.process && groupStatus(record.process.pid) !== "dead";
+        const unconfirmed = record.process && this.groupStatus(record.process) !== "dead";
         const next = this.commit(key, (value) => {
           value.activeGeneration = null;
           if (unconfirmed) {
@@ -382,9 +443,21 @@ export class PanelBackgroundService {
           }
           value.process = null;
           value.worker = null;
-          value.phase = value.desired === "off" ? (value.stopPhase ?? "stopped") : "backoff";
-          value.nextStartAt = this.now() + 5000;
-          value.lastError = "Recovered after storage failure; previous executors confirmed exited";
+          const settled = this.exitedPhase(value);
+          if (
+            value.paused ||
+            ["paused", "failed", "revoked", "needs-consent"].includes(value.phase) ||
+            ["paused", "failed", "revoked"].includes(settled)
+          ) {
+            if (value.paused) value.phase = "paused";
+            else if (["paused", "failed", "revoked"].includes(settled)) value.phase = settled;
+          } else if (value.desired === "off") value.phase = value.stopPhase ?? "stopped";
+          else {
+            value.phase = "backoff";
+            value.nextStartAt = Math.max(value.nextStartAt, this.now() + 5000);
+            value.lastError =
+              "Recovered after storage failure; previous executors confirmed exited";
+          }
         });
         this.emit(next);
       }
@@ -423,7 +496,7 @@ export class PanelBackgroundService {
       try {
         this.store.commit(key, record);
       } catch (error) {
-        this.failedCommits.set(key, record);
+        if (!this.failedCommits.has(key)) this.failedCommits.set(key, record);
         this.beginEmergencyStop();
         throw error;
       }
@@ -557,7 +630,14 @@ export class PanelBackgroundService {
         record.desired = input.desired;
         record.desiredRevision++;
         record.paused = false;
+        if (input.desired !== "off") {
+          record.restarts = 0;
+          record.nextStartAt = 0;
+          if (!record.process) record.phase = "stopped";
+        }
         if (input.desired === "off") {
+          record.stopRequestedGeneration = record.generation;
+          record.stopPhase = "stopped";
           record.activeGeneration = null;
           record.phase = record.process ? "draining" : "stopped";
         }
@@ -658,8 +738,11 @@ export class PanelBackgroundService {
           record.paused = false;
           record.restarts = 0;
           record.nextStartAt = 0;
+          if (!record.process) record.phase = "stopped";
         }
         if (["stop", "pause", "restart"].includes(input.action)) {
+          record.stopRequestedGeneration = record.generation;
+          record.stopPhase = input.action === "pause" ? "paused" : "stopped";
           record.activeGeneration = null;
           record.phase = record.process ? "draining" : "stopped";
         }
@@ -685,6 +768,7 @@ export class PanelBackgroundService {
       this.emit(
         this.commit(key, (record) => {
           record.activeGeneration = null;
+          record.stopRequestedGeneration = record.generation;
           record.stopPhase = phase;
           record.phase = record.process ? "draining" : phase;
         }),
@@ -695,7 +779,7 @@ export class PanelBackgroundService {
     const running = this.processes.get(key);
     const confirmed = running
       ? await running.process.terminate(failure ? 0 : backgroundServiceLimits.drainTimeoutMs)
-      : !current.process || groupStatus(current.process.pid) === "dead";
+      : !current.process || this.groupStatus(current.process) === "dead";
     if (confirmed) this.processes.delete(key);
     if (failure) throw failure;
     this.emit(
@@ -722,6 +806,26 @@ export class PanelBackgroundService {
     )
       throw new PanelBridgeError("SERVICE_CAPACITY", "SERVICE_CAPACITY");
   }
+  private exitedPhase(record: RecordState): Phase {
+    if (record.stopRequestedGeneration === record.generation) {
+      // Internal failure cleanup requests custody stop too. Its terminal state
+      // still follows the failure budget, unlike explicit stop/pause/revoke.
+      if (record.stopPhase === "backoff")
+        return record.restarts >= backgroundServiceLimits.maxConsecutiveFailures
+          ? "failed"
+          : "backoff";
+      return record.stopPhase ?? (record.paused ? "paused" : "stopped");
+    }
+    if (record.failureGeneration === record.generation)
+      return record.restarts >= backgroundServiceLimits.maxConsecutiveFailures
+        ? "failed"
+        : "backoff";
+    return record.paused
+      ? "paused"
+      : ["failed", "revoked", "needs-consent"].includes(record.phase)
+        ? record.phase
+        : "stopped";
+  }
   private async reconcile(key: string): Promise<void> {
     if (this.stopping || this.heldForUpdate.has(key)) return;
     if (!this.store.available()) {
@@ -729,49 +833,33 @@ export class PanelBackgroundService {
       return;
     }
     let record = this.records.get(key)!;
+    const upgradedProcess = record.process && upgradeLocalServiceIdentity(record.process);
+    const upgradedWorker = record.worker && upgradeLocalServiceIdentity(record.worker);
+    if (upgradedProcess !== record.process || upgradedWorker !== record.worker) {
+      record = this.commit(key, (next) => {
+        next.process = upgradedProcess;
+        next.worker = upgradedWorker;
+      });
+    }
     if (record.process && record.phase === "stop-unconfirmed" && this.processes.has(key)) {
-      if (groupStatus(record.process.pid) === "dead") this.processes.delete(key);
-      else return;
+      if (this.groupStatus(record.process) === "dead") this.processes.delete(key);
+      else {
+        this.markStopUnconfirmed(key, record);
+        return;
+      }
     }
     if (record.process && !this.processes.has(key)) {
-      if (groupStatus(record.process.pid) !== "dead") {
-        if (record.phase !== "stop-unconfirmed")
-          this.emit(
-            this.commit(key, (next) => {
-              next.activeGeneration = null;
-              next.phase = "stop-unconfirmed";
-            }),
-          );
+      if (this.groupStatus(record.process) !== "dead") {
+        this.markStopUnconfirmed(key, record);
         return;
       }
       record = this.commit(key, (next) => {
         next.process = null;
+        next.worker = null;
         next.activeGeneration = null;
-        next.phase = next.stopPhase ?? "stopped";
+        next.phase = this.exitedPhase(next);
       });
       this.emit(record);
-    }
-    if (!record.process && record.nextStartAt > this.now()) return;
-    let description: BackgroundServiceDescription;
-    try {
-      description = await this.options.describe(record.scope);
-    } catch (error) {
-      const revoked =
-        error instanceof PanelBridgeError && ["REVOKED", "PERMISSION_DENIED"].includes(error.code);
-      if (revoked) {
-        if (record.phase !== "revoked") {
-          this.commit(key, (next) => {
-            next.desired = "off";
-            next.desiredRevision++;
-            next.activeGeneration = null;
-          });
-          await this.stop(key, "revoked");
-        }
-      } else {
-        if (record.process) await this.stop(key, "backoff");
-        this.failAttempt(key, error);
-      }
-      return;
     }
     const attached = [...this.attachments.values()].some((value) => value.key === key);
     if (attached) this.idleSince.delete(key);
@@ -785,6 +873,36 @@ export class PanelBackgroundService {
               this.now() - this.idleSince.get(key)! < record.definition.idleGraceMs))));
     if (!shouldRun) {
       if (record.process) await this.stop(key, record.paused ? "paused" : "stopped");
+      return;
+    }
+    if (
+      !record.process &&
+      (record.restarts >= backgroundServiceLimits.maxConsecutiveFailures ||
+        ["failed", "revoked", "needs-consent"].includes(record.phase))
+    )
+      return;
+    if (!record.process && record.nextStartAt > this.now()) return;
+    let description: BackgroundServiceDescription;
+    try {
+      description = await this.options.describe(record.scope);
+    } catch (error) {
+      const revoked =
+        error instanceof PanelBridgeError && ["REVOKED", "PERMISSION_DENIED"].includes(error.code);
+      if (revoked) {
+        if (record.phase !== "revoked") {
+          this.commit(key, (next) => {
+            next.desired = "off";
+            next.desiredRevision++;
+            next.stopRequestedGeneration = next.generation;
+            next.stopPhase = "revoked";
+            next.activeGeneration = null;
+          });
+          await this.stop(key, "revoked");
+        }
+      } else {
+        if (record.process) await this.stop(key, "backoff");
+        this.failAttempt(key, error);
+      }
       return;
     }
     if (this.processes.has(key)) {
@@ -833,10 +951,19 @@ export class PanelBackgroundService {
       holder: { kind: "service", label: record.scope.name },
     });
     try {
+      const executable =
+        typeof description.executable === "function"
+          ? await description.executable()
+          : description.executable;
+      if (this.stopping) return;
       await mkdir(description.cwd, { recursive: true, mode: 0o700 });
+      if (this.stopping) return;
       if (record.compacted) this.compactInactive();
       record = this.commit(key, (next) => {
         next.generation++;
+        delete next.stopRequestedGeneration;
+        delete next.failureGeneration;
+        delete next.stopPhase;
         next.activeGeneration = next.generation;
         next.phase = "starting";
         next.revision = description.revision;
@@ -849,10 +976,7 @@ export class PanelBackgroundService {
       const generation = record.generation;
       const process = await (this.options.spawn ?? spawnServiceProcess)({
         ...description,
-        executable:
-          typeof description.executable === "function"
-            ? await description.executable()
-            : description.executable,
+        executable,
         maxLineBytes:
           Math.max(
             ...Object.values(description.definition.channels).map((channel) => channel.maxBytes),
@@ -873,10 +997,18 @@ export class PanelBackgroundService {
         throw error;
       }
       this.processes.set(key, { process, generation });
+      if (this.stopping) {
+        await this.stop(key, "stopped");
+        return;
+      }
       const member = await process.prepare();
       record = this.commit(key, (next) => {
         next.worker = member;
       });
+      if (this.stopping) {
+        await this.stop(key, "stopped");
+        return;
+      }
       process.activate({
         t: "hello",
         protocol: 1,
@@ -896,11 +1028,13 @@ export class PanelBackgroundService {
       release();
     }
   }
-  private failAttempt(key: string, error: unknown): void {
+  private failAttempt(key: string, error: unknown, generation?: number): void {
+    if (generation !== undefined && this.records.get(key)!.failureGeneration === generation) return;
     this.emit(
       this.commit(key, (next) => {
         next.activeGeneration = null;
         next.restarts++;
+        if (generation !== undefined) next.failureGeneration = generation;
         next.phase = next.process
           ? "stop-unconfirmed"
           : next.restarts >= backgroundServiceLimits.maxConsecutiveFailures
@@ -1017,12 +1151,19 @@ export class PanelBackgroundService {
   private async onExit(key: string, generation: number, error?: string) {
     if (this.processes.get(key)?.generation !== generation) return;
     this.pending.delete(key);
-    const record = this.records.get(key)!;
     if (!this.store.available()) {
       this.beginEmergencyStop();
       return;
     }
-    if (record.process && groupStatus(record.process.pid) !== "dead") {
+    let record = this.records.get(key)!;
+    // Revoking publication is not a stop request. Count a lost guardian once,
+    // even when its group remains alive until a later close event or tick.
+    const expected = record.stopRequestedGeneration === generation || this.stopping;
+    if (!expected) {
+      this.failAttempt(key, error ?? "Service exited unexpectedly", generation);
+      record = this.records.get(key)!;
+    }
+    if (record.process && this.groupStatus(record.process) !== "dead") {
       this.emit(
         this.commit(key, (next) => {
           next.activeGeneration = null;
@@ -1032,21 +1173,17 @@ export class PanelBackgroundService {
       return;
     }
     this.processes.delete(key);
-    const expected = record.activeGeneration === null || this.stopping;
     const next = this.commit(key, (next) => {
       next.process = null;
+      next.worker = null;
       next.activeGeneration = null;
-      if (expected) next.phase = next.stopPhase ?? (next.paused ? "paused" : "stopped");
-      else {
-        next.restarts++;
-        next.phase = next.restarts >= 5 ? "failed" : "backoff";
-        next.nextStartAt = this.now() + Math.min(300_000, 5000 * 2 ** (next.restarts - 1));
-        next.lastError = error ?? "Service exited unexpectedly";
-      }
+      next.phase = this.exitedPhase(next);
     });
     this.emit(next);
   }
-  tick() {
+  tick(): Promise<void> {
+    if (this.stopping) return Promise.resolve();
+    if (!this.initialized) return this.initialize();
     return this.exclusive(async () => {
       if (!this.store.available()) {
         await this.recoverStorage();
@@ -1063,11 +1200,15 @@ export class PanelBackgroundService {
   }
   drain(matches: (scope: PanelExecutionScope) => boolean) {
     return this.exclusive(async () => {
-      for (const [key, record] of this.records)
-        if (matches(record.scope)) {
-          this.heldForUpdate.add(key);
-          await this.stop(key, "stopped");
-        }
+      const selected = [...this.records].filter(([, record]) => matches(record.scope));
+      for (const [key] of selected) this.heldForUpdate.add(key);
+      await Promise.all(
+        selected
+          .filter(([, record]) => record.process)
+          .map(([key, record]) =>
+            this.stop(key, record.paused ? "paused" : (record.stopPhase ?? "stopped")),
+          ),
+      );
     });
   }
   /** Called after the catalog mutation releases its admission barrier, success or rollback. */
@@ -1082,6 +1223,8 @@ export class PanelBackgroundService {
           this.commit(key, (next) => {
             next.desired = "off";
             next.desiredRevision++;
+            next.stopRequestedGeneration = next.generation;
+            next.stopPhase = "revoked";
             next.activeGeneration = null;
             next.config = {};
             next.configRevision++;
