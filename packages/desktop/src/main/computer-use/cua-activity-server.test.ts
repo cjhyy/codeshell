@@ -26,6 +26,68 @@ test("activity payload contains only bounded presentation metadata", () => {
   expect(parseCompanionOperation({ ...value, target: { x: Infinity, y: 0 } })).toBeNull();
   expect(parseCompanionOperation({ ...value, id: "x".repeat(161) })).toBeNull();
   expect(parseCompanionOperation({ ...value, action: "execute" })).toBeNull();
+  expect(parseCompanionOperation({ ...value, phase: "update" })).toBeNull();
+  expect(
+    parseCompanionOperation({ ...value, phase: "update", targetSource: "native-cursor" }),
+  ).toMatchObject({ phase: "update", targetSource: "native-cursor" });
+  expect(
+    parseCompanionOperation({
+      ...value,
+      phase: "update",
+      targetSource: "native-cursor",
+      capture: true,
+    }),
+  ).toBeNull();
+});
+
+test("native target updates stay inside the active operation and disconnect releases its latest target", async () => {
+  const events: CompanionOperation[] = [];
+  const server = await createCuaActivityServer((event) => {
+    events.push(event);
+  });
+  const socket = createConnection(server.socketPath);
+  let replies = 0;
+  let buffer = "";
+  socket.on("data", (chunk) => {
+    buffer += chunk.toString();
+    while (buffer.includes("\n")) {
+      replies += 1;
+      buffer = buffer.slice(buffer.indexOf("\n") + 1);
+    }
+  });
+  socket.on("error", () => {});
+  try {
+    await new Promise<void>((resolve) => socket.once("connect", resolve));
+    const update = {
+      id: "operation",
+      action: "click",
+      phase: "update",
+      capture: false,
+      target: { x: -1900, y: 700 },
+      targetSource: "native-cursor",
+    };
+    const send = (value: unknown) =>
+      socket.write(JSON.stringify({ token: server.token, ...(value as object) }) + "\n");
+    send(update); // An update cannot create an operation.
+    send({ ...update, phase: "start", target: undefined });
+    send({ ...update, action: "type" }); // Nor change its semantic identity.
+    send(update);
+    const deadline = Date.now() + 1_000;
+    while (replies < 4 && Date.now() < deadline) await Bun.sleep(5);
+    expect(replies).toBe(4);
+    expect(events.map((event) => event.phase)).toEqual(["start", "update"]);
+    socket.destroy();
+    await server.close();
+    expect(events.at(-1)).toMatchObject({
+      id: "operation",
+      phase: "end",
+      target: update.target,
+      failed: true,
+    });
+  } finally {
+    socket.destroy();
+    await server.close();
+  }
 });
 
 test("capture acknowledgement waits for hiding, and socket loss releases its operations", async () => {

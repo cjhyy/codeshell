@@ -8,8 +8,9 @@ import type { MimiCompanionAction } from "../../shared/mimi-companion.js";
 export interface CompanionOperation {
   id: string;
   action: MimiCompanionAction;
-  phase: "start" | "end";
+  phase: "start" | "update" | "end";
   target?: { x: number; y: number };
+  targetSource?: "native-cursor";
   capture: boolean;
   failed?: boolean;
 }
@@ -25,7 +26,7 @@ export function parseCompanionOperation(value: unknown): CompanionOperation | nu
     input.id.length > 160 ||
     typeof input.action !== "string" ||
     !ACTIONS.has(input.action) ||
-    (input.phase !== "start" && input.phase !== "end") ||
+    (input.phase !== "start" && input.phase !== "update" && input.phase !== "end") ||
     typeof input.capture !== "boolean"
   )
     return null;
@@ -44,12 +45,18 @@ export function parseCompanionOperation(value: unknown): CompanionOperation | nu
       return null;
     target = { x: point.x, y: point.y };
   }
+  if (
+    input.phase === "update" &&
+    (!target || input.capture || input.targetSource !== "native-cursor")
+  )
+    return null;
   return {
     id: input.id,
     action: input.action as MimiCompanionAction,
     phase: input.phase,
     capture: input.capture,
     ...(target ? { target } : {}),
+    ...(input.targetSource === "native-cursor" ? { targetSource: "native-cursor" as const } : {}),
     ...(input.failed === true ? { failed: true } : {}),
   };
 }
@@ -95,6 +102,22 @@ export async function createCuaActivityServer(
               if (active.has(parsed.id) || active.size >= 64) return;
               active.set(parsed.id, parsed);
               await onOperation(parsed);
+            } else if (parsed.phase === "update") {
+              const started = active.get(parsed.id);
+              if (
+                started &&
+                !started.capture &&
+                parsed.action === started.action &&
+                parsed.capture === started.capture
+              ) {
+                const updated = {
+                  ...started,
+                  target: parsed.target,
+                  targetSource: parsed.targetSource,
+                };
+                active.set(parsed.id, updated);
+                await onOperation({ ...updated, phase: "update" });
+              }
             } else {
               const started = active.get(parsed.id);
               if (started) {

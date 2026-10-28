@@ -1,10 +1,12 @@
-/** MCP stdio observer for the embedded driver. The wire stream is never rewritten.
+/** MCP stdio observer for the embedded driver. Caller bytes pass through unchanged;
+ * one private cursor-state query identifies our own native transport session.
  * Build as a separate Node entry; it owns only the MCP client, never the daemon. */
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createConnection, type Socket } from "node:net";
 import type { Readable, Writable } from "node:stream";
 import { CuaActivityTracker, type CuaActivityEvent } from "./cua-activity.js";
+import { CuaNativeCursorBridge } from "./cua-native-cursor.js";
 
 const ACK_TIMEOUT_MS = 180;
 const MAX_ACTIVITY_BYTES = 2_048;
@@ -121,7 +123,10 @@ export class CuaActivityChannel {
           }
           try {
             const ack = JSON.parse(line);
-            if (typeof ack?.id === "string" && (ack.phase === "start" || ack.phase === "end")) {
+            if (
+              typeof ack?.id === "string" &&
+              (ack.phase === "start" || ack.phase === "update" || ack.phase === "end")
+            ) {
               this.acknowledgements.get(`${ack.id}:${ack.phase}`)?.(ack.ok === true);
             }
           } catch {
@@ -228,12 +233,28 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
     stdio: ["pipe", "pipe", "pipe"],
     windowsHide: true,
   });
+  const cursor = new CuaNativeCursorBridge({
+    socketPath: socket,
+    childPid: child.pid,
+    sendMcp: (bytes) => write(child.stdin, bytes),
+    emit: (event) => channel.send(event),
+  });
   const delivered = new Set<string>();
   let observing = true;
+  let turnId: unknown;
+  let turnDone = Promise.resolve();
+  let completeTurn: (() => void) | undefined;
+  const releaseTurn = (): void => {
+    completeTurn?.();
+    completeTurn = undefined;
+    turnId = undefined;
+  };
   const disableObserver = (): void => {
     observing = false;
     tracker.clear();
     delivered.clear();
+    cursor.close();
+    releaseTurn();
     channel.close();
   };
   const stop = (): void => {
@@ -249,29 +270,71 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
   });
   const incoming = (async () => {
     for await (const part of cuaWireParts(process.stdin)) {
+      // The pinned child dispatches requests serially. Match that boundary so
+      // a pipelined second action cannot sample the first action's position.
+      await turnDone;
       if (part.overflow) disableObserver();
+      let event: CuaActivityEvent | undefined;
+      const message = part.inspect ? parsed(part.bytes) : undefined;
       if (observing && part.inspect) {
-        const event = tracker.begin(parsed(part.bytes));
-        if (event && (await channel.send(event))) delivered.add(event.id);
+        cursor.observeRequest(message);
+        event = tracker.begin(message);
+        if (event && (await channel.send(event))) {
+          delivered.add(event.id);
+          await cursor.prepare(event, message);
+        }
+        const request = message as
+          | { jsonrpc?: unknown; id?: unknown; method?: unknown }
+          | undefined;
+        if (
+          request?.jsonrpc === "2.0" &&
+          typeof request?.method === "string" &&
+          (typeof request.id === "string" ||
+            (typeof request.id === "number" && Number.isSafeInteger(request.id)))
+        ) {
+          turnId = request.id;
+          turnDone = new Promise((resolve) => {
+            completeTurn = resolve;
+          });
+        }
       }
       await write(child.stdin, part.bytes);
+      if (event) cursor.start(event.id);
     }
     child.stdin.end();
   })();
   const outgoing = (async () => {
     for await (const part of cuaWireParts(child.stdout)) {
       if (part.overflow) disableObserver();
+      const message = part.inspect ? parsed(part.bytes) : undefined;
+      // Always consume our late private reply, even after observation is disabled.
+      if (part.inspect && cursor.consumeResponse(message)) continue;
       if (observing && part.inspect) {
-        const event = tracker.finish(parsed(part.bytes));
-        if (event && delivered.delete(event.id)) await channel.send(event);
+        const event = tracker.finish(message);
+        if (event && delivered.delete(event.id)) {
+          await cursor.finish(event.id, event.failed === true);
+          await channel.send(event);
+        }
       }
       await write(process.stdout, part.bytes);
+      const response =
+        message !== null && typeof message === "object"
+          ? (message as { id?: unknown; result?: unknown; error?: unknown })
+          : undefined;
+      if (response && ("result" in response || "error" in response) && response.id === turnId)
+        releaseTurn();
+      else if (completeTurn && response && ("result" in response || "error" in response))
+        // A malformed request may receive a null-ID protocol error. Do not hold
+        // later original bytes indefinitely for the advisory observer.
+        disableObserver();
     }
   })();
   // A broken pipe must not leave a proxy client and capture activity alive.
   void incoming.catch(stop);
   void outgoing.catch(stop);
   const exitCode = await exited;
+  cursor.close();
+  releaseTurn();
   process.stdin.destroy();
   await Promise.allSettled([incoming, outgoing]);
   disableObserver();

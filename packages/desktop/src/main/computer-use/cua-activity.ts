@@ -13,8 +13,9 @@ export type CuaActivityAction =
 export interface CuaActivityEvent {
   id: string;
   action: CuaActivityAction;
-  phase: "start" | "end";
+  phase: "start" | "update" | "end";
   target?: { x: number; y: number };
+  targetSource?: "native-cursor";
   capture: boolean;
   failed?: boolean;
 }
@@ -93,6 +94,8 @@ function classify(name: string, args: RecordValue): Pick<CuaActivityEvent, "acti
     case "press_key":
     case "hotkey":
       return { action: "key", capture: false };
+    case "move_cursor":
+      return { action: "working", capture: false };
     case "get_window_state":
       return {
         action: "observe",
