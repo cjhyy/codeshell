@@ -202,6 +202,36 @@ if (!process.argv.includes("--serve")) {
       "keyboard activation opens chat once per key",
     );
     await body.click({ button: "right" });
+    await page.getByRole("menu").waitFor({ state: "visible" });
+    await page.mouse.click(20, 80);
+    await page.getByRole("menu").waitFor({ state: "hidden" });
+    assert.equal(
+      await page.evaluate(() => window.previewInteractions.at(-1)),
+      "leave",
+      "outside dismissal relinquishes native mouse ownership instead of only ending a drag",
+    );
+    await body.click({ button: "right" });
+    await page.mouse.move(20, 80);
+    await page.keyboard.press("Escape");
+    await page.getByRole("menu").waitFor({ state: "hidden" });
+    assert.equal(
+      await page.evaluate(() => window.previewInteractions.at(-1)),
+      "leave",
+      "Escape outside the body releases native mouse ownership",
+    );
+    const menuDragStart = await body.boundingBox();
+    const movesBeforeMenuDrag = await page.evaluate(() => window.previewMoves.length);
+    await body.click({ button: "right" });
+    await page.mouse.move(menuDragStart.x + 50, menuDragStart.y + 50);
+    await page.mouse.down();
+    await page.mouse.move(menuDragStart.x + 80, menuDragStart.y + 70, { steps: 3 });
+    await page.mouse.up();
+    await page.getByRole("menu").waitFor({ state: "hidden" });
+    assert.ok(
+      (await page.evaluate(() => window.previewMoves.length)) > movesBeforeMenuDrag,
+      "dismissing the menu by dragging the body does not cancel the new gesture",
+    );
+    await body.click({ button: "right" });
     await page.getByRole("menuitem", { name: "恢复跟随工作" }).click();
     assert.equal(await page.evaluate(() => window.previewResumes), 1);
     assert.equal(

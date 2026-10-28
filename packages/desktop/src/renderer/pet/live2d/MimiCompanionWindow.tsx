@@ -40,6 +40,7 @@ export function MimiCompanionWindow() {
   const lastHoverAt = useRef(0);
   const hoverNeedsRefresh = useRef(false);
   const menu = useRef<HTMLDivElement>(null);
+  const body = useRef<HTMLButtonElement>(null);
   const [reducedMotion, setReducedMotion] = useState(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
@@ -98,11 +99,21 @@ export function MimiCompanionWindow() {
   const closeMenu = useCallback(() => {
     setMenuOpen(false);
     window.mimiCompanion.interaction("end");
+    // Closing a menu outside the body must release the native mouse capture.
+    // `end` alone deliberately keeps an ordinary body click interactive.
+    if (!body.current?.matches(":hover")) {
+      setHovered(false);
+      window.mimiCompanion.interaction("leave");
+    }
   }, []);
   useEffect(() => {
     if (!menuOpen) return;
     const closeOutside = (event: PointerEvent) => {
-      if (!menu.current?.contains(event.target as Node)) closeMenu();
+      if (menu.current?.contains(event.target as Node)) return;
+      // The body's pointer handler has already begun a new drag/click. Do not
+      // terminate that gesture while dismissing the old menu in bubbling.
+      if (body.current?.contains(event.target as Node)) setMenuOpen(false);
+      else closeMenu();
     };
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape") closeMenu();
@@ -182,6 +193,7 @@ export function MimiCompanionWindow() {
         }}
       >
         <button
+          ref={body}
           type="button"
           className="mimi-companion__body"
           aria-label="打开 Mimi 聊天，拖动可移动"
