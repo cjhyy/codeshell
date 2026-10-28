@@ -210,10 +210,12 @@ export function createHubFiles(options: {
         );
         if (!(await options.isAuthorized(req))) throw new FileRequestError(401, "请重新登录。");
         await opened.verify();
+        if (!(await options.isAuthorized(req))) throw new FileRequestError(401, "请重新登录。");
         hubJson(res, 200, { path: location.relativePath, files, truncated });
       } else {
         if (!(await options.isAuthorized(req))) throw new FileRequestError(401, "请重新登录。");
         await opened.verify();
+        if (!(await options.isAuthorized(req))) throw new FileRequestError(401, "请重新登录。");
         const imageType = IMAGE_TYPES[extname(location.path).toLowerCase()];
         const preview = url.searchParams.get("preview") === "true";
         if (preview) {
@@ -221,6 +223,8 @@ export function createHubFiles(options: {
           const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
           const bytes = buffer.subarray(0, bytesRead);
           const binary = bytes.includes(0) || !!imageType;
+          await opened.verify();
+          if (!(await options.isAuthorized(req))) throw new FileRequestError(401, "请重新登录。");
           hubJson(res, 200, {
             path: location.relativePath,
             name: basename(location.path),

@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, spyOn, test } from "bun:test";
 import { createServer, type Server } from "node:http";
 import {
   mkdtempSync,
@@ -14,6 +14,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { open } from "node:fs/promises";
 import { createHubFiles } from "./files.js";
 
 const fixtures: Array<{ root: string; server: Server; close: () => void }> = [];
@@ -278,4 +279,58 @@ test("revocation before bytes are returned rejects the download", async () => {
   const response = await f.request("file.txt", "content");
   expect(response.status).toBe(401);
   expect(await response.text()).not.toContain("private bytes");
+});
+
+test("workspace revocation while a preview read is pending cannot return its buffered contents", async () => {
+  let allowed = true;
+  const f = await fixture(() => allowed);
+  const path = join(f.cwd, "private.txt");
+  writeFileSync(path, "private-preview-marker");
+  const temporary = await open(path, "r");
+  const prototype = Object.getPrototypeOf(temporary);
+  await temporary.close();
+  let started!: () => void;
+  const reading = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  let release!: () => void;
+  const paused = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const read = prototype.read;
+  const mock = spyOn(prototype, "read").mockImplementation(async function (
+    this: unknown,
+    ...args: unknown[]
+  ) {
+    const result = await read.apply(this, args);
+    started();
+    await paused;
+    return result;
+  });
+  try {
+    const pending = f.request("private.txt", "content&preview=true");
+    await reading;
+    allowed = false;
+    release();
+    const response = await pending;
+    expect(response.status).toBe(401);
+    expect(await response.text()).not.toContain("private-preview-marker");
+  } finally {
+    release();
+    mock.mockRestore();
+  }
+});
+
+test("directory and HEAD metadata recheck workspace authorization after final path verification", async () => {
+  for (const kind of ["directory", "head"]) {
+    const f = await fixture((_cwd, call) => call < 3);
+    writeFileSync(join(f.cwd, "private-name.txt"), "private-marker");
+    const response =
+      kind === "directory"
+        ? await f.request("")
+        : await f.request("private-name.txt", "content", true, { method: "HEAD" });
+    expect(response.status).toBe(401);
+    expect(await response.text()).not.toContain("private-name");
+    expect(response.headers.get("content-disposition")).toBeNull();
+  }
 });
