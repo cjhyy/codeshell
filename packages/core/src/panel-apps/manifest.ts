@@ -252,7 +252,7 @@ export const PanelAppManifest = z
           });
       }
       for (const [name, service] of Object.entries(value.backgroundServices)) {
-        if (!value.nativeEntries?.[service.entry])
+        if (!value.nativeEntries || !Object.hasOwn(value.nativeEntries, service.entry))
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ["backgroundServices", name, "entry"],

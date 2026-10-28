@@ -53,6 +53,21 @@ export class PanelExecutionGate {
   private readonly executions = new Set<PanelExecutionScope>();
   private readonly sources = new Set<() => Iterable<PanelExecutionScope>>();
   private readonly settled = new Set<() => void>();
+  private readonly serviceDrains = new Set<
+    (matches: (scope: PanelExecutionScope) => boolean) => Promise<void>
+  >();
+  registerServiceDrain(
+    drain: (matches: (scope: PanelExecutionScope) => boolean) => Promise<void>,
+  ): () => void {
+    this.serviceDrains.add(drain);
+    return () => {
+      this.serviceDrains.delete(drain);
+    };
+  }
+  /** Call only after validating the concrete authorized catalog mutation. */
+  async drainServices(matches: (scope: PanelExecutionScope) => boolean): Promise<void> {
+    await Promise.all([...this.serviceDrains].map((drain) => drain(matches)));
+  }
   onMutationSettled(listener: () => void): () => void {
     this.settled.add(listener);
     return () => {
@@ -136,7 +151,13 @@ export class PanelExecutionGate {
       return await work();
     } finally {
       this.mutations.delete(matches);
-      for (const listener of this.settled) listener();
+      for (const listener of this.settled) {
+        try {
+          listener();
+        } catch {
+          /* observer */
+        }
+      }
     }
   }
 }

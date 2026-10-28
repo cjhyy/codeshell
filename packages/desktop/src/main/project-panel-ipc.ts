@@ -310,6 +310,7 @@ export function registerProjectPanelIpc(deps: {
         }
         deps.onChanged();
       },
+      () => deps.closeForPackageChange(id, (scope) => scope.appId === id),
     );
   });
 }

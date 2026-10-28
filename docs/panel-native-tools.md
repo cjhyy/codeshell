@@ -647,38 +647,61 @@ app, project and service name. No global HOME package search is performed.
 `on-demand` follows attached guests and the declared idle grace; `off` commits a
 stop tombstone. Guest close only detaches, and service custody never consumes a
 webview process quota or the two durable tool-job slots. Background services have
-a separate four-process/two-per-app budget. Package mutation drains service gate
-holders before replacement; after the gate settles the selected revision is
-re-authorized, including rollback to the old package on a failed mutation.
-Shutdown retains desired state, but publication is revoked before termination.
+a separate four-process/two-per-app/one-per-project-and-app budget. Package
+mutation validates the selected revision, then drains service gate holders before
+replacement, unbinding or removal. After the gate settles the selected revision
+is re-authorized, including rollback after a failed mutation. Shutdown retains
+desired state, revokes publication before termination, drains services in parallel,
+and preserves paused/revoked/failed states without executors.
 
 Each service has one bounded authoritative `panel.background-service/1` record
-containing controls, generations, configuration and all channel snapshots. Commit
+containing controls, generations, configuration and channel snapshots. Commit
 order is temporary-file write, file fsync, rename, directory fsync, then receipt
-and event. Generation is committed before spawning; stop and channel updates use
-the same record. The read/write format sets are explicit. An uncertain write
-poisons the coordinator until restart; recovery reads only the authoritative
-record. Temporary payload files can be cleaned, but installation incarnations,
-stop tombstones and sequence counters are never deleted. Uninstall clears
-sensitive payloads/configuration while advancing counters.
+and event. This promises Host-process crash consistency, not sudden power-loss
+persistence: Darwin `fsync` is not `F_FULLFSYNC`. Generation is committed before
+spawning; stop and channel updates use the same record. Read/write format sets
+are explicit. An uncertain write immediately stops owned executors without waiting
+for another commit and quarantines further writes. The retained exclusive owner
+validates every durable record before recovery; attempted control intent is
+recommitted before resuming. No replacement runs while previous exit is unknown.
+`get` and `read` never create records. Up to 128 full records and 4096 retained scope
+records are allowed: cold, off scopes compact obsolete snapshots to a new null
+sequence while retaining incarnation, generations, configuration and receipts.
+An explicit capacity error at the retained bound never deletes tombstones or
+reuses counters. Uninstall clears sensitive payloads while advancing counters.
 
 A process-lifetime directory lock elects one coordinator across Hosts. Its sole
-immutable owner token is reclaimed only after ESRCH, never by age or heartbeat.
-A reused live PID is retained conservatively. Each launch uses a Host-owned
-supervisor group and a startup nonce handshake. The supervisor cannot execute
-package code before its identity is committed and Host sends `go`; an orphaned
-supervisor that never received `go` cannot collect data. Package code runs in a
-Node permission sandbox permitting its package, private work directory and
-network, while denying child processes, worker threads, native addons and WASI.
-This prevents descendants escaping custody. The supervisor remains attached to
-Host stdin and is never unref'd. EOF requests exit and then kills its owned group.
+immutable owner token is reclaimed only after ESRCH or a different verified OS
+boot/process identity, never by age or heartbeat. Linux uses boot ID and start
+ticks; Darwin uses boot-session UUID plus libproc unique process ID/exec version,
+read with the system JXA C-function bridge. Unlike `ps lstart`, the kernel ID
+distinguishes PID reuse in the same second. Missing OS inspection, remote-host
+owners and legacy nonce-only identity records remain unknown and are never killed.
 
-Restart does not assume EOF succeeded: any persisted group that is still live or
-cannot be inspected remains `stop-unconfirmed`; no replacement is started and
-no unknown group is killed. Only confirmed group disappearance permits a new
-generation. During the same Host lifetime the original, unreaped ChildProcess
-object authorizes termination of its exact group. Publication uses that Host
-process reference and generation, never a worker-supplied identity.
+Each launch uses a Host-owned supervisor group. FD 3 carries a Host-only custody
+handshake; normal package stdout cannot forge it. The supervisor cannot spawn a
+native member before its identity is durable. A held bootstrap then waits until
+Host has also recorded the native member's OS identity before loading reviewed
+package code. Losing the supervisor triggers termination only when the retained
+native identity proves group ownership; unknown membership stays stop-unconfirmed.
+
+The runtime requires a supported security-patched Node (22.23.4+, 24.22.1+, or
+26.12.1+ within those major lines; [October 2026 security release](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases)).
+Version/permission probes are asynchronous, bounded and cache failures. Consecutive
+startup/exit failures back off and stop after five attempts; a healthy interval
+resets the counter. A temporary package lookup failure retains desired state;
+only explicit authorization revocation changes it to off. Desktop restores tasks,
+media and Cookie custody independently of background-service initialization.
+
+Node permissions allow the package/work directory and network while restricting
+child processes, worker threads, native addons and WASI. The [Node security policy](https://github.com/nodejs/node/blob/main/SECURITY.md)
+does not define this as a malicious-code sandbox. Reviewed package trust is still
+required; signals such as `process.kill` are not blocked by permission flags.
+The supervisor remains attached to Host stdin and is never unref'd. Restart never
+assumes EOF succeeded: any persisted live or uninspectable group stays
+`stop-unconfirmed`, with its original PID in diagnostics and no replacement.
+Only confirmed group disappearance permits a new generation. Publication uses the
+actual Host process reference and generation, never worker-supplied identity.
 
 The worker protocol is bounded NDJSON (`hello`, `config`, `poke`, `drain` to the
 worker; `ready`, `publish`, `progress`, `drained` from it). Output has a declared

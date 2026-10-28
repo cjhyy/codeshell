@@ -702,6 +702,19 @@ export function createPanelManagement(options: PanelManagementOptions) {
     return next;
   }
 
+  async function drainSelectedServices(
+    id: string,
+    expected: string,
+    guard: () => Promise<void>,
+    matches: (scope: PanelExecutionScope) => boolean,
+  ) {
+    const current = await selectedApp(id);
+    if (revision(current.app, current.digest) !== expected)
+      throw new PanelManagementError(409, "conflict", "面板已改变，请刷新后重试。");
+    await guard();
+    await panelExecutionGate.drainServices(matches);
+  }
+
   function setBinding(
     app: InstalledPanelApp,
     bound: boolean,
@@ -1090,52 +1103,62 @@ export function createPanelManagement(options: PanelManagementOptions) {
       assertId(id);
       assertRevision(expected);
       if (typeof bound !== "boolean") invalid();
-      return mutate(context, { appId: id, kind: "binding" }, async (guard) => {
-        const current = await selectedApp(id);
-        if (bound && !compatibility(current.app).supported)
-          throw new PanelManagementError(
-            400,
-            "unsupported",
-            "这个面板需要当前 Web 环境未提供的能力。",
-          );
-        // An unpinned (or superseded) selection needs a retained copy before the
-        // project can pin it. A current pin must keep its selected version.
-        const app =
-          bound &&
-          options.projectPackages &&
-          !currentPanelAppPackagePins(projectSettings())[current.app.id]
-            ? await retainInstalledPanelApp(current.app.id, current.app.packageDigest!)
-            : current.app;
-        await guard();
-        setBinding(app, bound, { ...current, revision: expected });
-        await options.onChanged?.(id, "binding");
-        return snapshot();
-      });
+      return mutate(
+        context,
+        { appId: id, kind: "binding" },
+        async (guard) => {
+          const current = await selectedApp(id);
+          if (bound && !compatibility(current.app).supported)
+            throw new PanelManagementError(
+              400,
+              "unsupported",
+              "这个面板需要当前 Web 环境未提供的能力。",
+            );
+          // An unpinned (or superseded) selection needs a retained copy before the
+          // project can pin it. A current pin must keep its selected version.
+          const app =
+            bound &&
+            options.projectPackages &&
+            !currentPanelAppPackagePins(projectSettings())[current.app.id]
+              ? await retainInstalledPanelApp(current.app.id, current.app.packageDigest!)
+              : current.app;
+          await guard();
+          setBinding(app, bound, { ...current, revision: expected });
+          await options.onChanged?.(id, "binding");
+          return snapshot();
+        },
+        (guard, matches) => drainSelectedServices(id, expected, guard, matches),
+      );
     },
     async remove(context: PanelOperationContext, id: unknown, expected: unknown) {
       assertId(id);
       assertRevision(expected);
-      return mutate(context, { appId: id, kind: "remove" }, async (guard) => {
-        const current = await selectedApp(id);
-        if (revision(current.app, current.digest) !== expected)
-          throw new PanelManagementError(409, "conflict", "面板已改变，请刷新后重试。");
-        await guard();
-        await uninstallPanelApp(id, {
-          beforeCommit: async () => {
-            const latest = await selectedApp(id);
-            if (revision(latest.app, latest.digest) !== expected)
-              throw new PanelManagementError(409, "conflict", "面板已改变，请刷新后重试。");
-            await guard();
-          },
-        });
-        origins((value) => {
-          delete value[id];
-        });
-        if (hasProject) setBinding(current.app, false);
-        invalidateSkillCache();
-        await options.onChanged?.(id, "remove");
-        return { removed: true as const };
-      });
+      return mutate(
+        context,
+        { appId: id, kind: "remove" },
+        async (guard) => {
+          const current = await selectedApp(id);
+          if (revision(current.app, current.digest) !== expected)
+            throw new PanelManagementError(409, "conflict", "面板已改变，请刷新后重试。");
+          await guard();
+          await uninstallPanelApp(id, {
+            beforeCommit: async () => {
+              const latest = await selectedApp(id);
+              if (revision(latest.app, latest.digest) !== expected)
+                throw new PanelManagementError(409, "conflict", "面板已改变，请刷新后重试。");
+              await guard();
+            },
+          });
+          origins((value) => {
+            delete value[id];
+          });
+          if (hasProject) setBinding(current.app, false);
+          invalidateSkillCache();
+          await options.onChanged?.(id, "remove");
+          return { removed: true as const };
+        },
+        (guard, matches) => drainSelectedServices(id, expected, guard, matches),
+      );
     },
     cancelOwner(owner: string) {
       generations.set(owner, generation(owner) + 1);

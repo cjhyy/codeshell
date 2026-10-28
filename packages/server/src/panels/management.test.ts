@@ -738,6 +738,43 @@ describe("shared Web panel management with the real Core installer", () => {
     expect(readFileSync(join(outside, "settings.json"), "utf8")).toBe('{"custom":"preserve"}');
   });
 
+  test("unbind and remove validate stale revisions before draining background service holders", async () => {
+    const api = service();
+    await api.install(owner, (await api.preview(owner, input)).reviewToken);
+    let app = (await api.snapshot()).panels[0]!;
+    let release = panelExecutionGate.enter({
+      appId: app.id,
+      projectPath: cwd,
+      holder: { kind: "service" },
+    });
+    let drains = 0;
+    const unregister = panelExecutionGate.registerServiceDrain(async () => {
+      drains++;
+      release();
+    });
+    try {
+      await expect(api.binding(owner, app.id, false, "stale")).rejects.toThrow();
+      expect(drains).toBe(0);
+      await api.binding(owner, app.id, false, app.revision);
+      expect(drains).toBe(1);
+      app = (await api.snapshot()).panels[0]!;
+      expect(app.bound).toBe(false);
+      release = panelExecutionGate.enter({
+        appId: app.id,
+        projectPath: cwd,
+        holder: { kind: "service" },
+      });
+      await expect(api.remove(owner, app.id, "stale")).rejects.toThrow();
+      expect(drains).toBe(1);
+      await api.remove(owner, app.id, app.revision);
+      expect(drains).toBe(2);
+      expect((await api.snapshot()).panels).toEqual([]);
+    } finally {
+      release();
+      unregister();
+    }
+  });
+
   test("unsupported panels remain installed without exposing them to the workspace", async () => {
     const api = service({ compatibility: () => ({ supported: false, reasons: ["需要桌面进程"] }) });
     await api.install(owner, (await api.preview(owner, input)).reviewToken);

@@ -7,6 +7,7 @@ import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { resolvePanelAppBindingProjectPath } from "@cjhyy/code-shell-core";
 import { createDesktopPanelManagement } from "./panel-app-management.js";
+import { PanelExecutionGate } from "../../../server/src/panels/execution-gate.js";
 import { panelChangeFailure, panelUpdateApproval } from "./panel-update-blockers.js";
 
 // Exercise the actual registrar without loading Electron's composition root.
@@ -22,6 +23,8 @@ const compiled = ts.transpileModule(
   declaration.getText(parsed).replace("export function", "function"),
   { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } },
 ).outputText;
+const uninstallGate = new PanelExecutionGate();
+const uninstallEffects: string[] = [];
 const register = runInNewContext(`${compiled}\nregisterProjectPanelIpc`, {
   createDesktopPanelManagement,
   panelUpdateApproval,
@@ -31,6 +34,12 @@ const register = runInNewContext(`${compiled}\nregisterProjectPanelIpc`, {
   panelAppUpdateService: { invalidate() {} },
   registerProjectPanelVersionIpc() {},
   Error,
+  panelExecutionGate: uninstallGate,
+  uninstallPanelAppForUi: async () => {
+    uninstallEffects.push("uninstall");
+  },
+  readSettings: async () => ({}),
+  writeSettings: async () => {},
 });
 
 test("the force-update IPC never closes Panel work for an invalid review", async () => {
@@ -68,5 +77,38 @@ test("the force-update IPC never closes Panel work for an invalid review", async
   } finally {
     sender.emit("destroyed");
     rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test("uninstall IPC drains package custody before removing bytes", async () => {
+  const handlers = new Map<string, (...args: any[]) => any>();
+  uninstallEffects.length = 0;
+  const release = uninstallGate.enter({
+    appId: "fixture",
+    projectPath: tmpdir(),
+    holder: { kind: "service" },
+  });
+  register({
+    ipcMain: {
+      handle: (name: string, handler: (...args: any[]) => any) => handlers.set(name, handler),
+    },
+    requireRendererProjectPath: async (path: string) => path,
+    withMutation: async (_cwd: string, write: () => Promise<unknown>) => write(),
+    onChanged() {},
+    revokeAppId() {},
+    onCleanupError(error: unknown) {
+      throw error;
+    },
+    describeGuest() {},
+    closeForPackageChange: async () => {
+      uninstallEffects.push("drain");
+      release();
+    },
+  });
+  try {
+    await handlers.get("panel-apps:uninstall")!({}, "fixture");
+    expect(uninstallEffects).toEqual(["drain", "uninstall"]);
+  } finally {
+    release();
   }
 });

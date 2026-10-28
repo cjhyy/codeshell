@@ -499,6 +499,7 @@ export class PanelAppBridge {
   >();
   private toolJobService?: PanelToolJobService;
   private backgroundService?: PanelBackgroundService;
+  private backgroundInitializationError?: string;
   private taskCookieHost?: PanelTaskCookieHost;
   private nextToolOwner = -1;
   private readonly toolOwners = new Map<
@@ -756,11 +757,19 @@ export class PanelAppBridge {
   async initializeMedia(): Promise<void> {
     await this.getResourceService().initialize();
     await this.getToolJobService().initialize();
-    if (process.platform !== "win32") await this.getBackgroundService().initialize();
     await this.getMediaService().initialize();
     // A damaged optional credential key must not prevent unrelated media recovery.
     if (this.options.cookieCredentials?.taskCredentials)
       await this.getTaskCookieHost().initialize();
+    if (process.platform !== "win32") {
+      try {
+        await this.getBackgroundService().initialize();
+        this.backgroundInitializationError = undefined;
+      } catch (error) {
+        this.backgroundInitializationError = String(error);
+        console.warn("Panel background services unavailable:", error);
+      }
+    }
   }
 
   async shutdownMedia(): Promise<void> {
@@ -770,12 +779,22 @@ export class PanelAppBridge {
     revokePanelAppMediaReads();
     for (const controller of this.resourceTransfers.keys()) controller.abort();
     await Promise.all([...this.resourceTransfers.values()].map(({ settled }) => settled));
-    await this.backgroundService?.shutdown();
-    await this.toolJobService?.shutdown();
-    await this.taskCookieHost?.shutdown();
-    await this.mediaService?.shutdown();
-    await this.resourceService?.shutdown();
+    const failures: unknown[] = [];
+    for (const service of [
+      this.backgroundService,
+      this.toolJobService,
+      this.taskCookieHost,
+      this.mediaService,
+      this.resourceService,
+    ]) {
+      try {
+        await service?.shutdown();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
     this.modelTraces.closeAll();
+    if (failures.length) throw new AggregateError(failures, "Panel shutdown incomplete");
   }
 
   registerGuest(
@@ -1535,7 +1554,9 @@ export class PanelAppBridge {
                   method === "credentials.connections.authorizeProcess" ||
                   method === "credentials.cookies.authorizeProcess"
                 ? PROCESS_CONSENT_TIMEOUT_MS
-                : CALL_TIMEOUT_MS),
+                : method.startsWith("services.")
+                  ? 45_000
+                  : CALL_TIMEOUT_MS),
       transfer ? () => transfer.abort() : undefined,
     );
     const resultLimit =
@@ -1620,7 +1641,10 @@ export class PanelAppBridge {
   private capabilitiesFor(binding: GuestBinding) {
     return desktopPanelCapabilities(binding.resource.descriptor.permissions, {
       resources: this.getResourceService().capabilities(),
-      services: process.platform !== "win32" && !!binding.resource.descriptor.backgroundServices,
+      services:
+        !this.backgroundInitializationError &&
+        process.platform !== "win32" &&
+        !!binding.resource.descriptor.backgroundServices,
       tasks: {
         available: true,
         directoryBookmarks: true,
@@ -1832,12 +1856,14 @@ export class PanelAppBridge {
             "Background service project authorization was revoked",
           );
         const installed = await this.projectToolApps(scope.projectPath).get(scope.appId);
+        // Cache absence may mean a transient inspection/registry IO error. It
+        // cannot prove revocation; explicit binding/trust and inspected grants can.
+        if (!installed) throw new Error("SERVICE_PACKAGE_INSPECTION_UNAVAILABLE");
         const definition =
           installed?.backgroundServices && Object.hasOwn(installed.backgroundServices, scope.name)
             ? installed.backgroundServices[scope.name]
             : undefined;
         if (
-          !installed ||
           !definition ||
           !["process", "background.services", "context.workspace"].every((permission) =>
             installed.permissions.includes(permission as PanelAppPermission),
@@ -1905,6 +1931,8 @@ export class PanelAppBridge {
         "NOT_SUPPORTED",
         "Background services require verifiable POSIX process custody",
       );
+    if (this.backgroundInitializationError)
+      throw new PanelBridgeError("NOT_SUPPORTED", this.backgroundInitializationError);
     const input = (params ?? {}) as any;
     const service = this.getBackgroundService();
     if (method === "services.detach") return service.detach(input.attachId, binding.guest.id);

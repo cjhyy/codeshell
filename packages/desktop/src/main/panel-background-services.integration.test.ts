@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import { PanelAppInspectionCache } from "./panel-app-inspection-cache.js";
 import { PanelBackgroundService } from "../../../server/src/panels/background-services.js";
 import {
   PanelExecutionGate,
@@ -204,6 +205,99 @@ test("Desktop authorization/dispatch/events survive closing all guests and selec
     ).rejects.toThrow("permission denied");
   } finally {
     await bridge.shutdownMedia();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("C1 failed background initialization cannot prevent real Desktop task/media/cookie restore", async () => {
+  const Bridge = runInNewContext(`${compiled}; Bridge`, { process, console: { warn() {} } });
+  const bridge = new Bridge(),
+    restored: string[] = [];
+  const component = (name: string) => ({
+    initialize: async () => {
+      restored.push(name);
+    },
+  });
+  Object.assign(bridge, {
+    options: { cookieCredentials: { taskCredentials: true } },
+    getResourceService: () => component("resources"),
+    getToolJobService: () => component("tasks"),
+    getMediaService: () => component("media"),
+    getTaskCookieHost: () => component("cookies"),
+    getBackgroundService: () => ({
+      initialize: async () => {
+        throw new Error("SERVICE_COORDINATOR_BUSY");
+      },
+    }),
+  });
+  await bridge.initializeMedia();
+  expect(restored).toEqual(["resources", "tasks", "media", "cookies"]);
+  expect(bridge.backgroundInitializationError).toContain("SERVICE_COORDINATOR_BUSY");
+});
+
+test("H-I3 actual Desktop describe and inspection cache distinguish IO absence from permission revocation", async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "desktop-service-inspection-")));
+  try {
+    const pkg = join(root, "package"),
+      registry = join(root, "registry.json");
+    await mkdir(pkg);
+    await writeFile(join(pkg, "entry.mjs"), "");
+    await writeFile(registry, "[]");
+    let unavailable = true;
+    const installed: any = {
+      id: "fixture",
+      installPath: pkg,
+      permissions: ["process", "background.services", "context.workspace"],
+      backgroundServices: {
+        feed: {
+          entry: "feed",
+          channels: { quotes: { maxBytes: 1024 } },
+          maxLifetimeMs: 60000,
+          idleGraceMs: 0,
+        },
+      },
+      nativeEntries: { feed: { entry: "entry.mjs", sha256: "a".repeat(64) } },
+    };
+    const cache = new PanelAppInspectionCache({
+      prepare: async () => {
+        if (unavailable) throw new Error("temporary registry I/O");
+      },
+      installPath: () => pkg,
+      registryPath: () => registry,
+      listInstalled: async () => [installed],
+    });
+    let captured: any;
+    const Bridge = runInNewContext(`${compiled}; Bridge`, {
+      PanelBackgroundService: class {
+        constructor(options: any) {
+          captured = options;
+        }
+      },
+      PanelBridgeError,
+      app: { getPath: () => root },
+      join,
+      createHash,
+      panelExecutionProject,
+      installedPanelAppRevision: () => "r1",
+      panelExecutableDirectories: () => [],
+      resolvePanelExecutable: async () => process.execPath,
+    });
+    const bridge = new Bridge();
+    Object.assign(bridge, {
+      options: { isPanelAppBound: () => true, isWorkspaceTrusted: () => true },
+      projectToolApps: () => cache,
+      managedBinDirectory: () => root,
+    });
+    bridge.getBackgroundService();
+    const scope = { appId: "fixture", projectPath: root, name: "feed" };
+    await expect(captured.describe(scope)).rejects.toThrow(
+      "SERVICE_PACKAGE_INSPECTION_UNAVAILABLE",
+    );
+    unavailable = false;
+    expect((await captured.describe(scope)).revision).toBe("r1");
+    installed.permissions = [];
+    await expect(captured.describe(scope)).rejects.toMatchObject({ code: "REVOKED" });
+  } finally {
     await rm(root, { recursive: true, force: true });
   }
 });

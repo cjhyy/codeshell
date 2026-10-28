@@ -165,10 +165,13 @@ export function desktopPanelCapabilities(
         : {}),
       modelTraces: { writeOnly: true, coverage: "logical-input", ...panelModelTraceLimits },
       methodLimits: {
-        "services.configure": { maxParamsBytes: 64 * 1024 + 4096 },
-        "services.read": { maxResultBytes: 1024 * 1024 + 4096 },
-        "services.control": { timeoutMs: 30_000 },
-        "services.setDesired": { timeoutMs: 30_000 },
+        ...Object.fromEntries(
+          panelBackgroundServiceMethods.map((method) => [method, { timeoutMs: 45_000 }]),
+        ),
+        "services.configure": { maxParamsBytes: 64 * 1024 + 4096, timeoutMs: 45_000 },
+        "services.read": { maxResultBytes: 1024 * 1024 + 4096, timeoutMs: 45_000 },
+        "services.control": { timeoutMs: 45_000 },
+        "services.setDesired": { timeoutMs: 45_000 },
         "modelTraces.start": { maxParamsBytes: panelModelTraceLimits.maxParamsBytes },
         "modelTraces.finish": { maxParamsBytes: panelModelTraceLimits.maxParamsBytes },
         "storage.getSnapshot": { maxResultBytes: options.limits?.maxResultBytes ?? storageBytes },

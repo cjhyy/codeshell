@@ -109,3 +109,21 @@ test("background services are strict, permission-gated, bounded reviewed entry d
   const preview = await previewLocalPanelApp({ kind: "dir", path: await fixture(value) });
   expect(preview.backgroundServices).toEqual(backgroundServices);
 });
+
+test("background service cannot resolve an inherited Object constructor as a reviewed entry", () => {
+  expect(
+    PanelAppManifest.safeParse({
+      ...manifest(),
+      nativeEntries: {},
+      permissions: [...manifest().permissions, "background.services"],
+      backgroundServices: {
+        feed: {
+          entry: "constructor",
+          channels: { quotes: { maxBytes: 1024 } },
+          maxLifetimeMs: 60000,
+          idleGraceMs: 0,
+        },
+      },
+    }).success,
+  ).toBe(false);
+});

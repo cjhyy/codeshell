@@ -342,7 +342,8 @@ await service.initialize();await service.setDesired(scope,{desired:'always',expe
     const path = (await readdir(f.options.rootDir)).find((name) => name.endsWith(".json"))!;
     const record = JSON.parse(await readFile(join(f.options.rootDir, path), "utf8"));
     guardian = record.process.pid;
-    expect(record.process.start.startsWith("custody:")).toBe(true);
+    expect(record.process.start).toMatch(/^(darwin-unique:|linux-ticks:)/);
+    expect(record.process.boot).toBeTruthy();
     process.kill(guardian, "SIGSTOP");
     const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
     child.kill("SIGKILL");
@@ -531,7 +532,7 @@ test("capacity rejection has a structured bridge code and does not enable a queu
     requestKey: "one",
   });
   await f.service.setDesired(
-    { ...f.scope, name: "second" },
+    { ...f.scope, name: "second", projectPath: join(f.root, "second-project") },
     { desired: "always", expectedRevision: 0, requestKey: "two" },
   );
   const third = { ...f.scope, name: "third" };

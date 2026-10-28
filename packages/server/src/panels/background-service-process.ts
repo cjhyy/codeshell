@@ -1,14 +1,21 @@
-import { spawn, execFileSync, type ChildProcess } from "node:child_process";
-import { hostname } from "node:os";
+import { spawn, execFile, type ChildProcess } from "node:child_process";
+import { promisify } from "node:util";
+import { stat } from "node:fs/promises";
 import { verifyProcessEntry } from "./process-entry.js";
-import { groupStatus, type ServiceProcessIdentity } from "./background-service-store.js";
+import {
+  groupStatus,
+  serviceIdentityInspector,
+  type ServiceProcessIdentity,
+  type ServiceIdentityInspector,
+} from "./background-service-store.js";
 
 // The guardian cannot execute package code until the Host has durably recorded its
 // PID/start identity and sends go. An EOF before go cannot leave an unrecorded worker.
 const GUARDIAN = String.raw`
 const { spawn } = require('node:child_process');
 const nonce = require('node:crypto').randomUUID();
-process.stdout.write(JSON.stringify({t:'custody',pid:process.pid,nonce})+'\n');
+const control = require('node:fs').createWriteStream(null,{fd:3});
+control.write(JSON.stringify({t:'custody',pid:process.pid,nonce})+'\n');
 let child, first = '', started = false, ending = false;
 const stop = () => {
   if (ending) return; ending = true;
@@ -29,6 +36,7 @@ process.stdin.on('data', (chunk) => {
   if (command.t !== 'go') process.exit(2);
   started = true;
   child = spawn(command.executable, command.args, { cwd: command.cwd, env: command.env, stdio: ['pipe','pipe','pipe'] });
+  control.write(JSON.stringify({t:'member',pid:child.pid})+'\n');
   child.stdout.pipe(process.stdout); child.stderr.pipe(process.stderr);
   child.stdin.on('error', () => {});
   child.on('error', () => process.exit(2));
@@ -38,46 +46,83 @@ process.stdin.on('data', (chunk) => {
 process.stdin.on('end', stop); process.on('SIGTERM', stop); process.on('SIGINT', stop);
 process.stdout.on('error', stop); process.stderr.on('error', stop);
 `;
-const permissionFlags = new Map<string, string[]>();
-function sandboxFlags(executable: string): string[] {
-  let flags = permissionFlags.get(executable);
-  if (flags) return flags;
-  const help = execFileSync(executable, ["--help"], {
-    encoding: "utf8",
-    timeout: 5000,
-    maxBuffer: 512 * 1024,
-  });
-  const flag = help.includes("--permission ")
-    ? "--permission"
-    : help.includes("--experimental-permission")
-      ? "--experimental-permission"
-      : null;
-  if (!flag) throw new Error("SERVICE_NODE_PERMISSION_UNAVAILABLE");
-  flags = [flag, ...(help.includes("--allow-net") ? ["--allow-net"] : [])];
-  // Never enable allow-child-process, worker, addons, WASI or inspector: the
-  // reviewed service is a single native Node process, with no escaping descendants.
-  permissionFlags.set(executable, flags);
-  return flags;
+const execute = promisify(execFile);
+const permissionFlags = new Map<string, { until: number; result: Promise<string[]> }>();
+// Latest supported security baselines at 2026-10-28. No EOL odd-major or experimental Node20.
+// https://nodejs.org/en/blog/vulnerability/october-2026-security-releases
+export function safeServiceNodeVersion(version: string): boolean {
+  const match = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(version.trim());
+  if (!match) return false;
+  const [major, minor, patch] = match.slice(1).map(Number);
+  const minimum = new Map([
+    [22, [23, 4]],
+    [24, [22, 1]],
+    [26, [12, 1]],
+  ]).get(major!);
+  return !!minimum && (minor! > minimum[0]! || (minor === minimum[0] && patch! >= minimum[1]!));
 }
+export async function probeServiceRuntime(executable: string): Promise<string[]> {
+  const info = await stat(executable);
+  const key = `${executable}:${info.dev}:${info.ino}:${info.size}:${info.mtimeMs}`;
+  const cached = permissionFlags.get(key);
+  if (cached && cached.until > Date.now()) return cached.result;
+  const entry = { until: Infinity, result: Promise.resolve([] as string[]) };
+  entry.result = (async () => {
+    const { stdout: version } = await execute(executable, ["--version"], {
+      timeout: 5000,
+      maxBuffer: 4096,
+    });
+    if (!safeServiceNodeVersion(version))
+      throw new Error("SERVICE_NODE_SECURITY_VERSION_REQUIRED:22.23.4/24.22.1/26.12.1");
+    const { stdout: help } = await execute(executable, ["--help"], {
+      timeout: 5000,
+      maxBuffer: 512 * 1024,
+    });
+    if (!help.includes("--permission ")) throw new Error("SERVICE_NODE_PERMISSION_UNAVAILABLE");
+    return ["--permission", ...(help.includes("--allow-net") ? ["--allow-net"] : [])];
+  })();
+  permissionFlags.set(key, entry);
+  if (permissionFlags.size > 64) permissionFlags.delete(permissionFlags.keys().next().value!);
+  void entry.result.then(
+    () => {
+      entry.until = Date.now() + 600_000;
+    },
+    () => {
+      entry.until = Date.now() + 300_000;
+    },
+  );
+  return entry.result;
+}
+// The package cannot run before its second, native member identity is durable.
+const BOOTSTRAP = String.raw`let bytes=Buffer.alloc(0);const begin=chunk=>{bytes=Buffer.concat([bytes,chunk]);const end=bytes.indexOf(10);if(end<0){if(bytes.length>4096)process.exit(2);return;}process.stdin.off('data',begin);process.stdin.pause();if(JSON.parse(bytes.subarray(0,end)).t!=='start')process.exit(2);const rest=bytes.subarray(end+1);if(rest.length)process.stdin.unshift(rest);import(require('node:url').pathToFileURL(process.argv[1]).href).catch(error=>{console.error(error);process.exit(2)});};process.stdin.on('data',begin);`;
 export interface ServiceProcess {
   identity: ServiceProcessIdentity;
   send(message: unknown): void;
+  prepare(): Promise<ServiceProcessIdentity>;
   activate(hello: unknown): void;
   terminate(timeoutMs: number): Promise<boolean>;
   exited: Promise<void>;
 }
-export async function spawnServiceProcess(input: {
-  executable: string;
-  entry: string;
-  sha256: string;
-  packageRoot: string;
-  cwd: string;
-  maxLineBytes: number;
-  onLine(message: unknown): void;
-  onExit(error?: string): void;
-}): Promise<ServiceProcess> {
+export async function spawnServiceProcess(
+  input: {
+    executable: string;
+    entry: string;
+    sha256: string;
+    packageRoot: string;
+    cwd: string;
+    maxLineBytes: number;
+    onLine(message: unknown): void;
+    onExit(error?: string): void;
+  },
+  adapters: {
+    /** Explicit OS/runtime boundaries for owned-process fault tests; never guest supplied. */
+    identities?: ServiceIdentityInspector;
+    probeRuntime?: typeof probeServiceRuntime;
+  } = {},
+): Promise<ServiceProcess> {
+  const identities = adapters.identities ?? serviceIdentityInspector;
   if (process.platform === "win32") throw new Error("SERVICE_PROCESS_IDENTITY_UNSUPPORTED");
-  const flags = sandboxFlags(input.executable);
+  const flags = await (adapters.probeRuntime ?? probeServiceRuntime)(input.executable);
   await verifyProcessEntry(input.entry, input.sha256);
   const env = Object.fromEntries(
     ["PATH", "LANG", "LC_ALL", "TMPDIR", "SSL_CERT_FILE", "SSL_CERT_DIR"].flatMap((name) =>
@@ -89,13 +134,48 @@ export async function spawnServiceProcess(input: {
     cwd: input.cwd,
     env,
     detached: true,
-    stdio: ["pipe", "pipe", "pipe"],
+    stdio: ["pipe", "pipe", "pipe", "pipe"],
   });
   let custodyResolve!: (identity: ServiceProcessIdentity) => void;
   let custodyReject!: (error: Error) => void;
   const custody = new Promise<ServiceProcessIdentity>((resolve, reject) => {
     custodyResolve = resolve;
     custodyReject = reject;
+  });
+  let memberResolve!: (identity: ServiceProcessIdentity) => void;
+  let memberReject!: (error: Error) => void;
+  const member = new Promise<ServiceProcessIdentity>((resolve, reject) => {
+    memberResolve = resolve;
+    memberReject = reject;
+  });
+  void member.catch(() => {});
+  let memberIdentity: ServiceProcessIdentity | undefined;
+  let controlBytes = "";
+  (child.stdio[3] as NodeJS.ReadableStream).on("data", (chunk: Buffer) => {
+    controlBytes += chunk.toString();
+    if (controlBytes.length > 8192) {
+      custodyReject(new Error("SERVICE_CUSTODY_LIMIT"));
+      return;
+    }
+    let end: number;
+    while ((end = controlBytes.indexOf("\n")) >= 0) {
+      const line = controlBytes.slice(0, end);
+      controlBytes = controlBytes.slice(end + 1);
+      try {
+        const value = JSON.parse(line);
+        const identity = identities.current(value.pid);
+        if (!identity) throw new Error("SERVICE_IDENTITY_UNAVAILABLE");
+        if (value.t === "custody" && value.pid === child.pid && /^[a-f0-9-]{36}$/.test(value.nonce))
+          custodyResolve(identity);
+        else if (value.t === "member" && !memberIdentity) {
+          memberIdentity = identity;
+          memberResolve(identity);
+        } else throw new Error("SERVICE_CUSTODY_INVALID");
+      } catch (error) {
+        custodyReject(error as Error);
+        memberReject(error as Error);
+      }
+    }
   });
   let failure: string | undefined;
   let pending = Buffer.alloc(0),
@@ -104,7 +184,8 @@ export async function spawnServiceProcess(input: {
     rateBytes = 0,
     rateLines = 0;
   let activated = false,
-    ended = false;
+    ended = false,
+    leaderExited = false;
   child.stdin!.on("error", () => {});
   const fail = (reason: string) => {
     failure = reason;
@@ -129,14 +210,7 @@ export async function spawnServiceProcess(input: {
       pending = pending.subarray(end + 1);
       try {
         const message = JSON.parse(line.toString("utf8"));
-        if (
-          !activated &&
-          message.t === "custody" &&
-          message.pid === child.pid &&
-          /^[a-f0-9-]{36}$/.test(message.nonce)
-        )
-          custodyResolve({ pid: message.pid, start: `custody:${message.nonce}`, host: hostname() });
-        else input.onLine(message);
+        input.onLine(message);
       } catch {
         return fail("SERVICE_INVALID_LINE");
       }
@@ -162,9 +236,24 @@ export async function spawnServiceProcess(input: {
   child.on("error", (error) => {
     failure = error.message;
   });
+  child.on("exit", () => {
+    leaderExited = true;
+    if (child.pid && groupStatus(child.pid) !== "dead")
+      input.onExit("SERVICE_CUSTODY_LEADER_EXITED");
+    // A killed guardian does not release custody: the separately authenticated
+    // native member proves this process group is still ours, even after leader reap.
+    if (memberIdentity && identities.status(memberIdentity) === "alive") {
+      try {
+        process.kill(-child.pid!, "SIGKILL");
+      } catch {
+        /* recovery remains conservative */
+      }
+    }
+  });
   child.on("close", (code) => {
     ended = true;
     custodyReject(new Error("SERVICE_CUSTODY_EXITED"));
+    memberReject(new Error("SERVICE_CUSTODY_EXITED"));
     exitResolve();
     input.onExit(
       failure ?? (code ? `Service exited ${code}: ${stderr.toString().slice(-2048)}` : undefined),
@@ -185,18 +274,25 @@ export async function spawnServiceProcess(input: {
     ]);
   } catch (error) {
     // This exact ChildProcess has not closed, so its PID has not been reaped/reused.
-    if (!ended && child.pid) {
+    if (!leaderExited && !ended && child.pid) {
       try {
         process.kill(-child.pid, "SIGKILL");
       } catch {}
     }
-    await exited;
+    let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      exited,
+      new Promise<void>((resolve) => {
+        cleanupTimer = setTimeout(resolve, 2000);
+      }),
+    ]);
+    if (cleanupTimer) clearTimeout(cleanupTimer);
     throw error;
   } finally {
     if (custodyTimer) clearTimeout(custodyTimer);
   }
   const send = (message: unknown) => {
-    if (ended || !child.stdin!.writable) return;
+    if (leaderExited || ended || !child.stdin!.writable) return;
     const bytes = JSON.stringify(message) + "\n";
     if (Buffer.byteLength(bytes) > 5 * 1024 * 1024 || child.stdin!.writableLength > 128 * 1024)
       throw new Error("SERVICE_STDIN_LIMIT");
@@ -206,9 +302,7 @@ export async function spawnServiceProcess(input: {
     identity,
     exited,
     send,
-    activate(hello) {
-      if (activated) throw new Error("SERVICE_ALREADY_ACTIVATED");
-      activated = true;
+    async prepare() {
       send({
         t: "go",
         executable: input.executable,
@@ -217,11 +311,30 @@ export async function spawnServiceProcess(input: {
           `--allow-fs-read=${input.packageRoot}`,
           `--allow-fs-read=${input.cwd}`,
           `--allow-fs-write=${input.cwd}`,
+          "-e",
+          BOOTSTRAP,
           input.entry,
         ],
         cwd: input.cwd,
         env,
       });
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        return await Promise.race([
+          member,
+          new Promise<never>((_r, reject) => {
+            timer = setTimeout(() => reject(new Error("SERVICE_MEMBER_TIMEOUT")), 10_000);
+          }),
+        ]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    },
+    activate(hello) {
+      if (activated) throw new Error("SERVICE_ALREADY_ACTIVATED");
+      if (!memberIdentity) throw new Error("SERVICE_MEMBER_UNCONFIRMED");
+      activated = true;
+      send({ t: "start" });
       send(hello);
     },
     async terminate(timeoutMs) {
@@ -243,13 +356,24 @@ export async function spawnServiceProcess(input: {
       if (groupStatus(identity.pid) === "dead") return true;
       // Only this still-live verified leader proves ownership of the group. If its
       // identity cannot be checked, preserve stop-unconfirmed and never guess/kill.
-      if (ended || child.pid !== identity.pid) return false;
+      if (
+        (leaderExited || ended || child.pid !== identity.pid) &&
+        (!memberIdentity || identities.status(memberIdentity) !== "alive")
+      )
+        return false;
       try {
         process.kill(-identity.pid, "SIGKILL");
       } catch {
         /* confirm below */
       }
-      await exited;
+      let forceTimer: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([
+        exited,
+        new Promise<void>((resolve) => {
+          forceTimer = setTimeout(resolve, 2000);
+        }),
+      ]);
+      if (forceTimer) clearTimeout(forceTimer);
       return groupStatus(identity.pid) === "dead";
     },
   };
