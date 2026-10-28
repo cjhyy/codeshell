@@ -68,8 +68,8 @@ Runtime identities and integrity metadata are descriptions, not approval grants.
 
 ## Build and release supply
 
-`packages/desktop/resources/node-runtime.lock.json` pins Node 24.21.0 and the
-SHA-256 of each official archive. The current release targets are macOS arm64 and
+`packages/desktop/resources/node-runtime.lock.json` pins Node 24.22.1 and the
+SHA-256 of each official archive, taken from the [official 24.22.1 release SHASUMS](https://nodejs.org/en/blog/release/v24.22.1/). The current release targets are macOS arm64 and
 x64, Windows x64, and Linux x64. The build uses the target architecture rather
 than the build machine's architecture.
 
