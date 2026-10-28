@@ -83,6 +83,7 @@ export class TunnelManager extends EventEmitter {
   private readonly killGraceMs: number;
   private readonly killHardTimeoutMs: number;
   private child?: ChildProcess;
+  private cancelPendingStart?: () => void;
   /** In-flight teardown of a previous child. Any start() awaits this first so a
    *  new cloudflared never spawns while the old one still owns the metrics port. */
   private pendingTeardown?: Promise<void>;
@@ -140,7 +141,7 @@ export class TunnelManager extends EventEmitter {
       // Force http2 (TCP). cloudflared defaults to QUIC (UDP/7844), which is
       // blocked on many networks (corp Wi-Fi, some carriers) — the connection
       // object registers but never becomes ready, so the phone hits Cloudflare
-      // error 1033. http2 falls back to TCP/443 and reliably connects.
+      // error 1033. HTTP/2 still requires outbound TCP/7844 to the edge.
       "--protocol",
       "http2",
       // Fixed local metrics endpoint so we can poll /ready for edge readiness.
@@ -153,36 +154,50 @@ export class TunnelManager extends EventEmitter {
 
     return new Promise<{ url: string }>((resolve, reject) => {
       let settled = false;
-
-      const finishReject = (err: Error) => {
-        if (settled) return;
+      const settle = () => {
+        if (settled) return false;
         settled = true;
         clearTimeout(timer);
+        if (this.cancelPendingStart === cancelStart) this.cancelPendingStart = undefined;
+        return true;
+      };
+      const cancelStart = () => {
+        if (settle()) reject(new Error("隧道启动已取消。"));
+      };
+      const finishReject = (err: Error) => {
+        if (!settle()) return;
         // Route through the shared teardown so a retried start() awaits this
         // child's real exit (releasing the metrics port) before re-spawning.
-        void this.beginTeardown();
+        if (this.child === child) void this.beginTeardown();
         reject(err);
       };
 
       const timer = setTimeout(() => {
         finishReject(new Error("隧道启动失败:15s 内未取得公网地址(超时)"));
       }, this.timeoutMs);
+      this.cancelPendingStart = cancelStart;
 
-      const scan = (buf: Buffer | string) => {
+      const scanTails = { stdout: "", stderr: "" };
+      const scan = (stream: keyof typeof scanTails, buf: Buffer | string) => {
         if (settled) return;
-        const match = TRYCLOUDFLARE_RE.exec(String(buf));
-        if (!match) return;
+        const text = scanTails[stream] + String(buf);
+        const match = TRYCLOUDFLARE_RE.exec(text);
+        if (!match) {
+          // A pipe chunk can end anywhere in the URL. Keep a bounded suffix
+          // per stream so stdout and stderr cannot combine into a false URL.
+          scanTails[stream] = text.slice(-256);
+          return;
+        }
         // URL captured, but the edge connection is NOT necessarily ready yet —
         // resolving here was the 1033 bug (handing back a dead QR). Stop the
         // URL scanners and wait for /ready before declaring connected.
-        child.stdout?.off("data", scan);
-        child.stderr?.off("data", scan);
+        child.stdout?.off("data", scanStdout);
+        child.stderr?.off("data", scanStderr);
         clearTimeout(timer);
         const url = match[0];
-        this.waitForReady()
+        this.waitForReady(child)
           .then(() => {
-            if (settled) return;
-            settled = true;
+            if (this.child !== child || !settle()) return;
             this.connected = true;
             this.currentUrl = url;
             this.emit("status", "connected", url);
@@ -192,8 +207,10 @@ export class TunnelManager extends EventEmitter {
           .catch((err: Error) => finishReject(err));
       };
 
-      child.stdout?.on("data", scan);
-      child.stderr?.on("data", scan);
+      const scanStdout = (buf: Buffer | string) => scan("stdout", buf);
+      const scanStderr = (buf: Buffer | string) => scan("stderr", buf);
+      child.stdout?.on("data", scanStdout);
+      child.stderr?.on("data", scanStderr);
 
       child.on("error", (err) => {
         // A superseded child (torn down by a restart / stop-during-start) must
@@ -202,8 +219,7 @@ export class TunnelManager extends EventEmitter {
         // promise ever settled (stop() can supersede an unsettled child).
         if (this.child !== child) return;
         if (!settled) {
-          settled = true;
-          clearTimeout(timer);
+          settle();
           this.child = undefined;
           this.connected = false;
           this.currentUrl = undefined;
@@ -229,8 +245,7 @@ export class TunnelManager extends EventEmitter {
         if (wasConnected) {
           this.emit("status", "disconnected", { code, signal });
         } else if (!settled) {
-          settled = true;
-          clearTimeout(timer);
+          settle();
           reject(new Error(`cloudflared 退出(code=${code ?? "?"} signal=${signal ?? "?"})`));
         }
       });
@@ -242,10 +257,13 @@ export class TunnelManager extends EventEmitter {
    * `readyTimeoutMs`. This is what distinguishes a working tunnel from one that
    * registered a connection but can't actually serve traffic (error 1033).
    */
-  private async waitForReady(): Promise<void> {
+  private async waitForReady(child: ChildProcess): Promise<void> {
     const deadline = Date.now() + this.readyTimeoutMs;
     for (;;) {
-      if (this.child && (await this.checkReady(this.metricsPort))) return;
+      if (this.child !== child || this.stopping) throw new Error("隧道启动已取消。");
+      const ready = await this.checkReady(this.metricsPort);
+      if (this.child !== child || this.stopping) throw new Error("隧道启动已取消。");
+      if (ready) return;
       if (Date.now() >= deadline) {
         throw new Error("隧道注册失败:公网边缘连接未就绪(可能网络限制,扫码会报 1033)");
       }
@@ -321,6 +339,7 @@ export class TunnelManager extends EventEmitter {
    */
   private beginTeardown(): Promise<void> {
     this.stopping = true;
+    this.cancelPendingStart?.();
     this.connected = false;
     this.currentUrl = undefined;
     this.stopHealthMonitor();
