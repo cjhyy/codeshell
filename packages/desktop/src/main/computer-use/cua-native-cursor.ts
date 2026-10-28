@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createConnection } from "node:net";
-import type { CuaActivityEvent } from "./cua-activity.js";
+import { parseCuaAvoidRect, type CuaActivityEvent } from "./cua-activity.js";
 
 type JsonObject = Record<string, unknown>;
 interface CursorState {
@@ -339,11 +339,24 @@ export class CuaNativeCursorBridge {
     while (this.confirmedPositions.size > 32)
       this.confirmedPositions.delete(this.confirmedPositions.keys().next().value!);
     try {
+      const { avoidRect: candidate, ...event } = action.event;
+      const rect = parseCuaAvoidRect(candidate);
+      // The snapshot is only a candidate. Never carry its rectangle across a
+      // native point that no longer belongs to that element's screen frame.
+      const avoidRect =
+        rect &&
+        state.position.x >= rect.x &&
+        state.position.x <= rect.x + rect.width &&
+        state.position.y >= rect.y &&
+        state.position.y <= rect.y + rect.height
+          ? rect
+          : undefined;
       await this.options.emit({
-        ...action.event,
+        ...event,
         phase: "update",
         target: state.position,
         targetSource: "native-cursor",
+        ...(avoidRect ? { avoidRect } : {}),
       });
     } catch {
       // Presentation failure never changes the real tool response.

@@ -86,6 +86,36 @@ describe("CuaActivityTracker", () => {
     ).toBeUndefined();
   });
 
+  test("AX avoidance rectangles contain only fresh matching snapshot geometry", () => {
+    let now = 100;
+    const tracker = new CuaActivityTracker("proxy", () => now);
+    observe(tracker);
+    const args = { pid: 10, window_id: 20, element_token: "s12345678:1", text: "private input" };
+    const event = tracker.begin(request(2, "type_text", args));
+    expect(event?.target).toEqual({ x: 200, y: 290 });
+    expect(event?.avoidRect).toEqual({ x: 180, y: 280, width: 40, height: 20 });
+    expect(JSON.stringify(event)).not.toContain("private");
+    expect(JSON.stringify(event)).not.toContain("secret");
+    for (const [index, extra] of [
+      { pid: 11 },
+      { window_id: 21 },
+      { from_zoom: true },
+      { scope: "desktop" },
+      { debug_image_out: "private" },
+    ].entries())
+      expect(
+        tracker.begin(request(index + 3, "click", { ...args, ...extra }))?.avoidRect,
+      ).toBeUndefined();
+    expect(
+      tracker.begin(request(9, "click", { pid: 10, window_id: 20, x: 1, y: 2 }))?.avoidRect,
+    ).toBeUndefined();
+    now += 15_001;
+    expect(tracker.begin(request(10, "type_text", args))?.avoidRect).toBeUndefined();
+    observe(tracker, 11);
+    observe(tracker, 12, { elements: [] });
+    expect(tracker.begin(request(13, "type_text", args))?.avoidRect).toBeUndefined();
+  });
+
   test("does not infer targets for zoom, stale captures, invalid pixels or expired geometry", () => {
     let now = 100;
     const tracker = new CuaActivityTracker("proxy", () => now);

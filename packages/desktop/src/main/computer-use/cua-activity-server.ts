@@ -4,6 +4,7 @@ import { createServer, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { MimiCompanionAction } from "../../shared/mimi-companion.js";
+import { parseCuaAvoidRect, type CuaAvoidRect } from "./cua-activity.js";
 
 export interface CompanionOperation {
   id: string;
@@ -11,6 +12,7 @@ export interface CompanionOperation {
   phase: "start" | "update" | "end";
   target?: { x: number; y: number };
   targetSource?: "native-cursor";
+  avoidRect?: CuaAvoidRect;
   capture: boolean;
   failed?: boolean;
 }
@@ -50,12 +52,15 @@ export function parseCompanionOperation(value: unknown): CompanionOperation | nu
     (!target || input.capture || input.targetSource !== "native-cursor")
   )
     return null;
+  const avoidRect = parseCuaAvoidRect(input.avoidRect);
+  if (input.avoidRect !== undefined && !avoidRect) return null;
   return {
     id: input.id,
     action: input.action as MimiCompanionAction,
     phase: input.phase,
     capture: input.capture,
     ...(target ? { target } : {}),
+    ...(avoidRect ? { avoidRect } : {}),
     ...(input.targetSource === "native-cursor" ? { targetSource: "native-cursor" as const } : {}),
     ...(input.failed === true ? { failed: true } : {}),
   };
@@ -114,6 +119,9 @@ export async function createCuaActivityServer(
                   ...started,
                   target: parsed.target,
                   targetSource: parsed.targetSource,
+                  // An absent rectangle revokes the previous candidate rather
+                  // than letting a stale input field survive an updated point.
+                  avoidRect: parsed.avoidRect,
                 };
                 active.set(parsed.id, updated);
                 await onOperation({ ...updated, phase: "update" });

@@ -225,6 +225,43 @@ describe("native CUA cursor side channel", () => {
     });
   });
 
+  test("native updates include an AX rectangle only while the actual point belongs to it", async () => {
+    let position = { x: 10, y: 20 };
+    const server = await daemon((input, reply) =>
+      reply(response(state(input.session_id, position))),
+    );
+    const emitted: CuaActivityEvent[] = [];
+    const bridge = new CuaNativeCursorBridge({
+      socketPath: server.path,
+      childPid: 42,
+      intervalMs: 5,
+      sendMcp: async (bytes) => {
+        bridge.consumeResponse({
+          id: JSON.parse(bytes.toString()).id,
+          result: { structuredContent: state("mcp-42-123", position) },
+        });
+      },
+      emit: async (value) => {
+        emitted.push(value);
+      },
+    });
+    cleanups.push(() => bridge.close());
+    initialized(bridge);
+    const avoidRect = { x: -2100, y: 100, width: 300, height: 200, label: "private field" };
+    await bridge.prepare({ ...event, avoidRect }, request);
+    bridge.start(event.id);
+    position = { x: -2000, y: 200 };
+    await until(() => emitted.length === 1);
+    expect(emitted[0]?.avoidRect).toEqual({ x: -2100, y: 100, width: 300, height: 200 });
+    expect(JSON.stringify(emitted)).not.toContain("private field");
+    position = { x: 1000, y: 100 };
+    await until(() => emitted.length === 2);
+    expect("avoidRect" in emitted[1]!).toBe(false);
+    expect(emitted[1]?.target).toEqual(position);
+    await bridge.finish(event.id, false);
+    expect(emitted).toHaveLength(2);
+  });
+
   test("never uses another proxy's identity or treats desktop/capture actions as agent positions", async () => {
     const server = await daemon((input, reply) => reply(response(state(input.session_id))));
     let injections = 0;

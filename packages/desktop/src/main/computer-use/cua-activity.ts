@@ -16,8 +16,22 @@ export interface CuaActivityEvent {
   phase: "start" | "update" | "end";
   target?: { x: number; y: number };
   targetSource?: "native-cursor";
+  avoidRect?: CuaAvoidRect;
   capture: boolean;
   failed?: boolean;
+}
+
+export interface CuaAvoidRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface ElementGeometry {
+  x: number;
+  y: number;
+  avoidRect?: CuaAvoidRect;
 }
 
 type RecordValue = Record<string, unknown>;
@@ -29,7 +43,7 @@ interface Geometry {
   imageWidth?: number;
   imageHeight?: number;
   captureId?: string;
-  tokens: Map<string, { x: number; y: number }>;
+  tokens: Map<string, ElementGeometry>;
 }
 
 interface Pending {
@@ -58,6 +72,27 @@ function finite(value: unknown): value is number {
 
 function positive(value: unknown): value is number {
   return finite(value) && value > 0;
+}
+
+/** Copies geometry only; AX labels, values and caller-supplied extra fields never travel. */
+export function parseCuaAvoidRect(value: unknown): CuaAvoidRect | undefined {
+  const rect = record(value);
+  if (!rect) return;
+  const { x, y, width, height } = rect;
+  if (
+    !finite(x) ||
+    !finite(y) ||
+    !positive(width) ||
+    !positive(height) ||
+    Math.abs(x) > 100_000 ||
+    Math.abs(y) > 100_000 ||
+    width > 100_000 ||
+    height > 100_000 ||
+    Math.abs(x + width) > 100_000 ||
+    Math.abs(y + height) > 100_000
+  )
+    return;
+  return { x, y, width, height };
 }
 
 function integer(value: unknown): number | undefined {
@@ -144,11 +179,13 @@ export class CuaActivityTracker {
     const identity = windowIdentity(args);
     const classified = classify(name, args);
     const target = classified.capture ? undefined : this.target(args, name);
+    const avoidRect = classified.capture ? undefined : this.element(args)?.avoidRect;
     const event: CuaActivityEvent = {
       id: `${this.prefix}:${++this.sequence}`,
       ...classified,
       phase: "start",
       ...(target ? { target } : {}),
+      ...(avoidRect ? { avoidRect: { ...avoidRect } } : {}),
     };
     this.pending.set(key, {
       event,
@@ -219,15 +256,8 @@ export class CuaActivityTracker {
       geometry = this.windows.get(`${identity.pid}:${identity.windowId}`);
     }
     if (typeof args.element_token === "string") {
-      if (!TOKEN_PATTERN.test(args.element_token) || desktop) return;
-      for (const item of geometry ? [geometry] : this.windows.values()) {
-        if (!this.fresh(item) || (identity.pid !== undefined && item.pid !== identity.pid))
-          continue;
-        if (identity.windowId !== undefined && item.windowId !== identity.windowId) continue;
-        const point = item.tokens.get(args.element_token);
-        if (point) return { ...point };
-      }
-      return;
+      const element = this.element(args);
+      return element ? { x: element.x, y: element.y } : undefined;
     }
     const x = name === "drag" ? args.from_x : args.x;
     const y = name === "drag" ? args.from_y : args.y;
@@ -239,6 +269,25 @@ export class CuaActivityTracker {
       x: geometry.bounds.x + (x * geometry.bounds.width) / geometry.imageWidth,
       y: geometry.bounds.y + (y * geometry.bounds.height) / geometry.imageHeight,
     };
+  }
+
+  private element(args: RecordValue): ElementGeometry | undefined {
+    if (
+      args.from_zoom === true ||
+      args.scope === "desktop" ||
+      record(args.target)?.kind === "desktop" ||
+      typeof args.element_token !== "string" ||
+      !TOKEN_PATTERN.test(args.element_token)
+    )
+      return;
+    const identity = windowIdentity(args);
+    for (const item of this.windows.values()) {
+      if (!this.fresh(item)) continue;
+      if (identity.pid !== undefined && item.pid !== identity.pid) continue;
+      if (identity.windowId !== undefined && item.windowId !== identity.windowId) continue;
+      const element = item.tokens.get(args.element_token);
+      if (element) return element;
+    }
   }
 
   private observe(pending: Pending, value: RecordValue | undefined): void {
@@ -303,6 +352,7 @@ export class CuaActivityTracker {
       geometry.tokens.set(element.element_token, {
         x: frame.x + frame.w / 2,
         y: frame.y + frame.h / 2,
+        avoidRect: parseCuaAvoidRect({ x: frame.x, y: frame.y, width: frame.w, height: frame.h }),
       });
     }
     this.windows.set(key, geometry);

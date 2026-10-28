@@ -38,6 +38,22 @@ test("activity payload contains only bounded presentation metadata", () => {
       capture: true,
     }),
   ).toBeNull();
+  const avoidRect = { x: -2000, y: 100, width: 300, height: 80, label: "private field" };
+  expect(parseCompanionOperation({ ...value, avoidRect })?.avoidRect).toEqual({
+    x: -2000,
+    y: 100,
+    width: 300,
+    height: 80,
+  });
+  for (const invalid of [
+    null,
+    { ...avoidRect, width: 0 },
+    { ...avoidRect, height: -1 },
+    { ...avoidRect, x: NaN },
+    { ...avoidRect, width: 100_001 },
+    { ...avoidRect, x: 99_999, width: 2 },
+  ])
+    expect(parseCompanionOperation({ ...value, avoidRect: invalid })).toBeNull();
 });
 
 test("native target updates stay inside the active operation and disconnect releases its latest target", async () => {
@@ -65,6 +81,7 @@ test("native target updates stay inside the active operation and disconnect rele
       capture: false,
       target: { x: -1900, y: 700 },
       targetSource: "native-cursor",
+      avoidRect: { x: -2000, y: 650, width: 300, height: 100 },
     };
     const send = (value: unknown) =>
       socket.write(JSON.stringify({ token: server.token, ...(value as object) }) + "\n");
@@ -72,18 +89,27 @@ test("native target updates stay inside the active operation and disconnect rele
     send({ ...update, phase: "start", target: undefined });
     send({ ...update, action: "type" }); // Nor change its semantic identity.
     send(update);
+    send({ ...update, id: "cleared", phase: "start" });
+    send({ ...update, id: "cleared", target: { x: 100, y: 300 }, avoidRect: undefined });
     const deadline = Date.now() + 1_000;
-    while (replies < 4 && Date.now() < deadline) await Bun.sleep(5);
-    expect(replies).toBe(4);
-    expect(events.map((event) => event.phase)).toEqual(["start", "update"]);
+    while (replies < 6 && Date.now() < deadline) await Bun.sleep(5);
+    expect(replies).toBe(6);
+    expect(events.map((event) => event.phase)).toEqual(["start", "update", "start", "update"]);
+    expect(events[1]?.avoidRect).toEqual(update.avoidRect);
+    expect(events[3]?.avoidRect).toBeUndefined();
     socket.destroy();
     await server.close();
-    expect(events.at(-1)).toMatchObject({
-      id: "operation",
-      phase: "end",
-      target: update.target,
-      failed: true,
-    });
+    expect(events.find((event) => event.id === "operation" && event.phase === "end")).toMatchObject(
+      {
+        id: "operation",
+        phase: "end",
+        target: update.target,
+        avoidRect: update.avoidRect,
+        failed: true,
+      },
+    );
+    expect(events.at(-1)).toMatchObject({ id: "cleared", phase: "end", failed: true });
+    expect(events.at(-1)?.avoidRect).toBeUndefined();
   } finally {
     socket.destroy();
     await server.close();
