@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "model": "Hiyori Momose",
+  "sampleRevision": "de9eb4bec4326b81fe67a54e84322fdc39bc7446",
+  "sampleBase": "https://raw.githubusercontent.com/Live2D/CubismWebSamples/de9eb4bec4326b81fe67a54e84322fdc39bc7446/Samples/Resources/Hiyori/",
+  "files": [
+    {
+      "path": "Hiyori/Hiyori.model3.json",
+      "sha256": "973cb3392f7b01f5f73e9d3fedc495a81a0f3ee8014e5df72ef943311c56ee12",
+      "bytes": 1736
+    },
+    {
+      "path": "Hiyori/Hiyori.moc3",
+      "sha256": "0323f5f377b9afef54318be09e9b4eea2a8cb266190ff9d2f843f95ecb77716c",
+      "bytes": 443648
+    },
+    {
+      "path": "Hiyori/Hiyori.2048/texture_00.png",
+      "sha256": "560aea0d910dc04950d669640b2ef17c0d817969e9909f477f166bb5cbd8ffbe",
+      "bytes": 1814312
+    },
+    {
+      "path": "Hiyori/Hiyori.2048/texture_01.png",
+      "sha256": "87fe9ab7db81ab3025e0407229e449233581e00fa92c8e911923bc6c7d98ce84",
+      "bytes": 2504416
+    },
+    {
+      "path": "Hiyori/Hiyori.physics3.json",
+      "sha256": "c7a6d641893519c0bbc615545887f03f6c5b8031b4096873740b618370452fc1",
+      "bytes": 26160
+    },
+    {
+      "path": "Hiyori/Hiyori.pose3.json",
+      "sha256": "ff1cc242790f196c87a7379dc1340b608723db60af1b2825e00da8f351ffc1bf",
+      "bytes": 166
+    },
+    {
+      "path": "Hiyori/Hiyori.userdata3.json",
+      "sha256": "75fe50a89ea695b46c98dce8991c2f3d67e3d7a479786e6310460289b552d29b",
+      "bytes": 623
+    },
+    {
+      "path": "Hiyori/Hiyori.cdi3.json",
+      "sha256": "0fc3fc76b7a68136056c8832c930c8af9f93899f359eded7349b481ea2342d03",
+      "bytes": 9660
+    },
+    {
+      "path": "Hiyori/motions/Hiyori_m01.motion3.json",
+      "sha256": "c4f0d982c685b81c1af0ced96c8f6bd5118b8a3fa972c3a12a46652b8d78461d",
+      "bytes": 10622
+    },
+    {
+      "path": "Hiyori/motions/Hiyori_m02.motion3.json",
+      "sha256": "858c582874a0c4badfec38d4caf19e232fea5ba714f5a2ac6a282c617910c154",
+      "bytes": 14248
+    },
+    {
+      "path": "Hiyori/motions/Hiyori_m03.motion3.json",
+      "sha256": "de33a8ce78226a5ff80cfa941fb5a4c50b6c1c4b346031ed44b384f772b62cf9",
+      "bytes": 12732
+    },
+    {
+      "path": "Hiyori/motions/Hiyori_m05.motion3.json",
+      "sha256": "7f71061c9207ac1da6e06098ede9318307a7e75715a3ef97c82646acd9ee8620",
+      "bytes": 16061
+    },
+    {
+      "path": "Hiyori/motions/Hiyori_m06.motion3.json",
+      "sha256": "55c007646febe4cb76d20cbb0623086986dbb55c7ef82212693a5e26636a32ef",
+      "bytes": 19492
+    },
+    {
+      "path": "Hiyori/motions/Hiyori_m07.motion3.json",
+      "sha256": "3f06cb70f5654eed3389978885e4dff151b6cf9e8d59248680addcd267ff793a",
+      "bytes": 9636
+    },
+    {
+      "path": "Hiyori/motions/Hiyori_m08.motion3.json",
+      "sha256": "66022fff5cff3c30b7fc1295bf92e4975e3ab9980d5cb296b5e24a2a8acc6daf",
+      "bytes": 10551
+    },
+    {
+      "path": "Hiyori/motions/Hiyori_m09.motion3.json",
+      "sha256": "9edbd6a88e977221fa90625b5f94c9fd27212e1183288105584be8272543ade7",
+      "bytes": 11479
+    },
+    {
+      "path": "Hiyori/motions/Hiyori_m10.motion3.json",
+      "sha256": "ba0ba6764a80459432ffd48d6bd5ba261fd25f196208ade3016be74efb9d3dfc",
+      "bytes": 9604
+    },
+    {
+      "path": "Hiyori/motions/Hiyori_m04.motion3.json",
+      "sha256": "54ddb94d0494772e10355429c547bb7e29601f38d663087804b0c793b29cc51f",
+      "bytes": 8772
+    }
+  ]
+}

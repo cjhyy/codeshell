@@ -244,6 +244,8 @@
     "esbuild": "^0.24.0",
     "highlight.js": "^11",
     "lucide-react": "^0.460.0",
+    "pixi-live2d-display": "0.4.0",
+    "pixi.js": "6.5.10",
     "playwright": "1.64.0",
     "puppeteer-core": "23.7.1",
     "qrcode": "^1.5.4",
