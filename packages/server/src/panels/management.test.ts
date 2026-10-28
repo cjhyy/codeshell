@@ -234,7 +234,7 @@ describe("shared Web panel management with the real Core installer", () => {
       "Version 2.0.0",
     );
     expect((await listInstalledPanelApps())[0]?.source).toMatchObject({ ref: "main" });
-    expect(projectPanelAppPackagePins(cwd)[current.id]).toEqual({
+    expect(projectPanelAppPackagePins(cwd)[current.id]).toMatchObject({
       version: "2.0.0",
       packageDigest: selected.packageDigest!,
     });
@@ -250,13 +250,25 @@ describe("shared Web panel management with the real Core installer", () => {
     const second = service({ cwd: elsewhere, projectPackages: true, allowLocalSources: true });
     const available = (await second.snapshot()).panels[0]!;
     await second.binding(owner, available.id, true, available.revision);
-    const selected = (await second.snapshot()).panels[0]!;
+    const original = (await second.snapshot()).panels[0]!;
 
     writePanel("2.0.0", ["context.workspace"]);
     const current = (await first.snapshot()).panels[0]!;
     const update = await first.previewUpdate(owner, current.id, current.revision);
     await first.install(owner, update.reviewToken);
     expect((await listInstalledPanelApps())[0]?.permissions).toEqual(["context.workspace"]);
+    // The update moved this project too; it keeps 1.0.0 only by rolling back afterwards.
+    const moved = (await second.snapshot()).panels[0]!;
+    expect(moved.version).toBe("2.0.0");
+    const rollback = await second.previewRestore(
+      owner,
+      moved.id,
+      original.packageDigest,
+      moved.revision,
+    );
+    await second.restore(owner, rollback.reviewToken);
+    const selected = (await second.snapshot()).panels[0]!;
+    expect(selected.version).toBe("1.0.0");
 
     writePanel("3.0.0", ["storage", "context.workspace"]);
     for (const review of [
@@ -304,7 +316,7 @@ describe("shared Web panel management with the real Core installer", () => {
     await expect(api.snapshot("../test-panel")).rejects.toThrow();
   });
 
-  test("project bindings retain independent versions and revisions through another project's update", async () => {
+  test("another project's update moves every bound project and stales its old revision", async () => {
     const first = service({ projectPackages: true });
     const elsewhere = join(root, "other-project");
     mkdirSync(elsewhere);
@@ -315,7 +327,7 @@ describe("shared Web panel management with the real Core installer", () => {
     const old = (await second.snapshot()).panels[0]!;
     const selected = (await listProjectPanelApps(elsewhere))[0]!;
     expect(selected.installPath).toContain("/.versions/test-panel/");
-    expect(projectPanelAppPackagePins(elsewhere)[old.id]).toEqual({
+    expect(projectPanelAppPackagePins(elsewhere)[old.id]).toMatchObject({
       version: "1.0.0",
       packageDigest: old.packageDigest!,
     });
@@ -324,23 +336,22 @@ describe("shared Web panel management with the real Core installer", () => {
     const update = await first.previewUpdate(owner, firstOld.id, firstOld.revision);
     await first.install(owner, update.reviewToken);
     expect((await first.snapshot()).panels[0]?.version).toBe("2.0.0");
-    expect((await second.snapshot()).panels[0]).toMatchObject({
-      version: "1.0.0",
-      revision: old.revision,
-      packageDigest: old.packageDigest,
-      enabled: true,
-    });
-    expect(readFileSync(join(selected.installPath, "app/index.html"), "utf8")).toContain("1.0.0");
-    // Another device can still change this project's binding using its old revision.
-    await second.binding(owner, old.id, false, old.revision);
+    const moved = (await second.snapshot()).panels[0]!;
+    expect(moved).toMatchObject({ version: "2.0.0", enabled: true });
+    expect(moved.revision).not.toBe(old.revision);
     expect(projectPanelAppPackagePins(elsewhere)[old.id]).toBeUndefined();
+    // A device still holding the pre-update revision must refresh first.
+    await expect(second.binding(owner, old.id, false, old.revision)).rejects.toMatchObject({
+      status: 409,
+    });
+    await second.binding(owner, moved.id, false, moved.revision);
     const latest = (await second.snapshot()).panels[0]!;
     expect(latest.version).toBe("2.0.0");
     await second.binding(owner, latest.id, true, latest.revision);
     expect((await second.snapshot()).panels[0]).toMatchObject({ version: "2.0.0", bound: true });
   });
 
-  test("reviewed updates block affected work, allow other pinned projects and close admission during commit", async () => {
+  test("reviewed updates block affected work in every bound project and close admission during commit", async () => {
     let checkWrite: (() => Promise<void>) | undefined;
     const api = service({
       projectPackages: true,
@@ -358,36 +369,29 @@ describe("shared Web panel management with the real Core installer", () => {
     await other.binding(owner, available.id, true, available.revision);
     writePanel("2.0.0");
     const review = await api.previewUpdate(owner, old.id, old.revision);
-    const release = panelExecutionGate.enter({ appId: old.id, projectPath: cwd });
-    try {
-      await expect(api.install(owner, review.reviewToken)).rejects.toMatchObject({ status: 409 });
-      expect((await api.snapshot()).panels[0]!.version).toBe("1.0.0");
-    } finally {
-      release();
+    for (const projectPath of [cwd, join(root, "legacy"), elsewhere]) {
+      // A catalog update reaches every project, pinned or not.
+      const release = panelExecutionGate.enter({ appId: old.id, projectPath });
+      try {
+        await expect(api.install(owner, review.reviewToken)).rejects.toMatchObject({
+          status: 409,
+        });
+        expect((await api.snapshot()).panels[0]!.version).toBe("1.0.0");
+      } finally {
+        release();
+      }
     }
-    const releaseLegacy = panelExecutionGate.enter({
-      appId: old.id,
-      projectPath: join(root, "legacy"),
-    });
-    try {
-      await expect(api.install(owner, review.reviewToken)).rejects.toMatchObject({ status: 409 });
-    } finally {
-      releaseLegacy();
-    }
-    const releaseOther = panelExecutionGate.enter({ appId: old.id, projectPath: elsewhere });
     checkWrite = async () => {
-      expect(() => panelExecutionGate.enter({ appId: old.id, projectPath: cwd })).toThrow(
-        "正在更新",
-      );
-      // This project's retained bytes do not change during the catalog update.
-      panelExecutionGate.enter({ appId: old.id, projectPath: elsewhere })();
+      for (const projectPath of [cwd, elsewhere])
+        expect(() => panelExecutionGate.enter({ appId: old.id, projectPath })).toThrow("正在更新");
     };
+    await api.install(owner, review.reviewToken);
+    expect((await api.snapshot()).panels[0]!.version).toBe("2.0.0");
+    expect((await other.snapshot()).panels[0]!.version).toBe("2.0.0");
+    checkWrite = undefined;
+    const updated = (await api.snapshot()).panels[0]!;
+    const releaseOther = panelExecutionGate.enter({ appId: old.id, projectPath: elsewhere });
     try {
-      await api.install(owner, review.reviewToken);
-      expect((await api.snapshot()).panels[0]!.version).toBe("2.0.0");
-      expect((await other.snapshot()).panels[0]!.version).toBe("1.0.0");
-      checkWrite = undefined;
-      const updated = (await api.snapshot()).panels[0]!;
       await expect(api.remove(owner, old.id, updated.revision)).rejects.toMatchObject({
         status: 409,
       });
@@ -396,7 +400,7 @@ describe("shared Web panel management with the real Core installer", () => {
     }
   });
 
-  test("project update review rejects a changed catalog without moving the old project pin", async () => {
+  test("a stale project update review is rejected after another project's update moved it", async () => {
     const first = service({ projectPackages: true });
     const second = service({ cwd: join(root, "other-project"), projectPackages: true });
     mkdirSync(join(root, "other-project"));
@@ -412,23 +416,20 @@ describe("shared Web panel management with the real Core installer", () => {
       (await first.previewUpdate(owner, one.id, one.revision)).reviewToken,
     );
     await expect(second.install(owner, stale.reviewToken)).rejects.toMatchObject({ status: 409 });
-    expect((await second.snapshot()).panels[0]).toMatchObject({
-      version: "1.0.0",
-      revision: two.revision,
-    });
-    // Refreshing the review explicitly upgrades this project to the already installed bytes.
-    await second.install(
-      owner,
-      (await second.previewUpdate(owner, two.id, two.revision)).reviewToken,
-    );
-    expect((await second.snapshot()).panels[0]?.version).toBe("2.0.0");
+    // The catalog update already moved this project to the installed bytes.
+    const moved = (await second.snapshot()).panels[0]!;
+    expect(moved.version).toBe("2.0.0");
+    expect(moved.revision).not.toBe(two.revision);
   });
 
   test("post-install binding CAS preserves a concurrent device's unbind and old package pin", async () => {
     const api = service({ projectPackages: true });
     await api.install(owner, (await api.preview(owner, input)).reviewToken);
     const old = (await api.snapshot()).panels[0]!;
-    const oldPins = projectPanelAppPackagePins(cwd);
+    const rawPins = () =>
+      new SettingsManager(cwd, "full").getRawForScope("project", cwd, { strict: true })
+        .panelAppPins;
+    const oldPins = rawPins();
     writePanel("2.0.0");
     const update = await api.previewUpdate(owner, old.id, old.revision);
     let changed = false;
@@ -449,8 +450,9 @@ describe("shared Web panel management with the real Core installer", () => {
       status: 409,
     });
     expect(changed).toBe(true);
-    expect(projectPanelAppPackagePins(cwd)).toEqual(oldPins);
-    expect((await api.snapshot()).panels[0]).toMatchObject({ version: "1.0.0", bound: false });
+    // The failed binding write leaves the stored pin alone; the catalog still moved.
+    expect(rawPins()).toEqual(oldPins);
+    expect((await api.snapshot()).panels[0]).toMatchObject({ version: "2.0.0", bound: false });
   });
 
   test("missing pinned package and invalid project settings never fall through to the catalog", async () => {
@@ -530,29 +532,6 @@ describe("shared Web panel management with the real Core installer", () => {
     expect((await api.snapshot()).issues).toBeUndefined();
     expect((await api.snapshot()).panels[0]?.version).toBe("1.0.0");
     expect(readFileSync(join(cwd, "project-data.json"), "utf8")).toBe('{"documentVersion":2}');
-  });
-
-  test("a broken legacy baseline is repaired without inventing the original version", async () => {
-    const { api, old } = await restorationFixture();
-    new SettingsManager(cwd, "full").mutateSettingsForScope("project", cwd, (settings) => {
-      settings.panelAppPins = {};
-    });
-    writeFileSync(
-      join(panelAppPackageDir(old.id, old.packageDigest!), "..", "legacy-projects.json"),
-      "damaged",
-    );
-    const issue = (await api.snapshot()).issues![0]!;
-    expect(issue.version).toBeUndefined();
-    const history = await api.packageHistory(owner, issue.id, issue.revision);
-    expect(history.current).toEqual({
-      version: "未记录",
-      packageDigest: undefined,
-      unavailable: true,
-    });
-    const preview = await api.previewRestore(owner, issue.id, old.packageDigest, issue.revision);
-    expect(preview.addedPermissions).toEqual(preview.permissions);
-    await api.restore(owner, preview.reviewToken);
-    expect((await api.snapshot()).panels[0]?.version).toBe("1.0.0");
   });
 
   test("repair reviews reject concurrent project edits and corrupt configuration", async () => {

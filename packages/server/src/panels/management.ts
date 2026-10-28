@@ -17,6 +17,8 @@ import {
   listRetainedPanelAppPackages,
   resolvePanelAppPackage,
   parsePanelAppPackagePins,
+  currentPanelAppPackagePins,
+  installedPanelAppUpdatedAt,
   retainInstalledPanelApp,
   userHome,
   panelAppsRoot,
@@ -319,14 +321,18 @@ export function createPanelManagement(options: PanelManagementOptions) {
         JSON.stringify({
           app,
           digest,
-          ...(options.projectPackages
-            ? { pin: parsePanelAppPackagePins(project ?? projectSettings())[app.id] ?? null }
-            : {}),
+          ...(options.projectPackages ? { pin: selectedPin(app.id, project) } : {}),
           bound: current.boundApps.has(app.id),
           disabled: current.globalDisabledApps.has(app.id),
         }),
       )
       .digest("hex");
+  }
+
+  /** The pinned package identity; when it was pinned does not change the selection. */
+  function selectedPin(id: string, project?: Record<string, unknown>) {
+    const pin = parsePanelAppPackagePins(project ?? projectSettings())[id];
+    return pin ? { version: pin.version, packageDigest: pin.packageDigest } : null;
   }
 
   function projectSettings(): Record<string, unknown> {
@@ -451,7 +457,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
     // Never attach a new revision to stale displayed binding state. File and
     // package inspection above can yield to another device's mutation.
     for (const app of [...panels, ...issues]) {
-      const pin = options.projectPackages ? parsePanelAppPackagePins(project)[app.id] : undefined;
+      const pin = options.projectPackages ? currentPanelAppPackagePins(project)[app.id] : undefined;
       if (
         projectState(app.id, project) !== projectState(app.id) ||
         current.globalDisabledApps.has(app.id) !== policy().globalDisabledApps.has(app.id) ||
@@ -728,7 +734,15 @@ export function createPanelManagement(options: PanelManagementOptions) {
         const pins = parsePanelAppPackagePins(current);
         if (bound) {
           if (!app.packageDigest) throw new Error("Cannot bind an unverified Panel package");
-          pins[app.id] = { version: app.version, packageDigest: app.packageDigest };
+          pins[app.id] = {
+            version: app.version,
+            packageDigest: app.packageDigest,
+            // Holds this project only until the next global install or update, so it
+            // must be strictly later than the install it was chosen after.
+            pinnedAt: new Date(
+              Math.max(now(), (installedPanelAppUpdatedAt(app.id) ?? 0) + 1),
+            ).toISOString(),
+          };
         } else delete pins[app.id];
         current.panelAppPins = pins;
       }
@@ -1076,12 +1090,12 @@ export function createPanelManagement(options: PanelManagementOptions) {
             "unsupported",
             "这个面板需要当前 Web 环境未提供的能力。",
           );
-        // Legacy installs need a retained copy before the project can pin them.
-        // An already pinned project must keep its selected version, not the catalog's.
+        // An unpinned (or superseded) selection needs a retained copy before the
+        // project can pin it. A current pin must keep its selected version.
         const app =
           bound &&
           options.projectPackages &&
-          !parsePanelAppPackagePins(projectSettings())[current.app.id]
+          !currentPanelAppPackagePins(projectSettings())[current.app.id]
             ? await retainInstalledPanelApp(current.app.id, current.app.packageDigest!)
             : current.app;
         await guard();

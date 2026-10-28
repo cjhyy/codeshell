@@ -16,7 +16,7 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
 
-test("real Hub HTTP serves and executes each project's retained package across catalog updates and restart", async () => {
+test("real Hub HTTP moves every project on a catalog update and serves a rolled-back project's retained package across restart", async () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "cs-project-packages-http-")));
   const previousHome = process.env.HOME;
   process.env.HOME = join(root, "home");
@@ -185,6 +185,8 @@ test("real Hub HTTP serves and executes each project's retained package across c
   const old = await second.bind(true);
   const original = await second.prepare();
   expect(await second.page(original)).toContain("Package 1.0.0");
+  const firstOldJob = await first.run(await first.prepare(), "1.0.0");
+  const oldJob = await second.run(original, "1.0.0");
   // This project is not discovered until after the global catalog changes.
   const dormantPath = join(root, "dormant-project");
   mkdirSync(join(dormantPath, ".code-shell"), { recursive: true });
@@ -196,22 +198,20 @@ test("real Hub HTTP serves and executes each project's retained package across c
     }),
   );
   await install("2.0.0", true);
+  // An unpinned legacy binding follows the catalog; nothing is migrated into its settings.
   const dormant = await host("dormant-project");
-  expect(await dormant.catalog()).toMatchObject({ version: "1.0.0", bound: true });
-  expect(
-    JSON.parse(readFileSync(join(dormantPath, ".code-shell/settings.json"), "utf8")),
-  ).toMatchObject({
-    panelAppPins: { "version-fixture": { version: "1.0.0", packageDigest: old.packageDigest } },
-    migrationNote: "preserve",
-  });
-  const migrated = await dormant.prepare();
-  expect(await dormant.page(migrated)).toContain("Package 1.0.0");
-  await dormant.run(migrated, "1.0.0");
+  expect(await dormant.catalog()).toMatchObject({ version: "2.0.0", bound: true });
+  const dormantSettings = JSON.parse(
+    readFileSync(join(dormantPath, ".code-shell/settings.json"), "utf8"),
+  );
+  expect(dormantSettings).toMatchObject({ migrationNote: "preserve" });
+  expect(dormantSettings.panelAppPins).toBeUndefined();
+  const following = await dormant.prepare();
+  expect(await dormant.page(following)).toContain("Package 2.0.0");
+  await dormant.run(following, "2.0.0");
   await dormant.close();
-  // A catalog update never changes a pinned project or revokes its open page.
-  expect(await second.catalog()).toMatchObject({ version: "1.0.0", revision: old.revision });
-  expect(await second.page(original)).toContain("Package 1.0.0");
-  const firstOldJob = await first.run(await first.prepare(), "1.0.0");
+  // A catalog update moves every project, including one pinned to the older package.
+  expect(await second.catalog()).toMatchObject({ version: "2.0.0" });
   await first.bind(false);
   await first.bind(true);
   const newer = await first.prepare();
@@ -275,7 +275,25 @@ test("real Hub HTTP serves and executes each project's retained package across c
     readOnly: false,
     package: { version: "1.0.0", packageDigest: old.packageDigest },
   });
-  const oldJob = await second.run(original, "1.0.0");
+  // Roll this project back after the update; the pin holds until the next update.
+  const secondVersions = await (
+    await second.request("/api/v1/panels/version-fixture/versions", "POST", {
+      expectedRevision: (await second.catalog()).revision,
+    })
+  ).json();
+  const secondRestore = await second.request(
+    "/api/v1/panels/version-fixture/restore-preview",
+    "POST",
+    { expectedRevision: secondVersions.expectedRevision, packageDigest: old.packageDigest },
+  );
+  expect(secondRestore.status).toBe(200);
+  expect(
+    (
+      await second.request("/api/v1/panels/restore", "POST", {
+        reviewToken: (await secondRestore.json()).reviewToken,
+      })
+    ).status,
+  ).toBe(200);
   await second.close();
   const restarted = await host("project-b");
   expect(await restarted.catalog()).toMatchObject({ version: "1.0.0", revision: old.revision });

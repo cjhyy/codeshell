@@ -23,7 +23,7 @@ afterEach(() => {
   if (root) rmSync(root, { recursive: true, force: true });
 });
 
-test("Desktop caches follow each project's pin even when both immutable versions remain unchanged", async () => {
+test("Desktop caches follow catalog updates and each later project pin", async () => {
   root = realpathSync(mkdtempSync(join(tmpdir(), "desktop-project-packages-")));
   process.env.HOME = join(root, "home");
   const source = join(root, "source"),
@@ -31,6 +31,9 @@ test("Desktop caches follow each project's pin even when both immutable versions
     second = join(root, "two");
   for (const path of [first, second, join(source, "app"), join(source, ".codeshell-panel")])
     mkdirSync(path, { recursive: true });
+  // Installs and pins happen in order: a pin holds only until the next install.
+  let ticks = 0;
+  const stamp = () => new Date(Date.UTC(2026, 8, 23) + ++ticks * 1_000).toISOString();
   async function install(version: string, overwrite = false) {
     writeFileSync(
       join(source, ".codeshell-panel/panel.json"),
@@ -49,14 +52,14 @@ test("Desktop caches follow each project's pin even when both immutable versions
     writeFileSync(join(source, "app/index.html"), version);
     const input = { kind: "dir" as const, path: source };
     const preview = await previewLocalPanelApp(input);
-    return installReviewedLocalPanelApp(input, preview.reviewToken, new Date().toISOString(), {
-      overwrite,
-    });
+    return installReviewedLocalPanelApp(input, preview.reviewToken, stamp(), { overwrite });
   }
   function pin(project: string, app: InstalledPanelApp, version = app.version) {
     new SettingsManager(project, "full").mutateSettingsForScope("project", project, (settings) => {
       settings.panelAppBindings = [app.id];
-      settings.panelAppPins = { [app.id]: { version, packageDigest: app.packageDigest } };
+      settings.panelAppPins = {
+        [app.id]: { version, packageDigest: app.packageDigest, pinnedAt: stamp() },
+      };
     });
   }
   const old = await install("1.0.0");
@@ -67,6 +70,10 @@ test("Desktop caches follow each project's pin even when both immutable versions
   expect((await a.get(old.id))?.version).toBe("1.0.0");
   expect((await b.get(old.id))?.version).toBe("1.0.0");
   const next = await install("2.0.0", true);
+  // The catalog update supersedes both earlier pins.
+  expect((await a.get(old.id))?.version).toBe("2.0.0");
+  expect((await b.get(old.id))?.version).toBe("2.0.0");
+  pin(second, old);
   pin(first, next);
   const selected = (await a.get(old.id))!;
   expect(selected.version).toBe("2.0.0");
