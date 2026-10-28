@@ -12,7 +12,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { PanelAppDirectoryBookmarks } from "./directory-bookmarks.js";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   PanelAppProcessService,
@@ -22,6 +22,8 @@ import {
 import { PanelResourceService } from "./resources/service.js";
 import { createPanelToolExecutor } from "./tool-executor.js";
 import { PanelTaskCookieService } from "./task-cookies.js";
+import { PanelToolJobService, type ToolJob } from "./tool-jobs.js";
+import { PanelModelTraceService } from "./model-traces.js";
 import type { Credential } from "@cjhyy/code-shell-core";
 
 const hash = (text: string | Buffer) => createHash("sha256").update(text).digest("hex");
@@ -41,6 +43,7 @@ describe("reviewed native tool executor", () => {
   type FixtureOptions = {
     directRead?: boolean;
     cookies?: boolean;
+    modelTraces?: boolean;
     confirmExecution?: () => Promise<boolean>;
   };
   afterEach(async () => {
@@ -61,9 +64,7 @@ describe("reviewed native tool executor", () => {
     await Promise.all([workDir, appData, bin].map((path) => mkdir(path)));
     const entryPath = join(root, "entry.mjs");
     await writeFile(entryPath, source);
-    const node = await resolvePanelExecutable("node", {
-      extraPathDirectories: [dirname(process.execPath), "/opt/homebrew/bin", "/usr/local/bin"],
-    });
+    const node = await resolvePanelExecutable("node");
     if (!node) throw new Error("Node fixture runtime is unavailable");
     await symlink(node, join(bin, "node"));
     let authorized = true;
@@ -71,6 +72,16 @@ describe("reviewed native tool executor", () => {
     const events: Array<{ event: string; payload: Record<string, unknown> }> = [];
     const processes = new PanelAppProcessService({
       env: { PATH: bin },
+      ...(options.modelTraces
+        ? {
+            modelTraces: new PanelModelTraceService({ storageDir: join(root, "traces") }),
+            modelTraceOwner: (owner: PanelProcessOwner) => ({
+              appId: owner.appId,
+              revision: owner.revision,
+              workspacePath: scope.projectPath,
+            }),
+          }
+        : {}),
       confirmExecution: options.confirmExecution ?? (async () => true),
       isOwnerAuthorized: (owner) => authorized && owners.has(owner.guestId),
       resolvePackageEntry: async () => ({ path: entryPath, sha256: hash(source) }),
@@ -220,6 +231,56 @@ console.log(JSON.stringify({type:"result",result:{read:content.includes("fixture
       mode: 0o600,
       inputSafe: true,
     });
+    expect(await readdir(join(f.root, "private-cookies"))).toEqual([]);
+    expect(f.owners.size).toBe(0);
+  });
+
+  test("a fast Cookie child with trace FD completes a durable task after its progress receipt", async () => {
+    const f = await fixture(
+      `import {readFile} from "node:fs/promises";
+${readRequest}
+const file=process.argv[process.argv.indexOf("--cookies-file")+1];
+if(!(await readFile(file,"utf8")).includes("fixture-secret"))process.exit(3);
+console.log(JSON.stringify({type:"progress",progress:{message:"cookie-read",fraction:0.5}}));
+setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:request.text}})),0);`,
+      false,
+      { cookies: true, modelTraces: true },
+    );
+    let finished!: (job: ToolJob) => void;
+    const terminal = new Promise<ToolJob>((resolve) => {
+      finished = resolve;
+    });
+    const jobs = new PanelToolJobService({
+      rootDir: join(f.root, "jobs"),
+      ...f.executor,
+      isAuthorized: async () => true,
+      onEvent: (job) => {
+        if (["succeeded", "failed", "cancelled", "interrupted"].includes(job.status)) finished(job);
+      },
+    });
+    cleanups.push(() => jobs.shutdown());
+    const input = await cookieInput(f);
+    const admitted = await jobs.start(scope, {
+      entry: f.job.entry,
+      input,
+      recovery: "retry",
+      requestKey: "fast-cookie-result",
+    });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const done = await Promise.race([
+      terminal,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error("Cookie terminal receipt not delivered")), 5000);
+      }),
+    ]).finally(() => clearTimeout(timer));
+    expect(done.status, JSON.stringify(done.error)).toBe("succeeded");
+    expect(done.result).toEqual({ ok: true, value: "safe-request" });
+    expect(done.progress).toEqual({ message: "cookie-read", fraction: 1 });
+    expect(done.requestKey).toBe("fast-cookie-result");
+    const { readOnly, ...receipt } = await jobs.get(scope, admitted.id);
+    expect(readOnly).toBe(false);
+    expect(await jobs.find(scope, "fast-cookie-result")).toEqual(receipt);
+    expect(JSON.stringify(done)).not.toContain("fixture-secret");
     expect(await readdir(join(f.root, "private-cookies"))).toEqual([]);
     expect(f.owners.size).toBe(0);
   });
