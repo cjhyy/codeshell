@@ -313,7 +313,9 @@ export async function run(root: string, port: number) {
           }),
       );
     };
-    await until(() => remote.onlineDeviceIds().includes(device.id));
+    await until(
+      () => remote.onlineDeviceIds().includes(device.id) && hook.result.current.status === "online",
+    );
     phase = "initial selection";
     await act(async () => {
       hook.result.current.selectSession("external-mobile");
