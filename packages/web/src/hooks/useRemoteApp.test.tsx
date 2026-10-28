@@ -3,6 +3,7 @@ import { act } from "react";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { useRemoteApp } from "./useRemoteApp";
 import { useDesktopController } from "../../app/DesktopApp.js";
+import { getApiWorkspace } from "../../app/api-context.js";
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -617,6 +618,183 @@ describe("useRemoteApp session creation failure recovery", () => {
       }
     });
   }
+});
+
+describe("selected Desktop management workspace", () => {
+  async function fixture(linkReturn = false) {
+    setupBrowser();
+    if (linkReturn) {
+      window.location.pathname = "/mobile/";
+      window.location.search = "?view=links&workspace=%2Flink-project";
+    }
+    const originalFetch = globalThis.fetch;
+    const requests: string[] = [];
+    globalThis.fetch = (async (_path, init) => {
+      const cwd = decodeURIComponent(new Headers(init?.headers).get("X-CodeShell-Workspace") ?? "");
+      requests.push(cwd);
+      return Response.json({
+        workspace: { path: cwd, settingsScope: "local", skillDirectories: [] },
+        defaults: {},
+        connections: [],
+        catalog: [],
+        skills: [],
+        mcpServers: [],
+        restartRequired: false,
+      });
+    }) as typeof fetch;
+    const noop = () => {};
+    const auth = { id: "fixture", username: "fixture", deviceName: "fixture" };
+    const hook = await renderHook(() => {
+      const app = useRemoteApp();
+      return { app, controller: useDesktopController(app, auth, noop) };
+    });
+    const ws = FakeWebSocket.instances[0]!;
+    const list = async (activeId: string, cwd: string, omit = false) => {
+      await act(async () => {
+        ws.message({
+          type: "session.list.ok",
+          activeSessionId: activeId,
+          sessions: omit
+            ? []
+            : [
+                {
+                  id: "s1",
+                  title: "First",
+                  cwd: activeId === "s1" ? cwd : "/primary",
+                  updatedAt: 1,
+                },
+                {
+                  id: "s2",
+                  title: "Second",
+                  cwd: activeId === "s2" ? cwd : "/other",
+                  updatedAt: 2,
+                },
+              ],
+        });
+        await flushMicrotasks();
+      });
+    };
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      ws.message({
+        type: "room.projects.ok",
+        projects: [
+          {
+            id: "project",
+            name: "Project",
+            path: "/primary",
+            roots: [{ path: "/primary" }, { path: "/secondary" }],
+          },
+          { id: "other", name: "Other", path: "/other" },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    await list("s1", "/primary");
+    const select = async (id: string) =>
+      act(async () => {
+        hook.result.current.controller.selectSession(id);
+        await flushMicrotasks();
+      });
+    return {
+      hook,
+      ws,
+      list,
+      select,
+      requests,
+      async close() {
+        await hook.unmount();
+        globalThis.fetch = originalFetch;
+      },
+    };
+  }
+
+  test("a selected Session follows its authoritative root migration and retains it across missing catalog metadata", async () => {
+    const f = await fixture();
+    try {
+      await f.select("s1");
+      await f.list("s1", "/secondary");
+      expect(f.hook.result.current.app.activeCwd).toBe("/secondary");
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/secondary");
+      expect(getApiWorkspace()).toBe("/secondary");
+      await f.list("s1", "/secondary", true);
+      expect(f.hook.result.current.app.activeCwd).toBeUndefined();
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/secondary");
+      await act(async () => {
+        visibilityState = "hidden";
+        document.dispatchEvent(new Event("visibilitychange"));
+        await flushMicrotasks();
+        visibilityState = "visible";
+        document.dispatchEvent(new Event("visibilitychange"));
+        window.dispatchEvent(new Event("focus"));
+        await flushMicrotasks();
+      });
+      expect(f.requests.at(-1)).toBe("/secondary");
+      await act(async () => {
+        f.ws.close();
+        window.dispatchEvent(new Event("online"));
+        await flushMicrotasks();
+      });
+      const reconnected = FakeWebSocket.instances.at(-1)!;
+      expect(reconnected).not.toBe(f.ws);
+      await act(async () => {
+        reconnected.open();
+        reconnected.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        reconnected.message({ type: "session.list.ok", activeSessionId: "s1", sessions: [] });
+        await flushMicrotasks();
+      });
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/secondary");
+      expect(f.requests.at(-1)).toBe("/secondary");
+    } finally {
+      await f.close();
+    }
+  });
+
+  test("rapid selection and pending creation keep their target when an earlier Session list arrives", async () => {
+    const f = await fixture();
+    try {
+      await f.select("s1");
+      await f.select("s2");
+      await f.list("s1", "/secondary");
+      expect(f.hook.result.current.app.activeSessionId).toBe("s2");
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/other");
+      await act(async () => {
+        f.hook.result.current.controller.newSession();
+        await flushMicrotasks();
+      });
+      await f.list("s1", "/primary");
+      expect(f.hook.result.current.app.activeSessionId).toBeUndefined();
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/other");
+      expect(getApiWorkspace()).toBe("/other");
+    } finally {
+      await f.close();
+    }
+  });
+
+  test("Link return and pending CLI selection keep their explicit management scope", async () => {
+    const f = await fixture(true);
+    try {
+      await f.list("s1", "/secondary");
+      expect(f.hook.result.current.app.activeCwd).toBe("/secondary");
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/link-project");
+      await f.select("s1");
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/secondary");
+      const sidebar = f.hook.result.current.controller.renderSidebar!({
+        guard: (action) => action(),
+        conversation: (action) => action(),
+      }) as any;
+      await act(async () => {
+        sidebar.props.app.openCcSession("cli-thread", "/cli-target", "default");
+        await flushMicrotasks();
+      });
+      await f.list("s1", "/primary");
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/cli-target");
+      expect(getApiWorkspace()).toBe("/cli-target");
+    } finally {
+      await f.close();
+    }
+  });
 });
 
 describe("useRemoteApp notice lifetime", () => {

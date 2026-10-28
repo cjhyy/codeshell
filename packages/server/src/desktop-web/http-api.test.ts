@@ -3,6 +3,7 @@ import { createServer, type Server } from "node:http";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { open } from "node:fs/promises";
 import { SessionManager } from "@cjhyy/code-shell-core";
 import { ModelTraceStore, type ModelTraceRecord } from "@cjhyy/code-shell-core/internal";
 import { createDesktopWebApi, type DesktopWebApiOptions } from "./http-api.js";
@@ -189,6 +190,37 @@ test("paired credentials exchange a private cookie without creating a Hub accoun
   expect(f.revoked).toContain(body.session.id);
   expect(f.devices.authenticate(f.device.id, "synthetic-pairing-secret")?.id).toBe(f.device.id);
   expect((await f.request("/mobile/", token)).status).toBe(200);
+});
+
+test("paired phones can preview and range-download large computer files only in their authorized workspace", async () => {
+  const f = await fixture();
+  const bytes = 100 * 1024 * 1024 + 128;
+  const file = await open(join(f.cwd, "computer-video.mp4"), "w");
+  try {
+    await file.truncate(bytes);
+    await file.write(Buffer.from("clip-end"), 0, 8, bytes - 8);
+  } finally {
+    await file.close();
+  }
+  writeFileSync(join(f.other, "computer-video.mp4"), "other project bytes");
+  const cookie = await f.authenticate();
+  const url = `/api/v1/files/content?path=computer-video.mp4&workspace=${encodeURIComponent(f.cwd)}`;
+  const preview = await f.request(url + "&preview=true", cookie);
+  expect(preview.status).toBe(200);
+  expect(await preview.json()).toMatchObject({ kind: "binary", size: bytes });
+  const head = await f.request(url, cookie, { method: "HEAD" });
+  expect(head.status).toBe(200);
+  expect(head.headers.get("content-length")).toBe(String(bytes));
+  const tail = await f.request(url, cookie, { headers: { Range: "bytes=-8" } });
+  expect(tail.status).toBe(206);
+  expect(await tail.text()).toBe("clip-end");
+  expect((await f.request(url, undefined, { headers: { Range: "bytes=-8" } })).status).toBe(401);
+  expect(
+    (await f.request(url.replace(encodeURIComponent(f.cwd), encodeURIComponent(f.root)), cookie))
+      .status,
+  ).toBe(403);
+  f.api.revokeDevice(f.device.id);
+  expect((await f.request(url, cookie, { headers: { Range: "bytes=-8" } })).status).toBe(401);
 });
 
 test("rejects foreign, absent, null Origin and forged Host while permitting same-origin file navigation", async () => {
@@ -437,6 +469,64 @@ test("the tunnel passcode still gates auth exchange, including secure public-ori
   });
   expect(authorized.status).toBe(200);
   expect(authorized.headers.get("set-cookie")).toContain("; Secure");
+});
+
+test("passcode rotation revokes original request authority and admission across workspace awaits", async () => {
+  const entered = deferred();
+  const resume = deferred();
+  let waitForWorkspace = false;
+  const authorities: Array<() => Promise<boolean>> = [];
+  const f = await fixture({
+    resolveWorkspace: async (cwd) => {
+      if (waitForWorkspace) {
+        entered.resolve();
+        await resume.promise;
+      }
+      return cwd;
+    },
+    handleExtra: async (_req, res, context) => {
+      authorities.push(context.isAuthorized);
+      res.end("derived grant");
+      return true;
+    },
+  });
+  await f.host.stop();
+  const passcode = new AccessPasscode({ filePath: join(f.root, "passcode.json") });
+  passcode.set("original-passcode");
+  const started = await f.host.start({ host: "127.0.0.1", port: 0, mode: "tunnel", passcode });
+  const entrance = `cs_access=${passcode.verify("original-passcode")!}`;
+  const login = await fetch(started.url + "/api/v1/desktop/session", {
+    method: "POST",
+    headers: { origin: started.url, cookie: entrance, "content-type": "application/json" },
+    body: JSON.stringify({ deviceId: f.device.id, secretHash: "synthetic-pairing-secret" }),
+  });
+  expect(login.status).toBe(200);
+  const paired = login.headers.get("set-cookie")!.split(";", 1)[0]!;
+  const request = (access: string) =>
+    fetch(started.url + "/api/v1/derived-grant", {
+      headers: {
+        origin: started.url,
+        cookie: `${paired}; ${access}`,
+        "x-codeshell-workspace": encodeURIComponent(f.cwd),
+      },
+    });
+  expect((await request(entrance)).status).toBe(200);
+  expect(await authorities[0]!()).toBe(true);
+  waitForWorkspace = true;
+  const pending = request(entrance);
+  try {
+    await entered.promise;
+    passcode.set("rotated-passcode");
+  } finally {
+    waitForWorkspace = false;
+    resume.resolve();
+  }
+  expect((await pending).status).toBe(401);
+  expect(authorities).toHaveLength(1);
+  expect(await authorities[0]!()).toBe(false);
+  expect((await request(`cs_access=${passcode.verify("rotated-passcode")!}`)).status).toBe(200);
+  expect(await authorities[1]!()).toBe(true);
+  expect(await authorities[0]!()).toBe(false);
 });
 
 test("logout cancels a real local model probe and forwards extra-route lifecycle ownership", async () => {

@@ -84,6 +84,7 @@ export interface PendingApproval {
 
 export interface RemoteApp {
   status: ConnStatus;
+  accessRequired?: boolean;
   deviceName: string;
   chat: ChatState;
   sessions: MobileSessionMeta[];
@@ -2143,6 +2144,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
 
   return {
     status: socket.status,
+    accessRequired: socket.accessRequired,
     deviceName: socket.deviceName,
     chat,
     sessions,

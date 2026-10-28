@@ -6,6 +6,7 @@ import http from "node:http";
 import { join, resolve } from "node:path";
 
 const root = realpathSync(process.argv[2]);
+const tunnel = process.argv[3] === "tunnel";
 process.env.HOME = join(root, "home");
 process.env.CODE_SHELL_HOME = join(root, "code-shell-home");
 const desktopMain = resolve(import.meta.dir, "..");
@@ -47,6 +48,7 @@ writeFileSync(
       "storage",
       "workspace.read",
       "workspace.write",
+      "resources",
     ],
   }),
 );
@@ -88,6 +90,8 @@ assert.throws(() => http.get("http://127.0.0.1:9/"), /non-fixture/);
 // Exercise current runtime sources without imposing a competing package build on the host.
 const panelsModule = await import(join(repository, "packages/server/src/index.panels.ts"));
 mock.module("@cjhyy/code-shell-server/panels", () => panelsModule);
+const desktopWebModule = await import(join(repository, "packages/server/src/index.desktop-web.ts"));
+mock.module("@cjhyy/code-shell-server/desktop-web", () => desktopWebModule);
 const { createDesktopWebService } = await import(join(desktopMain, "desktop-web-service.ts"));
 const { getProjectStore } = await import(join(desktopMain, "project-store.ts"));
 const { createDesktopPanelProjectScopeResolver, resolveDesktopPanelProjectPath } = await import(
@@ -191,6 +195,36 @@ const api = createDesktopWebService({
   resolveWorkspace: async (cwd) => (allowed.has(cwd ?? first) ? (cwd ?? first) : undefined),
   onSessionsChanged: () => {},
 });
+let remoteHost;
+let accessCookie;
+let passcode;
+if (tunnel) {
+  const { RemoteHostManager } = await import(
+    join(repository, "packages/server/src/mobile-remote/remote-host-manager.ts")
+  );
+  const { AccessPasscode } = await import(
+    join(repository, "packages/server/src/mobile-remote/access-passcode.ts")
+  );
+  // Reserve the exact origin before Core imports so the network guard stays
+  // installed; then replace the fixture listener with the real tunnel host.
+  await new Promise((resolve) => server.close(resolve));
+  passcode = new AccessPasscode({ filePath: join(root, "access.json") });
+  passcode.set("fixture-access-passcode");
+  remoteHost = new RemoteHostManager({ devices, webApi: api, onClientEvent: () => {} });
+  const started = await remoteHost.start({
+    mode: "tunnel",
+    host: "localhost",
+    port: Number(new URL(baseUrl).port),
+    passcode,
+  });
+  assert.equal(started.url, baseUrl);
+  const access = await fetch(`${baseUrl}/health`, {
+    headers: { "X-Access-Passcode": "fixture-access-passcode" },
+  });
+  assert.equal(access.status, 200);
+  accessCookie = access.headers.get("set-cookie").split(";", 1)[0];
+  assert.match(access.headers.get("set-cookie"), /SameSite=Lax/);
+}
 let cookie;
 async function request(
   path,
@@ -200,7 +234,13 @@ async function request(
     method,
     headers: {
       Origin: origin,
-      ...(authenticated && cookie ? { Cookie: cookie } : {}),
+      ...((authenticated && cookie) || (accessCookie && origin !== "null")
+        ? {
+            Cookie: [authenticated && cookie, origin !== "null" && accessCookie]
+              .filter(Boolean)
+              .join("; "),
+          }
+        : {}),
       ...(cwd ? { "X-CodeShell-Workspace": encodeURIComponent(cwd) } : {}),
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
     },
@@ -247,6 +287,44 @@ try {
   assert.equal((await request("/api/v1/panels", { cwd: forged })).status, 403);
   const grantA = await prepare(first);
   const grantB = await prepare(second);
+  if (tunnel) {
+    for (const [path, method] of [
+      ["/health", "GET"],
+      ["/api/v1/panels", "GET"],
+      ["/api/v1/panels/runtime/prepare", "POST"],
+      ["/api/mobile/uploads/opaque-upload-ticket", "PUT"],
+      [grantA.src, "POST"],
+      [grantA.src, "OPTIONS"],
+    ]) {
+      const denied = await fetch(baseUrl + path, { method, headers: { Origin: "null" } });
+      assert.equal(denied.status, 401, `${method} ${path} must retain the passcode gate`);
+    }
+    const upgradeStatus = await new Promise((resolve, reject) => {
+      const req = http.request(`${baseUrl}/ws`, {
+        headers: {
+          Connection: "Upgrade",
+          Upgrade: "websocket",
+          "Sec-WebSocket-Version": "13",
+          "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+          Origin: "null",
+        },
+      });
+      req.on("response", (response) => {
+        response.resume();
+        resolve(response.statusCode);
+      });
+      req.on("upgrade", (_response, socket) => {
+        socket.destroy();
+        reject(new Error("ungated websocket"));
+      });
+      req.on("error", (error) => {
+        if (error.code === "ECONNRESET") resolve("closed");
+        else reject(error);
+      });
+      req.end();
+    });
+    assert.ok(upgradeStatus === 401 || upgradeStatus === "closed");
+  }
   const nativeScope = await resolveProjectScope(first, first);
   assert.deepEqual(grantA.context.projectScope, nativeScope.scope);
   const switchedSession = await prepare(first, "other-session");
@@ -331,6 +409,19 @@ try {
     });
     assert.equal(script.status, 200);
     assert.match(await script.text(), /desktop-panel/);
+    const head = await request(grant.src.replace(/index\.html$/, "main.js"), {
+      method: "HEAD",
+      cwd: undefined,
+      authenticated: false,
+      origin: "null",
+    });
+    assert.equal(head.status, 200);
+    assert.equal(await head.text(), "");
+    // The ordinary route retains preflight support once the entrance gate has
+    // passed. OPTIONS is deliberately not part of the cookie-free exception.
+    const preflight = await request(grant.src, { method: "OPTIONS" });
+    assert.equal(preflight.status, 204);
+    assert.equal(preflight.headers.get("access-control-allow-methods"), "GET, HEAD, OPTIONS");
   }
   assert.equal(
     (
@@ -339,7 +430,7 @@ try {
         origin: "null",
       })
     ).status,
-    404,
+    tunnel ? 401 : 404,
   );
   const before = await list(first);
   busy = true;
@@ -363,7 +454,10 @@ try {
     ).status,
     200,
   );
-  assert.equal((await request(grantA.src, { authenticated: false, origin: "null" })).status, 404);
+  assert.equal(
+    (await request(grantA.src, { authenticated: false, origin: "null" })).status,
+    tunnel ? 401 : 404,
+  );
   assert.equal((await request(grantB.src, { authenticated: false, origin: "null" })).status, 200);
   assert.equal((await list(second)).bound, true);
   const next = await prepare(second);
@@ -376,20 +470,89 @@ try {
     "web-shared-value",
   );
   assert.equal((await request("/api/v1/auth/logout", { method: "POST", body: {} })).status, 200);
-  assert.equal((await request(next.src, { authenticated: false, origin: "null" })).status, 404);
+  assert.equal(
+    (await request(next.src, { authenticated: false, origin: "null" })).status,
+    tunnel ? 401 : 404,
+  );
   assert.equal((await request("/api/v1/panels", { cwd: second })).status, 401);
   assert.equal(scheduler.list().length, 1, "logout revokes control, not accepted recurring jobs");
   await login();
+  if (tunnel) {
+    const { PanelResourceService } = await import(
+      join(repository, "packages/server/src/panels/resources/service.ts")
+    );
+    const resources = new PanelResourceService({
+      rootDirectory: join(userData, "panel-app-media"),
+      isScopeAuthorized: () => true,
+    });
+    try {
+      const file = join(second, "preview.mp4");
+      writeFileSync(file, "0123456789");
+      const asset = await resources.library.importFile(
+        { appId: "desktop-panel", projectPath: second },
+        file,
+      );
+      const oldModule = await prepare(second);
+      const oldPreview = await prepare(second);
+      const preview = await call(second, oldPreview, "resources.preview", { assetId: asset.id });
+      const inlinePath = new URL(preview.url).pathname;
+      assert.equal(
+        (await request(inlinePath, { authenticated: false, origin: "null" })).status,
+        200,
+      );
+      passcode.set("rotated-fixture-passcode");
+      assert.equal((await request("/api/v1/panels", { cwd: second })).status, 401);
+      // The paired HTTP session still exists, but neither grant may outlive the
+      // passcode generation that authorized its original prepare request.
+      for (const path of [oldModule.src, inlinePath])
+        assert.equal((await request(path, { authenticated: false, origin: "null" })).status, 410);
+      const access = await fetch(`${baseUrl}/health`, {
+        headers: { "X-Access-Passcode": "rotated-fixture-passcode" },
+      });
+      assert.equal(access.status, 200);
+      accessCookie = access.headers.get("set-cookie").split(";", 1)[0];
+      const renewed = await prepare(second);
+      assert.equal(
+        (await request(renewed.src, { authenticated: false, origin: "null" })).status,
+        200,
+      );
+      const freshPreview = await call(second, renewed, "resources.preview", { assetId: asset.id });
+      assert.equal(
+        (
+          await request(new URL(freshPreview.url).pathname, {
+            authenticated: false,
+            origin: "null",
+          })
+        ).status,
+        200,
+      );
+      assert.equal(
+        (await request(oldModule.src, { authenticated: false, origin: "null" })).status,
+        401,
+      );
+    } finally {
+      await resources.shutdown();
+    }
+  }
   const closing = await prepare(second);
   await api.close();
   assert.equal(scheduler.list().length, 1, "closing Web must not own the Desktop scheduler");
-  assert.equal((await request(closing.src, { authenticated: false, origin: "null" })).status, 404);
+  assert.equal(
+    (await request(closing.src, { authenticated: false, origin: "null" })).status,
+    tunnel ? 401 : 404,
+  );
   api.start();
   await login();
   const revoked = await prepare(second);
   devices.revoke(device.id);
+  // A known capability must recheck its original paired owner even before
+  // explicit revokeDevice cleanup removes it from the asset map.
+  assert.equal((await request(revoked.src, { authenticated: false, origin: "null" })).status, 410);
   api.revokeDevice(device.id);
-  assert.equal((await request(revoked.src, { authenticated: false, origin: "null" })).status, 404);
+  assert.equal(
+    (await request(revoked.src, { authenticated: false, origin: "null" })).status,
+    tunnel ? 401 : 404,
+  );
   assert.equal((await request("/api/v1/panels", { cwd: second })).status, 401);
   assert.ok(mutations >= 1);
   assert.ok(notifications >= 1);
@@ -399,6 +562,7 @@ try {
       sharedDesktopStorage: true,
       workspaceIsolation: true,
       opaqueModuleAssets: true,
+      assetPreflight: true,
       mutationGate: true,
       projectScopedInvalidation: true,
       logoutRevokesAssets: true,
@@ -411,11 +575,21 @@ try {
       sessionIndependentProjectScope: true,
       forgedProjectScopeRejected: true,
       secondaryRootProjectScope: true,
+      ...(tunnel
+        ? {
+            tunnelOpaqueAssets: true,
+            ordinaryRoutesGated: true,
+            passcodeRotationRevokesAssets: true,
+          }
+        : {}),
     }),
   );
 } finally {
   scheduler.stopAll();
   await api.close();
-  server.closeAllConnections();
-  await new Promise((resolve) => server.close(resolve));
+  if (remoteHost) await remoteHost.stop();
+  else {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
 }
