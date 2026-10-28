@@ -65,6 +65,8 @@ export type TaskInboxBackgroundEntry = {
       finalText?: string;
       cwd?: string;
       externalSessionId?: string;
+      cli?: "claude" | "codex";
+      jobKind?: "drive-agent" | "video" | "job";
     }
 );
 

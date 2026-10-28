@@ -15,6 +15,7 @@ import { detectCodexImageInput, runAgentOnce, runWithLines } from "./external-ag
 import { claudeAdapter, claudeAdapter as adp, codexAdapter } from "./agent-adapter.js";
 import type { AgentAdapter } from "./agent-adapter.js";
 import { probeCli } from "./cc-capability.js";
+import type { BackgroundJobProgress } from "@cjhyy/code-shell-core/extension";
 
 const RUN_REAL_AGENT_TESTS = process.env.CODESHELL_RUN_REAL_AGENT_TESTS === "1";
 const describeRealAgent = RUN_REAL_AGENT_TESTS ? describe : describe.skip;
@@ -152,6 +153,87 @@ describe.serial("external agent driver", () => {
   });
 
   describe("runAgentOnce promptViaStdin（用 cat 做可移植子进程,不依赖 claude/codex）", () => {
+    it.serial(
+      "drains Claude diagnostics and final bytes without retaining partial token records",
+      async () => {
+        const dir = mkdtempSync(join(tmpdir(), "claude-progress-"));
+        const script = join(dir, "fake-claude.cjs");
+        const progress: BackgroundJobProgress[] = [];
+        try {
+          writeFileSync(
+            script,
+            [
+              'console.log(JSON.stringify({ type: "system", subtype: "init", session_id: "claude-progress" }));',
+              'for (let i = 0; i < 100; i++) console.log(JSON.stringify({ type: "stream_event", event: { type: "content_block_delta", delta: { type: "thinking_delta", thinking: "private reasoning" } } }));',
+              'process.stderr.write("private diagnostics".repeat(32768), () => process.stdout.write(JSON.stringify({ type: "result", session_id: "claude-progress", result: "done", is_error: false })));',
+            ].join("\n"),
+          );
+          const result = await runAgentOnce(
+            { ...claudeAdapter, buildArgs: () => [script] },
+            {
+              command: process.execPath,
+              prompt: "work",
+              cwd: dir,
+              onProgress: (update) => progress.push(update),
+            },
+          );
+          expect(result.finalText).toBe("done");
+          expect(result.lines).toHaveLength(2);
+          expect(result.lines.some((line) => line.includes("stream_event"))).toBe(false);
+          expect(progress.at(-1)).toMatchObject({
+            summary: "Response complete",
+            phase: "responding",
+          });
+          expect(progress.at(-1)!.eventCount).toBeGreaterThanOrEqual(102);
+          expect(JSON.stringify(progress)).not.toContain("private");
+        } finally {
+          rmSync(dir, { recursive: true, force: true });
+        }
+      },
+    );
+
+    it.serial(
+      "reports the CLI pid and settles when a backgrounded grandchild keeps stdio open",
+      async () => {
+        if (process.platform === "win32") return;
+        const dir = mkdtempSync(join(tmpdir(), "claude-held-stdio-"));
+        const script = join(dir, "fake-claude.sh");
+        const holderPidFile = join(dir, "holder.pid");
+        const pids: number[] = [];
+        try {
+          writeFileSync(
+            script,
+            [
+              "#!/bin/sh",
+              `echo '${JSON.stringify({ type: "result", session_id: "held", result: "done", is_error: false })}'`,
+              // Inherits stdout/stderr and outlives the CLI, like a dev server.
+              "sleep 30 &",
+              `echo $! > ${JSON.stringify(holderPidFile)}`,
+              "exit 0",
+            ].join("\n"),
+          );
+          chmodSync(script, 0o755);
+          const started = Date.now();
+          const result = await runAgentOnce(
+            { ...claudeAdapter, buildArgs: () => [] },
+            { command: script, prompt: "work", cwd: dir, onProcess: (pid) => pids.push(pid) },
+          );
+          expect(result.finalText).toBe("done");
+          expect(Date.now() - started).toBeLessThan(10_000);
+          expect(pids).toHaveLength(1);
+          expect(pids[0]).toBeGreaterThan(0);
+        } finally {
+          try {
+            process.kill(Number(readFileSync(holderPidFile, "utf8")), "SIGKILL");
+          } catch {
+            // already gone
+          }
+          rmSync(dir, { recursive: true, force: true });
+        }
+      },
+      20_000,
+    );
+
     // A fake adapter that drives `cat`: with promptViaStdin the driver must pipe
     // the prompt to the child's stdin, and `cat` echoes it back on stdout. This
     // exercises the real stdin-wiring code path without needing codex installed.
@@ -218,58 +300,75 @@ describe.serial("external agent driver", () => {
       expect(receivedDirectories).toEqual(["/logs/one", "/logs/two"]);
     });
 
-    it.serial("reports the Codex thread id before the process exits", async () => {
-      const dir = mkdtempSync(join(tmpdir(), "codex-live-session-id-"));
-      const script = join(dir, "fake-codex");
-      const release = join(dir, "release");
-      let run: ReturnType<typeof runAgentOnce> | undefined;
-      let observedSessionId = "";
-      let settled = false;
-      try {
-        writeFileSync(
-          script,
-          [
-            "#!/usr/bin/env node",
-            'const { existsSync } = require("node:fs");',
-            'console.log(JSON.stringify({ type: "thread.started", thread_id: "thread-live" }));',
-            "const timer = setInterval(() => {",
-            `  if (!existsSync(${JSON.stringify(release)})) return;`,
-            "  clearInterval(timer);",
-            '  console.log(JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: "done" } }));',
-            "}, 10);",
-          ].join("\n"),
-          "utf-8",
-        );
-        chmodSync(script, 0o755);
-        const liveCodexAdapter: AgentAdapter = {
-          ...codexAdapter,
-          promptViaStdin: false,
-          buildArgs: () => [script],
-        };
+    it.serial(
+      "reports the Codex thread id and bounded activity before the process exits",
+      async () => {
+        const dir = mkdtempSync(join(tmpdir(), "codex-live-session-id-"));
+        const script = join(dir, "fake-codex");
+        const release = join(dir, "release");
+        let run: ReturnType<typeof runAgentOnce> | undefined;
+        let observedSessionId = "";
+        let settled = false;
+        const progress: BackgroundJobProgress[] = [];
+        try {
+          writeFileSync(
+            script,
+            [
+              "#!/usr/bin/env node",
+              'const { existsSync } = require("node:fs");',
+              'console.log(JSON.stringify({ type: "thread.started", thread_id: "thread-live" }));',
+              'for (let i = 0; i < 20; i++) console.log(JSON.stringify({ type: "item.updated", item: { type: "reasoning", text: "private reasoning" } }));',
+              'console.log(JSON.stringify({ type: "item.started", item: { type: "command_execution", command: "private command" } }));',
+              'process.stderr.write("private diagnostics\\n");',
+              "const timer = setInterval(() => {",
+              `  if (!existsSync(${JSON.stringify(release)})) return;`,
+              "  clearInterval(timer);",
+              '  console.log(JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: "done" } }));',
+              "}, 10);",
+            ].join("\n"),
+            "utf-8",
+          );
+          chmodSync(script, 0o755);
+          const liveCodexAdapter: AgentAdapter = {
+            ...codexAdapter,
+            promptViaStdin: false,
+            buildArgs: () => [script],
+          };
 
-        run = runAgentOnce(liveCodexAdapter, {
-          command: process.execPath,
-          prompt: "keep working",
-          cwd: dir,
-          onSessionId: (sessionId) => {
-            observedSessionId = sessionId;
-          },
-        });
-        void run.then(() => {
-          settled = true;
-        });
+          run = runAgentOnce(liveCodexAdapter, {
+            command: process.execPath,
+            prompt: "keep working",
+            cwd: dir,
+            onSessionId: (sessionId) => {
+              observedSessionId = sessionId;
+            },
+            onProgress: (update) => {
+              progress.push(update);
+              // UI observer errors must not fail the underlying run.
+              throw new Error("observer failed");
+            },
+          });
+          void run.then(() => {
+            settled = true;
+          });
 
-        for (let i = 0; i < 100 && !observedSessionId; i++) {
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          for (let i = 0; i < 100 && progress.at(-1)?.phase !== "tool"; i++) {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+          }
+          expect(observedSessionId).toBe("thread-live");
+          expect(settled).toBe(false);
+          expect(progress.at(-1)?.summary).toBe("Running command");
+          expect(progress.at(-1)!.eventCount).toBeGreaterThanOrEqual(22);
+          expect(progress.length).toBeLessThan(10);
+          expect(JSON.stringify(progress)).not.toContain("private");
+        } finally {
+          writeFileSync(release, "1", "utf-8");
+          await run?.catch(() => undefined);
+          rmSync(dir, { recursive: true, force: true });
         }
-        expect(observedSessionId).toBe("thread-live");
-        expect(settled).toBe(false);
-      } finally {
-        writeFileSync(release, "1", "utf-8");
-        await run?.catch(() => undefined);
-        rmSync(dir, { recursive: true, force: true });
-      }
-    });
+        expect(progress.at(-1)?.summary).toBe("Response received");
+      },
+    );
 
     it.serial(
       "does not spawn the main codex CLI when aborted during image support probing",

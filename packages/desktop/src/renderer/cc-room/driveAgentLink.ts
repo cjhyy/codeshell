@@ -16,7 +16,7 @@ export function driveAgentLinkDetail(
   const cliKind = roomCliKind(job.cli);
   if (
     job.jobKind !== "drive-agent" ||
-    !job.externalSessionId?.trim() ||
+    !job.jobId.trim() ||
     !job.cwd?.trim() ||
     !job.sourceSession.sessionId?.trim() ||
     !cliKind
@@ -24,7 +24,9 @@ export function driveAgentLinkDetail(
     return null;
   }
   return {
-    externalSessionId: job.externalSessionId,
+    jobId: job.jobId,
+    title: job.description,
+    ...(job.externalSessionId?.trim() ? { externalSessionId: job.externalSessionId } : {}),
     cliKind,
     cwd: job.cwd,
     sourceSessionId: job.sourceSession.sessionId,

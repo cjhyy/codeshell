@@ -79,7 +79,12 @@ describe("subagent conversation dock requests", () => {
       },
       controls: {
         gitReviewAvailable: true,
-        engineToBucketRef: useRef(new Map()),
+        engineToBucketRef: useRef(
+          new Map([
+            ["engine-parent-a", firstBucket],
+            ["engine-parent-b", secondBucket],
+          ]),
+        ),
         setPermissionOverrides: () => {},
         setModelOverrides: () => {},
         defaultPermissionMode: "default",
@@ -344,5 +349,97 @@ describe("subagent conversation dock requests", () => {
     });
     expect(hook.result.current.panelByBucket[firstBucket]?.subagentSelection).toBeUndefined();
     expect(materializedBuckets).toEqual([]);
+  });
+
+  const cliTask = (overrides: Record<string, unknown> = {}) =>
+    new CustomEvent("codeshell:open-cli-session", {
+      detail: {
+        jobId: "cc-new",
+        sourceSessionId: "engine-parent-a",
+        cwd: "/repo",
+        cliKind: "codex",
+        title: "Run tests",
+        ...overrides,
+      },
+    });
+
+  test("opens a new task by job identity before its external session id arrives", async () => {
+    hook = await renderHook(useHarness);
+    await act(async () => {
+      window.dispatchEvent(cliTask({ autoOpen: true }));
+    });
+    expect(hook.result.current.activePanelState).toMatchObject({
+      open: true,
+      requestKind: "ccRoom",
+      openCliSession: {
+        jobId: "cc-new",
+        sourceSessionId: "engine-parent-a",
+        title: "Run tests",
+        externalSessionId: undefined,
+      },
+    });
+  });
+
+  test("automatic tasks cannot replace the page being viewed or navigate another chat", async () => {
+    hook = await renderHook(useHarness);
+    await act(async () => {
+      hook!.result.current.openSubagent(firstSelection);
+    });
+    const initial = hook.result.current.activePanelState;
+    await act(async () => {
+      window.dispatchEvent(cliTask({ autoOpen: true }));
+      window.dispatchEvent(cliTask({ autoOpen: true, sourceSessionId: "engine-parent-b" }));
+    });
+    expect(hook.result.current.activePanelState).toBe(initial);
+    expect(hook.result.current.panelByBucket[secondBucket]?.open).not.toBe(true);
+  });
+
+  test("manual cross-chat task links store the page and invoke normal session navigation", async () => {
+    hook = await renderHook(useHarness);
+    const navigations: unknown[] = [];
+    const listener = (event: Event) => navigations.push((event as CustomEvent).detail);
+    window.addEventListener("codeshell:open-notification-session", listener);
+    try {
+      await act(async () => {
+        window.dispatchEvent(cliTask({ sourceSessionId: "engine-parent-b" }));
+      });
+      expect(hook.result.current.panelByBucket[secondBucket]?.openCliSession?.jobId).toBe("cc-new");
+      expect(navigations).toEqual([{ sessionId: "engine-parent-b" }]);
+    } finally {
+      window.removeEventListener("codeshell:open-notification-session", listener);
+    }
+  });
+
+  test("return to chat closes only the matching task page", async () => {
+    hook = await renderHook(useHarness);
+    await act(async () => {
+      window.dispatchEvent(cliTask());
+    });
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("codeshell:return-from-cli-task", {
+          detail: { sourceSessionId: "engine-parent-a", jobId: "other" },
+        }),
+      );
+    });
+    expect(hook.result.current.activePanelState.open).toBe(true);
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("codeshell:return-from-cli-task", {
+          detail: { sourceSessionId: "engine-parent-a", jobId: "cc-new" },
+        }),
+      );
+    });
+    expect(hook.result.current.activePanelState.open).toBe(false);
+    expect(hook.result.current.activePanelState.openCliSession?.jobId).toBe("cc-new");
+  });
+
+  test("malformed task event identity is ignored without throwing", async () => {
+    hook = await renderHook(useHarness);
+    await act(async () => {
+      for (const overrides of [{ jobId: 2 }, { externalSessionId: 42 }, { sourceSessionId: null }])
+        window.dispatchEvent(cliTask(overrides));
+    });
+    expect(hook.result.current.activePanelState.open).toBe(false);
   });
 });

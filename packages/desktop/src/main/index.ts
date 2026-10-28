@@ -436,6 +436,7 @@ import { SessionCatalogStore } from "./session-catalog-store.js";
 import { createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
 import { createTaskInboxService } from "./task-inbox/task-inbox-service.js";
 import { createTaskInboxBackgroundHost } from "./task-inbox/task-inbox-background-host.js";
+import * as backgroundWork from "./cc-room/background-work-ipc.js";
 import { registerTaskInboxIpc } from "./task-inbox/task-inbox-ipc.js";
 import { registerOptimizationLabHost } from "./optimization-lab-host.js";
 import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
@@ -1226,6 +1227,7 @@ const roomManager = new RoomManager({
       room.kind === "codex" ? {} : { appendSystemPrompt: CC_COST_GUARD_PROMPT },
   },
   resolveLinkedSession: resolveLinkedSessionFromDisk,
+  assertExternalSessionAvailable: backgroundWork.assertExternalSessionIdle,
   createAgent: (room, onEvent) =>
     room.kind === "codex"
       ? new CodexRoomAgent({
@@ -7066,6 +7068,7 @@ taskInboxDisposers.push(
   registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled),
   sessionCatalogStore.onChanged(() => taskInboxService?.scheduleRefresh()),
 );
+backgroundWork.registerBackgroundWorkIpc(ipcMain, mainWindows, () => bridge);
 const disposeOperationBatchHost = registerOperationBatchHost({
   windows: () => [...mainWindows],
   enabled: taskInboxEnabled,

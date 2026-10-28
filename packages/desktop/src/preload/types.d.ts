@@ -331,6 +331,14 @@ export interface BackgroundWorkSourceSession {
   current: boolean;
 }
 
+export interface BackgroundJobProgress {
+  lastActivityAt: number;
+  eventCount: number;
+  phase?: "starting" | "thinking" | "tool" | "responding";
+  summary?: string;
+  recentEvents?: Array<{ at: number; summary: string }>;
+}
+
 type BackgroundWorkWithSource<T> = T & { sourceSession: BackgroundWorkSourceSession };
 
 /** One unified background-work row for the background panel. Discriminated by
@@ -351,7 +359,12 @@ export type BackgroundWorkInfo =
       kind: "job";
       jobId: string;
       description: string;
-      status: "running" | "completed" | "failed" | "cancelled";
+      status: "running" | "cancelling" | "completed" | "failed" | "cancelled" | "unknown";
+      /** With status "unknown": a live process elsewhere owns it, or its owner
+       *  exited while the external CLI is still running. */
+      unknownReason?: "other-process" | "orphaned-process";
+      progress?: BackgroundJobProgress;
+      canCancel?: boolean;
       startedAt: number;
       finishedAt?: number;
       /** Result summary / error, once finished. */
@@ -1208,6 +1221,17 @@ export interface CodeshellApi
     sessionId: string,
     opts?: { scope?: "session" | "all" },
   ): Promise<{ items: BackgroundWorkInfo[] }>;
+  cancelBackgroundJob(
+    sessionId: string,
+    jobId: string,
+    expectedStartedAt: number,
+  ): Promise<{ cancelled: boolean }>;
+  /** Resolve a task no live process reports; it is recorded as interrupted. */
+  markBackgroundJobInterrupted(
+    sessionId: string,
+    jobId: string,
+    expectedStartedAt: number,
+  ): Promise<{ marked: boolean }>;
   /**
    * Multi-session form. The dual-arg legacy form is also supported at runtime.
    * `scope` (once/session/project) on an approve threads to the engine's

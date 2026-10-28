@@ -5,6 +5,7 @@ describe("claudeAdapter.buildArgs", () => {
   it("includes core headless flags + permission mode", () => {
     const args = claudeAdapter.buildArgs({ prompt: "hi", permissionMode: "default", cwd: "/x" });
     expect(args.slice(0, 5)).toEqual(["-p", "hi", "--output-format", "stream-json", "--verbose"]);
+    expect(args).toContain("--include-partial-messages");
     expect(args).toContain("--permission-mode");
     expect(args[args.indexOf("--permission-mode") + 1]).toBe("default");
   });

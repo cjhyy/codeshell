@@ -5,16 +5,20 @@ import type { OpenCliSessionEventDetail } from "./types";
 
 export function DriveAgentLinkButton({ detail }: { detail: OpenCliSessionEventDetail }) {
   const { t } = useT();
-  const label = t(
-    detail.cliKind === "codex"
-      ? "panels.shells.openCodexSession"
-      : "panels.shells.openClaudeSession",
-  );
+  const label = detail.jobId
+    ? t("panels.shells.viewAgentProgress", {
+        cli: detail.cliKind === "codex" ? "Codex" : "Claude Code",
+      })
+    : t(
+        detail.cliKind === "codex"
+          ? "panels.shells.openCodexSession"
+          : "panels.shells.openClaudeSession",
+      );
 
   return (
     <button
       type="button"
-      className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+      className="inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-1 text-[11px] text-primary hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       aria-label={label}
       title={label}
       onClick={(event) => {
@@ -27,6 +31,7 @@ export function DriveAgentLinkButton({ detail }: { detail: OpenCliSessionEventDe
       }}
     >
       <ExternalLink className="h-3.5 w-3.5" />
+      {detail.jobId && <span>{label}</span>}
     </button>
   );
 }
