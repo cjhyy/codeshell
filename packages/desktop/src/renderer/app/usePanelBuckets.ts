@@ -873,6 +873,9 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
   useEffect(() => {
     const onOpenCliSession = (event: Event): void => {
       const detail = (event as CustomEvent<Partial<OpenCliSessionEventDetail>>).detail;
+      // Older producers may still emit automatic requests. They must never
+      // open a dock or replace the page the user is reading.
+      if (detail?.autoOpen) return;
       if (
         !detail ||
         (!(typeof detail.jobId === "string" && detail.jobId.trim()) &&
@@ -906,10 +909,6 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
       }
       const nonce = nextOpenCliSessionNonce();
       updatePanelBucket(targetBucket, (state) => {
-        // Background delegations may surface a closed dock once. They must not
-        // replace a page the user is reading, or navigate another chat's dock.
-        if (detail.autoOpen && (targetBucket !== activeBucketRef.current || state.open))
-          return state;
         return {
           ...state,
           open: true,
@@ -926,7 +925,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
           requestKind: "ccRoom",
         };
       });
-      if (!detail.autoOpen && targetBucket !== activeBucketRef.current) {
+      if (targetBucket !== activeBucketRef.current) {
         // Global background listings can link a task owned by another chat.
         // Use the existing authoritative session navigator after storing its page.
         window.dispatchEvent(

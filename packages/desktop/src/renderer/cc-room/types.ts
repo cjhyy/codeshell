@@ -14,6 +14,6 @@ export interface OpenCliSessionRequest {
 
 export interface OpenCliSessionEventDetail extends Omit<OpenCliSessionRequest, "nonce"> {
   sourceSessionId: string;
-  /** Only new, live delegations may surface the panel without a user click. */
+  /** @deprecated Automatic requests are ignored; opening a task requires a user action. */
   autoOpen?: boolean;
 }

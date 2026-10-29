@@ -126,6 +126,9 @@ export function DriveAgentTaskView({
   const cliKind =
     job?.cli === "claude" ? "claude-code" : job?.cli === "codex" ? "codex" : request.cliKind;
   const cliLabel = cliKind === "codex" ? "Codex" : "Claude Code";
+  const status = readFailed ? "unknown" : (job?.status ?? "unknown");
+  const terminal = driveAgentTaskIsTerminal(status);
+  const running = status === "running" || status === "cancelling";
   useEffect(() => {
     setLinked(null);
     setTakenOver(false);
@@ -144,12 +147,21 @@ export function DriveAgentTaskView({
           externalSessionId,
           cwd,
           cliKind,
+          { jobId: request.jobId, sourceSessionId: request.sourceSessionId },
         );
-        if (!cancelled) setLinked(result);
+        if (!cancelled) {
+          setLinked(result);
+          setConnectionFailed(false);
+        }
       } catch {
         if (cancelled) return;
-        if (++attempts < 5) timer = setTimeout(() => void connect(), 1500);
-        else setConnectionFailed(true);
+        attempts += 1;
+        if (attempts >= 5) setConnectionFailed(true);
+        // A live CLI may flush its transcript later than its session identity.
+        // Keep trying at a lower rate while visible, then give the final flush
+        // a fresh retry window when the task leaves its running state.
+        if (attempts < 5 || running)
+          timer = setTimeout(() => void connect(), attempts < 5 ? 1500 : 10_000);
       }
     };
     void connect();
@@ -157,11 +169,18 @@ export function DriveAgentTaskView({
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [active, externalSessionId, cwd, cliKind, linked, connectionRevision]);
+  }, [
+    active,
+    externalSessionId,
+    cwd,
+    cliKind,
+    linked,
+    running,
+    connectionRevision,
+    request.jobId,
+    request.sourceSessionId,
+  ]);
 
-  const status = readFailed ? "unknown" : (job?.status ?? "unknown");
-  const terminal = driveAgentTaskIsTerminal(status);
-  const running = status === "running" || status === "cancelling";
   useEffect(() => {
     if (!active || !running) return;
     setNow(Date.now());
@@ -264,6 +283,7 @@ export function DriveAgentTaskView({
               ? t("panels.shells.jobRunning")
               : t("panels.shells.jobUnknown");
   const progress = job?.progress;
+  const finalText = driveAgentTaskIsTerminal(job?.status) ? job?.finalText : undefined;
   const clock = job?.finishedAt ?? now;
   const quiet = running && now - (progress?.lastActivityAt ?? job?.startedAt ?? now) >= 60_000;
 
@@ -391,11 +411,11 @@ export function DriveAgentTaskView({
             </ol>
           </details>
         )}
-        {terminal && job?.finalText && (
+        {linked && finalText && (
           <details>
             <summary className="cursor-pointer">{t("panels.shells.taskResult")}</summary>
             <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words py-2">
-              {job.finalText}
+              {finalText}
             </pre>
           </details>
         )}
@@ -422,8 +442,14 @@ export function DriveAgentTaskView({
           />
         </div>
       ) : (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground">
-          <p>
+        <div className="min-h-0 flex-1 overflow-auto p-4 text-sm">
+          {finalText && (
+            <section aria-label={t("panels.shells.taskResult")} className="mb-4 space-y-2">
+              <h3 className="font-medium">{t("panels.shells.taskResult")}</h3>
+              <pre className="whitespace-pre-wrap break-words font-sans">{finalText}</pre>
+            </section>
+          )}
+          <p className="text-muted-foreground" role="status">
             {connectionFailed
               ? t("panels.shells.taskConnectionFailed")
               : externalSessionId
@@ -438,6 +464,7 @@ export function DriveAgentTaskView({
             <Button
               variant="outline"
               size="sm"
+              className="mt-3"
               onClick={() => setConnectionRevision((value) => value + 1)}
             >
               {t("panels.common.retry")}
