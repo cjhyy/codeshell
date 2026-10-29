@@ -44,6 +44,17 @@ describe("app profiles", () => {
     });
   });
 
+  test("accepts lists a formatter wrapped across lines", () => {
+    const parsed = parseAppProfile(
+      profile(
+        "id: wrapped\nbundleIds:\n  [\n    com.example.One,\n    com.example.Two,\n  ]\nnames: [One]\nstage:\n  keepClear:\n    [text, button]",
+      ),
+      "wrapped",
+    );
+    expect(parsed.bundleIds).toEqual(["com.example.One", "com.example.Two"]);
+    expect(parsed.stage.keepClear).toEqual(["text", "button"]);
+  });
+
   test("rejects profiles that do not identify an app or exceed their bounds", () => {
     const bad: Array<[string, string]> = [
       ["id: other\nnames: [X]", "mismatch"],
