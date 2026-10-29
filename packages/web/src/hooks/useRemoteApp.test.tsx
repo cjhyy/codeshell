@@ -117,6 +117,234 @@ describe("useRemoteApp session switching recovery", () => {
     return { hook, ws, sent: () => ws.sent.map((line) => JSON.parse(line)) };
   }
 
+  test("explicit repair keeps old writes fenced until a fresh complete journal joins", async () => {
+    const { hook, ws, sent } = await connected(true);
+    try {
+      await act(async () => {
+        hook.result.current.selectSession("native");
+        const selected = sent().findLast((event) => event.type === "session.select");
+        ws.message({
+          type: "session.recovery.ready",
+          sessionId: "native",
+          recoveryId: selected.recoveryId,
+          ok: true,
+        });
+        await flushMicrotasks();
+        const read = sent().findLast((event) => event.type === "session.outputJournal");
+        ws.message({
+          ...read,
+          page: { version: 1, status: "unavailable", frames: [], complete: false },
+          snapshot: { epoch: "old", nextSeq: 1, unpaired: true },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.outputHistoryFailed).toBe(true);
+      expect(hook.result.current.loading.sessionHistory).toBe(false);
+      expect(await hook.result.current.sendChat({ text: "held draft", attachments: [] })).toBe(
+        false,
+      );
+      const approval = {
+        type: "approval.request",
+        approvalId: "old-decision",
+        title: "Write",
+        body: "fixture",
+        risk: "low",
+      };
+      await act(async () => {
+        ws.message(approval);
+      });
+      // An ordinary read retry may still restore a valid pending card; repair retires it.
+      expect(hook.result.current.approvals).toHaveLength(1);
+      let applying!: Promise<unknown>;
+      const cancels = sent().filter((event) => event.type === "session.recovery.cancel").length;
+      await act(async () => {
+        applying = hook.result.current.applySessionOutputRecovery!("native", {
+          planId: "reviewed",
+          acceptHistoricalGap: true,
+        });
+        const request = sent().findLast((event) => event.type === "session.outputRecovery.apply");
+        ws.message({
+          ...request,
+          result: { status: "applied", sessionId: "native", historicalGap: true },
+        });
+        await applying;
+      });
+      expect(hook.result.current.outputHistoryFailed).toBe(true);
+      expect(hook.result.current.loading.sessionHistory).toBe(true);
+      expect(sent().filter((event) => event.type === "session.recovery.cancel")).toHaveLength(
+        cancels,
+      );
+      expect(await hook.result.current.sendChat({ text: "still held", attachments: [] })).toBe(
+        false,
+      );
+      await act(async () => {
+        const selected = sent().findLast((event) => event.type === "session.select");
+        ws.message({
+          type: "session.recovery.ready",
+          sessionId: "native",
+          recoveryId: selected.recoveryId,
+          ok: true,
+        });
+        await flushMicrotasks();
+        const read = sent().findLast((event) => event.type === "session.outputJournal");
+        const cursor = (sequence: number) =>
+          Buffer.from(
+            JSON.stringify({
+              identity: "a".repeat(64),
+              hash: "b".repeat(64),
+              sequence,
+              offset: sequence * 100,
+            }),
+          ).toString("base64url");
+        ws.message({
+          ...read,
+          page: {
+            version: 1,
+            status: "ok",
+            from: cursor(0),
+            through: cursor(1),
+            next: cursor(1),
+            coverageStart: cursor(0),
+            legacyBaseThroughEventId: "base",
+            frames: [
+              {
+                cursor: cursor(1),
+                sequence: 1,
+                event: { type: "text_delta", text: "verified history" },
+              },
+            ],
+            complete: true,
+          },
+          legacyBaseComplete: true,
+          legacyBase: {
+            throughEventId: "base",
+            events: [{ type: "session_started", sessionId: "native" }],
+          },
+          snapshot: {
+            epoch: "fresh",
+            nextSeq: 2,
+            unpaired: false,
+            outputCursor: cursor(1),
+            historicalGap: true,
+          },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.outputHistoryFailed).toBe(false);
+      expect(hook.result.current.outputHistoricalGap).toBe(true);
+      await act(async () => {
+        ws.message(approval);
+        hook.result.current.respondApproval("old-decision", "approve");
+        ws.message({ ...approval, approvalId: "new-decision" });
+      });
+      expect(hook.result.current.approvals.map((entry) => entry.requestId)).toEqual([
+        "new-decision",
+      ]);
+      expect(hook.result.current.loading.sessionHistory).toBe(false);
+      expect(
+        sent().some((event) =>
+          ["chat.send", "approval.respond", "goal.extend"].includes(event.type),
+        ),
+      ).toBe(false);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("repair retires an unacknowledged send and late acceptance without replay", async () => {
+    const { hook, ws, sent } = await connected(true);
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async () => {
+        throw new Error("No upload expected");
+      },
+      writable: true,
+    });
+    let retired = 0,
+      uncertain = 0;
+    try {
+      await act(async () => {
+        hook.result.current.selectSession("native");
+      });
+      let pending!: Promise<boolean>;
+      await act(async () => {
+        pending = hook.result.current.sendChat({
+          text: "keep for manual review",
+          attachments: [],
+          onRetired: () => {
+            retired++;
+          },
+          onUncertain: () => {
+            uncertain++;
+          },
+        });
+        await flushMicrotasks();
+      });
+      const message = sent().findLast((event) => event.type === "chat.send");
+      expect(message).toBeTruthy();
+      let applying!: Promise<unknown>;
+      await act(async () => {
+        applying = hook.result.current.applySessionOutputRecovery!("native", {
+          planId: "review",
+          acceptHistoricalGap: true,
+        });
+        await flushMicrotasks();
+      });
+      expect(await pending).toBe(false);
+      expect(retired).toBe(1);
+      expect(uncertain).toBe(0);
+      await act(async () => {
+        ws.message({
+          type: "chat.accepted",
+          clientMessageId: message.clientMessageId,
+          sessionId: "native",
+        });
+        const request = sent().findLast((event) => event.type === "session.outputRecovery.apply");
+        ws.message({
+          ...request,
+          result: { status: "applied", sessionId: "native", historicalGap: true },
+        });
+        await applying;
+      });
+      expect(sent().filter((event) => event.type === "chat.send")).toHaveLength(1);
+      expect(hook.result.current.chat.items.some((item) => item.kind === "user")).toBe(false);
+      expect(hook.result.current.outputHistoryFailed).toBe(true);
+    } finally {
+      await hook.unmount();
+      restoreFetch();
+    }
+  });
+
+  test("leaving a repair selection rejects its late apply acknowledgement", async () => {
+    const { hook, ws, sent } = await connected(true);
+    try {
+      await act(async () => {
+        hook.result.current.selectSession("native");
+      });
+      let outcome!: Promise<unknown>;
+      await act(async () => {
+        outcome = hook.result.current.applySessionOutputRecovery!("native", {
+          planId: "reviewed",
+          acceptHistoricalGap: true,
+        }).catch((error) => error);
+      });
+      const request = sent().findLast((event) => event.type === "session.outputRecovery.apply");
+      await act(async () => {
+        hook.result.current.selectSession("other");
+      });
+      await act(async () => {
+        ws.message({
+          ...request,
+          result: { status: "applied", sessionId: "native", historicalGap: true },
+        });
+      });
+      expect(await outcome).toBeInstanceOf(Error);
+      expect(hook.result.current.activeSessionId).toBe("other");
+      expect(sent().findLast((event) => event.type === "session.select").sessionId).toBe("other");
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("native history fallback keeps the verified selection until history arrives", async () => {
     const { hook, ws, sent } = await connected(true);
     try {

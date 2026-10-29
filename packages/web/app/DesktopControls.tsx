@@ -42,9 +42,9 @@ export function DesktopChatControls({ app }: { app: RemoteApp }) {
         <select
           aria-label="权限模式"
           value={inRoom ? (app.activeRoom?.permissionMode ?? "") : app.permissionMode}
-          disabled={inRoom}
+          disabled={inRoom || app.outputHistoryFailed}
           onChange={(event) => {
-            if (inRoom) return;
+            if (inRoom || app.outputHistoryFailed) return;
             const mode = event.target.value as MobileRemotePermissionMode;
             if (
               mode === "bypassPermissions" &&
