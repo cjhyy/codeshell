@@ -74,7 +74,7 @@ jobs:
           if node scripts/run-isolated-node-smoke.mjs scripts/run-mobile-video-download.mjs .mobile-panel-consumer/apps/video-download > "$TMPDIR/focused-touch.log" 2>&1; then touch_status=0; else touch_status=$?; fi
           if node scripts/run-isolated-node-smoke.mjs scripts/.diagnostic-video-suppressed-runner.mjs .mobile-panel-consumer/apps/video-download > "$TMPDIR/suppressed-click.log" 2>&1; then suppressed_status=0; else suppressed_status=$?; fi
           python3 - "$TMPDIR" "$old_status" "$touch_status" "$suppressed_status" <<'PYCODE'
-          import json,pathlib,sys
+          import json,pathlib,sys,re
           directory=pathlib.Path(sys.argv[1]);old_status,touch_status,suppressed_status=map(int,sys.argv[2:])
           positive=(directory/'focused-touch.log').read_text();negative=(directory/'suppressed-click.log').read_text()
           reports=[]
@@ -88,13 +88,17 @@ jobs:
           assert touch_status==0 and 'consumer: natural Node exit 0' in positive,positive[-16000:]
           assert consumer and consumer['exactDownloadBytes']==151552 and consumer['singleTrustedFocusedInspectTap'] and consumer['inspectionRpcReceived']
           assert consumer['unauthorizedDownloadDenied'] and consumer['revokedDownloadDenied'] and consumer['errors']==[] and consumer['blocked']==[]
-          assert suppressed_status!=0 and 'single focused inspect tap / RPC' in negative and 'Timeout 30000ms exceeded' in negative,negative[-16000:]
+          assert suppressed_status!=0 and 'single focused inspect tap / RPC' in negative,negative[-16000:]
           errors=[]
           for line in negative.splitlines():
               try: errors.append(json.loads(line))
               except (ValueError,TypeError): pass
           failure=next(x for x in errors if x.get('phase')=='single focused inspect tap / RPC')
-          assert any(e.get('kind')=='click' and e.get('target')=='inspect-button' and e.get('trusted') for e in failure['inputEvents'])
+          timeout=re.search(r'page.waitForRequest: Timeout (\d+)ms exceeded',failure['error'])
+          assert timeout and 0<int(timeout.group(1))<=30000,failure['error']
+          for kind in ['touchstart','touchend','click']:
+              events=[e for e in failure['inputEvents'] if e.get('kind')==kind and e.get('target')=='inspect-button']
+              assert len(events)==1 and events[0]['trusted'] and events[0]['disabled']==False,events
           assert failure['blocked']==[] and failure['errors']==[]
           assert 'consumer: cleanup completed' in negative
           PYCODE
