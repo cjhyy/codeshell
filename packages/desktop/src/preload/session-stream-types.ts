@@ -31,6 +31,7 @@ export interface SessionSnapshot {
   outputInputIds?: string[];
   outputCoverageIdentity?: string;
   outputJournalIdentity?: string;
+  historicalGap?: true;
 }
 
 /**
