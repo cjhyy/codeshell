@@ -29,7 +29,7 @@ const roots: string[] = [];
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
-function fixture(toolResult = "synthetic result") {
+function fixture(toolResult = "synthetic result", missingResult = false) {
   const root = mkdtempSync(join(tmpdir(), "output-history-"));
   roots.push(root);
   const id = "historical-session",
@@ -52,11 +52,17 @@ function fixture(toolResult = "synthetic result") {
   bundle.transcript.appendMessage("assistant", [
     { type: "tool_use", id: "tool", name: "Read", input: { path: "fixture" } },
   ]);
-  emit({
-    type: "tool_result",
-    result: { id: "tool", toolName: "Read", result: toolResult },
-  });
-  bundle.transcript.appendToolResult("tool", "Read", toolResult);
+  if (!missingResult)
+    emit({
+      type: "tool_result",
+      result: { id: "tool", toolName: "Read", result: toolResult },
+    });
+  bundle.transcript.appendToolResult(
+    "tool",
+    "Read",
+    missingResult ? undefined : toolResult,
+    missingResult ? "External runtime turn ended before this tool returned a result." : undefined,
+  );
   bundle.transcript.appendTurnBoundary();
   bundle.transcript.sync();
   const cursor = emit({ type: "turn_complete", reason: "completed" });
@@ -404,4 +410,67 @@ test("checkpoint accepts a verifier-owned failed visible input with its stable i
     { ...user, authority: "agent" },
   ])
     expect(() => checkpointOutputHistoryRecords([], [changed as StreamEvent], "session")).toThrow();
+});
+
+test("actual native checkpoint inserts only a proven failed input and preserves its provider context", () => {
+  const f = fixture();
+  f.bundle.transcript.appendMessage("user", "synthetic failed request", {
+    clientMessageId: "failed-input",
+  });
+  f.bundle.transcript.appendError("synthetic initialization failure", { phase: "initialization" });
+  f.bundle.transcript.appendRunResult("failed-input", {
+    sessionId: f.id,
+    reason: "model_error",
+    text: "synthetic initialization failure",
+    turnCount: 0,
+  } as any);
+  f.bundle.transcript.sync();
+  f.manager.updateSessionState(f.id, { provider: "openai", status: "model_error" });
+  const original = readFileSync(join(f.dir, "transcript.jsonl")),
+    service = new OutputHistoryRecovery(() => f.root),
+    plan = ready(service, f);
+  expect(plan.comparison.userInputs).toBe(2);
+  expect(
+    service.apply(f.id, { planId: plan.planId, acceptHistoricalGap: true }, f.authority).status,
+  ).toBe("applied");
+  const page = readOutputJournal(f.root, f.id);
+  expect(page.status).toBe("ok");
+  expect(page.frames.slice(-3).map((frame) => frame.event?.type)).toEqual([
+    "session_user_message",
+    "error",
+    "turn_complete",
+  ]);
+  expect(page.frames.at(-3)?.event).toMatchObject({
+    clientMessageId: "failed-input",
+  });
+  expect((page.frames.at(-3)?.event as any).injected).not.toBe(true);
+  expect(readFileSync(join(f.dir, "transcript.jsonl")).equals(original)).toBe(true);
+  expect(f.manager.resume(f.id).transcript.hasClientMessageId("failed-input")).toBe(true);
+  expect(f.manager.readSessionState(f.id)?.provider).toBe("openai");
+});
+
+test("actual epoch inserts the recorder's proved unresolved-tool error without replaying the call", () => {
+  const f = fixture("unused", true),
+    service = new OutputHistoryRecovery(() => f.root),
+    plan = ready(service, f);
+  const original = readFileSync(join(f.dir, "transcript.jsonl"));
+  expect(
+    service.apply(f.id, { planId: plan.planId, acceptHistoricalGap: true }, f.authority).status,
+  ).toBe("applied");
+  const events = readOutputJournal(f.root, f.id).frames.flatMap((frame) =>
+    frame.event ? [frame.event] : [],
+  );
+  expect(events.filter((event) => event.type === "tool_use_start")).toHaveLength(1);
+  expect(events.filter((event) => event.type === "tool_result")).toEqual([
+    {
+      type: "tool_result",
+      result: {
+        id: "tool",
+        toolName: "Read",
+        error: "External runtime turn ended before this tool returned a result.",
+        isError: true,
+      },
+    },
+  ]);
+  expect(readFileSync(join(f.dir, "transcript.jsonl")).equals(original)).toBe(true);
 });

@@ -20,6 +20,7 @@ import {
   readPublishedOutputHead,
 } from "./output-journal-head.js";
 import { compareOutputHistory } from "./output-history-comparison.js";
+import { compareNativeOutputHistory } from "./output-history-native-comparison.js";
 import {
   outputHistoryEventGroups,
   checkpointOutputHistoryRecords,
@@ -178,9 +179,6 @@ export class OutputHistoryRecovery {
       state.stateRevision === undefined ||
         (Number.isSafeInteger(state.stateRevision) && state.stateRevision >= 0),
     );
-    // This first implementation proves the external recorder format exactly.
-    // An unknown producer/format is never silently projected into a checkpoint.
-    requireProof(["codex", "claude-code"].includes(state.provider), "unsupported_history");
     // Persisted status can outlive a worker. The Host authority proves actual
     // quiescence; the complete closed-turn comparison below proves the source.
     requireProof(
@@ -242,7 +240,13 @@ export class OutputHistoryRecovery {
     const groups = outputHistoryEventGroups(raw);
     const events = groups.map((group) => group.event);
     const originalEventsHash = sha(JSON.stringify(events));
-    const compared = compareOutputHistory(native, events, sessionId, state.cwd);
+    const external = compareOutputHistory(native, events, sessionId, state.cwd);
+    const compared = external.ok
+      ? external
+      : compareNativeOutputHistory(native, events, sessionId, state.cwd, {
+          legacyBaseThroughEventId: header.legacyBaseThroughEventId,
+          terminalStatus: state.status,
+        });
     if (!compared.ok) throw new Refusal(compared.reason);
     requireProof(sha(JSON.stringify(events)) === originalEventsHash, "history_mismatch");
     const checkpointEvents = compared.checkpointEvents ?? events;
