@@ -13,6 +13,7 @@ import {
 import { createDesktopPanelManagement } from "./panel-app-management.js";
 import { PanelExecutionGate, panelExecutionGate } from "@cjhyy/code-shell-server/panels";
 import { panelChangeOperation, panelUpdateApproval } from "./panel-update-blockers.js";
+import { registerProjectPanelVersionIpc } from "./project-panel-version-ipc.js";
 
 // Exercise the actual registrar without loading Electron's composition root.
 // Unrelated route providers are adapters; review validation and cancellation use
@@ -36,7 +37,7 @@ const register = runInNewContext(`${compiled}\nregisterProjectPanelIpc`, {
   resolvePanelAppBindingProjectPath,
   createProjectPanelAppUpdateService: () => ({ invalidate() {} }),
   panelAppUpdateService: { invalidate() {} },
-  registerProjectPanelVersionIpc() {},
+  registerProjectPanelVersionIpc,
   Error,
   panelExecutionGate: uninstallGate,
   uninstallPanelAppForUi: async () => {
@@ -239,9 +240,128 @@ test("I9 actual reviewed project unbind IPC returns service blockers and leaves 
         selected.revision,
       ),
     ).toMatchObject({ ok: true, bindings: [{ appId: "fixture", bound: false }] });
+    const afterUnbind = await management.snapshot();
+    const completedDrains = effects.filter((value) => value === "drain").length;
+    expect(
+      await handlers.get("panel-apps:setProjectBinding")!(
+        { sender },
+        cwd,
+        "fixture",
+        true,
+        selected.revision,
+      ),
+    ).toEqual({ ok: false, error: "面板已改变，请刷新后重试。" });
+    expect(await management.snapshot()).toEqual(afterUnbind);
+    expect(effects.filter((value) => value === "drain")).toHaveLength(completedDrains);
   } finally {
     release();
     unregister();
+    sender.emit("destroyed");
+    if (previousHome === undefined) delete process.env.HOME;
+    else process.env.HOME = previousHome;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("reviewed restore IPC drains services, retains unconfirmed blockers, and retries the same review after exit", async () => {
+  const root = mkdtempSync(join(tmpdir(), "panel-restore-ipc-"));
+  const previousHome = process.env.HOME;
+  process.env.HOME = join(root, "home");
+  const cwd = join(root, "project"),
+    pkg = join(root, "package");
+  mkdirSync(cwd);
+  mkdirSync(join(pkg, ".codeshell-panel"), { recursive: true });
+  mkdirSync(join(pkg, "app"));
+  const writePackage = (version: string) => {
+    writeFileSync(join(pkg, "app/index.html"), version);
+    writeFileSync(
+      join(pkg, ".codeshell-panel/panel.json"),
+      JSON.stringify({
+        schemaVersion: 1,
+        id: "restore-fixture",
+        version,
+        title: { default: "fixture" },
+        entry: "app/index.html",
+        icon: "panel",
+        placement: "right-dock",
+        singleton: true,
+        permissions: ["storage"],
+      }),
+    );
+  };
+  const handlers = new Map<string, (...args: any[]) => any>();
+  const sender = Object.assign(new EventEmitter(), { id: 77003, isDestroyed: () => false });
+  const context = { ownerId: "fixture", authorize: () => true };
+  let release = () => {};
+  let unregister = () => {};
+  register({
+    ipcMain: {
+      handle: (name: string, handler: (...args: any[]) => any) => handlers.set(name, handler),
+    },
+    requireRendererProjectPath: async (path: string) => path,
+    withMutation: async (_cwd: string, write: () => Promise<unknown>) => write(),
+    onChanged() {},
+    revokeAppId() {},
+    onCleanupError() {},
+    describeGuest() {},
+    closeForPackageChange: async () => {
+      throw new Error("restore must not force other work closed");
+    },
+  });
+  const management = createDesktopPanelManagement(cwd);
+  try {
+    writePackage("1.0.0");
+    const input = { kind: "dir" as const, path: pkg };
+    await management.install(context, (await management.previewSource(context, input)).reviewToken);
+    const old = (await management.snapshot())[0]!;
+    writePackage("2.0.0");
+    await management.install(
+      context,
+      (await management.previewSource(context, input)).reviewToken,
+      { overwrite: true },
+    );
+    const selected = (await management.snapshot())[0]!;
+    const label = "feed: stop-unconfirmed; original process group 9876; exit unconfirmed";
+    const scope = {
+      appId: old.appId,
+      projectPath: cwd,
+      holder: { kind: "service" as const, label },
+    };
+    release = panelExecutionGate.enter(scope);
+    let confirmedExit = false,
+      drains = 0;
+    unregister = panelExecutionGate.registerServiceDrain(async (matches) => {
+      expect(matches(scope)).toBe(true);
+      expect(() => panelExecutionGate.enter(scope)).toThrow("正在更新");
+      drains++;
+      if (confirmedExit) release();
+    });
+    const review = await handlers.get("panel-apps:previewRestore")!(
+      { sender },
+      cwd,
+      old.appId,
+      old.packageDigest,
+      selected.revision,
+    );
+    const result = await handlers.get("panel-apps:restore")!({ sender }, cwd, review.reviewToken);
+    expect(result).toEqual({
+      ok: false,
+      error: "面板还有正在提交、排队或运行的任务，请结束后再修改。",
+      blockers: [{ kind: "service", count: 1, label }],
+    });
+    expect(drains).toBe(1);
+    expect((await management.snapshot())[0]!.packageDigest).toBe(selected.packageDigest);
+    expect(panelExecutionGate.blockers(() => true)).toHaveLength(1);
+    // Exit is a separate confirmed fact; a retry alone cannot release custody.
+    confirmedExit = true;
+    const restored = await handlers.get("panel-apps:restore")!({ sender }, cwd, review.reviewToken);
+    expect(restored).toEqual({ ok: true, id: old.appId, packageDigest: old.packageDigest });
+    expect(drains).toBe(2);
+    expect((await management.snapshot())[0]!.packageDigest).toBe(old.packageDigest);
+  } finally {
+    release();
+    unregister();
+    management.close();
     sender.emit("destroyed");
     if (previousHome === undefined) delete process.env.HOME;
     else process.env.HOME = previousHome;

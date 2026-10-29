@@ -885,10 +885,15 @@ export function createPanelManagement(options: PanelManagementOptions) {
         throw new PanelManagementError(403, "review_owner", "请在当前设备重新审阅这个版本。");
       await assertAuthorized(context, held.generation);
       const review = held.public;
-      return mutate(context, { appId: review.appId, kind: "binding" }, async (guard) => {
-        await assertAuthorized(context, held.generation);
+      const assertReviewLease = () => {
+        if (closed || generation(context.ownerId) !== held.generation)
+          throw new PanelManagementError(401, "login_required", "登录已失效，请重新登录。");
         if (restores.get(token) !== held || held.public.expiresAt <= now())
           throw new PanelManagementError(409, "review_expired", "版本审阅已失效，请重新选择。");
+      };
+      const validateReview = async (guard: () => Promise<void>) => {
+        await assertAuthorized(context, held.generation);
+        assertReviewLease();
         const current = await restorationSelection(review.appId);
         if (current.revision !== review.expectedRevision)
           throw new PanelManagementError(409, "conflict", "项目面板已改变，请重新审阅。");
@@ -897,13 +902,31 @@ export function createPanelManagement(options: PanelManagementOptions) {
           throw new PanelManagementError(400, "unsupported", "这个版本无法在当前环境使用。");
         await guard();
         await assertAuthorized(context, held.generation);
-        if (restores.get(token) !== held || held.public.expiresAt <= now())
-          throw new PanelManagementError(409, "review_expired", "版本审阅已失效，请重新选择。");
-        setBinding(target, true, { projectState: held.projectState });
-        restores.delete(token);
-        await options.onChanged?.(review.appId, "binding");
-        return { id: review.appId, packageDigest: review.packageDigest };
-      });
+        assertReviewLease();
+        if (projectState(review.appId) !== held.projectState)
+          throw new PanelManagementError(409, "conflict", "项目面板配置已改变，请重新审阅。");
+        return target;
+      };
+      return mutate(
+        context,
+        { appId: review.appId, kind: "binding" },
+        async (guard) => {
+          const target = await validateReview(guard);
+          assertReviewLease();
+          setBinding(target, true, { projectState: held.projectState });
+          restores.delete(token);
+          await options.onChanged?.(review.appId, "binding");
+          return { id: review.appId, packageDigest: review.packageDigest };
+        },
+        async (guard, matches) => {
+          // A reviewed version selection changes the executor's package just like
+          // unbinding. Validate authority and exact retained bytes before drain,
+          // then revalidate them before writing. Other executions still block.
+          await validateReview(guard);
+          assertReviewLease();
+          await panelExecutionGate.drainServices(matches);
+        },
+      );
     },
     assertAuthorized,
     async discover(context: PanelOperationContext, input: unknown): Promise<PanelDiscovery> {

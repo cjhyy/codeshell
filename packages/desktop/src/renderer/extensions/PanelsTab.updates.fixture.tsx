@@ -874,7 +874,7 @@ describe("Panel App update controls", () => {
       },
       restorePanelAppPackage: async (...args: unknown[]) => {
         calls.push(["restore", ...args]);
-        return { id: history.appId, packageDigest: "c".repeat(64) };
+        return { ok: true, id: history.appId, packageDigest: "c".repeat(64) };
       },
     });
     await render();
@@ -924,9 +924,11 @@ describe("Panel App update controls", () => {
   test("a failed native restore keeps its review available for cancellation", async () => {
     const { cancelled, review } = stubRetainedVersion();
     Object.assign(window.codeshell, {
-      restorePanelAppPackage: async () => {
-        throw new Error("任务正在运行，请结束后修改面板。");
-      },
+      restorePanelAppPackage: async () => ({
+        ok: false,
+        error: "任务正在运行，请结束后修改面板。",
+        blockers: [{ kind: "service", count: 1, label: "feed: stop-unconfirmed" }],
+      }),
     });
     await render();
     await click("展开");
@@ -934,6 +936,7 @@ describe("Panel App update controls", () => {
     await click("审阅 v0.6.1");
     await click("确认权限并恢复项目版本");
     expect(textOf(document.body)).toContain("任务正在运行，请结束后修改面板。");
+    expect(textOf(document.body)).toContain("feed: stop-unconfirmed");
     expect(button("确认权限并恢复项目版本")).toBeDefined();
     expect(cancelled).toEqual([]);
     await click("关闭版本记录");
@@ -1035,7 +1038,7 @@ describe("Panel App update controls", () => {
       },
       restorePanelAppPackage: async (...args: unknown[]) => {
         calls.push(["restore", ...args]);
-        return { id: history.appId, packageDigest: "c".repeat(64) };
+        return { ok: true, id: history.appId, packageDigest: "c".repeat(64) };
       },
     });
     await render();

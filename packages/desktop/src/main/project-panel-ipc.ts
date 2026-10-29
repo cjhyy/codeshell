@@ -107,6 +107,7 @@ export function registerProjectPanelIpc(deps: {
   });
   registerProjectPanelVersionIpc({
     ipcMain,
+    describeGuest: deps.describeGuest,
     requireRendererProjectPath,
     desktopPanelManager,
     desktopPanelContext,
