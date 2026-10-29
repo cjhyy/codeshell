@@ -162,6 +162,8 @@ jobs:
             # loop stalled on CI after earlier suites, timing out without a diagnostic.
             # browser-host's Electron mock needs BrowserWindow; an earlier file's electron
             # mock wins in a shared process (54afce1fe), so it also runs alone.
+            # Computer Use suites run as one process below: they spawn the MCP proxy and
+            # fake drivers, and splitting them out keeps this shard within its file budget.
             ignore: >-
               --path-ignore-patterns '**/browser-driver/cdp-actions.integration.test.ts'
               --path-ignore-patterns '**/browser-runtime/playwright-driver.test.ts'
@@ -176,6 +178,7 @@ jobs:
               --path-ignore-patterns '**/desktop/scripts/*.test.mjs'
               --path-ignore-patterns '**/cc-room/transcript-recovery.test.ts'
               --path-ignore-patterns '**/src/main/browser-host/index.test.ts'
+              --path-ignore-patterns '**/src/main/computer-use/**'
           # rest is split in two only for wall time (470s as one shard). Together the two
           # path lists are the previous single list. The module losses seen when it was split
           # were not size: two suites bundled with an in-process Bun.build, which shares the
@@ -265,6 +268,7 @@ jobs:
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/cc-room/transcript-recovery.test.ts
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/browser-host/index.test.ts
           node scripts/run-bun-test-shard.mjs --timeout 30000 tests/mimi-native-trial-cancel.test.ts
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/computer-use
       - name: test Desktop script suites with their own runners
         if: matrix.shard == 'desktop'
         run: |
