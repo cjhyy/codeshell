@@ -26,6 +26,23 @@ describe("input gate policy", () => {
     expect(inputLane("page", {})).toBe("foreground");
   });
 
+  test("the driver's browser route is withheld whatever the gate state", () => {
+    const open = { version: 1, userActive: false, cancelledSessions: [] };
+    for (const name of ["browser_navigate", "browser_prepare", "browser_future", "page"])
+      expect(gateDecision(open, call(name))).toMatchObject({
+        allow: false,
+        reason: "tool-withheld",
+      });
+    // Not even a read: get_browser_state inspects authenticated tabs.
+    expect(gateDecision(open, call("get_browser_state"))).toMatchObject({
+      reason: "tool-withheld",
+    });
+    expect(gateDecision(undefined, call("browser_click"))).toMatchObject({
+      reason: "tool-withheld",
+    });
+    expect(gateDecision(open, call("get_window_state"))).toEqual({ allow: true, lane: "read" });
+  });
+
   test("decisions: reads always pass; cancel and stop refuse every input lane", () => {
     const open = { version: 1, userActive: false, cancelledSessions: [] };
     expect(gateDecision(undefined, call("list_apps"))).toEqual({ allow: true, lane: "read" });
