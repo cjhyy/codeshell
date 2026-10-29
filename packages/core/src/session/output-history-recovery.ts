@@ -173,7 +173,7 @@ export class OutputHistoryRecovery {
         Number.isFinite(state.startedAt) &&
         !state.ephemeral &&
         !state.parentSessionId &&
-        state.kind !== "pet",
+        (state.kind === undefined || state.kind === "work"),
     );
     requireProof(
       state.stateRevision === undefined ||

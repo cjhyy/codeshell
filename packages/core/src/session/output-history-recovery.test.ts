@@ -474,3 +474,18 @@ test("actual epoch inserts the recorder's proved unresolved-tool error without r
   ]);
   expect(readFileSync(join(f.dir, "transcript.jsonl")).equals(original)).toBe(true);
 });
+
+test("known native formats do not broaden recovery into the hidden Pet session boundary", () => {
+  const f = fixture(),
+    state = JSON.parse(readFileSync(f.statePath, "utf8"));
+  state.kind = "pet";
+  writeFileSync(f.statePath, JSON.stringify(state));
+  const service = new OutputHistoryRecovery(() => f.root);
+  expect(service.plan(f.id, f.authority)).toMatchObject({
+    status: "blocked",
+    reason: "unavailable",
+  });
+  expect(readdirSync(f.dir).some((name) => name.startsWith(".output-history-recovery"))).toBe(
+    false,
+  );
+});
