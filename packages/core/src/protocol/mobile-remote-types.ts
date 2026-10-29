@@ -126,6 +126,14 @@ export type MobileClientEvent =
     }
   | { type: "session.select"; sessionId: string; recoveryId?: string }
   | { type: "session.recovery.cancel" }
+  | { type: "session.outputRecovery.plan"; sessionId: string; requestId: string }
+  | {
+      type: "session.outputRecovery.apply";
+      sessionId: string;
+      requestId: string;
+      planId: string;
+      acceptHistoricalGap: true;
+    }
   | ({
       type: "session.legacyBase";
       sessionId: string;
@@ -319,6 +327,18 @@ export type MobileServerEvent =
       approvalId?: string;
     }
   | {
+      type: "session.outputRecovery.plan";
+      sessionId: string;
+      requestId: string;
+      result: import("./output-history-recovery-types.js").OutputHistoryRecoveryPlan;
+    }
+  | {
+      type: "session.outputRecovery.apply";
+      sessionId: string;
+      requestId: string;
+      result: import("./output-history-recovery-types.js").OutputHistoryRecoveryResult;
+    }
+  | {
       type: "session.recovery.ready";
       sessionId: string;
       recoveryId: string;
@@ -344,6 +364,7 @@ export type MobileServerEvent =
         inputIds?: string[];
         incarnation?: string;
         journalIdentity?: string;
+        historicalGap?: true;
       };
     }
   | ({
@@ -376,6 +397,7 @@ export type MobileServerEvent =
       entries: Array<{ seq: number; event: unknown }>;
       nextSeq: number;
       outputCursor?: string;
+      historicalGap?: true;
       /** Main lifetime in which these sequence numbers are valid. */
       epoch?: string;
     }

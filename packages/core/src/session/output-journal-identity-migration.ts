@@ -450,6 +450,11 @@ function makePlan(
   const stateBytes = originalState ?? bytes(join(directory, "state.json"), 1024 * 1024),
     state = decodeJson(stateBytes);
   requireRepair(
+    !state.outputJournalBinding?.anchorName && !state.outputJournalHead?.name,
+    "unsupported_epoch",
+    "Explicit history epochs already retain stable recovery evidence",
+  );
+  requireRepair(
     state &&
       state.sessionId === sessionId &&
       Number.isFinite(state.startedAt) &&

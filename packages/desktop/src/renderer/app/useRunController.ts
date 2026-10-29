@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { playThemeSound } from "../theme-audio";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
@@ -33,6 +33,7 @@ import {
   enqueueSerialTask,
   removeQueuedInputById,
   type QueuedInputState,
+  type QueuedItem,
   type SerialTaskQueue,
 } from "../queuedInput";
 import { resolveStopBucket } from "../stopRouting";
@@ -40,7 +41,7 @@ import { runAfterModelSwitch } from "../modelSwitchRun";
 import { quickChatSessionIdFromBucket, type QuickChatSessionRef } from "../quickChatSession";
 import { browserPartitionForBucket, parsePanelBucket, type ApprovalHistoryEntry } from "./appUtils";
 import type { TranscriptsAction, TranscriptsMap } from "../transcriptsReducer";
-import type { ApprovalState, MessagesReducerState } from "../types";
+import type { ApprovalState, MessagesReducerState, UserMessage } from "../types";
 import { timePhase } from "../perf";
 import type { TrackedProject } from "../projects";
 import type { ViewMode, ViewState } from "../view";
@@ -54,10 +55,18 @@ import { NO_REPO_KEY } from "../transcripts";
 import { parseExternalRuntimeModelKey } from "../../shared/external-runtime-models";
 import {
   buildExternalRuntimeHandoff,
+  forgetExternalRuntimeSession,
   noteExternalRuntimeStopped,
   resolveRunSessionId,
   runExternalRuntimeTurn,
 } from "../externalRuntimeRun";
+
+export interface RecoveryHeldInput extends QueuedItem {
+  /** A cached display record lacks the original wire/attachment manifest. Never replay it. */
+  manualReviewOnly?: true;
+  cachedAttachments?: UserMessage["attachments"];
+}
+type RecoveryHeldState = Record<string, RecoveryHeldInput[]>;
 
 interface Params {
   shell: {
@@ -178,14 +187,20 @@ export function useRunController({
     new Map<string, { signature: string; promise: Promise<void> }>(),
   );
   const acknowledgedApprovalIdsRef = useRef(new Set<string>());
+  const retiredApprovalKeysRef = useRef(new Set<string>());
+  const retiredQuestionKeysRef = useRef(new Set<string>());
   // Project the legacy focused approval from the committed queue. Queue
   // updaters stay pure even when StrictMode or a concurrent render replays them.
   useEffect(() => {
+    const liveQueue = approvalQueue.filter(
+      (entry) => !retiredApprovalKeysRef.current.has(approvalKey(entry)),
+    );
+    if (liveQueue.length !== approvalQueue.length) setApprovalQueue(liveQueue);
     setApproval((current) => {
-      if (current && approvalQueue.some((entry) => approvalKey(entry) === approvalKey(current))) {
+      if (current && liveQueue.some((entry) => approvalKey(entry) === approvalKey(current))) {
         return current;
       }
-      return approvalQueue[0] ?? null;
+      return liveQueue[0] ?? null;
     });
     for (const requestId of acknowledgedApprovalIdsRef.current) {
       if (!approvalQueue.some((entry) => entry.requestId === requestId)) {
@@ -196,6 +211,134 @@ export function useRunController({
   }, [approvalQueue, setApproval, approvalBucketsRef]);
   const pendingLaunchesRef = useRef(new Map<string, { cancelled: boolean }>());
   const launchVersionsRef = useRef(new Map<string, symbol>());
+  // Retire delivery authority synchronously, before the recovery RPC can run.
+  // Held payloads are separate from the steer queue so late acknowledgements
+  // cannot delete them or turn them into an automatic resend.
+  const recoveryBlocksRef = useRef(new Set<string>());
+  const recoveryGenerationsRef = useRef(new Map<string, number>());
+  const inFlightInputsRef = useRef(new Map<symbol, { bucket: string; item: QueuedItem }>());
+  const [heldRecoveryInputs, setHeldRecoveryInputs] = useState<RecoveryHeldState>({});
+  const heldRecoveryInputsRef = useRef<RecoveryHeldState>({});
+  const cachedRecoveryIntentsRef = useRef(new Map<string, UserMessage[]>());
+  const holdInputs = (bucket: string, inputs: RecoveryHeldInput[]) => {
+    const previous = heldRecoveryInputsRef.current;
+    const held = previous[bucket] ?? [];
+    const ids = new Set(held.map((item) => item.clientMessageId));
+    const fresh = inputs.filter((item) => {
+      if (ids.has(item.clientMessageId)) return false;
+      ids.add(item.clientMessageId);
+      return true;
+    });
+    if (!fresh.length) return;
+    heldRecoveryInputsRef.current = { ...previous, [bucket]: [...held, ...fresh] };
+    setHeldRecoveryInputs(heldRecoveryInputsRef.current);
+  };
+  const beginOutputHistoryRecovery = (bucket = activeBucket): void => {
+    if (!cachedRecoveryIntentsRef.current.has(bucket)) {
+      cachedRecoveryIntentsRef.current.set(
+        bucket,
+        (transcriptsRef.current[bucket]?.messages ?? []).filter(
+          (message): message is UserMessage =>
+            message.kind === "user" &&
+            !!message.clientMessageId &&
+            (!message.injected || !!message.steerId),
+        ),
+      );
+    }
+    recoveryBlocksRef.current.add(bucket);
+    recoveryGenerationsRef.current.set(
+      bucket,
+      (recoveryGenerationsRef.current.get(bucket) ?? 0) + 1,
+    );
+    launchVersionsRef.current.delete(bucket);
+    const pending = pendingLaunchesRef.current.get(bucket);
+    if (pending) pending.cancelled = true;
+    pendingLaunchesRef.current.delete(bucket);
+    const queued = queuedInputs[bucket] ?? [];
+    const inputs = [...queued];
+    for (const [version, input] of inFlightInputsRef.current) {
+      if (input.bucket !== bucket) continue;
+      inputs.push(input.item);
+      inFlightInputsRef.current.delete(version);
+    }
+    holdInputs(bucket, inputs);
+    setQueuedInputs((previous) => clearQueuedInput(previous, bucket));
+    for (const item of inputs) {
+      steeredIdsRef.current.delete(item.id);
+      injectedSteerIdsRef.current.delete(item.id);
+      goalYieldIdsRef.current.delete(item.id);
+    }
+    setRelayingBuckets((previous) => {
+      const next = new Set(previous);
+      next.delete(bucket);
+      return next;
+    });
+    const engineId = resolveEngineSessionIdForBucket(bucket);
+    if (engineId) forgetExternalRuntimeSession(engineId);
+    const belongs = (entry: ApprovalRequestEnvelope) =>
+      engineId && entry.sessionId
+        ? entry.sessionId === engineId
+        : approvalBucketsRef.current.get(entry.requestId) === bucket;
+    for (const entry of approvalQueue)
+      if (belongs(entry)) retiredApprovalKeysRef.current.add(approvalKey(entry));
+    for (const message of transcriptsRef.current[bucket]?.messages ?? [])
+      if (message.kind === "ask_user")
+        retiredQuestionKeysRef.current.add(`${bucket}\0${message.requestId}`);
+    setApprovalQueue((previous) => previous.filter((entry) => !belongs(entry)));
+    setApproval((previous) => (previous && belongs(previous) ? null : previous));
+    if (pending) {
+      setBusyForKey(bucket, false);
+      if (runningBucketRef.current === bucket) runningBucketRef.current = null;
+    }
+  };
+  const captureApprovalFence = (bucket: string, requestId: string): (() => boolean) => {
+    const generation = recoveryGenerationsRef.current.get(bucket);
+    return () =>
+      !retiredQuestionKeysRef.current.has(`${bucket}\0${requestId}`) &&
+      !recoveryBlocksRef.current.has(bucket) &&
+      recoveryGenerationsRef.current.get(bucket) === generation;
+  };
+  const finishOutputHistoryRecovery = (bucket = activeBucket): void => {
+    if (!recoveryBlocksRef.current.has(bucket)) return;
+    const confirmed = new Set(
+      (transcriptsRef.current[bucket]?.messages ?? []).flatMap((message) =>
+        message.kind === "user" && message.clientMessageId ? [message.clientMessageId] : [],
+      ),
+    );
+    holdInputs(
+      bucket,
+      (cachedRecoveryIntentsRef.current.get(bucket) ?? [])
+        .filter((message) => !confirmed.has(message.clientMessageId!))
+        .map((message) => ({
+          id: message.clientMessageId!,
+          clientMessageId: message.clientMessageId!,
+          text: message.text,
+          manualReviewOnly: true,
+          cachedAttachments: message.attachments,
+        })),
+    );
+    cachedRecoveryIntentsRef.current.delete(bucket);
+    recoveryBlocksRef.current.delete(bucket);
+  };
+  const confirmHeldRecoveryInputs = (): void => {
+    if (recoveryBlocksRef.current.has(activeBucket)) return;
+    const all = heldRecoveryInputsRef.current[activeBucket] ?? [];
+    const held = all.filter((item) => !item.manualReviewOnly);
+    if (!held.length) return;
+    heldRecoveryInputsRef.current = {
+      ...heldRecoveryInputsRef.current,
+      [activeBucket]: all.filter((item) => item.manualReviewOnly),
+    };
+    setHeldRecoveryInputs(heldRecoveryInputsRef.current);
+    setQueuedInputs((previous) =>
+      held.reduce(
+        (next, item) =>
+          enqueueQueuedInput(next, activeBucket, newQueuedId(), item.text, newQueuedId(), item),
+        previous,
+      ),
+    );
+  };
+
   // Queued ids that already asked a running external Goal to yield.
   const goalYieldIdsRef = useRef(new Set<string>());
   const send = (
@@ -217,6 +360,19 @@ export function useRunController({
     const wasDraft = targetSessionId === null;
     const sid = targetSessionId ?? ensureActiveSession(targetProjectId);
     const bucket = bucketKey(targetProjectId, sid);
+    if (recoveryBlocksRef.current.has(bucket)) {
+      holdInputs(bucket, [
+        {
+          id: newQueuedId(),
+          text,
+          clientMessageId: sendOpts.clientMessageId ?? newQueuedId(),
+          attachments: sendOpts.attachments,
+          displayText: sendOpts.displayText,
+        },
+      ]);
+      return Promise.resolve();
+    }
+
     const launchVersion = Symbol();
     launchVersionsRef.current.set(bucket, launchVersion);
     const ownsCurrentLaunch = () => launchVersionsRef.current.get(bucket) === launchVersion;
@@ -247,6 +403,16 @@ export function useRunController({
           !previousRunIds.has(run.runId),
       );
     const displayText = sendOpts.displayText ?? text;
+    inFlightInputsRef.current.set(launchVersion, {
+      bucket,
+      item: {
+        id: clientMessageId,
+        clientMessageId,
+        text,
+        displayText,
+        attachments: sendOpts.attachments,
+      },
+    });
 
     // A draft has no sessionId, so its permission/goal overrides were keyed
     // under the SHARED per-repo "_none_" bucket (bucketKey collapses every
@@ -575,7 +741,8 @@ export function useRunController({
           : t("misc.session.sendSaveFailed");
         dispatch({ type: "turn_end", bucket, reason: "error", detail, elapsedMs });
         toast({ message: detail, variant: "error" });
-      });
+      })
+      .finally(() => inFlightInputsRef.current.delete(launchVersion));
   };
 
   const sendQuickChat = (
@@ -718,6 +885,7 @@ export function useRunController({
   // relay handoff (drain the WHOLE queue as one merged re-send) or a leftover
   // queue (take the next item). Clear the relay marker once we fire.
   const sendNextQueued = (bucket: string): void => {
+    if (recoveryBlocksRef.current.has(bucket)) return;
     const isRelay = relayingBuckets.has(bucket);
     if (isRelay) {
       const {
@@ -775,7 +943,7 @@ export function useRunController({
   };
 
   useEffect(() => {
-    if (!activeSessionId) return;
+    if (!activeSessionId || recoveryBlocksRef.current.has(activeBucket)) return;
     const queued = queuedInputs[activeBucket];
     if (!queued || queued.length === 0) return;
 
@@ -876,7 +1044,8 @@ export function useRunController({
   // they always wait for this), send its next serialized turn there.
   useEffect(() => {
     for (const bucket of Object.keys(queuedInputs)) {
-      if (bucket === activeBucket || busyKeys.has(bucket)) continue;
+      if (bucket === activeBucket || busyKeys.has(bucket) || recoveryBlocksRef.current.has(bucket))
+        continue;
       if (!queuedInputs[bucket]?.length || quickChatSessionIdFromBucket(bucket)) continue;
       if (!parsePanelBucket(bucket).sessionId) continue;
       sendNextQueued(bucket);
@@ -905,6 +1074,10 @@ export function useRunController({
     const attachments = queueOpts.attachments?.filter(Boolean) ?? [];
     if (!trimmed && !displayText && attachments.length === 0) return;
     const bucket = queueOpts.bucket ?? activeBucket;
+    if (recoveryBlocksRef.current.has(bucket)) {
+      holdInputs(bucket, [{ id, text: trimmed, clientMessageId, attachments, displayText }]);
+      return;
+    }
     // No optimistic right-side bubble here. A queued draft lives ONLY in the
     // left waiting panel (enqueueQueuedInput) until the engine consumes it and
     // echoes steer_injected — the reducer then appends the real user bubble
@@ -948,6 +1121,10 @@ export function useRunController({
     } = {},
   ): void => {
     const bucket = forceOpts.bucket ?? activeBucket;
+    if (recoveryBlocksRef.current.has(bucket)) {
+      queueInput(text, forceOpts);
+      return;
+    }
     revokeSteeredForRelay(bucket);
     setQueuedInputs((prev) =>
       enqueueQueuedInput(prev, bucket, newQueuedId(), text, forceOpts.clientMessageId, {
@@ -1008,6 +1185,7 @@ export function useRunController({
   // QUEUE's default — see the auto-send effect — so this button is the explicit
   // INTERRUPT entry, matching the composer 引导 button.)
   const guideActiveQueuedInput = (): void => {
+    if (recoveryBlocksRef.current.has(activeBucket)) return;
     const queued = queuedInputs[activeBucket];
     if (!queued || queued.length === 0) return;
     revokeSteeredForRelay();
@@ -1122,6 +1300,7 @@ export function useRunController({
   };
 
   const compactActiveSession = (): void => {
+    if (recoveryBlocksRef.current.has(activeBucket)) return;
     if (busyKeys.has(activeBucket)) {
       toast({ message: t("chat.compact.running"), variant: "error" });
       return;
@@ -1197,7 +1376,17 @@ export function useRunController({
     scope?: ApproveChoice,
     pathScope?: ApprovePathScope,
   ): Promise<void> => {
+    const bucket =
+      (env.sessionId ? engineToBucketRef.current.get(env.sessionId) : undefined) ??
+      approvalBucketsRef.current.get(env.requestId);
+    const generation = bucket ? recoveryGenerationsRef.current.get(bucket) : undefined;
     const key = approvalKey(env);
+    const isCurrent = () =>
+      !retiredApprovalKeysRef.current.has(key) &&
+      (!bucket ||
+        (!recoveryBlocksRef.current.has(bucket) &&
+          recoveryGenerationsRef.current.get(bucket) === generation));
+    if (!isCurrent()) return Promise.resolve();
     const signature = JSON.stringify([decision, reason, scope, pathScope]);
     const existing = approvalSubmissionsRef.current.get(key);
     if (existing) {
@@ -1210,6 +1399,7 @@ export function useRunController({
     // chat cards and the activity page can submit the same request, so share
     // one delivery promise and record the accepted decision exactly once.
     const submission = Promise.resolve().then(async () => {
+      if (!isCurrent()) return;
       const approveScope = decision === "approve" ? scope : undefined;
       const approvePathScope = decision === "approve" ? pathScope : undefined;
       const response = env.sessionId
@@ -1230,6 +1420,7 @@ export function useRunController({
             approveScope,
             approvePathScope,
           );
+      if (!isCurrent()) return;
       // The core RPC bridge returns error envelopes without rejecting.
       if (response?.error) throw new Error(response.error.message);
       const at = Date.now();
@@ -1270,6 +1461,7 @@ export function useRunController({
       () => approvalSubmissionsRef.current.delete(key),
       (error) => {
         approvalSubmissionsRef.current.delete(key);
+        if (!isCurrent()) return;
         toast({
           message: t("activityApprovals.failed"),
           detail: error instanceof Error ? error.message : String(error),
@@ -1282,7 +1474,11 @@ export function useRunController({
 
   const showWelcome = state.messages.length === 0;
   const approvalForBucket = (bucket: string): ApprovalRequestEnvelope | null =>
-    approvalQueue.find((env) => approvalBucketsRef.current.get(env.requestId) === bucket) ?? null;
+    approvalQueue.find(
+      (env) =>
+        !retiredApprovalKeysRef.current.has(approvalKey(env)) &&
+        approvalBucketsRef.current.get(env.requestId) === bucket,
+    ) ?? null;
   // Settings reads can finish out of order across Sessions. A different
   // Session's earlier queue entry must not hide this conversation's approval.
   const visibleApproval = approvalForBucket(activeBucket);
@@ -1290,6 +1486,12 @@ export function useRunController({
   const setViewMode = (v: ViewMode): void => setView((prev) => ({ ...prev, viewMode: v }));
 
   return {
+    beginOutputHistoryRecovery,
+    captureApprovalFence,
+    deliveryEpoch: recoveryGenerationsRef.current.get(activeBucket) ?? 0,
+    finishOutputHistoryRecovery,
+    confirmHeldRecoveryInputs,
+    heldRecoveryInputs: heldRecoveryInputs[activeBucket] ?? [],
     send,
     sendQuickChat,
     queueInput,

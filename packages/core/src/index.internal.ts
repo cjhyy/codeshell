@@ -44,6 +44,11 @@ export {
 } from "./session/output-coverage-state.js";
 
 export { outputUserMessage } from "./engine/run-output-user-message.js";
+export {
+  OutputHistoryRecovery,
+  type OutputHistoryRecoveryAuthority,
+  type OutputHistoryRecoveryEvidence,
+} from "./session/output-history-recovery.js";
 export { createRunTiming } from "./session/stream-timing.js";
 export { normalizeCumulativeUsageCounters } from "./session/usage.js";
 export { MemoryOrchestrator } from "./services/memory-orchestrator.js";
@@ -548,3 +553,4 @@ export {
 } from "./tool-system/mcp-probe-connection.js";
 
 export { listSessionEntries } from "./session/session-manager.js";
+export type * from "./protocol/output-history-recovery-types.js";

@@ -22,6 +22,7 @@ import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopC
 import { DesktopModelPicker, desktopRuntimeModel } from "./DesktopModelPicker.js";
 import type { WorkbenchController } from "./workbench-types.js";
 import { DesktopAccessChallenge } from "./DesktopAccessChallenge.js";
+import { OutputHistoryRecovery } from "../src/components/OutputHistoryRecovery.js";
 
 /** The Desktop adapter drives the already resident Desktop worker through its
  * paired-device protocol. It never starts a Hub ProtocolClient or another WS. */
@@ -371,6 +372,7 @@ export function useDesktopController(
   // Reconnect recovery shows whether an unconfirmed message was recorded. If
   // it was, its untouched restored copy would only invite a second send.
   React.useLayoutEffect(() => {
+    if (app.outputHistoryFailed) return;
     const intent = uncertainIntents.current.get(activeId);
     if (
       !intent ||
@@ -383,7 +385,7 @@ export function useDesktopController(
     if (drafts.current.get(activeId).revision === intent.revision) drafts.current.take(activeId);
     changed();
     setError("");
-  }, [app.chat.items, activeId]);
+  }, [app.chat.items, activeId, app.outputHistoryFailed]);
   const selectedProject = workspaceCwd ? projectForCwd(workspaceCwd, app.projects) : undefined;
   const actions: RemoteApp = {
     ...app,
@@ -480,6 +482,7 @@ export function useDesktopController(
     app.chat.run === "waiting" ||
     app.approvals.some((approval) => !approval.asynchronous);
   const send = (options?: { modelTraceSource?: string }): boolean => {
+    if (app.outputHistoryFailed) return false;
     if (sendingRef.current || app.status !== "online" || running || app.activeRoom?.observing)
       return false;
     if (pendingCreate.current || creationNeedsRetry) return false;
@@ -515,6 +518,7 @@ export function useDesktopController(
     // A failed retry (including upload/offline failure before send) cannot
     // prove that the original uncertain submission was never admitted.
     let uncertainId: string | undefined = retryId;
+    let retired = false;
     void app
       .sendChat({
         text: submitted.draft.text,
@@ -524,6 +528,10 @@ export function useDesktopController(
         ...(retryId ? { clientMessageId: retryId } : {}),
         onUncertain: (clientMessageId) => {
           uncertainId = clientMessageId;
+        },
+        onRetired: () => {
+          retired = true;
+          uncertainId = undefined;
         },
       })
       .then((accepted) => {
@@ -543,11 +551,13 @@ export function useDesktopController(
           if (mounted.current) {
             changed();
             setError(
-              uncertainId
-                ? "无法确认消息是否已送达。内容已放回输入框；直接重试不会重复执行同一条消息。"
-                : restored === "merged"
-                  ? "消息未送达。原内容和附件已放回输入框，之后输入的内容也已保留。"
-                  : "消息未送达，内容和附件已保留。请检查连接后重试。",
+              retired
+                ? "恢复已取消旧发送等待。内容和附件已保留为草稿，请核对记录后手动处理。"
+                : uncertainId
+                  ? "无法确认消息是否已送达。内容已放回输入框；直接重试不会重复执行同一条消息。"
+                  : restored === "merged"
+                    ? "消息未送达。原内容和附件已放回输入框，之后输入的内容也已保留。"
+                    : "消息未送达，内容和附件已保留。请检查连接后重试。",
             );
           }
         } else {
@@ -696,13 +706,13 @@ export function useDesktopController(
     uncertain: uncertainIntents.current.has(activeId),
     running,
     localDrafts,
-    approvals: app.approvals.map((approval) => ({
+    approvals: (app.outputHistoryFailed ? [] : app.approvals).map((approval) => ({
       id: approval.requestId,
       sessionId: approval.roomId ? undefined : approval.sessionId,
       ...(approval.asynchronous ? { asynchronous: true } : {}),
     })),
     approvalCount: (id) => app.approvals.filter((approval) => approval.sessionId === id).length,
-    approvalContent: app.approvals.map((approval) => (
+    approvalContent: (app.outputHistoryFailed ? [] : app.approvals).map((approval) => (
       <DesktopApproval key={approval.requestId} approval={approval} app={app} />
     )),
     error: error || app.notice || "",
@@ -745,7 +755,31 @@ export function useDesktopController(
         navigation={navigation}
       />
     ),
-    chatControls: <DesktopChatControls app={actions} />,
+    chatControls: (
+      <>
+        <DesktopChatControls app={actions} />
+        {app.activeSessionId &&
+        !app.activeRoomId &&
+        app.getSessionOutputRecoveryPlan &&
+        app.applySessionOutputRecovery ? (
+          <OutputHistoryRecovery
+            sessionId={app.activeSessionId}
+            identity={app.outputRecoveryIdentity ?? `${workspaceKey}:${app.activeSessionId}`}
+            failed={!!app.outputHistoryFailed}
+            historicalGap={app.outputHistoricalGap}
+            disabled={app.status !== "online" || app.loading.sessionHistory || sendingId !== null}
+            plan={app.getSessionOutputRecoveryPlan}
+            apply={app.applySessionOutputRecovery}
+            onApplied={() => {
+              // The content stays in the draft, but its old delivery identity is retired.
+              uncertainIntents.current.delete(activeId);
+              changed();
+              setError("");
+            }}
+          />
+        ) : null}
+      </>
+    ),
     modelSelector: app.activeRoomId ? undefined : (
       <DesktopModelPicker
         models={app.runtimeModels ?? []}
@@ -758,6 +792,7 @@ export function useDesktopController(
         error={app.runtimeModelsError}
         disabled={
           app.status !== "online" ||
+          app.outputHistoryFailed ||
           running ||
           sendingId !== null ||
           app.loading.sessionHistory ||
@@ -770,22 +805,25 @@ export function useDesktopController(
         }
       />
     ),
-    goalActions: app.activeSessionId ? (
-      <>
-        <button className="library-button" onClick={() => app.extendGoal(app.activeSessionId!)}>
-          继续目标
-        </button>
-        <button className="library-button" onClick={() => app.clearGoal(app.activeSessionId!)}>
-          结束目标
-        </button>
-      </>
-    ) : undefined,
+    goalActions:
+      app.activeSessionId && !app.outputHistoryFailed ? (
+        <>
+          <button className="library-button" onClick={() => app.extendGoal(app.activeSessionId!)}>
+            继续目标
+          </button>
+          <button className="library-button" onClick={() => app.clearGoal(app.activeSessionId!)}>
+            结束目标
+          </button>
+        </>
+      ) : undefined,
     loading:
       app.loading.sessionHistory || app.loading.roomHistory || Boolean(pendingCreate.current),
-    readOnly: app.activeRoom?.observing,
-    readOnlyNote: app.activeRoom?.observing
-      ? "此 CLI 会话正在桌面运行，当前设备以只读方式查看。"
-      : undefined,
+    readOnly: app.activeRoom?.observing || app.outputHistoryFailed,
+    readOnlyNote: app.outputHistoryFailed
+      ? "会话记录尚未完成核对。输入内容已保留为草稿，请先恢复记录。"
+      : app.activeRoom?.observing
+        ? "此 CLI 会话正在桌面运行，当前设备以只读方式查看。"
+        : undefined,
     attachmentAccept: "image/*",
     cameraAttachments: true,
     unreadSessionIds: app.unreadSessionIds,

@@ -60,3 +60,4 @@ export { isEnvironmentDescriptor, projectReferenceKey } from "./lib/environment.
 export type { EnvironmentDescriptor, ProjectReference } from "./lib/environment.js";
 
 export { ModelTraceExplorer } from "./components/ModelTraceExplorer.js";
+export { OutputHistoryRecovery } from "./components/OutputHistoryRecovery.js";

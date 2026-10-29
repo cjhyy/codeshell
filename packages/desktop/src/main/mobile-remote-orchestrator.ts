@@ -58,6 +58,11 @@ import {
 } from "./mobile-remote/handle-client-event.js";
 import { getProjectStore } from "./project-store.js";
 import { toMobileProjectMeta } from "./mobile-project-meta.js";
+import type {
+  OutputHistoryRecoveryAuthorization,
+  OutputHistoryRecoveryCaller,
+} from "./session-output-history-recovery.js";
+import type { MobileOutputHistoryService } from "./mobile-remote/output-history-commands.js";
 export { toMobileProjectMeta } from "./mobile-project-meta.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { lstatSync, realpathSync } from "node:fs";
@@ -114,6 +119,7 @@ export class MobileRemoteOrchestrator {
 
   private readonly outputRecovery: MobileOutputRecovery;
   private readonly externalCommands: MobileExternalRuntimeCommands;
+  private outputHistoryRecoveryService?: MobileOutputHistoryService;
   constructor(private readonly deps: MobileRemoteOrchestratorDeps) {
     this.externalCommands = new MobileExternalRuntimeCommands({
       authenticated: (viewer, device) => deps.remote.hasAuthenticatedViewer(viewer, device),
@@ -168,6 +174,72 @@ export class MobileRemoteOrchestrator {
   releaseViewer(viewerId: string): void {
     this.outputRecovery.revoke(viewerId);
     this.externalCommands.revoke(viewerId, true);
+  }
+
+  /** Installed once by Main's shared Desktop/mobile history composition. */
+  setOutputHistoryRecoveryService(service: MobileOutputHistoryService): void {
+    this.outputHistoryRecoveryService = service;
+  }
+
+  async authorizeOutputHistoryRecovery(
+    sessionId: string,
+    caller: Extract<OutputHistoryRecoveryCaller, { kind: "mobile" }>,
+  ): Promise<OutputHistoryRecoveryAuthorization> {
+    if (caller.kind !== "mobile") throw new Error("Invalid mobile recovery caller");
+    const bridge = this.deps.getBridge();
+    if (!bridge) throw new Error("Session bridge unavailable");
+    const ownerRevision = bridge.sessionPanelOwnerRevision(sessionId);
+    const selected = this.externalCommands.captureSelectedAuthority(
+      caller.viewerId,
+      caller.deviceId,
+      sessionId,
+    );
+    const authority = await mobileSessionCommandAuthority(sessionId);
+    const owner = bridge.panelOwnerWebContentsId(sessionId);
+    const assertCurrent = () => {
+      selected.assertCurrent();
+      authority.assertCurrent();
+      if (
+        this.deps.getBridge() !== bridge ||
+        bridge.sessionPanelOwnerRevision(sessionId) !== ownerRevision ||
+        bridge.panelOwnerWebContentsId(sessionId) !== owner ||
+        selected.owner !== owner ||
+        selected.stamp !== authority.stamp
+      )
+        throw new Error("Session recovery authority changed");
+    };
+    assertCurrent();
+    return {
+      key: JSON.stringify([
+        "mobile",
+        caller.viewerId,
+        caller.deviceId,
+        selected.key,
+        authority.stamp,
+        owner,
+        ownerRevision,
+      ]),
+      ownerWebContentsId: owner,
+      projectId: authority.projectId ?? null,
+      assertCurrent,
+    };
+  }
+
+  /** Every old tab and approval is retired, not just the confirming caller. */
+  retireOutputHistorySession(sessionId: string): void {
+    const errors: unknown[] = [];
+    for (const retire of [
+      () => this.outputRecovery.revokeSession(sessionId),
+      () => this.externalCommands.revokeSession(sessionId),
+      () => this.deps.pendingApprovals.forgetSession(sessionId),
+    ]) {
+      try {
+        retire();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    if (errors.length) throw new AggregateError(errors, "Session recovery retirement failed");
   }
 
   mirrorOwnedExternalStream(entry: OwnedExternalStreamEntry): void {
@@ -384,6 +456,7 @@ export class MobileRemoteOrchestrator {
       getBridge: () => this.deps.getBridge(),
       mobileSessionCwds: this.mobileSessionCwds,
       mobilePermissionModes: this.mobilePermissionModes,
+      outputHistoryRecovery: this.outputHistoryRecoveryService,
       deviceState: (deviceId) => this.deviceState(deviceId),
       ensureMobileSessionId: (state) => this.ensureMobileSessionId(state),
       lookupDiskSessionCwd: (sessionId) => this.lookupDiskSessionCwd(sessionId),

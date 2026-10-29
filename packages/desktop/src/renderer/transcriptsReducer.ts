@@ -40,7 +40,14 @@ export type TranscriptsAction =
       epoch?: string;
       raw?: SequencedStreamEvent[];
     }
-  | { type: "hydrate_begin"; bucket: string; token: number; sessionId?: string }
+  | {
+      type: "hydrate_begin";
+      bucket: string;
+      token: number;
+      sessionId?: string;
+      reset?: boolean;
+      suspended?: boolean;
+    }
   | { type: "hydrate_cancel"; bucket: string; token: number }
   | {
       /** Apply an authoritative goalGet result after an optimistic RPC failed.

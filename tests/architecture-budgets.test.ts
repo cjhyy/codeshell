@@ -140,8 +140,10 @@ describe("architecture growth budgets", () => {
     // Capabilities is the v0.9.34 anonymous, origin-bounded service discovery route;
     // it exposes only registration/GitHub availability, never account credentials.
     // Count all five explicit collection operations in the extracted registrar.
+    // Managed runtime discovery retains its two existing routes in an extracted registrar.
     expect(
       matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/managed-runtime-wiring.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/cc-room/linked-session-ipc.ts", /ipcMain\.handle\(/g) +
         matches(
           "packages/desktop/src/main/cc-room/linked-session-observation-ipc.ts",
@@ -156,6 +158,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/computer-use/settings-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/activity-history-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/model-trace-ipc.ts", /handle\("modelTraces:/g) +
         matches("packages/desktop/src/main/profile-switch-ipc.ts", /ipcMain\.handle\(/g) +
@@ -203,7 +206,12 @@ describe("architecture growth budgets", () => {
       // +1 computerUse:input (stop/resume/force-stop); the gate itself lives in
       // the CUA proxy, so this route only flips host-owned state.
       // The merged tree counts 367: the previous ceiling carried two spare routes.
-    ).toBeLessThanOrEqual(367);
+      // +2 Main-frame-only history recovery plan/apply routes; caller and paths remain Host-owned.
+      // Measured after merging main (2026-10-29): main counts 368, this branch adds 3.
+    ).toBeLessThanOrEqual(371);
+    expect(
+      matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g),
+    ).toBe(2);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -266,7 +274,8 @@ describe("architecture growth budgets", () => {
       // +1 session grouping invoke mirrors the single guarded Main route above.
       // +3 Mimi companion setting, preview and chat-focus invokes.
       // +1 computerUse:input mirrors the single stop/resume/force-stop Main route.
-    ).toBeLessThanOrEqual(358);
+      // +2 typed history recovery plan/apply invokes mirror the reviewed Main routes.
+    ).toBeLessThanOrEqual(360);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -436,7 +445,8 @@ describe("architecture growth budgets", () => {
       // +1 collection manifest schema/types for standalone Hosts and type-only Desktop UI.
       // +1 type-only preset routing policy/rule contract; no runtime or permission authority.
       // +1 CONTRACTS: read-only contract version table reported by initialize and /health; no host state.
-      "packages/core/src/index.ts": 134,
+      // Explicit history recovery adds one public type-only contract export.
+      "packages/core/src/index.ts": 135,
       // +3 reviewed Optimization Lab foundations: read-only Skill snapshots,
       // the shared file lock, and text-connection resolution (§5.2 of the plan).
       // +1 type-only LifetimeScope/Disposable contract lets capability modules
@@ -515,7 +525,8 @@ describe("architecture growth budgets", () => {
       // +4 Host-only memory seams (d93a3ab9e) so Desktop maintains memory for external
       // runtime sessions: MemoryOrchestrator (+ options type), the ephemeral-session check
       // and the shared content sanitizer. None reaches the public SDK or extension entry.
-      "packages/core/src/index.internal.ts": 127,
+      // Host-only checkpoint service plus its shared type-only contract.
+      "packages/core/src/index.internal.ts": 129,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
@@ -545,7 +556,8 @@ describe("architecture growth budgets", () => {
       // +1 browser-safe coverage validator shared by Desktop and paired Mobile.
       // +2 browser-only trace API contracts/requester and shared read-only explorer.
       // Workspace authorization and recording policy remain on the Host.
-      "packages/web/src/index.ts": 23,
+      // +1 explicit history-recovery confirmation UI; it receives transport callbacks only.
+      "packages/web/src/index.ts": 24,
     };
     for (const [path, budget] of Object.entries(exportBudgets)) {
       expect(matches(path, /^export /gm), path).toBeLessThanOrEqual(budget);

@@ -60,6 +60,20 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
     case "session.recovery.cancel":
       valid = true;
       break;
+    case "session.outputRecovery.plan":
+    case "session.outputRecovery.apply":
+      valid =
+        boundedString(event.sessionId, 128) &&
+        boundedString(event.requestId, 128) &&
+        (event.type === "session.outputRecovery.plan" ||
+          (boundedString(event.planId, 128) && event.acceptHistoricalGap === true)) &&
+        Object.keys(event).every((key) =>
+          (event.type === "session.outputRecovery.plan"
+            ? ["type", "sessionId", "requestId"]
+            : ["type", "sessionId", "requestId", "planId", "acceptHistoricalGap"]
+          ).includes(key),
+        );
+      break;
     case "session.legacyBase":
       valid =
         boundedString(event.sessionId, 128) &&

@@ -57,14 +57,11 @@ function referenceId(value: unknown): string {
 function validIdentity(value: any): value is DirectoryIdentity {
   return value && Number.isSafeInteger(value.dev) && Number.isSafeInteger(value.ino);
 }
-function sameSource(a: MediaSourceIdentity, b: MediaSourceIdentity, relocating = false) {
-  return (
-    a.dev === b.dev &&
-    a.ino === b.ino &&
-    a.size === b.size &&
-    a.mtimeMs === b.mtimeMs &&
-    (relocating || a.ctimeMs === b.ctimeMs)
-  );
+// Like other editors, recognize an original by file, size and modification time.
+// ctime is not identity: macOS changes it for tags, "last opened" and other
+// extended attributes, which would otherwise turn unchanged originals "changed".
+function sameSource(a: MediaSourceIdentity, b: MediaSourceIdentity) {
+  return a.dev === b.dev && a.ino === b.ino && a.size === b.size && a.mtimeMs === b.mtimeMs;
 }
 function view(
   record: StoredReference,
@@ -307,11 +304,29 @@ export class ExternalResourceReferences {
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
         }
-        if (
-          (await readdir(directory)).filter((name) =>
-            REFERENCE_ID.test(name.replace(/\.json$/, "")),
-          ).length >= MAX_REFERENCES
-        )
+        const names = (await readdir(directory)).filter((name) =>
+          REFERENCE_ID.test(name.replace(/\.json$/, "")),
+        );
+        // IDs include the ctime seen at creation. Choosing the same unchanged
+        // original again must return its reference, not a duplicate asset.
+        for (const name of names) {
+          const existing = await this.record(scope, name.replace(/\.json$/, "")).catch(
+            () => undefined,
+          );
+          if (
+            existing?.root === root &&
+            existing.path === path &&
+            sameSource(existing.source, selected.initial) &&
+            existing.ancestors.length === selected.directory.identities.length &&
+            existing.ancestors.every((identity, index) =>
+              sameResourceIdentity(identity, selected.directory.identities[index]!),
+            )
+          ) {
+            await selected.verify();
+            return view(existing);
+          }
+        }
+        if (names.length >= MAX_REFERENCES)
           throw new Error("External reference count limit exceeded");
         const record: StoredReference = {
           schemaVersion: 1,
@@ -401,7 +416,7 @@ export class ExternalResourceReferences {
       const selected = await this.selected(scope, root, resourceRelativePath(path), options);
       try {
         // Metadata alone cannot establish that an unrelated replacement is the original file.
-        if (!sameSource(previous.source, selected.initial, true))
+        if (!sameSource(previous.source, selected.initial))
           throw new Error("This is a different file; create a new external reference instead");
         const record: StoredReference = {
           ...previous,

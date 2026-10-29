@@ -3,6 +3,34 @@ import { parseMobileClientEvent } from "./mobile-client-event-validator.js";
 import { MAX_MOBILE_ATTACHMENTS, MAX_MOBILE_IMAGE_BYTES } from "./mobile-limits.js";
 
 describe("parseMobileClientEvent", () => {
+  test("history recovery requires a correlated plan and explicit acceptance without client paths", () => {
+    const plan = { type: "session.outputRecovery.plan", sessionId: "s1", requestId: "r1" };
+    const apply = {
+      ...plan,
+      type: "session.outputRecovery.apply",
+      planId: "reviewed-plan",
+      acceptHistoricalGap: true,
+    };
+    expect(parseMobileClientEvent(plan)).toEqual(plan);
+    expect(parseMobileClientEvent(apply)).toEqual(apply);
+    for (const changed of [
+      { requestId: "" },
+      { sessionId: "x".repeat(129) },
+      { cwd: "/somewhere" },
+      { epoch: "new" },
+    ]) {
+      expect(parseMobileClientEvent({ ...plan, ...changed })).toBeUndefined();
+      expect(parseMobileClientEvent({ ...apply, ...changed })).toBeUndefined();
+    }
+    for (const changed of [
+      { planId: "" },
+      { planId: "x".repeat(129) },
+      { acceptHistoricalGap: false },
+      { acceptHistoricalGap: undefined },
+      { acceptHistoricalGap: "true" },
+    ])
+      expect(parseMobileClientEvent({ ...apply, ...changed })).toBeUndefined();
+  });
   test("accepts bounded correlated session pages and rejects malformed filters", () => {
     expect(
       parseMobileClientEvent({ type: "ccRoom.listSessions", cwd: "/repo", all: true }),

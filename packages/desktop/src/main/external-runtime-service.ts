@@ -17,6 +17,8 @@
  *     so it resolves the real value rather than letting a default decide.
  */
 import type { BrowserWindow } from "electron";
+import { lstatSync } from "node:fs";
+import { join } from "node:path";
 import {
   claudePermissionModeFor,
   startExternalRuntimeSession,
@@ -30,6 +32,8 @@ import { CODING_TOOLS } from "@cjhyy/code-shell-capability-coding/capability";
 import {
   BUILTIN_AGENT_PRESETS,
   BUILTIN_TOOLS,
+  sessionsRoot,
+  SessionManager,
   ToolRegistry,
   type GoalConfig,
   type PermissionMode,
@@ -42,7 +46,12 @@ import {
   isFeatureEnabled,
   type FeatureFlagOverrides,
 } from "@cjhyy/code-shell-core/extension";
-import { canonicalKey, withModelTraceContext } from "@cjhyy/code-shell-core/internal";
+import {
+  canonicalKey,
+  needsIndependentOutput,
+  SessionOutputPublisher,
+  withModelTraceContext,
+} from "@cjhyy/code-shell-core/internal";
 import { getTrustCachedSync } from "./trust-store.js";
 import { dlog } from "./desktop-logger.js";
 import { createCodexLaunchResolver, type CodexLaunch } from "./external-runtime-launch.js";
@@ -71,6 +80,7 @@ import {
 } from "./external-runtime-profile.js";
 import { startExternalRuntimeTrace } from "./external-runtime-tracing.js";
 import type { ExternalRuntimeMemory } from "./external-runtime-memory.js";
+import { assertOutputHistoryWriteAvailable } from "./session-output-history-lease.js";
 
 export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
   goal?: string | GoalConfig;
@@ -258,6 +268,16 @@ export class ExternalRuntimeService {
   private readonly lifecycleTails = new Map<string, Promise<void>>();
   /** At most one notification-drain continuation may be scheduled per Session. */
   private readonly backgroundWakeups = new Set<string>();
+  private readonly recoveryContinuations = new Map<
+    string,
+    {
+      identity: string;
+      configuration: Pick<
+        ExternalRuntimeStartRequest,
+        "planMode" | "hasGoal" | "developerInstructions" | "workspaceProfile" | "permissionMode"
+      >;
+    }
+  >();
   /** Keep business-session custody while its physical runtime is being replaced. */
   private readonly retainedBackgroundOwners = new Map<
     string,
@@ -353,6 +373,7 @@ export class ExternalRuntimeService {
   }
 
   async updateGoal(sessionId: string, patch: ExternalGoalUpdate, callerWebContentsId?: number) {
+    assertOutputHistoryWriteAvailable(sessionId);
     this.assertOwner(sessionId, callerWebContentsId);
     const entry = this.sessions.get(sessionId);
     if (patch.paused === false && !this.canResumeGoal(sessionId, callerWebContentsId)) {
@@ -402,6 +423,7 @@ export class ExternalRuntimeService {
     expected?: { expectedGoalId?: string; expectedRevision?: number },
     callerWebContentsId?: number,
   ) {
+    assertOutputHistoryWriteAvailable(sessionId);
     this.assertOwner(sessionId, callerWebContentsId);
     const run = this.goals.running(sessionId);
     const result = this.goals.delete(sessionId, expected);
@@ -416,6 +438,7 @@ export class ExternalRuntimeService {
   }
 
   extendGoal(sessionId: string, extension: ExternalGoalExtension, callerWebContentsId?: number) {
+    assertOutputHistoryWriteAvailable(sessionId);
     this.assertOwner(sessionId, callerWebContentsId);
     return this.goals.extend(sessionId, extension);
   }
@@ -472,6 +495,25 @@ export class ExternalRuntimeService {
   }
 
   private emitSafely(sessionId: string, event: StreamEvent): void {
+    if (needsIndependentOutput(event)) {
+      const entry = this.sessions.get(sessionId);
+      try {
+        // Cold Goal edits are synchronous, already authorized by Main, and do
+        // not allocate a CLI or borrow a prior runtime's asynchronous identity.
+        event = entry
+          ? entry.recorder.recordIndependentOutput(event)
+          : (new SessionOutputPublisher(() => sessionsRoot(), "host").project(
+              sessionId,
+              event,
+            ) as StreamEvent);
+      } catch (error) {
+        // Never publish an unjournaled visible event or attach a late source
+        // to a replacement Session. The existing failure path retains its fence.
+        if (!entry) throw error;
+        entry.outputFailure();
+        return;
+      }
+    }
     try {
       this.deps.emit(sessionId, event);
     } catch (error) {
@@ -583,6 +625,7 @@ export class ExternalRuntimeService {
     }
     if (!preserveBackgroundWork) {
       this.retainedBackgroundOwners.delete(sessionId);
+      this.recoveryContinuations.delete(sessionId);
       try {
         this.deps.backgroundWork?.dropSession(sessionId);
       } catch (error) {
@@ -684,7 +727,10 @@ export class ExternalRuntimeService {
   ensureContinuation(request: ExternalRuntimeStartRequest): Promise<ExternalRuntimeSession> {
     return this.enqueueLifecycle(request.sessionId, () => {
       const entry = this.sessions.get(request.sessionId);
-      const configuration = entry?.continuationConfiguration;
+      const recovered = this.recoveryContinuations.get(request.sessionId);
+      if (recovered && recovered.identity !== this.recoverySessionIdentity(request.sessionId))
+        throw new Error("Recovered runtime Session identity changed");
+      const configuration = entry?.continuationConfiguration ?? recovered?.configuration;
       const continuation = {
         ...configuration,
         ...request,
@@ -735,6 +781,7 @@ export class ExternalRuntimeService {
   private async startExclusive(
     request: ExternalRuntimeStartRequest,
   ): Promise<ExternalRuntimeSession> {
+    assertOutputHistoryWriteAvailable(request.sessionId);
     // Do not retain a paired socket's startup grant in the long-lived runtime
     // hooks. A disconnect after successful startup must not revoke its work.
     const { assertStartAuthority, ...runtimeRequest } = request;
@@ -1375,6 +1422,7 @@ export class ExternalRuntimeService {
       ...(request.model ? { model: request.model } : {}),
     });
     this.retainedBackgroundOwners.delete(request.sessionId);
+    this.recoveryContinuations.delete(request.sessionId);
     this.notifySessionStateSafely(request.sessionId, true, ownerId);
     if (session.runtimeSessionId) {
       this.persistBindingSafely(request.sessionId, {
@@ -1423,6 +1471,7 @@ export class ExternalRuntimeService {
     expectedGoal?: { goalId: string; revision: number },
     hooks?: ExternalRuntimeSubmissionHooks,
   ): Promise<ExternalRuntimeTurnOutcome> {
+    assertOutputHistoryWriteAvailable(sessionId);
     this.assertOwner(sessionId, callerWebContentsId);
     const entry = this.sessions.get(sessionId);
     if (!entry) throw new Error(`no external runtime session for ${sessionId}`);
@@ -1430,6 +1479,7 @@ export class ExternalRuntimeService {
     const acceptedGeneration = entry.lifecycle.interruptGeneration;
     let accountingRejected = false;
     const runTurnExclusive = async (): Promise<ExternalRuntimeTurnOutcome> => {
+      assertOutputHistoryWriteAvailable(sessionId);
       if (this.sessions.get(sessionId) !== entry) {
         throw new Error(
           `external runtime session was replaced before its queued turn: ${sessionId}`,
@@ -1913,6 +1963,62 @@ export class ExternalRuntimeService {
   }
 
   /** Close one session. Safe when there is none. */
+  assertOutputRecoveryIdle(
+    sessionId: string,
+    callerWebContentsId?: number,
+    inLifecycle = false,
+  ): void {
+    this.assertOwner(sessionId, callerWebContentsId);
+    if (
+      this.isSessionRunning(sessionId) ||
+      (!inLifecycle && this.lifecycleTails.has(sessionId)) ||
+      this.backgroundWakeups.has(sessionId) ||
+      this.deps.backgroundWork?.hasPending(sessionId) ||
+      this.deps.backgroundWork?.hasRunning(sessionId)
+    )
+      throw new Error("Session still has active work");
+  }
+
+  private recoverySessionIdentity(sessionId: string): string {
+    const state = new SessionManager().readSessionState(sessionId);
+    const directory = lstatSync(join(sessionsRoot(), sessionId));
+    if (!state || directory.isSymbolicLink() || !directory.isDirectory())
+      throw new Error("Session changed");
+    return JSON.stringify([
+      directory.dev,
+      directory.ino,
+      state.startedAt,
+      state.cwd,
+      state.project,
+    ]);
+  }
+
+  /** Close only an idle CLI; preserve its provider resume key and actual Host owner. */
+  async quiesceForOutputRecovery(sessionId: string, callerWebContentsId?: number): Promise<void> {
+    return this.enqueueLifecycle(sessionId, async () => {
+      this.assertOutputRecoveryIdle(sessionId, callerWebContentsId, true);
+      const entry = this.sessions.get(sessionId);
+      if (!entry) return;
+      this.recoveryContinuations.set(sessionId, {
+        identity: this.recoverySessionIdentity(sessionId),
+        configuration: entry.continuationConfiguration,
+      });
+      entry.lifecycle.active = false;
+      entry.lifecycle.interruptGeneration++;
+      this.sessions.delete(sessionId);
+      this.retainedBackgroundOwners.set(sessionId, {
+        ownerWebContentsId: entry.ownerWebContentsId,
+        cwd: entry.cwd,
+        authority: entry.authority,
+      });
+      this.deps.memory?.cancel(sessionId);
+      this.goals.stop(sessionId);
+      await entry.session.close();
+      this.notifySessionStateSafely(sessionId, false, entry.ownerWebContentsId);
+      this.assertOutputRecoveryIdle(sessionId, callerWebContentsId, true);
+    });
+  }
+
   async stop(sessionId: string, callerWebContentsId?: number): Promise<void> {
     await this.enqueueLifecycle(sessionId, () => {
       // Ownership must be checked after earlier lifecycle work has settled. A

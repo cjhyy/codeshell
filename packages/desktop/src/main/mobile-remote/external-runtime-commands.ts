@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { parseExternalRuntimeModelKey } from "../../shared/external-runtime-models.js";
 import type { ExternalRuntimeService } from "../external-runtime-service.js";
 import type {
@@ -40,6 +41,7 @@ type Authority = {
   assertCurrent: () => void;
 };
 type Selection = {
+  token: string;
   sessionId: string;
   deviceId: string;
   external: boolean;
@@ -91,6 +93,7 @@ export class MobileExternalRuntimeCommands {
     authority.assertCurrent();
     this.revoke(viewer, true);
     this.selections.set(viewer, {
+      token: randomUUID(),
       sessionId,
       deviceId: device,
       external: false,
@@ -216,6 +219,37 @@ export class MobileExternalRuntimeCommands {
     this.selections.delete(viewer);
     if (releaseRoute) this.externalRoutes.delete(viewer);
   }
+
+  /** A checkpoint retires every tab's prior command route for this Session. */
+  revokeSession(sessionId: string): void {
+    for (const [viewer, selection] of this.selections) {
+      if (selection.sessionId === sessionId) this.revoke(viewer, true);
+    }
+    for (const [viewer, routed] of this.externalRoutes) {
+      if (routed === sessionId) this.externalRoutes.delete(viewer);
+    }
+  }
+
+  /** Capture a selected tab without starting a runtime or granting a new producer. */
+  captureSelectedAuthority(viewer: string, device: string, sessionId: string) {
+    const selection = this.selections.get(viewer);
+    if (
+      !selection ||
+      selection.deviceId !== device ||
+      selection.sessionId !== sessionId ||
+      !selection.authority
+    )
+      throw new Error("Session selection unavailable");
+    const authority = selection.authority;
+    const owner = this.deps.owner(sessionId);
+    const assertCurrent = () => {
+      this.assertSelection(viewer, device, selection);
+      if (selection.authority !== authority || this.deps.owner(sessionId) !== owner)
+        throw new Error("Session selection authority changed");
+    };
+    assertCurrent();
+    return { key: selection.token, stamp: authority.stamp, owner, assertCurrent };
+  }
   isExternal(sessionId: string, viewer?: string, newlyMintedNative = false): boolean {
     const selection = viewer ? this.selections.get(viewer) : undefined;
     const exists = this.deps.exists(sessionId);
@@ -261,7 +295,12 @@ export class MobileExternalRuntimeCommands {
       if (!this.externalRoutes.has(viewer) && this.externalRoutes.size >= 128) return;
       this.externalRoutes.set(viewer, event.sessionId);
     }
-    const selection: Selection = { sessionId: event.sessionId, deviceId: device, external };
+    const selection: Selection = {
+      token: randomUUID(),
+      sessionId: event.sessionId,
+      deviceId: device,
+      external,
+    };
     this.selections.set(viewer, selection);
     try {
       const authority = await this.deps.authority(event.sessionId);

@@ -244,6 +244,11 @@ function locate(root: string, sessionId: string, anchorIdentity?: FileIdentity):
     statePath = join(dir, "state.json");
   const state = decodeJson(readBytes(statePath, 1024 * 1024));
   requireRepair(
+    !state.outputJournalBinding?.anchorName && !state.outputJournalHead?.name,
+    "unsupported_epoch",
+    "Explicit history epochs retain their original recovery evidence",
+  );
+  requireRepair(
     state?.sessionId === sessionId &&
       Number.isFinite(state.startedAt) &&
       !state.ephemeral &&

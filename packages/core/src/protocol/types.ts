@@ -329,6 +329,8 @@ export interface CancelParams {
 /** Close (destroy) a session. */
 export interface CloseSessionParams {
   sessionId: string;
+  /** Host checkpoint preparation: refuse live work and preserve retained job history. */
+  onlyIfIdle?: boolean;
 }
 
 /** Reset a live session's workspace binding back to main. */

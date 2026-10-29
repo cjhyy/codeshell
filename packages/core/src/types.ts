@@ -371,6 +371,7 @@ export interface SessionState {
   outputJournalBinding?: import("./session/output-journal-binding.js").OutputJournalBinding;
   /** Explicit offline recovery evidence; historical gaps are never silently cleared. */
   outputIdentityRecovery?: Record<string, unknown>;
+  outputHistoryRecovery?: import("./session/output-history-gap.js").OutputHistoryRecoveryRecord;
   /** Host-owned segmented storage admission, preserving the original cursor domain. */
   outputJournalStorage?: import("./session/output-journal-storage.js").OutputStoragePin;
   /** Host-only coverage proof; never authorizes a run or claims no-run output persistence. */

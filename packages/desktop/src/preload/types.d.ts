@@ -1,4 +1,5 @@
 import type { CloudAccountApi } from "../shared/cloud-account.js";
+import type { SessionOutputRecoveryApi } from "./session-transcript-api.js";
 import type { ModelTraceApi } from "./model-trace-api.js";
 import type { CloudEnvironmentApi } from "../shared/cloud-environment.js";
 import type { CloudWorkbenchApi } from "../shared/cloud-management.js";
@@ -1072,6 +1073,7 @@ export type ImGatewayUiEvent =
 
 export interface CodeshellApi
   extends
+    SessionOutputRecoveryApi,
     ProjectAuthorityApi,
     ProjectPanelVersionApi,
     ProfilePluginExportApi,

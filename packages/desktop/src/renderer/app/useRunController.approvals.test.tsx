@@ -295,3 +295,52 @@ describe("accepted approval decisions", () => {
     expect(toasts).toEqual([]);
   });
 });
+
+test("recovery retires queued and in-flight approval acknowledgements without replay", async () => {
+  const early = envelope("session", "queued-old");
+  const late = envelope("session", "in-flight-old");
+  const hook = await mount([early, late]);
+  const response = deferred();
+  deliver = () => response.promise;
+  let inFlight!: Promise<void>;
+  await act(async () => {
+    inFlight = hook.result.current!.controller.decideEnvelope(late, "approve");
+    await flushMicrotasks();
+  });
+  expect(calls).toHaveLength(1);
+  await act(async () => {
+    const queued = hook.result.current!.controller.decideEnvelope(early, "approve");
+    hook.result.current!.controller.beginOutputHistoryRecovery("bucket");
+    await queued;
+    response.resolve({ result: {} });
+    await inFlight;
+  });
+  expect(calls).toHaveLength(1);
+  expect(hook.result.current!.queue).toEqual([]);
+  expect(hook.result.current!.history).toEqual([]);
+  expect(mirrored).toEqual([]);
+  await act(async () => {
+    hook.result.current!.controller.finishOutputHistoryRecovery("bucket");
+    await hook.result.current!.controller.decideEnvelope(early, "approve");
+  });
+  expect(calls).toHaveLength(1);
+  expect(toasts).toEqual([]);
+});
+
+test("recovery retirement is scoped to the session even when approval IDs are reused", async () => {
+  const old = envelope("session", "reused");
+  const other = envelope("other-session", "reused");
+  const hook = await mount([old, other]);
+  await act(async () => {
+    const queued = hook.result.current!.controller.decideEnvelope(old, "approve");
+    hook.result.current!.controller.beginOutputHistoryRecovery("_no_repo_::session");
+    await queued;
+  });
+  expect(calls).toEqual([]);
+  expect(hook.result.current!.queue).toEqual([other]);
+  await act(async () => {
+    await hook.result.current!.controller.decideEnvelope(other, "approve");
+  });
+  expect(calls).toHaveLength(1);
+  expect(calls[0]?.[0]).toBe("other-session");
+});

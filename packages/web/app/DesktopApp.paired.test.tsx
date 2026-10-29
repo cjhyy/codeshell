@@ -347,13 +347,33 @@ test("paired external selection sends its model and subscribes to output after a
         sessionId: "native",
         recoveryId: selection.recoveryId,
         ok: true,
-        journalRequired: true,
+        journalRequired: false,
       });
       await flushMicrotasks();
       const read = ws.sent.findLast((event) => event.type === "session.outputJournal")!;
       ws.message({
         ...read,
         page: { version: 1, status: "unavailable", frames: [], complete: false },
+        snapshot: { epoch: "native-host", nextSeq: 1, unpaired: false },
+      });
+      await flushMicrotasks();
+    });
+    // The selected native Session has legacy history. Complete the actual
+    // fallback before changing its model or issuing a new input.
+    expect(ws.sent).toContainEqual({ type: "session.history", sessionId: "native" });
+    expect(hook.result.current.app.loading.sessionHistory).toBe(true);
+    expect(chatSends(ws)).toHaveLength(0);
+    await act(async () => {
+      ws.message({
+        type: "session.history.ok",
+        sessionId: "native",
+        events: [
+          { type: "session_started", sessionId: "native" },
+          { type: "user_message", text: "earlier native task" },
+          { type: "stream_request_start" },
+          { type: "text_delta", text: "saved native answer" },
+          { type: "turn_complete", reason: "completed" },
+        ],
       });
       ws.message({
         type: "runtime.models.ok",
@@ -369,14 +389,22 @@ test("paired external selection sends its model and subscribes to output after a
       });
       await flushMicrotasks();
     });
+    expect(hook.result.current.app.loading.sessionHistory).toBe(false);
+    expect(hook.result.current.app.outputHistoryFailed).toBe(false);
+    expect(
+      hook.result.current.app.chat.items.some(
+        (item) => item.kind === "assistant" && item.text === "saved native answer",
+      ),
+    ).toBe(true);
     await act(async () => {
       (hook.result.current.controller.modelSelector as any).props.onChange("codex/fixture");
       hook.result.current.controller.setDraft("external task");
     });
     await act(async () => {
-      hook.result.current.controller.send();
+      expect(hook.result.current.controller.send()).toBe(true);
       await flushMicrotasks();
     });
+    expect(chatSends(ws)).toHaveLength(1);
     const sent = chatSends(ws).at(-1)!;
     expect(sent.modelKey).toBe("codex/fixture");
     const before = ws.sent.length;

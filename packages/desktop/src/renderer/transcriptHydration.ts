@@ -1,5 +1,5 @@
 import type { TranscriptsAction, TranscriptsMap } from "./transcriptsReducer";
-import type { Message, MessagesReducerState, UserMessage } from "./types";
+import { INITIAL_STATE, type Message, type MessagesReducerState, type UserMessage } from "./types";
 import type { SequencedStreamEvent } from "./streamCoalescer";
 import { mergeHistoryIntoLive } from "./automation/hydrateOrder";
 import { mergeHistoryWindows } from "./app/mergeHistoryWindows";
@@ -11,6 +11,7 @@ interface JournalEntry {
   previous?: JournalEntry;
 }
 interface Recovery {
+  suspended?: boolean;
   token: number;
   sessionId?: string;
   initial?: MessagesReducerState;
@@ -513,11 +514,11 @@ export function reduceTranscriptHydration(
   const previous = recoveries.get(map);
   const recovery = previous?.get(action.bucket);
   if (action.type === "hydrate_begin") {
-    const next = { ...map };
+    const next = action.reset ? { ...map, [action.bucket]: INITIAL_STATE } : { ...map };
     const windows = new Map(previous);
     windows.set(
       action.bucket,
-      recovery && recovery.sessionId === action.sessionId
+      !action.reset && recovery && recovery.sessionId === action.sessionId
         ? recovery.failed
           ? {
               ...recovery,
@@ -532,7 +533,8 @@ export function reduceTranscriptHydration(
         : {
             token: action.token,
             sessionId: action.sessionId,
-            initial: map[action.bucket],
+            initial: action.reset ? undefined : map[action.bucket],
+            suspended: action.suspended,
             count: 0,
             bytes: 0,
           },
@@ -541,7 +543,13 @@ export function reduceTranscriptHydration(
     return next;
   }
   if (action.type === "hydrate_cancel") {
-    if (!recovery || recovery.token !== action.token || recovery.count > 0 || recovery.failed)
+    if (
+      !recovery ||
+      recovery.suspended ||
+      recovery.token !== action.token ||
+      recovery.count > 0 ||
+      recovery.failed
+    )
       return map;
     const next = { ...map };
     const windows = new Map(previous);
@@ -560,6 +568,17 @@ export function reduceTranscriptHydration(
     if (windows.size) recoveries.set(next, windows);
     return next;
   }
+  // Recovery confirmation retires the old stream before Main rotates its journal.
+  // Keep the barrier until the explicit fresh read starts; old deliveries must
+  // not populate the new snapshot or recreate approval cards.
+  if (recovery?.suspended) return map;
+  if (
+    action.type === "stream" &&
+    map[action.bucket]?.outputCursor &&
+    action.event.outputCursor &&
+    compareOutputCursors(action.event.outputCursor, map[action.bucket]!.outputCursor!) === undefined
+  )
+    return map;
   let visibleAction = action;
   if (action.type === "stream_batch" && action.raw?.length) {
     const current = map[action.bucket];
@@ -569,7 +588,7 @@ export function reduceTranscriptHydration(
       (entry) =>
         (!current?.outputCursor ||
           !entry.event.outputCursor ||
-          (compareOutputCursors(entry.event.outputCursor, current.outputCursor) ?? 1) > 0) &&
+          (compareOutputCursors(entry.event.outputCursor, current.outputCursor) ?? -1) > 0) &&
         (!action.epoch || !entry.epoch || action.epoch === entry.epoch) &&
         (entry.seq === undefined || entry.seq > cursor),
     );

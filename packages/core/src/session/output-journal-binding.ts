@@ -15,8 +15,18 @@ export interface OutputJournalBinding {
   anchor: PersistentFileIdentity;
   journalIdentity: string;
   coverageIdentity: string;
+  /** Explicit recovery epochs retain the previous anchor instead of overwriting evidence. */
+  anchorName?: string;
 }
 const hex = /^[a-f0-9]{64}$/;
+export function outputJournalAnchorName(
+  binding?: Pick<OutputJournalBinding, "anchorName">,
+): string {
+  if (binding?.anchorName === undefined) return "output-journal.jsonl";
+  if (!/^output-journal-[a-f0-9-]{36}\.jsonl$/.test(binding.anchorName))
+    throw new Error("Invalid output epoch anchor name");
+  return binding.anchorName;
+}
 export function isValidOutputJournalBinding(value: unknown): value is OutputJournalBinding {
   const binding = value as OutputJournalBinding | undefined;
   return Boolean(
@@ -28,7 +38,10 @@ export function isValidOutputJournalBinding(value: unknown): value is OutputJour
     typeof binding.journalIdentity === "string" &&
     hex.test(binding.journalIdentity) &&
     typeof binding.coverageIdentity === "string" &&
-    hex.test(binding.coverageIdentity),
+    hex.test(binding.coverageIdentity) &&
+    (binding.anchorName === undefined ||
+      (typeof binding.anchorName === "string" &&
+        /^output-journal-[a-f0-9-]{36}\.jsonl$/.test(binding.anchorName))),
   );
 }
 
@@ -44,7 +57,7 @@ export function validateOutputJournalBinding(
     !matchesPersistentFileIdentity(directory, binding.directory) ||
     (anchorFd !== undefined &&
       !matchesPersistentFileIdentity(
-        join(directory, "output-journal.jsonl"),
+        join(directory, outputJournalAnchorName(binding)),
         binding.anchor,
         fstatSync(anchorFd, { bigint: true }),
       ))
@@ -58,16 +71,18 @@ export function createOutputJournalBinding(
   anchorFd: number,
   journalIdentity: string,
   coverageIdentity: string,
+  anchorName?: string,
 ): OutputJournalBinding {
   return {
     version: 1,
     root: realpathSync(root),
     directory: capturePersistentFileIdentity(directory),
     anchor: capturePersistentFileIdentity(
-      join(directory, "output-journal.jsonl"),
+      join(directory, outputJournalAnchorName({ anchorName })),
       fstatSync(anchorFd, { bigint: true }),
     ),
     journalIdentity,
     coverageIdentity,
+    ...(anchorName ? { anchorName } : {}),
   };
 }

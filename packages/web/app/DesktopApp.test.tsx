@@ -9,6 +9,7 @@ import { useDesktopController } from "./DesktopApp.js";
 import { getApiWorkspace } from "./api-context.js";
 import { Workbench } from "./Workbench.js";
 import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopControls.js";
+import { OutputHistoryRecovery } from "../src/components/OutputHistoryRecovery.js";
 import { DesktopModelPicker } from "./DesktopModelPicker.js";
 
 const noop = () => {};
@@ -79,6 +80,99 @@ afterEach(() => {
 });
 
 describe("Desktop workbench controller", () => {
+  test("recovery preserves draft text and attachments without releasing an old intent", async () => {
+    const sent: unknown[] = [];
+    let app = remoteApp({
+      activeSessionId: "native",
+      outputHistoryFailed: true,
+      getSessionOutputRecoveryPlan: async () => ({
+        status: "blocked",
+        sessionId: "native",
+        reason: "unavailable",
+      }),
+      applySessionOutputRecovery: async () => ({
+        status: "applied",
+        sessionId: "native",
+        historicalGap: true,
+      }),
+      sendChat: async (input) => {
+        sent.push(input);
+        return true;
+      },
+    });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      await act(async () => {
+        hook.result.current.setDraft("keep this unsent task");
+        hook.result.current.addFiles([
+          new File(["owned image"], "kept.png", { type: "image/png" }),
+        ] as unknown as FileList);
+      });
+      expect(hook.result.current.readOnly).toBe(true);
+      expect(hook.result.current.send()).toBe(false);
+      const card = React.Children.toArray(
+        (hook.result.current.chatControls as React.ReactElement<{ children: React.ReactNode }>)
+          .props.children,
+      ).find(
+        (child) => React.isValidElement(child) && child.type === OutputHistoryRecovery,
+      ) as React.ReactElement<{ onApplied(): void }>;
+      expect(card).toBeTruthy();
+      await act(async () => {
+        card.props.onApplied();
+      });
+      expect(hook.result.current.draft).toBe("keep this unsent task");
+      expect(hook.result.current.files.map((file) => file.name)).toEqual(["kept.png"]);
+      expect(sent).toEqual([]);
+      app = { ...app, outputHistoryFailed: false, outputHistoricalGap: true };
+      await hook.rerender();
+      expect(hook.result.current.readOnly).toBeFalsy();
+      expect(hook.result.current.draft).toBe("keep this unsent task");
+      expect(hook.result.current.files).toHaveLength(1);
+      expect(sent).toEqual([]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("retired in-flight submission merges into later typing and stays manual", async () => {
+    const response = deferred<boolean>();
+    let retired: (() => void) | undefined;
+    const calls: unknown[] = [];
+    const app = remoteApp({
+      activeSessionId: "native",
+      sendChat: (input) => {
+        calls.push(input);
+        retired = input.onRetired;
+        return response.promise;
+      },
+    });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      await act(async () => {
+        hook.result.current.setDraft("original task");
+        hook.result.current.addFiles([
+          new File(["image"], "task.png", { type: "image/png" }),
+        ] as unknown as FileList);
+      });
+      await act(async () => {
+        hook.result.current.send();
+      });
+      await act(async () => {
+        hook.result.current.setDraft("later typing");
+        retired?.();
+        response.resolve(false);
+      });
+      expect(hook.result.current.draft).toContain("original task");
+      expect(hook.result.current.draft).toContain("later typing");
+      expect(hook.result.current.files.map((file) => file.name)).toEqual(["task.png"]);
+      expect(hook.result.current.uncertain).toBe(false);
+      expect(hook.result.current.error).toContain("手动处理");
+      expect(calls).toHaveLength(1);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("offline session and CLI navigation preserve the workspace and draft", async () => {
     const calls: string[] = [];
     const app = remoteApp({
@@ -235,7 +329,12 @@ describe("Desktop workbench controller", () => {
       await flushMicrotasks();
     });
     expect(sent).toEqual([
-      { text: "first task", attachments: [], onUncertain: expect.any(Function) },
+      {
+        text: "first task",
+        attachments: [],
+        onUncertain: expect.any(Function),
+        onRetired: expect.any(Function),
+      },
     ]);
     expect(hook.result.current.activeId).toBe("mobile-real-1");
     expect(hook.result.current.draft).toBe("next task while accepting");

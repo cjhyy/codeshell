@@ -125,6 +125,7 @@ const expectedRuntimeExportsByPartition = {
   sessionUsageAccounting: ["normalizeCumulativeUsageCounters"],
   memoryMaintenance: ["MemoryOrchestrator", "isEphemeralSessionState", "sanitizeContent"],
   sessionOutputRecovery: [
+    "OutputHistoryRecovery",
     "SessionOutputJournal",
     "SessionOutputPublisher",
     "needsIndependentOutput",
@@ -359,6 +360,7 @@ const hostOnlySamples = [
   "restoreOutputJournalBackup",
   "inspectOutputJournalRepair",
   "SessionOutputCoverageStore",
+  "OutputHistoryRecovery",
   "collectionConfig",
   "captureCollectionLocalFile",
   "readCollectionLocalFile",
@@ -554,6 +556,7 @@ describe("core public/internal export contract", () => {
     expect(extensionApi).not.toHaveProperty("Engine");
     expect(extensionApi).not.toHaveProperty("sliceAnsi");
     expect(extensionApi).not.toHaveProperty("acquireWorkspaceWriteLock");
+    expect(extensionApi).not.toHaveProperty("OutputHistoryRecovery");
     for (const name of [
       ...expectedRuntimeExportsByPartition.modelTraces,
       ...expectedRuntimeExportsByPartition.mcpCredentialBinding,
