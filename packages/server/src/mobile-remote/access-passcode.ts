@@ -23,6 +23,10 @@ const SCRYPT_KEYLEN = 32;
 export const MIN_ACCESS_PASSCODE_LENGTH = 4;
 export const MAX_ACCESS_PASSCODE_LENGTH = 256;
 const MAX_REMEMBER_TOKEN_LENGTH = 128;
+/** Marks which gate decision produced a response: "granted", "denied" or
+ *  "unconfigured". The challenge page reports a passcode outcome only from this
+ *  marker, never from a status a tunnel edge or proxy could also produce. */
+const ACCESS_OUTCOME_HEADER = "X-CodeShell-Access";
 const MAX_ACCESS_RECORD_BYTES = 4 * 1024;
 
 /** On-disk shape. We persist a scrypt hash + salt (never the plaintext) and a
@@ -194,13 +198,19 @@ export class AccessPasscode {
   gate(req: GateRequest, res: GateResponse): boolean {
     if (!this.isSet()) {
       // No passcode configured → tunnel must not be reachable. Refuse.
-      res.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
+      res.writeHead(403, {
+        "content-type": "text/plain; charset=utf-8",
+        [ACCESS_OUTCOME_HEADER]: "unconfigured",
+      });
       res.end("access passcode not configured");
       return false;
     }
 
     const cookieToken = readCookie(req.headers.cookie, COOKIE_NAME);
-    if (cookieToken && this.verifyToken(cookieToken)) return true;
+    if (cookieToken && this.verifyToken(cookieToken)) {
+      res.setHeader(ACCESS_OUTCOME_HEADER, "granted");
+      return true;
+    }
 
     const supplied = readPasscodeParam(req);
     let wrongAttempt = false;
@@ -216,6 +226,7 @@ export class AccessPasscode {
           // because the tunnel terminates TLS (always https).
           `${COOKIE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${Math.floor(this.tokenMaxAgeMs / 1000)}`,
         );
+        res.setHeader(ACCESS_OUTCOME_HEADER, "granted");
         const cleanLocation = acceptsHtml(req) ? locationWithoutPasscode(req.url) : undefined;
         if (cleanLocation) {
           // The HTML challenge has a no-query JavaScript path below, but keep a
@@ -242,12 +253,18 @@ export class AccessPasscode {
     // to enter the passcode). Non-navigation requests (WS upgrade, fetch) keep
     // the lightweight text 401.
     if (acceptsHtml(req)) {
-      res.writeHead(401, { "content-type": "text/html; charset=utf-8" });
+      res.writeHead(401, {
+        "content-type": "text/html; charset=utf-8",
+        [ACCESS_OUTCOME_HEADER]: "denied",
+      });
       res.end(challengePage(req.url, wrongAttempt, this.isLocked()));
       return false;
     }
 
-    res.writeHead(401, { "content-type": "text/plain; charset=utf-8" });
+    res.writeHead(401, {
+      "content-type": "text/plain; charset=utf-8",
+      [ACCESS_OUTCOME_HEADER]: "denied",
+    });
     res.end("访问口令无效或缺失");
     return false;
   }
@@ -521,17 +538,32 @@ function challengePage(url: string | undefined, wrong: boolean, locked: boolean)
     const value = input?.value ?? "";
     if (!value) return;
     try {
+      // Request the page as the following navigation will (HTML), so SPA
+      // routes resolve the same way. A passcode outcome is reported only from
+      // the gate's own marker: a tunnel edge or proxy can answer 4xx/5xx
+      // without the request ever reaching the gate.
       const response = await fetch(window.location.href, {
-        headers: { "X-Access-Passcode": value, Accept: "application/json" },
+        headers: { "X-Access-Passcode": value, Accept: "text/html" },
         credentials: "same-origin",
       });
-      if (!response.ok) {
-        if (note) note.textContent = "口令不正确或尝试过多，请稍后重试。";
-        if (note) note.className = "err";
-        if (input) input.value = "";
+      if (response.ok) {
+        window.location.replace(${cleanLocation});
         return;
       }
-      window.location.replace(${cleanLocation});
+      const access = response.headers.get("${ACCESS_OUTCOME_HEADER}");
+      const status = "（HTTP " + response.status + "）";
+      if (access === "denied") {
+        if (note) note.textContent = "口令不正确或尝试过多，请稍后重试。";
+        if (input) input.value = "";
+      } else if (note) {
+        note.textContent =
+          access === "granted"
+            ? "访问验证已通过，但页面加载失败" + status + "，请稍后重试或检查桌面端。"
+            : access === "unconfigured"
+              ? "远程访问未就绪" + status + "，请在桌面端检查手机遥控设置。"
+              : "请求未完成" + status + "，口令尚未得到验证，请稍后重试。";
+      }
+      if (note) note.className = "err";
     } catch {
       if (note) note.textContent = "连接失败，请重试。";
       if (note) note.className = "err";

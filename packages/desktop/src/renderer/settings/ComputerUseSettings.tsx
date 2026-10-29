@@ -90,7 +90,7 @@ export function ComputerUseSettings() {
   function permissionRow(kind: ComputerUsePermissionKind, state: ComputerUsePermissionState) {
     const granted = state === "granted";
     const unavailable = state === "unsupported";
-    const canRequest = kind === "accessibility" || status?.permissions.screenRequestAvailable;
+    const canRequest = status?.permissions.screenRequestAvailable;
     return (
       <div key={kind} className="flex flex-wrap items-center justify-between gap-3 py-2">
         <div className="flex flex-col gap-1">
@@ -190,6 +190,9 @@ export function ComputerUseSettings() {
               {t("settingsX.computerUse.development")}
             </p>
           )}
+          <p className="m-0 text-xs text-muted-foreground">
+            {t("settingsX.computerUse.permissionOwner")}
+          </p>
           <div className="divide-y divide-border rounded-md border border-border px-3">
             {permissionRow("accessibility", status.permissions.accessibility)}
             {permissionRow("screenRecording", status.permissions.screenRecording)}

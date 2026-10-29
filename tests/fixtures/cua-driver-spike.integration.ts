@@ -74,12 +74,19 @@ function nodeExecutable(): string {
   throw new Error("The simulated Cua executable requires installed Node");
 }
 
-const source = readFileSync(
-  fileURLToPath(new URL("./cua-driver-spike-driver.mjs", import.meta.url)),
-  "utf8",
-);
-const driverPath = join(directory, "cua-driver.mjs");
-writeFileSync(driverPath, `#!${nodeExecutable()}\n${source}`, { mode: 0o700 });
+const appPath = join(directory, "desktop");
+const helperBundle = join(appPath, "out/native/CodeShell Computer Use.app");
+const helperPath = join(helperBundle, "Contents/MacOS/codeshell-computer-use");
+const driverPath = join(helperBundle, "Contents/Resources/cua-driver");
+mkdirSync(join(helperBundle, "Contents/MacOS"), { recursive: true });
+mkdirSync(join(helperBundle, "Contents/Resources"), { recursive: true });
+for (const [destination, filename] of [
+  [helperPath, "cua-driver-spike-helper.mjs"],
+  [driverPath, "cua-driver-spike-driver.mjs"],
+]) {
+  const source = readFileSync(fileURLToPath(new URL(filename, import.meta.url)), "utf8");
+  writeFileSync(destination, `#!${nodeExecutable()}\n${source}`, { mode: 0o700 });
+}
 writeFileSync(
   join(directory, "control.json"),
   JSON.stringify({
@@ -338,7 +345,7 @@ try {
     flags: scenario === "disabled" ? {} : { computer_use_cua: true },
     platform: "darwin",
     isPackaged: false,
-    env: { CODESHELL_CUA_DRIVER_PATH: driverPath },
+    appPath,
     createHost: (options) =>
       new CuaDriverHost({
         ...options,
@@ -516,6 +523,7 @@ try {
       const permission = blocks.find((block) => block.tool_use_id === "cua-1")!;
       assert.match(String(permission.content), /"attribution":"host"/);
       assert.match(String(permission.content), /"permissionMode":"standard"/);
+      assert.match(String(permission.content), /"hostBundleId":"com.cjhyy.codeshell.computer-use"/);
       for (const id of ["cua-2", "cua-7"]) {
         const content = blocks.find((block) => block.tool_use_id === id)!.content;
         assert.ok(Array.isArray(content), `Model must receive image content for ${id}`);
@@ -549,11 +557,14 @@ try {
       }
     }
     const daemon = events().find((event) => event.phase === "started" && event.mode === "serve")!;
-    assert.equal(daemon.ppid, process.pid);
+    const helper = events().find((event) => event.phase === "started" && event.mode === "helper")!;
+    assert.equal(helper.ppid, process.pid);
+    assert.equal(helper.secretInherited, false);
+    assert.equal(daemon.ppid, helper.pid, "Only the helper launches the embedded driver");
     assert.equal(daemon.home, process.env.HOME);
     assert.equal(daemon.secretInherited, false);
     assert.equal(daemon.permissionMode, "standard");
-    assert.equal(daemon.hostBundleId, "com.cjhyy.codeshell");
+    assert.equal(daemon.hostBundleId, "com.cjhyy.codeshell.computer-use");
   }
 } finally {
   await cleanup();

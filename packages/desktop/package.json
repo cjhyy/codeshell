@@ -71,6 +71,7 @@
     "test:e2e:task-inbox": "node scripts/e2e-task-inbox.mjs",
     "test:e2e:optimization-lab": "node scripts/e2e-optimization-lab.mjs",
     "test:upload-asar": "node ../../scripts/run-isolated-node-smoke.mjs scripts/smoke-upload-asar.mjs",
+    "test:mobile-asar": "node ../../scripts/run-isolated-node-smoke.mjs scripts/smoke-mobile-asar.mjs",
     "test:e2e:operation-resolution": "node scripts/e2e-operation-resolution.mjs",
     "test:e2e:operation-read": "node scripts/e2e-operation-read.mjs",
     "test:e2e:worktree-directories": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-shared-panel-tasks.mjs --worktree-directories",
@@ -101,6 +102,7 @@
       "node_modules/playwright-core/**/*"
     ],
     "asarUnpack": [
+      "out/mobile/**/*",
       "node_modules/node-pty/**/*",
       "node_modules/@cjhyy/code-shell-core/package.json",
       "node_modules/@cjhyy/code-shell-core/dist/sources/documents/{parser-entry,parse,types}.js",
@@ -138,14 +140,10 @@
       "buildResources": "build"
     },
     "mac": {
-      "extraResources": [
+      "extraFiles": [
         {
-          "from": "out/native/cua-driver",
-          "to": "cua-driver"
-        },
-        {
-          "from": "out/native/codeshell-permissions",
-          "to": "computer-use/codeshell-permissions"
+          "from": "out/native/CodeShell Computer Use.app",
+          "to": "Library/CodeShell Computer Use.app"
         }
       ],
       "sign": "scripts/sign-managed-node-mac.cjs",

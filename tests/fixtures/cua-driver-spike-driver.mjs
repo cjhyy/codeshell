@@ -1,5 +1,5 @@
-// Deliberately simulated calculator. This executable tests process attribution,
-// MCP framing, images and cancellation without native UI or network access.
+// Deliberately simulated calculator. This executable tests process ownership,
+// MCP framing, images and cancellation without native UI or macOS TCC access.
 import assert from "node:assert/strict";
 import { appendFileSync, readFileSync } from "node:fs";
 import http from "node:http";
@@ -115,6 +115,9 @@ if (mode === "mcp") {
   stdin.on("close", () => shutdown(0));
   process.on("SIGTERM", () => shutdown(0));
 } else {
+  assert.equal(process.env.CUA_DRIVER_HOST_BUNDLE_ID, "com.cjhyy.codeshell.computer-use");
+  assert.equal(process.env.CUA_DRIVER_PERMISSION_MODE, "standard");
+  assert.equal(process.env.CUA_DRIVER_PARENT_LIVENESS_STDIN, "1");
   const sockets = new Set();
   let display = "0";
   const pressed = [];
@@ -223,10 +226,15 @@ if (mode === "mcp") {
       } else send({});
     });
   });
-  process.on("SIGTERM", () => {
+  const shutdown = () => {
     for (const socket of sockets) socket.destroy();
     server.close(() => process.exit(0));
-  });
+  };
+  process.on("SIGTERM", shutdown);
+  // Mirror the driver's embedded parent-liveness pipe: helper death closes
+  // stdin even if no orderly shutdown signal reaches the daemon.
+  process.stdin.resume();
+  process.stdin.on("end", shutdown);
   if (control.readyDelayMs) await sleep(control.readyDelayMs);
   server.listen(socketPath, () => record({ phase: "listening" }));
 }
