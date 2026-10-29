@@ -548,3 +548,4 @@ export {
 } from "./tool-system/mcp-probe-connection.js";
 
 export { listSessionEntries } from "./session/session-manager.js";
+export type * from "./protocol/output-history-recovery-types.js";
