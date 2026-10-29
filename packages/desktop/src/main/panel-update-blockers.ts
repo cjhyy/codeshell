@@ -40,6 +40,25 @@ export function panelChangeFailure(
   return blockers ? { blockers } : {};
 }
 
+/** Preserve actionable blockers across Electron IPC, whose rejected Error loses custom fields. */
+export async function panelChangeOperation<T>(
+  work: () => Promise<T>,
+  describeGuest: DescribePanelGuest,
+) {
+  try {
+    return { ok: true as const, ...(await work()) };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: error instanceof Error ? error.message : String(error),
+      ...((error as { code?: string })?.code === "already_installed"
+        ? { alreadyInstalled: true as const }
+        : {}),
+      ...panelChangeFailure(error, describeGuest),
+    };
+  }
+}
+
 /** What holds a refused Panel change, each open instance named by its tab and session. */
 export function panelChangeBlockers(
   error: unknown,

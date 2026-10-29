@@ -2,6 +2,8 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import { PanelExecutionGate } from "@cjhyy/code-shell-server/panels";
+import { panelChangeOperation } from "./panel-update-blockers.js";
 
 // Exercise the composition callbacks without booting Electron or a real worker.
 function declaration(file: string, name: string): string {
@@ -78,7 +80,8 @@ test("native uninstall refreshes paired Web even though it does not reload proje
     `${declaration("./project-panel-ipc.ts", "registerProjectPanelIpc")}\nregisterProjectPanelIpc`,
     {
       registerProjectPanelVersionIpc() {},
-      panelExecutionGate: { mutate: async (_matches: unknown, write: () => unknown) => write() },
+      panelExecutionGate: new PanelExecutionGate(),
+      panelChangeOperation,
       uninstallPanelAppForUi: async () => f.events.push({ kind: "uninstall" }),
       readSettings: async () => ({ disabledPanelApps: ["fixture-panel"] }),
       writeSettings: async () => f.events.push({ kind: "settings" }),
@@ -98,9 +101,14 @@ test("native uninstall refreshes paired Web even though it does not reload proje
     onCleanupError: () => {
       throw new Error("Unexpected cleanup failure");
     },
+    describeGuest: () => undefined,
+    closeForPackageChange: async () => {
+      f.events.push({ kind: "drain" });
+    },
   });
-  await handlers.get("panel-apps:uninstall")!({}, "fixture-panel");
+  expect(await handlers.get("panel-apps:uninstall")!({}, "fixture-panel")).toEqual({ ok: true });
   expect(f.events).toEqual([
+    { kind: "drain" },
     { kind: "uninstall" },
     { kind: "revoke-native" },
     { kind: "settings" },

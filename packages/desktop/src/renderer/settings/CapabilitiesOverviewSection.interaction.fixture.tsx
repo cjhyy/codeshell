@@ -115,7 +115,7 @@ describe("project Panel capability details", () => {
         },
         setPanelAppProjectBinding: async (...args: unknown[]) => {
           bindings.push(args);
-          return [];
+          return { ok: true, bindings: [] };
         },
       },
     });
@@ -209,6 +209,32 @@ describe("project Panel capability details", () => {
     expect(textOf(container)).not.toContain("workspace.read");
     expect(textOf(container)).not.toContain("read_selected_document");
     expect(bindings).toEqual([]);
+  });
+
+  test("project unbind displays structured service blockers and keeps the selected binding", async () => {
+    const label = "feed: stop-unconfirmed; original process group 9876; exit unconfirmed";
+    window.codeshell.setPanelAppProjectBinding = async (...args: unknown[]) => {
+      bindings.push(args);
+      return {
+        ok: false,
+        error: "Service exit unconfirmed",
+        blockers: [{ kind: "service", count: 1, label }],
+      };
+    };
+    await render();
+    const beforeReads = panelReads.length;
+    const toggle = nodes(container).find((node) => props(node).role === "switch");
+    await act(async () => {
+      props(toggle).onClick({
+        stopPropagation() {},
+        isPropagationStopped: () => false,
+        defaultPrevented: false,
+      });
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain(label);
+    expect(panelReads.length).toBe(beforeReads);
+    expect(bindings).toHaveLength(1);
   });
 
   test("user scope does not show a project's Panel authority", async () => {

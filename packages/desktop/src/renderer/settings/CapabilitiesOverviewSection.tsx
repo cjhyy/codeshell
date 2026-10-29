@@ -1,3 +1,4 @@
+import { panelChangeErrorMessage } from "../../shared/panel-change-error";
 /**
  * 能力总览 — unified, scope-aware capability view (spec §7.5).
  *
@@ -290,12 +291,13 @@ export function CapabilitiesOverviewSection({
     setError(null);
     try {
       if (!app.bindingRevision) throw new Error(t("ext.panels.bindingChanged"));
-      await window.codeshell.setPanelAppProjectBinding(
+      const result = await window.codeshell.setPanelAppProjectBinding(
         projectPath,
         app.appId,
         bound,
         app.bindingRevision,
       );
+      if (!result.ok) throw new Error(panelChangeErrorMessage(result));
       // Panel App bindings gate the dock and the agent tool surface, so main
       // must re-broadcast; listCapabilities alone would not do it.
       notifySettingsChanged();
