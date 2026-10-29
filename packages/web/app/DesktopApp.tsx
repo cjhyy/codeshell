@@ -22,6 +22,7 @@ import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopC
 import { DesktopModelPicker, desktopRuntimeModel } from "./DesktopModelPicker.js";
 import type { WorkbenchController } from "./workbench-types.js";
 import { DesktopAccessChallenge } from "./DesktopAccessChallenge.js";
+import { DesktopPairingNotice } from "./DesktopPairingNotice.js";
 import { OutputHistoryRecovery } from "../src/components/OutputHistoryRecovery.js";
 
 /** The Desktop adapter drives the already resident Desktop worker through its
@@ -88,15 +89,14 @@ export function DesktopApp() {
       <main className="desktop-connection">
         <div className="desktop-connection-card">
           <EnvironmentMenu discover={false} />
-          <h1>
-            {unpaired ? "连接 CodeShell 桌面" : authError ? "桌面连接需要重试" : "正在连接桌面…"}
-          </h1>
-          <p>
-            {authError ||
-              (unpaired
-                ? "请在桌面端开启 Web 访问，扫描新的配对二维码打开此页。"
-                : "正在恢复已配对设备与桌面工作区的连接。")}
-          </p>
+          {unpaired ? (
+            <DesktopPairingNotice />
+          ) : (
+            <>
+              <h1>{authError ? "桌面连接需要重试" : "正在连接桌面…"}</h1>
+              <p>{authError || "正在恢复已配对设备与桌面工作区的连接。"}</p>
+            </>
+          )}
           {authError ? (
             <div className="library-actions">
               <button className="library-button primary" onClick={retryAuth}>
