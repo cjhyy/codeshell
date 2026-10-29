@@ -9,6 +9,7 @@ import {
   type MimiCompanionState,
 } from "../../shared/mimi-companion.js";
 import { CompanionChoreographer, type CompanionPlacementScene } from "./companion-choreographer.js";
+import type { AppProfileIndex } from "./app-profiles.js";
 import { stagePlacement } from "./stage-model.js";
 import { petWidgetAlwaysOnTopLevel } from "../pet/pet-widget-window-state.js";
 import type { ComputerActivityBus } from "./computer-activity-bus.js";
@@ -30,6 +31,8 @@ export interface MimiCompanionHostOptions {
   bus: ComputerActivityBus;
   /** Execution gate. The character only requests holds; it never enforces them. */
   gate: InputGate;
+  /** Per-app stage hints (where to stand, what never to cover, when to stay quiet). */
+  appProfiles?: AppProfileIndex;
   log(event: string, data?: Record<string, unknown>): void;
 }
 
@@ -119,6 +122,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       target,
       avoidRect: humanActive || chatting || pinned ? undefined : avoidRect,
       window: scene.window,
+      prefer: options.appProfiles?.byId(scene.appId)?.stage.perch,
     });
     if (anchor) placement.position = { x: anchor.x - bounds.x, y: anchor.y - bounds.y };
     return {
@@ -312,6 +316,11 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     reserved?: { x: number; y: number; width: number; height: number },
     where: CompanionPlacementScene = {},
   ) {
+    const hints = options.appProfiles?.byId(where.appId)?.stage;
+    // A quiet app keeps the character where it is; the action still plays.
+    if (hints?.quiet) point = undefined;
+    if (!reserved && where.element && hints?.keepClear.includes(where.element))
+      reserved = where.elementFrame;
     // Unknown agent coordinates never mean the human's system pointer.
     if (!point && !anchor) {
       const current = state();

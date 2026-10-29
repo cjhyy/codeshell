@@ -10,6 +10,7 @@ import {
   type CuaAvoidRect,
   type CuaElementKind,
 } from "./cua-activity.js";
+import { APP_PROFILE_ID } from "./app-profiles.js";
 import type { InputGateState, InputLane } from "./input-gate-policy.js";
 
 export interface CompanionOperation {
@@ -28,6 +29,8 @@ export interface CompanionOperation {
   pid?: number;
   window?: CuaAvoidRect;
   element?: CuaElementKind;
+  /** Start only: CodeShell app profile id of the target app. */
+  appId?: string;
 }
 
 const ACTIONS = new Set(["observe", "click", "type", "scroll", "drag", "key", "working", "error"]);
@@ -98,6 +101,9 @@ export function parseCompanionOperation(value: unknown): CompanionOperation | nu
     ...(frame ? { window: frame } : {}),
     ...(start && typeof input.element === "string" && CUA_ELEMENT_KINDS.has(input.element)
       ? { element: input.element as CuaElementKind }
+      : {}),
+    ...(start && typeof input.appId === "string" && APP_PROFILE_ID.test(input.appId)
+      ? { appId: input.appId }
       : {}),
   };
 }

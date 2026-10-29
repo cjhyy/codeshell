@@ -8,6 +8,9 @@ type Rect = { x: number; y: number; width: number; height: number };
 export interface CompanionPlacementScene {
   window?: Rect;
   element?: CompanionOperation["element"];
+  /** Frame of the control under the action, whether or not it receives text. */
+  elementFrame?: Rect;
+  appId?: string;
 }
 export type CompanionActivity = MimiCompanionState["activity"];
 
@@ -96,7 +99,12 @@ export class CompanionChoreographer {
         this.place(
           trustedTarget(event),
           event.targetSource === "element" ? event.avoidRect : undefined,
-          { window: event.window, element: event.element },
+          {
+            window: event.window,
+            element: event.element,
+            elementFrame: event.avoidRect,
+            appId: event.appId,
+          },
         );
       this.current = {
         id: event.id,
@@ -159,6 +167,8 @@ export class CompanionChoreographer {
     this.place(event.target, event.avoidRect ?? retainedInput, {
       window: previous.window,
       element: previous.element,
+      elementFrame: previous.avoidRect,
+      appId: previous.appId,
     });
     this.host.publish();
   }
@@ -175,7 +185,12 @@ export class CompanionChoreographer {
         ? { id: next.id, action: next.action, phase: "start", startedAt: this.host.now() }
         : { id: "idle", action: "idle", phase: "end", startedAt: this.host.now() };
       if (next && !this.host.suppressed())
-        this.place(next.target, next.avoidRect, { window: next.window, element: next.element });
+        this.place(next.target, next.avoidRect, {
+          window: next.window,
+          element: next.element,
+          elementFrame: next.avoidRect,
+          appId: next.appId,
+        });
       this.host.publish();
     }, GESTURE_DWELL_MS);
   }

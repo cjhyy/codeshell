@@ -119,6 +119,20 @@ describe("CuaDriverHost", () => {
       },
       inlineImages: true,
     });
+    const withProfiles = harness({
+      hostOptions: {
+        mcpProxy: {
+          command: "/app/electron",
+          entryPath: "/app/out/main/cua-activity-proxy.mjs",
+          socketPath: "/tmp/actor/activity.sock",
+          token: "host-token",
+          appProfilesDir: "/app/resources/computer-use/apps",
+        },
+      },
+    }).host;
+    expect(withProfiles.mcpDeclaration().env.CODE_SHELL_CUA_APP_PROFILES).toBe(
+      "/app/resources/computer-use/apps",
+    );
   });
   test("launches the independent helper through its bridge with an allowlisted env", async () => {
     const { host, spawns } = harness();

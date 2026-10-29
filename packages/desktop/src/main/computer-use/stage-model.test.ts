@@ -68,4 +68,19 @@ describe("stagePlacement", () => {
     expect(perched.perch).toBe("title-bar");
     expect(perched.position.y + height + 8).toBeLessThanOrEqual(inside.y);
   });
+
+  test("an app profile can keep the character beside the target or out of the way", () => {
+    const scene = { target: { x: 900, y: 480 }, window };
+    expect(stagePlacement(display, height, { ...scene, prefer: "beside-target" }).perch).toBe(
+      "beside-target",
+    );
+    const corner = stagePlacement(display, height, { ...scene, prefer: "screen-corner" });
+    expect(corner.perch).toBe("screen-corner");
+    expect(corner.position.x + width).toBeGreaterThan(display.width - 60);
+    expect(corner.target).toEqual({ x: 900, y: 480 });
+    // The title bar stays conditional even when an app prefers it.
+    expect(
+      stagePlacement(display, height, { target: { x: 900, y: 480 }, prefer: "title-bar" }).perch,
+    ).toBe("beside-target");
+  });
 });
