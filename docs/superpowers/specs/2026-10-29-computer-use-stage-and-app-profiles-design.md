@@ -1,6 +1,6 @@
 # 电脑操作 × Mimi：舞台、应用档案与真实感 设计
 
-- 状态：P2–P6 已实施（见 §11）；P1 待真机诊断
+- 状态：P1–P6 已实施（见 §11）
 - 日期：2026-10-29
 - 前置：`2026-10-28-mimi-cua-execution-boundary-design.md`（执行闸门，PR #239 已合并）、PR #242（驱动自带浏览器路线已下线）
 - 范围：Desktop 主进程 `src/main/computer-use/**`、Mimi 角色渲染 `src/renderer/pet/live2d/**`、新增资源 `resources/computer-use/apps/**`
@@ -255,3 +255,12 @@ stage:
 - §6 第 8 条的"窗口"只取应用名：拖放后用 CoreGraphics（经 JXA）列一次屏幕窗口（pid、应用名、窗口框，不取标题），确认后把"请看看我屏幕上的「App」窗口。"放进聊天输入框，由用户自己发送。
 - §6 第 1 条"窗口移动时跟着动"只在下一次读窗口时更新，不做轮询（§9 第 4 条）。
 - 预览实验室新增 `--stage-demo` 与 `--interaction-demo`，不需要电脑操作授权即可验证表现与互动。
+
+### P1 真机诊断（2026-10-29）
+
+经 LaunchServices 启动已授权辅助功能的 Electron，驱动 daemon 继承其授权；读取经 CodeShell proxy（含 #249）进行，只用临时配置的 Chrome 实例。
+
+- 默认情况下 Chrome（Chrome for Testing 148 与正式版 Chrome，各用临时配置）不把网页内容暴露给辅助功能：窗口只有工具栏、标签和菜单（约 156 个元素），**没有网页区域**。读多次、加大预算都一样。
+- 对应用元素设 `AXEnhancedUserInterface = true`（读回为 1）或 `AXManualAccessibility`（Chrome 不支持，-25205），无论页面加载前后，都不会打开网页辅助功能。
+- 对照组：带 `--force-renderer-accessibility` 启动时，同一条生产链路首读即得 126 个网页元素；后台 `set_value` 写入、元素点击后页面显示 `clicked:后台写入 ✓`；前台应用始终未变；应用档案注入一次。
+- 结论：#249 的"空网页区域补读"针对的是网页区域存在但尚未建好的情况，在日常 Chrome 里不会出现；日常 Chrome 的正确路线是截图 + 坐标（`click` 与带 `x`,`y` 的 `type_text`），Chrome 档案已据此改写。截图路线需要辅助 App 同时具备屏幕录制授权，尚待真机验证。

@@ -37,7 +37,12 @@ function scalar(raw: string): Scalar {
   if (value === "false") return false;
   if (value.startsWith("[") && value.endsWith("]")) {
     const inner = value.slice(1, -1).trim();
-    return inner ? inner.split(",").map((item) => unquote(item.trim())) : [];
+    return inner
+      ? inner
+          .split(",")
+          .map((item) => unquote(item.trim()))
+          .filter(Boolean)
+      : [];
   }
   return unquote(value);
 }
@@ -59,7 +64,16 @@ export function parseAppProfile(text: string, id: string): AppProfile {
   const top: Record<string, Scalar> = {};
   const stage: Record<string, Scalar> = {};
   let section: "top" | "stage" = "top";
-  for (const line of match[1]!.split(/\r?\n/)) {
+  // A flow list may span lines (formatters wrap long ones); fold it back.
+  const lines: string[] = [];
+  for (const raw of match[1]!.split(/\r?\n/)) {
+    const last = lines.length ? lines[lines.length - 1]! : undefined;
+    const openList = last !== undefined && last.includes("[") && !last.includes("]");
+    const listStart = last !== undefined && /:\s*$/.test(last) && raw.trim().startsWith("[");
+    if (openList || listStart) lines[lines.length - 1] = `${last} ${raw.trim()}`;
+    else lines.push(raw);
+  }
+  for (const line of lines) {
     if (!line.trim() || line.trim().startsWith("#")) continue;
     const nested = /^ {2}([a-zA-Z]+):\s*(.*)$/.exec(line);
     const field = /^([a-zA-Z]+):\s*(.*)$/.exec(line);
