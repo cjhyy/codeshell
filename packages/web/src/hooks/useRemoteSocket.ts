@@ -141,6 +141,18 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
       retryTimer = undefined;
       const wsUrl = window.location.origin.replace(/^http/, "ws") + "/ws";
       const ws = new WebSocket(wsUrl);
+      let pairingFallback: { token: string; name: string; secretHash: string } | undefined;
+      const clearPairingUrl = () => {
+        const query = new URLSearchParams(window.location.search);
+        if (!query.has("pairing")) return;
+        query.delete("pairing");
+        const search = query.toString();
+        window.history.replaceState(
+          null,
+          "",
+          window.location.pathname + (search ? `?${search}` : "") + (window.location.hash ?? ""),
+        );
+      };
       wsRef.current = ws;
       statusRef.current = "connecting";
       setStatus("connecting");
@@ -161,27 +173,21 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
         const secret = deviceStore.getOrCreateSecret(() => generateSecret());
         const name = deviceStore.getOrCreateName();
         setDeviceName(name);
-        if (pairingToken) {
+        pairingFallback = pairingToken
+          ? { token: pairingToken, name, secretHash: secret }
+          : undefined;
+        const deviceId = deviceStore.getId();
+        if (deviceId) {
+          // Bookmarked one-use links must not displace an already trusted browser.
           statusRef.current = "authenticating";
           setStatus("authenticating");
-          ws.send(
-            JSON.stringify({
-              type: "pair.complete",
-              token: pairingToken,
-              name,
-              secretHash: secret,
-            }),
-          );
-        } else if (deviceStore.getId()) {
+          ws.send(JSON.stringify({ type: "auth.device", deviceId, secretHash: secret }));
+        } else if (pairingFallback) {
           statusRef.current = "authenticating";
           setStatus("authenticating");
-          ws.send(
-            JSON.stringify({
-              type: "auth.device",
-              deviceId: deviceStore.getId(),
-              secretHash: secret,
-            }),
-          );
+          const grant = pairingFallback;
+          pairingFallback = undefined;
+          ws.send(JSON.stringify({ type: "pair.complete", ...grant }));
         } else {
           socketHealth.stop();
           statusRef.current = "unpaired";
@@ -220,10 +226,12 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
           // Re-auth with the freshly-minted device id, then clean the URL.
           const secret = deviceStore.getOrCreateSecret(() => generateSecret());
           ws.send(JSON.stringify({ type: "auth.device", deviceId: device.id, secretHash: secret }));
-          window.history.replaceState(null, "", window.location.pathname);
+          clearPairingUrl();
           return;
         }
         if (obj.type === "auth.ok") {
+          pairingFallback = undefined;
+          clearPairingUrl();
           socketHealth.connected();
           const device = obj.device as { name?: string } | undefined;
           if (device?.name) setDeviceName(device.name);
@@ -236,6 +244,15 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
           return;
         }
         if (obj.type === "auth.failed" || obj.type === "pair.failed") {
+          if (obj.type === "auth.failed" && pairingFallback) {
+            // A fresh QR can intentionally replace credentials revoked on the
+            // desktop. Use that grant once; a failed grant still stops below.
+            deviceStore.clearId();
+            const grant = pairingFallback;
+            pairingFallback = undefined;
+            ws.send(JSON.stringify({ type: "pair.complete", ...grant }));
+            return;
+          }
           closedByUs.current = true;
           if (obj.type === "auth.failed") deviceStore.clearId();
           statusRef.current = "unpaired";
