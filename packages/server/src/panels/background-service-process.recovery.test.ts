@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { bundleInSubprocess } from "../../../../tests/helpers/bundle-in-subprocess.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtemp, mkdir, writeFile, rm, realpath, stat } from "node:fs/promises";
+import { mkdtemp, writeFile, rm, realpath } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { hostname, tmpdir } from "node:os";
@@ -10,6 +10,7 @@ import { PassThrough } from "node:stream";
 import {
   spawnServiceProcess,
   readServiceCustody,
+  waitForServiceGroupExit,
   type ServiceProcess,
 } from "./background-service-process.js";
 import {
@@ -17,7 +18,6 @@ import {
   createBootSessionReader,
   identityStatus,
   processIdentity,
-  groupStatus,
   type ServiceIdentityInspector,
 } from "./background-service-store.js";
 import { resolvePanelExecutable } from "./process-service.js";
@@ -35,58 +35,35 @@ const identities: ServiceIdentityInspector = {
     return identityStatus(value, identities.current);
   },
 };
-test("guardian kill cannot orphan a native member that ignores EOF", async () => {
-  const root = await realpath(await mkdtemp(join(tmpdir(), "service-guardian-loss-")));
-  let actual: ServiceProcess | undefined;
+async function runNativeCustodyFixture(scenario: "guardian-loss" | "custody-fd") {
+  const root = await realpath(await mkdtemp(join(tmpdir(), `service-${scenario}-`)));
+  let passed = false;
   try {
-    const cwd = join(root, "data"),
-      entry = join(root, "entry.mjs");
-    await mkdir(cwd);
-    const source = `import{createInterface}from'node:readline';
-setInterval(()=>{},1000);createInterface({input:process.stdin}).on('line',line=>{const m=JSON.parse(line);if(m.t==='hello')console.log(JSON.stringify({t:'ready'}));if(m.t==='poke')process.kill(process.ppid,'SIGKILL')});`;
-    await writeFile(entry, source);
-    let ready!: () => void;
-    const readySignal = new Promise<void>((resolve) => {
-      ready = resolve;
-    });
-    const exits: Array<string | undefined> = [];
-    actual = await spawnServiceProcess(
-      {
-        executable: (await resolvePanelExecutable("node"))!,
-        entry,
-        packageRoot: root,
-        cwd,
-        sha256: createHash("sha256").update(source).digest("hex"),
-        maxLineBytes: 4096,
-        onLine(message: any) {
-          if (message.t === "ready") ready();
-        },
-        onExit(error) {
-          exits.push(error);
-        },
-      },
-      { identities, probeRuntime: async () => ["--permission"] },
+    bundleInSubprocess(
+      [join(import.meta.dir, "__fixtures__/background-service-custody.ts")],
+      root,
+      { naming: "custody.mjs" },
     );
-    const member = await actual.prepare();
-    expect(identities.status(member)).toBe("alive");
-    actual.activate({ t: "hello" });
-    await readySignal;
-    actual.send({ t: "poke" });
-    await actual.exited;
-    expect(exits).toContain("SERVICE_CUSTODY_LEADER_EXITED");
-    // Pipes closed and the previously observed executable identity is dead.
-    // Linux may retain a zombie /proc entry until PID 1 reaps it; that terminal
-    // state is not a live identity and must not require arbitrary sleeps.
-    // Restricted hosts may return EPERM rather than ESRCH for a negative PGID;
-    // production must preserve unconfirmed state in that case, never assert death.
-    expect(identities.current(member.pid)).toBeNull();
-    const status = groupStatus(actual.identity.pid);
-    expect(status).not.toBe("alive");
-    expect(await actual.terminate(0)).toBe(status === "dead");
+    const executable = (await resolvePanelExecutable("node"))!;
+    const result = await promisify(execFile)(
+      executable,
+      ["--unhandled-rejections=strict", join(root, "custody.mjs"), scenario, root],
+      { timeout: 20_000, killSignal: "SIGKILL", maxBuffer: 64 * 1024 },
+    );
+    const receipt = JSON.parse(result.stdout.trim());
+    expect(receipt).toMatchObject({ scenario, memberDead: true });
+    passed = true;
+  } catch (error) {
+    // Preserve failed owned-process evidence; a failed assertion is not proof
+    // every descendant has exited and must not remove their fixture directory.
+    throw new Error(`Native custody fixture retained at ${root}`, { cause: error });
   } finally {
-    await actual?.terminate(0);
-    await rm(root, { recursive: true, force: true });
+    if (passed) await rm(root, { recursive: true, force: true });
   }
+}
+
+test("guardian kill cannot orphan a native member that ignores EOF", async () => {
+  await runNativeCustodyFixture("guardian-loss");
 });
 
 test("I8 custody uses a strict total 8192-byte bound and releases listeners/buffer on limit", async () => {
@@ -152,58 +129,104 @@ test("I8 accepts only ordered custody/member, probes each identity once and clos
 });
 
 test("I8 actual native member cannot inherit the guardian custody FD", async () => {
-  const root = await realpath(await mkdtemp(join(tmpdir(), "service-custody-fd-")));
-  let actual: ServiceProcess | undefined;
-  try {
-    const entry = join(root, "entry.mjs");
-    const source = `import fs from'node:fs';process.stdin.once('data',()=>{try{fs.writeSync(3,JSON.stringify({t:'member',pid:process.pid})+'\\n');}catch{}console.log(JSON.stringify({t:'ready'}));process.exit(0)});`;
-    await writeFile(entry, source);
-    const messages: unknown[] = [],
-      inspected: number[] = [];
-    actual = await spawnServiceProcess(
-      {
-        executable: (await resolvePanelExecutable("node"))!,
-        entry,
-        packageRoot: root,
-        cwd: root,
-        sha256: createHash("sha256").update(source).digest("hex"),
-        maxLineBytes: 4096,
-        onLine: (message) => messages.push(message),
-        onExit() {},
-      },
-      {
-        identities: {
-          current: (pid) => {
-            inspected.push(pid);
-            return identities.current(pid);
-          },
-          status: identities.status,
-        },
-      },
-    );
-    // Linux can reuse FD number 3 for Node's own epoll/pipe. Compare the actual
-    // kernel object, not fstat's socket type or the mere presence of that number.
-    const custodyFd =
-      process.platform === "linux" ? await stat(`/proc/${actual.identity.pid}/fd/3`) : null;
-    const member = await actual.prepare();
-    if (custodyFd) {
-      const memberFd = await stat(`/proc/${member.pid}/fd/3`).catch((error) => {
-        if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
-        throw error;
-      });
-      expect(memberFd && `${memberFd.dev}:${memberFd.ino}`).not.toBe(
-        `${custodyFd.dev}:${custodyFd.ino}`,
-      );
-    }
-    expect(inspected).toEqual([actual.identity.pid, member.pid]);
-    actual.activate({ t: "hello" });
-    await actual.exited;
-    expect(messages).toEqual([{ t: "ready" }]);
-    expect(inspected).toHaveLength(2);
-  } finally {
-    await actual?.terminate(0);
-    await rm(root, { recursive: true, force: true });
-  }
+  await runNativeCustodyFixture("custody-fd");
+});
+
+test("custody IO failure retains the actual syscall and closes both bounded promises", async () => {
+  const stream = new PassThrough();
+  let inspected = 0;
+  const reader = readServiceCustody(stream, 10, {
+    current() {
+      inspected++;
+      return null;
+    },
+    status: () => "unknown",
+  });
+  stream.write(Buffer.alloc(8192, 32));
+  const cause = Object.assign(new Error("bad descriptor"), { code: "EBADF", syscall: "read" });
+  stream.destroy(cause);
+  await expect(reader.custody).rejects.toThrow("SERVICE_CUSTODY_IO:EBADF:read");
+  await expect(reader.member).rejects.toThrow("SERVICE_CUSTODY_IO:EBADF:read");
+  await reader.member.catch((error) => expect(error.cause).toBe(cause));
+  expect(inspected).toBe(0);
+  expect(reader.retainedBytes).toBe(0);
+  expect(stream.destroyed).toBe(true);
+});
+
+test("member custody IO failure preserves the guardian receipt without admitting a member", async () => {
+  const stream = new PassThrough(),
+    inspected: number[] = [];
+  const reader = readServiceCustody(stream, 10, {
+    current(pid) {
+      inspected.push(pid);
+      return { pid, start: "linux-ticks:1", host: "fixture", boot: "fixture" };
+    },
+    status: () => "alive",
+  });
+  stream.write(
+    JSON.stringify({ t: "custody", pid: 10, nonce: "00000000-0000-0000-0000-000000000001" }) + "\n",
+  );
+  expect((await reader.custody).pid).toBe(10);
+  stream.destroy(Object.assign(new Error("reset"), { code: "ECONNRESET", syscall: "read" }));
+  await expect(reader.member).rejects.toThrow("SERVICE_CUSTODY_IO:ECONNRESET:read");
+  expect((await reader.custody).pid).toBe(10);
+  expect(reader.memberIdentity).toBeUndefined();
+  expect(reader.retainedBytes).toBe(0);
+  expect(inspected).toEqual([10]);
+});
+
+test("group death confirmation waits past guardian close and preserves the proven observation", async () => {
+  let observed = 0,
+    clock = 0,
+    resume!: () => void;
+  const barrier = new Promise<void>((resolve) => {
+    resume = resolve;
+  });
+  let settled = false;
+  const confirmation = waitForServiceGroupExit(
+    10,
+    2000,
+    () => {
+      observed++;
+      // A live member may still exist after the guardian's close event. Once
+      // proven dead, a later unrelated /proc read error cannot undo that proof.
+      return observed === 1 ? "alive" : observed === 2 ? "dead" : "unknown";
+    },
+    () => clock,
+    async () => {
+      await barrier;
+      clock = 20;
+    },
+  ).then((confirmed) => {
+    settled = true;
+    return confirmed;
+  });
+  await Promise.resolve();
+  expect(settled).toBe(false);
+  expect(observed).toBe(1);
+  resume();
+  expect(await confirmation).toBe(true);
+  expect(observed).toBe(2);
+});
+
+test("group death confirmation never treats unknown as death and uses a bounded monotonic deadline", async () => {
+  let clock = 0,
+    observed = 0;
+  const confirmed = await waitForServiceGroupExit(
+    10,
+    40,
+    () => {
+      observed++;
+      return "unknown";
+    },
+    () => clock,
+    async (delay) => {
+      clock += delay;
+    },
+  );
+  expect(confirmed).toBe(false);
+  expect(clock).toBe(40);
+  expect(observed).toBe(3);
 });
 
 test("spawn failure observes custody rejection before close", async () => {

@@ -51,7 +51,7 @@ describe("reviewed native tool executor", () => {
   });
   async function fixture(
     source: string,
-    dropEvents = false,
+    dropEvents: boolean | ((event: string, payload: Record<string, unknown>) => boolean) = false,
     settings: boolean | FixtureOptions = false,
   ) {
     const options: FixtureOptions =
@@ -130,7 +130,9 @@ describe("reviewed native tool executor", () => {
           appTitle: "Fixture",
           send: (event, payload) => {
             events.push({ event, payload });
-            if (!dropEvents) send(event, payload);
+            const dropped =
+              typeof dropEvents === "function" ? dropEvents(event, payload) : dropEvents;
+            if (!dropped) send(event, payload);
           },
         };
         owners.set(owner.guestId, owner);
@@ -379,7 +381,8 @@ setInterval(()=>{},1000);`,
 
   test("real Node receives sealed directories and frozen resources, then captures a verified artifact", async () => {
     const source = `import {readFile,writeFile} from "node:fs/promises";import {createHash} from "node:crypto";import {join} from "node:path";
-${readRequest}
+let text="";process.stdin.setEncoding("utf8");for await(const chunk of process.stdin)text+=chunk;
+let request;try{request=JSON.parse(text)}finally{console.error("fixture-input:"+Buffer.byteLength(text)+":"+(typeof request?.jobId==="string"&&typeof request?.scopeKey==="string"));}
 const args=process.argv.slice(2), jobDir=args[args.indexOf("--job-dir")+1], dataDir=args[args.indexOf("--data-dir")+1];
 const content=await readFile(join(jobDir,"source.txt"),"utf8");
 const output=Buffer.from(content+request.text);await writeFile(join(jobDir,"result.txt"),output);await writeFile(join(dataDir,"marker"),"ran");
@@ -403,7 +406,32 @@ const sha256=createHash("sha256").update(output).digest("hex");console.log(JSON.
       f.controller.signal,
     );
     await writeFile(inputFile, "原文件已改变");
-    const result = (await f.executor.execute(f.job, f.context)) as any;
+    const result = (await f.executor.execute(f.job, f.context).catch((error) => {
+      // Linux Bun descriptor failures must remain failures. Capture only bounded,
+      // content-free evidence to distinguish early EOF, a child failure and lost output.
+      console.error(
+        "Sealed native tool lifecycle:",
+        JSON.stringify(
+          f.events.slice(-64).map(({ event, payload }) => {
+            const text = typeof payload.text === "string" ? payload.text : "";
+            const input =
+              payload.stream === "stderr" ? text.match(/fixture-input:(\d+):(true|false)/) : null;
+            return {
+              event,
+              sequence: payload.sequence,
+              ...(event === "process.exit"
+                ? { code: payload.code, signal: payload.signal }
+                : { stream: payload.stream, bytes: Buffer.byteLength(text) }),
+              ...(input && {
+                receivedBytes: Number(input[1]),
+                requestComplete: input[2] === "true",
+              }),
+            };
+          }),
+        ),
+      );
+      throw error;
+    })) as any;
     expect(result.jobId).toBe("fixture-job");
     expect(result.artifacts[0].asset).toMatchObject({
       id: `asset-${hash("原文你好")}`,
@@ -427,6 +455,48 @@ const sha256=createHash("sha256").update(output).digest("hex");console.log(JSON.
     );
     expect(await f.executor.execute(f.job, f.context)).toEqual({ received: "你好" });
     expect(f.progress).toContainEqual({ fraction: 0.5 });
+    expect(f.owners.size).toBe(0);
+  });
+
+  test("a delivered terminal event cannot bypass a missing final stdout receipt", async () => {
+    let dropFinalOutput = false;
+    const delivered: Array<{ event: string; sequence: number }> = [];
+    const f = await fixture(
+      `import {watch,existsSync} from "node:fs";import {join} from "node:path";
+${readRequest}
+const release=join(process.cwd(),"release-result");
+const released=new Promise(resolve=>{const watcher=watch(process.cwd(),()=>{if(existsSync(release)){watcher.close();resolve();}});if(existsSync(release)){watcher.close();resolve();}});
+console.log(JSON.stringify({type:"progress",progress:{stage:"awaiting-host"}}));
+await released;console.log(JSON.stringify({type:"result",result:{received:request.text}}));`,
+      (event, payload) => {
+        if (dropFinalOutput && event === "process.output" && payload.stream === "stdout")
+          return true;
+        delivered.push({ event, sequence: Number(payload.sequence) });
+        return false;
+      },
+    );
+    const result = await f.executor.execute(f.job, {
+      ...f.context,
+      reportProgress: async (progress) => {
+        expect(progress).toEqual({ stage: "awaiting-host" });
+        dropFinalOutput = true;
+        // An actual filesystem barrier: the native child cannot emit its result
+        // until the Host is ready to drop that push, with no timing or retry loop.
+        await writeFile(join(f.workDir, "release-result"), "release", { flag: "wx" });
+      },
+    });
+    expect(result).toEqual({ received: "你好" });
+    const exit = delivered.find((item) => item.event === "process.exit")!;
+    expect(exit).toBeDefined();
+    const finalOutput = f.events.find(
+      ({ event, payload }) =>
+        event === "process.output" &&
+        payload.stream === "stdout" &&
+        String(payload.text).includes('"type":"result"'),
+    )!;
+    expect(finalOutput).toBeDefined();
+    expect(Number(finalOutput.payload.sequence)).toBeLessThan(exit.sequence);
+    expect(delivered.some((item) => item.sequence === finalOutput.payload.sequence)).toBe(false);
     expect(f.owners.size).toBe(0);
   });
 

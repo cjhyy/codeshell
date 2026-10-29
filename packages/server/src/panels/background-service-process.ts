@@ -120,6 +120,7 @@ export interface ServiceProcess {
   prepare(): Promise<ServiceProcessIdentity>;
   activate(hello: unknown): void;
   terminate(timeoutMs: number): Promise<boolean>;
+  /** Guardian stdio closed; use terminate() to confirm the entire group is dead. */
   exited: Promise<void>;
 }
 /** This private guardian protocol has exactly two messages and one total byte
@@ -164,7 +165,13 @@ export function readServiceCustody(
     stream.destroy();
   };
   const ended = () => close(new Error("SERVICE_CUSTODY_EXITED"));
-  const failed = () => close(new Error("SERVICE_CUSTODY_IO"));
+  const failed = (cause: NodeJS.ErrnoException) =>
+    close(
+      new Error(
+        `SERVICE_CUSTODY_IO${cause.code ? `:${cause.code}` : ""}${cause.syscall ? `:${cause.syscall}` : ""}`,
+        { cause },
+      ),
+    );
   const receive = (chunk: Buffer) => {
     if (phase === "closed") return;
     const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
@@ -226,6 +233,27 @@ export function readServiceCustody(
       return pending.length;
     },
   };
+}
+
+/** A guardian's close event only confirms its stdio closed. A signalled native
+ * member may still be executing; only the OS group observation confirms death. */
+export async function waitForServiceGroupExit(
+  pid: number,
+  timeoutMs: number,
+  observe: () => ReturnType<typeof groupStatus> = () => groupStatus(pid),
+  clock: () => number = () => performance.now(),
+  yieldTurn: (delayMs: number) => Promise<void> = (delayMs) =>
+    new Promise((resolve) => setTimeout(resolve, delayMs)),
+): Promise<boolean> {
+  const deadline = clock() + Math.max(0, timeoutMs);
+  while (true) {
+    // Keep the exact successful observation. A second /proc scan can encounter
+    // unrelated PID churn and become unknown after death was already proven.
+    if (observe() === "dead") return true;
+    const remaining = deadline - clock();
+    if (remaining <= 0) return false;
+    await yieldTurn(Math.min(20, remaining));
+  }
 }
 export async function spawnServiceProcess(
   input: {
@@ -448,21 +476,18 @@ export async function spawnServiceProcess(
         (!custodyChannel.memberIdentity ||
           identities.status(custodyChannel.memberIdentity) !== "alive")
       )
-        return false;
+        // No verified live owner means no signal authority. A previous signal
+        // can still be taking effect, so bounded read-only confirmation remains
+        // useful; unknown throughout the deadline stays unconfirmed.
+        return waitForServiceGroupExit(identity.pid, 2000);
       try {
         process.kill(-identity.pid, "SIGKILL");
       } catch {
         /* confirm below */
       }
-      let forceTimer: ReturnType<typeof setTimeout> | undefined;
-      await Promise.race([
-        exited,
-        new Promise<void>((resolve) => {
-          forceTimer = setTimeout(resolve, 2000);
-        }),
-      ]);
-      if (forceTimer) clearTimeout(forceTimer);
-      return groupStatus(identity.pid) === "dead";
+      // `exited` may already have resolved when the guardian died. It is not a
+      // completion barrier for SIGKILL delivery to the authenticated member.
+      return waitForServiceGroupExit(identity.pid, 2000);
     },
   };
 }

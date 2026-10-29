@@ -17,6 +17,7 @@ import { PanelExecutionGate } from "./execution-gate.js";
 import { panelBridgeFailure } from "./bridge-contract.js";
 import { PanelToolJobService } from "./tool-jobs.js";
 import { resolvePanelExecutable } from "./process-service.js";
+import { waitForServiceGroupExit } from "./background-service-process.js";
 
 const roots: string[] = [],
   services: PanelBackgroundService[] = [];
@@ -430,10 +431,7 @@ await service.initialize();await service.setDesired(scope,{desired:'always',expe
     expect(await restarted.read(f.scope, "quotes")).toMatchObject({ seq: 1 });
     // The fixture owns this exact group; production recovery never issues this kill.
     process.kill(-guardian, "SIGKILL");
-    const deadline = Date.now() + 5000;
-    while (groupStatus(guardian) !== "dead" && Date.now() < deadline)
-      await new Promise((resolve) => setImmediate(resolve));
-    expect(groupStatus(guardian)).toBe("dead");
+    expect(await waitForServiceGroupExit(guardian, 5000)).toBe(true);
     guardian = 0;
     await restarted.tick();
     expect((await restarted.get(f.scope)).generation).toBe(2);

@@ -275,13 +275,25 @@ export function linuxGroupStatus(
   read: (path: string) => string = (path) => readFileSync(path, "utf8"),
   list: () => string[] = () => readdirSync("/proc"),
 ): "alive" | "dead" | "unknown" {
-  try {
-    try {
-      const leader = parseLinuxProcessStat(read(`/proc/${pid}/stat`));
-      if (leader?.group === pid && !["Z", "X"].includes(leader.state)) return "alive";
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") return "unknown";
+  // A task can disappear after enumeration or after opening its stat file.
+  // ENOENT and ESRCH both describe that absence; permissions/visibility errors
+  // do not. A short/invalid read gets one fresh observation, never a guessed
+  // identity: only a valid stat or confirmed absence can complete the scan.
+  const memberAt = (memberPid: number) => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const member = parseLinuxProcessStat(read(`/proc/${memberPid}/stat`));
+        if (member?.pid === memberPid) return member;
+      } catch (error) {
+        if (["ENOENT", "ESRCH"].includes((error as NodeJS.ErrnoException).code ?? "")) return null;
+        throw error;
+      }
     }
+    throw new Error("SERVICE_PROC_STAT_UNREADABLE");
+  };
+  try {
+    const leader = memberAt(pid);
+    if (leader?.group === pid && !["Z", "X"].includes(leader.state)) return "alive";
     const mounts = read("/proc/mounts")
       .split("\n")
       .map((line) => line.split(" "));
@@ -296,15 +308,10 @@ export function linuxGroupStatus(
       const terminal = new Map<number, string>();
       for (const name of list()) {
         if (!/^\d+$/.test(name)) continue;
-        try {
-          const member = parseLinuxProcessStat(read(`/proc/${name}/stat`));
-          if (!member || member.pid !== Number(name)) return "unknown";
-          if (member.group !== pid) continue;
-          if (!["Z", "X"].includes(member.state)) return "alive";
-          terminal.set(member.pid, member.start);
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== "ENOENT") return "unknown";
-        }
+        const member = memberAt(Number(name));
+        if (!member || member.group !== pid) continue;
+        if (!["Z", "X"].includes(member.state)) return "alive";
+        terminal.set(member.pid, member.start);
       }
       return terminal;
     };

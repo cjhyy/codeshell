@@ -312,6 +312,14 @@ jobs:
           packages/server/src/panels/process-state.test.ts
           packages/server/src/panels/model-trace-process.test.ts
           packages/server/src/panels/model-traces.test.ts
+      - name: test Hub Panel background services
+        if: matrix.shard == 'rest-server'
+        run: >-
+          node scripts/run-bun-test-shard.mjs --timeout 30000
+          packages/server/src/panels/background-service-store.recovery.test.ts
+          packages/server/src/panels/background-service-process.recovery.test.ts
+          packages/server/src/panels/background-services.recovery.test.ts
+          packages/server/src/panels/background-services.test.ts
       - name: test Hub Panel tasks
         if: matrix.shard == 'rest-server'
         run: >-

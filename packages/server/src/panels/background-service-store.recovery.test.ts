@@ -11,6 +11,7 @@ import {
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
+import { waitForServiceGroupExit } from "./background-service-process.js";
 import {
   BackgroundServiceStore,
   identityStatus,
@@ -300,6 +301,107 @@ test("Linux terminal confirmation sees a child forked between membership enumera
     "unknown",
   );
   expect(scans).toBe(2);
+});
+
+function linuxProcFixture(extraRead: () => string) {
+  return (path: string) => {
+    if (path === "/proc/mounts") return "proc /proc proc rw,nosuid,nodev,noexec 0 0\n";
+    if (path === "/proc/self/stat") return stat(process.pid, 999, "R");
+    if (path === "/proc/100/stat") return stat(100, 100, "Z");
+    if (path === "/proc/101/stat") return stat(101, 100, "X");
+    if (path === "/proc/102/stat") return extraRead();
+    throw Error(`unexpected read ${path}`);
+  };
+}
+
+test("Linux scan confirms terminal group despite an unrelated PID disappearing after enumeration", () => {
+  for (const code of ["ENOENT", "ESRCH"]) {
+    let reads = 0;
+    const read = linuxProcFixture(() => {
+      reads++;
+      // Opening/reading a listed PID races its exit. A failed stat is not an
+      // arbitrary visibility error: the kernel reports this exact task gone.
+      throw Object.assign(Error("task disappeared"), { code });
+    });
+    expect(linuxGroupStatus(100, read, () => ["100", "101", "102"])).toBe("dead");
+    expect(reads).toBe(2); // Both complete membership passes still run.
+  }
+});
+
+test("Linux empty stat is re-observed once and only confirmed absence may be ignored", () => {
+  let reads = 0;
+  const disappeared = linuxProcFixture(() => {
+    if (++reads === 1) return "";
+    throw Object.assign(Error("task disappeared"), { code: "ESRCH" });
+  });
+  expect(linuxGroupStatus(100, disappeared, () => ["100", "101", "102"])).toBe("dead");
+  expect(reads).toBe(3);
+
+  reads = 0;
+  const live = linuxProcFixture(() => (++reads === 1 ? "" : stat(102, 100, "S")));
+  expect(linuxGroupStatus(100, live, () => ["100", "101", "102"])).toBe("alive");
+  expect(reads).toBe(2);
+});
+
+test("Linux stable malformed stat, permissions and namespace uncertainty cannot prove group death", () => {
+  for (const body of ["", "not a stat", stat(103, 100, "Z")]) {
+    let reads = 0;
+    const read = linuxProcFixture(() => {
+      reads++;
+      return body;
+    });
+    expect(linuxGroupStatus(100, read, () => ["100", "101", "102"])).toBe("unknown");
+    expect(reads).toBeGreaterThan(0);
+    expect(reads).toBeLessThanOrEqual(2);
+  }
+  for (const code of ["EPERM", "EACCES", "EIO"]) {
+    const read = linuxProcFixture(() => {
+      throw Object.assign(Error("inspection unavailable"), { code });
+    });
+    expect(linuxGroupStatus(100, read, () => ["100", "101", "102"])).toBe("unknown");
+  }
+  const read = linuxProcFixture(() => stat(102, 999, "S"));
+  expect(
+    linuxGroupStatus(
+      100,
+      (path) => (path === "/proc/self/stat" ? stat(process.pid + 1, 999, "R") : read(path)),
+      () => ["100", "101", "102"],
+    ),
+  ).toBe("unknown");
+  expect(
+    linuxGroupStatus(100, read, () => {
+      throw Object.assign(Error("listing denied"), { code: "EPERM" });
+    }),
+  ).toBe("unknown");
+});
+
+test("owned-group death barrier keeps its completed proof instead of rescanning unrelated PID churn", async () => {
+  let observations = 0,
+    clock = 0;
+  const inspect = () => {
+    observations++;
+    return linuxGroupStatus(
+      100,
+      linuxProcFixture(() => {
+        if (observations === 2) throw Object.assign(Error("task disappeared"), { code: "ESRCH" });
+        return ""; // An unrelated incomplete stat prevents these other scans.
+      }),
+      () => ["100", "101", "102"],
+    );
+  };
+  expect(
+    await waitForServiceGroupExit(
+      100,
+      3,
+      inspect,
+      () => clock,
+      async () => {
+        clock++;
+      },
+    ),
+  ).toBe(true);
+  expect(observations).toBe(2);
+  expect(inspect()).toBe("unknown"); // Exactly the old fixture's failing second query.
 });
 
 test("reacquiring retained lock ownership cannot clear an uncertain record commit", () => {
