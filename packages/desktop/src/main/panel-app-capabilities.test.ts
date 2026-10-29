@@ -225,3 +225,27 @@ test("every authorized Panel can write scoped model observations without reading
   expect(value.capabilities.methodLimits["modelTraces.start"].maxParamsBytes).toBe(256 * 1024);
   expect(value.capabilities.methodLimits["modelTraces.finish"].maxParamsBytes).toBe(256 * 1024);
 });
+
+test("Desktop background services require explicit host support, declaration and every permission", () => {
+  const permissions = ["background.services", "process", "context.workspace"] as const;
+  expect(desktopPanelCapabilities(permissions, options).availableMethods).not.toContain(
+    "services.get",
+  );
+  for (const missing of permissions)
+    expect(
+      desktopPanelCapabilities(
+        permissions.filter((permission) => permission !== missing),
+        { ...options, services: true },
+      ).availableMethods,
+    ).not.toContain("services.get");
+  const supported = desktopPanelCapabilities(permissions, { ...options, services: true });
+  expect(supported.availableMethods).toContain("services.configure");
+  expect(supported.availableMethods).toContain("services.read");
+  expect(supported.capabilities.services).toMatchObject({
+    version: 1,
+    ownership: "project",
+    continuesAfterDisconnect: true,
+    continuesAfterHostExit: false,
+  });
+  expect(supported.capabilities.tasks).toBeUndefined();
+});

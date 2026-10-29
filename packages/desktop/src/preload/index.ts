@@ -40,6 +40,7 @@ import { createProfileMemoryPromotionApi } from "./profile-memory-promotion-api"
 import { createPetApi } from "./pet-api";
 import { createProjectAuthorityApi } from "./project-authority-api";
 import { createProjectPanelVersionApi } from "./project-panel-version-api";
+import { createPanelMutationApi } from "./panel-mutation-api";
 import { createSessionCatalogApi } from "./session-catalog-api";
 import { createPreloadRpcIdFactory, takePreloadRpcResponse } from "./rpc-identity";
 import { rpcResult } from "./rpc-result";
@@ -1066,8 +1067,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("panel-apps:listExtensions", cwd, locale),
   getPanelAppBindings: (cwd: string) => ipcRenderer.invoke("panel-apps:bindings", cwd),
   ...createProjectPanelVersionApi(ipcRenderer),
-  setPanelAppProjectBinding: (cwd: string, id: string, bound: boolean, expectedRevision: string) =>
-    ipcRenderer.invoke("panel-apps:setProjectBinding", cwd, id, bound, expectedRevision),
+  ...createPanelMutationApi(ipcRenderer),
   listPanelAppsForProjects: (projectPaths: string[], locale: string) =>
     ipcRenderer.invoke("panel-apps:listForProjects", projectPaths, locale),
   preparePanelApp: (id: string, projectPath: string) =>
@@ -1333,8 +1333,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     input: import("../shared/panel-apps").PanelAppUpdateInput,
   ): Promise<import("../shared/panel-apps").PanelAppUpdateResult> =>
     ipcRenderer.invoke("panel-apps:installUpdate", input),
-  uninstallPanelApp: (id: string, cwd?: string): Promise<void> =>
-    ipcRenderer.invoke("panel-apps:uninstall", id, cwd),
   readSkillBody: (target: RendererConfigurationTarget | null, filePath: string) =>
     ipcRenderer.invoke("skills:read", target, filePath),
   checkSkillUpdate: (target: RendererConfigurationTarget | null, filePath: string) =>

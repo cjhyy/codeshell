@@ -55,6 +55,10 @@ const permissionCopyKeys = {
     label: "ext.panels.permissionNames.automationsManage",
     description: "ext.panels.permissionDescriptions.automationsManage",
   },
+  "background.services": {
+    label: "ext.panels.permissionNames.backgroundServices",
+    description: "ext.panels.permissionDescriptions.backgroundServices",
+  },
   process: {
     label: "ext.panels.permissionNames.process",
     description: "ext.panels.permissionDescriptions.process",

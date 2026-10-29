@@ -360,7 +360,13 @@ describe("durable native tool jobs", () => {
     const f = await fixture();
     expect(await f.service.find(scope, "lost-reply")).toBeNull();
     const job = await f.service.start(scope, { ...request, requestKey: "lost-reply" });
-    expect((await f.service.find(scope, "lost-reply"))?.id).toBe(job.id);
+    expect(job.requestKey).toBe("lost-reply");
+    const found = await f.service.find(scope, "lost-reply");
+    expect(found?.id).toBe(job.id);
+    expect(found?.requestKey).toBe("lost-reply");
+    expect((await f.service.get(scope, job.id)).requestKey).toBe("lost-reply");
+    expect((await f.service.list(scope))[0]?.requestKey).toBe("lost-reply");
+    expect(found).not.toHaveProperty("requestDigest");
     expect(await f.service.find({ ...scope, revision: "r2" }, "lost-reply")).toBeNull();
     expect(await f.service.find({ ...scope, projectPath: "/other" }, "lost-reply")).toBeNull();
     await expect(f.service.find(scope, "")).rejects.toThrow("request key");

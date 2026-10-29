@@ -1,6 +1,7 @@
 import type { IpcMain, IpcMainInvokeEvent } from "electron";
 import type { PanelOperationContext } from "@cjhyy/code-shell-server/panels";
 import type { createDesktopPanelManagement } from "./panel-app-management.js";
+import { panelChangeOperation, type DescribePanelGuest } from "./panel-update-blockers.js";
 
 type VersionManagement = Pick<
   ReturnType<typeof createDesktopPanelManagement>,
@@ -10,6 +11,7 @@ type VersionManagement = Pick<
 /** Version routes share the parent registrar's project managers and renderer leases. */
 export function registerProjectPanelVersionIpc(deps: {
   ipcMain: Pick<IpcMain, "handle">;
+  describeGuest: DescribePanelGuest;
   requireRendererProjectPath: (cwd: string) => Promise<string>;
   desktopPanelManager: (cwd: string) => { management: VersionManagement };
   desktopPanelContext: (event: IpcMainInvokeEvent, cwd: string) => PanelOperationContext;
@@ -38,10 +40,12 @@ export function registerProjectPanelVersionIpc(deps: {
       );
     },
   );
-  ipcMain.handle("panel-apps:restore", async (event, rawCwd: string, token: string) => {
-    const cwd = await requireRendererProjectPath(rawCwd);
-    return desktopPanelManager(cwd).management.restore(desktopPanelContext(event, cwd), token);
-  });
+  ipcMain.handle("panel-apps:restore", async (event, rawCwd: string, token: string) =>
+    panelChangeOperation(async () => {
+      const cwd = await requireRendererProjectPath(rawCwd);
+      return desktopPanelManager(cwd).management.restore(desktopPanelContext(event, cwd), token);
+    }, deps.describeGuest),
+  );
   ipcMain.handle("panel-apps:cancelRestore", async (event, rawCwd: string, token: string) => {
     const cwd = await requireRendererProjectPath(rawCwd);
     return desktopPanelManager(cwd).management.cancelRestore(

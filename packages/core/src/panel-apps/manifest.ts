@@ -18,6 +18,7 @@ export const PANEL_APP_PERMISSIONS = [
   "credentials.cookies",
   "automations.manage",
   "process",
+  "background.services",
   "resources",
   "resources.directRead",
   "credentials.connections",
@@ -167,6 +168,36 @@ const PanelNativeEntries = z
   )
   .refine((entries) => Object.keys(entries).length <= 16, "too many native entries");
 
+const PanelBackgroundServices = z
+  .record(
+    z.string().regex(/^[a-z][a-z0-9-]{0,63}$/),
+    z
+      .object({
+        entry: z.string().regex(/^[a-z][a-z0-9-]{0,63}$/),
+        channels: z
+          .record(
+            z.string().regex(/^[a-z][a-z0-9-]{0,63}$/),
+            z
+              .object({
+                maxBytes: z
+                  .number()
+                  .int()
+                  .min(1024)
+                  .max(1 << 20),
+              })
+              .strict(),
+          )
+          .refine(
+            (value) => Object.keys(value).length > 0 && Object.keys(value).length <= 4,
+            "services require 1–4 channels",
+          ),
+        maxLifetimeMs: z.number().int().min(1000).max(21_600_000),
+        idleGraceMs: z.number().int().min(0).max(600_000),
+      })
+      .strict(),
+  )
+  .refine((value) => Object.keys(value).length <= 4, "too many background services");
+
 const PanelAppManifestFields = {
   id: z.string().regex(/^[a-z][a-z0-9-]{0,63}$/),
   version: z.string().min(1).max(80),
@@ -174,6 +205,7 @@ const PanelAppManifestFields = {
   description: z.string().min(1).max(500).optional(),
   entry: SafePanelAppEntry,
   nativeEntries: PanelNativeEntries.optional(),
+  backgroundServices: PanelBackgroundServices.optional(),
   icon: z.enum(PANEL_APP_ICONS).default("panel"),
   placement: z.literal("right-dock").default("right-dock"),
   singleton: z.boolean().default(true),
@@ -209,6 +241,24 @@ export const PanelAppManifest = z
         path: ["nativeEntries"],
         message: "native entries require process permission",
       });
+    }
+    if (value.backgroundServices) {
+      for (const permission of ["background.services", "process", "context.workspace"] as const) {
+        if (!value.permissions.includes(permission))
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["backgroundServices"],
+            message: `background services require ${permission} permission`,
+          });
+      }
+      for (const [name, service] of Object.entries(value.backgroundServices)) {
+        if (!value.nativeEntries || !Object.hasOwn(value.nativeEntries, service.entry))
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["backgroundServices", name, "entry"],
+            message: "background service entry must be a declared native entry",
+          });
+      }
     }
     const permissionSet = new Set(value.permissions);
     if (permissionSet.size !== value.permissions.length) {

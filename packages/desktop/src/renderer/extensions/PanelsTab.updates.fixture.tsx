@@ -302,6 +302,30 @@ describe("Panel App update controls", () => {
     ).toBe(false);
   });
 
+  test("structured service blockers reach the project toggle without reporting success", async () => {
+    const label = "feed: stop-unconfirmed; original process group 4242; exit unconfirmed";
+    window.codeshell.setPanelAppProjectBinding = async () => ({
+      ok: false,
+      error: "Service exit unconfirmed",
+      blockers: [{ kind: "service", count: 1, label }],
+    });
+    await render();
+    await click("展开");
+    const toggle = nodes(container).find((node) => props(node).role === "switch");
+    await act(async () => {
+      props(toggle).onClick({
+        stopPropagation() {},
+        isPropagationStopped: () => false,
+        defaultPrevented: false,
+      });
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain(label);
+    expect(
+      props(nodes(container).find((node) => props(node).role === "switch"))["aria-checked"],
+    ).toBe(false);
+  });
+
   test("a rejected project installation never reports success or attempts a separate binding", async () => {
     const writes: unknown[] = [];
     Object.assign(window.codeshell, {
@@ -850,7 +874,7 @@ describe("Panel App update controls", () => {
       },
       restorePanelAppPackage: async (...args: unknown[]) => {
         calls.push(["restore", ...args]);
-        return { id: history.appId, packageDigest: "c".repeat(64) };
+        return { ok: true, id: history.appId, packageDigest: "c".repeat(64) };
       },
     });
     await render();
@@ -900,9 +924,11 @@ describe("Panel App update controls", () => {
   test("a failed native restore keeps its review available for cancellation", async () => {
     const { cancelled, review } = stubRetainedVersion();
     Object.assign(window.codeshell, {
-      restorePanelAppPackage: async () => {
-        throw new Error("任务正在运行，请结束后修改面板。");
-      },
+      restorePanelAppPackage: async () => ({
+        ok: false,
+        error: "任务正在运行，请结束后修改面板。",
+        blockers: [{ kind: "service", count: 1, label: "feed: stop-unconfirmed" }],
+      }),
     });
     await render();
     await click("展开");
@@ -910,6 +936,7 @@ describe("Panel App update controls", () => {
     await click("审阅 v0.6.1");
     await click("确认权限并恢复项目版本");
     expect(textOf(document.body)).toContain("任务正在运行，请结束后修改面板。");
+    expect(textOf(document.body)).toContain("feed: stop-unconfirmed");
     expect(button("确认权限并恢复项目版本")).toBeDefined();
     expect(cancelled).toEqual([]);
     await click("关闭版本记录");
@@ -1011,7 +1038,7 @@ describe("Panel App update controls", () => {
       },
       restorePanelAppPackage: async (...args: unknown[]) => {
         calls.push(["restore", ...args]);
-        return { id: history.appId, packageDigest: "c".repeat(64) };
+        return { ok: true, id: history.appId, packageDigest: "c".repeat(64) };
       },
     });
     await render();

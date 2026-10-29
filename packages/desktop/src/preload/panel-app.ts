@@ -6,7 +6,8 @@ type PanelAppEvent =
   | "process.exit"
   | "agent.task.changed"
   | "media.job.changed"
-  | "tasks.changed";
+  | "tasks.changed"
+  | "services.changed";
 type ToolHandler = (args: Record<string, unknown>) => unknown | Promise<unknown>;
 
 interface AgentToolRequest {
@@ -141,6 +142,7 @@ const api = Object.freeze({
         "agent.task.changed",
         "media.job.changed",
         "tasks.changed",
+        "services.changed",
       ].includes(event) ||
       typeof listener !== "function"
     ) {
