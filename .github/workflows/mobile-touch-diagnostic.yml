@@ -1,0 +1,84 @@
+name: mobile touch diagnostic
+
+on:
+  push:
+    branches: [codex/web/mobile-touch-ci-diagnostic]
+
+permissions:
+  contents: read
+
+jobs:
+  touch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.11"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.16.0"
+      - run: bun install --frozen-lockfile
+      - name: Install the same locked Chromium as eligible desktop-ui CI
+        working-directory: packages/desktop
+        run: |
+          node node_modules/playwright/cli.js install --with-deps chromium
+          node -e "const fs=require('node:fs');const browser=require('playwright').chromium.executablePath();fs.accessSync(browser,fs.constants.X_OK);for(const key of ['CHROME_PATH','CODESHELL_TEST_CHROMIUM'])fs.appendFileSync(process.env.GITHUB_ENV,key+'='+browser+'\n');"
+      - name: Build reviewed workspace import boundaries
+        run: bun run build
+      - name: Compare the original synthetic gesture with real trusted touches
+        shell: bash
+        run: |
+          export TMPDIR="$RUNNER_TEMP/mobile-touch-diagnostic"
+          mkdir -p "$TMPDIR"
+          node --version > "$TMPDIR/runtime.txt"
+          "$CODESHELL_TEST_CHROMIUM" --version >> "$TMPDIR/runtime.txt"
+          git rev-parse HEAD >> "$TMPDIR/runtime.txt"
+          git show bc0f020670e2d85cb91d6475d7ca0d144ef76e77:packages/web/scripts/test-mobile-workbench-browser.mjs > packages/web/scripts/.diagnostic-synthetic-touch.mjs
+          trap 'rm -f packages/web/scripts/.diagnostic-synthetic-touch.mjs packages/web/scripts/.diagnostic-blocked-touch.mjs' EXIT
+          if node scripts/run-isolated-node-smoke.mjs packages/web/scripts/.diagnostic-synthetic-touch.mjs > "$TMPDIR/synthetic.log" 2>&1; then
+            synthetic_status=0
+          else
+            synthetic_status=$?
+          fi
+          python3 - "$TMPDIR" "$synthetic_status" <<'PY'
+          import json,pathlib,sys
+          directory=pathlib.Path(sys.argv[1]);status=int(sys.argv[2]);log=(directory/'synthetic.log').read_text()
+          if status:
+              assert '"scroll":0' in log and 'Timeout 5000ms exceeded' in log, log[-8000:]
+          receipt={'method':'original_synthesizeScrollGesture','exit':status,'touchScrollFailure':bool(status)}
+          (directory/'synthetic-status.json').write_text(json.dumps(receipt,indent=2));print(json.dumps(receipt))
+          PY
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-workbench-browser.mjs | tee "$TMPDIR/raw-production.log"
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-workbench-browser.mjs --development | tee "$TMPDIR/raw-development.log"
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('packages/web/scripts/test-mobile-workbench-browser.mjs').read_text()
+          marker="        // Chromium's synthetic"
+          assert source.count(marker)==1
+          source=source.replace(marker,"        await list.evaluate(node => { node.style.touchAction = 'none'; });\n"+marker,1)
+          Path('packages/web/scripts/.diagnostic-blocked-touch.mjs').write_text(source)
+          PY
+          if node scripts/run-isolated-node-smoke.mjs packages/web/scripts/.diagnostic-blocked-touch.mjs > "$TMPDIR/blocked-touch.log" 2>&1; then
+            echo 'The disabled touch surface unexpectedly passed the real scroll assertion.' >&2
+            exit 1
+          fi
+          python3 - "$TMPDIR" <<'PY'
+          import json,pathlib,sys
+          directory=pathlib.Path(sys.argv[1]);log=(directory/'blocked-touch.log').read_text()
+          assert '"scroll":0' in log and '"trusted":true' in log and 'Timeout 5000ms exceeded' in log, log[-8000:]
+          receipt={'method':'raw_touch_with_touch_action_none','correctlyRejected':True,'trustedEventsObserved':True,'scrollTop':0}
+          (directory/'blocked-touch-status.json').write_text(json.dumps(receipt,indent=2));print(json.dumps(receipt))
+          PY
+      - name: Preserve only the isolated fixture evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-touch-diagnostic
+          path: ${{ runner.temp }}/mobile-touch-diagnostic/
+          retention-days: 7
+          if-no-files-found: warn
