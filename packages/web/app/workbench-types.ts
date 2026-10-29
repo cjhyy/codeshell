@@ -10,6 +10,14 @@ export interface WorkbenchNavigation {
   conversation: (action: () => void) => void;
 }
 
+export interface HistoryDetail {
+  text?: string;
+  args?: Record<string, unknown>;
+  result?: string;
+  reasoning?: string;
+}
+export type HistoryDetailLoader = (reference: string) => Promise<HistoryDetail>;
+
 /** Host adapters supply existing transport state; the browser workbench owns
  * navigation, focus, message rendering and the composer for every host. */
 export interface WorkbenchController {
@@ -57,6 +65,13 @@ export interface WorkbenchController {
   renderSidebar?: (navigation: WorkbenchNavigation) => React.ReactNode;
   chatControls?: React.ReactNode;
   modelSelector?: React.ReactNode;
+  /** Reads a Host-issued reference in the currently selected history generation. */
+  loadHistoryDetail?: HistoryDetailLoader;
+  reloadHistory?: () => void;
+  historyHasEarlier?: boolean;
+  historyLoadingEarlier?: boolean;
+  historyEarlierError?: string;
+  loadEarlierHistory?: () => Promise<void>;
   goalActions?: React.ReactNode;
   loading?: boolean;
   loadingLabel?: string;
