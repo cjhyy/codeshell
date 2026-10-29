@@ -54,9 +54,9 @@ export async function closeIdleOutputHistorySession(
     );
     return;
   }
-  // close() publishes its owner fence synchronously before disposal awaits.
+  // Unloading publishes its owner fence synchronously before disposal awaits.
   // Unlike ordinary delete, this path never kills shells or drops retained jobs.
-  await deps.manager.close(sessionId);
+  await deps.manager.unloadIdleSession(sessionId);
   deps.closed();
   transport.send(createResponse(request.id, { ok: true }));
 }

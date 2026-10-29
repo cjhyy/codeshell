@@ -46,6 +46,10 @@ test("actual closeSession idle RPC retains completed background history", async 
   expect(f.sent.find((value) => value.id === 1)?.result).toEqual({ ok: true });
   expect(f.manager.get(f.session.id)).toBeUndefined();
   expect(backgroundJobRegistry.listForSession(f.session.id)).toHaveLength(1);
+  const resumed = await f.manager.getOrCreate(f.session.id, {});
+  expect(resumed).not.toBe(f.session);
+  expect(resumed.id).toBe(f.session.id);
+  await f.manager.close(f.session.id);
 });
 test.each(["background", "approval", "pending start"])(
   "idle recovery never cancels %s",
