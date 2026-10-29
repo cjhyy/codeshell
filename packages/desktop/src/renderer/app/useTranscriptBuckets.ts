@@ -86,6 +86,10 @@ export function useTranscriptBuckets({
   historyFailed: boolean;
   historyLimitReached: boolean;
   loadEarlierHistory: () => Promise<void>;
+  beginOutputHistoryRecovery: () => void;
+  reloadOutputHistory: () => void;
+  outputRecoveryPending: boolean;
+  historicalGap: boolean;
   appliedSeqRef: MutableRefObject<Map<string, number>>;
   setBusyForKey: (key: string, val: boolean) => void;
 } {
@@ -96,14 +100,53 @@ export function useTranscriptBuckets({
   historyPagesRef.current = historyPages;
   const pagingRequestsRef = useRef(new Set<string>());
   const hydrationGenerationsRef = useRef(new Map<string, number>());
+  const engineId = sessionIndices[activeProjectBucketSegment]?.sessions.find(
+    (session) => session.id === activeSessionId,
+  )?.engineSessionId;
   const [retryEpoch, setRetryEpoch] = useState(0);
+  const freshJournalBucketsRef = useRef(new Set<string>());
+  const [outputRecoveries, setOutputRecoveries] = useState<
+    Record<string, "held" | "loading" | "joining" | "failed">
+  >({});
+  const outputRecoveriesRef = useRef(outputRecoveries);
+  outputRecoveriesRef.current = outputRecoveries;
+  const [historicalGaps, setHistoricalGaps] = useState<Record<string, boolean>>({});
+  const beginOutputHistoryRecovery = useCallback(() => {
+    if (!engineId) return;
+    const token = (hydrationGenerationsRef.current.get(activeBucket) ?? 0) + 1;
+    hydrationGenerationsRef.current.set(activeBucket, token);
+    hydratedBucketsRef.current.delete(activeBucket);
+    appliedSeqRef.current.delete(activeBucket);
+    setHistoryPages((previous) => ({
+      ...previous,
+      [activeBucket]: {
+        engineId,
+        loadedBytes: 0,
+        hasMore: false,
+        loading: false,
+        failed: true,
+      },
+    }));
+    dispatch({
+      type: "hydrate_begin",
+      bucket: activeBucket,
+      token,
+      sessionId: engineId,
+      reset: true,
+      suspended: true,
+    });
+    setOutputRecoveries((previous) => ({ ...previous, [activeBucket]: "held" }));
+  }, [activeBucket, engineId, dispatch]);
+  const reloadOutputHistory = useCallback(() => {
+    freshJournalBucketsRef.current.add(activeBucket);
+    hydratedBucketsRef.current.delete(activeBucket);
+    setOutputRecoveries((previous) => ({ ...previous, [activeBucket]: "loading" }));
+    setRetryEpoch((epoch) => epoch + 1);
+  }, [activeBucket]);
   const transcriptsRef = useRef(transcripts);
   transcriptsRef.current = transcripts;
   const sessionIndicesRef = useRef(sessionIndices);
   sessionIndicesRef.current = sessionIndices;
-  const engineId = sessionIndices[activeProjectBucketSegment]?.sessions.find(
-    (session) => session.id === activeSessionId,
-  )?.engineSessionId;
   useIdleTranscriptEviction({
     activeBucket,
     transcripts,
@@ -175,27 +218,29 @@ export function useTranscriptBuckets({
   }, [transcripts, activeBucket]);
 
   useEffect(() => {
-    if (!activeSessionId) return;
+    if (!activeSessionId || outputRecoveriesRef.current[activeBucket] === "held") return;
     if (
       hydratedBucketsRef.current.has(activeBucket) &&
       hydratedBucketsRef.current.get(activeBucket) === engineId &&
       transcriptsRef.current[activeBucket]
     )
       return;
-    let local = loadTranscript(activeProjectId, activeSessionId);
+    const freshJournal = freshJournalBucketsRef.current.has(activeBucket);
+    let local = freshJournal ? INITIAL_STATE : loadTranscript(activeProjectId, activeSessionId);
     const bucket = activeBucket;
     hydrationGenerationsRef.current.set(
       bucket,
       (hydrationGenerationsRef.current.get(bucket) ?? 0) + 1,
     );
     const token = hydrationGenerationsRef.current.get(bucket)!;
-    dispatch({ type: "hydrate_begin", bucket, token, sessionId: engineId });
+    dispatch({ type: "hydrate_begin", bucket, token, sessionId: engineId, reset: freshJournal });
     const goalAtStart = transcriptsRef.current[bucket]
       ? transcriptsRef.current[bucket].activeGoal
       : local.activeGoal;
     let cancelled = false;
     const canCommit = () =>
-      !cancelled || hasBufferedTranscriptRecovery(transcriptsRef.current, bucket, token);
+      hydrationGenerationsRef.current.get(bucket) === token &&
+      (!cancelled || hasBufferedTranscriptRecovery(transcriptsRef.current, bucket, token));
     setHistoryPages((previous) => ({
       ...previous,
       [bucket]: { engineId, loadedBytes: 0, hasMore: false, loading: true, failed: false },
@@ -219,8 +264,10 @@ export function useTranscriptBuckets({
       let page: SessionTranscriptPage | undefined;
       let outputCursor: string | undefined;
       const [persistedResult, canonicalResult] = await Promise.allSettled([
-        loadPersistedTranscript(activeProjectId, activeSessionId, INITIAL_CHAT_HISTORY_BYTES),
-        engineId
+        freshJournal
+          ? Promise.resolve({ state: INITIAL_STATE, hasEarlier: false })
+          : loadPersistedTranscript(activeProjectId, activeSessionId, INITIAL_CHAT_HISTORY_BYTES),
+        engineId && !freshJournal
           ? readHistoryPage(engineId, INITIAL_CHAT_HISTORY_BYTES)
           : Promise.resolve(undefined),
       ]);
@@ -262,7 +309,16 @@ export function useTranscriptBuckets({
                   latestRecoveryOutputCursor(transcriptsRef.current, bucket, token),
               })
             : null;
+          if (freshJournal && !durable)
+            throw new Error("Recovered history requires the complete output journal");
           if (durable) {
+            historyLoaded = true;
+            persistedHasEarlier = false;
+            page = undefined;
+            setHistoricalGaps((previous) => ({
+              ...previous,
+              [bucket]: durable.snapshot.historicalGap === true,
+            }));
             state = base = canonicalHistory = durable.state;
             outputCursor = durable.outputCursor;
             snapshotEpoch = durable.snapshot.epoch;
@@ -271,6 +327,10 @@ export function useTranscriptBuckets({
           } else {
             const snapshot = await window.codeshell.subscribeSession(engineId, 0);
             if (!canCommit()) return;
+            setHistoricalGaps((previous) => ({
+              ...previous,
+              [bucket]: snapshot.historicalGap === true,
+            }));
             snapshotEpoch = snapshot.epoch;
             snapshotLoaded = true;
             if (
@@ -312,7 +372,7 @@ export function useTranscriptBuckets({
             error: error instanceof Error ? error.message : String(error),
           });
         }
-        if (state.messages.length === 0 && !page?.hasMore) {
+        if (!freshJournal && state.messages.length === 0 && !page?.hasMore) {
           try {
             page = await readHistoryPage(engineId, INITIAL_CHAT_HISTORY_BYTES);
             const disk = foldTranscript(page.items);
@@ -334,6 +394,11 @@ export function useTranscriptBuckets({
       if (canCommit()) {
         historyLoaded = historyLoaded && snapshotLoaded;
         if (historyLoaded) hydratedBucketsRef.current.set(bucket, engineId);
+        if (freshJournal)
+          setOutputRecoveries((previous) => ({
+            ...previous,
+            [bucket]: historyLoaded ? "joining" : "failed",
+          }));
         setHistoryPages((previous) => ({
           ...previous,
           [bucket]: {
@@ -417,7 +482,7 @@ export function useTranscriptBuckets({
             error: error instanceof Error ? error.message : String(error),
           });
         }
-        if (!cancelled && goalLookupSucceeded && state.activeGoal !== goalBeforeLookup) {
+        if (canCommit() && goalLookupSucceeded && state.activeGoal !== goalBeforeLookup) {
           dispatch({
             type: "goal_reconcile",
             bucket,
@@ -444,8 +509,27 @@ export function useTranscriptBuckets({
     retryEpoch,
   ]);
 
+  useEffect(() => {
+    for (const [bucket, phase] of Object.entries(outputRecoveries)) {
+      if (phase !== "joining") continue;
+      if (transcriptRecoveryFailed(transcripts, bucket)) {
+        setOutputRecoveries((previous) => ({ ...previous, [bucket]: "failed" }));
+      } else if (!hasTranscriptRecovery(transcripts, bucket) && transcripts[bucket]?.outputCursor) {
+        setOutputRecoveries((previous) => {
+          const next = { ...previous };
+          delete next[bucket];
+          return next;
+        });
+      }
+    }
+  }, [transcripts, outputRecoveries]);
+
   const loadEarlierHistory = useCallback(async (): Promise<void> => {
     if (!activeSessionId || pagingRequestsRef.current.has(activeBucket)) return;
+    if (outputRecoveriesRef.current[activeBucket]) {
+      reloadOutputHistory();
+      return;
+    }
     const previous = historyPagesRef.current[activeBucket];
     if (!previous || previous.engineId !== engineId || previous.loading) return;
     if (
@@ -507,7 +591,7 @@ export function useTranscriptBuckets({
     } finally {
       pagingRequestsRef.current.delete(bucket);
     }
-  }, [activeBucket, activeProjectId, activeSessionId, engineId, dispatch]);
+  }, [activeBucket, activeProjectId, activeSessionId, engineId, dispatch, reloadOutputHistory]);
 
   useEffect(() => {
     if (!activeSessionId) return;
@@ -546,7 +630,11 @@ export function useTranscriptBuckets({
     awaitingHydration,
     historyHasMore: activeHistoryPage?.hasMore ?? false,
     historyLoading: activeHistoryPage?.loading ?? false,
-    historyFailed: activeHistoryPage?.failed ?? false,
+    historyFailed: !!outputRecoveries[activeBucket] || (activeHistoryPage?.failed ?? false),
+    outputRecoveryPending: !!outputRecoveries[activeBucket],
+    historicalGap: historicalGaps[activeBucket] === true,
+    beginOutputHistoryRecovery,
+    reloadOutputHistory,
     historyLimitReached:
       !!activeHistoryPage?.hasMore && activeHistoryPage.loadedBytes >= MAX_CHAT_HISTORY_BYTES,
     loadEarlierHistory,

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
+import { NativeOutputHistoryRecovery } from "./app/NativeOutputHistoryRecovery";
 import { ChatView, type AttachmentSelection } from "./ChatView";
 import { emptyComposerMetadata, type ComposerMetadata } from "./chat/composerMetadata";
 import { useProjectRuntimeSelection } from "./projects/useProjectRuntimeSelection";
@@ -870,6 +871,10 @@ function App() {
     historyHasMore,
     historyLoading,
     historyFailed,
+    historicalGap,
+    outputRecoveryPending,
+    beginOutputHistoryRecovery: suspendOutputHistory,
+    reloadOutputHistory,
     historyLimitReached,
     loadEarlierHistory,
     appliedSeqRef,
@@ -1041,6 +1046,12 @@ function App() {
   });
 
   const {
+    beginOutputHistoryRecovery,
+    finishOutputHistoryRecovery,
+    heldRecoveryInputs,
+    confirmHeldRecoveryInputs,
+    captureApprovalFence,
+    deliveryEpoch,
     send,
     sendQuickChat,
     queueInput,
@@ -1109,6 +1120,10 @@ function App() {
       approvalBucketsRef,
     },
   });
+  useEffect(() => {
+    if (!outputRecoveryPending && !historyFailed && !historyLoading)
+      finishOutputHistoryRecovery(activeBucket);
+  }, [activeBucket, outputRecoveryPending, historyFailed, historyLoading]);
   const { openPetMemory, leavePetMemory } = usePetMemoryNavigation({ openPetPage, setViewMode });
 
   const {
@@ -1590,6 +1605,8 @@ function App() {
     const origin = findAskUserOrigin(transcripts, requestId);
     const originEngineSessionId = origin?.engineSessionId;
     const originBucket = origin?.bucket;
+    const isCurrent = captureApprovalFence(originBucket ?? activeBucket, requestId);
+    if (!isCurrent()) return;
     // Fallback (legacy prompts with no stamped sessionId): derive from the
     // active bucket, preserving the previous behavior.
     let engineSessionId = originEngineSessionId;
@@ -1610,6 +1627,7 @@ function App() {
     } else {
       await window.codeshell.approve(requestId, "approve", undefined, answer);
     }
+    if (!isCurrent()) return;
     dispatch({
       type: "ask_user_answered",
       // Mark answered in the bucket that actually holds the prompt (found above),
@@ -2562,6 +2580,30 @@ function App() {
                 <>
                   <ChatView
                     messages={state.messages}
+                    composerDisabled={outputRecoveryPending}
+                    deliveryEpoch={deliveryEpoch}
+                    outputHistoryRecovery={
+                      <NativeOutputHistoryRecovery
+                        sessionId={activeEngineSessionId}
+                        identity={JSON.stringify([
+                          activeBucket,
+                          activeEngineSessionId,
+                          sessionUiAuthority.workspaceRoot,
+                        ])}
+                        failed={historyFailed}
+                        historicalGap={historicalGap}
+                        disabled={historyLoading || busy}
+                        pending={outputRecoveryPending}
+                        heldInputs={heldRecoveryInputs}
+                        onConfirmHeld={confirmHeldRecoveryInputs}
+                        beforeApply={() => {
+                          beginOutputHistoryRecovery();
+                          suspendOutputHistory();
+                        }}
+                        onApplied={reloadOutputHistory}
+                        onReload={reloadOutputHistory}
+                      />
+                    }
                     awaitingHydration={awaitingHydration}
                     historyHasMore={historyHasMore}
                     historyLoading={historyLoading}
@@ -2585,7 +2627,8 @@ function App() {
                       () => ({
                         bucket: activeBucketRef.current,
                         cwd: sessionUiAuthority.workspaceRoot,
-                        available: sessionUiAuthority.configurationAvailable,
+                        available:
+                          sessionUiAuthority.configurationAvailable && !outputRecoveryPending,
                         busy:
                           busyKeys.has(activeBucketRef.current) ||
                           busySinceRef.current.has(activeBucketRef.current),
