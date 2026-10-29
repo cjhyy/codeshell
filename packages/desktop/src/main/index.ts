@@ -2687,19 +2687,12 @@ async function createWindow(): Promise<BrowserWindow> {
         if (!activeSegment?.boundaryBeforeMessageId || journalEntries.length === 0) return;
         const summary = buildMigrationSummary(journalEntries);
         if (!summary) return;
-        const response = await petBridge.requestWorker(
-          "agent/query",
-          {
-            type: "archive_marker",
-            sessionId: petSessionId,
-            summary,
-            toClientMessageId: activeSegment.boundaryBeforeMessageId,
-            segmentId: "context-migration-v1",
-          },
-          { meta: { origin: "host", producer: "pet-context-migration" } },
-        );
-        if (!response.ok) throw new Error(response.message);
-        const appended = (response.result as { data?: { appended?: boolean } })?.data?.appended;
+        const appended = await petBridge.appendStartupArchiveMarker({
+          sessionId: petSessionId,
+          summary,
+          toClientMessageId: activeSegment.boundaryBeforeMessageId,
+          segmentId: "context-migration-v1",
+        });
         // false covers two benign cases, not an error: this session was
         // already migrated on a prior launch (idempotent no-op — expected on
         // every subsequent startup), or the anchor was dead (engine already

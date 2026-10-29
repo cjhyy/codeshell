@@ -155,6 +155,7 @@ import { isOptimizationLabQuery, unwrapOptimizationLabReply } from "../shared/op
 import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
 import { resolveSessionRunWorkspace } from "./session-run-workspace.js";
+import { requestStartupArchiveMarker, type StartupArchiveMarker } from "./startup-session-query.js";
 import { PetWorkerProjectionGeneration } from "./pet/pet-worker-generation.js";
 import type { AgentBridgePetEvent, PetStateBridge } from "./pet/pet-state-aggregator.js";
 import {
@@ -1800,6 +1801,15 @@ export class AgentBridge implements PetStateBridge {
 
   hasLiveWorker(): boolean {
     return this.core.hasLiveWorker();
+  }
+
+  /** Startup maintenance is a fixed Host query, never a synthetic chat/run. */
+  appendStartupArchiveMarker(marker: StartupArchiveMarker): Promise<boolean> {
+    return requestStartupArchiveMarker(
+      this.core,
+      marker,
+      this.sessionsForFallback().readSessionMainRoot(marker.sessionId),
+    );
   }
 
   /** Main-only authority: generic renderer/mobile/serve frames cannot mint this admission. */
