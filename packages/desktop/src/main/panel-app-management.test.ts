@@ -18,7 +18,7 @@ import {
   listProjectPanelApps,
   panelAppPackageDir,
 } from "@cjhyy/code-shell-core";
-import { createPanelManagement } from "@cjhyy/code-shell-server/panels";
+import { createPanelManagement, panelExecutionGate } from "@cjhyy/code-shell-server/panels";
 import { createProjectPanelAppUpdateService } from "./panel-app-update-service.js";
 import { createDesktopPanelManagement } from "./panel-app-management.js";
 import { resolveDesktopPanelProjectPath } from "./panel-project-scope.js";
@@ -152,7 +152,7 @@ test("Desktop binds exact project bytes, preserves another device's unrelated ch
   const bound = next.find((app) => app.appId === first.id)!;
   await phone.binding(context, first.id, false, bound.revision);
   await expect(desktop.binding(context, first.id, true, bound.revision)).rejects.toThrow(
-    "配置已改变",
+    "面板已改变，请刷新后重试。",
   );
   expect(changes).toBe(1);
   project = settings.getRawForScope("project", cwd, { strict: true });
@@ -173,7 +173,7 @@ test("a catalog upgrade moves a bound project to the new bytes and stales its ol
   expect(moved.revision).not.toBe(pinned.revision);
   expect((await listProjectPanelApps(cwd))[0]!.packageDigest).toBe(latest.packageDigest);
   await expect(desktop.binding(context, old.id, true, pinned.revision)).rejects.toThrow(
-    "配置已改变",
+    "面板已改变，请刷新后重试。",
   );
   const otherCwd = join(root, "other");
   mkdirSync(otherCwd);
@@ -382,4 +382,36 @@ test("Desktop diagnoses a broken package separately and repairs its binding thro
     version: "2.0.0",
   });
   desktop.close();
+});
+
+test("stale Desktop toggle rejects before service draining and preserves the active binding", async () => {
+  const { cwd, install } = await fixture();
+  await install("fixture");
+  const desktop = createDesktopPanelManagement(cwd);
+  const initial = (await desktop.snapshot())[0]!;
+  await desktop.binding(context, "fixture", true, initial.revision);
+  const selected = (await desktop.snapshot())[0]!;
+  let drains = 0;
+  const release = panelExecutionGate.enter({
+    appId: "fixture",
+    projectPath: cwd,
+    holder: { kind: "service", label: "feed" },
+  });
+  const unregister = panelExecutionGate.registerServiceDrain(async () => {
+    drains++;
+  });
+  try {
+    await expect(desktop.binding(context, "fixture", false, initial.revision)).rejects.toThrow(
+      "面板已改变，请刷新后重试。",
+    );
+    expect(drains).toBe(0);
+    expect((await desktop.snapshot())[0]).toMatchObject({
+      bound: true,
+      revision: selected.revision,
+    });
+    expect(panelExecutionGate.blockers((scope) => scope.appId === "fixture")).toHaveLength(1);
+  } finally {
+    release();
+    unregister();
+  }
 });

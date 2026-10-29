@@ -123,7 +123,7 @@ async function options(input = fixture()) {
 describe("managed Node supply", () => {
   test("checked-in lock contains only the four reviewed official targets", async () => {
     const lock = await runtime.loadLock();
-    expect(lock.version).toBe("24.21.0");
+    expect(lock.version).toBe("24.22.1");
     expect(lock.artifacts.map((item) => `${item.platform}-${item.arch}`).sort()).toEqual([
       "darwin-arm64",
       "darwin-x64",

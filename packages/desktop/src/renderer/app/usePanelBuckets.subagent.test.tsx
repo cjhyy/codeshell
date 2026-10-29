@@ -363,10 +363,10 @@ describe("subagent conversation dock requests", () => {
       },
     });
 
-  test("opens a new task by job identity before its external session id arrives", async () => {
+  test("a manual request opens a task before its external session id arrives", async () => {
     hook = await renderHook(useHarness);
     await act(async () => {
-      window.dispatchEvent(cliTask({ autoOpen: true }));
+      window.dispatchEvent(cliTask());
     });
     expect(hook.result.current.activePanelState).toMatchObject({
       open: true,
@@ -380,8 +380,14 @@ describe("subagent conversation dock requests", () => {
     });
   });
 
-  test("automatic tasks cannot replace the page being viewed or navigate another chat", async () => {
+  test("automatic tasks cannot open a closed dock, replace a page, or navigate another chat", async () => {
     hook = await renderHook(useHarness);
+    const closed = hook.result.current.activePanelState;
+    await act(async () => {
+      window.dispatchEvent(cliTask({ autoOpen: true }));
+    });
+    expect(hook.result.current.activePanelState).toBe(closed);
+    expect(hook.result.current.activePanelState.open).not.toBe(true);
     await act(async () => {
       hook!.result.current.openSubagent(firstSelection);
     });

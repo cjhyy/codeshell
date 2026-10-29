@@ -649,7 +649,6 @@ export function MessageStream({
     <DriveAgentJobsLoader
       sessionId={localRuntime ? engineSessionId : undefined}
       messages={messages}
-      autoOpen={!readOnly && localRuntime && liveTurnActive}
     >
       <div className="relative flex min-w-0 max-w-full flex-1 flex-col overflow-hidden">
         {selectionOpen && (

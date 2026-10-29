@@ -105,6 +105,9 @@ async function discoverPanelApps(
       singleton: app.singleton,
       permissions: [...app.permissions],
       ...(app.nativeEntries ? { nativeEntries: structuredClone(app.nativeEntries) } : {}),
+      ...(app.backgroundServices
+        ? { backgroundServices: structuredClone(app.backgroundServices) }
+        : {}),
       ...(app.agent
         ? {
             agent: {

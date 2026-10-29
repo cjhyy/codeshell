@@ -458,7 +458,7 @@ function bridgeScript(id: string, origin: string): string {
         call: ask,
         callResult: (method, params) => ask(method, params).then(value => ({ ok: true, value }), error => ({ ok: false, error: { code: error.code || "OPERATION_FAILED", message: error.message, ...(typeof error.retryAfterMs === "number" ? { retryAfterMs: error.retryAfterMs } : {}) } })),
         on: (name, listener) => {
-          if (!["context.changed", "process.output", "process.exit", "agent.task.changed", "tasks.changed", "media.job.changed"].includes(name) || typeof listener !== "function") {
+          if (!["context.changed", "process.output", "process.exit", "agent.task.changed", "tasks.changed", "services.changed", "media.job.changed"].includes(name) || typeof listener !== "function") {
             throw new Error("Invalid event listener");
           }
           let list = listeners.get(name);

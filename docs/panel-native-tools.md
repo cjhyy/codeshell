@@ -630,3 +630,135 @@ while the global catalog contains distinct v2 HTML/program bytes. It verifies th
 v1 program result, shared tasks/queue/accounts, consent, logout and device
 revocation behavior, and native refresh notification after a phone binding
 change. This uses fixture programs/accounts, not a physical phone or provider.
+
+## Desktop background services (candidate contract 1)
+
+Desktop implements `services.get`, `setDesired`, `configure`, `attach`, `detach`,
+`read`, and `control`, advertised explicitly by `availableMethods` and
+`capabilities.services.version === 1`. Web/Hub and Windows do not advertise this
+capability. The strict `backgroundServices` manifest declaration references a
+reviewed `nativeEntries` entry and requires `background.services`, `process`, and
+`context.workspace`. Installation review displays the additional permission.
+Services execute the package currently selected in the canonical project;
+configuration, subscriptions, work directories and snapshots are isolated by
+app, project and service name. No global HOME package search is performed.
+Mutations and `attach` require the guest's reviewed revision to equal the selected
+installed revision. A stale guest may still `get`/`read` snapshots of its authorized
+app/project/service; it cannot configure or attach to the replacement revision.
+`detach` can release only an attachment owned by the requesting guest.
+
+`desired: "always"` survives closing all guests while Desktop is running.
+`on-demand` follows attached guests and the declared idle grace; `off` commits a
+stop tombstone. Guest close only detaches, and service custody never consumes a
+webview process quota or the two durable tool-job slots. Background services have
+a separate four-process/two-per-app/one-per-project-and-app budget. Package
+mutation validates the selected revision, then drains service gate holders before
+replacement, unbinding or removal. After the gate settles the selected revision
+is re-authorized, including rollback after a failed mutation. Shutdown retains
+desired state, revokes publication before termination, drains services in parallel,
+and preserves paused/revoked/failed states without executors.
+
+Each service has one bounded authoritative `panel.background-service/1` record
+containing controls, generations, configuration and channel snapshots. Commit
+order is temporary-file write, file fsync, rename, directory fsync, then receipt
+and event. This promises Host-process crash consistency, not sudden power-loss
+persistence: Darwin `fsync` is not `F_FULLFSYNC`. Generation is committed before
+spawning; stop and channel updates use the same record. Read/write format sets
+are explicit. An uncertain write immediately stops owned executors without waiting
+for another commit and quarantines further writes. The retained exclusive owner
+validates every durable record before recovery; attempted control intent is
+recommitted before resuming. No replacement runs while previous exit is unknown.
+`get` and `read` never create records. Up to 128 full records and 4096 retained scope
+records are allowed: cold, off scopes compact obsolete snapshots to a new null
+sequence while retaining incarnation, generations, configuration and receipts.
+An explicit capacity error at the retained bound never deletes tombstones or
+reuses counters. Uninstall clears sensitive payloads while advancing counters.
+
+A process-lifetime directory lock elects one coordinator across Host processes on
+one machine. Desktop's private service root is local to that machine; sharing or
+copying it between machines is unsupported. The immutable owner token, its staging
+directory and the installed lock's parent directory are fsynced before availability.
+Empty, damaged or unverifiable tokens remain in place with a diagnostic, and
+initialization retries after 5 seconds with exponential backoff capped at 60 seconds.
+It never drops supervision of an already started worker to retry initialization.
+The token is reclaimed only after verified local death or a different verified OS
+process identity, never by age or heartbeat. Linux uses boot ID and start
+ticks; Darwin uses boot-session UUID plus libproc unique process ID/exec version,
+read with the system JXA C-function bridge. Unlike `ps lstart`, the kernel ID
+distinguishes PID reuse in the same second. A matching boot tolerates a hostname
+change. A different boot proves the old group dead only when the persisted hashed
+machine identity also matches, before probing a possibly reused PGID. Foreign
+machine identities and unavailable inspection remain unknown and are never killed.
+Legacy records without a machine identity can be enriched only within the same
+verified boot. If first encountered after reboot, they report
+`SERVICE_COORDINATOR_LEGACY_LOCALITY_UNCONFIRMED` (or a service's unconfirmed-locality
+diagnostic) and require verification that the original Host and process group have
+stopped. Do not delete tokens based only on their age, hostname or current PID.
+The boot UUID is cached for this Host process lifetime, with one-second backoff
+on unavailable boot inspection. The machine identity is also cached; unsuccessful
+machine probes retry at most once per 60 seconds so unavailable ioreg access
+cannot add a synchronous probe to each service tick. Every process identity
+comparison still reads a
+fresh kernel unique ID; no PID ownership or liveness conclusion is cached. Normal
+service ticks use group liveness and do not invoke JXA. A new coordinator plus one
+launch performs three identity reads (Host, guardian, native member); subsequent
+launches perform two. Stop may need fresh member identity if its guardian already
+exited. These bounded synchronous OS probes can still delay the Host event loop;
+platform latency must be measured separately from Panel startup performance.
+
+Each launch uses a Host-owned supervisor group. FD 3 carries a Host-only custody
+handshake with a total 8192-byte budget and exactly two ordered messages. Invalid
+or excess input clears and destroys the channel before further identity probes;
+successful member receipt also closes it. The guardian closes FD 3 after reporting
+the member, and the member is spawned with that descriptor explicitly ignored.
+Normal package stdout cannot forge it. The supervisor cannot spawn a
+native member before its identity is durable. A held bootstrap then waits until
+Host has also recorded the native member's OS identity before loading reviewed
+package code. Losing the supervisor triggers termination only when the retained
+native identity proves group ownership; unknown membership stays stop-unconfirmed.
+
+The runtime requires a supported security-patched Node (22.23.4+, 24.22.1+, or
+26.12.1+ within those major lines; [October 2026 security release](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases)).
+Desktop explicitly resolves its application-owned, hash-verified Node at each
+service launch. A user-installed or PATH Node never overrides that selection;
+missing/invalid managed runtimes fail closed. Read-only discovery and snapshots
+do not hash the runtime binary. Version/permission probes are asynchronous,
+bounded and cache failures. Consecutive
+startup/exit failures, including guardian loss with a still-live group, are counted
+once per generation, back off and stop after five attempts; a healthy interval
+resets the counter. A temporary package lookup failure retains desired state;
+only explicit authorization revocation changes it to off. Inactive records do not
+consume a retry budget through package lookups. Desktop attempts resource, task,
+media, Cookie and service recovery independently and retains their original errors.
+Service discovery reflects actual coordinator availability, including retry recovery.
+
+Node permissions allow the package/work directory and network while restricting
+child processes, worker threads, native addons and WASI. The [Node security policy](https://github.com/nodejs/node/blob/main/SECURITY.md)
+does not define this as a malicious-code sandbox. Reviewed package trust is still
+required; signals such as `process.kill` are not blocked by permission flags.
+The supervisor remains attached to Host stdin and is never unref'd. Restart never
+assumes EOF succeeded: any persisted live or uninspectable group stays
+`stop-unconfirmed`, with its original PID in diagnostics and no replacement.
+Restart does not use a retained member PID to kill or adopt a surviving group:
+PGID membership may have changed across Host death. Recovery therefore remains
+conservative and can require the old group to exit externally before service
+updates resume. Only confirmed group disappearance permits a new generation.
+Publication uses the
+actual Host process reference and generation, never worker-supplied identity.
+
+The worker protocol is bounded NDJSON (`hello`, `config`, `poke`, `drain` to the
+worker; `ready`, `publish`, `progress`, `drained` from it). Output has a declared
+channel size plus 4 KiB line limit, 64 lines/second and 2 MiB/second limits,
+a 64 KiB stderr ring, bounded stdin backpressure and one coalesced pending payload
+per channel. Snapshots commit no faster than once per second. `configure` uses a
+revision CAS, a 64 KiB payload limit and canonical payload digest in its request receipt; identical
+configuration from multiple guests is a no-op. Unknown mutation receipts must be
+queried through `services.get().controls` before retrying with the same key.
+Unbind and uninstall return structured refusal receipts, including service and PID
+blockers, so the UI can display a `stop-unconfirmed` reason without losing it over IPC.
+
+Local verification uses isolated fixtures and reviewed native workers. It does
+not imply that a real installed Desktop, live provider, Windows process custody,
+or cross-machine/shared-filesystem coordination has been validated. Historical
+Panel clients without these methods must use only a verified selected package
+entry and explicitly report their window-dependent compatibility mode.

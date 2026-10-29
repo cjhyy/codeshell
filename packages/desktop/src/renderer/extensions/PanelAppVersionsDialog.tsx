@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { panelChangeErrorMessage } from "../../shared/panel-change-error.js";
 import { PanelAppPermissionList } from "./PanelAppCapabilities";
 
 type RestoreLease = { projectPath: string; reviewToken: string };
@@ -202,7 +203,14 @@ export function PanelAppVersionsDialog({
                   return;
                 }
                 void run(
-                  () => window.codeshell.restorePanelAppPackage(projectPath, review.reviewToken),
+                  async () => {
+                    const result = await window.codeshell.restorePanelAppPackage(
+                      projectPath,
+                      review.reviewToken,
+                    );
+                    if (!result.ok) throw new Error(panelChangeErrorMessage(result));
+                    return result;
+                  },
                   () => {
                     lease.current = undefined;
                     onChanged();

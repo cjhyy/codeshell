@@ -1837,7 +1837,7 @@ export interface CodeshellApi
     id: string,
     bound: boolean,
     expectedRevision: string,
-  ): Promise<PanelAppBindingState[]>;
+  ): Promise<import("../shared/panel-apps").PanelAppBindingResult>;
   /**
    * Descriptors for every app bound by any of `projectPaths`, plus which of
    * those projects bind each app. Panel buckets are per project, so the dock
@@ -2237,7 +2237,10 @@ export interface CodeshellApi
     input: import("../shared/panel-apps").PanelAppUpdateInput,
   ): Promise<import("../shared/panel-apps").PanelAppUpdateResult>;
   /** Remove one independently installed Panel App. */
-  uninstallPanelApp(id: string, cwd?: string): Promise<void>;
+  uninstallPanelApp(
+    id: string,
+    cwd?: string,
+  ): Promise<import("../shared/panel-apps").PanelAppUninstallResult>;
   /** Bounded full-text search over on-disk session transcripts (session switcher). */
   searchSessionContent(query: string): Promise<SessionContentSearchResult>;
   readSkillBody(target: RendererConfigurationTarget | null, filePath: string): Promise<string>;
@@ -2470,6 +2473,7 @@ export interface CodeshellApi
       externalSessionId: string,
       cwd: string,
       kind: "claude-code" | "codex",
+      source?: { jobId: string; sourceSessionId: string },
     ): Promise<{
       roomId: string;
       status: "observing" | "running";

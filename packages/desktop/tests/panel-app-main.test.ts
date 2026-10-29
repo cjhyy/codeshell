@@ -3672,6 +3672,13 @@ describeIsolated("Desktop project package variants", () => {
       previousData = panelAppElectronMock.userDataPath;
     process.env.HOME = join(root, "home");
     panelAppElectronMock.userDataPath = join(root, "data");
+    // Bind this private fixture to the runner's patched Node. Desktop's normal
+    // user-bin/Homebrew discovery must not select an unrelated machine runtime.
+    const { resolvePanelExecutable } = await import("../../server/src/panels/process-service.js");
+    const fixtureNode = await resolvePanelExecutable("node");
+    if (!fixtureNode) throw new Error("Paired native receipt fixture requires safe runner Node");
+    mkdirSync(join(panelAppElectronMock.userDataPath, "bin"), { recursive: true });
+    symlinkSync(fixtureNode, join(panelAppElectronMock.userDataPath, "bin", "node"));
     const source = join(root, "source"),
       a = join(root, "a"),
       b = join(root, "b");
@@ -3835,15 +3842,17 @@ describeIsolated("Desktop project package variants", () => {
         entry: { name: "version", sha256: selectedA.nativeEntries!.version!.sha256 },
         input: { request: {} },
         recovery: "retry",
+        requestKey: "desktop-project-a-version",
       });
       const jobB = await panelGuestHandler()({ sender: guestB }, "tasks.start", {
         entry: "version",
         input: { request: {} },
         recovery: "retry",
+        requestKey: "desktop-project-b-version",
       });
-      for (const [coordinator, job, version] of [
-        [coordinatorA, jobA, "2.0.0"],
-        [coordinatorB, jobB, "1.0.0"],
+      for (const [coordinator, job, version, requestKey] of [
+        [coordinatorA, jobA, "2.0.0", "desktop-project-a-version"],
+        [coordinatorB, jobB, "1.0.0", "desktop-project-b-version"],
       ] as const) {
         let current = await coordinator.get(job.id);
         const deadline = Date.now() + 8000;
@@ -3851,7 +3860,21 @@ describeIsolated("Desktop project package variants", () => {
           await new Promise((resolve) => setTimeout(resolve, 20));
           current = await coordinator.get(job.id);
         }
-        expect(current).toMatchObject({ status: "succeeded", result: { version } });
+        if (current.status !== "succeeded") {
+          // Native fixture has no credentials; emit only terminal metadata, never
+          // task input, stdout or package paths, to make CI execution failures actionable.
+          throw new Error(
+            `Native version receipt: ${JSON.stringify({
+              status: current.status,
+              attempt: current.attempt,
+              sequence: current.sequence,
+              error: current.error,
+              expectedVersion: version,
+            })}`,
+          );
+        }
+        expect(current).toMatchObject({ status: "succeeded", requestKey, result: { version } });
+        expect(await coordinator.find(requestKey)).toMatchObject({ id: job.id, requestKey });
       }
       const phoneCatalog = await (await request("/api/v1/panels")).json();
       expect(phoneCatalog.panels[0].version).toBe("1.0.0");
@@ -3872,6 +3895,7 @@ describeIsolated("Desktop project package variants", () => {
       expect(await result.json()).toMatchObject({
         id: jobB.id,
         status: "succeeded",
+        requestKey: "desktop-project-b-version",
         result: { version: "1.0.0" },
       });
       writeFileSync(join(a, ".code-shell/settings.json"), '{"panelAppPins":null}');
