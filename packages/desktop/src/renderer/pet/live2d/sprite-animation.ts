@@ -27,7 +27,8 @@ export function spriteAnimation(
     case "observe":
       return "review";
     case "click":
-      return "waving";
+      // Clicking into a field reads as settling in to type; controls get a tap.
+      return state.element === "text" ? "typing" : "waving";
     case "key":
     case "type":
       return "typing";

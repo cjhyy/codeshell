@@ -4,6 +4,11 @@ import type { CompanionOperation } from "./cua-activity-server.js";
 
 type Point = { x: number; y: number };
 type Rect = { x: number; y: number; width: number; height: number };
+/** What the stage knows about where an action happens. Content-free. */
+export interface CompanionPlacementScene {
+  window?: Rect;
+  element?: CompanionOperation["element"];
+}
 export type CompanionActivity = MimiCompanionState["activity"];
 
 /** A finished gesture stays legible this long before the next one or idle. */
@@ -17,8 +22,8 @@ export interface ChoreographerHost {
   clearTimer(handle: unknown): void;
   /** The human is touching the character or chatting: show nothing new. */
   suppressed(): boolean;
-  /** Move the character beside `point`, keeping clear of `reserved`. */
-  place(point: Point | undefined, reserved?: Rect): void;
+  /** Move the character to act at `point`, keeping clear of `reserved`. */
+  place(point: Point | undefined, reserved?: Rect, scene?: CompanionPlacementScene): void;
   /** A gesture is about to be shown (cancel previews, make sure a window exists). */
   beginGesture(): void;
   /** Publish the hidden state and resolve once the character is out of the
@@ -91,6 +96,7 @@ export class CompanionChoreographer {
         this.place(
           trustedTarget(event),
           event.targetSource === "element" ? event.avoidRect : undefined,
+          { window: event.window, element: event.element },
         );
       this.current = {
         id: event.id,
@@ -150,7 +156,10 @@ export class CompanionChoreographer {
       target.y === event.target.y
         ? avoidRect
         : undefined;
-    this.place(event.target, event.avoidRect ?? retainedInput);
+    this.place(event.target, event.avoidRect ?? retainedInput, {
+      window: previous.window,
+      element: previous.element,
+    });
     this.host.publish();
   }
 
@@ -165,14 +174,15 @@ export class CompanionChoreographer {
       this.current = next
         ? { id: next.id, action: next.action, phase: "start", startedAt: this.host.now() }
         : { id: "idle", action: "idle", phase: "end", startedAt: this.host.now() };
-      if (next && !this.host.suppressed()) this.place(next.target, next.avoidRect);
+      if (next && !this.host.suppressed())
+        this.place(next.target, next.avoidRect, { window: next.window, element: next.element });
       this.host.publish();
     }, GESTURE_DWELL_MS);
   }
 
-  private place(point: Point | undefined, reserved?: Rect): void {
+  private place(point: Point | undefined, reserved?: Rect, scene?: CompanionPlacementScene): void {
     this.placed = { target: point, avoidRect: reserved };
-    this.host.place(point, reserved);
+    this.host.place(point, reserved, scene);
   }
 
   private clearIdle(): void {
