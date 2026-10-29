@@ -1,4 +1,4 @@
-name: mobile touch diagnostic
+name: mobile consumer diagnostic
 
 on:
   push:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  touch:
+  consumer:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -21,64 +21,92 @@ jobs:
           bun-version: "1.3.11"
       - uses: actions/setup-node@v7
         with:
-          node-version: "22.16.0"
+          node-version: "22.23.4"
+          package-manager-cache: false
       - run: bun install --frozen-lockfile
-      - name: Install the same locked Chromium as eligible desktop-ui CI
+      - name: Install the locked Chromium and permit only its sandbox namespace
         working-directory: packages/desktop
         run: |
           node node_modules/playwright/cli.js install --with-deps chromium
-          node -e "const fs=require('node:fs');const browser=require('playwright').chromium.executablePath();fs.accessSync(browser,fs.constants.X_OK);for(const key of ['CHROME_PATH','CODESHELL_TEST_CHROMIUM'])fs.appendFileSync(process.env.GITHUB_ENV,key+'='+browser+'\n');"
-      - name: Build reviewed workspace import boundaries
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          import { writeFileSync, appendFileSync } from 'node:fs';
+          const browser=chromium.executablePath();
+          appendFileSync(process.env.GITHUB_ENV, `CODESHELL_TEST_CHROMIUM=${browser}\n`);
+          writeFileSync('/tmp/codeshell-consumer-chromium.apparmor', `abi <abi/4.0>,\ninclude <tunables/global>\nprofile codeshell-consumer-ci "${browser}" flags=(unconfined) {\n  userns,\n}\n`);
+          NODE
+          sudo apparmor_parser -r /tmp/codeshell-consumer-chromium.apparmor
+      - name: Build the reviewed workspace import boundaries
         run: bun run build
-      - name: Compare the original synthetic gesture with real trusted touches
+      - name: Check out the reviewed Video Download consumer
+        uses: actions/checkout@v7
+        with:
+          repository: cjhyy/codeshell-panel-apps
+          ref: 84348855be8ae4e5a31936b3c2b0d1d21410bd64
+          path: .mobile-panel-consumer
+          persist-credentials: false
+      - name: Compare original mouse and single focused touch with a suppressed-click control
         shell: bash
         run: |
-          export TMPDIR="$RUNNER_TEMP/mobile-touch-diagnostic"
+          export TMPDIR="$RUNNER_TEMP/mobile-consumer-diagnostic"
           mkdir -p "$TMPDIR"
           node --version > "$TMPDIR/runtime.txt"
           "$CODESHELL_TEST_CHROMIUM" --version >> "$TMPDIR/runtime.txt"
           git rev-parse HEAD >> "$TMPDIR/runtime.txt"
-          git show bc0f020670e2d85cb91d6475d7ca0d144ef76e77:packages/web/scripts/test-mobile-workbench-browser.mjs > packages/web/scripts/.diagnostic-synthetic-touch.mjs
-          trap 'rm -f packages/web/scripts/.diagnostic-synthetic-touch.mjs packages/web/scripts/.diagnostic-blocked-touch.mjs' EXIT
-          if node scripts/run-isolated-node-smoke.mjs packages/web/scripts/.diagnostic-synthetic-touch.mjs > "$TMPDIR/synthetic.log" 2>&1; then
-            synthetic_status=0
-          else
-            synthetic_status=$?
-          fi
-          python3 - "$TMPDIR" "$synthetic_status" <<'PY'
-          import json,pathlib,sys
-          directory=pathlib.Path(sys.argv[1]);status=int(sys.argv[2]);log=(directory/'synthetic.log').read_text()
-          if status:
-              assert '"scroll":0' in log and 'Timeout 5000ms exceeded' in log, log[-8000:]
-          receipt={'method':'original_synthesizeScrollGesture','exit':status,'touchScrollFailure':bool(status)}
-          (directory/'synthetic-status.json').write_text(json.dumps(receipt,indent=2));print(json.dumps(receipt))
-          PY
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-workbench-browser.mjs | tee "$TMPDIR/raw-production.log"
-          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-workbench-browser.mjs --development | tee "$TMPDIR/raw-development.log"
-          python3 - <<'PY'
+          git -C .mobile-panel-consumer rev-parse HEAD >> "$TMPDIR/runtime.txt"
+          python3 - <<'PYCODE'
           from pathlib import Path
-          source=Path('packages/web/scripts/test-mobile-workbench-browser.mjs').read_text()
-          marker="        // Chromium's synthetic"
-          assert source.count(marker)==1
-          source=source.replace(marker,"        await list.evaluate(node => { node.style.touchAction = 'none'; });\n"+marker,1)
-          Path('packages/web/scripts/.diagnostic-blocked-touch.mjs').write_text(source)
-          PY
-          if node scripts/run-isolated-node-smoke.mjs packages/web/scripts/.diagnostic-blocked-touch.mjs > "$TMPDIR/blocked-touch.log" 2>&1; then
-            echo 'The disabled touch surface unexpectedly passed the real scroll assertion.' >&2
-            exit 1
-          fi
-          python3 - "$TMPDIR" <<'PY'
+          import subprocess
+          scripts=Path('scripts')
+          runner=(scripts/'run-mobile-video-download.mjs').read_text()
+          original=subprocess.check_output(['git','show','9ad80260d2e49518f8d601e4ce173daa418589f4:scripts/smoke-mobile-video-download.mjs'],text=True)
+          current=(scripts/'smoke-mobile-video-download.mjs').read_text()
+          marker='  phase = "single focused inspect tap / RPC";'
+          assert current.count(marker)==1
+          negative=current.replace(marker,'  await frame.locator("#inspect-button").evaluate((button) => {\n    button.addEventListener("click", (event) => {\n      event.preventDefault();\n      event.stopImmediatePropagation();\n    }, true);\n  });\n'+marker,1)
+          for name,source in [('old',original),('suppressed',negative)]:
+              target=f'.diagnostic-video-{name}.mjs'
+              (scripts/target).write_text(source)
+              (scripts/f'.diagnostic-video-{name}-runner.mjs').write_text(runner.replace('scripts/smoke-mobile-video-download.mjs',f'scripts/{target}'))
+          PYCODE
+          trap 'rm -f scripts/.diagnostic-video-*.mjs' EXIT
+          if node scripts/run-isolated-node-smoke.mjs scripts/.diagnostic-video-old-runner.mjs .mobile-panel-consumer/apps/video-download > "$TMPDIR/old-mouse.log" 2>&1; then old_status=0; else old_status=$?; fi
+          if node scripts/run-isolated-node-smoke.mjs scripts/run-mobile-video-download.mjs .mobile-panel-consumer/apps/video-download > "$TMPDIR/focused-touch.log" 2>&1; then touch_status=0; else touch_status=$?; fi
+          if node scripts/run-isolated-node-smoke.mjs scripts/.diagnostic-video-suppressed-runner.mjs .mobile-panel-consumer/apps/video-download > "$TMPDIR/suppressed-click.log" 2>&1; then suppressed_status=0; else suppressed_status=$?; fi
+          python3 - "$TMPDIR" "$old_status" "$touch_status" "$suppressed_status" <<'PYCODE'
           import json,pathlib,sys
-          directory=pathlib.Path(sys.argv[1]);log=(directory/'blocked-touch.log').read_text()
-          assert '"scroll":0' in log and '"trusted":true' in log and 'Timeout 5000ms exceeded' in log, log[-8000:]
-          receipt={'method':'raw_touch_with_touch_action_none','correctlyRejected':True,'trustedEventsObserved':True,'scrollTop':0}
-          (directory/'blocked-touch-status.json').write_text(json.dumps(receipt,indent=2));print(json.dumps(receipt))
-          PY
-      - name: Preserve only the isolated fixture evidence
+          directory=pathlib.Path(sys.argv[1]);old_status,touch_status,suppressed_status=map(int,sys.argv[2:])
+          positive=(directory/'focused-touch.log').read_text();negative=(directory/'suppressed-click.log').read_text()
+          reports=[]
+          for line in positive.splitlines():
+              try: reports.append(json.loads(line))
+              except (ValueError,TypeError): pass
+          consumer=next((x for x in reports if x.get('panel')=='video-download'),None)
+          receipt={'oldMouseExit':old_status,'focusedTouchExit':touch_status,'suppressedClickExit':suppressed_status,'consumer':consumer}
+          (directory/'consumer-diagnostic-receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt))
+          assert touch_status==0 and 'consumer: natural Node exit 0' in positive,positive[-16000:]
+          assert consumer and consumer['exactDownloadBytes']==151552 and consumer['singleTrustedFocusedInspectTap'] and consumer['inspectionRpcReceived']
+          assert consumer['unauthorizedDownloadDenied'] and consumer['revokedDownloadDenied'] and consumer['errors']==[] and consumer['blocked']==[]
+          assert suppressed_status!=0 and 'single focused inspect tap / RPC' in negative and 'Timeout 30000ms exceeded' in negative,negative[-16000:]
+          errors=[]
+          for line in negative.splitlines():
+              try: errors.append(json.loads(line))
+              except (ValueError,TypeError): pass
+          failure=next(x for x in errors if x.get('phase')=='single focused inspect tap / RPC')
+          assert any(e.get('kind')=='click' and e.get('target')=='inspect-button' and e.get('trusted') for e in failure['inputEvents'])
+          assert failure['blocked']==[] and failure['errors']==[]
+          assert 'consumer: cleanup completed' in negative
+          PYCODE
+      - name: Preserve only isolated consumer diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mobile-touch-diagnostic
-          path: ${{ runner.temp }}/mobile-touch-diagnostic/
+          name: mobile-consumer-diagnostic
+          path: |
+            ${{ runner.temp }}/mobile-consumer-diagnostic/*.log
+            ${{ runner.temp }}/mobile-consumer-diagnostic/*.json
+            ${{ runner.temp }}/mobile-consumer-diagnostic/runtime.txt
+            ${{ runner.temp }}/mobile-consumer-diagnostic/codeshell-video-download-qa-*/*.png
           retention-days: 7
           if-no-files-found: warn
