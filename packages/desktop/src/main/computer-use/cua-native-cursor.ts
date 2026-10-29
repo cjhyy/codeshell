@@ -152,6 +152,8 @@ export class CuaNativeCursorBridge {
   private readonly confirmedPositions = new Map<string, CursorState["position"]>();
   private readonly lastKnown = new Map<string, CursorState["position"]>();
   private readonly deferred = new Set<string>();
+  /** Non-pointer writes (set_value) that may still move the agent cursor. */
+  private readonly baselines = new Map<string, string | undefined>();
   private readonly lastAction = new Map<string, string | undefined>();
   private readonly timeoutMs: number;
   private readonly intervalMs: number;
@@ -215,12 +217,18 @@ export class CuaNativeCursorBridge {
     }
     this.deferred.delete(event.id);
     const params = object(object(message)?.params);
-    if (typeof params?.name !== "string" || !POSITIONED_TOOLS.has(params.name)) return;
+    if (typeof params?.name !== "string") return;
     const args = object(params.arguments) ?? {};
     // Desktop pointer positions are a separate input lane; do not mistake its
     // real OS pointer for the independent agent-cursor registry.
     if (args.scope === "desktop" || object(args.target)?.kind === "desktop") return;
     const session = typeof args.session === "string" && args.session ? args.session : undefined;
+    if (!POSITIONED_TOOLS.has(params.name)) {
+      // An element write glides the cursor too. Its destination must become the
+      // baseline, or the next pointer action would publish it as its own target.
+      if (event.action !== "observe") this.baselines.set(event.id, session);
+      return;
+    }
     const key = session || this.transportSession;
     const action: SamplingAction = {
       event,
@@ -245,6 +253,12 @@ export class CuaNativeCursorBridge {
 
   async finish(id: string, failed: boolean): Promise<void> {
     this.deferred.delete(id);
+    if (this.baselines.has(id)) {
+      const session = this.baselines.get(id);
+      this.baselines.delete(id);
+      if (!this.lifetime.signal.aborted) await this.read(session, this.lifetime.signal);
+      return;
+    }
     const action = this.actions.get(id);
     if (!action) return;
     action.running = false;
@@ -274,6 +288,7 @@ export class CuaNativeCursorBridge {
     this.lastKnown.clear();
     this.lastAction.clear();
     this.deferred.clear();
+    this.baselines.clear();
   }
 
   private ready(): Promise<boolean> {

@@ -13,6 +13,16 @@ export interface CompanionScene {
   prefer?: MimiCompanionPerch;
 }
 
+/** A field receiving text must be uncovered before the next keystroke, so the
+ * character leaves it at once. Any other reserved control (a button, a link) is
+ * walked to like an ordinary target; it is only kept uncovered. */
+export function clearsFieldAtOnce(
+  reserved: CompanionDisplayBounds | undefined,
+  element: string | undefined,
+): boolean {
+  return !!reserved && (element === undefined || element === "text");
+}
+
 /** How far the character's feet rest into the window's top edge (title bar). */
 const PERCH_SINK = 14;
 /** Perch only while the target is this close below the window's top edge;

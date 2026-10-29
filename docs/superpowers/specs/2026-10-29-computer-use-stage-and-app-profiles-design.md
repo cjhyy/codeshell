@@ -246,8 +246,8 @@ stage:
 | P4a 宿主拆分                              | #245 `companion-choreographer.ts`                          | 已合并                 |
 | P3 场景事件、P4b 舞台模型、P5a 走动与手势 | #246 `stage-model.ts`、`companion-locomotion.ts`           | 已合并                 |
 | P2 应用档案、P6a 舞台提示                 | #247 `app-profiles.ts`、`resources/computer-use/apps/*.md` | 已合并                 |
-| P5b 让位与跨屏、P6b 拖到窗口生成聊天草稿  | #248 `window-at-point.ts`                                  | 待合并                 |
-| P1 Chromium 感知整形                      | —                                                          | 待辅助功能授权后跑诊断 |
+| P5b 让位与跨屏、P6b 拖到窗口生成聊天草稿  | #248 `window-at-point.ts`                                  | 已合并                 |
+| P1 Chromium 感知整形                      | #249、#250                                                 | 已合并；截图路线待授权 |
 
 与设计的差异：
 
@@ -264,3 +264,12 @@ stage:
 - 对应用元素设 `AXEnhancedUserInterface = true`（读回为 1）或 `AXManualAccessibility`（Chrome 不支持，-25205），无论页面加载前后，都不会打开网页辅助功能。
 - 对照组：带 `--force-renderer-accessibility` 启动时，同一条生产链路首读即得 126 个网页元素；后台 `set_value` 写入、元素点击后页面显示 `clicked:后台写入 ✓`；前台应用始终未变；应用档案注入一次。
 - 结论：#249 的"空网页区域补读"针对的是网页区域存在但尚未建好的情况，在日常 Chrome 里不会出现；日常 Chrome 的正确路线是截图 + 坐标（`click` 与带 `x`,`y` 的 `type_text`），Chrome 档案已据此改写。截图路线需要辅助 App 同时具备屏幕录制授权，尚待真机验证。
+
+### 真机联动：Mimi × 真实 Chrome（2026-10-30）
+
+同样经 LaunchServices 启动已授权辅助功能的 Electron，在同一进程里跑 Mimi 宿主与 CodeShell proxy，以带 `--force-renderer-accessibility` 的临时 Chrome for Testing 为目标：读窗口 → 后台 `set_value` → 元素点击。页面显示 `clicked:Mimi 真机 ✓`，前台应用始终未变。每 50ms 记录角色窗口的 DOM 状态与宿主状态，暴露两处只在真机出现的问题：
+
+- 点击先去错地方：`set_value` 也会把驱动的光标滑到输入框，但光标旁路不跟踪它，基线没更新；下一次点击开始时光标登记位置仍在输入框，被当成这次点击的新位置发布，Mimi 走向输入框，约 0.5 秒后再瞬移到按钮。修复：非指针写入结束后读一次光标，作为下一个指针动作的基线。
+- 到了按钮却不做动作、还会瞬移：指针动作的位置在开始后才由光标更新给出，手势预算按"没有行程"算，到达前已用完；同时任何带元素框的目标都被当作"正在输入的框"而瞬移。修复：位置晚到时手势从到达起重新计时；只有文本框才立即让开，按钮、链接照常走过去。
+
+修复后的真机序列：输入时原地显示键盘；点击开始时不乱走；按钮位置到达后侧身走过去（约 280ms），到达后在目标环旁做点击，再回到待机。
