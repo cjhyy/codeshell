@@ -12,6 +12,7 @@ const api: MimiCompanionApi = {
   interaction: (phase) => ipcRenderer.send("mimiCompanion:interaction", phase),
   move: (position) => ipcRenderer.send("mimiCompanion:move", position),
   openChat: () => ipcRenderer.invoke("mimiCompanion:chat"),
+  handoff: (accept) => ipcRenderer.invoke("mimiCompanion:handoff", accept),
   resumeFollowing: () => ipcRenderer.send("mimiCompanion:follow"),
   stopComputer: () => ipcRenderer.send("mimiCompanion:stopComputer"),
   resumeComputer: () => ipcRenderer.send("mimiCompanion:resumeComputer"),

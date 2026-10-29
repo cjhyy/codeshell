@@ -157,6 +157,11 @@ export interface PetOpenSessionRequest {
   external?: PetExternalSessionLocator;
 }
 
+/** Open the Mimi chat with a draft in its composer. Never sent automatically. */
+export interface PetChatPromptRequest {
+  prompt: string;
+}
+
 export interface PetNavigationTarget {
   uiSessionId: string;
   engineSessionId: string;
@@ -388,7 +393,9 @@ export interface PetApi {
   moveWidget(position: PetWidgetPosition): void;
   showWidgetContextMenu?(): void;
   openWidgetOverview(target?: PetOpenSessionRequest): Promise<{ ok: true }>;
-  onWidgetOpenOverview(listener: (target?: PetOpenSessionRequest) => void): () => void;
+  onWidgetOpenOverview(
+    listener: (target?: PetOpenSessionRequest | PetChatPromptRequest) => void,
+  ): () => void;
   onWidgetVisibilityChanged(listener: (visible: boolean) => void): () => void;
 }
 
@@ -509,8 +516,14 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
     openWidgetOverview: (target) =>
       ipcRenderer.invoke("pet:widget-open-overview", target) as Promise<{ ok: true }>,
     onWidgetOpenOverview: (listener) => {
-      const handler = (_event: unknown, target: unknown): void =>
+      const handler = (_event: unknown, target: unknown): void => {
+        const prompt = (target as { prompt?: unknown } | undefined)?.prompt;
+        if (typeof prompt === "string") {
+          if (prompt.trim()) listener({ prompt: prompt.slice(0, 500) });
+          return;
+        }
         listener(target as PetOpenSessionRequest | undefined);
+      };
       ipcRenderer.on("pet:widget-open-overview", handler);
       return () => ipcRenderer.removeListener("pet:widget-open-overview", handler);
     },

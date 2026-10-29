@@ -3492,7 +3492,7 @@ app.whenReady().then(async () => {
   // Register the opt-in host before the first worker receives its MCP environment.
   await initializeDesktopComputerUse({
     app,
-    openCompanionChat: () => openPetOverviewFromWidget(),
+    openCompanionChat: (request) => openPetOverviewFromWidget(request),
     ipcMain,
     openExternal: (url) => shell.openExternal(url),
     isMainWindow: (sender) =>
