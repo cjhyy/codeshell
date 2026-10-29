@@ -51,7 +51,7 @@ export function compareOutputHistory(
   sessionId: string,
   cwd: string,
 ):
-  | { ok: true; comparison: OutputHistoryComparison }
+  | { ok: true; comparison: OutputHistoryComparison; checkpointEvents?: StreamEvent[] }
   | {
       ok: false;
       reason: "history_mismatch" | "unsupported_history";

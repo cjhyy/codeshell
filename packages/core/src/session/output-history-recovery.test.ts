@@ -18,7 +18,11 @@ import { outputUserMessage } from "../engine/run-output-user-message.js";
 import { OutputHistoryRecovery } from "./output-history-recovery.js";
 import { outputJournalAnchorName } from "./output-journal-binding.js";
 import { backupOutputJournal } from "./output-journal-manual-repair.js";
-import { outputHistoryEvents } from "./output-history-events.js";
+import {
+  outputHistoryEvents,
+  outputHistoryEventGroups,
+  checkpointOutputHistoryRecords,
+} from "./output-history-events.js";
 import type { StreamEvent } from "../types.js";
 
 const roots: string[] = [];
@@ -323,4 +327,81 @@ test("a directory symlink substitution cannot publish even identical source file
   );
   expect(result.status).not.toBe("applied");
   expect(readFileSync(join(moved, "state.json")).equals(original)).toBe(true);
+});
+
+test("checkpoint display additions preserve every original record and its producer", () => {
+  const event = Buffer.from(JSON.stringify({ type: "text_delta", text: "synthetic" }));
+  const raw = [
+    {
+      sequence: 1,
+      run: { id: "original-run" },
+      fragment: { id: "part", index: 0, total: 2, data: event.subarray(0, 8).toString("base64") },
+    },
+    {
+      sequence: 2,
+      run: { id: "original-run" },
+      fragment: { id: "part", index: 1, total: 2, data: event.subarray(8).toString("base64") },
+    },
+  ];
+  const groups = outputHistoryEventGroups(raw),
+    terminal: StreamEvent = { type: "turn_complete", reason: "model_error" };
+  const records = checkpointOutputHistoryRecords(groups, [groups[0]!.event, terminal]);
+  expect(records[0]).toBe(raw[0]);
+  expect(records[1]).toBe(raw[1]);
+  expect(records[2]).toEqual({
+    version: 2,
+    producer: { kind: "host", id: "output-history-recovery" },
+    event: terminal,
+  });
+});
+
+test.each(["omit", "reorder", "duplicate", "input", "args", "approval", "success result"])(
+  "checkpoint rejects %s proposals",
+  (change) => {
+    const a: StreamEvent = { type: "text_delta", text: "a" },
+      b: StreamEvent = { type: "text_delta", text: "b" };
+    const groups = outputHistoryEventGroups([{ event: a }, { event: b }]);
+    let proposed: StreamEvent[] = [a, b];
+    if (change === "omit") proposed = [a];
+    if (change === "reorder") proposed = [b, a];
+    if (change === "duplicate") proposed = [a, a, b];
+    if (change === "input")
+      proposed.push({
+        type: "session_user_message",
+        sessionId: "synthetic",
+        text: "never submit",
+      } as StreamEvent);
+    if (change === "args")
+      proposed.push({ type: "tool_use_args_delta", toolCallId: "tool", args: { changed: true } });
+    if (change === "approval") proposed.push({ type: "ask_user", question: "never replay" } as any);
+    if (change === "success result")
+      proposed.push({
+        type: "tool_result",
+        result: { id: "tool", toolName: "Write", result: "unsupported success" },
+      });
+    expect(() => checkpointOutputHistoryRecords(groups, proposed)).toThrow();
+  },
+);
+
+test("checkpoint accepts a verifier-owned failed visible input with its stable identity", () => {
+  const user = outputUserMessage(
+    { role: "user", content: "synthetic failed input", clientMessageId: "failed-input" },
+    "session",
+    "/synthetic",
+  );
+  const events: StreamEvent[] = [
+    user,
+    { type: "error", error: "synthetic failure" },
+    { type: "turn_complete", reason: "model_error" },
+  ];
+  expect(
+    checkpointOutputHistoryRecords([], events, "session").map((record) => record.event),
+  ).toEqual(events);
+  for (const changed of [
+    { ...user, injected: true },
+    { ...user, sessionId: "another" },
+    { ...user, clientMessageId: undefined },
+    { ...user, authority: "agent" },
+  ])
+    expect(() => checkpointOutputHistoryRecords([], [changed as StreamEvent], "session")).toThrow();
 });

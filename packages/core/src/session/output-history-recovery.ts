@@ -20,7 +20,10 @@ import {
   readPublishedOutputHead,
 } from "./output-journal-head.js";
 import { compareOutputHistory } from "./output-history-comparison.js";
-import { outputHistoryEvents } from "./output-history-events.js";
+import {
+  outputHistoryEventGroups,
+  checkpointOutputHistoryRecords,
+} from "./output-history-events.js";
 import { hasHistoricalOutputGap } from "./output-history-gap.js";
 import { SessionOutputCoverageStore } from "./output-coverage-state.js";
 
@@ -236,11 +239,18 @@ export class OutputHistoryRecovery {
         position.hash === raw.at(-1)?.hash,
     );
     const native = jsonLines(transcript.data) as TranscriptEvent[];
-    const events = outputHistoryEvents(raw);
+    const groups = outputHistoryEventGroups(raw);
+    const events = groups.map((group) => group.event);
+    const originalEventsHash = sha(JSON.stringify(events));
     const compared = compareOutputHistory(native, events, sessionId, state.cwd);
     if (!compared.ok) throw new Refusal(compared.reason);
+    requireProof(sha(JSON.stringify(events)) === originalEventsHash, "history_mismatch");
+    const checkpointEvents = compared.checkpointEvents ?? events;
+    const checkpointRecords = checkpointOutputHistoryRecords(groups, checkpointEvents, sessionId);
+    requireProof(checkpointRecords.length <= MAX_FRAMES, "unsupported_history");
+    const proofSha256 = sha(JSON.stringify({ comparison: compared.comparison, checkpointEvents }));
     const inputIds = new Set(
-      events
+      checkpointEvents
         .filter((event) => event.type === "session_user_message")
         .map((event) => event.clientMessageId),
     );
@@ -257,6 +267,7 @@ export class OutputHistoryRecovery {
         String(directoryStat.dev),
         String(directoryStat.ino),
         files.map(({ name, path, sha256, stamp }) => ({ name, path, sha256, stamp })),
+        proofSha256,
       ]),
     );
     authority.assertCurrent();
@@ -276,6 +287,8 @@ export class OutputHistoryRecovery {
       journal,
       transcript,
       raw,
+      checkpointRecords,
+      proofSha256,
       header,
       fingerprint,
       comparison: compared.comparison,
@@ -413,15 +426,17 @@ export class OutputHistoryRecovery {
         seed = sha(headerText);
       let previousHash = seed;
       const lines = [headerText];
-      for (const record of source.raw) {
+      let sequence = 0;
+      for (const record of source.checkpointRecords) {
         const { hash: _oldHash, previousHash: _oldPrevious, ...rest } = record;
-        const value = { ...rest, previousHash };
+        const value = { ...rest, sequence: ++sequence, previousHash };
         previousHash = sha(JSON.stringify(value));
         lines.push(JSON.stringify({ ...value, hash: previousHash }) + "\n");
       }
       const data = Buffer.from(lines.join("")),
         anchorName = `output-journal-${id}.jsonl`,
         headName = `output-journal-head-${id}.json`;
+      requireProof(data.length <= MAX_FILE, "unsupported_history");
       const identity = sha(randomUUID()),
         incarnation = sha(randomUUID());
       writeExclusive(join(directory, anchorName), data);
@@ -447,7 +462,7 @@ export class OutputHistoryRecovery {
         {
           version: 1,
           identity,
-          sequence: source.raw.length,
+          sequence,
           offset: data.length,
           hash: previousHash,
         },
@@ -469,6 +484,8 @@ export class OutputHistoryRecovery {
             acceptedAt,
             historicalGap: true,
             comparison: source.comparison,
+            proofSha256: source.proofSha256,
+            insertedFrames: source.checkpointRecords.length - source.raw.length,
             source: source.files.map(({ name, sha256, stamp }) => ({ name, sha256, stamp })),
             epoch: { anchorName, journalSha256: sha(data), identity, incarnation, headName },
           },
