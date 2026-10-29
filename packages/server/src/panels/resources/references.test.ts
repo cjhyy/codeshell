@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
+  chmod,
   mkdtemp,
   mkdir,
   readFile,
@@ -167,6 +168,35 @@ test("external range, HEAD, EOF chunks and temporary materialization retain byte
   expect(
     (await readdir(f.store, { recursive: true })).some((file) => file.endsWith("asset.json")),
   ).toBe(false);
+});
+
+test("metadata-only changes such as tags or last-opened dates keep a reference available", async () => {
+  const f = await fixture(),
+    reference = await f.reference("original", "clip.mp4"),
+    path = join(f.sourceRoot, "clip.mp4"),
+    before = await stat(path);
+  // A Finder tag or "last opened" stamp moves ctime only; chmod does the same portably.
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  await chmod(path, 0o600);
+  await chmod(path, before.mode & 0o777);
+  const after = await stat(path);
+  expect(after.ctimeMs).not.toBe(before.ctimeMs);
+  expect(after.mtimeMs).toBe(before.mtimeMs);
+  expect((await f.call("resources.references.get", { id: reference.id })).reference.state).toBe(
+    "available",
+  );
+  expect(await contents(await f.service.openRead(f.scope, reference.id))).toEqual(
+    Buffer.from("original"),
+  );
+  const again = (
+    await f.call("resources.references.create", { directoryHandle: "selected", path: "clip.mp4" })
+  ).reference;
+  expect(again.id).toBe(reference.id);
+  expect(
+    (await readdir(join(f.store), { recursive: true })).filter((file) =>
+      /external-[a-f0-9]{64}\.json$/.test(String(file)),
+    ),
+  ).toHaveLength(1);
 });
 
 test("references reject changed files and cannot silently bind a same-size replacement with the old timestamp", async () => {
