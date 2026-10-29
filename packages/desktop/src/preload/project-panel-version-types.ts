@@ -3,6 +3,8 @@ import type {
   PanelPackageRestoreReview,
 } from "@cjhyy/code-shell-server/panels";
 
+import type { PanelAppMutationFailure } from "../shared/panel-apps.js";
+
 /** Version selection stays bound to the reviewed project and Host-issued token. */
 export interface ProjectPanelVersionApi {
   getPanelAppPackageHistory(
@@ -19,6 +21,6 @@ export interface ProjectPanelVersionApi {
   restorePanelAppPackage(
     cwd: string,
     token: string,
-  ): Promise<{ id: string; packageDigest: string }>;
+  ): Promise<{ ok: true; id: string; packageDigest: string } | PanelAppMutationFailure>;
   cancelPanelAppRestore(cwd: string, token: string): Promise<{ cancelled: boolean }>;
 }

@@ -3,6 +3,29 @@ import { parseMobileClientEvent } from "./mobile-client-event-validator.js";
 import { MAX_MOBILE_ATTACHMENTS, MAX_MOBILE_IMAGE_BYTES } from "./mobile-limits.js";
 
 describe("parseMobileClientEvent", () => {
+  test("accepts bounded correlated session pages and rejects malformed filters", () => {
+    expect(
+      parseMobileClientEvent({ type: "ccRoom.listSessions", cwd: "/repo", all: true }),
+    ).toBeDefined();
+    expect(
+      parseMobileClientEvent({ type: "ccRoom.listSessions", cwd: "/repo", all: "yes" }),
+    ).toBeUndefined();
+    const request = {
+      type: "session.list",
+      requestId: "page-1",
+      cursor: "v1:123:s1",
+      cwds: ["/repo", "/extra"],
+    };
+    expect(parseMobileClientEvent(request)).toEqual(request);
+    for (const fields of [
+      { cursor: "" },
+      { requestId: "x".repeat(129) },
+      { cwds: [] },
+      { cwds: ["/repo\0bad"] },
+      { cwds: Array(257).fill("/repo") },
+    ])
+      expect(parseMobileClientEvent({ type: "session.list", ...fields })).toBeUndefined();
+  });
   test("accepts representative authenticated protocol events", () => {
     expect(parseMobileClientEvent({ type: "session.list" })?.type).toBe("session.list");
     expect(
@@ -290,4 +313,24 @@ test("legacy base pages require bounded identities and exactly one typed anchor 
   }
   expect(parseMobileClientEvent({ ...event, cursor: "both" })).toBeUndefined();
   expect(parseMobileClientEvent({ ...event, throughEventId: undefined })).toBeUndefined();
+});
+
+test("external model selection is bounded and never admits native or malformed routing keys", () => {
+  expect(parseMobileClientEvent({ type: "runtime.models" })).toEqual({ type: "runtime.models" });
+  for (const modelKey of ["codex/fixture", "claude-code/sonnet", "codex/"]) {
+    const input = { type: "chat.send", text: "task", modelKey };
+    expect(parseMobileClientEvent(input)).toEqual(input);
+  }
+  for (const modelKey of [
+    "openai/model",
+    "codex",
+    "CODEX/fixture",
+    "",
+    5,
+    null,
+    "codex/\nother",
+    "codex/" + "a".repeat(512),
+  ]) {
+    expect(parseMobileClientEvent({ type: "chat.send", text: "task", modelKey })).toBeUndefined();
+  }
 });

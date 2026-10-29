@@ -64,10 +64,21 @@ export interface DesktopWebApiOptions {
 }
 
 export interface DesktopWebHttpApi {
+  /**
+   * Optional independent authorization for GET/HEAD Panel assets. A handler may
+   * serve only an existing short-lived capability after revalidating its owner
+   * and project grant. Return false without writing when no capability matches;
+   * the caller must then apply its ordinary access gate. Never accepts API calls.
+   */
+  handleCapabilityAsset?: (request: IncomingMessage, response: ServerResponse) => Promise<boolean>;
   handle: (
     request: IncomingMessage,
     response: ServerResponse,
-    context: { baseUrl: string },
+    context: {
+      baseUrl: string;
+      /** Recheck the entrance authorization captured after its access gate succeeded. */
+      isAccessAuthorized?: () => boolean;
+    },
   ) => Promise<boolean>;
   /** Reopen after RemoteHostManager.stop(), without reviving previous cookies. */
   start: () => void;
@@ -87,6 +98,7 @@ interface RequestIdentity {
   input: string | undefined;
   cwd: string;
   generation: number;
+  isAccessAuthorized?: () => boolean;
 }
 
 function json(response: ServerResponse, status: number, body: unknown): void {
@@ -245,6 +257,7 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
     const identity = identities.get(request);
     if (!identity || closed || identity.generation !== generation) return false;
     try {
+      if (identity.isAccessAuthorized?.() === false) return false;
       if (principal(identity.token)?.session !== identity.session) return false;
       const resolved = await options.resolveWorkspace(identity.input, identity.session.deviceId);
       // The resolver can yield while a device is revoked or the host is stopped.
@@ -252,6 +265,7 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
         resolved === identity.cwd &&
         !closed &&
         identity.generation === generation &&
+        identity.isAccessAuthorized?.() !== false &&
         principal(identity.token)?.session === identity.session
       );
     } catch {
@@ -385,6 +399,8 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
       if (!url.pathname.startsWith("/api/v1/")) return false;
       try {
         if (closed) throw new HubConfigurationError(503, "桌面远程服务已停止。");
+        if (context.isAccessAuthorized?.() === false)
+          throw new HubConfigurationError(401, "访问口令已更新，请重新连接桌面。");
         const requestGeneration = generation;
         const origin = sameOrigin(request, context.baseUrl);
         const secure = origin.protocol === "https:";
@@ -393,6 +409,8 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
           const input = await credentials(request);
           if (closed || requestGeneration !== generation)
             throw new HubConfigurationError(503, "桌面远程服务已停止。");
+          if (context.isAccessAuthorized?.() === false)
+            throw new HubConfigurationError(401, "访问口令已更新，请重新连接桌面。");
           const device = options.devices.authenticate(input.deviceId, input.secretHash);
           if (!device)
             throw new HubConfigurationError(401, "设备未配对或已被撤销，请在桌面重新配对。");
@@ -440,6 +458,7 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
           if (
             closed ||
             generation !== requestGeneration ||
+            context.isAccessAuthorized?.() === false ||
             principal(token)?.session !== current.session
           )
             throw new HubConfigurationError(401, "设备连接已失效，请重新连接桌面。");
@@ -451,12 +470,20 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
         if (
           closed ||
           generation !== requestGeneration ||
+          context.isAccessAuthorized?.() === false ||
           principal(token)?.session !== current.session
         )
           throw new HubConfigurationError(401, "设备连接已失效，请重新连接桌面。");
         if (!cwd || !isAbsolute(cwd))
           throw new HubConfigurationError(403, "只能访问桌面已知的项目或会话工作区。");
-        identities.set(request, { token, session: current.session, input, cwd, generation });
+        identities.set(request, {
+          token,
+          session: current.session,
+          input,
+          cwd,
+          generation,
+          isAccessAuthorized: context.isAccessAuthorized,
+        });
         const services = servicesFor(cwd);
         services.active++;
         try {

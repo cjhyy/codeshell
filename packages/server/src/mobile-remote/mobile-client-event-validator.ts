@@ -34,6 +34,9 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
     case "chat.send":
       valid =
         boundedOptionalEmptyString(event.text, MAX_MESSAGE_LENGTH) &&
+        (event.modelKey === undefined ||
+          (boundedString(event.modelKey, MAX_ID_LENGTH) &&
+            /^(codex|claude-code)\/[^\r\n\0]*$/.test(event.modelKey))) &&
         optionalBoundedString(event.sessionId, MAX_ID_LENGTH) &&
         (event.modelTraceSource === undefined ||
           (typeof event.modelTraceSource === "string" &&
@@ -102,6 +105,15 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         optionalMember(event.pathScope, PATH_SCOPES);
       break;
     case "session.list":
+      valid =
+        optionalBoundedString(event.requestId, 128) &&
+        optionalBoundedString(event.cursor, 2048) &&
+        (event.cwds === undefined ||
+          (Array.isArray(event.cwds) &&
+            event.cwds.length > 0 &&
+            event.cwds.length <= 256 &&
+            event.cwds.every(boundedPath)));
+      break;
     case "room.list":
     case "room.projects":
       valid = true;
@@ -119,6 +131,9 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
       break;
     case "model.set":
       valid = boundedString(event.model, MAX_ID_LENGTH);
+      break;
+    case "runtime.models":
+      valid = true;
       break;
     case "goal.extend":
       valid =
@@ -171,7 +186,10 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         optionalMember(event.kind, KINDS);
       break;
     case "ccRoom.listSessions":
-      valid = boundedPath(event.cwd) && optionalMember(event.kind, KINDS);
+      valid =
+        boundedPath(event.cwd) &&
+        optionalMember(event.kind, KINDS) &&
+        (event.all === undefined || typeof event.all === "boolean");
       break;
     case "ccRoom.openSession":
       valid =

@@ -586,9 +586,12 @@ function ResolvedPanelArea({
                     ? t("panels.area.launcherTitle")
                     : tab.kind === "subagent" && subagentSelection?.label
                       ? subagentSelection.label
-                      : entry
-                        ? panelEntryTitle(entry, (key) => t(key as never))
-                        : t("panels.area.unavailable"),
+                      : tab.kind === "ccRoom" && openCliSession?.jobId
+                        ? openCliSession.title ||
+                          (openCliSession.cliKind === "codex" ? "Codex" : "Claude Code")
+                        : entry
+                          ? panelEntryTitle(entry, (key) => t(key as never))
+                          : t("panels.area.unavailable"),
                 icon: tab.kind === PANEL_LAUNCHER_KIND ? LayoutGrid : (entry?.icon ?? CircleOff),
               };
             })}

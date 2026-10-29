@@ -33,12 +33,14 @@ import { createOperationResolutionApi } from "./operation-resolution-api";
 import { createOptimizationLabApi } from "./optimization-lab-api";
 import { createComputerUseSettingsApi } from "./computer-use-api";
 import { createSessionTranscriptApi } from "./session-transcript-api";
+import { createBackgroundWorkApi, type BackgroundJobProgress } from "./background-work-api";
 import { createModelTraceApi } from "./model-trace-api";
 import { createProfilePluginExportApi } from "./profile-plugin-export-api";
 import { createProfileMemoryPromotionApi } from "./profile-memory-promotion-api";
 import { createPetApi } from "./pet-api";
 import { createProjectAuthorityApi } from "./project-authority-api";
 import { createProjectPanelVersionApi } from "./project-panel-version-api";
+import { createPanelMutationApi } from "./panel-mutation-api";
 import { createSessionCatalogApi } from "./session-catalog-api";
 import { createPreloadRpcIdFactory, takePreloadRpcResponse } from "./rpc-identity";
 import { rpcResult } from "./rpc-result";
@@ -107,7 +109,12 @@ export type BackgroundWorkInfo =
       kind: "job";
       jobId: string;
       description: string;
-      status: "running" | "completed" | "failed" | "cancelled";
+      status: "running" | "cancelling" | "completed" | "failed" | "cancelled" | "unknown";
+      /** With status "unknown": a live process elsewhere owns it, or its owner
+       *  exited while the external CLI is still running. */
+      unknownReason?: "other-process" | "orphaned-process";
+      progress?: BackgroundJobProgress;
+      canCancel?: boolean;
       startedAt: number;
       finishedAt?: number;
       finalText?: string;
@@ -676,11 +683,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ) as Promise<{
       ok: boolean;
     }>,
-  /** Unified background-work listing for the panel: shells + sub-agents + jobs. */
-  listBackgroundWork: (sessionId: string, opts?: { scope?: "session" | "all" }) =>
-    rpc("agent/backgroundWork", { sessionId, ...(opts ?? {}) }).then(rpcResult) as Promise<{
-      items: BackgroundWorkInfo[];
-    }>,
+  ...createBackgroundWorkApi<BackgroundWorkInfo>(ipcRenderer),
   approve: (
     sessionIdOrRequestId: string,
     requestIdOrDecision: string | "approve" | "deny",
@@ -1064,8 +1067,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("panel-apps:listExtensions", cwd, locale),
   getPanelAppBindings: (cwd: string) => ipcRenderer.invoke("panel-apps:bindings", cwd),
   ...createProjectPanelVersionApi(ipcRenderer),
-  setPanelAppProjectBinding: (cwd: string, id: string, bound: boolean, expectedRevision: string) =>
-    ipcRenderer.invoke("panel-apps:setProjectBinding", cwd, id, bound, expectedRevision),
+  ...createPanelMutationApi(ipcRenderer),
   listPanelAppsForProjects: (projectPaths: string[], locale: string) =>
     ipcRenderer.invoke("panel-apps:listForProjects", projectPaths, locale),
   preparePanelApp: (id: string, projectPath: string) =>
@@ -1331,8 +1333,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     input: import("../shared/panel-apps").PanelAppUpdateInput,
   ): Promise<import("../shared/panel-apps").PanelAppUpdateResult> =>
     ipcRenderer.invoke("panel-apps:installUpdate", input),
-  uninstallPanelApp: (id: string, cwd?: string): Promise<void> =>
-    ipcRenderer.invoke("panel-apps:uninstall", id, cwd),
   readSkillBody: (target: RendererConfigurationTarget | null, filePath: string) =>
     ipcRenderer.invoke("skills:read", target, filePath),
   checkSkillUpdate: (target: RendererConfigurationTarget | null, filePath: string) =>
@@ -1799,8 +1799,12 @@ contextBridge.exposeInMainWorld("codeshell", {
       mode: string,
       kind?: "claude-code" | "codex",
     ) => ipcRenderer.invoke("ccRoom:openSession", claudeSessionId, cwd, mode, kind),
-    openLinkedSession: (externalSessionId: string, cwd: string, kind: "claude-code" | "codex") =>
-      ipcRenderer.invoke("ccRoom:openLinkedSession", externalSessionId, cwd, kind),
+    openLinkedSession: (
+      externalSessionId: string,
+      cwd: string,
+      kind: "claude-code" | "codex",
+      source?: { jobId: string; sourceSessionId: string },
+    ) => ipcRenderer.invoke("ccRoom:openLinkedSession", externalSessionId, cwd, kind, source),
     takeOverLinkedSession: (
       roomId: string,
       externalSessionId: string,

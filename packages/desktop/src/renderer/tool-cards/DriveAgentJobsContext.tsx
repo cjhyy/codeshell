@@ -14,7 +14,7 @@ import type { Message } from "../types";
 export type DriveAgentJob = Extract<BackgroundWorkInfo, { kind: "job" }>;
 
 const DriveAgentJobsContext = createContext<readonly DriveAgentJob[]>([]);
-const INITIAL_RETRY_DELAYS_MS = [100, 500] as const;
+const INITIAL_RETRY_DELAYS_MS = [100, 500, 1_500] as const;
 
 export function DriveAgentJobsProvider({
   jobs,
@@ -27,7 +27,8 @@ export function DriveAgentJobsProvider({
 }
 
 /** Load only the background jobs referenced by DriveAgent cards in this
- * transcript. One loader per message stream avoids per-card IPC and polling. */
+ * transcript. One loader per message stream avoids per-card IPC and polling.
+ * Loading progress never navigates; the user opens tasks through their links. */
 export function DriveAgentJobsLoader({
   sessionId,
   messages,
@@ -62,28 +63,32 @@ export function DriveAgentJobsLoader({
         setJobs([]);
         return;
       }
+      const retry = () => {
+        const delay = INITIAL_RETRY_DELAYS_MS[retryAttempt];
+        if (delay === undefined) return;
+        retryTimerRef.current = window.setTimeout(() => {
+          retryTimerRef.current = null;
+          if (requestSeq === requestSeqRef.current) void refresh(retryAttempt + 1);
+        }, delay);
+      };
       try {
         const result = await window.codeshell.listBackgroundWork(sessionId, { scope: "all" });
         if (requestSeq !== requestSeqRef.current) return;
         const wanted = new Set(jobKey.split("\n"));
-        setJobs(
-          (result?.items ?? []).filter(
-            (item: BackgroundWorkInfo): item is DriveAgentJob =>
-              item.kind === "job" &&
-              item.sourceSession.sessionId === sessionId &&
-              wanted.has(item.jobId),
-          ),
+        const matching = (result?.items ?? []).filter(
+          (item: BackgroundWorkInfo): item is DriveAgentJob =>
+            item.kind === "job" &&
+            item.sourceSession.sessionId === sessionId &&
+            wanted.has(item.jobId),
         );
+        setJobs(matching);
+        // Registration and the first UI read can race even when IPC succeeds.
+        // Retry missing rows briefly; a missing registry never polls forever.
+        if (matching.length < wanted.size) retry();
       } catch {
         if (requestSeq !== requestSeqRef.current) return;
         setJobs([]);
-        const delay = INITIAL_RETRY_DELAYS_MS[retryAttempt];
-        if (delay !== undefined) {
-          retryTimerRef.current = window.setTimeout(() => {
-            retryTimerRef.current = null;
-            if (requestSeq === requestSeqRef.current) void refresh(retryAttempt + 1);
-          }, delay);
-        }
+        retry();
       }
     },
     [jobKey, sessionId],
@@ -109,7 +114,8 @@ export function DriveAgentJobsLoader({
     return () => window.removeEventListener("codeshell:files-changed", onChanged);
   }, [jobKey, refresh]);
 
-  const hasRunningJob = jobs.some((job) => job.status === "running");
+  const hasRunningJob = jobs.some((job) => job.status === "running" || job.status === "cancelling");
+
   useEffect(() => {
     if (!hasRunningJob) return;
     const timer = window.setInterval(() => void refresh(), 3_000);

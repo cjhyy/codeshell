@@ -105,6 +105,8 @@ export interface ExternalRuntimeStartRequest {
   kind: ExternalRuntimeKind;
   sessionId: string;
   cwd: string;
+  /** Canonical Session/project root, supplied only by Main's workspace authority. */
+  mainRoot?: string;
   model?: string;
   modelKey?: string;
   permissionMode?: PermissionMode;
@@ -119,6 +121,8 @@ export interface ExternalRuntimeStartRequest {
   workspaceProfile?: string;
   /** The renderer window that owns this session's host-loopback surface. */
   ownerWindow?: BrowserWindow;
+  /** Host request authority, checked only until startup completes; never a turn lease. */
+  assertStartAuthority?: () => void;
 }
 
 /**
@@ -188,11 +192,14 @@ export interface ExternalRuntimeServiceDeps {
 interface ExternalRuntimeAuthority {
   key: string;
   cwdKey: string;
+  mainRoot: string;
+  mainRootKey: string;
   projectTrusted: boolean;
   projectBinding?: SessionProjectBinding;
   permissionMode: PermissionMode;
   planMode: boolean;
   epoch: number;
+  mainRootEpoch: number;
 }
 
 /**
@@ -216,6 +223,10 @@ export class ExternalRuntimeService {
       workspaceProfile?: string;
       routingKey: string;
       configurationKey: string;
+      continuationConfiguration: Pick<
+        ExternalRuntimeStartRequest,
+        "planMode" | "hasGoal" | "developerInstructions" | "workspaceProfile" | "permissionMode"
+      >;
       authority: ExternalRuntimeAuthority;
       ownerWebContentsId?: number;
       forwardEvent: (event: StreamEvent) => void;
@@ -492,6 +503,7 @@ export class ExternalRuntimeService {
     return JSON.stringify({
       kind: request.kind,
       cwd: request.cwd,
+      mainRoot: request.mainRoot ?? request.cwd,
       model: request.model ?? null,
       modelKey: request.modelKey ?? null,
       permissionMode: request.permissionMode ?? "default",
@@ -510,21 +522,26 @@ export class ExternalRuntimeService {
   }
 
   private captureAuthority(
-    request: Pick<ExternalRuntimeStartRequest, "cwd" | "permissionMode" | "planMode">,
+    request: Pick<ExternalRuntimeStartRequest, "cwd" | "mainRoot" | "permissionMode" | "planMode">,
   ): ExternalRuntimeAuthority {
     const cwdKey = canonicalKey(request.cwd);
-    const binding = this.deps.resolveProjectBinding(request.cwd);
+    const mainRoot = request.mainRoot ?? request.cwd;
+    const mainRootKey = canonicalKey(mainRoot);
+    const binding = this.deps.resolveProjectBinding(mainRoot);
     const projectBinding = binding
       ? { projectId: binding.projectId, mainRootId: binding.mainRootId }
       : undefined;
     const values = {
       cwdKey,
+      mainRoot,
+      mainRootKey,
       projectBinding,
-      projectTrusted: (this.deps.projectTrust ?? getTrustCachedSync)(request.cwd) === "trusted",
+      projectTrusted: (this.deps.projectTrust ?? getTrustCachedSync)(mainRoot) === "trusted",
       permissionMode: request.permissionMode ?? "default",
       planMode: request.planMode === true,
       hostToolsEnabled: this.areHostToolsEnabled(),
       epoch: this.workspaceRevocationEpochs.get(cwdKey) ?? 0,
+      mainRootEpoch: this.workspaceRevocationEpochs.get(mainRootKey) ?? 0,
     };
     return { ...values, key: JSON.stringify(values) };
   }
@@ -660,39 +677,69 @@ export class ExternalRuntimeService {
    * thread before sending its turn.
    */
   ensure(request: ExternalRuntimeStartRequest): Promise<ExternalRuntimeSession> {
-    return this.enqueueLifecycle(request.sessionId, async () => {
-      if (!this.isEnabled()) {
-        throw new Error(
-          "External Agent Runtimes are disabled. Enable the `external_agent_runtime` " +
-            "feature flag to run a session on Codex or Claude Code.",
-        );
-      }
-      if (request.ownerWindow?.isDestroyed?.()) {
-        throw new Error(`external runtime owner window is closed: ${request.sessionId}`);
-      }
-      const ownerId = request.ownerWindow?.webContents.id;
-      this.assertOwner(request.sessionId, ownerId);
+    return this.enqueueLifecycle(request.sessionId, () => this.ensureExclusive(request));
+  }
+
+  /** A remote continuation cannot discard policy/instructions owned by the live Desktop runtime. */
+  ensureContinuation(request: ExternalRuntimeStartRequest): Promise<ExternalRuntimeSession> {
+    return this.enqueueLifecycle(request.sessionId, () => {
       const entry = this.sessions.get(request.sessionId);
-      // A faulted runtime is never reused: the caller has already been told its
-      // turn failed and dropped its own binding expecting the next start to
-      // replace the provider, not to hand back the one that just broke.
+      const configuration = entry?.continuationConfiguration;
+      const continuation = {
+        ...configuration,
+        ...request,
+        permissionMode: request.permissionMode ?? configuration?.permissionMode ?? "default",
+      };
       if (
-        entry &&
-        !entry.lifecycle.faulted &&
-        this.authorityStillCurrent(entry.cwd, entry.authority) &&
-        entry.configurationKey === this.configurationKey(request) &&
-        entry.workspaceProfile ===
-          requestedExternalRuntimeProfile(request.sessionId, request.workspaceProfile)
-      ) {
-        return entry.session;
-      }
-      return this.startExclusive(request);
+        entry?.recorder.hasOpenRun &&
+        entry.configurationKey !== this.configurationKey(continuation)
+      )
+        throw new Error("Stop the running task before changing its runtime configuration");
+      return this.ensureExclusive(continuation);
     });
+  }
+
+  private async ensureExclusive(
+    request: ExternalRuntimeStartRequest,
+  ): Promise<ExternalRuntimeSession> {
+    request.assertStartAuthority?.();
+    if (!this.isEnabled()) {
+      throw new Error(
+        "External Agent Runtimes are disabled. Enable the `external_agent_runtime` " +
+          "feature flag to run a session on Codex or Claude Code.",
+      );
+    }
+    if (request.ownerWindow?.isDestroyed?.()) {
+      throw new Error(`external runtime owner window is closed: ${request.sessionId}`);
+    }
+    const ownerId = request.ownerWindow?.webContents.id;
+    this.assertOwner(request.sessionId, ownerId);
+    const entry = this.sessions.get(request.sessionId);
+    // A faulted runtime is never reused: the caller has already been told its
+    // turn failed and dropped its own binding expecting the next start to
+    // replace the provider, not to hand back the one that just broke.
+    if (
+      entry &&
+      !entry.lifecycle.faulted &&
+      this.authorityStillCurrent(entry.cwd, entry.authority) &&
+      entry.configurationKey === this.configurationKey(request) &&
+      entry.workspaceProfile ===
+        requestedExternalRuntimeProfile(request.sessionId, request.workspaceProfile)
+    ) {
+      request.assertStartAuthority?.();
+      return entry.session;
+    }
+    return this.startExclusive(request);
   }
 
   private async startExclusive(
     request: ExternalRuntimeStartRequest,
   ): Promise<ExternalRuntimeSession> {
+    // Do not retain a paired socket's startup grant in the long-lived runtime
+    // hooks. A disconnect after successful startup must not revoke its work.
+    const { assertStartAuthority, ...runtimeRequest } = request;
+    request = runtimeRequest;
+    assertStartAuthority?.();
     if (!this.isEnabled()) {
       throw new Error(
         "External Agent Runtimes are disabled. Enable the `external_agent_runtime` " +
@@ -717,12 +764,14 @@ export class ExternalRuntimeService {
     // old CLI running with authority the user has just withdrawn.
     if (previous && (!authority.projectTrusted || previous.authority.key !== authority.key)) {
       await this.stopExclusive(request.sessionId);
+      assertStartAuthority?.();
     }
 
     // Do not tear down a usable runtime or reserve its replacement until the
     // replacement's program and working directory have passed preflight.
     const codexLaunch =
       request.kind === "codex" ? await this.prepareCodexLaunch(request.cwd) : undefined;
+    assertStartAuthority?.();
 
     // Environment recovery can wait for a shell. Recheck the caller's authority
     // after that wait, before closing a live runtime or spawning its replacement.
@@ -733,7 +782,10 @@ export class ExternalRuntimeService {
       throw new Error(`external runtime owner window closed while preparing: ${request.sessionId}`);
     }
 
-    if ((this.workspaceRevocationEpochs.get(authority.cwdKey) ?? 0) !== authority.epoch) {
+    if (
+      (this.workspaceRevocationEpochs.get(authority.cwdKey) ?? 0) !== authority.epoch ||
+      (this.workspaceRevocationEpochs.get(authority.mainRootKey) ?? 0) !== authority.mainRootEpoch
+    ) {
       await this.stopExclusive(request.sessionId);
       throw new Error("Project trust was revoked while preparing the external runtime");
     }
@@ -751,6 +803,7 @@ export class ExternalRuntimeService {
     // Replacing an existing session: close the old one first so two runtimes
     // cannot interleave turns on the same business session.
     await this.stopExclusive(request.sessionId, preserveBackgroundWork);
+    assertStartAuthority?.();
     if (!this.authorityStillCurrent(request.cwd, authority)) {
       await this.stopExclusive(request.sessionId);
       throw new Error("External runtime authority changed while replacing its provider");
@@ -818,7 +871,7 @@ export class ExternalRuntimeService {
         : undefined;
     const recorder = new ExternalRuntimeSessionRecorder(
       request.sessionId,
-      request.cwd,
+      authority.mainRoot,
       request.modelKey ?? `${request.kind}/${request.model ?? "default"}`,
       request.kind,
       authority.projectBinding,
@@ -827,7 +880,7 @@ export class ExternalRuntimeService {
     // be bound and resolved before instructions, tools or source access use it.
     const profile = bindExternalRuntimeProfile({
       sessionId: request.sessionId,
-      cwd: request.cwd,
+      cwd: authority.mainRoot,
       requested: request.workspaceProfile,
     });
     // The same guidance reaches both runtimes (Codex as developer instructions,
@@ -1082,6 +1135,7 @@ export class ExternalRuntimeService {
     // Register immediately before the runtime starts: a host tool call on the
     // first turn needs its bucket, while all fallible preparation above should
     // happen before this externally visible reservation is made.
+    assertStartAuthority?.();
     this.deps.registerSession(request.sessionId, request.cwd, ownerId);
     try {
       session = await startExternalRuntimeSession({
@@ -1272,24 +1326,24 @@ export class ExternalRuntimeService {
       throw error;
     }
 
-    if (!this.authorityStillCurrent(request.cwd, authority)) {
+    try {
+      assertStartAuthority?.();
+      if (!this.authorityStillCurrent(request.cwd, authority)) {
+        throw new Error("External runtime authority changed while starting");
+      }
+      if (request.ownerWindow?.isDestroyed?.()) {
+        throw new Error(
+          `external runtime owner window closed while starting: ${request.sessionId}`,
+        );
+      }
+    } catch (error) {
       lifecycle.active = false;
       try {
         await session.close();
       } finally {
         this.releaseHostSession(request.sessionId);
       }
-      throw new Error("External runtime authority changed while starting");
-    }
-
-    if (request.ownerWindow?.isDestroyed?.()) {
-      lifecycle.active = false;
-      try {
-        await session.close();
-      } finally {
-        this.releaseHostSession(request.sessionId);
-      }
-      throw new Error(`external runtime owner window closed while starting: ${request.sessionId}`);
+      throw error;
     }
 
     this.sessions.set(request.sessionId, {
@@ -1302,6 +1356,13 @@ export class ExternalRuntimeService {
       ...(profile.pinned ? { workspaceProfile: profile.pinned } : {}),
       routingKey: this.routingKey(request),
       configurationKey: this.configurationKey(request),
+      continuationConfiguration: {
+        planMode: request.planMode,
+        hasGoal: request.hasGoal,
+        developerInstructions: request.developerInstructions,
+        workspaceProfile: request.workspaceProfile,
+        permissionMode: request.permissionMode,
+      },
       authority,
       turnTail: Promise.resolve(),
       lifecycle,
@@ -1523,7 +1584,7 @@ export class ExternalRuntimeService {
                   originClientMessageId: entry.recorder.operationIntentId ?? "",
                   sourceContext: createExternalRuntimeSourceContext({
                     sessionId,
-                    cwd: entry.cwd,
+                    cwd: entry.authority.mainRoot,
                     settingsScope: "full",
                   }),
                   isCurrent: () =>
@@ -1709,7 +1770,7 @@ export class ExternalRuntimeService {
           const snapshot = entry.recorder.memorySnapshot();
           const source = createExternalRuntimeSourceContext({
             sessionId,
-            cwd: entry.cwd,
+            cwd: entry.authority.mainRoot,
             settingsScope: "full",
           });
           if (snapshot)
@@ -1722,7 +1783,7 @@ export class ExternalRuntimeService {
                 if (
                   this.sessions.get(sessionId) !== entry ||
                   !entry.lifecycle.active ||
-                  (this.deps.projectTrust ?? getTrustCachedSync)(entry.cwd) !== "trusted" ||
+                  !this.authorityStillCurrent(entry.cwd, entry.authority) ||
                   !source.isSourceProfileCurrent()
                 )
                   throw new Error("External memory source was replaced or revoked");
@@ -1876,7 +1937,9 @@ export class ExternalRuntimeService {
         ...this.sessions,
       ]),
     ]
-      .filter(([, entry]) => entry.authority.cwdKey === cwdKey)
+      .filter(
+        ([, entry]) => entry.authority.cwdKey === cwdKey || entry.authority.mainRootKey === cwdKey,
+      )
       .map(([sessionId]) => sessionId);
     const failures: unknown[] = [];
     const interrupts: Promise<void>[] = [];

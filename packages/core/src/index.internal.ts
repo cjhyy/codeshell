@@ -209,7 +209,10 @@ export {
 export { backgroundJobRegistry } from "./tool-system/builtin/background-jobs.js";
 export {
   cancelBackgroundWorkForUI,
+  dropBackgroundJobHistoryForSession,
+  findActiveBackgroundJobForExternalSession,
   listBackgroundWorkForUI,
+  markBackgroundJobInterruptedForUI,
   type BackgroundWorkEntry,
 } from "./tool-system/builtin/background-work.js";
 export {

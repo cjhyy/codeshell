@@ -5,6 +5,8 @@ import {
   panelProcessMethods,
   panelResourceMethods,
   panelToolJobMethods,
+  panelBackgroundServiceMethods,
+  backgroundServiceLimits,
 } from "@cjhyy/code-shell-server/panels";
 import { panelAppStorageQuotaBytes } from "@cjhyy/code-shell-server/storage";
 import type { PanelAppPermission } from "../shared/panel-apps.js";
@@ -72,6 +74,7 @@ export function desktopPanelCapabilities(
     automationUniqueCreate?: boolean;
     automationConditionalMutations?: boolean;
     tasks?: unknown;
+    services?: boolean;
     mediaMethods: string[];
     limits?: any;
   },
@@ -115,6 +118,12 @@ export function desktopPanelCapabilities(
   if (permitted.has("media")) methods.push(...options.mediaMethods);
   if (options.tasks && permitted.has("process") && permitted.has("resources"))
     methods.push(...panelToolJobMethods);
+  const services =
+    options.services === true &&
+    permitted.has("background.services") &&
+    permitted.has("process") &&
+    permitted.has("context.workspace");
+  if (services) methods.push(...panelBackgroundServiceMethods);
   if (taskCookies) methods.push("credentials.cookies.listForTask");
   return {
     host: "desktop" as const,
@@ -137,8 +146,32 @@ export function desktopPanelCapabilities(
             : undefined,
         limits: options.limits,
       }),
+      ...(services
+        ? {
+            services: {
+              version: 1,
+              errors: [
+                "SERVICE_CAPACITY",
+                "SERVICE_CONFIG_CONFLICT",
+                "SERVICE_REVISION_CONFLICT",
+                "SERVICE_REQUEST_KEY_CONFLICT",
+              ],
+              ownership: "project",
+              continuesAfterDisconnect: true,
+              continuesAfterHostExit: false,
+              ...backgroundServiceLimits,
+            },
+          }
+        : {}),
       modelTraces: { writeOnly: true, coverage: "logical-input", ...panelModelTraceLimits },
       methodLimits: {
+        ...Object.fromEntries(
+          panelBackgroundServiceMethods.map((method) => [method, { timeoutMs: 45_000 }]),
+        ),
+        "services.configure": { maxParamsBytes: 64 * 1024 + 4096, timeoutMs: 45_000 },
+        "services.read": { maxResultBytes: 1024 * 1024 + 4096, timeoutMs: 45_000 },
+        "services.control": { timeoutMs: 45_000 },
+        "services.setDesired": { timeoutMs: 45_000 },
         "modelTraces.start": { maxParamsBytes: panelModelTraceLimits.maxParamsBytes },
         "modelTraces.finish": { maxParamsBytes: panelModelTraceLimits.maxParamsBytes },
         "storage.getSnapshot": { maxResultBytes: options.limits?.maxResultBytes ?? storageBytes },

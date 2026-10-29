@@ -143,6 +143,10 @@ describe("architecture growth budgets", () => {
     expect(
       matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/cc-room/linked-session-ipc.ts", /ipcMain\.handle\(/g) +
+        matches(
+          "packages/desktop/src/main/cc-room/linked-session-observation-ipc.ts",
+          /ipcMain\.handle\(/g,
+        ) +
         matches("packages/desktop/src/main/project-panel-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/project-panel-version-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/remote-link-ipc.ts", /ipcMain\.handle\(/g) +
@@ -162,6 +166,9 @@ describe("architecture growth budgets", () => {
         // Link authorization stay in Main; extraction must not hide them.
         matches("packages/desktop/src/main/linked-file-sources-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/task-inbox/task-inbox-ipc.ts", /handle\("taskInbox:/g) +
+        // Three owner-scoped DriveAgent task routes: list, cancel and the user's
+        // explicit mark-ended for a task no live process reports.
+        matches("packages/desktop/src/main/cc-room/background-work-ipc.ts", /ipcMain\.handle\(/g) +
         // Nine local-only Lab routes: eight existing operations plus P2 native
         // adoption. Exact body/scope review and post-dialog revalidation remain
         // in this owner-scoped registrar; ordinary RPC cannot approve adoption.
@@ -191,10 +198,12 @@ describe("architecture growth budgets", () => {
       // +1 metadata-only session grouping route shares the same fixed store and caller guard.
       // +1 review:preparePrompt; prompt assembly and Git reads stay in the review service.
       // +1 externalRuntime:yieldGoal; the owner check and Goal state stay in the service.
+      // +3 backgroundWork list/cancelJob/markInterrupted; ownership checks stay in Core.
       // +2 main-frame-owned Mimi companion setting and preview routes.
       // +1 computerUse:input (stop/resume/force-stop); the gate itself lives in
       // the CUA proxy, so this route only flips host-owned state.
-    ).toBeLessThanOrEqual(366);
+      // The merged tree counts 367: the previous ceiling carried two spare routes.
+    ).toBeLessThanOrEqual(367);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.

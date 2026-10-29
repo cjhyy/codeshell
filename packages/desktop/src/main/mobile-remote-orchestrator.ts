@@ -17,12 +17,20 @@ import { MobileOutputRecovery } from "./mobile-remote/output-recovery.js";
 import {
   mobileOutputRecoveryAuthority,
   mobileSessionCommandAuthority,
+  mobileNewSessionAuthority,
 } from "./mobile-remote/output-recovery-authority.js";
 import {
   MobileExternalRuntimeCommands,
   isPersistedExternalRuntime,
+  persistedExternalRuntimeModelKey,
+  type MobileRuntimeStart,
 } from "./mobile-remote/external-runtime-commands.js";
 import type { ExternalRuntimeService } from "./external-runtime-service.js";
+import type {
+  ExternalApprovalEvent,
+  ExternalRuntimeApprovals,
+} from "./external-runtime-approvals.js";
+import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models.js";
 import { SessionManager } from "@cjhyy/code-shell-core";
 import { requireRendererProjectEntryPath } from "./renderer-project-path.js";
 import type { OwnedExternalStreamEntry } from "./owned-external-stream.js";
@@ -92,6 +100,9 @@ export interface MobileRemoteOrchestratorDeps {
   /** The agent worker bridge; null until the first window creates it. */
   getBridge: () => AgentBridge | null;
   getExternalRuntimeService?: () => ExternalRuntimeService | null;
+  getExternalRuntimeModels?: () => Promise<ExternalRuntimeModelEntry[]>;
+  startMobileRuntime?: (request: MobileRuntimeStart) => Promise<void>;
+  getExternalRuntimeApprovals?: () => ExternalRuntimeApprovals | null;
   /** Send an IPC payload to every live desktop window. */
   broadcastToWindows: (channel: string, payload: unknown) => void;
 }
@@ -114,6 +125,32 @@ export class MobileRemoteOrchestrator {
         isPersistedExternalRuntime(new SessionManager().readSessionState(id)),
       exists: (id) => !!new SessionManager().readSessionState(id),
       attachmentPath: requireRendererProjectEntryPath,
+      modelKey: (id) => persistedExternalRuntimeModelKey(new SessionManager().readSessionState(id)),
+      startRuntime: deps.startMobileRuntime,
+      approvals: deps.getExternalRuntimeApprovals,
+      approvalEvent: (viewer, event) => {
+        if (event.type === "requested")
+          deps.remote.sendRawToViewer(
+            viewer,
+            JSON.stringify({
+              jsonrpc: "2.0",
+              method: "agent/approvalRequest",
+              params: {
+                sessionId: event.sessionId,
+                requestId: event.requestId,
+                request: event.request,
+              },
+            }),
+          );
+        else
+          deps.remote.sendToViewer(viewer, {
+            type: "approval.resolved",
+            approvalId: event.requestId,
+            sessionId: event.sessionId,
+            ...(event.approved !== undefined ? { approved: event.approved } : {}),
+            ...(event.answer !== undefined ? { answer: event.answer } : {}),
+          });
+      },
     });
     this.outputRecovery = new MobileOutputRecovery({
       root: sessionsRoot,
@@ -135,6 +172,10 @@ export class MobileRemoteOrchestrator {
 
   mirrorOwnedExternalStream(entry: OwnedExternalStreamEntry): void {
     this.outputRecovery.mirrorOwned(entry);
+  }
+
+  mirrorExternalApproval(event: ExternalApprovalEvent): void {
+    void this.externalCommands.mirrorApproval(event);
   }
 
   // ── Projects ───────────────────────────────────────────────────────────────
@@ -334,6 +375,8 @@ export class MobileRemoteOrchestrator {
       remote: this.deps.remote,
       outputRecovery: this.outputRecovery,
       externalCommands: this.externalCommands,
+      externalRuntimeModels: () => this.deps.getExternalRuntimeModels?.() ?? Promise.resolve([]),
+      newSessionAuthority: mobileNewSessionAuthority,
       uploads: this.deps.uploads,
       roomManager: this.deps.roomManager,
       approvalBridge: this.deps.approvalBridge,

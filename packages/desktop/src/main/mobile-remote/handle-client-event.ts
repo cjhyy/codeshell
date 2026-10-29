@@ -20,6 +20,11 @@ import type { TranscriptSubscriptionManager } from "../cc-room/transcript-subscr
 import { getSessionTranscript } from "../transcript-reader.js";
 import { handleCcRoomEvent } from "./handle-cc-room-event.js";
 import type { MobileExternalRuntimeCommands } from "./external-runtime-commands.js";
+import {
+  parseExternalRuntimeModelKey,
+  type ExternalRuntimeModelEntry,
+} from "../../shared/external-runtime-models.js";
+import type { mobileNewSessionAuthority } from "./output-recovery-authority.js";
 import type { MobileOutputRecovery } from "./output-recovery.js";
 import { handleRoomEvent } from "./handle-room-event.js";
 
@@ -60,6 +65,8 @@ export interface MobileDeviceState {
 export interface OrchestratorCtx {
   outputRecovery?: MobileOutputRecovery;
   externalCommands?: MobileExternalRuntimeCommands;
+  externalRuntimeModels?: () => Promise<ExternalRuntimeModelEntry[]>;
+  newSessionAuthority?: typeof mobileNewSessionAuthority;
   remote: RemoteHostManager;
   uploads: MobileUploadService;
   roomManager: RoomManager;
@@ -275,6 +282,26 @@ export async function handleClientEvent(
     }
     return;
   }
+  if (event.type === "runtime.models") {
+    if (
+      !event.viewerId ||
+      !event.deviceId ||
+      !ctx.remote.hasAuthenticatedViewer(event.viewerId, event.deviceId)
+    )
+      return;
+    try {
+      const models = (await ctx.externalRuntimeModels?.()) ?? [];
+      if (ctx.remote.hasAuthenticatedViewer(event.viewerId, event.deviceId))
+        ctx.remote.sendToViewer(event.viewerId, { type: "runtime.models.ok", models });
+    } catch {
+      ctx.remote.sendToViewer(event.viewerId, {
+        type: "runtime.models.ok",
+        models: [],
+        message: "暂时无法读取桌面的外部运行时模型。请稍后刷新。",
+      });
+    }
+    return;
+  }
   // ── CC Room (external claude CLI sessions) — checked first so "ccRoom.*"
   // never gets misrouted by the "room." prefix check below ───────────────
   if (event.type.startsWith("ccRoom.")) {
@@ -319,60 +346,97 @@ export async function handleClientEvent(
       });
     }
     ctx.replayPendingMobileApprovals(event.sessionId, deviceId);
+    await ctx.externalCommands?.replayApprovals(event.viewerId, deviceId, event.sessionId);
     return;
   }
   if (event.type === "session.create") {
     let selection: MobileSessionCreateResolution;
+    let nextState: MobileDeviceState;
     try {
       selection = await resolveMobileSessionCreateTarget(event, {
         resolveProjectRoot: ctx.resolveMobileProjectRoot,
         isLegacyCwdAllowed: ctx.validateMobileSessionCwd,
       });
+      const sessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      nextState = {
+        ...st,
+        sessionId,
+        selectedSessionId: sessionId,
+        selectedCwd: selection.cwd,
+        selectedProjectId: selection.projectId,
+        selectedRootId: selection.rootId,
+      };
+      // Publish the device selection only after its fresh command authority is valid.
+      if (ctx.newSessionAuthority)
+        ctx.externalCommands?.created(
+          event.viewerId,
+          deviceId,
+          sessionId,
+          ctx.newSessionAuthority(
+            ctx.effectiveMobileRunCwd(nextState),
+            selection.projectId,
+            selection.rootId,
+          ),
+        );
     } catch (error) {
-      reply({ type: "error", message: error instanceof Error ? error.message : String(error) });
+      reply({
+        type: "error",
+        message: error instanceof Error ? error.message : String(error),
+        ...(event.clientRequestId ? { clientRequestId: event.clientRequestId } : {}),
+      });
       return;
     }
     // Mint a fresh session for THIS device and make it its active selection.
-    st.sessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-    st.selectedSessionId = st.sessionId;
-    st.selectedCwd = selection.cwd;
-    st.selectedProjectId = selection.projectId;
-    st.selectedRootId = selection.rootId;
-    ctx.mobileSessionCwds.set(st.sessionId, st.selectedCwd);
-    if (st.permissionMode) ctx.mobilePermissionModes.set(st.sessionId, st.permissionMode);
+    Object.assign(st, nextState);
+    const sessionId = nextState.sessionId!;
+    ctx.mobileSessionCwds.set(sessionId, st.selectedCwd ?? null);
+    if (st.permissionMode) ctx.mobilePermissionModes.set(sessionId, st.permissionMode);
     reply({
       type: "chat.accepted",
       ...(event.clientRequestId ? { clientRequestId: event.clientRequestId } : {}),
-      sessionId: st.sessionId,
+      sessionId,
       cwd: st.selectedCwd,
       ...(selection.projectId !== undefined ? { projectId: selection.projectId } : {}),
       ...(selection.rootId ? { rootId: selection.rootId } : {}),
     });
-    if (deviceId) ctx.sendMobilePermissionMode(deviceId, st.sessionId);
+    if (deviceId) ctx.sendMobilePermissionMode(deviceId, sessionId);
     else {
       reply({
         type: "permission.mode",
-        sessionId: st.sessionId,
-        mode: ctx.mobilePermissionModes.get(st.sessionId) ?? "default",
+        sessionId,
+        mode: ctx.mobilePermissionModes.get(sessionId) ?? "default",
       });
     }
     return;
   }
   if (event.type === "chat.send") {
     const sessionId = resolveSessionId(event.sessionId);
+    const requestedRuntime = event.modelKey ? parseExternalRuntimeModelKey(event.modelKey) : null;
+    if (event.modelKey && !requestedRuntime) {
+      reply({
+        type: "error",
+        message: "请选择有效的外部运行时模型。",
+        clientMessageId: event.clientMessageId,
+      });
+      return;
+    }
     const external =
-      ctx.externalCommands?.isExternal(sessionId, event.viewerId, sessionId === st.sessionId) ??
-      false;
+      !!requestedRuntime ||
+      (ctx.externalCommands?.isExternal(sessionId, event.viewerId, sessionId === st.sessionId) ??
+        false);
     let externalTarget: Awaited<ReturnType<MobileExternalRuntimeCommands["prepare"]>> | undefined;
     if (external) {
       try {
-        externalTarget = await ctx.externalCommands!.prepare(event.viewerId, deviceId, sessionId);
-      } catch {
+        externalTarget = await ctx.externalCommands!.prepare(event.viewerId, deviceId, sessionId, {
+          modelKey: event.modelKey,
+          permissionMode: ctx.mobilePermissionModes.get(sessionId) ?? st.permissionMode,
+        });
+      } catch (error) {
         if (event.viewerId)
           ctx.remote.sendToViewer(event.viewerId, {
             type: "error",
             message:
-              "External runtime command unavailable; select its live Desktop-owned session again",
+              error instanceof Error ? error.message : "无法启动桌面的外部运行时。请重新选择会话。",
             ...(event.clientMessageId ? { clientMessageId: event.clientMessageId } : {}),
           });
         return;
@@ -431,13 +495,19 @@ export async function handleClientEvent(
     }
     ctx.mobileSessionCwds.set(sessionId, dispatched.cwd);
     const title = text || `图片 ${dispatched.metas.length} 张`;
-    if (!external)
-      ctx.broadcastMobileSession({
+    ctx.broadcastMobileSession({
+      sessionId,
+      cwd: dispatched.cwd,
+      title,
+      prompt: text,
+      clientMessageId: dispatched.clientMessageId,
+    });
+    if (!external && event.viewerId && deviceId)
+      await ctx.externalCommands?.observe({
+        type: "session.select",
         sessionId,
-        cwd: dispatched.cwd,
-        title,
-        prompt: text,
-        clientMessageId: dispatched.clientMessageId,
+        viewerId: event.viewerId,
+        deviceId,
       });
     // External acceptance belongs only to the authenticated submitting tab.
     chatReply({
@@ -446,13 +516,12 @@ export async function handleClientEvent(
       cwd: dispatched.cwd,
       clientMessageId: dispatched.clientMessageId,
       attachments: dispatched.summaries,
+      ...(externalTarget?.modelKey ? { modelKey: externalTarget.modelKey } : {}),
     });
     return;
   }
   if (
-    ["approval.respond", "model.set", "goal.extend", "goal.clear", "permission.setMode"].includes(
-      event.type,
-    ) &&
+    ["model.set", "goal.extend", "goal.clear"].includes(event.type) &&
     ctx.externalCommands?.isExternal(
       resolveSessionId("sessionId" in event ? event.sessionId : undefined),
       event.viewerId,
@@ -466,6 +535,33 @@ export async function handleClientEvent(
     return;
   }
   if (event.type === "approval.respond") {
+    const selectedSessionId = resolveSessionId(event.sessionId);
+    if (ctx.externalCommands?.isExternal(selectedSessionId, event.viewerId)) {
+      try {
+        const settled = await ctx.externalCommands.respondApproval(
+          event.viewerId,
+          deviceId,
+          selectedSessionId,
+          event.approvalId,
+          {
+            approved: event.decision === "approve",
+            ...(event.reason !== undefined ? { reason: event.reason } : {}),
+            ...(event.answer !== undefined ? { answer: event.answer } : {}),
+            ...(event.scope ? { scope: event.scope } : {}),
+            ...(event.pathScope ? { pathScope: event.pathScope } : {}),
+          },
+        );
+        if (!settled) throw new Error("审批已结束，或不属于当前会话。");
+      } catch (error) {
+        if (event.viewerId)
+          ctx.remote.sendToViewer(event.viewerId, {
+            type: "error",
+            approvalId: event.approvalId,
+            message: error instanceof Error ? error.message : "审批未提交。",
+          });
+      }
+      return;
+    }
     // Build the same ApprovalResult branch the renderer's preload assembles:
     // approve carries optional answer (AskUser) + remembered scope/pathScope;
     // reject carries an optional reason. Decisions still go through the core
@@ -530,12 +626,20 @@ export async function handleClientEvent(
     return;
   }
   if (event.type === "session.list") {
-    // Every desktop session the sidebar would show (top-level, existing cwd).
-    const { sessions } = await listDiskSessions({ limit: 100 });
+    // Filter before paging so busy projects cannot hide another project's history.
+    const { sessions, nextCursor } = await listDiskSessions({
+      limit: 100,
+      cursor: event.cursor,
+      cwds: event.cwds,
+    });
     for (const s of sessions) ctx.mobileSessionCwds.set(s.id, s.cwd || null);
     const activeSessionId = st.selectedSessionId ?? runContext.sessionId;
-    reply({
+    const replyPage = (page: MobileServerEvent) =>
+      event.viewerId ? ctx.remote.sendToViewer(event.viewerId, page) : reply(page);
+    replyPage({
       type: "session.list.ok",
+      ...(event.requestId ? { requestId: event.requestId } : {}),
+      nextCursor,
       sessions: sessions.flatMap((s) =>
         s.parentSessionId || s.origin === "subagent"
           ? []
@@ -546,6 +650,8 @@ export async function handleClientEvent(
                 cwd: s.cwd,
                 updatedAt: s.updatedAt,
                 origin: s.origin,
+                ...(s.model ? { model: s.model } : {}),
+                ...(s.provider ? { provider: s.provider } : {}),
               },
             ],
       ),
@@ -626,6 +732,10 @@ export async function handleClientEvent(
     return;
   }
   if (event.type === "model.set") {
+    if (parseExternalRuntimeModelKey(event.model)) {
+      reply({ type: "error", message: "请在对话的模型选择器中选择外部运行时。" });
+      return;
+    }
     // Only confirm the model AFTER the worker actually applied it; an invalid
     // model name must not be shown as the current model. Model is
     // engine-global, so a successful change broadcasts to all devices.

@@ -41,3 +41,5 @@ export * from "./panels/execution-gate.js";
 export * from "./panels/package-mutation.js";
 
 export * from "./panels/model-traces.js";
+
+export * from "./panels/background-services.js";

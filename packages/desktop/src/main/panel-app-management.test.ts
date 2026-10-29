@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { execFileSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
@@ -17,9 +18,12 @@ import {
   listProjectPanelApps,
   panelAppPackageDir,
 } from "@cjhyy/code-shell-core";
-import { createPanelManagement } from "@cjhyy/code-shell-server/panels";
+import { createPanelManagement, panelExecutionGate } from "@cjhyy/code-shell-server/panels";
 import { createProjectPanelAppUpdateService } from "./panel-app-update-service.js";
 import { createDesktopPanelManagement } from "./panel-app-management.js";
+import { resolveDesktopPanelProjectPath } from "./panel-project-scope.js";
+import { ProjectStore } from "./project-store.js";
+import { SessionCwdIndex } from "./session-cwd-index.js";
 
 const originalHome = process.env.HOME;
 let root: string;
@@ -63,6 +67,62 @@ async function fixture() {
 }
 const context = { ownerId: "desktop", authorize: () => true };
 
+test("paired workspaces reuse a native binding across project roots without binding another project", async () => {
+  const { cwd, install } = await fixture();
+  const git = (...args: string[]) =>
+    execFileSync("git", ["-C", cwd, ...args], { timeout: 3_000, stdio: "pipe" });
+  git("init", "--initial-branch=main");
+  git(
+    "-c",
+    "user.name=Fixture",
+    "-c",
+    "user.email=fixture@example.invalid",
+    "commit",
+    "--allow-empty",
+    "-m",
+    "fixture",
+  );
+  const worktree = join(root, "session-worktree");
+  git("worktree", "add", "-b", "fixture", worktree);
+  const secondary = join(root, "secondary");
+  const other = join(root, "other-project");
+  for (const directory of [secondary, other]) mkdirSync(directory);
+  const store = new ProjectStore({
+    file: join(root, "registry", "projects.json"),
+    recentsFile: join(root, "registry", "recents.json"),
+    migrationMarkerFile: join(root, "registry", "migration.json"),
+    sessionIndex: new SessionCwdIndex({ sessionsRoot: join(root, "sessions") }),
+    noRepoPath: join(root, "no-repo"),
+  });
+  const project = await store.createFromPath(cwd);
+  await store.addRoot(project.id, secondary);
+  await store.createFromPath(other);
+  const app = await install("shared-binding-panel");
+  const native = createDesktopPanelManagement(cwd);
+  const initial = (await native.snapshot())[0]!;
+  const bound = (await native.binding(context, app.id, true, initial.revision))[0]!;
+  const settingsFile = join(cwd, ".code-shell", "settings.json");
+  const originalSettings = readFileSync(settingsFile, "utf8");
+  for (const workspace of [cwd, secondary, worktree, other]) {
+    const bindingCwd = resolveDesktopPanelProjectPath(store, workspace);
+    expect(bindingCwd).toBe(workspace === other ? other : cwd);
+    const phone = createPanelManagement({ cwd: workspace, bindingCwd, projectPackages: true });
+    const snapshot = await phone.snapshot();
+    expect(snapshot.workspace).toBe(bindingCwd);
+    expect(snapshot.panels[0]!.bound).toBe(workspace !== other);
+    expect(snapshot.panels[0]!.enabled).toBe(workspace !== other);
+    if (workspace !== other) expect(snapshot.panels[0]!.revision).toBe(bound.revision);
+    phone.close();
+  }
+  // Reading the phone catalog does not copy bindings or change a package pin.
+  expect(readFileSync(settingsFile, "utf8")).toBe(originalSettings);
+  for (const workspace of [secondary, worktree, other])
+    expect(
+      new SettingsManager(workspace, "full").getRawForScope("project", workspace),
+    ).not.toHaveProperty("panelAppBindings");
+  native.close();
+});
+
 test("Desktop binds exact project bytes, preserves another device's unrelated changes, and rejects a stale toggle", async () => {
   const { cwd, install } = await fixture();
   const first = await install("first-panel");
@@ -92,7 +152,7 @@ test("Desktop binds exact project bytes, preserves another device's unrelated ch
   const bound = next.find((app) => app.appId === first.id)!;
   await phone.binding(context, first.id, false, bound.revision);
   await expect(desktop.binding(context, first.id, true, bound.revision)).rejects.toThrow(
-    "配置已改变",
+    "面板已改变，请刷新后重试。",
   );
   expect(changes).toBe(1);
   project = settings.getRawForScope("project", cwd, { strict: true });
@@ -113,7 +173,7 @@ test("a catalog upgrade moves a bound project to the new bytes and stales its ol
   expect(moved.revision).not.toBe(pinned.revision);
   expect((await listProjectPanelApps(cwd))[0]!.packageDigest).toBe(latest.packageDigest);
   await expect(desktop.binding(context, old.id, true, pinned.revision)).rejects.toThrow(
-    "配置已改变",
+    "面板已改变，请刷新后重试。",
   );
   const otherCwd = join(root, "other");
   mkdirSync(otherCwd);
@@ -322,4 +382,36 @@ test("Desktop diagnoses a broken package separately and repairs its binding thro
     version: "2.0.0",
   });
   desktop.close();
+});
+
+test("stale Desktop toggle rejects before service draining and preserves the active binding", async () => {
+  const { cwd, install } = await fixture();
+  await install("fixture");
+  const desktop = createDesktopPanelManagement(cwd);
+  const initial = (await desktop.snapshot())[0]!;
+  await desktop.binding(context, "fixture", true, initial.revision);
+  const selected = (await desktop.snapshot())[0]!;
+  let drains = 0;
+  const release = panelExecutionGate.enter({
+    appId: "fixture",
+    projectPath: cwd,
+    holder: { kind: "service", label: "feed" },
+  });
+  const unregister = panelExecutionGate.registerServiceDrain(async () => {
+    drains++;
+  });
+  try {
+    await expect(desktop.binding(context, "fixture", false, initial.revision)).rejects.toThrow(
+      "面板已改变，请刷新后重试。",
+    );
+    expect(drains).toBe(0);
+    expect((await desktop.snapshot())[0]).toMatchObject({
+      bound: true,
+      revision: selected.revision,
+    });
+    expect(panelExecutionGate.blockers((scope) => scope.appId === "fixture")).toHaveLength(1);
+  } finally {
+    release();
+    unregister();
+  }
 });

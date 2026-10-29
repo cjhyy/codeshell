@@ -127,6 +127,9 @@ async function fixture(
     review?: PanelReview;
     discovery?: PanelDiscovery;
     canRestorePackages?: boolean;
+    workspace?: string;
+    hasProject?: boolean;
+    hostLabel?: string;
     intercept?: (request: Request) => Response | Promise<Response> | undefined;
   } = {},
 ) {
@@ -134,8 +137,8 @@ async function fixture(
   let snapshot: PanelSnapshot = {
     panels: options.panels ?? [],
     issues: options.issues,
-    workspace: "/workspace/original",
-    hasProject: true,
+    workspace: options.workspace ?? "/workspace/original",
+    hasProject: options.hasProject ?? true,
     canRestorePackages: options.canRestorePackages,
   };
   const requests: Request[] = [];
@@ -201,6 +204,7 @@ async function fixture(
         opened.push(value);
       },
       configurationVersion: version,
+      hostLabel: options.hostLabel,
     });
     return tree;
   }
@@ -244,6 +248,45 @@ async function fixture(
     },
   };
 }
+
+test("paired panels show the Host binding project and open existing bindings without rebinding", async () => {
+  setApiWorkspace("/workspace/project-worktree");
+  const view = await fixture({
+    panels: [panel()],
+    workspace: "/workspace/电脑项目",
+    hostLabel: "桌面",
+  });
+  expect(text(view.tree)).toContain("绑定项目：/workspace/电脑项目");
+  expect(text(view.tree)).toContain("同一项目与电脑共用面板绑定");
+  expect(text(view.tree)).toContain("不同项目的绑定独立");
+  await click(button(view.tree, "打开面板"));
+  expect(view.opened.map((item) => item.id)).toEqual(["test-panel"]);
+  expect(view.requests.every((request) => request.method === "GET")).toBe(true);
+  expect(view.requests[0].url.searchParams.get("workspace")).toBe("/workspace/project-worktree");
+});
+
+test("a different unbound project never inherits the desktop binding", async () => {
+  const view = await fixture({
+    panels: [panel({ bound: false, enabled: false })],
+    workspace: "/workspace/another-project",
+    hostLabel: "桌面",
+  });
+  expect(text(view.tree)).toContain("绑定项目：/workspace/another-project");
+  expect(button(view.tree, "打开面板").props.disabled).toBe(true);
+  expect(button(view.tree, "绑定工作区").props.disabled).not.toBe(true);
+  expect(view.requests.every((request) => request.method === "GET")).toBe(true);
+});
+
+test("no-project and Hub views do not claim a shared desktop binding", async () => {
+  const unbound = await fixture({ hasProject: false, hostLabel: "桌面" });
+  expect(text(unbound.tree)).toContain("请先选择一个项目");
+  expect(text(unbound.tree)).not.toContain("绑定项目：");
+  expect(text(unbound.tree)).not.toContain("与电脑共用");
+  await unbound.unmount();
+  const hub = await fixture();
+  expect(text(hub.tree)).toContain("绑定项目：/workspace/original");
+  expect(text(hub.tree)).not.toContain("与电脑共用");
+});
 
 test("GitHub discovery reviews the selected candidate and installs only its opaque token before opening", async () => {
   setApiWorkspace("/workspace/演示 %20");
@@ -431,6 +474,27 @@ test("binding and confirmed uninstall carry the reviewed local revision", async 
     expectedRevision: "original-revision",
   });
   expect(text(view.tree)).toContain("还没有安装面板");
+});
+
+test("configuration refresh picks up a desktop binding while preserving an open review", async () => {
+  const view = await fixture({
+    panels: [panel({ bound: false, enabled: false })],
+    hostLabel: "桌面",
+  });
+  await click(button(view.tree, "检查更新"));
+  const requestsBeforeRefresh = view.requests.length;
+  await view.refresh([panel({ revision: "desktop-bound-revision" })]);
+  expect(button(view.tree, "打开面板").props.disabled).not.toBe(true);
+  expect(button(view.tree, "解除绑定")).toBeDefined();
+  expect(text(view.tree)).toContain("审阅面板更新");
+  expect(text(view.tree)).toContain(source.commit);
+  expect(view.dirty).toBe(true);
+  expect(
+    view.requests.slice(requestsBeforeRefresh).every((request) => request.method === "GET"),
+  ).toBe(true);
+  expect(
+    view.requests.filter((request) => request.url.pathname.endsWith("/update-preview")),
+  ).toHaveLength(1);
 });
 
 test("a concurrent panel change requires reviewing the new version before uninstalling", async () => {

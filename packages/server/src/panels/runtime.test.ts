@@ -1100,6 +1100,14 @@ async function nativeToolFixture(
     sharedToolJobs,
   });
   const entry = "app/tools/sample.mjs";
+  // Pin native fixtures to the runner's explicit Node (CI and local guarded
+  // runs supply the security-patched runtime). Host executable discovery also
+  // searches platform install directories; those are not fixture authority.
+  const node = await resolvePanelExecutable("node");
+  if (!node) throw new Error("Node.js is required for native tool fixtures");
+  const bin = join(f.root, "data", "panel-bin");
+  await mkdir(bin, { recursive: true });
+  await symlink(node, join(bin, "node"));
   await mkdir(join(f.installPath, "app", "tools"), { recursive: true });
   await writeFile(join(f.installPath, entry), source);
   f.app.nativeEntries = {
@@ -1190,9 +1198,13 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
       for (let i = 0; i < 100; i++) {
         current = await (await f.call("tasks.get", { id })).json();
         if (current.status === wanted) return current;
+        if (["failed", "cancelled", "interrupted", "succeeded"].includes(current.status)) break;
         await Bun.sleep(20);
       }
-      throw new Error(`Cookie task expected ${wanted}, received ${current?.status}`);
+      const diagnostic = JSON.stringify({ status: current?.status, error: current?.error })
+        .replaceAll("runtime-fixture-cookie", "[fixture-cookie]")
+        .slice(0, 4000);
+      throw new Error(`Cookie task expected ${wanted}, received ${diagnostic}`);
     }
     return { ...f, store, saved, input, consent, status };
   }

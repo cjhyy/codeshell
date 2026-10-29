@@ -14,6 +14,7 @@ import { QuotaPanel } from "./QuotaPanel";
 import type { OpenCliSessionRequest, RoomCliKind } from "./types";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
+import { DriveAgentTaskView } from "./DriveAgentTaskView";
 
 /**
  * CC Room — lists this project's external coding-agent CLI sessions for the
@@ -52,17 +53,34 @@ interface Availability {
   reason?: "not-found" | "not-executable";
 }
 
-export function CCRoomView({
-  cwd,
-  active = true,
-  openRequest,
-  onOpenRequestConsumed,
-}: {
+type CCRoomViewProps = {
   cwd: string | null;
   active?: boolean;
   openRequest?: OpenCliSessionRequest;
   onOpenRequestConsumed?: (nonce: number) => void;
-}) {
+};
+
+export function CCRoomView(props: CCRoomViewProps) {
+  const { openRequest, active = true, onOpenRequestConsumed } = props;
+  if (openRequest?.jobId && openRequest.sourceSessionId) {
+    return (
+      <DriveAgentTaskView
+        key={`${openRequest.sourceSessionId}:${openRequest.jobId}`}
+        request={openRequest as OpenCliSessionRequest & { jobId: string; sourceSessionId: string }}
+        active={active}
+        onOpenRequestConsumed={onOpenRequestConsumed}
+      />
+    );
+  }
+  return <CliRoomBrowser {...props} />;
+}
+
+function CliRoomBrowser({
+  cwd,
+  active = true,
+  openRequest,
+  onOpenRequestConsumed,
+}: CCRoomViewProps) {
   const { t } = useT();
   const toast = useToast();
   const tRef = useRef(t);
@@ -174,13 +192,10 @@ export function CCRoomView({
     // normal availability probe here: production probes execute
     // `claude/codex --version`, which would violate navigation's zero-process-
     // spawn contract before the user explicitly chooses takeover.
-    if (linkedRequest) {
+    if (linkedRequest?.externalSessionId) {
+      const externalSessionId = linkedRequest.externalSessionId;
       void window.codeshell.ccRoom
-        .openLinkedSession(
-          linkedRequest.externalSessionId,
-          linkedRequest.cwd,
-          linkedRequest.cliKind,
-        )
+        .openLinkedSession(externalSessionId, linkedRequest.cwd, linkedRequest.cliKind)
         .then((linked) => {
           if (
             cancelled ||
@@ -192,7 +207,7 @@ export function CCRoomView({
           pendingOpenRequestRef.current = null;
           setConv({
             roomId: linked.roomId,
-            sessionId: linkedRequest.externalSessionId,
+            sessionId: externalSessionId,
             mode: linked.mode,
             cwd: linked.cwd,
             cliKind: linkedRequest.cliKind,

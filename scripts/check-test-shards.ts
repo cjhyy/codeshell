@@ -28,9 +28,18 @@ export const SHARD_BUDGETS: Record<string, number> = {
   "tests (core-engine)": 300,
   "tests (rest)": 400,
   "tests (rest-server)": 240,
+  // 2026-10-29: replace the 34-file Panel process with 4–8-file partitions.
+  "tests: test Hub Panel packages": 8,
+  "tests: test Hub Panel runtime and scopes": 8,
+  "tests: test Hub Panel native processes": 6,
+  "tests: test Hub Panel tasks": 6,
+  "tests: test Hub Panel resources and files": 10,
+  "tests: test Hub Panel connections and automations": 6,
 };
 /** Any other Bun process is a step that isolates a few suites on purpose. */
 export const DEFAULT_BUDGET = 60;
+/** Renaming a Panel step must not silently restore the general 60-file budget. */
+export const PANEL_PROCESS_BUDGET = 10;
 const TEST_FILE = /(?:\.|_)(?:test|spec)\.(?:ts|tsx|js|jsx|mjs|cjs|mts|cts)$/;
 /** Run by their own runners rather than a Bun shard; the reason must stay true. */
 const RUN_ELSEWHERE: Array<[RegExp, string]> = [
@@ -128,18 +137,35 @@ export function selects(process: Process, file: string): boolean {
 }
 
 export function checkShards(files: string[], processes: Process[], budgets = SHARD_BUDGETS) {
-  const counts = processes.map((process) => ({
-    label: process.label,
-    files: files.filter((file) => selects(process, file)).length,
-    budget: budgets[process.label] ?? DEFAULT_BUDGET,
-  }));
+  const counts = processes.map((process) => {
+    const selected = files.filter((file) => selects(process, file));
+    const hasPanels = selected.some((file) => file.startsWith("packages/server/src/panels/"));
+    return {
+      label: process.label,
+      files: selected.length,
+      budget: Math.min(
+        budgets[process.label] ?? DEFAULT_BUDGET,
+        hasPanels ? PANEL_PROCESS_BUDGET : Infinity,
+      ),
+    };
+  });
   const uncovered = files.filter(
     (file) =>
       !processes.some((process) => selects(process, file)) &&
       !RUN_ELSEWHERE.some(([pattern]) => pattern.test(file)),
   );
   const oversized = counts.filter((count) => count.files > count.budget);
-  return { counts, uncovered, oversized };
+  // These partitions replace one complete directory invocation. A stale broad
+  // selection or overlapping resource subtree must not run a Panel suite twice.
+  // Other packages intentionally repeat selected files on Windows.
+  const overlappingPanels = files
+    .filter((file) => file.startsWith("packages/server/src/panels/"))
+    .map((file) => ({
+      file,
+      processes: processes.filter((process) => selects(process, file)).map(({ label }) => label),
+    }))
+    .filter(({ processes }) => processes.length > 1);
+  return { counts, uncovered, oversized, overlappingPanels };
 }
 
 if (import.meta.main) {
@@ -148,7 +174,10 @@ if (import.meta.main) {
   const files = execFileSync("git", ["ls-files"], { cwd: ROOT, encoding: "utf8" })
     .split("\n")
     .filter((file) => TEST_FILE.test(file) && !file.includes("/node_modules/"));
-  const { counts, uncovered, oversized } = checkShards(files, workflowProcesses(workflow));
+  const { counts, uncovered, oversized, overlappingPanels } = checkShards(
+    files,
+    workflowProcesses(workflow),
+  );
   for (const count of [...counts].sort((a, b) => b.files - a.files))
     console.log(
       `${String(count.files).padStart(5)} / ${String(count.budget).padEnd(4)} ${count.label}`,
@@ -166,6 +195,12 @@ if (import.meta.main) {
     );
     for (const count of oversized)
       console.error(`  ${count.files} > ${count.budget}  ${count.label}`);
+  }
+  if (overlappingPanels.length) {
+    failed = true;
+    console.error("\n✗ Panel partitions must select every suite exactly once:");
+    for (const item of overlappingPanels)
+      console.error(`  ${item.file}: ${item.processes.join(", ")}`);
   }
   const bundlers = newInProcessBundlers(files, (file) => readFileSync(resolve(ROOT, file), "utf8"));
   if (bundlers.length) {

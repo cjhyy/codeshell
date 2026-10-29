@@ -10,6 +10,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   symlinkSync,
@@ -20,11 +21,13 @@ import { join } from "node:path";
 import {
   sessionsRoot,
   SessionManager,
+  SettingsManager,
   type StreamEvent,
   type ToolRegistry,
 } from "@cjhyy/code-shell-core";
 import {
   backgroundJobRegistry,
+  activateWorkspaceProfile,
   ModelTraceStore,
   saveWorkspaceProfile,
 } from "@cjhyy/code-shell-core/internal";
@@ -36,6 +39,8 @@ import { getProjectStore } from "./project-store.js";
 import { mobileSessionCommandAuthority } from "./mobile-remote/output-recovery-authority.js";
 import { setProjectTrustWithRevocation } from "./project-trust-lifecycle.js";
 import { createExternalRuntimeSourceContext } from "./external-runtime-source-context.js";
+import { startMobileExternalRuntime } from "./mobile-remote/start-external-runtime.js";
+import { MobileExternalRuntimeCommands } from "./mobile-remote/external-runtime-commands.js";
 
 type StartArgs = Record<string, unknown>;
 const starts: StartArgs[] = [];
@@ -239,6 +244,262 @@ afterEach(() => {
 });
 
 describe("ExternalRuntimeService", () => {
+  test("main-project trust revocation fences a worktree start still awaiting CLI preflight", async () => {
+    let entered!: () => void;
+    let release!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const svc = service({ external_agent_runtime: true }, undefined, {
+      prepareCodexLaunch: async () => {
+        entered();
+        await gate;
+        return { command: "/test/bin/codex", env: { PATH: "/test/bin" } };
+      },
+    });
+    const pending = svc.start({
+      ...request,
+      cwd: "/tmp/authorized-worktree",
+      mainRoot: request.cwd,
+    });
+    await ready;
+    await svc.revokeProjectTrust(request.cwd);
+    release();
+    await expect(pending).rejects.toThrow("Project trust was revoked");
+    expect(starts).toHaveLength(0);
+    expect(claims).toHaveLength(0);
+    expect(new SessionManager().exists(request.sessionId)).toBe(false);
+    await svc.stopAll();
+  });
+
+  for (const kind of ["codex", "claude-code"] as const) {
+    test(`mobile ${kind} resumes an authorized worktree without moving canonical project/Profile authority`, async () => {
+      const mainRoot = join(realpathSync(testHome), "main");
+      const cwd = join(realpathSync(testHome), "worktree");
+      mkdirSync(mainRoot);
+      mkdirSync(cwd);
+      const project = await getProjectStore().createFromPath(mainRoot);
+      const projectBinding = { projectId: project.id, mainRootId: project.roots[0]!.id };
+      const manager = new SessionManager();
+      const modelKey = `${kind}/worktree-fixture`;
+      const sessionId = manager.create(mainRoot, modelKey, kind).state.sessionId;
+      manager.migrateSessionMainRoot(sessionId, projectBinding, mainRoot);
+      const workspace = {
+        kind: "worktree" as const,
+        root: cwd,
+        worktree: {
+          path: cwd,
+          branch: "fixture",
+          baseRef: "main",
+          createdBy: "codeshell" as const,
+        },
+      };
+      manager.setSessionWorkspace(sessionId, workspace);
+      saveWorkspaceProfile({
+        name: "main-reviewer",
+        label: "Main reviewer",
+        basePreset: "general",
+        mainInstruction: "Retain the main project's review constraints.",
+      });
+      activateWorkspaceProfile(new SettingsManager(mainRoot, "full"), "main-reviewer", mainRoot);
+      const ownerWindow = { isDestroyed: () => false, webContents: { id: 77 } } as never;
+      let owner: number | undefined;
+      const registeredCwds: string[] = [];
+      const snapshots: import("./external-runtime-memory.js").ExternalMemorySnapshot[] = [];
+      const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+        resolveProjectBinding: (root: string) => {
+          const resolved = getProjectStore().resolveExactRootSync(root);
+          return resolved
+            ? { projectId: resolved.project.id, mainRootId: resolved.mainRoot.id }
+            : undefined;
+        },
+        projectTrust: (root: string) => (root === mainRoot ? "trusted" : "untrusted"),
+        registerSession: (_id: string, root: string, id?: number) => {
+          registeredCwds.push(root);
+          owner = id;
+        },
+        releaseSession: () => {
+          owner = undefined;
+        },
+        memory: {
+          schedule: (snapshot: (typeof snapshots)[number]) => snapshots.push(snapshot),
+          cancel() {},
+          async dispose() {},
+        },
+      });
+      const bridge = { panelOwnerWebContentsId: () => owner, isSessionRunning: () => false };
+      const commands = new MobileExternalRuntimeCommands({
+        authenticated: () => true,
+        authority: mobileSessionCommandAuthority,
+        owner: () => owner,
+        service: () => svc,
+        isExternal: () => true,
+        exists: (id) => manager.exists(id),
+        modelKey: () => modelKey,
+        attachmentPath: async (path) => path,
+        startRuntime: (start) =>
+          startMobileExternalRuntime(
+            {
+              service: () => svc,
+              bridge: () => bridge,
+              windows: () => [ownerWindow],
+              history: async () => [],
+            },
+            start,
+          ),
+      });
+      try {
+        await commands.observe({
+          type: "session.select",
+          sessionId,
+          viewerId: "tab",
+          deviceId: "phone",
+        });
+        const prepare = () => commands.prepare("tab", "phone", sessionId, { modelKey });
+        await prepare();
+        const live = svc.get(sessionId);
+        await prepare();
+        expect(svc.get(sessionId)).toBe(live);
+        expect(starts).toHaveLength(1);
+        expect(starts[0]!.cwd).toBe(cwd);
+        expect(starts[0]!.projectTrusted).toBe(true);
+        expect(starts[0]!.visibility).toMatchObject({ cwd });
+        expect(starts[0]!.developerInstructions).toContain(
+          "Retain the main project's review constraints.",
+        );
+        providerSend = async (args) => {
+          const context = (
+            args.captureRunContext as () => {
+              workspaceProfileName?: string;
+              isSourceProfileCurrent: () => boolean;
+            }
+          )();
+          expect(context.workspaceProfileName).toBe("main-reviewer");
+          expect(context.isSourceProfileCurrent()).toBe(true);
+        };
+        expect(
+          (
+            await svc.send(
+              sessionId,
+              { text: "continue worktree", clientMessageId: "phone-worktree" },
+              77,
+            )
+          ).reason,
+        ).toBe("completed");
+        expect(snapshots).toHaveLength(1);
+        expect(() => snapshots[0]!.assertCurrent()).not.toThrow();
+        expect(manager.readSessionState(sessionId)).toMatchObject({
+          cwd: mainRoot,
+          project: projectBinding,
+        });
+        expect(manager.getSessionWorkspace(sessionId)).toEqual(workspace);
+        expect(await mobileSessionCommandAuthority(sessionId)).toMatchObject({ cwd, mainRoot });
+        failNextSend = true;
+        await svc.send(sessionId, "force synthetic restart", 77);
+        await prepare();
+        expect(starts).toHaveLength(2);
+        expect(starts[1]!.cwd).toBe(cwd);
+        expect(starts[1]!.resumeRuntimeSessionId).toBe("runtime-1");
+        expect(registeredCwds).toEqual([cwd, cwd]);
+        await svc.revokeProjectTrust(mainRoot);
+        expect(svc.get(sessionId)).toBeUndefined();
+        expect(manager.readSessionState(sessionId)).toMatchObject({
+          cwd: mainRoot,
+          project: projectBinding,
+        });
+        expect(manager.getSessionWorkspace(sessionId)).toEqual(workspace);
+      } finally {
+        await svc.stopAll();
+        await getProjectStore().remove(project.id);
+      }
+    });
+  }
+
+  test("a mobile continuation cannot change permissions after the Desktop turn starts", async () => {
+    let entered!: () => void;
+    let release!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    providerSend = async () => {
+      entered();
+      await gate;
+    };
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    const live = await svc.start({ ...request, permissionMode: "default", planMode: true });
+    const turn = svc.send(request.sessionId, "held review", 77);
+    await waiting;
+    try {
+      await expect(
+        svc.ensureContinuation({ ...request, permissionMode: "bypassPermissions" }),
+      ).rejects.toThrow("Stop the running task");
+      expect(await svc.ensureContinuation(request)).toBe(live);
+      expect(starts).toHaveLength(1);
+      expect(starts[0]!.sandbox).toBe("read-only");
+      expect(starts[0]!.approvalPolicy).toBe("on-request");
+    } finally {
+      release();
+      await turn;
+      await svc.stopAll();
+    }
+  });
+
+  test("mobile continuation preserves Desktop plan mode and instructions across reuse and faulted restart", async () => {
+    const owner = { isDestroyed: () => false, webContents: { id: 77 } } as never;
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    const desktopRequest = {
+      ...request,
+      ownerWindow: owner,
+      model: "plan-fixture",
+      modelKey: "codex/plan-fixture",
+      planMode: true,
+      hasGoal: true,
+      permissionMode: "acceptEdits" as const,
+      developerInstructions: "Keep the desktop-only review constraint.",
+    };
+    const live = await svc.start(desktopRequest);
+    const bridge = { panelOwnerWebContentsId: () => 77, isSessionRunning: () => false };
+    const continueFromPhone = () =>
+      startMobileExternalRuntime(
+        {
+          service: () => svc,
+          bridge: () => bridge,
+          windows: () => [owner],
+          history: async () => [],
+        },
+        {
+          sessionId: request.sessionId,
+          cwd: request.cwd,
+          modelKey: desktopRequest.modelKey,
+          owner: 77,
+          assertCurrent() {},
+        },
+      );
+    await continueFromPhone();
+    expect(svc.get(request.sessionId)).toBe(live);
+    expect(starts).toHaveLength(1);
+    expect(starts[0]!.planMode).toBe(true);
+    expect(starts[0]!.sandbox).toBe("read-only");
+    expect(starts[0]!.developerInstructions).toContain(desktopRequest.developerInstructions);
+    failNextSend = true;
+    await svc.send(request.sessionId, "continue review", 77);
+    await continueFromPhone();
+    expect(svc.get(request.sessionId)).not.toBe(live);
+    expect(starts).toHaveLength(2);
+    expect(starts[1]!.planMode).toBe(true);
+    expect(starts[1]!.sandbox).toBe("read-only");
+    expect(starts[1]!.permissionMode).toBe("acceptEdits");
+    expect(starts[1]!.visibility).toMatchObject({ hasGoal: true });
+    expect(starts[1]!.developerInstructions).toContain(desktopRequest.developerInstructions);
+    await svc.stopAll();
+  });
+
   test("completed logical turns schedule captured memory and replacement cancels its ownership", async () => {
     const snapshots: import("./external-runtime-memory.js").ExternalMemorySnapshot[] = [];
     const cancelled: string[] = [];
@@ -1154,6 +1415,93 @@ describe("ExternalRuntimeService", () => {
     expect(claims).toEqual([]);
     expect(starts).toEqual([]);
     expect(released).toEqual([]);
+  });
+
+  test("revoked paired startup authority during preflight cannot reserve or spawn a runtime", async () => {
+    let allowed = true;
+    let entered!: () => void;
+    let release!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const svc = service({ external_agent_runtime: true }, undefined, {
+      prepareCodexLaunch: async () => {
+        entered();
+        await gate;
+        return { command: "/test/bin/codex", env: {} };
+      },
+    });
+    const starting = svc.ensure({
+      ...request,
+      assertStartAuthority: () => {
+        if (!allowed) throw new Error("paired startup selection revoked");
+      },
+    });
+    await waiting;
+    allowed = false;
+    release();
+    await expect(starting).rejects.toThrow("paired startup selection revoked");
+    expect(starts).toEqual([]);
+    expect(claims).toEqual([]);
+    expect(released).toEqual([]);
+    expect(svc.get(request.sessionId)).toBeUndefined();
+  });
+
+  test("revoked paired startup authority closes a provider still starting and releases its host", async () => {
+    let allowed = true;
+    let entered!: () => void;
+    let release!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    providerStart = async () => {
+      entered();
+      await gate;
+    };
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    const starting = svc.ensure({
+      ...request,
+      assertStartAuthority: () => {
+        if (!allowed) throw new Error("paired startup selection revoked");
+      },
+    });
+    await waiting;
+    allowed = false;
+    release();
+    await expect(starting).rejects.toThrow("paired startup selection revoked");
+    expect(starts).toHaveLength(1);
+    expect(closed).toEqual([request.sessionId]);
+    expect(released).toEqual([request.sessionId]);
+    expect(svc.get(request.sessionId)).toBeUndefined();
+    expect(stateChanges.some((event) => event.active)).toBe(false);
+  });
+
+  test("startup authority fences reuse without becoming the live runtime's turn lease", async () => {
+    let allowed = true;
+    const svc = service({ external_agent_runtime: true });
+    const startRequest = {
+      ...request,
+      assertStartAuthority: () => {
+        if (!allowed) throw new Error("paired startup selection revoked");
+      },
+    };
+    const running = await svc.ensure(startRequest);
+    allowed = false;
+    await expect(svc.ensure(startRequest)).rejects.toThrow("paired startup selection revoked");
+    expect(svc.get(request.sessionId)).toBe(running);
+    // Desktop may continue the already-created runtime after the phone disconnects.
+    await expect(svc.send(request.sessionId, "desktop continuation", 77)).resolves.toMatchObject({
+      ok: true,
+    });
+    expect(providerInputs).toHaveLength(1);
+    expect(starts).toHaveLength(1);
+    await svc.stopAll();
   });
 
   test("failed replacement preflight preserves the existing live runtime", async () => {

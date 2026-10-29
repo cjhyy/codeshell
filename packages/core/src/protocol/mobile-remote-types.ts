@@ -108,6 +108,8 @@ export type MobileClientEvent =
   | { type: "pair.complete"; token: string; name: string; secretHash: string }
   | {
       type: "chat.send";
+      /** Explicit external-runtime selection, scoped to this submission. */
+      modelKey?: string;
       /** Observation source label only; no storage or workspace authority. */
       modelTraceSource?: string;
       text: string;
@@ -164,7 +166,13 @@ export type MobileClientEvent =
       pathScope?: ApprovalPathScope;
     }
   // ── Sessions: see every desktop session, open its history, drive it ──────
-  | { type: "session.list" }
+  | {
+      type: "session.list";
+      requestId?: string;
+      cursor?: string;
+      /** Listing filter only: selected project roots, including descendant workspaces. */
+      cwds?: string[];
+    }
   | { type: "session.history"; sessionId: string }
   | {
       type: "session.sync";
@@ -176,6 +184,7 @@ export type MobileClientEvent =
   // ── Capability controls ──────────────────────────────────────────────────
   | { type: "permission.setMode"; sessionId?: string; mode: PermissionMode }
   | { type: "model.set"; model: string }
+  | { type: "runtime.models" }
   | {
       type: "goal.extend";
       sessionId: string;
@@ -217,7 +226,7 @@ export type MobileClientEvent =
   //   `kind` selects which CLI to probe/list/open/read (defaults to
   //   "claude-code" when absent, so older phone clients keep working).
   | { type: "ccRoom.probe"; force?: boolean; kind?: "claude-code" | "codex" }
-  | { type: "ccRoom.listSessions"; cwd: string; kind?: "claude-code" | "codex" }
+  | { type: "ccRoom.listSessions"; cwd: string; kind?: "claude-code" | "codex"; all?: boolean }
   | {
       type: "ccRoom.openSession";
       sessionId: string;
@@ -263,6 +272,7 @@ export type MobileServerEvent =
   | { type: "pair.failed"; message: string }
   | {
       type: "chat.accepted";
+      modelKey?: string;
       clientRequestId?: string;
       sessionId?: string;
       cwd?: string | null;
@@ -301,7 +311,13 @@ export type MobileServerEvent =
       approved?: boolean;
       answer?: string;
     }
-  | { type: "error"; message: string; clientMessageId?: string; approvalId?: string }
+  | {
+      type: "error";
+      message: string;
+      clientMessageId?: string;
+      clientRequestId?: string;
+      approvalId?: string;
+    }
   | {
       type: "session.recovery.ready";
       sessionId: string;
@@ -315,6 +331,8 @@ export type MobileServerEvent =
       recoveryId: string;
       requestId: string;
       page: import("../session/output-journal.js").OutputJournalPage;
+      /** A valid selection temporarily exceeded the bounded read slots; retry this request. */
+      busy?: true;
       /** Main's display-only projection after validating the exact raw cutover anchor. */
       legacyBase?: { throughEventId: string; events: Record<string, unknown>[] };
       legacyBaseComplete?: boolean;
@@ -344,7 +362,13 @@ export type MobileServerEvent =
         } & ({ complete: true; next?: never } | { complete: false; next: string }))
     ))
   // ── Sessions ──────────────────────────────────────────────────────────
-  | { type: "session.list.ok"; sessions: MobileSessionMeta[]; activeSessionId?: string }
+  | {
+      type: "session.list.ok";
+      sessions: MobileSessionMeta[];
+      activeSessionId?: string;
+      requestId?: string;
+      nextCursor?: string | null;
+    }
   | { type: "session.history.ok"; sessionId: string; events: unknown[] }
   | {
       type: "session.snapshot";
@@ -366,6 +390,17 @@ export type MobileServerEvent =
   // ── Capability controls ──────────────────────────────────────────────────
   | { type: "permission.mode"; sessionId?: string; mode: PermissionMode }
   | { type: "model.current"; model: string; available?: string[] }
+  | {
+      type: "runtime.models.ok";
+      models: Array<{
+        key: string;
+        label: string;
+        provider: string;
+        kind: "claude-code" | "codex";
+        maxContextTokens: number;
+      }>;
+      message?: string;
+    }
   | { type: "goal.extended"; sessionId: string; ok: boolean; message?: string }
   | { type: "goal.cleared"; sessionId: string; ok: boolean; cleared?: boolean; message?: string }
   // ── Rooms ─────────────────────────────────────────────────────────────
@@ -428,6 +463,8 @@ export type MobileServerEvent =
       cwd: string;
       sessions: CcDiscoveredSession[];
       kind: "claude-code" | "codex";
+      total?: number;
+      all?: boolean;
     }
   | {
       type: "ccRoom.opened";
@@ -481,4 +518,6 @@ export interface MobileSessionMeta {
   cwd: string;
   updatedAt: number;
   origin: "desktop" | "automation";
+  model?: string;
+  provider?: string;
 }

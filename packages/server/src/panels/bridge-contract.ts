@@ -62,7 +62,11 @@ export type PanelBridgeErrorCode =
   | "RESULT_TOO_LARGE"
   | "TIMEOUT"
   | "INVALID_ARGUMENT"
-  | "OPERATION_FAILED";
+  | "OPERATION_FAILED"
+  | "SERVICE_CAPACITY"
+  | "SERVICE_CONFIG_CONFLICT"
+  | "SERVICE_REVISION_CONFLICT"
+  | "SERVICE_REQUEST_KEY_CONFLICT";
 export class PanelBridgeError extends Error {
   constructor(
     readonly code: PanelBridgeErrorCode,

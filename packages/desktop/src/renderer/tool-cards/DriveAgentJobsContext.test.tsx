@@ -68,6 +68,14 @@ async function render(sessionId: string, messages: readonly Message[] = [message
 
 beforeEach(() => {
   ensureMiniDom();
+  class DetailEvent<T> extends Event {
+    readonly detail: T | undefined;
+    constructor(type: string, init?: { detail?: T }) {
+      super(type);
+      this.detail = init?.detail;
+    }
+  }
+  Object.assign(globalThis, { CustomEvent: DetailEvent });
   observedJobs = [];
   Object.assign(window, {
     setInterval: globalThis.setInterval.bind(globalThis),
@@ -157,5 +165,141 @@ describe("DriveAgentJobsLoader request lifecycle", () => {
     await render("a");
     await render("b");
     expect(cleared).toContain(77);
+  });
+
+  test("loads new live tasks and their progress without opening the panel", async () => {
+    const details: unknown[] = [];
+    const listener = (event: Event) => details.push((event as CustomEvent).detail);
+    window.addEventListener("codeshell:open-cli-session", listener);
+    let items = [
+      { ...job("live", "running"), externalSessionId: undefined },
+      { ...job("live", "running"), jobId: "cc-second" },
+    ];
+    Object.assign(window, {
+      codeshell: { listBackgroundWork: async () => ({ items }) },
+    });
+    try {
+      await render("live", []);
+      await render("live", [
+        { ...message(), startedAt: Date.now(), status: "running", result: undefined },
+      ]);
+      // The second launch starts and completes between two renderer updates.
+      const messages = [
+        message(),
+        { ...message("cc-second"), id: "tool-2", startedAt: Date.now() },
+      ];
+      await render("live", messages);
+      expect(observedJobs).toHaveLength(2);
+      expect(details).toEqual([]);
+
+      items = items.map((item) => ({
+        ...item,
+        externalSessionId: `thread-${item.jobId}`,
+        progress: {
+          lastActivityAt: Date.now(),
+          eventCount: 1,
+          summary: "Read README.md",
+        },
+      }));
+      await act(async () => {
+        window.dispatchEvent(new Event("codeshell:files-changed"));
+        await flushMicrotasks();
+      });
+      expect(observedJobs[0]?.progress?.summary).toBe("Read README.md");
+      expect(details).toEqual([]);
+
+      items = items.map((item) => ({ ...item, status: "completed" }));
+      await act(async () => {
+        window.dispatchEvent(new Event("codeshell:files-changed"));
+        await flushMicrotasks();
+      });
+      expect(observedJobs.every((item) => item.status === "completed")).toBe(true);
+      expect(details).toEqual([]);
+    } finally {
+      window.removeEventListener("codeshell:open-cli-session", listener);
+    }
+  });
+
+  test("does not navigate for restored history or a replayed running tool", async () => {
+    const details: unknown[] = [];
+    const listener = (event: Event) => details.push((event as CustomEvent).detail);
+    window.addEventListener("codeshell:open-cli-session", listener);
+    Object.assign(window, {
+      codeshell: {
+        listBackgroundWork: async (sessionId: string) => ({
+          items: [job(sessionId, "running")],
+        }),
+      },
+    });
+    try {
+      await render("history", [message()]);
+      expect(observedJobs[0]?.sourceSession.sessionId).toBe("history");
+      await render("other", [{ ...message(), status: "running", result: undefined }]);
+      await render("other", [message()]);
+      expect(observedJobs[0]?.sourceSession.sessionId).toBe("other");
+      await render("late-history", []);
+      await render("late-history", [{ ...message(), status: "running", result: undefined }]);
+      await render("late-history", [message()]);
+      expect(observedJobs[0]?.sourceSession.sessionId).toBe("late-history");
+      expect(details).toEqual([]);
+    } finally {
+      window.removeEventListener("codeshell:open-cli-session", listener);
+    }
+  });
+
+  test("a delayed registry response does not open the panel after the launch finishes", async () => {
+    const details: unknown[] = [];
+    const listener = (event: Event) => details.push((event as CustomEvent).detail);
+    window.addEventListener("codeshell:open-cli-session", listener);
+    const response = deferred<{ items: BackgroundWorkInfo[] }>();
+    Object.assign(window, {
+      codeshell: { listBackgroundWork: () => response.promise },
+    });
+    try {
+      await render("delayed", []);
+      await render("delayed", [
+        { ...message(), startedAt: Date.now(), status: "running", result: undefined },
+      ]);
+      await render("delayed", [message()]);
+      expect(details).toEqual([]);
+      await act(async () => {
+        response.resolve({ items: [job("delayed", "completed")] });
+        await flushMicrotasks();
+      });
+      expect(observedJobs[0]?.status).toBe("completed");
+      expect(details).toEqual([]);
+    } finally {
+      window.removeEventListener("codeshell:open-cli-session", listener);
+    }
+  });
+
+  test("retries an initially missing registry row", async () => {
+    let calls = 0;
+    Object.assign(window, {
+      codeshell: {
+        listBackgroundWork: async () => ({ items: ++calls === 1 ? [] : [job("race")] }),
+      },
+    });
+    await render("race");
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      await flushMicrotasks();
+    });
+    expect(calls).toBe(2);
+    expect(observedJobs[0]?.jobId).toBe("cc-job");
+  });
+
+  test("keeps polling a task while cancellation is pending", async () => {
+    const intervals: number[] = [];
+    Object.assign(window, {
+      setInterval: (_handler: () => void, delay: number) => {
+        intervals.push(delay);
+        return 88;
+      },
+      clearInterval: () => undefined,
+      codeshell: { listBackgroundWork: async () => ({ items: [job("stopping", "cancelling")] }) },
+    });
+    await render("stopping");
+    expect(intervals).toEqual([3_000]);
   });
 });

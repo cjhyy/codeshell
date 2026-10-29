@@ -16,7 +16,7 @@ describe("DriveAgent CLI links", () => {
     expect(roomCliKind("other")).toBeNull();
   });
 
-  test("builds a link only for complete DriveAgent jobs", () => {
+  test("builds a stable task link before the external CLI session is ready", () => {
     const job: Extract<BackgroundWorkInfo, { kind: "job" }> = {
       kind: "job",
       jobId: "job-1",
@@ -30,12 +30,17 @@ describe("DriveAgent CLI links", () => {
       sourceSession,
     };
     expect(driveAgentLinkDetail(job)).toEqual({
+      jobId: "job-1",
+      title: "delegate",
       externalSessionId: "thread-1",
       cliKind: "codex",
       cwd: "/repo/worktree",
       sourceSessionId: "engine-1",
     });
-    expect(driveAgentLinkDetail({ ...job, externalSessionId: undefined })).toBeNull();
+    expect(driveAgentLinkDetail({ ...job, externalSessionId: undefined })).toMatchObject({
+      jobId: "job-1",
+      sourceSessionId: "engine-1",
+    });
     expect(driveAgentLinkDetail({ ...job, jobKind: "video" })).toBeNull();
   });
 
@@ -59,6 +64,8 @@ describe("DriveAgent CLI links", () => {
 
     expect(driveAgentJobIdFromToolMessage(message)).toBe("cc-abc123");
     expect(driveAgentLinkDetailForToolMessage(message, [job])).toEqual({
+      jobId: "cc-abc123",
+      title: "DriveAgent(codex): delegate",
       externalSessionId: "thread-1",
       cliKind: "codex",
       cwd: "/repo/worktree",
@@ -66,7 +73,7 @@ describe("DriveAgent CLI links", () => {
     });
     expect(
       driveAgentLinkDetailForToolMessage(message, [{ ...job, externalSessionId: undefined }]),
-    ).toBeNull();
+    ).toMatchObject({ jobId: "cc-abc123" });
   });
 
   test("does not treat unrelated tools or malformed results as DriveAgent jobs", () => {

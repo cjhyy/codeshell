@@ -101,6 +101,8 @@ export function CCConversationView({
   cliLabel = "Claude Code",
   active = true,
   observing = false,
+  hideHeader = false,
+  observeHint,
   onTakeOver,
   onBack,
 }: {
@@ -122,6 +124,9 @@ export function CCConversationView({
   /** Observe-only linked rooms tail transcript history but cannot send until
    * the user explicitly takes over the exact external session. */
   observing?: boolean;
+  /** Task details supply their own status/navigation header. */
+  hideHeader?: boolean;
+  observeHint?: string;
   onTakeOver?: () => Promise<void>;
   onBack: () => void;
 }) {
@@ -543,23 +548,29 @@ export function CCConversationView({
       }}
       onDrop={onDropFiles}
     >
-      <div className="flex items-center justify-between border-b border-border p-2">
-        <div className="text-sm font-medium">
-          {cliLabel} 会话 ·{" "}
-          <code className="text-xs text-muted-foreground">{(sessionId || roomId).slice(0, 8)}</code>{" "}
-          · {mode}
+      {!hideHeader && (
+        <div className="flex items-center justify-between border-b border-border p-2">
+          <div className="text-sm font-medium">
+            {cliLabel} 会话 ·{" "}
+            <code className="text-xs text-muted-foreground">
+              {(sessionId || roomId).slice(0, 8)}
+            </code>{" "}
+            · {mode}
+          </div>
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            返回
+          </Button>
         </div>
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          返回
-        </Button>
-      </div>
+      )}
 
       {observing && (
         <div
           data-cc-room-state="observing"
           className="flex items-center justify-between gap-3 border-b border-border bg-muted/35 px-3 py-2"
         >
-          <p className="text-xs text-muted-foreground">{t("panels.room.observingDescription")}</p>
+          <p className="text-xs text-muted-foreground">
+            {observeHint ?? t("panels.room.observingDescription")}
+          </p>
           <Button
             type="button"
             data-cc-room-takeover="true"

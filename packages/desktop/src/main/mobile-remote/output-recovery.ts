@@ -94,6 +94,13 @@ export class MobileOutputRecovery {
   private readonly readingViewers = new Set<string>();
   private readonly pendingMirrors = new Set<Binding>();
   private activeMirrors = 0;
+  /** One bounded display projection; raw bytes and authority are still verified on every page. */
+  private legacyProjection?: {
+    binding: Binding;
+    key: string;
+    events: ReturnType<typeof transcriptToStreamEvents>;
+    sizes: number[];
+  };
   constructor(
     private readonly deps: {
       root: () => string;
@@ -109,10 +116,19 @@ export class MobileOutputRecovery {
   revoke(viewerId: string): void {
     const old = this.bindings.get(viewerId);
     if (old) {
+      if (this.legacyProjection?.binding === old) this.legacyProjection = undefined;
       this.pendingMirrors.delete(old);
       old.cursorKey.fill(0);
     }
     this.bindings.delete(viewerId);
+  }
+
+  private projectLegacyBase(events: Parameters<typeof transcriptToStreamEvents>[0]) {
+    const projected = transcriptToStreamEvents(events);
+    return {
+      events: projected,
+      sizes: projected.map((event) => Buffer.byteLength(JSON.stringify(event))),
+    };
   }
 
   /** A bounded notification, not another event queue or a worker broadcast. */
@@ -293,8 +309,12 @@ export class MobileOutputRecovery {
       });
     // No pending-page queue: one read per viewer and eight globally bound the
     // raw page + raw cutover prefix held over an asynchronous authority check.
-    if (!valid() || this.readingViewers.has(viewer) || this.activeReads >= 8) {
+    if (!valid()) {
       reply({});
+      return false;
+    }
+    if (this.readingViewers.has(viewer) || this.activeReads >= 8) {
+      reply({ busy: true });
       return false;
     }
     this.readingViewers.add(viewer);
@@ -392,7 +412,7 @@ export class MobileOutputRecovery {
       fail("incomplete");
       return false;
     }
-    // No queue or transcript cache: one large projection globally, sharing the
+    // No queue or raw transcript cache: one large read globally, sharing the
     // existing per-viewer and eight-global slots with ordinary journal reads.
     if (this.readingViewers.has(viewer) || this.activeReads >= 8 || this.activeBaseReads >= 1) {
       fail("busy");
@@ -401,6 +421,7 @@ export class MobileOutputRecovery {
     this.readingViewers.add(viewer);
     this.activeReads++;
     this.activeBaseReads++;
+    if (this.legacyProjection?.binding !== binding) this.legacyProjection = undefined;
     try {
       if (
         !valid() ||
@@ -422,8 +443,22 @@ export class MobileOutputRecovery {
           (base.identity.endOffset !== cursor.endOffset || base.identity.sha256 !== cursor.sha256))
       )
         throw new Error("base identity changed");
-      // Tool pre-scan and cross-record state belong to a single whole projection.
-      const events = transcriptToStreamEvents(base.events);
+      const key = JSON.stringify([
+        root,
+        binding!.sessionId,
+        binding!.recoveryId,
+        binding!.authority,
+        journal.coverageIdentity,
+        journal.coverageStart,
+        throughEventId,
+        base.identity.endOffset,
+        base.identity.sha256,
+      ]);
+      if (this.legacyProjection?.key !== key) this.legacyProjection = undefined;
+      // Tool pre-scan and cross-record state still use the complete verified base.
+      // A cache hit skips only projection/serialization, never the raw hash checks above.
+      const projection = this.legacyProjection ?? this.projectLegacyBase(base.events);
+      const { events, sizes } = projection;
       if (
         !events.length ||
         events[0].type !== "session_started" ||
@@ -431,8 +466,6 @@ export class MobileOutputRecovery {
         (cursor && cursor.total !== events.length)
       )
         throw new Error("base projection changed");
-      // Serialize each event once per read; avoid repeated whole-array stringify.
-      const sizes = events.map((event) => Buffer.byteLength(JSON.stringify(event)));
       if (sizes.some((size) => size + 2 > BASE_PAGE_BYTES))
         throw new Error("base event exceeds its bound");
       const index = cursor?.index ?? 0;
@@ -471,8 +504,16 @@ export class MobileOutputRecovery {
         throw new Error("base reply exceeds its bound");
       if ((await this.deps.authority(event.sessionId)) !== binding!.authority || !valid())
         throw new Error("read grant revoked");
+      // Never install a cache after an awaited revocation; the final page releases it.
+      this.legacyProjection =
+        !reply.complete &&
+        events.length <= 20_000 &&
+        sizes.reduce((sum, size) => sum + size + 1, 2) <= 16 * MiB
+          ? { binding: binding!, key, events, sizes }
+          : undefined;
       this.deps.reply(viewer, reply);
     } catch {
+      if (this.legacyProjection?.binding === binding) this.legacyProjection = undefined;
       fail("incomplete");
     } finally {
       this.readingViewers.delete(viewer);

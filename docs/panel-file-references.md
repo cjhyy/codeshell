@@ -43,3 +43,44 @@ cancellation, app unloading and Host shutdown close active streams. Scope/trust
 authorization is checked before each new read, including when a paused stream
 resumes. Closing a Panel does not persist its process directory grants; previously
 registered file references can reopen independently after restart.
+
+## Saving computer files from the paired browser
+
+In the Desktop's paired Web workbench, `resources.open({assetId})` opens a Host
+preview with **保存到此设备** and **复制下载地址**. The file remains on the computer;
+the browser streams it over the current remote connection. Clipboard denial
+shows a selectable address. These links require the same signed-in browser and
+live Panel grant; closing the Panel or revoking access invalidates them. They
+are not public or permanent share links.
+
+The workspace **文件** page also supports authenticated GET/HEAD and single-range
+downloads up to 2 GiB. File information and text previews stay bounded to 512 KiB
+even for large outputs, so a video larger than 100 MiB still has a usable download
+entry. Streaming stops when the paired identity is revoked.
+
+`filesystem.openDirectory` exposes the currently authorized directory through
+**查看并下载文件**. Its file responses support GET/HEAD and single byte ranges,
+including suffix ranges, up to the existing 2 GiB per-file limit. Invalid ranges
+return 416. Mutable directory files have no stable validator, so an `If-Range`
+request returns the complete current file. Downloads continue checking access
+while streaming. Hidden files, sensitive names, symlinks and hardlinks remain
+excluded.
+
+The phone and Desktop share bindings and resources for the same project. The
+phone chooses its own current project; another project's bindings are not copied
+automatically. The Panel list displays the binding project to make that scope
+visible.
+
+`bun run test:mobile-panel-downloads` exercises opaque iframe modules through the
+real tunnel passcode gate in a 390px browser, saves synthetic computer bytes,
+checks copied URLs and clipboard fallback, and verifies range reads and access
+revocation. It uses a private HOME and makes no provider or video-site requests.
+Set `CODESHELL_TEST_CHROMIUM` to an installed Chromium executable when needed.
+
+For the reviewed Video Download 0.24.1 consumer, run
+`node scripts/run-isolated-node-smoke.mjs scripts/run-mobile-video-download.mjs /path/to/codeshell-panel-apps/apps/video-download`.
+It installs and binds the actual Panel in a private HOME, loads its opaque modules
+through the tunnel, approves its reviewed native entries, downloads deterministic
+local fixture bytes, and saves them from mobile history through the resource
+bridge. The Node runner verifies natural exit and cleanup. CI pins the consumer
+source commit; no real video site, model account or installed user Panel is used.

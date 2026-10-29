@@ -40,7 +40,6 @@ import {
   nativeTheme,
   type OpenDialogOptions,
   type SaveDialogOptions,
-  type IpcMainInvokeEvent,
 } from "electron";
 import { mainWindowTitleBarOptions, registerWindowTitleBarIpc } from "./window-titlebar.js";
 import {
@@ -49,11 +48,8 @@ import {
   closeManagedCloudWorkbench,
 } from "./cloud-workbench-window.js";
 import { registerCloudEnvironmentIpc } from "./cloud-environment-ipc.js";
-import {
-  createDesktopManagedRuntimeProvider,
-  createManagedRuntimeHandlers,
-  injectDesktopManagedRuntimePath,
-} from "./managed-runtime-service.js";
+import { injectDesktopManagedRuntimePath } from "./managed-runtime-service.js";
+import { createDesktopManagedRuntimeWiring } from "./managed-runtime-wiring.js";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import { dirname, resolve, basename, extname, isAbsolute, join } from "node:path";
@@ -145,6 +141,8 @@ import { getCuaDriverHost } from "./computer-use/service.js";
 import { initializeDesktopComputerUse, closeComputerUse } from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
+import { startMobileExternalRuntime } from "./mobile-remote/start-external-runtime.js";
+import { initializeMobileRemoteLifecycle } from "./mobile-remote/lifecycle.js";
 import { externalRuntimeToolContextForSession } from "./external-runtime-tool-context.js";
 import { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertWorkspaceProfileName } from "./external-runtime-profile.js";
@@ -230,12 +228,9 @@ import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import { PetImDecisions, collectImDecisions } from "./pet/pet-im-decisions.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
-import {
-  openLinkedSessionFromIpc,
-  registerRoomHistoryIpc,
-  takeOverLinkedSessionFromIpc,
-} from "./cc-room/linked-session-ipc.js";
+import { registerRoomHistoryIpc } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
+import { registerLinkedSessionObservationIpc } from "./cc-room/linked-session-observation-ipc.js";
 import { DEFAULT_SEGMENT_IDLE_MS, buildMigrationSummary } from "@cjhyy/code-shell-pet";
 import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { materializeOutgoingAttachments } from "@cjhyy/code-shell-chat";
@@ -370,14 +365,12 @@ import {
   CloudflaredBinary,
   CodexRoomAgent,
   MobileUploadService,
-  mobileTranscriptSubscriberId,
   PendingMobileApprovals,
   RemoteHostManager,
   ResidentAgentProcess,
   RoomManager,
   TrustedDeviceStore,
   TunnelManager,
-  type MobileViewerIdentity,
 } from "@cjhyy/code-shell-server/mobile-remote";
 import {
   MobileRemoteOrchestrator,
@@ -436,6 +429,7 @@ import { SessionCatalogStore } from "./session-catalog-store.js";
 import { createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
 import { createTaskInboxService } from "./task-inbox/task-inbox-service.js";
 import { createTaskInboxBackgroundHost } from "./task-inbox/task-inbox-background-host.js";
+import * as backgroundWork from "./cc-room/background-work-ipc.js";
 import { registerTaskInboxIpc } from "./task-inbox/task-inbox-ipc.js";
 import { registerOptimizationLabHost } from "./optimization-lab-host.js";
 import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
@@ -694,6 +688,7 @@ let externalRuntimeApprovals: ExternalRuntimeApprovals | null = null;
 const resolvePanelProjectScope = createDesktopPanelProjectScopeResolver({
   store: getProjectStore(),
 });
+const desktopManagedRuntimes = createDesktopManagedRuntimeWiring(app, process.resourcesPath);
 const panelAppBridge = new PanelAppBridge({
   isTrustedHost: (sender) =>
     [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
@@ -702,6 +697,7 @@ const panelAppBridge = new PanelAppBridge({
   isProjectRoot: (projectPath, rootPath) =>
     isRegisteredPanelProjectRoot(getProjectStore(), projectPath, rootPath),
   resolveProjectScope: resolvePanelProjectScope,
+  resolveBackgroundServiceNode: desktopManagedRuntimes.resolveBackgroundServiceNode,
   getAgentBridge: () => bridge,
   getExternalRuntimeService: () => externalRuntimeService,
   externalRuntimeInitialContext: async (sessionId) =>
@@ -987,9 +983,9 @@ function broadcastPluginCommandsChanged(windows: Iterable<BrowserWindow>): void 
 }
 
 function broadcastPanelAppsChanged(windows: Iterable<BrowserWindow>): void {
-  // Project management and paired Web write bindings outside settings:set.
-  // Invalidate before notifying any client or awaiting another side effect.
+  // Invalidate before notifying native and paired Web clients of Panel changes.
   invalidatePanelAppBindingGuard();
+  bridge?.notifyWebConfigurationChanged();
   for (const window of windows) {
     if (window.isDestroyed()) continue;
     window.webContents.send("panel-apps:changed");
@@ -1226,6 +1222,7 @@ const roomManager = new RoomManager({
       room.kind === "codex" ? {} : { appendSystemPrompt: CC_COST_GUARD_PROMPT },
   },
   resolveLinkedSession: resolveLinkedSessionFromDisk,
+  assertExternalSessionAvailable: backgroundWork.assertExternalSessionIdle,
   createAgent: (room, onEvent) =>
     room.kind === "codex"
       ? new CodexRoomAgent({
@@ -1295,6 +1292,17 @@ const mobileOrchestrator = new MobileRemoteOrchestrator({
   transcriptSubscriptions,
   getBridge: () => bridge,
   getExternalRuntimeService: () => externalRuntimeService,
+  getExternalRuntimeModels: () => externalRuntimeModelService.list(),
+  getExternalRuntimeApprovals: () => externalRuntimeApprovals,
+  startMobileRuntime: (request) =>
+    startMobileExternalRuntime(
+      {
+        service: () => externalRuntimeService,
+        bridge: () => bridge,
+        windows: () => mainWindows,
+      },
+      request,
+    ),
   broadcastToWindows: (channel, payload) => {
     for (const w of BrowserWindow.getAllWindows()) {
       if (!w.isDestroyed()) w.webContents.send(channel, payload);
@@ -1302,24 +1310,12 @@ const mobileOrchestrator = new MobileRemoteOrchestrator({
   },
 });
 
-// An abruptly closed phone tab has no chance to send unsubscribe. Release the
-// exact socket/viewer without disturbing another tab authenticated as the same
-// device.
-mobileRemote.on("viewer-offline", ({ viewerId }: MobileViewerIdentity) => {
-  mobileOrchestrator.releaseViewer(viewerId);
-  transcriptSubscriptions?.unsubscribeSubscriber(mobileTranscriptSubscriberId(viewerId));
-});
-
-// Idle-based room GC: rooms untouched for longer than this are reaped at
-// startup (a running room is never reaped). Replaces the cleanup the removed
-// one-shot /cc path never had.
-const ROOM_MAX_IDLE_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
-try {
-  const reaped = roomManager.pruneStaleRooms(ROOM_MAX_IDLE_MS);
-  if (reaped.length) console.log(`[rooms] pruned ${reaped.length} stale room(s)`);
-} catch {
-  /* GC is best-effort; never block startup */
-}
+initializeMobileRemoteLifecycle(
+  mobileRemote,
+  mobileOrchestrator,
+  transcriptSubscriptions,
+  roomManager,
+);
 
 /**
  * Harden the browser-panel <webview> guests hosted in `win`: no node, sandboxed,
@@ -1717,6 +1713,7 @@ async function createWindow(): Promise<BrowserWindow> {
     externalRuntimeApprovals = new ExternalRuntimeApprovals({
       windows: () => mainWindows,
       ownerWebContentsId: (sessionId) => externalBridge.panelOwnerWebContentsId(sessionId),
+      onPendingChange: (event) => mobileOrchestrator.mirrorExternalApproval(event),
     });
     const approvals = externalRuntimeApprovals;
     externalRuntimeService = new ExternalRuntimeService({
@@ -5589,19 +5586,13 @@ ipcMain.handle("updater:install", async () => quitAndInstall());
 ipcMain.handle("updater:status", async () => getLastStatus());
 ipcMain.handle("app:version", () => app.getVersion());
 
-const managedRuntimeHandlers = createManagedRuntimeHandlers<IpcMainInvokeEvent>(
-  createDesktopManagedRuntimeProvider({
-    isPackaged: app.isPackaged,
-    resourcesPath: process.resourcesPath,
-    appPath: app.getAppPath(),
-  }),
+desktopManagedRuntimes.registerIpc(
+  ipcMain,
   (event) =>
     [...mainWindows].some(
       (window) => !window.isDestroyed() && window.webContents === event.sender,
     ) && event.senderFrame === event.sender.mainFrame,
 );
-ipcMain.handle("managed-runtimes:list", managedRuntimeHandlers.list);
-ipcMain.handle("managed-runtimes:resolve", managedRuntimeHandlers.resolve);
 
 // ── Mobile Web Remote ───────────────────────────────────────────────────────
 const startMobileRemote = (opts?: { mode?: "lan" | "tunnel" | "relay" }) =>
@@ -5718,9 +5709,6 @@ ipcMain.handle(
   },
 );
 ipcMain.handle("rooms:open", async (_e, roomId: string) => roomManager.open(roomId));
-ipcMain.handle("rooms:close", async (_e, roomId: string) => {
-  roomManager.close(roomId);
-});
 ipcMain.handle("rooms:send", async (_e, roomId: string, text: string) => {
   if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
     throw new Error("invalid room message");
@@ -5762,61 +5750,15 @@ ipcMain.handle(
     return roomManager.openForSession(claudeSessionId, cwd, mode, kind ?? "claude-code");
   },
 );
-ipcMain.handle(
-  "ccRoom:openLinkedSession",
-  async (_e, externalSessionId: unknown, cwd: unknown, kind: unknown) =>
-    openLinkedSessionFromIpc(
-      roomManager,
-      externalSessionId,
-      await requireRendererLinkedSessionPath(cwd),
-      kind,
-    ),
-);
-ipcMain.handle(
-  "ccRoom:takeOverLinkedSession",
-  async (_e, roomId: unknown, externalSessionId: unknown, cwd: unknown, kind: unknown) =>
-    takeOverLinkedSessionFromIpc(
-      roomManager,
-      roomId,
-      externalSessionId,
-      await requireRendererLinkedSessionPath(cwd),
-      kind,
-    ),
-);
-const transcriptCleanupSenders = new Set<number>();
-ipcMain.handle(
-  "ccRoom:subscribeTranscript",
-  async (
-    event,
-    roomId: string,
-    cwd: string,
-    sessionId: string,
-    kind: "claude-code" | "codex",
-    limit: number,
-  ) => {
-    // Linked rooms may live in a worktree of a registered root; the opened-room
-    // match below is what binds this subscription.
-    cwd = await requireRendererLinkedSessionPath(cwd);
-    if (!mobileOrchestrator.roomMatchesTranscript(roomId, cwd, sessionId, kind)) {
-      throw new Error("cc-room transcript subscription does not match the opened room");
-    }
-    const senderId = event.sender.id;
-    const subscriberId = `desktop:${senderId}`;
-    if (!transcriptCleanupSenders.has(senderId)) {
-      transcriptCleanupSenders.add(senderId);
-      event.sender.once("destroyed", () => {
-        transcriptCleanupSenders.delete(senderId);
-        transcriptSubscriptions?.unsubscribeSubscriber(subscriberId);
-      });
-    }
-    return {
-      ...transcriptSubscriptions!.subscribe({ subscriberId, roomId, cwd, sessionId, kind, limit }),
-      approvals: approvalBridge.pendingRequests(roomId), // cards a remounted view missed
-    };
-  },
-);
-ipcMain.handle("ccRoom:unsubscribeTranscript", async (event, roomId: string) => {
-  transcriptSubscriptions!.unsubscribe(`desktop:${event.sender.id}`, roomId);
+registerLinkedSessionObservationIpc({
+  ipcMain,
+  windows: mainWindows,
+  roomManager,
+  listBackgroundWork: createTaskInboxBackgroundHost({ worker: () => bridge }).list,
+  requirePath: requireRendererLinkedSessionPath,
+  subscriptions: transcriptSubscriptions,
+  roomMatchesTranscript: (...args) => mobileOrchestrator.roomMatchesTranscript(...args),
+  pendingApprovals: (roomId) => approvalBridge.pendingRequests(roomId),
 });
 ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) => {
   if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
@@ -5849,10 +5791,6 @@ ipcMain.handle(
     return readCodexRecentHistory(cwd, threadId, limit);
   },
 );
-ipcMain.handle("ccRoom:closeSession", async (_e, roomId: string) => {
-  transcriptSubscriptions?.endRoom(roomId);
-  roomManager.close(roomId);
-});
 
 // Remaining CC/Codex subscription quota. Reads tokens from Keychain / ~/.codex
 // then hits each vendor's usage source. `provider` restricts the lookup
@@ -7067,6 +7005,7 @@ taskInboxDisposers.push(
   registerTaskInboxIpc(ipcMain, () => [...mainWindows], taskInboxService, taskInboxEnabled),
   sessionCatalogStore.onChanged(() => taskInboxService?.scheduleRefresh()),
 );
+backgroundWork.registerBackgroundWorkIpc(ipcMain, mainWindows, () => bridge);
 const disposeOperationBatchHost = registerOperationBatchHost({
   windows: () => [...mainWindows],
   enabled: taskInboxEnabled,

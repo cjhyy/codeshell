@@ -49,7 +49,7 @@ afterEach(() => {
   FakeWebSocket.instances = [];
 });
 
-async function pairedController() {
+async function pairedController(outputJournal = false) {
   ensureMiniDom();
   FakeWebSocket.instances = [];
   const values = new Map([
@@ -80,7 +80,11 @@ async function pairedController() {
     const ws = FakeWebSocket.instances.at(-1)!;
     await act(async () => {
       ws.open();
-      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      ws.message({
+        type: "auth.ok",
+        device: { id: "device-1", name: "Phone" },
+        ...(outputJournal ? { capabilities: { outputJournal: 1 } } : {}),
+      });
       await flushMicrotasks();
     });
     return ws;
@@ -327,6 +331,72 @@ test("a disconnect cancels a started image upload so text can be sent after reco
       await flushMicrotasks();
     });
     expect(chatSends(reconnected)[0]!.text).toBe("independent text");
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test("paired external selection sends its model and subscribes to output after acceptance", async () => {
+  const { hook, ws } = await pairedController(true);
+  try {
+    expect(ws.sent.some((event) => event.type === "runtime.models")).toBe(true);
+    await act(async () => {
+      const selection = ws.sent.findLast((event) => event.type === "session.select")!;
+      ws.message({
+        type: "session.recovery.ready",
+        sessionId: "native",
+        recoveryId: selection.recoveryId,
+        ok: true,
+        journalRequired: true,
+      });
+      await flushMicrotasks();
+      const read = ws.sent.findLast((event) => event.type === "session.outputJournal")!;
+      ws.message({
+        ...read,
+        page: { version: 1, status: "unavailable", frames: [], complete: false },
+      });
+      ws.message({
+        type: "runtime.models.ok",
+        models: [
+          {
+            key: "codex/fixture",
+            label: "Codex Fixture",
+            provider: "codex",
+            kind: "codex",
+            maxContextTokens: 1000,
+          },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      (hook.result.current.controller.modelSelector as any).props.onChange("codex/fixture");
+      hook.result.current.controller.setDraft("external task");
+    });
+    await act(async () => {
+      hook.result.current.controller.send();
+      await flushMicrotasks();
+    });
+    const sent = chatSends(ws).at(-1)!;
+    expect(sent.modelKey).toBe("codex/fixture");
+    const before = ws.sent.length;
+    await act(async () => {
+      ws.message({
+        type: "chat.accepted",
+        sessionId: "native",
+        clientMessageId: sent.clientMessageId,
+        modelKey: "codex/fixture",
+      });
+      await flushMicrotasks();
+    });
+    expect(
+      ws.sent
+        .slice(before)
+        .some(
+          (event) =>
+            event.type === "session.select" && event.sessionId === "native" && event.recoveryId,
+        ),
+    ).toBe(true);
   } finally {
     await hook.unmount();
   }

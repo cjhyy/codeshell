@@ -239,6 +239,50 @@ try {
   await secondClosed;
   await until(() => relay.records.length > records && relay.current.ready);
   assert.equal(dispatched, 3); // Reconnect did not replay any phone action.
+  const rotating = await phone({ Cookie: cookie });
+  await once(rotating, "open");
+  assert.equal(
+    (
+      await exchange(rotating, {
+        type: "auth.device",
+        deviceId: pairedTwo.device.id,
+        secretHash: "phone-two-secret",
+      })
+    ).type,
+    "auth.ok",
+  );
+  const lateOutput = [];
+  rotating.on("message", (raw) => lateOutput.push(String(raw)));
+  const rotationClosed = once(rotating, "close");
+  passcode.set("rotated-passcode");
+  rotating.send(JSON.stringify({ type: "chat.send", text: "revoked entrance" }));
+  rotating.send(
+    JSON.stringify({ type: "approval.respond", approvalId: "pending", decision: "approve" }),
+  );
+  host.broadcastRaw(JSON.stringify({ type: "fixture.forbidden-output" }));
+  assert.equal((await rotationClosed)[0], 4407);
+  assert.equal(dispatched, 3);
+  assert.deepEqual(lateOutput, []);
+  assert.equal((await http("/health", { headers: { Cookie: cookie } })).status, 401);
+  const revalidated = await http("/health", {
+    headers: { "x-access-passcode": "rotated-passcode" },
+  });
+  assert.equal(revalidated.status, 200);
+  const fresh = await phone({ Cookie: revalidated.headers["set-cookie"][0].split(";")[0] });
+  await once(fresh, "open");
+  assert.equal(
+    (
+      await exchange(fresh, {
+        type: "auth.device",
+        deviceId: pairedTwo.device.id,
+        secretHash: "phone-two-secret",
+      })
+    ).type,
+    "auth.ok",
+  );
+  assert.equal((await exchange(fresh, { type: "session.list" })).type, "test.dispatched");
+  assert.equal(dispatched, 4);
+  fresh.close();
   // Stop the actual Host without manually closing the connector, then reuse
   // the exact port for a different service. Revoked authority must not survive.
   const openBeforeStop = await relay.open();

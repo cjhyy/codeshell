@@ -1,4 +1,4 @@
-import { panelExecutionGate } from "./execution-gate.js";
+import { panelExecutionGate, panelExecutionProject } from "./execution-gate.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -25,6 +25,7 @@ import {
   panelAppPackageDir,
 } from "@cjhyy/code-shell-core";
 import { createPanelManagement } from "./management.js";
+import { PanelBackgroundService } from "./background-services.js";
 
 function git(cwd: string, ...args: string[]) {
   const result = spawnSync("git", args, { cwd, encoding: "utf8" });
@@ -202,7 +203,8 @@ describe("shared Web panel management with the real Core installer", () => {
     expect((await api.snapshot()).panels[0]?.version).toBe("2.0.0");
     expect((await listInstalledPanelApps())[0]?.source).toMatchObject({ ref: "main" });
     expect(refLookups()).toBe(2);
-    expect(fetches).toEqual([current.source!.commit, reviewedCommit]);
+    // Update preparation revalidates the pinned source before draining services.
+    expect(fetches).toEqual([current.source!.commit, reviewedCommit, reviewedCommit]);
   });
 
   test("Desktop project updates use the default ref resolver and retain the reviewed SHA when HEAD moves", async () => {
@@ -239,7 +241,7 @@ describe("shared Web panel management with the real Core installer", () => {
       packageDigest: selected.packageDigest!,
     });
     expect(refLookups()).toBe(2);
-    expect(fetches).toEqual([originalCommit, reviewedCommit]);
+    expect(fetches).toEqual([originalCommit, reviewedCommit, reviewedCommit]);
   });
 
   test("reviews compare permissions with the project's selected package rather than the newer catalog", async () => {
@@ -302,6 +304,23 @@ describe("shared Web panel management with the real Core installer", () => {
       expect(review).toHaveProperty("installedPermissions", []);
       expect(review.preview.permissions).toEqual(["storage"]);
     }
+  });
+
+  test("rebinding the package a current pin selects leaves settings and a pending review intact", async () => {
+    const api = service({ projectPackages: true });
+    await api.install(owner, (await api.preview(owner, input)).reviewToken);
+    const bound = (await api.snapshot()).panels[0]!;
+    const storedPins = () =>
+      new SettingsManager(cwd, "full").getRawForScope("project", cwd, { strict: true })
+        .panelAppPins;
+    const before = storedPins();
+    writePanel("2.0.0");
+    const review = await api.previewUpdate(owner, bound.id, bound.revision);
+    await api.binding(owner, bound.id, true, bound.revision);
+    expect(storedPins()).toEqual(before);
+    expect((await api.snapshot()).panels[0]?.revision).toBe(bound.revision);
+    await api.install(owner, review.reviewToken);
+    expect((await api.snapshot()).panels[0]?.version).toBe("2.0.0");
   });
 
   test("scoped management snapshots keep current authorization and do not return another app", async () => {
@@ -617,6 +636,276 @@ describe("shared Web panel management with the real Core installer", () => {
     expect(inventory.versions.map((app) => app.version)).toEqual(["2.0.0"]);
   });
 
+  test("reviewed restore drains only its service scope behind admission and rechecks before committing", async () => {
+    const { api, old, current } = await restorationFixture();
+    const review = await api.previewRestore(owner, old.id, old.packageDigest, current.revision);
+    const scope = { appId: old.id, projectPath: cwd, holder: { kind: "service" as const } };
+    const peer = { ...scope, projectPath: join(root, "other-project") };
+    const release = panelExecutionGate.enter(scope);
+    const releasePeer = panelExecutionGate.enter(peer);
+    let entered!: () => void;
+    const draining = new Promise<void>((resolve) => (entered = resolve));
+    let finish!: () => void;
+    const exited = new Promise<void>((resolve) => (finish = resolve));
+    const unregister = panelExecutionGate.registerServiceDrain(async (matches) => {
+      expect(matches(scope)).toBe(true);
+      expect(matches(peer)).toBe(false);
+      expect(() => panelExecutionGate.enter(scope)).toThrow("正在更新");
+      entered();
+      await exited;
+      release();
+    });
+    const restoring = api.restore(owner, review.reviewToken);
+    try {
+      await draining;
+      expect((await api.snapshot()).panels[0]!.packageDigest).toBe(current.packageDigest);
+      expect(
+        panelExecutionGate.blockers((value) => value.projectPath === panelExecutionProject(cwd)),
+      ).toHaveLength(1);
+      finish();
+      expect(await restoring).toEqual({ id: old.id, packageDigest: old.packageDigest });
+      expect((await api.snapshot()).panels[0]!.packageDigest).toBe(old.packageDigest);
+      expect(
+        panelExecutionGate.blockers((value) => value.projectPath === peer.projectPath),
+      ).toHaveLength(1);
+    } finally {
+      finish();
+      await restoring.catch(() => undefined);
+      release();
+      releasePeer();
+      unregister();
+    }
+  });
+
+  test("real coordinator restore waits for custody exit and refuses unconfirmed replacement", async () => {
+    const { api, old, current } = await restorationFixture();
+    const scope = { appId: old.id, projectPath: cwd, name: "feed" };
+    let announce!: () => void, confirm!: (dead: boolean) => void;
+    const stopping = new Promise<void>((resolve) => {
+      announce = resolve;
+    });
+    let exitProof = new Promise<boolean>((resolve) => {
+      confirm = resolve;
+    });
+    const workers: Array<{ alive: boolean; pid: number }> = [];
+    const identity = (pid: number) => ({
+      pid,
+      host: "owned-fixture",
+      boot: "fixture-boot",
+      start: String(pid),
+      machine: "fixture-machine",
+    });
+    const coordinator = new PanelBackgroundService({
+      rootDir: join(root, "services"),
+      gate: panelExecutionGate,
+      identities: { current: identity, status: () => "alive" },
+      groupStatus: (value) =>
+        workers.find((worker) => worker.pid === value.pid)?.alive ? "unknown" : "dead",
+      describe: async () => ({
+        revision: (await api.snapshot()).panels[0]!.revision,
+        entry: "feed",
+        packageRoot: root,
+        cwd,
+        executable: "/unused-owned-runtime",
+        sha256: "a".repeat(64),
+        definition: {
+          entry: "feed",
+          channels: { quotes: { maxBytes: 1024 } },
+          maxLifetimeMs: 21_600_000,
+          idleGraceMs: 0,
+        },
+      }),
+      spawn: async (input) => {
+        const worker = { alive: true, pid: 90_000_000 + workers.length };
+        workers.push(worker);
+        let exited!: () => void;
+        return {
+          identity: identity(worker.pid),
+          prepare: async () => identity(worker.pid),
+          activate: () => input.onLine({ t: "ready" }),
+          send() {},
+          exited: new Promise<void>((resolve) => {
+            exited = resolve;
+          }),
+          terminate: async () => {
+            announce();
+            const dead = await exitProof;
+            if (dead) {
+              worker.alive = false;
+              exited();
+            }
+            return dead;
+          },
+        };
+      },
+    });
+    let pending: Promise<unknown> | undefined;
+    try {
+      await coordinator.initialize();
+      await coordinator.setDesired(scope, {
+        desired: "always",
+        expectedRevision: 0,
+        requestKey: "start",
+      });
+      const review = await api.previewRestore(owner, old.id, old.packageDigest, current.revision);
+      pending = api.restore(owner, review.reviewToken);
+      await stopping;
+      expect(workers).toHaveLength(1);
+      expect(workers[0]!.alive).toBe(true);
+      expect((await api.snapshot()).panels[0]!.packageDigest).toBe(current.packageDigest);
+      confirm(true);
+      await pending;
+      await coordinator.tick();
+      expect(workers[0]!.alive).toBe(false);
+      expect(workers).toHaveLength(2);
+      expect((await api.snapshot()).panels[0]!.packageDigest).toBe(old.packageDigest);
+      exitProof = Promise.resolve(false);
+      const selected = (await api.snapshot()).panels[0]!;
+      const second = await api.previewRestore(
+        owner,
+        old.id,
+        current.packageDigest,
+        selected.revision,
+      );
+      await expect(api.restore(owner, second.reviewToken)).rejects.toMatchObject({
+        blockers: [{ holder: { kind: "service" } }],
+      });
+      expect((await coordinator.get(scope)).phase).toBe("stop-unconfirmed");
+      expect((await api.snapshot()).panels[0]!.packageDigest).toBe(old.packageDigest);
+      expect(workers).toHaveLength(2);
+      expect(workers[1]!.alive).toBe(true);
+    } finally {
+      confirm(true);
+      await pending?.catch(() => undefined);
+      exitProof = Promise.resolve(true);
+      await coordinator.shutdown();
+    }
+  });
+
+  test("restore preserves stop-unconfirmed custody and review until an explicit retry after exit", async () => {
+    const { api, old, current } = await restorationFixture();
+    const review = await api.previewRestore(owner, old.id, old.packageDigest, current.revision);
+    const scope = {
+      appId: old.id,
+      projectPath: cwd,
+      holder: { kind: "service" as const, label: "feed: stop-unconfirmed" },
+    };
+    const release = panelExecutionGate.enter(scope);
+    let drains = 0;
+    const unregister = panelExecutionGate.registerServiceDrain(async () => {
+      drains++;
+    });
+    try {
+      await expect(api.restore(owner, review.reviewToken)).rejects.toMatchObject({
+        blockers: [{ ...scope, projectPath: panelExecutionProject(cwd), count: 1 }],
+      });
+      expect(drains).toBe(1);
+      expect((await api.snapshot()).panels[0]!.packageDigest).toBe(current.packageDigest);
+      expect(panelExecutionGate.blockers(() => true)).toHaveLength(1);
+      release();
+      await api.restore(owner, review.reviewToken);
+      expect((await api.snapshot()).panels[0]!.packageDigest).toBe(old.packageDigest);
+    } finally {
+      release();
+      unregister();
+    }
+  });
+
+  test("restore validates stale authority and corrupt target bytes before draining service custody", async () => {
+    const { api, old, current } = await restorationFixture();
+    const review = await api.previewRestore(owner, old.id, old.packageDigest, current.revision);
+    const release = panelExecutionGate.enter({
+      appId: old.id,
+      projectPath: cwd,
+      holder: { kind: "service" },
+    });
+    let drains = 0;
+    const unregister = panelExecutionGate.registerServiceDrain(async () => {
+      drains++;
+    });
+    try {
+      await expect(
+        api.restore({ ...owner, ownerId: "other" }, review.reviewToken),
+      ).rejects.toMatchObject({ status: 403 });
+      writeFileSync(
+        join(panelAppPackageDir(old.id, old.packageDigest!), "app/index.html"),
+        "tampered",
+      );
+      await expect(api.restore(owner, review.reviewToken)).rejects.toThrow("content has changed");
+      expect(drains).toBe(0);
+      expect(panelExecutionGate.blockers(() => true)).toHaveLength(1);
+    } finally {
+      release();
+      unregister();
+    }
+  });
+
+  for (const boundary of ["prepare", "write"] as const) {
+    test(`restore cancels at the ${boundary} validation continuation without crossing its lease`, async () => {
+      let armed = false,
+        cancelOnNextClock = false,
+        cancelled = false;
+      let phase: "prepare" | "write" = "prepare";
+      const fixture = await restorationFixture({
+        compatibility: (app) => {
+          // The selected package is v2. Validation of the reviewed v1 target
+          // arms cancellation at its final lease clock read, before returning
+          // through the async validator's continuation. No elapsed-time race.
+          if (armed && app.version === "1.0.0" && phase === boundary) cancelOnNextClock = true;
+          return { supported: true, reasons: [] };
+        },
+        now: () => {
+          if (cancelOnNextClock) {
+            cancelOnNextClock = false;
+            queueMicrotask(() => {
+              cancelled = true;
+              api.cancelOwner(owner.ownerId);
+            });
+          }
+          return 1000;
+        },
+      });
+      const api = fixture.api;
+      const { old, current } = fixture;
+      const review = await api.previewRestore(owner, old.id, old.packageDigest, current.revision);
+      let drains = 0;
+      const unregister = panelExecutionGate.registerServiceDrain(async () => {
+        drains++;
+        phase = "write";
+      });
+      armed = true;
+      try {
+        await expect(api.restore(owner, review.reviewToken)).rejects.toMatchObject({ status: 401 });
+        expect(cancelled).toBe(true);
+        expect(drains).toBe(boundary === "prepare" ? 0 : 1);
+        expect((await api.snapshot()).panels[0]!.packageDigest).toBe(current.packageDigest);
+      } finally {
+        unregister();
+      }
+    });
+  }
+
+  test("restore rechecks owner revocation after service drain before writing the project pin", async () => {
+    const { api, old, current } = await restorationFixture();
+    const review = await api.previewRestore(owner, old.id, old.packageDigest, current.revision);
+    const release = panelExecutionGate.enter({
+      appId: old.id,
+      projectPath: cwd,
+      holder: { kind: "service" },
+    });
+    const unregister = panelExecutionGate.registerServiceDrain(async () => {
+      release();
+      api.cancelOwner(owner.ownerId);
+    });
+    try {
+      await expect(api.restore(owner, review.reviewToken)).rejects.toThrow();
+      expect((await api.snapshot()).panels[0]!.packageDigest).toBe(current.packageDigest);
+    } finally {
+      release();
+      unregister();
+    }
+  });
+
   test("owner-bound reviews expire on logout and pending network work cannot issue another review", async () => {
     const api = service();
     const reviewed = await api.preview(owner, input);
@@ -719,6 +1008,43 @@ describe("shared Web panel management with the real Core installer", () => {
     await expect(api.snapshot()).rejects.toThrow();
     await expect(api.binding(owner, app.id, true, app.revision)).rejects.toThrow();
     expect(readFileSync(join(outside, "settings.json"), "utf8")).toBe('{"custom":"preserve"}');
+  });
+
+  test("unbind and remove validate stale revisions before draining background service holders", async () => {
+    const api = service();
+    await api.install(owner, (await api.preview(owner, input)).reviewToken);
+    let app = (await api.snapshot()).panels[0]!;
+    let release = panelExecutionGate.enter({
+      appId: app.id,
+      projectPath: cwd,
+      holder: { kind: "service" },
+    });
+    let drains = 0;
+    const unregister = panelExecutionGate.registerServiceDrain(async () => {
+      drains++;
+      release();
+    });
+    try {
+      await expect(api.binding(owner, app.id, false, "stale")).rejects.toThrow();
+      expect(drains).toBe(0);
+      await api.binding(owner, app.id, false, app.revision);
+      expect(drains).toBe(1);
+      app = (await api.snapshot()).panels[0]!;
+      expect(app.bound).toBe(false);
+      release = panelExecutionGate.enter({
+        appId: app.id,
+        projectPath: cwd,
+        holder: { kind: "service" },
+      });
+      await expect(api.remove(owner, app.id, "stale")).rejects.toThrow();
+      expect(drains).toBe(1);
+      await api.remove(owner, app.id, app.revision);
+      expect(drains).toBe(2);
+      expect((await api.snapshot()).panels).toEqual([]);
+    } finally {
+      release();
+      unregister();
+    }
   });
 
   test("unsupported panels remain installed without exposing them to the workspace", async () => {

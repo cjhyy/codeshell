@@ -8,10 +8,19 @@ import { mobileSessionCommandAuthority } from "./output-recovery-authority.js";
 import {
   MobileExternalRuntimeCommands,
   isPersistedExternalRuntime,
+  persistedExternalRuntimeModelKey,
+  type MobileExternalRuntimeCommandsDeps,
 } from "./external-runtime-commands.js";
+import {
+  ExternalRuntimeApprovals,
+  type ExternalApprovalEvent,
+} from "../external-runtime-approvals.js";
+import type { BrowserWindow } from "electron";
 import type { ExternalRuntimeService } from "../external-runtime-service.js";
 
-function harness() {
+function harness(
+  extra: Pick<MobileExternalRuntimeCommandsDeps, "approvals" | "approvalEvent"> = {},
+) {
   let authenticated = true,
     stamp = "session-incarnation/project-root",
     owner: number | undefined = 77;
@@ -53,6 +62,7 @@ function harness() {
   let afterBeforeInput: (() => void) | undefined;
   let afterAuthority: (() => void) | undefined;
   const commands = new MobileExternalRuntimeCommands({
+    ...extra,
     authenticated: (viewer, device) => authenticated && viewer === "tab" && device === "phone",
     authority: async () => {
       const capturedStamp = stamp;
@@ -204,6 +214,11 @@ test("persisted external provider cannot become native merely because its model 
   expect(isPersistedExternalRuntime({ provider: "claude-code", model: "malformed" })).toBe(true);
   expect(isPersistedExternalRuntime({ provider: "other", model: "codex/synthetic" })).toBe(true);
   expect(isPersistedExternalRuntime({ provider: "openai", model: "gpt-4o" })).toBe(false);
+  expect(persistedExternalRuntimeModelKey({ provider: "codex", model: "fixture" })).toBe(
+    "codex/fixture",
+  );
+  expect(persistedExternalRuntimeModelKey({ provider: "claude-code" })).toBe("claude-code/");
+  expect(persistedExternalRuntimeModelKey({ provider: "openai", model: "gpt-4o" })).toBeUndefined();
 });
 
 test("project revocation after the final async check is fenced synchronously before physical input", async () => {
@@ -412,4 +427,202 @@ test("an explicit existing native Session needs the current viewer selection, wh
   });
   expect(commands.isExternal("native", "tab")).toBe(false);
   expect(commands.isExternal("unselected-native", "tab")).toBe(true);
+});
+
+function startupHarness() {
+  let owner: number | undefined;
+  let runtime: object | undefined;
+  let modelKey: string | undefined;
+  let exists = false;
+  let enabled = true;
+  let authenticated = true;
+  let stamp = "mounted-root-v1";
+  let duringStart = () => {};
+  const started: string[] = [];
+  let accepted = 0;
+  const authority = () => {
+    const captured = stamp;
+    return {
+      stamp,
+      cwd: "/workspace",
+      assertCurrent() {
+        if (stamp !== captured) throw new Error("revoked root");
+      },
+    };
+  };
+  const service = {
+    isEnabled: () => enabled,
+    get: () => runtime,
+    getCwd: () => "/workspace",
+    captureActiveRun: () => undefined,
+    send: async (_id: string, _input: unknown, _owner: number, _goal: unknown, hooks: any) => {
+      await hooks.beforeInput();
+      hooks.assertInputOwner();
+      accepted++;
+      hooks.accepted();
+      return { ok: true, reason: "completed" };
+    },
+  } as unknown as ExternalRuntimeService;
+  const commands = new MobileExternalRuntimeCommands({
+    authenticated: (viewer, device) => authenticated && viewer === "tab" && device === "phone",
+    authority: async () => authority(),
+    owner: () => owner,
+    service: () => service,
+    isExternal: () => Boolean(modelKey),
+    exists: () => exists,
+    attachmentPath: async (path) => path,
+    modelKey: () => modelKey,
+    startRuntime: async (request) => {
+      duringStart();
+      request.assertCurrent();
+      started.push(request.modelKey);
+      modelKey = request.modelKey;
+      owner = 77;
+      exists = true;
+      runtime = {};
+    },
+  });
+  return {
+    commands,
+    started,
+    accepted: () => accepted,
+    create: () => commands.created("tab", "phone", "mobile-new", authority()),
+    select: () =>
+      commands.observe({
+        type: "session.select",
+        sessionId: "mobile-new",
+        viewerId: "tab",
+        deviceId: "phone",
+      }),
+    restore: () => {
+      exists = true;
+      modelKey = "claude-code/sonnet";
+    },
+    disable: () => {
+      enabled = false;
+    },
+    revokeAtStart: () => {
+      duringStart = () => {
+        authenticated = false;
+      };
+    },
+    changeRootAtStart: () => {
+      duringStart = () => {
+        stamp = "replaced-root";
+      };
+    },
+    switchAtStart: () => {
+      duringStart = () => commands.revoke("tab");
+    },
+    request: {
+      id: "request",
+      params: { task: "hello", clientMessageId: "input", attachments: [] },
+    },
+  };
+}
+
+test("a Host-created mobile session starts the chosen external runtime and submits through its canonical producer", async () => {
+  const f = startupHarness();
+  f.create();
+  const target = await f.commands.prepare("tab", "phone", "mobile-new", { modelKey: "codex/test" });
+  expect(f.started).toEqual(["codex/test"]);
+  expect(target.modelKey).toBe("codex/test");
+  expect(await target.submit(f.request)).toEqual({ ok: true });
+  expect(f.accepted()).toBe(1);
+});
+
+test("selecting a saved external Session can restart its persisted runtime after Desktop restart", async () => {
+  const f = startupHarness();
+  f.restore();
+  await f.select();
+  const target = await f.commands.prepare("tab", "phone", "mobile-new");
+  expect(f.started).toEqual(["claude-code/sonnet"]);
+  expect(await target.submit(f.request)).toEqual({ ok: true });
+});
+
+for (const scenario of ["disable", "revokeAtStart", "changeRootAtStart", "switchAtStart"] as const)
+  test(`external first send rejects ${scenario} without spawning or accepting input`, async () => {
+    const f = startupHarness();
+    f.create();
+    f[scenario]();
+    await expect(
+      f.commands.prepare("tab", "phone", "mobile-new", { modelKey: "codex/test" }),
+    ).rejects.toThrow();
+    expect(f.started).toEqual([]);
+    expect(f.accepted()).toBe(0);
+  });
+
+test("an arbitrary session ID or another tab cannot borrow the fresh-session runtime grant", async () => {
+  const f = startupHarness();
+  f.create();
+  await expect(
+    f.commands.prepare("another-tab", "phone", "mobile-new", { modelKey: "codex/test" }),
+  ).rejects.toThrow();
+  await expect(
+    f.commands.prepare("tab", "phone", "other", { modelKey: "codex/test" }),
+  ).rejects.toThrow();
+  expect(f.started).toEqual([]);
+});
+
+test("mobile external approval replay and response require the exact authenticated selection and owner", async () => {
+  const mirrored: Array<{ viewer: string; event: ExternalApprovalEvent }> = [];
+  const approvals = new ExternalRuntimeApprovals({
+    windows: () => [
+      { isDestroyed: () => false, webContents: { id: 77, send() {} } } as unknown as BrowserWindow,
+    ],
+    ownerWebContentsId: () => 77,
+  });
+  const f = harness({
+    approvals: () => approvals,
+    approvalEvent: (viewer, event) => mirrored.push({ viewer, event }),
+  });
+  const pending = approvals.request("external", {
+    toolName: "__ask_user__",
+    args: { question: "Choose a target" },
+  });
+  const requestId = approvals.pendingForSession("external", 77)[0]!.requestId;
+  await f.commands.replayApprovals("tab", "phone", "external");
+  expect(mirrored).toHaveLength(0);
+  await f.select();
+  await f.commands.replayApprovals("other-tab", "phone", "external");
+  expect(mirrored).toHaveLength(0);
+  await f.commands.replayApprovals("tab", "phone", "external");
+  expect(mirrored[0]).toMatchObject({
+    viewer: "tab",
+    event: {
+      type: "requested",
+      requestId,
+      sessionId: "external",
+      request: { toolName: "__ask_user__" },
+    },
+  });
+  await expect(
+    f.commands.respondApproval("other-tab", "phone", "external", requestId, { approved: true }),
+  ).rejects.toThrow();
+  expect(approvals.hasPendingSession("external")).toBe(true);
+  expect(
+    await f.commands.respondApproval("tab", "phone", "external", requestId, {
+      approved: true,
+      answer: "staging",
+    }),
+  ).toBe(true);
+  expect(await pending).toMatchObject({ approved: true, answer: "staging" });
+  expect(approvals.hasPendingSession("external")).toBe(false);
+  await f.commands.mirrorApproval({
+    type: "resolved",
+    sessionId: "external",
+    requestId,
+    ownerWebContentsId: 77,
+    approved: true,
+  });
+  expect(mirrored.at(-1)?.event.type).toBe("resolved");
+  f.revoke();
+  const count = mirrored.length;
+  await f.commands.mirrorApproval({
+    type: "resolved",
+    sessionId: "external",
+    requestId,
+    ownerWebContentsId: 77,
+  });
+  expect(mirrored).toHaveLength(count);
 });

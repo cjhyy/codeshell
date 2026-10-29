@@ -5,6 +5,43 @@ import { getProjectStore } from "../project-store.js";
 import { assertDesktopSessionId } from "../session-validation.js";
 import { getSessionWorkspaceAuthorityForUi } from "../session-workspace-service.js";
 
+/** Authority for a Host-minted Session before its first canonical record exists. */
+export function mobileNewSessionAuthority(cwd: string, projectId?: string | null, rootId?: string) {
+  const snapshot = () => {
+    const store = getProjectStore();
+    const noRepo = store.isNoRepoCwd(cwd);
+    const root = noRepo ? undefined : store.resolveExactRootSync(cwd);
+    if (!noRepo && !root) throw new Error("New Session project is not mounted");
+    if (
+      (projectId === null && !noRepo) ||
+      (projectId && root?.project.id !== projectId) ||
+      (rootId && root?.mainRoot.id !== rootId)
+    )
+      throw new Error("New Session project authority changed");
+    const directory = lstatSync(cwd);
+    if (!directory.isDirectory() || directory.isSymbolicLink())
+      throw new Error("invalid project root");
+    return JSON.stringify([
+      noRepo,
+      root?.project.id,
+      root?.mainRoot.id,
+      directory.dev,
+      directory.ino,
+    ]);
+  };
+  const stamp = snapshot();
+  return {
+    cwd,
+    mainRoot: cwd,
+    projectId,
+    rootId,
+    stamp,
+    assertCurrent: () => {
+      if (snapshot() !== stamp) throw new Error("New Session project authority changed");
+    },
+  };
+}
+
 /** Re-resolve mounted project authority for every page; no worker or runtime is started. */
 export async function mobileSessionCommandAuthority(sessionId: string) {
   assertDesktopSessionId(sessionId);
@@ -135,6 +172,7 @@ export async function mobileSessionCommandAuthority(sessionId: string) {
     assertCurrent,
     stamp,
     cwd: authority.workspace.root,
+    mainRoot: authority.mainRoot,
     projectId: authority.projectId,
     rootId: authority.mainRootId,
   };

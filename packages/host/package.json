@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-host",
-  "version": "0.9.47",
+  "version": "0.9.49",
   "description": "Host-neutral capability registry and worker request dispatch for CodeShell hosts.",
   "type": "module",
   "main": "./dist/index.js",

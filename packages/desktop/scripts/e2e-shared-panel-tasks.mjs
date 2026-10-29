@@ -17,8 +17,7 @@ import {
 } from "./electron-harness.mjs";
 
 const worktreeDirectories = process.argv.includes("--worktree-directories");
-const legacyProjects = process.argv.includes("--legacy-projects");
-const projectPins = legacyProjects || process.argv.includes("--project-pins");
+const projectPins = process.argv.includes("--project-pins");
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isolated = await makeIsolatedElectronHome("codeshell-shared-task-e2e-");
 // Native package authorization intentionally rejects symlinked install roots.
@@ -162,12 +161,14 @@ async function run() {
     ),
   ]);
   if (projectPins) {
-    // Retain the project's v1 package, then install a distinguishable v2 in the
-    // global catalog. Both the actual Electron guest and paired HTTP must keep v1.
+    // Retain the project's v1 package and install a distinguishable v2 in the global
+    // catalog, then roll the project back to v1. The rollback is chosen after the
+    // install, so both the actual Electron guest and paired HTTP must keep v1.
     const previousHome = process.env.HOME;
     process.env.HOME = isolated.home;
     try {
       const {
+        installedPanelAppUpdatedAt,
         listInstalledPanelApps,
         retainInstalledPanelApp,
         previewLocalPanelApp,
@@ -175,18 +176,7 @@ async function run() {
       } = await import("@cjhyy/code-shell-core");
       const current = (await listInstalledPanelApps()).find((item) => item.id === manifest.id);
       assert.ok(current?.packageDigest);
-      if (!legacyProjects) {
-        await retainInstalledPanelApp(manifest.id, current.packageDigest);
-        await writeFile(
-          join(project, ".code-shell/settings.json"),
-          JSON.stringify({
-            panelAppBindings: [manifest.id],
-            panelAppPins: {
-              [manifest.id]: { version: current.version, packageDigest: current.packageDigest },
-            },
-          }),
-        );
-      }
+      await retainInstalledPanelApp(manifest.id, current.packageDigest);
       const newer = join(isolated.home, "catalog-v2");
       await mkdir(join(newer, ".codeshell-panel"), { recursive: true });
       await mkdir(join(newer, "app/tools"), { recursive: true });
@@ -218,6 +208,21 @@ async function run() {
         overwrite: true,
       });
       assert.equal((await listInstalledPanelApps())[0].version, "2.0.0");
+      await writeFile(
+        join(project, ".code-shell/settings.json"),
+        JSON.stringify({
+          panelAppBindings: [manifest.id],
+          panelAppPins: {
+            [manifest.id]: {
+              version: current.version,
+              packageDigest: current.packageDigest,
+              pinnedAt: new Date(
+                Math.max(Date.now(), (installedPanelAppUpdatedAt(manifest.id) ?? 0) + 1),
+              ).toISOString(),
+            },
+          },
+        }),
+      );
     } finally {
       if (previousHome === undefined) delete process.env.HOME;
       else process.env.HOME = previousHome;
@@ -393,13 +398,8 @@ console.log(JSON.stringify({bookmark, device: devices.addDevice({name:"Shared ta
   assert.ok(panel, "Panel was not installed");
   assert.equal(panel.version, "1.0.0");
   if (projectPins) assert.equal(panel.packagePinned, true);
-  if (legacyProjects) {
-    const migrated = JSON.parse(await readFile(join(project, ".code-shell/settings.json"), "utf8"));
-    assert.equal(migrated.panelAppPins[manifest.id].version, "1.0.0");
-    assert.equal(migrated.panelAppPins[manifest.id].packageDigest, panel.packageDigest);
-  }
-  // The production native binding API materializes legacy pins and shares the
-  // exact conditional revision with paired Web. No raw project settings write.
+  // The production native binding API shares the exact conditional revision with
+  // paired Web. No raw project settings write.
   const bindingBefore = await win.evaluate(
     async (cwd) =>
       (await window.codeshell.getPanelAppBindings(cwd)).find(
@@ -407,13 +407,16 @@ console.log(JSON.stringify({bookmark, device: devices.addDevice({name:"Shared ta
       ),
     project,
   );
-  const bindingAfter = await win.evaluate(
-    async ({ cwd, state }) =>
-      (
-        await window.codeshell.setPanelAppProjectBinding(cwd, state.appId, true, state.revision)
-      ).find((item) => item.appId === state.appId),
+  assert.ok(bindingBefore, "Installed fixture must have a conditional binding revision");
+  const bindingResult = await win.evaluate(
+    ({ cwd, state }) =>
+      window.codeshell.setPanelAppProjectBinding(cwd, state.appId, true, state.revision),
     { cwd: project, state: bindingBefore },
   );
+  assert.equal(bindingResult.ok, true, JSON.stringify(bindingResult));
+  const bindingAfter = bindingResult.bindings.find((item) => item.appId === bindingBefore.appId);
+  assert.ok(bindingAfter, "Successful binding receipt must include the selected Panel");
+  assert.equal(bindingAfter.bound, true);
   assert.equal(bindingAfter.version, "1.0.0");
   assert.ok(bindingAfter.packageDigest);
   const boundSettings = JSON.parse(
@@ -1141,10 +1144,13 @@ console.log(JSON.stringify({bookmark, device: devices.addDevice({name:"Shared ta
         window.codeshell.previewPanelAppRestore(cwd, app.appId, digest, app.revision),
       { cwd: project, app: selected, digest: retained.packageDigest },
     );
-    await win.evaluate(({ cwd, token }) => window.codeshell.restorePanelAppPackage(cwd, token), {
-      cwd: project,
-      token: restoreReview.reviewToken,
-    });
+    const restoreResult = await win.evaluate(
+      ({ cwd, token }) => window.codeshell.restorePanelAppPackage(cwd, token),
+      { cwd: project, token: restoreReview.reviewToken },
+    );
+    assert.equal(restoreResult.ok, true, JSON.stringify(restoreResult));
+    assert.equal(restoreResult.id, selected.appId);
+    assert.equal(restoreResult.packageDigest, retained.packageDigest);
     const restored = await win.evaluate(
       async (cwd) => (await window.codeshell.getPanelAppBindings(cwd))[0],
       project,
@@ -1183,10 +1189,13 @@ console.log(JSON.stringify({bookmark, device: devices.addDevice({name:"Shared ta
       { cwd: project, app: issue, digest: target.packageDigest },
     );
     assert.deepEqual(repair.addedPermissions, repair.permissions);
-    await win.evaluate(({ cwd, token }) => window.codeshell.restorePanelAppPackage(cwd, token), {
-      cwd: project,
-      token: repair.reviewToken,
-    });
+    const repairResult = await win.evaluate(
+      ({ cwd, token }) => window.codeshell.restorePanelAppPackage(cwd, token),
+      { cwd: project, token: repair.reviewToken },
+    );
+    assert.equal(repairResult.ok, true, JSON.stringify(repairResult));
+    assert.equal(repairResult.id, issue.appId);
+    assert.equal(repairResult.packageDigest, target.packageDigest);
     const repaired = await win.evaluate(
       async (cwd) => (await window.codeshell.getPanelAppBindings(cwd))[0],
       project,
@@ -1203,23 +1212,29 @@ console.log(JSON.stringify({bookmark, device: devices.addDevice({name:"Shared ta
     async (cwd) => (await window.codeshell.getPanelAppBindings(cwd))[0],
     project,
   );
-  await win.evaluate(
+  const unbound = await win.evaluate(
     ({ cwd, state }) =>
       window.codeshell.setPanelAppProjectBinding(cwd, state.appId, false, state.revision),
     { cwd: project, state: staleBinding },
   );
+  assert.equal(unbound.ok, true, JSON.stringify(unbound));
+  const unboundState = unbound.bindings.find((item) => item.appId === staleBinding.appId);
+  assert.ok(unboundState, "Successful unbind receipt must include the selected Panel");
+  assert.equal(unboundState.bound, false);
+  assert.notEqual(unboundState.revision, staleBinding.revision);
   const conflict = await win.evaluate(
-    async ({ cwd, state }) => {
-      try {
-        await window.codeshell.setPanelAppProjectBinding(cwd, state.appId, true, state.revision);
-        return false;
-      } catch (error) {
-        return String(error).includes("配置已改变");
-      }
-    },
+    ({ cwd, state }) =>
+      window.codeshell.setPanelAppProjectBinding(cwd, state.appId, true, state.revision),
     { cwd: project, state: staleBinding },
   );
-  assert.equal(conflict, true);
+  assert.equal(conflict.ok, false, "A stale revision must not re-enable the Panel");
+  assert.equal(conflict.error, "面板已改变，请刷新后重试。");
+  assert.equal(conflict.blockers, undefined, "A revision conflict is not an execution blocker");
+  assert.deepEqual(
+    await win.evaluate((cwd) => window.codeshell.getPanelAppBindings(cwd), project),
+    unbound.bindings,
+    "Rejected stale binding must preserve the committed unbound state",
+  );
 
   console.log(
     JSON.stringify({
@@ -1232,8 +1247,7 @@ console.log(JSON.stringify({bookmark, device: devices.addDevice({name:"Shared ta
       projectUpdateAfterActualTaskExit: projectPins,
       nativeReviewedPackageRestore: projectPins,
       nativeDamagedPackageRepair: projectPins,
-      projectPinnedAgainstNewerCatalog: projectPins,
-      legacyProjectAutomaticallyPinned: legacyProjects,
+      projectRollbackHoldsAgainstNewerCatalog: projectPins,
       sharedDirectoryBookmarks: true,
       backgroundDirectoryDelivery: true,
       sharedQueueControl: true,
