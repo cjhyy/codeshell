@@ -364,6 +364,14 @@ export function ComputerUseSettings() {
                 {t("settingsX.computerUse.screenSettingsHint")}
               </p>
             )}
+          {(status.permissions.accessibility !== "granted" ||
+            status.permissions.screenRecording !== "granted") && (
+            // Ad-hoc signed builds: an update changes the helper's code hash, so
+            // macOS keeps showing the old toggle while the grant no longer applies.
+            <p className="m-0 text-xs text-muted-foreground">
+              {t("settingsX.computerUse.staleGrantHint")}
+            </p>
+          )}
           {status.permissions.error && (
             <p className="m-0 text-xs text-status-warn" role="alert">
               {t("settingsX.computerUse.checkFailed")}

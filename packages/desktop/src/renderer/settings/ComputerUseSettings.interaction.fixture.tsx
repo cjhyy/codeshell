@@ -242,6 +242,10 @@ try {
     assert.equal(props(toggle())["aria-checked"], true, "Old reads cannot undo a saved toggle");
     assert.ok(textOf(container).includes("重启 CodeShell"));
   } else if (scenario === "refresh-on-return") {
+    assert.ok(
+      textOf(container).includes("原有授权可能失效"),
+      "A missing grant explains that an update can invalidate the earlier one",
+    );
     current.permissions.screenRecording = "granted";
     await update(() => window.dispatchEvent(new Event("focus")));
     assert.equal(reads, 2);
@@ -250,8 +254,10 @@ try {
     await update(() => document.dispatchEvent(new Event("visibilitychange")));
     assert.equal(reads, 2, "Hiding the app does not recheck permissions");
     visibility = "visible";
+    current.permissions.accessibility = "granted";
     await update(() => document.dispatchEvent(new Event("visibilitychange")));
     assert.equal(reads, 3);
+    assert.ok(!textOf(container).includes("原有授权可能失效"), "Fully granted hides the hint");
   } else if (scenario === "unmount") {
     await update(() => root.unmount());
     unmounted = true;
