@@ -1846,7 +1846,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         method === "filesystem.pickDirectory" &&
         !(await confirm(grant, "使用服务端下载目录？", directory))
       )
-        return null;
+        return { cancelled: true };
       await options.authorizePanelDirectory?.(
         grant.app,
         options.bindingCwd ?? options.cwd,

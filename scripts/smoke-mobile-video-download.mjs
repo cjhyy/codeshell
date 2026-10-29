@@ -208,6 +208,8 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
   });
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
     acceptDownloads: true,
   });
   await context.route("**/*", (route) => {
@@ -233,7 +235,10 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
   });
   // Exercise the real visible execution confirmation; no bypass of its endpoint.
   await page.addLocatorHandler(
-    page.getByRole("button", { name: "确认执行", exact: true }),
+    page
+      .locator(".panel-host-confirm")
+      .filter({ hasText: bin })
+      .getByRole("button", { name: "确认执行", exact: true }),
     async (button) => {
       approving = true;
       const body = await page
@@ -250,6 +255,19 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
   console.log("consumer: mobile page opened");
   const frame = page.frameLocator("iframe");
   await frame.locator("#url-input").waitFor();
+  await frame.locator('#environment-status[data-state="current"]').waitFor({ state: "attached" });
+  assert.equal(await frame.locator("#form-error").isVisible(), false);
+  assert.equal(await frame.locator("#destination-path").textContent(), cwd);
+  await frame.locator("#choose-directory").click();
+  const directoryConfirmation = page
+    .locator(".panel-host-confirm")
+    .filter({ hasText: "使用服务端下载目录？" });
+  await directoryConfirmation.waitFor();
+  assert.ok((await directoryConfirmation.textContent()).includes(join(cwd, "downloads")));
+  await directoryConfirmation.getByRole("button", { name: "取消", exact: true }).click();
+  await frame.locator("#choose-directory:not(:disabled)").waitFor();
+  assert.equal(await frame.locator("#form-error").isVisible(), false);
+  assert.equal(await frame.locator("#destination-path").textContent(), cwd);
   await frame.locator("#url-input").fill(fixtureUrl);
   await frame.locator("#inspect-button").click();
   await frame.locator("#video-title").filter({ hasText: "手机完整下载验证" }).waitFor();
@@ -320,6 +338,8 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
       realNativeService: true,
       visibleExecutionApproval: true,
       mobileHistoryCapture: true,
+      cancelledDirectoryPreservesProject: true,
+      environmentReadyWithoutAlert: true,
       exactDownloadBytes: bytes.length,
       sha256: digest(bytes),
       unauthorizedDownloadDenied: true,

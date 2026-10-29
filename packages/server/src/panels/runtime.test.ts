@@ -1633,6 +1633,54 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
     expect((await call()).status).toBe(410);
   });
 
+  test("Web directory cancellation returns the native contract without granting or creating a directory", async () => {
+    const f = await fixture({ permissions: ["context.workspace", "process"] });
+    const grant = await f.prepare();
+    const pending = f.api(`${grant.instanceId}/call`, "POST", {
+      method: "filesystem.pickDirectory",
+    });
+    const confirmation = await waitRuntimeEvent(f, grant.instanceId, "host.confirm");
+    const answer = await f.api(`${grant.instanceId}/confirm`, "POST", {
+      requestId: confirmation.payload.requestId,
+      allowed: false,
+    });
+    expect(answer.status).toBe(200);
+    const response = await pending;
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ cancelled: true });
+    expect(await readdir(f.cwd)).toEqual(["notes.txt"]);
+    // Cancellation is not an authorization failure: the existing project grant
+    // remains usable, and no replacement download-directory handle is issued.
+    const project = await f.api(`${grant.instanceId}/call`, "POST", {
+      method: "filesystem.getKnownDirectory",
+      params: { name: "project" },
+    });
+    expect(project.status).toBe(200);
+    expect(await project.json()).toMatchObject({ path: f.cwd });
+  });
+
+  test("revoking a pending Web directory choice remains an authorization failure", async () => {
+    const f = await fixture({ permissions: ["context.workspace", "process"] });
+    const grant = await f.prepare();
+    const pending = f.api(`${grant.instanceId}/call`, "POST", {
+      method: "filesystem.pickDirectory",
+    });
+    const confirmation = await waitRuntimeEvent(f, grant.instanceId, "host.confirm");
+    expect((await f.api(grant.instanceId, "DELETE")).status).toBe(200);
+    const response = await pending;
+    expect(response.status).toBe(410);
+    expect(await response.json()).not.toEqual({ cancelled: true });
+    expect(await readdir(f.cwd)).toEqual(["notes.txt"]);
+    expect(
+      (
+        await f.api(`${grant.instanceId}/confirm`, "POST", {
+          requestId: confirmation.payload.requestId,
+          allowed: true,
+        })
+      ).status,
+    ).toBe(410);
+  });
+
   test("Web restores only a bookmarked server directory after reopening the Panel", async () => {
     const f = await nodeProcessFixture();
     const project = await f.call("filesystem.getKnownDirectory", { name: "project" });
