@@ -2470,6 +2470,7 @@ export interface CodeshellApi
       externalSessionId: string,
       cwd: string,
       kind: "claude-code" | "codex",
+      source?: { jobId: string; sourceSessionId: string },
     ): Promise<{
       roomId: string;
       status: "observing" | "running";

@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, jest, mock, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { BackgroundWorkInfo } from "../../preload/types";
@@ -70,8 +70,15 @@ async function changed() {
     await flushMicrotasks();
   });
 }
+async function elapse(ms: number) {
+  await act(async () => {
+    jest.advanceTimersByTime(ms);
+    await flushMicrotasks();
+  });
+}
 beforeEach(() => {
   ensureMiniDom();
+  jest.useFakeTimers();
   conversation = null;
   current = job();
   reads = [];
@@ -115,6 +122,8 @@ afterEach(async () => {
     await flushMicrotasks();
   });
   root = null;
+  jest.clearAllTimers();
+  jest.useRealTimers();
 });
 afterAll(() => mock.restore());
 
@@ -134,7 +143,9 @@ describe("DriveAgentTaskView", () => {
       },
     });
     await changed();
-    expect(opens).toEqual([["thread-1", "/repo", "codex"]]);
+    expect(opens).toEqual([
+      ["thread-1", "/repo", "codex", { jobId: "cc-job", sourceSessionId: "parent" }],
+    ]);
     expect(conversation).toMatchObject({
       sessionId: "thread-1",
       observing: true,
@@ -164,6 +175,81 @@ describe("DriveAgentTaskView", () => {
     await render(true);
     expect(reads).toEqual(["parent"]);
     expect(opens).toHaveLength(1);
+  });
+
+  test("recovers a live transcript that appears after the initial retry window", async () => {
+    current = job({ externalSessionId: "thread-1" });
+    const open = window.codeshell.ccRoom.openLinkedSession;
+    let attempts = 0;
+    window.codeshell.ccRoom.openLinkedSession = async (...args) => {
+      if (++attempts <= 5) throw new Error("Transcript not flushed yet");
+      return open(...args);
+    };
+    await render();
+    for (let i = 0; i < 4; i++) await elapse(1500);
+    expect(attempts).toBe(5);
+    expect(text(container)).toContain("暂时无法读取会话记录");
+    await elapse(10_000);
+    expect(attempts).toBe(6);
+    expect(conversation).toMatchObject({ sessionId: "thread-1", observing: true });
+  });
+
+  test("stops connection retries when the task page is hidden", async () => {
+    current = job({ externalSessionId: "thread-1" });
+    let attempts = 0;
+    window.codeshell.ccRoom.openLinkedSession = async () => {
+      attempts += 1;
+      throw new Error("Transcript unavailable");
+    };
+    await render();
+    await render(false);
+    await elapse(30_000);
+    expect(attempts).toBe(1);
+    await render(true);
+    expect(attempts).toBe(2);
+  });
+
+  test("retries immediately on completion and bounds retries for a finished task", async () => {
+    current = job({ externalSessionId: "thread-1" });
+    let attempts = 0;
+    window.codeshell.ccRoom.openLinkedSession = async () => {
+      attempts += 1;
+      throw new Error("Transcript unavailable");
+    };
+    await render();
+    for (let i = 0; i < 4; i++) await elapse(1500);
+    expect(attempts).toBe(5);
+    current = { ...current, status: "completed", finalText: "Fixed the failing Linux checks" };
+    await changed();
+    expect(attempts).toBe(6);
+    for (let i = 0; i < 4; i++) await elapse(1500);
+    await elapse(30_000);
+    expect(attempts).toBe(10);
+    expect(text(container)).toContain("Fixed the failing Linux checks");
+    expect(
+      nodes(container, "DETAILS").some((node) => text(node).includes(current!.finalText!)),
+    ).toBe(false);
+    const retry = nodes(container, "BUTTON").find((node) => text(node) === "重试");
+    await act(async () => {
+      props(retry).onClick();
+      await flushMicrotasks();
+    });
+    expect(attempts).toBe(11);
+  });
+
+  test("shows a finished task's actual result directly when there is no transcript", async () => {
+    current = job({ status: "failed", finalText: "Build failed in packages/desktop" });
+    await render();
+    expect(text(container)).toContain("Build failed in packages/desktop");
+    expect(text(container)).toContain("此任务暂无可用的会话记录");
+    expect(nodes(container, "DETAILS")).toHaveLength(0);
+    expect(opens).toEqual([]);
+    window.codeshell.listBackgroundWork = async () => {
+      throw new Error("worker temporarily unavailable");
+    };
+    await changed();
+    expect(text(container)).toContain("无法确认任务当前状态");
+    expect(text(container)).toContain("Build failed in packages/desktop");
   });
 
   test("rejects another owner's matching job and reports unknown instead of running", async () => {

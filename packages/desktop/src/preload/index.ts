@@ -1801,8 +1801,12 @@ contextBridge.exposeInMainWorld("codeshell", {
       mode: string,
       kind?: "claude-code" | "codex",
     ) => ipcRenderer.invoke("ccRoom:openSession", claudeSessionId, cwd, mode, kind),
-    openLinkedSession: (externalSessionId: string, cwd: string, kind: "claude-code" | "codex") =>
-      ipcRenderer.invoke("ccRoom:openLinkedSession", externalSessionId, cwd, kind),
+    openLinkedSession: (
+      externalSessionId: string,
+      cwd: string,
+      kind: "claude-code" | "codex",
+      source?: { jobId: string; sourceSessionId: string },
+    ) => ipcRenderer.invoke("ccRoom:openLinkedSession", externalSessionId, cwd, kind, source),
     takeOverLinkedSession: (
       roomId: string,
       externalSessionId: string,
