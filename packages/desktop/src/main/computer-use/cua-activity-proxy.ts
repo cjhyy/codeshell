@@ -14,6 +14,7 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createConnection, type Socket } from "node:net";
 import type { Readable, Writable } from "node:stream";
+import { describedApp, loadAppProfiles, withAppNotes } from "./app-profiles.js";
 import { CuaActivityTracker, type CuaActivityEvent } from "./cua-activity.js";
 import { CuaNativeCursorBridge } from "./cua-native-cursor.js";
 import {
@@ -388,6 +389,18 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
   const childEnv: NodeJS.ProcessEnv = { ...process.env, CUA_DRIVER_EMBEDDED: "1" };
   delete childEnv.CODE_SHELL_CUA_ACTIVITY_SOCKET;
   delete childEnv.CODE_SHELL_CUA_ACTIVITY_TOKEN;
+  delete childEnv.CODE_SHELL_CUA_APP_PROFILES;
+  const profiles = loadAppProfiles(process.env.CODE_SHELL_CUA_APP_PROFILES, (file, reason) =>
+    process.stderr.write(`CUA app profile ${file} skipped: ${reason}\n`),
+  );
+  // App notes reach the model once per Session root and app, on the result of
+  // the call that first describes that app. Bounded; content-free keys only.
+  const noteRequests = new Map<string | number, string>();
+  const appByPid = new Map<number, string>();
+  const noted = new Set<string>();
+  const remember = <K, V>(map: Map<K, V> | Set<K>, limit: number) => {
+    while (map.size > limit) map.delete(map.keys().next().value!);
+  };
   const child = spawn(driver, ["mcp", "--embedded", "--socket", socket], {
     env: childEnv,
     stdio: ["pipe", "pipe", "pipe"],
@@ -467,6 +480,13 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
           continue;
         }
         if (call.stripped) bytes = line(call.stripped);
+        if (
+          profiles.profiles.length &&
+          (call.name === "get_window_state" || call.name === "launch_app")
+        ) {
+          noteRequests.set(call.id, call.sessionIds[call.sessionIds.length - 1] ?? "");
+          remember(noteRequests, 256);
+        }
       }
       const request = record(message);
       if (request?.method === "tools/list" && requestId(request.id) !== undefined)
@@ -475,6 +495,8 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
       if (observing) {
         cursor.observeRequest(message);
         event = tracker.begin(message);
+        const appId = event?.pid !== undefined ? appByPid.get(event.pid) : undefined;
+        if (event && appId) event.appId = appId;
         // Screen capture is the only synchronous step: the character must be
         // hidden before the driver captures pixels for the model.
         if (event?.capture) {
@@ -524,6 +546,23 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
       if (id !== undefined && toolLists.delete(id)) {
         const annotated = annotateToolList(message);
         if (annotated) bytes = line(annotated);
+      }
+      const root = id !== undefined ? noteRequests.get(id) : undefined;
+      if (id !== undefined && root !== undefined && response) {
+        noteRequests.delete(id);
+        const app = describedApp(response.result);
+        const profile = app && profiles.match(app);
+        if (profile && app.pid !== undefined) {
+          appByPid.set(app.pid, profile.id);
+          remember(appByPid, 128);
+        }
+        const key = `${root}\u0000${profile?.id}`;
+        const noteful = profile && !noted.has(key) ? withAppNotes(response, profile) : undefined;
+        if (noteful) {
+          noted.add(key);
+          remember(noted, 512);
+          bytes = line(noteful);
+        }
       }
       await write(process.stdout, bytes);
       if (response && ("result" in response || "error" in response) && response.id === turnId)

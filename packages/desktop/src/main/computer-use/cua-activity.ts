@@ -49,6 +49,8 @@ export interface CuaActivityEvent {
   window?: CuaAvoidRect;
   /** Category of the control the action lands on. */
   element?: CuaElementKind;
+  /** CodeShell app profile id of the target app, when one matches. */
+  appId?: string;
   lane?: InputLane;
   id: string;
   action: CuaActivityAction;

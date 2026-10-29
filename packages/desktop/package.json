@@ -137,6 +137,10 @@
       {
         "from": "resources/chrome-extension",
         "to": "packages/desktop/resources/chrome-extension"
+      },
+      {
+        "from": "resources/computer-use",
+        "to": "packages/desktop/resources/computer-use"
       }
     ],
     "directories": {

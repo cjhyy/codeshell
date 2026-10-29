@@ -252,7 +252,9 @@ test("window, process and control category are accepted only on a start", () => 
     pid: 42,
     window: { x: 0, y: 25, width: 1200, height: 800, title: "Inbox" },
     element: "text",
+    appId: "chrome",
   };
+  expect(parseCompanionOperation({ ...start, appId: "Not An Id!" })).not.toHaveProperty("appId");
   expect(parseCompanionOperation(start)).toEqual({
     id: "w1",
     action: "type",
@@ -261,6 +263,7 @@ test("window, process and control category are accepted only on a start", () => 
     pid: 42,
     window: { x: 0, y: 25, width: 1200, height: 800 },
     element: "text",
+    appId: "chrome",
   });
   expect(
     parseCompanionOperation({ ...start, window: { x: 0, y: 0, width: -1, height: 2 } }),

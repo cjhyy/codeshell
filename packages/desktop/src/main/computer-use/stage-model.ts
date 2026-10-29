@@ -9,6 +9,8 @@ export interface CompanionScene {
   avoidRect?: CompanionDisplayBounds;
   /** Frame of the target's window, when the agent observed it. */
   window?: CompanionDisplayBounds;
+  /** The app profile's preferred place; the title bar remains conditional. */
+  prefer?: MimiCompanionPerch;
 }
 
 /** How far the character's feet rest into the window's top edge (title bar). */
@@ -39,6 +41,16 @@ export function stagePlacement(
     perch: "beside-target" as const,
   });
   const { target, window } = scene;
+  if (scene.prefer === "screen-corner") {
+    // Out of the way entirely, still looking toward the action.
+    const corner = companionPlacement(display, size);
+    return {
+      position: corner.position,
+      ...(target ? { target: { x: target.x - display.x, y: target.y - display.y } } : {}),
+      perch: "screen-corner",
+    };
+  }
+  if (scene.prefer === "beside-target") return beside();
   if (!target || !window || !inside(target, window)) return beside();
   const depth = target.y - window.y;
   if (depth < PERCH_SINK + 4 || depth > PERCH_REACH) return beside();
