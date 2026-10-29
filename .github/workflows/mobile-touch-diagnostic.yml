@@ -1,4 +1,4 @@
-name: mobile consumer diagnostic
+name: mobile project lifecycle diagnostic
 
 on:
   push:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  consumer:
+  project-lifecycle:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -21,96 +21,87 @@ jobs:
           bun-version: "1.3.11"
       - uses: actions/setup-node@v7
         with:
-          node-version: "22.23.4"
+          node-version: "22.16.0"
           package-manager-cache: false
       - run: bun install --frozen-lockfile
-      - name: Install the locked Chromium and permit only its sandbox namespace
+      - name: Install the same locked Chromium as desktop-ui
         working-directory: packages/desktop
         run: |
           node node_modules/playwright/cli.js install --with-deps chromium
           node --input-type=module <<'NODE'
           import { chromium } from 'playwright';
-          import { writeFileSync, appendFileSync } from 'node:fs';
-          const browser=chromium.executablePath();
-          appendFileSync(process.env.GITHUB_ENV, `CODESHELL_TEST_CHROMIUM=${browser}\n`);
-          writeFileSync('/tmp/codeshell-consumer-chromium.apparmor', `abi <abi/4.0>,\ninclude <tunables/global>\nprofile codeshell-consumer-ci "${browser}" flags=(unconfined) {\n  userns,\n}\n`);
+          import { accessSync, constants, appendFileSync } from 'node:fs';
+          const browser = chromium.executablePath();
+          accessSync(browser, constants.X_OK);
+          for (const key of ['CHROME_PATH', 'CODESHELL_TEST_CHROMIUM']) appendFileSync(process.env.GITHUB_ENV, `${key}=${browser}\n`);
           NODE
-          sudo apparmor_parser -r /tmp/codeshell-consumer-chromium.apparmor
       - name: Build the reviewed workspace import boundaries
         run: bun run build
-      - name: Check out the reviewed Video Download consumer
-        uses: actions/checkout@v7
-        with:
-          repository: cjhyy/codeshell-panel-apps
-          ref: 84348855be8ae4e5a31936b3c2b0d1d21410bd64
-          path: .mobile-panel-consumer
-          persist-credentials: false
-      - name: Compare original mouse and single focused touch with a suppressed-click control
+      - name: Project lifecycle and real touch with causal negative controls
         shell: bash
         run: |
-          export TMPDIR="$RUNNER_TEMP/mobile-consumer-diagnostic"
+          export TMPDIR="$RUNNER_TEMP/mobile-project-diagnostic"
           mkdir -p "$TMPDIR"
           node --version > "$TMPDIR/runtime.txt"
           "$CODESHELL_TEST_CHROMIUM" --version >> "$TMPDIR/runtime.txt"
           git rev-parse HEAD >> "$TMPDIR/runtime.txt"
-          git -C .mobile-panel-consumer rev-parse HEAD >> "$TMPDIR/runtime.txt"
           python3 - <<'PYCODE'
-          from pathlib import Path
-          import subprocess
-          scripts=Path('scripts')
-          runner=(scripts/'run-mobile-video-download.mjs').read_text()
-          original=subprocess.check_output(['git','show','9ad80260d2e49518f8d601e4ce173daa418589f4:scripts/smoke-mobile-video-download.mjs'],text=True)
-          current=(scripts/'smoke-mobile-video-download.mjs').read_text()
-          marker='  phase = "single focused inspect tap / RPC";'
-          assert current.count(marker)==1
-          negative=current.replace(marker,'  await frame.locator("#inspect-button").evaluate((button) => {\n    button.addEventListener("click", (event) => {\n      event.preventDefault();\n      event.stopImmediatePropagation();\n    }, true);\n  });\n'+marker,1)
-          for name,source in [('old',original),('suppressed',negative)]:
-              target=f'.diagnostic-video-{name}.mjs'
-              (scripts/target).write_text(source)
-              (scripts/f'.diagnostic-video-{name}-runner.mjs').write_text(runner.replace('scripts/smoke-mobile-video-download.mjs',f'scripts/{target}'))
+          import json, os, pathlib, subprocess
+          directory = pathlib.Path(os.environ['TMPDIR'])
+          runner = ['node', 'scripts/run-isolated-node-smoke.mjs']
+          project = 'packages/web/scripts/test-project-workbench-back-browser.mjs'
+          reports = []
+          def run(name, args, *, failure=None, phase=None):
+              log = directory / (name + '.log')
+              with log.open('w') as output:
+                  result = subprocess.run(runner + args, stdout=output, stderr=subprocess.STDOUT, timeout=120)
+              text = log.read_text()
+              receipt = {'name': name, 'exit': result.returncode, 'log': str(log)}
+              reports.append(receipt)
+              (directory / 'project-diagnostic-receipt.json').write_text(json.dumps(reports, indent=2) + '\n')
+              print(json.dumps(receipt), flush=True)
+              if failure is None:
+                  assert result.returncode == 0, text[-16000:]
+              else:
+                  assert result.returncode != 0 and failure in text, text[-16000:]
+                  if phase: assert '"phase":"' + phase + '"' in text, text[-16000:]
+              return text
+          for mode, extra in [('production', []), ('development', ['--development'])]:
+              run('project-held-' + mode, [project] + extra)
+              run('project-immediate-' + mode, [project, '--immediate-configuration'] + extra)
+              run('links-touch-' + mode, ['packages/web/scripts/test-links-browser.mjs', '--case=touch-scroll'] + extra)
+              run('skills-touch-' + mode, ['packages/web/scripts/test-skills-browser.mjs', '--case=scroll'] + extra)
+          controller = pathlib.Path('packages/web/app/useHubController.tsx')
+          navigation = pathlib.Path('packages/web/app/useWorkbenchNavigation.ts')
+          original_controller = controller.read_bytes()
+          original_navigation = navigation.read_text()
+          try:
+              controller.write_bytes(subprocess.check_output(['git', 'show', '44b372a498fd35d6291e9dc758c18d4437c640d7:packages/web/app/useHubController.tsx']))
+              run('negative-late-metadata', [project, '--development'], failure='late workspace metadata must not retire a same-project Panel confirmation', phase='release-B-metadata')
+          finally:
+              controller.write_bytes(original_controller)
+          marker = 'if (selected.projectId) url.searchParams.set("project", selected.projectId);'
+          assert original_navigation.count(marker) == 1
+          try:
+              navigation.write_text(original_navigation.replace(marker, 'if (selected.projectId) { /* diagnostic: omit project URL normalization */ }', 1))
+              run('negative-wrong-scope', [project, '--development'], failure='Old history must not overwrite the active ProjectsGate project URL', phase='cross-project-history')
+          finally:
+              navigation.write_text(original_navigation)
+          assert controller.read_bytes() == original_controller
+          assert navigation.read_text() == original_navigation
+          subprocess.run(['git', 'diff', '--exit-code', '--', 'packages/web'], check=True)
           PYCODE
-          trap 'rm -f scripts/.diagnostic-video-*.mjs' EXIT
-          if node scripts/run-isolated-node-smoke.mjs scripts/.diagnostic-video-old-runner.mjs .mobile-panel-consumer/apps/video-download > "$TMPDIR/old-mouse.log" 2>&1; then old_status=0; else old_status=$?; fi
-          if node scripts/run-isolated-node-smoke.mjs scripts/run-mobile-video-download.mjs .mobile-panel-consumer/apps/video-download > "$TMPDIR/focused-touch.log" 2>&1; then touch_status=0; else touch_status=$?; fi
-          if node scripts/run-isolated-node-smoke.mjs scripts/.diagnostic-video-suppressed-runner.mjs .mobile-panel-consumer/apps/video-download > "$TMPDIR/suppressed-click.log" 2>&1; then suppressed_status=0; else suppressed_status=$?; fi
-          python3 - "$TMPDIR" "$old_status" "$touch_status" "$suppressed_status" <<'PYCODE'
-          import json,pathlib,sys,re
-          directory=pathlib.Path(sys.argv[1]);old_status,touch_status,suppressed_status=map(int,sys.argv[2:])
-          positive=(directory/'focused-touch.log').read_text();negative=(directory/'suppressed-click.log').read_text()
-          reports=[]
-          for line in positive.splitlines():
-              try: reports.append(json.loads(line))
-              except (ValueError,TypeError): pass
-          consumer=next((x for x in reports if x.get('panel')=='video-download'),None)
-          receipt={'oldMouseExit':old_status,'focusedTouchExit':touch_status,'suppressedClickExit':suppressed_status,'consumer':consumer}
-          (directory/'consumer-diagnostic-receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
-          print(json.dumps(receipt))
-          assert touch_status==0 and 'consumer: natural Node exit 0' in positive,positive[-16000:]
-          assert consumer and consumer['exactDownloadBytes']==151552 and consumer['singleTrustedFocusedInspectTap'] and consumer['inspectionRpcReceived']
-          assert consumer['unauthorizedDownloadDenied'] and consumer['revokedDownloadDenied'] and consumer['errors']==[] and consumer['blocked']==[]
-          assert suppressed_status!=0 and 'single focused inspect tap / RPC' in negative,negative[-16000:]
-          errors=[]
-          for line in negative.splitlines():
-              try: errors.append(json.loads(line))
-              except (ValueError,TypeError): pass
-          failure=next(x for x in errors if x.get('phase')=='single focused inspect tap / RPC')
-          timeout=re.search(r'page.waitForRequest: Timeout (\d+)ms exceeded',failure['error'])
-          assert timeout and 0<int(timeout.group(1))<=30000,failure['error']
-          for kind in ['touchstart','touchend','click']:
-              events=[e for e in failure['inputEvents'] if e.get('kind')==kind and e.get('target')=='inspect-button']
-              assert len(events)==1 and events[0]['trusted'] and events[0]['disabled']==False,events
-          assert failure['blocked']==[] and failure['errors']==[]
-          assert 'consumer: cleanup completed' in negative
-          PYCODE
-      - name: Preserve only isolated consumer diagnostics
+      - name: Preserve only isolated browser diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mobile-consumer-diagnostic
+          name: mobile-project-lifecycle-diagnostic
           path: |
-            ${{ runner.temp }}/mobile-consumer-diagnostic/*.log
-            ${{ runner.temp }}/mobile-consumer-diagnostic/*.json
-            ${{ runner.temp }}/mobile-consumer-diagnostic/runtime.txt
-            ${{ runner.temp }}/mobile-consumer-diagnostic/codeshell-video-download-qa-*/*.png
+            ${{ runner.temp }}/mobile-project-diagnostic/*.log
+            ${{ runner.temp }}/mobile-project-diagnostic/*.json
+            ${{ runner.temp }}/mobile-project-diagnostic/runtime.txt
+            ${{ runner.temp }}/mobile-project-diagnostic/**/failure.json
+            ${{ runner.temp }}/mobile-project-diagnostic/**/failure.png
+            ${{ runner.temp }}/mobile-project-diagnostic/**/receipt.json
           retention-days: 7
           if-no-files-found: warn
