@@ -59,6 +59,7 @@ export interface WorkbenchController {
   modelSelector?: React.ReactNode;
   goalActions?: React.ReactNode;
   loading?: boolean;
+  loadingLabel?: string;
   readOnly?: boolean;
   readOnlyNote?: string;
   attachmentAccept?: string;

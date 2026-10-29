@@ -3,6 +3,7 @@ import type { OutputJournalOptions } from "@cjhyy/code-shell-core/internal";
 import {
   applyOutputJournalPage,
   compareOutputCursors,
+  outputJournalProgress,
   type OutputJournalRecovery,
 } from "./outputJournalRecovery.js";
 import { assertOutputCoverage } from "./outputCoverage.js";
@@ -10,6 +11,12 @@ import { initialChatState, reduceStream } from "./streamReducer.js";
 
 type Reply = Extract<MobileServerEvent, { type: "session.outputJournal" }>;
 type BaseReply = Extract<MobileServerEvent, { type: "session.legacyBase" }>;
+export interface MobileRecoveryProgress {
+  phase: "legacy" | "journal";
+  pages: number;
+  receivedBytes: number;
+  totalBytes?: number;
+}
 export type MobileLegacyBaseOptions =
   | { throughEventId: string; cursor?: never }
   | { cursor: string; throughEventId?: never };
@@ -147,6 +154,7 @@ export async function recoverMobileOutput(args: {
   canContinue: () => boolean;
   latestCursor: () => string | undefined;
   requireJournal?: boolean;
+  progress?: (progress: MobileRecoveryProgress) => void;
 }) {
   let reply = await args.read({});
   if (!args.canContinue()) throw new Error("Recovery cancelled");
@@ -248,6 +256,7 @@ export async function recoverMobileOutput(args: {
       )
         throw new Error("Recovery base is incomplete or exceeds its bound");
       for (const event of base.events) chat = reduceStream(chat, event);
+      args.progress?.({ phase: "legacy", pages, receivedBytes: bytes });
       index += base.events.length;
       if (base.complete) break;
       cursor = base.next;
@@ -279,6 +288,8 @@ export async function recoverMobileOutput(args: {
           chat = reduceStream(chat, event);
         });
         if (recovery.incomplete) throw new Error("Recovery is incomplete");
+        const progress = outputJournalProgress(recovery);
+        if (progress) args.progress?.({ phase: "journal", pages, ...progress });
         if (complete) break;
         reply = await args.read({ after: recovery.cursor, through: recovery.through });
       }

@@ -3,6 +3,8 @@ export const mobile = {
   zh: {
     mobile: {
       historyRecovery: {
+        loadingProgress: "正在核对会话记录… {percent}%",
+        loadingPages: "正在读取旧会话记录… 已核对 {pages} 页",
         title: "会话记录需要恢复",
         failed: "记录尚未完整载入。已有内容已保留，恢复核对通过前不会继续任务。",
         check: "核对恢复方案",
@@ -196,6 +198,8 @@ export const mobile = {
   en: {
     mobile: {
       historyRecovery: {
+        loadingProgress: "Verifying conversation history… {percent}%",
+        loadingPages: "Loading older conversation history… {pages} pages verified",
         title: "Conversation history needs recovery",
         failed:
           "History has not fully loaded. Existing records are retained; work will stay paused until recovery is verified.",

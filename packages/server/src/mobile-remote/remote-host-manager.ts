@@ -82,6 +82,8 @@ export interface RemoteHostManagerOptions {
   outputJournal?: boolean;
   /** Enable only when the attached selected-session host implements legacy base pages. */
   legacyBasePages?: boolean;
+  /** Enable only when the selected-session reader supports opt-in dense pages. */
+  outputJournalPageFrames?: 2048;
   onClientEvent: (event: unknown, ws: WebSocket) => void | Promise<void>;
   /**
    * Absolute path to the built mobile app (out/mobile). Defaults to the
@@ -536,6 +538,9 @@ export class RemoteHostManager extends EventEmitter {
               capabilities: {
                 outputJournal: 1 as const,
                 ...(this.opts.legacyBasePages ? { legacyBasePages: 1 as const } : {}),
+                ...(this.opts.outputJournalPageFrames === 2048
+                  ? { outputJournalPageFrames: 2048 as const }
+                  : {}),
               },
             }
           : {}),
@@ -557,6 +562,9 @@ export class RemoteHostManager extends EventEmitter {
               capabilities: {
                 outputJournal: 1 as const,
                 ...(this.opts.legacyBasePages ? { legacyBasePages: 1 as const } : {}),
+                ...(this.opts.outputJournalPageFrames === 2048
+                  ? { outputJournalPageFrames: 2048 as const }
+                  : {}),
               },
             }
           : {}),

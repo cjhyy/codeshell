@@ -24,6 +24,7 @@ import type { WorkbenchController } from "./workbench-types.js";
 import { DesktopAccessChallenge } from "./DesktopAccessChallenge.js";
 import { DesktopPairingNotice } from "./DesktopPairingNotice.js";
 import { OutputHistoryRecovery } from "../src/components/OutputHistoryRecovery.js";
+import { t } from "../src/i18n/translate.js";
 
 /** The Desktop adapter drives the already resident Desktop worker through its
  * paired-device protocol. It never starts a Hub ProtocolClient or another WS. */
@@ -819,6 +820,19 @@ export function useDesktopController(
       ) : undefined,
     loading:
       app.loading.sessionHistory || app.loading.roomHistory || Boolean(pendingCreate.current),
+    loadingLabel: app.sessionHistoryProgress
+      ? app.sessionHistoryProgress.totalBytes
+        ? t("mobile.historyRecovery.loadingProgress", {
+            percent: Math.min(
+              99,
+              Math.floor(
+                (app.sessionHistoryProgress.receivedBytes / app.sessionHistoryProgress.totalBytes) *
+                  100,
+              ),
+            ),
+          })
+        : t("mobile.historyRecovery.loadingPages", { pages: app.sessionHistoryProgress.pages })
+      : undefined,
     readOnly: app.activeRoom?.observing || app.outputHistoryFailed,
     readOnlyNote: app.outputHistoryFailed
       ? "会话记录尚未完成核对。输入内容已保留为草稿，请先恢复记录。"

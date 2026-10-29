@@ -147,6 +147,8 @@ export type MobileClientEvent =
       requestId: string;
       after?: string;
       through?: string;
+      /** Opt-in token-dense pages; the existing 1 MiB byte bound still applies. */
+      maxFrames?: number;
     }
   | {
       type: "session.create";
@@ -269,13 +271,13 @@ export type MobileServerEvent =
   | {
       type: "auth.ok";
       device: TrustedDevicePublic;
-      capabilities?: { outputJournal?: 1; legacyBasePages?: 1 };
+      capabilities?: { outputJournal?: 1; legacyBasePages?: 1; outputJournalPageFrames?: 2048 };
     }
   | { type: "auth.failed"; message: string }
   | {
       type: "pair.ok";
       device: TrustedDevicePublic;
-      capabilities?: { outputJournal?: 1; legacyBasePages?: 1 };
+      capabilities?: { outputJournal?: 1; legacyBasePages?: 1; outputJournalPageFrames?: 2048 };
     }
   | { type: "pair.failed"; message: string }
   | {

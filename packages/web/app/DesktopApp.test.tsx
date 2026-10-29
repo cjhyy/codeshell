@@ -1145,3 +1145,43 @@ test("an immediately failed creation restores the visible draft and chosen model
     await hook.unmount();
   }
 });
+
+test("history banner exposes verified progress without declaring completion or dropping drafts", async () => {
+  let app = remoteApp({
+    activeSessionId: "native",
+    loading: {
+      sessions: false,
+      sessionHistory: true,
+      rooms: false,
+      projects: false,
+      roomHistory: false,
+      ccSessions: false,
+    },
+    sessionHistoryProgress: { phase: "journal", pages: 2, receivedBytes: 50, totalBytes: 100 },
+  });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    await act(async () => hook.result.current.setDraft("manual draft"));
+    expect(hook.result.current.loading).toBe(true);
+    expect(hook.result.current.loadingLabel).toContain("50%");
+    app = {
+      ...app,
+      sessionHistoryProgress: { phase: "journal", pages: 3, receivedBytes: 100, totalBytes: 100 },
+    };
+    await hook.rerender();
+    expect(hook.result.current.loadingLabel).toContain("99%");
+    expect(hook.result.current.loading).toBe(true);
+    expect(hook.result.current.draft).toBe("manual draft");
+    app = {
+      ...app,
+      loading: { ...app.loading, sessionHistory: false },
+      sessionHistoryProgress: undefined,
+    };
+    await hook.rerender();
+    expect(hook.result.current.loading).toBe(false);
+    expect(hook.result.current.loadingLabel).toBeUndefined();
+    expect(hook.result.current.draft).toBe("manual draft");
+  } finally {
+    await hook.unmount();
+  }
+});

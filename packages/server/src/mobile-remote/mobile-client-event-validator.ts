@@ -88,7 +88,9 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         boundedString(event.recoveryId, 128) &&
         boundedString(event.requestId, 128) &&
         optionalBoundedString(event.after, 2048) &&
-        optionalBoundedString(event.through, 2048);
+        optionalBoundedString(event.through, 2048) &&
+        (event.maxFrames === undefined ||
+          (isPositiveInteger(event.maxFrames) && event.maxFrames <= 2048));
       break;
     case "session.history":
       valid = boundedString(event.sessionId, MAX_ID_LENGTH);

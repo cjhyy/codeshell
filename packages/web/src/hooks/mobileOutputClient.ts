@@ -5,6 +5,7 @@ import {
   MobileOutputCatchupPending,
   MobileAwaitingJournal,
   type MobileLegacyBaseOptions,
+  type MobileRecoveryProgress,
 } from "../lib/mobileOutputRecovery.js";
 import type { OutputJournalOptions } from "@cjhyy/code-shell-core/internal";
 import { compareOutputCursors } from "../lib/outputJournalRecovery.js";
@@ -28,6 +29,7 @@ interface Selection {
   pendingInputIds?: Set<string>;
   pendingInputBytes?: number;
   readyTimer?: ReturnType<typeof setTimeout>;
+  deadlineTimer?: ReturnType<typeof setTimeout>;
   capacityTimer?: ReturnType<typeof setTimeout>;
   capacityPending?: boolean;
   capacityCursor?: string;
@@ -45,6 +47,7 @@ interface Selection {
 export class MobileOutputClient {
   private enabled = false;
   private basePages = false;
+  private densePages = false;
   private auth = 0;
   private sequence = 0;
   private selection?: Selection;
@@ -58,6 +61,7 @@ export class MobileOutputClient {
       legacy: (sessionId: string) => void;
       failed: (sessionId: string) => void;
       awaitingJournal?: (sessionId: string) => void;
+      progress?: (sessionId: string, progress: MobileRecoveryProgress | undefined) => void;
     },
   ) {}
 
@@ -68,6 +72,8 @@ export class MobileOutputClient {
     this.legacyHostSelection = false;
     this.lastResync = undefined;
     if (old?.readyTimer) clearTimeout(old.readyTimer);
+    if (old?.deadlineTimer) clearTimeout(old.deadlineTimer);
+    if (old) this.deps.progress?.(old.sessionId, undefined);
     if (old?.capacityTimer) clearTimeout(old.capacityTimer);
     if (old) this.clearPending(old, "Recovery cancelled");
     if (notify && (old || legacyHostSelection)) this.deps.send({ type: "session.recovery.cancel" });
@@ -161,6 +167,9 @@ export class MobileOutputClient {
   private fail(selection: Selection): void {
     if (!this.current(selection) || selection.failed) return;
     if (selection.readyTimer) clearTimeout(selection.readyTimer);
+    if (selection.deadlineTimer) clearTimeout(selection.deadlineTimer);
+    selection.deadlineTimer = undefined;
+    this.deps.progress?.(selection.sessionId, undefined);
     if (selection.capacityTimer) clearTimeout(selection.capacityTimer);
     selection.capacityTimer = undefined;
     selection.capacityPending = false;
@@ -177,6 +186,7 @@ export class MobileOutputClient {
       this.auth++;
       this.enabled = event.capabilities?.outputJournal === 1;
       this.basePages = this.enabled && event.capabilities?.legacyBasePages === 1;
+      this.densePages = this.enabled && event.capabilities?.outputJournalPageFrames === 2048;
       return false;
     }
     if (
@@ -239,6 +249,9 @@ export class MobileOutputClient {
         if (
           !this.deps.send({
             ...options,
+            // Only request the expanded bound after this authenticated Host
+            // advertises it; older peers receive their original request shape.
+            ...(type === "session.outputJournal" && this.densePages ? { maxFrames: 2048 } : {}),
             type,
             sessionId: selection.sessionId,
             recoveryId: selection.id,
@@ -311,6 +324,10 @@ export class MobileOutputClient {
   }
 
   private async recover(selection: Selection, resume?: () => Promise<Result>): Promise<void> {
+    if (!this.current(selection) || selection.failed) return;
+    // A peer making small progress must not keep a selection loading forever.
+    // Keep one deadline across busy retries, catch-up rounds and pending input.
+    selection.deadlineTimer ??= setTimeout(() => this.fail(selection), 120_000);
     try {
       const result = await (resume
         ? resume()
@@ -319,14 +336,21 @@ export class MobileOutputClient {
             canContinue: () => this.current(selection) && !selection.failed,
             latestCursor: () => selection.latest,
             read: (options) => this.readJournal(selection, options),
+            progress: (progress) => {
+              if (this.current(selection) && !selection.failed)
+                this.deps.progress?.(selection.sessionId, progress);
+            },
             ...(this.basePages
               ? {
                   readBase: (options: MobileLegacyBaseOptions) => this.readBase(selection, options),
                 }
               : {}),
           }));
-      if (!this.current(selection)) return;
+      if (!this.current(selection) || selection.failed) return;
       if (!result) {
+        clearTimeout(selection.deadlineTimer);
+        selection.deadlineTimer = undefined;
+        this.deps.progress?.(selection.sessionId, undefined);
         this.selection = undefined;
         this.legacyHostSelection = true;
         // Native pre-journal history still uses the verified Host selection.
@@ -356,12 +380,18 @@ export class MobileOutputClient {
       selection.pendingInputBytes = undefined;
       selection.applied = result.outputCursor;
       selection.latest = result.outputCursor;
+      clearTimeout(selection.deadlineTimer);
+      selection.deadlineTimer = undefined;
+      this.deps.progress?.(selection.sessionId, undefined);
       this.deps.commit(selection.sessionId, result);
     } catch (error) {
       if (error instanceof MobileAwaitingJournal) {
         if (!this.current(selection) || selection.failed) return;
         selection.recovering = false;
         selection.awaitingJournal = true;
+        clearTimeout(selection.deadlineTimer);
+        selection.deadlineTimer = undefined;
+        this.deps.progress?.(selection.sessionId, undefined);
         // No prefix exists yet. Retain the selected producer without polling,
         // publishing an empty success, or retiring its independent command selection.
         this.deps.awaitingJournal?.(selection.sessionId);

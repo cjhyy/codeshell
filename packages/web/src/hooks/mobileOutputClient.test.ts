@@ -42,6 +42,7 @@ function fixture(
   if (!pendingJournal) openJournal();
   const sent: MobileClientEvent[] = [],
     commits: string[] = [];
+  const progress: Array<unknown> = [];
   let failures = 0,
     pageCount = 0,
     baseCount = 0;
@@ -77,7 +78,11 @@ function fixture(
             ...(pendingJournal ? { journalRequired: true } : {}),
           });
         if (event.type === "session.outputJournal") {
-          const page = readOutputJournal(root, id, { after: event.after, through: event.through });
+          const page = readOutputJournal(root, id, {
+            after: event.after,
+            through: event.through,
+            maxFrames: event.maxFrames,
+          });
           pageCount++;
           beforePageReply?.(pageCount);
           const reply = {
@@ -96,9 +101,8 @@ function fixture(
               unpaired: false,
             },
           };
-          client.observe(
-            journalReply ? journalReply(reply, pageCount) : (reply as MobileServerEvent),
-          );
+          const response = journalReply ? journalReply(reply, pageCount) : reply;
+          if (response) client.observe(response as MobileServerEvent);
         }
         if ((event as any).type === "session.legacyBase") {
           const reply = baseOptions?.reply
@@ -116,6 +120,7 @@ function fixture(
           .map((item) => item.text)
           .join(""),
       ),
+    progress: (_sessionId, value) => progress.push(value),
     failed: () => {
       failures++;
     },
@@ -128,6 +133,7 @@ function fixture(
     type: "auth.ok",
     capabilities: {
       outputJournal: 1,
+      outputJournalPageFrames: 2048,
       ...(baseOptions && baseOptions.capability !== false ? { legacyBasePages: 1 } : {}),
     },
     device: { id: "phone", name: "fixture" },
@@ -138,6 +144,7 @@ function fixture(
     openJournal,
     removeJournal: () => unlinkSync(join(root, id, "output-journal.jsonl")),
     commits,
+    progress,
     sent,
     failures: () => failures,
     cursor: () => cursor,
@@ -601,4 +608,87 @@ test("foreground refresh discovers the first journal when its live notification 
   } finally {
     now.mockRestore();
   }
+});
+
+test("validated progress clears on completion and cancelled pages cannot publish it", async () => {
+  const f = fixture();
+  f.client.begin("external");
+  await settled(() => f.commits.length === 1);
+  expect(
+    f.progress.some((value: any) => value?.phase === "journal" && value.receivedBytes > 0),
+  ).toBe(true);
+  expect(f.progress.at(-1)).toBeUndefined();
+  expect(f.sent.find((event) => event.type === "session.outputJournal")).toMatchObject({
+    maxFrames: 2048,
+  });
+  let late: any;
+  const cancelled = fixture("cancelled", false, undefined, (reply) => {
+    late = reply;
+  });
+  cancelled.client.begin("cancelled");
+  await settled(() => !!late);
+  cancelled.client.cancel();
+  const count = cancelled.progress.length;
+  cancelled.client.observe(late);
+  await Promise.resolve();
+  expect(cancelled.progress.length).toBe(count);
+  expect(cancelled.commits).toHaveLength(0);
+  expect(cancelled.failures()).toBe(0);
+});
+
+test("overall recovery deadline fails closed, ignores a late page and permits explicit retry", async () => {
+  const timers: Array<() => void> = [];
+  const timeout = globalThis.setTimeout;
+  const spy = spyOn(globalThis, "setTimeout").mockImplementation(((
+    fn: () => void,
+    ms: number,
+    ...args: any[]
+  ) => {
+    if (ms === 120_000) timers.push(fn);
+    return timeout(fn, ms, ...args);
+  }) as typeof setTimeout);
+  cleanup.push(() => spy.mockRestore());
+  let late: any;
+  let hold = true;
+  const f = fixture("deadline", false, undefined, (reply) => {
+    if (hold) {
+      late = reply;
+      return;
+    }
+    return reply;
+  });
+  f.client.begin("deadline");
+  await settled(() => !!late);
+  expect(timers).toHaveLength(1);
+  timers[0]!();
+  expect(f.failures()).toBe(1);
+  expect(f.client.pending("deadline")).toBe(false);
+  f.client.observe(late);
+  await Promise.resolve();
+  expect(f.commits).toHaveLength(0);
+  expect(f.progress.at(-1)).toBeUndefined();
+  hold = false;
+  f.client.begin("deadline");
+  await settled(() => f.commits.length === 1);
+  expect(f.failures()).toBe(1);
+  expect(
+    f.sent.every((event) =>
+      ["session.select", "session.recovery.cancel", "session.outputJournal"].includes(event.type),
+    ),
+  ).toBe(true);
+});
+
+test("new client leaves the original request shape intact on an older authenticated Host", async () => {
+  const f = fixture("old-host");
+  f.client.observe({
+    type: "auth.ok",
+    capabilities: { outputJournal: 1 },
+    device: { id: "old", name: "fixture" },
+  } as MobileServerEvent);
+  f.client.begin("old-host");
+  await settled(() => f.commits.length === 1);
+  const pages = f.sent.filter((event) => event.type === "session.outputJournal");
+  expect(pages).toHaveLength(1);
+  expect(Object.hasOwn(pages[0]!, "maxFrames")).toBe(false);
+  expect(f.failures()).toBe(0);
 });

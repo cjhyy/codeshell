@@ -779,7 +779,7 @@ export function Workbench({
                 {controller.chatControls}
                 {controller.loading ? (
                   <div className="banner" role="status">
-                    正在恢复会话记录…
+                    {controller.loadingLabel ?? "正在恢复会话记录…"}
                   </div>
                 ) : null}
                 {chat.goal ? (

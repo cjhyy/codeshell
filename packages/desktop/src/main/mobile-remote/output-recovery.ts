@@ -337,6 +337,7 @@ export class MobileOutputRecovery {
       const page = readOutputJournal(root, event.sessionId, {
         after: event.after,
         through: event.through,
+        maxFrames: event.maxFrames,
       });
       const base =
         page.status === "ok" && event.after === undefined

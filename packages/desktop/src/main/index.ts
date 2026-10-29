@@ -1002,10 +1002,8 @@ onPluginInstallJobsChanged((jobs) => {
 });
 
 // ── Mobile Web Remote (LAN phone controller; off by default) ────────────────
-// Trusted-device store + HTTP/WS host. The host is NOT started on launch — the
-// user must explicitly Start it from Settings → Advanced. onClientEvent is a
-// v1 echo placeholder; chat/approval routing is wired in a later task and must
-// reuse the existing run/permission path rather than create a second runtime.
+// Trusted-device HTTP/WS host. Start is explicit in Settings → Advanced;
+// commands reuse the existing run/permission path.
 const mobileDevices = new TrustedDeviceStore(
   resolve(app.getPath("userData"), "mobile-remote", "devices.json"),
 );
@@ -1015,6 +1013,7 @@ const mobileUploads = new MobileUploadService({
 const mobileRemote = new RemoteHostManager({
   outputJournal: true,
   legacyBasePages: true,
+  outputJournalPageFrames: 2048,
   devices: mobileDevices,
   uploads: mobileUploads,
   webApi: createDesktopWebService({

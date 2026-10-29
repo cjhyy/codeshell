@@ -58,6 +58,7 @@ const MAX_EVENT_BYTES = 16 * 1024 * 1024;
 const CHUNK_BYTES = 64 * 1024;
 const MAX_PAGE_BYTES = 1024 * 1024;
 const MAX_PAGE_FRAMES = 512;
+const MAX_REQUESTED_PAGE_FRAMES = 2048;
 // A frozen transcript base has its own budget; transport pages/cutover stay small.
 const LEGACY_BASE_MAX_BYTES = 32 * 1024 * 1024;
 const LEGACY_BASE_MAX_EVENTS = 262144;
@@ -702,6 +703,11 @@ function verifiedFile(fd: OutputFile, file: string, start: Position, size: numbe
   const checkpoints: Checkpoint[] = [{ ...start, committed: true }];
   const format = { requiresHead: false, lastLegacySequence: 0 };
   const head = scan(fd, start, size, checkpoints, format);
+  // The scan already proved this complete event boundary. Reuse its hash for
+  // the frozen watermark instead of rereading the same final partial interval
+  // for both publication and `through` on every page.
+  if (checkpoints.at(-1)!.sequence !== head.sequence)
+    checkpoints.push({ ...head, committed: true });
   const result = { stamp, head, checkpoints, ...format };
   // A concurrent append may leave the frozen scan valid, but its new stamp
   // cannot certify the unseen tail. Rebuild on the next request instead.
@@ -808,7 +814,7 @@ function readOutputJournalAttempt(
     if (!options || typeof options !== "object" || Array.isArray(options))
       invalid("Invalid output journal options");
     const maxBytes = boundedInt(options.maxBytes, MAX_PAGE_BYTES, MAX_PAGE_BYTES);
-    const maxFrames = boundedInt(options.maxFrames, MAX_PAGE_FRAMES, MAX_PAGE_FRAMES);
+    const maxFrames = boundedInt(options.maxFrames, MAX_PAGE_FRAMES, MAX_REQUESTED_PAGE_FRAMES);
     const location = sessionLocation(root, sessionId);
     initialLocation = location;
     pinned = location.state.outputJournalIdentity !== undefined;

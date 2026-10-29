@@ -1096,17 +1096,23 @@ describe("RemoteHostManager", () => {
 
 test("output journal is explicitly negotiated on first pairing and subsequent auth only by enabled hosts", async () => {
   dir = mkdtempSync(join(tmpdir(), "mobile-recovery-capability-"));
-  for (const [enabled, basePages] of [
+  for (const [enabled, basePages, densePages] of [
     [false, false],
     [false, true],
     [true, false],
     [true, true],
+    [true, false, true],
+    [true, true, true],
+    [false, true, true],
   ]) {
-    const devices = new TrustedDeviceStore(join(dir, `devices-${enabled}-${basePages}.json`));
+    const devices = new TrustedDeviceStore(
+      join(dir, `devices-${enabled}-${basePages}-${densePages}.json`),
+    );
     const host = new RemoteHostManager({
       devices,
       outputJournal: enabled,
       legacyBasePages: basePages,
+      outputJournalPageFrames: densePages ? 2048 : undefined,
       onClientEvent() {},
     } as any);
     await host.start({ host: "127.0.0.1", port: 0 });
@@ -1128,7 +1134,13 @@ test("output journal is explicitly negotiated on first pairing and subsequent au
       expect(authenticated?.type).toBe("auth.ok");
       if (authenticated?.type !== "auth.ok") throw new Error("auth failed");
       expect(paired.capabilities).toEqual(
-        enabled ? { outputJournal: 1, ...(basePages ? { legacyBasePages: 1 } : {}) } : undefined,
+        enabled
+          ? {
+              outputJournal: 1,
+              ...(basePages ? { legacyBasePages: 1 } : {}),
+              ...(densePages ? { outputJournalPageFrames: 2048 } : {}),
+            }
+          : undefined,
       );
       expect(authenticated.capabilities).toEqual(paired.capabilities);
     } finally {

@@ -47,6 +47,16 @@ export function compareOutputCursors(left: string, right: string): number | unde
   }
 }
 
+/** Progress only for the contiguous prefix already accepted by the page verifier. */
+export function outputJournalProgress(state: OutputJournalRecovery) {
+  if (state.incomplete || !state.cursor || !state.coverageStart || !state.through) return;
+  const start = position(state.coverageStart).offset;
+  return {
+    receivedBytes: position(state.cursor).offset - start,
+    totalBytes: position(state.through).offset - start,
+  };
+}
+
 /**
  * Fold a frozen, contiguous page exactly once. Callers first load legacy history
  * through legacyBaseThroughEventId, then apply returned StreamEvents to their
@@ -68,7 +78,7 @@ export function applyOutputJournalPage(
       !page.next ||
       !page.coverageStart ||
       !Array.isArray(page.frames) ||
-      page.frames.length > 512 ||
+      page.frames.length > 2048 ||
       new TextEncoder().encode(JSON.stringify(page)).length > 1024 * 1024 + 16 * 1024
     )
       throw new Error("Output recovery is incomplete");

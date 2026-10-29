@@ -30,6 +30,7 @@ import {
 } from "../lib/messageMappers.js";
 import { projectForCwd } from "../lib/format.js";
 import { MobileOutputClient } from "./mobileOutputClient.js";
+import type { MobileRecoveryProgress } from "../lib/mobileOutputRecovery.js";
 import { MobileHistoryRecoveryRequests } from "./mobileHistoryRecoveryRequests.js";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket.js";
 import {
@@ -126,6 +127,7 @@ export interface RemoteApp {
     ccSessions: boolean;
   };
   notice?: string;
+  sessionHistoryProgress?: MobileRecoveryProgress;
   outputHistoryFailed?: boolean;
   outputHistoricalGap?: boolean;
   outputRecoveryIdentity?: string;
@@ -361,6 +363,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   );
   const conversationRevisionRef = useRef(0);
   const socketOnlineRef = useRef(false);
+  const [historyProgress, setHistoryProgress] = useState<{
+    sessionId: string;
+    progress: MobileRecoveryProgress;
+  }>();
   const [outputHistory, setOutputHistory] = useState<{
     sessionId: string;
     failed: boolean;
@@ -744,6 +750,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       roomId: activeRoomIdRef.current,
       revision: conversationRevisionRef.current,
     }),
+    progress: (sessionId, progress) =>
+      setHistoryProgress((previous) =>
+        progress
+          ? { sessionId, progress }
+          : previous?.sessionId === sessionId
+            ? undefined
+            : previous,
+      ),
     commit: (sessionId, result) => {
       const cursor = sessionCursor(sessionId);
       cursor.epoch = result.snapshot.epoch;
@@ -2360,6 +2374,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     refreshRuntimeModels,
     loading,
     notice,
+    sessionHistoryProgress:
+      !activeRoomId && loading.sessionHistory && historyProgress?.sessionId === activeSessionId
+        ? historyProgress?.progress
+        : undefined,
     outputHistoryFailed:
       !activeRoomId && !!activeSessionId && recoveryFencesRef.current.has(activeSessionId),
     outputHistoricalGap:
