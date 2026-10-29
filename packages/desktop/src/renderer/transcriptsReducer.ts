@@ -68,6 +68,8 @@ export type TranscriptsAction =
       sessionId?: string;
       /** Exact v2 prefix; its cursor also fences buffered live output. */
       outputCursor?: string;
+      /** Display-only fallback; cancellation must not make it a saveable cache. */
+      incomplete?: boolean;
     }
   | { type: "evict"; bucket: string }
   | { type: "evict_if_unchanged"; bucket: string; state: MessagesReducerState }

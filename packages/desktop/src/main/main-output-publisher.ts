@@ -63,7 +63,12 @@ export class MainOutputPublisher {
     return false;
   }
 
-  capture(sessionId: string, publish: (event: unknown) => boolean): MainOutputSource {
+  capture(
+    sessionId: string,
+    publish: (event: unknown) => boolean,
+    replayWorker = this.options.worker,
+    historicalPrefix?: string,
+  ): MainOutputSource {
     const producer = new SessionOutputPublisher(this.options.root, "host");
     producer.capture(sessionId);
     return {
@@ -76,10 +81,12 @@ export class MainOutputPublisher {
             return;
           }
           const root = this.options.root(sessionId);
-          // Only a cursor actually applied to Main is a baseline. An RPC response
-          // can include a committed Engine event not yet sent on stdout.
+          // A cold registration may pin an already committed history prefix
+          // before any provider starts. It is not a Main-applied cursor: new
+          // frames beyond it still require the normal live join/deduplication.
+          // RPC responses must never provide this historical boundary.
           const recovery: OutputJournalRecovery = {
-            cursor: this.options.latest(sessionId),
+            cursor: this.options.latest(sessionId) ?? historicalPrefix,
             through: event.outputCursor,
             incomplete: false,
           };
@@ -110,7 +117,7 @@ export class MainOutputPublisher {
               if (!publish(value.outputCursor === event.outputCursor ? event : value))
                 throw new Error("Main external output was not applied");
             } else {
-              if (!this.options.worker(sessionId, value))
+              if (!replayWorker(sessionId, value))
                 throw new Error("Main output replay was not applied");
               previous.set(value.outputCursor!, fingerprint(value));
               this.replayCount++;

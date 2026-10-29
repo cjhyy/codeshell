@@ -37,6 +37,32 @@ function deferred<T>() {
 const bucket = bucketKey("project", "saved");
 const oldHistory: FoldItem[] = [{ kind: "user", text: "Previous conversation", timestamp: 1 }];
 const emptySnapshot: SessionSnapshot = { events: [], nextSeq: 1, topLevelRunning: false };
+const olderToolHistory: FoldItem[] = [
+  {
+    kind: "stream",
+    event: { type: "session_started", sessionId: "saved", promptTokens: 0 },
+    timestamp: 0,
+  },
+  { kind: "user", text: "Earlier tool request", clientMessageId: "earlier", timestamp: 0 },
+  {
+    kind: "stream",
+    event: {
+      type: "tool_use_start",
+      toolCall: { id: "earlier-tool", toolName: "Bash", args: { command: "check" } },
+    },
+    timestamp: 1,
+  },
+  {
+    kind: "stream",
+    event: {
+      type: "tool_result",
+      result: { id: "earlier-tool", toolName: "Bash", result: "Earlier saved result" },
+    },
+    timestamp: 2,
+  },
+  { kind: "stream", event: { type: "turn_complete", reason: "completed" }, timestamp: 2 },
+  ...oldHistory,
+];
 
 describe("transcript history hydration after a background resume", () => {
   let hook: Awaited<ReturnType<typeof renderHook<ReturnType<typeof useHarness>>>> | undefined;
@@ -62,6 +88,16 @@ describe("transcript history hydration after a background resume", () => {
       readTranscript,
       deleteTranscript: async () => undefined,
     };
+  }
+
+  function installUnpairedOutput() {
+    window.codeshell.getSessionOutputJournal = async () => ({
+      version: 1,
+      status: "unavailable",
+      frames: [],
+      complete: false,
+    });
+    readSnapshot = async () => ({ ...emptySnapshot, outputUnpaired: true });
   }
 
   function useHarness() {
@@ -674,6 +710,34 @@ describe("transcript history hydration after a background resume", () => {
     expect(hook.result.current.transcripts[bucket]).toBeUndefined();
   });
 
+  test("a cancelled output recovery does not expand the old session's display window", async () => {
+    initial = {};
+    const snapshot = deferred<SessionSnapshot>();
+    installUnpairedOutput();
+    window.codeshell.subscribeSession = async (id) =>
+      id === "saved" ? snapshot.promise : emptySnapshot;
+    const savedReads: number[] = [];
+    window.codeshell.getSessionTranscriptPage = async (id, options) => {
+      if (id === "saved") savedReads.push(options!.maxBytes!);
+      return {
+        items: oldHistory,
+        loadedBytes: INITIAL_CHAT_HISTORY_BYTES,
+        hasMore: id === "saved",
+      };
+    };
+    hook = await renderHook(useHarness);
+    await act(async () => {
+      hook!.result.current.setActive("other");
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      snapshot.resolve({ ...emptySnapshot, outputUnpaired: true });
+      await flushMicrotasks();
+    });
+    expect(savedReads).toEqual([INITIAL_CHAT_HISTORY_BYTES]);
+    expect(hook.result.current.transcripts[bucket]).toBeUndefined();
+  });
+
   test("a failed subscription leaves the raw live tail available to a manual retry", async () => {
     initial = {};
     let reads = 0;
@@ -793,6 +857,159 @@ describe("transcript history hydration after a background resume", () => {
     });
     expect(diskReads).toBe(1);
     expect(loadTranscript("project", "saved")).toEqual(cached);
+  });
+
+  test("shows older saved tools after a coverage failure without authenticating or overwriting the cache", async () => {
+    initial = {};
+    const cached = {
+      ...foldTranscript([
+        ...oldHistory,
+        {
+          kind: "user",
+          text: "Cached request awaiting disk",
+          clientMessageId: "cached-request",
+          timestamp: 3,
+        },
+      ]),
+      sessionId: "saved",
+      turnEpoch: 1,
+    };
+    const original = JSON.stringify(cached);
+    const cachedReads: number[] = [];
+    installSnapshotReader(async ({ maxBytes }) => {
+      cachedReads.push(maxBytes!);
+      return { value: original, hasEarlier: maxBytes === INITIAL_CHAT_HISTORY_BYTES };
+    });
+    const writes: unknown[] = [];
+    window.codeshell.sessionCatalog!.writeTranscript = async (request) => {
+      writes.push(request);
+    };
+    const reads: number[] = [];
+    const fallbackBytes = 128 * 1024 * 1024;
+    window.codeshell.getSessionTranscriptPage = async (_id, options) => {
+      const maxBytes = options!.maxBytes!;
+      reads.push(maxBytes);
+      return {
+        items: maxBytes === fallbackBytes ? olderToolHistory : oldHistory,
+        loadedBytes: maxBytes,
+        hasMore: maxBytes !== fallbackBytes,
+      };
+    };
+    installUnpairedOutput();
+    hook = await renderHook(useHarness);
+    expect(reads).toEqual([INITIAL_CHAT_HISTORY_BYTES, fallbackBytes]);
+    expect(cachedReads).toEqual(reads);
+    expect(hook.result.current.state.messages).toContainEqual(
+      expect.objectContaining({
+        kind: "tool",
+        id: "earlier-tool",
+        result: "Earlier saved result",
+        status: "succeeded",
+      }),
+    );
+    expect(hook.result.current.state.messages).toContainEqual(
+      expect.objectContaining({ clientMessageId: "cached-request" }),
+    );
+    expect(hook.result.current.historyFailed).toBe(true);
+    expect(hook.result.current.historyHasMore).toBe(false);
+    expect(hook.result.current.state.outputCursor).toBeUndefined();
+    await act(async () => {
+      await flushSessionPersistence();
+      await hook!.result.current.loadEarlierHistory();
+      await flushMicrotasks();
+    });
+    expect(reads).toEqual([
+      INITIAL_CHAT_HISTORY_BYTES,
+      fallbackBytes,
+      INITIAL_CHAT_HISTORY_BYTES,
+      fallbackBytes,
+    ]);
+    expect(hook.result.current.historyFailed).toBe(true);
+    expect(
+      hook.result.current.state.messages.filter((message) => message.id === "earlier-tool"),
+    ).toHaveLength(1);
+    expect(hook.result.current.state.sessionId).toBe("saved");
+    expect(hook.result.current.state.turnEpoch).toBeGreaterThan(0);
+    await act(async () => {
+      hook!.result.current.setActive("other");
+      await flushMicrotasks();
+      await flushSessionPersistence();
+    });
+    expect(writes).toEqual([]);
+    expect(JSON.stringify(cached)).toBe(original);
+  });
+
+  test("recovers older tool activity without a renderer cache and keeps the fallback bound visible", async () => {
+    initial = {};
+    const reads: number[] = [];
+    window.codeshell.getSessionTranscriptPage = async (_id, options) => {
+      const maxBytes = options!.maxBytes!;
+      reads.push(maxBytes);
+      return {
+        items: reads.length === 1 ? oldHistory : olderToolHistory,
+        loadedBytes: maxBytes,
+        hasMore: true,
+      };
+    };
+    installUnpairedOutput();
+    hook = await renderHook(useHarness);
+    expect(reads).toEqual([INITIAL_CHAT_HISTORY_BYTES, 128 * 1024 * 1024]);
+    expect(hook.result.current.state.messages).toContainEqual(
+      expect.objectContaining({ kind: "tool", id: "earlier-tool", status: "succeeded" }),
+    );
+    expect(hook.result.current.historyFailed).toBe(true);
+    expect(hook.result.current.historyLimitReached).toBe(true);
+    expect(hook.result.current.state.outputCursor).toBeUndefined();
+  });
+
+  test("retains new live messages while the larger coverage-failure fallback is pending", async () => {
+    initial = {};
+    const fallback = deferred<SessionTranscriptPage>();
+    let reads = 0;
+    window.codeshell.getSessionTranscriptPage = async () => {
+      if (++reads === 2) return fallback.promise;
+      return { items: oldHistory, loadedBytes: INITIAL_CHAT_HISTORY_BYTES, hasMore: true };
+    };
+    installUnpairedOutput();
+    hook = await renderHook(useHarness);
+    expect(reads).toBe(2);
+    await act(async () => {
+      hook!.result.current.dispatch({
+        type: "user_message",
+        bucket,
+        text: "New request during fallback",
+        clientMessageId: "live-request",
+      });
+      hook!.result.current.dispatch({
+        type: "stream_batch",
+        bucket,
+        maxSeq: 3,
+        events: [
+          { type: "stream_request_start", turnNumber: 2, messageId: "live-fallback" },
+          { type: "text_delta", text: "New live answer" },
+        ] as StreamEvent[],
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      fallback.resolve({
+        items: olderToolHistory,
+        loadedBytes: 128 * 1024 * 1024,
+        hasMore: false,
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.state.messages).toContainEqual(
+      expect.objectContaining({ kind: "tool", id: "earlier-tool" }),
+    );
+    expect(hook.result.current.state.messages).toContainEqual(
+      expect.objectContaining({ kind: "user", clientMessageId: "live-request" }),
+    );
+    expect(hook.result.current.state.messages).toContainEqual(
+      expect.objectContaining({ id: "live-fallback", text: "New live answer" }),
+    );
+    expect(hook.result.current.state.streamingAssistantId).toBe("live-fallback");
+    expect(hook.result.current.historyFailed).toBe(true);
   });
 
   test("uses a successful fallback history read when the first read failed", async () => {

@@ -98,6 +98,7 @@ import {
 import {
   SessionOutputCoverageStore,
   needsIndependentOutput,
+  readOutputJournal,
 } from "@cjhyy/code-shell-core/internal";
 import type {
   WorkspaceContext,
@@ -324,6 +325,7 @@ export class AgentBridge implements PetStateBridge {
   // Kept separate from worker taps: native streams, RPC replies and approvals
   // must not be duplicated or impersonated by an in-Main producer.
   private readonly ownedExternalTaps = new Set<(entry: OwnedExternalStreamEntry) => void>();
+  private readonly ownedExternalOutputSources = new Map<string, MainOutputSource>();
   /**
    * The cwd/sessionId of the most recent `agent/run` (from renderer OR mobile).
    * Used as the default context when a mobile client sends chat without an
@@ -2044,6 +2046,7 @@ export class AgentBridge implements PetStateBridge {
   forgetSession(sessionId: string): void {
     this.snapshots.forget(sessionId);
     this.mainOutput.forget(sessionId);
+    this.ownedExternalOutputSources.delete(sessionId);
     this.releaseSessionResources(sessionId);
   }
 
@@ -2170,6 +2173,25 @@ export class AgentBridge implements PetStateBridge {
    */
   registerExternalSession(sessionId: string, cwd: string, webContentsId?: number): void {
     this.reserveHostSession(sessionId, cwd);
+    // A resumed runtime may receive background results before its next turn.
+    // Bind existing durable output now, without cutting over a legacy transcript.
+    const history = readOutputJournal(sessionsRoot(), sessionId, { maxFrames: 1 });
+    if (history.status === "ok") {
+      try {
+        const snapshot = this.snapshots.get(sessionId);
+        this.bindOwnedExternalOutputSource(
+          sessionId,
+          snapshot.nextSeq === 1 &&
+            snapshot.events.length === 0 &&
+            !snapshot.outputCursor &&
+            !snapshot.topLevelRunning
+            ? history.through
+            : undefined,
+        );
+      } catch (error) {
+        dlog("bridge", "stream.source_unavailable", { sessionId, error: String(error) });
+      }
+    }
     try {
       registerSessionBucket(sessionId, externalRuntimeBrowserBucket(sessionId));
     } catch (err) {
@@ -2608,6 +2630,50 @@ export class AgentBridge implements PetStateBridge {
 
   /** External interactive streams retain their exact owning window. */
   ingestOwnedExternalEvent(sessionId: string, event: unknown): void {
+    try {
+      if (needsIndependentOutput(event)) {
+        const source = this.ownedExternalOutputSources.get(sessionId);
+        if (!source) {
+          // Keep an unanchored notice visible, but never certify that a replay
+          // includes it. A new provider turn cannot erase this coverage gap.
+          this.publishOwnedExternalEvent(sessionId, { ...event, outputRecovery: "incomplete" });
+          throw new Error("External output has no committed Session anchor");
+        }
+        source.publish(event);
+        return;
+      }
+      if ((event as { outputCursor?: unknown } | null)?.outputCursor) {
+        if (!this.mainOutput.observeWorker(sessionId, event)) return;
+        // A new Session's recorder commits its first journal before any
+        // provider/tool work. It is now safe to bind without a legacy cutover.
+        this.bindOwnedExternalOutputSource(sessionId);
+      }
+      this.publishOwnedExternalEvent(sessionId, event);
+    } catch (error) {
+      if ((error as { coverageIncomplete?: boolean }).coverageIncomplete)
+        this.publishOwnedExternalEvent(sessionId, {
+          ...(event as object),
+          outputCursor: undefined,
+          outputRecovery: "incomplete",
+        });
+      dlog("bridge", "stream.source_unavailable", { sessionId, error: String(error) });
+    }
+  }
+
+  private bindOwnedExternalOutputSource(sessionId: string, historicalPrefix?: string): void {
+    if (this.ownedExternalOutputSources.has(sessionId)) return;
+    this.ownedExternalOutputSources.set(
+      sessionId,
+      this.mainOutput.capture(
+        sessionId,
+        (event) => this.publishOwnedExternalEvent(sessionId, event),
+        (id, event) => this.publishOwnedExternalEvent(id, event),
+        historicalPrefix,
+      ),
+    );
+  }
+
+  private publishOwnedExternalEvent(sessionId: string, event: unknown): boolean {
     this.workerRuns.observeExternal(sessionId, event);
     const entry = publishOwnedExternalStream(
       this.snapshots,
@@ -2616,15 +2682,16 @@ export class AgentBridge implements PetStateBridge {
       sessionId,
       annotateBrowserRuntimeStreamEvent(event, "full"),
     );
-    if (entry) {
+    if (entry?.ownerWebContentsId !== undefined) {
       for (const tap of this.ownedExternalTaps) {
         try {
-          tap(entry);
+          tap({ ...entry, ownerWebContentsId: entry.ownerWebContentsId });
         } catch {
           // Read-only observers cannot turn a committed output into a retry.
         }
       }
     }
+    return entry !== undefined;
   }
 
   /**
