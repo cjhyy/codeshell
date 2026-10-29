@@ -16,7 +16,15 @@ export interface WorkbenchLocation {
 }
 const marker = "codeshellWorkbench";
 const chat: WorkbenchLocation = { view: "chat" };
-const initialLocation = (): WorkbenchLocation => parseWorkbenchLocation(new URL(location.href));
+const initialLocation = (): WorkbenchLocation =>
+  typeof window !== "undefined" && window.location?.href
+    ? parseWorkbenchLocation(new URL(window.location.href))
+    : chat;
+
+interface PublicSelection {
+  projectId: string | null;
+  sessionId: string;
+}
 
 function parent(route: WorkbenchLocation): { label: string; route: WorkbenchLocation } | undefined {
   if (route.view === "panel")
@@ -60,18 +68,23 @@ const keepsPanel = (from: WorkbenchLocation, to: WorkbenchLocation) =>
   from.panel.revision === to.panel.revision;
 
 /** History holds opaque entry IDs only. Panel grants and file data stay in this mounted scope. */
-export function useWorkbenchNavigation(workspace: string) {
+export function useWorkbenchNavigation(workspace: string, selection?: PublicSelection) {
   // A reload/remount must not mistake a previous instance's indexes for its own.
   // This is a navigation marker, not an authorization token (plain HTTP Hub is supported).
   const [mountId] = React.useState(
-    () => window.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+    () =>
+      (typeof window !== "undefined" ? window.crypto?.randomUUID?.() : undefined) ??
+      `${Date.now()}-${Math.random()}`,
+  );
+  const documentPath = React.useRef(
+    typeof window !== "undefined" ? window.location?.pathname : undefined,
   );
   const epoch = React.useRef(0);
   const [route, setRoute] = React.useState(initialLocation);
   const [dirty, setDirty] = React.useState(false);
   const [pending, setPending] = React.useState<(() => void) | null>(null);
-  const current = React.useRef({ workspace, route, dirty });
-  current.current = { workspace, route, dirty };
+  const current = React.useRef({ workspace, route, dirty, selection });
+  current.current = { workspace, route, dirty, selection };
   const retiredOwners = React.useRef(new Set<string>());
   const approvedAction = React.useRef(false);
   const history = React.useRef<{
@@ -92,7 +105,15 @@ export function useWorkbenchNavigation(workspace: string) {
     state.entries.set(state.index, next);
     // Old entries can still return to their safe URL-level page, never stale capabilities.
     if (state.entries.size > 100) state.entries.delete(Math.min(...state.entries.keys()));
-    const url = new URL(location.href);
+    const url = new URL(window.location.href);
+    // Views never select a project or conversation. Their URL must describe the
+    // authority and activeId already held by ProjectsGate/useHubController.
+    const selected = current.current.selection;
+    if (selected) {
+      if (selected.projectId) url.searchParams.set("project", selected.projectId);
+      else url.searchParams.delete("project");
+      url.searchParams.set("session", selected.sessionId);
+    }
     if (next.view === "chat") url.searchParams.delete("view");
     else url.searchParams.set("view", next.view === "panel" ? "panels" : next.view);
     if (next.view === "settings" && next.section && next.section !== "overview")
@@ -144,6 +165,21 @@ export function useWorkbenchNavigation(workspace: string) {
           write(current.current.route, true);
           return;
         }
+        if (
+          typeof destination?.owner === "string" &&
+          destination.owner.length > 0 &&
+          Number.isSafeInteger(destination.index) &&
+          destination.index >= 0 &&
+          window.location.pathname === documentPath.current
+        ) {
+          // A prior Workbench mount is not the outer router. Its opaque Panel
+          // and file entities are gone; only its public page/section can be used.
+          // Restore the current selection before asking whether to leave it.
+          const next = initialLocation();
+          write(current.current.route, true);
+          guard(() => write(next, true));
+          return;
+        }
         // An unowned entry belongs to the outer router/browser. Never push a trap entry.
         setPending(null);
         current.current.route = initialLocation();
@@ -152,7 +188,12 @@ export function useWorkbenchNavigation(workspace: string) {
       }
       const target = destination.index as number;
       const next = state.entries.get(target) ?? initialLocation();
-      if (target === state.index) return;
+      if (target === state.index) {
+        // A restored old-owner entry can share this marker with another native
+        // entry. Keep the view, but never restore an older public selection.
+        write(current.current.route, true);
+        return;
+      }
       if (current.current.dirty && !keepsPanel(current.current.route, next)) {
         const retained = current.current.route;
         const scope = state.workspace;
@@ -169,12 +210,11 @@ export function useWorkbenchNavigation(workspace: string) {
       }
       setPending(null);
       state.index = target;
-      current.current.route = next;
-      setRoute(next);
+      write(next, true);
     };
     window.addEventListener("popstate", pop);
     return () => window.removeEventListener("popstate", pop);
-  }, [write]);
+  }, [guard, write]);
   const navigate = React.useCallback(
     (next: WorkbenchLocation) =>
       keepsPanel(current.current.route, next) ? write(next) : guard(() => write(next)),

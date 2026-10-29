@@ -13,6 +13,7 @@ import { MessageContent, ToolMessage, subagentStatusLabel } from "./MessageConte
 import { sessionTitle } from "./chat.js";
 import type { WorkbenchController, WorkbenchNavigation } from "./workbench-types.js";
 import { useWorkbenchNavigation } from "./useWorkbenchNavigation.js";
+import { getApiProject } from "./api-context.js";
 import { useLatestMessages } from "./useLatestMessages.js";
 import { useTranscriptWindow } from "./useTranscriptWindow.js";
 import { groupToolActivity } from "./toolActivityGroups.js";
@@ -111,7 +112,10 @@ export function Workbench({
   const fileInput = React.useRef<HTMLInputElement>(null);
   const cameraInput = React.useRef<HTMLInputElement>(null);
   const devicesOpener = React.useRef<HTMLButtonElement>(null);
-  const navigation = useWorkbenchNavigation(controller.workspaceKey);
+  const navigation = useWorkbenchNavigation(
+    controller.workspaceKey,
+    controller.host === "desktop" ? undefined : { projectId: getApiProject(), sessionId: activeId },
+  );
   const {
     route,
     dirty: navigationDirty,
