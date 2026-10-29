@@ -20,6 +20,7 @@ import {
   gateDecision,
   gateFullyOpen,
   INPUT_POLICY_NOTES,
+  isWithheldTool,
   parseInputGateState,
   parseSessionLineage,
   REFUSAL_POLICY_NOTE,
@@ -346,13 +347,18 @@ export function toolCall(message: unknown): ToolCall | undefined {
   return { id, name: params.name, args: record(params.arguments) ?? {}, sessionIds, stripped };
 }
 
-/** Append the CodeShell input strategy to the model-facing tool descriptions. */
+/** Drop withheld tools and append the CodeShell input strategy to the
+ * model-facing tool descriptions. */
 export function annotateToolList(message: unknown): JsonRecord | undefined {
   const response = record(message);
   const result = record(response?.result);
   if (!response || !result || !Array.isArray(result.tools)) return;
-  let changed = false;
-  const tools = result.tools.map((tool) => {
+  const offered = result.tools.filter((tool) => {
+    const name = record(tool)?.name;
+    return typeof name !== "string" || !isWithheldTool(name);
+  });
+  let changed = offered.length !== result.tools.length;
+  const tools = offered.map((tool) => {
     const item = record(tool);
     if (!item || typeof item.name !== "string") return tool;
     const note = INPUT_POLICY_NOTES[item.name];
@@ -500,8 +506,11 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
     child.stdin.end();
   })();
   async function gateFor(call: ToolCall): Promise<InputGateState | undefined> {
-    // Read-only calls never wait; input waits (bounded) for the first push.
-    return gateDecision(undefined, call).allow ? undefined : channel.waitForGate();
+    // Read-only and withheld calls never wait; input waits (bounded) for the first push.
+    const decision = gateDecision(undefined, call);
+    return decision.allow || decision.reason === "tool-withheld"
+      ? undefined
+      : channel.waitForGate();
   }
   const outgoing = (async () => {
     for await (const part of cuaWireParts(child.stdout)) {

@@ -7,7 +7,8 @@ export type InputRefusalReason =
   | "chat-open"
   | "user-active"
   | "session-cancelled"
-  | "host-unavailable";
+  | "host-unavailable"
+  | "tool-withheld";
 
 export interface InputGateState {
   /** Monotonic; the proxy ignores an older push. */
@@ -42,7 +43,6 @@ const READ_TOOLS = new Set([
   "check_permissions",
   "get_agent_cursor_state",
   "get_desktop_state",
-  "get_browser_state",
   "get_app_state",
   "zoom",
   "verify_state",
@@ -77,6 +77,15 @@ const BACKGROUND_TOOLS = new Set([
   "start_recording",
 ]);
 
+/** The driver's own browser route: DevTools control of a bound (possibly signed-in)
+ * browser, including page scripts. CodeShell's built-in browser tools own web
+ * pages, so these are neither listed nor forwarded, whatever the gate state. */
+const WITHHELD_TOOLS = new Set(["page", "get_browser_state"]);
+
+export function isWithheldTool(name: string): boolean {
+  return name.startsWith("browser_") || WITHHELD_TOOLS.has(name);
+}
+
 function object(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -98,6 +107,7 @@ export function gateDecision(
   call: { name: string; args: Record<string, unknown>; sessionIds: readonly string[] },
 ): InputGateDecision {
   const lane = inputLane(call.name, call.args);
+  if (isWithheldTool(call.name)) return { allow: false, lane, reason: "tool-withheld" };
   if (lane === "read") return { allow: true, lane };
   if (!state) return { allow: false, lane, reason: "host-unavailable" };
   if (call.sessionIds.some((id) => state.cancelledSessions.includes(id)))
@@ -158,6 +168,8 @@ const GUIDANCE: Record<InputRefusalReason, string> = {
   "session-cancelled": "The user cancelled this task. Do not send any further computer input.",
   "host-unavailable":
     "CodeShell cannot confirm the user's control state, so computer input is refused. Do not retry; report the problem to the user.",
+  "tool-withheld":
+    "CodeShell does not offer the computer-use driver's browser tools. For web pages use CodeShell's built-in browser tools (browser_navigate, browser_observe, browser_act); use computer tools only for desktop apps.",
 };
 
 /** A local MCP tool result; the request never reaches the driver. */
