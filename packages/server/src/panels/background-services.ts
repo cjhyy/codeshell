@@ -264,6 +264,10 @@ export class PanelBackgroundService {
   private initializationRetryAt = 0;
   private initializationFailures = 0;
   private initializationError: unknown;
+  private recoveringStorage = false;
+  private lastAvailability = false;
+  private availabilityRevision = 0;
+  private readonly availabilityListeners = new Set<(available: boolean) => void>();
   private stopping = false;
   private ticking = false;
   private unregister?: () => void;
@@ -280,7 +284,37 @@ export class PanelBackgroundService {
     return result;
   }
   isAvailable(): boolean {
-    return this.initialized && !this.stopping && this.store.available();
+    return (
+      this.initialized &&
+      !this.initialization &&
+      !this.recoveringStorage &&
+      !this.stopping &&
+      this.store.available()
+    );
+  }
+  /** Subscribe to transitions; callers read isAvailable() for the initial snapshot. */
+  subscribeAvailability(listener: (available: boolean) => void): () => void {
+    this.availabilityListeners.add(listener);
+    return () => {
+      this.availabilityListeners.delete(listener);
+    };
+  }
+  private notifyAvailability(): void {
+    const available = this.isAvailable();
+    if (available === this.lastAvailability) return;
+    this.lastAvailability = available;
+    const revision = ++this.availabilityRevision;
+    for (const listener of [...this.availabilityListeners]) {
+      // An observer can synchronously shut down or unsubscribe another observer.
+      // A nested transition supersedes this delivery even if its value returns.
+      if (revision !== this.availabilityRevision || this.isAvailable() !== available) break;
+      if (!this.availabilityListeners.has(listener)) continue;
+      try {
+        listener(available);
+      } catch {
+        /* observers cannot abort custody or durable lifecycle work */
+      }
+    }
   }
   private groupStatus(identity: ServiceProcessIdentity) {
     return (this.options.groupStatus ?? identityGroupStatus)(identity);
@@ -318,8 +352,8 @@ export class PanelBackgroundService {
   }
   async initialize(): Promise<void> {
     if (this.stopping) throw new Error("SERVICE_UNAVAILABLE");
-    if (this.initialized) return;
     if (this.initialization) return this.initialization;
+    if (this.initialized) return;
     // One supervisor timer also retries transient lock/inspection failures. It
     // never releases custody belonging to an already initialized coordinator.
     this.startTimer();
@@ -382,6 +416,7 @@ export class PanelBackgroundService {
       await attempt;
     } finally {
       if (this.initialization === attempt) this.initialization = undefined;
+      this.notifyAvailability();
     }
   }
   private commit(key: string, mutate: (record: RecordState) => void): RecordState {
@@ -401,6 +436,7 @@ export class PanelBackgroundService {
     return next;
   }
   private beginEmergencyStop(): void {
+    this.notifyAvailability();
     this.pending.clear();
     for (const timer of this.publishTimers.values()) clearTimeout(timer);
     this.publishTimers.clear();
@@ -422,6 +458,7 @@ export class PanelBackgroundService {
       this.emergency = undefined;
       return;
     }
+    this.recoveringStorage = true;
     try {
       const disk = this.store.recover(validateRecord);
       for (const record of disk) {
@@ -466,6 +503,9 @@ export class PanelBackgroundService {
     } catch {
       this.store.quarantine();
       this.beginEmergencyStop();
+    } finally {
+      this.recoveringStorage = false;
+      this.notifyAvailability();
     }
   }
   private emit(record: RecordState, channel?: string) {
@@ -1240,6 +1280,7 @@ export class PanelBackgroundService {
   }
   async shutdown(): Promise<void> {
     this.stopping = true;
+    this.notifyAvailability();
     if (this.timer) clearInterval(this.timer);
     for (const timer of this.publishTimers.values()) clearTimeout(timer);
     this.publishTimers.clear();

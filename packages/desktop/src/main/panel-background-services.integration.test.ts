@@ -25,6 +25,7 @@ const declaration = parsed.statements.find(
 )!;
 const methods = [
   "getBackgroundService",
+  "refreshBackgroundServiceContexts",
   "dispatchBackgroundServices",
   "initializeMedia",
   "shutdownMedia",
@@ -315,6 +316,9 @@ test("H-I3 actual Desktop describe and inspection cache distinguish IO absence f
       PanelBackgroundService: class {
         constructor(options: any) {
           captured = options;
+        }
+        subscribeAvailability() {
+          return () => {};
         }
       },
       PanelBridgeError,

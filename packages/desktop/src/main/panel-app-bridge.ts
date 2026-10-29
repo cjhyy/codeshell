@@ -501,6 +501,7 @@ export class PanelAppBridge {
   >();
   private toolJobService?: PanelToolJobService;
   private backgroundService?: PanelBackgroundService;
+  private unsubscribeBackgroundAvailability?: () => void;
   private backgroundInitializationError?: string;
   private taskCookieHost?: PanelTaskCookieHost;
   private nextToolOwner = -1;
@@ -789,6 +790,9 @@ export class PanelAppBridge {
 
   async shutdownMedia(): Promise<void> {
     this.resourceTransfersStopping = true;
+    this.refreshBackgroundServiceContexts();
+    this.unsubscribeBackgroundAvailability?.();
+    this.unsubscribeBackgroundAvailability = undefined;
     for (const guestId of [...this.windowSourceListeners.keys()]) this.revokeWindowSource(guestId);
     for (const binding of this.guests.values()) binding.bindController?.abort();
     revokePanelAppMediaReads();
@@ -1714,6 +1718,30 @@ export class PanelAppBridge {
     });
   }
 
+  private refreshBackgroundServiceContexts(): void {
+    // Synchronous validation + delivery cannot cross an asynchronous rebind or
+    // package change. Each guest retains its own authorized context and scope.
+    for (const binding of this.guests.values()) {
+      if (!binding.bucket || binding.guest.isDestroyed()) continue;
+      try {
+        this.assertProjectBinding(binding);
+        if (binding.windowSourceGuestId !== undefined) {
+          const source = this.guests.get(binding.windowSourceGuestId);
+          if (!source || binding.windowSourceIdentity !== this.windowSourceIdentity(source))
+            continue;
+          this.assertWindowSource(source);
+        }
+        const context = { ...binding.context, ...this.capabilitiesFor(binding) };
+        if (isDeepStrictEqual(context, binding.context)) continue;
+        binding.context = context;
+        binding.guest.send("panel-app:event", { event: "context.changed", payload: context });
+      } catch {
+        // A revoked/destroyed guest must neither receive updates nor prevent
+        // another still-authorized project from observing availability.
+      }
+    }
+  }
+
   private async installedToolApp(scope: ToolJobScope) {
     if (
       !this.options.isPanelAppBound(scope.projectPath, scope.appId) ||
@@ -1939,6 +1967,12 @@ export class PanelAppBridge {
           )
             binding.guest.send("panel-app:event", { event: "services.changed", payload });
       },
+    });
+    const service = this.backgroundService;
+    this.unsubscribeBackgroundAvailability = service.subscribeAvailability((available) => {
+      if (this.backgroundService !== service || this.resourceTransfersStopping) return;
+      if (available) this.backgroundInitializationError = undefined;
+      this.refreshBackgroundServiceContexts();
     });
     return this.backgroundService;
   }
@@ -2345,7 +2379,7 @@ export class PanelAppBridge {
     }
     switch (method) {
       case "context.get":
-        return binding.context;
+        return { ...binding.context, ...this.capabilitiesFor(binding) };
       case "storage.getSnapshot":
       case "storage.compareAndSet":
         this.requirePermission(binding, "storage");

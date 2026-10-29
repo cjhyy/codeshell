@@ -191,6 +191,157 @@ test("starting phase is published after durable admission before a blocked spawn
   await start;
 });
 
+test("N1 availability notifies initialization completion and shutdown once, with removable observers", async () => {
+  const f = await fixture();
+  await f.start();
+  await f.service.shutdown();
+  const entered = barrier(),
+    release = barrier();
+  const restored = new PanelBackgroundService({
+    ...f.options,
+    describe: async (scope) => {
+      entered.resolve();
+      await release.promise;
+      return f.options.describe(scope);
+    },
+  });
+  instances.push(restored);
+  const changes: boolean[] = [],
+    observed: boolean[] = [],
+    removed: boolean[] = [];
+  restored.subscribeAvailability(() => {
+    throw new Error("observer failure must not interrupt initialization or shutdown");
+  });
+  restored.subscribeAvailability((available) => {
+    changes.push(available);
+    observed.push(restored.isAvailable());
+  });
+  const unsubscribe = restored.subscribeAvailability((available) => removed.push(available));
+  expect(restored.isAvailable()).toBe(false);
+  const initialization = restored.initialize();
+  await entered.promise;
+  expect(restored.isAvailable()).toBe(false);
+  expect(changes).toEqual([]);
+  release.resolve();
+  await initialization;
+  expect(changes).toEqual([true]);
+  expect(observed).toEqual(changes);
+  expect(removed).toEqual([true]);
+  await restored.initialize();
+  await restored.tick();
+  expect(changes).toEqual([true]);
+  unsubscribe();
+  unsubscribe();
+  await restored.shutdown();
+  expect(changes).toEqual([true, false]);
+  expect(observed).toEqual(changes);
+  expect(removed).toEqual([true]);
+});
+
+test("N1 first-record write poison and recovery publish live availability without duplicate events", async () => {
+  let armed = false;
+  const f = await fixture({
+    fault: (point) => {
+      if (armed && point === "write") throw new Error("N1_FIRST_RECORD_WRITE_FAILED");
+    },
+  });
+  const changes: boolean[] = [],
+    observed: boolean[] = [];
+  f.service.subscribeAvailability((available) => {
+    changes.push(available);
+    observed.push(f.service.isAvailable());
+  });
+  expect(f.service.isAvailable()).toBe(true);
+  expect(changes).toEqual([]);
+  armed = true;
+  await expect(f.start()).rejects.toThrow("N1_FIRST_RECORD_WRITE_FAILED");
+  expect(f.service.isAvailable()).toBe(false);
+  expect(changes).toEqual([false]);
+  expect(f.processes).toHaveLength(0);
+  armed = false;
+  await f.service.tick();
+  expect(f.service.isAvailable()).toBe(true);
+  expect(changes).toEqual([false, true]);
+  await f.service.tick();
+  expect(changes).toEqual([false, true]);
+  expect(observed).toEqual(changes);
+});
+
+test("N1 synchronous observer shutdown supersedes availability delivery to later observers", async () => {
+  const f = await fixture();
+  await f.service.shutdown();
+  const restored = new PanelBackgroundService(f.options);
+  instances.push(restored);
+  const first: boolean[] = [],
+    second: boolean[] = [],
+    observed: boolean[] = [];
+  let shutdown: Promise<void> | undefined;
+  restored.subscribeAvailability((available) => {
+    first.push(available);
+    if (available) shutdown = restored.shutdown();
+  });
+  restored.subscribeAvailability((available) => {
+    second.push(available);
+    observed.push(restored.isAvailable());
+  });
+  await restored.initialize();
+  expect(shutdown).toBeDefined();
+  await shutdown;
+  expect(first).toEqual([true, false]);
+  expect(second).toEqual([false]);
+  expect(observed).toEqual(second);
+  expect(restored.isAvailable()).toBe(false);
+});
+
+test("N1 observers removed during delivery cannot receive a snapshotted notification", async () => {
+  const f = await fixture();
+  await f.service.shutdown();
+  const restored = new PanelBackgroundService(f.options);
+  instances.push(restored);
+  const changes: boolean[] = [];
+  let unsubscribe = () => {};
+  restored.subscribeAvailability(() => unsubscribe());
+  unsubscribe = restored.subscribeAvailability((available) => changes.push(available));
+  await restored.initialize();
+  expect(restored.isAvailable()).toBe(true);
+  expect(changes).toEqual([]);
+  await restored.shutdown();
+  expect(changes).toEqual([]);
+});
+
+test("N1 recovery remains unavailable until every recovery commit succeeds", async () => {
+  let armed = false;
+  const f = await fixture({
+    fault: (point) => {
+      if (armed && point === "directory-fsync") throw new Error("N1_RECOVERY_WRITE_FAILED");
+    },
+  });
+  await f.start();
+  await f.service.get(f.scope);
+  const changes: boolean[] = [],
+    observed: boolean[] = [];
+  f.service.subscribeAvailability((available) => {
+    changes.push(available);
+    observed.push(f.service.isAvailable());
+  });
+  armed = true;
+  await expect(
+    f.service.control(f.scope, { action: "stop", requestKey: "n1-failed-stop" }),
+  ).rejects.toThrow("N1_RECOVERY_WRITE_FAILED");
+  await f.processes[0].terminated;
+  expect(changes).toEqual([false]);
+  await f.service.tick(); // recover() opens the store, but the following durable commit fails
+  expect(f.service.isAvailable()).toBe(false);
+  expect(changes).toEqual([false]);
+  armed = false;
+  f.clock(105_000);
+  await f.service.tick();
+  expect(f.service.isAvailable()).toBe(true);
+  expect(changes).toEqual([false, true]);
+  expect(observed).toEqual(changes);
+  expect(await f.service.get(f.scope)).toMatchObject({ desired: "off", phase: "stopped" });
+});
+
 test("C2 same-second PID reuse compares kernel unique identity; legacy timestamps remain unknown", () => {
   const current = { ...identity, start: "darwin-unique:456:1" };
   expect(identityStatus({ ...current, start: "darwin-unique:455:1" }, () => current)).toBe("dead");
@@ -687,8 +838,14 @@ test("I-5 initialization retries lock availability with bounded backoff and coal
     },
   });
   instances.push(service);
+  const availability: boolean[] = [];
+  service.subscribeAvailability((available) => {
+    expect(service.isAvailable()).toBe(available);
+    availability.push(available);
+  });
   await expect(service.initialize()).rejects.toThrow("SERVICE_COORDINATOR_BUSY");
   expect(service.isAvailable()).toBe(false);
+  expect(availability).toEqual([]);
   expect(calls).toBe(1);
   await expect(service.tick()).rejects.toThrow("SERVICE_COORDINATOR_BUSY");
   expect(calls).toBe(1);
@@ -708,6 +865,7 @@ test("I-5 initialization retries lock availability with bounded backoff and coal
   await service.tick();
   expect(calls).toBe(3);
   expect(service.isAvailable()).toBe(true);
+  expect(availability).toEqual([true]);
   const challenger = new BackgroundServiceStore(root, undefined, identities);
   expect(() => challenger.acquire()).toThrow("SERVICE_COORDINATOR_BUSY");
 });
