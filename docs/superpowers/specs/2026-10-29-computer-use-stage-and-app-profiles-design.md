@@ -1,6 +1,6 @@
 # 电脑操作 × Mimi：舞台、应用档案与真实感 设计
 
-- 状态：设计稿，待分阶段实施
+- 状态：P2–P6 已实施（见 §11）；P1 待真机诊断
 - 日期：2026-10-29
 - 前置：`2026-10-28-mimi-cua-execution-boundary-design.md`（执行闸门，PR #239 已合并）、PR #242（驱动自带浏览器路线已下线）
 - 范围：Desktop 主进程 `src/main/computer-use/**`、Mimi 角色渲染 `src/renderer/pet/live2d/**`、新增资源 `resources/computer-use/apps/**`
@@ -238,3 +238,20 @@ stage:
 | 电脑操作在 Chrome | 读整棵辅助功能树、按编号操作、动作后自动等待稳定、看不清再截图                 | 同思路；稀疏树补读与读取预算在 proxy 里做（P1）          |
 | 按应用知识        | `AppInstructions/*.md`，每个应用一份                                           | 应用档案：同样的 Markdown 正文，另加给角色的舞台提示     |
 | 表现              | 系统级"正在使用电脑"提示条                                                     | Mimi 角色的完整表现，与操作同源                          |
+
+## 11. 实施进展（2026-10-29）
+
+| 阶段                                      | PR                                                         | 状态                   |
+| ----------------------------------------- | ---------------------------------------------------------- | ---------------------- |
+| P4a 宿主拆分                              | #245 `companion-choreographer.ts`                          | 已合并                 |
+| P3 场景事件、P4b 舞台模型、P5a 走动与手势 | #246 `stage-model.ts`、`companion-locomotion.ts`           | 已合并                 |
+| P2 应用档案、P6a 舞台提示                 | #247 `app-profiles.ts`、`resources/computer-use/apps/*.md` | 已合并                 |
+| P5b 让位与跨屏、P6b 拖到窗口生成聊天草稿  | #248 `window-at-point.ts`                                  | 待合并                 |
+| P1 Chromium 感知整形                      | —                                                          | 待辅助功能授权后跑诊断 |
+
+与设计的差异：
+
+- §5.3 应用识别没有用 `lsappinfo`：`get_window_state` 结果里的 `app_name` 与 `launch_app` 的 `bundle_id` 已足够，proxy 由此学到 pid→档案，后续事件带 `appId`。
+- §6 第 8 条的"窗口"只取应用名：拖放后用 CoreGraphics（经 JXA）列一次屏幕窗口（pid、应用名、窗口框，不取标题），确认后把"请看看我屏幕上的「App」窗口。"放进聊天输入框，由用户自己发送。
+- §6 第 1 条"窗口移动时跟着动"只在下一次读窗口时更新，不做轮询（§9 第 4 条）。
+- 预览实验室新增 `--stage-demo` 与 `--interaction-demo`，不需要电脑操作授权即可验证表现与互动。
