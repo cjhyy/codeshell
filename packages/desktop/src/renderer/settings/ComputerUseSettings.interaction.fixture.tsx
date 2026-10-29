@@ -39,6 +39,12 @@ let current: ComputerUseSettingsStatus = {
   },
 };
 let reads = 0;
+if (scenario === "companion") {
+  current.enabled = false;
+  current.companion = { enabled: false, size: 320, available: true, appearance: "mimi-sprite" };
+}
+const companionWrites: Array<{ enabled?: boolean; size?: number }> = [];
+let companionPreviews = 0;
 let writesFail = scenario === "enable-retry";
 let readsFail = scenario === "read-retry";
 const requests: string[] = [];
@@ -74,6 +80,15 @@ Object.assign(window, {
       },
       restart: async () => {
         restarts += 1;
+      },
+      setCompanion: async (value: { enabled?: boolean; size?: number }) => {
+        companionWrites.push(value);
+        current.companion = { ...current.companion!, ...value };
+        return structuredClone(current);
+      },
+      previewCompanion: async () => {
+        companionPreviews++;
+        return structuredClone(current);
       },
     },
   },
@@ -261,6 +276,29 @@ try {
     assert.ok(textOf(container).includes("Screen recording"));
     assert.ok(textOf(container).includes("Not granted"));
     assert.ok(!textOf(container).includes("settingsX.computerUse"));
+  } else if (scenario === "companion") {
+    const companionToggle = () => nodes(container).filter((n) => props(n).role === "switch")[1];
+    assert.ok(textOf(container).includes("Live2D"));
+    assert.ok(textOf(container).includes("尚未启用模型"));
+    await click("预览动作");
+    assert.equal(companionPreviews, 1);
+    assert.equal(
+      props(companionToggle())["aria-checked"],
+      false,
+      "Preview never persists the switch",
+    );
+    await update(() =>
+      props(companionToggle()).onClick({ defaultPrevented: false, stopPropagation() {} }),
+    );
+    assert.equal(props(companionToggle())["aria-checked"], true);
+    await update(() =>
+      props(companionToggle()).onClick({ defaultPrevented: false, stopPropagation() {} }),
+    );
+    assert.equal(props(companionToggle())["aria-checked"], false);
+    assert.deepEqual(companionWrites, [{ enabled: true }, { enabled: false }]);
+    assert.deepEqual(writes, [], "Companion never enables computer use");
+    assert.deepEqual(requests, [], "Companion never requests OS permissions");
+    assert.equal(restarts, 0);
   } else if (scenario === "scope") {
     // General settings must never mount the separate computer-use module.
     mock.module("./PermissionSection", () => ({ PermissionSection: () => null }));

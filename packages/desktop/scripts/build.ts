@@ -21,6 +21,7 @@ async function buildPreload(): Promise<void> {
       index: resolve(root, "src/preload/index.ts"),
       "browser-guest": resolve(root, "src/preload/browser-guest.ts"),
       "panel-app": resolve(root, "src/preload/panel-app.ts"),
+      "mimi-companion": resolve(root, "src/preload/mimi-companion.ts"),
     },
     bundle: true,
     platform: "node",

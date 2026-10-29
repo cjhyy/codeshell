@@ -50,7 +50,11 @@ import { mkdirSync } from "node:fs";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { desktopManagedRuntimeRoot } from "./managed-runtime-service.js";
 import { dlog } from "./desktop-logger.js";
-import { hostMcpServersEnv } from "./computer-use/service.js";
+import {
+  hostMcpServersEnv,
+  observeComputerUseRunControl,
+  observeComputerUseRunEvent,
+} from "./computer-use/service.js";
 import { composeCapabilityModulesEnv, readUserFeatureFlags } from "./capability-modules-env.js";
 import { ChildBrowserWorkerLifetime } from "./browser-runtime/child-browser-lifetime.js";
 import { WebConfigurationGate } from "./web-configuration-gate.js";
@@ -588,7 +592,10 @@ export class AgentBridge implements PetStateBridge {
           event: annotateBrowserRuntimeStreamEvent(rawAppend.event, "milestones"),
         }
       : null;
-    if (append) this.workerRuns.observeWorker(append.sessionId, append.event);
+    if (append) {
+      this.workerRuns.observeWorker(append.sessionId, append.event);
+      observeComputerUseRunEvent(append.sessionId, append.event);
+    }
     let snapshotEntry;
     try {
       snapshotEntry = append
@@ -906,6 +913,7 @@ export class AgentBridge implements PetStateBridge {
     if (typeof parsed.params?.sessionId === "string" && meta.producer !== "output-history-recovery")
       assertOutputHistoryWriteAvailable(parsed.params.sessionId);
     cancelBrowserActionsForStoppedRun(parsed);
+    observeComputerUseRunControl(parsed);
     if (
       isOptimizationLabQuery(parsed) &&
       (meta.origin !== "host" || !this.trustedLabRequests.has(String(parsed.id)))
@@ -996,6 +1004,7 @@ export class AgentBridge implements PetStateBridge {
         }
       }
       cancelBrowserActionsForStoppedRun(parsed);
+      observeComputerUseRunControl(parsed);
       if (isOptimizationLabQuery(parsed)) {
         if (parsed.id !== undefined && !event.sender.isDestroyed()) {
           event.sender.send(
@@ -2650,6 +2659,7 @@ export class AgentBridge implements PetStateBridge {
     options: { browserVisibility?: "hidden" | "milestones" | "full" },
   ): boolean {
     this.workerRuns.observeExternal(sessionId, event);
+    observeComputerUseRunEvent(sessionId, event);
     const projected = annotateBrowserRuntimeStreamEvent(event, options.browserVisibility ?? "full");
     let entry;
     try {
@@ -2670,6 +2680,7 @@ export class AgentBridge implements PetStateBridge {
   /** External interactive streams retain their exact owning window. */
   ingestOwnedExternalEvent(sessionId: string, event: unknown): void {
     this.workerRuns.observeExternal(sessionId, event);
+    observeComputerUseRunEvent(sessionId, event);
     const entry = publishOwnedExternalStream(
       this.snapshots,
       this.windows,

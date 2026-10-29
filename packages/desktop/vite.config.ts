@@ -33,7 +33,13 @@ export default defineConfig({
     // Vendor families are split below; keep the remaining application-shell
     // chunk under an explicit 1 MB budget instead of Vite's generic 500 kB.
     chunkSizeWarningLimit: 1_000,
-    rollupOptions: { output: { manualChunks: rendererManualChunks } },
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, "src/renderer/index.html"),
+        "mimi-companion": resolve(__dirname, "src/renderer/mimi-companion.html"),
+      },
+      output: { manualChunks: rendererManualChunks },
+    },
   },
   plugins: [react(), tailwindcss()],
   // Pre-bundle every installed Radix package (+ lucide) at server start.

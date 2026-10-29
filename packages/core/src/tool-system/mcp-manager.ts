@@ -616,6 +616,35 @@ function toOpenAIToolName(name: string): string {
   return name.replace(/[^a-zA-Z0-9_-]/g, "_");
 }
 
+/** `_meta` key read by host-owned MCP proxies (Desktop's Computer Use gate). */
+export const HOST_MCP_SESSION_META_KEY = "codeshell/sessionIds";
+
+/**
+ * Host-owned servers learn which Session (and its parent chain) issued a call,
+ * so the host can refuse further input for a run the user stopped. The host
+ * proxy removes the key before the request reaches the real server. Third-party
+ * servers never receive it.
+ */
+export function hostSessionMeta(
+  serverName: string,
+  ctx: Pick<Partial<ToolContext>, "sessionId" | "subAgentSpawner"> | undefined,
+): { _meta?: Record<string, unknown> } {
+  if (!serverName.startsWith("host:") || !ctx?.sessionId) return {};
+  const lineage = [ctx.sessionId];
+  for (let current = ctx.sessionId; lineage.length < 8; ) {
+    let parent: string | null | undefined;
+    try {
+      parent = ctx.subAgentSpawner?.getSessionParentId?.(current);
+    } catch {
+      break;
+    }
+    if (!parent || lineage.includes(parent)) break;
+    lineage.push(parent);
+    current = parent;
+  }
+  return { _meta: { [HOST_MCP_SESSION_META_KEY]: lineage } };
+}
+
 export function buildRegisteredTool(
   serverName: string,
   tool: McpTool,
@@ -1616,6 +1645,7 @@ export class MCPManager {
             tool,
             stripInternalToolArgs(args),
           ),
+          ...hostSessionMeta(serverName, ctx),
         },
         undefined,
         signal ? { signal } : undefined,
@@ -1726,6 +1756,7 @@ export class MCPManager {
             conn.tools?.get(toolName),
             stripInternalToolArgs(args),
           ),
+          ...hostSessionMeta(serverName, workspace as Partial<ToolContext> | undefined),
         },
         undefined,
         signal ? { signal } : undefined,
