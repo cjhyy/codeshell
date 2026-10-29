@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { CuaActivityTracker } from "./cua-activity.js";
+import { CuaActivityTracker, cuaElementKind } from "./cua-activity.js";
 
 const request = (id: string | number, name: string, args: Record<string, unknown> = {}) => ({
   jsonrpc: "2.0",
@@ -110,6 +110,8 @@ describe("CuaActivityTracker", () => {
       phase: "start",
       capture: false,
       lane: "background",
+      pid: 10,
+      window: { x: 100, y: 200, width: 800, height: 600 },
       target: { x: 340, y: 300 },
     });
     expect(tracker.finish(response(2))).toEqual({
@@ -301,5 +303,74 @@ describe("CuaActivityTracker", () => {
       { id: "proxy:1", action: "observe", phase: "end", capture: true, failed: true },
     ]);
     expect(tracker.clear()).toEqual([]);
+  });
+
+  test("an action carries its window frame and control category, never the control's text", () => {
+    const tracker = new CuaActivityTracker("proxy");
+    observe(tracker, 1, {
+      screenshot_frame_valid: false,
+      elements: [
+        {
+          role: "AXTextField",
+          element_token: "s12345678:1",
+          frame: { x: 180, y: 280, w: 40, h: 20 },
+          label: "secret document",
+          value: "private typed text",
+        },
+        {
+          role: "AXButton",
+          element_token: "s12345678:2",
+          frame: { x: 300, y: 280, w: 60, h: 20 },
+          label: "Send to Alice",
+        },
+      ],
+    });
+    const write = tracker.begin(
+      request(2, "set_value", { pid: 10, window_id: 20, element_token: "s12345678:1", value: "x" }),
+    );
+    // The window frame does not depend on a valid screenshot mapping.
+    expect(write).toMatchObject({
+      pid: 10,
+      window: { x: 100, y: 200, width: 800, height: 600 },
+      element: "text",
+    });
+    tracker.finish(response(2));
+    // A mutation invalidates geometry; the next action has no stale frame.
+    const stale = tracker.begin(
+      request(3, "click", { pid: 10, window_id: 20, element_token: "s12345678:2" }),
+    );
+    expect(stale?.window).toBeUndefined();
+    expect(stale?.element).toBeUndefined();
+    observe(tracker, 4, {
+      elements: [
+        {
+          role: "AXButton",
+          element_token: "s12345678:2",
+          frame: { x: 300, y: 280, w: 60, h: 20 },
+          label: "Send to Alice",
+        },
+      ],
+    });
+    const press = tracker.begin(
+      request(5, "click", { pid: 10, window_id: 20, element_token: "s12345678:2" }),
+    );
+    expect(press?.element).toBe("button");
+    expect(JSON.stringify([write, press])).not.toMatch(/secret|private|Alice/);
+  });
+
+  test("control categories come from the AX role alone", () => {
+    expect(cuaElementKind("AXTextField")).toBe("text");
+    expect(cuaElementKind("AXTextArea")).toBe("text");
+    expect(cuaElementKind("AXSearchField")).toBe("text");
+    expect(cuaElementKind("AXComboBox")).toBe("text");
+    expect(cuaElementKind("AXMenuButton")).toBe("button");
+    expect(cuaElementKind("AXPopUpButton")).toBe("button");
+    expect(cuaElementKind("AXCheckBox")).toBe("button");
+    expect(cuaElementKind("AXLink")).toBe("link");
+    expect(cuaElementKind("AXMenuItem")).toBe("menu");
+    expect(cuaElementKind("AXRow")).toBe("list");
+    expect(cuaElementKind("AXScrollArea")).toBe("scroll");
+    expect(cuaElementKind("AXStaticText")).toBe("other");
+    expect(cuaElementKind(undefined)).toBe("other");
   });
 });
