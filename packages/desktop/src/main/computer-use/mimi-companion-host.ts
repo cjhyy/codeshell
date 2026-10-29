@@ -8,10 +8,10 @@ import {
   type MimiCompanionSettings,
   type MimiCompanionState,
 } from "../../shared/mimi-companion.js";
+import { CompanionChoreographer } from "./companion-choreographer.js";
 import { companionPlacement } from "./companion-layout.js";
 import { petWidgetAlwaysOnTopLevel } from "../pet/pet-widget-window-state.js";
-import type { CompanionOperation } from "./cua-activity-server.js";
-import type { ComputerActivityBus, RunOutcome } from "./computer-activity-bus.js";
+import type { ComputerActivityBus } from "./computer-activity-bus.js";
 import type { InputGate } from "./input-gate.js";
 
 /** A closed chat keeps foreground input held this long, in case it reopens. */
@@ -65,21 +65,35 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   let previewSequence = 0;
   let previewTimers: Array<ReturnType<typeof setTimeout>> = [];
   let previewExpiry: ReturnType<typeof setTimeout> | undefined;
-  let idleTimer: ReturnType<typeof setTimeout> | undefined;
   let chatRelease: ReturnType<typeof setTimeout> | undefined;
-  const captures = new Set<string>();
   let captureBarrier: Promise<void> = Promise.resolve();
-  const active = new Map<string, CompanionOperation>();
   let display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   if (anchor) display = screen.getDisplayNearestPoint(anchor);
   let target: { x: number; y: number } | undefined;
   let avoidRect: { x: number; y: number; width: number; height: number } | undefined;
-  let activity: MimiCompanionState["activity"] = {
-    id: "idle",
-    action: "idle",
-    phase: "end",
-    startedAt: Date.now(),
-  };
+  const choreographer = new CompanionChoreographer({
+    now: () => Date.now(),
+    setTimer: (run, ms) => setTimeout(run, ms),
+    clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+    suppressed: () => humanActive || chatting,
+    place: placeAt,
+    beginGesture: () => {
+      cancelPreview();
+      if (enabled)
+        void ensureWindow().catch((failure) => {
+          options.log("mimi_companion_load_failed", { error: String(failure) });
+        });
+    },
+    hideForCapture: async () => {
+      const wasVisible = window?.isVisible() ?? false;
+      publish();
+      // Acknowledge only after the hidden window has had time to leave the
+      // compositor. The proxy bounds this wait and never retries input.
+      if (wasVisible) captureBarrier = new Promise((resolve) => setTimeout(resolve, 50));
+      await captureBarrier;
+    },
+    publish,
+  });
   const assetRoot = options.packaged
     ? join(options.resourcesPath, "mimi-live2d")
     : join(options.appPath, "out", "mimi-live2d");
@@ -111,7 +125,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       enabled,
       visible:
         (enabled || preview) &&
-        (captures.size === 0 || humanActive || chatting) &&
+        (!choreographer.capturing || humanActive || chatting) &&
         !placement.obstructed &&
         !disposed,
       appearance: "mimi-sprite",
@@ -123,7 +137,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       humanActive: humanActive || chatting,
       avoidInput: !!avoidRect && !humanActive && !chatting && !pinned,
       pinned,
-      activity,
+      activity: choreographer.activity,
       preview,
       control: options.gate.status(),
     };
@@ -318,109 +332,10 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     }
   }
 
-  // Cached AX/screenshot geometry may already be stale when pointer input
-  // starts, so follow the native cursor. A pointerless value write has no such
-  // cursor; its element frame is the only position that describes it.
-  const trustedTarget = (event: CompanionOperation) =>
-    event.targetSource === "native-cursor" || event.targetSource === "element"
-      ? event.target
-      : undefined;
-
-  async function receive(event: CompanionOperation) {
-    if (disposed) return;
-    if (event.phase === "update") {
-      const previous = active.get(event.id);
-      if (!previous || previous.capture || !event.target) return;
-      active.set(event.id, { ...previous, target: event.target, avoidRect: event.avoidRect });
-      if (humanActive || chatting || activity.id !== event.id) return;
-      // Native cursor snapshots refine the existing operation's target; they
-      // must not replay its gesture or release a capture held by another call.
-      const retainedInput =
-        event.action === "key" &&
-        target &&
-        avoidRect &&
-        target.x === event.target.x &&
-        target.y === event.target.y
-          ? avoidRect
-          : undefined;
-      placeAt(event.target, event.avoidRect ?? retainedInput);
-      publish();
-      return;
-    }
-    if (event.phase === "start") {
-      active.set(event.id, { ...event, target: trustedTarget(event) });
-      if (event.capture) {
-        const wasVisible = window?.isVisible() ?? false;
-        captures.add(event.id);
-        publish();
-        // Acknowledge only after the hidden window has had time to leave the
-        // compositor. The proxy bounds this wait and never retries input.
-        if (wasVisible) captureBarrier = new Promise((resolve) => setTimeout(resolve, 50));
-        await captureBarrier;
-        return;
-      }
-      // Read-only metadata probes must not erase the input target or cut off
-      // the gesture that the input is still completing.
-      if (event.action === "observe") return;
-      if (humanActive || chatting) return;
-      cancelPreview();
-      if (idleTimer) clearTimeout(idleTimer);
-      // Pointer input waits for this operation's native cursor update.
-      if (event.action !== "key")
-        placeAt(
-          trustedTarget(event),
-          event.targetSource === "element" ? event.avoidRect : undefined,
-        );
-      activity = { id: event.id, action: event.action, phase: "start", startedAt: Date.now() };
-      if (enabled)
-        void ensureWindow().catch((failure) => {
-          options.log("mimi_companion_load_failed", { error: String(failure) });
-        });
-    } else {
-      active.delete(event.id);
-      captures.delete(event.id);
-      if (activity.id === event.id) {
-        // A failed tool call is not a failed task; the run outcome decides that.
-        activity = { ...activity, phase: "end" };
-        idleTimer = setTimeout(() => {
-          if (activity.id !== event.id || disposed) return;
-          const next = [...active.values()]
-            .reverse()
-            .find((candidate) => !candidate.capture && candidate.action !== "observe");
-          activity = next
-            ? { id: next.id, action: next.action, phase: "start", startedAt: Date.now() }
-            : { id: "idle", action: "idle", phase: "end", startedAt: Date.now() };
-          if (next && !humanActive && !chatting) placeAt(next.target, next.avoidRect);
-          publish();
-        }, 700);
-      }
-    }
-    publish();
-  }
-
-  function onRun(run: { sessionId: string; outcome: RunOutcome }) {
-    if (disposed || humanActive || chatting || run.outcome === "cancelled") return;
-    if (active.size > 0) return;
-    if (idleTimer) clearTimeout(idleTimer);
-    const id = `run:${run.sessionId}:${Date.now()}`;
-    activity = {
-      id,
-      action: run.outcome === "completed" ? "complete" : "error",
-      phase: "end",
-      startedAt: Date.now(),
-    };
-    publish();
-    idleTimer = setTimeout(
-      () => {
-        if (activity.id !== id || disposed) return;
-        activity = { id: "idle", action: "idle", phase: "end", startedAt: Date.now() };
-        publish();
-      },
-      run.outcome === "completed" ? 1_200 : 2_000,
-    );
-  }
-
-  const unsubscribeBus = options.bus.subscribe({ onOperation: receive, onRun });
+  const unsubscribeBus = options.bus.subscribe({
+    onOperation: (event) => (disposed ? undefined : choreographer.receive(event)),
+    onRun: (run) => choreographer.run(run),
+  });
   const unsubscribeGate = options.gate.subscribe(() => publish());
   const ownOverlay = (sender: WebContents, frame: unknown) =>
     !sender.isDestroyed() && window?.webContents === sender && frame === sender.mainFrame;
@@ -438,8 +353,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   const stopPresentation = () => {
     previewTimers.forEach(clearTimeout);
     previewTimers = [];
-    if (idleTimer) clearTimeout(idleTimer);
-    activity = { id: "human", action: "idle", phase: "end", startedAt: Date.now() };
+    choreographer.interrupt();
     target = undefined;
     avoidRect = undefined;
   };
@@ -673,12 +587,12 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
               y: bounds.y + bounds.height * 0.52,
             };
             if (!pinned) anchor = undefined;
-            activity = {
+            choreographer.show({
               id: `preview-${runId}-${index}`,
               action,
               phase: "start",
               startedAt: Date.now(),
-            };
+            });
             publish();
           }, index * 1800),
         );
@@ -689,7 +603,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
           return;
         }
         cancelPreview();
-        activity = { id: "idle", action: "idle", phase: "end", startedAt: Date.now() };
+        choreographer.show({ id: "idle", action: "idle", phase: "end", startedAt: Date.now() });
         target = undefined;
         if (!enabled) window?.destroy();
         else publish();
@@ -700,7 +614,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     async close() {
       disposed = true;
       cancelPreview();
-      if (idleTimer) clearTimeout(idleTimer);
+      choreographer.dispose();
       window?.destroy();
       await creating?.catch(() => {});
       window?.destroy();
