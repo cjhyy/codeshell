@@ -299,6 +299,6 @@ interface EffectSet {
 - 后台 `set_value` 可写入网页字段，DOM 回读一致；Mimi 落点与驱动虚拟光标对齐、未遮挡输入框。
 - 停止后首个输入（click）在 proxy 被拒为 `computer_input_refused (user-stop)`，未到驱动；恢复后再次填写成功。
 - 新开网页的 AX 树在驱动首次请求后才建立，夹具需短暂重试快照。
-- 驱动的 TCC 权限归属"负责进程"：从终端直接 spawn Electron 时归终端，须经 LaunchServices（`open -a Electron.app`）启动，开发版 Electron 才能用自己的辅助功能授权。
+- 驱动的 TCC 权限归属"负责进程"：从终端直接 spawn Electron 时归终端，须经 LaunchServices（`open -a Electron.app`）启动，开发版 Electron 才能用自己的辅助功能授权。（合并 main 后由独立的 `CodeShell Computer Use.app` 持有授权，此条不再适用。）
 
 仍待真机验收：foreground 自身输入是否触发自我节流；⌘⇧Esc 在全屏 Space 下是否可用；真实 Chrome（非 Electron）中的后台 `set_value`。

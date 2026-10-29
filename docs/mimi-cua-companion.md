@@ -68,26 +68,19 @@ Closing the experiment window exits it. Native interaction smoke:
 bun run preview:companion --smoke
 ```
 
-`--native-cua <installed-official-driver-path>` explicitly enables a separate
-public form fixture in a newly created window. It never submits the form and
-does not control an existing user browser. This optional fixture remains subject
-to the acceptance limits above.
+`--native-cua` explicitly enables a separate public form fixture in a newly
+created window, driven through this checkout's Computer Use helper
+(`out/native/CodeShell Computer Use.app`, built by the desktop dev build). It
+never submits the form and does not control an existing user browser. This
+optional fixture remains subject to the acceptance limits above.
 
 Adding `--native-smoke` runs it unattended: fill the form without focusing it,
 stop input and expect `computer_input_refused (user-stop)`, then resume and fill
-again. The driver inherits macOS permissions from its responsible process, so
-the development `Electron.app` under
-`node_modules/.bun/electron@*/node_modules/electron/dist` needs Accessibility and
-must be launched through LaunchServices; `preview:companion` spawns it from the
-terminal, which makes the terminal responsible instead. Without the grant the
-driver reports `ax_window_unresolved` and finds no fields. From
-`packages/desktop`, after `preview:companion` has bundled
-`out/preview-mimi-companion.mjs` once:
+again. The helper owns the macOS grants, so give that app Accessibility; without
+it the driver reports `ax_window_unresolved` and finds no fields.
 
 ```sh
-open -n -W -a ../../node_modules/.bun/electron@*/node_modules/electron/dist/Electron.app \
-  --stdout /dev/tty --stderr /dev/tty --args "$PWD/out/preview-mimi-companion.mjs" \
-  --native-cua ~/.local/bin/cua-driver --native-smoke
+bun run preview:companion --native-cua --native-smoke
 ```
 
 Background `type_text` into web content is refused by cua-driver 0.34.1

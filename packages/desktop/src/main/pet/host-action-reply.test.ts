@@ -167,6 +167,45 @@ describe("enrichPetChatReplyWithHostActions", () => {
     expect(enriched.attachments).toEqual([]);
   });
 
+  test.each<{ name: string; result: { action: string; url: string; pairingUrl?: string } }>([
+    {
+      name: "with a pairing link",
+      result: {
+        action: "open",
+        url: "https://fake-tunnel.example",
+        pairingUrl: "https://fake-tunnel.example/mobile?pairing=fake-one-time",
+      },
+    },
+    {
+      name: "without a pairing link",
+      result: { action: "open", url: "https://fake-tunnel.example" },
+    },
+  ])("never offers the bare tunnel origin as a phone entry ($name)", async ({ result }) => {
+    const enriched = await enrichPetChatReplyWithHostActions(
+      "我去打开手机遥控。",
+      [{ kind: "mobileRemote", payload: { action: "open" }, ok: true, result }],
+      { qrDir: join(tmpdir(), "unused"), attachmentKinds: [] },
+    );
+
+    const links = enriched.text.split(/\s+/u).flatMap((word) => {
+      const start = word.indexOf("https://");
+      return start === -1 ? [] : [new URL(word.slice(start))];
+    });
+    expect(links.length).toBeGreaterThan(0);
+    // The origin alone has no route (it used to answer 404), so every link the
+    // phone may tap must name the mobile page itself.
+    for (const link of links) expect(link.pathname).toStartWith("/mobile");
+    expect(enriched.text).toContain("https://fake-tunnel.example/mobile/");
+    if (result.pairingUrl) {
+      expect(enriched.text).toContain(result.pairingUrl);
+      // The one-time pairing entry is the first link, ahead of the reusable page.
+      expect(links[0]!.href).toBe(result.pairingUrl);
+    } else {
+      expect(enriched.text).not.toContain("pairing=");
+    }
+    expect(enriched.text).toContain("访问口令");
+  });
+
   test("keeps at most a bounded number of rendered QR files", async () => {
     const qrDir = await mkdtemp(join(tmpdir(), "pet-qr-"));
     try {

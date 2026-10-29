@@ -10,6 +10,7 @@ const runtime = require("./managed-node-runtime.cjs");
 
 const exec = promisify(execFile);
 const APP_ID = "com.cjhyy.codeshell";
+const COMPUTER_USE_ID = "com.cjhyy.codeshell.computer-use";
 const ENTITLEMENTS = join(__dirname, "managed-node-entitlements.plist");
 const NODE_SIGN_IGNORE = /\/Contents\/Resources\/runtimes\/node\/bin\/node$/;
 
@@ -32,18 +33,19 @@ function createSigningHooks(overrides = {}) {
         windowsHide: true,
       }));
   const signAsync = overrides.signAsync ?? builderSign;
-  function computerUseExecutables(app) {
-    return [
-      join(app, "Contents/Resources/cua-driver/cua-driver"),
-      join(app, "Contents/Resources/computer-use/codeshell-permissions"),
-    ];
+  function computerUseCode(app) {
+    const helper = join(app, "Contents/Library/CodeShell Computer Use.app");
+    // Seal nested native code before the helper, then seal the containing app.
+    return [join(helper, "Contents/Resources/cua-driver"), helper];
   }
   async function signComputerUse(app, identity, keychain) {
-    // These plain Mach-O files under Resources are not reliably discovered by
-    // recursive bundle signing. Missing payloads must fail the macOS build.
-    for (const executable of computerUseExecutables(app)) {
+    // The driver is outside the standard nested-code directories, so sign it
+    // explicitly before sealing the independent helper application.
+    for (const executable of computerUseCode(app)) {
       const args = ["--force", "--sign", identity, "--options", "runtime"];
       if (identity !== "-") args.push("--timestamp");
+      else if (executable.endsWith(".app"))
+        args.push(`-r=designated => identifier "${COMPUTER_USE_ID}"`);
       if (keychain) args.push("--keychain", keychain);
       args.push(executable);
       await run("codesign", args);
@@ -66,7 +68,7 @@ function createSigningHooks(overrides = {}) {
     await supply.refreshManifest(runtimeDir);
   }
   async function verifySignedApp(app, runtimeDir) {
-    for (const executable of computerUseExecutables(app))
+    for (const executable of computerUseCode(app))
       await run("codesign", ["--verify", "--strict", executable]);
     await run("codesign", ["--verify", "--strict", join(runtimeDir, "bin/node")]);
     await run("codesign", ["--verify", "--deep", "--strict", app]);

@@ -318,6 +318,107 @@ describe("RemoteHostManager", () => {
     await host.stop();
   });
 
+  test("root / redirects to the mobile page with the whole query preserved", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+      mobileRootDir: mobileFixture(dir),
+    });
+    const started = await host.start({ host: "127.0.0.1", port: 0 });
+    try {
+      for (const [target, location] of [
+        ["/", "/mobile/"],
+        ["/?pairing=fake-pairing", "/mobile/?pairing=fake-pairing"],
+        [
+          "/?pairing=fake%2Fpairing&next=%2F%2Fother&x=1&x=2",
+          "/mobile/?pairing=fake%2Fpairing&next=%2F%2Fother&x=1&x=2",
+        ],
+      ] as const) {
+        for (const method of ["GET", "HEAD"]) {
+          const res = await fetch(`${started.url}${target}`, { method, redirect: "manual" });
+          expect(res.status).toBe(302);
+          expect(res.headers.get("location")).toBe(location);
+          expect(res.headers.get("cache-control")).toBe("no-store");
+        }
+      }
+      const followed = await fetch(`${started.url}/?pairing=fake-pairing`);
+      expect(followed.status).toBe(200);
+      expect(followed.url).toBe(`${started.url}/mobile/?pairing=fake-pairing`);
+      expect(await followed.text()).toContain('id="app"');
+      // Only the exact root is an entry. Protocol-relative targets parse to the
+      // pathname "/" but must never become an off-site redirect, and non-read
+      // methods keep the previous 404.
+      for (const target of ["//evil.example/", "//evil.example/?pairing=x", "/index.html"]) {
+        const res = await fetch(`${started.url}${target}`, { redirect: "manual" });
+        expect(res.status).toBe(404);
+        expect(res.headers.get("location")).toBeNull();
+      }
+      const post = await fetch(`${started.url}/`, { method: "POST", redirect: "manual" });
+      expect(post.status).toBe(404);
+      expect(post.headers.get("location")).toBeNull();
+    } finally {
+      await host.stop();
+    }
+  });
+
+  test("tunnel mode: root redirect stays behind the passcode gate", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const passcode = new AccessPasscode({ filePath: join(dir, "access.json") });
+    passcode.set("fake-passcode");
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+      mobileRootDir: mobileFixture(dir),
+    });
+    const started = await host.start({ mode: "tunnel", host: "lan", port: 0, passcode });
+    try {
+      const anonymous = await fetch(`${started.url}/?pairing=fake-pairing`, { redirect: "manual" });
+      expect(anonymous.status).toBe(401);
+      expect(anonymous.headers.get("location")).toBeNull();
+      const authorized = await fetch(`${started.url}/?pairing=fake-pairing`, {
+        redirect: "manual",
+        headers: { "X-Access-Passcode": "fake-passcode", Accept: "text/html" },
+      });
+      expect(authorized.status).toBe(302);
+      expect(authorized.headers.get("location")).toBe("/mobile/?pairing=fake-pairing");
+    } finally {
+      await host.stop();
+    }
+  });
+
+  test("tunnel mode: an accepted passcode is distinguishable from a missing page", async () => {
+    // The challenge page decides between "wrong passcode" and "page failed" from
+    // the gate's marker; a page that cannot be served after a correct passcode
+    // keeps its own status and still carries the "granted" marker.
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const passcode = new AccessPasscode({ filePath: join(dir, "access.json") });
+    passcode.set("fake-passcode");
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+      mobileRootDir: join(dir, "missing-mobile-build"),
+    });
+    const started = await host.start({ mode: "tunnel", host: "lan", port: 0, passcode });
+    try {
+      const probe = (value: string) =>
+        fetch(`${started.url}/mobile/?pairing=fake-pairing`, {
+          redirect: "manual",
+          headers: { "X-Access-Passcode": value, Accept: "text/html" },
+        });
+      const wrong = await probe("wrong-passcode");
+      expect(wrong.status).toBe(401);
+      expect(wrong.headers.get("x-codeshell-access")).toBe("denied");
+      expect(wrong.headers.get("set-cookie")).toBeNull();
+      const accepted = await probe("fake-passcode");
+      expect(accepted.status).toBe(404);
+      expect(accepted.headers.get("x-codeshell-access")).toBe("granted");
+      expect(accepted.headers.get("set-cookie")).toContain("cs_access=");
+    } finally {
+      await host.stop();
+    }
+  });
+
   test("routes upload PUTs to the ticket service", async () => {
     dir = mkdtempSync(join(tmpdir(), "remote-host-"));
     const uploads = new MobileUploadService({

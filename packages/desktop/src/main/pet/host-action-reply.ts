@@ -216,13 +216,14 @@ async function renderMobileRemoteLines(
   if (execution.payload.action === "close") {
     return { lines: ["公网隧道已关闭。"], attachments: [] };
   }
-  const url = typeof execution.result?.url === "string" ? execution.result.url : "地址未知";
+  // The tunnel origin itself is not a page; only ever hand out the mobile app
+  // entry. A new phone needs the one-time pairing link, so it leads.
+  const pageUrl = mobilePageUrl(execution.result?.url);
   const pairingUrl =
     typeof execution.result?.pairingUrl === "string" ? execution.result.pairingUrl : undefined;
-  const lines = [
-    `公网隧道已开启：${url}`,
-    ...(pairingUrl ? [`配对入口（10 分钟内有效）：${pairingUrl}`] : []),
-  ];
+  const lines = pairingUrl
+    ? ["手机遥控已开启。", `新手机请打开配对链接（10 分钟内有效，仅限一次）：${pairingUrl}`]
+    : [pageUrl ? `手机遥控已开启：${pageUrl}` : "手机遥控已开启，但未取得访问地址。"];
   const attachments: GatewayControlEventAttachment[] = [];
   if (pairingUrl && renderQr) {
     const qr = await renderPairingQrFile(pairingUrl, qrDir);
@@ -231,8 +232,21 @@ async function renderMobileRemoteLines(
       lines.push("也可以直接扫描下方二维码。");
     }
   }
+  if (pairingUrl && pageUrl) lines.push(`已配对的手机可直接打开：${pageUrl}`);
   lines.push("打开后仍需输入桌面端已设置的访问口令。");
   return { lines, attachments };
+}
+
+/** `<origin>/mobile/` for an http(s) tunnel URL; nothing for anything else. */
+function mobilePageUrl(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return undefined;
+    return `${url.origin}/mobile/`;
+  } catch {
+    return undefined;
+  }
 }
 
 function renderLongTaskLine(execution: PetHostActionExecution): string {

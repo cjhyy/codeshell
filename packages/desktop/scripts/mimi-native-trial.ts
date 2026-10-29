@@ -10,7 +10,7 @@ import type { CuaDriverHostOptions } from "../src/main/computer-use/cua-driver-h
 export function createMimiNativeTrial(options: {
   companion: MimiCompanionHost;
   mcpProxy: NonNullable<CuaDriverHostOptions["mcpProxy"]>;
-  driverPath: string;
+  bundle: { helperPath: string; driverPath: string };
   displayId: number;
   status(message: string): void;
   onRunningChange?(running: boolean): void;
@@ -19,8 +19,7 @@ export function createMimiNativeTrial(options: {
   let daemon: ReturnType<typeof spawn> | undefined;
   let stopped = false;
   const driver = new CuaDriverHost({
-    driverPath: options.driverPath,
-    hostBundleId: "com.github.Electron",
+    ...options.bundle,
     parentEnv: process.env,
     mcpProxy: options.mcpProxy,
     maxRestarts: 0,

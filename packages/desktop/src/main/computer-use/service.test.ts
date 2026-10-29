@@ -14,7 +14,8 @@ import {
 import { InputGate } from "./input-gate.js";
 import { ComputerActivityBus } from "./computer-activity-bus.js";
 
-const DRIVER = { CODESHELL_CUA_DRIVER_PATH: "/bin/sh" };
+const APP_PATH = "/test/packages/desktop";
+const DRIVER = {};
 
 class FakeChild extends EventEmitter {
   pid = 1234;
@@ -44,6 +45,8 @@ function enabledHarness(overrides: Partial<CuaDriverHostOptions> = {}) {
     flags: { computer_use_cua: true },
     platform: "darwin",
     isPackaged: false,
+    appPath: APP_PATH,
+    isExecutable: () => true,
     env: DRIVER,
     createHost: (options) =>
       new CuaDriverHost({
@@ -92,7 +95,7 @@ describe("Computer Use spike gates", () => {
       flags: { computer_use_cua: true },
       platform: "darwin",
       isPackaged: false,
-      env: { CODESHELL_CUA_DRIVER_PATH: "/definitely/missing/cua-driver" },
+      appPath: "/definitely/missing",
     });
     expect(decision).toEqual({ enabled: false, reason: "driver_not_found" });
   });
@@ -105,7 +108,9 @@ describe("Computer Use spike gates", () => {
     expect(hostMcpServersEnv()).toBeUndefined();
     await startup;
     const parsed = JSON.parse(hostMcpServersEnv()!);
-    expect(parsed["host:cua-driver"].command).toBe("/bin/sh");
+    expect(parsed["host:cua-driver"].command).toBe(
+      `${APP_PATH}/out/native/CodeShell Computer Use.app/Contents/Resources/cua-driver`,
+    );
     expect(parsed["host:cua-driver"].args).toEqual([
       "mcp",
       "--embedded",
@@ -195,7 +200,7 @@ describe("Computer Use spike gates", () => {
       const changes =
         gate === "unsupported_platform"
           ? { platform: "linux" as const }
-          : { env: { CODESHELL_CUA_DRIVER_PATH: "/definitely/missing/cua-driver" } };
+          : { isExecutable: () => false };
       expect(initCuaComputerUse({ ...inputs, ...changes })).toEqual({
         enabled: false,
         reason: gate,
@@ -211,7 +216,7 @@ describe("Computer Use spike gates", () => {
     await host.start();
     const replacement = initCuaComputerUse({
       ...inputs,
-      env: { CODESHELL_CUA_DRIVER_PATH: "/bin/bash" },
+      appPath: "/different/checkouts/desktop",
     });
     expect(replacement.enabled).toBe(true);
     if (!replacement.enabled) throw new Error("expected enabled replacement");
@@ -261,9 +266,6 @@ describe("Computer Use spike gates", () => {
     expect(spawnOptions[0]!.env).toEqual({
       PATH: "/selected/bin",
       HOME: "/selected/home",
-      CUA_DRIVER_EMBEDDED: "1",
-      CUA_DRIVER_HOST_BUNDLE_ID: "com.cjhyy.codeshell",
-      CUA_DRIVER_PERMISSION_MODE: "standard",
     });
   });
 });
@@ -274,6 +276,8 @@ describe("Computer Use execution gate wiring", () => {
       flags: { computer_use_cua: true },
       platform: "darwin",
       isPackaged: false,
+      appPath: APP_PATH,
+      isExecutable: () => true,
       env: DRIVER,
       requireProxy: true,
     });

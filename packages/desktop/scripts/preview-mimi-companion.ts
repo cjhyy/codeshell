@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createMimiCompanionHost } from "../src/main/computer-use/mimi-companion-host.js";
 import { createComputerUseControl } from "../src/main/computer-use/computer-use-control.js";
+import { resolveComputerUseBundle } from "../src/main/computer-use/cua-driver-host.js";
 import { createConnection } from "node:net";
 import { createInterface } from "node:readline";
 import { CuaActivityChannel } from "../src/main/computer-use/cua-activity-proxy.js";
@@ -74,15 +75,17 @@ async function main() {
     if (event.sender !== control.webContents || event.senderFrame !== control.webContents.mainFrame)
       throw new Error("Invalid preview window");
   };
-  const nativeFlag = process.argv.indexOf("--native-cua");
-  const nativeDriver = nativeFlag >= 0 ? process.argv[nativeFlag + 1] : undefined;
-  if (nativeFlag >= 0 && (!nativeDriver || nativeDriver.startsWith("--")))
-    throw new Error("--native-cua requires the path of the installed official driver");
-  const nativeTrial = nativeDriver
+  // The helper app owns the macOS grants; dev builds it into out/native.
+  const nativeBundle = process.argv.includes("--native-cua")
+    ? resolveComputerUseBundle({ isPackaged: false, appPath: desktopRoot })
+    : undefined;
+  if (process.argv.includes("--native-cua") && !nativeBundle)
+    throw new Error("--native-cua needs the Computer Use helper; run the desktop dev build first");
+  const nativeTrial = nativeBundle
     ? createMimiNativeTrial({
         companion: host,
         mcpProxy: execution.mcpProxy,
-        driverPath: nativeDriver,
+        bundle: nativeBundle,
         displayId: trialDisplay.id,
         onRunningChange: (running) => {
           globalShortcut.unregister("CommandOrControl+Shift+Escape");

@@ -1,5 +1,5 @@
 /**
- * Wiring for the Computer Use spike: decides whether the embedded Cua Driver
+ * Wiring for the Computer Use spike: decides whether the helper-owned Cua Driver
  * runs, and what the worker sees as the host-owned MCP server.
  *
  * Off unless the user-level flag `computer_use_cua` is on, the platform is
@@ -14,13 +14,12 @@ import {
 import {
   CUA_HOST_MCP_SERVER_NAME,
   CuaDriverHost,
-  resolveCuaDriverPath,
+  resolveComputerUseBundle,
+  type ComputerUseBundleOptions,
   type CuaDriverHostOptions,
 } from "./cua-driver-host.js";
 import type { ComputerActivityBus } from "./computer-activity-bus.js";
 import type { InputGate } from "./input-gate.js";
-
-export const CODESHELL_BUNDLE_ID = "com.cjhyy.codeshell";
 
 let host: CuaDriverHost | undefined;
 
@@ -29,6 +28,8 @@ export interface CuaComputerUseInputs {
   readonly platform: NodeJS.Platform;
   readonly isPackaged: boolean;
   readonly resourcesPath?: string;
+  readonly appPath?: string;
+  readonly isExecutable?: ComputerUseBundleOptions["isExecutable"];
   readonly env?: NodeJS.ProcessEnv;
   readonly log?: CuaDriverHostOptions["log"];
   readonly createHost?: (options: CuaDriverHostOptions) => CuaDriverHost;
@@ -63,14 +64,20 @@ export function initCuaComputerUse(inputs: CuaComputerUseInputs): CuaComputerUse
   if (!isFeatureEnabled(inputs.flags, "computer_use_cua")) return disabled("flag_off", inputs.log);
   // Windows/Linux embedding exists upstream but is out of scope for the spike.
   if (inputs.platform !== "darwin") return disabled("unsupported_platform", inputs.log);
-  const driverPath = resolveCuaDriverPath({
-    env: inputs.env ?? process.env,
+  const bundle = resolveComputerUseBundle({
+    appPath: inputs.appPath,
+    isExecutable: inputs.isExecutable,
     isPackaged: inputs.isPackaged,
     resourcesPath: inputs.resourcesPath,
   });
-  if (!driverPath) return disabled("driver_not_found", inputs.log);
+  if (!bundle) return disabled("driver_not_found", inputs.log);
   if (inputs.requireProxy && !inputs.mcpProxy) return disabled("control_unavailable", inputs.log);
-  if (host && host.status().driverPath === driverPath && host.status().state !== "stopped") {
+  if (
+    host &&
+    host.status().driverPath === bundle.driverPath &&
+    host.status().helperPath === bundle.helperPath &&
+    host.status().state !== "stopped"
+  ) {
     return { enabled: true, host };
   }
   // A changed executable replaces the registration immediately. The previous
@@ -79,8 +86,7 @@ export function initCuaComputerUse(inputs: CuaComputerUseInputs): CuaComputerUse
     inputs.log?.("cua_driver_stop_failed", { error: String(error) });
   });
   const options: CuaDriverHostOptions = {
-    driverPath,
-    hostBundleId: CODESHELL_BUNDLE_ID,
+    ...bundle,
     parentEnv: inputs.env ?? process.env,
     log: inputs.log,
     mcpProxy: inputs.mcpProxy,

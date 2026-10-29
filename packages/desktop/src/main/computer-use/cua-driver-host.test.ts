@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
   CuaDriverHost,
-  resolveCuaDriverPath,
+  resolveComputerUseBundle,
   type CuaDriverHostOptions,
 } from "./cua-driver-host.js";
 
@@ -69,7 +69,7 @@ function harness(
   const sleeps: number[] = [];
   const host = new CuaDriverHost({
     driverPath: "/opt/cua/cua-driver",
-    hostBundleId: "com.cjhyy.codeshell",
+    helperPath: "/opt/helper/codeshell-computer-use",
     socketPath: "/tmp/codeshell-cua-test.sock",
     parentEnv: { PATH: "/usr/bin", HOME: "/Users/u", OPENAI_API_KEY: "sk-secret" },
     spawn: (command, args, options) => {
@@ -120,18 +120,18 @@ describe("CuaDriverHost", () => {
       inlineImages: true,
     });
   });
-  test("spawns the embedded daemon directly with an allowlisted env", async () => {
+  test("launches the independent helper through its bridge with an allowlisted env", async () => {
     const { host, spawns } = harness();
     await host.start();
     expect(host.status().state).toBe("running");
     expect(spawns).toHaveLength(1);
     const { command, args, options } = spawns[0]!;
-    expect(command).toBe("/opt/cua/cua-driver");
-    expect(args).toEqual(["serve", "--embedded", "--socket", "/tmp/codeshell-cua-test.sock"]);
+    expect(command).toBe("/opt/helper/codeshell-computer-use");
+    expect(args).toEqual(["launch", "serve", "--socket", "/tmp/codeshell-cua-test.sock"]);
     const env = options.env as Record<string, string>;
-    expect(env.CUA_DRIVER_EMBEDDED).toBe("1");
-    expect(env.CUA_DRIVER_HOST_BUNDLE_ID).toBe("com.cjhyy.codeshell");
-    expect(env.CUA_DRIVER_PERMISSION_MODE).toBe("standard");
+    expect(env.CUA_DRIVER_EMBEDDED).toBeUndefined();
+    expect(env.CUA_DRIVER_HOST_BUNDLE_ID).toBeUndefined();
+    expect(env.CUA_DRIVER_PERMISSION_MODE).toBeUndefined();
     expect(env.PATH).toBe("/usr/bin");
     expect(env.OPENAI_API_KEY).toBeUndefined();
     expect(env.CUA_DRIVER_DANGEROUSLY_BYPASS_APPROVALS).toBeUndefined();
@@ -615,38 +615,43 @@ describe("CuaDriverHost", () => {
   });
 });
 
-describe("resolveCuaDriverPath", () => {
-  test("an explicit override wins and must be executable", () => {
+describe("resolveComputerUseBundle", () => {
+  test("uses only the bundled helper and driver outside ASAR", () => {
     expect(
-      resolveCuaDriverPath({
-        env: { CODESHELL_CUA_DRIVER_PATH: "/x/cua-driver" },
-        isPackaged: false,
-        isExecutable: () => true,
-      }),
-    ).toBe("/x/cua-driver");
-    expect(
-      resolveCuaDriverPath({
-        env: { CODESHELL_CUA_DRIVER_PATH: "/x/cua-driver" },
-        isPackaged: false,
-        isExecutable: () => false,
-      }),
-    ).toBeUndefined();
-  });
-
-  test("a packaged app prefers its bundled copy", () => {
-    expect(
-      resolveCuaDriverPath({
-        env: {},
+      resolveComputerUseBundle({
         isPackaged: true,
         resourcesPath: "/App/Contents/Resources",
         isExecutable: () => true,
       }),
-    ).toBe("/App/Contents/Resources/cua-driver/cua-driver");
+    ).toEqual({
+      helperPath:
+        "/App/Contents/Library/CodeShell Computer Use.app/Contents/MacOS/codeshell-computer-use",
+      driverPath: "/App/Contents/Library/CodeShell Computer Use.app/Contents/Resources/cua-driver",
+    });
   });
 
-  test("an executable directory is not a driver executable", () => {
+  test("development uses this checkout's built bundle", () => {
     expect(
-      resolveCuaDriverPath({ env: { CODESHELL_CUA_DRIVER_PATH: tmpdir() }, isPackaged: false }),
-    ).toBeUndefined();
+      resolveComputerUseBundle({
+        isPackaged: false,
+        appPath: "/checkout/packages/desktop",
+        isExecutable: () => true,
+      })?.helperPath,
+    ).toBe(
+      "/checkout/packages/desktop/out/native/CodeShell Computer Use.app/Contents/MacOS/codeshell-computer-use",
+    );
+  });
+
+  test("a missing helper or driver fails closed without a global fallback", () => {
+    for (const suffix of ["codeshell-computer-use", "cua-driver"]) {
+      expect(
+        resolveComputerUseBundle({
+          isPackaged: true,
+          resourcesPath: "/App/Contents/Resources",
+          isExecutable: (path) => !path.endsWith(suffix),
+        }),
+      ).toBeUndefined();
+    }
+    expect(resolveComputerUseBundle({ isPackaged: false })).toBeUndefined();
   });
 });
