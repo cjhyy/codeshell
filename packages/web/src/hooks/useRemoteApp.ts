@@ -13,6 +13,8 @@ import type {
   OutputHistoryRecoveryAcceptance,
   OutputHistoryRecoveryPlan,
   OutputHistoryRecoveryResult,
+  MobileHistoryDetail,
+  MobileHistoryItem,
 } from "@cjhyy/code-shell-core";
 import {
   reduceStream,
@@ -128,6 +130,12 @@ export interface RemoteApp {
   };
   notice?: string;
   sessionHistoryProgress?: MobileRecoveryProgress;
+  historyHasEarlier?: boolean;
+  historyLoadingEarlier?: boolean;
+  historyEarlierError?: string;
+  loadEarlierHistory?: () => Promise<void>;
+  loadHistoryDetail?: (ref: string) => Promise<MobileHistoryDetail>;
+  reloadHistory?: () => void;
   outputHistoryFailed?: boolean;
   outputHistoricalGap?: boolean;
   outputRecoveryIdentity?: string;
@@ -225,7 +233,8 @@ type ChatAction =
       clientMessageId?: string;
       attachments?: Array<{ name: string; mime?: string; size: number }>;
     }
-  | { kind: "hydrate"; chat: ChatState }
+  | { kind: "hydrate"; chat: ChatState; verifiedInputIds?: string[] }
+  | { kind: "prependHistory"; sessionId: string; items: MobileHistoryItem[] }
   | { kind: "reset" }
   | { kind: "stream_epoch_changed" }
   | { kind: "replay"; events: unknown[] }
@@ -237,12 +246,21 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return reduceStream(state, action.raw);
     case "user":
       return appendUserMessage(state, action.text, action.attachments, action.clientMessageId);
+    case "prependHistory": {
+      if (state.sessionId !== action.sessionId) return state;
+      const seen = new Set(state.items.map((item) => item.id));
+      return {
+        ...state,
+        items: [...action.items.filter((item) => !seen.has(item.id)), ...state.items],
+      };
+    }
     case "hydrate": {
       const ids = new Set(
         action.chat.items.flatMap((item) =>
           item.kind === "user" && item.clientMessageId ? [item.clientMessageId] : [],
         ),
       );
+      for (const id of action.verifiedInputIds ?? []) ids.add(id);
       const pending = state.items.filter(
         (item) => item.kind === "user" && item.clientMessageId && !ids.has(item.clientMessageId),
       );
@@ -363,6 +381,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   );
   const conversationRevisionRef = useRef(0);
   const socketOnlineRef = useRef(false);
+  const historyWindowRef = useRef<
+    | { sessionId: string; id: string; hasEarlier: boolean; loading?: boolean; error?: string }
+    | undefined
+  >(undefined);
+  const [historyWindow, setHistoryWindow] = useState<typeof historyWindowRef.current>();
   const [historyProgress, setHistoryProgress] = useState<{
     sessionId: string;
     progress: MobileRecoveryProgress;
@@ -750,6 +773,18 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       roomId: activeRoomIdRef.current,
       revision: conversationRevisionRef.current,
     }),
+    historyWindow: (sessionId, window) => {
+      const previous = historyWindowRef.current;
+      const value = window
+        ? { sessionId, ...window }
+        : previous?.sessionId === sessionId
+          ? undefined
+          : previous;
+      historyWindowRef.current = value;
+      setHistoryWindow(value);
+    },
+    prependHistory: (sessionId, items) =>
+      dispatchChat({ kind: "prependHistory", sessionId, items }),
     progress: (sessionId, progress) =>
       setHistoryProgress((previous) =>
         progress
@@ -775,7 +810,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           (previous?.sessionId === sessionId && previous.historicalGap) ||
           undefined,
       }));
-      dispatchChat({ kind: "hydrate", chat: result.chat });
+      dispatchChat({
+        kind: "hydrate",
+        chat: result.chat,
+        verifiedInputIds: result.view?.verifiedInputIds,
+      });
       setLoadingKey("sessionHistory", false);
       setNoticeState(undefined);
     },
@@ -808,6 +847,48 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     },
   }));
   useEffect(() => () => outputClient.cancel(false), [outputClient]);
+
+  const loadEarlierHistory = useCallback(async () => {
+    const window = historyWindowRef.current;
+    if (!window || window.loading || !window.hasEarlier)
+      throw new Error(t("mobile.historyRecovery.detailUnavailable"));
+    const current = () =>
+      historyWindowRef.current?.sessionId === window.sessionId &&
+      historyWindowRef.current?.id === window.id;
+    historyWindowRef.current = { ...window, loading: true, error: undefined };
+    setHistoryWindow(historyWindowRef.current);
+    try {
+      await outputClient.loadEarlier();
+    } catch {
+      const message = t("mobile.historyRecovery.detailUnavailable");
+      if (current()) {
+        historyWindowRef.current = { ...historyWindowRef.current!, loading: false, error: message };
+        setHistoryWindow(historyWindowRef.current);
+      }
+      throw new Error(message);
+    } finally {
+      if (current() && historyWindowRef.current?.loading) {
+        historyWindowRef.current = { ...historyWindowRef.current, loading: false };
+        setHistoryWindow(historyWindowRef.current);
+      }
+    }
+  }, [outputClient]);
+  const loadHistoryDetail = useCallback(
+    async (ref: string) => {
+      try {
+        return await outputClient.loadDetail(ref);
+      } catch {
+        throw new Error(t("mobile.historyRecovery.detailUnavailable"));
+      }
+    },
+    [outputClient],
+  );
+  const reloadHistory = useCallback(() => {
+    const sessionId = boundSessionRef.current;
+    if (!socketOnlineRef.current || !sessionId || activeRoomIdRef.current) return;
+    setLoadingKey("sessionHistory", true);
+    if (!outputClient.begin(sessionId)) requestSessionHistory(sessionId, true);
+  }, [outputClient, requestSessionHistory, setLoadingKey]);
 
   const onServerEvent = useCallback(
     (event: MobileServerEvent) => {
@@ -2374,6 +2455,17 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     refreshRuntimeModels,
     loading,
     notice,
+    historyHasEarlier:
+      !activeRoomId && historyWindow?.sessionId === activeSessionId && historyWindow?.hasEarlier,
+    historyLoadingEarlier:
+      !activeRoomId && historyWindow?.sessionId === activeSessionId && historyWindow?.loading,
+    historyEarlierError:
+      !activeRoomId && historyWindow?.sessionId === activeSessionId
+        ? historyWindow?.error
+        : undefined,
+    loadEarlierHistory,
+    loadHistoryDetail,
+    reloadHistory,
     sessionHistoryProgress:
       !activeRoomId && loading.sessionHistory && historyProgress?.sessionId === activeSessionId
         ? historyProgress?.progress

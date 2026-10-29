@@ -820,6 +820,12 @@ export function useDesktopController(
       ) : undefined,
     loading:
       app.loading.sessionHistory || app.loading.roomHistory || Boolean(pendingCreate.current),
+    historyHasEarlier: app.historyHasEarlier,
+    historyLoadingEarlier: app.historyLoadingEarlier,
+    historyEarlierError: app.historyEarlierError,
+    loadEarlierHistory: app.loadEarlierHistory,
+    loadHistoryDetail: app.loadHistoryDetail,
+    reloadHistory: app.reloadHistory,
     loadingLabel: app.sessionHistoryProgress
       ? app.sessionHistoryProgress.totalBytes
         ? t("mobile.historyRecovery.loadingProgress", {

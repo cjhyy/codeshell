@@ -692,3 +692,24 @@ test("new client leaves the original request shape intact on an older authentica
   expect(Object.hasOwn(pages[0]!, "maxFrames")).toBe(false);
   expect(f.failures()).toBe(0);
 });
+
+test("an explicit unsupported display view falls back to the original required journal path", async () => {
+  const f = fixture("view-fallback");
+  f.client.observe({
+    type: "auth.ok",
+    capabilities: { outputJournal: 1, historyView: 1 },
+    device: { id: "phone", name: "fixture" },
+  } as MobileServerEvent);
+  f.client.begin("view-fallback");
+  await settled(() => f.sent.some((event) => event.type === "session.historyView"));
+  const request = f.sent.find((event) => event.type === "session.historyView")!;
+  f.client.observe({
+    ...request,
+    type: "session.historyView",
+    result: { status: "unsupported" },
+  } as MobileServerEvent);
+  await settled(() => f.commits.length === 1);
+  expect(f.sent.filter((event) => event.type === "session.historyView")).toHaveLength(1);
+  expect(f.sent.filter((event) => event.type === "session.outputJournal")).toHaveLength(1);
+  expect(f.failures()).toBe(0);
+});

@@ -117,6 +117,111 @@ describe("useRemoteApp session switching recovery", () => {
     return { hook, ws, sent: () => ws.sent.map((line) => JSON.parse(line)) };
   }
 
+  test("verified lazy history prepends older rows, keeps reload receipts and exposes recoverable detail errors", async () => {
+    const { hook, ws, sent } = await connected(true);
+    const cursor = (sequence: number) =>
+      Buffer.from(
+        JSON.stringify({
+          identity: "a".repeat(64),
+          hash: "b".repeat(64),
+          sequence,
+          offset: 100 + sequence * 10,
+        }),
+      ).toString("base64url");
+    const users = [
+      { kind: "user", id: "old", text: "older input", clientMessageId: "old-input" },
+      { kind: "user", id: "new", text: "newer input", clientMessageId: "new-input" },
+    ];
+    const tail = [
+      { kind: "assistant", id: "answer", text: "saved answer", reasoning: "", done: true },
+      { kind: "tool", id: "tool", name: "Read", done: true, detailRef: "opaque-detail" },
+    ];
+    const page = (older = false) => ({
+      status: "ok",
+      viewId: "opaque-view",
+      through: cursor(30),
+      coverageStart: cursor(0),
+      coverageIdentity: "incarnation",
+      snapshot: {
+        epoch: "main",
+        nextSeq: 30,
+        outputCursor: cursor(30),
+        unpaired: false,
+        incarnation: "incarnation",
+        journalIdentity: "b".repeat(64),
+      },
+      verifiedInputIds: ["old-input", "new-input"],
+      state: { sessionId: "native", run: "completed", seq: 30, liveByAgent: {} },
+      totalItems: 4,
+      start: older ? 0 : 2,
+      end: older ? 2 : 4,
+      items: older ? users : tail,
+      ...(older ? {} : { before: "older-page" }),
+    });
+    const respondInitial = async () => {
+      const selected = sent().findLast((event) => event.type === "session.select");
+      ws.message({
+        type: "session.recovery.ready",
+        sessionId: "native",
+        recoveryId: selected.recoveryId,
+        ok: true,
+        journalRequired: true,
+      });
+      await flushMicrotasks();
+      const read = sent().findLast((event) => event.type === "session.historyView");
+      ws.message({ ...read, result: page() });
+      await flushMicrotasks();
+    };
+    try {
+      await act(async () => {
+        ws.message({ type: "auth.ok", capabilities: { outputJournal: 1, historyView: 1 } });
+        await flushMicrotasks();
+        hook.result.current.selectSession("native");
+        await respondInitial();
+      });
+      expect(hook.result.current.chat.items.map((item) => item.id)).toEqual(["answer", "tool"]);
+      expect(hook.result.current.historyHasEarlier).toBe(true);
+      expect(hook.result.current.loading.sessionHistory).toBe(false);
+      expect(sent().some((event) => event.type === "session.outputJournal")).toBe(false);
+      await act(async () => {
+        const older = hook.result.current.loadEarlierHistory!();
+        const read = sent().findLast((event) => event.type === "session.historyView");
+        expect(read.before).toBe("older-page");
+        ws.message({ ...read, result: page(true) });
+        await older;
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.chat.items.map((item) => item.id)).toEqual([
+        "old",
+        "new",
+        "answer",
+        "tool",
+      ]);
+      expect(hook.result.current.historyHasEarlier).toBe(false);
+      await act(async () => {
+        hook.result.current.reloadHistory!();
+        await respondInitial();
+      });
+      // Recorded users outside the new tail must not be mistaken for pending sends.
+      expect(hook.result.current.chat.items.map((item) => item.id)).toEqual(["answer", "tool"]);
+      await act(async () => {
+        const older = hook.result.current.loadEarlierHistory!().catch((error) => error);
+        const read = sent().findLast((event) => event.type === "session.historyView");
+        ws.message({ ...read, result: { status: "incomplete" } });
+        expect(await older).toBeInstanceOf(Error);
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.historyEarlierError).toBeTruthy();
+      expect(hook.result.current.historyLoadingEarlier).toBe(false);
+      expect(hook.result.current.chat.items).toHaveLength(2);
+      expect(
+        sent().some((event) => event.type === "chat.send" || event.type === "approval.respond"),
+      ).toBe(false);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("explicit repair keeps old writes fenced until a fresh complete journal joins", async () => {
     const { hook, ws, sent } = await connected(true);
     try {
