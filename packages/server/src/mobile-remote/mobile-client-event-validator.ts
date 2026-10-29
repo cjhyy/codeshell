@@ -106,6 +106,7 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         boundedString(event.requestId, 128) &&
         optionalBoundedString(event.after, 2048) &&
         optionalBoundedString(event.through, 2048) &&
+        (event.frozenSnapshot === undefined || event.frozenSnapshot === true) &&
         (event.maxFrames === undefined ||
           (isPositiveInteger(event.maxFrames) && event.maxFrames <= 2048));
       break;

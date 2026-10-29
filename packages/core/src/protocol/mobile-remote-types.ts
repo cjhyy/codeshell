@@ -165,6 +165,8 @@ export type MobileClientEvent =
       through?: string;
       /** Opt-in token-dense pages; the existing 1 MiB byte bound still applies. */
       maxFrames?: number;
+      /** historyView capability: capture the actual Main snapshot before freezing a suffix. */
+      frozenSnapshot?: true;
     }
   | {
       type: "session.create";
