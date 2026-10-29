@@ -48,6 +48,8 @@ export type ChatItem =
       messageId?: string;
       text: string;
       reasoning: string;
+      /** Opaque, selected-history grant; fetch only when the user expands reasoning. */
+      reasoningDetailRef?: string;
       done: boolean;
       agentId?: string;
     }
@@ -59,6 +61,8 @@ export type ChatItem =
       result?: string;
       error?: boolean;
       summary?: string;
+      /** Opaque, selected-history grant for arguments/result omitted from the initial view. */
+      detailRef?: string;
       done: boolean;
       agentId?: string;
     }
