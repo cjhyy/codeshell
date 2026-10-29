@@ -163,16 +163,11 @@ export class MobileHistoryViewStore {
       (cached && this.views.get(access.binding) !== view)
     )
       throw new Error("History snapshot changed");
-    if (!cached) {
-      const order =
-        snapshot.outputCursor === undefined
-          ? 0
-          : compareOutputCursors(snapshot.outputCursor, view.through);
-      if (order === undefined) throw new Error("History cursor identity changed");
-      if (order > 0) throw new BusyHistoryView("History head advanced while projecting");
-      const inputs = new Set(view.verifiedInputIds);
-      assertOutputCoverage(snapshot, page, (id) => inputs.has(id));
-    } else assertOutputCoverage({ ...snapshot, inputIds: undefined }, page, () => true);
+    // The view proves a frozen prefix, not the constantly advancing live head.
+    // Its actual snapshot was captured before the first journal read; later
+    // inputs belong to the strictly verified live suffix, never this receipt.
+    const inputs = new Set(view.verifiedInputIds);
+    assertOutputCoverage(view.snapshot, page, (id) => inputs.has(id));
   }
   private page(view: View, end: number): MobileHistoryView {
     if (!Number.isSafeInteger(end) || end < 0 || end > view.items.length)
@@ -328,20 +323,20 @@ export class MobileHistoryViewStore {
         maxFrames: 2048,
       });
     }
-    const snapshot = access.snapshot();
-    if (snapshotIdentity(snapshot) !== snapshotIdentity(initial))
+    const currentSnapshot = access.snapshot();
+    if (snapshotIdentity(currentSnapshot) !== snapshotIdentity(initial))
       throw new Error("History snapshot changed");
-    if (snapshot.outputCursor !== undefined) {
-      const order = compareOutputCursors(snapshot.outputCursor, recovery.cursor!);
+    if (initial.outputCursor !== undefined) {
+      const order = compareOutputCursors(initial.outputCursor, recovery.cursor!);
       if (order === undefined) throw new Error("History cursor identity changed");
-      if (order > 0) throw new BusyHistoryView("History head advanced while projecting");
+      if (order > 0) throw new Error("History initial snapshot is outside the frozen prefix");
     }
     const inputs = new Set(
       chat.items.flatMap((item) =>
         item.kind === "user" && item.clientMessageId ? [item.clientMessageId] : [],
       ),
     );
-    assertOutputCoverage(snapshot, first, (id) => inputs.has(id));
+    assertOutputCoverage(initial, first, (id) => inputs.has(id));
     if (chat.sessionId !== undefined && chat.sessionId !== access.sessionId)
       throw new Error("History Session identity changed");
     // The authorized journal header supplies identity even for an empty native journal.
@@ -358,7 +353,7 @@ export class MobileHistoryViewStore {
       coverageIdentity: first.coverageIdentity,
       baseThrough: first.legacyBaseThroughEventId!,
       baseIdentity: base ? JSON.stringify(base.identity) : undefined,
-      snapshot,
+      snapshot: initial,
     };
   }
 }

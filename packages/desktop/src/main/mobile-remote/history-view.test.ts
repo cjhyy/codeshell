@@ -690,3 +690,30 @@ test("final outer authorization fence rejects a changed scope before dispatching
   expect((await f.view()).status).toBe("incomplete");
   expect(checks).toBeGreaterThanOrEqual(4);
 });
+
+test("continuous journal writes across every authorization await do not starve the frozen first view", async () => {
+  const events = simple();
+  // Force multiple real journal pages while a live producer keeps advancing.
+  for (let i = 0; i < 12; i++)
+    events.push(start(`history-${i}`), result(`history-${i}`, "x".repeat(100_000)));
+  const f = fixture(events);
+  await f.select();
+  let writes = 0;
+  f.state.beforeAuthority = async () => {
+    const event: StreamEvent =
+      writes++ === 0
+        ? { type: "stream_request_start", turnNumber: 2 }
+        : { type: "text_delta", text: "live " };
+    const outputCursor = f.writer.append(event);
+    f.snapshots.append("history", { ...event, outputCursor });
+    await Promise.resolve();
+  };
+  const page = ok(await f.view());
+  expect(writes).toBeGreaterThan(4);
+  expect(page.snapshot.outputCursor).toBe(page.through);
+  expect(f.snapshots.get("history").outputCursor).not.toBe(page.through);
+  const active = page.items.find((item) => item.kind === "assistant" && !item.done);
+  expect(active).toBeDefined();
+  expect(active).not.toHaveProperty("textDetailRef");
+  expect(page.verifiedInputIds).toContain("stable-user");
+});
