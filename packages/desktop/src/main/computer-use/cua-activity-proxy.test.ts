@@ -352,6 +352,45 @@ describe("CUA activity proxy", () => {
     expect(click).toMatchObject({ pid: 77, appId: "slack" });
   }, 10_000);
 
+  // First window-state read: an empty web area; every later one: a full page.
+  // Each answer also reports the arguments and id the driver received.
+  const SPARSE_THEN_FULL = (failSecond = false) =>
+    `#!/usr/bin/env node\nconst readline=require('node:readline');let reads=0;\nreadline.createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(r.id===undefined)return;const name=r.params&&r.params.name;if(name!=='get_window_state'){process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:r.id,result:{content:[]}})+'\\n');return;}reads++;if(reads===2&&${failSecond}){process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:r.id,result:{isError:true,content:[{type:'text',text:'boom'}]}})+'\\n');return;}const kids=reads===1?0:5;const elements=[{element_index:0,role:'AXWindow'},{element_index:1,parent_index:0,role:'AXWebArea'}].concat(Array.from({length:kids},(_,i)=>({element_index:2+i,parent_index:1,role:'AXButton'})));process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:r.id,result:{content:[{type:'text',text:JSON.stringify({id:r.id,args:r.params.arguments,read:reads})}],structuredContent:{elements}}})+'\\n')});\n`;
+  const seen = (response: any) => JSON.parse(response.result.content[0].text);
+
+  test("an empty web area is read once more and the full page answers the caller", async () => {
+    const server = await activityServer(true, OPEN);
+    const responses = await runProxy(
+      server,
+      [
+        call(1, "get_window_state", { pid: 1, window_id: 2, include_screenshot: false }),
+        call(2, "get_window_state", { pid: 1, window_id: 2, timeout_ms: 800 }),
+      ],
+      SPARSE_THEN_FULL(),
+    );
+    expect(responses).toHaveLength(2);
+    expect(responses[0].id).toBe(1);
+    expect(responses[0].result.structuredContent.elements).toHaveLength(7);
+    // The caller sees the private re-read's answer, which got the default budget.
+    expect(seen(responses[0])).toMatchObject({ read: 2, args: { timeout_ms: 3000 } });
+    expect(seen(responses[0]).id).toMatch(/^codeshell-reread-/);
+    // An explicit budget is the caller's; the page is no longer sparse.
+    expect(seen(responses[1])).toMatchObject({ id: 2, read: 3, args: { timeout_ms: 800 } });
+  }, 10_000);
+
+  test("a failed re-read leaves the first answer in place", async () => {
+    const server = await activityServer(true, OPEN);
+    const responses = await runProxy(
+      server,
+      [call(1, "get_window_state", { pid: 1, window_id: 2, include_screenshot: false })],
+      SPARSE_THEN_FULL(true),
+    );
+    expect(responses).toHaveLength(1);
+    expect(responses[0].id).toBe(1);
+    expect(responses[0].result.isError).toBeUndefined();
+    expect(seen(responses[0])).toMatchObject({ id: 1, read: 1 });
+  }, 10_000);
+
   test("a held gate refuses input locally while observation still reaches the driver", async () => {
     const server = await activityServer(true, { ...OPEN, holdAll: "user-stop" });
     const responses = await runProxy(server, [
@@ -364,7 +403,8 @@ describe("CUA activity proxy", () => {
     });
     expect(echoed(responses[1]).params.name).toBe("get_window_state");
     expect(JSON.stringify(responses)).not.toContain("secret");
-    expect(server.events.every((event) => event.id && !String(event.id).includes("1:"))).toBe(true);
+    // The refused input never reached the observer; only the read did.
+    expect(server.events.every((event) => event.action === "observe")).toBe(true);
   }, 10_000);
 
   test("foreground input is refused while the user is active; background input proceeds", async () => {
