@@ -231,6 +231,7 @@ try {
   await waitForHeld("preview");
   await preview().getByRole("status").waitFor();
   await close().click();
+  await preview().waitFor({ state: "hidden" });
   assert.equal(
     await entry("pending.txt").evaluate((node) => node === document.activeElement),
     true,
@@ -339,6 +340,7 @@ try {
   assert.equal(await entry("report.md").getAttribute("aria-current"), "true");
   assert.ok(requests.some((url) => url.includes("path=%2Ffixture%2Freports%2Freport.md")));
   await close().click();
+  await preview().waitFor({ state: "hidden" });
   await rootCrumb().click();
   await entry("old-root.txt").waitFor();
   assert.deepEqual(errors, [], "No renderer errors");

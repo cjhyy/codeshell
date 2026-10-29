@@ -82,6 +82,9 @@ const context = await browser.newContext({
   hasTouch: true,
   serviceWorkers: "block",
 });
+await context.addInitScript(() => {
+  Object.defineProperty(window, "navigation", { configurable: true, value: undefined });
+});
 await context.route("**/*", async (route) => {
   const request = route.request(),
     url = new URL(request.url()),
@@ -148,7 +151,7 @@ await context.route("**/*", async (route) => {
   if (pathname.startsWith("/api/v1/panel-assets/")) {
     const id = pathname.split("/")[4];
     return reply(
-      `<button id="preview">Open owned resource</button><button id="confirm">Request confirmation</button><script>
+      `<button id="preview">Open owned resource</button><button id="confirm">Request confirmation</button><a id="anchor-a" href="#a">Owned child A</a><a id="anchor-b" href="#b">Owned child B</a><script>
    const id=${JSON.stringify(id)};let n=0;const call=(method,params)=>parent.postMessage({type:'codeshell-panel:call',instanceId:id,requestId:'owned-'+(++n),method,params},'*');
    document.querySelector('#preview').onclick=()=>call('resources.open',{assetId:${JSON.stringify(assetId)}});
    document.querySelector('#confirm').onclick=()=>call('external.open',{url:'https://owned-external.invalid/'});
@@ -291,6 +294,12 @@ try {
   await page.locator(".panels-grid").waitFor();
   await frames();
   assert.ok(revoked.length > before);
+  // A rejected dirty navigation intentionally abandons its Forward branch.
+  // Ordinary browser Back/Forward must still reopen a fresh, authorized instance.
+  await page.locator(".panels-card").getByRole("button", { name: "打开面板", exact: true }).tap();
+  await page.frameLocator("iframe").locator("#preview").waitFor();
+  await page.evaluate(() => history.back());
+  await page.locator(".panels-grid").waitFor();
   await page.evaluate(() => history.forward());
   await page.frameLocator("iframe").locator("#preview").waitFor();
   assert.equal(await page.locator(".panel-host-preview").count(), 0);
@@ -320,6 +329,96 @@ try {
   assert.equal(await page.locator(".navigation-prompt").count(), 0);
   reports.push(
     "dirty Back restores known entry; Stay preserves form; workspace retires pending intent and old scope",
+  );
+  // A sandbox iframe contributes joint history without a parent popstate.
+  await page.goto(origin + "/outside");
+  await page.goto(origin + "/mobile/?view=panels");
+  await page.locator(".panels-card").getByRole("button", { name: "打开面板", exact: true }).tap();
+  await page.evaluate(() => {
+    window.parentPops = 0;
+    window.addEventListener("popstate", () => window.parentPops++);
+  });
+  const childHistoryStart = await page.evaluate(() => history.length);
+  await page.frameLocator("iframe").locator("#anchor-a").tap();
+  await page.frameLocator("iframe").locator("#anchor-b").tap();
+  assert.equal(
+    await page
+      .frameLocator("iframe")
+      .locator("body")
+      .evaluate(() => location.hash),
+    "#b",
+  );
+  assert.equal(await page.evaluate(() => history.length), childHistoryStart + 2);
+  assert.equal(await page.evaluate(() => window.parentPops), 0);
+  await page.frameLocator("iframe").locator("#confirm").tap();
+  await page.locator(".panel-host-confirm").waitFor();
+  const childCloseStart = revoked.length;
+  await back().tap();
+  await page.locator(".navigation-prompt").waitFor();
+  await page.getByRole("button", { name: "放弃修改并离开", exact: true }).tap();
+  await page.locator(".panels-grid").waitFor();
+  await frames();
+  assert.equal(
+    revoked.length,
+    childCloseStart + 1,
+    "One accepted parent Back revokes the instance despite iframe history",
+  );
+  reports.push("iframe joint hash history cannot consume explicit parent Back");
+  // Preview Back is also parent-owned, and must not close the underlying Panel.
+  await page.locator(".panels-card").getByRole("button", { name: "打开面板", exact: true }).tap();
+  await page.frameLocator("iframe").locator("#preview").tap();
+  await page.locator(".panel-host-preview").waitFor();
+  await page.frameLocator("iframe").locator("#anchor-a").tap();
+  await page.frameLocator("iframe").locator("#anchor-b").tap();
+  const previewCloseStart = revoked.length;
+  await back().tap();
+  await page.locator(".panel-host-preview").waitFor({ state: "hidden" });
+  assert.equal(await page.locator("iframe").count(), 1);
+  assert.equal(revoked.length, previewCloseStart);
+  await checkBack("返回面板列表");
+  reports.push("explicit preview Back ignores child history and retains the Panel instance");
+
+  // Jump across child history and press Back again while the leave prompt is up.
+  // No asynchronous approval may be inherited by the second traversal.
+  await page.goto(origin + "/outside");
+  await page.goto(origin + "/mobile/?view=panels");
+  await page.locator(".panels-card").getByRole("button", { name: "打开面板", exact: true }).tap();
+  await page.frameLocator("iframe").locator("#anchor-a").tap();
+  await page.frameLocator("iframe").locator("#anchor-b").tap();
+  await page.frameLocator("iframe").locator("#preview").tap();
+  await page.locator(".panel-host-preview").waitFor();
+  await page.frameLocator("iframe").locator("#confirm").tap();
+  await page.locator(".panel-host-confirm").waitFor();
+  const repeatedCloseStart = revoked.length;
+  await page.evaluate(() => {
+    window.rapidBackPops = 0;
+    const again = () => {
+      window.rapidBackPops++;
+      if (window.rapidBackPops === 1) history.back();
+      else window.removeEventListener("popstate", again);
+    };
+    window.addEventListener("popstate", again);
+    history.go(-4);
+  });
+  await page.waitForFunction(() => window.rapidBackPops >= 2);
+  await page.locator(".navigation-prompt").waitFor();
+  await page.evaluate(() => history.back());
+  await frames();
+  assert.equal(await page.locator(".navigation-prompt").count(), 1);
+  assert.equal(await page.locator(".panel-host-confirm").count(), 1);
+  assert.equal(revoked.length, repeatedCloseStart);
+  await page.getByRole("button", { name: "留在此页", exact: true }).tap();
+  await frames();
+  assert.equal(await page.locator(".panel-host-confirm").count(), 1);
+  await page.evaluate(() => history.back());
+  await page.locator(".navigation-prompt").waitFor();
+  await page.getByRole("button", { name: "放弃修改并离开", exact: true }).tap();
+  await page.locator(".panels-grid").waitFor();
+  await frames();
+  assert.equal(revoked.length, repeatedCloseStart + 1);
+  assert.equal(await page.locator(".navigation-prompt").count(), 0);
+  reports.push(
+    "repeated Back during dirty restoration retains confirmation; only explicit acceptance revokes",
   );
   // Fresh direct links get a visible parent but no artificial Back loop.
   await page.goto(origin + "/outside");

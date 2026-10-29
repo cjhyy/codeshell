@@ -79,14 +79,12 @@ export function useWorkbenchNavigation(workspace: string) {
     workspace: string;
     index: number;
     entries: Map<number, WorkbenchLocation>;
-    restoring?: { target: number; accepted: boolean };
-    approved?: number;
   } | null>(null);
 
-  const write = React.useCallback((next: WorkbenchLocation, replace = false) => {
+  const write = React.useCallback((next: WorkbenchLocation, replace = false, force = false) => {
     const state = history.current;
     if (!state || state.workspace !== current.current.workspace) return;
-    if (!replace && identity(next) === identity(current.current.route)) return;
+    if (!replace && !force && identity(next) === identity(current.current.route)) return;
     if (!replace) {
       for (const key of state.entries.keys()) if (key > state.index) state.entries.delete(key);
       state.index++;
@@ -154,35 +152,22 @@ export function useWorkbenchNavigation(workspace: string) {
       }
       const target = destination.index as number;
       const next = state.entries.get(target) ?? initialLocation();
-      if (state.restoring && target === state.index) {
-        const restore = state.restoring;
-        state.restoring = undefined;
-        if (restore.accepted) {
-          state.approved = restore.target;
-          window.history.go(restore.target - state.index);
-        }
-        return;
-      }
       if (target === state.index) return;
-      if (
-        current.current.dirty &&
-        !keepsPanel(current.current.route, next) &&
-        state.approved !== target
-      ) {
-        state.restoring = { target, accepted: false };
-        window.history.go(state.index - target);
+      if (current.current.dirty && !keepsPanel(current.current.route, next)) {
+        const retained = current.current.route;
         const scope = state.workspace;
+        // Child iframe history makes an app index difference an invalid browser
+        // traversal distance. Restore this known page with a new opaque entry,
+        // then commit the approved target directly; never leave an approval for
+        // an unrelated future popstate. Cancelling discards this Forward branch.
+        state.index = target;
+        write(retained, false, true);
         setPending(() => () => {
-          if (history.current !== state || current.current.workspace !== scope) return;
-          if (state.restoring) state.restoring.accepted = true;
-          else {
-            state.approved = target;
-            window.history.go(target - state.index);
-          }
+          if (history.current === state && current.current.workspace === scope) write(next, true);
         });
         return;
       }
-      state.approved = undefined;
+      setPending(null);
       state.index = target;
       current.current.route = next;
       setRoute(next);
@@ -200,13 +185,10 @@ export function useWorkbenchNavigation(workspace: string) {
       const destination = parent(current.current.route);
       const state = history.current;
       if (!destination || !state) return;
-      const previous = state.entries.get(state.index - 1);
-      if (previous && identity(previous) === identity(destination.route)) {
-        if (approvedAction.current) state.approved = state.index - 1;
-        window.history.back();
-      }
-      // A direct link has no app predecessor. Replace it with its parent once; Back can then leave.
-      else write(destination.route, true);
+      // An iframe can add joint history entries without a parent popstate.
+      // Explicit parent navigation must finish synchronously, independent of
+      // that unknown distance. Browser Back/Forward remains a separate action.
+      write(destination.route, true);
     };
     const destination = parent(current.current.route);
     if (destination && keepsPanel(current.current.route, destination.route)) action();
