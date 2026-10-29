@@ -115,6 +115,25 @@ test("disabling stops an active daemon before returning", async () => {
   expect(h.effects).toEqual([["save", true], ["save", false], "stop"]);
 });
 
+test("disabling revokes execution before a slow native permission probe", async () => {
+  const h = harness();
+  await h.invoke("setEnabled", true);
+  h.setActive();
+  const permissions = await h.deps.permissions.status();
+  let finish!: (value: typeof permissions) => void;
+  h.deps.permissions.status = () =>
+    new Promise((resolve) => {
+      finish = resolve;
+    });
+  const pending = h.invoke("setEnabled", false);
+  expect(h.deps.getEnabled()).toBe(false);
+  expect(h.deps.isActive()).toBe(false);
+  expect(h.effects).toEqual([["save", true], ["save", false], "stop"]);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  finish(permissions);
+  expect(await pending).toMatchObject({ enabled: false, active: false });
+});
+
 test("requests require enabled opt-in and accept only fixed permission names", async () => {
   const h = harness();
   await expect(h.invoke("requestPermission", "accessibility")).rejects.toThrow("先启用");
