@@ -183,8 +183,13 @@ export class ResourceLibrary {
   ): Promise<MediaAsset> {
     const verify = async () => {
       options.signal?.throwIfAborted();
-      await this.authorize(scope);
-      await options.assertAuthorized?.();
+      // Both checks must complete before any source read or publication. They
+      // are independent; a captured directory may itself recheck the same scope.
+      const checks = await Promise.allSettled([
+        this.authorize(scope),
+        Promise.resolve().then(() => options.assertAuthorized?.()),
+      ]);
+      for (const check of checks) if (check.status === "rejected") throw check.reason;
       options.signal?.throwIfAborted();
     };
     await verify();
@@ -473,7 +478,14 @@ export class ResourceLibrary {
       if (!info.isFile() || info.size !== asset.bytes)
         throw new Error("Stored media content changed");
       await this.authorize(scope);
-      return { status, headers, body: handle.createReadStream({ ...bounds, autoClose: true }) };
+      return {
+        status,
+        headers,
+        // Bulk readers authorize every delivered block. Bound read-ahead to
+        // 1 MiB so large downloads and integrity rechecks do not repeat a full
+        // project/package inspection for each default 64 KiB filesystem read.
+        body: handle.createReadStream({ ...bounds, autoClose: true, highWaterMark: 1024 * 1024 }),
+      };
     } catch (error) {
       await handle.close();
       throw error;

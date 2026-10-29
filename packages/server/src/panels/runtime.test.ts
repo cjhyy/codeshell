@@ -1,6 +1,7 @@
 import { panelExecutionGate } from "./execution-gate.js";
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { createHash } from "node:crypto";
+import { mkdirSync, renameSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import { Readable } from "node:stream";
 import {
@@ -32,6 +33,7 @@ import { resolvePanelExecutable } from "./process-service.js";
 import { PanelResourceService } from "./resources/service.js";
 import { PanelTaskCookieHost } from "./task-cookie-host.js";
 import type { PanelSnapshot } from "./types.js";
+import { capturePanelProjectScope } from "./project-scope.js";
 
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -47,6 +49,7 @@ async function fixture(
     agentTasks?: PanelTaskHost;
     automations?: PanelRuntimeOptions["automations"];
     authorizePanelDirectory?: PanelRuntimeOptions["authorizePanelDirectory"];
+    projectScope?: PanelRuntimeOptions["projectScope"];
     createAgentTasks?: PanelRuntimeOptions["createAgentTasks"];
     sharedToolJobs?: (input: {
       root: string;
@@ -134,6 +137,7 @@ async function fixture(
     agentTasks: options.agentTasks,
     automations: options.automations,
     authorizePanelDirectory: options.authorizePanelDirectory,
+    projectScope: options.projectScope,
     createAgentTasks: options.createAgentTasks,
     now: () => state.now,
     ownerId: async (request) => ownerOf(request),
@@ -2503,6 +2507,56 @@ test("resource URLs cannot cross owners, projects, permissions, closed grants or
   expect(
     (await denied.api(`${deniedGrant.instanceId}/resources/${f.asset.id}`, "GET")).status,
   ).toBe(403);
+});
+
+test("bulk HTTP reads amortize full checks but still revoke a replaced physical project root", async () => {
+  const f = await fixture({
+    permissions: ["resources", "context.workspace"],
+    projectScope: () =>
+      capturePanelProjectScope({
+        environmentDir: join(f.root, "environment"),
+        projectPath: f.cwd,
+        cwd: f.cwd,
+        assertAuthority() {},
+      }),
+  });
+  const service = new PanelResourceService({
+    rootDirectory: join(f.root, "data", "panel-app-media"),
+    isScopeAuthorized: () => true,
+  });
+  cleanups.push(() => service.shutdown());
+  const data = Buffer.alloc(8 * 1024 * 1024 + 17, 43);
+  const file = join(f.cwd, "bulk.mp4");
+  await writeFile(file, data);
+  const asset = await service.library.importFile({ appId: f.app.id, projectPath: f.cwd }, file);
+  const grant = await f.prepare();
+  const url = `${f.url}/api/v1/panels/runtime/${grant.instanceId}/resources/${asset.id}`;
+  const read = () => fetch(url, { headers: { Cookie: "session=owner-a" } });
+  const checksBefore = f.state.snapshotAppIds.length;
+  const completed = await read();
+  expect(completed.status).toBe(200);
+  expect(Buffer.from(await completed.arrayBuffer())).toEqual(data);
+  expect(f.state.snapshotAppIds.length - checksBefore).toBeLessThan(40);
+  // Keep the source backpressured long enough to replace the mount between
+  // two verified blocks; no content or permission decision is stubbed.
+  f.state.beforeSnapshot = () => new Promise((resolve) => setTimeout(resolve, 5));
+  const response = await read();
+  const reader = response.body!.getReader();
+  let received = (await reader.read()).value!.length;
+  renameSync(f.cwd, f.cwd + "-original");
+  mkdirSync(f.cwd);
+  try {
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      received += chunk.value.length;
+    }
+  } catch {
+    /* A truncated authenticated response is an expected terminal. */
+  }
+  expect(received).toBeGreaterThan(0);
+  expect(received).toBeLessThan(data.length);
+  expect((await read()).status).toBe(410);
 });
 
 test("closing one resource reader interrupts its stream even while another grant keeps the scope alive", async () => {
