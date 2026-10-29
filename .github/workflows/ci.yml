@@ -290,6 +290,7 @@ jobs:
           packages/server/src/panels/management.test.ts
           packages/server/src/panels/management-http.test.ts
           packages/server/src/panels/management-force-update.test.ts
+          packages/server/src/panels/management-update-drain.test.ts
           packages/server/src/panels/package-mutation.test.ts
           packages/server/src/panels/project-packages.test.ts
           packages/server/src/panels/execution-gate.test.ts

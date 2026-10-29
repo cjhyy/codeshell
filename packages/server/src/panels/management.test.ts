@@ -203,7 +203,8 @@ describe("shared Web panel management with the real Core installer", () => {
     expect((await api.snapshot()).panels[0]?.version).toBe("2.0.0");
     expect((await listInstalledPanelApps())[0]?.source).toMatchObject({ ref: "main" });
     expect(refLookups()).toBe(2);
-    expect(fetches).toEqual([current.source!.commit, reviewedCommit]);
+    // Update preparation revalidates the pinned source before draining services.
+    expect(fetches).toEqual([current.source!.commit, reviewedCommit, reviewedCommit]);
   });
 
   test("Desktop project updates use the default ref resolver and retain the reviewed SHA when HEAD moves", async () => {
@@ -240,7 +241,7 @@ describe("shared Web panel management with the real Core installer", () => {
       packageDigest: selected.packageDigest!,
     });
     expect(refLookups()).toBe(2);
-    expect(fetches).toEqual([originalCommit, reviewedCommit]);
+    expect(fetches).toEqual([originalCommit, reviewedCommit, reviewedCommit]);
   });
 
   test("reviews compare permissions with the project's selected package rather than the newer catalog", async () => {

@@ -1026,6 +1026,8 @@ export function createPanelManagement(options: PanelManagementOptions) {
         );
       let admitted = false;
       const assertReviewLease = () => {
+        if (closed || generation(context.ownerId) !== held.generation)
+          throw new PanelManagementError(401, "login_required", "登录已失效，请重新登录。");
         if (!admitted && (reviews.get(token) !== held || held.public.expiresAt <= now()))
           throw new PanelManagementError(409, "review_expired", "预览已失效，请重新检查来源。");
       };
@@ -1056,6 +1058,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
         { appId: held.public.preview.id, kind: held.public.kind },
         async (guard) => {
           await validateReview(guard);
+          assertReviewLease();
           const id = held.public.preview.id;
           const installed = await installReviewedLocalPanelApp(
             held.source,
@@ -1081,6 +1084,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
                     "项目面板配置已改变，请重新预览。",
                   );
                 await guard();
+                assertReviewLease();
               },
             },
           );
@@ -1097,7 +1101,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
           await options.onChanged?.(id, held.public.kind);
           return { id, packageDigest: installed.packageDigest };
         },
-        approval?.releaseExecutions
+        held.public.kind === "update"
           ? async (guard, matches) => {
               await validateReview(guard);
               // A local directory/ZIP may have changed since preview. Check its
@@ -1107,12 +1111,18 @@ export function createPanelManagement(options: PanelManagementOptions) {
               if (preview.id !== held.public.preview.id || preview.reviewToken !== held.digest)
                 throw new PanelManagementError(409, "conflict", "来源已改变，请重新检查更新。");
               await validateReview(guard);
-              // This admitted operation owns the review while its holders exit.
-              // TTL expiry during cancellation must not invalidate that consent;
-              // owner revocation and package/project changes are still checked.
-              admitted = true;
-              reviews.delete(token);
-              await approval.releaseExecutions!(held.public.preview.id, matches);
+              assertReviewLease();
+              if (approval?.releaseExecutions) {
+                // Force owns the review while its holders exit. TTL expiry during
+                // cancellation must not invalidate consent; revocation is checked.
+                admitted = true;
+                reviews.delete(token);
+                await approval.releaseExecutions(held.public.preview.id, matches);
+              } else {
+                // Ordinary updates drain only services. Other executions still
+                // block, and failed publication must leave this review retryable.
+                await panelExecutionGate.drainServices(matches);
+              }
             }
           : undefined,
       );
