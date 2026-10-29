@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { OutputHistoryRecovery, translate } from "@cjhyy/code-shell-web";
 import { useT } from "../i18n/I18nProvider";
 import { Button } from "../components/ui/button";
-import type { RecoveryHeldInput } from "./useRunController";
+import type { RecoveryHeldInput, useRunController } from "./useRunController";
+import type { useTranscriptBuckets } from "./useTranscriptBuckets";
 
 /** Native adapter: the Host owns validation; held inputs require a separate user action. */
 export function NativeOutputHistoryRecovery(props: {
@@ -78,5 +79,43 @@ export function NativeOutputHistoryRecovery(props: {
         </div>
       )}
     </div>
+  );
+}
+
+/** Compose delivery fencing and verified rehydration without growing the application root. */
+export function NativeOutputHistoryRecoveryController(props: {
+  sessionId: string | null;
+  identity: string;
+  history: ReturnType<typeof useTranscriptBuckets>;
+  controller: ReturnType<typeof useRunController>;
+  busy: boolean;
+}) {
+  const { history, controller } = props;
+  useEffect(() => {
+    if (!history.outputRecoveryPending && !history.historyFailed && !history.historyLoading)
+      controller.finishOutputHistoryRecovery();
+  }, [
+    props.identity,
+    history.outputRecoveryPending,
+    history.historyFailed,
+    history.historyLoading,
+  ]);
+  return (
+    <NativeOutputHistoryRecovery
+      sessionId={props.sessionId}
+      identity={props.identity}
+      failed={history.historyFailed}
+      historicalGap={history.historicalGap}
+      disabled={history.historyLoading || props.busy}
+      pending={history.outputRecoveryPending}
+      heldInputs={controller.heldRecoveryInputs}
+      onConfirmHeld={controller.confirmHeldRecoveryInputs}
+      beforeApply={() => {
+        controller.beginOutputHistoryRecovery();
+        history.beginOutputHistoryRecovery();
+      }}
+      onApplied={history.reloadOutputHistory}
+      onReload={history.reloadOutputHistory}
+    />
   );
 }

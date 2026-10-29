@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
-import { NativeOutputHistoryRecovery } from "./app/NativeOutputHistoryRecovery";
+import { NativeOutputHistoryRecoveryController } from "./app/NativeOutputHistoryRecovery";
 import { ChatView, type AttachmentSelection } from "./ChatView";
 import { emptyComposerMetadata, type ComposerMetadata } from "./chat/composerMetadata";
 import { useProjectRuntimeSelection } from "./projects/useProjectRuntimeSelection";
@@ -865,21 +865,7 @@ function App() {
     queuedInputs,
     sessionStatusMap,
   );
-  const {
-    state,
-    awaitingHydration,
-    historyHasMore,
-    historyLoading,
-    historyFailed,
-    historicalGap,
-    outputRecoveryPending,
-    beginOutputHistoryRecovery: suspendOutputHistory,
-    reloadOutputHistory,
-    historyLimitReached,
-    loadEarlierHistory,
-    appliedSeqRef,
-    setBusyForKey,
-  } = useTranscriptBuckets({
+  const transcriptHistory = useTranscriptBuckets({
     activeProjectId,
     activeSessionId,
     activeBucket,
@@ -892,6 +878,8 @@ function App() {
     setBusyKeys,
     protectedBuckets: protectedTranscriptBuckets,
   });
+  const { state, awaitingHydration, historyLoading, historyFailed, appliedSeqRef, setBusyForKey } =
+    transcriptHistory;
 
   // The "正在思考…" live line shows whenever a turn is busy. Normally
   // streamingAssistantId flips it on once stream_request_start arrives; but on
@@ -1045,30 +1033,7 @@ function App() {
     activity: { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys },
   });
 
-  const {
-    beginOutputHistoryRecovery,
-    finishOutputHistoryRecovery,
-    heldRecoveryInputs,
-    confirmHeldRecoveryInputs,
-    captureApprovalFence,
-    deliveryEpoch,
-    send,
-    sendQuickChat,
-    queueInput,
-    forceSend,
-    clearActiveQueuedInput,
-    removeActiveQueuedInputAt,
-    guideActiveQueuedInput,
-    stop,
-    resolveEngineSessionIdForBucket,
-    compactActiveSession,
-    extendGoal,
-    decideEnvelope,
-    showWelcome,
-    visibleApproval,
-    approvalForBucket,
-    setViewMode,
-  } = useRunController({
+  const runController = useRunController({
     shell: { t, lang, toast, setView },
     session: {
       activeProjectId,
@@ -1120,10 +1085,25 @@ function App() {
       approvalBucketsRef,
     },
   });
-  useEffect(() => {
-    if (!outputRecoveryPending && !historyFailed && !historyLoading)
-      finishOutputHistoryRecovery(activeBucket);
-  }, [activeBucket, outputRecoveryPending, historyFailed, historyLoading]);
+  const {
+    send,
+    sendQuickChat,
+    queueInput,
+    forceSend,
+    clearActiveQueuedInput,
+    removeActiveQueuedInputAt,
+    guideActiveQueuedInput,
+    stop,
+    resolveEngineSessionIdForBucket,
+    compactActiveSession,
+    extendGoal,
+    decideEnvelope,
+    showWelcome,
+    visibleApproval,
+    approvalForBucket,
+    setViewMode,
+  } = runController;
+
   const { openPetMemory, leavePetMemory } = usePetMemoryNavigation({ openPetPage, setViewMode });
 
   const {
@@ -1605,7 +1585,7 @@ function App() {
     const origin = findAskUserOrigin(transcripts, requestId);
     const originEngineSessionId = origin?.engineSessionId;
     const originBucket = origin?.bucket;
-    const isCurrent = captureApprovalFence(originBucket ?? activeBucket, requestId);
+    const isCurrent = runController.captureApprovalFence(originBucket ?? activeBucket, requestId);
     if (!isCurrent()) return;
     // Fallback (legacy prompts with no stamped sessionId): derive from the
     // active bucket, preserving the previous behavior.
@@ -2580,36 +2560,27 @@ function App() {
                 <>
                   <ChatView
                     messages={state.messages}
-                    composerDisabled={outputRecoveryPending}
-                    deliveryEpoch={deliveryEpoch}
+                    composerDisabled={transcriptHistory.outputRecoveryPending}
+                    deliveryEpoch={runController.deliveryEpoch}
                     outputHistoryRecovery={
-                      <NativeOutputHistoryRecovery
+                      <NativeOutputHistoryRecoveryController
                         sessionId={activeEngineSessionId}
                         identity={JSON.stringify([
                           activeBucket,
                           activeEngineSessionId,
                           sessionUiAuthority.workspaceRoot,
                         ])}
-                        failed={historyFailed}
-                        historicalGap={historicalGap}
-                        disabled={historyLoading || busy}
-                        pending={outputRecoveryPending}
-                        heldInputs={heldRecoveryInputs}
-                        onConfirmHeld={confirmHeldRecoveryInputs}
-                        beforeApply={() => {
-                          beginOutputHistoryRecovery();
-                          suspendOutputHistory();
-                        }}
-                        onApplied={reloadOutputHistory}
-                        onReload={reloadOutputHistory}
+                        history={transcriptHistory}
+                        controller={runController}
+                        busy={busy}
                       />
                     }
                     awaitingHydration={awaitingHydration}
-                    historyHasMore={historyHasMore}
+                    historyHasMore={transcriptHistory.historyHasMore}
                     historyLoading={historyLoading}
                     historyFailed={historyFailed}
-                    historyLimitReached={historyLimitReached}
-                    onLoadEarlierHistory={loadEarlierHistory}
+                    historyLimitReached={transcriptHistory.historyLimitReached}
+                    onLoadEarlierHistory={transcriptHistory.loadEarlierHistory}
                     turnEpoch={state.turnEpoch}
                     engineSessionId={state.sessionId ?? engineSessionIdForActive()}
                     liveTurnActive={liveTurnActive}
@@ -2628,7 +2599,8 @@ function App() {
                         bucket: activeBucketRef.current,
                         cwd: sessionUiAuthority.workspaceRoot,
                         available:
-                          sessionUiAuthority.configurationAvailable && !outputRecoveryPending,
+                          sessionUiAuthority.configurationAvailable &&
+                          !transcriptHistory.outputRecoveryPending,
                         busy:
                           busyKeys.has(activeBucketRef.current) ||
                           busySinceRef.current.has(activeBucketRef.current),

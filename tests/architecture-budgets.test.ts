@@ -156,6 +156,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/computer-use/settings-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/session-transcript-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/activity-history-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/model-trace-ipc.ts", /handle\("modelTraces:/g) +
         matches("packages/desktop/src/main/profile-switch-ipc.ts", /ipcMain\.handle\(/g) +
@@ -199,7 +200,11 @@ describe("architecture growth budgets", () => {
       // +1 review:preparePrompt; prompt assembly and Git reads stay in the review service.
       // +1 externalRuntime:yieldGoal; the owner check and Goal state stay in the service.
       // +3 backgroundWork list/cancelJob/markInterrupted; ownership checks stay in Core.
-    ).toBeLessThanOrEqual(366);
+      // +2 Main-frame-only history recovery plan/apply routes; caller and paths remain Host-owned.
+    ).toBeLessThanOrEqual(368);
+    expect(
+      matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g),
+    ).toBe(2);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -260,7 +265,8 @@ describe("architecture growth budgets", () => {
       // The integrated baseline contains 349 invokes; tracing adds four fixed
       // list/detail/config read/update invokes, without renderer filesystem access.
       // +1 session grouping invoke mirrors the single guarded Main route above.
-    ).toBeLessThanOrEqual(354);
+      // +2 typed history recovery plan/apply invokes mirror the reviewed Main routes.
+    ).toBeLessThanOrEqual(356);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -541,7 +547,8 @@ describe("architecture growth budgets", () => {
       // +1 browser-safe coverage validator shared by Desktop and paired Mobile.
       // +2 browser-only trace API contracts/requester and shared read-only explorer.
       // Workspace authorization and recording policy remain on the Host.
-      "packages/web/src/index.ts": 23,
+      // +1 explicit history-recovery confirmation UI; it receives transport callbacks only.
+      "packages/web/src/index.ts": 24,
     };
     for (const [path, budget] of Object.entries(exportBudgets)) {
       expect(matches(path, /^export /gm), path).toBeLessThanOrEqual(budget);

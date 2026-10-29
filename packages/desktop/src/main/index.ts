@@ -427,7 +427,7 @@ import {
 } from "./memory-service.js";
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
-import { registerActivityHistoryIpc } from "./activity-history-ipc.js";
+import { registerDesktopOutputHistoryHost } from "./session-output-history-host.js";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
 import { SessionCatalogStore } from "./session-catalog-store.js";
 import { createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
@@ -1285,7 +1285,7 @@ const cloudEnvironment = registerCloudEnvironmentIpc({
   userDataDir: app.getPath("userData"),
   assertLocalProject: (id) => projectStore.requireLive(id),
 });
-const mobileOrchestrator = new MobileRemoteOrchestrator({
+const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrator({
   remote: mobileRemote,
   uploads: mobileUploads,
   pendingApprovals: pendingMobileApprovals,
@@ -6920,10 +6920,14 @@ ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: numbe
     }
   );
 });
-registerActivityHistoryIpc(ipcMain, () => [
-  ...mainWindows,
-  ...(petWidgetWindow ? [petWidgetWindow] : []),
-]);
+registerDesktopOutputHistoryHost({
+  ipcMain,
+  windows: () => [...mainWindows],
+  historyWindows: () => [...mainWindows, ...(petWidgetWindow ? [petWidgetWindow] : [])],
+  bridge: () => bridge,
+  external: () => externalRuntimeService,
+  mobile: mobileOrchestrator,
+});
 const sessionCatalogStore = new SessionCatalogStore();
 const sessionCatalogIpc = registerSessionCatalogIpc(
   ipcMain,
