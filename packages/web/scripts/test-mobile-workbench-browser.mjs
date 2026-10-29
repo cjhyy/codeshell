@@ -110,13 +110,44 @@ try {
         const listBounds = await list.boundingBox();
         const x = listBounds.x + listBounds.width / 2;
         const start = listBounds.y + listBounds.height - 20;
-        await gestures.send("Input.synthesizeScrollGesture", {
-          x,
-          y: start,
-          yDistance: -(listBounds.height - 40),
-          speed: 500,
-          gestureSourceType: "touch",
+        await list.evaluate((node) => {
+          window.modelTouchEvents = [];
+          for (const type of ["touchstart", "touchmove", "touchend"])
+            node.addEventListener(
+              type,
+              (event) => {
+                window.modelTouchEvents.push({ type: event.type, trusted: event.isTrusted });
+              },
+              { passive: true },
+            );
         });
+        // Chromium's synthetic scroll gesture can complete without scrolling
+        // this surface in headless CI. Feed the browser an actual finger path
+        // instead; CSS/hit testing must still scroll this list, with no DOM scroll write.
+        await gestures.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [{ x, y: start, radiusX: 4, radiusY: 4, force: 1, id: 1 }],
+        });
+        try {
+          for (let step = 1; step <= 12; step++) {
+            await new Promise((resolve) => setTimeout(resolve, 20));
+            await gestures.send("Input.dispatchTouchEvent", {
+              type: "touchMove",
+              touchPoints: [
+                {
+                  x,
+                  y: start - ((listBounds.height - 40) * step) / 12,
+                  radiusX: 4,
+                  radiusY: 4,
+                  force: 1,
+                  id: 1,
+                },
+              ],
+            });
+          }
+        } finally {
+          await gestures.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+        }
         try {
           await page.waitForFunction(
             () => document.querySelector(".model-choice-list").scrollTop > 20,
@@ -143,6 +174,7 @@ try {
                     ?.getBoundingClientRect()
                     .toJSON(),
                   scroll: document.querySelector(".model-choice-list")?.scrollTop,
+                  touches: window.modelTouchEvents,
                 }),
                 { x, start },
               ),
@@ -153,6 +185,18 @@ try {
           });
           throw error;
         }
+        const touches = await page.evaluate(() => window.modelTouchEvents);
+        const touchScrollTop = await list.evaluate((node) => node.scrollTop);
+        for (const type of ["touchstart", "touchmove", "touchend"])
+          assert.ok(
+            touches.some((event) => event.type === type && event.trusted),
+            `browser dispatched trusted ${type}`,
+          );
+        assert.deepEqual(
+          await page.evaluate(() => window.modelChanges),
+          [],
+          "a swipe never selects a model",
+        );
         assert.equal(await page.evaluate(() => document.scrollingElement.scrollTop), 0);
         await picker.getByRole("searchbox", { name: "搜索模型" }).fill("fixture 59");
         const last = picker.getByRole("option", { name: "Codex Fixture 59", exact: true });
@@ -222,6 +266,10 @@ try {
           height,
           modelDialog: bounds,
           scroll: metrics,
+          touchScrollTop,
+          trustedTouchTypes: [
+            ...new Set(touches.filter((event) => event.trusted).map((event) => event.type)),
+          ],
           controls,
           composerHeight,
         });
