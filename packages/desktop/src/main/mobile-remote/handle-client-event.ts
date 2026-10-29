@@ -27,6 +27,11 @@ import {
 import type { mobileNewSessionAuthority } from "./output-recovery-authority.js";
 import type { MobileOutputRecovery } from "./output-recovery.js";
 import { handleRoomEvent } from "./handle-room-event.js";
+import {
+  handleOutputHistoryRecoveryCommand,
+  type MobileOutputHistoryService,
+} from "./output-history-commands.js";
+import { captureMobileHistoryWrite, submitMobileHistoryWrite } from "./output-history-chat.js";
 
 /**
  * The remote host tags authenticated events with both the device id and a
@@ -66,6 +71,7 @@ export interface OrchestratorCtx {
   outputRecovery?: MobileOutputRecovery;
   externalCommands?: MobileExternalRuntimeCommands;
   externalRuntimeModels?: () => Promise<ExternalRuntimeModelEntry[]>;
+  outputHistoryRecovery?: MobileOutputHistoryService;
   newSessionAuthority?: typeof mobileNewSessionAuthority;
   remote: RemoteHostManager;
   uploads: MobileUploadService;
@@ -245,6 +251,16 @@ export async function handleClientEvent(
   ctx: OrchestratorCtx,
   event: AuthenticatedMobileClientEvent,
 ): Promise<void> {
+  if (
+    event.type === "session.outputRecovery.plan" ||
+    event.type === "session.outputRecovery.apply"
+  ) {
+    await handleOutputHistoryRecoveryCommand(
+      { remote: ctx.remote, service: ctx.outputHistoryRecovery },
+      event,
+    );
+    return;
+  }
   const commandSelection = ctx.externalCommands?.observe(event);
   if (ctx.outputRecovery) {
     const recovery = ctx.outputRecovery.handle(event);
@@ -411,6 +427,17 @@ export async function handleClientEvent(
   }
   if (event.type === "chat.send") {
     const sessionId = resolveSessionId(event.sessionId);
+    let assertHistoryCurrent: () => void;
+    try {
+      assertHistoryCurrent = captureMobileHistoryWrite(sessionId);
+    } catch {
+      reply({
+        type: "error",
+        message: "会话正在恢复，请完成历史核对后重新发送。",
+        ...(event.clientMessageId ? { clientMessageId: event.clientMessageId } : {}),
+      });
+      return;
+    }
     const requestedRuntime = event.modelKey ? parseExternalRuntimeModelKey(event.modelKey) : null;
     if (event.modelKey && !requestedRuntime) {
       reply({
@@ -467,7 +494,14 @@ export async function handleClientEvent(
       resolveWorkspace: externalTarget
         ? async () => externalTarget!.cwd
         : ctx.resolveSessionWorkspaceRoot,
-      ...(externalTarget ? { submit: externalTarget.submit } : {}),
+      submit: (request) =>
+        submitMobileHistoryWrite(
+          assertHistoryCurrent,
+          bridge,
+          { origin: "mobile", producer: "mobile-chat" },
+          request,
+          externalTarget?.submit,
+        ),
     });
     const chatReply =
       external && event.viewerId
@@ -713,6 +747,7 @@ export async function handleClientEvent(
       nextSeq: snapshot.nextSeq,
       ...(snapshot.outputCursor ? { outputCursor: snapshot.outputCursor } : {}),
       ...(snapshot.epoch ? { epoch: snapshot.epoch } : {}),
+      ...(snapshot.historicalGap ? { historicalGap: true } : {}),
     });
     ctx.replayPendingMobileApprovals(event.sessionId, deviceId);
     return;
