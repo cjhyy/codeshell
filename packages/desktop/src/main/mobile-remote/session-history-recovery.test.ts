@@ -96,7 +96,12 @@ test("a journal-less native Session keeps its verified selection through actual 
     for (let count = 0; count < 20; count++) {
       await Promise.resolve();
       const event = outbound.shift();
-      if (!event) break;
+      if (!event) {
+        // The client composes asynchronous recovery stages; an empty tick does
+        // not mean it has finished the native fallback handshake.
+        if (replies.some((reply) => reply.type === "session.history.ok")) break;
+        continue;
+      }
       await handleClientEvent(ctx, { ...event, viewerId: "tab", deviceId: "phone" });
     }
     expect(failures).toEqual([]);

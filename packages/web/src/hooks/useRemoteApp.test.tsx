@@ -185,6 +185,7 @@ describe("useRemoteApp session switching recovery", () => {
       expect(sent().some((event) => event.type === "session.outputJournal")).toBe(false);
       await act(async () => {
         const older = hook.result.current.loadEarlierHistory!();
+        await flushMicrotasks();
         const read = sent().findLast((event) => event.type === "session.historyView");
         expect(read.before).toBe("older-page");
         ws.message({ ...read, result: page(true) });
@@ -206,6 +207,7 @@ describe("useRemoteApp session switching recovery", () => {
       expect(hook.result.current.chat.items.map((item) => item.id)).toEqual(["answer", "tool"]);
       await act(async () => {
         const older = hook.result.current.loadEarlierHistory!().catch((error) => error);
+        await flushMicrotasks();
         const read = sent().findLast((event) => event.type === "session.historyView");
         ws.message({ ...read, result: { status: "incomplete" } });
         expect(await older).toBeInstanceOf(Error);

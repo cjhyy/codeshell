@@ -32,6 +32,7 @@ import {
 } from "../lib/messageMappers.js";
 import { projectForCwd } from "../lib/format.js";
 import { MobileOutputClient } from "./mobileOutputClient.js";
+import { HistoryReadBusyError } from "./mobileHistoryReadQueue.js";
 import type { MobileRecoveryProgress } from "../lib/mobileOutputRecovery.js";
 import { MobileHistoryRecoveryRequests } from "./mobileHistoryRecoveryRequests.js";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket.js";
@@ -813,7 +814,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       dispatchChat({
         kind: "hydrate",
         chat: result.chat,
-        verifiedInputIds: result.view?.verifiedInputIds,
+        verifiedInputIds: result.verifiedInputIds ?? result.view?.verifiedInputIds,
       });
       setLoadingKey("sessionHistory", false);
       setNoticeState(undefined);
@@ -859,13 +860,17 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     setHistoryWindow(historyWindowRef.current);
     try {
       await outputClient.loadEarlier();
-    } catch {
-      const message = t("mobile.historyRecovery.detailUnavailable");
+    } catch (error) {
+      const message = t(
+        error instanceof HistoryReadBusyError
+          ? "mobile.historyRecovery.detailBusy"
+          : "mobile.historyRecovery.detailUnavailable",
+      );
       if (current()) {
         historyWindowRef.current = { ...historyWindowRef.current!, loading: false, error: message };
         setHistoryWindow(historyWindowRef.current);
       }
-      throw new Error(message);
+      throw new Error(message, { cause: error });
     } finally {
       if (current() && historyWindowRef.current?.loading) {
         historyWindowRef.current = { ...historyWindowRef.current, loading: false };
@@ -877,8 +882,15 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     async (ref: string) => {
       try {
         return await outputClient.loadDetail(ref);
-      } catch {
-        throw new Error(t("mobile.historyRecovery.detailUnavailable"));
+      } catch (error) {
+        throw new Error(
+          t(
+            error instanceof HistoryReadBusyError
+              ? "mobile.historyRecovery.detailBusy"
+              : "mobile.historyRecovery.detailUnavailable",
+          ),
+          { cause: error },
+        );
       }
     },
     [outputClient],
@@ -1199,13 +1211,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             if (event.seq === session.appliedSeq + 1) session.appliedSeq = event.seq;
             else if (event.seq > session.appliedSeq + 1) {
               session.awaitingSnapshot = true;
-              outputClient.begin(event.sessionId);
+              if (!outputClient.catchUp(event.sessionId)) outputClient.begin(event.sessionId);
             }
             break;
           }
           if (!changed && !session.awaitingSnapshot && event.seq > session.appliedSeq + 1) {
             session.awaitingSnapshot = true;
-            if (!outputClient.begin(event.sessionId))
+            if (!outputClient.catchUp(event.sessionId) && !outputClient.begin(event.sessionId))
               setNotice(t("mobile.notice.sessionRecoveryIncomplete"));
             break;
           }

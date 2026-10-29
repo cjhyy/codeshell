@@ -366,6 +366,12 @@ test("external model selection is bounded and never admits native or malformed r
 test("output journal frame hint is optional, bounded and integral", () => {
   const event = { type: "session.outputJournal", sessionId: "s", recoveryId: "r", requestId: "p" };
   expect(parseMobileClientEvent(event)).toEqual(event);
+  expect(parseMobileClientEvent({ ...event, frozenSnapshot: true })).toEqual({
+    ...event,
+    frozenSnapshot: true,
+  });
+  for (const frozenSnapshot of [false, 1, "true", null])
+    expect(parseMobileClientEvent({ ...event, frozenSnapshot })).toBeUndefined();
   for (const maxFrames of [1, 512, 2048])
     expect(parseMobileClientEvent({ ...event, maxFrames })).toEqual({ ...event, maxFrames });
   for (const maxFrames of [0, -1, 2049, 1.5, "2048", null, Infinity])

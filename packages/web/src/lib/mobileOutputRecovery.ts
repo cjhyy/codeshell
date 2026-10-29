@@ -337,3 +337,100 @@ export async function recoverMobileOutput(args: {
   };
   return advance();
 }
+
+export class MobileHistoryViewChanged extends Error {}
+
+/** A display view already proves its entire historical prefix. Advance it by
+ * complete frozen journal suffixes, publishing each actual snapshot join even
+ * while a newer live head is still arriving. Future output is the next batch. */
+export async function recoverMobileOutputSuffix(args: {
+  chat: ReturnType<typeof initialChatState>;
+  after: string;
+  verifiedInputIds: readonly string[];
+  previousSnapshot: MobileOutputRecoveryResult["snapshot"];
+  read: (options: OutputJournalOptions) => Promise<Reply>;
+  canContinue: () => boolean;
+}): Promise<MobileOutputRecoveryResult> {
+  let reply = await args.read({ after: args.after });
+  if (!args.canContinue()) throw new Error("Recovery cancelled");
+  const snapshot = reply.snapshot;
+  if (
+    !snapshot ||
+    snapshot.unpaired ||
+    !snapshot.epoch ||
+    !Number.isSafeInteger(snapshot.nextSeq) ||
+    snapshot.nextSeq < args.previousSnapshot.nextSeq ||
+    snapshot.epoch !== args.previousSnapshot.epoch ||
+    snapshot.incarnation !== args.previousSnapshot.incarnation ||
+    snapshot.journalIdentity !== args.previousSnapshot.journalIdentity
+  )
+    throw new Error("Suffix snapshot is unavailable");
+  let chat = args.chat;
+  const recovery: OutputJournalRecovery = {
+    incomplete: false,
+    cursor: args.after,
+    appliedCursor: args.after,
+  };
+  let bytes = 0;
+  for (let pages = 0; pages < 2048; pages++) {
+    if (!args.canContinue()) throw new Error("Recovery cancelled");
+    bytes += wireBytes(reply.page);
+    if (
+      bytes > 128 * MiB ||
+      !reply.snapshot ||
+      reply.snapshot.unpaired ||
+      reply.snapshot.epoch !== snapshot.epoch ||
+      reply.snapshot.incarnation !== snapshot.incarnation ||
+      reply.snapshot.journalIdentity !== snapshot.journalIdentity
+    )
+      throw new Error("Suffix coverage changed");
+    let deferredChanged = false;
+    const complete = applyOutputJournalPage(recovery, reply.page, (event) => {
+      const id =
+        event.type === "tool_result"
+          ? event.result.id
+          : event.type === "tool_use_args_delta"
+            ? event.toolCallId
+            : event.type === "tool_use_start"
+              ? event.toolCall.id
+              : undefined;
+      const tool = id
+        ? chat.items.find((item) => item.kind === "tool" && item.id === id)
+        : undefined;
+      if (
+        (tool?.kind === "tool" && tool.detailRef) ||
+        (id && !tool && event.type === "tool_use_args_delta")
+      )
+        deferredChanged = true;
+      if (!deferredChanged) chat = reduceStream(chat, event);
+    });
+    if (recovery.incomplete) throw new Error("Suffix is incomplete");
+    if (deferredChanged)
+      throw new MobileHistoryViewChanged("Deferred tool changed during suffix recovery");
+    if (complete) {
+      if (chat.orphanResults && Object.keys(chat.orphanResults).length)
+        throw new MobileHistoryViewChanged("Suffix updated a tool outside the visible window");
+      const order =
+        snapshot.outputCursor === undefined
+          ? -1
+          : compareOutputCursors(snapshot.outputCursor, recovery.cursor!);
+      if (
+        order === undefined ||
+        order > 0 ||
+        (order === 0 && snapshot.outputCursor !== recovery.cursor)
+      )
+        throw new Error("Suffix does not cover its frozen snapshot");
+      const receipts = new Set(args.verifiedInputIds);
+      assertOutputCoverage(
+        snapshot,
+        reply.page,
+        (id) =>
+          receipts.has(id) ||
+          chat.items.some((item) => item.kind === "user" && item.clientMessageId === id),
+      );
+      return { chat, outputCursor: recovery.cursor!, snapshot };
+    }
+    reply = await args.read({ after: recovery.cursor, through: recovery.through });
+  }
+  throw new Error("Suffix exceeds its page bound");
+}

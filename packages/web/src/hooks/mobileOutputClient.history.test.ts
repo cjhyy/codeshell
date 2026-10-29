@@ -266,3 +266,88 @@ test("an overlapping earlier page cannot duplicate rows or replace current contr
   expect(f.prepends).toHaveLength(0);
   expect(f.commits).toHaveLength(1);
 });
+
+test("concurrent detail and earlier reads queue whole operations without false expiry", async () => {
+  const f = fixture();
+  f.client.begin("s");
+  await settle(() => f.commits.length === 1);
+  f.suppress();
+  const first = f.client.loadDetail("detail-1");
+  const second = f.client.loadDetail("detail-1");
+  const earlier = f.client.loadEarlier();
+  await settle(() => f.sent.some((event) => event.type === "session.historyDetail"));
+  expect(f.sent.filter((event) => event.type === "session.historyDetail")).toHaveLength(1);
+  expect(f.sent.filter((event) => event.type === "session.historyView")).toHaveLength(1);
+  // Release the first operation; each bounded multi-part detail must finish
+  // before the next operation gets this selection's protocol waiter.
+  await Promise.resolve();
+  f.release();
+  const [one, two] = await Promise.all([first, second, earlier]);
+  expect(one).toEqual(two);
+  expect(one.result).toHaveLength(1_100_000);
+  expect(f.sent.filter((event) => event.type === "session.historyDetail")).toHaveLength(10);
+  expect(f.prepends).toHaveLength(1);
+  expect(f.failures()).toBe(0);
+});
+
+test("navigation cancels active and queued history reads without dispatching old queued requests", async () => {
+  const f = fixture();
+  f.client.begin("s");
+  await settle(() => f.commits.length === 1);
+  f.suppress();
+  const outcomes = [
+    f.client.loadDetail("detail-1"),
+    f.client.loadEarlier(),
+    f.client.loadDetail("detail-1"),
+  ].map((request) =>
+    request.then(
+      () => undefined,
+      (error) => error,
+    ),
+  );
+  await settle(() => f.sent.some((event) => event.type === "session.historyDetail"));
+  await Promise.resolve();
+  f.changeSelection();
+  f.release();
+  expect((await Promise.all(outcomes)).every((error) => error instanceof Error)).toBe(true);
+  expect(f.sent.filter((event) => event.type === "session.historyDetail")).toHaveLength(1);
+  expect(f.prepends).toHaveLength(0);
+  expect(f.failures()).toBe(0);
+});
+
+test("a preliminary input absent from the frozen view remains fenced with no optimistic commit", async () => {
+  const f = fixture();
+  f.transform((event) => {
+    if (event.type === "session.historyView") {
+      expect(
+        f.client.hold("s", {
+          type: "session_user_message",
+          text: "pending",
+          clientMessageId: "pending-input",
+        }),
+      ).toBe("pending");
+    }
+    return event;
+  });
+  f.client.begin("s");
+  await settle(() => f.sent.some((event) => event.type === "session.historyView"));
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+  expect(f.commits).toHaveLength(0);
+  expect(
+    f.sent.some((event) => event.type === "chat.send" || event.type === "approval.respond"),
+  ).toBe(false);
+});
+
+test("a newer observed head does not discard a complete frozen initial view", async () => {
+  const f = fixture();
+  f.transform((event) => {
+    if (event.type === "session.historyView") f.client.advanceSnapshot("s", cursor(31));
+    return event;
+  });
+  f.client.begin("s");
+  await settle(() => f.commits.length === 1);
+  expect(f.commits[0].outputCursor).toBe(cursor(30));
+  expect(f.sent.filter((event) => event.type === "session.historyView")).toHaveLength(1);
+  expect(f.failures()).toBe(0);
+  f.client.cancel(false);
+});

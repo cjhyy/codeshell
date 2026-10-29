@@ -5,6 +5,7 @@ export const mobile = {
       historyRecovery: {
         loadingProgress: "正在核对会话记录… {percent}%",
         detailUnavailable: "记录已更新或暂时不可用，请重新载入当前会话。",
+        detailBusy: "其他记录仍在读取，请稍后重试。",
         loadingPages: "正在读取旧会话记录… 已核对 {pages} 页",
         title: "会话记录需要恢复",
         failed: "记录尚未完整载入。已有内容已保留，恢复核对通过前不会继续任务。",
@@ -202,6 +203,7 @@ export const mobile = {
         loadingProgress: "Verifying conversation history… {percent}%",
         detailUnavailable:
           "History has changed or is temporarily unavailable. Reload this conversation.",
+        detailBusy: "Other history is still loading. Try again shortly.",
         loadingPages: "Loading older conversation history… {pages} pages verified",
         title: "Conversation history needs recovery",
         failed:
