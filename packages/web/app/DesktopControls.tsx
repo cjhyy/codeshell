@@ -85,9 +85,12 @@ export function DesktopSidebar({
   cliCwd?: string | null;
 }) {
   const [createOpen, setCreateOpen] = React.useState(false);
-  const [picking, setPicking] = React.useState<{ id: string; cwd: string; label: string } | null>(
-    null,
-  );
+  const [picking, setPicking] = React.useState<{
+    id: string;
+    cwd: string;
+    label: string;
+    returnFocus: HTMLButtonElement;
+  } | null>(null);
   const cwd = cliCwd === undefined ? (app.activeProjectCwd ?? app.activeCwd ?? null) : cliCwd;
   return (
     <div className="desktop-sidebar-controls">
@@ -237,11 +240,12 @@ export function DesktopSidebar({
             <button
               className="session"
               key={session.sessionId}
-              onClick={() =>
+              onClick={(event) =>
                 setPicking({
                   id: session.sessionId,
                   cwd: session.cwd || cwd,
                   label: session.firstMessage || session.sessionId,
+                  returnFocus: event.currentTarget,
                 })
               }
             >
@@ -263,6 +267,7 @@ export function DesktopSidebar({
       {picking ? (
         <CcModeDialog
           title={picking.label}
+          returnFocus={picking.returnFocus}
           onClose={() => setPicking(null)}
           onChoose={(mode) => {
             const selected = picking;
@@ -277,22 +282,24 @@ export function DesktopSidebar({
 
 function CcModeDialog({
   title,
+  returnFocus,
   onChoose,
   onClose,
 }: {
   title: string;
+  returnFocus: HTMLButtonElement;
   onChoose: (mode: MobileRemotePermissionMode) => void;
   onClose: () => void;
 }) {
   const dialog = React.useRef<HTMLDialogElement>(null);
   React.useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    dialog.current?.showModal();
+    const node = dialog.current;
+    node?.showModal();
     return () => {
-      dialog.current?.close();
-      previous?.focus();
+      node?.close();
+      if (returnFocus.isConnected && !returnFocus.disabled) returnFocus.focus();
     };
-  }, []);
+  }, [returnFocus]);
   return (
     <dialog
       className="navigation-prompt desktop-cli-mode"

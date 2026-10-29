@@ -292,8 +292,8 @@ export function Workbench({
     const textarea = textareaRef.current;
     if (!textarea || view !== "chat") return;
     textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(180, Math.max(64, textarea.scrollHeight))}px`;
-  }, [draft, view]);
+    textarea.style.height = `${Math.min(180, Math.max(narrow ? 48 : 64, textarea.scrollHeight))}px`;
+  }, [draft, view, narrow]);
 
   const closeMobileSidebar = () => {
     if (narrow) {
@@ -933,7 +933,7 @@ export function Workbench({
                 aria-label="任务内容"
                 value={draft}
                 disabled={controller.readOnly}
-                rows={2}
+                rows={narrow ? 1 : 2}
                 placeholder="描述你的任务，或提出一个问题…"
                 onChange={(event) => {
                   controller.setDraft(event.target.value);
@@ -1008,7 +1008,8 @@ export function Workbench({
                       </>
                     ) : null}
                     <button
-                      className="model-button"
+                      className="model-button model-settings-button"
+                      aria-label="模型设置"
                       title="打开模型设置"
                       onClick={() => openSettings("models")}
                     >
@@ -1016,6 +1017,9 @@ export function Workbench({
                         {controller.modelSelector
                           ? "模型设置"
                           : defaultConnection?.model || "配置模型"}
+                      </span>
+                      <span className="model-settings-mobile-icon">
+                        <WorkbenchIcon name="settings" />
                       </span>
                       <WorkbenchIcon name="chevron" />
                     </button>

@@ -1100,7 +1100,7 @@ button.ghost:hover:not(:disabled) {
     max-width: 92%;
   }
   .composer-wrap {
-    padding: 10px 12px max(12px, env(safe-area-inset-bottom));
+    padding: 8px 10px max(8px, env(safe-area-inset-bottom));
   }
   .chat-empty .composer-wrap {
     margin-bottom: clamp(18px, 10vh, 80px);
@@ -1112,18 +1112,22 @@ button.ghost:hover:not(:disabled) {
     font-size: 12px;
   }
   .composer {
-    padding: 10px;
+    padding: 8px;
     border-radius: 16px;
   }
   .composer textarea {
     font-size: 16px;
+    min-height: 48px;
+    height: 48px;
+    max-height: min(180px, 26dvh);
+    padding: 4px 6px 8px;
   }
   .approval-answer {
     font-size: 16px;
   }
   .composer-caption {
     justify-content: center;
-    font-size: 9px;
+    font-size: 10px;
   }
   .composer-caption > span:last-child {
     display: none;
@@ -1133,7 +1137,20 @@ button.ghost:hover:not(:disabled) {
   }
   .model-button {
     max-width: 47%;
-    font-size: 10px;
+    min-height: 44px;
+    font-size: 12px;
+  }
+  .composer-toolbar .icon-button,
+  button.composer-submit {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+  .composer-caption {
+    padding-top: 6px;
+  }
+  .composer-toolbar.with-model-selector .model-settings-button {
+    font-size: 12px;
   }
   .banner {
     padding: 8px 14px;

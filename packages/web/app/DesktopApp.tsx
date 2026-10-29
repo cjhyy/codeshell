@@ -782,6 +782,7 @@ export function useDesktopController(
     ),
     modelSelector: app.activeRoomId ? undefined : (
       <DesktopModelPicker
+        key={`${workspaceKey}:${activeId}`}
         models={app.runtimeModels ?? []}
         value={selectedModel}
         defaultLabel={

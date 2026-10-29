@@ -1017,7 +1017,7 @@ test("model controls refuse unadvertised choices and changes during an uncertain
   }
 });
 
-test("the mobile model selector exposes both external providers and a saved unavailable model", () => {
+test("the mobile model trigger preserves the saved unavailable model identity", () => {
   const html = renderToStaticMarkup(
     <DesktopModelPicker
       models={runtimeModels}
@@ -1027,9 +1027,10 @@ test("the mobile model selector exposes both external providers and a saved unav
       onChange={noop}
     />,
   );
-  expect(html).toContain('label="Codex"');
-  expect(html).toContain('label="Claude Code"');
-  expect(html).toContain('value="codex/old-saved" selected=""');
+  expect(html).toContain('aria-label="选择模型或外部运行时"');
+  expect(html).toContain('aria-haspopup="dialog"');
+  expect(html).toContain('value="codex/old-saved"');
+  expect(html).toContain("codex/old-saved · 当前会话");
 });
 
 test("failed session creation exposes a retry that retains the external model and draft", async () => {

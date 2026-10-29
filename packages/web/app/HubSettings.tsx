@@ -2,6 +2,7 @@ import React from "react";
 import { ApiError } from "./auth.js";
 import { HubSkills } from "./HubSkills.js";
 import { HubMcp } from "./HubMcp.js";
+import { ModelChoicePicker, type ModelChoice } from "./ModelChoicePicker.js";
 import {
   connectionDraft,
   configurationErrorMessage,
@@ -853,7 +854,7 @@ function DefaultModels({
   } | null>(null);
   const pending = React.useRef(false);
   const saveButton = React.useRef<HTMLButtonElement>(null);
-  const conversationSelect = React.useRef<HTMLSelectElement>(null);
+  const conversationSelect = React.useRef<HTMLButtonElement>(null);
   const feedbackMessage = React.useRef<HTMLDivElement>(null);
   const focus = useModelActionFocus();
   React.useLayoutEffect(() => {
@@ -881,6 +882,13 @@ function DefaultModels({
     );
   }, [configuration.defaults]);
   const connections = configuration.connections.filter((item) => item.tag === "text");
+  const modelChoices = (current: string, auxiliary = false): ModelChoice[] => [
+    { value: "", label: auxiliary ? "跟随对话模型" : "选择模型连接", disabled: !auxiliary },
+    ...(current && !connections.some((item) => item.id === current)
+      ? [{ value: current, label: `${current}（连接不可用）`, disabled: true }]
+      : []),
+    ...connections.map((item) => ({ value: item.id, label: `${item.id} · ${item.model}` })),
+  ];
   const changed =
     text !== (configuration.defaults.text ?? "") ||
     auxText !== (configuration.defaults.auxText ?? "");
@@ -919,56 +927,33 @@ function DefaultModels({
       <fieldset disabled={disabled || !connections.length}>
         <legend>默认模型</legend>
         <div className="config-form-grid">
-          <label>
+          <div className="config-model-field">
             <span>对话模型</span>
-            <select
-              ref={conversationSelect}
-              required
+            <ModelChoicePicker
+              triggerRef={conversationSelect}
+              label="默认对话模型"
               value={text}
-              onChange={(event) => {
-                setText(event.target.value);
+              choices={modelChoices(text)}
+              disabled={disabled || !connections.length}
+              onChange={(value) => {
+                setText(value);
                 setFeedback(null);
               }}
-              aria-label="默认对话模型"
-            >
-              <option value="" disabled>
-                选择模型连接
-              </option>
-              {text && !connections.some((item) => item.id === text) && (
-                <option value={text} disabled>
-                  {text}（连接不可用）
-                </option>
-              )}
-              {connections.map((item) => (
-                <option value={item.id} key={item.id}>
-                  {item.id} · {item.model}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
+            />
+          </div>
+          <div className="config-model-field">
             <span>辅助模型</span>
-            <select
+            <ModelChoicePicker
+              label="默认辅助模型"
               value={auxText}
-              onChange={(event) => {
-                setAuxText(event.target.value);
+              choices={modelChoices(auxText, true)}
+              disabled={disabled || !connections.length}
+              onChange={(value) => {
+                setAuxText(value);
                 setFeedback(null);
               }}
-              aria-label="默认辅助模型"
-            >
-              <option value="">跟随对话模型</option>
-              {auxText && !connections.some((item) => item.id === auxText) && (
-                <option value={auxText} disabled>
-                  {auxText}（连接不可用）
-                </option>
-              )}
-              {connections.map((item) => (
-                <option value={item.id} key={item.id}>
-                  {item.id} · {item.model}
-                </option>
-              ))}
-            </select>
-          </label>
+            />
+          </div>
         </div>
         <div className="config-form-footer">
           <p className="config-help">辅助模型用于标题生成等轻量任务。</p>
