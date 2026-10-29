@@ -176,6 +176,8 @@ test("a fresh plan finishes failed snapshot retirement without another epoch", a
   const first = new SessionManager().readSessionState(f.id)!.outputHistoryRecovery!.recoveryId;
   expect(() => assertOutputHistoryWriteAvailable(f.id)).toThrow();
   f.failReset(false);
+  // A snapshot failure must not postpone independent revocation of other viewers.
+  expect(f.retired()).toBe(1);
   expect(await f.service.plan(f.id, f.caller)).toMatchObject({
     status: "blocked",
     reason: "not_needed",

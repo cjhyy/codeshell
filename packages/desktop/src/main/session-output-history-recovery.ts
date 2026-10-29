@@ -88,15 +88,21 @@ export class SessionOutputHistoryRecovery {
     };
   }
   private retire(sessionId: string): boolean {
+    let complete = true;
     try {
       this.deps.bridge()?.resetOutputHistoryRecovery(sessionId);
-      this.deps.retire(sessionId);
-      this.pendingRetirement.get(sessionId)?.();
-      this.pendingRetirement.delete(sessionId);
-      return true;
     } catch {
-      return false;
+      complete = false;
     }
+    try {
+      this.deps.retire(sessionId);
+    } catch {
+      complete = false;
+    }
+    if (!complete) return false;
+    this.pendingRetirement.get(sessionId)?.();
+    this.pendingRetirement.delete(sessionId);
+    return true;
   }
   async plan(
     sessionId: string,
