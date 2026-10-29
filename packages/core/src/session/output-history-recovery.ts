@@ -2,7 +2,7 @@
 import * as fs from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { join } from "node:path";
-import type { StreamEvent, TranscriptEvent } from "../types.js";
+import type { TranscriptEvent } from "../types.js";
 import type {
   OutputHistoryRecoveryAcceptance,
   OutputHistoryRecoveryPlan,
@@ -20,6 +20,7 @@ import {
   readPublishedOutputHead,
 } from "./output-journal-head.js";
 import { compareOutputHistory } from "./output-history-comparison.js";
+import { outputHistoryEvents } from "./output-history-events.js";
 import { hasHistoricalOutputGap } from "./output-history-gap.js";
 import { SessionOutputCoverageStore } from "./output-coverage-state.js";
 
@@ -227,12 +228,7 @@ export class OutputHistoryRecovery {
     } while (after);
     const raw = jsonLines(journal.data),
       header = raw.shift();
-    // Fragmented/segmented histories require a separate bounded proof; refuse
-    // them here instead of treating fragments or a retained suffix as history.
-    requireProof(
-      raw.length === count && raw.every((frame) => frame.event && !frame.fragment),
-      "unsupported_history",
-    );
+    requireProof(raw.length === count, "unsupported_history");
     const position = JSON.parse(Buffer.from(through!, "base64url").toString("utf8"));
     requireProof(
       position.offset === journal.data.length &&
@@ -240,17 +236,13 @@ export class OutputHistoryRecovery {
         position.hash === raw.at(-1)?.hash,
     );
     const native = jsonLines(transcript.data) as TranscriptEvent[];
-    const compared = compareOutputHistory(
-      native,
-      raw.map((frame) => frame.event) as StreamEvent[],
-      sessionId,
-      state.cwd,
-    );
+    const events = outputHistoryEvents(raw);
+    const compared = compareOutputHistory(native, events, sessionId, state.cwd);
     if (!compared.ok) throw new Refusal(compared.reason);
     const inputIds = new Set(
-      raw
-        .filter((frame) => frame.event.type === "session_user_message")
-        .map((frame) => frame.event.clientMessageId),
+      events
+        .filter((event) => event.type === "session_user_message")
+        .map((event) => event.clientMessageId),
     );
     requireProof(
       Array.isArray(state.outputCoverage.inputIds) &&

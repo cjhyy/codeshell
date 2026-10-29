@@ -9,13 +9,14 @@ import { outputUserMessage } from "../engine/run-output-user-message.js";
 import { OutputHistoryRecovery } from "./output-history-recovery.js";
 import { outputJournalAnchorName } from "./output-journal-binding.js";
 import { backupOutputJournal } from "./output-journal-manual-repair.js";
+import { outputHistoryEvents } from "./output-history-events.js";
 import type { StreamEvent } from "../types.js";
 
 const roots: string[] = [];
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
-function fixture() {
+function fixture(toolResult = "synthetic result") {
   const root = mkdtempSync(join(tmpdir(), "output-history-"));
   roots.push(root);
   const id = "historical-session",
@@ -40,9 +41,9 @@ function fixture() {
   ]);
   emit({
     type: "tool_result",
-    result: { id: "tool", toolName: "Read", result: "synthetic result" },
+    result: { id: "tool", toolName: "Read", result: toolResult },
   });
-  bundle.transcript.appendToolResult("tool", "Read", "synthetic result");
+  bundle.transcript.appendToolResult("tool", "Read", toolResult);
   bundle.transcript.appendTurnBoundary();
   bundle.transcript.sync();
   const cursor = emit({ type: "turn_complete", reason: "completed" });
@@ -250,3 +251,46 @@ test("a modified evidence copy cannot become an accepted checkpoint", () => {
   ).toMatchObject({ status: "blocked", reason: "storage_error" });
   expect(readFileSync(f.statePath).equals(before)).toBe(true);
 });
+
+test("complete large tool-result fragments survive exact comparison and checkpoint replay", () => {
+  const value = "large synthetic result ".repeat(12000),
+    f = fixture(value),
+    service = new OutputHistoryRecovery(() => f.root);
+  const plan = ready(service, f);
+  expect(plan.comparison.toolResults).toBe(1);
+  expect(
+    service.apply(f.id, { planId: plan.planId, acceptHistoricalGap: true }, f.authority).status,
+  ).toBe("applied");
+  const state = f.manager.readSessionState(f.id)!;
+  const records = readFileSync(
+    join(f.dir, outputJournalAnchorName(state.outputJournalBinding)),
+    "utf8",
+  )
+    .trimEnd()
+    .split("\n")
+    .slice(1)
+    .map((line) => JSON.parse(line));
+  expect(records.filter((record) => record.fragment).length).toBeGreaterThan(1);
+  expect(outputHistoryEvents(records).find((event) => event.type === "tool_result")).toMatchObject({
+    result: { result: value },
+  });
+  expect(readOutputJournal(f.root, f.id, { after: f.cursor }).status).toBe("cursor_invalid");
+});
+
+test.each(["missing", "reordered", "base64", "utf8"])(
+  "history decoder rejects %s fragments",
+  (damage) => {
+    const event = Buffer.from(JSON.stringify({ type: "text_delta", text: "synthetic" }));
+    const records = [
+      {
+        fragment: { id: "part", index: 0, total: 2, data: event.subarray(0, 8).toString("base64") },
+      },
+      { fragment: { id: "part", index: 1, total: 2, data: event.subarray(8).toString("base64") } },
+    ];
+    if (damage === "missing") records.pop();
+    if (damage === "reordered") records.reverse();
+    if (damage === "base64") records[0]!.fragment.data += "!";
+    if (damage === "utf8") records[0]!.fragment.data = Buffer.from([255]).toString("base64");
+    expect(() => outputHistoryEvents(records)).toThrow();
+  },
+);
