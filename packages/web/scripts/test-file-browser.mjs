@@ -249,6 +249,7 @@ try {
   await preview().locator("pre").waitFor();
   assert.equal(await preview().evaluate((node) => node === document.activeElement), true);
   await page.keyboard.press("Escape");
+  await preview().waitFor({ state: "hidden" });
   assert.equal(await preview().count(), 0);
   assert.equal(await entry("retry.md").evaluate((node) => node === document.activeElement), true);
 
@@ -314,6 +315,7 @@ try {
     await page.keyboard.press("PageDown");
     await page.waitForFunction(() => document.querySelector(".file-preview pre").scrollTop > 0);
     await page.keyboard.press("Escape");
+    await preview().waitFor({ state: "hidden" });
     assert.equal(
       await selected.evaluate((node) => node === document.activeElement),
       true,

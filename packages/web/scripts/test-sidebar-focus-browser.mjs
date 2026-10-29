@@ -564,10 +564,18 @@ try {
     }
     if (kind === "unmount") await page.evaluate(() => window.unmountFixture());
     else if (kind === "cancel") await page.keyboard.press("Escape");
-    else await page.getByRole("button", { name: "留在此页", exact: true }).click();
+    else if (kind !== "workspace")
+      await page.getByRole("button", { name: "留在此页", exact: true }).click();
     await frames(page);
     await frames(page);
     assert.equal(await page.locator(".navigation-prompt").count(), 0);
+    if (kind === "workspace") {
+      assert.equal(
+        await page.locator(".chat:not([hidden])").count(),
+        0,
+        "Changing workspace retires the old leave intent instead of navigating to chat",
+      );
+    }
     if (kind === "cancel" || kind === "rapid") {
       await focusMatches(source);
       assert.equal(

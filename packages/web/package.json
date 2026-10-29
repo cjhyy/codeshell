@@ -25,6 +25,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.app.json --noEmit",
     "build:app": "vite build",
     "test:sidebar-browser": "node scripts/test-sidebar-navigation.mjs",
+    "test:back-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-workbench-back-browser.mjs",
     "test:settings-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-settings-browser.mjs",
     "test:skills-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-skills-browser.mjs",
     "test:model-actions-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-model-actions-browser.mjs",
