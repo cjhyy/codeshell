@@ -8,8 +8,8 @@ import {
   type MimiCompanionSettings,
   type MimiCompanionState,
 } from "../../shared/mimi-companion.js";
-import { CompanionChoreographer } from "./companion-choreographer.js";
-import { companionPlacement } from "./companion-layout.js";
+import { CompanionChoreographer, type CompanionPlacementScene } from "./companion-choreographer.js";
+import { stagePlacement } from "./stage-model.js";
 import { petWidgetAlwaysOnTopLevel } from "../pet/pet-widget-window-state.js";
 import type { ComputerActivityBus } from "./computer-activity-bus.js";
 import type { InputGate } from "./input-gate.js";
@@ -71,6 +71,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   if (anchor) display = screen.getDisplayNearestPoint(anchor);
   let target: { x: number; y: number } | undefined;
   let avoidRect: { x: number; y: number; width: number; height: number } | undefined;
+  let scene: CompanionPlacementScene = {};
   const choreographer = new CompanionChoreographer({
     now: () => Date.now(),
     setTimer: (run, ms) => setTimeout(run, ms),
@@ -114,12 +115,11 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
 
   const state = (): MimiCompanionState => {
     const bounds = window && !window.isDestroyed() ? window.getContentBounds() : display.bounds;
-    const placement = companionPlacement(
-      bounds,
-      size,
+    const placement = stagePlacement(bounds, size, {
       target,
-      humanActive || chatting || pinned ? undefined : avoidRect,
-    );
+      avoidRect: humanActive || chatting || pinned ? undefined : avoidRect,
+      window: scene.window,
+    });
     if (anchor) placement.position = { x: anchor.x - bounds.x, y: anchor.y - bounds.y };
     return {
       enabled,
@@ -137,6 +137,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       humanActive: humanActive || chatting,
       avoidInput: !!avoidRect && !humanActive && !chatting && !pinned,
       pinned,
+      ...(target && scene.element ? { element: scene.element } : {}),
       activity: choreographer.activity,
       preview,
       control: options.gate.status(),
@@ -309,6 +310,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   function placeAt(
     point: { x: number; y: number } | undefined,
     reserved?: { x: number; y: number; width: number; height: number },
+    where: CompanionPlacementScene = {},
   ) {
     // Unknown agent coordinates never mean the human's system pointer.
     if (!point && !anchor) {
@@ -320,6 +322,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     }
     target = point;
     avoidRect = reserved;
+    scene = point ? where : {};
     if (!target || pinned) return;
     anchor = undefined;
     const next = screen.getDisplayNearestPoint({
@@ -356,6 +359,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     choreographer.interrupt();
     target = undefined;
     avoidRect = undefined;
+    scene = {};
   };
   const syncChatFocus = () => {
     if (disposed) return;

@@ -186,4 +186,35 @@ describe("CompanionChoreographer", () => {
     await f.choreographer.receive(op({ id: "c2" }));
     expect(f.choreographer.activity.id).toBe("c1");
   });
+
+  test("the action's window and control category reach placement", async () => {
+    const scenes: unknown[] = [];
+    const choreographer = new CompanionChoreographer({
+      now: () => 0,
+      setTimer: () => 0,
+      clearTimer: () => {},
+      suppressed: () => false,
+      place: (_point, _reserved, scene) => scenes.push(scene),
+      beginGesture: () => {},
+      hideForCapture: async () => {},
+      publish: () => {},
+    });
+    const window = { x: 0, y: 25, width: 800, height: 600 };
+    await choreographer.receive(
+      op({
+        id: "c1",
+        target: { x: 10, y: 60 },
+        targetSource: "native-cursor",
+        window,
+        element: "button",
+      }),
+    );
+    await choreographer.receive(
+      op({ id: "c1", phase: "update", target: { x: 12, y: 62 }, targetSource: "native-cursor" }),
+    );
+    expect(scenes).toEqual([
+      { window, element: "button" },
+      { window, element: "button" },
+    ]);
+  });
 });

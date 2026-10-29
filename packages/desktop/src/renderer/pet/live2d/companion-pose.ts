@@ -28,15 +28,27 @@ export function companionPose(
   const active = action !== "idle";
   const elapsed = Math.max(0, Number.isFinite(elapsedMs) ? elapsedMs : 0);
   const pulse = reducedMotion ? 0 : (1 - Math.cos(elapsed / 180)) / 2;
-  const click = active && action === "click";
+  const fieldTap = active && action === "click" && state.element === "text";
+  const click = active && action === "click" && !fieldTap;
   const typing = active && action === "type";
   const dragging = active && action === "drag";
   const scrolling = active && action === "scroll";
   return {
     gazeX,
     gazeY,
-    reach: reducedMotion ? 0 : dragging ? 0.55 : click ? 0.45 : scrolling ? 0.3 : 0,
-    handPulse: typing ? 0.12 * pulse : click ? 0.12 * pulse : scrolling ? 0.16 * pulse : 0,
+    reach: reducedMotion
+      ? 0
+      : dragging
+        ? 0.55
+        : click
+          ? 0.45
+          : scrolling
+            ? 0.3
+            : fieldTap
+              ? 0.2
+              : 0,
+    handPulse:
+      typing || fieldTap ? 0.12 * pulse : click ? 0.12 * pulse : scrolling ? 0.16 * pulse : 0,
     bodyLean: reducedMotion ? 0 : typing || dragging ? 3 : active ? 1 : 0,
     concerned: action === "error" ? 0.6 : 0,
   };
@@ -55,5 +67,17 @@ export function companionActionLabel(state: MimiCompanionState): string {
     complete: "任务完成",
     error: "任务没有完成",
   };
+  // Name the control category when known; never the control's own text.
+  if (state.activity.action === "click" && state.element) {
+    const clicks: Partial<Record<NonNullable<MimiCompanionState["element"]>, string>> = {
+      text: "点进输入框",
+      button: "点按钮",
+      link: "打开链接",
+      menu: "选菜单",
+      list: "选一项",
+    };
+    return clicks[state.element] ?? labels.click;
+  }
+  if (state.activity.action === "scroll" && state.element === "list") return "翻看列表";
   return labels[state.activity.action];
 }
