@@ -5,9 +5,11 @@ import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import { CuaDriverHost } from "../src/main/computer-use/cua-driver-host.js";
 import type { MimiCompanionHost } from "../src/main/computer-use/mimi-companion-host.js";
+import type { CuaDriverHostOptions } from "../src/main/computer-use/cua-driver-host.js";
 
 export function createMimiNativeTrial(options: {
   companion: MimiCompanionHost;
+  mcpProxy: NonNullable<CuaDriverHostOptions["mcpProxy"]>;
   driverPath: string;
   displayId: number;
   status(message: string): void;
@@ -20,7 +22,7 @@ export function createMimiNativeTrial(options: {
     driverPath: options.driverPath,
     hostBundleId: "com.github.Electron",
     parentEnv: process.env,
-    mcpProxy: options.companion.mcpProxy,
+    mcpProxy: options.mcpProxy,
     maxRestarts: 0,
     spawn: (command, args, config) => {
       if (stopped) throw new Error("本次试填已停止");
@@ -129,6 +131,7 @@ export function createMimiNativeTrial(options: {
         if (!form || form.isDestroyed()) {
           form = new BrowserWindow({
             title: "Mimi CUA · Web form",
+            show: false,
             x: display.workArea.x + 300,
             y: display.workArea.y + 130,
             width: Math.min(1600, display.workArea.width - 360),
@@ -140,27 +143,37 @@ export function createMimiNativeTrial(options: {
         }
         await form.loadURL("https://www.selenium.dev/selenium/web/web-form.html");
         if (stopped) throw new Error("本次试填已停止");
-        form.show();
+        // Background delivery must not depend on focus, so never take it.
+        form.showInactive();
         await options.companion.update({ enabled: true });
         const actor = BrowserWindow.getAllWindows().find((win) =>
           win.webContents.getURL().includes("mimi-companion.html"),
         );
         await actor?.webContents.executeJavaScript("window.mimiCompanion.resumeFollowing()");
-        const listed = await call("list_windows", { pid: process.pid });
-        const data = listed.structuredContent;
-        const windows = Array.isArray(data) ? data : data?.windows;
+        const findWindows = async () => {
+          const data = (await call("list_windows", { pid: process.pid })).structuredContent;
+          return Array.isArray(data) ? data : data?.windows;
+        };
         // WindowServer can redact titles. Match only this process and the
         // actual bounds of the window we just created, not a title or a guessed
         // initial display size (macOS can adjust the initial native frame).
         const bounds = form.getBounds();
-        const matches = windows?.filter(
-          (item: any) =>
-            item.pid === process.pid &&
-            ["x", "y", "width", "height"].every(
-              (key) => Math.abs(item.bounds?.[key] - bounds[key as keyof typeof bounds]) <= 1,
-            ),
-        );
-        const window = matches?.length === 1 ? matches[0] : undefined;
+        const matchWindow = (windows: any[] | undefined) => {
+          const matches = windows?.filter(
+            (item: any) =>
+              item.pid === process.pid &&
+              ["x", "y", "width", "height"].every(
+                (key) => Math.abs(item.bounds?.[key] - bounds[key as keyof typeof bounds]) <= 1,
+              ),
+          );
+          return matches?.length === 1 ? matches[0] : undefined;
+        };
+        // A just-shown window reaches WindowServer's list a moment later.
+        let window = matchWindow(await findWindows());
+        for (let attempt = 0; !window && attempt < 10 && !stopped; attempt++) {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          window = matchWindow(await findWindows());
+        }
         const windowId = window?.window_id ?? window?.id;
         if (!Number.isInteger(windowId)) throw new Error("CUA 未找到本次测试窗口");
         const target = { pid: process.pid, window_id: windowId };
@@ -175,24 +188,27 @@ export function createMimiNativeTrial(options: {
           ["Text input", "Mimi native CUA"],
           ["Textarea", "Mimi works here. Human interaction comes first."],
         ]) {
-          const before = await snapshot();
-          const field = editableField(before, label);
+          // Chromium builds a web page's AX tree only after the driver first
+          // asks for it, so a fresh page can briefly expose just its frame.
+          let field = editableField(await snapshot(), label);
+          for (let attempt = 0; !field && attempt < 10 && !stopped; attempt++) {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            field = editableField(await snapshot(), label);
+          }
           if (!field?.element_token) throw new Error(`CUA 未找到表单字段：${label}`);
-          if (!form.isFocused()) throw new Error("你已切换窗口，试填已停止；可以重新运行。");
           options.status(`真实 CUA 正在填写：${label}`);
           await call("click", {
             ...target,
             element_token: field.element_token,
-            delivery_mode: "foreground",
           });
           const focusedField = editableField(await snapshot(), label);
           if (!focusedField?.element_token) throw new Error(`字段已变化：${label}`);
-          await call("type_text", {
+          // cua-driver refuses background keystrokes into Electron web content;
+          // a whole-value AX write is the background route, as policy prefers.
+          await call("set_value", {
             ...target,
             element_token: focusedField.element_token,
-            text,
-            delivery_mode: "foreground",
-            delay_ms: 0,
+            value: text,
           });
           const cursor = (await call("get_agent_cursor_state")).structuredContent;
           const presentation = await actor?.webContents.executeJavaScript(
@@ -204,7 +220,13 @@ export function createMimiNativeTrial(options: {
             Math.abs(presentation.target.x + presentation.windowOrigin.x - cursor.position.x) > 1 ||
             Math.abs(presentation.target.y + presentation.windowOrigin.y - cursor.position.y) > 1
           ) {
-            throw new Error("宠物操作落点与原生虚拟光标未对齐");
+            throw new Error(
+              `宠物操作落点与原生虚拟光标未对齐：${JSON.stringify({
+                cursor: cursor?.position,
+                target: presentation?.target,
+                origin: presentation?.windowOrigin,
+              })}`,
+            );
           }
           console.log("Native placement verified:", {
             action: "type",

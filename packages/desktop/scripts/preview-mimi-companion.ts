@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createMimiCompanionHost } from "../src/main/computer-use/mimi-companion-host.js";
+import { createComputerUseControl } from "../src/main/computer-use/computer-use-control.js";
 import { createConnection } from "node:net";
 import { createInterface } from "node:readline";
 import { CuaActivityChannel } from "../src/main/computer-use/cua-activity-proxy.js";
@@ -46,11 +47,17 @@ async function main() {
     backgroundColor: "#f4f2ed",
     webPreferences: { preload, contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
+  const execution = await createComputerUseControl({
+    appPath: desktopRoot,
+    executablePath: process.execPath,
+    log: (event, data) => console.log(event, data ?? ""),
+  });
   const host = await createMimiCompanionHost({
     appPath: desktopRoot,
     resourcesPath: process.resourcesPath,
     userDataPath: join(temporary, "companion"),
-    executablePath: process.execPath,
+    bus: execution.bus,
+    gate: execution.gate,
     packaged: false,
     isMainWindow: (sender) => sender === control.webContents,
     holdForChat: false,
@@ -74,6 +81,7 @@ async function main() {
   const nativeTrial = nativeDriver
     ? createMimiNativeTrial({
         companion: host,
+        mcpProxy: execution.mcpProxy,
         driverPath: nativeDriver,
         displayId: trialDisplay.id,
         onRunningChange: (running) => {
@@ -154,7 +162,7 @@ ${nativeTrial ? '<button id="native" class="primary">用真实 CUA 试填表单<
   if (process.argv.includes("--external-cua")) {
     await host.update({ enabled: true });
     await control.webContents.executeJavaScript("document.querySelector('#enabled').checked=true");
-    const activity = createConnection(host.mcpProxy.socketPath);
+    const activity = createConnection(execution.mcpProxy.socketPath);
     activity.on("error", (error) =>
       console.error("External CUA presentation channel:", error.message),
     );
@@ -180,7 +188,7 @@ ${nativeTrial ? '<button id="native" class="primary">用真实 CUA 试填表单<
         const event = JSON.parse(line);
         // A background CUA action need not move the human's pointer. Only
         // explicit, authoritative global coordinates may move the character.
-        activity.write(JSON.stringify({ ...event, token: host.mcpProxy.token }) + "\n");
+        activity.write(JSON.stringify({ ...event, token: execution.mcpProxy.token }) + "\n");
       } catch {
         console.error("Expected a presentation event as JSON");
       }
@@ -201,12 +209,41 @@ ${nativeTrial ? '<button id="native" class="primary">用真实 CUA 试填表单<
     event.preventDefault();
     quitting = true;
     void Promise.allSettled([nativeTrial?.close(), host.close()]).finally(async () => {
+      await execution.close().catch(() => {});
       await rm(temporary, { recursive: true, force: true });
       app.quit();
     });
   });
   control.on("closed", () => app.quit());
   if (process.argv.includes("--demo")) await host.preview(trialDisplay.id);
+  if (process.argv.includes("--native-smoke")) {
+    // Real driver acceptance: fill, refuse while stopped, fill again after resume.
+    if (!nativeTrial) throw new Error("--native-smoke requires --native-cua");
+    const attempt = async (label: string) => {
+      const started = Date.now();
+      const outcome = await nativeTrial.run().then(
+        () => "filled",
+        (error: Error) => error.message,
+      );
+      const focused = BrowserWindow.getFocusedWindow()?.getTitle() ?? "(none)";
+      console.log(
+        `Native smoke ${label}: ${outcome} [${Date.now() - started}ms, focused: ${focused}]`,
+      );
+      return outcome;
+    };
+    const results = [await attempt("open")];
+    execution.stopInput("smoke");
+    results.push(await attempt("stopped"));
+    execution.resumeInput("smoke");
+    results.push(await attempt("resumed"));
+    const passed =
+      results[0] === "filled" &&
+      results[1].startsWith("computer_input_refused (user-stop)") &&
+      results[2] === "filled";
+    console.log(passed ? "Native smoke passed" : "Native smoke FAILED");
+    process.exitCode = passed ? 0 : 1;
+    app.quit();
+  }
   if (process.argv.includes("--smoke")) {
     try {
       await host.update({ enabled: true, size: 320 });
@@ -237,7 +274,10 @@ ${nativeTrial ? '<button id="native" class="primary">用真实 CUA 试填表单<
         Math.abs(held.windowOrigin.y + held.position.y - moved.y) > 1
       )
         throw new Error("Extended display placement drifted");
-      const channel = new CuaActivityChannel(host.mcpProxy.socketPath, host.mcpProxy.token);
+      const channel = new CuaActivityChannel(
+        execution.mcpProxy.socketPath,
+        execution.mcpProxy.token,
+      );
       await channel.send({
         id: "smoke-input",
         action: "click",
@@ -257,6 +297,18 @@ ${nativeTrial ? '<button id="native" class="primary">用真实 CUA 试填表单<
         "document.querySelector('#result').textContent",
       );
       if (!receipt.includes("已触发聊天入口")) throw new Error("Chat handoff failed");
+      // Stop from the character reaches the execution gate, and its state is
+      // reflected back to the character for the resume menu.
+      await surface.webContents.executeJavaScript("window.mimiCompanion.stopComputer()");
+      for (let i = 0; i < 50 && !execution.gate.status().stopped; i++)
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      if (!execution.gate.status().stopped) throw new Error("Character stop did not hold input");
+      if (!(await readState()).control?.stopped)
+        throw new Error("Character did not show the stopped state");
+      await surface.webContents.executeJavaScript("window.mimiCompanion.resumeComputer()");
+      for (let i = 0; i < 50 && execution.gate.status().stopped; i++)
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      if (execution.gate.status().stopped) throw new Error("Character resume did not release");
       await channel.send({ id: "smoke-input", action: "click", phase: "end", capture: false });
       channel.close();
       await writeFile(
@@ -282,7 +334,7 @@ ${nativeTrial ? '<button id="native" class="primary">用真实 CUA 试填表单<
         throw new Error("Preview used the wrong display");
       if (host.status().enabled) throw new Error("Preview persisted the switch");
       console.log(
-        "Mimi companion smoke: human priority, drag, mixed-display placement, chat handoff, disable cleanup, repeatable preview on selected screen PASS",
+        "Mimi companion smoke: human priority, drag, mixed-display placement, chat handoff, stop/resume gate, disable cleanup, repeatable preview on selected screen PASS",
       );
     } catch (error) {
       console.error(error);

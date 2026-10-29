@@ -8,6 +8,8 @@ export type MimiCompanionAction =
   | "drag"
   | "key"
   | "working"
+  /** The whole run that used the computer completed. Never per tool call. */
+  | "complete"
   | "error";
 
 export interface MimiCompanionSettings {
@@ -39,6 +41,12 @@ export interface MimiCompanionState {
     startedAt: number;
   };
   preview: boolean;
+  /** Execution gate as the user should see it. The character cannot enforce it. */
+  control?: {
+    stopped: boolean;
+    foregroundHeld: boolean;
+    userActive: boolean;
+  };
 }
 
 export interface MimiCompanionApi {
@@ -49,6 +57,9 @@ export interface MimiCompanionApi {
   move(position: { x: number; y: number }): void;
   openChat(): Promise<void>;
   resumeFollowing(): void;
+  /** Ask the execution side to refuse all computer input until resumed. */
+  stopComputer(): void;
+  resumeComputer(): void;
 }
 
 export const MIMI_COMPANION_SCHEME = "csmimi";

@@ -38,6 +38,13 @@ test("activity payload contains only bounded presentation metadata", () => {
       capture: true,
     }),
   ).toBeNull();
+  expect(parseCompanionOperation({ ...value, targetSource: "element" })?.targetSource).toBe(
+    "element",
+  );
+  // An element frame may only open a value write, never move a running one.
+  expect(
+    parseCompanionOperation({ ...value, phase: "update", targetSource: "element" }),
+  ).toBeNull();
   const avoidRect = { x: -2000, y: 100, width: 300, height: 80, label: "private field" };
   expect(parseCompanionOperation({ ...value, avoidRect })?.avoidRect).toEqual({
     x: -2000,
@@ -183,4 +190,55 @@ test("unauthenticated clients cannot move or hide the character", async () => {
     socket.destroy();
     await server.close();
   }
+});
+
+test("an authenticated proxy receives the gate on hello and every later change", async () => {
+  const { InputGate } = await import("./input-gate.js");
+  const gate = new InputGate();
+  const counts: number[] = [];
+  const server = await createCuaActivityServer({
+    onOperation: () => {},
+    gate,
+    onConnections: (count) => counts.push(count),
+  });
+  const socket = createConnection(server.socketPath);
+  const lines: any[] = [];
+  let buffer = "";
+  socket.setEncoding("utf8");
+  socket.on("data", (chunk: string) => {
+    buffer += chunk;
+    let newline: number;
+    while ((newline = buffer.indexOf("\n")) >= 0) {
+      lines.push(JSON.parse(buffer.slice(0, newline)));
+      buffer = buffer.slice(newline + 1);
+    }
+  });
+  await new Promise((resolve) => socket.once("connect", resolve));
+  // Nothing is pushed before authentication.
+  gate.stopAll();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(lines).toEqual([]);
+  socket.write(JSON.stringify({ token: server.token, type: "hello" }) + "\n");
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(lines[0]).toEqual({ type: "gate", gate: gate.snapshot() });
+  gate.resume();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(lines[1].gate.holdAll).toBeUndefined();
+  expect(lines[1].gate.version).toBeGreaterThan(lines[0].gate.version);
+  socket.destroy();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(counts).toEqual([1, 0]);
+  await server.close();
+});
+
+test("a wrong token on hello is disconnected without a gate", async () => {
+  const server = await createCuaActivityServer(() => {});
+  const socket = createConnection(server.socketPath);
+  const received: string[] = [];
+  socket.on("data", (chunk) => received.push(String(chunk)));
+  await new Promise((resolve) => socket.once("connect", resolve));
+  socket.write(JSON.stringify({ token: "wrong", type: "hello" }) + "\n");
+  await new Promise((resolve) => socket.once("close", resolve));
+  expect(received).toEqual([]);
+  await server.close();
 });

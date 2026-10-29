@@ -52,7 +52,8 @@ export function companionActionLabel(state: MimiCompanionState): string {
     drag: "拖动",
     key: "按键",
     working: "操作中",
-    error: "操作遇到问题",
+    complete: "任务完成",
+    error: "任务没有完成",
   };
   return labels[state.activity.action];
 }

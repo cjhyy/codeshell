@@ -1,3 +1,10 @@
+import {
+  inputLane,
+  parseSessionLineage,
+  SESSION_META_KEY,
+  type InputLane,
+} from "./input-gate-policy.js";
+
 /** Content-free, advisory projection of the pinned Cua Driver 0.34.1 MCP surface.
  * Input authority and all coordinate validation remain in the driver. */
 export type CuaActivityAction =
@@ -11,11 +18,16 @@ export type CuaActivityAction =
   | "error";
 
 export interface CuaActivityEvent {
+  /** Root of the calling Session lineage, when the caller declared one. */
+  sessionId?: string;
+  lane?: InputLane;
   id: string;
   action: CuaActivityAction;
   phase: "start" | "update" | "end";
   target?: { x: number; y: number };
-  targetSource?: "native-cursor";
+  /** Where `target` came from. Only `set_value` uses its element's AX frame:
+   * it has no pointer, so no native cursor position will ever describe it. */
+  targetSource?: "native-cursor" | "element";
   avoidRect?: CuaAvoidRect;
   capture: boolean;
   failed?: boolean;
@@ -180,11 +192,17 @@ export class CuaActivityTracker {
     const classified = classify(name, args);
     const target = classified.capture ? undefined : this.target(args, name);
     const avoidRect = classified.capture ? undefined : this.element(args)?.avoidRect;
+    const lineage = parseSessionLineage(record(params._meta)?.[SESSION_META_KEY]);
     const event: CuaActivityEvent = {
       id: `${this.prefix}:${++this.sequence}`,
       ...classified,
+      lane: inputLane(name, args),
+      ...(lineage.length ? { sessionId: lineage[lineage.length - 1] } : {}),
       phase: "start",
       ...(target ? { target } : {}),
+      ...(target && name === "set_value" && typeof args.element_token === "string"
+        ? { targetSource: "element" as const }
+        : {}),
       ...(avoidRect ? { avoidRect: { ...avoidRect } } : {}),
     };
     this.pending.set(key, {

@@ -118,6 +118,8 @@ interface NativeCursorOptions {
   childPid: number | undefined;
   sendMcp: (bytes: Buffer) => Promise<void>;
   emit: (event: CuaActivityEvent) => Promise<unknown>;
+  /** Emits the final update from `finish`, which already runs in emit order. */
+  emitFinal?: (event: CuaActivityEvent) => Promise<unknown>;
   timeoutMs?: number;
   intervalMs?: number;
 }
@@ -148,6 +150,9 @@ export class CuaNativeCursorBridge {
   private readonly lifetime = new AbortController();
   private readonly actions = new Map<string, SamplingAction>();
   private readonly confirmedPositions = new Map<string, CursorState["position"]>();
+  private readonly lastKnown = new Map<string, CursorState["position"]>();
+  private readonly deferred = new Set<string>();
+  private readonly lastAction = new Map<string, string | undefined>();
   private readonly timeoutMs: number;
   private readonly intervalMs: number;
 
@@ -185,23 +190,45 @@ export class CuaNativeCursorBridge {
     return false;
   }
 
-  async prepare(event: CuaActivityEvent, message: unknown): Promise<void> {
-    if (event.capture || this.lifetime.signal.aborted || !this.initialized) return;
+  /** Called after the client's `notifications/initialized` has been forwarded.
+   * The pinned driver rejects any request before that notification, so the
+   * private bootstrap query must not be injected earlier. */
+  observeForwarded(message: unknown): Promise<boolean> {
+    if (object(message)?.method !== "notifications/initialized") return Promise.resolve(false);
+    if (!this.initialized || this.lifetime.signal.aborted) return Promise.resolve(false);
+    return this.ready();
+  }
+
+  /** Called only after the original request bytes have been forwarded. Never
+   * awaited by the proxy: sampling is advisory and must not delay input. */
+  track(event: CuaActivityEvent, message: unknown): void {
+    if (event.capture || this.lifetime.signal.aborted) return;
+    if (!this.transportSession) {
+      // The first action can race the post-handshake bootstrap. Register it
+      // once identity is known, unless the action has already finished.
+      if (!this.readyPromise) return;
+      this.deferred.add(event.id);
+      void this.readyPromise.then((ok) => {
+        if (ok && this.deferred.delete(event.id)) this.track(event, message);
+      });
+      return;
+    }
+    this.deferred.delete(event.id);
     const params = object(object(message)?.params);
     if (typeof params?.name !== "string" || !POSITIONED_TOOLS.has(params.name)) return;
     const args = object(params.arguments) ?? {};
     // Desktop pointer positions are a separate input lane; do not mistake its
     // real OS pointer for the independent agent-cursor registry.
     if (args.scope === "desktop" || object(args.target)?.kind === "desktop") return;
-    if (!(await this.ready()) || this.lifetime.signal.aborted) return;
     const session = typeof args.session === "string" && args.session ? args.session : undefined;
-    const baseline = await this.read(session, this.lifetime.signal);
-    if (!baseline || this.lifetime.signal.aborted) return;
-    this.actions.set(event.id, {
+    const key = session || this.transportSession;
+    const action: SamplingAction = {
       event,
       session,
-      previous: baseline.position,
-      baselineAction: baseline.visualAction,
+      // The last position this bridge read for the session. The registry only
+      // changes through this serial connection, so it is the true baseline.
+      previous: this.lastKnown.get(key),
+      baselineAction: this.lastAction.get(key),
       expectedAction:
         params.name === "move_cursor"
           ? "navigate"
@@ -210,19 +237,14 @@ export class CuaNativeCursorBridge {
             : event.action,
       published: false,
       controller: new AbortController(),
-      running: false,
-    });
-  }
-
-  /** Called only after the original request bytes have been forwarded. */
-  start(id: string): void {
-    const action = this.actions.get(id);
-    if (!action || this.lifetime.signal.aborted) return;
-    action.running = true;
+      running: true,
+    };
+    this.actions.set(event.id, action);
     this.schedule(action);
   }
 
   async finish(id: string, failed: boolean): Promise<void> {
+    this.deferred.delete(id);
     const action = this.actions.get(id);
     if (!action) return;
     action.running = false;
@@ -233,7 +255,7 @@ export class CuaNativeCursorBridge {
       // A fast click can complete between polls. One final bounded read records
       // its real destination without inventing an intermediate movement path.
       const state = await this.read(action.session, this.lifetime.signal);
-      await this.publish(action, state);
+      await this.publish(action, state, this.options.emitFinal ?? this.options.emit);
     }
     this.actions.delete(id);
   }
@@ -249,6 +271,9 @@ export class CuaNativeCursorBridge {
     }
     this.actions.clear();
     this.confirmedPositions.clear();
+    this.lastKnown.clear();
+    this.lastAction.clear();
+    this.deferred.clear();
   }
 
   private ready(): Promise<boolean> {
@@ -292,18 +317,36 @@ export class CuaNativeCursorBridge {
     );
     if (!peer || !samePoint(peer.position, state.position)) return false;
     this.transportSession = state.session;
+    this.remember(state.session, peer);
     return true;
   }
 
-  private read(session: string | undefined, signal: AbortSignal): Promise<CursorState | undefined> {
-    if (!this.transportSession) return Promise.resolve(undefined);
-    return readNativeCursorState(
+  private async read(
+    session: string | undefined,
+    signal: AbortSignal,
+  ): Promise<CursorState | undefined> {
+    if (!this.transportSession) return undefined;
+    const state = await readNativeCursorState(
       this.options.socketPath,
       this.transportSession,
       session,
       signal,
       this.timeoutMs,
     );
+    if (state) this.remember(session || this.transportSession, state);
+    return state;
+  }
+
+  private remember(key: string, state: CursorState): void {
+    this.lastKnown.delete(key);
+    this.lastKnown.set(key, state.position);
+    this.lastAction.delete(key);
+    this.lastAction.set(key, state.visualAction);
+    while (this.lastKnown.size > 32) {
+      const oldest = this.lastKnown.keys().next().value!;
+      this.lastKnown.delete(oldest);
+      this.lastAction.delete(oldest);
+    }
   }
 
   private schedule(action: SamplingAction): void {
@@ -317,7 +360,11 @@ export class CuaNativeCursorBridge {
     }, this.intervalMs);
   }
 
-  private async publish(action: SamplingAction, state: CursorState | undefined): Promise<void> {
+  private async publish(
+    action: SamplingAction,
+    state: CursorState | undefined,
+    emit = this.options.emit,
+  ): Promise<void> {
     if (this.lifetime.signal.aborted || !state?.position) return;
     const key = action.session || this.transportSession!;
     if (samePoint(action.previous, state.position)) {
@@ -351,7 +398,7 @@ export class CuaNativeCursorBridge {
         state.position.y <= rect.y + rect.height
           ? rect
           : undefined;
-      await this.options.emit({
+      await emit({
         ...event,
         phase: "update",
         target: state.position,

@@ -191,7 +191,10 @@ describe("architecture growth budgets", () => {
       // +1 metadata-only session grouping route shares the same fixed store and caller guard.
       // +1 review:preparePrompt; prompt assembly and Git reads stay in the review service.
       // +1 externalRuntime:yieldGoal; the owner check and Goal state stay in the service.
-    ).toBeLessThanOrEqual(363);
+      // +2 main-frame-owned Mimi companion setting and preview routes.
+      // +1 computerUse:input (stop/resume/force-stop); the gate itself lives in
+      // the CUA proxy, so this route only flips host-owned state.
+    ).toBeLessThanOrEqual(366);
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
     // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
     // the validation and file-reading implementation remain extracted in main.
@@ -252,7 +255,9 @@ describe("architecture growth budgets", () => {
       // The integrated baseline contains 349 invokes; tracing adds four fixed
       // list/detail/config read/update invokes, without renderer filesystem access.
       // +1 session grouping invoke mirrors the single guarded Main route above.
-    ).toBeLessThanOrEqual(354);
+      // +3 Mimi companion setting, preview and chat-focus invokes.
+      // +1 computerUse:input mirrors the single stop/resume/force-stop Main route.
+    ).toBeLessThanOrEqual(358);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening

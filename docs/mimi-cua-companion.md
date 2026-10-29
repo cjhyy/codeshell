@@ -40,7 +40,12 @@ follow normal input speed, never slow real work to extend a gesture.
   suppresses gesture playback and movement easing.
 - The character's body accepts pointer interaction; the rest of the transparent
   surface passes input through. A human interaction suppresses incoming CUA
-  animation and movement. It does not cancel the underlying CUA operation.
+  animation and movement. Dragging does not stop work.
+- Stopping work is an execution-side action, not a character state: the
+  character menu, Command/Ctrl+Shift+Escape and Settings → Computer Use all
+  hold the input gate until the user resumes. Opening the Mimi chat holds only
+  foreground input. See
+  `docs/superpowers/specs/2026-10-28-mimi-cua-execution-boundary-design.md`.
 
 ## Local trial
 
@@ -67,6 +72,27 @@ bun run preview:companion --smoke
 public form fixture in a newly created window. It never submits the form and
 does not control an existing user browser. This optional fixture remains subject
 to the acceptance limits above.
+
+Adding `--native-smoke` runs it unattended: fill the form without focusing it,
+stop input and expect `computer_input_refused (user-stop)`, then resume and fill
+again. The driver inherits macOS permissions from its responsible process, so
+the development `Electron.app` under
+`node_modules/.bun/electron@*/node_modules/electron/dist` needs Accessibility and
+must be launched through LaunchServices; `preview:companion` spawns it from the
+terminal, which makes the terminal responsible instead. Without the grant the
+driver reports `ax_window_unresolved` and finds no fields. From
+`packages/desktop`, after `preview:companion` has bundled
+`out/preview-mimi-companion.mjs` once:
+
+```sh
+open -n -W -a ../../node_modules/.bun/electron@*/node_modules/electron/dist/Electron.app \
+  --stdout /dev/tty --stderr /dev/tty --args "$PWD/out/preview-mimi-companion.mjs" \
+  --native-cua ~/.local/bin/cua-driver --native-smoke
+```
+
+Background `type_text` into web content is refused by cua-driver 0.34.1
+(`background_unavailable`); the fixture writes with `set_value`, which works
+without focus.
 
 For the full application path, after building Desktop run from
 `packages/desktop`:
@@ -104,12 +130,14 @@ CodeShell integration observes its embedded CUA MCP transport automatically.
 
 ## Boundaries
 
-The driver remains the only input authority. Its stdio proxy preserves the
-original MCP bytes, classifies known operations, and forwards bounded metadata
-through an authenticated private Unix socket. It does not forward typed text,
-scripts, image bytes, or application contents to the character renderer. An
-animation acknowledgement has a 180ms deadline; presentation failures never
-retry a computer action.
+The driver remains the only input authority. Its stdio proxy enforces the
+host-owned input gate at dispatch time: a refused call never reaches the driver
+and returns `computer_input_refused`. Accepted bytes pass unchanged apart from
+CodeShell's own Session `_meta` key. Activity metadata is published after
+forwarding through an authenticated private Unix socket and never delays input;
+only a screen capture waits (≤180ms) for the character to hide. Typed text,
+scripts, image bytes and application contents never reach the renderer, and
+presentation failures never retry a computer action.
 
 Known screenshots and opaque composite tools hide the character while they run,
 with a shared compositor barrier. Active human interaction retains the pet, so

@@ -1,6 +1,7 @@
 import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
 import type { MimiCompanionSettings } from "../../shared/mimi-companion.js";
 import type {
+  ComputerUseInputStatus,
   ComputerUsePermissionKind,
   ComputerUsePermissionStatus,
   ComputerUseSettingsStatus,
@@ -25,6 +26,12 @@ export interface ComputerUseSettingsDependencies {
     status(): MimiCompanionSettings;
     update(value: { enabled?: boolean; size?: number }): Promise<void>;
     preview(): Promise<void>;
+  };
+  /** Execution gate. Stop/resume never depend on the character window. */
+  input?: {
+    status(): ComputerUseInputStatus;
+    stop(): void;
+    resume(): void;
   };
 }
 
@@ -59,6 +66,7 @@ export function registerComputerUseSettingsIpc(deps: ComputerUseSettingsDependen
       restartRequired: changed || permissions.restartRequired,
       permissions,
       ...(deps.companion ? { companion: deps.companion.status() } : {}),
+      ...(deps.input ? { input: deps.input.status() } : {}),
     };
   };
   const mutate = async <T>(work: () => Promise<T>): Promise<T> => {
@@ -129,6 +137,23 @@ export function registerComputerUseSettingsIpc(deps: ComputerUseSettingsDependen
       await deps.companion.update(input as { enabled?: boolean; size?: number });
       return status();
     });
+  });
+  // Stop is deliberately outside `mutate`: it must work while anything else is pending.
+  deps.ipcMain.handle("computerUse:input", async (event, action: unknown) => {
+    owner(event);
+    if (action !== "stop" && action !== "resume" && action !== "forceStop")
+      throw new Error("未知的电脑操作控制。");
+    if (action === "forceStop") {
+      // Last resort: also ends the shared driver, which affects every task.
+      deps.input?.stop();
+      await deps.stop();
+      changed = true;
+      return status();
+    }
+    if (!deps.input) throw new Error("当前没有可控制的电脑操作。");
+    if (action === "stop") deps.input.stop();
+    else deps.input.resume();
+    return status();
   });
   deps.ipcMain.handle("computerUse:previewCompanion", (event) => {
     owner(event);

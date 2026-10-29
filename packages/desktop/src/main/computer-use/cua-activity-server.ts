@@ -5,16 +5,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { MimiCompanionAction } from "../../shared/mimi-companion.js";
 import { parseCuaAvoidRect, type CuaAvoidRect } from "./cua-activity.js";
+import type { InputGateState, InputLane } from "./input-gate-policy.js";
 
 export interface CompanionOperation {
   id: string;
   action: MimiCompanionAction;
   phase: "start" | "update" | "end";
   target?: { x: number; y: number };
-  targetSource?: "native-cursor";
+  targetSource?: "native-cursor" | "element";
   avoidRect?: CuaAvoidRect;
   capture: boolean;
   failed?: boolean;
+  lane?: InputLane;
+  /** Root Session of the call, when the caller declared one. */
+  sessionId?: string;
 }
 
 const ACTIONS = new Set(["observe", "click", "type", "scroll", "drag", "key", "working", "error"]);
@@ -61,21 +65,57 @@ export function parseCompanionOperation(value: unknown): CompanionOperation | nu
     capture: input.capture,
     ...(target ? { target } : {}),
     ...(avoidRect ? { avoidRect } : {}),
-    ...(input.targetSource === "native-cursor" ? { targetSource: "native-cursor" as const } : {}),
+    ...(input.targetSource === "native-cursor" ||
+    (input.targetSource === "element" && input.phase === "start")
+      ? { targetSource: input.targetSource }
+      : {}),
     ...(input.failed === true ? { failed: true } : {}),
+    ...(input.lane === "read" || input.lane === "background" || input.lane === "foreground"
+      ? { lane: input.lane }
+      : {}),
+    ...(typeof input.sessionId === "string" && /^[A-Za-z0-9_.:-]{1,160}$/.test(input.sessionId)
+      ? { sessionId: input.sessionId }
+      : {}),
   };
 }
 
-/** Content-free, local presentation channel. It grants no computer-action authority. */
+export interface CuaActivityServerOptions {
+  onOperation(event: CompanionOperation): void | Promise<void>;
+  /** Execution gate pushed to every authenticated proxy. Without one the gate is open. */
+  gate?: {
+    snapshot(): InputGateState;
+    subscribe(listener: (state: InputGateState) => void): () => void;
+  };
+  /** Number of authenticated proxy connections changed. */
+  onConnections?(count: number): void;
+}
+
+const OPEN_GATE: InputGateState = { version: 0, userActive: false, cancelledSessions: [] };
+
+/** Content-free local channel. Activity flows in for presentation; the input
+ * gate flows out to the proxy, which enforces it. It grants no input authority. */
 export async function createCuaActivityServer(
-  onOperation: (event: CompanionOperation) => void | Promise<void>,
+  config: CuaActivityServerOptions | CuaActivityServerOptions["onOperation"],
 ): Promise<{ socketPath: string; token: string; close(): Promise<void> }> {
+  const options: CuaActivityServerOptions =
+    typeof config === "function" ? { onOperation: config } : config;
+  const onOperation = options.onOperation;
+  const authenticated = new Set<Socket>();
+  const gateLine = (state: InputGateState) => JSON.stringify({ type: "gate", gate: state }) + "\n";
+  const unsubscribeGate = options.gate?.subscribe((state) => {
+    const line = gateLine(state);
+    for (const socket of authenticated) if (!socket.destroyed) socket.write(line);
+  });
+  const connectionsChanged = () => options.onConnections?.(authenticated.size);
   const directory = await mkdtemp(join(tmpdir().length < 60 ? tmpdir() : "/tmp", "cs-actor-"));
   await chmod(directory, 0o700);
   const socketPath = join(directory, "activity.sock");
   const token = randomBytes(32).toString("hex");
   const sockets = new Set<Socket>();
   const cleanups = new Set<Promise<void>>();
+  // Resolved after a socket's close handler has registered its cleanup, so
+  // `close()` cannot observe an empty cleanup set before that handler ran.
+  const socketClosures = new Set<Promise<void>>();
   const server = createServer((socket) => {
     sockets.add(socket);
     const active = new Map<string, CompanionOperation>();
@@ -98,6 +138,14 @@ export async function createCuaActivityServer(
           return socket.destroy();
         }
         if (input?.token !== token) return socket.destroy();
+        if (input.type === "hello") {
+          if (!authenticated.has(socket)) {
+            authenticated.add(socket);
+            connectionsChanged();
+          }
+          socket.write(gateLine(options.gate?.snapshot() ?? OPEN_GATE));
+          continue;
+        }
         const parsed = parseCompanionOperation(input);
         if (!parsed) return socket.destroy();
         queue = queue
@@ -143,6 +191,7 @@ export async function createCuaActivityServer(
     });
     socket.on("close", () => {
       sockets.delete(socket);
+      if (authenticated.delete(socket)) connectionsChanged();
       // Queue cleanup after a pending hide has completed, so a dying proxy cannot
       // leave the companion permanently hidden or working.
       const cleanup = queue
@@ -159,7 +208,12 @@ export async function createCuaActivityServer(
         .catch(() => {});
       cleanups.add(cleanup);
       void cleanup.finally(() => cleanups.delete(cleanup));
+      releaseClosure();
     });
+    let releaseClosure!: () => void;
+    const closure = new Promise<void>((resolve) => (releaseClosure = resolve));
+    socketClosures.add(closure);
+    void closure.finally(() => socketClosures.delete(closure));
   });
   try {
     await new Promise<void>((resolve, reject) => {
@@ -179,8 +233,10 @@ export async function createCuaActivityServer(
     socketPath,
     token,
     async close() {
+      unsubscribeGate?.();
       for (const socket of sockets) socket.destroy();
       await new Promise<void>((resolve) => server.close(() => resolve()));
+      await Promise.all([...socketClosures]);
       await Promise.allSettled(cleanups);
       await rm(directory, { recursive: true, force: true });
     },

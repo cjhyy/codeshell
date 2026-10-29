@@ -13,6 +13,8 @@ const api: MimiCompanionApi = {
   move: (position) => ipcRenderer.send("mimiCompanion:move", position),
   openChat: () => ipcRenderer.invoke("mimiCompanion:chat"),
   resumeFollowing: () => ipcRenderer.send("mimiCompanion:follow"),
+  stopComputer: () => ipcRenderer.send("mimiCompanion:stopComputer"),
+  resumeComputer: () => ipcRenderer.send("mimiCompanion:resumeComputer"),
 };
 
 contextBridge.exposeInMainWorld("mimiCompanion", api);

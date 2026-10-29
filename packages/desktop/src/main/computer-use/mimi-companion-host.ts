@@ -10,18 +10,26 @@ import {
 } from "../../shared/mimi-companion.js";
 import { companionPlacement } from "./companion-layout.js";
 import { petWidgetAlwaysOnTopLevel } from "../pet/pet-widget-window-state.js";
-import { createCuaActivityServer, type CompanionOperation } from "./cua-activity-server.js";
+import type { CompanionOperation } from "./cua-activity-server.js";
+import type { ComputerActivityBus, RunOutcome } from "./computer-activity-bus.js";
+import type { InputGate } from "./input-gate.js";
+
+/** A closed chat keeps foreground input held this long, in case it reopens. */
+const CHAT_RELEASE_MS = 10_000;
 
 export interface MimiCompanionHostOptions {
   appPath: string;
   resourcesPath: string;
   userDataPath: string;
-  executablePath: string;
   packaged: boolean;
   devUrl?: string;
   isMainWindow(sender: WebContents): boolean;
   openChat(): Promise<void>;
   holdForChat?: boolean;
+  /** Execution-side activity, published by the CUA proxy channel. */
+  bus: ComputerActivityBus;
+  /** Execution gate. The character only requests holds; it never enforces them. */
+  gate: InputGate;
   log(event: string, data?: Record<string, unknown>): void;
 }
 
@@ -58,6 +66,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   let previewTimers: Array<ReturnType<typeof setTimeout>> = [];
   let previewExpiry: ReturnType<typeof setTimeout> | undefined;
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  let chatRelease: ReturnType<typeof setTimeout> | undefined;
   const captures = new Set<string>();
   let captureBarrier: Promise<void> = Promise.resolve();
   const active = new Map<string, CompanionOperation>();
@@ -116,6 +125,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       pinned,
       activity,
       preview,
+      control: options.gate.status(),
     };
   };
 
@@ -308,6 +318,14 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     }
   }
 
+  // Cached AX/screenshot geometry may already be stale when pointer input
+  // starts, so follow the native cursor. A pointerless value write has no such
+  // cursor; its element frame is the only position that describes it.
+  const trustedTarget = (event: CompanionOperation) =>
+    event.targetSource === "native-cursor" || event.targetSource === "element"
+      ? event.target
+      : undefined;
+
   async function receive(event: CompanionOperation) {
     if (disposed) return;
     if (event.phase === "update") {
@@ -330,10 +348,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       return;
     }
     if (event.phase === "start") {
-      active.set(event.id, {
-        ...event,
-        target: event.targetSource === "native-cursor" ? event.target : undefined,
-      });
+      active.set(event.id, { ...event, target: trustedTarget(event) });
       if (event.capture) {
         const wasVisible = window?.isVisible() ?? false;
         captures.add(event.id);
@@ -350,10 +365,12 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       if (humanActive || chatting) return;
       cancelPreview();
       if (idleTimer) clearTimeout(idleTimer);
-      // Cached AX/screenshot geometry may already be stale when input starts.
-      // Wait for this operation's native cursor update before following it.
+      // Pointer input waits for this operation's native cursor update.
       if (event.action !== "key")
-        placeAt(event.targetSource === "native-cursor" ? event.target : undefined);
+        placeAt(
+          trustedTarget(event),
+          event.targetSource === "element" ? event.avoidRect : undefined,
+        );
       activity = { id: event.id, action: event.action, phase: "start", startedAt: Date.now() };
       if (enabled)
         void ensureWindow().catch((failure) => {
@@ -363,27 +380,48 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       active.delete(event.id);
       captures.delete(event.id);
       if (activity.id === event.id) {
-        activity = { ...activity, phase: "end", ...(event.failed ? { action: "error" } : {}) };
-        idleTimer = setTimeout(
-          () => {
-            if (activity.id !== event.id || disposed) return;
-            const next = [...active.values()]
-              .reverse()
-              .find((candidate) => !candidate.capture && candidate.action !== "observe");
-            activity = next
-              ? { id: next.id, action: next.action, phase: "start", startedAt: Date.now() }
-              : { id: "idle", action: "idle", phase: "end", startedAt: Date.now() };
-            if (next && !humanActive && !chatting) placeAt(next.target, next.avoidRect);
-            publish();
-          },
-          event.failed ? 2000 : 700,
-        );
+        // A failed tool call is not a failed task; the run outcome decides that.
+        activity = { ...activity, phase: "end" };
+        idleTimer = setTimeout(() => {
+          if (activity.id !== event.id || disposed) return;
+          const next = [...active.values()]
+            .reverse()
+            .find((candidate) => !candidate.capture && candidate.action !== "observe");
+          activity = next
+            ? { id: next.id, action: next.action, phase: "start", startedAt: Date.now() }
+            : { id: "idle", action: "idle", phase: "end", startedAt: Date.now() };
+          if (next && !humanActive && !chatting) placeAt(next.target, next.avoidRect);
+          publish();
+        }, 700);
       }
     }
     publish();
   }
 
-  const activityServer = await createCuaActivityServer(receive);
+  function onRun(run: { sessionId: string; outcome: RunOutcome }) {
+    if (disposed || humanActive || chatting || run.outcome === "cancelled") return;
+    if (active.size > 0) return;
+    if (idleTimer) clearTimeout(idleTimer);
+    const id = `run:${run.sessionId}:${Date.now()}`;
+    activity = {
+      id,
+      action: run.outcome === "completed" ? "complete" : "error",
+      phase: "end",
+      startedAt: Date.now(),
+    };
+    publish();
+    idleTimer = setTimeout(
+      () => {
+        if (activity.id !== id || disposed) return;
+        activity = { id: "idle", action: "idle", phase: "end", startedAt: Date.now() };
+        publish();
+      },
+      run.outcome === "completed" ? 1_200 : 2_000,
+    );
+  }
+
+  const unsubscribeBus = options.bus.subscribe({ onOperation: receive, onRun });
+  const unsubscribeGate = options.gate.subscribe(() => publish());
   const ownOverlay = (sender: WebContents, frame: unknown) =>
     !sender.isDestroyed() && window?.webContents === sender && frame === sender.mainFrame;
   ipcMain.handle("mimiCompanion:state", (event) => {
@@ -414,7 +452,18 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     const next = !!focused && chatSurfaces.has(focused.webContents);
     if (chatting === next) return;
     chatting = next;
-    if (chatting) stopPresentation();
+    if (chatRelease) clearTimeout(chatRelease);
+    chatRelease = undefined;
+    if (chatting) {
+      stopPresentation();
+      options.gate.holdForegroundForChat();
+    } else {
+      // Leaving the chat releases foreground input only after it stays closed.
+      chatRelease = setTimeout(() => {
+        chatRelease = undefined;
+        if (!chatting && !disposed) options.gate.releaseForegroundForChat();
+      }, CHAT_RELEASE_MS);
+    }
     publish();
   };
   // A chat hold belongs to the visible, focused chat page. Leaving the page or
@@ -499,6 +548,20 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     void persist().catch(() => {});
     publish();
   };
+  // Stop/resume from the character are requests to the execution gate. They
+  // work while the character is idle, hidden by a capture, or mid-gesture.
+  const onStopComputer = (event: Electron.IpcMainEvent) => {
+    if (!ownOverlay(event.sender, event.senderFrame)) return;
+    options.gate.stopAll();
+    options.log("computer_input_stopped", { source: "companion" });
+  };
+  const onResumeComputer = (event: Electron.IpcMainEvent) => {
+    if (!ownOverlay(event.sender, event.senderFrame)) return;
+    options.gate.resume();
+    options.log("computer_input_resumed", { source: "companion" });
+  };
+  ipcMain.on("mimiCompanion:stopComputer", onStopComputer);
+  ipcMain.on("mimiCompanion:resumeComputer", onResumeComputer);
   ipcMain.on("mimiCompanion:interaction", onInteraction);
   ipcMain.on("mimiCompanion:move", onMove);
   ipcMain.on("mimiCompanion:follow", onFollow);
@@ -506,6 +569,11 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     if (!ownOverlay(event.sender, event.senderFrame)) throw new Error("Invalid companion surface");
     pinned = true;
     chatting = options.holdForChat !== false;
+    if (chatting) {
+      if (chatRelease) clearTimeout(chatRelease);
+      chatRelease = undefined;
+      options.gate.holdForegroundForChat();
+    }
     stopPresentation();
     humanActive = false;
     dragging = false;
@@ -542,12 +610,6 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
         available: true,
         ...(error ? { error } : {}),
       };
-    },
-    mcpProxy: {
-      command: options.executablePath,
-      entryPath: join(options.appPath, "out", "main", "cua-activity-proxy.mjs"),
-      socketPath: activityServer.socketPath,
-      token: activityServer.token,
     },
     async update(value: { enabled?: boolean; size?: number }) {
       const next = { enabled: value.enabled ?? enabled, size: companionSize(value.size ?? size) };
@@ -647,6 +709,11 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       ipcMain.removeListener("mimiCompanion:interaction", onInteraction);
       ipcMain.removeListener("mimiCompanion:move", onMove);
       ipcMain.removeListener("mimiCompanion:follow", onFollow);
+      ipcMain.removeListener("mimiCompanion:stopComputer", onStopComputer);
+      ipcMain.removeListener("mimiCompanion:resumeComputer", onResumeComputer);
+      unsubscribeBus();
+      unsubscribeGate();
+      if (chatRelease) clearTimeout(chatRelease);
       ipcMain.removeHandler("mimiCompanion:chat");
       ipcMain.removeHandler("mimiCompanion:chatActive");
       app.removeListener("browser-window-focus", onChatWindowFocus);
@@ -654,7 +721,6 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       chatSurfaces.clear();
       screen.removeListener("display-metrics-changed", onDisplaysChanged);
       screen.removeListener("display-removed", onDisplaysChanged);
-      await activityServer.close();
       await persist().catch(() => {});
     },
   };

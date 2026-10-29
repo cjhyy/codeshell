@@ -76,6 +76,22 @@ describe("CuaActivityTracker", () => {
     ).toEqual({ x: 790, y: 220, width: 2, height: 23 });
   });
 
+  test("only a pointerless value write marks its AX element as the target", () => {
+    const tracker = new CuaActivityTracker("proxy");
+    observe(tracker);
+    const write = { pid: 10, window_id: 20, element_token: "s12345678:1", value: "整段" };
+    expect(tracker.begin(request(2, "set_value", write))).toMatchObject({
+      action: "type",
+      target: { x: 200, y: 290 },
+      targetSource: "element",
+    });
+    expect(tracker.begin(request(3, "click", write))?.targetSource).toBeUndefined();
+    // Without a fresh snapshot of that element there is no position to claim.
+    expect(
+      tracker.begin(request(4, "set_value", { ...write, element_token: "s12345678:9" })),
+    ).not.toHaveProperty("targetSource");
+  });
+
   test("uses returned window geometry including image downscale, not only Retina scale", () => {
     const tracker = new CuaActivityTracker("proxy");
     observe(tracker);
@@ -93,6 +109,7 @@ describe("CuaActivityTracker", () => {
       action: "click",
       phase: "start",
       capture: false,
+      lane: "background",
       target: { x: 340, y: 300 },
     });
     expect(tracker.finish(response(2))).toEqual({
@@ -241,6 +258,8 @@ describe("CuaActivityTracker", () => {
         action: "working",
         phase: "start",
         capture: true,
+        // Opaque or unknown tools are gated as foreground input.
+        lane: "foreground",
       });
       expect(JSON.stringify(event)).not.toContain("secret");
     }

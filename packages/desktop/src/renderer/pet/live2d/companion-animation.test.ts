@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { MimiCompanionState } from "../../../shared/mimi-companion";
 import { companionPose } from "./companion-pose";
 import { companionCueDuration, spriteAnimation } from "./sprite-animation";
+import { effectAction, LIVE2D_EFFECTS, SPRITE_EFFECTS } from "./character-renderer";
 
 const state: MimiCompanionState = {
   enabled: true,
@@ -56,5 +57,18 @@ describe("companion action presentation", () => {
     expect(
       companionCueDuration({ ...state, activity: { ...state.activity, action: "error" } }),
     ).toBeLessThanOrEqual(800);
+  });
+
+  test("an appearance degrades missing actions through its fallbacks, then to idle", () => {
+    expect(effectAction(SPRITE_EFFECTS, "complete")).toBe("complete");
+    expect(effectAction(LIVE2D_EFFECTS, "key")).toBe("type");
+    expect(effectAction(LIVE2D_EFFECTS, "working")).toBe("observe");
+    expect(effectAction(LIVE2D_EFFECTS, "complete")).toBe("idle");
+    expect(
+      effectAction({ ...LIVE2D_EFFECTS, fallback: { key: "working", working: "key" } }, "key"),
+    ).toBe("idle");
+    expect(
+      spriteAnimation({ ...state, activity: { ...state.activity, action: "complete" } }, null),
+    ).toBe("jumping");
   });
 });

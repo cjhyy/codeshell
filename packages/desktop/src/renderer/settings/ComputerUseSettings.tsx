@@ -61,6 +61,18 @@ export function ComputerUseSettings() {
     };
   }, [refresh]);
 
+  /** Stop and resume never wait behind another settings operation. */
+  async function controlInput(
+    action: () => Promise<ComputerUseSettingsStatus | undefined> | undefined,
+  ) {
+    try {
+      const next = await action();
+      if (mounted.current && next) setStatus(next);
+    } catch {
+      if (mounted.current) setFailed(true);
+    }
+  }
+
   async function perform(name: string, action: () => Promise<ComputerUseSettingsStatus | void>) {
     // A ref also locks same-frame double-clicks, before React updates disabled.
     if (operation.current || !status?.permissions.supported) return;
@@ -180,6 +192,74 @@ export function ComputerUseSettings() {
           <p className="m-0 text-xs text-muted-foreground" role="status">
             {t(status.active ? "settingsX.computerUse.active" : "settingsX.computerUse.inactive")}
           </p>
+          {status.input && (
+            <div
+              className="flex flex-col gap-2 rounded-lg border border-border p-3"
+              data-computer-input-control
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium">{t("settingsX.computerUse.inputTitle")}</span>
+                {status.input.stopped || status.input.foregroundHeld ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      void controlInput(() => window.codeshell.computerUse.controlInput?.("resume"))
+                    }
+                  >
+                    {t("settingsX.computerUse.inputResume")}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() =>
+                      void controlInput(() => window.codeshell.computerUse.controlInput?.("stop"))
+                    }
+                  >
+                    {t("settingsX.computerUse.inputStop")}
+                  </Button>
+                )}
+              </div>
+              <p className="m-0 text-xs text-muted-foreground" role="status">
+                {t(
+                  status.input.stopped
+                    ? "settingsX.computerUse.inputStopped"
+                    : status.input.foregroundHeld
+                      ? "settingsX.computerUse.inputForegroundHeld"
+                      : "settingsX.computerUse.inputRunning",
+                )}
+                {status.input.userActive && !status.input.stopped
+                  ? ` ${t("settingsX.computerUse.inputUserActive")}`
+                  : ""}
+              </p>
+              <p className="m-0 text-xs text-muted-foreground">
+                {t("settingsX.computerUse.inputShortcut")}
+              </p>
+              {status.active && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!!busy}
+                    onClick={() =>
+                      void perform("force-stop", async () =>
+                        window.codeshell.computerUse.controlInput?.("forceStop"),
+                      )
+                    }
+                  >
+                    {t("settingsX.computerUse.inputForceStop")}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    {t("settingsX.computerUse.inputForceStopHint")}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
           {status.companion && (
             <div
               className="flex flex-col gap-3 rounded-lg border border-border p-3"

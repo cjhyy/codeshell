@@ -1,5 +1,14 @@
-/** MCP stdio observer for the embedded driver. Caller bytes pass through unchanged;
- * one private cursor-state query identifies our own native transport session.
+/** MCP stdio gate and observer for the embedded driver.
+ *
+ * Execution: every tools/call is checked against the host-owned input gate at
+ * dispatch time. A refused call never reaches the driver; the caller receives a
+ * local MCP error. Accepted bytes are forwarded unchanged, except that this
+ * proxy removes its own Session-lineage `_meta` key.
+ *
+ * Presentation: activity events are emitted after forwarding and never delay
+ * input. The one exception is a screen capture, which waits (bounded) for the
+ * host to hide the character so it cannot appear in the model's screenshot.
+ *
  * Build as a separate Node entry; it owns only the MCP client, never the daemon. */
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -7,17 +16,35 @@ import { createConnection, type Socket } from "node:net";
 import type { Readable, Writable } from "node:stream";
 import { CuaActivityTracker, type CuaActivityEvent } from "./cua-activity.js";
 import { CuaNativeCursorBridge } from "./cua-native-cursor.js";
+import {
+  gateDecision,
+  gateFullyOpen,
+  INPUT_POLICY_NOTES,
+  parseInputGateState,
+  parseSessionLineage,
+  REFUSAL_POLICY_NOTE,
+  refusalResponse,
+  SESSION_META_KEY,
+  type InputGateState,
+} from "./input-gate-policy.js";
 
 const ACK_TIMEOUT_MS = 180;
+const GATE_WAIT_MS = 1_000;
+const RECONNECT_MS = 250;
 const MAX_ACTIVITY_BYTES = 2_048;
+const MAX_HOST_LINE_BYTES = 64 * 1024;
 const MAX_INSPECT_BYTES = 16 * 1024 * 1024;
 const MAX_ACKS = 256;
 
+/** Private, authenticated link to Desktop main: activity out, gate state in. */
 export class CuaActivityChannel {
   private socket?: Socket;
   private connecting?: Promise<Socket | undefined>;
   private closed = false;
   private buffer = "";
+  private gateState?: InputGateState;
+  private reconnectTimer?: ReturnType<typeof setTimeout>;
+  private readonly gateWaiters = new Set<() => void>();
   private readonly acknowledgements = new Map<string, (ok: boolean) => void>();
 
   constructor(
@@ -26,11 +53,44 @@ export class CuaActivityChannel {
     private readonly timeoutMs = ACK_TIMEOUT_MS,
   ) {}
 
+  /** The current host gate, or undefined while the host is unreachable. */
+  gate(): InputGateState | undefined {
+    return this.socket && !this.socket.destroyed ? this.gateState : undefined;
+  }
+
+  /** Bounded wait for the host's first gate push after (re)connecting. */
+  async waitForGate(timeoutMs = GATE_WAIT_MS): Promise<InputGateState | undefined> {
+    const current = this.gate();
+    if (current || this.closed || !this.usable()) return current;
+    const deadline = Date.now() + timeoutMs;
+    await this.connect();
+    const remaining = deadline - Date.now();
+    if (!this.gate() && remaining > 0) {
+      await new Promise<void>((resolve) => {
+        const done = (): void => {
+          clearTimeout(timer);
+          this.gateWaiters.delete(done);
+          resolve();
+        };
+        const timer = setTimeout(done, remaining);
+        this.gateWaiters.add(done);
+      });
+    }
+    return this.gate();
+  }
+
+  /** Fire-and-forget presentation event. Never awaited on the input path. */
+  async post(event: CuaActivityEvent): Promise<void> {
+    const line = this.line(event);
+    if (!line) return;
+    const socket = await this.connect();
+    if (socket && !socket.destroyed) socket.write(line);
+  }
+
+  /** Event that needs the host's acknowledgement (screen-capture hiding). */
   async send(event: CuaActivityEvent): Promise<boolean> {
-    if (this.closed || !this.path || !this.token || this.token.length > 512) return false;
-    const line = `${JSON.stringify({ token: this.token, ...event })}\n`;
-    if (Buffer.byteLength(line) > MAX_ACTIVITY_BYTES || this.acknowledgements.size >= MAX_ACKS)
-      return false;
+    const line = this.line(event);
+    if (!line || this.acknowledgements.size >= MAX_ACKS) return false;
     const deadline = Date.now() + Math.min(ACK_TIMEOUT_MS, Math.max(1, this.timeoutMs));
     const socket = await this.connect();
     if (!socket || socket.destroyed || Date.now() >= deadline) return false;
@@ -44,34 +104,38 @@ export class CuaActivityChannel {
         this.acknowledgements.delete(key);
         resolve(ok);
       };
-      const timer = setTimeout(
-        () => {
-          finish(false);
-          // Closing is also the host's recovery signal for a capture whose ACK
-          // was lost. Do not leave an unseen start holding the overlay hidden.
-          socket.destroy();
-        },
-        Math.max(1, deadline - Date.now()),
-      );
+      // A late ACK only costs presentation. The connection also carries the
+      // input gate, so it is kept rather than destroyed on timeout.
+      const timer = setTimeout(() => finish(false), Math.max(1, deadline - Date.now()));
       this.acknowledgements.set(key, finish);
       socket.write(line, (error) => {
-        if (error) {
-          finish(false);
-          socket.destroy();
-        }
+        if (error) finish(false);
       });
     });
   }
 
   close(): void {
     this.closed = true;
+    clearTimeout(this.reconnectTimer);
     this.socket?.destroy();
+    this.gateState = undefined;
     for (const finish of this.acknowledgements.values()) finish(false);
     this.acknowledgements.clear();
+    for (const wake of this.gateWaiters) wake();
   }
 
-  private connect(): Promise<Socket | undefined> {
-    if (this.closed || !this.path) return Promise.resolve(undefined);
+  private usable(): boolean {
+    return !!this.path && !!this.token && this.token.length <= 512;
+  }
+
+  private line(event: CuaActivityEvent): string | undefined {
+    if (this.closed || !this.usable()) return;
+    const line = `${JSON.stringify({ token: this.token, ...event })}\n`;
+    return Buffer.byteLength(line) > MAX_ACTIVITY_BYTES ? undefined : line;
+  }
+
+  connect(): Promise<Socket | undefined> {
+    if (this.closed || !this.usable()) return Promise.resolve(undefined);
     if (this.socket && !this.socket.destroyed && !this.socket.connecting)
       return Promise.resolve(this.socket);
     if (this.connecting) return this.connecting;
@@ -79,6 +143,7 @@ export class CuaActivityChannel {
       const socket = createConnection(this.path!);
       this.socket = socket;
       this.buffer = "";
+      this.gateState = undefined;
       let settled = false;
       const finish = (value?: Socket): void => {
         if (settled) return;
@@ -93,7 +158,11 @@ export class CuaActivityChannel {
         },
         Math.min(ACK_TIMEOUT_MS, Math.max(1, this.timeoutMs)),
       );
-      socket.once("connect", () => finish(socket));
+      socket.once("connect", () => {
+        // Authenticate first; the host answers with the current gate state.
+        socket.write(`${JSON.stringify({ token: this.token, type: "hello" })}\n`);
+        finish(socket);
+      });
       socket.on("error", () => {
         finish();
         socket.destroy();
@@ -103,13 +172,20 @@ export class CuaActivityChannel {
         if (this.socket !== socket) return;
         this.socket = undefined;
         this.buffer = "";
+        this.gateState = undefined;
         for (const acknowledge of this.acknowledgements.values()) acknowledge(false);
         this.acknowledgements.clear();
+        // Keep the gate current without waiting for the next input call.
+        if (!this.closed) {
+          clearTimeout(this.reconnectTimer);
+          this.reconnectTimer = setTimeout(() => void this.connect(), RECONNECT_MS);
+          this.reconnectTimer.unref?.();
+        }
       });
       socket.setEncoding("utf8");
       socket.on("data", (chunk: string) => {
         this.buffer += chunk;
-        if (Buffer.byteLength(this.buffer) > MAX_ACTIVITY_BYTES * 2) {
+        if (Buffer.byteLength(this.buffer) > MAX_HOST_LINE_BYTES * 2) {
           socket.destroy();
           return;
         }
@@ -117,17 +193,25 @@ export class CuaActivityChannel {
         while ((newline = this.buffer.indexOf("\n")) >= 0) {
           const line = this.buffer.slice(0, newline);
           this.buffer = this.buffer.slice(newline + 1);
-          if (Buffer.byteLength(line) > MAX_ACTIVITY_BYTES) {
+          if (Buffer.byteLength(line) > MAX_HOST_LINE_BYTES) {
             socket.destroy();
             return;
           }
           try {
-            const ack = JSON.parse(line);
-            if (
-              typeof ack?.id === "string" &&
-              (ack.phase === "start" || ack.phase === "update" || ack.phase === "end")
+            const message = JSON.parse(line);
+            if (message?.type === "gate") {
+              const next = parseInputGateState(message.gate);
+              if (!next) {
+                socket.destroy();
+                return;
+              }
+              if (!this.gateState || next.version >= this.gateState.version) this.gateState = next;
+              for (const wake of [...this.gateWaiters]) wake();
+            } else if (
+              typeof message?.id === "string" &&
+              (message.phase === "start" || message.phase === "update" || message.phase === "end")
             ) {
-              this.acknowledgements.get(`${ack.id}:${ack.phase}`)?.(ack.ok === true);
+              this.acknowledgements.get(`${message.id}:${message.phase}`)?.(message.ok === true);
             }
           } catch {
             socket.destroy();
@@ -218,6 +302,75 @@ export function parseCuaActivityProxyArgs(args: readonly string[]): {
   return { driver: args[1], socket: args[3] };
 }
 
+type JsonRecord = Record<string, unknown>;
+
+function record(value: unknown): JsonRecord | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as JsonRecord)
+    : undefined;
+}
+
+function requestId(value: unknown): string | number | undefined {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" && Number.isSafeInteger(value)) return value;
+  return undefined;
+}
+
+interface ToolCall {
+  id: string | number;
+  name: string;
+  args: JsonRecord;
+  sessionIds: string[];
+  /** Original message without this proxy's private `_meta` key, when present. */
+  stripped?: JsonRecord;
+}
+
+/** Recognise a JSON-RPC tools/call and peel off the caller's Session lineage. */
+export function toolCall(message: unknown): ToolCall | undefined {
+  const request = record(message);
+  const params = record(request?.params);
+  const id = requestId(request?.id);
+  if (request?.method !== "tools/call" || id === undefined || typeof params?.name !== "string")
+    return;
+  const meta = record(params._meta);
+  const sessionIds = parseSessionLineage(meta?.[SESSION_META_KEY]);
+  let stripped: JsonRecord | undefined;
+  if (meta && SESSION_META_KEY in meta) {
+    const { [SESSION_META_KEY]: _lineage, ...restMeta } = meta;
+    const { _meta: _old, ...restParams } = params;
+    stripped = {
+      ...request,
+      params: Object.keys(restMeta).length ? { ...restParams, _meta: restMeta } : restParams,
+    };
+  }
+  return { id, name: params.name, args: record(params.arguments) ?? {}, sessionIds, stripped };
+}
+
+/** Append the CodeShell input strategy to the model-facing tool descriptions. */
+export function annotateToolList(message: unknown): JsonRecord | undefined {
+  const response = record(message);
+  const result = record(response?.result);
+  if (!response || !result || !Array.isArray(result.tools)) return;
+  let changed = false;
+  const tools = result.tools.map((tool) => {
+    const item = record(tool);
+    if (!item || typeof item.name !== "string") return tool;
+    const note = INPUT_POLICY_NOTES[item.name];
+    const base = typeof item.description === "string" ? item.description : item.name;
+    if (base.includes(REFUSAL_POLICY_NOTE)) return tool;
+    changed = true;
+    return {
+      ...item,
+      description: [base, note, REFUSAL_POLICY_NOTE].filter(Boolean).join("\n\n"),
+    };
+  });
+  return changed ? { ...response, result: { ...result, tools } } : undefined;
+}
+
+function line(value: unknown): Buffer {
+  return Buffer.from(`${JSON.stringify(value)}\n`);
+}
+
 export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise<number> {
   const { driver, socket } = parseCuaActivityProxyArgs(args);
   const tracker = new CuaActivityTracker(randomUUID());
@@ -225,6 +378,7 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
     process.env.CODE_SHELL_CUA_ACTIVITY_SOCKET,
     process.env.CODE_SHELL_CUA_ACTIVITY_TOKEN,
   );
+  void channel.connect();
   const childEnv: NodeJS.ProcessEnv = { ...process.env, CUA_DRIVER_EMBEDDED: "1" };
   delete childEnv.CODE_SHELL_CUA_ACTIVITY_SOCKET;
   delete childEnv.CODE_SHELL_CUA_ACTIVITY_TOKEN;
@@ -233,13 +387,23 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
     stdio: ["pipe", "pipe", "pipe"],
     windowsHide: true,
   });
+  // One ordered presentation lane. Nothing on the input path awaits it.
+  let emitting = Promise.resolve();
+  const enqueue = (work: () => Promise<unknown> | unknown): void => {
+    emitting = emitting.then(work).then(
+      () => {},
+      () => {},
+    );
+  };
   const cursor = new CuaNativeCursorBridge({
     socketPath: socket,
     childPid: child.pid,
     sendMcp: (bytes) => write(child.stdin, bytes),
-    emit: (event) => channel.send(event),
+    emit: async (event) => enqueue(() => channel.post(event)),
+    emitFinal: (event) => channel.post(event),
   });
   const delivered = new Set<string>();
+  const toolLists = new Set<string | number>();
   let observing = true;
   let turnId: unknown;
   let turnDone = Promise.resolve();
@@ -249,16 +413,17 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
     completeTurn = undefined;
     turnId = undefined;
   };
+  // Presentation only. The input gate and the channel that carries it stay on.
   const disableObserver = (): void => {
     observing = false;
     tracker.clear();
     delivered.clear();
     cursor.close();
-    releaseTurn();
-    channel.close();
   };
   const stop = (): void => {
     disableObserver();
+    releaseTurn();
+    channel.close();
     child.kill("SIGTERM");
   };
   process.once("SIGTERM", stop);
@@ -269,64 +434,108 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
     child.once("close", (code) => resolve(code ?? 1));
   });
   const incoming = (async () => {
+    let discarding = false;
     for await (const part of cuaWireParts(process.stdin)) {
-      // The pinned child dispatches requests serially. Match that boundary so
-      // a pipelined second action cannot sample the first action's position.
+      // The pinned child dispatches requests serially. Waiting here does not
+      // delay real work, and it makes the gate check happen at dispatch time.
       await turnDone;
-      if (part.overflow) disableObserver();
+      const endsLine = part.bytes[part.bytes.length - 1] === 10;
+      if (!part.inspect) {
+        // Too large to classify. Forward only when no hold of any kind applies.
+        if (part.overflow) {
+          disableObserver();
+          discarding = !gateFullyOpen(channel.gate());
+          if (discarding) process.stderr.write("CUA proxy refused an uninspectable request.\n");
+        }
+        if (!discarding) await write(child.stdin, part.bytes);
+        if (endsLine) discarding = false;
+        continue;
+      }
+      const message = parsed(part.bytes);
+      const call = toolCall(message);
+      let bytes = part.bytes;
+      if (call) {
+        const decision = gateDecision(channel.gate() ?? (await gateFor(call)), call);
+        if (!decision.allow) {
+          await write(process.stdout, line(refusalResponse(call.id, decision)));
+          continue;
+        }
+        if (call.stripped) bytes = line(call.stripped);
+      }
+      const request = record(message);
+      if (request?.method === "tools/list" && requestId(request.id) !== undefined)
+        toolLists.add(requestId(request.id)!);
       let event: CuaActivityEvent | undefined;
-      const message = part.inspect ? parsed(part.bytes) : undefined;
-      if (observing && part.inspect) {
+      if (observing) {
         cursor.observeRequest(message);
         event = tracker.begin(message);
-        if (event && (await channel.send(event))) {
+        // Screen capture is the only synchronous step: the character must be
+        // hidden before the driver captures pixels for the model.
+        if (event?.capture) {
+          await channel.send(event);
           delivered.add(event.id);
-          await cursor.prepare(event, message);
-        }
-        const request = message as
-          | { jsonrpc?: unknown; id?: unknown; method?: unknown }
-          | undefined;
-        if (
-          request?.jsonrpc === "2.0" &&
-          typeof request?.method === "string" &&
-          (typeof request.id === "string" ||
-            (typeof request.id === "number" && Number.isSafeInteger(request.id)))
-        ) {
-          turnId = request.id;
-          turnDone = new Promise((resolve) => {
-            completeTurn = resolve;
-          });
         }
       }
-      await write(child.stdin, part.bytes);
-      if (event) cursor.start(event.id);
+      if (
+        request?.jsonrpc === "2.0" &&
+        typeof request.method === "string" &&
+        requestId(request.id) !== undefined
+      ) {
+        turnId = request.id;
+        turnDone = new Promise((resolve) => {
+          completeTurn = resolve;
+        });
+      }
+      await write(child.stdin, bytes);
+      if (observing) {
+        if (event && !event.capture) {
+          const started = event;
+          delivered.add(started.id);
+          enqueue(() => channel.post(started));
+          cursor.track(started, message);
+        }
+        void cursor.observeForwarded(message);
+      }
     }
     child.stdin.end();
   })();
+  async function gateFor(call: ToolCall): Promise<InputGateState | undefined> {
+    // Read-only calls never wait; input waits (bounded) for the first push.
+    return gateDecision(undefined, call).allow ? undefined : channel.waitForGate();
+  }
   const outgoing = (async () => {
     for await (const part of cuaWireParts(child.stdout)) {
       if (part.overflow) disableObserver();
       const message = part.inspect ? parsed(part.bytes) : undefined;
       // Always consume our late private reply, even after observation is disabled.
       if (part.inspect && cursor.consumeResponse(message)) continue;
-      if (observing && part.inspect) {
-        const event = tracker.finish(message);
-        if (event && delivered.delete(event.id)) {
-          await cursor.finish(event.id, event.failed === true);
-          await channel.send(event);
-        }
+      const response = record(message);
+      const id = requestId(response?.id);
+      let bytes = part.bytes;
+      if (id !== undefined && toolLists.delete(id)) {
+        const annotated = annotateToolList(message);
+        if (annotated) bytes = line(annotated);
       }
-      await write(process.stdout, part.bytes);
-      const response =
-        message !== null && typeof message === "object"
-          ? (message as { id?: unknown; result?: unknown; error?: unknown })
-          : undefined;
+      await write(process.stdout, bytes);
       if (response && ("result" in response || "error" in response) && response.id === turnId)
         releaseTurn();
-      else if (completeTurn && response && ("result" in response || "error" in response))
+      else if (completeTurn && response && ("result" in response || "error" in response)) {
         // A malformed request may receive a null-ID protocol error. Do not hold
         // later original bytes indefinitely for the advisory observer.
         disableObserver();
+        releaseTurn();
+      }
+      if (observing && part.inspect) {
+        const event = tracker.finish(message);
+        if (event && delivered.delete(event.id)) {
+          const finished = event;
+          enqueue(async () => {
+            // The final cursor read and the end stay ahead of the next start.
+            await cursor.finish(finished.id, finished.failed === true);
+            await channel.post(finished);
+          });
+        }
+      }
     }
   })();
   // A broken pipe must not leave a proxy client and capture activity alive.
@@ -337,7 +546,9 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
   releaseTurn();
   process.stdin.destroy();
   await Promise.allSettled([incoming, outgoing]);
+  await Promise.race([emitting, new Promise((resolve) => setTimeout(resolve, 250))]);
   disableObserver();
+  channel.close();
   process.removeListener("SIGTERM", stop);
   process.removeListener("SIGINT", stop);
   return exitCode;

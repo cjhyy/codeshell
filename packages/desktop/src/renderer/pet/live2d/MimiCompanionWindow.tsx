@@ -1,6 +1,11 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { MimiCompanionApi, MimiCompanionState } from "../../../shared/mimi-companion";
-import type { CharacterRenderer } from "./character-renderer";
+import {
+  effectAction,
+  LIVE2D_EFFECTS,
+  SPRITE_EFFECTS,
+  type CharacterRenderer,
+} from "./character-renderer";
 import { companionActionLabel } from "./companion-pose";
 import { companionCueDuration } from "./sprite-animation";
 import { SpriteActor } from "./SpriteActor";
@@ -13,8 +18,13 @@ declare global {
 }
 const Live2DActor = lazy(() => import("./Live2DActor"));
 export const CHARACTER_RENDERERS: Record<MimiCompanionState["appearance"], CharacterRenderer> = {
-  "mimi-sprite": { id: "mimi-sprite", label: "Mimi 动画集", Actor: SpriteActor },
-  live2d: { id: "live2d", label: "Live2D 示例", Actor: Live2DActor },
+  "mimi-sprite": {
+    id: "mimi-sprite",
+    label: "Mimi 动画集",
+    Actor: SpriteActor,
+    effects: SPRITE_EFFECTS,
+  },
+  live2d: { id: "live2d", label: "Live2D 示例", Actor: Live2DActor, effects: LIVE2D_EFFECTS },
 };
 
 type Gesture = {
@@ -204,9 +214,16 @@ export function MimiCompanionWindow() {
   };
 
   if (!state) return null;
-  const { Actor } = CHARACTER_RENDERERS[state.appearance] ?? CHARACTER_RENDERERS["mimi-sprite"];
+  const { Actor, effects } =
+    CHARACTER_RENDERERS[state.appearance] ?? CHARACTER_RENDERERS["mimi-sprite"];
   const cueActive = Boolean(cueActivity && !humanActive && visible);
-  const presented = cueActive && cueActivity ? { ...state, activity: cueActivity } : state;
+  const presented =
+    cueActive && cueActivity
+      ? {
+          ...state,
+          activity: { ...cueActivity, action: effectAction(effects, cueActivity.action) },
+        }
+      : state;
   const typing = cueActive && ["type", "key"].includes(presented.activity.action);
   const targetEffect = cueActive && ["click", "scroll", "drag"].includes(presented.activity.action);
   const position = dragPosition ?? state.position;
@@ -341,9 +358,10 @@ export function MimiCompanionWindow() {
           </div>
         )}
         {state.preview && <div className="mimi-companion__preview">动作预览</div>}
-        {(error || cueActive) && (
+        {(error || cueActive || state.control?.stopped) && (
           <div className="mimi-companion__activity" role="status">
             {error ??
+              (state.control?.stopped && !cueActive ? "已停止电脑操作" : undefined) ??
               (presented.activity.action === "type"
                 ? presented.activity.phase === "start"
                   ? "正在输入"
@@ -363,6 +381,29 @@ export function MimiCompanionWindow() {
             >
               恢复跟随工作
             </button>
+            {state.control?.stopped || state.control?.foregroundHeld ? (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  window.mimiCompanion.resumeComputer();
+                  closeMenu();
+                }}
+              >
+                继续电脑操作
+              </button>
+            ) : (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  window.mimiCompanion.stopComputer();
+                  closeMenu();
+                }}
+              >
+                停止电脑操作（⌘⇧Esc）
+              </button>
+            )}
           </div>
         )}
       </div>

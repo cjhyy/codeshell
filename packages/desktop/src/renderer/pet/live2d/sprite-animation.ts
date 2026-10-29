@@ -22,6 +22,8 @@ export function spriteAnimation(
   if (!cueActive) return "idle";
   if (state.activity.action === "error") return "failed";
   switch (state.activity.action) {
+    case "complete":
+      return "jumping";
     case "observe":
       return "review";
     case "click":

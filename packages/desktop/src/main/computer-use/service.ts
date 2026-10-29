@@ -17,6 +17,8 @@ import {
   resolveCuaDriverPath,
   type CuaDriverHostOptions,
 } from "./cua-driver-host.js";
+import type { ComputerActivityBus } from "./computer-activity-bus.js";
+import type { InputGate } from "./input-gate.js";
 
 export const CODESHELL_BUNDLE_ID = "com.cjhyy.codeshell";
 
@@ -31,12 +33,18 @@ export interface CuaComputerUseInputs {
   readonly log?: CuaDriverHostOptions["log"];
   readonly createHost?: (options: CuaDriverHostOptions) => CuaDriverHost;
   readonly mcpProxy?: CuaDriverHostOptions["mcpProxy"];
+  /** The input gate lives in the proxy; without it the driver is not offered. */
+  readonly requireProxy?: boolean;
 }
 
 export type CuaComputerUseDecision =
   | {
       readonly enabled: false;
-      readonly reason: "flag_off" | "unsupported_platform" | "driver_not_found";
+      readonly reason:
+        | "flag_off"
+        | "unsupported_platform"
+        | "driver_not_found"
+        | "control_unavailable";
     }
   | { readonly enabled: true; readonly host: CuaDriverHost };
 
@@ -61,6 +69,7 @@ export function initCuaComputerUse(inputs: CuaComputerUseInputs): CuaComputerUse
     resourcesPath: inputs.resourcesPath,
   });
   if (!driverPath) return disabled("driver_not_found", inputs.log);
+  if (inputs.requireProxy && !inputs.mcpProxy) return disabled("control_unavailable", inputs.log);
   if (host && host.status().driverPath === driverPath && host.status().state !== "stopped") {
     return { enabled: true, host };
   }
@@ -82,6 +91,59 @@ export function initCuaComputerUse(inputs: CuaComputerUseInputs): CuaComputerUse
 
 export function getCuaDriverHost(): CuaDriverHost | undefined {
   return host;
+}
+
+let control: { gate: InputGate; bus: ComputerActivityBus } | undefined;
+
+/** Registered by Desktop setup; undefined when the execution gate is absent. */
+export function setComputerUseControl(
+  value: { gate: InputGate; bus: ComputerActivityBus } | undefined,
+): void {
+  control = value;
+}
+
+function sessionIdOf(params: unknown): string | undefined {
+  const value =
+    params && typeof params === "object"
+      ? (params as { sessionId?: unknown }).sessionId
+      : undefined;
+  return typeof value === "string" && value ? value : undefined;
+}
+
+/** Agent ingress: Stop refuses the Session's further input at the proxy, even
+ * for calls already queued; the next run of that Session starts clean. */
+export function observeComputerUseRunControl(
+  message: { method?: unknown; params?: unknown },
+  current = control,
+): void {
+  if (!current) return;
+  const sessionId = sessionIdOf(message.params);
+  if (!sessionId) return;
+  if (message.method === "agent/cancel") current.gate.cancelSession(sessionId);
+  else if (message.method === "agent/run") current.gate.clearSession(sessionId);
+}
+
+/** Worker stream: a top-level terminal event is the run's outcome. Only runs
+ * that used the computer are presented by the character. A new top-level turn
+ * also clears a cancel: a Stop may target one input while queued turns of the
+ * same Session continue without another `agent/run`. */
+export function observeComputerUseRunEvent(
+  sessionId: string,
+  value: unknown,
+  current = control,
+): void {
+  if (!current || !value || typeof value !== "object") return;
+  const event = value as { type?: unknown; agentId?: unknown; reason?: unknown };
+  if (event.agentId) return;
+  if (event.type === "session_started") current.gate.clearSession(sessionId);
+  else if (event.type === "error") current.bus.publishRun(sessionId, "failed");
+  else if (event.type === "turn_complete") {
+    const reason = typeof event.reason === "string" ? event.reason : "";
+    current.bus.publishRun(
+      sessionId,
+      reason === "completed" ? "completed" : reason.startsWith("aborted") ? "cancelled" : "failed",
+    );
+  }
 }
 
 /** Test seam and shutdown helper. */

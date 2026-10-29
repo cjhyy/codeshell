@@ -67,6 +67,14 @@ function initialized(bridge: CuaNativeCursorBridge): void {
   });
 }
 
+const INITIALIZED = { jsonrpc: "2.0", method: "notifications/initialized" };
+
+/** Bootstrap after the MCP handshake, then track an already-forwarded action. */
+async function begin(bridge: CuaNativeCursorBridge, value: CuaActivityEvent, message: unknown) {
+  await bridge.observeForwarded(INITIALIZED);
+  bridge.track(value, message);
+}
+
 const event: CuaActivityEvent = { id: "action:1", action: "click", phase: "start", capture: false };
 const request = { method: "tools/call", params: { name: "click", arguments: {} } };
 
@@ -121,8 +129,7 @@ describe("native CUA cursor side channel", () => {
     });
     cleanups.push(() => bridge.close());
     initialized(bridge);
-    await bridge.prepare(event, request);
-    bridge.start(event.id);
+    await begin(bridge, event, request);
     await until(() => server.requests.length >= 4);
     expect(emitted).toEqual([]);
     position = { x: -2200, y: 400 };
@@ -162,11 +169,10 @@ describe("native CUA cursor side channel", () => {
     });
     cleanups.push(() => bridge.close());
     initialized(bridge);
-    await bridge.prepare(event, {
+    await begin(bridge, event, {
       ...request,
       params: { name: "click", arguments: { session: "form", text: "private" } },
     });
-    bridge.start(event.id);
     position = { x: 100, y: 200 };
     await bridge.finish(event.id, false);
     expect(emitted).toHaveLength(1);
@@ -203,16 +209,15 @@ describe("native CUA cursor side channel", () => {
     });
     cleanups.push(() => bridge.close());
     initialized(bridge);
-    await bridge.prepare(event, request);
+    await begin(bridge, event, request);
     position = { x: -2000, y: 200 };
     visualAction = "click";
     await bridge.finish(event.id, false);
     const typing: CuaActivityEvent = { ...event, id: "action:2", action: "type" };
-    await bridge.prepare(typing, {
+    bridge.track(typing, {
       method: "tools/call",
       params: { name: "type_text", arguments: {} },
     });
-    bridge.start(typing.id);
     visualAction = "text";
     await until(() => emitted.length === 2);
     await bridge.finish(typing.id, false);
@@ -248,8 +253,7 @@ describe("native CUA cursor side channel", () => {
     cleanups.push(() => bridge.close());
     initialized(bridge);
     const avoidRect = { x: -2100, y: 100, width: 300, height: 200, label: "private field" };
-    await bridge.prepare({ ...event, avoidRect }, request);
-    bridge.start(event.id);
+    await begin(bridge, { ...event, avoidRect }, request);
     position = { x: -2000, y: 200 };
     await until(() => emitted.length === 1);
     expect(emitted[0]?.avoidRect).toEqual({ x: -2100, y: 100, width: 300, height: 200 });
@@ -281,14 +285,15 @@ describe("native CUA cursor side channel", () => {
     });
     cleanups.push(() => bridge.close());
     initialized(bridge);
-    await bridge.prepare({ ...event, capture: true }, request);
-    await bridge.prepare(event, {
+    // Actions seen before the MCP handshake completes never trigger a query.
+    bridge.track({ ...event, capture: true }, request);
+    bridge.track(event, {
       ...request,
       params: { name: "click", arguments: { scope: "desktop" } },
     });
     expect(injections).toBe(0);
-    await bridge.prepare(event, request);
-    bridge.start(event.id);
+    await begin(bridge, event, request);
+    expect(injections).toBe(1);
     await bridge.finish(event.id, false);
     expect(server.requests).toEqual([]);
   });
@@ -307,7 +312,7 @@ describe("native CUA cursor side channel", () => {
     });
     initialized(bridge);
     const at = Date.now();
-    await bridge.prepare(event, request);
+    expect(await bridge.observeForwarded(INITIALIZED)).toBe(false);
     expect(Date.now() - at).toBeLessThan(250);
     bridge.close();
     expect(
@@ -338,11 +343,11 @@ describe("native CUA cursor side channel", () => {
       },
     });
     initialized(bridge);
-    const preparing = bridge.prepare(event, request);
+    const preparing = bridge.observeForwarded(INITIALIZED);
     await until(() => !!injected);
     bridge.consumeResponse({ id: injected.id, result: { structuredContent: state("mcp-42-123") } });
-    await preparing;
-    bridge.start(event.id);
+    expect(await preparing).toBe(true);
+    bridge.track(event, request);
     await until(() => server.requests.length === 3);
     const at = Date.now();
     bridge.close();
@@ -358,7 +363,7 @@ describe("native CUA cursor side channel", () => {
       emit: async () => {},
     });
     initialized(pending);
-    const stopped = pending.prepare(event, request);
+    const stopped = pending.observeForwarded(INITIALIZED);
     pending.close();
     await stopped;
   });
@@ -439,8 +444,8 @@ readline.createInterface({input:process.stdin}).on('line',line=>{ queue=queue.th
     // their position in the stream and must not be mistaken for response turns.
     child.stdin.end(
       '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}\n' +
-        ' {"jsonrpc":"2.0", "id":2, "method":"tools/call", "params":{"name":"type_text", "arguments":{"text":"private text", "session":"form"}}} \r\n' +
         '{"jsonrpc":"2.0","method":"notifications/initialized"}\n' +
+        ' {"jsonrpc":"2.0", "id":2, "method":"tools/call", "params":{"name":"type_text", "arguments":{"text":"private text", "session":"form"}}} \r\n' +
         ' {"jsonrpc":"2.0", "id":3, "method":"tools/call", "params":{"name":"type_text", "arguments":{"text":"private second", "session":"form"}}} \r\n',
     );
     expect(await exited).toBe(0);

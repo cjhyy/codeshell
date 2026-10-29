@@ -142,7 +142,7 @@ import {
 import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { getCuaDriverHost } from "./computer-use/service.js";
-import { initializeDesktopComputerUse, closeMimiCompanion } from "./computer-use/desktop-setup.js";
+import { initializeDesktopComputerUse, closeComputerUse } from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
 import { externalRuntimeToolContextForSession } from "./external-runtime-tool-context.js";
@@ -7318,7 +7318,7 @@ app.on(
         panelAppBridge.shutdownMedia(),
         chromeExtensionRuntimeService.stop(),
         cuaDriverShutdown,
-        closeMimiCompanion(),
+        closeComputerUse(),
       ]);
       gatewayControlServer = undefined;
       await mobileUploads.dispose();
