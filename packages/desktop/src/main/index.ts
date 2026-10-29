@@ -147,6 +147,7 @@ import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.
 import { ExternalRuntimeService } from "./external-runtime-service.js";
 import { startMobileExternalRuntime } from "./mobile-remote/start-external-runtime.js";
 import { initializeMobileRemoteLifecycle } from "./mobile-remote/lifecycle.js";
+import { resolveMobileStaticRoot } from "./mobile-remote/mobile-static-root.js";
 import { externalRuntimeToolContextForSession } from "./external-runtime-tool-context.js";
 import { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertWorkspaceProfileName } from "./external-runtime-profile.js";
@@ -1063,7 +1064,8 @@ const mobileRemote = new RemoteHostManager({
   // The built mobile web app stays a desktop asset (out/mobile, sibling of the
   // bundled out/main) — pass it explicitly now that RemoteHostManager lives in
   // @cjhyy/code-shell-server and can no longer derive it from its own location.
-  mobileRootDir: resolve(__dirname, "../mobile"),
+  // Packaged builds read it from app.asar.unpacked (see resolveMobileStaticRoot).
+  mobileRootDir: resolveMobileStaticRoot(__dirname),
   onClientEvent: async (event) => {
     // The remote host tags authenticated events with both the device id and a
     // per-socket viewer id. Device state/replies remain shared per phone, while

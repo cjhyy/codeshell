@@ -19,6 +19,15 @@ import { isRelayOrigin } from "../remote-relay/protocol.js";
 /** Outbound bytes one paired socket may leave unread before it is retired. */
 const MAX_SOCKET_BACKLOG_BYTES = 4 * 1024 * 1024;
 
+/** The query suffix ("" or "?…") when the raw request target is exactly the
+ *  root entry, else undefined. The redirect path is fixed, so only the query
+ *  is carried over and it can never form an off-site Location. */
+function rootEntryQuery(target: string | undefined): string | undefined {
+  if (target === "/") return "";
+  if (target?.startsWith("/?")) return target.slice(1);
+  return undefined;
+}
+
 /**
  * Pick the Mac's real LAN IPv4 so a phone on the same Wi-Fi can reach the
  * remote host. We bind to a concrete LAN address (NOT 0.0.0.0) per the design's
@@ -235,6 +244,15 @@ export class RemoteHostManager extends EventEmitter {
             rootDir: this.mobileRootDir,
             devUrl: publicAccess ? undefined : this.mobileDevUrl,
           });
+          return;
+        }
+        // The bare origin is what people type or share; send it to the app with
+        // the query (e.g. ?pairing=) intact. Match the raw target, not the
+        // parsed pathname: "//other.host/" parses to "/" but must stay a 404.
+        const rootQuery = rootEntryQuery(req.url);
+        if (rootQuery !== undefined && (req.method === "GET" || req.method === "HEAD")) {
+          res.writeHead(302, { location: `/mobile/${rootQuery}`, "cache-control": "no-store" });
+          res.end();
           return;
         }
         res.writeHead(404);
