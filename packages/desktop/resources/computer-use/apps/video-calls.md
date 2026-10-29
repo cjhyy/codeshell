@@ -5,6 +5,7 @@ names: [zoom.us, FaceTime, Microsoft Teams]
 stage:
   quiet: true
 ---
+
 ## Video calls (Zoom, FaceTime, Teams)
 
 - Other people may see the screen. Do not act in a live call unless the user asked for that exact action.

@@ -31,6 +31,8 @@ export const settingsNs = {
         open_screenRecording: "打开屏幕录制设置",
         screenSettingsHint:
           "请在系统设置中允许 CodeShell Computer Use 录制屏幕，再返回此处重新检查。",
+        staleGrantHint:
+          "更新 CodeShell 后，原有授权可能失效：如果系统设置里 CodeShell Computer Use 看起来已开启、这里仍显示未授权，请在列表中选中它点“−”删除，再重新添加并开启。",
         checkFailed: "暂时无法确认系统权限，请重新检查或打开对应系统设置。",
         restartHint: "重启 CodeShell 后应用更改，并新建会话使用电脑操作。",
         restart: "重启 CodeShell",
@@ -1213,6 +1215,8 @@ export const settingsNs = {
         open_screenRecording: "Open Screen Recording settings",
         screenSettingsHint:
           "Allow CodeShell Computer Use to record the screen in System Settings, then return here and check again.",
+        staleGrantHint:
+          "Updating CodeShell can invalidate an earlier grant. If System Settings shows CodeShell Computer Use as enabled but this page says it is not granted, select it in the list, remove it with “−”, then add it again and turn it on.",
         checkFailed:
           "System permissions could not be confirmed. Check again or open the corresponding system settings.",
         restartHint:

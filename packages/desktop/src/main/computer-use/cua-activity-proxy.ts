@@ -3,7 +3,12 @@
  * Execution: every tools/call is checked against the host-owned input gate at
  * dispatch time. A refused call never reaches the driver; the caller receives a
  * local MCP error. Accepted bytes are forwarded unchanged, except that this
- * proxy removes its own Session-lineage `_meta` key.
+ * proxy removes its own Session-lineage `_meta` key and gives a window-state
+ * read without a walk budget the default one.
+ *
+ * Perception: a window state whose web area is still empty (the page's
+ * accessibility tree did not exist yet) is read once more, privately, and the
+ * second answer replaces the first. Read path only; input is never repeated.
  *
  * Presentation: activity events are emitted after forwarding and never delay
  * input. The one exception is a screen capture, which waits (bounded) for the
@@ -15,6 +20,7 @@ import { randomUUID } from "node:crypto";
 import { createConnection, type Socket } from "node:net";
 import type { Readable, Writable } from "node:stream";
 import { describedApp, loadAppProfiles, withAppNotes } from "./app-profiles.js";
+import { sparseWebArea, withReadBudget } from "./web-perception.js";
 import { CuaActivityTracker, type CuaActivityEvent } from "./cua-activity.js";
 import { CuaNativeCursorBridge } from "./cua-native-cursor.js";
 import {
@@ -398,6 +404,10 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
   const noteRequests = new Map<string | number, string>();
   const appByPid = new Map<number, string>();
   const noted = new Set<string>();
+  // One turn is in flight at a time, so at most one private re-read is too.
+  const rereads = new Map<string | number, Record<string, unknown>>();
+  let reread: { id: unknown; privateId: string; first: Record<string, unknown> } | undefined;
+  let rereadSequence = 0;
   const remember = <K, V>(map: Map<K, V> | Set<K>, limit: number) => {
     while (map.size > limit) map.delete(map.keys().next().value!);
   };
@@ -480,6 +490,12 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
           continue;
         }
         if (call.stripped) bytes = line(call.stripped);
+        const budgeted = withReadBudget(call.stripped ?? message);
+        if (budgeted) {
+          bytes = line(budgeted);
+          rereads.set(call.id, budgeted);
+          remember(rereads, 16);
+        }
         if (
           profiles.profiles.length &&
           (call.name === "get_window_state" || call.name === "launch_app")
@@ -525,6 +541,8 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
         void cursor.observeForwarded(message);
       }
     }
+    // Let the last turn finish first: it may still need a private re-read.
+    await Promise.race([turnDone, exited]);
     child.stdin.end();
   })();
   async function gateFor(call: ToolCall): Promise<InputGateState | undefined> {
@@ -537,12 +555,38 @@ export async function runCuaActivityProxy(args = process.argv.slice(2)): Promise
   const outgoing = (async () => {
     for await (const part of cuaWireParts(child.stdout)) {
       if (part.overflow) disableObserver();
-      const message = part.inspect ? parsed(part.bytes) : undefined;
+      let message = part.inspect ? parsed(part.bytes) : undefined;
       // Always consume our late private reply, even after observation is disabled.
       if (part.inspect && cursor.consumeResponse(message)) continue;
+      let replaced: Buffer | undefined;
+      const answer = record(message);
+      if (reread && answer && answer.id === reread.privateId) {
+        // The second read stands in for the first, under the caller's id; a
+        // failed second read leaves the first answer as it was.
+        const second =
+          "result" in answer && record(answer.result)?.isError !== true
+            ? { ...answer, id: reread.id }
+            : reread.first;
+        reread = undefined;
+        message = second;
+        replaced = line(second);
+      } else if (answer) {
+        const answered = requestId(answer.id);
+        const request = answered !== undefined ? rereads.get(answered) : undefined;
+        if (answered !== undefined) rereads.delete(answered);
+        if (request && !reread && sparseWebArea(answer.result)) {
+          reread = {
+            id: answer.id,
+            privateId: `codeshell-reread-${++rereadSequence}`,
+            first: answer,
+          };
+          await write(child.stdin, line({ ...request, id: reread.privateId }));
+          continue;
+        }
+      }
       const response = record(message);
       const id = requestId(response?.id);
-      let bytes = part.bytes;
+      let bytes = replaced ?? part.bytes;
       if (id !== undefined && toolLists.delete(id)) {
         const annotated = annotateToolList(message);
         if (annotated) bytes = line(annotated);

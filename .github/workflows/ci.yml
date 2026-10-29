@@ -285,6 +285,10 @@ jobs:
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-file-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-latest-messages.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-sidebar-navigation.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-workbench-back-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-workbench-back-browser.mjs --development
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-project-workbench-back-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-project-workbench-back-browser.mjs --development
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-settings-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-skills-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-model-actions-browser.mjs
