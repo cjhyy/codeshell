@@ -39,7 +39,6 @@ test("recovery holds pending launch and steer payloads until explicit fresh-ID c
       removeItem: (key: string) => storage.delete(key),
     },
   });
-  let busy = true;
   const actions: unknown[] = [];
   const toasts: unknown[] = [];
   const noop = () => {};
@@ -91,9 +90,7 @@ test("recovery holds pending launch and steer payloads until explicit fresh-ID c
       quickChatDefaultModelKey: null,
     },
     runtime: {
-      setBusyForKey: (_key, value) => {
-        busy = value;
-      },
+      setBusyForKey: noop,
       runningBucketRef: { current: null },
       engineToBucketRef: { current: new Map() },
       noRepoCwdRef: { current: "/tmp" },
