@@ -30,6 +30,7 @@ import { CODING_TOOLS } from "@cjhyy/code-shell-capability-coding/capability";
 import {
   BUILTIN_AGENT_PRESETS,
   BUILTIN_TOOLS,
+  sessionsRoot,
   ToolRegistry,
   type GoalConfig,
   type PermissionMode,
@@ -42,7 +43,12 @@ import {
   isFeatureEnabled,
   type FeatureFlagOverrides,
 } from "@cjhyy/code-shell-core/extension";
-import { canonicalKey, withModelTraceContext } from "@cjhyy/code-shell-core/internal";
+import {
+  canonicalKey,
+  needsIndependentOutput,
+  SessionOutputPublisher,
+  withModelTraceContext,
+} from "@cjhyy/code-shell-core/internal";
 import { getTrustCachedSync } from "./trust-store.js";
 import { dlog } from "./desktop-logger.js";
 import { createCodexLaunchResolver, type CodexLaunch } from "./external-runtime-launch.js";
@@ -472,6 +478,25 @@ export class ExternalRuntimeService {
   }
 
   private emitSafely(sessionId: string, event: StreamEvent): void {
+    if (needsIndependentOutput(event)) {
+      const entry = this.sessions.get(sessionId);
+      try {
+        // Cold Goal edits are synchronous, already authorized by Main, and do
+        // not allocate a CLI or borrow a prior runtime's asynchronous identity.
+        event = entry
+          ? entry.recorder.recordIndependentOutput(event)
+          : (new SessionOutputPublisher(() => sessionsRoot(), "host").project(
+              sessionId,
+              event,
+            ) as StreamEvent);
+      } catch (error) {
+        // Never publish an unjournaled visible event or attach a late source
+        // to a replacement Session. The existing failure path retains its fence.
+        if (!entry) throw error;
+        entry.outputFailure();
+        return;
+      }
+    }
     try {
       this.deps.emit(sessionId, event);
     } catch (error) {
