@@ -1,3 +1,4 @@
+import { trackRunStart, cancelRunStarts, hasPendingRunStarts } from "./run-start-claims.js";
 /**
  * AgentServer — wraps ChatSessionManager and exposes it over the protocol.
  *
@@ -86,6 +87,10 @@ import {
 import { clearSessionPathApprovals, openSessionPathApprovals } from "../tool-system/path-policy.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
+import {
+  closeIdleOutputHistorySession,
+  validCloseSessionRequest,
+} from "./output-history-quiescence.js";
 import { logger } from "../logging/logger.js";
 import { nanoid } from "nanoid";
 import type { ChatSession } from "./chat-session.js";
@@ -118,30 +123,6 @@ interface ChildHostScope {
   route: ApprovalRouteTarget;
   pending: Set<string>;
   failure(): { failure: "cancelled" | "owner_lost" | "session_closed"; reason: string } | undefined;
-}
-
-// A run can await a lifecycle handoff before it reaches ChatSession's queue.
-// Share this transient fence across transports using the same manager, while
-// keeping independent managers/identities and subsequent user runs separate.
-const pendingRunStarts = new WeakMap<ChatSessionManager, Map<string, Set<AbortController>>>();
-
-function trackRunStart(manager: ChatSessionManager, id: string, controller: AbortController) {
-  let sessions = pendingRunStarts.get(manager);
-  if (!sessions) pendingRunStarts.set(manager, (sessions = new Map()));
-  let starts = sessions.get(id);
-  if (!starts) sessions.set(id, (starts = new Set()));
-  starts.add(controller);
-  return () => {
-    starts.delete(controller);
-    if (!starts.size && sessions.get(id) === starts) sessions.delete(id);
-  };
-}
-
-function cancelRunStarts(manager: ChatSessionManager, id: string): boolean {
-  const starts = pendingRunStarts.get(manager)?.get(id);
-  if (!starts?.size) return false;
-  for (const controller of [...starts]) controller.abort();
-  return true;
 }
 
 const INTERNAL_PENDING_TOOLS = new Set([
@@ -2759,12 +2740,14 @@ export class AgentServer {
 
   private async handleCloseSession(req: RpcRequest): Promise<void> {
     const params = (req.params ?? {}) as unknown as import("./types.js").CloseSessionParams;
-    if (typeof params.sessionId !== "string" || params.sessionId.length === 0) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId is required"),
-      );
-      return;
-    }
+    if (!validCloseSessionRequest(req, this.transport)) return;
+    if (params.onlyIfIdle === true)
+      return closeIdleOutputHistorySession(req, this.transport, {
+        manager: this.chatManager,
+        mailbox: this.notificationMailbox,
+        pendingStarts: hasPendingRunStarts(this.chatManager, params.sessionId),
+        closed: () => this.observeSessionClosed(params.sessionId),
+      });
     if (this.chatManager) {
       cancelRunStarts(this.chatManager, params.sessionId);
       const session = this.chatManager.get(params.sessionId);

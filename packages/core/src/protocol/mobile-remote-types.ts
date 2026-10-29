@@ -364,6 +364,7 @@ export type MobileServerEvent =
         inputIds?: string[];
         incarnation?: string;
         journalIdentity?: string;
+        historicalGap?: true;
       };
     }
   | ({
@@ -396,6 +397,7 @@ export type MobileServerEvent =
       entries: Array<{ seq: number; event: unknown }>;
       nextSeq: number;
       outputCursor?: string;
+      historicalGap?: true;
       /** Main lifetime in which these sequence numbers are valid. */
       epoch?: string;
     }

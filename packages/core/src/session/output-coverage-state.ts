@@ -15,6 +15,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { lockSync } from "../utils/lockfile.js";
+import { hasHistoricalOutputGap } from "./output-history-gap.js";
 import {
   validateOutputJournalBinding,
   type OutputJournalBinding,
@@ -35,6 +36,7 @@ export interface SessionOutputCoverageProof {
   journalIdentity?: string;
   unpaired: boolean;
   inputIds: string[];
+  historicalGap?: true;
 }
 type State = Record<string, unknown> & {
   sessionId: string;
@@ -172,6 +174,7 @@ function location(root: string, sessionId: string) {
     state.startedAt,
     state.outputJournalBinding,
   );
+  if (state.outputJournalBinding?.anchorName && !hasHistoricalOutputGap(state)) throw failed();
   return { directory, target, state, incarnation, stat };
 }
 function coverage(at: ReturnType<typeof location>): PersistedOutputCoverage | undefined {
@@ -312,6 +315,7 @@ export class SessionOutputCoverageStore {
       this.bind(sessionId, at);
       const proof = coverage(at);
       return {
+        ...(hasHistoricalOutputGap(at.state) ? { historicalGap: true as const } : {}),
         status: at.state.outputJournalIdentity ? "ok" : "unavailable",
         incarnation: at.incarnation,
         journalIdentity: at.state.outputJournalIdentity,

@@ -47,6 +47,7 @@ export interface Snapshot {
   outputInputIds?: string[];
   outputCoverageIdentity?: string;
   outputJournalIdentity?: string;
+  historicalGap?: true;
 }
 
 interface SessionLog {
@@ -179,6 +180,7 @@ export class SessionSnapshotStore {
   get(sessionId: string, sinceSeq = 0): Snapshot {
     const proof = this.persistence?.read(sessionId);
     const coverage = {
+      ...(proof?.historicalGap ? { historicalGap: true as const } : {}),
       ...(proof?.unpaired ? { outputUnpaired: true } : {}),
       ...(proof?.inputIds.length ? { outputInputIds: proof.inputIds } : {}),
       ...(proof?.incarnation ? { outputCoverageIdentity: proof.incarnation } : {}),
@@ -222,6 +224,19 @@ export class SessionSnapshotStore {
     this.totalBytes -= this.logs.get(sessionId)?.bytes ?? 0;
     this.coverageBytes -= this.logs.get(sessionId)?.coverage.memoryBytes ?? 0;
     this.logs.delete(sessionId);
+  }
+
+  /** A verified explicit checkpoint retires old proof while keeping transport seq monotonic. */
+  resetForHistoryCheckpoint(sessionId: string): void {
+    const nextSeq = this.logs.get(sessionId)?.nextSeq ?? 1;
+    this.forget(sessionId);
+    this.logs.set(sessionId, {
+      events: [],
+      nextSeq,
+      bytes: 0,
+      topLevelRun: { running: false },
+      coverage: new OutputCoverage(),
+    });
   }
 
   private evict(log: SessionLog): void {

@@ -123,6 +123,12 @@ export class MobileOutputRecovery {
     this.bindings.delete(viewerId);
   }
 
+  /** A confirmed checkpoint invalidates every old viewer proof for this Session. */
+  revokeSession(sessionId: string): void {
+    for (const [viewerId, binding] of this.bindings)
+      if (binding.sessionId === sessionId) this.revoke(viewerId);
+  }
+
   private projectLegacyBase(events: Parameters<typeof transcriptToStreamEvents>[0]) {
     const projected = transcriptToStreamEvents(events);
     return {
@@ -205,6 +211,7 @@ export class MobileOutputRecovery {
           nextSeq: header.seq + 1,
           entries: [],
           outputCursor: header.outputCursor,
+          ...(snapshot?.historicalGap ? { historicalGap: true as const } : {}),
         });
       } else throw new Error("uncovered stream unavailable");
     } catch {
@@ -361,6 +368,7 @@ export class MobileOutputRecovery {
           nextSeq: snapshot.nextSeq,
           outputCursor: snapshot.outputCursor,
           unpaired: snapshot.outputUnpaired === true,
+          ...(snapshot.historicalGap ? { historicalGap: true as const } : {}),
           ...(snapshot.outputInputIds ? { inputIds: snapshot.outputInputIds } : {}),
           ...(snapshot.outputCoverageIdentity
             ? { incarnation: snapshot.outputCoverageIdentity }

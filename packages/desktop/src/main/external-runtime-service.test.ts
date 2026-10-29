@@ -37,6 +37,7 @@ import {
 import { SessionSnapshotStore } from "./SessionSnapshotStore.js";
 import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
 import { recoverDesktopOutputJournal } from "../renderer/app/outputJournalRecovery.js";
+import { acquireOutputHistoryRecovery } from "./session-output-history-lease.js";
 import { createSessionToolHost, FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
 import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { EXTERNAL_GOAL_TOOLS } from "./external-runtime-goals.js";
@@ -250,6 +251,43 @@ afterEach(() => {
 });
 
 describe("ExternalRuntimeService", () => {
+  test("history checkpoint quiesces only idle CLI work and preserves plan instructions for continuation", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start({
+      ...request,
+      planMode: true,
+      developerInstructions: "synthetic constrained instructions",
+    });
+    await svc.send(request.sessionId, "synthetic read-only question");
+    background.running.add(request.sessionId);
+    await expect(svc.quiesceForOutputRecovery(request.sessionId, 77)).rejects.toThrow(
+      "active work",
+    );
+    expect(closed).toHaveLength(0);
+    background.running.clear();
+    await expect(svc.quiesceForOutputRecovery(request.sessionId, 88)).rejects.toThrow(
+      "owned by another",
+    );
+    const release = acquireOutputHistoryRecovery(request.sessionId);
+    try {
+      await expect(svc.send(request.sessionId, "must not run")).rejects.toThrow("output recovery");
+      await svc.quiesceForOutputRecovery(request.sessionId, 77);
+      expect(closed).toEqual([request.sessionId]);
+      expect(released).toEqual([]);
+    } finally {
+      release();
+    }
+    await svc.ensureContinuation(request);
+    expect(starts.at(-1)).toMatchObject({
+      planMode: true,
+      developerInstructions: expect.stringContaining("synthetic constrained instructions"),
+    });
+    await svc.stopAll();
+  });
+
   test("cold external Goal control is journaled without starting a runtime", () => {
     const manager = new SessionManager();
     const session = manager.create(request.cwd, "fixture", "codex", request.sessionId);

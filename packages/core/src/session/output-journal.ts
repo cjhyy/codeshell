@@ -45,10 +45,12 @@ import {
 } from "./output-journal-storage.js";
 import {
   createOutputJournalBinding,
+  outputJournalAnchorName,
   validateOutputJournalBinding,
   type OutputJournalBinding,
 } from "./output-journal-binding.js";
 import { capturePersistentFileIdentity } from "./persistent-file-identity.js";
+import { hasHistoricalOutputGap } from "./output-history-gap.js";
 
 const MAX_JOURNAL_BYTES = 128 * 1024 * 1024;
 const MAX_RECORD_BYTES = 256 * 1024;
@@ -143,6 +145,7 @@ export interface OutputJournalPage {
   version: 1;
   /** Host coverage binds this prefix to the current Session directory incarnation. */
   coverageIdentity?: string;
+  historicalGap?: true;
   status: "ok" | "unavailable" | "cursor_invalid" | "incomplete";
   /** All pages in a recovery use the same frozen through cursor. */
   from?: string;
@@ -272,13 +275,15 @@ function sessionLocation(root: string, sessionId: string) {
       invalid("Output journal persistent Session identity changed");
     }
   }
+  if (state.outputJournalBinding?.anchorName && !hasHistoricalOutputGap(state))
+    throw new JournalError("incomplete", "Output epoch lost its historical gap receipt");
   return {
     root: canonicalRoot,
     directory,
     statePath,
     state,
     stat,
-    file: join(directory, "output-journal.jsonl"),
+    file: join(directory, outputJournalAnchorName(state.outputJournalBinding)),
   };
 }
 
@@ -979,6 +984,7 @@ function readOutputJournalAttempt(
         throw new JournalError("incomplete", "Published output watermark changed during recovery");
     }
     return {
+      ...(hasHistoricalOutputGap(finalLocation.state) ? { historicalGap: true as const } : {}),
       version: 1,
       status: "ok",
       coverageIdentity: outputCoverageIncarnation(

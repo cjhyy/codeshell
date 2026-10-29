@@ -430,7 +430,8 @@ describe("architecture growth budgets", () => {
       // +1 collection manifest schema/types for standalone Hosts and type-only Desktop UI.
       // +1 type-only preset routing policy/rule contract; no runtime or permission authority.
       // +1 CONTRACTS: read-only contract version table reported by initialize and /health; no host state.
-      "packages/core/src/index.ts": 134,
+      // Explicit history recovery adds one public type-only contract export.
+      "packages/core/src/index.ts": 135,
       // +3 reviewed Optimization Lab foundations: read-only Skill snapshots,
       // the shared file lock, and text-connection resolution (§5.2 of the plan).
       // +1 type-only LifetimeScope/Disposable contract lets capability modules
@@ -509,7 +510,8 @@ describe("architecture growth budgets", () => {
       // +4 Host-only memory seams (d93a3ab9e) so Desktop maintains memory for external
       // runtime sessions: MemoryOrchestrator (+ options type), the ephemeral-session check
       // and the shared content sanitizer. None reaches the public SDK or extension entry.
-      "packages/core/src/index.internal.ts": 127,
+      // Host-only checkpoint service plus its shared type-only contract.
+      "packages/core/src/index.internal.ts": 129,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
