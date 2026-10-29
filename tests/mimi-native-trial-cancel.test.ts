@@ -72,6 +72,7 @@ mock.module("electron", () => ({
     destroyed = false;
     async loadURL() {}
     show() {}
+    showInactive() {}
     getBounds() {
       return { x: 300, y: 130, width: 1240, height: 820 };
     }
@@ -88,8 +89,9 @@ function fixture(requestTimeoutMs = 1_000) {
   processes.length = 0;
   calls.length = 0;
   return createMimiNativeTrial({
-    companion: { mcpProxy: {}, update: async () => {} } as any,
-    driverPath: "fixture-driver",
+    companion: { update: async () => {} } as any,
+    mcpProxy: {} as any,
+    bundle: { helperPath: "fixture-helper", driverPath: "fixture-driver" },
     displayId: 3,
     status() {},
     requestTimeoutMs,
