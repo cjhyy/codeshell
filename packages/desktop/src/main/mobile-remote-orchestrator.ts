@@ -167,6 +167,7 @@ export class MobileRemoteOrchestrator {
       snapshot: (id, sinceSeq = 0) => this.deps.getBridge()?.getSnapshot(id, sinceSeq),
       reply: (viewer, event) => this.deps.remote.sendToViewer(viewer, event),
       owner: (id) => this.deps.getBridge()?.panelOwnerWebContentsId(id),
+      ownerRevision: (id) => this.deps.getBridge()?.sessionPanelOwnerRevision(id),
       authenticated: (viewer, device) => this.deps.remote.hasAuthenticatedViewer(viewer, device),
     });
   }

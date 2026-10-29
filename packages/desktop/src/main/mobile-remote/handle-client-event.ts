@@ -268,13 +268,20 @@ export async function handleClientEvent(
       // A later selection/create/room transition can revoke this grant while
       // authority awaits. It must not write the retired device selection back.
       if (!(await recovery)) return;
-    } else if (event.type === "session.outputJournal" || event.type === "session.legacyBase")
+    } else if (
+      event.type === "session.outputJournal" ||
+      event.type === "session.legacyBase" ||
+      event.type === "session.historyView" ||
+      event.type === "session.historyDetail"
+    )
       await recovery;
     else void recovery;
   }
   if (
     event.type === "session.outputJournal" ||
     event.type === "session.legacyBase" ||
+    event.type === "session.historyView" ||
+    event.type === "session.historyDetail" ||
     event.type === "session.recovery.cancel"
   )
     return;
