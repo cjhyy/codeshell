@@ -17,7 +17,7 @@ async function fixture() {
   const mailbox = new NotificationQueue(),
     sent: any[] = [];
   let deliver!: (value: unknown) => void;
-  new AgentServer({
+  const server = new AgentServer({
     chatManager: manager,
     notificationMailbox: mailbox,
     ownsBackgroundWakeups: false,
@@ -29,7 +29,7 @@ async function fixture() {
       close() {},
     } as any,
   });
-  return { manager, session, mailbox, sent, deliver };
+  return { manager, session, mailbox, sent, deliver, server };
 }
 test("actual closeSession idle RPC retains completed background history", async () => {
   const f = await fixture();
@@ -49,6 +49,23 @@ test("actual closeSession idle RPC retains completed background history", async 
   const resumed = await f.manager.getOrCreate(f.session.id, {});
   expect(resumed).not.toBe(f.session);
   expect(resumed.id).toBe(f.session.id);
+  await f.manager.close(f.session.id);
+});
+
+test("actual idle RPC refuses a drained notification whose background wake is still preparing", async () => {
+  const f = await fixture();
+  (f.server as any).wakeupsInFlight.add(f.session.id);
+  f.deliver({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "agent/closeSession",
+    params: { sessionId: f.session.id, onlyIfIdle: true },
+  });
+  for (let n = 0; n < 50 && !f.sent.some((value) => value.id === 1); n++)
+    await new Promise((resolve) => setTimeout(resolve, 2));
+  expect(f.sent.find((value) => value.id === 1)?.error).toBeDefined();
+  expect(f.manager.get(f.session.id)).toBe(f.session);
+  (f.server as any).wakeupsInFlight.clear();
   await f.manager.close(f.session.id);
 });
 test.each(["background", "approval", "pending start"])(

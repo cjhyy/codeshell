@@ -2745,7 +2745,9 @@ export class AgentServer {
       return closeIdleOutputHistorySession(req, this.transport, {
         manager: this.chatManager,
         mailbox: this.notificationMailbox,
-        pendingStarts: hasPendingRunStarts(this.chatManager, params.sessionId),
+        pendingStarts:
+          hasPendingRunStarts(this.chatManager, params.sessionId) ||
+          this.wakeupsInFlight.has(params.sessionId),
         closed: () => this.observeSessionClosed(params.sessionId),
       });
     if (this.chatManager) {
