@@ -280,6 +280,7 @@ jobs:
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-model-actions-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-workbench-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-workbench-browser.mjs --development
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-history-details-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mcp-settings-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-history-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-links-browser.mjs
