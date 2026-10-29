@@ -6,7 +6,7 @@ import {
   SPRITE_EFFECTS,
   type CharacterRenderer,
 } from "./character-renderer";
-import { companionLocomotion, type CompanionLocomotion } from "./companion-locomotion";
+import { companionLocomotion, HOP_MS, type CompanionLocomotion } from "./companion-locomotion";
 import { companionActionLabel } from "./companion-pose";
 import { companionCueDuration } from "./sprite-animation";
 import { SpriteActor } from "./SpriteActor";
@@ -47,6 +47,7 @@ export function MimiCompanionWindow() {
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [travel, setTravel] = useState<CompanionLocomotion>({ kind: "none" });
   const lastPosition = useRef<{ x: number; y: number } | undefined>(undefined);
+  const lastOrigin = useRef<{ x: number; y: number } | undefined>(undefined);
   const travelTimer = useRef<number | undefined>(undefined);
   const [cueActivity, setCueActivity] = useState<MimiCompanionState["activity"] | null>(null);
   const currentCue = useRef<MimiCompanionState["activity"] | null>(null);
@@ -171,17 +172,28 @@ export function MimiCompanionWindow() {
   useEffect(() => {
     if (!state) return;
     const from = lastPosition.current;
+    const origin = state.windowOrigin;
+    const previousOrigin = lastOrigin.current;
     lastPosition.current = state.position;
+    lastOrigin.current = origin;
     if (dragPosition) return;
-    const next = companionLocomotion(from, state.position, {
-      reducedMotion,
-      immediate: Boolean(state.avoidInput) || !visible,
-    });
+    // Another display means another overlay window: there is no path to walk.
+    const crossed =
+      !!origin &&
+      !!previousOrigin &&
+      (origin.x !== previousOrigin.x || origin.y !== previousOrigin.y);
+    const next: CompanionLocomotion =
+      crossed && !reducedMotion && visible && !state.avoidInput
+        ? { kind: "hop", duration: HOP_MS }
+        : companionLocomotion(from, state.position, {
+            reducedMotion,
+            immediate: Boolean(state.avoidInput) || !visible,
+          });
     window.clearTimeout(travelTimer.current);
     setTravel(next);
     if (next.kind !== "none")
       travelTimer.current = window.setTimeout(() => setTravel({ kind: "none" }), next.duration);
-  }, [state?.position.x, state?.position.y]);
+  }, [state?.position.x, state?.position.y, state?.windowOrigin?.x, state?.windowOrigin?.y]);
 
   const closeMenu = useCallback(() => {
     setMenuOpen(false);
@@ -262,6 +274,12 @@ export function MimiCompanionWindow() {
   const typing = cueActive && ["type", "key"].includes(presented.activity.action);
   const targetEffect = cueActive && ["click", "scroll", "drag"].includes(presented.activity.action);
   const position = dragPosition ?? state.position;
+  // While the human is typing or pointing elsewhere, step back and go quiet.
+  const yielding = Boolean(state.control?.userActive) && !humanActive;
+  const answerHandoff = (accept: boolean) => {
+    void window.mimiCompanion.handoff(accept).catch(() => setError("暂时无法打开聊天"));
+    if (!accept) window.mimiCompanion.interaction("leave");
+  };
   return (
     <div
       className={reducedMotion ? "mimi-scene mimi-scene--still" : "mimi-scene"}
@@ -278,7 +296,7 @@ export function MimiCompanionWindow() {
         </div>
       )}
       <div
-        className={`mimi-companion${held ? " mimi-companion--held" : ""}${travel.kind === "hop" ? " mimi-companion--hop" : ""}`}
+        className={`mimi-companion${held ? " mimi-companion--held" : ""}${travel.kind === "hop" ? " mimi-companion--hop" : ""}${yielding ? " mimi-companion--yield" : ""}`}
         data-appearance={state.appearance}
         data-action={cueActive ? presented.activity.action : "idle"}
         data-perch={state.perch ?? "beside-target"}
@@ -409,6 +427,25 @@ export function MimiCompanionWindow() {
                   ? "正在输入"
                   : "输入完成"
                 : companionActionLabel(presented))}
+          </div>
+        )}
+        {state.handoff && !menuOpen && !held && (
+          <div
+            className="mimi-companion__handoff"
+            role="dialog"
+            aria-label="让 Mimi 看看这个窗口"
+            onPointerEnter={() => window.mimiCompanion.interaction("hover")}
+            onPointerLeave={() => window.mimiCompanion.interaction("leave")}
+          >
+            <p>让 Mimi 看看「{state.handoff.app}」？</p>
+            <div>
+              <button type="button" onClick={() => answerHandoff(true)}>
+                看看
+              </button>
+              <button type="button" onClick={() => answerHandoff(false)}>
+                算了
+              </button>
+            </div>
           </div>
         )}
         {menuOpen && (

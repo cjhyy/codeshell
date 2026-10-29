@@ -47,6 +47,8 @@ export interface MimiCompanionState {
   pinned?: boolean;
   target?: { x: number; y: number };
   perch?: MimiCompanionPerch;
+  /** Mimi was dropped on this app's window: offer to look at it in the chat. */
+  handoff?: { app: string };
   /** Control category under the current gesture, for an apt motion. */
   element?: MimiCompanionElement;
   activity: {
@@ -71,6 +73,8 @@ export interface MimiCompanionApi {
   interaction(phase: "hover" | "leave" | "begin" | "end"): void;
   move(position: { x: number; y: number }): void;
   openChat(): Promise<void>;
+  /** Answer the drop offer; acceptance opens the chat with a draft, unsent. */
+  handoff(accept: boolean): Promise<void>;
   resumeFollowing(): void;
   /** Ask the execution side to refuse all computer input until resumed. */
   stopComputer(): void;
