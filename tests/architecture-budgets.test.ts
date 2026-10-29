@@ -140,8 +140,10 @@ describe("architecture growth budgets", () => {
     // Capabilities is the v0.9.34 anonymous, origin-bounded service discovery route;
     // it exposes only registration/GitHub availability, never account credentials.
     // Count all five explicit collection operations in the extracted registrar.
+    // Managed runtime discovery retains its two existing routes in an extracted registrar.
     expect(
       matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/managed-runtime-wiring.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/cc-room/linked-session-ipc.ts", /ipcMain\.handle\(/g) +
         matches(
           "packages/desktop/src/main/cc-room/linked-session-observation-ipc.ts",
