@@ -228,12 +228,9 @@ import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import { PetImDecisions, collectImDecisions } from "./pet/pet-im-decisions.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
-import {
-  openLinkedSessionFromIpc,
-  registerRoomHistoryIpc,
-  takeOverLinkedSessionFromIpc,
-} from "./cc-room/linked-session-ipc.js";
+import { registerRoomHistoryIpc } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
+import { registerLinkedSessionObservationIpc } from "./cc-room/linked-session-observation-ipc.js";
 import { DEFAULT_SEGMENT_IDLE_MS, buildMigrationSummary } from "@cjhyy/code-shell-pet";
 import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { materializeOutgoingAttachments } from "@cjhyy/code-shell-chat";
@@ -5711,9 +5708,6 @@ ipcMain.handle(
   },
 );
 ipcMain.handle("rooms:open", async (_e, roomId: string) => roomManager.open(roomId));
-ipcMain.handle("rooms:close", async (_e, roomId: string) => {
-  roomManager.close(roomId);
-});
 ipcMain.handle("rooms:send", async (_e, roomId: string, text: string) => {
   if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
     throw new Error("invalid room message");
@@ -5755,61 +5749,15 @@ ipcMain.handle(
     return roomManager.openForSession(claudeSessionId, cwd, mode, kind ?? "claude-code");
   },
 );
-ipcMain.handle(
-  "ccRoom:openLinkedSession",
-  async (_e, externalSessionId: unknown, cwd: unknown, kind: unknown) =>
-    openLinkedSessionFromIpc(
-      roomManager,
-      externalSessionId,
-      await requireRendererLinkedSessionPath(cwd),
-      kind,
-    ),
-);
-ipcMain.handle(
-  "ccRoom:takeOverLinkedSession",
-  async (_e, roomId: unknown, externalSessionId: unknown, cwd: unknown, kind: unknown) =>
-    takeOverLinkedSessionFromIpc(
-      roomManager,
-      roomId,
-      externalSessionId,
-      await requireRendererLinkedSessionPath(cwd),
-      kind,
-    ),
-);
-const transcriptCleanupSenders = new Set<number>();
-ipcMain.handle(
-  "ccRoom:subscribeTranscript",
-  async (
-    event,
-    roomId: string,
-    cwd: string,
-    sessionId: string,
-    kind: "claude-code" | "codex",
-    limit: number,
-  ) => {
-    // Linked rooms may live in a worktree of a registered root; the opened-room
-    // match below is what binds this subscription.
-    cwd = await requireRendererLinkedSessionPath(cwd);
-    if (!mobileOrchestrator.roomMatchesTranscript(roomId, cwd, sessionId, kind)) {
-      throw new Error("cc-room transcript subscription does not match the opened room");
-    }
-    const senderId = event.sender.id;
-    const subscriberId = `desktop:${senderId}`;
-    if (!transcriptCleanupSenders.has(senderId)) {
-      transcriptCleanupSenders.add(senderId);
-      event.sender.once("destroyed", () => {
-        transcriptCleanupSenders.delete(senderId);
-        transcriptSubscriptions?.unsubscribeSubscriber(subscriberId);
-      });
-    }
-    return {
-      ...transcriptSubscriptions!.subscribe({ subscriberId, roomId, cwd, sessionId, kind, limit }),
-      approvals: approvalBridge.pendingRequests(roomId), // cards a remounted view missed
-    };
-  },
-);
-ipcMain.handle("ccRoom:unsubscribeTranscript", async (event, roomId: string) => {
-  transcriptSubscriptions!.unsubscribe(`desktop:${event.sender.id}`, roomId);
+registerLinkedSessionObservationIpc({
+  ipcMain,
+  windows: mainWindows,
+  roomManager,
+  listBackgroundWork: createTaskInboxBackgroundHost({ worker: () => bridge }).list,
+  requirePath: requireRendererLinkedSessionPath,
+  subscriptions: transcriptSubscriptions,
+  roomMatchesTranscript: (...args) => mobileOrchestrator.roomMatchesTranscript(...args),
+  pendingApprovals: (roomId) => approvalBridge.pendingRequests(roomId),
 });
 ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) => {
   if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
@@ -5842,10 +5790,6 @@ ipcMain.handle(
     return readCodexRecentHistory(cwd, threadId, limit);
   },
 );
-ipcMain.handle("ccRoom:closeSession", async (_e, roomId: string) => {
-  transcriptSubscriptions?.endRoom(roomId);
-  roomManager.close(roomId);
-});
 
 // Remaining CC/Codex subscription quota. Reads tokens from Keychain / ~/.codex
 // then hits each vendor's usage source. `provider` restricts the lookup

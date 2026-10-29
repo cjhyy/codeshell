@@ -53,16 +53,12 @@ function Observer(): null {
   return null;
 }
 
-async function render(
-  sessionId: string,
-  messages: readonly Message[] = [message()],
-  autoOpen = false,
-) {
+async function render(sessionId: string, messages: readonly Message[] = [message()]) {
   const container = document.createElement("div");
   root ??= createRoot(container);
   await act(async () => {
     root?.render(
-      <DriveAgentJobsLoader sessionId={sessionId} messages={messages} autoOpen={autoOpen}>
+      <DriveAgentJobsLoader sessionId={sessionId} messages={messages}>
         <Observer />
       </DriveAgentJobsLoader>,
     );
@@ -171,89 +167,87 @@ describe("DriveAgentJobsLoader request lifecycle", () => {
     expect(cleared).toContain(77);
   });
 
-  test("opens the first new live task before its external id arrives and leaves concurrent tasks unfocused", async () => {
+  test("loads new live tasks and their progress without opening the panel", async () => {
+    const details: unknown[] = [];
+    const listener = (event: Event) => details.push((event as CustomEvent).detail);
+    window.addEventListener("codeshell:open-cli-session", listener);
+    let items = [
+      { ...job("live", "running"), externalSessionId: undefined },
+      { ...job("live", "running"), jobId: "cc-second" },
+    ];
+    Object.assign(window, {
+      codeshell: { listBackgroundWork: async () => ({ items }) },
+    });
+    try {
+      await render("live", []);
+      await render("live", [
+        { ...message(), startedAt: Date.now(), status: "running", result: undefined },
+      ]);
+      // The second launch starts and completes between two renderer updates.
+      const messages = [
+        message(),
+        { ...message("cc-second"), id: "tool-2", startedAt: Date.now() },
+      ];
+      await render("live", messages);
+      expect(observedJobs).toHaveLength(2);
+      expect(details).toEqual([]);
+
+      items = items.map((item) => ({
+        ...item,
+        externalSessionId: `thread-${item.jobId}`,
+        progress: {
+          lastActivityAt: Date.now(),
+          eventCount: 1,
+          summary: "Read README.md",
+        },
+      }));
+      await act(async () => {
+        window.dispatchEvent(new Event("codeshell:files-changed"));
+        await flushMicrotasks();
+      });
+      expect(observedJobs[0]?.progress?.summary).toBe("Read README.md");
+      expect(details).toEqual([]);
+
+      items = items.map((item) => ({ ...item, status: "completed" }));
+      await act(async () => {
+        window.dispatchEvent(new Event("codeshell:files-changed"));
+        await flushMicrotasks();
+      });
+      expect(observedJobs.every((item) => item.status === "completed")).toBe(true);
+      expect(details).toEqual([]);
+    } finally {
+      window.removeEventListener("codeshell:open-cli-session", listener);
+    }
+  });
+
+  test("does not navigate for restored history or a replayed running tool", async () => {
     const details: unknown[] = [];
     const listener = (event: Event) => details.push((event as CustomEvent).detail);
     window.addEventListener("codeshell:open-cli-session", listener);
     Object.assign(window, {
       codeshell: {
-        listBackgroundWork: async () => ({
-          items: [
-            { ...job("live", "running"), externalSessionId: undefined },
-            { ...job("live", "running"), jobId: "cc-second" },
-          ],
+        listBackgroundWork: async (sessionId: string) => ({
+          items: [job(sessionId, "running")],
         }),
       },
     });
     try {
-      await render("live", [], true);
-      await render(
-        "live",
-        [
-          { ...message(), startedAt: Date.now(), status: "running", result: undefined },
-          {
-            ...message("cc-second"),
-            startedAt: Date.now(),
-            id: "tool-2",
-            status: "running",
-            result: undefined,
-          },
-        ],
-        true,
-      );
-      await render("live", [message(), { ...message("cc-second"), id: "tool-2" }], true);
-      expect(details).toHaveLength(1);
-      expect(details[0]).toMatchObject({
-        jobId: "cc-job",
-        sourceSessionId: "live",
-        autoOpen: true,
-      });
-      expect(details[0]).not.toHaveProperty("externalSessionId");
-      await render("live", [message(), { ...message("cc-second"), id: "tool-2" }], true);
-      expect(details).toHaveLength(1);
-    } finally {
-      window.removeEventListener("codeshell:open-cli-session", listener);
-    }
-  });
-
-  test("does not navigate for replayed history or a replayed running tool", async () => {
-    const details: unknown[] = [];
-    const listener = (event: Event) => details.push((event as CustomEvent).detail);
-    window.addEventListener("codeshell:open-cli-session", listener);
-    Object.assign(window, {
-      codeshell: { listBackgroundWork: async () => ({ items: [job("history", "running")] }) },
-    });
-    try {
-      await render("history", [message()], true);
-      await render("other", [{ ...message(), status: "running", result: undefined }], true);
-      await render("other", [message()], true);
-      await render("late-history", [], true);
-      await render("late-history", [{ ...message(), status: "running", result: undefined }], true);
-      await render("late-history", [message()], true);
+      await render("history", [message()]);
+      expect(observedJobs[0]?.sourceSession.sessionId).toBe("history");
+      await render("other", [{ ...message(), status: "running", result: undefined }]);
+      await render("other", [message()]);
+      expect(observedJobs[0]?.sourceSession.sessionId).toBe("other");
+      await render("late-history", []);
+      await render("late-history", [{ ...message(), status: "running", result: undefined }]);
+      await render("late-history", [message()]);
+      expect(observedJobs[0]?.sourceSession.sessionId).toBe("late-history");
       expect(details).toEqual([]);
     } finally {
       window.removeEventListener("codeshell:open-cli-session", listener);
     }
   });
 
-  test("opens a fast live tool even when its start and result render together", async () => {
-    const details: unknown[] = [];
-    const listener = (event: Event) => details.push((event as CustomEvent).detail);
-    window.addEventListener("codeshell:open-cli-session", listener);
-    Object.assign(window, {
-      codeshell: { listBackgroundWork: async () => ({ items: [job("fast", "running")] }) },
-    });
-    try {
-      await render("fast", [], true);
-      await render("fast", [{ ...message(), startedAt: Date.now() }], true);
-      expect(details).toHaveLength(1);
-      expect(details[0]).toMatchObject({ jobId: "cc-job", autoOpen: true });
-    } finally {
-      window.removeEventListener("codeshell:open-cli-session", listener);
-    }
-  });
-
-  test("retains a live launch across turn end until its result and registry response arrive", async () => {
+  test("a delayed registry response does not open the panel after the launch finishes", async () => {
     const details: unknown[] = [];
     const listener = (event: Event) => details.push((event as CustomEvent).detail);
     window.addEventListener("codeshell:open-cli-session", listener);
@@ -262,74 +256,18 @@ describe("DriveAgentJobsLoader request lifecycle", () => {
       codeshell: { listBackgroundWork: () => response.promise },
     });
     try {
-      await render("delayed", [], true);
-      const running = {
-        ...message(),
-        startedAt: Date.now(),
-        status: "running" as const,
-        result: undefined,
-      };
-      await render("delayed", [running], true);
-      await render("delayed", [running], false);
-      await render("delayed", [message()], false);
+      await render("delayed", []);
+      await render("delayed", [
+        { ...message(), startedAt: Date.now(), status: "running", result: undefined },
+      ]);
+      await render("delayed", [message()]);
       expect(details).toEqual([]);
       await act(async () => {
-        response.resolve({ items: [job("delayed", "running")] });
+        response.resolve({ items: [job("delayed", "completed")] });
         await flushMicrotasks();
       });
-      expect(details).toHaveLength(1);
-      expect(details[0]).toMatchObject({
-        jobId: "cc-job",
-        sourceSessionId: "delayed",
-        autoOpen: true,
-      });
-    } finally {
-      window.removeEventListener("codeshell:open-cli-session", listener);
-    }
-  });
-
-  test("a delayed terminal batch opens only once after turn end and a later live batch can open again", async () => {
-    const details: unknown[] = [];
-    const listener = (event: Event) => details.push((event as CustomEvent).detail);
-    window.addEventListener("codeshell:open-cli-session", listener);
-    const response = deferred<{ items: BackgroundWorkInfo[] }>();
-    const finished = [job("terminal-batch"), { ...job("terminal-batch"), jobId: "cc-second" }];
-    Object.assign(window, {
-      codeshell: { listBackgroundWork: () => response.promise },
-    });
-    try {
-      await render("terminal-batch", [], true);
-      const running = [
-        { ...message(), startedAt: Date.now(), status: "running" as const, result: undefined },
-        {
-          ...message("cc-second"),
-          id: "tool-2",
-          startedAt: Date.now(),
-          status: "running" as const,
-          result: undefined,
-        },
-      ];
-      await render("terminal-batch", running, true);
-      const completed = [message(), { ...message("cc-second"), id: "tool-2" }];
-      await render("terminal-batch", completed, true);
-      await render("terminal-batch", completed, false);
-      await act(async () => {
-        response.resolve({ items: finished });
-        await flushMicrotasks();
-      });
-      expect(details).toHaveLength(1);
-      Object.assign(window.codeshell, {
-        listBackgroundWork: async () => ({
-          items: [...finished, { ...job("terminal-batch", "running"), jobId: "cc-third" }],
-        }),
-      });
-      await render(
-        "terminal-batch",
-        [...completed, { ...message("cc-third"), id: "tool-3", startedAt: Date.now() }],
-        true,
-      );
-      expect(details).toHaveLength(2);
-      expect(details[1]).toMatchObject({ jobId: "cc-third" });
+      expect(observedJobs[0]?.status).toBe("completed");
+      expect(details).toEqual([]);
     } finally {
       window.removeEventListener("codeshell:open-cli-session", listener);
     }

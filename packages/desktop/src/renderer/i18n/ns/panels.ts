@@ -90,7 +90,7 @@ export const panels = {
         taskLoading: "正在读取任务状态…",
         taskStarting: "启动中，等待外部会话…",
         taskConnecting: "正在连接会话记录…",
-        taskNoTranscript: "此任务未产生可用的会话记录，请查看上方的任务结果。",
+        taskNoTranscript: "此任务暂无可用的会话记录。",
         taskConnectionFailed: "暂时无法读取会话记录，可重试连接。",
         taskStatusUnavailable: "无法确认任务当前状态，请刷新。",
         taskUnknownHint: "未找到正在运行的任务记录；查看历史不会重新启动任务。",
@@ -455,8 +455,7 @@ export const panels = {
         taskLoading: "Loading task status…",
         taskStarting: "Starting; waiting for the external session…",
         taskConnecting: "Connecting to the conversation…",
-        taskNoTranscript:
-          "No conversation was recorded for this task. Check the task result above.",
+        taskNoTranscript: "No conversation record is available for this task.",
         taskConnectionFailed: "The conversation is not available yet. Retry to connect.",
         taskStatusUnavailable: "Unable to confirm the task status. Refresh to retry.",
         taskUnknownHint: "No live task record was found. Viewing history will not restart it.",
