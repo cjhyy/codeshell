@@ -323,6 +323,23 @@ describe("known native and external history projection proof", () => {
     expect(f.compare()).toEqual({ ok: false, reason: "unsupported_history" });
   });
 
+  test("legacy external results may omit the display error flag without changing their records", () => {
+    const f = fixture();
+    f.user("tool");
+    f.emit({ type: "tool_use_start", toolCall: { id: "a", toolName: "Read", args: {} } });
+    f.tool("a", {});
+    f.result("a");
+    f.boundary();
+    f.done();
+    const legacy = f.events.find((event) => event.type === "tool_result") as any;
+    delete legacy.result.isError;
+    const before = JSON.stringify(f.events);
+    expect(f.compare().ok).toBe(true);
+    expect(JSON.stringify(f.events)).toBe(before);
+    legacy.result.isError = "unknown";
+    expect(f.compare()).toEqual({ ok: false, reason: "unsupported_history" });
+  });
+
   test("unknown, truncated, incomplete, duplicate and mismatched evidence stays blocked", () => {
     for (const mutate of [
       (f: ReturnType<typeof fixture>) => {

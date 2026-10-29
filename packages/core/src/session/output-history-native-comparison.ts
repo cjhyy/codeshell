@@ -463,7 +463,10 @@ export function compareNativeOutputHistory(
             break;
           }
           case "tool_result": {
-            if (!object(event.result) || typeof event.result.isError !== "boolean")
+            if (
+              !object(event.result) ||
+              (event.result.isError !== undefined && typeof event.result.isError !== "boolean")
+            )
               return unsupported();
             const value = result(event.result.id, event.result.toolName, event.result);
             put(child.results, value.id, value);
@@ -517,7 +520,10 @@ export function compareNativeOutputHistory(
           break;
         }
         case "tool_result": {
-          if (!object(event.result) || typeof event.result.isError !== "boolean")
+          if (
+            !object(event.result) ||
+            (event.result.isError !== undefined && typeof event.result.isError !== "boolean")
+          )
             return unsupported();
           const value = result(event.result.id, event.result.toolName, event.result);
           commit(value.id);
