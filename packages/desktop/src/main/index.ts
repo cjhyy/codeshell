@@ -232,13 +232,9 @@ import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import { PetImDecisions, collectImDecisions } from "./pet/pet-im-decisions.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
-import {
-  openLinkedSessionFromIpc,
-  registerRoomHistoryIpc,
-  takeOverLinkedSessionFromIpc,
-} from "./cc-room/linked-session-ipc.js";
+import { registerRoomHistoryIpc } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
-import { DriveAgentTranscriptAccess } from "./cc-room/drive-agent-transcript-access.js";
+import { registerLinkedSessionObservationIpc } from "./cc-room/linked-session-observation-ipc.js";
 import { DEFAULT_SEGMENT_IDLE_MS, buildMigrationSummary } from "@cjhyy/code-shell-pet";
 import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { materializeOutgoingAttachments } from "@cjhyy/code-shell-chat";
@@ -5720,10 +5716,6 @@ ipcMain.handle(
   },
 );
 ipcMain.handle("rooms:open", async (_e, roomId: string) => roomManager.open(roomId));
-ipcMain.handle("rooms:close", async (event, roomId: string) => {
-  roomManager.close(roomId);
-  driveAgentTranscriptAccess.forgetRoom(event.sender.id, roomId);
-});
 ipcMain.handle("rooms:send", async (_e, roomId: string, text: string) => {
   if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
     throw new Error("invalid room message");
@@ -5765,116 +5757,15 @@ ipcMain.handle(
     return roomManager.openForSession(claudeSessionId, cwd, mode, kind ?? "claude-code");
   },
 );
-const driveAgentTranscriptAccess = new DriveAgentTranscriptAccess(
-  createTaskInboxBackgroundHost({ worker: () => bridge }).list,
-);
-const driveAgentObservationSenders = new Set<number>();
-ipcMain.handle(
-  "ccRoom:openLinkedSession",
-  async (event, externalSessionId: unknown, cwd: unknown, kind: unknown, source?: unknown) => {
-    let projectCwd: string;
-    try {
-      projectCwd = await requireRendererLinkedSessionPath(cwd);
-    } catch (error) {
-      if (source === undefined) throw error;
-      if (
-        ![...mainWindows].some(
-          (window) => !window.isDestroyed() && window.webContents === event.sender,
-        ) ||
-        event.senderFrame !== event.sender.mainFrame
-      ) {
-        throw new Error("DriveAgent transcript observation requires an application window", {
-          cause: error,
-        });
-      }
-      const senderId = event.sender.id;
-      if (!driveAgentObservationSenders.has(senderId)) {
-        driveAgentObservationSenders.add(senderId);
-        event.sender.once("destroyed", () => {
-          driveAgentObservationSenders.delete(senderId);
-          driveAgentTranscriptAccess.forgetSender(senderId);
-        });
-      }
-      const linked = await driveAgentTranscriptAccess.open(
-        senderId,
-        source,
-        { externalSessionId, cwd, kind },
-        (target) =>
-          openLinkedSessionFromIpc(roomManager, target.externalSessionId, target.cwd, target.kind),
-      );
-      // The job snapshot is asynchronous; destruction can run its cleanup
-      // before open finishes and records this observation.
-      if (event.sender.isDestroyed()) {
-        driveAgentTranscriptAccess.forgetSender(senderId);
-        throw new Error("DriveAgent transcript observation window was closed", { cause: error });
-      }
-      return linked;
-    }
-    return openLinkedSessionFromIpc(roomManager, externalSessionId, projectCwd, kind);
-  },
-);
-ipcMain.handle(
-  "ccRoom:takeOverLinkedSession",
-  async (_e, roomId: unknown, externalSessionId: unknown, cwd: unknown, kind: unknown) =>
-    takeOverLinkedSessionFromIpc(
-      roomManager,
-      roomId,
-      externalSessionId,
-      await requireRendererLinkedSessionPath(cwd),
-      kind,
-    ),
-);
-const transcriptCleanupSenders = new Set<number>();
-ipcMain.handle(
-  "ccRoom:subscribeTranscript",
-  async (
-    event,
-    roomId: string,
-    cwd: string,
-    sessionId: string,
-    kind: "claude-code" | "codex",
-    limit: number,
-  ) => {
-    // Only this window's exact, previously opened delegation may observe a
-    // transcript outside registered project roots. Takeover keeps its separate
-    // project-path gate; this grant is never used for writable operations.
-    try {
-      cwd = await requireRendererLinkedSessionPath(cwd);
-    } catch {
-      if (
-        ![...mainWindows].some(
-          (window) => !window.isDestroyed() && window.webContents === event.sender,
-        ) ||
-        event.senderFrame !== event.sender.mainFrame
-      ) {
-        throw new Error("DriveAgent transcript observation requires an application window");
-      }
-      cwd = await driveAgentTranscriptAccess.requireSubscription(event.sender.id, roomId, {
-        externalSessionId: sessionId,
-        cwd,
-        kind,
-      });
-    }
-    if (!mobileOrchestrator.roomMatchesTranscript(roomId, cwd, sessionId, kind)) {
-      throw new Error("cc-room transcript subscription does not match the opened room");
-    }
-    const senderId = event.sender.id;
-    const subscriberId = `desktop:${senderId}`;
-    if (!transcriptCleanupSenders.has(senderId)) {
-      transcriptCleanupSenders.add(senderId);
-      event.sender.once("destroyed", () => {
-        transcriptCleanupSenders.delete(senderId);
-        transcriptSubscriptions?.unsubscribeSubscriber(subscriberId);
-      });
-    }
-    return {
-      ...transcriptSubscriptions!.subscribe({ subscriberId, roomId, cwd, sessionId, kind, limit }),
-      approvals: approvalBridge.pendingRequests(roomId), // cards a remounted view missed
-    };
-  },
-);
-ipcMain.handle("ccRoom:unsubscribeTranscript", async (event, roomId: string) => {
-  transcriptSubscriptions!.unsubscribe(`desktop:${event.sender.id}`, roomId);
+registerLinkedSessionObservationIpc({
+  ipcMain,
+  windows: mainWindows,
+  roomManager,
+  listBackgroundWork: createTaskInboxBackgroundHost({ worker: () => bridge }).list,
+  requirePath: requireRendererLinkedSessionPath,
+  subscriptions: transcriptSubscriptions,
+  roomMatchesTranscript: (...args) => mobileOrchestrator.roomMatchesTranscript(...args),
+  pendingApprovals: (roomId) => approvalBridge.pendingRequests(roomId),
 });
 ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) => {
   if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
@@ -5907,11 +5798,6 @@ ipcMain.handle(
     return readCodexRecentHistory(cwd, threadId, limit);
   },
 );
-ipcMain.handle("ccRoom:closeSession", async (event, roomId: string) => {
-  transcriptSubscriptions?.endRoom(roomId);
-  roomManager.close(roomId);
-  driveAgentTranscriptAccess.forgetRoom(event.sender.id, roomId);
-});
 
 // Remaining CC/Codex subscription quota. Reads tokens from Keychain / ~/.codex
 // then hits each vendor's usage source. `provider` restricts the lookup
