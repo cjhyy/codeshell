@@ -968,10 +968,14 @@ function App() {
     const pet = window.codeshell.pet;
     if (!pet?.onWidgetOpenOverview) return;
     return pet.onWidgetOpenOverview((target) => {
-      if (target) void handleOpenPetTarget(target);
+      if (target && "prompt" in target) {
+        // A companion handoff: the user confirms by sending it themselves.
+        openPetPage();
+        petDispatch({ type: "insert-chat-prompt", draft: target.prompt });
+      } else if (target) void handleOpenPetTarget(target);
       else openPetPage();
     });
-  }, [openPetPage]);
+  }, [openPetPage, petDispatch]);
 
   useEffect(() => {
     const pet = window.codeshell.pet;

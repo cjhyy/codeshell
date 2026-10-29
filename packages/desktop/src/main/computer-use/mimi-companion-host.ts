@@ -11,12 +11,15 @@ import {
 import { CompanionChoreographer, type CompanionPlacementScene } from "./companion-choreographer.js";
 import type { AppProfileIndex } from "./app-profiles.js";
 import { stagePlacement } from "./stage-model.js";
+import { windowAtPoint } from "./window-at-point.js";
 import { petWidgetAlwaysOnTopLevel } from "../pet/pet-widget-window-state.js";
 import type { ComputerActivityBus } from "./computer-activity-bus.js";
 import type { InputGate } from "./input-gate.js";
 
 /** A closed chat keeps foreground input held this long, in case it reopens. */
 const CHAT_RELEASE_MS = 10_000;
+/** An unanswered "look at this window?" offer withdraws itself. */
+const HANDOFF_OFFER_MS = 8_000;
 
 export interface MimiCompanionHostOptions {
   appPath: string;
@@ -25,7 +28,8 @@ export interface MimiCompanionHostOptions {
   packaged: boolean;
   devUrl?: string;
   isMainWindow(sender: WebContents): boolean;
-  openChat(): Promise<void>;
+  /** Open the Mimi chat; `prompt` is placed in the composer, never sent. */
+  openChat(request?: { prompt: string }): Promise<void>;
   holdForChat?: boolean;
   /** Execution-side activity, published by the CUA proxy channel. */
   bus: ComputerActivityBus;
@@ -47,6 +51,9 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   let chatting = false;
   const chatSurfaces = new Set<WebContents>();
   let dragging = false;
+  let dragged = false;
+  let handoff: { app: string } | undefined;
+  let handoffTimer: ReturnType<typeof setTimeout> | undefined;
   try {
     const saved = JSON.parse(await readFile(prefsPath, "utf8"));
     enabled = saved.enabled === true;
@@ -141,6 +148,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       humanActive: humanActive || chatting,
       avoidInput: !!avoidRect && !humanActive && !chatting && !pinned,
       pinned,
+      ...(handoff ? { handoff: { app: handoff.app } } : {}),
       ...(target && scene.element ? { element: scene.element } : {}),
       activity: choreographer.activity,
       preview,
@@ -426,13 +434,18 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
         };
       }
       humanActive = true;
-      if (phase === "begin") dragging = true;
+      if (phase === "begin") {
+        dragging = true;
+        dragged = false;
+      }
       stopPresentation();
       window?.setIgnoreMouseEvents(false);
     } else {
       if (phase === "leave" && dragging) return;
       if (phase === "end") {
         dragging = false;
+        if (dragged) void offerHandoff();
+        dragged = false;
         void persist().catch(() => {});
         // Keep the pet clickable while the pointer still rests over its body.
         publish();
@@ -456,12 +469,35 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       y: Math.round(Math.max(area.y, Math.min(area.y + area.height - size, point.y))),
     };
     pinned = true;
+    dragged = true;
+    withdrawHandoff();
     if (display.id !== next.id) {
       display = next;
       window?.setBounds(display.bounds);
     }
     publish();
   };
+  // Dropping Mimi on another app's window offers to bring that window into the
+  // chat. Only the app's name travels, and only after the user confirms.
+  function withdrawHandoff() {
+    if (handoffTimer) clearTimeout(handoffTimer);
+    handoffTimer = undefined;
+    handoff = undefined;
+  }
+  async function offerHandoff() {
+    if (!anchor || disposed) return;
+    const feet = { x: anchor.x + size * 0.35, y: anchor.y + size * 0.9 };
+    const ownPids = new Set([process.pid, ...app.getAppMetrics().map((metric) => metric.pid)]);
+    const found = await windowAtPoint(feet, ownPids).catch(() => undefined);
+    if (!found || disposed || dragging) return;
+    withdrawHandoff();
+    handoff = { app: found.app };
+    handoffTimer = setTimeout(() => {
+      withdrawHandoff();
+      publish();
+    }, HANDOFF_OFFER_MS);
+    publish();
+  }
   const onFollow = (event: Electron.IpcMainEvent) => {
     if (!ownOverlay(event.sender, event.senderFrame)) return;
     pinned = false;
@@ -492,8 +528,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   ipcMain.on("mimiCompanion:interaction", onInteraction);
   ipcMain.on("mimiCompanion:move", onMove);
   ipcMain.on("mimiCompanion:follow", onFollow);
-  ipcMain.handle("mimiCompanion:chat", async (event) => {
-    if (!ownOverlay(event.sender, event.senderFrame)) throw new Error("Invalid companion surface");
+  async function startChat(request?: { prompt: string }) {
     pinned = true;
     chatting = options.holdForChat !== false;
     if (chatting) {
@@ -508,7 +543,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     window?.setFocusable(false);
     await persist();
     try {
-      await options.openChat();
+      await options.openChat(request);
     } catch (failure) {
       chatting = false;
       publish();
@@ -516,6 +551,18 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     }
     syncChatFocus();
     publish();
+  }
+  ipcMain.handle("mimiCompanion:chat", async (event) => {
+    if (!ownOverlay(event.sender, event.senderFrame)) throw new Error("Invalid companion surface");
+    await startChat();
+  });
+  ipcMain.handle("mimiCompanion:handoff", async (event, accept: unknown) => {
+    if (!ownOverlay(event.sender, event.senderFrame) || typeof accept !== "boolean")
+      throw new Error("Invalid companion surface");
+    const offered = handoff;
+    withdrawHandoff();
+    publish();
+    if (accept && offered) await startChat({ prompt: `请看看我屏幕上的「${offered.app}」窗口。` });
   });
   const onDisplaysChanged = () => {
     normalizeAnchor();
@@ -641,7 +688,9 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       unsubscribeBus();
       unsubscribeGate();
       if (chatRelease) clearTimeout(chatRelease);
+      withdrawHandoff();
       ipcMain.removeHandler("mimiCompanion:chat");
+      ipcMain.removeHandler("mimiCompanion:handoff");
       ipcMain.removeHandler("mimiCompanion:chatActive");
       app.removeListener("browser-window-focus", onChatWindowFocus);
       app.removeListener("browser-window-blur", onChatWindowFocus);

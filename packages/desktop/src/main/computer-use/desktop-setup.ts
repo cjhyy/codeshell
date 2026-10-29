@@ -57,7 +57,7 @@ export async function initializeDesktopComputerUse(options: {
   resourcesPath: string;
   env: NodeJS.ProcessEnv;
   log: NonNullable<CuaDriverHostOptions["log"]>;
-  openCompanionChat(): Promise<void>;
+  openCompanionChat(request?: { prompt: string }): Promise<void>;
 }): Promise<void> {
   const appProfilesDir = options.app.isPackaged
     ? join(options.resourcesPath, "packages", "desktop", "resources", "computer-use", "apps")
