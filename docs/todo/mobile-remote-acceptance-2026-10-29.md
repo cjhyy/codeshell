@@ -8,35 +8,39 @@ extended through actual Desktop/WS/CLI, browser and file-transfer boundaries.
 
 ## Delivery state
 
-- Runtime/session fixes: PR #232, `codex/desktop/mobile-runtime-sessions`, separate
-  worktree `mobile-runtime-sessions/codeshell`. Head `f63506c7a` includes the fixed
-  client-authentication smoke race and all 29 real WS/canonical/legacy CLI
-  lifecycle scenarios. These changes are now included in combined PR #233.
-- Panel/workspace/file/access fixes: PR #233, this worktree. Follow-up `e4b8310e9` added
-  shared binding invalidation, authoritative session-root migration, 2 GiB
-  workspace file transfers, post-I/O revocation checks, public socket passcode
-  rotation and explicit revalidation UI. Earlier
-  `24d558f40` passed all 14 CI checks; that does not certify later commits.
-- Combined merge `9df242ff5` incorporates both PRs, runtime `f63506c7a`,
-  Web/download/access changes, and integration test contract fixes. Both navigation
-  and test insertion conflicts preserve the two implementations.
-- Actual Video Download consumer acceptance passed in Node with natural exit 0.
-  Fragmented Cloudflare URL and stale-start-result fixes are in `4c6f0d700`.
-  Final combined source acceptance passed: 896 relevant source tests, workspace
-  typecheck, full Desktop build, lint (0 errors / 98 existing warnings), 29 real
-  external-runtime scenarios, reviewed Video Download consumer, and real Electron
-  main/preload/guest plus paired HTTP worktree task execution.
-- PR CI run `40753298454` at `a41c1f2a4` passed the six separately guarded Panel
-  processes on Linux, including the formerly failing project-packages lifecycle.
-  Its Electron job failed while fetching the consumer source pin: GitHub returned
-  `upload-pack: not our ref`. The actual consumer stage was therefore not run in
-  that CI attempt. This is a delivery gate, not a product acceptance success.
-  The corrected pin `84348855be8ae4e5a31936b3c2b0d1d21410bd64` is the published
-  Panel repository HEAD. Its complete Video Download and shared trees are identical
-  to the locally reviewed source (respectively `bf646deffee5cc06f9d0c02a5bb2ccfd293b22e2`
-  and `820b4774ef66f2574c3bf881a95389a3e55f26e1`). Obtain eligible green CI before merge.
-- Neither PR is merged or released. `/Applications/code-shell.app` is still
-  version **0.9.47**. The installed client has not been replaced.
+- PRs #232 and #233 were integrated through normal protected fast-forward at
+  `c2fb65b361018364440629220463b3f2b4577a50`. Eligible PR CI run `40755689061`
+  passed all 14 required checks on that exact candidate.
+- The reviewed Video Download consumer is pinned to the published Panel repository
+  commit `84348855be8ae4e5a31936b3c2b0d1d21410bd64`. Its full Video Download and
+  shared trees match the reviewed consumer. Actual Node acceptance passed with
+  natural exit and exact downloaded bytes.
+- The actual local app has been updated from 0.9.47 to a verified **0.9.48** build
+  of `c2fb65b`. All old owned processes exited normally before installation.
+  Binary rollback copies and delivery evidence live outside disposable worktrees.
+  The user completed the macOS Keychain prompt. The original unsent draft was
+  restored and verified without sending it; provider selection was preserved.
+- Current actual Desktop Main owns the listening HTTP port and its Cloudflare
+  child. Public HTTPS reaches the expected passcode challenge; the configured
+  passcode and all 11 trusted devices remain intact. No test device was paired
+  and no real provider request was submitted for acceptance.
+- Installed-profile validation uncovered a separate persisted-history defect:
+  a legacy unpaired-output marker blocks some old sessions. Canonical transcript
+  and output journal were compared on private stable copies. The repair preserves
+  raw originals and provider context, backs up projections, requires an explicit
+  historical-gap acknowledgement, and retires old cursors, approvals and queued
+  sends. It executes no model or tool. Unsupported or unexplained mismatches stay
+  blocked. The recovery follow-up is in progress and is **not installed yet**.
+- The follow-up also journals future external background/cold-Goal notifications
+  and starts the worker before the fixed archive-marker migration query. The
+  previous cold-start path silently dropped that query and waited 120 seconds.
+- Current task branch incorporates newer main commit `e9133d461` (PR #235).
+  Follow-up integration, eligible CI, packaged validation and local delivery remain
+  pending. No public release or tag has been made.
+
+The table below records the original broad mobile acceptance. Its original
+integration/delivery items are satisfied by the c2fb65b delivery above; the newly
+found legacy-history repair has its own outstanding delivery gate.
 
 ## Acceptance scope
 
@@ -55,7 +59,7 @@ extended through actual Desktop/WS/CLI, browser and file-transfer boundaries.
 | Layout/offline/long output                                            | Combined mobile 320px light/dark and short viewports; sidebar 14 layouts; service worker 11 cases; latest-message 8 layouts; real output journal and CLI multi-page histories                                                                                                                                                   | Physical phones have not been tested                                                               |
 | Integration/delivery                                                  | Combined workspace typecheck, full Desktop build plus final main build, lint baseline (0 errors/98 existing warnings), architecture/test-shard guards pass. Actual Electron main/preload/guest+paired HTTP executes an owned background task with exact output and primary-project bookmark/worktree execution scope preserved. | Refresh main, integrate eligible green PR, build and verify local package, preserve live user work |
 
-## Real installed tunnel observation
+## Real installed tunnel observation (historical and recovered)
 
 Read-only inspection found the user's existing cloudflared process (PID 50991)
 exposes metrics on `127.0.0.1:20741`. At inspection, `/ready` returned **503** and
@@ -83,7 +87,7 @@ phone was online during the operation. The new address/QR is displayed in the ap
 An existing Claude task was still alive after closing remote, then the app's
 execution observation recorded normal completion after 817.91 seconds. No App
 restart, model request, credential change or CLI stop was performed. An unsent
-Desktop draft remains, so package delivery must preserve live user work.
+Desktop draft was subsequently preserved through the local update described above.
 
 ## Evidence logs
 
