@@ -105,6 +105,7 @@ export const extensions = {
         blockerTab: "一个打开着的面板标签",
         blockerJob: "原生任务 {name}",
         blockerAgentTask: "面板发起的 AI 任务",
+        blockerService: "后台服务：{name}",
         blockerAutomation: "自动化任务",
         blockerProcess: "面板启动的本地进程",
         forceUpdate: "关闭这些并更新",
@@ -139,6 +140,7 @@ export const extensions = {
         agentToolsHint: "由面板包提供，调用时受工具权限和审批策略约束。",
         nativeToolsHint: "包内声明的本机程序入口。",
         permissionNames: {
+          backgroundServices: "后台更新",
           contextSession: "对话上下文",
           contextWorkspace: "项目上下文",
           storage: "面板数据存储",
@@ -160,6 +162,8 @@ export const extensions = {
           mediaCapture: "麦克风、摄像头与屏幕采集",
         },
         permissionDescriptions: {
+          backgroundServices:
+            "CodeShell 运行期间允许已审查的后台服务持续更新，关闭全部面板后也继续。",
           contextSession: "读取当前绑定对话的标识与运行状态。",
           contextWorkspace: "读取当前项目目录与信任状态。",
           storage: "保存面板自己的 JSON 数据，按面板和项目隔离。",
@@ -1298,6 +1302,7 @@ export const extensions = {
         blockerTab: "An open Panel tab",
         blockerJob: "Native task {name}",
         blockerAgentTask: "An AI task started by the Panel",
+        blockerService: "Background service: {name}",
         blockerAutomation: "An automation",
         blockerProcess: "A local process started by the Panel",
         forceUpdate: "Close these and update",
@@ -1336,6 +1341,7 @@ export const extensions = {
           "Provided by the Panel package; calls follow tool permissions and approval policies.",
         nativeToolsHint: "Native program entries declared in the package.",
         permissionNames: {
+          backgroundServices: "Background updates",
           contextSession: "Chat context",
           contextWorkspace: "Project context",
           storage: "Panel data storage",
@@ -1357,6 +1363,8 @@ export const extensions = {
           mediaCapture: "Microphone, camera, and screen capture",
         },
         permissionDescriptions: {
+          backgroundServices:
+            "Run reviewed native services while CodeShell is open, including after all panel windows close.",
           contextSession: "Read the bound chat's ID and running status.",
           contextWorkspace: "Read the current project directory and trust status.",
           storage: "Save the Panel's own JSON data, isolated by Panel and project.",

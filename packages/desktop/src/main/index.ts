@@ -40,7 +40,6 @@ import {
   nativeTheme,
   type OpenDialogOptions,
   type SaveDialogOptions,
-  type IpcMainInvokeEvent,
 } from "electron";
 import { mainWindowTitleBarOptions, registerWindowTitleBarIpc } from "./window-titlebar.js";
 import {
@@ -49,11 +48,8 @@ import {
   closeManagedCloudWorkbench,
 } from "./cloud-workbench-window.js";
 import { registerCloudEnvironmentIpc } from "./cloud-environment-ipc.js";
-import {
-  createDesktopManagedRuntimeProvider,
-  createManagedRuntimeHandlers,
-  injectDesktopManagedRuntimePath,
-} from "./managed-runtime-service.js";
+import { injectDesktopManagedRuntimePath } from "./managed-runtime-service.js";
+import { createDesktopManagedRuntimeWiring } from "./managed-runtime-wiring.js";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import { dirname, resolve, basename, extname, isAbsolute, join } from "node:path";
@@ -692,6 +688,7 @@ let externalRuntimeApprovals: ExternalRuntimeApprovals | null = null;
 const resolvePanelProjectScope = createDesktopPanelProjectScopeResolver({
   store: getProjectStore(),
 });
+const desktopManagedRuntimes = createDesktopManagedRuntimeWiring(app, process.resourcesPath);
 const panelAppBridge = new PanelAppBridge({
   isTrustedHost: (sender) =>
     [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
@@ -700,6 +697,7 @@ const panelAppBridge = new PanelAppBridge({
   isProjectRoot: (projectPath, rootPath) =>
     isRegisteredPanelProjectRoot(getProjectStore(), projectPath, rootPath),
   resolveProjectScope: resolvePanelProjectScope,
+  resolveBackgroundServiceNode: desktopManagedRuntimes.resolveBackgroundServiceNode,
   getAgentBridge: () => bridge,
   getExternalRuntimeService: () => externalRuntimeService,
   externalRuntimeInitialContext: async (sessionId) =>
@@ -5580,19 +5578,13 @@ ipcMain.handle("updater:install", async () => quitAndInstall());
 ipcMain.handle("updater:status", async () => getLastStatus());
 ipcMain.handle("app:version", () => app.getVersion());
 
-const managedRuntimeHandlers = createManagedRuntimeHandlers<IpcMainInvokeEvent>(
-  createDesktopManagedRuntimeProvider({
-    isPackaged: app.isPackaged,
-    resourcesPath: process.resourcesPath,
-    appPath: app.getAppPath(),
-  }),
+desktopManagedRuntimes.registerIpc(
+  ipcMain,
   (event) =>
     [...mainWindows].some(
       (window) => !window.isDestroyed() && window.webContents === event.sender,
     ) && event.senderFrame === event.sender.mainFrame,
 );
-ipcMain.handle("managed-runtimes:list", managedRuntimeHandlers.list);
-ipcMain.handle("managed-runtimes:resolve", managedRuntimeHandlers.resolve);
 
 // ── Mobile Web Remote ───────────────────────────────────────────────────────
 const startMobileRemote = (opts?: { mode?: "lan" | "tunnel" | "relay" }) =>

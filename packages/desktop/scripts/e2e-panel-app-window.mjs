@@ -385,16 +385,20 @@ fixtureApp.on('session-created',ses=>{
   // Real Main operations migrate these isolated legacy installs into retained,
   // project-pinned packages. No renderer catalog or project registry is mocked.
   for (const id of fixtureAppIds) {
-    await win.evaluate(
+    const result = await win.evaluate(
       async ({ cwd, id }) => {
         const binding = (await window.codeshell.getPanelAppBindings(cwd)).find(
           (item) => item.appId === id,
         );
         if (!binding) throw new Error(`Missing installed fixture binding ${id}`);
-        await window.codeshell.setPanelAppProjectBinding(cwd, id, true, binding.revision);
+        return window.codeshell.setPanelAppProjectBinding(cwd, id, true, binding.revision);
       },
       { cwd: project, id },
     );
+    assert.equal(result.ok, true, JSON.stringify(result));
+    const binding = result.bindings.find((item) => item.appId === id);
+    assert.ok(binding, `Successful binding receipt must include ${id}`);
+    assert.equal(binding.bound, true);
   }
   const projectSettings = JSON.parse(
     await readFile(join(project, ".code-shell/settings.json"), "utf8"),

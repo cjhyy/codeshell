@@ -12,7 +12,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { PanelAppDirectoryBookmarks } from "./directory-bookmarks.js";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   PanelAppProcessService,
@@ -22,6 +22,8 @@ import {
 import { PanelResourceService } from "./resources/service.js";
 import { createPanelToolExecutor } from "./tool-executor.js";
 import { PanelTaskCookieService } from "./task-cookies.js";
+import { PanelToolJobService, type ToolJob } from "./tool-jobs.js";
+import { PanelModelTraceService } from "./model-traces.js";
 import type { Credential } from "@cjhyy/code-shell-core";
 
 const hash = (text: string | Buffer) => createHash("sha256").update(text).digest("hex");
@@ -41,6 +43,7 @@ describe("reviewed native tool executor", () => {
   type FixtureOptions = {
     directRead?: boolean;
     cookies?: boolean;
+    modelTraces?: boolean;
     confirmExecution?: () => Promise<boolean>;
   };
   afterEach(async () => {
@@ -48,7 +51,7 @@ describe("reviewed native tool executor", () => {
   });
   async function fixture(
     source: string,
-    dropEvents = false,
+    dropEvents: boolean | ((event: string, payload: Record<string, unknown>) => boolean) = false,
     settings: boolean | FixtureOptions = false,
   ) {
     const options: FixtureOptions =
@@ -61,9 +64,7 @@ describe("reviewed native tool executor", () => {
     await Promise.all([workDir, appData, bin].map((path) => mkdir(path)));
     const entryPath = join(root, "entry.mjs");
     await writeFile(entryPath, source);
-    const node = await resolvePanelExecutable("node", {
-      extraPathDirectories: [dirname(process.execPath), "/opt/homebrew/bin", "/usr/local/bin"],
-    });
+    const node = await resolvePanelExecutable("node");
     if (!node) throw new Error("Node fixture runtime is unavailable");
     await symlink(node, join(bin, "node"));
     let authorized = true;
@@ -71,6 +72,16 @@ describe("reviewed native tool executor", () => {
     const events: Array<{ event: string; payload: Record<string, unknown> }> = [];
     const processes = new PanelAppProcessService({
       env: { PATH: bin },
+      ...(options.modelTraces
+        ? {
+            modelTraces: new PanelModelTraceService({ storageDir: join(root, "traces") }),
+            modelTraceOwner: (owner: PanelProcessOwner) => ({
+              appId: owner.appId,
+              revision: owner.revision,
+              workspacePath: scope.projectPath,
+            }),
+          }
+        : {}),
       confirmExecution: options.confirmExecution ?? (async () => true),
       isOwnerAuthorized: (owner) => authorized && owners.has(owner.guestId),
       resolvePackageEntry: async () => ({ path: entryPath, sha256: hash(source) }),
@@ -119,7 +130,9 @@ describe("reviewed native tool executor", () => {
           appTitle: "Fixture",
           send: (event, payload) => {
             events.push({ event, payload });
-            if (!dropEvents) send(event, payload);
+            const dropped =
+              typeof dropEvents === "function" ? dropEvents(event, payload) : dropEvents;
+            if (!dropped) send(event, payload);
           },
         };
         owners.set(owner.guestId, owner);
@@ -224,6 +237,56 @@ console.log(JSON.stringify({type:"result",result:{read:content.includes("fixture
     expect(f.owners.size).toBe(0);
   });
 
+  test("a fast Cookie child with trace FD completes a durable task after its progress receipt", async () => {
+    const f = await fixture(
+      `import {readFile} from "node:fs/promises";
+${readRequest}
+const file=process.argv[process.argv.indexOf("--cookies-file")+1];
+if(!(await readFile(file,"utf8")).includes("fixture-secret"))process.exit(3);
+console.log(JSON.stringify({type:"progress",progress:{message:"cookie-read",fraction:0.5}}));
+setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:request.text}})),0);`,
+      false,
+      { cookies: true, modelTraces: true },
+    );
+    let finished!: (job: ToolJob) => void;
+    const terminal = new Promise<ToolJob>((resolve) => {
+      finished = resolve;
+    });
+    const jobs = new PanelToolJobService({
+      rootDir: join(f.root, "jobs"),
+      ...f.executor,
+      isAuthorized: async () => true,
+      onEvent: (job) => {
+        if (["succeeded", "failed", "cancelled", "interrupted"].includes(job.status)) finished(job);
+      },
+    });
+    cleanups.push(() => jobs.shutdown());
+    const input = await cookieInput(f);
+    const admitted = await jobs.start(scope, {
+      entry: f.job.entry,
+      input,
+      recovery: "retry",
+      requestKey: "fast-cookie-result",
+    });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const done = await Promise.race([
+      terminal,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error("Cookie terminal receipt not delivered")), 5000);
+      }),
+    ]).finally(() => clearTimeout(timer));
+    expect(done.status, JSON.stringify(done.error)).toBe("succeeded");
+    expect(done.result).toEqual({ ok: true, value: "safe-request" });
+    expect(done.progress).toEqual({ message: "cookie-read", fraction: 1 });
+    expect(done.requestKey).toBe("fast-cookie-result");
+    const { readOnly, ...receipt } = await jobs.get(scope, admitted.id);
+    expect(readOnly).toBe(false);
+    expect(await jobs.find(scope, "fast-cookie-result")).toEqual(receipt);
+    expect(JSON.stringify(done)).not.toContain("fixture-secret");
+    expect(await readdir(join(f.root, "private-cookies"))).toEqual([]);
+    expect(f.owners.size).toBe(0);
+  });
+
   test("Cookie support is opt-in and cannot share a directory or connection argument", async () => {
     const f = await fixture(
       `${readRequest}console.log(JSON.stringify({type:"result",result:{}}));`,
@@ -318,7 +381,8 @@ setInterval(()=>{},1000);`,
 
   test("real Node receives sealed directories and frozen resources, then captures a verified artifact", async () => {
     const source = `import {readFile,writeFile} from "node:fs/promises";import {createHash} from "node:crypto";import {join} from "node:path";
-${readRequest}
+let text="";process.stdin.setEncoding("utf8");for await(const chunk of process.stdin)text+=chunk;
+let request;try{request=JSON.parse(text)}finally{console.error("fixture-input:"+Buffer.byteLength(text)+":"+(typeof request?.jobId==="string"&&typeof request?.scopeKey==="string"));}
 const args=process.argv.slice(2), jobDir=args[args.indexOf("--job-dir")+1], dataDir=args[args.indexOf("--data-dir")+1];
 const content=await readFile(join(jobDir,"source.txt"),"utf8");
 const output=Buffer.from(content+request.text);await writeFile(join(jobDir,"result.txt"),output);await writeFile(join(dataDir,"marker"),"ran");
@@ -342,7 +406,32 @@ const sha256=createHash("sha256").update(output).digest("hex");console.log(JSON.
       f.controller.signal,
     );
     await writeFile(inputFile, "原文件已改变");
-    const result = (await f.executor.execute(f.job, f.context)) as any;
+    const result = (await f.executor.execute(f.job, f.context).catch((error) => {
+      // Linux Bun descriptor failures must remain failures. Capture only bounded,
+      // content-free evidence to distinguish early EOF, a child failure and lost output.
+      console.error(
+        "Sealed native tool lifecycle:",
+        JSON.stringify(
+          f.events.slice(-64).map(({ event, payload }) => {
+            const text = typeof payload.text === "string" ? payload.text : "";
+            const input =
+              payload.stream === "stderr" ? text.match(/fixture-input:(\d+):(true|false)/) : null;
+            return {
+              event,
+              sequence: payload.sequence,
+              ...(event === "process.exit"
+                ? { code: payload.code, signal: payload.signal }
+                : { stream: payload.stream, bytes: Buffer.byteLength(text) }),
+              ...(input && {
+                receivedBytes: Number(input[1]),
+                requestComplete: input[2] === "true",
+              }),
+            };
+          }),
+        ),
+      );
+      throw error;
+    })) as any;
     expect(result.jobId).toBe("fixture-job");
     expect(result.artifacts[0].asset).toMatchObject({
       id: `asset-${hash("原文你好")}`,
@@ -366,6 +455,48 @@ const sha256=createHash("sha256").update(output).digest("hex");console.log(JSON.
     );
     expect(await f.executor.execute(f.job, f.context)).toEqual({ received: "你好" });
     expect(f.progress).toContainEqual({ fraction: 0.5 });
+    expect(f.owners.size).toBe(0);
+  });
+
+  test("a delivered terminal event cannot bypass a missing final stdout receipt", async () => {
+    let dropFinalOutput = false;
+    const delivered: Array<{ event: string; sequence: number }> = [];
+    const f = await fixture(
+      `import {watch,existsSync} from "node:fs";import {join} from "node:path";
+${readRequest}
+const release=join(process.cwd(),"release-result");
+const released=new Promise(resolve=>{const watcher=watch(process.cwd(),()=>{if(existsSync(release)){watcher.close();resolve();}});if(existsSync(release)){watcher.close();resolve();}});
+console.log(JSON.stringify({type:"progress",progress:{stage:"awaiting-host"}}));
+await released;console.log(JSON.stringify({type:"result",result:{received:request.text}}));`,
+      (event, payload) => {
+        if (dropFinalOutput && event === "process.output" && payload.stream === "stdout")
+          return true;
+        delivered.push({ event, sequence: Number(payload.sequence) });
+        return false;
+      },
+    );
+    const result = await f.executor.execute(f.job, {
+      ...f.context,
+      reportProgress: async (progress) => {
+        expect(progress).toEqual({ stage: "awaiting-host" });
+        dropFinalOutput = true;
+        // An actual filesystem barrier: the native child cannot emit its result
+        // until the Host is ready to drop that push, with no timing or retry loop.
+        await writeFile(join(f.workDir, "release-result"), "release", { flag: "wx" });
+      },
+    });
+    expect(result).toEqual({ received: "你好" });
+    const exit = delivered.find((item) => item.event === "process.exit")!;
+    expect(exit).toBeDefined();
+    const finalOutput = f.events.find(
+      ({ event, payload }) =>
+        event === "process.output" &&
+        payload.stream === "stdout" &&
+        String(payload.text).includes('"type":"result"'),
+    )!;
+    expect(finalOutput).toBeDefined();
+    expect(Number(finalOutput.payload.sequence)).toBeLessThan(exit.sequence);
+    expect(delivered.some((item) => item.sequence === finalOutput.payload.sequence)).toBe(false);
     expect(f.owners.size).toBe(0);
   });
 
