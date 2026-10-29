@@ -1,5 +1,14 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, linkSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+  linkSync,
+  renameSync,
+  symlinkSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "./session-manager.js";
@@ -294,3 +303,24 @@ test.each(["missing", "reordered", "base64", "utf8"])(
     expect(() => outputHistoryEvents(records)).toThrow();
   },
 );
+
+test("a directory symlink substitution cannot publish even identical source files", () => {
+  const f = fixture(),
+    original = readFileSync(f.statePath),
+    moved = f.dir + "-moved";
+  const service = new OutputHistoryRecovery(() => f.root, {
+    onCheckpoint(phase) {
+      if (phase !== "evidence-durable") return;
+      renameSync(f.dir, moved);
+      symlinkSync(moved, f.dir, process.platform === "win32" ? "junction" : "dir");
+    },
+  });
+  const plan = ready(service, f);
+  const result = service.apply(
+    f.id,
+    { planId: plan.planId, acceptHistoricalGap: true },
+    f.authority,
+  );
+  expect(result.status).not.toBe("applied");
+  expect(readFileSync(join(moved, "state.json")).equals(original)).toBe(true);
+});

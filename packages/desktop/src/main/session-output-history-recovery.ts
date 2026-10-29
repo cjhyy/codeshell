@@ -175,7 +175,27 @@ export class SessionOutputHistoryRecovery {
       await this.deps.bridge()?.quiesceForOutputRecovery(sessionId);
       authority.assertCurrent();
       this.assertIdle(sessionId, authorized.ownerWebContentsId);
-      const result = this.recovery.apply(sessionId, input, authority);
+      let result: OutputHistoryRecoveryResult,
+        committedStorageError = false;
+      try {
+        result = this.recovery.apply(sessionId, input, authority);
+      } catch (error) {
+        // A failed lease release can happen after atomic state publication.
+        // Report it, but settle a proven commit before releasing the ingress fence.
+        const durable = this.recovery.validate(sessionId, input, authority);
+        if (durable?.status !== "applied") throw error;
+        result = durable;
+        committedStorageError = true;
+      }
+      if (result.status !== "applied") {
+        // A directory fsync may fail after rename but before Core can return
+        // success. The accepted receipt identifies that publication exactly.
+        const durable = this.recovery.validate(sessionId, input, authority);
+        if (durable?.status === "applied") {
+          result = durable;
+          committedStorageError = true;
+        }
+      }
       if (result.status === "applied") {
         // No old Main writer, pending approval or viewer cursor may cross the
         // accepted checkpoint. This does not create input or execute tools.
@@ -185,6 +205,7 @@ export class SessionOutputHistoryRecovery {
         if (!this.retire(sessionId))
           return { status: "blocked", sessionId, reason: "storage_error" };
       }
+      if (committedStorageError) return { status: "blocked", sessionId, reason: "storage_error" };
       return result;
     } catch {
       return { status: "blocked", sessionId, reason: "busy" };

@@ -220,6 +220,34 @@ test("backs up current and legacy projections for every Main catalog alias", asy
   ).toEqual(["legacy-transcript-cache", "transcript-cache"]);
 });
 
+test.each(["throw", "blocked"])(
+  "a %s after durable commit still retires the old snapshot and reports the storage fault",
+  async (failure) => {
+    const f = fixture(),
+      plan = await f.service.plan(f.id, f.caller);
+    if (plan.status !== "ready") throw new Error("fixture plan failed");
+    const core = (f.service as any).recovery;
+    const apply = core.apply.bind(core);
+    core.apply = (...args: any[]) => {
+      const result = apply(...args);
+      expect(result.status).toBe("applied");
+      if (failure === "throw") throw new Error("synthetic lease release failure");
+      return { status: "blocked", sessionId: f.id, reason: "storage_error" };
+    };
+    expect(
+      await f.service.apply(f.id, { planId: plan.planId, acceptHistoricalGap: true }, f.caller),
+    ).toMatchObject({ status: "blocked", reason: "storage_error" });
+    expect(f.snapshots.get(f.id).outputUnpaired).not.toBe(true);
+    expect(f.snapshots.get(f.id).historicalGap).toBe(true);
+    expect(f.retired()).toBe(1);
+    expect(() => assertOutputHistoryWriteAvailable(f.id)).not.toThrow();
+    expect(await f.service.plan(f.id, f.caller)).toMatchObject({
+      status: "blocked",
+      reason: "not_needed",
+    });
+  },
+);
+
 test.each(["wrong owner", "revoked", "busy", "generation"] as const)(
   "Host refuses %s before closing any runtime",
   async (reason) => {

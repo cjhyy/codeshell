@@ -246,7 +246,9 @@ export class OutputHistoryRecovery {
     );
     requireProof(
       Array.isArray(state.outputCoverage.inputIds) &&
-        state.outputCoverage.inputIds.every((id: unknown) => inputIds.has(id)),
+        state.outputCoverage.inputIds.every(
+          (id: unknown) => typeof id === "string" && inputIds.has(id),
+        ),
       "history_mismatch",
     );
     const fingerprint = sha(
@@ -322,11 +324,11 @@ export class OutputHistoryRecovery {
     try {
       authority.assertCurrent();
       requireProof(safeId.test(sessionId) && !sessionId.includes(".."));
+      const directory = join(fs.realpathSync(this.root()), sessionId);
+      const namedDirectory = fs.lstatSync(directory);
+      requireProof(namedDirectory.isDirectory() && !namedDirectory.isSymbolicLink());
       const current = JSON.parse(
-        readFile(
-          join(fs.realpathSync(this.root()), sessionId, "state.json"),
-          "state.json",
-        ).data.toString("utf8"),
+        readFile(join(directory, "state.json"), "state.json").data.toString("utf8"),
       );
       if (
         current.sessionId === sessionId &&
@@ -368,13 +370,20 @@ export class OutputHistoryRecovery {
         statePath = join(directory, "state.json");
       release = lockSync(statePath, STATE_LEASE_LOCK_OPTIONS);
       const lease = fs.lstatSync(statePath + ".lock", { bigint: true });
+      const admittedDirectory = fs.lstatSync(directory, { bigint: true });
       const assertLease = () => {
         const current = fs.lstatSync(statePath + ".lock", { bigint: true });
+        const namedDirectory = fs.lstatSync(directory, { bigint: true });
         requireProof(
           current.isDirectory() &&
             !current.isSymbolicLink() &&
             current.dev === lease.dev &&
-            current.ino === lease.ino,
+            current.ino === lease.ino &&
+            namedDirectory.isDirectory() &&
+            !namedDirectory.isSymbolicLink() &&
+            namedDirectory.dev === admittedDirectory.dev &&
+            namedDirectory.ino === admittedDirectory.ino &&
+            fs.realpathSync(this.root()) === root,
           "stale",
         );
         fs.utimesSync(statePath + ".lock", new Date(), new Date());
