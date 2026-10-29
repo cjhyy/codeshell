@@ -193,6 +193,24 @@ describe("CUA activity proxy", () => {
     expect(annotateToolList(annotated)).toBeUndefined();
   });
 
+  test("the driver's browser route never reaches the model's tool list", () => {
+    const listed = {
+      jsonrpc: "2.0",
+      id: 3,
+      result: {
+        tools: [
+          { name: "browser_navigate", description: "Navigate." },
+          { name: "click", description: "Click." },
+          { name: "page", description: "Legacy browser." },
+          { name: "get_browser_state", description: "Browser state." },
+        ],
+      },
+    };
+    const annotated = annotateToolList(listed) as any;
+    expect(annotated.result.tools.map((tool: any) => tool.name)).toEqual(["click"]);
+    expect(annotateToolList(annotated)).toBeUndefined();
+  });
+
   test("rejects extra invocation arguments", () => {
     expect(parseCuaActivityProxyArgs(["--driver", "/driver", "--socket", "/private.sock"])).toEqual(
       { driver: "/driver", socket: "/private.sock" },
@@ -251,6 +269,7 @@ describe("CUA activity proxy", () => {
     server: Awaited<ReturnType<typeof activityServer>> | { path: string; folder: string },
     lines: unknown[],
     driverScript = ECHO_DRIVER,
+    extraEnv: Record<string, string> = {},
   ) {
     const driver = join(server.folder, `fake-driver-${Math.random().toString(16).slice(2)}`);
     writeFileSync(driver, driverScript);
@@ -263,6 +282,7 @@ describe("CUA activity proxy", () => {
           ...process.env,
           CODE_SHELL_CUA_ACTIVITY_SOCKET: server.path,
           CODE_SHELL_CUA_ACTIVITY_TOKEN: "test-token",
+          ...extraEnv,
         },
         stdio: ["pipe", "pipe", "pipe"],
       },
@@ -287,6 +307,50 @@ describe("CUA activity proxy", () => {
     params: { name, arguments: args, ...(meta ? { _meta: meta } : {}) },
   });
   const echoed = (response: any) => JSON.parse(response.result.content[0].text).request;
+
+  test("app notes reach the model once per Session root and app; actions name the app", async () => {
+    const server = await activityServer(true, OPEN);
+    const appDriver = `#!/usr/bin/env node\nconst readline=require('node:readline');\nif(process.env.CODE_SHELL_CUA_APP_PROFILES)process.exit(9);\nreadline.createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(r.id===undefined)return;const state=r.params&&r.params.name==='get_window_state';process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:r.id,result:{content:[{type:'text',text:'tree'}],structuredContent:state?{pid:77,window_id:5,app_name:'Slack',window_bounds:{x:0,y:400,width:900,height:600},elements:[]}:{}}})+'\\n')});\n`;
+    const root = (id: string) => ({ "codeshell/sessionIds": ["leaf", id] });
+    const responses = await runProxy(
+      server,
+      [
+        call(
+          1,
+          "get_window_state",
+          { pid: 77, window_id: 5, include_screenshot: false },
+          root("r1"),
+        ),
+        call(
+          2,
+          "get_window_state",
+          { pid: 77, window_id: 5, include_screenshot: false },
+          root("r1"),
+        ),
+        call(
+          3,
+          "get_window_state",
+          { pid: 77, window_id: 5, include_screenshot: false },
+          root("r2"),
+        ),
+        call(4, "click", { pid: 77, window_id: 5, x: 10, y: 10 }, root("r1")),
+      ],
+      appDriver,
+      {
+        CODE_SHELL_CUA_APP_PROFILES: join(import.meta.dir, "../../../resources/computer-use/apps"),
+      },
+    );
+    const notes = (index: number) =>
+      responses[index].result.content.filter((part: any) =>
+        /CodeShell app notes for Slack/.test(part.text),
+      ).length;
+    expect([notes(0), notes(1), notes(2)]).toEqual([1, 0, 1]);
+    expect(responses[0].result.content[0]).toEqual({ type: "text", text: "tree" });
+    const click = server.events.find(
+      (event) => event.action === "click" && event.phase === "start",
+    );
+    expect(click).toMatchObject({ pid: 77, appId: "slack" });
+  }, 10_000);
 
   test("a held gate refuses input locally while observation still reaches the driver", async () => {
     const server = await activityServer(true, { ...OPEN, holdAll: "user-stop" });

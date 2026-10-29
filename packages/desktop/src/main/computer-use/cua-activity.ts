@@ -17,9 +17,40 @@ export type CuaActivityAction =
   | "working"
   | "error";
 
+/** What kind of control an action lands on. A category only: never its label or value. */
+export type CuaElementKind = "text" | "button" | "link" | "menu" | "list" | "scroll" | "other";
+export const CUA_ELEMENT_KINDS: ReadonlySet<string> = new Set<CuaElementKind>([
+  "text",
+  "button",
+  "link",
+  "menu",
+  "list",
+  "scroll",
+  "other",
+]);
+
+/** Order matters: a menu button is a button, a search field is text. */
+export function cuaElementKind(role: unknown): CuaElementKind {
+  const value = typeof role === "string" ? role : "";
+  if (/text.?(field|area)|search.?field|combo.?box/i.test(value)) return "text";
+  if (/button|check.?box|radio|switch|pop.?up/i.test(value)) return "button";
+  if (/link/i.test(value)) return "link";
+  if (/menu/i.test(value)) return "menu";
+  if (/list|table|outline|row|cell/i.test(value)) return "list";
+  if (/scroll/i.test(value)) return "scroll";
+  return "other";
+}
+
 export interface CuaActivityEvent {
   /** Root of the calling Session lineage, when the caller declared one. */
   sessionId?: string;
+  /** Target process and its window frame (global points), when observed. */
+  pid?: number;
+  window?: CuaAvoidRect;
+  /** Category of the control the action lands on. */
+  element?: CuaElementKind;
+  /** CodeShell app profile id of the target app, when one matches. */
+  appId?: string;
   lane?: InputLane;
   id: string;
   action: CuaActivityAction;
@@ -44,6 +75,7 @@ interface ElementGeometry {
   x: number;
   y: number;
   avoidRect?: CuaAvoidRect;
+  kind: CuaElementKind;
 }
 
 type RecordValue = Record<string, unknown>;
@@ -51,6 +83,8 @@ interface Geometry {
   pid?: number;
   windowId?: number;
   at: number;
+  /** The window's own frame in global points, independent of any screenshot. */
+  frame?: CuaAvoidRect;
   bounds?: { x: number; y: number; width: number; height: number };
   imageWidth?: number;
   imageHeight?: number;
@@ -157,7 +191,6 @@ function classify(name: string, args: RecordValue): Pick<CuaActivityEvent, "acti
     case "get_agent_cursor_state":
       return { action: "observe", capture: false };
     case "get_desktop_state":
-    case "get_browser_state":
     case "zoom":
     case "verify_state":
       return { action: "observe", capture: true };
@@ -191,7 +224,9 @@ export class CuaActivityTracker {
     const identity = windowIdentity(args);
     const classified = classify(name, args);
     const target = classified.capture ? undefined : this.target(args, name);
-    const avoidRect = classified.capture ? undefined : this.element(args)?.avoidRect;
+    const element = classified.capture ? undefined : this.element(args);
+    const avoidRect = element?.avoidRect;
+    const frame = classified.capture ? undefined : this.frame(identity);
     const lineage = parseSessionLineage(record(params._meta)?.[SESSION_META_KEY]);
     const event: CuaActivityEvent = {
       id: `${this.prefix}:${++this.sequence}`,
@@ -199,6 +234,9 @@ export class CuaActivityTracker {
       lane: inputLane(name, args),
       ...(lineage.length ? { sessionId: lineage[lineage.length - 1] } : {}),
       phase: "start",
+      ...(identity.pid !== undefined ? { pid: identity.pid } : {}),
+      ...(frame ? { window: { ...frame } } : {}),
+      ...(element ? { element: element.kind } : {}),
       ...(target ? { target } : {}),
       ...(target && name === "set_value" && typeof args.element_token === "string"
         ? { targetSource: "element" as const }
@@ -289,6 +327,12 @@ export class CuaActivityTracker {
     };
   }
 
+  private frame(identity: { pid?: number; windowId?: number }): CuaAvoidRect | undefined {
+    if (identity.pid === undefined || identity.windowId === undefined) return;
+    const geometry = this.windows.get(`${identity.pid}:${identity.windowId}`);
+    return this.fresh(geometry) ? geometry.frame : undefined;
+  }
+
   private element(args: RecordValue): ElementGeometry | undefined {
     if (
       args.from_zoom === true ||
@@ -334,6 +378,7 @@ export class CuaActivityTracker {
     if (value.pid !== pid || value.window_id !== windowId) return;
     const geometry: Geometry = { pid, windowId, at: this.now(), tokens: new Map() };
     const bounds = record(value.window_bounds);
+    geometry.frame = parseCuaAvoidRect(bounds);
     if (
       value.screenshot_frame_valid === true &&
       bounds &&
@@ -405,6 +450,7 @@ export class CuaActivityTracker {
           width: inputFrame.w,
           height: inputFrame.h,
         }),
+        kind: cuaElementKind(element.role),
       });
     }
     this.windows.set(key, geometry);

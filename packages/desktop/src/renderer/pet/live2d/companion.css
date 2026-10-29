@@ -217,3 +217,81 @@ body,
   background: #ffffffec;
   color: #455468;
 }
+
+/* A long trip vanishes and reappears at the destination instead of lagging. */
+.mimi-companion--hop .mimi-companion__body {
+  animation: mimi-hop 220ms ease-out;
+}
+
+@keyframes mimi-hop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.mimi-scene--still .mimi-companion--hop .mimi-companion__body {
+  animation: none;
+}
+
+/* The human is busy: step back and go quiet without leaving. */
+.mimi-companion--yield .mimi-companion__body {
+  opacity: 0.45;
+  transform: translateY(8px) scale(0.94);
+  transition:
+    opacity 240ms ease-out,
+    transform 240ms ease-out;
+}
+
+.mimi-scene--still .mimi-companion--yield .mimi-companion__body {
+  transform: none;
+  transition: none;
+}
+
+/* Offer after a drop onto another app's window. Answered by the human only. */
+.mimi-companion__handoff {
+  position: absolute;
+  top: calc(100% - 18px);
+  left: 50%;
+  width: 196px;
+  transform: translateX(-50%);
+  border-radius: 10px;
+  border: 1px solid #d5dce3;
+  padding: 9px 10px 8px;
+  background: #fffffff5;
+  box-shadow: 0 5px 18px #24304025;
+  color: #374556;
+  font-size: 12px;
+  pointer-events: auto;
+}
+
+.mimi-companion__handoff p {
+  margin: 0 0 7px;
+  overflow-wrap: anywhere;
+}
+
+.mimi-companion__handoff div {
+  display: flex;
+  gap: 6px;
+}
+
+.mimi-companion__handoff button {
+  flex: 1;
+  padding: 6px 4px;
+  border: 1px solid #d5dce3;
+  border-radius: 6px;
+  background: white;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mimi-companion__handoff button:first-child {
+  border-color: #344c42;
+  background: #344c42;
+  color: white;
+}

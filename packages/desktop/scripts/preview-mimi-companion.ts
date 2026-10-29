@@ -62,11 +62,16 @@ async function main() {
     packaged: false,
     isMainWindow: (sender) => sender === control.webContents,
     holdForChat: false,
-    openChat: async () => {
+    openChat: async (request) => {
       control.show();
       control.focus();
+      if (request) console.log("Chat draft:", request.prompt);
       await control.webContents.executeJavaScript(
-        "document.querySelector('#result').textContent='已触发聊天入口。主应用中会打开 Mimi 聊天；独立效果实验室不连接聊天服务。'",
+        `document.querySelector('#result').textContent=${JSON.stringify(
+          request
+            ? `已打开聊天并放入草稿：${request.prompt}（需要你自己发送）`
+            : "已触发聊天入口。主应用中会打开 Mimi 聊天；独立效果实验室不连接聊天服务。",
+        )}`,
       );
     },
     log: (event, data) => console.log(event, data ?? ""),
@@ -205,6 +210,205 @@ ${nativeTrial ? '<button id="native" class="primary">用真实 CUA 试填表单<
       "Display bounds (logical points):",
       screen.getAllDisplays().map(({ bounds, scaleFactor }) => ({ ...bounds, scaleFactor })),
     );
+  }
+  if (process.argv.includes("--stage-demo")) {
+    // Scripted presentation only: content-free events through the real
+    // activity channel, using this lab window as the "target window". No
+    // computer input, no driver, no other app is touched.
+    await host.update({ enabled: true, size: 240 });
+    const area = trialDisplay.workArea;
+    control.setBounds({
+      x: Math.round(area.x + 80),
+      y: Math.round(area.y + 300),
+      width: 940,
+      height: Math.min(740, area.height - 340),
+    });
+    const frame = control.getBounds();
+    const channel = createConnection(execution.mcpProxy.socketPath);
+    await new Promise<void>((resolveConnect, reject) => {
+      channel.once("connect", resolveConnect);
+      channel.once("error", reject);
+    });
+    const send = (event: Record<string, unknown>) =>
+      channel.write(JSON.stringify({ ...event, token: execution.mcpProxy.token }) + "\n");
+    const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
+    const actor = () =>
+      BrowserWindow.getAllWindows().find((win) => win !== control && !win.isDestroyed());
+    const report = async (label: string) => {
+      const seen = await actor()?.webContents.executeJavaScript(
+        `(() => { const body = document.querySelector('.mimi-companion'); const sprite = document.querySelector('.mimi-companion__sprite'); return body && { perch: body.dataset.perch, travel: body.dataset.travel, action: body.dataset.action, animation: sprite?.dataset.animation, transform: body.style.transform }; })()`,
+      );
+      console.log("Stage:", label, JSON.stringify(seen));
+    };
+    const window = { x: frame.x, y: frame.y, width: frame.width, height: frame.height };
+    const scenes = [
+      { label: "button near the top", action: "click", element: "button", x: 0.62, y: 70 },
+      { label: "text field", action: "click", element: "text", x: 0.3, y: 150 },
+      { label: "lower in the window", action: "scroll", element: "list", x: 0.5, y: -40 },
+      { label: "back near the top", action: "click", element: "link", x: 0.85, y: 90 },
+      {
+        label: "no window observed",
+        action: "click",
+        element: "button",
+        x: 0.2,
+        y: -120,
+        bare: true,
+      },
+    ];
+    await sleep(1_500);
+    for (const [index, scene] of scenes.entries()) {
+      const id = `stage-demo:${index}`;
+      send({
+        id,
+        action: scene.action,
+        phase: "start",
+        capture: false,
+        targetSource: "native-cursor",
+        target: {
+          x: frame.x + frame.width * scene.x,
+          y: scene.y < 0 ? frame.y + frame.height + scene.y : frame.y + scene.y,
+        },
+        ...("bare" in scene ? {} : { window }),
+        element: scene.element,
+      });
+      await sleep(120);
+      await report(`${scene.label} @120ms`);
+      await sleep(480);
+      await report(`${scene.label} @600ms`);
+      const snapshots = process.argv.find((arg) => arg.startsWith("--stage-snapshots="));
+      const shot = snapshots && (await actor()?.webContents.capturePage());
+      if (snapshots && shot)
+        await writeFile(join(snapshots.slice(18), `stage-${index}.png`), shot.toPNG());
+      await sleep(500);
+      await report(`${scene.label} @1100ms`);
+      send({ id, action: scene.action, phase: "end", capture: false });
+      await sleep(1_000);
+    }
+    channel.destroy();
+    console.log("Stage demo finished");
+    if (process.argv.includes("--exit")) app.quit();
+  }
+  if (process.argv.includes("--interaction-demo")) {
+    // Real pointer events on the character, the real window hit test and the
+    // real gate; no computer input reaches any other app.
+    await host.update({ enabled: true, size: 240 });
+    const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
+    const actor = () =>
+      BrowserWindow.getAllWindows().find((win) => win !== control && !win.isDestroyed());
+    const read = async () =>
+      actor()?.webContents.executeJavaScript(
+        `(() => { const box = document.querySelector('.mimi-companion'); const body = document.querySelector('.mimi-companion__body')?.getBoundingClientRect(); const offer = document.querySelector('.mimi-companion__handoff'); return box && { yield: box.classList.contains('mimi-companion--yield'), travel: box.dataset.travel, body: body && { x: body.x, y: body.y, width: body.width, height: body.height }, offer: offer?.textContent ?? null }; })()`,
+      );
+    const channel = createConnection(execution.mcpProxy.socketPath);
+    await new Promise<void>((done, reject) => {
+      channel.once("connect", done);
+      channel.once("error", reject);
+    });
+    const send = (event: Record<string, unknown>) =>
+      channel.write(JSON.stringify({ ...event, token: execution.mcpProxy.token }) + "\n");
+    const area = trialDisplay.workArea;
+    send({
+      id: "interaction:place",
+      action: "observe",
+      phase: "start",
+      capture: false,
+    });
+    send({
+      id: "interaction:click",
+      action: "click",
+      phase: "start",
+      capture: false,
+      targetSource: "native-cursor",
+      target: { x: area.x + area.width * 0.3, y: area.y + area.height * 0.5 },
+    });
+    await sleep(1_200);
+    send({ id: "interaction:click", action: "click", phase: "end", capture: false });
+    await sleep(900);
+    execution.gate.setUserActive(true);
+    await sleep(400);
+    console.log("Interaction: user active", JSON.stringify(await read()));
+    execution.gate.setUserActive(false);
+    await sleep(400);
+    console.log("Interaction: user idle", JSON.stringify(await read()));
+    const others = screen.getAllDisplays().filter((item) => item.id !== trialDisplay.id);
+    if (others[0]) {
+      const far = others[0].workArea;
+      send({
+        id: "interaction:cross",
+        action: "click",
+        phase: "start",
+        capture: false,
+        targetSource: "native-cursor",
+        target: { x: far.x + far.width * 0.5, y: far.y + far.height * 0.5 },
+      });
+      await sleep(60);
+      console.log("Interaction: other display", JSON.stringify(await read()));
+      send({ id: "interaction:cross", action: "click", phase: "end", capture: false });
+      await sleep(1_000);
+      send({
+        id: "interaction:back",
+        action: "click",
+        phase: "start",
+        capture: false,
+        targetSource: "native-cursor",
+        target: { x: area.x + area.width * 0.3, y: area.y + area.height * 0.5 },
+      });
+      await sleep(900);
+      send({ id: "interaction:back", action: "click", phase: "end", capture: false });
+      await sleep(900);
+    }
+    const before = await read();
+    const win = actor();
+    if (win && before?.body) {
+      const start = {
+        x: Math.round(before.body.x + before.body.width / 2),
+        y: Math.round(before.body.y + before.body.height / 2),
+      };
+      const end = { x: Math.round(area.width * 0.55), y: Math.round(area.height * 0.4) };
+      // DevTools input yields real pointer events (capture included).
+      const input = win.webContents.debugger;
+      if (!input.isAttached()) input.attach("1.3");
+      const mouse = (type: string, point: { x: number; y: number }, buttons = 0) =>
+        input.sendCommand("Input.dispatchMouseEvent", {
+          type,
+          x: point.x,
+          y: point.y,
+          button: type === "mouseMoved" && !buttons ? "none" : "left",
+          buttons,
+          clickCount: type === "mouseMoved" ? 0 : 1,
+        });
+      await mouse("mouseMoved", start);
+      await sleep(200);
+      await mouse("mousePressed", start, 1);
+      for (let step = 1; step <= 12; step++) {
+        await mouse(
+          "mouseMoved",
+          {
+            x: Math.round(start.x + ((end.x - start.x) * step) / 12),
+            y: Math.round(start.y + ((end.y - start.y) * step) / 12),
+          },
+          1,
+        );
+        await sleep(25);
+      }
+      await mouse("mouseReleased", end);
+      await sleep(1_200);
+      const offered = await read();
+      console.log("Interaction: after drop", JSON.stringify(offered));
+      const snapshots = process.argv.find((arg) => arg.startsWith("--stage-snapshots="));
+      const shot = snapshots && (await win.webContents.capturePage());
+      if (snapshots && shot)
+        await writeFile(join(snapshots.slice(18), "handoff.png"), shot.toPNG());
+      if (offered?.offer)
+        await win.webContents.executeJavaScript(
+          "document.querySelector('.mimi-companion__handoff button')?.click()",
+        );
+      await sleep(600);
+      console.log("Interaction: after answer", JSON.stringify(await read()));
+    }
+    channel.destroy();
+    console.log("Interaction demo finished");
+    if (process.argv.includes("--exit")) app.quit();
   }
   let quitting = false;
   app.on("before-quit", (event) => {

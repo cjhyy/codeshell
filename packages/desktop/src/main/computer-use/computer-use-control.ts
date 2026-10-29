@@ -8,6 +8,8 @@ export const STOP_INPUT_ACCELERATOR = "CommandOrControl+Shift+Escape";
 
 export interface ComputerUseControlOptions {
   appPath: string;
+  /** Bundled app profiles (resources/computer-use/apps), read by every proxy. */
+  appProfilesDir?: string;
   executablePath: string;
   log(event: string, data?: Record<string, unknown>): void;
   /** Seconds since the last keyboard/mouse input. Omit to skip user-activity holds. */
@@ -75,6 +77,7 @@ export async function createComputerUseControl(options: ComputerUseControlOption
       entryPath: join(options.appPath, "out", "main", "cua-activity-proxy.mjs"),
       socketPath: server.socketPath,
       token: server.token,
+      ...(options.appProfilesDir ? { appProfilesDir: options.appProfilesDir } : {}),
     },
     async close() {
       setLive(false);
