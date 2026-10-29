@@ -6,11 +6,7 @@ import { createRequire } from "node:module";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  createPanelRuntime,
-  panelWebCompatibility,
-} from "../packages/server/src/panels/runtime.ts";
-import { PanelResourceService } from "../packages/server/src/panels/resources/service.ts";
+import { installLocalNetworkGuard } from "./runtime-cost-smoke-isolation.mjs";
 const { chromium } = createRequire(new URL("../packages/desktop/package.json", import.meta.url))(
   "playwright",
 );
@@ -18,12 +14,41 @@ const root = await mkdtemp(join(tmpdir(), "panel-inline-browser-"));
 const cwd = join(root, "workspace"),
   installPath = join(root, "package");
 const prefix = "/p/7bc54c17-1af8-4105-87c1-f4e5c6638998";
+const escapedRequests = [];
 let authorized = true,
   runtime,
   server,
   browser,
   service;
 try {
+  server = createServer((request, response) => {
+    void (async () => {
+      if (request.url === "/") {
+        response
+          .writeHead(200, { "Content-Type": "text/html" })
+          .end("<!doctype html><body></body>");
+        return;
+      }
+      // Simulate the production project proxy preserving the public path prefix.
+      if (!request.url.startsWith(prefix + "/")) {
+        response.writeHead(404).end();
+        return;
+      }
+      request.url = request.url.slice(prefix.length);
+      if (await runtime.handleAssets(request, response)) return;
+      if (await runtime.handle(request, response)) return;
+      response.writeHead(404).end();
+    })().catch(() => {
+      response.writeHead(500).end("Fixture failure");
+    });
+  });
+  await new Promise((done) => server.listen(0, "127.0.0.1", done));
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  installLocalNetworkGuard(origin);
+  const { createPanelRuntime, panelWebCompatibility } =
+    await import("../packages/server/src/panels/runtime.ts");
+  const { PanelResourceService } =
+    await import("../packages/server/src/panels/resources/service.ts");
   await mkdir(cwd);
   await mkdir(join(installPath, "app"), { recursive: true });
   await writeFile(
@@ -71,29 +96,6 @@ try {
       ],
     }),
   });
-  server = createServer((request, response) => {
-    void (async () => {
-      if (request.url === "/") {
-        response
-          .writeHead(200, { "Content-Type": "text/html" })
-          .end("<!doctype html><body></body>");
-        return;
-      }
-      // Simulate the production project proxy preserving the public path prefix.
-      if (!request.url.startsWith(prefix + "/")) {
-        response.writeHead(404).end();
-        return;
-      }
-      request.url = request.url.slice(prefix.length);
-      if (await runtime.handleAssets(request, response)) return;
-      if (await runtime.handle(request, response)) return;
-      response.writeHead(404).end();
-    })().catch(() => {
-      response.writeHead(500).end("Fixture failure");
-    });
-  });
-  await new Promise((done) => server.listen(0, "127.0.0.1", done));
-  const origin = `http://127.0.0.1:${server.address().port}`;
   const call = async (path, body) => {
     const response = await fetch(origin + prefix + "/api/v1/panels/runtime/" + path, {
       method: "POST",
@@ -149,8 +151,19 @@ try {
       }),
     ),
   );
-  browser = await chromium.launch({ headless: true, chromiumSandbox: true });
+  browser = await chromium.launch({
+    headless: true,
+    ...(process.env.CODESHELL_TEST_CHROMIUM
+      ? { executablePath: process.env.CODESHELL_TEST_CHROMIUM }
+      : {}),
+    chromiumSandbox: true,
+  });
   const page = await browser.newPage();
+  await page.route("**/*", (route) => {
+    if (new URL(route.request().url()).origin === origin) return route.continue();
+    escapedRequests.push(route.request().url());
+    return route.abort();
+  });
   await page.goto(origin);
   await page.evaluate(
     (src) => {
@@ -184,17 +197,29 @@ try {
       audio.onerror = fail;
       audio.currentTime = 0.7;
     });
-    let fetchBlocked = false;
+    // Reviewed WASM/asset loading intentionally permits fetch inside this
+    // capability. It must not grant access to the Host API or another origin.
+    const scoped = await fetch(sound.url);
+    const scopedBytes = (await scoped.arrayBuffer()).byteLength;
+    let apiBlocked = false;
     try {
-      await fetch(sound.url);
+      await fetch(new URL("/api/v1/configuration", sound.url));
     } catch {
-      fetchBlocked = true;
+      apiBlocked = true;
+    }
+    let remoteBlocked = false;
+    try {
+      await fetch("https://non-fixture.invalid/");
+    } catch {
+      remoteBlocked = true;
     }
     return {
       pixel,
       duration: audio.duration,
       currentTime: audio.currentTime,
-      fetchBlocked,
+      scopedBytes,
+      apiBlocked,
+      remoteBlocked,
       opaque: window.origin === "null",
     };
   }, previews);
@@ -202,11 +227,14 @@ try {
   assert.equal(result.pixel.length, 4);
   assert.ok(Math.abs(result.duration - 1) < 0.001);
   assert.ok(Math.abs(result.currentTime - 0.7) < 0.001);
-  assert.equal(result.fetchBlocked, true, "Inline media must not enable general fetch access");
+  assert.ok(result.scopedBytes > 0, "A scoped asset remains readable for reviewed asset loading");
+  assert.equal(result.apiBlocked, true, "Inline media must not enable Host API fetch access");
+  assert.equal(result.remoteBlocked, true, "Inline media must not enable external fetch access");
+  assert.deepEqual(escapedRequests, [], "CSP must reject external fetch before transport");
   authorized = false;
   for (const preview of previews) assert.ok([404, 410].includes((await fetch(preview.url)).status));
   console.log(
-    "PASS: opaque project iframe draws origin-clean image pixels, decodes/seeks real WAV through public proxy prefix, keeps fetch blocked and loses resource access on revocation",
+    "PASS: opaque project iframe draws origin-clean image pixels, decodes/seeks real WAV through public proxy prefix, allows scoped assets while blocking Host API/external fetch, and loses resource access on revocation",
   );
 } finally {
   await browser?.close();

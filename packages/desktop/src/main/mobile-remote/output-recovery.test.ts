@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, spyOn, test } from "bun:test";
 import {
   mkdtempSync,
   rmSync,
@@ -33,8 +33,26 @@ function fixture(
   const root = mkdtempSync(join(tmpdir(), "mobile-journal-"));
   roots.push(root);
   const manager = new SessionManager(root);
-  const session = manager.create(root, "fixture", "fixture", "native");
-  for (const message of legacy) session.transcript.append("message", message);
+  let session = manager.create(root, "fixture", "fixture", "native");
+  if (legacy.length > 1000) {
+    // Bulk-seed the persisted historical log; per-record canonical appends are
+    // unrelated to the read-path event-budget stress case and make it quadratic.
+    appendFileSync(
+      join(root, "native", "transcript.jsonl"),
+      legacy
+        .map((data, index) =>
+          JSON.stringify({
+            id: `legacy-${index}`,
+            type: "message",
+            timestamp: 1,
+            turnNumber: 0,
+            data,
+          }),
+        )
+        .join("\n") + "\n",
+    );
+    session = manager.resume("native");
+  } else for (const message of legacy) session.transcript.append("message", message);
   const transcript = session.transcript.getEvents();
   manager.startSessionRun(session.state, "run");
   if (oldHeader)
@@ -82,7 +100,7 @@ function fixture(
   const service = new MobileOutputRecovery({
     root: () => root,
     authority: () => resolveAuthority(),
-    snapshot: () => snapshots.get("native"),
+    snapshot: (sessionId) => snapshots.get(sessionId),
     reply: (viewer, event) => replies.push({ viewer, event }),
   });
   const select = () =>
@@ -432,21 +450,86 @@ test("journal pages have one in-flight read per viewer and eight globally, witho
   expect(f.replies.slice(before).map(({ event }) => event)).toEqual([
     expect.objectContaining({
       requestId: "page-8",
+      busy: true,
       page: expect.objectContaining({ status: "incomplete", frames: [] }),
     }),
     expect.objectContaining({
       requestId: "page-0",
+      busy: true,
       page: expect.objectContaining({ status: "incomplete", frames: [] }),
     }),
   ]);
+  // A stale/revoked selection is never advertised as retryable capacity pressure.
+  f.service.revoke("tab-8");
+  await request(8);
+  expect(f.replies.at(-1)!.event).not.toHaveProperty("busy");
   release("mounted-project-root-incarnation");
   await Promise.all(pending);
-  expect(f.replies.slice(before + 2)).toHaveLength(8);
+  expect(f.replies.slice(before + 3)).toHaveLength(8);
   expect(
     f.replies
-      .slice(before + 2)
+      .slice(before + 3)
       .every(({ event }) => event.type === "session.outputJournal" && event.page.status === "ok"),
   ).toBe(true);
+});
+
+test("a new Session selection retries the old viewer's occupied read slot without accepting its stale page", async () => {
+  const f = fixture();
+  const manager = new SessionManager(f.root);
+  const next = manager.create(f.root, "fixture", "fixture", "next");
+  manager.startSessionRun(next.state, "next-run");
+  const journal = new SessionOutputJournal(f.root, "next", "next-run");
+  const start: StreamEvent = { type: "session_started", sessionId: "next", runId: "next-run" };
+  f.snapshots().append("next", { ...start, outputCursor: journal.append(start) });
+  await f.select();
+  let release!: (stamp: string) => void;
+  const pendingAuthority = new Promise<string>((resolve) => {
+    release = resolve;
+  });
+  let checks = 0;
+  f.blockAuthority(() =>
+    ++checks === 1 ? pendingAuthority : Promise.resolve("mounted-project-root-incarnation"),
+  );
+  const oldRead = f.read();
+  await f.service.handle({
+    type: "session.select",
+    sessionId: "next",
+    recoveryId: "next-selection",
+    viewerId: "tab",
+    deviceId: "device",
+  });
+  const readNext = () =>
+    f.service.handle({
+      type: "session.outputJournal",
+      sessionId: "next",
+      recoveryId: "next-selection",
+      requestId: "next-page",
+      viewerId: "tab",
+      deviceId: "device",
+    });
+  await readNext();
+  expect(f.replies.at(-1)!.event).toMatchObject({
+    type: "session.outputJournal",
+    sessionId: "next",
+    busy: true,
+    page: { status: "incomplete", frames: [] },
+  });
+  release("mounted-project-root-incarnation");
+  expect(await oldRead).toMatchObject({
+    sessionId: "native",
+    page: { status: "incomplete", frames: [] },
+  });
+  await readNext();
+  expect(f.replies.at(-1)!.event).toMatchObject({
+    type: "session.outputJournal",
+    sessionId: "next",
+    page: { status: "ok" },
+  });
+  expect(f.replies.at(-1)!.event).not.toHaveProperty("busy");
+  f.blockAuthority(async () => "revoked-project-root");
+  await readNext();
+  expect(f.replies.at(-1)!.event).toMatchObject({ page: { status: "incomplete", frames: [] } });
+  expect(f.replies.at(-1)!.event).not.toHaveProperty("busy");
 });
 
 for (const type of ["error", "goal_updated", "goal_cleared", "session_started"] as const) {
@@ -748,6 +831,7 @@ const largeLegacy = () => [
 for (const oldHeader of [false, true])
   test(`${oldHeader ? "old" : "sealed"} 3 MiB base pages concatenate to the whole projection within 1 MiB replies`, async () => {
     const f = fixture(largeLegacy(), [], oldHeader);
+    const project = spyOn(f.service as any, "projectLegacyBase");
     await f.select();
     const first = await f.read();
     expect(first.page.status).toBe("ok");
@@ -771,6 +855,7 @@ for (const oldHeader of [false, true])
     }
     expect(events).toEqual(transcriptToStreamEvents(f.transcript));
     expect(events.filter((event: any) => event.type === "session_started")).toHaveLength(1);
+    expect(project).toHaveBeenCalledTimes(1);
     const restored = await recoverMobileOutput({
       read: f.read,
       readBase: f.readBase,
@@ -790,6 +875,76 @@ for (const oldHeader of [false, true])
       result: "result before its definition",
       done: true,
     });
+    // Completing the previous pagination released its retained projection.
+    expect(project).toHaveBeenCalledTimes(2);
+  });
+
+test("repeated legacy pages reuse only the verified projection and still reject raw transcript tampering", async () => {
+  const f = fixture(largeLegacy());
+  const project = spyOn(f.service as any, "projectLegacyBase");
+  await f.select();
+  const first = await f.read();
+  const options = { throughEventId: first.page.legacyBaseThroughEventId };
+  const page = await f.readBase(options);
+  const repeated = await f.readBase(options);
+  expect(repeated.events).toEqual(page.events);
+  expect(repeated.next).toBe(page.next);
+  expect(project).toHaveBeenCalledTimes(1);
+  const file = join(f.root, "native", "transcript.jsonl");
+  const original = readFileSync(file, "utf8");
+  writeFileSync(file, original.replace("0:", "X:"));
+  expect(await f.readBase({ cursor: page.next })).toMatchObject({
+    ok: false,
+    reason: "incomplete",
+  });
+  expect(project).toHaveBeenCalledTimes(1);
+  writeFileSync(file, original);
+  expect(await f.readBase(options)).toMatchObject({ ok: true });
+  // A rejected verification retires its cached projection even if bytes are repaired.
+  expect(project).toHaveBeenCalledTimes(2);
+});
+
+test("legacy projection retention belongs to one viewer selection and is cleared on revoke", async () => {
+  const f = fixture(largeLegacy());
+  const project = spyOn(f.service as any, "projectLegacyBase");
+  await f.select();
+  const first = await f.read();
+  const options = { throughEventId: first.page.legacyBaseThroughEventId };
+  expect(await f.readBase(options)).toMatchObject({ ok: true });
+  await f.service.handle({
+    type: "session.select",
+    sessionId: "native",
+    recoveryId: "other",
+    viewerId: "other-tab",
+    deviceId: "device",
+  });
+  expect(await f.readBase(options, { viewerId: "other-tab", recoveryId: "other" })).toMatchObject({
+    ok: true,
+  });
+  expect(project).toHaveBeenCalledTimes(2);
+  expect(await f.readBase(options)).toMatchObject({ ok: true });
+  expect(project).toHaveBeenCalledTimes(3);
+  f.service.revoke("tab");
+  await f.select();
+  expect(await f.readBase(options)).toMatchObject({ ok: true });
+  expect(project).toHaveBeenCalledTimes(4);
+});
+
+for (const limit of ["bytes", "events"] as const)
+  test(`legacy projections over the retained ${limit} budget still page successfully without caching`, async () => {
+    const records = Array.from({ length: limit === "bytes" ? 34 : 10_001 }, () => ({
+      role: "assistant",
+      content: [{ type: "text", text: "x".repeat(limit === "bytes" ? 500_000 : 120) }],
+    }));
+    const f = fixture(records);
+    const project = spyOn(f.service as any, "projectLegacyBase");
+    await f.select();
+    const first = await f.read();
+    const options = { throughEventId: first.page.legacyBaseThroughEventId };
+    const page = await f.readBase(options);
+    expect(page).toMatchObject({ ok: true, complete: false });
+    expect(await f.readBase({ cursor: page.next })).toMatchObject({ ok: true });
+    expect(project).toHaveBeenCalledTimes(2);
   });
 
 for (const damage of [
@@ -1089,8 +1244,8 @@ test("one base and seven journal reads fill eight shared slots, including the ba
   await journal(0);
   await journal(8);
   expect(f.replies.slice(before).map(({ event }) => event)).toMatchObject([
-    { type: "session.outputJournal", page: { status: "incomplete" } },
-    { type: "session.outputJournal", page: { status: "incomplete" } },
+    { type: "session.outputJournal", busy: true, page: { status: "incomplete" } },
+    { type: "session.outputJournal", busy: true, page: { status: "incomplete" } },
   ]);
   release("mounted-project-root-incarnation");
   await Promise.all(pending);

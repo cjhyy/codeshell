@@ -48,6 +48,8 @@ export class MobileOutputClient {
   private auth = 0;
   private sequence = 0;
   private selection?: Selection;
+  private legacyHostSelection = false;
+  private lastResync?: { sessionId: string; revision: number; auth: number; at: number };
   constructor(
     private readonly deps: {
       send: (event: MobileClientEvent) => boolean;
@@ -61,11 +63,14 @@ export class MobileOutputClient {
 
   cancel(notify = true): void {
     const old = this.selection;
+    const legacyHostSelection = this.legacyHostSelection;
     this.selection = undefined;
+    this.legacyHostSelection = false;
+    this.lastResync = undefined;
     if (old?.readyTimer) clearTimeout(old.readyTimer);
     if (old?.capacityTimer) clearTimeout(old.capacityTimer);
     if (old) this.clearPending(old, "Recovery cancelled");
-    if (notify && old) this.deps.send({ type: "session.recovery.cancel" });
+    if (notify && (old || legacyHostSelection)) this.deps.send({ type: "session.recovery.cancel" });
   }
 
   private clearPending(selection: Selection, message: string): void {
@@ -95,10 +100,43 @@ export class MobileOutputClient {
       failed: false,
     };
     this.selection = selection;
+    this.lastResync = { sessionId, revision: selection.revision, auth: this.auth, at: Date.now() };
     selection.readyTimer = setTimeout(() => this.fail(selection), 10_000);
     if (!this.deps.send({ type: "session.select", sessionId, recoveryId: selection.id }))
       this.fail(selection);
     return true;
+  }
+
+  /** Foreground events often arrive together; join an in-flight read instead of retiring it. */
+  resync(sessionId: string): "started" | "unchanged" | false {
+    if (!this.enabled) return false;
+    const selection = this.selection;
+    if (
+      selection?.sessionId === sessionId &&
+      this.current(selection) &&
+      !selection.failed &&
+      (selection.recovering || selection.capacityPending)
+    )
+      return "unchanged";
+    const recent = this.lastResync;
+    if (
+      recent?.sessionId === sessionId &&
+      recent.revision === this.deps.current().revision &&
+      recent.auth === this.auth &&
+      Date.now() - recent.at < 500
+    )
+      return "unchanged";
+    return this.begin(sessionId) ? "started" : false;
+  }
+
+  pending(sessionId: string): boolean {
+    const selection = this.selection;
+    return Boolean(
+      selection?.sessionId === sessionId &&
+      this.current(selection) &&
+      !selection.failed &&
+      (selection.recovering || selection.capacityPending),
+    );
   }
 
   private current(selection: Selection): boolean {
@@ -216,6 +254,41 @@ export class MobileOutputClient {
     });
   }
 
+  private backoff(selection: Selection, delay: number): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      if (!this.current(selection) || selection.failed)
+        return reject(new Error("Recovery cancelled"));
+      const timer = setTimeout(() => {
+        selection.retry = undefined;
+        resolve();
+      }, delay);
+      selection.retry = { timer, reject };
+    });
+  }
+
+  private async readJournal(selection: Selection, options: OutputJournalOptions): Promise<Page> {
+    for (let retries = 0; ; retries++) {
+      const reply = await this.request(selection, "session.outputJournal", options);
+      if (reply.busy !== true) return reply;
+      if (
+        Object.keys(reply).some(
+          (key) => !["type", "sessionId", "recoveryId", "requestId", "page", "busy"].includes(key),
+        ) ||
+        reply.page.version !== 1 ||
+        reply.page.status !== "incomplete" ||
+        reply.page.complete !== false ||
+        !Array.isArray(reply.page.frames) ||
+        reply.page.frames.length !== 0 ||
+        Object.keys(reply.page).some(
+          (key) => !["version", "status", "frames", "complete"].includes(key),
+        )
+      )
+        throw new Error("Invalid busy recovery reply");
+      if (retries >= 8) throw new Error("Recovery reader remained busy");
+      await this.backoff(selection, Math.min(50 * 2 ** retries, 1000));
+    }
+  }
+
   private async readBase(
     selection: Selection,
     options: MobileLegacyBaseOptions,
@@ -233,15 +306,7 @@ export class MobileOutputClient {
       )
         throw new Error("Invalid recovery base reply");
       if (reply.ok !== false || reply.reason !== "busy" || retries >= 8) return reply;
-      await new Promise<void>((resolve, reject) => {
-        if (!this.current(selection) || selection.failed)
-          return reject(new Error("Recovery cancelled"));
-        const timer = setTimeout(() => {
-          selection.retry = undefined;
-          resolve();
-        }, 25);
-        selection.retry = { timer, reject };
-      });
+      await this.backoff(selection, 25);
     }
   }
 
@@ -253,7 +318,7 @@ export class MobileOutputClient {
             requireJournal: selection.journalRequired,
             canContinue: () => this.current(selection) && !selection.failed,
             latestCursor: () => selection.latest,
-            read: (options) => this.request(selection, "session.outputJournal", options),
+            read: (options) => this.readJournal(selection, options),
             ...(this.basePages
               ? {
                   readBase: (options: MobileLegacyBaseOptions) => this.readBase(selection, options),
@@ -263,7 +328,10 @@ export class MobileOutputClient {
       if (!this.current(selection)) return;
       if (!result) {
         this.selection = undefined;
-        this.deps.send({ type: "session.recovery.cancel" });
+        this.legacyHostSelection = true;
+        // Native pre-journal history still uses the verified Host selection.
+        // Cancelling it here would revoke the command/history authority before
+        // the legacy request arrives. Only release local output ownership.
         this.deps.legacy(selection.sessionId);
         return;
       }

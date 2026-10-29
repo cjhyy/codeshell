@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { act } from "react";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { useRemoteApp } from "./useRemoteApp";
 import { useDesktopController } from "../../app/DesktopApp.js";
+import { getApiWorkspace } from "../../app/api-context.js";
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -101,6 +102,732 @@ afterEach(() => {
   restoreBrowserGlobals = undefined;
   FakeWebSocket.instances = [];
   visibilityState = "visible";
+});
+
+describe("useRemoteApp session switching recovery", () => {
+  async function connected(journal = false) {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", ...(journal ? { capabilities: { outputJournal: 1 } } : {}) });
+      await flushMicrotasks();
+    });
+    return { hook, ws, sent: () => ws.sent.map((line) => JSON.parse(line)) };
+  }
+
+  test("native history fallback keeps the verified selection until history arrives", async () => {
+    const { hook, ws, sent } = await connected(true);
+    try {
+      await act(async () => {
+        hook.result.current.selectSession("legacy-native");
+        await flushMicrotasks();
+        const select = sent().findLast((event) => event.type === "session.select");
+        ws.message({
+          type: "session.recovery.ready",
+          sessionId: select.sessionId,
+          recoveryId: select.recoveryId,
+          ok: true,
+        });
+        await flushMicrotasks();
+        const page = sent().findLast((event) => event.type === "session.outputJournal");
+        ws.message({
+          ...page,
+          page: { version: 1, status: "unavailable", frames: [], complete: false },
+          snapshot: { epoch: "host", nextSeq: 1, unpaired: false },
+        });
+        await flushMicrotasks();
+      });
+      expect(sent()).toContainEqual({ type: "session.history", sessionId: "legacy-native" });
+      expect(sent().some((event) => event.type === "session.recovery.cancel")).toBe(false);
+      expect(hook.result.current.loading.sessionHistory).toBe(true);
+      await act(async () => {
+        ws.message({
+          type: "session.history.ok",
+          sessionId: "legacy-native",
+          events: [
+            { type: "session_started", sessionId: "legacy-native" },
+            { type: "user_message", text: "older task" },
+            { type: "stream_request_start" },
+            { type: "text_delta", text: "saved answer" },
+          ],
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.loading.sessionHistory).toBe(false);
+      expect(
+        hook.result.current.chat.items.some(
+          (item) => item.kind === "assistant" && item.text === "saved answer",
+        ),
+      ).toBe(true);
+      await act(async () => {
+        hook.result.current.selectProject("/other");
+        await flushMicrotasks();
+      });
+      expect(sent().filter((event) => event.type === "session.recovery.cancel")).toHaveLength(1);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  for (const rejected of ["session.select", "session.history"] as const)
+    test(`a legacy ${rejected} send failure releases history loading`, async () => {
+      const { hook, ws, sent } = await connected();
+      try {
+        const send = ws.send.bind(ws);
+        ws.send = (payload) => {
+          if (JSON.parse(payload).type === rejected) throw new Error("socket send failed");
+          send(payload);
+        };
+        await act(async () => {
+          hook.result.current.selectSession("native");
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.loading.sessionHistory).toBe(false);
+        expect(hook.result.current.notice).toBeTruthy();
+        expect(sent().some((event) => event.type === "session.history")).toBe(false);
+      } finally {
+        await hook.unmount();
+      }
+    });
+
+  test("offline navigation after disconnect cleanup retains the selected conversation", async () => {
+    const { hook, ws, sent } = await connected();
+    try {
+      await act(async () => {
+        hook.result.current.selectSession("native");
+        ws.message({ type: "session.history.ok", sessionId: "native", events: [] });
+        await flushMicrotasks();
+        ws.close();
+        await flushMicrotasks();
+      });
+      const revision = hook.result.current.conversationRevision;
+      const requests = sent().length;
+      await act(async () => {
+        hook.result.current.selectSession("another");
+        hook.result.current.openCcSession("cli", "/other", "default");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeSessionId).toBe("native");
+      expect(hook.result.current.conversationRevision).toBe(revision);
+      expect(hook.result.current.loading.sessionHistory).toBe(false);
+      expect(hook.result.current.loading.roomHistory).toBe(false);
+      expect(sent()).toHaveLength(requests);
+      expect(hook.result.current.notice).toBeTruthy();
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("native and CLI switches discard the previous feed loading and late catchup", async () => {
+    const { hook, ws, sent } = await connected();
+    try {
+      await act(async () => {
+        hook.result.current.selectSession("native-a");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.loading.sessionHistory).toBe(true);
+      await act(async () => {
+        hook.result.current.openCcSession("cli", "/repo", "default");
+        ws.message({ type: "ccRoom.opened", sessionId: "cli", roomId: "room", status: "running" });
+        ws.message({
+          type: "ccRoom.transcriptSubscribed",
+          roomId: "room",
+          sessionId: "cli",
+          active: true,
+          messages: [],
+          roomCursor: 0,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.loading.sessionHistory).toBe(false);
+      expect(hook.result.current.loading.roomHistory).toBe(true);
+      const room = sent().findLast((event) => event.type === "room.history");
+      await act(async () => {
+        hook.result.current.selectSession("native-b");
+        ws.message({
+          type: "room.history.ok",
+          roomId: "room",
+          requestId: room.requestId,
+          messages: [],
+          page: { snapshotId: "old-room", throughSeq: 0, complete: true },
+        });
+        ws.message({ type: "session.history.ok", sessionId: "native-b", events: [] });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeSessionId).toBe("native-b");
+      expect(hook.result.current.loading.sessionHistory).toBe(false);
+      expect(hook.result.current.loading.roomHistory).toBe(false);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  for (const feed of ["native", "cli"] as const)
+    test(`disconnect clears cancelled ${feed} history loading`, async () => {
+      const { hook, ws } = await connected(true);
+      try {
+        await act(async () => {
+          if (feed === "native") hook.result.current.selectSession("native");
+          else {
+            hook.result.current.openCcSession("cli", "/repo", "default");
+            ws.message({
+              type: "ccRoom.opened",
+              sessionId: "cli",
+              roomId: "room",
+              status: "running",
+            });
+          }
+          await flushMicrotasks();
+        });
+        expect(
+          hook.result.current.loading[feed === "native" ? "sessionHistory" : "roomHistory"],
+        ).toBe(true);
+        await act(async () => {
+          ws.close();
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.loading.sessionHistory).toBe(false);
+        expect(hook.result.current.loading.roomHistory).toBe(false);
+      } finally {
+        await hook.unmount();
+      }
+    });
+
+  test("foreground event bursts retain the in-flight selected recovery", async () => {
+    const { hook, ws, sent } = await connected(true);
+    try {
+      await act(async () => {
+        hook.result.current.selectSession("native");
+        await flushMicrotasks();
+        window.dispatchEvent(new Event("focus"));
+        document.dispatchEvent(new Event("visibilitychange"));
+        window.dispatchEvent(new Event("pageshow"));
+        await flushMicrotasks();
+      });
+      expect(sent().filter((event) => event.type === "session.select")).toHaveLength(1);
+      expect(sent().some((event) => event.type === "session.recovery.cancel")).toBe(false);
+      expect(hook.result.current.loading.sessionHistory).toBe(true);
+      const select = sent().findLast((event) => event.type === "session.select");
+      await act(async () => {
+        ws.message({ ...select, type: "session.recovery.ready", ok: false });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.loading.sessionHistory).toBe(false);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  for (const source of ["foreground", "accepted"] as const)
+    test(`an immediate ${source} recovery send failure cannot leave loading true`, async () => {
+      const { hook, ws, sent } = await connected(true);
+      const now = spyOn(Date, "now").mockReturnValue(1000);
+      try {
+        await act(async () => {
+          hook.result.current.selectSession("native");
+          const select = sent().findLast((event) => event.type === "session.select");
+          ws.message({ ...select, type: "session.recovery.ready", ok: false });
+          await flushMicrotasks();
+        });
+        const send = ws.send.bind(ws);
+        ws.send = (payload) => {
+          if (JSON.parse(payload).type === "session.select") throw new Error("socket send failed");
+          send(payload);
+        };
+        now.mockReturnValue(2000);
+        await act(async () => {
+          if (source === "foreground") window.dispatchEvent(new Event("focus"));
+          else
+            ws.message({ type: "chat.accepted", sessionId: "external", modelKey: "codex:fixture" });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.loading.sessionHistory).toBe(false);
+        expect(hook.result.current.notice).toBeTruthy();
+      } finally {
+        now.mockRestore();
+        await hook.unmount();
+      }
+    });
+});
+
+describe("useRemoteApp session catalog pages", () => {
+  test("appends pages, ignores health snapshots, and fences a late page after changing projects", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    const latestRequest = () =>
+      ws.sent
+        .map((line) => JSON.parse(line))
+        .filter((event) => event.type === "session.list" && event.requestId)
+        .at(-1)!;
+    const row = (id: string, cwd = "/a") => ({
+      id,
+      cwd,
+      title: id,
+      updatedAt: 1,
+      origin: "desktop",
+    });
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok" });
+        ws.message({
+          type: "room.projects.ok",
+          projects: [
+            {
+              id: "a",
+              path: "/a",
+              name: "A",
+              roots: [
+                { id: "a-main", path: "/a", name: "A", role: "primary" },
+                { id: "a-extra", path: "/extra", name: "extra", role: "secondary" },
+              ],
+            },
+          ],
+        });
+        await flushMicrotasks();
+        hook.result.current.refreshSessions(["/a", "/extra"]);
+        await flushMicrotasks();
+      });
+      const first = latestRequest();
+      expect(first.cwds).toEqual(["/a", "/extra"]);
+      await act(async () => {
+        ws.message({
+          type: "session.list.ok",
+          requestId: first.requestId,
+          sessions: [row("a1")],
+          nextCursor: "page-2",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.sessionsHasMore).toBe(true);
+      await act(async () => {
+        hook.result.current.loadMoreSessions!();
+        await flushMicrotasks();
+      });
+      const second = latestRequest();
+      expect(second.cursor).toBe("page-2");
+      await act(async () => {
+        ws.message({
+          type: "session.list.ok",
+          sessions: [row("health")],
+          nextCursor: "health-page",
+        });
+        ws.message({
+          type: "session.list.ok",
+          requestId: second.requestId,
+          sessions: [row("a1"), row("a2")],
+          nextCursor: "page-3",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.sessions.map((item) => item.id)).toEqual(["a1", "a2"]);
+      await act(async () => {
+        hook.result.current.selectProject("a");
+        await flushMicrotasks();
+      });
+      expect(latestRequest().requestId).toBe(second.requestId);
+      expect(hook.result.current.sessions.map((item) => item.id)).toEqual(["a1", "a2"]);
+      await act(async () => {
+        hook.result.current.loadMoreSessions!();
+        await flushMicrotasks();
+      });
+      const late = latestRequest();
+      await act(async () => {
+        hook.result.current.refreshSessions(["/b"]);
+        await flushMicrotasks();
+      });
+      const current = latestRequest();
+      expect(hook.result.current.sessions).toEqual([]);
+      await act(async () => {
+        ws.message({
+          type: "session.list.ok",
+          requestId: current.requestId,
+          sessions: [row("b1", "/b")],
+          nextCursor: null,
+        });
+        ws.message({
+          type: "session.list.ok",
+          requestId: late.requestId,
+          sessions: [row("a3")],
+          nextCursor: null,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.sessions.map((item) => item.id)).toEqual(["b1"]);
+      expect(hook.result.current.sessionsHasMore).toBe(false);
+      expect(hook.result.current.loading.sessions).toBe(false);
+    } finally {
+      await hook.unmount();
+    }
+  });
+});
+
+test("the initial active external session establishes viewer selection before its first send", async () => {
+  setupBrowser();
+  const hook = await renderHook(() => useRemoteApp());
+  try {
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({
+        type: "auth.ok",
+        device: { id: "device-1", name: "Phone" },
+        capabilities: { outputJournal: 1 },
+      });
+      await flushMicrotasks();
+      const list = ws.sent
+        .map((line) => JSON.parse(line))
+        .findLast((event) => event.type === "session.list");
+      ws.message({
+        type: "session.list.ok",
+        requestId: list?.requestId,
+        nextCursor: null,
+        activeSessionId: "saved-codex",
+        sessions: [
+          {
+            id: "saved-codex",
+            title: "Saved",
+            cwd: "/project",
+            updatedAt: 1,
+            provider: "codex",
+            model: "fixture",
+          },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.activeSessionId).toBe("saved-codex");
+    const selection = ws.sent
+      .map((line) => JSON.parse(line))
+      .findLast((event) => event.type === "session.select");
+    expect(selection).toMatchObject({ sessionId: "saved-codex", recoveryId: expect.any(String) });
+    expect(hook.result.current.loading.sessionHistory).toBe(true);
+    const before = ws.sent.length;
+    await act(async () => {
+      ws.message({
+        type: "session.list.ok",
+        nextCursor: null,
+        activeSessionId: "other-tab",
+        sessions: [],
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.activeSessionId).toBe("saved-codex");
+    expect(
+      ws.sent
+        .slice(before)
+        .map((line) => JSON.parse(line))
+        .some((event) => event.type === "session.select"),
+    ).toBe(false);
+  } finally {
+    await hook.unmount();
+  }
+});
+
+describe("useRemoteApp session creation failure recovery", () => {
+  for (const failure of ["rejected", "disconnected", "timeout"] as const) {
+    test(`a ${failure} creation can be retried without accepting its late acknowledgement`, async () => {
+      setupBrowser();
+      const originalSet = globalThis.setTimeout;
+      const creationTimeouts: Array<() => void> = [];
+      const restoreTimer = defineTestProperty(globalThis, "setTimeout", {
+        value: (callback: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) => {
+          if (delay === 30_000) creationTimeouts.push(() => callback(...args));
+          return originalSet(callback, delay, ...args);
+        },
+      });
+      const hook = await renderHook(() => useRemoteApp());
+      let ws = FakeWebSocket.instances[0]!;
+      const lastCreate = () =>
+        ws.sent
+          .map((line) => JSON.parse(line))
+          .filter((event) => event.type === "session.create")
+          .at(-1)!;
+      try {
+        await act(async () => {
+          ws.open();
+          ws.message({ type: "auth.ok" });
+          await flushMicrotasks();
+          hook.result.current.newSession({ projectId: null });
+          await flushMicrotasks();
+        });
+        const first = lastCreate();
+        expect(hook.result.current.sessionCreationFailures).toBe(0);
+        await act(async () => {
+          ws.message({
+            type: "error",
+            clientRequestId: "another-request",
+            message: "stale rejection",
+          });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.sessionCreationFailures).toBe(0);
+        await act(async () => {
+          if (failure === "rejected")
+            ws.message({
+              type: "error",
+              clientRequestId: first.clientRequestId,
+              message: "project removed",
+            });
+          else if (failure === "disconnected") ws.close();
+          else creationTimeouts.at(-1)!();
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.sessionCreationFailures).toBe(1);
+        if (failure === "disconnected") {
+          await act(async () => {
+            window.dispatchEvent(new Event("online"));
+            await flushMicrotasks();
+          });
+          ws = FakeWebSocket.instances.at(-1)!;
+          await act(async () => {
+            ws.open();
+            ws.message({ type: "auth.ok" });
+            await flushMicrotasks();
+          });
+        }
+        await act(async () => {
+          ws.message({
+            type: "chat.accepted",
+            clientRequestId: first.clientRequestId,
+            sessionId: "late-session",
+            cwd: null,
+          });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.activeSessionId).toBeUndefined();
+        await act(async () => {
+          hook.result.current.newSession({ projectId: null });
+          await flushMicrotasks();
+          ws.message({
+            type: "chat.accepted",
+            clientRequestId: lastCreate().clientRequestId,
+            sessionId: "retry-session",
+            cwd: null,
+          });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.activeSessionId).toBe("retry-session");
+        expect(hook.result.current.sessionCreationFailures).toBe(1);
+      } finally {
+        await hook.unmount();
+        restoreTimer();
+      }
+    });
+  }
+});
+
+describe("selected Desktop management workspace", () => {
+  async function fixture(linkReturn = false) {
+    setupBrowser();
+    if (linkReturn) {
+      window.location.pathname = "/mobile/";
+      window.location.search = "?view=links&workspace=%2Flink-project";
+    }
+    const originalFetch = globalThis.fetch;
+    const requests: string[] = [];
+    globalThis.fetch = (async (_path, init) => {
+      const cwd = decodeURIComponent(new Headers(init?.headers).get("X-CodeShell-Workspace") ?? "");
+      requests.push(cwd);
+      return Response.json({
+        workspace: { path: cwd, settingsScope: "local", skillDirectories: [] },
+        defaults: {},
+        connections: [],
+        catalog: [],
+        skills: [],
+        mcpServers: [],
+        restartRequired: false,
+      });
+    }) as typeof fetch;
+    const noop = () => {};
+    const auth = { id: "fixture", username: "fixture", deviceName: "fixture" };
+    const hook = await renderHook(() => {
+      const app = useRemoteApp();
+      return { app, controller: useDesktopController(app, auth, noop) };
+    });
+    const ws = FakeWebSocket.instances[0]!;
+    const answeredLists = new Set<string>();
+    const list = async (activeId: string, cwd: string, omit = false) => {
+      await act(async () => {
+        let request = ws.sent
+          .map((line) => JSON.parse(line))
+          .findLast((event) => event.type === "session.list");
+        if (!request || answeredLists.has(request.requestId)) {
+          hook.result.current.app.refreshSessions();
+          await flushMicrotasks();
+          request = ws.sent
+            .map((line) => JSON.parse(line))
+            .findLast((event) => event.type === "session.list");
+        }
+        expect(request?.requestId).toBeString();
+        answeredLists.add(request.requestId);
+        const rows = [
+          { id: "s1", title: "First", cwd: activeId === "s1" ? cwd : "/primary", updatedAt: 1 },
+          { id: "s2", title: "Second", cwd: activeId === "s2" ? cwd : "/other", updatedAt: 2 },
+        ];
+        ws.message({
+          type: "session.list.ok",
+          requestId: request.requestId,
+          nextCursor: null,
+          activeSessionId: activeId,
+          sessions: omit
+            ? []
+            : rows.filter((row) => !request.cwds || request.cwds.includes(row.cwd)),
+        });
+        await flushMicrotasks();
+      });
+    };
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      ws.message({
+        type: "room.projects.ok",
+        projects: [
+          {
+            id: "project",
+            name: "Project",
+            path: "/primary",
+            roots: [{ path: "/primary" }, { path: "/secondary" }],
+          },
+          { id: "other", name: "Other", path: "/other" },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    await list("s1", "/primary");
+    const select = async (id: string) =>
+      act(async () => {
+        hook.result.current.controller.selectSession(id);
+        await flushMicrotasks();
+      });
+    return {
+      hook,
+      ws,
+      list,
+      select,
+      requests,
+      async close() {
+        await hook.unmount();
+        globalThis.fetch = originalFetch;
+      },
+    };
+  }
+
+  test("a selected Session follows its authoritative root migration and retains it across missing catalog metadata", async () => {
+    const f = await fixture();
+    try {
+      await f.select("s1");
+      await f.list("s1", "/secondary");
+      expect(f.hook.result.current.app.activeCwd).toBe("/secondary");
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/secondary");
+      expect(getApiWorkspace()).toBe("/secondary");
+      await f.list("s1", "/secondary", true);
+      // A project page omitting a row is not evidence that its confirmed root changed.
+      expect(f.hook.result.current.app.activeCwd).toBe("/secondary");
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/secondary");
+      await act(async () => {
+        visibilityState = "hidden";
+        document.dispatchEvent(new Event("visibilitychange"));
+        await flushMicrotasks();
+        visibilityState = "visible";
+        document.dispatchEvent(new Event("visibilitychange"));
+        window.dispatchEvent(new Event("focus"));
+        await flushMicrotasks();
+      });
+      expect(f.requests.at(-1)).toBe("/secondary");
+      await act(async () => {
+        f.ws.close();
+        window.dispatchEvent(new Event("online"));
+        await flushMicrotasks();
+      });
+      const reconnected = FakeWebSocket.instances.at(-1)!;
+      expect(reconnected).not.toBe(f.ws);
+      await act(async () => {
+        reconnected.open();
+        reconnected.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        const request = reconnected.sent
+          .map((line) => JSON.parse(line))
+          .findLast((event) => event.type === "session.list");
+        expect(request?.requestId).toBeString();
+        reconnected.message({
+          type: "session.list.ok",
+          requestId: request.requestId,
+          nextCursor: null,
+          activeSessionId: "s1",
+          sessions: [],
+        });
+        await flushMicrotasks();
+      });
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/secondary");
+      expect(f.requests.at(-1)).toBe("/secondary");
+    } finally {
+      await f.close();
+    }
+  });
+
+  test("selection across scopes and pending creation keep their target when an earlier Session list arrives", async () => {
+    const f = await fixture();
+    try {
+      await f.select("s1");
+      // Switching scope clears the old catalog. Reopen all-project history and
+      // receive its metadata before selecting a row from the other project.
+      await act(async () => {
+        f.hook.result.current.app.refreshSessions([]);
+        await flushMicrotasks();
+      });
+      await f.list("s1", "/primary");
+      await f.select("s2");
+      await f.list("s1", "/secondary");
+      expect(f.hook.result.current.app.activeSessionId).toBe("s2");
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/other");
+      await act(async () => {
+        f.hook.result.current.controller.newSession();
+        await flushMicrotasks();
+      });
+      await f.list("s1", "/primary");
+      expect(f.hook.result.current.app.activeSessionId).toBeUndefined();
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/other");
+      expect(getApiWorkspace()).toBe("/other");
+    } finally {
+      await f.close();
+    }
+  });
+
+  test("Link return and pending CLI selection keep their explicit management scope", async () => {
+    const f = await fixture(true);
+    try {
+      // The Link return initially scopes its catalog to /link-project. Explicit
+      // all-project history supplies the other Session's metadata before selection.
+      await act(async () => {
+        f.hook.result.current.app.refreshSessions([]);
+        await flushMicrotasks();
+      });
+      await f.list("s1", "/secondary");
+      expect(f.hook.result.current.app.activeCwd).toBe("/secondary");
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/link-project");
+      await f.select("s1");
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/secondary");
+      const sidebar = f.hook.result.current.controller.renderSidebar!({
+        guard: (action) => action(),
+        conversation: (action) => action(),
+      }) as any;
+      await act(async () => {
+        sidebar.props.app.openCcSession("cli-thread", "/cli-target", "default");
+        await flushMicrotasks();
+      });
+      await f.list("s1", "/primary");
+      expect(f.hook.result.current.controller.workspaceCwd).toBe("/cli-target");
+      expect(getApiWorkspace()).toBe("/cli-target");
+    } finally {
+      await f.close();
+    }
+  });
 });
 
 describe("useRemoteApp notice lifetime", () => {
@@ -493,7 +1220,7 @@ describe("useRemoteApp Main process epochs", () => {
           .filter((item) => item.kind === "assistant")
           .map((item) => item.text),
       ).toEqual(["old answer"]);
-      expect(hook.result.current.notice).toContain("开头尚未恢复");
+      expect(hook.result.current.notice).toContain("会话记录恢复未完成");
       await act(async () => {
         window.dispatchEvent(new Event("focus"));
         await flushMicrotasks();
@@ -2752,6 +3479,65 @@ describe("useRemoteApp CLI room controls", () => {
       });
     return { hook, ws, sent, approval };
   }
+
+  test("CLI history loads the full catalog and ignores a delayed default-window response", async () => {
+    const { hook, ws, sent } = await openRoom();
+    const row = (sessionId: string) => ({
+      sessionId,
+      cwd: "/repo",
+      firstMessage: sessionId,
+      lastModified: 1,
+      messageCount: 1,
+    });
+    try {
+      await act(async () => {
+        ws.message({
+          type: "ccRoom.listSessions.ok",
+          cwd: "/repo",
+          kind: "claude-code",
+          sessions: [row("recent")],
+          total: 2,
+          all: false,
+        });
+        await flushMicrotasks();
+        hook.result.current.loadAllCcSessions!();
+        await flushMicrotasks();
+      });
+      expect(sent().at(-1)).toMatchObject({
+        type: "ccRoom.listSessions",
+        cwd: "/repo",
+        kind: "claude-code",
+        all: true,
+      });
+      await act(async () => {
+        ws.message({
+          type: "ccRoom.listSessions.ok",
+          cwd: "/repo",
+          kind: "claude-code",
+          sessions: [row("recent"), row("old")],
+          total: 2,
+          all: true,
+        });
+        ws.message({
+          type: "ccRoom.listSessions.ok",
+          cwd: "/repo",
+          kind: "claude-code",
+          sessions: [row("recent")],
+          total: 2,
+          all: false,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.ccSessions.map((item) => item.sessionId)).toEqual([
+        "recent",
+        "old",
+      ]);
+      expect(hook.result.current.ccSessionsTotal).toBe(2);
+      expect(hook.result.current.loading.ccSessions).toBe(false);
+    } finally {
+      await hook.unmount();
+    }
+  });
 
   test("a multi-question CLI approval keeps every question for one response", async () => {
     const { hook, approval } = await openRoom();

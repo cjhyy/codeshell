@@ -52,7 +52,8 @@ export interface RemoteHostStartOptions {
   /**
    * "lan" (default) keeps the existing LAN behaviour unchanged. "tunnel" binds
    * 127.0.0.1 (cloudflared connects to loopback) and inserts a passcode gate in
-   * front of every HTTP route and the WS upgrade. "relay" also requires an
+   * front of ordinary HTTP routes and the WS upgrade. Host-verified Panel asset
+   * capabilities use their own short-lived authorization. "relay" also requires an
    * initialized passcode and a stable HTTPS origin before pairing/WS upgrades.
    */
   mode?: "lan" | "tunnel" | "relay";
@@ -109,6 +110,8 @@ export class RemoteHostManager extends EventEmitter {
   private publicBaseUrl?: string;
   /** Passcode gate, present only in tunnel mode. */
   private passcode?: AccessPasscode;
+  private socketAccessValidity = new WeakMap<WebSocket, () => boolean>();
+  private accessSweep?: ReturnType<typeof setInterval>;
   /** Where the built mobile app lives (out/mobile). */
   private readonly mobileRootDir: string;
   /** Dev proxy target for /mobile (HMR); undefined in prod. */
@@ -167,8 +170,8 @@ export class RemoteHostManager extends EventEmitter {
   private async startOnce(options: RemoteHostStartOptions): Promise<RemoteHostStarted> {
     const relay = options.mode === "relay";
     const publicAccess = relay || options.mode === "tunnel";
-    if (relay && !options.passcode?.isSet()) {
-      throw new Error("Relay mode requires an initialized access passcode");
+    if (publicAccess && !options.passcode?.isSet()) {
+      throw new Error(`${relay ? "Relay" : "Tunnel"} mode requires an initialized access passcode`);
     }
     if (relay) this.publicBaseUrl = undefined;
     this.passcode = publicAccess ? options.passcode : undefined;
@@ -184,57 +187,78 @@ export class RemoteHostManager extends EventEmitter {
         req.resume();
         return;
       }
-      // Tunnel mode: a passcode gate sits in front of EVERY route. The gate
-      // either allows (returns true) or writes its own 401/403 challenge.
-      if (gate && !gate.gate(req, res)) return;
-      if (req.url === "/health") {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ ok: true }));
-        return;
-      }
-      if (req.url?.startsWith("/api/v1/") && this.opts.webApi) {
-        const baseUrl = this.publicBaseUrl ?? this.started?.url;
-        if (!baseUrl) {
-          res.writeHead(503);
-          res.end("remote host is starting");
+      const serve = () => {
+        // All ordinary routes retain the tunnel passcode gate. Only a Host-verified
+        // short-lived Panel asset capability may use independent authorization.
+        if (gate && !gate.gate(req, res)) return;
+        if (req.url === "/health") {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ ok: true }));
           return;
         }
-        void this.opts.webApi
-          .handle(req, res, { baseUrl })
-          .then((handled) => {
-            if (!handled && !res.writableEnded) {
-              res.writeHead(404);
-              res.end("not found");
-            }
-          })
-          .catch(() => {
-            if (!res.headersSent) res.writeHead(500);
-            if (!res.writableEnded) res.end("remote request failed");
+        if (req.url?.startsWith("/api/v1/") && this.opts.webApi) {
+          const baseUrl = this.publicBaseUrl ?? this.started?.url;
+          if (!baseUrl) {
+            res.writeHead(503);
+            res.end("remote host is starting");
+            return;
+          }
+          void this.opts.webApi
+            .handle(req, res, { baseUrl, isAccessAuthorized: gate?.captureValidity() })
+            .then((handled) => {
+              if (!handled && !res.writableEnded) {
+                res.writeHead(404);
+                res.end("not found");
+              }
+            })
+            .catch(() => {
+              if (!res.headersSent) res.writeHead(500);
+              if (!res.writableEnded) res.end("remote request failed");
+            });
+          return;
+        }
+        const uploadPath = pathname.match(/^\/api\/mobile\/uploads\/([A-Za-z0-9_-]+)$/);
+        if (uploadPath && this.opts.uploads) {
+          void this.opts.uploads.acceptPut(uploadPath[1]!, req, res);
+          return;
+        }
+        // The mobile app is built/served with vite base "/mobile/", so ALL of its
+        // assets — and in dev, vite's HMR/module URLs — live under the /mobile
+        // prefix. A single prefix route serves prod (static out/mobile) and dev
+        // (proxy to the mobile vite server) symmetrically. Tunnel mode never
+        // proxies dev: Vite's HMR socket and @fs module URLs don't survive a
+        // public trycloudflare hop, so a public tunnel always serves the build.
+        // Match the route family exactly ("/mobile", "/mobile/…", "/mobile?…",
+        // "/mobile#…") — NOT a sibling like "/mobilexyz", which falls to 404.
+        if (req.url && /^\/mobile(?:[/?#]|$)/.test(req.url)) {
+          serveMobile(req, res, {
+            rootDir: this.mobileRootDir,
+            devUrl: publicAccess ? undefined : this.mobileDevUrl,
           });
+          return;
+        }
+        res.writeHead(404);
+        res.end("not found");
+      };
+      const webApi = this.opts.webApi;
+      if (
+        gate?.isSet() &&
+        ["GET", "HEAD"].includes(req.method ?? "") &&
+        pathname.startsWith("/api/v1/panel-assets/") &&
+        webApi?.handleCapabilityAsset
+      ) {
+        void webApi.handleCapabilityAsset(req, res).then(
+          (handled) => {
+            if (!handled && !res.writableEnded) serve();
+          },
+          () => {
+            if (!res.headersSent) res.writeHead(500);
+            if (!res.writableEnded) res.end("remote asset request failed");
+          },
+        );
         return;
       }
-      const uploadPath = pathname.match(/^\/api\/mobile\/uploads\/([A-Za-z0-9_-]+)$/);
-      if (uploadPath && this.opts.uploads) {
-        void this.opts.uploads.acceptPut(uploadPath[1]!, req, res);
-        return;
-      }
-      // The mobile app is built/served with vite base "/mobile/", so ALL of its
-      // assets — and in dev, vite's HMR/module URLs — live under the /mobile
-      // prefix. A single prefix route serves prod (static out/mobile) and dev
-      // (proxy to the mobile vite server) symmetrically. Tunnel mode never
-      // proxies dev: Vite's HMR socket and @fs module URLs don't survive a
-      // public trycloudflare hop, so a public tunnel always serves the build.
-      // Match the route family exactly ("/mobile", "/mobile/…", "/mobile?…",
-      // "/mobile#…") — NOT a sibling like "/mobilexyz", which falls to 404.
-      if (req.url && /^\/mobile(?:[/?#]|$)/.test(req.url)) {
-        serveMobile(req, res, {
-          rootDir: this.mobileRootDir,
-          devUrl: publicAccess ? undefined : this.mobileDevUrl,
-        });
-        return;
-      }
-      res.writeHead(404);
-      res.end("not found");
+      serve();
     });
     // In tunnel mode we must gate the WS handshake too. `noServer` lets us run
     // the passcode check during the HTTP `upgrade` event before completing the
@@ -278,7 +302,9 @@ export class RemoteHostManager extends EventEmitter {
           socket.destroy();
           return;
         }
+        const isAccessAuthorized = gate.captureValidity();
         this.wss!.handleUpgrade(req, socket, head, (ws) => {
+          this.socketAccessValidity.set(ws, isAccessAuthorized);
           this.wss!.emit("connection", ws, req);
         });
       });
@@ -294,16 +320,17 @@ export class RemoteHostManager extends EventEmitter {
         this.emit("host-error", error);
       });
       ws.on("message", (raw) => {
+        if (!this.hasSocketAccess(ws)) return;
         let parsed: unknown;
         try {
           parsed = JSON.parse(String(raw));
         } catch {
-          ws.send(JSON.stringify({ type: "error", message: "Invalid JSON" }));
+          this.sendBounded(ws, JSON.stringify({ type: "error", message: "Invalid JSON" }));
           return;
         }
         const event = parseMobileClientEvent(parsed);
         if (!event) {
-          ws.send(JSON.stringify({ type: "error", message: "Invalid client event" }));
+          this.sendBounded(ws, JSON.stringify({ type: "error", message: "Invalid client event" }));
           return;
         }
         // Pairing/auth are handled inline and bind device identity to this
@@ -313,7 +340,7 @@ export class RemoteHostManager extends EventEmitter {
         try {
           reply = this.handleClientEvent(event);
         } catch {
-          ws.send(JSON.stringify({ type: "error", message: "Client event failed" }));
+          this.sendBounded(ws, JSON.stringify({ type: "error", message: "Client event failed" }));
           return;
         }
         if (event.type === "auth.device" && reply?.type === "auth.ok") {
@@ -324,11 +351,14 @@ export class RemoteHostManager extends EventEmitter {
           this.bindSocketDevice(ws, reply.device.id);
         }
         if (reply) {
-          ws.send(JSON.stringify(reply));
+          this.sendBounded(ws, JSON.stringify(reply));
           return;
         }
         if (!this.authed.has(ws)) {
-          ws.send(JSON.stringify({ type: "auth.failed", message: "Not authenticated" }));
+          this.sendBounded(
+            ws,
+            JSON.stringify({ type: "auth.failed", message: "Not authenticated" }),
+          );
           return;
         }
         // Authenticated, non-auth event → hand to the main dispatcher, which
@@ -340,11 +370,14 @@ export class RemoteHostManager extends EventEmitter {
           );
           void Promise.resolve(dispatched).catch(() => {
             if (ws.readyState === ws.OPEN) {
-              ws.send(JSON.stringify({ type: "error", message: "Client event failed" }));
+              this.sendBounded(
+                ws,
+                JSON.stringify({ type: "error", message: "Client event failed" }),
+              );
             }
           });
         } catch {
-          ws.send(JSON.stringify({ type: "error", message: "Client event failed" }));
+          this.sendBounded(ws, JSON.stringify({ type: "error", message: "Client event failed" }));
         }
       });
       ws.on("close", () => {
@@ -395,6 +428,16 @@ export class RemoteHostManager extends EventEmitter {
       url: `http://${bindHost}:${port}`,
       mode: options.mode ?? "lan",
     };
+    if (gate) {
+      const sockets = this.wss;
+      // Idle public tabs must also relinquish viewer-owned state after rotation.
+      // Traffic is checked synchronously in both directions, without rehashing
+      // any plaintext or spending the passcode attempt budget.
+      this.accessSweep = setInterval(() => {
+        for (const client of sockets?.clients ?? []) this.hasSocketAccess(client);
+      }, 1000);
+      this.accessSweep.unref();
+    }
     return this.started;
   }
 
@@ -526,7 +569,7 @@ export class RemoteHostManager extends EventEmitter {
   hasAuthenticatedViewer(viewerId: string, deviceId: string): boolean {
     for (const client of this.wss?.clients ?? []) {
       if (
-        client.readyState === client.OPEN &&
+        this.hasSocketAccess(client) &&
         this.authed.get(client) === deviceId &&
         this.viewers.get(client) === viewerId
       )
@@ -536,7 +579,11 @@ export class RemoteHostManager extends EventEmitter {
   }
 
   sendToViewer(viewerId: string, event: MobileServerEvent): void {
-    const payload = JSON.stringify(event);
+    this.sendRawToViewer(viewerId, JSON.stringify(event));
+  }
+
+  /** Preserve the full worker envelope while retaining exact authenticated-tab routing. */
+  sendRawToViewer(viewerId: string, payload: string): void {
     for (const client of this.wss?.clients ?? []) {
       if (
         client.readyState === client.OPEN &&
@@ -578,6 +625,7 @@ export class RemoteHostManager extends EventEmitter {
    * socket is still delivered. Returns false when retired.
    */
   private sendBounded(client: WebSocket, payload: string): boolean {
+    if (!this.hasSocketAccess(client)) return false;
     if (
       client.bufferedAmount > 0 &&
       client.bufferedAmount + Buffer.byteLength(payload) > MAX_SOCKET_BACKLOG_BYTES
@@ -588,6 +636,19 @@ export class RemoteHostManager extends EventEmitter {
     }
     client.send(payload);
     return true;
+  }
+
+  private hasSocketAccess(client: WebSocket): boolean {
+    if (client.readyState !== client.OPEN) return false;
+    if (this.socketAccessValidity.get(client)?.() !== false) return true;
+    this.releaseSocket(client);
+    // Distinct from paired-device rejection (4401/4403): the browser keeps its
+    // identity and offers a fresh HTTP challenge instead of silently retrying.
+    client.close(4407, "Access passcode changed");
+    const deadline = setTimeout(() => client.terminate(), 1000);
+    deadline.unref();
+    client.once("close", () => clearTimeout(deadline));
+    return false;
   }
 
   private releaseSocket(ws: WebSocket): void {
@@ -644,6 +705,8 @@ export class RemoteHostManager extends EventEmitter {
 
   private async stopOnce(): Promise<void> {
     if (this.starting) await this.starting.catch(() => undefined);
+    clearInterval(this.accessSweep);
+    this.accessSweep = undefined;
     this.relayLifetime?.abort();
     this.relayLifetime = undefined;
     const server = this.server;

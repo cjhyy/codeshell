@@ -8,10 +8,7 @@ import { createRequire } from "node:module";
 import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import {
-  createPanelRuntime,
-  panelWebCompatibility,
-} from "../packages/server/src/panels/runtime.ts";
+import { installLocalNetworkGuard } from "./runtime-cost-smoke-isolation.mjs";
 const root = resolve(import.meta.dirname, "..");
 const { chromium } = createRequire(join(root, "packages/desktop/package.json"))("playwright");
 const scratch = await mkdtemp(join(tmpdir(), "panel-video-browser-"));
@@ -28,6 +25,34 @@ let runtime,
 const methods = [],
   errors = [];
 try {
+  server = createServer((request, response) => {
+    void (async () => {
+      if (request.url === "/") {
+        response
+          .writeHead(200, { "Content-Type": "text/html" })
+          .end(
+            '<!doctype html><html><head><title>Panel video fixture</title><link rel="stylesheet" href="/entry.css"></head><body><div id="root"></div><script type="module" src="/entry.js"></script></body></html>',
+          );
+        return;
+      }
+      const file = files.get(request.url);
+      if (file) {
+        response.writeHead(200, { "Content-Type": file.type }).end(Buffer.from(file.bytes));
+        return;
+      }
+      if (await runtime.handleAssets(request, response)) return;
+      if (await runtime.handle(request, response)) return;
+      response.writeHead(404).end();
+    })().catch((error) => {
+      errors.push(String(error));
+      response.writeHead(500).end("Fixture failed");
+    });
+  });
+  await new Promise((done) => server.listen(0, "127.0.0.1", done));
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  installLocalNetworkGuard(origin);
+  const { createPanelRuntime, panelWebCompatibility } =
+    await import("../packages/server/src/panels/runtime.ts");
   await mkdir(cwd);
   await mkdir(join(installPath, "app"), { recursive: true });
   await writeFile(
@@ -109,34 +134,11 @@ try {
       ]),
     ),
   );
-  server = createServer((request, response) => {
-    void (async () => {
-      if (request.url === "/") {
-        response
-          .writeHead(200, { "Content-Type": "text/html" })
-          .end(
-            '<!doctype html><html><head><title>Panel video fixture</title><link rel="stylesheet" href="/entry.css"></head><body><div id="root"></div><script type="module" src="/entry.js"></script></body></html>',
-          );
-        return;
-      }
-      const file = files.get(request.url);
-      if (file) {
-        response.writeHead(200, { "Content-Type": file.type }).end(Buffer.from(file.bytes));
-        return;
-      }
-      if (await runtime.handleAssets(request, response)) return;
-      if (await runtime.handle(request, response)) return;
-      response.writeHead(404).end();
-    })().catch((error) => {
-      errors.push(String(error));
-      response.writeHead(500).end("Fixture failed");
-    });
-  });
-  await new Promise((done) => server.listen(0, "127.0.0.1", done));
-  const origin = `http://127.0.0.1:${server.address().port}`;
   browser = await chromium.launch({
     headless: true,
-    channel: "chromium",
+    ...(process.env.CODESHELL_TEST_CHROMIUM
+      ? { executablePath: process.env.CODESHELL_TEST_CHROMIUM }
+      : { channel: "chromium" }),
     chromiumSandbox: true,
     args: [
       "--use-fake-device-for-media-stream",
@@ -146,9 +148,12 @@ try {
   });
   const context = await browser.newContext({
     permissions: ["microphone", "camera"],
-    viewport: { width: 1200, height: 900 },
+    viewport: { width: 390, height: 844 },
     acceptDownloads: true,
   });
+  await context.route("**/*", (route) =>
+    new URL(route.request().url()).origin === origin ? route.continue() : route.abort(),
+  );
   await context.addCookies([{ name: "session", value: "fixture", url: origin }]);
   page = await context.newPage();
   page.on("pageerror", (error) => errors.push(error.message));
@@ -156,7 +161,13 @@ try {
   await page.route("**/api/v1/panels/runtime/*/call", async (route) => {
     const method = route.request().postDataJSON().method;
     methods.push(method);
-    const response = await route.fetch();
+    const request = route.request();
+    const response = await fetch(request.url(), {
+      method: request.method(),
+      headers: await request.allHeaders(),
+      body: request.postDataBuffer(),
+    });
+    const body = Buffer.from(await response.arrayBuffer());
     if (method === "resources.upload.write" && lostWrite) {
       lostWrite = false;
       await route.abort();
@@ -167,7 +178,11 @@ try {
       await route.abort();
       return;
     }
-    await route.fulfill({ response });
+    await route.fulfill({
+      status: response.status,
+      headers: Object.fromEntries(response.headers),
+      body,
+    });
   });
   // Observe actual tracks for cleanup without substituting capture or encoding.
   await page.addInitScript(() => {
@@ -246,8 +261,8 @@ try {
     async (id) => window.codeshellPanel.call("resources.preview", { assetId: id }),
     receipt.asset.id,
   );
-  const response = await context.request.get(preview.url);
-  assert.deepEqual(await response.body(), bytes);
+  const response = await fetch(preview.url, { headers: { Cookie: "session=fixture" } });
+  assert.deepEqual(Buffer.from(await response.arrayBuffer()), bytes);
   const saved = await frame.evaluate(async () =>
     window.codeshellPanel.call("resources.list", { limit: 100 }),
   );

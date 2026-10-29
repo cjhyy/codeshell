@@ -67,6 +67,50 @@ test("a shard past its budget is reported with both numbers", () => {
   expect(result.oversized).toEqual([{ label: "tests (b)", files: 2, budget: 1 }]);
 });
 
+test("Panel partitions cover resource descendants once and report new omissions and overlaps", () => {
+  const panel = "packages/server/src/panels";
+  const files = [`${panel}/runtime.test.ts`, `${panel}/resources/uploads.test.ts`];
+  const processes = [
+    { label: "tests: runtime", paths: [files[0]!], ignores: [] },
+    { label: "tests: resources", paths: [`${panel}/resources`], ignores: [] },
+  ];
+  expect(checkShards(files, processes)).toMatchObject({ uncovered: [], overlappingPanels: [] });
+  expect(checkShards([...files, `${panel}/new.test.ts`], processes).uncovered).toEqual([
+    `${panel}/new.test.ts`,
+  ]);
+  expect(
+    checkShards(files, [
+      ...processes,
+      { label: "tests: stale broad selection", paths: [panel], ignores: [] },
+    ]).overlappingPanels,
+  ).toEqual([
+    { file: files[0], processes: ["tests: runtime", "tests: stale broad selection"] },
+    { file: files[1], processes: ["tests: resources", "tests: stale broad selection"] },
+  ]);
+});
+
+test("Panel partitions have smaller explicit process budgets", () => {
+  const label = "tests: test Hub Panel native processes";
+  const files = Array.from(
+    { length: 7 },
+    (_, index) => `packages/server/src/panels/${index}.test.ts`,
+  );
+  expect(
+    checkShards(files, [{ label, paths: ["packages/server/src/panels"], ignores: [] }]).oversized,
+  ).toEqual([{ label, files: 7, budget: 6 }]);
+});
+
+test("renaming a Panel process cannot restore the general default budget", () => {
+  const label = "tests: renamed Panel step";
+  const files = Array.from(
+    { length: 11 },
+    (_, index) => `packages/server/src/panels/${index}.test.ts`,
+  );
+  expect(
+    checkShards(files, [{ label, paths: ["packages/server/src/panels"], ignores: [] }]).oversized,
+  ).toEqual([{ label, files: 11, budget: 10 }]);
+});
+
 test("only the known suites may bundle inside the test process", () => {
   // Split so this file is not itself an in-process bundler to the guard.
   const call = "await Bun." + "build({})";

@@ -15,6 +15,7 @@ import { sessionTitle } from "./chat.js";
 import type { WorkbenchController, WorkbenchNavigation } from "./workbench-types.js";
 import { parseWorkbenchLocation } from "./website-routes.js";
 import { useLatestMessages } from "./useLatestMessages.js";
+import { useTranscriptWindow } from "./useTranscriptWindow.js";
 import "./app.css";
 import "./workbench-desktop.css";
 
@@ -161,6 +162,13 @@ export function Workbench({
     loading: Boolean(controller.loading),
     active: view === "chat",
     approvalCount: controller.approvals.length,
+  });
+  const transcript = useTranscriptWindow({
+    items: chat.items,
+    scope: JSON.stringify([controller.workspaceKey, activeId]),
+    loading: Boolean(controller.loading),
+    listRef: latest.listRef,
+    pauseFollowing: latest.pauseFollowing,
   });
   React.useLayoutEffect(() => {
     const handoff = historyHandoff.current;
@@ -780,7 +788,12 @@ export function Workbench({
                     {controller.goalActions}
                   </div>
                 ) : null}
-                {chat.items.map((item) => {
+                {transcript.hidden > 0 ? (
+                  <button className="library-button" onClick={transcript.showEarlier}>
+                    显示更早消息（还有 {transcript.hidden} 条）
+                  </button>
+                ) : null}
+                {transcript.items.map((item) => {
                   switch (item.kind) {
                     case "user":
                       return (
@@ -937,7 +950,9 @@ export function Workbench({
                   }
                 }}
               />
-              <div className="composer-toolbar">
+              <div
+                className={`composer-toolbar${controller.modelSelector ? " with-model-selector" : ""}`}
+              >
                 {hub ? (
                   <>
                     <input
@@ -997,9 +1012,14 @@ export function Workbench({
                       title="打开模型设置"
                       onClick={() => openSettings("models")}
                     >
-                      <span>{defaultConnection?.model || "配置模型"}</span>
+                      <span>
+                        {controller.modelSelector
+                          ? "模型设置"
+                          : defaultConnection?.model || "配置模型"}
+                      </span>
                       <WorkbenchIcon name="chevron" />
                     </button>
+                    {controller.modelSelector}
                   </>
                 ) : null}
                 <span className="composer-run-status" role="status">

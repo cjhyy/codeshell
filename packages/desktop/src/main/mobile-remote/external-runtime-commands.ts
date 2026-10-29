@@ -5,6 +5,11 @@ import type {
   MobileClientEvent,
 } from "@cjhyy/code-shell-server/mobile-remote";
 import type { InputAttachmentMeta } from "@cjhyy/code-shell-server/storage";
+import type {
+  ExternalApprovalDecision,
+  ExternalApprovalEvent,
+  ExternalRuntimeApprovals,
+} from "../external-runtime-approvals.js";
 
 /** Persisted provider identity survives a missing/invalid model key. */
 export function isPersistedExternalRuntime(
@@ -17,9 +22,19 @@ export function isPersistedExternalRuntime(
   );
 }
 
+export function persistedExternalRuntimeModelKey(
+  state: { provider?: string; model?: string } | undefined,
+): string | undefined {
+  if (parseExternalRuntimeModelKey(state?.model)) return state?.model;
+  if (state?.provider === "codex" || state?.provider === "claude-code")
+    return `${state.provider}/${state.model ?? ""}`;
+  return undefined;
+}
+
 type Authority = {
   stamp: string;
   cwd: string;
+  mainRoot?: string;
   projectId?: string | null;
   rootId?: string | null;
   assertCurrent: () => void;
@@ -30,7 +45,17 @@ type Selection = {
   external: boolean;
   authority?: Authority;
   owner?: number;
+  fresh?: boolean;
 };
+export interface MobileRuntimeStart {
+  sessionId: string;
+  cwd: string;
+  mainRoot?: string;
+  modelKey: string;
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
+  owner?: number;
+  assertCurrent: () => void;
+}
 export interface MobileExternalRuntimeCommandsDeps {
   authenticated: (viewer: string, device: string) => boolean;
   authority: (sessionId: string) => Promise<Authority>;
@@ -39,6 +64,10 @@ export interface MobileExternalRuntimeCommandsDeps {
   isExternal: (sessionId: string) => boolean;
   exists: (sessionId: string) => boolean;
   attachmentPath: (path: string, cwd: string) => Promise<string>;
+  modelKey?: (sessionId: string) => string | undefined;
+  startRuntime?: (request: MobileRuntimeStart) => Promise<void>;
+  approvals?: () => ExternalRuntimeApprovals | null;
+  approvalEvent?: (viewer: string, event: ExternalApprovalEvent) => void;
 }
 
 /** Independent command authority from the paired socket, never a recovery/read grant. */
@@ -47,7 +76,141 @@ export class MobileExternalRuntimeCommands {
   // A retired external selection cannot become a native producer merely
   // because its state disappeared or was recreated under the same ID.
   private readonly externalRoutes = new Map<string, string>();
+  private readonly preparing = new Set<string>();
   constructor(private readonly deps: MobileExternalRuntimeCommandsDeps) {}
+
+  /** Only the Host's successful session.create path may grant a fresh, unpersisted ID. */
+  created(
+    viewer: string | undefined,
+    device: string | undefined,
+    sessionId: string,
+    authority: Authority,
+  ): void {
+    if (!viewer || !device || !this.deps.authenticated(viewer, device)) return;
+    if (this.selections.size >= 128 && !this.selections.has(viewer)) return;
+    authority.assertCurrent();
+    this.revoke(viewer, true);
+    this.selections.set(viewer, {
+      sessionId,
+      deviceId: device,
+      external: false,
+      fresh: true,
+      authority,
+    });
+  }
+
+  private assertSelection(viewer: string, device: string, selection: Selection): void {
+    if (this.selections.get(viewer) !== selection || !this.deps.authenticated(viewer, device))
+      throw new Error("External command selection changed");
+    selection.authority?.assertCurrent();
+  }
+
+  private async ensureRuntime(
+    viewer: string | undefined,
+    device: string | undefined,
+    sessionId: string,
+    options?: { modelKey?: string; permissionMode?: MobileRuntimeStart["permissionMode"] },
+  ): Promise<void> {
+    const selection = viewer ? this.selections.get(viewer) : undefined;
+    if (
+      !viewer ||
+      !device ||
+      !selection?.authority ||
+      selection.deviceId !== device ||
+      selection.sessionId !== sessionId
+    )
+      throw new Error("External command selection unavailable");
+    this.assertSelection(viewer, device, selection);
+    const service = this.deps.service();
+    if (!this.deps.startRuntime) return;
+    if (!service?.isEnabled()) throw new Error("请先在桌面端启用外部 Agent 运行时。");
+    const persisted = this.deps.modelKey?.(sessionId);
+    const modelKey = options?.modelKey ?? persisted;
+    if (!modelKey || !parseExternalRuntimeModelKey(modelKey))
+      throw new Error("Select a Claude Code or Codex model before starting this session");
+    // Do not replace an active provider merely because another client sends a different model.
+    if (
+      service?.get(sessionId) &&
+      selection.owner !== undefined &&
+      service.captureActiveRun(sessionId, selection.owner)
+    ) {
+      if (options?.modelKey && options.modelKey !== persisted)
+        throw new Error("Stop the running task before changing its runtime model");
+      return;
+    }
+    if (this.preparing.has(sessionId)) throw new Error("External runtime is already starting");
+    this.preparing.add(sessionId);
+    try {
+      if (selection.fresh && this.deps.exists(sessionId))
+        throw new Error("New mobile Session was replaced before startup");
+      if (!selection.fresh) {
+        const current = await this.deps.authority(sessionId);
+        this.assertSelection(viewer, device, selection);
+        if (current.stamp !== selection.authority.stamp)
+          throw new Error("External command authority changed");
+      }
+      if (!this.externalRoutes.has(viewer) && this.externalRoutes.size >= 128)
+        throw new Error("Too many external runtime selections");
+      this.externalRoutes.set(viewer, sessionId);
+      selection.external = true;
+      const assertCurrent = () => {
+        this.assertSelection(viewer, device, selection);
+        if (this.deps.service() !== service || this.deps.owner(sessionId) !== selection.owner)
+          throw new Error("External runtime owner changed while starting");
+      };
+      // startRuntime establishes an owner once. Subsequent checks use the returned owner;
+      // its own start fence validates the captured BrowserWindow across every await.
+      const oldOwner = selection.owner;
+      await this.deps.startRuntime({
+        sessionId,
+        cwd: selection.authority.cwd,
+        mainRoot: selection.authority.mainRoot,
+        modelKey,
+        permissionMode: options?.permissionMode,
+        owner: oldOwner,
+        assertCurrent: () => {
+          this.assertSelection(viewer, device, selection);
+          if (
+            this.deps.service() !== service ||
+            (oldOwner !== undefined &&
+              this.deps.owner(sessionId) !== undefined &&
+              this.deps.owner(sessionId) !== oldOwner)
+          )
+            throw new Error("External runtime owner changed while starting");
+        },
+      });
+      this.assertSelection(viewer, device, selection);
+      if (this.deps.service() !== service) throw new Error("External runtime service changed");
+      const authority = await this.deps.authority(sessionId);
+      this.assertSelection(viewer, device, selection);
+      selection.authority = authority;
+      selection.owner = this.deps.owner(sessionId);
+      selection.fresh = false;
+      assertCurrent();
+    } finally {
+      this.preparing.delete(sessionId);
+      // Startup can persist the canonical Session before a CLI launch fails. Keep
+      // that exact authorized root retryable without inventing a new native route.
+      if (
+        selection.fresh &&
+        this.deps.exists(sessionId) &&
+        this.deps.modelKey?.(sessionId) === modelKey
+      ) {
+        try {
+          this.assertSelection(viewer, device, selection);
+          const authority = await this.deps.authority(sessionId);
+          this.assertSelection(viewer, device, selection);
+          if (authority.cwd === selection.authority.cwd) {
+            selection.authority = authority;
+            selection.owner = this.deps.owner(sessionId);
+            selection.fresh = false;
+          }
+        } catch {
+          /* A revoked or replaced workspace stays rejected. */
+        }
+      }
+    }
+  }
 
   revoke(viewer: string, releaseRoute = false): void {
     this.selections.delete(viewer);
@@ -146,7 +309,13 @@ export class MobileExternalRuntimeCommands {
     return { selection, service, runtime, owner: selection.owner, authority: current };
   }
 
-  async prepare(viewer: string | undefined, device: string | undefined, sessionId: string) {
+  async prepare(
+    viewer: string | undefined,
+    device: string | undefined,
+    sessionId: string,
+    options?: { modelKey?: string; permissionMode?: MobileRuntimeStart["permissionMode"] },
+  ) {
+    if (this.deps.startRuntime) await this.ensureRuntime(viewer, device, sessionId, options);
     const captured = await this.authorize(viewer, device, sessionId);
     const submit: NonNullable<DispatchMobileChatTurnInput["submit"]> = async (request) => {
       // Server staging supplies trusted metadata, never client-specified absolute paths.
@@ -247,7 +416,70 @@ export class MobileExternalRuntimeCommands {
         );
       });
     };
-    return { ...captured.authority, submit };
+    return { ...captured.authority, submit, modelKey: this.deps.modelKey?.(sessionId) };
+  }
+
+  async replayApprovals(
+    viewer: string | undefined,
+    device: string | undefined,
+    sessionId: string,
+  ): Promise<void> {
+    try {
+      const current = await this.authorize(viewer, device, sessionId);
+      current.authority.assertCurrent();
+      for (const pending of this.deps.approvals?.()?.pendingForSession(sessionId, current.owner) ??
+        [])
+        this.deps.approvalEvent?.(viewer!, {
+          type: "requested",
+          ...pending,
+          ownerWebContentsId: current.owner,
+        });
+    } catch {
+      /* A read selection may have no running runtime; it grants no approval authority. */
+    }
+  }
+
+  async mirrorApproval(event: ExternalApprovalEvent): Promise<void> {
+    await Promise.allSettled(
+      [...this.selections]
+        .filter(([, selection]) => selection.sessionId === event.sessionId)
+        .map(async ([viewer, selection]) => {
+          if (event.type === "resolved") {
+            // Stop tears down the runtime before asynchronous mirroring finishes.
+            // Retiring a card needs the original selected viewer, not a live CLI.
+            this.assertSelection(viewer, selection.deviceId, selection);
+            if (selection.owner === event.ownerWebContentsId)
+              this.deps.approvalEvent?.(viewer, event);
+            return;
+          }
+          const current = await this.authorize(viewer, selection.deviceId, event.sessionId);
+          current.authority.assertCurrent();
+          if (current.owner !== event.ownerWebContentsId) return;
+          if (
+            !this.deps
+              .approvals?.()
+              ?.pendingForSession(event.sessionId, current.owner)
+              .some((item) => item.requestId === event.requestId)
+          )
+            return;
+          this.deps.approvalEvent?.(viewer, event);
+        }),
+    );
+  }
+
+  async respondApproval(
+    viewer: string | undefined,
+    device: string | undefined,
+    sessionId: string,
+    requestId: string,
+    decision: ExternalApprovalDecision,
+  ): Promise<boolean> {
+    const current = await this.authorize(viewer, device, sessionId);
+    current.authority.assertCurrent();
+    return (
+      this.deps.approvals?.()?.settleForSession(sessionId, requestId, decision, current.owner) ??
+      false
+    );
   }
 
   async stop(

@@ -23,6 +23,7 @@ function fixture(
     capability?: boolean;
     reply?: (request: any, reply: any, count: number) => any;
   },
+  journalReply?: (reply: any, count: number) => any,
 ) {
   const root = mkdtempSync(join(tmpdir(), "mobile-pointer-"));
   cleanup.push(() => rmSync(root, { recursive: true, force: true }));
@@ -77,8 +78,9 @@ function fixture(
           });
         if (event.type === "session.outputJournal") {
           const page = readOutputJournal(root, id, { after: event.after, through: event.through });
-          beforePageReply?.(++pageCount);
-          client.observe({
+          pageCount++;
+          beforePageReply?.(pageCount);
+          const reply = {
             type: "session.outputJournal",
             sessionId: id,
             recoveryId: event.recoveryId,
@@ -93,7 +95,10 @@ function fixture(
               outputCursor: cursor,
               unpaired: false,
             },
-          });
+          };
+          client.observe(
+            journalReply ? journalReply(reply, pageCount) : (reply as MobileServerEvent),
+          );
         }
         if ((event as any).type === "session.legacyBase") {
           const reply = baseOptions?.reply
@@ -485,5 +490,115 @@ test("a base request keeps the ten-second timeout and releases its waiter after 
   } finally {
     timer.mockRestore();
     f.client.cancel(false);
+  }
+});
+
+function busyJournal(reply: any) {
+  return {
+    type: reply.type,
+    sessionId: reply.sessionId,
+    recoveryId: reply.recoveryId,
+    requestId: reply.requestId,
+    busy: true,
+    page: { version: 1, status: "incomplete", frames: [], complete: false },
+  };
+}
+
+for (const forever of [false, true])
+  test(`busy journal reads use bounded backoff (${forever ? "exhaust" : "recover"})`, async () => {
+    const real = globalThis.setTimeout;
+    const delays: number[] = [];
+    const timer = spyOn(globalThis, "setTimeout").mockImplementation(((
+      callback,
+      delay,
+      ...args
+    ) => {
+      if (delay >= 50 && delay <= 1000) delays.push(delay);
+      return real(callback, delay >= 50 && delay <= 1000 ? 1 : delay, ...args);
+    }) as typeof setTimeout);
+    try {
+      const f = fixture("external", false, undefined, (reply, count) =>
+        forever || count <= 8 ? busyJournal(reply) : reply,
+      );
+      f.client.begin("external");
+      for (let attempt = 0; attempt < 100 && !f.commits.length && !f.failures(); attempt++)
+        await new Promise((resolve) => real(resolve, 5));
+      expect(delays).toEqual([50, 100, 200, 400, 800, 1000, 1000, 1000]);
+      expect(f.sent.filter((event) => event.type === "session.outputJournal")).toHaveLength(9);
+      expect(f.commits).toEqual(forever ? [] : ["first"]);
+      expect(f.failures()).toBe(forever ? 1 : 0);
+    } finally {
+      timer.mockRestore();
+    }
+  });
+
+test("switching selection clears a busy journal retry and ignores its late reply", async () => {
+  const f = fixture("external", false, undefined, (reply, count) =>
+    count === 1 ? busyJournal(reply) : reply,
+  );
+  f.client.begin("external");
+  await settled(() => Boolean((f.client as any).selection.retry));
+  f.client.begin("external");
+  await settled(() => f.commits.length === 1);
+  const count = f.sent.length;
+  await new Promise((resolve) => setTimeout(resolve, 70));
+  expect(f.sent.length).toBe(count);
+  expect(f.sent.filter((event) => event.type === "session.outputJournal")).toHaveLength(2);
+  expect(f.commits).toEqual(["first"]);
+  expect(f.failures()).toBe(0);
+});
+
+for (const malformed of ["unmarked", "mixed"] as const)
+  test(`${malformed} incomplete journal replies are not retried as busy`, async () => {
+    const f = fixture("external", false, undefined, (reply) => {
+      const busy = busyJournal(reply);
+      return malformed === "mixed"
+        ? { ...busy, snapshot: reply.snapshot }
+        : { ...busy, busy: undefined };
+    });
+    f.client.begin("external");
+    await settled(() => f.failures() > 0);
+    expect(f.sent.filter((event) => event.type === "session.outputJournal")).toHaveLength(1);
+    expect(f.commits).toEqual([]);
+  });
+
+test("foreground bursts join an existing recovery and later foreground events still refresh", async () => {
+  const f = fixture();
+  const now = spyOn(Date, "now").mockReturnValue(1000);
+  try {
+    f.client.begin("external");
+    expect(f.client.resync("external")).toBe("unchanged");
+    now.mockReturnValue(2000);
+    expect(f.client.resync("external")).toBe("unchanged"); // Still in flight, beyond debounce.
+    await settled(() => f.commits.length === 1);
+    expect(f.client.resync("external")).toBe("started");
+    await settled(() => f.commits.length === 2);
+    expect(f.client.resync("external")).toBe("unchanged");
+    expect(f.sent.filter((event) => event.type === "session.select")).toHaveLength(2);
+    now.mockReturnValue(2600);
+    expect(f.client.resync("external")).toBe("started");
+    await settled(() => f.commits.length === 3);
+    expect(f.failures()).toBe(0);
+  } finally {
+    now.mockRestore();
+  }
+});
+
+test("foreground refresh discovers the first journal when its live notification was missed", async () => {
+  const f = fixture("external", true);
+  const now = spyOn(Date, "now").mockReturnValue(1000);
+  try {
+    f.client.begin("external");
+    await settled(() => !f.client.pending("external"));
+    expect(f.commits).toEqual([]);
+    expect(f.client.owns("external")).toBe(true);
+    f.openJournal();
+    now.mockReturnValue(2000);
+    expect(f.client.resync("external")).toBe("started");
+    await settled(() => f.commits.length === 1);
+    expect(f.commits).toEqual(["first"]);
+    expect(f.failures()).toBe(0);
+  } finally {
+    now.mockRestore();
   }
 });
