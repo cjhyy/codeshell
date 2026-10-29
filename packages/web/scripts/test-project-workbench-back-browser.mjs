@@ -11,6 +11,15 @@ const require = createRequire(path.join(web, "../desktop/package.json"));
 const { build } = require("esbuild");
 const { chromium } = require("playwright");
 const development = process.argv.includes("--development");
+// Exercise the real late-metadata path in CI; immediate delivery remains useful
+// for diagnosing initial iframe input/handshake failures independently.
+const holdConfiguration = !process.argv.includes("--immediate-configuration");
+let releaseConfiguration;
+const configurationGate = new Promise((resolve) => {
+  releaseConfiguration = resolve;
+});
+let confirmationTrace;
+let phase = "start";
 const sourceArg = process.argv.indexOf("--source-repo");
 const resolveDir =
   sourceArg < 0
@@ -41,6 +50,7 @@ const origin = "http://localhost:41735";
 const projectA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   projectB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const scopedRequests = [];
+const lifecycle = [];
 const panel = {
   id: "owned-panel",
   version: "1.0.0",
@@ -89,6 +99,24 @@ const context = await browser.newContext({
 });
 await context.addInitScript(() => {
   Object.defineProperty(window, "navigation", { configurable: true, value: undefined });
+  window.panelTrace = [];
+  window.addEventListener("message", (event) => {
+    const data = event.data;
+    if (typeof data?.type !== "string" || !data.type.startsWith("codeshell-panel:")) return;
+    window.panelTrace.push({
+      time: window.performance.now(),
+      type: data.type,
+      instanceId: data.instanceId,
+      method: data.method,
+      input: data.input,
+      currentFrame: document.querySelector("iframe")?.getAttribute("src"),
+      currentSource: event.source === document.querySelector("iframe")?.contentWindow,
+      workspace: document.querySelector(".workspace-button")?.getAttribute("title"),
+      session: new URL(location.href).searchParams.get("session"),
+      loading: !!document.querySelector(".panel-host-loading"),
+    });
+    if (window.panelTrace.length > 128) window.panelTrace.shift();
+  });
 });
 await context.route("**/*", async (route) => {
   const request = route.request(),
@@ -129,11 +157,13 @@ await context.route("**/*", async (route) => {
       })),
     });
   if (pathname === "/api/v1/sessions") return reply({ sessions: [] });
-  if (pathname === "/api/v1/configuration")
+  if (pathname === "/api/v1/configuration") {
+    if (holdConfiguration && scope?.[1] === projectB) await configurationGate;
     return reply({
       ...config,
       workspace: { ...config.workspace, path: scope?.[1] === projectB ? "/owned/B" : "/owned/A" },
     });
+  }
   if (pathname === "/api/v1/panels")
     return reply({ workspace: "/owned", hasProject: true, panels: [panel] });
   if (pathname === "/api/v1/files") {
@@ -164,6 +194,12 @@ await context.route("**/*", async (route) => {
     });
   if (pathname === "/api/v1/panels/runtime/prepare") {
     const instanceId = "owned-instance-" + String(++sequence).padStart(12, "0");
+    lifecycle.push({
+      kind: "prepare",
+      instanceId,
+      project: scope?.[1],
+      body: request.postDataJSON(),
+    });
     return reply({
       instanceId,
       src: "/api/v1/panel-assets/" + instanceId + "/index.html",
@@ -177,6 +213,7 @@ await context.route("**/*", async (route) => {
     return reply(
       `<button id="preview">Open owned resource</button><button id="confirm">Request confirmation</button><a id="anchor-a" href="#a">Owned child A</a><a id="anchor-b" href="#b">Owned child B</a><script>
    const id=${JSON.stringify(id)};let n=0;const call=(method,params)=>parent.postMessage({type:'codeshell-panel:call',instanceId:id,requestId:'owned-'+(++n),method,params},'*');
+   for(const type of ['touchstart','touchend','click'])document.addEventListener(type,event=>parent.postMessage({type:'codeshell-panel:fixture-input',instanceId:id,input:{type,trusted:event.isTrusted,target:event.target.id}},'*'),true);
    document.querySelector('#preview').onclick=()=>call('resources.open',{assetId:${JSON.stringify(assetId)}});
    document.querySelector('#confirm').onclick=()=>call('external.open',{url:'https://owned-external.invalid/'});
    parent.postMessage({type:'codeshell-panel:ready',instanceId:id},'*');
@@ -188,6 +225,7 @@ await context.route("**/*", async (route) => {
   if (pathname.endsWith("/call")) {
     const call = request.postDataJSON(),
       id = pathname.split("/")[5];
+    lifecycle.push({ kind: "call", instanceId: id, project: scope?.[1], method: call.method });
     if (call.method === "resources.open")
       return reply({
         effect: "resources.open",
@@ -199,6 +237,7 @@ await context.route("**/*", async (route) => {
   }
   if (pathname.startsWith("/api/v1/panels/runtime/") && request.method() === "DELETE") {
     revoked.push(pathname);
+    lifecycle.push({ kind: "revoke", path: pathname, project: scope?.[1] });
     return reply({ closed: true });
   }
   unexpected.push(request.method() + " " + pathname);
@@ -237,11 +276,12 @@ try {
   await nav("返回项目列表");
   await card("Owned project B").waitFor();
   await card("Owned project B").getByRole("button", { name: "打开项目", exact: true }).tap();
+  phase = "selected-project-B";
   await page.locator(".hub-files").waitFor();
-  await page.waitForFunction(
-    (a) => new URL(location.href).searchParams.get("session") !== a,
-    sessionA,
-  );
+  await page.waitForFunction((a) => {
+    const id = new URL(location.href).searchParams.get("session");
+    return !!id && id !== a;
+  }, sessionA);
   const sessionB = new URL(page.url()).searchParams.get("session");
   assert.equal(new URL(page.url()).searchParams.get("project"), projectB);
   assert.ok(scopedRequests.some((r) => r.project === projectB && r.path === "/api/v1/files"));
@@ -253,9 +293,35 @@ try {
     );
   } else {
     await nav("面板");
+    phase = "open-B-panel";
     await page.locator(".panels-card").getByRole("button", { name: "打开面板", exact: true }).tap();
+    phase = "tap-confirm";
     await page.frameLocator("iframe").locator("#confirm").tap();
+    phase = "wait-confirmation";
     await page.locator(".panel-host-confirm").waitFor();
+    confirmationTrace = await page.evaluate(() => window.panelTrace);
+    if (holdConfiguration) {
+      const frameBefore = await page.locator("iframe").getAttribute("src");
+      const revokesBefore = revoked.length;
+      const preparesBefore = lifecycle.filter((event) => event.kind === "prepare").length;
+      phase = "release-B-metadata";
+      releaseConfiguration();
+      await page.waitForFunction(
+        () => document.querySelector(".workspace-button")?.getAttribute("title") === "/owned/B",
+      );
+      assert.equal(
+        await page.locator(".panel-host-confirm").count(),
+        1,
+        "late workspace metadata must not retire a same-project Panel confirmation",
+      );
+      assert.equal(await page.locator("iframe").getAttribute("src"), frameBefore);
+      assert.equal(revoked.length, revokesBefore);
+      assert.equal(lifecycle.filter((event) => event.kind === "prepare").length, preparesBefore);
+      reports.push(
+        "delayed same-project metadata preserves the original Panel instance and confirmation",
+      );
+    }
+    phase = "cross-project-history";
     const before = revoked.length,
       requestStart = scopedRequests.length;
     // These three real app entries lead to A's Settings, across ProjectsGate's unmount/remount.
@@ -299,6 +365,7 @@ try {
     );
     // Same workspace: New conversation changes the real useHubController activeId.
     await nav("设置");
+    phase = "same-project-session-history";
     await page.getByRole("heading", { name: "设置", exact: true }).waitFor();
     await nav("新对话");
     await page.locator(".chat:not([hidden])").waitFor();
@@ -315,6 +382,7 @@ try {
     // The real remount normalization creates two native entries with the same
     // opaque marker. New conversation on Chat uses replaceState, not a new view.
     await page.goto(origin + "/hub/");
+    phase = "same-index-remount";
     await card("Owned project A").getByRole("button", { name: "打开项目", exact: true }).tap();
     await page.locator(".chat:not([hidden])").waitFor();
     await nav("设置");
@@ -366,11 +434,43 @@ try {
   assert.deepEqual(unexpected, []);
   await writeFile(
     path.join(output, "receipt.json"),
-    JSON.stringify({ development, oldEntries, reports, errors, blocked, unexpected }, null, 2),
+    JSON.stringify(
+      {
+        development,
+        oldEntries,
+        reports,
+        errors,
+        blocked,
+        unexpected,
+        lifecycle,
+        confirmationTrace,
+        panelTrace: await page.evaluate(() => window.panelTrace),
+      },
+      null,
+      2,
+    ),
   );
   console.log(JSON.stringify({ ok: true, output, reports, oldEntries }));
 } catch (error) {
   await page.screenshot({ path: path.join(output, "failure.png") }).catch(() => {});
+  const diagnostics = {
+    phase,
+    development,
+    holdConfiguration,
+    lifecycle: lifecycle.slice(-16),
+    confirmationTrace: confirmationTrace?.slice(-16),
+    current: await page.evaluate(() => ({
+      trace: window.panelTrace?.slice(-24),
+      workspace: document.querySelector(".workspace-button")?.getAttribute("title"),
+      session: new URL(location.href).searchParams.get("session"),
+      project: new URL(location.href).searchParams.get("project"),
+      frame: document.querySelector("iframe")?.getAttribute("src"),
+      loading: !!document.querySelector(".panel-host-loading"),
+      confirmation: !!document.querySelector(".panel-host-confirm"),
+      panels: !!document.querySelector(".panels-grid"),
+    })),
+  };
+  console.error("Owned project navigation diagnostics:", JSON.stringify(diagnostics));
   await writeFile(
     path.join(output, "failure.json"),
     JSON.stringify(
@@ -380,6 +480,7 @@ try {
         errors,
         blocked,
         unexpected,
+        diagnostics,
         body: await page.locator("body").innerText(),
       },
       null,
@@ -389,6 +490,7 @@ try {
   console.error("Project navigation evidence:", output);
   throw error;
 } finally {
+  releaseConfiguration();
   await context.close();
   await browser.close();
 }
