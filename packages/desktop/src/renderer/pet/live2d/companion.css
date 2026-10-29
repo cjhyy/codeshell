@@ -217,3 +217,23 @@ body,
   background: #ffffffec;
   color: #455468;
 }
+
+/* A long trip vanishes and reappears at the destination instead of lagging. */
+.mimi-companion--hop .mimi-companion__body {
+  animation: mimi-hop 220ms ease-out;
+}
+
+@keyframes mimi-hop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.mimi-scene--still .mimi-companion--hop .mimi-companion__body {
+  animation: none;
+}

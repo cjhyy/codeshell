@@ -4,7 +4,13 @@ import { createServer, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { MimiCompanionAction } from "../../shared/mimi-companion.js";
-import { parseCuaAvoidRect, type CuaAvoidRect } from "./cua-activity.js";
+import {
+  CUA_ELEMENT_KINDS,
+  parseCuaAvoidRect,
+  type CuaAvoidRect,
+  type CuaElementKind,
+} from "./cua-activity.js";
+import { APP_PROFILE_ID } from "./app-profiles.js";
 import type { InputGateState, InputLane } from "./input-gate-policy.js";
 
 export interface CompanionOperation {
@@ -19,6 +25,12 @@ export interface CompanionOperation {
   lane?: InputLane;
   /** Root Session of the call, when the caller declared one. */
   sessionId?: string;
+  /** Start only: target process, its window frame and the control category. */
+  pid?: number;
+  window?: CuaAvoidRect;
+  element?: CuaElementKind;
+  /** Start only: CodeShell app profile id of the target app. */
+  appId?: string;
 }
 
 const ACTIONS = new Set(["observe", "click", "type", "scroll", "drag", "key", "working", "error"]);
@@ -58,6 +70,9 @@ export function parseCompanionOperation(value: unknown): CompanionOperation | nu
     return null;
   const avoidRect = parseCuaAvoidRect(input.avoidRect);
   if (input.avoidRect !== undefined && !avoidRect) return null;
+  const start = input.phase === "start";
+  const frame = start ? parseCuaAvoidRect(input.window) : undefined;
+  if (start && input.window !== undefined && !frame) return null;
   return {
     id: input.id,
     action: input.action as MimiCompanionAction,
@@ -75,6 +90,20 @@ export function parseCompanionOperation(value: unknown): CompanionOperation | nu
       : {}),
     ...(typeof input.sessionId === "string" && /^[A-Za-z0-9_.:-]{1,160}$/.test(input.sessionId)
       ? { sessionId: input.sessionId }
+      : {}),
+    ...(start &&
+    typeof input.pid === "number" &&
+    Number.isSafeInteger(input.pid) &&
+    input.pid > 0 &&
+    input.pid < 2 ** 31
+      ? { pid: input.pid }
+      : {}),
+    ...(frame ? { window: frame } : {}),
+    ...(start && typeof input.element === "string" && CUA_ELEMENT_KINDS.has(input.element)
+      ? { element: input.element as CuaElementKind }
+      : {}),
+    ...(start && typeof input.appId === "string" && APP_PROFILE_ID.test(input.appId)
+      ? { appId: input.appId }
       : {}),
   };
 }

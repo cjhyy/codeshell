@@ -206,6 +206,83 @@ ${nativeTrial ? '<button id="native" class="primary">用真实 CUA 试填表单<
       screen.getAllDisplays().map(({ bounds, scaleFactor }) => ({ ...bounds, scaleFactor })),
     );
   }
+  if (process.argv.includes("--stage-demo")) {
+    // Scripted presentation only: content-free events through the real
+    // activity channel, using this lab window as the "target window". No
+    // computer input, no driver, no other app is touched.
+    await host.update({ enabled: true, size: 240 });
+    const area = trialDisplay.workArea;
+    control.setBounds({
+      x: Math.round(area.x + 80),
+      y: Math.round(area.y + 300),
+      width: 940,
+      height: Math.min(740, area.height - 340),
+    });
+    const frame = control.getBounds();
+    const channel = createConnection(execution.mcpProxy.socketPath);
+    await new Promise<void>((resolveConnect, reject) => {
+      channel.once("connect", resolveConnect);
+      channel.once("error", reject);
+    });
+    const send = (event: Record<string, unknown>) =>
+      channel.write(JSON.stringify({ ...event, token: execution.mcpProxy.token }) + "\n");
+    const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
+    const actor = () =>
+      BrowserWindow.getAllWindows().find((win) => win !== control && !win.isDestroyed());
+    const report = async (label: string) => {
+      const seen = await actor()?.webContents.executeJavaScript(
+        `(() => { const body = document.querySelector('.mimi-companion'); const sprite = document.querySelector('.mimi-companion__sprite'); return body && { perch: body.dataset.perch, travel: body.dataset.travel, action: body.dataset.action, animation: sprite?.dataset.animation, transform: body.style.transform }; })()`,
+      );
+      console.log("Stage:", label, JSON.stringify(seen));
+    };
+    const window = { x: frame.x, y: frame.y, width: frame.width, height: frame.height };
+    const scenes = [
+      { label: "button near the top", action: "click", element: "button", x: 0.62, y: 70 },
+      { label: "text field", action: "click", element: "text", x: 0.3, y: 150 },
+      { label: "lower in the window", action: "scroll", element: "list", x: 0.5, y: -40 },
+      { label: "back near the top", action: "click", element: "link", x: 0.85, y: 90 },
+      {
+        label: "no window observed",
+        action: "click",
+        element: "button",
+        x: 0.2,
+        y: -120,
+        bare: true,
+      },
+    ];
+    await sleep(1_500);
+    for (const [index, scene] of scenes.entries()) {
+      const id = `stage-demo:${index}`;
+      send({
+        id,
+        action: scene.action,
+        phase: "start",
+        capture: false,
+        targetSource: "native-cursor",
+        target: {
+          x: frame.x + frame.width * scene.x,
+          y: scene.y < 0 ? frame.y + frame.height + scene.y : frame.y + scene.y,
+        },
+        ...("bare" in scene ? {} : { window }),
+        element: scene.element,
+      });
+      await sleep(120);
+      await report(`${scene.label} @120ms`);
+      await sleep(480);
+      await report(`${scene.label} @600ms`);
+      const snapshots = process.argv.find((arg) => arg.startsWith("--stage-snapshots="));
+      const shot = snapshots && (await actor()?.webContents.capturePage());
+      if (snapshots && shot)
+        await writeFile(join(snapshots.slice(18), `stage-${index}.png`), shot.toPNG());
+      await sleep(500);
+      await report(`${scene.label} @1100ms`);
+      send({ id, action: scene.action, phase: "end", capture: false });
+      await sleep(1_000);
+    }
+    channel.destroy();
+    console.log("Stage demo finished");
+    if (process.argv.includes("--exit")) app.quit();
+  }
   let quitting = false;
   app.on("before-quit", (event) => {
     if (quitting) return;

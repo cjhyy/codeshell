@@ -242,3 +242,43 @@ test("a wrong token on hello is disconnected without a gate", async () => {
   expect(received).toEqual([]);
   await server.close();
 });
+
+test("window, process and control category are accepted only on a start", () => {
+  const start = {
+    id: "w1",
+    action: "type",
+    phase: "start",
+    capture: false,
+    pid: 42,
+    window: { x: 0, y: 25, width: 1200, height: 800, title: "Inbox" },
+    element: "text",
+    appId: "chrome",
+  };
+  expect(parseCompanionOperation({ ...start, appId: "Not An Id!" })).not.toHaveProperty("appId");
+  expect(parseCompanionOperation(start)).toEqual({
+    id: "w1",
+    action: "type",
+    phase: "start",
+    capture: false,
+    pid: 42,
+    window: { x: 0, y: 25, width: 1200, height: 800 },
+    element: "text",
+    appId: "chrome",
+  });
+  expect(
+    parseCompanionOperation({ ...start, window: { x: 0, y: 0, width: -1, height: 2 } }),
+  ).toBeNull();
+  expect(parseCompanionOperation({ ...start, element: "secret label" })).not.toHaveProperty(
+    "element",
+  );
+  expect(parseCompanionOperation({ ...start, pid: -1 })).not.toHaveProperty("pid");
+  const update = parseCompanionOperation({
+    ...start,
+    phase: "update",
+    target: { x: 1, y: 2 },
+    targetSource: "native-cursor",
+  });
+  expect(update).not.toHaveProperty("window");
+  expect(update).not.toHaveProperty("element");
+  expect(update).not.toHaveProperty("pid");
+});

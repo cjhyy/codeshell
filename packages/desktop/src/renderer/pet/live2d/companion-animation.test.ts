@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { MimiCompanionState } from "../../../shared/mimi-companion";
-import { companionPose } from "./companion-pose";
+import { companionActionLabel, companionPose } from "./companion-pose";
 import { companionCueDuration, spriteAnimation } from "./sprite-animation";
 import { effectAction, LIVE2D_EFFECTS, SPRITE_EFFECTS } from "./character-renderer";
 
@@ -70,5 +70,18 @@ describe("companion action presentation", () => {
     expect(
       spriteAnimation({ ...state, activity: { ...state.activity, action: "complete" } }, null),
     ).toBe("jumping");
+  });
+
+  test("a click lands as a tap on controls and as settling in to type on a field", () => {
+    expect(spriteAnimation({ ...state, element: "button" }, null)).toBe("waving");
+    expect(spriteAnimation({ ...state, element: "text" }, null)).toBe("typing");
+    const field = companionPose({ ...state, element: "text" }, 180);
+    const button = companionPose({ ...state, element: "button" }, 180);
+    expect(field.reach).toBeLessThan(button.reach);
+    expect(field.handPulse).toBeGreaterThan(0);
+    expect(companionActionLabel({ ...state, element: "text" })).toBe("点进输入框");
+    expect(companionActionLabel({ ...state, element: "link" })).toBe("打开链接");
+    expect(companionActionLabel({ ...state, element: "other" })).toBe("点击");
+    expect(companionActionLabel(state)).toBe("点击");
   });
 });

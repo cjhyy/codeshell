@@ -12,6 +12,18 @@ export type MimiCompanionAction =
   | "complete"
   | "error";
 
+/** Where the character stands relative to the window it is working in. */
+export type MimiCompanionPerch = "title-bar" | "beside-target" | "screen-corner";
+/** Category of the control an action lands on; never its label or value. */
+export type MimiCompanionElement =
+  | "text"
+  | "button"
+  | "link"
+  | "menu"
+  | "list"
+  | "scroll"
+  | "other";
+
 export interface MimiCompanionSettings {
   enabled: boolean;
   size: number;
@@ -34,6 +46,9 @@ export interface MimiCompanionState {
   avoidInput?: boolean;
   pinned?: boolean;
   target?: { x: number; y: number };
+  perch?: MimiCompanionPerch;
+  /** Control category under the current gesture, for an apt motion. */
+  element?: MimiCompanionElement;
   activity: {
     id: string;
     action: MimiCompanionAction;

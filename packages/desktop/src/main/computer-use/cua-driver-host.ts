@@ -63,6 +63,8 @@ export interface CuaDriverHostOptions {
     readonly entryPath: string;
     readonly socketPath: string;
     readonly token: string;
+    /** Directory of bundled app profiles the proxy reads. */
+    readonly appProfilesDir?: string;
   };
 }
 
@@ -210,6 +212,7 @@ export class CuaDriverHost {
           ELECTRON_RUN_AS_NODE: "1",
           CODE_SHELL_CUA_ACTIVITY_SOCKET: proxy.socketPath,
           CODE_SHELL_CUA_ACTIVITY_TOKEN: proxy.token,
+          ...(proxy.appProfilesDir ? { CODE_SHELL_CUA_APP_PROFILES: proxy.appProfilesDir } : {}),
         },
         inlineImages: true,
       };

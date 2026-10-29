@@ -1,4 +1,5 @@
 import { globalShortcut, Notification, powerMonitor, type App } from "electron";
+import { join } from "node:path";
 import { SettingsManager } from "@cjhyy/code-shell-core/extension";
 import { readUserFeatureFlags } from "../capability-modules-env.js";
 import { resolveComputerUseBundle, type CuaDriverHostOptions } from "./cua-driver-host.js";
@@ -17,6 +18,7 @@ import {
   resetCuaComputerUse,
   setComputerUseControl,
 } from "./service.js";
+import { loadAppProfiles } from "./app-profiles.js";
 import { createMimiCompanionHost, type MimiCompanionHost } from "./mimi-companion-host.js";
 import { createComputerUseControl, type ComputerUseControl } from "./computer-use-control.js";
 
@@ -57,9 +59,13 @@ export async function initializeDesktopComputerUse(options: {
   log: NonNullable<CuaDriverHostOptions["log"]>;
   openCompanionChat(): Promise<void>;
 }): Promise<void> {
+  const appProfilesDir = options.app.isPackaged
+    ? join(options.resourcesPath, "packages", "desktop", "resources", "computer-use", "apps")
+    : join(options.app.getAppPath(), "resources", "computer-use", "apps");
   if (options.platform === "darwin") {
     control = await createComputerUseControl({
       appPath: options.app.getAppPath(),
+      appProfilesDir,
       executablePath: process.execPath,
       log: options.log,
       idleSeconds: () => powerMonitor.getSystemIdleTime(),
@@ -94,6 +100,9 @@ export async function initializeDesktopComputerUse(options: {
       openChat: options.openCompanionChat,
       bus: executionControl.bus,
       gate: executionControl.gate,
+      appProfiles: loadAppProfiles(appProfilesDir, (file, error) =>
+        options.log("computer_use_app_profile_skipped", { file, error }),
+      ),
     }).catch((error) => {
       options.log("mimi_companion_setup_failed", { error: String(error) });
       return undefined;
