@@ -16,6 +16,9 @@ import type { WorkbenchController, WorkbenchNavigation } from "./workbench-types
 import { parseWorkbenchLocation } from "./website-routes.js";
 import { useLatestMessages } from "./useLatestMessages.js";
 import { useTranscriptWindow } from "./useTranscriptWindow.js";
+import { groupToolActivity } from "./toolActivityGroups.js";
+import { ToolActivity } from "./ToolActivity.js";
+import { ExpandedHistoryText } from "./ExpandedHistoryText.js";
 import "./app.css";
 import "./workbench-desktop.css";
 
@@ -774,6 +777,20 @@ export function Workbench({
               tabIndex={0}
               ref={latest.listRef}
               onScroll={latest.onScroll}
+              onWheel={latest.onScrollIntent}
+              onTouchMove={latest.onScrollIntent}
+              onPointerDown={(event) => {
+                if (event.target === event.currentTarget) latest.onScrollIntent();
+              }}
+              onKeyDown={(event) => {
+                if (
+                  event.target === event.currentTarget &&
+                  ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(
+                    event.key,
+                  )
+                )
+                  latest.onScrollIntent();
+              }}
             >
               <div className="transcript" ref={latest.contentRef}>
                 {controller.chatControls}
@@ -793,12 +810,45 @@ export function Workbench({
                     显示更早消息（还有 {transcript.hidden} 条）
                   </button>
                 ) : null}
-                {transcript.items.map((item) => {
+                {!transcript.hidden &&
+                controller.loadEarlierHistory &&
+                (controller.historyHasEarlier || controller.historyEarlierError) ? (
+                  <div className="message-earlier-history">
+                    <button
+                      type="button"
+                      className="library-button"
+                      disabled={controller.historyLoadingEarlier || controller.loading}
+                      onClick={() => {
+                        const cancel = transcript.prepareEarlierPage();
+                        void controller.loadEarlierHistory!().catch(cancel);
+                      }}
+                    >
+                      {controller.historyLoadingEarlier
+                        ? "正在读取更早记录…"
+                        : controller.historyEarlierError
+                          ? "重试读取更早记录"
+                          : "读取更早记录"}
+                    </button>
+                    {controller.historyEarlierError && (
+                      <p role="alert">{controller.historyEarlierError}</p>
+                    )}
+                  </div>
+                ) : null}
+                {groupToolActivity(transcript.items).map((item) => {
                   switch (item.kind) {
                     case "user":
                       return (
                         <div key={item.id} className="msg user">
-                          {item.text}
+                          <ExpandedHistoryText
+                            key={`${controller.workspaceKey}:${activeId}:${item.id}`}
+                            text={item.text}
+                            reference={item.textDetailRef}
+                            scope={`${controller.workspaceKey}:${activeId}`}
+                            load={controller.loadHistoryDetail}
+                            reload={controller.reloadHistory}
+                          >
+                            {(text) => <span>{text}</span>}
+                          </ExpandedHistoryText>
                           {item.attachments?.map((attachment, index) =>
                             hub && attachment.path ? (
                               <button
@@ -817,21 +867,55 @@ export function Workbench({
                         </div>
                       );
                     case "assistant":
-                      if (item.done && !item.text && !item.reasoning) return null;
+                      if (
+                        item.done &&
+                        !item.text &&
+                        !item.reasoning &&
+                        !item.reasoningDetailRef &&
+                        !item.textDetailRef
+                      )
+                        return null;
                       return (
                         <div key={item.id} className="msg assistant">
                           <MessageContent
+                            key={`${controller.workspaceKey}:${activeId}:${item.id}`}
                             text={item.text}
                             reasoning={item.reasoning}
+                            reasoningDetailRef={item.reasoningDetailRef}
+                            textDetailRef={item.textDetailRef}
+                            detailScope={`${controller.workspaceKey}:${activeId}`}
+                            loadHistoryDetail={controller.loadHistoryDetail}
+                            reloadHistory={controller.reloadHistory}
                             streaming={!item.done}
                             onOpenFile={hub ? openMessageFile : undefined}
+                          />
+                        </div>
+                      );
+                    case "tool_group":
+                      return (
+                        <div
+                          key={`${controller.workspaceKey}:${activeId}:${item.id}`}
+                          className="msg tool"
+                        >
+                          <ToolActivity
+                            items={item.items}
+                            detailScope={`${controller.workspaceKey}:${activeId}`}
+                            loadHistoryDetail={controller.loadHistoryDetail}
+                            reloadHistory={controller.reloadHistory}
                           />
                         </div>
                       );
                     case "tool":
                       return (
                         <div key={item.id} className={`msg tool${item.error ? " tool-error" : ""}`}>
-                          <ToolMessage item={item} running={running} />
+                          <ToolMessage
+                            key={`${controller.workspaceKey}:${activeId}:${item.id}`}
+                            item={item}
+                            running={running}
+                            detailScope={`${controller.workspaceKey}:${activeId}`}
+                            loadHistoryDetail={controller.loadHistoryDetail}
+                            reloadHistory={controller.reloadHistory}
+                          />
                         </div>
                       );
                     case "subagent":

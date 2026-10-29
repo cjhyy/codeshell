@@ -4,7 +4,14 @@ import type { ChatItem } from "../src/lib/streamReducer.js";
 function visibleOutput(item: ChatItem): boolean {
   return (
     item.kind !== "user" &&
-    !(item.kind === "assistant" && item.done && !item.text && !item.reasoning)
+    !(
+      item.kind === "assistant" &&
+      item.done &&
+      !item.text &&
+      !item.reasoning &&
+      !item.textDetailRef &&
+      !item.reasoningDetailRef
+    )
   );
 }
 
@@ -20,6 +27,8 @@ export function outputChanged(previous: ChatItem | undefined, item: ChatItem): b
         previous.kind === "assistant" &&
         (previous.text !== item.text ||
           previous.reasoning !== item.reasoning ||
+          previous.textDetailRef !== item.textDetailRef ||
+          previous.reasoningDetailRef !== item.reasoningDetailRef ||
           previous.done !== item.done)
       );
     case "tool":
@@ -66,6 +75,7 @@ export function useLatestMessages({
   const listRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const following = useRef(true);
+  const readingEarlier = useRef(false);
   const programmaticTop = useRef<number | null>(null);
   const snappedSize = useRef<{ width: number; height: number } | null>(null);
   const previous = useRef(new Map<string, ChatItem>());
@@ -86,6 +96,7 @@ export function useLatestMessages({
   }, []);
   const resume = useCallback(() => {
     following.current = true;
+    readingEarlier.current = false;
     clearNotices();
     setShowJump(false);
     snap();
@@ -107,6 +118,12 @@ export function useLatestMessages({
       return;
     }
     const near = list.scrollHeight - list.scrollTop - list.clientHeight <= 100;
+    // Restoring a history anchor also dispatches scroll. Even when that anchor
+    // happens to be near the tail, keep it until the reader scrolls or jumps.
+    if (readingEarlier.current) {
+      setShowJump(!near);
+      return;
+    }
     // A bottom snap dispatches its scroll event after more content may arrive.
     // Do not mistake that delayed event for the reader leaving the live tail.
     if (
@@ -137,6 +154,7 @@ export function useLatestMessages({
       clearNotices();
       if (changedScope) {
         following.current = true;
+        readingEarlier.current = false;
         programmaticTop.current = null;
         setShowJump(false);
       }
@@ -157,7 +175,11 @@ export function useLatestMessages({
     if (!active || !list || !content || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(() => {
       if (following.current) snap();
-      else if (list.scrollHeight - list.scrollTop - list.clientHeight <= 100) resume();
+      else if (
+        !readingEarlier.current &&
+        list.scrollHeight - list.scrollTop - list.clientHeight <= 100
+      )
+        resume();
       else setShowJump(true);
     });
     observer.observe(list);
@@ -171,13 +193,19 @@ export function useLatestMessages({
   }, [resume]);
   const pauseFollowing = useCallback(() => {
     following.current = false;
+    readingEarlier.current = true;
     programmaticTop.current = null;
     setShowJump(true);
+  }, []);
+  const onScrollIntent = useCallback(() => {
+    readingEarlier.current = false;
+    programmaticTop.current = null;
   }, []);
   return {
     listRef,
     contentRef,
     onScroll,
+    onScrollIntent,
     showJump,
     newOutputCount,
     jumpToLatest,

@@ -2,6 +2,9 @@ import React from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ChatItem } from "../src/lib/streamReducer.js";
+import type { HistoryDetailLoader } from "./workbench-types.js";
+import { HistoryDetailBody } from "./HistoryDetailBody.js";
+import { ExpandedHistoryText } from "./ExpandedHistoryText.js";
 import "./message-content.css";
 
 /** Markdown is untrusted display content. Network images are deliberately
@@ -189,43 +192,87 @@ export const MessageContent = React.memo(function MessageContent({
   reasoning = "",
   streaming = false,
   onOpenFile,
+  reasoningDetailRef,
+  textDetailRef,
+  loadHistoryDetail,
+  reloadHistory,
+  detailScope = "",
 }: {
   text: string;
   reasoning?: string;
   streaming?: boolean;
   onOpenFile?: (path: string) => void;
+  reasoningDetailRef?: string;
+  textDetailRef?: string;
+  loadHistoryDetail?: HistoryDetailLoader;
+  reloadHistory?: () => void;
+  detailScope?: string;
 }) {
   const components = React.useMemo(() => markdownComponents(onOpenFile), [onOpenFile]);
+  const [reasoningOpen, setReasoningOpen] = React.useState(false);
   return (
     <div className="message-content">
-      {reasoning ? (
-        <details className="message-reasoning">
+      {reasoning || reasoningDetailRef ? (
+        <details
+          className="message-reasoning"
+          onToggle={(event) => setReasoningOpen(event.currentTarget.open)}
+        >
           <summary>{streaming && !text ? "思考中…" : "思考过程"}</summary>
-          <pre>{reasoning}</pre>
+          {reasoningOpen && (
+            <HistoryDetailBody
+              key={`${detailScope}:${reasoningDetailRef ?? "local"}`}
+              reference={reasoningDetailRef}
+              load={loadHistoryDetail}
+              reload={reloadHistory}
+            >
+              {(detail) => (
+                <pre>
+                  {reasoningDetailRef ? detail?.reasoning || "没有保存思考记录。" : reasoning}
+                </pre>
+              )}
+            </HistoryDetailBody>
+          )}
         </details>
       ) : null}
-      {streaming ? (
-        <div className="message-streaming">
-          {text || (!reasoning ? "正在思考…" : "")}
-          <span className="cursor" aria-hidden="true">
-            ▍
-          </span>
-        </div>
-      ) : text ? (
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          skipHtml
-          urlTransform={(value) => safeMessageLink(value) ?? (isFileReference(value) ? value : "")}
-          components={components}
-        >
-          {text}
-        </ReactMarkdown>
-      ) : null}
-      {!streaming && text ? (
-        <div className="message-actions">
-          <MessageCopyButton text={text} label="复制回复" />
-        </div>
-      ) : null}
+      <ExpandedHistoryText
+        text={text}
+        reference={textDetailRef}
+        scope={detailScope}
+        load={loadHistoryDetail}
+        reload={reloadHistory}
+      >
+        {(body) => (
+          <>
+            {streaming ? (
+              <div className="message-streaming">
+                {body || (!reasoning ? "正在思考…" : "")}
+                <span className="cursor" aria-hidden="true">
+                  ▍
+                </span>
+              </div>
+            ) : body ? (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                skipHtml
+                urlTransform={(value) =>
+                  safeMessageLink(value) ?? (isFileReference(value) ? value : "")
+                }
+                components={components}
+              >
+                {body}
+              </ReactMarkdown>
+            ) : null}
+            {!streaming && body ? (
+              <div className="message-actions">
+                <MessageCopyButton
+                  text={body}
+                  label={textDetailRef && body === text ? "复制已显示内容" : "复制回复"}
+                />
+              </div>
+            ) : null}
+          </>
+        )}
+      </ExpandedHistoryText>
     </div>
   );
 });
@@ -243,14 +290,24 @@ export function toolDisplaySummary(item: Extract<ChatItem, { kind: "tool" }>): s
 export const ToolMessage = React.memo(function ToolMessage({
   item,
   running,
+  loadHistoryDetail,
+  reloadHistory,
+  detailScope = "",
 }: {
   item: Extract<ChatItem, { kind: "tool" }>;
   running: boolean;
+  loadHistoryDetail?: HistoryDetailLoader;
+  reloadHistory?: () => void;
+  detailScope?: string;
 }) {
+  const [open, setOpen] = React.useState(false);
   const summary = toolDisplaySummary(item);
   const status = item.done ? (item.error ? "失败" : "已完成") : running ? "执行中" : "未完成";
   return (
-    <details className={`message-tool-card${item.error ? " message-tool-error" : ""}`}>
+    <details
+      className={`message-tool-card${item.error ? " message-tool-error" : ""}`}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
       <summary>
         <span className="message-tool-indicator" aria-hidden="true">
           {item.done ? (item.error ? "!" : "✓") : "·"}
@@ -259,26 +316,43 @@ export const ToolMessage = React.memo(function ToolMessage({
         <span className="message-tool-summary">{summary}</span>
         <span className="message-tool-status">{status}</span>
       </summary>
-      {item.args && Object.keys(item.args).length ? (
-        <div className="message-tool-section">
-          <strong>参数</strong>
-          <pre tabIndex={0}>{JSON.stringify(item.args, null, 2)}</pre>
-        </div>
-      ) : null}
-      <div className="message-tool-section">
-        <div className="message-tool-result-heading">
-          <strong>结果</strong>
-          {item.result ? <MessageCopyButton text={item.result} label="复制结果" /> : null}
-        </div>
-        <pre tabIndex={0}>
-          {item.result ??
-            (item.done
-              ? "工具没有返回文本内容。"
-              : running
-                ? "等待工具返回结果…"
-                : "这次工具调用没有保存结果。")}
-        </pre>
-      </div>
+      {open && (
+        <HistoryDetailBody
+          key={`${detailScope}:${item.detailRef ?? "local"}`}
+          reference={item.detailRef}
+          load={loadHistoryDetail}
+          reload={reloadHistory}
+        >
+          {(detail) => {
+            const args = item.detailRef ? detail?.args : item.args;
+            const result = item.detailRef ? detail?.result : item.result;
+            return (
+              <>
+                {args && Object.keys(args).length ? (
+                  <div className="message-tool-section">
+                    <strong>参数</strong>
+                    <pre tabIndex={0}>{JSON.stringify(args, null, 2)}</pre>
+                  </div>
+                ) : null}
+                <div className="message-tool-section">
+                  <div className="message-tool-result-heading">
+                    <strong>结果</strong>
+                    {result ? <MessageCopyButton text={result} label="复制结果" /> : null}
+                  </div>
+                  <pre tabIndex={0}>
+                    {result ??
+                      (item.done
+                        ? "工具没有返回文本内容。"
+                        : running
+                          ? "等待工具返回结果…"
+                          : "这次工具调用没有保存结果。")}
+                  </pre>
+                </div>
+              </>
+            );
+          }}
+        </HistoryDetailBody>
+      )}
     </details>
   );
 });

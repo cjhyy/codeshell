@@ -47,4 +47,13 @@ test("completed empty assistant placeholders match the transcript's hidden-messa
   expect(outputChanged(assistant, { ...assistant, text: "", reasoning: "", done: true })).toBe(
     false,
   );
+  const deferred: ChatItem = {
+    ...assistant,
+    text: "",
+    reasoning: "",
+    done: true,
+    reasoningDetailRef: "opaque-proof",
+  };
+  expect(outputChanged(undefined, deferred)).toBe(true);
+  expect(outputChanged(deferred, structuredClone(deferred))).toBe(false);
 });

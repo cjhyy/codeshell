@@ -139,3 +139,54 @@ test("visiting an empty pending session resets a previous session's expanded win
     await hook.unmount();
   }
 });
+
+test("an earlier-page anchor waits for a prepend, and cancellation cannot clear a newer request", async () => {
+  let items = messages(10);
+  let scope = "first";
+  const list = {
+    scrollTop: 20,
+    scrollHeight: 100,
+    getBoundingClientRect: () => ({ top: 0 }),
+    querySelectorAll: () => [],
+  } as unknown as HTMLDivElement;
+  const hook = await renderHook(() =>
+    useTranscriptWindow({
+      items,
+      scope,
+      loading: false,
+      listRef: { current: list },
+      pauseFollowing: () => {},
+    }),
+  );
+  try {
+    const cancelOld = hook.result.current.prepareEarlierPage();
+    hook.result.current.prepareEarlierPage();
+    cancelOld();
+    Object.assign(list, { scrollHeight: 150 });
+    items = [...items, ...messages(1, "live")];
+    await hook.rerender();
+    expect(list.scrollTop).toBe(20);
+    Object.assign(list, { scrollHeight: 250 });
+    items = [...messages(2, "older"), ...items];
+    await hook.rerender();
+    expect(list.scrollTop).toBe(170);
+
+    const cancel = hook.result.current.prepareEarlierPage();
+    cancel();
+    Object.assign(list, { scrollHeight: 350 });
+    items = [...messages(1, "cancelled"), ...items];
+    await hook.rerender();
+    expect(list.scrollTop).toBe(170);
+
+    hook.result.current.prepareEarlierPage();
+    scope = "second";
+    items = messages(3, "second");
+    await hook.rerender();
+    Object.assign(list, { scrollHeight: 500 });
+    items = [...messages(1, "unrelated"), ...items];
+    await hook.rerender();
+    expect(list.scrollTop).toBe(170);
+  } finally {
+    await hook.unmount();
+  }
+});
