@@ -27,9 +27,11 @@ export async function verifyComputerUsePackage(
     throw new Error("Computer use package acceptance requires macOS");
   const run = options.run ?? execute;
   const app = resolve(appPath);
-  const resources = join(app, "Contents/Resources");
-  const driver = join(resources, "cua-driver/cua-driver");
-  const permissions = join(resources, "computer-use/codeshell-permissions");
+  const helper = join(app, "Contents/Library/CodeShell Computer Use.app");
+  const resources = join(helper, "Contents/Resources");
+  const driver = join(resources, "cua-driver");
+  const executable = join(helper, "Contents/MacOS/codeshell-computer-use");
+  const helperBundleId = "com.cjhyy.codeshell.computer-use";
   const lock = JSON.parse(await readFile(lockPath, "utf8")) as {
     version?: unknown;
     licenseSha256?: unknown;
@@ -42,33 +44,58 @@ export async function verifyComputerUsePackage(
   )
     throw new Error("Cua driver lock has no valid pinned version or license digest");
 
-  for (const executable of [driver, permissions]) {
-    const info = await lstat(executable);
+  for (const binary of [driver, executable]) {
+    const info = await lstat(binary);
     if (!info.isFile() || info.size === 0)
-      throw new Error(`Packaged computer use executable is missing or empty: ${executable}`);
-    await access(executable, constants.X_OK);
-    const { stdout } = await run("/usr/bin/lipo", ["-archs", executable]);
+      throw new Error(`Packaged computer use executable is missing or empty: ${binary}`);
+    await access(binary, constants.X_OK);
+    const { stdout } = await run("/usr/bin/lipo", ["-archs", binary]);
     if (stdout.trim().split(/\s+/).sort().join(" ") !== "arm64 x86_64")
-      throw new Error(`Packaged computer use executable is not universal: ${executable}`);
-    await run("/usr/bin/codesign", ["--verify", "--strict", executable]);
+      throw new Error(`Packaged computer use executable is not universal: ${binary}`);
+    await run("/usr/bin/codesign", ["--verify", "--strict", binary]);
   }
-  const license = await readFile(join(resources, "cua-driver/LICENSE"));
+  const metadata = JSON.parse(
+    (
+      await run("/usr/bin/plutil", [
+        "-convert",
+        "json",
+        "-o",
+        "-",
+        join(helper, "Contents/Info.plist"),
+      ])
+    ).stdout,
+  );
+  if (
+    metadata.CFBundleIdentifier !== helperBundleId ||
+    metadata.CFBundleExecutable !== "codeshell-computer-use" ||
+    metadata.CFBundleDisplayName !== "CodeShell Computer Use" ||
+    metadata.CFBundlePackageType !== "APPL" ||
+    metadata.LSUIElement !== true
+  )
+    throw new Error("Packaged Computer Use helper has an invalid application identity");
+  const license = await readFile(join(resources, "LICENSE"));
   if (createHash("sha256").update(license).digest("hex") !== lock.licenseSha256)
     throw new Error("Packaged Cua driver license checksum mismatch");
 
   const driverVersion = (await run(driver, ["--version"])).stdout.trim();
   if (driverVersion !== `cua-driver ${lock.version}`)
     throw new Error(`Packaged Cua driver version mismatch: ${driverVersion}`);
-  const permissionsVersion = (await run(permissions, ["--version"])).stdout.trim();
-  if (permissionsVersion !== "codeshell-permissions 1")
-    throw new Error(
-      `Packaged computer use permissions helper version mismatch: ${permissionsVersion}`,
-    );
+  const helperVersion = (await run(executable, ["--version"])).stdout.trim();
+  if (helperVersion !== "codeshell-computer-use 1")
+    throw new Error(`Packaged computer use helper version mismatch: ${helperVersion}`);
+  await run("/usr/bin/codesign", [
+    "--verify",
+    "--deep",
+    "--strict",
+    `-R=identifier "${helperBundleId}"`,
+    helper,
+  ]);
   await run("/usr/bin/codesign", ["--verify", "--deep", "--strict", app]);
   return {
     app,
     driverVersion: lock.version,
-    permissionsVersion: 1,
+    helperVersion: 1,
+    helperBundleId,
     architectures: ["arm64", "x64"],
   };
 }

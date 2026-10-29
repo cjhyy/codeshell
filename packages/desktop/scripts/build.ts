@@ -9,8 +9,7 @@ import esbuild from "esbuild";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildChromeExtension } from "./build-chrome-extension.js";
-import { buildComputerUsePermissions } from "./build-computer-use-permissions.js";
-import { buildComputerUseDriver } from "./build-computer-use-driver.js";
+import { buildComputerUseApp } from "./build-computer-use-app.js";
 import { buildDesktopMain } from "./build-main.js";
 
 const cwd = dirname(fileURLToPath(import.meta.url));
@@ -55,8 +54,7 @@ async function main(): Promise<void> {
     buildRenderer(),
     buildMobile(),
     buildChromeExtension(),
-    buildComputerUsePermissions(),
-    buildComputerUseDriver(),
+    buildComputerUseApp(),
   ]);
   // eslint-disable-next-line no-console
   console.log("[build] main, preload, renderer, mobile, and Chrome extension OK");

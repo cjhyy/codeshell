@@ -1,7 +1,7 @@
 import type { App } from "electron";
 import { SettingsManager } from "@cjhyy/code-shell-core/extension";
 import { readUserFeatureFlags } from "../capability-modules-env.js";
-import { resolveCuaDriverPath, type CuaDriverHostOptions } from "./cua-driver-host.js";
+import { resolveComputerUseBundle, type CuaDriverHostOptions } from "./cua-driver-host.js";
 import {
   createComputerUsePermissionsController,
   resolveComputerUsePermissionsHelper,
@@ -18,7 +18,6 @@ export async function initializeDesktopComputerUse(options: {
   app: Pick<App, "isPackaged" | "getAppPath" | "relaunch" | "quit">;
   ipcMain: ComputerUseSettingsDependencies["ipcMain"];
   isMainWindow: ComputerUseSettingsDependencies["isMainWindow"];
-  systemPreferences: ComputerUsePermissionsOptions["systemPreferences"];
   openExternal: ComputerUsePermissionsOptions["openExternal"];
   cwd(): string;
   platform: NodeJS.Platform;
@@ -31,6 +30,7 @@ export async function initializeDesktopComputerUse(options: {
     platform: options.platform,
     isPackaged: options.app.isPackaged,
     resourcesPath: options.resourcesPath,
+    appPath: options.app.getAppPath(),
     env: options.env,
     log: options.log,
   });
@@ -42,7 +42,6 @@ export async function initializeDesktopComputerUse(options: {
   }
   const permissions = createComputerUsePermissionsController({
     platform: options.platform,
-    systemPreferences: options.systemPreferences,
     openExternal: options.openExternal,
     parentEnv: options.env,
     helperPath: resolveComputerUsePermissionsHelper({
@@ -67,8 +66,8 @@ export async function initializeDesktopComputerUse(options: {
     },
     isActive: () => getCuaDriverHost()?.status().state === "running",
     driverAvailable: () =>
-      !!resolveCuaDriverPath({
-        env: options.env,
+      !!resolveComputerUseBundle({
+        appPath: options.app.getAppPath(),
         isPackaged: options.app.isPackaged,
         resourcesPath: options.resourcesPath,
       }),

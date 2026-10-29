@@ -6,6 +6,8 @@ export const settingsNs = {
         title: "电脑操作（试用）",
         description:
           "允许模型查看屏幕并操作本机应用。试用版开放较广的操作能力，尚未限制到指定窗口；请仅在你自己的测试环境中启用。",
+        permissionOwner:
+          "请为 CodeShell Computer Use 开启辅助功能和屏幕录制权限。此前授予 code-shell 的权限不会自动转移。",
         enable: "启用电脑操作",
         enableFirst: "启用后可申请系统权限；也可直接打开系统设置。打开此页面不会自动弹出授权申请。",
         refresh: "重新检查",
@@ -16,7 +18,7 @@ export const settingsNs = {
         inactive: "电脑操作服务尚未运行。",
         driverUnavailable: "电脑操作组件缺失或不可用，请更新或重新安装 CodeShell 后重新检查。",
         development:
-          "开发模式下，系统权限可能归启动它的应用。建议使用打包后的 CodeShell 验证授权。",
+          "开发模式同样使用独立的 CodeShell Computer Use 组件。移动构建目录或更换签名后，可能需要重新授权。",
         accessibility: "辅助功能",
         screenRecording: "屏幕录制",
         state_granted: "已授权",
@@ -27,7 +29,8 @@ export const settingsNs = {
         request_screenRecording: "申请屏幕录制权限",
         open_accessibility: "打开辅助功能设置",
         open_screenRecording: "打开屏幕录制设置",
-        screenSettingsHint: "请在系统设置中允许 CodeShell 录制屏幕，再返回此处重新检查。",
+        screenSettingsHint:
+          "请在系统设置中允许 CodeShell Computer Use 录制屏幕，再返回此处重新检查。",
         checkFailed: "暂时无法确认系统权限，请重新检查或打开对应系统设置。",
         restartHint: "重启 CodeShell 后应用更改，并新建会话使用电脑操作。",
         restart: "重启 CodeShell",
@@ -1164,6 +1167,8 @@ export const settingsNs = {
         title: "Computer use (preview)",
         description:
           "Let the model view your screen and control local apps. This preview exposes broad controls without restricting them to a selected window; enable it only in your own test environment.",
+        permissionOwner:
+          "Grant Accessibility and Screen Recording to CodeShell Computer Use. Existing code-shell permissions do not transfer to this component.",
         enable: "Enable computer use",
         enableFirst:
           "Enable computer use to request permissions, or open System Settings directly. Opening this page never requests permission automatically.",
@@ -1176,7 +1181,7 @@ export const settingsNs = {
         driverUnavailable:
           "The computer use component is missing or unavailable. Update or reinstall CodeShell, then check again.",
         development:
-          "In development mode, system permissions may belong to the app that launched CodeShell. Test authorization with a packaged CodeShell app.",
+          "Development uses the separate CodeShell Computer Use app too. Moving the build or changing its signature may require permission again.",
         accessibility: "Accessibility",
         screenRecording: "Screen recording",
         state_granted: "Granted",
@@ -1188,7 +1193,7 @@ export const settingsNs = {
         open_accessibility: "Open Accessibility settings",
         open_screenRecording: "Open Screen Recording settings",
         screenSettingsHint:
-          "Allow CodeShell to record the screen in System Settings, then return here and check again.",
+          "Allow CodeShell Computer Use to record the screen in System Settings, then return here and check again.",
         checkFailed:
           "System permissions could not be confirmed. Check again or open the corresponding system settings.",
         restartHint:

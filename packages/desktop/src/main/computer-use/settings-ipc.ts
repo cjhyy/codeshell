@@ -72,16 +72,25 @@ export function registerComputerUseSettingsIpc(deps: ComputerUseSettingsDependen
     owner(event);
     if (typeof enabled !== "boolean") throw new Error("电脑操作开关必须为布尔值。");
     return mutate(async () => {
+      // Revocation must not wait for a separate application to answer a status
+      // probe. Persist and stop first; only the returned UI status may wait.
+      if (!enabled) {
+        if (deps.getEnabled()) {
+          deps.saveEnabled(false);
+          changed = true;
+        }
+        await deps.stop();
+        return status();
+      }
       const permissions = await deps.permissions.status();
-      if (enabled && !permissions.supported) throw new Error("电脑操作目前仅支持 macOS。");
-      if (enabled && !deps.driverAvailable()) throw new Error("未找到电脑操作驱动。");
+      if (!permissions.supported) throw new Error("电脑操作目前仅支持 macOS。");
+      if (!deps.driverAvailable()) throw new Error("未找到电脑操作驱动。");
       // Re-check the owner after the asynchronous read, before persisting.
       owner(event);
       if (enabled !== deps.getEnabled()) {
         deps.saveEnabled(enabled);
         changed = true;
       }
-      if (!enabled) await deps.stop();
       return status(permissions);
     });
   });

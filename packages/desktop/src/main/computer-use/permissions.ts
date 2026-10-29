@@ -1,9 +1,8 @@
 import { execFile } from "node:child_process";
 import { accessSync, constants, statSync } from "node:fs";
-import { join } from "node:path";
+import { computerUseBundlePaths } from "./cua-driver-host.js";
 import type {
   ComputerUsePermissionKind,
-  ComputerUsePermissionState,
   ComputerUsePermissionStatus,
 } from "../../shared/computer-use.js";
 
@@ -22,12 +21,8 @@ export interface PermissionHelperOptions {
 
 export interface ComputerUsePermissionsOptions {
   readonly platform: NodeJS.Platform;
-  readonly systemPreferences: {
-    isTrustedAccessibilityClient(prompt: boolean): boolean;
-    getMediaAccessStatus(mediaType: "screen"): string;
-  };
   readonly openExternal: (url: string) => Promise<unknown>;
-  /** Main-owned path resolved from the app's resources, never from renderer input. */
+  /** Main-owned helper from this installation, never from renderer input. */
   readonly helperPath?: string;
   readonly parentEnv?: NodeJS.ProcessEnv;
   readonly isExecutable?: (path: string) => boolean;
@@ -63,9 +58,7 @@ export function resolveComputerUsePermissionsHelper(options: {
   readonly resourcesPath: string;
   readonly appPath: string;
 }): string {
-  return options.isPackaged
-    ? join(options.resourcesPath, "computer-use", "codeshell-permissions")
-    : join(options.appPath, "out", "native", "codeshell-permissions");
+  return computerUseBundlePaths(options)!.helperPath;
 }
 
 function runHelper(
@@ -74,7 +67,8 @@ function runHelper(
   options: PermissionHelperOptions,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    // A direct child of Electron keeps the host's macOS TCC responsibility.
+    // The bridge launches a separate application through LaunchServices. The
+    // permission read/request occurs there, under the same identity as actions.
     execFile(path, args, { ...options, encoding: "utf8" }, (error, stdout) => {
       if (error) reject(error);
       else resolve(stdout);
@@ -92,19 +86,21 @@ function validateKind(kind: ComputerUsePermissionKind): void {
   }
 }
 
-/**
- * Reading status never requests OS permissions. Only the main-process handler
- * for an explicit user click may call request(). Agent tools cannot use it.
- */
+/** Status probes never prompt. Only explicit settings requests may ask the OS. */
 export function createComputerUsePermissionsController(
   options: ComputerUsePermissionsOptions,
 ): ComputerUsePermissionsController {
   let restartRequired = false;
   let previous: Pick<ComputerUsePermissionStatus, "accessibility" | "screenRecording"> | undefined;
+  let reading: Promise<ComputerUsePermissionStatus> | undefined;
   const requests = new Map<ComputerUsePermissionKind, Promise<ComputerUsePermissionStatus>>();
   const executable = options.isExecutable ?? isExecutable;
 
-  async function status(error?: string): Promise<ComputerUsePermissionStatus> {
+  function available(): boolean {
+    return !!options.helperPath && executable(options.helperPath);
+  }
+
+  async function read(operation: string, error?: string): Promise<ComputerUsePermissionStatus> {
     if (options.platform !== "darwin") {
       return {
         supported: false,
@@ -114,85 +110,71 @@ export function createComputerUsePermissionsController(
         restartRequired: false,
       };
     }
-    let accessibility: ComputerUsePermissionState = "unknown";
-    let screenRecording: ComputerUsePermissionState = "unknown";
-    const errors: string[] = error ? [error] : [];
-    try {
-      accessibility = options.systemPreferences.isTrustedAccessibilityClient(false)
-        ? "granted"
-        : "denied";
-    } catch (cause) {
-      errors.push(`Accessibility status unavailable: ${message(cause)}`);
-    }
-    try {
-      const screen = options.systemPreferences.getMediaAccessStatus("screen");
-      screenRecording =
-        screen === "granted"
-          ? "granted"
-          : screen === "denied" || screen === "restricted" || screen === "not-determined"
-            ? "denied"
-            : "unknown";
-    } catch (cause) {
-      errors.push(`Screen recording status unavailable: ${message(cause)}`);
-    }
-    // The running Cua daemon can cache a denied TCC result. A newly granted
-    // permission needs a full app restart even when this fresh read sees it.
-    if (
-      previous &&
-      ((previous.accessibility === "denied" && accessibility === "granted") ||
-        (previous.screenRecording === "denied" && screenRecording === "granted"))
-    ) {
-      restartRequired = true;
-    }
-    previous = { accessibility, screenRecording };
-    return {
+    const result: ComputerUsePermissionStatus = {
       supported: true,
-      accessibility,
-      screenRecording,
-      screenRequestAvailable: !!options.helperPath && executable(options.helperPath),
+      accessibility: "unknown",
+      screenRecording: "unknown",
+      screenRequestAvailable: available(),
       restartRequired,
-      ...(errors.length ? { error: errors.join("; ") } : {}),
+      ...(error ? { error } : {}),
     };
+    try {
+      if (!result.screenRequestAvailable) {
+        throw new Error("CodeShell Computer Use helper is unavailable; rebuild CodeShell");
+      }
+      const parentEnv = options.parentEnv ?? process.env;
+      const env: NodeJS.ProcessEnv = {};
+      for (const key of ["HOME", "TMPDIR", "LANG", "LC_ALL"]) {
+        if (typeof parentEnv[key] === "string") env[key] = parentEnv[key];
+      }
+      const requested = operation !== "status";
+      // Even an interrupted native prompt can change the OS grant.
+      if (requested) restartRequired = true;
+      const output = await (options.runHelper ?? runHelper)(
+        options.helperPath!,
+        ["launch", operation],
+        { env, timeout: requested ? 60_000 : 15_000, maxBuffer: 4096, detached: false },
+      );
+      const response = JSON.parse(output);
+      if (
+        response?.version !== 1 ||
+        response?.requested !== requested ||
+        typeof response?.accessibility !== "boolean" ||
+        typeof response?.screenRecording !== "boolean"
+      ) {
+        throw new Error("Invalid CodeShell Computer Use permission response");
+      }
+      result.accessibility = response.accessibility ? "granted" : "denied";
+      result.screenRecording = response.screenRecording ? "granted" : "denied";
+      if (
+        previous &&
+        ((previous.accessibility === "denied" && result.accessibility === "granted") ||
+          (previous.screenRecording === "denied" && result.screenRecording === "granted"))
+      ) {
+        restartRequired = true;
+      }
+      previous = { accessibility: result.accessibility, screenRecording: result.screenRecording };
+    } catch (cause) {
+      result.error = [error, message(cause)].filter(Boolean).join("; ");
+    }
+    result.restartRequired = restartRequired;
+    return result;
   }
 
-  async function requestPermission(
-    kind: ComputerUsePermissionKind,
-  ): Promise<ComputerUsePermissionStatus> {
+  function status(): Promise<ComputerUsePermissionStatus> {
+    if (reading) return reading;
+    const pending = read("status").finally(() => {
+      if (reading === pending) reading = undefined;
+    });
+    reading = pending;
+    return pending;
+  }
+
+  async function requestPermission(kind: ComputerUsePermissionKind) {
     const before = await status();
     if (!before.supported) throw new Error("Computer use permissions require macOS");
-    if (before[kind] === "granted") return before;
-    try {
-      if (kind === "accessibility") {
-        options.systemPreferences.isTrustedAccessibilityClient(true);
-      } else {
-        if (!before.screenRequestAvailable || !options.helperPath) {
-          throw new Error("Screen recording permission helper is unavailable; rebuild CodeShell");
-        }
-        const parentEnv = options.parentEnv ?? process.env;
-        const env: NodeJS.ProcessEnv = {};
-        for (const key of ["HOME", "TMPDIR", "LANG", "LC_ALL"]) {
-          if (typeof parentEnv[key] === "string") env[key] = parentEnv[key];
-        }
-        // Even an interrupted native prompt may have changed the OS grant.
-        restartRequired = true;
-        const output = await (options.runHelper ?? runHelper)(
-          options.helperPath,
-          ["request-screen-recording"],
-          { env, timeout: 60_000, maxBuffer: 4096, detached: false },
-        );
-        const result = JSON.parse(output);
-        if (
-          result?.version !== 1 ||
-          result?.requested !== true ||
-          typeof result?.screenRecording !== "boolean"
-        ) {
-          throw new Error("Invalid screen recording permission helper response");
-        }
-      }
-      return status();
-    } catch (error) {
-      return status(message(error));
-    }
+    if (before[kind] === "granted" || !before.screenRequestAvailable) return before;
+    return read(kind === "accessibility" ? "request-accessibility" : "request-screen-recording");
   }
 
   return {
