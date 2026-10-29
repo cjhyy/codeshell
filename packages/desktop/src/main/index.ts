@@ -3503,7 +3503,6 @@ app.whenReady().then(async () => {
   await initializeDesktopComputerUse({
     app,
     ipcMain,
-    systemPreferences,
     openExternal: (url) => shell.openExternal(url),
     isMainWindow: (sender) =>
       [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),

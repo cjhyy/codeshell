@@ -2,7 +2,7 @@
 
 > 范围：`packages/desktop/src/main/**`、`src/preload/**`、`src/shared/**`、`src/browser-library/**`、`src/chrome-extension/**`、`src/browser-guest-link.ts`，以及 `packages/desktop/package.json` 与 `scripts/build*.ts` 的构建/打包配置。**不含** renderer 与 mobile UI。
 >
-> 基线：仓库 `main` @ `df2ca0bda`，`@cjhyy/code-shell-desktop` 0.9.45。所有 `file:line` 均在该基线上用 `grep -n` 核对过（路径相对 `packages/desktop/src/`，除非另写包名）。
+> 基线：仓库 `main` @ `df2ca0bda`，`@cjhyy/code-shell-desktop` 0.9.45。所有 `file:line` 均在该基线上用 `grep -n` 核对过（路径相对 `packages/desktop/src/`，除非另写包名）。Computer Use 的进程归属、产物与文件入口于 2026-10-29 按独立 helper 实现更新，见 [专项说明](../desktop-computer-use.md)。
 >
 > 旧文档 `docs/archive/architecture-2026-07/10-desktop-and-mobile.md` 中「浏览器动作走 `electron-cdp.ts` + `packages/cdp` 驱动、默认操作当前激活的 webview」的描述**已过时**：现在生产路径是 Puppeteer（`browser-library/`）经伪造 `chrome.debugger` facade 驱动 Electron `webContents.debugger`，默认目标是任务自有的隐藏窗口，而不是用户打开的 tab（见 §3.8、§6）。
 
@@ -37,7 +37,7 @@ Desktop main 是一个**组合根（composition root）+ 权限中介**：
 | C2  | **External Agent Runtime 子进程**（Codex / Claude Code）       | `ExternalRuntimeService.start/ensure`（`external-runtime-service.ts:554/566`）→ `startExternalRuntimeSession`（coding 包） | —                                                                                                     | 每会话一个子进程 + 一个监听端口；`before-quit` 显式 `stopAll()`                                                                            |
 | C3  | **CC Room 常驻 CLI 子进程**                                    | `RoomManager.createAgent`（`index.ts:1207`）→ `ResidentAgentProcess("claude")` / `CodexRoomAgent("codex")`（server 包）    | —                                                                                                     | 「双端房间」：桌面与手机共用同一个常驻 CLI                                                                                                 |
 | C4  | **Playwright 独立 Chromium**                                   | `DedicatedPlaywrightBackend`（`browser-runtime/playwright-backend.ts:77`）                                                 | `playwright-core`（不打包，运行时依赖）                                                               | 仅自动化（`backendPreference:"dedicated-playwright"`）或显式 `auto` 时使用；懒启动、最多 3 个 context、5 分钟空闲回收                      |
-| C5  | **cua-driver 守护进程**（Computer Use，feature flag）          | `CuaDriverHost`（`computer-use/cua-driver-host.ts`）                                                                       | `cua-driver serve --embedded`                                                                         | 必须是 main 的**直接子进程**，以便留在 macOS TCC 责任链；worker 通过 `CODE_SHELL_HOST_MCP_SERVERS` 得到 `host:cua-driver` MCP 代理声明     |
+| C5  | **CodeShell Computer Use.app 与 cua-driver**（feature flag） | `CuaDriverHost` 启动 CLI bridge，bridge 通过 LaunchServices 启动独立 helper | `native/computer-use.swift` → `cua-driver serve --embedded` | helper 以 `com.cjhyy.codeshell.computer-use` 拥有 TCC 权限；driver 是 helper 的直接子进程。worker 通过 `CODE_SHELL_HOST_MCP_SERVERS` 得到 `host:cua-driver` MCP 代理声明 |
 | C6  | **node-pty 终端**                                              | `pty-service.ts:262 ptyStart`                                                                                              | `node-pty`（native，asarUnpack）                                                                      | 每个 renderer webContents 拥有各自 pty；窗口销毁后 `ptyReapDestroyed` 回收                                                                 |
 | C7  | **git / 编辑器 / 登录 shell 探测等短命子进程**                 | `desktop-services.ts`（`execFile("git")`）、`login-shell-path.ts`、`editor.ts`、`link-cli-installer.ts`…                   | —                                                                                                     | 一次性                                                                                                                                     |
 | C8  | **cloudflared 隧道**                                           | `TunnelManager`（server 包）由 `mobileRemote:start {mode:"tunnel"}` 启动                                                   | —                                                                                                     | 默认关闭                                                                                                                                   |
@@ -66,7 +66,9 @@ flowchart LR
   EXT["Codex / Claude Code<br/>外部运行时子进程"]
   CC["CC Room 常驻 CLI"]
   PW["Playwright Chromium"]
-  CUA["cua-driver 守护进程"]
+  CUB["Computer Use CLI bridge<br/>main 直接子进程，监督 helper 生命周期"]
+  CUH["CodeShell Computer Use.app<br/>独立 TCC 身份 / 权限检查与申请"]
+  CUA["cua-driver 守护进程<br/>embedded，继承 helper 权限"]
   PTY["node-pty shells"]
   CH["用户 Chrome<br/>CodeShell 扩展 SW"]
   NH["Native Messaging 宿主<br/>(同一可执行文件, 无窗口)"]
@@ -84,8 +86,10 @@ flowchart LR
   MAIN --> EXT
   MAIN --> CC
   MAIN --> PW
-  MAIN --> CUA
-  W -. "MCP stdio 代理 host:cua-driver" .-> CUA
+  MAIN --> CUB
+  CUB -- "LaunchServices：指定 bundle URL" --> CUH
+  CUH -- "直接 spawn + stdin 生命周期管道" --> CUA
+  W -. "MCP stdio 代理 host:cua-driver → 私有 socket" .-> CUA
   MAIN --> PTY
   CH <-- "chrome.runtime.connectNative" --> NH
   NH <-- "loopback TCP + token" --> MAIN
@@ -135,7 +139,7 @@ flowchart LR
 | `out/renderer/`                                            | vite                                                  | 非本文范围                                                                                                                                                                                                                                  |
 | `out/mobile/`                                              | `vite.mobile.config.ts`                               | 由 `RemoteHostManager({mobileRootDir})` 托管（`index.ts` 中 `resolve(__dirname,"../mobile")`）                                                                                                                                              |
 | `resources/chrome-extension`                               | `scripts/build-chrome-extension.ts`                   | extraResources；被注册为 Chrome 扩展路径                                                                                                                                                                                                    |
-| `out/native/cua-driver`、`codeshell-permissions`           | `build-computer-use-*.ts`                             | 仅 mac extraResources                                                                                                                                                                                                                       |
+| `out/native/CodeShell Computer Use.app` | `scripts/build-computer-use-app.ts` | mac `extraFiles` → `Contents/Library/CodeShell Computer Use.app`；内含 Swift helper 与锁定版本的 driver，先签名嵌套产物再封装主应用 |
 | `package.json#build`                                       | electron-builder                                      | `asarUnpack` node-pty 与 core 文档解析依赖；`dependencies` 只保留运行时 require 的包（core、coding、pet、optimization-lab、node-pty、playwright-core），其余全是 devDependencies（`//deps` 注释）                                           |
 
 ---
@@ -439,7 +443,7 @@ flowchart LR
 | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ----------------------------------------------------------------- |
 | `main/operation-batch-{host,ipc}.ts` / `operation-resolution-{host,ipc}.ts`                                                             | 39/355/70/291         | 操作批次与「操作结果确认」原生审阅（私有 Native 准入）            |
 | `main/optimization-lab-{host,ipc,evidence}.ts`                                                                                          | 51/591/355            | Optimization Lab（feature flag），走专用 `requestOptimizationLab` |
-| `main/computer-use/{service,desktop-setup,cua-driver-host,permissions,settings-ipc}.ts` + `native/permissions.swift`                    | 101/83/449/214/105/27 | Computer Use：守护进程、TCC 权限助手、`computerUse:*`             |
+| `main/computer-use/{service,desktop-setup,cua-driver-host,permissions,settings-ipc}.ts` + `native/computer-use.swift` | —（独立 helper 更新） | Computer Use：LaunchServices 启动桥、helper-owned 守护进程与 TCC 权限、`computerUse:*` |
 | `main/desktop-notifier.ts` / `native-desktop-notification.ts` / `desktop-notification-routes.ts` / `background-notification-content.ts` | 224/34/172/173        | 原生通知去重、点击打开会话、各类通知路由                          |
 | `main/updater.ts` / `updater-feed.ts` / `updater-signature.ts` / `updater-error-classify.ts`                                            | 376/34/19/44          | electron-updater（只检查+通知，手动下载/安装）                    |
 

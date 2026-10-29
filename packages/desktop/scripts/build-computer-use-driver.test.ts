@@ -227,16 +227,16 @@ describe("Cua Driver build supply", () => {
   });
 });
 
-test("the standard macOS build packages Cua Driver at the runtime discovery path", async () => {
+test("the standard macOS build packages the independent Computer Use application", async () => {
   const packageJson = JSON.parse(
     await readFile(new URL("../package.json", import.meta.url), "utf8"),
   );
-  expect(packageJson.build.mac.extraResources).toContainEqual({
-    from: "out/native/cua-driver",
-    to: "cua-driver",
+  expect(packageJson.build.mac.extraFiles).toContainEqual({
+    from: "out/native/CodeShell Computer Use.app",
+    to: "Library/CodeShell Computer Use.app",
   });
   expect(packageJson.build.files).toContain("!out/cua-driver-cache{,/**/*}");
   expect(packageJson.build.files).toContain("!out/native{,/**/*}");
   const build = await readFile(new URL("./build.ts", import.meta.url), "utf8");
-  expect(build).toMatch(/await Promise\.all\(\[[\s\S]*?\bbuildComputerUseDriver\(\)/);
+  expect(build).toMatch(/await Promise\.all\(\[[\s\S]*?\bbuildComputerUseApp\(\)/);
 });

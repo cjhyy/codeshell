@@ -15,29 +15,38 @@ async function fixture() {
   const directory = await mkdtemp(join(tmpdir(), "computer-use-package-"));
   directories.push(directory);
   const app = join(directory, "code-shell.app");
-  const resources = join(app, "Contents/Resources");
-  const driver = join(resources, "cua-driver/cua-driver");
-  const permissions = join(resources, "computer-use/codeshell-permissions");
+  const helper = join(app, "Contents/Library/CodeShell Computer Use.app");
+  const resources = join(helper, "Contents/Resources");
+  const driver = join(resources, "cua-driver");
+  const permissions = join(helper, "Contents/MacOS/codeshell-computer-use");
   for (const executable of [driver, permissions]) {
     await mkdir(dirname(executable), { recursive: true });
     await writeFile(executable, "fixture executable", { mode: 0o755 });
   }
-  const license = join(resources, "cua-driver/LICENSE");
+  const license = join(resources, "LICENSE");
   await writeFile(
     license,
     await readFile(new URL("../packages/desktop/resources/cua-driver.LICENSE", import.meta.url)),
   );
   const calls: { command: string; args: string[] }[] = [];
+  const metadata = {
+    CFBundleIdentifier: "com.cjhyy.codeshell.computer-use",
+    CFBundleExecutable: "codeshell-computer-use",
+    CFBundleDisplayName: "CodeShell Computer Use",
+    CFBundlePackageType: "APPL",
+    LSUIElement: true,
+  };
   const outputs = new Map([
     [driver, "cua-driver 0.34.1\n"],
-    [permissions, "codeshell-permissions 1\n"],
+    [permissions, "codeshell-computer-use 1\n"],
   ]);
   const run = async (command: string, args: string[]) => {
     calls.push({ command, args });
     if (command === "/usr/bin/lipo") return { stdout: "x86_64 arm64\n" };
+    if (command === "/usr/bin/plutil") return { stdout: JSON.stringify(metadata) };
     return { stdout: outputs.get(command) ?? "" };
   };
-  return { app, driver, permissions, license, calls, outputs, run };
+  return { app, helper, driver, permissions, license, metadata, calls, outputs, run };
 }
 
 describe("packaged computer use release acceptance", () => {
@@ -46,7 +55,8 @@ describe("packaged computer use release acceptance", () => {
     expect(await verifyComputerUsePackage(f.app, { run: f.run })).toEqual({
       app: f.app,
       driverVersion: "0.34.1",
-      permissionsVersion: 1,
+      helperVersion: 1,
+      helperBundleId: "com.cjhyy.codeshell.computer-use",
       architectures: ["arm64", "x64"],
     });
     expect(
@@ -58,6 +68,16 @@ describe("packaged computer use release acceptance", () => {
     expect(f.calls.filter(({ command }) => command === "/usr/bin/codesign")).toEqual([
       { command: "/usr/bin/codesign", args: ["--verify", "--strict", f.driver] },
       { command: "/usr/bin/codesign", args: ["--verify", "--strict", f.permissions] },
+      {
+        command: "/usr/bin/codesign",
+        args: [
+          "--verify",
+          "--deep",
+          "--strict",
+          '-R=identifier "com.cjhyy.codeshell.computer-use"',
+          f.helper,
+        ],
+      },
       { command: "/usr/bin/codesign", args: ["--verify", "--deep", "--strict", f.app] },
     ]);
   });
@@ -109,12 +129,21 @@ describe("packaged computer use release acceptance", () => {
       const f = await fixture();
       f.outputs.set(
         f[executable],
-        executable === "driver" ? "cua-driver 0.34.0" : "codeshell-permissions 2",
+        executable === "driver" ? "cua-driver 0.34.0" : "codeshell-computer-use 2",
       );
       await expect(verifyComputerUsePackage(f.app, { run: f.run })).rejects.toThrow(
         "version mismatch",
       );
     }
+  });
+
+  test("rejects a helper that still uses the main application's permission identity", async () => {
+    const f = await fixture();
+    f.metadata.CFBundleIdentifier = "com.cjhyy.codeshell";
+    await expect(verifyComputerUsePackage(f.app, { run: f.run })).rejects.toThrow(
+      "invalid application identity",
+    );
+    expect(f.calls.some(({ command }) => command === f.permissions)).toBe(false);
   });
 
   test("propagates a failed final signature check", async () => {

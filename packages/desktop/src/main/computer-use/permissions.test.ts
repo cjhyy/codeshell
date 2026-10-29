@@ -7,14 +7,15 @@ import {
   type PermissionHelperOptions,
 } from "./permissions.js";
 
+const HELPER = "/trusted/CodeShell Computer Use.app/Contents/MacOS/codeshell-computer-use";
+
 function harness(overrides: Partial<ComputerUsePermissionsOptions> = {}) {
-  const state = { accessibility: false, screenRecording: "denied" };
-  const prompts: boolean[] = [];
+  const state = { accessibility: false, screenRecording: false };
   const urls: string[] = [];
   const executions: { path: string; args: string[]; options: PermissionHelperOptions }[] = [];
   const controller = createComputerUsePermissionsController({
     platform: "darwin",
-    helperPath: "/trusted/resources/computer-use/codeshell-permissions",
+    helperPath: HELPER,
     isExecutable: () => true,
     parentEnv: {
       HOME: "/isolated/home",
@@ -25,31 +26,22 @@ function harness(overrides: Partial<ComputerUsePermissionsOptions> = {}) {
       OPENAI_API_KEY: "must-not-leak",
       CUA_API_KEY: "must-not-leak-either",
       DYLD_INSERT_LIBRARIES: "/untrusted/injection.dylib",
-    },
-    systemPreferences: {
-      isTrustedAccessibilityClient: (prompt) => {
-        prompts.push(prompt);
-        return state.accessibility;
-      },
-      getMediaAccessStatus: (kind) => {
-        expect(kind).toBe("screen");
-        return state.screenRecording;
-      },
+      CUA_DRIVER_PERMISSION_MODE: "unrestricted",
     },
     openExternal: async (url) => {
       urls.push(url);
     },
     runHelper: async (path, args, options) => {
       executions.push({ path, args, options });
-      return JSON.stringify({ version: 1, requested: true, screenRecording: false });
+      return JSON.stringify({ version: 1, requested: args[1] !== "status", ...state });
     },
     ...overrides,
   });
-  return { controller, state, prompts, urls, executions };
+  return { controller, state, urls, executions };
 }
 
-describe("Computer Use macOS permission controller", () => {
-  test("reading status is read-only and does not launch a helper or open settings", async () => {
+describe("Computer Use helper permission controller", () => {
+  test("status queries the separate helper without requesting permissions or opening settings", async () => {
     const h = harness();
     expect(await h.controller.status()).toEqual({
       supported: true,
@@ -58,175 +50,168 @@ describe("Computer Use macOS permission controller", () => {
       screenRequestAvailable: true,
       restartRequired: false,
     });
-    expect(h.prompts).toEqual([false]);
-    expect(h.executions).toEqual([]);
+    expect(h.executions.map((x) => x.args)).toEqual([["launch", "status"]]);
     expect(h.urls).toEqual([]);
   });
 
-  test("Accessibility is prompted only by an explicit request", async () => {
-    const h = harness();
-    await h.controller.request("accessibility");
-    expect(h.prompts).toEqual([false, true, false]);
-    expect(h.executions).toEqual([]);
-    expect(h.urls).toEqual([]);
-  });
-
-  test("granted permissions never prompt again", async () => {
-    const h = harness();
-    h.state.accessibility = true;
-    h.state.screenRecording = "granted";
-    await h.controller.request("accessibility");
-    const status = await h.controller.request("screenRecording");
-    expect(status.restartRequired).toBe(false);
-    expect(h.prompts).toEqual([false, false]);
-    expect(h.executions).toEqual([]);
-  });
-
-  test("screen requests use the fixed direct-child operation and a credential-free environment", async () => {
-    const h = harness();
-    const status = await h.controller.request("screenRecording");
-    expect(h.executions).toEqual([
-      {
-        path: "/trusted/resources/computer-use/codeshell-permissions",
-        args: ["request-screen-recording"],
-        options: {
-          env: {
-            HOME: "/isolated/home",
-            TMPDIR: "/isolated/tmp",
-            LANG: "en_US.UTF-8",
-            LC_ALL: "en_US.UTF-8",
-          },
-          timeout: 60_000,
-          maxBuffer: 4096,
-          detached: false,
-        },
-      },
-    ]);
-    expect(status.screenRecording).toBe("denied");
-    expect(status.restartRequired).toBe(true);
-    expect(status.error).toBeUndefined();
-  });
-
-  test("a helper grant cannot override a still-denied host status", async () => {
-    const h = harness({
-      runHelper: async () => JSON.stringify({ version: 1, requested: true, screenRecording: true }),
-    });
-    const status = await h.controller.request("screenRecording");
-    expect(status.screenRecording).toBe("denied");
-    expect(status.restartRequired).toBe(true);
-  });
-
-  test("new grants seen after System Settings require a full app restart", async () => {
-    const h = harness();
-    await h.controller.status();
-    h.state.screenRecording = "granted";
-    expect((await h.controller.status()).restartRequired).toBe(true);
-    h.state.screenRecording = "denied";
-    expect((await h.controller.status()).restartRequired).toBe(true);
-  });
-
-  test("Accessibility grant changes also invalidate the daemon's cached status", async () => {
-    const h = harness();
-    await h.controller.status();
-    h.state.accessibility = true;
-    expect((await h.controller.status()).restartRequired).toBe(true);
-  });
-
-  test.each(["not-determined", "restricted", "denied"])(
-    "screen status %s remains denied",
-    async (screenStatus) => {
+  test.each(["accessibility", "screenRecording"] as const)(
+    "%s prompts only on an explicit request",
+    async (kind) => {
       const h = harness();
-      h.state.screenRecording = screenStatus;
-      expect((await h.controller.status()).screenRecording).toBe("denied");
-      expect(h.executions).toEqual([]);
+      const status = await h.controller.request(kind);
+      expect(h.executions.map((x) => x.args)).toEqual([
+        ["launch", "status"],
+        ["launch", kind === "accessibility" ? "request-accessibility" : "request-screen-recording"],
+      ]);
+      expect(status.restartRequired).toBe(true);
+      expect(h.urls).toEqual([]);
     },
   );
 
-  test("unknown OS screen status is never treated as authorization", async () => {
+  test("already granted helper permissions never prompt again", async () => {
     const h = harness();
-    h.state.screenRecording = "future-status";
-    expect((await h.controller.status()).screenRecording).toBe("unknown");
+    h.state.accessibility = true;
+    h.state.screenRecording = true;
+    await h.controller.request("accessibility");
+    expect((await h.controller.request("screenRecording")).restartRequired).toBe(false);
+    expect(h.executions.every((x) => x.args[1] === "status")).toBe(true);
   });
 
-  test("status errors remain unknown and expose a useful error", async () => {
+  test("both checks and requests use fixed operations and a credential-free environment", async () => {
+    const h = harness();
+    await h.controller.request("screenRecording");
+    for (const execution of h.executions) {
+      expect(execution.path).toBe(HELPER);
+      expect(execution.options.env).toEqual({
+        HOME: "/isolated/home",
+        TMPDIR: "/isolated/tmp",
+        LANG: "en_US.UTF-8",
+        LC_ALL: "en_US.UTF-8",
+      });
+      expect(execution.options.detached).toBe(false);
+      expect(execution.options.maxBuffer).toBe(4096);
+    }
+    expect(h.executions.map((x) => x.options.timeout)).toEqual([15_000, 60_000]);
+  });
+
+  test("the helper grant is authoritative even when the host has no grant", async () => {
     const h = harness({
-      systemPreferences: {
-        isTrustedAccessibilityClient: () => {
-          throw new Error("AX unavailable");
-        },
-        getMediaAccessStatus: () => {
-          throw new Error("TCC unavailable");
-        },
+      runHelper: async (_path, args) =>
+        JSON.stringify({
+          version: 1,
+          requested: args[1] !== "status",
+          accessibility: true,
+          screenRecording: true,
+        }),
+    });
+    const status = await h.controller.status();
+    expect(status.accessibility).toBe("granted");
+    expect(status.screenRecording).toBe("granted");
+    expect(status.error).toBeUndefined();
+  });
+
+  test.each(["accessibility", "screenRecording"] as const)(
+    "new %s grants invalidate the running daemon",
+    async (kind) => {
+      const h = harness();
+      await h.controller.status();
+      h.state[kind] = true;
+      expect((await h.controller.status()).restartRequired).toBe(true);
+      h.state[kind] = false;
+      expect((await h.controller.status()).restartRequired).toBe(true);
+    },
+  );
+
+  test("helper failures remain unknown instead of falling back to host permissions", async () => {
+    const h = harness({
+      runHelper: async () => {
+        throw new Error("LaunchServices unavailable");
       },
     });
     const status = await h.controller.status();
     expect(status.accessibility).toBe("unknown");
     expect(status.screenRecording).toBe("unknown");
-    expect(status.error).toContain("AX unavailable");
-    expect(status.error).toContain("TCC unavailable");
-    expect(h.executions).toEqual([]);
+    expect(status.error).toContain("LaunchServices unavailable");
   });
 
-  test("a missing native helper never triggers another permission mechanism", async () => {
-    const h = harness({ helperPath: undefined });
-    const status = await h.controller.request("screenRecording");
-    expect(status.screenRequestAvailable).toBe(false);
-    expect(status.error).toContain("helper is unavailable");
-    expect(status.restartRequired).toBe(false);
-    expect(h.executions).toEqual([]);
-    expect(h.prompts).toEqual([false, false]);
-  });
-
-  test("a non-executable helper fails closed", async () => {
-    const h = harness({ isExecutable: () => false });
-    expect((await h.controller.request("screenRecording")).error).toContain("rebuild CodeShell");
-    expect(h.executions).toEqual([]);
-  });
-
-  test("helper failures preserve denial and expose errors", async () => {
-    const h = harness({
-      runHelper: async () => {
-        throw new Error("permission helper timed out");
-      },
-    });
-    const status = await h.controller.request("screenRecording");
-    expect(status.screenRecording).toBe("denied");
-    expect(status.error).toBe("permission helper timed out");
-    expect(status.restartRequired).toBe(true);
-  });
+  test.each([undefined, false])(
+    "a missing or non-executable helper fails closed: %s",
+    async (present) => {
+      const h = harness(
+        present === undefined ? { helperPath: undefined } : { isExecutable: () => false },
+      );
+      const status = await h.controller.request("accessibility");
+      expect(status.screenRequestAvailable).toBe(false);
+      expect(status.error).toContain("helper is unavailable");
+      expect(status.restartRequired).toBe(false);
+      expect(h.executions).toEqual([]);
+    },
+  );
 
   test.each([
     "not json",
     "null",
-    JSON.stringify({ version: 2, requested: true, screenRecording: true }),
+    JSON.stringify({ version: 2, requested: false, accessibility: true, screenRecording: true }),
+    JSON.stringify({ version: 1, requested: true, accessibility: true, screenRecording: true }),
+    JSON.stringify({
+      version: 1,
+      requested: false,
+      accessibility: true,
+      screenRecording: "granted",
+    }),
     JSON.stringify({ version: 1, requested: false, screenRecording: true }),
-    JSON.stringify({ version: 1, requested: true, screenRecording: "granted" }),
-  ])("invalid helper output never grants permission: %s", async (output) => {
+  ])("invalid status output never grants permission: %s", async (output) => {
     const h = harness({ runHelper: async () => output });
-    const status = await h.controller.request("screenRecording");
-    expect(status.screenRecording).toBe("denied");
+    const status = await h.controller.status();
+    expect(status.accessibility).toBe("unknown");
+    expect(status.screenRecording).toBe("unknown");
     expect(status.error).toBeDefined();
   });
 
-  test("overlapping screen requests share one pending native prompt", async () => {
-    let release!: (output: string) => void;
-    let calls = 0;
+  test("interrupted explicit requests mark restart and never manufacture a grant", async () => {
     const h = harness({
-      runHelper: async () => {
-        calls++;
-        return new Promise((resolve) => (release = resolve));
+      runHelper: async (_path, args) => {
+        if (args[1] !== "status") throw new Error("permission request interrupted");
+        return JSON.stringify({
+          version: 1,
+          requested: false,
+          accessibility: false,
+          screenRecording: false,
+        });
       },
     });
+    const status = await h.controller.request("screenRecording");
+    expect(status.restartRequired).toBe(true);
+    expect(status.screenRecording).toBe("unknown");
+    expect(status.error).toContain("interrupted");
+  });
+
+  test("overlapping status reads and duplicate requests share one launch each", async () => {
+    const pending: Array<(output: string) => void> = [];
+    const h = harness({ runHelper: async () => new Promise((resolve) => pending.push(resolve)) });
+    const read = h.controller.status();
+    expect(h.controller.status()).toBe(read);
     const first = h.controller.request("screenRecording");
-    const second = h.controller.request("screenRecording");
-    expect(first).toBe(second);
-    await Promise.resolve();
-    expect(calls).toBe(1);
-    release(JSON.stringify({ version: 1, requested: true, screenRecording: false }));
+    expect(h.controller.request("screenRecording")).toBe(first);
+    expect(pending).toHaveLength(1);
+    pending[0]!(
+      JSON.stringify({
+        version: 1,
+        requested: false,
+        accessibility: false,
+        screenRecording: false,
+      }),
+    );
+    await read;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(pending).toHaveLength(2);
+    pending[1]!(
+      JSON.stringify({ version: 1, requested: true, accessibility: false, screenRecording: false }),
+    );
     await first;
   });
 
-  test("settings are opened only from a fixed allowlist", async () => {
+  test("settings URLs and request names are restricted", async () => {
     const h = harness();
     await h.controller.openSettings("accessibility");
     await h.controller.openSettings("screenRecording");
@@ -234,23 +219,15 @@ describe("Computer Use macOS permission controller", () => {
       "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
       "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
     ]);
-    expect(h.executions).toEqual([]);
-    expect(h.prompts).toEqual([]);
-  });
-
-  test("untrusted runtime permission names cannot become commands or settings URLs", async () => {
-    const h = harness();
     const invalid = "https://untrusted.invalid" as ComputerUsePermissionKind;
     expect(() => h.controller.request(invalid)).toThrow("Unknown computer use permission");
     await expect(h.controller.openSettings(invalid)).rejects.toThrow(
       "Unknown computer use permission",
     );
     expect(h.executions).toEqual([]);
-    expect(h.urls).toEqual([]);
-    expect(h.prompts).toEqual([]);
   });
 
-  test.each(["linux", "win32"] as const)("%s never calls macOS APIs", async (platform) => {
+  test.each(["linux", "win32"] as const)("%s never launches macOS helpers", async (platform) => {
     const h = harness({ platform });
     expect(await h.controller.status()).toEqual({
       supported: false,
@@ -260,32 +237,32 @@ describe("Computer Use macOS permission controller", () => {
       restartRequired: false,
     });
     await expect(h.controller.request("accessibility")).rejects.toThrow("require macOS");
-    await expect(h.controller.request("screenRecording")).rejects.toThrow("require macOS");
     await expect(h.controller.openSettings("screenRecording")).rejects.toThrow("require macOS");
     expect(h.executions).toEqual([]);
-    expect(h.prompts).toEqual([]);
-    expect(h.urls).toEqual([]);
   });
 });
 
 describe("Computer Use permission helper placement", () => {
-  test("packaged helper stays outside ASAR", () => {
+  test("packaged permissions use the same independent app as the daemon", () => {
     expect(
       resolveComputerUsePermissionsHelper({
         isPackaged: true,
-        appPath: "/Applications/CodeShell.app/Contents/Resources/app.asar",
-        resourcesPath: "/Applications/CodeShell.app/Contents/Resources",
+        appPath: "/App/Contents/Resources/app.asar",
+        resourcesPath: "/App/Contents/Resources",
       }),
-    ).toBe("/Applications/CodeShell.app/Contents/Resources/computer-use/codeshell-permissions");
+    ).toBe(
+      "/App/Contents/Library/CodeShell Computer Use.app/Contents/MacOS/codeshell-computer-use",
+    );
   });
-
-  test("development helper comes from this checkout's native build output", () => {
+  test("development uses this checkout's helper bundle", () => {
     expect(
       resolveComputerUsePermissionsHelper({
         isPackaged: false,
         appPath: "/worktree/packages/desktop",
         resourcesPath: "/electron/resources",
       }),
-    ).toBe("/worktree/packages/desktop/out/native/codeshell-permissions");
+    ).toBe(
+      "/worktree/packages/desktop/out/native/CodeShell Computer Use.app/Contents/MacOS/codeshell-computer-use",
+    );
   });
 });

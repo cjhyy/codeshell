@@ -138,14 +138,10 @@
       "buildResources": "build"
     },
     "mac": {
-      "extraResources": [
+      "extraFiles": [
         {
-          "from": "out/native/cua-driver",
-          "to": "cua-driver"
-        },
-        {
-          "from": "out/native/codeshell-permissions",
-          "to": "computer-use/codeshell-permissions"
+          "from": "out/native/CodeShell Computer Use.app",
+          "to": "Library/CodeShell Computer Use.app"
         }
       ],
       "sign": "scripts/sign-managed-node-mac.cjs",

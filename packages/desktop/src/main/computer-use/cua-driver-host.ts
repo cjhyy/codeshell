@@ -1,21 +1,8 @@
 /**
- * Embedded Cua Driver host (Computer Use spike, feature flag `computer_use_cua`).
- *
- * Electron main spawns `cua-driver serve --embedded` as a DIRECT child so the
- * daemon stays in this app's macOS TCC responsibility chain: Accessibility and
- * Screen Recording are granted once to CodeShell, never to a second identity.
- * Sessions reach the daemon through `cua-driver mcp --embedded --socket`, a
- * stdio proxy that executes nothing itself; the worker spawns that proxy as
- * the host-owned MCP server `host:cua-driver`.
- *
- * Contract: libs/cua-driver/rust/Skills/cua-driver/EMBEDDING.md in
- * https://github.com/trycua/cua ("Launching the daemon-backed host"). The
- * package `@trycua/cua-driver` ships `EmbeddedCuaDriverHost`, which wraps the
- * same contract; this file can be swapped for it once the dependency is added.
- *
- * Deliberately NOT done here: unrestricted mode, existing Chrome profile
- * grants, per-window authorization and the browser/terminal deny rules from
- * the design doc. This is the process skeleton only.
+ * Owns the launch bridge for CodeShell Computer Use.app. The bridge uses
+ * LaunchServices to give the helper its own macOS permission identity; the
+ * helper then supervises the embedded Cua daemon. Workers connect only through
+ * the bundled driver's stdio MCP proxy and this host's private socket.
  */
 import { spawn as nodeSpawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -29,7 +16,7 @@ import {
   unlinkSync,
 } from "node:fs";
 import { createConnection } from "node:net";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 export const CUA_HOST_MCP_SERVER_NAME = "host:cua-driver";
@@ -45,6 +32,7 @@ export type CuaDriverHostState =
 export interface CuaDriverHostStatus {
   readonly state: CuaDriverHostState;
   readonly driverPath?: string;
+  readonly helperPath?: string;
   readonly socketPath: string;
   readonly generation: number;
   readonly lastError?: string;
@@ -61,7 +49,7 @@ type SpawnFn = (command: string, args: string[], options: SpawnOptions) => Child
 
 export interface CuaDriverHostOptions {
   readonly driverPath: string;
-  readonly hostBundleId: string;
+  readonly helperPath: string;
   readonly socketPath?: string;
   readonly parentEnv?: NodeJS.ProcessEnv;
   readonly spawn?: SpawnFn;
@@ -131,29 +119,36 @@ function isExecutable(path: string): boolean {
   }
 }
 
-/**
- * Locate a cua-driver executable. An explicit override wins; a packaged app
- * prefers its bundled copy (outside ASAR, signed with the app); otherwise the
- * usual install locations are tried for the spike.
- */
-export function resolveCuaDriverPath(options: {
-  readonly env?: NodeJS.ProcessEnv;
+export const COMPUTER_USE_APP_NAME = "CodeShell Computer Use.app";
+export const COMPUTER_USE_BUNDLE_ID = "com.cjhyy.codeshell.computer-use";
+
+export interface ComputerUseBundleOptions {
   readonly isPackaged: boolean;
   readonly resourcesPath?: string;
+  readonly appPath?: string;
   readonly isExecutable?: (path: string) => boolean;
-}): string | undefined {
+}
+
+/** Resolve only this installation's helper; never fall back to a global driver. */
+export function computerUseBundlePaths(
+  options: ComputerUseBundleOptions,
+): { helperPath: string; driverPath: string } | undefined {
+  const bundle = options.isPackaged
+    ? options.resourcesPath && join(options.resourcesPath, "..", "Library", COMPUTER_USE_APP_NAME)
+    : options.appPath && join(options.appPath, "out", "native", COMPUTER_USE_APP_NAME);
+  if (!bundle) return undefined;
+  return {
+    helperPath: join(bundle, "Contents", "MacOS", "codeshell-computer-use"),
+    driverPath: join(bundle, "Contents", "Resources", "cua-driver"),
+  };
+}
+
+export function resolveComputerUseBundle(
+  options: ComputerUseBundleOptions,
+): { helperPath: string; driverPath: string } | undefined {
+  const paths = computerUseBundlePaths(options);
   const check = options.isExecutable ?? isExecutable;
-  const override = options.env?.CODESHELL_CUA_DRIVER_PATH?.trim();
-  if (override) return check(override) ? override : undefined;
-  const candidates = [
-    ...(options.isPackaged && options.resourcesPath
-      ? [join(options.resourcesPath, "cua-driver", "cua-driver")]
-      : []),
-    "/usr/local/bin/cua-driver",
-    "/opt/homebrew/bin/cua-driver",
-    join(homedir(), ".local", "bin", "cua-driver"),
-  ];
-  return candidates.find((candidate) => check(candidate));
+  return paths && check(paths.helperPath) && check(paths.driverPath) ? paths : undefined;
 }
 
 export class CuaDriverHost {
@@ -187,6 +182,7 @@ export class CuaDriverHost {
     return {
       state: this.state,
       driverPath: this.options.driverPath,
+      helperPath: this.options.helperPath,
       socketPath: this.socketPath,
       generation: this.generation,
       ...(this.lastError ? { lastError: this.lastError } : {}),
@@ -287,12 +283,8 @@ export class CuaDriverHost {
       const value = parent[key];
       if (typeof value === "string") env[key] = value;
     }
-    env.CUA_DRIVER_EMBEDDED = "1";
-    env.CUA_DRIVER_HOST_BUNDLE_ID = this.options.hostBundleId;
-    // Fixed at trusted launch; never agent-settable. `standard` keeps residual
-    // boundaries (such as an existing logged-in Chrome profile) denied because
-    // this host installs no authorization handler.
-    env.CUA_DRIVER_PERMISSION_MODE = "standard";
+    // Native helper fixes the driver identity and permission mode itself.
+    // Do not let inherited driver switches change the app's launch contract.
     return env;
   }
 
@@ -343,11 +335,11 @@ export class CuaDriverHost {
       this.prepareSocket();
       try {
         child = this.spawnFn(
-          this.options.driverPath,
-          ["serve", "--embedded", "--socket", this.socketPath],
+          this.options.helperPath,
+          ["launch", "serve", "--socket", this.socketPath],
           {
             env: this.daemonEnv(),
-            // Keep the direct-child macOS TCC responsibility chain.
+            // Supervise the bridge; it launches and owns the independent app instance.
             stdio: ["ignore", "pipe", "pipe"],
             detached: false,
           },

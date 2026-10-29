@@ -24,8 +24,8 @@ function fixture(platform = "darwin") {
   );
   const executable = platform === "win32" ? "bin/node.exe" : "bin/node";
   const nodePath = join(runtimeDir, executable);
-  const driverPath = join(appPath, "Contents/Resources/cua-driver/cua-driver");
-  const permissionsPath = join(appPath, "Contents/Resources/computer-use/codeshell-permissions");
+  const helperPath = join(appPath, "Contents/Library/CodeShell Computer Use.app");
+  const driverPath = join(helperPath, "Contents/Resources/cua-driver");
   const target = { platform, arch: "arm64" };
   const context = {
     electronPlatformName: platform,
@@ -69,7 +69,7 @@ function fixture(platform = "darwin") {
   const run = async (command: string, args: string[]) => {
     expect(command.endsWith("codesign")).toBe(true);
     const file = args.at(-1);
-    const native = file === driverPath ? "driver" : file === permissionsPath ? "permissions" : null;
+    const native = file === driverPath ? "driver" : file === helperPath ? "helper" : null;
     if (args.includes("--verify")) {
       events.push({
         kind: native ? `verify-${native}` : file === nodePath ? "verify-node" : "verify-app",
@@ -99,7 +99,7 @@ function fixture(platform = "darwin") {
     appPath,
     nodePath,
     driverPath,
-    permissionsPath,
+    helperPath,
     runtimeDir,
     target,
     context,
@@ -141,7 +141,7 @@ describe("managed Node packaging signature ordering", () => {
       "stage",
       "sign-deep",
       "sign-driver",
-      "sign-permissions",
+      "sign-helper",
       "sign-node",
       "refresh",
       "sign-outer",
@@ -162,16 +162,20 @@ describe("managed Node packaging signature ordering", () => {
     expect(nodeSignature).toContain("--entitlements");
     expect(nodeSignature).toContain("--options");
     expect(nodeSignature[nodeSignature.indexOf("--options") + 1].split(",")).toContain("runtime");
-    for (const native of ["driver", "permissions"]) {
+    for (const native of ["driver", "helper"]) {
       const nativeSignature = f.events.find(({ kind }) => kind === `sign-${native}`)!.args!;
       expect(signingIdentity(nativeSignature)).toBe("-");
       expect(nativeSignature[nativeSignature.indexOf("--options") + 1]).toBe("runtime");
       expect(nativeSignature).not.toContain("--entitlements");
       expect(nativeSignature).not.toContain("--timestamp");
+      if (native === "helper")
+        expect(nativeSignature).toContain(
+          '-r=designated => identifier "com.cjhyy.codeshell.computer-use"',
+        );
       expect(f.events.find(({ kind }) => kind === `verify-${native}`)?.args).toEqual([
         "--verify",
         "--strict",
-        native === "driver" ? f.driverPath : f.permissionsPath,
+        native === "driver" ? f.driverPath : f.helperPath,
       ]);
     }
     expect(f.events.some(({ kind }) => kind === "verify-node")).toBe(true);
@@ -191,7 +195,7 @@ describe("managed Node packaging signature ordering", () => {
 
     ordered(f.events, [
       "sign-driver",
-      "sign-permissions",
+      "sign-helper",
       "sign-node",
       "refresh",
       "builder-sign",
@@ -202,7 +206,7 @@ describe("managed Node packaging signature ordering", () => {
     expect(nodeSignature[nodeSignature.indexOf("--keychain") + 1]).toBe(options.keychain);
     expect(nodeSignature).toContain("--entitlements");
     expect(nodeSignature).toContain("--options");
-    for (const native of ["driver", "permissions"]) {
+    for (const native of ["driver", "helper"]) {
       const nativeSignature = f.events.find(({ kind }) => kind === `sign-${native}`)!.args!;
       expect(signingIdentity(nativeSignature)).toBe(options.identity);
       expect(nativeSignature[nativeSignature.indexOf("--keychain") + 1]).toBe(options.keychain);
@@ -212,7 +216,7 @@ describe("managed Node packaging signature ordering", () => {
       expect(f.events.find(({ kind }) => kind === `verify-${native}`)?.args).toEqual([
         "--verify",
         "--strict",
-        native === "driver" ? f.driverPath : f.permissionsPath,
+        native === "driver" ? f.driverPath : f.helperPath,
       ]);
     }
     const delegated = f.events.find(({ kind }) => kind === "builder-sign")!
@@ -252,7 +256,7 @@ describe("managed Node packaging signature ordering", () => {
     expect(f.events.some(({ kind }) => kind === "refresh" || kind === "sign-outer")).toBe(false);
   });
 
-  for (const native of ["driverPath", "permissionsPath"] as const) {
+  for (const native of ["driverPath", "helperPath"] as const) {
     for (const mode of ["ad-hoc", "Developer ID"]) {
       test(`${mode} refuses a missing or unsignable ${native} before Node or outer signing`, async () => {
         const f = fixture();
@@ -346,7 +350,7 @@ describe("managed Node packaging signature ordering", () => {
     expect(f.events.some(({ kind }) => kind === "verify-runtime")).toBe(true);
     expect(f.events.some(({ kind }) => kind === "verify-node")).toBe(true);
     expect(f.events.some(({ kind }) => kind === "verify-driver")).toBe(true);
-    expect(f.events.some(({ kind }) => kind === "verify-permissions")).toBe(true);
+    expect(f.events.some(({ kind }) => kind === "verify-helper")).toBe(true);
     expect(f.events.some(({ kind }) => kind === "verify-app")).toBe(true);
     expect(
       f.events.every(({ kind }) => kind.startsWith("verify-") || kind === "inspect-signature"),
