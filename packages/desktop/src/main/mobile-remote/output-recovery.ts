@@ -3,7 +3,11 @@ import { readOutputJournal, readOutputJournalLegacyBase } from "@cjhyy/code-shel
 import { BusyHistoryView, MobileHistoryViewStore } from "./history-view-store.js";
 import { UnsupportedHistoryView } from "./history-view-projection.js";
 import type { MobileOutputSnapshot, MobileServerEvent } from "@cjhyy/code-shell-core";
-import { transcriptToStreamEvents } from "@cjhyy/code-shell-web";
+import {
+  assertOutputCoverage,
+  compareOutputCursors,
+  transcriptToStreamEvents,
+} from "@cjhyy/code-shell-web";
 import type { Snapshot } from "../SessionSnapshotStore.js";
 import type { OwnedExternalStreamEntry } from "../owned-external-stream.js";
 import type { AuthenticatedMobileClientEvent } from "./handle-client-event.js";
@@ -15,6 +19,7 @@ interface Binding {
   recoveryId: string;
   authority?: string;
   cursorKey: Buffer;
+  historyView?: { root: string; ownerFence: string };
   pending?: {
     seq: number;
     epoch: string;
@@ -86,6 +91,19 @@ function decodeBaseCursor(token: string, binding: Binding): BaseCursor {
   )
     throw new Error("invalid base cursor");
   return value;
+}
+
+function outputSnapshot(value: Snapshot): MobileOutputSnapshot {
+  return {
+    epoch: value.epoch,
+    nextSeq: value.nextSeq,
+    outputCursor: value.outputCursor,
+    unpaired: value.outputUnpaired === true,
+    ...(value.outputInputIds ? { inputIds: [...value.outputInputIds] } : {}),
+    ...(value.outputCoverageIdentity ? { incarnation: value.outputCoverageIdentity } : {}),
+    ...(value.outputJournalIdentity ? { journalIdentity: value.outputJournalIdentity } : {}),
+    ...(value.historicalGap ? { historicalGap: true as const } : {}),
+  };
 }
 
 /** A selected tab owns a read grant, never a caller supplied storage root or an arbitrary Session. */
@@ -304,6 +322,19 @@ export class MobileOutputRecovery {
     if (event.type === "session.legacyBase") return this.readBase(event);
     if (event.type !== "session.outputJournal") return true;
     const binding = this.bindings.get(viewer);
+    const root = this.deps.root();
+    const ownerFence = () =>
+      JSON.stringify([
+        this.deps.owner?.(event.sessionId),
+        this.deps.ownerRevision?.(event.sessionId),
+      ]);
+    const frozenGrant = () =>
+      !event.frozenSnapshot ||
+      (!!event.after &&
+        !!binding?.historyView &&
+        binding.historyView.root === root &&
+        root === this.deps.root() &&
+        binding.historyView.ownerFence === ownerFence());
     const valid = () =>
       binding &&
       this.bindings.get(viewer) === binding &&
@@ -311,7 +342,8 @@ export class MobileOutputRecovery {
       (!this.deps.authenticated || this.deps.authenticated(viewer, event.deviceId)) &&
       binding.sessionId === event.sessionId &&
       binding.recoveryId === event.recoveryId &&
-      binding.authority !== undefined;
+      binding.authority !== undefined &&
+      frozenGrant();
     const reply = (data: Partial<Extract<MobileServerEvent, { type: "session.outputJournal" }>>) =>
       this.deps.reply(viewer, {
         type: "session.outputJournal",
@@ -341,6 +373,12 @@ export class MobileOutputRecovery {
       )
         throw new Error("read grant revoked");
       const root = this.deps.root();
+      // Capture only this real prefix's snapshot. Future live inputs are joined
+      // by the next suffix batch rather than making this bounded batch chase them.
+      const before = event.frozenSnapshot ? this.deps.snapshot(event.sessionId) : undefined;
+      const captured = before ? outputSnapshot(before) : undefined;
+      if (event.frozenSnapshot && (!captured || captured.unpaired))
+        throw new Error("snapshot unavailable");
       const page = readOutputJournal(root, event.sessionId, {
         after: event.after,
         through: event.through,
@@ -355,8 +393,45 @@ export class MobileOutputRecovery {
           : undefined;
       if ((await this.deps.authority(event.sessionId)) !== binding!.authority || !valid())
         throw new Error("read grant revoked");
-      const snapshot = this.deps.snapshot(event.sessionId);
-      if (!snapshot) throw new Error("snapshot unavailable");
+      const current = this.deps.snapshot(event.sessionId);
+      if (!current) throw new Error("snapshot unavailable");
+      const snapshot = outputSnapshot(current);
+      if (captured) {
+        if (
+          snapshot.unpaired ||
+          snapshot.epoch !== captured.epoch ||
+          snapshot.incarnation !== captured.incarnation ||
+          snapshot.journalIdentity !== captured.journalIdentity ||
+          snapshot.historicalGap !== captured.historicalGap ||
+          page.status !== "ok"
+        )
+          throw new Error("frozen snapshot changed");
+        const checked = readOutputJournal(root, event.sessionId, {
+          after: page.through,
+          through: page.through,
+          maxFrames: 1,
+        });
+        if (
+          checked.status !== "ok" ||
+          !checked.complete ||
+          checked.through !== page.through ||
+          checked.coverageStart !== page.coverageStart ||
+          checked.coverageIdentity !== page.coverageIdentity
+        )
+          throw new Error("frozen journal changed");
+        this.historyViews.confirm({
+          binding: binding!,
+          root,
+          sessionId: event.sessionId,
+          fence: ownerFence(),
+          snapshot: () => snapshot,
+        });
+        assertOutputCoverage({ ...captured, inputIds: undefined }, checked, () => true);
+        if (event.through === undefined && captured.outputCursor !== undefined) {
+          const order = compareOutputCursors(captured.outputCursor, page.through!);
+          if (order === undefined || order > 0) throw new Error("frozen snapshot not covered");
+        }
+      }
       const legacyBase = base
         ? {
             throughEventId: page.legacyBaseThroughEventId!,
@@ -371,20 +446,7 @@ export class MobileOutputRecovery {
       reply({
         page,
         ...(base ? { legacyBase, legacyBaseComplete } : {}),
-        snapshot: {
-          epoch: snapshot.epoch,
-          nextSeq: snapshot.nextSeq,
-          outputCursor: snapshot.outputCursor,
-          unpaired: snapshot.outputUnpaired === true,
-          ...(snapshot.historicalGap ? { historicalGap: true as const } : {}),
-          ...(snapshot.outputInputIds ? { inputIds: snapshot.outputInputIds } : {}),
-          ...(snapshot.outputCoverageIdentity
-            ? { incarnation: snapshot.outputCoverageIdentity }
-            : {}),
-          ...(snapshot.outputJournalIdentity
-            ? { journalIdentity: snapshot.outputJournalIdentity }
-            : {}),
-        },
+        snapshot: captured ?? snapshot,
       });
     } catch {
       // Fixed path-free failure; a once negotiated missing grant cannot become legacy success.
@@ -444,16 +506,7 @@ export class MobileOutputRecovery {
     const snapshot = (): MobileOutputSnapshot => {
       const value = this.deps.snapshot(event.sessionId);
       if (!value) throw new Error("History snapshot unavailable");
-      return {
-        epoch: value.epoch,
-        nextSeq: value.nextSeq,
-        outputCursor: value.outputCursor,
-        unpaired: value.outputUnpaired === true,
-        ...(value.outputInputIds ? { inputIds: [...value.outputInputIds] } : {}),
-        ...(value.outputCoverageIdentity ? { incarnation: value.outputCoverageIdentity } : {}),
-        ...(value.outputJournalIdentity ? { journalIdentity: value.outputJournalIdentity } : {}),
-        ...(value.historicalGap ? { historicalGap: true as const } : {}),
-      };
+      return outputSnapshot(value);
     };
     const assertCurrent = async () => {
       if (
@@ -478,6 +531,7 @@ export class MobileOutputRecovery {
         const result = await this.historyViews.read(access, event.before);
         await assertCurrent();
         this.historyViews.confirm(access);
+        binding!.historyView = { root, ownerFence: access.fence };
         this.deps.reply(viewer, { ...envelope, type: event.type, result });
       } else {
         const result = await this.historyViews.detail(access, event.ref, event.cursor);

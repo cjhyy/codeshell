@@ -35,6 +35,7 @@ export interface HistoryViewAccess {
   assertCurrent(): Promise<void>;
   snapshot(): MobileOutputSnapshot;
 }
+type HistoryViewSource = Omit<HistoryViewAccess, "assertCurrent">;
 interface View extends ReturnType<typeof projectHistoryView> {
   id: string;
   key: Buffer;
@@ -112,7 +113,7 @@ export class MobileHistoryViewStore {
     this.views.set(access.binding, view);
     this.bytes += view.bytes;
   }
-  private get(access: HistoryViewAccess): View {
+  private get(access: HistoryViewSource): View {
     const view = this.views.get(access.binding);
     if (
       !view ||
@@ -132,10 +133,10 @@ export class MobileHistoryViewStore {
     this.verifySource(access, view, cached);
   }
   /** Final synchronous fence after the caller awaits this store, directly before reply. */
-  confirm(access: HistoryViewAccess): void {
+  confirm(access: HistoryViewSource): void {
     this.verifySource(access, this.get(access), true);
   }
-  private verifySource(access: HistoryViewAccess, view: View, cached: boolean): void {
+  private verifySource(access: HistoryViewSource, view: View, cached: boolean): void {
     // No await after these raw-source checks: reply construction cannot interleave
     // with a writer or a revocation on the Main event loop.
     const page = readOutputJournal(access.root, access.sessionId, {

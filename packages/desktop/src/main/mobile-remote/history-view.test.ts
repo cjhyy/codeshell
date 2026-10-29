@@ -717,3 +717,118 @@ test("continuous journal writes across every authorization await do not starve t
   expect(active).not.toHaveProperty("textDetailRef");
   expect(page.verifiedInputIds).toContain("stable-user");
 });
+
+test("frozen suffix snapshots require a successful current history view and retain the captured prefix", async () => {
+  const f = fixture(simple());
+  await f.select();
+  const request = (frozenSnapshot = true) =>
+    f.send({
+      type: "session.outputJournal",
+      sessionId: "history",
+      recoveryId: "recovery",
+      requestId: "suffix",
+      after: f.outputCursor,
+      ...(frozenSnapshot ? { frozenSnapshot: true as const } : {}),
+    });
+  expect(await request()).toMatchObject({ page: { status: "incomplete" } });
+  await f.view();
+  const included = f.writer.append(input("captured"));
+  f.snapshots.append("history", { ...input("captured"), outputCursor: included });
+  let checks = 0;
+  f.state.beforeAuthority = async () => {
+    if (++checks === 2) {
+      const outputCursor = f.writer.append(input("later"));
+      f.snapshots.append("history", { ...input("later"), outputCursor });
+    }
+  };
+  const reply = await request();
+  expect(reply).toMatchObject({
+    page: { status: "ok", through: included },
+    snapshot: { outputCursor: included },
+  });
+  expect(f.snapshots.get("history").outputCursor).not.toBe(included);
+  expect(reply.type).toBe("session.outputJournal");
+  if (reply.type !== "session.outputJournal") throw new Error("Missing suffix");
+  expect(reply.snapshot?.inputIds ?? []).not.toContain("later");
+  expect(await request(false)).toMatchObject({
+    snapshot: { outputCursor: f.snapshots.get("history").outputCursor },
+  });
+  await f.select("new-selection");
+  expect(
+    await f.send({
+      type: "session.outputJournal",
+      sessionId: "history",
+      recoveryId: "new-selection",
+      requestId: "suffix",
+      after: included,
+      frozenSnapshot: true,
+    }),
+  ).toMatchObject({ page: { status: "incomplete" } });
+});
+
+for (const change of ["unpaired", "ownerABA", "epoch", "legacy"] as const) {
+  test(`frozen suffix still rejects ${change} after its raw read`, async () => {
+    const f = fixture(simple());
+    await f.select();
+    await f.view();
+    let checks = 0;
+    f.state.beforeAuthority = async () => {
+      if (++checks !== 2) return;
+      if (change === "unpaired")
+        f.snapshots.append("history", { type: "text_delta", text: "unpaired" });
+      if (change === "ownerABA") f.state.revision += 2;
+      if (change === "epoch") f.state.epoch = "new-epoch";
+      if (change === "legacy") {
+        const path = join(f.root, "history", "transcript.jsonl");
+        writeFileSync(path, readFileSync(path, "utf8").replace("fixture", "changed"));
+      }
+    };
+    expect(
+      await f.send({
+        type: "session.outputJournal",
+        sessionId: "history",
+        recoveryId: "recovery",
+        requestId: "suffix",
+        after: f.outputCursor,
+        frozenSnapshot: true,
+      }),
+    ).toMatchObject({ page: { status: "incomplete" } });
+  });
+}
+
+test("frozen suffix continuation allows its real per-page snapshot to advance beyond an old through", async () => {
+  const f = fixture(simple());
+  await f.select();
+  await f.view();
+  const event = result("large-suffix", "x".repeat(1_500_000));
+  const through = f.writer.append(event);
+  f.snapshots.append("history", { ...event, outputCursor: through });
+  const first = await f.send({
+    type: "session.outputJournal",
+    sessionId: "history",
+    recoveryId: "recovery",
+    requestId: "first",
+    after: f.outputCursor,
+    frozenSnapshot: true,
+  });
+  expect(first).toMatchObject({
+    page: { status: "ok", complete: false, through },
+    snapshot: { outputCursor: through },
+  });
+  if (first.type !== "session.outputJournal") throw new Error("Missing suffix");
+  const later = f.writer.append(input("later"));
+  f.snapshots.append("history", { ...input("later"), outputCursor: later });
+  const next = await f.send({
+    type: "session.outputJournal",
+    sessionId: "history",
+    recoveryId: "recovery",
+    requestId: "next",
+    after: first.page.next,
+    through,
+    frozenSnapshot: true,
+  });
+  expect(next).toMatchObject({
+    page: { status: "ok", complete: true, through },
+    snapshot: { outputCursor: later },
+  });
+});
