@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { PERCH_REACH, stagePlacement } from "./stage-model";
+import { PERCH_REACH, clearsFieldAtOnce, stagePlacement } from "./stage-model";
 
 const display = { x: 0, y: 0, width: 1920, height: 1080 };
 const window = { x: 400, y: 420, width: 1000, height: 600 };
@@ -82,5 +82,18 @@ describe("stagePlacement", () => {
     expect(
       stagePlacement(display, height, { target: { x: 900, y: 480 }, prefer: "title-bar" }).perch,
     ).toBe("beside-target");
+  });
+});
+
+describe("clearsFieldAtOnce", () => {
+  const frame = { x: 300, y: 300, width: 200, height: 40 };
+  test("only a field receiving text makes the character leave at once", () => {
+    expect(clearsFieldAtOnce(frame, "text")).toBe(true);
+    // An editor's backing textarea may report no kind; keep it clear too.
+    expect(clearsFieldAtOnce(frame, undefined)).toBe(true);
+    // A button or link is walked to like any other target.
+    expect(clearsFieldAtOnce(frame, "button")).toBe(false);
+    expect(clearsFieldAtOnce(frame, "link")).toBe(false);
+    expect(clearsFieldAtOnce(undefined, "text")).toBe(false);
   });
 });

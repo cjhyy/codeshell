@@ -10,7 +10,7 @@ import {
 } from "../../shared/mimi-companion.js";
 import { CompanionChoreographer, type CompanionPlacementScene } from "./companion-choreographer.js";
 import type { AppProfileIndex } from "./app-profiles.js";
-import { stagePlacement } from "./stage-model.js";
+import { clearsFieldAtOnce, stagePlacement } from "./stage-model.js";
 import { windowAtPoint } from "./window-at-point.js";
 import { petWidgetAlwaysOnTopLevel } from "../pet/pet-widget-window-state.js";
 import type { ComputerActivityBus } from "./computer-activity-bus.js";
@@ -146,7 +146,8 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       ...placement,
       windowOrigin: { x: bounds.x, y: bounds.y },
       humanActive: humanActive || chatting,
-      avoidInput: !!avoidRect && !humanActive && !chatting && !pinned,
+      avoidInput:
+        clearsFieldAtOnce(avoidRect, scene.element) && !humanActive && !chatting && !pinned,
       pinned,
       ...(handoff ? { handoff: { app: handoff.app } } : {}),
       ...(target && scene.element ? { element: scene.element } : {}),

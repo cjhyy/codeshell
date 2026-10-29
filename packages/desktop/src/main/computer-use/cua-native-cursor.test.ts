@@ -181,6 +181,64 @@ describe("native CUA cursor side channel", () => {
     expect(JSON.stringify(server.requests)).not.toContain("private");
   });
 
+  test("an element write that moves the agent cursor becomes the next click's baseline", async () => {
+    let position = { x: 10, y: 20 };
+    const server = await daemon((input, reply) =>
+      reply(response(state(input.args.session || input.session_id, position))),
+    );
+    const emitted: CuaActivityEvent[] = [];
+    const bridge = new CuaNativeCursorBridge({
+      socketPath: server.path,
+      childPid: 42,
+      intervalMs: 10,
+      sendMcp: async (bytes) => {
+        bridge.consumeResponse({
+          id: JSON.parse(bytes.toString()).id,
+          result: { structuredContent: state("mcp-42-123", position) },
+        });
+      },
+      emit: async (value) => {
+        emitted.push(value);
+      },
+    });
+    cleanups.push(() => bridge.close());
+    initialized(bridge);
+    const write: CuaActivityEvent = {
+      id: "action:1",
+      action: "type",
+      phase: "start",
+      capture: false,
+    };
+    await begin(bridge, write, {
+      method: "tools/call",
+      params: { name: "set_value", arguments: { element_token: "t1", value: "private" } },
+    });
+    // The driver glides its cursor to the written field.
+    position = { x: 516, y: 477 };
+    await bridge.finish(write.id, false);
+    expect(emitted).toEqual([]);
+    const click: CuaActivityEvent = {
+      id: "action:2",
+      action: "click",
+      phase: "start",
+      capture: false,
+    };
+    bridge.track(click, request);
+    const polled = server.requests.length;
+    await until(() => server.requests.length >= polled + 3);
+    // Still the field: an earlier operation's point, not this click's target.
+    expect(emitted).toEqual([]);
+    position = { x: 761, y: 477 };
+    await until(() => emitted.length === 1);
+    expect(emitted[0]).toMatchObject({
+      id: click.id,
+      target: position,
+      targetSource: "native-cursor",
+    });
+    await bridge.finish(click.id, false);
+    expect(JSON.stringify(server.requests)).not.toContain("private");
+  });
+
   test("a confirmed click anchor can emit a text transition at the same position", async () => {
     let position = { x: 10, y: 20 };
     let visualAction = "idle";

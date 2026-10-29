@@ -52,6 +52,8 @@ export function MimiCompanionWindow() {
   const [cueActivity, setCueActivity] = useState<MimiCompanionState["activity"] | null>(null);
   const currentCue = useRef<MimiCompanionState["activity"] | null>(null);
   const cueTimer = useRef<number | undefined>(undefined);
+  /** The one-shot gesture whose budget waits on the character's arrival. */
+  const oneShot = useRef<string | undefined>(undefined);
   const seenActivities = useRef(new Set<string>());
   const gesture = useRef<Gesture | null>(null);
   const lastHoverAt = useRef(0);
@@ -164,6 +166,7 @@ export function MimiCompanionWindow() {
     const arrival = trip.kind === "none" ? 0 : trip.duration;
     const remaining =
       companionCueDuration(state) + arrival - Math.max(0, Date.now() - activity.startedAt);
+    oneShot.current = activity.id;
     if (remaining > 0) play(remaining);
   }, [state?.activity.id, state?.activity.action, state?.activity.phase, humanActive, visible]);
 
@@ -193,6 +196,28 @@ export function MimiCompanionWindow() {
     setTravel(next);
     if (next.kind !== "none")
       travelTimer.current = window.setTimeout(() => setTravel({ kind: "none" }), next.duration);
+    // Pointer targets arrive after their gesture began (the native cursor
+    // update). The gesture plays where the character arrives, not before.
+    const activity = state.activity;
+    if (
+      next.kind !== "none" &&
+      activity.phase === "start" &&
+      oneShot.current === activity.id &&
+      !humanActive &&
+      visible
+    ) {
+      window.clearTimeout(cueTimer.current);
+      currentCue.current = activity;
+      setCueActivity(activity);
+      cueTimer.current = window.setTimeout(
+        () => {
+          cueTimer.current = undefined;
+          currentCue.current = null;
+          setCueActivity(null);
+        },
+        next.duration + companionCueDuration(state),
+      );
+    }
   }, [state?.position.x, state?.position.y, state?.windowOrigin?.x, state?.windowOrigin?.y]);
 
   const closeMenu = useCallback(() => {
