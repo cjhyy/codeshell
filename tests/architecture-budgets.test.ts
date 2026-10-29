@@ -202,8 +202,13 @@ describe("architecture growth budgets", () => {
       // +1 review:preparePrompt; prompt assembly and Git reads stay in the review service.
       // +1 externalRuntime:yieldGoal; the owner check and Goal state stay in the service.
       // +3 backgroundWork list/cancelJob/markInterrupted; ownership checks stay in Core.
+      // +2 main-frame-owned Mimi companion setting and preview routes.
+      // +1 computerUse:input (stop/resume/force-stop); the gate itself lives in
+      // the CUA proxy, so this route only flips host-owned state.
+      // The merged tree counts 367: the previous ceiling carried two spare routes.
       // +2 Main-frame-only history recovery plan/apply routes; caller and paths remain Host-owned.
-    ).toBeLessThanOrEqual(368);
+      // Measured after merging main (2026-10-29): main counts 368, this branch adds 3.
+    ).toBeLessThanOrEqual(371);
     expect(
       matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g),
     ).toBe(2);
@@ -267,8 +272,10 @@ describe("architecture growth budgets", () => {
       // The integrated baseline contains 349 invokes; tracing adds four fixed
       // list/detail/config read/update invokes, without renderer filesystem access.
       // +1 session grouping invoke mirrors the single guarded Main route above.
+      // +3 Mimi companion setting, preview and chat-focus invokes.
+      // +1 computerUse:input mirrors the single stop/resume/force-stop Main route.
       // +2 typed history recovery plan/apply invokes mirror the reviewed Main routes.
-    ).toBeLessThanOrEqual(356);
+    ).toBeLessThanOrEqual(360);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening

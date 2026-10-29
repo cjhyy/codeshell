@@ -10,5 +10,9 @@ export function createComputerUseSettingsApi(
     requestPermission: (kind) => ipc.invoke("computerUse:requestPermission", kind),
     openSettings: (kind) => ipc.invoke("computerUse:openSettings", kind),
     restart: () => ipc.invoke("computerUse:restart"),
+    setCompanion: (value) => ipc.invoke("computerUse:setCompanion", value),
+    previewCompanion: () => ipc.invoke("computerUse:previewCompanion"),
+    controlInput: (action) => ipc.invoke("computerUse:input", action),
+    setCompanionChatActive: (active) => ipc.invoke("mimiCompanion:chatActive", active),
   };
 }

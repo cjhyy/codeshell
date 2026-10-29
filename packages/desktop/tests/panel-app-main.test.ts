@@ -91,12 +91,23 @@ describeIsolated("Panel App protocol", () => {
     return prepared;
   }
 
-  test("registers Panel, theme, and media schemes together as secure before app readiness", () => {
+  test("registers Panel, theme, media, and Mimi schemes together as secure before app readiness", () => {
     api.registerPanelAppSchemePrivileges();
 
     expect(panelAppElectronMock.privilegedSchemeRegistrations).toHaveLength(1);
     const schemes = panelAppElectronMock.privilegedSchemeRegistrations[0];
-    expect(schemes.map(({ scheme }) => scheme)).toEqual(["csmedia", "cspanel", "cstheme"]);
+    // Electron accepts a single privileged-scheme registration, so the Mimi
+    // companion's asset scheme is registered here alongside the Panel schemes.
+    expect(schemes.map(({ scheme }) => scheme)).toEqual([
+      "csmimi",
+      "csmedia",
+      "cspanel",
+      "cstheme",
+    ]);
+    expect(schemes.find(({ scheme }) => scheme === "csmimi")?.privileges).toMatchObject({
+      supportFetchAPI: true,
+      corsEnabled: true,
+    });
     expect(schemes.every(({ privileges }) => privileges?.standard && privileges.secure)).toBe(true);
     expect(schemes.find(({ scheme }) => scheme === "cspanel")?.privileges).toMatchObject({
       supportFetchAPI: true,

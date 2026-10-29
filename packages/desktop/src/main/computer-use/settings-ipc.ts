@@ -1,5 +1,7 @@
 import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
+import type { MimiCompanionSettings } from "../../shared/mimi-companion.js";
 import type {
+  ComputerUseInputStatus,
   ComputerUsePermissionKind,
   ComputerUsePermissionStatus,
   ComputerUseSettingsStatus,
@@ -20,6 +22,17 @@ export interface ComputerUseSettingsDependencies {
   };
   stop(): Promise<void>;
   restart(): void;
+  companion?: {
+    status(): MimiCompanionSettings;
+    update(value: { enabled?: boolean; size?: number }): Promise<void>;
+    preview(): Promise<void>;
+  };
+  /** Execution gate. Stop/resume never depend on the character window. */
+  input?: {
+    status(): ComputerUseInputStatus;
+    stop(): void;
+    resume(): void;
+  };
 }
 
 /** Desktop-only setup authority. Never exposed to agent tools or Panel guests. */
@@ -52,6 +65,8 @@ export function registerComputerUseSettingsIpc(deps: ComputerUseSettingsDependen
       packaged: deps.packaged,
       restartRequired: changed || permissions.restartRequired,
       permissions,
+      ...(deps.companion ? { companion: deps.companion.status() } : {}),
+      ...(deps.input ? { input: deps.input.status() } : {}),
     };
   };
   const mutate = async <T>(work: () => Promise<T>): Promise<T> => {
@@ -110,5 +125,51 @@ export function registerComputerUseSettingsIpc(deps: ComputerUseSettingsDependen
     owner(event);
     if (mutationPending) throw new Error("请等待当前授权请求完成后再重启。");
     deps.restart();
+  });
+  deps.ipcMain.handle("computerUse:setCompanion", (event, raw: unknown) => {
+    owner(event);
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("无效的角色设置。");
+    const input = raw as Record<string, unknown>;
+    if (
+      Object.keys(input).some((key) => key !== "enabled" && key !== "size") ||
+      (input.enabled !== undefined && typeof input.enabled !== "boolean") ||
+      (input.size !== undefined &&
+        (typeof input.size !== "number" ||
+          !Number.isFinite(input.size) ||
+          input.size < 200 ||
+          input.size > 480))
+    ) {
+      throw new Error("无效的角色设置。");
+    }
+    return mutate(async () => {
+      if (!deps.companion) throw new Error("当前平台不支持桌面角色。");
+      await deps.companion.update(input as { enabled?: boolean; size?: number });
+      return status();
+    });
+  });
+  // Stop is deliberately outside `mutate`: it must work while anything else is pending.
+  deps.ipcMain.handle("computerUse:input", async (event, action: unknown) => {
+    owner(event);
+    if (action !== "stop" && action !== "resume" && action !== "forceStop")
+      throw new Error("未知的电脑操作控制。");
+    if (action === "forceStop") {
+      // Last resort: also ends the shared driver, which affects every task.
+      deps.input?.stop();
+      await deps.stop();
+      changed = true;
+      return status();
+    }
+    if (!deps.input) throw new Error("当前没有可控制的电脑操作。");
+    if (action === "stop") deps.input.stop();
+    else deps.input.resume();
+    return status();
+  });
+  deps.ipcMain.handle("computerUse:previewCompanion", (event) => {
+    owner(event);
+    return mutate(async () => {
+      if (!deps.companion) throw new Error("当前平台不支持桌面角色。");
+      await deps.companion.preview();
+      return status();
+    });
   });
 }
