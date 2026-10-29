@@ -73,6 +73,58 @@ function environment() {
   }
 }
 
+test.each([projectA, null])(
+  "late workspace metadata preserves a selected project identity (%s)",
+  async (project) => {
+    environment();
+    setApiProject(project);
+    let finish!: (response: Response) => void;
+    globalThis.fetch = (async () =>
+      new Promise<Response>((resolve) => {
+        finish = resolve;
+      })) as typeof fetch;
+    const hook = await renderHook(() => useHubController({ hub: true }));
+    cleanups.push(() => hook.unmount());
+    const sessionId = hook.result.current.activeId;
+    expect(hook.result.current.workspaceKey).toBe(project ? `project:${project}` : "hub");
+    let refresh!: Promise<void>;
+    await act(async () => {
+      hook.result.current.setDraft("Owned unsent text");
+      refresh = hook.result.current.refreshConfiguration();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      finish(
+        Response.json({
+          workspace: { path: "/owned/late", settingsScope: "local", skillDirectories: [] },
+          defaults: {},
+          connections: [],
+          catalog: [],
+          skills: [],
+          mcpServers: [],
+          restartRequired: false,
+        }),
+      );
+      await refresh;
+    });
+    expect(hook.result.current.workspaceCwd).toBe("/owned/late");
+    expect(hook.result.current.workspaceKey).toBe(project ? `project:${project}` : "/owned/late");
+    expect(hook.result.current.activeId).toBe(sessionId);
+    expect(hook.result.current.draft).toBe("Owned unsent text");
+    // A retiring render cannot acquire the next ProjectsGate selection's UI identity.
+    await act(async () => {
+      setApiProject(projectB);
+      hook.result.current.setDraft("Still the original scope");
+    });
+    expect(hook.result.current.workspaceKey).toBe(project ? `project:${project}` : "/owned/late");
+    await hook.unmount();
+    const next = await renderHook(() => useHubController({ hub: true }));
+    cleanups.push(() => next.unmount());
+    expect(next.result.current.workspaceKey).toBe(`project:${projectB}`);
+    expect(next.result.current.draft).toBe("");
+  },
+);
+
 test.each([200, 500, 401])(
   "a late inactive title refresh survives an older session-list response %i",
   async (status) => {
