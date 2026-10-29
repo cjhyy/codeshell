@@ -292,6 +292,7 @@ interface EffectSet {
 - native 试填夹具改为后台投递（去掉 `delivery_mode:"foreground"` 与"窗口失焦即停"检查），写入改用 `set_value`；`--native-smoke` 无人值守跑"填写→停止被拒→恢复再填"。
 - `set_value` 无指针，原生光标永远不会描述它；tracker 为它标 `targetSource:"element"`（取自变更后的新快照），companion 仅在 start 接受该来源，update 仍只认原生光标。
 - 同分支既有的 +2 IPC 路由 / +3 preload invoke（companion 设置、预览、聊天焦点）此前未计入预算，本次一并登记。
+- 驱动自带的浏览器路线（`browser_*`、`page`、`get_browser_state`，经 DevTools 控制绑定的、可能已登录的浏览器并可执行页面脚本）不提供：proxy 从 `tools/list` 中删除，调用一律本地拒绝为 `tool-withheld`，与闸门状态无关。网页操作走 CodeShell 内置浏览器工具（`browser_navigate` 等，内置工具，不经此 proxy）。
 
 真机结果（2026-10-29，cua-driver 0.34.1，Electron 33 自建表单窗口，全程无焦点）：
 

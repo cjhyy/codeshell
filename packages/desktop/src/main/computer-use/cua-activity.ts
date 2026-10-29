@@ -157,7 +157,6 @@ function classify(name: string, args: RecordValue): Pick<CuaActivityEvent, "acti
     case "get_agent_cursor_state":
       return { action: "observe", capture: false };
     case "get_desktop_state":
-    case "get_browser_state":
     case "zoom":
     case "verify_state":
       return { action: "observe", capture: true };

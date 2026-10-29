@@ -193,6 +193,24 @@ describe("CUA activity proxy", () => {
     expect(annotateToolList(annotated)).toBeUndefined();
   });
 
+  test("the driver's browser route never reaches the model's tool list", () => {
+    const listed = {
+      jsonrpc: "2.0",
+      id: 3,
+      result: {
+        tools: [
+          { name: "browser_navigate", description: "Navigate." },
+          { name: "click", description: "Click." },
+          { name: "page", description: "Legacy browser." },
+          { name: "get_browser_state", description: "Browser state." },
+        ],
+      },
+    };
+    const annotated = annotateToolList(listed) as any;
+    expect(annotated.result.tools.map((tool: any) => tool.name)).toEqual(["click"]);
+    expect(annotateToolList(annotated)).toBeUndefined();
+  });
+
   test("rejects extra invocation arguments", () => {
     expect(parseCuaActivityProxyArgs(["--driver", "/driver", "--socket", "/private.sock"])).toEqual(
       { driver: "/driver", socket: "/private.sock" },
