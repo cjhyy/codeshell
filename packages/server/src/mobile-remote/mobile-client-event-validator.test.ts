@@ -371,3 +371,24 @@ test("output journal frame hint is optional, bounded and integral", () => {
   for (const maxFrames of [0, -1, 2049, 1.5, "2048", null, Infinity])
     expect(parseMobileClientEvent({ ...event, maxFrames })).toBeUndefined();
 });
+
+test("history display requests carry only bounded selected-view references", () => {
+  const view = { type: "session.historyView", sessionId: "s", recoveryId: "r", requestId: "p" };
+  const detail = { ...view, type: "session.historyDetail", ref: "opaque" };
+  expect(parseMobileClientEvent(view)).toEqual(view);
+  expect(parseMobileClientEvent({ ...view, before: "older" })).toBeDefined();
+  expect(parseMobileClientEvent(detail)).toEqual(detail);
+  expect(parseMobileClientEvent({ ...detail, cursor: "part-2" })).toBeDefined();
+  for (const request of [view, detail]) {
+    for (const field of ["sessionId", "recoveryId", "requestId"])
+      for (const value of ["", null, 42, "x".repeat(129)])
+        expect(parseMobileClientEvent({ ...request, [field]: value })).toBeUndefined();
+    for (const field of ["cwd", "root", "epoch", "outputCursor"])
+      expect(parseMobileClientEvent({ ...request, [field]: "caller" })).toBeUndefined();
+  }
+  for (const value of ["", null, 42, "x".repeat(2049)]) {
+    expect(parseMobileClientEvent({ ...view, before: value })).toBeUndefined();
+    expect(parseMobileClientEvent({ ...detail, ref: value })).toBeUndefined();
+    expect(parseMobileClientEvent({ ...detail, cursor: value })).toBeUndefined();
+  }
+});

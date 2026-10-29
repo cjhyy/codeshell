@@ -82,6 +82,23 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         ((boundedString(event.throughEventId, 512) && event.cursor === undefined) ||
           (boundedString(event.cursor, 2048) && event.throughEventId === undefined));
       break;
+    case "session.historyView":
+    case "session.historyDetail":
+      valid =
+        boundedString(event.sessionId, 128) &&
+        boundedString(event.recoveryId, 128) &&
+        boundedString(event.requestId, 128) &&
+        (event.type === "session.historyView"
+          ? optionalBoundedString(event.before, 2048) &&
+            Object.keys(event).every((key) =>
+              ["type", "sessionId", "recoveryId", "requestId", "before"].includes(key),
+            )
+          : boundedString(event.ref, 2048) &&
+            optionalBoundedString(event.cursor, 2048) &&
+            Object.keys(event).every((key) =>
+              ["type", "sessionId", "recoveryId", "requestId", "ref", "cursor"].includes(key),
+            ));
+      break;
     case "session.outputJournal":
       valid =
         boundedString(event.sessionId, 128) &&

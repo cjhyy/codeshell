@@ -1014,6 +1014,7 @@ const mobileRemote = new RemoteHostManager({
   outputJournal: true,
   legacyBasePages: true,
   outputJournalPageFrames: 2048,
+  historyView: true,
   devices: mobileDevices,
   uploads: mobileUploads,
   webApi: createDesktopWebService({

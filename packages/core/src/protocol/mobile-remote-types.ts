@@ -5,6 +5,7 @@
  * package — this file must stay pure types (no runtime code).
  */
 import type { PermissionMode as CorePermissionMode } from "../types.js";
+export type * from "./mobile-history-view-types.js";
 
 /** Permission modes supported by the mobile remote wire protocol. */
 export type MobileRemotePermissionMode = Extract<
@@ -126,6 +127,21 @@ export type MobileClientEvent =
     }
   | { type: "session.select"; sessionId: string; recoveryId?: string }
   | { type: "session.recovery.cancel" }
+  | {
+      type: "session.historyView";
+      sessionId: string;
+      recoveryId: string;
+      requestId: string;
+      before?: string;
+    }
+  | {
+      type: "session.historyDetail";
+      sessionId: string;
+      recoveryId: string;
+      requestId: string;
+      ref: string;
+      cursor?: string;
+    }
   | { type: "session.outputRecovery.plan"; sessionId: string; requestId: string }
   | {
       type: "session.outputRecovery.apply";
@@ -269,15 +285,39 @@ export type MobileClientEvent =
 
 export type MobileServerEvent =
   | {
+      type: "session.historyView";
+      sessionId: string;
+      recoveryId: string;
+      requestId: string;
+      result: import("./mobile-history-view-types.js").MobileHistoryViewResult;
+    }
+  | {
+      type: "session.historyDetail";
+      sessionId: string;
+      recoveryId: string;
+      requestId: string;
+      result: import("./mobile-history-view-types.js").MobileHistoryDetailResult;
+    }
+  | {
       type: "auth.ok";
       device: TrustedDevicePublic;
-      capabilities?: { outputJournal?: 1; legacyBasePages?: 1; outputJournalPageFrames?: 2048 };
+      capabilities?: {
+        outputJournal?: 1;
+        legacyBasePages?: 1;
+        outputJournalPageFrames?: 2048;
+        historyView?: 1;
+      };
     }
   | { type: "auth.failed"; message: string }
   | {
       type: "pair.ok";
       device: TrustedDevicePublic;
-      capabilities?: { outputJournal?: 1; legacyBasePages?: 1; outputJournalPageFrames?: 2048 };
+      capabilities?: {
+        outputJournal?: 1;
+        legacyBasePages?: 1;
+        outputJournalPageFrames?: 2048;
+        historyView?: 1;
+      };
     }
   | { type: "pair.failed"; message: string }
   | {
@@ -358,16 +398,7 @@ export type MobileServerEvent =
       /** Main's display-only projection after validating the exact raw cutover anchor. */
       legacyBase?: { throughEventId: string; events: Record<string, unknown>[] };
       legacyBaseComplete?: boolean;
-      snapshot?: {
-        epoch: string;
-        nextSeq: number;
-        outputCursor?: string;
-        unpaired: boolean;
-        inputIds?: string[];
-        incarnation?: string;
-        journalIdentity?: string;
-        historicalGap?: true;
-      };
+      snapshot?: import("./mobile-history-view-types.js").MobileOutputSnapshot;
     }
   | ({
       type: "session.legacyBase";
