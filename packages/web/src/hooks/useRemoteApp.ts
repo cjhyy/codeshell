@@ -851,9 +851,23 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       setLoadingKey("sessionHistory", false);
       setNoticeState(undefined);
     },
-    legacy: (sessionId) => {
+    legacy: (sessionId, events?: Record<string, unknown>[]) => {
+      if (boundSessionRef.current !== sessionId || activeRoomIdRef.current) return;
       // An explicit repair must prove its new journal before writes resume.
       if (recoveryFencesRef.current.has(sessionId)) {
+        setLoadingKey("sessionHistory", false);
+        return;
+      }
+      if (events) {
+        // The output client has joined every bounded, selected legacy page.
+        // This proves saved display history, never a live output cursor.
+        epochHistorySessionRef.current = undefined;
+        const cursor = sessionCursor(sessionId);
+        cursor.historyUnpaired = true;
+        cursor.awaitingSnapshot = true;
+        dispatchChat({ kind: "replay", events });
+        dispatchChat({ kind: "stream_epoch_changed" });
+        setNotice(t("mobile.notice.sessionRecoveryHistoryOnly"));
         setLoadingKey("sessionHistory", false);
         return;
       }

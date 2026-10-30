@@ -3842,6 +3842,339 @@ for (const bindBeforeTimeout of [false, true]) {
   });
 }
 
+describe("useRemoteApp paged pre-journal display", () => {
+  test("actual selected Host streams a 3 MiB pre-journal transcript through the hook without truncation", async () => {
+    const { SessionManager } = await import("@cjhyy/code-shell-core");
+    const { SessionSnapshotStore } =
+      await import("../../../desktop/src/main/SessionSnapshotStore.js");
+    const { MobileOutputRecovery } =
+      await import("../../../desktop/src/main/mobile-remote/output-recovery.js");
+    const { mkdtempSync, readFileSync, writeFileSync, rmSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const root = mkdtempSync(join(tmpdir(), "mobile-hook-pre-journal-"));
+    const manager = new SessionManager(root);
+    const session = manager.create(root, "claude-code/fixture", "claude-code", "old-external");
+    const texts = Array.from({ length: 7 }, (_, index) => `${index}:` + "汉🙂".repeat(70_000));
+    for (const text of texts) session.transcript.appendMessage("assistant", text);
+    const statePath = join(root, "old-external", "state.json");
+    writeFileSync(
+      statePath,
+      JSON.stringify({ ...JSON.parse(readFileSync(statePath, "utf8")), status: "completed" }),
+    );
+    const f = await connected(true);
+    const replies: import("@cjhyy/code-shell-core").MobileServerEvent[] = [];
+    const snapshots = new SessionSnapshotStore();
+    const service = new MobileOutputRecovery({
+      root: () => root,
+      authority: async () => "owned-project-incarnation",
+      journalRequired: () => true,
+      authenticated: (viewer, device) => viewer === "tab" && device === "device-1",
+      snapshot: (id, since) => snapshots.get(id, since),
+      reply: (_viewer, event) => {
+        replies.push(event);
+        f.ws.message(event);
+      },
+    });
+    let readIndex = 0;
+    try {
+      for (let round = 0; round < 100; round++) {
+        const pending = f.ws.sent.slice(readIndex);
+        readIndex = f.ws.sent.length;
+        if (!pending.length) break;
+        await act(async () => {
+          for (const line of pending) {
+            const event = JSON.parse(line);
+            if (
+              [
+                "session.select",
+                "session.outputJournal",
+                "session.historyView",
+                "session.legacyBase",
+                "session.recovery.cancel",
+              ].includes(event.type)
+            )
+              await service.handle({ ...event, viewerId: "tab", deviceId: "device-1" });
+          }
+          await flushMicrotasks();
+        });
+      }
+      expect(
+        f.hook.result.current.chat.items
+          .filter((item) => item.kind === "assistant")
+          .map((item) => item.text),
+      ).toEqual(texts);
+      expect(f.hook.result.current.loading.sessionHistory).toBe(false);
+      expect(f.hook.result.current.notice).toContain("已恢复保存的聊天记录");
+      expect(f.hook.result.current.outputHistoryFailed).toBe(false);
+      const pages = replies.filter((event) => event.type === "session.legacyBase");
+      expect(pages.length).toBeGreaterThan(1);
+      expect(pages.every((event) => Buffer.byteLength(JSON.stringify(event)) <= 1024 * 1024)).toBe(
+        true,
+      );
+      expect(
+        f
+          .sent()
+          .some((event) =>
+            ["session.history", "chat.send", "approval.respond"].includes(event.type),
+          ),
+      ).toBe(false);
+    } finally {
+      await f.hook.unmount();
+      service.revoke("tab");
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  async function connected(historyView = false) {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    const sent = () => ws.sent.map((line) => JSON.parse(line));
+    await act(async () => {
+      ws.open();
+      ws.message({
+        type: "auth.ok",
+        capabilities: {
+          outputJournal: 1,
+          legacyBasePages: 1,
+          ...(historyView ? { historyView: 1 } : {}),
+        },
+      });
+      await flushMicrotasks();
+      hook.result.current.selectSession("old-external");
+      await flushMicrotasks();
+    });
+    const start = async () => {
+      const selected = sent().findLast((event) => event.type === "session.select");
+      ws.message({
+        type: "session.recovery.ready",
+        sessionId: "old-external",
+        recoveryId: selected.recoveryId,
+        ok: true,
+        journalRequired: false,
+      });
+      await flushMicrotasks();
+      const read = sent().findLast((event) => event.type === "session.outputJournal");
+      ws.message({
+        ...read,
+        page: { version: 1, status: "unavailable", frames: [], complete: true },
+        snapshot: { epoch: "fresh-main", nextSeq: 1 },
+        legacyBaseComplete: false,
+        legacyBase: { throughEventId: "saved-tail", events: [] },
+      });
+      await flushMicrotasks();
+      return selected;
+    };
+    const page = (index: number, events: Record<string, unknown>[], complete: boolean) => {
+      const read = sent().findLast((event) => event.type === "session.legacyBase");
+      expect(read).toBeDefined();
+      const reply = {
+        type: "session.legacyBase",
+        sessionId: read.sessionId,
+        recoveryId: read.recoveryId,
+        requestId: read.requestId,
+        throughEventId: "saved-tail",
+        ok: true,
+        index,
+        events,
+        complete,
+        ...(complete ? {} : { next: `page-${index + events.length}` }),
+      };
+      expect(Buffer.byteLength(JSON.stringify(reply))).toBeLessThan(1024 * 1024);
+      return reply;
+    };
+    return { hook, ws, sent, start, page };
+  }
+
+  test("joins all pages above 1 MiB without a second history request or invented live cursor", async () => {
+    const f = await connected();
+    const text = "synthetic saved answer ".repeat(30_000);
+    try {
+      await act(async () => {
+        await f.start();
+        f.ws.message(
+          f.page(
+            0,
+            [
+              { type: "session_started", sessionId: "old-external" },
+              { type: "user_message", text: "saved question", clientMessageId: "saved-input" },
+              { type: "text_delta", text },
+            ],
+            false,
+          ),
+        );
+        await flushMicrotasks();
+      });
+      expect(f.hook.result.current.chat.items).toEqual([]);
+      expect(f.hook.result.current.loading.sessionHistory).toBe(true);
+      await act(async () => {
+        f.ws.message(f.page(3, [{ type: "text_delta", text }], true));
+        await flushMicrotasks();
+      });
+      expect(
+        f.hook.result.current.chat.items.find((item) => item.kind === "assistant"),
+      ).toMatchObject({ text: text + text });
+      expect(f.hook.result.current.chat.items.find((item) => item.kind === "user")).toMatchObject({
+        clientMessageId: "saved-input",
+      });
+      expect(f.hook.result.current.chat.run).toBe("idle");
+      expect(f.hook.result.current.loading.sessionHistory).toBe(false);
+      expect(f.hook.result.current.outputHistoryFailed).toBe(false);
+      expect(f.hook.result.current.notice).toContain("已恢复保存的聊天记录");
+      expect(
+        f
+          .sent()
+          .some((event) =>
+            ["session.history", "session.sync", "chat.send", "approval.respond"].includes(
+              event.type,
+            ),
+          ),
+      ).toBe(false);
+      await act(async () => {
+        // An unassociated Main snapshot cannot repeat the durable answer.
+        f.ws.message({
+          type: "session.snapshot",
+          sessionId: "old-external",
+          epoch: "fresh-main",
+          nextSeq: 3,
+          entries: [{ seq: 1, event: { type: "text_delta", text: "duplicate saved answer" } }],
+        });
+        await flushMicrotasks();
+      });
+      expect(
+        f.hook.result.current.chat.items.filter((item) => item.kind === "assistant"),
+      ).toHaveLength(1);
+      expect(
+        f.hook.result.current.chat.items.find((item) => item.kind === "assistant"),
+      ).toMatchObject({ text: text + text });
+    } finally {
+      await f.hook.unmount();
+    }
+  });
+
+  test("a retained legacy selection still fails closed when the Host revokes it", async () => {
+    const f = await connected();
+    try {
+      let selected: any;
+      await act(async () => {
+        selected = await f.start();
+        f.ws.message(
+          f.page(
+            0,
+            [
+              { type: "session_started", sessionId: "old-external" },
+              { type: "text_delta", text: "saved display" },
+            ],
+            true,
+          ),
+        );
+        await flushMicrotasks();
+        f.ws.message({
+          type: "session.recovery.ready",
+          sessionId: "old-external",
+          recoveryId: selected.recoveryId,
+          ok: false,
+        });
+        await flushMicrotasks();
+      });
+      expect(f.hook.result.current.outputHistoryFailed).toBe(true);
+      expect(f.hook.result.current.loading.sessionHistory).toBe(false);
+      expect(
+        await f.hook.result.current.sendChat({ text: "must stay local", attachments: [] }),
+      ).toBe(false);
+      expect(f.sent().some((event) => event.type === "chat.send")).toBe(false);
+    } finally {
+      await f.hook.unmount();
+    }
+  });
+
+  test("late final pages cannot overwrite a newly selected conversation", async () => {
+    const f = await connected();
+    try {
+      await act(async () => {
+        await f.start();
+        const late = f.page(
+          0,
+          [
+            { type: "session_started", sessionId: "old-external" },
+            { type: "text_delta", text: "retired old answer" },
+          ],
+          true,
+        );
+        f.hook.result.current.selectSession("different-session");
+        f.ws.message(late);
+        await flushMicrotasks();
+      });
+      expect(f.hook.result.current.activeSessionId).toBe("different-session");
+      expect(f.hook.result.current.chat.items).toEqual([]);
+      expect(f.hook.result.current.loading.sessionHistory).toBe(true);
+    } finally {
+      await f.hook.unmount();
+    }
+  });
+
+  test("display-only pages cannot clear an explicit repair fence", async () => {
+    const f = await connected();
+    try {
+      await act(async () => {
+        await f.start();
+        f.ws.message(
+          f.page(
+            0,
+            [
+              { type: "session_started", sessionId: "old-external" },
+              { type: "text_delta", text: "before repair" },
+            ],
+            true,
+          ),
+        );
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        const applying = f.hook.result.current.applySessionOutputRecovery!("old-external", {
+          planId: "reviewed-plan",
+          acceptHistoricalGap: true,
+        });
+        const request = f.sent().findLast((event) => event.type === "session.outputRecovery.apply");
+        f.ws.message({
+          ...request,
+          result: { status: "applied", sessionId: "old-external", historicalGap: true },
+        });
+        await applying;
+        await f.start();
+        f.ws.message(
+          f.page(
+            0,
+            [
+              { type: "session_started", sessionId: "old-external" },
+              { type: "text_delta", text: "unproven replacement" },
+            ],
+            true,
+          ),
+        );
+        await flushMicrotasks();
+      });
+      expect(f.hook.result.current.outputHistoryFailed).toBe(true);
+      expect(f.hook.result.current.loading.sessionHistory).toBe(false);
+      expect(
+        f.hook.result.current.chat.items.some(
+          (item) => item.kind === "assistant" && item.text === "unproven replacement",
+        ),
+      ).toBe(false);
+      expect(
+        await f.hook.result.current.sendChat({
+          text: "held until real journal joins",
+          attachments: [],
+        }),
+      ).toBe(false);
+      expect(f.sent().some((event) => event.type === "chat.send")).toBe(false);
+    } finally {
+      await f.hook.unmount();
+    }
+  });
+});
+
 describe("useRemoteApp native output journal", () => {
   test("3 MiB legacy base crosses the real hook socket and selected MobileOutputRecovery host", async () => {
     const f = await connectedJournal(true);
