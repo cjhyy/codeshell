@@ -144,22 +144,30 @@ export function transcriptToStreamEvents(records: readonly unknown[]): ObjectVal
             if (block.type === "tool_result") finishTool(text(block.tool_use_id), block, agentId);
           }
         } else if (data.role === "assistant") {
-          const body = textContent(data.content);
-          const reasoning = blocks
-            .filter((block) => block.type === "reasoning")
-            .map((block) => text(block.reasoningContent) || text(block.text))
-            .join("");
-          if (body || reasoning) {
-            const scope = agentId ? { agentId } : {};
+          let body = typeof data.content === "string" ? data.content : "";
+          let reasoning = "";
+          const scope = agentId ? { agentId } : {};
+          const flush = () => {
+            if (!body && !reasoning) return;
             result.push({ type: "stream_request_start", ...scope });
             if (reasoning) result.push({ type: "thinking_delta", text: reasoning, ...scope });
             if (body) result.push({ type: "text_delta", text: body, ...scope });
             result.push({ type: "assistant_message", ...scope });
-          }
+            body = "";
+            reasoning = "";
+          };
+          // Content block order is authoritative. A tool separates prose
+          // segments; adjacent text chunks keep their original bytes.
           for (const block of blocks) {
-            if (block.type === "tool_use")
+            if (block.type === "text") body += text(block.text);
+            else if (block.type === "reasoning")
+              reasoning += text(block.reasoningContent) || text(block.text);
+            else if (block.type === "tool_use") {
+              flush();
               startTool(text(block.id), text(block.name), object(block.input) ?? {}, agentId);
+            }
           }
+          flush();
         } else if (data.role === "tool") {
           finishTool(text(data.tool_call_id), data, agentId);
         }

@@ -171,6 +171,62 @@ const text = (chat: ReturnType<typeof initialChatState>) =>
     .map((item) => item.text)
     .join("");
 
+test("a frozen view ending at a tool boundary joins later text as a fresh segment and retains tombstone ownership", async () => {
+  const f = fixture(5),
+    body = "Owned paragraph.\n\n" + "long retained text ".repeat(400);
+  f.append(
+    [
+      { type: "turn_complete", reason: "completed" },
+      { type: "stream_request_start", turnNumber: 3, messageId: "owned-request" },
+      { type: "text_delta", text: body },
+      { type: "tool_use_start", toolCall: { id: "boundary-tool", toolName: "Bash", args: {} } },
+    ],
+    false,
+  );
+  f.client.begin(f.id);
+  await until(() => f.commits.length === 1 || f.failures() > 0);
+  expect(f.failures()).toBe(0);
+  const prefix = f.commits[0].result.chat;
+  const before = prefix.items.find(
+    (item: any) => item.kind === "assistant" && item.messageId === "owned-request",
+  );
+  expect(before.done).toBe(true);
+  expect(before.textDetailRef).toBeString();
+  expect(prefix.liveByAgent[""]).toBe(before.id);
+  expect((await f.client.loadDetail(before.textDetailRef)).text).toBe(body);
+  f.append([
+    { type: "tool_result", result: { id: "boundary-tool", result: "done" } },
+    { type: "text_delta", text: "Final first.\n\nFinal second." },
+  ]);
+  await until(() => f.commits.at(-1)?.result.outputCursor === f.cursor() || f.failures() > 0);
+  expect(f.failures()).toBe(0);
+  const joined = f.commits.at(-1)!.result.chat;
+  expect(joined.items.at(-1)).toMatchObject({
+    kind: "assistant",
+    messageId: "owned-request",
+    text: "Final first.\n\nFinal second.",
+    done: false,
+  });
+  expect(joined.items.at(-2)).toMatchObject({ kind: "tool", id: "boundary-tool", done: true });
+  expect(joined.items.find((item: any) => item.id === before.id)).toEqual(before);
+  expect(joined.seq).toBe(prefix.seq + 1);
+  expect(joined.run).toBe("running");
+  expect(f.sent.filter((event) => event.type === "session.historyView")).toHaveLength(1);
+  f.append([{ type: "tombstone", messageId: "owned-request" }]);
+  await until(() => f.commits.at(-1)?.result.outputCursor === f.cursor() || f.failures() > 0);
+  expect(f.failures()).toBe(0);
+  expect(
+    f.commits.at(-1)!.result.chat.items.some((item: any) => item.messageId === "owned-request"),
+  ).toBe(false);
+  expect(f.commits.at(-1)!.result.chat.items.some((item: any) => item.id === "boundary-tool")).toBe(
+    true,
+  );
+  expect(
+    f.sent.some((event) => event.type === "chat.send" || event.type === "approval.respond"),
+  ).toBe(false);
+  expect(f.errors).toEqual([]);
+});
+
 test("real Host + JSON + client: 8.5 MiB history becomes visible while a writer continues across delayed round trips", async () => {
   const f = fixture(250, 513),
     started = performance.now();
