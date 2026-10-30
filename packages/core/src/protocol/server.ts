@@ -22,7 +22,12 @@ import {
   type ProtocolRequestHandler,
 } from "./dispatch.js";
 import type { Transport } from "./transport.js";
-import { handleCancelRequest, handleSteerRequest, runOptions } from "./server-run-controls.js";
+import {
+  handleCancelRequest,
+  handleSteerRequest,
+  runAcceptance,
+  runOptions,
+} from "./server-run-controls.js";
 import { deliverAsyncUserAnswer } from "./async-user-answer.js";
 import { queueGoalResumeTurn as queueGoalResume } from "./goal-resume-turn.js";
 import {
@@ -1719,6 +1724,9 @@ export class AgentServer {
       }
     }
 
+    const acceptance = runAcceptance(params, req.id, (payload) =>
+      this.notify(Methods.RunAccepted, payload),
+    );
     const start = new AbortController();
     const releaseStart = trackRunStart(cm, params.sessionId, start);
     this.runStarts.add(start);
@@ -1783,6 +1791,17 @@ export class AgentServer {
         }
       }
 
+      if (params.configuredModel && session.isBusy()) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.InvalidParams,
+            "Session is busy; a configured model selection cannot be queued",
+          ),
+        );
+        return;
+      }
+
       // Wire AskUserQuestion and host bridges for this interactive session. The
       // chatManager path builds a fresh per-session Engine via engineFactory, so
       // these host callbacks must be installed after every create/recreate.
@@ -1809,6 +1828,7 @@ export class AgentServer {
           injected: params.injected === true,
           attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
           onStream: (event: StreamEvent) => {
+            acceptance.observe(event);
             this.observeSessionStream(sid, event);
             this.notify(Methods.StreamEvent, { sessionId: sid, event });
           },
@@ -1838,7 +1858,7 @@ export class AgentServer {
         // active run. Do not let a later cancel affect a newer preparation.
         releaseStart();
         this.runStarts.delete(start);
-        this.notify(Methods.RunAccepted, { requestId: req.id, sessionId: sid });
+        acceptance.queued();
         this.observeRunBoundary(sid, "start");
         const result = await run;
         this.observeRunBoundary(sid, "end");
@@ -1876,6 +1896,7 @@ export class AgentServer {
         this.maybeWakeIdleSession(sid);
       }
     } finally {
+      acceptance.close();
       releaseStart();
       this.runStarts.delete(start);
     }
@@ -1953,7 +1974,11 @@ export class AgentServer {
     this.abortController = new AbortController();
     this.notify(Methods.Status, { status: "running" });
 
+    const acceptance = runAcceptance(params, req.id, (payload) =>
+      this.notify(Methods.RunAccepted, payload),
+    );
     const streamToClient = (event: StreamEvent) => {
+      acceptance.observe(event);
       this.notify(Methods.StreamEvent, { sessionId: params.sessionId ?? "", event });
     };
 
@@ -1975,10 +2000,7 @@ export class AgentServer {
             : {}),
         });
       }
-      this.notify(Methods.RunAccepted, {
-        requestId: req.id,
-        sessionId: params.sessionId ?? "",
-      });
+      acceptance.queued();
       const result = await this.legacyEngine!.run(params.task, {
         ...runOptions(params, () =>
           params.sessionId ? this.legacyEngine!.getGoal(params.sessionId) : undefined,
@@ -2049,6 +2071,7 @@ export class AgentServer {
         );
       }
     } finally {
+      acceptance.close();
       this.running = false;
       this.abortController = null;
       this.notify(Methods.Status, { status: "ready" });

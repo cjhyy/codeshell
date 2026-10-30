@@ -1,3 +1,4 @@
+import { PROVIDER_KINDS } from "@cjhyy/code-shell-core/internal";
 import { randomUUID } from "node:crypto";
 import { parseExternalRuntimeModelKey } from "../../shared/external-runtime-models.js";
 import type { ExternalRuntimeService } from "../external-runtime-service.js";
@@ -19,13 +20,15 @@ export function isPersistedExternalRuntime(
   return (
     state?.provider === "codex" ||
     state?.provider === "claude-code" ||
-    !!parseExternalRuntimeModelKey(state?.model)
+    (!(state?.provider && Object.hasOwn(PROVIDER_KINDS, state.provider)) &&
+      !!parseExternalRuntimeModelKey(state?.model))
   );
 }
 
 export function persistedExternalRuntimeModelKey(
   state: { provider?: string; model?: string } | undefined,
 ): string | undefined {
+  if (!isPersistedExternalRuntime(state)) return undefined;
   if (parseExternalRuntimeModelKey(state?.model)) return state?.model;
   if (state?.provider === "codex" || state?.provider === "claude-code")
     return `${state.provider}/${state.model ?? ""}`;
@@ -62,6 +65,7 @@ export interface MobileExternalRuntimeCommandsDeps {
   authenticated: (viewer: string, device: string) => boolean;
   authority: (sessionId: string) => Promise<Authority>;
   owner: (sessionId: string) => number | undefined;
+  ownerRevision?: (sessionId: string) => unknown;
   service: () => ExternalRuntimeService | null;
   isExternal: (sessionId: string) => boolean;
   exists: (sessionId: string) => boolean;
@@ -264,6 +268,46 @@ export class MobileExternalRuntimeCommands {
         !freshNative &&
         (!selection || selection.sessionId !== sessionId || selection.external))
     );
+  }
+
+  /** Native model selection uses the same authenticated, selected Session authority. */
+  async authorizeNative(viewer: string | undefined, device: string | undefined, sessionId: string) {
+    const selected = viewer ? this.selections.get(viewer) : undefined;
+    if (
+      !viewer ||
+      !device ||
+      !selected?.authority ||
+      selected.sessionId !== sessionId ||
+      selected.deviceId !== device ||
+      selected.external ||
+      this.deps.isExternal(sessionId) ||
+      this.externalRoutes.get(viewer) === sessionId
+    )
+      throw new Error("Native model selection requires the current native Session");
+    this.assertSelection(viewer, device, selected);
+    const authority = selected.authority;
+    const owner = this.deps.owner(sessionId),
+      revision = this.deps.ownerRevision?.(sessionId);
+    if (!selected.fresh) {
+      const current = await this.deps.authority(sessionId);
+      this.assertSelection(viewer, device, selected);
+      if (current.stamp !== authority.stamp) throw new Error("Session command authority changed");
+    }
+    const assertCurrent = () => {
+      this.assertSelection(viewer, device, selected);
+      if (
+        selected.authority !== authority ||
+        this.deps.owner(sessionId) !== owner ||
+        this.deps.ownerRevision?.(sessionId) !== revision ||
+        selected.external ||
+        this.deps.isExternal(sessionId) ||
+        this.externalRoutes.get(viewer) === sessionId ||
+        (selected.fresh && this.deps.exists(sessionId))
+      )
+        throw new Error("Native Session changed before submission");
+    };
+    assertCurrent();
+    return { ...authority, fresh: selected.fresh === true, assertCurrent };
   }
 
   async observe(

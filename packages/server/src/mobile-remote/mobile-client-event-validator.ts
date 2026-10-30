@@ -33,6 +33,8 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
       break;
     case "chat.send":
       valid =
+        event.configuredModel === undefined &&
+        event.model === undefined &&
         optionalMember(event.permissionMode, PERMISSION_MODES) &&
         boundedOptionalEmptyString(event.text, MAX_MESSAGE_LENGTH) &&
         (event.nativeConnectionId === undefined ||

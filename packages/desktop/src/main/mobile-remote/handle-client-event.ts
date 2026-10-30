@@ -33,6 +33,8 @@ import {
   type MobileOutputHistoryService,
 } from "./output-history-commands.js";
 import { captureMobileHistoryWrite, submitMobileHistoryWrite } from "./output-history-chat.js";
+import { prepareMobileNativeModel } from "./native-model.js";
+import type { MobileNativeSubmissions } from "./native-submissions.js";
 
 /**
  * The remote host tags authenticated events with both the device id and a
@@ -71,6 +73,8 @@ export interface MobileDeviceState {
 export interface OrchestratorCtx {
   outputRecovery?: MobileOutputRecovery;
   externalCommands?: MobileExternalRuntimeCommands;
+  nativeSubmissions?: MobileNativeSubmissions;
+  prepareNativeModel?: typeof prepareMobileNativeModel;
   externalRuntimeModels?: () => Promise<ExternalRuntimeModelEntry[]>;
   outputHistoryRecovery?: MobileOutputHistoryService;
   newSessionAuthority?: typeof mobileNewSessionAuthority;
@@ -453,7 +457,7 @@ export async function handleClientEvent(
       return;
     }
     const requestedRuntime = event.modelKey ? parseExternalRuntimeModelKey(event.modelKey) : null;
-    if (event.modelKey && !requestedRuntime) {
+    if ((event.modelKey && !requestedRuntime) || (event.modelKey && event.nativeConnectionId)) {
       reply({
         type: "error",
         message: "请选择有效的外部运行时模型。",
@@ -472,6 +476,54 @@ export async function handleClientEvent(
       !!requestedRuntime ||
       (ctx.externalCommands?.isExternal(sessionId, event.viewerId, sessionId === st.sessionId) ??
         false);
+    let nativeSubmission: Awaited<ReturnType<MobileNativeSubmissions["begin"]>> | undefined;
+    let nativeTarget: ReturnType<typeof prepareMobileNativeModel> | undefined;
+    if (event.nativeConnectionId || ctx.nativeSubmissions?.has(sessionId, event.clientMessageId)) {
+      try {
+        if (external || !ctx.nativeSubmissions)
+          throw new Error("请新建原生会话后选择文字模型，不可更改外部运行时会话的类型。");
+        nativeSubmission = await ctx.nativeSubmissions.begin(
+          event.viewerId,
+          deviceId,
+          sessionId,
+          event,
+          permissionMode,
+        );
+        if (nativeSubmission.cached) {
+          const cached = nativeSubmission.cached;
+          if (cached.ok)
+            reply({
+              type: "chat.accepted",
+              sessionId,
+              cwd: cached.cwd,
+              clientMessageId: cached.clientMessageId,
+              attachments: cached.summaries,
+              nativeConnectionId: event.nativeConnectionId,
+            });
+          else if (cached.uncertain)
+            reply({
+              type: "chat.uncertain",
+              sessionId,
+              clientMessageId: cached.clientMessageId,
+              message: cached.message,
+            });
+          return;
+        }
+        nativeTarget = (ctx.prepareNativeModel ?? prepareMobileNativeModel)(
+          sessionId,
+          event.nativeConnectionId!,
+          nativeSubmission.authority,
+        );
+      } catch (error) {
+        nativeSubmission?.reject?.();
+        reply({
+          type: "error",
+          message: error instanceof Error ? error.message : "无法确认会话模型选择。",
+          clientMessageId: event.clientMessageId,
+        });
+        return;
+      }
+    }
     let externalTarget: Awaited<ReturnType<MobileExternalRuntimeCommands["prepare"]>> | undefined;
     if (external) {
       try {
@@ -490,7 +542,7 @@ export async function handleClientEvent(
         return;
       }
     }
-    const fallbackCwd = externalTarget?.cwd ?? ctx.effectiveMobileRunCwd(st);
+    const fallbackCwd = nativeTarget?.cwd ?? externalTarget?.cwd ?? ctx.effectiveMobileRunCwd(st);
     ctx.mobilePermissionModes.set(sessionId, permissionMode);
     ctx.broadcastDesktopPermissionMode({ sessionId, mode: permissionMode });
     const text = typeof event.text === "string" ? event.text.trim() : "";
@@ -499,34 +551,58 @@ export async function handleClientEvent(
       deviceId: deviceId ?? "",
       sessionId,
       fallbackCwd,
-      ...(typeof st.selectedProjectId === "string" ? { projectId: st.selectedProjectId } : {}),
-      ...(st.selectedRootId ? { rootId: st.selectedRootId } : {}),
+      ...(!nativeTarget && typeof st.selectedProjectId === "string"
+        ? { projectId: st.selectedProjectId }
+        : {}),
+      ...(!nativeTarget && st.selectedRootId ? { rootId: st.selectedRootId } : {}),
       text,
       attachments: event.attachments,
       clientMessageId: event.clientMessageId,
       modelTraceSource: event.modelTraceSource,
+      ...(nativeTarget
+        ? {
+            configuredModel: nativeTarget.configuredModel,
+            workspaceProfile: nativeTarget.workspaceProfile,
+            ...(nativeTarget.projectId ? { projectId: nativeTarget.projectId } : {}),
+            ...(nativeTarget.rootId ? { rootId: nativeTarget.rootId } : {}),
+          }
+        : {}),
       permissionMode,
       runId,
       bridge,
       meta: { origin: "mobile", producer: "mobile-chat" },
       uploads: ctx.uploads,
-      resolveWorkspace: externalTarget
-        ? async () => externalTarget!.cwd
-        : ctx.resolveSessionWorkspaceRoot,
-      submit: (request) =>
-        submitMobileHistoryWrite(
+      resolveWorkspace: nativeTarget
+        ? async () => nativeTarget!.cwd
+        : externalTarget
+          ? async () => externalTarget!.cwd
+          : ctx.resolveSessionWorkspaceRoot,
+      submit: (request) => {
+        try {
+          if (nativeTarget && (ctx.getBridge() !== bridge || bridge.isSessionRunning?.(sessionId)))
+            throw new Error("请等待当前任务完成后再使用所选模型发送。");
+          nativeTarget?.assertCurrent();
+        } catch (error) {
+          return Promise.resolve({
+            ok: false as const,
+            message: error instanceof Error ? error.message : "会话模型选择已改变。",
+          });
+        }
+        return submitMobileHistoryWrite(
           assertHistoryCurrent,
           bridge,
           { origin: "mobile", producer: "mobile-chat" },
           request,
           externalTarget?.submit,
-        ),
+        );
+      },
     });
     const chatReply =
       external && event.viewerId
         ? (e: MobileServerEvent) => ctx.remote.sendToViewer(event.viewerId!, e)
         : reply;
     if (!dispatched.ok) {
+      nativeSubmission?.settle?.(dispatched);
       if (dispatched.uncertain) {
         // Older clients ignore this additive event and keep waiting for their
         // existing acknowledgement timeout. A correlated
@@ -563,6 +639,19 @@ export async function handleClientEvent(
         viewerId: event.viewerId,
         deviceId,
       });
+    let acceptedStamp: string | undefined;
+    if (nativeSubmission && event.viewerId && deviceId) {
+      try {
+        acceptedStamp = ctx.externalCommands?.captureSelectedAuthority(
+          event.viewerId,
+          deviceId,
+          sessionId,
+        ).stamp;
+      } catch {
+        /* A changed selection cannot reuse this receipt on its new authority. */
+      }
+      nativeSubmission.settle?.(dispatched, acceptedStamp);
+    }
     // External acceptance belongs only to the authenticated submitting tab.
     chatReply({
       type: "chat.accepted",
@@ -571,6 +660,7 @@ export async function handleClientEvent(
       clientMessageId: dispatched.clientMessageId,
       attachments: dispatched.summaries,
       ...(externalTarget?.modelKey ? { modelKey: externalTarget.modelKey } : {}),
+      ...(nativeTarget ? { nativeConnectionId: nativeTarget.nativeConnectionId } : {}),
     });
     return;
   }

@@ -344,6 +344,8 @@ export interface SessionState {
   startedAt: number;
   model: string;
   provider: string;
+  /** Explicit configured text connection for this Session; never inferred from model labels. */
+  modelConnectionId?: string;
   /**
    * Legacy/model-scoped usage summary. Some flows reset this accounting window
    * (for example model switches), so it must not drive whole-session metrics.

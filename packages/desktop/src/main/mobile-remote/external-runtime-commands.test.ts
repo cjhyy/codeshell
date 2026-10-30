@@ -1,8 +1,19 @@
 import { expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, renameSync, rmSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SessionManager } from "@cjhyy/code-shell-core";
+import { SessionManager, sessionsRoot } from "@cjhyy/code-shell-core";
+import { BUILTIN_CATALOG } from "@cjhyy/code-shell-core/internal";
+import { prepareMobileNativeModel } from "./native-model.js";
+import { hasPersistedMobileInput, MobileNativeSubmissions } from "./native-submissions.js";
 import { getProjectStore } from "../project-store.js";
 import { mobileSessionCommandAuthority } from "./output-recovery-authority.js";
 import {
@@ -18,12 +29,199 @@ import {
 import type { BrowserWindow } from "electron";
 import type { ExternalRuntimeService } from "../external-runtime-service.js";
 
+function nativeAuthority() {
+  let valid = true;
+  return {
+    stamp: "canonical-session/root-incarnation",
+    cwd: "/actual-worktree",
+    mainRoot: "/main",
+    projectId: "actual-project",
+    rootId: "actual-root",
+    fresh: false,
+    assertCurrent: () => {
+      if (!valid) throw new Error("root revoked");
+    },
+    revoke: () => {
+      valid = false;
+    },
+  };
+}
+
+function nativeConfiguration() {
+  return {
+    settings: {
+      modelConnections: [
+        {
+          id: "configured-text",
+          catalogId: "ollama",
+          tag: "text",
+          model: "owned-custom-model-not-in-presets",
+        },
+      ],
+      credentials: [],
+    },
+    sessionProfile: undefined,
+    profile: {},
+    catalog: structuredClone(BUILTIN_CATALOG),
+  } as unknown as ReturnType<NonNullable<Parameters<typeof prepareMobileNativeModel>[3]>>;
+}
+
+test("native selection resolves configured custom text models only in the authorized workspace", () => {
+  const authority = nativeAuthority(),
+    config = nativeConfiguration();
+  const read = (id: string, cwd: string) => {
+    expect(id).toBe("session");
+    expect(cwd).toBe("/actual-worktree");
+    return config;
+  };
+  const selected = prepareMobileNativeModel("session", "configured-text", authority, read);
+  expect(selected.configuredModel.id).toBe("configured-text");
+  expect(selected.projectId).toBe("actual-project");
+  selected.assertCurrent();
+  expect(() => prepareMobileNativeModel("session", "missing", authority, read)).toThrow();
+  config.settings.modelConnections![0]!.tag = "image";
+  expect(() => prepareMobileNativeModel("session", "configured-text", authority, read)).toThrow();
+});
+
+test("native selection rejects credential, catalog and profile drift after preparation", () => {
+  for (const change of ["model", "credential", "catalog", "profile", "root"]) {
+    const authority = nativeAuthority(),
+      config = nativeConfiguration();
+    const selected = prepareMobileNativeModel(
+      "session",
+      "configured-text",
+      authority,
+      () => config,
+    );
+    if (change === "model") config.settings.modelConnections![0]!.model = "changed";
+    if (change === "credential") config.settings.modelConnections![0]!.credentialId = "missing";
+    if (change === "catalog") config.catalog = [];
+    if (change === "profile") config.profile = { name: "missing-profile" };
+    if (change === "root") authority.revoke();
+    expect(() => selected.assertCurrent()).toThrow();
+  }
+  const config = nativeConfiguration();
+  config.settings.modelConnections![0]!.catalogId = "openai";
+  expect(() =>
+    prepareMobileNativeModel("session", "configured-text", nativeAuthority(), () => config),
+  ).toThrow();
+});
+
+test("native configuration reads the actual Session workspace and persisted profile without fallback", () => {
+  const cwd = mkdtempSync(join(tmpdir(), "native-config-owned-"));
+  const other = mkdtempSync(join(tmpdir(), "native-config-other-"));
+  const manager = new SessionManager(),
+    id = "owned-native-configuration";
+  mkdirSync(join(cwd, ".code-shell"));
+  const file = join(cwd, ".code-shell", "settings.json");
+  writeFileSync(file, JSON.stringify(nativeConfiguration().settings));
+  manager.create(cwd, "initial", "openai", id);
+  try {
+    const authority = { ...nativeAuthority(), cwd };
+    const selected = prepareMobileNativeModel(id, "configured-text", authority);
+    expect(selected.configuredModel.id).toBe("configured-text");
+    expect(() =>
+      prepareMobileNativeModel(id, "configured-text", { ...authority, cwd: other }),
+    ).toThrow();
+    manager.updateSessionState(id, { workspaceProfile: "missing-owned-profile" });
+    expect(() => selected.assertCurrent()).toThrow(/profile is unavailable/);
+    expect(() => prepareMobileNativeModel(id, "configured-text", authority)).toThrow(
+      /profile is unavailable/,
+    );
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+    rmSync(other, { recursive: true, force: true });
+    rmSync(join(sessionsRoot(), id), { recursive: true, force: true });
+  }
+});
+
+test("native intent receipts are atomic, bind model and permission, and never resubmit uncertainty", async () => {
+  const authority = nativeAuthority();
+  let reads = 0;
+  const store = new MobileNativeSubmissions({ authorizeNative: async () => authority }, () => {
+    reads++;
+    return false;
+  });
+  const event = {
+    type: "chat.send" as const,
+    text: "owned input",
+    clientMessageId: "input",
+    nativeConnectionId: "configured-text",
+  };
+  const first = await store.begin("tab", "phone", "session", event, "default");
+  expect((await store.begin("tab", "phone", "session", event, "default")).cached).toMatchObject({
+    uncertain: true,
+  });
+  for (const changed of [
+    { ...event, nativeConnectionId: "other" },
+    { ...event, text: "changed" },
+    { ...event, modelKey: "codex/test" },
+    { ...event, modelTraceSource: "changed-origin" },
+    {
+      ...event,
+      attachments: [
+        {
+          clientId: "image",
+          transport: "upload" as const,
+          uploadId: "u",
+          name: "x",
+          mime: "image/png" as const,
+          size: 1,
+        },
+      ],
+    },
+  ])
+    await expect(store.begin("tab", "phone", "session", changed, "default")).rejects.toThrow(
+      /内容或模型/,
+    );
+  await expect(
+    store.begin("tab", "phone", "session", event, "bypassPermissions"),
+  ).rejects.toThrow();
+  first.settle?.({
+    ok: true,
+    cwd: authority.cwd,
+    clientMessageId: "input",
+    metas: [],
+    summaries: [],
+  });
+  expect((await store.begin("new-tab", "phone", "session", event, "default")).cached).toMatchObject(
+    { ok: true },
+  );
+  expect(reads).toBe(1);
+  authority.revoke();
+  await expect(store.begin("tab", "phone", "session", event, "default")).rejects.toThrow(
+    "root revoked",
+  );
+});
+
+test("native durable IDs with no Host receipt reject rather than replay or claim a model", async () => {
+  const store = new MobileNativeSubmissions(
+    { authorizeNative: async () => nativeAuthority() },
+    () => true,
+  );
+  await expect(
+    store.begin(
+      "tab",
+      "phone",
+      "session",
+      {
+        type: "chat.send",
+        text: "owned",
+        clientMessageId: "already-persisted",
+        nativeConnectionId: "deleted-connection",
+      },
+      "default",
+    ),
+  ).rejects.toThrow(/已被接受/);
+});
+
 function harness(
   extra: Pick<MobileExternalRuntimeCommandsDeps, "approvals" | "approvalEvent"> = {},
 ) {
   let authenticated = true,
     stamp = "session-incarnation/project-root",
     owner: number | undefined = 77;
+  let revision = 0;
   let runtime = {};
   let exists = true,
     external = true;
@@ -79,6 +277,7 @@ function harness(
       return value;
     },
     owner: () => owner,
+    ownerRevision: () => revision,
     service: () => service,
     isExternal: () => external,
     exists: () => exists,
@@ -123,6 +322,9 @@ function harness(
     changeProject: () => {
       stamp = "new-root";
     },
+    replaceOwner: () => {
+      revision++;
+    },
     closeOwner: () => {
       owner = undefined;
     },
@@ -152,6 +354,74 @@ test("external Mobile commands use independent authenticated selected socket, ex
   expect(await target.submit(f.request)).toEqual({ ok: true });
   expect(f.physical()).toBe(1);
   expect(f.accepts()).toBe(1);
+});
+
+test("native model authority requires the exact authenticated selection and retires on root or producer changes", async () => {
+  const f = harness();
+  await f.select();
+  await expect(f.commands.authorizeNative("tab", "phone", "external")).rejects.toThrow();
+  f.recreateNative();
+  await f.commands.observe({ type: "session.create", viewerId: "tab", deviceId: "phone" });
+  await f.select();
+  for (const args of [
+    ["other", "phone", "external"],
+    ["tab", "other", "external"],
+    ["tab", "phone", "other"],
+  ])
+    await expect(f.commands.authorizeNative(args[0], args[1], args[2]!)).rejects.toThrow();
+  const target = await f.commands.authorizeNative("tab", "phone", "external");
+  expect(target.cwd).toBe("/workspace");
+  f.changeProject();
+  expect(() => target.assertCurrent()).toThrow();
+  expect(f.physical()).toBe(0);
+});
+
+test("native first send uses only the Host fresh grant and rejects same-ID replacement before injection", async () => {
+  const f = harness();
+  f.disappear();
+  const authority = nativeAuthority();
+  f.commands.created("tab", "phone", "external", authority);
+  const target = await f.commands.authorizeNative("tab", "phone", "external");
+  expect(target.fresh).toBe(true);
+  expect(target.cwd).toBe("/actual-worktree");
+  f.recreateNative();
+  expect(() => target.assertCurrent()).toThrow();
+  await expect(f.commands.authorizeNative("tab", "phone", "external")).rejects.toThrow();
+});
+
+test("native authority cannot survive a selection change during its asynchronous project lookup", async () => {
+  const f = harness();
+  f.recreateNative();
+  await f.select();
+  f.onAuthority(() => f.commands.revoke("tab"));
+  await expect(f.commands.authorizeNative("tab", "phone", "external")).rejects.toThrow();
+  expect(f.physical()).toBe(0);
+});
+
+test("durable native input lookup is read-only, complete and rejects malformed or redirected storage", () => {
+  const id = "owned-native-receipt-lookup",
+    dir = join(sessionsRoot(), id),
+    file = join(dir, "transcript.jsonl");
+  mkdirSync(dir, { recursive: true });
+  try {
+    const raw =
+      JSON.stringify({
+        type: "message",
+        data: { role: "user", content: "synthetic 🙂".repeat(8000), clientMessageId: "accepted" },
+      }) + "\n";
+    writeFileSync(file, raw);
+    expect(hasPersistedMobileInput(id, "accepted")).toBe(true);
+    expect(hasPersistedMobileInput(id, "other")).toBe(false);
+    expect(readFileSync(file, "utf8")).toBe(raw);
+    writeFileSync(file, raw + '{"truncated":');
+    expect(() => hasPersistedMobileInput(id, "accepted")).toThrow(/无法核对/);
+    rmSync(file);
+    writeFileSync(join(dir, "other.jsonl"), raw);
+    symlinkSync(join(dir, "other.jsonl"), file);
+    expect(() => hasPersistedMobileInput(id, "accepted")).toThrow();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 for (const change of ["revoke", "replace", "changeProject", "closeOwner"] as const) {
@@ -518,6 +788,7 @@ function startupHarness() {
     authenticated: (viewer, device) => authenticated && viewer === "tab" && device === "phone",
     authority: async () => authority(),
     owner: () => owner,
+    ownerRevision: () => revision,
     service: () => service,
     isExternal: () => Boolean(modelKey),
     exists: () => exists,
@@ -676,4 +947,65 @@ test("mobile external approval replay and response require the exact authenticat
     ownerWebContentsId: 77,
   });
   expect(mirrored).toHaveLength(count);
+});
+
+test("native authority rejects owner changes and ABA across asynchronous staging", async () => {
+  for (const duringAwait of [false, true]) {
+    const f = harness();
+    f.recreateNative();
+    await f.select();
+    if (duringAwait) {
+      f.onAuthority(() => f.replaceOwner());
+      await expect(f.commands.authorizeNative("tab", "phone", "external")).rejects.toThrow(
+        "changed",
+      );
+    } else {
+      const target = await f.commands.authorizeNative("tab", "phone", "external");
+      f.closeOwner();
+      expect(() => target.assertCurrent()).toThrow("changed");
+    }
+  }
+});
+
+test("different native intents cannot concurrently occupy one Session admission", async () => {
+  let persisted = false;
+  const authority = nativeAuthority();
+  const store = new MobileNativeSubmissions(
+    { authorizeNative: async () => authority },
+    (_sid, id) => persisted && id === "first",
+  );
+  const event = {
+    type: "chat.send" as const,
+    text: "owned",
+    nativeConnectionId: "one",
+    clientMessageId: "first",
+  };
+  const first = await store.begin("tab", "phone", "session", event, "default");
+  const second = { ...event, nativeConnectionId: "two", clientMessageId: "second" };
+  await expect(store.begin("tab", "phone", "session", second, "default")).rejects.toThrow("另一条");
+  first.settle?.({
+    ok: false,
+    uncertain: true,
+    clientMessageId: "first",
+    message: "owned uncertain",
+  });
+  await expect(store.begin("tab", "phone", "session", second, "default")).rejects.toThrow("另一条");
+  expect((await store.begin("tab", "phone", "session", event, "default")).cached).toMatchObject({
+    uncertain: true,
+  });
+  persisted = true;
+  const admitted = await store.begin("tab", "phone", "session", second, "default");
+  admitted.reject?.();
+  expect((await store.begin("tab", "phone", "session", second, "default")).cached).toBeUndefined();
+});
+
+test("known native providers keep custom external-looking model IDs native", () => {
+  expect(isPersistedExternalRuntime({ provider: "openai", model: "codex/custom" })).toBe(false);
+  expect(isPersistedExternalRuntime({ provider: "anthropic", model: "claude-code/custom" })).toBe(
+    false,
+  );
+  expect(
+    persistedExternalRuntimeModelKey({ provider: "openai", model: "codex/custom" }),
+  ).toBeUndefined();
+  expect(isPersistedExternalRuntime({ model: "codex/legacy" })).toBe(true);
 });

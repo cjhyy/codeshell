@@ -29,6 +29,7 @@ export interface OpenRunSessionArgs {
   sessionBrief?: string;
   llmModel: string;
   llmProvider: string;
+  modelConnectionId?: string;
   isSubAgent: boolean;
   origin: EngineConfig["origin"];
   costStore: EngineConfig["costStore"];
@@ -266,23 +267,14 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
       sessionBrief: args.sessionBrief,
     });
   }
-  // Record the actual resolved run model only after accepting a new input.
-  // A duplicate returns above and must not relabel an earlier execution.
-  if (session.state.model !== args.llmModel || session.state.provider !== args.llmProvider) {
-    if (
-      !args.sessionManager.saveStateOrUpdateFields(session.state, {
-        model: args.llmModel,
-        provider: args.llmProvider,
-      })
-    )
-      throw new SessionError("Could not persist the accepted run model");
-  }
   // Derive the predecessor and turn sequence from the same successful CAS that
   // publishes this run. The earlier resume snapshot may predate another opener.
+  // Model identity belongs to this same claim; duplicates return above without relabeling it.
   const previousRunId = args.sessionManager.startSessionRun(
     session.state,
     runId,
     options?.clientMessageId,
+    { model: args.llmModel, provider: args.llmProvider, modelConnectionId: args.modelConnectionId },
   );
 
   return {

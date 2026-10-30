@@ -1108,6 +1108,7 @@ test("output journal is explicitly negotiated on first pairing and subsequent au
     [false, true, false, true],
     [true, true, true, true, true],
     [false, false, false, false, true],
+    [false, true, true, true, true],
   ]) {
     const devices = new TrustedDeviceStore(
       join(
@@ -1147,9 +1148,9 @@ test("output journal is explicitly negotiated on first pairing and subsequent au
           ? {
               ...(enabled ? { outputJournal: 1 } : {}),
               ...(nativeModelSelection ? { nativeModelSelection: 1 } : {}),
-              ...(basePages ? { legacyBasePages: 1 } : {}),
-              ...(densePages ? { outputJournalPageFrames: 2048 } : {}),
-              ...(historyView ? { historyView: 1 } : {}),
+              ...(enabled && basePages ? { legacyBasePages: 1 } : {}),
+              ...(enabled && densePages ? { outputJournalPageFrames: 2048 } : {}),
+              ...(enabled && historyView ? { historyView: 1 } : {}),
             }
           : undefined,
       );

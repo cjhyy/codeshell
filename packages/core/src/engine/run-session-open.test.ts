@@ -6,6 +6,57 @@ import { SessionManager } from "../session/session-manager.js";
 import { openRunSession, type OpenRunSessionArgs } from "./run-session-open.js";
 
 describe("run session identity claim", () => {
+  it("publishes the actual model with the run that wins after a competing opener", () => {
+    const dir = mkdtempSync(join(tmpdir(), "run-model-cas-"));
+    const manager = new SessionManager(dir),
+      competitor = new SessionManager(dir);
+    manager.create(dir, "seed", "seed", "shared-model");
+    const args: OpenRunSessionArgs = {
+      sessionManager: manager,
+      options: { sessionId: "shared-model", clientMessageId: "input-a" },
+      parsedTask: { text: "owned", images: [], hasImages: false },
+      taskText: "owned",
+      userMessageContent: "owned",
+      cwd: dir,
+      sessionKind: "work",
+      sessionWorkspaceProfile: undefined,
+      llmModel: "model-a",
+      llmProvider: "provider-a",
+      isSubAgent: false,
+      origin: undefined,
+      costStore: undefined,
+      cachedCompactedMessages: undefined,
+      onAgentDirectionsDelivered: undefined,
+    };
+    const original = manager.startSessionRun.bind(manager);
+    let competingRun: string | undefined;
+    manager.startSessionRun = (...params) => {
+      const other = openRunSession({
+        ...args,
+        sessionManager: competitor,
+        options: { sessionId: "shared-model", clientMessageId: "input-b" },
+        llmModel: "model-b",
+        llmProvider: "provider-b",
+      });
+      if (!other.ok) throw new Error("competing run not accepted");
+      competingRun = other.opened.runId;
+      return original(...params);
+    };
+    try {
+      const result = openRunSession(args);
+      if (!result.ok) throw new Error("run not accepted");
+      expect(result.opened.previousRunId).toBe(competingRun);
+      expect(manager.readSessionState("shared-model")).toMatchObject({
+        runId: result.opened.runId,
+        model: "model-a",
+        provider: "provider-a",
+        clientMessageId: "input-a",
+        turnSeq: 2,
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   it("updates accepted model metadata while duplicate inputs keep the previous execution identity", () => {
     const dir = mkdtempSync(join(tmpdir(), "run-model-identity-"));
     const manager = new SessionManager(dir);

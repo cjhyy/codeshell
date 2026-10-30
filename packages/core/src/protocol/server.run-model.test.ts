@@ -1,3 +1,5 @@
+import { runAcceptance } from "./server-run-controls.js";
+import { resolveConfiguredTextModel } from "../engine/configured-text-model.js";
 import { describe, expect, it } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
@@ -8,7 +10,7 @@ import { Engine as ActualEngine } from "../engine/engine.js";
 import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -55,6 +57,159 @@ function makeEngine(opts: { failSwitch?: boolean } = {}) {
 }
 
 describe("agent/run model", () => {
+  it("binds configured claim ACKs to the original RPC, Session, root producer and input", () => {
+    const sent: unknown[] = [];
+    const gate = runAcceptance(
+      {
+        sessionId: "owned-session",
+        task: "owned",
+        clientMessageId: "input",
+        configuredModel: { id: "owned", expectedFingerprint: "a".repeat(64) },
+      },
+      "rpc-owned",
+      (frame) => sent.push(frame),
+    );
+    gate.queued();
+    const event = {
+      type: "session_started" as const,
+      sessionId: "owned-session",
+      clientMessageId: "input",
+      runId: "run-owned",
+    };
+    for (const changed of [
+      { sessionId: "other" },
+      { clientMessageId: "old" },
+      { agentId: "child" },
+      { runId: undefined },
+    ])
+      gate.observe({ ...event, ...changed });
+    expect(sent).toEqual([]);
+    gate.observe(event);
+    gate.observe(event);
+    expect(sent).toEqual([{ requestId: "rpc-owned", sessionId: "owned-session" }]);
+    const closed = runAcceptance(
+      {
+        sessionId: "owned-session",
+        task: "owned",
+        clientMessageId: "input",
+        configuredModel: { id: "owned", expectedFingerprint: "a".repeat(64) },
+      },
+      "late",
+      (frame) => sent.push(frame),
+    );
+    closed.close();
+    closed.observe(event);
+    expect(sent).toHaveLength(1);
+  });
+
+  it("acknowledges a configured intent only after its actual claim and returns duplicate receipts without replay", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "configured-ack-"));
+    mkdirSync(join(dir, ".code-shell"));
+    writeFileSync(
+      join(dir, ".code-shell", "settings.json"),
+      JSON.stringify({
+        modelConnections: [
+          {
+            id: "owned-ack",
+            catalogId: "ollama",
+            tag: "text",
+            model: "owned-custom",
+            baseUrl: "http://owned-ack.invalid/v1",
+          },
+        ],
+      }),
+    );
+    let calls = 0,
+      providerFails = false;
+    const engine = new ActualEngine({
+      llm: { provider: "openai", model: "seed" },
+      cwd: dir,
+      sessionStorageDir: join(dir, "sessions"),
+      settingsScope: "isolated",
+      headless: true,
+      enabledBuiltinTools: [],
+      maxTurns: 2,
+      clientDefaults: {
+        retryMaxAttempts: 1,
+        fetch: async (input) => {
+          expect(String(input)).toBe("http://owned-ack.invalid/v1/chat/completions");
+          calls++;
+          if (providerFails) throw new Error("owned provider failure");
+          return new Response(
+            'data: {"choices":[{"index":0,"delta":{"content":"owned answer"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+            { headers: { "content-type": "text/event-stream" } },
+          );
+        },
+      },
+    });
+    (engine as any).hooks.clear();
+    const manager = new ChatSessionManager({ runtime: {} as never, engineFactory: () => engine });
+    const t = makeTransport(),
+      acceptedStates: any[] = [];
+    t.transport.send = (frame: any) => {
+      t.sent.push(frame);
+      if (frame.method === "agent/runAccepted") {
+        const file = join(dir, "sessions", "configured-ack", "state.json");
+        acceptedStates.push(existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : null);
+      }
+    };
+    new AgentServer({ transport: t.transport, chatManager: manager });
+    const send = async (
+      id: number,
+      clientMessageId: string,
+      expectedFingerprint: string,
+      connectionId = "owned-ack",
+    ) => {
+      t.deliver({
+        jsonrpc: "2.0",
+        id,
+        method: "agent/run",
+        params: {
+          sessionId: "configured-ack",
+          task: "owned request",
+          clientMessageId,
+          configuredModel: { id: connectionId, expectedFingerprint },
+        },
+      });
+      for (let i = 0; i < 1000 && !t.sent.some((frame) => frame.id === id); i++)
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      const frame = t.sent.find((frame) => frame.id === id);
+      expect(frame).toBeDefined();
+      return frame;
+    };
+    try {
+      expect((await send(800, "stale", "0".repeat(64))).error?.message).toContain("changed");
+      expect(acceptedStates).toEqual([]);
+      expect(calls).toBe(0);
+      expect(existsSync(join(dir, "sessions", "configured-ack", "state.json"))).toBe(false);
+      const fingerprint = resolveConfiguredTextModel(dir, "owned-ack").fingerprint;
+      expect((await send(801, "accepted", fingerprint)).result?.reason).toBe("completed");
+      expect(acceptedStates).toHaveLength(1);
+      expect(acceptedStates[0]).toMatchObject({
+        clientMessageId: "accepted",
+        model: "owned-custom",
+        provider: "openai",
+        modelConnectionId: "owned-ack",
+      });
+      const count = calls;
+      expect((await send(802, "accepted", "0".repeat(64), "deleted")).result?.reason).toBe(
+        "completed",
+      );
+      expect(calls).toBe(count);
+      expect(acceptedStates).toHaveLength(1);
+      providerFails = true;
+      expect((await send(803, "provider-failed-after-claim", fingerprint)).result?.reason).toBe(
+        "model_error",
+      );
+      expect(acceptedStates).toHaveLength(2);
+      expect(acceptedStates[1]?.clientMessageId).toBe("provider-failed-after-claim");
+      expect(calls).toBeGreaterThan(count);
+    } finally {
+      await manager.closeAllAsync();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("persists the actual per-run model on first use and after a later native switch", async () => {
     const dir = mkdtempSync(join(tmpdir(), "native-model-metadata-"));
     const provider = "owned-native-model-metadata";
@@ -143,6 +298,68 @@ describe("agent/run model", () => {
     } finally {
       await manager.closeAllAsync();
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+  it("rejects mixed or busy configured intents and passes each admitted immutable proof to its run", async () => {
+    const { engine, calls } = makeEngine();
+    const seen: unknown[] = [];
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    engine.run = async (_task, opts) => {
+      seen.push(opts?.configuredModel);
+      await held;
+      return {
+        text: "owned",
+        reason: "completed",
+        sessionId: "configured-protocol",
+        turnCount: 1,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      };
+    };
+    const manager = new ChatSessionManager({ runtime: {} as never, engineFactory: () => engine });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager: manager });
+    const configuredModel = { id: "owned", expectedFingerprint: "a".repeat(64) };
+    const params = { sessionId: "configured-protocol", task: "owned", configuredModel };
+    const wait = async (predicate: () => boolean) => {
+      for (let i = 0; i < 100 && !predicate(); i++)
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      expect(predicate()).toBe(true);
+    };
+    try {
+      t.deliver({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "agent/run",
+        params: { ...params, model: "pool-key" },
+      });
+      await wait(() => t.sent.some((item) => item.id === 1));
+      expect(t.sent.find((item) => item.id === 1)?.error?.message).toContain("exclusive");
+      expect(calls).toEqual([]);
+      t.deliver({ jsonrpc: "2.0", id: 2, method: "agent/run", params });
+      await wait(() => seen.length === 1);
+      configuredModel.id = "mutated-after-queue";
+      t.deliver({
+        jsonrpc: "2.0",
+        id: 3,
+        method: "agent/run",
+        params: {
+          ...params,
+          configuredModel: { id: "other", expectedFingerprint: "b".repeat(64) },
+        },
+      });
+      await wait(() => t.sent.some((item) => item.id === 3));
+      expect(t.sent.find((item) => item.id === 3)?.error?.message).toContain("cannot be queued");
+      expect(seen).toEqual([{ id: "owned", expectedFingerprint: "a".repeat(64) }]);
+      release();
+      await wait(() => t.sent.some((item) => item.id === 2));
+      expect(t.sent.find((item) => item.id === 2)?.result?.reason).toBe("completed");
+      expect(calls).toEqual([]);
+    } finally {
+      release();
+      await manager.closeAllAsync();
     }
   });
   it("uses the general preset for a fresh isolated Task instead of inheriting coding", async () => {
