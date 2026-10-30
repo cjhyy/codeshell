@@ -2203,6 +2203,7 @@ describe("confirmed empty draft reconnect", () => {
     await act(async () => {
       next.open();
       next.message({ type: "auth.ok", capabilities: { outputJournal: 1 } });
+      next.message({ type: "permission.mode", sessionId: "empty-old", mode: "bypassPermissions" });
       await flushMicrotasks();
     });
     return next;

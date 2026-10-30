@@ -1377,7 +1377,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           break;
         }
         case "permission.mode":
-          if (pendingCreateRef.current) break;
+          if (
+            pendingCreateRef.current ||
+            (emptySessionReplacementRef.current &&
+              emptySessionReplacementRef.current.status !== "complete")
+          )
+            break;
           if (
             creationPermissionEchoRef.current &&
             creationPermissionEchoRef.current.sessionId === event.sessionId
