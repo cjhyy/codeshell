@@ -2087,6 +2087,7 @@ export class AgentBridge implements PetStateBridge {
   resetOutputHistoryRecovery(sessionId: string): void {
     this.snapshots.resetForHistoryCheckpoint(sessionId);
     this.mainOutput.forget(sessionId);
+    this.ownedExternalOutputSources.delete(sessionId);
   }
 
   /** The caller holds the Main ingress fence and has verified all work is idle. */
@@ -2250,10 +2251,9 @@ export class AgentBridge implements PetStateBridge {
         const snapshot = this.snapshots.get(sessionId);
         this.bindOwnedExternalOutputSource(
           sessionId,
-          snapshot.nextSeq === 1 &&
-            snapshot.events.length === 0 &&
-            !snapshot.outputCursor &&
-            !snapshot.topLevelRunning
+          // Explicit checkpoints preserve transport sequence numbers while
+          // retiring the entire old snapshot and journal incarnation.
+          snapshot.events.length === 0 && !snapshot.outputCursor && !snapshot.topLevelRunning
             ? history.through
             : undefined,
         );
