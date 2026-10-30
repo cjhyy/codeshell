@@ -825,9 +825,9 @@ export function useDesktopController(
         navigation={navigation}
       />
     ),
+    composerControls: <DesktopChatControls app={actions} />,
     chatControls: (
       <>
-        <DesktopChatControls app={actions} />
         {app.activeSessionId &&
         !app.activeRoomId &&
         app.getSessionOutputRecoveryPlan &&

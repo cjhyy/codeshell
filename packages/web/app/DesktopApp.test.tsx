@@ -795,6 +795,7 @@ describe("Desktop workbench controller", () => {
           workspaceApi: true,
           renderSidebar: undefined,
           chatControls: undefined,
+          composerControls: undefined,
           cameraAttachments: false,
         }}
       />,
@@ -807,6 +808,16 @@ describe("Desktop workbench controller", () => {
     }
     expect(desktop).toContain('aria-label="选择项目"');
     expect(desktop).toContain('aria-label="拍照"');
+    expect(
+      desktop.slice(desktop.indexOf('<footer class="composer'), desktop.indexOf("</footer>")),
+    ).toContain('aria-label="权限模式"');
+    expect(
+      desktop.slice(
+        desktop.indexOf('<div class="transcript"'),
+        desktop.indexOf('<footer class="composer'),
+      ),
+    ).not.toContain('aria-label="权限模式"');
+    expect(hub).not.toContain('aria-label="权限模式"');
     expect(desktop).not.toContain("设备与退出");
     expect(hub).toContain("设备与退出");
     await hook.unmount();
