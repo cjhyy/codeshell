@@ -81,6 +81,7 @@ test.each([false, true])(
       reply,
       authenticated: (viewer, device) => viewer === "tab" && device === "phone",
       journalRequired: () => external,
+      hasLiveExternalProducer: () => false,
     });
     const state = {};
     const ctx = {
