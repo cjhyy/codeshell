@@ -286,6 +286,18 @@ export function useDesktopController(
   const uncertainIntents = React.useRef(
     new Map<string, { clientMessageId: string; revision: number }>(),
   );
+  const replacementMigration = React.useRef<{
+    fromSessionId: string;
+    navigationRevision: number;
+    workspaceKey: string;
+  } | null>(null);
+  const emptyReplacement =
+    !app.activeRoomId &&
+    app.emptySessionReplacement &&
+    app.emptySessionReplacement.fromSessionId === app.activeSessionId &&
+    app.emptySessionReplacement.status !== "complete"
+      ? app.emptySessionReplacement
+      : undefined;
   const [error, setError] = React.useState("");
   const draft = drafts.current.get(activeId);
   const activeMetadata = app.sessions.find((item) => item.id === activeId);
@@ -300,6 +312,48 @@ export function useDesktopController(
     activeModelMetadata.current?.sessionId === activeId ? activeModelMetadata.current.model : "";
   const selectedModel = modelChoices.current.get(activeId) ?? persistedModel;
   const changed = () => setDraftRevision((value) => value + 1);
+  React.useLayoutEffect(() => {
+    const replacement = app.emptySessionReplacement;
+    if (!replacement) {
+      replacementMigration.current = null;
+      return;
+    }
+    if (replacement.status !== "complete") {
+      if (replacement.fromSessionId === activeId && !replacementMigration.current)
+        replacementMigration.current = {
+          fromSessionId: replacement.fromSessionId,
+          navigationRevision: navigationRevision.current,
+          workspaceKey,
+        };
+      return;
+    }
+    const pending = replacementMigration.current;
+    replacementMigration.current = null;
+    const destination = replacement.toSessionId;
+    if (
+      !pending ||
+      pending.fromSessionId !== replacement.fromSessionId ||
+      pending.navigationRevision !== navigationRevision.current ||
+      pending.workspaceKey !== workspaceKey ||
+      !destination ||
+      destination === replacement.fromSessionId ||
+      activeId !== destination ||
+      app.activeRoomId
+    )
+      return;
+    // The hook proves this was never dispatched. Carry only local composer
+    // state to the newly acknowledged ID; no message or upload is replayed.
+    const source = replacement.fromSessionId;
+    drafts.current.restore({ ...drafts.current.take(source), sessionId: destination });
+    if (!modelChoices.current.has(destination) && modelChoices.current.has(source))
+      modelChoices.current.set(destination, modelChoices.current.get(source)!);
+    modelChoices.current.delete(source);
+    if (!draftWorkspaces.current.has(destination) && draftWorkspaces.current.has(source))
+      draftWorkspaces.current.set(destination, draftWorkspaces.current.get(source)!);
+    draftWorkspaces.current.delete(source);
+    setWorkspaceSessionId((id) => (id === source ? destination : id));
+    changed();
+  }, [app.emptySessionReplacement, activeId, app.activeRoomId, workspaceKey]);
   React.useLayoutEffect(() => {
     const pending = pendingCreate.current;
     if (!pending || (app.sessionCreationFailures ?? 0) <= pending.failureCount) return;
@@ -483,7 +537,7 @@ export function useDesktopController(
     app.chat.run === "waiting" ||
     app.approvals.some((approval) => !approval.asynchronous);
   const send = (options?: { modelTraceSource?: string }): boolean => {
-    if (app.outputHistoryFailed) return false;
+    if (app.outputHistoryFailed || emptyReplacement) return false;
     if (sendingRef.current || app.status !== "online" || running || app.activeRoom?.observing)
       return false;
     if (pendingCreate.current || creationNeedsRetry) return false;
@@ -656,10 +710,16 @@ export function useDesktopController(
       running ||
       sendingRef.current ||
       app.loading.sessionHistory ||
+      emptyReplacement?.status === "pending" ||
       uncertainIntents.current.has(activeId)
     )
       return;
     if (modelKey && !app.runtimeModels?.some((model) => model.key === modelKey)) return;
+    if (emptyReplacement) {
+      modelChoices.current.set(activeId, modelKey);
+      changed();
+      return;
+    }
     if (
       forceCreation ||
       (modelKey && !app.activeSessionId && !pendingCreate.current) ||
@@ -798,12 +858,26 @@ export function useDesktopController(
           running ||
           sendingId !== null ||
           app.loading.sessionHistory ||
+          emptyReplacement?.status === "pending" ||
           uncertainIntents.current.has(activeId)
         }
         onRefresh={app.refreshRuntimeModels}
         onChange={chooseRuntimeModel}
         onRetryCreation={
-          creationNeedsRetry ? () => chooseRuntimeModel(selectedModel, true) : undefined
+          emptyReplacement?.status === "failed"
+            ? () => {
+                const current = appRef.current;
+                if (
+                  current.activeSessionId === emptyReplacement.fromSessionId &&
+                  current.emptySessionReplacement?.fromSessionId ===
+                    emptyReplacement.fromSessionId &&
+                  current.emptySessionReplacement.status === "failed"
+                )
+                  current.retryEmptySessionReplacement?.();
+              }
+            : creationNeedsRetry
+              ? () => chooseRuntimeModel(selectedModel, true)
+              : undefined
         }
       />
     ),
@@ -819,26 +893,34 @@ export function useDesktopController(
         </>
       ) : undefined,
     loading:
-      app.loading.sessionHistory || app.loading.roomHistory || Boolean(pendingCreate.current),
+      app.loading.sessionHistory ||
+      app.loading.roomHistory ||
+      Boolean(pendingCreate.current) ||
+      Boolean(emptyReplacement),
     historyHasEarlier: app.historyHasEarlier,
     historyLoadingEarlier: app.historyLoadingEarlier,
     historyEarlierError: app.historyEarlierError,
     loadEarlierHistory: app.loadEarlierHistory,
     loadHistoryDetail: app.loadHistoryDetail,
     reloadHistory: app.reloadHistory,
-    loadingLabel: app.sessionHistoryProgress
-      ? app.sessionHistoryProgress.totalBytes
-        ? t("mobile.historyRecovery.loadingProgress", {
-            percent: Math.min(
-              99,
-              Math.floor(
-                (app.sessionHistoryProgress.receivedBytes / app.sessionHistoryProgress.totalBytes) *
-                  100,
+    loadingLabel: emptyReplacement
+      ? emptyReplacement.status === "failed"
+        ? "新会话未建立。输入内容和附件已保留，请重试建立会话。"
+        : "正在重新建立未发送的会话，输入内容和附件会保留。"
+      : app.sessionHistoryProgress
+        ? app.sessionHistoryProgress.totalBytes
+          ? t("mobile.historyRecovery.loadingProgress", {
+              percent: Math.min(
+                99,
+                Math.floor(
+                  (app.sessionHistoryProgress.receivedBytes /
+                    app.sessionHistoryProgress.totalBytes) *
+                    100,
+                ),
               ),
-            ),
-          })
-        : t("mobile.historyRecovery.loadingPages", { pages: app.sessionHistoryProgress.pages })
-      : undefined,
+            })
+          : t("mobile.historyRecovery.loadingPages", { pages: app.sessionHistoryProgress.pages })
+        : undefined,
     readOnly: app.activeRoom?.observing || app.outputHistoryFailed,
     readOnlyNote: app.outputHistoryFailed
       ? "会话记录尚未完成核对。输入内容已保留为草稿，请先恢复记录。"
