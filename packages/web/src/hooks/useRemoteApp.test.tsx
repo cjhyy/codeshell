@@ -3869,6 +3869,7 @@ describe("useRemoteApp paged pre-journal display", () => {
       root: () => root,
       authority: async () => "owned-project-incarnation",
       journalRequired: () => true,
+      hasLiveExternalProducer: () => false,
       authenticated: (viewer, device) => viewer === "tab" && device === "device-1",
       snapshot: (id, since) => snapshots.get(id, since),
       reply: (_viewer, event) => {
