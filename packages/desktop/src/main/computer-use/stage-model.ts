@@ -1,4 +1,8 @@
-import { companionSize, type MimiCompanionPerch } from "../../shared/mimi-companion.js";
+import {
+  companionFeetOffset,
+  companionSize,
+  type MimiCompanionPerch,
+} from "../../shared/mimi-companion.js";
 import { companionPlacement, type CompanionDisplayBounds } from "./companion-layout.js";
 
 type Point = { x: number; y: number };
@@ -26,15 +30,13 @@ export function clearsFieldAtOnce(
 }
 
 /** How far the character's feet rest into the window's top edge (title bar). */
-const PERCH_SINK = 14;
+const PERCH_SINK = 6;
 /** Perch only while the target is this close below the window's top edge;
  * farther down, standing beside the target reads better than a distant seat. */
 export const PERCH_REACH = 520;
 /** Working on a control, the character is drawn at this fraction of its size
  * so it can stand on the control's edges without covering the page. */
 export const WORK_SCALE = 0.55;
-/** The sprite's transparent margin under the feet, as a fraction of height. */
-const FOOT_PAD = 0.05;
 /** Larger controls (rows, panes, canvases) are regions, not something to stand on. */
 const SURFACE_MAX = { width: 420, height: 120 };
 /** How much of the body rests over a field when sitting on its corner. */
@@ -82,7 +84,7 @@ export function stagePlacement(
   const height = companionSize(size);
   const width = height * 0.7;
   const top = window.y - display.y;
-  const y = top - height + PERCH_SINK;
+  const y = top - height + companionFeetOffset(height) + PERCH_SINK;
   // A maximized or fullscreen window leaves no room above its edge.
   if (y < MARGIN) return beside();
   const local = { x: target.x - display.x, y: target.y - display.y };
@@ -132,7 +134,7 @@ function surfacePlacement(
   if (frame.y + frame.height > window.y + window.height) return;
   const height = Math.round(companionSize(size) * WORK_SCALE);
   const width = height * 0.7;
-  const pad = height * FOOT_PAD;
+  const pad = companionFeetOffset(height);
   const minX = window.x + MARGIN;
   const maxX = window.x + window.width - width - MARGIN;
   let x: number;

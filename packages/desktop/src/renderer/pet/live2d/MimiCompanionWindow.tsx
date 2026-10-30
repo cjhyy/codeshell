@@ -46,6 +46,9 @@ export function MimiCompanionWindow() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [travel, setTravel] = useState<CompanionLocomotion>({ kind: "none" });
+  /** The activity whose move just made contact; shows the impact burst. */
+  const [impact, setImpact] = useState<string | null>(null);
+  const impactTimer = useRef<number | undefined>(undefined);
   const lastPosition = useRef<{ x: number; y: number } | undefined>(undefined);
   const lastOrigin = useRef<{ x: number; y: number } | undefined>(undefined);
   const travelTimer = useRef<number | undefined>(undefined);
@@ -93,6 +96,7 @@ export function MimiCompanionWindow() {
       query.removeEventListener("change", changed);
       window.clearTimeout(cueTimer.current);
       window.clearTimeout(travelTimer.current);
+      window.clearTimeout(impactTimer.current);
       if (gesture.current) {
         window.mimiCompanion.interaction("end");
         window.mimiCompanion.interaction("leave");
@@ -318,10 +322,11 @@ export function MimiCompanionWindow() {
           style={{ left: state.target.x, top: state.target.y }}
         >
           {state.activity.action === "scroll" && <span>↕</span>}
+          {impact === state.activity.id && <span className="mimi-impact" />}
         </div>
       )}
       <div
-        className={`mimi-companion${held ? " mimi-companion--held" : ""}${travel.kind === "hop" ? " mimi-companion--hop" : ""}${yielding ? " mimi-companion--yield" : ""}`}
+        className={`mimi-companion${held ? " mimi-companion--held" : ""}${travel.kind === "hop" ? " mimi-companion--hop" : ""}${travel.kind === "walk" && !reducedMotion ? ` mimi-companion--dash-${travel.facing}` : ""}${yielding ? " mimi-companion--yield" : ""}`}
         data-appearance={state.appearance}
         data-action={cueActive ? presented.activity.action : "idle"}
         data-perch={state.perch ?? "beside-target"}
@@ -431,10 +436,16 @@ export function MimiCompanionWindow() {
               cueActive={cueActive}
               onReady={ready}
               onError={failed}
+              onContact={() => {
+                setImpact(presented.activity.id);
+                window.clearTimeout(impactTimer.current);
+                impactTimer.current = window.setTimeout(() => setImpact(null), 320);
+              }}
             />
           </Suspense>
         </button>
-        {typing && (
+        {/* Sitting on the field, the paws already type; the field is the keyboard. */}
+        {typing && state.perch !== "on-field" && (
           <div
             className={`mimi-keyboard${presented.activity.phase === "end" ? " mimi-keyboard--settling" : ""}`}
             aria-label="输入动作提示"

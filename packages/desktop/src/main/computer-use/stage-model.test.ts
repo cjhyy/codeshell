@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { companionFeetOffset } from "../../shared/mimi-companion";
 import { PERCH_REACH, WORK_SCALE, clearsFieldAtOnce, stagePlacement } from "./stage-model";
 
 const display = { x: 0, y: 0, width: 1920, height: 1080 };
@@ -10,9 +11,10 @@ describe("stagePlacement", () => {
   test("sits on the target window's title bar beside the target column", () => {
     const result = stagePlacement(display, height, { target: { x: 900, y: 480 }, window });
     expect(result.perch).toBe("title-bar");
-    // Feet rest on the window's top edge; the body stays above the content.
-    expect(result.position.y + height).toBeGreaterThan(window.y);
-    expect(result.position.y + height).toBeLessThanOrEqual(window.y + 20);
+    // Feet rest just inside the window's top edge; the body stays above the content.
+    const feet = result.position.y + height - companionFeetOffset(height);
+    expect(feet).toBeGreaterThan(window.y);
+    expect(feet).toBeLessThanOrEqual(window.y + 10);
     expect(result.position.x + width).toBeLessThanOrEqual(900);
     expect(result.position.x).toBeGreaterThanOrEqual(window.x);
   });
@@ -102,8 +104,10 @@ describe("stagePlacement on element surfaces", () => {
   const page = { x: 160, y: 70, width: 1280, height: 820 };
   const screen = { x: 0, y: 38, width: 1512, height: 982 };
   const working = Math.round(320 * WORK_SCALE);
-  const feet = (result: ReturnType<typeof stagePlacement>) =>
-    result.position.y + screen.y + (result.size ?? 320);
+  const feet = (result: ReturnType<typeof stagePlacement>) => {
+    const size = result.size ?? 320;
+    return result.position.y + screen.y + size - companionFeetOffset(size);
+  };
 
   test("sits on a text field's right corner while text goes in", () => {
     const field = { x: 420, y: 454, width: 760, height: 35 };
@@ -115,7 +119,7 @@ describe("stagePlacement on element surfaces", () => {
     expect(result.perch).toBe("on-field");
     expect(result.size).toBe(working);
     // Feet on the field's top edge; the body above the field, never inside it.
-    expect(Math.abs(feet(result) - field.y)).toBeLessThanOrEqual(working * 0.06);
+    expect(Math.abs(feet(result) - field.y)).toBeLessThanOrEqual(1);
     // Riding the field's right corner: most of the body hangs past the field's
     // end, so it covers little of the field's neighbours above it.
     const overField = field.x + field.width - result.position.x;
@@ -131,7 +135,7 @@ describe("stagePlacement on element surfaces", () => {
       surface: { kind: "button", frame: button },
     });
     expect(result.perch).toBe("on-baseline");
-    expect(Math.abs(feet(result) - (button.y + button.height))).toBeLessThanOrEqual(working * 0.06);
+    expect(Math.abs(feet(result) - (button.y + button.height))).toBeLessThanOrEqual(1);
     const right = result.position.x + working * 0.7;
     // Beside the button, not over it.
     expect(right <= button.x || result.position.x >= button.x + button.width).toBe(true);
