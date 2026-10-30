@@ -5,6 +5,13 @@ import { apiUrl, getApiWorkspace, getApiProject } from "./api-context.js";
 import { connectPanelRuntime, type PanelRuntimeEvent } from "./panel-runtime-connection.js";
 import { PanelAudioDialog, type PanelAudioRequest } from "./PanelAudioDialog.js";
 import { PanelVideoDialog, type PanelVideoRequest } from "./PanelVideoDialog.js";
+import {
+  PanelDirectoryPicker,
+  directoryToken,
+  validDirectoryDescription,
+  type PanelDirectoryDescription,
+  type PanelDirectoryRequest,
+} from "./PanelDirectoryPicker.js";
 import { CopyDownloadLink } from "./CopyDownloadLink.js";
 import { panelVideoCapabilities } from "./panel-video-capture.js";
 import { panelVideoOptions } from "../../server/src/panels/browser-capture.js";
@@ -21,7 +28,14 @@ interface PreparedPanel {
 type PanelEffect =
   | { effect: "agent.submitPrompt"; prompt: string; sessionId: string }
   | { effect: "external.open"; url: string }
-  | { effect: "host.confirm"; requestId: string; title: string; body: string; expiresAt: number };
+  | {
+      effect: "host.confirm";
+      requestId: string;
+      title: string;
+      body: string;
+      expiresAt: number;
+      directoryPicker?: PanelDirectoryDescription;
+    };
 interface ResourcePreview {
   name: string;
   url: string;
@@ -30,8 +44,9 @@ interface ResourcePreview {
 }
 interface Confirmation {
   effect: PanelEffect;
-  finish: (approved: boolean) => void;
+  finish: (approved: boolean, token?: string) => void;
   cancel: () => void;
+  directory?: PanelDirectoryRequest;
 }
 export interface PanelHostProps {
   panel: ManagedPanel;
@@ -384,8 +399,9 @@ export function PanelHost({
             setConfirming(false);
           }
         },
-        finish: (allowed) => {
+        finish: (allowed, selectedToken) => {
           if (disposed || !scope.grant || activeConfirmation.current !== pending || sending) return;
+          if (allowed && effect.directoryPicker && !directoryToken(selectedToken)) return;
           sending = true;
           setConfirming(true);
           setConfirmationError("");
@@ -397,7 +413,11 @@ export function PanelHost({
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ requestId: effect.requestId, allowed }),
+              body: JSON.stringify({
+                requestId: effect.requestId,
+                allowed,
+                ...(allowed && effect.directoryPicker ? { directoryToken: selectedToken } : {}),
+              }),
               signal: controller.signal,
             },
           )
@@ -433,6 +453,57 @@ export function PanelHost({
             });
         },
       };
+      if (effect.directoryPicker) {
+        const instanceId = scope.grant.instanceId;
+        pending.directory = {
+          requestId: effect.requestId,
+          title: effect.title.trim() || "选择项目目录",
+          description: effect.directoryPicker,
+          finish: pending.finish,
+          list: async (token, signal) => {
+            if (
+              disposed ||
+              scope.grant?.instanceId !== instanceId ||
+              activeConfirmation.current !== pending ||
+              !directoryToken(token) ||
+              signal.aborted
+            )
+              throw new Error("目录选择已结束。");
+            const controller = new AbortController();
+            calls.add(controller);
+            const abort = () => controller.abort();
+            signal.addEventListener("abort", abort, { once: true });
+            const timeout = setTimeout(abort, 8_000);
+            try {
+              const result = await api<unknown>(
+                apiUrl(`${ROOT}/${instanceId}/directory-picker`, workspace, projectId),
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ requestId: effect.requestId, directoryToken: token }),
+                  signal: controller.signal,
+                },
+              );
+              if (disposed || activeConfirmation.current !== pending || controller.signal.aborted)
+                throw new Error("目录选择已结束。");
+              return result;
+            } catch (cause) {
+              if (
+                !disposed &&
+                activeConfirmation.current === pending &&
+                cause instanceof ApiError &&
+                [401, 403, 410].includes(cause.status)
+              )
+                terminate(cause);
+              throw cause;
+            } finally {
+              clearTimeout(timeout);
+              signal.removeEventListener("abort", abort);
+              calls.delete(controller);
+            }
+          },
+        };
+      }
       const timer = setTimeout(() => {
         pending.cancel();
         if (!disposed && scope.grant) {
@@ -459,7 +530,11 @@ export function PanelHost({
           typeof payload.title !== "string" ||
           payload.title.length > 500 ||
           typeof payload.body !== "string" ||
-          payload.body.length > 30_000
+          payload.body.length > 30_000 ||
+          (payload.directoryPicker !== undefined &&
+            (!validDirectoryDescription(payload.directoryPicker) ||
+              !Number.isSafeInteger(payload.expiresAt) ||
+              Number(payload.expiresAt) <= 0))
         )
           throw new Error("面板操作确认格式无效。");
         if (!confirmationIds.has(payload.requestId)) {
@@ -469,7 +544,12 @@ export function PanelHost({
             requestId: payload.requestId,
             title: payload.title,
             body: payload.body,
-            expiresAt: Date.now() + 50_000,
+            expiresAt: payload.directoryPicker
+              ? Math.min(Number(payload.expiresAt), Date.now() + 5 * 60_000)
+              : Date.now() + 50_000,
+            ...(payload.directoryPicker
+              ? { directoryPicker: payload.directoryPicker as PanelDirectoryDescription }
+              : {}),
           });
         }
       }
@@ -922,7 +1002,7 @@ export function PanelHost({
   }, [busy, prepared]);
 
   return (
-    <section className="panel-host">
+    <section className={`panel-host${confirmation?.directory ? " panel-host-picking" : ""}`}>
       <header className="panel-host-heading">
         <div>
           <h1>{panel.title["zh-CN"] || panel.title.default}</h1>
@@ -1048,7 +1128,15 @@ export function PanelHost({
       )}
       {audioRequest && <PanelAudioDialog request={audioRequest} />}
       {videoRequest && <PanelVideoDialog request={videoRequest} />}
-      {confirmation && (
+      {confirmation?.directory && (
+        <PanelDirectoryPicker
+          key={confirmation.directory.requestId}
+          request={confirmation.directory}
+          confirming={confirming}
+          confirmationError={confirmationError}
+        />
+      )}
+      {confirmation && !confirmation.directory && (
         <section
           className="panel-host-confirm"
           ref={confirmationElement}
