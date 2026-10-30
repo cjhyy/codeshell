@@ -1450,8 +1450,13 @@ describe("useRemoteApp Main process epochs", () => {
       await flushMicrotasks();
     });
     expect(hook.result.current.chat.items).toContainEqual(
-      expect.objectContaining({ kind: "assistant", text: "old answer", done: false }),
+      expect.objectContaining({ kind: "assistant", text: "old answer", done: seedTool }),
     );
+    expect(hook.result.current.chat.run).toBe("running");
+    if (seedTool)
+      expect(hook.result.current.chat.items).toContainEqual(
+        expect.objectContaining({ kind: "tool", id: "call-1", done: false }),
+      );
     await act(async () => {
       firstSocket.close();
       window.dispatchEvent(new Event("online"));
