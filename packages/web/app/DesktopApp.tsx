@@ -750,11 +750,19 @@ export function useDesktopController(
           : "connecting",
     session,
     activeId,
-    panelSessionId: app.activeRoomId ? undefined : app.activeSessionId,
+    panelSessionId:
+      app.activeRoomId ||
+      creationNeedsRetry ||
+      (pendingCreate.current && app.activeSessionId === pendingCreate.current.previousSessionId)
+        ? undefined
+        : app.activeSessionId,
     chat: app.chat,
     sessions,
     workspaceCwd,
     workspaceKey,
+    projects: app.projects,
+    selectedProjectId: selectedProject?.id ?? workspaceCwd ?? undefined,
+    selectProject: actions.selectProject,
     workspaceName: workspaceCwd?.split(/[\\/]/).filter(Boolean).pop() || "桌面工作区",
     title,
     configuration,

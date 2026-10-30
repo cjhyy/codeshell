@@ -387,6 +387,33 @@ button.workspace-button:hover {
   flex-direction: column;
   gap: 2px;
 }
+.panel-project-switcher {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--subtle);
+  color: var(--muted);
+  font-size: 12px;
+}
+.panel-project-switcher > span {
+  flex-shrink: 0;
+}
+.panel-project-switcher select {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  text-overflow: ellipsis;
+}
 .workbench-back {
   display: inline-flex;
   align-items: center;
@@ -1111,6 +1138,9 @@ button.ghost:hover:not(:disabled) {
     padding: 0 12px;
     gap: 8px;
     height: 50px;
+  }
+  .panel-project-switcher {
+    padding: 8px 12px;
   }
   .messages {
     padding: 24px 18px 12px;
