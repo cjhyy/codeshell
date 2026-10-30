@@ -129,6 +129,7 @@ export interface RemoteApp {
   approvals: PendingApproval[];
   permissionMode: PermissionMode;
   runtimeModels?: MobileRuntimeModel[];
+  nativeModelSelection?: boolean;
   runtimeModelsLoading?: boolean;
   runtimeModelsError?: string;
   refreshRuntimeModels?: () => void;
@@ -165,6 +166,8 @@ export interface RemoteApp {
     text: string;
     attachments: MobileComposerAttachment[];
     modelKey?: string;
+    nativeConnectionId?: string;
+    permissionMode?: PermissionMode;
     modelTraceSource?: string;
     /** Retry an earlier intent whose delivery could not be confirmed. The host
      *  ignores an ID it already recorded, so the task never runs twice. */
@@ -326,6 +329,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     undefined,
   );
   const [runtimeModels, setRuntimeModels] = useState<MobileRuntimeModel[]>([]);
+  const [nativeModelSelection, setNativeModelSelection] = useState(false);
+  const nativeModelSelectionRef = useRef(false);
   const [runtimeModelsLoading, setRuntimeModelsLoading] = useState(false);
   const [runtimeModelsError, setRuntimeModelsError] = useState<string>();
   const [unreadSessionIds, setUnreadSessionIds] = useState<Set<string>>(() => new Set());
@@ -430,6 +435,19 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   // A first send can use the Host's implicit session. Once an uncertain reply
   // identifies it, pin retries to that session even if the Host's selection moves.
   const uncertainMessageSessionsRef = useRef(new Map<string, string>());
+  // Keep the exact prepared descriptors for an unconfirmed intent. Re-uploading
+  // the same File creates a new uploadId and would change the Host fingerprint.
+  const preparedMessagesRef = useRef(
+    new Map<
+      string,
+      {
+        signature: string;
+        sessionId?: string;
+        sources: MobileComposerAttachment[];
+        attachments: Awaited<ReturnType<typeof prepareMobileAttachments>>;
+      }
+    >(),
+  );
   const pendingCreateRef = useRef<{
     clientRequestId: string;
     permissionMode: PermissionMode;
@@ -585,6 +603,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         waiter.reject(new Error("Remote app closed"));
       }
       messageAckWaitersRef.current.clear();
+      preparedMessagesRef.current.clear();
     },
     [],
   );
@@ -1042,7 +1061,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         setLoadingKey("sessionHistory", false);
         setOutputHistory(undefined);
       }
-      if (event.type === "auth.ok") unsentCreatedSessionRef.current = null;
+      if (event.type === "auth.ok") {
+        unsentCreatedSessionRef.current = null;
+        nativeModelSelectionRef.current = event.capabilities?.nativeModelSelection === 1;
+        setNativeModelSelection(nativeModelSelectionRef.current);
+      }
       if (historyRecovery.observe(event)) return;
       if (
         "sessionId" in event &&
@@ -2083,6 +2106,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   useEffect(() => {
     socketOnlineRef.current = socket.status === "online";
     if (socketOnlineRef.current) return;
+    nativeModelSelectionRef.current = false;
+    setNativeModelSelection(false);
     creationPermissionEchoRef.current = null;
     failSessionCreation();
     sessionListRequestRef.current = undefined;
@@ -2133,6 +2158,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       recoveryFencesRef.current.add(sessionId);
       applyingHistoryRef.current = sessionId;
       outputWriteGenerationRef.current++;
+      preparedMessagesRef.current.clear();
       setOutputHistory((previous) => ({
         sessionId,
         failed: true,
@@ -2195,15 +2221,25 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       text: string;
       attachments: MobileComposerAttachment[];
       modelKey?: string;
+      nativeConnectionId?: string;
+      permissionMode?: PermissionMode;
       modelTraceSource?: string;
       clientMessageId?: string;
       onUncertain?: (clientMessageId: string) => void;
       onRetired?: () => void;
     }): Promise<boolean> => {
-      const permissionMode = permissionModeRef.current;
+      const permissionMode = input.permissionMode ?? permissionModeRef.current;
       const text = input.text.trim();
       if (!text && input.attachments.length === 0) return false;
       if (socket.status !== "online") return false;
+      if (
+        input.nativeConnectionId &&
+        (!nativeModelSelectionRef.current || activeRoomIdRef.current || input.modelKey)
+      ) {
+        setNotice("当前连接不支持这项原生模型选择。草稿已保留，请重新连接桌面端后再试。");
+        if (input.clientMessageId) input.onUncertain?.(input.clientMessageId);
+        return false;
+      }
       if (
         pendingCreateRef.current ||
         (emptySessionReplacementRef.current &&
@@ -2225,6 +2261,42 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         input.clientMessageId ??
         globalThis.crypto?.randomUUID?.() ??
         `mobile-message-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const signature = JSON.stringify([
+        text,
+        roomId,
+        input.modelKey,
+        input.nativeConnectionId,
+        permissionMode,
+        input.modelTraceSource,
+      ]);
+      const prepared = preparedMessagesRef.current.get(clientMessageId);
+      if (prepared && !roomId) {
+        const original =
+          prepared.sessionId ?? uncertainMessageSessionsRef.current.get(clientMessageId);
+        if (
+          !original ||
+          sessionId !== original ||
+          (boundSessionRef.current !== undefined && boundSessionRef.current !== original)
+        ) {
+          setNotice("原发送会话尚未核对或选择已改变，请重新载入原会话核对结果。草稿仍保留。");
+          input.onUncertain?.(clientMessageId);
+          return false;
+        }
+      }
+      if (
+        prepared &&
+        (prepared.signature !== signature ||
+          prepared.sources.length !== input.attachments.length ||
+          prepared.sources.some(
+            (source, index) =>
+              source.clientId !== input.attachments[index]?.clientId ||
+              source.file !== input.attachments[index]?.file,
+          ))
+      ) {
+        setNotice("原发送意图已改变，请重新载入会话核对结果后再发送。草稿仍保留。");
+        input.onUncertain?.(clientMessageId);
+        return false;
+      }
       let attachments;
       if (roomId && roomsRef.current.find((room) => room.id === roomId)?.observing) {
         setNotice(t("mobile.notice.ccRoomObserving"));
@@ -2233,11 +2305,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       const upload = new AbortController();
       uploadAbortsRef.current.add(upload);
       try {
-        attachments = await prepareMobileAttachments(input.attachments, {
-          beginUpload: (metadata) => beginMobileUpload(metadata, connectionGeneration),
-          fetch: window.fetch.bind(window),
-          signal: upload.signal,
-        });
+        attachments =
+          prepared?.attachments ??
+          (await prepareMobileAttachments(input.attachments, {
+            beginUpload: (metadata) => beginMobileUpload(metadata, connectionGeneration),
+            fetch: window.fetch.bind(window),
+            signal: upload.signal,
+          }));
       } catch (error) {
         if (outputWriteGeneration !== outputWriteGenerationRef.current) {
           input.onRetired?.();
@@ -2263,6 +2337,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       )
         return false;
       const summaries = attachments.map(({ name, mime, size }) => ({ name, mime, size }));
+      preparedMessagesRef.current.set(clientMessageId, {
+        signature,
+        sessionId,
+        sources: input.attachments.map((source) => ({ ...source })),
+        attachments,
+      });
       const acknowledged = waitForMessageAck(
         clientMessageId,
         connectionGeneration,
@@ -2290,6 +2370,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             type: "chat.send",
             permissionMode,
             ...(input.modelKey ? { modelKey: input.modelKey } : {}),
+            ...(input.nativeConnectionId ? { nativeConnectionId: input.nativeConnectionId } : {}),
             ...(input.modelTraceSource ? { modelTraceSource: input.modelTraceSource } : {}),
             text,
             sessionId,
@@ -2300,6 +2381,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         );
       }
       if (!queued) {
+        if (!prepared) preparedMessagesRef.current.delete(clientMessageId);
         settleMessageAck(clientMessageId, new Error("Remote connection changed before send"));
         await acknowledged.catch(() => undefined);
         return false;
@@ -2311,6 +2393,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         const retired = error instanceof MessageRetiredError;
         if (retired) input.onRetired?.();
         const uncertain = !retired && !(error instanceof MessageRejectedError);
+        if (!uncertain) preparedMessagesRef.current.delete(clientMessageId);
         if (uncertain) input.onUncertain?.(clientMessageId);
         setNotice(
           retired
@@ -2323,6 +2406,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         );
         return false;
       }
+      preparedMessagesRef.current.delete(clientMessageId);
       if (
         !roomId &&
         conversationRevision === conversationRevisionRef.current &&
@@ -2794,6 +2878,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     approvals,
     permissionMode,
     runtimeModels,
+    nativeModelSelection,
     runtimeModelsLoading,
     runtimeModelsError,
     refreshRuntimeModels,

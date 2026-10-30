@@ -55,8 +55,27 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin: 8px 0 16px;
+  margin: 0;
   font-size: 12px;
+}
+.composer-controls {
+  min-width: 0;
+  max-width: 100%;
+}
+.composer-controls .desktop-permission-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.composer-controls .desktop-chat-controls select {
+  min-height: 44px;
+  font-size: 14px;
+}
+.composer-controls .desktop-chat-controls select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .desktop-room-label {
   min-width: 0;
@@ -213,5 +232,48 @@
   }
   .with-model-selector:has(.desktop-model-picker .library-button) .composer-run-status {
     grid-row: 3;
+  }
+  .composer-toolbar.with-composer-controls {
+    display: grid;
+    grid-template-columns: 44px 44px 44px minmax(0, 1fr) 44px;
+    column-gap: 2px;
+    row-gap: 4px;
+  }
+  .with-composer-controls .composer-controls {
+    grid-row: 1;
+    grid-column: 1 / 3;
+  }
+  .with-composer-controls .desktop-chat-controls select {
+    width: 100%;
+    font-size: 16px;
+    padding-inline: 4px;
+  }
+  .with-composer-controls .desktop-chat-controls label {
+    width: 100%;
+  }
+  .with-composer-controls .desktop-model-picker {
+    grid-row: 1;
+    grid-column: 3 / -1;
+  }
+  .with-composer-controls .attach-button,
+  .with-composer-controls .model-settings-button,
+  .with-composer-controls .composer-submit {
+    grid-row: 2;
+  }
+  .with-composer-controls .composer-run-status {
+    grid-row: 3;
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+  .with-composer-controls .composer-run-status:empty {
+    display: none;
+  }
+  .with-composer-controls:has(.desktop-room-label) .composer-controls,
+  .with-composer-controls:has(.desktop-model-picker .library-button) .desktop-model-picker {
+    grid-row: auto;
+    grid-column: 1 / -1;
+  }
+  .with-composer-controls .desktop-room-label {
+    flex: 1;
   }
 }

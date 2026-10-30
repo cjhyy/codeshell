@@ -38,7 +38,7 @@ export function DesktopChatControls({ app }: { app: RemoteApp }) {
       <label
         title={inRoom ? "CLI 会话的权限模式在打开时确定；离开后重新打开即可更改。" : undefined}
       >
-        权限模式
+        <span className="desktop-permission-label">权限模式</span>
         <select
           aria-label="权限模式"
           value={inRoom ? (app.activeRoom?.permissionMode ?? "") : app.permissionMode}

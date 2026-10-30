@@ -14,13 +14,13 @@ const { chromium } = require("playwright");
 const output = await mkdtemp(path.join(tmpdir(), "codeshell-mobile-workbench-"));
 const source = `
 import React from 'react';import{createRoot}from'react-dom/client';
-import{Workbench}from'./Workbench';import{DesktopModelPicker}from'./DesktopModelPicker';import{DesktopSidebar,DesktopApproval}from'./DesktopControls';
-const noop=()=>{},long='ownedlongidentifier'.repeat(35);window.sends=[];window.opened=[];window.modelChanges=[];const models=Array.from({length:60},(_,i)=>({key:(i<30?'claude-code':'codex')+'/fixture-'+i,label:(i<30?'Claude Code':'Codex')+' Fixture '+i+(i===58?' '+long:''),kind:i<30?'claude-code':'codex',provider:i<30?'claude-code':'codex',maxContextTokens:1000}));
-function Fixture(){const[state,setState]=React.useState({draft:'First line',model:'',running:false,asking:false,retry:false,scope:'initial'});
+import{Workbench}from'./Workbench';import{DesktopModelPicker}from'./DesktopModelPicker';import{DesktopSidebar,DesktopApproval,DesktopChatControls}from'./DesktopControls';
+const noop=()=>{},long='ownedlongidentifier'.repeat(35);window.sends=[];window.opened=[];window.modelChanges=[];window.permissionChanges=[];const models=Array.from({length:60},(_,i)=>({key:(i<30?'claude-code':'codex')+'/fixture-'+i,label:(i<30?'Claude Code':'Codex')+' Fixture '+i+(i===58?' '+long:''),kind:i<30?'claude-code':'codex',provider:i<30?'claude-code':'codex',maxContextTokens:1000}));
+function Fixture(){const[state,setState]=React.useState({draft:'First line',model:'',running:false,asking:false,retry:false,scope:'initial',permissionMode:'acceptEdits',large:false});
 window.patchFixture=patch=>setState(current=>({...current,...patch}));
 const approval={id:'owned-approval',requestId:'owned-approval',toolName:'__ask_user__',description:long,summary:long,risk:'low',options:[long],optionsOnly:false};
-const app={status:'online',activeProjectId:'owned-project',activeProjectCwd:'/owned',activeCwd:'/owned',projects:[{id:'owned-project',name:'Owned project',path:'/owned'}],loading:{sessions:false,ccSessions:false},ccCliKind:'codex',ccProbe:{available:true},ccSessions:[{sessionId:'owned-cli',firstMessage:long,cwd:'/owned',messageCount:1}],selectProject:noop,refreshSessions:noop,setCcCliKind:noop,newSession:noop,openCcSession:(...args)=>window.opened.push(args),respondApproval:noop};
-const controller={panelSessionId:undefined,host:'desktop',workspaceApi:true,connection:'open',activeId:'owned-session',chat:{goal:long,items:[{kind:'assistant',id:'owned-output',text:'Owned transcript',done:true}],run:state.running?'running':'idle'},sessions:[],workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:'owned',title:long,configuration:null,configurationVersion:0,sessionsVersion:0,draft:state.draft,files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running:state.running,localDrafts:[],approvals:state.asking?[approval]:[],approvalCount:()=>0,approvalContent:state.asking?<DesktopApproval approval={approval} app={app}/>:null,error:'',clearError:noop,setDraft:draft=>setState(current=>({...current,draft})),removeFile:noop,selectSession:noop,newSession:noop,send:()=>{window.sends.push(state.draft);setState(current=>({...current,draft:''}));return true},stop:noop,addFiles:noop,cameraAttachments:true,refreshSessions:noop,refreshConfiguration:noop,onAuthLost:noop,modelSelector:<DesktopModelPicker key={state.scope} models={state.retry?[]:models} value={state.model} defaultLabel='Default' disabled={state.running} onRefresh={noop} onRetryCreation={state.retry?noop:undefined} onChange={model=>{window.modelChanges.push(model);setState(current=>({...current,model}));}}/>,renderSidebar:navigation=><DesktopSidebar app={app} navigation={navigation}/>};
+const app={status:'online',permissionMode:state.permissionMode,setPermissionMode:mode=>{window.permissionChanges.push(mode);setState(current=>({...current,permissionMode:mode}));},activeProjectId:'owned-project',activeProjectCwd:'/owned',activeCwd:'/owned',projects:[{id:'owned-project',name:'Owned project',path:'/owned'}],loading:{sessions:false,ccSessions:false},ccCliKind:'codex',ccProbe:{available:true},ccSessions:[{sessionId:'owned-cli',firstMessage:long,cwd:'/owned',messageCount:1}],selectProject:noop,refreshSessions:noop,setCcCliKind:noop,newSession:noop,openCcSession:(...args)=>window.opened.push(args),respondApproval:noop};
+const controller={panelSessionId:undefined,host:'desktop',workspaceApi:true,connection:'open',activeId:'owned-session',chat:{goal:long,items:[{kind:'assistant',id:'owned-output',text:'Owned transcript',done:true}],run:state.running?'running':'idle'},sessions:[],workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:'owned',title:long,configuration:null,configurationVersion:0,sessionsVersion:0,draft:state.draft,files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running:state.running,localDrafts:[],approvals:state.asking?[approval]:[],approvalCount:()=>0,approvalContent:state.asking?<DesktopApproval approval={approval} app={app}/>:null,error:'',clearError:noop,setDraft:draft=>setState(current=>({...current,draft})),removeFile:noop,selectSession:noop,newSession:noop,send:()=>{window.sends.push(state.draft);setState(current=>({...current,draft:''}));return true},stop:noop,addFiles:noop,cameraAttachments:true,refreshSessions:noop,refreshConfiguration:noop,onAuthLost:noop,composerControls:<DesktopChatControls app={app}/>,modelSelector:<DesktopModelPicker key={state.scope} models={state.retry?[]:models} nativeChoices={state.large?Array.from({length:1000},(_,i)=>({value:'native:owned-'+i,label:'Native model '+i,group:'Owned provider'})):[]} value={state.model} defaultLabel='Default' disabled={state.running} onRefresh={noop} onRetryCreation={state.retry?noop:undefined} onChange={model=>{window.modelChanges.push(model);setState(current=>({...current,model}));}}/>,renderSidebar:navigation=><DesktopSidebar app={app} navigation={navigation}/>};
 return <Workbench controller={controller}/>};createRoot(document.getElementById('root')).render(<React.StrictMode><Fixture/></React.StrictMode>);`;
 const bundle = await build({
   stdin: { contents: source, resolveDir: path.join(repo, "packages/web/app"), loader: "tsx" },
@@ -86,6 +86,15 @@ try {
       });
       const input = page.getByRole("textbox", { name: "任务内容", exact: true });
       await input.waitFor();
+      const permission = page.getByRole("combobox", { name: "权限模式", exact: true });
+      assert.equal(await permission.inputValue(), "acceptEdits");
+      assert.equal(await permission.evaluate((node) => Boolean(node.closest(".composer"))), true);
+      assert.equal(await page.locator(".transcript [aria-label='权限模式']").count(), 0);
+      assert.deepEqual(await page.evaluate(() => window.permissionChanges), []);
+      page.once("dialog", (dialog) => dialog.dismiss());
+      await permission.selectOption("bypassPermissions");
+      assert.equal(await permission.inputValue(), "acceptEdits");
+      assert.deepEqual(await page.evaluate(() => window.permissionChanges), []);
       const models = page.getByRole("button", { name: "选择模型或外部运行时" });
       const picker = page.getByRole("dialog", { name: "选择模型或外部运行时" });
       const gestures = await context.newCDPSession(page);
@@ -208,7 +217,7 @@ try {
         assert.deepEqual(await page.evaluate(() => window.sends), []);
         assert.deepEqual(await page.evaluate(() => window.opened), []);
         const controls = await page.locator(".composer-toolbar").evaluate((node) => {
-          const controls = [...node.querySelectorAll("button")].filter(
+          const controls = [...node.querySelectorAll("button, select")].filter(
             (button) => button.getBoundingClientRect().width > 0,
           );
           return controls.map((button) => {
@@ -236,7 +245,7 @@ try {
           path: path.join(output, `${theme}-${width}x${height}-layout.png`),
         });
         assert.ok(
-          composerHeight <= 152,
+          composerHeight <= 200,
           `compact idle composer: ${composerHeight}; ${JSON.stringify(await page.locator(".composer textarea, .composer-toolbar, .composer-caption").evaluateAll((nodes) => nodes.map((node) => ({ className: node.className, height: node.getBoundingClientRect().height, display: getComputedStyle(node).display }))))}`,
         );
         await models.tap();
@@ -325,6 +334,19 @@ try {
           .evaluate((node) => node.scrollWidth <= node.clientWidth + 1),
         "long goal text must stay within the transcript",
       );
+      await page.evaluate(() => window.patchFixture({ large: true }));
+      await models.tap();
+      assert.ok(
+        (await picker.getByRole("option").count()) <= 81,
+        "large catalogs mount one bounded batch",
+      );
+      await picker.getByRole("button", { name: /显示更多模型/ }).tap();
+      assert.ok((await picker.getByRole("option").count()) <= 161);
+      await picker.getByRole("searchbox", { name: "搜索模型" }).fill("native model 999");
+      await picker.getByRole("option", { name: "Native model 999", exact: true }).tap();
+      assert.equal(await models.getAttribute("value"), "native:owned-999");
+      assert.deepEqual(await page.evaluate(() => window.sends), []);
+      assert.deepEqual(await page.evaluate(() => window.permissionChanges), []);
       await input.fill("First line");
       await input.press("Enter");
       assert.deepEqual(

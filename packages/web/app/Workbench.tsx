@@ -1081,8 +1081,11 @@ export function Workbench({
                 }}
               />
               <div
-                className={`composer-toolbar${controller.modelSelector ? " with-model-selector" : ""}`}
+                className={`composer-toolbar${controller.modelSelector ? " with-model-selector" : ""}${controller.composerControls ? " with-composer-controls" : ""}`}
               >
+                {controller.composerControls ? (
+                  <div className="composer-controls">{controller.composerControls}</div>
+                ) : null}
                 {hub ? (
                   <>
                     <input

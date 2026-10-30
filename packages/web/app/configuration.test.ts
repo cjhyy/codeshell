@@ -71,11 +71,13 @@ describe("Hub configuration client boundary", () => {
       id: "work",
       catalogId: "openai",
       model: "new-model",
-      baseUrl: "https://example.test/v1",
     });
     expect(request?.credentials).toBe("same-origin");
     expect(request?.cache).toBe("no-store");
     expect(request?.method).toBe("PUT");
+    draft.baseUrl = "";
+    await saveConnection(draft);
+    expect(body?.baseUrl).toBe("");
   });
 
   test("sends only the explicitly entered replacement key and leaves the draft reusable after failure", async () => {

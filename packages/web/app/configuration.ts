@@ -10,6 +10,27 @@ export interface HubConnection {
   baseUrl: string;
   hasApiKey: boolean;
   needsKey: boolean;
+  /** Safe, declared scalar values only; credentials never appear here. */
+  paramValues?: Record<string, string | number | boolean>;
+  unavailableParameters?: string[];
+}
+
+export interface HubModelParameter {
+  name: string;
+  label: string;
+  control: "enum" | "number" | "toggle";
+  options?: string[];
+  min?: number;
+  max?: number;
+  default?: string | number | boolean;
+}
+
+export interface HubModelPreset {
+  value: string;
+  label: string;
+  maxContextTokens?: number;
+  supportsVision?: boolean;
+  parameters: HubModelParameter[];
 }
 
 export interface HubCatalogEntry {
@@ -18,6 +39,7 @@ export interface HubCatalogEntry {
   adapterKind: string;
   defaultBaseUrl: string;
   needsKey: boolean;
+  modelPresets?: HubModelPreset[];
 }
 
 export interface HubSkill {
@@ -45,6 +67,10 @@ export interface ConnectionDraft {
   model: string;
   baseUrl: string;
   apiKey: string;
+  /** The public URL can omit private URL credentials; never echo it unchanged. */
+  originalBaseUrl?: string;
+  /** A patch created only by explicit parameter edits; null clears one value. */
+  paramValues?: Record<string, string | number | boolean | null>;
 }
 
 /** A blank key means keep the server's credential; secrets are never loaded into a draft. */
@@ -55,19 +81,23 @@ export function connectionDraft(connection?: HubConnection): ConnectionDraft {
     catalogId: connection?.catalogId ?? "",
     model: connection?.model ?? "",
     baseUrl: connection?.baseUrl ?? "",
+    ...(connection ? { originalBaseUrl: connection.baseUrl ?? "" } : {}),
     apiKey: "",
   };
 }
 
-export function connectionPayload(draft: ConnectionDraft): Record<string, string | null> {
-  const payload: Record<string, string | null> = {
+export function connectionPayload(draft: ConnectionDraft): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
     id: draft.id.trim(),
     catalogId: draft.catalogId,
     model: draft.model.trim(),
-    baseUrl: draft.baseUrl.trim(),
   };
+  if (draft.originalBaseUrl === undefined || draft.baseUrl.trim() !== draft.originalBaseUrl.trim())
+    payload.baseUrl = draft.baseUrl.trim();
   if (draft.expectedRevision !== undefined) payload.expectedRevision = draft.expectedRevision;
   if (draft.apiKey.trim()) payload.apiKey = draft.apiKey.trim();
+  if (draft.paramValues && Object.keys(draft.paramValues).length)
+    payload.paramValues = draft.paramValues;
   return payload;
 }
 

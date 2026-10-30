@@ -160,6 +160,12 @@
   flex-shrink: 0;
   width: 18px;
 }
+.model-choice-description {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: normal;
+}
 .model-choice-empty,
 .model-choice-status {
   margin: 8px;
