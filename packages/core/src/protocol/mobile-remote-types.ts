@@ -312,6 +312,7 @@ export type MobileServerEvent =
       type: "auth.ok";
       device: TrustedDevicePublic;
       capabilities?: {
+        nativeModelSelection?: 1;
         outputJournal?: 1;
         legacyBasePages?: 1;
         outputJournalPageFrames?: 2048;
@@ -323,6 +324,7 @@ export type MobileServerEvent =
       type: "pair.ok";
       device: TrustedDevicePublic;
       capabilities?: {
+        nativeModelSelection?: 1;
         outputJournal?: 1;
         legacyBasePages?: 1;
         outputJournalPageFrames?: 2048;
