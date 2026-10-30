@@ -105,7 +105,7 @@ export function DeviceRelaySettings({
     <div className="mt-3 space-y-3 rounded-md border border-border p-3">
       <p className="text-xs text-muted-foreground">{t("settingsX.adv.relayTrust")}</p>
       <p role="status" className="text-sm">
-        {t(`settingsX.adv.relayState_${status.state}`)}
+        {status.message ?? t(`settingsX.adv.relayState_${status.state}`)}
       </p>
       {status.registered ? (
         <div className="space-y-1 text-sm">

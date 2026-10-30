@@ -88,7 +88,8 @@ export const settingsNs = {
         capabilitiesFailed: "无法检查云服务的登录方式，请检查地址和网络后重试。",
         checkAgain: "重新检查",
         registrationUnavailable: "此云服务暂未开放注册。",
-        optional: "不登录也可使用本地项目、模型和 MCP。登录仅用于云服务，不会自动共享电脑或项目。",
+        optional:
+          "不登录也可使用本地项目、模型和 MCP。桌面登录后，本机会自动加入该账号的设备协作，可切换电脑和项目派发任务。",
         origin: "云服务地址",
         username: "账号名称",
         password: "密码（至少 12 位）",
@@ -1115,7 +1116,8 @@ export const settingsNs = {
           "在目录页面登录后生成票据。重新登记会替换旧连接；登记不会自动启动，退出应用后也不会自动重连。",
         relayEnroll: "使用票据登记电脑",
         relayAccountEnroll: "通过当前账号登记电脑",
-        relayAccountHint: "登记到 {origin} 的当前账号；登记不会自动启动连接。",
+        relayAccountHint: "默认在登录时自动连接到 {origin}；此处手动重新登记会替换旧授权。",
+        relayState_unavailable: "设备协作暂不可用，请检查服务能力和网络后恢复连接。",
         relayState_unregistered: "尚未登记",
         relayState_stopped: "已登记，连接已停止",
         relayState_connecting: "正在连接目录…",
@@ -1282,7 +1284,7 @@ export const settingsNs = {
         checkAgain: "Check again",
         registrationUnavailable: "Registration is not available on this cloud service.",
         optional:
-          "Local projects, models and MCP work without signing in. Signing in enables cloud services and does not share this computer or its projects.",
+          "Local projects, models and MCP work without an account. Desktop sign-in automatically joins device collaboration so you can choose a computer and project for tasks.",
         origin: "Cloud service address",
         username: "Username",
         password: "Password (at least 12 characters)",
@@ -2400,6 +2402,8 @@ export const settingsNs = {
         relayAccountEnroll: "Register with current account",
         relayAccountHint:
           "Register with the current account at {origin}. Registration does not start the connection.",
+        relayState_unavailable:
+          "Device collaboration is unavailable. Check service support and connection.",
         relayState_unregistered: "Not registered",
         relayState_stopped: "Registered, connection stopped",
         relayState_connecting: "Connecting to directory…",

@@ -4,6 +4,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { MobileRemoteController } from "./mobile-remote-controller.js";
+import { CloudAccountHttpError } from "./cloud-account-http.js";
 import type { RelayRegistration } from "./device-relay-store.js";
 
 const token = () => randomBytes(32).toString("base64url");
@@ -309,6 +310,170 @@ test("stopping during a committed device refresh preserves its rotated credentia
     expect(
       requests.some((req) => req.path.endsWith("logout") && req.token === late.accessToken),
     ).toBe(true);
+  } finally {
+    await controller.dispose();
+  }
+});
+
+test("Desktop login recovers a first network failure, enrolls once and reconnects the stable device without a passcode or extra buttons", async () => {
+  const root = mkdtempSync(join(tmpdir(), "account-relay-auto-"));
+  const identity = { origin: "https://account.example", accountId: randomUUID() };
+  let saved: RelayRegistration | undefined;
+  let active: any;
+  let enrollments = 0;
+  let starts = 0;
+  let configured: any;
+  let capabilityRequests = 0;
+  const account: any = {
+    status: () => ({
+      state: "signed-in",
+      origin: identity.origin,
+      account: { id: identity.accountId },
+    }),
+    capabilities: async () => {
+      if (++capabilityRequests === 1) throw new CloudAccountHttpError(503);
+      return {
+        relay: {
+          enabled: true,
+          directoryOrigin: identity.origin,
+          protocolVersion: 1,
+          accountHandoffVersion: 1,
+        },
+      };
+    },
+    getCredential: async () => token(),
+  };
+  const controller = new MobileRemoteController({
+    host: {
+      status: () => active,
+      start: async (input) => {
+        starts++;
+        active = { mode: input.mode, url: "http://127.0.0.1:1234", port: 1234 };
+        return active;
+      },
+      stop: async () => {
+        active = undefined;
+      },
+      setAccountRelayAccess: (provider) => {
+        configured = provider;
+      },
+      relayTarget: () => ({
+        port: 1234,
+        signal: new AbortController().signal,
+        setPublicBaseUrl: () => {},
+      }),
+      onlineDeviceIds: () => [],
+      createPairingUrl: () => ({
+        url: "https://device.example/mobile",
+        expiresAt: Date.now() + 30_000,
+      }),
+    } as any,
+    tunnel: { stop: async () => {}, isRunning: () => false, isConnected: () => false } as any,
+    binary: {} as any,
+    passcode: { isSet: () => false } as any,
+    store: {
+      load: () => saved,
+      save: (value) => {
+        saved = value;
+      },
+      forget: () => {
+        saved = undefined;
+      },
+      preflight: () => {},
+    } as any,
+    environmentDir: root,
+    autoRetryDelayMs: 5,
+    account,
+    accountRequest: async (input) => {
+      expect(input.origin).toBe(identity.origin);
+      expect(input.path).toBe("/api/v1/remote-hosts/ensure");
+      enrollments++;
+      return {
+        ...(input.body as any),
+        hostId: randomUUID(),
+        accountId: identity.accountId,
+        publicOrigin: "https://device.example",
+        credential: token(),
+        refreshToken: token(),
+        credentialExpiresAt: Date.now() + 600_000,
+        credentialEpoch: 1,
+        protocolVersion: 1,
+      };
+    },
+    connectorFactory: (options) =>
+      ({
+        start: () => {
+          options.onState?.("ready");
+        },
+        close: async () => {},
+        state: () => "ready",
+      }) as any,
+    listProjects: async () => [
+      { id: "actual-project", name: "My project", path: "/target/project" },
+    ],
+    changed: () => {},
+  });
+  try {
+    expect(controller.relayStatus().state).toBe("unregistered");
+    await expect(controller.activateAccountRelay(identity, () => true)).rejects.toThrow();
+    const deadline = Date.now() + 2_000;
+    while (controller.relayStatus().state !== "ready") {
+      if (Date.now() > deadline) throw new Error("Automatic first-login recovery did not occur");
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    await Promise.all([
+      controller.activateAccountRelay(identity, () => true),
+      controller.activateAccountRelay(identity, () => true),
+    ]);
+    expect(controller.relayStatus().state).toBe("ready");
+    expect(enrollments).toBe(1);
+    expect(starts).toBe(1);
+    const binding = [saved!.hostId, saved!.environmentId, saved!.credentialEpoch];
+    expect(configured.hostId).toBe(saved!.hostId);
+    expect(await configured.listProjects()).toEqual([
+      { id: "actual-project", name: "My project", path: "/target/project" },
+    ]);
+    await controller.stop();
+    await controller.activateAccountRelay(identity, () => true);
+    expect(enrollments).toBe(1);
+    expect(starts).toBe(2);
+    expect([saved!.hostId, saved!.environmentId, saved!.credentialEpoch]).toEqual(binding);
+    const publicState = JSON.stringify(controller.relayStatus());
+    expect(publicState).not.toContain(saved!.credential);
+    expect(publicState).not.toContain(saved!.refreshToken!);
+    await controller.retireAccountRelay(identity);
+    expect(configured).toBeUndefined();
+    expect(active).toBeUndefined();
+    expect(saved).toBeUndefined();
+  } finally {
+    await controller.dispose();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("unsupported account relay reports upgrade without starting Host or consuming an enrollment", async () => {
+  const identity = { origin: "https://account.example", accountId: randomUUID() };
+  const controller = new MobileRemoteController({
+    host: { status: () => undefined, stop: async () => {}, onlineDeviceIds: () => [] } as any,
+    tunnel: { stop: async () => {}, isRunning: () => false, isConnected: () => false } as any,
+    binary: {} as any,
+    passcode: {} as any,
+    store: { load: () => undefined } as any,
+    environmentDir: "/unused-no-capability",
+    account: {
+      status: () => ({
+        state: "signed-in",
+        origin: identity.origin,
+        account: { id: identity.accountId },
+      }),
+      capabilities: async () => ({}),
+    } as any,
+    changed: () => {},
+  });
+  try {
+    await expect(controller.activateAccountRelay(identity, () => true)).rejects.toThrow();
+    expect(controller.relayStatus()).toMatchObject({ state: "unavailable", registered: false });
+    expect(controller.relayStatus().message).toContain("升级");
   } finally {
     await controller.dispose();
   }

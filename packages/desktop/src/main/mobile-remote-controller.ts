@@ -1,3 +1,4 @@
+import { hostname } from "node:os";
 import type {
   AccessPasscode,
   CloudflaredBinary,
@@ -46,6 +47,9 @@ export class MobileRemoteController {
   private deviceRefresh?: Promise<string>;
   private deviceRefreshResponse?: Promise<unknown>;
   private deviceAuthority = 0;
+  private autoActivation?: Promise<void>;
+  private availabilityMessage?: string;
+  private autoRetry?: ReturnType<typeof setTimeout>;
   private accountEnrollment?: { origin: string; accountId: string };
   constructor(
     private readonly deps: {
@@ -59,6 +63,8 @@ export class MobileRemoteController {
       account?: CloudAccountManager;
       accountRequest?: CloudAccountTransport;
       connectorFactory?: typeof createDeviceRelayConnector;
+      autoRetryDelayMs?: number;
+      listProjects?: () => Promise<Array<{ id: string; name: string; path: string }>>;
     },
   ) {}
   private serial<T>(work: () => Promise<T>): Promise<T> {
@@ -84,11 +90,13 @@ export class MobileRemoteController {
     return {
       state: this.state,
       registered: !!data,
+      ...(this.availabilityMessage ? { message: this.availabilityMessage } : {}),
       ...(data
         ? {
             relayOrigin: data.relayOrigin,
             publicOrigin: data.publicOrigin,
             hostId: data.hostId,
+            environmentId: data.environmentId,
             name: data.name,
             ...(data.accountId ? { accountId: data.accountId } : {}),
           }
@@ -119,6 +127,7 @@ export class MobileRemoteController {
   }
   enroll(input: DesktopRelayEnrollment, authorized: () => boolean): Promise<DesktopRelayStatus> {
     validateRelayEnrollment(input);
+    clearTimeout(this.autoRetry);
     this.deviceAuthority++;
     this.deviceRefresh = undefined;
     this.deviceRefreshResponse = undefined;
@@ -180,12 +189,189 @@ export class MobileRemoteController {
       }
     });
   }
+  /** Authorized by Desktop login/resume; a saved identity never starts networking by being read. */
+  activateAccountRelay(
+    identity: { origin: string; accountId: string },
+    authorized: () => boolean,
+  ): Promise<void> {
+    if (this.autoActivation)
+      return this.autoActivation.then(() => {
+        if (authorized()) return this.activateAccountRelay(identity, authorized);
+      });
+    const pending = this.activateAccountRelayOnce(identity, authorized);
+    this.autoActivation = pending;
+    void pending
+      .finally(() => {
+        if (this.autoActivation === pending) this.autoActivation = undefined;
+      })
+      .catch(() => {});
+    return pending;
+  }
+  private async activateAccountRelayOnce(
+    identity: { origin: string; accountId: string },
+    authorized: () => boolean,
+  ) {
+    clearTimeout(this.autoRetry);
+    const account = this.deps.account;
+    const current = () => {
+      const actual = account?.status();
+      return (
+        authorized() &&
+        actual?.state === "signed-in" &&
+        actual.origin === identity.origin &&
+        actual.account?.id === identity.accountId
+      );
+    };
+    if (!account || !current()) return;
+    const activationGeneration = this.generation;
+    let retryNetworkFailure = false;
+    this.load();
+    this.availabilityMessage = undefined;
+    try {
+      retryNetworkFailure = true;
+      const capabilities = await account.capabilities(identity.origin);
+      retryNetworkFailure = false;
+      if (!current()) return;
+      if (!capabilities.relay?.enabled || capabilities.relay.directoryOrigin !== identity.origin) {
+        this.availabilityMessage = "当前账号服务尚未提供设备中继，请升级服务；本地工作仍可使用。";
+        this.publish("unavailable");
+        throw new Error(this.availabilityMessage);
+      }
+      const environmentId = await environmentIdentity(this.deps.environmentDir);
+      if (!current()) return;
+      const saved = this.registration;
+      if (
+        saved &&
+        (saved.relayOrigin !== identity.origin || saved.accountId !== identity.accountId)
+      ) {
+        // Login has already retired the previous account; never silently overwrite legacy authority.
+        if (!saved.accountId) throw new Error("本机已有独立中继登记，请先移除后使用账号协作。");
+        await this.retireAccountRelay({ origin: saved.relayOrigin, accountId: saved.accountId });
+      }
+      if (!current()) return;
+      if (!this.registration) {
+        this.deps.store.preflight();
+        this.accountEnrollment = identity;
+        const generation = this.generation;
+        const signal = this.operation.signal;
+        retryNetworkFailure = true;
+        const credential = await account.getCredential(identity.origin, identity.accountId, signal);
+        const result = await enrollAccountRelayComputer(
+          {
+            relayOrigin: identity.origin,
+            authorization: "account",
+            name: hostname().slice(0, 80) || "我的电脑",
+          },
+          environmentId,
+          credential,
+          identity.accountId,
+          signal,
+          this.deps.accountRequest ?? createCloudAccountTransport(),
+          true,
+        );
+        retryNetworkFailure = false;
+        if (!current() || generation !== this.generation || signal.aborted) {
+          void this.revokeAccountDevice(result);
+          return;
+        }
+        this.deps.store.save(result);
+        this.registration = result;
+        this.publish("stopped");
+      }
+      if (this.registration.environmentId !== environmentId)
+        throw new Error("本机设备身份与已有登记不匹配。");
+      if (!current()) return;
+      // Do not replace a running LAN/tunnel server when the user explicitly selected that transport.
+      const active = this.deps.host.status();
+      if (active && active.mode !== "relay") {
+        this.availabilityMessage = "账号已登录；当前本地远程通道正在使用，请停止后恢复设备协作。";
+        this.publish("unavailable");
+        throw new Error(this.availabilityMessage);
+      }
+      retryNetworkFailure = true;
+      await this.start({ mode: "relay" });
+    } catch (error) {
+      const unauthorized =
+        this.state === "unauthorized" ||
+        (error instanceof CloudAccountHttpError && [401, 403].includes(error.status));
+      if (current()) {
+        this.availabilityMessage ??=
+          "设备协作暂不可用，请检查服务能力、系统安全存储和网络后恢复连接。";
+        this.publish(
+          this.loadFailed ? "storage-error" : unauthorized ? "unauthorized" : "unavailable",
+        );
+      }
+      if (
+        current() &&
+        !this.disposed &&
+        activationGeneration === this.generation &&
+        retryNetworkFailure &&
+        (!this.registration || this.registration.accountId === identity.accountId) &&
+        !unauthorized &&
+        (!(error instanceof CloudAccountHttpError) ||
+          error.status === 429 ||
+          error.status >= 500) &&
+        !this.loadFailed
+      ) {
+        this.autoRetry = setTimeout(
+          () => {
+            if (current() && !this.disposed)
+              void this.activateAccountRelay(identity, authorized).catch(() => {});
+          },
+          Math.max(1, this.deps.autoRetryDelayMs ?? 30_000),
+        );
+        this.autoRetry.unref?.();
+      }
+      throw error;
+    } finally {
+      if (this.accountEnrollment === identity) this.accountEnrollment = undefined;
+    }
+  }
+  /** Main-only source proof binds dispatch rights to this registered computer as well as the root account. */
+  async accountRelaySource(identity: { origin: string; accountId: string }, signal: AbortSignal) {
+    this.load();
+    const saved = this.registration;
+    if (!saved || saved.relayOrigin !== identity.origin || saved.accountId !== identity.accountId)
+      throw new Error("本机设备尚未获得账号授权，请恢复设备协作。");
+    const sourceDeviceCredential = await this.accountDeviceCredential(signal);
+    signal.throwIfAborted();
+    if (this.registration?.hostId !== saved.hostId) throw new Error("本机设备授权已更换。");
+    return { sourceHostId: saved.hostId, sourceDeviceCredential };
+  }
+  private configureAccountAccess() {
+    const registration = this.registration;
+    if (!registration?.accountId) {
+      this.deps.host.setAccountRelayAccess?.(undefined);
+      return;
+    }
+    this.deps.host.setAccountRelayAccess?.({
+      hostId: registration.hostId,
+      environmentId: registration.environmentId,
+      accountId: registration.accountId,
+      listProjects: this.deps.listProjects ?? (async () => []),
+      redeem: async (handoff) => {
+        const signal = this.operation.signal;
+        const credential = await this.accountDeviceCredential(signal);
+        const value = await (this.deps.accountRequest ?? createCloudAccountTransport())({
+          origin: registration.relayOrigin,
+          path: "/api/v1/remote-hosts/handoffs/redeem",
+          token: credential,
+          body: { handoff, hostId: registration.hostId, environmentId: registration.environmentId },
+          signal,
+        });
+        signal.throwIfAborted();
+        if (this.registration?.hostId !== registration.hostId) throw new Error("设备授权已更换。");
+        return value as any;
+      },
+    });
+  }
   forget(): Promise<void> {
     // A cold process still owns a persisted device grant. Unreadable storage
     // leaves no credential to revoke, but must not prevent deleting local state.
     this.load();
     const previous = this.registration;
     const refresh = this.deviceRefreshResponse;
+    clearTimeout(this.autoRetry);
     this.deviceAuthority++;
     this.deviceRefresh = undefined;
     this.deviceRefreshResponse = undefined;
@@ -223,13 +409,18 @@ export class MobileRemoteController {
       await this.closeTransport();
       if (signal.aborted) throw new Error("远程启动已取消。");
       try {
-        if (mode !== "lan" && !this.deps.passcode.isSet())
+        if (
+          mode !== "lan" &&
+          !(mode === "relay" && this.registration?.accountId) &&
+          !this.deps.passcode.isSet()
+        )
           throw new Error("请先设置访问口令，再开启公网连接。");
         if (mode === "tunnel") {
           await this.deps.binary.ensureBinary();
           if (signal.aborted) throw new Error("远程启动已取消。");
         }
         if (mode === "relay" && !this.registration) throw new Error("请先登记这台电脑。");
+        if (mode === "relay") this.configureAccountAccess();
         await this.deps.host.start(
           mode === "lan"
             ? { host: "lan", port: 0 }
@@ -300,7 +491,10 @@ export class MobileRemoteController {
             finish(new Error("电脑登记已被撤销或替换，请使用新票据重新登记。"));
             // Running connections have already resolved start: retire their Host
             // without queuing behind that earlier start promise.
-            void this.stop().catch(() => this.publish("disconnected"));
+            void this.stop().then(
+              () => this.publish("unauthorized"),
+              () => this.publish("unauthorized"),
+            );
           }
         },
       });
@@ -317,10 +511,12 @@ export class MobileRemoteController {
       this.accountEnrollment?.origin === identity.origin &&
       this.accountEnrollment?.accountId === identity.accountId;
     if (!matches && !enrolling) return Promise.resolve();
+    clearTimeout(this.autoRetry);
     this.deviceAuthority++;
     this.deviceRefresh = undefined;
     this.deviceRefreshResponse = undefined;
     if (enrolling || this.deps.host.status()?.mode === "relay") this.invalidate();
+    this.deps.host.setAccountRelayAccess?.(undefined);
     return this.serial(async () => {
       if (this.deps.host.status()?.mode === "relay") await this.closeTransport();
       if (
@@ -441,6 +637,7 @@ export class MobileRemoteController {
     }
   }
   stop(): Promise<void> {
+    clearTimeout(this.autoRetry);
     this.invalidate();
     return this.serial(async () => {
       await this.closeTransport();

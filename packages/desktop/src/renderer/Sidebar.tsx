@@ -91,6 +91,7 @@ interface SidebarProps {
   onOpenProjectConfig: (id: string) => void;
   onOpenSettingsPage: () => void;
   onOpenAccountSettings: () => void;
+  onOpenExecutionDevices?: () => void;
   onOpenPetPage: () => void;
   onTogglePetWidget: () => void;
   onLoadMoreSessionHistory: () => void;
@@ -161,6 +162,7 @@ export function Sidebar({
   onOpenProjectConfig,
   onOpenSettingsPage,
   onOpenAccountSettings,
+  onOpenExecutionDevices,
   onOpenPetPage,
   onTogglePetWidget,
   onLoadMoreSessionHistory,
@@ -534,6 +536,15 @@ export function Sidebar({
       </div>
 
       <div className="shrink-0 border-t border-border/70 bg-card/40 px-2 py-2">
+        {onOpenExecutionDevices && (
+          <Button
+            variant="ghost"
+            className="mb-1 w-full justify-start"
+            onClick={onOpenExecutionDevices}
+          >
+            执行电脑 / 设备
+          </Button>
+        )}
         <div className="flex items-center gap-1.5">
           <div className="min-w-0 flex-1">
             <AccountSidebarEntry

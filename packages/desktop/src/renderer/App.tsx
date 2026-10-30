@@ -6,6 +6,7 @@ import { emptyComposerMetadata, type ComposerMetadata } from "./chat/composerMet
 import { useProjectRuntimeSelection } from "./projects/useProjectRuntimeSelection";
 import { useCloudProjectRuntime } from "./runtime/useCloudProjectRuntime";
 import { CloudProjectWorkspace } from "./runtime/CloudProjectWorkspace";
+import { AccountDeviceWorkspace } from "./runtime/AccountDeviceWorkspace";
 import type { ContextPackageCreatedOptions } from "./MessageStream";
 import { Sidebar } from "./app/AppSidebar";
 import { ResponsiveSidebar, SIDEBAR_NAVIGATION_ID } from "./app/ResponsiveSidebar";
@@ -194,6 +195,8 @@ function PageLoading({ label }: { label: string }) {
 }
 
 function App() {
+  const [executionDevicesOpen, setExecutionDevicesOpen] = useState(false);
+  const [executionDevicesMounted, setExecutionDevicesMounted] = useState(false);
   useThemeAudio();
   const toast = useToast();
   const confirm = useOptionalConfirm();
@@ -2290,6 +2293,12 @@ function App() {
                 });
               }}
               onOpenSettingsPage={() => navigateFromSidebar(() => setViewMode("settings_page"))}
+              onOpenExecutionDevices={() =>
+                navigateFromSidebar(() => {
+                  setExecutionDevicesMounted(true);
+                  setExecutionDevicesOpen(true);
+                })
+              }
               onOpenAccountSettings={() =>
                 navigateFromSidebar(() => {
                   setSettingsInitialModule("account");
@@ -2862,6 +2871,12 @@ function App() {
           tool card's expandable body. */}
       </div>
 
+      {executionDevicesMounted && (
+        <AccountDeviceWorkspace
+          open={executionDevicesOpen}
+          onClose={() => setExecutionDevicesOpen(false)}
+        />
+      )}
       <PetPeekHost
         peeks={petPeeks}
         onAction={handlePetPeekAction}
