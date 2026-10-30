@@ -103,6 +103,7 @@ export interface OrchestratorCtx {
     title: string;
     prompt: string;
     clientMessageId?: string;
+    permissionMode?: PermissionMode;
   }) => void;
   broadcastApprovalResolved: (params: {
     requestId: string;
@@ -268,7 +269,7 @@ export async function handleClientEvent(
   const commandSelection = ctx.externalCommands?.observe(event);
   if (ctx.outputRecovery) {
     const recovery = ctx.outputRecovery.handle(event);
-    if (event.type === "session.select" && event.recoveryId) {
+    if ((event.type === "session.select" && event.recoveryId) || event.type === "session.history") {
       // A later selection/create/room transition can revoke this grant while
       // authority awaits. It must not write the retired device selection back.
       if (!(await recovery)) return;
@@ -387,6 +388,7 @@ export async function handleClientEvent(
       const sessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
       nextState = {
         ...st,
+        permissionMode: event.permissionMode ?? st.permissionMode ?? "default",
         sessionId,
         selectedSessionId: sessionId,
         selectedCwd: selection.cwd,
@@ -417,7 +419,8 @@ export async function handleClientEvent(
     Object.assign(st, nextState);
     const sessionId = nextState.sessionId!;
     ctx.mobileSessionCwds.set(sessionId, st.selectedCwd ?? null);
-    if (st.permissionMode) ctx.mobilePermissionModes.set(sessionId, st.permissionMode);
+    ctx.mobilePermissionModes.set(sessionId, st.permissionMode!);
+    ctx.broadcastDesktopPermissionMode({ sessionId, mode: st.permissionMode! });
     reply({
       type: "chat.accepted",
       ...(event.clientRequestId ? { clientRequestId: event.clientRequestId } : {}),
@@ -458,6 +461,13 @@ export async function handleClientEvent(
       });
       return;
     }
+    // Capture once: preparing the producer awaits I/O and can overlap an older
+    // Desktop permission snapshot. The actual turn must use the phone's choice.
+    const permissionMode =
+      event.permissionMode ??
+      ctx.mobilePermissionModes.get(sessionId) ??
+      st.permissionMode ??
+      "default";
     const external =
       !!requestedRuntime ||
       (ctx.externalCommands?.isExternal(sessionId, event.viewerId, sessionId === st.sessionId) ??
@@ -467,7 +477,7 @@ export async function handleClientEvent(
       try {
         externalTarget = await ctx.externalCommands!.prepare(event.viewerId, deviceId, sessionId, {
           modelKey: event.modelKey,
-          permissionMode: ctx.mobilePermissionModes.get(sessionId) ?? st.permissionMode,
+          permissionMode,
         });
       } catch (error) {
         if (event.viewerId)
@@ -481,10 +491,8 @@ export async function handleClientEvent(
       }
     }
     const fallbackCwd = externalTarget?.cwd ?? ctx.effectiveMobileRunCwd(st);
-    if (st.permissionMode && !ctx.mobilePermissionModes.has(sessionId)) {
-      ctx.mobilePermissionModes.set(sessionId, st.permissionMode);
-    }
-    const permissionMode = ctx.mobilePermissionModes.get(sessionId);
+    ctx.mobilePermissionModes.set(sessionId, permissionMode);
+    ctx.broadcastDesktopPermissionMode({ sessionId, mode: permissionMode });
     const text = typeof event.text === "string" ? event.text.trim() : "";
     const runId = `mobile-run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     const dispatched = await dispatchMobileChatTurn({
@@ -546,6 +554,7 @@ export async function handleClientEvent(
       title,
       prompt: text,
       clientMessageId: dispatched.clientMessageId,
+      permissionMode,
     });
     if (!external && event.viewerId && deviceId)
       await ctx.externalCommands?.observe({
@@ -783,6 +792,7 @@ export async function handleClientEvent(
     return;
   }
   if (event.type === "permission.setMode") {
+    st.permissionMode = event.mode;
     const sessionId = event.sessionId ?? st.selectedSessionId;
     if (sessionId) {
       ctx.mobilePermissionModes.set(sessionId, event.mode);

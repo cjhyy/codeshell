@@ -18,6 +18,8 @@ test.each([false, true])(
     });
     let physical = 0;
     const replies: unknown[] = [];
+    const permissionBroadcasts: Parameters<OrchestratorCtx["broadcastDesktopPermissionMode"]>[0][] =
+      [];
     const bridge = {
       getLastRunContext: () => ({}),
       subscribeOutbound: () => () => {},
@@ -65,8 +67,10 @@ test.each([false, true])(
           }
         : undefined,
       broadcastMobileSession() {},
+      broadcastDesktopPermissionMode: (mode) => permissionBroadcasts.push(mode),
       settleMobileUploadClaims: async () => {},
-    } as unknown as OrchestratorCtx;
+    } satisfies Pick<OrchestratorCtx, "broadcastDesktopPermissionMode"> &
+      Record<string, unknown> as unknown as OrchestratorCtx;
     const pending = handleClientEvent(ctx, {
       type: "chat.send",
       sessionId,
@@ -81,6 +85,7 @@ test.each([false, true])(
     resume("/fixture");
     await pending;
     expect(physical).toBe(0);
+    expect(permissionBroadcasts).toEqual([{ sessionId, mode: "default" }]);
     expect(replies).toEqual([
       expect.objectContaining({ type: "error", clientMessageId: "old-intent" }),
     ]);

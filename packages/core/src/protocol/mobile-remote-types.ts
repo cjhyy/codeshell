@@ -113,6 +113,8 @@ export type MobileClientEvent =
       modelKey?: string;
       /** Observation source label only; no storage or workspace authority. */
       modelTraceSource?: string;
+      /** The permission choice displayed when this submission was made. */
+      permissionMode?: PermissionMode;
       text: string;
       sessionId?: string;
       clientMessageId?: string;
@@ -170,6 +172,8 @@ export type MobileClientEvent =
     }
   | {
       type: "session.create";
+      /** Explicit fresh-session intent, including the initial default. */
+      permissionMode?: PermissionMode;
       /** Optional browser request correlation; echoed with the creation acknowledgement. */
       clientRequestId?: string;
       /** Stable V2 project identity. null explicitly selects the no-repo workspace. */
