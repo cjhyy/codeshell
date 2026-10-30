@@ -12,6 +12,12 @@ import { computeEffectiveDisabledLists, getMergedCatalog } from "@cjhyy/code-she
 import { withModelTraceContext } from "@cjhyy/code-shell-core/internal";
 
 import { probeConfiguredModel } from "@cjhyy/code-shell-host";
+import {
+  publicModelPresets,
+  publicParameterValues,
+  validateParameterPatch,
+  unavailableParameters,
+} from "./model-parameter-metadata.js";
 
 const ROOT = "/api/v1/configuration";
 const MAX_BODY_BYTES = 64 * 1024;
@@ -98,6 +104,7 @@ export function createHubConfiguration(options: HubConfigurationOptions) {
             protocol: template?.protocol,
             adapterKind: template?.adapterKind,
             defaultBaseUrl: template?.defaultBaseUrl,
+            modelPresets: template?.modelPresets,
           },
         }),
       )
@@ -172,6 +179,18 @@ export function createHubConfiguration(options: HubConfigurationOptions) {
           ),
           hasApiKey: Boolean(credential?.apiKey),
           needsKey: template?.needsKey !== false,
+          ...(connection.tag === "text"
+            ? {
+                paramValues: publicParameterValues(
+                  template?.modelPresets?.find((preset) => preset.value === connection.model),
+                  connection.paramValues,
+                ),
+                unavailableParameters: unavailableParameters(
+                  template?.modelPresets?.find((preset) => preset.value === connection.model),
+                  connection.paramValues,
+                ),
+              }
+            : {}),
         };
       }),
       catalog: catalog
@@ -182,6 +201,7 @@ export function createHubConfiguration(options: HubConfigurationOptions) {
           adapterKind: entry.adapterKind,
           defaultBaseUrl: displayUrl(entry.defaultBaseUrl),
           needsKey: entry.needsKey !== false,
+          modelPresets: publicModelPresets(entry),
         })),
       skills: allSkills.map((skill) => ({
         name: skill.name,
@@ -242,7 +262,15 @@ export function createHubConfiguration(options: HubConfigurationOptions) {
   }
 
   function updateConnection(input: JsonObject): void {
-    knownFields(input, ["id", "catalogId", "model", "baseUrl", "apiKey", "expectedRevision"]);
+    knownFields(input, [
+      "id",
+      "catalogId",
+      "model",
+      "baseUrl",
+      "apiKey",
+      "expectedRevision",
+      "paramValues",
+    ]);
     const id = boundedString(input.id, "id", 128);
     const catalogId = boundedString(input.catalogId, "catalogId", 128);
     const model = boundedString(input.model, "model", 256);
@@ -258,6 +286,25 @@ export function createHubConfiguration(options: HubConfigurationOptions) {
       const effective = settingsManager().get();
       checkConnectionRevision(input, id, effective);
       const existing = effective.modelConnections.find((entry) => entry.id === id);
+      if (
+        input.paramValues !== undefined &&
+        (existing ? typeof input.expectedRevision !== "string" : input.expectedRevision !== null)
+      )
+        throw new HubConfigurationError(409, "请载入最新连接后再保存模型参数。");
+      const parameters =
+        input.paramValues === undefined
+          ? undefined
+          : validateParameterPatch(
+              template.modelPresets?.find((preset) => preset.value === model),
+              input.paramValues,
+            );
+      if (input.paramValues !== undefined && parameters === undefined)
+        throw new HubConfigurationError(400, "模型参数不受支持或超出允许范围，请刷新后检查。");
+      const mergedParameters = { ...existing?.paramValues };
+      for (const [key, value] of Object.entries(parameters ?? {})) {
+        if (value === null) delete mergedParameters[key];
+        else mergedParameters[key] = value;
+      }
       if (existing && (existing.tag !== "text" || existing.catalogId !== catalogId)) {
         throw new HubConfigurationError(400, "existing connection provider cannot be changed");
       }
@@ -295,6 +342,7 @@ export function createHubConfiguration(options: HubConfigurationOptions) {
         model,
         ...(credentialId ? { credentialId } : {}),
         ...(baseUrl !== undefined ? { baseUrl: baseUrl || template.defaultBaseUrl } : {}),
+        ...(parameters !== undefined ? { paramValues: mergedParameters } : {}),
       };
       current.modelConnections = [
         ...effective.modelConnections.filter((entry) => entry.id !== id),

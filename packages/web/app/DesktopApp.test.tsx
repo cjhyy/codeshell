@@ -10,7 +10,7 @@ import { getApiWorkspace } from "./api-context.js";
 import { Workbench } from "./Workbench.js";
 import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopControls.js";
 import { OutputHistoryRecovery } from "../src/components/OutputHistoryRecovery.js";
-import { DesktopModelPicker } from "./DesktopModelPicker.js";
+import { DesktopModelPicker, CURRENT_NATIVE_MODEL } from "./DesktopModelPicker.js";
 import { HubPanels } from "./HubPanels.js";
 import { PanelHost } from "./PanelHost.js";
 
@@ -508,6 +508,7 @@ describe("Desktop workbench controller", () => {
     expect(sent).toEqual([
       {
         text: "first task",
+        permissionMode: "default",
         attachments: [],
         onUncertain: expect.any(Function),
         onRetired: expect.any(Function),
@@ -1085,6 +1086,336 @@ function modelPicker(controller: ReturnType<typeof useDesktopController>) {
     controller.modelSelector as React.ReactElement<React.ComponentProps<typeof DesktopModelPicker>>
   ).props;
 }
+
+test("native choices keep connection identity, leave old model labels truthful, and freeze retry intent", async () => {
+  ensureMiniDom();
+  let currentConfiguration = {
+    ...configuration("/owned"),
+    defaults: { text: "first" },
+    catalog: [
+      {
+        id: "fixture",
+        displayName: "Owned provider",
+        adapterKind: "openai",
+        defaultBaseUrl: "",
+        needsKey: true,
+      },
+    ],
+    connections: ["first", "second"].map((id) => ({
+      id,
+      catalogId: "fixture",
+      tag: "text",
+      model: "same-model",
+      baseUrl: "",
+      hasApiKey: true,
+      needsKey: true,
+    })),
+  };
+  globalThis.fetch = (async () => Response.json(currentConfiguration)) as typeof fetch;
+  const sent: Array<Record<string, unknown>> = [];
+  let reloaded = 0;
+  let app = remoteApp({
+    nativeModelSelection: true,
+    reloadHistory: () => {
+      reloaded++;
+    },
+    activeSessionId: "native-saved",
+    activeCwd: "/owned",
+    permissionMode: "default",
+    sessions: [
+      {
+        id: "native-saved",
+        title: "Owned",
+        cwd: "/owned",
+        updatedAt: 1,
+        provider: "actual-provider",
+        model: "codex/custom-native",
+      },
+    ],
+    sendChat: async (input) => {
+      sent.push(input);
+      input.onUncertain?.("owned-intent");
+      return false;
+    },
+  });
+  const hook = await renderHook(() => useDesktopController(app, session, noop));
+  try {
+    expect(modelPicker(hook.result.current).value).toBe(CURRENT_NATIVE_MODEL);
+    expect(modelPicker(hook.result.current).currentNativeLabel).toBe(
+      "actual-provider · codex/custom-native",
+    );
+    expect(modelPicker(hook.result.current).nativeChoices?.map((item) => item.value)).toEqual([
+      "native:first",
+      "native:second",
+    ]);
+    await act(async () => {
+      modelPicker(hook.result.current).onChange("native:second");
+      hook.result.current.setDraft("owned native task");
+    });
+    expect(sent).toEqual([]);
+    expect(app.permissionMode).toBe("default");
+    await act(async () => {
+      hook.result.current.send({ modelTraceSource: "owned-trace" });
+      await flushMicrotasks();
+    });
+    expect(sent[0]).toMatchObject({ nativeConnectionId: "second", permissionMode: "default" });
+    expect(sent[0].modelKey).toBeUndefined();
+    app = { ...app, permissionMode: "bypassPermissions" };
+    currentConfiguration = {
+      ...currentConfiguration,
+      defaults: { text: "first" },
+      connections: currentConfiguration.connections.slice(0, 1),
+    };
+    await hook.rerender();
+    await act(async () => {
+      hook.result.current.refreshConfiguration();
+      await flushMicrotasks();
+    });
+    await act(async () => modelPicker(hook.result.current).onChange("native:first"));
+    expect(modelPicker(hook.result.current).value).toBe("native:second");
+    await act(async () => {
+      hook.result.current.send();
+      await flushMicrotasks();
+    });
+    expect(sent[1]).toMatchObject({
+      nativeConnectionId: "second",
+      permissionMode: "default",
+      clientMessageId: "owned-intent",
+      modelTraceSource: "owned-trace",
+    });
+    expect(hook.result.current.draft).toBe("owned native task");
+    const reload = workbenchElements(hook.result.current.chatControls).find(
+      (element) => element.type === "button" && element.props.children === "重新载入会话核对记录",
+    );
+    expect(reload).toBeDefined();
+    await act(async () => reload!.props.onClick());
+    expect(reloaded).toBe(1);
+    expect(sent).toHaveLength(2);
+    expect(hook.result.current.draft).toBe("owned native task");
+    app = { ...app, nativeModelSelection: false };
+    await hook.rerender();
+    await act(async () => expect(hook.result.current.send()).toBe(false));
+    expect(sent).toHaveLength(2);
+    expect(hook.result.current.uncertain).toBe(true);
+    expect(hook.result.current.error).toContain("不支持这项原生模型选择");
+    expect(hook.result.current.draft).toBe("owned native task");
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test("native choices wait for their current workspace snapshot after creation ACK and ignore old callbacks", async () => {
+  ensureMiniDom();
+  const snapshot = (cwd: string) => ({
+    ...configuration(cwd),
+    defaults: { text: "shared-id" },
+    catalog: [
+      {
+        id: "fixture",
+        displayName: "Owned",
+        adapterKind: "openai",
+        defaultBaseUrl: "",
+        needsKey: false,
+      },
+    ],
+    connections: [
+      {
+        id: "shared-id",
+        catalogId: "fixture",
+        tag: "text",
+        model: cwd === "/A" ? "custom-A" : "custom-B",
+        baseUrl: "",
+        hasApiKey: false,
+        needsKey: false,
+      },
+    ],
+  });
+  const lateA = deferred<ReturnType<typeof snapshot>>();
+  const pendingB = deferred<ReturnType<typeof snapshot>>();
+  let holdA = false;
+  globalThis.fetch = (async (_path, init) => {
+    const cwd = decodeURIComponent(new Headers(init?.headers).get("X-CodeShell-Workspace") ?? "");
+    return Response.json(
+      cwd === "/B" ? await pendingB.promise : holdA ? await lateA.promise : snapshot("/A"),
+    );
+  }) as typeof fetch;
+  const sends: unknown[] = [];
+  let app = remoteApp({
+    nativeModelSelection: true,
+    activeSessionId: "A",
+    activeCwd: "/A",
+    projects: [
+      { id: "A", path: "/A", name: "A" },
+      { id: "B", path: "/B", name: "B" },
+    ],
+    sendChat: async (input) => {
+      sends.push(input);
+      return true;
+    },
+  });
+  const hook = await renderHook(() => useDesktopController(app, session, noop));
+  try {
+    const stalePicker = modelPicker(hook.result.current);
+    expect(stalePicker.nativeChoices?.[0].label).toBe("custom-A · shared-id");
+    holdA = true;
+    await act(async () => {
+      void hook.result.current.refreshConfiguration();
+      await flushMicrotasks();
+    });
+    await act(async () => hook.result.current.selectProject!("B"));
+    app = { ...app, activeSessionId: "B-new", activeCwd: "/B" };
+    await hook.rerender();
+    expect(hook.result.current.configuration).toBeNull();
+    expect(modelPicker(hook.result.current).nativeChoices).toEqual([]);
+    await act(async () => {
+      hook.result.current.setDraft("B-only draft");
+      stalePicker.onChange("native:shared-id");
+      modelPicker(hook.result.current).onChange("native:shared-id");
+    });
+    expect(modelPicker(hook.result.current).value).toBe("");
+    await act(async () => {
+      lateA.resolve(snapshot("/A"));
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.configuration).toBeNull();
+    expect(modelPicker(hook.result.current).nativeChoices).toEqual([]);
+    await act(async () => {
+      pendingB.resolve(snapshot("/B"));
+      await flushMicrotasks();
+    });
+    expect(modelPicker(hook.result.current).nativeChoices?.[0].label).toBe("custom-B · shared-id");
+    await act(async () => modelPicker(hook.result.current).onChange("native:shared-id"));
+    expect(sends).toEqual([]);
+    expect(hook.result.current.draft).toBe("B-only draft");
+    await act(async () => {
+      hook.result.current.send();
+      await flushMicrotasks();
+    });
+    expect(sends).toHaveLength(1);
+    expect(sends[0]).toMatchObject({ nativeConnectionId: "shared-id", permissionMode: "default" });
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test("choosing a native connection from an external session requires a fresh session ACK and preserves the draft", async () => {
+  ensureMiniDom();
+  globalThis.fetch = (async () =>
+    Response.json({
+      ...configuration("/owned"),
+      defaults: { text: "first" },
+      catalog: [
+        {
+          id: "fixture",
+          displayName: "Owned",
+          adapterKind: "openai",
+          defaultBaseUrl: "",
+          needsKey: false,
+        },
+      ],
+      connections: [
+        {
+          id: "first",
+          catalogId: "fixture",
+          tag: "text",
+          model: "native-model",
+          baseUrl: "",
+          hasApiKey: false,
+          needsKey: false,
+        },
+      ],
+    })) as typeof fetch;
+  const sent: Array<Record<string, unknown>> = [],
+    creates: unknown[] = [];
+  let app = remoteApp({
+    nativeModelSelection: true,
+    activeSessionId: "external",
+    activeCwd: "/owned",
+    runtimeModels,
+    sessions: [
+      {
+        id: "external",
+        title: "External",
+        cwd: "/owned",
+        updatedAt: 1,
+        provider: "codex",
+        model: "fixture",
+      },
+    ],
+    newSession: (target) => creates.push(target),
+    sendChat: async (input) => {
+      sent.push(input);
+      return true;
+    },
+  });
+  const hook = await renderHook(() => useDesktopController(app, session, noop));
+  try {
+    await act(async () => {
+      hook.result.current.setDraft("keep across producer change");
+      modelPicker(hook.result.current).onChange("native:first");
+    });
+    expect(creates).toHaveLength(1);
+    expect(hook.result.current.send()).toBe(false);
+    expect(sent).toEqual([]);
+    app = { ...app, activeSessionId: "fresh-native", sessions: [] };
+    await hook.rerender();
+    expect(hook.result.current.draft).toBe("keep across producer change");
+    await act(async () => {
+      hook.result.current.send();
+      await flushMicrotasks();
+    });
+    expect(sent[0]).toMatchObject({ nativeConnectionId: "first", permissionMode: "default" });
+    expect(sent[0].modelKey).toBeUndefined();
+    expect(modelPicker(hook.result.current).value).toBe("");
+    // ACK does not fabricate model metadata. A fresh authoritative row is what
+    // makes the actual provider/model visible, including after a new mount.
+    app = {
+      ...app,
+      sessions: [
+        {
+          id: "fresh-native",
+          title: "Owned",
+          cwd: "/owned",
+          updatedAt: 2,
+          provider: "resolved-provider",
+          model: "resolved-custom-model",
+        },
+      ],
+    };
+    await hook.rerender();
+    expect(modelPicker(hook.result.current).value).toBe(CURRENT_NATIVE_MODEL);
+    expect(modelPicker(hook.result.current).currentNativeLabel).toBe(
+      "resolved-provider · resolved-custom-model",
+    );
+    const remounted = await renderHook(() => useDesktopController(app, session, noop));
+    try {
+      expect(modelPicker(remounted.result.current).value).toBe(CURRENT_NATIVE_MODEL);
+      expect(modelPicker(remounted.result.current).currentNativeLabel).toBe(
+        "resolved-provider · resolved-custom-model",
+      );
+      expect(sent).toHaveLength(1);
+    } finally {
+      await remounted.unmount();
+    }
+    app = { ...app, chat: { ...app.chat, run: "running" } };
+    await hook.rerender();
+    expect(modelPicker(hook.result.current).disabled).toBe(true);
+    await act(async () => modelPicker(hook.result.current).onChange("native:first"));
+    expect(modelPicker(hook.result.current).value).toBe(CURRENT_NATIVE_MODEL);
+    app = { ...app, chat: { ...app.chat, run: "idle" } };
+    await hook.rerender();
+    await act(async () => hook.result.current.setDraft("ordinary follow-up"));
+    await act(async () => {
+      hook.result.current.send();
+      await flushMicrotasks();
+    });
+    expect(sent).toHaveLength(2);
+    expect(sent[1].nativeConnectionId).toBeUndefined();
+    expect(sent[1].modelKey).toBeUndefined();
+  } finally {
+    await hook.unmount();
+  }
+});
 
 test("external model selection waits for creation and follows the newly accepted session", async () => {
   const sent: Array<Record<string, unknown>> = [];

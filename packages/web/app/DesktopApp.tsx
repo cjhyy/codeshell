@@ -19,7 +19,13 @@ import { SessionDrafts } from "./drafts.js";
 import { sessionTitle } from "./chat.js";
 import { Workbench } from "./Workbench.js";
 import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopControls.js";
-import { DesktopModelPicker, desktopRuntimeModel } from "./DesktopModelPicker.js";
+import {
+  DesktopModelPicker,
+  desktopRuntimeModel,
+  CURRENT_NATIVE_MODEL,
+  nativeConnectionId,
+  nativeModelChoices,
+} from "./DesktopModelPicker.js";
 import type { WorkbenchController } from "./workbench-types.js";
 import { DesktopAccessChallenge } from "./DesktopAccessChallenge.js";
 import { DesktopPairingNotice } from "./DesktopPairingNotice.js";
@@ -188,7 +194,14 @@ export function useDesktopController(
     setApiWorkspace(workspaceCwd ?? undefined);
   }, [workspaceCwd]);
   React.useEffect(() => () => setApiWorkspace(undefined), []);
-  const [configuration, setConfiguration] = React.useState<HubConfiguration | null>(null);
+  const [configurationSnapshot, setConfigurationSnapshot] = React.useState<{
+    cwd: string | null;
+    value: HubConfiguration;
+  } | null>(null);
+  // Do not expose the previous project's choices even during the render before
+  // its passive refresh effect runs. Response paths may be normalized by Host.
+  const configuration =
+    configurationSnapshot?.cwd === workspaceCwd ? configurationSnapshot.value : null;
   const [configurationVersion, setConfigurationVersion] = React.useState(0);
   const [sessionsVersion, setSessionsVersion] = React.useState(0);
   const configurationRequest = React.useRef(0);
@@ -216,7 +229,7 @@ export function useDesktopController(
         request === configurationRequest.current &&
         workspaceRef.current === cwd
       ) {
-        setConfiguration(next);
+        setConfigurationSnapshot({ cwd, value: next });
         setConfigurationVersion((value) => value + 1);
       }
     } catch (error) {
@@ -225,7 +238,7 @@ export function useDesktopController(
     }
   }, [session]);
   React.useEffect(() => {
-    setConfiguration(null);
+    setConfigurationSnapshot(null);
     void refreshConfiguration();
   }, [workspaceCwd, refreshConfiguration]);
   React.useEffect(() => {
@@ -256,9 +269,9 @@ export function useDesktopController(
   const localFiles = React.useRef(new Map<string, File>());
   const draftWorkspaces = React.useRef(new Map<string, string | null>());
   const modelChoices = React.useRef(new Map<string, string>());
-  const activeModelMetadata = React.useRef<{ sessionId: string; model: string } | undefined>(
-    undefined,
-  );
+  const activeModelMetadata = React.useRef<
+    { sessionId: string; model: string; nativeLabel?: string } | undefined
+  >(undefined);
   const [draftRevision, setDraftRevision] = React.useState(0);
   const [newDraftId, setNewDraftId] = React.useState(() => `desktop-new-${browserId()}`);
   const activeId = app.activeRoom
@@ -284,7 +297,17 @@ export function useDesktopController(
   /** Per draft: a sent message whose acceptance never arrived. Retrying the
    *  unchanged draft reuses its intent ID so the host cannot run it twice. */
   const uncertainIntents = React.useRef(
-    new Map<string, { clientMessageId: string; revision: number }>(),
+    new Map<
+      string,
+      {
+        clientMessageId: string;
+        revision: number;
+        modelKey?: string;
+        nativeConnectionId?: string;
+        modelTraceSource?: string;
+        permissionMode: RemoteApp["permissionMode"];
+      }
+    >(),
   );
   const replacementMigration = React.useRef<{
     fromSessionId: string;
@@ -302,15 +325,24 @@ export function useDesktopController(
   const draft = drafts.current.get(activeId);
   const activeMetadata = app.sessions.find((item) => item.id === activeId);
   if (activeMetadata) {
+    const external = desktopRuntimeModel(activeMetadata);
     activeModelMetadata.current = {
       sessionId: activeId,
-      model: desktopRuntimeModel(activeMetadata),
+      model: external || (activeMetadata.model ? CURRENT_NATIVE_MODEL : ""),
+      ...(!external && activeMetadata.model
+        ? {
+            nativeLabel: [activeMetadata.provider, activeMetadata.model]
+              .filter(Boolean)
+              .join(" · "),
+          }
+        : {}),
     };
   }
   // Refreshing page one does not change the producer of a selected older row.
   const persistedModel =
     activeModelMetadata.current?.sessionId === activeId ? activeModelMetadata.current.model : "";
   const selectedModel = modelChoices.current.get(activeId) ?? persistedModel;
+  const nativeChoices = app.nativeModelSelection ? nativeModelChoices(configuration) : [];
   const changed = () => setDraftRevision((value) => value + 1);
   React.useLayoutEffect(() => {
     const replacement = app.emptySessionReplacement;
@@ -437,6 +469,7 @@ export function useDesktopController(
     )
       return;
     uncertainIntents.current.delete(activeId);
+    if (intent.nativeConnectionId) modelChoices.current.delete(activeId);
     if (drafts.current.get(activeId).revision === intent.revision) drafts.current.take(activeId);
     changed();
     setError("");
@@ -563,8 +596,47 @@ export function useDesktopController(
         : null;
     pendingNewSend.current = pending;
     const retry = uncertainIntents.current.get(id);
-    uncertainIntents.current.delete(id);
     const retryId = retry?.revision === current.revision ? retry.clientMessageId : undefined;
+    const connectionId = nativeConnectionId(selectedModel);
+    if ((retryId ? retry?.nativeConnectionId : connectionId) && !app.nativeModelSelection) {
+      setError("当前桌面连接不支持这项原生模型选择。草稿和原发送意图已保留，请重新连接后再试。");
+      return false;
+    }
+    if (
+      !retryId &&
+      connectionId &&
+      !nativeChoices.some((choice) => choice.value === selectedModel)
+    ) {
+      setError("此模型连接已不可用，请刷新后重新选择。草稿仍保留。");
+      return false;
+    }
+    const selection: {
+      modelKey?: string;
+      nativeConnectionId?: string;
+      modelTraceSource?: string;
+      permissionMode: RemoteApp["permissionMode"];
+    } =
+      retryId && retry
+        ? {
+            modelKey: retry.modelKey,
+            nativeConnectionId: retry.nativeConnectionId,
+            ...(retry.modelTraceSource ? { modelTraceSource: retry.modelTraceSource } : {}),
+            permissionMode: retry.permissionMode,
+          }
+        : {
+            ...(connectionId
+              ? { nativeConnectionId: connectionId }
+              : selectedModel && selectedModel !== CURRENT_NATIVE_MODEL
+                ? { modelKey: selectedModel }
+                : app.nativeModelSelection &&
+                    modelChoices.current.has(id) &&
+                    configuration?.defaults.text
+                  ? { nativeConnectionId: configuration.defaults.text }
+                  : {}),
+            permissionMode: app.permissionMode,
+            ...(options?.modelTraceSource ? { modelTraceSource: options.modelTraceSource } : {}),
+          };
+    uncertainIntents.current.delete(id);
     const submitted = drafts.current.take(id);
     changed();
     sendingRef.current = id;
@@ -578,8 +650,7 @@ export function useDesktopController(
       .sendChat({
         text: submitted.draft.text,
         attachments,
-        ...(selectedModel && !app.activeRoomId ? { modelKey: selectedModel } : {}),
-        ...(options?.modelTraceSource ? { modelTraceSource: options.modelTraceSource } : {}),
+        ...(!app.activeRoomId ? selection : {}),
         ...(retryId ? { clientMessageId: retryId } : {}),
         onUncertain: (clientMessageId) => {
           uncertainId = clientMessageId;
@@ -602,6 +673,7 @@ export function useDesktopController(
             uncertainIntents.current.set(id, {
               clientMessageId: uncertainId,
               revision: drafts.current.get(id).revision,
+              ...selection,
             });
           if (mounted.current) {
             changed();
@@ -616,6 +688,10 @@ export function useDesktopController(
             );
           }
         } else {
+          // A chosen connection is a next-turn intent, not proof of the model
+          // that ran. After acceptance, the label follows Host session metadata.
+          if (selection.nativeConnectionId && modelChoices.current.get(id) === selectedModel)
+            modelChoices.current.delete(id);
           for (const file of submitted.draft.files) localFiles.current.delete(file.id);
           if (pending) pending.settled = true;
           if (mounted.current) changed();
@@ -706,6 +782,9 @@ export function useDesktopController(
     sessionTitle(app.chat, activeId);
   const chooseRuntimeModel = (modelKey: string, forceCreation = false) => {
     if (
+      workspaceRef.current !== workspaceCwd ||
+      activeIdRef.current !== activeId ||
+      appRef.current.activeRoomId ||
       app.status !== "online" ||
       running ||
       sendingRef.current ||
@@ -714,7 +793,16 @@ export function useDesktopController(
       uncertainIntents.current.has(activeId)
     )
       return;
-    if (modelKey && !app.runtimeModels?.some((model) => model.key === modelKey)) return;
+    if (!app.nativeModelSelection && !modelKey && persistedModel === CURRENT_NATIVE_MODEL) {
+      setError("当前桌面连接不支持切换原生模型，请更新桌面端后重试。");
+      return;
+    }
+    if (
+      modelKey &&
+      !app.runtimeModels?.some((model) => model.key === modelKey) &&
+      !nativeChoices.some((model) => model.value === modelKey)
+    )
+      return;
     if (emptyReplacement) {
       modelChoices.current.set(activeId, modelKey);
       changed();
@@ -723,7 +811,10 @@ export function useDesktopController(
     if (
       forceCreation ||
       (modelKey && !app.activeSessionId && !pendingCreate.current) ||
-      (!modelKey && (persistedModel || (selectedModel && app.chat.items.length)))
+      ((!modelKey || nativeConnectionId(modelKey)) &&
+        (desktopRuntimeModel(activeMetadata) ||
+          /^(codex|claude-code)\//.test(persistedModel) ||
+          (/^(codex|claude-code)\//.test(selectedModel) && app.chat.items.length)))
     ) {
       // Returning from an external producer to Core creates an explicit
       // native session; omitting modelKey must never silently reuse the CLI.
@@ -828,6 +919,17 @@ export function useDesktopController(
     composerControls: <DesktopChatControls app={actions} />,
     chatControls: (
       <>
+        {app.activeSessionId && uncertainIntents.current.has(activeId) && app.reloadHistory ? (
+          <button
+            className="library-button"
+            disabled={
+              app.status !== "online" || running || app.loading.sessionHistory || sendingId !== null
+            }
+            onClick={app.reloadHistory}
+          >
+            重新载入会话核对记录
+          </button>
+        ) : null}
         {app.activeSessionId &&
         !app.activeRoomId &&
         app.getSessionOutputRecoveryPlan &&
@@ -854,11 +956,18 @@ export function useDesktopController(
       <DesktopModelPicker
         key={`${workspaceKey}:${activeId}`}
         models={app.runtimeModels ?? []}
+        nativeChoices={nativeChoices}
+        currentNativeLabel={
+          activeModelMetadata.current?.sessionId === activeId
+            ? activeModelMetadata.current.nativeLabel
+            : undefined
+        }
         value={selectedModel}
         defaultLabel={
           configuration?.connections.find((item) => item.id === configuration.defaults.text)
             ?.model || "默认模型"
         }
+        defaultDisabled={!app.nativeModelSelection && persistedModel === CURRENT_NATIVE_MODEL}
         loading={app.runtimeModelsLoading}
         error={app.runtimeModelsError}
         disabled={

@@ -120,13 +120,14 @@ async function visibleFocus(locator) {
     JSON.stringify(value),
   );
 }
-async function mount(config = { width: 390, height: 360, theme: "light" }) {
+async function mount(config = { width: 390, height: 360, theme: "light" }, configure = () => {}) {
   const context = await browser.newContext({
     viewport: { width: config.width, height: config.height },
     colorScheme: config.theme,
     serviceWorkers: "block",
   });
   const host = { configuration: snapshot(), mode: "reject", calls: [], pending: [] };
+  configure(host.configuration);
   await context.route("**/*", async (route) => {
     const request = route.request(),
       url = new URL(request.url());
@@ -271,7 +272,6 @@ try {
           id: "owned-11",
           catalogId: "openai",
           model: "owned-edited-draft",
-          baseUrl: "https://owned.invalid/v1",
           expectedRevision: "11".padStart(64, "0"),
         },
       ]);
@@ -365,6 +365,93 @@ try {
     await frames(page);
     assert.equal(await focused(page.locator("#outside-field")), true);
     reports.push({ kind: "unmount" });
+    await context.close();
+    currentPage = null;
+  }
+  {
+    const { page, context, host } = await mount(
+      { width: 390, height: 844, theme: "light" },
+      (configuration) => {
+        configuration.catalog[0].modelPresets = [
+          {
+            value: "owned-model-11",
+            label: "Owned preset",
+            parameters: [
+              {
+                name: "reasoning",
+                label: "思考强度",
+                control: "enum",
+                options: ["low", "high"],
+                default: "low",
+              },
+              { name: "temperature", label: "Temperature", control: "number", min: 0, max: 1 },
+              { name: "thinking_type", label: "思考开关", control: "toggle" },
+            ],
+          },
+        ];
+        configuration.connections[11].paramValues = {
+          reasoning: "high",
+          temperature: 0.5,
+          thinking_type: true,
+        };
+      },
+    );
+    currentPage = page;
+    await openExisting(page);
+    assert.equal(
+      await editor(page).getByRole("combobox", { name: "思考强度", exact: true }).inputValue(),
+      "high",
+    );
+    assert.equal(
+      await editor(page).getByRole("spinbutton", { name: "Temperature", exact: true }).inputValue(),
+      "0.5",
+    );
+    assert.equal(
+      await editor(page).getByRole("combobox", { name: "思考开关", exact: true }).inputValue(),
+      "true",
+    );
+    assert.equal(host.calls.length, 0);
+    host.configuration.connections[11].revision = "f".repeat(64);
+    host.configuration.connections[11].paramValues.reasoning = "low";
+    await page.evaluate(() => window.refreshConfigurationFixture());
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll(".config-connection-editor select")].some(
+        (select) => select.value === "low",
+      ),
+    );
+    assert.equal(
+      await editor(page).getByRole("combobox", { name: "思考强度", exact: true }).inputValue(),
+      "low",
+      "a pristine editor follows the new CAS revision's parameter values",
+    );
+    assert.equal(host.calls.length, 0);
+    await editor(page).getByRole("button", { name: "选择服务商模型" }).click();
+    await page
+      .getByRole("dialog", { name: "选择服务商模型" })
+      .getByRole("searchbox")
+      .fill("Owned preset");
+    await page.keyboard.press("Enter");
+    assert.equal(host.calls.length, 0, "search Enter never submits the model connection form");
+    await page.keyboard.press("Escape");
+    await editor(page)
+      .getByRole("combobox", { name: "思考强度", exact: true })
+      .selectOption("high");
+    await editor(page).getByRole("button", { name: "保存连接", exact: true }).click();
+    await page.getByRole("alert").waitFor();
+    assert.equal(host.calls.length, 1);
+    assert.deepEqual(host.calls[0].paramValues, { reasoning: "high" });
+    assert.equal(host.calls[0].apiKey, undefined);
+    assert.equal(
+      host.calls[0].baseUrl,
+      undefined,
+      "parameter edits do not echo a sanitized endpoint",
+    );
+    assert.equal(host.calls[0].expectedRevision, host.configuration.connections[11].revision);
+    assert.equal(
+      await editor(page).getByRole("combobox", { name: "思考强度", exact: true }).inputValue(),
+      "high",
+    );
+    reports.push({ kind: "declared-parameters-explicit-save" });
     await context.close();
     currentPage = null;
   }

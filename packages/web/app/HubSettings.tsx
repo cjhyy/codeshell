@@ -1086,10 +1086,27 @@ function ConnectionEditor({
     return () => onDirtyChange(false);
   }, [dirty, onDirtyChange]);
   const provider = configuration.catalog.find((item) => item.id === draft.catalogId);
+  const preset = provider?.modelPresets?.find((item) => item.value === draft.model);
   const duplicateId =
     !connection && configuration.connections.some((item) => item.id === draft.id.trim());
   const patch = (field: keyof ConnectionDraft, value: string) =>
-    setDraft((current) => ({ ...current, [field]: value }));
+    setDraft((current) => ({
+      ...current,
+      [field]: value,
+      ...(["model", "catalogId"].includes(field) ? { paramValues: undefined } : {}),
+    }));
+  const parameterConnection = latest?.revision === draft.expectedRevision ? latest : connection;
+  const parameterValue = (name: string) => {
+    if (draft.paramValues && name in draft.paramValues) return draft.paramValues[name];
+    return parameterConnection?.model === draft.model
+      ? parameterConnection.paramValues?.[name]
+      : undefined;
+  };
+  const patchParameter = (name: string, value: string | number | boolean | null) =>
+    setDraft((current) => ({
+      ...current,
+      paramValues: { ...current.paramValues, [name]: value },
+    }));
   return (
     <form
       ref={formRef}
@@ -1166,6 +1183,108 @@ function ConnectionEditor({
               autoComplete="off"
             />
           </label>
+          {!!provider?.modelPresets?.length && (
+            <div className="config-full-width">
+              <ModelChoicePicker
+                label="选择服务商模型"
+                value={draft.model}
+                placeholder="从服务商模型目录选择"
+                choices={provider.modelPresets.map((item) => ({
+                  value: item.value,
+                  label: item.label,
+                }))}
+                disabled={disabled}
+                onChange={(model) => patch("model", model)}
+              />
+            </div>
+          )}
+          {preset?.parameters.map((parameter) => {
+            const current = parameterValue(parameter.name);
+            const unavailable =
+              parameterConnection?.model === draft.model &&
+              parameterConnection.unavailableParameters?.includes(parameter.name) &&
+              !Object.hasOwn(draft.paramValues ?? {}, parameter.name);
+            return (
+              <label key={parameter.name}>
+                <span>{parameter.label}</span>
+                {parameter.control === "number" ? (
+                  <input
+                    type="number"
+                    step="any"
+                    min={parameter.min}
+                    max={parameter.max}
+                    value={typeof current === "number" ? current : ""}
+                    placeholder={
+                      unavailable
+                        ? "当前值需在桌面检查"
+                        : parameter.default === undefined
+                          ? "未设置"
+                          : `目录建议：${parameter.default}`
+                    }
+                    onChange={(event) =>
+                      patchParameter(
+                        parameter.name,
+                        event.target.value === "" ? null : Number(event.target.value),
+                      )
+                    }
+                  />
+                ) : (
+                  <select
+                    value={
+                      unavailable
+                        ? "__unavailable"
+                        : current === undefined || current === null
+                          ? ""
+                          : String(current)
+                    }
+                    onChange={(event) =>
+                      patchParameter(
+                        parameter.name,
+                        event.target.value === ""
+                          ? null
+                          : parameter.control === "toggle"
+                            ? event.target.value === "true"
+                            : event.target.value,
+                      )
+                    }
+                  >
+                    {unavailable ? (
+                      <option value="__unavailable" disabled>
+                        当前值需在桌面检查
+                      </option>
+                    ) : null}
+                    <option value="">
+                      未设置
+                      {parameter.default !== undefined ? `（目录建议：${parameter.default}）` : ""}
+                    </option>
+                    {(parameter.control === "toggle"
+                      ? ["true", "false"]
+                      : (parameter.options ?? [])
+                    ).map((option) => (
+                      <option key={option} value={option}>
+                        {parameter.control === "toggle"
+                          ? option === "true"
+                            ? "开启"
+                            : "关闭"
+                          : option}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {unavailable ? <small>原值会保留；只有选择新值并保存才会替换。</small> : null}
+              </label>
+            );
+          })}
+          {!!preset?.parameters.length && (
+            <p className="config-full-width config-help">
+              参数仅在保存后更新此共享连接。未在此列出的高级参数保留在桌面配置中。
+            </p>
+          )}
+          {!preset?.parameters.length && draft.model && (
+            <p className="config-full-width config-help">
+              此模型没有可在手机编辑的参数；已有高级参数保留，可在桌面端管理。
+            </p>
+          )}
           <label className="config-full-width">
             <span>服务地址</span>
             <input
