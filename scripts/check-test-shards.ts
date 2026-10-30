@@ -23,7 +23,9 @@ import { resolve } from "node:path";
 const ROOT = resolve(import.meta.dir, "..");
 /** Files per shard, from its size on 2026-10-27 plus headroom (desktop 739, core-rest 451, core-engine 274, rest 376, rest-server 215). */
 export const SHARD_BUDGETS: Record<string, number> = {
-  "tests (desktop)": 770,
+  // 2026-10-30: +2 for the panel identity cache and external output recovery
+  // suites; the shard is at its ceiling, split it before raising this again.
+  "tests (desktop)": 772,
   "tests (core-rest)": 470,
   "tests (core-engine)": 300,
   "tests (rest)": 400,
