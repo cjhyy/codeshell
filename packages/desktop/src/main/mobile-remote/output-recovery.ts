@@ -11,6 +11,11 @@ import {
 import type { Snapshot } from "../SessionSnapshotStore.js";
 import type { OwnedExternalStreamEntry } from "../owned-external-stream.js";
 import type { AuthenticatedMobileClientEvent } from "./handle-client-event.js";
+import {
+  LegacyHistoryUnavailable,
+  isUntouchedLegacySnapshot,
+  readLegacyExternalHistory,
+} from "./legacy-transcript-history.js";
 
 interface Binding {
   viewerId: string;
@@ -20,6 +25,7 @@ interface Binding {
   authority?: string;
   cursorKey: Buffer;
   historyView?: { root: string; ownerFence: string };
+  legacyTranscript?: { root: string; identity: string; ownerFence: string };
   pending?: {
     seq: number;
     epoch: string;
@@ -293,12 +299,33 @@ export class MobileOutputRecovery {
           (this.deps.authenticated && !this.deps.authenticated(viewer, event.deviceId))
         )
           return false;
+        let journalRequired = this.deps.journalRequired?.(event.sessionId) === true;
+        if (journalRequired && isUntouchedLegacySnapshot(this.deps.snapshot(event.sessionId))) {
+          try {
+            const root = this.deps.root();
+            const legacy = readLegacyExternalHistory(root, event.sessionId);
+            if (legacy) {
+              binding.legacyTranscript = {
+                root,
+                identity: legacy.identity,
+                ownerFence: JSON.stringify([
+                  this.deps.owner?.(event.sessionId),
+                  this.deps.ownerRevision?.(event.sessionId),
+                ]),
+              };
+              journalRequired = false;
+            }
+          } catch (error) {
+            if (error instanceof LegacyHistoryUnavailable) throw error;
+            /* Missing or modern history must still prove its journal. */
+          }
+        }
         this.deps.reply(viewer, {
           type: "session.recovery.ready",
           sessionId: event.sessionId,
           recoveryId: event.recoveryId,
           ok: true,
-          ...(this.deps.journalRequired?.(event.sessionId) ? { journalRequired: true } : {}),
+          ...(journalRequired ? { journalRequired: true } : {}),
         });
         if (binding.pending) {
           this.pendingMirrors.add(binding);
@@ -317,6 +344,7 @@ export class MobileOutputRecovery {
         return false;
       }
     }
+    if (event.type === "session.history") return this.readLegacyHistory(event);
     if (event.type === "session.historyView" || event.type === "session.historyDetail")
       return this.readHistory(event);
     if (event.type === "session.legacyBase") return this.readBase(event);
@@ -432,25 +460,112 @@ export class MobileOutputRecovery {
           if (order === undefined || order > 0) throw new Error("frozen snapshot not covered");
         }
       }
-      const legacyBase = base
-        ? {
-            throughEventId: page.legacyBaseThroughEventId!,
-            events: base.complete ? transcriptToStreamEvents(base.events) : [],
-          }
-        : undefined;
-      let legacyBaseComplete = base?.complete;
+      const standalone =
+        page.status === "unavailable" && binding!.legacyTranscript
+          ? this.legacyHistory(binding!)
+          : undefined;
+      const legacyBase = standalone
+        ? { throughEventId: standalone.throughEventId, events: [] }
+        : base
+          ? {
+              throughEventId: page.legacyBaseThroughEventId!,
+              events: base.complete ? transcriptToStreamEvents(base.events) : [],
+            }
+          : undefined;
+      let legacyBaseComplete = standalone ? false : base?.complete;
       if (legacyBase && Buffer.byteLength(JSON.stringify(legacyBase)) > MiB) {
         legacyBase.events = [];
         legacyBaseComplete = false;
       }
       reply({
         page,
-        ...(base ? { legacyBase, legacyBaseComplete } : {}),
+        ...(base || standalone ? { legacyBase, legacyBaseComplete } : {}),
         snapshot: captured ?? snapshot,
       });
     } catch {
       // Fixed path-free failure; a once negotiated missing grant cannot become legacy success.
       reply({});
+    } finally {
+      this.readingViewers.delete(viewer);
+      this.activeReads--;
+    }
+    return false;
+  }
+
+  private legacyHistory(binding: Binding) {
+    const proof = binding.legacyTranscript;
+    if (
+      !proof ||
+      proof.root !== this.deps.root() ||
+      proof.ownerFence !==
+        JSON.stringify([
+          this.deps.owner?.(binding.sessionId),
+          this.deps.ownerRevision?.(binding.sessionId),
+        ]) ||
+      !isUntouchedLegacySnapshot(this.deps.snapshot(binding.sessionId))
+    )
+      throw new Error("Legacy history changed");
+    const current = readLegacyExternalHistory(proof.root, binding.sessionId);
+    if (!current || current.identity !== proof.identity) throw new Error("Legacy history changed");
+    return current;
+  }
+
+  private async readLegacyHistory(
+    event: Extract<AuthenticatedMobileClientEvent, { type: "session.history" }>,
+  ): Promise<boolean> {
+    const viewer = event.viewerId!;
+    const binding = this.bindings.get(viewer);
+    const legacy = binding?.legacyTranscript;
+    if (!binding || !legacy) return true;
+    const valid = () =>
+      this.bindings.get(viewer) === binding &&
+      binding.deviceId === event.deviceId &&
+      binding.sessionId === event.sessionId &&
+      (!this.deps.authenticated || this.deps.authenticated(viewer, event.deviceId!)) &&
+      legacy.root === this.deps.root() &&
+      legacy.ownerFence ===
+        JSON.stringify([
+          this.deps.owner?.(event.sessionId),
+          this.deps.ownerRevision?.(event.sessionId),
+        ]) &&
+      isUntouchedLegacySnapshot(this.deps.snapshot(event.sessionId));
+    if (this.readingViewers.has(viewer) || this.activeReads >= 8) {
+      this.deps.reply(viewer, {
+        type: "session.recovery.ready",
+        sessionId: event.sessionId,
+        recoveryId: binding.recoveryId,
+        ok: false,
+      });
+      return false;
+    }
+    this.readingViewers.add(viewer);
+    this.activeReads++;
+    try {
+      if (
+        !valid() ||
+        (await this.deps.authority(event.sessionId)) !== binding.authority ||
+        !valid()
+      )
+        throw new Error("Legacy history grant revoked");
+      const current = this.legacyHistory(binding);
+      if (!valid() || Buffer.byteLength(JSON.stringify(current.events)) > MiB - 16 * 1024)
+        throw new Error("Legacy history changed");
+      this.deps.reply(viewer, {
+        type: "session.history.ok",
+        sessionId: event.sessionId,
+        events: current.events,
+      });
+    } catch {
+      // A failed legacy read is still a recovery failure, never an empty success.
+      if (this.bindings.get(viewer) === binding) {
+        this.revoke(viewer);
+        this.deps.reply(viewer, {
+          type: "session.recovery.ready",
+          sessionId: event.sessionId,
+          recoveryId: binding.recoveryId,
+          ok: false,
+        });
+      }
     } finally {
       this.readingViewers.delete(viewer);
       this.activeReads--;
@@ -613,10 +728,23 @@ export class MobileOutputRecovery {
       const cursor = event.cursor ? decodeBaseCursor(event.cursor, binding!) : undefined;
       const throughEventId = cursor?.throughEventId ?? event.throughEventId!;
       const root = this.deps.root();
-      const journal = readOutputJournal(root, event.sessionId, { maxFrames: 1 });
-      if (journal.status !== "ok" || journal.legacyBaseThroughEventId !== throughEventId)
+      const standalone = binding!.legacyTranscript ? this.legacyHistory(binding!) : undefined;
+      const journal = standalone
+        ? undefined
+        : readOutputJournal(root, event.sessionId, { maxFrames: 1 });
+      if (
+        standalone
+          ? standalone.throughEventId !== throughEventId
+          : journal?.status !== "ok" || journal.legacyBaseThroughEventId !== throughEventId
+      )
         throw new Error("base is not the journal cutover");
-      const base = readOutputJournalLegacyBase(root, event.sessionId, throughEventId);
+      const base = standalone
+        ? {
+            complete: true,
+            events: [],
+            identity: { endOffset: standalone.sourceBytes, sha256: standalone.identity },
+          }
+        : readOutputJournalLegacyBase(root, event.sessionId, throughEventId);
       if (
         !base.complete ||
         !base.identity ||
@@ -629,8 +757,8 @@ export class MobileOutputRecovery {
         binding!.sessionId,
         binding!.recoveryId,
         binding!.authority,
-        journal.coverageIdentity,
-        journal.coverageStart,
+        journal?.coverageIdentity,
+        journal?.coverageStart,
         throughEventId,
         base.identity.endOffset,
         base.identity.sha256,
@@ -638,7 +766,14 @@ export class MobileOutputRecovery {
       if (this.legacyProjection?.key !== key) this.legacyProjection = undefined;
       // Tool pre-scan and cross-record state still use the complete verified base.
       // A cache hit skips only projection/serialization, never the raw hash checks above.
-      const projection = this.legacyProjection ?? this.projectLegacyBase(base.events);
+      const projection =
+        this.legacyProjection ??
+        (standalone
+          ? {
+              events: standalone.events,
+              sizes: standalone.events.map((event) => Buffer.byteLength(JSON.stringify(event))),
+            }
+          : this.projectLegacyBase(base.events));
       const { events, sizes } = projection;
       if (
         !events.length ||
@@ -685,6 +820,7 @@ export class MobileOutputRecovery {
         throw new Error("base reply exceeds its bound");
       if ((await this.deps.authority(event.sessionId)) !== binding!.authority || !valid())
         throw new Error("read grant revoked");
+      if (standalone) this.legacyHistory(binding!);
       // Never install a cache after an awaited revocation; the final page releases it.
       this.legacyProjection =
         !reply.complete &&

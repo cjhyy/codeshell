@@ -265,7 +265,7 @@ export async function handleClientEvent(
   const commandSelection = ctx.externalCommands?.observe(event);
   if (ctx.outputRecovery) {
     const recovery = ctx.outputRecovery.handle(event);
-    if (event.type === "session.select" && event.recoveryId) {
+    if ((event.type === "session.select" && event.recoveryId) || event.type === "session.history") {
       // A later selection/create/room transition can revoke this grant while
       // authority awaits. It must not write the retired device selection back.
       if (!(await recovery)) return;
