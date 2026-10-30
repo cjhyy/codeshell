@@ -44,7 +44,7 @@ export function modelParameters(preset?: Preset): PublicModelParameter[] {
     if (
       !NAMES.has(spec.name) ||
       preset!.params!.filter((candidate) => candidate.name === spec.name).length !== 1 ||
-      spec.control === "text" ||
+      (spec.control !== "enum" && spec.control !== "number" && spec.control !== "toggle") ||
       !FIELDS[spec.name]?.includes(spec.wire?.field ?? spec.name)
     )
       return [];
@@ -67,6 +67,7 @@ function validParameter(
   if (spec.control === "enum")
     return typeof value === "string" && value.length <= 256 && !!spec.options?.includes(value);
   if (spec.control === "toggle") return typeof value === "boolean";
+  if (spec.control !== "number") return false;
   return (
     typeof value === "number" &&
     Number.isFinite(value) &&
