@@ -39,6 +39,7 @@ export function PanelLauncher({
   const id = useId();
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  const busy = catalog.loading || catalog.refreshing;
   const consumedFocusRequest = useRef(0);
   useEffect(() => {
     if (active && focusRequest > consumedFocusRequest.current) {
@@ -111,12 +112,13 @@ export function PanelLauncher({
               variant="ghost"
               size="sm"
               data-panel-launcher-refresh=""
-              disabled={!active || catalog.loading}
+              disabled={!active || busy}
+              aria-busy={busy || undefined}
               onClick={catalog.refresh}
               title={t("panels.launcher.refreshPanels")}
               className="h-7 gap-1.5 rounded-lg px-2 text-xs text-muted-foreground"
             >
-              {catalog.loading ? (
+              {busy ? (
                 <LoaderCircle
                   className="size-3.5 animate-spin motion-reduce:animate-none"
                   aria-hidden="true"

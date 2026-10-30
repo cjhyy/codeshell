@@ -10,7 +10,9 @@ import {
   resolvePanelAppBindingProjectPath,
   SettingsManager,
   type InstalledPanelApp,
+  type PanelAppInspectionReads,
 } from "@cjhyy/code-shell-core";
+import { createPanelSnapshotReads } from "@cjhyy/code-shell-server/panels";
 import type { PanelAppDescriptor, PanelAppExtensionSummary } from "../shared/panel-apps.js";
 import { dlog } from "./desktop-logger.js";
 import { replacePanelAppResources, type PanelAppProtocolResource } from "./panel-app-protocol.js";
@@ -45,6 +47,7 @@ export function installedPanelAppRevision(app: InstalledPanelApp): string {
 async function discoverPanelApps(
   locale: string,
   projectPath = "",
+  reads?: PanelAppInspectionReads,
 ): Promise<{
   descriptors: PanelAppDescriptor[];
   resources: PanelAppProtocolResource[];
@@ -53,7 +56,9 @@ async function discoverPanelApps(
   let apps: InstalledPanelApp[];
   let pins: ReturnType<typeof projectPanelAppPackagePins>;
   try {
-    const inspected = projectPath ? await inspectProjectPanelApps(projectPath) : undefined;
+    const inspected = projectPath
+      ? await inspectProjectPanelApps(projectPath, undefined, reads)
+      : undefined;
     pins = inspected?.pins ?? {};
     apps = inspected?.apps ?? (await listInstalledPanelApps());
     if (
@@ -233,11 +238,14 @@ export async function listPanelAppExtensions(
   locale: string,
 ): Promise<PanelAppExtensionSummary[]> {
   const policy = panelAppPolicy(cwd);
+  // The catalog and binding reads below verify the same packages; share them.
+  const reads = createPanelSnapshotReads();
   const discovered = await discoverPanelApps(
     locale,
     cwd ? resolvePanelAppBindingProjectPath(cwd) : "",
+    reads.inspection,
   );
-  const bindings = cwd ? await createDesktopPanelManagement(cwd).snapshot() : [];
+  const bindings = cwd ? await createDesktopPanelManagement(cwd).snapshot(reads) : [];
   return discovered.descriptors.map((app) => {
     const binding = bindings.find((item) => item.appId === app.appId);
     if (
@@ -277,6 +285,8 @@ export async function listPanelAppsForProjects(
   const variants = new Map<string, PanelAppDescriptor>();
   const boundProjectPathsByAppId: Record<string, string[]> = {};
   const byCanonical = new Map<string, Set<string>>();
+  // One pass hashes the installed catalog once instead of once per project.
+  const reads: PanelAppInspectionReads = { packages: new Map() };
   for (const requested of new Set(projectPaths.filter(Boolean))) {
     const canonical = resolvePanelAppBindingProjectPath(requested);
     if (!canonical) continue;
@@ -288,7 +298,7 @@ export async function listPanelAppsForProjects(
     // Every caller needs a complete snapshot. Dropping an older overlapping
     // read made a normal refresh look like all of this project's apps vanished.
     const enabled = await projectDiscoveries.read(canonical, async () => {
-      const discovered = await discoverPanelApps(locale, canonical);
+      const discovered = await discoverPanelApps(locale, canonical, reads);
       const policy = panelAppPolicy(canonical);
       const available = discovered.descriptors.filter((app) => isPanelAppAvailable(app, policy));
       const enabledHosts = new Set(available.map((app) => app.hostId));

@@ -141,10 +141,12 @@ describe("Panel App catalog loading", () => {
     // The hook captures the bridge object, so implementations may be updated
     // without reconstructing the mounted application.
     await act(async () => hook!.result.current.refresh());
-    expect(hook!.result.current.loading).toBe(true);
+    // A healthy catalog refreshes in the background instead of re-entering loading.
+    expect(hook!.result.current).toMatchObject({ loading: false, refreshing: true });
     expect(enabled("/a")).toEqual(["studio-v1"]);
     await act(async () => pending.resolve(snapshot(["/a"], "v2")));
     expect(enabled("/a")).toEqual(["v2"]);
+    expect(hook!.result.current).toMatchObject({ loading: false, refreshing: false });
 
     api.listPanelAppsForProjects = async () => {
       throw new Error("host unavailable");
@@ -155,8 +157,12 @@ describe("Panel App catalog loading", () => {
     expect(hook!.result.current).toMatchObject({ loading: false });
     expect(hook!.result.current.error).toContain("host unavailable");
 
-    api.listPanelAppsForProjects = async () => snapshot(["/a"], "recovered");
+    const retry = deferred<Snapshot>();
+    api.listPanelAppsForProjects = mock(() => retry.promise);
     await act(async () => window.dispatchEvent(new Event("focus")));
+    // After a failure there is no trustworthy catalog, so the retry is a real load.
+    expect(hook!.result.current).toMatchObject({ loading: true, refreshing: false, error: null });
+    await act(async () => retry.resolve(snapshot(["/a"], "recovered")));
     expect(enabled("/a")).toEqual(["recovered"]);
     expect(hook!.result.current.error).toBeNull();
   });

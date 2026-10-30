@@ -208,7 +208,8 @@ describe("architecture growth budgets", () => {
       // The merged tree counts 367: the previous ceiling carried two spare routes.
       // +2 Main-frame-only history recovery plan/apply routes; caller and paths remain Host-owned.
       // Measured after merging main (2026-10-29): main counts 368, this branch adds 3.
-    ).toBeLessThanOrEqual(371);
+      // +1 panel-apps:bindingsForProjects batches binding reads so each package is verified once.
+    ).toBeLessThanOrEqual(372);
     expect(
       matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g),
     ).toBe(2);

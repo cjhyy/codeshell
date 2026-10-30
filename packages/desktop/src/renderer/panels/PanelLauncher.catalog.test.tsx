@@ -37,18 +37,20 @@ const refresh = () => {
 };
 const render = async ({
   loading = false,
+  refreshing = false,
   error = null,
   active = true,
   focusRequest = 0,
   entries = [],
 }: {
   loading?: boolean;
+  refreshing?: boolean;
   error?: string | null;
   active?: boolean;
   focusRequest?: number;
   entries?: readonly PanelEntry[];
 } = {}) => {
-  const state: PanelCatalogState = { loading, error, refresh };
+  const state: PanelCatalogState = { loading, refreshing, error, refresh };
   await act(async () => {
     root!.render(
       <PanelCatalogContext.Provider value={state}>
@@ -121,6 +123,17 @@ describe("PanelLauncher catalog feedback", () => {
       await flushMicrotasks();
     });
     expect(refreshes).toBe(before + 1);
+  });
+
+  test("keeps loaded cards in place during a background refresh", async () => {
+    await render({ refreshing: true, entries: [tool] });
+    expect(text(container)).not.toContain("正在加载面板");
+    expect(nodes(container).some((node) => props(node).role === "status")).toBe(false);
+    expect(
+      nodes(container).some((node) => props(node)["data-panel-launcher-kind"] === tool.key),
+    ).toBe(true);
+    expect(refreshButton().getAttribute("disabled")).not.toBeNull();
+    expect(refreshButton().getAttribute("aria-busy")).toBe("true");
   });
 
   test("refreshes once on activation or an explicit plus request, not on loading rerenders", async () => {

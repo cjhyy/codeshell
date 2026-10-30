@@ -2,7 +2,12 @@ import {
   resolvePanelAppBindingProjectPath,
   type PanelAppSourceInput,
 } from "@cjhyy/code-shell-core";
-import { createPanelManagement, type PanelOperationContext } from "@cjhyy/code-shell-server/panels";
+import {
+  createPanelManagement,
+  createPanelSnapshotReads,
+  type PanelOperationContext,
+  type PanelSnapshotReads,
+} from "@cjhyy/code-shell-server/panels";
 import type { PanelAppBindingState } from "../shared/panel-apps.js";
 
 /** Trusted Desktop composition of the same conditional writer used by paired Web. */
@@ -67,8 +72,8 @@ export function createDesktopPanelManagement(
       token: string,
       approval?: Parameters<typeof management.install>[3],
     ) => management.install(context, token, true, approval),
-    async snapshot() {
-      return states(await management.snapshot());
+    async snapshot(reads?: PanelSnapshotReads) {
+      return states(await management.snapshot(undefined, reads));
     },
     async binding(
       context: PanelOperationContext,
@@ -79,4 +84,25 @@ export function createDesktopPanelManagement(
       return states(await management.binding(context, id, bound, expectedRevision));
     },
   };
+}
+
+/** Bindings for several projects in request order, verifying each package once per request. */
+export async function readDesktopPanelBindings(
+  projectPaths: unknown,
+  authorize: (path: string) => Promise<string>,
+): Promise<Array<PanelAppBindingState[] | null>> {
+  if (!Array.isArray(projectPaths) || projectPaths.length > 64) {
+    throw new Error("panel-apps:bindingsForProjects requires projectPaths");
+  }
+  const reads = createPanelSnapshotReads();
+  return Promise.all(
+    projectPaths.map(async (path) => {
+      try {
+        return await createDesktopPanelManagement(await authorize(path)).snapshot(reads);
+      } catch {
+        // A stale project must not hide every other project's bindings.
+        return null;
+      }
+    }),
+  );
 }

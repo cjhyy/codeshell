@@ -124,7 +124,8 @@ export const panelAppUpdateService = createPanelAppUpdateService({
 
 export function createProjectPanelAppUpdateService(cwd: string) {
   const getInstalled = async (id: string) =>
-    (await inspectProjectPanelApps(resolvePanelAppBindingProjectPath(cwd))).apps.find(
+    // Scope the read to this app: an update check never needs the whole catalog verified.
+    (await inspectProjectPanelApps(resolvePanelAppBindingProjectPath(cwd), id)).apps.find(
       (app) => app.id === id,
     );
   return createPanelAppUpdateService({
