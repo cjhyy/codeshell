@@ -96,7 +96,45 @@ describe("petStateReducer", () => {
         state: "active",
       },
     });
-    expect(cannotHealFromTail).toBe(afterGap);
+    expect(cannotHealFromTail.projection).toBe(afterGap.projection);
+    expect(cannotHealFromTail.needsSnapshot).toBe(true);
+    expect(cannotHealFromTail.bufferedProjectionEvents).toHaveLength(2);
+  });
+
+  test("bounds buffered events and requests another baseline when the replay still has a gap", () => {
+    let state = petStateReducer(initialPetState, {
+      type: "snapshot-received",
+      snapshot: snapshot(),
+    });
+    state = petStateReducer(state, {
+      type: "projection-event",
+      event: { kind: "reset", generation: 4, version: 3, observedAt: 1_100 },
+    });
+    for (let version = 4; version < 304; version += 1) {
+      state = petStateReducer(state, {
+        type: "projection-event",
+        event: {
+          kind: "worker-state",
+          generation: 4,
+          version,
+          observedAt: version,
+          state: "active",
+        },
+      });
+    }
+    expect(state.bufferedProjectionEvents).toHaveLength(256);
+    const recovered = petStateReducer(state, {
+      type: "snapshot-received",
+      snapshot: snapshot({ version: 3 }),
+    });
+    expect(recovered.needsSnapshot).toBe(true);
+    expect(recovered.snapshotRetryRevision).toBe(1);
+    const current = petStateReducer(recovered, {
+      type: "snapshot-received",
+      snapshot: snapshot({ version: 303 }),
+    });
+    expect(current.needsSnapshot).toBe(false);
+    expect(current.bufferedProjectionEvents).toEqual([]);
   });
 
   test("projection events preserve page-local focus, draft and transcript state", () => {

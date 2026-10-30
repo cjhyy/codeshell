@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import type { Engine, EngineResult } from "@cjhyy/code-shell-core";
+import type { Engine, EngineResult, ToolContext } from "@cjhyy/code-shell-core";
 import { AgentClient } from "@cjhyy/code-shell-core";
 import { ChatSessionManager } from "@cjhyy/code-shell-core";
 import { AgentServer } from "@cjhyy/code-shell-core";
 import { createInProcessTransport, compileComposition } from "@cjhyy/code-shell-core";
+import { ToolRegistry } from "@cjhyy/code-shell-core";
 import {
   GET_PET_PROJECTION_SNAPSHOT_METHOD,
   PET_PROJECTION_DELTA_METHOD,
@@ -305,6 +306,74 @@ describe("Pet projection protocol", () => {
 
     server.close();
     client.close();
+  });
+
+  test("cancelling a nested tool withdraws its pending question and waiting count", async () => {
+    const sessionId = "session-cancelled-question";
+    const { client, manager, server } = makePair([sessionId]);
+    try {
+      const session = await manager.getOrCreate(sessionId, {} as never);
+      await client.requestExtension(GET_PET_PROJECTION_SNAPSHOT_METHOD);
+      const deltas: PetProjectionDelta[] = [];
+      client.onExtensionNotification(PET_PROJECTION_DELTA_METHOD, (raw) => {
+        deltas.push(raw as unknown as PetProjectionDelta);
+      });
+      const registry = new ToolRegistry({ builtinTools: [] });
+      const controller = new AbortController();
+      let protectedOperationRan = false;
+      registry.registerTool(
+        {
+          name: "QuestionGate",
+          description: "An operation requiring a user decision",
+          inputSchema: { type: "object", properties: {} },
+          source: "builtin",
+          permissionDefault: "allow",
+        },
+        async (_args, ctx) => {
+          await ctx!.askUser!("Allow this operation?", { throwOnFailure: true });
+          protectedOperationRan = true;
+          return "done";
+        },
+      );
+      const execution = registry.executeTool(
+        "QuestionGate",
+        {},
+        {
+          signal: controller.signal,
+          ctx: {
+            askUser: (question, opts) =>
+              (server as any).requestAskUserForSession(session, sessionId, question, opts),
+          } as ToolContext,
+        },
+      );
+      const waiting = (await client.requestExtension(
+        GET_PET_PROJECTION_SNAPSHOT_METHOD,
+      )) as PetProjectionSnapshotResult;
+      expect(waiting.pending).toHaveLength(1);
+      expect(waiting.sessions[0]?.pendingDecisionCount).toBe(1);
+      controller.abort();
+      expect(await execution).toMatchObject({ isError: true });
+      expect(protectedOperationRan).toBe(false);
+      const created = deltas.find((delta) => delta.kind === "pending-upsert");
+      if (!created || created.kind !== "pending-upsert") throw new Error("missing pending delta");
+      expect(deltas).toContainEqual(
+        expect.objectContaining({
+          kind: "pending-remove",
+          sessionId,
+          requestId: created.pending.requestId,
+          status: "cancelled",
+        }),
+      );
+      const snapshot = (await client.requestExtension(
+        GET_PET_PROJECTION_SNAPSHOT_METHOD,
+      )) as PetProjectionSnapshotResult;
+      expect(snapshot.pending).toEqual([]);
+      expect(snapshot.sessions[0]?.pendingDecisionCount).toBe(0);
+      expect(snapshot.sessions[0]?.phase).not.toBe("waiting-decision");
+    } finally {
+      await server.close();
+      client.close();
+    }
   });
 
   test("never exposes the durable pet session as a work session or work pending", async () => {

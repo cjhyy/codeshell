@@ -422,11 +422,16 @@ export class PetStateAggregator {
         request.routeGeneration === undefined ||
         pending?.routeGeneration === undefined ||
         request.routeGeneration === pending.routeGeneration;
-      const generationMatches = pending?.workerGeneration === request.generation;
+      const generationMatches =
+        request.generation === this.generation && pending?.workerGeneration === request.generation;
       if (!pending || pending.status !== "pending" || !routeMatches || !generationMatches) {
         stale = true;
         pendingStatus = "resolved";
       } else {
+        // The shared cursor also advances for catalog refreshes and other
+        // Sessions. An exact current request remains actionable across those
+        // unrelated updates; its own identity and generations are the fence.
+        stale = false;
         pendingStatus = "pending";
       }
     }

@@ -285,7 +285,8 @@ export const pet = {
         askUser: "需要回答",
       },
       navigation: {
-        stale: "该请求已处理或状态已更新；已打开原会话",
+        stale: "状态已更新；已打开原会话",
+        resolved: "该请求已结束；已打开原会话",
         notFound: "原会话已不存在或不可打开",
         externalUnavailable: "外部会话定位信息不完整，无法打开",
       },
@@ -733,7 +734,8 @@ export const pet = {
         askUser: "Answer needed",
       },
       navigation: {
-        stale: "The request changed or was handled; opened the original session",
+        stale: "The session state changed; opened the original session",
+        resolved: "The request is no longer active; opened the original session",
         notFound: "The original session no longer exists or cannot be opened",
         externalUnavailable: "The external session locator is incomplete and cannot be opened",
       },
