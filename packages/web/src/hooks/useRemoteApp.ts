@@ -106,6 +106,13 @@ export interface RemoteApp {
   conversationRevision: number;
   /** Increments when this browser's pending session creation fails or loses its connection. */
   sessionCreationFailures?: number;
+  /** A never-submitted draft needs a new Host selection after reconnecting. */
+  emptySessionReplacement?: {
+    fromSessionId: string;
+    toSessionId?: string;
+    status: "pending" | "failed" | "complete";
+  };
+  retryEmptySessionReplacement?: () => void;
   activeCwd?: string | null;
   projects: MobileProjectMeta[];
   /** The bound room — for the user this is always an external CC (Claude Code)
@@ -423,6 +430,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     connectionGeneration: number;
     timer?: ReturnType<typeof setTimeout>;
   } | null>(null);
+  const unsentCreatedSessionRef = useRef<{ sessionId: string; generation: number } | null>(null);
   const messageAckWaitersRef = useRef(
     new Map<
       string,
@@ -903,12 +911,26 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const reloadHistory = useCallback(() => {
     const sessionId = boundSessionRef.current;
     if (!socketOnlineRef.current || !sessionId || activeRoomIdRef.current) return;
+    if (
+      unsentCreatedSessionRef.current?.sessionId === sessionId &&
+      unsentCreatedSessionRef.current.generation === connectionGenerationRef.current
+    )
+      return;
     setLoadingKey("sessionHistory", true);
     if (!outputClient.begin(sessionId)) requestSessionHistory(sessionId, true);
   }, [outputClient, requestSessionHistory, setLoadingKey]);
 
   const onServerEvent = useCallback(
     (event: MobileServerEvent) => {
+      const unsent = unsentCreatedSessionRef.current;
+      if (
+        unsent &&
+        (event.type === "auth.ok" ||
+          (event.type === "session.stream" && event.sessionId === unsent.sessionId) ||
+          (event.type === "session.list.ok" &&
+            event.sessions.some((session) => session.id === unsent.sessionId)))
+      )
+        unsentCreatedSessionRef.current = null;
       if (historyRecovery.observe(event)) return;
       if (
         "sessionId" in event &&
@@ -954,6 +976,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           ) {
             clearTimeout(creation.timer);
             pendingCreateRef.current = null;
+            if (event.clientRequestId && event.sessionId && mayBind)
+              unsentCreatedSessionRef.current = {
+                sessionId: event.sessionId,
+                generation: creation.connectionGeneration,
+              };
             if (event.sessionId && creation.permissionMode !== permissionModeRef.current) {
               // The user can change the draft while creation is in flight. Apply
               // that choice to the new id, never to the previous selection.
@@ -1744,6 +1771,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         if (applyingHistoryRef.current === boundSessionRef.current && applyingHistoryRef.current)
           return;
         const params = obj.params as Record<string, unknown>;
+        if (params.sessionId === unsentCreatedSessionRef.current?.sessionId)
+          unsentCreatedSessionRef.current = null;
         const sid = typeof params.sessionId === "string" ? params.sessionId : undefined;
         if (boundSessionRef.current) {
           if (sid && sid !== boundSessionRef.current) return;
@@ -1790,6 +1819,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     }
     const sessionId = boundSessionRef.current;
     if (!sessionId) return;
+    if (
+      unsentCreatedSessionRef.current?.sessionId === sessionId &&
+      unsentCreatedSessionRef.current.generation === connectionGenerationRef.current
+    )
+      return;
     const cursor = sessionCursor(sessionId);
     const recovery = outputClient.resync(sessionId);
     if (recovery) {
@@ -1952,6 +1986,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       const text = input.text.trim();
       if (!text && input.attachments.length === 0) return false;
       if (socket.status !== "online") return false;
+      unsentCreatedSessionRef.current = null;
       const connectionGeneration = socket.connectionGeneration;
       const conversationRevision = conversationRevisionRef.current;
       const outputWriteGeneration = outputWriteGenerationRef.current;
@@ -2105,6 +2140,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         return;
       }
       conversationRevisionRef.current += 1;
+      unsentCreatedSessionRef.current = null;
       creationPermissionEchoRef.current = null;
       if (activeRoomIdRef.current) {
         socket.send({
@@ -2181,6 +2217,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         return;
       }
       outputClient.cancel();
+      unsentCreatedSessionRef.current = null;
       creationPermissionEchoRef.current = null;
       conversationRevisionRef.current += 1;
       setLoadingKey("sessionHistory", false);
@@ -2254,6 +2291,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
       outputClient.cancel();
       conversationRevisionRef.current += 1;
+      unsentCreatedSessionRef.current = null;
       creationPermissionEchoRef.current = null;
       clearTimeout(pendingCreateRef.current?.timer);
       pendingCreateRef.current = {

@@ -655,6 +655,68 @@ describe("useRemoteApp session switching recovery", () => {
     }
   });
 
+  test("foreground keeps a confirmed unsent draft empty until a real send attempt needs reconciliation", async () => {
+    const { hook, ws, sent } = await connected(true);
+    const now = spyOn(Date, "now").mockReturnValue(1000);
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async () => {
+        throw new Error("no network expected");
+      },
+      writable: true,
+    });
+    try {
+      await act(async () => {
+        hook.result.current.newSession({ projectId: null });
+        await flushMicrotasks();
+      });
+      const create = sent().findLast((event) => event.type === "session.create");
+      await act(async () => {
+        ws.message({
+          type: "chat.accepted",
+          clientRequestId: create.clientRequestId,
+          sessionId: "host-minted-empty",
+          cwd: null,
+        });
+        await flushMicrotasks();
+      });
+      now.mockReturnValue(2000);
+      await act(async () => {
+        window.dispatchEvent(new Event("focus"));
+        hook.result.current.reloadHistory?.();
+        await flushMicrotasks();
+      });
+      expect(sent().filter((event) => event.type === "session.select")).toHaveLength(0);
+      expect(hook.result.current.loading.sessionHistory).toBe(false);
+      let message!: Promise<boolean>;
+      await act(async () => {
+        message = hook.result.current.sendChat({ text: "fixture", attachments: [] });
+        await flushMicrotasks();
+      });
+      const send = sent().findLast((event) => event.type === "chat.send");
+      await act(async () => {
+        ws.message({
+          type: "chat.uncertain",
+          sessionId: "host-minted-empty",
+          clientMessageId: send.clientMessageId,
+          message: "admission unknown",
+        });
+        await flushMicrotasks();
+      });
+      expect(await message).toBe(false);
+      now.mockReturnValue(4000);
+      await act(async () => {
+        window.dispatchEvent(new Event("focus"));
+        await flushMicrotasks();
+      });
+      expect(sent().filter((event) => event.type === "session.select")).toHaveLength(1);
+      expect(hook.result.current.loading.sessionHistory).toBe(true);
+    } finally {
+      now.mockRestore();
+      restoreFetch();
+      await hook.unmount();
+    }
+  });
+
   for (const source of ["foreground", "accepted"] as const)
     test(`an immediate ${source} recovery send failure cannot leave loading true`, async () => {
       const { hook, ws, sent } = await connected(true);
