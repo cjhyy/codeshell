@@ -138,6 +138,7 @@ export class MobileOutputRecovery {
       ownerRevision?: (sessionId: string) => number | undefined;
       authenticated?: (viewerId: string, deviceId: string) => boolean;
       journalRequired?: (sessionId: string) => boolean;
+      hasLiveExternalProducer?: (sessionId: string) => boolean;
     },
   ) {}
 
@@ -299,8 +300,16 @@ export class MobileOutputRecovery {
           (this.deps.authenticated && !this.deps.authenticated(viewer, event.deviceId))
         )
           return false;
-        let journalRequired = this.deps.journalRequired?.(event.sessionId) === true;
-        if (journalRequired && isUntouchedLegacySnapshot(this.deps.snapshot(event.sessionId))) {
+        const liveProducer = this.deps.hasLiveExternalProducer?.(event.sessionId);
+        let journalRequired =
+          liveProducer === true || this.deps.journalRequired?.(event.sessionId) === true;
+        // An allocated runtime can be idle before its first journal frame. Only
+        // explicit Host proof of no current producer permits persisted fallback.
+        if (
+          journalRequired &&
+          liveProducer === false &&
+          isUntouchedLegacySnapshot(this.deps.snapshot(event.sessionId))
+        ) {
           try {
             const root = this.deps.root();
             const legacy = readLegacyExternalHistory(root, event.sessionId);
@@ -496,6 +505,7 @@ export class MobileOutputRecovery {
     const proof = binding.legacyTranscript;
     if (
       !proof ||
+      this.deps.hasLiveExternalProducer?.(binding.sessionId) !== false ||
       proof.root !== this.deps.root() ||
       proof.ownerFence !==
         JSON.stringify([
@@ -521,6 +531,7 @@ export class MobileOutputRecovery {
       this.bindings.get(viewer) === binding &&
       binding.deviceId === event.deviceId &&
       binding.sessionId === event.sessionId &&
+      this.deps.hasLiveExternalProducer?.(event.sessionId) === false &&
       (!this.deps.authenticated || this.deps.authenticated(viewer, event.deviceId!)) &&
       legacy.root === this.deps.root() &&
       legacy.ownerFence ===

@@ -11,6 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager, type MobileServerEvent } from "@cjhyy/code-shell-core";
+import { SessionOutputJournal } from "@cjhyy/code-shell-core/internal";
 import { SessionSnapshotStore } from "../SessionSnapshotStore.js";
 import { MobileOutputRecovery } from "./output-recovery.js";
 import { MobileOutputClient } from "../../../../web/src/hooks/mobileOutputClient.js";
@@ -25,13 +26,15 @@ const roots: string[] = [];
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
-function fixture() {
+function fixture(options: { beforeFirstTurn?: boolean; producerKnown?: boolean } = {}) {
   const root = mkdtempSync(join(tmpdir(), "legacy-external-"));
   roots.push(root);
   const manager = new SessionManager(root);
   const session = manager.create(root, "claude-code/fixture", "claude-code", "legacy");
-  session.transcript.appendMessage("user", "owned prompt");
-  session.transcript.appendMessage("assistant", "owned saved answer");
+  if (!options.beforeFirstTurn) {
+    session.transcript.appendMessage("user", "owned prompt");
+    session.transcript.appendMessage("assistant", "owned saved answer");
+  }
   const directory = join(root, "legacy"),
     statePath = join(directory, "state.json"),
     transcript = join(directory, "transcript.jsonl");
@@ -41,7 +44,8 @@ function fixture() {
   patch({});
   const snapshots = new SessionSnapshotStore();
   let authority = "selected-physical-project",
-    ownerRevision = 1;
+    ownerRevision = 1,
+    liveProducer = false;
   let resolveAuthority = async () => authority;
   const replies: MobileServerEvent[] = [];
   let onReply: ((event: MobileServerEvent) => void) | undefined;
@@ -49,6 +53,7 @@ function fixture() {
     root: () => root,
     authority: () => resolveAuthority(),
     journalRequired: () => true,
+    ...(options.producerKnown === false ? {} : { hasLiveExternalProducer: () => liveProducer }),
     owner: () => 1,
     ownerRevision: () => ownerRevision,
     authenticated: () => true,
@@ -65,6 +70,9 @@ function fixture() {
     statePath,
     transcript,
     patch,
+    producer: (value: boolean) => {
+      liveProducer = value;
+    },
     snapshots,
     replies,
     host,
@@ -101,6 +109,66 @@ test("pre-journal legacy display is complete, bounded, immutable and never persi
   expect(f.replies.at(-1)).toMatchObject({ type: "session.history.ok", sessionId: "legacy" });
   expect(readFileSync(f.transcript).equals(source)).toBe(true);
   expect(readFileSync(f.statePath).equals(state)).toBe(true);
+});
+
+test("a live external producer before its first input waits for and reads its real journal", async () => {
+  const f = fixture({ beforeFirstTurn: true });
+  f.patch({ status: "active" });
+  f.producer(true);
+  expect(await f.select()).toBe(true);
+  expect(f.replies.at(-1)).toMatchObject({
+    type: "session.recovery.ready",
+    ok: true,
+    journalRequired: true,
+  });
+  const request = {
+    type: "session.outputJournal" as const,
+    sessionId: "legacy",
+    recoveryId: "recovery",
+    viewerId: "viewer",
+    deviceId: "device",
+    requestId: "first-page",
+  };
+  await f.host.handle(request);
+  expect(f.replies.at(-1)).toMatchObject({
+    type: "session.outputJournal",
+    page: { status: "unavailable" },
+  });
+  expect(f.replies.at(-1)).not.toHaveProperty("legacyBase");
+
+  const manager = new SessionManager(f.root);
+  manager.startSessionRun(manager.readSessionState("legacy")!, "first-run");
+  const writer = new SessionOutputJournal(f.root, "legacy", "first-run");
+  const event = { type: "session_started" as const, sessionId: "legacy", runId: "first-run" };
+  const cursor = writer.append(event);
+  f.snapshots.append("legacy", { ...event, outputCursor: cursor });
+  await f.host.handle({ ...request, requestId: "published-page" });
+  expect(f.replies.at(-1)).toMatchObject({
+    type: "session.outputJournal",
+    page: { status: "ok", complete: true, frames: [{ event }] },
+    snapshot: { outputCursor: cursor },
+  });
+  expect(f.replies.some((reply) => reply.type === "session.history.ok")).toBe(false);
+});
+
+test.each(["completed", "model_error"])(
+  "a current producer cannot be downgraded by persisted terminal status (%s)",
+  async (status) => {
+    const f = fixture();
+    f.patch({ status });
+    f.producer(true);
+    expect(await f.select()).toBe(true);
+    expect(f.replies.at(-1)).toMatchObject({ ok: true, journalRequired: true });
+    expect(await f.read()).toBe(true);
+    expect(f.replies.some((reply) => reply.type === "session.history.ok")).toBe(false);
+  },
+);
+
+test("unknown producer ownership cannot authorize a legacy fallback", async () => {
+  const f = fixture({ producerKnown: false });
+  expect(await f.select()).toBe(true);
+  expect(f.replies.at(-1)).toMatchObject({ ok: true, journalRequired: true });
+  expect(await f.read()).toBe(true);
 });
 
 test.each([false, true])(
@@ -239,7 +307,7 @@ test.each(["truncated", "malformed", "oversized", "unknown", "payload"])(
   },
 );
 
-test.each(["authority", "owner", "transcript", "journal", "live"])(
+test.each(["authority", "owner", "transcript", "journal", "live", "producer"])(
   "legacy selection is revoked when its read proof changes (%s)",
   async (change) => {
     const f = fixture();
@@ -257,6 +325,7 @@ test.each(["authority", "owner", "transcript", "journal", "live"])(
       );
     if (change === "journal") writeFileSync(join(f.directory, "output-journal.jsonl"), "broken");
     if (change === "live") f.snapshots.append("legacy", { type: "text_delta", text: "live" });
+    if (change === "producer") f.producer(true);
     await f.read();
     expect(f.replies.at(-1)).toMatchObject({ type: "session.recovery.ready", ok: false });
     expect(f.replies.some((event) => event.type === "session.history.ok")).toBe(false);

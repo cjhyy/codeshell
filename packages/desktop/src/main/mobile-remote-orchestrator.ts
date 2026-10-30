@@ -141,6 +141,7 @@ export class MobileRemoteOrchestrator {
     });
     this.outputRecovery = new MobileOutputRecovery({
       root: sessionsRoot,
+      hasLiveExternalProducer: (id) => !!deps.getExternalRuntimeService?.()?.hasSession(id),
       journalRequired: (id) =>
         !!deps.getExternalRuntimeService?.()?.hasSession(id) ||
         isPersistedExternalRuntime(new SessionManager().readSessionState(id)),
