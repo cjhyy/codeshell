@@ -268,6 +268,41 @@ describe("cross-device user decision lifecycle", () => {
     expect(f.resolutions()).toHaveLength(0);
   });
 
+  it.each(["__future_action__", "__other_future_action__", "__panel_action__"])(
+    "keeps reserved host loopback %s internal when it resolves as unsupported",
+    async (toolName) => {
+      const f = await fixture();
+      const decision = (f.server as any).requestApprovalFromClient(
+        {
+          sessionId: f.sessionId,
+          toolName,
+          args: {},
+          description: "host operation",
+          riskLevel: "low",
+        },
+        { connectionId: "owner", sessionId: f.sessionId, generation: 1 },
+      );
+      const request = f.request();
+      expect(f.session.pendingApprovals.get(request.requestId)!.metadata).toMatchObject({
+        kind: "internal",
+        surfaceable: false,
+      });
+      await f.approve(
+        routeOf(request),
+        {
+          approved: true,
+          answer: JSON.stringify({ ok: false, failure: "unsupported", capability: toolName }),
+        },
+        "host-reply",
+      );
+      expect(await decision).toMatchObject({ approved: true });
+      expect(f.session.pendingApprovals.size).toBe(0);
+      expect((f.server as any).approvalTimers.size).toBe(0);
+      expect((f.server as any).pendingApprovalTargets.size).toBe(0);
+      expect(f.resolutions()).toHaveLength(0);
+    },
+  );
+
   it("resumes the execution budget once a person has answered", async () => {
     const f = await fixture();
     const registry = new ToolRegistry({ builtinTools: [] });

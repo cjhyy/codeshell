@@ -127,12 +127,6 @@ interface ChildHostScope {
   failure(): { failure: "cancelled" | "owner_lost" | "session_closed"; reason: string } | undefined;
 }
 
-const INTERNAL_PENDING_TOOLS = new Set([
-  "__browser_action__",
-  "__credential_action__",
-  "__workspace_action__",
-]);
-
 /**
  * Why a host-loopback request (Panel / Browser / workspace / credential) ended
  * without a result. These four used to collapse into one string — "declined or
@@ -3893,7 +3887,9 @@ export class AgentServer {
       };
       const sessionId = effectiveRoute.sessionId;
       const session = this.chatManager && sessionId ? this.chatManager.get(sessionId) : undefined;
-      const internal = INTERNAL_PENDING_TOOLS.has(request.toolName);
+      // Public tools cannot use __* names. Unknown reserved loopbacks stay
+      // private too; only the user-question channel is meant for clients.
+      const internal = request.toolName.startsWith("__") && request.toolName !== "__ask_user__";
       const timeoutMs = internal ? AgentServer.APPROVAL_TIMEOUT_MS : USER_DECISION_TIMEOUT_MS;
       const createdAt = Date.now();
       const expiresAt = createdAt + timeoutMs;
