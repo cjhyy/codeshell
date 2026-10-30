@@ -13,6 +13,7 @@
  */
 
 import { Methods, sessionsRoot } from "@cjhyy/code-shell-core";
+import { MobilePermissionModes } from "./mobile-remote/permission-modes.js";
 import { MobileOutputRecovery } from "./mobile-remote/output-recovery.js";
 import {
   mobileOutputRecoveryAuthority,
@@ -36,7 +37,6 @@ import { requireRendererProjectEntryPath } from "./renderer-project-path.js";
 import type { OwnedExternalStreamEntry } from "./owned-external-stream.js";
 import {
   type ClaimedMobileUpload,
-  type MobilePermissionModeSnapshotEntry,
   type MobileProjectMeta,
   type MobileServerEvent,
   type MobileUploadService,
@@ -76,25 +76,6 @@ export { injectAndAwaitResult } from "./mobile-remote/handle-client-event.js";
 export { resolveRoomPermissionMode } from "./mobile-remote/handle-room-event.js";
 export type { AuthenticatedMobileClientEvent } from "./mobile-remote/handle-client-event.js";
 
-function normalizePermissionMode(raw: unknown): PermissionMode | null {
-  return raw === "default" || raw === "acceptEdits" || raw === "bypassPermissions" ? raw : null;
-}
-
-function normalizePermissionModeSnapshot(raw: unknown): MobilePermissionModeSnapshotEntry[] {
-  if (!Array.isArray(raw)) return [];
-  const out: MobilePermissionModeSnapshotEntry[] = [];
-  const seen = new Set<string>();
-  for (const item of raw) {
-    const row = item as { sessionId?: unknown; mode?: unknown } | null;
-    const sessionId = typeof row?.sessionId === "string" ? row.sessionId : "";
-    const mode = normalizePermissionMode(row?.mode);
-    if (!sessionId || !mode || seen.has(sessionId)) continue;
-    seen.add(sessionId);
-    out.push({ sessionId, mode });
-  }
-  return out;
-}
-
 export interface MobileRemoteOrchestratorDeps {
   remote: RemoteHostManager;
   uploads: MobileUploadService;
@@ -115,7 +96,7 @@ export interface MobileRemoteOrchestratorDeps {
 export class MobileRemoteOrchestrator {
   private readonly mobileDeviceStates = new Map<string, MobileDeviceState>();
   private readonly mobileSessionCwds = new Map<string, string | null>();
-  private readonly mobilePermissionModes = new Map<string, PermissionMode>();
+  private readonly mobilePermissionModes = new MobilePermissionModes();
 
   private readonly outputRecovery: MobileOutputRecovery;
   private readonly externalCommands: MobileExternalRuntimeCommands;
@@ -319,9 +300,7 @@ export class MobileRemoteOrchestrator {
 
   /** Replace the desktop-pushed permission-mode snapshot and re-announce. */
   updatePermissionModes(entries: unknown): void {
-    const next = normalizePermissionModeSnapshot(entries);
-    this.mobilePermissionModes.clear();
-    for (const entry of next) this.mobilePermissionModes.set(entry.sessionId, entry.mode);
+    this.mobilePermissionModes.replaceDesktopSnapshot(entries);
     this.sendSelectedMobilePermissionModes();
   }
 
@@ -393,6 +372,7 @@ export class MobileRemoteOrchestrator {
     title: string;
     prompt: string;
     clientMessageId?: string;
+    permissionMode?: PermissionMode;
   }): void {
     const line = JSON.stringify({
       jsonrpc: "2.0",

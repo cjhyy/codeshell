@@ -2100,6 +2100,128 @@ describe("useRemoteApp mobile image sends", () => {
 });
 
 describe("useRemoteApp project V2 session creation", () => {
+  test("permission edits while creation awaits acceptance target only the new session and resist the initial echo", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    const sent = () => ws.sent.map((line) => JSON.parse(line));
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok" });
+      hook.result.current.setPermissionMode("bypassPermissions");
+      hook.result.current.newSession({ projectId: null });
+      await flushMicrotasks();
+    });
+    const create = sent().findLast((event) => event.type === "session.create");
+    const previous = sent().filter((event) => event.type === "permission.setMode").length;
+    await act(async () => {
+      hook.result.current.setPermissionMode("default");
+      await flushMicrotasks();
+    });
+    expect(sent().filter((event) => event.type === "permission.setMode")).toHaveLength(previous);
+    await act(async () => {
+      ws.message({
+        type: "chat.accepted",
+        clientRequestId: create.clientRequestId,
+        sessionId: "new",
+      });
+      ws.message({ type: "permission.mode", sessionId: "new", mode: "bypassPermissions" });
+      await flushMicrotasks();
+    });
+    expect(sent().findLast((event) => event.type === "permission.setMode")).toEqual({
+      type: "permission.setMode",
+      sessionId: "new",
+      mode: "default",
+    });
+    expect(hook.result.current.permissionMode).toBe("default");
+    await act(async () => {
+      ws.message({ type: "permission.mode", sessionId: "new", mode: "default" });
+      ws.message({ type: "permission.mode", sessionId: "new", mode: "acceptEdits" });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.permissionMode).toBe("acceptEdits");
+    await hook.unmount();
+  });
+
+  for (const previousSession of [false, true]) {
+    test(`pins the displayed default into creation and first send (previous CC session: ${previousSession})`, async () => {
+      setupBrowser();
+      const hook = await renderHook(() => useRemoteApp());
+      const ws = FakeWebSocket.instances[0]!;
+      const sent = () => ws.sent.map((line) => JSON.parse(line));
+      const restoreFetch = defineTestProperty(window, "fetch", {
+        value: async () => {
+          throw new Error("no network expected");
+        },
+        writable: true,
+      });
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        await flushMicrotasks();
+      });
+      if (previousSession) {
+        await act(async () => {
+          hook.result.current.selectSession("completed-claude");
+          ws.message({
+            type: "permission.mode",
+            sessionId: "completed-claude",
+            mode: "bypassPermissions",
+          });
+          await flushMicrotasks();
+        });
+      }
+      await act(async () => {
+        if (previousSession) hook.result.current.setPermissionMode("default");
+        hook.result.current.newSession({ projectId: null });
+        await flushMicrotasks();
+      });
+      const create = sent().findLast((event) => event.type === "session.create");
+      expect(create.permissionMode).toBe("default");
+      await act(async () => {
+        // A reply for the previous selection must not alter the new draft.
+        ws.message({
+          type: "permission.mode",
+          sessionId: "completed-claude",
+          mode: "bypassPermissions",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.permissionMode).toBe("default");
+      await act(async () => {
+        ws.message({
+          type: "chat.accepted",
+          clientRequestId: create.clientRequestId,
+          sessionId: "new-canonical",
+          cwd: null,
+        });
+        await flushMicrotasks();
+      });
+      let accepted!: Promise<boolean>;
+      await act(async () => {
+        accepted = hook.result.current.sendChat({
+          text: "fixture",
+          attachments: [],
+          modelKey: previousSession ? "codex/gpt-test" : "claude-code/haiku-test",
+        });
+        await flushMicrotasks();
+      });
+      const message = sent().findLast((event) => event.type === "chat.send");
+      expect(message).toMatchObject({ sessionId: "new-canonical", permissionMode: "default" });
+      await act(async () => {
+        ws.message({
+          type: "chat.accepted",
+          sessionId: "new-canonical",
+          clientMessageId: message.clientMessageId,
+        });
+        await flushMicrotasks();
+      });
+      expect(await accepted).toBe(true);
+      await hook.unmount();
+      restoreFetch();
+    });
+  }
+
   test("sends stable project/root ids and follows a make-primary projection by project id", async () => {
     setupBrowser();
     const hook = await renderHook(() => useRemoteApp());
@@ -2133,6 +2255,7 @@ describe("useRemoteApp project V2 session creation", () => {
     expect(ws.sent.map((payload) => JSON.parse(payload))).toContainEqual({
       type: "session.create",
       clientRequestId: expect.any(String),
+      permissionMode: "default",
       projectId: "project-1",
       rootId: "root-new",
     });
@@ -2176,6 +2299,7 @@ describe("useRemoteApp project V2 session creation", () => {
     expect(ws.sent.map((payload) => JSON.parse(payload))).toContainEqual({
       type: "session.create",
       clientRequestId: expect.any(String),
+      permissionMode: "default",
       projectId: null,
     });
     await hook.unmount();

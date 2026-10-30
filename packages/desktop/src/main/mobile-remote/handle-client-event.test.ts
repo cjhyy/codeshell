@@ -5,6 +5,7 @@ import { SessionSnapshotStore } from "../SessionSnapshotStore.js";
 import { prepareAgentRunMetadata } from "../agent-run-metadata.js";
 import type { SessionCwdIndexEntry } from "../session-cwd-index.js";
 import { MobileExternalRuntimeCommands } from "./external-runtime-commands.js";
+import { MobilePermissionModes } from "./permission-modes.js";
 import {
   agentRunTimeoutMs,
   handleClientEvent,
@@ -103,6 +104,82 @@ async function sendChat(ctx: OrchestratorCtx): Promise<void> {
     deviceId: "phone-1",
     sessionId: "session-1",
     text: "continue",
+  });
+}
+
+test("mobile default intent survives a desktop snapshot during external preparation", async () => {
+  const harness = createHarness({
+    requestedWorkspaceRoot: "/worktree",
+    lookupSession: () => undefined,
+  });
+  const observed: unknown[] = [];
+  harness.ctx.mobilePermissionModes.set("session-1", "bypassPermissions");
+  harness.ctx.broadcastMobileSession = (meta) => observed.push(meta);
+  harness.ctx.externalCommands = {
+    observe: () => undefined,
+    isExternal: () => true,
+    prepare: async (_viewer: string, _device: string, _session: string, input: unknown) => {
+      observed.push(input);
+      harness.ctx.mobilePermissionModes.set("session-1", "bypassPermissions");
+      return {
+        cwd: "/worktree",
+        submit: async (request: unknown) => {
+          observed.push(request);
+          return { ok: true };
+        },
+      };
+    },
+  } as unknown as MobileExternalRuntimeCommands;
+  (harness.ctx.remote as any).sendToViewer = (_viewer: string, event: Record<string, unknown>) =>
+    harness.replies.push(event);
+  await handleClientEvent(harness.ctx, {
+    type: "chat.send",
+    deviceId: "phone-1",
+    viewerId: "tab",
+    sessionId: "session-1",
+    text: "fixture",
+    modelKey: "codex/gpt-test",
+    permissionMode: "default",
+  } as Parameters<typeof handleClientEvent>[1]);
+  expect(observed).toHaveLength(3);
+  expect(observed[0]).toMatchObject({ permissionMode: "default" });
+  expect(observed[1]).toMatchObject({ params: { permissionMode: "default" } });
+  expect(observed[2]).toMatchObject({ permissionMode: "default" });
+});
+
+for (const previousSelection of [false, true]) {
+  test(`creation pins explicit default across adoption snapshots (previous selection: ${previousSelection})`, async () => {
+    const harness = createHarness({
+      requestedWorkspaceRoot: "/worktree",
+      lookupSession: () => undefined,
+    });
+    const modes = new MobilePermissionModes();
+    harness.ctx.mobilePermissionModes = modes;
+    const device = harness.ctx.deviceState("phone-1");
+    if (previousSelection) {
+      device.permissionMode = "bypassPermissions";
+      await handleClientEvent(harness.ctx, {
+        type: "permission.setMode",
+        deviceId: "phone-1",
+        sessionId: "session-1",
+        mode: "default",
+      });
+    }
+    await handleClientEvent(harness.ctx, {
+      type: "session.create",
+      deviceId: "phone-1",
+      projectId: null,
+      permissionMode: "default",
+    });
+    const createdId = device.sessionId!;
+    expect(createdId).toStartWith("mobile-");
+    expect(modes.get(createdId)).toBe("default");
+    modes.replaceDesktopSnapshot([]);
+    modes.replaceDesktopSnapshot([{ sessionId: createdId, mode: "bypassPermissions" }]);
+    expect(modes.get(createdId)).toBe("default");
+    modes.replaceDesktopSnapshot([{ sessionId: createdId, mode: "default" }]);
+    modes.replaceDesktopSnapshot([{ sessionId: createdId, mode: "acceptEdits" }]);
+    expect(modes.get(createdId)).toBe("acceptEdits");
   });
 }
 

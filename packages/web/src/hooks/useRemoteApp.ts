@@ -418,6 +418,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const uncertainMessageSessionsRef = useRef(new Map<string, string>());
   const pendingCreateRef = useRef<{
     clientRequestId: string;
+    permissionMode: PermissionMode;
     conversationRevision: number;
     connectionGeneration: number;
     timer?: ReturnType<typeof setTimeout>;
@@ -435,6 +436,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     >(),
   );
   const [permissionMode, setPermissionModeState] = useState<PermissionMode>("default");
+  const permissionModeRef = useRef<PermissionMode>("default");
+  const creationPermissionEchoRef = useRef<{ sessionId: string; mode: PermissionMode } | null>(
+    null,
+  );
   /** Transient banner message (errors, room-missing, …). Auto-clears. */
   const [notice, setNoticeState] = useState<string | undefined>();
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -949,6 +954,19 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           ) {
             clearTimeout(creation.timer);
             pendingCreateRef.current = null;
+            if (event.sessionId && creation.permissionMode !== permissionModeRef.current) {
+              // The user can change the draft while creation is in flight. Apply
+              // that choice to the new id, never to the previous selection.
+              creationPermissionEchoRef.current = {
+                sessionId: event.sessionId,
+                mode: permissionModeRef.current,
+              };
+              sendRef.current?.({
+                type: "permission.setMode",
+                sessionId: event.sessionId,
+                mode: permissionModeRef.current,
+              });
+            }
           }
           if (event.clientMessageId) {
             if (waiter) uncertainMessageSessionsRef.current.delete(event.clientMessageId);
@@ -1257,11 +1275,20 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           break;
         }
         case "permission.mode":
+          if (pendingCreateRef.current) break;
+          if (
+            creationPermissionEchoRef.current &&
+            creationPermissionEchoRef.current.sessionId === event.sessionId
+          ) {
+            if (creationPermissionEchoRef.current.mode !== event.mode) break;
+            creationPermissionEchoRef.current = null;
+          }
           if (
             !event.sessionId ||
             !boundSessionRef.current ||
             event.sessionId === boundSessionRef.current
           ) {
+            permissionModeRef.current = event.mode;
             setPermissionModeState(event.mode);
           }
           break;
@@ -1808,6 +1835,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   useEffect(() => {
     socketOnlineRef.current = socket.status === "online";
     if (socketOnlineRef.current) return;
+    creationPermissionEchoRef.current = null;
     failSessionCreation();
     sessionListRequestRef.current = undefined;
     setLoadingKey("sessions", false);
@@ -1920,6 +1948,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       onUncertain?: (clientMessageId: string) => void;
       onRetired?: () => void;
     }): Promise<boolean> => {
+      const permissionMode = permissionModeRef.current;
       const text = input.text.trim();
       if (!text && input.attachments.length === 0) return false;
       if (socket.status !== "online") return false;
@@ -1999,6 +2028,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         queued = socket.send(
           {
             type: "chat.send",
+            permissionMode,
             ...(input.modelKey ? { modelKey: input.modelKey } : {}),
             ...(input.modelTraceSource ? { modelTraceSource: input.modelTraceSource } : {}),
             text,
@@ -2075,6 +2105,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         return;
       }
       conversationRevisionRef.current += 1;
+      creationPermissionEchoRef.current = null;
       if (activeRoomIdRef.current) {
         socket.send({
           type: "ccRoom.unsubscribeTranscript",
@@ -2150,6 +2181,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         return;
       }
       outputClient.cancel();
+      creationPermissionEchoRef.current = null;
       conversationRevisionRef.current += 1;
       setLoadingKey("sessionHistory", false);
       setLoadingKey("roomHistory", false);
@@ -2195,13 +2227,21 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       // view: offline, a dropped frame used to leave the view on the new target
       // while a later first send fell back to the previous (possibly another
       // project's) session.
+      const permissionMode = permissionModeRef.current;
       const created = socket.send(
         stableTarget && typeof stableTarget === "object"
-          ? { type: "session.create", clientRequestId, ...stableTarget, ...(name ? { name } : {}) }
+          ? {
+              type: "session.create",
+              clientRequestId,
+              permissionMode,
+              ...stableTarget,
+              ...(name ? { name } : {}),
+            }
           : stableTarget === undefined
-            ? { type: "session.create", clientRequestId, ...(name ? { name } : {}) }
+            ? { type: "session.create", clientRequestId, permissionMode, ...(name ? { name } : {}) }
             : {
                 type: "session.create",
+                permissionMode,
                 clientRequestId,
                 cwd: stableTarget,
                 ...(name ? { name } : {}),
@@ -2214,9 +2254,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
       outputClient.cancel();
       conversationRevisionRef.current += 1;
+      creationPermissionEchoRef.current = null;
       clearTimeout(pendingCreateRef.current?.timer);
       pendingCreateRef.current = {
         clientRequestId,
+        permissionMode,
         conversationRevision: conversationRevisionRef.current,
         connectionGeneration: socket.connectionGeneration,
         timer: setTimeout(() => {
@@ -2332,7 +2374,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       // session mode does not govern it. Never pretend to change it here.
       if (activeRoomIdRef.current) return;
       if (boundSessionRef.current && recoveryFencesRef.current.has(boundSessionRef.current)) return;
+      permissionModeRef.current = mode;
       setPermissionModeState(mode);
+      if (pendingCreateRef.current) return;
+      if (creationPermissionEchoRef.current) creationPermissionEchoRef.current.mode = mode;
       socket.send({ type: "permission.setMode", sessionId: boundSessionRef.current, mode });
     },
     [socket],
