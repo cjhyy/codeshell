@@ -1829,6 +1829,10 @@ export interface CodeshellApi
   listPanelApps(cwd: string, locale: string): Promise<PanelAppDescriptor[]>;
   listPanelAppExtensions(cwd: string, locale: string): Promise<PanelAppExtensionSummary[]>;
   getPanelAppBindings(cwd: string): Promise<PanelAppBindingState[]>;
+  /** Bindings per project in request order; `null` for a project that could not be read. */
+  getPanelAppBindingsForProjects?(
+    projectPaths: string[],
+  ): Promise<Array<PanelAppBindingState[] | null>>;
   setPanelAppProjectBinding(
     cwd: string,
     id: string,

@@ -73,7 +73,12 @@ export function usePanelAppCatalog({
   const generation = useRef(0);
   const refreshRef = useRef<() => void>(() => {});
   const errorRef = useRef<string | null>(null);
-  const [state, setState] = useState({ loading: true, error: null as string | null });
+  const loadedRef = useRef(false);
+  const [state, setState] = useState({
+    loading: true,
+    refreshing: false,
+    error: null as string | null,
+  });
   const refresh = useCallback(() => refreshRef.current(), []);
 
   useEffect(() => {
@@ -85,14 +90,21 @@ export function usePanelAppCatalog({
     const run = async () => {
       const request = ++generation.current;
       if (!alive) return;
-      errorRef.current = null;
-      setState({ loading: true, error: null });
+      // Re-reading a healthy catalog keeps it on screen: a full host read can
+      // take seconds, and swapping the list for a loading row made it jump.
+      if (loadedRef.current && !errorRef.current)
+        setState((previous) => ({ ...previous, refreshing: true }));
+      else {
+        errorRef.current = null;
+        setState({ loading: true, refreshing: false, error: null });
+      }
       const current = () => alive && generation.current === request;
       const publish = (snapshot: CatalogSnapshot, error: string | null = null) => {
         if (!current()) return;
         replacePanelApps(snapshot.descriptors, null, snapshot.boundProjectPathsByAppId);
+        loadedRef.current = true;
         errorRef.current = error;
-        setState({ loading: false, error });
+        setState({ loading: false, refreshing: false, error });
       };
       const empty: CatalogSnapshot = { descriptors: [], boundProjectPathsByAppId: {} };
       if (!api?.listPanelAppsForProjects && !api?.listPanelApps) {
@@ -135,7 +147,7 @@ export function usePanelAppCatalog({
           replacePanelApps([], null, {});
           const message = errorMessage(error);
           errorRef.current = message;
-          setState({ loading: false, error: message });
+          setState({ loading: false, refreshing: false, error: message });
         })
         .finally(() => {
           inFlight = false;

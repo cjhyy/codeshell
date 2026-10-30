@@ -12,7 +12,7 @@ import {
   listPanelAppsForProjects,
 } from "./panel-apps-service.js";
 import { discoverGitPanelAppsForUi, uninstallPanelAppForUi } from "./panel-app-install-service.js";
-import { createDesktopPanelManagement } from "./panel-app-management.js";
+import { createDesktopPanelManagement, readDesktopPanelBindings } from "./panel-app-management.js";
 import { panelChangeOperation, panelUpdateApproval } from "./panel-update-blockers.js";
 import type { ClosePanelForUpdate, DescribePanelGuest } from "./panel-update-blockers.js";
 import { registerProjectPanelVersionIpc } from "./project-panel-version-ipc.js";
@@ -105,6 +105,9 @@ export function registerProjectPanelIpc(deps: {
     cwd = await requireRendererProjectPath(cwd);
     return createDesktopPanelManagement(cwd).snapshot();
   });
+  ipcMain.handle("panel-apps:bindingsForProjects", (_e, projectPaths: string[]) =>
+    readDesktopPanelBindings(projectPaths, requireRendererProjectPath),
+  );
   registerProjectPanelVersionIpc({
     ipcMain,
     describeGuest: deps.describeGuest,

@@ -140,12 +140,23 @@ export interface ProjectPanelAppIssue {
   selectionKey: string;
 }
 
+/**
+ * Verified package reads shared by one multi-project pass. Each read hashes
+ * every package byte, so N projects would otherwise re-hash the same catalog
+ * N times. Create a fresh object per pass; never keep one across passes.
+ */
+export interface PanelAppInspectionReads {
+  installed?: Promise<InstalledPanelApp[]>;
+  packages: Map<string, Promise<InstalledPanelApp>>;
+}
+
 /** Separate failed selections from runnable apps. Never substitute catalog bytes for a failed pin.
  * Invalid project configuration still rejects the whole read; individual package failures do not.
  */
 export async function inspectProjectPanelApps(
   projectPath: string,
   appId?: string,
+  reads?: PanelAppInspectionReads,
 ): Promise<{
   apps: InstalledPanelApp[];
   issues: ProjectPanelAppIssue[];
@@ -155,7 +166,19 @@ export async function inspectProjectPanelApps(
   const settings = new SettingsManager(projectPath, "full");
   parsePanelAppPackagePins(settings.getRawForScope("project", projectPath, { strict: true }));
   const records = await readInstalledPanelAppsRegistry();
-  const catalog = new Map((await listInstalledPanelApps(appId)).map((app) => [app.id, app]));
+  const installed = reads
+    ? (await (reads.installed ??= listInstalledPanelApps())).filter(
+        (app) => appId === undefined || app.id === appId,
+      )
+    : await listInstalledPanelApps(appId);
+  const catalog = new Map(installed.map((app) => [app.id, app]));
+  const resolvePackage = (id: string, packageDigest: string) => {
+    if (!reads) return resolvePanelAppPackage(id, packageDigest);
+    const key = `${id}\0${packageDigest}`;
+    let read = reads.packages.get(key);
+    if (!read) reads.packages.set(key, (read = resolvePanelAppPackage(id, packageDigest)));
+    return read;
+  };
   const apps: InstalledPanelApp[] = [];
   const issues: ProjectPanelAppIssue[] = [];
   const pins: Record<string, PanelAppPackagePin> = {};
@@ -166,9 +189,7 @@ export async function inspectProjectPanelApps(
       pin = projectPanelAppPackagePins(projectPath, record.id)[record.id];
       await migrateProjectPanelAppPackagePins(projectPath, record.id);
       pin = projectPanelAppPackagePins(projectPath, record.id)[record.id];
-      const app = pin
-        ? await resolvePanelAppPackage(record.id, pin.packageDigest)
-        : catalog.get(record.id);
+      const app = pin ? await resolvePackage(record.id, pin.packageDigest) : catalog.get(record.id);
       if (!app || (pin && pin.version !== app.version))
         throw new PanelAppInstallError("Selected project package is unavailable");
       if (
