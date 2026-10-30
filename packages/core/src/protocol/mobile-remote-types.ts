@@ -188,6 +188,8 @@ export type MobileClientEvent =
       approvalId: string;
       decision: "approve" | "reject";
       sessionId?: string;
+      connectionId?: string;
+      generation?: number;
       reason?: string;
       answer?: string;
       scope?: ApprovalScope;
@@ -360,6 +362,8 @@ export type MobileServerEvent =
       type: "approval.resolved";
       approvalId: string;
       sessionId?: string;
+      connectionId?: string;
+      generation?: number;
       approved?: boolean;
       answer?: string;
     }

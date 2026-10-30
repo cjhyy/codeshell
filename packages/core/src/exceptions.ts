@@ -66,6 +66,17 @@ export class ToolError extends FrameworkError {
   }
 }
 
+/** A host lifecycle failure while waiting for a user; it is never a user denial. */
+export class UserDecisionError extends ToolError {
+  constructor(
+    public readonly failure: string,
+    message: string,
+  ) {
+    super(message, undefined, { failure });
+    this.name = "UserDecisionError";
+  }
+}
+
 export class ToolNotFoundError extends ToolError {
   constructor(toolName: string) {
     super(`Tool not found: ${toolName}`, toolName);
@@ -74,10 +85,7 @@ export class ToolNotFoundError extends ToolError {
 }
 
 export class ToolExecutionError extends ToolError {
-  constructor(
-    toolName: string,
-    cause: string,
-  ) {
+  constructor(toolName: string, cause: string) {
     super(`Tool execution failed: ${toolName} - ${cause}`, toolName, { cause });
     this.name = "ToolExecutionError";
   }
@@ -96,10 +104,7 @@ export class ToolTimeoutError extends ToolError {
 // ─── Permission Errors ────────────────────────────────────────────
 
 export class PermissionDeniedError extends FrameworkError {
-  constructor(
-    toolName: string,
-    reason?: string,
-  ) {
+  constructor(toolName: string, reason?: string) {
     super(`Permission denied for tool: ${toolName}${reason ? ` - ${reason}` : ""}`, {
       toolName,
       reason,

@@ -172,6 +172,7 @@ async function renderStrictHook<T>(useHook: () => T) {
 describe("accepted approval decisions", () => {
   test("keeps failed requests pending, prevents duplicate deliveries, and permits a retry", async () => {
     const env = envelope("session");
+    env.source = "external-runtime";
     const first = deferred();
     deliver = () => first.promise;
     const hook = await mount([env]);
@@ -282,6 +283,7 @@ describe("accepted approval decisions", () => {
 
   test("a failed mobile notification cannot undo or reject an accepted decision", async () => {
     const env = envelope("session");
+    env.source = "external-runtime";
     mirror = async () => {
       throw new Error("mobile offline");
     };
@@ -293,6 +295,18 @@ describe("accepted approval decisions", () => {
     expect(hook.result.current.history).toHaveLength(1);
     expect(hook.result.current.queue).toEqual([]);
     expect(toasts).toEqual([]);
+  });
+
+  test("native decisions rely on Core's authoritative resolution instead of a partial mirror", async () => {
+    const env = envelope("session");
+    const hook = await mount([env]);
+    await act(async () => {
+      await hook.result.current.controller.decideEnvelope(env, "approve");
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.history).toHaveLength(1);
+    expect(hook.result.current.queue).toEqual([]);
+    expect(mirrored).toEqual([]);
   });
 });
 

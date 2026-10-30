@@ -23,6 +23,61 @@ function approvalRequestLine(sessionId: string, requestId: string): string {
 }
 
 describe("PendingMobileApprovals", () => {
+  test("reconnect replays only requests before the worker's absolute deadline", () => {
+    let now = 1_000;
+    const pending = new PendingMobileApprovals(() => now);
+    const request = JSON.parse(approvalRequestLine("s1", "ask-1"));
+    Object.assign(request.params, { connectionId: "worker", generation: 2, expiresAt: 2_000 });
+    const line = JSON.stringify(request);
+    pending.observeOutboundLine(line);
+    expect(pending.find("s1", "ask-1")).toEqual({
+      sessionId: "s1",
+      requestId: "ask-1",
+      connectionId: "worker",
+      generation: 2,
+      expiresAt: 2_000,
+    });
+    now = 1_999;
+    expect(pending.replayLines("s1")).toEqual([line]);
+    now = 2_000;
+    expect(pending.find("s1", "ask-1")).toBeUndefined();
+    expect(pending.replayLines("s1")).toEqual([]);
+    expect(pending.replayAllLines()).toEqual([]);
+    pending.observeOutboundLine(line);
+    expect(pending.replayAllLines()).toEqual([]);
+  });
+
+  test("a delayed resolution cannot remove another session or worker generation's request", () => {
+    const pending = new PendingMobileApprovals();
+    const request = (sessionId: string, generation: number) => {
+      const frame = JSON.parse(approvalRequestLine(sessionId, "same-id"));
+      Object.assign(frame.params, { connectionId: "worker", generation });
+      return JSON.stringify(frame);
+    };
+    const first = request("s1", 2);
+    const second = request("s2", 3);
+    pending.observeOutboundLine(first);
+    pending.observeOutboundLine(second);
+    pending.observeOutboundLine(
+      JSON.stringify({
+        method: "agent/approvalResolved",
+        params: { sessionId: "s1", requestId: "same-id" },
+      }),
+    );
+    expect(pending.replayAllLines()).toEqual([first, second]);
+    const resolve = (sessionId: string, generation: number) =>
+      pending.observeOutboundLine(
+        JSON.stringify({
+          method: "agent/approvalResolved",
+          params: { sessionId, requestId: "same-id", connectionId: "worker", generation },
+        }),
+      );
+    resolve("s1", 1);
+    expect(pending.replayAllLines()).toEqual([first, second]);
+    resolve("s1", 2);
+    expect(pending.replayAllLines()).toEqual([second]);
+  });
+
   test("replays an asynchronous question after its run ends until it is answered or cancelled", () => {
     const pending = new PendingMobileApprovals();
     const request = JSON.parse(approvalRequestLine("s1", "ask-later"));

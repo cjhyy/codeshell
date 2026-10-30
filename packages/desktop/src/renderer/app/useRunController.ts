@@ -1433,6 +1433,8 @@ export function useRunController({
       });
       // Mirroring is best-effort after acceptance; a disconnected mobile peer
       // must not turn a successful approval into a retryable delivery failure.
+      // Core emits authoritative resolutions itself, including owner identity.
+      if (env.source !== "external-runtime") return;
       try {
         const mirrored = window.codeshell.mobileRemote?.notifyApprovalResolved?.({
           requestId: env.requestId,

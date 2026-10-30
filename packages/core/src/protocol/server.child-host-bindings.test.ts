@@ -1,11 +1,11 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import type { Engine } from "../engine/engine.js";
 import type { ChildHostBindings, ChildHostBindingsFactory } from "../engine/types.js";
 import type { ApprovalRequest } from "../types.js";
 import { ApprovalRouter } from "../tool-system/permission.js";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
-import { Methods } from "./types.js";
+import { Methods, USER_DECISION_TIMEOUT_MS } from "./types.js";
 
 const cleanup: Array<() => void | Promise<void>> = [];
 afterEach(async () => {
@@ -193,8 +193,17 @@ describe("child host bindings", () => {
 
   test("cleans up expired child tool approvals and preserves the timeout reason", async () => {
     const p = await setup();
-    const oldTimeout = (AgentServer as any).APPROVAL_TIMEOUT_MS;
-    (AgentServer as any).APPROVAL_TIMEOUT_MS = 5;
+    const setTimeoutOriginal = globalThis.setTimeout;
+    const timerSpy = spyOn(globalThis, "setTimeout").mockImplementation(((
+      handler: (...args: any[]) => void,
+      timeout?: number,
+      ...args: any[]
+    ) =>
+      setTimeoutOriginal(
+        handler,
+        timeout === USER_DECISION_TIMEOUT_MS ? 5 : timeout,
+        ...args,
+      )) as typeof setTimeout);
     try {
       expect(await permission(p.child("child-a"), "child-a")).toMatchObject({
         approved: false,
@@ -203,7 +212,7 @@ describe("child host bindings", () => {
       expect(p.session.pendingApprovals.size).toBe(0);
       expect((p.server as any).approvalTimers.size).toBe(0);
     } finally {
-      (AgentServer as any).APPROVAL_TIMEOUT_MS = oldTimeout;
+      timerSpy.mockRestore();
     }
   });
 });

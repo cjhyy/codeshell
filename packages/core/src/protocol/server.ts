@@ -38,6 +38,7 @@ import {
   type PluginCommandsListParams,
   type PluginCommandExpandParams,
   type PendingApprovalMetadata,
+  USER_DECISION_TIMEOUT_MS,
   Methods,
   ErrorCodes,
   createResponse,
@@ -93,6 +94,7 @@ import {
 } from "./output-history-quiescence.js";
 import { logger } from "../logging/logger.js";
 import { nanoid } from "nanoid";
+import { UserDecisionLifecycle } from "./user-decision-lifecycle.js";
 import type { ChatSession } from "./chat-session.js";
 import type { ChatSessionManager, EngineConfigSlice } from "./chat-session-manager.js";
 import { wakeSessionForBackgroundResults } from "./background-result-wakeup.js";
@@ -124,12 +126,6 @@ interface ChildHostScope {
   pending: Set<string>;
   failure(): { failure: "cancelled" | "owner_lost" | "session_closed"; reason: string } | undefined;
 }
-
-const INTERNAL_PENDING_TOOLS = new Set([
-  "__browser_action__",
-  "__credential_action__",
-  "__workspace_action__",
-]);
 
 /**
  * Why a host-loopback request (Panel / Browser / workspace / credential) ended
@@ -499,16 +495,23 @@ export class AgentServer {
   private pendingApprovals = new Map<string, (result: ApprovalResult) => void>();
   /** Timers for approval timeouts */
   private approvalTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  /** Default approval timeout: 5 minutes */
+  private approvalDeadlines = new Map<string, number>();
+  private readonly userDecisions = new UserDecisionLifecycle({
+    pendingApprovals: this.pendingApprovals,
+    pendingApprovalTargets: this.pendingApprovalTargets,
+    approvalTimers: this.approvalTimers,
+    approvalDeadlines: this.approvalDeadlines,
+    connectionId: () => this.connectionId,
+    disconnected: () => this.transportDisconnected,
+    workerGeneration: () => this.workerGeneration(),
+    route: (sessionId, requestId) => this.approvalRouteEnvelope(sessionId, requestId),
+    clearTimer: (requestId) => this.clearApprovalTimer(requestId),
+    take: (session, requestId, status) => this.takeSessionApproval(session, requestId, status),
+    observeCreated: (metadata) => this.observeApprovalCreated(metadata),
+    notify: (method, params) => this.notify(method, params),
+  });
+  /** Host-loopback operations have a separate mechanical timeout. */
   private static readonly APPROVAL_TIMEOUT_MS = 5 * 60 * 1000;
-  /**
-   * Wall-clock timeout for AskUserQuestion during a GOAL run (10 minutes).
-   * Plain interactive asks stay untimed; only a self-driving goal run arms this
-   * so a mid-goal question can't suspend the loop forever with nobody watching.
-   * Longer than the tool-approval timeout — a user who IS present deserves more
-   * time to compose a real answer before we assume-and-continue.
-   */
-  private static readonly GOAL_ASKUSER_TIMEOUT_MS = 10 * 60 * 1000;
 
   /**
    * Unsubscribe handle for the process-local `agentNotificationBus`
@@ -965,11 +968,6 @@ export class AgentServer {
                   ...closedFailure,
                 },
           );
-          try {
-            this.notify(Methods.ApprovalResolved, { sessionId: sid, requestId: id });
-          } catch {
-            /* transport may already be closed */
-          }
         }
         scope.pending.clear();
         // One-way release uses the existing private host channel; it is never
@@ -2110,6 +2108,30 @@ export class AgentServer {
         );
         return;
       }
+      if (entry.metadata.expiresAt !== undefined && Date.now() >= entry.metadata.expiresAt) {
+        if (entry.metadata.kind === "internal") {
+          this.takeSessionApproval(s, params.requestId, "expired");
+          this.pendingApprovalTargets.delete(params.requestId);
+          this.clearApprovalTimer(params.requestId);
+          entry.resolve(internalCancellation("timed_out", "host operation timed out"));
+        } else {
+          this.finishSessionUserDecision(
+            s,
+            params.requestId,
+            {
+              approved: false,
+              failure: "timed_out",
+              reason:
+                "The confirmation deadline expired without an answer. No permission was granted.",
+            },
+            "expired",
+          );
+        }
+        this.transport.send(
+          createErrorResponse(req.id, ErrorCodes.InvalidParams, "This confirmation has expired"),
+        );
+        return;
+      }
       if (entry.metadata.asynchronous) {
         if (entry.submitting) {
           this.transport.send(
@@ -2150,14 +2172,16 @@ export class AgentServer {
           this.takeSessionApproval(s, params.requestId, "resolved");
           this.pendingApprovalTargets.delete(params.requestId);
           this.clearApprovalTimer(params.requestId);
-          if (typeof answer === "string") {
-            this.notify(Methods.ApprovalResolved, {
+          this.notifyDecisionResolved(
+            {
+              connectionId: this.connectionId,
               sessionId: params.sessionId,
+              generation: entry.metadata.routeGeneration,
               requestId: params.requestId,
-              approved: true,
-              answer,
-            });
-          }
+            },
+            decision,
+            "resolved",
+          );
           this.transport.send(createResponse(req.id, { ok: true }));
         } catch (error) {
           this.transport.send(
@@ -2175,9 +2199,6 @@ export class AgentServer {
       s.pendingApprovals.delete(params.requestId);
       this.observeApprovalTransition(entry.metadata, "resolved");
       this.pendingApprovalTargets.delete(params.requestId);
-      // Cancel the pending timeout for requests that arm one (browser actions,
-      // credential injection, and tool approvals). AskUserQuestion does not use
-      // a timeout; this is harmless for those request ids.
       this.clearApprovalTimer(params.requestId);
       entry.resolve(params.decision);
       this.transport.send(createResponse(req.id, { ok: true }));
@@ -2193,6 +2214,18 @@ export class AgentServer {
           ErrorCodes.InvalidParams,
           `No pending approval: ${params.requestId}`,
         ),
+      );
+      return;
+    }
+
+    const deadline = this.approvalDeadlines.get(params.requestId);
+    if (deadline !== undefined && Date.now() >= deadline) {
+      this.pendingApprovals.delete(params.requestId);
+      this.pendingApprovalTargets.delete(params.requestId);
+      this.clearApprovalTimer(params.requestId);
+      resolve({ approved: false, failure: "timed_out", reason: "approval timed out" });
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "This confirmation has expired"),
       );
       return;
     }
@@ -3854,6 +3887,12 @@ export class AgentServer {
       };
       const sessionId = effectiveRoute.sessionId;
       const session = this.chatManager && sessionId ? this.chatManager.get(sessionId) : undefined;
+      // Public tools cannot use __* names. Unknown reserved loopbacks stay
+      // private too; only the user-question channel is meant for clients.
+      const internal = request.toolName.startsWith("__") && request.toolName !== "__ask_user__";
+      const timeoutMs = internal ? AgentServer.APPROVAL_TIMEOUT_MS : USER_DECISION_TIMEOUT_MS;
+      const createdAt = Date.now();
+      const expiresAt = createdAt + timeoutMs;
 
       if (this.chatManager && sessionId && !session) {
         resolve({
@@ -3865,7 +3904,6 @@ export class AgentServer {
       }
 
       if (session) {
-        const internal = INTERNAL_PENDING_TOOLS.has(request.toolName);
         const toolName = safeApprovalToolName(request.toolName);
         this.registerSessionApproval(
           session,
@@ -3878,32 +3916,46 @@ export class AgentServer {
             title: internal ? "内部操作等待" : `等待批准 ${toolName}`,
             toolName,
             riskLevel: request.riskLevel,
-            createdAt: Date.now(),
-            expiresAt: Date.now() + AgentServer.APPROVAL_TIMEOUT_MS,
+            createdAt,
+            expiresAt,
             surfaceable: !internal,
           },
           (decision: unknown) => resolve(decision as ApprovalResult),
           scope,
         );
       } else {
-        this.pendingApprovals.set(requestId, resolve);
+        this.pendingApprovals.set(requestId, (decision) => {
+          this.pendingApprovalTargets.delete(requestId);
+          this.clearApprovalTimer(requestId);
+          if (!internal) {
+            this.notifyDecisionResolved({ ...effectiveRoute, requestId }, decision);
+          }
+          resolve(decision);
+        });
       }
       this.pendingApprovalTargets.set(requestId, { ...effectiveRoute, requestId });
+      this.approvalDeadlines.set(requestId, expiresAt);
 
       const timer = setTimeout(() => {
         const pending = session?.pendingApprovals ?? this.pendingApprovals;
         if (pending.has(requestId)) {
-          if (session) {
-            this.takeSessionApproval(session, requestId, "expired");
-          } else {
-            pending.delete(requestId);
-          }
+          const entry = session
+            ? this.takeSessionApproval(session, requestId, "expired")
+            : undefined;
+          const legacyResolve = !session ? this.pendingApprovals.get(requestId) : undefined;
+          if (!session) pending.delete(requestId);
           this.pendingApprovalTargets.delete(requestId);
-          this.approvalTimers.delete(requestId);
+          this.clearApprovalTimer(requestId);
           scope?.pending.delete(requestId);
-          resolve({ approved: false, failure: "timed_out", reason: "approval timed out" });
+          const decision: ApprovalResult = {
+            approved: false,
+            failure: "timed_out",
+            reason: "approval timed out",
+          };
+          if (entry) entry.resolve(decision);
+          else legacyResolve?.(decision);
         }
-      }, AgentServer.APPROVAL_TIMEOUT_MS);
+      }, timeoutMs);
       this.approvalTimers.set(requestId, timer);
 
       this.notify(Methods.ApprovalRequest, {
@@ -3911,6 +3963,7 @@ export class AgentServer {
         ...(sessionId ? { sessionId } : {}),
         generation: effectiveRoute.generation,
         requestId,
+        expiresAt,
         request,
       });
     });
@@ -3919,10 +3972,14 @@ export class AgentServer {
   private approvalRouteEnvelope(
     sessionId: string,
     requestId: string,
-  ): (ApprovalRouteTarget & { requestId: string }) | { sessionId: string; requestId: string } {
+  ): ApprovalRouteTarget & { requestId: string } {
     const route = this.approvalRouter.current(sessionId);
-    if (!route || route.connectionId !== this.connectionId) return { sessionId, requestId };
-    const target = { ...route, requestId };
+    const target = {
+      ...(route?.connectionId === this.connectionId
+        ? route
+        : { connectionId: this.connectionId, sessionId, generation: 0 }),
+      requestId,
+    };
     this.pendingApprovalTargets.set(requestId, target);
     return target;
   }
@@ -3950,8 +4007,11 @@ export class AgentServer {
 
     const requestId = nanoid(12);
     const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
+    const createdAt = Date.now();
+    const expiresAt = createdAt + USER_DECISION_TIMEOUT_MS;
     const continuation = session.captureFollowUpOptions();
     const requestingRun = session.settled;
+    let answerActive = true;
     session.lastActivityAt = Date.now();
     this.registerSessionApproval(
       session,
@@ -3962,7 +4022,8 @@ export class AgentServer {
         workerGeneration: this.workerGeneration(),
         kind: "ask_user",
         title: "可稍后回答的问题",
-        createdAt: Date.now(),
+        createdAt,
+        expiresAt,
         surfaceable: false,
         asynchronous: true,
       },
@@ -3978,7 +4039,7 @@ export class AgentServer {
         // Cancellation and ownership loss retire the card; they are never
         // synthetic user answers and must not restart a stopped session.
         if (!hasAnswer) {
-          this.notify(Methods.ApprovalResolved, { sessionId, requestId, approved: false });
+          answerActive = false;
           return;
         }
         return deliverAsyncUserAnswer({
@@ -3988,7 +4049,7 @@ export class AgentServer {
           answer,
           continuation: { ...continuation, approvalRouter: this.approvalRouter },
           requestingRun,
-          isCurrent,
+          isCurrent: () => isCurrent() && answerActive,
           resolveWorkspace: () => this.resolveSessionTurnWorkspace(session, sessionId),
           onStream: (event) => {
             this.observeSessionStream(sessionId, event);
@@ -4013,12 +4074,15 @@ export class AgentServer {
         });
       },
     );
+    this.armUserDecisionTimeout(session, requestId, expiresAt);
+    const { signal: _signal, throwOnFailure: _throwOnFailure, ...questionOptions } = opts ?? {};
     try {
       this.notify(Methods.ApprovalRequest, {
         ...routeEnvelope,
+        expiresAt,
         request: {
           toolName: "__ask_user__",
-          args: { question, ...opts, asynchronous: true },
+          args: { question, ...questionOptions, asynchronous: true },
           description: question,
           riskLevel: "low",
         },
@@ -4026,6 +4090,7 @@ export class AgentServer {
     } catch (error) {
       this.takeSessionApproval(session, requestId, "cancelled");
       this.pendingApprovalTargets.delete(requestId);
+      this.clearApprovalTimer(requestId);
       return Promise.reject(error);
     }
     return Promise.resolve(
@@ -4034,15 +4099,9 @@ export class AgentServer {
     );
   }
 
-  /**
-   * Per-session AskUserQuestion for the chatManager path. Resolves via the
-   * SESSION's pendingApprovals (the chatManager approve handler looks there,
-   * keyed by sessionId+requestId) and tags the notify with sessionId so the
-   * renderer routes the question to the right chat tab. This intentionally has
-   * no wall-clock timeout; Stop/cancel drains the pending ask.
-   */
+  /** A blocking question belongs to its tool and shares one deadline across clients. */
   private requestAskUserForSession(
-    session: import("./chat-session.js").ChatSession,
+    session: ChatSession,
     sessionId: string,
     question: string,
     opts?: import("../tool-system/context.js").AskUserOptions,
@@ -4050,86 +4109,14 @@ export class AgentServer {
   ): Promise<string> {
     const failure = scope?.failure();
     if (failure) return Promise.resolve(`(question ${failure.failure}: ${failure.reason})`);
-    return new Promise((resolve) => {
-      const requestId = nanoid(12);
-      const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
-      this.registerSessionApproval(
-        session,
-        {
-          sessionId,
-          requestId,
-          routeGeneration: "generation" in routeEnvelope ? routeEnvelope.generation : undefined,
-          workerGeneration: this.workerGeneration(),
-          kind: "ask_user",
-          title: "需要用户回答",
-          createdAt: Date.now(),
-          surfaceable: true,
-        },
-        (decision: unknown) => {
-          this.clearApprovalTimer(requestId);
-          const result = decision as ApprovalResult;
-          if (result && typeof result === "object" && "approved" in result) {
-            resolve(
-              result.approved
-                ? (result.answer ?? "")
-                : (result.reason ?? "(user declined to answer)"),
-            );
-          } else {
-            // chatManager approve handler resolves with the raw decision value.
-            resolve(typeof decision === "string" ? decision : "");
-          }
-        },
-        scope,
-      );
-
-      const args: Record<string, unknown> = { question };
-      if (opts?.header !== undefined) args.header = opts.header;
-      if (opts?.options !== undefined) args.options = opts.options;
-      if (opts?.multiSelect !== undefined) args.multiSelect = opts.multiSelect;
-      if (opts?.optionsOnly !== undefined) args.optionsOnly = opts.optionsOnly;
-
-      this.notify(Methods.ApprovalRequest, {
-        ...routeEnvelope,
-        ...(scope ? { sourceSessionId: scope.sourceSessionId } : {}),
-        request: {
-          toolName: "__ask_user__",
-          args,
-          description: question,
-          riskLevel: "low" as const,
-        },
-      });
-
-      // Goal mode is an unattended, self-driving run: nobody may be watching to
-      // answer, and this ask channel otherwise has NO wall-clock timeout — so a
-      // model that calls AskUserQuestion mid-goal would suspend the turn loop
-      // forever (only a manual Stop could unblock it). When a goal is active,
-      // arm the shared 10-minute approval timeout: on expiry, drain the pending
-      // ask and resolve with a nudge so the loop keeps making progress instead
-      // of hanging. Plain interactive (no-goal) asks keep their intentional
-      // no-timeout behavior — a human can take as long as they like.
-      let goalActive: boolean;
-      try {
-        goalActive = !!session.getGoal();
-      } catch {
-        goalActive = false;
-      }
-      if (goalActive) {
-        const timer = setTimeout(() => {
-          const entry = this.takeSessionApproval(session, requestId, "expired");
-          if (entry) {
-            this.pendingApprovalTargets.delete(requestId);
-            this.approvalTimers.delete(requestId);
-            entry.resolve("(用户未在限定时间内回答;目标运行中请自行做出合理假设并继续推进。)");
-            // Tell every client the ask is resolved (nobody answered) so the
-            // stale AskUserQuestion card is dismissed instead of lingering as
-            // if still waiting. Reuses the same envelope shape the desktop main
-            // already broadcasts / the renderer's onApprovalResolved consumes.
-            this.notify(Methods.ApprovalResolved, { sessionId, requestId });
-          }
-        }, AgentServer.GOAL_ASKUSER_TIMEOUT_MS);
-        this.approvalTimers.set(requestId, timer);
-      }
-    });
+    return this.userDecisions.askSession(
+      session,
+      sessionId,
+      question,
+      opts,
+      (metadata, resolve) => this.registerSessionApproval(session, metadata, resolve, scope),
+      scope?.sourceSessionId,
+    );
   }
 
   /**
@@ -4543,42 +4530,12 @@ export class AgentServer {
     });
   }
 
-  /**
-   * Ask the client to answer a question from the agent (legacy single-engine
-   * path). This intentionally has no wall-clock timeout; Stop/cancel drains
-   * the pending ask.
-   */
+  /** Legacy questions use the same cancellation and deadline contract. */
   private requestAskUserFromClient(
     question: string,
     opts?: import("../tool-system/context.js").AskUserOptions,
   ): Promise<string> {
-    return new Promise((resolve) => {
-      const requestId = nanoid(12);
-      this.pendingApprovals.set(requestId, (result: ApprovalResult) => {
-        this.clearApprovalTimer(requestId);
-        if (result.approved) {
-          resolve(result.answer ?? "");
-        } else {
-          resolve(result.reason ?? "(user declined to answer)");
-        }
-      });
-
-      const args: Record<string, unknown> = { question };
-      if (opts?.header !== undefined) args.header = opts.header;
-      if (opts?.options !== undefined) args.options = opts.options;
-      if (opts?.multiSelect !== undefined) args.multiSelect = opts.multiSelect;
-      if (opts?.optionsOnly !== undefined) args.optionsOnly = opts.optionsOnly;
-
-      this.notify(Methods.ApprovalRequest, {
-        requestId,
-        request: {
-          toolName: "__ask_user__",
-          args,
-          description: question,
-          riskLevel: "low" as const,
-        },
-      });
-    });
+    return this.userDecisions.askLegacy(question, opts);
   }
 
   private notify(method: string, params: Record<string, unknown>, source?: object): void {
@@ -4753,24 +4710,34 @@ export class AgentServer {
     return this.chatManager?.getLiveSessionSnapshot().generation ?? 0;
   }
 
+  private notifyDecisionResolved(
+    route: Partial<ApprovalRouteTarget> & { requestId: string },
+    decision: unknown,
+    status?: string,
+  ): void {
+    this.userDecisions.notifyResolved(route, decision, status);
+  }
+
+  private finishSessionUserDecision(
+    session: ChatSession,
+    requestId: string,
+    decision: ApprovalResult,
+    status: string,
+  ): boolean {
+    return this.userDecisions.finishSession(session, requestId, decision, status);
+  }
+
+  private armUserDecisionTimeout(session: ChatSession, requestId: string, expiresAt: number): void {
+    this.userDecisions.armTimeout(session, requestId, expiresAt);
+  }
+
   private registerSessionApproval(
     session: ChatSession,
     metadata: PendingApprovalMetadata,
     resolve: (decision: unknown) => void | Promise<void>,
     scope?: ChildHostScope,
   ): void {
-    if (scope) {
-      metadata = { ...metadata, sourceSessionId: scope.sourceSessionId };
-      scope.pending.add(metadata.requestId);
-    }
-    metadata = this.observeApprovalCreated(metadata);
-    session.pendingApprovals.set(metadata.requestId, {
-      resolve: (decision) => {
-        scope?.pending.delete(metadata.requestId);
-        return resolve(decision);
-      },
-      metadata,
-    });
+    this.userDecisions.register(session, metadata, resolve, scope);
   }
 
   private takeSessionApproval(
@@ -4807,6 +4774,7 @@ export class AgentServer {
   }
 
   private clearApprovalTimer(requestId: string): void {
+    this.approvalDeadlines.delete(requestId);
     const timer = this.approvalTimers.get(requestId);
     if (timer) {
       clearTimeout(timer);
@@ -4818,8 +4786,8 @@ export class AgentServer {
    * Resolve all of a chat session's pending approvals as cancelled and clear
    * any matching server-side approval timers. Used by handleCancel's
    * per-session path so a Stop while a tool is awaiting approval doesn't leave
-   * the tool hanging. Bounded request types have same-keyed timer entries;
-   * AskUserQuestion does not.
+   * the tool hanging. User decisions and host-loopback operations both retain
+   * same-keyed timer entries so cancellation also retires their deadlines.
    */
   private cancelSessionApprovals(
     session: import("./chat-session.js").ChatSession,
@@ -4869,6 +4837,18 @@ export class AgentServer {
               ? internalCancellation(failure, reason)
               : { approved: false, failure, reason },
           );
+          if (entry.metadata.asynchronous) {
+            this.notifyDecisionResolved(
+              {
+                connectionId: this.connectionId,
+                sessionId: entry.metadata.sessionId,
+                generation: entry.metadata.routeGeneration,
+                requestId,
+              },
+              { approved: false, failure, reason },
+              status,
+            );
+          }
         } catch {
           /* a resolver must never break cancel cleanup */
         }
@@ -4914,6 +4894,7 @@ export class AgentServer {
       clearTimeout(timer);
     }
     this.approvalTimers.clear();
+    this.approvalDeadlines.clear();
   }
 }
 

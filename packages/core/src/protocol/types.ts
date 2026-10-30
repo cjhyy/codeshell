@@ -28,6 +28,9 @@ import type { SessionMessageTarget } from "../session/session-message.js";
 
 export type PendingApprovalKind = "tool_approval" | "ask_user" | "internal";
 
+/** One server-owned deadline for user decisions across every client surface. */
+export const USER_DECISION_TIMEOUT_MS = 10 * 60 * 1000;
+
 /** Resolver-free metadata retained beside a pending approval callback. */
 export interface PendingApprovalMetadata {
   /** Child task that originated this request; sessionId remains its parent UI route. */
@@ -601,6 +604,8 @@ export interface ApprovalRequestNotification {
   /** Monotonic owner generation required by strict multi-connection hosts. */
   generation?: number;
   requestId: string;
+  /** Absolute server deadline; clients must not restart it on replay. */
+  expiresAt?: number;
   request: ApprovalRequest;
 }
 
@@ -608,7 +613,14 @@ export interface ApprovalRequestNotification {
 export interface ApprovalResolvedNotification {
   /** Originating engine session when known. */
   sessionId?: string;
+  connectionId?: string;
+  generation?: number;
   requestId: string;
+  status?: "resolved" | "expired" | "cancelled" | "owner-lost";
+  approved?: boolean;
+  answer?: string;
+  reason?: string;
+  failure?: Extract<ApprovalResult, { approved: false }>["failure"];
 }
 
 /** Server status changed. */

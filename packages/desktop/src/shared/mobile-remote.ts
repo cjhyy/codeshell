@@ -3,7 +3,10 @@ import type { DesktopRelayApi } from "./device-relay.js";
 export interface ApprovalResolvedEnvelope {
   /** Owning engine session when known. */
   sessionId?: string;
+  connectionId?: string;
+  generation?: number;
   requestId: string;
+  status?: "resolved" | "expired" | "cancelled" | "owner-lost";
   approved?: boolean;
   /** Actual question answer, including answers submitted from another client. */
   answer?: string;

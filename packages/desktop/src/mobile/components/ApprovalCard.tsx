@@ -72,6 +72,17 @@ export function ApprovalCard({
       {showDescription && (
         <p className="mb-2 break-words text-xs text-muted-foreground">{approval.description}</p>
       )}
+      {approval.expiresAt !== undefined && (
+        <p className="mb-2 text-xs text-muted-foreground">
+          {t("mobile.approval.expiresAt", {
+            time: new Date(approval.expiresAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }),
+          })}
+        </p>
+      )}
       {isAsk && approval.asynchronous && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs text-muted-foreground">{t("msg.ask.asyncHint")}</span>

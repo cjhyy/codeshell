@@ -215,7 +215,7 @@ const expectedRuntimeExportsByPartition = {
     "deleteUserCatalogEntry",
     "catalogEntryOrigins",
   ],
-  protocolExtensions: ["createInProcessClient"],
+  protocolExtensions: ["createInProcessClient", "USER_DECISION_TIMEOUT_MS"],
   llmHostExtensions: [
     "defaultCacheDir",
     "fetchModelList",
@@ -348,6 +348,7 @@ const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).
 // Host-only symbols that must NOT leak back onto the public root barrel.
 // (Representative sample across the removed @internal partitions.)
 const hostOnlySamples = [
+  "USER_DECISION_TIMEOUT_MS",
   "McpProbeConnectionError",
   "createMcpProbeConnection",
   "listSessionEntries",
@@ -512,6 +513,7 @@ describe("core public/internal export contract", () => {
 
     expect(new Set(expectedRuntimeExports).size).toBe(expectedRuntimeExports.length);
     expect(Object.keys(internalApi).sort()).toEqual([...expectedRuntimeExports].sort());
+    expect(internalApi.USER_DECISION_TIMEOUT_MS).toBe(600_000);
 
     // Where a symbol is intentionally shared with the public barrel (process
     // singletons and helpers that SDK users legitimately need too), the two

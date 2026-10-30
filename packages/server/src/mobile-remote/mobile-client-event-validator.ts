@@ -133,6 +133,9 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         boundedString(event.approvalId, MAX_ID_LENGTH) &&
         (event.decision === "approve" || event.decision === "reject") &&
         optionalBoundedString(event.sessionId, MAX_ID_LENGTH) &&
+        optionalBoundedString(event.connectionId, MAX_ID_LENGTH) &&
+        (event.generation === undefined ||
+          (Number.isSafeInteger(event.generation) && (event.generation as number) >= 0)) &&
         optionalBoundedString(event.reason, MAX_MESSAGE_LENGTH) &&
         optionalBoundedString(event.answer, MAX_MESSAGE_LENGTH) &&
         optionalMember(event.scope, SCOPES) &&

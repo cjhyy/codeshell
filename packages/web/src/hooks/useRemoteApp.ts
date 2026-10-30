@@ -49,12 +49,14 @@ import {
   maxRoomSeq,
   alignSessionEpoch,
   pruneUnreadSessions,
-  rawApprovalResolvedRequestId,
-  removeResolvedApproval,
+  rawApprovalResolvedRoute,
+  approvalMatchesRoute,
+  approvalRouteKey,
   roomMessageSeq,
   selectSessionReplayEntries,
   type SessionReplayEntry,
   type SessionStreamCursor,
+  type ApprovalRoute,
 } from "./remoteAppSync.js";
 
 /** The host explicitly refused a message, so it was not admitted. */
@@ -72,6 +74,10 @@ export type MobileRuntimeModel = Extract<
 export interface PendingApproval {
   requestId: string;
   sessionId?: string;
+  connectionId?: string;
+  generation?: number;
+  /** Absolute deadline supplied by the worker; reconnecting never extends it. */
+  expiresAt?: number;
   /** Set for cc-room (external claude CLI) approvals — routes the response via
    *  respondCcApproval(roomId, …) instead of the session approval path. */
   roomId?: string;
@@ -337,6 +343,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
    *  delivery error asks Main to replay them if Core still holds the request. */
   const submittedApprovalsRef = useRef(new Set<string>());
   const retiredApprovalsRef = useRef(new Set<string>());
+  const settledApprovalRoutesRef = useRef(new Set<string>());
   const requestActiveResyncRef = useRef<() => void>(() => undefined);
   // The SELECTED project (one-true-source for "what am I looking at"), distinct
   // from activeSessionCwd which is derived from the bound session. Drives session
@@ -642,12 +649,42 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     [setLoadingKey],
   );
 
-  const clearApproval = useCallback((requestId: string) => {
-    submittingAsyncApprovalsRef.current.delete(requestId);
-    submittedApprovalsRef.current.delete(requestId);
-    approvalsRef.current = removeResolvedApproval(approvalsRef.current, requestId);
-    setApprovals((prev) => removeResolvedApproval(prev, requestId));
+  const clearApproval = useCallback((requestId: string, route?: ApprovalRoute) => {
+    const target = route ?? { requestId };
+    const matching = approvalsRef.current.filter((approval) =>
+      approvalMatchesRoute(approval, target),
+    );
+    // Remember the complete worker route so a delayed replay cannot resurrect
+    // a request already answered on desktop or in the originating IM chat.
+    if (route?.sessionId) settledApprovalRoutesRef.current.add(approvalRouteKey(route));
+    for (const approval of matching)
+      settledApprovalRoutesRef.current.add(approvalRouteKey(approval));
+    if (!route || matching.length || !approvalsRef.current.some((a) => a.requestId === requestId)) {
+      submittingAsyncApprovalsRef.current.delete(requestId);
+      submittedApprovalsRef.current.delete(requestId);
+    }
+    approvalsRef.current = approvalsRef.current.filter(
+      (approval) => !approvalMatchesRoute(approval, target),
+    );
+    setApprovals((prev) => prev.filter((approval) => !approvalMatchesRoute(approval, target)));
   }, []);
+
+  useEffect(() => {
+    const deadlines = approvals.flatMap((approval) =>
+      typeof approval.expiresAt === "number" ? [approval.expiresAt] : [],
+    );
+    if (!deadlines.length) return;
+    const timer = setTimeout(
+      () => {
+        for (const approval of approvalsRef.current) {
+          if (approval.expiresAt !== undefined && approval.expiresAt <= Date.now())
+            clearApproval(approval.requestId, approval);
+        }
+      },
+      Math.max(0, Math.min(...deadlines) - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [approvals, clearApproval]);
 
   const rememberRoomMessages = useCallback(
     (roomId: string, messages: unknown[], latestSeq?: number) => {
@@ -699,10 +736,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         return type === "turn_complete" || type === "error";
       })
     ) {
-      // Asynchronous questions outlive the current run. Only a resolution
-      // notification (or a new worker epoch) makes their answer stale.
-      approvalsRef.current = approvalsRef.current.filter((approval) => approval.asynchronous);
-      setApprovals((prev) => prev.filter((approval) => approval.asynchronous));
+      // Modern requests have a worker-owned deadline and resolution. A history
+      // snapshot may replay an older terminal event after a live question was
+      // restored; it cannot revoke that newer question's authority.
+      const keep = (approval: PendingApproval) =>
+        approval.asynchronous || approval.expiresAt !== undefined;
+      approvalsRef.current = approvalsRef.current.filter(keep);
+      setApprovals((prev) => prev.filter(keep));
     }
   }, []);
 
@@ -727,6 +767,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
 
   const addApproval = useCallback((a: PendingApproval) => {
     if (retiredApprovalsRef.current.has(a.requestId)) return;
+    if (settledApprovalRoutesRef.current.has(approvalRouteKey(a))) return;
+    if (a.expiresAt !== undefined && a.expiresAt <= Date.now()) return;
     if (
       applyingHistoryRef.current &&
       (a.sessionId ?? boundSessionRef.current) === applyingHistoryRef.current
@@ -748,7 +790,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         setActiveSessionId(a.sessionId);
       }
     }
-    setApprovals((prev) => (prev.some((p) => p.requestId === a.requestId) ? prev : [...prev, a]));
+    setApprovals((prev) =>
+      prev.some((p) => approvalRouteKey(p) === approvalRouteKey(a))
+        ? prev
+        : [...prev.filter((p) => p.requestId !== a.requestId), a],
+    );
   }, []);
 
   const requestSessionHistory = useCallback(
@@ -1266,7 +1312,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           }
           break;
         case "approval.resolved":
-          clearApproval(event.approvalId);
+          clearApproval(event.approvalId, { ...event, requestId: event.approvalId });
           break;
         case "room.list.ok":
           setRooms(event.rooms);
@@ -1686,6 +1732,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           addApproval({
             requestId: String(params.requestId),
             sessionId: typeof params.sessionId === "string" ? params.sessionId : undefined,
+            connectionId: typeof params.connectionId === "string" ? params.connectionId : undefined,
+            generation: typeof params.generation === "number" ? params.generation : undefined,
+            expiresAt: typeof params.expiresAt === "number" ? params.expiresAt : undefined,
             toolName: rq.toolName ?? t("mobile.tool.fallbackName"),
             description: rq.description ?? "",
             summary: askOptions ? (rq.description ?? summary) : summary,
@@ -1698,9 +1747,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         }
         return;
       }
-      const resolvedRequestId = rawApprovalResolvedRequestId(raw);
-      if (resolvedRequestId) {
-        clearApproval(resolvedRequestId);
+      const resolvedRoute = rawApprovalResolvedRoute(raw);
+      if (resolvedRoute) {
+        clearApproval(resolvedRoute.requestId, resolvedRoute);
         return;
       }
       // Everything else (agent/streamEvent) folds through the reducer, but it
@@ -1818,6 +1867,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     setLoadingKey("roomHistory", false);
     submittingAsyncApprovalsRef.current.clear();
     submittedApprovalsRef.current.clear();
+    // An offline tab may miss another device's resolution. Only the Host's
+    // pending replay can restore authority after this connection is replaced.
+    approvalsRef.current = [];
+    setApprovals([]);
     const error = new Error("Remote connection was lost");
     for (const upload of uploadAbortsRef.current) upload.abort(error);
     uploadAbortsRef.current.clear();
@@ -2300,12 +2353,18 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         recoveryFencesRef.current.has(a.sessionId ?? boundSessionRef.current ?? "")
       )
         return;
+      if (a.expiresAt !== undefined && a.expiresAt <= Date.now()) {
+        clearApproval(requestId, a);
+        return;
+      }
       if (a.asynchronous && submittingAsyncApprovalsRef.current.has(requestId)) return;
       const sent = socket.send({
         type: "approval.respond",
         approvalId: requestId,
         decision,
         sessionId: a?.sessionId,
+        ...(a.connectionId !== undefined ? { connectionId: a.connectionId } : {}),
+        ...(a.generation !== undefined ? { generation: a.generation } : {}),
         reason: opts?.reason,
         answer: opts?.answer,
         scope: opts?.scope,
@@ -2324,7 +2383,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       approvalsRef.current = approvalsRef.current.filter((p) => p.requestId !== requestId);
       setApprovals((prev) => prev.filter((p) => p.requestId !== requestId));
     },
-    [socket],
+    [socket, clearApproval],
   );
   const setPermissionMode = useCallback(
     (mode: PermissionMode) => {

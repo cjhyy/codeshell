@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { USER_DECISION_TIMEOUT_MS } from "@cjhyy/code-shell-core/internal";
 import type { PetLongTask } from "@cjhyy/code-shell-pet";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator.js";
 import type {
@@ -13,11 +14,13 @@ interface Envelope {
   requestId: string;
   connectionId?: string;
   generation?: number;
+  expiresAt?: number;
   request: { toolName: string; description?: string; args: Record<string, unknown> };
 }
 export interface ImDecision {
   code: string;
   createdAt: number;
+  expiresAt?: number;
   task: PetLongTask;
   envelope: Envelope;
 }
@@ -65,7 +68,13 @@ export function collectImDecisions(
       .digest("hex")
       .slice(0, 12)
       .toUpperCase();
-    result.push({ code, createdAt: pending.createdAt, task, envelope });
+    result.push({
+      code,
+      createdAt: pending.createdAt,
+      expiresAt: envelope.expiresAt ?? pending.expiresAt,
+      task,
+      envelope,
+    });
   }
   return result;
 }
@@ -124,6 +133,8 @@ export class PetImDecisions {
   private readonly sent = new Set<string>();
   private readonly submitting = new Set<string>();
   private readonly notices = new Map<string, GatewayControlEventInput>();
+  /** Retain delivered prompts briefly so late short replies receive an explicit ended notice. */
+  private readonly delivered = new Map<string, { entry: ImDecision; at: number }>();
   constructor(
     private readonly options: {
       read: () => ImDecision[];
@@ -150,7 +161,33 @@ export class PetImDecisions {
     return this.options.now?.() ?? Date.now();
   }
   private expired(entry: ImDecision): boolean {
-    return this.now() >= entry.createdAt + (this.options.timeoutMs ?? 10 * 60_000);
+    return this.now() >= this.expiresAt(entry);
+  }
+  private expiresAt(entry: ImDecision): number {
+    return Number.isFinite(entry.expiresAt)
+      ? entry.expiresAt!
+      : entry.createdAt + (this.options.timeoutMs ?? USER_DECISION_TIMEOUT_MS);
+  }
+  private sameOrigin(
+    entry: ImDecision,
+    origin: Parameters<PetImDecisions["reply"]>[0]["origin"],
+  ): boolean {
+    const target = entry.task.completionTarget;
+    return (
+      !!target &&
+      canReply(entry) &&
+      origin?.isDirectMessage === true &&
+      origin.channel === target.channel &&
+      origin.target === target.target &&
+      origin.senderId === target.senderId
+    );
+  }
+  private pruneDelivered(): void {
+    for (const [code, item] of this.delivered) {
+      if (this.now() > Math.max(this.expiresAt(item.entry), item.at) + USER_DECISION_TIMEOUT_MS)
+        this.delivered.delete(code);
+    }
+    while (this.delivered.size > 256) this.delivered.delete(this.delivered.keys().next().value!);
   }
 
   async tick(): Promise<void> {
@@ -158,6 +195,7 @@ export class PetImDecisions {
     this.ticking = true;
     try {
       const entries = this.options.read();
+      this.pruneDelivered();
       const live = new Set(entries.map((entry) => entry.code));
       for (const code of this.sent) if (!live.has(code)) this.sent.delete(code);
       for (const entry of entries) {
@@ -196,6 +234,7 @@ export class PetImDecisions {
         try {
           await this.options.publish(event(entry, "question", this.prompt(entry)));
           this.sent.add(entry.code);
+          this.delivered.set(entry.code, { entry, at: this.now() });
         } catch (error) {
           this.options.onError(error);
         }
@@ -216,11 +255,8 @@ export class PetImDecisions {
   }
 
   private prompt(entry: ImDecision): string {
-    const remaining = Math.max(
-      1,
-      Math.ceil((entry.createdAt + (this.options.timeoutMs ?? 600_000) - this.now()) / 60_000),
-    );
-    const deadline = `请在 ${remaining} 分钟内处理；超时不会授权本次操作。`;
+    const remaining = Math.max(1, Math.ceil((this.expiresAt(entry) - this.now()) / 60_000));
+    const deadline = `剩余约 ${remaining} 分钟；电脑、微信和已连接的手机遥控共用截止时间，超时不会授权本次操作。`;
     // Existing tasks lack sender identity; group conversations must not receive
     // private permission details or gain authority through a guessed reply code.
     if (!canReply(entry)) return `任务正在等待确认，请打开桌面 Session 处理。\n${deadline}`;
@@ -241,9 +277,12 @@ export class PetImDecisions {
       `确认 ${entry.code}`,
       body,
       instructions,
+      "回答时请保留确认码；无需进入 Session。",
       `回复「回答 ${entry.code} 拒绝」可跳过。`,
       deadline,
-    ].join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
 
   /** The gateway probes bound Sessions before it reaches the Pet chat endpoint. */
@@ -261,23 +300,51 @@ export class PetImDecisions {
       "channel" | "target" | "senderId" | "isDirectMessage"
     >;
   }): Promise<string | undefined> {
-    const match = /^(?:回答|\/decision)\s+([a-f0-9]{12})\s+([\s\S]+)$/iu.exec(
-      request.message.trim(),
-    );
-    if (!match) return undefined;
-    const code = match[1]!.toUpperCase();
-    const entry = this.options.read().find((item) => item.code === code);
+    const message = request.message.trim();
+    const match = /^(?:回答|\/decision)\s+([a-f0-9]{12})\s+([\s\S]+)$/iu.exec(message);
+    this.pruneDelivered();
+    const entries = this.options.read();
     const origin = request.origin;
-    const target = entry?.task.completionTarget;
-    if (
-      !entry ||
-      !target ||
-      !canReply(entry) ||
-      origin?.isDirectMessage !== true ||
-      origin.channel !== target.channel ||
-      origin.target !== target.target ||
-      origin.senderId !== target.senderId
-    ) {
+    let code: string;
+    let answer: string;
+    if (match) {
+      code = match[1]!.toUpperCase();
+      answer = match[2]!.trim();
+    } else {
+      const delivered = [...this.delivered.values()].filter((item) =>
+        this.sameOrigin(item.entry, origin),
+      );
+      const matching = entries.filter((item) => this.sameOrigin(item, origin));
+      const shortReply =
+        /^\d+(?:\s*[,，]\s*\d+)*$/u.test(message) ||
+        [...matching, ...delivered.map(({ entry }) => entry)].some((entry) =>
+          [
+            "拒绝",
+            ...(entry.envelope.request.toolName === "__ask_user__" ? choices(entry) : ["允许本次"]),
+          ].includes(message),
+        );
+      if (!shortReply) return undefined;
+      const candidates = matching.filter((item) => !this.expired(item));
+      if (candidates.length === 0) {
+        if (delivered.length === 0 && matching.length === 0) return undefined;
+        await this.tick();
+        return "这条确认已结束或超时，未采用这条回答。无需进入 Session；如仍需该操作，请重新发起。";
+      }
+      if (candidates.length > 1) {
+        return [
+          "当前无法唯一匹配已送达的待确认，请带确认码回答，避免选错任务：",
+          ...candidates.map((item) => `回答 ${item.code} <选项编号>`),
+        ].join("\n");
+      }
+      const candidate = candidates[0]!;
+      return [
+        "单独的编号或选项还没有提交确认。当前待确认内容：",
+        questionBody(candidate) ?? "请在电脑查看完整内容。",
+        `核对后请回复「回答 ${candidate.code} ${message}」。无需进入 Session。`,
+      ].join("\n");
+    }
+    const entry = entries.find((item) => item.code === code);
+    if (!entry || !this.sameOrigin(entry, origin)) {
       return "该确认已结束，或不属于当前私聊。未执行任何操作。";
     }
     if (this.expired(entry)) {
@@ -285,7 +352,6 @@ export class PetImDecisions {
       return "该确认已超时，未采用这条回答。";
     }
     if (this.submitting.has(code)) return "该确认正在处理，请勿重复提交。";
-    const answer = match[2]!.trim();
     if (answer.length > 12_000) return "回答过长，请缩短后重试。";
     if (answer !== "拒绝" && !questionBody(entry))
       return "请在桌面 Session 查看完整确认内容后处理；也可以回复拒绝。";
