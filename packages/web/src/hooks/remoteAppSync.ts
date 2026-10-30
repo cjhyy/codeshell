@@ -54,6 +54,50 @@ export function rawApprovalResolvedRequestId(raw: unknown): string | null {
   return typeof requestId === "string" && requestId ? requestId : null;
 }
 
+export interface ApprovalRoute {
+  requestId: string;
+  sessionId?: string;
+  connectionId?: string;
+  generation?: number;
+}
+
+export function approvalRouteKey(route: ApprovalRoute): string {
+  return JSON.stringify([
+    route.sessionId ?? null,
+    route.connectionId ?? null,
+    route.generation ?? null,
+    route.requestId,
+  ]);
+}
+
+export function approvalMatchesRoute(approval: ApprovalRoute, route: ApprovalRoute): boolean {
+  if (
+    (approval.connectionId !== undefined || approval.generation !== undefined) &&
+    (route.sessionId !== approval.sessionId ||
+      route.connectionId !== approval.connectionId ||
+      route.generation !== approval.generation)
+  )
+    return false;
+  return (
+    approval.requestId === route.requestId &&
+    (route.sessionId === undefined || approval.sessionId === route.sessionId) &&
+    (route.connectionId === undefined || approval.connectionId === route.connectionId) &&
+    (route.generation === undefined || approval.generation === route.generation)
+  );
+}
+
+export function rawApprovalResolvedRoute(raw: unknown): ApprovalRoute | undefined {
+  const requestId = rawApprovalResolvedRequestId(raw);
+  if (!requestId) return undefined;
+  const params = (raw as { params: Record<string, unknown> }).params;
+  return {
+    requestId,
+    ...(typeof params.sessionId === "string" ? { sessionId: params.sessionId } : {}),
+    ...(typeof params.connectionId === "string" ? { connectionId: params.connectionId } : {}),
+    ...(typeof params.generation === "number" ? { generation: params.generation } : {}),
+  };
+}
+
 export function removeResolvedApproval<T extends { requestId: string }>(
   approvals: T[],
   requestId: string,

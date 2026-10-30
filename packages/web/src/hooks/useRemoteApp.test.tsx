@@ -2183,6 +2183,180 @@ describe("useRemoteApp project V2 session creation", () => {
 });
 
 describe("useRemoteApp approval replay", () => {
+  test("phone answers preserve the exact worker route and another device's resolution retires its card", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    const route = {
+      sessionId: "s1",
+      requestId: "credential",
+      connectionId: "worker",
+      generation: 2,
+    };
+    const question = {
+      method: "agent/approvalRequest",
+      params: {
+        ...route,
+        expiresAt: Date.now() + 600_000,
+        request: {
+          toolName: "__ask_user__",
+          description: "是否使用 Bilibili 登录凭据？",
+          args: {
+            options: [{ label: "允许本次" }, { label: "本会话都允许" }, { label: "拒绝" }],
+            optionsOnly: true,
+          },
+        },
+      },
+    };
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        ws.message(question);
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals[0]).toMatchObject({
+        ...route,
+        expiresAt: question.params.expiresAt,
+        options: ["允许本次", "本会话都允许", "拒绝"],
+        optionsOnly: true,
+      });
+      await act(async () => {
+        // Selected history can arrive after the Host restored its live pending
+        // request. An older completed turn must not erase that confirmation.
+        ws.message({
+          type: "session.snapshot",
+          sessionId: "s1",
+          nextSeq: 2,
+          entries: [{ seq: 1, event: { type: "turn_complete", reason: "completed" } }],
+        });
+        // A late reply from a previous worker cannot remove this question.
+        ws.message({ method: "agent/approvalResolved", params: { ...route, generation: 1 } });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals).toHaveLength(1);
+      await act(async () => {
+        hook.result.current.respondApproval("credential", "approve", { answer: "本会话都允许" });
+        await flushMicrotasks();
+      });
+      expect(ws.sent.map((line) => JSON.parse(line))).toContainEqual({
+        type: "approval.respond",
+        sessionId: "s1",
+        approvalId: "credential",
+        connectionId: "worker",
+        generation: 2,
+        decision: "approve",
+        answer: "本会话都允许",
+      });
+      await act(async () => {
+        ws.message({ method: "agent/approvalResolved", params: { ...route, approved: true } });
+        ws.message(question);
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals).toEqual([]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("reconnecting never extends a confirmation deadline and expiration removes its response authority", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const first = FakeWebSocket.instances[0]!;
+    const expiresAt = Date.now() + 600_000;
+    const question = {
+      method: "agent/approvalRequest",
+      params: {
+        sessionId: "s1",
+        requestId: "credential",
+        connectionId: "worker",
+        generation: 2,
+        expiresAt,
+        request: {
+          toolName: "__ask_user__",
+          description: "Use credential?",
+          args: { options: ["Allow", "Deny"], optionsOnly: true },
+        },
+      },
+    };
+    const clock = spyOn(Date, "now");
+    try {
+      await act(async () => {
+        first.open();
+        first.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        first.message(question);
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals[0]?.expiresAt).toBe(expiresAt);
+      await act(async () => {
+        first.close();
+        window.dispatchEvent(new Event("online"));
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals).toEqual([]);
+      const next = FakeWebSocket.instances.at(-1)!;
+      expect(next).not.toBe(first);
+      await act(async () => {
+        next.open();
+        next.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        next.message(question);
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals[0]?.expiresAt).toBe(expiresAt);
+      clock.mockReturnValue(expiresAt);
+      await act(async () => {
+        hook.result.current.respondApproval("credential", "approve", { answer: "Allow" });
+        next.message(question);
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals).toEqual([]);
+      expect(
+        next.sent
+          .map((line) => JSON.parse(line))
+          .some((event) => event.type === "approval.respond"),
+      ).toBe(false);
+    } finally {
+      clock.mockRestore();
+      await hook.unmount();
+    }
+  });
+
+  test("the worker deadline clears an idle phone's confirmation without user input", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        ws.message({
+          method: "agent/approvalRequest",
+          params: {
+            sessionId: "s1",
+            requestId: "short-lived",
+            expiresAt: Date.now() + 40,
+            request: {
+              toolName: "__ask_user__",
+              description: "Use credential?",
+              args: { options: ["Allow"] },
+            },
+          },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals).toHaveLength(1);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 60));
+      });
+      expect(hook.result.current.approvals).toEqual([]);
+      expect(
+        ws.sent.map((line) => JSON.parse(line)).some((event) => event.type === "approval.respond"),
+      ).toBe(false);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   for (const source of ["raw", "stream", "snapshot"] as const) {
     test(`keeps asynchronous questions across ${source} terminal events and acknowledges a late answer`, async () => {
       setupBrowser();

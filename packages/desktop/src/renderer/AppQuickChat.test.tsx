@@ -2369,6 +2369,7 @@ describe("App quick-chat integration", () => {
   test("asynchronous answers stay pending until accepted and can retry a failed delivery", async () => {
     await mountApp({ withNormalSession: true, panelTabs: [] });
     const question = approvalEnvelope("engine-a", "ask-async", "__ask_user__");
+    question.source = "external-runtime";
     question.request.args = { ...question.request.args, asynchronous: true };
     await act(async () => {
       emitApproval(question);
@@ -2434,6 +2435,59 @@ describe("App quick-chat integration", () => {
       ["engine-a", "ask-async", "approve", undefined, "Read only"],
       ["engine-a", "ask-async", "approve", undefined, "Read only"],
     ]);
+  });
+
+  for (const reason of ["Approval expired", "Approval already resolved on another device"]) {
+    test(`a rejected AskUser RPC does not mark the answer accepted: ${reason}`, async () => {
+      await mountApp({ withNormalSession: true, panelTabs: [] });
+      const question = approvalEnvelope("engine-a", "rejected-ask", "__ask_user__");
+      await act(async () => {
+        emitApproval(question);
+        await flushMicrotasks();
+      });
+      const mirrored: unknown[] = [];
+      (window.codeshell as any).approve = async () => ({
+        error: { code: -32602, message: reason },
+      });
+      window.codeshell.mobileRemote.notifyApprovalResolved = async (env) => {
+        mirrored.push(env);
+      };
+      await act(async () => {
+        await expect(chatProps!.onAskUserAnswer!(question.requestId, "Read only")).rejects.toThrow(
+          reason,
+        );
+        await flushMicrotasks();
+      });
+      expect(
+        chatProps?.messages.find(
+          (message) => message.kind === "ask_user" && message.requestId === question.requestId,
+        ),
+      ).not.toHaveProperty("answer");
+      expect(mirrored).toEqual([]);
+    });
+  }
+
+  test("accepted native answers use Core's authoritative resolution without an imprecise mirror", async () => {
+    await mountApp({ withNormalSession: true, panelTabs: [] });
+    const question = approvalEnvelope("engine-a", "native-ask", "__ask_user__");
+    await act(async () => {
+      emitApproval(question);
+      await flushMicrotasks();
+    });
+    const mirrored: unknown[] = [];
+    window.codeshell.mobileRemote.notifyApprovalResolved = async (env) => {
+      mirrored.push(env);
+    };
+    await act(async () => {
+      await chatProps!.onAskUserAnswer!(question.requestId, "Read only");
+      await flushMicrotasks();
+    });
+    expect(
+      chatProps?.messages.find(
+        (message) => message.kind === "ask_user" && message.requestId === question.requestId,
+      ),
+    ).toMatchObject({ answer: "Read only" });
+    expect(mirrored).toEqual([]);
   });
 
   test("AskUser prompts and answers stay on their owning quick or normal session", async () => {

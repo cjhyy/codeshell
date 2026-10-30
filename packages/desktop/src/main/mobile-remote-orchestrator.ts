@@ -366,10 +366,21 @@ export class MobileRemoteOrchestrator {
   broadcastApprovalResolved(params: {
     requestId: string;
     sessionId?: string;
+    connectionId?: string;
+    generation?: number;
     approved?: boolean;
     answer?: string;
   }): void {
-    this.deps.pendingApprovals.resolve(params.requestId);
+    if (params.connectionId === undefined || params.generation === undefined) {
+      const pending = params.sessionId
+        ? this.deps.pendingApprovals.find(params.sessionId, params.requestId)
+        : undefined;
+      // New workers publish their own fully routed resolution. An old renderer
+      // acknowledgement cannot revoke an unrelated or successor worker request.
+      if (!pending || pending.connectionId !== undefined || pending.generation !== undefined)
+        return;
+    }
+    this.deps.pendingApprovals.resolve(params.requestId, params);
     const line = JSON.stringify({
       jsonrpc: "2.0",
       method: Methods.ApprovalResolved,
@@ -380,6 +391,8 @@ export class MobileRemoteOrchestrator {
       type: "approval.resolved",
       approvalId: params.requestId,
       ...(params.sessionId ? { sessionId: params.sessionId } : {}),
+      ...(params.connectionId !== undefined ? { connectionId: params.connectionId } : {}),
+      ...(params.generation !== undefined ? { generation: params.generation } : {}),
       ...(params.approved !== undefined ? { approved: params.approved } : {}),
       ...(params.answer !== undefined ? { answer: params.answer } : {}),
     });
@@ -453,6 +466,7 @@ export class MobileRemoteOrchestrator {
       uploads: this.deps.uploads,
       roomManager: this.deps.roomManager,
       approvalBridge: this.deps.approvalBridge,
+      pendingApprovals: this.deps.pendingApprovals,
       transcriptSubscriptions: this.deps.transcriptSubscriptions,
       getBridge: () => this.deps.getBridge(),
       mobileSessionCwds: this.mobileSessionCwds,

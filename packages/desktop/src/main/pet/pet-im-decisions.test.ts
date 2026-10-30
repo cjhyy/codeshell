@@ -28,6 +28,7 @@ function fixture(id = "one") {
     requestId: `request-${id}`,
     connectionId: "worker",
     generation: 3,
+    expiresAt: undefined as number | undefined,
     request: {
       toolName: "__ask_user__",
       description: "Path permission",
@@ -146,6 +147,154 @@ describe("IM task confirmations", () => {
     expect(await h.reply(code, "好的")).toContain("选项无效");
     expect(await h.reply(code, "3")).toContain("选项无效");
     expect(await h.reply(code, "1,2")).toContain("选项无效");
+    expect(h.approvals).toHaveLength(0);
+  });
+  test("a numbered reply gets the exact confirmation format without entering its Session", async () => {
+    const f = fixture(),
+      h = harness(f);
+    const request = {
+      message: "2",
+      origin: {
+        channel: "wechat",
+        target: "conversation",
+        senderId: "owner",
+        isDirectMessage: true,
+      },
+    };
+    // Even after a restart, short replies get deterministic guidance, never authorization.
+    expect(await h.relay.reply(request)).toContain(`回答 ${f.read()[0]!.code} 2`);
+    expect(h.approvals).toHaveLength(0);
+    await h.relay.tick();
+    expect(h.published[0]!.text).toContain("无需进入 Session");
+    const code = f.read()[0]!.code;
+    const guidance = await h.relay.reply(request);
+    expect(guidance).toContain(`回答 ${code} 2`);
+    expect(guidance).toContain("Read /private/example?");
+    expect(h.approvals).toHaveLength(0);
+    expect(await h.reply(code, "2")).toContain("已处理");
+    expect(h.approvals).toEqual([
+      { requestId: "request-one", decision: { approved: true, answer: "拒绝" } },
+    ]);
+    expect(await h.relay.reply(request)).toContain("已结束或超时");
+    expect(h.approvals).toHaveLength(1);
+  });
+  test("short answers never select among multiple pending questions", async () => {
+    const a = fixture("a"),
+      b = fixture("b"),
+      h = harness(a, b);
+    await h.relay.tick();
+    const answer = await h.relay.reply({
+      message: "1",
+      origin: {
+        channel: "wechat",
+        target: "conversation",
+        senderId: "owner",
+        isDirectMessage: true,
+      },
+    });
+    expect(answer).toContain(`回答 ${a.read()[0]!.code}`);
+    expect(answer).toContain(`回答 ${b.read()[0]!.code}`);
+    expect(h.approvals).toHaveLength(0);
+    await h.reply(b.read()[0]!.code, "1");
+    expect(h.approvals).toHaveLength(1);
+  });
+  test("short replies are limited to the authenticated recipient of the delivered prompt", async () => {
+    const f = fixture(),
+      h = harness(f);
+    await h.relay.tick();
+    for (const override of [
+      { senderId: "other" },
+      { target: "elsewhere" },
+      { channel: "telegram" },
+      { isDirectMessage: false },
+    ]) {
+      expect(
+        await h.relay.reply({
+          message: "1",
+          origin: {
+            channel: "wechat",
+            target: "conversation",
+            senderId: "owner",
+            isDirectMessage: true,
+            ...override,
+          },
+        }),
+      ).toBeUndefined();
+    }
+    expect(h.approvals).toHaveLength(0);
+  });
+  test("a bare number cannot authorize a replacement prompt that was not delivered", async () => {
+    const old = fixture("old"),
+      replacement = fixture("new"),
+      h = harness(old, replacement);
+    replacement.snapshot.pending = [];
+    await h.relay.tick();
+    old.snapshot.pending = [];
+    replacement.snapshot.pending = fixture("new").snapshot.pending;
+    expect(
+      await h.relay.reply({
+        message: "1",
+        origin: {
+          channel: "wechat",
+          target: "conversation",
+          senderId: "owner",
+          isDirectMessage: true,
+        },
+      }),
+    ).toContain(`回答 ${replacement.read()[0]!.code}`);
+    expect(h.approvals).toHaveLength(0);
+  });
+  test("a late numbered reply to an answered question cannot authorize the next delivered question", async () => {
+    const a = fixture("a"),
+      b = fixture("b"),
+      h = harness(a, b);
+    b.snapshot.pending = [];
+    await h.relay.tick();
+    a.snapshot.pending = [];
+    b.snapshot.pending = fixture("b").snapshot.pending;
+    await h.relay.tick();
+    const guidance = await h.relay.reply({
+      message: "1",
+      origin: {
+        channel: "wechat",
+        target: "conversation",
+        senderId: "owner",
+        isDirectMessage: true,
+      },
+    });
+    expect(guidance).toContain(`回答 ${b.read()[0]!.code} 1`);
+    expect(h.approvals).toHaveLength(0);
+  });
+  test("the worker deadline controls both the displayed time and expiration", async () => {
+    const f = fixture();
+    f.params.expiresAt = 140_000;
+    const h = harness(f);
+    await h.relay.tick();
+    expect(h.published[0]!.text).toContain("剩余约 2 分钟");
+    const code = f.read()[0]!.code;
+    h.time(140_000);
+    expect(await h.reply(code, "1")).toContain("超时");
+    expect(h.approvals[0]!.decision).toMatchObject({ approved: false, failure: "timed_out" });
+  });
+  test("a question resolved on desktop or mobile cannot be answered again through WeChat", async () => {
+    const f = fixture(),
+      h = harness(f);
+    await h.relay.tick();
+    const code = f.read()[0]!.code;
+    f.snapshot.pending = [];
+    await h.relay.tick();
+    expect(await h.reply(code, "1")).toContain("已结束");
+    expect(
+      await h.relay.reply({
+        message: "1",
+        origin: {
+          channel: "wechat",
+          target: "conversation",
+          senderId: "owner",
+          isDirectMessage: true,
+        },
+      }),
+    ).toContain("已结束或超时");
     expect(h.approvals).toHaveLength(0);
   });
   test("cannot answer from another sender, target, channel or group", async () => {
@@ -399,6 +548,12 @@ test("HTTP gateway resolves exact decisions before bound Sessions and Mimi", asy
       await say(`回答 ${code} 1`, origin);
       expect(replies.at(-1)).toContain("不属于当前私聊");
     }
+    expect(h.approvals).toHaveLength(0);
+    expect(boundMessages).toEqual([]);
+    expect(mimiMessages).toEqual([]);
+    await h.relay.tick();
+    await say("1");
+    expect(replies.at(-1)).toContain(`回答 ${code} 1`);
     expect(h.approvals).toHaveLength(0);
     expect(boundMessages).toEqual([]);
     expect(mimiMessages).toEqual([]);

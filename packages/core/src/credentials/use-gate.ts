@@ -40,6 +40,7 @@ export type CredentialAskFn = (
     header?: string;
     options: { label: string; description: string; tone?: "ok" | "danger" | "neutral" }[];
     optionsOnly: true;
+    throwOnFailure?: boolean;
   },
 ) => Promise<string>;
 
@@ -84,6 +85,8 @@ export async function credentialUseGate(
       { label: DENY, description: "拒绝本次取用", tone: "danger" },
     ],
     optionsOnly: true,
+    // Expiry and cancellation must not be reported as an explicit user refusal.
+    throwOnFailure: true,
   });
 
   if (choice === ALLOW_SESSION) {

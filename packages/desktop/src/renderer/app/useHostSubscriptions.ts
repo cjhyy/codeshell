@@ -101,6 +101,8 @@ interface Params {
   };
 }
 
+type QuestionProjection = Extract<TranscriptsAction, { type: "ask_user" }>;
+
 /** Owns long-lived worker/mobile IPC subscriptions and stream coalescing. */
 export function useHostSubscriptions({
   services,
@@ -148,7 +150,15 @@ export function useHostSubscriptions({
     pending: new Set<string>(),
     resolved: new Map<string, ApprovalResolvedEnvelope>(),
   });
-  const retiredExternalQuestionsRef = useRef(new WeakSet<AskUserMessage>());
+  const retiredQuestionsRef = useRef(new WeakSet<AskUserMessage>());
+  // Questions are live approval state, not durable assistant output. Keep their
+  // authoritative projection outside the transcript that hydration can replace.
+  const questionsRef = useRef({
+    ready: false,
+    pending: new Map<string, QuestionProjection>(),
+    resolved: new Map<string, ApprovalResolvedEnvelope>(),
+    projectedInto: new Map<string, TranscriptsMap>(),
+  });
   const [, refreshExternalApprovals] = useState(0);
   useEffect(
     () =>
@@ -675,15 +685,40 @@ export function useHostSubscriptions({
     let approvalRestoreActive = true;
     let approvalHandlingActive = true;
     const approvalRequests = new Map<string, object>();
+    const approvalDeadlines = new Map<string, ReturnType<typeof setTimeout>>();
     const pendingApprovalDecisions = new Set<string>();
     let restoringApprovals = true;
     const resolvedDuringRestore = new Set<string>();
     const externalRequestsDuringRestore = new Set<string>();
     externalApprovalsRef.current.ready = false;
+    questionsRef.current.ready = false;
+    const questionsDuringRestore = new Set<string>();
     // Remember a question's route before React commits its card. Another
     // client can answer in the same IPC batch as the original request.
     const pendingQuestionBuckets = new Map<string, string>();
     const handleApproval = (env: ApprovalRequestEnvelope, fromSnapshot = false): void => {
+      if (env.expiresAt !== undefined && env.expiresAt <= Date.now()) {
+        questionsRef.current.resolved.set(env.requestId, { requestId: env.requestId });
+        return;
+      }
+      if (resolvedDuringRestore.has(env.requestId)) return;
+      if (env.expiresAt !== undefined) {
+        const previous = approvalDeadlines.get(env.requestId);
+        if (previous !== undefined) clearTimeout(previous);
+        const expire = () => {
+          const remaining = env.expiresAt! - Date.now();
+          if (remaining > 0) {
+            approvalDeadlines.set(
+              env.requestId,
+              setTimeout(expire, Math.min(2_147_483_647, remaining)),
+            );
+          } else handleApprovalResolved({ requestId: env.requestId });
+        };
+        approvalDeadlines.set(
+          env.requestId,
+          setTimeout(expire, Math.min(2_147_483_647, Math.max(0, env.expiresAt - Date.now()))),
+        );
+      }
       if (env.source === "external-runtime") {
         if (externalApprovalsRef.current.resolved.has(env.requestId)) return;
         externalApprovalsRef.current.pending.add(env.requestId);
@@ -783,18 +818,26 @@ export function useHostSubscriptions({
         const bucket = resolved ?? activeBucketRef.current;
         pendingQuestionBuckets.set(env.requestId, bucket);
         if (!fromSnapshot) playThemeSound("approval", env.requestId);
-        dispatch({
+        const projection: QuestionProjection = {
           type: "ask_user",
           bucket,
           requestId: env.requestId,
           engineSessionId: env.sessionId,
+          source: env.source,
           question,
           header,
           options,
           multiSelect,
           optionsOnly,
           asynchronous: args.asynchronous === true,
-        });
+          expiresAt: env.expiresAt,
+        };
+        const questions = questionsRef.current;
+        questions.pending.set(env.requestId, projection);
+        questions.resolved.delete(env.requestId);
+        questions.projectedInto.set(env.requestId, transcriptsRef.current);
+        if (restoringApprovals && !fromSnapshot) questionsDuringRestore.add(env.requestId);
+        dispatch(projection);
         return;
       }
       if (env.sessionId && !resolved) {
@@ -807,7 +850,9 @@ export function useHostSubscriptions({
       const token = {};
       approvalRequests.set(env.requestId, token);
       const isCurrent = () =>
-        approvalHandlingActive && approvalRequests.get(env.requestId) === token;
+        approvalHandlingActive &&
+        approvalRequests.get(env.requestId) === token &&
+        (env.expiresAt === undefined || env.expiresAt > Date.now());
       // Display may fall back to the active tab for an unknown route. Authority
       // must not: only an exact route can supply a per-session UI override.
       const currentRoute = () => {
@@ -864,6 +909,9 @@ export function useHostSubscriptions({
             if (error) throw new Error(error.message || "Approval rejected by worker");
             if (!isCurrent()) return;
             pendingApprovalDecisions.delete(env.requestId);
+            // Native Core publishes the accepted route identity itself. The
+            // legacy mirror lacks that identity and is only needed externally.
+            if (env.source !== "external-runtime") return;
             // Mirror only an accepted decision, so failed RPCs never advertise
             // a successful approval to other clients.
             void window.codeshell.mobileRemote
@@ -920,6 +968,16 @@ export function useHostSubscriptions({
     const offApproval = window.codeshell.onApprovalRequest(handleApproval);
     const handleApprovalResolved = (env: ApprovalResolvedEnvelope): void => {
       if (!env.requestId) return;
+      const deadline = approvalDeadlines.get(env.requestId);
+      if (deadline !== undefined) clearTimeout(deadline);
+      approvalDeadlines.delete(env.requestId);
+      const questions = questionsRef.current;
+      questions.pending.delete(env.requestId);
+      questions.projectedInto.delete(env.requestId);
+      questionsDuringRestore.delete(env.requestId);
+      questions.resolved.set(env.requestId, env);
+      if (questions.resolved.size > 2_048)
+        questions.resolved.delete(questions.resolved.keys().next().value!);
       if (
         env.requestId.startsWith("external-approval-") ||
         externalApprovalsRef.current.pending.has(env.requestId)
@@ -949,7 +1007,12 @@ export function useHostSubscriptions({
           bucket: questionBucket,
           requestId: env.requestId,
           answer:
-            env.answer ?? t(env.approved === false ? "msg.ask.cancelled" : "msg.ask.timedOut"),
+            env.answer ??
+            t(
+              env.status === "expired" || (env.status === undefined && env.approved !== false)
+                ? "msg.ask.timedOut"
+                : "msg.ask.cancelled",
+            ),
         });
       }
       pendingQuestionBuckets.delete(env.requestId);
@@ -973,11 +1036,25 @@ export function useHostSubscriptions({
           if (!approvalHandlingActive) return;
           const external = externalApprovalsRef.current;
           external.pending = new Set(externalRequestsDuringRestore);
+          const pendingQuestions = new Set(questionsDuringRestore);
           for (const env of pending) {
             // A Core worker exit invalidates only its own snapshot entries.
-            if (approvalRestoreActive || env.source === "external-runtime")
+            if (approvalRestoreActive || env.source === "external-runtime") {
               handleApproval(env, true);
+              if (
+                env.request.toolName === "__ask_user__" &&
+                !resolvedDuringRestore.has(env.requestId)
+              )
+                pendingQuestions.add(env.requestId);
+            }
           }
+          for (const requestId of questionsRef.current.pending.keys()) {
+            if (!pendingQuestions.has(requestId)) {
+              questionsRef.current.pending.delete(requestId);
+              questionsRef.current.projectedInto.delete(requestId);
+            }
+          }
+          questionsRef.current.ready = true;
           external.ready = true;
           refreshExternalApprovals((version) => version + 1);
         })
@@ -1105,6 +1182,8 @@ export function useHostSubscriptions({
       approvalRestoreActive = false;
       approvalHandlingActive = false;
       approvalRequests.clear();
+      for (const timer of approvalDeadlines.values()) clearTimeout(timer);
+      approvalDeadlines.clear();
       // A language change re-registers these listeners. Let the new listener's
       // snapshot recover requests whose permission lookup or approval RPC was still in flight.
       for (const requestId of pendingApprovalDecisions) {
@@ -1128,23 +1207,44 @@ export function useHostSubscriptions({
   }, [t, toast]);
 
   // Transcript hydration can finish after the authoritative pending snapshot.
-  // Reconcile then as well, so a reload cannot revive an expired external card.
+  // Recreate pending cards by request identity, and retire cached cards that
+  // another device resolved. Never infer actionable authority from the cache.
   // Inspect refs after App's transcript effect has committed the latest map.
   useEffect(() => {
-    const external = externalApprovalsRef.current;
-    if (!external.ready) return;
+    const questions = questionsRef.current;
+    if (!questions.ready) return;
+    let nextDeadline = Infinity;
+    for (const [requestId, projection] of questions.pending) {
+      if (projection.expiresAt !== undefined) {
+        if (projection.expiresAt <= Date.now()) {
+          questions.pending.delete(requestId);
+          questions.projectedInto.delete(requestId);
+          questions.resolved.set(requestId, { requestId });
+          continue;
+        }
+        nextDeadline = Math.min(nextDeadline, projection.expiresAt);
+      }
+      const map = transcriptsRef.current;
+      if (
+        hasTranscriptRecovery(map, projection.bucket) ||
+        findAskUserOrigin(map, requestId) ||
+        questions.projectedInto.get(requestId) === map
+      )
+        continue;
+      questions.projectedInto.set(requestId, map);
+      dispatch(projection);
+    }
     for (const [bucket, transcript] of Object.entries(transcriptsRef.current)) {
       for (const message of transcript.messages) {
         if (
           message.kind !== "ask_user" ||
           message.answer !== undefined ||
-          !message.requestId.startsWith("external-approval-") ||
-          external.pending.has(message.requestId) ||
-          retiredExternalQuestionsRef.current.has(message)
+          questions.pending.has(message.requestId) ||
+          retiredQuestionsRef.current.has(message)
         )
           continue;
-        const resolution = external.resolved.get(message.requestId);
-        retiredExternalQuestionsRef.current.add(message);
+        const resolution = questions.resolved.get(message.requestId);
+        retiredQuestionsRef.current.add(message);
         dispatch({
           type: "ask_user_answered",
           bucket,
@@ -1152,12 +1252,21 @@ export function useHostSubscriptions({
           answer:
             resolution?.answer ??
             t(
-              resolution && resolution.approved !== false
+              resolution &&
+                (resolution.status === "expired" ||
+                  (resolution.status === undefined && resolution.approved !== false))
                 ? "msg.ask.timedOut"
                 : "msg.ask.cancelled",
             ),
         });
       }
+    }
+    if (Number.isFinite(nextDeadline)) {
+      const timer = setTimeout(
+        () => refreshExternalApprovals((version) => version + 1),
+        Math.min(2_147_483_647, Math.max(0, nextDeadline - Date.now())),
+      );
+      return () => clearTimeout(timer);
     }
   });
 

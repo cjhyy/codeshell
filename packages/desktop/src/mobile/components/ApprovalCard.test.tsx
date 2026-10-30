@@ -50,6 +50,21 @@ test("AskUser 审批渲染选项按钮", () => {
   expect(html).toContain("或输入自定义回答");
 });
 
+test("手机确认展示 worker 给出的统一绝对截止时间", () => {
+  const expiresAt = new Date("2026-10-30T04:16:02Z").getTime();
+  const html = renderToStaticMarkup(
+    <ApprovalCard approval={{ ...base, expiresAt }} onRespond={() => {}} />,
+  );
+  expect(html).toContain("各端共用此期限");
+  expect(html).toContain(
+    new Date(expiresAt).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }),
+  );
+});
+
 test("optionsOnly 不出自由输入", () => {
   const html = renderToStaticMarkup(
     <ApprovalCard
