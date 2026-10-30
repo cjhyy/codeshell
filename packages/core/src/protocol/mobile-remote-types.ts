@@ -111,6 +111,8 @@ export type MobileClientEvent =
       type: "chat.send";
       /** Explicit external-runtime selection, scoped to this submission. */
       modelKey?: string;
+      /** Configured text connection, resolved by the Host for this Session only. */
+      nativeConnectionId?: string;
       /** Observation source label only; no storage or workspace authority. */
       modelTraceSource?: string;
       /** The permission choice displayed when this submission was made. */
@@ -331,6 +333,7 @@ export type MobileServerEvent =
   | {
       type: "chat.accepted";
       modelKey?: string;
+      nativeConnectionId?: string;
       clientRequestId?: string;
       sessionId?: string;
       cwd?: string | null;
