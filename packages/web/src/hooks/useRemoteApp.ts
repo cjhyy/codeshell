@@ -426,11 +426,25 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const pendingCreateRef = useRef<{
     clientRequestId: string;
     permissionMode: PermissionMode;
+    target: MobileSessionCreateTarget;
+    replacesSessionId?: string;
     conversationRevision: number;
     connectionGeneration: number;
     timer?: ReturnType<typeof setTimeout>;
   } | null>(null);
-  const unsentCreatedSessionRef = useRef<{ sessionId: string; generation: number } | null>(null);
+  const unsentCreatedSessionRef = useRef<{
+    sessionId: string;
+    generation: number;
+    target: MobileSessionCreateTarget;
+  } | null>(null);
+  const replacementSourceRef = useRef<typeof unsentCreatedSessionRef.current>(null);
+  const [emptySessionReplacement, setEmptySessionReplacementState] =
+    useState<RemoteApp["emptySessionReplacement"]>();
+  const emptySessionReplacementRef = useRef<RemoteApp["emptySessionReplacement"]>(undefined);
+  const setEmptySessionReplacement = useCallback((value: RemoteApp["emptySessionReplacement"]) => {
+    emptySessionReplacementRef.current = value;
+    setEmptySessionReplacementState(value);
+  }, []);
   const messageAckWaitersRef = useRef(
     new Map<
       string,
@@ -475,6 +489,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     if (!pending || (clientRequestId && pending.clientRequestId !== clientRequestId)) return false;
     clearTimeout(pending.timer);
     pendingCreateRef.current = null;
+    if (
+      pending.replacesSessionId &&
+      emptySessionReplacementRef.current?.fromSessionId === pending.replacesSessionId
+    )
+      setEmptySessionReplacement({ fromSessionId: pending.replacesSessionId, status: "failed" });
     setSessionCreationFailures((value) => value + 1);
     return true;
   }, []);
@@ -912,6 +931,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     const sessionId = boundSessionRef.current;
     if (!socketOnlineRef.current || !sessionId || activeRoomIdRef.current) return;
     if (
+      emptySessionReplacementRef.current &&
+      emptySessionReplacementRef.current.status !== "complete"
+    )
+      return;
+    if (
       unsentCreatedSessionRef.current?.sessionId === sessionId &&
       unsentCreatedSessionRef.current.generation === connectionGenerationRef.current
     )
@@ -923,14 +947,42 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const onServerEvent = useCallback(
     (event: MobileServerEvent) => {
       const unsent = unsentCreatedSessionRef.current;
+      const source = unsent ?? replacementSourceRef.current;
       if (
-        unsent &&
-        (event.type === "auth.ok" ||
-          (event.type === "session.stream" && event.sessionId === unsent.sessionId) ||
+        source &&
+        ((event.type === "session.stream" && event.sessionId === source.sessionId) ||
           (event.type === "session.list.ok" &&
-            event.sessions.some((session) => session.id === unsent.sessionId)))
-      )
+            event.sessions.some((session) => session.id === source.sessionId)))
+      ) {
         unsentCreatedSessionRef.current = null;
+        replacementSourceRef.current = null;
+        if (
+          emptySessionReplacementRef.current?.status !== "complete" &&
+          emptySessionReplacementRef.current?.fromSessionId === source.sessionId
+        ) {
+          if (pendingCreateRef.current?.replacesSessionId === source.sessionId) {
+            clearTimeout(pendingCreateRef.current.timer);
+            pendingCreateRef.current = null;
+          }
+          setEmptySessionReplacement(undefined);
+          if (event.type === "session.list.ok")
+            queueMicrotask(() => requestActiveResyncRef.current());
+        }
+      }
+      if (
+        event.type === "auth.ok" &&
+        unsent &&
+        boundSessionRef.current === unsent.sessionId &&
+        !activeRoomIdRef.current
+      ) {
+        // This proves only an unused draft, not authority on the new socket.
+        // Keep its local content visible while normal creation obtains a new grant.
+        replacementSourceRef.current = unsent;
+        setEmptySessionReplacement({ fromSessionId: unsent.sessionId, status: "pending" });
+        setLoadingKey("sessionHistory", false);
+        setOutputHistory(undefined);
+      }
+      if (event.type === "auth.ok") unsentCreatedSessionRef.current = null;
       if (historyRecovery.observe(event)) return;
       if (
         "sessionId" in event &&
@@ -958,12 +1010,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
                 creation.conversationRevision === conversationRevisionRef.current &&
                 creation.connectionGeneration === connectionGenerationRef.current,
               )
-            : !event.clientMessageId ||
-              Boolean(
-                waiter &&
-                waiter.conversationRevision === conversationRevisionRef.current &&
-                waiter.connectionGeneration === connectionGenerationRef.current,
-              );
+            : (!emptySessionReplacementRef.current ||
+                emptySessionReplacementRef.current.status === "complete") &&
+              (!event.clientMessageId ||
+                Boolean(
+                  waiter &&
+                  waiter.conversationRevision === conversationRevisionRef.current &&
+                  waiter.connectionGeneration === connectionGenerationRef.current,
+                ));
           if (
             creation &&
             ((event.clientRequestId && creation.clientRequestId === event.clientRequestId) ||
@@ -976,12 +1030,33 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           ) {
             clearTimeout(creation.timer);
             pendingCreateRef.current = null;
-            if (event.clientRequestId && event.sessionId && mayBind)
+            if (event.clientRequestId && event.sessionId && mayBind) {
+              const target =
+                event.projectId !== undefined
+                  ? {
+                      projectId: event.projectId,
+                      ...(event.rootId ? { rootId: event.rootId } : {}),
+                    }
+                  : "cwd" in event
+                    ? (event.cwd ?? null)
+                    : creation.target;
               unsentCreatedSessionRef.current = {
                 sessionId: event.sessionId,
                 generation: creation.connectionGeneration,
+                target,
               };
-            if (event.sessionId && creation.permissionMode !== permissionModeRef.current) {
+              if (creation.replacesSessionId)
+                setEmptySessionReplacement({
+                  fromSessionId: creation.replacesSessionId,
+                  toSessionId: event.sessionId,
+                  status: "complete",
+                });
+            }
+            if (
+              mayBind &&
+              event.sessionId &&
+              creation.permissionMode !== permissionModeRef.current
+            ) {
               // The user can change the draft while creation is in flight. Apply
               // that choice to the new id, never to the previous selection.
               creationPermissionEchoRef.current = {
@@ -1773,6 +1848,17 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         const params = obj.params as Record<string, unknown>;
         if (params.sessionId === unsentCreatedSessionRef.current?.sessionId)
           unsentCreatedSessionRef.current = null;
+        if (
+          replacementSourceRef.current &&
+          params.sessionId === replacementSourceRef.current.sessionId &&
+          boundSessionRef.current === params.sessionId &&
+          emptySessionReplacementRef.current?.status !== "complete"
+        ) {
+          replacementSourceRef.current = null;
+          clearTimeout(pendingCreateRef.current?.timer);
+          pendingCreateRef.current = null;
+          setEmptySessionReplacement(undefined);
+        }
         const sid = typeof params.sessionId === "string" ? params.sessionId : undefined;
         if (boundSessionRef.current) {
           if (sid && sid !== boundSessionRef.current) return;
@@ -1820,6 +1906,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     const sessionId = boundSessionRef.current;
     if (!sessionId) return;
     if (
+      emptySessionReplacementRef.current &&
+      emptySessionReplacementRef.current.status !== "complete"
+    )
+      return;
+    if (
       unsentCreatedSessionRef.current?.sessionId === sessionId &&
       unsentCreatedSessionRef.current.generation === connectionGenerationRef.current
     )
@@ -1855,6 +1946,61 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   });
   sendRef.current = socket.send;
   connectionGenerationRef.current = socket.connectionGeneration;
+
+  const retryEmptySessionReplacement = useCallback(() => {
+    const source = replacementSourceRef.current;
+    if (
+      !source ||
+      !socketOnlineRef.current ||
+      activeRoomIdRef.current ||
+      boundSessionRef.current !== source.sessionId ||
+      pendingCreateRef.current ||
+      emptySessionReplacementRef.current?.status === "complete"
+    )
+      return;
+    const clientRequestId =
+      globalThis.crypto?.randomUUID?.() ??
+      `mobile-replace-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const permissionMode = permissionModeRef.current;
+    const generation = connectionGenerationRef.current;
+    pendingCreateRef.current = {
+      clientRequestId,
+      permissionMode,
+      target: source.target,
+      replacesSessionId: source.sessionId,
+      conversationRevision: conversationRevisionRef.current,
+      connectionGeneration: generation,
+      timer: setTimeout(() => {
+        if (failSessionCreation(clientRequestId))
+          setNotice("重新建立空白会话超时，输入内容已保留，请重试。");
+      }, 30_000),
+    };
+    setEmptySessionReplacement({ fromSessionId: source.sessionId, status: "pending" });
+    outputClient.cancel(false);
+    setLoadingKey("sessionHistory", false);
+    const target =
+      source.target && typeof source.target === "object"
+        ? source.target
+        : { cwd: source.target ?? null };
+    if (
+      !sendRef.current?.(
+        { type: "session.create", clientRequestId, permissionMode, ...target },
+        generation,
+      )
+    ) {
+      failSessionCreation(clientRequestId);
+      setNotice("连接已变化，输入内容已保留，请重试建立会话。");
+    }
+  }, [failSessionCreation, outputClient, setEmptySessionReplacement, setLoadingKey, setNotice]);
+
+  useEffect(() => {
+    if (
+      socket.status === "online" &&
+      emptySessionReplacementRef.current?.status === "pending" &&
+      !pendingCreateRef.current
+    )
+      retryEmptySessionReplacement();
+  }, [socket.status, socket.connectionGeneration, retryEmptySessionReplacement]);
 
   useEffect(() => {
     historyRecovery.cancel();
@@ -1986,7 +2132,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       const text = input.text.trim();
       if (!text && input.attachments.length === 0) return false;
       if (socket.status !== "online") return false;
+      if (
+        pendingCreateRef.current ||
+        (emptySessionReplacementRef.current &&
+          emptySessionReplacementRef.current.status !== "complete")
+      )
+        return false;
       unsentCreatedSessionRef.current = null;
+      replacementSourceRef.current = null;
       const connectionGeneration = socket.connectionGeneration;
       const conversationRevision = conversationRevisionRef.current;
       const outputWriteGeneration = outputWriteGenerationRef.current;
@@ -2141,6 +2294,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
       conversationRevisionRef.current += 1;
       unsentCreatedSessionRef.current = null;
+      replacementSourceRef.current = null;
+      setEmptySessionReplacement(undefined);
+      clearTimeout(pendingCreateRef.current?.timer);
+      pendingCreateRef.current = null;
       creationPermissionEchoRef.current = null;
       if (activeRoomIdRef.current) {
         socket.send({
@@ -2218,6 +2375,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
       outputClient.cancel();
       unsentCreatedSessionRef.current = null;
+      replacementSourceRef.current = null;
+      setEmptySessionReplacement(undefined);
+      clearTimeout(pendingCreateRef.current?.timer);
+      pendingCreateRef.current = null;
       creationPermissionEchoRef.current = null;
       conversationRevisionRef.current += 1;
       setLoadingKey("sessionHistory", false);
@@ -2292,11 +2453,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       outputClient.cancel();
       conversationRevisionRef.current += 1;
       unsentCreatedSessionRef.current = null;
+      replacementSourceRef.current = null;
+      setEmptySessionReplacement(undefined);
       creationPermissionEchoRef.current = null;
       clearTimeout(pendingCreateRef.current?.timer);
       pendingCreateRef.current = {
         clientRequestId,
         permissionMode,
+        target: stableTarget ?? null,
         conversationRevision: conversationRevisionRef.current,
         connectionGeneration: socket.connectionGeneration,
         timer: setTimeout(() => {
@@ -2414,7 +2578,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       if (boundSessionRef.current && recoveryFencesRef.current.has(boundSessionRef.current)) return;
       permissionModeRef.current = mode;
       setPermissionModeState(mode);
-      if (pendingCreateRef.current) return;
+      if (
+        pendingCreateRef.current ||
+        (emptySessionReplacementRef.current &&
+          emptySessionReplacementRef.current.status !== "complete")
+      )
+        return;
       if (creationPermissionEchoRef.current) creationPermissionEchoRef.current.mode = mode;
       socket.send({ type: "permission.setMode", sessionId: boundSessionRef.current, mode });
     },
@@ -2528,6 +2697,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
 
   return {
     status: socket.status,
+    emptySessionReplacement,
+    retryEmptySessionReplacement,
     accessRequired: socket.accessRequired,
     deviceName: socket.deviceName,
     chat,

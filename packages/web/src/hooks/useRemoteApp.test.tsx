@@ -2161,6 +2161,225 @@ describe("useRemoteApp mobile image sends", () => {
   });
 });
 
+describe("confirmed empty draft reconnect", () => {
+  async function draft(
+    target: { projectId: string | null; rootId?: string } = { projectId: null },
+  ) {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const first = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      first.open();
+      first.message({ type: "auth.ok", capabilities: { outputJournal: 1 } });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.newSession(target);
+      await flushMicrotasks();
+    });
+    const create = first.sent
+      .map((line) => JSON.parse(line))
+      .findLast((event) => event.type === "session.create");
+    await act(async () => {
+      first.message({
+        type: "chat.accepted",
+        clientRequestId: create.clientRequestId,
+        sessionId: "empty-old",
+        cwd: target.projectId ? "/original-root" : null,
+        ...target,
+      });
+      await flushMicrotasks();
+    });
+    return { hook, first, create };
+  }
+  async function reconnect(first: FakeWebSocket) {
+    await act(async () => {
+      first.close();
+      window.dispatchEvent(new Event("online"));
+      await flushMicrotasks();
+    });
+    const next = FakeWebSocket.instances.at(-1)!;
+    expect(next).not.toBe(first);
+    await act(async () => {
+      next.open();
+      next.message({ type: "auth.ok", capabilities: { outputJournal: 1 } });
+      await flushMicrotasks();
+    });
+    return next;
+  }
+  for (const target of [
+    { projectId: null },
+    { projectId: "original-project", rootId: "original-root" },
+  ]) {
+    test(`reconnect recreates only the confirmed empty draft under its original target ${target.projectId}`, async () => {
+      const { hook, first, create } = await draft(target);
+      try {
+        await act(async () => {
+          hook.result.current.setPermissionMode("acceptEdits");
+          await flushMicrotasks();
+        });
+        const next = await reconnect(first);
+        const sent = () => next.sent.map((line) => JSON.parse(line));
+        const replacement = sent().findLast((event) => event.type === "session.create");
+        expect(replacement).toMatchObject({ ...target, permissionMode: "acceptEdits" });
+        expect(replacement.clientRequestId).not.toBe(create.clientRequestId);
+        expect(hook.result.current.emptySessionReplacement).toEqual({
+          fromSessionId: "empty-old",
+          status: "pending",
+        });
+        expect(hook.result.current.activeSessionId).toBe("empty-old");
+        expect(
+          await hook.result.current.sendChat({ text: "must remain draft", attachments: [] }),
+        ).toBe(false);
+        expect(sent().some((event) => ["chat.send", "session.select"].includes(event.type))).toBe(
+          false,
+        );
+        await act(async () => {
+          next.message({
+            type: "chat.accepted",
+            clientRequestId: create.clientRequestId,
+            sessionId: "late-original",
+          });
+          next.message({ type: "chat.accepted", sessionId: "uncorrelated" });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.activeSessionId).toBe("empty-old");
+        await act(async () => {
+          next.message({
+            type: "chat.accepted",
+            clientRequestId: replacement.clientRequestId,
+            sessionId: "empty-new",
+            cwd: target.projectId ? "/original-root" : null,
+            ...target,
+          });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.activeSessionId).toBe("empty-new");
+        expect(hook.result.current.emptySessionReplacement).toEqual({
+          fromSessionId: "empty-old",
+          toSessionId: "empty-new",
+          status: "complete",
+        });
+        expect(hook.result.current.outputHistoryFailed).toBe(false);
+        expect(hook.result.current.loading.sessionHistory).toBe(false);
+        expect(sent().some((event) => event.type === "chat.send")).toBe(false);
+      } finally {
+        await hook.unmount();
+      }
+    });
+  }
+  test("failed replacement remains blocked and retries explicitly; a later navigation retires both acknowledgements", async () => {
+    const { hook, first } = await draft();
+    try {
+      const next = await reconnect(first);
+      const sent = () => next.sent.map((line) => JSON.parse(line));
+      const replacement = sent().findLast((event) => event.type === "session.create");
+      await act(async () => {
+        next.message({
+          type: "error",
+          clientRequestId: replacement.clientRequestId,
+          message: "root unavailable",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.emptySessionReplacement?.status).toBe("failed");
+      expect(hook.result.current.activeSessionId).toBe("empty-old");
+      expect(await hook.result.current.sendChat({ text: "do not submit", attachments: [] })).toBe(
+        false,
+      );
+      await act(async () => {
+        hook.result.current.retryEmptySessionReplacement?.();
+        await flushMicrotasks();
+      });
+      const retry = sent().findLast((event) => event.type === "session.create");
+      expect(retry.clientRequestId).not.toBe(replacement.clientRequestId);
+      await act(async () => {
+        hook.result.current.selectSession("existing");
+        next.message({
+          type: "chat.accepted",
+          clientRequestId: replacement.clientRequestId,
+          sessionId: "old-replacement",
+        });
+        next.message({
+          type: "chat.accepted",
+          clientRequestId: retry.clientRequestId,
+          sessionId: "late-retry",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeSessionId).toBe("existing");
+      expect(hook.result.current.emptySessionReplacement).toBeUndefined();
+      expect(sent().filter((event) => event.type === "chat.send")).toHaveLength(0);
+    } finally {
+      await hook.unmount();
+    }
+  });
+  for (const evidence of ["uncertain-send", "persisted-row", "stream"] as const) {
+    test(`${evidence} retires empty proof and reconnect uses strict existing-session recovery`, async () => {
+      const { hook, first } = await draft();
+      const restoreFetch = defineTestProperty(window, "fetch", {
+        value: async () => {
+          throw new Error("no network expected");
+        },
+        writable: true,
+      });
+      try {
+        if (evidence === "uncertain-send") {
+          let send!: Promise<boolean>;
+          await act(async () => {
+            send = hook.result.current.sendChat({ text: "fixture", attachments: [] });
+            await flushMicrotasks();
+          });
+          const event = first.sent
+            .map((line) => JSON.parse(line))
+            .findLast((event) => event.type === "chat.send");
+          await act(async () => {
+            first.message({
+              type: "chat.uncertain",
+              sessionId: "empty-old",
+              clientMessageId: event.clientMessageId,
+              message: "admission unknown",
+            });
+            await flushMicrotasks();
+          });
+          expect(await send).toBe(false);
+        } else {
+          await act(async () => {
+            first.message(
+              evidence === "persisted-row"
+                ? {
+                    type: "session.list.ok",
+                    sessions: [{ id: "empty-old", cwd: "/original-root", title: "fixture" }],
+                  }
+                : {
+                    type: "session.stream",
+                    sessionId: "empty-old",
+                    seq: 1,
+                    event: { type: "text_delta", agentId: "main", text: "fixture" },
+                  },
+            );
+            await flushMicrotasks();
+          });
+        }
+        const next = await reconnect(first);
+        const events = next.sent.map((line) => JSON.parse(line));
+        expect(events.some((event) => event.type === "session.create")).toBe(false);
+        expect(events.some((event) => event.type === "chat.send")).toBe(false);
+        const select = events.find((event) => event.type === "session.select");
+        expect(select?.sessionId).toBe("empty-old");
+        await act(async () => {
+          next.message({ ...select, type: "session.recovery.ready", ok: false });
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.outputHistoryFailed).toBe(true);
+      } finally {
+        restoreFetch();
+        await hook.unmount();
+      }
+    });
+  }
+});
+
 describe("useRemoteApp project V2 session creation", () => {
   test("permission edits while creation awaits acceptance target only the new session and resist the initial echo", async () => {
     setupBrowser();
@@ -2170,6 +2389,9 @@ describe("useRemoteApp project V2 session creation", () => {
     await act(async () => {
       ws.open();
       ws.message({ type: "auth.ok" });
+      await flushMicrotasks();
+    });
+    await act(async () => {
       hook.result.current.setPermissionMode("bypassPermissions");
       hook.result.current.newSession({ projectId: null });
       await flushMicrotasks();
@@ -3232,6 +3454,122 @@ describe("useRemoteApp correlated session creation", () => {
     expect(hook.result.current.activeSessionId).toBe("legacy");
     await hook.unmount();
   });
+});
+
+test("actual hook and controller preserve draft, attachments, model and permission across empty reconnect failure and retry", async () => {
+  setupBrowser();
+  const hook = await renderHook(() => {
+    const app = useRemoteApp();
+    return { app, controller: useDesktopController(app, undefined, () => {}) };
+  });
+  const first = FakeWebSocket.instances[0]!;
+  const picker = () => (hook.result.current.controller.modelSelector as any).props;
+  try {
+    await act(async () => {
+      first.open();
+      first.message({ type: "auth.ok", capabilities: { outputJournal: 1 } });
+      first.message({
+        type: "runtime.models.ok",
+        models: [
+          {
+            key: "codex/fixture",
+            label: "Fixture",
+            provider: "codex",
+            kind: "codex",
+            maxContextTokens: 1000,
+          },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.controller.newSession({ projectId: null });
+      await flushMicrotasks();
+    });
+    const create = first.sent
+      .map((line) => JSON.parse(line))
+      .findLast((event) => event.type === "session.create");
+    await act(async () => {
+      first.message({
+        type: "chat.accepted",
+        clientRequestId: create.clientRequestId,
+        sessionId: "empty-old",
+        projectId: null,
+        cwd: null,
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.controller.setDraft("keep this unsent task");
+      picker().onChange("codex/fixture");
+      hook.result.current.controller.addFiles([
+        new File(["owned"], "kept.png", { type: "image/png" }),
+      ] as unknown as FileList);
+      hook.result.current.app.setPermissionMode("default");
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      first.close();
+      window.dispatchEvent(new Event("online"));
+      await flushMicrotasks();
+    });
+    const next = FakeWebSocket.instances.at(-1)!;
+    await act(async () => {
+      next.open();
+      next.message({ type: "auth.ok", capabilities: { outputJournal: 1 } });
+      await flushMicrotasks();
+    });
+    const sent = () => next.sent.map((line) => JSON.parse(line));
+    const replacement = sent().findLast((event) => event.type === "session.create");
+    expect(replacement).toMatchObject({ projectId: null, permissionMode: "default" });
+    expect(hook.result.current.controller.activeId).toBe("empty-old");
+    expect(hook.result.current.controller.send()).toBe(false);
+    await act(async () => {
+      next.message({
+        type: "error",
+        clientRequestId: replacement.clientRequestId,
+        message: "temporary root failure",
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.controller.draft).toBe("keep this unsent task");
+    expect(hook.result.current.controller.files.map((file) => file.name)).toEqual(["kept.png"]);
+    expect(picker().value).toBe("codex/fixture");
+    await act(async () => {
+      hook.result.current.controller.setDraft("keep this unsent task plus new typing");
+      picker().onRetryCreation();
+      await flushMicrotasks();
+    });
+    const retry = sent().findLast((event) => event.type === "session.create");
+    await act(async () => {
+      next.message({
+        type: "chat.accepted",
+        clientRequestId: replacement.clientRequestId,
+        sessionId: "late-old",
+      });
+      next.message({
+        type: "chat.accepted",
+        clientRequestId: retry.clientRequestId,
+        sessionId: "empty-new",
+        projectId: null,
+        cwd: null,
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.controller.activeId).toBe("empty-new");
+    expect(hook.result.current.controller.draft).toBe("keep this unsent task plus new typing");
+    expect(hook.result.current.controller.files.map((file) => file.name)).toEqual(["kept.png"]);
+    expect(picker().value).toBe("codex/fixture");
+    expect(hook.result.current.app.permissionMode).toBe("default");
+    expect(hook.result.current.controller.loading).toBe(false);
+    expect(
+      sent().some((event) =>
+        ["chat.send", "attachment.upload.begin", "session.select"].includes(event.type),
+      ),
+    ).toBe(false);
+  } finally {
+    await hook.unmount();
+  }
 });
 
 test("the actual Desktop hook/controller pair keeps drafts through create and send acceptance on one socket", async () => {
