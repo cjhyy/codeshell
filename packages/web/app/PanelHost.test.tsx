@@ -147,10 +147,14 @@ afterEach(async () => {
 
 async function fixture(
   options: {
+    sessionId?: string;
     intercept?: (request: Request) => Response | Promise<Response> | undefined;
     onSubmit?: (input: { prompt: string; sessionId: string }) => Promise<{ accepted: true }>;
   } = {},
 ) {
+  const sessionId = Object.hasOwn(options, "sessionId")
+    ? options.sessionId
+    : prepared.context.sessionId;
   ensureMiniDom();
   previousMatchMedia = Object.getOwnPropertyDescriptor(window, "matchMedia");
   Object.defineProperty(window, "matchMedia", {
@@ -179,7 +183,8 @@ async function fixture(
     requests.push(request);
     const intercepted = options.intercept?.(request);
     if (intercepted) return intercepted;
-    if (request.url.pathname.endsWith("/prepare")) return Response.json(prepared);
+    if (request.url.pathname.endsWith("/prepare"))
+      return Response.json({ ...prepared, context: { ...prepared.context, sessionId } });
     if (request.url.pathname.endsWith("/events"))
       return Response.json({ events: [], cursor: Number(request.url.searchParams.get("after")) });
     if (request.url.pathname.endsWith("/renew"))
@@ -208,7 +213,7 @@ async function fixture(
   function MountedHost() {
     tree = PanelHost({
       panel,
-      sessionId: prepared.context.sessionId,
+      sessionId,
       busy,
       onClose() {},
       onAuthLost: () => {
@@ -532,6 +537,9 @@ test.each([
 
 test("panel prompt requires parent confirmation and duplicate request IDs cannot resubmit it", async () => {
   const view = await fixture();
+  expect(
+    view.requests.find((request) => request.url.pathname.endsWith("/prepare"))!.body.sessionId,
+  ).toBe(prepared.context.sessionId);
   await view.call("agent.submitPrompt", { prompt: "Read the selected project" }, "first");
   expect(view.submissions).toHaveLength(0);
   expect(view.dirty).toBe(true);
@@ -552,6 +560,32 @@ test("panel prompt requires parent confirmation and duplicate request IDs cannot
   });
   expect(view.dirty).toBe(false);
 });
+
+test.each([undefined, "native-previous"])(
+  "an unbound Panel omits its session and rejects a forged prompt effect for %s",
+  async (forgedSessionId) => {
+    const view = await fixture({
+      sessionId: undefined,
+      intercept(request) {
+        if (request.body?.method === "agent.submitPrompt")
+          return Response.json({
+            effect: "agent.submitPrompt",
+            prompt: "Must not send",
+            sessionId: forgedSessionId,
+          });
+      },
+    });
+    await view.ready();
+    expect(
+      view.requests.find((request) => request.url.pathname.endsWith("/prepare"))!.body,
+    ).not.toHaveProperty("sessionId");
+    await view.call("agent.submitPrompt", { prompt: "Must not send" });
+    expect(view.submissions).toEqual([]);
+    expect(view.dirty).toBe(false);
+    expect(text(view.tree)).not.toContain("确认发送任务");
+    expect(view.replies.at(-1)!.data.error).toContain("当前对话不匹配");
+  },
+);
 
 test("declining a panel task never calls the workbench controller", async () => {
   const view = await fixture();

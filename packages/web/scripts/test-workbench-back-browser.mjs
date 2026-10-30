@@ -20,7 +20,7 @@ const output = await mkdtemp(path.join(tmpdir(), "codeshell-workbench-back-"));
 const source = `import React from 'react';import{createRoot}from'react-dom/client';import{Workbench}from'./Workbench';
 const noop=()=>{};window.sends=[];window.selections=[];
 function Fixture(){const[draft,setDraft]=React.useState('Owned retained draft'),[workspace,setWorkspace]=React.useState('owned');window.changeWorkspace=()=>setWorkspace('other-owned');
-const controller={host:'desktop',workspaceApi:true,connection:'open',activeId:'owned-session',chat:{items:Array.from({length:70},(_,i)=>({kind:'assistant',id:'row-'+i,text:'Owned conversation '+i+' '.repeat(1)+'retained reading position '.repeat(12),done:true})),run:'idle'},sessions:[],workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:workspace,title:'Owned conversation',configuration:null,configurationVersion:0,sessionsVersion:0,draft,files:[],uploading:false,uploadBusy:false,hasUnsent:Boolean(draft),uncertain:false,running:false,localDrafts:[],approvals:[],approvalCount:()=>0,approvalContent:null,error:'',clearError:noop,setDraft,removeFile:noop,selectSession:id=>window.selections.push(id),newSession:noop,send:()=>{window.sends.push(draft);return false},stop:noop,addFiles:noop,refreshSessions:noop,refreshConfiguration:noop,onAuthLost:()=>{throw Error('Unexpected auth loss')}};return <Workbench controller={controller}/>};createRoot(document.getElementById('root')).render(<React.StrictMode><Fixture/></React.StrictMode>);`;
+const controller={panelSessionId:'owned-session',host:'desktop',workspaceApi:true,connection:'open',activeId:'owned-session',chat:{items:Array.from({length:70},(_,i)=>({kind:'assistant',id:'row-'+i,text:'Owned conversation '+i+' '.repeat(1)+'retained reading position '.repeat(12),done:true})),run:'idle'},sessions:[],workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:workspace,title:'Owned conversation',configuration:null,configurationVersion:0,sessionsVersion:0,draft,files:[],uploading:false,uploadBusy:false,hasUnsent:Boolean(draft),uncertain:false,running:false,localDrafts:[],approvals:[],approvalCount:()=>0,approvalContent:null,error:'',clearError:noop,setDraft,removeFile:noop,selectSession:id=>window.selections.push(id),newSession:noop,send:()=>{window.sends.push(draft);return false},stop:noop,addFiles:noop,refreshSessions:noop,refreshConfiguration:noop,onAuthLost:()=>{throw Error('Unexpected auth loss')}};return <Workbench controller={controller}/>};createRoot(document.getElementById('root')).render(<React.StrictMode><Fixture/></React.StrictMode>);`;
 const bundle = await build({
   stdin: { contents: source, resolveDir, loader: "tsx" },
   bundle: true,
@@ -139,6 +139,7 @@ await context.route("**/*", async (route) => {
       content: "Owned preview content",
     });
   if (pathname === "/api/v1/panels/runtime/prepare") {
+    assert.equal(request.postDataJSON().sessionId, "owned-session");
     const instanceId = "owned-instance-" + String(++sequence).padStart(12, "0");
     return reply({
       instanceId,

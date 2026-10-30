@@ -27,7 +27,13 @@ export function submitWorkbenchPanelPrompt(
   controller: WorkbenchController,
   request: { prompt: string; sessionId: string; workspaceKey: string; modelTraceSource?: string },
 ): { accepted: true } {
-  if (request.workspaceKey !== controller.workspaceKey || request.sessionId !== controller.activeId)
+  if (
+    !controller.panelSessionId ||
+    !request.sessionId ||
+    request.workspaceKey !== controller.workspaceKey ||
+    request.sessionId !== controller.panelSessionId ||
+    request.sessionId !== controller.activeId
+  )
     throw new Error("当前工作区或对话已经变化，请重新打开面板后发送。");
   if (controller.connection !== "open" || controller.loading)
     throw new Error("工作台尚未连接，请连接后重新发送面板任务。");
@@ -1219,7 +1225,7 @@ export function Workbench({
           <PanelHost
             key={`${controller.workspaceKey}:panel:${openedPanel.panel.id}:${activeId}`}
             panel={openedPanel.panel}
-            sessionId={activeId}
+            sessionId={controller.panelSessionId}
             busy={running || uploading || controller.uncertain}
             onAuthLost={onAuthLost}
             onDirtyChange={setNavigationDirty}

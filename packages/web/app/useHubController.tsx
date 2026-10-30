@@ -826,6 +826,7 @@ export function useHubController({
     connection,
     session,
     activeId,
+    panelSessionId: activeId,
     loading: loadingSession === activeId,
     chat,
     sessions,

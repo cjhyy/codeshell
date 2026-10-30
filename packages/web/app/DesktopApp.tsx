@@ -750,6 +750,7 @@ export function useDesktopController(
           : "connecting",
     session,
     activeId,
+    panelSessionId: app.activeRoomId ? undefined : app.activeSessionId,
     chat: app.chat,
     sessions,
     workspaceCwd,

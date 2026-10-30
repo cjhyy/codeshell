@@ -32,7 +32,7 @@ const source = `
     React.useEffect(()=>{void read()},[]);
     if(!model)return null;
     const noop=()=>{};
-    const controller={...model,host:model.host??'hub',workspaceApi:true,
+    const controller={panelSessionId:undefined,...model,host:model.host??'hub',workspaceApi:true,
       chat:{items:[],run:'idle',seq:1,liveByAgent:{}},configuration:null,
       configurationVersion:0,sessionsVersion:0,draft:'',files:[],uploading:false,
       uploadBusy:false,hasUnsent:false,uncertain:false,running:false,localDrafts:[],approvals:[],

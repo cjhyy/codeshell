@@ -11,6 +11,8 @@ import { Workbench } from "./Workbench.js";
 import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopControls.js";
 import { OutputHistoryRecovery } from "../src/components/OutputHistoryRecovery.js";
 import { DesktopModelPicker } from "./DesktopModelPicker.js";
+import { HubPanels } from "./HubPanels.js";
+import { PanelHost } from "./PanelHost.js";
 
 const noop = () => {};
 const session = { id: "paired-session", username: "synthetic", deviceName: "Fixture" };
@@ -56,6 +58,12 @@ function remoteApp(patch: Partial<RemoteApp> = {}): RemoteApp {
     ...patch,
   };
 }
+function workbenchElements(node: React.ReactNode): React.ReactElement<any>[] {
+  if (Array.isArray(node)) return node.flatMap(workbenchElements);
+  if (!React.isValidElement(node)) return [];
+  const element = node as React.ReactElement<any>;
+  return [element, ...workbenchElements(element.props.children)];
+}
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => {
@@ -75,11 +83,129 @@ function configuration(path: string) {
   };
 }
 const originalFetch = globalThis.fetch;
+const browserRestores: Array<() => void> = [];
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  for (const restore of browserRestores.splice(0).reverse()) restore();
 });
 
 describe("Desktop workbench controller", () => {
+  test.each(["canonical", "room ready", "room pending", "new draft"])(
+    "Panels bind only the canonical session (%s)",
+    async (selection) => {
+      ensureMiniDom();
+      let location = new URL("http://localhost/mobile/");
+      const history = {
+        state: null as unknown,
+        replaceState(state: unknown, _unused: string, url: string) {
+          this.state = state;
+          location = new URL(url, location);
+        },
+        pushState(state: unknown, _unused: string, url: string) {
+          this.replaceState(state, _unused, url);
+        },
+      };
+      for (const [key, descriptor] of [
+        ["location", { get: () => location }],
+        ["history", { value: history }],
+        [
+          "matchMedia",
+          { value: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }) },
+        ],
+      ] as const) {
+        const previous = Object.getOwnPropertyDescriptor(window, key);
+        Object.defineProperty(window, key, { configurable: true, ...descriptor });
+        browserRestores.push(() =>
+          previous ? Object.defineProperty(window, key, previous) : delete (window as any)[key],
+        );
+      }
+      const sent: unknown[] = [];
+      const room = {
+        id: "cli-room",
+        name: "Synthetic CLI",
+        cwd: "/owned",
+        kind: "claude-code" as const,
+        createdAt: 1,
+        lastActiveAt: 1,
+        open: true,
+        observing: false,
+      };
+      const app = remoteApp({
+        activeSessionId: selection === "new draft" ? undefined : "native-previous",
+        activeRoomId: selection.startsWith("room") ? room.id : undefined,
+        activeRoom: selection === "room ready" ? room : undefined,
+        sendChat: async (input) => {
+          sent.push(input);
+          return true;
+        },
+      });
+      const hook = await renderHook(() => {
+        const controller = useDesktopController(app, undefined, noop);
+        return {
+          controller,
+          tree: Workbench({ controller: { ...controller, workspaceApi: true } }),
+        };
+      });
+      try {
+        const canonical = selection === "canonical" ? "native-previous" : undefined;
+        expect(hook.result.current.controller.panelSessionId).toBe(canonical);
+        const activeId = hook.result.current.controller.activeId;
+        await act(async () => {
+          const nav = workbenchElements(hook.result.current.tree).find(
+            (element) =>
+              element.type === "button" &&
+              workbenchElements(element.props.children).some(
+                (child) => child.type === "span" && child.props.children === "面板",
+              ),
+          );
+          expect(nav).toBeDefined();
+          nav!.props.onClick();
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          const panels = workbenchElements(hook.result.current.tree).find(
+            (element) => element.type === HubPanels,
+          );
+          expect(panels).toBeDefined();
+          panels!.props.onOpen({
+            id: "synthetic-panel",
+            title: { default: "Panel" },
+            version: "1.0.0",
+            entry: "index.html",
+            icon: "panel",
+            singleton: true,
+            permissions: ["context.session"],
+            revision: "revision",
+            bound: true,
+            enabled: true,
+            globalDisabled: false,
+            updatable: false,
+            source: { kind: "local", label: "Fixture" },
+            compatibility: { supported: true, reasons: [] },
+          });
+          await flushMicrotasks();
+        });
+        const panel = workbenchElements(hook.result.current.tree).find(
+          (element) => element.type === PanelHost,
+        );
+        expect(panel).toBeDefined();
+        expect(panel!.props.sessionId).toBe(canonical);
+        expect(panel!.key).toContain(activeId);
+        expect(hook.result.current.controller.activeId).toBe(activeId);
+        if (!canonical) {
+          for (const sessionId of new Set([activeId, "native-previous"]))
+            await expect(
+              panel!.props.onSubmitPrompt({ prompt: "Must not send", sessionId }),
+            ).rejects.toThrow("当前工作区或对话已经变化");
+          expect(hook.result.current.controller.draft).toBe("");
+        }
+        expect(sent).toEqual([]);
+      } finally {
+        await hook.unmount();
+      }
+    },
+  );
+
   test("recovery preserves draft text and attachments without releasing an old intent", async () => {
     const sent: unknown[] = [];
     let app = remoteApp({

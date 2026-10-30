@@ -35,7 +35,7 @@ interface Confirmation {
 }
 export interface PanelHostProps {
   panel: ManagedPanel;
-  sessionId: string;
+  sessionId?: string;
   busy: boolean;
   onClose: () => void;
   onAuthLost: () => void;
@@ -618,6 +618,7 @@ export function PanelHost({
           reply(child, requestId, { opened: true });
         } else if (data.method === "agent.submitPrompt") {
           if (
+            !sessionId ||
             !isRecord(result) ||
             result.effect !== data.method ||
             typeof result.prompt !== "string" ||
