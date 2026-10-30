@@ -1,5 +1,6 @@
 import {
   chmodSync,
+  existsSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -23,6 +24,33 @@ afterEach(() => {
 });
 
 describe("TrustedDeviceStore", () => {
+  test("account identities never enter the pairing file or become permanent credentials", () => {
+    dir = mkdtempSync(join(tmpdir(), "mobile-account-devices-"));
+    const file = join(dir, "devices.json");
+    const store = new TrustedDeviceStore(file);
+    const device = store.addEphemeralDevice({
+      name: "Account device",
+      secretHash: "short-lived-secret",
+      expiresAt: Date.now() + 60_000,
+    });
+    expect(store.isEphemeralDevice(device.id)).toBe(true);
+    expect(store.authenticate(device.id, "wrong-secret")).toBeUndefined();
+    expect(store.authenticate(device.id, "short-lived-secret")?.id).toBe(device.id);
+    expect(existsSync(file)).toBe(false);
+    expect(new TrustedDeviceStore(file).listDevices()).toEqual([]);
+    expect(() => store.addDevice({ name: "Promoted", secretHash: "short-lived-secret" })).toThrow(
+      /cannot be paired permanently/,
+    );
+    store.addDevice({ name: "Normal pairing", secretHash: "durable-secret" });
+    const persisted = readFileSync(file, "utf8");
+    expect(persisted).not.toContain("short-lived-secret");
+    expect(persisted).not.toContain(device.id);
+    expect(store.removeEphemeralDevice(device.id)).toBe(true);
+    expect(store.removeEphemeralDevice(device.id)).toBe(false);
+    expect(readFileSync(file, "utf8")).toBe(persisted);
+    expect(store.isEphemeralDevice(device.id)).toBe(false);
+  });
+
   test("adds, lists, authenticates, and revokes devices", () => {
     dir = mkdtempSync(join(tmpdir(), "mobile-devices-"));
     const store = new TrustedDeviceStore(join(dir, "devices.json"));

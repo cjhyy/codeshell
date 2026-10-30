@@ -55,6 +55,7 @@
     "test:github-star": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-github-star.mjs",
     "test:operation-retention": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-operation-retention.mjs && node scripts/run-isolated-node-smoke.mjs scripts/smoke-verified-link-write.mjs --retention",
     "test:mobile-external-output-journal": "node scripts/run-mobile-external-output-smoke.mjs",
+    "test:account-relay-device-dispatch": "node scripts/test-account-relay-device-dispatch.mjs",
     "test:mobile-output-journal": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-mobile-output-journal.mjs",
     "test:mobile-panel-downloads": "bun scripts/run-isolated-node-smoke.mjs scripts/smoke-mobile-panel-downloads.mjs",
     "test:output-journal": "node scripts/run-isolated-node-smoke.mjs scripts/smoke-output-journal.mjs",

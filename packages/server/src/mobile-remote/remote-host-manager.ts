@@ -1,4 +1,4 @@
-import { createServer, type Server } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { networkInterfaces } from "node:os";
 import { EventEmitter } from "node:events";
 import { dirname, resolve } from "node:path";
@@ -15,6 +15,11 @@ import { parseMobileClientEvent } from "./mobile-client-event-validator.js";
 import type { DesktopWebHttpApi } from "../desktop-web/http-api.js";
 import type { RelayLocalTarget } from "../remote-relay/connector.js";
 import { isRelayOrigin } from "../remote-relay/protocol.js";
+import {
+  AccountRelayAccessGate,
+  readRelayHandoff,
+  type AccountRelayAccessProvider,
+} from "./account-relay-access.js";
 
 /** Outbound bytes one paired socket may leave unread before it is retired. */
 const MAX_SOCKET_BACKLOG_BYTES = 4 * 1024 * 1024;
@@ -62,11 +67,11 @@ export interface RemoteHostStartOptions {
    * "lan" (default) keeps the existing LAN behaviour unchanged. "tunnel" binds
    * 127.0.0.1 (cloudflared connects to loopback) and inserts a passcode gate in
    * front of ordinary HTTP routes and the WS upgrade. Host-verified Panel asset
-   * capabilities use their own short-lived authorization. "relay" also requires an
-   * initialized passcode and a stable HTTPS origin before pairing/WS upgrades.
+   * capabilities use their own short-lived authorization. "relay" requires a
+   * passcode or main-owned account handoff provider and a stable HTTPS origin.
    */
   mode?: "lan" | "tunnel" | "relay";
-  /** Required and initialized in relay mode; public gate for tunnel mode too. */
+  /** Public passcode gate; account handoffs may independently authorize relay mode. */
   passcode?: AccessPasscode;
 }
 
@@ -127,6 +132,8 @@ export class RemoteHostManager extends EventEmitter {
   private passcode?: AccessPasscode;
   private socketAccessValidity = new WeakMap<WebSocket, () => boolean>();
   private accessSweep?: ReturnType<typeof setInterval>;
+  private readonly accountAccess: AccountRelayAccessGate;
+  private accountSocketDevices = new WeakMap<WebSocket, string>();
   /** Where the built mobile app lives (out/mobile). */
   private readonly mobileRootDir: string;
   /** Dev proxy target for /mobile (HMR); undefined in prod. */
@@ -134,10 +141,36 @@ export class RemoteHostManager extends EventEmitter {
 
   constructor(private readonly opts: RemoteHostManagerOptions) {
     super();
+    this.accountAccess = new AccountRelayAccessGate(opts.devices, (id) => this.revokeDevice(id));
     // Bundled main is out/main/index.mjs → mobile app is the sibling out/mobile.
     const here = dirname(fileURLToPath(import.meta.url));
     this.mobileRootDir = opts.mobileRootDir ?? resolve(here, "../mobile");
     this.mobileDevUrl = opts.mobileDevUrl ?? process.env.MOBILE_DEV_URL;
+  }
+
+  /** Install main-owned directory redemption; replacing it synchronously revokes old sessions. */
+  setAccountRelayAccess(provider?: AccountRelayAccessProvider): void {
+    this.accountAccess.setProvider(provider);
+  }
+
+  private relayRequestOrigin(request: IncomingMessage, requireOrigin = false): boolean {
+    return !!(
+      this.publicBaseUrl &&
+      request.headers.host === new URL(this.publicBaseUrl).host &&
+      (request.headers.origin === this.publicBaseUrl ||
+        (!requireOrigin && request.headers.origin === undefined)) &&
+      request.headers["sec-fetch-site"] !== "cross-site"
+    );
+  }
+
+  private relayJson(response: ServerResponse, status: number, body: unknown): void {
+    if (response.writableEnded || response.destroyed) return;
+    response.writeHead(status, {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    });
+    response.end(JSON.stringify(body));
   }
 
   /** Device ids with at least one live socket right now. */
@@ -185,11 +218,11 @@ export class RemoteHostManager extends EventEmitter {
   private async startOnce(options: RemoteHostStartOptions): Promise<RemoteHostStarted> {
     const relay = options.mode === "relay";
     const publicAccess = relay || options.mode === "tunnel";
-    if (publicAccess && !options.passcode?.isSet()) {
+    if (publicAccess && !options.passcode?.isSet() && !(relay && this.accountAccess.available)) {
       throw new Error(`${relay ? "Relay" : "Tunnel"} mode requires an initialized access passcode`);
     }
     if (relay) this.publicBaseUrl = undefined;
-    this.passcode = publicAccess ? options.passcode : undefined;
+    this.passcode = publicAccess && options.passcode?.isSet() ? options.passcode : undefined;
     const gate = this.passcode;
     this.opts.webApi?.start();
     const server = createServer((req, res) => {
@@ -202,10 +235,54 @@ export class RemoteHostManager extends EventEmitter {
         req.resume();
         return;
       }
+      if (relay && pathname === "/api/v1/relay/session") {
+        if (
+          req.method !== "POST" ||
+          !this.accountAccess.available ||
+          !this.relayRequestOrigin(req, true)
+        ) {
+          this.relayJson(res, 403, { error: "Account relay session is unavailable" });
+          req.resume();
+          return;
+        }
+        const lifetime = this.relayLifetime;
+        void readRelayHandoff(req)
+          .then((handoff) => {
+            if (!lifetime || lifetime.signal.aborted || lifetime !== this.relayLifetime)
+              throw new Error("Relay Host stopped");
+            return this.accountAccess.exchange(handoff);
+          })
+          .then((session) => this.relayJson(res, 200, session))
+          .catch(() =>
+            this.relayJson(res, 401, { error: "Account relay handoff expired or invalid" }),
+          );
+        return;
+      }
       const serve = () => {
         // All ordinary routes retain the tunnel passcode gate. Only a Host-verified
         // short-lived Panel asset capability may use independent authorization.
-        if (gate && !gate.gate(req, res)) return;
+        const account =
+          relay && this.relayRequestOrigin(req) ? this.accountAccess.capture(req) : undefined;
+        if (!account) {
+          if (relay && (req.headers["x-codeshell-host-access"] !== undefined || !gate)) {
+            this.relayJson(res, 401, { error: "Account relay authorization is required" });
+            req.resume();
+            return;
+          }
+          if (gate && !gate.gate(req, res)) return;
+        }
+        if (relay && pathname === "/api/v1/relay/projects") {
+          if (req.method !== "GET" || !account) {
+            this.relayJson(res, 401, { error: "Account relay authorization is required" });
+            req.resume();
+            return;
+          }
+          void this.accountAccess.projects(account).then(
+            (projects) => this.relayJson(res, 200, projects),
+            () => this.relayJson(res, 401, { error: "Account relay authorization expired" }),
+          );
+          return;
+        }
         if (req.url === "/health") {
           res.writeHead(200, { "content-type": "application/json" });
           res.end(JSON.stringify({ ok: true }));
@@ -219,7 +296,11 @@ export class RemoteHostManager extends EventEmitter {
             return;
           }
           void this.opts.webApi
-            .handle(req, res, { baseUrl, isAccessAuthorized: gate?.captureValidity() })
+            .handle(req, res, {
+              baseUrl,
+              isAccessAuthorized: account?.isAuthorized ?? gate?.captureValidity(),
+              ...(account ? { accessDeviceId: account.deviceId } : {}),
+            })
             .then((handled) => {
               if (!handled && !res.writableEnded) {
                 res.writeHead(404);
@@ -287,13 +368,13 @@ export class RemoteHostManager extends EventEmitter {
     // In tunnel mode we must gate the WS handshake too. `noServer` lets us run
     // the passcode check during the HTTP `upgrade` event before completing the
     // handshake; in lan mode behaviour is unchanged (the same path/server bind).
-    this.wss = gate
+    this.wss = publicAccess
       ? new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 })
       : new WebSocketServer({ server, path: "/ws", maxPayload: 1024 * 1024 });
     // ws re-emits its HTTP server's bind errors. Without an error listener a
     // handled EADDRINUSE rejection still becomes an uncaught EventEmitter error.
     this.wss.on("error", (error) => this.emit("host-error", error));
-    if (gate) {
+    if (publicAccess) {
       server.on("upgrade", (req, socket, head) => {
         let isWebSocketPath = false;
         try {
@@ -305,30 +386,29 @@ export class RemoteHostManager extends EventEmitter {
           socket.destroy();
           return;
         }
-        if (
-          relay &&
-          (!this.publicBaseUrl ||
-            req.headers.origin !== this.publicBaseUrl ||
-            req.headers.host !== new URL(this.publicBaseUrl).host)
-        ) {
+        if (relay && !this.relayRequestOrigin(req, true)) {
           socket.end("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
           return;
         }
+        const account = relay ? this.accountAccess.capture(req) : undefined;
         if (
-          !gate.allows(
-            req as unknown as {
-              url?: string;
-              headers: Record<string, string | string[] | undefined>;
-            },
-          )
+          !account &&
+          ((relay && req.headers["x-codeshell-host-access"] !== undefined) ||
+            !gate?.allows(
+              req as unknown as {
+                url?: string;
+                headers: Record<string, string | string[] | undefined>;
+              },
+            ))
         ) {
           socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
           socket.destroy();
           return;
         }
-        const isAccessAuthorized = gate.captureValidity();
+        const isAccessAuthorized = account?.isAuthorized ?? gate!.captureValidity();
         this.wss!.handleUpgrade(req, socket, head, (ws) => {
           this.socketAccessValidity.set(ws, isAccessAuthorized);
+          if (account) this.accountSocketDevices.set(ws, account.deviceId);
           this.wss!.emit("connection", ws, req);
         });
       });
@@ -357,12 +437,24 @@ export class RemoteHostManager extends EventEmitter {
           this.sendBounded(ws, JSON.stringify({ type: "error", message: "Invalid client event" }));
           return;
         }
+        const accountDevice = this.accountSocketDevices.get(ws);
+        if (
+          accountDevice &&
+          (event.type === "pair.complete" ||
+            (event.type === "auth.device" && event.deviceId !== accountDevice))
+        ) {
+          this.sendBounded(
+            ws,
+            JSON.stringify({ type: "auth.failed", message: "Account device mismatch" }),
+          );
+          return;
+        }
         // Pairing/auth are handled inline and bind device identity to this
         // socket. Everything else is gated: an unauthenticated socket cannot
         // send chat/approval/run/job events (design §6.1).
         let reply: MobileServerEvent | undefined;
         try {
-          reply = this.handleClientEvent(event);
+          reply = this.handleClientEvent(event, accountDevice);
         } catch {
           this.sendBounded(ws, JSON.stringify({ type: "error", message: "Client event failed" }));
           return;
@@ -452,7 +544,7 @@ export class RemoteHostManager extends EventEmitter {
       url: `http://${bindHost}:${port}`,
       mode: options.mode ?? "lan",
     };
-    if (gate) {
+    if (publicAccess) {
       const sockets = this.wss;
       // Idle public tabs must also relinquish viewer-owned state after rotation.
       // Traffic is checked synchronously in both directions, without rehashing
@@ -516,7 +608,7 @@ export class RemoteHostManager extends EventEmitter {
    * trusted-device store (which rejects revoked devices), so the remote host
    * never executes tools itself — it only gates transport.
    */
-  handleClientEvent(input: unknown): MobileServerEvent | undefined {
+  handleClientEvent(input: unknown, accountDeviceId?: string): MobileServerEvent | undefined {
     const event = parseMobileClientEvent(input);
     if (!event) return { type: "error", message: "Invalid client event" };
     if (event.type === "pair.complete") {
@@ -557,6 +649,8 @@ export class RemoteHostManager extends EventEmitter {
       };
     }
     if (event.type === "auth.device") {
+      if (this.opts.devices.isEphemeralDevice(event.deviceId) && event.deviceId !== accountDeviceId)
+        return { type: "auth.failed", message: "Account device requires its Host access grant" };
       let device;
       try {
         device = this.opts.devices.authenticate(event.deviceId, event.secretHash);
@@ -686,7 +780,7 @@ export class RemoteHostManager extends EventEmitter {
     this.releaseSocket(client);
     // Distinct from paired-device rejection (4401/4403): the browser keeps its
     // identity and offers a fresh HTTP challenge instead of silently retrying.
-    client.close(4407, "Access passcode changed");
+    client.close(4407, "Host access expired");
     const deadline = setTimeout(() => client.terminate(), 1000);
     deadline.unref();
     client.once("close", () => clearTimeout(deadline));
@@ -720,6 +814,7 @@ export class RemoteHostManager extends EventEmitter {
 
   /** Call after revoking/removing a trusted device to release both transports immediately. */
   revokeDevice(deviceId: string): void {
+    if (this.accountAccess.revokeDevice(deviceId)) return;
     void this.opts.uploads?.revokeDevice(deviceId).catch((error) => {
       this.emit("host-error", error instanceof Error ? error.message : String(error));
     });
@@ -735,6 +830,7 @@ export class RemoteHostManager extends EventEmitter {
     // Listeners synchronously fence and destroy outbound sockets before the
     // loopback listener can close or its port can be reused by another Host.
     this.relayLifetime?.abort();
+    this.accountAccess.clear();
     if (this.stopping) return this.stopping;
     const attempt = Promise.resolve()
       .then(() => this.stopOnce())

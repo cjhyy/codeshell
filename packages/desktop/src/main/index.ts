@@ -1096,6 +1096,11 @@ const { cloudAccountManager, mobileRemoteController, cloudManagementManager } =
     ipcMain,
     userDataDir: app.getPath("userData"),
     environmentDir: join(codeShellHome(), "desktop"),
+    listProjects: async () =>
+      (await getProjectStore().list()).flatMap((project) => {
+        const root = project.roots.find((entry) => entry.id === project.primaryRootId);
+        return root ? [{ id: project.id, name: project.name, path: root.path }] : [];
+      }),
     safeStorage,
     windows: () => mainWindows,
     openExternal: (url) => shell.openExternal(url),
