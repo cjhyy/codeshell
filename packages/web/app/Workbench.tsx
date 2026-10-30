@@ -9,7 +9,7 @@ import { HubSessions, useHistoryActionFocus } from "./HubSessions.js";
 import { HubLinks } from "./HubLinks.js";
 import { HubPanels } from "./HubPanels.js";
 import { PanelHost } from "./PanelHost.js";
-import { MessageContent, ToolMessage, subagentStatusLabel } from "./MessageContent.js";
+import { MessageContent, subagentStatusLabel } from "./MessageContent.js";
 import { sessionTitle } from "./chat.js";
 import type { WorkbenchController, WorkbenchNavigation } from "./workbench-types.js";
 import { useWorkbenchNavigation } from "./useWorkbenchNavigation.js";
@@ -17,6 +17,7 @@ import { getApiProject } from "./api-context.js";
 import { useLatestMessages } from "./useLatestMessages.js";
 import { useTranscriptWindow } from "./useTranscriptWindow.js";
 import { groupToolActivity } from "./toolActivityGroups.js";
+import { foldToolDisplayRecords, isInvisibleAssistant } from "./toolDisplayRecords.js";
 import { ToolActivity } from "./ToolActivity.js";
 import { ExpandedHistoryText } from "./ExpandedHistoryText.js";
 import "./app.css";
@@ -870,7 +871,7 @@ export function Workbench({
                     )}
                   </div>
                 ) : null}
-                {groupToolActivity(transcript.items).map((item) => {
+                {foldToolDisplayRecords(groupToolActivity(transcript.items)).map((item) => {
                   switch (item.kind) {
                     case "user":
                       return (
@@ -903,14 +904,7 @@ export function Workbench({
                         </div>
                       );
                     case "assistant":
-                      if (
-                        item.done &&
-                        !item.text &&
-                        !item.reasoning &&
-                        !item.reasoningDetailRef &&
-                        !item.textDetailRef
-                      )
-                        return null;
+                      if (isInvisibleAssistant(item)) return null;
                       return (
                         <div key={item.id} className="msg assistant">
                           <MessageContent
@@ -927,14 +921,22 @@ export function Workbench({
                           />
                         </div>
                       );
+                    case "tool_records":
                     case "tool_group":
                       return (
                         <div
-                          key={`${controller.workspaceKey}:${activeId}:${item.id}`}
+                          key={JSON.stringify([
+                            controller.workspaceKey,
+                            activeId,
+                            "tool",
+                            item.items[0].agentId ?? null,
+                            item.items[0].id,
+                          ])}
                           className="msg tool"
                         >
                           <ToolActivity
                             items={item.items}
+                            presentation={item.kind === "tool_records" ? "records" : "verified"}
                             detailScope={`${controller.workspaceKey}:${activeId}`}
                             loadHistoryDetail={controller.loadHistoryDetail}
                             reloadHistory={controller.reloadHistory}
@@ -943,10 +945,18 @@ export function Workbench({
                       );
                     case "tool":
                       return (
-                        <div key={item.id} className={`msg tool${item.error ? " tool-error" : ""}`}>
-                          <ToolMessage
-                            key={`${controller.workspaceKey}:${activeId}:${item.id}`}
-                            item={item}
+                        <div
+                          key={JSON.stringify([
+                            controller.workspaceKey,
+                            activeId,
+                            "tool",
+                            item.agentId ?? null,
+                            item.id,
+                          ])}
+                          className={`msg tool${item.error ? " tool-error" : ""}`}
+                        >
+                          <ToolActivity
+                            items={[item]}
                             running={running}
                             detailScope={`${controller.workspaceKey}:${activeId}`}
                             loadHistoryDetail={controller.loadHistoryDetail}
@@ -1071,8 +1081,11 @@ export function Workbench({
                 }}
               />
               <div
-                className={`composer-toolbar${controller.modelSelector ? " with-model-selector" : ""}`}
+                className={`composer-toolbar${controller.modelSelector ? " with-model-selector" : ""}${controller.composerControls ? " with-composer-controls" : ""}`}
               >
+                {controller.composerControls ? (
+                  <div className="composer-controls">{controller.composerControls}</div>
+                ) : null}
                 {hub ? (
                   <>
                     <input

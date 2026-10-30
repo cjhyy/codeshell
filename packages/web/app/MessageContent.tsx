@@ -293,12 +293,14 @@ export const ToolMessage = React.memo(function ToolMessage({
   loadHistoryDetail,
   reloadHistory,
   detailScope = "",
+  onOpenChange,
 }: {
   item: Extract<ChatItem, { kind: "tool" }>;
   running: boolean;
   loadHistoryDetail?: HistoryDetailLoader;
   reloadHistory?: () => void;
   detailScope?: string;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = React.useState(false);
   const summary = toolDisplaySummary(item);
@@ -306,7 +308,10 @@ export const ToolMessage = React.memo(function ToolMessage({
   return (
     <details
       className={`message-tool-card${item.error ? " message-tool-error" : ""}`}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
+      onToggle={(event) => {
+        setOpen(event.currentTarget.open);
+        onOpenChange?.(event.currentTarget.open);
+      }}
     >
       <summary>
         <span className="message-tool-indicator" aria-hidden="true">

@@ -1450,8 +1450,13 @@ describe("useRemoteApp Main process epochs", () => {
       await flushMicrotasks();
     });
     expect(hook.result.current.chat.items).toContainEqual(
-      expect.objectContaining({ kind: "assistant", text: "old answer", done: false }),
+      expect.objectContaining({ kind: "assistant", text: "old answer", done: seedTool }),
     );
+    expect(hook.result.current.chat.run).toBe("running");
+    if (seedTool)
+      expect(hook.result.current.chat.items).toContainEqual(
+        expect.objectContaining({ kind: "tool", id: "call-1", done: false }),
+      );
     await act(async () => {
       firstSocket.close();
       window.dispatchEvent(new Event("online"));
@@ -2018,6 +2023,183 @@ describe("useRemoteApp session unread", () => {
 });
 
 describe("useRemoteApp mobile image sends", () => {
+  test("an unacknowledged intent cannot reuse its prepared payload in a different session", async () => {
+    setupBrowser();
+    let uploads = 0;
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async () => {
+        uploads++;
+        throw new Error("No upload expected");
+      },
+      writable: true,
+    });
+    const hook = await renderHook(() => useRemoteApp());
+    const first = FakeWebSocket.instances[0]!;
+    let pending!: Promise<boolean>;
+    try {
+      await act(async () => {
+        first.open();
+        first.message({ type: "auth.ok", capabilities: { nativeModelSelection: 1 } });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.selectSession("original-A");
+        first.message({ type: "session.history.ok", sessionId: "original-A", events: [] });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        pending = hook.result.current.sendChat({
+          text: "original task",
+          attachments: [],
+          nativeConnectionId: "shared-id",
+        });
+        await flushMicrotasks();
+      });
+      const sent = first.sent
+        .map((line) => JSON.parse(line))
+        .find((event) => event.type === "chat.send");
+      expect(sent.sessionId).toBe("original-A");
+      // No chat.uncertain response supplies a Host pin: only the original frame does.
+      await act(async () => {
+        first.close();
+        await flushMicrotasks();
+      });
+      expect(await pending).toBe(false);
+      await act(async () => {
+        window.dispatchEvent(new Event("online"));
+        await flushMicrotasks();
+      });
+      const second = FakeWebSocket.instances.at(-1)!;
+      await act(async () => {
+        second.open();
+        second.message({ type: "auth.ok", capabilities: { nativeModelSelection: 1 } });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.selectSession("different-B");
+        second.message({ type: "session.history.ok", sessionId: "different-B", events: [] });
+        await flushMicrotasks();
+      });
+      let retry!: Promise<boolean>;
+      await act(async () => {
+        retry = hook.result.current.sendChat({
+          text: "original task",
+          attachments: [],
+          nativeConnectionId: "shared-id",
+          clientMessageId: sent.clientMessageId,
+        });
+        await flushMicrotasks();
+      });
+      expect(
+        second.sent
+          .map((line) => JSON.parse(line))
+          .filter((event) => ["chat.send", "attachment.upload.begin"].includes(event.type)),
+      ).toEqual([]);
+      expect(await retry).toBe(false);
+      expect(hook.result.current.notice).toContain("原发送会话尚未核对或选择已改变");
+      expect(uploads).toBe(0);
+    } finally {
+      await hook.unmount();
+      restoreFetch();
+    }
+  });
+
+  test("a reconnect to an older Host retires native selection capability without downgrading an uncertain intent", async () => {
+    setupBrowser();
+    const restoreFetch = defineTestProperty(window, "fetch", {
+      value: async () => {
+        throw new Error("No upload expected");
+      },
+      writable: true,
+    });
+    const hook = await renderHook(() => useRemoteApp());
+    const first = FakeWebSocket.instances[0]!;
+    let accepted!: Promise<boolean>;
+    let uncertainId: string | undefined;
+    try {
+      await act(async () => {
+        first.open();
+        first.message({ type: "auth.ok", capabilities: { nativeModelSelection: 1 } });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.nativeModelSelection).toBe(true);
+      await act(async () => {
+        accepted = hook.result.current.sendChat({
+          text: "owned intent",
+          attachments: [],
+          nativeConnectionId: "owned-native",
+          onUncertain: (id) => {
+            uncertainId = id;
+          },
+        });
+        await flushMicrotasks();
+      });
+      const sent = first.sent
+        .map((line) => JSON.parse(line))
+        .find((event) => event.type === "chat.send");
+      await act(async () => {
+        first.close();
+        await flushMicrotasks();
+      });
+      expect(await accepted).toBe(false);
+      expect(hook.result.current.nativeModelSelection).toBe(false);
+      expect(uncertainId).toBe(sent.clientMessageId);
+      await act(async () => {
+        window.dispatchEvent(new Event("online"));
+        await flushMicrotasks();
+      });
+      const older = FakeWebSocket.instances.at(-1)!;
+      expect(older).not.toBe(first);
+      await act(async () => {
+        older.open();
+        older.message({ type: "auth.ok" });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.nativeModelSelection).toBe(false);
+      const stillUncertain: string[] = [];
+      await act(async () => {
+        expect(
+          await hook.result.current.sendChat({
+            text: "owned intent",
+            attachments: [],
+            nativeConnectionId: "owned-native",
+            clientMessageId: sent.clientMessageId,
+            onUncertain: (id) => stillUncertain.push(id),
+          }),
+        ).toBe(false);
+      });
+      expect(stillUncertain).toEqual([sent.clientMessageId]);
+      expect(hook.result.current.notice).toContain("不支持这项原生模型选择");
+      expect(
+        older.sent.map((line) => JSON.parse(line)).filter((event) => event.type === "chat.send"),
+      ).toEqual([]);
+      await act(async () => {
+        accepted = hook.result.current.sendChat({
+          text: "independent external intent",
+          attachments: [],
+          modelKey: "codex/owned",
+        });
+        await flushMicrotasks();
+      });
+      const external = older.sent
+        .map((line) => JSON.parse(line))
+        .find((event) => event.type === "chat.send");
+      expect(external.modelKey).toBe("codex/owned");
+      expect(external.nativeConnectionId).toBeUndefined();
+      await act(async () => {
+        older.message({
+          type: "chat.accepted",
+          clientMessageId: external.clientMessageId,
+          sessionId: "external-owned",
+        });
+        expect(await accepted).toBe(true);
+      });
+    } finally {
+      await hook.unmount();
+      restoreFetch();
+    }
+  });
+
   test("waits for a large-image ticket + PUT, then sends one image-only chat turn", async () => {
     setupBrowser();
     const puts: Array<{ url: string; size: number }> = [];
@@ -2033,7 +2215,11 @@ describe("useRemoteApp mobile image sends", () => {
 
     await act(async () => {
       ws.open();
-      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      ws.message({
+        type: "auth.ok",
+        device: { id: "device-1", name: "Phone" },
+        capabilities: { nativeModelSelection: 1 },
+      });
       await flushMicrotasks();
     });
 
@@ -2044,6 +2230,8 @@ describe("useRemoteApp mobile image sends", () => {
     await act(async () => {
       sent = hook.result.current.sendChat({
         text: "",
+        nativeConnectionId: "owned-native-image",
+        permissionMode: "default",
         attachments: [{ clientId: "img-1", file }],
       });
       await flushMicrotasks();
@@ -2057,6 +2245,8 @@ describe("useRemoteApp mobile image sends", () => {
       mime: "image/png",
       size: 256 * 1024 + 1,
     });
+
+    await act(async () => hook.result.current.setPermissionMode("bypassPermissions"));
 
     await act(async () => {
       ws.message({
@@ -2075,6 +2265,8 @@ describe("useRemoteApp mobile image sends", () => {
       .find((event) => event.type === "chat.send");
     expect(chatSend).toMatchObject({
       text: "",
+      nativeConnectionId: "owned-native-image",
+      permissionMode: "default",
       attachments: [
         {
           transport: "upload",
@@ -2092,6 +2284,50 @@ describe("useRemoteApp mobile image sends", () => {
     });
     await flushMicrotasks();
     expect(settled).toBe(false);
+    await act(async () => {
+      ws.message({
+        type: "chat.uncertain",
+        clientMessageId: chatSend.clientMessageId,
+        sessionId: "session-1",
+        message: "Owned acceptance has not arrived",
+      });
+      expect(await sent).toBe(false);
+    });
+    await act(async () => {
+      expect(
+        await hook.result.current.sendChat({
+          text: "",
+          clientMessageId: chatSend.clientMessageId,
+          nativeConnectionId: "different-native",
+          permissionMode: "default",
+          attachments: [{ clientId: "img-1", file }],
+        }),
+      ).toBe(false);
+    });
+    expect(
+      ws.sent.map((payload) => JSON.parse(payload)).filter((event) => event.type === "chat.send"),
+    ).toHaveLength(1);
+    await act(async () => {
+      sent = hook.result.current.sendChat({
+        text: "",
+        clientMessageId: chatSend.clientMessageId,
+        nativeConnectionId: "owned-native-image",
+        permissionMode: "default",
+        attachments: [{ clientId: "img-1", file }],
+      });
+      await flushMicrotasks();
+    });
+    const retried = ws.sent
+      .map((payload) => JSON.parse(payload))
+      .filter((event) => event.type === "chat.send");
+    expect(retried).toHaveLength(2);
+    expect(retried[1]).toEqual({ ...chatSend, sessionId: "session-1" });
+    expect(puts).toHaveLength(1);
+    expect(
+      ws.sent
+        .map((payload) => JSON.parse(payload))
+        .filter((event) => event.type === "attachment.upload.begin"),
+    ).toHaveLength(1);
     await act(async () => {
       ws.message({
         type: "chat.accepted",

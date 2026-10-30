@@ -406,6 +406,14 @@ test("output journal frame hint is optional, bounded and integral", () => {
     expect(parseMobileClientEvent({ ...event, maxFrames })).toBeUndefined();
 });
 
+test("native text connection intent is bounded and exclusive with external model routing", () => {
+  const event = { type: "chat.send", text: "task", nativeConnectionId: "text-local-1" };
+  expect(parseMobileClientEvent(event)).toEqual(event);
+  expect(parseMobileClientEvent({ ...event, modelKey: "codex/fixture" })).toBeUndefined();
+  for (const nativeConnectionId of ["", " ", "bad\nkey", "bad\0key", 5, null, "a".repeat(513)])
+    expect(parseMobileClientEvent({ ...event, nativeConnectionId })).toBeUndefined();
+});
+
 test("history display requests carry only bounded selected-view references", () => {
   const view = { type: "session.historyView", sessionId: "s", recoveryId: "r", requestId: "p" };
   const detail = { ...view, type: "session.historyDetail", ref: "opaque" };
@@ -425,4 +433,15 @@ test("history display requests carry only bounded selected-view references", () 
     expect(parseMobileClientEvent({ ...detail, ref: value })).toBeUndefined();
     expect(parseMobileClientEvent({ ...detail, cursor: value })).toBeUndefined();
   }
+});
+
+test("phone native choice cannot supply the private Worker proof or a pool model", () => {
+  const base = { type: "chat.send", text: "owned", nativeConnectionId: "text" };
+  expect(
+    parseMobileClientEvent({
+      ...base,
+      configuredModel: { id: "text", expectedFingerprint: "0".repeat(64) },
+    }),
+  ).toBeUndefined();
+  expect(parseMobileClientEvent({ ...base, model: "pool-key" })).toBeUndefined();
 });

@@ -62,8 +62,13 @@ mock.module(join(main, "session-workspace-service.ts"), () => ({
 
 const { AgentBridge } = await import("../agent-bridge.ts");
 const { SessionManager, sessionsRoot } = await import("@cjhyy/code-shell-core");
-const { SessionOutputJournal, SessionOutputCoverageStore, readOutputJournal } =
-  await import("@cjhyy/code-shell-core/internal");
+const {
+  SessionOutputJournal,
+  SessionOutputCoverageStore,
+  OutputHistoryRecovery,
+  outputUserMessage,
+  readOutputJournal,
+} = await import("@cjhyy/code-shell-core/internal");
 const { MainOutputPublisher } = await import("../main-output-publisher.ts");
 const { SessionSnapshotStore } = await import("../SessionSnapshotStore.ts");
 const { registerSessionTranscriptIpc } = await import("../session-transcript-ipc.ts");
@@ -369,4 +374,77 @@ assert.equal(envelopes.length, 4);
 assert.equal(longCold.getSnapshot(longId).nextSeq, 5);
 assert.equal(longCold.getSnapshot(longId).outputUnpaired, undefined);
 rmSync(join(root, longId), { recursive: true });
+
+// Explicit history repair keeps the Session and transport sequence, but must
+// retire every publisher bound to the old journal incarnation. Use the real
+// verified checkpoint transaction; no worker, CLI or provider is involved.
+const repairedId = "runtime-explicit-history-recovery";
+const repairedBundle = manager.create("/fixture/project", "fixture", "codex", repairedId);
+const base = repairedBundle.transcript.getEvents()[0].id;
+const user = repairedBundle.transcript.appendMessage("user", "owned checkpoint question", {
+  clientMessageId: "checkpoint-input",
+});
+manager.startSessionRun(repairedBundle.state, user.id);
+const repairedWriter = new SessionOutputJournal(root, repairedId, user.id, base);
+const repairedBridge = createBridge();
+for (const event of [
+  outputUserMessage(user.data, repairedId, "/fixture/project"),
+  { type: "session_started", sessionId: repairedId, runId: user.id, promptTokens: 0 },
+  { type: "stream_request_start", turnNumber: 1, messageId: "checkpoint-assistant" },
+  { type: "text_delta", text: "owned checkpoint answer" },
+  { type: "turn_complete", reason: "completed" },
+]) {
+  const committed = { ...event, outputCursor: repairedWriter.append(event) };
+  repairedBridge.ingestOwnedExternalEvent(repairedId, committed);
+}
+repairedBundle.transcript.appendMessage("assistant", "owned checkpoint answer");
+repairedBundle.transcript.appendTurnBoundary();
+repairedBundle.transcript.sync();
+manager.updateSessionState(repairedId, { status: "completed" });
+repairedBridge.registerExternalSession(repairedId, "/fixture/project", owner.webContents.id);
+const oldSource = repairedBridge.ownedExternalOutputSources.get(repairedId);
+assert.ok(oldSource);
+// The historical, unpaired notice is deliberately retained as a declared gap.
+repairedBridge.snapshots.append(repairedId, {
+  type: "background_agent_completed",
+  agentId: "historical-notice",
+  description: "Owned old notification",
+  status: "completed",
+  enqueuedAt: 1,
+});
+const oldSnapshot = repairedBridge.getSnapshot(repairedId);
+assert.equal(oldSnapshot.outputUnpaired, true);
+const checkpoint = new OutputHistoryRecovery(() => root);
+const authority = { key: "owned-checkpoint", assertCurrent() {} };
+const plan = checkpoint.plan(repairedId, authority);
+assert.equal(plan.status, "ready");
+assert.deepEqual(
+  checkpoint.apply(repairedId, { planId: plan.planId, acceptHistoricalGap: true }, authority),
+  { status: "applied", sessionId: repairedId, historicalGap: true },
+);
+repairedBridge.resetOutputHistoryRecovery(repairedId);
+assert.equal(repairedBridge.getSnapshot(repairedId).nextSeq, oldSnapshot.nextSeq);
+const checkpointHead = readOutputJournal(root, repairedId).through;
+const freshNotice = { type: "goal_cleared" };
+envelopes.length = 0;
+assert.throws(() => oldSource.publish(freshNotice), /Session was replaced/);
+assert.equal(readOutputJournal(root, repairedId).through, checkpointHead);
+assert.equal(envelopes.length, 0);
+assert.equal(
+  readOutputJournal(root, repairedId, { after: oldSnapshot.outputCursor }).status,
+  "cursor_invalid",
+);
+repairedBridge.registerExternalSession(repairedId, "/fixture/project", owner.webContents.id);
+repairedBridge.ingestOwnedExternalEvent(repairedId, freshNotice);
+assert.equal(envelopes.length, 1, "only the new independent output is published after recovery");
+assert.equal(envelopes[0].event.type, "goal_cleared");
+assert.equal(envelopes[0].seq, oldSnapshot.nextSeq);
+assert.equal(repairedBridge.getSnapshot(repairedId).outputUnpaired, undefined);
+const checkpointSuffix = readOutputJournal(root, repairedId, { after: checkpointHead });
+assert.equal(checkpointSuffix.status, "ok");
+assert.equal(checkpointSuffix.frames.length, 1);
+assert.equal(checkpointSuffix.frames[0].event.type, "goal_cleared");
+assert.equal(checkpointSuffix.frames[0].producer.kind, "host");
+assert.equal(checkpointSuffix.historicalGap, true);
+rmSync(join(root, repairedId), { recursive: true });
 console.log(JSON.stringify({ first, second }));

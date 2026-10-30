@@ -527,7 +527,9 @@ describe("architecture growth budgets", () => {
       // runtime sessions: MemoryOrchestrator (+ options type), the ephemeral-session check
       // and the shared content sanitizer. None reaches the public SDK or extension entry.
       // Host-only checkpoint service plus its shared type-only contract.
-      "packages/core/src/index.internal.ts": 129,
+      // +1 shared configured-text resolver: authorized Host and Worker resolve the same
+      // Session/profile connection without falling back to a different shared boot pool.
+      "packages/core/src/index.internal.ts": 130,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules

@@ -227,8 +227,8 @@ button.message-image-reference:hover {
 }
 .message-tool-group-items {
   display: grid;
-  gap: 8px;
-  padding: 0 10px 10px;
+  gap: 4px;
+  padding: 0 6px 6px;
 }
 .message-tool-group-items > .message-tool-card {
   box-shadow: none;
@@ -275,7 +275,8 @@ button.message-image-reference:hover {
   cursor: pointer;
   list-style: none;
   min-width: 0;
-  padding: 10px 12px;
+  min-height: 44px;
+  padding: 0 10px;
   font-size: 11px;
 }
 .message-tool-card > summary::-webkit-details-marker {
@@ -286,6 +287,7 @@ button.message-image-reference:hover {
   color: var(--muted);
   margin-left: 3px;
   font-size: 16px;
+  flex-shrink: 0;
 }
 .message-tool-card[open] > summary::after {
   transform: rotate(90deg);
@@ -304,15 +306,26 @@ button.message-image-reference:hover {
 .message-tool-name {
   color: var(--text);
   font-weight: 550;
-  flex-shrink: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.message-tool-group > summary > .message-tool-name {
+  max-width: 70%;
 }
 .message-tool-summary {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--muted);
 }
 .message-tool-status {
+  flex-shrink: 0;
   margin-left: auto;
   color: var(--muted);
   white-space: nowrap;

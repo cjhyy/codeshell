@@ -85,6 +85,8 @@ describe("dispatchMobileChatTurn", () => {
       ],
       clientMessageId: "phone-message-1",
       modelTraceSource: "panel:design-studio",
+      model: "owned-text-connection",
+      workspaceProfile: "owned-session-profile",
       projectId: "project-1",
       rootId: "root-2",
       runId: "mobile-run-test",
@@ -143,6 +145,8 @@ describe("dispatchMobileChatTurn", () => {
       clientMessageId: "phone-message-1",
       modelTraceSource: "panel:design-studio",
       attachments: [{ origin: "mobile", sessionId: "safe-session", mime: "image/png" }],
+      model: "owned-text-connection",
+      workspaceProfile: "owned-session-profile",
       projectId: "project-1",
       rootId: "root-2",
     });

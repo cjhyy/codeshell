@@ -7,6 +7,7 @@ export interface ModelChoice {
   label: string;
   group?: string;
   disabled?: boolean;
+  description?: string;
 }
 
 /** A bounded, searchable list stays scrollable above the composer and phone keyboard. */
@@ -33,6 +34,7 @@ export function ModelChoicePicker({
 }) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
+  const [visibleCount, setVisibleCount] = React.useState(80);
   const [active, setActive] = React.useState(value);
   const [viewport, setViewport] = React.useState<{ top: number; height: number }>();
   const trigger = React.useRef<HTMLButtonElement>(null);
@@ -53,9 +55,15 @@ export function ModelChoicePicker({
       .toLocaleLowerCase()
       .includes(query.trim().toLocaleLowerCase()),
   );
-  const focusValue = filtered.some((choice) => choice.value === active && !choice.disabled)
+  const visible = filtered.slice(0, visibleCount);
+  // Keep a selected saved item reachable without mounting an entire catalog.
+  const selectedOutside = filtered.find(
+    (choice) => choice.value === value && !visible.includes(choice),
+  );
+  if (selectedOutside) visible.unshift(selectedOutside);
+  const focusValue = visible.some((choice) => choice.value === active && !choice.disabled)
     ? active
-    : filtered.find((choice) => !choice.disabled)?.value;
+    : visible.find((choice) => !choice.disabled)?.value;
 
   React.useLayoutEffect(() => {
     if (!open) return;
@@ -114,6 +122,7 @@ export function ModelChoicePicker({
         value={value}
         onClick={() => {
           setQuery("");
+          setVisibleCount(80);
           setActive(value);
           setOpen(true);
         }}
@@ -169,7 +178,17 @@ export function ModelChoicePicker({
               aria-label="搜索模型"
               placeholder="搜索模型或运行时"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setVisibleCount(80);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setOpen(false);
+                } else if (event.key === "Enter") event.preventDefault();
+              }}
             />
             <div
               ref={list}
@@ -178,9 +197,9 @@ export function ModelChoicePicker({
               aria-label={label}
               onKeyDown={move}
             >
-              {filtered.map((choice, index) => (
+              {visible.map((choice, index) => (
                 <React.Fragment key={choice.value}>
-                  {choice.group && choice.group !== filtered[index - 1]?.group && (
+                  {choice.group && choice.group !== visible[index - 1]?.group && (
                     <div className="model-choice-group" role="presentation">
                       {choice.group}
                     </div>
@@ -199,13 +218,27 @@ export function ModelChoicePicker({
                       if (choice.value !== value) onChange(choice.value);
                     }}
                   >
-                    <span>{choice.label}</span>
+                    <span>
+                      {choice.label}
+                      {choice.description ? (
+                        <small className="model-choice-description">{choice.description}</small>
+                      ) : null}
+                    </span>
                     <span className="model-choice-check" aria-hidden="true">
                       {value === choice.value ? "✓" : ""}
                     </span>
                   </button>
                 </React.Fragment>
               ))}
+              {filtered.length > visibleCount && (
+                <button
+                  type="button"
+                  className="model-choice-more"
+                  onClick={() => setVisibleCount((count) => count + 80)}
+                >
+                  显示更多模型（还有 {filtered.length - visibleCount} 项）
+                </button>
+              )}
               {!filtered.length && (
                 <p className="model-choice-empty" role="status">
                   没有匹配的模型

@@ -49,7 +49,10 @@ afterEach(() => {
   FakeWebSocket.instances = [];
 });
 
-async function pairedController(outputJournal = false) {
+async function pairedController(
+  outputJournal = false,
+  options: { nativeModelSelection?: boolean; fetch?: typeof fetch } = {},
+) {
   ensureMiniDom();
   FakeWebSocket.instances = [];
   const values = new Map([
@@ -69,12 +72,22 @@ async function pairedController(outputJournal = false) {
     pathname: "/mobile",
   });
   define(window, "history", { replaceState() {} });
-  define(window, "fetch", async () => {
-    throw new Error("paired send tests make no HTTP requests");
-  });
+  const fetch =
+    options.fetch ??
+    (async () => {
+      throw new Error("paired send tests make no HTTP requests");
+    });
+  define(window, "fetch", fetch);
+  if (options.fetch) define(globalThis, "fetch", options.fetch);
+  const session = options.fetch
+    ? { id: "paired", username: "owned", deviceName: "Phone" }
+    : undefined;
   const hook = await renderHook(() => {
     const app = useRemoteApp();
-    return { app, controller: useDesktopController(app, undefined, () => {}) };
+    return {
+      app,
+      controller: useDesktopController(app, session, () => {}),
+    };
   });
   const online = async () => {
     const ws = FakeWebSocket.instances.at(-1)!;
@@ -83,7 +96,10 @@ async function pairedController(outputJournal = false) {
       ws.message({
         type: "auth.ok",
         device: { id: "device-1", name: "Phone" },
-        ...(outputJournal ? { capabilities: { outputJournal: 1 } } : {}),
+        capabilities: {
+          ...(outputJournal ? { outputJournal: 1 } : {}),
+          ...(options.nativeModelSelection ? { nativeModelSelection: 1 } : {}),
+        },
       });
       await flushMicrotasks();
     });
@@ -427,5 +443,296 @@ test("paired external selection sends its model and subscribes to output after a
     ).toBe(true);
   } finally {
     await hook.unmount();
+  }
+});
+
+test("an accepted native choice survives actual worker persistence and a fresh phone connection", async () => {
+  const { installFixtureNetworkGuard } = await import("../../../tests/helpers/network-fixture.js");
+  const network = installFixtureNetworkGuard();
+  const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = mkdtempSync(join(tmpdir(), "paired-native-model-"));
+  let hook: Awaited<ReturnType<typeof pairedController>>["hook"] | undefined;
+  let manager: { closeAllAsync(): Promise<void> } | undefined;
+  let restoreProvider: (() => void) | undefined;
+  try {
+    // Guard before evaluating the real producer. Only the registered fixture client below
+    // can return model output; no tool, provider credential or live socket is used.
+    const { Engine } = await import("../../core/src/engine/engine.js");
+    const { AgentServer } = await import("../../core/src/protocol/server.js");
+    const { ChatSessionManager } = await import("../../core/src/protocol/chat-session-manager.js");
+    const { createHubConfiguration } = await import("../../server/src/hub/configuration.js");
+    const { listDiskSessions } = await import("../../server/src/sessions-service.js");
+    const { dispatchMobileChatTurn } =
+      await import("../../server/src/mobile-remote/mobile-chat-turn.js");
+    const { prepareMobileNativeModel } =
+      await import("../../desktop/src/main/mobile-remote/native-model.js");
+    mkdirSync(join(dir, ".code-shell"));
+    writeFileSync(
+      join(dir, ".code-shell", "settings.json"),
+      JSON.stringify({
+        credentials: [{ id: "owned", catalogId: "openai", apiKey: "owned-fixture-not-a-secret" }],
+        modelConnections: [
+          {
+            id: "phone-connection",
+            credentialId: "owned",
+            catalogId: "openai",
+            tag: "text",
+            model: "codex/owned-native-custom",
+            baseUrl: "http://owned-model.invalid/v1",
+          },
+        ],
+        defaults: { text: "phone-connection" },
+      }),
+    );
+    const snapshot = createHubConfiguration({ cwd: dir }).snapshot();
+    const requests: Array<{ url: string; model: unknown }> = [];
+    const { LLMClientBase } = await import("../../core/src/llm/client-base.js");
+    const { PROVIDER_REGISTRY, registerProvider } =
+      await import("../../core/src/llm/client-factory.js");
+    const previousProvider = PROVIDER_REGISTRY.get("openai");
+    restoreProvider = () => {
+      if (previousProvider) PROVIDER_REGISTRY.set("openai", previousProvider);
+      else PROVIDER_REGISTRY.delete("openai");
+    };
+    class OwnedClient extends LLMClientBase {
+      protected initClient() {}
+      async createMessage(options: import("../../core/src/llm/types.js").CreateMessageOptions) {
+        if (this.config.baseUrl !== "http://owned-model.invalid/v1")
+          throw new Error("non-owned model configuration denied");
+        if (options.requestVisible !== false)
+          requests.push({ url: this.config.baseUrl, model: this.model });
+        const usage = { promptTokens: 1, completionTokens: 1, totalTokens: 2 };
+        this.recordUsage(usage, options);
+        return { text: "owned answer", toolCalls: [], stopReason: "stop" as const, usage };
+      }
+    }
+    registerProvider("openai", OwnedClient);
+    const engine = new Engine({
+      llm: {
+        provider: "openai",
+        model: "initial",
+        apiKey: "owned-fixture-not-a-secret",
+        baseUrl: "http://owned-model.invalid/v1",
+      },
+      cwd: dir,
+      origin: "desktop",
+      sessionStorageDir: join(dir, "sessions"),
+      settingsScope: "isolated",
+      headless: true,
+      enabledBuiltinTools: [],
+      maxTurns: 2,
+    });
+    (engine as any).hooks.clear();
+    manager = new ChatSessionManager({ runtime: {} as never, engineFactory: () => engine });
+    const outbound: any[] = [];
+    const listeners = new Set<(line: string) => void>();
+    let deliver!: (message: unknown) => void;
+    new AgentServer({
+      chatManager: manager as InstanceType<typeof ChatSessionManager>,
+      transport: {
+        send(message) {
+          outbound.push(message);
+          for (const listener of listeners) listener(JSON.stringify(message));
+        },
+        onMessage(callback) {
+          deliver = callback;
+        },
+        close() {},
+      },
+    });
+    const bridge = {
+      subscribeOutbound(listener: (line: string) => void) {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
+      },
+      injectWorkerMessage(line: string) {
+        deliver(JSON.parse(line));
+      },
+    };
+    deliver({
+      jsonrpc: "2.0",
+      id: "owned-initial-run",
+      method: "agent/run",
+      params: {
+        sessionId: "native",
+        cwd: dir,
+        task: "owned previous input",
+        clientMessageId: "owned-initial-input",
+      },
+    });
+    const seedDeadline = Date.now() + 5000;
+    while (
+      !outbound.some((message) => message.id === "owned-initial-run") &&
+      Date.now() < seedDeadline
+    )
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(outbound.find((message) => message.id === "owned-initial-run")?.result?.reason).toBe(
+      "completed",
+    );
+    const statePath = join(dir, "sessions", "native", "state.json");
+    expect(JSON.parse(readFileSync(statePath, "utf8")).model).toBe("initial");
+    const initialRequestCount = requests.length;
+    expect(initialRequestCount).toBe(1);
+    const browserFetch = (async (input) => {
+      const url = new URL(String(input), "http://127.0.0.1:3000");
+      if (url.origin !== "http://127.0.0.1:3000" || url.pathname !== "/api/v1/configuration")
+        throw new Error("non-owned browser request denied");
+      return Response.json(snapshot);
+    }) as typeof fetch;
+    const paired = await pairedController(false, {
+      nativeModelSelection: true,
+      fetch: browserFetch,
+    });
+    hook = paired.hook;
+    await act(async () => {
+      paired.ws.message({ type: "session.history.ok", sessionId: "native", events: [] });
+      hook!.result.current.controller.setDraft("owned native request");
+      await flushMicrotasks();
+    });
+    const picker = () => (hook!.result.current.controller.modelSelector as any).props;
+    await act(async () => picker().onChange("native:phone-connection"));
+    expect(chatSends(paired.ws)).toHaveLength(0);
+    expect(requests).toHaveLength(initialRequestCount);
+    expect(hook.result.current.app.permissionMode).toBe("default");
+    await act(async () => {
+      expect(hook!.result.current.controller.send()).toBe(true);
+      await flushMicrotasks();
+    });
+    const intent = chatSends(paired.ws).at(-1)!;
+    expect(intent).toMatchObject({
+      nativeConnectionId: "phone-connection",
+      permissionMode: "default",
+      sessionId: "native",
+    });
+    const selected = prepareMobileNativeModel("native", intent.nativeConnectionId, {
+      cwd: dir,
+      assertCurrent() {},
+    } as never);
+    const accepted = await dispatchMobileChatTurn({
+      deviceId: "device-1",
+      sessionId: "native",
+      fallbackCwd: dir,
+      text: intent.text,
+      clientMessageId: intent.clientMessageId,
+      permissionMode: intent.permissionMode,
+      configuredModel: selected.configuredModel,
+      runId: "owned-native-run",
+      bridge,
+      meta: { origin: "mobile", producer: "owned-native-model-fixture" },
+      uploads: {
+        claim: async () => {
+          throw new Error("no attachments in fixture");
+        },
+        release: async () => {},
+        finalize: async () => {},
+      },
+      resolveWorkspace: async () => {
+        selected.assertCurrent();
+        return dir;
+      },
+    });
+    expect(accepted.ok).toBe(true);
+    await act(async () => {
+      paired.ws.message({
+        type: "chat.accepted",
+        sessionId: "native",
+        clientMessageId: intent.clientMessageId,
+        nativeConnectionId: intent.nativeConnectionId,
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.controller.draft).toBe("");
+    // Acceptance alone does not claim an executed model. Wait for the real
+    // Engine's final state and use the same fresh disk catalog as Main.
+    const deadline = Date.now() + 5000;
+    while (!outbound.some((message) => message.id === "owned-native-run") && Date.now() < deadline)
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    if (
+      outbound.find((message) => message.id === "owned-native-run")?.result?.reason !== "completed"
+    )
+      console.error("owned native fixture", {
+        requests,
+        errors: outbound
+          .filter((message) => /error/i.test(message.params?.event?.type ?? ""))
+          .map((message) => ({
+            type: message.params.event.type,
+            error: message.params.event.error,
+          })),
+      });
+    expect(outbound.find((message) => message.id === "owned-native-run")?.result).toMatchObject({
+      reason: "completed",
+    });
+    const state = JSON.parse(readFileSync(statePath, "utf8"));
+    expect({
+      provider: state.provider,
+      model: state.model,
+      modelConnectionId: state.modelConnectionId,
+    }).toEqual({
+      provider: "openai",
+      model: "codex/owned-native-custom",
+      modelConnectionId: "phone-connection",
+    });
+    expect(requests).toHaveLength(initialRequestCount + 1);
+    expect(requests.at(-1)?.model).toBe(state.model);
+    const beforeReconnect = requests.length;
+    await act(async () => {
+      paired.ws.close();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+      await flushMicrotasks();
+    });
+    const fresh = await paired.online();
+    const list = fresh.sent.findLast((frame) => frame.type === "session.list")!;
+    const page = await listDiskSessions({ limit: 100 }, join(dir, "sessions"));
+    expect(page.sessions).toHaveLength(1);
+    await act(async () => {
+      fresh.message({
+        type: "session.list.ok",
+        requestId: list.requestId,
+        activeSessionId: "native",
+        ...page,
+      });
+      await flushMicrotasks();
+    });
+    // Discovering this previously unbound Session's cwd causes the real
+    // controller to request its authorized project page. Answer that distinct
+    // request too, as Main would; an unscoped page is not a scoped cache hit.
+    const scopedList = fresh.sent.findLast((frame) => frame.type === "session.list")!;
+    expect(scopedList.requestId).not.toBe(list.requestId);
+    expect(scopedList.cwds).toEqual([dir]);
+    const scopedPage = await listDiskSessions(
+      { limit: 100, cwds: scopedList.cwds },
+      join(dir, "sessions"),
+    );
+    await act(async () => {
+      fresh.message({
+        type: "session.list.ok",
+        requestId: scopedList.requestId,
+        activeSessionId: "native",
+        ...scopedPage,
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.app.sessions[0]).toMatchObject({
+      provider: state.provider,
+      model: state.model,
+    });
+    expect(picker().value).toBe("session:current-native");
+    expect(picker().currentNativeLabel).toBe("openai · codex/owned-native-custom");
+    expect(chatSends(fresh)).toHaveLength(0);
+    expect(requests).toHaveLength(beforeReconnect);
+  } finally {
+    await hook?.unmount();
+    await manager?.closeAllAsync();
+    restoreProvider?.();
+    for (const restore of restores.splice(0).reverse()) restore();
+    network.restore();
+    rmSync(dir, { recursive: true, force: true });
   }
 });

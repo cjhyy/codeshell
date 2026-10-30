@@ -11,6 +11,8 @@ const { SettingsManager } = await import("@cjhyy/code-shell-core");
 const { computeEffectiveDisabledLists } = await import("@cjhyy/code-shell-core/internal");
 import type { HubConfigurationOptions } from "./configuration.js";
 const { createHubConfiguration, HubConfigurationError } = await import("./configuration.js");
+const { modelParameters, publicParameterValues, validateParameterPatch, unavailableParameters } =
+  await import("./model-parameter-metadata.js");
 
 const directories: string[] = [];
 const servers: Server[] = [];
@@ -121,6 +123,126 @@ function cancelledResult(id: string) {
 }
 
 describe("Hub workspace configuration", () => {
+  test("model parameter metadata excludes secrets, arbitrary wire paths and ambiguous declarations", () => {
+    const preset = {
+      value: "synthetic",
+      params: [
+        {
+          name: "reasoning",
+          control: "enum" as const,
+          options: ["low", "high"],
+          wire: { field: "reasoning_effort" },
+        },
+        { name: "apiKey", control: "text" as const, default: "never-public" },
+        { name: "top_p", control: "number" as const, wire: { field: "headers.Authorization" } },
+        { name: "temperature", control: "number" as const, wire: { field: "temperature" } },
+        { name: "temperature", control: "number" as const, wire: { field: "messages" } },
+      ],
+    };
+    expect(modelParameters(preset)).toEqual([
+      { name: "reasoning", label: "reasoning", control: "enum", options: ["low", "high"] },
+    ]);
+    expect(
+      publicParameterValues(preset, { reasoning: "high", apiKey: "never-public", top_p: 0.5 }),
+    ).toEqual({ reasoning: "high" });
+    expect(unavailableParameters(preset, { reasoning: 42, apiKey: "never-public" })).toEqual([
+      "reasoning",
+    ]);
+    for (const patch of [
+      { apiKey: "secret" },
+      { top_p: 0.4 },
+      { temperature: 0.4 },
+      { reasoning: "invented" },
+      { reasoning: {} },
+      JSON.parse('{"__proto__":true}'),
+    ])
+      expect(validateParameterPatch(preset, patch)).toBeUndefined();
+    for (const control of [undefined, "future-scalar"]) {
+      const unsupported = {
+        value: "synthetic",
+        params: [{ name: "max_tokens", control, default: 512 }],
+      } as unknown as Parameters<typeof modelParameters>[0];
+      expect(modelParameters(unsupported)).toEqual([]);
+      expect(publicParameterValues(unsupported, { max_tokens: 512 })).toEqual({});
+      expect(unavailableParameters(unsupported, { max_tokens: 512 })).toEqual([]);
+      expect(validateParameterPatch(unsupported, { max_tokens: 1024 })).toBeUndefined();
+      expect(validateParameterPatch(unsupported, { max_tokens: null })).toBeUndefined();
+    }
+  });
+
+  test("safe scalar edits require CAS and retain every untouched hidden parameter and credential", async () => {
+    const { api, seed, localFile } = await fixture();
+    Object.assign(seed.modelConnections[0]!, {
+      catalogId: "zhipu",
+      model: "glm-5.2",
+      baseUrl: "https://open.bigmodel.cn/api/paas/v4?token=owned-private-query",
+      paramValues: { reasoning_effort: "high", custom: null, privateObject: { untouched: true } },
+    });
+    writeFileSync(localFile, JSON.stringify(seed));
+    const initial = await (await api()).json();
+    const connection = initial.connections[0];
+    expect(connection.paramValues).toEqual({ reasoning_effort: "high" });
+    const provider = initial.catalog.find((item: any) => item.id === "zhipu");
+    expect(
+      provider.modelPresets.find((item: any) => item.value === "glm-5.2").parameters.length,
+    ).toBeGreaterThan(0);
+    expect(JSON.stringify(provider)).not.toContain('"wire"');
+    const body = {
+      id: connection.id,
+      catalogId: connection.catalogId,
+      model: connection.model,
+      paramValues: { reasoning_effort: "low", temperature: 0.5 },
+    };
+    expect((await api("/connections", body)).status).toBe(409);
+    expect(
+      (await api("/connections", { ...body, expectedRevision: connection.revision })).status,
+    ).toBe(200);
+    const saved = JSON.parse(readFileSync(localFile, "utf8"));
+    expect(
+      saved.modelConnections.find((item: any) => item.id === connection.id).paramValues,
+    ).toEqual({
+      reasoning_effort: "low",
+      temperature: 0.5,
+      custom: null,
+      privateObject: { untouched: true },
+    });
+    expect(saved.credentials).toEqual(seed.credentials);
+    expect(saved.modelConnections.find((item: any) => item.id === connection.id).baseUrl).toBe(
+      "https://open.bigmodel.cn/api/paas/v4?token=owned-private-query",
+    );
+    expect(saved.defaults).toEqual(seed.defaults);
+    expect(
+      (await api("/connections", { ...body, expectedRevision: connection.revision })).status,
+    ).toBe(409);
+    const revision = (await (await api()).json()).connections.find(
+      (item: any) => item.id === connection.id,
+    ).revision;
+    for (const paramValues of [
+      { temperature: 2 },
+      { temperature: "0.5" },
+      { top_p: -1 },
+      { reasoning_effort: "unknown" },
+      { thinking_type: true },
+      { headers: {} },
+    ])
+      expect(
+        (await api("/connections", { ...body, expectedRevision: revision, paramValues })).status,
+      ).toBe(400);
+    expect(
+      (
+        await api("/connections", {
+          ...body,
+          expectedRevision: revision,
+          paramValues: { temperature: null },
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      JSON.parse(readFileSync(localFile, "utf8")).modelConnections.find(
+        (item: any) => item.id === connection.id,
+      ).paramValues,
+    ).toEqual({ reasoning_effort: "low", custom: null, privateObject: { untouched: true } });
+  });
   test("uses the worker's effective settings and never returns credentials or MCP secrets", async () => {
     const { api, cwd } = await fixture();
     const response = await api();

@@ -71,6 +71,8 @@ export interface WorkbenchController {
   /** Browser-safe controls for capabilities owned by the Desktop host. */
   renderSidebar?: (navigation: WorkbenchNavigation) => React.ReactNode;
   chatControls?: React.ReactNode;
+  /** Session controls belong beside the input; transcript notices stay above history. */
+  composerControls?: React.ReactNode;
   modelSelector?: React.ReactNode;
   /** Reads a Host-issued reference in the currently selected history generation. */
   loadHistoryDetail?: HistoryDetailLoader;

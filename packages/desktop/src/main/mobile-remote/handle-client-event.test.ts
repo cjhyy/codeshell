@@ -5,6 +5,9 @@ import { SessionSnapshotStore } from "../SessionSnapshotStore.js";
 import { prepareAgentRunMetadata } from "../agent-run-metadata.js";
 import type { SessionCwdIndexEntry } from "../session-cwd-index.js";
 import { MobileExternalRuntimeCommands } from "./external-runtime-commands.js";
+import { MobileNativeSubmissions } from "./native-submissions.js";
+import { prepareMobileNativeModel } from "./native-model.js";
+import { BUILTIN_CATALOG, createWorkspaceContext } from "@cjhyy/code-shell-core/internal";
 import { MobilePermissionModes } from "./permission-modes.js";
 import { PendingMobileApprovals } from "@cjhyy/code-shell-server/mobile-remote";
 import {
@@ -19,6 +22,7 @@ type OutboundListener = (line: string) => void;
 function createHarness(options: {
   requestedWorkspaceRoot: string;
   lookupSession: (refresh: boolean) => SessionCwdIndexEntry | undefined;
+  nativeProject?: boolean;
 }) {
   const outbound = new Set<OutboundListener>();
   const replies: Array<Record<string, unknown>> = [];
@@ -44,6 +48,32 @@ function createHarness(options: {
           isProjectTrusted: () => true,
           lookupSession: (_sessionId, refresh) => options.lookupSession(refresh),
           isNoRepoCwd: () => false,
+          ...(options.nativeProject
+            ? {
+                resolveProjectRun: (
+                  projectId: string,
+                  _sid: string,
+                  _session: unknown,
+                  rootId?: string,
+                ) => {
+                  expect(projectId).toBe("actual-project");
+                  expect(rootId).toBe("actual-root");
+                  return {
+                    cwd: "/worktree",
+                    trustCwd: "/primary",
+                    projectId,
+                    mainRootId: rootId!,
+                    projectPrimaryRootId: rootId!,
+                    workspaceContext: createWorkspaceContext({
+                      projectId,
+                      projectRevision: 1,
+                      sessionMainRootId: rootId!,
+                      roots: [{ id: rootId!, path: "/worktree", role: "primary" }],
+                    }),
+                  };
+                },
+              }
+            : {}),
         });
         preparedRuns.push(JSON.parse(prepared.outLine).params as Record<string, unknown>);
         queueMicrotask(() =>
@@ -109,6 +139,137 @@ async function sendChat(ctx: OrchestratorCtx): Promise<void> {
     text: "continue",
   });
 }
+
+function nativeModelHarness() {
+  const h = createHarness({
+    nativeProject: true,
+    requestedWorkspaceRoot: "/wrong-fallback",
+    lookupSession: () => ({
+      sessionId: "session-1",
+      cwd: "/primary",
+      workspaceRoot: "/worktree",
+      status: "confirmed",
+    }),
+  });
+  const authority = {
+    stamp: "session/root",
+    cwd: "/worktree",
+    projectId: "actual-project",
+    rootId: "actual-root",
+    fresh: false,
+    assertCurrent: () => {},
+  };
+  const config = {
+    settings: {
+      modelConnections: [
+        { id: "native-text", catalogId: "ollama", tag: "text", model: "custom-owned-model" },
+      ],
+      credentials: [],
+    },
+    profile: {},
+    catalog: structuredClone(BUILTIN_CATALOG),
+  } as unknown as ReturnType<NonNullable<Parameters<typeof prepareMobileNativeModel>[3]>>;
+  h.ctx.externalCommands = {
+    authorizeNative: async () => authority,
+    isExternal: () => false,
+    observe: async () => {},
+    captureSelectedAuthority: () => ({ stamp: authority.stamp }),
+  } as unknown as MobileExternalRuntimeCommands;
+  h.ctx.nativeSubmissions = new MobileNativeSubmissions(h.ctx.externalCommands, () => false);
+  h.ctx.prepareNativeModel = (sid, id, selected) =>
+    prepareMobileNativeModel(sid, id, selected, () => config);
+  h.ctx.deviceState("phone-1").selectedProjectId = "wrong-project";
+  const event = {
+    type: "chat.send" as const,
+    deviceId: "phone-1",
+    viewerId: "tab",
+    sessionId: "session-1",
+    text: "native task",
+    clientMessageId: "native-input",
+    nativeConnectionId: "native-text",
+    permissionMode: "default" as const,
+  };
+  return { ...h, config, authority, event };
+}
+
+test("native selection uses authorized workspace and per-run model; a confirmed retry ignores later configuration changes", async () => {
+  const h = nativeModelHarness();
+  await handleClientEvent(h.ctx, h.event);
+  expect(h.preparedRuns).toHaveLength(1);
+  expect(h.preparedRuns[0]).toMatchObject({
+    configuredModel: {
+      id: "native-text",
+      expectedFingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
+    },
+    cwd: "/worktree",
+    projectId: "actual-project",
+    rootId: "actual-root",
+    permissionMode: "default",
+  });
+  expect(h.replies.at(-1)).toMatchObject({
+    type: "chat.accepted",
+    nativeConnectionId: "native-text",
+    clientMessageId: "native-input",
+  });
+  h.config.settings.modelConnections = [];
+  await handleClientEvent(h.ctx, h.event);
+  expect(h.preparedRuns).toHaveLength(1);
+  expect(h.replies.at(-1)).toMatchObject({
+    type: "chat.accepted",
+    nativeConnectionId: "native-text",
+  });
+  await handleClientEvent(h.ctx, { ...h.event, nativeConnectionId: "another" });
+  expect(h.replies.at(-1)?.type).toBe("error");
+  expect(h.preparedRuns).toHaveLength(1);
+});
+
+test("native configuration changes across workspace staging reject before worker injection", async () => {
+  const h = nativeModelHarness();
+  const prepare = h.ctx.prepareNativeModel!;
+  h.ctx.prepareNativeModel = (...args) => {
+    const target = prepare(...args);
+    queueMicrotask(() => {
+      h.config.settings.modelConnections = [];
+    });
+    return target;
+  };
+  await handleClientEvent(h.ctx, h.event);
+  expect(h.preparedRuns).toHaveLength(0);
+  expect(h.replies.at(-1)?.type).toBe("error");
+});
+
+test("native intent cannot select a connection on an external Session or carry both selectors", async () => {
+  const h = nativeModelHarness();
+  h.ctx.externalCommands!.isExternal = () => true;
+  await handleClientEvent(h.ctx, h.event);
+  await handleClientEvent(h.ctx, { ...h.event, modelKey: "codex/owned" });
+  expect(h.preparedRuns).toHaveLength(0);
+  expect(h.replies.filter((item) => item.type === "error")).toHaveLength(2);
+});
+
+test("native model intent does not enter the mutable model queue while the Session is running", async () => {
+  const h = nativeModelHarness();
+  h.ctx.getBridge()!.isSessionRunning = () => true;
+  await handleClientEvent(h.ctx, h.event);
+  expect(h.preparedRuns).toHaveLength(0);
+  expect(h.replies.at(-1)).toMatchObject({
+    type: "error",
+    message: "请等待当前任务完成后再使用所选模型发送。",
+  });
+  const legacy = createHarness({
+    requestedWorkspaceRoot: "/worktree",
+    lookupSession: () => ({
+      sessionId: "session-1",
+      cwd: "/primary",
+      workspaceRoot: "/worktree",
+      status: "confirmed",
+    }),
+  });
+  legacy.ctx.getBridge()!.isSessionRunning = () => true;
+  await sendChat(legacy.ctx);
+  expect(legacy.preparedRuns).toHaveLength(1);
+  expect(legacy.preparedRuns[0]).not.toHaveProperty("model");
+});
 
 test("mobile default intent survives a desktop snapshot during external preparation", async () => {
   const harness = createHarness({
@@ -816,4 +977,58 @@ test("external model discovery answers failure with an empty bounded response", 
   });
   expect(harness.replies).toHaveLength(1);
   expect(harness.replies[0]).toMatchObject({ type: "runtime.models.ok", models: [] });
+});
+
+test("phone cannot inject configured model proof, endpoint or credentials into Worker params", async () => {
+  const h = nativeModelHarness();
+  await handleClientEvent(h.ctx, {
+    ...h.event,
+    configuredModel: { id: "forged", expectedFingerprint: "0".repeat(64) },
+    model: "forged",
+    apiKey: "owned-forgery",
+  } as typeof h.event);
+  expect(h.preparedRuns).toHaveLength(1);
+  expect(h.preparedRuns[0]?.configuredModel).toMatchObject({ id: "native-text" });
+  expect(h.preparedRuns[0]?.configuredModel).not.toEqual({
+    id: "forged",
+    expectedFingerprint: "0".repeat(64),
+  });
+  expect(h.preparedRuns[0]?.model).toBeUndefined();
+  expect(h.preparedRuns[0]?.apiKey).toBeUndefined();
+});
+
+test("native admission stays exclusive through the asynchronous Worker acceptance boundary", async () => {
+  const h = nativeModelHarness();
+  h.config.settings.modelConnections!.push({
+    ...h.config.settings.modelConnections![0]!,
+    id: "native-other",
+  });
+  const bridge = h.ctx.getBridge()!;
+  const subscribe = bridge.subscribeOutbound.bind(bridge);
+  let release: (() => void) | undefined;
+  bridge.subscribeOutbound = ((listener: OutboundListener) =>
+    subscribe((line: string) => {
+      if (JSON.parse(line).method === "agent/runAccepted" && !release)
+        release = () => listener(line);
+      else listener(line);
+    })) as typeof bridge.subscribeOutbound;
+  const first = handleClientEvent(h.ctx, h.event);
+  for (let i = 0; i < 50 && !release; i++) await new Promise((resolve) => setTimeout(resolve, 1));
+  expect(release).toBeDefined();
+  const second = {
+    ...h.event,
+    clientMessageId: "second-input",
+    nativeConnectionId: "native-other",
+  };
+  await handleClientEvent(h.ctx, second);
+  expect(h.preparedRuns).toHaveLength(1);
+  expect(h.replies.at(-1)).toMatchObject({ type: "error", clientMessageId: "second-input" });
+  release!();
+  await first;
+  await handleClientEvent(h.ctx, second);
+  expect(h.preparedRuns).toHaveLength(2);
+  expect(h.preparedRuns.map((item) => (item.configuredModel as { id: string }).id)).toEqual([
+    "native-text",
+    "native-other",
+  ]);
 });

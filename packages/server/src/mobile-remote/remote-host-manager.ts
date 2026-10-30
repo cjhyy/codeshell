@@ -86,6 +86,8 @@ export interface RemoteHostManagerOptions {
   outputJournalPageFrames?: 2048;
   /** Selected-session Host implements verified display views and bounded detail parts. */
   historyView?: boolean;
+  /** The attached command Host resolves native text connections per authorized Session. */
+  nativeModelSelection?: boolean;
   onClientEvent: (event: unknown, ws: WebSocket) => void | Promise<void>;
   /**
    * Absolute path to the built mobile app (out/mobile). Defaults to the
@@ -535,13 +537,18 @@ export class RemoteHostManager extends EventEmitter {
       return {
         type: "pair.ok",
         device,
-        ...(this.opts.outputJournal
+        ...(this.opts.outputJournal || this.opts.nativeModelSelection
           ? {
               capabilities: {
-                outputJournal: 1 as const,
-                ...(this.opts.historyView ? { historyView: 1 as const } : {}),
-                ...(this.opts.legacyBasePages ? { legacyBasePages: 1 as const } : {}),
-                ...(this.opts.outputJournalPageFrames === 2048
+                ...(this.opts.outputJournal ? { outputJournal: 1 as const } : {}),
+                ...(this.opts.nativeModelSelection ? { nativeModelSelection: 1 as const } : {}),
+                ...(this.opts.outputJournal && this.opts.historyView
+                  ? { historyView: 1 as const }
+                  : {}),
+                ...(this.opts.outputJournal && this.opts.legacyBasePages
+                  ? { legacyBasePages: 1 as const }
+                  : {}),
+                ...(this.opts.outputJournal && this.opts.outputJournalPageFrames === 2048
                   ? { outputJournalPageFrames: 2048 as const }
                   : {}),
               },
@@ -560,13 +567,18 @@ export class RemoteHostManager extends EventEmitter {
       return {
         type: "auth.ok",
         device,
-        ...(this.opts.outputJournal
+        ...(this.opts.outputJournal || this.opts.nativeModelSelection
           ? {
               capabilities: {
-                outputJournal: 1 as const,
-                ...(this.opts.historyView ? { historyView: 1 as const } : {}),
-                ...(this.opts.legacyBasePages ? { legacyBasePages: 1 as const } : {}),
-                ...(this.opts.outputJournalPageFrames === 2048
+                ...(this.opts.outputJournal ? { outputJournal: 1 as const } : {}),
+                ...(this.opts.nativeModelSelection ? { nativeModelSelection: 1 as const } : {}),
+                ...(this.opts.outputJournal && this.opts.historyView
+                  ? { historyView: 1 as const }
+                  : {}),
+                ...(this.opts.outputJournal && this.opts.legacyBasePages
+                  ? { legacyBasePages: 1 as const }
+                  : {}),
+                ...(this.opts.outputJournal && this.opts.outputJournalPageFrames === 2048
                   ? { outputJournalPageFrames: 2048 as const }
                   : {}),
               },

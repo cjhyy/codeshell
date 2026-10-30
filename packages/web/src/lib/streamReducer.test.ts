@@ -30,6 +30,111 @@ test("text_delta 在没有 stream_request_start 时自开一条", () => {
   expect(asst(s).text).toBe("hi");
 });
 
+test("one external request preserves text/tool/text order and exact paragraph bytes", () => {
+  const s = feed([
+    ev({ type: "stream_request_start", turnNumber: 1, messageId: "provider-message" }),
+    ev({ type: "text_delta", text: "First progress." }),
+    ev({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } }),
+    ev({ type: "tool_result", result: { id: "t1", result: "one" } }),
+    ev({ type: "text_delta", text: "Second progress." }),
+    ev({ type: "tool_use_start", toolCall: { id: "t2", toolName: "LinkAction", args: {} } }),
+    ev({ type: "tool_result", result: { id: "t2", result: "two" } }),
+    ev({ type: "text_delta", text: "Final paragraph.\n" }),
+    ev({ type: "text_delta", text: "\nNext paragraph." }),
+    ev({ type: "turn_complete", reason: "completed" }),
+  ]);
+  expect(s.items.map((item) => item.kind)).toEqual([
+    "assistant",
+    "tool",
+    "assistant",
+    "tool",
+    "assistant",
+  ]);
+  expect(
+    s.items
+      .filter((item) => item.kind === "assistant")
+      .map((item) => ({ text: item.text, done: item.done })),
+  ).toEqual([
+    { text: "First progress.", done: true },
+    { text: "Second progress.", done: true },
+    { text: "Final paragraph.\n\nNext paragraph.", done: true },
+  ]);
+  expect(new Set(s.items.map((item) => item.id)).size).toBe(s.items.length);
+});
+
+test("tool-first output cannot fill the earlier placeholder with the final answer", () => {
+  const s = feed([
+    ev({ type: "stream_request_start", turnNumber: 1 }),
+    ev({ type: "tool_use_start", toolCall: { id: "t1", toolName: "commandExecution", args: {} } }),
+    ev({ type: "tool_result", result: { id: "t1", result: "done" } }),
+    ev({ type: "text_delta", text: "After tool." }),
+    ev({ type: "assistant_message" }),
+  ]);
+  expect(
+    s.items
+      .filter((item) => item.kind !== "assistant" || item.text || item.reasoning)
+      .map((item) => item.kind),
+  ).toEqual(["tool", "assistant"]);
+  expect(
+    s.items.findIndex((item) => item.kind === "assistant" && item.text === "After tool."),
+  ).toBeGreaterThan(s.items.findIndex((item) => item.id === "t1"));
+});
+
+test("a child tool segments only its own text and duplicate starts do not cut later prose", () => {
+  const s = feed([
+    ev({ type: "stream_request_start", turnNumber: 1 }),
+    ev({ type: "text_delta", text: "Parent " }),
+    ev({ type: "stream_request_start", turnNumber: 1, agentId: "child" }),
+    ev({ type: "text_delta", text: "Child before", agentId: "child" }),
+    ev({
+      type: "tool_use_start",
+      toolCall: { id: "child-tool", toolName: "Read", args: {} },
+      agentId: "child",
+    }),
+    ev({ type: "text_delta", text: "Child after ", agentId: "child" }),
+    ev({
+      type: "tool_use_start",
+      toolCall: { id: "child-tool", toolName: "Read", args: {} },
+      agentId: "child",
+    }),
+    ev({ type: "text_delta", text: "duplicate", agentId: "child" }),
+    ev({ type: "text_delta", text: "unchanged" }),
+  ]);
+  expect(
+    s.items.filter((item) => item.kind === "assistant" && !item.agentId).map((item) => item.text),
+  ).toEqual(["Parent unchanged"]);
+  expect(
+    s.items
+      .filter((item) => item.kind === "assistant" && item.agentId === "child")
+      .map((item) => item.text),
+  ).toEqual(["Child before", "Child after duplicate"]);
+  expect(s.items.filter((item) => item.id === "child-tool")).toHaveLength(1);
+});
+
+test("sealing a segment retains liveness, orphan pairing and request tombstone ownership", () => {
+  const state = feed([
+    ev({ type: "stream_request_start", turnNumber: 1, messageId: "owned-request" }),
+    ev({ type: "text_delta", text: "Before" }),
+    ev({ type: "tool_result", result: { id: "early", result: "already returned" } }),
+    ev({ type: "tool_use_start", toolCall: { id: "early", toolName: "Bash", args: {} } }),
+    ev({ type: "thinking_delta", text: "After-tool reasoning" }),
+    ev({ type: "text_delta", text: "After" }),
+  ]);
+  expect(state.run).toBe("running");
+  expect(
+    state.items.filter((item) => item.kind === "assistant").map((item) => item.messageId),
+  ).toEqual(["owned-request", "owned-request"]);
+  expect(state.items.find((item) => item.id === "early")).toMatchObject({
+    kind: "tool",
+    done: true,
+    result: "already returned",
+  });
+  expect(state.orphanResults).toBeUndefined();
+  const revoked = reduceStream(state, ev({ type: "tombstone", messageId: "owned-request" }));
+  expect(revoked.items.map((item) => item.id)).toEqual(["early"]);
+  expect(revoked.liveByAgent).toEqual({});
+});
+
 test("thinking_delta 累计到 reasoning", () => {
   const s = feed([
     ev({ type: "stream_request_start", turnNumber: 1 }),

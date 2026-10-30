@@ -1663,12 +1663,14 @@ export class SessionManager {
     state: SessionState,
     runId: string,
     clientMessageId?: string,
+    actualModel?: { model: string; provider: string; modelConnectionId?: string },
   ): string | undefined {
     assertSafeSessionId(state.sessionId);
     for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
       const latest = this.readPersistedState(state.sessionId);
       const previousRunId = latest.runId;
       const runFields = {
+        ...actualModel,
         runId,
         clientMessageId,
         status: "active" as const,

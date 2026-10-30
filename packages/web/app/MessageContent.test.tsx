@@ -8,6 +8,12 @@ function render(text: string, streaming = false) {
 }
 
 describe("Hub message rendering", () => {
+  test("explicit blank lines remain distinct Markdown paragraphs without changing text", () => {
+    const html = render("First paragraph.\n\nSecond paragraph.");
+    expect(html).toContain("<p>First paragraph.</p>");
+    expect(html).toContain("<p>Second paragraph.</p>");
+    expect((html.match(/<p>/g) ?? []).length).toBe(2);
+  });
   test("completed messages render headings, lists, tables and labeled copyable code blocks", () => {
     const html = render(
       "# 结果\n\n- 一\n- 二\n\n| 项目 | 状态 |\n| --- | --- |\n| 部署 | 完成 |\n\n```typescript\nconst answer = 42;\n```",

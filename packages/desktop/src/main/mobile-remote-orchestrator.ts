@@ -14,6 +14,7 @@
 
 import { Methods, sessionsRoot } from "@cjhyy/code-shell-core";
 import { MobilePermissionModes } from "./mobile-remote/permission-modes.js";
+import { MobileNativeSubmissions } from "./mobile-remote/native-submissions.js";
 import { MobileOutputRecovery } from "./mobile-remote/output-recovery.js";
 import {
   mobileOutputRecoveryAuthority,
@@ -100,12 +101,14 @@ export class MobileRemoteOrchestrator {
 
   private readonly outputRecovery: MobileOutputRecovery;
   private readonly externalCommands: MobileExternalRuntimeCommands;
+  private readonly nativeSubmissions: MobileNativeSubmissions;
   private outputHistoryRecoveryService?: MobileOutputHistoryService;
   constructor(private readonly deps: MobileRemoteOrchestratorDeps) {
     this.externalCommands = new MobileExternalRuntimeCommands({
       authenticated: (viewer, device) => deps.remote.hasAuthenticatedViewer(viewer, device),
       authority: mobileSessionCommandAuthority,
       owner: (id) => deps.getBridge()?.panelOwnerWebContentsId(id),
+      ownerRevision: (id) => deps.getBridge()?.sessionPanelOwnerRevision(id),
       service: () => deps.getExternalRuntimeService?.() ?? null,
       isExternal: (id) =>
         !!deps.getExternalRuntimeService?.()?.hasSession(id) ||
@@ -139,6 +142,7 @@ export class MobileRemoteOrchestrator {
           });
       },
     });
+    this.nativeSubmissions = new MobileNativeSubmissions(this.externalCommands);
     this.outputRecovery = new MobileOutputRecovery({
       root: sessionsRoot,
       hasLiveExternalProducer: (id) => !!deps.getExternalRuntimeService?.()?.hasSession(id),
@@ -442,6 +446,7 @@ export class MobileRemoteOrchestrator {
       remote: this.deps.remote,
       outputRecovery: this.outputRecovery,
       externalCommands: this.externalCommands,
+      nativeSubmissions: this.nativeSubmissions,
       externalRuntimeModels: () => this.deps.getExternalRuntimeModels?.() ?? Promise.resolve([]),
       newSessionAuthority: mobileNewSessionAuthority,
       uploads: this.deps.uploads,

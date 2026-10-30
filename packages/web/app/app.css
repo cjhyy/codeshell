@@ -548,11 +548,12 @@ button.workspace-button:hover {
   padding: 28px 24px 16px;
 }
 .transcript {
+  --transcript-gap: 18px;
   max-width: 736px;
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--transcript-gap);
   margin: 0 auto;
 }
 .chat-empty .messages {
@@ -624,7 +625,10 @@ button.workspace-button:hover {
   align-self: stretch;
   color: var(--muted);
   font-size: 12px;
-  padding: 2px 0;
+  padding: 0;
+}
+.msg.tool + .msg.tool {
+  margin-top: calc(6px - var(--transcript-gap));
 }
 .msg.tool .tool-result {
   max-height: 280px;
@@ -1146,7 +1150,7 @@ button.ghost:hover:not(:disabled) {
     padding: 24px 18px 12px;
   }
   .transcript {
-    gap: 16px;
+    --transcript-gap: 16px;
   }
   .msg {
     font-size: 14px;

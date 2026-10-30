@@ -2,6 +2,7 @@
  * Engine — the main facade that wires all components together.
  */
 
+import { ConfiguredTextModelBinding } from "./configured-text-model.js";
 import type {
   ClientDefaults,
   Message,
@@ -469,6 +470,8 @@ export class Engine {
   private pendingLlm?: import("../types.js").LLMConfig;
   /** Only bind selections owned by this Engine's pool; child/SDK snapshots may name a foreign pool. */
   private boundModelKey?: string;
+  private readonly configuredModels = new ConfiguredTextModelBinding();
+  private configuredModelRunAccepted = false;
   private runAbort?: AbortController;
   private revokedInstructionContext: SessionBundle | undefined;
   private activeInstructionSessionId: string | undefined;
@@ -1006,7 +1009,9 @@ export class Engine {
   }
 
   private refreshCurrentModelConfig(): void {
+    if (this.configuredModels.id && !this.pendingLlm) return;
     if (this.pendingLlm) {
+      this.configuredModels.clear();
       this.config = { ...this.config, llm: this.pendingLlm };
       this.boundModelKey = this.pendingLlm.modelKey;
       this.pendingLlm = undefined;
@@ -1377,31 +1382,28 @@ export class Engine {
   /** Restore a cold Engine's configured model from persisted source state without resetting usage. */
   restoreSessionModel(sessionId: string): void {
     const state = this.sessionManager.resume(sessionId).state;
-    if (this.config.llm.model === state.model && this.config.llm.provider === state.provider)
-      return;
-    const entry =
-      this.modelPool
-        .list()
-        .find(
-          (candidate) => candidate.model === state.model && candidate.provider === state.provider,
-        ) ?? this.modelPool.list().find((candidate) => candidate.model === state.model);
-    if (!entry) {
-      throw new Error(`Persisted source model is no longer configured: ${state.model}`);
-    }
-    this.config = { ...this.config, llm: this.modelPool.toLLMConfig(entry) };
-    this.boundModelKey = entry.key;
+    const llm = this.configuredModels.restorePersisted(
+      state,
+      this.config.cwd ?? this.sessionManager.readSessionMainRoot(sessionId) ?? state.cwd,
+      this.modelPool,
+      this.config.llm,
+    );
+    this.config = { ...this.config, llm };
+    this.boundModelKey = llm.modelKey;
   }
 
-  /**
-   * Run a task from start to finish. Rejects immediately when this Engine
-   * instance already has a run in progress; hosts that want queueing own that
-   * policy (for example ChatSession's FIFO queue).
-   */
+  /** Run exclusively; hosts such as ChatSession own any queueing policy. */
   async run(task: string, options?: EngineRunOptions): Promise<EngineResult> {
     if (this.disposed) throw new Error("Engine has been disposed");
     if (this.runInProgress) {
       throw new Error("Engine.run() cannot start while another run is in progress");
     }
+    const previousModel = {
+      llm: this.config.llm,
+      binding: this.configuredModels.snapshot(this.pendingLlm),
+      key: this.boundModelKey,
+    };
+    this.configuredModelRunAccepted = false;
     const runTiming = createRunTiming();
     this.runInProgress = true;
     this.loadedInstructionSnapshots = [];
@@ -1417,7 +1419,8 @@ export class Engine {
     try {
       await this.ready();
       if (this.disposed) throw new Error("Engine has been disposed");
-      this.refreshCurrentModelConfig();
+      if (!options?.configuredModel && (!this.configuredModels.id || this.pendingLlm))
+        this.refreshCurrentModelConfig();
       return await this.runExclusive(task, options, runTiming);
     } catch (error) {
       // Once a run is durably claimed, even a pre-loop initialization failure
@@ -1458,6 +1461,11 @@ export class Engine {
           try {
             this.permissionController.applyPending();
           } finally {
+            if (options?.configuredModel && !this.configuredModelRunAccepted) {
+              this.config = { ...this.config, llm: previousModel.llm };
+              this.configuredModels.restore(previousModel.binding);
+              this.boundModelKey = previousModel.key;
+            }
             this.runInProgress = false;
             this.runningSession = undefined;
             this.failClaimedRun = undefined;
@@ -1569,6 +1577,17 @@ export class Engine {
         profileMemoryDir,
       },
     } = workspaceResolved.resolution;
+    const configured = this.configuredModels.prepare(
+      options,
+      cwd,
+      sessionWorkspaceProfile,
+      this.sessionManager,
+    );
+    if (configured.replayed) return configured.replayed;
+    if (configured.llm) {
+      this.config = { ...this.config, llm: configured.llm };
+      this.boundModelKey = undefined;
+    }
     if (
       options?.operationBatchToken &&
       (!this.config.operationBatchAuthority ||
@@ -1675,19 +1694,9 @@ export class Engine {
 
     const userMessageContent = buildRunUserMessageContent(parsedTask, cwd, taskText);
 
-    // Create or resume session.
-    //
-    // Three valid shapes:
-    //   1. options.sessionId names an EXISTING on-disk session → resume
-    //   2. options.sessionId names a fresh sid the host wants materialized
-    //      (ChatSessionManager's "tui-main" first-turn case) → create
-    //      with that explicit sid so subsequent turns can resume cleanly
-    //   3. no sessionId → create with nanoid
-    //
-    // Shape (2) was previously broken — engine threw SessionError,
-    // surfacing as `[-32603] Session not found: <sid>` on the very first
-    // TUI turn. Detection now uses `sessionManager.exists()` (one stat
-    // call) instead of a try/catch on resume.
+    // Resume persisted state or create the Host-minted/new ID, then atomically claim
+    // the accepted input and its actual model identity. Duplicate inputs return early.
+    configured.assertCurrent?.();
     const openedResult = openRunSession({
       sessionManager: this.sessionManager,
       options,
@@ -1706,6 +1715,7 @@ export class Engine {
       ...(options?.sessionBrief ? { sessionBrief: options.sessionBrief } : {}),
       llmModel: this.config.llm.model,
       llmProvider: this.config.llm.provider,
+      modelConnectionId: this.configuredModels.id,
       isSubAgent: this.config.isSubAgent === true,
       origin: this.config.origin,
       costStore: this.config.costStore,
@@ -1715,6 +1725,9 @@ export class Engine {
         : undefined,
     });
     if (!openedResult.ok) return openedResult.result;
+    this.configuredModelRunAccepted = true;
+    if (options.configuredModel && this.configuredModels.supersedesPending(this.pendingLlm))
+      this.pendingLlm = undefined;
     const {
       runId,
       previousRunId,
@@ -3606,6 +3619,7 @@ export class Engine {
     const nextLlm = this.modelPool.toLLMConfig(entry);
     if (this.runInProgress) this.pendingLlm = nextLlm;
     else {
+      this.configuredModels.clear();
       this.pendingLlm = undefined;
       this.boundModelKey = entry.key;
       this.config = { ...this.config, llm: nextLlm };

@@ -19,6 +19,23 @@ function visible(state: ChatState) {
 }
 
 describe("Core transcript browser replay", () => {
+  test("assistant content blocks retain their text/tool order without invented separators", () => {
+    const transcript = Transcript.inMemory("ordered-content");
+    transcript.appendMessage("assistant", [
+      { type: "text", text: "Before " },
+      { type: "text", text: "tool." },
+      { type: "tool_use", id: "owned-tool", name: "Bash", input: { command: "owned" } },
+      { type: "text", text: "After tool.\n\nSecond paragraph." },
+    ]);
+    transcript.appendToolUse("Bash", "owned-tool", { command: "owned" });
+    transcript.appendToolResult("owned-tool", "Bash", "done");
+    const state = replayTranscript(transcript.getEvents());
+    expect(state.items.map((item) => item.kind)).toEqual(["assistant", "tool", "assistant"]);
+    expect(
+      state.items.filter((item) => item.kind === "assistant").map((item) => item.text),
+    ).toEqual(["Before tool.", "After tool.\n\nSecond paragraph."]);
+    expect(state.items.filter((item) => item.kind === "tool")).toHaveLength(1);
+  });
   test("real Transcript events reproduce live user, reasoning, tool and assistant content without duplicate tools", () => {
     const transcript = Transcript.inMemory("web-replay-fixture");
     transcript.append("session_meta", { sessionId: "fixture", cwd: "/workspace" });

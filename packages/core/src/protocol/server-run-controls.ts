@@ -25,6 +25,7 @@ export function runOptions(params: RunParams, readGoal: () => GoalConfig | undef
     disableGoal: params.disableGoal === true,
     goalContinuation: params.goalContinuation,
     modelTraceSource: params.modelTraceSource,
+    configuredModel: params.configuredModel,
   };
 }
 
@@ -194,4 +195,42 @@ export function handleSteerRequest(req: RpcRequest, host: SteerHost): void {
       createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
     );
   }
+}
+
+/** Configured connections acknowledge the durable claim, not merely admission to a queue. */
+export function runAcceptance(
+  params: RunParams,
+  requestId: RpcRequest["id"],
+  notify: (payload: { requestId: RpcRequest["id"]; sessionId: string }) => void,
+) {
+  const { sessionId, clientMessageId } = params;
+  const configured = params.configuredModel !== undefined;
+  let open = true,
+    sent = false;
+  const publish = () => {
+    if (open && !sent) {
+      sent = true;
+      notify({ requestId, sessionId: sessionId ?? "" });
+    }
+  };
+  return {
+    queued: () => {
+      if (!configured) publish();
+    },
+    observe: (event: import("../types.js").StreamEvent) => {
+      if (
+        configured &&
+        event.type === "session_started" &&
+        event.sessionId === sessionId &&
+        (!("agentId" in event) || event.agentId === undefined) &&
+        typeof event.runId === "string" &&
+        event.runId.length > 0 &&
+        event.clientMessageId === clientMessageId
+      )
+        publish();
+    },
+    close: () => {
+      open = false;
+    },
+  };
 }
