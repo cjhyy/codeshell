@@ -4,6 +4,7 @@ import type {
   PetSessionProjection,
 } from "../../preload/types";
 import { normalizeLocalFilePaths } from "../chat/localFilePaths";
+import { bufferPetProjectionEvent } from "./petReliability";
 
 export type PetOverviewFilter = "all" | "pending" | "running";
 export type PetProjectionStatus = "loading" | "ready" | "reconciling" | "error";
@@ -13,6 +14,9 @@ export interface PetState {
   status: PetProjectionStatus;
   error?: string;
   needsSnapshot: boolean;
+  /** Events arriving after a reset must be replayed onto the recovered baseline. */
+  bufferedProjectionEvents: PetProjectionEvent[];
+  snapshotRetryRevision: number;
   overviewFilter: PetOverviewFilter;
   overviewFocus: string | null;
   chatDraft: string;
@@ -26,6 +30,8 @@ export const initialPetState: PetState = {
   projection: null,
   status: "loading",
   needsSnapshot: false,
+  bufferedProjectionEvents: [],
+  snapshotRetryRevision: 0,
   overviewFilter: "all",
   overviewFocus: null,
   chatDraft: "",
@@ -47,8 +53,16 @@ export type PetStateAction =
   | { type: "insert-chat-prompt"; draft: string }
   | { type: "set-chat-transcript"; transcript: unknown[] };
 
-function requireSnapshot(state: PetState): PetState {
-  return { ...state, status: "reconciling", needsSnapshot: true, error: undefined };
+function requireSnapshot(state: PetState, event?: PetProjectionEvent): PetState {
+  const bufferedProjectionEvents = [...state.bufferedProjectionEvents];
+  if (event) bufferPetProjectionEvent(bufferedProjectionEvents, event);
+  return {
+    ...state,
+    status: "reconciling",
+    needsSnapshot: true,
+    error: undefined,
+    bufferedProjectionEvents,
+  };
 }
 
 function upsertSession(
@@ -108,26 +122,37 @@ function applyProjectionEvent(
 
 export function petStateReducer(state: PetState, action: PetStateAction): PetState {
   switch (action.type) {
-    case "snapshot-received":
-      return {
+    case "snapshot-received": {
+      let next: PetState = {
         ...state,
         projection: action.snapshot,
         status: action.snapshot.workerState === "reconciling" ? "reconciling" : "ready",
         needsSnapshot: false,
+        bufferedProjectionEvents: [],
         error: undefined,
       };
+      for (const event of state.bufferedProjectionEvents) {
+        if (event.generation < action.snapshot.generation) continue;
+        next = petStateReducer(next, { type: "projection-event", event });
+      }
+      // A response can precede another buffered reset or still miss an event.
+      // Retrigger the recovery effect even when needsSnapshot stayed true.
+      if (next.needsSnapshot) next.snapshotRetryRevision += 1;
+      return next;
+    }
     case "snapshot-failed":
       return { ...state, status: "error", error: action.error };
     case "snapshot-retry":
       return { ...state, status: "reconciling", needsSnapshot: true, error: undefined };
     case "projection-event": {
       const snapshot = state.projection;
-      if (!snapshot) return requireSnapshot(state);
-      if (state.needsSnapshot) return state;
-      if (action.event.generation !== snapshot.generation) return requireSnapshot(state);
+      if (!snapshot || state.needsSnapshot) return requireSnapshot(state, action.event);
+      if (action.event.generation !== snapshot.generation)
+        return requireSnapshot(state, action.event);
       if (action.event.version <= snapshot.version) return state;
-      if (action.event.kind === "reset") return requireSnapshot(state);
-      if (action.event.version !== snapshot.version + 1) return requireSnapshot(state);
+      if (action.event.kind === "reset") return requireSnapshot(state, action.event);
+      if (action.event.version !== snapshot.version + 1)
+        return requireSnapshot(state, action.event);
       return {
         ...state,
         projection: applyProjectionEvent(snapshot, action.event),

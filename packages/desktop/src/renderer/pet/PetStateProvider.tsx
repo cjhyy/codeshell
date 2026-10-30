@@ -389,7 +389,7 @@ export function PetStateProvider({
       active = false;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [api, snapshotRetryDelay, state.needsSnapshot]);
+  }, [api, snapshotRetryDelay, state.needsSnapshot, state.snapshotRetryRevision]);
 
   React.useEffect(() => {
     let active = true;
