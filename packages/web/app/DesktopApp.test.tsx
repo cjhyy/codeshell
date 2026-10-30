@@ -90,6 +90,57 @@ afterEach(() => {
 });
 
 describe("Desktop workbench controller", () => {
+  test("Panel project selection reuses Desktop navigation and never borrows the old session during creation", async () => {
+    const projects = [
+      { id: "project-a", name: "Project A", path: "/owned/A" },
+      { id: "project-b", name: "Project B", path: "/owned/B" },
+    ];
+    const selections: string[] = [],
+      creates: unknown[] = [],
+      sends: unknown[] = [];
+    let app = remoteApp({
+      projects,
+      activeProjectId: "project-a",
+      activeProjectCwd: "/owned/A",
+      activeCwd: "/owned/A",
+      activeSessionId: "native-a",
+      selectProject: (id) => selections.push(id),
+      newSession: (target) => creates.push(target),
+      sendChat: async (input) => {
+        sends.push(input);
+        return true;
+      },
+    });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      expect(hook.result.current.projects).toEqual(projects);
+      expect(hook.result.current.selectedProjectId).toBe("project-a");
+      expect(hook.result.current.panelSessionId).toBe("native-a");
+      await act(async () => hook.result.current.selectProject!("project-b"));
+      expect(selections).toEqual(["project-b"]);
+      expect(creates).toEqual([{ projectId: "project-b" }]);
+      expect(hook.result.current.workspaceCwd).toBe("/owned/B");
+      expect(hook.result.current.selectedProjectId).toBe("project-b");
+      expect(hook.result.current.panelSessionId).toBeUndefined();
+      const sidebar = hook.result.current.renderSidebar!({
+        guard: (action) => action(),
+        conversation: (action) => action(),
+      }) as React.ReactElement<any>;
+      expect(sidebar.props.app.activeProjectId).toBe("project-b");
+      app = { ...app, sessionCreationFailures: 1 };
+      await hook.rerender();
+      expect(hook.result.current.panelSessionId).toBeUndefined();
+      expect(hook.result.current.send()).toBe(false);
+      await act(async () => hook.result.current.newSession());
+      app = { ...app, activeSessionId: "native-b", activeCwd: "/owned/B" };
+      await hook.rerender();
+      expect(hook.result.current.panelSessionId).toBe("native-b");
+      expect(sends).toEqual([]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test.each(["canonical", "room ready", "room pending", "new draft"])(
     "Panels bind only the canonical session (%s)",
     async (selection) => {

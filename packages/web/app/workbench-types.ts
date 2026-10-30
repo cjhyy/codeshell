@@ -1,4 +1,5 @@
 import type React from "react";
+import type { MobileProjectMeta } from "@cjhyy/code-shell-core";
 import type { ChatState } from "../src/lib/streamReducer.js";
 import type { AuthSession, UploadedFile } from "./auth.js";
 import type { HubConfiguration } from "./configuration.js";
@@ -33,6 +34,10 @@ export interface WorkbenchController {
   workspaceCwd: string | null;
   workspaceName: string;
   workspaceKey: string;
+  /** Existing Host project navigation, when the adapter supports direct selection. */
+  projects?: readonly MobileProjectMeta[];
+  selectedProjectId?: string;
+  selectProject?: (id: string) => void;
   title: string;
   configuration: HubConfiguration | null;
   configurationVersion: number;
