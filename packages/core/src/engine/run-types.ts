@@ -138,6 +138,8 @@ export const ISOLATED_TASK_PROFILE: RunBehaviorProfile = {
 };
 
 export interface EngineRunOptions {
+  /** Host-resolved configured text connection, immutable for this run. */
+  configuredModel?: import("../engine/configured-text-model.js").ConfiguredTextModelIntent;
   cwd?: string;
   /** Diagnostic origin label only; grants no workspace or storage authority. */
   modelTraceSource?: string;

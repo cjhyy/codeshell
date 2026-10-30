@@ -43,6 +43,13 @@ export {
   type SessionOutputCoverageProof,
 } from "./session/output-coverage-state.js";
 
+export {
+  configuredTextModelSnapshot,
+  readConfiguredTextModelSource,
+  resolveConfiguredTextModel,
+  type ConfiguredTextModelIntent,
+} from "./engine/configured-text-model.js";
+
 export { outputUserMessage } from "./engine/run-output-user-message.js";
 export {
   OutputHistoryRecovery,

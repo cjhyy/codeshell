@@ -542,9 +542,13 @@ export class RemoteHostManager extends EventEmitter {
               capabilities: {
                 ...(this.opts.outputJournal ? { outputJournal: 1 as const } : {}),
                 ...(this.opts.nativeModelSelection ? { nativeModelSelection: 1 as const } : {}),
-                ...(this.opts.historyView ? { historyView: 1 as const } : {}),
-                ...(this.opts.legacyBasePages ? { legacyBasePages: 1 as const } : {}),
-                ...(this.opts.outputJournalPageFrames === 2048
+                ...(this.opts.outputJournal && this.opts.historyView
+                  ? { historyView: 1 as const }
+                  : {}),
+                ...(this.opts.outputJournal && this.opts.legacyBasePages
+                  ? { legacyBasePages: 1 as const }
+                  : {}),
+                ...(this.opts.outputJournal && this.opts.outputJournalPageFrames === 2048
                   ? { outputJournalPageFrames: 2048 as const }
                   : {}),
               },
@@ -568,9 +572,13 @@ export class RemoteHostManager extends EventEmitter {
               capabilities: {
                 ...(this.opts.outputJournal ? { outputJournal: 1 as const } : {}),
                 ...(this.opts.nativeModelSelection ? { nativeModelSelection: 1 as const } : {}),
-                ...(this.opts.historyView ? { historyView: 1 as const } : {}),
-                ...(this.opts.legacyBasePages ? { legacyBasePages: 1 as const } : {}),
-                ...(this.opts.outputJournalPageFrames === 2048
+                ...(this.opts.outputJournal && this.opts.historyView
+                  ? { historyView: 1 as const }
+                  : {}),
+                ...(this.opts.outputJournal && this.opts.legacyBasePages
+                  ? { legacyBasePages: 1 as const }
+                  : {}),
+                ...(this.opts.outputJournal && this.opts.outputJournalPageFrames === 2048
                   ? { outputJournalPageFrames: 2048 as const }
                   : {}),
               },

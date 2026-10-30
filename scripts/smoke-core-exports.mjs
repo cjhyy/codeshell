@@ -35,6 +35,9 @@ assert.equal(typeof publicApi.createServer, "function");
 // internal-only value (`BUILTIN_CATALOG`) even though the separation was
 // correct and the four source-level contract tests passed.
 const hostOnlySamples = [
+  "configuredTextModelSnapshot",
+  "readConfiguredTextModelSource",
+  "resolveConfiguredTextModel",
   "McpProbeConnectionError",
   "createMcpProbeConnection",
   "listSessionEntries",
@@ -140,6 +143,16 @@ assert.equal("Arena" in internalApi, false);
 // Include the already-exported process-launch and missed-cron contracts;
 // the compiled declaration pin must describe the current Host surface.
 const expectedInternalTypeExports = [
+  "ConfiguredTextModelIntent",
+  // Existing Host memory and output-recovery contracts (already exported by the checked base).
+  "MemoryOrchestratorOptions",
+  "OutputHistoryComparison",
+  "OutputHistoryRecoveryAcceptance",
+  "OutputHistoryRecoveryAuthority",
+  "OutputHistoryRecoveryEvidence",
+  "OutputHistoryRecoveryPlan",
+  "OutputHistoryRecoveryReason",
+  "OutputHistoryRecoveryResult",
   // Main's model tracing and Link authority contracts remain Host-only.
   "ExternalModelTraceInput",
   "LegacyLinkCleanupEntry",

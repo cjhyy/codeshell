@@ -434,3 +434,14 @@ test("history display requests carry only bounded selected-view references", () 
     expect(parseMobileClientEvent({ ...detail, cursor: value })).toBeUndefined();
   }
 });
+
+test("phone native choice cannot supply the private Worker proof or a pool model", () => {
+  const base = { type: "chat.send", text: "owned", nativeConnectionId: "text" };
+  expect(
+    parseMobileClientEvent({
+      ...base,
+      configuredModel: { id: "text", expectedFingerprint: "0".repeat(64) },
+    }),
+  ).toBeUndefined();
+  expect(parseMobileClientEvent({ ...base, model: "pool-key" })).toBeUndefined();
+});

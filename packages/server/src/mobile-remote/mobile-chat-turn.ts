@@ -23,6 +23,10 @@ export interface DispatchMobileChatTurnInput {
   attachments?: MobileImageAttachment[];
   clientMessageId?: string;
   modelTraceSource?: string;
+  /** Host-resolved per-run model pool key; never a global model setting. */
+  model?: string;
+  configuredModel?: import("@cjhyy/code-shell-core/internal").ConfiguredTextModelIntent;
+  workspaceProfile?: string;
   permissionMode?: PermissionMode;
   runId: string;
   bridge: MobileRunBridge;
@@ -98,6 +102,9 @@ export async function dispatchMobileChatTurn(
     id: input.runId,
     params: {
       task: text,
+      ...(input.model ? { model: input.model } : {}),
+      ...(input.configuredModel ? { configuredModel: { ...input.configuredModel } } : {}),
+      ...(input.workspaceProfile ? { workspaceProfile: input.workspaceProfile } : {}),
       ...(input.modelTraceSource && /^panel:[a-z][a-z0-9-]{0,63}$/.test(input.modelTraceSource)
         ? { modelTraceSource: input.modelTraceSource }
         : {}),

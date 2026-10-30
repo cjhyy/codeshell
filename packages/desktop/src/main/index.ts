@@ -1011,6 +1011,7 @@ const mobileUploads = new MobileUploadService({
   rootDir: resolve(app.getPath("userData"), "mobile-remote", "uploads"),
 });
 const mobileRemote = new RemoteHostManager({
+  nativeModelSelection: true,
   outputJournal: true,
   legacyBasePages: true,
   outputJournalPageFrames: 2048,

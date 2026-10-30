@@ -1,5 +1,7 @@
+import { resolveConfiguredTextModel } from "./configured-text-model.js";
+import { ChatSession } from "../protocol/chat-session.js";
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Engine } from "./engine.js";
@@ -25,6 +27,252 @@ function fixture() {
 }
 
 describe("shared current model configuration", () => {
+  test("configured text intents use each Session's fresh workspace without mutating the shared boot pool", async () => {
+    const a = fixture(),
+      b = fixture(),
+      home = fixture();
+    const previousHome = process.env.HOME;
+    const previousKey = process.env.OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = "owned-global-key-must-not-leak";
+    process.env.HOME = home;
+    const registry = new ToolRegistry({ builtinTools: [] });
+    const runtime = new EngineRuntime({
+      modelPool: new ModelPool(),
+      toolRegistry: registry,
+      settings: new SettingsManager(a, "full"),
+      mcpPool: new MCPManager(registry),
+      costTracker: {} as never,
+      usageStorageDir: join(a, "usage"),
+    });
+    mkdirSync(join(home, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(home, ".code-shell", "model-catalog.user.json"),
+      JSON.stringify([
+        {
+          id: "owned-scoped",
+          tag: "text",
+          adapterKind: "openai",
+          protocol: "openai-compat",
+          displayName: "owned",
+          description: "owned",
+          defaultBaseUrl: "http://owned-a.invalid/v1",
+          needsKey: false,
+          modelPresets: [
+            {
+              value: "shared-model",
+              params: [
+                {
+                  name: "temperature",
+                  control: "number",
+                  min: 0,
+                  max: 2,
+                  wire: { field: "temperature" },
+                },
+              ],
+            },
+          ],
+        },
+      ]),
+    );
+    const save = (
+      cwd: string,
+      endpoint: string,
+      temperature: number,
+      id = "shared",
+      keyless = false,
+    ) => {
+      mkdirSync(join(cwd, ".code-shell"), { recursive: true });
+      writeFileSync(
+        join(cwd, ".code-shell", "settings.json"),
+        JSON.stringify({
+          credentials: keyless
+            ? []
+            : [{ id: "owned-key", catalogId: "owned-scoped", apiKey: "owned-fixture-only" }],
+          modelConnections: [
+            {
+              id,
+              credentialId: keyless ? undefined : "owned-key",
+              catalogId: "owned-scoped",
+              tag: "text",
+              model: "shared-model",
+              baseUrl: endpoint,
+              paramValues: { temperature },
+            },
+          ],
+          defaults: { text: id },
+        }),
+      );
+    };
+    save(a, "http://owned-a.invalid/v1", 0.1);
+    save(b, "http://owned-b.invalid/v1", 0.2);
+    runtime.reloadModelsFromSettings();
+    const boot = structuredClone(runtime.modelPool.list());
+    const requests: { url: string; body: any; authorization: string | null }[] = [];
+    let pause: (() => Promise<void>) | undefined;
+    const fetch: NonNullable<import("../types.js").ClientDefaults["fetch"]> = async (
+      input,
+      init,
+    ) => {
+      const url = String(input);
+      if (
+        ![
+          "http://owned-a.invalid/v1/chat/completions",
+          "http://owned-b.invalid/v1/chat/completions",
+        ].includes(url)
+      )
+        throw new Error("non-owned request denied");
+      requests.push({
+        url,
+        body: JSON.parse(String(init?.body)),
+        authorization: new Headers(init?.headers).get("authorization"),
+      });
+      await pause?.();
+      return new Response(
+        'data: {"choices":[{"index":0,"delta":{"content":"owned ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    };
+    const engines: Engine[] = [];
+    const make = (llm = runtime.modelPool.resolveLLMConfig()!, child = false) => {
+      const engine = new Engine({
+        runtime,
+        llm,
+        cwd: b,
+        sessionStorageDir: join(b, "sessions"),
+        enabledBuiltinTools: [],
+        headless: true,
+        isSubAgent: child,
+        maxTurns: 2,
+        clientDefaults: { fetch, retryMaxAttempts: 1 },
+      });
+      (engine as any).hooks.clear();
+      engines.push(engine);
+      return engine;
+    };
+    const intent = (id = "shared") => ({
+      id,
+      expectedFingerprint: resolveConfiguredTextModel(b, id).fingerprint,
+    });
+    const state = () =>
+      JSON.parse(readFileSync(join(b, "sessions", "scope-session", "state.json"), "utf8"));
+    const run = (engine: Engine, input: string, configuredModel?: ReturnType<typeof intent>) =>
+      engine.run("owned fixture request", {
+        sessionId: "scope-session",
+        clientMessageId: input,
+        configuredModel,
+      });
+    try {
+      let engine = make();
+      expect(await run(engine, "first", intent())).toMatchObject({ reason: "completed" });
+      expect(requests.at(-1)).toMatchObject({
+        url: "http://owned-b.invalid/v1/chat/completions",
+        body: { model: "shared-model", temperature: 0.2 },
+      });
+      expect(state()).toMatchObject({
+        provider: "openai",
+        model: "shared-model",
+        modelConnectionId: "shared",
+      });
+      expect(requests.at(-1)?.authorization).toBe("Bearer owned-fixture-only");
+      expect(engine.getConfig().llm.modelKey).toBeUndefined();
+      const child = make(engine.getConfig().llm, true);
+      expect((await child.run("owned child request")).reason).toBe("completed");
+      expect(requests.at(-1)?.url).toContain("owned-b.invalid");
+      save(b, "http://owned-b.invalid/v1", 0.7, "shared", true);
+      await run(engine, "fresh-params");
+      expect(requests.at(-1)?.body.temperature).toBe(0.7);
+      expect(requests.at(-1)?.authorization).toBe("Bearer codeshell-keyless");
+      await engine.dispose();
+      engine = make();
+      await run(engine, "cold");
+      expect(requests.at(-1)?.url).toContain("owned-b.invalid");
+      const before = state(),
+        count = requests.length,
+        stale = intent();
+      save(b, "http://owned-b.invalid/v1", 0.9);
+      await expect(run(engine, "stale", stale)).rejects.toThrow("changed");
+      expect(state()).toEqual(before);
+      expect(requests).toHaveLength(count);
+      save(b, "http://owned-b.invalid/v1", 0.9, "replacement");
+      expect((await run(engine, "first", stale)).reason).toBe("completed");
+      expect(requests).toHaveLength(count);
+      await engine.dispose();
+      engine = make();
+      await expect(run(engine, "deleted")).rejects.toThrow("unavailable");
+      expect(requests).toHaveLength(count);
+      expect(state()).toEqual(before);
+      await run(engine, "replacement", intent("replacement"));
+      expect(state().modelConnectionId).toBe("replacement");
+      const originalContext = engine.buildToolContext.bind(engine);
+      let switchBeforeClaim = true;
+      engine.buildToolContext = (...args) => {
+        const context = originalContext(...args);
+        if (switchBeforeClaim) {
+          switchBeforeClaim = false;
+          engine.switchModel("shared", { persist: false });
+        }
+        return context;
+      };
+      await run(engine, "queued-switch-still-b", intent("replacement"));
+      expect(requests.at(-1)?.url).toContain("owned-b.invalid");
+      expect(state().modelConnectionId).toBe("replacement");
+      engine.buildToolContext = originalContext;
+      await run(engine, "ordinary-switch");
+      expect(requests.at(-1)?.url).toContain("owned-a.invalid");
+      expect(state().modelConnectionId).toBeUndefined();
+      await run(engine, "ordinary-next");
+      expect(requests.at(-1)?.url).toContain("owned-a.invalid");
+      switchBeforeClaim = true;
+      engine.buildToolContext = (...args) => {
+        const context = originalContext(...args);
+        if (switchBeforeClaim) {
+          switchBeforeClaim = false;
+          engine.switchModel("shared", { persist: false });
+        }
+        return context;
+      };
+      await run(engine, "defer-before-new-selection", intent("replacement"));
+      engine.buildToolContext = originalContext;
+      await run(engine, "new-selection-replaces-old-pending", intent("replacement"));
+      await run(engine, "continue-new-selection");
+      expect(requests.at(-1)?.url).toContain("owned-b.invalid");
+      expect(state().modelConnectionId).toBe("replacement");
+      expect(
+        requests.every((item) => item.authorization !== "Bearer owned-global-key-must-not-leak"),
+      ).toBe(true);
+      expect(runtime.modelPool.list()).toEqual(boot);
+      expect(runtime.modelPool.get()?.key).toBe("shared");
+      // The new explicit intent cannot replace a running or queued turn's immutable selection.
+      const chat = new ChatSession({ id: "scope-session", engine });
+      let release!: () => void;
+      const waiting = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      pause = () => waiting;
+      const first = chat.enqueueTurn("owned first concurrent", {
+        clientMessageId: "concurrent-a",
+        configuredModel: intent("replacement"),
+      });
+      await expect(
+        chat.enqueueTurn("owned second concurrent", {
+          clientMessageId: "concurrent-b",
+          configuredModel: { id: "shared", expectedFingerprint: "0".repeat(64) },
+        }),
+      ).rejects.toThrow("cannot be queued");
+      release();
+      await first;
+      pause = undefined;
+      expect(requests.at(-1)?.url).toContain("owned-b.invalid");
+      expect(state().clientMessageId).toBe("concurrent-a");
+    } finally {
+      for (const engine of engines) await engine.dispose();
+      await runtime.close();
+      process.env.HOME = previousHome;
+      if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
+      else process.env.OPENAI_API_KEY = previousKey;
+    }
+  });
+
   test("an inherited child/SDK snapshot does not require ownership of the parent's pool", async () => {
     const cwd = fixture();
     const pool = new ModelPool([

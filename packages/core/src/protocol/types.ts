@@ -168,6 +168,8 @@ export interface RunParams {
    * request to a worker that has not been spawned yet.
    */
   model?: string;
+  /** Host-resolved configured text connection, immutable for this run. */
+  configuredModel?: import("../engine/configured-text-model.js").ConfiguredTextModelIntent;
   /**
    * Workspace trust for this run's project (`cwd`), asserted by the host
    * (desktop main from its trust-store) — never by the renderer. When false,

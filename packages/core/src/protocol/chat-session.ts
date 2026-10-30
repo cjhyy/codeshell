@@ -24,6 +24,8 @@ export interface PendingApprovalEntry {
 }
 
 export interface TurnOpts {
+  /** Host-resolved configured text connection, immutable for this run. */
+  configuredModel?: import("../engine/configured-text-model.js").ConfiguredTextModelIntent;
   /** Working directory override for this turn. If omitted, Engine uses its
    *  configured cwd. */
   cwd?: string;
@@ -172,6 +174,10 @@ export class ChatSession {
   }
 
   enqueueTurn(task: string, opts: TurnOpts): Promise<EngineResult> {
+    if (opts.configuredModel && this.isBusy())
+      return Promise.reject(
+        new Error("Session is busy; a configured model selection cannot be queued"),
+      );
     this.lastActivityAt = Date.now();
     // The user (or a wakeup the guard already let through) is starting a turn —
     // clear the post-Stop suppression so future background-job completions
@@ -182,6 +188,7 @@ export class ChatSession {
         task,
         opts: {
           ...opts,
+          ...(opts.configuredModel ? { configuredModel: { ...opts.configuredModel } } : {}),
           ...(opts.toolAllowlist !== undefined ? { toolAllowlist: [...opts.toolAllowlist] } : {}),
           ...(opts.skillAllowlist !== undefined
             ? { skillAllowlist: [...opts.skillAllowlist] }
@@ -521,6 +528,7 @@ export class ChatSession {
         );
       };
       const result = await this.engine.run(next.task, {
+        configuredModel: next.opts.configuredModel,
         cwd: next.opts.cwd,
         workspaceContext: next.opts.workspaceContext,
         sessionId: this.id,

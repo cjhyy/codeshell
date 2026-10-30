@@ -1,4 +1,5 @@
 /** Protocol request routing and domain-neutral ingress validation. */
+import { isConfiguredTextModelIntent } from "../engine/configured-text-model.js";
 import type { ExtensionQueryHandler } from "../tool-system/capability-module.js";
 import type { Transport } from "./transport.js";
 import { initializeResult } from "./initialize.js";
@@ -84,6 +85,11 @@ async function dispatchExtensionRequest(
 }
 
 export function runInputError(params: RunParams): string | null {
+  if (
+    params.configuredModel !== undefined &&
+    (params.model !== undefined || !isConfiguredTextModelIntent(params.configuredModel))
+  )
+    return "configuredModel requires a valid exclusive configured text intent";
   if (typeof params.task !== "string") return "task must be a string";
   if (
     params.sandboxMode !== undefined &&

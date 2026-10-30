@@ -22,6 +22,11 @@ import { CONTRACTS } from "./contracts.js";
 // index.internal.ts. Host-assembly surfaces (installer/marketplace/onboarding/
 // updater) moved here in 0.8.
 const expectedRuntimeExportsByPartition = {
+  configuredTextModels: [
+    "configuredTextModelSnapshot",
+    "readConfiguredTextModelSource",
+    "resolveConfiguredTextModel",
+  ],
   hostSharedServices: ["McpProbeConnectionError", "createMcpProbeConnection", "listSessionEntries"],
   modelTraces: [
     "ModelTraceStore",
@@ -348,6 +353,7 @@ const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).
 // Host-only symbols that must NOT leak back onto the public root barrel.
 // (Representative sample across the removed @internal partitions.)
 const hostOnlySamples = [
+  ...expectedRuntimeExportsByPartition.configuredTextModels,
   "USER_DECISION_TIMEOUT_MS",
   "McpProbeConnectionError",
   "createMcpProbeConnection",
