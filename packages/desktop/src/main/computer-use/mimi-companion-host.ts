@@ -86,7 +86,9 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     now: () => Date.now(),
     setTimer: (run, ms) => setTimeout(run, ms),
     clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
-    suppressed: () => humanActive || chatting,
+    // Chatting with Mimi holds foreground input only (input-gate); the work the
+    // chat asked for is still performed. Only touching the character yields.
+    suppressed: () => humanActive,
     place: placeAt,
     beginGesture: () => {
       cancelPreview();
@@ -127,7 +129,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     const bounds = window && !window.isDestroyed() ? window.getContentBounds() : display.bounds;
     const placement = stagePlacement(bounds, size, {
       target,
-      avoidRect: humanActive || chatting || pinned ? undefined : avoidRect,
+      avoidRect: humanActive || pinned ? undefined : avoidRect,
       window: scene.window,
       prefer: options.appProfiles?.byId(scene.appId)?.stage.perch,
       ...(target && scene.element && scene.elementFrame
@@ -139,7 +141,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       enabled,
       visible:
         (enabled || preview) &&
-        (!choreographer.capturing || humanActive || chatting) &&
+        (!choreographer.capturing || humanActive) &&
         !placement.obstructed &&
         !disposed,
       appearance: "mimi-sprite",
@@ -150,9 +152,8 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       // it, it keeps the size they chose.
       size: (!anchor && placement.size) || size,
       windowOrigin: { x: bounds.x, y: bounds.y },
-      humanActive: humanActive || chatting,
-      avoidInput:
-        clearsFieldAtOnce(avoidRect, scene.element) && !humanActive && !chatting && !pinned,
+      humanActive,
+      avoidInput: clearsFieldAtOnce(avoidRect, scene.element) && !humanActive && !pinned,
       pinned,
       ...(handoff ? { handoff: { app: handoff.app } } : {}),
       ...(target && scene.element ? { element: scene.element } : {}),
@@ -396,7 +397,6 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     if (chatRelease) clearTimeout(chatRelease);
     chatRelease = undefined;
     if (chatting) {
-      stopPresentation();
       options.gate.holdForegroundForChat();
     } else {
       // Leaving the chat releases foreground input only after it stays closed.
@@ -535,7 +535,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   ipcMain.on("mimiCompanion:move", onMove);
   ipcMain.on("mimiCompanion:follow", onFollow);
   async function startChat(request?: { prompt: string }) {
-    pinned = true;
+    // Opening the chat is not a placement: only a drag pins the character.
     chatting = options.holdForChat !== false;
     if (chatting) {
       if (chatRelease) clearTimeout(chatRelease);
