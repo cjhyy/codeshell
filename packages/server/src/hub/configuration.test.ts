@@ -157,6 +157,17 @@ describe("Hub workspace configuration", () => {
       JSON.parse('{"__proto__":true}'),
     ])
       expect(validateParameterPatch(preset, patch)).toBeUndefined();
+    for (const control of [undefined, "future-scalar"]) {
+      const unsupported = {
+        value: "synthetic",
+        params: [{ name: "max_tokens", control, default: 512 }],
+      } as unknown as Parameters<typeof modelParameters>[0];
+      expect(modelParameters(unsupported)).toEqual([]);
+      expect(publicParameterValues(unsupported, { max_tokens: 512 })).toEqual({});
+      expect(unavailableParameters(unsupported, { max_tokens: 512 })).toEqual([]);
+      expect(validateParameterPatch(unsupported, { max_tokens: 1024 })).toBeUndefined();
+      expect(validateParameterPatch(unsupported, { max_tokens: null })).toBeUndefined();
+    }
   });
 
   test("safe scalar edits require CAS and retain every untouched hidden parameter and credential", async () => {
