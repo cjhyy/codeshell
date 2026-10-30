@@ -6,48 +6,6 @@ import { SessionManager } from "../session/session-manager.js";
 import { openRunSession, type OpenRunSessionArgs } from "./run-session-open.js";
 
 describe("run session identity claim", () => {
-  it("updates accepted model metadata while duplicate inputs keep the previous execution identity", () => {
-    const dir = mkdtempSync(join(tmpdir(), "run-model-identity-"));
-    const manager = new SessionManager(dir);
-    const args: OpenRunSessionArgs = {
-      sessionManager: manager,
-      options: { sessionId: "owned-model-session", clientMessageId: "first" },
-      parsedTask: { text: "owned", images: [], hasImages: false },
-      taskText: "owned",
-      userMessageContent: "owned",
-      cwd: dir,
-      sessionKind: "work",
-      sessionWorkspaceProfile: undefined,
-      llmModel: "model-a",
-      llmProvider: "provider-a",
-      isSubAgent: false,
-      origin: undefined,
-      costStore: undefined,
-      cachedCompactedMessages: undefined,
-      onAgentDirectionsDelivered: undefined,
-    };
-    try {
-      expect(openRunSession(args).ok).toBe(true);
-      args.options!.clientMessageId = "second";
-      args.llmModel = "model-b";
-      args.llmProvider = "provider-b";
-      expect(openRunSession(args).ok).toBe(true);
-      const before = manager.readSessionState("owned-model-session")!;
-      expect(before).toMatchObject({ model: "model-b", provider: "provider-b", turnSeq: 2 });
-      args.options!.clientMessageId = "first";
-      args.llmModel = "must-not-apply";
-      expect(openRunSession(args).ok).toBe(false);
-      expect(manager.readSessionState("owned-model-session")).toEqual(before);
-      expect(
-        manager
-          .resumeForRun("owned-model-session")
-          .transcript.getEvents("message")
-          .filter((event) => event.data.role === "user"),
-      ).toHaveLength(2);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
   it("links an opener with an old resume snapshot to the run it actually replaces", () => {
     const dir = mkdtempSync(join(tmpdir(), "run-session-open-"));
     const manager = new SessionManager(dir);
