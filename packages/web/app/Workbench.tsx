@@ -108,6 +108,8 @@ export function Workbench({
     session,
   } = controller;
   const hub = controller.workspaceApi;
+  const currentController = React.useRef(controller);
+  currentController.current = controller;
   const hostLabel = controller.host === "desktop" ? "桌面" : "服务端";
   const [devicesOpen, setDevicesOpen] = React.useState(false);
   const historyFocus = useHistoryActionFocus();
@@ -717,6 +719,54 @@ export function Workbench({
             <span>{hostLabel}</span>
           </span>
         </header>
+        {hub &&
+        (view === "panels" || view === "panel") &&
+        controller.selectProject &&
+        controller.projects?.length ? (
+          <label className="panel-project-switcher">
+            <span>当前项目</span>
+            <select
+              aria-label="切换面板项目"
+              value={controller.selectedProjectId ?? ""}
+              disabled={connection !== "open"}
+              title={
+                controller.projects.find(
+                  (project) => (project.id ?? project.path) === controller.selectedProjectId,
+                )?.name ?? workspaceName
+              }
+              onChange={(event) => {
+                const selected = event.target.value;
+                if (!selected || selected === controller.selectedProjectId) return;
+                requestNavigation(() => {
+                  const current = currentController.current;
+                  if (
+                    current.connection !== "open" ||
+                    !current.selectProject ||
+                    selected === current.selectedProjectId ||
+                    !current.projects?.some((project) => (project.id ?? project.path) === selected)
+                  )
+                    return;
+                  navigation.replace({ view: "panels" });
+                  current.selectProject(selected);
+                  closeMobileSidebar();
+                });
+              }}
+            >
+              {!controller.projects.some(
+                (project) => (project.id ?? project.path) === controller.selectedProjectId,
+              ) ? (
+                <option value={controller.selectedProjectId ?? ""} disabled>
+                  {workspaceName}
+                </option>
+              ) : null}
+              {controller.projects.map((project) => (
+                <option key={project.id ?? project.path} value={project.id ?? project.path}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         {workerNote ? <div className="banner">{workerNote}</div> : null}
         {replayNote ? <div className="banner">{replayNote}</div> : null}
         {error ? (

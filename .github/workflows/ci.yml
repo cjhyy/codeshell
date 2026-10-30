@@ -291,6 +291,8 @@ jobs:
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-project-workbench-back-browser.mjs --development
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-project-workbench-back-browser.mjs --immediate-configuration
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-project-workbench-back-browser.mjs --development --immediate-configuration
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-panel-project-switcher-browser.mjs
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-panel-project-switcher-browser.mjs --development
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-settings-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-skills-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-model-actions-browser.mjs
