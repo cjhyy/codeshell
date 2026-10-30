@@ -175,8 +175,11 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       const text = (event.text as string) ?? "";
       const key = agentKey(event);
       const liveId = s.liveByAgent[key];
-      const live = liveId && s.items.find((i) => i.id === liveId && i.kind === "assistant");
-      if (live) {
+      const live = s.items.find(
+        (i): i is Extract<ChatItem, { kind: "assistant" }> =>
+          i.id === liveId && i.kind === "assistant",
+      );
+      if (live && !live.done) {
         return {
           ...s,
           run: event.agentId ? s.run : "running",
@@ -195,6 +198,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         reasoning: "",
         done: false,
         agentId: event.agentId as string | undefined,
+        ...(live?.messageId ? { messageId: live.messageId } : {}),
       };
       return {
         ...s2,
@@ -208,7 +212,11 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       const text = (event.text as string) ?? "";
       const key = agentKey(event);
       const liveId = s.liveByAgent[key];
-      if (liveId && s.items.some((i) => i.id === liveId && i.kind === "assistant")) {
+      const live = s.items.find(
+        (i): i is Extract<ChatItem, { kind: "assistant" }> =>
+          i.id === liveId && i.kind === "assistant",
+      );
+      if (live && !live.done) {
         return {
           ...s,
           run: event.agentId ? s.run : "running",
@@ -225,6 +233,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         reasoning: text,
         done: false,
         agentId: event.agentId as string | undefined,
+        ...(live?.messageId ? { messageId: live.messageId } : {}),
       };
       return {
         ...s2,
@@ -261,10 +270,20 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         const { [call.id]: _used, ...restOrphans } = s.orphanResults!;
         orphanResults = Object.keys(restOrphans).length > 0 ? restOrphans : undefined;
       }
+      // External providers may emit a whole turn under one request start.
+      // Seal only this agent's prose at the tool boundary, retaining its
+      // request anchor so later text opens below the tool and tombstones can
+      // still revoke every segment belonging to that provider message.
+      const liveId = s.liveByAgent[agentKey(event)];
+      const items = s.items.map((item) =>
+        item.kind === "assistant" && item.id === liveId && !item.done
+          ? { ...item, done: true }
+          : item,
+      );
       return {
         ...s,
         run: event.agentId ? s.run : "running",
-        items: [...s.items, item],
+        items: [...items, item],
         orphanResults,
       };
     }

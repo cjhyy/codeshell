@@ -12,14 +12,16 @@ const require = createRequire(path.join(repo, "packages/desktop/package.json"));
 const { build } = require("esbuild"),
   { chromium } = require("playwright");
 const output = await mkdtemp(path.join(tmpdir(), "codeshell-history-details-"));
-const source = `import React from 'react';import{createRoot}from'react-dom/client';import{Workbench}from'./Workbench';
+const source = `import React from 'react';import{createRoot}from'react-dom/client';import{Workbench}from'./Workbench';import{initialChatState,reduceStream}from'../src/lib/streamReducer';
 const noop=()=>{};window.sends=0;window.earlierCalls=0;window.reloads=0;
-function Fixture(){const[scope,setScope]=React.useState('first');const[live,setLive]=React.useState(0);window.appendLive=()=>setLive(n=>n+1);const[older,setOlder]=React.useState(false),[earlierError,setEarlierError]=React.useState('');window.switchScope=()=>setScope('second');
-const items=[...(older?[{kind:'user',id:'earlier',text:'Earlier record '+'owned '.repeat(800)}]:[]),{kind:'user',id:'user',text:'Original task',attachments:[{name:'owned.txt',size:4}]},
+function orderedHistory(){let state=initialChatState();for(const event of [{type:'user_message',text:'Ordered request'},{type:'stream_request_start',turnNumber:1,messageId:'owned-request'},{type:'text_delta',text:'Before first tool.'},{type:'tool_use_start',toolCall:{id:'first-tool',toolName:'Bash',args:{}}},{type:'tool_result',result:{id:'first-tool',result:'one'}},{type:'text_delta',text:'Between tools.'},{type:'tool_use_start',toolCall:{id:'second-tool',toolName:'LinkAction',args:{}}},{type:'tool_result',result:{id:'second-tool',result:'two'}},{type:'text_delta',text:'Final first paragraph.\\n'},{type:'text_delta',text:'\\nFinal second paragraph.'},{type:'turn_complete',reason:'completed'}])state=reduceStream(state,event);return state.items;}
+function Fixture(){const[scope,setScope]=React.useState('first');const[live,setLive]=React.useState(0);window.appendLive=()=>setLive(n=>n+1);const[older,setOlder]=React.useState(false),[earlierError,setEarlierError]=React.useState('');const[ordered,setOrdered]=React.useState(false);window.replayOrdered=()=>setOrdered(true);window.switchScope=()=>setScope('second');
+const originalItems=[...(older?[{kind:'user',id:'earlier',text:'Earlier record '+'owned '.repeat(800)}]:[]),{kind:'user',id:'user',text:'Original task',attachments:[{name:'owned.txt',size:4}]},
 ...Array.from({length:4},(_,i)=>({kind:'tool',id:'tool-'+i,name:'Read '+i,done:true,summary:'Owned step '+i,activityGroupKey:scope+'/run/turn/main',detailRef:scope+'/tool-'+i})),
 {kind:'tool',id:'error',name:'Failed step',done:true,error:true,summary:'Visible failure',detailRef:scope+'/error'},
 {kind:'tool',id:'running',name:'Running step',done:false,args:{query:'still active'}},
 {kind:'assistant',id:'answer',text:'Original complete answer.',reasoning:'',reasoningDetailRef:scope+'/reasoning',done:true},{kind:'assistant',id:'long',text:'Large text preview',textDetailRef:scope+'/text',reasoning:'',done:true},...Array.from({length:live},(_,i)=>({kind:'assistant',id:'live-'+i,text:'Fresh output '+i,done:true}))];
+const items=ordered?orderedHistory():originalItems;
 const controller={panelSessionId:undefined,host:'desktop',workspaceApi:false,connection:'open',activeId:scope,chat:{items,run:'running'},sessions:[],workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:'owned',title:'Owned history',configuration:null,configurationVersion:0,sessionsVersion:0,draft:'Preserved draft',files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running:true,localDrafts:[],approvals:[{id:'approval'}],approvalCount:()=>1,approvalContent:<div role='status'>Approval remains visible</div>,error:'',clearError:noop,setDraft:noop,removeFile:noop,selectSession:noop,newSession:noop,send:()=>{window.sends++;return false},stop:noop,addFiles:noop,refreshSessions:noop,refreshConfiguration:noop,onAuthLost:noop,
 historyHasEarlier:!older,historyEarlierError:earlierError,loadEarlierHistory:async()=>{window.earlierCalls++;if(window.earlierCalls===1){setEarlierError('Owned earlier retry');throw new Error('Owned earlier retry');}setOlder(true);setEarlierError('');},reloadHistory:()=>window.reloads++,loadHistoryDetail:async ref=>{const response=await fetch('/detail?ref='+encodeURIComponent(ref));if(!response.ok)throw new Error('Owned detail temporarily unavailable');return response.json();}};
 return <Workbench controller={controller}/>};createRoot(document.getElementById('root')).render(<React.StrictMode><Fixture/></React.StrictMode>);`;
@@ -261,6 +263,39 @@ try {
     );
     assert.equal(await page.evaluate(() => window.sends), 0);
     await page.screenshot({ path: path.join(output, `${theme}-grouped-history.png`) });
+    const priorReads = reads.length;
+    await page.evaluate(() => window.replayOrdered());
+    await page.getByText("Final second paragraph.", { exact: true }).waitFor();
+    const ordered = await page.evaluate(() => {
+      const rows = [...document.querySelectorAll(".transcript > .msg")];
+      const last = rows.at(-1),
+        paragraphs = [...last.querySelectorAll(".message-content p")];
+      return {
+        kinds: rows.map((row) =>
+          row.classList.contains("tool")
+            ? "tool"
+            : row.classList.contains("assistant")
+              ? "assistant"
+              : "user",
+        ),
+        paragraphs: paragraphs.map((p) => p.textContent),
+        gap:
+          paragraphs[1].getBoundingClientRect().top - paragraphs[0].getBoundingClientRect().bottom,
+      };
+    });
+    assert.deepEqual(ordered.kinds, [
+      "user",
+      "assistant",
+      "tool",
+      "assistant",
+      "tool",
+      "assistant",
+    ]);
+    assert.deepEqual(ordered.paragraphs, ["Final first paragraph.", "Final second paragraph."]);
+    assert.ok(ordered.gap >= 9, "existing paragraph margins remain visible");
+    assert.equal(reads.length, priorReads);
+    assert.equal(await page.evaluate(() => window.sends), 0);
+    await page.screenshot({ path: path.join(output, `${theme}-ordered-paragraphs.png`) });
     reports.push({
       theme,
       reads,
@@ -268,6 +303,9 @@ try {
       retiredOldResponse: true,
       fullTextOnDemand: true,
       earlierAnchorPreserved: true,
+      authoritativeOrder: ordered.kinds,
+      explicitParagraphs: ordered.paragraphs.length,
+      paragraphGap: ordered.gap,
       modelCalls: 0,
     });
     await context.close();

@@ -186,6 +186,46 @@ function withoutRefs(item: MobileHistoryItem): unknown {
   return copy;
 }
 
+test("verified journal projection preserves external text/tool segments and complete paragraph bytes without source writes", async () => {
+  const finalText = "First final paragraph.\n\n" + "Second paragraph ".repeat(400);
+  const f = fixture(
+    [
+      input("ordered-input"),
+      { type: "stream_request_start", turnNumber: 1, messageId: "external-request" },
+      { type: "text_delta", text: "Before tool." },
+      start("ordered-tool", { command: "owned" }),
+      result("ordered-tool", "done"),
+      { type: "text_delta", text: finalText },
+      end,
+    ],
+    { producer: true },
+  );
+  const files = [
+    "state.json",
+    "transcript.jsonl",
+    "output-journal.jsonl",
+    "output-journal-head.json",
+  ];
+  const before = files.map((name) => readFileSync(join(f.root, "history", name)));
+  await f.select();
+  const view = ok(await f.view());
+  expect(view.verifiedInputIds).toEqual(["ordered-input"]);
+  expect(view.items.map((item) => item.kind)).toEqual(["user", "assistant", "tool", "assistant"]);
+  const final = view.items.at(-1)!;
+  expect(final.kind).toBe("assistant");
+  if (final.kind !== "assistant" || !final.textDetailRef)
+    throw new Error("Missing exact final-text detail");
+  const detail = await f.detail(final.textDetailRef);
+  expect(detail.status).toBe("ok");
+  if (detail.status !== "ok") throw new Error("Missing detail body");
+  expect(detail.complete).toBe(true);
+  expect(JSON.parse(Buffer.from(detail.data, "base64").toString("utf8")).text).toBe(finalText);
+  expect(view.through).toBe(f.outputCursor);
+  files.forEach((name, index) =>
+    expect(readFileSync(join(f.root, "history", name))).toEqual(before[index]),
+  );
+});
+
 test("8.5 MiB/513 tools: small first page, complete earlier reconstruction and no eager detail body", async () => {
   const events: StreamEvent[] = [
     input("old-user"),
