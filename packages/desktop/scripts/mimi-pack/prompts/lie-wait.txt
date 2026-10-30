@@ -1,0 +1,13 @@
+Create one horizontal animation strip for the desktop pet `mimi`, move `lie-wait`.
+
+Use the attached canonical base and style sheet for identity. Use the attached layout guide only for slot count, spacing, centering, and padding; do not draw the guide.
+
+Output exactly 6 full-body frames in one left-to-right row on flat pure green #00FF00. Treat the row as 6 invisible equal-width slots (each 192x208 in proportion): one centered complete pose per slot, evenly spaced, with no overlap, clipping, empty slots, labels, or borders.
+
+Identity: same pet in every frame: Mimi, a cheerful black-and-white Papillon with enormous feathered ears, white chest ruff, plumed white tail, and a tiny red square paw-print patch on the cheek. Preserve silhouette, face, proportions, markings, palette, material, style.
+Style: Soft painterly mascot illustration matching the attached Mimi sprites exactly: same line quality, fur texture, shading, palette and proportions.
+Animation continuity: keep apparent pet scale and baseline stable within the row. Move the pose within the slot instead of redrawing the pet larger or smaller.
+
+Move: Lying on a ledge while waiting: the bottom edge of each slot is the top of a window. Mimi lies on her belly along the ledge, chin resting on crossed front paws, looking slightly down and forward, ears relaxed. Across frames: slow tail wag, one blink, a small ear twitch. Belly and paws stay flat on the slot's bottom edge in every frame; frames 1 and 6 nearly identical.
+
+Clean extraction: crisp opaque edges, safe padding, no scenery, ledge, keyboard, text, guide marks, checkerboard, shadows, glows, motion blur, speed lines, dust, detached effects, stray pixels, or green inside the pet.

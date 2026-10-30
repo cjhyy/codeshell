@@ -33,6 +33,8 @@ const cwd = join(scratch, "project"),
 const bytes = Buffer.from("owned synthetic video download bytes\n".repeat(4096));
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 let api, manager, browser, page;
+let phase = "setup",
+  inspectionInput;
 const errors = [],
   blocked = [],
   calls = [],
@@ -208,6 +210,8 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
   });
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
     acceptDownloads: true,
   });
   await context.route("**/*", (route) => {
@@ -226,6 +230,45 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
     { name: "session", value: "fixture", url: origin, sameSite: "Lax", httpOnly: true },
   ]);
   page = await context.newPage();
+  await page.addInitScript(() => {
+    const events = (window.__consumerInputEvents = []);
+    const record = (kind, event) => {
+      const button = document.querySelector("#inspect-button");
+      const rect = button?.getBoundingClientRect();
+      events.push({
+        at: Date.now(),
+        kind,
+        target: event?.target?.id,
+        trusted: event?.isTrusted,
+        disabled: button?.disabled,
+        x: event?.clientX,
+        y: event?.clientY,
+        rect: rect && [rect.x, rect.y, rect.width, rect.height],
+        focus: document.activeElement?.id,
+        status: document.querySelector("#inspect-status")?.textContent,
+        readiness: document.querySelector("#download-readiness")?.textContent,
+        environment: document.querySelector("#environment-status")?.dataset.state,
+      });
+      if (events.length > 200) events.shift();
+    };
+    for (const kind of [
+      "input",
+      "focusin",
+      "focusout",
+      "pointerdown",
+      "pointerup",
+      "mousedown",
+      "mouseup",
+      "click",
+      "touchstart",
+      "touchend",
+    ])
+      document.addEventListener(kind, (event) => record(kind, event), true);
+    new MutationObserver((records) => {
+      if (records.some((record) => record.target.id === "inspect-button"))
+        record("button-mutation");
+    }).observe(document, { attributes: true, attributeFilter: ["disabled"], subtree: true });
+  });
   page.setDefaultTimeout(30_000);
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("request", (request) => {
@@ -233,7 +276,10 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
   });
   // Exercise the real visible execution confirmation; no bypass of its endpoint.
   await page.addLocatorHandler(
-    page.getByRole("button", { name: "确认执行", exact: true }),
+    page
+      .locator(".panel-host-confirm")
+      .filter({ hasText: bin })
+      .getByRole("button", { name: "确认执行", exact: true }),
     async (button) => {
       approving = true;
       const body = await page
@@ -250,9 +296,80 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
   console.log("consumer: mobile page opened");
   const frame = page.frameLocator("iframe");
   await frame.locator("#url-input").waitFor();
+  await frame.locator('#environment-status[data-state="current"]').waitFor({ state: "attached" });
+  assert.equal(await frame.locator("#form-error").isVisible(), false);
+  assert.equal(await frame.locator("#destination-path").textContent(), cwd);
+  await frame.locator("#choose-directory").click();
+  const directoryConfirmation = page
+    .locator(".panel-host-confirm")
+    .filter({ hasText: "使用服务端下载目录？" });
+  await directoryConfirmation.waitFor();
+  assert.ok((await directoryConfirmation.textContent()).includes(join(cwd, "downloads")));
+  await directoryConfirmation.getByRole("button", { name: "取消", exact: true }).click();
+  await frame.locator("#choose-directory:not(:disabled)").waitFor();
+  assert.equal(await frame.locator("#form-error").isVisible(), false);
+  assert.equal(await frame.locator("#destination-path").textContent(), cwd);
   await frame.locator("#url-input").fill(fixtureUrl);
-  await frame.locator("#inspect-button").click();
-  await frame.locator("#video-title").filter({ hasText: "手机完整下载验证" }).waitFor();
+  // Keep the textarea focused: the phone path must handle the focus/viewport
+  // transition itself. A synthetic desktop mouse click is not a touch gesture.
+  assert.equal(
+    await frame.locator("#url-input").evaluate((input) => input === document.activeElement),
+    true,
+  );
+  const inspectionDeadline = Date.now() + 30_000;
+  const inspectionTimeout = () => {
+    const remaining = inspectionDeadline - Date.now();
+    assert.ok(remaining > 0, `Inspection deadline exceeded during ${phase}`);
+    return remaining;
+  };
+  phase = "inspect readiness";
+  await frame.locator("#inspect-button:not(:disabled)").waitFor({ timeout: inspectionTimeout() });
+  phase = "single focused inspect tap / RPC";
+  await Promise.all([
+    page.waitForRequest(
+      (request) => {
+        if (!request.url().endsWith("/call")) return false;
+        const call = request.postDataJSON();
+        return (
+          call.method === "process.spawn" &&
+          call.params?.args?.includes("--dump-single-json") &&
+          call.params.args.at(-1) === fixtureUrl
+        );
+      },
+      { timeout: inspectionTimeout() },
+    ),
+    // Exactly one trusted touch gesture. Never replay an ambiguous UI action.
+    frame.locator("#inspect-button").tap({ timeout: inspectionTimeout() }),
+  ]);
+  inspectionInput = await frame.locator("body").evaluate(() => window.__consumerInputEvents);
+  for (const kind of ["touchstart", "touchend", "click"]) {
+    const received = inspectionInput.filter(
+      (event) => event.kind === kind && event.target === "inspect-button",
+    );
+    assert.equal(received.length, 1, `Expected one inspect ${kind}`);
+    assert.equal(received[0].trusted, true, `Inspect ${kind} must be a browser event`);
+    assert.equal(received[0].disabled, false, `Inspect ${kind} must target an enabled button`);
+  }
+  const touchStart = inspectionInput.find(
+    (event) => event.kind === "touchstart" && event.target === "inspect-button",
+  );
+  assert.equal(
+    touchStart.focus,
+    "url-input",
+    "The real tap must start with the URL textarea focused",
+  );
+  console.log("consumer: one trusted focused inspect tap and native RPC received");
+  phase = "inspect result";
+  await frame
+    .locator("#video-title")
+    .filter({ hasText: "手机完整下载验证" })
+    .waitFor({ timeout: inspectionTimeout() });
+  await writeFile(
+    join(evidenceDir, "inspection-input.json"),
+    JSON.stringify(inspectionInput, null, 2),
+    { mode: 0o600 },
+  );
+  phase = "download";
   await frame.locator("#download-button").click();
   await frame.locator("#tab-history").click();
   const play = frame
@@ -320,6 +437,10 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
       realNativeService: true,
       visibleExecutionApproval: true,
       mobileHistoryCapture: true,
+      singleTrustedFocusedInspectTap: true,
+      inspectionRpcReceived: true,
+      cancelledDirectoryPreservesProject: true,
+      environmentReadyWithoutAlert: true,
       exactDownloadBytes: bytes.length,
       sha256: digest(bytes),
       unauthorizedDownloadDenied: true,
@@ -335,6 +456,7 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
     console.error(
       JSON.stringify({
         error: String(error),
+        phase,
         host: await page
           .locator("body")
           .innerText()
@@ -345,6 +467,12 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
           .innerText()
           .catch(() => ""),
         calls: calls.slice(-12),
+        hostInputEvents: await page.evaluate(() => window.__consumerInputEvents).catch(() => []),
+        inputEvents: await page
+          .frameLocator("iframe")
+          .locator("body")
+          .evaluate(() => window.__consumerInputEvents)
+          .catch(() => []),
         errors,
         blocked,
       }),

@@ -507,7 +507,7 @@ describe("host subscriptions and recovery", () => {
     ]);
   });
 
-  test("reload retires expired external cards while retaining real pending and native questions", async () => {
+  test("reload retires expired cards while retaining only authoritative pending questions", async () => {
     const read = deferred<ApprovalRequestEnvelope[]>();
     readApprovals = () => read.promise;
     const bucket = bucketKey("project", "pinned-1");
@@ -556,17 +556,173 @@ describe("host subscriptions and recovery", () => {
         (message) => message.kind === "ask_user" && message.requestId === "external-approval-live",
       ),
     ).not.toHaveProperty("answer");
-    expect(
-      messages.find(
-        (message) => message.kind === "ask_user" && message.requestId === "native-question",
-      ),
-    ).not.toHaveProperty("answer");
+    expect(messages).toContainEqual(
+      expect.objectContaining({ requestId: "native-question", answer: "msg.ask.cancelled" }),
+    );
     expect(messages).toContainEqual(
       expect.objectContaining({
         requestId: "external-approval-answered",
         answer: "Original answer",
       }),
     );
+    expect(approveCalls).toEqual([]);
+  });
+
+  test("durable hydration restores an earlier pending native question in its original session", async () => {
+    const bucket = bucketKey("project", "pinned-1");
+    hook = await renderHook(() => {
+      const [transcripts, dispatch] = useReducer(transcriptsReducer, {});
+      params.services.dispatch = dispatch;
+      params.routing.transcriptsRef.current = transcripts;
+      useHostSubscriptions(params);
+    });
+    const question = {
+      ...approval("credential-decision", "__ask_user__"),
+      expiresAt: Date.now() + 60_000,
+    };
+    await act(async () => {
+      listeners.get("onApprovalRequest")!(question);
+      await flushMicrotasks();
+    });
+    expect(params.routing.transcriptsRef.current[bucket]!.messages).toHaveLength(1);
+    for (const token of [1, 2]) {
+      await act(async () => {
+        params.services.dispatch({
+          type: "hydrate_begin",
+          bucket,
+          sessionId: question.sessionId,
+          token,
+        });
+        params.services.dispatch({
+          type: "hydrate_history",
+          bucket,
+          token,
+          state: INITIAL_STATE,
+          history: INITIAL_STATE,
+          goalAtStart: null,
+          outputCursor: "authoritative-prefix",
+        });
+        await flushMicrotasks();
+      });
+      expect(params.routing.transcriptsRef.current[bucket]!.messages).toEqual([
+        expect.objectContaining({
+          kind: "ask_user",
+          requestId: question.requestId,
+          engineSessionId: question.sessionId,
+          question: "Choose a target",
+        }),
+      ]);
+    }
+    expect(
+      params.routing.transcriptsRef.current[params.routing.activeBucketRef.current],
+    ).toBeUndefined();
+    expect(approveCalls).toEqual([]);
+  });
+
+  test("a native resolution on another device wins over hydration and an older pending snapshot", async () => {
+    const read = deferred<ApprovalRequestEnvelope[]>();
+    readApprovals = () => read.promise;
+    const bucket = bucketKey("project", "pinned-1");
+    hook = await renderHook(() => {
+      const [transcripts, dispatch] = useReducer(transcriptsReducer, {});
+      params.services.dispatch = dispatch;
+      params.routing.transcriptsRef.current = transcripts;
+      useHostSubscriptions(params);
+    });
+    const question = approval("answered-on-phone", "__ask_user__");
+    await act(async () => {
+      listeners.get("onApprovalResolved")!({
+        sessionId: question.sessionId,
+        requestId: question.requestId,
+        approved: true,
+        answer: "Read only",
+      });
+      read.resolve([question]);
+      await flushMicrotasks();
+      const cached = {
+        ...INITIAL_STATE,
+        messages: [
+          {
+            kind: "ask_user" as const,
+            id: "cached",
+            requestId: question.requestId,
+            engineSessionId: question.sessionId,
+            question: "Choose a target",
+            multiSelect: false,
+          },
+        ],
+      };
+      params.services.dispatch({
+        type: "hydrate_history",
+        bucket,
+        state: cached,
+        history: cached,
+        goalAtStart: null,
+      });
+      await flushMicrotasks();
+    });
+    expect(params.routing.transcriptsRef.current[bucket]!.messages).toEqual([
+      expect.objectContaining({ requestId: question.requestId, answer: "Read only" }),
+    ]);
+    expect(approveCalls).toEqual([]);
+  });
+
+  test("an expired native deadline is not renewed by restoring its pending snapshot", async () => {
+    const question = {
+      ...approval("expired-credential", "__ask_user__"),
+      expiresAt: Date.now() - 1,
+    };
+    readApprovals = async () => [question];
+    const bucket = bucketKey("project", "pinned-1");
+    hook = await renderHook(() => {
+      const [transcripts, dispatch] = useReducer(transcriptsReducer, {});
+      params.services.dispatch = dispatch;
+      params.routing.transcriptsRef.current = transcripts;
+      useHostSubscriptions(params);
+    });
+    await act(async () => {
+      await flushMicrotasks();
+    });
+    expect(params.routing.transcriptsRef.current[bucket]?.messages ?? []).toEqual([]);
+    expect(approveCalls).toEqual([]);
+  });
+
+  test("bypass does not approve an ordinary tool request whose original deadline expired", async () => {
+    params.permissions.permissionOverrideForBucketRef.current = () => "bypass";
+    readApprovals = async () => [{ ...approval("expired-write"), expiresAt: Date.now() - 1 }];
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      await flushMicrotasks();
+    });
+    expect(approvals.value).toEqual([]);
+    expect(approveCalls).toEqual([]);
+  });
+
+  test("a live native question retires at its absolute deadline without a resolution event", async () => {
+    const bucket = bucketKey("project", "pinned-1");
+    hook = await renderHook(() => {
+      const [transcripts, dispatch] = useReducer(transcriptsReducer, {});
+      params.services.dispatch = dispatch;
+      params.routing.transcriptsRef.current = transcripts;
+      useHostSubscriptions(params);
+    });
+    await act(async () => {
+      listeners.get("onApprovalRequest")!({
+        ...approval("deadline-without-notification", "__ask_user__"),
+        expiresAt: Date.now() + 30,
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 70));
+      await flushMicrotasks();
+    });
+    expect(params.routing.transcriptsRef.current[bucket]!.messages).toEqual([
+      expect.objectContaining({
+        requestId: "deadline-without-notification",
+        answer: "msg.ask.timedOut",
+      }),
+    ]);
     expect(approveCalls).toEqual([]);
   });
 
@@ -610,6 +766,47 @@ describe("host subscriptions and recovery", () => {
         answer: "msg.ask.timedOut",
       }),
     );
+  });
+
+  test("an explicit Core expiry stays timed out after cached history is rehydrated", async () => {
+    const bucket = bucketKey("project", "pinned-1");
+    hook = await renderHook(() => {
+      const [transcripts, dispatch] = useReducer(transcriptsReducer, {});
+      params.services.dispatch = dispatch;
+      params.routing.transcriptsRef.current = transcripts;
+      useHostSubscriptions(params);
+    });
+    await act(async () => {
+      listeners.get("onApprovalResolved")!({
+        requestId: "native-expiry",
+        sessionId: "pinned-1",
+        approved: false,
+        status: "expired",
+      });
+      const cached = {
+        ...INITIAL_STATE,
+        messages: [
+          {
+            kind: "ask_user" as const,
+            id: "cached-native-expiry",
+            requestId: "native-expiry",
+            question: "Old question",
+            multiSelect: false,
+          },
+        ],
+      };
+      params.services.dispatch({
+        type: "hydrate_history",
+        bucket,
+        state: cached,
+        history: cached,
+        goalAtStart: null,
+      });
+      await flushMicrotasks();
+    });
+    expect(params.routing.transcriptsRef.current[bucket]!.messages).toEqual([
+      expect.objectContaining({ requestId: "native-expiry", answer: "msg.ask.timedOut" }),
+    ]);
   });
 
   test("external resolution wins over stale replay while a newer live question remains pending", async () => {
@@ -848,6 +1045,138 @@ describe("host subscriptions and recovery", () => {
       listeners.get("onMobilePermissionMode")!({ sessionId: "pinned-1", mode: "default" });
     });
     expect(overrides.value).toEqual({ [bucketKey("project", "pinned-1")]: "default" });
+  });
+
+  test("a new mobile default is installed before adoption can publish the Desktop bypass default", async () => {
+    const sessionId = "mobile-default";
+    const bucket = bucketKey("project", sessionId);
+    const foreground = bucketKey("project", "pinned-4");
+    const overrides = cell<Record<string, PermissionMode>>({ [foreground]: "bypass" });
+    userSettings = { permissionMode: "bypass" };
+    params.permissions.setPermissionOverrides = overrides.set;
+    params.permissions.permissionOverrideForBucketRef.current = (key) =>
+      overrides.value[key] ?? null;
+    const published: Array<PermissionMode | undefined> = [];
+    params.sessions.setSessionIndices = (action) => {
+      published.push(overrides.value[bucket]);
+      indices.set(action);
+    };
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onMobileSession")!({ ...announcement(sessionId), permissionMode: "default" });
+      await flushMicrotasks();
+    });
+    expect(published).toEqual(["default"]);
+    expect(overrides.value).toEqual({ [foreground]: "bypass", [bucket]: "default" });
+    const request = { ...approval(), sessionId };
+    await act(async () => {
+      listeners.get("onApprovalRequest")!(request);
+      await flushMicrotasks();
+    });
+    expect(approveCalls).toEqual([]);
+    expect(approvals.value).toEqual([request]);
+  });
+
+  test("an explicit mobile mode received before its bucket exists survives first adoption", async () => {
+    const sessionId = "mobile-before-adoption";
+    const overrides = cell<Record<string, PermissionMode>>({});
+    params.permissions.setPermissionOverrides = overrides.set;
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "default" });
+      listeners.get("onMobileSession")!({
+        ...announcement(sessionId),
+        permissionMode: "bypassPermissions",
+      });
+      await flushMicrotasks();
+    });
+    expect(overrides.value[bucketKey("project", sessionId)]).toBe("default");
+  });
+
+  test.each([false, true])(
+    "an unadopted mobile restriction prevents automatic approval (settings lookup already pending: %s)",
+    async (lookupPending) => {
+      const sessionId = "mobile-unadopted-approval";
+      const read = deferred<Record<string, unknown>>();
+      readPermissionSettings = () => read.promise;
+      userSettings = { permissionMode: "bypass" };
+      hook = await renderHook(() => useHostSubscriptions(params));
+      const request = { ...approval(), sessionId };
+      await act(async () => {
+        if (lookupPending) listeners.get("onApprovalRequest")!(request);
+        listeners.get("onMobilePermissionMode")!({ sessionId, mode: "default" });
+        if (!lookupPending) listeners.get("onApprovalRequest")!(request);
+        read.resolve({ permissionMode: "bypass" });
+        await flushMicrotasks();
+      });
+      expect(approveCalls).toEqual([]);
+      expect(approvals.value).toEqual([request]);
+      expect(permissionReads).toEqual(lookupPending ? [sessionId] : []);
+    },
+  );
+
+  test("the latest explicit mode during project lookup wins over the announcement", async () => {
+    const sessionId = "mobile-during-adoption";
+    const placement = deferred<unknown[]>();
+    resolveCwds = () => placement.promise;
+    const overrides = cell<Record<string, PermissionMode>>({});
+    params.permissions.setPermissionOverrides = overrides.set;
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onMobileSession")!({ ...announcement(sessionId), permissionMode: "default" });
+      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "bypassPermissions" });
+      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "acceptEdits" });
+      placement.resolve([{ projectId: "project", rootId: "root", created: false }]);
+      await flushMicrotasks();
+    });
+    expect(overrides.value[bucketKey("project", sessionId)]).toBe("accept_edits");
+  });
+
+  test("a delayed duplicate announcement cannot overwrite a later explicit mobile choice", async () => {
+    const sessionId = "mobile-duplicate-adoption";
+    const first = deferred<unknown[]>();
+    let lookups = 0;
+    resolveCwds = () =>
+      ++lookups === 1
+        ? first.promise
+        : Promise.resolve([{ projectId: "project", rootId: "root", created: false }]);
+    const overrides = cell<Record<string, PermissionMode>>({});
+    params.permissions.setPermissionOverrides = overrides.set;
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onMobileSession")!({
+        ...announcement(sessionId),
+        permissionMode: "bypassPermissions",
+      });
+      listeners.get("onMobileSession")!({ ...announcement(sessionId), permissionMode: "default" });
+      await flushMicrotasks();
+    });
+    expect(overrides.value[bucketKey("project", sessionId)]).toBe("default");
+    await act(async () => {
+      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "acceptEdits" });
+      first.resolve([{ projectId: "project", rootId: "root", created: false }]);
+      await flushMicrotasks();
+    });
+    expect(overrides.value[bucketKey("project", sessionId)]).toBe("accept_edits");
+  });
+
+  test("existing Desktop sessions keep their choice while new explicit mobile events still apply", async () => {
+    const sessionId = "pinned-1";
+    const bucket = bucketKey("project", sessionId);
+    const overrides = cell<Record<string, PermissionMode>>({ [bucket]: "bypass" });
+    params.permissions.setPermissionOverrides = overrides.set;
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onMobileSession")!({ ...announcement(sessionId), permissionMode: "default" });
+      await flushMicrotasks();
+    });
+    expect(overrides.value[bucket]).toBe("bypass");
+    await act(async () => {
+      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "acceptEdits" });
+      listeners.get("onMobileSession")!({ ...announcement(sessionId), permissionMode: "default" });
+      await flushMicrotasks();
+    });
+    expect(overrides.value[bucket]).toBe("accept_edits");
   });
 
   test("a resolved approval cannot be approved or displayed after its settings arrive", async () => {

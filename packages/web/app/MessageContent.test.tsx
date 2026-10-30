@@ -34,7 +34,7 @@ describe("Hub message rendering", () => {
     expect(html).toContain('<details class="message-reasoning">');
     expect(html).not.toContain("<details open");
     expect(html).toContain("思考过程");
-    expect(html).toContain("检查了两个方案。");
+    expect(html).not.toContain("检查了两个方案。");
     expect(html).toContain("<p>完成</p>");
   });
 
@@ -80,7 +80,7 @@ describe("Hub message rendering", () => {
       expect(safeMessageLink(unsafe)).toBeUndefined();
   });
 
-  test("tool cards preserve parameters/results and escape untrusted output", () => {
+  test("collapsed tool cards expose their status without mounting the full body", () => {
     const html = renderToStaticMarkup(
       <ToolMessage
         running={false}
@@ -97,9 +97,9 @@ describe("Hub message rendering", () => {
     );
     expect(html).toContain("printf hello");
     expect(html).toContain("失败");
-    expect(html).toContain("&lt;script&gt;");
+    expect(html).not.toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>");
-    expect(html).toContain("复制结果");
+    expect(html).not.toContain("复制结果");
   });
 });
 

@@ -50,11 +50,16 @@ import { mkdirSync } from "node:fs";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { desktopManagedRuntimeRoot } from "./managed-runtime-service.js";
 import { dlog } from "./desktop-logger.js";
-import { hostMcpServersEnv } from "./computer-use/service.js";
+import {
+  hostMcpServersEnv,
+  observeComputerUseRunControl,
+  observeComputerUseRunEvent,
+} from "./computer-use/service.js";
 import { composeCapabilityModulesEnv, readUserFeatureFlags } from "./capability-modules-env.js";
 import { ChildBrowserWorkerLifetime } from "./browser-runtime/child-browser-lifetime.js";
 import { WebConfigurationGate } from "./web-configuration-gate.js";
 import { SessionSnapshotStore, type Snapshot, type SnapshotEntry } from "./SessionSnapshotStore.js";
+import { assertOutputHistoryWriteAvailable } from "./session-output-history-lease.js";
 import { parseLiveStreamEnvelope, parseSnapshotAppend } from "./parseStreamLine.js";
 import {
   parseBrowserActionLine,
@@ -156,6 +161,7 @@ import { isOptimizationLabQuery, unwrapOptimizationLabReply } from "../shared/op
 import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
 import { resolveSessionRunWorkspace } from "./session-run-workspace.js";
+import { requestStartupArchiveMarker, type StartupArchiveMarker } from "./startup-session-query.js";
 import { PetWorkerProjectionGeneration } from "./pet/pet-worker-generation.js";
 import type { AgentBridgePetEvent, PetStateBridge } from "./pet/pet-state-aggregator.js";
 import {
@@ -588,7 +594,10 @@ export class AgentBridge implements PetStateBridge {
           event: annotateBrowserRuntimeStreamEvent(rawAppend.event, "milestones"),
         }
       : null;
-    if (append) this.workerRuns.observeWorker(append.sessionId, append.event);
+    if (append) {
+      this.workerRuns.observeWorker(append.sessionId, append.event);
+      observeComputerUseRunEvent(append.sessionId, append.event);
+    }
     let snapshotEntry;
     try {
       snapshotEntry = append
@@ -903,7 +912,10 @@ export class AgentBridge implements PetStateBridge {
   ): { line: string; method?: string } {
     const prepared = prepareAgentRunMetadata(line, meta, this.agentRunMetadataDeps());
     const parsed = prepared.parsed;
+    if (typeof parsed.params?.sessionId === "string" && meta.producer !== "output-history-recovery")
+      assertOutputHistoryWriteAvailable(parsed.params.sessionId);
     cancelBrowserActionsForStoppedRun(parsed);
+    observeComputerUseRunControl(parsed);
     if (
       isOptimizationLabQuery(parsed) &&
       (meta.origin !== "host" || !this.trustedLabRequests.has(String(parsed.id)))
@@ -974,7 +986,27 @@ export class AgentBridge implements PetStateBridge {
         throw error;
       }
       const parsed = prepared.parsed;
+      if (typeof parsed.params?.sessionId === "string") {
+        try {
+          assertOutputHistoryWriteAvailable(parsed.params.sessionId);
+        } catch {
+          if (parsed.id !== undefined && !event.sender.isDestroyed())
+            event.sender.send(
+              "agent:msg",
+              JSON.stringify({
+                jsonrpc: "2.0",
+                id: parsed.id,
+                error: {
+                  code: ErrorCodes.Overloaded,
+                  message: "Session output recovery is in progress",
+                },
+              }),
+            );
+          return;
+        }
+      }
       cancelBrowserActionsForStoppedRun(parsed);
+      observeComputerUseRunControl(parsed);
       if (isOptimizationLabQuery(parsed)) {
         if (parsed.id !== undefined && !event.sender.isDestroyed()) {
           event.sender.send(
@@ -1804,6 +1836,15 @@ export class AgentBridge implements PetStateBridge {
     return this.core.hasLiveWorker();
   }
 
+  /** Startup maintenance is a fixed Host query, never a synthetic chat/run. */
+  appendStartupArchiveMarker(marker: StartupArchiveMarker): Promise<boolean> {
+    return requestStartupArchiveMarker(
+      this.core,
+      marker,
+      this.sessionsForFallback().readSessionMainRoot(marker.sessionId),
+    );
+  }
+
   /** Main-only authority: generic renderer/mobile/serve frames cannot mint this admission. */
   async requestOptimizationLab(type: string, params: Record<string, unknown>): Promise<unknown> {
     if (!/^optimization_lab_[a-z_]+$/.test(type)) throw new Error("Invalid Optimization Lab query");
@@ -2040,6 +2081,34 @@ export class AgentBridge implements PetStateBridge {
    */
   getSnapshot(sessionId: string, sinceSeq = 0): Snapshot {
     return this.snapshots.get(sessionId, sinceSeq);
+  }
+
+  /** Retire an explicit checkpoint's old proof without resetting transport sequence numbers. */
+  resetOutputHistoryRecovery(sessionId: string): void {
+    this.snapshots.resetForHistoryCheckpoint(sessionId);
+    this.mainOutput.forget(sessionId);
+  }
+
+  /** The caller holds the Main ingress fence and has verified all work is idle. */
+  async quiesceForOutputRecovery(sessionId: string): Promise<void> {
+    if (this.isSessionRunning(sessionId) || this.snapshots.get(sessionId).topLevelRunning)
+      throw new Error("Session still has active work");
+    if (!this.core.canSend()) return;
+    const outcome = await this.core.request(
+      "agent/closeSession",
+      { sessionId, onlyIfIdle: true },
+      {
+        id: `history-close-${randomUUID()}`,
+        timeoutMs: 5_000,
+        failFast: true,
+        meta: { origin: "host", producer: "output-history-recovery" },
+      },
+    );
+    if (
+      outcome.status !== "result" ||
+      (outcome.result as { ok?: boolean } | undefined)?.ok === false
+    )
+      throw new Error("Session could not become idle for output recovery");
   }
 
   /** Drop a session's snapshot (e.g. when the session is deleted). */
@@ -2326,6 +2395,7 @@ export class AgentBridge implements PetStateBridge {
       parsed = {};
     }
     const sessionId = parsed.params?.sessionId;
+    if (typeof sessionId === "string") assertOutputHistoryWriteAvailable(sessionId);
     if (
       parsed.method === "agent/run" &&
       (this.webConfiguration.runBlocked ||
@@ -2611,6 +2681,7 @@ export class AgentBridge implements PetStateBridge {
     options: { browserVisibility?: "hidden" | "milestones" | "full" },
   ): boolean {
     this.workerRuns.observeExternal(sessionId, event);
+    observeComputerUseRunEvent(sessionId, event);
     const projected = annotateBrowserRuntimeStreamEvent(event, options.browserVisibility ?? "full");
     let entry;
     try {
@@ -2675,6 +2746,7 @@ export class AgentBridge implements PetStateBridge {
 
   private publishOwnedExternalEvent(sessionId: string, event: unknown): boolean {
     this.workerRuns.observeExternal(sessionId, event);
+    observeComputerUseRunEvent(sessionId, event);
     const entry = publishOwnedExternalStream(
       this.snapshots,
       this.windows,

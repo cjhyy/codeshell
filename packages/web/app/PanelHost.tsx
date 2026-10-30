@@ -35,11 +35,16 @@ interface Confirmation {
 }
 export interface PanelHostProps {
   panel: ManagedPanel;
-  sessionId: string;
+  sessionId?: string;
   busy: boolean;
   onClose: () => void;
   onAuthLost: () => void;
   onDirtyChange?: (dirty: boolean) => void;
+  /** Opaque, instance-local preview key; never persist a resource URL in history. */
+  previewKey?: string | null;
+  onPreviewOpen?: (key: string) => void;
+  onPreviewClose?: () => void;
+  onPreviewUnavailable?: () => void;
   onSubmitPrompt: (input: {
     prompt: string;
     sessionId: string;
@@ -149,14 +154,30 @@ export function PanelHost({
   onAuthLost,
   onDirtyChange,
   onSubmitPrompt,
+  previewKey,
+  onPreviewOpen,
+  onPreviewClose,
+  onPreviewUnavailable,
 }: PanelHostProps) {
   const frame = React.useRef<HTMLIFrameElement>(null);
   const [prepared, setPrepared] = React.useState<PreparedPanel>();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
   const [notice, setNotice] = React.useState("");
+  const [confirmationNotice, setConfirmationNotice] = React.useState("");
   const [directory, setDirectory] = React.useState<{ path: string; url?: string }>();
   const [preview, setPreview] = React.useState<ResourcePreview>();
+  const previews = React.useRef(new Map<string, ResourcePreview>());
+  const previewSequence = React.useRef(0);
+  const previewNavigation = React.useRef({ onPreviewOpen, onPreviewClose });
+  previewNavigation.current = { onPreviewOpen, onPreviewClose };
+  React.useEffect(() => {
+    if (previewKey !== undefined) {
+      setPreview(previewKey ? previews.current.get(previewKey) : undefined);
+      setPreviewError(false);
+      if (previewKey && !previews.current.has(previewKey)) onPreviewUnavailable?.();
+    }
+  }, [previewKey]);
   const [previewError, setPreviewError] = React.useState(false);
   const previewElement = React.useRef<HTMLElement>(null);
   React.useEffect(() => {
@@ -247,7 +268,9 @@ export function PanelHost({
     setLoading(true);
     setError("");
     setNotice("");
+    setConfirmationNotice("");
     setDirectory(undefined);
+    previews.current.clear();
     setPreview(undefined);
     setPreviewError(false);
     setConnectionStatus("");
@@ -286,6 +309,7 @@ export function PanelHost({
       if (handshakeTimeout) clearTimeout(handshakeTimeout);
       setPrepared(undefined);
       setDirectory(undefined);
+      previews.current.clear();
       setPreview(undefined);
       setLoading(false);
       setConfirming(false);
@@ -381,9 +405,9 @@ export function PanelHost({
               if (disposed || activeConfirmation.current !== pending) return;
               if (typeof result.allowed !== "boolean") throw new Error("确认响应无效。");
               if (allowed && result.allowed === false)
-                setNotice("此确认已超时或被取消，操作未获准执行，请在面板中重新发起。");
+                setConfirmationNotice("此确认已超时或被取消，操作未获准执行，请在面板中重新发起。");
               if (!allowed && result.allowed === true)
-                setNotice("该操作此前已获准执行，请在面板中查看进度或停止。");
+                setConfirmationNotice("该操作此前已获准执行，请在面板中查看进度或停止。");
               pending.cancel();
               showNextHostConfirmation();
             })
@@ -395,7 +419,7 @@ export function PanelHost({
               }
               if (cause instanceof ApiError && cause.status === 409) {
                 pending.cancel();
-                setNotice("面板操作确认已失效，请在面板中重新发起。");
+                setConfirmationNotice("面板操作确认已失效，请在面板中重新发起。");
                 showNextHostConfirmation();
                 return;
               }
@@ -412,13 +436,14 @@ export function PanelHost({
       const timer = setTimeout(() => {
         pending.cancel();
         if (!disposed && scope.grant) {
-          setNotice("面板操作确认已超时，请在面板中重新发起。");
+          setConfirmationNotice("面板操作确认已超时，请在面板中重新发起。");
           showNextHostConfirmation();
         }
       }, effect.expiresAt - Date.now());
       activeConfirmation.current = pending;
       setConfirmation(pending);
       setConfirmationError("");
+      setConfirmationNotice("");
     };
     const receiveEvents = (events: PanelRuntimeEvent[]) => {
       for (const event of events) {
@@ -593,6 +618,7 @@ export function PanelHost({
           reply(child, requestId, { opened: true });
         } else if (data.method === "agent.submitPrompt") {
           if (
+            !sessionId ||
             !isRecord(result) ||
             result.effect !== data.method ||
             typeof result.prompt !== "string" ||
@@ -732,11 +758,17 @@ export function PanelHost({
             isRecord(data.params) ? data.params.assetId : undefined,
           );
           if (!resource) throw new Error("面板文件预览链接无效，请重新打开文件。");
-          setPreview({
+          const nextPreview = {
             ...resource,
             url: apiUrl(resource.url, workspace, projectId),
             downloadUrl: apiUrl(`${resource.url}?download=1`, workspace, projectId),
-          });
+          };
+          const key = `${grant.instanceId}:${++previewSequence.current}`;
+          previews.current.set(key, nextPreview);
+          if (previews.current.size > 20)
+            previews.current.delete(previews.current.keys().next().value!);
+          setPreview(nextPreview);
+          previewNavigation.current.onPreviewOpen?.(key);
           reply(child, requestId, { opened: true });
         } else if (data.method === "filesystem.openDirectory") {
           setDirectory(undefined);
@@ -857,6 +889,7 @@ export function PanelHost({
       });
     return () => {
       disposed = true;
+      previews.current.clear();
       activeConfirmation.current?.cancel();
       window.removeEventListener("message", listener);
       window.removeEventListener("focus", resume);
@@ -913,6 +946,11 @@ export function PanelHost({
           {notice}
         </p>
       )}
+      {confirmationNotice && (
+        <p className="panel-host-notice" role="status">
+          {confirmationNotice}
+        </p>
+      )}
       {directory && (
         <div className="panel-host-notice panel-host-directory" role="status">
           <p>
@@ -943,7 +981,9 @@ export function PanelHost({
         >
           <header>
             <h2>{preview.name}</h2>
-            <button onClick={() => setPreview(undefined)}>关闭预览</button>
+            <button onClick={() => (onPreviewClose ? onPreviewClose() : setPreview(undefined))}>
+              关闭预览
+            </button>
           </header>
           {!previewError && preview.kind === "video" && (
             <video

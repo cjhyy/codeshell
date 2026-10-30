@@ -73,7 +73,15 @@ test("reading settings never prompts, saves, starts or restarts", async () => {
 });
 
 test("every setup method rejects guest frames and foreign or destroyed windows", async () => {
-  for (const method of ["status", "setEnabled", "requestPermission", "openSettings", "restart"]) {
+  for (const method of [
+    "status",
+    "setEnabled",
+    "requestPermission",
+    "openSettings",
+    "restart",
+    "setCompanion",
+    "previewCompanion",
+  ]) {
     for (const caller of ["guest", "foreign", "destroyed"]) {
       const h = harness();
       const event =
@@ -89,6 +97,42 @@ test("every setup method rejects guest frames and foreign or destroyed windows",
       expect(() => h.invoke(method, true, event)).toThrow("桌面主窗口");
       expect(h.effects).toEqual([]);
     }
+  }
+});
+
+test("companion toggles and previews independently without starting CUA or requesting permissions", async () => {
+  const h = harness();
+  let enabled = false;
+  let size = 320;
+  let previews = 0;
+  h.deps.companion = {
+    status: () => ({ enabled, size, available: true, appearance: "mimi-sprite" }),
+    update: async (value) => {
+      enabled = value.enabled ?? enabled;
+      size = value.size ?? size;
+    },
+    preview: async () => {
+      previews++;
+    },
+  };
+  expect(await h.invoke("setCompanion", { enabled: true, size: 400 })).toMatchObject({
+    enabled: false,
+    active: false,
+    restartRequired: false,
+    companion: { enabled: true, size: 400 },
+  });
+  await h.invoke("previewCompanion");
+  await h.invoke("setCompanion", { enabled: false });
+  expect(enabled).toBe(false);
+  expect(previews).toBe(1);
+  expect(h.effects).toEqual([]);
+  for (const invalid of [
+    { size: NaN },
+    { size: 10 },
+    { enabled: "yes" },
+    { modelPath: "/tmp/arbitrary" },
+  ]) {
+    expect(() => h.invoke("setCompanion", invalid)).toThrow("无效");
   }
 });
 
@@ -190,4 +234,54 @@ test("an owner closed during async status cannot persist a setting", async () =>
   finish(original);
   await expect(pending).rejects.toThrow("桌面主窗口");
   expect(h.effects).toEqual([]);
+});
+
+test("stop and resume reach the execution gate even while another operation is pending", async () => {
+  const h = harness();
+  let stopped = false;
+  h.deps.input = {
+    status: () => ({ stopped, foregroundHeld: false, userActive: false }),
+    stop: () => {
+      stopped = true;
+    },
+    resume: () => {
+      stopped = false;
+    },
+  };
+  let finish!: (value: any) => void;
+  const original = await h.deps.permissions.status();
+  h.deps.permissions.status = () =>
+    new Promise((resolve) => {
+      finish = resolve;
+    });
+  const pending = h.invoke("setEnabled", true);
+  h.deps.permissions.status = async () => original;
+  expect((await h.invoke("input", "stop")).input).toEqual({
+    stopped: true,
+    foregroundHeld: false,
+    userActive: false,
+  });
+  expect((await h.invoke("input", "resume")).input.stopped).toBe(false);
+  finish(original);
+  await pending;
+});
+
+test("force stop holds input first, then ends the shared driver", async () => {
+  const h = harness();
+  const order: string[] = [];
+  h.deps.input = {
+    status: () => ({ stopped: true, foregroundHeld: false, userActive: false }),
+    stop: () => order.push("gate"),
+    resume: () => {},
+  };
+  h.deps.stop = async () => {
+    order.push("driver");
+  };
+  const result = await h.invoke("input", "forceStop");
+  expect(order).toEqual(["gate", "driver"]);
+  expect(result.restartRequired).toBe(true);
+  await expect(h.invoke("input", "explode")).rejects.toThrow("未知");
+  await expect(
+    h.invoke("input", "stop", { ...h.event, sender: { ...h.sender } as never }),
+  ).rejects.toThrow("桌面主窗口");
 });

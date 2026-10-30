@@ -69,6 +69,10 @@ export interface AskUserChoice {
  * question. Implementations may ignore unknown fields — they're additive.
  */
 export interface AskUserOptions {
+  /** Runtime-only cancellation for the tool that owns a blocking question. Never sent to clients. */
+  signal?: AbortSignal;
+  /** Runtime-only: preserve host cancellation/expiry as an error instead of a user answer. */
+  throwOnFailure?: boolean;
   /** Short chip-style label (≤12 chars) shown above the question. */
   header?: string;
   /** Multiple-choice options. When omitted, the UI falls back to free-text. */

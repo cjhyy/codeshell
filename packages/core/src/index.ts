@@ -4,7 +4,7 @@
  * Public API exports.
  */
 
-export const VERSION = "0.9.49";
+export const VERSION = "0.9.50";
 
 // ─── Types ───────────────────────────────────────────────────────
 
@@ -306,6 +306,7 @@ export {
   type MigrateSessionMainRootResult,
 } from "./protocol/types.js";
 export type * from "./protocol/mobile-remote-types.js";
+export type * from "./protocol/output-history-recovery-types.js";
 
 // ─── Session ─────────────────────────────────────────────────────
 

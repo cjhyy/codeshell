@@ -3,6 +3,7 @@ import type { OutputJournalOptions } from "@cjhyy/code-shell-core/internal";
 import {
   applyOutputJournalPage,
   compareOutputCursors,
+  outputJournalProgress,
   type OutputJournalRecovery,
 } from "./outputJournalRecovery.js";
 import { assertOutputCoverage } from "./outputCoverage.js";
@@ -10,6 +11,12 @@ import { initialChatState, reduceStream } from "./streamReducer.js";
 
 type Reply = Extract<MobileServerEvent, { type: "session.outputJournal" }>;
 type BaseReply = Extract<MobileServerEvent, { type: "session.legacyBase" }>;
+export interface MobileRecoveryProgress {
+  phase: "legacy" | "journal";
+  pages: number;
+  receivedBytes: number;
+  totalBytes?: number;
+}
 export type MobileLegacyBaseOptions =
   | { throughEventId: string; cursor?: never }
   | { cursor: string; throughEventId?: never };
@@ -147,6 +154,9 @@ export async function recoverMobileOutput(args: {
   canContinue: () => boolean;
   latestCursor: () => string | undefined;
   requireJournal?: boolean;
+  progress?: (progress: MobileRecoveryProgress) => void;
+  /** A selected pre-journal transcript is display history, never a fake cursor. */
+  legacyTranscript?: (events: Record<string, unknown>[]) => void;
 }) {
   let reply = await args.read({});
   if (!args.canContinue()) throw new Error("Recovery cancelled");
@@ -186,12 +196,33 @@ export async function recoverMobileOutput(args: {
         throw new Error("Required output journal is unavailable");
     } else throw new MobileAwaitingJournal();
   }
-  if (reply.page.status === "unavailable") return null;
+  const legacyOnly = reply.page.status === "unavailable" && !!reply.legacyBase;
+  if (reply.page.status === "unavailable" && !legacyOnly) return null;
+  if (
+    legacyOnly &&
+    (!args.readBase ||
+      !args.legacyTranscript ||
+      args.requireJournal ||
+      !reply.snapshot?.epoch ||
+      reply.snapshot.nextSeq !== 1 ||
+      reply.snapshot.unpaired ||
+      reply.snapshot.outputCursor ||
+      reply.snapshot.journalIdentity ||
+      reply.snapshot.inputIds?.length)
+  )
+    throw new Error("Legacy display is unavailable");
 
   let chat = initialChatState();
+  const legacyEvents: Record<string, unknown>[] = [];
   let pages = 0;
-  if (reply.page.status === "ok" && reply.legacyBaseComplete === false && args.readBase) {
-    const throughEventId = reply.page.legacyBaseThroughEventId;
+  if (
+    (reply.page.status === "ok" || legacyOnly) &&
+    reply.legacyBaseComplete === false &&
+    args.readBase
+  ) {
+    const throughEventId = legacyOnly
+      ? reply.legacyBase!.throughEventId
+      : reply.page.legacyBaseThroughEventId;
     if (typeof throughEventId !== "string" || !throughEventId || throughEventId.length > 512)
       throw new Error("Recovery base is incomplete");
     const cursors = new Set<string>();
@@ -247,7 +278,11 @@ export async function recoverMobileOutput(args: {
             cursors.has(base.next))
       )
         throw new Error("Recovery base is incomplete or exceeds its bound");
-      for (const event of base.events) chat = reduceStream(chat, event);
+      for (const event of base.events) {
+        chat = reduceStream(chat, event);
+        if (legacyOnly) legacyEvents.push(event);
+      }
+      args.progress?.({ phase: "legacy", pages, receivedBytes: bytes });
       index += base.events.length;
       if (base.complete) break;
       cursor = base.next;
@@ -268,6 +303,11 @@ export async function recoverMobileOutput(args: {
   }
   // A legacy transcript establishes display history, never live completion.
   chat = { ...chat, run: chat.run === "error" ? "error" : "idle", liveByAgent: {} };
+  if (legacyOnly) {
+    if (args.latestCursor()) throw new MobileHistoryViewChanged();
+    args.legacyTranscript!(legacyEvents);
+    return null;
+  }
   let recovery: OutputJournalRecovery = { incomplete: false };
   // A continuation retains the verified private candidate and the same total
   // page budget. No prefix is published until the eventual frozen join passes.
@@ -279,6 +319,8 @@ export async function recoverMobileOutput(args: {
           chat = reduceStream(chat, event);
         });
         if (recovery.incomplete) throw new Error("Recovery is incomplete");
+        const progress = outputJournalProgress(recovery);
+        if (progress) args.progress?.({ phase: "journal", pages, ...progress });
         if (complete) break;
         reply = await args.read({ after: recovery.cursor, through: recovery.through });
       }
@@ -325,4 +367,101 @@ export async function recoverMobileOutput(args: {
     throw new MobileOutputCatchupPending(recovery.cursor!, advance);
   };
   return advance();
+}
+
+export class MobileHistoryViewChanged extends Error {}
+
+/** A display view already proves its entire historical prefix. Advance it by
+ * complete frozen journal suffixes, publishing each actual snapshot join even
+ * while a newer live head is still arriving. Future output is the next batch. */
+export async function recoverMobileOutputSuffix(args: {
+  chat: ReturnType<typeof initialChatState>;
+  after: string;
+  verifiedInputIds: readonly string[];
+  previousSnapshot: MobileOutputRecoveryResult["snapshot"];
+  read: (options: OutputJournalOptions) => Promise<Reply>;
+  canContinue: () => boolean;
+}): Promise<MobileOutputRecoveryResult> {
+  let reply = await args.read({ after: args.after });
+  if (!args.canContinue()) throw new Error("Recovery cancelled");
+  const snapshot = reply.snapshot;
+  if (
+    !snapshot ||
+    snapshot.unpaired ||
+    !snapshot.epoch ||
+    !Number.isSafeInteger(snapshot.nextSeq) ||
+    snapshot.nextSeq < args.previousSnapshot.nextSeq ||
+    snapshot.epoch !== args.previousSnapshot.epoch ||
+    snapshot.incarnation !== args.previousSnapshot.incarnation ||
+    snapshot.journalIdentity !== args.previousSnapshot.journalIdentity
+  )
+    throw new Error("Suffix snapshot is unavailable");
+  let chat = args.chat;
+  const recovery: OutputJournalRecovery = {
+    incomplete: false,
+    cursor: args.after,
+    appliedCursor: args.after,
+  };
+  let bytes = 0;
+  for (let pages = 0; pages < 2048; pages++) {
+    if (!args.canContinue()) throw new Error("Recovery cancelled");
+    bytes += wireBytes(reply.page);
+    if (
+      bytes > 128 * MiB ||
+      !reply.snapshot ||
+      reply.snapshot.unpaired ||
+      reply.snapshot.epoch !== snapshot.epoch ||
+      reply.snapshot.incarnation !== snapshot.incarnation ||
+      reply.snapshot.journalIdentity !== snapshot.journalIdentity
+    )
+      throw new Error("Suffix coverage changed");
+    let deferredChanged = false;
+    const complete = applyOutputJournalPage(recovery, reply.page, (event) => {
+      const id =
+        event.type === "tool_result"
+          ? event.result.id
+          : event.type === "tool_use_args_delta"
+            ? event.toolCallId
+            : event.type === "tool_use_start"
+              ? event.toolCall.id
+              : undefined;
+      const tool = id
+        ? chat.items.find((item) => item.kind === "tool" && item.id === id)
+        : undefined;
+      if (
+        (tool?.kind === "tool" && tool.detailRef) ||
+        (id && !tool && event.type === "tool_use_args_delta")
+      )
+        deferredChanged = true;
+      if (!deferredChanged) chat = reduceStream(chat, event);
+    });
+    if (recovery.incomplete) throw new Error("Suffix is incomplete");
+    if (deferredChanged)
+      throw new MobileHistoryViewChanged("Deferred tool changed during suffix recovery");
+    if (complete) {
+      if (chat.orphanResults && Object.keys(chat.orphanResults).length)
+        throw new MobileHistoryViewChanged("Suffix updated a tool outside the visible window");
+      const order =
+        snapshot.outputCursor === undefined
+          ? -1
+          : compareOutputCursors(snapshot.outputCursor, recovery.cursor!);
+      if (
+        order === undefined ||
+        order > 0 ||
+        (order === 0 && snapshot.outputCursor !== recovery.cursor)
+      )
+        throw new Error("Suffix does not cover its frozen snapshot");
+      const receipts = new Set(args.verifiedInputIds);
+      assertOutputCoverage(
+        snapshot,
+        reply.page,
+        (id) =>
+          receipts.has(id) ||
+          chat.items.some((item) => item.kind === "user" && item.clientMessageId === id),
+      );
+      return { chat, outputCursor: recovery.cursor!, snapshot };
+    }
+    reply = await args.read({ after: recovery.cursor, through: recovery.through });
+  }
+  throw new Error("Suffix exceeds its page bound");
 }

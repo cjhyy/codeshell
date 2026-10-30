@@ -13,6 +13,7 @@
  */
 
 import { Methods, sessionsRoot } from "@cjhyy/code-shell-core";
+import { MobilePermissionModes } from "./mobile-remote/permission-modes.js";
 import { MobileOutputRecovery } from "./mobile-remote/output-recovery.js";
 import {
   mobileOutputRecoveryAuthority,
@@ -36,7 +37,6 @@ import { requireRendererProjectEntryPath } from "./renderer-project-path.js";
 import type { OwnedExternalStreamEntry } from "./owned-external-stream.js";
 import {
   type ClaimedMobileUpload,
-  type MobilePermissionModeSnapshotEntry,
   type MobileProjectMeta,
   type MobileServerEvent,
   type MobileUploadService,
@@ -58,6 +58,11 @@ import {
 } from "./mobile-remote/handle-client-event.js";
 import { getProjectStore } from "./project-store.js";
 import { toMobileProjectMeta } from "./mobile-project-meta.js";
+import type {
+  OutputHistoryRecoveryAuthorization,
+  OutputHistoryRecoveryCaller,
+} from "./session-output-history-recovery.js";
+import type { MobileOutputHistoryService } from "./mobile-remote/output-history-commands.js";
 export { toMobileProjectMeta } from "./mobile-project-meta.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { lstatSync, realpathSync } from "node:fs";
@@ -70,25 +75,6 @@ import {
 export { injectAndAwaitResult } from "./mobile-remote/handle-client-event.js";
 export { resolveRoomPermissionMode } from "./mobile-remote/handle-room-event.js";
 export type { AuthenticatedMobileClientEvent } from "./mobile-remote/handle-client-event.js";
-
-function normalizePermissionMode(raw: unknown): PermissionMode | null {
-  return raw === "default" || raw === "acceptEdits" || raw === "bypassPermissions" ? raw : null;
-}
-
-function normalizePermissionModeSnapshot(raw: unknown): MobilePermissionModeSnapshotEntry[] {
-  if (!Array.isArray(raw)) return [];
-  const out: MobilePermissionModeSnapshotEntry[] = [];
-  const seen = new Set<string>();
-  for (const item of raw) {
-    const row = item as { sessionId?: unknown; mode?: unknown } | null;
-    const sessionId = typeof row?.sessionId === "string" ? row.sessionId : "";
-    const mode = normalizePermissionMode(row?.mode);
-    if (!sessionId || !mode || seen.has(sessionId)) continue;
-    seen.add(sessionId);
-    out.push({ sessionId, mode });
-  }
-  return out;
-}
 
 export interface MobileRemoteOrchestratorDeps {
   remote: RemoteHostManager;
@@ -110,10 +96,11 @@ export interface MobileRemoteOrchestratorDeps {
 export class MobileRemoteOrchestrator {
   private readonly mobileDeviceStates = new Map<string, MobileDeviceState>();
   private readonly mobileSessionCwds = new Map<string, string | null>();
-  private readonly mobilePermissionModes = new Map<string, PermissionMode>();
+  private readonly mobilePermissionModes = new MobilePermissionModes();
 
   private readonly outputRecovery: MobileOutputRecovery;
   private readonly externalCommands: MobileExternalRuntimeCommands;
+  private outputHistoryRecoveryService?: MobileOutputHistoryService;
   constructor(private readonly deps: MobileRemoteOrchestratorDeps) {
     this.externalCommands = new MobileExternalRuntimeCommands({
       authenticated: (viewer, device) => deps.remote.hasAuthenticatedViewer(viewer, device),
@@ -154,6 +141,7 @@ export class MobileRemoteOrchestrator {
     });
     this.outputRecovery = new MobileOutputRecovery({
       root: sessionsRoot,
+      hasLiveExternalProducer: (id) => !!deps.getExternalRuntimeService?.()?.hasSession(id),
       journalRequired: (id) =>
         !!deps.getExternalRuntimeService?.()?.hasSession(id) ||
         isPersistedExternalRuntime(new SessionManager().readSessionState(id)),
@@ -161,6 +149,7 @@ export class MobileRemoteOrchestrator {
       snapshot: (id, sinceSeq = 0) => this.deps.getBridge()?.getSnapshot(id, sinceSeq),
       reply: (viewer, event) => this.deps.remote.sendToViewer(viewer, event),
       owner: (id) => this.deps.getBridge()?.panelOwnerWebContentsId(id),
+      ownerRevision: (id) => this.deps.getBridge()?.sessionPanelOwnerRevision(id),
       authenticated: (viewer, device) => this.deps.remote.hasAuthenticatedViewer(viewer, device),
     });
   }
@@ -168,6 +157,72 @@ export class MobileRemoteOrchestrator {
   releaseViewer(viewerId: string): void {
     this.outputRecovery.revoke(viewerId);
     this.externalCommands.revoke(viewerId, true);
+  }
+
+  /** Installed once by Main's shared Desktop/mobile history composition. */
+  setOutputHistoryRecoveryService(service: MobileOutputHistoryService): void {
+    this.outputHistoryRecoveryService = service;
+  }
+
+  async authorizeOutputHistoryRecovery(
+    sessionId: string,
+    caller: Extract<OutputHistoryRecoveryCaller, { kind: "mobile" }>,
+  ): Promise<OutputHistoryRecoveryAuthorization> {
+    if (caller.kind !== "mobile") throw new Error("Invalid mobile recovery caller");
+    const bridge = this.deps.getBridge();
+    if (!bridge) throw new Error("Session bridge unavailable");
+    const ownerRevision = bridge.sessionPanelOwnerRevision(sessionId);
+    const selected = this.externalCommands.captureSelectedAuthority(
+      caller.viewerId,
+      caller.deviceId,
+      sessionId,
+    );
+    const authority = await mobileSessionCommandAuthority(sessionId);
+    const owner = bridge.panelOwnerWebContentsId(sessionId);
+    const assertCurrent = () => {
+      selected.assertCurrent();
+      authority.assertCurrent();
+      if (
+        this.deps.getBridge() !== bridge ||
+        bridge.sessionPanelOwnerRevision(sessionId) !== ownerRevision ||
+        bridge.panelOwnerWebContentsId(sessionId) !== owner ||
+        selected.owner !== owner ||
+        selected.stamp !== authority.stamp
+      )
+        throw new Error("Session recovery authority changed");
+    };
+    assertCurrent();
+    return {
+      key: JSON.stringify([
+        "mobile",
+        caller.viewerId,
+        caller.deviceId,
+        selected.key,
+        authority.stamp,
+        owner,
+        ownerRevision,
+      ]),
+      ownerWebContentsId: owner,
+      projectId: authority.projectId ?? null,
+      assertCurrent,
+    };
+  }
+
+  /** Every old tab and approval is retired, not just the confirming caller. */
+  retireOutputHistorySession(sessionId: string): void {
+    const errors: unknown[] = [];
+    for (const retire of [
+      () => this.outputRecovery.revokeSession(sessionId),
+      () => this.externalCommands.revokeSession(sessionId),
+      () => this.deps.pendingApprovals.forgetSession(sessionId),
+    ]) {
+      try {
+        retire();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    if (errors.length) throw new AggregateError(errors, "Session recovery retirement failed");
   }
 
   mirrorOwnedExternalStream(entry: OwnedExternalStreamEntry): void {
@@ -246,9 +301,7 @@ export class MobileRemoteOrchestrator {
 
   /** Replace the desktop-pushed permission-mode snapshot and re-announce. */
   updatePermissionModes(entries: unknown): void {
-    const next = normalizePermissionModeSnapshot(entries);
-    this.mobilePermissionModes.clear();
-    for (const entry of next) this.mobilePermissionModes.set(entry.sessionId, entry.mode);
+    this.mobilePermissionModes.replaceDesktopSnapshot(entries);
     this.sendSelectedMobilePermissionModes();
   }
 
@@ -293,10 +346,21 @@ export class MobileRemoteOrchestrator {
   broadcastApprovalResolved(params: {
     requestId: string;
     sessionId?: string;
+    connectionId?: string;
+    generation?: number;
     approved?: boolean;
     answer?: string;
   }): void {
-    this.deps.pendingApprovals.resolve(params.requestId);
+    if (params.connectionId === undefined || params.generation === undefined) {
+      const pending = params.sessionId
+        ? this.deps.pendingApprovals.find(params.sessionId, params.requestId)
+        : undefined;
+      // New workers publish their own fully routed resolution. An old renderer
+      // acknowledgement cannot revoke an unrelated or successor worker request.
+      if (!pending || pending.connectionId !== undefined || pending.generation !== undefined)
+        return;
+    }
+    this.deps.pendingApprovals.resolve(params.requestId, params);
     const line = JSON.stringify({
       jsonrpc: "2.0",
       method: Methods.ApprovalResolved,
@@ -307,6 +371,8 @@ export class MobileRemoteOrchestrator {
       type: "approval.resolved",
       approvalId: params.requestId,
       ...(params.sessionId ? { sessionId: params.sessionId } : {}),
+      ...(params.connectionId !== undefined ? { connectionId: params.connectionId } : {}),
+      ...(params.generation !== undefined ? { generation: params.generation } : {}),
       ...(params.approved !== undefined ? { approved: params.approved } : {}),
       ...(params.answer !== undefined ? { answer: params.answer } : {}),
     });
@@ -320,6 +386,7 @@ export class MobileRemoteOrchestrator {
     title: string;
     prompt: string;
     clientMessageId?: string;
+    permissionMode?: PermissionMode;
   }): void {
     const line = JSON.stringify({
       jsonrpc: "2.0",
@@ -380,10 +447,12 @@ export class MobileRemoteOrchestrator {
       uploads: this.deps.uploads,
       roomManager: this.deps.roomManager,
       approvalBridge: this.deps.approvalBridge,
+      pendingApprovals: this.deps.pendingApprovals,
       transcriptSubscriptions: this.deps.transcriptSubscriptions,
       getBridge: () => this.deps.getBridge(),
       mobileSessionCwds: this.mobileSessionCwds,
       mobilePermissionModes: this.mobilePermissionModes,
+      outputHistoryRecovery: this.outputHistoryRecoveryService,
       deviceState: (deviceId) => this.deviceState(deviceId),
       ensureMobileSessionId: (state) => this.ensureMobileSessionId(state),
       lookupDiskSessionCwd: (sessionId) => this.lookupDiskSessionCwd(sessionId),

@@ -10,6 +10,7 @@ import {
   type RoomManager,
   type RoomMeta,
   type RoomPublic,
+  type PendingMobileApprovals,
 } from "@cjhyy/code-shell-server/mobile-remote";
 import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
 import { transcriptUserDisplay } from "@cjhyy/code-shell-web";
@@ -27,6 +28,11 @@ import {
 import type { mobileNewSessionAuthority } from "./output-recovery-authority.js";
 import type { MobileOutputRecovery } from "./output-recovery.js";
 import { handleRoomEvent } from "./handle-room-event.js";
+import {
+  handleOutputHistoryRecoveryCommand,
+  type MobileOutputHistoryService,
+} from "./output-history-commands.js";
+import { captureMobileHistoryWrite, submitMobileHistoryWrite } from "./output-history-chat.js";
 
 /**
  * The remote host tags authenticated events with both the device id and a
@@ -66,11 +72,13 @@ export interface OrchestratorCtx {
   outputRecovery?: MobileOutputRecovery;
   externalCommands?: MobileExternalRuntimeCommands;
   externalRuntimeModels?: () => Promise<ExternalRuntimeModelEntry[]>;
+  outputHistoryRecovery?: MobileOutputHistoryService;
   newSessionAuthority?: typeof mobileNewSessionAuthority;
   remote: RemoteHostManager;
   uploads: MobileUploadService;
   roomManager: RoomManager;
   approvalBridge: Pick<ApprovalBridge, "respond" | "pendingRequests">;
+  pendingApprovals: Pick<PendingMobileApprovals, "find">;
   transcriptSubscriptions: TranscriptSubscriptionManager;
   getBridge: () => AgentBridge | null;
   mobileSessionCwds: Map<string, string | null>;
@@ -95,10 +103,13 @@ export interface OrchestratorCtx {
     title: string;
     prompt: string;
     clientMessageId?: string;
+    permissionMode?: PermissionMode;
   }) => void;
   broadcastApprovalResolved: (params: {
     requestId: string;
     sessionId?: string;
+    connectionId?: string;
+    generation?: number;
     approved?: boolean;
     answer?: string;
   }) => void;
@@ -245,20 +256,37 @@ export async function handleClientEvent(
   ctx: OrchestratorCtx,
   event: AuthenticatedMobileClientEvent,
 ): Promise<void> {
+  if (
+    event.type === "session.outputRecovery.plan" ||
+    event.type === "session.outputRecovery.apply"
+  ) {
+    await handleOutputHistoryRecoveryCommand(
+      { remote: ctx.remote, service: ctx.outputHistoryRecovery },
+      event,
+    );
+    return;
+  }
   const commandSelection = ctx.externalCommands?.observe(event);
   if (ctx.outputRecovery) {
     const recovery = ctx.outputRecovery.handle(event);
-    if (event.type === "session.select" && event.recoveryId) {
+    if ((event.type === "session.select" && event.recoveryId) || event.type === "session.history") {
       // A later selection/create/room transition can revoke this grant while
       // authority awaits. It must not write the retired device selection back.
       if (!(await recovery)) return;
-    } else if (event.type === "session.outputJournal" || event.type === "session.legacyBase")
+    } else if (
+      event.type === "session.outputJournal" ||
+      event.type === "session.legacyBase" ||
+      event.type === "session.historyView" ||
+      event.type === "session.historyDetail"
+    )
       await recovery;
     else void recovery;
   }
   if (
     event.type === "session.outputJournal" ||
     event.type === "session.legacyBase" ||
+    event.type === "session.historyView" ||
+    event.type === "session.historyDetail" ||
     event.type === "session.recovery.cancel"
   )
     return;
@@ -360,6 +388,7 @@ export async function handleClientEvent(
       const sessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
       nextState = {
         ...st,
+        permissionMode: event.permissionMode ?? st.permissionMode ?? "default",
         sessionId,
         selectedSessionId: sessionId,
         selectedCwd: selection.cwd,
@@ -390,7 +419,8 @@ export async function handleClientEvent(
     Object.assign(st, nextState);
     const sessionId = nextState.sessionId!;
     ctx.mobileSessionCwds.set(sessionId, st.selectedCwd ?? null);
-    if (st.permissionMode) ctx.mobilePermissionModes.set(sessionId, st.permissionMode);
+    ctx.mobilePermissionModes.set(sessionId, st.permissionMode!);
+    ctx.broadcastDesktopPermissionMode({ sessionId, mode: st.permissionMode! });
     reply({
       type: "chat.accepted",
       ...(event.clientRequestId ? { clientRequestId: event.clientRequestId } : {}),
@@ -411,6 +441,17 @@ export async function handleClientEvent(
   }
   if (event.type === "chat.send") {
     const sessionId = resolveSessionId(event.sessionId);
+    let assertHistoryCurrent: () => void;
+    try {
+      assertHistoryCurrent = captureMobileHistoryWrite(sessionId);
+    } catch {
+      reply({
+        type: "error",
+        message: "会话正在恢复，请完成历史核对后重新发送。",
+        ...(event.clientMessageId ? { clientMessageId: event.clientMessageId } : {}),
+      });
+      return;
+    }
     const requestedRuntime = event.modelKey ? parseExternalRuntimeModelKey(event.modelKey) : null;
     if (event.modelKey && !requestedRuntime) {
       reply({
@@ -420,6 +461,13 @@ export async function handleClientEvent(
       });
       return;
     }
+    // Capture once: preparing the producer awaits I/O and can overlap an older
+    // Desktop permission snapshot. The actual turn must use the phone's choice.
+    const permissionMode =
+      event.permissionMode ??
+      ctx.mobilePermissionModes.get(sessionId) ??
+      st.permissionMode ??
+      "default";
     const external =
       !!requestedRuntime ||
       (ctx.externalCommands?.isExternal(sessionId, event.viewerId, sessionId === st.sessionId) ??
@@ -429,7 +477,7 @@ export async function handleClientEvent(
       try {
         externalTarget = await ctx.externalCommands!.prepare(event.viewerId, deviceId, sessionId, {
           modelKey: event.modelKey,
-          permissionMode: ctx.mobilePermissionModes.get(sessionId) ?? st.permissionMode,
+          permissionMode,
         });
       } catch (error) {
         if (event.viewerId)
@@ -443,10 +491,8 @@ export async function handleClientEvent(
       }
     }
     const fallbackCwd = externalTarget?.cwd ?? ctx.effectiveMobileRunCwd(st);
-    if (st.permissionMode && !ctx.mobilePermissionModes.has(sessionId)) {
-      ctx.mobilePermissionModes.set(sessionId, st.permissionMode);
-    }
-    const permissionMode = ctx.mobilePermissionModes.get(sessionId);
+    ctx.mobilePermissionModes.set(sessionId, permissionMode);
+    ctx.broadcastDesktopPermissionMode({ sessionId, mode: permissionMode });
     const text = typeof event.text === "string" ? event.text.trim() : "";
     const runId = `mobile-run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     const dispatched = await dispatchMobileChatTurn({
@@ -467,7 +513,14 @@ export async function handleClientEvent(
       resolveWorkspace: externalTarget
         ? async () => externalTarget!.cwd
         : ctx.resolveSessionWorkspaceRoot,
-      ...(externalTarget ? { submit: externalTarget.submit } : {}),
+      submit: (request) =>
+        submitMobileHistoryWrite(
+          assertHistoryCurrent,
+          bridge,
+          { origin: "mobile", producer: "mobile-chat" },
+          request,
+          externalTarget?.submit,
+        ),
     });
     const chatReply =
       external && event.viewerId
@@ -501,6 +554,7 @@ export async function handleClientEvent(
       title,
       prompt: text,
       clientMessageId: dispatched.clientMessageId,
+      permissionMode,
     });
     if (!external && event.viewerId && deviceId)
       await ctx.externalCommands?.observe({
@@ -562,6 +616,21 @@ export async function handleClientEvent(
       }
       return;
     }
+    const sessionId = resolveSessionId(event.sessionId);
+    const pending = ctx.pendingApprovals.find(sessionId, event.approvalId);
+    if (
+      !pending ||
+      (event.connectionId !== undefined && event.connectionId !== pending.connectionId) ||
+      (event.generation !== undefined && event.generation !== pending.generation)
+    ) {
+      reply({
+        type: "error",
+        approvalId: event.approvalId,
+        message:
+          "This confirmation has expired, was already handled, or belongs to another session.",
+      });
+      return;
+    }
     // Build the same ApprovalResult branch the renderer's preload assembles:
     // approve carries optional answer (AskUser) + remembered scope/pathScope;
     // reject carries an optional reason. Decisions still go through the core
@@ -579,11 +648,16 @@ export async function handleClientEvent(
     } else {
       decision = { approved: false, reason: event.reason };
     }
-    const sessionId = resolveSessionId(event.sessionId);
+    const route = {
+      sessionId,
+      requestId: event.approvalId,
+      ...(pending.connectionId !== undefined ? { connectionId: pending.connectionId } : {}),
+      ...(pending.generation !== undefined ? { generation: pending.generation } : {}),
+    };
     const result = await injectAndAwaitResult(
       bridge,
       "agent/approve",
-      { sessionId, requestId: event.approvalId, decision },
+      { ...route, decision },
       { origin: "mobile", producer: "mobile-approval" },
     );
     if (!result.ok) {
@@ -591,8 +665,7 @@ export async function handleClientEvent(
       return;
     }
     ctx.broadcastApprovalResolved({
-      requestId: event.approvalId,
-      sessionId,
+      ...route,
       approved: event.decision === "approve",
       ...(event.decision === "approve" && event.answer !== undefined
         ? { answer: event.answer }
@@ -713,11 +786,13 @@ export async function handleClientEvent(
       nextSeq: snapshot.nextSeq,
       ...(snapshot.outputCursor ? { outputCursor: snapshot.outputCursor } : {}),
       ...(snapshot.epoch ? { epoch: snapshot.epoch } : {}),
+      ...(snapshot.historicalGap ? { historicalGap: true } : {}),
     });
     ctx.replayPendingMobileApprovals(event.sessionId, deviceId);
     return;
   }
   if (event.type === "permission.setMode") {
+    st.permissionMode = event.mode;
     const sessionId = event.sessionId ?? st.selectedSessionId;
     if (sessionId) {
       ctx.mobilePermissionModes.set(sessionId, event.mode);

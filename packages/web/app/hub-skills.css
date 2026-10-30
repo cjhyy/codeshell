@@ -1,4 +1,8 @@
 .hub-skills {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   max-width: 1060px;
   width: 100%;
   margin: 0 auto;

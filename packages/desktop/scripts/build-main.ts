@@ -11,6 +11,7 @@ export function desktopMainBuildOptions(root = desktopRoot): BuildOptions {
     entryPoints: {
       index: resolve(root, "src/main/index.ts"),
       "link-provider-module": resolve(root, "src/main/link-provider-module.ts"),
+      "cua-activity-proxy": resolve(root, "src/main/computer-use/cua-activity-proxy.ts"),
     },
     bundle: true,
     platform: "node",

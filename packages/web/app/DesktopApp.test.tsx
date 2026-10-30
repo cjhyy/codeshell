@@ -9,7 +9,10 @@ import { useDesktopController } from "./DesktopApp.js";
 import { getApiWorkspace } from "./api-context.js";
 import { Workbench } from "./Workbench.js";
 import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopControls.js";
+import { OutputHistoryRecovery } from "../src/components/OutputHistoryRecovery.js";
 import { DesktopModelPicker } from "./DesktopModelPicker.js";
+import { HubPanels } from "./HubPanels.js";
+import { PanelHost } from "./PanelHost.js";
 
 const noop = () => {};
 const session = { id: "paired-session", username: "synthetic", deviceName: "Fixture" };
@@ -55,6 +58,12 @@ function remoteApp(patch: Partial<RemoteApp> = {}): RemoteApp {
     ...patch,
   };
 }
+function workbenchElements(node: React.ReactNode): React.ReactElement<any>[] {
+  if (Array.isArray(node)) return node.flatMap(workbenchElements);
+  if (!React.isValidElement(node)) return [];
+  const element = node as React.ReactElement<any>;
+  return [element, ...workbenchElements(element.props.children)];
+}
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => {
@@ -74,11 +83,222 @@ function configuration(path: string) {
   };
 }
 const originalFetch = globalThis.fetch;
+const browserRestores: Array<() => void> = [];
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  for (const restore of browserRestores.splice(0).reverse()) restore();
 });
 
 describe("Desktop workbench controller", () => {
+  test.each(["canonical", "room ready", "room pending", "new draft"])(
+    "Panels bind only the canonical session (%s)",
+    async (selection) => {
+      ensureMiniDom();
+      let location = new URL("http://localhost/mobile/");
+      const history = {
+        state: null as unknown,
+        replaceState(state: unknown, _unused: string, url: string) {
+          this.state = state;
+          location = new URL(url, location);
+        },
+        pushState(state: unknown, _unused: string, url: string) {
+          this.replaceState(state, _unused, url);
+        },
+      };
+      for (const [key, descriptor] of [
+        ["location", { get: () => location }],
+        ["history", { value: history }],
+        [
+          "matchMedia",
+          { value: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }) },
+        ],
+      ] as const) {
+        const previous = Object.getOwnPropertyDescriptor(window, key);
+        Object.defineProperty(window, key, { configurable: true, ...descriptor });
+        browserRestores.push(() =>
+          previous ? Object.defineProperty(window, key, previous) : delete (window as any)[key],
+        );
+      }
+      const sent: unknown[] = [];
+      const room = {
+        id: "cli-room",
+        name: "Synthetic CLI",
+        cwd: "/owned",
+        kind: "claude-code" as const,
+        createdAt: 1,
+        lastActiveAt: 1,
+        open: true,
+        observing: false,
+      };
+      const app = remoteApp({
+        activeSessionId: selection === "new draft" ? undefined : "native-previous",
+        activeRoomId: selection.startsWith("room") ? room.id : undefined,
+        activeRoom: selection === "room ready" ? room : undefined,
+        sendChat: async (input) => {
+          sent.push(input);
+          return true;
+        },
+      });
+      const hook = await renderHook(() => {
+        const controller = useDesktopController(app, undefined, noop);
+        return {
+          controller,
+          tree: Workbench({ controller: { ...controller, workspaceApi: true } }),
+        };
+      });
+      try {
+        const canonical = selection === "canonical" ? "native-previous" : undefined;
+        expect(hook.result.current.controller.panelSessionId).toBe(canonical);
+        const activeId = hook.result.current.controller.activeId;
+        await act(async () => {
+          const nav = workbenchElements(hook.result.current.tree).find(
+            (element) =>
+              element.type === "button" &&
+              workbenchElements(element.props.children).some(
+                (child) => child.type === "span" && child.props.children === "面板",
+              ),
+          );
+          expect(nav).toBeDefined();
+          nav!.props.onClick();
+          await flushMicrotasks();
+        });
+        await act(async () => {
+          const panels = workbenchElements(hook.result.current.tree).find(
+            (element) => element.type === HubPanels,
+          );
+          expect(panels).toBeDefined();
+          panels!.props.onOpen({
+            id: "synthetic-panel",
+            title: { default: "Panel" },
+            version: "1.0.0",
+            entry: "index.html",
+            icon: "panel",
+            singleton: true,
+            permissions: ["context.session"],
+            revision: "revision",
+            bound: true,
+            enabled: true,
+            globalDisabled: false,
+            updatable: false,
+            source: { kind: "local", label: "Fixture" },
+            compatibility: { supported: true, reasons: [] },
+          });
+          await flushMicrotasks();
+        });
+        const panel = workbenchElements(hook.result.current.tree).find(
+          (element) => element.type === PanelHost,
+        );
+        expect(panel).toBeDefined();
+        expect(panel!.props.sessionId).toBe(canonical);
+        expect(panel!.key).toContain(activeId);
+        expect(hook.result.current.controller.activeId).toBe(activeId);
+        if (!canonical) {
+          for (const sessionId of new Set([activeId, "native-previous"]))
+            await expect(
+              panel!.props.onSubmitPrompt({ prompt: "Must not send", sessionId }),
+            ).rejects.toThrow("当前工作区或对话已经变化");
+          expect(hook.result.current.controller.draft).toBe("");
+        }
+        expect(sent).toEqual([]);
+      } finally {
+        await hook.unmount();
+      }
+    },
+  );
+
+  test("recovery preserves draft text and attachments without releasing an old intent", async () => {
+    const sent: unknown[] = [];
+    let app = remoteApp({
+      activeSessionId: "native",
+      outputHistoryFailed: true,
+      getSessionOutputRecoveryPlan: async () => ({
+        status: "blocked",
+        sessionId: "native",
+        reason: "unavailable",
+      }),
+      applySessionOutputRecovery: async () => ({
+        status: "applied",
+        sessionId: "native",
+        historicalGap: true,
+      }),
+      sendChat: async (input) => {
+        sent.push(input);
+        return true;
+      },
+    });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      await act(async () => {
+        hook.result.current.setDraft("keep this unsent task");
+        hook.result.current.addFiles([
+          new File(["owned image"], "kept.png", { type: "image/png" }),
+        ] as unknown as FileList);
+      });
+      expect(hook.result.current.readOnly).toBe(true);
+      expect(hook.result.current.send()).toBe(false);
+      const card = React.Children.toArray(
+        (hook.result.current.chatControls as React.ReactElement<{ children: React.ReactNode }>)
+          .props.children,
+      ).find(
+        (child) => React.isValidElement(child) && child.type === OutputHistoryRecovery,
+      ) as React.ReactElement<{ onApplied(): void }>;
+      expect(card).toBeTruthy();
+      await act(async () => {
+        card.props.onApplied();
+      });
+      expect(hook.result.current.draft).toBe("keep this unsent task");
+      expect(hook.result.current.files.map((file) => file.name)).toEqual(["kept.png"]);
+      expect(sent).toEqual([]);
+      app = { ...app, outputHistoryFailed: false, outputHistoricalGap: true };
+      await hook.rerender();
+      expect(hook.result.current.readOnly).toBeFalsy();
+      expect(hook.result.current.draft).toBe("keep this unsent task");
+      expect(hook.result.current.files).toHaveLength(1);
+      expect(sent).toEqual([]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("retired in-flight submission merges into later typing and stays manual", async () => {
+    const response = deferred<boolean>();
+    let retired: (() => void) | undefined;
+    const calls: unknown[] = [];
+    const app = remoteApp({
+      activeSessionId: "native",
+      sendChat: (input) => {
+        calls.push(input);
+        retired = input.onRetired;
+        return response.promise;
+      },
+    });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      await act(async () => {
+        hook.result.current.setDraft("original task");
+        hook.result.current.addFiles([
+          new File(["image"], "task.png", { type: "image/png" }),
+        ] as unknown as FileList);
+      });
+      await act(async () => {
+        hook.result.current.send();
+      });
+      await act(async () => {
+        hook.result.current.setDraft("later typing");
+        retired?.();
+        response.resolve(false);
+      });
+      expect(hook.result.current.draft).toContain("original task");
+      expect(hook.result.current.draft).toContain("later typing");
+      expect(hook.result.current.files.map((file) => file.name)).toEqual(["task.png"]);
+      expect(hook.result.current.uncertain).toBe(false);
+      expect(hook.result.current.error).toContain("手动处理");
+      expect(calls).toHaveLength(1);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("offline session and CLI navigation preserve the workspace and draft", async () => {
     const calls: string[] = [];
     const app = remoteApp({
@@ -235,7 +455,12 @@ describe("Desktop workbench controller", () => {
       await flushMicrotasks();
     });
     expect(sent).toEqual([
-      { text: "first task", attachments: [], onUncertain: expect.any(Function) },
+      {
+        text: "first task",
+        attachments: [],
+        onUncertain: expect.any(Function),
+        onRetired: expect.any(Function),
+      },
     ]);
     expect(hook.result.current.activeId).toBe("mobile-real-1");
     expect(hook.result.current.draft).toBe("next task while accepting");
@@ -918,7 +1143,7 @@ test("model controls refuse unadvertised choices and changes during an uncertain
   }
 });
 
-test("the mobile model selector exposes both external providers and a saved unavailable model", () => {
+test("the mobile model trigger preserves the saved unavailable model identity", () => {
   const html = renderToStaticMarkup(
     <DesktopModelPicker
       models={runtimeModels}
@@ -928,9 +1153,10 @@ test("the mobile model selector exposes both external providers and a saved unav
       onChange={noop}
     />,
   );
-  expect(html).toContain('label="Codex"');
-  expect(html).toContain('label="Claude Code"');
-  expect(html).toContain('value="codex/old-saved" selected=""');
+  expect(html).toContain('aria-label="选择模型或外部运行时"');
+  expect(html).toContain('aria-haspopup="dialog"');
+  expect(html).toContain('value="codex/old-saved"');
+  expect(html).toContain("codex/old-saved · 当前会话");
 });
 
 test("failed session creation exposes a retry that retains the external model and draft", async () => {
@@ -1045,3 +1271,207 @@ test("an immediately failed creation restores the visible draft and chosen model
     await hook.unmount();
   }
 });
+
+test("history banner exposes verified progress without declaring completion or dropping drafts", async () => {
+  let app = remoteApp({
+    activeSessionId: "native",
+    loading: {
+      sessions: false,
+      sessionHistory: true,
+      rooms: false,
+      projects: false,
+      roomHistory: false,
+      ccSessions: false,
+    },
+    sessionHistoryProgress: { phase: "journal", pages: 2, receivedBytes: 50, totalBytes: 100 },
+  });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    await act(async () => hook.result.current.setDraft("manual draft"));
+    expect(hook.result.current.loading).toBe(true);
+    expect(hook.result.current.loadingLabel).toContain("50%");
+    app = {
+      ...app,
+      sessionHistoryProgress: { phase: "journal", pages: 3, receivedBytes: 100, totalBytes: 100 },
+    };
+    await hook.rerender();
+    expect(hook.result.current.loadingLabel).toContain("99%");
+    expect(hook.result.current.loading).toBe(true);
+    expect(hook.result.current.draft).toBe("manual draft");
+    app = {
+      ...app,
+      loading: { ...app.loading, sessionHistory: false },
+      sessionHistoryProgress: undefined,
+    };
+    await hook.rerender();
+    expect(hook.result.current.loading).toBe(false);
+    expect(hook.result.current.loadingLabel).toBeUndefined();
+    expect(hook.result.current.draft).toBe("manual draft");
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test("empty-session replacement retains editable input through failure and retries without sending", async () => {
+  const sent: Array<Record<string, unknown>> = [];
+  let retries = 0;
+  let creates = 0;
+  let app = remoteApp({
+    activeSessionId: "empty-old",
+    runtimeModels,
+    newSession: () => {
+      creates++;
+    },
+    retryEmptySessionReplacement: () => {
+      retries++;
+    },
+    sendChat: async (input) => {
+      sent.push(input);
+      return true;
+    },
+  });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    await act(async () => {
+      hook.result.current.setDraft("unsent task");
+      modelPicker(hook.result.current).onChange("codex/fixture");
+      hook.result.current.addFiles([
+        new File(["owned"], "kept.png", { type: "image/png" }),
+      ] as unknown as FileList);
+    });
+    app = { ...app, emptySessionReplacement: { fromSessionId: "empty-old", status: "pending" } };
+    await hook.rerender();
+    expect(hook.result.current.loading).toBe(true);
+    expect(hook.result.current.readOnly).toBeFalsy();
+    expect(hook.result.current.send()).toBe(false);
+    expect(modelPicker(hook.result.current).disabled).toBe(true);
+    await act(async () => hook.result.current.setDraft("unsent task plus later typing"));
+    app = { ...app, emptySessionReplacement: { fromSessionId: "empty-old", status: "failed" } };
+    await hook.rerender();
+    expect(hook.result.current.loading).toBe(true);
+    expect(hook.result.current.loadingLabel).toContain("重试建立会话");
+    expect(hook.result.current.send()).toBe(false);
+    expect(modelPicker(hook.result.current).disabled).toBe(false);
+    await act(async () => modelPicker(hook.result.current).onRetryCreation!());
+    expect(retries).toBe(1);
+    expect(creates).toBe(0);
+    expect(sent).toEqual([]);
+    app = {
+      ...app,
+      activeSessionId: "empty-new",
+      emptySessionReplacement: {
+        fromSessionId: "empty-old",
+        toSessionId: "empty-new",
+        status: "complete",
+      },
+    };
+    await hook.rerender();
+    expect(hook.result.current.loading).toBe(false);
+    expect(hook.result.current.draft).toBe("unsent task plus later typing");
+    expect(hook.result.current.files.map((file) => file.name)).toEqual(["kept.png"]);
+    expect(modelPicker(hook.result.current).value).toBe("codex/fixture");
+    expect(sent).toEqual([]);
+    await hook.rerender();
+    expect(hook.result.current.files).toHaveLength(1);
+    await act(async () => {
+      expect(hook.result.current.send()).toBe(true);
+      await flushMicrotasks();
+    });
+    expect(sent).toHaveLength(1);
+    expect(sent[0].text).toBe("unsent task plus later typing");
+    expect(sent[0].modelKey).toBe("codex/fixture");
+    expect((sent[0].attachments as Array<{ file: File }>).map((item) => item.file.name)).toEqual([
+      "kept.png",
+    ]);
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test("empty-session replacement merges destination edits and preserves its newer model choice", async () => {
+  let app = remoteApp({ activeSessionId: "replacement", runtimeModels });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    await act(async () => {
+      hook.result.current.setDraft("destination typing");
+      hook.result.current.addFiles([
+        new File(["new"], "new.png", { type: "image/png" }),
+      ] as unknown as FileList);
+      modelPicker(hook.result.current).onChange("claude-code/sonnet");
+    });
+    app = { ...app, activeSessionId: "empty" };
+    await hook.rerender();
+    await act(async () => {
+      hook.result.current.setDraft("source typing");
+      hook.result.current.addFiles([
+        new File(["old"], "old.png", { type: "image/png" }),
+      ] as unknown as FileList);
+      modelPicker(hook.result.current).onChange("codex/fixture");
+    });
+    app = { ...app, emptySessionReplacement: { fromSessionId: "empty", status: "pending" } };
+    await hook.rerender();
+    app = {
+      ...app,
+      activeSessionId: "replacement",
+      emptySessionReplacement: {
+        fromSessionId: "empty",
+        toSessionId: "replacement",
+        status: "complete",
+      },
+    };
+    await hook.rerender();
+    expect(hook.result.current.draft).toBe("source typing\n\ndestination typing");
+    expect(hook.result.current.files.map((file) => file.name)).toEqual(["old.png", "new.png"]);
+    expect(modelPicker(hook.result.current).value).toBe("claude-code/sonnet");
+    await hook.rerender();
+    expect(hook.result.current.draft).toBe("source typing\n\ndestination typing");
+    app = { ...app, activeSessionId: "empty", emptySessionReplacement: undefined };
+    await hook.rerender();
+    expect(hook.result.current.draft).toBe("");
+    expect(hook.result.current.files).toEqual([]);
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test.each(["session", "new", "cli"])(
+  "late empty-session replacement after %s navigation never moves the old draft",
+  async (navigation) => {
+    let app = remoteApp({ activeSessionId: "empty" });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      await act(async () => hook.result.current.setDraft("keep on old draft"));
+      app = { ...app, emptySessionReplacement: { fromSessionId: "empty", status: "pending" } };
+      await hook.rerender();
+      await act(async () => {
+        if (navigation === "session") hook.result.current.selectSession("other");
+        else if (navigation === "new") hook.result.current.newSession();
+        else {
+          const sidebar = hook.result.current.renderSidebar!({
+            guard: noop,
+            conversation: noop,
+          }) as React.ReactElement<{ app: RemoteApp }>;
+          sidebar.props.app.openCcSession("cli", "/owned", "default");
+        }
+      });
+      // Even a late producer that changes activeId cannot authorize draft migration
+      // after the controller has observed an explicit navigation intent.
+      app = {
+        ...app,
+        activeSessionId: "replacement",
+        emptySessionReplacement: {
+          fromSessionId: "empty",
+          toSessionId: "replacement",
+          status: "complete",
+        },
+      };
+      await hook.rerender();
+      expect(hook.result.current.draft).toBe("");
+      app = { ...app, activeSessionId: "empty", emptySessionReplacement: undefined };
+      await hook.rerender();
+      expect(hook.result.current.draft).toBe("keep on old draft");
+    } finally {
+      await hook.unmount();
+    }
+  },
+);

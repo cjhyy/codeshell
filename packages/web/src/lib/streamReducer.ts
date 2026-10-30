@@ -16,6 +16,7 @@
  * by agentId so a subagent never clobbers the main list).
  */
 
+import type { MobileHistoryAttachment, MobileHistoryItem } from "@cjhyy/code-shell-core";
 import { projectOutputUserEvent } from "./userMessageDisplay.js";
 
 /** Strip <system-reminder>…</system-reminder> blocks from tool output before
@@ -26,45 +27,8 @@ function stripSystemReminders(s: string): string {
 
 export type RunState = "idle" | "running" | "waiting" | "completed" | "error";
 
-export interface UserAttachmentSummary {
-  name: string;
-  mime?: string;
-  size: number;
-  path?: string;
-  absPath?: string;
-}
-
-export type ChatItem =
-  | {
-      kind: "user";
-      id: string;
-      text: string;
-      attachments?: UserAttachmentSummary[];
-      clientMessageId?: string;
-    }
-  | {
-      kind: "assistant";
-      id: string;
-      messageId?: string;
-      text: string;
-      reasoning: string;
-      done: boolean;
-      agentId?: string;
-    }
-  | {
-      kind: "tool";
-      id: string;
-      name: string;
-      args?: Record<string, unknown>;
-      result?: string;
-      error?: boolean;
-      summary?: string;
-      done: boolean;
-      agentId?: string;
-    }
-  | { kind: "subagent"; id: string; agentId: string; label: string; status: string }
-  | { kind: "system"; id: string; text: string }
-  | { kind: "system_error"; id: string; text: string };
+export type UserAttachmentSummary = MobileHistoryAttachment;
+export type ChatItem = MobileHistoryItem;
 
 export interface ChatState {
   items: ChatItem[];

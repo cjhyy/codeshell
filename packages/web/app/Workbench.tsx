@@ -9,13 +9,16 @@ import { HubSessions, useHistoryActionFocus } from "./HubSessions.js";
 import { HubLinks } from "./HubLinks.js";
 import { HubPanels } from "./HubPanels.js";
 import { PanelHost } from "./PanelHost.js";
-import type { ManagedPanel } from "../../server/src/panels/types.js";
 import { MessageContent, ToolMessage, subagentStatusLabel } from "./MessageContent.js";
 import { sessionTitle } from "./chat.js";
 import type { WorkbenchController, WorkbenchNavigation } from "./workbench-types.js";
-import { parseWorkbenchLocation } from "./website-routes.js";
+import { useWorkbenchNavigation } from "./useWorkbenchNavigation.js";
+import { getApiProject } from "./api-context.js";
 import { useLatestMessages } from "./useLatestMessages.js";
 import { useTranscriptWindow } from "./useTranscriptWindow.js";
+import { groupToolActivity } from "./toolActivityGroups.js";
+import { ToolActivity } from "./ToolActivity.js";
+import { ExpandedHistoryText } from "./ExpandedHistoryText.js";
 import "./app.css";
 import "./workbench-desktop.css";
 
@@ -24,7 +27,13 @@ export function submitWorkbenchPanelPrompt(
   controller: WorkbenchController,
   request: { prompt: string; sessionId: string; workspaceKey: string; modelTraceSource?: string },
 ): { accepted: true } {
-  if (request.workspaceKey !== controller.workspaceKey || request.sessionId !== controller.activeId)
+  if (
+    !controller.panelSessionId ||
+    !request.sessionId ||
+    request.workspaceKey !== controller.workspaceKey ||
+    request.sessionId !== controller.panelSessionId ||
+    request.sessionId !== controller.activeId
+  )
     throw new Error("当前工作区或对话已经变化，请重新打开面板后发送。");
   if (controller.connection !== "open" || controller.loading)
     throw new Error("工作台尚未连接，请连接后重新发送面板任务。");
@@ -109,38 +118,23 @@ export function Workbench({
   const fileInput = React.useRef<HTMLInputElement>(null);
   const cameraInput = React.useRef<HTMLInputElement>(null);
   const devicesOpener = React.useRef<HTMLButtonElement>(null);
-  const [view, setView] = React.useState<
-    "chat" | "activity" | "settings" | "files" | "history" | "links" | "panels" | "panel"
-  >(() => parseWorkbenchLocation(new URL(window.location.href)).view);
-  const [openedPanel, setOpenedPanel] = React.useState<{
-    panel: ManagedPanel;
-    workspaceKey: string;
-  }>();
-  const [selectedFile, setSelectedFile] = React.useState<string | undefined>();
-  const [fileOpenVersion, setFileOpenVersion] = React.useState(0);
-  const [navigationDirty, setNavigationDirty] = React.useState(false);
-  const [pendingNavigation, setPendingNavigation] = React.useState<(() => void) | null>(null);
-  const [settingsSection, setSettingsSection] = React.useState<HubSettingsSection>(
-    () => parseWorkbenchLocation(new URL(window.location.href)).section,
+  const navigation = useWorkbenchNavigation(
+    controller.workspaceKey,
+    controller.host === "desktop" ? undefined : { projectId: getApiProject(), sessionId: activeId },
   );
-  React.useEffect(() => {
-    const url = new URL(window.location.href);
-    if (view === "chat") url.searchParams.delete("view");
-    else url.searchParams.set("view", view === "panel" ? "panels" : view);
-    if (view === "settings" && settingsSection !== "overview")
-      url.searchParams.set("section", settingsSection);
-    else url.searchParams.delete("section");
-    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
-  }, [view, settingsSection]);
-  React.useEffect(() => {
-    const pop = () => {
-      const next = parseWorkbenchLocation(new URL(window.location.href));
-      setView(next.view);
-      setSettingsSection(next.section);
-    };
-    window.addEventListener("popstate", pop);
-    return () => window.removeEventListener("popstate", pop);
-  }, []);
+  const {
+    route,
+    dirty: navigationDirty,
+    setDirty: setNavigationDirty,
+    pending: pendingNavigation,
+    guard: requestNavigation,
+  } = navigation;
+  const view = route.view;
+  const settingsSection = route.section ?? "overview";
+  const openedPanel = route.panel
+    ? { panel: route.panel, workspaceKey: controller.workspaceKey }
+    : undefined;
+  const setView = (view: typeof route.view) => navigation.navigate({ view });
   const [narrow, setNarrow] = React.useState(() => window.matchMedia("(max-width: 760px)").matches);
   const [sidebarOpen, setSidebarOpen] = React.useState(
     () => !window.matchMedia("(max-width: 760px)").matches,
@@ -181,10 +175,6 @@ export function Workbench({
       historyFocus.finish(handoff.request, latest.listRef.current);
     }
   }, [activeId, controller.workspaceKey, historyFocus, latest.listRef, narrow, view]);
-  React.useEffect(() => {
-    setOpenedPanel(undefined);
-    setView((current) => (current === "panel" ? "panels" : current));
-  }, [controller.workspaceKey]);
   React.useLayoutEffect(() => {
     if (sidebarOpen) return;
     const intent = sidebarCloseFocus.current;
@@ -292,8 +282,8 @@ export function Workbench({
     const textarea = textareaRef.current;
     if (!textarea || view !== "chat") return;
     textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(180, Math.max(64, textarea.scrollHeight))}px`;
-  }, [draft, view]);
+    textarea.style.height = `${Math.min(180, Math.max(narrow ? 48 : 64, textarea.scrollHeight))}px`;
+  }, [draft, view, narrow]);
 
   const closeMobileSidebar = () => {
     if (narrow) {
@@ -315,21 +305,14 @@ export function Workbench({
       return;
     }
     requestNavigation(() => {
-      setSettingsSection(section);
-      setView("settings");
+      navigation.navigate({ view: "settings", section });
       closeMobileSidebar();
     });
   };
 
-  const requestNavigation = (action: () => void) => {
-    if (navigationDirty) setPendingNavigation(() => action);
-    else action();
-  };
   const openFiles = (path?: string) =>
     requestNavigation(() => {
-      setSelectedFile(path);
-      setFileOpenVersion((value) => value + 1);
-      setView("files");
+      navigation.navigate({ view: "files", files: { folder: "", path, reveal: Boolean(path) } });
       closeMobileSidebar();
     });
   // Keep settled Markdown memoized while typing, but always use current
@@ -454,7 +437,7 @@ export function Workbench({
             navigate={(address) => {
               const go = () => window.location.assign(address);
               if (navigationDirty || controller.hasUnsent || controller.uploadBusy)
-                setPendingNavigation(() => go);
+                navigation.prompt(go);
               else go();
             }}
           />
@@ -465,7 +448,7 @@ export function Workbench({
                 title={projectName}
                 onClick={() => {
                   if (navigationDirty || controller.hasUnsent || controller.uploadBusy)
-                    setPendingNavigation(() => onBackToProjects);
+                    navigation.prompt(onBackToProjects);
                   else onBackToProjects();
                 }}
               >
@@ -710,6 +693,12 @@ export function Workbench({
           >
             <WorkbenchIcon name="sidebar" />
           </button>
+          {navigation.backLabel ? (
+            <button className="workbench-back" type="button" onClick={navigation.back}>
+              <span aria-hidden="true">←</span>
+              <span>{navigation.backLabel}</span>
+            </button>
+          ) : null}
           <div className="topbar-context">
             <span
               className="topbar-project"
@@ -774,12 +763,26 @@ export function Workbench({
               tabIndex={0}
               ref={latest.listRef}
               onScroll={latest.onScroll}
+              onWheel={latest.onScrollIntent}
+              onTouchMove={latest.onScrollIntent}
+              onPointerDown={(event) => {
+                if (event.target === event.currentTarget) latest.onScrollIntent();
+              }}
+              onKeyDown={(event) => {
+                if (
+                  event.target === event.currentTarget &&
+                  ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(
+                    event.key,
+                  )
+                )
+                  latest.onScrollIntent();
+              }}
             >
               <div className="transcript" ref={latest.contentRef}>
                 {controller.chatControls}
                 {controller.loading ? (
                   <div className="banner" role="status">
-                    正在恢复会话记录…
+                    {controller.loadingLabel ?? "正在恢复会话记录…"}
                   </div>
                 ) : null}
                 {chat.goal ? (
@@ -793,12 +796,45 @@ export function Workbench({
                     显示更早消息（还有 {transcript.hidden} 条）
                   </button>
                 ) : null}
-                {transcript.items.map((item) => {
+                {!transcript.hidden &&
+                controller.loadEarlierHistory &&
+                (controller.historyHasEarlier || controller.historyEarlierError) ? (
+                  <div className="message-earlier-history">
+                    <button
+                      type="button"
+                      className="library-button"
+                      disabled={controller.historyLoadingEarlier || controller.loading}
+                      onClick={() => {
+                        const cancel = transcript.prepareEarlierPage();
+                        void controller.loadEarlierHistory!().catch(cancel);
+                      }}
+                    >
+                      {controller.historyLoadingEarlier
+                        ? "正在读取更早记录…"
+                        : controller.historyEarlierError
+                          ? "重试读取更早记录"
+                          : "读取更早记录"}
+                    </button>
+                    {controller.historyEarlierError && (
+                      <p role="alert">{controller.historyEarlierError}</p>
+                    )}
+                  </div>
+                ) : null}
+                {groupToolActivity(transcript.items).map((item) => {
                   switch (item.kind) {
                     case "user":
                       return (
                         <div key={item.id} className="msg user">
-                          {item.text}
+                          <ExpandedHistoryText
+                            key={`${controller.workspaceKey}:${activeId}:${item.id}`}
+                            text={item.text}
+                            reference={item.textDetailRef}
+                            scope={`${controller.workspaceKey}:${activeId}`}
+                            load={controller.loadHistoryDetail}
+                            reload={controller.reloadHistory}
+                          >
+                            {(text) => <span>{text}</span>}
+                          </ExpandedHistoryText>
                           {item.attachments?.map((attachment, index) =>
                             hub && attachment.path ? (
                               <button
@@ -817,21 +853,55 @@ export function Workbench({
                         </div>
                       );
                     case "assistant":
-                      if (item.done && !item.text && !item.reasoning) return null;
+                      if (
+                        item.done &&
+                        !item.text &&
+                        !item.reasoning &&
+                        !item.reasoningDetailRef &&
+                        !item.textDetailRef
+                      )
+                        return null;
                       return (
                         <div key={item.id} className="msg assistant">
                           <MessageContent
+                            key={`${controller.workspaceKey}:${activeId}:${item.id}`}
                             text={item.text}
                             reasoning={item.reasoning}
+                            reasoningDetailRef={item.reasoningDetailRef}
+                            textDetailRef={item.textDetailRef}
+                            detailScope={`${controller.workspaceKey}:${activeId}`}
+                            loadHistoryDetail={controller.loadHistoryDetail}
+                            reloadHistory={controller.reloadHistory}
                             streaming={!item.done}
                             onOpenFile={hub ? openMessageFile : undefined}
+                          />
+                        </div>
+                      );
+                    case "tool_group":
+                      return (
+                        <div
+                          key={`${controller.workspaceKey}:${activeId}:${item.id}`}
+                          className="msg tool"
+                        >
+                          <ToolActivity
+                            items={item.items}
+                            detailScope={`${controller.workspaceKey}:${activeId}`}
+                            loadHistoryDetail={controller.loadHistoryDetail}
+                            reloadHistory={controller.reloadHistory}
                           />
                         </div>
                       );
                     case "tool":
                       return (
                         <div key={item.id} className={`msg tool${item.error ? " tool-error" : ""}`}>
-                          <ToolMessage item={item} running={running} />
+                          <ToolMessage
+                            key={`${controller.workspaceKey}:${activeId}:${item.id}`}
+                            item={item}
+                            running={running}
+                            detailScope={`${controller.workspaceKey}:${activeId}`}
+                            loadHistoryDetail={controller.loadHistoryDetail}
+                            reloadHistory={controller.reloadHistory}
+                          />
                         </div>
                       );
                     case "subagent":
@@ -933,7 +1003,7 @@ export function Workbench({
                 aria-label="任务内容"
                 value={draft}
                 disabled={controller.readOnly}
-                rows={2}
+                rows={narrow ? 1 : 2}
                 placeholder="描述你的任务，或提出一个问题…"
                 onChange={(event) => {
                   controller.setDraft(event.target.value);
@@ -1008,7 +1078,8 @@ export function Workbench({
                       </>
                     ) : null}
                     <button
-                      className="model-button"
+                      className="model-button model-settings-button"
+                      aria-label="模型设置"
                       title="打开模型设置"
                       onClick={() => openSettings("models")}
                     >
@@ -1016,6 +1087,9 @@ export function Workbench({
                         {controller.modelSelector
                           ? "模型设置"
                           : defaultConnection?.model || "配置模型"}
+                      </span>
+                      <span className="model-settings-mobile-icon">
+                        <WorkbenchIcon name="settings" />
                       </span>
                       <WorkbenchIcon name="chevron" />
                     </button>
@@ -1088,8 +1162,11 @@ export function Workbench({
         {view === "files" && hub ? (
           <HubFiles
             key={`${controller.workspaceKey}:files`}
-            initialPath={selectedFile}
-            openVersion={fileOpenVersion}
+            location={route.files ?? { folder: "" }}
+            onNavigate={(files, replace) =>
+              (replace ? navigation.replace : navigation.navigate)({ view: "files", files })
+            }
+            onBack={navigation.back}
             onAuthLost={onAuthLost}
           />
         ) : null}
@@ -1138,8 +1215,7 @@ export function Workbench({
             configurationVersion={configurationVersion}
             onOpen={(panel) =>
               requestNavigation(() => {
-                setOpenedPanel({ panel, workspaceKey: controller.workspaceKey });
-                setView("panel");
+                navigation.navigate({ view: "panel", panel });
                 closeMobileSidebar();
               })
             }
@@ -1149,11 +1225,17 @@ export function Workbench({
           <PanelHost
             key={`${controller.workspaceKey}:panel:${openedPanel.panel.id}:${activeId}`}
             panel={openedPanel.panel}
-            sessionId={activeId}
+            sessionId={controller.panelSessionId}
             busy={running || uploading || controller.uncertain}
             onAuthLost={onAuthLost}
             onDirtyChange={setNavigationDirty}
-            onClose={() => requestNavigation(() => setView("panels"))}
+            onClose={navigation.back}
+            previewKey={route.preview ?? null}
+            onPreviewOpen={(preview) =>
+              (route.preview ? navigation.replace : navigation.navigate)({ ...route, preview })
+            }
+            onPreviewClose={navigation.back}
+            onPreviewUnavailable={() => navigation.replace({ ...route, preview: undefined })}
             onSubmitPrompt={async (request) =>
               submitWorkbenchPanelPrompt(controller, {
                 ...request,
@@ -1167,13 +1249,8 @@ export function Workbench({
         <NavigationPrompt
           identity={pendingNavigation}
           workspaceKey={controller.workspaceKey}
-          onStay={() => setPendingNavigation(null)}
-          onLeave={() => {
-            const action = pendingNavigation;
-            setPendingNavigation(null);
-            setNavigationDirty(false);
-            action();
-          }}
+          onStay={navigation.stay}
+          onLeave={navigation.leave}
         />
       ) : null}
       {devicesOpen && controller.host === "hub" && !cloudAccount ? (

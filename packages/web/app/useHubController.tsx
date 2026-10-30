@@ -59,6 +59,9 @@ export function useHubController({
   onAuthLost?: () => void;
   onCheckAuth?: () => Promise<void>;
 }): WorkbenchController {
+  // ProjectsGate remounts this controller for a different project/generation.
+  // Late display metadata must not look like a new authority and retire Panels.
+  const [projectId] = React.useState(() => (hub ? captureApiScope().projectId : null));
   const clientRef = React.useRef<ProtocolClient | null>(null);
   const [connection, setConnection] = React.useState<ConnectionState>("connecting");
   const [sessions, setSessions] = React.useState<SessionSummary[]>([]);
@@ -823,13 +826,14 @@ export function useHubController({
     connection,
     session,
     activeId,
+    panelSessionId: activeId,
     loading: loadingSession === activeId,
     chat,
     sessions,
     workspaceCwd,
     workspaceName,
     title,
-    workspaceKey: workspaceCwd ?? "hub",
+    workspaceKey: projectId ? `project:${projectId}` : (workspaceCwd ?? "hub"),
     configuration,
     configurationVersion,
     sessionsVersion,

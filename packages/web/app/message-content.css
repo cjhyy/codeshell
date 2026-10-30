@@ -225,6 +225,49 @@ button.message-image-reference:hover {
   white-space: normal;
   overflow: hidden;
 }
+.message-tool-group-items {
+  display: grid;
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+.message-tool-group-items > .message-tool-card {
+  box-shadow: none;
+}
+.message-detail-status {
+  padding: 10px 14px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.message-detail-error > p {
+  margin: 0 0 8px;
+}
+.message-detail-error button {
+  min-height: 44px;
+  margin-right: 8px;
+}
+.message-full-text > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.message-earlier-history {
+  align-self: stretch;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.message-earlier-history button {
+  min-height: 44px;
+}
+.message-earlier-history p {
+  overflow-wrap: anywhere;
+}
 .message-tool-card > summary {
   display: flex;
   align-items: center;

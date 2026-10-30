@@ -119,6 +119,8 @@ interface Props {
   /** Remote runtimes use the same chat while local-only capabilities fail closed. */
   localRuntime?: boolean;
   composerDisabled?: boolean;
+  outputHistoryRecovery?: React.ReactNode;
+  deliveryEpoch?: number;
   remoteFiles?: Array<{ id: string; name: string; size: number }>;
   onSelectRemoteFiles?: (files: File[]) => Promise<void>;
   onRemoveRemoteFile?: (id: string) => void;
@@ -417,6 +419,8 @@ export function ChatView({
   awaitingHydration = false,
   historyHasMore = false,
   historyLoading = false,
+  outputHistoryRecovery,
+  deliveryEpoch = 0,
   historyFailed = false,
   historyLimitReached = false,
   onLoadEarlierHistory,
@@ -575,6 +579,20 @@ export function ChatView({
     currentMentionReferences(mentionReferences, draft).reduce(appendReference, inputReferences);
   const toast = useToast();
   const [linkIntents, setLinkIntents] = useState<ChatLinkResourceIntent[]>([]);
+  const linkDeliveryEpochs = useRef(new Map<string, number>());
+  useEffect(() => {
+    if (!sendBucket) return;
+    const previous = linkDeliveryEpochs.current.get(sendBucket) ?? 0;
+    linkDeliveryEpochs.current.set(sendBucket, deliveryEpoch);
+    if (previous === deliveryEpoch) return;
+    // A recovery boundary revokes automatic Link continuations as well as
+    // queued runs. Keep the user's composer/history, retire only delivery intent.
+    linkProvenance.current = linkProvenance.current.filter(
+      (intent) => intent.bucket !== sendBucket,
+    );
+    setLinkIntents((current) => current.filter((intent) => intent.bucket !== sendBucket));
+  }, [sendBucket, deliveryEpoch]);
+
   const linkProvenance = useRef<ChatLinkResourceIntent[]>([]);
   const resolvedMcpRequests = useRef(new Set<string>());
   const mcpRequestKey = (intent: ChatLinkResourceIntent) =>
@@ -1761,9 +1779,9 @@ export function ChatView({
   const chatLinkResources =
     onReadLinkResource && visibleLinkIntents.length > 0 ? (
       <ChatLinkResources
-        key={`${sendBucket}:${conversationRoot}`}
+        key={`${sendBucket}:${conversationRoot}:${deliveryEpoch}`}
         intents={visibleLinkIntents}
-        busy={busy || compacting}
+        busy={busy || compacting || composerDisabled}
         onRead={onReadLinkResource}
         onConsumed={consumeLinkIntent}
         onResumeConnectionChange={setLinkResumeConnection}
@@ -1934,6 +1952,7 @@ export function ChatView({
         eat the vertical space and push the welcome + composer to the bottom.
         The welcome block below owns the flex-1 and centers itself instead.
       */}
+      {outputHistoryRecovery}
       {awaitingHydration ? (
         // Existing session picked from the sidebar, not hydrated yet: owns the
         // flex-1 stream space with a centered spinner so the pane isn't blank

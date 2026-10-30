@@ -72,7 +72,15 @@ export function createPetTargetNavigator({
         });
         markViewedPetCompletions(request.agentSessionId);
       },
-      onStale: () => toast({ message: t("pet.navigation.stale"), variant: "default" }),
+      onStale: (pendingStatus) => {
+        if (pendingStatus === "pending") return;
+        toast({
+          message: t(
+            pendingStatus === "resolved" ? "pet.navigation.resolved" : "pet.navigation.stale",
+          ),
+          variant: "default",
+        });
+      },
       onNotFound: () => toast({ message: t("pet.navigation.notFound"), variant: "error" }),
     });
   };

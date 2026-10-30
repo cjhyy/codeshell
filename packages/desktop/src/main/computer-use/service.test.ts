@@ -6,9 +6,13 @@ import {
   getCuaDriverHost,
   hostMcpServersEnv,
   initCuaComputerUse,
+  observeComputerUseRunControl,
+  observeComputerUseRunEvent,
   resetCuaComputerUse,
   type CuaComputerUseInputs,
 } from "./service.js";
+import { InputGate } from "./input-gate.js";
+import { ComputerActivityBus } from "./computer-activity-bus.js";
 
 const APP_PATH = "/test/packages/desktop";
 const DRIVER = {};
@@ -263,5 +267,69 @@ describe("Computer Use spike gates", () => {
       PATH: "/selected/bin",
       HOME: "/selected/home",
     });
+  });
+});
+
+describe("Computer Use execution gate wiring", () => {
+  test("the driver is not offered on macOS without the proxy that enforces the gate", () => {
+    const decision = initCuaComputerUse({
+      flags: { computer_use_cua: true },
+      platform: "darwin",
+      isPackaged: false,
+      appPath: APP_PATH,
+      isExecutable: () => true,
+      env: DRIVER,
+      requireProxy: true,
+    });
+    expect(decision).toEqual({ enabled: false, reason: "control_unavailable" });
+  });
+
+  test("Stop cancels the Session at the gate and its next run clears it", () => {
+    const control = { gate: new InputGate(), bus: new ComputerActivityBus() };
+    observeComputerUseRunControl({ method: "agent/cancel", params: { sessionId: "s1" } }, control);
+    expect(control.gate.snapshot().cancelledSessions).toEqual(["s1"]);
+    observeComputerUseRunControl({ method: "agent/approve", params: { sessionId: "s1" } }, control);
+    expect(control.gate.snapshot().cancelledSessions).toEqual(["s1"]);
+    observeComputerUseRunControl({ method: "agent/run", params: { sessionId: "s1" } }, control);
+    expect(control.gate.snapshot().cancelledSessions).toEqual([]);
+    observeComputerUseRunControl({ method: "agent/cancel", params: {} }, control);
+    expect(control.gate.snapshot().cancelledSessions).toEqual([]);
+    // A queued turn of the same Session starts without another agent/run.
+    observeComputerUseRunControl({ method: "agent/cancel", params: { sessionId: "s2" } }, control);
+    observeComputerUseRunEvent("s2", { type: "session_started", agentId: "child" }, control);
+    expect(control.gate.snapshot().cancelledSessions).toEqual(["s2"]);
+    observeComputerUseRunEvent("s2", { type: "session_started" }, control);
+    expect(control.gate.snapshot().cancelledSessions).toEqual([]);
+  });
+
+  test("top-level terminal events become run outcomes; child agent events do not", () => {
+    const control = { gate: new InputGate(), bus: new ComputerActivityBus() };
+    const runs: string[] = [];
+    control.bus.subscribe({
+      onOperation: () => {},
+      onRun: (run) => runs.push(`${run.sessionId}:${run.outcome}`),
+    });
+    const used = (sessionId: string) =>
+      void control.bus.publish({
+        id: `${sessionId}-op`,
+        action: "click",
+        phase: "start",
+        capture: false,
+        sessionId,
+      });
+    used("a");
+    observeComputerUseRunEvent(
+      "a",
+      { type: "turn_complete", reason: "completed", agentId: "x" },
+      control,
+    );
+    observeComputerUseRunEvent("a", { type: "turn_complete", reason: "completed" }, control);
+    used("b");
+    observeComputerUseRunEvent("b", { type: "turn_complete", reason: "aborted_tools" }, control);
+    used("c");
+    observeComputerUseRunEvent("c", { type: "error" }, control);
+    used("d");
+    observeComputerUseRunEvent("d", { type: "turn_complete", reason: "model_error" }, control);
+    expect(runs).toEqual(["a:completed", "b:cancelled", "c:failed", "d:failed"]);
   });
 });

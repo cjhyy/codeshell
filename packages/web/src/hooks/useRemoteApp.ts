@@ -10,6 +10,11 @@ import type {
   ApprovalPathScope,
   CcDiscoveredSession,
   MobileImageBase,
+  OutputHistoryRecoveryAcceptance,
+  OutputHistoryRecoveryPlan,
+  OutputHistoryRecoveryResult,
+  MobileHistoryDetail,
+  MobileHistoryItem,
 } from "@cjhyy/code-shell-core";
 import {
   reduceStream,
@@ -27,6 +32,9 @@ import {
 } from "../lib/messageMappers.js";
 import { projectForCwd } from "../lib/format.js";
 import { MobileOutputClient } from "./mobileOutputClient.js";
+import { HistoryReadBusyError } from "./mobileHistoryReadQueue.js";
+import type { MobileRecoveryProgress } from "../lib/mobileOutputRecovery.js";
+import { MobileHistoryRecoveryRequests } from "./mobileHistoryRecoveryRequests.js";
 import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket.js";
 import {
   prepareMobileAttachments,
@@ -41,16 +49,20 @@ import {
   maxRoomSeq,
   alignSessionEpoch,
   pruneUnreadSessions,
-  rawApprovalResolvedRequestId,
-  removeResolvedApproval,
+  rawApprovalResolvedRoute,
+  approvalMatchesRoute,
+  approvalRouteKey,
   roomMessageSeq,
   selectSessionReplayEntries,
   type SessionReplayEntry,
   type SessionStreamCursor,
+  type ApprovalRoute,
 } from "./remoteAppSync.js";
 
 /** The host explicitly refused a message, so it was not admitted. */
 class MessageRejectedError extends Error {}
+/** A recovery invalidated delivery authority; the content must remain a manual draft. */
+class MessageRetiredError extends Error {}
 
 /** Which external coding-CLI the CC pane drives. Mirrors desktop CCRoomView. */
 export type CcCliKind = "claude-code" | "codex";
@@ -62,6 +74,10 @@ export type MobileRuntimeModel = Extract<
 export interface PendingApproval {
   requestId: string;
   sessionId?: string;
+  connectionId?: string;
+  generation?: number;
+  /** Absolute deadline supplied by the worker; reconnecting never extends it. */
+  expiresAt?: number;
   /** Set for cc-room (external claude CLI) approvals — routes the response via
    *  respondCcApproval(roomId, …) instead of the session approval path. */
   roomId?: string;
@@ -96,6 +112,13 @@ export interface RemoteApp {
   conversationRevision: number;
   /** Increments when this browser's pending session creation fails or loses its connection. */
   sessionCreationFailures?: number;
+  /** A never-submitted draft needs a new Host selection after reconnecting. */
+  emptySessionReplacement?: {
+    fromSessionId: string;
+    toSessionId?: string;
+    status: "pending" | "failed" | "complete";
+  };
+  retryEmptySessionReplacement?: () => void;
   activeCwd?: string | null;
   projects: MobileProjectMeta[];
   /** The bound room — for the user this is always an external CC (Claude Code)
@@ -120,6 +143,21 @@ export interface RemoteApp {
     ccSessions: boolean;
   };
   notice?: string;
+  sessionHistoryProgress?: MobileRecoveryProgress;
+  historyHasEarlier?: boolean;
+  historyLoadingEarlier?: boolean;
+  historyEarlierError?: string;
+  loadEarlierHistory?: () => Promise<void>;
+  loadHistoryDetail?: (ref: string) => Promise<MobileHistoryDetail>;
+  reloadHistory?: () => void;
+  outputHistoryFailed?: boolean;
+  outputHistoricalGap?: boolean;
+  outputRecoveryIdentity?: string;
+  getSessionOutputRecoveryPlan?: (sessionId: string) => Promise<OutputHistoryRecoveryPlan>;
+  applySessionOutputRecovery?: (
+    sessionId: string,
+    acceptance: OutputHistoryRecoveryAcceptance,
+  ) => Promise<OutputHistoryRecoveryResult>;
   logout: () => void;
   // actions
   /** Resolves true once the host accepted the message. */
@@ -134,6 +172,7 @@ export interface RemoteApp {
     /** The frame reached the socket but neither acceptance nor rejection
      *  arrived (lost connection or timeout): the host may have run it. */
     onUncertain?: (clientMessageId: string) => void;
+    onRetired?: () => void;
   }) => Promise<boolean>;
   stopRun: () => void;
   selectSession: (id: string) => void;
@@ -208,7 +247,8 @@ type ChatAction =
       clientMessageId?: string;
       attachments?: Array<{ name: string; mime?: string; size: number }>;
     }
-  | { kind: "hydrate"; chat: ChatState }
+  | { kind: "hydrate"; chat: ChatState; verifiedInputIds?: string[] }
+  | { kind: "prependHistory"; sessionId: string; items: MobileHistoryItem[] }
   | { kind: "reset" }
   | { kind: "stream_epoch_changed" }
   | { kind: "replay"; events: unknown[] }
@@ -220,12 +260,21 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return reduceStream(state, action.raw);
     case "user":
       return appendUserMessage(state, action.text, action.attachments, action.clientMessageId);
+    case "prependHistory": {
+      if (state.sessionId !== action.sessionId) return state;
+      const seen = new Set(state.items.map((item) => item.id));
+      return {
+        ...state,
+        items: [...action.items.filter((item) => !seen.has(item.id)), ...state.items],
+      };
+    }
     case "hydrate": {
       const ids = new Set(
         action.chat.items.flatMap((item) =>
           item.kind === "user" && item.clientMessageId ? [item.clientMessageId] : [],
         ),
       );
+      for (const id of action.verifiedInputIds ?? []) ids.add(id);
       const pending = state.items.filter(
         (item) => item.kind === "user" && item.clientMessageId && !ids.has(item.clientMessageId),
       );
@@ -300,6 +349,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   /** Synchronous approvals whose card was consumed on send. A correlated
    *  delivery error asks Main to replay them if Core still holds the request. */
   const submittedApprovalsRef = useRef(new Set<string>());
+  const retiredApprovalsRef = useRef(new Set<string>());
+  const settledApprovalRoutesRef = useRef(new Set<string>());
   const requestActiveResyncRef = useRef<() => void>(() => undefined);
   // The SELECTED project (one-true-source for "what am I looking at"), distinct
   // from activeSessionCwd which is derived from the bound session. Drives session
@@ -345,15 +396,62 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   );
   const conversationRevisionRef = useRef(0);
   const socketOnlineRef = useRef(false);
+  const historyWindowRef = useRef<
+    | { sessionId: string; id: string; hasEarlier: boolean; loading?: boolean; error?: string }
+    | undefined
+  >(undefined);
+  const [historyWindow, setHistoryWindow] = useState<typeof historyWindowRef.current>();
+  const [historyProgress, setHistoryProgress] = useState<{
+    sessionId: string;
+    progress: MobileRecoveryProgress;
+  }>();
+  const [outputHistory, setOutputHistory] = useState<{
+    sessionId: string;
+    failed: boolean;
+    historicalGap?: boolean;
+  }>();
+  const recoveryFencesRef = useRef(new Set<string>());
+  const outputWriteGenerationRef = useRef(0);
+  const applyingHistoryRef = useRef<string | undefined>(undefined);
+  const [historyRecovery] = useState(
+    () =>
+      new MobileHistoryRecoveryRequests({
+        send: (event) => sendRef.current?.(event) ?? false,
+        current: () => ({
+          sessionId: boundSessionRef.current,
+          roomId: activeRoomIdRef.current,
+          revision: conversationRevisionRef.current,
+          generation: connectionGenerationRef.current,
+          online: socketOnlineRef.current,
+        }),
+      }),
+  );
+  useEffect(() => () => historyRecovery.cancel(), [historyRecovery]);
   // A first send can use the Host's implicit session. Once an uncertain reply
   // identifies it, pin retries to that session even if the Host's selection moves.
   const uncertainMessageSessionsRef = useRef(new Map<string, string>());
   const pendingCreateRef = useRef<{
     clientRequestId: string;
+    permissionMode: PermissionMode;
+    target: MobileSessionCreateTarget;
+    replacesSessionId?: string;
     conversationRevision: number;
     connectionGeneration: number;
     timer?: ReturnType<typeof setTimeout>;
   } | null>(null);
+  const unsentCreatedSessionRef = useRef<{
+    sessionId: string;
+    generation: number;
+    target: MobileSessionCreateTarget;
+  } | null>(null);
+  const replacementSourceRef = useRef<typeof unsentCreatedSessionRef.current>(null);
+  const [emptySessionReplacement, setEmptySessionReplacementState] =
+    useState<RemoteApp["emptySessionReplacement"]>();
+  const emptySessionReplacementRef = useRef<RemoteApp["emptySessionReplacement"]>(undefined);
+  const setEmptySessionReplacement = useCallback((value: RemoteApp["emptySessionReplacement"]) => {
+    emptySessionReplacementRef.current = value;
+    setEmptySessionReplacementState(value);
+  }, []);
   const messageAckWaitersRef = useRef(
     new Map<
       string,
@@ -367,6 +465,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     >(),
   );
   const [permissionMode, setPermissionModeState] = useState<PermissionMode>("default");
+  const permissionModeRef = useRef<PermissionMode>("default");
+  const creationPermissionEchoRef = useRef<{ sessionId: string; mode: PermissionMode } | null>(
+    null,
+  );
   /** Transient banner message (errors, room-missing, …). Auto-clears. */
   const [notice, setNoticeState] = useState<string | undefined>();
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -394,6 +496,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     if (!pending || (clientRequestId && pending.clientRequestId !== clientRequestId)) return false;
     clearTimeout(pending.timer);
     pendingCreateRef.current = null;
+    if (
+      pending.replacesSessionId &&
+      emptySessionReplacementRef.current?.fromSessionId === pending.replacesSessionId
+    )
+      setEmptySessionReplacement({ fromSessionId: pending.replacesSessionId, status: "failed" });
     setSessionCreationFailures((value) => value + 1);
     return true;
   }, []);
@@ -574,12 +681,42 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     [setLoadingKey],
   );
 
-  const clearApproval = useCallback((requestId: string) => {
-    submittingAsyncApprovalsRef.current.delete(requestId);
-    submittedApprovalsRef.current.delete(requestId);
-    approvalsRef.current = removeResolvedApproval(approvalsRef.current, requestId);
-    setApprovals((prev) => removeResolvedApproval(prev, requestId));
+  const clearApproval = useCallback((requestId: string, route?: ApprovalRoute) => {
+    const target = route ?? { requestId };
+    const matching = approvalsRef.current.filter((approval) =>
+      approvalMatchesRoute(approval, target),
+    );
+    // Remember the complete worker route so a delayed replay cannot resurrect
+    // a request already answered on desktop or in the originating IM chat.
+    if (route?.sessionId) settledApprovalRoutesRef.current.add(approvalRouteKey(route));
+    for (const approval of matching)
+      settledApprovalRoutesRef.current.add(approvalRouteKey(approval));
+    if (!route || matching.length || !approvalsRef.current.some((a) => a.requestId === requestId)) {
+      submittingAsyncApprovalsRef.current.delete(requestId);
+      submittedApprovalsRef.current.delete(requestId);
+    }
+    approvalsRef.current = approvalsRef.current.filter(
+      (approval) => !approvalMatchesRoute(approval, target),
+    );
+    setApprovals((prev) => prev.filter((approval) => !approvalMatchesRoute(approval, target)));
   }, []);
+
+  useEffect(() => {
+    const deadlines = approvals.flatMap((approval) =>
+      typeof approval.expiresAt === "number" ? [approval.expiresAt] : [],
+    );
+    if (!deadlines.length) return;
+    const timer = setTimeout(
+      () => {
+        for (const approval of approvalsRef.current) {
+          if (approval.expiresAt !== undefined && approval.expiresAt <= Date.now())
+            clearApproval(approval.requestId, approval);
+        }
+      },
+      Math.max(0, Math.min(...deadlines) - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [approvals, clearApproval]);
 
   const rememberRoomMessages = useCallback(
     (roomId: string, messages: unknown[], latestSeq?: number) => {
@@ -631,10 +768,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         return type === "turn_complete" || type === "error";
       })
     ) {
-      // Asynchronous questions outlive the current run. Only a resolution
-      // notification (or a new worker epoch) makes their answer stale.
-      approvalsRef.current = approvalsRef.current.filter((approval) => approval.asynchronous);
-      setApprovals((prev) => prev.filter((approval) => approval.asynchronous));
+      // Modern requests have a worker-owned deadline and resolution. A history
+      // snapshot may replay an older terminal event after a live question was
+      // restored; it cannot revoke that newer question's authority.
+      const keep = (approval: PendingApproval) =>
+        approval.asynchronous || approval.expiresAt !== undefined;
+      approvalsRef.current = approvalsRef.current.filter(keep);
+      setApprovals((prev) => prev.filter(keep));
     }
   }, []);
 
@@ -658,6 +798,16 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   }, [sessions]);
 
   const addApproval = useCallback((a: PendingApproval) => {
+    if (retiredApprovalsRef.current.has(a.requestId)) return;
+    if (settledApprovalRoutesRef.current.has(approvalRouteKey(a))) return;
+    if (a.expiresAt !== undefined && a.expiresAt <= Date.now()) return;
+    if (
+      applyingHistoryRef.current &&
+      (a.sessionId ?? boundSessionRef.current) === applyingHistoryRef.current
+    ) {
+      retiredApprovalsRef.current.add(a.requestId);
+      return;
+    }
     // Isolate to the bound session: an approval for some OTHER desktop session
     // must not pop on this phone's feed. If nothing is bound yet, auto-bind to
     // the approval's session (same first-coherent-conversation rule as streams)
@@ -672,7 +822,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         setActiveSessionId(a.sessionId);
       }
     }
-    setApprovals((prev) => (prev.some((p) => p.requestId === a.requestId) ? prev : [...prev, a]));
+    setApprovals((prev) =>
+      prev.some((p) => approvalRouteKey(p) === approvalRouteKey(a))
+        ? prev
+        : [...prev.filter((p) => p.requestId !== a.requestId), a],
+    );
   }, []);
 
   const requestSessionHistory = useCallback(
@@ -698,6 +852,26 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       roomId: activeRoomIdRef.current,
       revision: conversationRevisionRef.current,
     }),
+    historyWindow: (sessionId, window) => {
+      const previous = historyWindowRef.current;
+      const value = window
+        ? { sessionId, ...window }
+        : previous?.sessionId === sessionId
+          ? undefined
+          : previous;
+      historyWindowRef.current = value;
+      setHistoryWindow(value);
+    },
+    prependHistory: (sessionId, items) =>
+      dispatchChat({ kind: "prependHistory", sessionId, items }),
+    progress: (sessionId, progress) =>
+      setHistoryProgress((previous) =>
+        progress
+          ? { sessionId, progress }
+          : previous?.sessionId === sessionId
+            ? undefined
+            : previous,
+      ),
     commit: (sessionId, result) => {
       const cursor = sessionCursor(sessionId);
       cursor.epoch = result.snapshot.epoch;
@@ -706,11 +880,43 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       cursor.awaitingSnapshot = false;
       cursor.historyUnpaired = undefined;
       epochHistorySessionRef.current = undefined;
-      dispatchChat({ kind: "hydrate", chat: result.chat });
+      recoveryFencesRef.current.delete(sessionId);
+      setOutputHistory((previous) => ({
+        sessionId,
+        failed: false,
+        historicalGap:
+          (result.snapshot as { historicalGap?: true }).historicalGap ||
+          (previous?.sessionId === sessionId && previous.historicalGap) ||
+          undefined,
+      }));
+      dispatchChat({
+        kind: "hydrate",
+        chat: result.chat,
+        verifiedInputIds: result.verifiedInputIds ?? result.view?.verifiedInputIds,
+      });
       setLoadingKey("sessionHistory", false);
       setNoticeState(undefined);
     },
-    legacy: (sessionId) => {
+    legacy: (sessionId, events?: Record<string, unknown>[]) => {
+      if (boundSessionRef.current !== sessionId || activeRoomIdRef.current) return;
+      // An explicit repair must prove its new journal before writes resume.
+      if (recoveryFencesRef.current.has(sessionId)) {
+        setLoadingKey("sessionHistory", false);
+        return;
+      }
+      if (events) {
+        // The output client has joined every bounded, selected legacy page.
+        // This proves saved display history, never a live output cursor.
+        epochHistorySessionRef.current = undefined;
+        const cursor = sessionCursor(sessionId);
+        cursor.historyUnpaired = true;
+        cursor.awaitingSnapshot = true;
+        dispatchChat({ kind: "replay", events });
+        dispatchChat({ kind: "stream_epoch_changed" });
+        setNotice(t("mobile.notice.sessionRecoveryHistoryOnly"));
+        setLoadingKey("sessionHistory", false);
+        return;
+      }
       epochHistorySessionRef.current = sessionId;
       sessionCursor(sessionId).historyUnpaired = true;
       requestSessionHistory(sessionId);
@@ -721,6 +927,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       setLoadingKey("sessionHistory", false);
     },
     failed: (sessionId) => {
+      recoveryFencesRef.current.add(sessionId);
+      setOutputHistory((previous) => ({
+        sessionId,
+        failed: true,
+        historicalGap: previous?.sessionId === sessionId ? previous.historicalGap : undefined,
+      }));
       sessionCursor(sessionId).awaitingSnapshot = true;
       dispatchChat({ kind: "stream_epoch_changed" });
       setNotice(t("mobile.notice.sessionRecoveryIncomplete"));
@@ -729,8 +941,117 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   }));
   useEffect(() => () => outputClient.cancel(false), [outputClient]);
 
+  const loadEarlierHistory = useCallback(async () => {
+    const window = historyWindowRef.current;
+    if (!window || window.loading || !window.hasEarlier)
+      throw new Error(t("mobile.historyRecovery.detailUnavailable"));
+    const current = () =>
+      historyWindowRef.current?.sessionId === window.sessionId &&
+      historyWindowRef.current?.id === window.id;
+    historyWindowRef.current = { ...window, loading: true, error: undefined };
+    setHistoryWindow(historyWindowRef.current);
+    try {
+      await outputClient.loadEarlier();
+    } catch (error) {
+      const message = t(
+        error instanceof HistoryReadBusyError
+          ? "mobile.historyRecovery.detailBusy"
+          : "mobile.historyRecovery.detailUnavailable",
+      );
+      if (current()) {
+        historyWindowRef.current = { ...historyWindowRef.current!, loading: false, error: message };
+        setHistoryWindow(historyWindowRef.current);
+      }
+      throw new Error(message, { cause: error });
+    } finally {
+      if (current() && historyWindowRef.current?.loading) {
+        historyWindowRef.current = { ...historyWindowRef.current, loading: false };
+        setHistoryWindow(historyWindowRef.current);
+      }
+    }
+  }, [outputClient]);
+  const loadHistoryDetail = useCallback(
+    async (ref: string) => {
+      try {
+        return await outputClient.loadDetail(ref);
+      } catch (error) {
+        throw new Error(
+          t(
+            error instanceof HistoryReadBusyError
+              ? "mobile.historyRecovery.detailBusy"
+              : "mobile.historyRecovery.detailUnavailable",
+          ),
+          { cause: error },
+        );
+      }
+    },
+    [outputClient],
+  );
+  const reloadHistory = useCallback(() => {
+    const sessionId = boundSessionRef.current;
+    if (!socketOnlineRef.current || !sessionId || activeRoomIdRef.current) return;
+    if (
+      emptySessionReplacementRef.current &&
+      emptySessionReplacementRef.current.status !== "complete"
+    )
+      return;
+    if (
+      unsentCreatedSessionRef.current?.sessionId === sessionId &&
+      unsentCreatedSessionRef.current.generation === connectionGenerationRef.current
+    )
+      return;
+    setLoadingKey("sessionHistory", true);
+    if (!outputClient.begin(sessionId)) requestSessionHistory(sessionId, true);
+  }, [outputClient, requestSessionHistory, setLoadingKey]);
+
   const onServerEvent = useCallback(
     (event: MobileServerEvent) => {
+      const unsent = unsentCreatedSessionRef.current;
+      const source = unsent ?? replacementSourceRef.current;
+      if (
+        source &&
+        ((event.type === "session.stream" && event.sessionId === source.sessionId) ||
+          (event.type === "session.list.ok" &&
+            event.sessions.some((session) => session.id === source.sessionId)))
+      ) {
+        unsentCreatedSessionRef.current = null;
+        replacementSourceRef.current = null;
+        if (
+          emptySessionReplacementRef.current?.status !== "complete" &&
+          emptySessionReplacementRef.current?.fromSessionId === source.sessionId
+        ) {
+          if (pendingCreateRef.current?.replacesSessionId === source.sessionId) {
+            clearTimeout(pendingCreateRef.current.timer);
+            pendingCreateRef.current = null;
+          }
+          setEmptySessionReplacement(undefined);
+          if (event.type === "session.list.ok")
+            queueMicrotask(() => requestActiveResyncRef.current());
+        }
+      }
+      if (
+        event.type === "auth.ok" &&
+        unsent &&
+        boundSessionRef.current === unsent.sessionId &&
+        !activeRoomIdRef.current
+      ) {
+        // This proves only an unused draft, not authority on the new socket.
+        // Keep its local content visible while normal creation obtains a new grant.
+        replacementSourceRef.current = unsent;
+        setEmptySessionReplacement({ fromSessionId: unsent.sessionId, status: "pending" });
+        setLoadingKey("sessionHistory", false);
+        setOutputHistory(undefined);
+      }
+      if (event.type === "auth.ok") unsentCreatedSessionRef.current = null;
+      if (historyRecovery.observe(event)) return;
+      if (
+        "sessionId" in event &&
+        event.sessionId === applyingHistoryRef.current &&
+        (event.type === "session.snapshot" ||
+          event.type === "session.history.ok" ||
+          event.type === "session.stream")
+      )
+        return;
       if (outputClient.observe(event)) return;
       switch (event.type) {
         case "auth.ok":
@@ -749,12 +1070,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
                 creation.conversationRevision === conversationRevisionRef.current &&
                 creation.connectionGeneration === connectionGenerationRef.current,
               )
-            : !event.clientMessageId ||
-              Boolean(
-                waiter &&
-                waiter.conversationRevision === conversationRevisionRef.current &&
-                waiter.connectionGeneration === connectionGenerationRef.current,
-              );
+            : (!emptySessionReplacementRef.current ||
+                emptySessionReplacementRef.current.status === "complete") &&
+              (!event.clientMessageId ||
+                Boolean(
+                  waiter &&
+                  waiter.conversationRevision === conversationRevisionRef.current &&
+                  waiter.connectionGeneration === connectionGenerationRef.current,
+                ));
           if (
             creation &&
             ((event.clientRequestId && creation.clientRequestId === event.clientRequestId) ||
@@ -767,6 +1090,45 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           ) {
             clearTimeout(creation.timer);
             pendingCreateRef.current = null;
+            if (event.clientRequestId && event.sessionId && mayBind) {
+              const target =
+                event.projectId !== undefined
+                  ? {
+                      projectId: event.projectId,
+                      ...(event.rootId ? { rootId: event.rootId } : {}),
+                    }
+                  : "cwd" in event
+                    ? (event.cwd ?? null)
+                    : creation.target;
+              unsentCreatedSessionRef.current = {
+                sessionId: event.sessionId,
+                generation: creation.connectionGeneration,
+                target,
+              };
+              if (creation.replacesSessionId)
+                setEmptySessionReplacement({
+                  fromSessionId: creation.replacesSessionId,
+                  toSessionId: event.sessionId,
+                  status: "complete",
+                });
+            }
+            if (
+              mayBind &&
+              event.sessionId &&
+              creation.permissionMode !== permissionModeRef.current
+            ) {
+              // The user can change the draft while creation is in flight. Apply
+              // that choice to the new id, never to the previous selection.
+              creationPermissionEchoRef.current = {
+                sessionId: event.sessionId,
+                mode: permissionModeRef.current,
+              };
+              sendRef.current?.({
+                type: "permission.setMode",
+                sessionId: event.sessionId,
+                mode: permissionModeRef.current,
+              });
+            }
           }
           if (event.clientMessageId) {
             if (waiter) uncertainMessageSessionsRef.current.delete(event.clientMessageId);
@@ -1029,13 +1391,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             if (event.seq === session.appliedSeq + 1) session.appliedSeq = event.seq;
             else if (event.seq > session.appliedSeq + 1) {
               session.awaitingSnapshot = true;
-              outputClient.begin(event.sessionId);
+              if (!outputClient.catchUp(event.sessionId)) outputClient.begin(event.sessionId);
             }
             break;
           }
           if (!changed && !session.awaitingSnapshot && event.seq > session.appliedSeq + 1) {
             session.awaitingSnapshot = true;
-            if (!outputClient.begin(event.sessionId))
+            if (!outputClient.catchUp(event.sessionId) && !outputClient.begin(event.sessionId))
               setNotice(t("mobile.notice.sessionRecoveryIncomplete"));
             break;
           }
@@ -1076,15 +1438,29 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         }
         case "permission.mode":
           if (
+            pendingCreateRef.current ||
+            (emptySessionReplacementRef.current &&
+              emptySessionReplacementRef.current.status !== "complete")
+          )
+            break;
+          if (
+            creationPermissionEchoRef.current &&
+            creationPermissionEchoRef.current.sessionId === event.sessionId
+          ) {
+            if (creationPermissionEchoRef.current.mode !== event.mode) break;
+            creationPermissionEchoRef.current = null;
+          }
+          if (
             !event.sessionId ||
             !boundSessionRef.current ||
             event.sessionId === boundSessionRef.current
           ) {
+            permissionModeRef.current = event.mode;
             setPermissionModeState(event.mode);
           }
           break;
         case "approval.resolved":
-          clearApproval(event.approvalId);
+          clearApproval(event.approvalId, { ...event, requestId: event.approvalId });
           break;
         case "room.list.ok":
           setRooms(event.rooms);
@@ -1504,6 +1880,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           addApproval({
             requestId: String(params.requestId),
             sessionId: typeof params.sessionId === "string" ? params.sessionId : undefined,
+            connectionId: typeof params.connectionId === "string" ? params.connectionId : undefined,
+            generation: typeof params.generation === "number" ? params.generation : undefined,
+            expiresAt: typeof params.expiresAt === "number" ? params.expiresAt : undefined,
             toolName: rq.toolName ?? t("mobile.tool.fallbackName"),
             description: rq.description ?? "",
             summary: askOptions ? (rq.description ?? summary) : summary,
@@ -1516,9 +1895,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         }
         return;
       }
-      const resolvedRequestId = rawApprovalResolvedRequestId(raw);
-      if (resolvedRequestId) {
-        clearApproval(resolvedRequestId);
+      const resolvedRoute = rawApprovalResolvedRoute(raw);
+      if (resolvedRoute) {
+        clearApproval(resolvedRoute.requestId, resolvedRoute);
         return;
       }
       // Everything else (agent/streamEvent) folds through the reducer, but it
@@ -1532,7 +1911,22 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       //   - event with no sessionId while unbound → drop (can't attribute it)
       if (obj.method === "agent/streamEvent" && obj.params) {
         if (activeRoomIdRef.current) return; // room view owns the feed
+        if (applyingHistoryRef.current === boundSessionRef.current && applyingHistoryRef.current)
+          return;
         const params = obj.params as Record<string, unknown>;
+        if (params.sessionId === unsentCreatedSessionRef.current?.sessionId)
+          unsentCreatedSessionRef.current = null;
+        if (
+          replacementSourceRef.current &&
+          params.sessionId === replacementSourceRef.current.sessionId &&
+          boundSessionRef.current === params.sessionId &&
+          emptySessionReplacementRef.current?.status !== "complete"
+        ) {
+          replacementSourceRef.current = null;
+          clearTimeout(pendingCreateRef.current?.timer);
+          pendingCreateRef.current = null;
+          setEmptySessionReplacement(undefined);
+        }
         const sid = typeof params.sessionId === "string" ? params.sessionId : undefined;
         if (boundSessionRef.current) {
           if (sid && sid !== boundSessionRef.current) return;
@@ -1555,6 +1949,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   );
 
   const requestActiveResync = useCallback(() => {
+    if (applyingHistoryRef.current) return;
     const roomId = activeRoomIdRef.current;
     if (roomId) {
       const ccSessionId = ccHistorySessionRef.current;
@@ -1578,6 +1973,16 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     }
     const sessionId = boundSessionRef.current;
     if (!sessionId) return;
+    if (
+      emptySessionReplacementRef.current &&
+      emptySessionReplacementRef.current.status !== "complete"
+    )
+      return;
+    if (
+      unsentCreatedSessionRef.current?.sessionId === sessionId &&
+      unsentCreatedSessionRef.current.generation === connectionGenerationRef.current
+    )
+      return;
     const cursor = sessionCursor(sessionId);
     const recovery = outputClient.resync(sessionId);
     if (recovery) {
@@ -1610,18 +2015,89 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   sendRef.current = socket.send;
   connectionGenerationRef.current = socket.connectionGeneration;
 
+  const retryEmptySessionReplacement = useCallback(() => {
+    const source = replacementSourceRef.current;
+    if (
+      !source ||
+      !socketOnlineRef.current ||
+      activeRoomIdRef.current ||
+      boundSessionRef.current !== source.sessionId ||
+      pendingCreateRef.current ||
+      emptySessionReplacementRef.current?.status === "complete"
+    )
+      return;
+    const clientRequestId =
+      globalThis.crypto?.randomUUID?.() ??
+      `mobile-replace-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const permissionMode = permissionModeRef.current;
+    const generation = connectionGenerationRef.current;
+    pendingCreateRef.current = {
+      clientRequestId,
+      permissionMode,
+      target: source.target,
+      replacesSessionId: source.sessionId,
+      conversationRevision: conversationRevisionRef.current,
+      connectionGeneration: generation,
+      timer: setTimeout(() => {
+        if (failSessionCreation(clientRequestId))
+          setNotice("重新建立空白会话超时，输入内容已保留，请重试。");
+      }, 30_000),
+    };
+    setEmptySessionReplacement({ fromSessionId: source.sessionId, status: "pending" });
+    outputClient.cancel(false);
+    setLoadingKey("sessionHistory", false);
+    const target =
+      source.target && typeof source.target === "object"
+        ? source.target
+        : { cwd: source.target ?? null };
+    if (
+      !sendRef.current?.(
+        { type: "session.create", clientRequestId, permissionMode, ...target },
+        generation,
+      )
+    ) {
+      failSessionCreation(clientRequestId);
+      setNotice("连接已变化，输入内容已保留，请重试建立会话。");
+    }
+  }, [failSessionCreation, outputClient, setEmptySessionReplacement, setLoadingKey, setNotice]);
+
+  useEffect(() => {
+    if (
+      socket.status === "online" &&
+      emptySessionReplacementRef.current?.status === "pending" &&
+      !pendingCreateRef.current
+    )
+      retryEmptySessionReplacement();
+  }, [socket.status, socket.connectionGeneration, retryEmptySessionReplacement]);
+
+  useEffect(() => {
+    historyRecovery.cancel();
+  }, [
+    historyRecovery,
+    activeSessionId,
+    activeRoomId,
+    activeProjectId,
+    socket.connectionGeneration,
+  ]);
+
   useEffect(() => {
     socketOnlineRef.current = socket.status === "online";
     if (socketOnlineRef.current) return;
+    creationPermissionEchoRef.current = null;
     failSessionCreation();
     sessionListRequestRef.current = undefined;
     setLoadingKey("sessions", false);
     outputClient.cancel(false);
+    historyRecovery.cancel();
     roomCatchupRef.current = undefined;
     setLoadingKey("sessionHistory", false);
     setLoadingKey("roomHistory", false);
     submittingAsyncApprovalsRef.current.clear();
     submittedApprovalsRef.current.clear();
+    // An offline tab may miss another device's resolution. Only the Host's
+    // pending replay can restore authority after this connection is replaced.
+    approvalsRef.current = [];
+    setApprovals([]);
     const error = new Error("Remote connection was lost");
     for (const upload of uploadAbortsRef.current) upload.abort(error);
     uploadAbortsRef.current.clear();
@@ -1638,6 +2114,82 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   }, [socket.status, failSessionCreation]);
 
   // ── actions ────────────────────────────────────────────────────────────
+  const getSessionOutputRecoveryPlan = useCallback(
+    (sessionId: string) => historyRecovery.plan(sessionId),
+    [historyRecovery],
+  );
+  const applySessionOutputRecovery = useCallback(
+    async (
+      sessionId: string,
+      acceptance: OutputHistoryRecoveryAcceptance,
+    ): Promise<OutputHistoryRecoveryResult> => {
+      if (
+        !socketOnlineRef.current ||
+        activeRoomIdRef.current ||
+        boundSessionRef.current !== sessionId ||
+        applyingHistoryRef.current
+      )
+        throw new Error("Recovery selection changed");
+      recoveryFencesRef.current.add(sessionId);
+      applyingHistoryRef.current = sessionId;
+      outputWriteGenerationRef.current++;
+      setOutputHistory((previous) => ({
+        sessionId,
+        failed: true,
+        historicalGap: previous?.sessionId === sessionId ? previous.historicalGap : undefined,
+      }));
+      const error = new MessageRetiredError(
+        "History recovery retired the pending submission; its draft is retained",
+      );
+      for (const upload of uploadAbortsRef.current) upload.abort(error);
+      for (const waiter of uploadWaitersRef.current.values()) {
+        clearTimeout(waiter.timer);
+        waiter.reject(error);
+      }
+      uploadWaitersRef.current.clear();
+      for (const [id, waiter] of messageAckWaitersRef.current) {
+        clearTimeout(waiter.timer);
+        waiter.reject(error);
+        messageAckWaitersRef.current.delete(id);
+      }
+      approvalsRef.current = approvalsRef.current.filter((approval) => {
+        if (approval.roomId || (approval.sessionId && approval.sessionId !== sessionId))
+          return true;
+        retiredApprovalsRef.current.add(approval.requestId);
+        return false;
+      });
+      for (const id of submittedApprovalsRef.current) retiredApprovalsRef.current.add(id);
+      for (const id of submittingAsyncApprovalsRef.current) retiredApprovalsRef.current.add(id);
+      setApprovals(approvalsRef.current);
+      submittedApprovalsRef.current.clear();
+      submittingAsyncApprovalsRef.current.clear();
+      // Preserve the Host's selected-session authority while retiring local old reads.
+      outputClient.cancel(false);
+      const revision = conversationRevisionRef.current;
+      try {
+        const result = await historyRecovery.apply(sessionId, acceptance);
+        if (revision !== conversationRevisionRef.current || boundSessionRef.current !== sessionId)
+          throw new Error("Recovery selection changed");
+        if (result.status === "applied") {
+          for (const [id, target] of uncertainMessageSessionsRef.current)
+            if (target === sessionId) uncertainMessageSessionsRef.current.delete(id);
+          sessionCursorsRef.current.delete(sessionId);
+          epochHistorySessionRef.current = undefined;
+          setOutputHistory({ sessionId, failed: true, historicalGap: true });
+          dispatchChat({ kind: "stream_epoch_changed" });
+          // An acknowledgement only starts a fresh proof; commit() alone unlocks writes.
+          applyingHistoryRef.current = undefined;
+          outputClient.begin(sessionId);
+          setLoadingKey("sessionHistory", outputClient.pending(sessionId));
+        }
+        return result;
+      } finally {
+        if (applyingHistoryRef.current === sessionId) applyingHistoryRef.current = undefined;
+      }
+    },
+    [historyRecovery, outputClient, setLoadingKey],
+  );
+
   const sendChat = useCallback(
     async (input: {
       text: string;
@@ -1646,17 +2198,29 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       modelTraceSource?: string;
       clientMessageId?: string;
       onUncertain?: (clientMessageId: string) => void;
+      onRetired?: () => void;
     }): Promise<boolean> => {
+      const permissionMode = permissionModeRef.current;
       const text = input.text.trim();
       if (!text && input.attachments.length === 0) return false;
       if (socket.status !== "online") return false;
+      if (
+        pendingCreateRef.current ||
+        (emptySessionReplacementRef.current &&
+          emptySessionReplacementRef.current.status !== "complete")
+      )
+        return false;
+      unsentCreatedSessionRef.current = null;
+      replacementSourceRef.current = null;
       const connectionGeneration = socket.connectionGeneration;
       const conversationRevision = conversationRevisionRef.current;
+      const outputWriteGeneration = outputWriteGenerationRef.current;
       const roomId = activeRoomIdRef.current;
       const sessionId =
         (input.clientMessageId
           ? uncertainMessageSessionsRef.current.get(input.clientMessageId)
           : undefined) ?? boundSessionRef.current;
+      if (!roomId && sessionId && recoveryFencesRef.current.has(sessionId)) return false;
       const clientMessageId =
         input.clientMessageId ??
         globalThis.crypto?.randomUUID?.() ??
@@ -1675,6 +2239,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           signal: upload.signal,
         });
       } catch (error) {
+        if (outputWriteGeneration !== outputWriteGenerationRef.current) {
+          input.onRetired?.();
+          setNotice(t("mobile.historyRecovery.noReplay"));
+          return false;
+        }
         setNotice(
           t("mobile.notice.attachmentSendFailed", {
             error: error instanceof Error ? error.message : String(error),
@@ -1684,7 +2253,15 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       } finally {
         uploadAbortsRef.current.delete(upload);
       }
-      if (conversationRevision !== conversationRevisionRef.current) return false;
+      if (outputWriteGeneration !== outputWriteGenerationRef.current) {
+        input.onRetired?.();
+        return false;
+      }
+      if (
+        conversationRevision !== conversationRevisionRef.current ||
+        (!roomId && sessionId && recoveryFencesRef.current.has(sessionId))
+      )
+        return false;
       const summaries = attachments.map(({ name, mime, size }) => ({ name, mime, size }));
       const acknowledged = waitForMessageAck(
         clientMessageId,
@@ -1711,6 +2288,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         queued = socket.send(
           {
             type: "chat.send",
+            permissionMode,
             ...(input.modelKey ? { modelKey: input.modelKey } : {}),
             ...(input.modelTraceSource ? { modelTraceSource: input.modelTraceSource } : {}),
             text,
@@ -1730,14 +2308,18 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         await acknowledged;
       } catch (error) {
         // Only an explicit host rejection proves the message was not admitted.
-        const uncertain = !(error instanceof MessageRejectedError);
+        const retired = error instanceof MessageRetiredError;
+        if (retired) input.onRetired?.();
+        const uncertain = !retired && !(error instanceof MessageRejectedError);
         if (uncertain) input.onUncertain?.(clientMessageId);
         setNotice(
-          uncertain
-            ? t("mobile.composer.sendUncertain")
-            : t("mobile.notice.attachmentSendFailed", {
-                error: error instanceof Error ? error.message : String(error),
-              }),
+          retired
+            ? t("mobile.historyRecovery.noReplay")
+            : uncertain
+              ? t("mobile.composer.sendUncertain")
+              : t("mobile.notice.attachmentSendFailed", {
+                  error: error instanceof Error ? error.message : String(error),
+                }),
         );
         return false;
       }
@@ -1783,6 +2365,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         return;
       }
       conversationRevisionRef.current += 1;
+      unsentCreatedSessionRef.current = null;
+      replacementSourceRef.current = null;
+      setEmptySessionReplacement(undefined);
+      clearTimeout(pendingCreateRef.current?.timer);
+      pendingCreateRef.current = null;
+      creationPermissionEchoRef.current = null;
       if (activeRoomIdRef.current) {
         socket.send({
           type: "ccRoom.unsubscribeTranscript",
@@ -1858,6 +2446,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         return;
       }
       outputClient.cancel();
+      unsentCreatedSessionRef.current = null;
+      replacementSourceRef.current = null;
+      setEmptySessionReplacement(undefined);
+      clearTimeout(pendingCreateRef.current?.timer);
+      pendingCreateRef.current = null;
+      creationPermissionEchoRef.current = null;
       conversationRevisionRef.current += 1;
       setLoadingKey("sessionHistory", false);
       setLoadingKey("roomHistory", false);
@@ -1903,13 +2497,21 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       // view: offline, a dropped frame used to leave the view on the new target
       // while a later first send fell back to the previous (possibly another
       // project's) session.
+      const permissionMode = permissionModeRef.current;
       const created = socket.send(
         stableTarget && typeof stableTarget === "object"
-          ? { type: "session.create", clientRequestId, ...stableTarget, ...(name ? { name } : {}) }
+          ? {
+              type: "session.create",
+              clientRequestId,
+              permissionMode,
+              ...stableTarget,
+              ...(name ? { name } : {}),
+            }
           : stableTarget === undefined
-            ? { type: "session.create", clientRequestId, ...(name ? { name } : {}) }
+            ? { type: "session.create", clientRequestId, permissionMode, ...(name ? { name } : {}) }
             : {
                 type: "session.create",
+                permissionMode,
                 clientRequestId,
                 cwd: stableTarget,
                 ...(name ? { name } : {}),
@@ -1922,9 +2524,15 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       }
       outputClient.cancel();
       conversationRevisionRef.current += 1;
+      unsentCreatedSessionRef.current = null;
+      replacementSourceRef.current = null;
+      setEmptySessionReplacement(undefined);
+      creationPermissionEchoRef.current = null;
       clearTimeout(pendingCreateRef.current?.timer);
       pendingCreateRef.current = {
         clientRequestId,
+        permissionMode,
+        target: stableTarget ?? null,
         conversationRevision: conversationRevisionRef.current,
         connectionGeneration: socket.connectionGeneration,
         timer: setTimeout(() => {
@@ -2002,13 +2610,24 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       // Dedup at the source: if this approval is already gone from the ref it was
       // already responded to (rapid double-tap before setApprovals flushes / the
       // card unmounts). Sending again would violate the approve-once invariant.
-      if (!a) return;
+      if (
+        !a ||
+        retiredApprovalsRef.current.has(requestId) ||
+        recoveryFencesRef.current.has(a.sessionId ?? boundSessionRef.current ?? "")
+      )
+        return;
+      if (a.expiresAt !== undefined && a.expiresAt <= Date.now()) {
+        clearApproval(requestId, a);
+        return;
+      }
       if (a.asynchronous && submittingAsyncApprovalsRef.current.has(requestId)) return;
       const sent = socket.send({
         type: "approval.respond",
         approvalId: requestId,
         decision,
         sessionId: a?.sessionId,
+        ...(a.connectionId !== undefined ? { connectionId: a.connectionId } : {}),
+        ...(a.generation !== undefined ? { generation: a.generation } : {}),
         reason: opts?.reason,
         answer: opts?.answer,
         scope: opts?.scope,
@@ -2027,26 +2646,38 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       approvalsRef.current = approvalsRef.current.filter((p) => p.requestId !== requestId);
       setApprovals((prev) => prev.filter((p) => p.requestId !== requestId));
     },
-    [socket],
+    [socket, clearApproval],
   );
   const setPermissionMode = useCallback(
     (mode: PermissionMode) => {
       // A CLI room's mode is a spawn-time argument of its process; the native
       // session mode does not govern it. Never pretend to change it here.
       if (activeRoomIdRef.current) return;
+      if (boundSessionRef.current && recoveryFencesRef.current.has(boundSessionRef.current)) return;
+      permissionModeRef.current = mode;
       setPermissionModeState(mode);
+      if (
+        pendingCreateRef.current ||
+        (emptySessionReplacementRef.current &&
+          emptySessionReplacementRef.current.status !== "complete")
+      )
+        return;
+      if (creationPermissionEchoRef.current) creationPermissionEchoRef.current.mode = mode;
       socket.send({ type: "permission.setMode", sessionId: boundSessionRef.current, mode });
     },
     [socket],
   );
 
   const extendGoal = useCallback(
-    (sessionId: string) => socket.send({ type: "goal.extend", sessionId, addTurns: 100 }),
+    (sessionId: string) =>
+      !recoveryFencesRef.current.has(sessionId) &&
+      socket.send({ type: "goal.extend", sessionId, addTurns: 100 }),
     [socket],
   );
 
   const clearGoal = useCallback(
-    (sessionId: string) => socket.send({ type: "goal.clear", sessionId }),
+    (sessionId: string) =>
+      !recoveryFencesRef.current.has(sessionId) && socket.send({ type: "goal.clear", sessionId }),
     [socket],
   );
 
@@ -2144,6 +2775,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
 
   return {
     status: socket.status,
+    emptySessionReplacement,
+    retryEmptySessionReplacement,
     accessRequired: socket.accessRequired,
     deviceName: socket.deviceName,
     chat,
@@ -2166,6 +2799,30 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     refreshRuntimeModels,
     loading,
     notice,
+    historyHasEarlier:
+      !activeRoomId && historyWindow?.sessionId === activeSessionId && historyWindow?.hasEarlier,
+    historyLoadingEarlier:
+      !activeRoomId && historyWindow?.sessionId === activeSessionId && historyWindow?.loading,
+    historyEarlierError:
+      !activeRoomId && historyWindow?.sessionId === activeSessionId
+        ? historyWindow?.error
+        : undefined,
+    loadEarlierHistory,
+    loadHistoryDetail,
+    reloadHistory,
+    sessionHistoryProgress:
+      !activeRoomId && loading.sessionHistory && historyProgress?.sessionId === activeSessionId
+        ? historyProgress?.progress
+        : undefined,
+    outputHistoryFailed:
+      !activeRoomId && !!activeSessionId && recoveryFencesRef.current.has(activeSessionId),
+    outputHistoricalGap:
+      !activeRoomId && outputHistory?.sessionId === activeSessionId
+        ? outputHistory?.historicalGap
+        : undefined,
+    outputRecoveryIdentity: `${socket.connectionGeneration}:${conversationRevisionRef.current}:${activeProjectId ?? ""}:${activeSessionId ?? ""}`,
+    getSessionOutputRecoveryPlan,
+    applySessionOutputRecovery,
     logout: socket.logout,
     sendChat,
     stopRun,

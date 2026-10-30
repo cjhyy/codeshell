@@ -705,19 +705,11 @@ export function HubLinks({
         provider.authModes?.some((mode) => mode.available)) &&
       `${provider.displayName} ${provider.description.zh}`.toLowerCase().includes(needle),
   );
-  const latest =
-    editor &&
-    snapshot?.connections.find((item) =>
-      editor.original
-        ? item.id === editor.original.id
-        : item.id === `link-${editor.provider.id}-${editor.methodId}` &&
-          item.providerId === editor.provider.id &&
-          item.methodId === editor.methodId,
-    );
-  const conflict =
-    editor &&
-    snapshot &&
-    (editor.original ? latest?.revision !== editor.original.revision : !!latest);
+  // The Host assigns new connection IDs. A legacy provider/method ID in the
+  // list is another account, not the revision target of a create-only request.
+  const original = editor?.original;
+  const latest = original && snapshot?.connections.find((item) => item.id === original.id);
+  const conflict = !!(original && snapshot && latest?.revision !== original.revision);
 
   return (
     <section className="hub-links">

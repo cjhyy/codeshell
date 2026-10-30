@@ -1,12 +1,14 @@
-import { describe, it, expect, spyOn } from "bun:test";
+import { afterEach, describe, it, expect, spyOn } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
-import { Methods } from "./types.js";
+import { Methods, USER_DECISION_TIMEOUT_MS } from "./types.js";
 import type { Engine, EngineResult } from "../engine/engine.js";
 import type { ApprovalRequest, ApprovalResult } from "../types.js";
 
-const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000;
-const GOAL_ASKUSER_TIMEOUT_MS = 10 * 60 * 1000;
+const cleanup: AgentServer[] = [];
+afterEach(async () => {
+  for (const server of cleanup.splice(0)) await server.close();
+});
 
 function makeTransport() {
   const sent: any[] = [];
@@ -63,10 +65,11 @@ function makeAskingEngine(sessionId: string, goal?: { objective: string }) {
 }
 
 describe("AgentServer AskUserQuestion timeout behavior", () => {
-  it("does not arm the approval timeout for legacy interactive askUser", async () => {
+  it("shares the user deadline with legacy interactive askUser", async () => {
     const { engine, state } = makeAskingEngine("legacy-sess");
     const t = makeTransport();
     const server = new AgentServer({ transport: t.transport, engine });
+    cleanup.push(server);
 
     t.deliver({
       jsonrpc: "2.0",
@@ -77,20 +80,28 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
     await tick();
 
     expect((server as any).pendingApprovals.size).toBe(1);
-    expect((server as any).approvalTimers.size).toBe(0);
+    expect((server as any).approvalTimers.size).toBe(1);
     expect(state.answer).toBeUndefined();
     expect(
-      t.sent.some((m) => m.method === Methods.ApprovalRequest && m.params?.request?.toolName === "__ask_user__"),
+      t.sent.some(
+        (m) =>
+          m.method === Methods.ApprovalRequest && m.params?.request?.toolName === "__ask_user__",
+      ),
     ).toBe(true);
 
-    t.deliver({ jsonrpc: "2.0", id: 2, method: Methods.Cancel, params: { sessionId: "legacy-sess" } });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: Methods.Cancel,
+      params: { sessionId: "legacy-sess" },
+    });
     await tick();
 
     expect((server as any).pendingApprovals.size).toBe(0);
     expect(state.answer).toBe("cancelled");
   });
 
-  it("does not arm the approval timeout for chatManager interactive askUser", async () => {
+  it("shares the user deadline with chatManager interactive askUser", async () => {
     const { engine, state } = makeAskingEngine("sess-1");
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
@@ -98,6 +109,7 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
     });
     const t = makeTransport();
     const server = new AgentServer({ transport: t.transport, chatManager });
+    cleanup.push(server);
 
     t.deliver({
       jsonrpc: "2.0",
@@ -109,7 +121,7 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
 
     const session = chatManager.get("sess-1")!;
     expect(session.pendingApprovals.size).toBe(1);
-    expect((server as any).approvalTimers.size).toBe(0);
+    expect((server as any).approvalTimers.size).toBe(1);
     expect(state.answer).toBeUndefined();
     expect(
       t.sent.some(
@@ -127,14 +139,16 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
     expect(state.answer).toBe("cancelled");
   });
 
-  it("arms the approval timeout for chatManager askUser when a goal is active, and resolves with a continue-nudge on expiry", async () => {
+  it("expires goal questions without granting permission", async () => {
     const scheduled: Array<{ timeout: number | undefined; run: () => void }> = [];
-    const timeoutSpy = spyOn(globalThis, "setTimeout").mockImplementation(
-      ((handler: (...args: any[]) => void, timeout?: number, ...args: any[]) => {
-        scheduled.push({ timeout, run: () => handler(...args) });
-        return 1 as any;
-      }) as unknown as typeof setTimeout,
-    );
+    const timeoutSpy = spyOn(globalThis, "setTimeout").mockImplementation(((
+      handler: (...args: any[]) => void,
+      timeout?: number,
+      ...args: any[]
+    ) => {
+      scheduled.push({ timeout, run: () => handler(...args) });
+      return 1 as any;
+    }) as unknown as typeof setTimeout);
 
     try {
       const { engine, state } = makeAskingEngine("goal-sess", { objective: "ship it" });
@@ -144,6 +158,7 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
       });
       const t = makeTransport();
       const server = new AgentServer({ transport: t.transport, chatManager });
+      cleanup.push(server);
 
       t.deliver({
         jsonrpc: "2.0",
@@ -155,21 +170,19 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
 
       const session = chatManager.get("goal-sess")!;
       expect(session.pendingApprovals.size).toBe(1);
-      // Goal-active ask arms a dedicated 10-minute timeout (longer than the
-      // 5-minute tool-approval timeout — a present user deserves more time).
-      const askTimer = scheduled.find((s) => s.timeout === GOAL_ASKUSER_TIMEOUT_MS);
+      // Every user-facing decision has the same server-owned deadline.
+      const askTimer = scheduled.find((s) => s.timeout === USER_DECISION_TIMEOUT_MS);
       expect(askTimer).toBeDefined();
       expect((server as any).approvalTimers.size).toBe(1);
       expect(state.answer).toBeUndefined();
 
-      // Fire the timeout → the pending ask drains and resolves with a nudge so
-      // the goal loop keeps going instead of hanging forever.
+      // Expiration retires the pending request without manufacturing consent.
       askTimer!.run();
       await tick();
 
       expect(session.pendingApprovals.size).toBe(0);
       expect((server as any).approvalTimers.size).toBe(0);
-      expect(state.answer).toContain("自行做出合理假设并继续");
+      expect(state.answer).toContain("No permission was granted");
       // The server also notifies clients so the stale ask card is dismissed.
       expect(
         t.sent.some(
@@ -186,12 +199,14 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
 
   it("keeps the approval timeout for real tool approvals", async () => {
     const scheduled: Array<{ timeout: number | undefined; run: () => void }> = [];
-    const timeoutSpy = spyOn(globalThis, "setTimeout").mockImplementation(
-      ((handler: (...args: any[]) => void, timeout?: number, ...args: any[]) => {
-        scheduled.push({ timeout, run: () => handler(...args) });
-        return 1 as any;
-      }) as unknown as typeof setTimeout,
-    );
+    const timeoutSpy = spyOn(globalThis, "setTimeout").mockImplementation(((
+      handler: (...args: any[]) => void,
+      timeout?: number,
+      ...args: any[]
+    ) => {
+      scheduled.push({ timeout, run: () => handler(...args) });
+      return 1 as any;
+    }) as unknown as typeof setTimeout);
 
     try {
       const t = makeTransport();
@@ -199,6 +214,7 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
         transport: t.transport,
         engine: { isHeadless: () => true, setAskUser() {} } as unknown as Engine,
       });
+      cleanup.push(server);
       const request: ApprovalRequest = {
         toolName: "Bash",
         args: { command: "echo ok" },
@@ -206,10 +222,12 @@ describe("AgentServer AskUserQuestion timeout behavior", () => {
         riskLevel: "medium",
       };
 
-      const approval = (server as any).requestApprovalFromClient(request) as Promise<ApprovalResult>;
+      const approval = (server as any).requestApprovalFromClient(
+        request,
+      ) as Promise<ApprovalResult>;
 
       expect(scheduled).toHaveLength(1);
-      expect(scheduled[0]!.timeout).toBe(APPROVAL_TIMEOUT_MS);
+      expect(scheduled[0]!.timeout).toBe(USER_DECISION_TIMEOUT_MS);
       expect((server as any).approvalTimers.size).toBe(1);
 
       scheduled[0]!.run();

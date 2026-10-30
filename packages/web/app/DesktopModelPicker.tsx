@@ -1,5 +1,6 @@
 import React from "react";
 import type { MobileRuntimeModel } from "../src/hooks/useRemoteApp.js";
+import { ModelChoicePicker, type ModelChoice } from "./ModelChoicePicker.js";
 
 /** Persisted provider identity also covers sessions saved without a model alias. */
 export function desktopRuntimeModel(session?: { model?: string; provider?: string }): string {
@@ -30,36 +31,32 @@ export function DesktopModelPicker({
   onRefresh?: () => void;
   onRetryCreation?: () => void;
 }) {
+  const choices: ModelChoice[] = [{ value: "", label: defaultLabel }];
+  if (value && !models.some((model) => model.key === value))
+    choices.push({ value, label: `${value} · 当前会话` });
+  for (const kind of ["claude-code", "codex"] as const)
+    choices.push(
+      ...models
+        .filter((model) => model.kind === kind)
+        .map((model) => ({
+          value: model.key,
+          label: model.label,
+          group: kind === "codex" ? "Codex" : "Claude Code",
+        })),
+    );
   return (
     <div className="desktop-model-picker">
-      <select
+      <ModelChoicePicker
         className="model-button"
-        aria-label="选择模型或外部运行时"
-        title={error || "选择本次会话使用的模型"}
+        label="选择模型或外部运行时"
         value={value}
+        choices={choices}
         disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        <option value="">{defaultLabel}</option>
-        {value && !models.some((model) => model.key === value) ? (
-          <option value={value}>{value} · 当前会话</option>
-        ) : null}
-        {(["claude-code", "codex"] as const).map((kind) => {
-          const entries = models.filter((model) => model.kind === kind);
-          return entries.length ? (
-            <optgroup key={kind} label={kind === "codex" ? "Codex" : "Claude Code"}>
-              {entries.map((model) => (
-                <option key={model.key} value={model.key}>
-                  {model.label}
-                </option>
-              ))}
-            </optgroup>
-          ) : null;
-        })}
-        {!models.length ? (
-          <option disabled>{loading ? "正在检测外部模型…" : error || "暂无可用的外部模型"}</option>
-        ) : null}
-      </select>
+        onChange={onChange}
+        status={
+          !models.length ? (loading ? "正在检测外部模型…" : error || "暂无可用的外部模型") : error
+        }
+      />
       {onRetryCreation ? (
         <button className="library-button" disabled={disabled} onClick={onRetryCreation}>
           重试建立会话

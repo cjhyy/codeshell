@@ -5,6 +5,7 @@
  * package — this file must stay pure types (no runtime code).
  */
 import type { PermissionMode as CorePermissionMode } from "../types.js";
+export type * from "./mobile-history-view-types.js";
 
 /** Permission modes supported by the mobile remote wire protocol. */
 export type MobileRemotePermissionMode = Extract<
@@ -112,6 +113,8 @@ export type MobileClientEvent =
       modelKey?: string;
       /** Observation source label only; no storage or workspace authority. */
       modelTraceSource?: string;
+      /** The permission choice displayed when this submission was made. */
+      permissionMode?: PermissionMode;
       text: string;
       sessionId?: string;
       clientMessageId?: string;
@@ -126,6 +129,29 @@ export type MobileClientEvent =
     }
   | { type: "session.select"; sessionId: string; recoveryId?: string }
   | { type: "session.recovery.cancel" }
+  | {
+      type: "session.historyView";
+      sessionId: string;
+      recoveryId: string;
+      requestId: string;
+      before?: string;
+    }
+  | {
+      type: "session.historyDetail";
+      sessionId: string;
+      recoveryId: string;
+      requestId: string;
+      ref: string;
+      cursor?: string;
+    }
+  | { type: "session.outputRecovery.plan"; sessionId: string; requestId: string }
+  | {
+      type: "session.outputRecovery.apply";
+      sessionId: string;
+      requestId: string;
+      planId: string;
+      acceptHistoricalGap: true;
+    }
   | ({
       type: "session.legacyBase";
       sessionId: string;
@@ -139,9 +165,15 @@ export type MobileClientEvent =
       requestId: string;
       after?: string;
       through?: string;
+      /** Opt-in token-dense pages; the existing 1 MiB byte bound still applies. */
+      maxFrames?: number;
+      /** historyView capability: capture the actual Main snapshot before freezing a suffix. */
+      frozenSnapshot?: true;
     }
   | {
       type: "session.create";
+      /** Explicit fresh-session intent, including the initial default. */
+      permissionMode?: PermissionMode;
       /** Optional browser request correlation; echoed with the creation acknowledgement. */
       clientRequestId?: string;
       /** Stable V2 project identity. null explicitly selects the no-repo workspace. */
@@ -160,6 +192,8 @@ export type MobileClientEvent =
       approvalId: string;
       decision: "approve" | "reject";
       sessionId?: string;
+      connectionId?: string;
+      generation?: number;
       reason?: string;
       answer?: string;
       scope?: ApprovalScope;
@@ -259,15 +293,39 @@ export type MobileClientEvent =
 
 export type MobileServerEvent =
   | {
+      type: "session.historyView";
+      sessionId: string;
+      recoveryId: string;
+      requestId: string;
+      result: import("./mobile-history-view-types.js").MobileHistoryViewResult;
+    }
+  | {
+      type: "session.historyDetail";
+      sessionId: string;
+      recoveryId: string;
+      requestId: string;
+      result: import("./mobile-history-view-types.js").MobileHistoryDetailResult;
+    }
+  | {
       type: "auth.ok";
       device: TrustedDevicePublic;
-      capabilities?: { outputJournal?: 1; legacyBasePages?: 1 };
+      capabilities?: {
+        outputJournal?: 1;
+        legacyBasePages?: 1;
+        outputJournalPageFrames?: 2048;
+        historyView?: 1;
+      };
     }
   | { type: "auth.failed"; message: string }
   | {
       type: "pair.ok";
       device: TrustedDevicePublic;
-      capabilities?: { outputJournal?: 1; legacyBasePages?: 1 };
+      capabilities?: {
+        outputJournal?: 1;
+        legacyBasePages?: 1;
+        outputJournalPageFrames?: 2048;
+        historyView?: 1;
+      };
     }
   | { type: "pair.failed"; message: string }
   | {
@@ -308,6 +366,8 @@ export type MobileServerEvent =
       type: "approval.resolved";
       approvalId: string;
       sessionId?: string;
+      connectionId?: string;
+      generation?: number;
       approved?: boolean;
       answer?: string;
     }
@@ -317,6 +377,18 @@ export type MobileServerEvent =
       clientMessageId?: string;
       clientRequestId?: string;
       approvalId?: string;
+    }
+  | {
+      type: "session.outputRecovery.plan";
+      sessionId: string;
+      requestId: string;
+      result: import("./output-history-recovery-types.js").OutputHistoryRecoveryPlan;
+    }
+  | {
+      type: "session.outputRecovery.apply";
+      sessionId: string;
+      requestId: string;
+      result: import("./output-history-recovery-types.js").OutputHistoryRecoveryResult;
     }
   | {
       type: "session.recovery.ready";
@@ -336,15 +408,7 @@ export type MobileServerEvent =
       /** Main's display-only projection after validating the exact raw cutover anchor. */
       legacyBase?: { throughEventId: string; events: Record<string, unknown>[] };
       legacyBaseComplete?: boolean;
-      snapshot?: {
-        epoch: string;
-        nextSeq: number;
-        outputCursor?: string;
-        unpaired: boolean;
-        inputIds?: string[];
-        incarnation?: string;
-        journalIdentity?: string;
-      };
+      snapshot?: import("./mobile-history-view-types.js").MobileOutputSnapshot;
     }
   | ({
       type: "session.legacyBase";
@@ -376,6 +440,7 @@ export type MobileServerEvent =
       entries: Array<{ seq: number; event: unknown }>;
       nextSeq: number;
       outputCursor?: string;
+      historicalGap?: true;
       /** Main lifetime in which these sequence numbers are valid. */
       epoch?: string;
     }

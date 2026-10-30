@@ -1,6 +1,7 @@
 import { panelExecutionGate } from "./execution-gate.js";
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { createHash } from "node:crypto";
+import { mkdirSync, renameSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import { Readable } from "node:stream";
 import {
@@ -32,6 +33,7 @@ import { resolvePanelExecutable } from "./process-service.js";
 import { PanelResourceService } from "./resources/service.js";
 import { PanelTaskCookieHost } from "./task-cookie-host.js";
 import type { PanelSnapshot } from "./types.js";
+import { capturePanelProjectScope } from "./project-scope.js";
 
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -47,6 +49,7 @@ async function fixture(
     agentTasks?: PanelTaskHost;
     automations?: PanelRuntimeOptions["automations"];
     authorizePanelDirectory?: PanelRuntimeOptions["authorizePanelDirectory"];
+    projectScope?: PanelRuntimeOptions["projectScope"];
     createAgentTasks?: PanelRuntimeOptions["createAgentTasks"];
     sharedToolJobs?: (input: {
       root: string;
@@ -134,6 +137,7 @@ async function fixture(
     agentTasks: options.agentTasks,
     automations: options.automations,
     authorizePanelDirectory: options.authorizePanelDirectory,
+    projectScope: options.projectScope,
     createAgentTasks: options.createAgentTasks,
     now: () => state.now,
     ownerId: async (request) => ownerOf(request),
@@ -217,6 +221,26 @@ async function fixture(
 }
 
 describe("Panel HTTP runtime", () => {
+  test("a workspace-only Panel cannot borrow a session for task submission", async () => {
+    const f = await fixture();
+    const unbound = await f.prepare("owner-a", { sessionId: undefined });
+    expect(unbound.context).not.toHaveProperty("sessionId");
+    const rejected = await f.api(`${unbound.instanceId}/call`, "POST", {
+      method: "agent.submitPrompt",
+      params: { prompt: "Must not run", sessionId: "session-previous" },
+    });
+    expect(rejected.status).toBe(409);
+    expect(await rejected.json()).not.toHaveProperty("effect");
+    const invalid = await f.api("prepare", "POST", {
+      appId: f.app.id,
+      revision: f.state.revision,
+      sessionId: "room:cli-session",
+    });
+    expect(invalid.status).toBe(400);
+    const canonical = await f.prepare();
+    expect(canonical.context.sessionId).toBe("session-1234");
+  });
+
   test("authenticated Panel observations are write-only, bound to exact grant and workspace, and cancelled on revoke", async () => {
     const f = await fixture({ permissions: [] });
     f.state.now = Date.now();
@@ -1633,6 +1657,54 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
     expect((await call()).status).toBe(410);
   });
 
+  test("Web directory cancellation returns the native contract without granting or creating a directory", async () => {
+    const f = await fixture({ permissions: ["context.workspace", "process"] });
+    const grant = await f.prepare();
+    const pending = f.api(`${grant.instanceId}/call`, "POST", {
+      method: "filesystem.pickDirectory",
+    });
+    const confirmation = await waitRuntimeEvent(f, grant.instanceId, "host.confirm");
+    const answer = await f.api(`${grant.instanceId}/confirm`, "POST", {
+      requestId: confirmation.payload.requestId,
+      allowed: false,
+    });
+    expect(answer.status).toBe(200);
+    const response = await pending;
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ cancelled: true });
+    expect(await readdir(f.cwd)).toEqual(["notes.txt"]);
+    // Cancellation is not an authorization failure: the existing project grant
+    // remains usable, and no replacement download-directory handle is issued.
+    const project = await f.api(`${grant.instanceId}/call`, "POST", {
+      method: "filesystem.getKnownDirectory",
+      params: { name: "project" },
+    });
+    expect(project.status).toBe(200);
+    expect(await project.json()).toMatchObject({ path: f.cwd });
+  });
+
+  test("revoking a pending Web directory choice remains an authorization failure", async () => {
+    const f = await fixture({ permissions: ["context.workspace", "process"] });
+    const grant = await f.prepare();
+    const pending = f.api(`${grant.instanceId}/call`, "POST", {
+      method: "filesystem.pickDirectory",
+    });
+    const confirmation = await waitRuntimeEvent(f, grant.instanceId, "host.confirm");
+    expect((await f.api(grant.instanceId, "DELETE")).status).toBe(200);
+    const response = await pending;
+    expect(response.status).toBe(410);
+    expect(await response.json()).not.toEqual({ cancelled: true });
+    expect(await readdir(f.cwd)).toEqual(["notes.txt"]);
+    expect(
+      (
+        await f.api(`${grant.instanceId}/confirm`, "POST", {
+          requestId: confirmation.payload.requestId,
+          allowed: true,
+        })
+      ).status,
+    ).toBe(410);
+  });
+
   test("Web restores only a bookmarked server directory after reopening the Panel", async () => {
     const f = await nodeProcessFixture();
     const project = await f.call("filesystem.getKnownDirectory", { name: "project" });
@@ -2455,6 +2527,56 @@ test("resource URLs cannot cross owners, projects, permissions, closed grants or
   expect(
     (await denied.api(`${deniedGrant.instanceId}/resources/${f.asset.id}`, "GET")).status,
   ).toBe(403);
+});
+
+test("bulk HTTP reads amortize full checks but still revoke a replaced physical project root", async () => {
+  const f = await fixture({
+    permissions: ["resources", "context.workspace"],
+    projectScope: () =>
+      capturePanelProjectScope({
+        environmentDir: join(f.root, "environment"),
+        projectPath: f.cwd,
+        cwd: f.cwd,
+        assertAuthority() {},
+      }),
+  });
+  const service = new PanelResourceService({
+    rootDirectory: join(f.root, "data", "panel-app-media"),
+    isScopeAuthorized: () => true,
+  });
+  cleanups.push(() => service.shutdown());
+  const data = Buffer.alloc(8 * 1024 * 1024 + 17, 43);
+  const file = join(f.cwd, "bulk.mp4");
+  await writeFile(file, data);
+  const asset = await service.library.importFile({ appId: f.app.id, projectPath: f.cwd }, file);
+  const grant = await f.prepare();
+  const url = `${f.url}/api/v1/panels/runtime/${grant.instanceId}/resources/${asset.id}`;
+  const read = () => fetch(url, { headers: { Cookie: "session=owner-a" } });
+  const checksBefore = f.state.snapshotAppIds.length;
+  const completed = await read();
+  expect(completed.status).toBe(200);
+  expect(Buffer.from(await completed.arrayBuffer())).toEqual(data);
+  expect(f.state.snapshotAppIds.length - checksBefore).toBeLessThan(40);
+  // Keep the source backpressured long enough to replace the mount between
+  // two verified blocks; no content or permission decision is stubbed.
+  f.state.beforeSnapshot = () => new Promise((resolve) => setTimeout(resolve, 5));
+  const response = await read();
+  const reader = response.body!.getReader();
+  let received = (await reader.read()).value!.length;
+  renameSync(f.cwd, f.cwd + "-original");
+  mkdirSync(f.cwd);
+  try {
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      received += chunk.value.length;
+    }
+  } catch {
+    /* A truncated authenticated response is an expected terminal. */
+  }
+  expect(received).toBeGreaterThan(0);
+  expect(received).toBeLessThan(data.length);
+  expect((await read()).status).toBe(410);
 });
 
 test("closing one resource reader interrupts its stream even while another grant keeps the scope alive", async () => {

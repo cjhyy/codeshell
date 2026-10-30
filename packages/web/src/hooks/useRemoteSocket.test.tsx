@@ -103,6 +103,76 @@ afterEach(() => {
 });
 
 describe("useRemoteSocket resync", () => {
+  test("a paired browser authenticates without consuming a bookmarked pairing link", async () => {
+    setupBrowser();
+    window.location.search = "?pairing=expired-test-token&view=panels";
+    const replaced: string[] = [];
+    window.history.replaceState = (_data, _unused, url) => replaced.push(String(url));
+    const hook = await renderHook(() => useRemoteSocket({}));
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      await flushMicrotasks();
+    });
+    expect(ws.sent.map((line) => JSON.parse(line).type)).toEqual(["auth.device"]);
+    await act(async () => {
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.status).toBe("online");
+    expect(replaced).toEqual(["/mobile?view=panels"]);
+    expect(localStorage.getItem("cs.deviceId")).toBe("device-1");
+    expect(ws.sent.some((line) => JSON.parse(line).type === "pair.complete")).toBe(false);
+    await hook.unmount();
+  });
+
+  test("a fresh pairing link can replace a revoked stored device exactly once", async () => {
+    setupBrowser();
+    window.location.search = "?pairing=fresh-test-token";
+    const hook = await renderHook(() => useRemoteSocket({}));
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.failed", message: "Device is not trusted" });
+      await flushMicrotasks();
+    });
+    expect(ws.sent.map((line) => JSON.parse(line).type)).toEqual(["auth.device", "pair.complete"]);
+    expect(hook.result.current.status).toBe("authenticating");
+    expect(localStorage.getItem("cs.deviceId")).toBeNull();
+    expect(hook.result.current.send({ type: "chat.send", text: "must remain unsent" })).toBe(false);
+    await act(async () => {
+      ws.message({ type: "pair.ok", device: { id: "replacement-device", name: "Phone" } });
+      ws.message({ type: "auth.ok", device: { id: "replacement-device", name: "Phone" } });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.status).toBe("online");
+    expect(localStorage.getItem("cs.deviceId")).toBe("replacement-device");
+    expect(ws.sent.map((line) => JSON.parse(line).type)).toEqual([
+      "auth.device",
+      "pair.complete",
+      "auth.device",
+    ]);
+    await hook.unmount();
+  });
+
+  test("a new browser still needs a valid one-use pairing grant", async () => {
+    setupBrowser();
+    localStorage.removeItem("cs.deviceId");
+    window.location.search = "?pairing=invalid-test-token";
+    const hook = await renderHook(() => useRemoteSocket({}));
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "pair.failed", message: "Pairing token expired or invalid" });
+      await flushMicrotasks();
+    });
+    expect(ws.sent.map((line) => JSON.parse(line).type)).toEqual(["pair.complete"]);
+    expect(hook.result.current.status).toBe("unpaired");
+    expect(localStorage.getItem("cs.deviceId")).toBeNull();
+    expect(hook.result.current.send({ type: "session.list" })).toBe(false);
+    await hook.unmount();
+  });
+
   test("passcode rotation offers HTTP verification without losing pairing or replaying writes", async () => {
     setupBrowser();
     const resyncs: ResyncReason[] = [];

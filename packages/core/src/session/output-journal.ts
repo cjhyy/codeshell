@@ -45,10 +45,12 @@ import {
 } from "./output-journal-storage.js";
 import {
   createOutputJournalBinding,
+  outputJournalAnchorName,
   validateOutputJournalBinding,
   type OutputJournalBinding,
 } from "./output-journal-binding.js";
 import { capturePersistentFileIdentity } from "./persistent-file-identity.js";
+import { hasHistoricalOutputGap } from "./output-history-gap.js";
 
 const MAX_JOURNAL_BYTES = 128 * 1024 * 1024;
 const MAX_RECORD_BYTES = 256 * 1024;
@@ -56,6 +58,7 @@ const MAX_EVENT_BYTES = 16 * 1024 * 1024;
 const CHUNK_BYTES = 64 * 1024;
 const MAX_PAGE_BYTES = 1024 * 1024;
 const MAX_PAGE_FRAMES = 512;
+const MAX_REQUESTED_PAGE_FRAMES = 2048;
 // A frozen transcript base has its own budget; transport pages/cutover stay small.
 const LEGACY_BASE_MAX_BYTES = 32 * 1024 * 1024;
 const LEGACY_BASE_MAX_EVENTS = 262144;
@@ -143,6 +146,7 @@ export interface OutputJournalPage {
   version: 1;
   /** Host coverage binds this prefix to the current Session directory incarnation. */
   coverageIdentity?: string;
+  historicalGap?: true;
   status: "ok" | "unavailable" | "cursor_invalid" | "incomplete";
   /** All pages in a recovery use the same frozen through cursor. */
   from?: string;
@@ -272,13 +276,15 @@ function sessionLocation(root: string, sessionId: string) {
       invalid("Output journal persistent Session identity changed");
     }
   }
+  if (state.outputJournalBinding?.anchorName && !hasHistoricalOutputGap(state))
+    throw new JournalError("incomplete", "Output epoch lost its historical gap receipt");
   return {
     root: canonicalRoot,
     directory,
     statePath,
     state,
     stat,
-    file: join(directory, "output-journal.jsonl"),
+    file: join(directory, outputJournalAnchorName(state.outputJournalBinding)),
   };
 }
 
@@ -697,6 +703,11 @@ function verifiedFile(fd: OutputFile, file: string, start: Position, size: numbe
   const checkpoints: Checkpoint[] = [{ ...start, committed: true }];
   const format = { requiresHead: false, lastLegacySequence: 0 };
   const head = scan(fd, start, size, checkpoints, format);
+  // The scan already proved this complete event boundary. Reuse its hash for
+  // the frozen watermark instead of rereading the same final partial interval
+  // for both publication and `through` on every page.
+  if (checkpoints.at(-1)!.sequence !== head.sequence)
+    checkpoints.push({ ...head, committed: true });
   const result = { stamp, head, checkpoints, ...format };
   // A concurrent append may leave the frozen scan valid, but its new stamp
   // cannot certify the unseen tail. Rebuild on the next request instead.
@@ -803,7 +814,7 @@ function readOutputJournalAttempt(
     if (!options || typeof options !== "object" || Array.isArray(options))
       invalid("Invalid output journal options");
     const maxBytes = boundedInt(options.maxBytes, MAX_PAGE_BYTES, MAX_PAGE_BYTES);
-    const maxFrames = boundedInt(options.maxFrames, MAX_PAGE_FRAMES, MAX_PAGE_FRAMES);
+    const maxFrames = boundedInt(options.maxFrames, MAX_PAGE_FRAMES, MAX_REQUESTED_PAGE_FRAMES);
     const location = sessionLocation(root, sessionId);
     initialLocation = location;
     pinned = location.state.outputJournalIdentity !== undefined;
@@ -979,6 +990,7 @@ function readOutputJournalAttempt(
         throw new JournalError("incomplete", "Published output watermark changed during recovery");
     }
     return {
+      ...(hasHistoricalOutputGap(finalLocation.state) ? { historicalGap: true as const } : {}),
       version: 1,
       status: "ok",
       coverageIdentity: outputCoverageIncarnation(

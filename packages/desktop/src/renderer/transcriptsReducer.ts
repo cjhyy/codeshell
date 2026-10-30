@@ -40,7 +40,14 @@ export type TranscriptsAction =
       epoch?: string;
       raw?: SequencedStreamEvent[];
     }
-  | { type: "hydrate_begin"; bucket: string; token: number; sessionId?: string }
+  | {
+      type: "hydrate_begin";
+      bucket: string;
+      token: number;
+      sessionId?: string;
+      reset?: boolean;
+      suspended?: boolean;
+    }
   | { type: "hydrate_cancel"; bucket: string; token: number }
   | {
       /** Apply an authoritative goalGet result after an optimistic RPC failed.
@@ -79,6 +86,8 @@ export type TranscriptsAction =
       bucket: string;
       requestId: string;
       engineSessionId?: string;
+      source?: "external-runtime";
+      expiresAt?: number;
       question: string;
       header?: string;
       options?: AskUserOption[];
@@ -176,6 +185,8 @@ function reduceTranscriptAction(map: TranscriptsMap, action: TranscriptsAction):
       next = appendAskUserMessage(current, {
         requestId: action.requestId,
         engineSessionId: action.engineSessionId,
+        source: action.source,
+        expiresAt: action.expiresAt,
         question: action.question,
         header: action.header,
         options: action.options,

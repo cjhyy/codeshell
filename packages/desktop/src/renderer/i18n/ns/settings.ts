@@ -31,9 +31,30 @@ export const settingsNs = {
         open_screenRecording: "打开屏幕录制设置",
         screenSettingsHint:
           "请在系统设置中允许 CodeShell Computer Use 录制屏幕，再返回此处重新检查。",
+        staleGrantHint:
+          "更新 CodeShell 后，原有授权可能失效：如果系统设置里 CodeShell Computer Use 看起来已开启、这里仍显示未授权，请在列表中选中它点“−”删除，再重新添加并开启。",
         checkFailed: "暂时无法确认系统权限，请重新检查或打开对应系统设置。",
         restartHint: "重启 CodeShell 后应用更改，并新建会话使用电脑操作。",
         restart: "重启 CodeShell",
+        companionEnable: "显示 Mimi 操作角色（试验）",
+        companionDescription:
+          "拖动放置，点击打开 Mimi 聊天，右键恢复跟随。人的交互优先，待机安静，工作动作短暂播放。预览持续 10 秒；实际联动需启用电脑操作。",
+        companionSprite: "Mimi 图片动画集",
+        companionSpriteHint: "当前效果 · 全身动作与操作反馈",
+        companionLive2dHint: "预留效果集接口 · 尚未启用模型",
+        companionSize: "角色大小",
+        companionPreview: "预览动作",
+        inputTitle: "电脑输入控制",
+        inputRunning:
+          "AI 可以发送键盘和鼠标输入。你正在操作时，会前置应用或移动指针的输入会自动等待。",
+        inputStopped: "已停止：AI 不会再发送任何键盘或鼠标输入，直到你点继续。",
+        inputForegroundHeld: "Mimi 聊天打开期间，会前置应用或移动指针的输入暂停。",
+        inputUserActive: "检测到你正在使用键盘或鼠标。",
+        inputStop: "停止电脑操作",
+        inputResume: "继续",
+        inputShortcut: "随时可按 ⌘⇧Esc 停止。",
+        inputForceStop: "强制停止输入驱动",
+        inputForceStopHint: "会结束所有任务共用的驱动，需重启 CodeShell 才能再次使用电脑操作。",
       },
       cloudAccount: {
         title: "CodeShell 云账号（可选）",
@@ -1194,11 +1215,34 @@ export const settingsNs = {
         open_screenRecording: "Open Screen Recording settings",
         screenSettingsHint:
           "Allow CodeShell Computer Use to record the screen in System Settings, then return here and check again.",
+        staleGrantHint:
+          "Updating CodeShell can invalidate an earlier grant. If System Settings shows CodeShell Computer Use as enabled but this page says it is not granted, select it in the list, remove it with “−”, then add it again and turn it on.",
         checkFailed:
           "System permissions could not be confirmed. Check again or open the corresponding system settings.",
         restartHint:
           "Restart CodeShell to apply changes, then start a new conversation to use computer controls.",
         restart: "Restart CodeShell",
+        companionEnable: "Show Mimi computer companion (experimental)",
+        companionDescription:
+          "Drag to place, click for Mimi chat, and right-click to resume following. Your interaction takes priority. Idle stays still; work gestures are brief. Preview lasts 10 seconds; live reactions require computer use.",
+        companionSprite: "Mimi sprite animations",
+        companionSpriteHint: "Active pack · full character and action feedback",
+        companionLive2dHint: "Renderer slot reserved · model not enabled",
+        companionSize: "Character size",
+        companionPreview: "Preview actions",
+        inputTitle: "Computer input control",
+        inputRunning:
+          "The AI may send keyboard and mouse input. While you are using the computer, input that brings an app forward or moves the pointer waits.",
+        inputStopped: "Stopped: the AI sends no keyboard or mouse input until you resume.",
+        inputForegroundHeld:
+          "While the Mimi chat is open, input that brings an app forward or moves the pointer is paused.",
+        inputUserActive: "You are using the keyboard or mouse.",
+        inputStop: "Stop computer control",
+        inputResume: "Resume",
+        inputShortcut: "Press ⌘⇧Esc at any time to stop.",
+        inputForceStop: "Force-stop the input driver",
+        inputForceStopHint:
+          "Ends the driver shared by every task. Restart CodeShell to use computer control again.",
       },
       cloudAccount: {
         title: "CodeShell cloud account (optional)",

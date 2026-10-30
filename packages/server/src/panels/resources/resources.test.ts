@@ -117,6 +117,29 @@ test("ordinary PDF, Word, font and CSV resources retain old IDs/layout and safe 
   ).toBe(5);
 });
 
+test("bulk reads and integrity checks use bounded blocks without changing bytes or ranges", async () => {
+  const f = await fixture();
+  const data = Buffer.alloc(4 * 1024 * 1024 + 19, 41);
+  const asset = await f.asset(data);
+  const read = await f.service.openRead(f.scope, asset.id);
+  const chunks: Buffer[] = [];
+  for await (const chunk of read.body!) chunks.push(chunk);
+  expect(Buffer.concat(chunks)).toEqual(data);
+  expect(chunks.length).toBeLessThanOrEqual(5);
+  expect(chunks.every((chunk) => chunk.length <= 1024 * 1024)).toBe(true);
+  let checkedBlocks = 0;
+  await f.service.library.verifyContent(f.scope, asset.id, () => {
+    checkedBlocks++;
+  });
+  expect(checkedBlocks).toBeGreaterThan(0);
+  expect(checkedBlocks).toBeLessThanOrEqual(5);
+  const range = await f.service.openRead(f.scope, asset.id, { range: "bytes=1048570-1048580" });
+  const rangeChunks: Buffer[] = [];
+  for await (const chunk of range.body!) rangeChunks.push(chunk);
+  expect(range.status).toBe(206);
+  expect(Buffer.concat(rangeChunks)).toEqual(data.subarray(1048570, 1048581));
+});
+
 test("chunk reads reconstruct arbitrary binary bytes with exact EOF and reject oversized/cross-scope reads", async () => {
   const f = await fixture(),
     data = Buffer.alloc(70001);
@@ -409,6 +432,51 @@ test.each(["scope", "grant", "cancel"])(
     ).toEqual([]);
   },
 );
+
+test("capture waits for concurrent scope and directory checks before failing without publication", async () => {
+  const f = await fixture();
+  const path = join(f.tool, "source.bin");
+  await writeFile(path, Buffer.alloc(1024 * 1024 + 1, 17));
+  let scopeEntered!: () => void;
+  let releaseScope!: () => void;
+  const entered = new Promise<void>((resolve) => {
+    scopeEntered = resolve;
+  });
+  const release = new Promise<void>((resolve) => {
+    releaseScope = resolve;
+  });
+  let checked = false;
+  const library = new ResourceLibrary({
+    rootDirectory: join(f.root, "store"),
+    isScopeAuthorized: async () => {
+      scopeEntered();
+      await release;
+      checked = true;
+      return false;
+    },
+  });
+  let settled = false;
+  const result = library
+    .importFile(f.scope, path, {
+      assertAuthorized: () => {
+        throw new Error("Directory grant was revoked");
+      },
+    })
+    .then(
+      () => "unexpected success",
+      (error) => error.message,
+    )
+    .finally(() => {
+      settled = true;
+    });
+  await entered;
+  await Promise.resolve();
+  expect(settled).toBe(false);
+  releaseScope();
+  expect(await result).toContain("revoked");
+  expect(checked).toBe(true);
+  expect(await f.service.library.list(f.scope)).toEqual([]);
+});
 
 test.each(["replace", "rewrite"])(
   "capture rejects a same-size source %s after copying begins",

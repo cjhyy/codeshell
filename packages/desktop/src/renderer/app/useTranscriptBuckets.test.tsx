@@ -183,6 +183,139 @@ describe("transcript history hydration after a background resume", () => {
     else Reflect.deleteProperty(window, "codeshell");
   });
 
+  test("explicit recovery ignores old cache and cursors, keeps failure locked, and joins every new page", async () => {
+    const roots = [0, 1].map(() => mkdtempSync(join(tmpdir(), "codeshell-explicit-hydrate-")));
+    const sources = roots.map((root, index) => {
+      const manager = new SessionManager(root);
+      const session = manager.create(root, "fixture", "fixture", "saved");
+      manager.startSessionRun(session.state, "run");
+      const writer = new SessionOutputJournal(
+        root,
+        "saved",
+        "run",
+        session.transcript.getEvents()[0].id,
+      );
+      const snapshots = new SessionSnapshotStore({
+        coverage: new SessionOutputCoverageStore(() => root),
+      });
+      for (const event of [
+        {
+          type: "session_user_message",
+          text: `source-${index}`,
+          clientMessageId: `client-${index}`,
+        },
+        { type: "session_started", sessionId: "saved", runId: "run", promptTokens: 0 },
+        { type: "stream_request_start", turnNumber: 1, messageId: `reply-${index}` },
+        { type: "text_delta", text: `complete-${index}` },
+        { type: "turn_complete", reason: "stop" },
+      ] as StreamEvent[])
+        snapshots.append("saved", { ...event, outputCursor: writer.append(event) });
+      return { root, snapshot: snapshots.get("saved") as SessionSnapshot };
+    });
+    let source = sources[0]!;
+    let invalid = true;
+    let readPages = 0;
+    const joinGate = deferred<SessionSnapshot>();
+    try {
+      saveTranscript("project", "saved", appendUserMessage(INITIAL_STATE, "stale cache intent", 1));
+      readDisk = async () => oldHistory;
+      readSnapshot = async () => ({
+        ...source.snapshot,
+        outputUnpaired: invalid,
+        historicalGap: source === sources[1],
+      });
+      window.codeshell.getSessionOutputJournal = async (_id, options) => {
+        readPages++;
+        return {
+          ...readOutputJournal(source.root, "saved", { ...options, maxFrames: 1 }),
+          legacyBaseComplete: true,
+          legacyBaseItems: [],
+        };
+      };
+      hook = await renderHook(useHarness);
+      await act(flushMicrotasks);
+      expect(hook.result.current.historyFailed).toBe(true);
+      await act(async () => {
+        hook!.result.current.beginOutputHistoryRecovery();
+        hook!.result.current.dispatch({
+          type: "stream",
+          bucket,
+          event: { type: "text_delta", text: "retired delivery" } as StreamEvent,
+        });
+      });
+      expect(hook.result.current.outputRecoveryPending).toBe(true);
+      expect(hook.result.current.state.messages).toEqual([]);
+      expect(hook.result.current.appliedSeqRef.current.has(bucket)).toBe(false);
+      source = sources[1]!;
+      readSnapshot = () => joinGate.promise;
+      readPages = 0;
+      await act(async () => {
+        hook!.result.current.reloadOutputHistory();
+        await flushMicrotasks();
+      });
+      expect(readPages).toBeGreaterThan(1);
+      expect(hook.result.current.outputRecoveryPending).toBe(true);
+      expect(hook.result.current.historyLoading).toBe(true);
+      await act(async () => {
+        joinGate.resolve({ ...source.snapshot, outputUnpaired: true, historicalGap: true });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.historyFailed).toBe(true);
+      expect(hook.result.current.outputRecoveryPending).toBe(true);
+      invalid = false;
+      readSnapshot = async () => ({ ...source.snapshot, historicalGap: true });
+      await act(async () => {
+        await hook!.result.current.loadEarlierHistory();
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.historyFailed).toBe(false);
+      expect(hook.result.current.outputRecoveryPending).toBe(false);
+      expect(hook.result.current.historicalGap).toBe(true);
+      expect(hook.result.current.historyHasMore).toBe(false);
+      expect(
+        hook.result.current.state.messages.some(
+          (message) => message.kind === "assistant" && message.text === "complete-1",
+        ),
+      ).toBe(true);
+      expect(JSON.stringify(hook.result.current.state)).not.toContain("stale cache intent");
+      const restored = hook.result.current.state;
+      await act(async () => {
+        hook!.result.current.dispatch({
+          type: "stream_batch",
+          bucket,
+          epoch: source.snapshot.epoch,
+          events: [{ type: "text_delta", text: "OLD" } as StreamEvent],
+          raw: [
+            {
+              seq: 9999,
+              epoch: source.snapshot.epoch,
+              event: {
+                type: "text_delta",
+                text: "OLD",
+                outputCursor: sources[0]!.snapshot.outputCursor,
+              } as StreamEvent,
+            },
+          ],
+        });
+      });
+      expect(hook.result.current.state.messages).toEqual(restored.messages);
+      await act(async () => {
+        hook!.result.current.setActive("other");
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook!.result.current.setActive("saved");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.historicalGap).toBe(true);
+      expect(hook.result.current.outputRecoveryPending).toBe(false);
+    } finally {
+      await hook?.unmount();
+      hook = undefined;
+      for (const root of roots) rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("existing hydration recovers a long prefix evicted from Main through the v2 journal", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-hydrate-journal-"));
     const manager = new SessionManager(root);

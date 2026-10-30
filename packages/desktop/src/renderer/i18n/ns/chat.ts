@@ -25,6 +25,12 @@ export const chat = {
         readPrompt:
           "此 Figma 文件已授权。请继续此前任务，先使用 LinkAction 按以下参数查看页面和顶层结构；链接含 node-id 时仅查看该节点。根据任务需要用 get_nodes 继续读取目标子树，仅在原任务确有需要时用 full:true 读取整个文件。参数：{arguments}",
       },
+      recoveryHeld:
+        "恢复前的待发送内容已保留。它们可能已被接收；请先核对恢复后的历史，再决定是否重新发送。",
+      recoveryResend: "已核对历史，重新发送保留内容",
+      recoveryCachedDraft:
+        "这条内容仅存在于旧界面缓存中，未确认已发送。请复制需要的文字、重新添加列出的附件后手动发送；系统不会重放缓存。",
+      recoveryAttachments: "{count} 个附件",
       loadingSession: "正在加载会话…",
       loadEarlierHistory: "加载更早记录",
       loadingEarlierHistory: "正在加载更早记录…",
@@ -311,6 +317,12 @@ export const chat = {
   },
   en: {
     chat: {
+      recoveryHeld:
+        "Inputs from before recovery are held. They may already have been received; check the restored history before sending them again.",
+      recoveryResend: "History checked — resend held inputs",
+      recoveryCachedDraft:
+        "This input was only found in the previous UI cache and delivery is unconfirmed. Copy the text you need and reattach the listed files before sending manually; cached records are never replayed.",
+      recoveryAttachments: "{count} attachments",
       linkResource: {
         title: "Figma file",
         connectMcp: "Connect Figma design context",

@@ -89,7 +89,7 @@ export function usePetProjectionState(
       active = false;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [api, state.needsSnapshot]);
+  }, [api, state.needsSnapshot, state.snapshotRetryRevision]);
 
   return state;
 }

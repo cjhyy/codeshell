@@ -1,6 +1,6 @@
 /** Real Workbench/HubSkills against an owned loopback HTTP controller.
  * Production by default; --development enables StrictMode effect replay.
- * --source-repo PATH bundles the old HubSkills for a deterministic before check.
+ * --source-repo PATH bundles the old HubSkills and its CSS for a deterministic before check.
  * Run with scripts/run-isolated-node-smoke.mjs; no provider or user state is used.
  */
 /* global document, window, requestAnimationFrame, innerHeight, innerWidth, getComputedStyle, structuredClone, Event */
@@ -28,7 +28,7 @@ const source = `
  import React from 'react'; import {createRoot} from 'react-dom/client';
  import {Workbench} from './Workbench';
  const noop=()=>{};
- const controller={host:'desktop',workspaceApi:true,connection:'open',activeId:'owned',
+ const controller={panelSessionId:undefined,host:'desktop',workspaceApi:true,connection:'open',activeId:'owned',
  chat:{items:[],run:'idle'},sessions:[],workspaceCwd:'/owned',workspaceName:'Owned workspace',
  workspaceKey:'owned',title:'Owned conversation',configuration:null,configurationVersion:0,
  sessionsVersion:0,draft:'',files:[],uploading:false,uploadBusy:false,hasUnsent:false,
@@ -56,6 +56,14 @@ const bundle = await build({
         {
           name: "owned-before-source",
           setup(builder) {
+            builder.onLoad({ filter: /\/hub-skills\.css$/ }, async () => ({
+              contents: await readFile(
+                path.join(sourceRepo, "packages/web/app/hub-skills.css"),
+                "utf8",
+              ),
+              loader: "css",
+              resolveDir: path.join(web, "app"),
+            }));
             builder.onLoad({ filter: /\/HubSkills\.tsx$/ }, async () => ({
               contents: await readFile(
                 path.join(sourceRepo, "packages/web/app/HubSkills.tsx"),
@@ -335,6 +343,208 @@ try {
       requests: structuredClone(requests),
     });
   };
+  if (!onlyCase || onlyCase === "scroll") {
+    // A locator focus/click may scroll overflow:hidden ancestors on our behalf.
+    // Reach the last card using only trusted raw touch input in the real shell.
+    for (const [width, height] of [
+      [320, 568],
+      [390, 844],
+      [844, 390],
+    ]) {
+      for (const theme of ["light", "dark"]) {
+        reset();
+        const touchContext = await browser.newContext({
+          viewport: { width, height },
+          isMobile: true,
+          hasTouch: true,
+          colorScheme: theme,
+          serviceWorkers: "block",
+        });
+        await touchContext.route("**/*", (route) => {
+          if (new URL(route.request().url()).origin === origin) return route.continue();
+          external.push(route.request().url());
+          return route.abort();
+        });
+        const touchPage = await touchContext.newPage();
+        touchPage.setDefaultTimeout(7000);
+        touchPage.on("pageerror", (error) => errors.push(String(error)));
+        await touchPage.addInitScript(() => {
+          window.skillsTouches = [];
+          window.skillsLastScroll = 0;
+          for (const kind of ["touchstart", "touchend"])
+            document.addEventListener(
+              kind,
+              (event) => {
+                window.skillsTouches.push({ kind, trusted: event.isTrusted });
+              },
+              { capture: true, passive: true },
+            );
+          document.addEventListener(
+            "scroll",
+            () => {
+              window.skillsLastScroll = window.performance.now();
+            },
+            true,
+          );
+        });
+        try {
+          await touchPage.goto(`${origin}/?view=settings&section=skills`);
+          const last = touchPage
+            .locator(".skills-card")
+            .last()
+            .getByRole("button", { name: "查看与编辑", exact: true });
+          await last.waitFor({ state: "attached" });
+          const metrics = () =>
+            touchPage.evaluate(() => {
+              const scroller = document.querySelector(".hub-skills"),
+                shell = document.querySelector(".shell"),
+                header = document.querySelector(".workbench-topbar");
+              const box = scroller.getBoundingClientRect(),
+                style = getComputedStyle(scroller);
+              return {
+                scrollTop: scroller.scrollTop,
+                clientHeight: scroller.clientHeight,
+                scrollHeight: scroller.scrollHeight,
+                overflowY: style.overflowY,
+                top: box.top,
+                bottom: box.bottom,
+                left: box.left,
+                right: box.right,
+                headerTop: header.getBoundingClientRect().top,
+                headerBottom: header.getBoundingClientRect().bottom,
+                shellTop: shell.scrollTop,
+                pageTop: document.scrollingElement.scrollTop,
+                documentWidth: document.documentElement.scrollWidth,
+                viewportWidth: innerWidth,
+              };
+            });
+          const visible = (locator) =>
+            locator.evaluate((node) => {
+              const box = node.getBoundingClientRect(),
+                area = document.querySelector(".hub-skills").getBoundingClientRect();
+              const x = box.x + box.width / 2,
+                y = box.y + box.height / 2;
+              return {
+                x,
+                y,
+                focused: node === document.activeElement,
+                visible:
+                  box.top >= area.top &&
+                  box.bottom <= Math.min(area.bottom, innerHeight) &&
+                  box.left >= area.left &&
+                  box.right <= Math.min(area.right, innerWidth) &&
+                  node.contains(document.elementFromPoint(x, y)),
+              };
+            });
+          const settled = () =>
+            touchPage.waitForFunction(
+              () => window.performance.now() - window.skillsLastScroll > 120,
+            );
+          const stableShell = (value) => {
+            assert.equal(value.headerTop, 0, JSON.stringify(value));
+            assert.equal(value.shellTop, 0, JSON.stringify(value));
+            assert.equal(value.pageTop, 0, JSON.stringify(value));
+            assert.ok(value.documentWidth <= value.viewportWidth, JSON.stringify(value));
+          };
+          const initial = await metrics();
+          stableShell(initial);
+          assert.equal(initial.scrollTop, 0);
+          const cdp = await touchContext.newCDPSession(touchPage);
+          let swipes = 0;
+          do {
+            const area = await metrics();
+            const x = (area.left + Math.min(area.right, width)) / 2;
+            const from = height - 65,
+              to = area.headerBottom + 65;
+            await cdp.send("Input.dispatchTouchEvent", {
+              type: "touchStart",
+              touchPoints: [{ x, y: from }],
+            });
+            for (let step = 1; step <= 8; step++) {
+              await cdp.send("Input.dispatchTouchEvent", {
+                type: "touchMove",
+                touchPoints: [{ x, y: from + ((to - from) * step) / 8 }],
+              });
+              await touchPage.evaluate(
+                () =>
+                  new Promise((resolve) =>
+                    requestAnimationFrame(() => requestAnimationFrame(resolve)),
+                  ),
+              );
+            }
+            await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+            await settled();
+            const after = await metrics();
+            stableShell(after);
+            assert.ok(
+              after.scrollTop > 0,
+              JSON.stringify({ kind: "raw-touch-did-not-scroll", initial, after }),
+            );
+            swipes++;
+          } while (!(await visible(last)).visible && swipes < 24);
+          const beforeOpen = await metrics(),
+            opener = await visible(last);
+          assert.equal(opener.visible, true, JSON.stringify({ swipes, beforeOpen, opener }));
+          // Tap a proven onscreen point; no locator action can auto-scroll it.
+          await touchPage.touchscreen.tap(opener.x, opener.y);
+          const detail = touchPage.locator(".skills-workspace-panel");
+          await detail.waitFor();
+          const close = detail.getByRole("button", { name: "关闭", exact: true });
+          const closeAt = await visible(close);
+          assert.equal(closeAt.visible, true, JSON.stringify(closeAt));
+          assert.equal(
+            await detail.getByRole("textbox", { name: "SKILL.md 内容", exact: true }).inputValue(),
+            content,
+          );
+          stableShell(await metrics());
+          await touchPage.touchscreen.tap(closeAt.x, closeAt.y);
+          await detail.waitFor({ state: "hidden" });
+          await settled();
+          const restored = await visible(last),
+            afterClose = await metrics();
+          assert.equal(restored.visible, true, JSON.stringify({ restored, afterClose }));
+          assert.equal(restored.focused, true, JSON.stringify(restored));
+          assert.ok(afterClose.scrollTop > 0);
+          stableShell(afterClose);
+          const touches = await touchPage.evaluate(() => window.skillsTouches);
+          assert.equal(touches.length, (swipes + 2) * 2);
+          assert.ok(touches.every((event) => event.trusted));
+          assert.deepEqual(
+            requests
+              .filter((wire) => wire.path === "/api/v1/skills/detail")
+              .map((wire) => wire.search),
+            ["?name=skill-11"],
+          );
+          assert.equal(requests.filter((wire) => wire.method !== "GET").length, 0);
+          await touchPage.screenshot({
+            path: path.join(output, `scroll-restored-${width}-${theme}.png`),
+          });
+          reports.push({
+            kind: "raw-mobile-list-scroll-and-close",
+            viewport: { width, height },
+            theme,
+            swipes,
+            initial,
+            beforeOpen,
+            afterClose,
+            restored,
+            touches,
+          });
+          console.log(
+            "SKILLS_SCROLL",
+            JSON.stringify({ width, height, theme, swipes, scrollTop: afterClose.scrollTop }),
+          );
+        } catch (cause) {
+          await touchPage
+            .screenshot({ path: path.join(output, `scroll-failure-${width}-${theme}.png`) })
+            .catch(() => {});
+          throw cause;
+        } finally {
+          await touchContext.close();
+        }
+      }
+    }
+  }
   if (!onlyCase || onlyCase === "close") {
     for (const [width, height] of [
       [320, 240],

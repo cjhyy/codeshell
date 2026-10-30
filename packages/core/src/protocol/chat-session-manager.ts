@@ -509,6 +509,20 @@ export class ChatSessionManager {
     return this.closeSession(sessionId, true);
   }
 
+  /** Retire an idle Engine for a Host checkpoint without tombstoning the Session ID. */
+  unloadIdleSession(sessionId: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (
+      this.closingSessions.has(sessionId) ||
+      this.residentMigrations.has(sessionId) ||
+      this.migrationClaims.has(sessionId) ||
+      session?.isBusy() ||
+      session?.pendingApprovals.size
+    )
+      return Promise.reject(new Error("Session is not idle"));
+    return this.closeSession(sessionId, false);
+  }
+
   private closeSession(sessionId: string, markClosed: boolean): Promise<void> {
     const alreadyClosing = this.closingSessions.get(sessionId);
     if (alreadyClosing) return alreadyClosing;

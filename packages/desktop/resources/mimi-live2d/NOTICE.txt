@@ -1,0 +1,10 @@
+Hiyori Momose sample model — copyright Live2D Inc.
+
+This content uses sample data owned and copyrighted by Live2D Inc. The sample data are utilized in accordance with terms and conditions set by Live2D Inc. This content itself is created at the author’s sole discretion.
+
+Source: https://github.com/Live2D/CubismWebSamples/tree/4-r.7/Samples/Resources/Hiyori
+Model terms: https://www.live2d.com/eula/live2d-sample-model-terms_en.html
+Free material license: https://www.live2d.com/eula/live2d-free-material-license-agreement_en.html
+Cubism Core (when locally installed): https://www.live2d.com/eula/live2d-proprietary-software-license-agreement_en.html
+
+Model and Core assets are not covered by CodeShell's MIT license.

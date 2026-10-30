@@ -1,4 +1,4 @@
-import { afterEach, expect, setSystemTime, test } from "bun:test";
+import { afterEach, expect, setSystemTime, spyOn, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import type { ManagedPanel } from "../../server/src/panels/types.js";
@@ -73,6 +73,40 @@ interface Request {
 const originalFetch = globalThis.fetch;
 const unmounts: Array<() => Promise<void>> = [];
 const videoRestores: Array<() => void> = [];
+const timerRestores: Array<() => void> = [];
+function manualTimers() {
+  setSystemTime(prepared.expiresAt - 60 * 60_000);
+  let id = 0;
+  const scheduled = new Map<number, { at: number; delay: number; callback: () => void }>();
+  const set = spyOn(globalThis, "setTimeout").mockImplementation(((
+    callback: () => void,
+    delay = 0,
+  ) => {
+    scheduled.set(++id, { at: Date.now() + delay, delay, callback });
+    return id;
+  }) as typeof setTimeout);
+  const clear = spyOn(globalThis, "clearTimeout").mockImplementation(((timer: number) => {
+    scheduled.delete(timer);
+  }) as typeof clearTimeout);
+  timerRestores.push(() => {
+    set.mockRestore();
+    clear.mockRestore();
+  });
+  return {
+    async fire(delay: number) {
+      const entry = [...scheduled].find(([, timer]) => timer.delay === delay);
+      expect(entry).toBeDefined();
+      const [timerId, timer] = entry!;
+      scheduled.delete(timerId);
+      await act(async () => {
+        setSystemTime(Math.max(Date.now(), timer.at));
+        timer.callback();
+        await flushMicrotasks();
+      });
+      return timer.callback;
+    },
+  };
+}
 function supportVideo(screen = true) {
   const change = (target: object, key: string, value: unknown) => {
     const previous = Object.getOwnPropertyDescriptor(target, key);
@@ -102,6 +136,7 @@ let previousMatchMedia: PropertyDescriptor | undefined;
 afterEach(async () => {
   for (const unmount of unmounts.splice(0)) await unmount();
   for (const restore of videoRestores.splice(0).reverse()) restore();
+  for (const restore of timerRestores.splice(0).reverse()) restore();
   globalThis.fetch = originalFetch;
   if (previousMatchMedia) Object.defineProperty(window, "matchMedia", previousMatchMedia);
   else delete (window as any).matchMedia;
@@ -112,10 +147,14 @@ afterEach(async () => {
 
 async function fixture(
   options: {
+    sessionId?: string;
     intercept?: (request: Request) => Response | Promise<Response> | undefined;
     onSubmit?: (input: { prompt: string; sessionId: string }) => Promise<{ accepted: true }>;
   } = {},
 ) {
+  const sessionId = Object.hasOwn(options, "sessionId")
+    ? options.sessionId
+    : prepared.context.sessionId;
   ensureMiniDom();
   previousMatchMedia = Object.getOwnPropertyDescriptor(window, "matchMedia");
   Object.defineProperty(window, "matchMedia", {
@@ -144,7 +183,8 @@ async function fixture(
     requests.push(request);
     const intercepted = options.intercept?.(request);
     if (intercepted) return intercepted;
-    if (request.url.pathname.endsWith("/prepare")) return Response.json(prepared);
+    if (request.url.pathname.endsWith("/prepare"))
+      return Response.json({ ...prepared, context: { ...prepared.context, sessionId } });
     if (request.url.pathname.endsWith("/events"))
       return Response.json({ events: [], cursor: Number(request.url.searchParams.get("after")) });
     if (request.url.pathname.endsWith("/renew"))
@@ -173,7 +213,7 @@ async function fixture(
   function MountedHost() {
     tree = PanelHost({
       panel,
-      sessionId: prepared.context.sessionId,
+      sessionId,
       busy,
       onClose() {},
       onAuthLost: () => {
@@ -497,6 +537,9 @@ test.each([
 
 test("panel prompt requires parent confirmation and duplicate request IDs cannot resubmit it", async () => {
   const view = await fixture();
+  expect(
+    view.requests.find((request) => request.url.pathname.endsWith("/prepare"))!.body.sessionId,
+  ).toBe(prepared.context.sessionId);
   await view.call("agent.submitPrompt", { prompt: "Read the selected project" }, "first");
   expect(view.submissions).toHaveLength(0);
   expect(view.dirty).toBe(true);
@@ -517,6 +560,32 @@ test("panel prompt requires parent confirmation and duplicate request IDs cannot
   });
   expect(view.dirty).toBe(false);
 });
+
+test.each([undefined, "native-previous"])(
+  "an unbound Panel omits its session and rejects a forged prompt effect for %s",
+  async (forgedSessionId) => {
+    const view = await fixture({
+      sessionId: undefined,
+      intercept(request) {
+        if (request.body?.method === "agent.submitPrompt")
+          return Response.json({
+            effect: "agent.submitPrompt",
+            prompt: "Must not send",
+            sessionId: forgedSessionId,
+          });
+      },
+    });
+    await view.ready();
+    expect(
+      view.requests.find((request) => request.url.pathname.endsWith("/prepare"))!.body,
+    ).not.toHaveProperty("sessionId");
+    await view.call("agent.submitPrompt", { prompt: "Must not send" });
+    expect(view.submissions).toEqual([]);
+    expect(view.dirty).toBe(false);
+    expect(text(view.tree)).not.toContain("确认发送任务");
+    expect(view.replies.at(-1)!.data.error).toContain("当前对话不匹配");
+  },
+);
 
 test("declining a panel task never calls the workbench controller", async () => {
   const view = await fixture();
@@ -787,6 +856,117 @@ test("a confirmation that already timed out does not close the panel", async () 
   expect(view.attach()).toBeDefined();
   expect(view.authLost).toBe(0);
 });
+
+test("a fresh confirmation retires the expired feedback while preserving ordinary notices", async () => {
+  const timers = manualTimers();
+  const view = await fixture({
+    intercept(request) {
+      if (!request.url.pathname.endsWith("/events")) return;
+      const id = Number(request.url.searchParams.get("after")) + 1;
+      return Response.json({
+        cursor: id,
+        events: [
+          {
+            id,
+            event: "host.confirm",
+            payload: {
+              requestId: `run-${id}`,
+              title: `Confirmation ${id}`,
+              body: "synthetic command",
+            },
+          },
+        ],
+      });
+    },
+  });
+  await view.ready();
+  await view.call("notifications.send", { title: "Keep this notification" });
+  await timers.fire(50_000);
+  expect(text(view.tree)).toContain("面板操作确认已超时");
+  expect(text(view.tree)).toContain("Keep this notification");
+  expect(view.dirty).toBe(false);
+  await timers.fire(1_000);
+  expect(text(view.tree)).toContain("Confirmation 2");
+  expect(text(view.tree)).not.toContain("面板操作确认已超时");
+  expect(text(view.tree)).toContain("Keep this notification");
+  expect(view.attach()!.props.inert).toBe(true);
+  expect(view.dirty).toBe(true);
+  expect(view.requests.filter((request) => request.url.pathname.endsWith("/confirm"))).toHaveLength(
+    0,
+  );
+  await click(button(view.tree, "确认执行"));
+  expect(text(view.tree)).not.toContain("Confirmation 2");
+  expect(text(view.tree)).not.toContain("面板操作确认已超时");
+  expect(text(view.tree)).toContain("Keep this notification");
+  expect(view.dirty).toBe(false);
+  expect(view.attach()!.props.inert).toBe(false);
+  expect(
+    view.requests
+      .filter((request) => request.url.pathname.endsWith("/confirm"))
+      .map((request) => request.body),
+  ).toEqual([{ requestId: "run-2", allowed: true }]);
+});
+
+for (const lateStatus of [200, 409]) {
+  test(`an expired confirmation's late ${lateStatus} response cannot replace the fresh confirmation`, async () => {
+    const timers = manualTimers();
+    let resolveFirst!: (value: Response) => void;
+    const firstResponse = new Promise<Response>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const view = await fixture({
+      intercept(request) {
+        if (request.url.pathname.endsWith("/events")) {
+          const id = Number(request.url.searchParams.get("after")) + 1;
+          return Response.json({
+            cursor: id,
+            events: [
+              {
+                id,
+                event: "host.confirm",
+                payload: {
+                  requestId: `run-${id}`,
+                  title: `Confirmation ${id}`,
+                  body: "synthetic command",
+                },
+              },
+            ],
+          });
+        }
+        if (request.url.pathname.endsWith("/confirm") && request.body.requestId === "run-1")
+          return firstResponse;
+      },
+    });
+    await view.ready();
+    await click(button(view.tree, "确认执行"));
+    await timers.fire(50_000);
+    expect(text(view.tree)).toContain("面板操作确认已超时");
+    await timers.fire(1_000);
+    await act(async () => {
+      resolveFirst(
+        Response.json(lateStatus === 200 ? { allowed: false } : { error: "Expired" }, {
+          status: lateStatus,
+        }),
+      );
+      await flushMicrotasks();
+    });
+    expect(text(view.tree)).toContain("Confirmation 2");
+    expect(text(view.tree)).not.toContain("已超时");
+    expect(text(view.tree)).not.toContain("已失效");
+    expect(view.dirty).toBe(true);
+    expect(view.attach()!.props.inert).toBe(true);
+    await click(button(view.tree, "确认执行"));
+    expect(view.dirty).toBe(false);
+    expect(
+      view.requests
+        .filter((request) => request.url.pathname.endsWith("/confirm"))
+        .map((request) => request.body),
+    ).toEqual([
+      { requestId: "run-1", allowed: true },
+      { requestId: "run-2", allowed: true },
+    ]);
+  });
+}
 
 test("cancelling after an uncertain approved response reports the server's actual outcome", async () => {
   const view = await fixture({

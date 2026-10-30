@@ -172,6 +172,7 @@ async function renderStrictHook<T>(useHook: () => T) {
 describe("accepted approval decisions", () => {
   test("keeps failed requests pending, prevents duplicate deliveries, and permits a retry", async () => {
     const env = envelope("session");
+    env.source = "external-runtime";
     const first = deferred();
     deliver = () => first.promise;
     const hook = await mount([env]);
@@ -282,6 +283,7 @@ describe("accepted approval decisions", () => {
 
   test("a failed mobile notification cannot undo or reject an accepted decision", async () => {
     const env = envelope("session");
+    env.source = "external-runtime";
     mirror = async () => {
       throw new Error("mobile offline");
     };
@@ -294,4 +296,65 @@ describe("accepted approval decisions", () => {
     expect(hook.result.current.queue).toEqual([]);
     expect(toasts).toEqual([]);
   });
+
+  test("native decisions rely on Core's authoritative resolution instead of a partial mirror", async () => {
+    const env = envelope("session");
+    const hook = await mount([env]);
+    await act(async () => {
+      await hook.result.current.controller.decideEnvelope(env, "approve");
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.history).toHaveLength(1);
+    expect(hook.result.current.queue).toEqual([]);
+    expect(mirrored).toEqual([]);
+  });
+});
+
+test("recovery retires queued and in-flight approval acknowledgements without replay", async () => {
+  const early = envelope("session", "queued-old");
+  const late = envelope("session", "in-flight-old");
+  const hook = await mount([early, late]);
+  const response = deferred();
+  deliver = () => response.promise;
+  let inFlight!: Promise<void>;
+  await act(async () => {
+    inFlight = hook.result.current!.controller.decideEnvelope(late, "approve");
+    await flushMicrotasks();
+  });
+  expect(calls).toHaveLength(1);
+  await act(async () => {
+    const queued = hook.result.current!.controller.decideEnvelope(early, "approve");
+    hook.result.current!.controller.beginOutputHistoryRecovery("bucket");
+    await queued;
+    response.resolve({ result: {} });
+    await inFlight;
+  });
+  expect(calls).toHaveLength(1);
+  expect(hook.result.current!.queue).toEqual([]);
+  expect(hook.result.current!.history).toEqual([]);
+  expect(mirrored).toEqual([]);
+  await act(async () => {
+    hook.result.current!.controller.finishOutputHistoryRecovery("bucket");
+    await hook.result.current!.controller.decideEnvelope(early, "approve");
+  });
+  expect(calls).toHaveLength(1);
+  expect(toasts).toEqual([]);
+});
+
+test("recovery retirement is scoped to the session even when approval IDs are reused", async () => {
+  const old = envelope("session", "reused");
+  const other = envelope("other-session", "reused");
+  const hook = await mount([old, other]);
+  await act(async () => {
+    const queued = hook.result.current!.controller.decideEnvelope(old, "approve");
+    hook.result.current!.controller.beginOutputHistoryRecovery("_no_repo_::session");
+    await queued;
+  });
+  expect(calls).toEqual([]);
+  expect(hook.result.current!.queue).toEqual([other]);
+  await act(async () => {
+    await hook.result.current!.controller.decideEnvelope(other, "approve");
+  });
+  expect(calls).toHaveLength(1);
+  expect(calls[0]?.[0]).toBe("other-session");
 });

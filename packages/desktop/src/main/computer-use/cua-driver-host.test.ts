@@ -91,6 +91,49 @@ function harness(
 }
 
 describe("CuaDriverHost", () => {
+  test("activity proxy preserves embedded transport and carries only host-owned endpoint configuration", () => {
+    const { host } = harness({
+      hostOptions: {
+        mcpProxy: {
+          command: "/app/electron",
+          entryPath: "/app/out/main/cua-activity-proxy.mjs",
+          socketPath: "/tmp/actor/activity.sock",
+          token: "host-token",
+        },
+      },
+    });
+    expect(host.mcpDeclaration()).toEqual({
+      command: "/app/electron",
+      args: [
+        "/app/out/main/cua-activity-proxy.mjs",
+        "--driver",
+        "/opt/cua/cua-driver",
+        "--socket",
+        "/tmp/codeshell-cua-test.sock",
+      ],
+      env: {
+        CUA_DRIVER_EMBEDDED: "1",
+        ELECTRON_RUN_AS_NODE: "1",
+        CODE_SHELL_CUA_ACTIVITY_SOCKET: "/tmp/actor/activity.sock",
+        CODE_SHELL_CUA_ACTIVITY_TOKEN: "host-token",
+      },
+      inlineImages: true,
+    });
+    const withProfiles = harness({
+      hostOptions: {
+        mcpProxy: {
+          command: "/app/electron",
+          entryPath: "/app/out/main/cua-activity-proxy.mjs",
+          socketPath: "/tmp/actor/activity.sock",
+          token: "host-token",
+          appProfilesDir: "/app/resources/computer-use/apps",
+        },
+      },
+    }).host;
+    expect(withProfiles.mcpDeclaration().env.CODE_SHELL_CUA_APP_PROFILES).toBe(
+      "/app/resources/computer-use/apps",
+    );
+  });
   test("launches the independent helper through its bridge with an allowlisted env", async () => {
     const { host, spawns } = harness();
     await host.start();

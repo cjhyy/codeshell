@@ -2045,6 +2045,9 @@ export class SessionManager {
       if (persisted?.outputIdentityRecovery)
         state.outputIdentityRecovery = structuredClone(persisted.outputIdentityRecovery);
       else delete state.outputIdentityRecovery;
+      if (persisted?.outputHistoryRecovery)
+        state.outputHistoryRecovery = structuredClone(persisted.outputHistoryRecovery);
+      else delete state.outputHistoryRecovery;
       if (persisted?.outputRecoveryIncomplete) state.outputRecoveryIncomplete = true;
       preserveOutputCoverage(state, persisted ?? {});
 

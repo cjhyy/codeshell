@@ -3,6 +3,49 @@ import { parseMobileClientEvent } from "./mobile-client-event-validator.js";
 import { MAX_MOBILE_ATTACHMENTS, MAX_MOBILE_IMAGE_BYTES } from "./mobile-limits.js";
 
 describe("parseMobileClientEvent", () => {
+  test("approval replies retain the worker route and reject malformed generations", () => {
+    const reply = {
+      type: "approval.respond",
+      sessionId: "s1",
+      approvalId: "a1",
+      decision: "approve",
+      connectionId: "worker",
+      generation: 2,
+      answer: "允许本次",
+    };
+    expect(parseMobileClientEvent(reply)).toEqual(reply);
+    for (const generation of [-1, 1.5, "2", Infinity])
+      expect(parseMobileClientEvent({ ...reply, generation })).toBeUndefined();
+    expect(parseMobileClientEvent({ ...reply, connectionId: "" })).toBeUndefined();
+  });
+  test("history recovery requires a correlated plan and explicit acceptance without client paths", () => {
+    const plan = { type: "session.outputRecovery.plan", sessionId: "s1", requestId: "r1" };
+    const apply = {
+      ...plan,
+      type: "session.outputRecovery.apply",
+      planId: "reviewed-plan",
+      acceptHistoricalGap: true,
+    };
+    expect(parseMobileClientEvent(plan)).toEqual(plan);
+    expect(parseMobileClientEvent(apply)).toEqual(apply);
+    for (const changed of [
+      { requestId: "" },
+      { sessionId: "x".repeat(129) },
+      { cwd: "/somewhere" },
+      { epoch: "new" },
+    ]) {
+      expect(parseMobileClientEvent({ ...plan, ...changed })).toBeUndefined();
+      expect(parseMobileClientEvent({ ...apply, ...changed })).toBeUndefined();
+    }
+    for (const changed of [
+      { planId: "" },
+      { planId: "x".repeat(129) },
+      { acceptHistoricalGap: false },
+      { acceptHistoricalGap: undefined },
+      { acceptHistoricalGap: "true" },
+    ])
+      expect(parseMobileClientEvent({ ...apply, ...changed })).toBeUndefined();
+  });
   test("accepts bounded correlated session pages and rejects malformed filters", () => {
     expect(
       parseMobileClientEvent({ type: "ccRoom.listSessions", cwd: "/repo", all: true }),
@@ -211,6 +254,19 @@ test("session creation accepts bounded optional client correlation without chang
   expect(parseMobileClientEvent({ type: "session.create" })).toEqual({ type: "session.create" });
 });
 
+test("creation and sends carry only valid optional permission intent while preserving legacy requests", () => {
+  for (const event of [{ type: "session.create" }, { type: "chat.send", text: "fixture" }]) {
+    expect(parseMobileClientEvent(event)).toEqual(event);
+    for (const permissionMode of ["default", "acceptEdits", "bypassPermissions"])
+      expect(parseMobileClientEvent({ ...event, permissionMode })).toEqual({
+        ...event,
+        permissionMode,
+      });
+    for (const permissionMode of ["", "skip", null, true, {}, []])
+      expect(parseMobileClientEvent({ ...event, permissionMode })).toBeUndefined();
+  }
+});
+
 test("session sync accepts optional bounded epochs and rejects malformed lifetime identifiers", () => {
   const legacy = { type: "session.sync", sessionId: "s1", sinceSeq: 100 };
   expect(parseMobileClientEvent(legacy)).toEqual(legacy);
@@ -332,5 +388,41 @@ test("external model selection is bounded and never admits native or malformed r
     "codex/" + "a".repeat(512),
   ]) {
     expect(parseMobileClientEvent({ type: "chat.send", text: "task", modelKey })).toBeUndefined();
+  }
+});
+
+test("output journal frame hint is optional, bounded and integral", () => {
+  const event = { type: "session.outputJournal", sessionId: "s", recoveryId: "r", requestId: "p" };
+  expect(parseMobileClientEvent(event)).toEqual(event);
+  expect(parseMobileClientEvent({ ...event, frozenSnapshot: true })).toEqual({
+    ...event,
+    frozenSnapshot: true,
+  });
+  for (const frozenSnapshot of [false, 1, "true", null])
+    expect(parseMobileClientEvent({ ...event, frozenSnapshot })).toBeUndefined();
+  for (const maxFrames of [1, 512, 2048])
+    expect(parseMobileClientEvent({ ...event, maxFrames })).toEqual({ ...event, maxFrames });
+  for (const maxFrames of [0, -1, 2049, 1.5, "2048", null, Infinity])
+    expect(parseMobileClientEvent({ ...event, maxFrames })).toBeUndefined();
+});
+
+test("history display requests carry only bounded selected-view references", () => {
+  const view = { type: "session.historyView", sessionId: "s", recoveryId: "r", requestId: "p" };
+  const detail = { ...view, type: "session.historyDetail", ref: "opaque" };
+  expect(parseMobileClientEvent(view)).toEqual(view);
+  expect(parseMobileClientEvent({ ...view, before: "older" })).toBeDefined();
+  expect(parseMobileClientEvent(detail)).toEqual(detail);
+  expect(parseMobileClientEvent({ ...detail, cursor: "part-2" })).toBeDefined();
+  for (const request of [view, detail]) {
+    for (const field of ["sessionId", "recoveryId", "requestId"])
+      for (const value of ["", null, 42, "x".repeat(129)])
+        expect(parseMobileClientEvent({ ...request, [field]: value })).toBeUndefined();
+    for (const field of ["cwd", "root", "epoch", "outputCursor"])
+      expect(parseMobileClientEvent({ ...request, [field]: "caller" })).toBeUndefined();
+  }
+  for (const value of ["", null, 42, "x".repeat(2049)]) {
+    expect(parseMobileClientEvent({ ...view, before: value })).toBeUndefined();
+    expect(parseMobileClientEvent({ ...detail, ref: value })).toBeUndefined();
+    expect(parseMobileClientEvent({ ...detail, cursor: value })).toBeUndefined();
   }
 });

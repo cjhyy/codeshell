@@ -28,9 +28,16 @@ export interface PublishedOutputHead {
 export interface OutputHeadPin extends Omit<PublishedOutputHead, "version"> {
   version: 1 | 2 | 3;
   file?: { dev: number; ino: number; stable?: PersistentFileIdentity };
+  name?: string;
 }
 const BYTES = 4096;
 const NAME = "output-journal-head.json";
+export function outputJournalHeadName(pin?: Pick<OutputHeadPin, "name">): string {
+  if (pin?.name === undefined) return NAME;
+  if (!/^output-journal-head-[a-f0-9-]{36}\.json$/.test(pin.name))
+    throw new Error("Invalid output epoch watermark name");
+  return pin.name;
+}
 const hash = (data: string) => createHash("sha256").update(data).digest("hex");
 function validHead(head: PublishedOutputHead | OutputHeadPin): boolean {
   return Boolean(
@@ -47,8 +54,8 @@ function stamp(fd: number): string {
   const at = fstatSync(fd, { bigint: true });
   return `${at.dev}:${at.ino}:${at.size}:${at.mtimeNs}:${at.ctimeNs}`;
 }
-function open(directory: string, flags: number, pin?: OutputHeadPin): number {
-  const path = join(directory, NAME);
+function open(directory: string, flags: number, pin?: OutputHeadPin, name?: string): number {
+  const path = join(directory, outputJournalHeadName(pin ?? { name }));
   const fd = openSync(
     path,
     flags | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
@@ -148,7 +155,7 @@ export function readPublishedOutputHead(
       if (stamp(fd) !== before) continue;
       const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(data));
       const head = value?.head as PublishedOutputHead;
-      const named = lstatSync(join(directory, NAME));
+      const named = lstatSync(join(directory, outputJournalHeadName(pin)));
       const opened = fstatSync(fd);
       if (
         !validHead(head) ||
@@ -174,8 +181,14 @@ export function readPublishedOutputHead(
 export function initializePublishedOutputHead(
   directory: string,
   head: PublishedOutputHead,
+  name?: string,
 ): OutputHeadPin {
-  const fd = open(directory, constants.O_RDWR | constants.O_CREAT | constants.O_EXCL);
+  const fd = open(
+    directory,
+    constants.O_RDWR | constants.O_CREAT | constants.O_EXCL,
+    undefined,
+    name,
+  );
   try {
     write(fd, encoded(head));
     const at = fstatSync(fd);
@@ -193,8 +206,9 @@ export function initializePublishedOutputHead(
       file: {
         dev: at.dev,
         ino: at.ino,
-        stable: capturePersistentFileIdentity(join(directory, NAME), at),
+        stable: capturePersistentFileIdentity(join(directory, outputJournalHeadName({ name })), at),
       },
+      ...(name ? { name } : {}),
     };
   } finally {
     closeSync(fd);

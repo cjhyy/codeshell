@@ -138,7 +138,7 @@ import {
 import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { getCuaDriverHost } from "./computer-use/service.js";
-import { initializeDesktopComputerUse } from "./computer-use/desktop-setup.js";
+import { initializeDesktopComputerUse, closeComputerUse } from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
 import { startMobileExternalRuntime } from "./mobile-remote/start-external-runtime.js";
@@ -424,7 +424,7 @@ import {
 } from "./memory-service.js";
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
-import { registerActivityHistoryIpc } from "./activity-history-ipc.js";
+import { registerDesktopOutputHistoryHost } from "./session-output-history-host.js";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
 import { SessionCatalogStore } from "./session-catalog-store.js";
 import { createTaskInboxSources } from "./task-inbox/task-inbox-sources.js";
@@ -1002,10 +1002,8 @@ onPluginInstallJobsChanged((jobs) => {
 });
 
 // ── Mobile Web Remote (LAN phone controller; off by default) ────────────────
-// Trusted-device store + HTTP/WS host. The host is NOT started on launch — the
-// user must explicitly Start it from Settings → Advanced. onClientEvent is a
-// v1 echo placeholder; chat/approval routing is wired in a later task and must
-// reuse the existing run/permission path rather than create a second runtime.
+// Trusted-device HTTP/WS host. Start is explicit in Settings → Advanced;
+// commands reuse the existing run/permission path.
 const mobileDevices = new TrustedDeviceStore(
   resolve(app.getPath("userData"), "mobile-remote", "devices.json"),
 );
@@ -1015,6 +1013,8 @@ const mobileUploads = new MobileUploadService({
 const mobileRemote = new RemoteHostManager({
   outputJournal: true,
   legacyBasePages: true,
+  outputJournalPageFrames: 2048,
+  historyView: true,
   devices: mobileDevices,
   uploads: mobileUploads,
   webApi: createDesktopWebService({
@@ -1285,7 +1285,7 @@ const cloudEnvironment = registerCloudEnvironmentIpc({
   userDataDir: app.getPath("userData"),
   assertLocalProject: (id) => projectStore.requireLive(id),
 });
-const mobileOrchestrator = new MobileRemoteOrchestrator({
+const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrator({
   remote: mobileRemote,
   uploads: mobileUploads,
   pendingApprovals: pendingMobileApprovals,
@@ -2127,6 +2127,8 @@ async function createWindow(): Promise<BrowserWindow> {
         mobileOrchestrator.broadcastApprovalResolved({
           sessionId: route.sessionId,
           requestId: route.requestId,
+          connectionId: route.connectionId,
+          generation: route.generation,
           approved: decision.approved,
           answer: decision.answer,
         });
@@ -2684,19 +2686,12 @@ async function createWindow(): Promise<BrowserWindow> {
         if (!activeSegment?.boundaryBeforeMessageId || journalEntries.length === 0) return;
         const summary = buildMigrationSummary(journalEntries);
         if (!summary) return;
-        const response = await petBridge.requestWorker(
-          "agent/query",
-          {
-            type: "archive_marker",
-            sessionId: petSessionId,
-            summary,
-            toClientMessageId: activeSegment.boundaryBeforeMessageId,
-            segmentId: "context-migration-v1",
-          },
-          { meta: { origin: "host", producer: "pet-context-migration" } },
-        );
-        if (!response.ok) throw new Error(response.message);
-        const appended = (response.result as { data?: { appended?: boolean } })?.data?.appended;
+        const appended = await petBridge.appendStartupArchiveMarker({
+          sessionId: petSessionId,
+          summary,
+          toClientMessageId: activeSegment.boundaryBeforeMessageId,
+          segmentId: "context-migration-v1",
+        });
         // false covers two benign cases, not an error: this session was
         // already migrated on a prior launch (idempotent no-op — expected on
         // every subsequent startup), or the anchor was dead (engine already
@@ -3499,6 +3494,7 @@ app.whenReady().then(async () => {
   // Register the opt-in host before the first worker receives its MCP environment.
   await initializeDesktopComputerUse({
     app,
+    openCompanionChat: (request) => openPetOverviewFromWidget(request),
     ipcMain,
     openExternal: (url) => shell.openExternal(url),
     isMainWindow: (sender) =>
@@ -5645,13 +5641,22 @@ ipcMain.handle(
   "mobileRemote:approvalResolved",
   async (
     _e,
-    input: { requestId?: unknown; sessionId?: unknown; approved?: unknown; answer?: unknown },
+    input: {
+      requestId?: unknown;
+      sessionId?: unknown;
+      connectionId?: unknown;
+      generation?: unknown;
+      approved?: unknown;
+      answer?: unknown;
+    },
   ) => {
     const requestId = typeof input?.requestId === "string" ? input.requestId : "";
     if (!requestId) return false;
     mobileOrchestrator.broadcastApprovalResolved({
       requestId,
       sessionId: typeof input?.sessionId === "string" ? input.sessionId : undefined,
+      connectionId: typeof input?.connectionId === "string" ? input.connectionId : undefined,
+      generation: typeof input?.generation === "number" ? input.generation : undefined,
       approved: typeof input?.approved === "boolean" ? input.approved : undefined,
       answer: typeof input?.answer === "string" ? input.answer : undefined,
     });
@@ -6920,10 +6925,14 @@ ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: numbe
     }
   );
 });
-registerActivityHistoryIpc(ipcMain, () => [
-  ...mainWindows,
-  ...(petWidgetWindow ? [petWidgetWindow] : []),
-]);
+registerDesktopOutputHistoryHost({
+  ipcMain,
+  windows: () => [...mainWindows],
+  historyWindows: () => [...mainWindows, ...(petWidgetWindow ? [petWidgetWindow] : [])],
+  bridge: () => bridge,
+  external: () => externalRuntimeService,
+  mobile: mobileOrchestrator,
+});
 const sessionCatalogStore = new SessionCatalogStore();
 const sessionCatalogIpc = registerSessionCatalogIpc(
   ipcMain,
@@ -7257,6 +7266,7 @@ app.on(
         panelAppBridge.shutdownMedia(),
         chromeExtensionRuntimeService.stop(),
         cuaDriverShutdown,
+        closeComputerUse(),
       ]);
       gatewayControlServer = undefined;
       await mobileUploads.dispose();

@@ -18,7 +18,7 @@ const output = await mkdtemp(path.join(tmpdir(), "codeshell-sidebar-focus-"));
 const source = `import React from 'react';import{createRoot}from'react-dom/client';import{Workbench}from'./Workbench';
 const root=createRoot(document.getElementById('root')),noop=()=>{};window.unmountFixture=()=>root.render(null);window.selections=[];
 function Fixture(){const[draft,setDraft]=React.useState('Owned retained task draft'),[workspace,setWorkspace]=React.useState('owned');window.changeWorkspace=()=>setWorkspace('other-owned');
-const controller={host:'desktop',workspaceApi:true,connection:'open',activeId:'owned-session',chat:{items:[{kind:'assistant',id:'owned-output',text:'Owned transcript',done:true}],run:'idle'},sessions:[{sessionId:'owned-session',title:'Owned sidebar session',startedAt:1,status:'completed',turnCount:1}],workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:workspace,title:'Owned conversation',configuration:null,configurationVersion:0,sessionsVersion:0,draft,files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running:false,localDrafts:[],approvals:[],approvalCount:()=>0,approvalContent:null,error:'',clearError:noop,setDraft,removeFile:noop,selectSession:id=>window.selections.push(id),newSession:noop,send:()=>false,stop:noop,addFiles:noop,refreshSessions:noop,refreshConfiguration:noop,onAuthLost:()=>{throw Error('Unexpected auth loss')}};return <Workbench controller={controller}/>};root.render(<React.StrictMode><Fixture/></React.StrictMode>);`;
+const controller={panelSessionId:undefined,host:'desktop',workspaceApi:true,connection:'open',activeId:'owned-session',chat:{items:[{kind:'assistant',id:'owned-output',text:'Owned transcript',done:true}],run:'idle'},sessions:[{sessionId:'owned-session',title:'Owned sidebar session',startedAt:1,status:'completed',turnCount:1}],workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:workspace,title:'Owned conversation',configuration:null,configurationVersion:0,sessionsVersion:0,draft,files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running:false,localDrafts:[],approvals:[],approvalCount:()=>0,approvalContent:null,error:'',clearError:noop,setDraft,removeFile:noop,selectSession:id=>window.selections.push(id),newSession:noop,send:()=>false,stop:noop,addFiles:noop,refreshSessions:noop,refreshConfiguration:noop,onAuthLost:()=>{throw Error('Unexpected auth loss')}};return <Workbench controller={controller}/>};root.render(<React.StrictMode><Fixture/></React.StrictMode>);`;
 const bundle = await build({
   stdin: { contents: source, resolveDir: path.join(repo, "packages/web/app"), loader: "tsx" },
   bundle: true,
@@ -564,10 +564,18 @@ try {
     }
     if (kind === "unmount") await page.evaluate(() => window.unmountFixture());
     else if (kind === "cancel") await page.keyboard.press("Escape");
-    else await page.getByRole("button", { name: "留在此页", exact: true }).click();
+    else if (kind !== "workspace")
+      await page.getByRole("button", { name: "留在此页", exact: true }).click();
     await frames(page);
     await frames(page);
     assert.equal(await page.locator(".navigation-prompt").count(), 0);
+    if (kind === "workspace") {
+      assert.equal(
+        await page.locator(".chat:not([hidden])").count(),
+        0,
+        "Changing workspace retires the old leave intent instead of navigating to chat",
+      );
+    }
     if (kind === "cancel" || kind === "rapid") {
       await focusMatches(source);
       assert.equal(

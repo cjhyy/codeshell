@@ -1,0 +1,361 @@
+:root {
+  color-scheme: light;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: transparent;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+  pointer-events: none;
+  user-select: none;
+}
+
+.mimi-scene {
+  position: absolute;
+  inset: 0;
+}
+
+.mimi-companion {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: transform 280ms ease-out;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.mimi-scene--still .mimi-companion {
+  transition: none;
+}
+
+.mimi-companion--held {
+  transition: none;
+}
+
+.mimi-companion__body {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-app-region: no-drag;
+}
+
+.mimi-companion__body:focus-visible {
+  outline: 2px solid #7d9b89;
+  outline-offset: -8px;
+  border-radius: 30%;
+}
+
+.mimi-companion--held .mimi-companion__body {
+  cursor: grabbing;
+}
+
+.mimi-companion__menu {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 35px;
+  border-radius: 9px;
+  border: 1px solid #d5dce3;
+  padding: 4px;
+  background: #fffffff5;
+  box-shadow: 0 5px 18px #24304025;
+  pointer-events: auto;
+}
+
+.mimi-companion__menu button {
+  width: 100%;
+  padding: 9px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #374556;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mimi-companion__menu button:hover,
+.mimi-companion__menu button:focus-visible {
+  background: #edf2ee;
+}
+
+.mimi-companion canvas {
+  display: block;
+}
+
+.mimi-companion__sprite {
+  position: absolute;
+  width: 100%;
+  aspect-ratio: 192 / 208;
+  /* bottom comes from COMPANION_SPRITE_BOTTOM; the stage model grounds on it. */
+  background-size: 800% 1100%;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 5px 5px #1c23351a);
+}
+
+.mimi-target {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border: 2px solid #f6aa4b;
+  border-radius: 50%;
+  box-sizing: border-box;
+  box-shadow: 0 0 0 5px #ffc77026;
+  animation: mimi-touch 500ms ease-out both;
+}
+
+.mimi-target--scroll {
+  color: #b05a18;
+  background: #fff3dc;
+  text-align: center;
+  line-height: 23px;
+  font-size: 20px;
+}
+
+.mimi-target--drag {
+  border-style: dashed;
+}
+
+.mimi-keyboard {
+  position: absolute;
+  left: 14%;
+  bottom: 34px;
+  width: 72%;
+  height: clamp(36px, 13%, 52px);
+  padding: 6px 7px;
+  box-sizing: border-box;
+  border-radius: 7px;
+  border: 1px solid #6d879d;
+  background: #dfe9f1;
+  box-shadow:
+    0 3px 0 #aebdca,
+    0 5px 8px #20324720;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  transform: perspective(120px) rotateX(18deg);
+}
+
+.mimi-keyboard i {
+  border-radius: 2px;
+  background: white;
+  box-shadow: 0 1px 0 #b9c6d1;
+  animation: mimi-key 780ms ease-in-out infinite;
+}
+
+.mimi-keyboard--settling {
+  opacity: 0.8;
+}
+
+.mimi-scene--still * {
+  animation: none !important;
+}
+
+@keyframes mimi-touch {
+  from {
+    opacity: 0.9;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 0.25;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes mimi-key {
+  0%,
+  60%,
+  100% {
+    background: white;
+    transform: translateY(0);
+  }
+  30% {
+    background: #f5ad40;
+    transform: translateY(2px);
+  }
+}
+
+.mimi-companion__activity,
+.mimi-companion__preview {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 90%;
+  border: 1px solid #ffffffaa;
+  border-radius: 20px;
+  background: #202a38e6;
+  color: white;
+  padding: 5px 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: 0 2px 8px #11182720;
+}
+
+.mimi-companion__activity {
+  bottom: 3px;
+}
+
+/* Standing on a control, the space under the feet is the control itself. */
+.mimi-companion[data-perch="on-field"] .mimi-companion__activity,
+.mimi-companion[data-perch="on-baseline"] .mimi-companion__activity {
+  top: -26px;
+  bottom: auto;
+}
+
+.mimi-companion__preview {
+  top: 0;
+  background: #ffffffec;
+  color: #455468;
+}
+
+/* A long trip vanishes and reappears at the destination instead of lagging. */
+.mimi-companion--hop .mimi-companion__body {
+  animation: mimi-hop 220ms ease-out;
+}
+
+@keyframes mimi-hop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.mimi-scene--still .mimi-companion--hop .mimi-companion__body {
+  animation: none;
+}
+
+/* The human is busy: step back and go quiet without leaving. */
+.mimi-companion--yield .mimi-companion__body {
+  opacity: 0.45;
+  transform: translateY(8px) scale(0.94);
+  transition:
+    opacity 240ms ease-out,
+    transform 240ms ease-out;
+}
+
+.mimi-scene--still .mimi-companion--yield .mimi-companion__body {
+  transform: none;
+  transition: none;
+}
+
+/* Offer after a drop onto another app's window. Answered by the human only. */
+.mimi-companion__handoff {
+  position: absolute;
+  top: calc(100% - 18px);
+  left: 50%;
+  width: 196px;
+  transform: translateX(-50%);
+  border-radius: 10px;
+  border: 1px solid #d5dce3;
+  padding: 9px 10px 8px;
+  background: #fffffff5;
+  box-shadow: 0 5px 18px #24304025;
+  color: #374556;
+  font-size: 12px;
+  pointer-events: auto;
+}
+
+.mimi-companion__handoff p {
+  margin: 0 0 7px;
+  overflow-wrap: anywhere;
+}
+
+.mimi-companion__handoff div {
+  display: flex;
+  gap: 6px;
+}
+
+.mimi-companion__handoff button {
+  flex: 1;
+  padding: 6px 4px;
+  border: 1px solid #d5dce3;
+  border-radius: 6px;
+  background: white;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mimi-companion__handoff button:first-child {
+  border-color: #344c42;
+  background: #344c42;
+  color: white;
+}
+
+/* Contact: the paw or foot meets the target. */
+.mimi-impact {
+  position: absolute;
+  inset: -22px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(#f6aa4b 0 8deg, transparent 8deg 30deg);
+  -webkit-mask: radial-gradient(circle, transparent 42%, #000 44%, #000 70%, transparent 72%);
+  mask: radial-gradient(circle, transparent 42%, #000 44%, #000 70%, transparent 72%);
+  animation: mimi-impact 260ms ease-out forwards;
+}
+
+@keyframes mimi-impact {
+  from {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+/* Speed lines trail a walk. */
+.mimi-companion--dash-right::before,
+.mimi-companion--dash-left::before {
+  content: "";
+  position: absolute;
+  top: 38%;
+  width: 46%;
+  height: 26%;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0 9px,
+    rgba(120, 120, 135, 0.55) 9px 12px
+  );
+  animation: mimi-dash 180ms linear infinite alternate;
+}
+
+.mimi-companion--dash-right::before {
+  right: 88%;
+}
+
+.mimi-companion--dash-left::before {
+  left: 88%;
+}
+
+@keyframes mimi-dash {
+  from {
+    opacity: 0.35;
+    transform: scaleX(0.7);
+  }
+  to {
+    opacity: 0.8;
+    transform: scaleX(1);
+  }
+}

@@ -33,6 +33,7 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
       break;
     case "chat.send":
       valid =
+        optionalMember(event.permissionMode, PERMISSION_MODES) &&
         boundedOptionalEmptyString(event.text, MAX_MESSAGE_LENGTH) &&
         (event.modelKey === undefined ||
           (boundedString(event.modelKey, MAX_ID_LENGTH) &&
@@ -60,6 +61,20 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
     case "session.recovery.cancel":
       valid = true;
       break;
+    case "session.outputRecovery.plan":
+    case "session.outputRecovery.apply":
+      valid =
+        boundedString(event.sessionId, 128) &&
+        boundedString(event.requestId, 128) &&
+        (event.type === "session.outputRecovery.plan" ||
+          (boundedString(event.planId, 128) && event.acceptHistoricalGap === true)) &&
+        Object.keys(event).every((key) =>
+          (event.type === "session.outputRecovery.plan"
+            ? ["type", "sessionId", "requestId"]
+            : ["type", "sessionId", "requestId", "planId", "acceptHistoricalGap"]
+          ).includes(key),
+        );
+      break;
     case "session.legacyBase":
       valid =
         boundedString(event.sessionId, 128) &&
@@ -68,19 +83,40 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         ((boundedString(event.throughEventId, 512) && event.cursor === undefined) ||
           (boundedString(event.cursor, 2048) && event.throughEventId === undefined));
       break;
+    case "session.historyView":
+    case "session.historyDetail":
+      valid =
+        boundedString(event.sessionId, 128) &&
+        boundedString(event.recoveryId, 128) &&
+        boundedString(event.requestId, 128) &&
+        (event.type === "session.historyView"
+          ? optionalBoundedString(event.before, 2048) &&
+            Object.keys(event).every((key) =>
+              ["type", "sessionId", "recoveryId", "requestId", "before"].includes(key),
+            )
+          : boundedString(event.ref, 2048) &&
+            optionalBoundedString(event.cursor, 2048) &&
+            Object.keys(event).every((key) =>
+              ["type", "sessionId", "recoveryId", "requestId", "ref", "cursor"].includes(key),
+            ));
+      break;
     case "session.outputJournal":
       valid =
         boundedString(event.sessionId, 128) &&
         boundedString(event.recoveryId, 128) &&
         boundedString(event.requestId, 128) &&
         optionalBoundedString(event.after, 2048) &&
-        optionalBoundedString(event.through, 2048);
+        optionalBoundedString(event.through, 2048) &&
+        (event.frozenSnapshot === undefined || event.frozenSnapshot === true) &&
+        (event.maxFrames === undefined ||
+          (isPositiveInteger(event.maxFrames) && event.maxFrames <= 2048));
       break;
     case "session.history":
       valid = boundedString(event.sessionId, MAX_ID_LENGTH);
       break;
     case "session.create":
       valid =
+        optionalMember(event.permissionMode, PERMISSION_MODES) &&
         optionalBoundedString(event.clientRequestId, MAX_ID_LENGTH) &&
         (event.cwd === undefined || event.cwd === null || boundedPath(event.cwd)) &&
         (event.projectId === undefined ||
@@ -99,6 +135,9 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         boundedString(event.approvalId, MAX_ID_LENGTH) &&
         (event.decision === "approve" || event.decision === "reject") &&
         optionalBoundedString(event.sessionId, MAX_ID_LENGTH) &&
+        optionalBoundedString(event.connectionId, MAX_ID_LENGTH) &&
+        (event.generation === undefined ||
+          (Number.isSafeInteger(event.generation) && (event.generation as number) >= 0)) &&
         optionalBoundedString(event.reason, MAX_MESSAGE_LENGTH) &&
         optionalBoundedString(event.answer, MAX_MESSAGE_LENGTH) &&
         optionalMember(event.scope, SCOPES) &&

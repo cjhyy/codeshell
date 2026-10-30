@@ -337,9 +337,9 @@ test("disconnecting another connection preserves the current pending authorizati
   expect(view.dirty).toBe(false);
 });
 
-test("a create-only draft explicitly adopts a concurrently created matching connection without losing its input", async () => {
-  const view = await fixture([]);
-  await click(findButton(view.tree, "添加连接"));
+test("an edited connection explicitly reviews a changed revision without losing its input", async () => {
+  const view = await fixture([connection()]);
+  await click(findButton(view.tree, "管理连接"));
   await act(async () => {
     input(view.tree, "name").props.onChange({ target: { value: "My retained name" } });
   });
@@ -372,10 +372,11 @@ test("a create-only draft explicitly adopts a concurrently created matching conn
   });
 });
 
-test("a new draft does not adopt a different provider, method or connection ID", async () => {
+test("a new draft never adopts a listed connection without an explicit edit", async () => {
   const view = await fixture([]);
   await click(findButton(view.tree, "添加连接"));
   for (const unrelated of [
+    connection(),
     connection(undefined, { methodId: "another-method" }),
     connection(undefined, { providerId: "gitlab" }),
     connection("another-id"),
@@ -384,6 +385,37 @@ test("a new draft does not adopt a different provider, method or connection ID",
     expect(text(view.tree)).not.toContain("载入最新版本，保留输入");
     expect(findButton(view.tree, "验证并保存").props.disabled).not.toBe(true);
   }
+});
+
+test("adding an authorization beside a legacy connection does not review or overwrite that account", async () => {
+  const existing = connection();
+  const view = await fixture([existing], { modern: true, strict: true });
+  await click(findButton(view.tree, "添加连接"));
+  const begin = view.requests.find(
+    (request) => request.url.pathname === "/api/v1/links/authorizations",
+  )!;
+  expect(begin.body).toMatchObject({ providerId: "github", methodId, expectedRevision: null });
+  expect(begin.body.connectionId).toBeUndefined();
+  expect(text(view.tree)).not.toContain("载入最新版本，保留输入");
+  const step = elements(view.tree).find((element) => element.type === LinkAuthorizationStepView)!;
+  expect(step.props.busy).toBe(false);
+  await view.refresh([{ ...existing, revision: "updated-elsewhere" }]);
+  expect(text(view.tree)).not.toContain("载入最新版本，保留输入");
+  expect(
+    elements(view.tree).find((element) => element.type === LinkAuthorizationStepView)!.props.busy,
+  ).toBe(false);
+  await click(findButton(view.tree, "关闭"));
+  expect(view.dirty).toBe(false);
+  expect(
+    view.requests
+      .filter((request) => request.method === "DELETE")
+      .map((request) => request.url.pathname),
+  ).toEqual(["/api/v1/links/authorizations/modern-attempt"]);
+  expect(
+    view.requests.some(
+      (request) => request.url.pathname.endsWith("/responses") || request.method === "PATCH",
+    ),
+  ).toBe(false);
 });
 
 test("available Host mode starts directly under StrictMode and responses retain the originating workspace", async () => {

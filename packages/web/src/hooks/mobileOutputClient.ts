@@ -1,18 +1,44 @@
-import type { MobileClientEvent, MobileServerEvent } from "@cjhyy/code-shell-core";
+import type {
+  MobileClientEvent,
+  MobileServerEvent,
+  MobileHistoryDetail,
+  MobileHistoryView,
+  MobileHistoryItem,
+} from "@cjhyy/code-shell-core";
 import {
   recoverMobileOutput,
+  recoverMobileOutputSuffix,
+  MobileHistoryViewChanged,
   MobilePendingInput,
   MobileOutputCatchupPending,
   MobileAwaitingJournal,
   type MobileLegacyBaseOptions,
+  type MobileRecoveryProgress,
 } from "../lib/mobileOutputRecovery.js";
 import type { OutputJournalOptions } from "@cjhyy/code-shell-core/internal";
 import { compareOutputCursors } from "../lib/outputJournalRecovery.js";
+import {
+  validateMobileHistoryView,
+  mobileHistoryRefs,
+  readMobileHistoryDetail,
+} from "../lib/mobileHistoryView.js";
+import { MobileHistoryReadQueue, HistoryReadBusyError } from "./mobileHistoryReadQueue.js";
 
 type Page = Extract<MobileServerEvent, { type: "session.outputJournal" }>;
 type BasePage = Extract<MobileServerEvent, { type: "session.legacyBase" }>;
-type RecoveryReply = Page | BasePage;
-type Result = NonNullable<Awaited<ReturnType<typeof recoverMobileOutput>>>;
+type ViewPage = Extract<MobileServerEvent, { type: "session.historyView" }>;
+type DetailPage = Extract<MobileServerEvent, { type: "session.historyDetail" }>;
+type RecoveryReply = Page | BasePage | ViewPage | DetailPage;
+type Result = NonNullable<Awaited<ReturnType<typeof recoverMobileOutput>>> & {
+  view?: MobileHistoryView;
+  verifiedInputIds?: string[];
+};
+type RequestOptions = {
+  "session.outputJournal": OutputJournalOptions & { frozenSnapshot?: true };
+  "session.legacyBase": MobileLegacyBaseOptions;
+  "session.historyView": { before?: string };
+  "session.historyDetail": { ref: string; cursor?: string };
+};
 interface Selection {
   id: string;
   sessionId: string;
@@ -27,10 +53,22 @@ interface Selection {
   applied?: string;
   pendingInputIds?: Set<string>;
   pendingInputBytes?: number;
+  legacyEvents?: Record<string, unknown>[];
   readyTimer?: ReturnType<typeof setTimeout>;
+  deadlineTimer?: ReturnType<typeof setTimeout>;
   capacityTimer?: ReturnType<typeof setTimeout>;
   capacityPending?: boolean;
   capacityCursor?: string;
+  chat?: Result["chat"];
+  snapshot?: Result["snapshot"];
+  historyReads?: number;
+  suffixRequested?: boolean;
+  view?: {
+    page: MobileHistoryView;
+    refs: Set<string>;
+    itemIds: Set<string>;
+    deferredTools: Set<string>;
+  };
   retry?: { timer: ReturnType<typeof setTimeout>; reject: (error: Error) => void };
   waiter?: {
     id: string;
@@ -45,19 +83,28 @@ interface Selection {
 export class MobileOutputClient {
   private enabled = false;
   private basePages = false;
+  private densePages = false;
+  private historyViews = false;
+  private readonly historyReads = new MobileHistoryReadQueue();
   private auth = 0;
   private sequence = 0;
   private selection?: Selection;
-  private legacyHostSelection = false;
+  private legacyHostSelection?: Selection;
   private lastResync?: { sessionId: string; revision: number; auth: number; at: number };
   constructor(
     private readonly deps: {
       send: (event: MobileClientEvent) => boolean;
       current: () => { sessionId?: string; roomId?: string; revision: number };
       commit: (sessionId: string, result: Result) => void;
-      legacy: (sessionId: string) => void;
+      legacy: (sessionId: string, events?: Record<string, unknown>[]) => void;
       failed: (sessionId: string) => void;
       awaitingJournal?: (sessionId: string) => void;
+      progress?: (sessionId: string, progress: MobileRecoveryProgress | undefined) => void;
+      historyWindow?: (
+        sessionId: string,
+        window: { id: string; hasEarlier: boolean } | undefined,
+      ) => void;
+      prependHistory?: (sessionId: string, items: MobileHistoryItem[]) => void;
     },
   ) {}
 
@@ -65,9 +112,13 @@ export class MobileOutputClient {
     const old = this.selection;
     const legacyHostSelection = this.legacyHostSelection;
     this.selection = undefined;
-    this.legacyHostSelection = false;
+    this.historyReads.reset();
+    this.legacyHostSelection = undefined;
     this.lastResync = undefined;
     if (old?.readyTimer) clearTimeout(old.readyTimer);
+    if (old?.deadlineTimer) clearTimeout(old.deadlineTimer);
+    if (old) this.deps.progress?.(old.sessionId, undefined);
+    if (old) this.deps.historyWindow?.(old.sessionId, undefined);
     if (old?.capacityTimer) clearTimeout(old.capacityTimer);
     if (old) this.clearPending(old, "Recovery cancelled");
     if (notify && (old || legacyHostSelection)) this.deps.send({ type: "session.recovery.cancel" });
@@ -126,6 +177,15 @@ export class MobileOutputClient {
       Date.now() - recent.at < 500
     )
       return "unchanged";
+    if (
+      selection?.view &&
+      selection.sessionId === sessionId &&
+      this.current(selection) &&
+      !selection.failed
+    ) {
+      this.scheduleSuffix(selection);
+      return "started";
+    }
     return this.begin(sessionId) ? "started" : false;
   }
 
@@ -142,7 +202,7 @@ export class MobileOutputClient {
   private current(selection: Selection): boolean {
     const current = this.deps.current();
     return (
-      this.selection === selection &&
+      (this.selection === selection || this.legacyHostSelection === selection) &&
       selection.auth === this.auth &&
       current.sessionId === selection.sessionId &&
       !current.roomId &&
@@ -161,12 +221,18 @@ export class MobileOutputClient {
   private fail(selection: Selection): void {
     if (!this.current(selection) || selection.failed) return;
     if (selection.readyTimer) clearTimeout(selection.readyTimer);
+    if (selection.deadlineTimer) clearTimeout(selection.deadlineTimer);
+    selection.deadlineTimer = undefined;
+    this.deps.progress?.(selection.sessionId, undefined);
     if (selection.capacityTimer) clearTimeout(selection.capacityTimer);
     selection.capacityTimer = undefined;
     selection.capacityPending = false;
     selection.readyTimer = undefined;
     selection.recovering = false;
     selection.failed = true;
+    this.historyReads.reset();
+    selection.view = undefined;
+    this.deps.historyWindow?.(selection.sessionId, undefined);
     this.clearPending(selection, "Recovery failed");
     this.deps.failed(selection.sessionId);
   }
@@ -177,15 +243,19 @@ export class MobileOutputClient {
       this.auth++;
       this.enabled = event.capabilities?.outputJournal === 1;
       this.basePages = this.enabled && event.capabilities?.legacyBasePages === 1;
+      this.densePages = this.enabled && event.capabilities?.outputJournalPageFrames === 2048;
+      this.historyViews = this.enabled && event.capabilities?.historyView === 1;
       return false;
     }
     if (
       event.type !== "session.recovery.ready" &&
       event.type !== "session.outputJournal" &&
-      event.type !== "session.legacyBase"
+      event.type !== "session.legacyBase" &&
+      event.type !== "session.historyView" &&
+      event.type !== "session.historyDetail"
     )
       return false;
-    const selection = this.selection;
+    const selection = this.selection ?? this.legacyHostSelection;
     if (
       !selection ||
       !this.current(selection) ||
@@ -199,6 +269,7 @@ export class MobileOutputClient {
         this.fail(selection);
         return true;
       }
+      if (selection === this.legacyHostSelection) return true;
       if (selection.started || selection.failed) return true;
       selection.started = true;
       selection.journalRequired = event.journalRequired === true;
@@ -218,7 +289,7 @@ export class MobileOutputClient {
   private request<T extends RecoveryReply["type"]>(
     selection: Selection,
     type: T,
-    options: T extends "session.outputJournal" ? OutputJournalOptions : MobileLegacyBaseOptions,
+    options: RequestOptions[T],
   ): Promise<Extract<RecoveryReply, { type: T }>> {
     return new Promise((resolve, reject) => {
       if (!this.current(selection) || selection.failed || selection.waiter || selection.retry)
@@ -239,6 +310,9 @@ export class MobileOutputClient {
         if (
           !this.deps.send({
             ...options,
+            // Only request the expanded bound after this authenticated Host
+            // advertises it; older peers receive their original request shape.
+            ...(type === "session.outputJournal" && this.densePages ? { maxFrames: 2048 } : {}),
             type,
             sessionId: selection.sessionId,
             recoveryId: selection.id,
@@ -266,7 +340,10 @@ export class MobileOutputClient {
     });
   }
 
-  private async readJournal(selection: Selection, options: OutputJournalOptions): Promise<Page> {
+  private async readJournal(
+    selection: Selection,
+    options: OutputJournalOptions & { frozenSnapshot?: true },
+  ): Promise<Page> {
     for (let retries = 0; ; retries++) {
       const reply = await this.request(selection, "session.outputJournal", options);
       if (reply.busy !== true) return reply;
@@ -310,35 +387,267 @@ export class MobileOutputClient {
     }
   }
 
-  private async recover(selection: Selection, resume?: () => Promise<Result>): Promise<void> {
+  private async readView(selection: Selection, before?: string): Promise<ViewPage["result"]> {
+    for (let retry = 0; ; retry++) {
+      const reply = await this.request(selection, "session.historyView", before ? { before } : {});
+      if (!this.current(selection) || selection.failed) throw new Error("Recovery cancelled");
+      const result = reply.result;
+      if (
+        !result ||
+        typeof result !== "object" ||
+        new TextEncoder().encode(JSON.stringify(reply)).length > 1024 * 1024 + 16 * 1024
+      )
+        throw new Error("Invalid history view reply");
+      if (
+        result.status !== "ok" &&
+        (Object.keys(result).length !== 1 ||
+          !["busy", "incomplete", "unsupported"].includes(result.status))
+      )
+        throw new Error("Invalid history view status");
+      if (result.status !== "busy" || retry >= 8) return result;
+      await this.backoff(selection, Math.min(1000, 50 * 2 ** retry));
+    }
+  }
+
+  private async initialResult(selection: Selection): Promise<Result | null> {
+    if (this.historyViews) {
+      const reply = await this.readView(selection);
+      if (reply.status !== "unsupported") {
+        if (reply.status !== "ok") throw new Error("History view unavailable");
+        const view = validateMobileHistoryView(reply, selection.sessionId);
+        const latest = selection.latest ? compareOutputCursors(selection.latest, view.through) : 0;
+        if (
+          selection.latest &&
+          (latest === undefined || (latest === 0 && selection.latest !== view.through))
+        )
+          throw new Error("History identity changed");
+        return {
+          chat: { ...view.state, items: view.items },
+          outputCursor: view.through,
+          snapshot: view.snapshot,
+          view,
+          verifiedInputIds: view.verifiedInputIds,
+        };
+      }
+    }
+    return recoverMobileOutput({
+      legacyTranscript: (events) => {
+        selection.legacyEvents = events;
+      },
+      requireJournal: selection.journalRequired,
+      canContinue: () => this.current(selection) && !selection.failed,
+      latestCursor: () => selection.latest,
+      read: (options) => this.readJournal(selection, options),
+      progress: (progress) => {
+        if (this.current(selection) && !selection.failed)
+          this.deps.progress?.(selection.sessionId, progress);
+      },
+      ...(this.basePages
+        ? { readBase: (options: MobileLegacyBaseOptions) => this.readBase(selection, options) }
+        : {}),
+    });
+  }
+
+  private scheduleSuffix(selection: Selection): void {
+    selection.suffixRequested = true;
+    if (
+      !this.current(selection) ||
+      selection.failed ||
+      !selection.view ||
+      !selection.chat ||
+      selection.recovering ||
+      selection.capacityPending ||
+      selection.historyReads
+    )
+      return;
+    selection.capacityPending = true;
+    selection.capacityTimer = setTimeout(() => {
+      selection.capacityTimer = undefined;
+      selection.capacityPending = false;
+      if (!this.current(selection) || selection.failed || !selection.view || !selection.chat)
+        return;
+      if (selection.historyReads || selection.waiter || selection.retry) return;
+      void this.advanceSuffix(selection);
+    }, 25);
+  }
+
+  private async advanceSuffix(selection: Selection): Promise<void> {
+    selection.suffixRequested = false;
+    selection.recovering = true;
+    await this.recover(selection, async () => ({
+      ...(await recoverMobileOutputSuffix({
+        chat: selection.chat!,
+        after: selection.applied!,
+        verifiedInputIds: selection.view!.page.verifiedInputIds,
+        previousSnapshot: selection.snapshot!,
+        canContinue: () => this.current(selection) && !selection.failed,
+        read: (options) => this.readJournal(selection, { ...options, frozenSnapshot: true }),
+      })),
+      verifiedInputIds: selection.view!.page.verifiedInputIds,
+    }));
+  }
+
+  /** A large detail must not monopolize the socket for all of its chunks.
+   * Join at most one frozen live batch between chunks, never chase the future
+   * head in a loop. The read queue still owns the whole detail operation. */
+  private async interleaveSuffix(selection: Selection): Promise<void> {
+    if (
+      selection.view &&
+      selection.chat &&
+      !selection.recovering &&
+      (selection.suffixRequested ||
+        (selection.latest &&
+          selection.applied &&
+          compareOutputCursors(selection.latest, selection.applied) === 1))
+    )
+      await this.advanceSuffix(selection);
+    if (!this.current(selection) || selection.failed) throw new Error("History selection changed");
+    if (selection.recovering) throw new HistoryReadBusyError();
+  }
+
+  /** A Main sequence gap can advance a retained view without rereading its old prefix. */
+  catchUp(sessionId: string): boolean {
+    const selection = this.selection;
+    if (
+      !selection?.view ||
+      selection.sessionId !== sessionId ||
+      !this.current(selection) ||
+      selection.failed
+    )
+      return false;
+    this.scheduleSuffix(selection);
+    return true;
+  }
+
+  private async historyRead<T>(selection: Selection, work: () => Promise<T>): Promise<T> {
+    if (!this.current(selection) || selection.failed || !selection.view)
+      throw new Error("History selection changed");
+    selection.historyReads = (selection.historyReads ?? 0) + 1;
+    if (selection.capacityTimer) clearTimeout(selection.capacityTimer);
+    selection.capacityTimer = undefined;
+    selection.capacityPending = false;
+    const started = Date.now();
     try {
-      const result = await (resume
-        ? resume()
-        : recoverMobileOutput({
-            requireJournal: selection.journalRequired,
-            canContinue: () => this.current(selection) && !selection.failed,
-            latestCursor: () => selection.latest,
-            read: (options) => this.readJournal(selection, options),
-            ...(this.basePages
-              ? {
-                  readBase: (options: MobileLegacyBaseOptions) => this.readBase(selection, options),
-                }
-              : {}),
-          }));
-      if (!this.current(selection)) return;
+      while (selection.recovering || selection.waiter || selection.retry) {
+        if (!this.current(selection) || selection.failed)
+          throw new Error("History selection changed");
+        if (Date.now() - started > 30_000) throw new HistoryReadBusyError();
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      if (!this.current(selection) || selection.failed)
+        throw new Error("History selection changed");
+      await this.interleaveSuffix(selection);
+      return await work();
+    } finally {
+      selection.historyReads!--;
+      if (
+        selection.suffixRequested ||
+        (selection.latest &&
+          selection.applied &&
+          compareOutputCursors(selection.latest, selection.applied) === 1)
+      )
+        this.scheduleSuffix(selection);
+    }
+  }
+
+  async loadEarlier(): Promise<void> {
+    const selection = this.selection,
+      view = selection?.view;
+    if (!selection || !view || !view.page.before || !this.current(selection) || selection.failed)
+      throw new Error("History view unavailable");
+    return this.historyReads.run(`${selection.id}:${view.page.viewId}`, () =>
+      this.historyRead(selection, async () => {
+        if (selection.view !== view) throw new Error("History selection changed");
+        if (!view.page.before) return;
+        const reply = await this.readView(selection, view.page.before);
+        if (!this.current(selection) || selection.view !== view || selection.failed)
+          throw new Error("History selection changed");
+        const page = validateMobileHistoryView(reply, selection.sessionId, view.page);
+        if (page.items.some((item) => view.itemIds.has(item.id)))
+          throw new Error("History page overlaps its visible window");
+        for (const item of page.items) {
+          view.itemIds.add(item.id);
+          if (item.kind === "tool" && item.detailRef) view.deferredTools.add(item.id);
+        }
+        for (const ref of mobileHistoryRefs(page.items)) view.refs.add(ref);
+        view.page = page;
+        if (selection.chat)
+          selection.chat = { ...selection.chat, items: [...page.items, ...selection.chat.items] };
+        this.deps.prependHistory?.(selection.sessionId, page.items);
+        this.deps.historyWindow?.(selection.sessionId, {
+          id: page.viewId,
+          hasEarlier: !!page.before,
+        });
+      }),
+    );
+  }
+
+  async loadDetail(ref: string): Promise<MobileHistoryDetail> {
+    const selection = this.selection,
+      view = selection?.view;
+    const started = Date.now();
+    const current = () =>
+      Date.now() - started <= 120_000 &&
+      !!selection &&
+      this.current(selection) &&
+      !selection.failed &&
+      selection.view === view &&
+      !!view?.refs.has(ref);
+    if (!selection || !current()) throw new Error("History detail unavailable");
+    return this.historyReads.run(`${selection.id}:${view!.page.viewId}`, () =>
+      this.historyRead(selection, () =>
+        readMobileHistoryDetail(
+          ref,
+          async (cursor) => {
+            for (let retry = 0; ; retry++) {
+              if (!current() || Date.now() - started > 120_000)
+                throw new Error("History detail cancelled or timed out");
+              await this.interleaveSuffix(selection);
+              if (!current()) throw new Error("History selection changed");
+              const reply = await this.request(selection, "session.historyDetail", {
+                ref,
+                ...(cursor ? { cursor } : {}),
+              });
+              if (!current()) throw new Error("History selection changed");
+              if (reply.result?.status !== "busy") return reply.result;
+              if (Object.keys(reply.result).length !== 1 || retry >= 8)
+                throw new Error("History detail is busy");
+              await this.backoff(selection, Math.min(1000, 50 * 2 ** retry));
+            }
+          },
+          current,
+        ),
+      ),
+    );
+  }
+
+  private async recover(selection: Selection, resume?: () => Promise<Result>): Promise<void> {
+    if (!this.current(selection) || selection.failed) return;
+    // A peer making small progress must not keep a selection loading forever.
+    // Keep one deadline across busy retries, catch-up rounds and pending input.
+    selection.deadlineTimer ??= setTimeout(() => this.fail(selection), 120_000);
+    try {
+      const result = await (resume ? resume() : this.initialResult(selection));
+      if (!this.current(selection) || selection.failed) return;
       if (!result) {
+        clearTimeout(selection.deadlineTimer);
+        selection.deadlineTimer = undefined;
+        this.deps.progress?.(selection.sessionId, undefined);
         this.selection = undefined;
-        this.legacyHostSelection = true;
+        this.legacyHostSelection = selection;
         // Native pre-journal history still uses the verified Host selection.
         // Cancelling it here would revoke the command/history authority before
         // the legacy request arrives. Only release local output ownership.
-        this.deps.legacy(selection.sessionId);
+        const events = selection.legacyEvents;
+        selection.legacyEvents = undefined;
+        this.deps.legacy(selection.sessionId, events);
         return;
       }
       if (
         selection.pendingInputIds &&
         [...selection.pendingInputIds].some(
           (id) =>
+            !(result.verifiedInputIds ?? result.view?.verifiedInputIds)?.includes(id) &&
             !result.chat.items.some((item) => item.kind === "user" && item.clientMessageId === id),
         )
       ) {
@@ -355,13 +664,54 @@ export class MobileOutputClient {
       selection.pendingInputIds = undefined;
       selection.pendingInputBytes = undefined;
       selection.applied = result.outputCursor;
-      selection.latest = result.outputCursor;
+      if (!selection.latest || compareOutputCursors(selection.latest, result.outputCursor)! <= 0)
+        selection.latest = result.outputCursor;
+      selection.chat = result.chat;
+      selection.snapshot = result.snapshot;
+      clearTimeout(selection.deadlineTimer);
+      selection.deadlineTimer = undefined;
+      this.deps.progress?.(selection.sessionId, undefined);
+      if (result.view) {
+        selection.view = {
+          page: result.view,
+          refs: new Set(mobileHistoryRefs(result.view.items)),
+          itemIds: new Set(result.view.items.map((item) => item.id)),
+          deferredTools: new Set(
+            result.view.items.flatMap((item) =>
+              item.kind === "tool" && item.detailRef ? [item.id] : [],
+            ),
+          ),
+        };
+        this.deps.historyWindow?.(selection.sessionId, {
+          id: result.view.viewId,
+          hasEarlier: !!result.view.before,
+        });
+      }
+      if (selection.view) {
+        for (const item of result.chat.items) selection.view.itemIds.add(item.id);
+        // A tombstone can remove an item after the frozen view was created.
+        // Its old ref is no longer a valid handle in this visible selection.
+        selection.view.refs = new Set(mobileHistoryRefs(result.chat.items));
+      }
       this.deps.commit(selection.sessionId, result);
+      if (
+        selection.view &&
+        (selection.suffixRequested ||
+          (selection.latest && compareOutputCursors(selection.latest, result.outputCursor) === 1))
+      )
+        this.scheduleSuffix(selection);
     } catch (error) {
+      if (error instanceof MobileHistoryViewChanged) {
+        if (this.current(selection) && !selection.failed) this.begin(selection.sessionId);
+        return;
+      }
       if (error instanceof MobileAwaitingJournal) {
         if (!this.current(selection) || selection.failed) return;
         selection.recovering = false;
         selection.awaitingJournal = true;
+        clearTimeout(selection.deadlineTimer);
+        selection.deadlineTimer = undefined;
+        this.deps.progress?.(selection.sessionId, undefined);
         // No prefix exists yet. Retain the selected producer without polling,
         // publishing an empty success, or retiring its independent command selection.
         this.deps.awaitingJournal?.(selection.sessionId);
@@ -416,6 +766,9 @@ export class MobileOutputClient {
       agentId?: unknown;
       injected?: unknown;
       authority?: unknown;
+      toolCallId?: string;
+      toolCall?: { id?: string };
+      result?: { id?: string };
     } | null;
     const priorCursor = selection.latest ?? selection.applied;
     if (typeof event?.outputCursor === "string") {
@@ -494,13 +847,40 @@ export class MobileOutputClient {
     }
     if (selection.pendingInputIds?.size) return "pending";
     if (selection.failed || selection.recovering || selection.capacityPending) return "pending";
-    if (event?.type === "session_title") return false;
+    const changedTool =
+      event?.type === "tool_result"
+        ? event.result?.id
+        : event?.type === "tool_use_start"
+          ? event.toolCall?.id
+          : event?.type === "tool_use_args_delta"
+            ? event.toolCallId
+            : undefined;
+    if (
+      changedTool &&
+      selection.view?.deferredTools.has(changedTool) &&
+      event?.outputCursor &&
+      (!selection.applied || compareOutputCursors(event.outputCursor, selection.applied) === 1)
+    ) {
+      const latest = selection.latest;
+      this.begin(sessionId);
+      if (this.selection) this.selection.latest = latest;
+      return "pending";
+    }
+    if (event?.type === "session_title") {
+      if (selection.chat && typeof (raw as { title?: unknown }).title === "string")
+        selection.chat = { ...selection.chat, title: (raw as { title: string }).title };
+      return false;
+    }
     const order =
       event?.outputCursor && selection.applied
         ? compareOutputCursors(event.outputCursor, selection.applied)
         : undefined;
     if (order === undefined) {
       this.fail(selection);
+      return "pending";
+    }
+    if (order > 0 && selection.view) {
+      this.scheduleSuffix(selection);
       return "pending";
     }
     return order <= 0 ? "covered" : false;
@@ -531,6 +911,10 @@ export class MobileOutputClient {
       selection.recovering = true;
       void this.recover(selection);
     } else if (!selection.recovering && !selection.capacityPending) {
+      if (selection.view) {
+        this.scheduleSuffix(selection);
+        return;
+      }
       this.begin(sessionId);
       if (this.selection) this.selection.latest = outputCursor;
     }

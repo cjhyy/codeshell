@@ -16,7 +16,7 @@ const output = await mkdtemp(path.join(tmpdir(), "codeshell-web-model-actions-")
 const development = process.argv.includes("--development");
 const source = `import React from 'react';import{createRoot}from'react-dom/client';import{Workbench}from'./Workbench';
 const root=createRoot(document.getElementById('root')),noop=()=>{};window.authLost=0;window.changes=0;
-function Fixture(){const[version,setVersion]=React.useState(0);window.bumpConfiguration=()=>setVersion(n=>n+1);const controller={host:'desktop',workspaceApi:true,connection:'open',activeId:'owned',chat:{items:[],run:'idle'},sessions:[],workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:'owned',title:'New conversation',configuration:null,configurationVersion:version,sessionsVersion:0,draft:'',files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running:false,localDrafts:[],approvals:[],approvalCount:()=>0,approvalContent:null,error:'',clearError:noop,setDraft:noop,removeFile:noop,selectSession:noop,newSession:noop,send:()=>false,stop:noop,addFiles:noop,refreshSessions:noop,refreshConfiguration:()=>window.changes++,onAuthLost:()=>window.authLost++};return <Workbench controller={controller}/>}
+function Fixture(){const[version,setVersion]=React.useState(0);window.bumpConfiguration=()=>setVersion(n=>n+1);const controller={panelSessionId:undefined,host:'desktop',workspaceApi:true,connection:'open',activeId:'owned',chat:{items:[],run:'idle'},sessions:[],workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:'owned',title:'New conversation',configuration:null,configurationVersion:version,sessionsVersion:0,draft:'',files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running:false,localDrafts:[],approvals:[],approvalCount:()=>0,approvalContent:null,error:'',clearError:noop,setDraft:noop,removeFile:noop,selectSession:noop,newSession:noop,send:()=>false,stop:noop,addFiles:noop,refreshSessions:noop,refreshConfiguration:()=>window.changes++,onAuthLost:()=>window.authLost++};return <Workbench controller={controller}/>}
 window.unmountFixture=()=>root.render(null);root.render(<React.StrictMode><Fixture/></React.StrictMode>);`;
 const bundle = await build({
   stdin: { contents: source, resolveDir: path.join(repo, "packages/web/app"), loader: "tsx" },
@@ -75,7 +75,16 @@ const frames = () =>
   );
 const defaults = () => page.locator(".config-defaults"),
   save = () => defaults().getByRole("button", { name: "保存默认模型", exact: true });
-const text = () => defaults().getByRole("combobox", { name: "默认对话模型", exact: true });
+const text = () => defaults().getByRole("button", { name: "默认对话模型", exact: true });
+async function chooseModel(trigger, value) {
+  await trigger.click();
+  const dialog = page.getByRole("dialog", {
+    name: await trigger.getAttribute("aria-label"),
+    exact: true,
+  });
+  await dialog.locator(`[role="option"][value=${JSON.stringify(value)}]`).click();
+  await dialog.waitFor({ state: "detached" });
+}
 const card = (id = "owned-11") =>
   page
     .locator(".config-connection-card")
@@ -155,6 +164,8 @@ async function mount({ width = 390, height = 360, theme = "light", single = fals
   await context?.close();
   context = await browser.newContext({
     viewport: { width, height },
+    hasTouch: width <= 760,
+    isMobile: width <= 760,
     colorScheme: theme,
     serviceWorkers: "block",
   });
@@ -291,7 +302,7 @@ async function ready() {
   await frames();
 }
 async function submitDefault() {
-  await text().selectOption("owned-11");
+  await chooseModel(text(), "owned-11");
   await save().focus();
   await page.keyboard.press("Enter");
 }
@@ -384,6 +395,37 @@ async function interrupt(kind) {
   return focusToken();
 }
 try {
+  for (const theme of ["light", "dark"]) {
+    await mount({ width: 390, height: 844, theme });
+    await text().tap();
+    const picker = page.getByRole("dialog", { name: "默认对话模型", exact: true });
+    const list = picker.getByRole("listbox");
+    assert.ok(
+      await list.evaluate((node) => node.scrollHeight > node.clientHeight),
+      "settings model list scrolls independently",
+    );
+    await picker.getByRole("searchbox", { name: "搜索模型" }).fill("owned-model-11");
+    await picker.getByRole("searchbox", { name: "搜索模型" }).press("Enter");
+    assert.deepEqual(host.writes, [], "search Enter does not submit the settings form");
+    await picker.getByRole("option", { name: "owned-11 · owned-model-11", exact: true }).tap();
+    assert.equal(await text().getAttribute("value"), "owned-11");
+    assert.deepEqual(host.writes, [], "choosing a settings model edits only the form until Save");
+    await text().tap();
+    await page.setViewportSize({ width: 320, height: 360 });
+    await frames();
+    const box = await picker.boundingBox();
+    assert.ok(
+      box.x >= 10 && box.x + box.width <= 310 && box.y >= 10 && box.y + box.height <= 350,
+      JSON.stringify(box),
+    );
+    await picker.getByRole("searchbox", { name: "搜索模型" }).fill("missing fixture model");
+    await picker.getByText("没有匹配的模型", { exact: true }).waitFor();
+    await picker.getByRole("button", { name: "关闭模型选择" }).tap();
+    assert.equal(await text().getAttribute("value"), "owned-11");
+    assert.equal(await text().evaluate((node) => document.activeElement === node), true);
+    assert.deepEqual(host.writes, []);
+    reports.push({ label: "mobile-default-model-picker", theme, box, writes: host.writes });
+  }
   if (!process.argv.includes("--behaviors-only"))
     for (const theme of ["light", "dark"])
       for (const [width, height] of [
@@ -401,7 +443,7 @@ try {
             await ready();
             await visible(save(), true);
             const feedback = await singleFeedback(defaults(), longError);
-            assert.equal(await text().inputValue(), "owned-11");
+            assert.equal(await text().getAttribute("value"), "owned-11");
             assert.deepEqual(host.writes[0], {
               path: "/api/v1/configuration/defaults",
               method: "PUT",
@@ -480,7 +522,7 @@ try {
       const status = await singleFeedback(defaults(), message, "status");
       await visible(status, true);
       assert.equal(await status.getAttribute("aria-label"), "默认模型保存结果");
-      assert.equal(await text().inputValue(), "owned-11");
+      assert.equal(await text().getAttribute("value"), "owned-11");
       assert.equal(await save().isDisabled(), true);
     } else {
       await confirmation().waitFor({ state: "hidden" });
@@ -547,7 +589,7 @@ try {
   }
   await mount();
   host.writeStatus = 200;
-  await defaults().getByRole("combobox", { name: "默认辅助模型", exact: true }).selectOption("");
+  await chooseModel(defaults().getByRole("button", { name: "默认辅助模型", exact: true }), "");
   await save().focus();
   await page.keyboard.press("Enter");
   await defaults().getByRole("status").waitFor();
@@ -588,7 +630,7 @@ try {
       assert.equal(host.reads.length, readCount + 1);
       assert.equal(host.writes.length, 1);
       if (action === "defaults") {
-        assert.equal(await text().inputValue(), "owned-11");
+        assert.equal(await text().getAttribute("value"), "owned-11");
         await visible(save(), true);
       } else {
         assert.equal(await page.locator(".config-connection-card").count(), 12);
@@ -670,7 +712,7 @@ try {
   await until(() => host.pendingReads.length === 1);
   await finishReads(200);
   await ready();
-  assert.equal(await text().inputValue(), "owned-11");
+  assert.equal(await text().getAttribute("value"), "owned-11");
   await visible(defaults().getByRole("status"), true);
   assert.equal(await page.evaluate(() => window.changes), 1);
   reports.push({ label: "pushed-version-queues-read" });
@@ -689,12 +731,12 @@ try {
     reports.push({ label: "auth-lost-preserved", action });
   }
   await mount();
-  await text().selectOption("owned-11");
+  await chooseModel(text(), "owned-11");
   host.readStatus = 500;
   await page.locator(".hub-settings-heading > button").click();
   await page.getByRole("alert").waitFor();
   await ready();
-  assert.equal(await text().inputValue(), "owned-11");
+  assert.equal(await text().getAttribute("value"), "owned-11");
   assert.equal(host.writes.length, 0);
   reports.push({ label: "read-failure-keeps-draft" });
   assert.deepEqual(errors, []);

@@ -429,6 +429,57 @@ test("an explicit existing native Session needs the current viewer selection, wh
   expect(commands.isExternal("unselected-native", "tab")).toBe(true);
 });
 
+test("a recovery authority is bound to the selected tab, owner and exact selection lifetime", async () => {
+  const f = harness();
+  await f.select();
+  const old = f.commands.captureSelectedAuthority("tab", "phone", "external");
+  expect(() => old.assertCurrent()).not.toThrow();
+  for (const [viewer, device, session] of [
+    ["other-tab", "phone", "external"],
+    ["tab", "other-phone", "external"],
+    ["tab", "phone", "other"],
+  ])
+    expect(() => f.commands.captureSelectedAuthority(viewer!, device!, session!)).toThrow();
+  await f.select();
+  expect(() => old.assertCurrent()).toThrow();
+  const fresh = f.commands.captureSelectedAuthority("tab", "phone", "external");
+  expect(fresh.key).not.toBe(old.key);
+  f.closeOwner();
+  expect(() => fresh.assertCurrent()).toThrow();
+});
+
+test("Session retirement revokes every old native route while leaving other Sessions selected", async () => {
+  const commands = new MobileExternalRuntimeCommands({
+    authenticated: (_viewer, device) => device === "phone",
+    authority: async (id) => ({ stamp: id, cwd: "/fixture", assertCurrent() {} }),
+    owner: () => undefined,
+    service: () => null,
+    isExternal: () => false,
+    exists: () => true,
+    attachmentPath: async (path) => path,
+  });
+  for (const [viewer, sessionId] of [
+    ["tab-a", "target"],
+    ["tab-b", "target"],
+    ["tab-c", "other"],
+  ])
+    await commands.observe({
+      type: "session.select",
+      viewerId: viewer,
+      deviceId: "phone",
+      sessionId: sessionId!,
+    });
+  const a = commands.captureSelectedAuthority("tab-a", "phone", "target");
+  const b = commands.captureSelectedAuthority("tab-b", "phone", "target");
+  const c = commands.captureSelectedAuthority("tab-c", "phone", "other");
+  commands.revokeSession("target");
+  expect(() => a.assertCurrent()).toThrow();
+  expect(() => b.assertCurrent()).toThrow();
+  expect(() => c.assertCurrent()).not.toThrow();
+  expect(commands.isExternal("target", "tab-a")).toBe(true);
+  expect(commands.isExternal("other", "tab-c")).toBe(false);
+});
+
 function startupHarness() {
   let owner: number | undefined;
   let runtime: object | undefined;

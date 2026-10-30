@@ -799,8 +799,47 @@ describe("PetStateAggregator", () => {
       }),
     ).toMatchObject({
       status: "ok",
+      pendingStatus: "pending",
       target: { uiSessionId: "one", projectPath: "/Users/me/work/one" },
     });
+
+    const pendingRequest = {
+      agentSessionId: "one",
+      snapshotVersion: aggregator.getSnapshot().version,
+      generation: 1,
+      requestId: "req-1",
+      routeGeneration: 3,
+    };
+    // Catalog refreshes and unrelated Session updates advance the shared cursor,
+    // but neither changes the identity of this still-pending question.
+    await aggregator.refreshCatalog();
+    await bridge.emit({
+      kind: "delta",
+      delta: {
+        workerGeneration: 1,
+        version: 5,
+        observedAt: 3_000,
+        kind: "session-upsert",
+        session: live("other"),
+      },
+    });
+    expect(aggregator.getSnapshot().version).toBeGreaterThan(pendingRequest.snapshotVersion);
+    expect(await aggregator.resolveNavigation(pendingRequest)).toMatchObject({
+      status: "ok",
+      pendingStatus: "pending",
+    });
+
+    for (const mismatch of [{ routeGeneration: 4 }, { generation: 2 }]) {
+      expect(await aggregator.resolveNavigation({ ...pendingRequest, ...mismatch })).toMatchObject({
+        status: "stale",
+        pendingStatus: "resolved",
+      });
+    }
+
+    catalog.replace([disk("one"), disk("two")]);
+    expect(
+      await aggregator.resolveNavigation({ ...pendingRequest, agentSessionId: "two" }),
+    ).toMatchObject({ status: "stale", pendingStatus: "resolved" });
 
     expect(
       await aggregator.resolveNavigation({
@@ -810,6 +849,23 @@ describe("PetStateAggregator", () => {
         requestId: "resolved",
       }),
     ).toMatchObject({ status: "stale", pendingStatus: "resolved" });
+
+    await bridge.emit({
+      kind: "delta",
+      delta: {
+        workerGeneration: 1,
+        version: 6,
+        observedAt: 3_100,
+        kind: "pending-remove",
+        sessionId: "one",
+        requestId: "req-1",
+        status: "resolved",
+      },
+    });
+    expect(await aggregator.resolveNavigation(pendingRequest)).toMatchObject({
+      status: "stale",
+      pendingStatus: "resolved",
+    });
 
     catalog.replace([]);
     expect(

@@ -8,7 +8,11 @@ import {
   SessionOutputJournal,
 } from "../../../core/src/session/output-journal.js";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
-import { applyOutputJournalPage, type OutputJournalRecovery } from "./outputJournalRecovery.js";
+import {
+  applyOutputJournalPage,
+  outputJournalProgress,
+  type OutputJournalRecovery,
+} from "./outputJournalRecovery.js";
 
 const directories: string[] = [];
 afterEach(() => {
@@ -33,6 +37,12 @@ test("frozen multipage recovery reconstructs UTF-8 fragments and leaves unfinish
   let page = readOutputJournal(f.root, "stream", { maxFrames: 2 });
   expect(applyOutputJournalPage(state, page, (event) => events.push(event))).toBe(false);
   expect(state.pending).toBeDefined();
+  const progress = outputJournalProgress(state)!;
+  expect(progress.receivedBytes).toBeGreaterThan(0);
+  expect(progress.receivedBytes).toBeLessThan(progress.totalBytes);
+  // A validated fragment can advance download progress without publishing a
+  // partial logical event or pretending the whole history is complete.
+  expect(events).toHaveLength(1);
   expect(state.appliedCursor).not.toBe(state.cursor);
   f.writer.append({ type: "text_delta", text: "after frozen head" });
   while (!page.complete) {
@@ -46,6 +56,9 @@ test("frozen multipage recovery reconstructs UTF-8 fragments and leaves unfinish
   expect(state.incomplete).toBe(false);
   expect(state.pending).toBeUndefined();
   expect(state.appliedCursor).toBe(state.cursor);
+  expect(outputJournalProgress(state)?.receivedBytes).toBe(
+    outputJournalProgress(state)?.totalBytes,
+  );
   expect(state.legacyBaseThroughEventId).toBe("legacy-base");
   expect(events.map((event) => event.type)).toEqual(["stream_request_start", "text_delta"]);
   expect((events[1] as { text: string }).text).toBe(large);
@@ -72,6 +85,7 @@ test("duplicate, skipped, replaced and incomplete pages preserve an explicit rec
     const state: OutputJournalRecovery = { incomplete: false };
     for (const page of pages) applyOutputJournalPage(state, page, () => {});
     expect(state.incomplete).toBe(true);
+    expect(outputJournalProgress(state)).toBeUndefined();
   }
   const state: OutputJournalRecovery = { incomplete: false };
   applyOutputJournalPage(state, first, () => {});

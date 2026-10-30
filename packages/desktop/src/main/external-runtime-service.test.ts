@@ -7,6 +7,7 @@
  */
 import { afterAll, afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import {
+  appendFileSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -30,7 +31,13 @@ import {
   activateWorkspaceProfile,
   ModelTraceStore,
   saveWorkspaceProfile,
+  SessionOutputCoverageStore,
+  readOutputJournal,
 } from "@cjhyy/code-shell-core/internal";
+import { SessionSnapshotStore } from "./SessionSnapshotStore.js";
+import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
+import { recoverDesktopOutputJournal } from "../renderer/app/outputJournalRecovery.js";
+import { acquireOutputHistoryRecovery } from "./session-output-history-lease.js";
 import { createSessionToolHost, FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
 import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { EXTERNAL_GOAL_TOOLS } from "./external-runtime-goals.js";
@@ -244,6 +251,137 @@ afterEach(() => {
 });
 
 describe("ExternalRuntimeService", () => {
+  test("history checkpoint quiesces only idle CLI work and preserves plan instructions for continuation", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    await svc.start({
+      ...request,
+      planMode: true,
+      developerInstructions: "synthetic constrained instructions",
+    });
+    await svc.send(request.sessionId, "synthetic read-only question");
+    background.running.add(request.sessionId);
+    await expect(svc.quiesceForOutputRecovery(request.sessionId, 77)).rejects.toThrow(
+      "active work",
+    );
+    expect(closed).toHaveLength(0);
+    background.running.clear();
+    await expect(svc.quiesceForOutputRecovery(request.sessionId, 88)).rejects.toThrow(
+      "owned by another",
+    );
+    const release = acquireOutputHistoryRecovery(request.sessionId);
+    try {
+      await expect(svc.send(request.sessionId, "must not run")).rejects.toThrow("output recovery");
+      await svc.quiesceForOutputRecovery(request.sessionId, 77);
+      expect(closed).toEqual([request.sessionId]);
+      expect(released).toEqual([]);
+    } finally {
+      release();
+    }
+    await svc.ensureContinuation(request);
+    expect(starts.at(-1)).toMatchObject({
+      planMode: true,
+      developerInstructions: expect.stringContaining("synthetic constrained instructions"),
+    });
+    await svc.stopAll();
+  });
+
+  test("cold external Goal control is journaled without starting a runtime", () => {
+    const manager = new SessionManager();
+    const session = manager.create(request.cwd, "fixture", "codex", request.sessionId);
+    manager.saveActiveGoal(session.state, {
+      objective: "synthetic saved goal",
+      goalId: "goal",
+      revision: 1,
+      paused: true,
+    });
+    const svc = service({ external_agent_runtime: true });
+    expect(svc.deleteGoal(request.sessionId).cleared).toBe(true);
+    expect(starts).toHaveLength(0);
+    expect(streamEvents.at(-1)).toMatchObject({
+      type: "goal_cleared",
+      outputCursor: expect.any(String),
+    });
+    expect(readOutputJournal(sessionsRoot(), request.sessionId).status).toBe("ok");
+  });
+
+  test.each(["replaced", "write failure"] as const)(
+    "background completion cannot escape its %s output boundary",
+    async (failure) => {
+      const background = backgroundDelivery();
+      const svc = service({ external_agent_runtime: true }, undefined, {
+        backgroundWork: background.delivery,
+      });
+      await svc.start(request);
+      await svc.send(request.sessionId, "synthetic question");
+      const manager = new SessionManager();
+      const file = join(sessionsRoot(), request.sessionId, "output-journal.jsonl");
+      if (failure === "replaced") manager.incrementSessionGeneration(request.sessionId);
+      else appendFileSync(file, "invalid journal tail\n");
+      const before = readFileSync(file);
+      streamEvents.length = 0;
+      background.complete(request.sessionId);
+      background.pending.clear();
+      expect(streamEvents.some((event) => event.type === "background_agent_completed")).toBe(false);
+      expect(readFileSync(file).equals(before)).toBe(true);
+      if (failure === "replaced") expect(streamEvents).toEqual([]);
+      else {
+        expect(streamEvents).toContainEqual(
+          expect.objectContaining({
+            type: "error",
+            outputRecovery: "incomplete",
+          }),
+        );
+        expect(manager.readSessionState(request.sessionId)?.outputRecoveryIncomplete).toBe(true);
+      }
+      await svc.stopAll();
+    },
+  );
+
+  for (const kind of ["codex", "claude-code"] as const) {
+    test(`${kind} journals background completion after a failed turn for cold Desktop recovery`, async () => {
+      const background = backgroundDelivery();
+      const coverage = new SessionOutputCoverageStore(() => sessionsRoot());
+      const snapshots = new SessionSnapshotStore({ coverage, maxPerSession: 1 });
+      const svc = service({ external_agent_runtime: true }, undefined, {
+        backgroundWork: background.delivery,
+        emit: (sessionId: string, event: StreamEvent) => snapshots.append(sessionId, event),
+      });
+      const handlers = new Map<string, (...args: any[]) => any>();
+      registerSessionTranscriptIpc({ handle: (name, listener) => handlers.set(name, listener) });
+      try {
+        await svc.start({ ...request, kind });
+        failNextSend = true;
+        expect((await svc.send(request.sessionId, "synthetic question")).reason).toBe(
+          "model_error",
+        );
+        const runId = new SessionManager().readSessionState(request.sessionId)!.runId;
+        background.complete(request.sessionId);
+        // Observe the completed job without scheduling another provider turn.
+        background.pending.clear();
+        expect(new SessionManager().readSessionState(request.sessionId)!.runId).toBe(runId);
+        expect(snapshots.get(request.sessionId).outputUnpaired).not.toBe(true);
+        const cold = new SessionSnapshotStore({ coverage });
+        const recovered = await recoverDesktopOutputJournal({
+          read: (options) =>
+            handlers.get("sessions:outputJournal")!({}, request.sessionId, options),
+          snapshot: async () => cold.get(request.sessionId) as any,
+          canContinue: () => true,
+          latestObservedCursor: () => undefined,
+        });
+        expect(
+          recovered?.state.messages.filter((message) => message.kind === "system"),
+        ).toContainEqual(
+          expect.objectContaining({ text: expect.stringContaining("delegated task") }),
+        );
+      } finally {
+        await svc.stopAll();
+      }
+    });
+  }
+
   test("main-project trust revocation fences a worktree start still awaiting CLI preflight", async () => {
     let entered!: () => void;
     let release!: () => void;

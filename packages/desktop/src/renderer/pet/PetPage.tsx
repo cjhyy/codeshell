@@ -30,6 +30,13 @@ export function PetPage({
   revealTask = false,
 }: PetPageProps) {
   const { t } = useT();
+  React.useEffect(() => {
+    const report = window.codeshell?.computerUse?.setCompanionChatActive;
+    void report?.(true).catch(() => {});
+    return () => {
+      void report?.(false).catch(() => {});
+    };
+  }, []);
   const reveal = focusPending || revealTask;
   const [workExpanded, setWorkExpanded] = React.useState(reveal);
   const [focusMode, setFocusMode] = React.useState(false);

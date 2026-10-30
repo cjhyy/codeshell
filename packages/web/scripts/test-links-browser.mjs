@@ -19,7 +19,7 @@ const out = await mkdtemp(path.join(tmpdir(), "codeshell-web-links-"));
 const source = `import React from 'react';import {createRoot} from 'react-dom/client';import {Workbench} from './Workbench';
 const noop=()=>{};const root=createRoot(document.getElementById('root'));
 function Fixture(){const [version,setVersion]=React.useState(0);window.refreshConfigurationFixture=()=>setVersion(n=>n+1);
-const controller={host:'desktop',workspaceApi:true,connection:'open',activeId:'owned',chat:{items:[],run:'idle'},sessions:[],workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:'owned',title:'New conversation',configuration:null,configurationVersion:version,sessionsVersion:0,draft:'',files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running:false,localDrafts:[],approvals:[],approvalCount:()=>0,approvalContent:null,error:'',clearError:noop,setDraft:noop,removeFile:noop,selectSession:noop,newSession:noop,send:()=>false,stop:noop,addFiles:noop,refreshSessions:noop,refreshConfiguration:noop,onAuthLost:()=>window.authLost++};return <Workbench controller={controller}/>;}
+const controller={panelSessionId:undefined,host:'desktop',workspaceApi:true,connection:'open',activeId:'owned',chat:{items:[],run:'idle'},sessions:[],workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:'owned',title:'New conversation',configuration:null,configurationVersion:version,sessionsVersion:0,draft:'',files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running:false,localDrafts:[],approvals:[],approvalCount:()=>0,approvalContent:null,error:'',clearError:noop,setDraft:noop,removeFile:noop,selectSession:noop,newSession:noop,send:()=>false,stop:noop,addFiles:noop,refreshSessions:noop,refreshConfiguration:noop,onAuthLost:()=>window.authLost++};return <Workbench controller={controller}/>;}
 window.authLost=0;window.unmountFixture=()=>root.render(null);root.render(<React.StrictMode><Fixture/></React.StrictMode>);`;
 const bundle = await build({
   stdin: { contents: source, resolveDir: path.join(repo, "packages/web/app"), loader: "tsx" },
@@ -152,7 +152,14 @@ async function geometry(locator) {
     };
   });
 }
-async function mount({ width = 390, height = 360, readFail = false, theme = "light" } = {}) {
+async function mount({
+  width = 390,
+  height = 360,
+  readFail = false,
+  theme = "light",
+  touch = false,
+  legacyConnection = false,
+} = {}) {
   // Like the real Host, derive the attempt and its step from one instant. Two
   // Date.now() reads can straddle a millisecond, making the step outlive the
   // attempt; the client then correctly rejects the authorization as invalid.
@@ -192,7 +199,23 @@ async function mount({ width = 390, height = 360, readFail = false, theme = "lig
     viewport: { width, height },
     colorScheme: theme,
     serviceWorkers: "block",
+    hasTouch: touch,
+    isMobile: touch,
   });
+  if (legacyConnection)
+    host.snapshot.connections[0].id = `link-${provider.id}-${provider.connectionMethods[0].id}`;
+  if (touch && !legacyConnection)
+    host.snapshot.providers = [
+      {
+        ...provider,
+        authModes: Array.from({ length: 18 }, (_, index) => ({
+          ...provider.authModes[0],
+          id: "owned-credential-" + index,
+          label: "Owned authorization method " + index,
+          preferred: index === 0,
+        })),
+      },
+    ];
   const html =
     '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div><input id="outside-field" aria-label="Outside field" style="position:fixed;bottom:0;right:0;width:60px;z-index:2001"><div id="outside-blank" style="position:fixed;bottom:0;left:0;width:24px;height:24px;z-index:2001"></div>';
   await context.route("**/*", async (route) => {
@@ -331,7 +354,232 @@ async function record(page, kind, extra = {}) {
   console.log("LINKS", JSON.stringify({ kind, viewport: page.viewportSize() }));
   await page.screenshot({ path: path.join(out, kind + ".png") });
 }
+
+// Use trusted finger events rather than focus()/locator auto-scroll: those can
+// programmatically move an overflow:hidden ancestor that a person cannot scroll.
+async function swipe(page, gestures, surface, direction = 1, fingerX) {
+  const box = await surface.boundingBox();
+  const top = Math.max(box.y, 0) + 24;
+  const bottom = Math.min(box.y + box.height, page.viewportSize().height) - 36;
+  assert.ok(bottom - top > 60, "touch surface remains inside the viewport");
+  const x = fingerX ?? box.x + box.width / 2;
+  const start = direction > 0 ? bottom : top;
+  const end = direction > 0 ? top : bottom;
+  await gestures.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x, y: start, radiusX: 4, radiusY: 4, force: 1, id: 1 }],
+  });
+  try {
+    for (let step = 1; step <= 12; step++) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await gestures.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [
+          { x, y: start + ((end - start) * step) / 12, radiusX: 4, radiusY: 4, force: 1, id: 1 },
+        ],
+      });
+    }
+    // Pause the finger before lifting so assertions don't race inertial scrolling.
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  } finally {
+    await gestures.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  }
+  await frames(page);
+}
+async function touchReveal(page, gestures, surface, target) {
+  for (let attempt = 0; attempt < 32; attempt++) {
+    const box = await target.boundingBox();
+    const bounds = await surface.boundingBox();
+    if (
+      box.y >= Math.max(0, bounds.y) + 4 &&
+      box.y + box.height <= Math.min(page.viewportSize().height - 28, bounds.y + bounds.height) - 4
+    ) {
+      assert.equal((await geometry(target)).hit, true, "visible target receives the finger");
+      return box;
+    }
+    await swipe(page, gestures, surface, box.y < bounds.y ? -1 : 1);
+  }
+  assert.fail("target must be reachable with finger scrolling alone");
+}
+async function tapVisible(page, target) {
+  const box = await geometry(target);
+  assert.equal(box.hit, true, "tap does not rely on locator auto-scrolling");
+  assert.ok(box.box.y >= 0 && box.box.bottom <= page.viewportSize().height);
+  await page.touchscreen.tap(box.box.x + box.box.width / 2, box.box.y + box.box.height / 2);
+  await frames(page);
+}
+async function scrollState(page) {
+  return page.evaluate(() => ({
+    list: document.querySelector(".hub-links").scrollTop,
+    shell: document.querySelector(".shell").scrollTop,
+    body: document.scrollingElement.scrollTop,
+    topbar: document.querySelector(".workbench-topbar").getBoundingClientRect().toJSON(),
+    editor: document.querySelector(".links-editor")?.scrollTop,
+  }));
+}
 try {
+  if (!onlyCase || onlyCase === "new-account") {
+    const { page, context, host } = await mount({
+      width: 390,
+      height: 844,
+      touch: true,
+      legacyConnection: true,
+    });
+    const gestures = await context.newCDPSession(page);
+    const add = page
+      .locator(".links-provider")
+      .getByRole("button", { name: "添加连接", exact: true });
+    await touchReveal(page, gestures, page.locator(".hub-links"), add);
+    await tapVisible(page, add);
+    await editor(page).waitFor();
+    await editor(page).getByRole("textbox", { name: "Owned token", exact: true }).waitFor();
+    assert.equal(
+      await editor(page).locator(".links-conflict").count(),
+      0,
+      "new authorization cannot inherit a legacy account's revision",
+    );
+    assert.equal(
+      await editor(page).getByRole("textbox", { name: "Owned token", exact: true }).isEnabled(),
+      true,
+    );
+    const begin = host.authCalls.find((call) => call.method === "POST");
+    assert.equal(begin.body.expectedRevision, null);
+    assert.equal(begin.body.connectionId, undefined);
+    const close = editor(page).getByRole("button", { name: "关闭", exact: true });
+    await touchReveal(page, gestures, editor(page), close);
+    await tapVisible(page, close);
+    const deadline = Date.now() + 5000;
+    while (!host.authPending.length) {
+      assert.ok(Date.now() < deadline);
+      await frames(page);
+    }
+    await host.authPending.shift().fulfill({ contentType: "application/json", body: "{}" });
+    await editor(page).waitFor({ state: "detached" });
+    await page.getByRole("button", { name: "返回对话", exact: true }).tap();
+    await page.locator(".chat:not([hidden])").waitFor();
+    assert.equal(new URL(page.url()).searchParams.get("view"), null);
+    assert.equal(await page.locator(".navigation-prompt").count(), 0);
+    assert.deepEqual(host.calls, []);
+    assert.deepEqual(host.responsePending, []);
+    assert.equal(host.authCalls.filter((call) => call.method === "POST").length, 1);
+    assert.equal(host.authCalls.filter((call) => call.method === "DELETE").length, 1);
+    await record(page, "new-account-beside-legacy-cancel-and-return", {
+      authCalls: host.authCalls,
+    });
+    await context.close();
+  }
+  if (!onlyCase || onlyCase === "touch-scroll")
+    for (const [width, height] of [
+      [390, 844],
+      [320, 568],
+      [844, 390],
+    ]) {
+      const { page, context, host } = await mount({ width, height, touch: true });
+      const gestures = await context.newCDPSession(page);
+      const list = page.locator(".hub-links");
+      await list.evaluate((node) => {
+        window.linkTouchEvents = [];
+        for (const type of ["touchstart", "touchmove", "touchend"])
+          node.addEventListener(
+            type,
+            (event) => {
+              window.linkTouchEvents.push({ type: event.type, trusted: event.isTrusted });
+            },
+            { passive: true },
+          );
+      });
+      const before = await scrollState(page);
+      await swipe(page, gestures, list);
+      const after = await scrollState(page);
+      await record(page, `touch-list-${width}x${height}`, { before, after });
+      assert.ok(after.list > before.list + 20, "finger scrolls the Link list itself");
+      assert.equal(after.shell, 0, "fixed shell must not be programmatically scrolled");
+      assert.equal(after.body, 0);
+      assert.deepEqual(after.topbar, before.topbar, "topbar stays visible and fixed");
+      await touchReveal(page, gestures, list, manage(page));
+      const listPosition = (await scrollState(page)).list;
+      await tapVisible(page, manage(page));
+      await editor(page).waitFor();
+      await swipe(page, gestures, page.locator(".links-editor-backdrop"), -1, 8);
+      assert.equal(
+        (await scrollState(page)).list,
+        listPosition,
+        "backdrop gestures leave the list in place",
+      );
+      const methods = editor(page).locator(".links-other-methods > summary");
+      await touchReveal(page, gestures, editor(page), methods);
+      await tapVisible(page, methods);
+      const modalBefore = await scrollState(page);
+      await swipe(page, gestures, editor(page));
+      const modalAfter = await scrollState(page);
+      assert.ok(modalAfter.editor > modalBefore.editor + 20, "expanded connection details scroll");
+      assert.equal(modalAfter.list, listPosition, "modal scrolling leaves the list in place");
+      await touchReveal(page, gestures, editor(page), save(page));
+      // Keep swiping at the end: a modal must not scroll its background.
+      await swipe(page, gestures, editor(page));
+      await swipe(page, gestures, editor(page));
+      assert.equal((await scrollState(page)).list, listPosition);
+      await touchReveal(page, gestures, editor(page), label(page));
+      await tapVisible(page, label(page));
+      await page.keyboard.press("End");
+      await page.keyboard.press("Backspace");
+      const draft = await label(page).inputValue();
+      await page.setViewportSize({ width, height: Math.min(height, 300) });
+      await frames(page);
+      const focused = await geometry(label(page));
+      assert.equal(focused.focused, true);
+      assert.ok(
+        focused.box.top >= focused.dialog.top && focused.box.bottom <= focused.dialog.bottom,
+      );
+      assert.equal(
+        await label(page).inputValue(),
+        draft,
+        "keyboard-sized viewport preserves the draft",
+      );
+      await record(page, `touch-details-keyboard-${width}x${height}`, { focused });
+      await page.setViewportSize({ width, height });
+      await frames(page);
+      if (width === 320) {
+        const close = editor(page).getByRole("button", { name: "关闭", exact: true });
+        await touchReveal(page, gestures, editor(page), close);
+        await tapVisible(page, close);
+      } else await page.keyboard.press("Escape");
+      await editor(page).waitFor({ state: "detached" });
+      assert.ok(
+        Math.abs((await scrollState(page)).list - listPosition) <= 1,
+        "closing details preserves list position",
+      );
+      assert.equal((await scrollState(page)).shell, 0);
+      assert.equal((await scrollState(page)).body, 0);
+      assert.deepEqual(host.calls, [], "scrolling and editing never save or run a tool");
+      assert.deepEqual(host.authCalls, [], "opening details never starts authorization");
+      const touchEvents = await page.evaluate(() => window.linkTouchEvents);
+      for (const type of ["touchstart", "touchmove", "touchend"])
+        assert.ok(touchEvents.some((event) => event.type === type && event.trusted));
+      assert.ok(touchEvents.every((event) => event.trusted));
+      await record(page, `touch-details-return-${width}x${height}`, {
+        listPosition,
+        trustedTouches: Object.fromEntries(
+          ["touchstart", "touchmove", "touchend"].map((type) => [
+            type,
+            touchEvents.filter((event) => event.type === type).length,
+          ]),
+        ),
+      });
+      // The earlier backdrop gesture deliberately handed focus away; retain the
+      // existing no-focus-steal contract, then test keys on an already visible button.
+      assert.equal((await active(page)).tag, "BODY");
+      await manage(page).focus();
+      assert.equal((await scrollState(page)).list, listPosition);
+      await page.keyboard.press("PageUp");
+      await page.waitForFunction(
+        (previous) => document.querySelector(".hub-links").scrollTop < previous - 20,
+        listPosition,
+      );
+      assert.equal((await scrollState(page)).shell, 0);
+      assert.equal((await scrollState(page)).body, 0);
+      await context.close();
+    }
   if (!onlyCase || onlyCase === "layout")
     for (const [width, height] of [
       [1280, 700],

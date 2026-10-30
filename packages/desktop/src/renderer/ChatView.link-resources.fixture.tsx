@@ -122,7 +122,12 @@ async function fixture(
   let configurationAvailable = true;
   const synchronousBusy = new Set<string>();
   let update!: React.Dispatch<
-    React.SetStateAction<{ bucket: string; busy: boolean; messages: Message[] }>
+    React.SetStateAction<{
+      bucket: string;
+      busy: boolean;
+      messages: Message[];
+      deliveryEpoch: number;
+    }>
   >;
   let currentSnapshot: LinkSnapshot = {
     providers: [
@@ -247,6 +252,7 @@ async function fixture(
   function Host() {
     const [state, setState] = React.useState({
       bucket: initial,
+      deliveryEpoch: 0,
       busy: options.busy ?? false,
       messages: options.history ?? [],
     });
@@ -274,6 +280,7 @@ async function fixture(
     return (
       <ChatView
         messages={state.messages}
+        deliveryEpoch={state.deliveryEpoch}
         sendBucket={state.bucket}
         engineSessionId={state.bucket.split("::")[1]}
         onSend={submit}
@@ -388,6 +395,12 @@ async function fixture(
         await flushMicrotasks();
       });
     },
+    recover: async () => {
+      await act(async () => {
+        update((state) => ({ ...state, deliveryEpoch: state.deliveryEpoch + 1 }));
+        await flushMicrotasks();
+      });
+    },
     setBusy: async (busy: boolean) => {
       if (!busy) synchronousBusy.delete(liveBucket);
       await act(async () => {
@@ -498,6 +511,23 @@ async function fixture(
 }
 
 describe("chat file authorization", () => {
+  test("history recovery retires an authorized queued Link continuation without clearing the composer", async () => {
+    const f = await fixture({ busy: true });
+    f.completeImmediately();
+    await f.send();
+    await f.click("授权此文件");
+    expect(f.reads).toHaveLength(0);
+    await f.type("Keep this draft after recovery");
+    await f.recover();
+    await f.setBusy(false);
+    expect(f.reads).toHaveLength(0);
+    expect(descendants(f.container).some((node) => props(node)["data-chat-link-resource"])).toBe(
+      false,
+    );
+    const textarea = descendants(f.container).find((node) => props(node).rows === 1);
+    expect(props(textarea).value).toBe("Keep this draft after recovery");
+  });
+
   test("history, assistant, tool, and engine-only user text cannot register file candidates", async () => {
     const url = "https://figma.com/design/FileOne/Name";
     const f = await fixture({

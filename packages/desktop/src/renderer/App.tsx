@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
+import { NativeOutputHistoryRecoveryController } from "./app/NativeOutputHistoryRecovery";
 import { ChatView, type AttachmentSelection } from "./ChatView";
 import { emptyComposerMetadata, type ComposerMetadata } from "./chat/composerMetadata";
 import { useProjectRuntimeSelection } from "./projects/useProjectRuntimeSelection";
@@ -129,6 +130,7 @@ import { useSessionHistorySync } from "./app/useSessionHistorySync";
 import { useSessionWorkspaceProfiles } from "./app/useSessionWorkspaceProfiles";
 import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
+import { submitAskUserAnswer } from "./app/submitAskUserAnswer";
 import { useGoalPendingBuckets } from "./app/useGoalPendingBuckets";
 import { usePetMemoryNavigation } from "./app/usePetMemoryNavigation";
 import { createChatLinkReadHandler } from "./chat/linkResourceIntents";
@@ -864,17 +866,7 @@ function App() {
     queuedInputs,
     sessionStatusMap,
   );
-  const {
-    state,
-    awaitingHydration,
-    historyHasMore,
-    historyLoading,
-    historyFailed,
-    historyLimitReached,
-    loadEarlierHistory,
-    appliedSeqRef,
-    setBusyForKey,
-  } = useTranscriptBuckets({
+  const transcriptHistory = useTranscriptBuckets({
     activeProjectId,
     activeSessionId,
     activeBucket,
@@ -887,6 +879,8 @@ function App() {
     setBusyKeys,
     protectedBuckets: protectedTranscriptBuckets,
   });
+  const { state, awaitingHydration, historyLoading, historyFailed, appliedSeqRef, setBusyForKey } =
+    transcriptHistory;
 
   // The "正在思考…" live line shows whenever a turn is busy. Normally
   // streamingAssistantId flips it on once stream_request_start arrives; but on
@@ -975,10 +969,14 @@ function App() {
     const pet = window.codeshell.pet;
     if (!pet?.onWidgetOpenOverview) return;
     return pet.onWidgetOpenOverview((target) => {
-      if (target) void handleOpenPetTarget(target);
+      if (target && "prompt" in target) {
+        // A companion handoff: the user confirms by sending it themselves.
+        openPetPage();
+        petDispatch({ type: "insert-chat-prompt", draft: target.prompt });
+      } else if (target) void handleOpenPetTarget(target);
       else openPetPage();
     });
-  }, [openPetPage]);
+  }, [openPetPage, petDispatch]);
 
   useEffect(() => {
     const pet = window.codeshell.pet;
@@ -1040,24 +1038,7 @@ function App() {
     activity: { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys },
   });
 
-  const {
-    send,
-    sendQuickChat,
-    queueInput,
-    forceSend,
-    clearActiveQueuedInput,
-    removeActiveQueuedInputAt,
-    guideActiveQueuedInput,
-    stop,
-    resolveEngineSessionIdForBucket,
-    compactActiveSession,
-    extendGoal,
-    decideEnvelope,
-    showWelcome,
-    visibleApproval,
-    approvalForBucket,
-    setViewMode,
-  } = useRunController({
+  const runController = useRunController({
     shell: { t, lang, toast, setView },
     session: {
       activeProjectId,
@@ -1109,6 +1090,25 @@ function App() {
       approvalBucketsRef,
     },
   });
+  const {
+    send,
+    sendQuickChat,
+    queueInput,
+    forceSend,
+    clearActiveQueuedInput,
+    removeActiveQueuedInputAt,
+    guideActiveQueuedInput,
+    stop,
+    resolveEngineSessionIdForBucket,
+    compactActiveSession,
+    extendGoal,
+    decideEnvelope,
+    showWelcome,
+    visibleApproval,
+    approvalForBucket,
+    setViewMode,
+  } = runController;
+
   const { openPetMemory, leavePetMemory } = usePetMemoryNavigation({ openPetPage, setViewMode });
 
   const {
@@ -1588,8 +1588,13 @@ function App() {
     // misrouted answers when the prompt belonged to a background session (cold
     // route table after a remount). Find the message by requestId to recover it.
     const origin = findAskUserOrigin(transcripts, requestId);
+    if (origin?.answer !== undefined) return;
+    if (origin?.expiresAt !== undefined && origin.expiresAt <= Date.now())
+      throw new Error(t("msg.ask.timedOut"));
     const originEngineSessionId = origin?.engineSessionId;
     const originBucket = origin?.bucket;
+    const isCurrent = runController.captureApprovalFence(originBucket ?? activeBucket, requestId);
+    if (!isCurrent()) return;
     // Fallback (legacy prompts with no stamped sessionId): derive from the
     // active bucket, preserving the previous behavior.
     let engineSessionId = originEngineSessionId;
@@ -1605,11 +1610,7 @@ function App() {
           : undefined;
       engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
     }
-    if (engineSessionId) {
-      await window.codeshell.approve(engineSessionId, requestId, "approve", undefined, answer);
-    } else {
-      await window.codeshell.approve(requestId, "approve", undefined, answer);
-    }
+    if (!(await submitAskUserAnswer(engineSessionId, requestId, answer, isCurrent))) return;
     dispatch({
       type: "ask_user_answered",
       // Mark answered in the bucket that actually holds the prompt (found above),
@@ -1618,7 +1619,9 @@ function App() {
       requestId,
       answer,
     });
-    // The worker has accepted the answer. A mirror notification failure must
+    // Native Core publishes the accepted decision with its exact route.
+    if (origin?.source !== "external-runtime") return;
+    // The external worker accepted the answer. A mirror notification failure must
     // not turn a successful send into a retry that submits the answer twice.
     void window.codeshell.mobileRemote
       .notifyApprovalResolved({
@@ -2562,12 +2565,27 @@ function App() {
                 <>
                   <ChatView
                     messages={state.messages}
+                    composerDisabled={transcriptHistory.outputRecoveryPending}
+                    deliveryEpoch={runController.deliveryEpoch}
+                    outputHistoryRecovery={
+                      <NativeOutputHistoryRecoveryController
+                        sessionId={activeEngineSessionId}
+                        identity={JSON.stringify([
+                          activeBucket,
+                          activeEngineSessionId,
+                          sessionUiAuthority.workspaceRoot,
+                        ])}
+                        history={transcriptHistory}
+                        controller={runController}
+                        busy={busy}
+                      />
+                    }
                     awaitingHydration={awaitingHydration}
-                    historyHasMore={historyHasMore}
+                    historyHasMore={transcriptHistory.historyHasMore}
                     historyLoading={historyLoading}
                     historyFailed={historyFailed}
-                    historyLimitReached={historyLimitReached}
-                    onLoadEarlierHistory={loadEarlierHistory}
+                    historyLimitReached={transcriptHistory.historyLimitReached}
+                    onLoadEarlierHistory={transcriptHistory.loadEarlierHistory}
                     turnEpoch={state.turnEpoch}
                     engineSessionId={state.sessionId ?? engineSessionIdForActive()}
                     liveTurnActive={liveTurnActive}
@@ -2585,7 +2603,9 @@ function App() {
                       () => ({
                         bucket: activeBucketRef.current,
                         cwd: sessionUiAuthority.workspaceRoot,
-                        available: sessionUiAuthority.configurationAvailable,
+                        available:
+                          sessionUiAuthority.configurationAvailable &&
+                          !transcriptHistory.outputRecoveryPending,
                         busy:
                           busyKeys.has(activeBucketRef.current) ||
                           busySinceRef.current.has(activeBucketRef.current),

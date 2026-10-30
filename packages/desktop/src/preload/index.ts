@@ -3,6 +3,10 @@ import { cloudAccountApi } from "./cloud-account-api.js";
 import { cloudEnvironmentApi } from "./cloud-environment-api.js";
 import type { CloudWorkbenchApi } from "../shared/cloud-management.js";
 import { mobileRemoteApi } from "./mobile-remote-api.js";
+import {
+  normalizeMobileSessionAnnouncement,
+  type MobileSessionAnnouncement,
+} from "./mobile-session-announcement.js";
 /**
  * Preload — bridges the renderer (browser context) to Electron main's
  * ipcMain via contextBridge. The renderer never imports core; it sees
@@ -235,15 +239,7 @@ const automationSessionListeners: Array<
     clientMessageId?: string;
   }) => void
 > = [];
-const mobileSessionListeners: Array<
-  (meta: {
-    sessionId: string;
-    cwd: string;
-    title: string;
-    prompt: string;
-    clientMessageId?: string;
-  }) => void
-> = [];
+const mobileSessionListeners: Array<(meta: MobileSessionAnnouncement) => void> = [];
 const petDelegationSessionListeners: Array<
   (meta: {
     sessionId: string;
@@ -323,17 +319,8 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
       );
     }
   } else if (method === "agent/mobileSession") {
-    const sessionId = (params?.sessionId as string | undefined) ?? "";
-    const cwd = (params?.cwd as string | undefined) ?? "";
-    const title = (params?.title as string | undefined) ?? "";
-    const prompt = (params?.prompt as string | undefined) ?? "";
-    const clientMessageId =
-      typeof params?.clientMessageId === "string" ? params.clientMessageId : undefined;
-    if (sessionId) {
-      mobileSessionListeners.forEach((cb) =>
-        cb({ sessionId, cwd, title, prompt, clientMessageId }),
-      );
-    }
+    const announcement = normalizeMobileSessionAnnouncement(params);
+    if (announcement) mobileSessionListeners.forEach((cb) => cb(announcement));
   } else if (method === "agent/petDelegationSession") {
     const sessionId = (params?.sessionId as string | undefined) ?? "";
     const cwd = (params?.cwd as string | undefined) ?? "";
@@ -810,15 +797,7 @@ contextBridge.exposeInMainWorld("codeshell", {
       if (i >= 0) automationSessionListeners.splice(i, 1);
     };
   },
-  onMobileSession: (
-    cb: (meta: {
-      sessionId: string;
-      cwd: string;
-      title: string;
-      prompt: string;
-      clientMessageId?: string;
-    }) => void,
-  ): (() => void) => {
+  onMobileSession: (cb: (meta: MobileSessionAnnouncement) => void): (() => void) => {
     mobileSessionListeners.push(cb);
     return () => {
       const i = mobileSessionListeners.indexOf(cb);

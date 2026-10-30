@@ -1,6 +1,7 @@
 import React from "react";
 import { api, ApiError } from "./auth.js";
 import { apiUrl } from "./api-context.js";
+import type { WorkbenchFileLocation } from "./useWorkbenchNavigation.js";
 import "./hub-library.css";
 
 interface FileEntry {
@@ -41,10 +42,16 @@ export function HubFiles({
   initialPath,
   openVersion = 0,
   onAuthLost,
+  location,
+  onNavigate,
+  onBack,
 }: {
   initialPath?: string;
   openVersion?: number;
   onAuthLost: () => void;
+  location?: WorkbenchFileLocation;
+  onNavigate?: (location: WorkbenchFileLocation, replace?: boolean) => void;
+  onBack?: () => void;
 }) {
   const [folder, setFolder] = React.useState("");
   const [directory, setDirectory] = React.useState<{
@@ -70,6 +77,14 @@ export function HubFiles({
   const focusPreview = React.useRef(false);
   const restoreDirectory = React.useRef(false);
   const callback = React.useRef(onAuthLost);
+  const navigation = React.useRef(onNavigate);
+  navigation.current = onNavigate;
+  const appliedLocation = React.useRef<string | undefined>(undefined);
+  const locationKey = (value: WorkbenchFileLocation) => JSON.stringify(value);
+  const recordLocation = (value: WorkbenchFileLocation, replace = false) => {
+    appliedLocation.current = locationKey(value);
+    navigation.current?.(value, replace);
+  };
   callback.current = onAuthLost;
   const report = React.useCallback((cause: unknown) => {
     if (cause instanceof ApiError && cause.status === 401) {
@@ -153,8 +168,10 @@ export function HubFiles({
           // The host accepts absolute workspace links and returns a canonical
           // relative path. Breadcrumbs and selection must use that saved target.
           if (reveal) {
-            changeDirectory(value.path.split("/").slice(0, -1).join("/"));
+            const parent = value.path.split("/").slice(0, -1).join("/");
+            changeDirectory(parent);
             focusDirectory.current = false;
+            recordLocation({ folder: parent, path: value.path }, true);
           }
           setPreviewPath(value.path);
           setPreview(value);
@@ -180,6 +197,25 @@ export function HubFiles({
     setPreviewPath(null);
     setPreviewError("");
     restoreDirectory.current = true;
+  };
+  React.useEffect(() => {
+    if (!location || appliedLocation.current === locationKey(location)) return;
+    appliedLocation.current = locationKey(location);
+    if (location.folder !== folder) changeFolder(location.folder);
+    if (location.path) openFile(location.path, location.reveal);
+    else closePreview();
+  }, [location, folder, changeFolder, openFile]);
+  const navigateFolder = (path: string) => {
+    recordLocation({ folder: path });
+    changeFolder(path);
+  };
+  const navigateFile = (path: string, trigger: HTMLElement) => {
+    recordLocation({ folder, path });
+    openFile(path, false, trigger);
+  };
+  const returnToDirectory = () => {
+    if (onBack) onBack();
+    else closePreview();
   };
   React.useLayoutEffect(() => {
     if (previewPath !== null && focusPreview.current) {
@@ -225,7 +261,7 @@ export function HubFiles({
         </button>
       </header>
       <nav className="file-breadcrumbs" aria-label="文件位置">
-        <button aria-current={!folder ? "location" : undefined} onClick={() => changeFolder("")}>
+        <button aria-current={!folder ? "location" : undefined} onClick={() => navigateFolder("")}>
           工作区
         </button>
         {folder
@@ -236,7 +272,7 @@ export function HubFiles({
               <span aria-hidden="true">/</span>
               <button
                 aria-current={index === segments.length - 1 ? "location" : undefined}
-                onClick={() => changeFolder(segments.slice(0, index + 1).join("/"))}
+                onClick={() => navigateFolder(segments.slice(0, index + 1).join("/"))}
               >
                 {name}
               </button>
@@ -292,8 +328,8 @@ export function HubFiles({
                   aria-current={previewPath === entry.path ? "true" : undefined}
                   onClick={(event) =>
                     entry.kind === "directory"
-                      ? changeFolder(entry.path)
-                      : openFile(entry.path, false, event.currentTarget)
+                      ? navigateFolder(entry.path)
+                      : navigateFile(entry.path, event.currentTarget)
                   }
                 >
                   <span className="file-glyph" aria-hidden="true">
@@ -322,7 +358,7 @@ export function HubFiles({
               if (event.key === "Escape" && !event.nativeEvent.isComposing) {
                 event.preventDefault();
                 event.stopPropagation();
-                closePreview();
+                returnToDirectory();
               }
             }}
           >
@@ -337,7 +373,7 @@ export function HubFiles({
                     下载
                   </a>
                 ) : null}
-                <button className="library-button" onClick={closePreview}>
+                <button className="library-button" onClick={returnToDirectory}>
                   <span className="file-back-label">返回文件列表</span>
                   <span className="file-close-label">关闭预览</span>
                 </button>

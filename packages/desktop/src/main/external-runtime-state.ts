@@ -23,6 +23,7 @@ import {
 } from "@cjhyy/code-shell-core";
 import {
   SessionOutputJournal,
+  SessionOutputPublisher,
   outputUserMessage,
   createRunTiming,
   normalizeCumulativeUsageCounters,
@@ -209,6 +210,10 @@ export interface ExternalRuntimeTurnOutcome {
  */
 export class ExternalRuntimeSessionRecorder {
   private readonly manager = new SessionManager();
+  private readonly independentOutput = new SessionOutputPublisher(
+    () => this.manager.getStorageDir(),
+    "host",
+  );
   private readonly transcript;
   private readonly directoryIdentity: { dev: number; ino: number };
   private readonly cwd: string;
@@ -309,6 +314,14 @@ export class ExternalRuntimeSessionRecorder {
   recordControlOutput(event: StreamEvent): StreamEvent {
     if (this.runClosed) throw new Error("Session output run is closed");
     return this.appendOutput(event);
+  }
+
+  /** Background/control output belongs to this Session, even after its run closes. */
+  recordIndependentOutput(event: StreamEvent): StreamEvent {
+    this.assertOwner(false);
+    if (this.persistenceFailed || this.transcript.flushFailed())
+      throw new Error("Session output recovery is incomplete");
+    return this.independentOutput.project(this.sessionId, event) as StreamEvent;
   }
 
   beginTurn(input: RecordedExternalRuntimeTurnInput, continueRun = false): StreamEvent {

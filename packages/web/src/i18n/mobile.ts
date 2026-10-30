@@ -2,6 +2,35 @@
 export const mobile = {
   zh: {
     mobile: {
+      historyRecovery: {
+        loadingProgress: "正在核对会话记录… {percent}%",
+        detailUnavailable: "记录已更新或暂时不可用，请重新载入当前会话。",
+        detailBusy: "其他记录仍在读取，请稍后重试。",
+        loadingPages: "正在读取旧会话记录… 已核对 {pages} 页",
+        title: "会话记录需要恢复",
+        failed: "记录尚未完整载入。已有内容已保留，恢复核对通过前不会继续任务。",
+        check: "核对恢复方案",
+        checking: "正在核对记录…",
+        applying: "正在保留原始记录并恢复…",
+        verified:
+          "已核对并保留 {turns} 轮聊天、{userInputs} 条输入、{toolCalls} 次工具调用和 {toolResults} 条工具结果。",
+        gapTitle: "此会话有已知历史缺口",
+        gapNotice: "旧版本的部分后台完成通知可能缺失。聊天和工具记录仍会保留。",
+        preserve: "确认后会先保留原始记录，再恢复并继续使用同一会话。",
+        noReplay: "不会自动发送或重发消息、重做工具操作或沿用旧审批。待发送内容会保留为草稿。",
+        confirm: "保留原始记录并恢复",
+        cancel: "取消",
+        reason: {
+          not_needed: "当前记录不需要此项恢复。请重新加载记录。",
+          busy: "会话仍有正在进行的操作。请等待操作结束后重新核对。",
+          unavailable: "暂时无法完成核对或恢复。请检查连接后重试。",
+          unsupported_history: "此会话的旧记录格式暂不支持安全恢复，原始记录已保留。",
+          history_mismatch: "聊天和工具记录尚未核对一致，无法安全恢复。原始记录已保留。",
+          stale: "记录或连接已变化，请重新核对恢复方案。",
+          confirmation_required: "请先查看核对结果，再确认恢复。",
+          storage_error: "原始记录未能完整保存，恢复未完成。请检查主机存储后重试。",
+        },
+      },
       app: {
         extendGoal: "延长目标",
         clearGoal: "清除目标",
@@ -25,6 +54,7 @@ export const mobile = {
         },
         readSourceSummary: "读取数据源 {source} / {scope} / {resource}",
         question: "问题",
+        expiresAt: "请在 {time} 前确认，各端共用此期限。",
         customPlaceholder: "或输入自定义回答…",
         sendCustom: "发送自定义回答",
         rememberScope: "记住范围",
@@ -170,6 +200,43 @@ export const mobile = {
   },
   en: {
     mobile: {
+      historyRecovery: {
+        loadingProgress: "Verifying conversation history… {percent}%",
+        detailUnavailable:
+          "History has changed or is temporarily unavailable. Reload this conversation.",
+        detailBusy: "Other history is still loading. Try again shortly.",
+        loadingPages: "Loading older conversation history… {pages} pages verified",
+        title: "Conversation history needs recovery",
+        failed:
+          "History has not fully loaded. Existing records are retained; work will stay paused until recovery is verified.",
+        check: "Review recovery",
+        checking: "Checking records…",
+        applying: "Preserving original records and recovering…",
+        verified:
+          "Verified and retained {turns} conversation turns, {userInputs} inputs, {toolCalls} tool calls and {toolResults} tool results.",
+        gapTitle: "This conversation has a known history gap",
+        gapNotice:
+          "Some background completion notices from older versions may be missing. Chat and tool records are retained.",
+        preserve:
+          "Confirmation preserves the original records, then restores the same conversation for continued use.",
+        noReplay:
+          "No messages, tool actions or old approvals will be replayed automatically. Unsent content will remain as drafts.",
+        confirm: "Preserve records and recover",
+        cancel: "Cancel",
+        reason: {
+          not_needed: "These records do not need this recovery. Reload the conversation history.",
+          busy: "This conversation still has an active operation. Wait for it to finish, then review again.",
+          unavailable: "The review or recovery could not finish. Check the connection and retry.",
+          unsupported_history:
+            "This older record format cannot yet be recovered safely. Original records are retained.",
+          history_mismatch:
+            "Chat and tool records could not be verified as matching. Recovery is blocked and original records are retained.",
+          stale: "The records or connection changed. Review a fresh recovery plan.",
+          confirmation_required: "Review the result before confirming recovery.",
+          storage_error:
+            "Original records could not be fully preserved. Check host storage before retrying.",
+        },
+      },
       app: {
         extendGoal: "Extend goal",
         clearGoal: "Clear goal",
@@ -194,6 +261,7 @@ export const mobile = {
         },
         readSourceSummary: "Read data source {source} / {scope} / {resource}",
         question: "Question",
+        expiresAt: "Confirm by {time}. All devices share this deadline.",
         customPlaceholder: "Or enter a custom answer…",
         sendCustom: "Send custom answer",
         rememberScope: "Remember scope",

@@ -205,6 +205,16 @@ describe("Pet preload contract", () => {
     offOverview();
     for (const handler of handlers.get("pet:widget-open-overview") ?? []) handler({}, undefined);
     expect(overviewOpenCount).toBe(1);
+    const prompts: unknown[] = [];
+    const offPrompt = api.onWidgetOpenOverview((target) => prompts.push(target));
+    for (const payload of [
+      { prompt: "看看这个窗口" },
+      { prompt: "  " },
+      { prompt: "x".repeat(900) },
+    ])
+      for (const handler of handlers.get("pet:widget-open-overview") ?? []) handler({}, payload);
+    offPrompt();
+    expect(prompts).toEqual([{ prompt: "看看这个窗口" }, { prompt: "x".repeat(500) }]);
     const visibility: boolean[] = [];
     const offVisibility = api.onWidgetVisibilityChanged((visible) => visibility.push(visible));
     for (const handler of handlers.get("pet:widget-visibility-changed") ?? []) handler({}, false);
