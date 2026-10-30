@@ -154,6 +154,8 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/remote-link-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/device-relay-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/cloud-account-ipc.ts", /ipcMain\.handle\(/g) +
+        // The registrar loops over eight fixed method entries, so count entries, not the loop.
+        matches("packages/desktop/src/main/account-device-ipc.ts", /^    [a-z]+: \(/gm) +
         matches("packages/desktop/src/main/cloud-workbench-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/computer-use/settings-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/local-file-preview-ipc.ts", /ipcMain\.handle\(/g) +
@@ -209,7 +211,11 @@ describe("architecture growth budgets", () => {
       // +2 Main-frame-only history recovery plan/apply routes; caller and paths remain Host-owned.
       // Measured after merging main (2026-10-29): main counts 368, this branch adds 3.
       // +1 panel-apps:bindingsForProjects batches binding reads so each package is verified once.
-    ).toBeLessThanOrEqual(372);
+      // +1 explicit account resume; construction/status remain side-effect free.
+      // +8 main-frame-owned computer operations: list/projects/connect/resume/send/stop/approve/close.
+      // Main retains credentials and pins every operation to its owner/Host/project/Session.
+    ).toBeLessThanOrEqual(381);
+    expect(matches("packages/desktop/src/main/account-device-ipc.ts", /^    [a-z]+: \(/gm)).toBe(8);
     expect(
       matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g),
     ).toBe(2);
@@ -248,6 +254,11 @@ describe("architecture growth budgets", () => {
     expect(
       matches("packages/desktop/src/preload/device-relay-api.ts", /ipcRenderer\.invoke\(/g) +
         matches("packages/desktop/src/preload/cloud-account-api.ts", /ipcRenderer\.invoke\(/g) +
+        // Count each fixed helper call plus send's explicit serializable delivery DTO invoke.
+        matches(
+          "packages/desktop/src/preload/account-device-api.ts",
+          /(?:\binvoke|ipcRenderer\.invoke)\("/g,
+        ) +
         matches("packages/desktop/src/preload/mobile-remote-api.ts", /ipcRenderer\.invoke\(/g) +
         matches("packages/desktop/src/preload/index.ts", /ipcRenderer\.invoke\(/g) +
         matches(
@@ -276,7 +287,14 @@ describe("architecture growth budgets", () => {
       // +3 Mimi companion setting, preview and chat-focus invokes.
       // +1 computerUse:input mirrors the single stop/resume/force-stop Main route.
       // +2 typed history recovery plan/apply invokes mirror the reviewed Main routes.
-    ).toBeLessThanOrEqual(360);
+      // +9 mirrors explicit account resume and the eight bounded computer operations above.
+    ).toBeLessThanOrEqual(369);
+    expect(
+      matches(
+        "packages/desktop/src/preload/account-device-api.ts",
+        /(?:\binvoke|ipcRenderer\.invoke)\("/g,
+      ),
+    ).toBe(8);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
     // transcript-page method adds its bounded response shape without widening
@@ -314,7 +332,10 @@ describe("architecture growth budgets", () => {
     // Existing project-runtime selection composes local/cloud session views
     // and gates navigation until selection is ready (+144). Binding selection
     // and connection lifecycle stay in the extracted project runtime hooks.
-    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_932);
+    // +15 composition lines mount the extracted computer workspace lazily and keep it alive
+    // while hidden. Device selection, drafts, approvals and reconnect state stay in that module.
+    // Pin the measured combined root (the previous ceiling had two spare lines).
+    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_945);
     // Goal-extension and pre-turn archive inputs now fail closed at protocol
     // ingress instead of trusting arbitrary numeric/object payloads. Manual
     // Mimi clears also validate their host-authored summary at this boundary.

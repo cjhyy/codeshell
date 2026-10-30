@@ -21,6 +21,7 @@
 - Host Server 原生及相关 guarded shard：96 通过、0 失败、0 跳过。包含实际 HTTP/WS、既有 Relay TLS、普通配对与账号授权隔离、撤销和到期断流。
 - 组合 fixture 运行实际 Account、Relay、Host HTTP/WS 解析器与受控 stdio 进程；字节传输为隔离 memory adapter，不能当作真实 TCP/TLS 或公网验收。调用：`SERVICES_CHECKOUT_PATH=/absolute/path/to/reviewed/services bun run test:account-relay-device-dispatch`。
 - 浏览器 fixture 直接构建生产组件，覆盖电脑/项目选择、输出、草稿/附件隔离、原电脑 Stop、审批代次、快速完成先于 IPC 回复、迟到目录、超大帧预检、恢复原会话、退出和 390px 布局：`node packages/desktop/src/renderer/runtime/AccountDeviceWorkspace.browser.fixture.mjs`。
+- 真实隔离 Electron `contextBridge` 验收：`bun run test:account-device-bridge`，当前 4 种投递结果均通过。跨桥使用可序列化 DTO；Electron 会丢失自定义 Error 字段，不能靠 `Error.delivery` 跨桥保留投递确定性。receipt 默认保存在 `.code-shell/artifacts/account-relay/account-device-bridge.json`。
 - 原后台运行的长时间测试停滞未能复现；原生 fixture 的编译及执行现在均有独立硬截止，后续 shard 另以外部进程组总期限验证。
 
 ### 交互与授权边界
