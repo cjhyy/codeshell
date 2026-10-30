@@ -29,11 +29,13 @@ import {
 } from "./runtime.js";
 import { PanelToolJobService, type ToolJobScope } from "./tool-jobs.js";
 import { createSharedPanelToolHost, type SharedPanelToolHost } from "./shared-tool-jobs.js";
-import { resolvePanelExecutable } from "./process-service.js";
+import { PanelAppProcessService, resolvePanelExecutable } from "./process-service.js";
 import { PanelResourceService } from "./resources/service.js";
 import { PanelTaskCookieHost } from "./task-cookie-host.js";
 import type { PanelSnapshot } from "./types.js";
 import { capturePanelProjectScope } from "./project-scope.js";
+import { hubPanelDirectoryBookmarks } from "./directory-bookmarks.js";
+import { PanelDirectoryPicker } from "./directory-picker.js";
 
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -656,12 +658,14 @@ describe("Panel HTTP runtime", () => {
     const parent = { postMessage: (...args: any[]) => messages.push(args) };
     const window: any = {};
     const timers = new Set<ReturnType<typeof setTimeout>>();
+    const timerDelays: number[] = [];
     runInNewContext(script, {
       window,
       parent,
       addEventListener: (name: string, callback: (event: any) => void) =>
         handlers.set(name, callback),
       setTimeout: (callback: () => void, timeout: number) => {
+        timerDelays.push(timeout);
         const timer = setTimeout(callback, timeout);
         timers.add(timer);
         return timer;
@@ -703,6 +707,16 @@ describe("Panel HTTP runtime", () => {
       expect(timers.size).toBe(1);
       handlers.get("message")!({ source: parent, origin: f.url, data: response });
       expect(await result).toEqual({ appId: f.app.id });
+      expect(timerDelays[0]).toBe(60_000);
+      const choosing = window.codeshellPanel.call("filesystem.pickDirectory");
+      expect(timerDelays.at(-1)).toBe(6 * 60_000);
+      const pickerRequest = messages.at(-1)![0];
+      handlers.get("message")!({
+        source: parent,
+        origin: f.url,
+        data: { ...response, requestId: pickerRequest.requestId, result: { cancelled: true } },
+      });
+      expect(await choosing).toEqual({ cancelled: true });
       let updated: unknown;
       const unsubscribe = window.codeshellPanel.on("context.changed", (value: unknown) => {
         updated = value;
@@ -1071,10 +1085,11 @@ async function waitRuntimeEvent(
   name: string,
   after = 0,
   predicate: (event: RuntimeEvent) => boolean = () => true,
+  owner = "owner-a",
 ) {
   const deadline = Date.now() + 5_000;
   while (Date.now() < deadline) {
-    const batch = await runtimeEvents(f, instance, after);
+    const batch = await runtimeEvents(f, instance, after, owner);
     const event = batch.events.find((item) => item.event === name && predicate(item));
     if (event) return event;
     await new Promise((done) => setTimeout(done, 10));
@@ -1716,6 +1731,7 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
         await f.api(`${f.grant.instanceId}/confirm`, "POST", {
           requestId: confirmation.payload.requestId,
           allowed: true,
+          directoryToken: confirmation.payload.directoryPicker.initialToken,
         })
       ).status,
     ).toBe(200);
@@ -1741,6 +1757,436 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
         })
       ).status,
     ).toBe(400);
+  });
+
+  describe("parent-owned workspace directory picker", () => {
+    async function start(f: Awaited<ReturnType<typeof fixture>>, owner = "owner-a") {
+      const grant = await f.prepare(owner);
+      const call = f.api(
+        `${grant.instanceId}/call`,
+        "POST",
+        { method: "filesystem.pickDirectory" },
+        owner,
+      );
+      const event = await waitRuntimeEvent(
+        f,
+        grant.instanceId,
+        "host.confirm",
+        0,
+        () => true,
+        owner,
+      );
+      const { requestId, directoryPicker } = event.payload;
+      const list = (directoryToken: unknown) =>
+        f.api(`${grant.instanceId}/directory-picker`, "POST", { requestId, directoryToken }, owner);
+      const answer = (allowed: boolean, directoryToken?: unknown) =>
+        f.api(
+          `${grant.instanceId}/confirm`,
+          "POST",
+          {
+            requestId,
+            allowed,
+            ...(directoryToken === undefined ? {} : { directoryToken }),
+          },
+          owner,
+        );
+      return { grant, call, event, requestId, directoryPicker, list, answer };
+    }
+
+    test("browses existing nested directories, grants one explicit selection, and preserves bookmark restore", async () => {
+      const f = await fixture({ permissions: ["context.workspace", "process"] });
+      await mkdir(join(f.cwd, "downloads"));
+      await mkdir(join(f.cwd, "media", "clips"), { recursive: true });
+      await mkdir(join(f.cwd, ".ssh"));
+      await mkdir(join(f.cwd, "node_modules"));
+      const outside = join(f.root, "outside");
+      await mkdir(outside);
+      await symlink(outside, join(f.cwd, "escape"));
+      const p = await start(f);
+      expect(p.event.payload.expiresAt).toBe(f.state.now + 300_000);
+      expect(p.directoryPicker).toMatchObject({ kind: "workspace-directory", rootPath: f.cwd });
+      const initial = await (await p.list(p.directoryPicker.initialToken)).json();
+      expect(initial).toMatchObject({
+        relativePath: "downloads",
+        parentToken: p.directoryPicker.rootToken,
+      });
+      const root = await (await p.list(p.directoryPicker.rootToken)).json();
+      expect(root.directories.map((item: any) => item.name)).toEqual([
+        "downloads",
+        "media",
+        "node_modules",
+      ]);
+      const media = await (
+        await p.list(root.directories.find((item: any) => item.name === "media").token)
+      ).json();
+      expect(media.parentToken).toBe(p.directoryPicker.rootToken);
+      const clips = await (await p.list(media.directories[0].token)).json();
+      expect(clips.relativePath).toBe("media/clips");
+      const spy = spyOn(PanelAppProcessService.prototype, "grantDirectory");
+      try {
+        expect((await p.answer(true, clips.directoryToken)).status).toBe(200);
+        const result = await p.call;
+        expect(result.status).toBe(200);
+        const selected = await result.json();
+        expect(selected.path).toBe(join(f.cwd, "media", "clips"));
+        expect(typeof selected.bookmark).toBe("string");
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(await (await p.answer(true, clips.directoryToken)).json()).toEqual({
+          accepted: true,
+          allowed: true,
+        });
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect((await p.answer(true, p.directoryPicker.rootToken)).status).toBe(409);
+        expect((await p.list(clips.directoryToken)).status).toBe(409);
+        await f.api(p.grant.instanceId, "DELETE");
+        const reopened = await f.prepare();
+        const restored = await f.api(`${reopened.instanceId}/call`, "POST", {
+          method: "filesystem.restoreDirectory",
+          params: { bookmark: selected.bookmark },
+        });
+        expect(restored.status).toBe(200);
+        expect(await restored.json()).toMatchObject({
+          path: selected.path,
+          bookmark: selected.bookmark,
+        });
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    test("without downloads defaults to root; cancelling never creates a directory or capability", async () => {
+      const f = await fixture({ permissions: ["context.workspace", "process"] });
+      const p = await start(f);
+      const capabilities = p.grant.context.capabilities as any;
+      expect(capabilities.bridge).toMatchObject({
+        callTimeoutMs: 60_000,
+        consentTimeoutMs: 50_000,
+      });
+      expect(capabilities.methodLimits).toEqual({
+        "filesystem.pickDirectory": { timeoutMs: 360_000 },
+      });
+      expect(p.directoryPicker.initialToken).toBe(p.directoryPicker.rootToken);
+      const before = await readdir(f.cwd);
+      const spy = spyOn(PanelAppProcessService.prototype, "grantDirectory");
+      try {
+        const listing = await (await p.list(p.directoryPicker.initialToken)).json();
+        expect(listing).toMatchObject({
+          relativePath: "",
+          directories: [],
+        });
+        expect((await p.answer(false)).status).toBe(200);
+        expect(await (await p.call).json()).toEqual({ cancelled: true });
+        expect(await readdir(f.cwd)).toEqual(before);
+        expect(
+          await readFile(join(f.root, "data", "panel-directories", "bookmarks.json")).catch(
+            (error: NodeJS.ErrnoException) => error.code,
+          ),
+        ).toBe("ENOENT");
+        expect(spy).not.toHaveBeenCalled();
+        expect((await p.list(p.directoryPicker.rootToken)).status).toBe(409);
+        expect((await p.answer(true, p.directoryPicker.rootToken)).status).toBe(409);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    test("rejects raw paths, another picker token, another owner, and opaque-origin guest requests", async () => {
+      const f = await fixture({ permissions: ["context.workspace", "process"] });
+      const a = await start(f),
+        b = await start(f, "owner-b");
+      for (const token of [undefined, f.cwd, "../", "/", b.directoryPicker.rootToken]) {
+        expect((await a.list(token)).status).toBe(409);
+        expect((await a.answer(true, token)).status).toBe(409);
+      }
+      expect(
+        (
+          await f.api(
+            `${a.grant.instanceId}/directory-picker`,
+            "POST",
+            { requestId: a.requestId, directoryToken: a.directoryPicker.rootToken },
+            "owner-b",
+          )
+        ).status,
+      ).toBe(403);
+      const guest = await fetch(
+        `${f.url}/api/v1/panels/runtime/${a.grant.instanceId}/directory-picker`,
+        {
+          method: "POST",
+          headers: {
+            Origin: "null",
+            Cookie: "session=owner-a",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            requestId: a.requestId,
+            directoryToken: a.directoryPicker.rootToken,
+          }),
+        },
+      );
+      expect(guest.status).toBe(403);
+      expect(
+        (
+          await f.api(`${a.grant.instanceId}/call`, "POST", {
+            method: "filesystem.directoryPicker",
+            params: { requestId: a.requestId, directoryToken: a.directoryPicker.rootToken },
+          })
+        ).status,
+      ).not.toBe(200);
+      await a.answer(false);
+      await b.answer(false);
+      expect(await (await a.call).json()).toEqual({ cancelled: true });
+      expect(await (await b.call).json()).toEqual({ cancelled: true });
+    });
+
+    test("cancellation wins while confirmation authorization is suspended", async () => {
+      let beforeAuthorization: (() => Promise<void>) | undefined;
+      const f = await fixture({
+        permissions: ["context.workspace", "process"],
+        authorizePanelDirectory: async () => {
+          await beforeAuthorization?.();
+        },
+      });
+      const p = await start(f);
+      let enter!: () => void, release!: () => void;
+      const entered = new Promise<void>((resolve) => {
+        enter = resolve;
+      });
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      beforeAuthorization = async () => {
+        beforeAuthorization = undefined;
+        enter();
+        await held;
+      };
+      const late = p.answer(true, p.directoryPicker.rootToken);
+      await entered;
+      expect((await p.answer(false)).status).toBe(200);
+      release();
+      expect((await late).status).toBe(409);
+      expect(await (await p.call).json()).toEqual({ cancelled: true });
+      expect(await readdir(f.cwd)).toEqual(["notes.txt"]);
+    });
+
+    test("a cancelled picker cannot return a suspended directory listing", async () => {
+      let beforeAuthorization: (() => Promise<void>) | undefined;
+      const f = await fixture({
+        permissions: ["context.workspace", "process"],
+        authorizePanelDirectory: async () => {
+          await beforeAuthorization?.();
+        },
+      });
+      const p = await start(f);
+      let enter!: () => void, release!: () => void;
+      const entered = new Promise<void>((resolve) => {
+        enter = resolve;
+      });
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      beforeAuthorization = async () => {
+        beforeAuthorization = undefined;
+        enter();
+        await held;
+      };
+      const late = p.list(p.directoryPicker.rootToken);
+      await entered;
+      await p.answer(false);
+      release();
+      expect((await late).status).toBe(409);
+      expect(await (await p.call).json()).toEqual({ cancelled: true });
+    });
+
+    test("concurrent directory reads report transient busy without expiring the pending choice", async () => {
+      let beforeAuthorization: (() => Promise<void>) | undefined;
+      const f = await fixture({
+        permissions: ["context.workspace", "process"],
+        authorizePanelDirectory: async () => {
+          await beforeAuthorization?.();
+        },
+      });
+      const p = await start(f);
+      let enter!: () => void, release!: () => void;
+      const entered = new Promise<void>((resolve) => {
+        enter = resolve;
+      });
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const original = PanelDirectoryPicker.prototype.list;
+      let first = true;
+      const spy = spyOn(PanelDirectoryPicker.prototype, "list").mockImplementation(
+        function (token, authorize) {
+          if (first) {
+            first = false;
+            beforeAuthorization = async () => {
+              beforeAuthorization = undefined;
+              enter();
+              await held;
+            };
+          }
+          return original.call(this, token, authorize);
+        },
+      );
+      try {
+        const pending = p.list(p.directoryPicker.rootToken);
+        await entered;
+        const busy = await p.list(p.directoryPicker.rootToken);
+        expect(busy.status).toBe(429);
+        expect(await busy.json()).toMatchObject({ code: "RATE_LIMITED", retryAfterMs: 50 });
+        release();
+        expect((await pending).status).toBe(200);
+        expect((await p.answer(true, p.directoryPicker.rootToken)).status).toBe(200);
+        expect((await p.call).status).toBe(200);
+      } finally {
+        release();
+        spy.mockRestore();
+      }
+    });
+
+    test("timeout, package revision and grant revocation retire all picker tokens", async () => {
+      for (const reason of ["timeout", "revision", "revoke"] as const) {
+        const f = await fixture({ permissions: ["context.workspace", "process"] });
+        const p = await start(f);
+        if (reason === "timeout") f.state.now += 300_001;
+        else if (reason === "revision") f.state.revision = "c".repeat(64);
+        else await f.api(p.grant.instanceId, "DELETE");
+        expect((await p.list(p.directoryPicker.rootToken)).status).toBe(
+          reason === "timeout" ? 409 : 410,
+        );
+        expect((await p.call).status).toBe(reason === "timeout" ? 200 : 410);
+        expect((await p.answer(true, p.directoryPicker.rootToken)).status).toBe(
+          reason === "timeout" ? 409 : 410,
+        );
+        expect(await readdir(f.cwd)).toEqual(["notes.txt"]);
+      }
+    });
+
+    test("rejects a replaced ancestor and a root changed during authorization without granting outside", async () => {
+      const f = await fixture({ permissions: ["context.workspace", "process"] });
+      await mkdir(join(f.cwd, "media", "clips"), { recursive: true });
+      const p = await start(f);
+      const root = await (await p.list(p.directoryPicker.rootToken)).json();
+      const media = await (await p.list(root.directories[0].token)).json();
+      await rename(join(f.cwd, "media"), join(f.root, "original-media"));
+      await symlink(join(f.root, "original-media"), join(f.cwd, "media"));
+      const spy = spyOn(PanelAppProcessService.prototype, "grantDirectory");
+      try {
+        expect((await p.answer(true, media.directories[0].token)).status).toBe(409);
+        await p.answer(false);
+        await p.call;
+        const fresh = await start(f);
+        const outside = join(f.root, "outside");
+        await mkdir(outside);
+        f.state.beforeSnapshot = async () => {
+          f.state.beforeSnapshot = undefined;
+          await rename(f.cwd, join(f.root, "original-workspace"));
+          await symlink(outside, f.cwd);
+        };
+        expect((await fresh.answer(true, fresh.directoryPicker.rootToken)).status).toBe(409);
+        expect(spy).not.toHaveBeenCalled();
+        expect(await readdir(outside)).toEqual([]);
+        await fresh.answer(false);
+        await fresh.call;
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    test("one outstanding picker per instance and bounded listings do not silently claim completeness", async () => {
+      const f = await fixture({ permissions: ["context.workspace", "process"] });
+      await Promise.all(
+        Array.from({ length: 205 }, (_, i) =>
+          mkdir(join(f.cwd, `folder-${String(i).padStart(3, "0")}`)),
+        ),
+      );
+      const p = await start(f);
+      expect(
+        (await f.api(`${p.grant.instanceId}/call`, "POST", { method: "filesystem.pickDirectory" }))
+          .status,
+      ).toBe(409);
+      const response = await p.list(p.directoryPicker.rootToken);
+      const listing = await response.json();
+      expect(listing.directories).toHaveLength(200);
+      expect(listing.truncated).toBe(true);
+      expect(Buffer.byteLength(JSON.stringify(listing))).toBeLessThan(1024 * 1024);
+      expect((await p.answer(false)).status).toBe(200);
+      expect(await (await p.call).json()).toEqual({ cancelled: true });
+    });
+
+    test("an unsafe downloads default falls back to root and cannot expose or select its target", async () => {
+      const f = await fixture({ permissions: ["context.workspace", "process"] });
+      const outside = join(f.root, "outside");
+      await mkdir(join(outside, "private-child"), { recursive: true });
+      await symlink(outside, join(f.cwd, "downloads"));
+      const p = await start(f);
+      expect(p.directoryPicker.initialToken).toBe(p.directoryPicker.rootToken);
+      expect(await (await p.list(p.directoryPicker.rootToken)).json()).toMatchObject({
+        relativePath: "",
+        directories: [],
+      });
+      expect((await p.answer(true, outside)).status).toBe(409);
+      await p.answer(false);
+      expect(await (await p.call).json()).toEqual({ cancelled: true });
+      expect(await readdir(outside)).toEqual(["private-child"]);
+    });
+
+    test("a Hub bookmark cannot restore outside its workspace even when a trusted writer saved it", async () => {
+      const f = await fixture({ permissions: ["context.workspace", "process"] });
+      const outside = join(f.root, "outside");
+      await mkdir(outside);
+      const bookmark = hubPanelDirectoryBookmarks(join(f.root, "data")).remember(
+        f.app.id,
+        f.cwd,
+        outside,
+      );
+      const grant = await f.prepare();
+      const restore = await f.api(`${grant.instanceId}/call`, "POST", {
+        method: "filesystem.restoreDirectory",
+        params: { bookmark },
+      });
+      expect(restore.status).toBe(409);
+      expect(await readdir(outside)).toEqual([]);
+    });
+
+    test("grantDirectory rechecks the selected ancestor after its own authorization awaits", async () => {
+      let duringGrant: (() => Promise<void>) | undefined;
+      const f = await fixture({
+        permissions: ["context.workspace", "process"],
+        authorizePanelDirectory: async () => {
+          await duringGrant?.();
+        },
+      });
+      await mkdir(join(f.cwd, "media", "clips"), { recursive: true });
+      const outside = join(f.root, "outside");
+      await mkdir(join(outside, "clips"), { recursive: true });
+      const p = await start(f);
+      const root = await (await p.list(p.directoryPicker.rootToken)).json();
+      const media = await (await p.list(root.directories[0].token)).json();
+      const original = PanelAppProcessService.prototype.grantDirectory;
+      const spy = spyOn(PanelAppProcessService.prototype, "grantDirectory").mockImplementation(
+        async function (owner, path, options) {
+          duringGrant = async () => {
+            duringGrant = undefined;
+            await rename(join(f.cwd, "media"), join(f.root, "old-media"));
+            await symlink(outside, join(f.cwd, "media"));
+          };
+          return original.call(this, owner, path, options);
+        },
+      );
+      try {
+        expect((await p.answer(true, media.directories[0].token)).status).toBe(200);
+        expect((await p.call).status).toBe(409);
+        expect(
+          await readFile(join(f.root, "data", "panel-directories", "bookmarks.json")).catch(
+            (error: NodeJS.ErrnoException) => error.code,
+          ),
+        ).toBe("ENOENT");
+        expect(await readdir(outside)).toEqual(["clips"]);
+      } finally {
+        spy.mockRestore();
+      }
+    });
   });
 
   test("renew preserves assets and instance, rejects other owners, and cannot revive expiry", async () => {
