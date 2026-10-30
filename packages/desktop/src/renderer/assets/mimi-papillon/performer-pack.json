@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "atlas": "performer-v1.webp",
+  "columns": 8,
+  "rows": 4,
+  "cell": { "width": 192, "height": 208 },
+  "moves": {
+    "sit-type": {
+      "row": 0,
+      "frames": 6,
+      "frameMs": 170,
+      "loop": true,
+      "feetY": 203,
+      "scale": 1,
+      "facing": "front"
+    },
+    "kick": {
+      "row": 1,
+      "frames": 5,
+      "frameMs": 110,
+      "loop": false,
+      "contact": 2,
+      "feetY": 186,
+      "scale": 1.25,
+      "facing": "right"
+    },
+    "poke": {
+      "row": 2,
+      "frames": 4,
+      "frameMs": 120,
+      "loop": false,
+      "contact": 2,
+      "feetY": 186,
+      "scale": 1.25,
+      "facing": "right"
+    },
+    "lie-wait": {
+      "row": 3,
+      "frames": 6,
+      "frameMs": 220,
+      "loop": true,
+      "feetY": 172,
+      "scale": 1.25,
+      "facing": "front"
+    }
+  }
+}

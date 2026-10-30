@@ -474,6 +474,8 @@ export interface ApprovalRequestEnvelope {
   /** Owning chat session — renderer routes the modal to the right tab. */
   sessionId?: string;
   requestId: string;
+  /** Absolute deadline supplied by the owning runtime; hydration must not extend it. */
+  expiresAt?: number;
   request: ApprovalRequest;
 }
 

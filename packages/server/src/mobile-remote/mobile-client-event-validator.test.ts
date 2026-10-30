@@ -3,6 +3,21 @@ import { parseMobileClientEvent } from "./mobile-client-event-validator.js";
 import { MAX_MOBILE_ATTACHMENTS, MAX_MOBILE_IMAGE_BYTES } from "./mobile-limits.js";
 
 describe("parseMobileClientEvent", () => {
+  test("approval replies retain the worker route and reject malformed generations", () => {
+    const reply = {
+      type: "approval.respond",
+      sessionId: "s1",
+      approvalId: "a1",
+      decision: "approve",
+      connectionId: "worker",
+      generation: 2,
+      answer: "允许本次",
+    };
+    expect(parseMobileClientEvent(reply)).toEqual(reply);
+    for (const generation of [-1, 1.5, "2", Infinity])
+      expect(parseMobileClientEvent({ ...reply, generation })).toBeUndefined();
+    expect(parseMobileClientEvent({ ...reply, connectionId: "" })).toBeUndefined();
+  });
   test("history recovery requires a correlated plan and explicit acceptance without client paths", () => {
     const plan = { type: "session.outputRecovery.plan", sessionId: "s1", requestId: "r1" };
     const apply = {

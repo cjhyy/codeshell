@@ -9,6 +9,8 @@ export interface CharacterActorProps {
   cueActive: boolean;
   onReady(): void;
   onError(message: string): void;
+  /** A one-shot move reached its contact frame (the paw meets the target). */
+  onContact?(): void;
 }
 
 /** What an appearance can actually perform. CUA never depends on it: a

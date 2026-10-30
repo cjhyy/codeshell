@@ -6,6 +6,7 @@ import { prepareAgentRunMetadata } from "../agent-run-metadata.js";
 import type { SessionCwdIndexEntry } from "../session-cwd-index.js";
 import { MobileExternalRuntimeCommands } from "./external-runtime-commands.js";
 import { MobilePermissionModes } from "./permission-modes.js";
+import { PendingMobileApprovals } from "@cjhyy/code-shell-server/mobile-remote";
 import {
   agentRunTimeoutMs,
   handleClientEvent,
@@ -23,6 +24,7 @@ function createHarness(options: {
   const replies: Array<Record<string, unknown>> = [];
   const preparedRuns: Array<Record<string, unknown>> = [];
   const metas: WorkerFrameMeta[] = [];
+  const pendingApprovals = new PendingMobileApprovals();
 
   const emit = (message: Record<string, unknown>): void => {
     const line = JSON.stringify(message);
@@ -92,10 +94,11 @@ function createHarness(options: {
     broadcastDesktopPermissionMode: () => undefined,
     broadcastMobileSession: () => undefined,
     broadcastApprovalResolved: () => undefined,
+    pendingApprovals,
     settleMobileUploadClaims: async () => undefined,
   } as unknown as OrchestratorCtx;
 
-  return { ctx, metas, preparedRuns, replies };
+  return { ctx, metas, preparedRuns, replies, pendingApprovals };
 }
 
 async function sendChat(ctx: OrchestratorCtx): Promise<void> {
@@ -386,6 +389,49 @@ describe("injectAndAwaitResult timeouts", () => {
 });
 
 describe("mobile question answer acknowledgment", () => {
+  test("expired, already-resolved and mismatched worker routes never reach the worker", async () => {
+    const harness = createHarness({
+      requestedWorkspaceRoot: "/primary",
+      lookupSession: () => undefined,
+    });
+    for (const [requestId, expiresAt] of [
+      ["expired", Date.now() - 1],
+      ["live", Date.now() + 600_000],
+    ] as const)
+      harness.pendingApprovals.observeOutboundLine(
+        JSON.stringify({
+          method: "agent/approvalRequest",
+          params: {
+            sessionId: "session-1",
+            requestId,
+            connectionId: "worker",
+            generation: 2,
+            expiresAt,
+            request: { toolName: "__ask_user__", args: { question: "Pick one" } },
+          },
+        }),
+      );
+    for (const route of [
+      { approvalId: "expired" },
+      { approvalId: "missing" },
+      { approvalId: "live", connectionId: "wrong-worker", generation: 2 },
+      { approvalId: "live", connectionId: "worker", generation: 1 },
+      { approvalId: "live", sessionId: "another-session" },
+    ])
+      await handleClientEvent(harness.ctx, {
+        type: "approval.respond",
+        deviceId: "phone-1",
+        sessionId: "session-1",
+        ...route,
+        decision: "approve",
+        answer: "允许本次",
+      });
+    expect(harness.metas).toEqual([]);
+    expect(harness.replies).toHaveLength(5);
+    expect(harness.replies.every((event) => event.type === "error")).toBe(true);
+    expect(harness.pendingApprovals.find("session-1", "live")).toBeDefined();
+  });
+
   for (const success of [true, false]) {
     test(`only resolves an answer after worker acceptance (success: ${success})`, async () => {
       const harness = createHarness({
@@ -395,6 +441,19 @@ describe("mobile question answer acknowledgment", () => {
       const outbound = new Set<OutboundListener>();
       const requests: Array<{ id: string; params: Record<string, unknown> }> = [];
       const resolved: Record<string, unknown>[] = [];
+      harness.pendingApprovals.observeOutboundLine(
+        JSON.stringify({
+          method: "agent/approvalRequest",
+          params: {
+            sessionId: "session-1",
+            requestId: "async-question",
+            connectionId: "worker",
+            generation: 2,
+            expiresAt: Date.now() + 600_000,
+            request: { toolName: "__ask_user__", args: { question: "Pick one" } },
+          },
+        }),
+      );
       harness.ctx.broadcastApprovalResolved = (value) => {
         resolved.push(value);
       };
@@ -424,6 +483,8 @@ describe("mobile question answer acknowledgment", () => {
       expect(requests[0]?.params).toEqual({
         sessionId: "session-1",
         requestId: "async-question",
+        connectionId: "worker",
+        generation: 2,
         decision: { approved: true, answer: "Read only" },
       });
       const response = {
@@ -438,6 +499,8 @@ describe("mobile question answer acknowledgment", () => {
               {
                 requestId: "async-question",
                 sessionId: "session-1",
+                connectionId: "worker",
+                generation: 2,
                 approved: true,
                 answer: "Read only",
               },

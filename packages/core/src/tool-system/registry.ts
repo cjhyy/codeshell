@@ -193,13 +193,24 @@ export class ToolRegistry {
     // Create a child AbortController that aborts on timeout OR parent abort
     const childController = new AbortController();
     let timedOut = false;
-    const timerId =
-      timeout > 0
-        ? setTimeout(() => {
-            timedOut = true;
-            childController.abort(new ToolTimeoutError(name, timeout));
-          }, timeout)
-        : undefined;
+    let timerId: ReturnType<typeof setTimeout> | undefined;
+    let remainingExecutionMs = timeout;
+    let executionStartedAt = Date.now();
+    let waitingForUser = 0;
+    let finished = false;
+    const questionControllers = new Set<AbortController>();
+    const resumeExecutionTimer = () => {
+      if (timeout <= 0 || waitingForUser > 0 || finished || childController.signal.aborted) return;
+      executionStartedAt = Date.now();
+      timerId = setTimeout(
+        () => {
+          timedOut = true;
+          childController.abort(new ToolTimeoutError(name, timeout));
+        },
+        Math.max(0, remainingExecutionMs),
+      );
+    };
+    resumeExecutionTimer();
 
     // Cascade parent abort to child
     const onParentAbort = () => childController.abort(parentSignal?.reason);
@@ -213,6 +224,42 @@ export class ToolRegistry {
     const ctx: ToolContext | undefined = options?.ctx
       ? { ...options.ctx, signal: childController.signal }
       : undefined;
+    if (ctx?.askUser) {
+      const askUser = ctx.askUser;
+      ctx.askUser = async (question, askOptions) => {
+        childController.signal.throwIfAborted();
+        if (waitingForUser++ === 0) {
+          clearTimeout(timerId);
+          remainingExecutionMs -= Date.now() - executionStartedAt;
+        }
+        const questionController = new AbortController();
+        questionControllers.add(questionController);
+        const signal = AbortSignal.any([
+          childController.signal,
+          questionController.signal,
+          ...(askOptions?.signal ? [askOptions.signal] : []),
+        ]);
+        let onAbort: (() => void) | undefined;
+        try {
+          signal.throwIfAborted();
+          const abortedQuestion = new Promise<never>((_, reject) => {
+            onAbort = () => reject(signal.reason);
+            signal.addEventListener("abort", onAbort, { once: true });
+          });
+          // The server owns the question's wall-clock deadline. Waiting for a
+          // person does not consume this tool's execution budget.
+          return await Promise.race([
+            askUser(question, { ...askOptions, signal }),
+            abortedQuestion,
+          ]);
+        } finally {
+          if (onAbort) signal.removeEventListener("abort", onAbort);
+          questionControllers.delete(questionController);
+          waitingForUser -= 1;
+          resumeExecutionTimer();
+        }
+      };
+    }
     const moduleId = this.moduleOwners.get(name);
     if (ctx && moduleId && ctx.capabilityServices) {
       ctx.capabilityServices = Object.freeze(
@@ -234,7 +281,11 @@ export class ToolRegistry {
       if (childController.signal.aborted) onChildAbort();
     });
     const cleanup = () => {
+      finished = true;
       clearTimeout(timerId);
+      for (const controller of questionControllers) {
+        controller.abort(new DOMException("The owning tool has finished", "AbortError"));
+      }
       parentSignal?.removeEventListener("abort", onParentAbort);
       if (onChildAbort) childController.signal.removeEventListener("abort", onChildAbort);
     };

@@ -91,6 +91,22 @@ export interface MimiCompanionApi {
 export const MIMI_COMPANION_SCHEME = "csmimi";
 export const MIMI_COMPANION_DEFAULT_SIZE = 320;
 
+/** The sprite is drawn this far above the bottom of the character box, which
+ * leaves room for the action label underneath. */
+export const COMPANION_SPRITE_BOTTOM = 25;
+/** Atlas cells are 192x208 with the feet on y=203. */
+export const COMPANION_CELL = { width: 192, height: 208, feetY: 203 } as const;
+
+/** Distance from the bottom of a character box `height` tall to the feet:
+ * the sprite is 70% of the box wide, so the cell's own margin scales with it. */
+export function companionFeetOffset(height: number): number {
+  const sprite = (height * 0.7 * COMPANION_CELL.height) / COMPANION_CELL.width;
+  return (
+    COMPANION_SPRITE_BOTTOM +
+    (sprite * (COMPANION_CELL.height - COMPANION_CELL.feetY)) / COMPANION_CELL.height
+  );
+}
+
 export function companionSize(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return MIMI_COMPANION_DEFAULT_SIZE;
   return Math.max(200, Math.min(480, Math.round(value)));

@@ -84,6 +84,8 @@ export type TranscriptsAction =
       bucket: string;
       requestId: string;
       engineSessionId?: string;
+      source?: "external-runtime";
+      expiresAt?: number;
       question: string;
       header?: string;
       options?: AskUserOption[];
@@ -181,6 +183,8 @@ function reduceTranscriptAction(map: TranscriptsMap, action: TranscriptsAction):
       next = appendAskUserMessage(current, {
         requestId: action.requestId,
         engineSessionId: action.engineSessionId,
+        source: action.source,
+        expiresAt: action.expiresAt,
         question: action.question,
         header: action.header,
         options: action.options,

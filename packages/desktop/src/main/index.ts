@@ -2127,6 +2127,8 @@ async function createWindow(): Promise<BrowserWindow> {
         mobileOrchestrator.broadcastApprovalResolved({
           sessionId: route.sessionId,
           requestId: route.requestId,
+          connectionId: route.connectionId,
+          generation: route.generation,
           approved: decision.approved,
           answer: decision.answer,
         });
@@ -5639,13 +5641,22 @@ ipcMain.handle(
   "mobileRemote:approvalResolved",
   async (
     _e,
-    input: { requestId?: unknown; sessionId?: unknown; approved?: unknown; answer?: unknown },
+    input: {
+      requestId?: unknown;
+      sessionId?: unknown;
+      connectionId?: unknown;
+      generation?: unknown;
+      approved?: unknown;
+      answer?: unknown;
+    },
   ) => {
     const requestId = typeof input?.requestId === "string" ? input.requestId : "";
     if (!requestId) return false;
     mobileOrchestrator.broadcastApprovalResolved({
       requestId,
       sessionId: typeof input?.sessionId === "string" ? input.sessionId : undefined,
+      connectionId: typeof input?.connectionId === "string" ? input.connectionId : undefined,
+      generation: typeof input?.generation === "number" ? input.generation : undefined,
       approved: typeof input?.approved === "boolean" ? input.approved : undefined,
       answer: typeof input?.answer === "string" ? input.answer : undefined,
     });

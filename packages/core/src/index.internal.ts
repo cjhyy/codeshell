@@ -306,7 +306,7 @@ export {
 // ─── Protocol extensions ─────────────────────────────────────────
 
 export { createInProcessClient } from "./protocol/helpers.js";
-export type { ProtocolModelEntry } from "./protocol/types.js";
+export { USER_DECISION_TIMEOUT_MS, type ProtocolModelEntry } from "./protocol/types.js";
 
 // ─── LLM host extensions ─────────────────────────────────────────
 

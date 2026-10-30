@@ -9,10 +9,35 @@ import {
   pruneUnreadSessions,
   rawApprovalResolvedRequestId,
   removeResolvedApproval,
+  rawApprovalResolvedRoute,
+  approvalMatchesRoute,
   selectSessionReplayEntries,
 } from "./remoteAppSync";
 
 describe("mobile remote app sync helpers", () => {
+  test("resolution matches the precise session, connection and request generation", () => {
+    const current = { requestId: "ask-1", sessionId: "s1", connectionId: "worker", generation: 2 };
+    const route = rawApprovalResolvedRoute({
+      method: "agent/approvalResolved",
+      params: { ...current, approved: true },
+    });
+    expect(route).toEqual(current);
+    expect(approvalMatchesRoute(current, route!)).toBe(true);
+    for (const changed of [
+      { sessionId: "s2" },
+      { connectionId: "old-worker" },
+      { generation: 1 },
+      { requestId: "ask-2" },
+    ])
+      expect(approvalMatchesRoute(current, { ...route!, ...changed })).toBe(false);
+    expect(approvalMatchesRoute(current, { sessionId: "s1", requestId: "ask-1" })).toBe(false);
+    expect(
+      approvalMatchesRoute(
+        { sessionId: "s1", requestId: "ask-1" },
+        { sessionId: "s1", requestId: "ask-1" },
+      ),
+    ).toBe(true);
+  });
   test("session snapshot replay appends only entries past the applied cursor", () => {
     const selected = selectSessionReplayEntries(
       [

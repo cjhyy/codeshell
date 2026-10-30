@@ -74,15 +74,32 @@ export function findAskUserOrigin(
         kind: string;
         requestId?: string;
         engineSessionId?: string;
+        source?: "external-runtime";
+        expiresAt?: number;
         answer?: string;
       }>;
     }
   >,
   requestId: string,
-): { bucket: string; engineSessionId?: string; answer?: string } | undefined {
+):
+  | {
+      bucket: string;
+      engineSessionId?: string;
+      source?: "external-runtime";
+      expiresAt?: number;
+      answer?: string;
+    }
+  | undefined {
   for (const [bucket, state] of Object.entries(transcripts)) {
     const msg = state.messages.find((m) => m.kind === "ask_user" && m.requestId === requestId);
-    if (msg) return { bucket, engineSessionId: msg.engineSessionId, answer: msg.answer };
+    if (msg)
+      return {
+        bucket,
+        engineSessionId: msg.engineSessionId,
+        answer: msg.answer,
+        ...(msg.source ? { source: msg.source } : {}),
+        ...(msg.expiresAt !== undefined ? { expiresAt: msg.expiresAt } : {}),
+      };
   }
   return undefined;
 }

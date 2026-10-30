@@ -130,6 +130,7 @@ import { useSessionHistorySync } from "./app/useSessionHistorySync";
 import { useSessionWorkspaceProfiles } from "./app/useSessionWorkspaceProfiles";
 import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
+import { submitAskUserAnswer } from "./app/submitAskUserAnswer";
 import { useGoalPendingBuckets } from "./app/useGoalPendingBuckets";
 import { usePetMemoryNavigation } from "./app/usePetMemoryNavigation";
 import { createChatLinkReadHandler } from "./chat/linkResourceIntents";
@@ -1587,6 +1588,9 @@ function App() {
     // misrouted answers when the prompt belonged to a background session (cold
     // route table after a remount). Find the message by requestId to recover it.
     const origin = findAskUserOrigin(transcripts, requestId);
+    if (origin?.answer !== undefined) return;
+    if (origin?.expiresAt !== undefined && origin.expiresAt <= Date.now())
+      throw new Error(t("msg.ask.timedOut"));
     const originEngineSessionId = origin?.engineSessionId;
     const originBucket = origin?.bucket;
     const isCurrent = runController.captureApprovalFence(originBucket ?? activeBucket, requestId);
@@ -1606,12 +1610,7 @@ function App() {
           : undefined;
       engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
     }
-    if (engineSessionId) {
-      await window.codeshell.approve(engineSessionId, requestId, "approve", undefined, answer);
-    } else {
-      await window.codeshell.approve(requestId, "approve", undefined, answer);
-    }
-    if (!isCurrent()) return;
+    if (!(await submitAskUserAnswer(engineSessionId, requestId, answer, isCurrent))) return;
     dispatch({
       type: "ask_user_answered",
       // Mark answered in the bucket that actually holds the prompt (found above),
@@ -1620,7 +1619,9 @@ function App() {
       requestId,
       answer,
     });
-    // The worker has accepted the answer. A mirror notification failure must
+    // Native Core publishes the accepted decision with its exact route.
+    if (origin?.source !== "external-runtime") return;
+    // The external worker accepted the answer. A mirror notification failure must
     // not turn a successful send into a retry that submits the answer twice.
     void window.codeshell.mobileRemote
       .notifyApprovalResolved({

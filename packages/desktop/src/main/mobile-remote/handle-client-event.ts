@@ -10,6 +10,7 @@ import {
   type RoomManager,
   type RoomMeta,
   type RoomPublic,
+  type PendingMobileApprovals,
 } from "@cjhyy/code-shell-server/mobile-remote";
 import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
 import { transcriptUserDisplay } from "@cjhyy/code-shell-web";
@@ -77,6 +78,7 @@ export interface OrchestratorCtx {
   uploads: MobileUploadService;
   roomManager: RoomManager;
   approvalBridge: Pick<ApprovalBridge, "respond" | "pendingRequests">;
+  pendingApprovals: Pick<PendingMobileApprovals, "find">;
   transcriptSubscriptions: TranscriptSubscriptionManager;
   getBridge: () => AgentBridge | null;
   mobileSessionCwds: Map<string, string | null>;
@@ -106,6 +108,8 @@ export interface OrchestratorCtx {
   broadcastApprovalResolved: (params: {
     requestId: string;
     sessionId?: string;
+    connectionId?: string;
+    generation?: number;
     approved?: boolean;
     answer?: string;
   }) => void;
@@ -612,6 +616,21 @@ export async function handleClientEvent(
       }
       return;
     }
+    const sessionId = resolveSessionId(event.sessionId);
+    const pending = ctx.pendingApprovals.find(sessionId, event.approvalId);
+    if (
+      !pending ||
+      (event.connectionId !== undefined && event.connectionId !== pending.connectionId) ||
+      (event.generation !== undefined && event.generation !== pending.generation)
+    ) {
+      reply({
+        type: "error",
+        approvalId: event.approvalId,
+        message:
+          "This confirmation has expired, was already handled, or belongs to another session.",
+      });
+      return;
+    }
     // Build the same ApprovalResult branch the renderer's preload assembles:
     // approve carries optional answer (AskUser) + remembered scope/pathScope;
     // reject carries an optional reason. Decisions still go through the core
@@ -629,11 +648,16 @@ export async function handleClientEvent(
     } else {
       decision = { approved: false, reason: event.reason };
     }
-    const sessionId = resolveSessionId(event.sessionId);
+    const route = {
+      sessionId,
+      requestId: event.approvalId,
+      ...(pending.connectionId !== undefined ? { connectionId: pending.connectionId } : {}),
+      ...(pending.generation !== undefined ? { generation: pending.generation } : {}),
+    };
     const result = await injectAndAwaitResult(
       bridge,
       "agent/approve",
-      { sessionId, requestId: event.approvalId, decision },
+      { ...route, decision },
       { origin: "mobile", producer: "mobile-approval" },
     );
     if (!result.ok) {
@@ -641,8 +665,7 @@ export async function handleClientEvent(
       return;
     }
     ctx.broadcastApprovalResolved({
-      requestId: event.approvalId,
-      sessionId,
+      ...route,
       approved: event.decision === "approve",
       ...(event.decision === "approve" && event.answer !== undefined
         ? { answer: event.answer }

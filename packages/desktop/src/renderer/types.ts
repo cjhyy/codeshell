@@ -276,6 +276,9 @@ export interface AskUserMessage {
    * table cold). Undefined for legacy/pre-bind prompts with no sessionId.
    */
   engineSessionId?: string;
+  /** Native approvals resolve authoritatively through Core; external runtimes retain their mirror. */
+  source?: "external-runtime";
+  expiresAt?: number;
   question: string;
   header?: string;
   options?: AskUserOption[];
