@@ -811,7 +811,9 @@ describeIsolated("PanelAppBridge", () => {
       isWorkspaceTrusted: () => true,
       isPanelAppBound: () => true,
       getAgentBridge: () => null,
-      limits: { callTimeoutMs: 250 },
+      // Setup calls share this budget; a cold resource store on a busy runner
+      // took over 250 ms, so keep headroom while transfers still exceed it.
+      limits: { callTimeoutMs: 1_000 },
     });
     try {
       panelAppElectronMock.userDataPath = directory;
@@ -842,7 +844,7 @@ describeIsolated("PanelAppBridge", () => {
       const dispatch = service.dispatch.bind(service);
       service.dispatch = async (...args: any[]) => {
         // Delay only the transfer, after it has crossed the real IPC wrapper.
-        await new Promise((resolve) => setTimeout(resolve, 350));
+        await new Promise((resolve) => setTimeout(resolve, 1_200));
         return dispatch(...args);
       };
       const { asset } = await call("resources.upload.finish", { sessionId: upload.sessionId });
