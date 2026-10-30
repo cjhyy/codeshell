@@ -53,6 +53,7 @@ interface Selection {
   applied?: string;
   pendingInputIds?: Set<string>;
   pendingInputBytes?: number;
+  legacyEvents?: Record<string, unknown>[];
   readyTimer?: ReturnType<typeof setTimeout>;
   deadlineTimer?: ReturnType<typeof setTimeout>;
   capacityTimer?: ReturnType<typeof setTimeout>;
@@ -88,14 +89,14 @@ export class MobileOutputClient {
   private auth = 0;
   private sequence = 0;
   private selection?: Selection;
-  private legacyHostSelection = false;
+  private legacyHostSelection?: Selection;
   private lastResync?: { sessionId: string; revision: number; auth: number; at: number };
   constructor(
     private readonly deps: {
       send: (event: MobileClientEvent) => boolean;
       current: () => { sessionId?: string; roomId?: string; revision: number };
       commit: (sessionId: string, result: Result) => void;
-      legacy: (sessionId: string) => void;
+      legacy: (sessionId: string, events?: Record<string, unknown>[]) => void;
       failed: (sessionId: string) => void;
       awaitingJournal?: (sessionId: string) => void;
       progress?: (sessionId: string, progress: MobileRecoveryProgress | undefined) => void;
@@ -112,7 +113,7 @@ export class MobileOutputClient {
     const legacyHostSelection = this.legacyHostSelection;
     this.selection = undefined;
     this.historyReads.reset();
-    this.legacyHostSelection = false;
+    this.legacyHostSelection = undefined;
     this.lastResync = undefined;
     if (old?.readyTimer) clearTimeout(old.readyTimer);
     if (old?.deadlineTimer) clearTimeout(old.deadlineTimer);
@@ -201,7 +202,7 @@ export class MobileOutputClient {
   private current(selection: Selection): boolean {
     const current = this.deps.current();
     return (
-      this.selection === selection &&
+      (this.selection === selection || this.legacyHostSelection === selection) &&
       selection.auth === this.auth &&
       current.sessionId === selection.sessionId &&
       !current.roomId &&
@@ -254,7 +255,7 @@ export class MobileOutputClient {
       event.type !== "session.historyDetail"
     )
       return false;
-    const selection = this.selection;
+    const selection = this.selection ?? this.legacyHostSelection;
     if (
       !selection ||
       !this.current(selection) ||
@@ -268,6 +269,7 @@ export class MobileOutputClient {
         this.fail(selection);
         return true;
       }
+      if (selection === this.legacyHostSelection) return true;
       if (selection.started || selection.failed) return true;
       selection.started = true;
       selection.journalRequired = event.journalRequired === true;
@@ -429,6 +431,9 @@ export class MobileOutputClient {
       }
     }
     return recoverMobileOutput({
+      legacyTranscript: (events) => {
+        selection.legacyEvents = events;
+      },
       requireJournal: selection.journalRequired,
       canContinue: () => this.current(selection) && !selection.failed,
       latestCursor: () => selection.latest,
@@ -629,11 +634,13 @@ export class MobileOutputClient {
         selection.deadlineTimer = undefined;
         this.deps.progress?.(selection.sessionId, undefined);
         this.selection = undefined;
-        this.legacyHostSelection = true;
+        this.legacyHostSelection = selection;
         // Native pre-journal history still uses the verified Host selection.
         // Cancelling it here would revoke the command/history authority before
         // the legacy request arrives. Only release local output ownership.
-        this.deps.legacy(selection.sessionId);
+        const events = selection.legacyEvents;
+        selection.legacyEvents = undefined;
+        this.deps.legacy(selection.sessionId, events);
         return;
       }
       if (
