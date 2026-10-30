@@ -347,7 +347,13 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     target = point;
     avoidRect = reserved;
     scene = point ? where : {};
-    if (!target || pinned) return;
+    if (!target) return;
+    // A drag holds the character only while nothing is happening; the next
+    // operation takes it back to the work.
+    if (pinned) {
+      pinned = false;
+      void persist();
+    }
     anchor = undefined;
     const next = screen.getDisplayNearestPoint({
       x: Math.round(target.x),
