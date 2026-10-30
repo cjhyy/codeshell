@@ -155,6 +155,8 @@ export async function recoverMobileOutput(args: {
   latestCursor: () => string | undefined;
   requireJournal?: boolean;
   progress?: (progress: MobileRecoveryProgress) => void;
+  /** A selected pre-journal transcript is display history, never a fake cursor. */
+  legacyTranscript?: (events: Record<string, unknown>[]) => void;
 }) {
   let reply = await args.read({});
   if (!args.canContinue()) throw new Error("Recovery cancelled");
@@ -194,12 +196,33 @@ export async function recoverMobileOutput(args: {
         throw new Error("Required output journal is unavailable");
     } else throw new MobileAwaitingJournal();
   }
-  if (reply.page.status === "unavailable") return null;
+  const legacyOnly = reply.page.status === "unavailable" && !!reply.legacyBase;
+  if (reply.page.status === "unavailable" && !legacyOnly) return null;
+  if (
+    legacyOnly &&
+    (!args.readBase ||
+      !args.legacyTranscript ||
+      args.requireJournal ||
+      !reply.snapshot?.epoch ||
+      reply.snapshot.nextSeq !== 1 ||
+      reply.snapshot.unpaired ||
+      reply.snapshot.outputCursor ||
+      reply.snapshot.journalIdentity ||
+      reply.snapshot.inputIds?.length)
+  )
+    throw new Error("Legacy display is unavailable");
 
   let chat = initialChatState();
+  const legacyEvents: Record<string, unknown>[] = [];
   let pages = 0;
-  if (reply.page.status === "ok" && reply.legacyBaseComplete === false && args.readBase) {
-    const throughEventId = reply.page.legacyBaseThroughEventId;
+  if (
+    (reply.page.status === "ok" || legacyOnly) &&
+    reply.legacyBaseComplete === false &&
+    args.readBase
+  ) {
+    const throughEventId = legacyOnly
+      ? reply.legacyBase!.throughEventId
+      : reply.page.legacyBaseThroughEventId;
     if (typeof throughEventId !== "string" || !throughEventId || throughEventId.length > 512)
       throw new Error("Recovery base is incomplete");
     const cursors = new Set<string>();
@@ -255,7 +278,10 @@ export async function recoverMobileOutput(args: {
             cursors.has(base.next))
       )
         throw new Error("Recovery base is incomplete or exceeds its bound");
-      for (const event of base.events) chat = reduceStream(chat, event);
+      for (const event of base.events) {
+        chat = reduceStream(chat, event);
+        if (legacyOnly) legacyEvents.push(event);
+      }
       args.progress?.({ phase: "legacy", pages, receivedBytes: bytes });
       index += base.events.length;
       if (base.complete) break;
@@ -277,6 +303,11 @@ export async function recoverMobileOutput(args: {
   }
   // A legacy transcript establishes display history, never live completion.
   chat = { ...chat, run: chat.run === "error" ? "error" : "idle", liveByAgent: {} };
+  if (legacyOnly) {
+    if (args.latestCursor()) throw new MobileHistoryViewChanged();
+    args.legacyTranscript!(legacyEvents);
+    return null;
+  }
   let recovery: OutputJournalRecovery = { incomplete: false };
   // A continuation retains the verified private candidate and the same total
   // page budget. No prefix is published until the eventual frozen join passes.

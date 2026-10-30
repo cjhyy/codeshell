@@ -143,6 +143,7 @@ export function useHostSubscriptions({
   } = sessions;
   const { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys } = activity;
   const pendingApprovalIdsRef = useRef(new Set<string>());
+  const pendingMobilePermissionsRef = useRef(new Map<string, PermissionMode>());
   const coreApprovalIdsRef = useRef(new Set<string>());
   const externalRuntimeSessionIdsRef = useRef(new Set<string>());
   const externalApprovalsRef = useRef({
@@ -576,6 +577,7 @@ export function useHostSubscriptions({
         title: string;
         prompt: string;
         clientMessageId?: string;
+        permissionMode?: MobilePermissionModeEnvelope["mode"];
       },
       source: "mobile" | "pet-delegation",
     ): Promise<void> => {
@@ -644,6 +646,24 @@ export function useHostSubscriptions({
       }
 
       const bucket = bucketKey(projectId, sessionId);
+      if (source === "mobile") {
+        // Permission messages can precede both the announcement and its async
+        // project lookup. An explicit event wins over the announcement's copy.
+        const alreadyAdopted =
+          known ||
+          resolveBucket(meta.sessionId, engineToBucketRef.current, sessionIndicesRef.current, null);
+        const mode =
+          pendingMobilePermissionsRef.current.get(meta.sessionId) ??
+          (!alreadyAdopted && meta.permissionMode !== undefined
+            ? fromMobilePermissionMode(meta.permissionMode)
+            : undefined);
+        if (mode !== undefined) {
+          // Commit the override before publishing the new index: otherwise a
+          // Desktop permission snapshot can send its global default for this row.
+          flushSync(() => setPermissionOverrides((prev) => ({ ...prev, [bucket]: mode })));
+          pendingMobilePermissionsRef.current.delete(meta.sessionId);
+        }
+      }
       engineToBucketRef.current.set(meta.sessionId, bucket);
       window.codeshell.registerBrowserSessionBucket({
         sessionId: meta.sessionId,
@@ -872,7 +892,12 @@ export function useHostSubscriptions({
       };
       const currentOverride = () => {
         const bucket = currentRoute();
-        return bucket ? permissionOverrideForBucketRef.current(bucket) : null;
+        // A fast first tool request may precede the async sidebar adoption.
+        // Its explicit phone restriction already belongs to this Session.
+        return (
+          pendingMobilePermissionsRef.current.get(env.sessionId ?? "") ??
+          (bucket ? permissionOverrideForBucketRef.current(bucket) : null)
+        );
       };
       const showApproval = () => {
         if (!isCurrent()) return;
@@ -1067,6 +1092,7 @@ export function useHostSubscriptions({
     const offMobilePermissionMode = window.codeshell.onMobilePermissionMode(
       (env: MobilePermissionModeEnvelope) => {
         if (!env.sessionId) return;
+        const mode = fromMobilePermissionMode(env.mode);
         const bucketFromRoute =
           engineToBucketRef.current.get(env.sessionId) ||
           resolveBucket(
@@ -1088,8 +1114,11 @@ export function useHostSubscriptions({
             }
           }
         }
-        if (!bucket) return;
-        const mode = fromMobilePermissionMode(env.mode);
+        if (!bucket) {
+          pendingMobilePermissionsRef.current.set(env.sessionId, mode);
+          return;
+        }
+        pendingMobilePermissionsRef.current.delete(env.sessionId);
         // This is an explicit choice for the target Session. Comparing it to
         // the foreground project's default can erase a background restriction.
         setPermissionOverrides((prev) => ({ ...prev, [bucket]: mode }));

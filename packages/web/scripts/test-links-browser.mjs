@@ -158,6 +158,7 @@ async function mount({
   readFail = false,
   theme = "light",
   touch = false,
+  legacyConnection = false,
 } = {}) {
   // Like the real Host, derive the attempt and its step from one instant. Two
   // Date.now() reads can straddle a millisecond, making the step outlive the
@@ -201,7 +202,9 @@ async function mount({
     hasTouch: touch,
     isMobile: touch,
   });
-  if (touch)
+  if (legacyConnection)
+    host.snapshot.connections[0].id = `link-${provider.id}-${provider.connectionMethods[0].id}`;
+  if (touch && !legacyConnection)
     host.snapshot.providers = [
       {
         ...provider,
@@ -415,6 +418,56 @@ async function scrollState(page) {
   }));
 }
 try {
+  if (!onlyCase || onlyCase === "new-account") {
+    const { page, context, host } = await mount({
+      width: 390,
+      height: 844,
+      touch: true,
+      legacyConnection: true,
+    });
+    const gestures = await context.newCDPSession(page);
+    const add = page
+      .locator(".links-provider")
+      .getByRole("button", { name: "添加连接", exact: true });
+    await touchReveal(page, gestures, page.locator(".hub-links"), add);
+    await tapVisible(page, add);
+    await editor(page).waitFor();
+    await editor(page).getByRole("textbox", { name: "Owned token", exact: true }).waitFor();
+    assert.equal(
+      await editor(page).locator(".links-conflict").count(),
+      0,
+      "new authorization cannot inherit a legacy account's revision",
+    );
+    assert.equal(
+      await editor(page).getByRole("textbox", { name: "Owned token", exact: true }).isEnabled(),
+      true,
+    );
+    const begin = host.authCalls.find((call) => call.method === "POST");
+    assert.equal(begin.body.expectedRevision, null);
+    assert.equal(begin.body.connectionId, undefined);
+    const close = editor(page).getByRole("button", { name: "关闭", exact: true });
+    await touchReveal(page, gestures, editor(page), close);
+    await tapVisible(page, close);
+    const deadline = Date.now() + 5000;
+    while (!host.authPending.length) {
+      assert.ok(Date.now() < deadline);
+      await frames(page);
+    }
+    await host.authPending.shift().fulfill({ contentType: "application/json", body: "{}" });
+    await editor(page).waitFor({ state: "detached" });
+    await page.getByRole("button", { name: "返回对话", exact: true }).tap();
+    await page.locator(".chat:not([hidden])").waitFor();
+    assert.equal(new URL(page.url()).searchParams.get("view"), null);
+    assert.equal(await page.locator(".navigation-prompt").count(), 0);
+    assert.deepEqual(host.calls, []);
+    assert.deepEqual(host.responsePending, []);
+    assert.equal(host.authCalls.filter((call) => call.method === "POST").length, 1);
+    assert.equal(host.authCalls.filter((call) => call.method === "DELETE").length, 1);
+    await record(page, "new-account-beside-legacy-cancel-and-return", {
+      authCalls: host.authCalls,
+    });
+    await context.close();
+  }
   if (!onlyCase || onlyCase === "touch-scroll")
     for (const [width, height] of [
       [390, 844],

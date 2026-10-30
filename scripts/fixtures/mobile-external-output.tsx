@@ -107,6 +107,7 @@ export async function run(root: string, port: number) {
     journalRequired: (id) =>
       service.hasSession(id) ||
       isPersistedExternalRuntime(new SessionManager().readSessionState(id)),
+    hasLiveExternalProducer: (id) => service.hasSession(id),
     authority: async (id) => {
       const stamp = await mobileOutputRecoveryAuthority(id);
       if (stamps.has(id) && stamps.get(id) !== stamp) authorityChanges++;
@@ -159,6 +160,8 @@ export async function run(root: string, port: number) {
     commands.revoke(viewerId, true);
   });
   const states = new Map();
+  const permissionBroadcasts: Parameters<OrchestratorCtx["broadcastDesktopPermissionMode"]>[0][] =
+    [];
   context = {
     outputRecovery: recovery,
     externalCommands: commands,
@@ -181,6 +184,7 @@ export async function run(root: string, port: number) {
     effectiveMobileRunCwd: () => cwd,
     resolveSessionWorkspaceRoot: async () => cwd,
     sendMobilePermissionMode() {},
+    broadcastDesktopPermissionMode: (mode) => permissionBroadcasts.push(mode),
     replayPendingMobileApprovals() {},
     broadcastMobileSession() {},
     uploads: {
@@ -190,7 +194,8 @@ export async function run(root: string, port: number) {
       async release() {},
       async finalize() {},
     },
-  } as unknown as OrchestratorCtx;
+  } satisfies Pick<OrchestratorCtx, "broadcastDesktopPermissionMode"> &
+    Record<string, unknown> as unknown as OrchestratorCtx;
   const requests = () => {
     try {
       return readFileSync(process.env.CODESHELL_OUTPUT_REQUEST_LOG!, "utf8")
@@ -367,6 +372,10 @@ export async function run(root: string, port: number) {
           .map(({ event }) => ({ type: (event as any).type, message: (event as any).message })),
       }),
     );
+    assert.deepEqual(permissionBroadcasts.at(-1), {
+      sessionId: "external-mobile",
+      mode: "default",
+    });
     await until(
       () => text() === expected.repeat(3) && hook.result.current.chat.run === "completed",
     );

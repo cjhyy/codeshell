@@ -16,6 +16,71 @@ const cleanup: Array<() => void> = [];
 afterEach(() => {
   for (const fn of cleanup.splice(0)) fn();
 });
+
+test.each(["current", "cancelled", "navigated", "reauthenticated"])(
+  "legacy display grants retain a revocation fence only for the current selection (%s)",
+  async (state) => {
+    let sessionId = "old",
+      revision = 1,
+      failures = 0,
+      fallbacks = 0,
+      recoveryId = "";
+    const client = new MobileOutputClient({
+      current: () => ({ sessionId, revision }),
+      send: (event) => {
+        queueMicrotask(() => {
+          if (event.type === "session.select" && event.recoveryId) {
+            recoveryId = event.recoveryId;
+            client.observe({
+              type: "session.recovery.ready",
+              sessionId: event.sessionId,
+              recoveryId,
+              ok: true,
+            });
+          }
+          if (event.type === "session.outputJournal")
+            client.observe({
+              type: "session.outputJournal",
+              sessionId: event.sessionId,
+              recoveryId: event.recoveryId,
+              requestId: event.requestId,
+              page: { version: 1, status: "unavailable", frames: [], complete: false },
+              snapshot: { epoch: "owned", nextSeq: 1, unpaired: false },
+            });
+        });
+        return true;
+      },
+      commit: () => {
+        throw new Error("A legacy transcript is not a journal commit");
+      },
+      legacy: () => {
+        fallbacks++;
+      },
+      failed: () => {
+        failures++;
+      },
+    });
+    try {
+      const auth = { type: "auth.ok", capabilities: { outputJournal: 1 } } as MobileServerEvent;
+      client.observe(auth);
+      client.begin(sessionId);
+      for (let i = 0; i < 20 && !fallbacks; i++) await new Promise((done) => setTimeout(done, 1));
+      expect(fallbacks).toBe(1);
+      expect(client.owns(sessionId)).toBe(false);
+      if (state === "cancelled") client.cancel(false);
+      if (state === "navigated") {
+        sessionId = "other";
+        revision++;
+      }
+      if (state === "reauthenticated") client.observe(auth);
+      client.observe({ type: "session.recovery.ready", sessionId: "old", recoveryId, ok: false });
+      expect(failures).toBe(state === "current" ? 1 : 0);
+      expect(fallbacks).toBe(1);
+    } finally {
+      client.cancel(false);
+    }
+  },
+);
 function fixture(
   id = "external",
   pendingJournal = false,

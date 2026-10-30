@@ -1185,3 +1185,167 @@ test("history banner exposes verified progress without declaring completion or d
     await hook.unmount();
   }
 });
+
+test("empty-session replacement retains editable input through failure and retries without sending", async () => {
+  const sent: Array<Record<string, unknown>> = [];
+  let retries = 0;
+  let creates = 0;
+  let app = remoteApp({
+    activeSessionId: "empty-old",
+    runtimeModels,
+    newSession: () => {
+      creates++;
+    },
+    retryEmptySessionReplacement: () => {
+      retries++;
+    },
+    sendChat: async (input) => {
+      sent.push(input);
+      return true;
+    },
+  });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    await act(async () => {
+      hook.result.current.setDraft("unsent task");
+      modelPicker(hook.result.current).onChange("codex/fixture");
+      hook.result.current.addFiles([
+        new File(["owned"], "kept.png", { type: "image/png" }),
+      ] as unknown as FileList);
+    });
+    app = { ...app, emptySessionReplacement: { fromSessionId: "empty-old", status: "pending" } };
+    await hook.rerender();
+    expect(hook.result.current.loading).toBe(true);
+    expect(hook.result.current.readOnly).toBeFalsy();
+    expect(hook.result.current.send()).toBe(false);
+    expect(modelPicker(hook.result.current).disabled).toBe(true);
+    await act(async () => hook.result.current.setDraft("unsent task plus later typing"));
+    app = { ...app, emptySessionReplacement: { fromSessionId: "empty-old", status: "failed" } };
+    await hook.rerender();
+    expect(hook.result.current.loading).toBe(true);
+    expect(hook.result.current.loadingLabel).toContain("重试建立会话");
+    expect(hook.result.current.send()).toBe(false);
+    expect(modelPicker(hook.result.current).disabled).toBe(false);
+    await act(async () => modelPicker(hook.result.current).onRetryCreation!());
+    expect(retries).toBe(1);
+    expect(creates).toBe(0);
+    expect(sent).toEqual([]);
+    app = {
+      ...app,
+      activeSessionId: "empty-new",
+      emptySessionReplacement: {
+        fromSessionId: "empty-old",
+        toSessionId: "empty-new",
+        status: "complete",
+      },
+    };
+    await hook.rerender();
+    expect(hook.result.current.loading).toBe(false);
+    expect(hook.result.current.draft).toBe("unsent task plus later typing");
+    expect(hook.result.current.files.map((file) => file.name)).toEqual(["kept.png"]);
+    expect(modelPicker(hook.result.current).value).toBe("codex/fixture");
+    expect(sent).toEqual([]);
+    await hook.rerender();
+    expect(hook.result.current.files).toHaveLength(1);
+    await act(async () => {
+      expect(hook.result.current.send()).toBe(true);
+      await flushMicrotasks();
+    });
+    expect(sent).toHaveLength(1);
+    expect(sent[0].text).toBe("unsent task plus later typing");
+    expect(sent[0].modelKey).toBe("codex/fixture");
+    expect((sent[0].attachments as Array<{ file: File }>).map((item) => item.file.name)).toEqual([
+      "kept.png",
+    ]);
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test("empty-session replacement merges destination edits and preserves its newer model choice", async () => {
+  let app = remoteApp({ activeSessionId: "replacement", runtimeModels });
+  const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+  try {
+    await act(async () => {
+      hook.result.current.setDraft("destination typing");
+      hook.result.current.addFiles([
+        new File(["new"], "new.png", { type: "image/png" }),
+      ] as unknown as FileList);
+      modelPicker(hook.result.current).onChange("claude-code/sonnet");
+    });
+    app = { ...app, activeSessionId: "empty" };
+    await hook.rerender();
+    await act(async () => {
+      hook.result.current.setDraft("source typing");
+      hook.result.current.addFiles([
+        new File(["old"], "old.png", { type: "image/png" }),
+      ] as unknown as FileList);
+      modelPicker(hook.result.current).onChange("codex/fixture");
+    });
+    app = { ...app, emptySessionReplacement: { fromSessionId: "empty", status: "pending" } };
+    await hook.rerender();
+    app = {
+      ...app,
+      activeSessionId: "replacement",
+      emptySessionReplacement: {
+        fromSessionId: "empty",
+        toSessionId: "replacement",
+        status: "complete",
+      },
+    };
+    await hook.rerender();
+    expect(hook.result.current.draft).toBe("source typing\n\ndestination typing");
+    expect(hook.result.current.files.map((file) => file.name)).toEqual(["old.png", "new.png"]);
+    expect(modelPicker(hook.result.current).value).toBe("claude-code/sonnet");
+    await hook.rerender();
+    expect(hook.result.current.draft).toBe("source typing\n\ndestination typing");
+    app = { ...app, activeSessionId: "empty", emptySessionReplacement: undefined };
+    await hook.rerender();
+    expect(hook.result.current.draft).toBe("");
+    expect(hook.result.current.files).toEqual([]);
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test.each(["session", "new", "cli"])(
+  "late empty-session replacement after %s navigation never moves the old draft",
+  async (navigation) => {
+    let app = remoteApp({ activeSessionId: "empty" });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      await act(async () => hook.result.current.setDraft("keep on old draft"));
+      app = { ...app, emptySessionReplacement: { fromSessionId: "empty", status: "pending" } };
+      await hook.rerender();
+      await act(async () => {
+        if (navigation === "session") hook.result.current.selectSession("other");
+        else if (navigation === "new") hook.result.current.newSession();
+        else {
+          const sidebar = hook.result.current.renderSidebar!({
+            guard: noop,
+            conversation: noop,
+          }) as React.ReactElement<{ app: RemoteApp }>;
+          sidebar.props.app.openCcSession("cli", "/owned", "default");
+        }
+      });
+      // Even a late producer that changes activeId cannot authorize draft migration
+      // after the controller has observed an explicit navigation intent.
+      app = {
+        ...app,
+        activeSessionId: "replacement",
+        emptySessionReplacement: {
+          fromSessionId: "empty",
+          toSessionId: "replacement",
+          status: "complete",
+        },
+      };
+      await hook.rerender();
+      expect(hook.result.current.draft).toBe("");
+      app = { ...app, activeSessionId: "empty", emptySessionReplacement: undefined };
+      await hook.rerender();
+      expect(hook.result.current.draft).toBe("keep on old draft");
+    } finally {
+      await hook.unmount();
+    }
+  },
+);

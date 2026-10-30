@@ -254,6 +254,19 @@ test("session creation accepts bounded optional client correlation without chang
   expect(parseMobileClientEvent({ type: "session.create" })).toEqual({ type: "session.create" });
 });
 
+test("creation and sends carry only valid optional permission intent while preserving legacy requests", () => {
+  for (const event of [{ type: "session.create" }, { type: "chat.send", text: "fixture" }]) {
+    expect(parseMobileClientEvent(event)).toEqual(event);
+    for (const permissionMode of ["default", "acceptEdits", "bypassPermissions"])
+      expect(parseMobileClientEvent({ ...event, permissionMode })).toEqual({
+        ...event,
+        permissionMode,
+      });
+    for (const permissionMode of ["", "skip", null, true, {}, []])
+      expect(parseMobileClientEvent({ ...event, permissionMode })).toBeUndefined();
+  }
+});
+
 test("session sync accepts optional bounded epochs and rejects malformed lifetime identifiers", () => {
   const legacy = { type: "session.sync", sessionId: "s1", sinceSeq: 100 };
   expect(parseMobileClientEvent(legacy)).toEqual(legacy);

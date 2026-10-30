@@ -33,6 +33,7 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
       break;
     case "chat.send":
       valid =
+        optionalMember(event.permissionMode, PERMISSION_MODES) &&
         boundedOptionalEmptyString(event.text, MAX_MESSAGE_LENGTH) &&
         (event.modelKey === undefined ||
           (boundedString(event.modelKey, MAX_ID_LENGTH) &&
@@ -115,6 +116,7 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
       break;
     case "session.create":
       valid =
+        optionalMember(event.permissionMode, PERMISSION_MODES) &&
         optionalBoundedString(event.clientRequestId, MAX_ID_LENGTH) &&
         (event.cwd === undefined || event.cwd === null || boundedPath(event.cwd)) &&
         (event.projectId === undefined ||
