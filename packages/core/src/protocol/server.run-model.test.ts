@@ -4,6 +4,13 @@ import { ChatSessionManager } from "./chat-session-manager.js";
 import type { EngineConfigSlice } from "./chat-session-manager.js";
 import { ErrorCodes } from "./types.js";
 import type { Engine, EngineResult } from "../engine/engine.js";
+import { Engine as ActualEngine } from "../engine/engine.js";
+import { LLMClientBase } from "../llm/client-base.js";
+import { registerProvider } from "../llm/client-factory.js";
+import type { CreateMessageOptions } from "../llm/types.js";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 function makeTransport() {
   const sent: any[] = [];
@@ -48,6 +55,96 @@ function makeEngine(opts: { failSwitch?: boolean } = {}) {
 }
 
 describe("agent/run model", () => {
+  it("persists the actual per-run model on first use and after a later native switch", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "native-model-metadata-"));
+    const provider = "owned-native-model-metadata";
+    const calls: string[] = [];
+    class OwnedClient extends LLMClientBase {
+      protected initClient() {}
+      async createMessage(options: CreateMessageOptions) {
+        if (options.requestVisible !== false) calls.push(this.model);
+        const usage = { promptTokens: 1, completionTokens: 1, totalTokens: 2 };
+        this.recordUsage(usage, options);
+        return { text: "owned response", toolCalls: [], stopReason: "stop" as const, usage };
+      }
+    }
+    registerProvider(provider, OwnedClient);
+    const engine = new ActualEngine({
+      llm: { provider, model: "initial" },
+      cwd: dir,
+      sessionStorageDir: join(dir, "sessions"),
+      settingsScope: "isolated",
+      headless: true,
+      enabledBuiltinTools: [],
+      maxTurns: 2,
+    });
+    (engine as any).hooks.clear();
+    for (const model of ["custom-alpha", "custom-beta"])
+      engine.getModelPool().register({ key: model, provider, model });
+    const manager = new ChatSessionManager({ runtime: {} as never, engineFactory: () => engine });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager: manager });
+    try {
+      for (const [index, model] of ["custom-alpha", "custom-beta"].entries()) {
+        const id = 700 + index;
+        t.deliver({
+          jsonrpc: "2.0",
+          id,
+          method: "agent/run",
+          params: {
+            sessionId: "native-metadata",
+            cwd: dir,
+            task: "owned input",
+            clientMessageId: `input-${index}`,
+            model,
+            permissionMode: "default",
+          },
+        });
+        const deadline = Date.now() + 5000;
+        while (!t.sent.some((item) => item.id === id) && Date.now() < deadline)
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        expect(t.sent.find((item) => item.id === id)?.result?.reason).toBe("completed");
+        expect(calls.at(-1)).toBe(model);
+        const state = JSON.parse(
+          readFileSync(join(dir, "sessions", "native-metadata", "state.json"), "utf8"),
+        );
+        expect(state).toMatchObject({ sessionId: "native-metadata", model, provider });
+      }
+      expect(calls).toEqual(["custom-alpha", "custom-beta"]);
+      for (const [id, model, clientMessageId] of [
+        [702, "missing", "rejected"],
+        [703, "custom-alpha", "input-0"],
+      ] as const) {
+        t.deliver({
+          jsonrpc: "2.0",
+          id,
+          method: "agent/run",
+          params: {
+            sessionId: "native-metadata",
+            cwd: dir,
+            task: "owned input",
+            clientMessageId,
+            model,
+          },
+        });
+        const deadline = Date.now() + 5000;
+        while (!t.sent.some((item) => item.id === id) && Date.now() < deadline)
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        expect(t.sent.find((item) => item.id === id)).toBeDefined();
+        if (model === "missing") expect(t.sent.find((item) => item.id === id)?.error).toBeDefined();
+        else expect(t.sent.find((item) => item.id === id)?.result?.reason).toBe("completed");
+        const state = JSON.parse(
+          readFileSync(join(dir, "sessions", "native-metadata", "state.json"), "utf8"),
+        );
+        expect(state.model).toBe("custom-beta");
+        expect(state.provider).toBe(provider);
+        expect(calls).toEqual(["custom-alpha", "custom-beta"]);
+      }
+    } finally {
+      await manager.closeAllAsync();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   it("uses the general preset for a fresh isolated Task instead of inheriting coding", async () => {
     const { engine } = makeEngine();
     let createdWith: EngineConfigSlice | undefined;

@@ -266,6 +266,17 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
       sessionBrief: args.sessionBrief,
     });
   }
+  // Record the actual resolved run model only after accepting a new input.
+  // A duplicate returns above and must not relabel an earlier execution.
+  if (session.state.model !== args.llmModel || session.state.provider !== args.llmProvider) {
+    if (
+      !args.sessionManager.saveStateOrUpdateFields(session.state, {
+        model: args.llmModel,
+        provider: args.llmProvider,
+      })
+    )
+      throw new SessionError("Could not persist the accepted run model");
+  }
   // Derive the predecessor and turn sequence from the same successful CAS that
   // publishes this run. The earlier resume snapshot may predate another opener.
   const previousRunId = args.sessionManager.startSessionRun(
