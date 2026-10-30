@@ -850,6 +850,138 @@ describe("host subscriptions and recovery", () => {
     expect(overrides.value).toEqual({ [bucketKey("project", "pinned-1")]: "default" });
   });
 
+  test("a new mobile default is installed before adoption can publish the Desktop bypass default", async () => {
+    const sessionId = "mobile-default";
+    const bucket = bucketKey("project", sessionId);
+    const foreground = bucketKey("project", "pinned-4");
+    const overrides = cell<Record<string, PermissionMode>>({ [foreground]: "bypass" });
+    userSettings = { permissionMode: "bypass" };
+    params.permissions.setPermissionOverrides = overrides.set;
+    params.permissions.permissionOverrideForBucketRef.current = (key) =>
+      overrides.value[key] ?? null;
+    const published: Array<PermissionMode | undefined> = [];
+    params.sessions.setSessionIndices = (action) => {
+      published.push(overrides.value[bucket]);
+      indices.set(action);
+    };
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onMobileSession")!({ ...announcement(sessionId), permissionMode: "default" });
+      await flushMicrotasks();
+    });
+    expect(published).toEqual(["default"]);
+    expect(overrides.value).toEqual({ [foreground]: "bypass", [bucket]: "default" });
+    const request = { ...approval(), sessionId };
+    await act(async () => {
+      listeners.get("onApprovalRequest")!(request);
+      await flushMicrotasks();
+    });
+    expect(approveCalls).toEqual([]);
+    expect(approvals.value).toEqual([request]);
+  });
+
+  test("an explicit mobile mode received before its bucket exists survives first adoption", async () => {
+    const sessionId = "mobile-before-adoption";
+    const overrides = cell<Record<string, PermissionMode>>({});
+    params.permissions.setPermissionOverrides = overrides.set;
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "default" });
+      listeners.get("onMobileSession")!({
+        ...announcement(sessionId),
+        permissionMode: "bypassPermissions",
+      });
+      await flushMicrotasks();
+    });
+    expect(overrides.value[bucketKey("project", sessionId)]).toBe("default");
+  });
+
+  test.each([false, true])(
+    "an unadopted mobile restriction prevents automatic approval (settings lookup already pending: %s)",
+    async (lookupPending) => {
+      const sessionId = "mobile-unadopted-approval";
+      const read = deferred<Record<string, unknown>>();
+      readPermissionSettings = () => read.promise;
+      userSettings = { permissionMode: "bypass" };
+      hook = await renderHook(() => useHostSubscriptions(params));
+      const request = { ...approval(), sessionId };
+      await act(async () => {
+        if (lookupPending) listeners.get("onApprovalRequest")!(request);
+        listeners.get("onMobilePermissionMode")!({ sessionId, mode: "default" });
+        if (!lookupPending) listeners.get("onApprovalRequest")!(request);
+        read.resolve({ permissionMode: "bypass" });
+        await flushMicrotasks();
+      });
+      expect(approveCalls).toEqual([]);
+      expect(approvals.value).toEqual([request]);
+      expect(permissionReads).toEqual(lookupPending ? [sessionId] : []);
+    },
+  );
+
+  test("the latest explicit mode during project lookup wins over the announcement", async () => {
+    const sessionId = "mobile-during-adoption";
+    const placement = deferred<unknown[]>();
+    resolveCwds = () => placement.promise;
+    const overrides = cell<Record<string, PermissionMode>>({});
+    params.permissions.setPermissionOverrides = overrides.set;
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onMobileSession")!({ ...announcement(sessionId), permissionMode: "default" });
+      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "bypassPermissions" });
+      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "acceptEdits" });
+      placement.resolve([{ projectId: "project", rootId: "root", created: false }]);
+      await flushMicrotasks();
+    });
+    expect(overrides.value[bucketKey("project", sessionId)]).toBe("accept_edits");
+  });
+
+  test("a delayed duplicate announcement cannot overwrite a later explicit mobile choice", async () => {
+    const sessionId = "mobile-duplicate-adoption";
+    const first = deferred<unknown[]>();
+    let lookups = 0;
+    resolveCwds = () =>
+      ++lookups === 1
+        ? first.promise
+        : Promise.resolve([{ projectId: "project", rootId: "root", created: false }]);
+    const overrides = cell<Record<string, PermissionMode>>({});
+    params.permissions.setPermissionOverrides = overrides.set;
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onMobileSession")!({
+        ...announcement(sessionId),
+        permissionMode: "bypassPermissions",
+      });
+      listeners.get("onMobileSession")!({ ...announcement(sessionId), permissionMode: "default" });
+      await flushMicrotasks();
+    });
+    expect(overrides.value[bucketKey("project", sessionId)]).toBe("default");
+    await act(async () => {
+      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "acceptEdits" });
+      first.resolve([{ projectId: "project", rootId: "root", created: false }]);
+      await flushMicrotasks();
+    });
+    expect(overrides.value[bucketKey("project", sessionId)]).toBe("accept_edits");
+  });
+
+  test("existing Desktop sessions keep their choice while new explicit mobile events still apply", async () => {
+    const sessionId = "pinned-1";
+    const bucket = bucketKey("project", sessionId);
+    const overrides = cell<Record<string, PermissionMode>>({ [bucket]: "bypass" });
+    params.permissions.setPermissionOverrides = overrides.set;
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onMobileSession")!({ ...announcement(sessionId), permissionMode: "default" });
+      await flushMicrotasks();
+    });
+    expect(overrides.value[bucket]).toBe("bypass");
+    await act(async () => {
+      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "acceptEdits" });
+      listeners.get("onMobileSession")!({ ...announcement(sessionId), permissionMode: "default" });
+      await flushMicrotasks();
+    });
+    expect(overrides.value[bucket]).toBe("accept_edits");
+  });
+
   test("a resolved approval cannot be approved or displayed after its settings arrive", async () => {
     const read = deferred<Record<string, unknown>>();
     readPermissionSettings = () => read.promise;

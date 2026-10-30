@@ -1,6 +1,7 @@
 import type { CloudAccountApi } from "../shared/cloud-account.js";
 import type { SessionOutputRecoveryApi } from "./session-transcript-api.js";
 import type { ModelTraceApi } from "./model-trace-api.js";
+import type { MobileSessionAnnouncement } from "./mobile-session-announcement.js";
 import type { CloudEnvironmentApi } from "../shared/cloud-environment.js";
 import type { CloudWorkbenchApi } from "../shared/cloud-management.js";
 import type {
@@ -1303,15 +1304,7 @@ export interface CodeshellApi
    * CodeShell run so the desktop renderer can place the session under the
    * correct project before stream events arrive.
    */
-  onMobileSession(
-    cb: (meta: {
-      sessionId: string;
-      cwd: string;
-      title: string;
-      prompt: string;
-      clientMessageId?: string;
-    }) => void,
-  ): Unsubscribe;
+  onMobileSession(cb: (meta: MobileSessionAnnouncement) => void): Unsubscribe;
   /** A normal Work Session created and started directly by Mimi's main-process host. */
   onPetDelegationSession(
     cb: (meta: {
