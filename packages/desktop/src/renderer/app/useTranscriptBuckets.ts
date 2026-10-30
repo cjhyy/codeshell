@@ -261,7 +261,9 @@ export function useTranscriptBuckets({
       let replaySnapshot: SequencedStreamEvent[] = [];
       let snapshotEpoch: string | undefined;
       let snapshotLoaded = !engineId;
+      let snapshotFailed = false;
       let page: SessionTranscriptPage | undefined;
+      let loadedBytes = INITIAL_CHAT_HISTORY_BYTES;
       let outputCursor: string | undefined;
       const [persistedResult, canonicalResult] = await Promise.allSettled([
         freshJournal
@@ -365,14 +367,52 @@ export function useTranscriptBuckets({
             }
           }
         } catch (error) {
+          if (!canCommit()) return;
+          snapshotFailed = true;
+          snapshotLoaded = false;
           historyLoaded = false;
           window.codeshell.log("session.hydrate.fail", {
             bucket,
             stage: "snapshot",
             error: error instanceof Error ? error.message : String(error),
           });
+          if (page?.hasMore || persistedHasEarlier || !canonicalHistory) {
+            // A coverage failure must keep the recovery barrier and the saved
+            // cache intact. It need not hide older durable tool activity just
+            // because the initial display window was only 512 KiB. Expand the
+            // existing transcript/cache readers within their normal hard bound;
+            // this is a best-effort display, never a complete output prefix.
+            const [persistedFallback, canonicalFallback] = await Promise.allSettled([
+              loadPersistedTranscript(activeProjectId, activeSessionId, MAX_CHAT_HISTORY_BYTES),
+              readHistoryPage(engineId, MAX_CHAT_HISTORY_BYTES),
+            ]);
+            if (!canCommit()) return;
+            if (persistedFallback.status === "fulfilled") {
+              local = persistedFallback.value.state;
+              persistedHasEarlier = persistedFallback.value.hasEarlier;
+            }
+            if (canonicalFallback.status === "fulfilled") {
+              page = canonicalFallback.value;
+              canonicalHistory = foldTranscript(page.items);
+              loadedBytes = MAX_CHAT_HISTORY_BYTES;
+            } else {
+              window.codeshell.log("session.hydrate.fail", {
+                bucket,
+                stage: "transcript_fallback",
+                error: String(canonicalFallback.reason),
+              });
+            }
+            if (persistedFallback.status === "rejected") {
+              window.codeshell.log("session.hydrate.fail", {
+                bucket,
+                stage: "persisted_snapshot_fallback",
+                error: String(persistedFallback.reason),
+              });
+            }
+            state = base = canonicalHistory ? mergeHistoryWindows(canonicalHistory, local) : local;
+          }
         }
-        if (!freshJournal && state.messages.length === 0 && !page?.hasMore) {
+        if (!freshJournal && !snapshotFailed && state.messages.length === 0 && !page?.hasMore) {
           try {
             page = await readHistoryPage(engineId, INITIAL_CHAT_HISTORY_BYTES);
             const disk = foldTranscript(page.items);
@@ -403,7 +443,7 @@ export function useTranscriptBuckets({
           ...previous,
           [bucket]: {
             engineId,
-            loadedBytes: INITIAL_CHAT_HISTORY_BYTES,
+            loadedBytes,
             hasMore: (page?.hasMore ?? false) || persistedHasEarlier,
             loading: false,
             failed: !historyLoaded,
@@ -423,6 +463,7 @@ export function useTranscriptBuckets({
           epoch: snapshotEpoch,
           sessionId: engineId,
           outputCursor,
+          incomplete: snapshotFailed,
         });
         // Existing live buckets already get authoritative busy changes from the
         // host subscription, including a completion during the awaited reads.

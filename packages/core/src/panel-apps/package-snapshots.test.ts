@@ -1,5 +1,5 @@
 import { writeFileSync } from "node:fs";
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, setSystemTime, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
   mkdir,
@@ -10,6 +10,7 @@ import {
   rm,
   stat,
   symlink,
+  utimes,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -19,6 +20,7 @@ import { skillTool } from "../tool-system/builtin/skill.js";
 import type { ToolContext } from "../tool-system/context.js";
 import {
   installReviewedLocalPanelApp,
+  inspectInstalledPanelAppDigest,
   listInstalledPanelApps,
   listRetainedPanelAppPackages,
   listProjectPanelApps,
@@ -30,6 +32,7 @@ import {
   resolvePanelAppPackage,
   retainInstalledPanelApp,
   uninstallPanelApp,
+  type PanelAppInspectionReads,
 } from "./index.js";
 import { scanSkills, invalidateSkillCache } from "../skills/scanner.js";
 
@@ -471,6 +474,68 @@ test("a damaged project package is isolated while healthy packages and Skills ke
   ).toEqual(["healthy-panel:check"]);
   await uninstallPanelApp(id);
   expect((await inspectProjectPanelApps(project)).issues).toEqual([]);
+});
+
+test("a shared multi-project pass verifies each package once with the same per-project result", async () => {
+  const first = await install();
+  await writePackage("2.0.0");
+  await install(true);
+  const pin = { version: first.version, packageDigest: first.packageDigest };
+  const pinnedA = await pinProject("shared-pass-a", pin);
+  const pinnedB = await pinProject("shared-pass-b", pin);
+  const latest = join(root, "shared-pass-latest");
+  await mkdir(join(latest, ".code-shell"), { recursive: true });
+  await writeFile(
+    join(latest, ".code-shell/settings.json"),
+    JSON.stringify({ panelAppBindings: [id] }),
+  );
+  const projects = [pinnedA, pinnedB, latest];
+  const separate = await Promise.all(projects.map((project) => inspectProjectPanelApps(project)));
+  const reads: PanelAppInspectionReads = { packages: new Map() };
+  const shared = [];
+  for (const project of projects)
+    shared.push(await inspectProjectPanelApps(project, undefined, reads));
+  expect(shared).toEqual(separate);
+  expect(shared.map((result) => result.apps.map((app) => app.version))).toEqual([
+    ["1.0.0"],
+    ["1.0.0"],
+    ["2.0.0"],
+  ]);
+  // Both pinned projects reuse one verified read of the retained v1 package.
+  expect(reads.packages.size).toBe(1);
+  expect(shared[0]!.apps[0]).toBe(shared[1]!.apps[0]);
+  expect(reads.installed).toBeDefined();
+  expect(
+    (await inspectProjectPanelApps(latest, "other-panel", reads)).apps.map((app) => app.id),
+  ).toEqual([]);
+});
+
+test("reused package verification still catches same-size rewrites that restore mtime", async () => {
+  const first = await install();
+  const retained = panelAppPackageDir(id, first.packageDigest!);
+  const page = join(retained, "app/index.html");
+  const original = await readFile(page, "utf8");
+  const { mtime } = await stat(page);
+  // Step past the racy window so the fresh install is eligible for reuse.
+  setSystemTime(new Date(Date.now() + 10_000));
+  try {
+    const verified = await resolvePanelAppPackage(id, first.packageDigest!);
+    expect(await resolvePanelAppPackage(id, first.packageDigest!)).toEqual(verified);
+    expect(await inspectInstalledPanelAppDigest(retained)).toBe(
+      (await previewLocalPanelApp({ kind: "dir", path: retained })).reviewToken,
+    );
+    await writeFile(page, original.replace("1.0.0", "6.6.6"));
+    await utimes(page, mtime, mtime);
+    expect((await stat(page)).size).toBe(original.length);
+    await expect(resolvePanelAppPackage(id, first.packageDigest!)).rejects.toThrow(
+      "Retained Panel App package content has changed",
+    );
+    await writeFile(page, original);
+    await utimes(page, mtime, mtime);
+    expect((await resolvePanelAppPackage(id, first.packageDigest!)).version).toBe("1.0.0");
+  } finally {
+    setSystemTime();
+  }
 });
 
 test("scoped inspection verifies its live package without migrating unrelated bindings", async () => {

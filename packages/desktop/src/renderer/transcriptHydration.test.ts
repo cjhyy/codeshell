@@ -109,6 +109,33 @@ test("cancelled windows retain raw tails for retry and reject the older completi
   expect(reply(state)).toMatchObject({ text: "prefix tail" });
 });
 
+test("an incomplete display retains its persistence barrier after cancellation until recovery succeeds", () => {
+  let state = begin();
+  const fallback = { ...INITIAL_STATE, sessionId: "saved", turnEpoch: 1 };
+  state = transcriptsReducer(state, {
+    type: "hydrate_history",
+    bucket,
+    state: fallback,
+    history: fallback,
+    goalAtStart: null,
+    incomplete: true,
+  });
+  state = transcriptsReducer(state, { type: "hydrate_cancel", bucket, token: 1 });
+  expect(hasTranscriptRecovery(state, bucket)).toBe(true);
+  expect(transcriptRecoveryFailed(state, bucket)).toBe(false);
+  state = transcriptsReducer(state, { type: "hydrate_begin", bucket, token: 2 });
+  state = finish(
+    state,
+    [
+      { seq: 9, event: start },
+      { seq: 10, event: text("Recovered complete prefix") },
+    ],
+    2,
+  );
+  expect(reply(state)).toMatchObject({ text: "Recovered complete prefix" });
+  expect(hasTranscriptRecovery(state, bucket)).toBe(false);
+});
+
 test("recovery cannot publish a successful cursor after its bounded journal overflows", () => {
   let state = begin();
   state = transcriptsReducer(state, {

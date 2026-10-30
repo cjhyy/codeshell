@@ -23,6 +23,11 @@ breaking.
 
 ### Fixed
 
+- Persist external CLI background-completion and Goal events before display,
+  preserving execution history when long sessions reopen and keeping each
+  session's output in its owning window.
+- Restore older saved tool activity when complete output recovery is unavailable,
+  retaining historical-gap warnings and protecting saved caches after navigation.
 - Keep successful MCP POST probes usable after optional GET/SSE diagnostics,
   preserve Desktop launcher-banner and structured-logger compatibility, and
   redact explicit credentials at any length plus longer private env/argv values

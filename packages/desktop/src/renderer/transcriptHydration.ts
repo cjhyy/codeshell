@@ -24,6 +24,7 @@ interface Recovery {
   count: number;
   bytes: number;
   failed?: boolean;
+  retainOnCancel?: boolean;
   latestOutputCursor?: string;
   unpairedOutput?: boolean;
 }
@@ -548,7 +549,8 @@ export function reduceTranscriptHydration(
       recovery.suspended ||
       recovery.token !== action.token ||
       recovery.count > 0 ||
-      recovery.failed
+      recovery.failed ||
+      recovery.retainOnCancel
     )
       return map;
     const next = { ...map };
@@ -609,6 +611,12 @@ export function reduceTranscriptHydration(
   const windows = new Map(previous);
   if (action.type === "evict" || action.type === "evict_if_unchanged") {
     if (!next[action.bucket]) windows.delete(action.bucket);
+  } else if (recovery && action.type === "hydrate_history" && action.incomplete) {
+    // An unverified fallback can look like a live-run cache (session id and
+    // turn epoch included). Keep the persistence barrier after navigation,
+    // even when no stream events arrived during this recovery attempt.
+    windows.set(action.bucket, { ...recovery, retainOnCancel: true });
+    if (next === map) next = { ...map };
   } else if (recovery && action.type !== "hydrate_history") {
     const raw = entries(action);
     let latestOutputCursor = recovery.latestOutputCursor;

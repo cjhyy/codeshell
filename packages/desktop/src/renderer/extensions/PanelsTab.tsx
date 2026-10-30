@@ -86,6 +86,37 @@ export function nextPanelAppBindings(value: unknown, appId: string, bound: boole
   return [...bindings].sort();
 }
 
+const MAX_BINDING_BATCH = 64;
+
+/** One host read per batch shares package verification across projects. */
+export async function readProjectBindings(
+  paths: readonly string[],
+): Promise<Array<PanelAppBindingState[] | null>> {
+  const single = async (path: string) => {
+    try {
+      return await window.codeshell.getPanelAppBindings(path);
+    } catch {
+      return null;
+    }
+  };
+  const batch = window.codeshell.getPanelAppBindingsForProjects;
+  if (!batch) return Promise.all(paths.map(single));
+  const chunks: string[][] = [];
+  for (let offset = 0; offset < paths.length; offset += MAX_BINDING_BATCH)
+    chunks.push(paths.slice(offset, offset + MAX_BINDING_BATCH));
+  const results = await Promise.all(
+    chunks.map(async (chunk) => {
+      try {
+        return await batch(chunk);
+      } catch {
+        // An older or failing host still answers per project.
+        return Promise.all(chunk.map(single));
+      }
+    }),
+  );
+  return results.flat();
+}
+
 function RecommendedPanelIcon({ icon }: { icon: RecommendedPanelApp["icon"] }) {
   const className = "h-4 w-4";
   if (icon === "download") return <Download className={className} aria-hidden="true" />;
@@ -206,15 +237,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       ]),
     ];
     setProjects(tracked);
-    void Promise.all(
-      paths.map(async (path) => {
-        try {
-          return await window.codeshell.getPanelAppBindings(path);
-        } catch {
-          return null;
-        }
-      }),
-    ).then((states) => {
+    void readProjectBindings(paths).then((states) => {
       if (!alive) return;
       setProjectBindings(Object.fromEntries(paths.map((path, index) => [path, states[index]])));
       setGlobalDisabled(

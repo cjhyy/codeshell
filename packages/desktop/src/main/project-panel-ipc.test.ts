@@ -10,7 +10,7 @@ import {
   previewLocalPanelApp,
   installReviewedLocalPanelApp,
 } from "@cjhyy/code-shell-core";
-import { createDesktopPanelManagement } from "./panel-app-management.js";
+import { createDesktopPanelManagement, readDesktopPanelBindings } from "./panel-app-management.js";
 import { PanelExecutionGate, panelExecutionGate } from "@cjhyy/code-shell-server/panels";
 import { panelChangeOperation, panelUpdateApproval } from "./panel-update-blockers.js";
 import { registerProjectPanelVersionIpc } from "./project-panel-version-ipc.js";
@@ -32,6 +32,7 @@ const uninstallGate = new PanelExecutionGate();
 const uninstallEffects: string[] = [];
 const register = runInNewContext(`${compiled}\nregisterProjectPanelIpc`, {
   createDesktopPanelManagement,
+  readDesktopPanelBindings,
   panelUpdateApproval,
   panelChangeOperation,
   resolvePanelAppBindingProjectPath,
@@ -154,6 +155,78 @@ test("I9 uninstall IPC preserves service stop-unconfirmed blockers without delet
     expect(uninstallGate.blockers(() => true)).toHaveLength(1);
   } finally {
     release();
+  }
+});
+
+test("batch bindings IPC answers each project in order and isolates an unreadable one", async () => {
+  const root = mkdtempSync(join(tmpdir(), "panel-bindings-batch-ipc-"));
+  const previousHome = process.env.HOME;
+  process.env.HOME = join(root, "home");
+  const pkg = join(root, "package");
+  const projects = ["a", "b"].map((name) => join(root, name));
+  for (const project of projects) mkdirSync(project);
+  mkdirSync(join(pkg, ".codeshell-panel"), { recursive: true });
+  mkdirSync(join(pkg, "app"));
+  writeFileSync(join(pkg, "app/index.html"), "fixture");
+  writeFileSync(
+    join(pkg, ".codeshell-panel/panel.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      id: "fixture",
+      version: "1.0.0",
+      title: { default: "fixture" },
+      entry: "app/index.html",
+      icon: "panel",
+      placement: "right-dock",
+      singleton: true,
+      permissions: ["storage"],
+    }),
+  );
+  const handlers = new Map<string, (...args: any[]) => any>();
+  const stale = join(root, "stale");
+  register({
+    ipcMain: {
+      handle: (name: string, handler: (...args: any[]) => any) => handlers.set(name, handler),
+    },
+    requireRendererProjectPath: async (path: string) => {
+      if (path === stale) throw new Error("project is not registered");
+      return path;
+    },
+    withMutation: async (_cwd: string, write: () => Promise<unknown>) => write(),
+  });
+  try {
+    const input = { kind: "dir" as const, path: pkg };
+    const preview = await previewLocalPanelApp(input);
+    await installReviewedLocalPanelApp(input, preview.reviewToken, new Date().toISOString());
+    const first = createDesktopPanelManagement(projects[0]!);
+    await first.binding(
+      { ownerId: "fixture", authorize: () => true },
+      "fixture",
+      true,
+      (await first.snapshot())[0]!.revision,
+    );
+    const batch = await handlers.get("panel-apps:bindingsForProjects")!({}, [
+      projects[0],
+      stale,
+      projects[1],
+    ]);
+    expect(batch).toEqual([
+      await handlers.get("panel-apps:bindings")!({}, projects[0]),
+      null,
+      await handlers.get("panel-apps:bindings")!({}, projects[1]),
+    ]);
+    expect(batch[0][0]).toMatchObject({ appId: "fixture", bound: true });
+    expect(batch[2][0]).toMatchObject({ appId: "fixture", bound: false });
+    await expect(
+      handlers.get("panel-apps:bindingsForProjects")!(
+        {},
+        Array.from({ length: 65 }, () => root),
+      ),
+    ).rejects.toThrow("requires projectPaths");
+  } finally {
+    if (previousHome === undefined) delete process.env.HOME;
+    else process.env.HOME = previousHome;
+    rmSync(root, { recursive: true, force: true });
   }
 });
 

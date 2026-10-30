@@ -24,6 +24,7 @@ export {
   installReviewedLocalPanelApp,
   installReviewedPanelAppUpdate,
   listInstalledPanelApps,
+  inspectInstalledPanelAppDigest,
   retainInstalledPanelApp,
   resolvePanelAppPackage,
   listRetainedPanelAppPackages,
@@ -57,6 +58,7 @@ export {
   listProjectPanelApps,
   inspectProjectPanelApps,
   type ProjectPanelAppIssue,
+  type PanelAppInspectionReads,
 } from "./project-packages.js";
 export {
   checkInstalledPanelAppUpdate,

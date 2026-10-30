@@ -23,11 +23,13 @@ import {
   userHome,
   panelAppsRoot,
   previewLocalPanelApp,
+  inspectInstalledPanelAppDigest,
   resolveGitHubPanelAppCommit,
   resolvePanelAppBindingPolicy,
   uninstallPanelApp,
   type GitPanelAppSourceInput,
   type InstalledPanelApp,
+  type PanelAppInspectionReads,
   type PanelAppPreview,
   type PanelAppSourceInput,
 } from "@cjhyy/code-shell-core";
@@ -276,6 +278,19 @@ function assertRevision(revision: unknown): asserts revision is string {
   if (typeof revision !== "string" || !/^[a-f0-9]{64}$/.test(revision)) invalid();
 }
 
+/**
+ * Verified reads shared by the snapshots of one multi-project request, so the
+ * same package is not re-verified once per project. Create one per request.
+ */
+export interface PanelSnapshotReads {
+  inspection: PanelAppInspectionReads;
+  digests: Map<string, Promise<string>>;
+}
+
+export function createPanelSnapshotReads(): PanelSnapshotReads {
+  return { inspection: { packages: new Map() }, digests: new Map() };
+}
+
 export function createPanelManagement(options: PanelManagementOptions) {
   const now = options.now ?? Date.now;
   const workspace = resolve(options.bindingCwd ?? options.cwd);
@@ -357,12 +372,17 @@ export function createPanelManagement(options: PanelManagementOptions) {
       ? inspectProjectPanelApps(workspace).then((result) => result.apps)
       : listInstalledPanelApps();
 
-  async function inspectApp(app: InstalledPanelApp) {
+  async function inspectApp(app: InstalledPanelApp, reads?: PanelSnapshotReads) {
     const info = lstatSync(app.installPath);
     if (info.isSymbolicLink() || !info.isDirectory())
       throw new PanelManagementError(403, "unsafe_path", "面板安装目录不支持链接。");
-    const preview = await previewLocalPanelApp({ kind: "dir", path: app.installPath });
-    return { app, digest: preview.reviewToken };
+    // Same digest a dir preview reports, without re-hashing unchanged installed bytes.
+    let digest = reads?.digests.get(app.installPath);
+    if (!digest) {
+      digest = inspectInstalledPanelAppDigest(app.installPath);
+      reads?.digests.set(app.installPath, digest);
+    }
+    return { app, digest: await digest };
   }
 
   async function selectedApp(id: string) {
@@ -395,11 +415,11 @@ export function createPanelManagement(options: PanelManagementOptions) {
     };
   }
 
-  async function snapshot(appId?: string): Promise<PanelSnapshot> {
+  async function snapshot(appId?: string, reads?: PanelSnapshotReads): Promise<PanelSnapshot> {
     if (appId !== undefined) assertSafePanelAppId(appId);
     options.assertBinding?.();
     const inspected = options.projectPackages
-      ? await inspectProjectPanelApps(workspace, appId)
+      ? await inspectProjectPanelApps(workspace, appId, reads?.inspection)
       : undefined;
     const apps = inspected?.apps ?? (await listInstalledPanelApps(appId));
     options.assertBinding?.();
@@ -424,7 +444,7 @@ export function createPanelManagement(options: PanelManagementOptions) {
         .digest("hex"),
     }));
     for (const listed of apps) {
-      const { app, digest } = await inspectApp(listed);
+      const { app, digest } = await inspectApp(listed, reads);
       const source = savedSource(app, saved);
       const {
         installPath: _path,

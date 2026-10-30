@@ -599,6 +599,85 @@ async function inspectPanelAppSource(sourceRoot: string): Promise<{
   return { manifest, files, digest: hash.digest("hex"), packageDigest: payloadHash.digest("hex") };
 }
 
+type PanelAppInspection = Awaited<ReturnType<typeof inspectPanelAppSource>>;
+
+const MAX_VERIFIED_PACKAGES = 64;
+// Like Git's racily-clean rule: a path changed this recently may still be
+// rewritten within the same timestamp tick, so its identity proves nothing yet.
+const RACY_IDENTITY_NS = 2_000_000_000n;
+const verifiedPackages = new Map<string, { identity: string; inspection: PanelAppInspection }>();
+// Concurrent readers of one unchanged root share a single verification.
+const verifyingPackages = new Map<
+  string,
+  { identity: string; inspection: Promise<PanelAppInspection> }
+>();
+
+/** Every path identity under a package root, or undefined when it must not be reused. */
+async function packageTreeIdentity(root: string): Promise<string | undefined> {
+  const startedNs = BigInt(Date.now()) * 1_000_000n;
+  const parts: string[] = [];
+  const visit = async (path: string, depth: number): Promise<boolean> => {
+    if (depth > MAX_DEPTH + 1 || parts.length > MAX_ENTRIES) return false;
+    const info = await lstat(path, { bigint: true });
+    if (info.ctimeNs > startedNs - RACY_IDENTITY_NS) return false;
+    // ctime catches same-size in-place writes even if a writer restores mtime.
+    parts.push(
+      `${path}\0${info.dev}:${info.ino}:${info.mode}:${info.size}:${info.mtimeNs}:${info.ctimeNs}`,
+    );
+    if (!info.isDirectory()) return true;
+    for (const name of (await readdir(path)).sort()) {
+      if (!(await visit(join(path, name), depth + 1))) return false;
+    }
+    return true;
+  };
+  try {
+    return (await visit(root, 0)) ? parts.join("\n") : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Verify installed or retained package bytes, reusing the last full
+ * verification only while every file and directory identity under the root is
+ * unchanged. Review and install paths keep calling inspectPanelAppSource.
+ */
+async function inspectInstalledPanelAppSource(sourceRoot: string): Promise<PanelAppInspection> {
+  const root = await realpath(sourceRoot);
+  const before = await packageTreeIdentity(root);
+  const cached = verifiedPackages.get(root);
+  if (before !== undefined && cached?.identity === before) {
+    verifiedPackages.delete(root);
+    verifiedPackages.set(root, cached);
+    return structuredClone(cached.inspection);
+  }
+  verifiedPackages.delete(root);
+  if (before === undefined) return inspectPanelAppSource(root);
+  const active = verifyingPackages.get(root);
+  if (active?.identity === before) return structuredClone(await active.inspection);
+  const inspection = (async () => {
+    const inspected = await inspectPanelAppSource(root);
+    if ((await packageTreeIdentity(root)) === before) {
+      verifiedPackages.set(root, { identity: before, inspection: structuredClone(inspected) });
+      while (verifiedPackages.size > MAX_VERIFIED_PACKAGES)
+        verifiedPackages.delete(verifiedPackages.keys().next().value!);
+    }
+    return inspected;
+  })();
+  const entry = { identity: before, inspection };
+  verifyingPackages.set(root, entry);
+  try {
+    return await inspection;
+  } finally {
+    if (verifyingPackages.get(root) === entry) verifyingPackages.delete(root);
+  }
+}
+
+/** The review digest of an installed or retained package, as a dir preview would report it. */
+export async function inspectInstalledPanelAppDigest(installPath: string): Promise<string> {
+  return (await inspectInstalledPanelAppSource(installPath)).digest;
+}
+
 function previewFrom(
   manifest: PanelAppManifest,
   reviewToken: string,
@@ -784,7 +863,7 @@ export async function resolvePanelAppPackage(
   const info = await lstat(target);
   if (info.isSymbolicLink() || !info.isDirectory())
     throw new PanelAppInstallError("Panel App package must be an ordinary directory");
-  const inspected = await inspectPanelAppSource(target);
+  const inspected = await inspectInstalledPanelAppSource(target);
   if (inspected.manifest.id !== id || inspected.packageDigest !== packageDigest)
     throw new PanelAppInstallError("Retained Panel App package content has changed");
   const metadata = JSON.parse(
@@ -1165,7 +1244,7 @@ export async function listInstalledPanelApps(appId?: string): Promise<InstalledP
     if (appId !== undefined && record.id !== appId) continue;
     try {
       const root = await realpath(panelAppInstallDir(record.id));
-      const inspected = await inspectPanelAppSource(root);
+      const inspected = await inspectInstalledPanelAppSource(root);
       if (inspected.manifest.id !== record.id) continue;
       output.push({
         ...installedPanelApp(inspected.manifest, record),

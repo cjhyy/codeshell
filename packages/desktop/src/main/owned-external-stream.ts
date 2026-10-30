@@ -6,6 +6,12 @@ export interface OwnedExternalStreamEntry extends SnapshotEntry {
   ownerWebContentsId: number;
 }
 
+interface OwnedExternalStreamPublication extends SnapshotEntry {
+  sessionId: string;
+  epoch: string;
+  ownerWebContentsId?: number;
+}
+
 interface StreamWindow {
   isDestroyed(): boolean;
   webContents: { id: number; send(channel: string, payload: unknown): void };
@@ -18,7 +24,7 @@ export function publishOwnedExternalStream(
   ownerId: number | undefined,
   sessionId: string,
   event: unknown,
-): OwnedExternalStreamEntry | undefined {
+): OwnedExternalStreamPublication | undefined {
   let entry: SnapshotEntry;
   try {
     entry = snapshots.append(sessionId, event);
@@ -38,7 +44,10 @@ export function publishOwnedExternalStream(
   } catch {
     /* Committed output remains recoverable if its owner remounts. */
   }
-  return owner && ownerId !== undefined
-    ? { ...entry, sessionId, epoch: snapshots.epoch, ownerWebContentsId: ownerId }
-    : undefined;
+  return {
+    ...entry,
+    sessionId,
+    epoch: snapshots.epoch,
+    ...(owner && ownerId !== undefined ? { ownerWebContentsId: ownerId } : {}),
+  };
 }
