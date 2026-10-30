@@ -20,6 +20,7 @@ import { extractZip, extractZipSubdirectory } from "../plugins/installer/unzip.j
 import { downloadGitHubPanelAppArchive } from "./github-archive.js";
 import { normalizeGitPanelAppSource } from "./source.js";
 import { discoverPanelAppRoots, findPanelAppRoot } from "./discovery.js";
+import { inspectBatch, INSPECTION_BATCH_SIZE } from "./inspection-batch.js";
 import { lock } from "../utils/lockfile.js";
 import {
   PANEL_APP_META_FILE,
@@ -481,7 +482,24 @@ async function readBoundedPackageFile(
         `Panel App file is not a bounded regular file: ${relativePath}`,
       );
     }
-    return await handle.readFile();
+    // Reserve a bounded buffer before reading. A file growing after fstat must
+    // not turn a small inspection batch into an unbounded allocation.
+    const bytes = Buffer.allocUnsafe(opened.size + 1);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const { bytesRead } = await handle.read(bytes, offset, bytes.length - offset, offset);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    const after = await handle.stat();
+    if (
+      offset !== opened.size ||
+      after.size !== opened.size ||
+      after.mtimeMs !== opened.mtimeMs ||
+      after.ctimeMs !== opened.ctimeMs
+    )
+      throw new PanelAppInstallError(`Panel App file changed while reading: ${relativePath}`);
+    return bytes.subarray(0, offset);
   } finally {
     await handle.close();
   }
@@ -562,14 +580,21 @@ async function inspectPanelAppSource(sourceRoot: string): Promise<{
   }
   const hash = createHash("sha256");
   const payloadHash = createPanelPackageHash();
-  for (const file of files.sort()) {
-    const bytes = await readBoundedPackageFile(
-      root,
-      file,
-      file === PANEL_APP_MANIFEST_FILE ? MAX_MANIFEST_BYTES : MAX_FILE_BYTES,
+  files.sort();
+  for (let offset = 0; offset < files.length; offset += INSPECTION_BATCH_SIZE) {
+    const batch = files.slice(offset, offset + INSPECTION_BATCH_SIZE);
+    const contents = await inspectBatch(batch, (file) =>
+      readBoundedPackageFile(
+        root,
+        file,
+        file === PANEL_APP_MANIFEST_FILE ? MAX_MANIFEST_BYTES : MAX_FILE_BYTES,
+      ),
     );
-    hash.update(file).update("\0").update(bytes);
-    hashPanelPackageFile(payloadHash, file, bytes);
+    for (const [index, file] of batch.entries()) {
+      const bytes = contents[index]!;
+      hash.update(file).update("\0").update(bytes);
+      hashPanelPackageFile(payloadHash, file, bytes);
+    }
   }
   return { manifest, files, digest: hash.digest("hex"), packageDigest: payloadHash.digest("hex") };
 }
