@@ -11,6 +11,8 @@ export interface CompanionScene {
   window?: CompanionDisplayBounds;
   /** The app profile's preferred place; the title bar remains conditional. */
   prefer?: MimiCompanionPerch;
+  /** The control under the action, when the agent addressed an element. */
+  surface?: { kind: string; frame: CompanionDisplayBounds };
 }
 
 /** A field receiving text must be uncovered before the next keystroke, so the
@@ -28,6 +30,15 @@ const PERCH_SINK = 14;
 /** Perch only while the target is this close below the window's top edge;
  * farther down, standing beside the target reads better than a distant seat. */
 export const PERCH_REACH = 520;
+/** Working on a control, the character is drawn at this fraction of its size
+ * so it can stand on the control's edges without covering the page. */
+export const WORK_SCALE = 0.55;
+/** The sprite's transparent margin under the feet, as a fraction of height. */
+const FOOT_PAD = 0.05;
+/** Larger controls (rows, panes, canvases) are regions, not something to stand on. */
+const SURFACE_MAX = { width: 420, height: 120 };
+/** How much of the body rests over a field when sitting on its corner. */
+const CORNER_OVERLAP = 0.35;
 const MARGIN = 12;
 const GAP = 16;
 
@@ -45,7 +56,7 @@ export function stagePlacement(
   display: CompanionDisplayBounds,
   size: number,
   scene: CompanionScene,
-): ReturnType<typeof companionPlacement> & { perch: MimiCompanionPerch } {
+): ReturnType<typeof companionPlacement> & { perch: MimiCompanionPerch; size?: number } {
   const beside = () => ({
     ...companionPlacement(display, size, scene.target, scene.avoidRect),
     perch: "beside-target" as const,
@@ -61,6 +72,10 @@ export function stagePlacement(
     };
   }
   if (scene.prefer === "beside-target") return beside();
+  // Element reads without a screenshot carry no window frame; the display bounds it then.
+  const surface =
+    target && surfacePlacement(display, size, target, window ?? display, scene.surface);
+  if (surface) return surface;
   if (!target || !window || !inside(target, window)) return beside();
   const depth = target.y - window.y;
   if (depth < PERCH_SINK + 4 || depth > PERCH_REACH) return beside();
@@ -94,4 +109,53 @@ export function stagePlacement(
     if (!clear) return beside();
   }
   return { position: { x, y }, target: local, perch: "title-bar" };
+}
+
+/** Stand on the control the agent is acting on: sit on a field's top edge
+ * while text goes in, or stand beside a control with feet on its bottom edge.
+ * Undefined when the control is not a surface or leaves no room in the window. */
+function surfacePlacement(
+  display: CompanionDisplayBounds,
+  size: number,
+  target: Point,
+  window: CompanionDisplayBounds,
+  surface: CompanionScene["surface"],
+):
+  | (ReturnType<typeof companionPlacement> & { perch: MimiCompanionPerch; size: number })
+  | undefined {
+  if (!surface) return;
+  const { frame, kind } = surface;
+  if (frame.width > SURFACE_MAX.width + (kind === "text" ? 400 : 0)) return;
+  if (frame.height > SURFACE_MAX.height) return;
+  if (frame.x < window.x || frame.y < window.y) return;
+  if (frame.x + frame.width > window.x + window.width) return;
+  if (frame.y + frame.height > window.y + window.height) return;
+  const height = Math.round(companionSize(size) * WORK_SCALE);
+  const width = height * 0.7;
+  const pad = height * FOOT_PAD;
+  const minX = window.x + MARGIN;
+  const maxX = window.x + window.width - width - MARGIN;
+  let x: number;
+  let y: number;
+  let perch: MimiCompanionPerch;
+  if (kind === "text") {
+    // Ride the field's right corner: most of the body hangs past the field's
+    // end, where neither its text nor the content above it usually is.
+    x = Math.min(maxX, frame.x + frame.width - width * CORNER_OVERLAP);
+    y = frame.y - height + pad;
+    perch = "on-field";
+  } else {
+    const left = frame.x - width - 4;
+    x = left >= minX ? left : frame.x + frame.width + 4;
+    if (x > maxX) return;
+    y = frame.y + frame.height - height + pad;
+    perch = "on-baseline";
+  }
+  if (x < minX || y < window.y + MARGIN) return;
+  return {
+    position: { x: x - display.x, y: y - display.y },
+    target: { x: target.x - display.x, y: target.y - display.y },
+    perch,
+    size: height,
+  };
 }
