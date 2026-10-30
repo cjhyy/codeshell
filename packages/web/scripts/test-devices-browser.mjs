@@ -19,7 +19,7 @@ const { build } = require("esbuild"),
 const output = await mkdtemp(path.join(tmpdir(), "codeshell-devices-audit-"));
 const source = `import React from 'react';import {createRoot} from 'react-dom/client';import {Workbench} from './Workbench';
 const noop=()=>{};window.authLost=0;
-const controller={host:'hub',workspaceApi:true,connection:'open',activeId:'owned',chat:{items:[],run:'idle'},sessions:[],
+const controller={panelSessionId:undefined,host:'hub',workspaceApi:true,connection:'open',activeId:'owned',chat:{items:[],run:'idle'},sessions:[],
  workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:'owned',title:'Owned conversation',configuration:null,
  configurationVersion:0,sessionsVersion:0,draft:'',files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,
  running:false,localDrafts:[],approvals:[],approvalCount:()=>0,approvalContent:null,error:'',clearError:noop,setDraft:noop,

@@ -26,6 +26,8 @@ export interface WorkbenchController {
   connection: ConnectionState;
   session?: AuthSession;
   activeId: string;
+  /** Canonical protocol session, never a draft or CLI-room display bucket. */
+  panelSessionId: string | undefined;
   chat: ChatState;
   sessions: SessionSummary[];
   workspaceCwd: string | null;

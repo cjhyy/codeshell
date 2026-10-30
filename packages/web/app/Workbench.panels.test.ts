@@ -7,6 +7,7 @@ function fixture(patch: Partial<WorkbenchController> = {}) {
   const controller = {
     workspaceKey: "workspace-original",
     activeId: "session-original",
+    panelSessionId: "session-original",
     connection: "open",
     chat: { run: "idle" },
     running: false,
@@ -41,6 +42,8 @@ test("confirmed panel tasks set the synchronous draft store before sending", () 
 test.each([
   ["other workspace", { workspaceKey: "workspace-later" }],
   ["other conversation", { activeId: "session-later" }],
+  ["other panel conversation", { panelSessionId: "session-later" }],
+  ["no canonical conversation", { panelSessionId: undefined }],
   ["offline", { connection: "closed" }],
   ["loading", { loading: true }],
   ["read only", { readOnly: true }],
@@ -56,6 +59,17 @@ test.each([
   expect(() => submitWorkbenchPanelPrompt(controller, request)).toThrow();
   expect(calls).toEqual([]);
 });
+
+test.each(["room:cli-original", "desktop-new-original", ""])(
+  "an unbound Panel cannot submit through UI bucket %s",
+  (activeId) => {
+    const { controller, calls } = fixture({ activeId, panelSessionId: undefined });
+    expect(() =>
+      submitWorkbenchPanelPrompt(controller, { ...request, sessionId: activeId }),
+    ).toThrow();
+    expect(calls).toEqual([]);
+  },
+);
 
 test("drafts belonging to other conversations do not block an empty current composer", () => {
   const { controller, calls } = fixture({ hasUnsent: true });

@@ -221,6 +221,26 @@ async function fixture(
 }
 
 describe("Panel HTTP runtime", () => {
+  test("a workspace-only Panel cannot borrow a session for task submission", async () => {
+    const f = await fixture();
+    const unbound = await f.prepare("owner-a", { sessionId: undefined });
+    expect(unbound.context).not.toHaveProperty("sessionId");
+    const rejected = await f.api(`${unbound.instanceId}/call`, "POST", {
+      method: "agent.submitPrompt",
+      params: { prompt: "Must not run", sessionId: "session-previous" },
+    });
+    expect(rejected.status).toBe(409);
+    expect(await rejected.json()).not.toHaveProperty("effect");
+    const invalid = await f.api("prepare", "POST", {
+      appId: f.app.id,
+      revision: f.state.revision,
+      sessionId: "room:cli-session",
+    });
+    expect(invalid.status).toBe(400);
+    const canonical = await f.prepare();
+    expect(canonical.context.sessionId).toBe("session-1234");
+  });
+
   test("authenticated Panel observations are write-only, bound to exact grant and workspace, and cancelled on revoke", async () => {
     const f = await fixture({ permissions: [] });
     f.state.now = Date.now();

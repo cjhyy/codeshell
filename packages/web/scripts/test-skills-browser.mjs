@@ -28,7 +28,7 @@ const source = `
  import React from 'react'; import {createRoot} from 'react-dom/client';
  import {Workbench} from './Workbench';
  const noop=()=>{};
- const controller={host:'desktop',workspaceApi:true,connection:'open',activeId:'owned',
+ const controller={panelSessionId:undefined,host:'desktop',workspaceApi:true,connection:'open',activeId:'owned',
  chat:{items:[],run:'idle'},sessions:[],workspaceCwd:'/owned',workspaceName:'Owned workspace',
  workspaceKey:'owned',title:'Owned conversation',configuration:null,configurationVersion:0,
  sessionsVersion:0,draft:'',files:[],uploading:false,uploadBusy:false,hasUnsent:false,

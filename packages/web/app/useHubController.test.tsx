@@ -73,6 +73,22 @@ function environment() {
   }
 }
 
+test.each([true, false])(
+  "Hub and legacy adapters expose their protocol session to Panels (hub=%s)",
+  async (hub) => {
+    environment();
+    globalThis.fetch = (async () => Response.json({ sessions: [] })) as typeof fetch;
+    const hook = await renderHook(() => useHubController({ hub }));
+    cleanups.push(() => hook.unmount());
+    const first = hook.result.current.activeId;
+    expect(first).toMatch(/^[A-Za-z0-9_-]{8,128}$/);
+    expect(hook.result.current.panelSessionId).toBe(first);
+    await act(async () => hook.result.current.newSession());
+    expect(hook.result.current.activeId).not.toBe(first);
+    expect(hook.result.current.panelSessionId).toBe(hook.result.current.activeId);
+  },
+);
+
 test.each([projectA, null])(
   "late workspace metadata preserves a selected project identity (%s)",
   async (project) => {

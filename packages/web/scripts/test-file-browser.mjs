@@ -25,7 +25,7 @@ const source = `
   import {createRoot} from 'react-dom/client';
   import {Workbench} from './Workbench';
   const noop=()=>{};
-  const controller={host:'desktop',workspaceApi:true,connection:'open',activeId:'fixture',
+  const controller={panelSessionId:undefined,host:'desktop',workspaceApi:true,connection:'open',activeId:'fixture',
     chat:{items:[{kind:'assistant',id:'linked-file',done:true,text:'[Open linked file](/fixture/reports/report.md)'}],run:'idle'},
     sessions:[],workspaceCwd:'/fixture',workspaceName:'File browser',
     workspaceKey:'fixture',title:'Fixture conversation',configuration:null,configurationVersion:0,

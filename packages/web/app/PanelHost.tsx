@@ -35,7 +35,7 @@ interface Confirmation {
 }
 export interface PanelHostProps {
   panel: ManagedPanel;
-  sessionId: string;
+  sessionId?: string;
   busy: boolean;
   onClose: () => void;
   onAuthLost: () => void;
@@ -164,6 +164,7 @@ export function PanelHost({
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
   const [notice, setNotice] = React.useState("");
+  const [confirmationNotice, setConfirmationNotice] = React.useState("");
   const [directory, setDirectory] = React.useState<{ path: string; url?: string }>();
   const [preview, setPreview] = React.useState<ResourcePreview>();
   const previews = React.useRef(new Map<string, ResourcePreview>());
@@ -267,6 +268,7 @@ export function PanelHost({
     setLoading(true);
     setError("");
     setNotice("");
+    setConfirmationNotice("");
     setDirectory(undefined);
     previews.current.clear();
     setPreview(undefined);
@@ -403,9 +405,9 @@ export function PanelHost({
               if (disposed || activeConfirmation.current !== pending) return;
               if (typeof result.allowed !== "boolean") throw new Error("确认响应无效。");
               if (allowed && result.allowed === false)
-                setNotice("此确认已超时或被取消，操作未获准执行，请在面板中重新发起。");
+                setConfirmationNotice("此确认已超时或被取消，操作未获准执行，请在面板中重新发起。");
               if (!allowed && result.allowed === true)
-                setNotice("该操作此前已获准执行，请在面板中查看进度或停止。");
+                setConfirmationNotice("该操作此前已获准执行，请在面板中查看进度或停止。");
               pending.cancel();
               showNextHostConfirmation();
             })
@@ -417,7 +419,7 @@ export function PanelHost({
               }
               if (cause instanceof ApiError && cause.status === 409) {
                 pending.cancel();
-                setNotice("面板操作确认已失效，请在面板中重新发起。");
+                setConfirmationNotice("面板操作确认已失效，请在面板中重新发起。");
                 showNextHostConfirmation();
                 return;
               }
@@ -434,13 +436,14 @@ export function PanelHost({
       const timer = setTimeout(() => {
         pending.cancel();
         if (!disposed && scope.grant) {
-          setNotice("面板操作确认已超时，请在面板中重新发起。");
+          setConfirmationNotice("面板操作确认已超时，请在面板中重新发起。");
           showNextHostConfirmation();
         }
       }, effect.expiresAt - Date.now());
       activeConfirmation.current = pending;
       setConfirmation(pending);
       setConfirmationError("");
+      setConfirmationNotice("");
     };
     const receiveEvents = (events: PanelRuntimeEvent[]) => {
       for (const event of events) {
@@ -615,6 +618,7 @@ export function PanelHost({
           reply(child, requestId, { opened: true });
         } else if (data.method === "agent.submitPrompt") {
           if (
+            !sessionId ||
             !isRecord(result) ||
             result.effect !== data.method ||
             typeof result.prompt !== "string" ||
@@ -940,6 +944,11 @@ export function PanelHost({
       {notice && (
         <p className="panel-host-notice" role="status">
           {notice}
+        </p>
+      )}
+      {confirmationNotice && (
+        <p className="panel-host-notice" role="status">
+          {confirmationNotice}
         </p>
       )}
       {directory && (
