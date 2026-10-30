@@ -13,7 +13,14 @@ export type MimiCompanionAction =
   | "error";
 
 /** Where the character stands relative to the window it is working in. */
-export type MimiCompanionPerch = "title-bar" | "beside-target" | "screen-corner";
+export type MimiCompanionPerch =
+  | "title-bar"
+  | "beside-target"
+  | "screen-corner"
+  /** Sitting on the top edge of the field receiving text. */
+  | "on-field"
+  /** Standing beside a control, feet on its bottom edge. */
+  | "on-baseline";
 /** Category of the control an action lands on; never its label or value. */
 export type MimiCompanionElement =
   | "text"

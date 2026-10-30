@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { PERCH_REACH, clearsFieldAtOnce, stagePlacement } from "./stage-model";
+import { PERCH_REACH, WORK_SCALE, clearsFieldAtOnce, stagePlacement } from "./stage-model";
 
 const display = { x: 0, y: 0, width: 1920, height: 1080 };
 const window = { x: 400, y: 420, width: 1000, height: 600 };
@@ -95,5 +95,77 @@ describe("clearsFieldAtOnce", () => {
     expect(clearsFieldAtOnce(frame, "button")).toBe(false);
     expect(clearsFieldAtOnce(frame, "link")).toBe(false);
     expect(clearsFieldAtOnce(undefined, "text")).toBe(false);
+  });
+});
+
+describe("stagePlacement on element surfaces", () => {
+  const page = { x: 160, y: 70, width: 1280, height: 820 };
+  const screen = { x: 0, y: 38, width: 1512, height: 982 };
+  const working = Math.round(320 * WORK_SCALE);
+  const feet = (result: ReturnType<typeof stagePlacement>) =>
+    result.position.y + screen.y + (result.size ?? 320);
+
+  test("sits on a text field's right corner while text goes in", () => {
+    const field = { x: 420, y: 454, width: 760, height: 35 };
+    const result = stagePlacement(screen, 320, {
+      target: { x: 800, y: 471 },
+      window: page,
+      surface: { kind: "text", frame: field },
+    });
+    expect(result.perch).toBe("on-field");
+    expect(result.size).toBe(working);
+    // Feet on the field's top edge; the body above the field, never inside it.
+    expect(Math.abs(feet(result) - field.y)).toBeLessThanOrEqual(working * 0.06);
+    // Riding the field's right corner: most of the body hangs past the field's
+    // end, so it covers little of the field's neighbours above it.
+    const overField = field.x + field.width - result.position.x;
+    expect(overField).toBeGreaterThan(0);
+    expect(overField).toBeLessThanOrEqual(working * 0.7 * 0.4);
+  });
+
+  test("stands beside a button with its feet on the button's baseline", () => {
+    const button = { x: 420, y: 649, width: 80, height: 37 };
+    const result = stagePlacement(screen, 320, {
+      target: { x: 460, y: 667 },
+      window: page,
+      surface: { kind: "button", frame: button },
+    });
+    expect(result.perch).toBe("on-baseline");
+    expect(Math.abs(feet(result) - (button.y + button.height))).toBeLessThanOrEqual(working * 0.06);
+    const right = result.position.x + working * 0.7;
+    // Beside the button, not over it.
+    expect(right <= button.x || result.position.x >= button.x + button.width).toBe(true);
+  });
+
+  test("falls back when the surface leaves no room inside the window", () => {
+    // A field right under the window's top edge: sitting on it would leave the window.
+    const field = { x: 600, y: 90, width: 200, height: 30 };
+    const result = stagePlacement(screen, 320, {
+      target: { x: 700, y: 105 },
+      window: page,
+      surface: { kind: "text", frame: field },
+    });
+    expect(result.perch).not.toBe("on-field");
+    expect(result.size).toBeUndefined();
+  });
+
+  test("uses the display as the bounds when the window frame is unknown", () => {
+    // Element reads without a screenshot carry no window frame.
+    const button = { x: 420, y: 649, width: 80, height: 37 };
+    const result = stagePlacement(screen, 320, {
+      target: { x: 460, y: 667 },
+      surface: { kind: "button", frame: button },
+    });
+    expect(result.perch).toBe("on-baseline");
+  });
+
+  test("a wide row or a large region is not a surface", () => {
+    const row = { x: 200, y: 400, width: 1100, height: 40 };
+    const result = stagePlacement(screen, 320, {
+      target: { x: 900, y: 420 },
+      window: page,
+      surface: { kind: "list", frame: row },
+    });
+    expect(result.perch).not.toBe("on-baseline");
   });
 });

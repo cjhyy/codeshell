@@ -334,8 +334,10 @@ export function MimiCompanionWindow() {
             state.avoidInput || travel.kind === "hop"
               ? "none"
               : travel.kind === "walk"
-                ? `transform ${travel.duration}ms cubic-bezier(0.33, 0.8, 0.4, 1)`
-                : undefined,
+                ? `transform ${travel.duration}ms cubic-bezier(0.33, 0.8, 0.4, 1), width ${travel.duration}ms, height ${travel.duration}ms`
+                : reducedMotion
+                  ? undefined
+                  : "transform 280ms ease-out, width 180ms, height 180ms",
         }}
       >
         <button

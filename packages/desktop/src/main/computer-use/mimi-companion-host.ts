@@ -130,6 +130,9 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       avoidRect: humanActive || chatting || pinned ? undefined : avoidRect,
       window: scene.window,
       prefer: options.appProfiles?.byId(scene.appId)?.stage.perch,
+      ...(target && scene.element && scene.elementFrame
+        ? { surface: { kind: scene.element, frame: scene.elementFrame } }
+        : {}),
     });
     if (anchor) placement.position = { x: anchor.x - bounds.x, y: anchor.y - bounds.y };
     return {
@@ -140,10 +143,12 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
         !placement.obstructed &&
         !disposed,
       appearance: "mimi-sprite",
-      size,
       modelUrl: `${MIMI_COMPANION_SCHEME}://assets/Hiyori/Hiyori.model3.json`,
       coreUrl: `${MIMI_COMPANION_SCHEME}://assets/Core/live2dcubismcore.min.js`,
       ...placement,
+      // Working on a control draws the character smaller; where the human put
+      // it, it keeps the size they chose.
+      size: (!anchor && placement.size) || size,
       windowOrigin: { x: bounds.x, y: bounds.y },
       humanActive: humanActive || chatting,
       avoidInput:
