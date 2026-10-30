@@ -101,7 +101,7 @@ body,
   position: absolute;
   width: 100%;
   aspect-ratio: 192 / 208;
-  bottom: 25px;
+  /* bottom comes from COMPANION_SPRITE_BOTTOM; the stage model grounds on it. */
   background-size: 800% 1100%;
   background-repeat: no-repeat;
   filter: drop-shadow(0 5px 5px #1c23351a);
@@ -212,6 +212,13 @@ body,
   bottom: 3px;
 }
 
+/* Standing on a control, the space under the feet is the control itself. */
+.mimi-companion[data-perch="on-field"] .mimi-companion__activity,
+.mimi-companion[data-perch="on-baseline"] .mimi-companion__activity {
+  top: -26px;
+  bottom: auto;
+}
+
 .mimi-companion__preview {
   top: 0;
   background: #ffffffec;
@@ -294,4 +301,61 @@ body,
   border-color: #344c42;
   background: #344c42;
   color: white;
+}
+
+/* Contact: the paw or foot meets the target. */
+.mimi-impact {
+  position: absolute;
+  inset: -22px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(#f6aa4b 0 8deg, transparent 8deg 30deg);
+  -webkit-mask: radial-gradient(circle, transparent 42%, #000 44%, #000 70%, transparent 72%);
+  mask: radial-gradient(circle, transparent 42%, #000 44%, #000 70%, transparent 72%);
+  animation: mimi-impact 260ms ease-out forwards;
+}
+
+@keyframes mimi-impact {
+  from {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+/* Speed lines trail a walk. */
+.mimi-companion--dash-right::before,
+.mimi-companion--dash-left::before {
+  content: "";
+  position: absolute;
+  top: 38%;
+  width: 46%;
+  height: 26%;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0 9px,
+    rgba(120, 120, 135, 0.55) 9px 12px
+  );
+  animation: mimi-dash 180ms linear infinite alternate;
+}
+
+.mimi-companion--dash-right::before {
+  right: 88%;
+}
+
+.mimi-companion--dash-left::before {
+  left: 88%;
+}
+
+@keyframes mimi-dash {
+  from {
+    opacity: 0.35;
+    transform: scaleX(0.7);
+  }
+  to {
+    opacity: 0.8;
+    transform: scaleX(1);
+  }
 }
