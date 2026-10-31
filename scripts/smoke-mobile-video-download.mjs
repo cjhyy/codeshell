@@ -28,6 +28,7 @@ const scratch = await realpath(await mkdtemp(join(tmpdir(), "mobile-video-downlo
 const buildDir = await mkdtemp(join(root, "node_modules/.cache-mobile-video-download-"));
 const evidenceDir = await realpath(await mkdtemp(join(tmpdir(), "codeshell-video-download-qa-")));
 const cwd = join(scratch, "project"),
+  destination = join(cwd, "exports", "phone-downloads"),
   dataDir = join(scratch, "data"),
   bin = join(dataDir, "panel-bin");
 const bytes = Buffer.from("owned synthetic video download bytes\n".repeat(4096));
@@ -45,6 +46,7 @@ let authorized = true,
   approving = false;
 try {
   await Promise.all([mkdir(cwd), mkdir(bin, { recursive: true })]);
+  await mkdir(destination, { recursive: true });
   const passcode = new AccessPasscode({ filePath: join(scratch, "access.json") });
   passcode.set("synthetic-video-download-access");
   manager = new RemoteHostManager({
@@ -300,15 +302,41 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
   assert.equal(await frame.locator("#form-error").isVisible(), false);
   assert.equal(await frame.locator("#destination-path").textContent(), cwd);
   await frame.locator("#choose-directory").click();
-  const directoryConfirmation = page
-    .locator(".panel-host-confirm")
-    .filter({ hasText: "使用服务端下载目录？" });
+  const directoryConfirmation = page.locator(".panel-directory-picker");
   await directoryConfirmation.waitFor();
-  assert.ok((await directoryConfirmation.textContent()).includes(join(cwd, "downloads")));
+  assert.ok((await directoryConfirmation.textContent()).includes(cwd));
+  assert.equal(await page.locator("iframe").evaluate((element) => element.inert), true);
   await directoryConfirmation.getByRole("button", { name: "取消", exact: true }).click();
   await frame.locator("#choose-directory:not(:disabled)").waitFor();
   assert.equal(await frame.locator("#form-error").isVisible(), false);
   assert.equal(await frame.locator("#destination-path").textContent(), cwd);
+  await assert.rejects(realpath(join(cwd, "downloads")), { code: "ENOENT" });
+  // Browse to an existing owned subdirectory through the trusted parent UI.
+  // The downloader and exact-file/revocation assertions below retain this scope.
+  await frame.locator("#choose-directory").click();
+  await directoryConfirmation.waitFor();
+  await directoryConfirmation
+    .locator(".panel-directory-list")
+    .getByRole("button", { name: "exports", exact: true })
+    .click();
+  await directoryConfirmation
+    .locator(".panel-directory-list")
+    .getByRole("button", { name: "phone-downloads", exact: true })
+    .click();
+  const selectedDirectory = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/call") &&
+      response.request().postDataJSON()?.method === "filesystem.pickDirectory",
+  );
+  await directoryConfirmation.getByRole("button", { name: "使用此目录", exact: true }).click();
+  const selectedResponse = await selectedDirectory;
+  assert.equal(selectedResponse.status(), 200);
+  assert.equal((await selectedResponse.json()).path, destination);
+  await frame.locator("#destination-path").filter({ hasText: destination }).waitFor();
+  await frame.locator("#choose-directory:not(:disabled)").waitFor();
+  assert.equal(await frame.locator("#form-error").isVisible(), false);
+  assert.equal(await frame.locator("#destination-path").textContent(), destination);
+  assert.equal(calls.filter((call) => call.method === "filesystem.pickDirectory").length, 2);
   await frame.locator("#url-input").fill(fixtureUrl);
   // Keep the textarea focused: the phone path must handle the focus/viewport
   // transition itself. A synthetic desktop mouse click is not a touch gesture.
@@ -387,7 +415,7 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
   const download = await downloaded;
   assert.equal(download.suggestedFilename(), "手机下载验证.mp4");
   assert.equal(digest(await readFile(await download.path())), digest(bytes));
-  assert.equal(digest(await readFile(join(cwd, "手机下载验证.mp4"))), digest(bytes));
+  assert.equal(digest(await readFile(join(destination, "手机下载验证.mp4"))), digest(bytes));
   assert.ok(
     calls.some(
       (call) => call.method === "process.resolveEntry" && call.params.name === "download-service",
