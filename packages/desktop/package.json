@@ -39,6 +39,7 @@
     "test:e2e:companion-chat": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-mimi-companion-chat.mjs",
     "test:e2e:mimi-presence-restart": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-mimi-presence-restart.mjs",
     "test:e2e:mimi-presence-native": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-mimi-presence-native.mjs",
+    "test:e2e:mimi-presence-packaged": "node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-mimi-presence-packaged.mjs",
     "test:e2e:search": "node scripts/e2e-search.mjs",
     "test:e2e:navigation": "node scripts/e2e-navigation.mjs",
     "test:e2e:workspace-pages": "node scripts/e2e-workspace-pages.mjs",

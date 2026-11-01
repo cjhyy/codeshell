@@ -195,7 +195,9 @@ screen, per-window captures show the expected pixels, native right-click/click/
 keys switch forms, and 962 WindowServer samples during interleaved switching
 never had both on screen. Still open: multi-display/mixed-DPI (one built-in
 display here), capture hiding through the real CUA driver channel, ⌘⇧Esc in a
-fullscreen Space, and packaged acceptance (see `docs/todo/mimi-single-entry-movement-plan.md` §9).
+fullscreen Space, and packaged release acceptance (see `docs/todo/mimi-single-entry-movement-plan.md` §9).
+Merged in PR #267; a local packaged candidate of that exact tree passed
+`e2e-mimi-presence-packaged` in a private HOME (plan §9.7).
 
 See `packages/desktop/resources/mimi-live2d/README.md` for the optional official
 sample model, version pins, and separate Core/model licensing. Downloaded sample
