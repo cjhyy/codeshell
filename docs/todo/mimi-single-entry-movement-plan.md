@@ -244,12 +244,13 @@ Mimi presence（唯一拥有者：Desktop main 进程 MimiPresenceController）
 - 更新：`stage-model.test.ts`（工作态下限 96）、`settings-ipc.test.ts`（160–480 边界）、`pet-widget-window-state.test.ts`（源码契约指向新模块与“关闭 Mimi”）、`preload/pet-contract.test.ts`（presence 通道）、`ComputerUseSettings.interaction.fixture.tsx`（不再有第二开关/预览，改为入口）、`tests/architecture-budgets.test.ts`（新增 4 条 presence 路由计入总数，372→376）。
 - **CC 初稿阶段运行情况（已由主控补验，当前结果见 §9.5）：当时未能运行任何测试、typecheck、lint 或 build**——`bun`（含 `bun --version`、`bun install --frozen-lockfile`）、`node scripts/run-bun-test-shard.mjs …`、`node …/typescript/bin/tsc` 均被工具权限拒绝（需人工批准，会话非交互）；`cp -R` 克隆依赖也被路径校验拒绝，未绕过。主控现已完成补验，结果见 §9.5；仍缺的原生/正式包项目见 §9.4。
 
-### 9.4 仍待完成 / 未验收
+### 9.4 仍待完成 / 未验收（2026-11-01 第二轮更新）
 
-1. 原生合成器与真实指针验收：互斥录屏/快速点击、CUA 截图中实际隐藏、混合 DPI 多显示器拔插、全屏 Space 与停止快捷键。实际 Electron 自动测试不替代这些项目。
-2. 冷重启恢复、当前用户旧配置迁移和最终安装包验收仍需完成；本轮只使用隔离配置，没有安装覆盖操作者当前应用。正式包门禁归根 TODO P0.3。
-3. 移动模式下尚未增加审批计数徽标，当前点击角色可以直接打开主窗口 Mimi 页查看待批事项；停靠模式的活动提示保留。
-4. 任务分支尚未 push、PR 或合入主线；其他审查问题 R01–R04、R09–R28 仍保留，不在本实现中混修。
+1. **硬件缺口**：本机只有一块内置 Retina 屏（1512×982 DIP，scaleFactor 2），没有外接屏，因此多显示器、拔插、混合 DPI 下的夹紧与切换位置**未真机验证**（仍只有单测与显示器事件夹紧代码）。
+2. **原生 CUA 截图隐藏**未经真实 CUA 截图通道验证：需要真实 driver 截屏通道；生产代码没有、也不新增测试后门拿活动通道令牌。目前由实际 host 子进程测试（交互中截图隐藏）和控制器测试覆盖。
+3. **⌘⇧Esc 在全屏 Space 下**未原生发送：本机正在运行的 CodeShell 宿主可能持有同一全局快捷键，发送它可能停止用户真实的电脑操作。
+4. 移动模式下的审批计数徽标未做（点击角色可直达主窗口 Mimi 页查看待批事项）。
+5. PR/CI/合入与本机安装状态见 §9.6 与根 TODO；其他审查问题 R01–R04、R09–R28 仍保留，不在本实现中混修。正式包门禁仍归根 TODO P0.3。
 
 ### 9.5 主控补验与修正
 
@@ -276,3 +277,16 @@ CC 完成初稿后，主控在同一独立工作区补齐执行环境并完成�
 | `git diff --check` / `git diff --cached --check` | 无空白错误 |
 
 两组 Bun 范围存在重叠，不能把计数相加当作独立测试总数。Electron 回执保存在任务工作区的 `packages/desktop/out/mimi-presence-acceptance-20261101.json`；这是自动交互与 `BrowserWindow.isVisible()` 采样，不能证明全帧视觉互斥、原生输入命中、截图合成器、全屏或跨显示器行为。没有使用真实模型凭据、付费 API 或操作者当前的配置。
+
+### 9.6 第二轮补验（2026-11-01，CC，在任务 worktree 执行）
+
+新增两个只在本机运行的验收脚本（不进 CI）：`packages/desktop/scripts/e2e-mimi-presence-restart.mjs`（`test:e2e:mimi-presence-restart`）与 `e2e-mimi-presence-native.mjs`（`test:e2e:mimi-presence-native`，需要终端有辅助功能与屏幕录制权限），配套 `mimi-window-server-probe.swift`（`CGWindowListCopyWindowInfo` 只读窗口编号/层级/边界，不读标题与像素；另可发原生指针/按键）。两者都在 `scripts/run-isolated-node-smoke.mjs --private-keyring` 下跑：隔离 HOME/凭据、本地 mock provider，不调用模型。
+
+| 验收 | 结果 | 证据边界 |
+| --- | --- | --- |
+| 冷重启 + 旧配置迁移（同一隔离 HOME 连续启动 3 次） | 通过。首启：旧 `mimi-companion.json {enabled:true,size:320,anchor}` + `pet-widget.json` → 移动可见、尺寸 200、移动位置=旧锚点、停靠位置=旧位置；两个旧文件逐字节不变。二启：恢复 visible/移动/240/拖动后的位置；切到停靠后窗口位于保存的停靠位置。三启：关闭状态保持隐藏，启动全程 0 次出现 Mimi 窗口 | 主进程每 5 ms 采样 `BrowserWindow.isVisible()`：三次启动共 2794 次采样、0 次双显；3 次进程均 cleaned、隔离 HOME 已删、renderer errors 为空 |
+| 多个独立入口 | 通过：移动角色右键菜单“切换到停靠模式”（真实 DOM 点击）、账户菜单“隐藏/显示 Mimi”、电脑操作页无第二开关且“打开 Mimi 设置”跳转、Mimi 设置页停靠/移动按钮与尺寸下拉（240 后角色按 240 重绘）、设置页预览替换停靠、预览中关闭开关后越过 10 s 预览到期仍不显示、旧 `computerUse:setCompanion` 与 `pet:widget-visible`、多入口并发请求 | 同上（Playwright 驱动真实渲染端与 IPC） |
+| 原生 / 合成器（本机） | 通过：在测试应用自有的**全屏 Space** 中，停靠与移动都由 WindowServer 列为 on-screen；对两种形态的窗口单独截图（`screencapture -l`）分别得到小狗头与位于 200 DIP 框内（0.7× 宽）的移动角色像素；**原生右键**停靠小狗头弹出原生菜单、原生按键选“切换到移动模式”；**原生右键**移动角色弹出其菜单、原生点击“切换到停靠模式”；交错切换期间 WindowServer 每 5 ms 采样 962 次：停靠 707 次、移动 242 次、同时 0 次 | 原生事件只在自有全屏 Space 内、且点位窗口栈中自有 Mimi 之上只有可穿透的透明覆盖层时才发送；只截取自有 Mimi 窗口、不截全屏；结束后恢复指针位置并退出全屏。回执（任务 worktree，`out/` 不入库）：`packages/desktop/out/mimi-presence-native-final.json` 与 `mimi-presence-native-final-captures/`；冷重启回执 `mimi-presence-restart-final.json` |
+| 显示器 | 单块内置屏（scaleFactor 2）；多屏/混合 DPI 未覆盖 | 见 §9.4 |
+
+注意：本机同时运行着已安装的旧版 CodeShell（`/Applications/code-shell.app`），它自己的移动 Mimi 覆盖层也在屏幕上；本轮所有判定都按测试应用 PID 过滤，并未触碰该应用。

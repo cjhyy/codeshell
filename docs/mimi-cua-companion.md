@@ -186,8 +186,16 @@ skipped in the UI/preload group, with overlap). A confined real Electron test
 using a local mock model passed mode switching, interleaved requests, preview
 closure and continued chat through the actual worker; 67 visibility samples had
 no double-visible window. This is scripted app-level evidence, not compositor
-or native hit testing. Fullscreen Space, multi-display/mixed-DPI, cold restart
-and packaged acceptance remain open (see `docs/todo/mimi-single-entry-movement-plan.md` §9).
+or native hit testing. A second round (local only, see plan §9.6) added three
+cold restarts in one isolated HOME (legacy enabled+320 → moving at 200 with
+legacy files byte-identical; visible/mode/size/positions restored; a closed Mimi
+stays hidden) across six independent entries with 0 double-visible samples, and
+native checks in an owned fullscreen Space: WindowServer listed both forms on
+screen, per-window captures show the expected pixels, native right-click/click/
+keys switch forms, and 962 WindowServer samples during interleaved switching
+never had both on screen. Still open: multi-display/mixed-DPI (one built-in
+display here), capture hiding through the real CUA driver channel, ⌘⇧Esc in a
+fullscreen Space, and packaged acceptance (see `docs/todo/mimi-single-entry-movement-plan.md` §9).
 
 See `packages/desktop/resources/mimi-live2d/README.md` for the optional official
 sample model, version pins, and separate Core/model licensing. Downloaded sample
