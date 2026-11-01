@@ -25,6 +25,16 @@ import {
   petPersonalizationSettingsPatch,
   type PetPersonalization,
 } from "../../shared/pet-settings";
+import { SimpleSelect } from "@/components/ui/simple-select";
+import type {
+  MimiPresenceMode,
+  MimiPresencePatch,
+  MimiPresenceSnapshot,
+} from "../../shared/mimi-presence";
+import {
+  MIMI_COMPANION_DEFAULT_SIZE,
+  MIMI_COMPANION_SIZE_OPTIONS,
+} from "../../shared/mimi-companion";
 
 type PetPersonalizationDraft = Required<PetPersonalization>;
 
@@ -264,14 +274,168 @@ export function PetPersonalizationPage({ onBack }: PetPersonalizationPageProps) 
   );
 }
 
+/** Docked/moving mode, moving size, preview and failure state for the one Mimi. */
+export function MimiPresenceControls({
+  presence,
+  onChange,
+  onPreview,
+  onRetry,
+}: {
+  presence: MimiPresenceSnapshot;
+  onChange: (patch: MimiPresencePatch) => void;
+  onPreview?: () => Promise<void>;
+  onRetry?: () => void;
+}) {
+  const { t } = useT();
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const modes: Array<{ mode: MimiPresenceMode; label: string; hint: string; disabled: boolean }> = [
+    {
+      mode: "docked",
+      label: t("pet.settings.modeDocked"),
+      hint: t("pet.settings.modeDockedHint"),
+      disabled: false,
+    },
+    {
+      mode: "moving",
+      label: t("pet.settings.modeMoving"),
+      hint: t("pet.settings.modeMovingHint"),
+      disabled: !presence.movingAvailable,
+    },
+  ];
+  // A legacy custom size that is not a preset stays selectable instead of vanishing.
+  const sizes: number[] = MIMI_COMPANION_SIZE_OPTIONS.includes(
+    presence.size as (typeof MIMI_COMPANION_SIZE_OPTIONS)[number],
+  )
+    ? [...MIMI_COMPANION_SIZE_OPTIONS]
+    : [...MIMI_COMPANION_SIZE_OPTIONS, presence.size].sort((a, b) => a - b);
+  return (
+    <CardContent className="space-y-4 pt-0" data-mimi-presence-controls>
+      {!presence.visible && (
+        <p className="text-xs text-muted-foreground">{t("pet.settings.hiddenHint")}</p>
+      )}
+      <div className="space-y-2">
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("pet.settings.modeLabel")}
+        </div>
+        <div
+          className="grid grid-cols-2 gap-2"
+          role="radiogroup"
+          aria-label={t("pet.settings.modeLabel")}
+        >
+          {modes.map((item) => {
+            const selected = presence.mode === item.mode;
+            return (
+              <Button
+                key={item.mode}
+                type="button"
+                variant={selected ? "default" : "outline"}
+                role="radio"
+                aria-checked={selected}
+                data-mimi-mode={item.mode}
+                data-effective={presence.effectiveMode === item.mode ? "true" : undefined}
+                disabled={item.disabled}
+                className="h-auto flex-col items-start gap-0.5 whitespace-normal px-3 py-2 text-left"
+                onClick={() => {
+                  if (!selected) onChange({ mode: item.mode });
+                }}
+              >
+                <span className="text-sm font-medium">{item.label}</span>
+                <span className="text-xs font-normal text-muted-foreground">{item.hint}</span>
+              </Button>
+            );
+          })}
+        </div>
+        {!presence.movingAvailable && presence.movingUnavailableReason && (
+          <p className="text-xs text-muted-foreground" data-mimi-moving-unavailable>
+            {t("pet.settings.movingUnavailable", { reason: presence.movingUnavailableReason })}
+          </p>
+        )}
+        {presence.movingError && (
+          <div className="flex flex-wrap items-center gap-2" role="alert">
+            <span className="text-xs text-status-err">
+              {t("pet.settings.movingFallback", { error: presence.movingError })}
+            </span>
+            {onRetry && (
+              <Button type="button" size="sm" variant="outline" onClick={onRetry}>
+                {t("pet.settings.retry")}
+              </Button>
+            )}
+          </div>
+        )}
+        {presence.dockedError && (
+          <div className="flex flex-wrap items-center gap-2" role="alert">
+            <span className="text-xs text-status-err">
+              {t("pet.settings.dockedFailed", { error: presence.dockedError })}
+            </span>
+            {onRetry && (
+              <Button type="button" size="sm" variant="outline" onClick={onRetry}>
+                {t("pet.settings.retry")}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Label className="text-xs text-muted-foreground">{t("pet.settings.sizeLabel")}</Label>
+        <div className="w-56">
+          <SimpleSelect
+            size="sm"
+            value={String(presence.size)}
+            disabled={!presence.movingAvailable}
+            onChange={(value) => onChange({ size: Number(value) })}
+            options={sizes.map((size) => ({
+              value: String(size),
+              label:
+                size === MIMI_COMPANION_DEFAULT_SIZE
+                  ? t("pet.settings.sizeDefault", { size })
+                  : t("pet.settings.sizeOption", { size }),
+            }))}
+          />
+        </div>
+        {onPreview && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            data-mimi-preview
+            disabled={!presence.movingAvailable || previewBusy || presence.previewing}
+            onClick={() => {
+              setPreviewError(null);
+              setPreviewBusy(true);
+              void onPreview()
+                .catch((error) =>
+                  setPreviewError(error instanceof Error ? error.message : String(error)),
+                )
+                .finally(() => setPreviewBusy(false));
+            }}
+          >
+            {presence.previewing ? t("pet.settings.previewing") : t("pet.settings.preview")}
+          </Button>
+        )}
+      </div>
+      {previewError && (
+        <p className="text-xs text-status-err" role="alert">
+          {previewError}
+        </p>
+      )}
+    </CardContent>
+  );
+}
+
 export interface PetSettingsPageProps {
   activeModelKey: string | null;
   modelOptions: ModelOption[];
   hasModelOverride: boolean;
   widgetVisible: boolean;
+  /** Actual presence from the main-process owner; null until it is known. */
+  presence?: MimiPresenceSnapshot | null;
   onSelectModel: (option: ModelOption) => void;
   onResetModel: () => void;
   onWidgetVisibleChange: (visible: boolean) => void;
+  onPresenceChange?: (patch: MimiPresencePatch) => void;
+  onPreviewMoving?: () => Promise<void>;
+  onRetryPresence?: () => void;
   onOpenPersonalization: () => void;
   onOpenConnections: () => void;
   onOpenMemory: () => void;
@@ -283,9 +447,13 @@ export function PetSettingsPage({
   modelOptions,
   hasModelOverride,
   widgetVisible,
+  presence = null,
   onSelectModel,
   onResetModel,
   onWidgetVisibleChange,
+  onPresenceChange,
+  onPreviewMoving,
+  onRetryPresence,
   onOpenPersonalization,
   onOpenConnections,
   onOpenMemory,
@@ -391,11 +559,19 @@ export function PetSettingsPage({
                 </CardDescription>
               </div>
               <Switch
-                checked={widgetVisible}
+                checked={presence ? presence.visible : widgetVisible}
                 onCheckedChange={onWidgetVisibleChange}
                 aria-label={t("pet.settings.widgetTitle")}
               />
             </CardHeader>
+            {presence && onPresenceChange && (
+              <MimiPresenceControls
+                presence={presence}
+                onChange={onPresenceChange}
+                onPreview={onPreviewMoving}
+                onRetry={onRetryPresence}
+              />
+            )}
           </Card>
 
           <Card data-pet-setting="memory" className="rounded-2xl">

@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, screen, session, type WebContents } from "electron";
-import { readFile, writeFile, mkdir, rename, realpath } from "node:fs/promises";
-import { dirname, extname, join, resolve, sep } from "node:path";
+import { readFile, realpath } from "node:fs/promises";
+import { extname, join, resolve, sep } from "node:path";
 import {
   companionSize,
   MIMI_COMPANION_DEFAULT_SIZE,
@@ -12,7 +12,8 @@ import { CompanionChoreographer, type CompanionPlacementScene } from "./companio
 import type { AppProfileIndex } from "./app-profiles.js";
 import { clearsFieldAtOnce, stagePlacement } from "./stage-model.js";
 import { windowAtPoint } from "./window-at-point.js";
-import { petWidgetAlwaysOnTopLevel } from "../pet/pet-widget-window-state.js";
+import { petWidgetAlwaysOnTopLevel } from "../pet/pet-widget-geometry.js";
+import { movingAnchorForFeet, movingFeet } from "../pet/mimi-presence-state.js";
 import type { ComputerActivityBus } from "./computer-activity-bus.js";
 import type { InputGate } from "./input-gate.js";
 
@@ -21,13 +22,34 @@ const CHAT_RELEASE_MS = 10_000;
 /** An unanswered "look at this window?" offer withdraws itself. */
 const HANDOFF_OFFER_MS = 8_000;
 
+/**
+ * How the single Mimi presence owner hears from the moving surface. Without it
+ * (the standalone effect lab) the host keeps its own enabled switch.
+ */
+export interface MimiCompanionPresenceHooks {
+  /** Initial size and user-pinned position from the unified presence file. */
+  initial?: { size?: number; anchor?: { x: number; y: number } };
+  /** The user pinned (or released) the character; persist with the presence. */
+  onAnchorChange?(anchor: { x: number; y: number } | undefined): void;
+  /** The renderer crashed or the window was lost while presented. */
+  onFailure?(error: string): void;
+  /** The settings preview finished on its own. */
+  onPreviewEnd?(): void;
+  /** A capture started/ended; returns whether another Mimi form was hidden. */
+  onCaptureChange?(capturing: boolean): boolean;
+  /** The character's own menu asked to dock or close Mimi. */
+  request?(action: "dock" | "close"): void;
+}
+
 export interface MimiCompanionHostOptions {
   appPath: string;
   resourcesPath: string;
-  userDataPath: string;
   packaged: boolean;
   devUrl?: string;
   isMainWindow(sender: WebContents): boolean;
+  /** Mimi chat surfaces allowed to hold foreground input (defaults to main windows). */
+  isChatSurface?(sender: WebContents): boolean;
+  presence?: MimiCompanionPresenceHooks;
   /** Open the Mimi chat; `prompt` is placed in the composer, never sent. */
   openChat(request?: { prompt: string }): Promise<void>;
   holdForChat?: boolean;
@@ -42,9 +64,12 @@ export interface MimiCompanionHostOptions {
 
 /** A full character surface, independent of both the pointer and the chat widget. */
 export async function createMimiCompanionHost(options: MimiCompanionHostOptions) {
-  const prefsPath = join(options.userDataPath, "mimi-companion.json");
-  let enabled = false;
-  let size = MIMI_COMPANION_DEFAULT_SIZE;
+  const hooks = options.presence ?? {};
+  /** Whether the presence owner wants this form shown. Never true together with docked. */
+  let presenting = false;
+  /** Effect-lab switch, used only when no presence owner drives this host. */
+  let standaloneEnabled = false;
+  let size = companionSize(hooks.initial?.size ?? MIMI_COMPANION_DEFAULT_SIZE);
   let anchor: { x: number; y: number } | undefined;
   let pinned = false;
   let humanActive = false;
@@ -54,20 +79,23 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   let dragged = false;
   let handoff: { app: string } | undefined;
   let handoffTimer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    const saved = JSON.parse(await readFile(prefsPath, "utf8"));
-    enabled = saved.enabled === true;
-    size = companionSize(saved.size);
-    if (validPoint(saved.anchor)) {
-      anchor = saved.anchor;
-      pinned = true;
-    }
-  } catch {
-    /* First run and invalid preferences use the opt-out default. */
+  const initialAnchor = hooks.initial?.anchor;
+  if (validPoint(initialAnchor)) {
+    anchor = { x: initialAnchor.x, y: initialAnchor.y };
+    pinned = true;
   }
+  let captureNotified = false;
+  /** Tell the owner when captures start/end so the docked form hides too. */
+  const syncCapture = (): boolean => {
+    const capturing = choreographer.capturing && !disposed;
+    if (capturing === captureNotified) return false;
+    captureNotified = capturing;
+    return hooks.onCaptureChange?.(capturing) ?? false;
+  };
 
   let window: BrowserWindow | undefined;
   let creating: Promise<void> | undefined;
+  let creationEpoch = 0;
   let disposed = false;
   let ready = false;
   let error: string | undefined;
@@ -91,18 +119,26 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     suppressed: () => humanActive,
     place: placeAt,
     beginGesture: () => {
-      cancelPreview();
-      if (enabled)
+      if (preview) {
+        cancelPreview();
+        // Real work replaced the preview; the owner returns to the user's form.
+        if (hooks.onPreviewEnd) hooks.onPreviewEnd();
+        else if (!standaloneEnabled) withdraw();
+      }
+      if (presenting)
         void ensureWindow().catch((failure) => {
           options.log("mimi_companion_load_failed", { error: String(failure) });
         });
     },
     hideForCapture: async () => {
       const wasVisible = window?.isVisible() ?? false;
+      // Hides whichever Mimi form is on screen, docked included.
+      const otherHidden = syncCapture();
       publish();
       // Acknowledge only after the hidden window has had time to leave the
       // compositor. The proxy bounds this wait and never retries input.
-      if (wasVisible) captureBarrier = new Promise((resolve) => setTimeout(resolve, 50));
+      if (wasVisible || otherHidden)
+        captureBarrier = new Promise((resolve) => setTimeout(resolve, 50));
       await captureBarrier;
     },
     publish,
@@ -138,12 +174,8 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     });
     if (anchor) placement.position = { x: anchor.x - bounds.x, y: anchor.y - bounds.y };
     return {
-      enabled,
-      visible:
-        (enabled || preview) &&
-        (!choreographer.capturing || humanActive) &&
-        !placement.obstructed &&
-        !disposed,
+      enabled: presenting,
+      visible: presenting && !choreographer.capturing && !placement.obstructed && !disposed,
       appearance: "mimi-sprite",
       modelUrl: `${MIMI_COMPANION_SCHEME}://assets/Hiyori/Hiyori.model3.json`,
       coreUrl: `${MIMI_COMPANION_SCHEME}://assets/Core/live2dcubismcore.min.js`,
@@ -176,24 +208,18 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     );
   }
 
-  let saveQueue = Promise.resolve();
-  const persist = () => {
-    const saved = JSON.stringify({ enabled, size, ...(pinned && anchor ? { anchor } : {}) });
-    saveQueue = saveQueue
-      .catch(() => {})
-      .then(async () => {
-        await mkdir(dirname(prefsPath), { recursive: true });
-        await writeFile(prefsPath + ".tmp", saved, { mode: 0o600 });
-        await rename(prefsPath + ".tmp", prefsPath);
-      });
-    return saveQueue;
+  /** Position belongs to the unified presence file, written by its owner. */
+  const persist = async () => {
+    hooks.onAnchorChange?.(pinned && anchor ? { ...anchor } : undefined);
   };
 
   function publish() {
+    syncCapture();
     if (!window || window.isDestroyed() || disposed) return;
     const next = state();
     window.webContents.send("mimiCompanion:state", next);
-    if (next.visible && ready && !error) {
+    // The only place this window becomes visible: only while presented.
+    if (presenting && next.visible && ready && !error) {
       window.showInactive();
       elevate(window);
     } else window.hide();
@@ -212,7 +238,10 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   async function ensureWindow() {
     if (disposed || (window && !window.isDestroyed())) return;
     if (creating) return creating;
-    creating = (async () => {
+    // A withdraw bumps the epoch: a creation started before it must not build
+    // a window, and a new presentation must not wait on that stale creation.
+    const epoch = creationEpoch;
+    const current = (async () => {
       ready = false;
       error = undefined;
       const isolated = session.fromPartition("mimi-companion");
@@ -254,7 +283,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
           }
         });
       }
-      if (disposed || (!enabled && !preview)) return;
+      if (disposed || !presenting || epoch !== creationEpoch) return;
       const win = new BrowserWindow({
         ...display.bounds,
         // NSPanel participates in other apps' fullscreen Spaces without
@@ -295,8 +324,11 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
       win.webContents.on("will-navigate", (event) => event.preventDefault());
       win.webContents.on("render-process-gone", () => {
-        error = "角色显示进程已退出，请关闭再开启。";
+        const current = window === win;
+        if (current) error = "角色显示进程已退出，可在 Mimi 设置里重试移动模式。";
         if (!win.isDestroyed()) win.destroy();
+        // Shown and then lost: the owner hides it and falls back to docked.
+        if (current && presenting && !disposed) hooks.onFailure?.(error!);
       });
       win.on("closed", () => {
         if (window === win) {
@@ -309,14 +341,17 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
           await win.loadURL(`${options.devUrl.replace(/\/$/, "")}/mimi-companion.html`);
         else await win.loadFile(join(options.appPath, "out", "renderer", "mimi-companion.html"));
       } catch (failure) {
-        error = "角色显示未能加载，请关闭再开启。";
+        // Withdrawn while loading: the abort is expected, not a failure.
+        if (window !== win || !presenting) return;
+        error = "角色显示未能加载，可在 Mimi 设置里重试移动模式。";
         options.log("mimi_companion_load_failed", { error: String(failure) });
         if (!win.isDestroyed()) win.destroy();
       }
     })().finally(() => {
-      creating = undefined;
+      if (creating === current) creating = undefined;
     });
-    return creating;
+    creating = current;
+    return current;
   }
 
   function cancelPreview() {
@@ -416,10 +451,11 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   // A chat hold belongs to the visible, focused chat page. Leaving the page or
   // switching back to work releases it; dragging still keeps the saved anchor.
   ipcMain.handle("mimiCompanion:chatActive", (event, value: unknown) => {
+    const chatSurface = options.isChatSurface ?? options.isMainWindow;
     if (
       event.sender.isDestroyed() ||
       event.senderFrame !== event.sender.mainFrame ||
-      !options.isMainWindow(event.sender) ||
+      !chatSurface(event.sender) ||
       typeof value !== "boolean"
     ) {
       throw new Error("Invalid companion chat surface");
@@ -535,6 +571,14 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     options.gate.resume();
     options.log("computer_input_resumed", { source: "companion" });
   };
+  // Dock/close from the character's own menu go to the single presence owner,
+  // which hides this surface before it shows the other one.
+  const onPresence = (event: Electron.IpcMainEvent, action: unknown) => {
+    if (!ownOverlay(event.sender, event.senderFrame) || !presenting) return;
+    if (action !== "dock" && action !== "close") return;
+    hooks.request?.(action);
+  };
+  ipcMain.on("mimiCompanion:presence", onPresence);
   ipcMain.on("mimiCompanion:stopComputer", onStopComputer);
   ipcMain.on("mimiCompanion:resumeComputer", onResumeComputer);
   ipcMain.on("mimiCompanion:interaction", onInteraction);
@@ -585,111 +629,193 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   };
   screen.on("display-metrics-changed", onDisplaysChanged);
   screen.on("display-removed", onDisplaysChanged);
-  if (enabled) await ensureWindow();
+
+  /** Mark wanted, then create/load and wait for the renderer's ready signal. */
+  async function present(isCurrent: () => boolean = () => true): Promise<void> {
+    if (disposed) throw new Error("角色已关闭");
+    presenting = true;
+    error = undefined;
+    normalizeAnchor();
+    window?.setBounds(display.bounds);
+    await ensureWindow();
+    const readyDeadline = Date.now() + 5000;
+    while (presenting && !ready && !error && !disposed && Date.now() < readyDeadline) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    // Withdrawn or superseded meanwhile: the newer request decides what shows.
+    if (!presenting || !isCurrent()) return;
+    if (disposed || !ready || error || !window || window.isDestroyed()) {
+      const reason = error ?? "角色尚未准备好";
+      error = reason;
+      throw new Error(reason);
+    }
+    publish();
+  }
+
+  /** Synchronously hide and drop the window. Execution activity keeps flowing. */
+  function withdraw(): void {
+    presenting = false;
+    creationEpoch++;
+    creating = undefined;
+    cancelPreview();
+    humanActive = false;
+    dragging = false;
+    withdrawHandoff();
+    const win = window;
+    window = undefined;
+    ready = false;
+    if (win && !win.isDestroyed()) {
+      win.hide();
+      win.destroy();
+    }
+  }
+
+  function setSize(value: number): void {
+    size = companionSize(value);
+    normalizeAnchor();
+    if (anchor) window?.setBounds(display.bounds);
+    publish();
+  }
+
+  async function startPreview(isCurrent: () => boolean = () => true, displayId?: number) {
+    cancelPreview();
+    if (!presenting || !isCurrent()) return;
+    if (humanActive) throw new Error("请先移开角色上的鼠标，再预览动作。");
+    chatting = false;
+    preview = true;
+    if (displayId !== undefined) {
+      const selected = screen.getAllDisplays().find((item) => item.id === displayId);
+      if (!selected) {
+        preview = false;
+        throw new Error("所选屏幕已断开");
+      }
+      display = selected;
+      anchor = {
+        x: display.workArea.x + display.workArea.width * 0.68 - size * 0.35,
+        y: display.workArea.y + display.workArea.height * 0.5 - size / 2,
+      };
+      pinned = true;
+    } else {
+      normalizeAnchor();
+      display = screen.getDisplayNearestPoint(anchor ?? screen.getCursorScreenPoint());
+    }
+    window?.setBounds(display.bounds);
+    target = undefined;
+    if (!isCurrent() || !presenting) {
+      cancelPreview();
+      return;
+    }
+    const runId = ++previewSequence;
+    const steps = ["observe", "click", "type", "scroll", "idle"] as const;
+    steps.forEach((action, index) => {
+      previewTimers.push(
+        setTimeout(() => {
+          if (!preview || disposed || !presenting || !isCurrent()) return;
+          const bounds = display.bounds;
+          target = {
+            x: bounds.x + bounds.width * (index % 2 === 0 ? 0.62 : 0.4),
+            y: bounds.y + bounds.height * 0.52,
+          };
+          if (!pinned) anchor = undefined;
+          choreographer.show({
+            id: `preview-${runId}-${index}`,
+            action,
+            phase: "start",
+            startedAt: Date.now(),
+          });
+          publish();
+        }, index * 1800),
+      );
+    });
+    const finishPreview = () => {
+      // A stale timer from a cancelled or superseded preview does nothing.
+      if (!preview || disposed || runId !== previewSequence) return;
+      if (humanActive) {
+        previewExpiry = setTimeout(finishPreview, 1000);
+        return;
+      }
+      cancelPreview();
+      choreographer.show({ id: "idle", action: "idle", phase: "end", startedAt: Date.now() });
+      target = undefined;
+      publish();
+      // The owner decides what is shown next; it never re-shows a closed Mimi.
+      if (hooks.onPreviewEnd) hooks.onPreviewEnd();
+      else if (!standaloneEnabled) withdraw();
+    };
+    previewExpiry = setTimeout(finishPreview, 10_000);
+    publish();
+  }
 
   return {
+    present,
+    withdraw,
+    setSize,
+    startPreview,
+    cancelPreview() {
+      if (!preview) return;
+      cancelPreview();
+      target = undefined;
+      choreographer.show({ id: "idle", action: "idle", phase: "end", startedAt: Date.now() });
+      publish();
+    },
+    isVisible() {
+      return presenting && !!window && !window.isDestroyed() && window.isVisible();
+    },
+    /** Visual feet in global DIP, using the size actually drawn (working scale included). */
+    feet(): { x: number; y: number } | undefined {
+      if (window && !window.isDestroyed() && presenting) {
+        const current = state();
+        const origin = current.windowOrigin ?? { x: 0, y: 0 };
+        return movingFeet(
+          { x: origin.x + current.position.x, y: origin.y + current.position.y },
+          current.size,
+        );
+      }
+      return anchor ? movingFeet(anchor, size) : undefined;
+    },
+    /** Stand at `feet` (pinned) the next time the character is shown. */
+    placeFeet(feet: { x: number; y: number }) {
+      if (!validPoint(feet)) return;
+      anchor = movingAnchorForFeet(feet, size);
+      pinned = true;
+      target = undefined;
+      normalizeAnchor();
+      window?.setBounds(display.bounds);
+      void persist();
+      publish();
+    },
     status(): MimiCompanionSettings {
       return {
-        enabled,
+        enabled: presenting,
         size,
         appearance: "mimi-sprite",
         available: true,
         ...(error ? { error } : {}),
       };
     },
+    /** Standalone effect lab only. Desktop routes this through the presence owner. */
     async update(value: { enabled?: boolean; size?: number }) {
-      const next = { enabled: value.enabled ?? enabled, size: companionSize(value.size ?? size) };
-      enabled = next.enabled;
-      size = next.size;
-      normalizeAnchor();
-      if (anchor) window?.setBounds(display.bounds);
-      await persist();
-      cancelPreview();
-      if (!enabled) {
-        stopPresentation();
-        humanActive = false;
-        chatting = false;
-        dragging = false;
-        window?.destroy();
-        error = undefined;
-      } else await ensureWindow();
+      if (value.size !== undefined) setSize(value.size);
+      if (value.enabled !== undefined) standaloneEnabled = value.enabled;
+      if (value.enabled === false) withdraw();
+      else if (value.enabled === true) await present();
       publish();
     },
+    /** Standalone effect lab only. */
     async preview(displayId?: number) {
-      cancelPreview();
-      if (humanActive) return;
-      chatting = false;
-      preview = true;
-      if (displayId !== undefined) {
-        const selected = screen.getAllDisplays().find((item) => item.id === displayId);
-        if (!selected) {
-          preview = false;
-          throw new Error("所选屏幕已断开");
-        }
-        display = selected;
-        anchor = {
-          x: display.workArea.x + display.workArea.width * 0.68 - size * 0.35,
-          y: display.workArea.y + display.workArea.height * 0.5 - size / 2,
-        };
-        pinned = true;
-      } else {
-        normalizeAnchor();
-        display = screen.getDisplayNearestPoint(anchor ?? screen.getCursorScreenPoint());
-      }
-      window?.setBounds(display.bounds);
-      target = undefined;
-      await ensureWindow();
-      const readyDeadline = Date.now() + 5000;
-      while (!ready && !error && !disposed && Date.now() < readyDeadline) {
-        await new Promise((resolve) => setTimeout(resolve, 20));
-      }
-      if (!ready || disposed) {
-        cancelPreview();
-        throw new Error(error ?? "角色尚未准备好");
-      }
-      const runId = ++previewSequence;
-      const steps = ["observe", "click", "type", "scroll", "idle"] as const;
-      steps.forEach((action, index) => {
-        previewTimers.push(
-          setTimeout(() => {
-            if (!preview || disposed) return;
-            const bounds = display.bounds;
-            target = {
-              x: bounds.x + bounds.width * (index % 2 === 0 ? 0.62 : 0.4),
-              y: bounds.y + bounds.height * 0.52,
-            };
-            if (!pinned) anchor = undefined;
-            choreographer.show({
-              id: `preview-${runId}-${index}`,
-              action,
-              phase: "start",
-              startedAt: Date.now(),
-            });
-            publish();
-          }, index * 1800),
-        );
-      });
-      const finishPreview = () => {
-        if (humanActive) {
-          previewExpiry = setTimeout(finishPreview, 1000);
-          return;
-        }
-        cancelPreview();
-        choreographer.show({ id: "idle", action: "idle", phase: "end", startedAt: Date.now() });
-        target = undefined;
-        if (!enabled) window?.destroy();
-        else publish();
-      };
-      previewExpiry = setTimeout(finishPreview, 10_000);
-      publish();
+      if (!presenting) await present();
+      await startPreview(() => true, displayId);
     },
     async close() {
       disposed = true;
+      presenting = false;
       cancelPreview();
+      syncCapture();
       choreographer.dispose();
       window?.destroy();
       await creating?.catch(() => {});
       window?.destroy();
+      ipcMain.removeListener("mimiCompanion:presence", onPresence);
       ipcMain.removeHandler("mimiCompanion:state");
       ipcMain.removeListener("mimiCompanion:ready", onReady);
       ipcMain.removeListener("mimiCompanion:interaction", onInteraction);
@@ -709,7 +835,6 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       chatSurfaces.clear();
       screen.removeListener("display-metrics-changed", onDisplaysChanged);
       screen.removeListener("display-removed", onDisplaysChanged);
-      await persist().catch(() => {});
     },
   };
 }

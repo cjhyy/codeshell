@@ -41,10 +41,11 @@ let current: ComputerUseSettingsStatus = {
 let reads = 0;
 if (scenario === "companion") {
   current.enabled = false;
-  current.companion = { enabled: false, size: 320, available: true, appearance: "mimi-sprite" };
+  current.companion = { enabled: false, size: 200, available: true, appearance: "mimi-sprite" };
 }
 const companionWrites: Array<{ enabled?: boolean; size?: number }> = [];
 let companionPreviews = 0;
+let mimiSettingsOpens = 0;
 let writesFail = scenario === "enable-retry";
 let readsFail = scenario === "read-retry";
 const requests: string[] = [];
@@ -143,7 +144,9 @@ async function grant(kind: "accessibility" | "screenRecording") {
   await update(() => pending.resolve(structuredClone(current)));
 }
 try {
-  await update(() => root.render(<ComputerUseSettings />));
+  await update(() =>
+    root.render(<ComputerUseSettings onOpenMimiSettings={() => (mimiSettingsOpens += 1)} />),
+  );
   assert.deepEqual(requests, [], "Rendering never requests OS permissions");
   assert.deepEqual(settings, [], "Rendering never opens System Settings");
   assert.equal(restarts, 0, "Rendering never restarts the app");
@@ -283,25 +286,21 @@ try {
     assert.ok(textOf(container).includes("Not granted"));
     assert.ok(!textOf(container).includes("settingsX.computerUse"));
   } else if (scenario === "companion") {
-    const companionToggle = () => nodes(container).filter((n) => props(n).role === "switch")[1];
-    assert.ok(textOf(container).includes("Live2D"));
-    assert.ok(textOf(container).includes("尚未启用模型"));
-    await click("预览动作");
-    assert.equal(companionPreviews, 1);
+    // Mimi has one switch: this page no longer owns a second companion switch,
+    // size control or preview; it links to the single Mimi setting instead.
     assert.equal(
-      props(companionToggle())["aria-checked"],
-      false,
-      "Preview never persists the switch",
+      nodes(container).filter((n) => props(n).role === "switch").length,
+      1,
+      "Only the computer-use feature switch remains on this page",
     );
-    await update(() =>
-      props(companionToggle()).onClick({ defaultPrevented: false, stopPropagation() {} }),
-    );
-    assert.equal(props(companionToggle())["aria-checked"], true);
-    await update(() =>
-      props(companionToggle()).onClick({ defaultPrevented: false, stopPropagation() {} }),
-    );
-    assert.equal(props(companionToggle())["aria-checked"], false);
-    assert.deepEqual(companionWrites, [{ enabled: true }, { enabled: false }]);
+    assert.ok(!textOf(container).includes("预览动作"));
+    assert.ok(!nodes(container).some((n) => n.tagName === "SELECT"));
+    assert.ok(textOf(container).includes("Mimi 只有一个开关"));
+    assert.ok(textOf(container).includes("当前：未使用移动模式。"));
+    await click("打开 Mimi 设置");
+    assert.equal(mimiSettingsOpens, 1);
+    assert.deepEqual(companionWrites, [], "The link never toggles Mimi by itself");
+    assert.equal(companionPreviews, 0);
     assert.deepEqual(writes, [], "Companion never enables computer use");
     assert.deepEqual(requests, [], "Companion never requests OS permissions");
     assert.equal(restarts, 0);

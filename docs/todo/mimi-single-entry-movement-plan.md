@@ -1,6 +1,6 @@
 # Mimi 单入口 + 移动模式合并方案（2026-11-01）
 
-> 状态：**方案草稿，未实施**。本文只做现状核对与设计，不修改产品代码。
+> 状态：**已按本文在任务分支 `codex/desktop/mimi-unified-presence-20261101` 的 worktree 中实施（2026-11-01；实施会话因工具权限未能提交，未合并）**。用户已授权实施，T0 各项按 §9.1 的“实施采用”决定执行，不再作为开工前的确认门槛。实施记录、测试与未验收项见 [§9](#9-实施记录2026-11-01)。§2–§3 仍是基线代码的现状核对，行号以基线为准。
 > 审查基线：`82c6f37ab6ef8dd29ee58aa7ca9a1daa0ea1d7c6`（`origin/main`，PR #266 合并提交，提交日期 2026-10-31）；审查日期 2026-11-01。
 > 代码证据全部通过 `git show 82c6f37ab:<path>` / `git grep -n <pattern> 82c6f37ab -- <path>` 读取，行号以该基线为准。
 > 关联：[全仓审查报告](repo-audit-20261101.md) · [Mimi CUA 角色原型说明](../mimi-cua-companion.md) · [数字人与 Pet 架构](../architecture/14-digital-human-and-pet.md) · [CUA 执行边界设计](../superpowers/specs/2026-10-28-mimi-cua-execution-boundary-design.md) · [舞台与应用档案设计](../superpowers/specs/2026-10-29-computer-use-stage-and-app-profiles-design.md) · [根 TODO](../../TODO.md)
@@ -19,7 +19,7 @@
 | U4 | **默认尺寸缩小**，且仍可调 | “默认有点太大了” |
 | U5 | 保留 `packages/pet` 能力边界：Pet 行为 / DelegateWork / 投影仍是能力包，不把 Pet 加回 core；窗口与呈现属于 Desktop 宿主 | CODESHELL.md Known Architecture Debt |
 
-本文中的**新尺寸为建议值，用户尚未确认**。
+新尺寸已按 §9.1 **实施采用**（移动角色框默认 200 DIP）。
 
 ## 1. 名词：“移动的 Mimi”指什么
 
@@ -123,7 +123,7 @@ Mimi presence（唯一拥有者：Desktop main 进程 MimiPresenceController）
   - 旧 `mimi-companion.json.enabled === true` → `visible: true, mode: "moving"`，`moving.anchor` 取旧 `anchor`；
   - 否则 → `visible: false, mode: "docked"`（旧 widget 显隐本来就不持久化，与现在“启动时隐藏”一致）；
   - `pet-widget.json` 的位置 → `docked.anchor`；
-  - 尺寸：旧 `size === 320`（旧默认值，且旧文件无法区分“没改过”和“主动选 320”）→ 迁移到新默认值；其他合法值保留，并夹紧到新范围。**这一条需用户确认**（备选：一律保留旧值）。
+  - 尺寸：旧 `size === 320`（旧默认值，且旧文件无法区分“没改过”和“主动选 320”）→ 迁移到新默认值 200；其他合法值保留，并夹紧到新范围。**实施采用**（见 §9.1；旧文件保留，可回滚）。
   - 旧文件损坏 / 字段非法：按仓库“严格校验叠加旧数据”规则，隔离坏字段、其余用默认值，不抛错，也不覆盖原文件。
 - 启动顺序：`moving` 依赖 `initializeDesktopComputerUse`（`index.ts:3496-3508`）创建的 companion host，所以控制器要在 `petIpcReady` 与 computer-use 初始化都完成后再 `apply`。在此之前**两个形态都不显示**，避免启动瞬间闪出两个。
 - 持久化的 `mode=moving` 但当前不可用（非 macOS、`control` 创建失败、companion host 初始化失败）：**生效**模式降为 `docked`，**保存的偏好不改**；设置里显示“移动模式不可用：原因”。
@@ -152,7 +152,7 @@ Mimi presence（唯一拥有者：Desktop main 进程 MimiPresenceController）
 - 混合 DPI（例如 2560×1440 外接屏 + Retina 内屏）：只用 Electron DIP 计算，不自己乘 `scaleFactor`；`display-metrics-changed/display-removed` 时两个形态都要重新夹紧（companion 已有，`mimi-companion-host.ts:579-587`；widget 当前只在创建和移动时夹紧）。
 - UI 文案：建议叫“**移动模式**（Mimi 在桌面上走动、跟随电脑操作）”，并加副标题，避免和“移动端 / 手机”混淆；停靠形态叫“**停靠模式**”。最终命名待用户确认。
 
-### 5.7 尺寸（建议值，待用户确认）
+### 5.7 尺寸（实施采用）
 
 | 项 | 现值 | 建议 | 理由 |
 | --- | --- | --- | --- |
@@ -167,7 +167,7 @@ Mimi presence（唯一拥有者：Desktop main 进程 MimiPresenceController）
 
 | 任务 | 内容 | 主要文件 | 体量 |
 | --- | --- | --- | --- |
-| T0 | 用户确认：默认尺寸、320 迁移规则、移动失败回落策略、模式命名、电脑操作页开关的去留 | 本文 | XS |
+| T0 | ~~用户确认~~ 已由授权实施决定（§9.1）：默认尺寸、320 迁移规则、移动失败回落策略、模式命名、电脑操作页开关的去留 | 本文 | XS |
 | T1 | 把 widget 窗口逻辑从 `index.ts:2882-3110, 5903-5981` 抽成 `DockedSurface` 模块，**零行为变化**，旧 IPC 保持 | `main/index.ts`、新 `main/pet/pet-widget-surface.ts`、`main/pet/pet-widget-window-state.ts` | M |
 | T2 | companion host 拆开“偏好 enabled”与“是否呈现 presenting”：新增 `setPresenting(bool)` 和 `setSize(n)`；`update({enabled})` 保留为兼容路径，内部改为调用控制器 | `main/computer-use/mimi-companion-host.ts`、`desktop-setup.ts`、`settings-ipc.ts`、`shared/mimi-companion.ts` | S–M |
 | T3 | `MimiPresenceController`：状态、串行 `apply`、代次校验、hide-before-show、持久化与迁移、可用性降级、统一 `hideForCapture` | 新 `main/pet/mimi-presence-controller.ts`、`mimi-presence-state.ts`；`main/index.ts` 接线 | M |
@@ -205,3 +205,74 @@ Mimi presence（唯一拥有者：Desktop main 进程 MimiPresenceController）
 - 不改 `packages/pet` 能力包与 core 协议；不为手机端新增 Mimi 形象。
 - 不改变 CUA 执行权限、驱动版本或输入闸门语义。
 - Live2D 适配仍是预留接口，不在本方案启用。
+
+## 9. 实施记录（2026-11-01）
+
+分支 `codex/desktop/mimi-unified-presence-20261101`，起点 `82c6f37ab` + 本文提交。只改 Desktop 宿主呈现层；`packages/pet`、`packages/core` 未改。
+
+### 9.1 实施采用的决定（原 T0）
+
+| 项 | 采用 |
+| --- | --- |
+| 入口 | 只有一个“显示 Mimi”开关（Mimi 设置页、账户菜单同一状态）；打开后切“停靠模式 / 移动模式” |
+| 命名 | “停靠模式”“移动模式”，副标题注明移动模式是桌面角色、不是手机端 |
+| 默认尺寸 | 移动角色框高 200 DIP（宽 0.7×）；范围 160–480；选项 160/200/240/320/400/480；工作态 ×0.55，下限 96；停靠狗头不变 |
+| 320 迁移 | 旧 `mimi-companion.json.size === 320` 视为旧默认迁到 200；其他合法值保留并夹紧。旧文件无法区分“主动选 320”，因此主动选过 320 的用户会被降到 200，可在设置里重新选 320。新文件里的 320 视为主动选择，保留 |
+| 首次迁移 | 新文件不存在时：旧 companion `enabled=true` → 移动可见；否则停靠且隐藏；`pet-widget.json` 位置 → 停靠锚点；companion 锚点 → 移动锚点。旧文件只读、不删不改，可回滚 |
+| 坏文件 | 旧文件坏：逐字段保全合法值，不抛错，不改写原文件。新文件无法解析：先复制为 `mimi-presence.json.corrupt-<时间戳>`，再按旧文件/默认值启动 |
+| 失败回落 | 移动表面加载失败或崩溃：先撤下移动表面，再回落停靠并显示错误；再选移动模式或点“重试”可恢复。保存的偏好保持移动 |
+| 不可用 | 非 macOS、执行闸门或角色初始化失败：移动选项禁用并显示原因，生效模式为停靠，保存的移动偏好不改 |
+| 电脑操作页 | 移除第二个独立开关、大小与预览；改为说明 + “打开 Mimi 设置”入口 |
+
+### 9.2 落地结构
+
+| 文件 | 内容 |
+| --- | --- |
+| `shared/mimi-presence.ts` | 快照/补丁类型（`visible/mode/size` + `effectiveMode/shown/movingAvailable/错误/previewing`） |
+| `main/pet/mimi-presence-controller.ts` | 唯一拥有者：`set/preview/retry/start/surfaceFailed/setCaptureActive/rememberAnchor/dispose`；每次 apply 递增代次，先同步撤下非目标形态再显示目标，异步返回后校验代次，过期结果不显示且必要时再撤下；广播实际生效状态 |
+| `main/pet/mimi-presence-state.ts` | 持久化（有序原子写入）、逐字段解析、旧文件迁移、脚底几何（停靠狗头底边中点；移动用实际绘制高度与 `companionFeetOffset`，不用 0.9×size） |
+| `main/pet/pet-widget-surface.ts` | 停靠表面（原 `index.ts` 窗口生命周期抽出）：只在“被呈现 + 已加载 + 未被截图隐藏”时显示；撤下即销毁并作废进行中的创建；崩溃上报；显示器移除/度量变化时夹紧 |
+| `main/pet/pet-widget-geometry.ts` | 纯几何常量与夹紧函数（从 `pet-widget-window-state.ts` 拆出并再导出） |
+| `main/pet/mimi-presence-ipc.ts` | `mimi:presence-get/set/preview/retry`（设置类只收主窗口 main frame；停靠表面只读和关闭自己）；`pet:widget-visible(-get)` 与 `computerUse:setCompanion/previewCompanion` 兼容别名都落到同一拥有者 |
+| `main/computer-use/mimi-companion-host.ts` | 去掉自有 `enabled` 与 `mimi-companion.json` 写入；改为 `present/withdraw/setSize/startPreview/cancelPreview/feet/placeFeet`；显示只在 `presenting` 时；撤下作废进行中的创建；截图时通知拥有者隐藏停靠；角色菜单加“切换到停靠模式 / 关闭 Mimi”；聊天 hold 接受停靠内联聊天 |
+| `main/index.ts` | 启动加载/迁移后创建拥有者；computer-use 初始化完成且 pet IPC 就绪后才 `start`（启动期两形态都不显示）；停靠右键菜单含“切换到移动模式 / 停止或继续电脑操作 / 关闭 Mimi”；退出时先撤下并保存 |
+| 渲染端 | Mimi 设置页唯一开关 + 停靠/移动 + 大小 + 预览 + 失败重试；账户菜单同一状态；电脑操作页改入口；停靠内联聊天参与前台 hold；中英文案 |
+
+### 9.3 测试（新增/更新）
+
+- 新增：`main/pet/mimi-presence-controller.test.ts`（启动前不显示、hide-before-show 事件顺序、过期加载与迟到 ready 不显示、40 组种子交错序列每步检查“不同时可见”且最终等于最后请求、关闭/预览结束竞态、预览加载中关闭、不可用与失败回落/重试、截图隐藏恢复只看最新状态、位置携带、尺寸夹紧、锚点持久化、dispose）；`mimi-presence-state.test.ts`（默认值、320→200、逐字段解析、迁移、旧文件字节不变、坏文件隔离、写入顺序与原子性、脚底几何）；`pet-widget-surface.test.ts`（并发共享一个窗口、加载中撤下、撤下后重建、崩溃上报、截图隐藏、显示器夹紧与监听清理、`placeFeet`、展开态锚点不变）；`mimi-presence-ipc.test.ts`（发送方校验、补丁校验、兼容别名映射）。
+- 更新：`stage-model.test.ts`（工作态下限 96）、`settings-ipc.test.ts`（160–480 边界）、`pet-widget-window-state.test.ts`（源码契约指向新模块与“关闭 Mimi”）、`preload/pet-contract.test.ts`（presence 通道）、`ComputerUseSettings.interaction.fixture.tsx`（不再有第二开关/预览，改为入口）、`tests/architecture-budgets.test.ts`（新增 4 条 presence 路由计入总数，372→376）。
+- **CC 初稿阶段运行情况（已由主控补验，当前结果见 §9.5）：当时未能运行任何测试、typecheck、lint 或 build**——`bun`（含 `bun --version`、`bun install --frozen-lockfile`）、`node scripts/run-bun-test-shard.mjs …`、`node …/typescript/bin/tsc` 均被工具权限拒绝（需人工批准，会话非交互）；`cp -R` 克隆依赖也被路径校验拒绝，未绕过。主控现已完成补验，结果见 §9.5；仍缺的原生/正式包项目见 §9.4。
+
+### 9.4 仍待完成 / 未验收
+
+1. 原生合成器与真实指针验收：互斥录屏/快速点击、CUA 截图中实际隐藏、混合 DPI 多显示器拔插、全屏 Space 与停止快捷键。实际 Electron 自动测试不替代这些项目。
+2. 冷重启恢复、当前用户旧配置迁移和最终安装包验收仍需完成；本轮只使用隔离配置，没有安装覆盖操作者当前应用。正式包门禁归根 TODO P0.3。
+3. 移动模式下尚未增加审批计数徽标，当前点击角色可以直接打开主窗口 Mimi 页查看待批事项；停靠模式的活动提示保留。
+4. 任务分支尚未 push、PR 或合入主线；其他审查问题 R01–R04、R09–R28 仍保留，不在本实现中混修。
+
+### 9.5 主控补验与修正
+
+CC 完成初稿后，主控在同一独立工作区补齐执行环境并完成下列验证。CC 初稿阶段的“命令需审批”是历史状态；主控正常使用宿主执行工具后已能安装依赖、运行检查与提交，没有提升为 bypassPermissions。
+
+- 修复独立复核发现的三处 P2：移动表面捕获时无条件隐藏（包括悬停/拖动）；停靠并发呈现等待尚未完成的加载并共享失败；忙碌导致预览未启动时清理 previewing 并恢复用户模式。
+- 抽取 `renderer/app/useMimiPresence.ts`，统一菜单/设置状态订阅，防止旧初读、旧请求回复覆盖更新的主进程广播或用户请求；`App.tsx` 保持在原架构预算内。
+- 新增实际 `mimi-companion-host.test.ts` 与独立 Bun 子进程 fixture，只 fake Electron，实际执行 host、bus、choreographer：5 项覆盖迟到 ready/发送方、并发加载失败、关闭清理、交互中截图隐藏、忙时预览拒绝。另补控制器忙时预览恢复、停靠重复加载失败和 4 项 renderer hook 回归。
+- CI 新增有界 presence 测试进程，避免扩大已接近上限的 Desktop shard；`lint:test-shards` 证实 2564 个测试文件均有归属，最大进程 770/772，未放宽分片预算。
+- 最终只读复核确认上述修复与 hook 接线无关键阻断；这不构成逐行穷尽审计或原生视觉验收。
+
+| 实际命令 / 范围 | 结果 |
+| --- | --- |
+| `bun install --frozen-lockfile` | 成功；锁文件未修改，依赖位于任务 worktree |
+| `bun run build` | 全部基础包构建 exit 0 |
+| guarded runner：`main/pet`、`main/computer-use`、`preload/pet-contract.test.ts`、`tests/architecture-budgets.test.ts` | 901 pass / 0 fail / 0 skip，85 files |
+| guarded runner：控制器、停靠表面、presence hook、AppPet、PetDesktopWindow、`renderer/settings`、`preload`、architecture budgets | 403 pass / 1 skip / 0 fail，71 files；跳过项为未配置 Chromium 的 settings navigation 浏览器检查 |
+| `bun run typecheck:workspaces`（基础包构建后） | 14 包 exit 0 |
+| `bun run --cwd packages/desktop typecheck`（最终 hook / fixture 状态） | Desktop + mobile 配置 exit 0 |
+| `bun run lint` | 0 errors / 98 warnings，与既有 warning 基线一致 |
+| `bun run lint:test-shards` | 2564 个测试文件覆盖，最大进程 770/772 |
+| `bun run --cwd packages/desktop build` | main / preload / renderer / mobile / Chrome extension 构建 exit 0；保留既有大 chunk 提示 |
+| `node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-mimi-companion-chat.mjs --receipt packages/desktop/out/mimi-presence-acceptance-20261101.json` | 实际 Electron + 实际 worker + 本地 mock provider 通过；默认 200、模式切换、交错请求、预览中关闭，67 次窗口可见采样、0 次双显；同 Session 两轮聊天及前台 hold/释放通过；测试进程 cleaned、隔离 HOME 已删除、renderer errors 为空 |
+| `git diff --check` / `git diff --cached --check` | 无空白错误 |
+
+两组 Bun 范围存在重叠，不能把计数相加当作独立测试总数。Electron 回执保存在任务工作区的 `packages/desktop/out/mimi-presence-acceptance-20261101.json`；这是自动交互与 `BrowserWindow.isVisible()` 采样，不能证明全帧视觉互斥、原生输入命中、截图合成器、全屏或跨显示器行为。没有使用真实模型凭据、付费 API 或操作者当前的配置。

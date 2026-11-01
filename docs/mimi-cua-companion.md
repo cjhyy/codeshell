@@ -1,7 +1,7 @@
 # Mimi CUA character prototype
 
-The desktop companion is an opt-in interactive pet with a replaceable character
-renderer. The first effect set uses Mimi's bundled full-body sprite atlas. A
+The desktop companion is the opt-in **moving mode** of the single desktop Mimi
+(see "One Mimi" below), with a replaceable character renderer. The first effect set uses Mimi's bundled full-body sprite atlas. A
 Live2D adapter is reserved behind the same presentation contract; it is not
 enabled by the settings UI and has not been validated with Cubism Core.
 
@@ -34,7 +34,8 @@ follow normal input speed, never slow real work to extend a gesture.
   Dragging does not open chat. The saved position is clamped after monitor changes.
 - Click opens the existing Mimi chat page in the main application. The floating
   pet does not take keyboard focus away from another application.
-- The context menu can resume following CUA actions after manual placement.
+- The context menu can resume following CUA actions after manual placement,
+  switch Mimi to docked mode, or close Mimi.
 - Idle is still. Text input follows the real operation with a short completion
   tail; consecutive key input retains its animation phase. Reduced-motion mode
   suppresses gesture playback and movement easing.
@@ -133,16 +134,60 @@ scripts, image bytes and application contents never reach the renderer, and
 presentation failures never retry a computer action.
 
 Known screenshots and opaque composite tools hide the character while they run,
-with a shared compositor barrier. Active human interaction retains the pet, so
-the overlay may appear in a capture during that interaction. Unknown tools do
+with a shared compositor barrier. Captures hide Mimi even during active human
+interaction, and restore only the form still requested by the presence owner. Unknown tools do
 not produce invented mouse paths. Coordinates use native logical points and the
 actual overlay content bounds, including negative display origins and different
 screen scale factors.
 
 The character is placed beside a known target; this prototype does not provide
-skeletal hand contact with an arbitrary control. The existing compact pet widget
-is a separate surface in this experiment. Consolidating both surfaces and adding
-more natural action assets are follow-up product work.
+skeletal hand contact with an arbitrary control. More natural action assets are
+follow-up product work.
+
+## One Mimi: docked and moving modes (2026-11-01, task branch)
+
+The compact pet widget and this character are now two forms of one Mimi. The
+user has a single "Show Mimi" switch in Mimi settings (also the account menu)
+and, once shown, chooses **docked** (the corner pet with chat and activity) or
+**moving** (this character). "Moving" is the desktop character, unrelated to the
+phone UI. Desktop main's `MimiPresenceController`
+(`packages/desktop/src/main/pet/mimi-presence-controller.ts`) is the only owner:
+every entry — settings, account menu, both surfaces' menus, the legacy
+`pet:widget-visible` and `computerUse:setCompanion/previewCompanion` routes and the
+settings preview — goes through it. It withdraws the unwanted form synchronously
+before presenting the wanted one and checks a generation after every
+asynchronous load/ready boundary, so the two forms are never visible together.
+
+- State persists in `codeShellHome()/desktop/mimi-presence.json` (visible, mode,
+  size and one position per form). The first launch migrates the legacy
+  `pet-widget.json` position and `userData/mimi-companion.json`
+  (`enabled: true` → shown in moving mode); legacy files are read only and kept
+  for rollback. A legacy size of exactly 320 was the old default and cannot be
+  told apart from an explicit choice, so it becomes the new 200 default; other
+  valid sizes are kept and clamped to 160–480.
+- Moving box default 200 DIP tall (0.7× wide), options 160/200/240/320/400/480.
+  Working on a control draws it at ×0.55, never below 96 DIP. The docked pet is
+  unchanged (112 DIP window, 96 DIP image).
+- Switching keeps the visual feet in place using the drawn height and
+  `companionFeetOffset`, in Electron DIP without multiplying by `scaleFactor`;
+  both forms clamp to the visible work area after display removal or metric changes.
+- Switching modes never changes computer-use authorization or the stop state.
+  Docked mode's context menu keeps Stop/Resume computer use. The docked inline
+  chat shares the foreground-input hold with the main Mimi page.
+- Screen captures hide whichever form is visible (docked included) and restore
+  only a form that is still wanted.
+- Moving is unavailable off macOS or without the execution gate; the saved moving
+  preference is kept while docked is shown. A moving surface failure is withdrawn
+  first, then Mimi falls back to docked; choosing moving again (or Retry) restores it.
+
+Acceptance status: workspace/Desktop builds, workspace typecheck and lint passed.
+Isolated Bun regressions passed (901 tests in the host group; 403 passed and one
+skipped in the UI/preload group, with overlap). A confined real Electron test
+using a local mock model passed mode switching, interleaved requests, preview
+closure and continued chat through the actual worker; 67 visibility samples had
+no double-visible window. This is scripted app-level evidence, not compositor
+or native hit testing. Fullscreen Space, multi-display/mixed-DPI, cold restart
+and packaged acceptance remain open (see `docs/todo/mimi-single-entry-movement-plan.md` §9).
 
 See `packages/desktop/resources/mimi-live2d/README.md` for the optional official
 sample model, version pins, and separate Core/model licensing. Downloaded sample

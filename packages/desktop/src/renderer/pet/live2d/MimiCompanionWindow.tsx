@@ -498,6 +498,17 @@ export function MimiCompanionWindow() {
             >
               恢复跟随工作
             </button>
+            <button
+              type="button"
+              role="menuitem"
+              data-mimi-presence="dock"
+              onClick={() => {
+                window.mimiCompanion.presence("dock");
+                closeMenu();
+              }}
+            >
+              切换到停靠模式
+            </button>
             {state.control?.stopped || state.control?.foregroundHeld ? (
               <button
                 type="button"
@@ -521,6 +532,17 @@ export function MimiCompanionWindow() {
                 停止电脑操作（⌘⇧Esc）
               </button>
             )}
+            <button
+              type="button"
+              role="menuitem"
+              data-mimi-presence="close"
+              onClick={() => {
+                window.mimiCompanion.presence("close");
+                closeMenu();
+              }}
+            >
+              关闭 Mimi
+            </button>
           </div>
         )}
       </div>

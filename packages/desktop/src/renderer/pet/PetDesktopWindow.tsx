@@ -255,6 +255,17 @@ export function PetDesktopWindow() {
     if (panel === "chat") inputRef.current?.focus();
   }, [panel]);
 
+  // The docked inline chat is a Mimi chat like the main Mimi page: while it is
+  // open (and focused) it shares the same foreground-input hold.
+  React.useEffect(() => {
+    if (panel !== "chat") return;
+    const report = window.codeshell?.computerUse?.setCompanionChatActive;
+    void report?.(true).catch(() => {});
+    return () => {
+      void report?.(false).catch(() => {});
+    };
+  }, [panel]);
+
   React.useEffect(() => {
     if (panel !== "chat") return;
     conversationEndRef.current?.scrollIntoView({ block: "end" });

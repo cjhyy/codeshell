@@ -15,7 +15,7 @@
 
 **P1**
 
-- [ ] **Mimi 单入口、互斥与移动模式（R05，M–L，用户 2026-11-01 提出）。** 现在桌宠（pet widget）与“移动的 Mimi”（电脑操作角色 companion）是两个互不感知的置顶窗口，可同时出现，入口、持久化和聊天入口各一套。目标：一个“显示 Mimi”入口、一个可见实例；打开后可切换“停靠 / 移动”模式，互斥切换（先隐藏后显示，快速连点、重启、崩溃恢复下都不同时出现）；默认尺寸缩小且可调（建议移动形态角色框由 320 DIP 降到 200 DIP，**待用户确认**）。内部可保留两个窗口实现，由 Desktop 宿主的统一状态拥有者控制；不改 `packages/pet` 与 core。先做方案 T0 确认项，再按 T1–T8 落地；同时收口 R06（截图不隐藏桌宠）、R07（桌宠不响应显示器变化）、R08（companion host 无单测）。见[方案](docs/todo/mimi-single-entry-movement-plan.md)。
+- [ ] **Mimi 单入口、互斥与移动模式（R05，M–L）——源码与隔离验证已完成，待合入及真机/正式包验收。** 任务分支 `codex/desktop/mimi-unified-presence-20261101`：唯一状态拥有者、一个显示开关、停靠/移动互斥，预览/旧 IPC/快速交错请求都经同一控制器；移动默认 200 DIP、范围 160–480、工作态不低于 96；旧默认 320 迁为 200，其他自选尺寸保留，旧配置只读保留。R06 截图隐藏、R07 显示器变化与 R08 host 直接回归测试已同批实现。基础包和 Desktop 构建、全部工作区类型检查、最终 Desktop 类型检查通过；两组隔离回归分别 901 pass/0 fail、403 pass/1 skip/0 fail（存在重叠，不相加）；lint 0 错误/98 条既有警告；真实隔离 Electron 的模式切换、交错请求和预览关闭采样 67 次未见双显，聊天/worker 续办及清理通过。**剩余：**原生点击/截图合成器录屏、混合 DPI 多显示器拔插、全屏 Space、冷重启与正式包验收；未安装覆盖本机应用，未合并。见[实施与验证记录](docs/todo/mimi-single-entry-movement-plan.md#95-主控补验与修正)。
 - [ ] **Bash 只读免审批可读 CodeShell 凭据/设置（R01，S）。** `cat ~/.code-shell/settings.json` 等在 default 模式免审批，而 Read 对用户目录下同类容器要求审批；普通项目 `.code-shell/settings.local.json` 则是 Bash / Read 双方的敏感路径识别缺口。统一两侧判定并补齐项目设置路径。
 - [ ] **项目授权持久化不加锁且解析失败即重写（R02，S）。** `persistProjectRule` 与路径授权持久化改走 `SettingsManager` 锁内读改写，读不懂时不覆盖，并保留 YAML 原配置语义，避免新 JSON 遮蔽旧配置。
 - [ ] **浏览器弹出窗口导航守卫与 `openExternal` 发送方校验（R03，S，待真实环境验收）。** 弹出窗口复用主窗口的新窗口/顶层导航拦截；`shell:openExternal` 校验可信宿主窗口及来源，并收紧 `file:`，保留现有合法外链入口。

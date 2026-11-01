@@ -126,9 +126,16 @@ test("companion toggles and previews independently without starting CUA or reque
   expect(enabled).toBe(false);
   expect(previews).toBe(1);
   expect(h.effects).toEqual([]);
+  // The moving-size range is 160–480 DIP (default 200).
+  await h.invoke("setCompanion", { size: 160 });
+  expect(size).toBe(160);
+  await h.invoke("setCompanion", { size: 480 });
+  expect(size).toBe(480);
   for (const invalid of [
     { size: NaN },
     { size: 10 },
+    { size: 159 },
+    { size: 481 },
     { enabled: "yes" },
     { modelPath: "/tmp/arbitrary" },
   ]) {
