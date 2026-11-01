@@ -2,25 +2,46 @@
 
 > 本文件只保留**未完成**的待办；已完成实现与历史验收见 Git 历史和 [能力盘点](docs/architecture/11-feature-inventory.md)。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> **当前发布核对：2026-10-26。** 当前 `origin/main` 为 `2661eb04d`，源码版本 `0.9.46`；[v0.9.46](https://github.com/cjhyy/codeshell/releases/tag/v0.9.46) 已于 2026-10-22 正式发布，审计发行基线为 `c7f108ee4`。[发行流程](https://github.com/cjhyy/codeshell/actions/runs/39755931851) 三平台打包及 10 个公开包 smoke 已通过（49 typed entries / 47 runtime entries）；当前主线[普通 CI](https://github.com/cjhyy/codeshell/actions/runs/39771531242) 十二项成功。源码、发行与原生/真实环境验收分别记录，不能继续表述为尚未打包或未发行。
+> **当前主线核对：2026-11-01。** `origin/main` 为 `82c6f37ab`（PR #266），源码版本 `0.9.51`；最新 tag 为 v0.9.51（`3cadd158c`，2026-10-30），其前依次为 v0.9.50 `37369c0b3`、v0.9.49 `9161ff792`、v0.9.48 `d85ef7a23`、v0.9.47 `c6a1c5130`。主线领先 v0.9.51 tag 的改动包括 `773a3bba2`（停用外部输出源）、`0b0f559f1`/`d882fc717`（手机端原生模型选择）与 PR #266（手机面板目录选择）。`ci.yml` 按矩阵展开为 14 项检查；GitHub ruleset 是否全部必需本轮未核对。下一行是 2026-10-26 的历史核对，保留其当时范围。
+> **2026-10-26 历史发布核对。** 当时 `origin/main` 为 `2661eb04d`，源码版本 `0.9.46`；[v0.9.46](https://github.com/cjhyy/codeshell/releases/tag/v0.9.46) 已于 2026-10-22 正式发布，审计发行基线为 `c7f108ee4`。[发行流程](https://github.com/cjhyy/codeshell/actions/runs/39755931851) 三平台打包及 10 个公开包 smoke 已通过（49 typed entries / 47 runtime entries）；当时主线[普通 CI](https://github.com/cjhyy/codeshell/actions/runs/39771531242) 十二项成功。源码、发行与原生/真实环境验收分别记录，不能继续表述为尚未打包或未发行。
 >
 > [CI40](https://github.com/cjhyy/codeshell/actions/runs/39104976943) 的 Windows 首窗超时、NSIS 卸载初始身份失败及此前未定位的 `0xC0000005` 仍未关闭；后续普通 CI 和发布成功不能替代这些门禁。历史判断与 2026-10-26 追认见[发布验收记录](docs/todo/release-real-operations-2026-10-16.md)，本轮源码修复与剩余阻塞见[审查交付记录](docs/todo/recovery-windows-audit-20261026.md)。
 >
 > 原 **3 P0 + 7 P1** 剩余验收范围保留。**2026-10-14 云端范围决定**继续有效：按[第 16 章](docs/architecture/16-platform-consolidation.md)决策 7，只做薄云端（配对、中继、推送、Link OAuth 回调）与一任务一容器沙箱，不扩展常驻云端工作台、持久云端工作区或云端 Panel 运行时。已有云端证据保留其历史范围。
 
+## 2026-11-01 全仓审查：新增待办
+
+入口：[全仓审查报告](docs/todo/repo-audit-20261101.md)（基线 `82c6f37ab`，静态审查，未运行测试；含覆盖矩阵、证据行号与验收标准）· [Mimi 单入口 + 移动模式方案](docs/todo/mimi-single-entry-movement-plan.md)。本轮未发现 P0；下列条目只总结可行动问题，证据与验收见报告对应编号。
+
+**P1**
+
+- [ ] **Mimi 单入口、互斥与移动模式（R05，M–L，用户 2026-11-01 提出）。** 现在桌宠（pet widget）与“移动的 Mimi”（电脑操作角色 companion）是两个互不感知的置顶窗口，可同时出现，入口、持久化和聊天入口各一套。目标：一个“显示 Mimi”入口、一个可见实例；打开后可切换“停靠 / 移动”模式，互斥切换（先隐藏后显示，快速连点、重启、崩溃恢复下都不同时出现）；默认尺寸缩小且可调（建议移动形态角色框由 320 DIP 降到 200 DIP，**待用户确认**）。内部可保留两个窗口实现，由 Desktop 宿主的统一状态拥有者控制；不改 `packages/pet` 与 core。先做方案 T0 确认项，再按 T1–T8 落地；同时收口 R06（截图不隐藏桌宠）、R07（桌宠不响应显示器变化）、R08（companion host 无单测）。见[方案](docs/todo/mimi-single-entry-movement-plan.md)。
+- [ ] **Bash 只读免审批可读 CodeShell 凭据/设置（R01，S）。** `cat ~/.code-shell/settings.json` 等在 default 模式免审批，而 Read 对用户目录下同类容器要求审批；普通项目 `.code-shell/settings.local.json` 则是 Bash / Read 双方的敏感路径识别缺口。统一两侧判定并补齐项目设置路径。
+- [ ] **项目授权持久化不加锁且解析失败即重写（R02，S）。** `persistProjectRule` 与路径授权持久化改走 `SettingsManager` 锁内读改写，读不懂时不覆盖，并保留 YAML 原配置语义，避免新 JSON 遮蔽旧配置。
+- [ ] **浏览器弹出窗口导航守卫与 `openExternal` 发送方校验（R03，S，待真实环境验收）。** 弹出窗口复用主窗口的新窗口/顶层导航拦截；`shell:openExternal` 校验可信宿主窗口及来源，并收紧 `file:`，保留现有合法外链入口。
+- [ ] **退出失败后可恢复（R04，M，待真实环境验收）。** 未被捕获的 flush / cleanup 失败会取消本次退出且只记日志，虽可再次触发退出重试，但缺少可见提示与明确强制退出路径；补齐提示及重试 / 仍然退出，并识别已崩溃的渲染进程；`second-instance` 无窗口时新建窗口，避免无窗口常驻占用单实例锁。
+
+**P2（S/M，可单会话处理；详见报告）**
+
+- [ ] **手机审批截止时间与时钟偏差（R16、R17，S）。** 截止时间要显示在实际挂载的 `web/app` 审批组件里，旧 `desktop/src/mobile/components` 隔离或删除；截止时间改为相对 TTL 或附带服务器时间，目录选择器过期时给出提示。
+- [ ] **模型连接被删后会话失败粘住（R10，M）**；**chat 同会话并发导致绑定 Session 消息乱序（R14，M）**；**面板发现瞬时错误清空目录与资源（R18，M）**。
+- [ ] **CUA 执行边界规格与代码一致化（R09，S）。** 先定“停止电脑操作是否取消 Run”，再统一规格 `:138/:143` 与 `computer-use-control.ts`。
+- [ ] **小修集合（S）。** DelegateWork schema 文案（R11）、pet observer 共享连接（R12）、Optimization Lab 冻结 root（R13）、chat 就绪与退避（R15）、Dock 连点双窗（R19）、主进程同步阻塞（R20）、Linux `basic_text` 凭据策略（R21）、TUI `process.exit` 截断（R22）、cdp 等待期限（R23）、ESLint 漏 `host`（R24）、发布门禁（R25）、`bun run test`/`test:watch` 与分片一致（R26）。
+- [ ] **文档与发布说明（S）。** 补 CHANGELOG 0.9.46–0.9.51 并加发布校验（R27）；更新 arena README、`docs/panel-native-tools.md` Hub 目录说明，并链接 [手机远程验收记录](docs/todo/mobile-remote-acceptance-2026-10-29.md)（R28）。
+
 ## 本轮 P0 / P1：待核查与继续交付
 
-四批[2026-10-27 组合](docs/todo/audit-integration-20261027.md)已获原 CC 最终独立验收 PASS（Host 111 files、1628/0/0；Panel check 52/0/0；三 ZIP equal；无 Critical / Important），已快进合入两仓本地 main，未推送、未发行。批 1 NSIS（196）、批 2 Mobile（361）、批 3 probe/WER（161）、批 4 Panel ZIP（52）是来源历史 PASS，不能直接相加作为组合计数；这些 PASS 不关闭正式包/原生/实体设备项。执行边界见[runbook / 决策字段](docs/todo/audit-remaining-runbooks-20261026.md)。主仓本地基线 `2035c0a30` 已含新 external-runtime memory，不把它算作仍未实现或已随发行包发布。
+四批[2026-10-27 组合](docs/todo/audit-integration-20261027.md)已获原 CC 最终独立验收 PASS（Host 111 files、1628/0/0；Panel check 52/0/0；三 ZIP equal；无 Critical / Important）。**2026-11-01 更正：**Host 仓相关提交（`2d031febe`、`26f8068eb`、`2035c0a30`）已包含于 v0.9.47–v0.9.51 的 tag，且已进入远端主线；本轮未核对这些 tag 对应的 Release、发行工件及 codeshell-panel-apps 一侧，不能仅凭祖先关系认定正式发行完成。批 1 NSIS（196）、批 2 Mobile（361）、批 3 probe/WER（161）、批 4 Panel ZIP（52）是来源历史 PASS，不能直接相加作为组合计数；这些 PASS 不关闭正式包/原生/实体设备项。执行边界见[runbook / 决策字段](docs/todo/audit-remaining-runbooks-20261026.md)。
 
-- [ ] **外部运行时剩余真实验收与能力边界（2026-10-26 核对）。** PR #195、#211–#214 已合入并包含于 v0.9.46；新[外部自动记忆](docs/todo/external-runtime-memory-20261026.md)另已集成本地 main。仍缺 E05 真实 Electron reload 后 Stop 归属验收、E08 真实账号审批验证。portable dream、24h 调度、外部 runtime 原生 MCP、扩权与逐请求成本的最小推荐/批准字段见[runbook 第三章](docs/todo/audit-remaining-runbooks-20261026.md#三memory--runtime--lab-的最小推荐与批准字段)；既有[专项核对](docs/todo/external-runtime-parity-audit-20261021.md)的旧 memory 表述以新交付为准。
-- [ ] **P0.1 — 最终正式候选的原生、签名与升级门禁。** v0.9.46 已发行，10 包 smoke 与普通 CI 已通过；仍需准确最终候选的三平台原生验收。CI40 的 Web/macOS/Linux 仅覆盖各自已记录范围，Windows 首窗、卸载身份与后续打包更新恢复未完成，旧 `0xC0000005` 无 dump 不得定位。Developer ID/公证及 Windows 签名证书/Apple 账号、真实 `0.9.44→0.9.46` 升级回滚留待完成；v0.9.46 macOS 实际为固定 requirement 的 ad-hoc 签名。早期 Linux services 完整验收 [38384214542](https://github.com/cjhyy/codeshell-services/actions/runs/38384214542) 的 page-errors/大工件上传仍须独立重跑，不删工件或触发远端。候选组合、16 阶段、dump 私密保管、签名/升级与 candidate.yml 准确输入见[runbook A–D](docs/todo/audit-remaining-runbooks-20261026.md#二正式环境验收-runbook)，历史保留[发布验收记录](docs/todo/release-real-operations-2026-10-16.md)。
+- [ ] **外部运行时剩余真实验收与能力边界（2026-10-26 核对）。** PR #195、#211–#214 已合入并包含于 v0.9.46；新[外部自动记忆](docs/todo/external-runtime-memory-20261026.md)源码已包含于 v0.9.47–v0.9.51 tag（2026-11-01 更正，发行工件本轮未核对）。仍缺 E05 真实 Electron reload 后 Stop 归属验收、E08 真实账号审批验证。portable dream、24h 调度、外部 runtime 原生 MCP、扩权与逐请求成本的最小推荐/批准字段见[runbook 第三章](docs/todo/audit-remaining-runbooks-20261026.md#三memory--runtime--lab-的最小推荐与批准字段)；既有[专项核对](docs/todo/external-runtime-parity-audit-20261021.md)的旧 memory 表述以新交付为准。
+- [ ] **P0.1 — 最终正式候选的原生、签名与升级门禁。** 源码已到 0.9.51（v0.9.51 已打 tag），10 包 smoke 与普通 CI 的历史通过不替代本项；仍需准确最终候选（v0.9.51 或之后）的三平台原生验收。CI40 的 Web/macOS/Linux 仅覆盖各自已记录范围，Windows 首窗、卸载身份与后续打包更新恢复未完成，旧 `0xC0000005` 无 dump 不得定位。Developer ID/公证及 Windows 签名证书/Apple 账号、真实“上一正式版 → 最终候选”升级回滚（原记录为 `0.9.44→0.9.46`，候选需按新版本重定）留待完成；v0.9.46 macOS 实际为固定 requirement 的 ad-hoc 签名，后续版本签名状态需按候选重新核对。早期 Linux services 完整验收 [38384214542](https://github.com/cjhyy/codeshell-services/actions/runs/38384214542) 的 page-errors/大工件上传仍须独立重跑，不删工件或触发远端。候选组合、16 阶段、dump 私密保管、签名/升级与 candidate.yml 准确输入见[runbook A–D](docs/todo/audit-remaining-runbooks-20261026.md#二正式环境验收-runbook)，历史保留[发布验收记录](docs/todo/release-real-operations-2026-10-16.md)。
 - [ ] **P0.2 — 重新冻结 Panel 版本并验收正式安装更新。** 旧六包草稿版本已过期，需用户逐包决定准确版本与包摘要。批 4 基线 `8434885` 的 manifest 为 Design 0.23.0、Job 5.1.0、Quant 0.47.0、Download 0.24.1、Video 0.8.0、Starter 0.1.1。现成正式 Download/Video/Design ZIP 分别 34/41/145 文件与准确 tag 一致；这不等于当前目录或新候选一致。当前同版本 tag 目录差异为 Design 47、Download 5、Video 10、Starter 6，Job/Quant 无同版本本地 tag；原 Video check 的 5 路径差异已由 I1 证实为软链依赖引起的 esbuild realpath 注释假差异；独立 clone 后完整前置门禁与 release-zip suite exit 0、52/0，无需重建 Video。具体 SHA/步骤见[runbook H](docs/todo/audit-remaining-runbooks-20261026.md#h-六-panel-重新-freeze只列事实与缺口不替用户选版本)。六包真实安装/更新/加载/项目绑定/权限保留，生产更新链为 Desktop 与 Hub，不扩展云端 Panel 运行时。
-- [ ] **P0.3 — 正式包 Pet / Mimi 与插件可靠性。** 用最终正式包验证真实 Electron / worker / Keychain、固定版本真实插件安装审阅与初始化、同 Session 续办和冷重启；完成真实微信长回合、断线与图片验收。早期真实插件 SDK 和 SVG 两次冷启动已通过，保留各自旧输入，仍缺最终正式包证据。
+- [ ] **P0.3 — 正式包 Pet / Mimi 与插件可靠性。** 用最终正式包验证真实 Electron / worker / Keychain、固定版本真实插件安装审阅与初始化、同 Session 续办和冷重启；完成真实微信长回合、断线与图片验收。早期真实插件 SDK 和 SVG 两次冷启动已通过，保留各自旧输入，仍缺最终正式包证据。Mimi 桌面形态合并（见上方 R05）落地后，其互斥、重启恢复与多显示器验收一并纳入本项的正式包验收。
 - [ ] **P1.1 — 六 Panel 的 12 组合完整业务（原 24 组合）。** 补齐电脑 / 手机 × 本地两组合的完整领域流程、真实服务商与项目隔离；实体设备证据单独记录。按 2026-10-14 范围决定，电脑 / 手机 × 云端两组合移出，手机经中继查看电脑上的 Panel；已有的云端组合证据保留为历史记录。受控 CI、窄屏浏览器和局部通过项不关闭完整矩阵。
 - [ ] **P1.2 — 真实旧数据迁移、升级与回滚。** 用真实旧版本数据完成审阅、取消、执行、冲突、失败保全、重启和回滚，确认其他项目不受影响。现有 Job 迁移与受控快照恢复保留，其他完整领域和真实数据验收仍缺。
 - [ ] **P1.3 — Hub / Account / Link 三仓正式兼容。** 完成版本固定的正式包 / 镜像或正式私有交付、已有 GitHub 授权的严格单仓库读取、旧 owner 显式迁移、账号 / 设备统一 authority 及正式原生 Keychain 验收。Account/Link 已有生产部署记录；Link 后续为 `da73ce5` / schema 3，见[现状追认](docs/remote-link-host.md#2026-10-26-后续部署追认)。已有 GitHub 登录/consent/native callback 证据不替代严格单仓读取、OS Keychain、旧 owner 迁移与三仓正式兼容验收；真实单仓 consent/list/A成功/B拒绝、测试用户 Keychain 冷启/logout/revoke、0600 plan 新目录迁移步骤见[runbook E–F](docs/todo/audit-remaining-runbooks-20261026.md#e-github-严格单仓真实-consent-与-keychain)。
 - [ ] **P1.4 — 目标部署、备份恢复与保留最新数据回滚。** 固定可信目标入口及最终源码 / 配置，实际验证薄云端数据备份、新目录恢复、旧授权撤销，以及兼容代码回滚仍保留最新数据。Account/Link 既有部署已执行，不能再写“部署入口待确认”；本轮恢复演练的 target/范围仍待用户决定，所需字段与既有 Account/Link/relay 脚本见[runbook G](docs/todo/audit-remaining-runbooks-20261026.md#g-恢复演练选择真实-target新目录验证完整业务)。HTTPS 200 和历史备份不能关闭本项；本轮未找到 pushgateway 实现，不能外推完整云端。按 2026-10-14 范围决定，范围仅薄云端（Account、Link、设备中继、推送）的备份恢复与回滚；云端项目持久化与项目 volume 恢复随云端工作区冻结移出。
-- [ ] **P1.5 — 实体手机弱网与后台恢复。** 验证断网 / 重连、后台 / 前台、审批、应用内通知和补收。实体 iOS / Android 环境仍待接入；本项不新增 OS push 功能。
+- [ ] **P1.5 — 实体手机弱网与后台恢复。** 验证断网 / 重连、后台 / 前台、审批、应用内通知和补收。实体 iOS / Android 环境仍待接入；本项不新增 OS push 功能。手机审批截止时间显示与时钟偏差（报告 R16、R17）修复后一并纳入实体手机验收。
 - [ ] **P1.6 — 输出持久恢复的正式消费者验收。** 主体与已覆盖 producer 的修复已合入；仍需最终正式包的 Desktop / Hub / Mobile，覆盖后台 / 无 Run、正确 Session / producer 身份、冷重启、并发和删除重用。
 - [ ] **P1.7 — 日志轮转与显式损坏修复验收。** 主体与竞态修复已合入；仍需最终正式消费者验证游标 / 恢复身份、原证据保全、容量、取消与失败路径。
 
@@ -35,8 +56,9 @@ P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 
 
 - **Codex 无工具辅助推理契约**（M，等待可验证的上游接口）。外部会话已可显式选择 API 辅助模型进行记忆提取/摘要；Claude CLI 可跟随当前模型。Codex CLI 0.162.0 尚无可验证的全工具禁用入口，默认跟随路径明确拒绝，不用只读 sandbox 或提示词伪装。后续在获得受支持的能力合同后接入独立、临时、可取消的辅助调用；见[实施边界](docs/todo/external-runtime-memory-20261026.md)。
 - **无模型请求的执行观测入口**（M，2026-10-26 观测复核）。真实积累中有 4 次执行只留下 lifecycle 事件，没有模型请求记录；其中 3 次在恢复门禁失败，1 次因输出 owner 被替代而取消。当前执行观测从模型摘要进入，无法打开这些运行。后续增加独立执行记录的查询与展示，保留会话/项目授权和有界分页，不伪造模型请求、用量或费用；见[本轮复核](docs/todo/execution-observation-review-20261026.md)。
-- **Desktop / Hub 大历史恢复的正式包验收**（S，本轮源码修复已通过原 CC 二轮验收，待正式包/原生验收）。真实旧 anchor 结束于 1,963,815 字节，原读端仅扫描 1 MiB/4096 事件，与任意长度历史末 ID 的写端不匹配。本轮实现已通过原 CC 二轮验收，正式包/原生环境验收仍未完成；实现包含独立 32 MiB/262144 事件预算、每记录 1 MiB 上限、新 header 原始前缀偏移/SHA-256 和身份复核；Desktop 另将旧基线从共享分页校验中分离。普通分页与独立 cutover 上限不变。源码与隔离回归不是正式包冷重启证据，仍需最终包的刷新、冷重启、失败重试与后续流式衔接验收；Mobile 大旧基线分页的[来源批次源码](docs/todo/mobile-legacy-base-pages-20261026.md)已获原 CC PASS 361/0，已通过最终组合验收并合入本地 main；正式包和手机真机验收仍未完成；首页 inline 和单页 wire 保留 1 MiB，分页复用独立 32 MiB 原始基线预算，client 逐页校验并限制最多 40 页。损坏基线失败关闭并保全原数据。详见[本轮交付](docs/todo/recovery-windows-audit-20261026.md)。
+- **Desktop / Hub 大历史恢复的正式包验收**（S，本轮源码修复已通过原 CC 二轮验收，待正式包/原生验收）。真实旧 anchor 结束于 1,963,815 字节，原读端仅扫描 1 MiB/4096 事件，与任意长度历史末 ID 的写端不匹配。本轮实现已通过原 CC 二轮验收，正式包/原生环境验收仍未完成；实现包含独立 32 MiB/262144 事件预算、每记录 1 MiB 上限、新 header 原始前缀偏移/SHA-256 和身份复核；Desktop 另将旧基线从共享分页校验中分离。普通分页与独立 cutover 上限不变。源码与隔离回归不是正式包冷重启证据，仍需最终包的刷新、冷重启、失败重试与后续流式衔接验收；Mobile 大旧基线分页的[来源批次源码](docs/todo/mobile-legacy-base-pages-20261026.md)已获原 CC PASS 361/0，已通过最终组合验收，源码包含于 v0.9.47–v0.9.51 tag（2026-11-01 更正，发行工件本轮未核对）；正式包和手机真机验收仍未完成；首页 inline 和单页 wire 保留 1 MiB，分页复用独立 32 MiB 原始基线预算，client 逐页校验并限制最多 40 页。损坏基线失败关闭并保全原数据。详见[本轮交付](docs/todo/recovery-windows-audit-20261026.md)。
 - **Pet 可靠性修复的真实环境验收**（S，部署验证；正式包部分与 P0.3 同一验收，状态以 P0.3 为准）。续办、插件初始化/故障反馈、预算终态、图片保留和提示约束已修复并做本地回归；9 月 21 日补齐微信纯图片路由、Mimi 长回合等待、断线保留消息与工具参数损坏反馈。10 月 12 日已用新构建的真实 Electron／stdio worker 验证 Pet 同 Session 连续输入、普通 Work 同 Session 续办、冷启动聊天／记忆恢复、合成固定版本插件初始化和原生 safeStorage，见[运行时验收与回执](docs/todo/pet-built-runtime-acceptance-2026-10-12.md)。仍需真实插件与固定版本／预安装发行入口、真实微信长回合及该环境的自动 Pet Work 续办、正式安装包验收。详见 [逐项 TODO 与证据](docs/todo/pet-work-reliability-audit-2026-09-20.md)、[技术方案](docs/todo/pet-work-reliability-design-2026-09-20.md) 和 [微信回合修复与回归](docs/todo/mimi-wechat-turn-lifecycle-2026-09-21.md)。不把本机隔离验收当作已部署，不重放真实账号写操作。
+- **Mimi 电脑操作（CUA）角色的真机验收**（S，验证任务，2026-11-01 补登记）。PR #239、#244–#258 的执行闸门、舞台/应用档案与角色源码已包含于 v0.9.50 tag（发行工件本轮未核对）；2026-10-28 仅确认全屏 Space 可见性。仍缺：⌘⇧Esc 在全屏 Space 下是否可用（[执行边界规格](docs/superpowers/specs/2026-10-28-mimi-cua-execution-boundary-design.md) 列为待真机验收）、选定外接显示器上的完整视觉跟随验收、`--native-cua` 受控表单夹具在本修订上的重跑；不得自动重新控制用户真实浏览器。见[角色原型说明](docs/mimi-cua-companion.md)。合并为单入口后的形态验收归上方 R05。
 - **Link 真账号 / 真 token 验证**（S，验证任务；GitHub 严格单仓库读取与账号 authority 归 P1.3，其余 provider 留在此项）。按 2026-10-09 用户要求，新增第三方应用、OAuth 授权、token 配置与接入部署暂缓，继续保留未完成。各 provider 仍需授权账号验证 action 响应与错误形状；现有 stub、契约和本地 CLI 测试不能代替真实账号验收。执行时按 provider 单独记录，不写入用户真实数据来代替只读验证。
 
 ## 大功能升级（体量 L，分阶段落地）
@@ -71,7 +93,7 @@ P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 
 - **Ink meta/escape 兼容**注释保留到明确 major 迁移策略；不能因为带 TODO 就删除兼容行为。
 - **Memory P2 背压 / rate-limit / 注入 cap**按既有产品决策挂起，待真实容量或成本证据触发。
 - **外部 CLI 的审批/排队可观测性**受上游 transcript 限制，继续诚实显示可观测状态，不通过猜测补成完整状态。Pet 外部卡片跳转、项目可见性 override 和真实委派终态收尾已实现。
-- **Core First**：Arena、Pet、coding 都是独立能力包，经 extension/composition 组合，不反向加回 core 内置业务。
+- **Core First**：Pet、coding 是独立能力包，经 extension/composition 组合，不反向加回 core 内置业务；Arena 只作为私有保留源码（`packages/arena`，不被宿主加载、不发布），同样不得加回 core（2026-11-01 更正）。Mimi 单入口合并只改 Desktop 宿主呈现层，不改 `packages/pet` 能力边界。
 - **quick-chat 不做 Pi 式 parent 指针树状 Session**：快聊是短对话，需要合并时使用 fork/复制派生，不引入树状会话模型。
 - **IM Gateway 不做编排大脑 / IM 内富交互审批 / 多租户**：Gateway 负责通道、隧道生命周期与入口回推；已绑定 Session 路由和通知能力保留。
 - **同一 Workspace 同时一个 active Profile**；项目专属定制仍放项目指令，项目明确 override 优先。

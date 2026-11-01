@@ -1,0 +1,207 @@
+# Mimi 单入口 + 移动模式合并方案（2026-11-01）
+
+> 状态：**方案草稿，未实施**。本文只做现状核对与设计，不修改产品代码。
+> 审查基线：`82c6f37ab6ef8dd29ee58aa7ca9a1daa0ea1d7c6`（`origin/main`，PR #266 合并提交，提交日期 2026-10-31）；审查日期 2026-11-01。
+> 代码证据全部通过 `git show 82c6f37ab:<path>` / `git grep -n <pattern> 82c6f37ab -- <path>` 读取，行号以该基线为准。
+> 关联：[全仓审查报告](repo-audit-20261101.md) · [Mimi CUA 角色原型说明](../mimi-cua-companion.md) · [数字人与 Pet 架构](../architecture/14-digital-human-and-pet.md) · [CUA 执行边界设计](../superpowers/specs/2026-10-28-mimi-cua-execution-boundary-design.md) · [舞台与应用档案设计](../superpowers/specs/2026-10-29-computer-use-stage-and-app-profiles-design.md) · [根 TODO](../../TODO.md)
+
+## 0. 用户要求（作为验收约束）
+
+用户原话：“mimi pet 和 移动的mimi怎么 是分开的 看看逻辑怎么合并在一起 不能同时出现 只是一个打开后有移动模式 默认有点太大了。”
+
+落成可验收约束：
+
+| 编号 | 约束 | 来源 |
+| --- | --- | --- |
+| U1 | 用户只看到**一个 Mimi 入口**（一个“显示 Mimi”开关），对应**一个一致的可见实例** | “合并在一起” |
+| U2 | 打开 Mimi 后可切到**移动模式**；移动模式是同一个 Mimi 的模式，不是第二个功能开关 | “只是一个打开后有移动模式” |
+| U3 | 停靠形态与移动形态**互斥**，任何时刻（含快速连点、并发入口、重启恢复、崩溃恢复）都不得同时可见 | “不能同时出现” |
+| U4 | **默认尺寸缩小**，且仍可调 | “默认有点太大了” |
+| U5 | 保留 `packages/pet` 能力边界：Pet 行为 / DelegateWork / 投影仍是能力包，不把 Pet 加回 core；窗口与呈现属于 Desktop 宿主 | CODESHELL.md Known Architecture Debt |
+
+本文中的**新尺寸为建议值，用户尚未确认**。
+
+## 1. 名词：“移动的 Mimi”指什么
+
+- **桌面“移动的 Mimi”** = Desktop 的 **Mimi CUA companion（操作角色）**：一个全屏透明、点击穿透的覆盖窗口，角色会走到电脑操作（CUA）的目标旁边、可拖动放置、右键恢复跟随。设置页文案为“显示 Mimi 操作角色（试验）”（`packages/desktop/src/renderer/i18n/ns/settings.ts:39`）。这是本方案的“移动模式”。
+- **Mimi Pet 桌宠** = Desktop 的 **pet widget**：右下角 112×112 的悬浮小狗头，可展开为 400×380 的聊天/活动气泡。菜单文案为“显示 Mimi / 隐藏 Mimi”（`packages/desktop/src/renderer/i18n/ns/pet.ts:417-418`）。这是本方案的“停靠模式”。
+- **手机 / 移动端 Mimi：现在没有 Mimi 形象界面。**
+  - 手机入口 `packages/desktop/src/mobile/main.tsx:4,14` 挂载的是 `packages/web/app/DesktopApp`，`packages/web/app`、`packages/web/src` 里没有任何 mimi/pet/companion 引用。
+  - Host 侧会主动过滤 Mimi：`packages/server/src/sessions-service.ts:98` 从会话列表剔除 `kind === "pet"`，`:352` 从磁盘会话列表剔除；`packages/desktop/src/main/mobile-remote/output-recovery-authority.ts:56,74,141` 拒绝 pet 会话的输出恢复；`legacy-transcript-history.ts:139` 同理。
+  - 在手机上只能经 IM 通道（微信等，`packages/chat` → Desktop `pet-dispatch-service`）和 Mimi 对话，不涉及任何窗口或形象。
+  - 结论：“移动模式”与手机端无关。本方案只改 Desktop 桌面形态，手机端行为不变。UI 文案要避免与“移动端”混淆，见 §5.6。
+
+## 2. 现状：两个独立实现
+
+### 2.1 两个表面对照
+
+| 维度 | 停靠：pet widget | 移动：Mimi CUA companion |
+| --- | --- | --- |
+| 状态拥有者 | `packages/desktop/src/main/index.ts` 模块级变量 `petWidgetWindow` / `petWidgetWindowCreation` / `petWidgetShouldBeVisible` / `petWidgetSurfaceMode`（`:650-654`） | `createMimiCompanionHost` 闭包内的 `enabled/size/anchor/pinned/window`（`packages/desktop/src/main/computer-use/mimi-companion-host.ts:44-79`） |
+| 何时创建 | 任何平台；只有用户打开时才创建（`index.ts:5913-5923`） | **仅 macOS**，且 CUA 执行闸门 `control` 创建成功后才有（`computer-use/desktop-setup.ts:65-110`）；`enabled` 为真时启动就建窗（`mimi-companion-host.ts:588`） |
+| 窗口 | 112×112 DIP 无边框透明，`resizable:false`、`alwaysOnTop`，主 preload `preload/index.cjs`，default session（`index.ts:2954-2982`）；展开时 `setBounds` 到 400×380（`:3075-3085`） | 覆盖整块显示器 `display.bounds`；mac 用 `type:"panel"`、`focusable:false`、点击穿透；独立 preload `mimi-companion.cjs`、独立 partition `mimi-companion` 并带 CSP（`mimi-companion-host.ts:218-231, 258-289`） |
+| 置顶 | mac `screen-saver` 级，其他平台 `floating`（`pet/pet-widget-window-state.ts:36-41`，`index.ts:2933-2943`）；全部工作区可见（`index.ts:2996`） | 复用同一个 `petWidgetAlwaysOnTopLevel`（`mimi-companion-host.ts:15,202-210`）；全部工作区、全屏可见（`:288`） |
+| 显隐判定 | `petWidgetShouldBeVisible && window 存活`（`index.ts:5904, 5920-5922`） | `(enabled \|\| preview) && (!capturing \|\| humanActive) && !obstructed && !disposed`（`mimi-companion-host.ts:142-146`）；CUA 截图期间会自己隐藏（`:100-107`） |
+| 持久化 | 只存位置：`codeShellHome()/desktop/pet-widget.json`（`pet-widget-window-state.ts:49-51,110-131`）；**显隐不持久化**，每次启动都是隐藏（`index.ts:652`，全仓只有 `:5914` 一处赋值） | `app.getPath("userData")/mimi-companion.json` 保存 `{enabled,size,anchor?}`（`mimi-companion-host.ts:45, 57-67, 180-190`）；`enabled` 会在重启后自动恢复显示 |
+| 用户入口 | 账户/设置下拉菜单“显示/隐藏 Mimi”（`renderer/Sidebar.tsx:545-546` → `settings/SettingsMenu.tsx:258-260`）；Pet 设置页开关（`pet/PetSettingsPage.tsx:388-396`）；桌宠右键“打开 Mimi / 关闭宠物”（`index.ts:5931-5947`） | 设置 → 电脑操作页：“显示 Mimi 操作角色（试验）”开关、角色大小下拉、预览按钮（`settings/ComputerUseSettings.tsx:263-336`） |
+| 聊天入口 | 桌宠内联聊天气泡，展开后 400×380（`pet/PetDesktopWindow.tsx:231-244`） | 点击角色打开**主窗口**的 Mimi 页面（`index.ts:3498` → `openPetOverviewFromWidget` `:3100-3110`；`App.tsx:968-979`） |
+| IPC | `pet:widget-visible(-get)`、`pet:widget-visibility-changed`、`pet:widget-move/expanded/surface/context-menu/open-overview`（`index.ts:5903-5981`；preload `pet-api.ts:507-535`） | `mimiCompanion:*`（`mimi-companion-host.ts:375-578`）；设置走 `computerUse:setCompanion/previewCompanion`（`settings-ipc.ts:129-171`；preload `computer-use-api.ts:13-16`） |
+| 测试 | `pet-widget-window-state.test.ts`、`PetDesktopWindow.test.ts`、`AppPet.test.tsx`、`preload/pet-contract.test.ts` | `companion-choreographer/-layout/stage-model/settings-ipc` 等单测；**`mimi-companion-host.ts` 本身没有单测**（`git grep -l mimi-companion-host 82c6f37ab -- "*.test.ts"` 无结果）；`test:e2e:companion-chat` 脚本（见 [原型说明](../mimi-cua-companion.md)） |
+
+### 2.2 为什么现在是分开的
+
+1. **来源不同。** pet widget 是 Pet 桌宠的概览/聊天/活动入口。companion 是 CUA 呈现实验：起点是 `7dca610dc feat(desktop): add opt-in interactive Mimi CUA companion trial`，后续经 PR #239、#244–#258 迭代。它挂在 computer-use 子系统下，由 `initializeDesktopComputerUse` 组装（`desktop-setup.ts:90-110`），依赖执行闸门的 `bus/gate`。
+2. **文档明确列为后续工作。** 原型说明写着 “The existing compact pet widget is a separate surface in this experiment. Consolidating both surfaces and adding more natural action assets are follow-up product work.”（`docs/mimi-cua-companion.md:143-145`）。
+3. **没有共同的状态拥有者。** 两者状态分处两个模块、写在两个根目录下的两个文件（`codeShellHome()` 和 `userData`），由两套 IPC 和两个设置页控制。
+4. **互不感知。** `mimi-companion-host.ts` 从 pet 模块只导入了 `petWidgetAlwaysOnTopLevel`（`:15`）；`packages/desktop/src/main/pet/` 下没有任何 companion 引用；`index.ts` 的 widget 显隐逻辑也不看 companion 状态。
+
+### 2.3 为什么能同时出现（确认）
+
+在 macOS 上，用户在 Pet 设置或菜单里打开“显示 Mimi”（widget），又在电脑操作设置里打开“显示 Mimi 操作角色”（companion），两者会同时可见：
+
+- 两条显隐判定（§2.1“显隐判定”一行）互相独立，没有任何互斥检查；
+- 两个窗口都在 `screen-saver` 层、全部工作区可见，会互相重叠；
+- 重启后 companion 按 `enabled` 自动恢复，widget 总是隐藏，形成“这次只有一个、下次又两个”的不一致；
+- companion 的点击和 widget 的内联聊天是两个聊天入口，companion 的聊天 hold（`mimiCompanion:chatActive`，`mimi-companion-host.ts:418-430`）只接受主窗口发送方（`isMainWindow`），widget 的内联聊天不参与。
+
+附带风险：**CUA 截图时只隐藏 companion，不隐藏 widget。**`hideForCapture` 只在 companion host 里实现（`mimi-companion-host.ts:100-107`；`git grep setContentProtection|hideForCapture 82c6f37ab -- packages/desktop/src/main` 只命中 companion 相关文件）。同屏时 widget 可能出现在模型截图里或遮住目标（静态风险，待真机验收）。
+
+## 3. 实际默认尺寸（基线代码数值）
+
+> 单位说明：Electron `BrowserWindow` 的尺寸和 `screen` 坐标是**逻辑像素 DIP**；渲染进程在缩放 1 时 CSS px = DIP；**物理像素 = DIP × 所在显示器 `scaleFactor`**（Retina 一般为 2）。基线 main/preload 中没有任何 `setZoomFactor/setZoomLevel` 调用，两个 Mimi 窗口都按缩放 1 渲染。设置页选项写的是“px”（`ComputerUseSettings.tsx:311-313`），实际含义是 DIP。
+
+| 项 | 数值（DIP） | 证据 | Retina 2× 物理像素 |
+| --- | --- | --- | --- |
+| widget 收起窗口 | 112 × 112 | `pet-widget-window-state.ts:6`；`index.ts:2955-2956` | 224 × 224 |
+| widget 狗头图像 | 96 × 96（`h-24 w-24`），容器 112（`h-28 w-28`） | `renderer/pet/PetWidget.tsx:113,199` | 192 × 192 |
+| widget 展开窗口 | 400 × 380（268 气泡 + 112 锚点） | `pet-widget-window-state.ts:8-11` | 800 × 760 |
+| widget 默认位置 | 工作区右下，距右/下边缘 24，最小边距 12 | `pet-widget-window-state.ts:7,89-99` | — |
+| companion 窗口 | 整块显示器 `display.bounds`（透明、点击穿透，只有角色身体接收指针） | `mimi-companion-host.ts:258-259,285` | — |
+| companion 角色框默认 | **高 320 × 宽 224**（宽 = 0.7 × size） | 默认值 `shared/mimi-companion.ts:92`；`renderer/pet/live2d/MimiCompanionWindow.tsx:335-336` | 448 × 640 |
+| companion 可调范围 | 夹紧到 200–480；设置下拉只有 240/320/400/480 | `shared/mimi-companion.ts:110-113`；`ComputerUseSettings.tsx:311` | — |
+| companion 工作时缩放 | 操作控件时 × 0.55（默认 320 → 176）；用户拖动固定后保持原尺寸 | `computer-use/stage-model.ts:39,135`；`mimi-companion-host.ts:151-153` | — |
+
+按默认值比较：companion 角色框高 320，是 widget 狗头 96 的约 3.3 倍；面积 224×320 对 96×96，约 7.8 倍。用户说的“默认有点太大”与这组数字吻合。由于用户原话没有点明是哪一个，本文按**两种形态都给出建议**处理，以移动形态为主。
+
+## 4. 目标模型
+
+```
+Mimi presence（唯一拥有者：Desktop main 进程 MimiPresenceController）
+  visible: boolean                       ← 唯一“显示 Mimi”开关
+  mode: "docked" | "moving"              ← 打开后可切换；互斥
+  size: { preset, movingBoxHeight }      ← 统一尺寸配置
+  docked: { anchor }                     ← 原 pet-widget.json
+  moving: { anchor?, pinned }            ← 原 mimi-companion.json 的 anchor
+        │ apply()（串行、代次校验、先隐藏后显示）
+        ├── DockedSurface  = 现有 pet widget 窗口（抽出为模块，行为不变）
+        └── MovingSurface  = 现有 companion host（去掉自己的 enabled 真相，只接受 presenting 指令）
+```
+
+- **内部可以保留两个窗口实现**（它们的窗口类型、preload、partition、点击穿透策略差别很大，强行合成一个窗口反而风险更高），但**用户永远只看到其中一个**。可见性只由控制器决定。
+- 控制器放在 `packages/desktop/src/main/pet/`（宿主呈现层）。`packages/pet`（能力包）和 core 不做任何改动（U5）。
+- `shared/mimi-companion.ts:1` 已规定 companion 只做呈现、不能发出电脑输入。合并后维持这一边界：模式切换不影响 CUA 执行闸门，也不得触发 CUA 安装、授权或输入。
+
+## 5. 设计细节与边界
+
+### 5.1 互斥与切换顺序
+
+- `apply(next)`：生成递增 `generation`。**先隐藏当前形态，确认隐藏后再显示目标形态**（hide-before-show），允许出现 ≤300 ms 的“都不可见”空档，但绝不允许两者同时可见。
+- 每个 `await`（建窗、`loadFile`、`ready`）返回后都要检查 `generation` 是否仍是最新；不是就放弃本次显示并隐藏刚建好的窗口。现有 `setPetWidgetVisibility` 已有显隐意图复核（`index.ts:5916-5918`），但尚无统一模式代次；新控制器需显式补齐。
+- 不变量（写进单测）：每次显示/隐藏操作及每个异步恢复边界上均满足 `!(dockedVisible && movingVisible)`，且任意交错序列稳定后的可见形态等于最后一次请求。只检查序列结束状态不足以证明全程互斥。
+
+### 5.2 快速连点与并发入口
+
+- 所有入口（菜单、Pet 设置、桌宠右键、角色右键、电脑操作设置的兼容开关、预览、旧 IPC 别名）只提交 `setPresence(patch)`，控制器以“最新请求胜出”合并。
+- **预览同样经过控制器。**删除独立建窗预览路径，或将预览作为同一个移动表面的临时状态：先隐藏当前表面；预览结束仅在请求代次仍有效时恢复之前模式，期间关闭 Mimi 必须取消预览，不能由过期定时器重新显示。不得在停靠模式旁额外显示预览角色。
+- 渲染端乐观更新后，以 `mimi:presence-changed` 广播的**实际生效状态**为准，与现有 `pet:widget-visibility-changed` 回滚模式一致（`App.tsx:981-997`）。
+- IPC 发送方校验：设置类请求只接受主窗口 main frame；两个 Mimi 表面自身只允许“切换模式 / 关闭 / 打开聊天”这类受限动作，并校验发送方是当前可见表面。
+
+### 5.3 重启恢复与旧设置迁移
+
+- 新状态文件：`codeShellHome()/desktop/mimi-presence.json`，带 `schemaVersion: 1`。和 `pet-widget.json` 同根，隔离测试已覆盖该根。写入沿用原子 tmp + rename；只有本进程写这个文件，如果将来出现跨进程写，需复用同一路径的跨进程锁协议。
+- **一次性迁移**（读旧文件，不删除、不改写旧文件，便于回滚）：
+  - 旧 `mimi-companion.json.enabled === true` → `visible: true, mode: "moving"`，`moving.anchor` 取旧 `anchor`；
+  - 否则 → `visible: false, mode: "docked"`（旧 widget 显隐本来就不持久化，与现在“启动时隐藏”一致）；
+  - `pet-widget.json` 的位置 → `docked.anchor`；
+  - 尺寸：旧 `size === 320`（旧默认值，且旧文件无法区分“没改过”和“主动选 320”）→ 迁移到新默认值；其他合法值保留，并夹紧到新范围。**这一条需用户确认**（备选：一律保留旧值）。
+  - 旧文件损坏 / 字段非法：按仓库“严格校验叠加旧数据”规则，隔离坏字段、其余用默认值，不抛错，也不覆盖原文件。
+- 启动顺序：`moving` 依赖 `initializeDesktopComputerUse`（`index.ts:3496-3508`）创建的 companion host，所以控制器要在 `petIpcReady` 与 computer-use 初始化都完成后再 `apply`。在此之前**两个形态都不显示**，避免启动瞬间闪出两个。
+- 持久化的 `mode=moving` 但当前不可用（非 macOS、`control` 创建失败、companion host 初始化失败）：**生效**模式降为 `docked`，**保存的偏好不改**；设置里显示“移动模式不可用：原因”。
+
+### 5.4 关闭、退出与崩溃
+
+- “关闭 Mimi”只置 `visible=false`，保留 `mode` 和尺寸。
+- 应用退出：控制器先持久化，然后沿用现有 `closeComputerUse()`（`index.ts:7270`）和 widget 销毁路径。
+- 表面崩溃：widget 的 `render-process-gone` 会直接销毁窗口（`index.ts:3015-3021`），companion 会写入 `error` 并销毁窗口（`mimi-companion-host.ts:297-300`）。控制器保持 `visible` 意图不变，进入“失败”子状态并在设置页显示错误和重试按钮。**建议**移动形态失败时提示一次并回落到停靠形态，以兑现“一个可见实例”；该回落策略待确认。
+
+### 5.5 工作中 / 审批 / Cua 输入权限
+
+- **执行闸门不随模式变化。**停止/继续电脑操作仍由执行侧负责（菜单、⌘⇧Esc `computer-use-control.ts:7`、设置页），见 [执行边界设计](../superpowers/specs/2026-10-28-mimi-cua-execution-boundary-design.md)。
+- **停靠模式必须保留“停止电脑操作”入口。**现在 companion 自带 stop/resume（`mimi-companion-host.ts:528-539`），用户切到停靠后会失去这个入口。CUA 输入活跃时，在桌宠右键菜单补上“停止/继续电脑操作”，调用同一个 `gate.stopAll/resume`。
+- **聊天 hold：**现在只有主窗口的 Mimi 页能触发 `holdForegroundForChat`（`mimi-companion-host.ts:418-430`，`isMainWindow`）。合并后停靠形态的内联聊天也是 Mimi 聊天面，建议聊天输入框聚焦时同样请求前台 hold，并放宽发送方校验到“当前可见的 Mimi 表面”。
+- **截图隐藏：**控制器提供统一的 `hideForCapture`，隐藏**当前可见形态**（停靠也要隐藏），复用 companion 现有 ≤50 ms 合成器屏障（`mimi-companion-host.ts:100-107`）。这样同时修掉 §2.3 的附带风险。
+- **审批 / 待办提醒：**停靠形态已有活动气泡和徽标；移动形态目前没有审批提示。Phase 1 先保证切到移动模式时有待批审批的话，在角色旁显示计数徽标，或者点击直达主窗口审批；不得因为切换模式让审批不可见。
+- 工作中（CUA 运行）切换模式：choreographer 继续接收 bus 事件，只是不绘制；切回移动时从当前 activity 恢复，不重放历史动作。
+
+### 5.6 多显示器 / DPI / 坐标换算
+
+- 两个形态都用全局 DIP 坐标。切换时**保持“Mimi 站在同一个地方”**：
+  - 停靠 → 移动：让角色实际脚底中点（`x + 0.35·height, y + height - companionFeetOffset(height)`；复用 `shared/mimi-companion.ts:103` 与 `stage-model.ts` 的脚底偏移）对齐 widget 狗头底边中点。当前 `mimi-companion-host.ts:501` 的 `0.9·size` 是投放检测的近似点，不能直接当视觉脚底；切换时使用当前生效高度（含工作缩放），不只读保存的基础尺寸；
+  - 移动 → 停靠：把 widget 锚点放到角色脚底附近；
+  - 两个方向都按目标形态各自的规则夹紧到所在显示器工作区（`clampPetWidgetWindowPosition` / `normalizeAnchor`）。
+- 混合 DPI（例如 2560×1440 外接屏 + Retina 内屏）：只用 Electron DIP 计算，不自己乘 `scaleFactor`；`display-metrics-changed/display-removed` 时两个形态都要重新夹紧（companion 已有，`mimi-companion-host.ts:579-587`；widget 当前只在创建和移动时夹紧）。
+- UI 文案：建议叫“**移动模式**（Mimi 在桌面上走动、跟随电脑操作）”，并加副标题，避免和“移动端 / 手机”混淆；停靠形态叫“**停靠模式**”。最终命名待用户确认。
+
+### 5.7 尺寸（建议值，待用户确认）
+
+| 项 | 现值 | 建议 | 理由 |
+| --- | --- | --- | --- |
+| 移动形态默认角色框高 | 320（宽 224） | **200**（宽 140），约为现值的 62.5% | 等于现有下限；狗头 96 的约 2 倍，仍能看清动作 |
+| 移动形态可调范围 | 200–480，下拉 240/320/400/480 | **160–480**，下拉 160/200/240/320/400/480 | 保留旧最大值，避免缩小已主动选大的用户 |
+| 工作时缩放 | × 0.55（200 → 110） | × 0.55，**下限 96** | 小尺寸下工作姿态仍可辨认 |
+| 停靠形态 | 窗口 112 / 狗头 96，不可调 | Phase 1 **不变**；Phase 2 可选统一“小/中/大”预设（窗口 96/112/136） | 用户没有明确说停靠太大；先缩移动形态，降低改动面 |
+
+统一配置为 `size.movingBoxHeight`（数值）。设置页一个“Mimi 大小”控件同时作用于当前形态：Phase 1 只影响移动形态，Phase 2 才加停靠预设。
+
+## 6. 最小架构改动与任务拆解
+
+| 任务 | 内容 | 主要文件 | 体量 |
+| --- | --- | --- | --- |
+| T0 | 用户确认：默认尺寸、320 迁移规则、移动失败回落策略、模式命名、电脑操作页开关的去留 | 本文 | XS |
+| T1 | 把 widget 窗口逻辑从 `index.ts:2882-3110, 5903-5981` 抽成 `DockedSurface` 模块，**零行为变化**，旧 IPC 保持 | `main/index.ts`、新 `main/pet/pet-widget-surface.ts`、`main/pet/pet-widget-window-state.ts` | M |
+| T2 | companion host 拆开“偏好 enabled”与“是否呈现 presenting”：新增 `setPresenting(bool)` 和 `setSize(n)`；`update({enabled})` 保留为兼容路径，内部改为调用控制器 | `main/computer-use/mimi-companion-host.ts`、`desktop-setup.ts`、`settings-ipc.ts`、`shared/mimi-companion.ts` | S–M |
+| T3 | `MimiPresenceController`：状态、串行 `apply`、代次校验、hide-before-show、持久化与迁移、可用性降级、统一 `hideForCapture` | 新 `main/pet/mimi-presence-controller.ts`、`mimi-presence-state.ts`；`main/index.ts` 接线 | M |
+| T4 | IPC / preload：新 `mimi:presence-get/set`、`mimi:presence-changed`；`pet:widget-visible` 与 `computerUse:setCompanion` 作为兼容别名映射到控制器；更新类型与契约测试 | `preload/pet-api.ts`、`preload/computer-use-api.ts`、`preload/types.d.ts`、`preload/pet-contract.test.ts`、`tests/` 下 IPC 契约 | S |
+| T5 | 渲染端入口统一：Pet 设置页一个“显示 Mimi”开关 + “停靠/移动”分段控件 + 大小；账户菜单只切显隐；电脑操作页把 companion 开关改为跳转到同一设置；两个表面右键各加“切换模式 / 关闭 Mimi” | `renderer/App.tsx`、`Sidebar.tsx`、`settings/SettingsMenu.tsx`、`pet/PetSettingsPage.tsx`、`settings/ComputerUseSettings.tsx`、`pet/PetDesktopWindow.tsx`、`pet/live2d/MimiCompanionWindow.tsx`、i18n `ns/pet.ts`、`ns/settings.ts` | M |
+| T6 | 尺寸：新默认值与范围、工作缩放下限、设置选项 | `shared/mimi-companion.ts:92,110-113`、`computer-use/stage-model.ts:39,135`、`ComputerUseSettings.tsx:311` | S |
+| T7 | 停靠模式补“停止/继续电脑操作”；停靠内联聊天参与前台 hold | `main/index.ts` 右键菜单、`mimi-companion-host.ts:418-430` | S |
+| T8 | 测试与文档：控制器 / 迁移 / 互斥单测，`mimi-companion-host` 补单测，e2e `test:e2e:companion-chat` 增加互斥断言；更新 `docs/mimi-cua-companion.md:143-145` 与架构 14 章 | 测试文件、文档 | M |
+
+合计 **M–L**，建议按 T1 → T2/T3 → T4 → T5/T6/T7 → T8 分 2–3 个 PR 落地。T1 是纯重构，可以先合。不碰 `packages/pet`、`packages/core`。
+
+## 7. 验收矩阵
+
+| # | 场景 | 期望 | 方式 |
+| --- | --- | --- | --- |
+| A1 | 设置里只有一个“显示 Mimi” | 账户菜单、Pet 设置、电脑操作页不再出现第二个独立显示开关；电脑操作页只链接到 Mimi 设置 | 渲染测试 + 人工 |
+| A2 | 打开 Mimi（默认） | 显示停靠形态；移动形态不可见 | 单测 + 真机 |
+| A3 | 切到移动模式 | 停靠隐藏后移动出现，全程不同时可见；角色位于切换前位置附近 | 单测（不变量）+ 真机录屏 |
+| A4 | 快速连点：显隐 / 模式在 1 s 内各切 10 次，并且从两个入口同时触发；停靠时预览、预览中关闭、旧预览超时后切换 | 结束状态等于最后一次请求；任何采样点都不同时可见 | 单测（交错序列）+ 真机 |
+| A5 | 重启恢复 | 恢复上次 `visible/mode/size/位置`；启动过程中不闪出第二个 | 隔离 HOME 的冷启动 e2e |
+| A6 | 旧设置迁移 | `enabled:true` 的旧用户 → 移动模式可见；旧用户默认 320 → 新默认（若 T0 确认）；坏文件不抛错、不覆盖 | 迁移单测 |
+| A7 | 非 macOS / CUA 闸门失败 | 移动选项禁用并说明原因；已保存的 `moving` 偏好降为停靠生效 | 单测 + Windows/Linux 冒烟 |
+| A8 | CUA 运行中切换模式 | 执行闸门状态不变；截图时当前形态被隐藏；停靠模式右键可停止/继续 | 单测 + 真机（受控测试页，不碰用户浏览器） |
+| A9 | 待批审批时处于移动模式 | 有可见计数或可直达审批，不因切模式丢失提醒 | 渲染测试 + 真机 |
+| A10 | 多显示器 / 混合 DPI | 两形态在 2560×1440 + Retina 间拖动、拔插后都夹紧在可见工作区，切换位置正确 | 真机 |
+| A11 | 默认尺寸 | 新安装移动形态角色框高 = 建议值（T0 确认后的值），设置可调到范围两端 | 单测 + 截图测量（DIP） |
+| A12 | 全屏 Space | 移动形态在其他应用全屏时仍可见（沿用 10-28 已确认能力）；⌘⇧Esc 在全屏下可用仍是**未验收项** | 真机 |
+| A13 | 关闭与退出 | “关闭 Mimi”后两形态都不可见且重启不恢复；退出无残留窗口或进程 | e2e |
+
+源码单测与隔离 e2e 不能替代 A3/A4/A8/A10/A12 的真机验收；正式包验收仍归 [TODO](../../TODO.md) 的 P0.3。
+
+## 8. 不做 / 后置
+
+- 不把两个窗口合成一个 `BrowserWindow`（窗口类型、焦点、点击穿透、partition/CSP 差异大；只在用户可见层合并）。
+- 不改 `packages/pet` 能力包与 core 协议；不为手机端新增 Mimi 形象。
+- 不改变 CUA 执行权限、驱动版本或输入闸门语义。
+- Live2D 适配仍是预留接口，不在本方案启用。
