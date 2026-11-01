@@ -1,5 +1,9 @@
 import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
-import type { MimiCompanionSettings } from "../../shared/mimi-companion.js";
+import {
+  MIMI_COMPANION_MAX_SIZE,
+  MIMI_COMPANION_MIN_SIZE,
+  type MimiCompanionSettings,
+} from "../../shared/mimi-companion.js";
 import type {
   ComputerUseInputStatus,
   ComputerUsePermissionKind,
@@ -22,6 +26,10 @@ export interface ComputerUseSettingsDependencies {
   };
   stop(): Promise<void>;
   restart(): void;
+  /**
+   * Legacy companion settings. In Desktop this is an adapter onto the single
+   * Mimi presence owner, so it can never show a second Mimi.
+   */
   companion?: {
     status(): MimiCompanionSettings;
     update(value: { enabled?: boolean; size?: number }): Promise<void>;
@@ -136,8 +144,8 @@ export function registerComputerUseSettingsIpc(deps: ComputerUseSettingsDependen
       (input.size !== undefined &&
         (typeof input.size !== "number" ||
           !Number.isFinite(input.size) ||
-          input.size < 200 ||
-          input.size > 480))
+          input.size < MIMI_COMPANION_MIN_SIZE ||
+          input.size > MIMI_COMPANION_MAX_SIZE))
     ) {
       throw new Error("无效的角色设置。");
     }

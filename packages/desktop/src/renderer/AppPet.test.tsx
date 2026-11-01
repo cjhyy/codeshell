@@ -127,9 +127,13 @@ describe("App Pet lifecycle boundaries", () => {
     expect(sidebarSource).toContain("<AccountSidebarEntry");
   });
 
-  test("starts the desktop Pet hidden until the user explicitly toggles it", () => {
-    expect(appSource).toContain("const [petWidgetVisible, setPetWidgetVisible] = useState(false)");
-    expect(appSource).toContain(".getWidgetVisibility()");
+  test("uses the host-owned Mimi preference and starts hidden until its snapshot arrives", () => {
+    const presenceSource = readFileSync(join(rendererRoot, "app", "useMimiPresence.ts"), "utf8");
+    expect(appSource).toContain("useMimiPresence()");
+    expect(presenceSource).toContain(
+      "const [petWidgetVisible, setPetWidgetVisible] = useState(false)",
+    );
+    expect(presenceSource).toContain("pet.getPresence()");
     expect(appSource).not.toContain("loadPetWidgetVisible");
     expect(appSource).not.toContain("savePetWidgetVisible");
   });

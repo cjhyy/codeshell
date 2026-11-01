@@ -367,6 +367,8 @@ interface Props {
   onBack: () => void;
   /** Jump to the full digital-humans page (market / teams). */
   onOpenDigitalHumans?: () => void;
+  /** Mimi's single show/mode/size setting lives on the Mimi settings page. */
+  onOpenMimiSettings?: () => void;
   /** Open account connections directly on the Link category. */
   onOpenLink?: () => void;
 }
@@ -391,6 +393,7 @@ export function SettingsPage({
   isFullscreen,
   onBack,
   onOpenDigitalHumans,
+  onOpenMimiSettings,
   onOpenLink,
 }: Props) {
   const { t } = useT();
@@ -776,7 +779,9 @@ export function SettingsPage({
                   activeProjectPath={scopeProjectPath ?? activeProjectPath}
                 />
               )}
-              {active === "computer-use" && <ComputerUseSettings />}
+              {active === "computer-use" && (
+                <ComputerUseSettings onOpenMimiSettings={onOpenMimiSettings} />
+              )}
               {active === "account" && <CloudAccountSettings />}
               {active === "appearance" && <AppearanceSection />}
               {active === "config" && (

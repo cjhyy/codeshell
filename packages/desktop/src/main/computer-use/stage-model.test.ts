@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { companionFeetOffset } from "../../shared/mimi-companion";
-import { PERCH_REACH, WORK_SCALE, clearsFieldAtOnce, stagePlacement } from "./stage-model";
+import {
+  PERCH_REACH,
+  WORK_SCALE,
+  clearsFieldAtOnce,
+  stagePlacement,
+  workingSize,
+} from "./stage-model";
 
 const display = { x: 0, y: 0, width: 1920, height: 1080 };
 const window = { x: 400, y: 420, width: 1000, height: 600 };
@@ -84,6 +90,29 @@ describe("stagePlacement", () => {
     expect(
       stagePlacement(display, height, { target: { x: 900, y: 480 }, prefer: "title-bar" }).perch,
     ).toBe("beside-target");
+  });
+});
+
+describe("workingSize", () => {
+  test("scales by WORK_SCALE but never draws the working character below 96 DIP", () => {
+    expect(workingSize(320)).toBe(Math.round(320 * WORK_SCALE));
+    expect(workingSize(480)).toBe(264);
+    // The new 200 default scales to 110; the 160 minimum would be 88 → floored.
+    expect(workingSize(200)).toBe(110);
+    expect(workingSize(160)).toBe(96);
+    // Invalid input falls back to the default size before scaling.
+    expect(workingSize(Number.NaN)).toBe(110);
+  });
+
+  test("a small character standing on a control uses the floored working height", () => {
+    const page = { x: 160, y: 70, width: 1280, height: 820 };
+    const screen = { x: 0, y: 38, width: 1512, height: 982 };
+    const result = stagePlacement(screen, 160, {
+      target: { x: 800, y: 471 },
+      window: page,
+      surface: { kind: "button", frame: { x: 700, y: 454, width: 120, height: 32 } },
+    });
+    expect(result.size).toBe(96);
   });
 });
 

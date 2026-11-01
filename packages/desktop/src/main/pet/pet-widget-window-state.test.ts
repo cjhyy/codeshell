@@ -64,28 +64,35 @@ describe("desktop Pet window position", () => {
 
   test("keeps the pet above other apps and active across macOS Spaces", () => {
     const mainSource = readFileSync(join(import.meta.dir, "..", "index.ts"), "utf8");
-    expect(mainSource).toContain(
-      "win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(process.platform))",
+    // Window lifecycle moved into the docked surface; host-specific options stay in index.ts.
+    const surfaceSource = readFileSync(join(import.meta.dir, "pet-widget-surface.ts"), "utf8");
+    expect(surfaceSource).toContain(
+      "win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(options.platform))",
     );
-    expect(mainSource).toContain("win.moveTop()");
+    expect(surfaceSource).toContain("win.moveTop()");
     expect(mainSource).toContain(
       "win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })",
     );
     expect(mainSource).toContain("win.setHiddenInMissionControl(true)");
     expect(mainSource).toContain("backgroundThrottling: false");
-    expect(mainSource).toContain('win.on("always-on-top-changed"');
+    expect(surfaceSource).toContain('win.on("always-on-top-changed"');
   });
 
   test("deduplicates concurrent renderer requests into one Pet BrowserWindow", () => {
-    const mainSource = readFileSync(join(import.meta.dir, "..", "index.ts"), "utf8");
-    expect(mainSource).toContain("let petWidgetWindowCreation: Promise<BrowserWindow> | null");
-    expect(mainSource).toContain("if (petWidgetWindowCreation) return petWidgetWindowCreation");
+    const surfaceSource = readFileSync(join(import.meta.dir, "pet-widget-surface.ts"), "utf8");
+    expect(surfaceSource).toContain("let creation: Promise<PetWidgetWindowLike> | null");
+    expect(surfaceSource).toContain("if (creation) return creation");
   });
 
-  test("starts hidden and exposes process-scoped visibility without creating a window", () => {
+  test("starts hidden and exposes visibility through the single presence owner", () => {
     const mainSource = readFileSync(join(import.meta.dir, "..", "index.ts"), "utf8");
-    expect(mainSource).toContain("let petWidgetShouldBeVisible = false");
-    expect(mainSource).toContain('ipcMain.handle("pet:widget-visible-get"');
+    const stateSource = readFileSync(join(import.meta.dir, "mimi-presence-state.ts"), "utf8");
+    const ipcSource = readFileSync(join(import.meta.dir, "mimi-presence-ipc.ts"), "utf8");
+    expect(stateSource).toContain('visible: false, mode: "docked"');
+    expect(ipcSource).toContain('deps.ipcMain.handle("pet:widget-visible-get"');
+    expect(mainSource).toContain("registerMimiPresenceIpc({");
+    // No second, independent visibility flag for the widget remains in main.
+    expect(mainSource).not.toContain("petWidgetShouldBeVisible");
   });
 
   test("keeps double-click open separate from the native right-click close action", () => {
@@ -100,8 +107,8 @@ describe("desktop Pet window position", () => {
     expect(widgetSource).not.toContain("onClose();");
     expect(mainSource).toContain('ipcMain.on("pet:widget-context-menu"');
     expect(mainSource).toContain("event.sender !== win.webContents");
-    expect(mainSource).toContain('chinese ? "关闭宠物" : "Close Pet"');
-    expect(mainSource).toContain("setPetWidgetVisibility(false)");
+    expect(mainSource).toContain('chinese ? "关闭 Mimi" : "Close Mimi"');
+    expect(mainSource).toContain("mimiPresenceOwner.set({ visible: false })");
   });
 
   test("serializes position saves and uses atomic temporary-file replacement", () => {

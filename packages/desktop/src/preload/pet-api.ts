@@ -6,6 +6,7 @@ import type {
   PetLongTaskSnapshot,
 } from "@cjhyy/code-shell-pet";
 import type { PetChatAttachment } from "../shared/pet-chat-attachments";
+import type { MimiPresencePatch, MimiPresenceSnapshot } from "../shared/mimi-presence";
 
 export type { PetChatAttachment } from "../shared/pet-chat-attachments";
 
@@ -397,6 +398,12 @@ export interface PetApi {
     listener: (target?: PetOpenSessionRequest | PetChatPromptRequest) => void,
   ): () => void;
   onWidgetVisibilityChanged(listener: (visible: boolean) => void): () => void;
+  /** The single Mimi presence (one switch; docked or moving, never both). */
+  getPresence?(): Promise<MimiPresenceSnapshot>;
+  setPresence?(patch: MimiPresencePatch): Promise<MimiPresenceSnapshot>;
+  previewPresence?(): Promise<MimiPresenceSnapshot>;
+  retryPresence?(): Promise<MimiPresenceSnapshot>;
+  onPresenceChanged?(listener: (snapshot: MimiPresenceSnapshot) => void): () => void;
 }
 
 export interface PetIpcRenderer {
@@ -533,6 +540,24 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       };
       ipcRenderer.on("pet:widget-visibility-changed", handler);
       return () => ipcRenderer.removeListener("pet:widget-visibility-changed", handler);
+    },
+    getPresence: () => ipcRenderer.invoke("mimi:presence-get") as Promise<MimiPresenceSnapshot>,
+    setPresence: (patch) =>
+      ipcRenderer.invoke("mimi:presence-set", patch) as Promise<MimiPresenceSnapshot>,
+    previewPresence: () =>
+      ipcRenderer.invoke("mimi:presence-preview") as Promise<MimiPresenceSnapshot>,
+    retryPresence: () => ipcRenderer.invoke("mimi:presence-retry") as Promise<MimiPresenceSnapshot>,
+    onPresenceChanged: (listener) => {
+      const handler = (_event: unknown, snapshot: unknown): void => {
+        if (
+          snapshot &&
+          typeof snapshot === "object" &&
+          typeof (snapshot as MimiPresenceSnapshot).visible === "boolean"
+        )
+          listener(snapshot as MimiPresenceSnapshot);
+      };
+      ipcRenderer.on("mimi:presence-changed", handler);
+      return () => ipcRenderer.removeListener("mimi:presence-changed", handler);
     },
   };
 }

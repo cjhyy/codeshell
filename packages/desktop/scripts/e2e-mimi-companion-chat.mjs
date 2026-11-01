@@ -208,6 +208,53 @@ try {
       scaleFactor: selected.scaleFactor,
     };
   }, flags.has("--right-display"));
+  const initialPresence = await main.evaluate(() => window.codeshell.pet.getPresence());
+  assert.equal(initialPresence.size, 200, "A new profile must use the smaller default");
+  assert.equal(initialPresence.visible, false);
+  await app.evaluate(({ BrowserWindow }) => {
+    globalThis.__mimiMutualExclusion = { samples: 0, violations: [] };
+    globalThis.__mimiSampler = setInterval(() => {
+      const visible = BrowserWindow.getAllWindows().filter((win) => {
+        const url = win.webContents.getURL();
+        return (
+          win.isVisible() && (url.includes("popout=pet") || url.endsWith("/mimi-companion.html"))
+        );
+      });
+      globalThis.__mimiMutualExclusion.samples++;
+      if (visible.length > 1)
+        globalThis.__mimiMutualExclusion.violations.push(visible.map((win) => win.id));
+    }, 5);
+  });
+  try {
+    await main.evaluate(async () => {
+      const pet = window.codeshell.pet;
+      await pet.setPresence({ visible: true, mode: "docked" });
+      await pet.setPresence({ mode: "moving" });
+      await pet.setPresence({ mode: "docked" });
+      // Interleave load/withdraw requests from the actual renderer and IPC.
+      await Promise.all([
+        pet.setPresence({ mode: "moving" }),
+        pet.setPresence({ visible: false }),
+        pet.setPresence({ visible: true, mode: "docked" }),
+      ]);
+      const pendingPreview = pet.previewPresence();
+      await pet.setPresence({ visible: false });
+      await pendingPreview;
+    });
+    const closed = await main.evaluate(() => window.codeshell.pet.getPresence());
+    assert.equal(closed.visible, false);
+    assert.equal(closed.shown, null);
+  } finally {
+    receipt.presence = await app.evaluate(() => {
+      clearInterval(globalThis.__mimiSampler);
+      return globalThis.__mimiMutualExclusion;
+    });
+  }
+  assert.ok(receipt.presence.samples > 0);
+  assert.deepEqual(receipt.presence.violations, [], "Both Mimi surfaces became visible together");
+  receipt.checks.push(
+    "default 200 DIP; real window switching, concurrent requests and preview-close stay mutually exclusive",
+  );
   await main.evaluate(async () => {
     await window.codeshell.pet.setWidgetVisible(false);
     await window.codeshell.computerUse.setCompanion({ enabled: true, size: 240 });

@@ -1,6 +1,7 @@
 import {
   companionFeetOffset,
   companionSize,
+  MIMI_COMPANION_MIN_WORKING_SIZE,
   type MimiCompanionPerch,
 } from "../../shared/mimi-companion.js";
 import { companionPlacement, type CompanionDisplayBounds } from "./companion-layout.js";
@@ -37,6 +38,11 @@ export const PERCH_REACH = 520;
 /** Working on a control, the character is drawn at this fraction of its size
  * so it can stand on the control's edges without covering the page. */
 export const WORK_SCALE = 0.55;
+
+/** Drawn height while working on a control: scaled down, never below the floor. */
+export function workingSize(size: number): number {
+  return Math.max(MIMI_COMPANION_MIN_WORKING_SIZE, Math.round(companionSize(size) * WORK_SCALE));
+}
 /** Larger controls (rows, panes, canvases) are regions, not something to stand on. */
 const SURFACE_MAX = { width: 420, height: 120 };
 /** How much of the body rests over a field when sitting on its corner. */
@@ -132,7 +138,7 @@ function surfacePlacement(
   if (frame.x < window.x || frame.y < window.y) return;
   if (frame.x + frame.width > window.x + window.width) return;
   if (frame.y + frame.height > window.y + window.height) return;
-  const height = Math.round(companionSize(size) * WORK_SCALE);
+  const height = workingSize(size);
   const width = height * 0.7;
   const pad = companionFeetOffset(height);
   const minX = window.x + MARGIN;

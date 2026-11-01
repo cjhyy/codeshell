@@ -19,11 +19,31 @@ import {
   setComputerUseControl,
 } from "./service.js";
 import { loadAppProfiles } from "./app-profiles.js";
-import { createMimiCompanionHost, type MimiCompanionHost } from "./mimi-companion-host.js";
+import {
+  createMimiCompanionHost,
+  type MimiCompanionHost,
+  type MimiCompanionPresenceHooks,
+} from "./mimi-companion-host.js";
 import { createComputerUseControl, type ComputerUseControl } from "./computer-use-control.js";
 
 let companion: MimiCompanionHost | undefined;
 let control: ComputerUseControl | undefined;
+let movingUnavailableReason: string | undefined = "电脑操作尚未初始化";
+
+/** The moving Mimi surface, when this platform and its execution gate allow one. */
+export function getMimiCompanion(): MimiCompanionHost | undefined {
+  return companion;
+}
+
+/** Why the moving Mimi surface is missing, shown next to the disabled option. */
+export function mimiMovingUnavailableReason(): string | undefined {
+  return companion ? undefined : movingUnavailableReason;
+}
+
+/** Execution gate controls for Mimi surfaces other than the moving character. */
+export function getComputerUseInputControl() {
+  return inputControl(control);
+}
 
 /** Close the character first, then the execution gate and its socket. */
 export async function closeComputerUse(): Promise<void> {
@@ -31,6 +51,7 @@ export async function closeComputerUse(): Promise<void> {
   const previousControl = control;
   companion = undefined;
   control = undefined;
+  movingUnavailableReason = "电脑操作已关闭";
   setComputerUseControl(undefined);
   await previousCompanion?.close();
   await previousControl?.close();
@@ -58,6 +79,12 @@ export async function initializeDesktopComputerUse(options: {
   env: NodeJS.ProcessEnv;
   log: NonNullable<CuaDriverHostOptions["log"]>;
   openCompanionChat(request?: { prompt: string }): Promise<void>;
+  /** Mimi chat surfaces (main-window Mimi page, docked inline chat). */
+  isCompanionChatSurface?: ComputerUseSettingsDependencies["isMainWindow"];
+  /** Hooks into the single Mimi presence owner (Desktop main). */
+  companionPresence?: MimiCompanionPresenceHooks;
+  /** Legacy computerUse:setCompanion/previewCompanion, routed through that owner. */
+  companionSettings?: ComputerUseSettingsDependencies["companion"];
 }): Promise<void> {
   const appProfilesDir = options.app.isPackaged
     ? join(options.resourcesPath, "packages", "desktop", "resources", "computer-use", "apps")
@@ -87,15 +114,20 @@ export async function initializeDesktopComputerUse(options: {
     });
     setComputerUseControl(control);
   }
+  movingUnavailableReason =
+    options.platform !== "darwin"
+      ? "移动模式目前仅支持 macOS"
+      : "电脑操作执行闸门未能启动，移动模式不可用";
   if (control) {
     const executionControl = control;
     companion = await createMimiCompanionHost({
       appPath: options.app.getAppPath(),
       resourcesPath: options.resourcesPath,
-      userDataPath: options.app.getPath("userData"),
       packaged: options.app.isPackaged,
       devUrl: options.env.VITE_DEV_URL,
       isMainWindow: options.isMainWindow,
+      isChatSurface: options.isCompanionChatSurface,
+      presence: options.companionPresence,
       log: options.log,
       openChat: options.openCompanionChat,
       bus: executionControl.bus,
@@ -105,6 +137,7 @@ export async function initializeDesktopComputerUse(options: {
       ),
     }).catch((error) => {
       options.log("mimi_companion_setup_failed", { error: String(error) });
+      movingUnavailableReason = "移动角色初始化失败，移动模式不可用";
       return undefined;
     });
   }
@@ -158,7 +191,7 @@ export async function initializeDesktopComputerUse(options: {
       }),
     packaged: options.app.isPackaged,
     permissions,
-    companion,
+    companion: options.companionSettings,
     input: inputControl(control),
     stop: resetCuaComputerUse,
     restart: () => {
