@@ -166,8 +166,9 @@ asynchronous load/ready boundary, so the two forms are never visible together.
   told apart from an explicit choice, so it becomes the new 200 default; other
   valid sizes are kept and clamped to 160–480.
 - Moving box default 200 DIP tall (0.7× wide), options 160/200/240/320/400/480.
-  Working on a control draws it at ×0.55, never below 96 DIP. The docked pet is
-  unchanged (112 DIP window, 96 DIP image).
+  Working on a control draws it at ×0.55, never below 96 DIP. The docked pet keeps
+  its size (112 DIP window, 96 DIP image); on macOS it is a panel window, like the
+  moving form, so it stays visible over another app's fullscreen Space.
 - Switching keeps the visual feet in place using the drawn height and
   `companionFeetOffset`, in Electron DIP without multiplying by `scaleFactor`;
   both forms clamp to the visible work area after display removal or metric changes.
@@ -193,9 +194,16 @@ stays hidden) across six independent entries with 0 double-visible samples, and
 native checks in an owned fullscreen Space: WindowServer listed both forms on
 screen, per-window captures show the expected pixels, native right-click/click/
 keys switch forms, and 962 WindowServer samples during interleaved switching
-never had both on screen. Still open: multi-display/mixed-DPI (one built-in
-display here), capture hiding through the real CUA driver channel, ⌘⇧Esc in a
-fullscreen Space, and packaged release acceptance (see `docs/todo/mimi-single-entry-movement-plan.md` §9).
+never had both on screen. Multi-display/mixed-DPI was accepted on real
+hardware on 2026-11-02 (built-in 2×, a 2× 4K screen at negative x, a 1× QHD
+screen at negative y; plan §9.8): placement, edges, switching, native
+cross-display drags, cold restarts and simulated display loss all passed, and
+three defects were fixed — the docked pet is now a panel so it shows over another
+app's fullscreen Space, it no longer uses `moveTop()` on macOS (that left a white
+backing on 1× displays), and the moving form no longer hides CodeShell's Dock
+icon. Still open: physical hot-unplug (only simulated), capture hiding through
+the real CUA driver channel, ⌘⇧Esc in a fullscreen Space, and packaged release
+acceptance (see `docs/todo/mimi-single-entry-movement-plan.md` §9).
 Merged in PR #267; a local packaged candidate of that exact tree passed
 `e2e-mimi-presence-packaged` in a private HOME (plan §9.7).
 
