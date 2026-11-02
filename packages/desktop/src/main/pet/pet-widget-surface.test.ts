@@ -53,7 +53,10 @@ class FakeWindow implements PetWidgetWindowLike {
     this.emit("closed");
   }
   setAlwaysOnTop() {}
-  moveTop() {}
+  moveTops = 0;
+  moveTop() {
+    this.moveTops++;
+  }
   on(event: string, listener: Listener) {
     this.listeners.set(event, [...(this.listeners.get(event) ?? []), listener]);
   }
@@ -67,7 +70,7 @@ class FakeWindow implements PetWidgetWindowLike {
 
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
-function setup() {
+function setup(platform: NodeJS.Platform = "darwin") {
   const windows: FakeWindow[] = [];
   const loads: Array<{ win: FakeWindow; resolve(): void; reject(error: Error): void }> = [];
   const saved: Point[] = [];
@@ -76,7 +79,7 @@ function setup() {
   let anchor: Point | undefined;
   let workArea = { x: 0, y: 0, width: 1920, height: 1080 };
   const surface = createPetWidgetSurface({
-    platform: "darwin",
+    platform,
     screen: {
       getDisplayNearestPoint: () => ({ workArea }),
       getPrimaryDisplay: () => ({ workArea }),
@@ -259,6 +262,48 @@ describe("docked pet widget surface", () => {
     h.finish();
     await expect(presented).rejects.toThrow();
     expect(h.windows[0]!.shows).toBe(0);
+  });
+
+  test("macOS refreshes z-order without moveTop and never shows a hidden widget from it", async () => {
+    // moveTop() left the 112 DIP transparent widget on an opaque white backing on
+    // a 1× display (2026-11-02 mixed-DPI acceptance). Ordering a visible window
+    // front again is the same refresh; it must not reveal a withdrawn/hidden one.
+    const h = setup("darwin");
+    const presented = h.surface.present(() => true);
+    await flush();
+    h.finish();
+    await presented;
+    const win = h.windows[0]!;
+    expect(win.isVisible()).toBe(true);
+    const shown = win.shows;
+    win.emit("blur");
+    win.emit("show");
+    expect(win.shows).toBe(shown + 2);
+    expect(win.moveTops).toBe(0);
+    expect(h.surface.setCaptureHidden(true)).toBe(true);
+    win.emit("blur");
+    win.emit("always-on-top-changed", {}, true);
+    expect(win.isVisible()).toBe(false);
+    expect(win.shows).toBe(shown + 2);
+    h.surface.setCaptureHidden(false);
+    expect(win.isVisible()).toBe(true);
+    expect(win.moveTops).toBe(0);
+    h.surface.dispose();
+  });
+
+  test("other platforms keep moveTop for the z-order refresh", async () => {
+    const h = setup("linux");
+    const presented = h.surface.present(() => true);
+    await flush();
+    h.finish();
+    await presented;
+    const win = h.windows[0]!;
+    const before = win.moveTops;
+    const shown = win.shows;
+    win.emit("blur");
+    expect(win.moveTops).toBe(before + 1);
+    expect(win.shows).toBe(shown);
+    h.surface.dispose();
   });
 
   test("display removal/metrics change clamps the docked window back into the work area", async () => {

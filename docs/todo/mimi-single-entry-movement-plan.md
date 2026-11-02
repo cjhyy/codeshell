@@ -246,7 +246,7 @@ Mimi presence（唯一拥有者：Desktop main 进程 MimiPresenceController）
 
 ### 9.4 仍待完成 / 未验收（2026-11-01 第二轮更新）
 
-1. **硬件缺口**：本机只有一块内置 Retina 屏（1512×982 DIP，scaleFactor 2），没有外接屏，因此多显示器、拔插、混合 DPI 下的夹紧与切换位置**未真机验证**（仍只有单测与显示器事件夹紧代码）。
+1. ~~**硬件缺口**：本机只有一块内置 Retina 屏（1512×982 DIP，scaleFactor 2），没有外接屏，因此多显示器、拔插、混合 DPI 下的夹紧与切换位置**未真机验证**。~~（2026-11-01 时的状态。）**2026-11-02 更新：**本机已接三块屏（内建 2×、VG2781-4K 2×、LS27B61x 1×），多显示器与混合 DPI 已实机验收并修复三处缺陷，见 §9.8。仍未做的只有**物理热拔插**（未拔线/关屏/改排列；移除与分辨率变化在测试进程内模拟）。
 2. **原生 CUA 截图隐藏**未经真实 CUA 截图通道验证：需要真实 driver 截屏通道；生产代码没有、也不新增测试后门拿活动通道令牌。目前由实际 host 子进程测试（交互中截图隐藏）和控制器测试覆盖。
 3. **⌘⇧Esc 在全屏 Space 下**未原生发送：本机正在运行的 CodeShell 宿主可能持有同一全局快捷键，发送它可能停止用户真实的电脑操作。
 4. 移动模式下的审批计数徽标未做（点击角色可直达主窗口 Mimi 页查看待批事项）。
@@ -287,7 +287,7 @@ CC 完成初稿后，主控在同一独立工作区补齐执行环境并完成�
 | 冷重启 + 旧配置迁移（同一隔离 HOME 连续启动 3 次） | 通过。首启：旧 `mimi-companion.json {enabled:true,size:320,anchor}` + `pet-widget.json` → 移动可见、尺寸 200、移动位置=旧锚点、停靠位置=旧位置；两个旧文件逐字节不变。二启：恢复 visible/移动/240/拖动后的位置；切到停靠后窗口位于保存的停靠位置。三启：关闭状态保持隐藏，启动全程 0 次出现 Mimi 窗口 | 主进程每 5 ms 采样 `BrowserWindow.isVisible()`：三次启动共 2794 次采样、0 次双显；3 次进程均 cleaned、隔离 HOME 已删、renderer errors 为空 |
 | 多个独立入口 | 通过：移动角色右键菜单“切换到停靠模式”（真实 DOM 点击）、账户菜单“隐藏/显示 Mimi”、电脑操作页无第二开关且“打开 Mimi 设置”跳转、Mimi 设置页停靠/移动按钮与尺寸下拉（240 后角色按 240 重绘）、设置页预览替换停靠、预览中关闭开关后越过 10 s 预览到期仍不显示、旧 `computerUse:setCompanion` 与 `pet:widget-visible`、多入口并发请求 | 同上（Playwright 驱动真实渲染端与 IPC） |
 | 原生 / 合成器（本机） | 通过：在测试应用自有的**全屏 Space** 中，停靠与移动都由 WindowServer 列为 on-screen；对两种形态的窗口单独截图（`screencapture -l`）分别得到小狗头与位于 200 DIP 框内（0.7× 宽）的移动角色像素；**原生右键**停靠小狗头弹出原生菜单、原生按键选“切换到移动模式”；**原生右键**移动角色弹出其菜单、原生点击“切换到停靠模式”；交错切换期间 WindowServer 每 5 ms 采样 962 次：停靠 707 次、移动 242 次、同时 0 次 | 原生事件只在自有全屏 Space 内、且点位窗口栈中自有 Mimi 之上只有可穿透的透明覆盖层时才发送；只截取自有 Mimi 窗口、不截全屏；结束后恢复指针位置并退出全屏。回执（任务 worktree，`out/` 不入库）：`packages/desktop/out/mimi-presence-native-final.json` 与 `mimi-presence-native-final-captures/`；冷重启回执 `mimi-presence-restart-final.json` |
-| 显示器 | 单块内置屏（scaleFactor 2）；多屏/混合 DPI 未覆盖 | 见 §9.4 |
+| 显示器 | 单块内置屏（scaleFactor 2）；多屏/混合 DPI 未覆盖（2026-11-01 历史状态） | 2026-11-02 三屏实机验收见 §9.8 |
 
 注意：本机同时运行着已安装的旧版 CodeShell（`/Applications/code-shell.app`），它自己的移动 Mimi 覆盖层也在屏幕上；本轮所有判定都按测试应用 PID 过滤，并未触碰该应用。
 
@@ -296,5 +296,56 @@ CC 完成初稿后，主控在同一独立工作区补齐执行环境并完成�
 - **合入：**[PR #267](https://github.com/cjhyy/codeshell/pull/267) 以普通 merge commit `e69dff688` 合入 `main`（父提交 `82c6f37ab` 与任务头 `f0bdcc35c`）。必需检查为 `ci.yml` run 41281187947，事件 `pull_request`、headSha `f0bdcc35c`，14/14 通过；用 `--match-head-commit` 合入，未强推、未用 workflow_dispatch 代替。
 - **本机候选：**在专用干净 worktree `.worktrees/mimi-local-candidate-20261101`（提交 `f0bdcc35c`，tree `5b8c5210e`，与合入提交 `e69dff688` 的 tree 相同）按发布流水线的 mac 步骤构建：`bun install --frozen-lockfile` → `build-workspace-dependencies.ts` → Desktop build → `predist.ts` → `CSC_IDENTITY_AUTO_DISCOVERY=false bunx electron-builder --dir --mac --arm64 --publish never`。版本 0.9.51（未改版本号、未打 tag、未发布），ad-hoc 签名，Identifier `com.cjhyy.codeshell`，与本机现装 0.9.51 的签名方式相同；`verify-computer-use-package.ts` 通过（driver 0.34.1、helper 1、arm64+x64），`codesign --verify --deep --strict` 通过，`app.asar` sha256 `3382e5a12e7f…ba4685`，主进程包含 `mimi:presence-get`、`mimi-presence.json`、`mimiCompanion:presence`。
 - **打包候选验收：**新增 `e2e-mimi-presence-packaged.mjs`（`test:e2e:mimi-presence-packaged`，沿用打包检查夹具：首条指令 Main 守卫、私有 HOME、应用前后清单、只读默认钥匙串元数据）。对候选运行通过：新配置默认隐藏且移动尺寸 200、移动可用；停靠/移动切换及多入口并发时只有一个可见形态（168 次采样 0 次双显）；电脑操作页无第二开关，链接到 Mimi 设置，其开关能隐藏 Mimi；无原生密钥调用、无 renderer 错误、私有 HOME 已删、应用文件清单前后不变。
-- **安装：**本会话运行在已安装的 `/Applications/code-shell.app` 之内（会话进程的父进程就是它），强行退出会中断当前 DriveAgent 作业，因此没有强杀或替换运行中的应用。改为登记一个用户级 LaunchAgent `com.cjhyy.codeshell.local-install.mimi-20261101`，等用户正常退出 CodeShell（应用包内所有进程都退出）后才动手：先校验候选 hash 与签名，把旧包改名为 `/Applications/code-shell.app.backup-<旧版本>-<时间戳>`（沿用本机已有的备份命名），用 `ditto` 安装候选，再次校验 hash 与签名，失败就恢复旧包；成功后写 `install-receipt.json`、重新打开 CodeShell 并移除自身。候选、脚本、`provenance.json`、日志都放在 `~/Library/Application Support/CodeShellLocalBuilds/mimi-unified-presence-20261101/`。不删除用户 dataRoot、设置、凭据或项目。**截至本记录，安装尚未发生**（等待用户退出）；安装后应核对 `install-receipt.json`、`/Applications/code-shell.app/Contents/Resources/app.asar` 的 sha256 与上面一致，并在应用里确认只出现一个 Mimi、默认较小、电脑操作页只有“打开 Mimi 设置”入口。
+- **安装：**本会话运行在已安装的 `/Applications/code-shell.app` 之内（会话进程的父进程就是它），强行退出会中断当前 DriveAgent 作业，因此没有强杀或替换运行中的应用。改为登记一个用户级 LaunchAgent `com.cjhyy.codeshell.local-install.mimi-20261101`，等用户正常退出 CodeShell（应用包内所有进程都退出）后才动手：先校验候选 hash 与签名，把旧包改名为 `/Applications/code-shell.app.backup-<旧版本>-<时间戳>`（沿用本机已有的备份命名），用 `ditto` 安装候选，再次校验 hash 与签名，失败就恢复旧包；成功后写 `install-receipt.json`、重新打开 CodeShell 并移除自身。候选、脚本、`provenance.json`、日志都放在 `~/Library/Application Support/CodeShellLocalBuilds/mimi-unified-presence-20261101/`。不删除用户 dataRoot、设置、凭据或项目。**截至本记录，安装尚未发生**（等待用户退出；**2026-11-02 核对：已于 2026-11-01T07:55:37Z 安装**，`install-receipt.json` 的 target/rollback 存在，`/Applications/code-shell.app/Contents/Resources/app.asar` 实际 sha256 与回执及上面的候选值相同；该安装不含 §9.8 的修复）；安装后应核对 `install-receipt.json`、`/Applications/code-shell.app/Contents/Resources/app.asar` 的 sha256 与上面一致，并在应用里确认只出现一个 Mimi、默认较小、电脑操作页只有“打开 Mimi 设置”入口。
 - **回滚：**退出 CodeShell 后把 `/Applications/code-shell.app` 删除或改名，再把 `code-shell.app.backup-0.9.51-<时间戳>` 改回 `code-shell.app`。取消尚未执行的安装：`launchctl bootout gui/$(id -u)/com.cjhyy.codeshell.local-install.mimi-20261101 && rm ~/Library/LaunchAgents/com.cjhyy.codeshell.local-install.mimi-20261101.plist`。
+
+### 9.8 2026-11-02 三屏 / 混合 DPI 实机验收（CC，任务分支 `codex/desktop/mimi-multidisplay-acceptance-20261102`）
+
+§9.4/§9.6 写于 2026-11-01，当时本机只接内置屏，所以多屏/混合 DPI 记为“无设备”。2026-11-02 本机已接三块屏，本节补做实机验收；旧记录保留为历史。
+
+**真实拓扑**（Electron `screen.getAllDisplays()` 与 CoreGraphics `CGDisplayBounds`/显示模式逐项一致：Electron id = CGDirectDisplayID，`scaleFactor` = 像素宽 / 点宽；全局 DIP = macOS 点，主屏左上为原点）：
+
+| id  | 屏                             | bounds（DIP）          | workArea               | scale | 物理像素  | 运行时的 Space                       |
+| --- | ------------------------------ | ---------------------- | ---------------------- | ----- | --------- | ------------------------------------ |
+| 1   | 内建视网膜显示器（主屏）       | (0, 0) 1512×982        | (0, 38) 1512×852       | 2     | 3024×1964 | 普通桌面                             |
+| 2   | VG2781-4K（左侧）              | (-1920, 11) 1920×1080  | (-1920, 36) 1920×1055  | 2     | 3840×2160 | 另一应用的全屏 Space（该屏无菜单栏） |
+| 3   | LS27B61x（右侧，顶边高于主屏） | (1512, -199) 2560×1440 | (1512, -174) 2560×1415 | 1     | 2560×1440 | 普通桌面（试跑期间曾是另一应用全屏） |
+
+负坐标：屏 2 的 x、屏 3 的 y。混合 DPI：1↔3 直接相邻（2×↔1×），2↔3 需穿过屏 1。
+
+**发现并修复的缺陷**（提交 `9cebe6b06`，只改 Desktop 宿主呈现层）：
+
+1. **停靠形态在显示其他应用全屏 Space 的屏上消失。**停靠窗口是普通 NSWindow，macOS 不把它绘制在别的应用的全屏 Space 上：Electron 报 `isVisible()`，WindowServer 在屏列表里没有它（`kCGWindowIsOnscreen` 为空）。把停靠拖到这样的屏，或重启恢复到那里，Mimi 就看不见了。改为 macOS `type: "panel"`（与移动形态相同），并 `setVisibleOnAllWorkspaces(…, { skipTransformProcessType: true })`。只加 skip 不改 panel 不可靠（启动时创建的窗口仍不在屏），未采用。
+2. **1× 屏上停靠小狗外有白色圆角方块**（屏幕上可见：只含自有背景的区域截图里出现白框）。二分定位为 `BrowserWindow.moveTop()` 作用在 112 DIP 透明小窗口上，会在 1× 屏留下不透明白色背板；与 panel 无关（修复前的 NSWindow 同样复现），200 DIP 以上的窗口不受影响。macOS 上停靠表面改为对**已可见**窗口 `showInactive()` 重新排到最前（实测同样排到同级遮挡窗之上），隐藏窗口不会因此显示；其他平台仍用 `moveTop()`。
+3. **呈现移动形态时 CodeShell 的 Dock 图标消失。**移动表面的 `setVisibleOnAllWorkspaces` 未跳过进程类型转换，Electron 把应用转成 UIElement，直到停靠窗口重建时 `app.dock.show()` 才恢复。移动形态同样加 `skipTransformProcessType: true`；panel 不需要这次转换即可进入全屏 Space（实测）。
+
+回归：`pet-widget-window-state.test.ts`（panel + skip 源码契约；旧源码不含两者）、`pet-widget-surface.test.ts`（macOS 不调用 `moveTop`、只重排可见窗口、截图隐藏中不会被显示；其他平台保留 `moveTop`）、`mimi-companion-host` 新场景 `keeps-dock-icon`。
+
+**验收脚本**：新增 `packages/desktop/scripts/e2e-mimi-presence-multidisplay.mjs`（`test:e2e:mimi-presence-multidisplay`，只在本机运行），复用 confined fixture、electron-harness、watchdog、本地 mock provider，经 `run-isolated-node-smoke.mjs --private-keyring` 隔离 HOME/凭据，不调用模型。`mimi-window-server-probe.swift` 增加 `displays`、多屏 `sample`（按**所有**显示器的全局 bounds 分类，接受菜单栏下移；另计“未分类大覆盖窗”）、`drag`、自有前台助手 `front`、`frontmost`、`type`。分类与期望几何放在 `mimi-multidisplay-geometry.mjs`，由 `mimi-multidisplay-geometry.test.mjs` 与生产函数逐值对齐（含负原点、同尺寸屏、菜单栏下移）。原 native 脚本的 `ownedMimi` 改用同一分类：旧实现只比较主屏宽高，会漏掉其他屏上的移动窗口（普通 Space 中移动面板被放在菜单栏下，也不等于屏幕 bounds）。BrowserWindow 与 WindowServer 窗口按 `getMediaSourceId()` 的 CGWindowID 一一对应，全程按测试 PID 过滤。
+
+**最终结果**（提交 `9cebe6b06`、工作树干净，2026-11-02T03:44:57Z–03:47:02Z，passed）：
+
+| 场景                                                                                     | 结果                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 每屏停靠 / 移动                                                                          | 停靠窗三屏都是 112×112 DIP；截图 224×224 px（2×）/ 112×112 px（1×）；不透明像素 68×75.5 / 68×76 DIP（最大差 0.5）。移动窗 = 该屏宽高（普通 Space 中 y 在菜单栏下 +38/+25/+25），截图 3024×1964 / 3840×2160 / 2560×1440 px = 点数 × 该屏倍率；角色像素 124×144.5 / 124×146 DIP（最大差 1.5），默认 200 DIP。BrowserWindow bounds = WindowServer bounds，渲染端 windowOrigin = 实际窗口原点                                                        |
+| 停靠↔移动位置                                                                            | 三屏切换锚点误差 0 DIP，脚底公式残差 0.35 DIP（取整）；像素测得两形态脚底相差 6.08 DIP（狗图底边与角色鞋底的绘制差，三屏相同）                                                                                                                                                                                                                                                                                                                   |
+| 边缘 / 角落                                                                              | 每屏 4 角 × 停靠先 / 移动先 = 24 组，全部 0 DIP 误差、都留在原屏 workArea；其中 12 组移动形态按目标 workArea 夹紧（如狗头贴顶时 200 DIP 角色放不下）                                                                                                                                                                                                                                                                                             |
+| 快速切换 / 预览 / 关闭                                                                   | 每屏 6 轮交错（含旧别名与并发）+ 预览中关闭；WindowServer 每 5 ms 全屏采样 870 / 881 / 874 次（共 2625）：0 次双显、0 次出现在其他屏、0 个未分类覆盖窗；CUA 输入闸门（enabled / active / stopped / foregroundHeld）前后一致                                                                                                                                                                                                                      |
+| 原生跨屏拖动（三块屏都进入自有全屏 Space）                                               | 10 次 CGEvent 拖动：移动与停靠各 1→2、2→1（2×↔2×，跨负 x）、1→3、3→1（2×↔1×）、2→3（穿过两条边界）。落点与指针位移误差全部 0 DIP；尺寸不变；每次约 450 次 WindowServer 采样（共 4502）：0 次双显、0 次在屏外，源屏和目标屏都有采样（连续跨屏）；闸门不变。落到 1× 屏的 3 次停靠做了合成区域截图（区域内只有自有背景 + Mimi）：窗口边缘就是背景色，无白框。落到屏 1 的 2 次因安装版 CodeShell 的全 Space 覆盖层在该区域内而按隐私规则跳过区域截图 |
+| 停靠聊天焦点（改 panel 后）                                                              | 自有前台助手进程激活时，原生点击小狗：展开为 400×380，输入框获焦、宠物窗是 key window；原生键入 `mimi 3 screens` 完整到达输入框（只在前台应用与 key window 都属于测试进程时才发键）；聊天期间前台 hold = true，关闭后 10.16 s 释放。点击会激活测试应用本身（与修复前一致）                                                                                                                                                                       |
+| 显示器移除 / 度量变化（在测试进程内替换 Electron `screen` 返回值并发事件；真实屏未断开） | 移除屏 2：移动 (-768, 458) → (0, 458)，停靠 → (12, 458)，都到屏 1；移除屏 3：移动 (3048, 392) → (1372, 392)，停靠 → (1388, 392)；移除后切换形态仍在屏 1、误差 0。屏 3 workArea 缩到 60%：停靠 (3922, 1091) → (2924, 521)，移动锚点在新 workArea 内。真实窗口按 WindowServer 在真实屏上移动                                                                                                                                                       |
+| 冷重启（同一隔离 HOME）                                                                  | 第 2 次启动：停靠恢复在屏 3 右上角 (3872, -144)（负 y）；启动期 1207 次采样里停靠只在屏 3、移动 0 次。第 3 次启动：移动恢复在屏 2 (-1620, 256) 且 pinned；1182 次采样只在屏 2、停靠 0 次；恢复后切换误差 0                                                                                                                                                                                                                                       |
+| Dock 图标                                                                                | 31 个快照全部可见（修复前移动形态期间为隐藏）                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 进程 / HOME                                                                              | 3 次启动都 cleaned；BrowserWindow 每 5 ms 采样 15877 / 779 / 826 次，0 次双显；renderer errors 为空；隔离 HOME 已删除                                                                                                                                                                                                                                                                                                                            |
+
+同一提交上的回归：原 native 脚本通过（自有全屏 Space 内原生右键/按键/点击互切，975 次全屏 WindowServer 采样：停靠 582、移动 246、同时 0）；冷重启脚本第一次在第 2 次启动前被测试夹具的钥匙串安全预检拒绝（`CODESHELL_KEYCHAIN_PREFLIGHT_IDENTITY_CHANGED`，Electron 未启动，第 1 次启动的 7 项检查已通过），重跑通过，两份回执都保留；`e2e-mimi-companion-chat` 通过（真实 worker + 本地 mock 模型）。guarded Bun：`main/pet`、`main/computer-use`、`preload/pet-contract`、`tests/architecture-budgets`、几何测试 914 pass / 0 fail（86 文件）；Desktop typecheck、改动文件 ESLint 0 错误、`lint:test-shards`（2565 文件，最大进程 770）、Prettier、`git diff --check` 通过。
+
+**观察（未改）：**普通 Space 中 macOS 把整屏移动面板放在该屏菜单栏下方，窗口下缘超出屏幕 25–38 DIP（透明、点击穿透）；渲染用实际窗口原点，角色位置不受影响。把角色拖放到另一个应用的窗口上会弹出“让 Mimi 看看「…」？”（既有功能，不点击不发送，8 s 撤回）；同时运行开发版与安装版时，安装版的全 Space 透明覆盖层也会被当作“下面的窗口”。
+
+**仍未做（精确边界）：**
+
+- **物理热拔插**：没有拔线、关屏、改排列或分辨率，也没装虚拟显示器；`display-removed` / `display-metrics-changed` 只在测试进程内模拟。
+- CUA 真实截图通道隐藏、全屏下 ⌘⇧Esc（§9.4 第 2、3 项）不在本轮。
+- `/Applications/code-shell.app`（0.9.51，asar `3382e5a1…ba4685`）不含本节三处修复；本轮未重装、未重启宿主。合入后要靠新的本机安装或正式发版生效，正式包验收仍归根 TODO P0.3。
+
+证据（本地，不入库，只含自有窗口）：`~/Library/Application Support/CodeShellLocalBuilds/mimi-multidisplay-20261102/`（`README.md` 索引；三屏回执 `mimi-presence-multidisplay-final.json` 与 21 张截图；native / restart / chat 回执；`before-fix/` 修复前证据）。

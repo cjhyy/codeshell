@@ -95,7 +95,10 @@ class FakeWindow extends EventEmitter {
   setFocusable() {}
   setAlwaysOnTop() {}
   moveTop() {}
-  setVisibleOnAllWorkspaces() {}
+  workspaces: unknown[] = [];
+  setVisibleOnAllWorkspaces(...args: unknown[]) {
+    this.workspaces.push(args);
+  }
   setHiddenInMissionControl() {}
 }
 
@@ -300,6 +303,15 @@ try {
       host.withdraw();
       await host.startPreview();
       assert.equal(host.isVisible(), false, "preview cannot resurrect withdrawn Mimi");
+      break;
+    }
+    case "keeps-dock-icon": {
+      // Joining fullscreen Spaces must not transform CodeShell into a UIElement
+      // app (that removes its Dock icon while the moving form is shown).
+      const win = await present();
+      assert.deepEqual(win.workspaces, [
+        [true, { visibleOnFullScreen: true, skipTransformProcessType: true }],
+      ]);
       break;
     }
     default:
