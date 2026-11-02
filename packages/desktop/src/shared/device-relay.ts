@@ -15,6 +15,10 @@ export interface DesktopRelayStatus {
   hostId?: string;
   name?: string;
   accountId?: string;
+  /** Reconnect the saved registration when Desktop starts. */
+  autoConnect: boolean;
+  /** Default computer name offered before registration. */
+  suggestedName: string;
 }
 export interface DesktopRelayEnrollment {
   relayOrigin: string;
@@ -27,5 +31,6 @@ export interface DesktopRelayApi {
   status(): Promise<DesktopRelayStatus>;
   enroll(input: DesktopRelayEnrollment): Promise<DesktopRelayStatus>;
   forget(): Promise<void>;
+  setAutoConnect(enabled: boolean): Promise<DesktopRelayStatus>;
   onStatus(callback: (status: DesktopRelayStatus) => void): () => void;
 }

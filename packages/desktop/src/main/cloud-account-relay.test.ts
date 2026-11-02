@@ -77,7 +77,12 @@ for (const unreadable of [false, true]) {
             ],
       );
       for (let attempt = 0; attempt < 3; attempt++)
-        expect(controller.relayStatus()).toEqual({ state: "unregistered", registered: false });
+        expect(controller.relayStatus()).toEqual({
+          state: "unregistered",
+          registered: false,
+          autoConnect: false,
+          suggestedName: expect.any(String),
+        });
       expect(loads).toBe(1);
       await controller.dispose();
     },

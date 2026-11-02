@@ -43,4 +43,9 @@ export function registerDeviceRelayIpc(options: {
     requireOwner(event);
     return controller.forget();
   });
+  ipcMain.handle("mobileRemote:relaySetAutoConnect", (event, enabled: unknown) => {
+    requireOwner(event);
+    if (typeof enabled !== "boolean") throw new Error("无效的自动连接设置。");
+    return controller.setAutoConnect(enabled);
+  });
 }

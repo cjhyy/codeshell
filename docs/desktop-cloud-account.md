@@ -138,10 +138,13 @@ still validates the live bridge.
 ## Local credentials and remote access
 
 Signing in does not register this computer, start remote access, upload projects,
-or authorize a phone. In Mobile Remote, “Register with current account” explicitly
-registers the computer at the signed-in service origin. Connecting still requires
-the computer's access passcode and separate phone pairing. The existing self-hosted
-directory ticket flow, LAN mode, and temporary Cloudflare tunnel remain available.
+or authorize a phone. In Mobile Remote, “Allow remote control of this computer”
+explicitly registers the computer at the signed-in service origin and connects it.
+Connecting still requires the computer's access passcode. A phone signed in to the
+same account at the directory page can open any online computer of that account;
+the computer then issues its one-time pairing token through the relay instead of
+a scanned QR code (see `device-relay.md`). The existing self-hosted directory
+ticket flow, LAN mode, and temporary Cloudflare tunnel remain available.
 
 The native account and relay directory use the same canonical HTTPS origin in
 this version. The account management token is never sent to a separately entered
@@ -173,7 +176,9 @@ case and remains available through the account service's session management.
 
 Construction and status reads perform no network requests. Stored sign-in state
 is checked/refreshed only when cloud functionality is used, and never blocks local
-startup. No remote connection is started automatically after application restart.
+startup. No remote connection is started automatically after application restart
+unless the user enabled automatic connection for this computer's registration;
+see `device-relay.md`.
 
 Guarded tests cover anonymous/offline operation, token confidentiality, encrypted
 storage, singleflight refresh, account/origin isolation, logout and account-switch

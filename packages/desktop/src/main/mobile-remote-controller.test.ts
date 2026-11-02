@@ -151,8 +151,18 @@ test("failed credential deletion stays fail-closed instead of reloading the forg
   failForget();
   await expect(controller.forget()).rejects.toThrow("无法移除");
   for (let i = 0; i < 3; i++) {
-    expect(controller.relayStatus()).toEqual({ state: "storage-error", registered: false });
+    expect(controller.relayStatus()).toEqual({
+      state: "storage-error",
+      registered: false,
+      autoConnect: false,
+      suggestedName: expect.any(String),
+    });
   }
   await controller.stop();
-  expect(controller.relayStatus()).toEqual({ state: "storage-error", registered: false });
+  expect(controller.relayStatus()).toEqual({
+    state: "storage-error",
+    registered: false,
+    autoConnect: false,
+    suggestedName: expect.any(String),
+  });
 });

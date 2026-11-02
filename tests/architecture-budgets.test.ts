@@ -215,7 +215,9 @@ describe("architecture growth budgets", () => {
       // +4 main-frame-owned Mimi presence routes (get/set/preview/retry). The two
       // legacy widget-visibility routes moved, not added; every Mimi entry now goes
       // through one owner, so docked and moving can never be shown together.
-    ).toBeLessThanOrEqual(376);
+      // +1 main-frame-owned relay auto-connect preference; it never registers or
+      // carries credentials, and startup reconnect stays in the controller.
+    ).toBeLessThanOrEqual(377);
     expect(
       matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g),
     ).toBe(2);

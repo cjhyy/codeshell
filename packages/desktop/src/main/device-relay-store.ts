@@ -129,3 +129,38 @@ export class DeviceRelayStore {
     }
   }
 }
+
+export interface RelayPreferences {
+  /** Reconnect this computer's saved registration when Desktop starts. */
+  autoConnect: boolean;
+}
+
+/** Non-secret relay preferences; unreadable or foreign content means defaults. */
+export class RelayPreferencesStore {
+  constructor(private readonly path: string) {}
+  load(): RelayPreferences {
+    try {
+      const metadata = lstatSync(this.path);
+      if (!metadata.isFile() || metadata.isSymbolicLink() || metadata.size > 4096)
+        return { autoConnect: false };
+      const value = JSON.parse(readFileSync(this.path, "utf8")) as Partial<RelayPreferences>;
+      return { autoConnect: value?.autoConnect === true };
+    } catch {
+      return { autoConnect: false };
+    }
+  }
+  save(preferences: RelayPreferences) {
+    mkdirSync(dirname(this.path), { recursive: true, mode: 0o700 });
+    const temp = `${this.path}.${randomUUID()}.tmp`;
+    writeFileSync(temp, JSON.stringify({ autoConnect: preferences.autoConnect === true }), {
+      mode: 0o600,
+      flag: "wx",
+    });
+    try {
+      renameSync(temp, this.path);
+    } catch (error) {
+      unlinkSync(temp);
+      throw error;
+    }
+  }
+}

@@ -23,7 +23,12 @@ import {
   enrollAccountRelayComputer,
   validateRelayEnrollment,
 } from "./device-relay-enrollment.js";
-import { DeviceRelayStore, type RelayRegistration } from "./device-relay-store.js";
+import { hostname } from "node:os";
+import {
+  DeviceRelayStore,
+  type RelayPreferencesStore,
+  type RelayRegistration,
+} from "./device-relay-store.js";
 import type { CloudAccountManager } from "./cloud-account-manager.js";
 import {
   CloudAccountHttpError,
@@ -47,6 +52,9 @@ export class MobileRemoteController {
   private deviceRefreshResponse?: Promise<unknown>;
   private deviceAuthority = 0;
   private accountEnrollment?: { origin: string; accountId: string };
+  private autoRetry?: ReturnType<typeof setTimeout>;
+  private autoFailures = 0;
+  private pairingIssued: number[] = [];
   constructor(
     private readonly deps: {
       host: RemoteHostManager;
@@ -59,8 +67,17 @@ export class MobileRemoteController {
       account?: CloudAccountManager;
       accountRequest?: CloudAccountTransport;
       connectorFactory?: typeof createDeviceRelayConnector;
+      preferences?: RelayPreferencesStore;
+      computerName?: () => string;
+      now?: () => number;
     },
   ) {}
+  private now() {
+    return this.deps.now?.() ?? Date.now();
+  }
+  private autoConnectEnabled() {
+    return this.deps.preferences?.load().autoConnect === true;
+  }
   private serial<T>(work: () => Promise<T>): Promise<T> {
     const next = this.queue.then(work, work);
     this.queue = next.catch(() => {});
@@ -93,6 +110,8 @@ export class MobileRemoteController {
             ...(data.accountId ? { accountId: data.accountId } : {}),
           }
         : {}),
+      autoConnect: !!data && this.autoConnectEnabled(),
+      suggestedName: suggestedComputerName(this.deps.computerName?.() ?? hostname()),
     };
   }
   private publish(state: DesktopRelayState) {
@@ -104,6 +123,8 @@ export class MobileRemoteController {
     }
   }
   private invalidate() {
+    clearTimeout(this.autoRetry);
+    this.autoRetry = undefined;
     this.generation++;
     this.operation.abort();
     this.operation = new AbortController();
@@ -195,6 +216,7 @@ export class MobileRemoteController {
       this.registration = undefined;
       this.loaded = true;
       this.loadFailed = false;
+      this.disableAutoConnect();
       try {
         this.deps.store.forget();
         this.publish("unregistered");
@@ -284,6 +306,7 @@ export class MobileRemoteController {
                 this.accountDeviceCredential(credentialSignal),
             }
           : {}),
+        ...(this.registration?.accountId ? { issuePairing: () => this.issueAccountPairing() } : {}),
         localHost: this.deps.host.relayTarget(),
         onState: (state) => {
           if (generation !== this.generation || state === "closed") return;
@@ -291,6 +314,7 @@ export class MobileRemoteController {
           if (state === "ready") finish();
           if (state === "unauthorized") {
             this.registration = undefined;
+            this.disableAutoConnect();
             try {
               this.deps.store.forget();
             } catch {
@@ -329,6 +353,7 @@ export class MobileRemoteController {
       )
         return;
       this.registration = undefined;
+      this.disableAutoConnect();
       try {
         this.deps.store.forget();
         this.publish("unregistered");
@@ -440,6 +465,94 @@ export class MobileRemoteController {
       /* Local authority is already retired; server revocation/expiry remains authoritative. */
     }
   }
+  /**
+   * Pairing requested by the account directory for its signed-in owner. The
+   * phone still passes the computer passcode; this only replaces the QR scan.
+   */
+  private issueAccountPairing(): { token: string; expiresAt: number } {
+    const registration = this.registration;
+    const account = this.deps.account?.status();
+    if (
+      !registration?.accountId ||
+      account?.state !== "signed-in" ||
+      account.origin !== registration.relayOrigin ||
+      account.account?.id !== registration.accountId ||
+      this.state !== "ready"
+    )
+      throw new Error("account pairing unavailable");
+    const now = this.now();
+    this.pairingIssued = this.pairingIssued.filter((at) => now - at < ACCOUNT_PAIRING_WINDOW_MS);
+    if (this.pairingIssued.length >= ACCOUNT_PAIRING_LIMIT)
+      throw new Error("account pairing rate limited");
+    const pairing = this.deps.host.createPairingUrl();
+    this.pairingIssued.push(now);
+    return { token: pairing.token, expiresAt: pairing.expiresAt };
+  }
+  private disableAutoConnect() {
+    try {
+      if (this.autoConnectEnabled()) this.deps.preferences?.save({ autoConnect: false });
+    } catch {
+      /* A stale preference cannot start anything without a registration. */
+    }
+  }
+  setAutoConnect(enabled: boolean): Promise<DesktopRelayStatus> {
+    return this.serial(async () => {
+      this.load();
+      if (enabled && !this.registration) throw new Error("请先登记这台电脑。");
+      if (!this.deps.preferences) throw new Error("自动连接不可用。");
+      this.deps.preferences.save({ autoConnect: enabled });
+      if (!enabled) {
+        clearTimeout(this.autoRetry);
+        this.autoRetry = undefined;
+      }
+      this.publish(this.state);
+      return this.relayStatus();
+    });
+  }
+  /**
+   * Startup reconnect of a saved registration the user opted into. It never
+   * registers, never displaces a running LAN/tunnel Host, and an account
+   * registration waits for that same account to be signed in locally.
+   */
+  autoStart(): void {
+    clearTimeout(this.autoRetry);
+    this.autoRetry = undefined;
+    if (this.disposed) return;
+    this.load();
+    const registration = this.registration;
+    if (!registration || !this.autoConnectEnabled() || !this.deps.passcode.isSet()) return;
+    if (this.deps.host.status()) return;
+    if (registration.accountId) {
+      const account = this.deps.account?.status();
+      if (
+        account?.state !== "signed-in" ||
+        account.origin !== registration.relayOrigin ||
+        account.account?.id !== registration.accountId
+      )
+        return;
+    }
+    const generation = this.generation;
+    this.start({ mode: "relay" }).then(
+      () => {
+        this.autoFailures = 0;
+      },
+      () => {
+        if (
+          this.disposed ||
+          generation !== this.generation ||
+          !this.registration ||
+          !this.autoConnectEnabled()
+        )
+          return;
+        const delay = Math.min(
+          AUTO_CONNECT_MAX_RETRY_MS,
+          AUTO_CONNECT_RETRY_MS * 2 ** Math.min(this.autoFailures++, 4),
+        );
+        this.autoRetry = setTimeout(() => this.autoStart(), delay);
+        this.autoRetry.unref?.();
+      },
+    );
+  }
   stop(): Promise<void> {
     this.invalidate();
     return this.serial(async () => {
@@ -450,6 +563,7 @@ export class MobileRemoteController {
   }
   async dispose(): Promise<void> {
     this.disposed = true;
+    clearTimeout(this.autoRetry);
     await this.stop();
     await this.deviceRefresh?.catch(() => {});
   }
@@ -479,4 +593,19 @@ export class MobileRemoteController {
       onlineDeviceCount: this.deps.host.onlineDeviceIds().length,
     };
   }
+}
+
+const ACCOUNT_PAIRING_LIMIT = 6;
+const ACCOUNT_PAIRING_WINDOW_MS = 60_000;
+const AUTO_CONNECT_RETRY_MS = 30_000;
+const AUTO_CONNECT_MAX_RETRY_MS = 5 * 60_000;
+
+/** Host names such as "Alices-MacBook-Pro.local" become a readable default. */
+export function suggestedComputerName(raw: string): string {
+  const name = raw
+    .replace(/\.local$/i, "")
+    .replace(/[\x00-\x1f\x7f]/g, "")
+    .trim()
+    .slice(0, 80);
+  return name || "CodeShell";
 }

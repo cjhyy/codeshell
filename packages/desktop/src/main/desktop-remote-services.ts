@@ -8,7 +8,11 @@ import type {
 } from "@cjhyy/code-shell-server/mobile-remote";
 import { CloudAccountManager } from "./cloud-account-manager.js";
 import { CloudAccountStore } from "./cloud-account-store.js";
-import { DeviceRelayStore, type RelaySecretCipher } from "./device-relay-store.js";
+import {
+  DeviceRelayStore,
+  RelayPreferencesStore,
+  type RelaySecretCipher,
+} from "./device-relay-store.js";
 import { MobileRemoteController } from "./mobile-remote-controller.js";
 import { registerCloudAccountIpc } from "./cloud-account-ipc.js";
 import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
@@ -75,6 +79,9 @@ export function createDesktopRemoteServices(options: {
     passcode: options.passcode,
     environmentDir: options.environmentDir,
     store: new DeviceRelayStore(resolve(options.userDataDir, "mobile-remote", "relay.enc"), cipher),
+    preferences: new RelayPreferencesStore(
+      resolve(options.userDataDir, "mobile-remote", "relay-preferences.json"),
+    ),
     changed: (status) => {
       for (const window of options.windows()) {
         if (!window.isDestroyed())

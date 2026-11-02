@@ -3568,6 +3568,8 @@ app.whenReady().then(async () => {
   await imGatewayService.startConfiguredAtLaunch().catch((error) => {
     dlog("main", "im_gateway.autostart_failed", { error: String(error) });
   });
+  // Opt-in reconnect of a registered computer; never registers or blocks startup.
+  mobileRemoteController.autoStart();
 
   const staleQuickChats = await runOwnedQuickChatStartupCleanup(
     ownsDesktopInstance,

@@ -1576,6 +1576,8 @@ export function MobileRemoteSection() {
   const [relay, setRelay] = useState<DesktopRelayStatus>({
     state: "unregistered",
     registered: false,
+    autoConnect: false,
+    suggestedName: "",
   });
   const [onlineIds, setOnlineIds] = useState<string[]>([]);
   const [status, setStatus] = useState<{

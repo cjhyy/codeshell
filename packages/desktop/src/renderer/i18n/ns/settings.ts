@@ -1105,15 +1105,25 @@ export const settingsNs = {
         relayForgetHint:
           "停止连接并删除这台电脑保存的登记。目录中的记录仍保留；彻底撤销访问请前往目录页面。",
         relayTrust:
-          "使用你信任的中继服务。服务会转发手机请求，能接触请求内容和凭据；电脑口令与手机配对仍需验证。",
+          "使用你信任的中继服务。服务会转发手机请求，能接触请求内容和凭据；电脑访问口令仍需验证，手机通过配对码或同一账号配对。",
         relayDirectory: "目录地址",
         relayName: "电脑名称",
         relayTicket: "一次性登记票据",
         relayTicketHint:
           "在目录页面登录后生成票据。重新登记会替换旧连接；登记不会自动启动，退出应用后也不会自动重连。",
         relayEnroll: "使用票据登记电脑",
-        relayAccountEnroll: "通过当前账号登记电脑",
-        relayAccountHint: "登记到 {origin} 的当前账号；登记不会自动启动连接。",
+        relayAccountEnroll: "允许此电脑被远程操控",
+        relayAccountHint:
+          "登记到 {origin} 的当前账号。手机登录同一账号后，可从电脑列表直接打开这台电脑。",
+        relayAutoConnect: "启动 CodeShell 时自动连接",
+        relayAutoConnectHint:
+          "只重连已登记的这台电脑；需要已设置访问口令，账号登记还需本机保持登录。",
+        relayAdvanced: "自部署目录（票据登记）",
+        relayReenroll: "重新登记这台电脑",
+        relaySignInHint: "登录云账号后可一键登记，无需填写目录地址和票据。",
+        relayPhoneEntry: "手机打开我的电脑列表",
+        relayPhoneEntryHint:
+          "用手机扫码并登录同一账号，点选在线的电脑即可连接，无需再扫配对码；仍需输入电脑访问口令。",
         relayState_unregistered: "尚未登记",
         relayState_stopped: "已登记，连接已停止",
         relayState_connecting: "正在连接目录…",
@@ -2386,16 +2396,26 @@ export const settingsNs = {
         relayForgetHint:
           "Stop the connection and remove the registration saved on this computer. The directory record remains; revoke access from the directory page.",
         relayTrust:
-          "Use a relay you trust. It forwards phone requests and can access their contents and credentials. The computer passcode and phone pairing still apply.",
+          "Use a relay you trust. It forwards phone requests and can access their contents and credentials. The computer passcode still applies; phones pair by code or through the same account.",
         relayDirectory: "Directory address",
         relayName: "Computer name",
         relayTicket: "One-time enrollment ticket",
         relayTicketHint:
           "Sign in to the directory to create a ticket. Re-enrollment replaces the previous connection. Registration does not start a connection or enable automatic startup.",
         relayEnroll: "Register with ticket",
-        relayAccountEnroll: "Register with current account",
+        relayAccountEnroll: "Allow remote control of this computer",
         relayAccountHint:
-          "Register with the current account at {origin}. Registration does not start the connection.",
+          "Register with the current account at {origin}. A phone signed in to the same account can open this computer from its computer list.",
+        relayAutoConnect: "Connect automatically when CodeShell starts",
+        relayAutoConnectHint:
+          "Only reconnects this registered computer. Requires the access passcode; account registrations also require staying signed in here.",
+        relayAdvanced: "Self-hosted directory (ticket enrollment)",
+        relayReenroll: "Register this computer again",
+        relaySignInHint:
+          "Sign in to a cloud account to register in one step, without a directory address or ticket.",
+        relayPhoneEntry: "Open my computer list on a phone",
+        relayPhoneEntryHint:
+          "Scan with your phone and sign in to the same account, then tap an online computer. No pairing code is needed; the computer passcode still applies.",
         relayState_unregistered: "Not registered",
         relayState_stopped: "Registered, connection stopped",
         relayState_connecting: "Connecting to directory…",

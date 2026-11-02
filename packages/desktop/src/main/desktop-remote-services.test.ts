@@ -50,7 +50,7 @@ test("remote composition registers owner-scoped IPC without starting cloud or lo
         throw new Error("unexpected legacy Cloud window");
       },
     });
-    expect(handlers.size).toBe(17);
+    expect(handlers.size).toBe(18);
     expect(handlers.has("cloudAccount:capabilities")).toBe(true);
     expect(handlers.has("cloudAccount:profile")).toBe(true);
     const event = { sender, senderFrame: sender.mainFrame };
