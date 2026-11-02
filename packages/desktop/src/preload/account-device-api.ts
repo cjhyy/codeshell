@@ -5,8 +5,12 @@ import type {
   AccountDeviceSendResult,
 } from "../shared/account-device.js";
 
+function invokeRaw(method: string, input?: unknown): Promise<any> {
+  return ipcRenderer.invoke(`accountDevice:${method}`, input);
+}
+
 async function invoke<T>(method: string, input?: unknown): Promise<T> {
-  const result = await ipcRenderer.invoke(`accountDevice:${method}`, input);
+  const result = await invokeRaw(method, input);
   if (!result.ok) throw new Error(result.error);
   return result.value;
 }
@@ -17,7 +21,7 @@ export const accountDeviceApi: AccountDeviceApi = {
   resume: (input) => invoke("resume", input),
   async send(input): Promise<AccountDeviceSendResult> {
     try {
-      const result = await ipcRenderer.invoke("accountDevice:send", input);
+      const result = await invokeRaw("send", input);
       if (result?.ok === true) return { ok: true };
       if (
         result?.ok === false &&

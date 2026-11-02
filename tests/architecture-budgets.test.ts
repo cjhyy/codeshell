@@ -260,11 +260,8 @@ describe("architecture growth budgets", () => {
     expect(
       matches("packages/desktop/src/preload/device-relay-api.ts", /ipcRenderer\.invoke\(/g) +
         matches("packages/desktop/src/preload/cloud-account-api.ts", /ipcRenderer\.invoke\(/g) +
-        // Count each fixed helper call plus send's explicit serializable delivery DTO invoke.
-        matches(
-          "packages/desktop/src/preload/account-device-api.ts",
-          /(?:\binvoke|ipcRenderer\.invoke)\("/g,
-        ) +
+        // Count each fixed helper call plus send's raw delivery DTO invoke.
+        matches("packages/desktop/src/preload/account-device-api.ts", /\binvoke(?:Raw)?\("/g) +
         matches("packages/desktop/src/preload/mobile-remote-api.ts", /ipcRenderer\.invoke\(/g) +
         matches("packages/desktop/src/preload/index.ts", /ipcRenderer\.invoke\(/g) +
         matches(
@@ -296,10 +293,7 @@ describe("architecture growth budgets", () => {
       // +9 mirrors explicit account resume and the eight bounded computer operations above.
     ).toBeLessThanOrEqual(369);
     expect(
-      matches(
-        "packages/desktop/src/preload/account-device-api.ts",
-        /(?:\binvoke|ipcRenderer\.invoke)\("/g,
-      ),
+      matches("packages/desktop/src/preload/account-device-api.ts", /\binvoke(?:Raw)?\("/g),
     ).toBe(8);
     // GitHub skill previews and Panel task hosting carry main-issued review and
     // ownership fields across the typed preload boundary. The optional Mimi
