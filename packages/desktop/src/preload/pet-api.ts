@@ -6,7 +6,12 @@ import type {
   PetLongTaskSnapshot,
 } from "@cjhyy/code-shell-pet";
 import type { PetChatAttachment } from "../shared/pet-chat-attachments";
-import type { MimiPresencePatch, MimiPresenceSnapshot } from "../shared/mimi-presence";
+import type {
+  MimiBubbleOpenRequest,
+  MimiPresencePatch,
+  MimiPresenceSnapshot,
+} from "../shared/mimi-presence";
+import type { MimiCompanionAttention } from "../shared/mimi-companion";
 
 export type { PetChatAttachment } from "../shared/pet-chat-attachments";
 
@@ -398,6 +403,10 @@ export interface PetApi {
     listener: (target?: PetOpenSessionRequest | PetChatPromptRequest) => void,
   ): () => void;
   onWidgetVisibilityChanged(listener: (visible: boolean) => void): () => void;
+  /** Moving Mimi's bubble: main asks it to open a panel (or close with `null`). */
+  onBubbleOpen?(listener: (request: MimiBubbleOpenRequest) => void): () => void;
+  /** Moving Mimi's bubble: counts for the badge over the character. */
+  reportBubbleAttention?(attention: MimiCompanionAttention): void;
   /** The single Mimi presence (one switch; docked or moving, never both). */
   getPresence?(): Promise<MimiPresenceSnapshot>;
   setPresence?(patch: MimiPresencePatch): Promise<MimiPresenceSnapshot>;
@@ -534,6 +543,18 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       ipcRenderer.on("pet:widget-open-overview", handler);
       return () => ipcRenderer.removeListener("pet:widget-open-overview", handler);
     },
+    onBubbleOpen: (listener) => {
+      const handler = (_event: unknown, payload: unknown): void => {
+        const request = payload as { panel?: unknown; prompt?: unknown } | undefined;
+        const panel = request?.panel;
+        if (panel !== null && panel !== "chat" && panel !== "activity") return;
+        const prompt = typeof request?.prompt === "string" ? request.prompt.slice(0, 500) : "";
+        listener({ panel, ...(prompt.trim() ? { prompt } : {}) });
+      };
+      ipcRenderer.on("pet:bubble-open", handler);
+      return () => ipcRenderer.removeListener("pet:bubble-open", handler);
+    },
+    reportBubbleAttention: (attention) => ipcRenderer.send("pet:bubble-attention", attention),
     onWidgetVisibilityChanged: (listener) => {
       const handler = (_event: unknown, visible: unknown): void => {
         if (typeof visible === "boolean") listener(visible);

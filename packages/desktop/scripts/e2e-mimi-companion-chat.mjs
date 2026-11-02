@@ -217,7 +217,10 @@ try {
       const visible = BrowserWindow.getAllWindows().filter((win) => {
         const url = win.webContents.getURL();
         return (
-          win.isVisible() && (url.includes("popout=pet") || url.endsWith("/mimi-companion.html"))
+          win.isVisible() &&
+          // The bubble is moving Mimi's chat, not a second Mimi.
+          ((url.includes("popout=pet") && !url.includes("role=bubble")) ||
+            url.endsWith("/mimi-companion.html"))
         );
       });
       globalThis.__mimiMutualExclusion.samples++;
@@ -310,14 +313,68 @@ try {
   await overlay.waitForFunction(async () => !(await window.mimiCompanion.getState()).humanActive);
   receipt.checks.push("outside click and Escape release the production host interaction hold");
 
+  // Clicking moving Mimi opens her chat beside her: the docked widget's chat,
+  // not the full Mimi page.
   await body.click();
-  await main.locator('[data-pet-manager-chat="true"]').waitFor({ state: "visible" });
-  await main.waitForFunction(() => {
-    const chat = document.querySelector('[data-pet-manager-chat="true"]');
-    return chat && !chat.closest('[aria-hidden="true"], [inert]');
+  let bubble;
+  await bounded(
+    (async () => {
+      while (!bubble) {
+        bubble = app.windows().find((page) => {
+          const url = new URL(page.url());
+          return (
+            url.searchParams.get("popout") === "pet" && url.searchParams.get("role") === "bubble"
+          );
+        });
+        if (!bubble) await new Promise((done) => setTimeout(done, 100));
+      }
+    })(),
+    15_000,
+    "Mimi bubble did not load",
+  );
+  rendererErrors.push(captureRendererErrors(bubble));
+  const bubbleChat = '[data-pet-mini-panel-content="chat"]';
+  await bubble.locator(bubbleChat).waitFor({ state: "visible" });
+  const bubbleWindow = () =>
+    app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find((candidate) =>
+        candidate.webContents.getURL().includes("role=bubble"),
+      );
+      return win && { id: win.id, visible: win.isVisible(), bounds: win.getBounds() };
+    });
+  const character = await overlay.evaluate(async () => {
+    const state = await window.mimiCompanion.getState();
+    return {
+      x: state.windowOrigin.x + state.position.x,
+      y: state.windowOrigin.y + state.position.y,
+      width: Math.round(state.size * 0.7),
+      height: state.size,
+    };
   });
-  const composer = main.locator('[data-pet-composer="true"]');
-  await main.waitForFunction(() => !document.querySelector('[data-pet-composer="true"]')?.disabled);
+  let placed;
+  await bounded(
+    (async () => {
+      while (!(placed = await bubbleWindow())?.visible)
+        await new Promise((done) => setTimeout(done, 50));
+    })(),
+    10_000,
+    "Mimi bubble window never became visible",
+  );
+  const { bounds } = placed;
+  assert.ok(
+    bounds.x >= character.x + character.width - 1 || bounds.x + bounds.width <= character.x + 1,
+    `Bubble ${JSON.stringify(bounds)} is not beside Mimi ${JSON.stringify(character)}`,
+  );
+  assert.ok(
+    bounds.y < character.y + character.height && bounds.y + bounds.height > character.y,
+    `Bubble ${JSON.stringify(bounds)} is not level with Mimi ${JSON.stringify(character)}`,
+  );
+  receipt.bubble = { bounds, character };
+  const composer = bubble.locator(`${bubbleChat} input`);
+  await bubble.waitForFunction(
+    (selector) => !document.querySelector(`${selector} input`)?.disabled,
+    bubbleChat,
+  );
   const firstStatus = await main.evaluate(() =>
     window.codeshell.pet.dispatch({ type: "get_global_status" }),
   );
@@ -329,14 +386,14 @@ try {
   ];
   for (let index = 0; index < inputs.length; index++) {
     await composer.fill(inputs[index]);
-    await main.getByRole("button", { name: "发送", exact: true }).click();
+    await bubble.getByRole("button", { name: "发送", exact: true }).click();
     receipt.guard = await fixture.assertWorker(app);
-    await main.waitForFunction(
-      (expected) => {
-        const text = document.querySelector('[data-pet-manager-chat="true"]')?.textContent ?? "";
+    await bubble.waitForFunction(
+      ([selector, expected]) => {
+        const text = document.querySelector(selector)?.textContent ?? "";
         return text.split("The plain streaming smoke response completed.").length - 1 >= expected;
       },
-      index + 1,
+      [bubbleChat, index + 1],
       { timeout: 30_000 },
     );
   }
@@ -361,7 +418,7 @@ try {
   receipt.petSessionId = firstStatus.petSessionId;
   receipt.providerRequests = model.requests.length;
   receipt.checks.push(
-    "companion click opens real Mimi chat; two UI inputs reach the actual worker in one session",
+    "companion click opens the shared chat bubble beside Mimi; two inputs reach the actual worker in one session",
   );
   // The chat holds foreground input but never silences the work it asked for.
   const held = async () => {
@@ -369,14 +426,8 @@ try {
     return state.control?.foregroundHeld === true && !state.humanActive;
   };
   await overlay.waitForFunction(held);
-  const mainWindowId = await app.evaluate(({ BrowserWindow }) => {
-    const win = BrowserWindow.getAllWindows().find((candidate) => {
-      const url = new URL(candidate.webContents.getURL());
-      return url.pathname.endsWith("/renderer/index.html") && !url.searchParams.has("popout");
-    });
-    win.hide();
-    return win.id;
-  });
+  const bubbleWindowId = placed.id;
+  await app.evaluate(({ BrowserWindow }, id) => BrowserWindow.fromId(id).hide(), bubbleWindowId);
   await overlay.waitForFunction(
     async () => (await window.mimiCompanion.getState()).control?.foregroundHeld === false,
     { timeout: 20_000 },
@@ -385,11 +436,35 @@ try {
     const win = BrowserWindow.fromId(id);
     win.show();
     win.focus();
-  }, mainWindowId);
+  }, bubbleWindowId);
   await overlay.waitForFunction(held);
   receipt.checks.push(
     "chat focus holds foreground input without silencing Mimi; switching away releases it",
   );
+
+  // The bubble's work counts reach the badge over her head through production IPC.
+  await bubble.evaluate(() =>
+    window.codeshell.pet.reportBubbleAttention({ running: 0, needsAction: 1, unread: 2 }),
+  );
+  const badge = overlay.locator(".mimi-companion__badge");
+  await badge.waitFor({ state: "visible" });
+  assert.equal((await badge.textContent())?.trim(), "3");
+  await bubble.evaluate(() =>
+    window.codeshell.pet.reportBubbleAttention({ running: 0, needsAction: 0, unread: 0 }),
+  );
+  await badge.waitFor({ state: "detached" });
+  receipt.checks.push("bubble work counts show as a badge over moving Mimi and clear at zero");
+
+  // Clicking her again puts the chat away.
+  await body.click();
+  await bounded(
+    (async () => {
+      while ((await bubbleWindow())?.visible) await new Promise((done) => setTimeout(done, 50));
+    })(),
+    10_000,
+    "Clicking Mimi again did not close the bubble",
+  );
+  receipt.checks.push("clicking Mimi again closes the bubble");
   receipt.passed = true;
   await put(join(isolated.home, "companion-trial-state.json"), receipt);
   console.log(JSON.stringify({ phase: "companion-chat-passed", ...receipt }));

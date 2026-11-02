@@ -55,7 +55,7 @@ if (params.get("popout") === "pet") {
       <I18nProvider>
         <SessionPersistenceGate>
           <PetStateProvider>
-            <PetDesktopWindow />
+            <PetDesktopWindow variant={params.get("role") === "bubble" ? "bubble" : "docked"} />
           </PetStateProvider>
         </SessionPersistenceGate>
       </I18nProvider>

@@ -140,7 +140,10 @@ describe("App Pet lifecycle boundaries", () => {
 
   test("mounts the Pet in its own desktop window instead of the App renderer", () => {
     expect(mainSource).toContain('params.get("popout") === "pet"');
-    expect(mainSource).toContain("<PetDesktopWindow />");
+    expect(mainSource).toContain("<PetDesktopWindow variant=");
+    // Moving Mimi's bubble is the same window component without the widget.
+    expect(mainSource).toContain('params.get("role") === "bubble"');
+    expect(petSource).toContain("{!bubble && (");
     expect(appSource).not.toContain("<PetWidget");
     expect(petSource).toContain('data-pet-widget="desktop-window"');
     expect(petSource).toContain("window.codeshell.pet.moveWidget");

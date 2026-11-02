@@ -5,6 +5,8 @@ import {
   companionSize,
   MIMI_COMPANION_DEFAULT_SIZE,
   MIMI_COMPANION_SCHEME,
+  type MimiCompanionAttention,
+  type MimiCompanionRect,
   type MimiCompanionSettings,
   type MimiCompanionState,
 } from "../../shared/mimi-companion.js";
@@ -50,8 +52,13 @@ export interface MimiCompanionHostOptions {
   /** Mimi chat surfaces allowed to hold foreground input (defaults to main windows). */
   isChatSurface?(sender: WebContents): boolean;
   presence?: MimiCompanionPresenceHooks;
-  /** Open the Mimi chat; `prompt` is placed in the composer, never sent. */
-  openChat(request?: { prompt: string }): Promise<void>;
+  /**
+   * Open the Mimi chat; `prompt` is placed in the composer, never sent. `near`
+   * is where the character stands, so the chat can open beside her.
+   */
+  openChat(request?: { prompt: string }, near?: MimiCompanionRect): Promise<void>;
+  /** Open the work list from the character's badge. */
+  openActivity?(near?: MimiCompanionRect): Promise<void>;
   holdForChat?: boolean;
   /** Execution-side activity, published by the CUA proxy channel. */
   bus: ComputerActivityBus;
@@ -78,6 +85,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   let dragging = false;
   let dragged = false;
   let handoff: { app: string } | undefined;
+  let attention: MimiCompanionAttention | undefined;
   let handoffTimer: ReturnType<typeof setTimeout> | undefined;
   const initialAnchor = hooks.initial?.anchor;
   if (validPoint(initialAnchor)) {
@@ -191,9 +199,23 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       ...(target && scene.element ? { element: scene.element } : {}),
       activity: choreographer.activity,
       preview,
+      ...(attention ? { attention: { ...attention } } : {}),
       control: options.gate.status(),
     };
   };
+
+  /** The character box as drawn right now, in global DIP. */
+  function characterRect(): MimiCompanionRect | undefined {
+    if (!presenting || !window || window.isDestroyed()) return undefined;
+    const current = state();
+    const origin = current.windowOrigin ?? { x: 0, y: 0 };
+    return {
+      x: Math.round(origin.x + current.position.x),
+      y: Math.round(origin.y + current.position.y),
+      width: Math.round(current.size * 0.7),
+      height: Math.round(current.size),
+    };
+  }
 
   function validPoint(value: unknown): value is { x: number; y: number } {
     if (!value || typeof value !== "object") return false;
@@ -591,6 +613,8 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   ipcMain.on("mimiCompanion:move", onMove);
   ipcMain.on("mimiCompanion:follow", onFollow);
   async function startChat(request?: { prompt: string }) {
+    // Where she stands before the chat changes anything.
+    const near = characterRect();
     // Opening the chat is not a placement: only a drag pins the character.
     chatting = options.holdForChat !== false;
     if (chatting) {
@@ -605,7 +629,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     window?.setFocusable(false);
     await persist();
     try {
-      await options.openChat(request);
+      await options.openChat(request, near);
     } catch (failure) {
       chatting = false;
       publish();
@@ -617,6 +641,10 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   ipcMain.handle("mimiCompanion:chat", async (event) => {
     if (!ownOverlay(event.sender, event.senderFrame)) throw new Error("Invalid companion surface");
     await startChat();
+  });
+  ipcMain.handle("mimiCompanion:activity", async (event) => {
+    if (!ownOverlay(event.sender, event.senderFrame)) throw new Error("Invalid companion surface");
+    await options.openActivity?.(characterRect());
   });
   ipcMain.handle("mimiCompanion:handoff", async (event, accept: unknown) => {
     if (!ownOverlay(event.sender, event.senderFrame) || typeof accept !== "boolean")
@@ -767,6 +795,29 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     isVisible() {
       return presenting && !!window && !window.isDestroyed() && window.isVisible();
     },
+    /** Counts for the badge over her head; undefined or all zero hides it. */
+    setAttention(next: MimiCompanionAttention | undefined) {
+      const count = (value: unknown) =>
+        typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+      const normalized = next && {
+        running: count(next.running),
+        needsAction: count(next.needsAction),
+        unread: count(next.unread),
+      };
+      const value =
+        normalized && normalized.running + normalized.needsAction + normalized.unread > 0
+          ? normalized
+          : undefined;
+      if (
+        value?.running === attention?.running &&
+        value?.needsAction === attention?.needsAction &&
+        value?.unread === attention?.unread
+      )
+        return;
+      attention = value;
+      publish();
+    },
+    characterRect,
     /** Visual feet in global DIP, using the size actually drawn (working scale included). */
     feet(): { x: number; y: number } | undefined {
       if (window && !window.isDestroyed() && presenting) {
@@ -835,6 +886,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       withdrawHandoff();
       ipcMain.removeHandler("mimiCompanion:chat");
       ipcMain.removeHandler("mimiCompanion:handoff");
+      ipcMain.removeHandler("mimiCompanion:activity");
       ipcMain.removeHandler("mimiCompanion:chatActive");
       app.removeListener("browser-window-focus", onChatWindowFocus);
       app.removeListener("browser-window-blur", onChatWindowFocus);
