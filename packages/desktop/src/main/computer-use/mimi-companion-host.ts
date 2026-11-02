@@ -336,7 +336,13 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       win.setIgnoreMouseEvents(true, { forward: true });
       win.setFocusable(false);
       elevate(win);
-      win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+      // The panel joins fullscreen Spaces by itself. Without skipping the
+      // process-type round trip Electron turns CodeShell into a UIElement app,
+      // removing its Dock icon while the moving form is shown (2026-11-02).
+      win.setVisibleOnAllWorkspaces(true, {
+        visibleOnFullScreen: true,
+        skipTransformProcessType: true,
+      });
       win.setHiddenInMissionControl(true);
       win.on("show", () => elevate(win));
       win.on("blur", () => elevate(win));

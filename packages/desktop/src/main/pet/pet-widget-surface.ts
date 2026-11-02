@@ -119,15 +119,25 @@ export function createPetWidgetSurface(options: PetWidgetSurfaceOptions) {
     }, 250);
   }
 
-  function elevate(win: PetWidgetWindowLike): void {
+  let raising = false;
+  function elevate(win: PetWidgetWindowLike, reorder = true): void {
     if (win.isDestroyed()) return;
     win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(options.platform));
+    if (!reorder || raising) return;
+    raising = true;
     try {
       // Refresh the z-order without stealing focus when the active application
-      // or Space changes. Wayland may not implement this operation.
-      win.moveTop();
+      // or Space changes. On macOS, moveTop() leaves this small transparent
+      // window with an opaque white backing on a 1× display (2026-11-02 mixed-DPI
+      // acceptance); ordering an already visible window front again refreshes the
+      // same z-order. A hidden window is never shown from here. Wayland may not
+      // implement moveTop.
+      if (options.platform !== "darwin") win.moveTop();
+      else if (win.isVisible()) win.showInactive();
     } catch {
-      // The always-on-top level still applies when moveTop is unavailable.
+      // The always-on-top level still applies when reordering is unavailable.
+    } finally {
+      raising = false;
     }
   }
 
@@ -136,8 +146,10 @@ export function createPetWidgetSurface(options: PetWidgetSurfaceOptions) {
     const win = live();
     if (!win) return;
     if (presenting && loaded && !captureHidden) {
-      if (!win.isVisible()) win.showInactive();
-      elevate(win);
+      // Showing already orders the window front; only refresh a visible one.
+      const wasVisible = win.isVisible();
+      if (!wasVisible) win.showInactive();
+      elevate(win, wasVisible);
     } else if (win.isVisible()) win.hide();
   }
 
