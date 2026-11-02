@@ -25,6 +25,8 @@ interface Props {
   host?: "hub" | "desktop";
   section: HubSettingsSection;
   onSectionChange?: (section: HubSettingsSection) => void;
+  /** Execution traces live under settings rather than the first-level sidebar. */
+  onOpenActivity?: () => void;
   onAuthLost: () => void;
   onDirtyChange?: (dirty: boolean) => void;
   onConfigurationChange?: () => void;
@@ -138,6 +140,7 @@ function ConfigurationSettings({
   host = "hub",
   section,
   onSectionChange,
+  onOpenActivity,
   onAuthLost,
   onDirtyChange,
   onConfigurationChange,
@@ -291,7 +294,12 @@ function ConfigurationSettings({
       {configuration && (
         <>
           {section === "overview" && (
-            <Overview host={host} configuration={configuration} onSectionChange={onSectionChange} />
+            <Overview
+              host={host}
+              configuration={configuration}
+              onSectionChange={onSectionChange}
+              onOpenActivity={onOpenActivity}
+            />
           )}
           {section === "models" && (
             <Models
@@ -322,31 +330,45 @@ function Overview({
   host,
   configuration,
   onSectionChange,
+  onOpenActivity,
 }: {
   host: "hub" | "desktop";
   configuration: HubConfiguration;
   onSectionChange?: Props["onSectionChange"];
+  onOpenActivity?: Props["onOpenActivity"];
 }) {
   const current = configuration.connections.find((item) => item.id === configuration.defaults.text);
   const enabledSkills = configuration.skills.filter((skill) => skill.enabled).length;
-  const rows: { section: HubSettingsSection; title: string; summary: string; icon: string }[] = [
+  const select = (section: HubSettingsSection) =>
+    onSectionChange ? () => onSectionChange(section) : undefined;
+  const rows: { key: string; title: string; summary: string; icon: string; open?: () => void }[] = [
     {
-      section: "models",
+      key: "models",
+      open: select("models"),
       title: "模型与连接",
       summary: current ? `${current.id} · ${current.model}` : "尚未设置默认模型",
       icon: "◈",
     },
     {
-      section: "skills",
+      key: "skills",
+      open: select("skills"),
       title: "Skills",
       summary: `${configuration.skills.length} 个可用 · ${enabledSkills} 个已启用`,
       icon: "✧",
     },
     {
-      section: "mcp",
+      key: "mcp",
+      open: select("mcp"),
       title: "MCP 工具",
       summary: `${configuration.mcpServers.length} 个已配置的工具服务`,
       icon: "⌘",
+    },
+    {
+      key: "activity",
+      open: onOpenActivity,
+      title: "执行观测",
+      summary: "查看模型调用的 Prompt、响应、重试和工具事件",
+      icon: "◷",
     },
   ];
   return (
@@ -378,23 +400,19 @@ function Overview({
                 <strong>{row.title}</strong>
                 <span>{row.summary}</span>
               </span>
-              {onSectionChange && (
+              {row.open && (
                 <span className="config-chevron" aria-hidden="true">
                   ›
                 </span>
               )}
             </>
           );
-          return onSectionChange ? (
-            <button
-              className="config-overview-row"
-              key={row.section}
-              onClick={() => onSectionChange(row.section)}
-            >
+          return row.open ? (
+            <button className="config-overview-row" key={row.key} onClick={row.open}>
               {content}
             </button>
           ) : (
-            <div className="config-overview-row" key={row.section}>
+            <div className="config-overview-row" key={row.key}>
               {content}
             </div>
           );

@@ -140,6 +140,15 @@ const server = createServer((request, response) => {
   }
   if (url.pathname === "/api/v1/environment") return reply({ error: "环境信息暂时无法读取" }, 503);
   if (url.pathname === "/api/v1/auth/sessions") return reply({ sessions: [] });
+  if (url.pathname === "/api/v1/configuration")
+    return reply({
+      workspace: { path: "/fixture", skillDirectories: [] },
+      defaults: {},
+      connections: [],
+      catalog: [],
+      skills: [],
+      mcpServers: [],
+    });
   if (url.pathname === "/api/v1/model-traces/config")
     return reply({
       enabled: true,
@@ -237,6 +246,11 @@ const assertFocus = async () => {
   const result = await focused();
   assert.ok(result.inside && result.visible, JSON.stringify(result));
   return result;
+};
+// Execution traces are reached from the settings overview, not the sidebar.
+const openTraces = async () => {
+  await page.getByRole("button", { name: "设置", exact: true }).click();
+  await page.locator(".config-overview-row", { hasText: "执行观测" }).click();
 };
 const inspectTrace = async () => {
   const explorer = page.locator(".cs-trace-explorer");
@@ -342,7 +356,7 @@ try {
           .evaluate((node) => document.activeElement === node),
         true,
       );
-      await page.getByRole("button", { name: "执行观测", exact: true }).click();
+      await openTraces();
       await inspectTrace();
       reports.push({ theme, size, keyboardStops: count, footer });
     }
@@ -416,7 +430,7 @@ try {
     await page.screenshot({
       path: path.join(output, `desktop-${size.width}x${size.height}-cli.png`),
     });
-    await page.getByRole("button", { name: "执行观测", exact: true }).click();
+    await openTraces();
     await inspectTrace();
     await page.goto(`${origin}/?view=activity`);
     await inspectTrace();

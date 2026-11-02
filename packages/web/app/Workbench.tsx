@@ -387,6 +387,9 @@ export function Workbench({
                 : settingsSection === "skills"
                   ? "Skills"
                   : "设置";
+  // Execution traces open from the settings overview, so they keep 设置 highlighted.
+  const settingsNavActive =
+    view === "activity" || (view === "settings" && settingsSection !== "skills");
   return (
     <div className={`shell${sidebarOpen ? " sidebar-open" : ""}`}>
       {narrow && sidebarOpen ? (
@@ -479,19 +482,6 @@ export function Workbench({
             {hub ? (
               <>
                 <button
-                  className={`nav-button${view === "activity" ? " active" : ""}`}
-                  onClick={() =>
-                    requestNavigation(() => {
-                      setView("activity");
-                      closeMobileSidebar();
-                    })
-                  }
-                  aria-current={view === "activity" ? "page" : undefined}
-                >
-                  <WorkbenchIcon name="history" />
-                  <span>执行观测</span>
-                </button>
-                <button
                   className={`nav-button${view === "history" ? " active" : ""}`}
                   onClick={() =>
                     requestNavigation(() => {
@@ -549,11 +539,9 @@ export function Workbench({
                   <span>Link</span>
                 </button>
                 <button
-                  className={`nav-button${view === "settings" && settingsSection !== "skills" ? " active" : ""}`}
+                  className={`nav-button${settingsNavActive ? " active" : ""}`}
                   onClick={() => openSettings("overview")}
-                  aria-current={
-                    view === "settings" && settingsSection !== "skills" ? "page" : undefined
-                  }
+                  aria-current={settingsNavActive ? "page" : undefined}
                 >
                   <WorkbenchIcon name="settings" />
                   <span>设置</span>
@@ -1216,6 +1204,12 @@ export function Workbench({
             key={`${controller.workspaceKey}:settings`}
             section={settingsSection}
             onSectionChange={openSettings}
+            onOpenActivity={() =>
+              requestNavigation(() => {
+                setView("activity");
+                closeMobileSidebar();
+              })
+            }
             onAuthLost={onAuthLost}
             onConfigurationChange={() => void refreshConfiguration()}
             configurationVersion={configurationVersion}
