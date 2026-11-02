@@ -237,6 +237,47 @@ jobs:
           append_env APPLE_APP_SPECIFIC_PASSWORD "$MAC_APPLE_APP_SPECIFIC_PASSWORD"
           append_env APPLE_TEAM_ID "$MAC_APPLE_TEAM_ID"
 
+      # A fixed self-signed certificate (no Developer ID) for the outer app: its
+      # designated requirement names the certificate, so the macOS keychain and
+      # privacy grants keep trusting every release signed with it, and in-app
+      # updates satisfy the installed app's requirement. Without the secret the
+      # package stays ad-hoc signed exactly as before (scripts/managed-node-signing.cjs).
+      - name: import local mac signing identity
+        if: matrix.artifact == 'mac'
+        shell: bash
+        env:
+          SIGNING_P12: ${{ secrets.MAC_LOCAL_SIGNING_P12 }}
+          SIGNING_P12_PASSWORD: ${{ secrets.MAC_LOCAL_SIGNING_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$SIGNING_P12" ]]; then
+            echo "No local signing identity configured; the package stays ad-hoc signed."
+            exit 0
+          fi
+          keychain="$RUNNER_TEMP/codeshell-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 16)"
+          p12="$RUNNER_TEMP/codeshell-signing.p12"
+          printf '%s' "$SIGNING_P12" | base64 --decode > "$p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$p12" -k "$keychain" -P "$SIGNING_P12_PASSWORD" -T /usr/bin/codesign
+          rm -f "$p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          cert="$RUNNER_TEMP/codeshell-signing.pem"
+          security find-certificate -c "CodeShell Local Signing" -p "$keychain" > "$cert"
+          sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$cert"
+          identity="$(security find-identity -v -p codesigning "$keychain" | awk '/"CodeShell Local Signing"/ { print $2; exit }')"
+          if [[ ! "$identity" =~ ^[0-9A-F]{40}$ ]]; then
+            echo "The local signing identity was not usable for code signing." >&2
+            exit 1
+          fi
+          {
+            echo "CODESHELL_MAC_SIGNING_IDENTITY=$identity"
+            echo "CODESHELL_MAC_SIGNING_KEYCHAIN=$keychain"
+          } >> "$GITHUB_ENV"
+
       # electron-builder. Per-OS target comes from packages/desktop/package.json
       # build.{mac,win,linux}. `--publish never`: we attach artifacts ourselves
       # in the release job, so electron-builder must NOT try to publish (and a
@@ -252,6 +293,20 @@ jobs:
         run: >-
           bun run scripts/verify-computer-use-package.ts
           dist/mac/code-shell.app dist/mac-arm64/code-shell.app
+
+      - name: verify local mac signing identity
+        if: matrix.artifact == 'mac' && env.CODESHELL_MAC_SIGNING_IDENTITY != ''
+        working-directory: packages/desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          leaf="$(echo "$CODESHELL_MAC_SIGNING_IDENTITY" | tr '[:upper:]' '[:lower:]')"
+          for app in dist/mac/code-shell.app dist/mac-arm64/code-shell.app; do
+            requirement="$(codesign -d -r- "$app" 2>&1)"
+            echo "$app: $requirement"
+            grep -q "identifier \"com.cjhyy.codeshell\" and certificate leaf = H\"$leaf\"" <<< "$requirement"
+            codesign --verify --deep --strict "$app"
+          done
 
       # Exercise the packaged executable on its native runner after signing.
       # The other macOS architecture is integrity-checked by the packaging hooks.

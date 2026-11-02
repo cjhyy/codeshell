@@ -182,6 +182,37 @@ describe("managed Node packaging signature ordering", () => {
     expect(f.events.some(({ kind }) => kind === "verify-app")).toBe(true);
   });
 
+  test("a local signing identity seals only the outer app with it; helpers and Node stay ad-hoc", async () => {
+    const f = fixture();
+    const identity = "30A64D20FC3614E327902F45CF9B725E6E1986DC";
+    await f
+      .hooks({
+        env: {
+          CODESHELL_MAC_SIGNING_IDENTITY: identity,
+          CODESHELL_MAC_SIGNING_KEYCHAIN: "/runner/signing.keychain-db",
+        },
+      })
+      .afterPack(f.context);
+    ordered(f.events, ["sign-deep", "sign-helper", "sign-node", "refresh", "sign-outer"]);
+    const outer = f.events.filter(({ kind }) => kind === "sign-outer").at(-1)!.args!;
+    expect(signingIdentity(outer)).toBe(identity);
+    expect(outer).toContain("--keychain");
+    expect(outer.some((arg) => arg.startsWith("-r="))).toBe(false);
+    for (const kind of ["sign-helper", "sign-node"])
+      expect(signingIdentity(f.events.find((event) => event.kind === kind)!.args!)).toBe("-");
+    expect(f.events.some(({ kind }) => kind === "verify-app")).toBe(true);
+  });
+
+  test("a malformed local signing identity fails before any signature", async () => {
+    const f = fixture();
+    await expect(
+      f
+        .hooks({ env: { CODESHELL_MAC_SIGNING_IDENTITY: "CodeShell Local Signing" } })
+        .afterPack(f.context),
+    ).rejects.toThrow("SHA-1");
+    expect(f.events).toEqual([]);
+  });
+
   test("Developer ID signing uses the resolved identity and preserves builder's ignore callback", async () => {
     const f = fixture();
     const ignore = (file: string) => file === f.nodePath || file.endsWith(".kext");
