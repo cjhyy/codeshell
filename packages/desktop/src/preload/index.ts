@@ -1,5 +1,6 @@
 import { createOperationBatchApi } from "./operation-batch-api.js";
 import { cloudAccountApi } from "./cloud-account-api.js";
+import { accountDeviceApi } from "./account-device-api.js";
 import { cloudEnvironmentApi } from "./cloud-environment-api.js";
 import type { CloudWorkbenchApi } from "../shared/cloud-management.js";
 import { mobileRemoteApi } from "./mobile-remote-api.js";
@@ -879,6 +880,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     autoDeleteWorktreesGraceMins: number;
   }) => ipcRenderer.invoke("git:setPrefs", prefs),
   cloudAccount: cloudAccountApi,
+  accountDevices: accountDeviceApi,
   cloudEnvironment: cloudEnvironmentApi,
   openCloudWorkbench: ((input: unknown) =>
     ipcRenderer.invoke("cloud:open-workbench", input)) as CloudWorkbenchApi,

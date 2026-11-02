@@ -920,7 +920,7 @@ describe("RemoteHostManager", () => {
   // ── Tunnel mode ───────────────────────────────────────────────────────────
 
   test.each(["tunnel", "relay"] as const)(
-    "%s mode refuses missing or uninitialized passcodes before opening a listener",
+    "%s mode without an account handoff refuses missing or uninitialized passcodes",
     async (mode) => {
       dir = mkdtempSync(join(tmpdir(), "remote-host-public-gate-"));
       const passcode = new AccessPasscode({ filePath: join(dir, "access.json") });

@@ -124,6 +124,8 @@ export class CloudAccountManager {
   private profileRevision = 0;
   private profileRequestRevision = 0;
   private profileUpdate?: object;
+  private activation?: { sessionId: string; pending: Promise<void> };
+  private expiryTimer?: ReturnType<typeof setTimeout>;
   constructor(
     private readonly deps: {
       store: CloudAccountStore;
@@ -136,6 +138,11 @@ export class CloudAccountManager {
       changed: (status: CloudAccountStatus) => void;
       /** Retire only this account's remote access; never local work or LAN. */
       retireRelay?: (identity: { origin: string; accountId: string }) => Promise<void>;
+      /** Explicit desktop login/resume enables account-owned device collaboration. */
+      activateRelay?: (
+        identity: { origin: string; accountId: string },
+        authorized: () => boolean,
+      ) => Promise<void>;
       now?: () => number;
       sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
     },
@@ -193,7 +200,78 @@ export class CloudAccountManager {
         ? {}
         : { linkManagementEnabled: value.linkManagementEnabled }),
       ...(value.profileEnabled === undefined ? {} : { profileEnabled: value.profileEnabled }),
+      ...(this.relayCapability(value.relay, origin)
+        ? { relay: this.relayCapability(value.relay, origin) }
+        : {}),
     };
+  }
+  private relayCapability(value: CloudAccountCapabilities["relay"], origin: string) {
+    if (value === undefined) return;
+    if (!value || typeof value !== "object" || typeof value.enabled !== "boolean")
+      throw new Error("云服务返回了无效的中继能力信息。");
+    if (!value.enabled) return { enabled: false as const };
+    if (
+      value.directoryOrigin !== origin ||
+      value.protocolVersion !== 1 ||
+      value.accountHandoffVersion !== 1
+    )
+      throw new Error("此服务的设备协作需要升级，或目录地址不属于当前账号服务。");
+    return {
+      enabled: true as const,
+      directoryOrigin: origin,
+      protocolVersion: 1 as const,
+      accountHandoffVersion: 1 as const,
+    };
+  }
+  private armExpiry() {
+    clearTimeout(this.expiryTimer);
+    const saved = this.saved;
+    if (!saved) return;
+    const delay = Math.min(2_147_483_647, Math.max(1, saved.refreshTokenExpiresAt - this.now()));
+    this.expiryTimer = setTimeout(() => {
+      if (this.saved?.sessionId !== saved.sessionId) return;
+      if (saved.refreshTokenExpiresAt <= this.now()) void this.logout().catch(() => {});
+      else this.armExpiry();
+    }, delay);
+    this.expiryTimer.unref?.();
+  }
+  private async activate(authorized: () => boolean) {
+    const saved = this.saved;
+    if (!saved || !this.deps.activateRelay) return;
+    if (this.activation?.sessionId === saved.sessionId) return this.activation.pending;
+    const generation = this.generation;
+    const current = () => {
+      try {
+        this.current(generation, authorized);
+      } catch {
+        return false;
+      }
+      return this.state === "signed-in" && this.saved?.sessionId === saved.sessionId;
+    };
+    const pending = (async () => {
+      try {
+        await this.deps.activateRelay!(
+          { origin: saved.origin, accountId: saved.account.id },
+          current,
+        );
+      } catch {
+        // Device collaboration reports its own unavailable state; account login remains successful.
+      }
+    })();
+    this.activation = { sessionId: saved.sessionId, pending };
+    await pending;
+    if (this.activation?.pending === pending) this.activation = undefined;
+  }
+  /** The application explicitly restores saved authority once its main window is ready. */
+  async resume(authorized: () => boolean = () => true): Promise<CloudAccountStatus> {
+    this.load();
+    const saved = this.saved;
+    if (!saved || this.state !== "signed-in" || !authorized()) return this.status();
+    await this.getCredential(saved.origin, saved.account.id);
+    if (this.saved?.sessionId !== saved.sessionId || !authorized()) return this.status();
+    this.armExpiry();
+    await this.activate(authorized);
+    return this.status();
   }
   private publish(state: CloudAccountStatus["state"]) {
     this.state = state;
@@ -205,6 +283,8 @@ export class CloudAccountManager {
   }
   private invalidate() {
     this.generation++;
+    this.activation = undefined;
+    clearTimeout(this.expiryTimer);
     this.operation.abort();
     cancelPrepared(this.pendingGitHubLink);
     this.pendingGitHubLink = undefined;
@@ -253,8 +333,10 @@ export class CloudAccountManager {
       throw error;
     }
     this.saved = next;
+    this.armExpiry();
     this.publish("signed-in");
-    if (previous && previous.sessionId !== next.sessionId) void this.revoke(previous);
+    if (previous && previous.sessionId !== next.sessionId) await this.revoke(previous);
+    await this.activate(authorized);
     return this.status();
   }
   private async revoke(
@@ -800,6 +882,7 @@ export class CloudAccountManager {
             throw error;
           }
           this.saved = next;
+          this.armExpiry();
           this.publish("signed-in");
           return next.accessToken;
         } catch (error) {

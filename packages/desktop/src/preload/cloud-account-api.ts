@@ -10,6 +10,7 @@ const github = (input: CloudAccountGitHubRequest): Promise<CloudAccountStatus> =
 
 export const cloudAccountApi: CloudAccountApi = {
   status: () => ipcRenderer.invoke("cloudAccount:status"),
+  resume: () => ipcRenderer.invoke("cloudAccount:resume"),
   capabilities: (origin) => ipcRenderer.invoke("cloudAccount:capabilities", origin),
   login: (input) => ipcRenderer.invoke("cloudAccount:login", input),
   register: (input) => ipcRenderer.invoke("cloudAccount:register", input),

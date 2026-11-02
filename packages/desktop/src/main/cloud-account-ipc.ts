@@ -21,6 +21,10 @@ export function registerCloudAccountIpc(options: {
     owner(event);
     return options.manager.status();
   });
+  options.ipcMain.handle("cloudAccount:resume", (event) => {
+    owner(event);
+    return options.manager.resume(() => allowed(event));
+  });
   options.ipcMain.handle("cloudAccount:capabilities", (event, origin: string) => {
     owner(event);
     return options.manager.capabilities(origin);

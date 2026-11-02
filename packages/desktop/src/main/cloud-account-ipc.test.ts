@@ -56,6 +56,9 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
       profile: (_input, allowed) => {
         authorized = allowed;
       },
+      resume: (allowed) => {
+        authorized = allowed;
+      },
       logout: () => {},
       cancelSignIn: () => {},
     } as any,
@@ -63,6 +66,7 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
   expect([...handlers.keys()].sort()).toEqual(
     [
       "status",
+      "resume",
       "capabilities",
       "login",
       "register",
@@ -84,6 +88,8 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
     githubEnabled: false,
   });
   expect(capabilityOrigin).toBe("https://account.example");
+  handlers.get("cloudAccount:resume")!(event);
+  expect(authorized!()).toBe(true);
   for (const name of ["login", "register"]) {
     handlers.get(`cloudAccount:${name}`)!(event, {});
     expect(authorized!()).toBe(true);

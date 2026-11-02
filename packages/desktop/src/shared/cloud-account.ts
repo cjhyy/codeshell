@@ -35,6 +35,9 @@ export interface CloudAccountCapabilities {
   githubLinkEnabled?: boolean;
   linkManagementEnabled?: boolean;
   profileEnabled?: boolean;
+  relay?:
+    | { enabled: false }
+    | { enabled: true; directoryOrigin: string; protocolVersion: 1; accountHandoffVersion: 1 };
 }
 
 export type CloudAccountProfileRequest = { origin: string; accountId: string } & (
@@ -81,6 +84,7 @@ export interface CloudAccountGitHubLogin {
 
 export interface CloudAccountApi {
   status(): Promise<CloudAccountStatus>;
+  resume?(): Promise<CloudAccountStatus>;
   capabilities(origin: string): Promise<CloudAccountCapabilities>;
   login(input: CloudAccountLogin): Promise<CloudAccountStatus>;
   register(input: CloudAccountLogin): Promise<CloudAccountStatus>;

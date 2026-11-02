@@ -6,6 +6,8 @@ import type {
   RemoteHostManager,
   TunnelManager,
 } from "@cjhyy/code-shell-server/mobile-remote";
+import { AccountDeviceService } from "./account-device-service.js";
+import { registerAccountDeviceIpc } from "./account-device-ipc.js";
 import { CloudAccountManager } from "./cloud-account-manager.js";
 import { CloudAccountStore } from "./cloud-account-store.js";
 import { DeviceRelayStore, type RelaySecretCipher } from "./device-relay-store.js";
@@ -18,7 +20,7 @@ import { CloudManagementManager, type ManagedCloudWindows } from "./cloud-manage
 
 /** Compose optional cloud identity and its remote-access lifecycle without starting either. */
 export function createDesktopRemoteServices(options: {
-  ipcMain: Pick<IpcMain, "handle">;
+  ipcMain: Pick<IpcMain, "handle" | "removeHandler">;
   userDataDir: string;
   environmentDir: string;
   safeStorage: Pick<
@@ -33,6 +35,7 @@ export function createDesktopRemoteServices(options: {
   binary: CloudflaredBinary;
   passcode: AccessPasscode;
   cloudWindows: ManagedCloudWindows;
+  listProjects?: () => Promise<Array<{ id: string; name: string; path: string }>>;
   openLegacyCloud: (address: unknown) => Promise<{ address: string }>;
 }) {
   const cipher: RelaySecretCipher = {
@@ -50,7 +53,10 @@ export function createDesktopRemoteServices(options: {
     ),
     openExternal: options.openExternal,
     prepareGitHubLink: options.prepareGitHubLink,
+    activateRelay: (identity, authorized) =>
+      mobileRemoteController.activateAccountRelay(identity, authorized),
     retireRelay: async (identity) => {
+      accountDeviceService.retireIdentity();
       const results = await Promise.allSettled([
         mobileRemoteController.retireAccountRelay(identity),
         cloudManagementManager.retireAccount(identity),
@@ -74,6 +80,7 @@ export function createDesktopRemoteServices(options: {
     binary: options.binary,
     passcode: options.passcode,
     environmentDir: options.environmentDir,
+    listProjects: options.listProjects,
     store: new DeviceRelayStore(resolve(options.userDataDir, "mobile-remote", "relay.enc"), cipher),
     changed: (status) => {
       for (const window of options.windows()) {
@@ -81,6 +88,28 @@ export function createDesktopRemoteServices(options: {
           window.webContents.send("mobileRemote:relayStatusChanged", status);
       }
     },
+  });
+  const accountDeviceService = new AccountDeviceService({
+    identity: () => {
+      const status = cloudAccountManager.status();
+      return status.state === "signed-in" && status.origin && status.account
+        ? { origin: status.origin, accountId: status.account.id }
+        : undefined;
+    },
+    credential: (identity, signal) =>
+      cloudAccountManager.getCredential(identity.origin, identity.accountId, signal),
+    sourceProof: (identity, signal) => mobileRemoteController.accountRelaySource(identity, signal),
+    relayOrigin: async (identity) => {
+      const capabilities = await cloudAccountManager.capabilities(identity.origin);
+      if (!capabilities.relay?.enabled || capabilities.relay.directoryOrigin !== identity.origin)
+        throw new Error("当前账号服务不支持设备协作，请升级服务。");
+      return capabilities.relay.directoryOrigin;
+    },
+  });
+  registerAccountDeviceIpc({
+    ipcMain: options.ipcMain,
+    service: accountDeviceService,
+    windows: options.windows,
   });
   const isMainWindow = (contents: WebContents) =>
     [...options.windows()].some(
@@ -111,5 +140,10 @@ export function createDesktopRemoteServices(options: {
     controller: mobileRemoteController,
     isMainWindow,
   });
-  return { cloudAccountManager, mobileRemoteController, cloudManagementManager };
+  return {
+    cloudAccountManager,
+    mobileRemoteController,
+    cloudManagementManager,
+    accountDeviceService,
+  };
 }

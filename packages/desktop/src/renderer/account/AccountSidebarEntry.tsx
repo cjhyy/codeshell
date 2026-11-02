@@ -38,7 +38,8 @@ export function AccountSidebarEntry({ onOpenAccountSettings, ...props }: Props) 
     });
     // A status event can arrive while this first IPC request is still pending.
     // Its newer state must win over either a stale response or a late failure.
-    void api.status().then(
+    // The ready Desktop main window explicitly resumes the saved account and device collaboration.
+    void (api.resume ? api.resume() : api.status()).then(
       (next) => {
         if (!active || receivedStatus) return;
         setStatus(next);

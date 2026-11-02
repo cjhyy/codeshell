@@ -41,6 +41,10 @@ function setup(
     authorized: () => boolean,
   ) => Promise<PreparedGitHubLink>,
   now?: () => number,
+  activateRelay?: (
+    identity: { origin: string; accountId: string },
+    authorized: () => boolean,
+  ) => Promise<void>,
 ) {
   let stored = initial;
   let writes = 0;
@@ -50,6 +54,7 @@ function setup(
   const events: unknown[] = [];
   const retired: unknown[] = [];
   const launched: string[] = [];
+  const activated: unknown[] = [];
   let unavailable = false;
   let retireFailure = false;
   let saveFailure = false;
@@ -77,6 +82,10 @@ function setup(
     store,
     now,
     prepareGitHubLink,
+    activateRelay: async (identity, authorized) => {
+      activated.push(identity);
+      await activateRelay?.(identity, authorized);
+    },
     request: async (input) => {
       requests.push(input);
       return transport ? transport(input) : input.path.endsWith("/logout") ? { ok: true } : {};
@@ -97,6 +106,7 @@ function setup(
     events,
     retired,
     launched,
+    activated,
     store,
     saved: () => stored,
     writes: () => writes,
@@ -507,7 +517,7 @@ test("capability discovery requires boolean registration and GitHub flags", asyn
     expect(ctx.events).toHaveLength(0);
   }
 });
-test("password login keeps tokens in main and does not enroll, start or share a computer", async () => {
+test("password login keeps tokens in main and activates the signed-in computer collaboration", async () => {
   const next = grant();
   const ctx = setup(undefined, async () => next);
   const state = await ctx.manager.signIn("login", {
@@ -516,6 +526,7 @@ test("password login keeps tokens in main and does not enroll, start or share a 
     password: "long password here",
   });
   expect(state.account).toEqual(next.account);
+  expect(ctx.activated).toEqual([{ origin, accountId: next.account.id }]);
   expect(ctx.requests.map((req) => req.path)).toEqual(["/api/v1/account/login"]);
   expect(ctx.retired).toHaveLength(0);
   expect(ctx.saved()?.accessToken).toBe(next.accessToken);
@@ -1111,4 +1122,69 @@ test("access expiry alone does not make a refreshable root identity perform netw
   expect(ctx.retired).toEqual([]);
   expect(ctx.writes()).toBe(0);
   expect(ctx.saved()).toEqual(saved);
+});
+
+test("explicit resume is singleflight and retryable; constructor/status and token refresh never register a computer", async () => {
+  const saved = grant();
+  const ctx = setup(saved);
+  expect(ctx.manager.status().state).toBe("signed-in");
+  expect(ctx.activated).toEqual([]);
+  expect(ctx.requests).toEqual([]);
+  await Promise.all([ctx.manager.resume(), ctx.manager.resume()]);
+  expect(ctx.activated).toEqual([{ origin, accountId: saved.account.id }]);
+  await ctx.manager.resume();
+  await ctx.manager.getCredential(origin, saved.account.id);
+  expect(ctx.activated).toEqual([
+    { origin, accountId: saved.account.id },
+    { origin, accountId: saved.account.id },
+  ]);
+  expect(ctx.requests).toEqual([]);
+});
+
+test("relay failure leaves successful account login usable and retryable by explicit resume", async () => {
+  const saved = grant();
+  const ctx = setup(
+    undefined,
+    async () => saved,
+    undefined,
+    undefined,
+    async () => {
+      throw new Error("relay unavailable");
+    },
+  );
+  expect(
+    (await ctx.manager.signIn("login", { origin, username: "alice", password: "long-password" }))
+      .state,
+  ).toBe("signed-in");
+  expect(ctx.saved()?.sessionId).toBe(saved.sessionId);
+  await ctx.manager.resume();
+  expect(ctx.activated).toHaveLength(2);
+  expect(ctx.requests.map((request) => request.path)).toEqual(["/api/v1/account/login"]);
+});
+
+test("relay discovery accepts only the signed-in exact origin and supported account handoff version", async () => {
+  const relay = {
+    enabled: true,
+    directoryOrigin: origin,
+    protocolVersion: 1,
+    accountHandoffVersion: 1,
+  };
+  for (const invalid of [
+    { ...relay, directoryOrigin: "https://attacker.example" },
+    { ...relay, accountHandoffVersion: 2 },
+  ]) {
+    const ctx = setup(undefined, async () => ({
+      registrationAllowed: true,
+      githubEnabled: false,
+      relay: invalid,
+    }));
+    await expect(ctx.manager.capabilities(origin)).rejects.toThrow();
+    expect(ctx.requests[0]!.token).toBeUndefined();
+  }
+  const ctx = setup(undefined, async () => ({
+    registrationAllowed: true,
+    githubEnabled: false,
+    relay,
+  }));
+  expect((await ctx.manager.capabilities(origin)).relay).toEqual(relay);
 });

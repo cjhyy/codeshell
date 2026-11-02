@@ -6,7 +6,8 @@ export type DesktopRelayState =
   | "ready"
   | "disconnected"
   | "unauthorized"
-  | "storage-error";
+  | "storage-error"
+  | "unavailable";
 export interface DesktopRelayStatus {
   state: DesktopRelayState;
   registered: boolean;
@@ -15,6 +16,8 @@ export interface DesktopRelayStatus {
   hostId?: string;
   name?: string;
   accountId?: string;
+  environmentId?: string;
+  message?: string;
 }
 export interface DesktopRelayEnrollment {
   relayOrigin: string;

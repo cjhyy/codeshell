@@ -78,6 +78,8 @@ export interface DesktopWebHttpApi {
       baseUrl: string;
       /** Recheck the entrance authorization captured after its access gate succeeded. */
       isAccessAuthorized?: () => boolean;
+      /** Account handoffs may authenticate only their own short-lived device. */
+      accessDeviceId?: string;
     },
   ) => Promise<boolean>;
   /** Reopen after RemoteHostManager.stop(), without reviving previous cookies. */
@@ -412,7 +414,11 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
           if (context.isAccessAuthorized?.() === false)
             throw new HubConfigurationError(401, "访问口令已更新，请重新连接桌面。");
           const device = options.devices.authenticate(input.deviceId, input.secretHash);
-          if (!device)
+          if (
+            !device ||
+            (context.accessDeviceId && context.accessDeviceId !== device.id) ||
+            (options.devices.isEphemeralDevice(device.id) && context.accessDeviceId !== device.id)
+          )
             throw new HubConfigurationError(401, "设备未配对或已被撤销，请在桌面重新配对。");
           const existing = principal(token);
           if (token && existing?.session.deviceId === device.id) {
@@ -436,7 +442,14 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
           json(response, 200, status(session, device));
           return true;
         }
-        const current = principal(token);
+        const candidate = principal(token);
+        const current =
+          (context.accessDeviceId && candidate?.device.id !== context.accessDeviceId) ||
+          (candidate &&
+            options.devices.isEphemeralDevice(candidate.device.id) &&
+            context.accessDeviceId !== candidate.device.id)
+            ? undefined
+            : candidate;
         if (
           request.method === "GET" &&
           ["/api/v1/auth/status", "/api/v1/auth"].includes(url.pathname)
@@ -445,7 +458,7 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
           return true;
         }
         if (request.method === "POST" && url.pathname === "/api/v1/auth/logout") {
-          if (token) dropSession(token);
+          if (token && current) dropSession(token);
           setCookie(response, "", secure);
           json(response, 200, { ok: true });
           return true;

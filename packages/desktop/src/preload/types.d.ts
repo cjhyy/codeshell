@@ -1,4 +1,5 @@
 import type { CloudAccountApi } from "../shared/cloud-account.js";
+import type { AccountDeviceApi } from "../shared/account-device.js";
 import type { SessionOutputRecoveryApi } from "./session-transcript-api.js";
 import type { ModelTraceApi } from "./model-trace-api.js";
 import type { MobileSessionAnnouncement } from "./mobile-session-announcement.js";
@@ -1605,6 +1606,7 @@ export interface CodeshellApi
 
   /** Open a cloud workbench in a browser-only native window, isolated from local projects. */
   cloudAccount: CloudAccountApi;
+  accountDevices: AccountDeviceApi;
   cloudEnvironment: CloudEnvironmentApi;
   openCloudWorkbench: CloudWorkbenchApi;
   openExternal(url: string): Promise<void>;

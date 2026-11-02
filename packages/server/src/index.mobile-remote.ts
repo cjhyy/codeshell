@@ -1,5 +1,10 @@
 /** Mobile HTTP/WebSocket transport, rooms, uploads, pairing, and tunnels. */
 export * from "./mobile-remote/access-passcode.js";
+export type {
+  AccountRelayAccessProvider,
+  AccountRelayBinding,
+  AccountRelayProject,
+} from "./mobile-remote/account-relay-access.js";
 export * from "./mobile-remote/cloudflared-binary.js";
 export * from "./mobile-remote/codex-parse.js";
 export * from "./mobile-remote/codex-room-agent.js";

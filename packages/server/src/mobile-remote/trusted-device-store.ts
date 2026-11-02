@@ -38,7 +38,52 @@ function secretHashEquals(a: string, b: string): boolean {
 }
 
 export class TrustedDeviceStore {
+  /** Account handoffs never create durable pairing credentials, even after a crash. */
+  private readonly ephemeral = new Map<string, { device: TrustedDevice; expiresAt: number }>();
+
   constructor(private readonly filePath: string) {}
+
+  addEphemeralDevice(input: {
+    name: string;
+    secretHash: string;
+    expiresAt: number;
+  }): TrustedDevicePublic {
+    const name = normalizeDeviceName(input.name);
+    if (
+      !name ||
+      !isBoundedOpaqueString(input.secretHash, MAX_DEVICE_SECRET_LENGTH) ||
+      !isTimestamp(input.expiresAt) ||
+      input.expiresAt <= Date.now() ||
+      input.expiresAt > Date.now() + 10 * 60_000
+    )
+      throw new Error("Invalid short-lived device grant");
+    this.pruneEphemeral();
+    if (this.ephemeral.size >= 128) throw new Error("Short-lived device limit reached");
+    const device: TrustedDevice = {
+      id: randomUUID(),
+      name,
+      secretHash: input.secretHash,
+      createdAt: Date.now(),
+    };
+    this.ephemeral.set(device.id, { device, expiresAt: input.expiresAt });
+    return this.toPublic(device);
+  }
+
+  private pruneEphemeral(): void {
+    const now = Date.now();
+    for (const [id, grant] of this.ephemeral) if (grant.expiresAt <= now) this.ephemeral.delete(id);
+  }
+
+  /** Account identities require their matching entrance grant on every transport. */
+  isEphemeralDevice(id: string): boolean {
+    this.pruneEphemeral();
+    return this.ephemeral.has(id);
+  }
+
+  /** Retiring an account grant must never acquire or mutate the durable pairing store. */
+  removeEphemeralDevice(id: string): boolean {
+    return this.ephemeral.delete(id);
+  }
 
   addDevice(input: { name: string; secretHash: string }): TrustedDevicePublic {
     const name = normalizeDeviceName(input.name);
@@ -46,6 +91,13 @@ export class TrustedDeviceStore {
     if (!isBoundedOpaqueString(input.secretHash, MAX_DEVICE_SECRET_LENGTH)) {
       throw new Error("Invalid trusted device secret");
     }
+    this.pruneEphemeral();
+    if (
+      [...this.ephemeral.values()].some(({ device }) =>
+        secretHashEquals(device.secretHash, input.secretHash),
+      )
+    )
+      throw new Error("Account device credentials cannot be paired permanently");
     return this.mutate((devices) => {
       // Get-or-create by secretHash. A phone's secret is stable per browser
       // (persisted in localStorage as cs.deviceSecret), so re-scanning the QR
@@ -74,7 +126,10 @@ export class TrustedDeviceStore {
   }
 
   listDevices(): TrustedDevicePublic[] {
-    return this.readAll().map((device) => this.toPublic(device));
+    this.pruneEphemeral();
+    return [...this.readAll(), ...[...this.ephemeral.values()].map((grant) => grant.device)].map(
+      (device) => this.toPublic(device),
+    );
   }
 
   authenticate(id: string, secretHash: string): TrustedDevicePublic | undefined {
@@ -83,6 +138,13 @@ export class TrustedDeviceStore {
       !isBoundedOpaqueString(secretHash, MAX_DEVICE_SECRET_LENGTH)
     ) {
       return undefined;
+    }
+    this.pruneEphemeral();
+    const temporary = this.ephemeral.get(id)?.device;
+    if (temporary) {
+      if (temporary.revokedAt || !secretHashEquals(temporary.secretHash, secretHash)) return;
+      temporary.lastSeenAt = Date.now();
+      return this.toPublic(temporary);
     }
     return this.mutate((devices) => {
       const device = devices.find(
@@ -97,6 +159,7 @@ export class TrustedDeviceStore {
 
   revoke(id: string): boolean {
     if (!isBoundedOpaqueString(id, MAX_DEVICE_ID_LENGTH)) return false;
+    if (this.ephemeral.has(id)) return this.ephemeral.delete(id);
     return this.mutate((devices) => {
       const device = devices.find((item) => item.id === id && !item.revokedAt);
       if (!device) return { result: false, changed: false };
@@ -108,6 +171,7 @@ export class TrustedDeviceStore {
   /** Hard-delete a device row entirely (no revoked zombie left behind). */
   remove(id: string): boolean {
     if (!isBoundedOpaqueString(id, MAX_DEVICE_ID_LENGTH)) return false;
+    if (this.ephemeral.has(id)) return this.ephemeral.delete(id);
     return this.mutate((devices) => {
       const index = devices.findIndex((item) => item.id === id);
       if (index < 0) return { result: false, changed: false };

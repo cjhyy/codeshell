@@ -96,11 +96,12 @@ export async function enrollAccountRelayComputer(
   accountId: string,
   signal: AbortSignal,
   transport: import("./cloud-account-http.js").CloudAccountTransport,
+  ensure = false,
 ): Promise<RelayRegistration> {
   validateRelayEnrollment(input);
   const data = await transport({
     origin: input.relayOrigin,
-    path: "/api/v1/remote-hosts/enroll",
+    path: ensure ? "/api/v1/remote-hosts/ensure" : "/api/v1/remote-hosts/enroll",
     token,
     body: { environmentId, name: input.name.trim() },
     signal,
