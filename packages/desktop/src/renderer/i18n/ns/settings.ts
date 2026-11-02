@@ -36,14 +36,12 @@ export const settingsNs = {
         checkFailed: "暂时无法确认系统权限，请重新检查或打开对应系统设置。",
         restartHint: "重启 CodeShell 后应用更改，并新建会话使用电脑操作。",
         restart: "重启 CodeShell",
-        companionEnable: "显示 Mimi 操作角色（试验）",
-        companionDescription:
-          "拖动放置，点击打开 Mimi 聊天，右键恢复跟随。人的交互优先，待机安静，工作动作短暂播放。预览持续 10 秒；实际联动需启用电脑操作。",
-        companionSprite: "Mimi 图片动画集",
-        companionSpriteHint: "当前效果 · 全身动作与操作反馈",
-        companionLive2dHint: "预留效果集接口 · 尚未启用模型",
-        companionSize: "角色大小",
-        companionPreview: "预览动作",
+        companionTitle: "Mimi 移动模式",
+        companionMoved:
+          "Mimi 只有一个开关。显示/隐藏、停靠或移动模式、角色大小都在 Mimi 设置里统一管理；切换模式不会改变电脑操作的授权与停止状态。",
+        companionStatusMoving: "当前：Mimi 以移动模式显示。",
+        companionStatusOff: "当前：未使用移动模式。",
+        companionOpenSettings: "打开 Mimi 设置",
         inputTitle: "电脑输入控制",
         inputRunning:
           "AI 可以发送键盘和鼠标输入。你正在操作时，会前置应用或移动指针的输入会自动等待。",
@@ -1224,14 +1222,12 @@ export const settingsNs = {
         restartHint:
           "Restart CodeShell to apply changes, then start a new conversation to use computer controls.",
         restart: "Restart CodeShell",
-        companionEnable: "Show Mimi computer companion (experimental)",
-        companionDescription:
-          "Drag to place, click for Mimi chat, and right-click to resume following. Your interaction takes priority. Idle stays still; work gestures are brief. Preview lasts 10 seconds; live reactions require computer use.",
-        companionSprite: "Mimi sprite animations",
-        companionSpriteHint: "Active pack · full character and action feedback",
-        companionLive2dHint: "Renderer slot reserved · model not enabled",
-        companionSize: "Character size",
-        companionPreview: "Preview actions",
+        companionTitle: "Mimi moving mode",
+        companionMoved:
+          "Mimi has a single switch. Show/hide, docked or moving mode, and character size are managed in Mimi settings; switching modes never changes computer-use permission or stop state.",
+        companionStatusMoving: "Now: Mimi is shown in moving mode.",
+        companionStatusOff: "Now: moving mode is not in use.",
+        companionOpenSettings: "Open Mimi settings",
         inputTitle: "Computer input control",
         inputRunning:
           "The AI may send keyboard and mouse input. While you are using the computer, input that brings an app forward or moves the pointer waits.",

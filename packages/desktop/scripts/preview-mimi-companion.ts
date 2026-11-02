@@ -56,7 +56,6 @@ async function main() {
   const host = await createMimiCompanionHost({
     appPath: desktopRoot,
     resourcesPath: process.resourcesPath,
-    userDataPath: join(temporary, "companion"),
     bus: execution.bus,
     gate: execution.gate,
     packaged: false,

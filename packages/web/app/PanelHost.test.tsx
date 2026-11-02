@@ -7,6 +7,7 @@ import { setApiWorkspace, setApiProject } from "./api-context.js";
 import { PanelHost } from "./PanelHost.js";
 import { PanelAudioDialog, type PanelAudioRequest } from "./PanelAudioDialog.js";
 import { PanelVideoDialog, type PanelVideoRequest } from "./PanelVideoDialog.js";
+import { PanelDirectoryPicker, type PanelDirectoryRequest } from "./PanelDirectoryPicker.js";
 
 type Element = React.ReactElement<Record<string, any>>;
 function elements(node: React.ReactNode): Element[] {
@@ -831,6 +832,151 @@ test("failed host confirmation can be retried and cancelling explicitly denies t
     { requestId: "run-two", allowed: false },
   ]);
   expect(view.attach()!.props.inert).toBe(false);
+});
+
+const directoryRoot = "r".repeat(24);
+const directoryDownloads = "d".repeat(24);
+function directoryEvent(requestId = "directory-one", expiresAt = Date.now() + 300_000) {
+  return {
+    id: 1,
+    event: "host.confirm",
+    payload: {
+      requestId,
+      title: "Choose directory",
+      body: "Owned project directory",
+      expiresAt,
+      directoryPicker: {
+        kind: "workspace-directory",
+        rootPath: "/owned/project",
+        rootToken: directoryRoot,
+        initialToken: directoryDownloads,
+      },
+    },
+  };
+}
+function directoryList(request: Request) {
+  return Response.json({
+    requestId: request.body.requestId,
+    directoryToken: request.body.directoryToken,
+    rootToken: directoryRoot,
+    relativePath: "downloads",
+    name: "downloads",
+    parentToken: directoryRoot,
+    directories: [],
+    truncated: false,
+  });
+}
+function directoryRequest(tree: React.ReactNode) {
+  return elements(tree).find((item) => item.type === PanelDirectoryPicker)?.props.request as
+    | PanelDirectoryRequest
+    | undefined;
+}
+
+test("directory selection stays in the trusted parent and submits only a chosen token in the original scope", async () => {
+  setApiProject(projectA);
+  const view = await fixture({
+    intercept(request) {
+      if (request.url.pathname.endsWith("/events"))
+        return Response.json({ cursor: 1, events: [directoryEvent()] });
+      if (request.url.pathname.endsWith("/directory-picker")) return directoryList(request);
+    },
+  });
+  await view.ready();
+  const picker = directoryRequest(view.tree)!;
+  expect(picker.description.initialToken).toBe(directoryDownloads);
+  expect(view.dirty).toBe(true);
+  expect(view.attach()!.props.inert).toBe(true);
+  expect(view.replies.some((item) => item.data.event === "host.confirm")).toBe(false);
+  expect(view.requests.some((item) => item.url.pathname.endsWith("/confirm"))).toBe(false);
+  setApiProject(projectB);
+  await picker.list(directoryRoot, new AbortController().signal);
+  expect(view.requests.at(-1)?.url.pathname).toContain(`/p/${projectA}/`);
+  picker.finish(true, "/not-a-token");
+  expect(view.requests.some((item) => item.url.pathname.endsWith("/confirm"))).toBe(false);
+  await act(async () => {
+    picker.finish(true, directoryDownloads);
+    await flushMicrotasks();
+  });
+  const confirmed = view.requests.find((item) => item.url.pathname.endsWith("/confirm"))!;
+  expect(confirmed.url.pathname).toContain(`/p/${projectA}/`);
+  expect(confirmed.body).toEqual({
+    requestId: "directory-one",
+    allowed: true,
+    directoryToken: directoryDownloads,
+  });
+  expect(view.dirty).toBe(false);
+  expect(directoryRequest(view.tree)).toBeUndefined();
+});
+
+test("directory confirmation failure preserves the picker; cancel sends no directory choice", async () => {
+  let failing = true;
+  const view = await fixture({
+    intercept(request) {
+      if (request.url.pathname.endsWith("/events"))
+        return Response.json({ cursor: 1, events: [directoryEvent()] });
+      if (request.url.pathname.endsWith("/directory-picker")) return directoryList(request);
+      if (request.url.pathname.endsWith("/confirm") && failing)
+        return Response.json({ error: "Owned unavailable response" }, { status: 503 });
+    },
+  });
+  const picker = directoryRequest(view.tree)!;
+  await act(async () => {
+    picker.finish(true, directoryDownloads);
+    await flushMicrotasks();
+  });
+  expect(directoryRequest(view.tree)).toBe(picker);
+  expect(view.dirty).toBe(true);
+  expect(
+    elements(view.tree).find((item) => item.type === PanelDirectoryPicker)?.props.confirmationError,
+  ).toContain("暂未收到");
+  failing = false;
+  await act(async () => {
+    picker.finish(false, directoryDownloads);
+    await flushMicrotasks();
+  });
+  expect(
+    view.requests.filter((item) => item.url.pathname.endsWith("/confirm")).map((item) => item.body),
+  ).toEqual([
+    { requestId: "directory-one", allowed: true, directoryToken: directoryDownloads },
+    { requestId: "directory-one", allowed: false },
+  ]);
+  expect(directoryRequest(view.tree)).toBeUndefined();
+});
+
+test("directory expiry retires pending reads and old callbacks cannot approve a later request", async () => {
+  const timers = manualTimers();
+  let resolveList!: (response: Response) => void;
+  const held = new Promise<Response>((resolve) => {
+    resolveList = resolve;
+  });
+  let event = directoryEvent("directory-first", Date.now() + 300_000);
+  const view = await fixture({
+    intercept(request) {
+      if (request.url.pathname.endsWith("/events"))
+        return Response.json({ cursor: event.id, events: [event] });
+      if (request.url.pathname.endsWith("/directory-picker")) return held;
+    },
+  });
+  const old = directoryRequest(view.tree)!;
+  const read = view.requests.find((item) => item.url.pathname.endsWith("/directory-picker"))!;
+  await timers.fire(300_000);
+  expect(directoryRequest(view.tree)).toBeUndefined();
+  expect(read.signal?.aborted).toBe(true);
+  event = { ...directoryEvent("directory-next"), id: 2 };
+  await timers.fire(1_000);
+  expect(directoryRequest(view.tree)?.requestId).toBe("directory-next");
+  await act(async () => {
+    old.finish(true, directoryDownloads);
+    resolveList(directoryList(read));
+    await flushMicrotasks();
+  });
+  expect(view.requests.some((item) => item.url.pathname.endsWith("/confirm"))).toBe(false);
+  expect(directoryRequest(view.tree)?.requestId).toBe("directory-next");
+  const latest = directoryRequest(view.tree)!;
+  await view.unmount();
+  await expect(latest.list(directoryRoot, new AbortController().signal)).rejects.toThrow("已结束");
+  latest.finish(true, directoryRoot);
+  expect(view.requests.some((item) => item.url.pathname.endsWith("/confirm"))).toBe(false);
 });
 
 test("a confirmation that already timed out does not close the panel", async () => {

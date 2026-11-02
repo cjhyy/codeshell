@@ -124,6 +124,7 @@ import { useApprovalHistory } from "./approvals/useApprovalHistory";
 import { useBucketOverrides } from "./app/useBucketOverrides";
 import { useTranscriptBuckets } from "./app/useTranscriptBuckets";
 import { useAutomationSessionImport } from "./app/useAutomationSessionImport";
+import { useMimiPresence } from "./app/useMimiPresence";
 import { useSessionNavigation } from "./app/useSessionNavigation";
 import { useNewProjectDialog } from "./projects/NewProjectDialog";
 import { useNotificationSessionNavigation } from "./app/useNotificationSessionNavigation";
@@ -213,7 +214,15 @@ function App() {
     setChatModelKey: setPetChatModelKey,
   } = useOptionalPetState();
   // Pet visibility is process-scoped and mirrored by the desktop host.
-  const [petWidgetVisible, setPetWidgetVisible] = useState(false);
+  const {
+    petWidgetVisible,
+    mimiPresence,
+    setPetWidgetVisibility,
+    togglePetWidget,
+    changeMimiPresence,
+    previewMimi,
+    retryMimi,
+  } = useMimiPresence();
   const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
@@ -952,23 +961,6 @@ function App() {
   }, [petDispatch, isNarrowWindow]);
 
   useEffect(() => {
-    let disposed = false;
-    const pet = window.codeshell.pet;
-    if (!pet) return;
-    void pet
-      .getWidgetVisibility()
-      .then((visible) => {
-        if (!disposed) setPetWidgetVisible(visible);
-      })
-      .catch((error) =>
-        window.codeshell.log("pet.widget.visibility.read.failed", { error: String(error) }),
-      );
-    return () => {
-      disposed = true;
-    };
-  }, []);
-
-  useEffect(() => {
     const pet = window.codeshell.pet;
     if (!pet?.onWidgetOpenOverview) return;
     return pet.onWidgetOpenOverview((target) => {
@@ -980,26 +972,6 @@ function App() {
       else openPetPage();
     });
   }, [openPetPage, petDispatch]);
-
-  useEffect(() => {
-    const pet = window.codeshell.pet;
-    if (!pet?.onWidgetVisibilityChanged) return;
-    return pet.onWidgetVisibilityChanged((visible) => {
-      setPetWidgetVisible(visible);
-    });
-  }, []);
-
-  const setPetWidgetVisibility = useCallback((next: boolean): void => {
-    const pet = window.codeshell.pet;
-    if (!pet) return;
-    setPetWidgetVisible(next);
-    void pet.setWidgetVisible(next).catch((error) => {
-      setPetWidgetVisible((current) => (current === next ? !next : current));
-      window.codeshell.log("pet.widget.visibility.failed", { error: String(error) });
-    });
-  }, []);
-
-  const togglePetWidget = (): void => setPetWidgetVisibility(!petWidgetVisible);
 
   const { diskSessionCatalog, loadDiskSessionCatalogPage } = useAutomationSessionImport({
     sessionIndicesRef,
@@ -2372,9 +2344,15 @@ function App() {
                   modelOptions={quickChatModelOptions}
                   hasModelOverride={petChatModelKey !== null}
                   widgetVisible={petWidgetVisible}
+                  presence={mimiPresence}
                   onSelectModel={(option) => setPetChatModelKey(option.key)}
                   onResetModel={() => setPetChatModelKey(null)}
-                  onWidgetVisibleChange={setPetWidgetVisibility}
+                  onWidgetVisibleChange={(visible) =>
+                    mimiPresence ? changeMimiPresence({ visible }) : setPetWidgetVisibility(visible)
+                  }
+                  onPresenceChange={changeMimiPresence}
+                  onPreviewMoving={previewMimi}
+                  onRetryPresence={retryMimi}
                   onOpenPersonalization={() => setViewMode("pet_personalization")}
                   onOpenConnections={() => setViewMode("credentials")}
                   onOpenMemory={() => openPetMemory("settings")}
@@ -2901,6 +2879,7 @@ function App() {
                   isFullscreen={isFullscreen}
                   onBack={() => setViewMode("chat")}
                   onOpenDigitalHumans={() => setViewMode("digital_humans")}
+                  onOpenMimiSettings={() => setViewMode("pet_settings")}
                   onOpenLink={openLinkCredentials}
                 />
               ) : activeProject ? (
@@ -2920,6 +2899,7 @@ function App() {
                   isFullscreen={isFullscreen}
                   onBack={() => setViewMode("chat")}
                   onOpenDigitalHumans={() => setViewMode("digital_humans")}
+                  onOpenMimiSettings={() => setViewMode("pet_settings")}
                   onOpenLink={openLinkCredentials}
                 />
               ) : null}

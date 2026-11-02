@@ -221,4 +221,51 @@ describe("Pet preload contract", () => {
     offVisibility();
     expect(visibility).toEqual([false]);
   });
+
+  test("Mimi presence goes through the single owner's channels and ignores malformed broadcasts", async () => {
+    const invoked: Array<{ channel: string; payload: unknown }> = [];
+    const handlers = new Map<string, Set<(event: unknown, payload: unknown) => void>>();
+    const snapshot = {
+      visible: true,
+      mode: "moving" as const,
+      size: 200,
+      effectiveMode: "moving" as const,
+      shown: "moving" as const,
+      movingAvailable: true,
+      previewing: false,
+    };
+    const api = createPetApi({
+      invoke: async (channel, payload) => {
+        invoked.push({ channel, payload });
+        return snapshot;
+      },
+      send: () => {},
+      on: (channel, listener) => {
+        const set = handlers.get(channel) ?? new Set();
+        set.add(listener);
+        handlers.set(channel, set);
+      },
+      removeListener: (channel, listener) => handlers.get(channel)?.delete(listener),
+    });
+    expect(await api.getPresence?.()).toEqual(snapshot);
+    expect(await api.setPresence?.({ mode: "docked" })).toEqual(snapshot);
+    await api.previewPresence?.();
+    await api.retryPresence?.();
+    expect(invoked).toEqual([
+      { channel: "mimi:presence-get", payload: undefined },
+      { channel: "mimi:presence-set", payload: { mode: "docked" } },
+      { channel: "mimi:presence-preview", payload: undefined },
+      { channel: "mimi:presence-retry", payload: undefined },
+    ]);
+    const received: unknown[] = [];
+    const off = api.onPresenceChanged?.((value) => received.push(value));
+    for (const handler of handlers.get("mimi:presence-changed") ?? []) {
+      handler({}, snapshot);
+      handler({}, { visible: "yes" });
+      handler({}, null);
+    }
+    off?.();
+    for (const handler of handlers.get("mimi:presence-changed") ?? []) handler({}, snapshot);
+    expect(received).toEqual([snapshot]);
+  });
 });

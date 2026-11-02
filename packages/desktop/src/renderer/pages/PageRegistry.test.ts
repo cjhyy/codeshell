@@ -31,7 +31,6 @@ describe("PageRegistry", () => {
       "extensions",
       "digital_humans",
       "automation",
-      "traces",
     ]);
   });
 
@@ -41,7 +40,6 @@ describe("PageRegistry", () => {
       { kind: "i18n", key: "sidebar.extensions" },
       { kind: "i18n", key: "sidebar.digitalHumans" },
       { kind: "i18n", key: "sidebar.automation" },
-      { kind: "i18n", key: "observability.title" },
     ]);
   });
 
@@ -58,7 +56,13 @@ describe("PageRegistry", () => {
   });
 
   it("keeps utility pages routable through settings and the command palette", () => {
-    for (const key of ["settings_page", "task_inbox", "credentials", "optimization_lab"]) {
+    for (const key of [
+      "settings_page",
+      "task_inbox",
+      "credentials",
+      "optimization_lab",
+      "traces",
+    ]) {
       expect(PAGE_REGISTRY.has(key)).toBe(true);
       expect(PAGE_REGISTRY.get(key)!.nav).toBeUndefined();
     }
@@ -142,7 +146,6 @@ describe("migrated builtin pages", () => {
       "extensions",
       "digital_humans",
       "automation",
-      "traces",
     ]);
   });
 

@@ -6,6 +6,12 @@ import type {
   PetLongTaskSnapshot,
 } from "@cjhyy/code-shell-pet";
 import type { PetChatAttachment } from "../shared/pet-chat-attachments";
+import type {
+  MimiBubbleOpenRequest,
+  MimiPresencePatch,
+  MimiPresenceSnapshot,
+} from "../shared/mimi-presence";
+import type { MimiCompanionAttention } from "../shared/mimi-companion";
 
 export type { PetChatAttachment } from "../shared/pet-chat-attachments";
 
@@ -397,6 +403,16 @@ export interface PetApi {
     listener: (target?: PetOpenSessionRequest | PetChatPromptRequest) => void,
   ): () => void;
   onWidgetVisibilityChanged(listener: (visible: boolean) => void): () => void;
+  /** Moving Mimi's bubble: main asks it to open a panel (or close with `null`). */
+  onBubbleOpen?(listener: (request: MimiBubbleOpenRequest) => void): () => void;
+  /** Moving Mimi's bubble: counts for the badge over the character. */
+  reportBubbleAttention?(attention: MimiCompanionAttention): void;
+  /** The single Mimi presence (one switch; docked or moving, never both). */
+  getPresence?(): Promise<MimiPresenceSnapshot>;
+  setPresence?(patch: MimiPresencePatch): Promise<MimiPresenceSnapshot>;
+  previewPresence?(): Promise<MimiPresenceSnapshot>;
+  retryPresence?(): Promise<MimiPresenceSnapshot>;
+  onPresenceChanged?(listener: (snapshot: MimiPresenceSnapshot) => void): () => void;
 }
 
 export interface PetIpcRenderer {
@@ -527,12 +543,42 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       ipcRenderer.on("pet:widget-open-overview", handler);
       return () => ipcRenderer.removeListener("pet:widget-open-overview", handler);
     },
+    onBubbleOpen: (listener) => {
+      const handler = (_event: unknown, payload: unknown): void => {
+        const request = payload as { panel?: unknown; prompt?: unknown } | undefined;
+        const panel = request?.panel;
+        if (panel !== null && panel !== "chat" && panel !== "activity") return;
+        const prompt = typeof request?.prompt === "string" ? request.prompt.slice(0, 500) : "";
+        listener({ panel, ...(prompt.trim() ? { prompt } : {}) });
+      };
+      ipcRenderer.on("pet:bubble-open", handler);
+      return () => ipcRenderer.removeListener("pet:bubble-open", handler);
+    },
+    reportBubbleAttention: (attention) => ipcRenderer.send("pet:bubble-attention", attention),
     onWidgetVisibilityChanged: (listener) => {
       const handler = (_event: unknown, visible: unknown): void => {
         if (typeof visible === "boolean") listener(visible);
       };
       ipcRenderer.on("pet:widget-visibility-changed", handler);
       return () => ipcRenderer.removeListener("pet:widget-visibility-changed", handler);
+    },
+    getPresence: () => ipcRenderer.invoke("mimi:presence-get") as Promise<MimiPresenceSnapshot>,
+    setPresence: (patch) =>
+      ipcRenderer.invoke("mimi:presence-set", patch) as Promise<MimiPresenceSnapshot>,
+    previewPresence: () =>
+      ipcRenderer.invoke("mimi:presence-preview") as Promise<MimiPresenceSnapshot>,
+    retryPresence: () => ipcRenderer.invoke("mimi:presence-retry") as Promise<MimiPresenceSnapshot>,
+    onPresenceChanged: (listener) => {
+      const handler = (_event: unknown, snapshot: unknown): void => {
+        if (
+          snapshot &&
+          typeof snapshot === "object" &&
+          typeof (snapshot as MimiPresenceSnapshot).visible === "boolean"
+        )
+          listener(snapshot as MimiPresenceSnapshot);
+      };
+      ipcRenderer.on("mimi:presence-changed", handler);
+      return () => ipcRenderer.removeListener("mimi:presence-changed", handler);
     },
   };
 }

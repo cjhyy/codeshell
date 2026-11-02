@@ -431,9 +431,22 @@ await service.initialize();await service.setDesired(scope,{desired:'always',expe
     expect(await restarted.read(f.scope, "quotes")).toMatchObject({ seq: 1 });
     // The fixture owns this exact group; production recovery never issues this kill.
     process.kill(-guardian, "SIGKILL");
-    expect(await waitForServiceGroupExit(guardian, 5000)).toBe(true);
+    const recoveryDeadline = performance.now() + 5000;
+    expect(await waitForServiceGroupExit(guardian, recoveryDeadline - performance.now())).toBe(
+      true,
+    );
     guardian = 0;
-    await restarted.tick();
+    // The supervisor makes its own conservative observation; a later scan may
+    // be unknown even after the waiter proved death. Keep the same total budget.
+    while (performance.now() < recoveryDeadline) {
+      await restarted.tick();
+      const generation = (await restarted.get(f.scope)).generation;
+      if (generation === 2) break;
+      expect(generation).toBe(1);
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.min(20, Math.max(0, recoveryDeadline - performance.now()))),
+      );
+    }
     expect((await restarted.get(f.scope)).generation).toBe(2);
   } finally {
     child.kill("SIGKILL");

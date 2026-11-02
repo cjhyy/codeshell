@@ -127,16 +127,23 @@ describe("App Pet lifecycle boundaries", () => {
     expect(sidebarSource).toContain("<AccountSidebarEntry");
   });
 
-  test("starts the desktop Pet hidden until the user explicitly toggles it", () => {
-    expect(appSource).toContain("const [petWidgetVisible, setPetWidgetVisible] = useState(false)");
-    expect(appSource).toContain(".getWidgetVisibility()");
+  test("uses the host-owned Mimi preference and starts hidden until its snapshot arrives", () => {
+    const presenceSource = readFileSync(join(rendererRoot, "app", "useMimiPresence.ts"), "utf8");
+    expect(appSource).toContain("useMimiPresence()");
+    expect(presenceSource).toContain(
+      "const [petWidgetVisible, setPetWidgetVisible] = useState(false)",
+    );
+    expect(presenceSource).toContain("pet.getPresence()");
     expect(appSource).not.toContain("loadPetWidgetVisible");
     expect(appSource).not.toContain("savePetWidgetVisible");
   });
 
   test("mounts the Pet in its own desktop window instead of the App renderer", () => {
     expect(mainSource).toContain('params.get("popout") === "pet"');
-    expect(mainSource).toContain("<PetDesktopWindow />");
+    expect(mainSource).toContain("<PetDesktopWindow variant=");
+    // Moving Mimi's bubble is the same window component without the widget.
+    expect(mainSource).toContain('params.get("role") === "bubble"');
+    expect(petSource).toContain("{!bubble && (");
     expect(appSource).not.toContain("<PetWidget");
     expect(petSource).toContain('data-pet-widget="desktop-window"');
     expect(petSource).toContain("window.codeshell.pet.moveWidget");

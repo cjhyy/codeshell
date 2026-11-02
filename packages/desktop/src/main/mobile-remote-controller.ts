@@ -51,6 +51,7 @@ export class MobileRemoteController {
   private availabilityMessage?: string;
   private autoRetry?: ReturnType<typeof setTimeout>;
   private accountEnrollment?: { origin: string; accountId: string };
+  private pairingIssued: number[] = [];
   constructor(
     private readonly deps: {
       host: RemoteHostManager;
@@ -65,6 +66,7 @@ export class MobileRemoteController {
       connectorFactory?: typeof createDeviceRelayConnector;
       autoRetryDelayMs?: number;
       listProjects?: () => Promise<Array<{ id: string; name: string; path: string }>>;
+      now?: () => number;
     },
   ) {}
   private serial<T>(work: () => Promise<T>): Promise<T> {
@@ -475,6 +477,7 @@ export class MobileRemoteController {
                 this.accountDeviceCredential(credentialSignal),
             }
           : {}),
+        ...(this.registration?.accountId ? { issuePairing: () => this.issueAccountPairing() } : {}),
         localHost: this.deps.host.relayTarget(),
         onState: (state) => {
           if (generation !== this.generation || state === "closed") return;
@@ -636,6 +639,29 @@ export class MobileRemoteController {
       /* Local authority is already retired; server revocation/expiry remains authoritative. */
     }
   }
+  /**
+   * Pairing requested by the account relay for a phone its owner signed in on.
+   * The phone still passes the computer passcode; this only replaces the QR scan.
+   */
+  private issueAccountPairing(): { token: string; expiresAt: number } {
+    const registration = this.registration;
+    const account = this.deps.account?.status();
+    if (
+      !registration?.accountId ||
+      account?.state !== "signed-in" ||
+      account.origin !== registration.relayOrigin ||
+      account.account?.id !== registration.accountId ||
+      this.state !== "ready"
+    )
+      throw new Error("account pairing unavailable");
+    const now = this.deps.now?.() ?? Date.now();
+    this.pairingIssued = this.pairingIssued.filter((at) => now - at < ACCOUNT_PAIRING_WINDOW_MS);
+    if (this.pairingIssued.length >= ACCOUNT_PAIRING_LIMIT)
+      throw new Error("account pairing rate limited");
+    const pairing = this.deps.host.createPairingUrl();
+    this.pairingIssued.push(now);
+    return { token: pairing.token, expiresAt: pairing.expiresAt };
+  }
   stop(): Promise<void> {
     clearTimeout(this.autoRetry);
     this.invalidate();
@@ -677,3 +703,6 @@ export class MobileRemoteController {
     };
   }
 }
+
+const ACCOUNT_PAIRING_LIMIT = 6;
+const ACCOUNT_PAIRING_WINDOW_MS = 60_000;

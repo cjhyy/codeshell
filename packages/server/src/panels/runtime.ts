@@ -58,6 +58,12 @@ import {
 } from "./directory-bookmarks.js";
 import { handlePanelProcessDirectory } from "./process-files.js";
 import {
+  PanelDirectoryPicker,
+  capturePanelWorkspaceDirectory,
+  directoryPickerLifetime,
+  type PanelDirectorySelection,
+} from "./directory-picker.js";
+import {
   PanelAppProcessService,
   panelExecutableDirectories,
   panelProcessInfo,
@@ -212,7 +218,16 @@ interface Grant {
   eventCounter: number;
   eventBytes: number;
   registeredTools: Set<string>;
-  confirmations: Map<string, { finish: (allowed: boolean) => void; result?: boolean }>;
+  confirmations: Map<
+    string,
+    {
+      finish: (allowed: boolean) => void;
+      result?: boolean;
+      picker?: PanelDirectoryPicker;
+      directoryToken?: string;
+      selection?: PanelDirectorySelection;
+    }
+  >;
   toolCalls: Map<string, { finish: (value: { result?: unknown; error?: string }) => void }>;
 }
 export interface PanelTaskScope {
@@ -414,7 +429,7 @@ function bridgeScript(id: string, origin: string): string {
       const requestId = String(++next);
       const timer = setTimeout(() => {
         pending.delete(requestId); reject(new Error("Panel request timed out"));
-      }, ["tasks.start", "tasks.retry", "tasks.queue.set", "resources.recordAudio", "resources.recordVideo"].includes(method) ? 30 * 60 * 1000 : 60000);
+      }, ["tasks.start", "tasks.retry", "tasks.queue.set", "resources.recordAudio", "resources.recordVideo"].includes(method) ? 30 * 60 * 1000 : method === "filesystem.pickDirectory" ? 6 * 60 * 1000 : 60000);
       pending.set(requestId, { resolve, reject, timer });
       try {
         parent.postMessage({ type: "codeshell-panel:call", instanceId: id, requestId, method, params }, origin);
@@ -1054,6 +1069,46 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     });
     return result && (await authorized(grant));
   }
+  async function pickDirectory(grant: Grant): Promise<PanelDirectorySelection | undefined> {
+    if (!(await authorized(grant))) error(410, "面板授权已失效。");
+    if ([...grant.confirmations.values()].some((item) => item.picker && item.result === undefined))
+      error(409, "请先完成当前目录选择。");
+    for (const [id, item] of grant.confirmations) {
+      if (item.result !== undefined) grant.confirmations.delete(id);
+    }
+    if (grant.confirmations.size >= 64) error(429, "待确认操作过多。");
+    const picker = new PanelDirectoryPicker(options.cwd, now);
+    const requestId = randomBytes(18).toString("base64url");
+    const pending = { picker } as NonNullable<ReturnType<typeof grant.confirmations.get>>;
+    const allowed = await new Promise<boolean>((done) => {
+      const timer = setTimeout(() => pending.finish(false), directoryPickerLifetime);
+      timer.unref();
+      pending.finish = (value) => {
+        if (pending.result !== undefined) return;
+        pending.result = value;
+        clearTimeout(timer);
+        picker.close();
+        done(value);
+      };
+      grant.confirmations.set(requestId, pending);
+      emit(grant, "host.confirm", {
+        requestId,
+        title: options.host === "desktop" ? "选择电脑上的目录" : "选择服务器上的目录",
+        body: "仅可选择当前项目内的目录，确认后授予此面板使用。",
+        expiresAt: picker.expiresAt,
+        directoryPicker: {
+          kind: "workspace-directory",
+          rootPath: picker.rootPath,
+          rootToken: picker.rootToken,
+          initialToken: picker.initialToken,
+        },
+      });
+    });
+    if (!(await authorized(grant))) error(410, "面板授权已失效。");
+    if (!allowed) return undefined;
+    pending.selection!.assertCurrent();
+    return pending.selection;
+  }
   function taskScope(grant: Grant): PanelTaskScope {
     return {
       instanceId: grant.id,
@@ -1339,12 +1394,19 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
               consentTimeoutMs: 50000,
             },
           }),
-          ...(app.permissions.includes("resources")
+          ...(app.permissions.includes("resources") || app.permissions.includes("process")
             ? {
                 methodLimits: {
-                  "resources.recordAudio": { timeoutMs: 30 * 60 * 1000 },
-                  "resources.recordVideo": { timeoutMs: 30 * 60 * 1000 },
+                  ...(app.permissions.includes("resources")
+                    ? {
+                        "resources.recordAudio": { timeoutMs: 30 * 60 * 1000 },
+                        "resources.recordVideo": { timeoutMs: 30 * 60 * 1000 },
+                      }
+                    : {}),
                   ...(app.permissions.includes("process")
+                    ? { "filesystem.pickDirectory": { timeoutMs: 6 * 60_000 } }
+                    : {}),
+                  ...(app.permissions.includes("process") && app.permissions.includes("resources")
                     ? {
                         "tasks.start": {
                           maxParamsBytes: toolJobLimits.maxInputBytes,
@@ -1810,13 +1872,10 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           options.bindingCwd ?? options.cwd,
           (params as { bookmark?: unknown } | null)?.bookmark,
         );
-        if (
-          !options.authorizePanelDirectory &&
-          saved !== (await realpath(options.cwd)) &&
-          saved !== (await realpath(join(options.cwd, "downloads")))
-        )
-          throw new PanelBridgeError("PERMISSION_DENIED", "Saved server directory is unavailable");
-        const restored = await processes.grantDirectory(owner, saved);
+        const workspaceSelection = !options.authorizePanelDirectory
+          ? capturePanelWorkspaceDirectory(options.cwd, saved)
+          : undefined;
+        const restored = await processes.grantDirectory(owner, saved, workspaceSelection);
         await options.authorizePanelDirectory?.(
           grant.app,
           options.bindingCwd ?? options.cwd,
@@ -1827,10 +1886,26 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           options.bindingCwd ?? options.cwd,
           (params as { bookmark?: unknown } | null)?.bookmark,
         );
+        workspaceSelection?.assertCurrent();
         return { ...restored, bookmark: (params as { bookmark: string }).bookmark };
       }
-      const name =
-        method === "filesystem.pickDirectory" ? "downloads" : (params as { name?: unknown })?.name;
+      if (method === "filesystem.pickDirectory") {
+        const selection = await pickDirectory(grant);
+        if (!selection) return { cancelled: true };
+        selection.assertCurrent();
+        const selected = await processes.grantDirectory(owner, selection.path, selection);
+        selection.assertCurrent();
+        if (!(await authorized(grant))) error(410, "面板授权已失效。");
+        selection.assertCurrent();
+        const bookmark = directoryBookmarks.remember(
+          grant.app.id,
+          options.bindingCwd ?? options.cwd,
+          selected.path,
+        );
+        processes.directoryPath(owner, selected.handle);
+        return { ...selected, bookmark };
+      }
+      const name = (params as { name?: unknown })?.name;
       const directory =
         name === "project"
           ? options.cwd
@@ -1842,11 +1917,6 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
                 ? panelDataDirectory(grant.app.id)
                 : undefined;
       if (!directory) error(400, "不支持这个服务端目录。");
-      if (
-        method === "filesystem.pickDirectory" &&
-        !(await confirm(grant, "使用服务端下载目录？", directory))
-      )
-        return { cancelled: true };
       await options.authorizePanelDirectory?.(
         grant.app,
         options.bindingCwd ?? options.cwd,
@@ -1855,8 +1925,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       if (name !== "project") await mkdir(directory, { recursive: true, mode: 0o700 });
       if (!(await authorized(grant))) error(410, "面板授权已失效。");
       const selected = await processes.grantDirectory(owner, directory);
-      if (method !== "filesystem.pickDirectory" && !["downloads", "project"].includes(String(name)))
-        return selected;
+      if (!["downloads", "project"].includes(String(name))) return selected;
       const bookmark = directoryBookmarks.remember(
         grant.app.id,
         options.bindingCwd ?? options.cwd,
@@ -2043,7 +2112,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
             url.pathname,
           );
         const match =
-          /^\/api\/v1\/panels\/runtime\/([\w-]+)(?:\/(call|renew|events|confirm|tool-results))?$/.exec(
+          /^\/api\/v1\/panels\/runtime\/([\w-]+)(?:\/(call|renew|events|confirm|directory-picker|tool-results))?$/.exec(
             url.pathname,
           ) ??
           directoryMatch ??
@@ -2112,6 +2181,27 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           );
           const batch = grant.events.slice(0, 128);
           json(response, 200, { events: batch, cursor: batch.at(-1)?.id ?? after });
+        } else if (request.method === "POST" && match[2] === "directory-picker") {
+          if (request.headers.origin !== grant.origin) error(403, "目录选择仅供当前宿主页面使用。");
+          const input = await body(request);
+          if (Object.keys(input).some((key) => !["requestId", "directoryToken"].includes(key)))
+            error(400, "目录选择参数无效。");
+          const pending =
+            typeof input.requestId === "string" && grant.confirmations.get(input.requestId);
+          if (!pending || !pending.picker || pending.result !== undefined)
+            error(409, "目录选择已失效，请重新发起。");
+          const assertPending = async () => {
+            if (!(await authorized(grant))) error(410, "面板授权已失效。");
+            if (pending.result !== undefined || now() >= pending.picker!.expiresAt) {
+              pending.finish(false);
+              error(409, "目录选择已失效，请重新发起。");
+            }
+          };
+          await assertPending();
+          const listing = await pending.picker.list(input.directoryToken, assertPending);
+          await assertPending();
+          pending.picker.assertListing(listing);
+          json(response, 200, { requestId: input.requestId, ...listing });
         } else if (request.method === "POST" && match[2] === "confirm") {
           const input = await body(request);
           const pending =
@@ -2119,10 +2209,35 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           if (
             !pending ||
             typeof input.allowed !== "boolean" ||
-            Object.keys(input).some((key) => !["requestId", "allowed"].includes(key))
+            Object.keys(input).some(
+              (key) =>
+                !["requestId", "allowed", ...(pending?.picker ? ["directoryToken"] : [])].includes(
+                  key,
+                ),
+            ) ||
+            (input.allowed === false && input.directoryToken !== undefined)
           )
             error(400, "找不到这个待确认操作。");
           if (!(await authorized(grant))) error(410, "面板授权已失效。");
+          if (pending.picker) {
+            if (request.headers.origin !== grant.origin)
+              error(403, "目录选择仅供当前宿主页面使用。");
+            if (input.allowed) {
+              if (pending.result === undefined) {
+                if (now() >= pending.picker.expiresAt) {
+                  pending.finish(false);
+                  error(409, "目录选择已失效，请重新发起。");
+                }
+                pending.selection = pending.picker.select(input.directoryToken);
+                pending.directoryToken = input.directoryToken as string;
+              } else if (
+                pending.result !== true ||
+                input.directoryToken !== pending.directoryToken
+              ) {
+                error(409, "目录选择已失效，请重新发起。");
+              }
+            }
+          }
           pending.finish(input.allowed);
           json(response, 200, { accepted: true, allowed: pending.result });
         } else if (request.method === "POST" && match[2] === "tool-results") {

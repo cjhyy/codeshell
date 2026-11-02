@@ -186,7 +186,10 @@ describe("architecture growth budgets", () => {
         ) +
         // Exactly two Native batch routes: bounded options and manual approval.
         // Main alone issues the private Run nonce; extraction cannot hide IPC growth.
-        matches("packages/desktop/src/main/operation-batch-ipc.ts", /handle\("operationBatch:/g),
+        matches("packages/desktop/src/main/operation-batch-ipc.ts", /handle\("operationBatch:/g) +
+        // Mimi's single presence owner: get/set/preview/retry plus the two legacy
+        // pet:widget-visible(-get) routes moved here from index.ts.
+        matches("packages/desktop/src/main/pet/mimi-presence-ipc.ts", /ipcMain\.handle\(/g),
       // +1 read-only, bounded Session output-journal page route. Its file/owner
       // validation and recovery algorithm stay in Core and the extracted adapters.
       // +2 metadata-only Profile preview and revision-checked adoption routes.
@@ -211,10 +214,13 @@ describe("architecture growth budgets", () => {
       // +2 Main-frame-only history recovery plan/apply routes; caller and paths remain Host-owned.
       // Measured after merging main (2026-10-29): main counts 368, this branch adds 3.
       // +1 panel-apps:bindingsForProjects batches binding reads so each package is verified once.
+      // +4 main-frame-owned Mimi presence routes (get/set/preview/retry). The two
+      // legacy widget-visibility routes moved, not added; every Mimi entry now goes
+      // through one owner, so docked and moving can never be shown together.
       // +1 explicit account resume; construction/status remain side-effect free.
       // +8 main-frame-owned computer operations: list/projects/connect/resume/send/stop/approve/close.
       // Main retains credentials and pins every operation to its owner/Host/project/Session.
-    ).toBeLessThanOrEqual(381);
+    ).toBeLessThanOrEqual(385);
     expect(matches("packages/desktop/src/main/account-device-ipc.ts", /^    [a-z]+: \(/gm)).toBe(8);
     expect(
       matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g),

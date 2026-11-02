@@ -700,6 +700,36 @@ test("I-1 delayed group death counts one unexpected exit and preserves its backo
   });
 });
 
+test("unknown group observations defer recovery until a later tick proves death", async () => {
+  let observation: "unknown" | "dead" = "unknown";
+  const f = await fixture({ groupStatus: () => observation });
+  await f.start();
+  expect(await f.service.get(f.scope)).toMatchObject({ phase: "running", generation: 1 });
+  f.processes[0].exit();
+  await f.service.get(f.scope);
+  f.clock(105_000); // The ordinary failure backoff has elapsed; custody still blocks recovery.
+  for (let n = 0; n < 3; n++) {
+    await f.service.tick();
+    expect(await f.service.get(f.scope)).toMatchObject({
+      phase: "stop-unconfirmed",
+      desired: "always",
+      generation: 1,
+      restarts: 1,
+    });
+    expect(f.processes).toHaveLength(1);
+    expect(f.processes.filter((process) => process.running)).toHaveLength(0);
+  }
+  observation = "dead";
+  await f.service.tick();
+  expect(await f.service.get(f.scope)).toMatchObject({ phase: "running", generation: 2 });
+  expect(f.processes).toHaveLength(2);
+  expect(f.processes[0].running).toBe(false);
+  expect(f.processes.filter((process) => process.running)).toHaveLength(1);
+  await f.service.tick();
+  expect((await f.service.get(f.scope)).generation).toBe(2);
+  expect(f.processes).toHaveLength(2);
+});
+
 test("I-2 queued ready and publication cannot replace the first failed durable stop", async () => {
   let armed = false;
   const publishEntered = barrier(),

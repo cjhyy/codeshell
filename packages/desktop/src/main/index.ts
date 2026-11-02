@@ -138,7 +138,13 @@ import {
 import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { getCuaDriverHost } from "./computer-use/service.js";
-import { initializeDesktopComputerUse, closeComputerUse } from "./computer-use/desktop-setup.js";
+import {
+  initializeDesktopComputerUse,
+  closeComputerUse,
+  getComputerUseInputControl,
+  getMimiCompanion,
+  mimiMovingUnavailableReason,
+} from "./computer-use/desktop-setup.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
 import { startMobileExternalRuntime } from "./mobile-remote/start-external-runtime.js";
@@ -558,17 +564,26 @@ import { registerProjectAuthorityIpc } from "./project-authority-ipc.js";
 import { reviewService } from "./review-service.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
 import {
-  PET_WIDGET_WINDOW_SIZE,
-  clampPetWidgetWindowPosition,
-  defaultPetWidgetWindowPosition,
-  loadPetWidgetWindowPosition,
-  petWidgetAlwaysOnTopLevel,
-  petWidgetSurface,
-  sanitizePetWidgetWindowPosition,
-  savePetWidgetWindowPosition,
+  petWidgetWindowStatePath,
   shouldSkipPetWidgetTaskbar,
-  type PetWidgetSurfaceMode,
 } from "./pet/pet-widget-window-state.js";
+import { createPetWidgetSurface, type PetWidgetSurface } from "./pet/pet-widget-surface.js";
+import { createMimiBubbleHost, type MimiBubbleHost } from "./pet/mimi-bubble-host.js";
+import { MimiPresenceController } from "./pet/mimi-presence-controller.js";
+import {
+  createMimiPresenceWriter,
+  defaultMimiPresenceState,
+  loadMimiPresenceState,
+  MIMI_PRESENCE_FILE,
+  type MimiPresenceLoadResult,
+} from "./pet/mimi-presence-state.js";
+import {
+  effectiveMimiVisible,
+  legacyCompanionSettings,
+  registerMimiPresenceIpc,
+  type MimiPresenceOwner,
+} from "./pet/mimi-presence-ipc.js";
+import type { MimiPresenceSnapshot } from "../shared/mimi-presence.js";
 import {
   getTrust,
   getTrustCachedSync,
@@ -647,11 +662,40 @@ function sendToOwnerWindow(webContentsId: number | undefined, channel: string, p
     .find((window) => !window.isDestroyed() && window.webContents.id === webContentsId)
     ?.webContents.send(channel, payload);
 }
-let petWidgetWindow: BrowserWindow | null = null;
-let petWidgetWindowCreation: Promise<BrowserWindow> | null = null;
-let petWidgetShouldBeVisible = false;
-let petWidgetSurfaceMode: PetWidgetSurfaceMode = "collapsed";
-let petWidgetPositionSaveTimer: ReturnType<typeof setTimeout> | null = null;
+/** Docked Mimi (the pet widget). Created once the app is ready. */
+let petWidgetSurface: PetWidgetSurface | null = null;
+/** Moving Mimi's chat and work list: the docked widget's panels, opened beside her. */
+let mimiBubble: MimiBubbleHost | null = null;
+/** The single owner of Mimi's desktop presence (docked/moving, never both). */
+let mimiPresence: MimiPresenceController | null = null;
+let resolveMimiPresence: ((controller: MimiPresenceController) => void) | null = null;
+const mimiPresenceReady = new Promise<MimiPresenceController>((resolveReady) => {
+  resolveMimiPresence = resolveReady;
+});
+const initialMimiPresenceSnapshot: MimiPresenceSnapshot = {
+  visible: false,
+  mode: "docked",
+  size: defaultMimiPresenceState().size,
+  effectiveMode: "docked",
+  shown: null,
+  movingAvailable: false,
+  movingUnavailableReason: "正在初始化",
+  previewing: false,
+};
+/** Requests made before startup finishes wait for the owner instead of failing. */
+const mimiPresenceOwner: MimiPresenceOwner = {
+  snapshot: () => mimiPresence?.snapshot() ?? initialMimiPresenceSnapshot,
+  set: async (patch) => (await mimiPresenceReady).set(patch),
+  preview: async () => (await mimiPresenceReady).preview(),
+  retry: async () => (await mimiPresenceReady).retry(),
+};
+const petWidgetWindow = (): BrowserWindow | null =>
+  (petWidgetSurface?.window() as BrowserWindow | null | undefined) ?? null;
+/** Mimi windows besides the main ones that render pet chat and history. */
+const petSurfaceWindows = (): BrowserWindow[] =>
+  [petWidgetWindow(), mimiBubble?.surface.window() as BrowserWindow | null | undefined].filter(
+    (win): win is BrowserWindow => !!win,
+  );
 let markPetIpcReady: (() => void) | null = null;
 const petIpcReady = new Promise<void>((resolveReady) => {
   markPetIpcReady = resolveReady;
@@ -2884,83 +2928,20 @@ async function runPetAutoArchive(aggregator: PetStateAggregator): Promise<void> 
   await aggregator.refreshCatalog(true, { full: true });
 }
 
-function petWindowOriginForAnchor(
-  anchor: { x: number; y: number },
-  mode: PetWidgetSurfaceMode,
-): { x: number; y: number } {
-  const surface = petWidgetSurface(mode);
-  return {
-    x: anchor.x - (surface.width - PET_WIDGET_WINDOW_SIZE),
-    y: anchor.y - (surface.height - PET_WIDGET_WINDOW_SIZE),
-  };
-}
-
-function petAnchorForWindowOrigin(
-  origin: { x: number; y: number },
-  mode: PetWidgetSurfaceMode,
-): { x: number; y: number } {
-  const surface = petWidgetSurface(mode);
-  return {
-    x: origin.x + (surface.width - PET_WIDGET_WINDOW_SIZE),
-    y: origin.y + (surface.height - PET_WIDGET_WINDOW_SIZE),
-  };
-}
-
-function currentPetAnchor(win: BrowserWindow): { x: number; y: number } {
-  const { x, y } = win.getBounds();
-  return petAnchorForWindowOrigin({ x, y }, petWidgetSurfaceMode);
-}
-
-function clampPetPositionToDisplay(
-  position: { x: number; y: number },
-  mode = petWidgetSurfaceMode,
-): { x: number; y: number } {
-  const display = screen.getDisplayNearestPoint({
-    x: position.x + Math.round(PET_WIDGET_WINDOW_SIZE / 2),
-    y: position.y + Math.round(PET_WIDGET_WINDOW_SIZE / 2),
-  });
-  return clampPetWidgetWindowPosition(position, display.workArea, petWidgetSurface(mode));
-}
-
-function persistPetWidgetPosition(win: BrowserWindow): void {
-  if (win.isDestroyed()) return;
-  void savePetWidgetWindowPosition(currentPetAnchor(win));
-}
-
-function schedulePetWidgetPositionSave(win: BrowserWindow): void {
-  if (petWidgetPositionSaveTimer) clearTimeout(petWidgetPositionSaveTimer);
-  petWidgetPositionSaveTimer = setTimeout(() => {
-    petWidgetPositionSaveTimer = null;
-    persistPetWidgetPosition(win);
-  }, 250);
-}
-
-function elevatePetWidgetWindow(win: BrowserWindow): void {
-  if (win.isDestroyed()) return;
-  win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(process.platform));
-  try {
-    // Refresh the z-order without stealing focus when the active application
-    // or Space changes. Wayland may not implement this operation.
-    win.moveTop();
-  } catch {
-    // The always-on-top level still applies when moveTop is unavailable.
-  }
-}
-
-async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
-  if (petWidgetWindow && !petWidgetWindow.isDestroyed()) return petWidgetWindow;
-
-  const savedPosition = await loadPetWidgetWindowPosition();
-  const primaryWorkArea = screen.getPrimaryDisplay().workArea;
-  const anchor = savedPosition
-    ? clampPetPositionToDisplay(savedPosition, "collapsed")
-    : defaultPetWidgetWindowPosition(primaryWorkArea);
-  const position = petWindowOriginForAnchor(anchor, "collapsed");
+/** Build the hidden docked-widget window; the surface decides when it shows. */
+function createPetWidgetBrowserWindow(bounds: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}): BrowserWindow {
   const win = new BrowserWindow({
-    width: PET_WIDGET_WINDOW_SIZE,
-    height: PET_WIDGET_WINDOW_SIZE,
-    x: position.x,
-    y: position.y,
+    ...bounds,
+    // An ordinary NSWindow of a regular app is not drawn over another app's
+    // fullscreen Space, so the docked pet vanished on any display showing one
+    // (multi-display acceptance 2026-11-02). A panel joins those Spaces, like
+    // the moving form; its inline chat still takes keyboard focus on click.
+    ...(process.platform === "darwin" ? { type: "panel" as const } : {}),
     show: false,
     frame: false,
     transparent: true,
@@ -2985,8 +2966,6 @@ async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
       backgroundThrottling: false,
     },
   });
-  petWidgetSurfaceMode = "collapsed";
-  petWidgetWindow = win;
   // Register the widget window with the agent bridge so it receives live
   // agent:msg / agent:streamEvent broadcasts. Without this the widget's chat
   // only updates on a fresh transcript hydrate (opening the panel or a restart)
@@ -2998,12 +2977,15 @@ async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
     win.setHiddenInMissionControl(true);
   }
   try {
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    // The panel needs no process-type round trip (UIElement and back) to join
+    // fullscreen Spaces; skipping it also keeps the Dock icon from flickering.
+    win.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true,
+      skipTransformProcessType: true,
+    });
   } catch {
     // Some Linux window managers do not implement workspace pinning.
   }
-  elevatePetWidgetWindow(win);
-
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   win.webContents.on("will-navigate", (event) => event.preventDefault());
   win.webContents.on("did-fail-load", (_event, code, desc, validatedUrl) => {
@@ -3012,88 +2994,106 @@ async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
   win.webContents.on("console-message", (_event, level, message, line, sourceId) => {
     if (level >= 2) dlog("main", "pet-widget.console", { level, message, line, sourceId });
   });
-  win.webContents.once("did-finish-load", () => {
-    if (win.isDestroyed()) return;
-    win.showInactive();
-    elevatePetWidgetWindow(win);
-  });
-  // A crashed renderer leaves a blank, unresponsive widget that the visibility
-  // checks still treat as "open" (window not destroyed), so toggling can't
-  // recover it. Tear it down so the next open creates a fresh one.
-  win.webContents.on("render-process-gone", (_event, details) => {
-    dlog("main", "pet-widget.render-process-gone", { reason: details.reason });
-    if (!win.isDestroyed()) win.destroy();
-  });
-
-  win.on("move", () => schedulePetWidgetPositionSave(win));
-  win.on("show", () => elevatePetWidgetWindow(win));
-  win.on("blur", () => elevatePetWidgetWindow(win));
-  win.on("always-on-top-changed", (_event, isAlwaysOnTop) => {
-    if (isAlwaysOnTop || !petWidgetShouldBeVisible) return;
-    setImmediate(() => elevatePetWidgetWindow(win));
-  });
-  win.on("close", () => persistPetWidgetPosition(win));
-  win.on("closed", () => {
-    if (petWidgetPositionSaveTimer) {
-      clearTimeout(petWidgetPositionSaveTimer);
-      petWidgetPositionSaveTimer = null;
-    }
-    if (petWidgetWindow === win) petWidgetWindow = null;
-    petWidgetSurfaceMode = "collapsed";
-  });
-
-  try {
-    const devUrl = process.env.VITE_DEV_URL;
-    if (devUrl) {
-      const url = new URL(devUrl);
-      url.searchParams.set("popout", "pet");
-      await win.loadURL(url.toString());
-    } else {
-      await win.loadFile(resolve(__dirname, "..", "renderer", "index.html"), {
-        query: { popout: "pet" },
-      });
-    }
-  } catch (error) {
-    // A failed load must not leave a blank window cached as petWidgetWindow —
-    // every later create/visibility check would return this dead window. Tear
-    // it down (the closed handler clears petWidgetWindow) and propagate so the
-    // caller can retry with a fresh window.
-    dlog("main", "pet-widget.load.failed", { error: String(error) });
-    if (!win.isDestroyed()) win.destroy();
-    throw error;
-  }
   return win;
 }
 
-function createPetWidgetWindow(): Promise<BrowserWindow> {
-  if (petWidgetWindow && !petWidgetWindow.isDestroyed()) return Promise.resolve(petWidgetWindow);
-  if (petWidgetWindowCreation) return petWidgetWindowCreation;
-  const creation = createPetWidgetWindowNow();
-  petWidgetWindowCreation = creation;
-  const clearCreation = (): void => {
-    if (petWidgetWindowCreation === creation) petWidgetWindowCreation = null;
+async function loadPetWidgetBrowserWindow(win: BrowserWindow, role?: "bubble"): Promise<void> {
+  const query: Record<string, string> = { popout: "pet", ...(role ? { role } : {}) };
+  const devUrl = process.env.VITE_DEV_URL;
+  if (devUrl) {
+    const url = new URL(devUrl);
+    for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
+    await win.loadURL(url.toString());
+  } else {
+    await win.loadFile(resolve(__dirname, "..", "renderer", "index.html"), { query });
+  }
+}
+
+function broadcastMimiPresence(snapshot: MimiPresenceSnapshot): void {
+  mimiBubble?.sync(snapshot);
+  const visible = effectiveMimiVisible(snapshot);
+  for (const win of mainWindows) {
+    if (win.isDestroyed()) continue;
+    win.webContents.send("mimi:presence-changed", snapshot);
+    win.webContents.send("pet:widget-visibility-changed", visible);
+  }
+}
+
+/**
+ * Load (or migrate) the unified presence file and create its owner. Neither
+ * form is shown until `startMimiPresence` runs after computer use is composed.
+ */
+async function createMimiPresence(): Promise<MimiPresenceController> {
+  const paths = {
+    statePath: join(codeShellHome(), "desktop", MIMI_PRESENCE_FILE),
+    legacyCompanionPath: join(app.getPath("userData"), "mimi-companion.json"),
+    legacyWidgetPath: petWidgetWindowStatePath(),
   };
-  creation.then(clearCreation, clearCreation);
-  return creation;
+  const loaded: MimiPresenceLoadResult = await loadMimiPresenceState(paths).catch((error) => {
+    dlog("main", "mimi-presence.load.failed", { error: String(error) });
+    return { state: defaultMimiPresenceState(), source: "default" as const };
+  });
+  if (loaded.quarantined) dlog("main", "mimi-presence.quarantined", { copy: loaded.quarantined });
+  const write = createMimiPresenceWriter(paths.statePath);
+  const surface = createPetWidgetSurface({
+    platform: process.platform,
+    screen: {
+      getDisplayNearestPoint: (point) => screen.getDisplayNearestPoint(point),
+      getPrimaryDisplay: () => screen.getPrimaryDisplay(),
+      on: (event, listener) => screen.on(event as "display-removed", listener),
+      removeListener: (event, listener) =>
+        screen.removeListener(event as "display-removed", listener),
+    },
+    ready: () => petIpcReady,
+    createWindow: createPetWidgetBrowserWindow,
+    load: (win) => loadPetWidgetBrowserWindow(win as BrowserWindow),
+    loadAnchor: () => mimiPresence?.anchor("docked"),
+    saveAnchor: (anchor) => mimiPresence?.rememberAnchor("docked", anchor),
+    onFailure: (error) => mimiPresence?.surfaceFailed("docked", error),
+    log: (event, data) => dlog("main", event, data),
+  });
+  petWidgetSurface = surface;
+  mimiBubble = createMimiBubbleHost({
+    platform: process.platform,
+    screen,
+    ipcMain,
+    ready: () => petIpcReady,
+    createWindow: createPetWidgetBrowserWindow,
+    load: (win) => loadPetWidgetBrowserWindow(win as BrowserWindow, "bubble"),
+    companion: getMimiCompanion,
+    openOverview: openPetOverviewFromWidget,
+    log: (event, data) => dlog("main", event, data),
+  });
+  const controller = new MimiPresenceController({
+    initial: loaded.state,
+    docked: surface,
+    save: write,
+    onChange: broadcastMimiPresence,
+    log: (event, data) => dlog("main", event, data),
+  });
+  mimiPresence = controller;
+  // One-time migration: write the new file; legacy files stay untouched for rollback.
+  if (loaded.source === "migrated") {
+    dlog("main", "mimi-presence.migrated", {
+      visible: loaded.state.visible,
+      mode: loaded.state.mode,
+      size: loaded.state.size,
+    });
+    void write(loaded.state).catch(() => {});
+  }
+  resolveMimiPresence?.(controller);
+  resolveMimiPresence = null;
+  return controller;
 }
 
-function setPetWidgetSurfaceMode(mode: PetWidgetSurfaceMode): void {
-  const win = petWidgetWindow;
-  if (!win || win.isDestroyed() || petWidgetSurfaceMode === mode) return;
-  const anchor = currentPetAnchor(win);
-  const nextAnchor = clampPetPositionToDisplay(anchor, mode);
-  const origin = petWindowOriginForAnchor(nextAnchor, mode);
-  const surface = petWidgetSurface(mode);
-  petWidgetSurfaceMode = mode;
-  win.setBounds({ ...origin, ...surface }, true);
-  elevatePetWidgetWindow(win);
-}
-
-function destroyPetWidgetWindow(): void {
-  const win = petWidgetWindow;
-  if (!win || win.isDestroyed()) return;
-  persistPetWidgetPosition(win);
-  win.destroy();
+/** Present only after pet IPC and computer use are both composed: no startup flash. */
+function startMimiPresence(controller: MimiPresenceController): void {
+  void petIpcReady.then(() =>
+    controller.start({
+      surface: getMimiCompanion(),
+      unavailableReason: mimiMovingUnavailableReason(),
+    }),
+  );
 }
 
 function preferredMainWindow(): BrowserWindow | null {
@@ -3497,20 +3497,40 @@ app.whenReady().then(async () => {
   await chromeExtensionRuntimeService.start().catch((error) => {
     dlog("browser", "chrome_extension_bridge_start_failed", { error: String(error) });
   });
+  // One owner for Mimi's desktop presence; nothing is shown until it starts.
+  const presence = await createMimiPresence();
   // Register the opt-in host before the first worker receives its MCP environment.
-  await initializeDesktopComputerUse({
-    app,
-    openCompanionChat: (request) => openPetOverviewFromWidget(request),
-    ipcMain,
-    openExternal: (url) => shell.openExternal(url),
-    isMainWindow: (sender) =>
-      [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
-    cwd: resolveNoRepoCwd,
-    platform: process.platform,
-    resourcesPath: process.resourcesPath,
-    env: process.env,
-    log: (event, data) => dlog("computer-use", event, data),
-  });
+  try {
+    await initializeDesktopComputerUse({
+      app,
+      openCompanionChat: async (request, near) => mimiBubble?.open("chat", near, request?.prompt),
+      openCompanionActivity: async (near) => mimiBubble?.open("activity", near),
+      ipcMain,
+      openExternal: (url) => shell.openExternal(url),
+      isMainWindow: isMainWindowSender,
+      // The docked inline chat is a Mimi chat too: it may hold foreground input.
+      isCompanionChatSurface: (sender) =>
+        isMainWindowSender(sender) ||
+        Boolean(petWidgetSurface?.owns(sender.id) || mimiBubble?.surface.owns(sender.id)),
+      companionPresence: {
+        initial: { size: presence.persisted().size, anchor: presence.anchor("moving") },
+        onAnchorChange: (anchor) => presence.rememberAnchor("moving", anchor),
+        onFailure: (error) => presence.surfaceFailed("moving", error),
+        onPreviewEnd: () => presence.previewEnded(),
+        onCaptureChange: (capturing) => presence.setCaptureActive(capturing),
+        request: (action) =>
+          void presence.set(action === "dock" ? { mode: "docked" } : { visible: false }),
+      },
+      companionSettings: legacyCompanionSettings(mimiPresenceOwner),
+      cwd: resolveNoRepoCwd,
+      platform: process.platform,
+      resourcesPath: process.resourcesPath,
+      env: process.env,
+      log: (event, data) => dlog("computer-use", event, data),
+    });
+  } finally {
+    startMimiPresence(presence);
+  }
   chromeNativeRegistration = await installChromeNativeMessagingHost({
     executablePath: process.execPath,
     appPath: app.getAppPath(),
@@ -5905,68 +5925,84 @@ ipcMain.handle("window:isFullscreen", async (e): Promise<boolean> => {
 
 registerWindowTitleBarIpc({ ipcMain, platform: process.platform, windows: () => mainWindows });
 
-ipcMain.handle("pet:widget-visible-get", () => {
-  return petWidgetShouldBeVisible && Boolean(petWidgetWindow && !petWidgetWindow.isDestroyed());
-});
-
-function broadcastPetWidgetVisibility(visible: boolean): void {
-  for (const win of mainWindows) {
-    if (!win.isDestroyed()) win.webContents.send("pet:widget-visibility-changed", visible);
-  }
+function isMainWindowSender(sender: Electron.WebContents): boolean {
+  return [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender);
 }
 
-async function setPetWidgetVisibility(visible: boolean): Promise<void> {
-  petWidgetShouldBeVisible = visible;
-  if (visible) {
-    await petIpcReady;
-    await createPetWidgetWindow();
-    if (!petWidgetShouldBeVisible) destroyPetWidgetWindow();
-  } else destroyPetWidgetWindow();
-  const effectiveVisible =
-    petWidgetShouldBeVisible && Boolean(petWidgetWindow && !petWidgetWindow.isDestroyed());
-  broadcastPetWidgetVisibility(effectiveVisible);
-}
-
-ipcMain.handle("pet:widget-visible", async (_event, visible: unknown) => {
-  if (typeof visible !== "boolean") throw new Error("pet:widget-visible requires boolean");
-  await setPetWidgetVisibility(visible);
-  return { ok: true as const };
+// Every Mimi entry — account menu, Mimi settings, legacy widget/companion IPC
+// and both surfaces' menus — goes through the one presence owner.
+registerMimiPresenceIpc({
+  ipcMain,
+  owner: mimiPresenceOwner,
+  isMainWindow: isMainWindowSender,
+  isDockedSurface: (sender) => Boolean(petWidgetSurface?.owns(sender.id)),
 });
 
 ipcMain.on("pet:widget-context-menu", (event) => {
-  const win = petWidgetWindow;
+  const win = petWidgetWindow();
   if (!win || win.isDestroyed() || event.sender !== win.webContents) return;
   const chinese = app.getLocale().toLowerCase().startsWith("zh");
-  const menu = Menu.buildFromTemplate([
+  const presence = mimiPresenceOwner.snapshot();
+  const input = getComputerUseInputControl();
+  const inputStatus = input?.status();
+  const template: Electron.MenuItemConstructorOptions[] = [
     {
       label: chinese ? "打开 Mimi" : "Open Mimi",
       click: () => void openPetOverviewFromWidget(),
     },
+    {
+      label: presence.movingAvailable
+        ? chinese
+          ? "切换到移动模式"
+          : "Switch to moving mode"
+        : chinese
+          ? `移动模式不可用：${presence.movingUnavailableReason ?? ""}`
+          : "Moving mode unavailable",
+      enabled: presence.movingAvailable,
+      click: () => void mimiPresenceOwner.set({ mode: "moving" }),
+    },
+  ];
+  // Docked keeps the stop/resume entry the moving character offers. These are
+  // requests to the execution gate; switching forms never changes the gate.
+  if (input && inputStatus) {
+    const resume = inputStatus.stopped || inputStatus.foregroundHeld;
+    template.push({
+      label: resume
+        ? chinese
+          ? "继续电脑操作"
+          : "Resume computer use"
+        : chinese
+          ? "停止电脑操作（⌘⇧Esc）"
+          : "Stop computer use (⌘⇧Esc)",
+      click: () => {
+        if (resume) input.resume();
+        else input.stop();
+        dlog("computer-use", resume ? "computer_input_resumed" : "computer_input_stopped", {
+          source: "docked-mimi",
+        });
+      },
+    });
+  }
+  template.push(
     { type: "separator" },
     {
-      label: chinese ? "关闭宠物" : "Close Pet",
-      click: () => void setPetWidgetVisibility(false),
+      label: chinese ? "关闭 Mimi" : "Close Mimi",
+      click: () => void mimiPresenceOwner.set({ visible: false }),
     },
-  ]);
-  menu.popup({ window: win });
+  );
+  Menu.buildFromTemplate(template).popup({ window: win });
 });
 
 ipcMain.on("pet:widget-move", (event, rawPosition: unknown) => {
-  const win = petWidgetWindow;
-  if (!win || win.isDestroyed() || event.sender !== win.webContents) return;
-  const position = sanitizePetWidgetWindowPosition(rawPosition);
-  if (!position) return;
-  const requestedAnchor = petAnchorForWindowOrigin(position, petWidgetSurfaceMode);
-  const nextAnchor = clampPetPositionToDisplay(requestedAnchor);
-  const nextOrigin = petWindowOriginForAnchor(nextAnchor, petWidgetSurfaceMode);
-  win.setPosition(nextOrigin.x, nextOrigin.y, false);
+  if (!petWidgetSurface?.owns(event.sender.id)) return;
+  petWidgetSurface.moveTo(rawPosition);
 });
 
 ipcMain.handle("pet:widget-expanded", (event, expanded: unknown) => {
   if (typeof expanded !== "boolean") throw new Error("pet:widget-expanded requires boolean");
-  if (petWidgetWindow && event.sender === petWidgetWindow.webContents) {
-    setPetWidgetSurfaceMode(expanded ? "expanded" : "collapsed");
-  }
+  if (petWidgetSurface?.owns(event.sender.id)) {
+    petWidgetSurface.setSurfaceMode(expanded ? "expanded" : "collapsed");
+  } else if (mimiBubble?.surface.owns(event.sender.id)) mimiBubble.surface.setExpanded(expanded);
   return { ok: true as const };
 });
 
@@ -5974,8 +6010,10 @@ ipcMain.handle("pet:widget-surface", (event, mode: unknown) => {
   if (mode !== "collapsed" && mode !== "expanded") {
     throw new Error("pet:widget-surface requires collapsed or expanded");
   }
-  if (petWidgetWindow && event.sender === petWidgetWindow.webContents) {
-    setPetWidgetSurfaceMode(mode);
+  if (petWidgetSurface?.owns(event.sender.id)) {
+    petWidgetSurface.setSurfaceMode(mode);
+  } else if (mimiBubble?.surface.owns(event.sender.id)) {
+    mimiBubble.surface.setExpanded(mode === "expanded");
   }
   return { ok: true as const };
 });
@@ -6934,7 +6972,9 @@ ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: numbe
 registerDesktopOutputHistoryHost({
   ipcMain,
   windows: () => [...mainWindows],
-  historyWindows: () => [...mainWindows, ...(petWidgetWindow ? [petWidgetWindow] : [])],
+  historyWindows: () => {
+    return [...mainWindows, ...petSurfaceWindows()];
+  },
   bridge: () => bridge,
   external: () => externalRuntimeService,
   mobile: mobileOrchestrator,
@@ -6942,7 +6982,9 @@ registerDesktopOutputHistoryHost({
 const sessionCatalogStore = new SessionCatalogStore();
 const sessionCatalogIpc = registerSessionCatalogIpc(
   ipcMain,
-  () => [...mainWindows, ...(petWidgetWindow ? [petWidgetWindow] : [])],
+  () => {
+    return [...mainWindows, ...petSurfaceWindows()];
+  },
   sessionCatalogStore,
 );
 function taskInboxEnabled(): boolean {
@@ -7259,7 +7301,12 @@ app.on(
       // The embedded Cua daemon is a direct child; stop it explicitly rather
       // than relying on the parent-liveness pipe.
       const cuaDriverShutdown = getCuaDriverHost()?.stop();
+      // Withdraw both Mimi forms and persist presence before closing the character host.
+      const mimiPresenceShutdown = mimiPresence?.dispose();
+      petWidgetSurface?.dispose();
+      mimiBubble?.surface.dispose();
       await Promise.allSettled([
+        mimiPresenceShutdown,
         imGatewayService.dispose(),
         mobileRemoteController.dispose(),
         cloudManagementManager.dispose(),

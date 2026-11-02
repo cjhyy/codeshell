@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-desktop",
-  "version": "0.9.51",
+  "version": "0.9.52",
   "private": true,
   "license": "MIT",
   "description": "Electron desktop client for CodeShell — the full desktop agent app.",
@@ -37,6 +37,10 @@
     "test:e2e:pet-runtime": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-pet-runtime.mjs",
     "test:e2e:cross-device-confirmation": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-cross-device-confirmation.mjs",
     "test:e2e:companion-chat": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-mimi-companion-chat.mjs",
+    "test:e2e:mimi-presence-restart": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-mimi-presence-restart.mjs",
+    "test:e2e:mimi-presence-native": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-mimi-presence-native.mjs",
+    "test:e2e:mimi-presence-packaged": "node ../../scripts/run-isolated-node-smoke.mjs scripts/e2e-mimi-presence-packaged.mjs",
+    "test:e2e:mimi-presence-multidisplay": "node ../../scripts/run-isolated-node-smoke.mjs --private-keyring scripts/e2e-mimi-presence-multidisplay.mjs",
     "test:e2e:search": "node scripts/e2e-search.mjs",
     "test:e2e:navigation": "node scripts/e2e-navigation.mjs",
     "test:e2e:workspace-pages": "node scripts/e2e-workspace-pages.mjs",

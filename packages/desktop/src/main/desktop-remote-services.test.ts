@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createDesktopRemoteServices } from "./desktop-remote-services.js";
 
-test("remote composition registers owner-scoped IPC without starting cloud or local transports", () => {
+test("remote composition registers owner-scoped IPC without starting cloud or local transports", async () => {
   const root = mkdtempSync(join(tmpdir(), "desktop-remote-composition-"));
   const handlers = new Map<string, (...args: any[]) => any>();
   let starts = 0;
@@ -50,19 +50,31 @@ test("remote composition registers owner-scoped IPC without starting cloud or lo
         throw new Error("unexpected legacy Cloud window");
       },
     });
-    expect(handlers.size).toBe(17);
+    // 17 account/relay/cloud routes, plus explicit account resume and the eight
+    // main-frame-owned account computer operations.
+    expect(handlers.size).toBe(26);
+    expect(handlers.has("cloudAccount:resume")).toBe(true);
     expect(handlers.has("cloudAccount:capabilities")).toBe(true);
     expect(handlers.has("cloudAccount:profile")).toBe(true);
     const event = { sender, senderFrame: sender.mainFrame };
     expect(handlers.get("cloudAccount:status")!(event)).toEqual({ state: "signed-out" });
     expect(handlers.get("mobileRemote:status")!(event)).toMatchObject({ running: false });
     expect(handlers.get("mobileRemote:relayStatus")!(event)).toMatchObject({ registered: false });
-    for (const handler of handlers.values()) {
+    // Account computer operations report refusals as `{ ok: false }` values instead
+    // of throwing, so no custom Error crosses the context bridge.
+    const deviceRoutes = [...handlers].filter(([name]) => name.startsWith("accountDevice:"));
+    expect(deviceRoutes.length).toBe(8);
+    const ownerRoutes = [...handlers].filter(([name]) => !name.startsWith("accountDevice:"));
+    for (const [, handler] of ownerRoutes) {
       expect(() => handler({ ...event, senderFrame: {} }, {})).toThrow();
       expect(() => handler({ ...event, sender: { ...sender } }, {})).toThrow();
     }
+    for (const [, handler] of deviceRoutes)
+      expect(await handler({ ...event, senderFrame: {} }, {})).toMatchObject({ ok: false });
     owned = false;
-    for (const handler of handlers.values()) expect(() => handler(event, {})).toThrow();
+    for (const [, handler] of ownerRoutes) expect(() => handler(event, {})).toThrow();
+    for (const [, handler] of deviceRoutes)
+      expect(await handler(event, {})).toMatchObject({ ok: false });
     expect(starts).toBe(0);
   } finally {
     rmSync(root, { recursive: true, force: true });

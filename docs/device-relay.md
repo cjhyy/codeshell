@@ -176,6 +176,22 @@ LAN access are not cancelled. A pre-existing LAN/tunnel listener is preserved an
 reported as unavailable for automatic Relay activation until that transport is
 stopped; no automatic transport replacement is performed.
 
+## Account phone pairing
+
+Account-registered computers advertise `X-CodeShell-Relay-Features: pairing` on
+the control upgrade. The account relay may then send
+`{"type":"pair","v":1,"leaseId","requestId"}` on the control connection after
+the computer's owner signs in on a phone browser or app. Electron main answers
+`{"type":"paired",…,"token","expiresAt"}` with a fresh one-time token from the
+running Host's existing `PairingTokenManager`, or `{"type":"pair-failed",…}` when
+the local account is signed out or differs, the relay is not ready, or six
+pairings were already issued in the last minute. The relay builds the
+`<publicOrigin>/mobile?pairing=` link itself. Ticket-registered computers neither
+advertise nor accept the message; an unexpected `pair` terminates the control
+connection. The computer passcode still applies, and an already paired phone
+keeps its stored device. The phone's relay access (cookie or header) is issued by
+the account relay; see the services "客户端通行接口 v1".
+
 `bun test packages/desktop/src/main/device-relay.native.test.ts` exercises native
 Node TLS enrollment, encrypted persistence, actual Host/connector lifecycle,
 401 revocation, request bounds, no redirects and cancellation during enrollment.

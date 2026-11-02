@@ -264,6 +264,7 @@ export function MimiCompanionWindow() {
     window.mimiCompanion.ready({ error: message });
   }, []);
   const openChat = () => {
+    setError(null);
     hoverNeedsRefresh.current = true;
     void window.mimiCompanion.openChat().then(
       () => {
@@ -305,6 +306,12 @@ export function MimiCompanionWindow() {
   const position = dragPosition ?? state.position;
   // While the human is typing or pointing elsewhere, step back and go quiet.
   const yielding = Boolean(state.control?.userActive) && !humanActive;
+  // The docked widget's work badge, carried over her head: what needs the
+  // human first, then finished work not yet seen, else a quiet "busy" dot.
+  const attention = state.attention;
+  const attentionCount = (attention?.needsAction ?? 0) + (attention?.unread ?? 0);
+  const showAttention =
+    Boolean(attention) && !state.preview && !menuOpen && !held && !state.handoff;
   const answerHandoff = (accept: boolean) => {
     void window.mimiCompanion.handoff(accept).catch(() => setError("暂时无法打开聊天"));
     if (!accept) window.mimiCompanion.interaction("leave");
@@ -467,6 +474,33 @@ export function MimiCompanionWindow() {
                 : companionActionLabel(presented))}
           </div>
         )}
+        {showAttention && attention && (
+          <button
+            type="button"
+            className="mimi-companion__badge"
+            data-attention={
+              attention.needsAction > 0
+                ? "needs-action"
+                : attention.unread > 0
+                  ? "unread"
+                  : "running"
+            }
+            aria-label={
+              attentionCount > 0
+                ? `查看 Mimi 的工作：${attentionCount} 项待看`
+                : "查看 Mimi 正在做的工作"
+            }
+            onPointerEnter={() => window.mimiCompanion.interaction("hover")}
+            onPointerLeave={() => window.mimiCompanion.interaction("leave")}
+            onClick={() => {
+              void window.mimiCompanion
+                .openActivity()
+                .catch(() => setError("暂时无法打开工作列表"));
+            }}
+          >
+            {attentionCount > 0 ? (attentionCount > 99 ? "99+" : attentionCount) : null}
+          </button>
+        )}
         {state.handoff && !menuOpen && !held && (
           <div
             className="mimi-companion__handoff"
@@ -498,6 +532,17 @@ export function MimiCompanionWindow() {
             >
               恢复跟随工作
             </button>
+            <button
+              type="button"
+              role="menuitem"
+              data-mimi-presence="dock"
+              onClick={() => {
+                window.mimiCompanion.presence("dock");
+                closeMenu();
+              }}
+            >
+              切换到停靠模式
+            </button>
             {state.control?.stopped || state.control?.foregroundHeld ? (
               <button
                 type="button"
@@ -521,6 +566,17 @@ export function MimiCompanionWindow() {
                 停止电脑操作（⌘⇧Esc）
               </button>
             )}
+            <button
+              type="button"
+              role="menuitem"
+              data-mimi-presence="close"
+              onClick={() => {
+                window.mimiCompanion.presence("close");
+                closeMenu();
+              }}
+            >
+              关闭 Mimi
+            </button>
           </div>
         )}
       </div>

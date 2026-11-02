@@ -113,7 +113,15 @@ export function PetMiniMarkdown({ text }: { text: string }) {
   );
 }
 
-export function PetDesktopWindow() {
+/**
+ * `docked`: the compact pet widget with its own chat and work list.
+ * `bubble`: the same chat and work list without the widget, opened beside
+ * moving Mimi by the main process. One Mimi, one chat.
+ */
+export type PetDesktopWindowVariant = "docked" | "bubble";
+
+export function PetDesktopWindow({ variant = "docked" }: { variant?: PetDesktopWindowVariant }) {
+  const bubble = variant === "bubble";
   const { t } = useT();
   const api = window.codeshell.pet;
   const {
@@ -228,6 +236,26 @@ export function PetDesktopWindow() {
     [longTasks, state.projection, workReceipts],
   );
 
+  // Moving Mimi shows these counts over her head instead of the widget's badge.
+  const needsActionCount = workActivity.items.filter((item) => item.kind === "needs-action").length;
+  React.useEffect(() => {
+    if (!bubble) return;
+    api.reportBubbleAttention?.({
+      running: workActivity.runningCount,
+      needsAction: needsActionCount,
+      unread: workActivity.unreadCompletedCount,
+    });
+  }, [api, bubble, needsActionCount, workActivity.runningCount, workActivity.unreadCompletedCount]);
+
+  React.useEffect(() => {
+    if (!bubble) return;
+    return api.onBubbleOpen?.((request) => {
+      setActivityListExpanded(false);
+      setPanel(request.panel);
+      if (request.prompt) setDraft(request.prompt);
+    });
+  }, [api, bubble]);
+
   const toggleChatPanel = React.useCallback((): void => {
     setPanel((current) => (current === "chat" ? null : "chat"));
   }, []);
@@ -238,6 +266,21 @@ export function PetDesktopWindow() {
   }, []);
 
   const closePanel = React.useCallback((): void => setPanel(null), []);
+
+  React.useEffect(() => {
+    if (!bubble || !panel) return;
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape" && !event.isComposing) closePanel();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [bubble, closePanel, panel]);
+
+  /** The full Mimi page takes over; the bubble beside moving Mimi steps aside. */
+  const openOverview = (target?: Parameters<typeof api.openWidgetOverview>[0]): void => {
+    void api.openWidgetOverview(target);
+    if (bubble) closePanel();
+  };
 
   React.useEffect(() => {
     void api.setWidgetSurface(panel ? "expanded" : "collapsed");
@@ -253,6 +296,17 @@ export function PetDesktopWindow() {
 
   React.useEffect(() => {
     if (panel === "chat") inputRef.current?.focus();
+  }, [panel]);
+
+  // The docked inline chat is a Mimi chat like the main Mimi page: while it is
+  // open (and focused) it shares the same foreground-input hold.
+  React.useEffect(() => {
+    if (panel !== "chat") return;
+    const report = window.codeshell?.computerUse?.setCompanionChatActive;
+    void report?.(true).catch(() => {});
+    return () => {
+      void report?.(false).catch(() => {});
+    };
   }, [panel]);
 
   React.useEffect(() => {
@@ -292,7 +346,7 @@ export function PetDesktopWindow() {
     if (activityItem) markCompletionSeen(activityItem);
     const external = activityItem ? petExternalSessionLocator(activityItem) : null;
     if (activityItem?.external && !external) return;
-    void api.openWidgetOverview({
+    openOverview({
       agentSessionId: sessionId,
       snapshotVersion: projection.version,
       generation: projection.generation,
@@ -307,7 +361,7 @@ export function PetDesktopWindow() {
   const openDelegation = (sessionId: string): void => {
     const projection = state.projection;
     if (!projection) {
-      void api.openWidgetOverview();
+      openOverview();
       return;
     }
     openSession(sessionId);
@@ -328,7 +382,7 @@ export function PetDesktopWindow() {
               <button
                 type="button"
                 className="rounded-md px-2 py-1 text-xs hover:bg-muted"
-                onClick={() => void api.openWidgetOverview()}
+                onClick={() => openOverview()}
               >
                 {t("pet.widget.openFull")}
               </button>
@@ -428,7 +482,7 @@ export function PetDesktopWindow() {
         <section
           data-pet-activity-bubbles="true"
           aria-label={t("pet.widget.activityBubbles")}
-          className="absolute bottom-[112px] right-1 flex max-h-[268px] w-[392px] flex-col gap-2 overflow-y-auto px-2 pb-2 pt-2"
+          className={`absolute ${bubble ? "left-1 top-1" : "bottom-[112px] right-1"} flex max-h-[268px] w-[392px] flex-col gap-2 overflow-y-auto px-2 pb-2 pt-2`}
         >
           {workActivity.items.length > 1 && !activityListExpanded ? (
             <div
@@ -474,17 +528,19 @@ export function PetDesktopWindow() {
         </section>
       )}
 
-      <PetWidget
-        runningCount={workActivity.runningCount}
-        activityCount={workActivity.badgeCount}
-        unreadCompletedCount={workActivity.unreadCompletedCount}
-        chatExpanded={panel === "chat"}
-        activityExpanded={panel === "activity"}
-        onToggleChat={toggleChatPanel}
-        onToggleActivity={toggleActivityPanel}
-        onOpen={() => void api.openWidgetOverview()}
-        onContextMenu={() => api.showWidgetContextMenu?.()}
-      />
+      {!bubble && (
+        <PetWidget
+          runningCount={workActivity.runningCount}
+          activityCount={workActivity.badgeCount}
+          unreadCompletedCount={workActivity.unreadCompletedCount}
+          chatExpanded={panel === "chat"}
+          activityExpanded={panel === "activity"}
+          onToggleChat={toggleChatPanel}
+          onToggleActivity={toggleActivityPanel}
+          onOpen={() => void api.openWidgetOverview()}
+          onContextMenu={() => api.showWidgetContextMenu?.()}
+        />
+      )}
     </div>
   );
 }
