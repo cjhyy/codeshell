@@ -14,6 +14,21 @@ const COMPUTER_USE_ID = "com.cjhyy.codeshell.computer-use";
 const ENTITLEMENTS = join(__dirname, "managed-node-entitlements.plist");
 const NODE_SIGN_IGNORE = /\/Contents\/Resources\/runtimes\/node\/bin\/node$/;
 
+/**
+ * A fixed, self-signed certificate for the outer app (no Developer ID): its
+ * designated requirement then names the certificate, so the login keychain and
+ * privacy grants keep trusting every release signed with it. Unset, the app
+ * stays ad-hoc exactly as before.
+ */
+function localSigningIdentity(env) {
+  const identity = env.CODESHELL_MAC_SIGNING_IDENTITY;
+  if (!identity) return undefined;
+  if (!/^[0-9A-F]{40}$/i.test(identity))
+    throw new Error("CODESHELL_MAC_SIGNING_IDENTITY must be a certificate SHA-1");
+  const keychain = env.CODESHELL_MAC_SIGNING_KEYCHAIN || undefined;
+  return { identity, keychain };
+}
+
 function builderSign(options) {
   // Resolve transitive dependencies through electron-builder, including Bun's
   // isolated dependency layout; they are not public Desktop dependencies.
@@ -33,6 +48,7 @@ function createSigningHooks(overrides = {}) {
         windowsHide: true,
       }));
   const signAsync = overrides.signAsync ?? builderSign;
+  const env = overrides.env ?? process.env;
   function computerUseCode(app) {
     const helper = join(app, "Contents/Library/CodeShell Computer Use.app");
     // Seal nested native code before the helper, then seal the containing app.
@@ -75,6 +91,8 @@ function createSigningHooks(overrides = {}) {
     await supply.verifyRuntime(runtimeDir);
   }
   async function afterPack(context) {
+    // Reject a bad identity before any bytes change.
+    const local = localSigningIdentity(env);
     const target = supply.packagingTarget(context);
     const runtimeDir = supply.packagedRuntimeDirectory(context);
     await supply.stageRuntime({
@@ -93,7 +111,15 @@ function createSigningHooks(overrides = {}) {
     await run("codesign", ["--deep", "--force", "-s", "-", app]);
     await signComputerUse(app, "-");
     await signNode(runtimeDir, "-");
-    await run("codesign", ["--force", "-s", "-", `-r=designated => identifier "${APP_ID}"`, app]);
+    if (local) {
+      // Only the outer seal: the Computer Use helper keeps its own ad-hoc
+      // requirement, so its Accessibility grant is not reset.
+      const args = ["--force", "--sign", local.identity];
+      if (local.keychain) args.push("--keychain", local.keychain);
+      await run("codesign", [...args, app]);
+    } else {
+      await run("codesign", ["--force", "-s", "-", `-r=designated => identifier "${APP_ID}"`, app]);
+    }
     await verifySignedApp(app, runtimeDir);
     await run("codesign", ["--verify", `-R=identifier "${APP_ID}"`, app]);
   }
