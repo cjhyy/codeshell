@@ -24,6 +24,13 @@ export function DeviceRelaySettings({
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [account, setAccount] = useState<CloudAccountStatus>({ state: "signed-out" });
+  const [phoneEntryQr, setPhoneEntryQr] = useState<string>();
+  // Account registrations are opened from the account's computer list; the
+  // phone signs in there, so the QR carries only the public origin.
+  const phoneEntryUrl =
+    status.registered && status.accountId && status.relayOrigin
+      ? `${status.relayOrigin.replace(/\/$/, "")}/`
+      : undefined;
   useEffect(() => {
     let active = true;
     void window.codeshell.cloudAccount.status().then((next) => {
@@ -35,6 +42,24 @@ export function DeviceRelaySettings({
       off();
     };
   }, []);
+  useEffect(() => {
+    if (!phoneEntryUrl) {
+      setPhoneEntryQr(undefined);
+      return;
+    }
+    let cancelled = false;
+    void import("qrcode")
+      .then(({ default: QRCode }) => QRCode.toDataURL(phoneEntryUrl, { width: 180, margin: 1 }))
+      .then((url) => {
+        if (!cancelled) setPhoneEntryQr(url);
+      })
+      .catch(() => {
+        if (!cancelled) setPhoneEntryQr(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [phoneEntryUrl]);
   const enrollAccount = async () => {
     if (account.state !== "signed-in" || !account.origin) return;
     setSaving(true);
@@ -113,6 +138,22 @@ export function DeviceRelaySettings({
             {status.name} · {status.relayOrigin}
           </p>
           <p className="break-all text-xs text-muted-foreground">{status.publicOrigin}</p>
+          {phoneEntryUrl ? (
+            <div className="space-y-1 py-1">
+              <p className="text-sm font-medium">{t("settingsX.adv.relayPhoneEntry")}</p>
+              {phoneEntryQr ? (
+                <img
+                  src={phoneEntryQr}
+                  alt={t("settingsX.adv.relayPhoneEntry")}
+                  className="h-[180px] w-[180px] rounded border border-border bg-white"
+                />
+              ) : null}
+              <p className="text-xs text-muted-foreground">
+                {t("settingsX.adv.relayPhoneEntryHint")}
+              </p>
+              <p className="break-all text-xs text-muted-foreground">{phoneEntryUrl}</p>
+            </div>
+          ) : null}
           <Button
             variant="outline"
             size="sm"

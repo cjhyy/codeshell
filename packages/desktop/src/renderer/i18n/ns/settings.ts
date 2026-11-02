@@ -1115,6 +1115,9 @@ export const settingsNs = {
         relayEnroll: "使用票据登记电脑",
         relayAccountEnroll: "通过当前账号登记电脑",
         relayAccountHint: "默认在登录时自动连接到 {origin}；此处手动重新登记会替换旧授权。",
+        relayPhoneEntry: "用手机打开我的电脑列表",
+        relayPhoneEntryHint:
+          "手机扫码后用同一账号登录，在列表里点“打开”即可连接这台电脑；二维码只包含账号服务地址，不含任何凭据。",
         relayState_unavailable: "设备协作暂不可用，请检查服务能力和网络后恢复连接。",
         relayState_unregistered: "尚未登记",
         relayState_stopped: "已登记，连接已停止",
@@ -2398,6 +2401,9 @@ export const settingsNs = {
         relayAccountEnroll: "Register with current account",
         relayAccountHint:
           "Register with the current account at {origin}. Registration does not start the connection.",
+        relayPhoneEntry: "Open my computers on a phone",
+        relayPhoneEntryHint:
+          "Scan with a phone, sign in with the same account, then tap Open next to this computer. The code holds only the account service address, no credentials.",
         relayState_unavailable:
           "Device collaboration is unavailable. Check service support and connection.",
         relayState_unregistered: "Not registered",
