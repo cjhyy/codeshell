@@ -22,7 +22,6 @@ import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { inflateSync } from "node:zlib";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import {
   assertOfflinePluginBootstrapHeld,
@@ -34,6 +33,8 @@ import {
 } from "./electron-harness.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import { startMockProviderServer } from "./mock-provider-server.mjs";
+import { classifyOwnedWindow } from "./mimi-multidisplay-geometry.mjs";
+import { opaquePixels } from "./mimi-window-pixels.mjs";
 
 const run = promisify(execFile);
 assert.equal(process.platform, "darwin", "Native Mimi acceptance requires macOS");
@@ -61,7 +62,7 @@ const probePath = join(isolated.home, "mimi-window-server-probe");
 const receipt = {
   schemaVersion: 1,
   boundary:
-    "WindowServer on-screen list + per-window captures of owned Mimi windows + native input inside an owned fullscreen Space. No CUA capture channel, no ⌘⇧Esc, single built-in display only.",
+    "WindowServer on-screen list + per-window captures of owned Mimi windows + native input inside an owned fullscreen Space on the primary display. Windows are classified against every attached display. No CUA capture channel, no ⌘⇧Esc. Multi-display and mixed-DPI placement: e2e-mimi-presence-multidisplay.mjs.",
   passed: false,
   checks: [],
   gaps: [],
@@ -82,61 +83,6 @@ async function until(check, label, ms = 15_000) {
   throw Error(`${label} (last: ${JSON.stringify(last)})`);
 }
 
-/** Minimal PNG (8-bit RGBA, non-interlaced) decoder → opaque pixel bbox/count. */
-function opaquePixels(png) {
-  assert.equal(png.readUInt32BE(12), 0x49484452, "PNG IHDR");
-  const width = png.readUInt32BE(16);
-  const height = png.readUInt32BE(20);
-  const depth = png[24];
-  const color = png[25];
-  assert.ok(depth === 8 && (color === 6 || color === 2), `Unsupported PNG ${depth}/${color}`);
-  const channels = color === 6 ? 4 : 3;
-  const chunks = [];
-  for (let offset = 8; offset < png.length; ) {
-    const length = png.readUInt32BE(offset);
-    const type = png.toString("ascii", offset + 4, offset + 8);
-    if (type === "IDAT") chunks.push(png.subarray(offset + 8, offset + 8 + length));
-    offset += 12 + length;
-  }
-  const data = inflateSync(Buffer.concat(chunks));
-  const stride = width * channels;
-  const pixels = Buffer.alloc(stride * height);
-  for (let y = 0; y < height; y++) {
-    const filter = data[y * (stride + 1)];
-    for (let x = 0; x < stride; x++) {
-      const raw = data[y * (stride + 1) + 1 + x];
-      const left = x >= channels ? pixels[y * stride + x - channels] : 0;
-      const up = y > 0 ? pixels[(y - 1) * stride + x] : 0;
-      const upLeft = y > 0 && x >= channels ? pixels[(y - 1) * stride + x - channels] : 0;
-      let value = raw;
-      if (filter === 1) value = raw + left;
-      else if (filter === 2) value = raw + up;
-      else if (filter === 3) value = raw + ((left + up) >> 1);
-      else if (filter === 4) {
-        const p = left + up - upLeft;
-        const pa = Math.abs(p - left);
-        const pb = Math.abs(p - up);
-        const pc = Math.abs(p - upLeft);
-        value = raw + (pa <= pb && pa <= pc ? left : pb <= pc ? up : upLeft);
-      }
-      pixels[y * stride + x] = value & 0xff;
-    }
-  }
-  let count = 0;
-  const box = { left: width, top: height, right: -1, bottom: -1 };
-  for (let y = 0; y < height; y++)
-    for (let x = 0; x < width; x++) {
-      const alpha = channels === 4 ? pixels[(y * width + x) * 4 + 3] : 255;
-      if (alpha <= 32) continue;
-      count++;
-      box.left = Math.min(box.left, x);
-      box.top = Math.min(box.top, y);
-      box.right = Math.max(box.right, x);
-      box.bottom = Math.max(box.bottom, y);
-    }
-  return { width, height, count, box: count ? box : null };
-}
-
 async function captureWindow(id, name) {
   await mkdir(evidenceDir, { recursive: true, mode: 0o700 });
   const file = join(evidenceDir, `${name}.png`);
@@ -145,21 +91,17 @@ async function captureWindow(id, name) {
 }
 
 const pid = () => app.process().pid;
-/** Owned Mimi windows on screen per WindowServer, classified by size. */
+/** Global DIP bounds of every display, as the probe's sampler expects them. */
+const displayRects = (display) =>
+  display.displays.map(({ bounds: b }) => `${b.x},${b.y},${b.width},${b.height}`).join(";");
+/**
+ * Owned Mimi windows on screen per WindowServer, classified against every
+ * attached display, so a stale moving window left on another screen is never missed.
+ */
 async function ownedMimi(display) {
   const windows = await probe("list", pid());
   return windows
-    .map((win) => ({
-      ...win,
-      form:
-        (win.width === 112 && win.height === 112) || (win.width === 400 && win.height === 380)
-          ? "docked"
-          : win.width === display.bounds.width &&
-              win.height === display.bounds.height &&
-              win.layer > 0
-            ? "moving"
-            : null,
-    }))
+    .map((win) => ({ ...win, form: classifyOwnedWindow(win, display.displays) }))
     .filter((win) => win.form);
 }
 async function shown(display, form) {
@@ -255,12 +197,11 @@ try {
     workArea: screen.getPrimaryDisplay().workArea,
   }));
   receipt.display = display;
-  if (display.displays.length < 2)
-    receipt.gaps.push(
-      "Only one display is attached: multi-display, hot-unplug and mixed-DPI not exercised",
-    );
-  else if (new Set(display.displays.map((item) => item.scaleFactor)).size < 2)
-    receipt.gaps.push("Displays share one scale factor: mixed-DPI not exercised");
+  receipt.gaps.push(
+    display.displays.length < 2
+      ? "Only one display is attached: multi-display and mixed-DPI not exercised here"
+      : "Cross-display and mixed-DPI placement are exercised by e2e-mimi-presence-multidisplay.mjs, not here",
+  );
 
   // An owned fullscreen Space: everything the pointer can reach there is ours
   // or an all-Spaces click-through overlay.
@@ -346,7 +287,7 @@ try {
   const movingPixels = await captureWindow(moving.id, "moving");
   assert.ok(movingPixels.count > 500, `Companion rendered no character: ${movingPixels.count}`);
   // The character's opaque pixels stay inside its 0.7×200 box (plus label), in device pixels.
-  const scale = movingPixels.width / display.bounds.width;
+  const scale = movingPixels.width / moving.width; // the display this window is on
   const allowed = {
     left: (state.position.x - 8) * scale,
     right: (state.position.x + state.size * 0.7 + 8) * scale,
@@ -391,7 +332,7 @@ try {
   );
 
   // 4. Rapid interleaved switching while WindowServer is sampled every 5 ms.
-  const sampling = probe("sample", pid(), 7000, 5, display.bounds.width, display.bounds.height);
+  const sampling = probe("sample", pid(), 7000, 5, displayRects(display));
   await sleep(150);
   await main.evaluate(async () => {
     const pet = window.codeshell.pet;

@@ -2924,6 +2924,11 @@ function createPetWidgetBrowserWindow(bounds: {
 }): BrowserWindow {
   const win = new BrowserWindow({
     ...bounds,
+    // An ordinary NSWindow of a regular app is not drawn over another app's
+    // fullscreen Space, so the docked pet vanished on any display showing one
+    // (multi-display acceptance 2026-11-02). A panel joins those Spaces, like
+    // the moving form; its inline chat still takes keyboard focus on click.
+    ...(process.platform === "darwin" ? { type: "panel" as const } : {}),
     show: false,
     frame: false,
     transparent: true,
@@ -2959,7 +2964,12 @@ function createPetWidgetBrowserWindow(bounds: {
     win.setHiddenInMissionControl(true);
   }
   try {
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    // The panel needs no process-type round trip (UIElement and back) to join
+    // fullscreen Spaces; skipping it also keeps the Dock icon from flickering.
+    win.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true,
+      skipTransformProcessType: true,
+    });
   } catch {
     // Some Linux window managers do not implement workspace pinning.
   }

@@ -1,7 +1,10 @@
 // WindowServer view of one process's on-screen windows (no window titles or
 // pixels are read, so Screen Recording permission is not required).
 //   list <pid>                          one JSON snapshot
-//   sample <pid> <durationMs> <everyMs> classify Mimi windows over time
+//   sample <pid> <durationMs> <everyMs> <rects>
+//                                       classify Mimi windows over time; <rects> is every
+//                                       display's global bounds "x,y,w,h;x,y,w,h;..."
+//   displays                            CoreGraphics online displays (bounds, mode, pixels)
 //   trusted                             whether this process may post input
 //   capture-access                      whether this process may capture the screen
 //   topmost <x> <y>                     owner pid of the frontmost window at a point
@@ -10,6 +13,13 @@
 //   cursor                              current pointer position
 //   stack <x> <y>                       every on-screen window at a point, front to back
 //   others <pid>                        on-screen windows of other processes (bounds only)
+//   drag <x1> <y1> <x2> <y2> <steps> <stepMs>
+//                                       native left-button drag (callers check the start point)
+//   front <seconds>                     an owned foreground helper app (one small window) that
+//                                       holds activation, so stray keys reach it, not another app
+//   frontmost                           pid of the active application
+//   type <text>                         native key events carrying <text> (callers check the key window)
+import AppKit
 import ApplicationServices
 import CoreGraphics
 import Foundation
@@ -29,12 +39,40 @@ func windows(pid: Int32) -> [Win] {
   }
 }
 
-// Docked: 112×112 or 400×380. Moving: the whole display (passed by the caller).
-func kind(_ w: Win, displayWidth: Double, displayHeight: Double) -> String? {
+struct Rect: Codable { let x: Double; let y: Double; let width: Double; let height: Double }
+
+func parseRects(_ text: String) -> [Rect] {
+  text.split(separator: ";").compactMap { part in
+    let v = part.split(separator: ",").compactMap { Double($0) }
+    return v.count == 4 ? Rect(x: v[0], y: v[1], width: v[2], height: v[3]) : nil
+  }
+}
+
+// Docked: 112×112 or 400×380. Moving: one display's full width and height above
+// the normal layer, at that display's x and at or up to 64 pt below its top (in an
+// ordinary Space macOS keeps the panel below that display's menu bar). Every display
+// is checked (same-size screens and negative origins included); a size-only match
+// against one display would miss a moving window left on another screen.
+func kind(_ w: Win, displays: [Rect]) -> String? {
   if w.alpha <= 0 { return nil }
   if (w.width == 112 && w.height == 112) || (w.width == 400 && w.height == 380) { return "docked" }
-  if w.width == displayWidth && w.height == displayHeight && w.layer > 0 { return "moving" }
+  if w.layer > 0 && displays.contains(where: {
+    $0.x == w.x && $0.width == w.width && $0.height == w.height && w.y >= $0.y && w.y - $0.y <= 64
+  }) {
+    return "moving"
+  }
   return nil
+}
+
+/// An owned, visible, above-normal-layer window large enough to be a character
+/// surface but matching neither form: the sampler must never see one.
+func unclassifiedLarge(_ w: Win, displays: [Rect]) -> Bool {
+  w.alpha > 0 && w.layer > 0 && w.width >= 300 && w.height >= 300 && kind(w, displays: displays) == nil
+}
+
+func displayIndex(_ w: Win, displays: [Rect]) -> Int {
+  let cx = w.x + w.width / 2, cy = w.y + w.height / 2
+  return displays.firstIndex { cx >= $0.x && cy >= $0.y && cx < $0.x + $0.width && cy < $0.y + $0.height } ?? -1
 }
 
 func emit<T: Encodable>(_ value: T) {
@@ -112,20 +150,103 @@ case "list":
   emit(windows(pid: Int32(args[2])!))
 case "sample":
   let pid = Int32(args[2])!, duration = Double(args[3])! / 1000, every = UInt32(args[4])! * 1000
-  let displayWidth = Double(args[5])!, displayHeight = Double(args[6])!
-  struct Result: Codable { var samples = 0; var docked = 0; var moving = 0; var both = 0; var bothAt: [Double] = [] }
+  let displays = parseRects(args[5])
+  guard !displays.isEmpty else { exit(2) }
+  struct Result: Codable {
+    var samples = 0; var docked = 0; var moving = 0; var both = 0; var bothAt: [Double] = []
+    var multipleMoving = 0; var multipleDocked = 0; var unclassified = 0
+    /// Per display index: samples in which a docked / moving window was there.
+    var dockedOn: [Int] = []; var movingOn: [Int] = []
+    var displays: [Rect] = []
+  }
   var result = Result()
+  result.displays = displays
+  result.dockedOn = Array(repeating: 0, count: displays.count + 1)
+  result.movingOn = Array(repeating: 0, count: displays.count + 1)
   let start = Date()
   while Date().timeIntervalSince(start) < duration {
-    let kinds = Set(windows(pid: pid).compactMap { kind($0, displayWidth: displayWidth, displayHeight: displayHeight) })
+    var dockedCount = 0, movingCount = 0
+    for w in windows(pid: pid) {
+      if unclassifiedLarge(w, displays: displays) { result.unclassified += 1 }
+      guard let k = kind(w, displays: displays) else { continue }
+      let index = displayIndex(w, displays: displays)
+      let slot = index < 0 ? displays.count : index
+      if k == "docked" { dockedCount += 1; result.dockedOn[slot] += 1 } else { movingCount += 1; result.movingOn[slot] += 1 }
+    }
     result.samples += 1
-    if kinds.contains("docked") { result.docked += 1 }
-    if kinds.contains("moving") { result.moving += 1 }
-    if kinds.count > 1 { result.both += 1; result.bothAt.append(Date().timeIntervalSince(start)) }
+    if dockedCount > 0 { result.docked += 1 }
+    if movingCount > 0 { result.moving += 1 }
+    if dockedCount > 1 { result.multipleDocked += 1 }
+    if movingCount > 1 { result.multipleMoving += 1 }
+    if dockedCount + movingCount > 1 { result.both += 1; result.bothAt.append(Date().timeIntervalSince(start)) }
     usleep(every)
   }
   emit(result)
+case "front":
+  let seconds = Double(args[2])!
+  let app = NSApplication.shared
+  app.setActivationPolicy(.regular)
+  let window = NSWindow(contentRect: NSRect(x: 60, y: 60, width: 360, height: 90), styleMask: [.titled], backing: .buffered, defer: false)
+  window.title = "Mimi acceptance foreground helper (test-owned)"
+  window.makeKeyAndOrderFront(nil)
+  app.activate(ignoringOtherApps: true)
+  DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+    emit(["pid": Int(getpid()), "active": NSRunningApplication.current.isActive ? 1 : 0])
+    fflush(stdout)
+  }
+  DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { exit(0) }
+  app.run()
+case "frontmost":
+  emit(["pid": Int(NSWorkspace.shared.frontmostApplication?.processIdentifier ?? -1)])
+case "type":
+  for scalar in args[2].utf16 {
+    var unit = scalar
+    for down in [true, false] {
+      let event = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: down)!
+      event.keyboardSetUnicodeString(stringLength: 1, unicodeString: &unit)
+      event.post(tap: .cghidEventTap)
+      usleep(25_000)
+    }
+  }
+  emit(["typed": args[2].count])
+case "displays":
+  var ids = [CGDirectDisplayID](repeating: 0, count: 32)
+  var count: UInt32 = 0
+  CGGetOnlineDisplayList(32, &ids, &count)
+  struct Display: Codable {
+    let id: UInt32; let main: Bool; let builtin: Bool; let mirrored: Bool; let active: Bool; let asleep: Bool
+    let x: Double; let y: Double; let width: Double; let height: Double
+    let modeWidth: Int; let modeHeight: Int; let pixelWidth: Int; let pixelHeight: Int
+    let vendor: UInt32; let model: UInt32
+  }
+  emit(ids.prefix(Int(count)).map { id -> Display in
+    let b = CGDisplayBounds(id)
+    let mode = CGDisplayCopyDisplayMode(id)
+    return Display(id: id, main: CGDisplayIsMain(id) != 0, builtin: CGDisplayIsBuiltin(id) != 0,
+      mirrored: CGDisplayIsInMirrorSet(id) != 0, active: CGDisplayIsActive(id) != 0, asleep: CGDisplayIsAsleep(id) != 0,
+      x: b.origin.x, y: b.origin.y, width: b.size.width, height: b.size.height,
+      modeWidth: mode?.width ?? 0, modeHeight: mode?.height ?? 0,
+      pixelWidth: mode?.pixelWidth ?? 0, pixelHeight: mode?.pixelHeight ?? 0,
+      vendor: CGDisplayVendorNumber(id), model: CGDisplayModelNumber(id))
+  })
+case "drag":
+  let from = CGPoint(x: Double(args[2])!, y: Double(args[3])!)
+  let to = CGPoint(x: Double(args[4])!, y: Double(args[5])!)
+  let steps = max(1, Int(args[6])!), stepMicros = UInt32(args[7])! * 1000
+  CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: from, mouseButton: .left)!.post(tap: .cghidEventTap)
+  usleep(150_000)
+  CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: from, mouseButton: .left)!.post(tap: .cghidEventTap)
+  usleep(120_000)
+  for step in 1...steps {
+    let t = Double(step) / Double(steps)
+    let point = CGPoint(x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t)
+    CGEvent(mouseEventSource: nil, mouseType: .leftMouseDragged, mouseCursorPosition: point, mouseButton: .left)!.post(tap: .cghidEventTap)
+    usleep(stepMicros)
+  }
+  usleep(150_000)
+  CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: to, mouseButton: .left)!.post(tap: .cghidEventTap)
+  emit(["dragged": true])
 default:
-  FileHandle.standardError.write("usage: list <pid> | sample <pid> <ms> <everyMs> <displayW> <displayH> | trusted\n".data(using: .utf8)!)
+  FileHandle.standardError.write("usage: list <pid> | sample <pid> <ms> <everyMs> <x,y,w,h;...> | displays | drag ... | trusted\n".data(using: .utf8)!)
   exit(2)
 }

@@ -70,8 +70,19 @@ describe("desktop Pet window position", () => {
       "win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(options.platform))",
     );
     expect(surfaceSource).toContain("win.moveTop()");
-    expect(mainSource).toContain(
-      "win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })",
+    const factory = mainSource.slice(
+      mainSource.indexOf("function createPetWidgetBrowserWindow("),
+      mainSource.indexOf("async function loadPetWidgetBrowserWindow("),
+    );
+    // A regular NSWindow is not drawn over another app's fullscreen Space: on a
+    // display showing one, the docked pet was off screen (2026-11-02 three-display
+    // acceptance). The macOS widget is a non-activating panel like the moving form,
+    // and joins those Spaces without the process-type (Dock) round trip.
+    expect(factory).toContain(
+      '...(process.platform === "darwin" ? { type: "panel" as const } : {})',
+    );
+    expect(factory).toMatch(
+      /win\.setVisibleOnAllWorkspaces\(true, \{\s*visibleOnFullScreen: true,\s*skipTransformProcessType: true,?\s*\}\)/,
     );
     expect(mainSource).toContain("win.setHiddenInMissionControl(true)");
     expect(mainSource).toContain("backgroundThrottling: false");
