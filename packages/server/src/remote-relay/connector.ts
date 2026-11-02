@@ -8,6 +8,8 @@ import {
   parseRelayControlMessage,
   RELAY_CONNECT_PATH,
   RELAY_CONTROL_MAX_BYTES,
+  RELAY_FEATURE_PAIRING,
+  RELAY_FEATURES_HEADER,
   RELAY_MAX_STREAMS,
   RELAY_PING_INTERVAL_MS,
   RELAY_PONG_TIMEOUT_MS,
@@ -35,6 +37,11 @@ export interface DeviceRelayConnectorOptions {
   /** Additional trusted CA for private installations; TLS verification stays enabled. */
   ca?: ConnectionOptions["ca"];
   onState?: (state: DeviceRelayState) => void;
+  /**
+   * Opt-in: lets the directory mint a one-time phone pairing token for its
+   * owner. Omitted, the feature is neither advertised nor accepted.
+   */
+  issuePairing?: () => { token: string; expiresAt: number };
 }
 export interface DeviceRelayConnector {
   /** Idempotent while running. Callers must await close before restarting. */
@@ -52,6 +59,7 @@ export function createDeviceRelayConnector(
     !isRelayHostId(options.hostId) ||
     (!options.getCredential && !isRelayToken(options.credential)) ||
     (options.getCredential !== undefined && typeof options.getCredential !== "function") ||
+    (options.issuePairing !== undefined && typeof options.issuePairing !== "function") ||
     !options.localHost ||
     !Number.isInteger(options.localHost.port) ||
     options.localHost.port < 1 ||
@@ -138,7 +146,10 @@ export function createDeviceRelayConnector(
     const url = new URL(RELAY_CONNECT_PATH, config.relayOrigin);
     url.protocol = "wss:";
     const ws = new WebSocket(url, {
-      headers: { Authorization: `Bearer ${credential}` },
+      headers: {
+        Authorization: `Bearer ${credential}`,
+        ...(config.issuePairing ? { [RELAY_FEATURES_HEADER]: RELAY_FEATURE_PAIRING } : {}),
+      },
       ca: config.ca,
       followRedirects: false,
       perMessageDeflate: false,
@@ -216,6 +227,28 @@ export function createDeviceRelayConnector(
         ws.send(JSON.stringify({ type: "ready", v: 1, leaseId }));
         failures = 0;
         state("ready");
+        return;
+      }
+      if (message.type === "pair") {
+        if (!config.issuePairing || !leaseId || message.leaseId !== leaseId) return ws.terminate();
+        let reply: object = {
+          type: "pair-failed",
+          v: 1,
+          leaseId,
+          requestId: message.requestId,
+        };
+        try {
+          const issued = config.issuePairing();
+          if (
+            isRelayToken(issued?.token) &&
+            Number.isSafeInteger(issued.expiresAt) &&
+            issued.expiresAt > Date.now()
+          )
+            reply = { ...reply, type: "paired", token: issued.token, expiresAt: issued.expiresAt };
+        } catch {
+          /* Refused or unavailable: the directory reports failure to its owner. */
+        }
+        if (current() && ws.readyState === ws.OPEN) ws.send(JSON.stringify(reply));
         return;
       }
       if (

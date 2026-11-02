@@ -313,3 +313,97 @@ test("stopping during a committed device refresh preserves its rotated credentia
     await controller.dispose();
   }
 });
+
+test("account relay pairing is offered only to account registrations, follows sign-out and is rate limited", async () => {
+  const origin = "https://account.example",
+    accountId = randomUUID();
+  const make = (account: boolean) => {
+    const saved: RelayRegistration = {
+      relayOrigin: origin,
+      publicOrigin: "https://computer.devices.example",
+      hostId: randomUUID(),
+      environmentId: randomUUID(),
+      name: "Computer",
+      protocolVersion: 1,
+      credentialEpoch: 1,
+      credential: token(),
+      ...(account
+        ? { accountId, refreshToken: token(), credentialExpiresAt: Date.now() + 600_000 }
+        : {}),
+    };
+    let current: any,
+      signedIn = true,
+      now = 1_000_000,
+      pairings = 0;
+    const connectors: any[] = [];
+    const controller = new MobileRemoteController({
+      host: {
+        status: () => current,
+        start: async () => {
+          current = { mode: "relay", port: 1234 };
+          return current;
+        },
+        stop: async () => {
+          current = undefined;
+        },
+        onlineDeviceIds: () => [],
+        relayTarget: () => ({
+          port: 1234,
+          signal: new AbortController().signal,
+          setPublicBaseUrl: () => {},
+        }),
+        createPairingUrl: () => {
+          pairings++;
+          const value = token();
+          return { token: value, url: `https://x/mobile?pairing=${value}`, expiresAt: now + 1 };
+        },
+      } as any,
+      tunnel: { stop: async () => {}, isRunning: () => false, isConnected: () => false } as any,
+      binary: {} as any,
+      passcode: { isSet: () => true } as any,
+      store: { load: () => saved, save: () => {}, forget: () => {} } as any,
+      account: {
+        status: () =>
+          signedIn
+            ? { state: "signed-in", origin, account: { id: accountId, username: "alice" } }
+            : { state: "signed-out" },
+      } as any,
+      accountRequest: async () => ({}),
+      connectorFactory: (options) => {
+        connectors.push(options);
+        return {
+          start: () => queueMicrotask(() => options.onState?.("ready")),
+          close: async () => {},
+        };
+      },
+      now: () => now,
+      environmentDir: "/unused",
+      changed: () => {},
+    });
+    return {
+      controller,
+      connectors,
+      pairings: () => pairings,
+      advance: (ms: number) => (now += ms),
+      signOut: () => (signedIn = false),
+    };
+  };
+  const legacy = make(false);
+  await legacy.controller.start({ mode: "relay" });
+  expect(legacy.connectors[0].issuePairing).toBeUndefined();
+  await legacy.controller.dispose();
+
+  const owned = make(true);
+  await owned.controller.start({ mode: "relay" });
+  // start() mints the Desktop's own QR pairing once.
+  const baseline = owned.pairings();
+  const issue = owned.connectors[0].issuePairing as () => { token: string };
+  for (let i = 0; i < 6; i++) expect(issue().token).toHaveLength(43);
+  expect(() => issue()).toThrow();
+  owned.advance(60_000);
+  expect(issue().token).toHaveLength(43);
+  owned.signOut();
+  expect(() => issue()).toThrow();
+  expect(owned.pairings() - baseline).toBe(7);
+  await owned.controller.dispose();
+});

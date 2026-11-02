@@ -53,6 +53,8 @@ describe("Server package public entry contracts", () => {
       "RELAY_CONTROL_MAX_BYTES",
       "RELAY_DATA_CHUNK_BYTES",
       "RELAY_DATA_MAX_BYTES",
+      "RELAY_FEATURES_HEADER",
+      "RELAY_FEATURE_PAIRING",
       "RELAY_MAX_STREAMS",
       "RELAY_PING_INTERVAL_MS",
       "RELAY_PONG_TIMEOUT_MS",
