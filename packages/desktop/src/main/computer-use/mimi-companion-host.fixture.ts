@@ -142,6 +142,9 @@ const gate = {
   resume() {},
 };
 const captureChanges: boolean[] = [];
+type Rect = { x: number; y: number; width: number; height: number };
+const chatCalls: Array<Rect | undefined> = [];
+const activityCalls: Array<Rect | undefined> = [];
 const host = await createMimiCompanionHost({
   appPath: "/fixture-app",
   resourcesPath: "/fixture-resources",
@@ -153,7 +156,12 @@ const host = await createMimiCompanionHost({
       return false;
     },
   },
-  openChat: async () => {},
+  openChat: async (_request, near) => {
+    chatCalls.push(near);
+  },
+  openActivity: async (near) => {
+    activityCalls.push(near);
+  },
   bus,
   gate: gate as any,
   log() {},
@@ -245,7 +253,7 @@ try {
       await host.startPreview();
       assert.equal(busSubscriptions, 1);
       assert.equal(gateListeners.size, 1);
-      assert.equal(handlers.size, 4);
+      assert.equal(handlers.size, 5);
       assert.equal(ipcMain.eventNames().length, 7);
       assert.equal(screen.listenerCount("display-removed"), 1);
       assert.equal(app.listenerCount("browser-window-focus"), 1);
@@ -261,6 +269,32 @@ try {
       screen.emit("display-removed");
       await bus.publish({ id: "after-close", phase: "start", action: "click" } as any);
       assert.equal(host.isVisible(), false);
+      break;
+    }
+    case "chat-and-badge-beside-character": {
+      const win = await present();
+      const drawn = latestState(win);
+      const origin = drawn.windowOrigin ?? { x: 0, y: 0 };
+      // Clicking her hands the chat where she stands, so it opens beside her.
+      await handlers.get("mimiCompanion:chat")!(event(win));
+      assert.deepEqual(chatCalls.at(-1), {
+        x: Math.round(origin.x + drawn.position.x),
+        y: Math.round(origin.y + drawn.position.y),
+        width: Math.round(drawn.size * 0.7),
+        height: Math.round(drawn.size),
+      });
+      host.setAttention({ running: 1, needsAction: 2, unread: -3 } as any);
+      assert.deepEqual(latestState(win).attention, { running: 1, needsAction: 2, unread: 0 });
+      await handlers.get("mimiCompanion:activity")!(event(win));
+      assert.equal(activityCalls.at(-1)?.width, Math.round(latestState(win).size * 0.7));
+      await assert.rejects(
+        async () =>
+          handlers.get("mimiCompanion:activity")!({ sender: new FakeContents(), senderFrame: {} }),
+        /Invalid/,
+      );
+      assert.equal(activityCalls.length, 1, "only her own overlay opens the work list");
+      host.setAttention({ running: 0, needsAction: 0, unread: 0 });
+      assert.equal(latestState(win).attention, undefined, "nothing to show hides the badge");
       break;
     }
     case "capture-while-human-active": {

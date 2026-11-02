@@ -41,3 +41,13 @@ export interface MimiPresenceSnapshot {
 export function isMimiPresenceMode(value: unknown): value is MimiPresenceMode {
   return value === "docked" || value === "moving";
 }
+
+/** The docked widget's panels, also offered beside moving Mimi as her bubble. */
+export type MimiBubblePanel = "chat" | "activity";
+
+/** What the moving form's bubble is asked to show; `null` closes it. */
+export interface MimiBubbleOpenRequest {
+  panel: MimiBubblePanel | null;
+  /** Placed in the composer, never sent. */
+  prompt?: string;
+}

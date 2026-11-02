@@ -11,6 +11,7 @@ const scenarios = [
   "close-cleans-listeners",
   "capture-while-human-active",
   "busy-preview-rejects",
+  "chat-and-badge-beside-character",
 ] as const;
 
 describe("actual Mimi companion host", () => {

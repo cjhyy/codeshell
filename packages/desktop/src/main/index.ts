@@ -568,6 +568,7 @@ import {
   shouldSkipPetWidgetTaskbar,
 } from "./pet/pet-widget-window-state.js";
 import { createPetWidgetSurface, type PetWidgetSurface } from "./pet/pet-widget-surface.js";
+import { createMimiBubbleHost, type MimiBubbleHost } from "./pet/mimi-bubble-host.js";
 import { MimiPresenceController } from "./pet/mimi-presence-controller.js";
 import {
   createMimiPresenceWriter,
@@ -663,6 +664,8 @@ function sendToOwnerWindow(webContentsId: number | undefined, channel: string, p
 }
 /** Docked Mimi (the pet widget). Created once the app is ready. */
 let petWidgetSurface: PetWidgetSurface | null = null;
+/** Moving Mimi's chat and work list: the docked widget's panels, opened beside her. */
+let mimiBubble: MimiBubbleHost | null = null;
 /** The single owner of Mimi's desktop presence (docked/moving, never both). */
 let mimiPresence: MimiPresenceController | null = null;
 let resolveMimiPresence: ((controller: MimiPresenceController) => void) | null = null;
@@ -688,6 +691,11 @@ const mimiPresenceOwner: MimiPresenceOwner = {
 };
 const petWidgetWindow = (): BrowserWindow | null =>
   (petWidgetSurface?.window() as BrowserWindow | null | undefined) ?? null;
+/** Mimi windows besides the main ones that render pet chat and history. */
+const petSurfaceWindows = (): BrowserWindow[] =>
+  [petWidgetWindow(), mimiBubble?.surface.window() as BrowserWindow | null | undefined].filter(
+    (win): win is BrowserWindow => !!win,
+  );
 let markPetIpcReady: (() => void) | null = null;
 const petIpcReady = new Promise<void>((resolveReady) => {
   markPetIpcReady = resolveReady;
@@ -2974,20 +2982,20 @@ function createPetWidgetBrowserWindow(bounds: {
   return win;
 }
 
-async function loadPetWidgetBrowserWindow(win: BrowserWindow): Promise<void> {
+async function loadPetWidgetBrowserWindow(win: BrowserWindow, role?: "bubble"): Promise<void> {
+  const query: Record<string, string> = { popout: "pet", ...(role ? { role } : {}) };
   const devUrl = process.env.VITE_DEV_URL;
   if (devUrl) {
     const url = new URL(devUrl);
-    url.searchParams.set("popout", "pet");
+    for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
     await win.loadURL(url.toString());
   } else {
-    await win.loadFile(resolve(__dirname, "..", "renderer", "index.html"), {
-      query: { popout: "pet" },
-    });
+    await win.loadFile(resolve(__dirname, "..", "renderer", "index.html"), { query });
   }
 }
 
 function broadcastMimiPresence(snapshot: MimiPresenceSnapshot): void {
+  mimiBubble?.sync(snapshot);
   const visible = effectiveMimiVisible(snapshot);
   for (const win of mainWindows) {
     if (win.isDestroyed()) continue;
@@ -3030,6 +3038,17 @@ async function createMimiPresence(): Promise<MimiPresenceController> {
     log: (event, data) => dlog("main", event, data),
   });
   petWidgetSurface = surface;
+  mimiBubble = createMimiBubbleHost({
+    platform: process.platform,
+    screen,
+    ipcMain,
+    ready: () => petIpcReady,
+    createWindow: createPetWidgetBrowserWindow,
+    load: (win) => loadPetWidgetBrowserWindow(win as BrowserWindow, "bubble"),
+    companion: getMimiCompanion,
+    openOverview: openPetOverviewFromWidget,
+    log: (event, data) => dlog("main", event, data),
+  });
   const controller = new MimiPresenceController({
     initial: loaded.state,
     docked: surface,
@@ -3469,13 +3488,15 @@ app.whenReady().then(async () => {
   try {
     await initializeDesktopComputerUse({
       app,
-      openCompanionChat: (request) => openPetOverviewFromWidget(request),
+      openCompanionChat: async (request, near) => mimiBubble?.open("chat", near, request?.prompt),
+      openCompanionActivity: async (near) => mimiBubble?.open("activity", near),
       ipcMain,
       openExternal: (url) => shell.openExternal(url),
       isMainWindow: isMainWindowSender,
       // The docked inline chat is a Mimi chat too: it may hold foreground input.
       isCompanionChatSurface: (sender) =>
-        isMainWindowSender(sender) || Boolean(petWidgetSurface?.owns(sender.id)),
+        isMainWindowSender(sender) ||
+        Boolean(petWidgetSurface?.owns(sender.id) || mimiBubble?.surface.owns(sender.id)),
       companionPresence: {
         initial: { size: presence.persisted().size, anchor: presence.anchor("moving") },
         onAnchorChange: (anchor) => presence.rememberAnchor("moving", anchor),
@@ -5966,7 +5987,7 @@ ipcMain.handle("pet:widget-expanded", (event, expanded: unknown) => {
   if (typeof expanded !== "boolean") throw new Error("pet:widget-expanded requires boolean");
   if (petWidgetSurface?.owns(event.sender.id)) {
     petWidgetSurface.setSurfaceMode(expanded ? "expanded" : "collapsed");
-  }
+  } else if (mimiBubble?.surface.owns(event.sender.id)) mimiBubble.surface.setExpanded(expanded);
   return { ok: true as const };
 });
 
@@ -5976,6 +5997,8 @@ ipcMain.handle("pet:widget-surface", (event, mode: unknown) => {
   }
   if (petWidgetSurface?.owns(event.sender.id)) {
     petWidgetSurface.setSurfaceMode(mode);
+  } else if (mimiBubble?.surface.owns(event.sender.id)) {
+    mimiBubble.surface.setExpanded(mode === "expanded");
   }
   return { ok: true as const };
 });
@@ -6935,8 +6958,7 @@ registerDesktopOutputHistoryHost({
   ipcMain,
   windows: () => [...mainWindows],
   historyWindows: () => {
-    const widget = petWidgetWindow();
-    return [...mainWindows, ...(widget ? [widget] : [])];
+    return [...mainWindows, ...petSurfaceWindows()];
   },
   bridge: () => bridge,
   external: () => externalRuntimeService,
@@ -6946,8 +6968,7 @@ const sessionCatalogStore = new SessionCatalogStore();
 const sessionCatalogIpc = registerSessionCatalogIpc(
   ipcMain,
   () => {
-    const widget = petWidgetWindow();
-    return [...mainWindows, ...(widget ? [widget] : [])];
+    return [...mainWindows, ...petSurfaceWindows()];
   },
   sessionCatalogStore,
 );
@@ -7268,6 +7289,7 @@ app.on(
       // Withdraw both Mimi forms and persist presence before closing the character host.
       const mimiPresenceShutdown = mimiPresence?.dispose();
       petWidgetSurface?.dispose();
+      mimiBubble?.surface.dispose();
       await Promise.allSettled([
         mimiPresenceShutdown,
         imGatewayService.dispose(),

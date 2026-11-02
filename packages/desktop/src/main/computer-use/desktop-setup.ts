@@ -25,6 +25,7 @@ import {
   type MimiCompanionPresenceHooks,
 } from "./mimi-companion-host.js";
 import { createComputerUseControl, type ComputerUseControl } from "./computer-use-control.js";
+import type { MimiCompanionRect } from "../../shared/mimi-companion.js";
 
 let companion: MimiCompanionHost | undefined;
 let control: ComputerUseControl | undefined;
@@ -78,7 +79,9 @@ export async function initializeDesktopComputerUse(options: {
   resourcesPath: string;
   env: NodeJS.ProcessEnv;
   log: NonNullable<CuaDriverHostOptions["log"]>;
-  openCompanionChat(request?: { prompt: string }): Promise<void>;
+  openCompanionChat(request?: { prompt: string }, near?: MimiCompanionRect): Promise<void>;
+  /** The moving character's badge: open the work list beside her. */
+  openCompanionActivity?(near?: MimiCompanionRect): Promise<void>;
   /** Mimi chat surfaces (main-window Mimi page, docked inline chat). */
   isCompanionChatSurface?: ComputerUseSettingsDependencies["isMainWindow"];
   /** Hooks into the single Mimi presence owner (Desktop main). */
@@ -130,6 +133,7 @@ export async function initializeDesktopComputerUse(options: {
       presence: options.companionPresence,
       log: options.log,
       openChat: options.openCompanionChat,
+      openActivity: options.openCompanionActivity,
       bus: executionControl.bus,
       gate: executionControl.gate,
       appProfiles: loadAppProfiles(appProfilesDir, (file, error) =>
