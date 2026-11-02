@@ -126,7 +126,7 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     key: "traces",
     title: { kind: "i18n", key: "observability.title" },
     icon: Workflow,
-    nav: { order: 15, target: "traces", isActive: (mode) => mode === "traces" },
+    // Reached from the settings menu's activity submenu, not the sidebar.
     render: ({
       tracesInitialSessionId,
       tracesInitialTraceId,
