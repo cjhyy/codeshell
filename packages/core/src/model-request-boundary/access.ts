@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { userHome } from "../settings/manager.js";
 import { PlaintextCipher } from "../credentials/cipher.js";
 import type { Transport } from "../protocol/transport.js";
+import { HostRequestSigningTimeoutError } from "./context.js";
 import { ModelRequestKeyStore } from "./custody.js";
 import type { ModelRequestSignatures, ModelRequestSigner } from "./types.js";
 
@@ -33,10 +34,18 @@ export function createEphemeralModelRequestSigner(): ModelRequestSigner {
   return new ModelRequestKeyStore({ custodyMode: "ephemeral-memory" });
 }
 
+// The clock starts at send, so it also covers time queued behind earlier worker
+// output on the stdio pipe. A backlog of tens of seconds is real (2026-11-02:
+// 21s after a streaming child Agent), while a Host that is gone is settled by
+// dispose() on worker exit, so a long bound costs nothing in the healthy case.
+const HOST_SIGNING_TIMEOUT_MS = 60_000;
+
 /** Narrow worker→Main request: prehashes only, no key retrieval or message contents. */
 export function createIpcModelRequestSigner(
   transport: Pick<Transport, "send" | "onMessage">,
+  options: { timeoutMs?: number } = {},
 ): ModelRequestSigner {
+  const timeoutMs = options.timeoutMs ?? HOST_SIGNING_TIMEOUT_MS;
   let disposed = false;
   const pending = new Map<
     string,
@@ -67,8 +76,8 @@ export function createIpcModelRequestSigner(
         const id = `request-proof-${randomUUID()}`;
         const timer = setTimeout(() => {
           pending.delete(id);
-          reject(new Error("Host request signing timed out"));
-        }, 15_000);
+          reject(new HostRequestSigningTimeoutError());
+        }, timeoutMs);
         pending.set(id, { resolve, reject, timer });
         try {
           transport.send({

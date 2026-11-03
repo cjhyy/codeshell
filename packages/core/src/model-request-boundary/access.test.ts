@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { RpcMessage } from "../protocol/types.js";
 import { createIpcModelRequestSigner } from "./access.js";
+import { HostRequestSigningTimeoutError } from "./context.js";
 
 test("worker signer disposal rejects pending roundtrips and ignores late Host replies", async () => {
   const sent: RpcMessage[] = [];
@@ -27,4 +28,22 @@ test("worker signer disposal rejects pending roundtrips and ignores late Host re
   receive({ jsonrpc: "2.0", id: (sent[0] as { id: string }).id, result: {} });
   await expect(signer.sign(input)).rejects.toThrow("signing closed");
   expect(sent).toHaveLength(2);
+});
+
+test("an unanswered Host request rejects with a typed timeout", async () => {
+  const signer = createIpcModelRequestSigner(
+    { send: () => {}, onMessage: () => {} },
+    { timeoutMs: 5 },
+  );
+  const error = await signer
+    .sign({
+      subject: {
+        sessionId: "synthetic-session",
+        storageScopeId: "a".repeat(64),
+        sessionInstanceId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      },
+      prehashes: { messages: "b".repeat(64) },
+    })
+    .catch((cause: unknown) => cause);
+  expect(error).toBeInstanceOf(HostRequestSigningTimeoutError);
 });

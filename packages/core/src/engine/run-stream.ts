@@ -84,9 +84,6 @@ export function buildWrappedOnStream(args: {
   let childIncarnation: string | undefined;
   let failed = false;
   let streamingClosed = false;
-  let pending: StreamEvent[] = [],
-    pendingBytes = 0;
-  let timer: ReturnType<typeof setTimeout> | undefined;
   const failure = (independent = false) => {
     failed = true;
     try {
@@ -97,23 +94,69 @@ export function buildWrappedOnStream(args: {
       /* Retain the live barrier when its durable marker also fails. */
     }
   };
-  const flush = () => {
-    if (timer) clearTimeout(timer);
-    timer = undefined;
-    const events = pending;
-    pending = [];
-    pendingBytes = 0;
-    if (!events.length) return;
-    let cursors: string[];
+  // Every append reopens, verifies and fsyncs the Session journal: tens of ms
+  // once it is large or on-access scanned. Streamed deltas therefore commit in
+  // bounded batches; one append per delta held the worker's event loop for
+  // minutes while a child Agent streamed into a long-lived Session.
+  const deltaBatch = (commit: (events: StreamEvent[]) => string[]) => {
+    let pending: StreamEvent[] = [],
+      pendingBytes = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const flush = () => {
+      if (timer) clearTimeout(timer);
+      timer = undefined;
+      const events = pending;
+      pending = [];
+      pendingBytes = 0;
+      if (!events.length) return;
+      const cursors = commit(events);
+      for (let index = 0; index < events.length; index++)
+        userOnStream?.({ ...events[index], outputCursor: cursors[index] });
+    };
+    const push = (event: StreamEvent) => {
+      const bytes = Buffer.byteLength(JSON.stringify(event));
+      if (pending.length && (pending.length >= 64 || pendingBytes + bytes > 256 * 1024)) flush();
+      pending.push({ ...event });
+      pendingBytes += bytes;
+      if (pendingBytes >= 256 * 1024) flush();
+      else if (!timer) {
+        timer = setTimeout(() => {
+          try {
+            flush();
+          } catch {
+            // flush fences storage failures itself; a consumer throw must
+            // not mark already durable output as damaged.
+          }
+        }, 8);
+        timer.unref?.();
+      }
+    };
+    return { push, flush };
+  };
+  const parentOutput = deltaBatch((events) => {
     try {
-      cursors = journal!.appendBatch(events);
+      return journal!.appendBatch(events);
     } catch (cause) {
       failure();
       throw cause;
     }
-    for (let index = 0; index < events.length; index++)
-      userOnStream?.({ ...events[index], outputCursor: cursors[index] });
+  });
+  const childOutput = deltaBatch((events) => {
+    try {
+      return childJournal!.appendBatch(events);
+    } catch (cause) {
+      failure(true);
+      throw cause;
+    }
+  });
+  // The two queues are never both non-empty: each flushes the other first, so
+  // parent and child output keep their arrival order.
+  const flush = () => {
+    childOutput.flush();
+    parentOutput.flush();
   };
+  const isDelta = (event: StreamEvent) =>
+    event.type === "text_delta" || event.type === "thinking_delta";
   const onStream: StreamCallback = (event) => {
     event = stampStreamEvent(args.prepareEvent?.(event) ?? event);
     if (!("agentId" in event && event.agentId) && args.outputJournal?.allowLateMetadata?.(event))
@@ -126,7 +169,7 @@ export function buildWrappedOnStream(args: {
         // Child details and lifecycle belong to the Session, not to the run
         // that spawned them. They also must not update the parent's Todos or
         // Goal transcript. Flush earlier parent text before independent output.
-        flush();
+        parentOutput.flush();
         try {
           if (!childJournal) {
             const { sessionId, startedAt } = getSession().state;
@@ -144,7 +187,6 @@ export function buildWrappedOnStream(args: {
               childIncarnation,
             );
           }
-          event = { ...event, outputCursor: childJournal.append(event) };
         } catch (error) {
           if (
             !childJournal &&
@@ -158,11 +200,27 @@ export function buildWrappedOnStream(args: {
           failure(true);
           throw error;
         }
+        if (isDelta(event)) return childOutput.push(event);
+        childOutput.flush();
+        try {
+          event = { ...event, outputCursor: childJournal.append(event) };
+        } catch (error) {
+          failure(true);
+          throw error;
+        }
       }
       userOnStream?.(event);
       return;
     }
     if (args.outputJournal && getSession().transcript.isPersistent()) {
+      // Earlier child output lands before anything this run commits, including
+      // the user anchor its first event writes. A storage failure is fenced
+      // below, where terminal events still reach the user.
+      try {
+        childOutput.flush();
+      } catch {
+        // failure(true) has latched `failed`.
+      }
       if (failed) {
         // The failure result must remain visible even if storage itself cannot
         // record it. Never publish an ordinary/completed event after this fence.
@@ -218,26 +276,8 @@ export function buildWrappedOnStream(args: {
         failure();
         throw error;
       }
-      if (event.type === "text_delta" || event.type === "thinking_delta") {
-        const bytes = Buffer.byteLength(JSON.stringify(event));
-        if (pending.length && (pending.length >= 64 || pendingBytes + bytes > 256 * 1024)) flush();
-        pending.push({ ...event });
-        pendingBytes += bytes;
-        if (pendingBytes >= 256 * 1024) flush();
-        else if (!timer) {
-          timer = setTimeout(() => {
-            try {
-              flush();
-            } catch {
-              // flush fences storage failures itself; a consumer throw must
-              // not mark already durable output as damaged.
-            }
-          }, 8);
-          timer.unref?.();
-        }
-        return;
-      }
-      flush();
+      if (isDelta(event)) return parentOutput.push(event);
+      parentOutput.flush();
       try {
         event = { ...event, outputCursor: journal!.append(event) };
       } catch (error) {

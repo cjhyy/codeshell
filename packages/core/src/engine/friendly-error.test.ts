@@ -9,6 +9,11 @@ describe("friendlyError", () => {
     expect(custody).toContain("Host could not securely sign this Session");
     expect(custody).toContain("system keyring");
     expect(custody).toContain("This attempt was stopped before sending");
+    const timeout = formatFriendlyError(
+      new Error("Model request boundary validation failed (custody-timeout)"),
+    );
+    expect(timeout).toContain("did not answer");
+    expect(timeout).not.toContain("Check the Host's system keyring");
     const durability = formatFriendlyError(
       new Error("Model request boundary validation failed (transcript)"),
     );
