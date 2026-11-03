@@ -17,6 +17,8 @@ import { parseUnifiedDiff } from "../diff/parseUnifiedDiff";
 import { groupReviewSnapshot } from "../diff/reviewSnapshot";
 import { syntheticSnippetDiff } from "../diff/composeFileEdits";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
+import { sanitizeExternalChangedFilesProvenance as browserSanitize } from "../externalFileProvenance";
+import { sanitizeExternalChangedFilesProvenance as coreSanitize } from "../../../../core/src/session/external-file-provenance.js";
 
 const user: Message = { kind: "user", id: "owner", text: "edit", clientMessageId: "client" };
 function edit(path: string): ToolMessage {
@@ -62,8 +64,20 @@ test("real completion reducer preserves two external roots with the same relativ
   state = complete(state, "/owned/worktree-one");
   state = complete(state, "/owned/worktree-two");
   expect(card(state).files).toEqual([
-    { path: "/owned/worktree-one/src/a.ts", added: 0, removed: 0, count: 1 },
-    { path: "/owned/worktree-two/src/a.ts", added: 0, removed: 0, count: 1 },
+    {
+      path: "/owned/worktree-one/src/a.ts",
+      added: 0,
+      removed: 0,
+      count: 1,
+      origin: { kind: "external-agent", sourceId: "external:/owned/worktree-one" },
+    },
+    {
+      path: "/owned/worktree-two/src/a.ts",
+      added: 0,
+      removed: 0,
+      count: 1,
+      origin: { kind: "external-agent", sourceId: "external:/owned/worktree-two" },
+    },
   ]);
   expect(card(state).sessionDiffs).toEqual([]);
 });
@@ -73,7 +87,13 @@ test("real completion does not attribute the parent relative tool to an external
   const summary = card(state);
   expect(summary.files).toEqual([
     { path: "src/a.ts", added: 1, removed: 1, count: 1 },
-    { path: "/owned/child/src/a.ts", added: 0, removed: 0, count: 1 },
+    {
+      path: "/owned/child/src/a.ts",
+      added: 0,
+      removed: 0,
+      count: 1,
+      origin: { kind: "external-agent", sourceId: "external:/owned/child" },
+    },
   ]);
   expect(summary.sessionDiffs?.map((diff) => diff.path)).toEqual(["src/a.ts"]);
 });
@@ -87,7 +107,13 @@ for (const markerFirst of [false, true]) {
       ...(markerFirst ? [marker, tool] : [tool, marker]),
     ]);
     expect(summary?.files).toEqual([
-      { path: "/owned/child/src/a.ts", added: 1, removed: 1, count: 2 },
+      {
+        path: "/owned/child/src/a.ts",
+        added: 1,
+        removed: 1,
+        count: 2,
+        origin: { kind: "external-agent", sourceId: "/owned/child" },
+      },
     ]);
     expect(summary?.sessionDiffs).toHaveLength(1);
     expect(parseUnifiedDiff(summary!.sessionDiffs[0]!.diff)[0]?.newPath).toBe(
@@ -101,7 +127,12 @@ for (const markerFirst of [false, true]) {
       type: "turn_complete",
       reason: "completed",
     } as StreamEvent);
-    expect(card(state).files).toEqual(summary!.files);
+    expect(card(state).files).toEqual(
+      summary!.files.map((file) => ({
+        ...file,
+        origin: { kind: "external-agent", sourceId: "external:/owned/child" },
+      })),
+    );
   });
 }
 
@@ -155,7 +186,15 @@ test("external absolute identity preserves the conservative previews of differen
     agent("second", "middle", "after"),
     external("/owned/child"),
   ])!;
-  expect(summary.files).toEqual([{ path, added: 2, removed: 2, count: 3 }]);
+  expect(summary.files).toEqual([
+    {
+      path,
+      added: 2,
+      removed: 2,
+      count: 3,
+      origin: { kind: "external-agent", sourceId: "/owned/child" },
+    },
+  ]);
   const parsed = parseUnifiedDiff(summary.sessionDiffs[0]!.diff);
   expect(parsed).toHaveLength(1);
   expect(parsed[0]?.hunks).toHaveLength(2);
@@ -243,7 +282,15 @@ test("actual Card row clicks retain both external targets and the relative paren
       }
       console.log(JSON.stringify({ scenario: "actual-card-file-targets", internal, external }));
       expect(links.map((node) => propsOf(node).title)).toEqual(expected);
-      expect(internal).toEqual(expected.map((path) => ({ path, cwd: "/owned/parent" })));
+      expect(internal).toEqual(
+        expected.map((path, index) => ({
+          path,
+          cwd: "/owned/parent",
+          ...(card(state).files[index]?.origin
+            ? { reference: card(state).files[index]!.origin }
+            : {}),
+        })),
+      );
       expect(external).toEqual(
         expected.flatMap((path) => Array(2).fill({ path, cwd: "/owned/parent" })),
       );
@@ -312,3 +359,175 @@ for (const path of [
     );
   });
 }
+
+const missingProvenance = {
+  schemaVersion: 1,
+  cli: "claude",
+  observedAt: 123,
+  capture: "completion",
+  files: [
+    {
+      path: "src/a.ts",
+      absolutePath: "/owned/one/src/a.ts",
+      presence: "missing",
+      versionStatus: "unsupported",
+    },
+  ],
+} as const;
+function provenanceCompletion(provenance: unknown, agentId = "external-first") {
+  return {
+    type: "background_agent_completed",
+    agentId,
+    description: "external",
+    status: "completed",
+    workKind: "cc",
+    cwd: "/owned/one",
+    changedFiles: ["src/a.ts"],
+    changedFilesProvenance: provenance,
+    originClientMessageId: "client",
+    enqueuedAt: 123,
+  } as StreamEvent;
+}
+test("completion reducer validates provenance and aggregator matches exact path with last source winning", () => {
+  let state = applyStreamEvent(
+    { ...INITIAL_STATE, messages: [user] },
+    provenanceCompletion(missingProvenance),
+  );
+  expect(card(state).files[0]?.origin).toMatchObject({
+    kind: "external-agent",
+    sourceId: "external-first",
+    cli: "claude",
+    observedAt: 123,
+    ref: missingProvenance.files[0],
+  });
+  const second = {
+    ...missingProvenance,
+    cli: "codex",
+    files: [{ ...missingProvenance.files[0], path: "unrelated" }],
+  };
+  state = applyStreamEvent(state, provenanceCompletion(second, "external-last"));
+  expect(card(state).files[0]?.origin?.sourceId).toBe("external-last");
+  expect(card(state).files[0]?.origin?.ref).toBeUndefined();
+  const damaged = applyStreamEvent(
+    { ...INITIAL_STATE, messages: [user] },
+    provenanceCompletion({ schemaVersion: 9 }),
+  );
+  expect(card(damaged).files[0]?.origin).toEqual({
+    kind: "external-agent",
+    sourceId: "external-first",
+  });
+});
+test("known missing card keeps command clicks internal and preserves reference", async () => {
+  const state = applyStreamEvent(
+    { ...INITIAL_STATE, messages: [user] },
+    provenanceCompletion(missingProvenance),
+  );
+  const origin = card(state).files[0]!.origin;
+  await withRendered(
+    <FilesChangedCard message={card(state)} cwd="/parent" sessionId={null} isLatest />,
+    async (container, internal, external) => {
+      await click(descendants(container).find((node) => propsOf(node)["aria-expanded"] === false));
+      const link = descendants(container).find((node) => node.tagName === "A");
+      const text = descendants(container)
+        .map((node) => node.textContent ?? node.nodeValue ?? "")
+        .join("");
+      expect(text).toContain("完成时已不存在");
+      expect(text).toContain("工作区外");
+      await click(link, "meta");
+      await click(link, "ctrl");
+      expect(external).toEqual([]);
+      expect(internal).toEqual(
+        Array(2).fill({ path: "/owned/one/src/a.ts", cwd: "/parent", reference: origin }),
+      );
+    },
+  );
+});
+
+test("present linked capture is labeled linked, without claiming it was missing at completion", async () => {
+  const provenance = {
+    ...missingProvenance,
+    files: [
+      {
+        ...missingProvenance.files[0],
+        presence: "present",
+        versionStatus: "recorded",
+        contentRef: {
+          kind: "git-blob",
+          commit: "a".repeat(40),
+          blob: "b".repeat(40),
+          repoPath: "src/a.ts",
+          worktreePath: "/owned/one",
+          linkedWorktree: true,
+        },
+      },
+    ],
+  };
+  const state = applyStreamEvent(
+    { ...INITIAL_STATE, messages: [user] },
+    provenanceCompletion(provenance),
+  );
+  await withRendered(
+    <FilesChangedCard message={card(state)} cwd="/owned" sessionId={null} isLatest />,
+    async (container) => {
+      await click(descendants(container).find((node) => propsOf(node)["aria-expanded"] === false));
+      const text = descendants(container)
+        .map((node) => node.textContent ?? node.nodeValue ?? "")
+        .join("");
+      expect(text).toContain("linked 工作树");
+      expect(text).not.toContain("完成时已不存在");
+    },
+  );
+});
+
+test("browser guard matches core validation on damaged journal inputs", () => {
+  const contentRef = {
+    kind: "git-blob",
+    commit: "a".repeat(40),
+    blob: "b".repeat(40),
+    repoPath: "file",
+    worktreePath: "/work",
+    linkedWorktree: true,
+    repositoryId: "c".repeat(64),
+  };
+  const entry = {
+    path: "file",
+    absolutePath: "/work/file",
+    presence: "present",
+    versionStatus: "recorded",
+    contentRef,
+  };
+  const valid = {
+    schemaVersion: 1,
+    cli: "codex",
+    capture: "completion",
+    observedAt: 123,
+    files: [entry],
+  };
+  for (const value of [
+    valid,
+    null,
+    { ...valid, observedAt: Infinity },
+    { ...valid, observedAt: 9e15 },
+    { ...valid, schemaVersion: 9 },
+    {
+      ...valid,
+      files: [{ ...entry, contentRef: { ...contentRef, repoPath: "../secret" } }, entry],
+    },
+    {
+      ...valid,
+      files: [
+        new Proxy(
+          {},
+          {
+            get() {
+              throw Error("hostile");
+            },
+          },
+        ),
+        entry,
+      ],
+    },
+  ]) {
+    expect(browserSanitize(value, ["file"])).toEqual(coreSanitize(value, ["file"]));
+  }
+});

@@ -151,3 +151,21 @@ describe("desktop IPC contract", () => {
     }
   });
 });
+
+test("preload version bridge forwards opaque authority ids and reference", async () => {
+  const { createProjectAuthorityApi } = await import("./project-authority-api.js");
+  const calls: unknown[][] = [];
+  const api = createProjectAuthorityApi({
+    invoke: async (...args: unknown[]) => {
+      calls.push(args);
+      return { status: "unavailable", reason: "object-missing" };
+    },
+  } as any);
+  const ref = { kind: "git-blob" } as any;
+  await api.readSessionFileVersion("session", "root", ref);
+  await api.readProjectFileVersion("project", "root", ref);
+  expect(calls).toEqual([
+    ["fsSession:readFileVersion", "session", "root", ref],
+    ["fsRoot:readFileVersion", "project", "root", ref],
+  ]);
+});

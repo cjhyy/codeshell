@@ -1,3 +1,5 @@
+import type { ExternalFileOrigin } from "../types";
+
 /**
  * Shared "open with" actions for a file reference. Centralizes the three ways
  * the desktop app opens a path so file cards, diffs, the file panel, and
@@ -11,6 +13,7 @@ export interface OpenTarget {
   path: string;
   /** Workspace dir used to resolve a relative path. */
   cwd?: string | null;
+  reference?: ExternalFileOrigin;
 }
 
 /** Open in the OS default application. */
@@ -28,7 +31,11 @@ export function openDefault(t: OpenTarget): Promise<string> {
 export function openInternalPanel(t: OpenTarget): void {
   window.dispatchEvent(
     new CustomEvent("codeshell:open-file", {
-      detail: { path: t.path, cwd: t.cwd ?? null },
+      detail: {
+        path: t.path,
+        cwd: t.cwd ?? null,
+        ...(t.reference ? { reference: t.reference } : {}),
+      },
     }),
   );
 }
@@ -42,15 +49,15 @@ export function openInternalPanel(t: OpenTarget): void {
  */
 export function openFileTarget(
   e: { metaKey: boolean; ctrlKey: boolean; preventDefault(): void },
-  opts: { path: string; cwd?: string | null; line?: number; isScheme?: boolean },
+  opts: OpenTarget & { line?: number; isScheme?: boolean },
 ): void {
   e.preventDefault();
-  const { path, cwd, line, isScheme } = opts;
-  if (e.metaKey || e.ctrlKey) {
+  const { path, cwd, line, isScheme, reference } = opts;
+  if ((e.metaKey || e.ctrlKey) && reference?.ref?.presence !== "missing") {
     const arg = line ? `${path}:${line}` : path;
     void openDefault({ path: arg, cwd: isScheme ? undefined : cwd });
   } else {
-    openInternalPanel({ path, cwd });
+    openInternalPanel({ path, cwd, reference });
   }
 }
 

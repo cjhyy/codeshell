@@ -1314,8 +1314,20 @@ describe("applyStreamEvent — background_agent_completed", () => {
     if (cards[0]?.kind === "files_changed") {
       expect(cards[0].files).toEqual([
         { path: "src/a.ts", added: 1, removed: 1, count: 1 },
-        { path: "/repo/src/a.ts", added: 0, removed: 0, count: 1 },
-        { path: "/repo/src/b.ts", added: 0, removed: 0, count: 1 },
+        {
+          path: "/repo/src/a.ts",
+          added: 0,
+          removed: 0,
+          count: 1,
+          origin: { kind: "external-agent", sourceId: "cc-files" },
+        },
+        {
+          path: "/repo/src/b.ts",
+          added: 0,
+          removed: 0,
+          count: 1,
+          origin: { kind: "external-agent", sourceId: "cc-files" },
+        },
       ]);
     }
   });

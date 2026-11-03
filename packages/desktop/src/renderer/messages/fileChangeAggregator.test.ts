@@ -333,7 +333,15 @@ describe("aggregateFileChanges", () => {
         },
       },
     ]);
-    expect(summary?.files).toEqual([{ path: "/repo/a.ts", added: 0, removed: 0, count: 1 }]);
+    expect(summary?.files).toEqual([
+      {
+        path: "/repo/a.ts",
+        added: 0,
+        removed: 0,
+        count: 1,
+        origin: { kind: "external-agent", sourceId: "external-source" },
+      },
+    ]);
     expect(summary?.sessionDiffs).toEqual([]);
   });
 

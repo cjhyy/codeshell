@@ -9,6 +9,9 @@ export const VERSION = "0.9.52";
 // ─── Types ───────────────────────────────────────────────────────
 
 export type {
+  ExternalChangedFilesProvenance,
+  ExternalChangedFileRef,
+  ExternalGitBlobRef,
   Message,
   ContentBlock,
   ToolDefinition,

@@ -1,3 +1,4 @@
+import { sanitizeExternalChangedFilesProvenance } from "@cjhyy/code-shell-core/internal";
 /**
  * Read a persisted engine transcript (~/.code-shell/sessions/<id>/transcript.jsonl)
  * and convert it to an ordered list of FoldItems the renderer can replay
@@ -550,6 +551,7 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
           : [];
         const cwd = typeof d.cwd === "string" ? d.cwd : "";
         if (changedFiles.length === 0 || !cwd) break;
+        const provenance = sanitizeExternalChangedFilesProvenance(d.provenance, changedFiles);
         const status = d.status === "failed" ? "failed" : "completed";
         items.push({
           kind: "stream",
@@ -560,6 +562,7 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
             status,
             workKind: "cc",
             changedFiles,
+            ...(provenance ? { changedFilesProvenance: provenance } : {}),
             cwd,
             ...(typeof d.originClientMessageId === "string"
               ? { originClientMessageId: d.originClientMessageId }

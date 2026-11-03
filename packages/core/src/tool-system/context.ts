@@ -255,6 +255,7 @@ export interface ExternalFileChangesRecord {
   cwd: string;
   status: "completed" | "failed" | "cancelled";
   changedFiles: string[];
+  provenance?: import("../session/external-file-provenance.js").ExternalChangedFilesProvenance;
   originClientMessageId?: string;
 }
 

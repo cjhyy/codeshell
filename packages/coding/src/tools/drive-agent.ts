@@ -1,3 +1,4 @@
+import { probeExternalChangedFiles } from "../cc-orchestrator/external-change-provenance.js";
 import {
   backgroundJobRegistry,
   isExistingDirectory,
@@ -208,6 +209,7 @@ export interface DriveAgentToolOptions {
   sessionStore?: SessionStore;
   /** Test seam for external transcript attribution. */
   readChangedFiles?: typeof readExternalChangedFiles;
+  probeChangedFiles?: typeof probeExternalChangedFiles;
 }
 
 function isExternalRuntimeContext(ctx?: ToolContext): boolean {
@@ -757,9 +759,10 @@ function attachDriveCompletion(params: {
   run: Promise<AgentRunResult>;
   sessionStore: SessionStore;
   readChangedFiles: typeof readExternalChangedFiles;
+  probeChangedFiles: typeof probeExternalChangedFiles;
   recordExternalFileChanges?: ToolContext["recordExternalFileChanges"];
   originClientMessageId?: string;
-}): void {
+}): Promise<void> {
   const {
     jobId,
     sessionId,
@@ -772,23 +775,39 @@ function attachDriveCompletion(params: {
     run,
     sessionStore,
     readChangedFiles,
+    probeChangedFiles,
     recordExternalFileChanges,
     originClientMessageId,
   } = params;
-  void run
-    .then((r) => {
+  return run
+    .then(async (r) => {
       const jobStatus = backgroundJobRegistry.get(jobId)?.status;
       if (jobStatus !== "running" && jobStatus !== "cancelling") {
         safeFinalizeDriveWorktree(worktree);
         return;
       }
-      const cancelling = jobStatus === "cancelling";
       // Attribute external changes BEFORE publishing completion. Previously the
       // notification event was emitted first and carried no files; changedFiles
       // only reached the background-work registry/panel, so the chat turn card
       // could never count DriveAgent edits.
       const rawChangedFiles = r.sessionId ? readChangedFiles(cli, cwd, r.sessionId) : [];
       const changedFiles = normalizeChangedFiles(cwd, rawChangedFiles);
+      let provenance;
+      if (changedFiles.length) {
+        try {
+          provenance = await probeChangedFiles(cwd, changedFiles, { cli });
+        } catch {
+          /* Observation failure must never prevent cleanup or completion. */
+        }
+      }
+      // Observation adds an async gap: cancellation/Session teardown may have
+      // changed ownership since the runner settled. Never revive a removed job.
+      const settledStatus = backgroundJobRegistry.get(jobId)?.status;
+      if (settledStatus !== "running" && settledStatus !== "cancelling") {
+        safeFinalizeDriveWorktree(worktree);
+        return;
+      }
+      const cancelling = settledStatus === "cancelling";
       const lifecycle = safeFinalizeDriveWorktree(worktree);
       const finalText = appendLifecycleNote(r.finalText, lifecycle);
       if (lifecycle) {
@@ -810,6 +829,7 @@ function attachDriveCompletion(params: {
           cwd,
           status: cancelling ? "cancelled" : r.isError ? "failed" : "completed",
           changedFiles,
+          ...(provenance ? { provenance } : {}),
           ...(originClientMessageId ? { originClientMessageId } : {}),
         });
       }
@@ -844,7 +864,13 @@ function attachDriveCompletion(params: {
               workKind: "cc",
               error: finalText || "(no output)",
               ccSessionId: r.sessionId || undefined,
-              ...(changedFiles.length ? { changedFiles, cwd } : {}),
+              ...(changedFiles.length
+                ? {
+                    changedFiles,
+                    cwd,
+                    ...(provenance ? { changedFilesProvenance: provenance } : {}),
+                  }
+                : {}),
               ...(originClientMessageId ? { originClientMessageId } : {}),
               enqueuedAt: Date.now(),
             }
@@ -855,7 +881,13 @@ function attachDriveCompletion(params: {
               workKind: "cc",
               finalText,
               ccSessionId: r.sessionId || undefined,
-              ...(changedFiles.length ? { changedFiles, cwd } : {}),
+              ...(changedFiles.length
+                ? {
+                    changedFiles,
+                    cwd,
+                    ...(provenance ? { changedFilesProvenance: provenance } : {}),
+                  }
+                : {}),
               ...(originClientMessageId ? { originClientMessageId } : {}),
               enqueuedAt: Date.now(),
             },
@@ -924,6 +956,7 @@ function trackBackgroundRun(params: {
   sessionStore: SessionStore;
   writable: boolean;
   readChangedFiles: typeof readExternalChangedFiles;
+  probeChangedFiles: typeof probeExternalChangedFiles;
   recordExternalFileChanges?: ToolContext["recordExternalFileChanges"];
   originClientMessageId?: string;
 }): { jobId: string } | { error: string } {
@@ -946,6 +979,7 @@ function trackBackgroundRun(params: {
   if (conflict) return { error: conflict };
   const jobId = newDriveJobId();
   let run: Promise<AgentRunResult> | undefined;
+  const completion = { promise: Promise.resolve() };
   try {
     // Publish ownership before starting the external process. Registry
     // listeners are synchronous and may re-enter session teardown from the
@@ -972,6 +1006,7 @@ function trackBackgroundRun(params: {
       abort: async () => {
         params.abort();
         await run?.catch(() => undefined);
+        await completion.promise;
       },
     });
   } catch (error) {
@@ -1000,7 +1035,7 @@ function trackBackgroundRun(params: {
     backgroundJobRegistry.finish(jobId, { status: "failed", finalText: message });
     return { error: `Error: failed to start DriveAgent job: ${message}` };
   }
-  attachDriveCompletion({ ...params, sessionId, jobId, run });
+  completion.promise = attachDriveCompletion({ ...params, sessionId, jobId, run });
   return { jobId };
 }
 
@@ -1286,6 +1321,7 @@ export function makeDriveAgentTool(
         sessionStore,
         writable: isWritableRun,
         readChangedFiles: options.readChangedFiles ?? readExternalChangedFiles,
+        probeChangedFiles: options.probeChangedFiles ?? probeExternalChangedFiles,
         recordExternalFileChanges: ctx?.recordExternalFileChanges,
         originClientMessageId: ctx?.originClientMessageId,
       });
@@ -1395,6 +1431,7 @@ export function makeDriveAgentTool(
         sessionStore,
         writable: isWritableRun,
         readChangedFiles: options.readChangedFiles ?? readExternalChangedFiles,
+        probeChangedFiles: options.probeChangedFiles ?? probeExternalChangedFiles,
         recordExternalFileChanges: ctx?.recordExternalFileChanges,
         originClientMessageId: ctx?.originClientMessageId,
       });

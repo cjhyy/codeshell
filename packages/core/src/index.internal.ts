@@ -60,7 +60,7 @@ export { createRunTiming } from "./session/stream-timing.js";
 export { normalizeCumulativeUsageCounters } from "./session/usage.js";
 export { MemoryOrchestrator } from "./services/memory-orchestrator.js";
 export type { MemoryOrchestratorOptions } from "./services/memory-orchestrator.js";
-export { isEphemeralSessionState } from "./session/session-manager.js";
+export { isEphemeralSessionState, listSessionEntries } from "./session/session-manager.js";
 export { sanitizeContent } from "./logging/sanitize-messages.js";
 export { McpResponseTooLargeError } from "./tool-system/mcp-results.js";
 export {
@@ -559,5 +559,9 @@ export {
   McpProbeConnectionError,
 } from "./tool-system/mcp-probe-connection.js";
 
-export { listSessionEntries } from "./session/session-manager.js";
 export type * from "./protocol/output-history-recovery-types.js";
+
+export {
+  sanitizeExternalChangedFilesProvenance,
+  sanitizeGitBlobRef,
+} from "./session/external-file-provenance.js";

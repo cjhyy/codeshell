@@ -1,3 +1,5 @@
+import type { ExternalGitBlobRef } from "@cjhyy/code-shell-core";
+import type { FileVersionResult } from "../shared/file-version.js";
 import type { SessionWorkspace } from "@cjhyy/code-shell-core";
 import type {
   ReviewAiPromptRequest,
@@ -46,7 +48,7 @@ export interface FsEntry {
 export interface FileContent {
   path: string;
   text: string | null;
-  reason?: "too-large" | "binary";
+  reason?: "too-large" | "binary" | "missing";
   size: number;
 }
 
@@ -173,6 +175,16 @@ export interface ProjectAuthorityApi {
   readSessionFileContent(sessionId: string, rootId: string, path: string): Promise<FileContent>;
   sessionFileExists(sessionId: string, rootId: string, path: string): Promise<boolean>;
   /** Metadata-only lookup for absolute paths mentioned in Desktop chat. */
+  readSessionFileVersion(
+    sessionId: string,
+    rootId: string,
+    ref: ExternalGitBlobRef,
+  ): Promise<FileVersionResult>;
+  readProjectFileVersion(
+    projectId: string,
+    rootId: string,
+    ref: ExternalGitBlobRef,
+  ): Promise<FileVersionResult>;
   localFileExists(absPath: string): Promise<boolean>;
   /** Read one explicitly opened file without granting access to its directory. */
   readLocalFilePreview(absPath: string): Promise<LocalFilePreview>;

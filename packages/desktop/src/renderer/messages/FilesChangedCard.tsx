@@ -262,13 +262,31 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
                       href="#"
                       className="min-w-0 flex-1 truncate font-mono"
                       title={f.path}
-                      onClick={(e) => openFileTarget(e, { path: f.path, cwd })}
+                      onClick={(e) => openFileTarget(e, { path: f.path, cwd, reference: f.origin })}
                     >
                       {basename(f.path)}
                     </a>
                   ) : (
                     <span className="min-w-0 flex-1 truncate font-mono" title={f.path}>
                       {basename(f.path)}
+                    </span>
+                  )}
+                  {f.origin && (
+                    <span className="shrink-0 text-muted-foreground" data-file-origin>
+                      {[
+                        f.origin.ref?.presence === "missing" ? t("externalFiles.missing") : null,
+                        f.origin.ref?.contentRef?.linkedWorktree ? t("externalFiles.linked") : null,
+                        cwd &&
+                        !f.path
+                          .replace(/\\/g, "/")
+                          .startsWith(cwd.replace(/\\/g, "/").replace(/\/$/, "") + "/") &&
+                        /^(?:\/|[A-Za-z]:)/.test(f.path.replace(/\\/g, "/"))
+                          ? t("externalFiles.outside")
+                          : null,
+                        f.origin.observedAt === undefined ? t("externalFiles.legacy") : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   )}
                   <span className="text-status-ok">+{f.added}</span>

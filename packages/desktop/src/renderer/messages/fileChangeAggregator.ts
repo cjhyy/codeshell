@@ -44,6 +44,7 @@ interface ExternalFileChange {
   sourceId: string;
   path: string;
   identity: string;
+  origin: NonNullable<FileEditEntry["origin"]>;
 }
 
 function normalizeFilePath(path: string): string {
@@ -318,11 +319,11 @@ export function aggregateFileChangeSummary(
   // must not be attributed to whichever external root happens to match first.
   const externalFiles: ExternalFileChange[] = [];
   const externalIdentities = new Set<string>();
-  const seenExternalAttribution = new Set<string>();
+  const seenExternalAttribution = new Map<string, ExternalFileChange>();
   for (let i = start + 1; i < messages.length; i++) {
     const m = messages[i];
     if (m.kind !== "system" || !m.externalFileChanges) continue;
-    const { sourceId, cwd, files } = m.externalFileChanges;
+    const { sourceId, cwd, files, provenance } = m.externalFileChanges;
     if (
       m.externalFileChanges.originClientMessageId !== undefined &&
       m.externalFileChanges.originClientMessageId !== boundaryClientMessageId
@@ -333,18 +334,26 @@ export function aggregateFileChangeSummary(
       if (typeof path !== "string" || !path) continue;
       const identity = resolveFilePath(cwd, path);
       const attributionKey = `${sourceId}\0${identity}`;
-      if (seenExternalAttribution.has(attributionKey)) continue;
-      seenExternalAttribution.add(attributionKey);
+      const ref = provenance?.files.find((ref) => ref.path === path);
+      const origin: NonNullable<FileEditEntry["origin"]> = {
+        kind: "external-agent",
+        sourceId,
+        ...(provenance ? { cli: provenance.cli, observedAt: provenance.observedAt } : {}),
+        ...(ref ? { ref } : {}),
+      };
+      const previous = seenExternalAttribution.get(attributionKey);
+      if (previous) {
+        // Replayed attribution must not inflate the count; last metadata still wins.
+        externalFiles.splice(externalFiles.indexOf(previous), 1);
+      }
       externalIdentities.add(identity);
       // Completion markers have no execution receipt identifying which capture
       // includes their writes. Neither delivery order nor a newer wall clock
       // can establish coverage, even when this path was previously net-zero.
       if (trackedPaths.has(identity)) unresolvedPaths.add(identity);
-      externalFiles.push({
-        sourceId,
-        path,
-        identity,
-      });
+      const external = { sourceId, path, identity, origin };
+      seenExternalAttribution.set(attributionKey, external);
+      externalFiles.push(external);
     }
   }
 
@@ -442,6 +451,7 @@ export function aggregateFileChangeSummary(
     // An earlier relative preview may share this now-known execution identity.
     // Keep the external file's authoritative root in its display/open target.
     byPath.get(external.identity)!.path = external.identity;
+    byPath.get(external.identity)!.origin = external.origin;
   }
 
   const sessionDiffs: SessionFileDiff[] = [];

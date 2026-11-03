@@ -226,3 +226,79 @@ describe("NotificationQueue persistence", () => {
     ).toEqual([retained.id]);
   });
 });
+
+describe("external provenance persistence", () => {
+  const provenance = {
+    schemaVersion: 1,
+    cli: "codex",
+    observedAt: 123,
+    capture: "completion",
+    files: [
+      {
+        path: "a.ts",
+        absolutePath: "/work/a.ts",
+        presence: "present",
+        versionStatus: "recorded",
+        contentRef: {
+          kind: "git-blob",
+          commit: "a".repeat(40),
+          blob: "b".repeat(40),
+          repoPath: "a.ts",
+          worktreePath: "/work",
+          linkedWorktree: true,
+          branch: "fixture",
+          repositoryId: "c".repeat(64),
+        },
+      },
+    ],
+  } as const;
+  it("preserves legacy enqueue → persistence → reload → alias → completion event", () => {
+    const root = tempRoot();
+    const first = new NotificationQueue();
+    first.attachPersistence(persistence(root));
+    first.enqueue(
+      {
+        agentId: "external",
+        description: "done",
+        status: "completed",
+        workKind: "cc",
+        changedFiles: ["a.ts"],
+        changedFilesProvenance: provenance as any,
+        enqueuedAt: 123,
+      },
+      "parent",
+    );
+    const restarted = new NotificationQueue();
+    restarted.attachPersistence(persistence(root));
+    const [entry] = restarted.getSnapshot("parent");
+    expect(entry?.changedFilesProvenance).toEqual(provenance);
+    expect(notificationItemToStreamEvent(entry as any).changedFilesProvenance).toEqual(provenance);
+  });
+  it("strips corrupt provenance without discarding the live or persisted result", () => {
+    const root = tempRoot();
+    const first = new NotificationQueue();
+    first.attachPersistence(persistence(root));
+    const draft = result();
+    (draft.payload as any).changedFilesProvenance = { ...provenance, schemaVersion: 9 };
+    const entry = first.enqueue(draft)!;
+    expect(entry.payload).not.toHaveProperty("changedFilesProvenance");
+    const file = join(root, "parent/pending-notifications.json");
+    writeFileSync(
+      file,
+      JSON.stringify({
+        schemaVersion: 1,
+        results: [{ ...entry, payload: { ...entry.payload, changedFilesProvenance: "broken" } }],
+      }),
+    );
+    const restarted = new NotificationQueue();
+    restarted.attachPersistence(persistence(root));
+    expect(restarted.getSnapshot("parent")).toHaveLength(1);
+    expect(restarted.getSnapshot("parent")[0]?.payload).not.toHaveProperty(
+      "changedFilesProvenance",
+    );
+    restarted.enqueue(result("second"));
+    expect(JSON.parse(readFileSync(file, "utf8")).results[0].payload).not.toHaveProperty(
+      "changedFilesProvenance",
+    );
+  });
+});

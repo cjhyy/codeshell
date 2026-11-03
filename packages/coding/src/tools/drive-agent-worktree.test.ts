@@ -27,7 +27,8 @@ function createRepo(prefix: string): { root: string; repo: string } {
 }
 
 async function waitForTerminal(jobId: string): Promise<void> {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
+  // Completion observation has a legitimate four-second total budget.
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
     const status = backgroundJobRegistry.get(jobId)?.status;
     if (status && status !== "running" && status !== "cancelling") return;
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -407,4 +408,72 @@ describe("DriveAgent worktree isolation lifecycle", () => {
       rmSync(join(root, ".worktrees"), { recursive: true, force: true });
     }
   });
+});
+
+describe("completion capture before worktree finalization", () => {
+  for (const throws of [false, true])
+    for (const failed of [false, true])
+      test(`failed=${failed}: probe precedes cleanup and ${throws ? "throw still completes" : "metadata reaches record and notification"}`, async () => {
+        const { root, repo } = createRepo("drive-provenance-");
+        const { notificationQueue } = await import("@cjhyy/code-shell-core/extension");
+        const { probeExternalChangedFiles } =
+          await import("../cc-orchestrator/external-change-provenance.js");
+        const sessionId = "provenance-completion";
+        let worktree = "";
+        let probed = false;
+        const records: any[] = [];
+        try {
+          const tool = makeDriveAgentTool(
+            async (options) => {
+              worktree = options.cwd;
+              writeFileSync(join(worktree, "tracked.txt"), "completion bytes\n");
+              git(worktree, ["add", "tracked.txt"]);
+              git(worktree, ["commit", "-qm", "agent"]);
+              return {
+                sessionId: "fixture-external",
+                finalText: "done",
+                isError: failed,
+                exitCode: failed ? 1 : 0,
+                lines: [],
+              };
+            },
+            undefined,
+            {
+              sessionStore: new ExternalAgentSessionStore(join(root, "sessions.json")),
+              readChangedFiles: () => ["tracked.txt"],
+              probeChangedFiles: async (cwd, files, opts) => {
+                expect(existsSync(cwd)).toBe(true);
+                probed = true;
+                if (throws) throw Error("injected probe failure");
+                return probeExternalChangedFiles(cwd, files, opts);
+              },
+            },
+          );
+          await tool({ prompt: "fixture", cwd: repo, isolation: "worktree", cleanup: "discard" }, {
+            cwd: repo,
+            sessionId,
+            recordExternalFileChanges: (record) => records.push(record),
+          } as any);
+          const job = backgroundJobRegistry.listForSession(sessionId)[0]!;
+          await waitForTerminal(job.jobId);
+          expect(probed).toBe(true);
+          expect(existsSync(worktree)).toBe(false);
+          expect(backgroundJobRegistry.get(job.jobId)?.status).toBe(
+            failed ? "failed" : "completed",
+          );
+          const event = notificationQueue.getSnapshot(sessionId)[0];
+          expect(event?.changedFiles).toEqual(["tracked.txt"]);
+          if (!throws) {
+            expect(records[0]?.provenance?.files[0]).toMatchObject({
+              presence: "present",
+              versionStatus: "recorded",
+            });
+            expect(event?.changedFilesProvenance).toEqual(records[0].provenance);
+          }
+        } finally {
+          notificationQueue.reset(sessionId);
+          rmSync(root, { recursive: true, force: true });
+          rmSync(join(root, ".worktrees"), { recursive: true, force: true });
+        }
+      });
 });

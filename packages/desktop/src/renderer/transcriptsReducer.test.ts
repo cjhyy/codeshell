@@ -499,3 +499,58 @@ it("does not reconcile an old engine lookup into a rebound bucket", () => {
   });
   expect(next).toBe(map);
 });
+
+describe("external provenance through Desktop transcriptsReducer", () => {
+  it("preserves a journal completion through a batch and hydration; corrupt provenance keeps the result", () => {
+    const provenance = {
+      schemaVersion: 1,
+      cli: "codex",
+      observedAt: 123,
+      capture: "completion",
+      files: [{ path: "gone.ts", absolutePath: "/removed/gone.ts", presence: "missing" }],
+    } as const;
+    const events: StreamEvent[] = [
+      { type: "session_user_message", text: "edit", clientMessageId: "client" },
+      {
+        type: "background_agent_completed",
+        agentId: "external",
+        description: "done",
+        status: "completed",
+        workKind: "cc",
+        cwd: "/removed",
+        changedFiles: ["gone.ts"],
+        changedFilesProvenance: provenance as any,
+        originClientMessageId: "client",
+        enqueuedAt: 123,
+      },
+    ];
+    const map = transcriptsReducer({}, { type: "stream_batch", bucket: "b", events });
+    const next = transcriptsReducer(
+      {},
+      { type: "hydrate_history", bucket: "b", state: map.b, history: map.b, goalAtStart: null },
+    );
+    expect(next.b.messages.find((message) => message.kind === "system")).toMatchObject({
+      externalFileChanges: { provenance },
+    });
+    expect(next.b.messages.find((message) => message.kind === "files_changed")).toMatchObject({
+      files: [{ origin: { sourceId: "external", ref: provenance.files[0] } }],
+    });
+    const corrupted = transcriptsReducer(
+      {},
+      {
+        type: "stream_batch",
+        bucket: "bad",
+        events: [
+          events[0]!,
+          { ...events[1], changedFilesProvenance: { schemaVersion: 9 } } as StreamEvent,
+        ],
+      },
+    );
+    expect(corrupted.bad.messages.find((message) => message.kind === "system")).toMatchObject({
+      externalFileChanges: { files: ["gone.ts"] },
+    });
+    expect(
+      corrupted.bad.messages.find((message) => message.kind === "files_changed"),
+    ).toMatchObject({ files: [{ origin: { sourceId: "external" } }] });
+  });
+});

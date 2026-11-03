@@ -103,7 +103,9 @@ describe("architecture growth budgets", () => {
     // Pin HEAD (7_330): Pet handlers registered before the renderer loads, root-scoped
     // project file search and the review:preparePrompt handler; logic stays in services.
     // +4 composition lines bind MCP probes to the selected configuration target and authorized cwd.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_334);
+    // +1 net after rebasing onto 7_333: import and register the read-only file-version IPC;
+    // root authorization and Git blob checks stay in file-version-ipc/service.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_335);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider

@@ -5,6 +5,9 @@
  */
 
 export type {
+  ExternalChangedFilesProvenance,
+  ExternalChangedFileRef,
+  ExternalGitBlobRef,
   ClientDefaults,
   ContentBlock,
   LLMConfig,
@@ -12,6 +15,9 @@ export type {
   Message,
   RegisteredTool,
   SessionOrigin,
+  SessionWorkspace,
+  PermissionRule,
+  PermissionMode,
   SessionStatus,
   StreamEvent,
   TerminalReason,
@@ -94,7 +100,6 @@ export type { ExtensionQueryHandler, ExtensionTool } from "./tool-system/capabil
 // resolve to a single module instance (notificationQueue and
 // backgroundJobRegistry are process-level singletons — identity must
 // stay consistent across entry points).
-export type { SessionWorkspace } from "./types.js";
 export type {
   CapabilityArtifactDetector,
   CapabilityDynamicContextProvider,
@@ -168,7 +173,6 @@ export type {
 } from "./tool-system/capability-module.js";
 export type { ToolVisibilityContext } from "./tool-system/context.js";
 export type { BuiltinToolExposure } from "./tool-system/builtin/index.js";
-export type { PermissionRule, PermissionMode } from "./types.js";
 export { ApprovalRouter } from "./tool-system/permission.js";
 
 export { runIsolatedInstruction } from "./skills/isolated-instruction-run.js";
@@ -211,3 +215,8 @@ export {
   figmaActionParameters,
   normalizeFigmaActionResult,
 } from "./links/figma.js";
+
+export {
+  sanitizeExternalChangedFilesProvenance,
+  sanitizeGitBlobRef,
+} from "./session/external-file-provenance.js";

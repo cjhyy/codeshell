@@ -3,3 +3,4 @@ export * from "./git/worktree.js";
 export * from "./git/utils.js";
 export * from "./review/review-prompt.js";
 export * from "./review/review-target.js";
+export { createReadOnlyGitRunner, gitRepositoryId } from "./git/readonly-git.js";

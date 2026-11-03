@@ -10,6 +10,12 @@
  */
 export const core = {
   zh: {
+    externalFiles: {
+      missing: "完成时已不存在",
+      linked: "linked 工作树",
+      outside: "工作区外",
+      legacy: "旧记录 · 外部代理",
+    },
     cloudManager: {
       accountUnavailable: "无法读取账号状态，请重新打开云端管理。",
       signIn: "登录云账号后连接云端服务。",
@@ -207,6 +213,12 @@ export const core = {
     },
   },
   en: {
+    externalFiles: {
+      missing: "Missing at completion",
+      linked: "Linked worktree",
+      outside: "Outside workspace",
+      legacy: "Legacy · external agent",
+    },
     cloudManager: {
       accountUnavailable: "Account status is unavailable. Reopen cloud management.",
       signIn: "Sign in to your cloud account to connect to a cloud service.",
