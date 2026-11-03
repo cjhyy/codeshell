@@ -27,6 +27,7 @@ const fixtures = [
   "updater/UpdaterBanner.browser.fixture.mjs",
   "Sidebar.browser.fixture.mjs",
   "runtime/CloudProjectWorkspace.browser.fixture.mjs",
+  "runtime/AccountDeviceWorkspace.browser.fixture.mjs",
   "projects/CloudProjectDialogs.browser.fixture.mjs",
   "workspace-trust/TrustGate.browser.fixture.mjs",
   "digital-humans/ProfileDialogs.browser.fixture.mjs",

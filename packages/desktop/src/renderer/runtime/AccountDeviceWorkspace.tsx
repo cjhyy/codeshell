@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   appendUserMessage,
   initialChatState,
@@ -13,6 +13,7 @@ import type {
 } from "../../shared/account-device.js";
 import type { CloudAccountStatus } from "../../shared/cloud-account.js";
 import type { DesktopRelayStatus } from "../../shared/device-relay.js";
+import { cn } from "@/lib/utils";
 
 interface Conversation {
   connection?: AccountDeviceConnection;
@@ -392,6 +393,14 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
   };
   const connected =
     current.status === "connected" && selectedDevice?.online && !selectedDevice.revoked;
+  useEffect(() => {
+    if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented) onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [open, onClose]);
   if (!open) return null;
   return (
     <section
@@ -400,7 +409,15 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
       aria-label="执行电脑 / 设备"
       className="absolute inset-0 z-50 flex min-h-0 flex-col bg-background text-foreground"
     >
-      <header className="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
+      {/* This page replaces the shell's TopBar, so it owns the window drag
+          surface; on macOS the title clears the inset traffic lights. */}
+      <header
+        className={cn(
+          "flex shrink-0 items-center justify-between border-b border-border px-6 py-4",
+          window.codeshell?.platform === "darwin" && "pl-[88px]",
+        )}
+        style={{ WebkitAppRegion: "drag" } as CSSProperties}
+      >
         <div>
           <h1 className="text-lg font-semibold">执行电脑 / 设备</h1>
           <p className="text-xs text-muted-foreground">同账号电脑 · 任务在所选电脑的项目中执行</p>
@@ -409,6 +426,7 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
           type="button"
           onClick={onClose}
           className="rounded-md border border-border px-3 py-1.5"
+          style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
         >
           返回工作台
         </button>

@@ -2151,8 +2151,10 @@ function App() {
       sidebarIsDialog={isNarrowWindow}
     >
       <div
-        className={isSettingsPage ? "hidden" : "flex min-h-0 flex-1 flex-col"}
-        aria-hidden={isSettingsPage}
+        className={
+          isSettingsPage || executionDevicesOpen ? "hidden" : "flex min-h-0 flex-1 flex-col"
+        }
+        aria-hidden={isSettingsPage || executionDevicesOpen}
       >
         <div className="shrink-0">
           <TopBar

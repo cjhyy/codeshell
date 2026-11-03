@@ -36,7 +36,8 @@ window.codeshell={
 window.emit=(hostId,event,type="event")=>{const c=window.connections[hostId];for(const callback of window.listeners)callback({connectionId:c.id,hostId,environmentId:c.environmentId,projectId:c.projectId,sessionId:c.sessionId,type,event})};
 window.output=(hostId,text)=>window.emit(hostId,{type:"session.stream",sessionId:"session-"+hostId,event:{method:"agent/streamEvent",params:{sessionId:"session-"+hostId,event:{type:"text_delta",text}}}});
 window.signOut=()=>accountListener({state:"signed-out"});
-createRoot(document.getElementById("root")).render(<AccountDeviceWorkspace open onClose={()=>{}}/>);
+window.closeCalls=0;
+createRoot(document.getElementById("root")).render(<AccountDeviceWorkspace open onClose={()=>{window.closeCalls+=1}}/>);
 `;
 const result = await build({
   stdin: { contents: source, resolveDir: renderer, loader: "tsx" },
@@ -325,13 +326,26 @@ try {
   await page.evaluate(() => window.signOut());
   await page.getByText("请先登录账号，登录后本机将自动加入设备协作。", { exact: true }).waitFor();
   assert.equal(await page.getByLabel("电脑任务", { exact: true }).count(), 0);
+  // The page replaces the shell TopBar: its header is the window drag surface
+  // and the only way back must stay clickable, even when signed out.
+  const back = page.getByRole("button", { name: "返回工作台" });
+  assert.deepEqual(
+    await back.evaluate((button) => [
+      window.getComputedStyle(button.closest("header")).getPropertyValue("-webkit-app-region"),
+      window.getComputedStyle(button).getPropertyValue("-webkit-app-region"),
+    ]),
+    ["drag", "no-drag"],
+  );
+  await back.click();
+  await page.keyboard.press("Escape");
+  assert.equal(await page.evaluate(() => window.closeCalls), 2);
   assert.deepEqual(errors, []);
   assert.deepEqual(unexpected, []);
   console.log(
     JSON.stringify({
       ok: true,
       assertions:
-        "device/project selection; output, drafts, attachments, approvals and Stop isolation; worker-generation approval fencing; fast completion before IPC reply; oversized-frame preflight; original-session restoration without task replay; late directory responses; offline rejection; logout; 390px layout",
+        "device/project selection; output, drafts, attachments, approvals and Stop isolation; worker-generation approval fencing; fast completion before IPC reply; oversized-frame preflight; original-session restoration without task replay; late directory responses; offline rejection; logout; back button and Escape close; 390px layout",
       screenshots: output,
     }),
   );
