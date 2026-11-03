@@ -479,15 +479,8 @@ function toAbsolute(path: string, cwd?: string | null): string {
 // times across a transcript; this keeps repeated answers from re-hitting the
 // fs:exists IPC for the same file.
 //
-// We cache ONLY positive results. A file that exists won't stop existing mid
-// session, so `true` is safe to memoize forever. A `false` is NOT: the model
-// very often writes a path to a file it CREATES this same turn, and the first
-// existence check races the write — the file isn't on disk yet, so fs:exists
-// returns false. Caching that false permanently pinned the link as dead text,
-// and it only came back after a session switch happened to build a new cache
-// key (the "刚输出点不了,切一下 session 才能点" bug). So a negative check is
-// re-run on the next mount, and `files-changed` (fired when an AI turn ends)
-// also clears the cache so a just-written file re-validates immediately.
+// Cache positives until files change or a preview discovers a missing path.
+// Negative checks are repeated because the agent may still be creating the file.
 const existsCache = new Map<string, boolean>();
 
 async function checkExists(
@@ -498,6 +491,7 @@ async function checkExists(
   path: string,
 ): Promise<boolean> {
   const root = cwd ?? "";
+  const generation = filesChangedNonce;
   const key = `${sessionId ?? ""}\0${sessionMainRootId ?? ""}\0${rootStatus ?? ""}\0${root}\0${path}`;
   if (existsCache.get(key) === true) return true;
   const absolute = isAbsolutePath(path);
@@ -513,7 +507,7 @@ async function checkExists(
       if (!sessionId || !sessionMainRootId) return false;
       ok = await window.codeshell.sessionFileExists(sessionId, sessionMainRootId, path);
     }
-    if (ok) existsCache.set(key, true); // memoize positives only
+    if (ok && generation === filesChangedNonce) existsCache.set(key, true); // memoize positives only
     return ok;
   } catch {
     return false;
@@ -525,12 +519,13 @@ async function checkExists(
 // mounted PathLink to re-run its check via useSyncExternalStore.
 let filesChangedNonce = 0;
 const filesChangedListeners = new Set<() => void>();
+export function invalidateFileExistsCache(): void {
+  existsCache.clear();
+  filesChangedNonce++;
+  for (const listener of filesChangedListeners) listener();
+}
 if (typeof window !== "undefined") {
-  window.addEventListener("codeshell:files-changed", () => {
-    existsCache.clear();
-    filesChangedNonce++;
-    for (const l of filesChangedListeners) l();
-  });
+  window.addEventListener("codeshell:files-changed", invalidateFileExistsCache);
 }
 function subscribeFilesChanged(cb: () => void): () => void {
   filesChangedListeners.add(cb);

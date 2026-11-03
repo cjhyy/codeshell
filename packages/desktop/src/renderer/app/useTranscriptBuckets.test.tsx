@@ -338,6 +338,42 @@ describe("transcript history hydration after a background resume", () => {
       readDisk = async () => [];
       publish({ type: "session_user_message", text: "question", clientMessageId: "client" });
       publish({ type: "session_started", sessionId: "saved", runId: "run", promptTokens: 0 });
+      const provenance = {
+        schemaVersion: 1,
+        cli: "codex",
+        observedAt: 123,
+        capture: "completion",
+        files: [
+          {
+            path: "gone.ts",
+            absolutePath: "/removed-worktree/gone.ts",
+            presence: "present",
+            versionStatus: "recorded",
+            contentRef: {
+              kind: "git-blob",
+              commit: "a".repeat(40),
+              blob: "b".repeat(40),
+              repoPath: "gone.ts",
+              worktreePath: "/removed-worktree",
+              linkedWorktree: true,
+              branch: "fixture",
+              repositoryId: "c".repeat(64),
+            },
+          },
+        ],
+      } as const;
+      publish({
+        type: "background_agent_completed",
+        agentId: "external",
+        description: "external files",
+        status: "completed",
+        workKind: "cc",
+        cwd: "/removed-worktree",
+        changedFiles: ["gone.ts"],
+        changedFilesProvenance: provenance as any,
+        enqueuedAt: 123,
+        originClientMessageId: "client",
+      });
       publish({ type: "stream_request_start", turnNumber: 1, messageId: "durable-reply" });
       const parts = Array.from({ length: 12 }, (_, index) => `${index}汉🙂`);
       for (const text of parts) publish({ type: "text_delta", text });
@@ -358,6 +394,21 @@ describe("transcript history hydration after a background resume", () => {
           done: false,
         }),
       );
+      const marker = hook.result.current.state.messages.find(
+        (message) => message.kind === "system" && message.externalFileChanges,
+      );
+      expect(marker).toMatchObject({ externalFileChanges: { provenance } });
+      const card = hook.result.current.state.messages.find(
+        (message) => message.kind === "files_changed",
+      );
+      expect(card).toMatchObject({
+        files: [
+          {
+            path: "/removed-worktree/gone.ts",
+            origin: { sourceId: "external", ref: provenance.files[0] },
+          },
+        ],
+      });
       expect(hook.result.current.awaitingHydration).toBe(false);
       expect(hook.result.current.state.outputCursor).toBe(snapshots.get("saved").outputCursor);
       expect(hook.result.current.busyKeys.has(bucket)).toBe(true);

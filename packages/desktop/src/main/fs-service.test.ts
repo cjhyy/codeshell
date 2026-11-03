@@ -86,3 +86,32 @@ describe("fileExists", () => {
     }
   });
 });
+
+describe("missing file content", () => {
+  it("returns missing for ENOENT/ENOTDIR after authorization, and still rejects escapes", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fsm-"));
+    const outside = await mkdtemp(join(tmpdir(), "fsm-out-"));
+    try {
+      const { readFile } = await import("./fs-service.js");
+      await writeFile(join(root, "file"), "x");
+      for (const path of [join(root, "gone.ts"), join(root, "file/child")]) {
+        expect(await readFile(root, path)).toEqual({
+          path,
+          text: null,
+          reason: "missing",
+          size: 0,
+        });
+      }
+      await expect(readFile(root, join(outside, "gone"))).rejects.toThrow("escapes");
+      if (process.platform !== "win32") {
+        await symlink(outside, join(root, "escape"));
+        await expect(readFile(root, join(root, "escape/gone"))).rejects.toThrow("escapes");
+        await symlink(join(outside, "not-created"), join(root, "dangling"));
+        await expect(readFile(root, join(root, "dangling"))).rejects.toThrow("escapes");
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+});

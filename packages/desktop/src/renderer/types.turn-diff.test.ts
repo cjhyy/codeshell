@@ -328,7 +328,13 @@ describe("execution snapshots and DriveAgent completions", () => {
     state = driveComplete(state);
     expect(cards(state)).toHaveLength(1);
     expect(cards(state)[0].files).toEqual([
-      { path: "/repo/src/a.ts", added: 0, removed: 0, count: 1 },
+      {
+        path: "/repo/src/a.ts",
+        added: 0,
+        removed: 0,
+        count: 1,
+        origin: { kind: "external-agent", sourceId: "drive:/repo" },
+      },
     ]);
     expect(cards(state)[0].sessionDiffs).toEqual([]);
     expectVisibleLateNotice(state);
@@ -346,7 +352,13 @@ describe("execution snapshots and DriveAgent completions", () => {
     const diffs = cards(state)[0].sessionDiffs!.map((item) => item.diff);
     expect(diffs).not.toContain(finalDiff);
     expect(cards(state)[0].files).toEqual([
-      { path: "/repo/src/a.ts", added: 1, removed: 1, count: 2 },
+      {
+        path: "/repo/src/a.ts",
+        added: 1,
+        removed: 1,
+        count: 2,
+        origin: { kind: "external-agent", sourceId: "drive:/repo" },
+      },
     ]);
     expect(diffs.join("\n")).toContain("+B");
     expect(diffs.join("\n")).not.toContain("+C");
@@ -396,7 +408,13 @@ describe("execution snapshots and DriveAgent completions", () => {
     state = applyStreamEvent(state, { ...snapshot({ capturedAt: 1_000 }), timestamp: 2_000 });
     expect(cards(state)).toHaveLength(1);
     expect(cards(state)[0].files).toEqual([
-      { path: "/repo/src/a.ts", added: 0, removed: 0, count: 1 },
+      {
+        path: "/repo/src/a.ts",
+        added: 0,
+        removed: 0,
+        count: 1,
+        origin: { kind: "external-agent", sourceId: "drive:/repo" },
+      },
     ]);
     expect(cards(state)[0].sessionDiffs).toEqual([]);
     expectVisibleLateNotice(state);
@@ -410,7 +428,13 @@ describe("execution snapshots and DriveAgent completions", () => {
     state = applyStreamEvent(state, snapshot());
     state = driveComplete(state);
     expect(cards(state)[0].files).toEqual([
-      { path: "/repo/src/a.ts", added: 1, removed: 1, count: 2 },
+      {
+        path: "/repo/src/a.ts",
+        added: 1,
+        removed: 1,
+        count: 2,
+        origin: { kind: "external-agent", sourceId: "drive:/repo" },
+      },
     ]);
     expect(cards(state)[0].sessionDiffs![0].path).toBe("/repo/src/a.ts");
     expect(parseUnifiedDiff(cards(state)[0].sessionDiffs![0].diff)[0].newPath).toBe(
@@ -452,7 +476,13 @@ describe("execution snapshots and DriveAgent completions", () => {
   test("legacy completion without a snapshot still preserves its absolute attribution", () => {
     const state = driveComplete(start(), "/owned path", ["报告.ts"]);
     expect(cards(state)[0].files).toEqual([
-      { path: "/owned path/报告.ts", added: 0, removed: 0, count: 1 },
+      {
+        path: "/owned path/报告.ts",
+        added: 0,
+        removed: 0,
+        count: 1,
+        origin: { kind: "external-agent", sourceId: "drive:/owned path" },
+      },
     ]);
     expect(state.messages.some((message) => message.kind === "system" && message.turnDiff)).toBe(
       false,

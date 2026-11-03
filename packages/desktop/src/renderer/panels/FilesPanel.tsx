@@ -1,3 +1,6 @@
+import type { ExternalFileOrigin } from "../types";
+import { FilePreviewContent, type FilePreviewReader } from "./FilePreviewContent";
+import type { FileRevealRequest } from "../chat/fileReveal";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -98,13 +101,13 @@ interface Props {
   /** Attach an image file to the composer by absolute path (TODO 2.1). */
   onAttachImage?: (absPath: string) => void;
   /** A chat path-link asked to reveal this file; nonce re-fires on re-click. */
-  revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
+  revealFile?: FileRevealRequest;
   /** Report back once we've actually revealed a request, so the parent marks it
    *  consumed (a later manually-opened tab then won't replay it). */
   onRevealConsumed?: (nonce: number) => void;
 }
 
-interface FileSystemReader {
+interface FileSystemReader extends FilePreviewReader {
   readDir: (root: string, dir: string) => Promise<FsEntry[]>;
   readFile: (root: string, path: string) => Promise<FileContent>;
   readImage: (root: string, path: string) => Promise<string | null>;
@@ -191,6 +194,12 @@ export function FilesPanel({
   const fileSystem = useMemo<FileSystemReader>(() => {
     if (engineSessionId && sessionMainRootId && activeRoot) {
       return {
+        ...(typeof window.codeshell.readSessionFileVersion === "function"
+          ? {
+              readVersion: (_root, ref) =>
+                window.codeshell.readSessionFileVersion(engineSessionId, activeRoot.id, ref),
+            }
+          : {}),
         // The Session authorizes its managed worktree, which is not a project root.
         readImage: (root, path) =>
           window.codeshell.readImageDataUrl(path, { cwd: root, sessionId: engineSessionId }),
@@ -202,13 +211,25 @@ export function FilesPanel({
     }
     if (!project || !activeRoot) return UNAVAILABLE_FILE_SYSTEM;
     return {
+      ...(typeof window.codeshell.readProjectFileVersion === "function"
+        ? {
+            readVersion: (_root, ref) =>
+              window.codeshell.readProjectFileVersion(project.id, activeRoot.id, ref),
+          }
+        : {}),
       readImage: UNAVAILABLE_FILE_SYSTEM.readImage,
       readDir: (_root, dir) => window.codeshell.readProjectDir(project.id, activeRoot.id, dir),
       readFile: (_root, path) =>
         window.codeshell.readProjectFileContent(project.id, activeRoot.id, path),
     };
   }, [activeRoot, engineSessionId, project, sessionMainRootId]);
+  const rootIdentity = JSON.stringify([engineSessionId, project?.id, activeRoot?.id, cwd]);
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectedReference, setSelectedReference] = useState<{
+    path: string;
+    root: string;
+    reference: ExternalFileOrigin;
+  } | null>(null);
   const [filter, setFilter] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -228,13 +249,14 @@ export function FilesPanel({
   // manual refresh button and by `codeshell:files-changed` (fired when an AI
   // turn completes), so an edit to the open file shows without re-selecting.
   const [reloadNonce, setReloadNonce] = useState(0);
-  const previousRootRef = useRef(cwd);
+  const previousRootRef = useRef(rootIdentity);
   // `selected` is only meaningful for the exact workspace identity in which
   // it was chosen. A nested worktree path is also lexically contained by its
   // main repository, so a path-prefix check cannot distinguish the two.
-  const selectedRootRef = useRef(cwd);
-  const selectedForCurrentRoot = selectedRootRef.current === cwd ? selected : null;
-  const revealDirsForCurrentRoot = previousRootRef.current === cwd ? revealDirs : new Set<string>();
+  const selectedRootRef = useRef(rootIdentity);
+  const selectedForCurrentRoot = selectedRootRef.current === rootIdentity ? selected : null;
+  const revealDirsForCurrentRoot =
+    previousRootRef.current === rootIdentity ? revealDirs : new Set<string>();
   const lastRevealNonceRef = useRef<number | null>(null);
   const revealPath = revealFile
     ? isAbsolutePath(revealFile.path)
@@ -245,6 +267,52 @@ export function FilesPanel({
     : null;
   const externalPreview =
     !!selectedForCurrentRoot && (!cwd || !resolveUnderRoot(cwd, selectedForCurrentRoot));
+  const previewFileSystem = useMemo<FileSystemReader>(() => {
+    if (!externalPreview) return fileSystem;
+    const ref =
+      selectedReference?.path === selectedForCurrentRoot && selectedReference.root === rootIdentity
+        ? selectedReference.reference.ref?.contentRef
+        : undefined;
+    if (typeof ref?.repositoryId !== "string" || !/^[a-f0-9]{64}$/.test(ref.repositoryId))
+      return LOCAL_FILE_SYSTEM;
+    // A sibling worktree's live path stays a local preview. Its Git version is
+    // read through the already authorized main root, independently of the tree
+    // selection; main still verifies repository identity and subdirectory scope.
+    if (
+      engineSessionId &&
+      sessionMainRootId &&
+      typeof window.codeshell.readSessionFileVersion === "function"
+    ) {
+      return {
+        ...LOCAL_FILE_SYSTEM,
+        readVersion: (_root, reference) =>
+          window.codeshell.readSessionFileVersion(engineSessionId, sessionMainRootId, reference),
+      };
+    }
+    if (
+      project &&
+      mainRootId &&
+      project.roots.some((root) => root.id === mainRootId) &&
+      typeof window.codeshell.readProjectFileVersion === "function"
+    ) {
+      return {
+        ...LOCAL_FILE_SYSTEM,
+        readVersion: (_root, reference) =>
+          window.codeshell.readProjectFileVersion(project.id, mainRootId, reference),
+      };
+    }
+    return LOCAL_FILE_SYSTEM;
+  }, [
+    externalPreview,
+    fileSystem,
+    selectedReference,
+    selectedForCurrentRoot,
+    rootIdentity,
+    engineSessionId,
+    sessionMainRootId,
+    project,
+    mainRootId,
+  ]);
   const pendingExternalPreview =
     !!revealFile &&
     !revealFile.consumed &&
@@ -253,15 +321,16 @@ export function FilesPanel({
   const treeAvailable = !!cwd && !externalPreview && !pendingExternalPreview;
 
   useEffect(() => {
-    if (previousRootRef.current === cwd) return;
-    previousRootRef.current = cwd;
-    selectedRootRef.current = cwd;
+    if (previousRootRef.current === rootIdentity) return;
+    previousRootRef.current = rootIdentity;
+    selectedRootRef.current = rootIdentity;
     setSelected(null);
+    setSelectedReference(null);
     setPreviewOpen(false);
     setFilter("");
     setRevealDirs(new Set());
     setReloadNonce((n) => n + 1);
-  }, [cwd]);
+  }, [rootIdentity]);
 
   useEffect(() => {
     const onChanged = (): void => setReloadNonce((n) => n + 1);
@@ -295,8 +364,13 @@ export function FilesPanel({
     }
     const abs = cwd ? resolveUnderRoot(cwd, revealPath) : null;
     lastRevealNonceRef.current = revealFile.nonce;
-    selectedRootRef.current = cwd;
+    selectedRootRef.current = rootIdentity;
     setSelected(abs ?? revealPath);
+    setSelectedReference(
+      revealFile.reference
+        ? { path: abs ?? revealPath, root: rootIdentity, reference: revealFile.reference }
+        : null,
+    );
     setPreviewOpen(true);
     setRevealDirs(cwd && abs ? ancestorDirs(cwd, abs) : new Set());
     setReloadNonce((n) => n + 1);
@@ -313,6 +387,7 @@ export function FilesPanel({
     revealFile,
     revealPath,
     rootOptions,
+    rootIdentity,
     setSelectedRootId,
   ]);
 
@@ -382,7 +457,7 @@ export function FilesPanel({
   }
 
   return (
-    <FileSystemContext.Provider value={externalPreview ? LOCAL_FILE_SYSTEM : fileSystem}>
+    <FileSystemContext.Provider value={previewFileSystem}>
       <div ref={panelRef} className="@container/files-panel flex min-h-0 min-w-0 flex-1">
         {treeAvailable && treeOpen && cwd && (
           <div
@@ -442,8 +517,9 @@ export function FilesPanel({
                 depth={0}
                 selected={selectedForCurrentRoot}
                 onSelect={(path) => {
-                  selectedRootRef.current = cwd;
+                  selectedRootRef.current = rootIdentity;
                   setSelected(path);
+                  setSelectedReference(null);
                   setPreviewOpen(true);
                 }}
                 filter={filter.trim().toLowerCase()}
@@ -514,6 +590,13 @@ export function FilesPanel({
           <div className="min-h-0 flex-1 overflow-hidden">
             {selectedForCurrentRoot ? (
               <FileViewer
+                key={`${cwd}\0${selectedForCurrentRoot}\0${JSON.stringify(selectedReference)}`}
+                reference={
+                  selectedReference?.path === selectedForCurrentRoot &&
+                  selectedReference?.root === rootIdentity
+                    ? selectedReference.reference
+                    : undefined
+                }
                 root={cwd ?? ""}
                 path={selectedForCurrentRoot}
                 reloadNonce={reloadNonce}
@@ -824,12 +907,15 @@ function FileViewer({
   root,
   path,
   reloadNonce,
+  reference,
 }: {
   root: string;
   path: string;
   reloadNonce: number;
+  reference?: ExternalFileOrigin;
 }) {
   const { t } = useT();
+  const fileSystem = React.useContext(FileSystemContext);
   const ext = useMemo(() => (path.split(".").pop() ?? "").toLowerCase(), [path]);
   const name = nativeBasename(path, window.codeshell.platform);
   const isImage = IMAGE_EXT.has(ext) || ext === SVG_EXT;
@@ -861,20 +947,43 @@ function FileViewer({
           </button>
         )}
       </div>
-      <div className="min-h-0 flex-1 overflow-auto">
-        {isImage ? (
-          <ImagePreview root={root} path={path} reloadNonce={reloadNonce} />
-        ) : (
-          // Markdown in preview mode renders rich; everything else (and md in
-          // source mode) uses the line-numbered, per-line-commentable view.
-          <TextPreview
-            root={root}
-            path={path}
-            markdown={isMarkdown && !mdSource}
-            reloadNonce={reloadNonce}
-          />
-        )}
-      </div>
+      <FilePreviewContent
+        root={root}
+        path={path}
+        reloadNonce={reloadNonce}
+        reference={reference}
+        reader={fileSystem}
+        renderCurrent={(content) => {
+          if (isImage)
+            return (
+              <ImagePreview
+                root={root}
+                path={path}
+                reloadNonce={reloadNonce}
+                initialSource={
+                  "imageDataUrl" in content && typeof content.imageDataUrl === "string"
+                    ? content.imageDataUrl
+                    : undefined
+                }
+              />
+            );
+          if (content.text === null)
+            return (
+              <div className="p-4 text-sm text-muted-foreground">
+                {content.reason === "too-large"
+                  ? t("panels.files.tooLarge")
+                  : t("panels.files.binary")}
+              </div>
+            );
+          if (isMarkdown && !mdSource)
+            return (
+              <div className="p-4">
+                <Markdown text={content.text} cwd={mdBaseDir(root, path)} />
+              </div>
+            );
+          return <CodeWithComments path={path} text={content.text} />;
+        }}
+      />
     </div>
   );
 }
@@ -884,16 +993,23 @@ function ImagePreview({
   root,
   path,
   reloadNonce,
+  initialSource,
 }: {
   root: string;
   path: string;
   reloadNonce: number;
+  initialSource?: string;
 }) {
   const { t } = useT();
   const fileSystem = React.useContext(FileSystemContext);
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
+    if (initialSource) {
+      setSrc(initialSource);
+      setFailed(false);
+      return;
+    }
     let cancelled = false;
     setSrc(null);
     setFailed(false);
@@ -910,7 +1026,7 @@ function ImagePreview({
     return () => {
       cancelled = true;
     };
-  }, [fileSystem, root, path, reloadNonce]);
+  }, [fileSystem, root, path, reloadNonce, initialSource]);
 
   if (failed)
     return (
@@ -937,79 +1053,6 @@ function ImagePreview({
 function mdBaseDir(root: string, path: string): string {
   const abs = isAbsolutePath(path) ? path : joinPath(root, path);
   return nativeDirname(abs, window.codeshell.platform);
-}
-
-function TextPreview({
-  root,
-  path,
-  markdown,
-  reloadNonce,
-}: {
-  root: string;
-  path: string;
-  markdown: boolean;
-  reloadNonce: number;
-}) {
-  const { t } = useT();
-  const fileSystem = React.useContext(FileSystemContext);
-  const [content, setContent] = useState<FileContent | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  // Blank to "加载中…" only when the FILE changes, not on a same-file reload
-  // (turn-complete / refresh) — otherwise the preview would flash empty on
-  // every AI turn. A reload swaps content in place once the read resolves.
-  useEffect(() => {
-    setContent(null);
-    setError(null);
-  }, [root, path]);
-  useEffect(() => {
-    let cancelled = false;
-    void fileSystem
-      .readFile(root, path)
-      .then((c) => {
-        if (!cancelled) {
-          setContent(c);
-          setError(null);
-        }
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(String(e instanceof Error ? e.message : e));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [fileSystem, path, reloadNonce, root]);
-
-  if (error)
-    return (
-      <div className="p-4 text-sm text-status-err">{t("panels.files.readFailed", { error })}</div>
-    );
-  if (!content)
-    return <div className="p-4 text-sm text-muted-foreground">{t("panels.common.loading")}</div>;
-  if (content.text === null) {
-    return (
-      <div className="p-4 text-sm text-muted-foreground">
-        {content.reason === "too-large" ? t("panels.files.tooLarge") : t("panels.files.binary")}
-      </div>
-    );
-  }
-
-  if (markdown) {
-    // Render markdown with the shared renderer (gfm + highlighted code blocks).
-    // Pass the file's OWN directory as cwd so relative image paths in the doc
-    // (e.g. a README's `docs/images/x.png`) resolve and load as data: URLs —
-    // without it the images can't load (webSecurity + CSP block file://).
-    const fileDir = mdBaseDir(root, path);
-    return (
-      <div className="p-4">
-        <Markdown text={content.text} cwd={fileDir} />
-      </div>
-    );
-  }
-
-  // Code/text: line-numbered view with a per-line comment affordance so the
-  // user can pin a precise location (file:line) to the composer.
-  return <CodeWithComments path={path} text={content.text} />;
 }
 
 /** Line-numbered code view; hover a line to pin a comment anchor (file:line). */

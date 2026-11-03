@@ -22,6 +22,7 @@ import { CONTRACTS } from "./contracts.js";
 // index.internal.ts. Host-assembly surfaces (installer/marketplace/onboarding/
 // updater) moved here in 0.8.
 const expectedRuntimeExportsByPartition = {
+  externalFileProvenance: ["sanitizeExternalChangedFilesProvenance", "sanitizeGitBlobRef"],
   configuredTextModels: [
     "configuredTextModelSnapshot",
     "readConfiguredTextModelSource",
@@ -447,6 +448,8 @@ const hostOnlySamples = [
 
 // Runtime members of the /extension capability contract (coding/arena imports).
 const extensionRuntimeContract = [
+  "sanitizeExternalChangedFilesProvenance",
+  "sanitizeGitBlobRef",
   "createEphemeralModelRequestSigner",
   "currentModelRequestCall",
   "currentUsageAttempt",
@@ -548,6 +551,10 @@ describe("core public/internal export contract", () => {
     // Process singletons shared by hosts (via /internal) and capability
     // packages (via /extension) must be the same instance.
     expect(extensionApi.notificationQueue).toBe(internalApi.notificationQueue);
+    for (const name of ["sanitizeExternalChangedFilesProvenance", "sanitizeGitBlobRef"]) {
+      expect(extensionApi[name]).toBe(internalApi[name]);
+      expect(publicApi).not.toHaveProperty(name);
+    }
 
     // Shared host helpers must retain their identity across supported entries.
     expect(extensionApi.acquireLockOnPath).toBe(internalApi.acquireLockOnPath);

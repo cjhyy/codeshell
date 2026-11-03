@@ -1,3 +1,7 @@
+import {
+  sanitizeExternalChangedFilesProvenance,
+  type ExternalChangedFilesProvenance,
+} from "../../session/external-file-provenance.js";
 import { nanoid } from "nanoid";
 import {
   closeSync,
@@ -75,6 +79,7 @@ export interface ResultPayload {
   signal?: string;
   ccSessionId?: string;
   changedFiles?: string[];
+  changedFilesProvenance?: ExternalChangedFilesProvenance;
   cwd?: string;
   originClientMessageId?: string;
   finishedAt: number;
@@ -111,6 +116,7 @@ interface NotificationEnvelopeBase<
   readonly ccSessionId?: string;
   readonly error?: string;
   readonly changedFiles?: string[];
+  readonly changedFilesProvenance?: ExternalChangedFilesProvenance;
   readonly cwd?: string;
   readonly originClientMessageId?: string;
   readonly enqueuedAt?: number;
@@ -152,6 +158,7 @@ export type DirectionEnvelopeDraft = Omit<
   | "ccSessionId"
   | "error"
   | "changedFiles"
+  | "changedFilesProvenance"
   | "cwd"
   | "originClientMessageId"
   | "enqueuedAt"
@@ -174,6 +181,7 @@ export type ProgressEnvelopeDraft = Omit<
   | "ccSessionId"
   | "error"
   | "changedFiles"
+  | "changedFilesProvenance"
   | "cwd"
   | "originClientMessageId"
   | "enqueuedAt"
@@ -196,6 +204,7 @@ export type ResultEnvelopeDraft = Omit<
   | "ccSessionId"
   | "error"
   | "changedFiles"
+  | "changedFilesProvenance"
   | "cwd"
   | "originClientMessageId"
   | "enqueuedAt"
@@ -246,6 +255,7 @@ export type NotificationItem = {
   ccSessionId?: string;
   error?: string;
   changedFiles?: string[];
+  changedFilesProvenance?: ExternalChangedFilesProvenance;
   cwd?: string;
   originClientMessageId?: string;
   enqueuedAt: number;
@@ -407,6 +417,9 @@ function legacyItemToDraft(item: NotificationItem, sessionId: string): ResultEnv
       ...(item.ccSessionId !== undefined ? { ccSessionId: item.ccSessionId } : {}),
       ...(item.error !== undefined ? { error: item.error } : {}),
       ...(item.changedFiles !== undefined ? { changedFiles: item.changedFiles } : {}),
+      ...(item.changedFilesProvenance !== undefined
+        ? { changedFilesProvenance: item.changedFilesProvenance }
+        : {}),
       ...(item.cwd !== undefined ? { cwd: item.cwd } : {}),
       ...(item.originClientMessageId !== undefined
         ? { originClientMessageId: item.originClientMessageId }
@@ -416,7 +429,14 @@ function legacyItemToDraft(item: NotificationItem, sessionId: string): ResultEnv
   };
 }
 
+function normalizeResultProvenance(payload: ResultPayload): ResultPayload {
+  const { changedFilesProvenance: raw, ...rest } = payload;
+  const provenance = sanitizeExternalChangedFilesProvenance(raw, payload.changedFiles ?? []);
+  return { ...rest, ...(provenance ? { changedFilesProvenance: provenance } : {}) };
+}
+
 function installLegacyResultAliases(envelope: ResultEnvelope): void {
+  envelope.payload = normalizeResultProvenance(envelope.payload);
   const aliases: Record<string, () => unknown> = {
     agentId: () => envelope.from.agentId ?? envelope.payload.workId,
     name: () => envelope.payload.name,
@@ -430,6 +450,7 @@ function installLegacyResultAliases(envelope: ResultEnvelope): void {
     ccSessionId: () => envelope.payload.ccSessionId,
     error: () => envelope.payload.error,
     changedFiles: () => envelope.payload.changedFiles,
+    changedFilesProvenance: () => envelope.payload.changedFilesProvenance,
     cwd: () => envelope.payload.cwd,
     originClientMessageId: () => envelope.payload.originClientMessageId,
     enqueuedAt: () => envelope.payload.finishedAt,
@@ -876,7 +897,10 @@ export class NotificationQueue {
       this.quarantineCorruptFile(file, new Error("invalid pending notification schema"));
       return { schemaVersion: PERSISTENCE_SCHEMA_VERSION, results: [] };
     }
-    const valid = parsed.results.filter(isPersistedResultEnvelope);
+    const valid = parsed.results.filter(isPersistedResultEnvelope).map((candidate) => ({
+      ...candidate,
+      payload: normalizeResultProvenance(candidate.payload),
+    }));
     if (valid.length !== parsed.results.length) {
       this.quarantineCorruptFile(
         file,
@@ -983,6 +1007,9 @@ function resultEnvelopeToItem(envelope: ResultEnvelope): NotificationItem {
     ...(payload.ccSessionId !== undefined ? { ccSessionId: payload.ccSessionId } : {}),
     ...(payload.error !== undefined ? { error: payload.error } : {}),
     ...(payload.changedFiles !== undefined ? { changedFiles: payload.changedFiles } : {}),
+    ...(payload.changedFilesProvenance !== undefined
+      ? { changedFilesProvenance: payload.changedFilesProvenance }
+      : {}),
     ...(payload.cwd !== undefined ? { cwd: payload.cwd } : {}),
     ...(payload.originClientMessageId !== undefined
       ? { originClientMessageId: payload.originClientMessageId }
@@ -1011,6 +1038,11 @@ export function notificationItemToStreamEvent(
   if (item.error !== undefined) event.error = item.error;
   if (item.ccSessionId !== undefined) event.ccSessionId = item.ccSessionId;
   if (item.changedFiles !== undefined) event.changedFiles = item.changedFiles;
+  const provenance = sanitizeExternalChangedFilesProvenance(
+    item.changedFilesProvenance,
+    item.changedFiles ?? [],
+  );
+  if (provenance) event.changedFilesProvenance = provenance;
   if (item.cwd !== undefined) event.cwd = item.cwd;
   if (item.originClientMessageId !== undefined) {
     event.originClientMessageId = item.originClientMessageId;

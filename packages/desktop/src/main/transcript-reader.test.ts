@@ -392,6 +392,56 @@ describe("transcriptToFoldItems", () => {
     ]);
   });
 
+  it.each([true, false])(
+    "sanitizes external transcript provenance without losing the completion (valid=%s)",
+    (valid) => {
+      const provenance = {
+        schemaVersion: valid ? 1 : 9,
+        cli: "claude",
+        observedAt: 123,
+        capture: "completion",
+        files: [{ path: "a.ts", absolutePath: "/repo/a.ts", presence: "missing" }],
+      };
+      const items = transcriptToFoldItems(
+        line("external_file_changes", {
+          jobId: "external",
+          cwd: "/repo",
+          changedFiles: ["a.ts"],
+          provenance,
+        }),
+      );
+      expect(items).toHaveLength(1);
+      const event = (items[0] as any).event;
+      expect(event.type).toBe("background_agent_completed");
+      expect(event.changedFilesProvenance).toEqual(valid ? provenance : undefined);
+    },
+  );
+
+  it("preserves the legacy completed projection for cancelled external changes", () => {
+    const provenance = {
+      schemaVersion: 1,
+      cli: "claude",
+      observedAt: 123,
+      capture: "completion",
+      files: [{ path: "a.ts", absolutePath: "/repo/a.ts", presence: "present" }],
+    };
+    const items = transcriptToFoldItems(
+      line("external_file_changes", {
+        jobId: "cancelled-external",
+        cwd: "/repo",
+        status: "cancelled",
+        changedFiles: ["a.ts"],
+        provenance,
+      }),
+    );
+    expect(items).toHaveLength(1);
+    expect((items[0] as any).event).toMatchObject({
+      type: "background_agent_completed",
+      status: "completed",
+      changedFilesProvenance: provenance,
+    });
+  });
+
   it("maps tool_use + tool_result", () => {
     const jsonl = [
       line("tool_use", { toolName: "Bash", toolCallId: "tc1", args: { command: "ls" } }),

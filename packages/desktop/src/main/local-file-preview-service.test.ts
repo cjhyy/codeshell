@@ -1,9 +1,22 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtemp, mkdir, realpath, rm, symlink, truncate, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import {
+  cp,
+  mkdtemp,
+  mkdir,
+  realpath,
+  rename,
+  rm,
+  symlink,
+  truncate,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileExists, readDirectory, readFile } from "./fs-service.js";
+import { readGitBlobVersion } from "./file-version-service.js";
 import { localFileExists, readLocalFilePreview } from "./local-file-preview-service.js";
+import { probeExternalChangedFiles } from "../../../coding/src/cc-orchestrator/external-change-provenance.js";
 
 describe("explicit local file preview", () => {
   let root: string;
@@ -31,14 +44,19 @@ describe("explicit local file preview", () => {
     await expect(readDirectory(workspace, root)).rejects.toThrow("path escapes workspace root");
   });
 
+  test("missing local files return a stable reason", async () => {
+    await writeFile(join(root, "file"), "x");
+    for (const path of [join(root, "missing.md"), join(root, "file/child")])
+      expect(await readLocalFilePreview(path)).toEqual({
+        path,
+        text: null,
+        reason: "missing",
+        size: 0,
+      });
+  });
+
   test("rejects directories, missing files, relative paths, NUL and oversized path values", async () => {
-    const invalid = [
-      root,
-      join(root, "missing.md"),
-      "README.md",
-      "/tmp/\0file",
-      "/".repeat(32_769),
-    ];
+    const invalid = [root, "README.md", "/tmp/\0file", "/".repeat(32_769)];
     for (const path of invalid) {
       expect(await localFileExists(path)).toBe(false);
       await expect(readLocalFilePreview(path)).rejects.toThrow();
@@ -95,6 +113,171 @@ describe("explicit local file preview", () => {
       text: null,
       reason: "binary",
       size: 3,
+    });
+  });
+});
+
+// Read-only historical versions share the same authorized-root boundary as previews.
+describe("file versions", () => {
+  let root: string;
+  function git(cwd: string, ...args: string[]) {
+    return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
+  }
+  beforeEach(async () => {
+    root = await realpath(await mkdtemp(join(tmpdir(), "version-")));
+    git(root, "init", "-q");
+    git(root, "config", "user.name", "Fixture");
+    git(root, "config", "user.email", "fixture@example.invalid");
+    await mkdir(join(root, "sub"));
+    await writeFile(join(root, "sub/a.md"), "# exact history\n![image](private.png)\n");
+    await writeFile(join(root, "other"), "outside authorized subdir");
+    await writeFile(join(root, "binary"), Buffer.from([1, 0, 2]));
+    await writeFile(join(root, "invalid-utf8"), Buffer.from([0xff, 0xfe]));
+    await writeFile(join(root, "large"), Buffer.alloc(2_000_001, 97));
+    await symlink("sub/a.md", join(root, "link"));
+    git(root, "add", ".");
+    git(root, "commit", "-qm", "fixture");
+  });
+  afterEach(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
+  async function ref(path = "sub/a.md", cwd = root) {
+    return (await probeExternalChangedFiles(cwd, [path])).files[0]!.contentRef!;
+  }
+
+  describe("authorized Git blob versions", () => {
+    test("reads exact committed bytes from the main repository after linked worktree removal", async () => {
+      const wt = root + "-linked";
+      git(root, "worktree", "add", "-qb", "version-fixture", wt);
+      await writeFile(join(wt, "sub/a.md"), "linked completion bytes\n");
+      git(wt, "add", ".");
+      git(wt, "commit", "-qm", "linked commit");
+      const reference = await ref("sub/a.md", wt);
+      git(root, "worktree", "remove", "--force", wt);
+      expect(await readGitBlobVersion(root, reference)).toMatchObject({
+        status: "ok",
+        text: "linked completion bytes\n",
+        commit: reference.commit,
+      });
+      expect(
+        await readGitBlobVersion(root, { ...reference, worktreePath: "/untrusted/display-only" }),
+      ).toMatchObject({ status: "ok" });
+    });
+    test("requires commit:path == regular blob, objects, valid UTF8 and bounded content", async () => {
+      const reference = await ref();
+      expect(await readGitBlobVersion(root, { ...reference, blob: "a".repeat(40) })).toMatchObject({
+        status: "unavailable",
+        reason: "mismatch",
+      });
+      expect(
+        await readGitBlobVersion(root, { ...reference, commit: "a".repeat(40) }),
+      ).toMatchObject({
+        status: "unavailable",
+        reason: "object-missing",
+      });
+      expect(
+        await readGitBlobVersion(root, {
+          ...reference,
+          repoPath: "link",
+          blob: git(root, "rev-parse", "HEAD:link"),
+        }),
+      ).toMatchObject({ status: "unavailable", reason: "mismatch" });
+      expect(await readGitBlobVersion(root, await ref("binary"))).toMatchObject({
+        status: "unavailable",
+        reason: "binary",
+      });
+      expect(await readGitBlobVersion(root, await ref("invalid-utf8"))).toMatchObject({
+        status: "unavailable",
+        reason: "invalid-utf8",
+      });
+      expect(await readGitBlobVersion(root, await ref("large"))).toMatchObject({
+        status: "unavailable",
+        reason: "too-large",
+      });
+      for (const invalid of [
+        null,
+        {},
+        { ...reference, repoPath: "../secret" },
+        { ...reference, commit: "--help" },
+      ])
+        await expect(readGitBlobVersion(root, invalid)).rejects.toThrow("Invalid");
+    });
+    test("uses literal special names and preserves UTF-8 BOM bytes", async () => {
+      for (const path of [":(glob)*.ts", "space [文]\n.ts", "bom.txt"])
+        await writeFile(join(root, path), path === "bom.txt" ? "\uFEFFprecise UTF8\n" : path);
+      git(root, "--literal-pathspecs", "add", "--", ":(glob)*.ts", "space [文]\n.ts", "bom.txt");
+      git(root, "commit", "-qm", "special names");
+      for (const path of [":(glob)*.ts", "space [文]\n.ts", "bom.txt"])
+        expect(await readGitBlobVersion(root, await ref(path))).toMatchObject({
+          status: "ok",
+          text: path === "bom.txt" ? "\uFEFFprecise UTF8\n" : path,
+        });
+    });
+    test("subdirectory authorization cannot read siblings or escape via symlinks", async () => {
+      expect(await readGitBlobVersion(join(root, "sub"), await ref())).toMatchObject({
+        status: "ok",
+      });
+      await expect(readGitBlobVersion(join(root, "sub"), await ref("other"))).rejects.toThrow(
+        "authorized root",
+      );
+      const external = await mkdtemp(join(tmpdir(), "notrepo-"));
+      try {
+        expect(await readGitBlobVersion(external, await ref())).toMatchObject({
+          status: "unavailable",
+          reason: "not-a-repository",
+        });
+      } finally {
+        await rm(external, { recursive: true, force: true });
+      }
+    });
+    test("rejects a repository replaced at the same path even with identical objects", async () => {
+      const reference = await ref();
+      await rename(join(root, ".git"), join(root, ".git-original"));
+      await cp(join(root, ".git-original"), join(root, ".git"), { recursive: true });
+      expect(await readGitBlobVersion(root, reference)).toMatchObject({
+        status: "unavailable",
+        reason: "repository-mismatch",
+      });
+    });
+    test("binds repository identity even for cloned objects and ignores malicious Git environment", async () => {
+      const reference = await ref();
+      const clone = root + "-clone";
+      git(root, "clone", "--quiet", "--no-hardlinks", root, clone);
+      try {
+        expect(await readGitBlobVersion(clone, reference)).toMatchObject({
+          status: "unavailable",
+          reason: "repository-mismatch",
+        });
+        const { repositoryId: _id, ...unbound } = reference;
+        expect(await readGitBlobVersion(root, unbound)).toMatchObject({
+          status: "unavailable",
+          reason: "repository-mismatch",
+        });
+        const old = { ...process.env };
+        Object.assign(process.env, {
+          GIT_DIR: clone,
+          GIT_WORK_TREE: clone,
+          GIT_INDEX_FILE: "/no-index",
+          GIT_OBJECT_DIRECTORY: "/no-objects",
+          GIT_ALTERNATE_OBJECT_DIRECTORIES: clone,
+          GIT_COMMON_DIR: clone,
+          GIT_NAMESPACE: "evil",
+          GIT_CONFIG_COUNT: "1",
+          GIT_CONFIG_KEY_0: "core.worktree",
+          GIT_CONFIG_VALUE_0: clone,
+        });
+        try {
+          expect(await readGitBlobVersion(root, reference)).toMatchObject({
+            status: "ok",
+            text: "# exact history\n![image](private.png)\n",
+          });
+        } finally {
+          for (const key of Object.keys(process.env)) if (!(key in old)) delete process.env[key];
+          Object.assign(process.env, old);
+        }
+      } finally {
+        await rm(clone, { recursive: true, force: true });
+      }
     });
   });
 });

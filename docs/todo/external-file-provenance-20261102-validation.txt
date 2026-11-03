@@ -1,0 +1,283 @@
+历史文件链接与外部代理来源：首版实施与 CC 复验修订报告（待 CC 复验）
+日期：2026-11-02
+验收会话：Claude Code b7659921-16fc-4380-b8b9-3da7c34eab9e
+
+1. 工作区与交付状态
+
+worktree：/Users/admin/.codex/worktrees/external-file-provenance-20261102/codeshell
+branch：codex/desktop/external-file-provenance-20261102
+base SHA / 当前 HEAD：9bd3bca56abb5b682316bdd829bb5657ccf3e37a
+基线在任务开始时 git fetch origin 后取最新 origin/main。I1 修订开始时再次 git fetch origin，origin/main 已为 d97fb6018702e27c42029d315822f96f7fc0f673，比 base 多 5 个提交。incoming 与任务已修改的 packages/core/src/index.ts、packages/desktop/src/main/index.ts 相交；本轮保留原 base，没有 stash/reset/stage/commit 或在 dirty 目录强行同步。整合前待更新 origin/main 并复验，详见第 7 节。
+任务路径和分支创建前均不存在，没有覆盖其他 ownership。
+主仓 main 的大量未提交改动保留；没有对主仓业务文件写入、stash/reset/stage。
+读取 DriveAgentJobs 的持久化 job 元数据核对冲突：活动记录 cc-8mqyz80akz 的 processId 47709 对应本次 Codex 进程，effectiveWorkspaceCwd 正是任务 worktree，未发现另一活动记录占用此任务目录。未修改 job 或真实 session 数据。
+我是唯一业务写手；并行助手只读审计，无编辑或测试/构建写入。
+所有任务代码及本报告均未提交、未暂存。未 commit/push/PR/合并/触发 CI/发版，未清理任务 worktree。
+未启动、安装或替换正在运行的 App。测试均通过守护 runner 使用隔离真实 HOME、应用状态及凭证环境，真实 Git fixture 只用临时 repo 和局部 user.name/user.email。
+
+2. 已实现机制
+
+Core：
+- 可选 schemaVersion=1 completion provenance、精确 changedFiles 原始路径匹配、最多 100 条、4096 字符路径界限、40/64 位 Git OID、有限时间与安全整数 size 校验。
+- 坏 schema 整体剥除，坏条目隔离；坏可选 ref 剥除，不能把坏来源升级为 recorded。来源损坏不丢整条完成通知。
+- 类型从 . 和 /extension 导出，sanitizer 从 /extension 与 /internal 导出，精确导出契约与共享函数 identity 已验证。
+- ToolContext record、engine transcript append、notification draft/payload/legacy aliases/enqueue、两处 persistence restore/mutation、事件转换完整保留来源。
+- Desktop transcript-reader 清洗 provenance 后转成 changedFilesProvenance。
+- 既有 output-journal codec 已原样保存整个完成事件，无需改 journal schema。真实 v2 journal → 内存前缀淘汰 → Desktop hydrate → 实际 transcriptsReducer → 来源 marker/卡片的测试通过，并非仅测试 transcript 重放。
+
+Coding：
+- normalizeChangedFiles 后、safeFinalizeDriveWorktree 前 await completion probe；changedFiles 和模型唤醒正文保持原行为。
+- probe 总预算 4 秒，单 Git 命令最多 2 秒；先创建最多 100 个 ref，未开始探测的条目标 skipped-limit，超出协议上限的条目不发布。
+- lstat 判 present/missing/not-regular/unknown，ENOENT/ENOTDIR 为 missing，软链和非普通文件不捕获版本。
+- 按真实目录定位 Git top/git-dir/common-dir，识别 linked worktree，记录 HEAD 和可选 branch。
+- 只有 HEAD tree 的 regular blob、index stage/mode/blob 与 HEAD 一致、原始工作文件 hash 匹配，并通过 inode/dev/size/mode/mtime/ctime 栅栏后才 recorded。modified/staged/mode-changed、untracked/ignored 均无历史引用。
+- Git 用 execFile 参数数组、literal pathspec、timeout/maxBuffer；清除全部继承 GIT_*，禁 optional locks/fsmonitor/hooks/外部 diff，GIT_ALLOW_PROTOCOL='' 禁所有传输；无 shell、无 filters/textconv。
+- probe 抛错仍清理及发布完成；新增异步间隙后复核 ownership。取消等待 completion Promise，session teardown 不会被晚到成功事件复活。
+- 完成和失败两种通知分支均携带来源；无 changedFiles 不附来源，早退语义保留。
+
+Desktop Main / preload：
+- 授权范围内 missing 读返回 text:null/reason:missing/size:0，目录路径别名与缺失祖先正确处理；权限与路径逃逸仍 throw，包括指向工作区外的 dangling symlink。
+- 显式 local preview 的缺失 realpath 同样返回 missing，非法参数与非普通文件拒绝策略保留。
+- 只读历史服务只从已授权 root 仓库读取。验证仓库实例绑定、commit 类型、literal commit:path 的 regular blob 与 ref.blob 相等，再先查 size、最多读取 2,000,000 字节、重算 blob OID。
+- NUL 二进制与无效 UTF-8 明确 unavailable；UTF-8 BOM 保留。对象缺失、mismatch、非仓库、跨仓库、过大等明确返回状态。
+- worktreePath 只作展示，不用于定位。授权 root 是仓库子目录时拒绝读取其外 repoPath。不同路径 clone 及同路径替换仓库均不能混用旧 ref。
+- 新增 fsSession:readFileVersion / fsRoot:readFileVersion 模块注册，分别经过 assertDesktopSessionId + requireSessionFileRootForUi / requireRendererProjectRoot。
+- main/index.ts 只有导入与调用两行；preload 只改 project-authority-api/types，未改 preload/index.ts 或 types.d.ts。
+
+Renderer：
+- Core 类型仅 type import，本地 guard 与 Core guard 的损坏输入 parity 测试通过。
+- 修改实际 Desktop 完成 reducer 路径；没有误改 mobile reducer。
+- 文件聚合精确按原始 path 取 ref，同路径最后来源优先，同来源重放不增加计数；既有 turn_diff 覆盖/保守处理与 Review 行为保留。
+- 卡片展示完成时缺失、linked worktree、工作区外、旧记录外部代理，完整路径作 title；完成时 present 的记录不误标“完成时已不存在”。
+- origin/reference 经 openFileTarget → CustomEvent → usePanelBuckets → FileRevealRequest → FilesPanel 完整传递。已知 missing 的 Cmd/Ctrl 点击进入内置面板。
+- 选择绑定 project/session/root id + cwd + path + reference；换文件或授权根清引用，异步旧请求不串内容。
+- missing 展示可复制完整路径、CLI、完成时间及当时状态；旧记录明确未保存历史版本；不会剥 .worktrees 前缀去打开 main 同名文件。
+- 已有实时内容默认当前文件，可显式切完成时版本。历史视图纯文本行号、无 Markdown 相对媒体解析、无评论锚点，常驻“非当前磁盘内容/完成时/只读/commit”横幅。
+- files-changed 仅重读实时内容，不破坏已选历史；同值 project/reader 刷新保留历史。
+- 外部路径实时读取仍为 LOCAL_FILE_SYSTEM；I1 修订将历史能力解耦，只有绑定到当前选中文件且有有效 repositoryId 的 ref，才组合已授权 Session/project 主根的 readVersion。没有授权或有效 repositoryId 不提供历史入口。
+- 导出并调用 Markdown invalidateFileExistsCache；不派 files-changed，避免 reload 循环，并防旧异步检查在失效后回填正缓存。
+- 中英 panels/core 文案及相应交互测试已补。
+
+3. 与 CC 方案的偏差及安全修正
+
+A. 没有执行 git status。
+真实失败测试证实 filter driver 名可包含 '='，按配置名拼接 -c 关闭过滤器会失效并执行仓库程序；即使屏蔽所有当时已知 driver，config/attributes 仍可能并发变化。
+因此采用 ls-files --stage -z + ls-tree -z + hash-object --no-filters + 文件 stat 栅栏完成分类，不调用能触发 clean/process filters 的 status。真实恶意 filter（含 '=' 名称）测试保证没有执行 marker。这是针对 Git 配置执行面的最小修正。
+可执行权限也作保守比较；未提交的 chmod 不误记 recorded。
+
+B. contentRef 增加可选 repositoryId（64 位 SHA256）。
+它绑定 canonical commonDir + dev/ino/birthtime，而非只绑定 OID 或 worktreePath。新 probe 始终生成；历史 reader 缺少绑定时拒绝读取（repository-mismatch）。该 ID 是仓库关联检验，不是新的权限凭证，授权仍由 Session/project root 决定。
+这意味着仓库搬迁、克隆、替换或文件系统身份变化会安全地变成不可用，不尝试猜测迁移。
+
+C. Renderer 使用本地纯校验守卫。
+为遵守 renderer 不 runtime import 非 reviewed Core entry 的规则，保留本地 guard，并用 parity 测试约束与 Core 协议一致；未扩展 browser runtime entry。
+
+D. 未提高架构预算。
+只合并已有同模块的重复 barrel export 声明，添加要求的类型/函数。architecture-budgets 与精确 export contract 均通过，预算文件和 workflow 无改动。
+
+4. TDD 与实际验证
+
+本节保留首次交付的 598 项验证记录；CC I1 修订的新增 TDD、最终复跑命令及结果见第 7 节。
+
+先运行新增失败测试，再实现并回归：
+- 协议模块尚未存在及 fs missing 旧行为先失败。
+- 通知来源丢失/坏字段未清洗先失败。
+- probe/file-version/IPCs/preload 新能力不存在先失败。
+- 卡片 origin/缺失标记、FilesPanel missing/历史切换先失败。
+- 恶意 '=' filter 执行、同路径替换仓库引用误接受、未提交 chmod 错误 recorded 均经真实 Git 失败测试后修正。
+- 受影响回归发现新增异步 probe 导致取消通知漏 partial changedFiles，已修复并添加取消/teardown 间隙测试。
+- typecheck 最后发现 lstat overload 的 Stats|BigIntStats 类型导致位运算错误，已改用实际默认 lstat 的 Stats 类型，最终 typecheck 通过。
+- 过程中本任务导致的断言、格式与 lint 错误均已修正；最终没有待忽略的失败。
+
+依赖与构建：
+bun install --frozen-lockfile —— 通过，bun.lock 无改动。
+bun run --filter '@cjhyy/code-shell-link' build —— 通过。
+bun run --filter '@cjhyy/code-shell-core' build —— 通过。
+bun run --filter '@cjhyy/code-shell-capability-coding' build —— 通过。
+bun run build —— 通过。
+最终 bun run typecheck —— 通过；包含重新构建依赖边界及全部 workspace/desktop main/preload/renderer/mobile/Web SPA 类型检查。
+日志：/tmp/external-provenance-typecheck-final.log
+最终 bun run lint —— 退出 0，0 errors / 98 warnings；这些 warning 均不在本任务修改文件内。
+日志：/tmp/external-provenance-lint-final.log
+
+首次交付受影响分片共 598 项，41 个测试文件，全部通过，0 失败、0 跳过：
+core：85 项通过，0 失败、0 跳过。
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/core/src/session/external-file-provenance.test.ts ./packages/core/src/tool-system/builtin/agent-notifications.persistence.test.ts ./packages/core/src/tool-system/builtin/agent-notifications.phase0.test.ts ./packages/core/src/index.exports.test.ts ./packages/core/src/engine/engine.output-journal.test.ts ./packages/core/src/engine/engine.external-file-provenance.test.ts ./tests/agent-notifications.test.ts ./tests/background-agent-protocol.test.ts ./tests/architecture-budgets.test.ts
+日志：/tmp/external-provenance-core-final.log
+
+coding：108 项通过，0 失败、0 跳过。
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/coding/src/cc-orchestrator/external-change-provenance.test.ts ./packages/coding/src/git/readonly-git.test.ts ./packages/coding/src/tools/drive-agent.test.ts ./packages/coding/src/tools/drive-agent-worktree.test.ts ./packages/coding/src/tools/drive-agent-provenance.test.ts ./packages/coding/src/git/worktree/ ./packages/coding/src/index.exports.test.ts
+日志：/tmp/external-provenance-coding-final.log
+
+main：75 项通过，0 失败、0 跳过。
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/desktop/src/main/fs-service.test.ts ./packages/desktop/src/main/local-file-preview-service.test.ts ./packages/desktop/src/main/local-file-preview-ipc.test.ts ./packages/desktop/src/main/file-version-service.test.ts ./packages/desktop/src/main/file-version-ipc.test.ts ./packages/desktop/src/main/transcript-reader.test.ts ./packages/desktop/src/main/transcript-reader.turn-diff.test.ts ./packages/desktop/src/preload/ipc-contract.test.ts
+日志：/tmp/external-provenance-main-final.log
+
+renderer：330 项通过，0 失败、0 跳过。
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts ./packages/desktop/src/renderer/messages/fileChangeAggregator.count.test.ts ./packages/desktop/src/renderer/messages/FilesChangedCard.test.tsx ./packages/desktop/src/renderer/messages/externalFileTargets.test.tsx ./packages/desktop/src/renderer/panels/FilesPanel.workspace.test.tsx ./packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx ./packages/desktop/src/renderer/Markdown.test.tsx ./packages/desktop/src/renderer/Markdown.authority.test.tsx ./packages/desktop/src/renderer/externalFileProvenance.test.ts ./packages/desktop/src/renderer/transcriptsReducer.test.ts ./packages/desktop/src/renderer/types.test.ts ./packages/desktop/src/renderer/types.turn-diff.test.ts ./packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx ./packages/desktop/src/renderer/app/useTranscriptBuckets.test.tsx
+日志：/tmp/external-provenance-renderer-final.log
+
+仅任务文件使用 bunx prettier --write 格式化；最终对全部 59 个任务 TS/TSX 文件执行 bunx prettier --check，全部通过。
+git diff --check —— 通过。
+git diff --cached --name-only —— 空，未暂存。
+受限文件检查：.github/、tests/architecture-budgets.test.ts、preload/index.ts、preload/types.d.ts、bun.lock 均无任务 diff。
+未运行 test:package-release，也没有它清理 dist 与其他消费者并发的问题。
+
+5. 未验证项与剩余边界
+
+- 未执行仓库全量 bun run test：仓库约 2300 个测试文件，单进程全量资源成本较高；本轮完成明确列出的受影响分片。不能据此声称全仓全量通过。
+- 未启动 App，未进行 Electron 真机点击、运行中 App 重启或跨平台 Windows/Linux 真机验收。UI 交互是 miniDOM，Git/文件系统是本机真实临时 repo 测试。
+- 未读取或改写真实 s-mvxb1rlp-f45f0906 session 数据作测试，未宣称其正文恢复。
+- 旧记录没有可信 Git 版本，只显示 missing 与“旧记录未保存历史版本”。本案首次事件就缺失且代理提前自行删除，completion probe 无法补录已经失去的版本来源。
+- 新 managed-worktree 在 completion probe 时仍存在、文件为干净已提交 regular blob 时，可在清理前 recorded；移除 worktree 后真实路径 missing，历史服务仍能从已授权同一仓库读准确版本。对应真实 Git 删除 linked worktree 后读取测试通过。卡片沿用当时 present，不误说当时 missing。
+- 未提交、未跟踪/ignored、symlink、非普通文件、probe 超时/失败及代理提前删目录均不会凭猜测补版本。
+- 不保存全文快照，不逐写入捕获，不解析助手文本猜 commit，不自动恢复 worktree，不切分支，不 undo，不做通用版本库或 turn-diff 新集成。
+- 不可达 Git 对象被 GC 后历史不可用；repositoryId 不负责 pin 对象。
+- 外部路径实时预览没有扩大目录/仓库授权。历史固定复用已授权主根，main 仍校验 repositoryId 与授权子目录。若 ref 不属于该主根仓库，则安全拒绝，不自动扫描其他根；用户需要在对应已授权仓库的上下文打开。
+- 这份代码尚未合并 I1 修订 fetch 时比 base 多出的 5 个 origin/main 提交；整合前待更新 origin/main 并复验，本次按用户要求保留未提交现状。
+
+6. 任务文件范围（59 个 TS/TSX 文件；另有本验收报告）
+
+packages/coding/src/cc-orchestrator/external-change-provenance.test.ts
+packages/coding/src/cc-orchestrator/external-change-provenance.ts
+packages/coding/src/git/readonly-git.test.ts
+packages/coding/src/git/readonly-git.ts
+packages/coding/src/index.git.ts
+packages/coding/src/tools/drive-agent-provenance.test.ts
+packages/coding/src/tools/drive-agent-worktree.test.ts
+packages/coding/src/tools/drive-agent.ts
+packages/core/src/engine/engine.external-file-provenance.test.ts
+packages/core/src/index.exports.test.ts
+packages/core/src/index.extension.ts
+packages/core/src/index.internal.ts
+packages/core/src/index.ts
+packages/core/src/session/external-file-provenance.test.ts
+packages/core/src/session/external-file-provenance.ts
+packages/core/src/tool-system/builtin/agent-notifications.persistence.test.ts
+packages/core/src/tool-system/builtin/agent-notifications.ts
+packages/core/src/tool-system/context.ts
+packages/core/src/types.ts
+packages/desktop/src/main/file-version-ipc.test.ts
+packages/desktop/src/main/file-version-ipc.ts
+packages/desktop/src/main/file-version-service.test.ts
+packages/desktop/src/main/file-version-service.ts
+packages/desktop/src/main/fs-service.test.ts
+packages/desktop/src/main/fs-service.ts
+packages/desktop/src/main/index.ts
+packages/desktop/src/main/local-file-preview-service.test.ts
+packages/desktop/src/main/local-file-preview-service.ts
+packages/desktop/src/main/transcript-reader.test.ts
+packages/desktop/src/main/transcript-reader.ts
+packages/desktop/src/preload/ipc-contract.test.ts
+packages/desktop/src/preload/project-authority-api.ts
+packages/desktop/src/preload/project-authority-types.ts
+packages/desktop/src/renderer/Markdown.authority.test.tsx
+packages/desktop/src/renderer/Markdown.tsx
+packages/desktop/src/renderer/app/appUtils.ts
+packages/desktop/src/renderer/app/usePanelBuckets.subagent.test.tsx
+packages/desktop/src/renderer/app/usePanelBuckets.ts
+packages/desktop/src/renderer/app/useTranscriptBuckets.test.tsx
+packages/desktop/src/renderer/chat/fileReveal.ts
+packages/desktop/src/renderer/chat/openWith.ts
+packages/desktop/src/renderer/externalFileProvenance.test.ts
+packages/desktop/src/renderer/externalFileProvenance.ts
+packages/desktop/src/renderer/i18n/ns/core.ts
+packages/desktop/src/renderer/i18n/ns/panels.ts
+packages/desktop/src/renderer/messages/FilesChangedCard.tsx
+packages/desktop/src/renderer/messages/externalFileTargets.test.tsx
+packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts
+packages/desktop/src/renderer/messages/fileChangeAggregator.ts
+packages/desktop/src/renderer/panels/FilePreviewContent.tsx
+packages/desktop/src/renderer/panels/FilesPanel.tsx
+packages/desktop/src/renderer/panels/FilesPanel.workspace.test.tsx
+packages/desktop/src/renderer/panels/PanelArea.tsx
+packages/desktop/src/renderer/panels/PanelRegistry.ts
+packages/desktop/src/renderer/transcriptsReducer.test.ts
+packages/desktop/src/renderer/types.test.ts
+packages/desktop/src/renderer/types.ts
+packages/desktop/src/renderer/types.turn-diff.test.ts
+packages/desktop/src/shared/file-version.ts
+
+本报告也保留在任务 worktree 内：
+docs/todo/external-file-provenance-20261102-validation.txt
+
+7. CC I1 复验修订（2026-11-02；待同一 CC 会话复验）
+
+本轮相对首次交付仅修改 4 个已有任务源码/测试文件及本报告：
+- packages/desktop/src/renderer/panels/FilesPanel.tsx
+- packages/desktop/src/renderer/panels/FilesPanel.workspace.test.tsx
+- packages/desktop/src/main/transcript-reader.ts
+- packages/desktop/src/main/transcript-reader.test.ts
+没有改动 Coding probe、Git 历史服务、IPC、preload、架构预算或 workflow；整个首版仍为上述 59 个 TS/TSX 文件加本报告，全部未暂存/未提交。
+
+I1 修法与授权边界：
+- FilesPanel 为外部路径组合稳定的 previewFileSystem：实时 readFile/readImage/readDir 仍来自 LOCAL_FILE_SYSTEM，只组合历史 readVersion 能力，不把外部路径、worktreePath 或其父目录当授权根。
+- 组合历史能力前，选中引用必须同时匹配 selected path 与 rootIdentity，repositoryId 必须是小写 64 位 hex 字符串，并有可用的已授权 Session/project 版本读取接口。
+- Session 调用 readSessionFileVersion(engineSessionId, sessionMainRootId, ref)；project 模式调用 readProjectFileVersion(project.id, mainRootId, ref)，且主根 ID 必须在已注册 project roots 中。即使 activeRoot 切到另一仓库，也固定使用这一个已授权主根，不向其他根试探。
+- main 现有 repositoryId 检验、commit:path == blob 检验与授权子目录范围检查完整保留。固定主根与引用仓库不一致时明确 repository-mismatch，不读同 OID 的另一个仓库，也不绕过子目录授权。
+- 无 Session/project 授权、缺失/损坏/非字符串 repositoryId 仍无历史入口并提示当前授权工作区外。只有缺失旧文件本身不再使一个有效、已授权的 Git ref 永远失去入口。
+- sibling managed worktree 删除后，实时仍显示 missing；点击“查看完成时版本(只读)”读取确切历史正文及常驻只读/非当前磁盘/commit 横幅，可切回实时 missing。当时 presence=present 保持不变，不误标“完成时已不存在”。
+
+新增回归证据：
+- renderer Session 和 project 两条成功路径：主根 /repo、绝对路径 /.worktrees/repo-feature-session/src/worktree.ts、recorded ref、本地 missing。断言只走本地实时读取，未用 Session 文件读取外部路径；点击后准确调用 primary 根的版本接口，显示正文/历史横幅并可切回当前。
+- 无 Session/project 权限、无 repositoryId、格式错误 ID、可被正则隐式转字符串的数组 ID 均无入口且不调用版本接口。
+- activeRoot=secondary（/other-repo）时，外部历史仍传 primary，不传 secondary/外部路径；main 返回 repository-mismatch 时，UI 明确展示拒绝。
+- main 已有同等真实 Git 覆盖：file-version-service.test.ts 的首项使用 root + '-linked'，它是仓库外兄弟目录；在该 worktree 提交、capture ref、git worktree remove 后，readGitBlobVersion(root, ref) 从授权主仓读回精确正文。相同位置另有授权子目录越界、不同路径 clone 同 OID、同路径仓库替换及恶意 Git 环境测试。本轮原样重新通过，不重复造等价 fixture。
+- transcript 的新增回归锁住 M4 取消状态原有投影，同时确认 provenance 保留。最终新增 7 项（renderer 6，main 1）。
+
+TDD 与本轮实际命令（均从任务 worktree 执行）：
+RED 1：
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/desktop/src/renderer/panels/FilesPanel.workspace.test.tsx ./packages/desktop/src/main/transcript-reader.test.ts
+结果：81 pass / 4 fail。失败为 sibling Session/project 缺入口、active secondary 缺入口及 M4 取消状态；没有实现前先跑。
+日志：/tmp/external-provenance-i1-red.log
+
+RED 2（收紧 repositoryId 类型守卫）：
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/desktop/src/renderer/panels/FilesPanel.workspace.test.tsx
+结果：38 pass / 1 fail，数组 ID 通过正则隐式转换而误显示入口；补 typeof string 后通过。
+日志：/tmp/external-provenance-i1-id-red.log
+
+定向 GREEN：
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/desktop/src/renderer/panels/FilesPanel.workspace.test.tsx ./packages/desktop/src/main/file-version-service.test.ts ./packages/desktop/src/main/file-version-ipc.test.ts ./packages/desktop/src/main/transcript-reader.test.ts
+结果：93 pass / 0 fail / 0 skipped，4 文件。
+日志：/tmp/external-provenance-i1-targeted.log
+
+随后完整复跑第 4 节原四组相同命令和路径（全部原有 598 项 + 新增 7 项），最终 605 pass / 0 fail / 0 skipped，41 文件：
+core：85 pass，9 文件，日志 /tmp/external-provenance-i1-core.log
+coding：108 pass，10 文件，日志 /tmp/external-provenance-i1-coding.log
+main：76 pass，8 文件，日志 /tmp/external-provenance-i1-main.log
+renderer：336 pass，14 文件，日志 /tmp/external-provenance-i1-renderer.log
+全部采用 node scripts/run-bun-test-shard.mjs --timeout 30000，路径均带 ./；runner 创建隔离 HOME/应用状态、剥除凭证。本轮没有裸 bun test。
+
+四组完成后执行 bun run typecheck：退出 0，完整依赖构建及所有 workspace（含 Desktop main/preload/renderer/mobile、Web SPA）类型检查通过。
+日志：/tmp/external-provenance-i1-typecheck.log
+
+随后对第 6 节全部 59 个任务 TS/TSX 路径执行 ESLint/Prettier，未跑全仓 format。实际通过 python3 分别以参数数组执行，文件选择代码为：
+import subprocess
+raw = subprocess.check_output(['git', 'diff', '--name-only', '-z']) + subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard', '-z'])
+paths = sorted({p.decode() for p in raw.split(b'\0') if p and p.decode().endswith(('.ts', '.tsx'))})
+assert len(paths) == 59, len(paths)
+ESLint 调用：subprocess.run(['bunx', 'eslint', *paths]) —— 退出 0，0 errors / 0 warnings。
+Prettier 调用：subprocess.run(['bunx', 'prettier', '--check', *paths]) —— 最终退出 0，全部匹配文件符合格式。
+首次 Prettier check 指出新增 ID 参数化测试格式；仅运行 bunx prettier --write packages/desktop/src/renderer/panels/FilesPanel.workspace.test.tsx 修正换行，再复跑两项检查通过。没有改变行为或测试断言。
+日志：/tmp/external-provenance-i1-eslint.log、/tmp/external-provenance-i1-prettier.log
+git diff --check —— 通过；git diff --cached --name-only —— 空。
+没有新增第三方依赖、修改 lockfile、架构预算、workflow、preload/index.ts 或 preload/types.d.ts，也没有运行 package-release 清理 dist。
+
+CC minor 处置：
+M1：本轮不改 Git executable 发现策略，仍用 execFile('git')；Windows 自定义 Git 安装发现的兼容风险保留，未验证 Windows 真机，避免把 I1 修订扩大为跨平台执行器变更。
+M2：本轮不改 probe outside-repository 的诊断分类；目前仍只在 stderr/error 文案匹配 not a git repository 时这样分类，其余为 probe-failed，并未把所有 128 当 outside-repository。文案依赖仍是非阻塞诊断限制，不影响本轮授权和版本正文正确性。
+M3：继续按真实文件目录分组；多目录会更快耗尽总预算，届时保守跳过，不做仓库级缓存重构。
+M4：已恢复原 cancelled -> completed 的 transcript 投影，删除与 provenance 无关的状态语义更改；新增失败测试后修正。
+M5：维持仅在捕获 Git ref 时展示 linked worktree 标记。
+M6：repositoryId 继续含 birthtimeMs；Bun/Electron 精度差异可能保守拒绝，留为明确限制，不扩设计。
+
+上游只读评估：
+git fetch origin —— 已完成。
+git rev-parse HEAD / origin/main：9bd3bca56abb5b682316bdd829bb5657ccf3e37a / d97fb6018702e27c42029d315822f96f7fc0f673。
+HEAD..origin/main 共 5 提交：d97fb6018、baa026cc3、7d767a788、f90d15bfb、7f4afccf0，涉及 release 0.9.52 与 Mimi shared bubble。
+incoming 与任务已改的 core/index.ts、desktop main/index.ts 相交；core 为 VERSION 更新，main 有 Mimi bubble 导入、注册及启动行为，另外还有清单/bun.lock 变更。
+因此不符合 dirty checkout incoming 路径互斥条件，保持原 base。未 stash/reset/commit/merge，也没有复制旧 worktree；整合前待更新 origin/main 并复验，这不是本轮 I1 修复阻塞。
+
+未验证与交付状态：
+仍未运行全仓 bun run test、Electron 真机点击/重启、跨平台真机或 Bun/Electron repositoryId 精度兼容实测。没有启动/替换 App，没有使用真实 session 做测试，没有 CI/发布验证。
+本轮仅完成代码修复及列明回归；是否满足最终验收由同一 CC 会话复验决定。全部改动继续保留在本任务 worktree，未暂存、未提交、不清理。

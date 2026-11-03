@@ -1,3 +1,4 @@
+import type { FileRevealRequest } from "../chat/fileReveal";
 import type { MobilePermissionMode } from "../../preload/types";
 import type { OpenCliSessionRequest } from "../cc-room/types";
 import type { ImageAttachment } from "../chat/attachments";
@@ -70,7 +71,7 @@ export interface PanelBucketState {
   requestKind: PanelTab | null;
   reviewFiles?: string[];
   reviewDiff?: string;
-  revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
+  revealFile?: FileRevealRequest;
   openUrl?: { url: string; nonce: number };
   openCliSession?: OpenCliSessionRequest;
   subagentSelection?: SubagentSelection;

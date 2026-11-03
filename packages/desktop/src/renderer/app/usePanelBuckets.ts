@@ -1,3 +1,4 @@
+import type { FileRevealRequest } from "../chat/fileReveal";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 
@@ -962,7 +963,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
   // here we just surface the dock + files panel.
   useEffect(() => {
     const onOpenFile = (e: Event): void => {
-      const detail = (e as CustomEvent<{ path?: string; cwd?: string | null }>).detail;
+      const detail = (e as CustomEvent<Partial<FileRevealRequest>>).detail;
       if (!detail?.path) return;
       const nonce = (revealFileNonceRef.current ?? 0) + 1;
       revealFileNonceRef.current = nonce;
@@ -979,7 +980,13 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
       updatePanelBucket(activeBucketRef.current, (state) => ({
         ...state,
         open: true,
-        revealFile: { path: detail.path!, cwd: detail.cwd ?? null, nonce, consumed: false },
+        revealFile: {
+          path: detail.path!,
+          cwd: detail.cwd ?? null,
+          nonce,
+          consumed: false,
+          ...(detail.reference ? { reference: detail.reference } : {}),
+        },
         requestNonce: state.requestNonce + 1,
         requestKind: "files",
       }));

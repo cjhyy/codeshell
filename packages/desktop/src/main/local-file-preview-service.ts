@@ -50,7 +50,14 @@ export async function localFileExists(path: unknown): Promise<boolean> {
 export async function readLocalFilePreview(path: unknown): Promise<LocalFilePreview> {
   assertAbsoluteFilePath(path);
   const requestedPath = path;
-  const canonicalPath = await realpath(path);
+  let canonicalPath: string;
+  try {
+    canonicalPath = await realpath(path);
+  } catch (error) {
+    if (["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? ""))
+      return { path: requestedPath, text: null, reason: "missing", size: 0 };
+    throw error;
+  }
   // Nonblocking open also prevents a raced replacement with a FIFO from hanging
   // Main; the descriptor check below rejects every non-regular file.
   const file = await open(

@@ -4,7 +4,8 @@ import type { SubagentSelection } from "../subagents/SubagentNavigation";
 import { ensureMiniDom, renderHook } from "../test-utils/renderHook";
 import { bucketKey, type SessionIndex } from "../transcripts";
 import type { ViewMode } from "../view";
-import { usePanelBuckets } from "./usePanelBuckets";
+ensureMiniDom();
+const { usePanelBuckets } = await import("./usePanelBuckets");
 import { requestComposerSeed } from "../chat/composerSeed";
 
 type Params = Parameters<typeof usePanelBuckets>[0];
@@ -126,6 +127,28 @@ describe("subagent conversation dock requests", () => {
       },
     };
   }
+
+  test("file open events preserve the reference in the actual panel bucket", async () => {
+    hook = await renderHook(useHarness);
+    const reference = {
+      kind: "external-agent",
+      sourceId: "external",
+      ref: { path: "gone.ts", absolutePath: "/removed/gone.ts", presence: "missing" },
+    };
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("codeshell:open-file", {
+          detail: { path: "/removed/gone.ts", cwd: "/repo", reference },
+        }),
+      );
+    });
+    expect(hook.result.current.activePanelState.revealFile).toMatchObject({
+      path: "/removed/gone.ts",
+      cwd: "/repo",
+      reference,
+      consumed: false,
+    });
+  });
 
   test("does not acknowledge another conversation's late review draft", async () => {
     hook = await renderHook(useHarness);

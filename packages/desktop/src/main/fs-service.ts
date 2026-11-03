@@ -2,7 +2,7 @@
 // (fs-read-directory / fs-read-file) but local-only: one directory level at a
 // time so the renderer can lazily expand a tree, plus a capped file reader.
 import { promises as fs } from "node:fs";
-import { isAbsolute, join, normalize, sep } from "node:path";
+import { isAbsolute, basename, dirname, join, normalize, resolve, sep } from "node:path";
 
 export interface FsEntry {
   name: string;
@@ -21,6 +21,29 @@ function isWithin(root: string, target: string): boolean {
   return t === r || t.startsWith(r.endsWith(sep) ? r : r + sep);
 }
 
+/** Canonicalize the existing ancestor, including dangling links, before a missing result. */
+async function realpathAllowMissing(target: string, links = 0): Promise<string> {
+  try {
+    return await fs.realpath(target);
+  } catch (error) {
+    if (!["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error;
+    let info;
+    try {
+      info = await fs.lstat(target);
+    } catch (statError) {
+      if (!["ENOENT", "ENOTDIR"].includes((statError as NodeJS.ErrnoException).code ?? ""))
+        throw statError;
+    }
+    if (info?.isSymbolicLink()) {
+      if (links >= 40) throw new Error("too many symbolic links", { cause: error });
+      return realpathAllowMissing(resolve(dirname(target), await fs.readlink(target)), links + 1);
+    }
+    const parent = dirname(target);
+    if (parent === target) throw error;
+    return join(await realpathAllowMissing(parent, links), basename(target));
+  }
+}
+
 /**
  * Resolve `target` through symlinks and verify it stays within the real
  * workspace root. This defeats symlink escapes: a link inside the repo that
@@ -33,15 +56,7 @@ async function resolveWithin(root: string, target: string): Promise<string> {
   const realRoot = await fs.realpath(root);
   // realpath requires the path to exist; for not-yet-existing paths fall back
   // to the lexical check against the real root.
-  let realTarget: string;
-  try {
-    realTarget = await fs.realpath(target);
-  } catch {
-    if (!isWithin(realRoot, normalize(target))) {
-      throw new Error("path escapes workspace root");
-    }
-    return target;
-  }
+  const realTarget = await realpathAllowMissing(target);
   if (!isWithin(realRoot, realTarget)) {
     throw new Error("path escapes workspace root");
   }
@@ -85,7 +100,7 @@ export interface FileContent {
   /** UTF-8 text, or null when the file is binary / too large. */
   text: string | null;
   /** Why text is null, if it is. */
-  reason?: "too-large" | "binary";
+  reason?: "too-large" | "binary" | "missing";
   size: number;
 }
 
@@ -112,13 +127,28 @@ export async function fileExists(root: string, path: string): Promise<boolean> {
 }
 
 export async function readFile(root: string, path: string): Promise<FileContent> {
+  const requestedPath = path;
   const real = await resolveWithin(root, path);
   path = real;
-  const stat = await fs.stat(path);
+  let stat;
+  try {
+    stat = await fs.stat(path);
+  } catch (error) {
+    if (["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? ""))
+      return { path: requestedPath, text: null, reason: "missing", size: 0 };
+    throw error;
+  }
   if (stat.size > MAX_FILE_BYTES) {
     return { path, text: null, reason: "too-large", size: stat.size };
   }
-  const buf = await fs.readFile(path);
+  let buf: Buffer;
+  try {
+    buf = await fs.readFile(path);
+  } catch (error) {
+    if (["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? ""))
+      return { path: requestedPath, text: null, reason: "missing", size: 0 };
+    throw error;
+  }
   // Heuristic binary sniff: a NUL byte in the first 8 KB.
   const sniff = buf.subarray(0, 8192);
   if (sniff.includes(0)) {

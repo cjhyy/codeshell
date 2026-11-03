@@ -1,3 +1,4 @@
+import type { FileRevealRequest } from "../chat/fileReveal";
 import React, {
   useCallback,
   useEffect,
@@ -97,7 +98,7 @@ interface Props {
   /** The originating turn's diff snapshot — survives later commits (TODO 2.3a). */
   reviewDiff?: string;
   /** File a chat path-link asked to reveal in the Files panel (nonce re-fires). */
-  revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
+  revealFile?: FileRevealRequest;
   /** A Files panel reveals the requested file and reports the nonce back, so the
    *  parent marks it consumed (no timing race — see App.onRevealConsumed). */
   onRevealConsumed?: (nonce: number) => void;
@@ -820,7 +821,7 @@ function PanelBody({
   gitReviewAvailable: boolean;
   reviewFiles?: string[];
   reviewDiff?: string;
-  revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
+  revealFile?: FileRevealRequest;
   onRevealConsumed?: (nonce: number) => void;
   openUrl?: { url: string; nonce: number };
   openCliSession?: OpenCliSessionRequest;

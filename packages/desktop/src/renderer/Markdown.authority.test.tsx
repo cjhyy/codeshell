@@ -3,7 +3,8 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { SessionWorkspaceAuthority } from "../preload/types";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
-import { Markdown } from "./Markdown";
+ensureMiniDom();
+const { Markdown, invalidateFileExistsCache } = await import("./Markdown");
 
 interface MiniElementNode {
   tagName?: string;
@@ -335,4 +336,36 @@ describe("Markdown Session root authority", () => {
     expect(imageReads).toBe(0);
     expect(findPathLink(container!)).toBeNull();
   });
+});
+
+test("invalidates positive file-exists cache without broadcasting a live file reload", async () => {
+  let present = true;
+  let checks = 0;
+  let reloads = 0;
+  const changed = () => {
+    reloads++;
+  };
+  window.addEventListener("codeshell:files-changed", changed);
+  Object.assign(window, {
+    codeshell: {
+      localFileExists: async () => {
+        checks++;
+        return present;
+      },
+    },
+  });
+  try {
+    await renderMarkdown(<Markdown text="[gone](/cache-invalidation/old-worktree.ts)" />);
+    expect(findPathLink(container!)).not.toBeNull();
+    present = false;
+    await act(async () => {
+      invalidateFileExistsCache();
+      await flushMicrotasks();
+    });
+    expect(checks).toBe(2);
+    expect(findPathLink(container!)).toBeNull();
+    expect(reloads).toBe(0);
+  } finally {
+    window.removeEventListener("codeshell:files-changed", changed);
+  }
 });

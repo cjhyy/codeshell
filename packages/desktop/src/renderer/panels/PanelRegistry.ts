@@ -1,3 +1,4 @@
+import type { FileRevealRequest } from "../chat/fileReveal";
 import { createElement, lazy, Suspense, type ComponentType, type ReactNode } from "react";
 import {
   Bot,
@@ -59,7 +60,7 @@ export interface PanelRenderContext extends PanelAvailabilityContext {
   hasGoal: boolean;
   reviewFiles?: string[];
   reviewDiff?: string;
-  revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
+  revealFile?: FileRevealRequest;
   onRevealConsumed?: (nonce: number) => void;
   openUrl?: { url: string; nonce: number };
   openCliSession?: OpenCliSessionRequest;

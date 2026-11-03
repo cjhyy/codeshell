@@ -1,3 +1,5 @@
+import type { ExternalGitBlobRef } from "@cjhyy/code-shell-core";
+import type { FileVersionResult } from "../shared/file-version.js";
 import type { IpcRenderer, IpcRendererEvent } from "electron";
 import type {
   ReviewAiPromptRequest,
@@ -121,6 +123,20 @@ export function createProjectAuthorityApi(ipcRenderer: ProjectAuthorityIpcRender
       ipcRenderer.invoke("fsSession:readFile", sessionId, rootId, path),
     sessionFileExists: (sessionId: string, rootId: string, path: string) =>
       ipcRenderer.invoke("fsSession:exists", sessionId, rootId, path),
+    readSessionFileVersion: (sessionId: string, rootId: string, ref: ExternalGitBlobRef) =>
+      ipcRenderer.invoke(
+        "fsSession:readFileVersion",
+        sessionId,
+        rootId,
+        ref,
+      ) as Promise<FileVersionResult>,
+    readProjectFileVersion: (projectId: string, rootId: string, ref: ExternalGitBlobRef) =>
+      ipcRenderer.invoke(
+        "fsRoot:readFileVersion",
+        projectId,
+        rootId,
+        ref,
+      ) as Promise<FileVersionResult>,
     localFileExists: (absPath: string) => ipcRenderer.invoke("fsLocal:exists", absPath),
     readLocalFilePreview: (absPath: string) => ipcRenderer.invoke("fsLocal:readPreview", absPath),
   };

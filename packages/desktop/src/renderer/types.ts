@@ -5,7 +5,13 @@
  * Message; one tool call (start → result) is one Message.
  */
 
-import type { StreamEvent, TurnDiffSnapshot } from "@cjhyy/code-shell-core";
+import { sanitizeExternalChangedFilesProvenance } from "./externalFileProvenance";
+import type {
+  ExternalChangedFilesProvenance,
+  ExternalChangedFileRef,
+  StreamEvent,
+  TurnDiffSnapshot,
+} from "@cjhyy/code-shell-core";
 import { projectOutputUserEvent } from "@cjhyy/code-shell-web";
 import type { TaskInfo } from "@cjhyy/code-shell-core/internal";
 import type { ApprovalRequestEnvelope } from "../preload/types";
@@ -175,6 +181,7 @@ export interface SystemMessage {
     sourceId: string;
     cwd: string;
     files: string[];
+    provenance?: ExternalChangedFilesProvenance;
     originClientMessageId?: string;
   };
 }
@@ -293,7 +300,16 @@ export interface AskUserMessage {
   answer?: string;
 }
 
+export interface ExternalFileOrigin {
+  kind: "external-agent";
+  sourceId: string;
+  cli?: "claude" | "codex";
+  observedAt?: number;
+  ref?: ExternalChangedFileRef;
+}
+
 export interface FileEditEntry {
+  origin?: ExternalFileOrigin;
   path: string;
   added: number;
   removed: number;
@@ -2186,6 +2202,10 @@ function applyStreamEventToTurn(
           }
         }
       }
+      const provenance = sanitizeExternalChangedFilesProvenance(
+        event.changedFilesProvenance,
+        event.changedFiles ?? [],
+      );
       const externalFileChanges =
         event.workKind === "cc" &&
         Array.isArray(event.changedFiles) &&
@@ -2196,6 +2216,7 @@ function applyStreamEventToTurn(
               sourceId: event.agentId,
               cwd: event.cwd,
               files: event.changedFiles,
+              ...(provenance ? { provenance } : {}),
               ...(event.originClientMessageId
                 ? { originClientMessageId: event.originClientMessageId }
                 : {}),

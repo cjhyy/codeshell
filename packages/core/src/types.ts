@@ -982,6 +982,7 @@ type StreamEventPayload =
       ccSessionId?: string;
       /** Files attributed to an external DriveAgent transcript. */
       changedFiles?: string[];
+      changedFilesProvenance?: import("./session/external-file-provenance.js").ExternalChangedFilesProvenance;
       /** Working directory used to canonicalize relative/absolute path aliases. */
       cwd?: string;
       /** Client id of the real user turn that launched this background work. */
@@ -1334,3 +1335,9 @@ export interface LegacyPetWorkDelegation {
   objective: string;
   reusableSessionId?: string;
 }
+
+export type {
+  ExternalChangedFilesProvenance,
+  ExternalChangedFileRef,
+  ExternalGitBlobRef,
+} from "./session/external-file-provenance.js";

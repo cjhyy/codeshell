@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
-import { FilesPanel } from "./FilesPanel";
+ensureMiniDom();
+const { FilesPanel } = await import("./FilesPanel");
 import type { TrackedProject } from "../projects";
 
 const WORKTREE = "/repo/.worktrees/feature";
@@ -14,6 +15,7 @@ let revealCwd: string | null | undefined;
 let revealPath = `${WORKTREE}/src/worktree.ts`;
 let revealNonce = 1;
 let revealConsumed = false;
+let revealReference: any;
 const readProjectDirs: Array<[string, string, string | undefined]> = [];
 const readSessionDirs: Array<[string, string, string | undefined]> = [];
 const readSessionFiles: Array<[string, string, string]> = [];
@@ -84,6 +86,7 @@ async function render(): Promise<void> {
           cwd: revealCwd === undefined ? cwd : revealCwd,
           nonce: revealNonce,
           consumed: revealConsumed,
+          reference: revealReference,
         }}
         onRevealConsumed={(nonce) => consumedNonces.push(nonce)}
       />,
@@ -107,6 +110,7 @@ beforeEach(async () => {
   readLocalFiles.length = 0;
   consumedNonces.length = 0;
   revealCwd = undefined;
+  revealReference = undefined;
   project = {
     id: "project-1",
     name: "Project",
@@ -123,6 +127,8 @@ beforeEach(async () => {
   revealConsumed = false;
   Object.assign(window, {
     codeshell: {
+      readSessionFileVersion: async () => ({ status: "unavailable", reason: "object-missing" }),
+      readProjectFileVersion: async () => ({ status: "unavailable", reason: "object-missing" }),
       readLocalFilePreview: async (path: string) => {
         readLocalFiles.push(path);
         return {
@@ -553,4 +559,345 @@ describe("FilesPanel workspace identity", () => {
     expect(readProjectDirs).toContainEqual(["project-1", "new-primary", "/notes"]);
     expect(readProjectDirs).not.toContainEqual(["project-1", "new-primary", "/repo"]);
   });
+});
+
+function versionOrigin(path: string) {
+  return {
+    kind: "external-agent",
+    sourceId: "external",
+    cli: "codex",
+    observedAt: 123,
+    ref: {
+      path,
+      absolutePath: path,
+      presence: "present",
+      versionStatus: "recorded",
+      contentRef: {
+        kind: "git-blob",
+        commit: "a".repeat(40),
+        blob: "b".repeat(40),
+        repoPath: "src/worktree.ts",
+        worktreePath: WORKTREE,
+        linkedWorktree: true,
+        repositoryId: "c".repeat(64),
+      },
+    },
+  };
+}
+async function clickWhere(predicate: (props: any) => boolean) {
+  const node = findByProps(container, predicate);
+  expect(node).toBeDefined();
+  await act(async () => {
+    reactPropsOf(node).onClick();
+    await flushMicrotasks();
+  });
+}
+test("old missing external file shows an honest no-version state and no main-name fallback", async () => {
+  const local: string[] = [];
+  window.codeshell.readLocalFilePreview = async (path) => {
+    local.push(path);
+    return { path, text: null, reason: "missing", size: 0 };
+  };
+  revealPath = "/removed-worktree/src/a.ts";
+  revealReference = { kind: "external-agent", sourceId: "legacy" };
+  revealNonce++;
+  await render();
+  const text = textOf(container);
+  expect(text).toContain("路径不存在");
+  expect(text).toContain(revealPath);
+  expect(text).toContain("旧记录未保存历史版本");
+  expect(text).not.toContain("ENOENT");
+  expect(local).toEqual([revealPath]);
+});
+test("missing committed reference opens a read-only completion version and live reload preserves it", async () => {
+  let reads = 0;
+  window.codeshell.readSessionFileContent = async (_sid, _rid, path) => ({
+    path,
+    text: null,
+    reason: "missing",
+    size: 0,
+  });
+  window.codeshell.readSessionFileVersion = async () => {
+    reads++;
+    return {
+      status: "ok",
+      text: "# historic\n![media](relative.png)\n",
+      size: 34,
+      commit: "a".repeat(40),
+      blob: "b".repeat(40),
+      repoPath: "src/worktree.ts",
+    };
+  };
+  revealReference = versionOrigin(revealPath);
+  revealNonce++;
+  await render();
+  expect(textOf(container)).toContain("路径不存在");
+  expect(textOf(container)).not.toContain("完成时已不存在"); // capture observed present, later cleanup removed it
+  await clickWhere((p) => p["data-file-version-open"]);
+  expect(textOf(container)).toContain("非当前磁盘内容");
+  expect(textOf(container)).toContain("只读");
+  expect(textOf(container)).toContain("a".repeat(40));
+  expect(textOf(container)).toContain("![media](relative.png)");
+  expect(findElement(container, "IMG")).toBeUndefined();
+  expect(findByProps(container, (p) => p["aria-label"] === "评论此行")).toBeUndefined();
+  await act(async () => {
+    window.dispatchEvent(new Event("codeshell:files-changed"));
+    await flushMicrotasks();
+  });
+  expect(reads).toBe(1);
+  expect(textOf(container)).toContain("# historic");
+});
+test("existing file defaults to current, can switch versions, reports unavailable objects", async () => {
+  window.codeshell.readSessionFileVersion = async () => ({
+    status: "unavailable",
+    reason: "object-missing",
+  });
+  revealReference = versionOrigin(revealPath);
+  revealNonce++;
+  await render();
+  expect(textOf(container)).toContain("content");
+  await clickWhere((p) => p["data-file-version-open"]);
+  expect(textOf(container)).toContain("Git 对象已不可用");
+  await clickWhere((p) => p["data-file-current"]);
+  expect(textOf(container)).toContain("content");
+});
+test("external local preview without Session or project authority cannot read history", async () => {
+  let reads = 0;
+  cwd = null;
+  project = undefined;
+  engineSessionId = undefined;
+  sessionMainRootId = undefined;
+  window.codeshell.readSessionFileVersion = async () => {
+    reads++;
+    throw Error("must not read");
+  };
+  window.codeshell.readLocalFilePreview = async (path) => ({
+    path,
+    text: null,
+    reason: "missing",
+    size: 0,
+  });
+  revealPath = "/outside/file.ts";
+  revealReference = versionOrigin(revealPath);
+  revealNonce++;
+  await render();
+  expect(findByProps(container, (p) => p["data-file-version-open"])).toBeUndefined();
+  expect(textOf(container)).toContain("当前授权工作区外");
+  expect(reads).toBe(0);
+});
+
+test.each(["session", "project"] as const)(
+  "removed sibling worktree uses local live reads and the authorized %s main root for history",
+  async (authority) => {
+    cwd = "/repo";
+    if (authority === "project") {
+      engineSessionId = undefined;
+      sessionMainRootId = undefined;
+    }
+    const calls: unknown[][] = [];
+    const readVersion = async (...args: unknown[]) => {
+      calls.push(args);
+      return {
+        status: "ok" as const,
+        text: "exact sibling completion bytes",
+        size: 30,
+        commit: "a".repeat(40),
+        blob: "b".repeat(40),
+        repoPath: "src/worktree.ts",
+      };
+    };
+    window.codeshell.readSessionFileVersion = readVersion;
+    window.codeshell.readProjectFileVersion = readVersion;
+    window.codeshell.readLocalFilePreview = async (path) => {
+      readLocalFiles.push(path);
+      return { path, text: null, reason: "missing", size: 0 };
+    };
+    revealPath = "/.worktrees/repo-feature-session/src/worktree.ts";
+    revealReference = versionOrigin(revealPath);
+    revealReference.ref.contentRef.worktreePath = "/.worktrees/repo-feature-session";
+    revealNonce++;
+    readSessionFiles.length = 0;
+    await render();
+    expect(readLocalFiles).toEqual([revealPath]);
+    expect(readSessionFiles).toEqual([]);
+    expect(calls).toEqual([]);
+    expect(textOf(container)).toContain("路径不存在");
+    expect(textOf(container)).not.toContain("完成时已不存在");
+    await clickWhere((props) => props["data-file-version-open"]);
+    expect(calls).toEqual([
+      [
+        authority === "session" ? "session-1" : "project-1",
+        "primary",
+        revealReference.ref.contentRef,
+      ],
+    ]);
+    expect(textOf(container)).toContain("exact sibling completion bytes");
+    expect(textOf(container)).toContain("非当前磁盘内容");
+    expect(textOf(container)).toContain("只读");
+    expect(textOf(container)).toContain("a".repeat(40));
+    await clickWhere((props) => props["data-file-current"]);
+    expect(textOf(container)).toContain("路径不存在");
+    expect(textOf(container)).not.toContain("exact sibling completion bytes");
+  },
+);
+
+test.each([
+  ["missing", undefined],
+  ["malformed", "invalid-id"],
+  ["non-string", ["c".repeat(64)]],
+] as const)("external history requires a valid repositoryId (%s)", async (_label, repositoryId) => {
+  cwd = "/repo";
+  let reads = 0;
+  window.codeshell.readSessionFileVersion = async () => {
+    reads++;
+    throw Error("must not read");
+  };
+  window.codeshell.readLocalFilePreview = async (path) => ({
+    path,
+    text: null,
+    reason: "missing",
+    size: 0,
+  });
+  revealPath = "/.worktrees/repo-feature/src/worktree.ts";
+  revealReference = versionOrigin(revealPath);
+  revealReference.ref.contentRef.repositoryId = repositoryId;
+  revealNonce++;
+  await render();
+  expect(findByProps(container, (props) => props["data-file-version-open"])).toBeUndefined();
+  expect(textOf(container)).toContain("当前授权工作区外");
+  expect(reads).toBe(0);
+});
+
+test("external history stays bound to the main authority when another repository root is active", async () => {
+  cwd = "/repo";
+  project = {
+    ...project!,
+    roots: [...project!.roots, { id: "secondary", path: "/other-repo", name: "other", addedAt: 2 }],
+  };
+  revealConsumed = true;
+  await render();
+  await act(async () => {
+    rootSelectProps().onChange("secondary");
+    await flushMicrotasks();
+  });
+  const calls: unknown[][] = [];
+  window.codeshell.readSessionFileVersion = async (...args) => {
+    calls.push(args);
+    return { status: "unavailable", reason: "repository-mismatch" };
+  };
+  window.codeshell.readLocalFilePreview = async (path) => ({
+    path,
+    text: null,
+    reason: "missing",
+    size: 0,
+  });
+  revealPath = "/.worktrees/repo-feature/src/worktree.ts";
+  revealReference = versionOrigin(revealPath);
+  revealConsumed = false;
+  revealNonce++;
+  await render();
+  await clickWhere((props) => props["data-file-version-open"]);
+  expect(calls).toEqual([["session-1", "primary", revealReference.ref.contentRef]]);
+  expect(textOf(container)).toContain("不属于当前授权仓库");
+  expect(textOf(container)).not.toContain("exact sibling completion bytes");
+});
+test("switching file cancels an old historical request and clears the old reference", async () => {
+  let settle!: (result: any) => void;
+  window.codeshell.readSessionFileVersion = async () =>
+    new Promise((resolve) => {
+      settle = resolve;
+    });
+  revealReference = versionOrigin(revealPath);
+  revealNonce++;
+  await render();
+  await clickWhere((p) => p["data-file-version-open"]);
+  revealPath = `${WORKTREE}/other.ts`;
+  revealReference = undefined;
+  revealNonce++;
+  await render();
+  await act(async () => {
+    settle({
+      status: "ok",
+      text: "STALE HISTORICAL CONTENT",
+      size: 24,
+      commit: "a".repeat(40),
+      blob: "b".repeat(40),
+      repoPath: "src/worktree.ts",
+    });
+    await flushMicrotasks();
+  });
+  expect(textOf(container)).not.toContain("STALE HISTORICAL CONTENT");
+  expect(findByProps(container, (p) => p["data-file-version-open"])).toBeUndefined();
+});
+
+test("retains historical selection across a directory metadata refresh", async () => {
+  let reads = 0;
+  window.codeshell.readSessionFileVersion = async () => {
+    reads++;
+    return {
+      status: "ok",
+      text: "stable history",
+      size: 14,
+      commit: "a".repeat(40),
+      blob: "b".repeat(40),
+      repoPath: "src/worktree.ts",
+    };
+  };
+  revealReference = versionOrigin(revealPath);
+  revealNonce++;
+  await render();
+  await clickWhere((p) => p["data-file-version-open"]);
+  revealConsumed = true;
+  project = { ...project!, roots: project!.roots.map((root) => ({ ...root })) };
+  await render();
+  await act(async () => {
+    window.dispatchEvent(new Event("codeshell:files-changed"));
+    await flushMicrotasks();
+  });
+  expect(textOf(container)).toContain("stable history");
+  expect(reads).toBe(1);
+});
+
+test("changing Session authority at the same root path clears the old file reference", async () => {
+  revealReference = versionOrigin(revealPath);
+  revealNonce++;
+  await render();
+  revealConsumed = true;
+  engineSessionId = "other-session";
+  await render();
+  expect(findByProps(container, (p) => p["data-file-version-open"])).toBeUndefined();
+  expect(textOf(container)).not.toContain("Git 版本已记录");
+});
+
+test.each([
+  ["too-large", "历史文件过大"],
+  ["binary", "历史文件是二进制"],
+  ["mismatch", "Git 路径与记录的版本不匹配"],
+  ["invalid-utf8", "不是有效的 UTF-8"],
+] as const)(
+  "historical unavailable reason %s has an explicit explanation",
+  async (reason, message) => {
+    window.codeshell.readSessionFileVersion = async () => ({ status: "unavailable", reason });
+    revealReference = versionOrigin(revealPath);
+    revealNonce++;
+    await render();
+    await clickWhere((props) => props["data-file-version-open"]);
+    expect(textOf(container)).toContain(message);
+    expect(textOf(container)).toContain("非当前磁盘内容");
+  },
+);
+
+test("project history uses the selected opaque project/root ids", async () => {
+  const calls: unknown[][] = [];
+  engineSessionId = undefined;
+  sessionMainRootId = undefined;
+  window.codeshell.readProjectFileVersion = async (...args) => {
+    calls.push(args);
+    return { status: "unavailable", reason: "object-missing" };
+  };
+  revealReference = versionOrigin(revealPath);
+  revealNonce++;
+  await render();
+  await clickWhere((props) => props["data-file-version-open"]);
+  expect(calls).toEqual([["project-1", "primary", revealReference.ref.contentRef]]);
 });

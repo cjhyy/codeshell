@@ -396,6 +396,7 @@ import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { createRoomTranscriptSubscriptions } from "./cc-room/transcript-subscriptions.js";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
+import { registerFileVersionIpc } from "./file-version-ipc.js";
 import { registerLocalFilePreviewIpc } from "./local-file-preview-ipc.js";
 import { registerProfilePluginExportIpc } from "./profile-plugin-export-ipc.js";
 import { registerProfileMemoryPromotionIpc } from "./profile-memory-promotion-ipc.js";
@@ -6600,6 +6601,7 @@ ipcMain.handle("pty:kill", (e, sessionId: string) => {
 });
 
 // ── Filesystem reads — file-browser panel ──────────────────────────────────
+registerFileVersionIpc(ipcMain);
 registerLocalFilePreviewIpc(ipcMain, (sender) =>
   [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
 );
