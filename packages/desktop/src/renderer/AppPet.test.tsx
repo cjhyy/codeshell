@@ -25,7 +25,8 @@ describe("App Pet lifecycle boundaries", () => {
   test("keeps the provider outside App and Settings as a mounted-shell overlay", () => {
     expect(mainSource).toContain("<PetStateProvider>");
     expect(mainSource).toContain("<App />");
-    expect(appSource).toContain('className={isSettingsPage ? "hidden"');
+    // Settings and the device workspace hide the mounted shell instead of unmounting it.
+    expect(appSource).toContain('isSettingsPage || executionDevicesOpen ? "hidden"');
     expect(appSource).toContain("{isSettingsPage && (");
     expect(appSource).not.toMatch(/if\s*\(isSettingsPage\)\s*return/);
   });

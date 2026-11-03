@@ -331,8 +331,8 @@ try {
   const back = page.getByRole("button", { name: "返回工作台" });
   assert.deepEqual(
     await back.evaluate((button) => [
-      getComputedStyle(button.closest("header")).getPropertyValue("-webkit-app-region"),
-      getComputedStyle(button).getPropertyValue("-webkit-app-region"),
+      window.getComputedStyle(button.closest("header")).getPropertyValue("-webkit-app-region"),
+      window.getComputedStyle(button).getPropertyValue("-webkit-app-region"),
     ]),
     ["drag", "no-drag"],
   );
