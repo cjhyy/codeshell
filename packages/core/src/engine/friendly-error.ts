@@ -30,6 +30,13 @@ const RULES: Rule[] = [
       "Check the Host's system keyring or secure key storage and Session ownership, then retry.",
   },
   {
+    test: /^Model request boundary validation failed \(custody-timeout\)$/,
+    message: () =>
+      "The Host did not answer this Session's signing request in time. This attempt was stopped before sending.",
+    suggestion:
+      "The app was busy (often a long-running background Agent); retry. Your keyring is not the problem.",
+  },
+  {
     test: /^Model request boundary validation failed \(transcript\)$/,
     message: () =>
       "The model request could not be recorded durably. This attempt was stopped before sending.",

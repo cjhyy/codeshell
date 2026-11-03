@@ -1380,8 +1380,13 @@ export class AgentBridge implements PetStateBridge {
                 parsed.params as unknown as ModelRequestSignInput,
               ),
             };
-          } catch {
-            throw new Error("Host request signing unavailable");
+          } catch (error) {
+            // The worker only learns "unavailable"; keep the real cause here.
+            dlog("bridge", "model_request_sign.failed", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+            // Only the message crosses to the worker; the cause stays in Main.
+            throw new Error("Host request signing unavailable", { cause: error });
           }
         } else if (parsed.method === "desktop/credentialResolve") {
           reply = {

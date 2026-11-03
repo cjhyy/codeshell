@@ -92,6 +92,8 @@ export function useSessionNavigation({
   const { t } = useT();
   const toast = useToast();
   const selectionRequest = useRef(0);
+  // Latest archive/restore per Session; an older failure must not undo a newer choice.
+  const archiveRequests = useRef(new Map<string, number>());
   const selectSession = async (
     projectId: string | null,
     sessionId: string,
@@ -316,6 +318,19 @@ export function useSessionNavigation({
     const summary = sessionIndices[projectBucketSegment(projectId)]?.sessions.find(
       (session) => session.id === sessionId,
     );
+    const request = (archiveRequests.current.get(sessionId) ?? 0) + 1;
+    archiveRequests.current.set(sessionId, request);
+    const commit = (value: boolean): void => {
+      const next = archiveSession(projectId, sessionId, value);
+      setSessionIndices((prev) => ({
+        ...prev,
+        [projectBucketSegment(projectId)]: next,
+      }));
+    };
+    // Hiding a row is safe before Core agrees. The worker release round trip
+    // waits behind a busy worker for up to 5s, so the row must not wait on it.
+    // A restore still waits: a visible row must already be live in Core.
+    if (archived) commit(true);
     try {
       await releaseWorkspaceForArchive(summary, archived, window.codeshell);
     } catch (error) {
@@ -326,13 +341,10 @@ export function useSessionNavigation({
         detail: String(error),
         variant: "error",
       });
+      if (archived && archiveRequests.current.get(sessionId) === request) commit(false);
       return;
     }
-    const next = archiveSession(projectId, sessionId, archived);
-    setSessionIndices((prev) => ({
-      ...prev,
-      [projectBucketSegment(projectId)]: next,
-    }));
+    if (!archived) commit(false);
   };
 
   const deleteSession = async (projectId: string | null, sessionId: string): Promise<void> => {

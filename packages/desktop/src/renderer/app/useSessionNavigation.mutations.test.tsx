@@ -230,6 +230,81 @@ describe("sidebar project and session mutations", () => {
     ).toEqual(["ui-2"]);
     expect(errorToasts()).toEqual([]);
   });
+  test("archiving hides the Session before the worker and Core finish", async () => {
+    let releaseWorkspace!: () => void;
+    bridge.releaseSessionWorkspace = (id: string) => {
+      calls.push(`release:${id}`);
+      return new Promise((resolve) => {
+        releaseWorkspace = () => resolve({ sessionId: id, ok: true, status: "released" });
+      });
+    };
+    await mount();
+    let archived!: Promise<void>;
+    await act(async () => {
+      archived = result.current.handleArchiveSession(project.id, "ui-1", true);
+      await flushMicrotasks();
+    });
+
+    const row = () =>
+      result.current.sessionIndices[project.id]!.sessions.find((s) => s.id === "ui-1");
+    expect(row()?.archived).toBe(true);
+    expect(calls).toEqual(["release:engine-1"]);
+
+    await act(async () => {
+      releaseWorkspace();
+      await archived;
+    });
+    expect(calls).toEqual(["release:engine-1", "archive:engine-1:true"]);
+    expect(row()?.archived).toBe(true);
+    expect(errorToasts()).toEqual([]);
+  });
+
+  test("a refused archive shows the Session again and reports the failure", async () => {
+    bridge.setSessionArchived = async () => {
+      throw new Error("EACCES: permission denied");
+    };
+    await mount();
+    await act(async () => {
+      await result.current.handleArchiveSession(project.id, "ui-1", true);
+    });
+
+    const row = () =>
+      result.current.sessionIndices[project.id]!.sessions.find((s) => s.id === "ui-1");
+    expect(row()?.archived).toBeFalsy();
+    expect(
+      loadSessionIndex(project.id).sessions.find((s) => s.id === "ui-1")?.archived,
+    ).toBeFalsy();
+    expect(errorToasts()).toHaveLength(1);
+  });
+
+  test("a stale archive failure does not undo a newer restore", async () => {
+    let failArchive!: () => void;
+    bridge.setSessionArchived = (id: string, archived: boolean) => {
+      calls.push(`archive:${id}:${archived}`);
+      if (!archived) return Promise.resolve();
+      return new Promise<void>((_resolve, reject) => {
+        failArchive = () => reject(new Error("EACCES: permission denied"));
+      });
+    };
+    await mount();
+    let archived!: Promise<void>;
+    await act(async () => {
+      archived = result.current.handleArchiveSession(project.id, "ui-1", true);
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      await result.current.handleRestoreArchivedSession(project.id, "ui-1");
+    });
+    await act(async () => {
+      failArchive();
+      await archived;
+    });
+
+    const row = result.current.sessionIndices[project.id]!.sessions.find((s) => s.id === "ui-1");
+    expect(row?.archived).toBeFalsy();
+    expect(calls).toEqual(["release:engine-1", "archive:engine-1:true", "archive:engine-1:false"]);
+  });
+
   test("restoring an archived Session clears Core's archive marker before the catalog", async () => {
     saveSessionIndex(project.id, {
       ...index,

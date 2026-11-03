@@ -5,9 +5,19 @@ import { canonicalDigest } from "./canonical.js";
 import type { ModelRequestSigner, ModelRequestSubject } from "./types.js";
 
 export class ModelRequestBoundaryError extends Error {
-  constructor(readonly reason: "projection" | "custody" | "transcript" | "identity") {
+  constructor(
+    readonly reason: "projection" | "custody" | "custody-timeout" | "transcript" | "identity",
+  ) {
     super(`Model request boundary validation failed (${reason})`);
     this.name = "ModelRequestBoundaryError";
+  }
+}
+
+/** The Host never answered; distinct from a Host that answered with a refusal. */
+export class HostRequestSigningTimeoutError extends Error {
+  constructor() {
+    super("Host request signing timed out");
+    this.name = "HostRequestSigningTimeoutError";
   }
 }
 
@@ -228,8 +238,9 @@ export function requestBoundaryFetch(
         return fail("custody");
       if (call.keyId && signatures.keyId !== call.keyId) return fail("custody");
       call.keyId = signatures.keyId;
-    } catch {
-      return fail("custody");
+    } catch (error) {
+      // A Host that never answered is not evidence of broken key storage.
+      return fail(error instanceof HostRequestSigningTimeoutError ? "custody-timeout" : "custody");
     }
     // Cancellation while awaiting the Host must never publish a send anchor.
     if (init?.signal?.aborted || (input instanceof Request && input.signal.aborted)) {

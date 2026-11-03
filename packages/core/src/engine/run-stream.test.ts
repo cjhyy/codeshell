@@ -80,6 +80,9 @@ const childStart: StreamEvent = {
   description: "Check the message",
 };
 
+/** Lets the 8ms delta batch timer run its flush. */
+const batchFlushed = () => new Promise((done) => setTimeout(done, 30));
+
 describe("run stream background output boundaries", () => {
   test("late parent text and thinking are rejected without marking recovery incomplete", () => {
     const f = fixture();
@@ -207,15 +210,15 @@ describe("run stream background output boundaries", () => {
     });
   });
 
-  test("a child journal failure fences the same Session after its parent run was replaced", () => {
+  test("a child journal failure fences the same Session after its parent run was replaced", async () => {
     const f = fixture();
     f.wrapped(childStart);
     f.wrapped.finish();
     const nextRunId = f.nextRun();
     truncateSync(f.journal, 0);
-    expect(() =>
-      f.wrapped({ type: "text_delta", agentId: "background-child", text: "cannot persist" }),
-    ).toThrow();
+    // Deltas are batched; the failure surfaces at the deferred flush.
+    f.wrapped({ type: "text_delta", agentId: "background-child", text: "cannot persist" });
+    await batchFlushed();
     const state = f.manager.readSessionState(f.id);
     expect(state?.runId).toBe(nextRunId);
     expect(state?.outputRecoveryIncomplete).toBe(true);
@@ -230,19 +233,21 @@ describe("run stream background output boundaries", () => {
     expect(f.events.at(-1)?.type).toBe("agent_start");
   });
 
-  test("a late child cannot recreate its deleted parent Session", () => {
+  test("a late child cannot recreate its deleted parent Session", async () => {
     const f = fixture();
     f.wrapped(childStart);
     f.wrapped.finish();
     rmSync(f.directory, { recursive: true });
+    f.wrapped({ type: "text_delta", agentId: "background-child", text: "orphan output" });
+    await batchFlushed();
     expect(() =>
-      f.wrapped({ type: "text_delta", agentId: "background-child", text: "orphan output" }),
+      f.wrapped({ type: "agent_end", agentId: "background-child", description: "late" }),
     ).toThrow();
     expect(existsSync(f.directory)).toBe(false);
     expect(f.events.at(-1)?.type).toBe("agent_start");
   });
 
-  test("a late child rejects a copied replacement without changing its state or journal", () => {
+  test("a late child rejects a copied replacement without changing its state or journal", async () => {
     const f = fixture();
     f.wrapped(childStart);
     f.wrapped.finish();
@@ -251,8 +256,10 @@ describe("run stream background output boundaries", () => {
     cpSync(original, f.directory, { recursive: true });
     const stateBefore = readFileSync(join(f.directory, "state.json"));
     const journalBefore = readFileSync(f.journal);
+    f.wrapped({ type: "text_delta", agentId: "background-child", text: "wrong incarnation" });
+    await batchFlushed();
     expect(() =>
-      f.wrapped({ type: "text_delta", agentId: "background-child", text: "wrong incarnation" }),
+      f.wrapped({ type: "agent_end", agentId: "background-child", description: "late" }),
     ).toThrow();
     expect(readFileSync(join(f.directory, "state.json"))).toEqual(stateBefore);
     expect(readFileSync(f.journal)).toEqual(journalBefore);

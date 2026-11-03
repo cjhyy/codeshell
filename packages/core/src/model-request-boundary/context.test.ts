@@ -7,6 +7,7 @@ import { Transcript } from "../session/transcript.js";
 import { canonicalDigest } from "./canonical.js";
 import { ModelRequestKeyStore } from "./custody.js";
 import {
+  HostRequestSigningTimeoutError,
   ModelRequestBoundaryError,
   requestBoundaryFetch,
   withModelRequestBoundary,
@@ -178,6 +179,31 @@ describe("request boundary at the configured provider fetch", () => {
       expect(sends).toBe(0);
       expect(transcript.getEvents("model_request_attempt")).toHaveLength(0);
     }
+  });
+
+  test("a Host that never answers is reported as a signing timeout, not broken custody", async () => {
+    const { binding } = fixture();
+    binding.signer = {
+      sign: async () => {
+        throw new HostRequestSigningTimeoutError();
+      },
+    };
+    let sends = 0;
+    const fetch = requestBoundaryFetch(
+      async () => {
+        sends++;
+        return new Response("{}");
+      },
+      () => receipt(binding),
+    );
+    const error = await withModelRequestBoundary(binding, undefined, undefined, () =>
+      withProviderRequestProjection("openai-chat", body, () =>
+        fetch("http://fixture.invalid", { body: JSON.stringify(body) }),
+      ),
+    ).catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(ModelRequestBoundaryError);
+    expect((error as ModelRequestBoundaryError).reason).toBe("custody-timeout");
+    expect(sends).toBe(0);
   });
 
   test("plain fetch and explicitly unbound nested calls do not inherit main audit context", async () => {

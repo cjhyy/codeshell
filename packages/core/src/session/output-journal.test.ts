@@ -451,6 +451,51 @@ describe("Session output journal", () => {
     expect(readOutputJournal(parent.root, parent.id).through).toBe(output[0].outputCursor);
     expect(readOutputJournal(child.root, child.id).through).toBe(origin);
   });
+  test("streamed child deltas commit in bounded batches and keep order with parent output", () => {
+    const f = fixture();
+    const output: StreamEvent[] = [];
+    const wrapped = buildWrappedOnStream({
+      getSession: () => f.session,
+      setLatestTodos: () => {},
+      userOnStream: (event) => {
+        const proof = readOutputJournal(f.root, f.id, {
+          after: event.outputCursor,
+          through: event.outputCursor,
+        });
+        expect(proof.status).toBe("ok");
+        output.push(event);
+      },
+      outputJournal: { root: f.root, getRunId: () => f.runId, onFailure: () => {} },
+    });
+    const appends = spyOn(SessionOutputJournal.prototype, "appendBatch");
+    try {
+      for (let index = 0; index < 130; index++)
+        wrapped({ type: "text_delta", text: `c${index}`, agentId: "child" });
+      // 64 + 64 committed, 2 still pending: one append per batch, not per delta.
+      expect(appends).toHaveBeenCalledTimes(2);
+      expect(output).toHaveLength(128);
+      wrapped({ type: "text_delta", text: "parent" });
+      wrapped({
+        type: "tool_use_start",
+        toolCall: { id: "t", toolName: "Read", args: {} },
+        agentId: "child",
+      } as StreamEvent);
+      wrapped.finish();
+    } finally {
+      appends.mockRestore();
+    }
+    expect(output.map((event) => ("text" in event ? event.text : event.type))).toEqual([
+      ...Array.from({ length: 130 }, (_, index) => `c${index}`),
+      "parent",
+      "tool_use_start",
+    ]);
+    const replay = readOutputJournal(f.root, f.id)
+      .frames.map((frame) => frame.event!)
+      .filter((event) => event.type !== "session_user_message");
+    expect(replay.map((event) => ("text" in event ? event.text : event.type))).toEqual(
+      output.map((event) => ("text" in event ? event.text : event.type)),
+    );
+  });
   test("a truncated frozen upper bound is invalid and malformed complete records are incomplete", () => {
     const f = fixture();
     f.writer.append({ type: "text_delta", text: "one" });
