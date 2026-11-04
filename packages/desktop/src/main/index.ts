@@ -118,12 +118,11 @@ import {
 import {
   CC_COST_GUARD_PROMPT,
   checkQuota,
-  countRelatedSessions,
   DEFAULT_DISCOVER_LIMIT,
   DEFAULT_DISCOVER_SINCE_MS,
   discoverRecentClaudeSessions,
   discoverRecentCodexSessions,
-  discoverRelatedSessions,
+  listRelatedClaudeSessions,
   listRelatedCodexSessions,
   parseClaudeTranscriptLine,
   parseCodexTranscriptLine,
@@ -5760,9 +5759,7 @@ ipcMain.handle("ccRoom:codexProbe", async (_e, force?: boolean) => probeCodexCli
 ipcMain.handle("ccRoom:listSessions", async (_e, cwd: string, all?: boolean) => {
   cwd = await requireRendererProjectPath(cwd);
   const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-  const sessions = discoverRelatedSessions("claude", cwd, opts);
-  const total = all ? sessions.length : countRelatedSessions("claude", cwd);
-  return { sessions, total };
+  return listRelatedClaudeSessions(cwd, opts, {}, Boolean(all));
 });
 ipcMain.handle("ccRoom:listCodexSessions", async (_e, cwd: string, all?: boolean) => {
   cwd = await requireRendererProjectPath(cwd);
