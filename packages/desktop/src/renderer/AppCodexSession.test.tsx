@@ -393,7 +393,7 @@ test.each([
     onMobileSession: () => unsubscribe,
     onApprovalRequest: () => unsubscribe,
     onApprovalResolved: () => unsubscribe,
-    onMobilePermissionMode: () => unsubscribe,
+    onMobileSessionSettings: () => unsubscribe,
     onStatus: () => unsubscribe,
     onAgentLifecycle: () => unsubscribe,
     onWorktreeCleanupSkipped: () => unsubscribe,

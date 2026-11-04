@@ -46,6 +46,7 @@ import { planDiskRebuild } from "../automation/rebuildFromDisk";
 import { isCaseInsensitivePlatform } from "../automation/pathMatch";
 import { browserPartitionForBucket, fromMobilePermissionMode, stablePromptHash } from "./appUtils";
 import { titleFromWire } from "../chat/attachments";
+import { normalizeExternalRuntimeModelKey } from "../../shared/external-runtime-models";
 import { readApprovalPermission } from "./approvalPermission";
 import { revealSidebarProject } from "../sidebarSessionVisibility";
 import { useToast } from "../ui/ToastProvider";
@@ -54,7 +55,8 @@ import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
   ApprovalResolvedEnvelope,
-  MobilePermissionModeEnvelope,
+  MobilePermissionMode,
+  MobileSessionSettingsEnvelope,
   StreamEventEnvelope,
 } from "../../preload/types";
 
@@ -92,6 +94,7 @@ interface Params {
     setQuickChatSessions: Dispatch<SetStateAction<Record<string, QuickChatSessionRef>>>;
     setCollapsedProjects: Dispatch<SetStateAction<Set<string>>>;
     setRevealedSessionIds: Dispatch<SetStateAction<Record<string, string>>>;
+    setModelOverrides: Dispatch<SetStateAction<Record<string, string>>>;
   };
   activity: {
     mobileAnnounceSeqRef: MutableRefObject<number>;
@@ -140,10 +143,14 @@ export function useHostSubscriptions({
     setQuickChatSessions,
     setCollapsedProjects,
     setRevealedSessionIds,
+    setModelOverrides,
   } = sessions;
   const { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys } = activity;
   const pendingApprovalIdsRef = useRef(new Set<string>());
-  const pendingMobilePermissionsRef = useRef(new Map<string, PermissionMode>());
+  // Phone choices that arrived before Desktop placed their Session in a bucket.
+  const pendingMobileSettingsRef = useRef(
+    new Map<string, { permissionMode?: PermissionMode; modelKey?: string }>(),
+  );
   const coreApprovalIdsRef = useRef(new Set<string>());
   const externalRuntimeSessionIdsRef = useRef(new Set<string>());
   const externalApprovalsRef = useRef({
@@ -577,7 +584,7 @@ export function useHostSubscriptions({
         title: string;
         prompt: string;
         clientMessageId?: string;
-        permissionMode?: MobilePermissionModeEnvelope["mode"];
+        permissionMode?: MobilePermissionMode;
       },
       source: "mobile" | "pet-delegation",
     ): Promise<void> => {
@@ -652,8 +659,10 @@ export function useHostSubscriptions({
         const alreadyAdopted =
           known ||
           resolveBucket(meta.sessionId, engineToBucketRef.current, sessionIndicesRef.current, null);
+        const pending = pendingMobileSettingsRef.current.get(meta.sessionId);
+        pendingMobileSettingsRef.current.delete(meta.sessionId);
         const mode =
-          pendingMobilePermissionsRef.current.get(meta.sessionId) ??
+          pending?.permissionMode ??
           (!alreadyAdopted && meta.permissionMode !== undefined
             ? fromMobilePermissionMode(meta.permissionMode)
             : undefined);
@@ -661,8 +670,9 @@ export function useHostSubscriptions({
           // Commit the override before publishing the new index: otherwise a
           // Desktop permission snapshot can send its global default for this row.
           flushSync(() => setPermissionOverrides((prev) => ({ ...prev, [bucket]: mode })));
-          pendingMobilePermissionsRef.current.delete(meta.sessionId);
         }
+        const modelKey = pending?.modelKey;
+        if (modelKey !== undefined) setModelOverrides((prev) => ({ ...prev, [bucket]: modelKey }));
       }
       engineToBucketRef.current.set(meta.sessionId, bucket);
       window.codeshell.registerBrowserSessionBucket({
@@ -895,7 +905,7 @@ export function useHostSubscriptions({
         // A fast first tool request may precede the async sidebar adoption.
         // Its explicit phone restriction already belongs to this Session.
         return (
-          pendingMobilePermissionsRef.current.get(env.sessionId ?? "") ??
+          pendingMobileSettingsRef.current.get(env.sessionId ?? "")?.permissionMode ??
           (bucket ? permissionOverrideForBucketRef.current(bucket) : null)
         );
       };
@@ -1089,10 +1099,16 @@ export function useHostSubscriptions({
           resolvedDuringRestore.clear();
         });
     } else restoringApprovals = false;
-    const offMobilePermissionMode = window.codeshell.onMobilePermissionMode(
-      (env: MobilePermissionModeEnvelope) => {
+    const offMobileSessionSettings = window.codeshell.onMobileSessionSettings(
+      (env: MobileSessionSettingsEnvelope) => {
         if (!env.sessionId) return;
-        const mode = fromMobilePermissionMode(env.mode);
+        const settings = {
+          ...(env.permissionMode !== undefined
+            ? { permissionMode: fromMobilePermissionMode(env.permissionMode) }
+            : {}),
+          ...(env.modelKey ? { modelKey: normalizeExternalRuntimeModelKey(env.modelKey) } : {}),
+        };
+        if (settings.permissionMode === undefined && settings.modelKey === undefined) return;
         const bucketFromRoute =
           engineToBucketRef.current.get(env.sessionId) ||
           resolveBucket(
@@ -1115,13 +1131,17 @@ export function useHostSubscriptions({
           }
         }
         if (!bucket) {
-          pendingMobilePermissionsRef.current.set(env.sessionId, mode);
+          const pending = pendingMobileSettingsRef.current.get(env.sessionId);
+          pendingMobileSettingsRef.current.set(env.sessionId, { ...pending, ...settings });
           return;
         }
-        pendingMobilePermissionsRef.current.delete(env.sessionId);
-        // This is an explicit choice for the target Session. Comparing it to
-        // the foreground project's default can erase a background restriction.
-        setPermissionOverrides((prev) => ({ ...prev, [bucket]: mode }));
+        pendingMobileSettingsRef.current.delete(env.sessionId);
+        // These are explicit choices for the target Session. Comparing them to
+        // the foreground project's defaults can erase a background restriction.
+        const { permissionMode, modelKey } = settings;
+        if (permissionMode !== undefined)
+          setPermissionOverrides((prev) => ({ ...prev, [bucket]: permissionMode }));
+        if (modelKey !== undefined) setModelOverrides((prev) => ({ ...prev, [bucket]: modelKey }));
       },
     );
     const offStatus = window.codeshell.onStatus((evt) => {
@@ -1226,7 +1246,7 @@ export function useHostSubscriptions({
       offPetDelegationSession();
       offApproval();
       offApprovalResolved();
-      offMobilePermissionMode();
+      offMobileSessionSettings();
       offStatus();
       offExternalSessionState?.();
       offLifecycle();

@@ -14,9 +14,16 @@ export interface ApprovalResolvedEnvelope {
 
 export type MobilePermissionMode = "default" | "acceptEdits" | "bypassPermissions";
 
-export interface MobilePermissionModeEnvelope {
+/**
+ * Session settings a phone changed and the Host accepted. Desktop adopts each
+ * present field as that Session's own override, so both clients keep driving
+ * the same composer configuration.
+ */
+export interface MobileSessionSettingsEnvelope {
   sessionId: string;
-  mode: MobilePermissionMode;
+  permissionMode?: MobilePermissionMode;
+  /** Desktop model option key: a native connection id or an external runtime key. */
+  modelKey?: string;
 }
 
 export interface MobilePermissionModeSnapshotEntry {

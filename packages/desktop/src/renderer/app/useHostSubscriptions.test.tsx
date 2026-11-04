@@ -162,7 +162,7 @@ describe("host subscriptions and recovery", () => {
             "onPetDelegationSession",
             "onApprovalRequest",
             "onApprovalResolved",
-            "onMobilePermissionMode",
+            "onMobileSessionSettings",
             "onStatus",
             "onAgentLifecycle",
             "onWorktreeCleanupSkipped",
@@ -204,6 +204,7 @@ describe("host subscriptions and recovery", () => {
         setQuickChatSessions: () => {},
         setCollapsedProjects: collapsed.set,
         setRevealedSessionIds: revealed.set,
+        setModelOverrides: () => {},
       },
       activity: {
         mobileAnnounceSeqRef: { current: 0 },
@@ -1042,9 +1043,52 @@ describe("host subscriptions and recovery", () => {
     params.permissions.setPermissionOverrides = overrides.set;
     hook = await renderHook(() => useHostSubscriptions(params));
     await act(async () => {
-      listeners.get("onMobilePermissionMode")!({ sessionId: "pinned-1", mode: "default" });
+      listeners.get("onMobileSessionSettings")!({
+        sessionId: "pinned-1",
+        permissionMode: "default",
+      });
     });
     expect(overrides.value).toEqual({ [bucketKey("project", "pinned-1")]: "default" });
+  });
+
+  test("a Host-accepted mobile model becomes that session's Desktop model", async () => {
+    const models = cell<Record<string, string>>({
+      [bucketKey("project", "pinned-1")]: "openrouter-gpt",
+      [bucketKey("project", "pinned-2")]: "deepseek",
+    });
+    const overrides = cell<Record<string, PermissionMode>>({});
+    params.sessions.setModelOverrides = models.set;
+    params.permissions.setPermissionOverrides = overrides.set;
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onMobileSessionSettings")!({
+        sessionId: "pinned-1",
+        modelKey: "codex/gpt-6.1-sol",
+      });
+    });
+    expect(models.value).toEqual({
+      [bucketKey("project", "pinned-1")]: "codex/gpt-6.1-sol",
+      [bucketKey("project", "pinned-2")]: "deepseek",
+    });
+    // A model-only change must not reset the session's permission choice.
+    expect(overrides.value).toEqual({});
+  });
+
+  test("mobile settings received before their bucket exists are all adopted with the session", async () => {
+    const sessionId = "mobile-settings-before-adoption";
+    const models = cell<Record<string, string>>({});
+    const overrides = cell<Record<string, PermissionMode>>({});
+    params.sessions.setModelOverrides = models.set;
+    params.permissions.setPermissionOverrides = overrides.set;
+    hook = await renderHook(() => useHostSubscriptions(params));
+    await act(async () => {
+      listeners.get("onMobileSessionSettings")!({ sessionId, permissionMode: "acceptEdits" });
+      listeners.get("onMobileSessionSettings")!({ sessionId, modelKey: "codex/gpt-6.1-sol" });
+      listeners.get("onMobileSession")!({ ...announcement(sessionId), permissionMode: "default" });
+      await flushMicrotasks();
+    });
+    expect(overrides.value[bucketKey("project", sessionId)]).toBe("accept_edits");
+    expect(models.value[bucketKey("project", sessionId)]).toBe("codex/gpt-6.1-sol");
   });
 
   test("a new mobile default is installed before adoption can publish the Desktop bypass default", async () => {
@@ -1083,7 +1127,7 @@ describe("host subscriptions and recovery", () => {
     params.permissions.setPermissionOverrides = overrides.set;
     hook = await renderHook(() => useHostSubscriptions(params));
     await act(async () => {
-      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "default" });
+      listeners.get("onMobileSessionSettings")!({ sessionId, permissionMode: "default" });
       listeners.get("onMobileSession")!({
         ...announcement(sessionId),
         permissionMode: "bypassPermissions",
@@ -1104,7 +1148,7 @@ describe("host subscriptions and recovery", () => {
       const request = { ...approval(), sessionId };
       await act(async () => {
         if (lookupPending) listeners.get("onApprovalRequest")!(request);
-        listeners.get("onMobilePermissionMode")!({ sessionId, mode: "default" });
+        listeners.get("onMobileSessionSettings")!({ sessionId, permissionMode: "default" });
         if (!lookupPending) listeners.get("onApprovalRequest")!(request);
         read.resolve({ permissionMode: "bypass" });
         await flushMicrotasks();
@@ -1124,8 +1168,8 @@ describe("host subscriptions and recovery", () => {
     hook = await renderHook(() => useHostSubscriptions(params));
     await act(async () => {
       listeners.get("onMobileSession")!({ ...announcement(sessionId), permissionMode: "default" });
-      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "bypassPermissions" });
-      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "acceptEdits" });
+      listeners.get("onMobileSessionSettings")!({ sessionId, permissionMode: "bypassPermissions" });
+      listeners.get("onMobileSessionSettings")!({ sessionId, permissionMode: "acceptEdits" });
       placement.resolve([{ projectId: "project", rootId: "root", created: false }]);
       await flushMicrotasks();
     });
@@ -1153,7 +1197,7 @@ describe("host subscriptions and recovery", () => {
     });
     expect(overrides.value[bucketKey("project", sessionId)]).toBe("default");
     await act(async () => {
-      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "acceptEdits" });
+      listeners.get("onMobileSessionSettings")!({ sessionId, permissionMode: "acceptEdits" });
       first.resolve([{ projectId: "project", rootId: "root", created: false }]);
       await flushMicrotasks();
     });
@@ -1172,7 +1216,7 @@ describe("host subscriptions and recovery", () => {
     });
     expect(overrides.value[bucket]).toBe("bypass");
     await act(async () => {
-      listeners.get("onMobilePermissionMode")!({ sessionId, mode: "acceptEdits" });
+      listeners.get("onMobileSessionSettings")!({ sessionId, permissionMode: "acceptEdits" });
       listeners.get("onMobileSession")!({ ...announcement(sessionId), permissionMode: "default" });
       await flushMicrotasks();
     });
