@@ -37,6 +37,7 @@ const f=window.fixture={calls:{login:[],management:[],linked:[],local:0,reconnec
  result(action){return action==='list'?{action,available:true,projects:Array.from({length:18},(_,i)=>({...project,id:i===0?projectId:'20000000-0000-4000-8000-'+String(i+1).padStart(12,'0'),name:(String(i+1)+'-'+project.name).slice(0,80)}))}:action==='logout'?{action,revoked:true}:{action,project:{...project,status:action==='start'?'running':'stopped'},address:binding.origin};}};
 const held=()=>new Promise((resolve,reject)=>f.pending.push({resolve,reject}));
 window.codeshell=new Proxy({
+ accountFeatures:{snapshot:async()=>({'cloud.projects':{id:'cloud.projects',state:'ready'}}),refresh:async()=>({}),onChanged:()=>()=>{}},
  onMenuEvent:fn=>{f.menu.add(fn);return()=>f.menu.delete(fn)},
  cloudAccount:{status:async()=>account,capabilities:async()=>({}),onStatus:fn=>{f.listeners.add(fn);return()=>f.listeners.delete(fn)}},
  credentials:{list:async()=>[]},

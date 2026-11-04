@@ -7,7 +7,6 @@ import { useProjectRuntimeSelection } from "./projects/useProjectRuntimeSelectio
 import { useCloudProjectRuntime } from "./runtime/useCloudProjectRuntime";
 import { CloudProjectWorkspace } from "./runtime/CloudProjectWorkspace";
 import { AccountDeviceWorkspace } from "./runtime/AccountDeviceWorkspace";
-import { useAccountDeviceEntry } from "./runtime/useAccountDeviceEntry";
 import type { ContextPackageCreatedOptions } from "./MessageStream";
 import { Sidebar } from "./app/AppSidebar";
 import { ResponsiveSidebar, SIDEBAR_NAVIGATION_ID } from "./app/ResponsiveSidebar";
@@ -199,7 +198,6 @@ function PageLoading({ label }: { label: string }) {
 function App() {
   const [executionDevicesOpen, setExecutionDevicesOpen] = useState(false);
   const [executionDevicesMounted, setExecutionDevicesMounted] = useState(false);
-  const executionDevicesAvailable = useAccountDeviceEntry();
   useThemeAudio();
   const toast = useToast();
   const confirm = useOptionalConfirm();
@@ -307,9 +305,19 @@ function App() {
   } = useBucketOverrides();
   const [settingsRevision, setSettingsRevision] = useState(0);
   const optimizationLabEnabled = useOptimizationLabFeature(settingsRevision, setView);
+
   const [settingsInitialModule, setSettingsInitialModule] = useState<
     SettingsModuleId | undefined
   >();
+  useEffect(() => {
+    const openAccount = () => {
+      setSettingsInitialModule("account");
+      setExecutionDevicesOpen(false);
+      setViewMode("settings_page");
+    };
+    window.addEventListener("codeshell:open-account-settings", openAccount);
+    return () => window.removeEventListener("codeshell:open-account-settings", openAccount);
+  }, []);
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
   const [revealedSessionIds, setRevealedSessionIds] = useState<Record<string, string>>({});
 
@@ -2269,14 +2277,11 @@ function App() {
                 });
               }}
               onOpenSettingsPage={() => navigateFromSidebar(() => setViewMode("settings_page"))}
-              onOpenExecutionDevices={
-                executionDevicesAvailable
-                  ? () =>
-                      navigateFromSidebar(() => {
-                        setExecutionDevicesMounted(true);
-                        setExecutionDevicesOpen(true);
-                      })
-                  : undefined
+              onOpenExecutionDevices={() =>
+                navigateFromSidebar(() => {
+                  setExecutionDevicesMounted(true);
+                  setExecutionDevicesOpen(true);
+                })
               }
               onOpenAccountSettings={() =>
                 navigateFromSidebar(() => {

@@ -1,3 +1,5 @@
+import { useAccountFeature, openAccountSettings } from "../account/useAccountFeature";
+import { AccountFeatureEntry } from "../account/AccountFeatureEntry";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Cloud, Loader2, Monitor } from "lucide-react";
 import {
@@ -57,6 +59,7 @@ export function NewProjectDialog({
   onOpenCloudProject,
 }: Props) {
   const { t } = useT();
+  const cloudFeature = useAccountFeature("cloud.projects");
   const [location, setLocation] = useState<"choose" | "cloud">("choose");
   const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
@@ -73,14 +76,21 @@ export function NewProjectDialog({
   useEffect(() => {
     if (!open) return;
     setLocation("choose");
+    void window.codeshell.accountFeatures?.refresh().catch(() => undefined);
     setError(null);
     composingRef.current = false;
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     try {
-      setAddress(window.localStorage.getItem(CLOUD_ADDRESS_KEY) ?? "");
+      setAddress(
+        cloudFeature.params?.cloudOrigin ?? window.localStorage.getItem(CLOUD_ADDRESS_KEY) ?? "",
+      );
     } catch {
       setAddress("");
     }
-  }, [open]);
+  }, [open, cloudFeature.params?.cloudOrigin]);
 
   useEffect(() => {
     if (!open) return;
@@ -170,25 +180,35 @@ export function NewProjectDialog({
                   </span>
                 </span>
               </Button>
-              <Button
-                type="button"
-                variant="outline"
+              <AccountFeatureEntry
+                feature={cloudFeature}
+                label={t("sidebar.cloud")}
                 className="h-auto justify-start gap-3 whitespace-normal rounded-xl p-4 text-left"
-                aria-label={t("sidebar.cloud")}
-                disabled={busy}
-                onClick={() => {
-                  setError(null);
-                  setLocation("cloud");
+                onSignIn={() => {
+                  onOpenChange(false);
+                  openAccountSettings();
                 }}
               >
-                <Cloud aria-hidden />
-                <span>
-                  <span className="block font-medium">{t("sidebar.cloud")}</span>
-                  <span className="mt-1 block text-xs font-normal leading-5 text-muted-foreground">
-                    {t("sidebar.cloudProjectHint")}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-auto justify-start gap-3 whitespace-normal rounded-xl p-4 text-left"
+                  aria-label={t("sidebar.cloud")}
+                  disabled={busy}
+                  onClick={() => {
+                    setError(null);
+                    setLocation("cloud");
+                  }}
+                >
+                  <Cloud aria-hidden />
+                  <span>
+                    <span className="block font-medium">{t("sidebar.cloud")}</span>
+                    <span className="mt-1 block text-xs font-normal leading-5 text-muted-foreground">
+                      {t("sidebar.cloudProjectHint")}
+                    </span>
                   </span>
-                </span>
-              </Button>
+                </Button>
+              </AccountFeatureEntry>
               {error && (
                 <p role="alert" className="text-sm text-destructive [overflow-wrap:anywhere]">
                   {error}
@@ -197,40 +217,45 @@ export function NewProjectDialog({
             </div>
           ) : (
             <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
-              {cloudBindings.length > 0 && onOpenCloudProject && (
-                <section
-                  className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2"
-                  aria-label={t("sidebar.linkedCloudProjects")}
-                >
-                  <p className="text-sm font-medium">{t("sidebar.linkedCloudProjects")}</p>
-                  {cloudBindings.map((binding) => (
-                    <Button
-                      key={binding.id}
-                      type="button"
-                      variant="outline"
-                      className="h-auto min-w-0 justify-start gap-3 whitespace-normal p-3 text-left"
-                      aria-label={t("sidebar.openLinkedCloudProject", {
-                        name: binding.remoteProjectName,
-                      })}
-                      disabled={busy}
-                      onClick={() => void openProject(() => onOpenCloudProject(binding))}
-                    >
-                      <Cloud className="shrink-0" aria-hidden />
-                      <span className="min-w-0 [overflow-wrap:anywhere]">
-                        <span className="block">{binding.remoteProjectName}</span>
-                        <span className="block text-xs font-normal text-muted-foreground">
-                          {binding.environmentName} · {binding.origin}
+              {cloudFeature.state !== "hidden" &&
+                cloudBindings.length > 0 &&
+                onOpenCloudProject && (
+                  <section
+                    className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2"
+                    aria-label={t("sidebar.linkedCloudProjects")}
+                  >
+                    <p className="text-sm font-medium">{t("sidebar.linkedCloudProjects")}</p>
+                    {cloudBindings.map((binding) => (
+                      <Button
+                        key={binding.id}
+                        type="button"
+                        variant="outline"
+                        className="h-auto min-w-0 justify-start gap-3 whitespace-normal p-3 text-left"
+                        aria-label={t("sidebar.openLinkedCloudProject", {
+                          name: binding.remoteProjectName,
+                        })}
+                        disabled={busy || cloudFeature.state !== "ready"}
+                        onClick={() => {
+                          if (cloudFeature.state === "ready")
+                            void openProject(() => onOpenCloudProject(binding));
+                        }}
+                      >
+                        <Cloud className="shrink-0" aria-hidden />
+                        <span className="min-w-0 [overflow-wrap:anywhere]">
+                          <span className="block">{binding.remoteProjectName}</span>
+                          <span className="block text-xs font-normal text-muted-foreground">
+                            {binding.environmentName} · {binding.origin}
+                          </span>
                         </span>
-                      </span>
-                    </Button>
-                  ))}
-                  {error && (
-                    <p role="alert" className="text-sm text-destructive [overflow-wrap:anywhere]">
-                      {error}
-                    </p>
-                  )}
-                </section>
-              )}
+                      </Button>
+                    ))}
+                    {error && (
+                      <p role="alert" className="text-sm text-destructive [overflow-wrap:anywhere]">
+                        {error}
+                      </p>
+                    )}
+                  </section>
+                )}
               <fieldset disabled={busy} className="min-w-0">
                 <CloudProjectManager
                   initialAddress={address}

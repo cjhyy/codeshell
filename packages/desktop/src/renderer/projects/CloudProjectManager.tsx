@@ -7,7 +7,8 @@ import type {
   CloudManagementResult,
   CloudProject,
 } from "../../shared/cloud-management.js";
-import { CloudAccountSettings } from "../settings/CloudAccountSettings";
+import { useAccountFeature } from "../account/useAccountFeature";
+import { AccountFeatureEntry } from "../account/AccountFeatureEntry";
 import { useCloudDialogFocus } from "./useCloudDialogFocus";
 import { useT } from "../i18n";
 
@@ -23,9 +24,17 @@ export function CloudProjectManager({
   onBusyChange: (busy: boolean) => void;
 }) {
   const { t } = useT();
+  const feature = useAccountFeature("cloud.projects");
+  const featureRef = useRef(feature);
+  featureRef.current = feature;
   const [status, setStatus] = useState<CloudAccountStatus>({ state: "signed-out" });
   const [address, setAddress] = useState(initialAddress);
   const [connected, setConnected] = useState("");
+  useEffect(() => {
+    setAddress(feature.params?.cloudOrigin ?? initialAddress);
+    setConnected("");
+    setView(null);
+  }, [feature.params?.cloudOrigin, initialAddress, status.origin, status.account?.id]);
   const [attempted, setAttempted] = useState<Pick<
     CloudManagementRequest,
     "accountOrigin" | "accountId" | "cloudOrigin"
@@ -102,7 +111,7 @@ export function CloudProjectManager({
       event.preventDefault();
   };
   const act = async (action: CloudManagementRequest["action"], projectId?: string) => {
-    if (pending.current) return;
+    if (pending.current || (action !== "logout" && featureRef.current.state !== "ready")) return;
     const captured = authority.current;
     const currentStatus = captured.status;
     if (currentStatus.state !== "signed-in" || !currentStatus.origin || !currentStatus.account)
@@ -212,17 +221,20 @@ export function CloudProjectManager({
       } else focus.discard(lease);
     }
   };
-  const canAct = !busy && !uncertain && connected === address.trim().replace(/\/$/, "");
+  const canAct =
+    feature.state === "ready" &&
+    !busy &&
+    !uncertain &&
+    connected === address.trim().replace(/\/$/, "");
   return (
     <div
       ref={focus.attachScope}
       className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 [overflow-wrap:anywhere]"
     >
-      {status.state !== "signed-in" ? (
-        <>
-          <p className="text-sm text-muted-foreground">{t("cloudManager.signIn")}</p>
-          <CloudAccountSettings embedded />
-        </>
+      {feature.state !== "ready" || status.state !== "signed-in" ? (
+        <AccountFeatureEntry feature={feature} label={t("sidebar.cloud")}>
+          <span />
+        </AccountFeatureEntry>
       ) : (
         <>
           <p className="text-sm [overflow-wrap:anywhere]">
@@ -235,33 +247,41 @@ export function CloudProjectManager({
               if (!composing.current) void act("list");
             }}
           >
-            <label htmlFor={id}>{t("sidebar.cloudAddress")}</label>
-            <Input
-              onCompositionStart={() => {
-                composing.current = true;
-              }}
-              onCompositionEnd={() => {
-                composing.current = false;
-              }}
-              ref={addressRef}
-              id={id}
-              value={address}
-              inputMode="url"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              onKeyDown={guardComposingEnter}
-              disabled={busy}
-              placeholder="https://cloud.example.com"
-              onChange={(event) => {
-                setAddress(event.target.value);
-                setView(null);
-                setConnected("");
-                setError("");
-                setUncertain(false);
-                setConfirmLogout(false);
-              }}
-            />
+            {feature.params?.cloudOrigin && (
+              <p className="break-all text-sm">{feature.params.cloudOrigin}</p>
+            )}
+            <details open={!feature.params?.cloudOrigin} className="space-y-2">
+              <summary className="cursor-pointer text-sm">
+                {t("accountFeatures.advancedAddress")}
+              </summary>
+              <label htmlFor={id}>{t("sidebar.cloudAddress")}</label>
+              <Input
+                onCompositionStart={() => {
+                  composing.current = true;
+                }}
+                onCompositionEnd={() => {
+                  composing.current = false;
+                }}
+                ref={addressRef}
+                id={id}
+                value={address}
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                onKeyDown={guardComposingEnter}
+                disabled={busy}
+                placeholder="https://cloud.example.com"
+                onChange={(event) => {
+                  setAddress(event.target.value);
+                  setView(null);
+                  setConnected("");
+                  setError("");
+                  setUncertain(false);
+                  setConfirmLogout(false);
+                }}
+              />
+            </details>
             <Button ref={reloadRef} type="submit" disabled={busy || !address.trim()}>
               {t(view ? "cloudManager.reload" : "cloudManager.connect")}
             </Button>
@@ -356,31 +376,31 @@ export function CloudProjectManager({
               </ul>
             </>
           )}
-          {attempted && (
-            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
-              <p className="break-all text-xs text-muted-foreground">{attempted.cloudOrigin}</p>
-              {confirmLogout && <p className="text-sm">{t("cloudManager.logoutReview")}</p>}
-              <Button
-                type="button"
-                variant="outline"
-                disabled={busy}
-                onClick={() => (confirmLogout ? void act("logout") : setConfirmLogout(true))}
-              >
-                {t(confirmLogout ? "cloudManager.confirmLogout" : "cloudManager.logout")}
-              </Button>
-              {confirmLogout && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={busy}
-                  onClick={() => setConfirmLogout(false)}
-                >
-                  {t("cloudManager.cancel")}
-                </Button>
-              )}
-            </div>
-          )}
         </>
+      )}
+      {attempted && (
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
+          <p className="break-all text-xs text-muted-foreground">{attempted.cloudOrigin}</p>
+          {confirmLogout && <p className="text-sm">{t("cloudManager.logoutReview")}</p>}
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => (confirmLogout ? void act("logout") : setConfirmLogout(true))}
+          >
+            {t(confirmLogout ? "cloudManager.confirmLogout" : "cloudManager.logout")}
+          </Button>
+          {confirmLogout && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => setConfirmLogout(false)}
+            >
+              {t("cloudManager.cancel")}
+            </Button>
+          )}
+        </div>
       )}
       {error && (
         <p role="alert" className="text-sm text-destructive [overflow-wrap:anywhere]">

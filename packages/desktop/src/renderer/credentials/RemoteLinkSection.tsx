@@ -1,4 +1,6 @@
 import React from "react";
+import { useAccountFeature } from "../account/useAccountFeature";
+import { AccountFeatureEntry } from "../account/AccountFeatureEntry";
 import { Cable, Check, ExternalLink, Figma, FileText, Github, Settings2 } from "lucide-react";
 import type { LinkProviderView, LinkSnapshot, MaskedLinkConnection } from "@cjhyy/code-shell-link";
 import { Button } from "@/components/ui/button";
@@ -142,7 +144,21 @@ export function RemoteLinkSection(props: {
 }
 
 /** Native owner-bound IPC; private credentials never enter this component. */
-export function RemoteProviderSection({
+export function RemoteProviderSection(props: Parameters<typeof RemoteProviderSectionReady>[0]) {
+  const feature = useAccountFeature("links.remote");
+  const { t } = useT();
+  return (
+    <AccountFeatureEntry
+      feature={feature}
+      label={t("accountFeatures.remoteLink")}
+      className="h-auto w-full flex-wrap text-left"
+    >
+      <RemoteProviderSectionReady {...props} />
+    </AccountFeatureEntry>
+  );
+}
+
+function RemoteProviderSectionReady({
   cwd,
   snapshot,
   loadError,

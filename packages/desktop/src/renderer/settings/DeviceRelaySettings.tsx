@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useAccountFeature } from "../account/useAccountFeature";
+import { AccountFeatureEntry } from "../account/AccountFeatureEntry";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
@@ -17,6 +19,8 @@ export function DeviceRelaySettings({
   refresh: () => Promise<unknown>;
 }) {
   const { t } = useT();
+  const phoneFeature = useAccountFeature("relay.phone");
+  const directoryFeature = useAccountFeature("devices.directory");
   const toast = useToast();
   const confirm = useConfirm();
   const [origin, setOrigin] = useState("");
@@ -28,11 +32,12 @@ export function DeviceRelaySettings({
   // Account registrations are opened from the account's computer list; the
   // phone signs in there, so the QR carries only the public origin.
   const phoneEntryUrl =
-    status.registered && status.accountId && status.relayOrigin
+    phoneFeature.state === "ready" && status.relayOrigin
       ? `${status.relayOrigin.replace(/\/$/, "")}/`
       : undefined;
   useEffect(() => {
     let active = true;
+    void window.codeshell.accountFeatures?.refresh().catch(() => undefined);
     void window.codeshell.cloudAccount.status().then((next) => {
       if (active) setAccount(next);
     });
@@ -132,6 +137,20 @@ export function DeviceRelaySettings({
       <p role="status" className="text-sm">
         {status.message ?? t(`settingsX.adv.relayState_${status.state}`)}
       </p>
+      <AccountFeatureEntry feature={phoneFeature} label={t("settingsX.adv.relayPhoneEntry")}>
+        <span />
+      </AccountFeatureEntry>
+      {phoneFeature.state === "pending" && (
+        <Button
+          variant="outline"
+          disabled={busy || saving}
+          onClick={() => {
+            void Promise.allSettled([refresh(), window.codeshell.accountFeatures.refresh()]);
+          }}
+        >
+          {t("accountFeatures.retry")}
+        </Button>
+      )}
       {status.registered ? (
         <div className="space-y-1 text-sm">
           <p>
@@ -188,7 +207,7 @@ export function DeviceRelaySettings({
           disabled={saving || busy}
         />
       </label>
-      {account.state === "signed-in" && account.origin ? (
+      {directoryFeature.state === "ready" && account.state === "signed-in" && account.origin ? (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">
             {t("settingsX.adv.relayAccountHint", { origin: account.origin })}
