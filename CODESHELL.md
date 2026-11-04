@@ -133,7 +133,9 @@ bun install            # bun workspaces (NOT npm/yarn/pnpm)
 bun run build          # filter order: link → core → host → pet → optimization-lab → coding → cdp → browser-devtools → web → server → tui → chat → build-meta.ts (desktop separate)
 bun run dev            # = dev:desktop (launches the Electron app)
 bun run dev:tui        # CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 packages/tui/src/cli/main.ts
-bun run test           # guarded Bun test runner (NOT vitest/jest)
+bun run test           # CI unit partitions, each in a fresh guarded process (NOT vitest/jest)
+bun run test --list    # list partitions; --shard <index> runs one
+bun run test:watch packages/core/src/example.test.ts # explicit 1–8 files, isolated HOME
 node scripts/run-bun-test-shard.mjs --timeout 30000 tests/example.test.ts # targeted tests
 bun run typecheck      # builds dependency declarations, then checks all workspaces + Web SPA
 bun run lint           # eslint packages/
@@ -147,13 +149,18 @@ Run it to completion before starting other checks that read `dist/`, including D
 build, workspace typecheck, and SDK/Hub smoke tests; running those concurrently can
 observe deleted or partially emitted dependency files.
 
-Use the guarded runner for unit shards. It creates a fresh real HOME, application
+Use `bun run test` for the CI unit partitions, or the guarded runner for targeted
+unit shards. The guarded runner creates a fresh real HOME, application
 state and platform config directories, removes inherited provider credentials and
 Host configuration, and requires a complete zero-failure JUnit report. Do not run
 an ordinary unit suite against the operator's HOME or credentials. Individual
 network fixtures must still install their exact-origin guards before Core/worker
 imports: HOME isolation is not an OS sandbox or network confinement. Live paid
 evaluations use their separate, explicitly authorized workflow.
+
+Interactive `test:watch` requires 1–8 explicit test files. It watches their import
+graph in a temporary HOME with provider credentials removed; it is not a completed
+acceptance run. Use the guarded runner before reporting a passing check.
 
 ## Code Style
 
