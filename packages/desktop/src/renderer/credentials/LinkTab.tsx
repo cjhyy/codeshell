@@ -55,6 +55,7 @@ import { selectPrimaryLinkOption } from "./linkPrimaryConnection";
 import { useCloudAccountStatus } from "./useCloudAccountStatus";
 import { useAccountFeature } from "../account/useAccountFeature";
 import { AccountFeatureEntry } from "../account/AccountFeatureEntry";
+import { UnavailableLinkCleanup } from "./UnavailableLinkCleanup";
 import { localLinkProvider, localLinkSnapshot } from "./linkLocalPresentation";
 import type { MaskedCredentialView } from "./types";
 import { DingTalkSetupDialog } from "./DingTalkSetupDialog";
@@ -1343,6 +1344,21 @@ export function LinkTab({ cwd }: { cwd: string }) {
           </div>
         </div>
       </section>
+
+      {remoteFeature.state !== "ready" && (
+        <UnavailableLinkCleanup
+          key={cwd}
+          cwd={cwd}
+          connections={remote.snapshot?.connections}
+          credentials={credentials.filter(
+            (credential) =>
+              linkCredentialRuntime(credential) === "server" &&
+              credential.meta?.linkExecutionBackend !== "remote",
+          )}
+          reload={remote.reload}
+          onChanged={() => void load().catch(() => undefined)}
+        />
+      )}
 
       {legacyCredentials.length > 0 ? (
         <section className="space-y-3" aria-labelledby="link-legacy-title">

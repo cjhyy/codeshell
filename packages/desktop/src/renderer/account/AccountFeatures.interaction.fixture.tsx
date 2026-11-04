@@ -28,8 +28,14 @@ Object.assign(window, {
 });
 mock.module("../ui/ToastProvider", () => ({ useToast: () => () => {} }));
 mock.module("../ui/ConfirmDialog", () => ({ useConfirm: () => async () => true }));
+const qrValues: string[] = [];
 mock.module("qrcode", () => ({
-  default: { toDataURL: async () => "data:image/png;base64,fixture" },
+  default: {
+    toDataURL: async (url: string) => {
+      qrValues.push(url);
+      return "data:image/png;base64,fixture";
+    },
+  },
 }));
 const presentation = ({ children }: any) => <div>{children}</div>;
 mock.module("@/components/ui/dialog", () => ({
@@ -46,9 +52,16 @@ const { DeviceRelaySettings } = await import("../settings/DeviceRelaySettings");
 const { NewProjectDialog } = await import("../projects/NewProjectDialog");
 const { CloudProjectManager } = await import("../projects/CloudProjectManager");
 const { RemoteProviderSection } = await import("../credentials/RemoteLinkSection");
-const [scenario, state = "ready"] = process.argv.slice(2);
+const { UnavailableLinkCleanup } = await import("../credentials/UnavailableLinkCleanup");
+const [scenario, requestedState = "ready"] = process.argv.slice(2);
+const state = scenario.startsWith("remote-cleanup")
+  ? scenario.endsWith("pending")
+    ? "pending"
+    : "hidden"
+  : requestedState;
 const snapshot = featureSnapshot(state as AccountFeatureView["state"], {
   cloudOrigin: "https://cloud.example",
+  ...(scenario === "phone-new-route" ? { directoryPath: "/devices" as const } : {}),
 });
 for (const view of Object.values(snapshot))
   if (view.state === "pending") view.reason = "relay_connecting";
@@ -66,14 +79,24 @@ let unsubscribed = 0,
   signIns = 0,
   closed = 0,
   refreshed = 0,
-  enrolled = 0;
+  enrolled = 0,
+  resumed = 0,
+  revoked = 0;
 const cloudActions: string[] = [];
+const cloudOrigins: string[] = [];
+const retryOrder: string[] = [];
+let cloudResolve!: (result: unknown) => void;
+const cloudLate = new Promise((resolve) => {
+  cloudResolve = resolve;
+});
+const cloudProject = { id: "cloud-project", name: "Old project", status: "running" };
 const listeners = new Set<(value: AccountFeatureSnapshot) => void>();
 const api = {
   snapshot: () =>
     scenario.startsWith("late-") || scenario === "unmount" ? late : Promise.resolve(snapshot),
   refresh: async () => {
     refreshed++;
+    retryOrder.push("features");
     return snapshot;
   },
   onChanged: (listener: (value: AccountFeatureSnapshot) => void) => {
@@ -89,6 +112,10 @@ window.addEventListener("codeshell:open-account-settings", () => signIns++);
 window.codeshell = {
   accountFeatures: api,
   cloudAccount: {
+    resume: async () => {
+      resumed++;
+      retryOrder.push("resume");
+    },
     status: async () => ({
       state: "signed-in",
       origin: "https://account.example",
@@ -104,11 +131,27 @@ window.codeshell = {
       forget: async () => {},
     },
   },
-  links: {},
+  links: {
+    remoteDisconnect: async () => {
+      revoked++;
+    },
+  },
+  mcpOAuth: {
+    logout: async () => {
+      revoked++;
+      return { remoteRevoked: true };
+    },
+  },
   onMenuEvent: () => () => {},
-  openCloudWorkbench: async (request: { action: string }) => {
+  openCloudWorkbench: async (request: { action: string; cloudOrigin: string }) => {
     opened++;
     cloudActions.push(request.action);
+    cloudOrigins.push(request.cloudOrigin);
+    if (scenario === "cloud-target-change") return cloudLate;
+    if (scenario === "cloud-stop-hidden")
+      return request.action === "list"
+        ? { action: "list", available: true, projects: [cloudProject] }
+        : { action: request.action, project: { ...cloudProject, status: "stopped" } };
     return { action: request.action, available: true, projects: [] };
   },
 } as any;
@@ -139,7 +182,7 @@ const render = async () =>
   update(() =>
     root.render(
       <I18nProvider>
-        {scenario === "phone" ? (
+        {scenario.startsWith("phone") ? (
           <DeviceRelaySettings
             status={{
               state: "ready",
@@ -151,6 +194,7 @@ const render = async () =>
             busy={false}
             refresh={async () => {
               refreshed++;
+              retryOrder.push("relay-refresh");
             }}
           />
         ) : scenario === "cloud" || scenario === "cloud-sign-in-transition" ? (
@@ -170,12 +214,35 @@ const render = async () =>
             onOpened={() => {}}
             onBusyChange={() => {}}
           />
-        ) : scenario === "remote" ? (
+        ) : scenario === "credential-cleanup" ? (
+          <UnavailableLinkCleanup
+            cwd="/fixture"
+            credentials={[{ id: "oauth", label: "OAuth account", type: "oauth", hasSecret: true }]}
+            reload={async () => {}}
+            onChanged={() => {}}
+          />
+        ) : scenario.startsWith("remote") ? (
           <RemoteProviderSection
             cwd="/fixture"
             providerId="github"
             snapshot={
-              { providers: [], connections: [], revision: "fixture", capabilities: {} } as any
+              {
+                providers: [],
+                connections: scenario.startsWith("remote-cleanup")
+                  ? [
+                      {
+                        id: "remote-account",
+                        providerId: "github",
+                        label: "GitHub account",
+                        editable: true,
+                        authSource: "remote-link",
+                        revision: "v1",
+                      },
+                    ]
+                  : [],
+                revision: "fixture",
+                capabilities: {},
+              } as any
             }
             provider={
               {
@@ -214,6 +281,41 @@ try {
       subscribed!(featureSnapshot("ready"));
     });
     assert.equal(container.childNodes.length, 0);
+  } else if (scenario.startsWith("remote-cleanup")) {
+    assert.ok(text(container).includes("已有授权的清理"));
+    assert.equal(button("连接"), undefined);
+    await update(() => props(button("断开")).onClick());
+    await update(() => props(button("确认断开")).onClick());
+    assert.equal(revoked, 1);
+  } else if (scenario === "credential-cleanup") {
+    await update(() => props(button("退出")).onClick());
+    assert.equal(revoked, 1);
+  } else if (scenario === "phone-new-route") {
+    assert.deepEqual(qrValues, ["https://account.example/devices"]);
+  } else if (scenario === "cloud-target-change") {
+    const form = nodes(container).find((node) => node.tagName === "FORM");
+    await update(() => props(form).onSubmit({ preventDefault() {} }));
+    await update(() => {
+      for (const listener of listeners)
+        listener(featureSnapshot("ready", { cloudOrigin: "https://new.example" }));
+    });
+    await update(() => cloudResolve({ action: "list", available: true, projects: [cloudProject] }));
+    const input = nodes(container).find(
+      (node) => node.tagName === "INPUT" && props(node).inputMode === "url",
+    );
+    assert.equal(props(input).value, "https://new.example");
+    assert.equal(text(container).includes("Old project"), false);
+    assert.equal(props(button("连接并加载项目")).disabled, false);
+  } else if (scenario === "cloud-stop-hidden") {
+    const form = nodes(container).find((node) => node.tagName === "FORM");
+    await update(() => props(form).onSubmit({ preventDefault() {} }));
+    await update(() => {
+      for (const listener of listeners) listener(featureSnapshot("hidden"));
+    });
+    assert.equal(props(button("停止")).disabled, false);
+    await update(() => props(button("停止")).onClick());
+    assert.deepEqual(cloudActions, ["list", "stop"]);
+    assert.deepEqual(cloudOrigins, ["https://cloud.example", "https://cloud.example"]);
   } else if (scenario === "cloud-sign-in-transition") {
     await update(() => props(button("云端")).onClick());
     await update(() => {
@@ -279,7 +381,10 @@ try {
         assert.equal(props(button("通过当前账号登记电脑")).disabled, false);
         await update(() => props(button("通过当前账号登记电脑")).onClick());
         assert.equal(enrolled, 1);
+        retryOrder.length = 0;
         await update(() => props(button("重试")).onClick());
+        assert.equal(resumed, 1);
+        assert.deepEqual(retryOrder, ["resume", "relay-refresh", "features"]);
         assert.ok(refreshed >= 2);
       }
     } else if (scenario === "devices") {
@@ -287,8 +392,10 @@ try {
       assert.equal(opened, 1);
     } else if (scenario === "remote")
       assert.ok(nodes(container).some((n) => props(n)["data-link-runtime"] === "server"));
-    else if (scenario === "phone") assert.ok(nodes(container).some((n) => n.tagName === "IMG"));
-    else {
+    else if (scenario === "phone") {
+      assert.ok(nodes(container).some((n) => n.tagName === "IMG"));
+      assert.deepEqual(qrValues, ["https://account.example/"]);
+    } else {
       assert.ok(button(label));
       assert.equal(props(button(label)).disabled, false);
     }

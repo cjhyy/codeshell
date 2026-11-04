@@ -30,10 +30,10 @@ export function DeviceRelaySettings({
   const [account, setAccount] = useState<CloudAccountStatus>({ state: "signed-out" });
   const [phoneEntryQr, setPhoneEntryQr] = useState<string>();
   // Account registrations are opened from the account's computer list; the
-  // phone signs in there, so the QR carries only the public origin.
+  // phone signs in there, so the QR carries only the public directory URL.
   const phoneEntryUrl =
     phoneFeature.state === "ready" && status.relayOrigin
-      ? `${status.relayOrigin.replace(/\/$/, "")}/`
+      ? `${status.relayOrigin.replace(/\/$/, "")}${phoneFeature.params?.directoryPath ?? "/"}`
       : undefined;
   useEffect(() => {
     let active = true;
@@ -145,7 +145,21 @@ export function DeviceRelaySettings({
           variant="outline"
           disabled={busy || saving}
           onClick={() => {
-            void Promise.allSettled([refresh(), window.codeshell.accountFeatures.refresh()]);
+            setSaving(true);
+            void (async () => {
+              try {
+                await window.codeshell.cloudAccount.resume?.();
+                await refresh();
+                await window.codeshell.accountFeatures.refresh();
+              } catch (error) {
+                toast({
+                  message: error instanceof Error ? error.message : t("settingsX.adv.relayFailed"),
+                  variant: "error",
+                });
+              } finally {
+                setSaving(false);
+              }
+            })();
           }}
         >
           {t("accountFeatures.retry")}

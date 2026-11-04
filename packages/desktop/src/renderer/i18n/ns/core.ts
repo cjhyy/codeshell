@@ -24,6 +24,7 @@ export const core = {
       advancedAddress: "高级：手动填写云端地址",
       registration: "前往网页注册",
       registrationHint: "在网页创建账号后，返回这里登录。",
+      cleanup: "已有授权的清理",
     },
     externalFiles: {
       missing: "完成时已不存在",
@@ -242,6 +243,7 @@ export const core = {
       advancedAddress: "Advanced: enter a cloud address",
       registration: "Register on the website",
       registrationHint: "Create your account on the website, then return here to sign in.",
+      cleanup: "Remove existing authorizations",
     },
     externalFiles: {
       missing: "Missing at completion",

@@ -25,6 +25,12 @@ for (const scenario of [
   "cloud-default",
   "cloud-revoke-cleanup",
   "cloud-sign-in-transition",
+  "cloud-stop-hidden",
+  "cloud-target-change",
+  "phone-new-route",
+  "remote-cleanup-hidden",
+  "remote-cleanup-pending",
+  "credential-cleanup",
 ])
   test(`account feature lifecycle: ${scenario}`, () => {
     const result = Bun.spawnSync({

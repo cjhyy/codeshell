@@ -1,6 +1,7 @@
 import React from "react";
 import { useAccountFeature } from "../account/useAccountFeature";
 import { AccountFeatureEntry } from "../account/AccountFeatureEntry";
+import { UnavailableLinkCleanup } from "./UnavailableLinkCleanup";
 import { Cable, Check, ExternalLink, Figma, FileText, Github, Settings2 } from "lucide-react";
 import type { LinkProviderView, LinkSnapshot, MaskedLinkConnection } from "@cjhyy/code-shell-link";
 import { Button } from "@/components/ui/button";
@@ -148,13 +149,25 @@ export function RemoteProviderSection(props: Parameters<typeof RemoteProviderSec
   const feature = useAccountFeature("links.remote");
   const { t } = useT();
   return (
-    <AccountFeatureEntry
-      feature={feature}
-      label={t("accountFeatures.remoteLink")}
-      className="h-auto w-full flex-wrap text-left"
-    >
-      <RemoteProviderSectionReady {...props} />
-    </AccountFeatureEntry>
+    <>
+      <AccountFeatureEntry
+        feature={feature}
+        label={t("accountFeatures.remoteLink")}
+        className="h-auto w-full flex-wrap text-left"
+      >
+        <RemoteProviderSectionReady {...props} />
+      </AccountFeatureEntry>
+      {feature.state !== "ready" && !props.embedded && (
+        <UnavailableLinkCleanup
+          cwd={props.cwd}
+          connections={props.snapshot?.connections.filter(
+            (connection) => connection.providerId === props.providerId,
+          )}
+          reload={props.reload}
+          onChanged={props.onChanged}
+        />
+      )}
+    </>
   );
 }
 
