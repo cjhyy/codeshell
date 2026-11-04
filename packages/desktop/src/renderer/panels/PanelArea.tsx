@@ -53,6 +53,30 @@ import { nextPanelTabId } from "./panelTabIds";
 export interface OpenTab {
   id: string;
   kind: PanelTab;
+  /**
+   * Set on the one CC Room tab that shows a DriveAgent task page
+   * (`cliTaskKey` of the bucket's request). Other CC Room tabs keep the
+   * ordinary session list, so following a task link never hides it.
+   */
+  cliTask?: string;
+}
+
+/** Stable identity of a DriveAgent task request; undefined for plain room requests. */
+export function cliTaskKey(request: OpenCliSessionRequest | undefined): string | undefined {
+  return request?.jobId && request.sourceSessionId
+    ? `${request.sourceSessionId}:${request.jobId}`
+    : undefined;
+}
+
+/** The CLI request a given tab should render, if any. */
+export function cliSessionForTab(
+  tab: OpenTab,
+  request: OpenCliSessionRequest | undefined,
+): OpenCliSessionRequest | undefined {
+  if (tab.kind !== "ccRoom") return request;
+  const key = cliTaskKey(request);
+  if (key) return tab.cliTask === key ? request : undefined;
+  return tab.cliTask ? undefined : request;
 }
 
 interface Props {
@@ -510,8 +534,28 @@ function ResolvedPanelArea({
       return;
     openedNonce.current = requestNonce;
     const newTab: OpenTab = { id: mkId(requestKind), kind: requestKind };
+    const cliTask = requestKind === "ccRoom" ? cliTaskKey(openCliSession) : undefined;
+    if (cliTask) {
+      // A task link reuses the existing task tab (or opens a new one). It never
+      // takes over a CC Room tab the user is using as the session list.
+      setTabs((prev) => {
+        const bound =
+          prev.find((t) => t.kind === "ccRoom" && t.cliTask === cliTask) ??
+          prev.find((t) => t.kind === "ccRoom" && t.cliTask);
+        if (bound) {
+          setActiveId(bound.id);
+          return bound.cliTask === cliTask
+            ? prev
+            : prev.map((t) => (t.id === bound.id ? { ...t, cliTask } : t));
+        }
+        if (prev.some((t) => t.id === newTab.id)) return prev; // updater re-run guard
+        setActiveId(newTab.id);
+        return [...prev, { ...newTab, cliTask }];
+      });
+      return;
+    }
     setTabs((prev) => {
-      const existing = prev.find((t) => t.kind === requestKind);
+      const existing = prev.find((t) => t.kind === requestKind && !t.cliTask);
       if (existing) {
         setActiveId(existing.id);
         return prev;
@@ -520,7 +564,17 @@ function ResolvedPanelArea({
       setActiveId(newTab.id);
       return [...prev, newTab];
     });
-  }, [enabledPanelIds, panelRegistryRevision, requestNonce, requestKind, hasReviewSnapshot]);
+  }, [
+    enabledPanelIds,
+    panelRegistryRevision,
+    requestNonce,
+    requestKind,
+    hasReviewSnapshot,
+    openCliSession,
+  ]);
+
+  const showCliSessionList = (tabId: string): void =>
+    setTabs((prev) => prev.map((tab) => (tab.id === tabId ? { id: tab.id, kind: tab.kind } : tab)));
 
   const panelStyle: React.CSSProperties | undefined = hidden
     ? keepActiveBodyLive
@@ -587,9 +641,9 @@ function ResolvedPanelArea({
                     ? t("panels.area.launcherTitle")
                     : tab.kind === "subagent" && subagentSelection?.label
                       ? subagentSelection.label
-                      : tab.kind === "ccRoom" && openCliSession?.jobId
-                        ? openCliSession.title ||
-                          (openCliSession.cliKind === "codex" ? "Codex" : "Claude Code")
+                      : tab.kind === "ccRoom" && cliSessionForTab(tab, openCliSession)?.jobId
+                        ? openCliSession!.title ||
+                          (openCliSession!.cliKind === "codex" ? "Codex" : "Claude Code")
                         : entry
                           ? panelEntryTitle(entry, (key) => t(key as never))
                           : t("panels.area.unavailable"),
@@ -750,7 +804,10 @@ function ResolvedPanelArea({
                     revealFile={revealFile}
                     onRevealConsumed={onRevealConsumed}
                     openUrl={openUrl}
-                    openCliSession={openCliSession}
+                    openCliSession={cliSessionForTab(panelTab, openCliSession)}
+                    onShowCliSessionList={
+                      panelTab.cliTask ? () => showCliSessionList(panelTab.id) : undefined
+                    }
                     subagentSelection={subagentSelection}
                     onOpenCliSessionConsumed={onOpenCliSessionConsumed}
                     onAttachImage={onAttachImage}
@@ -795,6 +852,7 @@ function PanelBody({
   onRevealConsumed,
   openUrl,
   openCliSession,
+  onShowCliSessionList,
   subagentSelection,
   onOpenCliSessionConsumed,
   engineSessionId,
@@ -825,6 +883,7 @@ function PanelBody({
   onRevealConsumed?: (nonce: number) => void;
   openUrl?: { url: string; nonce: number };
   openCliSession?: OpenCliSessionRequest;
+  onShowCliSessionList?: () => void;
   subagentSelection?: SubagentSelection;
   onOpenCliSessionConsumed?: (nonce: number) => void;
   engineSessionId?: string | null;
@@ -872,6 +931,7 @@ function PanelBody({
     onRevealConsumed,
     openUrl,
     openCliSession,
+    onShowCliSessionList,
     subagentSelection,
     onOpenCliSessionConsumed,
     engineSessionId: engineSessionId ?? null,
