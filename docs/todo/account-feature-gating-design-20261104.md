@@ -145,7 +145,7 @@ export const FEATURES = {
 
 ### 服务端强制
 
-新增 `requireFeature(principal, id)`，受保护接口入口处调用，失败返回
+新增 `requireFeature(principal, id)`，受保护接口入口处调用；
 已配置但被关闭时返回 `403 feature_not_entitled`；未登录仍沿用认证层的 `401`，
 未配置服务保留现有 `503` 兼容行为。第一批接到：设备访问 handoff
 签发、设备目录管理、Link 管理、云端授权签发。设备访问 handoff 属于现有远程访问流程，
@@ -278,6 +278,16 @@ export interface AccountFeatureView {
 3. **codeshell PR（Web 与注册入口）**：网站侧 hook 与入口迁移、固定网页注册入口，
    各客户端注册统一引导网页。原生客户端入口与网页路由需兼容交付后再启用跳转。
 4. 之后每个新功能：服务端注册一项，客户端用一次 hook，再写功能本身。
+
+### 2026-11-04 首批交付记录
+
+- 方案：[codeshell PR #283](https://github.com/cjhyy/codeshell/pull/283)。
+- 服务端：[codeshell-services PR #56](https://github.com/cjhyy/codeshell-services/pull/56)，
+  提交 `39bacc067962fc75905c1c547b0e7052ccef12be`。已实现注册表、原生/网页下发、关闭配置
+  和授权路径检查；独立按锁文件安装后 `npm test` 767 项：766 通过、0 失败、1 项原有
+  平台条件跳过；格式检查与 `git diff --check` 通过。
+- 本记录表示源码和 PR 已交付，不表示已合并或部署。共享 Host、Desktop/TUI/`serve`
+  登录接入及网页注册入口仍按后续客户端 PR 实施；Mimi/历史同步未启用。
 
 ## 待定
 
