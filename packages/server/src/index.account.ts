@@ -8,3 +8,5 @@ export * from "./account/profile.js";
 export * from "./account/cloud-contract.js";
 export * from "./account/cloud-types.js";
 export * from "./account/feature-service.js";
+export * from "./account/native-store.js";
+export * from "./account/cli.js";

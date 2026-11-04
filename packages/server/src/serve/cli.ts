@@ -30,6 +30,7 @@ interface CliArgs {
 }
 
 const SERVE_HELP = `Usage: code-shell-serve [options]
+       code-shell-serve account <login|status|features|links|logout|register> [options]
 
 Run the CodeShell headless Web host for a workspace.
 
@@ -169,6 +170,11 @@ export function resolveWebAppRoot(): string | undefined {
 }
 
 export async function runServeCli(argv: string[] = process.argv.slice(2)): Promise<void> {
+  if (argv[0] === "account") {
+    const { runAccountCli } = await import("../account/cli.js");
+    await runAccountCli(argv.slice(1));
+    return;
+  }
   if (argv.includes("--help") || argv.includes("-h")) {
     console.log(SERVE_HELP);
     return;

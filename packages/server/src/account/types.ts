@@ -85,6 +85,7 @@ export interface CloudAccountGitHubLogin {
 }
 
 export interface CloudAccountApi {
+  openRegistration(origin: string): Promise<void>;
   status(): Promise<CloudAccountStatus>;
   resume?(): Promise<CloudAccountStatus>;
   capabilities(origin: string): Promise<CloudAccountCapabilities>;

@@ -3,6 +3,8 @@ import type { ConnectionOptions } from "node:tls";
 import { isRelayOrigin } from "../remote-relay/protocol.js";
 
 function accountErrorMessage(status: number, path?: string, code?: unknown): string {
+  if (status === 403 && code === "feature_not_entitled")
+    return "此账号功能当前不可用，请刷新功能状态。";
   if (path === "/api/v1/account/profile") {
     if (status === 400 && code === "invalid_display_name")
       return "昵称需为 1–64 个字符，不能包含控制字符。";
@@ -64,12 +66,14 @@ function accountErrorMessage(status: number, path?: string, code?: unknown): str
 }
 
 export class CloudAccountHttpError extends Error {
+  readonly code?: string;
   constructor(
     readonly status: number,
     path?: string,
     code?: unknown,
   ) {
     super(accountErrorMessage(status, path, code));
+    if (code === "feature_not_entitled" || code === "authentication_required") this.code = code;
   }
 }
 

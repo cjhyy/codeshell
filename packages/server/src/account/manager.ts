@@ -1,6 +1,11 @@
 import { readAccountFeatures } from "@cjhyy/code-shell-web/account";
 import { createHash, randomBytes } from "node:crypto";
-import { cloudManagementTicket, cloudOrigin, cloudId } from "./cloud-contract.js";
+import {
+  cloudManagementTicket,
+  cloudOrigin,
+  cloudId,
+  type CloudManagementTicket,
+} from "./cloud-contract.js";
 import { isRelayOrigin, isRelayToken } from "../remote-relay/protocol.js";
 import type {
   CloudAccountCapabilities,
@@ -182,18 +187,22 @@ export class CloudAccountManager {
   async overview(
     input: { origin: string; accountId: string },
     authorized: () => boolean = () => true,
+    signal?: AbortSignal,
   ): Promise<CloudAccountOverview> {
     const lease = this.captureRootAccount(input.origin, input.accountId, authorized);
-    const token = await this.getCredential(input.origin, input.accountId, lease.signal);
+    const requestSignal = signal ? AbortSignal.any([lease.signal, signal]) : lease.signal;
+    requestSignal.throwIfAborted();
+    const token = await this.getCredential(input.origin, input.accountId, requestSignal);
     lease.current();
     const raw = await this.request({
       origin: input.origin,
       path: "/api/v1/account/overview",
       method: "GET",
       token,
-      signal: lease.signal,
+      signal: requestSignal,
     });
     lease.current();
+    requestSignal.throwIfAborted();
     if (!raw || typeof raw !== "object" || Array.isArray(raw))
       throw new Error("云服务返回了无效的账号概况。");
     const value = raw as Record<string, unknown>;
@@ -217,13 +226,14 @@ export class CloudAccountManager {
     };
   }
   /** Public service discovery never reads or changes this device's account authority. */
-  async capabilities(origin: string): Promise<CloudAccountCapabilities> {
+  async capabilities(origin: string, signal?: AbortSignal): Promise<CloudAccountCapabilities> {
     requireOrigin(origin);
     if (this.disposed) throw new Error("云账号服务已关闭。");
     const value = (await this.request({
       origin,
       path: "/api/v1/account/status",
       method: "GET",
+      signal,
     })) as Partial<CloudAccountCapabilities> | undefined;
     if (
       !value ||
@@ -830,7 +840,15 @@ export class CloudAccountManager {
     return { state: "signed-out", revocation: confirmed ? "confirmed" : "unconfirmed" };
   }
   /** Main-only root authority lease; refresh preserves it, logout/relogin invalidates it. */
-  captureRootAccount(origin: string, accountId: string, authorized: () => boolean) {
+  captureRootAccount(
+    origin: string,
+    accountId: string,
+    authorized: () => boolean,
+  ): {
+    signal: AbortSignal;
+    current: () => void;
+    ticket: (targetOrigin: string, installationId: string) => Promise<CloudManagementTicket>;
+  } {
     requireOrigin(origin);
     this.load();
     const saved = this.saved;

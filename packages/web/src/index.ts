@@ -63,3 +63,5 @@ export { ModelTraceExplorer } from "./components/ModelTraceExplorer.js";
 export { OutputHistoryRecovery } from "./components/OutputHistoryRecovery.js";
 
 export * from "./account/features.js";
+
+export { normalizeCloudDisplayName, normalizeCloudUsername } from "./account/profile.js";

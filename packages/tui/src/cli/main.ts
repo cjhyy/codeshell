@@ -82,6 +82,17 @@ function addInteractiveOptions(cmd: Command): Command {
     .option("--prefill <text>", "Pre-fill the input box without submitting");
 }
 
+program
+  .command("account")
+  .description("Optional account login, status, features, logout, or website registration")
+  .argument("[args...]")
+  .allowUnknownOption()
+  .allowExcessArguments()
+  .action(async (args: string[]) => {
+    const { runAccountCli } = await import("@cjhyy/code-shell-server/account");
+    await runAccountCli(args);
+  });
+
 // ─── run ──────────────────────────────────────────────────────────
 
 addCommonOptions(
