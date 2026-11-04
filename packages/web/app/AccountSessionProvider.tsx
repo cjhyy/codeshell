@@ -1,4 +1,6 @@
 import React from "react";
+import { readAccountFeatures, resolveAccountFeatures } from "../src/account/features.js";
+import { AccountFeaturesContext } from "./useAccountFeature.js";
 import {
   AccountWebClient,
   AccountWebError,
@@ -49,6 +51,7 @@ export function useAccountSession(): AccountSessionContext {
 }
 
 export function AccountSessionProvider({ children }: { children: React.ReactNode }) {
+  const origin = React.useRef(window.location.origin).current;
   const client = React.useRef<AccountWebClient | null>(null);
   client.current ??= new AccountWebClient();
   const api = client.current;
@@ -60,6 +63,9 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
   const busyRef = React.useRef(false);
   const [error, setError] = React.useState("");
   const [status, setStatus] = React.useState("");
+  const [deployment, setDeployment] = React.useState<Record<string, unknown>>();
+  const [deploymentReachable, setDeploymentReachable] = React.useState(true);
+  const [accountReachable, setAccountReachable] = React.useState(true);
   const [capabilities, setCapabilities] = React.useState({
     registrationAllowed: false,
     githubEnabled: false,
@@ -76,7 +82,10 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
     const controller = new AbortController();
     capabilityRequest.current = controller;
     const live = () =>
-      mounted.current && capabilityRequest.current === controller && !controller.signal.aborted;
+      mounted.current &&
+      window.location.origin === origin &&
+      capabilityRequest.current === controller &&
+      !controller.signal.aborted;
     setLoginCapabilitiesLoading(true);
     setLoginCapabilitiesError("");
     try {
@@ -93,13 +102,17 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
         typeof value?.githubEnabled !== "boolean"
       )
         throw new Error("登录方式数据无效，请重试读取。");
-      if (live())
+      if (live()) {
+        setDeployment(value);
+        setDeploymentReachable(true);
         setCapabilities({
           registrationAllowed: value.registrationAllowed,
           githubEnabled: value.githubEnabled,
         });
+      }
     } catch (cause) {
       if (live()) {
+        setDeploymentReachable(false);
         setCapabilities({ registrationAllowed: false, githubEnabled: false });
         setLoginCapabilitiesError(
           cause instanceof Error && cause.name !== "TimeoutError"
@@ -113,8 +126,9 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
         setLoginCapabilitiesLoading(false);
       }
     }
-  }, []);
-  const active = (epoch: number) => mounted.current && epoch === revision.current;
+  }, [origin]);
+  const active = (epoch: number) =>
+    mounted.current && window.location.origin === origin && epoch === revision.current;
   const setWorking = (value: boolean) => {
     busyRef.current = value;
     setBusy(value);
@@ -126,7 +140,17 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
     api.setSession(next);
     setSession(next);
     sessionRef.current = next;
+    setAccountReachable(true);
     setReady(true);
+  };
+  const clearDisplayedAccount = () => {
+    const cleared: AccountWebSession = {
+      authenticated: false,
+      refreshRequired: false,
+      cloudTarget: sessionRef.current?.cloudTarget ?? null,
+    };
+    setSession(cleared);
+    sessionRef.current = cleared;
   };
   const cleanup = (flow: OAuthFlow): Promise<void> => {
     flow.popup.close();
@@ -180,7 +204,10 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
       if (active(epoch)) {
         if (cause instanceof AccountWebError && cause.status === 401) {
           accept({ authenticated: false, refreshRequired: false, cloudTarget: null });
-        } else setReady(false);
+        } else {
+          setReady(false);
+          setAccountReachable(false);
+        }
         report(cause);
       }
     } finally {
@@ -213,6 +240,7 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
       if (!pending.current) void restore();
     };
     window.addEventListener("focus", focus);
+    const poll = setInterval(focus, 10 * 60 * 1000);
     return () => {
       mounted.current = false;
       revision.current++;
@@ -226,6 +254,7 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
       capabilityRequest.current?.abort();
       capabilityRequest.current = null;
       window.removeEventListener("focus", focus);
+      clearInterval(poll);
     };
   }, [api, restore, refreshLoginCapabilities]);
   React.useEffect(() => {
@@ -243,7 +272,10 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
       } catch (cause) {
         if (active(epoch)) {
           if (cause instanceof AccountWebError && cause.status === 401) api.onSessionLost?.();
-          else report(cause);
+          else {
+            setAccountReachable(false);
+            report(cause);
+          }
         }
       }
     };
@@ -259,6 +291,7 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
     }
     const epoch = ++revision.current;
     api.invalidate();
+    clearDisplayedAccount();
     setWorking(true);
     setError("");
     setStatus("");
@@ -352,6 +385,10 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
     pending.current = flow;
     const accountId = sessionRef.current?.account?.id;
     const epoch = mode === "login" ? ++revision.current : revision.current;
+    if (mode === "login") {
+      api.invalidate();
+      clearDisplayedAccount();
+    }
     const live = () =>
       active(epoch) &&
       pending.current === flow &&
@@ -467,33 +504,54 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
     (...args) => api.request(...args),
     [api],
   );
+  // Old services disclose Cloud only on the authenticated web session. Explicit
+  // features (including empty/malformed maps) always win over this compatibility input.
+  const cloudTarget = session?.cloudTarget
+    ? { enabled: true, ...session.cloudTarget }
+    : { enabled: false };
+  const offered = deployment
+    ? readAccountFeatures({ ...deployment, cloudTarget }, "deployment")
+    : undefined;
+  const entitled =
+    session?.authenticated && session.overview
+      ? readAccountFeatures({ ...session.overview, cloudTarget }, "account", offered)
+      : undefined;
+  const features = resolveAccountFeatures({
+    deployment: window.location.origin === origin ? offered : undefined,
+    account: entitled,
+    signedIn: session?.authenticated === true,
+    supported: ["links.remote", "cloud.projects", "relay.phone"],
+    reachable: deploymentReachable && accountReachable,
+  });
   return (
-    <AccountContext.Provider
-      value={{
-        session,
-        ready,
-        busy,
-        error,
-        status,
-        ...capabilities,
-        loginCapabilitiesLoading,
-        loginCapabilitiesError,
-        refreshLoginCapabilities,
-        oauthPending,
-        restore,
-        signIn,
-        logout,
-        github,
-        cancelGithub,
-        clearError: () => setError(""),
-        workspaceActive: (identity) =>
-          !busyRef.current &&
-          sessionRef.current?.authenticated === true &&
-          `${sessionRef.current.account!.id}:${sessionRef.current.session!.id}` === identity,
-        request,
-      }}
-    >
-      {children}
-    </AccountContext.Provider>
+    <AccountFeaturesContext.Provider value={features}>
+      <AccountContext.Provider
+        value={{
+          session,
+          ready,
+          busy,
+          error,
+          status,
+          ...capabilities,
+          loginCapabilitiesLoading,
+          loginCapabilitiesError,
+          refreshLoginCapabilities,
+          oauthPending,
+          restore,
+          signIn,
+          logout,
+          github,
+          cancelGithub,
+          clearError: () => setError(""),
+          workspaceActive: (identity) =>
+            !busyRef.current &&
+            sessionRef.current?.authenticated === true &&
+            `${sessionRef.current.account!.id}:${sessionRef.current.session!.id}` === identity,
+          request,
+        }}
+      >
+        {children}
+      </AccountContext.Provider>
+    </AccountFeaturesContext.Provider>
   );
 }

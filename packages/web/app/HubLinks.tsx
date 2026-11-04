@@ -24,6 +24,8 @@ import {
   type ApiScope,
 } from "./api-context.js";
 import "./hub-links.css";
+import { accountLinkMethods } from "./account-link-methods.js";
+import { useOptionalAccountFeature, accountFeatureMessage } from "./useAccountFeature.js";
 
 const ROOT = "/api/v1/links";
 const statuses: Record<MaskedLinkConnection["status"], string> = {
@@ -141,6 +143,7 @@ export function HubLinks({
   hostLabel?: string;
   configurationVersion?: number;
 }) {
+  const remoteFeature = useOptionalAccountFeature("links.remote");
   const [snapshot, setSnapshot] = React.useState<LinkSnapshot>();
   const [editor, setEditor] = React.useState<Editor>();
   const [query, setQuery] = React.useState("");
@@ -154,11 +157,25 @@ export function HubLinks({
   const [authModeId, setAuthModeId] = React.useState<string>();
   const attemptTargets = React.useRef(new Map<string, { target: string; scope: ApiScope }>());
   const handoffs = React.useRef(new Set<string>());
+  const remoteGate = React.useRef({ feature: remoteFeature, providers: snapshot?.providers });
+  remoteGate.current = { feature: remoteFeature, providers: snapshot?.providers };
   const [browserLaunch, setBrowserLaunch] = React.useState<{ id: string; url: string }>();
   const controller = React.useMemo(
     () =>
       new LinkAuthorizationController({
         begin: async (connectionInput, modeId) => {
+          const gate = remoteGate.current;
+          if (
+            gate.feature &&
+            gate.feature.state !== "ready" &&
+            gate.providers
+              ?.find((provider) => provider.id === connectionInput.providerId)
+              ?.connectionMethods.some(
+                (method) =>
+                  method.id === connectionInput.methodId && method.executionRuntime === "server",
+              )
+          )
+            throw new Error(accountFeatureMessage(gate.feature) || "此账号暂不可使用远程 Link。");
           const scope = captureApiScope();
           const { workspace, projectId } = scope;
           const value = await api<LinkAuthorization>(
@@ -509,6 +526,20 @@ export function HubLinks({
     original?: MaskedLinkConnection,
     source = document.activeElement,
   ) {
+    if (
+      remoteFeature &&
+      remoteFeature.state !== "ready" &&
+      (provider.connectionMethods.every((method) => method.executionRuntime === "server") ||
+        (original &&
+          provider.connectionMethods.some(
+            (method) => method.id === original.methodId && method.executionRuntime === "server",
+          )))
+    ) {
+      if (remoteFeature.state === "sign-in") window.location.assign("/");
+      else setNotice(accountFeatureMessage(remoteFeature) || "此账号暂不可使用远程 Link。");
+      return;
+    }
+    provider = accountLinkMethods(provider, remoteFeature);
     if (busy || flow.busy || genericPending || authorization?.state === "pending") return;
     if (dirty && !window.confirm("放弃当前未保存的连接修改？")) return;
     controller.reset();
@@ -555,6 +586,14 @@ export function HubLinks({
       void beginGeneric(next, preferred);
   }
   async function beginGeneric(next: Editor, mode: LinkAuthMode) {
+    if (
+      remoteFeature &&
+      remoteFeature.state !== "ready" &&
+      next.provider.connectionMethods.some(
+        (method) => method.id === mode.methodId && method.executionRuntime === "server",
+      )
+    )
+      return;
     if (!mode.available || !next.label.trim()) return;
     captureEditorOperation();
     if (controller.getSnapshot().authorization?.state === "pending") {
@@ -699,17 +738,36 @@ export function HubLinks({
   const pending = authorization?.state === "pending";
   const unavailable = busy || flow.busy || pending || genericPending;
   const needle = query.trim().toLowerCase();
-  const providers = (snapshot?.providers ?? []).filter(
-    (provider) =>
-      (snapshot?.capabilities.authorizationSteps !== 1 ||
-        provider.authModes?.some((mode) => mode.available)) &&
-      `${provider.displayName} ${provider.description.zh}`.toLowerCase().includes(needle),
-  );
+  const providers = (snapshot?.providers ?? [])
+    .map((provider) => accountLinkMethods(provider, remoteFeature))
+    .filter(
+      (provider) =>
+        provider.connectionMethods.length > 0 &&
+        (snapshot?.capabilities.authorizationSteps !== 1 ||
+          (remoteFeature?.state === "pending" &&
+            provider.connectionMethods.some((method) => method.executionRuntime === "server")) ||
+          (remoteFeature?.state === "sign-in" &&
+            provider.connectionMethods.some((method) => method.executionRuntime === "server")) ||
+          provider.authModes?.some((mode) => mode.available)) &&
+        `${provider.displayName} ${provider.description.zh}`.toLowerCase().includes(needle),
+    );
   // The Host assigns new connection IDs. A legacy provider/method ID in the
   // list is another account, not the revision target of a create-only request.
   const original = editor?.original;
   const latest = original && snapshot?.connections.find((item) => item.id === original.id);
   const conflict = !!(original && snapshot && latest?.revision !== original.revision);
+  React.useEffect(() => {
+    if (
+      remoteFeature &&
+      remoteFeature.state !== "ready" &&
+      editor?.provider.connectionMethods.some(
+        (method) => method.id === editor.methodId && method.executionRuntime === "server",
+      )
+    ) {
+      void controller.cancel();
+      setEditor(undefined);
+    }
+  }, [remoteFeature?.state, editor, controller]);
 
   return (
     <section className="hub-links">
@@ -786,7 +844,17 @@ export function HubLinks({
                 {connection.editable ? (
                   <>
                     <button
-                      disabled={unavailable || !provider}
+                      disabled={
+                        unavailable ||
+                        !provider ||
+                        (remoteFeature !== null &&
+                          remoteFeature.state !== "ready" &&
+                          provider.connectionMethods.some(
+                            (method) =>
+                              method.id === connection.methodId &&
+                              method.executionRuntime === "server",
+                          ))
+                      }
                       ref={(node) => {
                         if (node) manageButtons.current.set(connection.id, node);
                         else manageButtons.current.delete(connection.id);
@@ -1273,6 +1341,10 @@ export function HubLinks({
               <button
                 disabled={
                   unavailable ||
+                  (remoteFeature?.state === "pending" &&
+                    provider.connectionMethods.every(
+                      (method) => method.executionRuntime === "server",
+                    )) ||
                   (snapshot?.capabilities.authorizationSteps !== 1 &&
                     !!(existing && !existing.editable))
                 }
@@ -1288,13 +1360,21 @@ export function HubLinks({
                   )
                 }
               >
-                {snapshot?.capabilities.authorizationSteps === 1
-                  ? "添加连接"
-                  : existing
-                    ? existing.editable
-                      ? "管理连接"
-                      : "项目配置管理"
-                    : "添加连接"}
+                {remoteFeature?.state === "sign-in" &&
+                provider.connectionMethods.every((method) => method.executionRuntime === "server")
+                  ? "登录后可用"
+                  : remoteFeature?.state === "pending" &&
+                      provider.connectionMethods.every(
+                        (method) => method.executionRuntime === "server",
+                      )
+                    ? "暂时无法连接"
+                    : snapshot?.capabilities.authorizationSteps === 1
+                      ? "添加连接"
+                      : existing
+                        ? existing.editable
+                          ? "管理连接"
+                          : "项目配置管理"
+                        : "添加连接"}
               </button>
             </article>
           );

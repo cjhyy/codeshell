@@ -1,21 +1,33 @@
 import React from "react";
 import { useAccountSession } from "./AccountSessionProvider.js";
 
-export function WebsiteLogin() {
+export function WebsiteLogin({ registration = false }: { registration?: boolean }) {
   const account = useAccountSession();
-  const [register, setRegister] = React.useState(false);
+  const [register, setRegister] = React.useState(registration);
   const [username, setUsername] = React.useState("");
   const [displayName, setDisplayName] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [confirmation, setConfirmation] = React.useState("");
   const [validation, setValidation] = React.useState("");
   React.useEffect(() => {
-    if (register && !account.registrationAllowed && !account.loginCapabilitiesLoading) {
+    if (
+      register &&
+      account.ready &&
+      !account.registrationAllowed &&
+      !account.loginCapabilitiesLoading &&
+      !account.loginCapabilitiesError
+    ) {
       setRegister(false);
       setValidation("");
       setConfirmation("");
     }
-  }, [register, account.registrationAllowed, account.loginCapabilitiesLoading]);
+  }, [
+    register,
+    account.ready,
+    account.registrationAllowed,
+    account.loginCapabilitiesLoading,
+    account.loginCapabilitiesError,
+  ]);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setValidation("");
@@ -83,7 +95,18 @@ export function WebsiteLogin() {
         <section className="auth-card website-auth" aria-labelledby="website-login-title">
           <p className="website-eyebrow">欢迎来到 CodeShell</p>
           <h2 id="website-login-title">{register ? "创建你的账号" : "继续你的工作"}</h2>
-          <p className="website-muted">登录后进入你的工作台。</p>
+          <p className="website-muted">
+            {registration ? "创建账号后，返回 CodeShell 客户端登录。" : "登录后进入你的工作台。"}
+          </p>
+          {registration &&
+          account.ready &&
+          !account.loginCapabilitiesLoading &&
+          !account.loginCapabilitiesError &&
+          !account.registrationAllowed ? (
+            <p role="status" className="website-hint">
+              当前服务未开放注册，可使用已有账号登录。
+            </p>
+          ) : null}
           <button
             className="website-button website-wide"
             disabled={account.busy || account.loginCapabilitiesLoading || !account.githubEnabled}
@@ -163,7 +186,9 @@ export function WebsiteLogin() {
             <button
               className="send website-wide"
               disabled={
-                account.busy || !account.ready || (register && account.loginCapabilitiesLoading)
+                account.busy ||
+                !account.ready ||
+                (register && (account.loginCapabilitiesLoading || !account.registrationAllowed))
               }
               type="submit"
             >
@@ -207,6 +232,28 @@ export function WebsiteLogin() {
         </section>
       </div>
       <footer className="website-login-footer">CodeShell · 让工作继续</footer>
+    </main>
+  );
+}
+
+/** This page finishes only a website session. Native clients log in separately. */
+export function WebsiteRegistration() {
+  const account = useAccountSession();
+  if (!account.session?.authenticated) return <WebsiteLogin registration />;
+  return (
+    <main className="website-login">
+      <section className="auth-card website-auth">
+        <h1>账号已就绪</h1>
+        <p>{account.session.account?.displayName}</p>
+        <p>请返回 CodeShell 客户端，使用此账号登录。</p>
+        <a className="website-button" href="/">
+          继续使用网页版
+        </a>
+        <button className="ghost" disabled={account.busy} onClick={() => void account.logout()}>
+          退出当前网页账号
+        </button>
+        {account.error ? <p role="alert">{account.error}</p> : null}
+      </section>
     </main>
   );
 }

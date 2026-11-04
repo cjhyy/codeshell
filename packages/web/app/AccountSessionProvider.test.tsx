@@ -6,6 +6,8 @@ import { AccountSessionProvider, useAccountSession } from "./AccountSessionProvi
 import { AccountSettings } from "./AccountSettings.js";
 import { WebsiteLogin } from "./WebsiteLogin.js";
 import type { WebsiteRoute } from "./website-routes.js";
+import { AccountFeaturesContext } from "./useAccountFeature.js";
+import type { AccountFeatureSnapshot } from "../src/account/features.js";
 
 const accountId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const sessionId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -62,6 +64,8 @@ async function fixture({
   admin = false,
   signedIn = true,
   renderLogin = false,
+  registration = false,
+  featureResponse = undefined as unknown,
   capabilityResponse = undefined as (() => Response | Promise<Response>) | undefined,
 } = {}) {
   ensureMiniDom();
@@ -120,7 +124,9 @@ async function fixture({
       expiresAt: Date.now() + 600000,
     },
   ];
+  let accountFeatures = featureResponse;
   const overview = () => ({
+    ...(accountFeatures === undefined ? {} : { features: accountFeatures }),
     account: profile,
     security: { hasPassword, githubLinked: false },
     capabilities: {
@@ -192,8 +198,10 @@ async function fixture({
     throw new Error(`Unexpected controlled Account request ${init?.method ?? "GET"} ${path}`);
   }) as typeof fetch;
   let context!: ReturnType<typeof useAccountSession>;
+  let featureViews: AccountFeatureSnapshot | null = null;
   function Content() {
     context = useAccountSession();
+    featureViews = React.useContext(AccountFeaturesContext);
     const route: WebsiteRoute = admin
       ? { kind: "admin", section: "users" }
       : { kind: "account", section: section as any };
@@ -203,7 +211,7 @@ async function fixture({
         route={route}
       />
     ) : renderLogin ? (
-      <WebsiteLogin />
+      <WebsiteLogin registration={registration} />
     ) : (
       <p>请登录</p>
     );
@@ -229,6 +237,12 @@ async function fixture({
     calls,
     overrides,
     snapshot,
+    get features() {
+      return featureViews!;
+    },
+    setFeatures(value: unknown) {
+      accountFeatures = value;
+    },
     switchIdentity() {
       profile = {
         id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
@@ -685,4 +699,102 @@ test("unavailable or malformed login options do not block an existing password a
   expect(view.context.session?.authenticated).toBe(true);
   expect(view.context.githubEnabled).toBe(false);
   expect(view.context.error).toBe("");
+});
+
+const enabledFeatures = {
+  "links.remote": { version: 1, enabled: true },
+  "relay.phone": { version: 1, enabled: true },
+  "devices.dispatch": { version: 1, enabled: true },
+};
+const featureStatus = (features: unknown = enabledFeatures) =>
+  Response.json({ registrationAllowed: true, githubEnabled: true, features });
+
+test("website features use anonymous discovery, account policy and browser support independently", async () => {
+  const view = await fixture({ signedIn: false, capabilityResponse: () => featureStatus() });
+  expect(view.features["links.remote"].state).toBe("sign-in");
+  expect(view.features["relay.phone"].state).toBe("sign-in");
+  expect(view.features["devices.dispatch"].state).toBe("hidden");
+  view.setFeatures(enabledFeatures);
+  await action(() =>
+    view.context.signIn("login", { username: "fixture-user", password: "fixture-password-12345" }),
+  );
+  await until(() => !view.context.busy);
+  expect(view.features["links.remote"].state).toBe("ready");
+  expect(view.features["relay.phone"].state).toBe("ready");
+  await action(() => view.context.logout());
+  await until(() => !view.context.busy);
+  expect(view.features["links.remote"].state).toBe("sign-in");
+});
+
+test.each([{}, null, { "links.remote": { version: 2, enabled: true } }])(
+  "explicit unsupported or empty account features fail closed (%j)",
+  async (features) => {
+    const view = await fixture({
+      featureResponse: features,
+      capabilityResponse: () => featureStatus(),
+    });
+    expect(view.features["links.remote"].state).toBe("hidden");
+    expect(view.features["relay.phone"].state).toBe("hidden");
+  },
+);
+
+test("known website features degrade offline and recover without replacing the account", async () => {
+  const view = await fixture({
+    featureResponse: enabledFeatures,
+    capabilityResponse: () => featureStatus(),
+  });
+  view.overrides.set("GET /api/v1/account/status", () => Response.json({}, { status: 503 }));
+  await action(() => view.context.refreshLoginCapabilities());
+  await until(() => !view.context.loginCapabilitiesLoading);
+  expect(view.context.session?.account?.id).toBe(accountId);
+  expect(view.features["links.remote"]).toEqual({
+    id: "links.remote",
+    state: "pending",
+    reason: "service_unreachable",
+  });
+  view.overrides.set("GET /api/v1/account/status", () => featureStatus());
+  await action(() => view.context.refreshLoginCapabilities());
+  await until(() => !view.context.loginCapabilitiesLoading);
+  expect(view.features["links.remote"].state).toBe("ready");
+  view.switchIdentity();
+  view.setFeatures({});
+  await action(() => view.context.restore());
+  await until(() => !view.context.busy);
+  expect(view.context.session?.account?.id).not.toBe(accountId);
+  expect(view.features["links.remote"].state).toBe("hidden");
+});
+
+test("the fixed registration screen opens creation mode and explains a closed service", async () => {
+  const view = await fixture({ signedIn: false, renderLogin: true, registration: true });
+  expect(text(view.container)).toContain("创建你的账号");
+  expect(text(view.container)).toContain("返回 CodeShell 客户端登录");
+  view.overrides.set("GET /api/v1/account/status", () =>
+    Response.json({ registrationAllowed: false, githubEnabled: false }),
+  );
+  await action(() => view.context.refreshLoginCapabilities());
+  await until(() => !view.context.loginCapabilitiesLoading);
+  expect(text(view.container)).toContain("当前服务未开放注册");
+  expect(text(view.container)).not.toContain("确认密码");
+});
+
+test("starting another sign-in immediately drops the previous account feature grant", async () => {
+  const view = await fixture({
+    featureResponse: enabledFeatures,
+    capabilityResponse: () => featureStatus(),
+  });
+  expect(view.features["links.remote"].state).toBe("ready");
+  const pendingLogin = deferred<Response>();
+  view.overrides.set("POST /api/v1/account/login", () => pendingLogin.promise);
+  let login!: Promise<boolean>;
+  await action(() => {
+    login = view.context.signIn("login", {
+      username: "other-user",
+      password: "fixture-password-12345",
+    });
+  });
+  expect(view.features["links.remote"].state).toBe("sign-in");
+  expect(view.context.session?.account).toBeUndefined();
+  pendingLogin.resolve(Response.json({ error: "invalid_credentials" }, { status: 401 }));
+  await action(() => login);
+  expect(view.features["links.remote"].state).toBe("sign-in");
 });

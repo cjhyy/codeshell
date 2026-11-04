@@ -1,4 +1,5 @@
 import { withAccountCookieLock } from "./account-cookie-lock.js";
+import { parseAccountFeatures, type AccountFeatureMap } from "../src/account/features.js";
 export const ACCOUNT_WEB_PREFIX = "/api/v1/account/web";
 const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;
 const OPAQUE = /^[A-Za-z0-9_-]{43}$/;
@@ -30,6 +31,8 @@ export interface AccountOverview {
   security: { hasPassword: boolean; githubLinked: boolean };
   capabilities: { sessions: boolean; passwordChange: boolean; admin: boolean; links: boolean };
   stats: { activeSessions: number; loginMethods: number };
+  features?: AccountFeatureMap;
+  relay?: { enabled: boolean };
 }
 
 const messages: Record<string, string> = {
@@ -223,6 +226,12 @@ export function parseAccountOverview(value: unknown, accountId: string): Account
       links: result.capabilities.links,
     },
     stats: { activeSessions: result.stats.activeSessions, loginMethods: result.stats.loginMethods },
+    ...(Object.hasOwn(result, "features")
+      ? { features: parseAccountFeatures(result.features) }
+      : {}),
+    ...(typeof result.relay?.enabled === "boolean"
+      ? { relay: { enabled: result.relay.enabled } }
+      : {}),
   };
 }
 
