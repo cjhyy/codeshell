@@ -266,6 +266,7 @@ function freshSettings(sessionCwd = cwd): typeof settings {
 
 const chatManager = new ChatSessionManager({
   runtime,
+  sessionStorageDir: dataSessionsDir,
   // resolvedLlmConfig is the bootstrap-time snapshot. Explicit global model
   // changes can move modelPool.activeKey ahead of it, so newly-created
   // sessions re-resolve from the pool each time the factory fires. A

@@ -66,6 +66,7 @@ function fixture(runResult: (sessionId: string) => EngineResult) {
   const manager = new IsolatedSessionManager({
     runtime: {} as never,
     dataRoot: dir,
+    sessionMetadata: { exists: () => true, readSessionMainRoot: () => root },
     engineFactory() {
       return {
         isHeadless: () => false,

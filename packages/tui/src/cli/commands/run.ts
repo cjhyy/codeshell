@@ -193,6 +193,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
   // 4. ChatSessionManager — one session per `run` invocation (UUID)
   const chatManager = new ChatSessionManager({
     runtime,
+    sessionStorageDir: settings.session.storageDir,
     engineFactory: (slice) =>
       new Engine({
         llm: resolvedLlmConfig,

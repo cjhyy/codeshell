@@ -69,7 +69,7 @@ describe("AgentServer goal controls", () => {
     const transport = makeTransport();
     const server = new AgentServer({
       transport: transport.transport,
-      chatManager: { get: () => session } as any,
+      chatManager: { get: () => session, isUnavailable: () => false } as any,
     });
 
     try {

@@ -127,6 +127,7 @@ const runtime = new EngineRuntime({
 
 const chatManager = new ChatSessionManager({
   runtime,
+  sessionStorageDir: dataSessionsDir,
   engineFactory: (slice) => {
     // Fold project capabilityOverrides over the global disabledPlugins for
     // the MCP merge (能力总览 project "on" must override global off) — same
