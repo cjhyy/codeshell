@@ -33,11 +33,22 @@ function discoverWorkspaceManifestPaths(repoRoot: string): string[] {
   ].sort();
 }
 
+export function collectReleaseChangelogErrors(
+  version: string,
+  repoRoot = DEFAULT_REPO_ROOT,
+): string[] {
+  const path = join(repoRoot, "CHANGELOG.md");
+  if (!existsSync(path)) return ["CHANGELOG.md is missing"];
+  const notes = readFileSync(path, "utf8");
+  const heading = new RegExp(String.raw`^## \[${escapeRegex(version)}\](?: - [^\n]+)?\s*$`, "m");
+  return heading.test(notes) ? [] : [`CHANGELOG.md must contain a ## [${version}] release heading`];
+}
+
 export function collectReleaseVersionErrors(
   expectedVersion: string,
   repoRoot = DEFAULT_REPO_ROOT,
 ): string[] {
-  const errors: string[] = [];
+  const errors: string[] = collectReleaseChangelogErrors(expectedVersion, repoRoot);
   const fail = (message: string): void => {
     errors.push(message);
   };

@@ -43,6 +43,112 @@ breaking.
   files clear names and open actions, and separate alternative connections and
   authorization-service diagnostics from everyday account management.
 
+## [0.9.52] - 2026-11-02
+
+### Added
+
+- Browse and select existing subdirectories inside an authorized project from Web
+  Panels, using Host-owned directory tokens.
+- Select scoped native model connections and supported parameters on mobile.
+
+### Fixed
+
+- Unify docked and moving Mimi under one visibility controller, share chat and work
+  badges, and preserve placement and appearance across displays with different DPI.
+- Compact completed mobile tool records while preserving transcript segments.
+
+Source: [v0.9.51…v0.9.52](https://github.com/cjhyy/codeshell/compare/v0.9.51...v0.9.52).
+
+## [0.9.51] - 2026-10-30
+
+### Added
+
+- Switch projects directly from the Web Panel workspace.
+
+### Fixed
+
+- Preserve external background output and process history when reopening Desktop sessions.
+- Bind Panels to canonical sessions and retire stale confirmation feedback.
+- Keep Mimi's pending decisions synchronized across its surfaces.
+
+Source: [v0.9.50…v0.9.51](https://github.com/cjhyy/codeshell/compare/v0.9.50...v0.9.51).
+
+## [0.9.50] - 2026-10-30
+
+### Added
+
+- Load verified mobile history windows and compressed tool details on demand.
+- Present Mimi's computer operations on their target surfaces using a character pack.
+
+### Fixed
+
+- Share cross-device confirmation lifecycle and retain unsent drafts through reconnects.
+- Keep mobile back navigation, model selection, Skills and Link management usable on touch screens.
+- Display verified paged history from sessions created before output journals.
+
+Source: [v0.9.49…v0.9.50](https://github.com/cjhyy/codeshell/compare/v0.9.49...v0.9.50).
+
+## [0.9.49] - 2026-10-29
+
+### Added
+
+- Review and explicitly recover verified output history with checkpoints, preserving
+  pending input without replaying it as a new run.
+- Isolate macOS Computer Use in a dedicated helper application.
+
+### Fixed
+
+- Load Desktop Panels through mobile tunnels and stream authorized workspace downloads.
+- Journal external background and Goal output, retaining session and viewer authority.
+- Keep external file references usable when only filesystem ctime changes.
+
+Source: [v0.9.48…v0.9.49](https://github.com/cjhyy/codeshell/compare/v0.9.48...v0.9.49).
+
+## [0.9.48] - 2026-10-28
+
+### Added
+
+- Show live DriveAgent task pages and move bound projects to installed Panel catalog updates.
+
+### Fixed
+
+- Preserve package pins when rebinding and expire Link steps when their deadlines fire.
+- Retain uncertain mobile message identities on retry and improve account recovery.
+- Recheck native process identity after transient query failures before sending signals.
+
+Source: [v0.9.47…v0.9.48](https://github.com/cjhyy/codeshell/compare/v0.9.47...v0.9.48).
+
+## [0.9.47] - 2026-10-27
+
+### Added
+
+- Maintain memory for external runtime sessions using isolated auxiliary inference.
+- Explain which active resources prevent a Panel update and offer to close them.
+
+### Fixed
+
+- Preserve verified history recovery and Windows launch diagnostics across the integrated release.
+- Handle failed external CLI input pipes, LSP shutdown and process transport stdin failures.
+- Wait for durable duplicate chat acceptance and preserve delivery retry order.
+
+Source: [v0.9.46…v0.9.47](https://github.com/cjhyy/codeshell/compare/v0.9.46...v0.9.47).
+
+## [0.9.46] - 2026-10-22
+
+### Added
+
+- Let external runtime Goals wait for user replies and background shells.
+- Forward Mimi chat images into delegated Work Sessions.
+
+### Fixed
+
+- Preserve Claude developer instructions, permission mode, thinking and usage; stop
+  interrupted Claude turns and settle Codex turns when their app server exits.
+- Route external runtime Stop through Main after renderer reloads.
+- Preserve exact Windows directory identities and integrate themed native title bars.
+
+Source: [0.9.45 release commit…v0.9.46](https://github.com/cjhyy/codeshell/compare/33c9834a7...v0.9.46).
+
 ## [0.9.45] - 2026-10-16
 
 ### Added
