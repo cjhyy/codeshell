@@ -9,8 +9,9 @@ import type {
   ApprovalRequest,
   ApprovalResult,
 } from "../types.js";
-import { resolve as resolvePath, dirname } from "node:path";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
+import { resolve as resolvePath, dirname, posix } from "node:path";
+import { existsSync } from "node:fs";
+import { SettingsManager } from "../settings/manager.js";
 import { randomUUID } from "node:crypto";
 import { logger as rootPermLogger } from "../logging/logger.js";
 import { READ_ONLY_TOOLS } from "./plan-mode-allowlist.js";
@@ -736,43 +737,20 @@ export function ruleMatches(
  * Idempotent: skips if an equivalent rule is already present.
  */
 function persistProjectRule(cwd: string, rule: PermissionRule): void {
-  const dir = `${cwd}/.code-shell`;
-  const file = `${dir}/settings.local.json`;
-
-  // Don't resurrect a deleted project root: a recursive mkdir of
-  // <cwd>/.code-shell recreates `cwd` itself as an empty shell when cwd is gone.
-  // Persistence here is best-effort, so skip when the root is missing.
   if (!existsSync(cwd)) return;
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-
-  let settings: { permissions?: { rules?: PermissionRule[] } } = {};
-  if (existsSync(file)) {
-    try {
-      settings = JSON.parse(readFileSync(file, "utf-8"));
-    } catch {
-      /* start fresh on parse error */
-    }
-  }
-  if (!settings.permissions) settings.permissions = {};
-  if (!settings.permissions.rules) settings.permissions.rules = [];
-
-  // Dedup: same tool + same argsPattern.command (or no pattern) is a match
-  const exists = settings.permissions.rules.some(
-    (r) =>
-      r.tool === rule.tool &&
-      r.decision === "allow" &&
-      JSON.stringify(r.argsPattern) === JSON.stringify(rule.argsPattern),
-  );
-  if (exists) return;
-
-  settings.permissions.rules.push(rule);
-  // Atomic write: stage to .tmp, then rename, so a crash mid-write can't
-  // truncate settings.local.json and lose every saved permission grant.
-  // randomUUID() (not pid+Date.now()) guards against temp-name collisions when
-  // two writers fire within the same millisecond.
-  const tmp = `${file}.${randomUUID()}.tmp`;
-  writeFileSync(tmp, JSON.stringify(settings, null, 2) + "\n", "utf-8");
-  renameSync(tmp, file);
+  new SettingsManager(cwd).mutateSettingsForScope("local", cwd, (current) => {
+    const settings = current as { permissions?: { rules?: PermissionRule[] } };
+    settings.permissions ??= {};
+    settings.permissions.rules ??= [];
+    const exists = settings.permissions.rules.some(
+      (r) =>
+        r.tool === rule.tool &&
+        r.decision === "allow" &&
+        JSON.stringify(r.argsPattern) === JSON.stringify(rule.argsPattern),
+    );
+    if (exists) return false;
+    settings.permissions.rules.push(rule);
+  });
 }
 
 // Singleton interactive backend and its multi-connection owner router.
@@ -1410,7 +1388,12 @@ const SENSITIVE_PATH_PATTERNS = [
   /(^|\/)id_(rsa|dsa|ecdsa|ed25519)\b/,
   /(^|\/|\s)\.env(\.[A-Za-z0-9]|\b)/, // .env, .env.local, .env.production
   /\.aws\/credentials\b/,
-  /\.code-shell\/credentials\b/,
+  // Recursive reads of this directory can include provider/MCP/session keys.
+  /\.code-shell[/\\]?(?=[\s"']|$)/,
+  // Search tools can traverse these parents without naming their secret files.
+  /\.code-shell[/\\](?:serve|desktop|project-control|browser-runtime|im-gateway|chat(?:[/\\]wechat)?)[/\\]?(?=[\s"']|$)/,
+  /\.code-shell[/\\](?:settings(?:\.(?:local|managed))?\.(?:json|ya?ml)|credentials\b|(?:serve|desktop)[/\\]access\.json|project-runtime-secrets\b|project-control[/\\]registry\.json|browser-runtime[/\\](?:profiles|chrome-native\.json)|im-gateway[/\\](?:config|desktop-control)\.json|chat[/\\]wechat[/\\]accounts)/,
+
   /credentials\.json\b/,
   /\.npmrc\b/,
   /\.netrc\b/,
@@ -1437,6 +1420,11 @@ export function segmentIsSensitiveRead(segment: string): boolean {
   // Search patterns/options (`rg token SKILL.md`) are not credential paths.
   const words = splitShellWords(s);
   if (!words) return false;
+  // Shell quoting, repeated separators, and dot segments do not change which
+  // file a reader opens. Test normalized words as well as the original text.
+  // Keep this lexical: classification must not perform I/O or depend on cwd.
+  if (words.some((word) => SENSITIVE_PATH_PATTERNS.some((re) => re.test(posix.normalize(word)))))
+    return true;
   if (words[0] === "sed") {
     if (!isSafeReadSedCommand(s)) return false;
     const scriptIndex = words[2] === "-e" ? 3 : 2;

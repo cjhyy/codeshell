@@ -111,6 +111,8 @@ export function UnifiedDiffViewer({
   const localActions = useLocalRuntimeActions();
   const [diff, setDiff] = useState<LoadedDiff | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [filePage, setFilePage] = useState(0);
+  useEffect(() => setFilePage(0), [diff, onlyPath]);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,8 +199,20 @@ export function UnifiedDiffViewer({
     (n, loaded) => n + loaded.file.hunks.reduce((m, h) => m + h.lines.length, 0),
     0,
   );
-  const overCap = totalLines > MAX_RENDERED_LINES;
-  const filesToRender = overCap ? capFiles(visible, MAX_RENDERED_LINES) : visible;
+  // Binary and rename-only files have no hunk lines, but each still mounts a
+  // complete file card. Page those cards independently of the line budget.
+  const pageCount = Math.max(1, Math.ceil(visible.length / MAX_RENDERED_FILES));
+  const currentPage = Math.min(filePage, pageCount - 1);
+  const pageFiles = visible.slice(
+    currentPage * MAX_RENDERED_FILES,
+    (currentPage + 1) * MAX_RENDERED_FILES,
+  );
+  const overCap =
+    pageFiles.reduce(
+      (n, loaded) => n + loaded.file.hunks.reduce((m, h) => m + h.lines.length, 0),
+      0,
+    ) > MAX_RENDERED_LINES;
+  const filesToRender = overCap ? capFiles(pageFiles, MAX_RENDERED_LINES) : pageFiles;
   const showRepository = new Set(visible.map((entry) => entry.repoRoot)).size > 1;
   return (
     <div className="flex min-w-0 flex-col gap-3 overflow-x-auto text-sm">
@@ -212,6 +226,27 @@ export function UnifiedDiffViewer({
           })}
         </div>
       ))}
+      {pageCount > 1 && (
+        <div className="flex items-center gap-2 text-xs" data-diff-file-pages>
+          <button
+            type="button"
+            disabled={currentPage === 0}
+            onClick={() => setFilePage(currentPage - 1)}
+          >
+            {t("panels.diff.previousFiles")}
+          </button>
+          <span role="status">
+            {t("panels.diff.filePage", { page: currentPage + 1, total: pageCount })}
+          </span>
+          <button
+            type="button"
+            disabled={currentPage + 1 === pageCount}
+            onClick={() => setFilePage(currentPage + 1)}
+          >
+            {t("panels.diff.nextFiles")}
+          </button>
+        </div>
+      )}
       {overCap && (
         <div className="rounded-md bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
           {t("panels.diff.largeDiff", { total: totalLines, max: MAX_RENDERED_LINES })}
@@ -233,6 +268,7 @@ export function UnifiedDiffViewer({
 /** Upper bound on rendered diff lines before we stop and ask the user to pick a
  *  single file. A per-line table past this size blocks the main thread. */
 const MAX_RENDERED_LINES = 2000;
+const MAX_RENDERED_FILES = 100;
 
 /** Keep the first files/lines within the budget, including a single file whose
  * merged edit hunks exceed it. The source snapshot and stats stay complete. */

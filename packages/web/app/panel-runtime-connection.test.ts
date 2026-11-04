@@ -232,3 +232,17 @@ test("stop cancels pending polling and ignores a late response", async () => {
   expect(view.requests).toHaveLength(1);
   expect(view.errors).toHaveLength(0);
 });
+
+test("renewal translates the Host lease to the phone clock", async () => {
+  const skew = 15 * 60_000;
+  const view = fixture({
+    renew: () =>
+      Response.json({ expiresAt: view.now - skew + 30 * 60_000, serverTime: view.now - skew }),
+  });
+  await view.advance(29 * 60_000);
+  expect(view.errors).toHaveLength(0);
+  await view.advance(29 * 60_000 - 1);
+  expect(view.requests.filter((request) => request.path.endsWith("/renew"))).toHaveLength(1);
+  await view.advance(1);
+  expect(view.requests.filter((request) => request.path.endsWith("/renew"))).toHaveLength(2);
+});

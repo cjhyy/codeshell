@@ -48,7 +48,7 @@ import { resolve } from "node:path";
 
 import { RELEASE_PACKAGES, packageManifestPath } from "./package-release-audit-config";
 import { releasePushError } from "./release-push-guard";
-import { verifyReleaseVersions } from "./verify-release-versions";
+import { collectReleaseChangelogErrors, verifyReleaseVersions } from "./verify-release-versions";
 
 const ROOT = resolve(import.meta.dir, "..");
 const PKG_FILES = RELEASE_PACKAGES.map(packageManifestPath);
@@ -141,6 +141,9 @@ const status = (await $`git status --porcelain`.cwd(ROOT).text()).trim();
 if (status && !allowDirty && !dryRun) {
   die(`working tree not clean — commit/stash first, or pass --allow-dirty:\n${status}`);
 }
+
+const changelogErrors = collectReleaseChangelogErrors(target, ROOT);
+if (changelogErrors.length) die(changelogErrors.join("\n"));
 
 try {
   verifyReleaseVersions(current, ROOT);

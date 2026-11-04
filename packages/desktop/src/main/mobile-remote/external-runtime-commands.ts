@@ -396,8 +396,13 @@ export class MobileExternalRuntimeCommands {
     viewer: string | undefined,
     device: string | undefined,
     sessionId: string,
-    options?: { modelKey?: string; permissionMode?: MobileRuntimeStart["permissionMode"] },
+    options?: {
+      modelKey?: string;
+      permissionMode?: MobileRuntimeStart["permissionMode"];
+      assertSubmissionCurrent?: () => void;
+    },
   ) {
+    options?.assertSubmissionCurrent?.();
     if (this.deps.startRuntime) await this.ensureRuntime(viewer, device, sessionId, options);
     const captured = await this.authorize(viewer, device, sessionId);
     const submit: NonNullable<DispatchMobileChatTurnInput["submit"]> = async (request) => {
@@ -473,6 +478,7 @@ export class MobileExternalRuntimeCommands {
                 throw new Error("External queued submission was revoked");
             },
             assertInputOwner: () => {
+              options?.assertSubmissionCurrent?.();
               captured.authority.assertCurrent();
               if (
                 expired ||

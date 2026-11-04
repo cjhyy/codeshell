@@ -11,7 +11,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { deriveModelTraceCallType, isModelTraceCallType } from "./classification.js";
 import type {
   ModelTraceConfig,
@@ -60,6 +60,10 @@ function summary(record: ModelTraceRecord): ModelTraceSummary {
 export class ModelTraceStore {
   readonly storageDir: string;
   private lastPruned = 0;
+  private maintenance?: Promise<void>;
+  private maintenanceAgain = false;
+  private maintenanceWake?: ReturnType<typeof setImmediate>;
+  private maintenanceWaiters = 0;
   constructor({ storageDir }: { storageDir: string }) {
     if (typeof storageDir !== "string" || !storageDir || storageDir.includes("\0"))
       throw new Error("Model trace storage directory required");
@@ -567,27 +571,86 @@ export class ModelTraceStore {
       return false;
     }
   }
+  /** Await optional retention work, e.g. before a Host disposes its storage. */
+  async flushMaintenance(): Promise<void> {
+    this.maintenanceWaiters++;
+    try {
+      while (this.maintenance) {
+        this.maintenanceWake?.ref?.();
+        await this.maintenance;
+      }
+    } finally {
+      this.maintenanceWaiters--;
+    }
+  }
+
   private prune(force = false): void {
+    if (this.maintenance) {
+      if (force) this.maintenanceAgain = true;
+      return;
+    }
     if (!force && Date.now() - this.lastPruned < 60_000) return;
     this.lastPruned = Date.now();
-    const cutoff = Date.now() - this.getConfig().retentionDays * 86_400_000;
+    // Retention is observational work, never part of accepting a model request.
+    // In particular, do not synchronously open every historical tool result on
+    // the first write of a turn. Keep each callback bounded so Main can process
+    // input, Stop and other windows between batches.
+    const candidates = this.retentionCandidates();
+    this.maintenance = new Promise<void>((resolveDone) => {
+      const queueStep = () => {
+        this.maintenanceWake = setImmediate(() => {
+          this.maintenanceWake = undefined;
+          step();
+        });
+        if (!this.maintenanceWaiters) this.maintenanceWake.unref?.();
+      };
+      const finish = () => {
+        this.maintenance = undefined;
+        resolveDone();
+        if (this.maintenanceAgain) {
+          this.maintenanceAgain = false;
+          this.prune(true);
+        }
+      };
+      const step = () => {
+        const until = performance.now() + 4;
+        // Re-read the policy between batches: extending retention must also
+        // protect records that a previously queued cleanup has not visited yet.
+        const cutoff = Date.now() - this.getConfig().retentionDays * 86_400_000;
+        try {
+          for (let count = 0; count < 8; count++) {
+            const next = candidates.next();
+            if (next.done) return finish();
+            const { file, startedAt } = next.value;
+            try {
+              if (file && this.directorySafe(dirname(file))) {
+                const info = lstatSync(file);
+                const time = Number.isFinite(startedAt) ? startedAt! : info.mtimeMs;
+                if (info.isFile() && !info.isSymbolicLink() && time < cutoff) rmSync(file);
+              }
+            } catch {
+              /* A writer or another process may replace/prune a record. */
+            }
+            if (performance.now() >= until) break;
+          }
+          queueStep();
+        } catch {
+          // Trace retention must neither fail a request nor leave a rejected
+          // background promise. A future write retries after the interval.
+          finish();
+        }
+      };
+      queueStep();
+    });
+  }
+
+  private *retentionCandidates(): Generator<{ file?: string; startedAt?: number }> {
     const startedByName = new Map<string, number>();
-    const removeExpired = (file: string, startedAt: unknown) => {
-      try {
-        const time =
-          typeof startedAt === "number" && Number.isFinite(startedAt)
-            ? startedAt
-            : lstatSync(file).mtimeMs;
-        if (time < cutoff) rmSync(file);
-      } catch {
-        /* Another process may prune concurrently. */
-      }
-    };
     for (const name of this.files("summaries")) {
       const file = join(this.storageDir, "summaries", name);
       const row = readJson(file, MAX_SUMMARY_BYTES);
       if (Number.isFinite(row?.startedAt)) startedByName.set(name, row.startedAt);
-      removeExpired(file, row?.startedAt);
+      yield { file, startedAt: row?.startedAt };
     }
     // A crash between atomic writes can leave a body without its summary. Inspect
     // orphan bodies independently, while normal retention only reads small summaries.
@@ -598,23 +661,20 @@ export class ModelTraceStore {
         const row = readJson(file, MAX_RECORD_BYTES);
         startedAt = row?.startedAt;
       }
-      removeExpired(file, startedAt);
+      yield { file, startedAt };
     }
     try {
       if (!this.directorySafe(join(this.storageDir, "events"))) return;
       for (const directory of readdirSync(join(this.storageDir, "events"))) {
+        // Empty/invalid directories and unreadable records still consume work.
+        // Yield for them too, otherwise corruption bypasses the batch budget.
+        yield {};
         if (!/^[a-f0-9]{64}$/.test(directory)) continue;
         for (const name of this.files(join("events", directory))) {
-          const event = readJson(
-            join(this.storageDir, "events", directory, name),
-            MAX_RECORD_BYTES,
-          );
-          if (event && event.startedAt < cutoff)
-            try {
-              rmSync(join(this.storageDir, "events", directory, name));
-            } catch {
-              /* Concurrent cleanup. */
-            }
+          const file = join(this.storageDir, "events", directory, name);
+          const event = readJson(file, MAX_RECORD_BYTES);
+          if (event) yield { file, startedAt: event.startedAt };
+          else yield {};
         }
       }
     } catch {

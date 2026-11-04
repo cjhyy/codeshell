@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { OPTIMIZATION_LAB_QUERIES } from "./queries.js";
+import { createOptimizationLabQueries, OPTIMIZATION_LAB_QUERIES } from "./queries.js";
 import { labRoot } from "./store-paths.js";
 
 const roots: string[] = [];
@@ -47,6 +47,20 @@ describe("optimization lab queries", () => {
       ok: boolean;
     };
     expect(result.ok).toBe(true);
+    expect(existsSync(labRoot(cwd))).toBe(false);
+  });
+
+  test("freeze uses the controller's explicit storage root", async () => {
+    const cwd = project();
+    const root = join(cwd, "custom-lab");
+    const query = createOptimizationLabQueries({ root }).optimization_lab_freeze_dataset!;
+    const result = (await query({ type: "optimization_lab_freeze_dataset", cwd, dataset })) as {
+      ok: boolean;
+      path: string;
+    };
+    expect(result.ok).toBe(true);
+    expect(result.path.startsWith(root)).toBe(true);
+    expect(existsSync(result.path)).toBe(true);
     expect(existsSync(labRoot(cwd))).toBe(false);
   });
 

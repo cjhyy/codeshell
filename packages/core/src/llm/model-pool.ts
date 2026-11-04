@@ -49,6 +49,8 @@ const OPENROUTER_VENDOR_BY_KIND: Record<string, string> = {
 export interface ModelEntry {
   /** Short alias: "claude", "sonnet", "haiku", "gpt", "deepseek" */
   key: string;
+  /** Settings connection identity; resolve credentials in the consuming Engine's workspace. */
+  configuredConnectionId?: string;
   /** Human-readable label. Auto-generated from model path if not provided. */
   label?: string;
   provider: string;

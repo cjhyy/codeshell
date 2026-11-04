@@ -76,6 +76,21 @@ interface MobileRecoveryHost {
   retireOutputHistorySession(sessionId: string): void;
 }
 
+/** Every open Desktop projection must retire the previous journal domain. */
+export function broadcastOutputHistoryReset(
+  windows: Iterable<Pick<BrowserWindow, "isDestroyed" | "webContents">>,
+  sessionId: string,
+): void {
+  for (const window of windows) {
+    if (window.isDestroyed() || window.webContents.isDestroyed()) continue;
+    try {
+      window.webContents.send("sessions:outputHistoryReset", { sessionId });
+    } catch {
+      // One closing renderer must not prevent other windows from retiring.
+    }
+  }
+}
+
 /** Keep history IPC and the shared recovery service composition out of index.ts. */
 export function registerDesktopOutputHistoryHost(deps: {
   ipcMain: Pick<IpcMain, "handle" | "removeHandler">;
@@ -93,7 +108,10 @@ export function registerDesktopOutputHistoryHost(deps: {
       caller.kind === "desktop"
         ? desktop(sessionId, caller)
         : deps.mobile.authorizeOutputHistoryRecovery(sessionId, caller),
-    retire: (sessionId) => deps.mobile.retireOutputHistorySession(sessionId),
+    retire: (sessionId) => {
+      deps.mobile.retireOutputHistorySession(sessionId);
+      broadcastOutputHistoryReset(deps.windows(), sessionId);
+    },
   });
   deps.mobile.setOutputHistoryRecoveryService(service);
   registerActivityHistoryIpc(deps.ipcMain, deps.historyWindows);

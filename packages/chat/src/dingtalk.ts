@@ -1,3 +1,4 @@
+import type { ChannelRunLifecycle } from "./channel.js";
 import { DWClient, TOPIC_ROBOT, type RobotTextMessage } from "dingtalk-stream";
 import type {
   ChannelAdapter,
@@ -68,7 +69,11 @@ export class DingTalkAdapter implements ChannelAdapter {
     this.onConnected = config.onConnected;
   }
 
-  async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
+  async run(
+    handler: ChannelMessageHandler,
+    signal: AbortSignal,
+    lifecycle?: ChannelRunLifecycle,
+  ): Promise<void> {
     this.client.registerCallbackListener(TOPIC_ROBOT, async (frame) => {
       const incoming = parseDingTalkTextMessage(frame.data, frame.headers.messageId);
       if (!incoming) return;
@@ -80,9 +85,10 @@ export class DingTalkAdapter implements ChannelAdapter {
       await dispatchSafely(handler, incoming);
       this.client.socketCallBackResponse(frame.headers.messageId, { status: "SUCCESS" });
     });
-    await this.client.connect();
-    this.onConnected?.();
     try {
+      await this.client.connect();
+      lifecycle?.ready();
+      this.onConnected?.();
       await waitForAbort(signal);
     } finally {
       this.client.disconnect();

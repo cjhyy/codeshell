@@ -1562,6 +1562,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         instanceId: id,
         src: ASSETS + asset + "/" + app.entry.split("/").map(encodeURIComponent).join("/"),
         expiresAt: grant.expiresAt,
+        serverTime: now(),
         context,
         limitations: panel.compatibility.reasons,
       };
@@ -2180,7 +2181,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           if (Object.keys(input).length) error(400, "续期参数无效。");
           if (!(await authorized(grant))) error(410, "面板授权已失效。");
           grant.expiresAt = now() + GRANT_TTL;
-          json(response, 200, { expiresAt: grant.expiresAt });
+          json(response, 200, { expiresAt: grant.expiresAt, serverTime: now() });
         } else if (request.method === "GET" && match[2] === "events") {
           const after = Number(url.searchParams.get("after") ?? 0);
           if (!Number.isSafeInteger(after) || after < 0 || after > grant.eventCounter)
@@ -2191,7 +2192,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
             0,
           );
           const batch = grant.events.slice(0, 128);
-          json(response, 200, { events: batch, cursor: batch.at(-1)?.id ?? after });
+          json(response, 200, {
+            events: batch,
+            cursor: batch.at(-1)?.id ?? after,
+            serverTime: now(),
+          });
         } else if (request.method === "POST" && match[2] === "directory-picker") {
           if (request.headers.origin !== grant.origin) error(403, "目录选择仅供当前宿主页面使用。");
           const input = await body(request);

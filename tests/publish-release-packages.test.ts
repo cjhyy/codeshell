@@ -399,6 +399,10 @@ describe("release helper modes and target checkout", () => {
     const repo = resolve(import.meta.dir, "..");
     const current = JSON.parse(readFileSync(join(repo, "package.json"), "utf8")).version;
     const targetVersion = "10.2.3";
+    writeFileSync(
+      join(target, "CHANGELOG.md"),
+      `# Changelog\n\n## [${targetVersion}] - 2026-11-04\n\nFixture release.\n`,
+    );
     for (const definition of RELEASE_PACKAGES) {
       const relative = packageManifestPath(definition);
       const manifest = JSON.parse(readFileSync(join(repo, relative), "utf8"));

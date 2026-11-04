@@ -183,7 +183,7 @@ jobs:
               --path-ignore-patterns '**/renderer/pet/createPetTargetNavigator.test.ts'
               --path-ignore-patterns '**/src/main/pet/mimi-presence*.test.ts'
               --path-ignore-patterns '**/src/main/pet/pet-widget-surface.test.ts'
-              --path-ignore-patterns '**/renderer/app/useMimiPresence.test.tsx'
+              --path-ignore-patterns '**/renderer/app/**'
               --path-ignore-patterns '**/renderer/account/**'
               --path-ignore-patterns '**/src/main/account-features.test.ts'
               --path-ignore-patterns '**/src/main/cloud-account*.test.ts'
@@ -283,6 +283,9 @@ jobs:
           # Keep new presence suites in their own bounded process; the general Desktop shard is full.
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/pet/mimi-presence-controller.test.ts packages/desktop/src/main/pet/mimi-presence-state.test.ts packages/desktop/src/main/pet/mimi-presence-ipc.test.ts packages/desktop/src/main/pet/pet-widget-surface.test.ts packages/desktop/src/renderer/app/useMimiPresence.test.tsx
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/pet/createPetTargetNavigator.test.ts
+      - name: test Desktop application state hooks
+        if: matrix.shard == 'desktop'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/useMimiPresence.test.tsx' packages/desktop/src/renderer/app
       - name: test Desktop account feature entries
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/account-features.test.ts packages/desktop/src/renderer/account
@@ -386,6 +389,7 @@ jobs:
           packages/server/src/panels/agent-task-execution.test.ts
           packages/server/src/panels/tool-executor.test.ts
           packages/server/src/panels/tool-jobs.test.ts
+          packages/server/src/panels/tool-jobs-storage.test.ts
       - name: test Hub Panel resources and files
         if: matrix.shard == 'rest-server'
         run: >-

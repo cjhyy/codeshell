@@ -1,3 +1,4 @@
+import type { ChannelRunLifecycle } from "./channel.js";
 import type {
   ChannelAdapter,
   ChatAttachment,
@@ -88,7 +89,11 @@ export class TelegramAdapter implements ChannelAdapter {
     this.apiBaseUrl = config.apiBaseUrl?.replace(/\/$/, "") ?? "https://api.telegram.org";
   }
 
-  async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
+  async run(
+    handler: ChannelMessageHandler,
+    signal: AbortSignal,
+    lifecycle?: ChannelRunLifecycle,
+  ): Promise<void> {
     let offset: number | undefined;
     let retryMs = 1_000;
 
@@ -103,6 +108,7 @@ export class TelegramAdapter implements ChannelAdapter {
           },
           signal,
         );
+        lifecycle?.ready();
         retryMs = 1_000;
         for (const update of updates) {
           const nextOffset = Math.max(offset ?? 0, update.update_id + 1);
@@ -138,6 +144,7 @@ export class TelegramAdapter implements ChannelAdapter {
         }
       } catch (error) {
         if (signal.aborted) return;
+        lifecycle?.unavailable(error);
         this.log(
           `Telegram long polling 失败，${retryMs}ms 后重试：${this.redact(formatError(error))}`,
         );

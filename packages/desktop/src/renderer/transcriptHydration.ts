@@ -515,7 +515,17 @@ export function reduceTranscriptHydration(
   const previous = recoveries.get(map);
   const recovery = previous?.get(action.bucket);
   if (action.type === "hydrate_begin") {
-    const next = action.reset ? { ...map, [action.bucket]: INITIAL_STATE } : { ...map };
+    // A new durable journal retires output/proofs, not this window's queued
+    // inputs. Carry only stable pending inputs across the domain boundary.
+    const pending = action.reset
+      ? {
+          ...INITIAL_STATE,
+          messages: (map[action.bucket]?.messages ?? []).filter(
+            (message) => message.kind === "user" && message.pending && message.clientMessageId,
+          ),
+        }
+      : undefined;
+    const next = pending ? { ...map, [action.bucket]: pending } : { ...map };
     const windows = new Map(previous);
     windows.set(
       action.bucket,
@@ -534,7 +544,7 @@ export function reduceTranscriptHydration(
         : {
             token: action.token,
             sessionId: action.sessionId,
-            initial: action.reset ? undefined : map[action.bucket],
+            initial: pending ?? map[action.bucket],
             suspended: action.suspended,
             count: 0,
             bytes: 0,

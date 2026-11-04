@@ -2,7 +2,7 @@
   "name": "@cjhyy/code-shell-arena",
   "version": "0.9.52",
   "private": true,
-  "description": "Optional multi-model Arena capability for CodeShell.",
+  "description": "Retained private multi-model Arena experiments for CodeShell.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -39,9 +39,6 @@
   "homepage": "https://github.com/cjhyy/codeshell/tree/main/packages/arena#readme",
   "bugs": {
     "url": "https://github.com/cjhyy/codeshell/issues"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "license": "MIT"
 }

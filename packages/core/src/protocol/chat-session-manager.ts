@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { ChatSession } from "./chat-session.js";
-import { codeShellHome } from "../session/session-manager.js";
+import { SessionManager, codeShellHome } from "../session/session-manager.js";
 import type { SessionKind } from "../types.js";
 import type { SessionProjectBinding, SessionWorkspace } from "../types.js";
 import type { Engine } from "../engine/engine.js";
@@ -68,6 +68,9 @@ export interface ChatSessionManagerOptions {
   runtime: EngineRuntime;
   /** Build an Engine. Tests inject a fake; production passes a runtime-backed Engine factory. */
   engineFactory: (slice: EngineConfigSlice) => Engine;
+  /** Storage metadata must match the Engine factory, without constructing an Engine to probe. */
+  sessionMetadata?: Pick<SessionManager, "exists" | "readSessionMainRoot">;
+  sessionStorageDir?: string;
   maxSessions?: number; // default 16
   idleTtlMs?: number; // default 30 min
   /** Host lifecycle generation attached to Pet projection snapshots/deltas. */
@@ -92,6 +95,8 @@ export interface ChatSessionManagerOptions {
 export interface GetOrCreateSessionOptions {
   /** Only explicit user opens may clear a closed Session's tombstone. */
   allowReopen?: boolean;
+  /** Restore disk model authority before publishing a newly created Engine. */
+  restorePersistedModel?: boolean;
   /** Cancel lifecycle waits without creating or reopening the Session. */
   signal?: AbortSignal;
 }
@@ -172,6 +177,7 @@ export class ChatSessionManager {
   private readonly projectionGeneration: number;
   /** Construction options retained so forIdentity() can derive siblings. */
   private readonly baseOptions: ChatSessionManagerOptions;
+  private sessionMetadata?: Pick<SessionManager, "exists" | "readSessionMainRoot">;
   private sweeper: ReturnType<typeof setInterval> | null = null;
   private shuttingDown = false;
   private shutdown?: Promise<void>;
@@ -185,6 +191,7 @@ export class ChatSessionManager {
     this.idleTtlMs = opts.idleTtlMs ?? 30 * 60 * 1000;
     this.projectionGeneration = opts.projectionGeneration ?? 1;
     this.baseOptions = opts;
+    this.sessionMetadata = opts.sessionMetadata;
   }
 
   /**
@@ -210,6 +217,8 @@ export class ChatSessionManager {
     return new ChatSessionManager({
       ...this.baseOptions,
       identity,
+      sessionMetadata: undefined,
+      sessionStorageDir,
       engineFactory: (slice) => baseFactory({ ...slice, sessionStorageDir }),
     });
   }
@@ -250,7 +259,7 @@ export class ChatSessionManager {
       // process's event loop, either this creates the resident owner first or
       // beginSessionMigration installs the fence first; both cannot win.
       assertAccess();
-      return this.getOrCreateNow(sessionId, slice);
+      return this.getOrCreateNow(sessionId, slice, options);
     }
   }
 
@@ -372,38 +381,51 @@ export class ChatSessionManager {
     }
   }
 
-  /**
-   * Cold-resume a persisted session using its own cwd. The first detached
-   * Engine is only a storage probe; all actual work runs on the second Engine
-   * built from the recovered project slice.
-   */
+  private metadata(slice: Partial<EngineConfigSlice> = {}) {
+    if (slice.sessionStorageDir && slice.sessionStorageDir !== this.baseOptions.sessionStorageDir) {
+      return new SessionManager(slice.sessionStorageDir);
+    }
+    return (this.sessionMetadata ??= new SessionManager(this.baseOptions.sessionStorageDir));
+  }
+
+  /** Cold-resume using storage metadata, without activating a detached Engine. */
   async getOrCreatePersisted(
     sessionId: string,
     slice: Partial<EngineConfigSlice> = {},
     restorePersistedModel = true,
+    options: GetOrCreateSessionOptions = {},
   ): Promise<ChatSession | null> {
+    options.signal?.throwIfAborted();
+    if (this.isUnavailable(sessionId))
+      throw new Error(`target Session is closing or closed: ${sessionId}`);
     const existing = this.sessions.get(sessionId);
     if (existing) return existing;
     if (this.shuttingDown) throw new Error("ChatSessionManager has been closed");
-    const probe = this.factory(slice as EngineConfigSlice);
-    let cwd: string | undefined;
-    try {
-      if (!probe.sessionExistsOnDisk(sessionId)) return null;
-      cwd = probe.getSessionManager().readSessionMainRoot(sessionId);
-    } finally {
-      await this.disposeEngine(probe, sessionId);
-    }
+    const metadata = this.metadata(slice);
+    if (!metadata.exists(sessionId)) return null;
+    const cwd = metadata.readSessionMainRoot(sessionId);
     if (!cwd) return null;
-    const session = await this.getOrCreate(sessionId, {
-      ...slice,
-      cwd,
-      projectTrusted: slice.projectTrusted ?? false,
-    } as EngineConfigSlice);
-    if (restorePersistedModel) session.engine.restoreSessionModel(sessionId);
+    const session = await this.getOrCreate(
+      sessionId,
+      {
+        ...slice,
+        cwd,
+        projectTrusted: slice.projectTrusted ?? false,
+      } as EngineConfigSlice,
+      { ...options, allowReopen: false, restorePersistedModel },
+    );
+    options.signal?.throwIfAborted();
+    if (this.isUnavailable(sessionId) || this.sessions.get(sessionId) !== session) {
+      throw new Error(`target Session is closing or closed: ${sessionId}`);
+    }
     return session;
   }
 
-  private getOrCreateNow(sessionId: string, slice: EngineConfigSlice): ChatSession {
+  private async getOrCreateNow(
+    sessionId: string,
+    slice: EngineConfigSlice,
+    options: GetOrCreateSessionOptions,
+  ): Promise<ChatSession> {
     openSessionPathApprovals(sessionId);
     openInteractiveApprovalSession(sessionId);
     const existing = this.sessions.get(sessionId);
@@ -420,6 +442,12 @@ export class ChatSessionManager {
       throw err;
     }
     const engine = this.factory(slice);
+    try {
+      if (options.restorePersistedModel) engine.restoreSessionModel?.(sessionId);
+    } catch (error) {
+      await this.disposeEngine(engine, sessionId);
+      throw error;
+    }
     const session = new ChatSession({ id: sessionId, engine });
     const sessionManager = this.engineSessionManager(engine);
     const generation = sessionManager?.registerSessionGeneration(sessionId) ?? 1;
@@ -451,8 +479,7 @@ export class ChatSessionManager {
   sessionExistsOnDisk(sessionId: string, slice: EngineConfigSlice): boolean {
     const existing = this.sessions.get(sessionId);
     if (existing) return true;
-    const probeEngine = this.factory(slice);
-    return probeEngine.sessionExistsOnDisk(sessionId);
+    return this.metadata(slice).exists(sessionId);
   }
 
   /**

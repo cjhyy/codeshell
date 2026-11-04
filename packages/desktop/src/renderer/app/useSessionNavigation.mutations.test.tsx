@@ -259,6 +259,35 @@ describe("sidebar project and session mutations", () => {
     expect(errorToasts()).toEqual([]);
   });
 
+  test("restore waits for a pending archive release before clearing the Core marker", async () => {
+    let release!: () => void;
+    bridge.releaseSessionWorkspace = (id: string) => {
+      calls.push(`release:${id}`);
+      return new Promise((resolve) => {
+        release = () => resolve({ sessionId: id, ok: true, status: "released" });
+      });
+    };
+    await mount();
+    let archived!: Promise<void>;
+    let restored!: Promise<void>;
+    await act(async () => {
+      archived = result.current.handleArchiveSession(project.id, "ui-1", true);
+      await flushMicrotasks();
+      restored = result.current.handleRestoreArchivedSession(project.id, "ui-1");
+      await flushMicrotasks();
+    });
+    expect(calls).toEqual(["release:engine-1"]);
+    expect(loadSessionIndex(project.id).sessions.find((s) => s.id === "ui-1")?.archived).toBe(true);
+    await act(async () => {
+      release();
+      await Promise.all([archived, restored]);
+    });
+    expect(calls).toEqual(["release:engine-1", "archive:engine-1:true", "archive:engine-1:false"]);
+    expect(loadSessionIndex(project.id).sessions.find((s) => s.id === "ui-1")?.archived).toBe(
+      false,
+    );
+  });
+
   test("a refused archive shows the Session again and reports the failure", async () => {
     bridge.setSessionArchived = async () => {
       throw new Error("EACCES: permission denied");
@@ -292,12 +321,14 @@ describe("sidebar project and session mutations", () => {
       archived = result.current.handleArchiveSession(project.id, "ui-1", true);
       await flushMicrotasks();
     });
+    let restored!: Promise<void>;
     await act(async () => {
-      await result.current.handleRestoreArchivedSession(project.id, "ui-1");
+      restored = result.current.handleRestoreArchivedSession(project.id, "ui-1");
+      await flushMicrotasks();
     });
     await act(async () => {
       failArchive();
-      await archived;
+      await Promise.all([archived, restored]);
     });
 
     const row = result.current.sessionIndices[project.id]!.sessions.find((s) => s.id === "ui-1");

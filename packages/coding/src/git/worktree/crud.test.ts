@@ -8,10 +8,17 @@ import {
   readFileSync,
   rmSync,
   writeFileSync,
+  symlinkSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createWorktree, lockWorktree, removeWorktree, unlockWorktree } from "./crud.js";
+import {
+  copyWorktreeIncludes,
+  createWorktree,
+  lockWorktree,
+  removeWorktree,
+  unlockWorktree,
+} from "./crud.js";
 
 const ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
 
@@ -166,6 +173,25 @@ describe("coding worktree CRUD", () => {
     expect(wt.baseRef).toBe(stableCommit);
     expect(wt.baseRefLabel).toBe("stable");
     removeWorktree(wt.worktreePath, true);
+  });
+
+  test.each(["leaf", "parent"])("refuses an include through a target %s symlink", (kind) => {
+    const destination = join(root, "destination");
+    const outside = join(root, "outside");
+    mkdirSync(destination);
+    mkdirSync(outside);
+    writeFileSync(join(outside, "secret"), "untouched");
+    writeFileSync(join(repo, ".gitignore"), "config/\n");
+    writeFileSync(join(repo, ".worktreeinclude"), "config/*\n");
+    mkdirSync(join(repo, "config"));
+    writeFileSync(join(repo, "config", "secret"), "replacement");
+    if (kind === "parent") symlinkSync(outside, join(destination, "config"), "dir");
+    else {
+      mkdirSync(join(destination, "config"));
+      symlinkSync(join(outside, "secret"), join(destination, "config", "secret"));
+    }
+    expect(() => copyWorktreeIncludes(repo, destination, undefined)).toThrow();
+    expect(readFileSync(join(outside, "secret"), "utf8")).toBe("untouched");
   });
 
   test("copies gitignored files selected by .worktreeinclude and explicit include patterns", async () => {

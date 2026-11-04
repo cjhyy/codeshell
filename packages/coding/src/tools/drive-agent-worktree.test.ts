@@ -41,6 +41,82 @@ afterEach(() => {
 });
 
 describe("DriveAgent worktree isolation lifecycle", () => {
+  test.each(["default", "bypassPermissions"])(
+    "cleanup respects an active foreground %s run",
+    async (permissionMode) => {
+      const { root, repo } = createRepo("drive-wt-active-foreground-");
+      const store = new ExternalAgentSessionStore(join(root, "sessions.json"));
+      let release!: () => void;
+      let started!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const ready = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      let run: Promise<string> | undefined;
+      try {
+        const seed = makeDriveAgentTool(
+          async () => ({
+            sessionId: "seed",
+            finalText: "done",
+            isError: false,
+            exitCode: 0,
+            lines: [],
+          }),
+          undefined,
+          { sessionStore: store },
+        );
+        await seed({ prompt: "fixture", cwd: repo, isolation: "worktree", cleanup: "keep" }, {
+          cwd: repo,
+          sessionId: "seed-owner",
+        } as any);
+        const job = backgroundJobRegistry.listForSession("seed-owner")[0]!;
+        await waitForTerminal(job.jobId);
+        const active = makeDriveAgentTool(
+          async () => {
+            started();
+            await gate;
+            return {
+              sessionId: "active",
+              finalText: "done",
+              isError: false,
+              exitCode: 0,
+              lines: [],
+            };
+          },
+          undefined,
+          { sessionStore: store },
+        );
+        run = active(
+          {
+            prompt: "fixture",
+            cwd: job.worktreePath,
+            isolation: "current",
+            background: false,
+            permissionMode,
+          },
+          { cwd: job.worktreePath, sessionId: "active-owner" } as any,
+        );
+        await ready;
+        expect(
+          await driveAgentJobsTool({ action: "cleanup", jobId: job.jobId, cleanup: "discard" }),
+        ).toContain("in use by foreground");
+        expect(existsSync(job.worktreePath!)).toBe(true);
+        release();
+        await run;
+        expect(
+          await driveAgentJobsTool({ action: "cleanup", jobId: job.jobId, cleanup: "discard" }),
+        ).not.toContain("Error:");
+        expect(existsSync(job.worktreePath!)).toBe(false);
+      } finally {
+        release();
+        await run;
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+
   test("explicit worktree isolation copies includes, preserves changes, and persists the binding", async () => {
     const { root, repo } = createRepo("drive-wt-explicit-");
     try {

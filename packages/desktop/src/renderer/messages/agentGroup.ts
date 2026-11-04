@@ -17,11 +17,7 @@
  */
 
 import type { AgentMessage } from "../types";
-import type {
-  StreamItem,
-  RenderedTurnProcessGroup,
-  ToolGroup,
-} from "./streamGroups";
+import type { StreamItem, RenderedTurnProcessGroup, ToolGroup } from "./streamGroups";
 import type { Message } from "../types";
 
 export interface AgentGroup {
@@ -76,8 +72,7 @@ export function summarizeAgentGroup(agents: AgentMessage[]): AgentGroupStats {
     if (a.endedAt && a.endedAt > maxEnd) maxEnd = a.endedAt;
   }
 
-  const wallMs =
-    anyRunning || minStart === Infinity || maxEnd <= minStart ? 0 : maxEnd - minStart;
+  const wallMs = anyRunning || minStart === Infinity || maxEnd <= minStart ? 0 : maxEnd - minStart;
 
   return { total: agents.length, succeeded, failed, running, toolTotal, wallMs };
 }
@@ -86,6 +81,11 @@ export function summarizeAgentGroup(agents: AgentMessage[]): AgentGroupStats {
 function isAgent(item: { kind: string }): item is AgentMessage {
   return item.kind === "agent";
 }
+
+// Inputs are immutable reducer/reconciler snapshots. Weak keys preserve memoized
+// card identities without retaining discarded conversations.
+const foldedTurns = new WeakMap<object, RenderedStreamItem>();
+const foldedAgents = new WeakMap<AgentMessage, AgentGroup>();
 
 /**
  * Wrap runs of ≥2 adjacent `agent` items into AgentGroups; recurse into
@@ -104,7 +104,15 @@ export function foldAgentGroups(
 
   const flush = (): void => {
     if (run.length >= 2) {
-      out.push({ kind: "agent_group", id: `ag-${run[0]!.id}`, agents: run });
+      const previous = foldedAgents.get(run[0]!);
+      const group =
+        previous &&
+        previous.agents.length === run.length &&
+        previous.agents.every((agent, index) => agent === run[index])
+          ? previous
+          : { kind: "agent_group" as const, id: `ag-${run[0]!.id}`, agents: run };
+      foldedAgents.set(run[0]!, group);
+      out.push(group);
     } else {
       // 0 or 1 — emit as-is (a single agent is not summarized).
       for (const a of run) out.push(a);
@@ -120,10 +128,17 @@ export function foldAgentGroups(
     flush();
     if (item.kind === "turn_process_group") {
       // Recurse: the turn card may hold its own agent fan-out.
-      out.push({
-        ...item,
-        items: foldAgentGroups(item.items) as Array<Message | ToolGroup | AgentGroup>,
-      });
+      let folded = foldedTurns.get(item);
+      if (!folded) {
+        const children = foldAgentGroups(item.items) as Array<Message | ToolGroup | AgentGroup>;
+        folded =
+          children.length === item.items.length &&
+          children.every((child, index) => child === item.items[index])
+            ? item
+            : { ...item, items: children };
+        foldedTurns.set(item, folded);
+      }
+      out.push(folded);
     } else {
       out.push(item as RenderedStreamItem);
     }

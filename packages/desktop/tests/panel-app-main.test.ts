@@ -3790,6 +3790,36 @@ describeIsolated("Desktop project package variants", () => {
       expect(initial.descriptors[0]!.projectPaths?.sort()).toEqual([a, b]);
       const preparedA = await api.preparePanelApp("panel-app:demo", a);
       const readerA = panelAppElectronMock.protocolHandler!;
+      // A transient package read must not publish a partial catalog or change
+      // the revision of a page whose verified package is still selected.
+      const fsPromises = await import("node:fs/promises");
+      const selectedRoot = api.validatePanelAppEntryUrl(preparedA.src)!.root;
+      for (const [fault, failedPath] of [
+        ["stat", join(selectedRoot, ".codeshell-panel/panel.json")],
+        ["realpath", selectedRoot],
+        ["open", join(process.env.HOME!, ".code-shell/panel-apps/installed.json")],
+      ] as const) {
+        const original = fsPromises[fault];
+        let failed = false;
+        const injected = spyOn(fsPromises, fault).mockImplementation((...args: any[]) => {
+          const target = String(args[0]);
+          if (!failed && target === failedPath) {
+            failed = true;
+            return Promise.reject(
+              Object.assign(new Error("transient package read"), { code: "EIO" }),
+            );
+          }
+          return (original as any)(...args);
+        });
+        try {
+          await expect(listPanelApps(a, "en")).rejects.toThrow();
+          expect(failed).toBe(true);
+        } finally {
+          injected.mockRestore();
+        }
+        expect(api.validatePanelAppEntryUrl(preparedA.src)!.projectPaths).toContain(a);
+        expect(await (await readerA(new Request(preparedA.src))).text()).toContain("Package 1.0.0");
+      }
       const guestA = fakeGuest(4801),
         guestB = fakeGuest(4802);
       bridge.registerGuest(

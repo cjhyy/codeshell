@@ -316,6 +316,82 @@ describe("transcript history hydration after a background resume", () => {
     }
   });
 
+  for (const background of [false, true])
+    test(`another window's checkpoint retires ${background ? "inactive" : "active"} cursors and preserves local pending input`, async () => {
+      const roots = [0, 1].map(() => mkdtempSync(join(tmpdir(), "other-window-checkpoint-")));
+      const sources = roots.map((root, index) => {
+        const manager = new SessionManager(root);
+        const session = manager.create(root, "fixture", "fixture", "saved");
+        manager.startSessionRun(session.state, "run");
+        const writer = new SessionOutputJournal(root, "saved", "run");
+        const snapshots = new SessionSnapshotStore({
+          coverage: new SessionOutputCoverageStore(() => root),
+        });
+        for (const event of [
+          { type: "session_started", sessionId: "saved", promptTokens: 0 },
+          { type: "stream_request_start", turnNumber: 1, messageId: `reply-${index}` },
+          { type: "text_delta", text: `answer-${index}` },
+          { type: "turn_complete", reason: "completed" },
+        ] as StreamEvent[])
+          snapshots.append("saved", { ...event, outputCursor: writer.append(event) });
+        return { root, snapshot: snapshots.get("saved") as SessionSnapshot };
+      });
+      let source = sources[0]!;
+      let notify!: (sessionId: string) => void;
+      window.codeshell.onSessionOutputHistoryReset = (listener) => {
+        notify = listener;
+        return () => {};
+      };
+      readSnapshot = async () => source.snapshot;
+      window.codeshell.getSessionOutputJournal = async (_id, options) => ({
+        ...readOutputJournal(source.root, "saved", options),
+        legacyBaseComplete: true,
+        legacyBaseItems: [],
+      });
+      try {
+        hook = await renderHook(useHarness);
+        await act(flushMicrotasks);
+        expect(hook.result.current.state.outputCursor).toBe(sources[0]!.snapshot.outputCursor);
+        await act(async () => {
+          hook!.result.current.dispatch({
+            type: "user_message",
+            bucket,
+            text: "this window's queued input",
+            pending: true,
+            clientMessageId: "local-pending",
+          });
+          if (background) hook!.result.current.setActive("other");
+          await flushMicrotasks();
+        });
+        source = sources[1]!;
+        await act(async () => {
+          notify("saved");
+          await flushMicrotasks();
+        });
+        if (background)
+          await act(async () => {
+            hook!.result.current.setActive("saved");
+            await flushMicrotasks();
+          });
+        expect(hook.result.current.state.outputCursor).toBe(source.snapshot.outputCursor);
+        expect(hook.result.current.state.messages).toContainEqual(
+          expect.objectContaining({ kind: "assistant", text: "answer-1" }),
+        );
+        expect(hook.result.current.state.messages).toContainEqual(
+          expect.objectContaining({
+            kind: "user",
+            clientMessageId: "local-pending",
+            pending: true,
+          }),
+        );
+        expect(hook.result.current.historyFailed).toBe(false);
+      } finally {
+        await hook?.unmount();
+        hook = undefined;
+        for (const root of roots) rmSync(root, { recursive: true, force: true });
+      }
+    });
+
   test("existing hydration recovers a long prefix evicted from Main through the v2 journal", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-hydrate-journal-"));
     const manager = new SessionManager(root);

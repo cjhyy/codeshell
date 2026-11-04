@@ -197,7 +197,16 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
             chat: wire.type === "error" ? { ...previous.chat, run: "error" } : previous.chat,
           };
         if (wire.type === "chat.accepted") return { ...previous, uncertain: false };
-        return { ...previous, chat: reduceStream(previous.chat, event) };
+        const chat = reduceStream(previous.chat, event);
+        // A terminal event on the bound Session settles a lost admission receipt.
+        // Child-agent completions leave the parent run running in reduceStream.
+        const settled = previous.chat.run === "running" && chat.run !== "running";
+        return {
+          ...previous,
+          chat,
+          uncertain: settled ? false : previous.uncertain,
+          error: settled ? "" : previous.error,
+        };
       });
     });
     return () => {
@@ -332,7 +341,8 @@ export function AccountDeviceWorkspace({ open, onClose }: { open: boolean; onClo
         failure instanceof Error && "delivery" in failure && failure.delivery === "not-sent";
       update(target, (previous) => ({
         ...previous,
-        uncertain: !notSent,
+        // A late transport failure cannot undo an accepted/terminal receipt.
+        uncertain: !notSent && previous.uncertain,
         error: message(failure),
         chat: notSent ? { ...previous.chat, run: "error" } : previous.chat,
       }));

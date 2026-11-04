@@ -1,3 +1,4 @@
+import type { ChannelRunLifecycle } from "./channel.js";
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto";
 import type {
   ChatAttachment,
@@ -253,7 +254,11 @@ export class WechatAdapter implements ChannelAdapter {
     );
   }
 
-  async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
+  async run(
+    handler: ChannelMessageHandler,
+    signal: AbortSignal,
+    lifecycle?: ChannelRunLifecycle,
+  ): Promise<void> {
     await this.ensureState();
     if (liveWechatAdapters.has(this.accountKey)) {
       throw new Error("同一微信账号已有一个长轮询 adapter 在运行");
@@ -294,6 +299,7 @@ export class WechatAdapter implements ChannelAdapter {
             }
             throw new Error(`微信 getUpdates 失败：${response.errmsg ?? `ret=${errorCode}`}`);
           }
+          lifecycle?.ready();
           let batchAccepted = true;
           for (const raw of response.msgs ?? []) {
             const message = this.normalizeInbound(raw, retryingHeldBatch);
@@ -324,6 +330,7 @@ export class WechatAdapter implements ChannelAdapter {
         } catch (error) {
           if (signal.aborted) return;
           if (error instanceof WechatRequestTimeoutError) continue;
+          lifecycle?.unavailable(error);
           this.log(
             `微信长轮询失败，${retryMs}ms 后重试：${error instanceof Error ? error.message : String(error)}`,
           );

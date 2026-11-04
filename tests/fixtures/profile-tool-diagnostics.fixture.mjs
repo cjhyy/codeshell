@@ -50,33 +50,32 @@ https.get = deny;
 // Observe the exact production call once, returning its unchanged result or
 // rethrowing the unchanged error. No timeout, arguments, or process result is
 // injected by this observer.
-const actualSpawnSync = childProcess.spawnSync;
+const actualExecFile = childProcess.execFile;
 const physicalProbes = [];
-childProcess.spawnSync = function (...args) {
+childProcess.execFile = function (command, args, options, callback) {
   const started = performance.now();
-  const receipt = { command: args[0], args: args[1], timeout: args[2]?.timeout };
-  try {
-    const result = Reflect.apply(actualSpawnSync, this, args);
-    Object.assign(receipt, {
-      pid: result.pid,
-      status: result.status,
-      signal: result.signal,
-      errorCode: result.error?.code ?? null,
-      elapsedMs: performance.now() - started,
-      outputSha256: createHash("sha256")
-        .update(String(result.stdout ?? "") + String(result.stderr ?? ""))
-        .digest("hex"),
-    });
-    physicalProbes.push(receipt);
-    return result;
-  } catch (error) {
-    physicalProbes.push({
-      ...receipt,
-      elapsedMs: performance.now() - started,
-      thrown: { name: error.name, code: error.code ?? null },
-    });
-    throw error;
-  }
+  const receipt = { command, args, timeout: options?.timeout };
+  const child = Reflect.apply(actualExecFile, this, [
+    command,
+    args,
+    options,
+    (error, stdout, stderr) => {
+      Object.assign(receipt, {
+        pid: child.pid,
+        status: error ? (typeof error.code === "number" ? error.code : null) : 0,
+        signal: error?.signal ?? null,
+        errorCode: typeof error?.code === "string" ? error.code : null,
+        killed: error?.killed ?? false,
+        elapsedMs: performance.now() - started,
+        outputSha256: createHash("sha256")
+          .update(String(stdout ?? "") + String(stderr ?? ""))
+          .digest("hex"),
+      });
+      physicalProbes.push(receipt);
+      callback(error, stdout, stderr);
+    },
+  ]);
+  return child;
 };
 syncBuiltinESMExports();
 const { request: namedHttpRequest } = await import("node:http");
@@ -132,7 +131,7 @@ const { previewProfileRequirements, saveProfile } = await import(
 assert.equal(physicalProbes.length, 0);
 const receipts = [];
 function register(index, name, script, inspect, mode = 0o755) {
-  test(name, { timeout: 20_000 }, () => {
+  test(name, { timeout: 20_000 }, async () => {
     const bin = "profile-probe-" + index;
     const cwd = join(home, "workspace-" + index);
     mkdirSync(cwd, { recursive: true, mode: 0o700 });
@@ -155,7 +154,7 @@ function register(index, name, script, inspect, mode = 0o755) {
     const before = physicalProbes.length;
     const receipt = { name, pid: process.pid, homeSha256, outcome: "failed" };
     try {
-      const preview = previewProfileRequirements(profileName, cwd);
+      const preview = await previewProfileRequirements(profileName, cwd);
       const probes = physicalProbes.slice(before);
       Object.assign(receipt, { preview, probes });
       assert.equal(probes.length, 1);
@@ -248,7 +247,8 @@ register(
   // exec replaces this exact owned probe PID; no sleep descendant survives.
   "printf '%s' 'v99.0.0'\nexec /bin/sleep 30",
   (preview, probe) => {
-    assert.equal(probe.errorCode, "ETIMEDOUT");
+    assert.equal(probe.killed, true);
+    assert.equal(probe.signal, "SIGTERM");
     assert.ok(probe.pid > 0);
     assert.ok(probe.elapsedMs >= 9_000);
     assertFailedProbe(preview);

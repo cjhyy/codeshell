@@ -12,7 +12,6 @@ import {
   invalidateSkillCache,
   planProfileRequirements,
   scanSkills,
-  type ToolProbeResult,
   type WorkspaceProfile,
 } from "@cjhyy/code-shell-core";
 import {
@@ -21,7 +20,7 @@ import {
   type RequirementPlanSummary,
   type SkillInstallRunner,
 } from "./profile-requirements-service.js";
-import { spawnSync } from "node:child_process";
+import { probeProfileTools } from "./profile-tool-probe.js";
 import {
   activateWorkspaceProfile,
   addHumanRepo,
@@ -562,7 +561,10 @@ export interface ProfileRequirementPreview extends RequirementPlanSummary {
  * 已装 skill 由 core scanner 提供（含 `plugin:skill` 命名空间的插件来源），
  * 因此冲突判断与运行时实际可见的集合一致。
  */
-export function previewProfileRequirements(name: string, cwd: string): ProfileRequirementPreview {
+export async function previewProfileRequirements(
+  name: string,
+  cwd: string,
+): Promise<ProfileRequirementPreview> {
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
   const profile = readWorkspaceProfile(name);
   if (!profile) throw new Error(`Digital human "${name}" not found`);
@@ -571,9 +573,10 @@ export function previewProfileRequirements(name: string, cwd: string): ProfileRe
     name: skill.name,
     source: skill.source,
   }));
+  const probes = await probeProfileTools(profile.requires?.tools.map((tool) => tool.bin) ?? []);
   const plan = planProfileRequirements(profile.requires, {
     installedSkills,
-    toolProbe: probeTool,
+    toolProbe: (bin) => probes.get(bin) ?? { status: "not-found" },
   });
   return { profileName: name, needsInstall: plan.needsInstall, ...formatRequirementPlan(plan) };
 }
@@ -596,9 +599,10 @@ export async function installProfileRequirements(
     name: skill.name,
     source: skill.source,
   }));
+  const probes = await probeProfileTools(profile.requires?.tools.map((tool) => tool.bin) ?? []);
   const plan = planProfileRequirements(profile.requires, {
     installedSkills,
-    toolProbe: probeTool,
+    toolProbe: (bin) => probes.get(bin) ?? { status: "not-found" },
   });
 
   const errors: string[] = [];
@@ -625,22 +629,6 @@ export async function installProfileRequirements(
     }
   }
   return { ok: errors.length === 0, errors };
-}
-
-/** 只把成功退出的输出用于版本比较；不存在与执行失败分别诊断。 */
-function probeTool(bin: string): ToolProbeResult {
-  // bin 来自 profile，故只允许命令名，绝不含路径分隔符或 shell 元字符。
-  if (!/^[A-Za-z0-9._-]{1,64}$/.test(bin)) return { status: "failed" };
-  const probe = spawnSync(bin, ["--version"], {
-    encoding: "utf8",
-    timeout: 10_000,
-    windowsHide: true,
-  });
-  if ((probe.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") {
-    return { status: "not-found" };
-  }
-  if (probe.error || probe.status !== 0 || probe.signal) return { status: "failed" };
-  return { status: "ok", output: (probe.stdout ?? "").concat(probe.stderr ?? "").trim() };
 }
 
 /**

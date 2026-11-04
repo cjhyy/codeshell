@@ -3,7 +3,7 @@ import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
 import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
 import { registerOperationBatchHost } from "./operation-batch-host.js";
 import { createDesktopRemoteServices } from "./desktop-remote-services.js";
-import { createDesktopShutdownHandler } from "./desktop-shutdown.js";
+import { registerDesktopShutdown } from "./desktop-shutdown.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
 import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
 import { registerSourceCollectionIpc } from "./source-collections-ipc.js";
@@ -45,7 +45,8 @@ import {
 import { registerCloudEnvironmentIpc } from "./cloud-environment-ipc.js";
 import { injectDesktopManagedRuntimePath } from "./managed-runtime-service.js";
 import { createDesktopManagedRuntimeWiring } from "./managed-runtime-wiring.js";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { AppRendererNavigation } from "./app-renderer-navigation.js";
 import { createHash, randomUUID } from "node:crypto";
 import { dirname, resolve, basename, extname, isAbsolute, join } from "node:path";
 import { writeFile } from "node:fs/promises";
@@ -113,12 +114,11 @@ import {
 import {
   CC_COST_GUARD_PROMPT,
   checkQuota,
-  countRelatedSessions,
   DEFAULT_DISCOVER_LIMIT,
   DEFAULT_DISCOVER_SINCE_MS,
   discoverRecentClaudeSessions,
   discoverRecentCodexSessions,
-  discoverRelatedSessions,
+  listRelatedClaudeSessions,
   listRelatedCodexSessions,
   parseClaudeTranscriptLine,
   parseCodexTranscriptLine,
@@ -547,6 +547,7 @@ import {
   checkForUpdate,
   downloadUpdate,
   quitAndInstall,
+  cancelPendingUpdateInstall,
   getLastStatus,
 } from "./updater.js";
 import { loadRecents, loadProjects } from "./recents-store.js";
@@ -603,6 +604,7 @@ import { injectLoginShellPathAtStartup } from "./login-shell-path.js";
 import {
   acquireDesktopInstanceLock,
   registerSecondInstanceFocus,
+  createMainWindowRestorer,
   runOwnedQuickChatStartupCleanup,
 } from "./quick-chat-startup-cleanup.js";
 import {
@@ -616,6 +618,10 @@ import {
 } from "./renderer-configuration-authority.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const appRendererNavigation = new AppRendererNavigation(
+  process.env.VITE_DEV_URL || pathToFileURL(resolve(__dirname, "..", "renderer", "index.html")).href,
+  (url) => shell.openExternal(url),
+);
 const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
 if (chromeNativeMessagingOrigin) {
   void runChromeNativeMessagingHost(chromeNativeMessagingOrigin)
@@ -697,10 +703,19 @@ const petIpcReady = new Promise<void>((resolveReady) => {
   markPetIpcReady = resolveReady;
 });
 const ownsDesktopInstance = chromeNativeMessagingOrigin ? false : acquireDesktopInstanceLock(app);
+const restoreMainWindow = createMainWindowRestorer(preferredMainWindow, async () => {
+  await app.whenReady();
+  return createWindow();
+});
 if (ownsDesktopInstance) {
   registerSecondInstanceFocus(
     (handler) => app.on("second-instance", handler),
     () => Array.from(mainWindows),
+    () => {
+      void restoreMainWindow().catch((error) =>
+        dlog("main", "window.restore_failed", { error: String(error) }),
+      );
+    },
   );
 }
 
@@ -1602,16 +1617,7 @@ async function createWindow(): Promise<BrowserWindow> {
     });
   }
 
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:/i.test(url)) void shell.openExternal(url);
-    return { action: "deny" };
-  });
-  win.webContents.on("will-navigate", (e, url) => {
-    const devUrl = process.env.VITE_DEV_URL ?? "";
-    if (devUrl && url.startsWith(devUrl)) return;
-    e.preventDefault();
-    if (/^https?:/i.test(url)) void shell.openExternal(url);
-  });
+  appRendererNavigation.bind(win.webContents);
 
   const devUrl = process.env.VITE_DEV_URL;
   const noDevtools = process.env.CODE_SHELL_NO_DEVTOOLS === "1";
@@ -2970,6 +2976,7 @@ function createPetWidgetBrowserWindow(bounds: {
   } catch {
     // Some Linux window managers do not implement workspace pinning.
   }
+  appRendererNavigation.bind(win.webContents);
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   win.webContents.on("will-navigate", (event) => event.preventDefault());
   win.webContents.on("did-fail-load", (_event, code, desc, validatedUrl) => {
@@ -3121,6 +3128,7 @@ async function createBrowserPopout(parent: BrowserWindow, initialUrl?: string): 
       webviewTag: true,
     },
   });
+  appRendererNavigation.bind(win.webContents);
   const wcId = win.webContents.id;
   popoutParents.set(wcId, parent.id);
   win.on("closed", () => popoutParents.delete(wcId));
@@ -4784,12 +4792,12 @@ ipcMain.handle(
   },
 );
 ipcMain.handle("plugins:uninstall", async (_e, pluginName: string, marketplaceName: string) => {
-  const result = uninstallPluginEntry(pluginName, marketplaceName);
+  const result = await uninstallPluginEntry(pluginName, marketplaceName);
   broadcastPluginCommandsChanged(mainWindows);
   return result;
 });
 ipcMain.handle("plugins:uninstallLocal", async (_e, name: string) => {
-  const result = uninstallLocalPluginEntry(name);
+  const result = await uninstallLocalPluginEntry(name);
   broadcastPluginCommandsChanged(mainWindows);
   return result;
 });
@@ -5743,9 +5751,7 @@ ipcMain.handle("ccRoom:codexProbe", async (_e, force?: boolean) => probeCodexCli
 ipcMain.handle("ccRoom:listSessions", async (_e, cwd: string, all?: boolean) => {
   cwd = await requireRendererProjectPath(cwd);
   const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-  const sessions = discoverRelatedSessions("claude", cwd, opts);
-  const total = all ? sessions.length : countRelatedSessions("claude", cwd);
-  return { sessions, total };
+  return listRelatedClaudeSessions(cwd, opts, {}, Boolean(all));
 });
 ipcMain.handle("ccRoom:listCodexSessions", async (_e, cwd: string, all?: boolean) => {
   cwd = await requireRendererProjectPath(cwd);
@@ -6496,7 +6502,8 @@ async function sweepStaleWorktrees(reason: string): Promise<void> {
   }
 }
 
-ipcMain.handle("shell:openExternal", async (_e, url: string) => {
+ipcMain.handle("shell:openExternal", async (event, url: string) => {
+  appRendererNavigation.assertSender(event);
   if (typeof url !== "string" || !url || url.length > 16_384 || url.includes("\0")) {
     throw new Error("openExternal requires a bounded url");
   }
@@ -7225,94 +7232,81 @@ ipcMain.handle("badge:set", async (_e, count: number) => {
   }
 });
 
-app.on("window-all-closed", () => {
-  if (!ownsDesktopInstance) return;
-  if (process.platform !== "darwin") app.quit();
-});
-
-app.on(
-  "before-quit",
-  createDesktopShutdownHandler({
-    ownsInstance: () => ownsDesktopInstance,
-    flushRenderers: () => sessionCatalogIpc.flushRenderers(),
-    disposeOperationResolution: async () => {
-      await disposeOperationBatchHost();
-      await disposeOperationResolutionHost();
-    },
-    onError: (phase, error) => dlog("main", phase, { error: String(error) }),
-    cleanup: async () => {
-      cloudEnvironment.dispose();
-      taskInboxService?.dispose();
-      for (const dispose of taskInboxDisposers.splice(0)) dispose();
-      const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
-      petRuntimeReady = false;
-      browserRuntime.closeAll();
-      bridge?.kill();
-      petStateAggregator?.stop();
-      petStateAggregator = null;
-      petExternalVisibilityController?.shutdown();
-      petExternalVisibilityController = null;
-      reconcileExternalAdapters = null;
-      petDispatchService = null;
-      petFollowUpWakeCoordinator?.stop();
-      petFollowUpWakeCoordinator = null;
-      petHostActionReceiptService = null;
-      petImDecisions?.stop();
-      petImDecisions = null;
-      petLongTaskCoordinator?.stop();
-      petLongTaskCoordinator = null;
-      unsubscribePetLongTaskStream?.();
-      unsubscribePetLongTaskStream = null;
-      unsubscribePetReportStream?.();
-      unsubscribePetReportStream = null;
-      petAttentionPolicy?.stop();
-      petAttentionPolicy = null;
-      const petWorkInboxFlush = petWorkInboxStore?.flush();
-      petWorkInboxStore = null;
-      const petLongTaskFlush = petLongTaskStore?.flush();
-      petLongTaskStore = null;
-      disposePetIpc?.();
-      disposePetIpc = null;
-      automationHandle?.stop();
-      automationHandle = null;
-      ptyKillAll();
-      transcriptSubscriptions?.closeAll();
-      roomManager.closeAll();
-      // Each external-runtime session holds a child process and a listening port,
-      // and neither dies with the parent on Windows. Captured before the async
-      // block so a later reassignment cannot make this a no-op.
-      const externalRuntimeShutdown = externalRuntimeService?.stopAll();
-      externalRuntimeService = null;
-      // The embedded Cua daemon is a direct child; stop it explicitly rather
-      // than relying on the parent-liveness pipe.
-      const cuaDriverShutdown = getCuaDriverHost()?.stop();
-      // Withdraw both Mimi forms and persist presence before closing the character host.
-      const mimiPresenceShutdown = mimiPresence?.dispose();
-      petWidgetSurface?.dispose();
-      mimiBubble?.surface.dispose();
-      await Promise.allSettled([
-        mimiPresenceShutdown,
-        imGatewayService.dispose(),
-        mobileRemoteController.dispose(),
-        cloudManagementManager.dispose(),
-        gatewayControlServer?.stop(),
-        petWorkInboxFlush,
-        petLongTaskFlush,
-        externalRuntimeShutdown,
-        cookieRefreshShutdown,
-        sessionCatalogIpc.flush(),
-        panelAppBridge.shutdownMedia(),
-        chromeExtensionRuntimeService.stop(),
-        cuaDriverShutdown,
-        closeComputerUse(),
-      ]);
-      gatewayControlServer = undefined;
-      await mobileUploads.dispose();
-    },
-    quit: () => app.quit(),
-  }),
-);
-
-app.on("activate", () => {
-  if (ownsDesktopInstance && !preferredMainWindow()) void createWindow();
+registerDesktopShutdown(app, {
+  ownsInstance: () => ownsDesktopInstance,
+  flushRenderers: () => sessionCatalogIpc.flushRenderers(),
+  disposeOperationResolution: async () => {
+    await disposeOperationBatchHost();
+    await disposeOperationResolutionHost();
+  },
+  onError: (phase, error) => dlog("main", phase, { error: String(error) }),
+  cancelQuit: cancelPendingUpdateInstall,
+  showFailureDialog: (options) => dialog.showMessageBox(options),
+  restoreMainWindow,
+  cleanup: async () => {
+    cloudEnvironment.dispose();
+    taskInboxService?.dispose();
+    for (const dispose of taskInboxDisposers.splice(0)) dispose();
+    const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
+    petRuntimeReady = false;
+    browserRuntime.closeAll();
+    bridge?.kill();
+    petStateAggregator?.stop();
+    petStateAggregator = null;
+    petExternalVisibilityController?.shutdown();
+    petExternalVisibilityController = null;
+    reconcileExternalAdapters = null;
+    petDispatchService = null;
+    petFollowUpWakeCoordinator?.stop();
+    petFollowUpWakeCoordinator = null;
+    petHostActionReceiptService = null;
+    petImDecisions?.stop();
+    petImDecisions = null;
+    petLongTaskCoordinator?.stop();
+    petLongTaskCoordinator = null;
+    unsubscribePetLongTaskStream?.();
+    unsubscribePetLongTaskStream = null;
+    unsubscribePetReportStream?.();
+    unsubscribePetReportStream = null;
+    petAttentionPolicy?.stop();
+    petAttentionPolicy = null;
+    const petWorkInboxFlush = petWorkInboxStore?.flush();
+    petWorkInboxStore = null;
+    const petLongTaskFlush = petLongTaskStore?.flush();
+    petLongTaskStore = null;
+    disposePetIpc?.();
+    disposePetIpc = null;
+    automationHandle?.stop();
+    automationHandle = null;
+    ptyKillAll();
+    transcriptSubscriptions?.closeAll();
+    roomManager.closeAll();
+    // Stop captured external runtimes explicitly; their child processes can survive Windows exit.
+    const externalRuntimeShutdown = externalRuntimeService?.stopAll();
+    externalRuntimeService = null;
+    // Stop the embedded Cua child explicitly.
+    const cuaDriverShutdown = getCuaDriverHost()?.stop();
+    // Withdraw both Mimi forms and persist presence before closing the character host.
+    const mimiPresenceShutdown = mimiPresence?.dispose();
+    petWidgetSurface?.dispose();
+    mimiBubble?.surface.dispose();
+    await Promise.allSettled([
+      mimiPresenceShutdown,
+      imGatewayService.dispose(),
+      mobileRemoteController.dispose(),
+      cloudManagementManager.dispose(),
+      gatewayControlServer?.stop(),
+      petWorkInboxFlush,
+      petLongTaskFlush,
+      externalRuntimeShutdown,
+      cookieRefreshShutdown,
+      panelAppBridge.shutdownMedia(),
+      chromeExtensionRuntimeService.stop(),
+      cuaDriverShutdown,
+      closeComputerUse(),
+    ]);
+    gatewayControlServer = undefined;
+    await mobileUploads.dispose();
+  },
+  finalize: () => sessionCatalogIpc.close(),
 });

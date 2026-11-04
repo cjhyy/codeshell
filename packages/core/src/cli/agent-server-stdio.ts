@@ -254,7 +254,9 @@ const runtime = new EngineRuntime({
 // sessions is a separate, heavier push mechanism, intentionally out of scope.)
 // Best-effort: if a freshly-edited settings.json is malformed, fall back to the
 // last-known-good bootstrap snapshot rather than failing to create a session.
-function freshSettings(): typeof settings {
+function freshSettings(sessionCwd = cwd): typeof settings {
+  // A project read must never fall back to a different project's settings.
+  if (sessionCwd !== cwd) return new SettingsManager(sessionCwd, "full").load();
   try {
     return settingsManager.load();
   } catch {
@@ -264,6 +266,7 @@ function freshSettings(): typeof settings {
 
 const chatManager = new ChatSessionManager({
   runtime,
+  sessionStorageDir: dataSessionsDir,
   // resolvedLlmConfig is the bootstrap-time snapshot. Explicit global model
   // changes can move modelPool.activeKey ahead of it, so newly-created
   // sessions re-resolve from the pool each time the factory fires. A
@@ -283,15 +286,10 @@ const chatManager = new ChatSessionManager({
     // into (and shadow) other projects' sessions. A per-session SettingsManager
     // still reads the full hierarchy (user ~/.code-shell + THIS project's
     // .code-shell), keeping user-global settings while picking up the correct
-    // project overlay. Falls back to the boot snapshot if this project's file is
-    // malformed (same best-effort contract as freshSettings()).
+    // project overlay. A failed project read cannot inherit another project's
+    // bootstrap snapshot.
     const sessionSettingsManager = new SettingsManager(sessionCwd, "full");
-    let live: typeof settings;
-    try {
-      live = sessionSettingsManager.load();
-    } catch {
-      live = freshSettings();
-    }
+    const live = freshSettings(sessionCwd);
     // Fold project capabilityOverrides over the global disabledPlugins before
     // the MCP merge — a plugin force-enabled in 能力总览 (project "on") must
     // contribute its MCP servers even while globally disabled, and vice versa.

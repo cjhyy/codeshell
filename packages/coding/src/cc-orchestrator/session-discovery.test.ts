@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, utimesSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, utimesSync, rmSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import {
   encodeCwd,
@@ -344,3 +345,37 @@ describe("discoverRecentClaudeSessions", () => {
     expect(contentReads).not.toContain(disabledFile);
   });
 });
+
+it.skipIf(process.platform === "win32")(
+  "skips FIFO sessions and a regular file replaced after the identity read",
+  () => {
+    const home = mkdtempSync(join(tmpdir(), "claude-special-file-"));
+    const cwd = join(home, "project");
+    const file = writeClaudeSession(home, cwd, "session", [
+      { type: "user", cwd, message: { content: "regular session" } },
+    ]);
+    const fifo = join(home, "projects", encodeCwd(cwd), "pipe.jsonl");
+    const makeFifo = (path: string) =>
+      expect(spawnSync("mkfifo", [path], { timeout: 1000 }).status).toBe(0);
+    try {
+      makeFifo(fifo);
+      expect(discoverSessions(cwd, home).map((s) => s.sessionId)).toEqual(["session"]);
+      expect(countSessions(cwd, home)).toBe(1);
+      let swapped = false;
+      expect(
+        discoverRecentClaudeSessions({}, home, undefined, {
+          onContentRead: (path) => {
+            expect(path).toBe(file);
+            unlinkSync(path);
+            makeFifo(path);
+            swapped = true;
+          },
+        }),
+      ).toEqual([]);
+      expect(swapped).toBe(true);
+      expect(countSessions(cwd, home)).toBe(0);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  },
+);

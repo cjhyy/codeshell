@@ -104,7 +104,8 @@ export async function runCommand(options: RunOptions): Promise<void> {
     console.error(
       "Error: 没有可用的文本模型连接。请在「连接」页添加,或用 --api-key/--model 指定。",
     );
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
   // CLI flag overrides still apply on top of a resolved connection, so
   // `--model X` / `--provider X` / `--base-url X` / `--api-key X` work even
@@ -193,6 +194,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
   // 4. ChatSessionManager — one session per `run` invocation (UUID)
   const chatManager = new ChatSessionManager({
     runtime,
+    sessionStorageDir: settings.session.storageDir,
     engineFactory: (slice) =>
       new Engine({
         llm: resolvedLlmConfig,
@@ -289,7 +291,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
       client.close();
     }
   }
-  process.exit(exitCode);
+  process.exitCode = exitCode;
 }
 
 /**

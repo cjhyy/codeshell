@@ -9,25 +9,27 @@
 >
 > 原 **3 P0 + 7 P1** 剩余验收范围保留。**2026-10-14 云端范围决定**继续有效：按[第 16 章](docs/architecture/16-platform-consolidation.md)决策 7，只做薄云端（配对、中继、推送、Link OAuth 回调）与一任务一容器沙箱，不扩展常驻云端工作台、持久云端工作区或云端 Panel 运行时。已有云端证据保留其历史范围。
 
-## 2026-11-01 全仓审查：新增待办
+## 2026-11-01 全仓审查：修复与剩余验收
 
 入口：[全仓审查报告](docs/todo/repo-audit-20261101.md)（基线 `82c6f37ab`，静态审查，未运行测试；含覆盖矩阵、证据行号与验收标准）· [Mimi 单入口 + 移动模式方案](docs/todo/mimi-single-entry-movement-plan.md)。本轮未发现 P0；下列条目只总结可行动问题，证据与验收见报告对应编号。
+
+2026-11-04：[PR #291](https://github.com/cjhyy/codeshell/pull/291) 已实现下列源码修复并补回归；必需 CI 作为最终整合门禁。已实现代码不替代原生、正式包与实体设备验收，详见审查报告新增跟进节。
 
 **P1**
 
 - [ ] **Mimi 单入口、互斥与移动模式（R05，M–L）——已合入 main（PR #267，merge `e69dff688`，必需 CI 14/14 通过）；本机候选已构建并通过打包验收，并已于 2026-11-01T07:55:37Z 装入 `/Applications`（2026-11-02 核对 asar sha256 与回执一致）；2026-11-02 已在三块真实屏（2×/2×/1×，含负坐标）完成多屏与混合 DPI 实机验收并修复三处缺陷（待合入，见下）；正式发布包验收仍缺。** 唯一状态拥有者、一个显示开关、停靠/移动互斥，预览/旧 IPC/快速交错请求都经同一控制器；移动默认 200 DIP、范围 160–480、工作态不低于 96；旧默认 320 迁为 200，其他自选尺寸保留，旧配置只读保留。R06 截图隐藏、R07 显示器变化与 R08 host 直接回归测试已同批实现。构建、全部工作区类型检查、两组 guarded 回归（901 pass/0 fail；403 pass/1 skip/0 fail，有重叠不相加）、lint 0 错误通过；隔离 Electron：聊天/worker 续办通过，冷重启三次（旧配置 320→200 迁移、旧文件逐字节保留、恢复 visible/模式/尺寸/位置、关闭后重启保持隐藏）与六类独立入口 2794 次采样 0 次双显；本机原生：自有全屏 Space 内 WindowServer 5 ms 采样 962 次 0 次同时在屏，原生右键/点击/按键驱动两种形态互切，两种形态窗口截图像素正确。打包候选（0.9.51 ad-hoc，tree 与合入提交相同）私有 HOME 验收通过。**2026-11-02 三屏实机验收**（内建 2× 主屏、左侧 VG2781-4K 2× 位于负 x、右侧 LS27B61x 1× 顶边负 y；Electron 与 CoreGraphics 拓扑逐项一致）：每屏停靠/移动、24 组边角、2625 次切换采样 0 双显且不跨屏、10 次原生跨屏拖动（2×↔2×、2×↔1×、跨两条边界）落点误差 0 DIP、像素尺寸随倍率正确且 DIP 尺寸不变、显示器移除/度量变化（测试进程内模拟）夹紧到余下屏、冷重启恢复在原屏，全部通过。修复（提交 `9cebe6b06`）：停靠窗在显示其他应用全屏 Space 的屏上不可见（改为 panel）；1× 屏上停靠小狗外白色背板（`moveTop()` 引起，macOS 改为重排可见窗口）；移动形态显示期间 Dock 图标消失。**剩余：**物理热拔插未做（只模拟）；已安装的 0.9.51 不含上述修复，需合入后重新安装或发版；CUA 真实截图通道隐藏与全屏下 ⌘⇧Esc 未原生发送（会与运行中的宿主快捷键冲突）；移动模式审批徽标未做；正式包验收归 P0.3。见[实施与验证记录](docs/todo/mimi-single-entry-movement-plan.md#97-合入本机候选与安装2026-11-01)与[三屏实机验收](docs/todo/mimi-single-entry-movement-plan.md#98-2026-11-02-三屏--混合-dpi-实机验收cc任务分支-codexdesktopmimi-multidisplay-acceptance-20261102)。
-- [ ] **Bash 只读免审批可读 CodeShell 凭据/设置（R01，S）。** `cat ~/.code-shell/settings.json` 等在 default 模式免审批，而 Read 对用户目录下同类容器要求审批；普通项目 `.code-shell/settings.local.json` 则是 Bash / Read 双方的敏感路径识别缺口。统一两侧判定并补齐项目设置路径。
-- [ ] **项目授权持久化不加锁且解析失败即重写（R02，S）。** `persistProjectRule` 与路径授权持久化改走 `SettingsManager` 锁内读改写，读不懂时不覆盖，并保留 YAML 原配置语义，避免新 JSON 遮蔽旧配置。
-- [ ] **浏览器弹出窗口导航守卫与 `openExternal` 发送方校验（R03，S，待真实环境验收）。** 弹出窗口复用主窗口的新窗口/顶层导航拦截；`shell:openExternal` 校验可信宿主窗口及来源，并收紧 `file:`，保留现有合法外链入口。
-- [ ] **退出失败后可恢复（R04，M，待真实环境验收）。** 未被捕获的 flush / cleanup 失败会取消本次退出且只记日志，虽可再次触发退出重试，但缺少可见提示与明确强制退出路径；补齐提示及重试 / 仍然退出，并识别已崩溃的渲染进程；`second-instance` 无窗口时新建窗口，避免无窗口常驻占用单实例锁。
+- [x] **Bash 只读免审批可读 CodeShell 凭据/设置（R01，S）。** `cat ~/.code-shell/settings.json` 等在 default 模式免审批，而 Read 对用户目录下同类容器要求审批；普通项目 `.code-shell/settings.local.json` 则是 Bash / Read 双方的敏感路径识别缺口。统一两侧判定并补齐项目设置路径。
+- [x] **项目授权持久化不加锁且解析失败即重写（R02，S）。** `persistProjectRule` 与路径授权持久化改走 `SettingsManager` 锁内读改写，读不懂时不覆盖，并保留 YAML 原配置语义，避免新 JSON 遮蔽旧配置。
+- [ ] **浏览器弹出窗口导航守卫与 `openExternal` 发送方校验（R03，源码与回归已实现，待真实环境验收）。** 弹出窗口复用主窗口的新窗口/顶层导航拦截；`shell:openExternal` 校验可信宿主窗口及来源，并收紧 `file:`，保留现有合法外链入口。
+- [ ] **退出失败后可恢复（R04，源码与回归已实现，待真实环境验收）。** 未被捕获的 flush / cleanup 失败会取消本次退出且只记日志，虽可再次触发退出重试，但缺少可见提示与明确强制退出路径；补齐提示及重试 / 仍然退出，并识别已崩溃的渲染进程；`second-instance` 无窗口时新建窗口，避免无窗口常驻占用单实例锁。
 
 **P2（S/M，可单会话处理；详见报告）**
 
-- [ ] **手机审批截止时间与时钟偏差（R16、R17，S）。** 截止时间要显示在实际挂载的 `web/app` 审批组件里，旧 `desktop/src/mobile/components` 隔离或删除；截止时间改为相对 TTL 或附带服务器时间，目录选择器过期时给出提示。
-- [ ] **模型连接被删后会话失败粘住（R10，M）**；**chat 同会话并发导致绑定 Session 消息乱序（R14，M）**；**面板发现瞬时错误清空目录与资源（R18，M）**。
-- [ ] **CUA 执行边界规格与代码一致化（R09，S）。** 先定“停止电脑操作是否取消 Run”，再统一规格 `:138/:143` 与 `computer-use-control.ts`。
-- [ ] **小修集合（S）。** DelegateWork schema 文案（R11）、pet observer 共享连接（R12）、Optimization Lab 冻结 root（R13）、chat 就绪与退避（R15）、Dock 连点双窗（R19）、主进程同步阻塞（R20）、Linux `basic_text` 凭据策略（R21）、TUI `process.exit` 截断（R22）、cdp 等待期限（R23）、ESLint 漏 `host`（R24）、发布门禁（R25）、`bun run test`/`test:watch` 与分片一致（R26）。
-- [ ] **文档与发布说明（S）。** 补 CHANGELOG 0.9.46–0.9.51 并加发布校验（R27）；更新 arena README、`docs/panel-native-tools.md` Hub 目录说明，并链接 [手机远程验收记录](docs/todo/mobile-remote-acceptance-2026-10-29.md)（R28）。
+- [x] **手机审批截止时间与时钟偏差（R16、R17，S）。** 截止时间要显示在实际挂载的 `web/app` 审批组件里，旧 `desktop/src/mobile/components` 隔离或删除；截止时间改为相对 TTL 或附带服务器时间，目录选择器过期时给出提示。
+- [x] **模型连接被删后会话失败粘住（R10，M）**；**chat 同会话并发导致绑定 Session 消息乱序（R14，M）**；**面板发现瞬时错误清空目录与资源（R18，M）**。
+- [x] **CUA 执行边界规格与代码一致化（R09，S）。** 全局入口只停止电脑输入，不取消 Run；会话 Stop 仍取消 Run。快捷键按已连接 CUA proxy 数注册/注销，规格与控制层回归已同步。
+- [x] **小修集合（S）。** DelegateWork schema 文案（R11）、pet observer 共享连接（R12）、Optimization Lab 冻结 root（R13）、chat 就绪与退避（R15）、Dock 连点双窗（R19）、主进程同步阻塞（R20）、Linux `basic_text` 凭据策略（R21）、TUI `process.exit` 截断（R22）、cdp 等待期限（R23）、ESLint 漏 `host`（R24）、发布门禁（R25）、`bun run test`/`test:watch` 与分片一致（R26）。
+- [x] **文档与发布说明（R27、R28，S）。** R27 已按实际 tag 补齐 CHANGELOG 0.9.46–0.9.52，并在版本校验及 bump 前置检查要求目标标题；R28 已更新 arena 私有源码说明与 Hub 项目内子目录选择说明；[手机远程验收记录](docs/todo/mobile-remote-acceptance-2026-10-29.md)已在此链接，真实设备验收仍保留未完成。
 
 ## 本轮 P0 / P1：待核查与继续交付
 

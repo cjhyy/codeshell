@@ -90,6 +90,48 @@ describe("ReportToMimi tool", () => {
     expect(reports).toEqual([]);
   });
 
+  test("closing one observer preserves the other observer's reporting channel", async () => {
+    const module_ = createPetModule();
+    const deliveries = [[], []] as unknown as Array<
+      Array<{ method: string; params: Record<string, unknown> }>
+    >;
+    const observers = deliveries.map((messages) =>
+      module_.protocol!.createObserver!({
+        getLiveSessionSnapshot: () => [],
+        projectionGeneration: () => 1,
+        getSessionKind: () => undefined,
+        isTransportDisconnected: () => false,
+        notify: (method, params) => messages.push({ method, params }),
+        registerQuery: () => undefined,
+      }),
+    );
+    observers[0]!.onSessionAttached?.("owner-a", 1);
+    observers[1]!.onSessionAttached?.("owner-b", 1);
+    const tool = module_
+      .engine!.tools!.flatMap((c) => (c.kind === "preset-tags" ? [c.tool] : []))
+      .find((c) => c.definition.name === REPORT_TO_MIMI_TOOL_NAME)!;
+    await tool.execute({ message: "a" }, { sessionId: "owner-a" } as ToolContext);
+    await tool.execute({ message: "b" }, { sessionId: "owner-b" } as ToolContext);
+    observers[0]!.onServerClose?.();
+    await expect(
+      tool.execute({ message: "after close" }, { sessionId: "owner-b" } as ToolContext),
+    ).resolves.toContain("accepted");
+    await expect(
+      tool.execute({ message: "retired" }, { sessionId: "owner-a" } as ToolContext),
+    ).resolves.toContain("unavailable");
+    expect(
+      deliveries[0]!
+        .filter((item) => item.method === PET_REPORT_TO_MIMI_METHOD)
+        .map((item) => item.params.message),
+    ).toEqual(["a"]);
+    expect(
+      deliveries[1]!
+        .filter((item) => item.method === PET_REPORT_TO_MIMI_METHOD)
+        .map((item) => item.params.message),
+    ).toEqual(["b", "after close"]);
+    observers[1]!.onServerClose?.();
+  });
+
   test("routes the catalog tool through the protocol observer notification", async () => {
     const notifications: Array<{ method: string; params: Record<string, unknown> }> = [];
     const module_ = createPetModule();

@@ -34,12 +34,33 @@ interface FocusableWindow {
 export function registerSecondInstanceFocus(
   register: (handler: () => void) => void,
   getWindows: () => FocusableWindow[],
+  openMissing?: () => void,
 ): void {
   register(() => {
     const window = getWindows().find((candidate) => !candidate.isDestroyed());
-    if (!window) return;
+    if (!window) {
+      openMissing?.();
+      return;
+    }
     if (window.isMinimized()) window.restore();
     window.show();
     window.focus();
   });
+}
+
+/** Dock/second-instance requests share one in-flight main-window creation. */
+export function createMainWindowRestorer<T>(
+  getWindow: () => T | undefined | null,
+  create: () => Promise<T>,
+): () => Promise<T> {
+  let pending: Promise<T> | undefined;
+  return () => {
+    const existing = getWindow();
+    if (existing) return Promise.resolve(existing);
+    if (!pending)
+      pending = create().finally(() => {
+        pending = undefined;
+      });
+    return pending;
+  };
 }

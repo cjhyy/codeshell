@@ -203,6 +203,12 @@ describe("shared current model configuration", () => {
       expect(state()).toEqual(before);
       await run(engine, "replacement", intent("replacement"));
       expect(state().modelConnectionId).toBe("replacement");
+      // A legacy model key must also resolve in B. Reintroduce it in B alongside
+      // the explicit replacement; the worker's A connection must never leak.
+      const settingsFile = join(b, ".code-shell", "settings.json");
+      const localSettings = JSON.parse(readFileSync(settingsFile, "utf8"));
+      localSettings.modelConnections.push({ ...localSettings.modelConnections[0], id: "shared" });
+      writeFileSync(settingsFile, JSON.stringify(localSettings));
       const originalContext = engine.buildToolContext.bind(engine);
       let switchBeforeClaim = true;
       engine.buildToolContext = (...args) => {
@@ -218,10 +224,10 @@ describe("shared current model configuration", () => {
       expect(state().modelConnectionId).toBe("replacement");
       engine.buildToolContext = originalContext;
       await run(engine, "ordinary-switch");
-      expect(requests.at(-1)?.url).toContain("owned-a.invalid");
+      expect(requests.at(-1)?.url).toContain("owned-b.invalid");
       expect(state().modelConnectionId).toBeUndefined();
       await run(engine, "ordinary-next");
-      expect(requests.at(-1)?.url).toContain("owned-a.invalid");
+      expect(requests.at(-1)?.url).toContain("owned-b.invalid");
       switchBeforeClaim = true;
       engine.buildToolContext = (...args) => {
         const context = originalContext(...args);

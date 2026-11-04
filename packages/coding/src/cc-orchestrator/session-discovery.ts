@@ -6,6 +6,8 @@ import {
   openSync,
   readSync,
   closeSync,
+  fstatSync,
+  constants,
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
@@ -227,6 +229,7 @@ function listSessionStats(dir: string): { sessionId: string; file: string; mtime
     } catch {
       continue;
     }
+    if (!st.isFile()) continue;
     stats.push({ sessionId: name.replace(/\.jsonl$/, ""), file, mtimeMs: st.mtimeMs });
   }
   return stats;
@@ -274,7 +277,12 @@ export function discoverSessions(
     if (out.length >= limit) break;
     let lines: string[];
     try {
-      lines = readFileSync(s.file, "utf-8").split("\n");
+      const fd = openRegularSessionFile(s.file);
+      try {
+        lines = readFileSync(fd, "utf-8").split("\n");
+      } finally {
+        closeSync(fd);
+      }
     } catch {
       continue;
     }
@@ -290,10 +298,23 @@ export function discoverSessions(
   return out;
 }
 
+/** Recheck the opened descriptor: a file can become a FIFO after the stat pass.
+ * O_NONBLOCK prevents its open from hanging before fstat can reject it. */
+function openRegularSessionFile(file: string): number {
+  const fd = openSync(file, constants.O_RDONLY | constants.O_NONBLOCK);
+  try {
+    if (!fstatSync(fd).isFile()) throw new Error("Session transcript is not a regular file");
+    return fd;
+  } catch (error) {
+    closeSync(fd);
+    throw error;
+  }
+}
+
 /** Read up to maxBytes of a file as UTF-8 (may span many lines), without
  *  loading the whole transcript. Newlines are preserved so callers can split. */
 function readBoundedPrefix(file: string, maxBytes: number): string {
-  const fd = openSync(file, "r");
+  const fd = openRegularSessionFile(file);
   try {
     const buf = Buffer.alloc(maxBytes);
     const n = readSync(fd, buf, 0, maxBytes, 0);
@@ -310,7 +331,7 @@ function readBoundedPrefix(file: string, maxBytes: number): string {
  * reading transcript content merely to classify visibility.
  */
 function readSessionIdentityCwd(file: string, maxBytes = 4 * 1024): string | undefined {
-  const fd = openSync(file, "r");
+  const fd = openRegularSessionFile(file);
   try {
     const buffer = Buffer.alloc(maxBytes);
     let total = 0;

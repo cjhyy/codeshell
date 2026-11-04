@@ -94,6 +94,7 @@ export function useSessionNavigation({
   const selectionRequest = useRef(0);
   // Latest archive/restore per Session; an older failure must not undo a newer choice.
   const archiveRequests = useRef(new Map<string, number>());
+  const archiveOperations = useRef(new Map<string, Promise<void>>());
   const selectSession = async (
     projectId: string | null,
     sessionId: string,
@@ -331,20 +332,38 @@ export function useSessionNavigation({
     // waits behind a busy worker for up to 5s, so the row must not wait on it.
     // A restore still waits: a visible row must already be live in Core.
     if (archived) commit(true);
+    // Serialize the complete release + Core marker update, not only the local
+    // catalog writes. A restore must not overtake an archive's delayed release.
+    const operation = (archiveOperations.current.get(sessionId) ?? Promise.resolve()).then(
+      async () => {
+        try {
+          await releaseWorkspaceForArchive(summary, archived, window.codeshell);
+        } catch (error) {
+          // Core still holds the old marker; leave the catalog matching it.
+          window.codeshell.log("session.archive.failed", {
+            sessionId,
+            archived,
+            error: String(error),
+          });
+          toast({
+            message: t("sidebar.archiveSessionFailed"),
+            detail: String(error),
+            variant: "error",
+          });
+          if (archived && archiveRequests.current.get(sessionId) === request) commit(false);
+          return;
+        }
+        if (!archived && archiveRequests.current.get(sessionId) === request) commit(false);
+      },
+    );
+    archiveOperations.current.set(sessionId, operation);
     try {
-      await releaseWorkspaceForArchive(summary, archived, window.codeshell);
-    } catch (error) {
-      // Core still holds the old marker; leave the catalog matching it.
-      window.codeshell.log("session.archive.failed", { sessionId, archived, error: String(error) });
-      toast({
-        message: t("sidebar.archiveSessionFailed"),
-        detail: String(error),
-        variant: "error",
-      });
-      if (archived && archiveRequests.current.get(sessionId) === request) commit(false);
-      return;
+      await operation;
+    } finally {
+      if (archiveOperations.current.get(sessionId) === operation) {
+        archiveOperations.current.delete(sessionId);
+      }
     }
-    if (!archived) commit(false);
   };
 
   const deleteSession = async (projectId: string | null, sessionId: string): Promise<void> => {

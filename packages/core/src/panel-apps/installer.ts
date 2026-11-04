@@ -41,6 +41,7 @@ import {
   panelAppInstallDir,
   panelAppPackageDir,
   panelAppsRoot,
+  isPanelAppStorageReadError,
 } from "./paths.js";
 import {
   readInstalledPanelAppsRegistry,
@@ -454,6 +455,7 @@ async function readManifest(sourceRoot: string): Promise<PanelAppManifest> {
     );
     return PanelAppManifest.parse(JSON.parse(raw.toString("utf8")));
   } catch (error) {
+    if (isPanelAppStorageReadError(error)) throw error;
     throw new PanelAppInstallError(
       `invalid Panel App manifest: ${error instanceof Error ? error.message : String(error)}`,
     );
@@ -528,7 +530,10 @@ async function inspectPanelAppSource(sourceRoot: string): Promise<{
   }
   const manifest = await readManifest(root);
   assertSafePanelAppId(manifest.id);
-  const entry = await realpath(resolve(root, ...manifest.entry.split("/"))).catch(() => "");
+  const entry = await realpath(resolve(root, ...manifest.entry.split("/"))).catch((error) => {
+    if (isPanelAppStorageReadError(error)) throw error;
+    return "";
+  });
   if (!entry || (entry !== root && !entry.startsWith(`${root}${sep}`))) {
     throw new PanelAppInstallError(`Panel App entry escapes its package: ${manifest.entry}`);
   }
@@ -1240,7 +1245,7 @@ function installedPanelApp(
 export async function listInstalledPanelApps(appId?: string): Promise<InstalledPanelApp[]> {
   if (appId !== undefined) assertSafePanelAppId(appId);
   const output: InstalledPanelApp[] = [];
-  for (const record of await readInstalledPanelAppsRegistry()) {
+  for (const record of await readInstalledPanelAppsRegistry({ strict: true })) {
     if (appId !== undefined && record.id !== appId) continue;
     try {
       const root = await realpath(panelAppInstallDir(record.id));
@@ -1250,8 +1255,10 @@ export async function listInstalledPanelApps(appId?: string): Promise<InstalledP
         ...installedPanelApp(inspected.manifest, record),
         packageDigest: inspected.packageDigest,
       });
-    } catch {
-      // One corrupt/missing app must not hide the rest of the catalog.
+    } catch (error) {
+      // One corrupt/missing app must not hide the rest of the catalog. Storage
+      // failures, however, must not publish a false removal of a live app.
+      if (isPanelAppStorageReadError(error)) throw error;
     }
   }
   return output.sort((left, right) => left.id.localeCompare(right.id));

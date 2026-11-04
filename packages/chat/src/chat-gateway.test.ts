@@ -66,7 +66,8 @@ describe("ChatGateway standalone runtime", () => {
     const states: string[] = [];
     const failing: ChannelAdapter = {
       channel: "failing",
-      run: async (_handler, signal) => {
+      run: async (_handler, signal, lifecycle) => {
+        lifecycle?.ready();
         failingRuns += 1;
         if (failingRuns === 1) throw new Error("boom");
         await waitForSignal(signal);
@@ -75,7 +76,8 @@ describe("ChatGateway standalone runtime", () => {
     };
     const healthy: ChannelAdapter = {
       channel: "healthy",
-      run: async (_handler, signal) => {
+      run: async (_handler, signal, lifecycle) => {
+        lifecycle?.ready();
         await waitForSignal(signal);
         healthyStopped = true;
       },
@@ -104,7 +106,10 @@ describe("ChatGateway standalone runtime", () => {
     const abort = new AbortController();
     const polling = (): ChannelAdapter => ({
       channel: "telegram",
-      run: async (_handler, signal) => void (await waitForSignal(signal)),
+      run: async (_handler, signal, lifecycle) => {
+        lifecycle?.ready();
+        await waitForSignal(signal);
+      },
       send: async () => undefined,
     });
     const webhook = { host: "127.0.0.1", port: 8791 };

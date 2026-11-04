@@ -1,3 +1,4 @@
+import type { ChannelRunLifecycle } from "./channel.js";
 import * as lark from "@larksuiteoapi/node-sdk";
 import type { ChannelAdapter, ChannelMessageHandler, OutgoingMessage } from "./channel.js";
 import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
@@ -15,6 +16,7 @@ export class LarkAdapter implements ChannelAdapter {
   readonly capabilities = BUILTIN_CHANNEL_CAPABILITIES.lark;
   private readonly client: lark.Client;
   private readonly ws: lark.WSClient;
+  private lifecycle?: ChannelRunLifecycle;
   private readonly delivery = new OutgoingDeliveryTracker();
 
   constructor(config: LarkAdapterConfig) {
@@ -24,10 +26,22 @@ export class LarkAdapter implements ChannelAdapter {
       ...(config.domain ? { domain: config.domain } : {}),
     };
     this.client = new lark.Client(credentials);
-    this.ws = new lark.WSClient({ ...credentials, autoReconnect: true });
+    this.ws = new lark.WSClient({
+      ...credentials,
+      autoReconnect: true,
+      onReady: () => this.lifecycle?.ready(),
+      onReconnected: () => this.lifecycle?.ready(),
+      onReconnecting: () => this.lifecycle?.unavailable(),
+      onError: (error) => this.lifecycle?.unavailable(error),
+    });
   }
 
-  async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
+  async run(
+    handler: ChannelMessageHandler,
+    signal: AbortSignal,
+    lifecycle?: ChannelRunLifecycle,
+  ): Promise<void> {
+    this.lifecycle = lifecycle;
     const dispatcher = new lark.EventDispatcher({}).register({
       "im.message.receive_v1": async (event) => {
         const messageId = event.message.message_id;
@@ -55,9 +69,16 @@ export class LarkAdapter implements ChannelAdapter {
         });
       },
     });
-    signal.addEventListener("abort", () => this.ws.close({ force: true }), { once: true });
-    await this.ws.start({ eventDispatcher: dispatcher });
-    await waitForAbort(signal);
+    const abort = () => this.ws.close({ force: true });
+    signal.addEventListener("abort", abort, { once: true });
+    try {
+      await this.ws.start({ eventDispatcher: dispatcher });
+      await waitForAbort(signal);
+    } finally {
+      this.lifecycle = undefined;
+      signal.removeEventListener("abort", abort);
+      this.ws.close({ force: true });
+    }
   }
 
   async send(target: string, message: OutgoingMessage): Promise<void> {

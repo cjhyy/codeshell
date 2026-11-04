@@ -2216,7 +2216,8 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
     expect(renewal.status).toBe(200);
     const result = await renewal.json();
     expect(result.expiresAt).toBe(grant.expiresAt + 60_000);
-    expect(Object.keys(result)).toEqual(["expiresAt"]);
+    expect(Object.keys(result)).toEqual(["expiresAt", "serverTime"]);
+    expect(result.serverTime).toBe(f.state.now);
     expect((await fetch(f.url + grant.src)).status).toBe(200);
     expect(
       (await f.api(`${grant.instanceId}/call`, "POST", { method: "context.get" })).status,

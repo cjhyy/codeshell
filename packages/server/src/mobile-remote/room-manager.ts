@@ -19,6 +19,7 @@ import {
 import {
   readRoomHistoryPage,
   scanRoomHistory,
+  scanRoomHistoryAsync,
   type RoomHistoryRequest,
   type RoomHistoryPage,
 } from "./room-history.js";
@@ -175,6 +176,9 @@ function parseRoomMessage(value: unknown): RoomMessage | undefined {
     "reason",
     "toolId",
     "transcriptSource",
+    "clientMessageId",
+    "clientDeviceId",
+    "clientIntentHash",
   ] as const) {
     const item = raw[field];
     if (item !== undefined && (typeof item !== "string" || item.includes("\0"))) return undefined;
@@ -335,6 +339,15 @@ export interface RoomMessage {
   /** Durable external transcript provenance, scoped to its actual file incarnation. */
   transcriptSource?: string;
   attachments?: Array<{ name: string; mime?: string; size: number; path: string }>;
+  /** Exact mobile intent receipt, durable alongside its accepted user turn. */
+  clientMessageId?: string;
+  clientDeviceId?: string;
+  clientIntentHash?: string;
+}
+export interface RoomInputReceipt {
+  clientMessageId: string;
+  clientDeviceId: string;
+  clientIntentHash: string;
 }
 
 const ROOM_ATTACHMENT_START = "<codeshell-image-attachments>";
@@ -494,6 +507,11 @@ export class RoomManager {
   private readonly rootRealPath: string;
   private readonly rootIdentity: string;
   private readonly failedWrites = new Set<string>();
+  private readonly preparingInputReceipts = new Map<string, Promise<void>>();
+  private readonly inputReceipts = new Map<
+    string,
+    { stamp: string; intents: Map<string, string> }
+  >();
 
   /** Drop all pending AskUser entries for a room. Called when its agent goes
    *  away (exit/close) so a request that can no longer be answered doesn't leak
@@ -750,7 +768,17 @@ export class RoomManager {
     const msg: RoomMessage = { seq, ts, ...partial };
     try {
       this.appendRoomMessage(id, msg);
-      this.messageStampByRoom.set(id, this.messageStamp(id));
+      const stamp = this.messageStamp(id);
+      this.messageStampByRoom.set(id, stamp);
+      const receipts = this.inputReceipts.get(id);
+      if (receipts) {
+        receipts.stamp = stamp;
+        if (msg.clientMessageId && msg.clientDeviceId && msg.clientIntentHash)
+          receipts.intents.set(
+            JSON.stringify([msg.clientDeviceId, msg.clientMessageId]),
+            msg.clientIntentHash,
+          );
+      }
     } catch (error) {
       // Sequence assignment is a commit effect, not an attempt counter. A
       // failed serialization/write must not leave a phantom gap in memory.
@@ -1329,10 +1357,86 @@ export class RoomManager {
     }
   }
 
+  /** Prepare cold receipts outside the synchronous send path; concurrent intents share one scan. */
+  async prepareInputReceipts(id: string): Promise<void> {
+    if (this.inputReceipts.has(id)) {
+      this.currentInputReceipts(id);
+      return;
+    }
+    const pending = this.preparingInputReceipts.get(id);
+    if (pending) return pending;
+    const work = this.buildInputReceipts(id).finally(() => {
+      if (this.preparingInputReceipts.get(id) === work) this.preparingInputReceipts.delete(id);
+    });
+    this.preparingInputReceipts.set(id, work);
+    return work;
+  }
+
+  private async buildInputReceipts(id: string): Promise<void> {
+    if (this.failedWrites.has(id)) throw new Error("room persistence failed");
+    const path = this.msgPath(id);
+    const intents = new Map<string, string>();
+    const proof = existsSync(path)
+      ? await scanRoomHistoryAsync(path, parseRoomMessage, (message) => {
+          if (!message.clientMessageId) return;
+          if (!message.clientDeviceId || !message.clientIntentHash)
+            throw new Error("room input receipt is incomplete");
+          const key = JSON.stringify([message.clientDeviceId, message.clientMessageId]);
+          const previous = intents.get(key);
+          if (previous && previous !== message.clientIntentHash)
+            throw new Error("conflicting room input receipts");
+          intents.set(key, message.clientIntentHash);
+        })
+      : { sequence: 0, stamp: "" };
+    if ((existsSync(path) ? this.messageStamp(id) : "") !== proof.stamp)
+      throw new Error("room input history changed; reload before retrying");
+    this.inputReceipts.set(id, { stamp: proof.stamp, intents });
+    // Avoid a second synchronous history scan when the cold Room first appends.
+    if (proof.stamp && !this.lastSeqByRoom.has(id)) {
+      this.lastSeqByRoom.set(id, proof.sequence);
+      this.messageStampByRoom.set(id, proof.stamp);
+    }
+  }
+
+  private currentInputReceipts(id: string) {
+    const cached = this.inputReceipts.get(id);
+    if (!cached) throw new Error("room input receipts must be prepared before send");
+    const path = this.msgPath(id);
+    if (cached.stamp !== (existsSync(path) ? this.messageStamp(id) : ""))
+      throw new Error("room input history changed; reload before retrying");
+    return cached;
+  }
+
+  /** A replay never opens a new CLI, reclaims an attachment, or reuses a changed intent. */
+  hasAcceptedInput(id: string, receipt: RoomInputReceipt): boolean {
+    if (
+      !receipt.clientMessageId ||
+      receipt.clientMessageId.length > 200 ||
+      !receipt.clientDeviceId ||
+      receipt.clientDeviceId.length > 256 ||
+      !/^[a-f0-9]{64}$/.test(receipt.clientIntentHash)
+    )
+      throw new Error("invalid room input receipt");
+    if (this.failedWrites.has(id)) throw new Error("room persistence failed");
+    const cached = this.currentInputReceipts(id);
+    const known = cached.intents.get(
+      JSON.stringify([receipt.clientDeviceId, receipt.clientMessageId]),
+    );
+    if (known && known !== receipt.clientIntentHash)
+      throw new Error("同一输入的内容已改变，请核对草稿后作为新消息发送。");
+    return known !== undefined;
+  }
+
   /** Post a user message: persist it, ensure agent running, feed it. */
-  send(id: string, text: string, attachments: InputAttachmentMeta[] = []): boolean {
+  send(
+    id: string,
+    text: string,
+    attachments: InputAttachmentMeta[] = [],
+    receipt?: RoomInputReceipt,
+  ): boolean {
     const meta = this.getRoom(id);
     if (!meta) return false;
+    if (receipt && this.hasAcceptedInput(id, receipt)) return true;
     const displayText = text.trim();
     if (!displayText && attachments.length === 0) return false;
     if (this.open(id).status !== "running") return false;
@@ -1400,6 +1504,7 @@ export class RoomManager {
       from: "user",
       type: "text",
       text: displayText,
+      ...(receipt ?? {}),
       ...(summaries.length ? { attachments: summaries } : {}),
     });
     if (this.transcriptFollowedRooms.has(id)) {
@@ -1485,6 +1590,7 @@ export class RoomManager {
       // Drop the cached seq with the files, so a room id that somehow comes back
       // re-derives its counter from disk instead of continuing a dead sequence.
       this.lastSeqByRoom.delete(meta.id);
+      this.inputReceipts.delete(meta.id);
       removed.push(meta.id);
     }
     return removed;

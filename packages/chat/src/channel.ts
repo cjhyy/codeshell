@@ -144,6 +144,13 @@ export interface ChannelSendOptions {
 
 export type ChannelMessageHandler = (message: ChannelMessage) => Promise<void>;
 
+export interface ChannelRunLifecycle {
+  /** Transport has authenticated/connected, or completed its first successful poll. */
+  ready(): void;
+  /** Transport lost readiness while the adapter performs its own reconnect. */
+  unavailable(error?: unknown): void;
+}
+
 export interface ChannelAdapter {
   readonly channel: string;
   /**
@@ -162,7 +169,12 @@ export interface ChannelAdapter {
   readonly combinesTextAndAttachmentsAtomically?: boolean;
   /** @deprecated Use capabilities.outbound.attachments or supportsOutgoingAttachment(). */
   readonly supportsOutgoingAttachments?: boolean;
-  run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void>;
+  /** Legacy adapters may omit lifecycle; their first inbound event proves readiness. */
+  run(
+    handler: ChannelMessageHandler,
+    signal: AbortSignal,
+    lifecycle?: ChannelRunLifecycle,
+  ): Promise<void>;
   send(target: string, message: OutgoingMessage, options?: ChannelSendOptions): Promise<void>;
 }
 

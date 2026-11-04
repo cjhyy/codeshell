@@ -1,12 +1,12 @@
 import {
-  chmodSync,
   copyFileSync,
+  constants,
+  realpathSync,
   existsSync,
   lstatSync,
   mkdirSync,
   readFileSync,
   readdirSync,
-  statSync,
   symlinkSync,
 } from "node:fs";
 import { rm } from "node:fs/promises";
@@ -295,9 +295,26 @@ export function copyWorktreeIncludes(
     if (!isContainedPath(sourceRoot, source) || !isContainedPath(worktreePath, target)) continue;
     const info = lstatSync(source);
     if (!info.isFile()) continue;
-    mkdirSync(dirname(target), { recursive: true });
-    copyFileSync(source, target);
-    chmodSync(target, statSync(source).mode);
+    if (!isContainedPath(realpathSync(sourceRoot), realpathSync(source))) continue;
+    // Never traverse an existing symlink (including a dependency shortcut), or
+    // overwrite a tracked checkout entry selected from a different base ref.
+    let parent = resolve(worktreePath);
+    for (const part of [
+      "",
+      ...relative(worktreePath, dirname(target)).split(sep).filter(Boolean),
+    ]) {
+      parent = part ? join(parent, part) : parent;
+      try {
+        mkdirSync(parent);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      }
+      const directory = lstatSync(parent);
+      if (!directory.isDirectory() || directory.isSymbolicLink()) {
+        throw new Error(`worktree include destination is not a real directory: ${parent}`);
+      }
+    }
+    copyFileSync(source, target, constants.COPYFILE_EXCL);
     included.push(file);
   }
   return included;

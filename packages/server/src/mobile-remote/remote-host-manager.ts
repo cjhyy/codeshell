@@ -1,3 +1,4 @@
+import { stampApprovalClock } from "./approval-clock.js";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { networkInterfaces } from "node:os";
 import { EventEmitter } from "node:events";
@@ -222,7 +223,9 @@ export class RemoteHostManager extends EventEmitter {
       throw new Error(`${relay ? "Relay" : "Tunnel"} mode requires an initialized access passcode`);
     }
     if (relay) this.publicBaseUrl = undefined;
-    this.passcode = publicAccess && options.passcode?.isSet() ? options.passcode : undefined;
+    // Keep the gate object even when account auto-start precedes passcode setup.
+    // Its current configuration is consulted for each HTTP/WS admission.
+    this.passcode = publicAccess ? options.passcode : undefined;
     const gate = this.passcode;
     this.opts.webApi?.start();
     const server = createServer((req, res) => {
@@ -264,7 +267,7 @@ export class RemoteHostManager extends EventEmitter {
         const account =
           relay && this.relayRequestOrigin(req) ? this.accountAccess.capture(req) : undefined;
         if (!account) {
-          if (relay && (req.headers["x-codeshell-host-access"] !== undefined || !gate)) {
+          if (relay && (req.headers["x-codeshell-host-access"] !== undefined || !gate?.isSet())) {
             this.relayJson(res, 401, { error: "Account relay authorization is required" });
             req.resume();
             return;
@@ -720,6 +723,7 @@ export class RemoteHostManager extends EventEmitter {
 
   /** Preserve the full worker envelope while retaining exact authenticated-tab routing. */
   sendRawToViewer(viewerId: string, payload: string): void {
+    payload = stampApprovalClock(payload);
     for (const client of this.wss?.clients ?? []) {
       if (
         client.readyState === client.OPEN &&
@@ -735,6 +739,7 @@ export class RemoteHostManager extends EventEmitter {
 
   /** Send a raw JSON-RPC worker line to ONLY one authenticated device. */
   sendRawToDevice(deviceId: string, payload: string): void {
+    payload = stampApprovalClock(payload);
     for (const client of this.wss?.clients ?? []) {
       if (client.readyState === client.OPEN && this.authed.get(client) === deviceId) {
         this.sendBounded(client, payload);
@@ -746,6 +751,7 @@ export class RemoteHostManager extends EventEmitter {
    *  every authenticated mobile socket. Unauthenticated sockets are skipped so
    *  a half-paired client never sees session output. */
   broadcastRaw(payload: string): void {
+    payload = stampApprovalClock(payload);
     for (const client of this.wss?.clients ?? []) {
       if (client.readyState === client.OPEN && this.authed.has(client)) {
         this.sendBounded(client, payload);

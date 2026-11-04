@@ -227,6 +227,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   // 4. ChatSessionManager — single session "tui-main" (or resumed sid)
   const chatManager = new ChatSessionManager({
     runtime,
+    sessionStorageDir: settings.session.storageDir,
     engineFactory: (slice) =>
       new Engine({
         llm: resolvedLlmConfig,

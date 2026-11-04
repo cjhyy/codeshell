@@ -213,7 +213,7 @@ describe("marketplace install jobs", () => {
     await waitForJob(jobId, "installed");
     expect(installed()).toBe(true);
 
-    uninstallPluginEntry(plugin, market);
+    await uninstallPluginEntry(plugin, market);
     expect(installed()).toBe(false);
     // The earlier success no longer describes the installed inventory.
     expect(listPluginInstallJobsForUi().find((job) => job.id === jobId)?.status).not.toBe(

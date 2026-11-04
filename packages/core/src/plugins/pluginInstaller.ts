@@ -6,7 +6,7 @@
  */
 
 import { existsSync, realpathSync, rmSync, rmdirSync } from "node:fs";
-import { cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rename, rm, rmdir, writeFile } from "node:fs/promises";
 import { dirname, join, sep } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { gitClone, gitRevParseHead, gitSparseCheckoutAdd, githubRepoToCloneUrl } from "./gitOps.js";
@@ -22,6 +22,10 @@ import { rewritePluginVars } from "./varRewrite.js";
 import { pluginHookInstallRecord } from "./pluginHookIntegrity.js";
 import { pluginMcpInstallRecord } from "./pluginMcpIntegrity.js";
 import { assertSafePluginName } from "./installer/paths.js";
+import {
+  detachPluginDirectory,
+  removeDetachedPluginDirectories,
+} from "./installer/removeDirectory.js";
 import { pruneDisabledSettingsForPlugin } from "./installer/pruneDisabled.js";
 import { detectPluginFormat } from "./installer/detectFormat.js";
 import { normalizePluginManifest } from "./installer/normalizeManifest.js";
@@ -461,7 +465,13 @@ export interface UninstallResult {
   removedFromDisk: boolean;
 }
 
-export function uninstallPlugin(pluginName: string, marketplaceName: string): UninstallResult {
+function uninstallPluginDirectories(
+  pluginName: string,
+  marketplaceName: string,
+  removeDirectory: (dir: string) => void,
+): UninstallResult {
+  assertSafePluginName(pluginName);
+  assertSafePluginName(marketplaceName);
   const key = pluginInstallKey(pluginName, marketplaceName);
   const data = readInstalledPlugins();
   const entries = data.plugins[key];
@@ -476,7 +486,7 @@ export function uninstallPlugin(pluginName: string, marketplaceName: string): Un
       const safePath = resolveSafePluginPath(e.installPath, cacheRoot);
       if (!safePath) continue;
       if (existsSync(safePath)) {
-        rmSync(safePath, { recursive: true, force: true });
+        removeDirectory(safePath);
         removedFromDisk = true;
       }
     }
@@ -494,6 +504,32 @@ export function uninstallPlugin(pluginName: string, marketplaceName: string): Un
   // disabledPlugins "name") so a removed plugin leaves no dangling entries.
   pruneDisabledSettingsForPlugin(pluginName);
   return { ok: removedFromManifest || removedFromDisk, removedFromManifest, removedFromDisk };
+}
+
+/** Synchronous SDK compatibility entry. UI hosts should use the async entry. */
+export function uninstallPlugin(pluginName: string, marketplaceName: string): UninstallResult {
+  return uninstallPluginDirectories(pluginName, marketplaceName, (dir) =>
+    rmSync(dir, { recursive: true, force: true }),
+  );
+}
+
+export async function uninstallPluginAsync(
+  pluginName: string,
+  marketplaceName: string,
+): Promise<UninstallResult> {
+  assertSafePluginName(pluginName);
+  assertSafePluginName(marketplaceName);
+  const cleanup: string[] = [];
+  try {
+    return uninstallPluginDirectories(pluginName, marketplaceName, (dir) =>
+      cleanup.push(detachPluginDirectory(dir)),
+    );
+  } finally {
+    await removeDetachedPluginDirectories(cleanup);
+    // Detached trees no longer keep this parent nonempty. A concurrent install
+    // creates its own directory, in which case rmdir safely refuses removal.
+    await rmdir(join(pluginCacheRoot(), marketplaceName, pluginName)).catch(() => {});
+  }
 }
 
 export function listInstalled(): { key: string; entry: PluginInstallEntry }[] {

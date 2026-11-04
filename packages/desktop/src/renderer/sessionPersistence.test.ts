@@ -330,7 +330,7 @@ test("keeps new transcript content when an older background snapshot read resolv
   await Promise.resolve();
   persistence.saveTranscript("project", "session", "new user tail");
   read.resolve({ value: "old disk tail", hasEarlier: true });
-  expect(await loading).toEqual({ value: "new user tail", hasEarlier: false });
+  expect(await loading).toEqual({ value: "new user tail", hasEarlier: false, readDeferred: true });
   expect(persistence.getTranscript("project", "session")).toBe("new user tail");
   write.resolve();
   await persistence.flush();
@@ -364,7 +364,11 @@ test("an older read cannot overwrite a newer read that completed first", async (
   recent.resolve({ value: rawSnapshot("Recent state"), hasEarlier: false });
   await second;
   old.resolve({ value: rawSnapshot("Old state"), hasEarlier: true });
-  expect(await first).toEqual({ value: rawSnapshot("Recent state"), hasEarlier: false });
+  expect(await first).toEqual({
+    value: rawSnapshot("Recent state"),
+    hasEarlier: false,
+    readDeferred: true,
+  });
   expect(persistence.getTranscript("project", "session")).toBe(rawSnapshot("Recent state"));
 });
 
@@ -613,4 +617,51 @@ test.each([
     if (originalStorage) Object.defineProperty(globalThis, "localStorage", originalStorage);
     else delete (globalThis as Record<string, unknown>).localStorage;
   }
+});
+
+test("immutable snapshot identity survives serialized-cache eviction without retaining or rewriting history", async () => {
+  const writes: string[] = [];
+  const { persistence } = fixture({
+    writeTranscript: async ({ sessionId }) => {
+      writes.push(sessionId);
+    },
+  });
+  await persistence.initialize();
+  const states = Array.from({ length: 24 }, (_, id) => ({
+    messages: [{ id: `answer-${id}`, kind: "assistant", done: true, text: "saved" }],
+  }));
+  for (const [id, state] of states.entries())
+    persistence.saveSnapshot("project", String(id), state);
+  await persistence.flush();
+  expect(persistence.getTranscript("project", "0")).toBeNull();
+  writes.length = 0;
+  for (const [id, state] of states.entries())
+    persistence.saveSnapshot("project", String(id), state);
+  await persistence.flush();
+  expect(writes).toEqual([]);
+  persistence.saveSnapshot("project", "0", {
+    ...states[0],
+    messages: [...states[0]!.messages, { id: "new", kind: "user", text: "new input" }],
+  });
+  await persistence.flush();
+  expect(writes).toEqual(["0"]);
+});
+
+test("skipping the same queued snapshot still retries a failed durable write", async () => {
+  let fail = true;
+  const writes: string[] = [];
+  const { persistence } = fixture({
+    writeTranscript: async ({ value }) => {
+      writes.push(value);
+      if (fail) throw new Error("disk full");
+    },
+  });
+  const state = { messages: [{ id: "one", kind: "user", text: "keep me" }] };
+  await persistence.initialize();
+  persistence.saveSnapshot("project", "session", state);
+  await expect(persistence.flush()).rejects.toThrow("disk full");
+  fail = false;
+  persistence.saveSnapshot("project", "session", state);
+  await persistence.flush();
+  expect(writes).toEqual([JSON.stringify(state), JSON.stringify(state)]);
 });

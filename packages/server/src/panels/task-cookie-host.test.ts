@@ -48,7 +48,11 @@ describe("Host-owned task Cookie lifecycle", () => {
       0o600,
     );
     await host.shutdown();
-    expect((await readdir(f.options.rootDirectory)).sort()).toEqual(["revision-key.json"]);
+    expect((await readdir(f.options.rootDirectory)).sort()).toEqual([
+      "owner.claim",
+      "revision-key.json",
+    ]);
+    expect(await readdir(join(f.options.rootDirectory, "owner.claim"))).toEqual([]);
     await expect(host.list(scope, selection.url)).rejects.toThrow("stopping");
     const next = f.create();
     expect(await select(next)).toEqual(selection);
@@ -114,7 +118,11 @@ describe("Host-owned task Cookie lifecycle", () => {
     release();
     expect(await pending).toBeInstanceOf(Error);
     await closing;
-    expect(await readdir(f.options.rootDirectory)).toEqual(["revision-key.json"]);
+    expect((await readdir(f.options.rootDirectory)).sort()).toEqual([
+      "owner.claim",
+      "revision-key.json",
+    ]);
+    expect(await readdir(join(f.options.rootDirectory, "owner.claim"))).toEqual([]);
   });
   test("real Host process crash leaves a recoverable key and clears only abandoned leases", async () => {
     const f = await fixture();
@@ -149,7 +157,9 @@ setInterval(()=>{},1000);`;
     const next = f.create();
     expect(await select(next)).toEqual(record!.selection);
     await expect(readFile(record!.path)).rejects.toThrow();
+    expect(await readdir(join(f.options.rootDirectory, "owner.claim"))).toHaveLength(1);
     expect((await readdir(f.options.rootDirectory)).sort()).toEqual([
+      "owner.claim",
       "owner.lock",
       "revision-key.json",
     ]);

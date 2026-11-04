@@ -74,6 +74,10 @@ describe("agent/run requireExisting", () => {
       const chatManager = new ChatSessionManager({
         runtime: {} as never,
         engineFactory: () => engine,
+        sessionMetadata: {
+          exists: (id) => engine.sessionExistsOnDisk(id),
+          readSessionMainRoot: () => undefined,
+        },
       });
       const t = makeTransport();
       new AgentServer({ transport: t.transport, chatManager });
@@ -105,6 +109,10 @@ describe("agent/run requireExisting", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,
+      sessionMetadata: {
+        exists: (id) => engine.sessionExistsOnDisk(id),
+        readSessionMainRoot: () => undefined,
+      },
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -155,6 +163,10 @@ describe("agent/run requireExisting", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,
+      sessionMetadata: {
+        exists: (id) => engine.sessionExistsOnDisk(id),
+        readSessionMainRoot: () => undefined,
+      },
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -176,6 +188,10 @@ describe("agent/run requireExisting", () => {
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory: () => engine,
+      sessionMetadata: {
+        exists: (id) => engine.sessionExistsOnDisk(id),
+        readSessionMainRoot: () => undefined,
+      },
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });

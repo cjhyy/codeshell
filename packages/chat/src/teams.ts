@@ -1,3 +1,4 @@
+import type { ChannelRunLifecycle } from "./channel.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import {
@@ -65,7 +66,12 @@ export class TeamsAdapter implements WebhookChannelAdapter {
     this.loadReferences();
   }
 
-  run(_handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
+  run(
+    _handler: ChannelMessageHandler,
+    signal: AbortSignal,
+    lifecycle?: ChannelRunLifecycle,
+  ): Promise<void> {
+    lifecycle?.ready();
     return waitForAbort(signal);
   }
 

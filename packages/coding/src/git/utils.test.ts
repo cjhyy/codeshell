@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { getGitLog, getGitStatus } from "./utils.js";
+import { getGitLog, getGitStatus, resolveProjectRootAsync } from "./utils.js";
 
 function git(cwd: string, ...args: string[]): string {
   return execFileSync("git", args, { cwd, encoding: "utf-8" });
@@ -26,6 +26,21 @@ describe("coding git utils", () => {
 
   afterEach(() => {
     rmSync(repo, { recursive: true, force: true });
+  });
+
+  test("async root discovery yields while git runs and preserves fallback paths", async () => {
+    let ticked = false;
+    const tick = new Promise<void>((resolve) =>
+      setImmediate(() => {
+        ticked = true;
+        resolve();
+      }),
+    );
+    expect(await resolveProjectRootAsync(join(repo, ".git"))).toBe(join(repo, ".git"));
+    expect(ticked).toBe(true);
+    await tick;
+    expect(await resolveProjectRootAsync(repo)).toBe(repo);
+    expect(await resolveProjectRootAsync(join(repo, "missing"))).toBe(join(repo, "missing"));
   });
 
   test("getGitStatus keeps the full path of a leading unstaged entry", () => {

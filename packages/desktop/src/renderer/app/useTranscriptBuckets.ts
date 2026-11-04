@@ -147,6 +147,39 @@ export function useTranscriptBuckets({
   transcriptsRef.current = transcripts;
   const sessionIndicesRef = useRef(sessionIndices);
   sessionIndicesRef.current = sessionIndices;
+  useEffect(
+    () =>
+      window.codeshell.onSessionOutputHistoryReset?.((sessionId) => {
+        const buckets: string[] = [];
+        for (const [projectKey, index] of Object.entries(sessionIndicesRef.current)) {
+          const projectId = projectKey === NO_REPO_KEY ? null : projectKey;
+          for (const session of index.sessions) {
+            if (session.engineSessionId !== sessionId) continue;
+            const bucket = bucketKey(projectId, session.id);
+            buckets.push(bucket);
+            const token = (hydrationGenerationsRef.current.get(bucket) ?? 0) + 1;
+            hydrationGenerationsRef.current.set(bucket, token);
+            hydratedBucketsRef.current.delete(bucket);
+            appliedSeqRef.current.delete(bucket);
+            freshJournalBucketsRef.current.add(bucket);
+            dispatch({ type: "hydrate_begin", bucket, token, sessionId, reset: true });
+          }
+        }
+        if (!buckets.length) return;
+        setHistoryPages((previous) => {
+          const next = { ...previous };
+          for (const bucket of buckets) delete next[bucket];
+          return next;
+        });
+        setOutputRecoveries((previous) => {
+          const next = { ...previous };
+          for (const bucket of buckets) next[bucket] = "loading";
+          return next;
+        });
+        if (buckets.includes(activeBucket)) setRetryEpoch((epoch) => epoch + 1);
+      }),
+    [activeBucket, dispatch],
+  );
   useIdleTranscriptEviction({
     activeBucket,
     transcripts,
@@ -613,7 +646,10 @@ export function useTranscriptBuckets({
         ...pages,
         [bucket]: {
           engineId,
-          loadedBytes: maxBytes,
+          // A pending save / overlapping live update can return the in-memory
+          // window instead of the requested disk page. Do not spend its budget.
+          loadedBytes:
+            !page && persistedResult.value.readDeferred ? previous.loadedBytes : maxBytes,
           hasMore: (page?.hasMore ?? false) || persistedResult.value.hasEarlier,
           loading: false,
           failed: false,

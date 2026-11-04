@@ -1,3 +1,4 @@
+import { PagedText } from "../components/PagedText";
 import React, { useEffect, useState } from "react";
 import type { ExternalGitBlobRef } from "@cjhyy/code-shell-core";
 import type { FileContent } from "../../preload/types";
@@ -118,19 +119,19 @@ export function FilePreviewContent({
               </div>
             ) : (
               <div className="p-3 font-mono text-xs" data-file-version-code>
-                {version.text
-                  .replace(/\n$/, "")
-                  .split("\n")
-                  .map((line, i) => (
-                    <div key={i} className="flex">
+                <PagedText
+                  text={version.text}
+                  renderLine={(line, no) => (
+                    <div className="flex">
                       <span className="w-10 shrink-0 select-none pr-3 text-right text-muted-foreground">
-                        {i + 1}
+                        {no}
                       </span>
                       <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words">
                         {line || " "}
                       </pre>
                     </div>
-                  ))}
+                  )}
+                />
               </div>
             )}
           </div>

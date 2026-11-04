@@ -27,8 +27,8 @@ import {
 import {
   installPlugin,
   refreshMarketplace,
-  uninstallPlugin,
-  uninstallPluginByName,
+  uninstallPluginAsync,
+  uninstallPluginByNameAsync,
   updatePluginByName,
   checkPluginUpdate,
   type UpdateResult,
@@ -201,17 +201,17 @@ export interface UninstallPluginResult {
  * from the renderer after splitting the install key (see resolveUninstallTarget).
  * Throws on bad input so the IPC layer surfaces a clear error.
  */
-export function uninstallPluginEntry(
+export async function uninstallPluginEntry(
   pluginName: string,
   marketplaceName: string,
-): UninstallPluginResult {
+): Promise<UninstallPluginResult> {
   if (typeof pluginName !== "string" || !pluginName) {
     throw new Error("uninstallPluginEntry requires pluginName");
   }
   if (typeof marketplaceName !== "string" || !marketplaceName) {
     throw new Error("uninstallPluginEntry requires marketplaceName");
   }
-  const result = uninstallPlugin(pluginName, marketplaceName);
+  const result = await uninstallPluginAsync(pluginName, marketplaceName);
   reconcilePluginInstallJobs();
   return result;
 }
@@ -223,11 +223,11 @@ export function uninstallPluginEntry(
  * renderer derives from the install key (see resolveUninstallTarget).
  * Throws on bad input so the IPC layer surfaces a clear error.
  */
-export function uninstallLocalPluginEntry(name: string): void {
+export async function uninstallLocalPluginEntry(name: string): Promise<void> {
   if (typeof name !== "string" || !name) {
     throw new Error("uninstallLocalPluginEntry requires a plugin name");
   }
-  uninstallPluginByName(name);
+  await uninstallPluginByNameAsync(name);
 }
 
 type PluginUpdateCatalogEntry = Pick<

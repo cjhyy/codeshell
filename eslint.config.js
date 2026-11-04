@@ -15,6 +15,7 @@ const coreRoot = packageRoot("packages", "core");
 const workspacePackageRoots = [
   "link",
   "core",
+  "host",
   "coding",
   "arena",
   "pet",

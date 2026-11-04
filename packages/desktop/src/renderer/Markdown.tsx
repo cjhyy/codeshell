@@ -14,6 +14,7 @@
  * background.
  */
 
+import { PagedText, needsPagedMarkdown } from "./components/PagedText";
 import React, { memo, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -225,6 +226,7 @@ export const streamingMarkdownClassName = cn(
  */
 function MarkdownImpl({ text, cwd, sessionId, sessionMainRootId, rootStatus }: Props) {
   const localActions = useLocalRuntimeActions();
+  if (needsPagedMarkdown(text)) return <PagedText text={text} sourceNotice />;
   return (
     <div className={markdownBodyClassName}>
       <ReactMarkdown

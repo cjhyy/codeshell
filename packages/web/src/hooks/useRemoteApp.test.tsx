@@ -2904,6 +2904,61 @@ describe("useRemoteApp approval replay", () => {
     }
   });
 
+  test("Host-stamped deadlines survive a phone clock fifteen minutes ahead and reconnect", async () => {
+    setupBrowser();
+    const hostNow = Date.now();
+    let phoneNow = hostNow + 900_000;
+    const clock = spyOn(Date, "now").mockImplementation(() => phoneNow);
+    const hook = await renderHook(() => useRemoteApp());
+    const first = FakeWebSocket.instances[0]!;
+    const question = {
+      method: "agent/approvalRequest",
+      serverTime: hostNow,
+      params: {
+        sessionId: "s1",
+        requestId: "skewed",
+        expiresAt: hostNow + 600_000,
+        request: { toolName: "Read", args: {} },
+      },
+    };
+    try {
+      await act(async () => {
+        first.open();
+        first.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        first.message(question);
+        await flushMicrotasks();
+      });
+      const expected = phoneNow + 600_000;
+      expect(hook.result.current.approvals[0]?.expiresAt).toBe(expected);
+      await act(async () => {
+        first.close();
+        window.dispatchEvent(new Event("online"));
+        await flushMicrotasks();
+      });
+      phoneNow += 60_000;
+      const next = FakeWebSocket.instances.at(-1)!;
+      await act(async () => {
+        next.open();
+        next.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        next.message({ ...question, serverTime: hostNow + 60_000 });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals[0]?.expiresAt).toBe(expected);
+      await act(async () => {
+        hook.result.current.respondApproval("skewed", "approve");
+        await flushMicrotasks();
+      });
+      expect(
+        next.sent
+          .map((line) => JSON.parse(line))
+          .some((event) => event.type === "approval.respond"),
+      ).toBe(true);
+    } finally {
+      await hook.unmount();
+      clock.mockRestore();
+    }
+  });
+
   test("reconnecting never extends a confirmation deadline and expiration removes its response authority", async () => {
     setupBrowser();
     const hook = await renderHook(() => useRemoteApp());

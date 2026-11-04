@@ -103,7 +103,16 @@ function makeRehydratableEngineFactory(
       },
     } as unknown as Engine;
   };
-  return { engineFactory, runs, slices };
+  return {
+    engineFactory,
+    runs,
+    slices,
+    sessionMetadata: {
+      exists: (id: string) =>
+        typeof existsOnDisk === "function" ? existsOnDisk(id) : existsOnDisk,
+      readSessionMainRoot: () => undefined,
+    },
+  };
 }
 
 function enqueueShellExit(sid: string, agentId = "bg_abc123", exitCode = 0) {
@@ -448,10 +457,11 @@ describe("AgentServer — background shell completion wakes an idle session", ()
 
   it("does not rehydrate a closed session when background work finishes afterward", async () => {
     const sid = "bg-wake-closed-s1";
-    const { engineFactory, runs } = makeRehydratableEngineFactory(true, sid);
+    const { engineFactory, sessionMetadata, runs } = makeRehydratableEngineFactory(true, sid);
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory,
+      sessionMetadata,
     });
     const t = makeTransport();
     servers.push(new AgentServer({ transport: t.transport, chatManager }));
@@ -473,13 +483,14 @@ describe("AgentServer — background shell completion wakes an idle session", ()
 
   it("rehydrates an idle-evicted disk-backed session and wakes it with the pending notification", async () => {
     const sid = "bg-wake-rehydrate-s1";
-    const { engineFactory, runs, slices } = makeRehydratableEngineFactory(
+    const { engineFactory, sessionMetadata, runs, slices } = makeRehydratableEngineFactory(
       (sessionId) => sessionId === sid,
       sid,
     );
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory,
+      sessionMetadata,
       idleTtlMs: 0,
     });
     const t = makeTransport();
@@ -524,10 +535,11 @@ describe("AgentServer — background shell completion wakes an idle session", ()
   });
 
   it("does not rehydrate or drain when an evicted session is absent from disk", async () => {
-    const { engineFactory, runs } = makeRehydratableEngineFactory(false);
+    const { engineFactory, sessionMetadata, runs } = makeRehydratableEngineFactory(false);
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
       engineFactory,
+      sessionMetadata,
     });
     const t = makeTransport();
     servers.push(new AgentServer({ transport: t.transport, chatManager }));
@@ -547,13 +559,14 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     process.env.CODE_SHELL_HOME = home;
     try {
       new SessionManager().create("/tmp/project-from-state", "model-a", "provider-a", sid);
-      const { engineFactory, runs, slices } = makeRehydratableEngineFactory(
+      const { engineFactory, sessionMetadata, runs, slices } = makeRehydratableEngineFactory(
         (sessionId) => sessionId === sid,
         sid,
       );
       const chatManager = new ChatSessionManager({
         runtime: {} as never,
         engineFactory,
+        sessionMetadata,
       });
       const t = makeTransport();
       servers.push(new AgentServer({ transport: t.transport, chatManager }));
@@ -603,8 +616,12 @@ describe("AgentServer — background shell completion wakes an idle session", ()
       );
 
       notificationQueue.reset();
-      const { engineFactory, runs } = makeRehydratableEngineFactory(true, sid);
-      const chatManager = new ChatSessionManager({ runtime: {} as never, engineFactory });
+      const { engineFactory, sessionMetadata, runs } = makeRehydratableEngineFactory(true, sid);
+      const chatManager = new ChatSessionManager({
+        runtime: {} as never,
+        engineFactory,
+        sessionMetadata,
+      });
       const t = makeTransport();
       const afterRestart = new NotificationQueue();
       servers.push(

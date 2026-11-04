@@ -1,3 +1,4 @@
+import { checkedExternalUrl } from "./app-renderer-navigation.js";
 /**
  * Desktop-side services that don't belong in the agent worker:
  *   - git status / git diff (renderer needs these to render Diff inspector)
@@ -973,11 +974,8 @@ async function syntheticUntrackedDiff(cwd: string, file: string): Promise<string
 }
 
 export async function openExternal(url: string): Promise<void> {
-  // Only allow http(s) and file URLs to be opened externally.
-  if (!/^(https?:|file:)/i.test(url)) {
-    throw new Error(`Refused to open URL with unsupported scheme: ${url}`);
-  }
-  await shell.openExternal(url);
+  // Local files use the separately authorized open/reveal file IPCs.
+  await shell.openExternal(checkedExternalUrl(url));
 }
 
 /**

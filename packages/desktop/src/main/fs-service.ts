@@ -1,7 +1,7 @@
 // Filesystem reads for the file-browser panel. Mirrors Codex's fs RPC
 // (fs-read-directory / fs-read-file) but local-only: one directory level at a
 // time so the renderer can lazily expand a tree, plus a capped file reader.
-import { promises as fs } from "node:fs";
+import { promises as fs, constants } from "node:fs";
 import { isAbsolute, basename, dirname, join, normalize, resolve, sep } from "node:path";
 
 export interface FsEntry {
@@ -130,29 +130,49 @@ export async function readFile(root: string, path: string): Promise<FileContent>
   const requestedPath = path;
   const real = await resolveWithin(root, path);
   path = real;
-  let stat;
+  let handle: fs.FileHandle | undefined;
   try {
-    stat = await fs.stat(path);
+    // Pin the ordinary-file identity before opening; O_NONBLOCK prevents a
+    // replacement FIFO from consuming a libuv worker indefinitely.
+    const before = await fs.lstat(path);
+    if (!before.isFile()) throw new Error("workspace path is not a regular file");
+    handle = await fs.open(
+      path,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+    );
+    const stat = await handle.stat();
+    if (!stat.isFile() || before.dev !== stat.dev || before.ino !== stat.ino)
+      throw new Error("workspace file changed during read");
+    const verify = async () => {
+      if ((await resolveWithin(root, requestedPath)) !== real)
+        throw new Error("workspace file changed during read");
+      const current = await fs.lstat(real);
+      if (!current.isFile() || current.dev !== stat.dev || current.ino !== stat.ino)
+        throw new Error("workspace file changed during read");
+    };
+    await verify();
+    if (stat.size > MAX_FILE_BYTES)
+      return { path, text: null, reason: "too-large", size: stat.size };
+    // Fixed allocation also bounds growth after fstat. Read only through the
+    // authorized descriptor, never reopen the pathname after validation.
+    const buffer = Buffer.alloc(MAX_FILE_BYTES + 1);
+    let offset = 0;
+    while (offset < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    await verify();
+    if (offset > MAX_FILE_BYTES) return { path, text: null, reason: "too-large", size: offset };
+    const buf = buffer.subarray(0, offset);
+    if (buf.subarray(0, 8192).includes(0))
+      return { path, text: null, reason: "binary", size: offset };
+    return { path, text: buf.toString("utf8"), size: offset };
   } catch (error) {
     if (["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? ""))
       return { path: requestedPath, text: null, reason: "missing", size: 0 };
     throw error;
+  } finally {
+    await handle?.close();
   }
-  if (stat.size > MAX_FILE_BYTES) {
-    return { path, text: null, reason: "too-large", size: stat.size };
-  }
-  let buf: Buffer;
-  try {
-    buf = await fs.readFile(path);
-  } catch (error) {
-    if (["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? ""))
-      return { path: requestedPath, text: null, reason: "missing", size: 0 };
-    throw error;
-  }
-  // Heuristic binary sniff: a NUL byte in the first 8 KB.
-  const sniff = buf.subarray(0, 8192);
-  if (sniff.includes(0)) {
-    return { path, text: null, reason: "binary", size: stat.size };
-  }
-  return { path, text: buf.toString("utf8"), size: stat.size };
 }

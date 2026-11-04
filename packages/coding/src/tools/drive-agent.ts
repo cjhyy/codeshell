@@ -194,6 +194,8 @@ interface WorktreeLifecycleResult {
 
 interface ForegroundDriveLease {
   leaseId: string;
+  cwd: string;
+  writable: boolean;
   effectiveWorkspaceRoot: string;
   workspaceRoot: string;
   label: string;
@@ -288,7 +290,10 @@ function hasRunningDriveWriter(workspaceCwd: string, workspaceRoot: string): boo
     return true;
   }
   for (const lease of foregroundDriveLeases.values()) {
-    if (lease.effectiveWorkspaceRoot === workspaceRoot || lease.workspaceRoot === workspaceRoot) {
+    if (
+      lease.writable &&
+      (lease.effectiveWorkspaceRoot === workspaceRoot || lease.workspaceRoot === workspaceRoot)
+    ) {
       return true;
     }
   }
@@ -675,8 +680,12 @@ async function recordSuccessfulSession(
           worktreeBaseRef: metadata.worktree.session.baseRef,
         }
       : metadata.worktree && branchPreserved
-        ? { worktreeBranch: metadata.worktree.session.worktreeBranch }
-        : {};
+        ? {
+            worktreePath: undefined,
+            worktreeBranch: metadata.worktree.session.worktreeBranch,
+            worktreeBaseRef: metadata.worktree.session.baseRef,
+          }
+        : { worktreePath: undefined, worktreeBranch: undefined, worktreeBaseRef: undefined };
   try {
     await store.record({
       cli,
@@ -708,7 +717,7 @@ function duplicateCwdError(
     .listRunningByCwd(effectiveWorkspaceCwd)
     .filter(isDriveAgentJob);
   const foreground = [...foregroundDriveLeases.values()].filter(
-    (lease) => lease.effectiveWorkspaceRoot === effectiveWorkspaceRoot,
+    (lease) => lease.writable && lease.effectiveWorkspaceRoot === effectiveWorkspaceRoot,
   );
   if (running.length === 0 && foreground.length === 0) return undefined;
   const jobs = [
@@ -724,23 +733,24 @@ function duplicateCwdError(
 }
 
 function acquireForegroundDriveLease(params: {
+  cwd: string;
   effectiveWorkspaceCwd: string;
   effectiveWorkspaceRoot: string;
   workspaceRoot: string;
   label: string;
   writable: boolean;
-}): { release: () => void } | { error: string } {
+}): { leaseId: string; release: () => void } | { error: string } {
   const conflict = duplicateCwdError(
     params.effectiveWorkspaceCwd,
     params.effectiveWorkspaceRoot,
     params.writable,
   );
   if (conflict) return { error: conflict };
-  if (!params.writable) return { release: () => undefined };
   const leaseId = newDriveJobId();
   const lease: ForegroundDriveLease = { leaseId, ...params };
   foregroundDriveLeases.set(leaseId, lease);
   return {
+    leaseId,
     release: () => {
       if (foregroundDriveLeases.get(leaseId) === lease) foregroundDriveLeases.delete(leaseId);
     },
@@ -1344,6 +1354,7 @@ export function makeDriveAgentTool(
         .join("\n");
     }
     const lease = acquireForegroundDriveLease({
+      cwd,
       effectiveWorkspaceCwd,
       effectiveWorkspaceRoot,
       workspaceRoot,
@@ -1458,6 +1469,46 @@ export function makeDriveAgentTool(
     }
     try {
       const r = result.kind === "completed" ? result.result : await run;
+      // Capture while the isolated checkout still exists, just as background
+      // completion does. The lease stays held until capture and cleanup finish.
+      try {
+        const changedFiles = normalizeChangedFiles(
+          cwd,
+          r.sessionId
+            ? (options.readChangedFiles ?? readExternalChangedFiles)(cli, cwd, r.sessionId)
+            : [],
+        );
+        if (changedFiles.length) {
+          let provenance;
+          try {
+            provenance = await (options.probeChangedFiles ?? probeExternalChangedFiles)(
+              cwd,
+              changedFiles,
+              { cli },
+            );
+          } catch {
+            /* Observation failure must not skip finalization. */
+          }
+          ctx?.recordExternalFileChanges?.({
+            jobId: lease.leaseId,
+            description: label,
+            cli,
+            cwd,
+            status: foregroundAbort.signal.aborted
+              ? "cancelled"
+              : r.isError
+                ? "failed"
+                : "completed",
+            changedFiles,
+            ...(provenance ? { provenance } : {}),
+            ...(ctx?.originClientMessageId
+              ? { originClientMessageId: ctx.originClientMessageId }
+              : {}),
+          });
+        }
+      } catch (error) {
+        logger.warn("drive_agent.foreground_capture_failed", { error: String(error) });
+      }
       const lifecycle = safeFinalizeDriveWorktree(managedWorktree);
       await recordSuccessfulSession(sessionStore, cli, cwd, r, {
         codeShellSessionId: ctx?.sessionId,
@@ -1681,6 +1732,14 @@ function cleanupDriveAgentWorktree(jobId: string | undefined, requested: unknown
   if (!action) return "Error: cleanup must be keep, detach, or discard.";
   if (!existsSync(job.worktreePath)) {
     return `Worktree directory is already absent: ${job.worktreePath} (lifecycle ${job.worktreeLifecycle ?? "unknown"}).`;
+  }
+  const foreground = [...foregroundDriveLeases.values()].filter(
+    (lease) =>
+      isPathInside(normalizeCwdPath(job.worktreePath!), normalizeCwdPath(lease.cwd)) ||
+      lease.effectiveWorkspaceRoot === normalizeCwdPath(job.worktreePath!),
+  );
+  if (foreground.length) {
+    return `Error: worktree ${job.worktreePath} is in use by foreground DriveAgent run(s): ${foreground.map((lease) => lease.leaseId).join(", ")}.`;
   }
   const active = backgroundJobRegistry
     .listRunningByCwd(job.worktreePath)

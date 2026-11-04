@@ -18,13 +18,61 @@ export interface ChatContext {
   reply(message: OutgoingMessage): Promise<void>;
 }
 
-export type ChatMiddleware = (context: ChatContext, next: () => Promise<void>) => Promise<void>;
+export type ChatMiddleware = ((
+  context: ChatContext,
+  next: () => Promise<void>,
+) => Promise<void>) & {
+  /** Side-effect-free ingress check, before attachments are downloaded or persisted. */
+  acceptsMessage?: (message: ChannelMessage, adapter: ChannelAdapter) => boolean;
+};
+
+/** Serialize routing decisions, releasing the lane before downstream model work. */
+export function createOrderedChatRouting(...routing: ChatMiddleware[]): ChatMiddleware {
+  const lanes = new WeakMap<ChannelAdapter, Map<string, Promise<void>>>();
+  return async (context, next) => {
+    let conversations = lanes.get(context.adapter);
+    if (!conversations) lanes.set(context.adapter, (conversations = new Map()));
+    const key = JSON.stringify([context.message.target, context.message.threadId ?? ""]);
+    const previous = conversations.get(key) ?? Promise.resolve();
+    let resolve!: () => void;
+    const current = new Promise<void>((done) => {
+      resolve = done;
+    });
+    conversations.set(key, current);
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      resolve();
+      if (conversations.get(key) === current) conversations.delete(key);
+    };
+    await previous;
+    let index = -1;
+    const dispatch = async (position: number): Promise<void> => {
+      if (position <= index)
+        throw new Error("Chat routing middleware called next() more than once");
+      index = position;
+      const middleware = routing[position];
+      if (middleware) await middleware(context, () => dispatch(position + 1));
+      else {
+        // Mimi must accept same-conversation followers while its turn runs.
+        release();
+        await next();
+      }
+    };
+    try {
+      await dispatch(0);
+    } finally {
+      release();
+    }
+  };
+}
 
 export interface ChatGatewayOptions {
   adapters: ChannelAdapter[];
   webhook?: Partial<WebhookIngressConfig>;
   delivery?: Partial<DeliveryQueueConfig>;
-  adapterRestart?: Partial<{ baseMs: number; maxMs: number }>;
+  adapterRestart?: Partial<{ baseMs: number; maxMs: number; healthyResetMs: number }>;
   onError?: (error: unknown, message: ChannelMessage) => void;
   onAdapterState?: (state: AdapterRuntimeState) => void;
 }
@@ -69,7 +117,7 @@ export class ChatGateway {
   private readonly adapters: ChannelAdapter[];
   private readonly webhook: WebhookIngressConfig;
   private readonly delivery: DeliveryQueueConfig;
-  private readonly adapterRestart: { baseMs: number; maxMs: number };
+  private readonly adapterRestart: { baseMs: number; maxMs: number; healthyResetMs: number };
   private readonly onError: NonNullable<ChatGatewayOptions["onError"]>;
   private readonly onAdapterState?: ChatGatewayOptions["onAdapterState"];
   private readonly adapterStates = new Map<string, AdapterRuntimeState>();
@@ -83,6 +131,7 @@ export class ChatGateway {
     this.adapterRestart = {
       baseMs: options.adapterRestart?.baseMs ?? 1_000,
       maxMs: options.adapterRestart?.maxMs ?? 30_000,
+      healthyResetMs: options.adapterRestart?.healthyResetMs ?? 30_000,
     };
     this.onAdapterState = options.onAdapterState;
     this.onError =
@@ -145,8 +194,17 @@ export class ChatGateway {
 
     const runners: Promise<void>[] = [];
     for (const [adapterId, adapter] of adapterById) {
-      const handler = (message: ChannelMessage) =>
-        queue.enqueue(adapterId, message).then(() => undefined);
+      const handler = async (message: ChannelMessage) => {
+        if (message.channel !== adapter.channel)
+          throw new Error("Adapter message channel mismatch");
+        if (
+          this.middleware.some(
+            (middleware) => middleware.acceptsMessage?.(message, adapter) === false,
+          )
+        )
+          return;
+        await queue.enqueue(adapterId, message);
+      };
       if (isWebhookChannelAdapter(adapter)) webhooks.push({ adapter, handler });
       runners.push(this.superviseAdapter(adapterId, adapter, handler, ownedAbort.signal));
     }
@@ -178,7 +236,12 @@ export class ChatGateway {
   healthSnapshot(): Record<string, unknown> {
     const adapters = [...this.adapterStates.values()];
     return {
-      status: adapters.every(({ state }) => state === "running") ? "ready" : "degraded",
+      status:
+        this.startedAt !== undefined &&
+        adapters.length === this.adapters.length &&
+        adapters.every(({ state }) => state === "running")
+          ? "ready"
+          : "degraded",
       startedAt: this.startedAt,
       adapters,
       inbox: this.queue?.status() ?? { pending: 0, inFlight: 0, delayed: 0 },
@@ -194,13 +257,52 @@ export class ChatGateway {
     let attempts = 0;
     while (!signal.aborted) {
       this.setAdapterState({ id, channel: adapter.channel, state: "starting", attempts });
+      let active = true;
+      let readyAt: number | undefined;
+      const resetAfterHealthyRun = () => {
+        if (readyAt !== undefined && Date.now() - readyAt >= this.adapterRestart.healthyResetMs)
+          attempts = 0;
+      };
+      const ready = () => {
+        if (!active || signal.aborted) return;
+        readyAt ??= Date.now();
+        resetAfterHealthyRun();
+        if (
+          this.adapterStates.get(id)?.state !== "running" ||
+          this.adapterStates.get(id)?.attempts !== attempts
+        ) {
+          this.setAdapterState({ id, channel: adapter.channel, state: "running", attempts });
+        }
+      };
       try {
-        this.setAdapterState({ id, channel: adapter.channel, state: "running", attempts });
-        await adapter.run(handler, signal);
+        await adapter.run(
+          async (message) => {
+            ready();
+            await handler(message);
+          },
+          signal,
+          {
+            ready,
+            unavailable: (error) => {
+              if (!active || signal.aborted) return;
+              resetAfterHealthyRun();
+              readyAt = undefined;
+              this.setAdapterState({
+                id,
+                channel: adapter.channel,
+                state: "starting",
+                attempts,
+                ...(error ? { error: error instanceof Error ? error.message : String(error) } : {}),
+              });
+            },
+          },
+        );
         if (signal.aborted) break;
         throw new Error("adapter exited unexpectedly");
       } catch (error) {
+        active = false;
         if (signal.aborted) break;
+        resetAfterHealthyRun();
         attempts += 1;
         const delay = Math.min(
           this.adapterRestart.maxMs,
@@ -214,6 +316,8 @@ export class ChatGateway {
           error: error instanceof Error ? error.message : String(error),
         });
         await abortableDelay(delay, signal);
+      } finally {
+        active = false;
       }
     }
     this.setAdapterState({ id, channel: adapter.channel, state: "stopped", attempts });
@@ -307,12 +411,17 @@ export function createAllowlistMiddleware(
       },
     ]),
   );
-  return async ({ message }, next) => {
+  const acceptsMessage = (message: ChannelMessage): boolean => {
     const rule = normalized.get(message.channel);
-    if (!rule?.targets.has(message.target)) return;
-    if (rule.users && rule.users.size > 0 && !rule.users.has(message.senderId)) return;
-    await next();
+    return Boolean(
+      rule?.targets.has(message.target) && (!rule.users?.size || rule.users.has(message.senderId)),
+    );
   };
+  const middleware: ChatMiddleware = async ({ message }, next) => {
+    if (acceptsMessage(message)) await next();
+  };
+  middleware.acceptsMessage = acceptsMessage;
+  return middleware;
 }
 
 /** Fixed-window per-sender limiter; rejected messages never reach expensive middleware. */

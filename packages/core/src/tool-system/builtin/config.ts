@@ -3,7 +3,7 @@
  */
 
 import type { ToolDefinition } from "../../types.js";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { SettingsManager, setDottedSetting } from "../../settings/manager.js";
 import type { ToolContext } from "../context.js";
@@ -74,17 +74,32 @@ async function runConfigTool(
   const configPath = join(cwd, ".code-shell", "settings.json");
 
   if (action === "read") {
-    const blocked = await enforcePathPolicyWithApproval(configPath, "read", ctx);
+    // Config's independent approval covers its fixed settings resource. Keep
+    // ordinary Read gated on the credential-bearing file and use the strict
+    // settings reader here so that a link cannot redirect this authority.
+    const blocked = await enforcePathPolicyWithApproval(join(cwd, ".code-shell"), "read", ctx);
     if (blocked) return blocked;
     if (!existsSync(configPath)) {
       return "No project settings found. Use /init to create one.";
     }
-    const content = readFileSync(configPath, "utf-8");
-    return content;
+    try {
+      const raw = deps.makeSettingsManager(cwd, "project").getRawForScope("project", cwd, {
+        strict: true,
+      });
+      return JSON.stringify(raw, null, 2);
+    } catch (error) {
+      return `Error: ${error instanceof Error ? error.message : String(error)}`;
+    }
   }
 
   if (action === "write") {
-    const blocked = await enforcePathPolicyWithApproval(configPath, "write", ctx);
+    // Config already has its own tool approval. It is a structured, single-key
+    // mutation through SettingsManager, not an arbitrary file write: authorize
+    // its fixed project directory without granting Write/Edit access to the
+    // credential-bearing settings file. SettingsManager rejects linked state
+    // directories/files and validates the value inside its locked transaction.
+    if (ctx?.planMode) return "Error: Plan mode does not allow settings writes.";
+    const blocked = await enforcePathPolicyWithApproval(join(cwd, ".code-shell"), "write", ctx);
     if (blocked) return blocked;
     const key = args.key as string;
     const value = args.value;
@@ -103,6 +118,7 @@ async function runConfigTool(
     }
 
     await deps.beforeWrite?.();
+    if (ctx?.signal?.aborted) return "Error: settings write cancelled — run stopped";
 
     // Never resurrect a deleted project root: a recursive mkdir of
     // <cwd>/.code-shell would recreate `cwd` itself as an empty shell when the

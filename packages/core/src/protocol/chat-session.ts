@@ -433,8 +433,7 @@ export class ChatSession {
    */
   requestModelSwitch(key: string): ModelEntry {
     if (this.isBusy()) {
-      const pool = this.engine.getModelPool();
-      const entry = pool.get(key);
+      const entry = this.engine.resolveModelEntry(key);
       if (!entry) throw new Error(`Model not found: ${key}`);
       this.pendingModel = key;
       return entry;

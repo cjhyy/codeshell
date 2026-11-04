@@ -94,3 +94,48 @@ describe("foldAgentGroups", () => {
     expect(foldAgentGroups([])).toEqual([]);
   });
 });
+
+test("unrelated sends retain settled turn identities, while an immutable child update propagates", () => {
+  const first = agent("first", { done: true });
+  const second = agent("second", { done: true });
+  const turn = {
+    kind: "turn_process_group",
+    id: "turn",
+    items: [first, second],
+    isLive: false,
+    stopped: false,
+    completedCleanly: true,
+    durationMs: 10,
+    firstToolStartedAt: 1,
+    toolCount: 0,
+  } satisfies TurnProcessGroup;
+  const before = foldAgentGroups([turn]);
+  const sent = foldAgentGroups([turn, { kind: "user", id: "next", text: "next turn" }]);
+  expect(sent[0]).toBe(before[0]);
+  const changed = foldAgentGroups([
+    { ...turn, items: [first, { ...second, textBuffer: "late result" }] },
+  ]);
+  expect(changed[0]).not.toBe(before[0]);
+  expect((changed[0] as any).items[0].agents[1].textBuffer).toBe("late result");
+});
+
+test("turns without grouped agents and unchanged top-level fanouts keep their identities", () => {
+  const first = agent("first"),
+    second = agent("second");
+  const before = foldAgentGroups([first, second]);
+  expect(foldAgentGroups([first, second, { kind: "user", id: "next", text: "hi" }])[0]).toBe(
+    before[0],
+  );
+  const turn = {
+    kind: "turn_process_group",
+    id: "turn",
+    items: [{ kind: "tool", id: "t", toolName: "Read", args: "{}", status: "succeeded" }],
+    isLive: false,
+    stopped: false,
+    completedCleanly: true,
+    durationMs: 1,
+    firstToolStartedAt: 1,
+    toolCount: 1,
+  } satisfies TurnProcessGroup;
+  expect(foldAgentGroups([turn])[0]).toBe(turn);
+});

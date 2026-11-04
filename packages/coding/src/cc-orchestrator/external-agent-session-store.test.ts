@@ -66,6 +66,44 @@ describe("ExternalAgentSessionStore", () => {
     }
   });
 
+  it("clears explicitly retired worktree fields in optimistic and persisted bindings", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "external-agent-clear-"));
+    try {
+      const file = join(dir, "sessions.json");
+      const store = new ExternalAgentSessionStore(file);
+      await store.record({
+        cli: "claude",
+        sessionId: "S",
+        cwd: "/repo/worktree",
+        workspaceRoot: "/repo",
+        worktreePath: "/repo/worktree",
+        worktreeBranch: "old",
+        worktreeBaseRef: "old-base",
+        isolation: "worktree",
+      });
+      const update = store.record({
+        cli: "claude",
+        sessionId: "S",
+        cwd: "/repo",
+        workspaceRoot: undefined,
+        worktreePath: undefined,
+        worktreeBranch: undefined,
+        worktreeBaseRef: undefined,
+        isolation: "current",
+      });
+      expect(store.get("claude", "S")?.worktreePath).toBeUndefined();
+      await update;
+      const restored = new ExternalAgentSessionStore(file).get("claude", "S");
+      expect(restored?.workspaceRoot).toBeUndefined();
+      expect(restored?.worktreePath).toBeUndefined();
+      expect(restored?.worktreeBranch).toBeUndefined();
+      expect(restored?.worktreeBaseRef).toBeUndefined();
+      expect(restored?.cwd).toBe("/repo");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("updates an existing binding and preserves optional worktree fields", async () => {
     const dir = mkdtempSync(join(tmpdir(), "external-agent-store-"));
     try {

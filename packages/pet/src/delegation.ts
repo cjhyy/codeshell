@@ -53,12 +53,7 @@ export interface PetSessionContinuationEvidence {
 
 export interface PetWorkSessionDecision {
   mode: "new" | "reuse";
-  reason:
-    | "new_work"
-    | "grounded_continuation"
-    | "missing_continuation_evidence"
-    | "invalid_continuation_evidence"
-    | "unmatched_prior_thread";
+  reason: "new_work" | "grounded_continuation";
   requestedSessionId?: string;
   reusableSessionId?: string;
 }

@@ -10,6 +10,8 @@
  */
 
 import { createRequire } from "node:module";
+import { realpathSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 
 interface LockRetryOptions {
   retries?: number;
@@ -69,16 +71,87 @@ function getLockfile(): LockfileApi {
   return _lockfile;
 }
 
-export function lock(file: string, options?: LockOptions): Promise<() => Promise<void>> {
-  return getLockfile().lock(file, options);
+// Include pending async acquisition: its filesystem callback may have acquired
+// the lease before its Promise continuation gets a chance to register ownership.
+const localLocks = new Map<string, number>();
+function lockKey(file: string, options?: LockfilePathOptions): string {
+  const path = options?.lockfilePath
+    ? resolve(options.lockfilePath)
+    : `${options?.realpath === false ? resolve(file) : realpathSync(file)}.lock`;
+  // realpath:false preserves the target's leaf identity, but parent aliases
+  // (/var versus /private/var on macOS) still address the very same lease.
+  try {
+    return join(realpathSync(dirname(path)), basename(path));
+  } catch {
+    return path;
+  }
+}
+function remember(key: string): () => void {
+  localLocks.set(key, (localLocks.get(key) ?? 0) + 1);
+  let forgotten = false;
+  return () => {
+    if (forgotten) return;
+    forgotten = true;
+    const count = localLocks.get(key)! - 1;
+    if (count) localLocks.set(key, count);
+    else localLocks.delete(key);
+  };
+}
+
+export async function lock(file: string, options?: LockOptions): Promise<() => Promise<void>> {
+  const forget = remember(lockKey(file, options));
+  try {
+    const release = await getLockfile().lock(file, options);
+    return async () => {
+      await release();
+      forget();
+    };
+  } catch (error) {
+    forget();
+    throw error;
+  }
 }
 
 export function lockSync(file: string, options?: LockOptions): () => void {
-  return getLockfile().lockSync(file, options);
+  const key = lockKey(file, options);
+  const release = getLockfile().lockSync(file, options);
+  const forget = remember(key);
+  return () => {
+    release();
+    forget();
+  };
 }
 
-export function unlock(file: string, options?: UnlockOptions): Promise<void> {
-  return getLockfile().unlock(file, options);
+export function isLockHeldInProcess(file: string, options?: LockfilePathOptions): boolean {
+  return localLocks.has(lockKey(file, options));
+}
+
+/** Short synchronous CAS holders in another process may finish between attempts.
+ * Never wait for this process: its async holder needs our event loop to release. */
+export function lockSyncWithBoundedRetry(file: string, options?: LockOptions): () => void {
+  const key = lockKey(file, options);
+  const delays = [5, 10, 20, 40];
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return lockSync(file, options);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      const delay = delays[attempt];
+      if ((code !== "ELOCKED" && code !== "EEXIST") || delay === undefined || localLocks.has(key))
+        throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay);
+    }
+  }
+}
+
+export async function unlock(file: string, options?: UnlockOptions): Promise<void> {
+  const key = lockKey(file, options);
+  await getLockfile().unlock(file, options);
+  const count = localLocks.get(key);
+  if (count !== undefined) {
+    if (count > 1) localLocks.set(key, count - 1);
+    else localLocks.delete(key);
+  }
 }
 
 export function check(file: string, options?: CheckOptions): Promise<boolean> {

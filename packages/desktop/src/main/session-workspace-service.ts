@@ -173,7 +173,7 @@ function projects(): ProjectStore {
 }
 
 function workspaceOwners(sm: SessionManager): WorktreeWorkspaceOwner[] {
-  return sm.list(10_000).map((state) => ({
+  return sm.list(10_000, { includePreview: false }).map((state) => ({
     sessionId: state.sessionId,
     workspace: state.workspace ?? { root: state.cwd, kind: "main" },
   }));

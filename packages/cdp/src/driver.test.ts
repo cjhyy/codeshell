@@ -1002,3 +1002,13 @@ describe("scroll NaN amount guard", () => {
     expect(wheel!.params.deltaY).toBe(300);
   });
 });
+
+test("waitForLoad deadline includes a CDP sender that never responds", async () => {
+  const d = new CdpActionsDriver(
+    () => new Promise(() => {}),
+    () => ({ url: "about:blank" }),
+  );
+  const start = performance.now();
+  expect(await d.waitForLoad(30)).toEqual({ ok: true, detail: "load wait timed out (proceeding)" });
+  expect(performance.now() - start).toBeLessThan(500);
+});

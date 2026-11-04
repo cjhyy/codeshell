@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { delegateWorkToolDef } from "./delegate-work.js";
 import { normalizePetWorkDelegation, type PetWorkDelegation } from "./delegation.js";
 import { PET_BEHAVIOR_PROFILE, type PetRunScopedServices } from "./profile.js";
 
@@ -138,4 +139,12 @@ describe("Pet work continuation gate", () => {
     });
     expect(reported.workDelegation).toEqual(CONTINUATION);
   });
+});
+
+test("DelegateWork schema tells callers that invalid reuse is rejected", () => {
+  const schema = delegateWorkToolDef.inputSchema as any;
+  expect(schema.properties.session_continuation.description).toContain(
+    "without grounded evidence is rejected",
+  );
+  expect(schema.properties.session_continuation.description).not.toContain("makes the host create");
 });

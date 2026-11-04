@@ -56,7 +56,12 @@ export function registerSessionCatalogIpc(
     flushRenderers: async () => {
       await Promise.all(
         windows()
-          .filter((window) => !window.isDestroyed())
+          .filter(
+            (window) =>
+              !window.isDestroyed() &&
+              !window.webContents.isDestroyed() &&
+              !window.webContents.isCrashed?.(),
+          )
           .map(
             (window) =>
               new Promise<void>((resolve, reject) => {
@@ -81,6 +86,9 @@ export function registerSessionCatalogIpc(
     },
     flush: async () => {
       await Promise.all([catalog.flush(), transcripts.flush()]);
+    },
+    close: async () => {
+      await Promise.all([catalog.flush(), transcripts.close()]);
     },
     dispose: () => {
       unsubscribe();

@@ -4,7 +4,56 @@ import { getMergedCatalog } from "../model-catalog/index.js";
 import { resolveInstance } from "../model-catalog/resolve.js";
 import { resolveActiveWorkspaceProfileSelection } from "../profile/resolve.js";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
-import { ModelPool } from "../llm/model-pool.js";
+import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
+import { ConfigError } from "../exceptions.js";
+
+/** Register catalog-backed text connections without selecting a shared pool entry. */
+export function registerConfiguredTextModels(
+  pool: ModelPool,
+  settings: ReturnType<SettingsManager["get"]>,
+): boolean {
+  // Unified model catalog (统一模型接入方案 §6): register text
+  // connections from settings.modelConnections[] into the pool — the
+  // catalog-driven instance store is the sole source of model selection.
+  // A connection's instance id becomes its pool key. See
+  // docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md.
+  const connections = (settings as { modelConnections?: unknown[] }).modelConnections;
+  if (Array.isArray(connections) && connections.length) {
+    const catalog = getMergedCatalog();
+    const credentials = (settings as { credentials?: unknown[] }).credentials;
+    for (const entry of modelEntriesFromConnections(
+      connections as never[],
+      (Array.isArray(credentials) ? credentials : []) as never[],
+      catalog,
+    )) {
+      pool.register(entry);
+    }
+  }
+  return Array.isArray(connections) && connections.length > 0;
+}
+
+/** Resolve a selection using this workspace's settings, never a foreign pool's credentials. */
+export function resolveWorkspaceModelEntry(
+  key: string,
+  pool: ModelPool,
+  manager: SettingsManager,
+): ModelEntry | undefined {
+  const pooled = pool.get(key);
+  manager.invalidate();
+  const settings = manager.get();
+  const connections = (settings.modelConnections ?? []).filter((item) => item.id === key);
+  if (!pooled?.configuredConnectionId && connections.length === 0) return pooled;
+  if (connections.length !== 1 || connections[0].tag !== "text") return undefined;
+  const entry = modelEntriesFromConnections(
+    connections,
+    settings.credentials ?? [],
+    getMergedCatalog(),
+  )[0];
+  if (!entry || (entry.needsKey !== false && !entry.apiKey?.trim()))
+    throw new ConfigError(`Selected model connection "${key}" is incomplete`);
+  if (entry.needsKey === false && !entry.apiKey?.trim()) entry.apiKey = "codeshell-keyless";
+  return entry;
+}
 
 /** Internal host-to-engine consistency proof; never substitutes for workspace authorization. */
 export interface ConfiguredTextModelIntent {

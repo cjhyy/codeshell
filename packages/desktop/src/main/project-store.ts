@@ -150,6 +150,7 @@ export class ProjectStore {
   private readonly now: () => number;
   private readonly foldProjectRoot: (cwd: string) => string;
   private initialized = false;
+  private readonly migratingRoots = new Map<string, number>();
   private readonly listeners = new Set<(projects: LocalProject[]) => void>();
 
   constructor(options: ProjectStoreOptions = {}) {
@@ -323,6 +324,9 @@ export class ProjectStore {
     }
     const project = this.mutate((registry) => {
       const target = requireLiveProject(registry, projectId);
+      if (this.migratingRoots.has(`${projectId}\0${rootId}`)) {
+        throw new Error("folder is the target of an in-progress Session migration");
+      }
       if (target.roots.length === 1) throw new Error("a project must retain at least one root");
       if (target.primaryRootId === rootId) throw new Error("cannot remove the primary root");
       const index = target.roots.findIndex((root) => root.id === rootId);
@@ -352,124 +356,141 @@ export class ProjectStore {
     if (!binding?.projectId || !binding.mainRootId) {
       throw new Error("Session is not bound to a project root");
     }
-    const project = await this.requireLive(binding.projectId);
+    // Validate and reserve in one synchronous segment so a queued root removal
+    // cannot invalidate a snapshot returned across an await.
+    this.ensureInitialized();
+    const project = requireLiveProject(readRegistryFile(this.file), binding.projectId);
     const target = project.roots.find((root) => root.id === targetRootId);
     if (!target) throw new Error("migration target root not found in the same project");
     requireMountedProjectRoot(target);
 
-    let from = state.workspace ?? ({ root: state.cwd, kind: "main" } as const);
-    const workspace: SessionWorkspace = { root: target.path, kind: "main" };
-    const commit = {
-      sessionId,
-      projectId: project.id,
-      mainRootId: target.id,
-      mainRoot: target.path,
-      // A repair moves the Session off a folder that may be missing; that
-      // folder must not have to exist for the repair to proceed.
-      workspaceContext: workspaceContextFor(project, target, target.path, {
-        omitMissingSecondaries: true,
-      }),
-    };
+    const reservation = `${project.id}\0${target.id}`;
+    this.migratingRoots.set(reservation, (this.migratingRoots.get(reservation) ?? 0) + 1);
+    try {
+      let from = state.workspace ?? ({ root: state.cwd, kind: "main" } as const);
+      const workspace: SessionWorkspace = { root: target.path, kind: "main" };
+      const commit = {
+        sessionId,
+        projectId: project.id,
+        mainRootId: target.id,
+        mainRoot: target.path,
+        // A repair moves the Session off a folder that may be missing; that
+        // folder must not have to exist for the repair to proceed.
+        workspaceContext: workspaceContextFor(project, target, target.path, {
+          omitMissingSecondaries: true,
+        }),
+      };
 
-    if (options.owner) {
-      let ownership: MigrateSessionMainRootResult;
-      try {
-        ownership = await options.owner.migrate(commit);
-      } catch (error) {
-        // A worker response can be lost after its atomic rename. Re-read the
-        // commit point: a fully matching state is success and can safely finish
-        // the recoverable index/handoff projections; anything else is failure.
-        if (!sessionRootMigrationMatches(this.sessionManager.readSessionState(sessionId), commit)) {
-          throw error;
+      if (options.owner) {
+        let ownership: MigrateSessionMainRootResult;
+        try {
+          ownership = await options.owner.migrate(commit);
+        } catch (error) {
+          // A worker response can be lost after its atomic rename. Re-read the
+          // commit point: a fully matching state is success and can safely finish
+          // the recoverable index/handoff projections; anything else is failure.
+          if (
+            !sessionRootMigrationMatches(this.sessionManager.readSessionState(sessionId), commit)
+          ) {
+            throw error;
+          }
+          ownership = { status: "migrated", workspace };
         }
-        ownership = { status: "migrated", workspace };
-      }
 
-      if (ownership.status === "failed") {
-        throw new Error(ownership.error || "live Session owner failed the root migration");
-      }
-      if (ownership.status === "migrated") {
-        if (!sessionRootMigrationMatches(this.sessionManager.readSessionState(sessionId), commit)) {
-          throw new Error("live Session owner did not commit the root migration");
+        if (ownership.status === "failed") {
+          throw new Error(ownership.error || "live Session owner failed the root migration");
+        }
+        if (ownership.status === "migrated") {
+          if (
+            !sessionRootMigrationMatches(this.sessionManager.readSessionState(sessionId), commit)
+          ) {
+            throw new Error("live Session owner did not commit the root migration");
+          }
+        } else {
+          if (!ownership.ownershipToken) {
+            throw new Error("worker returned an invalid non-resident migration claim");
+          }
+          try {
+            // `not-resident` is an authorization, not an assumption. Re-read all
+            // durable authority and root availability after acquiring the worker
+            // fence, then commit only the exact revision that was validated.
+            const durable = this.sessionManager.readSessionState(sessionId);
+            if (!durable) throw new Error(`unknown or corrupt Session: ${sessionId}`);
+            if (
+              durable.project?.projectId !== binding.projectId ||
+              durable.project.mainRootId !== binding.mainRootId
+            ) {
+              throw new Error("Session root authority changed during migration");
+            }
+            const durableProject = await this.requireLive(binding.projectId);
+            const durableTarget = durableProject.roots.find((root) => root.id === targetRootId);
+            if (
+              !durableTarget ||
+              canonicalKey(durableTarget.path) !== canonicalKey(commit.mainRoot)
+            ) {
+              throw new Error("migration target root changed during migration");
+            }
+            requireMountedProjectRoot(durableTarget);
+            from = durable.workspace ?? ({ root: durable.cwd, kind: "main" } as const);
+            this.sessionManager.migrateSessionMainRootIfRevision(
+              sessionId,
+              { projectId: durableProject.id, mainRootId: durableTarget.id },
+              durableTarget.path,
+              durable.stateRevision,
+            );
+          } finally {
+            try {
+              await options.owner.complete({
+                sessionId,
+                ownershipToken: ownership.ownershipToken,
+              });
+            } catch (error) {
+              // state.json remains the commit point. A lost release response must
+              // not skip deterministic index/handoff repair. The matching Main
+              // fence is released in AgentBridge's finally path; a worker-only
+              // fence dies with that worker process.
+              dlog("main", "project_store.session_root_migration_claim_release_failed", {
+                sessionId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          }
+          if (
+            !sessionRootMigrationMatches(this.sessionManager.readSessionState(sessionId), commit)
+          ) {
+            throw new Error("durable Session migration did not reach the requested root");
+          }
         }
       } else {
-        if (!ownership.ownershipToken) {
-          throw new Error("worker returned an invalid non-resident migration claim");
-        }
-        try {
-          // `not-resident` is an authorization, not an assumption. Re-read all
-          // durable authority and root availability after acquiring the worker
-          // fence, then commit only the exact revision that was validated.
-          const durable = this.sessionManager.readSessionState(sessionId);
-          if (!durable) throw new Error(`unknown or corrupt Session: ${sessionId}`);
-          if (
-            durable.project?.projectId !== binding.projectId ||
-            durable.project.mainRootId !== binding.mainRootId
-          ) {
-            throw new Error("Session root authority changed during migration");
-          }
-          const durableProject = await this.requireLive(binding.projectId);
-          const durableTarget = durableProject.roots.find((root) => root.id === targetRootId);
-          if (
-            !durableTarget ||
-            canonicalKey(durableTarget.path) !== canonicalKey(commit.mainRoot)
-          ) {
-            throw new Error("migration target root changed during migration");
-          }
-          requireMountedProjectRoot(durableTarget);
-          from = durable.workspace ?? ({ root: durable.cwd, kind: "main" } as const);
-          this.sessionManager.migrateSessionMainRootIfRevision(
-            sessionId,
-            { projectId: durableProject.id, mainRootId: durableTarget.id },
-            durableTarget.path,
-            durable.stateRevision,
-          );
-        } finally {
-          try {
-            await options.owner.complete({
-              sessionId,
-              ownershipToken: ownership.ownershipToken,
-            });
-          } catch (error) {
-            // state.json remains the commit point. A lost release response must
-            // not skip deterministic index/handoff repair. The matching Main
-            // fence is released in AgentBridge's finally path; a worker-only
-            // fence dies with that worker process.
-            dlog("main", "project_store.session_root_migration_claim_release_failed", {
-              sessionId,
-              error: error instanceof Error ? error.message : String(error),
-            });
-          }
-        }
-        if (!sessionRootMigrationMatches(this.sessionManager.readSessionState(sessionId), commit)) {
-          throw new Error("durable Session migration did not reach the requested root");
-        }
+        this.sessionManager.migrateSessionMainRoot(
+          sessionId,
+          { projectId: project.id, mainRootId: target.id },
+          target.path,
+        );
       }
-    } else {
-      this.sessionManager.migrateSessionMainRoot(
-        sessionId,
-        { projectId: project.id, mainRootId: target.id },
-        target.path,
-      );
-    }
 
-    // state.json is the commit point. These projections are deterministic and
-    // replayable: a process restart rebuilds the index from that same state.
-    this.sessionIndex.upsert(sessionId, {
-      cwd: target.path,
-      workspaceRoot: target.path,
-      projectId: project.id,
-      mainRootId: target.id,
-    });
-    this.sessionManager.recordWorkspaceHandoff(sessionId, from, workspace);
-    return {
-      sessionId,
-      projectId: project.id,
-      previousMainRootId: binding.mainRootId,
-      targetRootId: target.id,
-      mainRoot: target.path,
-      workspace,
-    };
+      // state.json is the commit point. These projections are deterministic and
+      // replayable: a process restart rebuilds the index from that same state.
+      this.sessionIndex.upsert(sessionId, {
+        cwd: target.path,
+        workspaceRoot: target.path,
+        projectId: project.id,
+        mainRootId: target.id,
+      });
+      this.sessionManager.recordWorkspaceHandoff(sessionId, from, workspace);
+      return {
+        sessionId,
+        projectId: project.id,
+        previousMainRootId: binding.mainRootId,
+        targetRootId: target.id,
+        mainRoot: target.path,
+        workspace,
+      };
+    } finally {
+      const remaining = this.migratingRoots.get(reservation)! - 1;
+      if (remaining) this.migratingRoots.set(reservation, remaining);
+      else this.migratingRoots.delete(reservation);
+    }
   }
 
   async setPrimary(projectId: string, rootId: string): Promise<LocalProject> {
@@ -516,6 +537,9 @@ export class ProjectStore {
   }
 
   async remove(projectId: string): Promise<void> {
+    if ([...this.migratingRoots.keys()].some((key) => key.startsWith(`${projectId}\0`))) {
+      throw new Error("project has an in-progress Session migration");
+    }
     this.mutate((registry) => {
       const target = requireLiveProject(registry, projectId);
       const timestamp = this.now();

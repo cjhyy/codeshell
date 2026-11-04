@@ -132,10 +132,20 @@ export function createMimiPetChat(options: MimiPetChatOptions): ChatMiddleware {
   // first send so retrying cannot re-run Mimi or any already-executed host
   // action. Failed desktop/materialization work is evicted and remains retryable.
   const replies = new Map<string, MimiCachedReply>();
+  const anonymousAccounts = new WeakMap<object, number>();
+  let nextAnonymousAccount = 0;
   const configuredChannels = options.channels ?? [];
   return async ({ message, adapter, reply }) => {
     if (!message.text.trim() && !message.attachments?.length) return;
-    const cacheKey = mimiReplyCacheKey(message);
+    let account = adapter.accountId;
+    if (!account) {
+      let id = anonymousAccounts.get(adapter);
+      if (id === undefined) anonymousAccounts.set(adapter, (id = ++nextAnonymousAccount));
+      account = `anonymous:${id}`;
+    } else {
+      account = `account:${account}`;
+    }
+    const cacheKey = mimiReplyCacheKey(message, account);
     let cacheEntry: MimiCachedReply | undefined;
     let outgoing: OutgoingMessage[];
     try {
@@ -312,9 +322,9 @@ function normalizePetReplyButton(value: unknown): OutgoingMessage["button"] | un
   return { text: record.text.trim(), url: record.url };
 }
 
-function mimiReplyCacheKey(message: ChannelMessage): string | undefined {
+function mimiReplyCacheKey(message: ChannelMessage, account: string): string | undefined {
   if (!message.messageId) return undefined;
-  return [message.channel, message.target, message.senderId, message.messageId].join("\0");
+  return [account, message.channel, message.target, message.senderId, message.messageId].join("\0");
 }
 
 /** Render the one-time pairing URL as a PNG QR code; failures degrade to text+button. */

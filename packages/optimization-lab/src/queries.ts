@@ -87,7 +87,7 @@ export function createOptimizationLabQueries(
     ),
     optimization_lab_freeze_dataset: handler(
       z.object({ cwd, dataset: z.unknown() }).strict(),
-      (p) => freezeDataset(p.dataset, labRoot(p.cwd)),
+      (p) => freezeDataset(p.dataset, options.root ?? labRoot(p.cwd)),
     ),
     optimization_lab_discover: handler(z.object({ cwd }).strict(), (p) =>
       controller(p.cwd).discover(),

@@ -39,7 +39,7 @@ function openRunStore(): FileRunStore {
   return new FileRunStore();
 }
 
-function createRunManager(): RunManager {
+function createRunManager(): RunManager | undefined {
   const cwd = process.cwd();
   const settings = new SettingsManager(cwd).get();
 
@@ -50,7 +50,8 @@ function createRunManager(): RunManager {
     // exit 1 (mirrors plugin.ts's clean-exit convention) instead of throwing a
     // raw stack trace up through the generic reportFatal handler.
     console.error("没有可用的文本模型连接(runs)。请在「连接」页配置。");
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   const store = new FileRunStore();
@@ -114,7 +115,9 @@ export function createRunsCommand(): Command {
         return;
       }
 
-      console.log(`\n  ${"ID".padEnd(18)} ${"Status".padEnd(22)} ${"Created".padEnd(22)} Objective`);
+      console.log(
+        `\n  ${"ID".padEnd(18)} ${"Status".padEnd(22)} ${"Created".padEnd(22)} Objective`,
+      );
       console.log("  " + "─".repeat(90));
 
       for (const r of snapshots) {
@@ -139,7 +142,8 @@ export function createRunsCommand(): Command {
 
       if (!run) {
         console.error(`Run not found: ${runId}`);
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
 
       console.log(`
@@ -169,6 +173,7 @@ export function createRunsCommand(): Command {
     .option("--tag <tags>", "Comma-separated tags")
     .action(async (objective: string, opts) => {
       const manager = createRunManager();
+      if (!manager) return;
       const tags = opts.tag ? opts.tag.split(",").map((t: string) => t.trim()) : [];
 
       const run = await manager.submit({
@@ -217,11 +222,13 @@ export function createRunsCommand(): Command {
     .option("--reject", "Reject pending approval")
     .action(async (runId: string, opts) => {
       const manager = createRunManager();
+      if (!manager) return;
       const run = await manager.get(runId);
 
       if (!run) {
         console.error(`Run not found: ${runId}`);
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
 
       const store = new FileRunStore();
@@ -231,7 +238,8 @@ export function createRunsCommand(): Command {
         const pendingApproval = await store.getPendingApproval(runId);
         if (!pendingApproval) {
           console.error("No pending approval found for this run.");
-          process.exit(1);
+          process.exitCode = 1;
+          return;
         }
         approvalDecision = {
           approvalId: pendingApproval.approvalId,
@@ -257,13 +265,15 @@ export function createRunsCommand(): Command {
     .option("--reason <text>", "Cancellation reason")
     .action(async (runId: string, opts) => {
       const manager = createRunManager();
+      if (!manager) return;
 
       try {
         await manager.cancel(runId, opts.reason);
         console.log(`\n  Run cancelled: ${runId}\n`);
       } catch (err) {
         console.error(`Error: ${(err as Error).message}`);
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
     });
 
@@ -286,13 +296,14 @@ export function createRunsCommand(): Command {
       const limit = opts.limit as number;
       const shown = events.slice(-limit);
 
-      console.log(`\n  Events for run ${runId} (showing last ${shown.length} of ${events.length}):\n`);
+      console.log(
+        `\n  Events for run ${runId} (showing last ${shown.length} of ${events.length}):\n`,
+      );
 
       for (const e of shown) {
         const time = new Date(e.timestamp).toLocaleTimeString();
-        const data = Object.keys(e.data).length > 0
-          ? " " + JSON.stringify(e.data).slice(0, 80)
-          : "";
+        const data =
+          Object.keys(e.data).length > 0 ? " " + JSON.stringify(e.data).slice(0, 80) : "";
         console.log(`  ${time}  ${e.type}${data}`);
       }
       console.log();
@@ -305,6 +316,7 @@ export function createRunsCommand(): Command {
     .description("Recover crashed runs (run on startup)")
     .action(async () => {
       const manager = createRunManager();
+      if (!manager) return;
       const recovered = await manager.recover();
 
       if (recovered.length === 0) {

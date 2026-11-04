@@ -1,3 +1,4 @@
+import type { ChannelRunLifecycle } from "./channel.js";
 import type {
   ChannelAdapter,
   ChannelMessage,
@@ -58,7 +59,11 @@ export class MatrixAdapter implements ChannelAdapter {
     private readonly fetchFn: typeof fetch = fetch,
   ) {}
 
-  async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
+  async run(
+    handler: ChannelMessageHandler,
+    signal: AbortSignal,
+    lifecycle?: ChannelRunLifecycle,
+  ): Promise<void> {
     let since: string | undefined;
     let retryMs = 1_000;
     while (!signal.aborted) {
@@ -73,6 +78,7 @@ export class MatrixAdapter implements ChannelAdapter {
           method: "GET",
           signal,
         });
+        lifecycle?.ready();
         retryMs = 1_000;
         for (const message of this.toMessages(sync)) {
           await handler(message);
@@ -82,6 +88,7 @@ export class MatrixAdapter implements ChannelAdapter {
         since = sync.next_batch ?? since;
       } catch (error) {
         if (signal.aborted) return;
+        lifecycle?.unavailable(error);
         await abortableDelay(retryMs, signal);
         retryMs = Math.min(retryMs * 2, 30_000);
         if (error instanceof MatrixRateLimitError && error.retryAfterMs) {

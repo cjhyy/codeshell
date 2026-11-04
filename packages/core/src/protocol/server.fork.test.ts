@@ -97,6 +97,10 @@ describe("AgentServer agent/forkSession", () => {
     const slices: unknown[] = [];
     const manager = new ChatSessionManager({
       runtime: {} as never,
+      sessionMetadata: {
+        exists: (id) => fake.engine.sessionExistsOnDisk(id),
+        readSessionMainRoot: (id) => fake.engine.getSessionManager().readSessionMainRoot(id),
+      },
       engineFactory: (slice) => {
         slices.push(slice);
         return fake.engine;
@@ -138,7 +142,7 @@ describe("AgentServer agent/forkSession", () => {
         options: { targetSessionId: "target", throughEventId: "z" },
       },
     ]);
-    expect(slices).toEqual([{}, { cwd: "/project/from-source-state", projectTrusted: false }]);
+    expect(slices).toEqual([{ cwd: "/project/from-source-state", projectTrusted: false }]);
     expect(manager.get("source")?.engine).toBe(fake.engine);
     expect(transport.sent.some((message) => message.method === Methods.StreamEvent)).toBe(false);
   });
@@ -147,6 +151,10 @@ describe("AgentServer agent/forkSession", () => {
     const fake = fakeEngine();
     const manager = new ChatSessionManager({
       runtime: {} as never,
+      sessionMetadata: {
+        exists: (id) => fake.engine.sessionExistsOnDisk(id),
+        readSessionMainRoot: (id) => fake.engine.getSessionManager().readSessionMainRoot(id),
+      },
       engineFactory: () => fake.engine,
     });
     const transport = makeTransport();
@@ -185,6 +193,10 @@ describe("AgentServer agent/forkSession", () => {
     const fake = fakeEngine();
     const manager = new ChatSessionManager({
       runtime: {} as never,
+      sessionMetadata: {
+        exists: (id) => fake.engine.sessionExistsOnDisk(id),
+        readSessionMainRoot: (id) => fake.engine.getSessionManager().readSessionMainRoot(id),
+      },
       engineFactory: () => fake.engine,
     });
     const transport = makeTransport();
@@ -249,6 +261,10 @@ describe("AgentServer agent/forkSession", () => {
     };
     const manager = new ChatSessionManager({
       runtime: {} as never,
+      sessionMetadata: {
+        exists: (id) => fake.engine.sessionExistsOnDisk(id),
+        readSessionMainRoot: (id) => fake.engine.getSessionManager().readSessionMainRoot(id),
+      },
       engineFactory: () => fake.engine,
     });
     const transport = makeTransport();
@@ -276,6 +292,10 @@ describe("AgentServer agent/forkSession", () => {
     const fake = fakeEngine();
     const manager = new ChatSessionManager({
       runtime: {} as never,
+      sessionMetadata: {
+        exists: (id) => fake.engine.sessionExistsOnDisk(id),
+        readSessionMainRoot: (id) => fake.engine.getSessionManager().readSessionMainRoot(id),
+      },
       engineFactory: () => fake.engine,
     });
     const transport = makeTransport();
@@ -304,6 +324,10 @@ describe("AgentServer agent/forkSession", () => {
     const fake = fakeEngine();
     const manager = new ChatSessionManager({
       runtime: {} as never,
+      sessionMetadata: {
+        exists: (id) => fake.engine.sessionExistsOnDisk(id),
+        readSessionMainRoot: (id) => fake.engine.getSessionManager().readSessionMainRoot(id),
+      },
       engineFactory: () => fake.engine,
     });
     const transport = makeTransport();
@@ -361,6 +385,10 @@ describe("AgentServer agent/forkSession", () => {
     };
     const manager = new ChatSessionManager({
       runtime: {} as never,
+      sessionMetadata: {
+        exists: (id) => fake.engine.sessionExistsOnDisk(id),
+        readSessionMainRoot: (id) => fake.engine.getSessionManager().readSessionMainRoot(id),
+      },
       engineFactory: () => fake.engine,
     });
     await manager.getOrCreate("source", {} as never);
@@ -401,6 +429,10 @@ describe("AgentServer agent/forkSession", () => {
       const fake = fakeEngine();
       const manager = new ChatSessionManager({
         runtime: {} as never,
+        sessionMetadata: {
+          exists: (id) => fake.engine.sessionExistsOnDisk(id),
+          readSessionMainRoot: (id) => fake.engine.getSessionManager().readSessionMainRoot(id),
+        },
         engineFactory: () => fake.engine,
       });
       const live = await manager.getOrCreate("source", {} as never);
@@ -428,6 +460,10 @@ describe("AgentServer agent/forkSession", () => {
     const fake = fakeEngine();
     const manager = new ChatSessionManager({
       runtime: {} as never,
+      sessionMetadata: {
+        exists: (id) => fake.engine.sessionExistsOnDisk(id),
+        readSessionMainRoot: (id) => fake.engine.getSessionManager().readSessionMainRoot(id),
+      },
       engineFactory: () => fake.engine,
     });
     const live = await manager.getOrCreate("source", {} as never);

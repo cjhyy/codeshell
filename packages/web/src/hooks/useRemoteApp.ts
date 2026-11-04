@@ -1,3 +1,4 @@
+import { localDeadline } from "../remote-deadline.js";
 import { RoomHistoryAccumulator } from "../lib/roomHistory.js";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type {
@@ -76,7 +77,7 @@ export interface PendingApproval {
   sessionId?: string;
   connectionId?: string;
   generation?: number;
-  /** Absolute deadline supplied by the worker; reconnecting never extends it. */
+  /** Deadline translated to the local clock from the Host delivery timestamp. */
   expiresAt?: number;
   /** Set for cc-room (external claude CLI) approvals — routes the response via
    *  respondCcApproval(roomId, …) instead of the session approval path. */
@@ -1905,7 +1906,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             sessionId: typeof params.sessionId === "string" ? params.sessionId : undefined,
             connectionId: typeof params.connectionId === "string" ? params.connectionId : undefined,
             generation: typeof params.generation === "number" ? params.generation : undefined,
-            expiresAt: typeof params.expiresAt === "number" ? params.expiresAt : undefined,
+            expiresAt:
+              typeof params.expiresAt === "number"
+                ? localDeadline(params.expiresAt, obj.serverTime)
+                : undefined,
             toolName: rq.toolName ?? t("mobile.tool.fallbackName"),
             description: rq.description ?? "",
             summary: askOptions ? (rq.description ?? summary) : summary,

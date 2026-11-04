@@ -415,9 +415,11 @@ preserved. Replacement directories and symbolic links require a new selection.
 A Desktop-supplied `PanelDirectoryAuthorizer` independently checks current
 installation, process permission, binding and trust of both project and actual
 workspace before the Web facade restores a chosen Desktop directory. Trust
-revocation invalidates the existing process grant. Standalone Hub retains its
-restriction to the server project and downloads directories. No client-supplied path grants
-access. Background directory delivery is described below.
+revocation invalidates the existing process grant. Standalone Hub uses a parent-owned directory picker for existing directories
+inside the server project, including nested subdirectories. The picker sends
+opaque directory tokens; the Host rechecks identity and containment before
+granting access. Downloads is an initial selection when available, not the only
+allowed subdirectory. No client-supplied path grants access. Background directory delivery is described below.
 
 The current shared flow covers main project roots. Legacy Desktop bookmarks use
 actual cwd, whereas Web uses bindingCwd; worktree/main-project scope migration is

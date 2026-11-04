@@ -27,6 +27,40 @@ function mobileFixture(base: string): string {
 }
 
 describe("RemoteHostManager", () => {
+  test("account relay auto-start admits a later configured passcode without restarting", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-late-passcode-"));
+    const passcode = new AccessPasscode({ filePath: join(dir, "access.json") });
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent() {},
+    });
+    host.setAccountRelayAccess({
+      hostId: "host",
+      environmentId: "env",
+      accountId: "account",
+      async redeem() {
+        throw new Error("unused");
+      },
+      async listProjects() {
+        return [];
+      },
+    });
+    const started = await host.start({ mode: "relay", host: "127.0.0.1", port: 0, passcode });
+    try {
+      expect((await fetch(`${started.url}/health`)).status).toBe(401);
+      passcode.set("late-passcode");
+      const probe = (code: string) =>
+        fetch(`${started.url}/health`, { headers: { "X-Access-Passcode": code } });
+      expect((await probe("late-passcode")).status).toBe(200);
+      expect((await probe("wrong-passcode")).status).toBe(401);
+      passcode.set("rotated-passcode");
+      expect((await probe("late-passcode")).status).toBe(401);
+      expect((await probe("rotated-passcode")).status).toBe(200);
+    } finally {
+      await host.stop();
+    }
+  });
+
   test("device upload cleanup errors are reported and stop still closes the listener", async () => {
     dir = mkdtempSync(join(tmpdir(), "remote-upload-revoke-failure-"));
     const rootDir = join(dir, "spool");

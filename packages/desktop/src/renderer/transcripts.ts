@@ -665,7 +665,7 @@ export async function loadPersistedTranscript(
   projectId: string | null,
   sessionId: string,
   maxBytes?: number,
-): Promise<{ state: MessagesReducerState; hasEarlier: boolean }> {
+): Promise<{ state: MessagesReducerState; hasEarlier: boolean; readDeferred?: true }> {
   const persistence = getSessionPersistence();
   if (!persistence) return { state: loadTranscript(projectId, sessionId), hasEarlier: false };
   const result = await persistence.readTranscript(
@@ -673,7 +673,11 @@ export async function loadPersistedTranscript(
     sessionId,
     maxBytes,
   );
-  return { state: parseTranscriptSnapshot(result.value), hasEarlier: result.hasEarlier };
+  return {
+    state: parseTranscriptSnapshot(result.value),
+    hasEarlier: result.hasEarlier,
+    ...(result.readDeferred ? { readDeferred: true as const } : {}),
+  };
 }
 
 function parseTranscriptSnapshot(raw: string | null): MessagesReducerState {
@@ -739,7 +743,7 @@ export function saveTranscript(
 ): void {
   const persistence = getSessionPersistence();
   if (persistence) {
-    persistence.saveTranscript(projectBucketSegment(projectId), sessionId, JSON.stringify(state));
+    persistence.saveSnapshot(projectBucketSegment(projectId), sessionId, state);
     return;
   }
   try {

@@ -100,3 +100,10 @@ test("a renderer save failure rejects normal quit so pending edits remain availa
   });
   expect((await outcome)?.message).toContain("could not be saved");
 });
+
+test("quit skips crashed renderers while still draining Main persistence", async () => {
+  const { event, sent, registration } = await setup();
+  (event.sender as unknown as { isCrashed(): boolean }).isCrashed = () => true;
+  await registration.flushRenderers();
+  expect(sent.some((entry) => entry.channel === "sessionCatalog:flushRequested")).toBe(false);
+});

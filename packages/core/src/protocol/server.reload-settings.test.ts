@@ -175,7 +175,12 @@ describe("AgentServer configure({ reloadSettings })", () => {
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager, settingsReader });
 
-    t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/configure", params: { reloadSettings: true } });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "agent/configure",
+      params: { reloadSettings: true },
+    });
 
     expect(readCount).toBe(1);
     expect(a.calls.length).toBe(1);
@@ -191,13 +196,61 @@ describe("AgentServer configure({ reloadSettings })", () => {
     const v1 = a.calls[0].version;
 
     // A second reload bumps the version.
-    t.deliver({ jsonrpc: "2.0", id: 2, method: "agent/configure", params: { reloadSettings: true } });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: "agent/configure",
+      params: { reloadSettings: true },
+    });
     expect(a.calls.length).toBe(2);
     expect(a.calls[1].version).toBeGreaterThan(v1);
 
     // Both responses are ok.
     const oks = t.sent.filter((m: any) => m.result?.ok === true);
     expect(oks.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("reads each live session's project for global and targeted reloads", () => {
+    const a = makeFakeEngine("A");
+    const b = makeFakeEngine("B");
+    a.engine.getConfig = () => ({ cwd: "/project-a" }) as never;
+    b.engine.getConfig = () => ({ cwd: "/project-b" }) as never;
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => {
+        throw new Error("unexpected Engine construction");
+      },
+    });
+    (chatManager as any).sessions.set("A", { id: "A", engine: a.engine });
+    (chatManager as any).sessions.set("B", { id: "B", engine: b.engine });
+    const reads: Array<string | undefined> = [];
+    const t = makeTransport();
+    new AgentServer({
+      transport: t.transport,
+      chatManager,
+      settingsReader: (cwd) => {
+        reads.push(cwd);
+        return fakeSettings(`instructions:${cwd}`);
+      },
+    });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "agent/configure",
+      params: { reloadSettings: true },
+    });
+    expect(reads).toEqual(["/project-a", "/project-b"]);
+    expect(a.calls[0].patch.appendSystemPrompt).toBe("instructions:/project-a");
+    expect(b.calls[0].patch.appendSystemPrompt).toBe("instructions:/project-b");
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: "agent/configure",
+      params: { sessionId: "B", reloadSettings: true },
+    });
+    expect(reads.at(-1)).toBe("/project-b");
+    expect(b.calls[1].patch.appendSystemPrompt).toBe("instructions:/project-b");
+    expect(a.calls).toHaveLength(1);
   });
 
   it("reloadModels refreshes the shared runtime model pool", () => {
@@ -214,7 +267,11 @@ describe("AgentServer configure({ reloadSettings })", () => {
     (chatManager as any).sessions.set("B", { id: "B", engine: b.engine });
 
     const t = makeTransport();
-    new AgentServer({ transport: t.transport, chatManager, settingsReader: () => fakeSettings("x") });
+    new AgentServer({
+      transport: t.transport,
+      chatManager,
+      settingsReader: () => fakeSettings("x"),
+    });
 
     t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/configure", params: { reloadModels: true } });
 
@@ -235,18 +292,31 @@ describe("AgentServer configure({ reloadSettings })", () => {
     (chatManager as any).sessions.set("A", { id: "A", engine: a.engine });
 
     // Identical settings every read (simulates a no-op personalization re-save).
-    let readCount = 0;
     const settingsReader = () => {
-      readCount++;
       return fakeSettings("same");
     };
 
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager, settingsReader });
 
-    t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/configure", params: { reloadSettings: true } });
-    t.deliver({ jsonrpc: "2.0", id: 2, method: "agent/configure", params: { reloadSettings: true } });
-    t.deliver({ jsonrpc: "2.0", id: 3, method: "agent/configure", params: { reloadSettings: true } });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "agent/configure",
+      params: { reloadSettings: true },
+    });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: "agent/configure",
+      params: { reloadSettings: true },
+    });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 3,
+      method: "agent/configure",
+      params: { reloadSettings: true },
+    });
 
     // Settings are re-read each time (cheap) but the broadcast — and the per-
     // session reloadHooks churn — fires only once because the patch is identical.
@@ -271,8 +341,18 @@ describe("AgentServer configure({ reloadSettings })", () => {
       chatManager: chatManager2,
       settingsReader: () => fakeSettings(`v${++n}`),
     });
-    t2.deliver({ jsonrpc: "2.0", id: 1, method: "agent/configure", params: { reloadSettings: true } });
-    t2.deliver({ jsonrpc: "2.0", id: 2, method: "agent/configure", params: { reloadSettings: true } });
+    t2.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "agent/configure",
+      params: { reloadSettings: true },
+    });
+    t2.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: "agent/configure",
+      params: { reloadSettings: true },
+    });
     expect(a2.calls.length).toBe(2);
   });
 
@@ -289,7 +369,12 @@ describe("AgentServer configure({ reloadSettings })", () => {
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
 
-    t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/configure", params: { reloadSettings: true } });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "agent/configure",
+      params: { reloadSettings: true },
+    });
 
     const response = t.sent.find((m: any) => m.id === 1);
     expect(response?.error?.message).toContain("reloadSettings is not supported");
@@ -308,7 +393,12 @@ describe("AgentServer configure({ reloadSettings })", () => {
     const t = makeTransport();
     new AgentServer({ transport: t.transport, engine: a.engine, settingsReader });
 
-    t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/configure", params: { reloadSettings: true } });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "agent/configure",
+      params: { reloadSettings: true },
+    });
 
     // Without chatManager the reload must still land on the one engine, not be
     // silently dropped behind an ok:true.
@@ -408,7 +498,11 @@ describe("AgentServer configure({ reloadSettings })", () => {
     });
 
     const t = makeTransport();
-    new AgentServer({ transport: t.transport, chatManager, settingsReader: () => fakeSettings("x") });
+    new AgentServer({
+      transport: t.transport,
+      chatManager,
+      settingsReader: () => fakeSettings("x"),
+    });
 
     t.deliver({
       jsonrpc: "2.0",

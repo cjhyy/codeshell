@@ -296,6 +296,7 @@ describe("ChatSessionManager serialized lifecycle", () => {
       engineFactory: () =>
         ({
           isHeadless: () => false,
+          resolveModelEntry: (key: string) => ({ key, model: key }),
           getModelPool: () => ({
             get: (key: string) => ({ key, model: key }),
           }),

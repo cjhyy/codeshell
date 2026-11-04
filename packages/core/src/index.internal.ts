@@ -483,11 +483,19 @@ export {
 } from "./plugins/installer/parseSource.js";
 export { detectPluginFormat } from "./plugins/installer/detectFormat.js";
 export { validatePluginComposerSvg } from "./plugins/static-svg.js";
-export { uninstallPluginByName } from "./plugins/installer/uninstall.js";
+export {
+  uninstallPluginByName,
+  uninstallPluginByNameAsync,
+} from "./plugins/installer/uninstall.js";
 export { listInstalledPlugins, type PluginListRow } from "./plugins/installer/list.js";
 export { updatePluginByName, type UpdateResult } from "./plugins/installer/update.js";
 export { checkPluginUpdate, type UpdateCheck } from "./plugins/installer/checkUpdate.js";
-export { installPlugin, uninstallPlugin, listInstalled } from "./plugins/pluginInstaller.js";
+export {
+  installPlugin,
+  uninstallPlugin,
+  uninstallPluginAsync,
+  listInstalled,
+} from "./plugins/pluginInstaller.js";
 export {
   addMarketplace,
   refreshMarketplace,

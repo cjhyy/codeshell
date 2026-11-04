@@ -1032,3 +1032,49 @@ test("native admission stays exclusive through the asynchronous Worker acceptanc
     "native-other",
   ]);
 });
+
+for (const stoppedSession of ["session-1", "other-session"])
+  test(`Stop for ${stoppedSession} fences only its in-flight workspace preparation`, async () => {
+    const h = createHarness({
+      requestedWorkspaceRoot: "/primary",
+      lookupSession: () => ({
+        sessionId: "session-1",
+        cwd: "/primary",
+        workspaceRoot: "/primary",
+        status: "confirmed",
+      }),
+    });
+    let release!: (cwd: string) => void;
+    let reached!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    h.ctx.resolveSessionWorkspaceRoot = () => {
+      reached();
+      return new Promise((resolve) => {
+        release = resolve;
+      });
+    };
+    const submitted = sendChat(h.ctx);
+    await entered;
+    // Production creates a fresh context view for each event; the Host object is shared.
+    await handleClientEvent(
+      { ...h.ctx },
+      { type: "run.stop", deviceId: "phone-1", sessionId: stoppedSession },
+    );
+    release("/primary");
+    await submitted;
+    expect(h.metas.filter((meta) => meta.producer === "mobile-chat")).toHaveLength(
+      stoppedSession === "session-1" ? 0 : 1,
+    );
+    expect(h.replies.some((event) => event.type === "chat.accepted")).toBe(
+      stoppedSession !== "session-1",
+    );
+    if (stoppedSession === "session-1") {
+      expect(h.replies.at(-1)?.message).toContain("已被停止");
+      h.ctx.resolveSessionWorkspaceRoot = async () => "/primary";
+      await sendChat(h.ctx);
+      expect(h.metas.filter((meta) => meta.producer === "mobile-chat")).toHaveLength(1);
+      expect(h.replies.at(-1)?.type).toBe("chat.accepted");
+    }
+  });

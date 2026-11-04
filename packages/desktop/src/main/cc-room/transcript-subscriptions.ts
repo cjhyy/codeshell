@@ -10,6 +10,7 @@ import {
   watchFile,
   type Stats,
 } from "node:fs";
+import { lstat, open } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import {
@@ -97,6 +98,8 @@ interface FollowRecord extends TranscriptTarget {
   subscribers: Set<string>;
   listener: (curr: Stats, prev: Stats) => void;
   observedStamp?: string;
+  polling?: Promise<void>;
+  pollAgain?: boolean;
   history: { messages: HistoryMessage[]; totalCount: number };
 }
 const MAX_TRANSCRIPT_BYTES = 64 * 1024 * 1024;
@@ -182,7 +185,7 @@ export class TranscriptSubscriptionManager {
         identity: current.identity,
         sourceId: randomUUID(),
         offset: current.complete,
-        digest: digest(current.bytes.subarray(0, current.complete)),
+        digest: current.completeDigest,
         roomCursor: this.opts.roomCursor(request.roomId),
         status: "committed",
       };
@@ -191,11 +194,7 @@ export class TranscriptSubscriptionManager {
     const listener = (_curr: Stats, _prev: Stats) => {
       const active = this.follows.get(request.roomId);
       if (!active) return;
-      try {
-        this.drain(active);
-      } catch {
-        /* failure was latched and surfaced */
-      }
+      void this.poll(active);
     };
     record = {
       ...request,
@@ -271,6 +270,42 @@ export class TranscriptSubscriptionManager {
       this.stopRecord(record);
     }
   }
+  private poll(record: FollowRecord): Promise<void> {
+    record.pollAgain = true;
+    if (record.polling) return record.polling;
+    const active = () => this.follows.get(record.roomId) === record;
+    record.polling = (async () => {
+      do {
+        record.pollAgain = false;
+        const checkpoint = record.checkpoint;
+        try {
+          const info = await lstat(record.file);
+          if (!active()) return;
+          if (record.observedStamp === stamp(info)) continue;
+          const current = await readTranscriptAsync(record.file, checkpoint.offset, active);
+          if (!active()) return;
+          // A repeat subscription or final drain may have advanced the cursor
+          // while I/O yielded. Never publish against an obsolete checkpoint.
+          if (record.checkpoint !== checkpoint) {
+            record.pollAgain = true;
+            continue;
+          }
+          this.drain(record, current);
+        } catch (error) {
+          if (!active()) return;
+          if (record.checkpoint !== checkpoint) {
+            record.pollAgain = true;
+            continue;
+          }
+          this.fail(record, error, true);
+          return;
+        }
+      } while (record.pollAgain && active());
+    })().finally(() => {
+      record.polling = undefined;
+    });
+    return record.polling;
+  }
   private drain(record: FollowRecord, captured?: ReturnType<typeof readTranscript>): void {
     let current: ReturnType<typeof readTranscript>;
     try {
@@ -317,7 +352,7 @@ export class TranscriptSubscriptionManager {
         ...before,
         status: "committed",
         offset: current.complete,
-        digest: digest(current.bytes.subarray(0, current.complete)),
+        digest: current.completeDigest,
         roomCursor: this.opts.roomCursor(record.roomId),
       };
       const history = appendHistory(
@@ -382,10 +417,7 @@ function resolveTranscriptFile(target: TranscriptTarget): string | undefined {
     );
   return findCodexRolloutFile(join(homedir(), ".codex"), target.cwd, target.sessionId);
 }
-function readTranscript(
-  file: string,
-  validateFrom = 0,
-): { bytes: Buffer; complete: number; identity: string; stamp: string } {
+function readTranscript(file: string, validateFrom = 0): TranscriptCapture {
   const info = lstatSync(file);
   if (!info.isFile() || info.isSymbolicLink() || info.nlink !== 1)
     throw new Error("external transcript is unsafe");
@@ -428,47 +460,150 @@ function readTranscript(
       path.size < before.size
     )
       throw new Error("external transcript incarnation changed or shrank while reading");
-    if (verified.digest("hex") !== digest(bytes.subarray(0, complete)))
+    const completeDigest = digest(bytes.subarray(0, complete));
+    if (verified.digest("hex") !== completeDigest)
       throw new Error("external transcript captured prefix was rewritten while reading");
-    let start = validateFrom;
-    while (start < complete) {
-      const end = bytes.indexOf(0x0a, start);
-      if (end - start > MAX_LINE_BYTES) throw new Error("external transcript line exceeds 4 MiB");
-      const line = decoder.decode(bytes.subarray(start, end));
-      if (line.trim()) {
-        const value = JSON.parse(line);
-        if (
-          !value ||
-          typeof value !== "object" ||
-          Array.isArray(value) ||
-          typeof value.type !== "string"
-        )
-          throw new Error("external transcript contains an invalid record");
-        if (
-          (value.type === "assistant" || value.type === "user") &&
-          (!value.message ||
-            typeof value.message !== "object" ||
-            (typeof value.message.content !== "string" && !Array.isArray(value.message.content)))
-        ) {
-          throw new Error("external transcript contains an invalid message record");
-        }
-        if (
-          (value.type === "response_item" || value.type === "event_msg") &&
-          (!value.payload ||
-            typeof value.payload !== "object" ||
-            typeof value.payload.type !== "string")
-        ) {
-          throw new Error("external transcript contains an invalid payload record");
-        }
-      }
-      start = end + 1;
-    }
-    if (bytes.length - complete > MAX_LINE_BYTES)
-      throw new Error("external transcript partial line exceeds 4 MiB");
-    return { bytes, complete, identity: identity(before), stamp: stamp(before) };
+    validateRecords(bytes, complete, validateFrom);
+    return {
+      bytes,
+      complete,
+      identity: identity(before),
+      stamp: stamp(before),
+      completeDigest,
+      prefixOffset: validateFrom,
+      prefixDigest: digest(bytes.subarray(0, validateFrom)),
+    };
   } finally {
     closeSync(fd);
   }
+}
+interface TranscriptCapture {
+  bytes: Buffer;
+  complete: number;
+  identity: string;
+  stamp: string;
+  completeDigest: string;
+  prefixOffset: number;
+  prefixDigest: string;
+}
+
+/** Full integrity proof, with bounded async I/O/hash chunks for live polling. */
+async function readTranscriptAsync(
+  file: string,
+  validateFrom: number,
+  active: () => boolean,
+): Promise<TranscriptCapture> {
+  const info = await lstat(file);
+  if (!info.isFile() || info.isSymbolicLink() || info.nlink !== 1)
+    throw new Error("external transcript is unsafe");
+  const handle = await open(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  try {
+    const before = await handle.stat();
+    if (!before.isFile() || before.nlink !== 1 || identity(before) !== identity(info))
+      throw new Error("external transcript incarnation changed while opening");
+    if (before.size > MAX_TRANSCRIPT_BYTES) throw new Error("external transcript exceeds 64 MiB");
+    const bytes = Buffer.allocUnsafe(before.size);
+    let offset = 0;
+    while (offset < bytes.length) {
+      if (!active()) throw new Error("transcript follower was closed");
+      const { bytesRead } = await handle.read(
+        bytes,
+        offset,
+        Math.min(256 * 1024, bytes.length - offset),
+        offset,
+      );
+      if (!bytesRead) throw new Error("external transcript was truncated while reading");
+      offset += bytesRead;
+    }
+    const complete = bytes.lastIndexOf(0x0a) + 1;
+    const verified = createHash("sha256");
+    const captured = createHash("sha256");
+    const prefix = createHash("sha256");
+    const chunk = Buffer.allocUnsafe(256 * 1024);
+    offset = 0;
+    while (offset < complete) {
+      if (!active()) throw new Error("transcript follower was closed");
+      const { bytesRead } = await handle.read(
+        chunk,
+        0,
+        Math.min(chunk.length, complete - offset),
+        offset,
+      );
+      if (!bytesRead)
+        throw new Error("external transcript was truncated during prefix verification");
+      verified.update(chunk.subarray(0, bytesRead));
+      captured.update(bytes.subarray(offset, offset + bytesRead));
+      if (offset < validateFrom)
+        prefix.update(bytes.subarray(offset, Math.min(validateFrom, offset + bytesRead)));
+      offset += bytesRead;
+    }
+    const after = await handle.stat();
+    const path = await lstat(file);
+    if (
+      !path.isFile() ||
+      path.isSymbolicLink() ||
+      after.nlink !== 1 ||
+      path.nlink !== 1 ||
+      identity(after) !== identity(before) ||
+      identity(path) !== identity(before) ||
+      after.size < before.size ||
+      path.size < before.size
+    )
+      throw new Error("external transcript incarnation changed or shrank while reading");
+    const completeDigest = captured.digest("hex");
+    if (verified.digest("hex") !== completeDigest)
+      throw new Error("external transcript captured prefix was rewritten while reading");
+    if (!active()) throw new Error("transcript follower was closed");
+    validateRecords(bytes, complete, validateFrom);
+    return {
+      bytes,
+      complete,
+      identity: identity(before),
+      stamp: stamp(before),
+      completeDigest,
+      prefixOffset: validateFrom,
+      prefixDigest: prefix.digest("hex"),
+    };
+  } finally {
+    await handle.close();
+  }
+}
+function validateRecords(bytes: Buffer, complete: number, validateFrom: number): void {
+  let start = validateFrom;
+  while (start < complete) {
+    const end = bytes.indexOf(0x0a, start);
+    if (end - start > MAX_LINE_BYTES) throw new Error("external transcript line exceeds 4 MiB");
+    const line = decoder.decode(bytes.subarray(start, end));
+    if (line.trim()) {
+      const value = JSON.parse(line);
+      if (
+        !value ||
+        typeof value !== "object" ||
+        Array.isArray(value) ||
+        typeof value.type !== "string"
+      )
+        throw new Error("external transcript contains an invalid record");
+      if (
+        (value.type === "assistant" || value.type === "user") &&
+        (!value.message ||
+          typeof value.message !== "object" ||
+          (typeof value.message.content !== "string" && !Array.isArray(value.message.content)))
+      ) {
+        throw new Error("external transcript contains an invalid message record");
+      }
+      if (
+        (value.type === "response_item" || value.type === "event_msg") &&
+        (!value.payload ||
+          typeof value.payload !== "object" ||
+          typeof value.payload.type !== "string")
+      ) {
+        throw new Error("external transcript contains an invalid payload record");
+      }
+    }
+    start = end + 1;
+  }
+  if (bytes.length - complete > MAX_LINE_BYTES)
+    throw new Error("external transcript partial line exceeds 4 MiB");
 }
 function verifyPrefix(
   current: ReturnType<typeof readTranscript>,
@@ -478,7 +613,11 @@ function verifyPrefix(
     throw new Error("external transcript file incarnation changed; recovery is required");
   if (current.bytes.length < checkpoint.offset || current.complete < checkpoint.offset)
     throw new Error("external transcript shrank; recovery is required");
-  if (digest(current.bytes.subarray(0, checkpoint.offset)) !== checkpoint.digest)
+  const prefixDigest =
+    current.prefixOffset === checkpoint.offset
+      ? current.prefixDigest
+      : digest(current.bytes.subarray(0, checkpoint.offset));
+  if (prefixDigest !== checkpoint.digest)
     throw new Error("external transcript prefix was rewritten; recovery is required");
 }
 function appendHistory(

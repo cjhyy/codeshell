@@ -70,6 +70,7 @@ describe("AgentServer cold Goal resume", () => {
     const runs: Array<{ task: string; configuredCwd?: string; injected?: boolean }> = [];
     const manager = new ChatSessionManager({
       runtime: {} as never,
+      sessionStorageDir: storageDir,
       engineFactory: (slice) => {
         factorySlices.push({ ...slice });
         const sessions = new SessionManager(storageDir);
@@ -121,9 +122,8 @@ describe("AgentServer cold Goal resume", () => {
         revision: 2,
         paused: false,
       });
-      expect(factorySlices).toHaveLength(2);
-      expect(factorySlices[0]?.cwd).toBeUndefined();
-      expect(factorySlices[1]).toMatchObject({ cwd: projectRoot, projectTrusted: false });
+      expect(factorySlices).toHaveLength(1);
+      expect(factorySlices[0]).toMatchObject({ cwd: projectRoot, projectTrusted: false });
       expect(restoredModels).toEqual([sessionId]);
       expect(runs).toEqual([
         {

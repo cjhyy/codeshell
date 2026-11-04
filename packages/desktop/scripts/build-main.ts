@@ -12,6 +12,10 @@ export function desktopMainBuildOptions(root = desktopRoot): BuildOptions {
       index: resolve(root, "src/main/index.ts"),
       "link-provider-module": resolve(root, "src/main/link-provider-module.ts"),
       "cua-activity-proxy": resolve(root, "src/main/computer-use/cua-activity-proxy.ts"),
+      "session-transcript-cache-worker": resolve(
+        root,
+        "src/main/session-transcript-cache-worker.ts",
+      ),
     },
     bundle: true,
     platform: "node",

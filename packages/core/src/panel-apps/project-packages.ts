@@ -9,7 +9,12 @@ import {
   resolvePanelAppPackage,
   type InstalledPanelApp,
 } from "./installer.js";
-import { PanelAppInstallError, assertSafePanelAppId, panelAppInstallDir } from "./paths.js";
+import {
+  PanelAppInstallError,
+  assertSafePanelAppId,
+  panelAppInstallDir,
+  isPanelAppStorageReadError,
+} from "./paths.js";
 import { PANEL_APP_META_FILE } from "./package-content.js";
 import { readInstalledPanelAppsRegistry } from "./registry.js";
 
@@ -30,7 +35,8 @@ export function installedPanelAppUpdatedAt(id: string): number | undefined {
       .parse(JSON.parse(readFileSync(fd, "utf8")));
     const time = Date.parse(meta.lastUpdated);
     return Number.isFinite(time) ? time : undefined;
-  } catch {
+  } catch (error) {
+    if (isPanelAppStorageReadError(error)) throw error;
     return undefined;
   } finally {
     if (fd !== undefined) closeSync(fd);
@@ -112,7 +118,7 @@ export async function listProjectPanelApps(
   await migrateProjectPanelAppPackagePins(projectPath, appId);
   const pins = projectPanelAppPackagePins(projectPath);
   // A removed global catalog entry stays unavailable; a retained file is not a grant.
-  const records = await readInstalledPanelAppsRegistry();
+  const records = await readInstalledPanelAppsRegistry({ strict: true });
   const catalog = new Map((await listInstalledPanelApps(appId)).map((app) => [app.id, app]));
   const selected: InstalledPanelApp[] = [];
   for (const record of records) {
@@ -165,7 +171,7 @@ export async function inspectProjectPanelApps(
   if (appId !== undefined) assertSafePanelAppId(appId);
   const settings = new SettingsManager(projectPath, "full");
   parsePanelAppPackagePins(settings.getRawForScope("project", projectPath, { strict: true }));
-  const records = await readInstalledPanelAppsRegistry();
+  const records = await readInstalledPanelAppsRegistry({ strict: true });
   const installed = reads
     ? (await (reads.installed ??= listInstalledPanelApps())).filter(
         (app) => appId === undefined || app.id === appId,
@@ -199,7 +205,8 @@ export async function inspectProjectPanelApps(
         throw new PanelAppInstallError("Project package changed during inspection");
       if (pin) pins[record.id] = pin;
       apps.push(app);
-    } catch {
+    } catch (error) {
+      if (isPanelAppStorageReadError(error)) throw error;
       issues.push({
         id: record.id,
         ...(pin ? { pin } : {}),

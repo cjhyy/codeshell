@@ -1,3 +1,4 @@
+import type { ChannelRunLifecycle } from "./channel.js";
 import {
   WSClient,
   type BaseMessage,
@@ -39,7 +40,11 @@ export class WeComAdapter implements ChannelAdapter {
     });
   }
 
-  async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
+  async run(
+    handler: ChannelMessageHandler,
+    signal: AbortSignal,
+    lifecycle?: ChannelRunLifecycle,
+  ): Promise<void> {
     const onMessage = (frame: WsFrame<TextMessage>): void => {
       const message = frame.body;
       if (!message?.text?.content) return;
@@ -65,10 +70,16 @@ export class WeComAdapter implements ChannelAdapter {
     this.client.on("message.voice", onVoice);
     this.client.on("message.file", onFile);
     this.client.on("message.video", onVideo);
-    this.client.connect();
+    const onReady = () => lifecycle?.ready();
+    const onUnavailable = (reason: string) => lifecycle?.unavailable(reason);
+    this.client.on("authenticated", onReady);
+    this.client.on("disconnected", onUnavailable);
     try {
+      this.client.connect();
       await waitForAbort(signal);
     } finally {
+      this.client.off("authenticated", onReady);
+      this.client.off("disconnected", onUnavailable);
       this.client.off("message.text", onMessage);
       this.client.off("message.image", onImage);
       this.client.off("message.mixed", onMixed);

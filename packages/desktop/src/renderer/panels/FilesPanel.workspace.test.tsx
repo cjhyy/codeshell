@@ -493,6 +493,18 @@ describe("FilesPanel workspace identity", () => {
     });
 
     expect(readProjectDirs).toContainEqual(["project-1", "secondary", "/shared"]);
+
+    const reads: unknown[][] = [];
+    window.codeshell.readProjectFileContent = async (...args) => {
+      reads.push(args);
+      return { text: "secondary file", size: 14 };
+    };
+    revealPath = "src/secondary.ts";
+    revealCwd = null;
+    revealConsumed = false;
+    revealNonce += 1;
+    await render();
+    expect(reads).toEqual([["project-1", "secondary", "/shared/src/secondary.ts"]]);
   });
 
   test("uses the Session mainRootId for a worktree after Make primary without duplicating the old root", async () => {

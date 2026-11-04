@@ -1,4 +1,4 @@
-import type { IpcRenderer } from "electron";
+import type { IpcRenderer, IpcRendererEvent } from "electron";
 import type {
   OutputHistoryRecoveryAcceptance,
   OutputHistoryRecoveryPlan,
@@ -6,6 +6,7 @@ import type {
 } from "@cjhyy/code-shell-core";
 
 export interface SessionOutputRecoveryApi {
+  onSessionOutputHistoryReset?(listener: (sessionId: string) => void): () => void;
   getSessionOutputRecoveryPlan?(sessionId: string): Promise<OutputHistoryRecoveryPlan>;
   applySessionOutputRecovery?(
     sessionId: string,
@@ -14,8 +15,17 @@ export interface SessionOutputRecoveryApi {
 }
 
 /** Original session history stays behind the same validated Main IPC routes. */
-export function createSessionTranscriptApi(ipc: Pick<IpcRenderer, "invoke">) {
+export function createSessionTranscriptApi(
+  ipc: Pick<IpcRenderer, "invoke" | "on" | "removeListener">,
+) {
   return {
+    onSessionOutputHistoryReset(listener: (sessionId: string) => void) {
+      const handler = (_event: IpcRendererEvent, payload: { sessionId?: unknown }) => {
+        if (typeof payload?.sessionId === "string") listener(payload.sessionId);
+      };
+      ipc.on("sessions:outputHistoryReset", handler);
+      return () => ipc.removeListener("sessions:outputHistoryReset", handler);
+    },
     getSessionOutputRecoveryPlan: (sessionId: string) =>
       ipc.invoke("sessions:outputRecoveryPlan", sessionId),
     applySessionOutputRecovery: (sessionId: string, acceptance: OutputHistoryRecoveryAcceptance) =>
