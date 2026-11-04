@@ -43,6 +43,11 @@ test("feature lifecycle waits for Electron ready and only refreshes focused main
   app.emit("browser-window-focus", {}, window);
   expect(refreshes[1]).toEqual([undefined, 60_000]);
   app.emit("before-quit");
+  expect(disposed).toBe(0);
+  app.emit("browser-window-focus", {}, window);
+  expect(refreshes).toHaveLength(3);
+  app.emit("will-quit");
+  app.emit("will-quit");
   expect(disposed).toBe(1);
 });
 test("local relay readiness binds both origin and account and leaves setup actionable", () => {

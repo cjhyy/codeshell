@@ -14,7 +14,9 @@ export function bindAccountFeatureLifecycle(
     if ([...windows()].includes(window)) void service.refresh(undefined, 60_000);
   });
   void app.whenReady().then(() => service.refresh());
-  app.once("before-quit", () => service.dispose());
+  // before-quit can still be cancelled when saving fails. Keep the account
+  // usable until Electron has committed to actually leaving the application.
+  app.once("will-quit", () => service.dispose());
 }
 export function accountLocalConditions(
   status: CloudAccountStatus,
