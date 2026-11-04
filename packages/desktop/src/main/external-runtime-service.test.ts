@@ -1153,6 +1153,254 @@ describe("ExternalRuntimeService", () => {
     expect(providerInputs).toHaveLength(1);
   });
 
+  test.each(["codex", "claude-code"] as const)(
+    "%s retains background completion after Stop until the next user input",
+    async (kind) => {
+      const background = backgroundDelivery();
+      const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+        backgroundWork: background.delivery,
+      });
+      let entered!: () => void;
+      let release!: () => void;
+      const firstStarted = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const blocked = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let onEvent: ((event: StreamEvent) => void) | undefined;
+      let interrupts = 0;
+      providerSend = async (args) => {
+        if (providerInputs.length > 1) return;
+        onEvent = (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent;
+        background.running.add(request.sessionId);
+        entered();
+        await blocked;
+      };
+      providerInterrupt = async () => {
+        interrupts++;
+        onEvent?.({ type: "turn_complete", reason: "aborted_streaming" });
+        release();
+      };
+
+      let foreground: ReturnType<typeof svc.send> | undefined;
+      try {
+        await svc.start({ ...request, kind });
+        foreground = svc.send(request.sessionId, { text: "Start a background check" }, 77);
+        await firstStarted;
+        expect(svc.getGoal(request.sessionId).goal).toBeNull();
+
+        // Stop leaves the job running, but its result must wait for the user.
+        await svc.interrupt(request.sessionId, 77);
+        expect(await foreground).toMatchObject({ ok: false, reason: "aborted_streaming" });
+        expect(interrupts).toBe(1);
+        expect(svc.hasSession(request.sessionId)).toBe(true);
+        expect(svc.getGoal(request.sessionId).goal).toBeNull();
+        expect(providerInputs).toHaveLength(1);
+        expect(background.running.has(request.sessionId)).toBe(true);
+
+        const completion = "Background check completed after Stop";
+        background.complete(request.sessionId, completion);
+        await settleBackgroundWakeup();
+
+        expect(providerInputs).toHaveLength(1);
+        expect(background.pending.get(request.sessionId)).toBe(completion);
+        expect(emitted).toContainEqual({
+          sessionId: request.sessionId,
+          type: "background_agent_completed",
+        });
+        expect(background.dropped).toEqual([]);
+        expect(starts).toHaveLength(1);
+        expect(closed).toEqual([]);
+        expect(svc.hasSession(request.sessionId)).toBe(true);
+        expect(svc.getGoal(request.sessionId).goal).toBeNull();
+
+        await svc.send(request.sessionId, "Review the completed check", 77);
+        await settleBackgroundWakeup();
+        expect(providerInputs).toHaveLength(2);
+        expect(providerInputs[1]!.injected).not.toBe(true);
+        expect(providerInputs[1]!.text).toContain("Review the completed check");
+        expect(providerInputs[1]!.text.split(completion)).toHaveLength(2);
+        expect(background.pending.has(request.sessionId)).toBe(false);
+
+        // Accepted user input also restores automatic delivery of later jobs.
+        background.complete(request.sessionId, "Another check completed");
+        await settleBackgroundWakeup();
+        expect(providerInputs).toHaveLength(3);
+        expect(providerInputs[2]).toMatchObject({ injected: true });
+        expect(providerInputs[2]!.text).toContain("Another check completed");
+      } finally {
+        release();
+        await foreground?.catch(() => {});
+        await svc.stopAll();
+      }
+    },
+  );
+
+  test.each(["codex", "claude-code"] as const)(
+    "%s automatically continues an ordinary session for background completion without Stop",
+    async (kind) => {
+      const background = backgroundDelivery();
+      const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+        backgroundWork: background.delivery,
+      });
+      try {
+        await svc.start({ ...request, kind });
+        background.running.add(request.sessionId);
+        await svc.send(request.sessionId, "Start a background check", 77);
+        expect(svc.getGoal(request.sessionId).goal).toBeNull();
+
+        background.complete(request.sessionId, "Background check completed normally");
+        await settleBackgroundWakeup();
+        expect(providerInputs).toHaveLength(2);
+        expect(providerInputs[1]).toMatchObject({ injected: true });
+        expect(providerInputs[1]!.text).toContain("Background check completed normally");
+        expect(background.pending.has(request.sessionId)).toBe(false);
+        expect(background.dropped).toEqual([]);
+        expect(starts).toHaveLength(1);
+        expect(closed).toEqual([]);
+      } finally {
+        await svc.stopAll();
+      }
+    },
+  );
+
+  test("Stop fences an already queued background wake and earlier queued user input", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    let entered!: () => void;
+    let release!: () => void;
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    providerSend = async () => {
+      if (providerInputs.length > 1) return;
+      entered();
+      await blocked;
+    };
+    providerInterrupt = async () => release();
+    let foreground: ReturnType<typeof svc.send> | undefined;
+    let queued: ReturnType<typeof svc.send> | undefined;
+    try {
+      await svc.start(request);
+      foreground = svc.send(request.sessionId, "Launch background work", 77);
+      await started;
+      background.complete(request.sessionId, "Result queued before Stop");
+      queued = svc.send(request.sessionId, "Input queued before Stop", 77);
+      await svc.interrupt(request.sessionId, 77);
+      expect(await foreground).toMatchObject({ reason: "aborted_streaming" });
+      expect(await queued).toMatchObject({ reason: "aborted_streaming" });
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(1);
+      expect(background.pending.get(request.sessionId)).toBe("Result queued before Stop");
+
+      await svc.send(request.sessionId, "Continue after Stop", 77);
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(2);
+      expect(providerInputs[1]!.text).toContain("Result queued before Stop");
+      expect(background.pending.size).toBe(0);
+    } finally {
+      release();
+      await Promise.allSettled([foreground, queued]);
+      await svc.stopAll();
+    }
+  });
+
+  test("replacement, rejected input and injected reminders preserve Stop until real input", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    try {
+      await svc.start(request);
+      await svc.send(request.sessionId, "Launch background work", 77);
+      await svc.interrupt(request.sessionId, 77);
+      background.complete(request.sessionId, "Retained result");
+      await svc.start(request);
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(1);
+      expect(background.pending.get(request.sessionId)).toBe("Retained result");
+      expect(background.dropped).toEqual([]);
+
+      await expect(
+        svc.send(request.sessionId, "Rejected input", 77, undefined, {
+          beforeInput: async () => {
+            throw new Error("Input rejected");
+          },
+          accepted: () => {
+            throw new Error("Must not accept rejected input");
+          },
+        }),
+      ).rejects.toThrow("Input rejected");
+      await svc.send(request.sessionId, { text: "Unrelated reminder", injected: true }, 77);
+      // Repeat the completion signal to exercise the wake gate after both sends.
+      background.complete(request.sessionId, "Retained result");
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(2);
+      expect(providerInputs[1]!.text).toBe("Unrelated reminder");
+      expect(background.pending.get(request.sessionId)).toBe("Retained result");
+
+      await svc.send(request.sessionId, "Review the result", 77);
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(3);
+      expect(providerInputs[2]!.text).toBe(
+        "Review the result\n\n<system-reminder>\nRetained result\n</system-reminder>",
+      );
+      expect(background.pending.size).toBe(0);
+
+      // A full business-session close releases Stop state as well as job custody.
+      await svc.interrupt(request.sessionId, 77);
+      await svc.stop(request.sessionId, 77);
+      await svc.start(request);
+      background.complete(request.sessionId, "Result after reopening");
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(4);
+      expect(providerInputs[3]!.text).toContain("Result after reopening");
+    } finally {
+      await svc.stopAll();
+    }
+  });
+
+  test("Stop during input acceptance retains results and prevents that provider send", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    let stopping: Promise<void> | undefined;
+    try {
+      await svc.start(request);
+      await svc.send(request.sessionId, "Launch background work", 77);
+      await svc.interrupt(request.sessionId, 77);
+      background.complete(request.sessionId, "Result before interrupted acceptance");
+
+      const outcome = await svc.send(request.sessionId, "Try to continue", 77, undefined, {
+        beforeInput: async () => {},
+        accepted: () => {
+          stopping = svc.interrupt(request.sessionId, 77);
+        },
+      });
+      await stopping;
+      await settleBackgroundWakeup();
+      expect(outcome).toMatchObject({ ok: false, reason: "aborted_streaming" });
+      expect(providerInputs).toHaveLength(1);
+      expect(background.pending.get(request.sessionId)).toBe(
+        "Result before interrupted acceptance",
+      );
+      await svc.send(request.sessionId, "Continue for real", 77);
+      expect(providerInputs).toHaveLength(2);
+      expect(providerInputs[1]!.text).toContain("Result before interrupted acceptance");
+      expect(background.pending.size).toBe(0);
+    } finally {
+      await stopping;
+      await svc.stopAll();
+    }
+  });
+
   test.each([false, true])(
     "consumes background results within the Goal run, with Stop=%s",
     async (stop) => {
@@ -1248,6 +1496,18 @@ describe("ExternalRuntimeService", () => {
       expect(pending).toBeUndefined();
       expect(starts).toHaveLength(1);
       expect(svc.getGoal(request.sessionId).goal).toBeNull();
+      providerSend = undefined;
+      pending = "A later background result after Goal Resume";
+      listener?.(request.sessionId, {
+        type: "background_agent_completed",
+        agentId: "later-child",
+        description: "later background work",
+        status: "completed",
+        enqueuedAt: Date.now(),
+      });
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(3);
+      expect(providerInputs[2]!.text).toContain("A later background result after Goal Resume");
       await svc.stopAll();
     },
   );
@@ -2961,6 +3221,14 @@ describe("ExternalRuntimeService", () => {
     expect(providerInputs).toHaveLength(1);
     expect(svc.getGoal(request.sessionId)).toEqual(goal);
     expect(background.pending.has(request.sessionId)).toBe(true);
+    await svc.send(request.sessionId, "Review the background result", 77);
+    await settleBackgroundWakeup();
+    expect(providerInputs).toHaveLength(2);
+    expect(providerInputs[1]!.text).toBe(
+      "Review the background result\n\n<system-reminder>\ndelegated result\n</system-reminder>",
+    );
+    expect(background.pending.size).toBe(0);
+    expect(svc.getGoal(request.sessionId)).toEqual(goal);
     await svc.stopAll();
   });
 

@@ -278,6 +278,8 @@ export class ExternalRuntimeService {
   private readonly lifecycleTails = new Map<string, Promise<void>>();
   /** At most one notification-drain continuation may be scheduled per Session. */
   private readonly backgroundWakeups = new Set<string>();
+  /** User Stop belongs to the business Session, including physical runtime replacements. */
+  private readonly backgroundWakePaused = new Set<string>();
   private readonly recoveryContinuations = new Map<
     string,
     {
@@ -636,6 +638,7 @@ export class ExternalRuntimeService {
     }
     if (!preserveBackgroundWork) {
       this.retainedBackgroundOwners.delete(sessionId);
+      this.backgroundWakePaused.delete(sessionId);
       this.recoveryContinuations.delete(sessionId);
       try {
         this.deps.backgroundWork?.dropSession(sessionId);
@@ -682,6 +685,7 @@ export class ExternalRuntimeService {
     return (
       !!entry?.lifecycle.active &&
       !entry.lifecycle.faulted &&
+      !this.backgroundWakePaused.has(sessionId) &&
       this.authorityStillCurrent(entry.cwd, entry.authority) &&
       !this.goals.read(sessionId)?.paused &&
       // A Goal waiting on the user's answer is not driven by background
@@ -1635,18 +1639,12 @@ export class ExternalRuntimeService {
         modelTraceSource: _modelTraceSource,
         ...providerInput
       } = turnInput;
-      const pendingBackground = goalRun
-        ? this.deps.backgroundWork?.drainMessage(sessionId)
-        : undefined;
       const withBackground = (text: string, background?: string) =>
         background ? `${text}\n\n<system-reminder>\n${background}\n</system-reminder>` : text;
       let nextInput: ExternalRuntimeTurnInput = goalRun
         ? {
             ...providerInput,
-            text: withBackground(
-              `${providerInput.text}\n\n${this.goals.instruction(goalRun)}`,
-              pendingBackground,
-            ),
+            text: `${providerInput.text}\n\n${this.goals.instruction(goalRun)}`,
           }
         : providerInput;
       let finalOutcome: ExternalRuntimeTurnOutcome | undefined;
@@ -1704,6 +1702,30 @@ export class ExternalRuntimeService {
                   hooks?.accepted();
                 } catch {
                   /* disconnected caller */
+                }
+                // Acceptance observers can Stop or replace the runtime. Do not
+                // consume queued results or undo that newer Stop in either case.
+                if (this.sessions.get(sessionId) !== entry || !entry.lifecycle.active)
+                  return entry.recorder.finishIfMissing();
+                if (acceptedGeneration !== entry.lifecycle.interruptGeneration) {
+                  this.abortRecordedRun(sessionId);
+                  return entry.recorder.finishIfMissing();
+                }
+                // Real input and an explicitly validated Goal Resume restore
+                // continuation; an arbitrary injected reminder does not.
+                if (!turnInput.injected || expectedGoal) {
+                  this.backgroundWakePaused.delete(sessionId);
+                }
+                // Wait for durable acceptance before taking the results. Keep
+                // the recorded user message intact and attach them to this send.
+                if (goalRun || !turnInput.injected) {
+                  nextInput = {
+                    ...nextInput,
+                    text: withBackground(
+                      nextInput.text,
+                      this.deps.backgroundWork?.drainMessage(sessionId),
+                    ),
+                  };
                 }
               }
               const onEvent = (event: StreamEvent) => {
@@ -1965,6 +1987,9 @@ export class ExternalRuntimeService {
     const run = this.goals.running(sessionId);
     // Interrupt-and-send (keepGoal) redirects the Goal instead of stopping it.
     if (!options.keepGoal) {
+      if (entry || this.retainedBackgroundOwners.has(sessionId)) {
+        this.backgroundWakePaused.add(sessionId);
+      }
       if (run && this.goals.isCurrent(run)) {
         this.goals.pause(run, "用户已停止本轮执行");
       } else {
