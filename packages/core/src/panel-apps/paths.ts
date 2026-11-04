@@ -1,6 +1,12 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 
+/** Missing packages may be omitted; unreadable storage is not an empty catalog. */
+export function isPanelAppStorageReadError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException | null)?.code;
+  return typeof code === "string" && code !== "ENOENT" && code !== "ENOTDIR";
+}
+
 export class PanelAppInstallError extends Error {
   constructor(message: string) {
     super(message);

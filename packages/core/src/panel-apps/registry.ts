@@ -135,8 +135,10 @@ async function mutateRegistry<T>(
   }
 }
 
-export async function readInstalledPanelAppsRegistry(): Promise<InstalledPanelAppRecord[]> {
-  return readRegistryUnlocked();
+export async function readInstalledPanelAppsRegistry(
+  options: { strict?: boolean } = {},
+): Promise<InstalledPanelAppRecord[]> {
+  return readRegistryUnlocked(options.strict);
 }
 
 export async function writeInstalledPanelAppsRegistry(
