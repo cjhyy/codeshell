@@ -1,8 +1,10 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, spyOn } from "bun:test";
 import { mkdtemp, writeFile, mkdir, symlink, rm } from "node:fs/promises";
+import { promises as fs } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileExists } from "./fs-service.js";
+import { fileExists, readFile } from "./fs-service.js";
 
 /**
  * fileExists gates whether a path mentioned in an answer becomes a clickable
@@ -112,6 +114,66 @@ describe("missing file content", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
       await rm(outside, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("descriptor-bound workspace reads", () => {
+  it("rejects a symlink replacement after the initial file inspection", async () => {
+    if (process.platform === "win32") return;
+    const root = await fs.realpath(await mkdtemp(join(tmpdir(), "fs-race-")));
+    const outside = await mkdtemp(join(tmpdir(), "fs-race-out-"));
+    const file = join(root, "file.txt");
+    const target = join(outside, "fixture.txt");
+    await writeFile(file, "inside");
+    await writeFile(target, "outside fixture");
+    const original = fs.open;
+    const open = spyOn(fs, "open").mockImplementation(async (...args) => {
+      if (args[0] === file) {
+        await fs.unlink(file);
+        await symlink(target, file);
+      }
+      return original(...args);
+    });
+    try {
+      await expect(readFile(root, file)).rejects.toThrow();
+    } finally {
+      open.mockRestore();
+      await rm(root, { recursive: true, force: true });
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects four FIFOs without consuming the filesystem thread pool", async () => {
+    if (process.platform === "win32") return;
+    const root = await mkdtemp(join(tmpdir(), "fs-fifo-"));
+    try {
+      const fifo = join(root, "pipe");
+      execFileSync("mkfifo", [fifo]);
+      const reads = await Promise.allSettled(Array.from({ length: 4 }, () => readFile(root, fifo)));
+      expect(reads.every((result) => result.status === "rejected")).toBe(true);
+      await writeFile(join(root, "normal"), "still responsive");
+      expect((await readFile(root, join(root, "normal"))).text).toBe("still responsive");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still reads internal symlinks, binary and bounded regular files", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fs-content-"));
+    try {
+      const file = join(root, "normal");
+      await writeFile(file, "hello");
+      if (process.platform !== "win32") {
+        await symlink(file, join(root, "link"));
+        expect((await readFile(root, join(root, "link"))).text).toBe("hello");
+      }
+      await writeFile(file, Buffer.from([0, 1]));
+      expect((await readFile(root, file)).reason).toBe("binary");
+      await writeFile(file, Buffer.alloc(2_000_001, 32));
+      expect((await readFile(root, file)).reason).toBe("too-large");
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 });
