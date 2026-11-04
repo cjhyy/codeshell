@@ -223,7 +223,9 @@ export class RemoteHostManager extends EventEmitter {
       throw new Error(`${relay ? "Relay" : "Tunnel"} mode requires an initialized access passcode`);
     }
     if (relay) this.publicBaseUrl = undefined;
-    this.passcode = publicAccess && options.passcode?.isSet() ? options.passcode : undefined;
+    // Keep the gate object even when account auto-start precedes passcode setup.
+    // Its current configuration is consulted for each HTTP/WS admission.
+    this.passcode = publicAccess ? options.passcode : undefined;
     const gate = this.passcode;
     this.opts.webApi?.start();
     const server = createServer((req, res) => {
@@ -265,7 +267,7 @@ export class RemoteHostManager extends EventEmitter {
         const account =
           relay && this.relayRequestOrigin(req) ? this.accountAccess.capture(req) : undefined;
         if (!account) {
-          if (relay && (req.headers["x-codeshell-host-access"] !== undefined || !gate)) {
+          if (relay && (req.headers["x-codeshell-host-access"] !== undefined || !gate?.isSet())) {
             this.relayJson(res, 401, { error: "Account relay authorization is required" });
             req.resume();
             return;
