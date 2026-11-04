@@ -4,10 +4,30 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "@cjhyy/code-shell-core";
 import {
+  broadcastOutputHistoryReset,
   createDesktopOutputRecoveryAuthorizer,
   registerDesktopOutputHistoryHost,
 } from "./session-output-history-host.js";
 import { __resetProjectStoreForTest, getProjectStore } from "./project-store.js";
+
+test("history retirement reaches every Desktop window even when one closes during fanout", () => {
+  const delivered: Array<[number, string, unknown]> = [];
+  const windows = [1, 2, 3, 4].map((id) => ({
+    isDestroyed: () => id === 4,
+    webContents: {
+      isDestroyed: () => false,
+      send(channel: string, payload: unknown) {
+        if (id === 2) throw new Error("closing window");
+        delivered.push([id, channel, payload]);
+      },
+    },
+  }));
+  broadcastOutputHistoryReset(windows as any, "recovered");
+  expect(delivered).toEqual([
+    [1, "sessions:outputHistoryReset", { sessionId: "recovered" }],
+    [3, "sessions:outputHistoryReset", { sessionId: "recovered" }],
+  ]);
+});
 
 function fixture() {
   let owner: number | undefined;
