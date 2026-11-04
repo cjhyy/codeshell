@@ -613,7 +613,10 @@ export function useTranscriptBuckets({
         ...pages,
         [bucket]: {
           engineId,
-          loadedBytes: maxBytes,
+          // A pending save / overlapping live update can return the in-memory
+          // window instead of the requested disk page. Do not spend its budget.
+          loadedBytes:
+            !page && persistedResult.value.readDeferred ? previous.loadedBytes : maxBytes,
           hasMore: (page?.hasMore ?? false) || persistedResult.value.hasEarlier,
           loading: false,
           failed: false,

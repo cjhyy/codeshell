@@ -164,6 +164,9 @@ export class SessionPersistence {
       evictable?: boolean;
     }
   >();
+  // Reducer snapshots are immutable. Keep only weak identities after their serialized
+  // cache is evicted, so a global flush neither retains history nor rewrites it.
+  private readonly transcriptSnapshots = new Map<string, WeakRef<object>>();
   private readonly readingTranscripts = new Map<string, number>();
   private transcriptVersion = 0;
   private transcriptReadGeneration = 0;
@@ -380,8 +383,20 @@ export class SessionPersistence {
     return value?.value ?? null;
   }
 
+  saveSnapshot(projectKey: string, sessionId: string, state: object): void {
+    const key = memoryTranscriptKey(projectKey, sessionId);
+    if (this.transcriptSnapshots.get(key)?.deref() === state) return;
+    this.saveTranscript(projectKey, sessionId, JSON.stringify(state));
+    this.transcriptSnapshots.set(key, new WeakRef(state));
+    // Dead identities do not need to outlive their renderer projections.
+    for (const [identity, reference] of this.transcriptSnapshots) {
+      if (!reference.deref()) this.transcriptSnapshots.delete(identity);
+    }
+  }
+
   saveTranscript(projectKey: string, sessionId: string, value: string | null): void {
     const key = memoryTranscriptKey(projectKey, sessionId);
+    this.transcriptSnapshots.delete(key);
     if (this.transcriptValues.get(key)?.value === value) return;
     const hasEarlier = this.transcriptValues.get(key)?.hasEarlier === true;
     let evictable = false;
@@ -416,6 +431,7 @@ export class SessionPersistence {
 
   copyTranscript(projectKey: string, targetProjectKey: string, sessionId: string): void {
     if (projectKey === targetProjectKey) return;
+    this.transcriptSnapshots.delete(memoryTranscriptKey(targetProjectKey, sessionId));
     const current = this.getTranscript(projectKey, sessionId);
     if (current !== null) {
       this.transcriptValues.set(memoryTranscriptKey(targetProjectKey, sessionId), {
@@ -471,7 +487,7 @@ export class SessionPersistence {
     projectKey: string,
     sessionId: string,
     maxBytes?: number,
-  ): Promise<{ value: string | null; hasEarlier: boolean }> {
+  ): Promise<{ value: string | null; hasEarlier: boolean; readDeferred?: true }> {
     await this.initialize();
     if (
       this.transcriptQueue.some(
@@ -487,7 +503,12 @@ export class SessionPersistence {
     const pending = this.transcriptQueue.some(
       (operation) => operation.projectKey === projectKey && operation.sessionId === sessionId,
     );
-    if (pending) return { value: before?.value ?? null, hasEarlier: before?.hasEarlier ?? false };
+    if (pending)
+      return {
+        value: before?.value ?? null,
+        hasEarlier: before?.hasEarlier ?? false,
+        readDeferred: true,
+      };
     const readGeneration = ++this.transcriptReadGeneration;
     this.readingTranscripts.set(key, (this.readingTranscripts.get(key) ?? 0) + 1);
     let result: { value: string | null; hasEarlier: boolean };
@@ -503,7 +524,11 @@ export class SessionPersistence {
       (latest?.version ?? 0) !== (before?.version ?? 0) ||
       (latest?.readGeneration ?? 0) > readGeneration
     ) {
-      return { value: latest?.value ?? null, hasEarlier: latest?.hasEarlier ?? false };
+      return {
+        value: latest?.value ?? null,
+        hasEarlier: latest?.hasEarlier ?? false,
+        readDeferred: true,
+      };
     }
     let evictable = false;
     try {
@@ -567,6 +592,7 @@ export class SessionPersistence {
 
   dispose(): void {
     this.unsubscribe?.();
+    this.transcriptSnapshots.clear();
     this.listeners.clear();
     this.errorListeners.clear();
     this.flushListeners.events.clear();
