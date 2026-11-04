@@ -232,8 +232,9 @@ try {
           params: { event: { type: "turn_complete", reason: "completed" } },
         },
       });
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         window.finishSend = resolve;
+        window.failSend = reject;
       });
     };
   });
@@ -242,7 +243,7 @@ try {
   await page.getByText(/fast task finished before IPC reply/).waitFor();
   await page.getByLabel("电脑任务", { exact: true }).fill("New draft while IPC is pending");
   assert.equal(await page.getByRole("button", { name: "发送到此电脑" }).isDisabled(), true);
-  await page.evaluate(() => window.finishSend());
+  await page.evaluate(() => window.failSend(new Error("late transport reply lost")));
   await page.waitForFunction(() =>
     [...document.querySelectorAll("button")].some(
       (button) => button.textContent === "发送到此电脑" && !button.disabled,
@@ -293,6 +294,41 @@ try {
     "stop",
     { connectionId: "connection-a" },
   ]);
+  // Completion after reconnect is sufficient even if chat.accepted was lost.
+  await page.evaluate(() =>
+    window.emit("a", {
+      type: "session.stream",
+      event: {
+        method: "agent/streamEvent",
+        params: {
+          event: {
+            type: "turn_complete",
+            reason: "completed",
+            agentId: "child",
+          },
+        },
+      },
+    }),
+  );
+  assert.equal(await page.getByRole("button", { name: "发送到此电脑" }).isDisabled(), true);
+  await page.evaluate(() =>
+    window.emit("a", {
+      type: "session.stream",
+      event: {
+        method: "agent/streamEvent",
+        params: { event: { type: "turn_complete", reason: "completed" } },
+      },
+    }),
+  );
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll("button")].some(
+      (button) => button.textContent === "发送到此电脑" && !button.disabled,
+    ),
+  );
+  assert.equal(
+    await page.evaluate(() => window.calls.filter((call) => call[0] === "send").length),
+    sentBeforeLargeImage,
+  );
   await page.screenshot({ path: path.join(output, "devices-desktop.png") });
   // An older online directory response cannot undo a newer offline response.
   await page.evaluate(() => {
