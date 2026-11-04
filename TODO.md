@@ -25,9 +25,9 @@
 
 - [ ] **手机审批截止时间与时钟偏差（R16、R17，S）。** 截止时间要显示在实际挂载的 `web/app` 审批组件里，旧 `desktop/src/mobile/components` 隔离或删除；截止时间改为相对 TTL 或附带服务器时间，目录选择器过期时给出提示。
 - [ ] **模型连接被删后会话失败粘住（R10，M）**；**chat 同会话并发导致绑定 Session 消息乱序（R14，M）**；**面板发现瞬时错误清空目录与资源（R18，M）**。
-- [ ] **CUA 执行边界规格与代码一致化（R09，S）。** 先定“停止电脑操作是否取消 Run”，再统一规格 `:138/:143` 与 `computer-use-control.ts`。
+- [x] **CUA 执行边界规格与代码一致化（R09，S）。** 全局入口只停止电脑输入，不取消 Run；会话 Stop 仍取消 Run。快捷键按已连接 CUA proxy 数注册/注销，规格与控制层回归已同步。
 - [ ] **小修集合（S）。** DelegateWork schema 文案（R11）、pet observer 共享连接（R12）、Optimization Lab 冻结 root（R13）、chat 就绪与退避（R15）、Dock 连点双窗（R19）、主进程同步阻塞（R20）、Linux `basic_text` 凭据策略（R21）、TUI `process.exit` 截断（R22）、cdp 等待期限（R23）、ESLint 漏 `host`（R24）、发布门禁（R25）、`bun run test`/`test:watch` 与分片一致（R26）。
-- [ ] **文档与发布说明（S）。** 补 CHANGELOG 0.9.46–0.9.51 并加发布校验（R27）；更新 arena README、`docs/panel-native-tools.md` Hub 目录说明，并链接 [手机远程验收记录](docs/todo/mobile-remote-acceptance-2026-10-29.md)（R28）。
+- [x] **文档与发布说明（R27、R28，S）。** R27 已按实际 tag 补齐 CHANGELOG 0.9.46–0.9.52，并在版本校验及 bump 前置检查要求目标标题；R28 已更新 arena 私有源码说明与 Hub 项目内子目录选择说明；[手机远程验收记录](docs/todo/mobile-remote-acceptance-2026-10-29.md)已在此链接，真实设备验收仍保留未完成。
 
 ## 本轮 P0 / P1：待核查与继续交付
 

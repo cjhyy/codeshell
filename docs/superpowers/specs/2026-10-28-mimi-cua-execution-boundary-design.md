@@ -135,12 +135,12 @@ proxy 只对这一类请求重序列化并剥离 `_meta`，其余字节仍原样
 | 触发                                                                                       | 动作                                                                                                                 | 清除                                          |
 | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
 | 会话 Stop（agent-bridge 看到 `agent/cancel`，与 `cancelBrowserActionsForStoppedRun` 并列） | `cancelledSessions += sessionId`；core 的 abort 同时生效                                                             | 该会话下一个 `agent/run`                      |
-| 全局停止（宠物菜单"停止操作"、Pet 小组件按钮、全局快捷键 ⌘⇧Esc）                           | `hold.background = hold.foreground = true, reason user-stop`；对闸门记录过本轮有 CUA 调用的活跃会话发 `agent/cancel` | 用户显式点"继续"                              |
+| 全局停止（宠物菜单"停止操作"、Pet 小组件按钮、全局快捷键 ⌘⇧Esc）                           | `gate.stopAll()` 阻止新的电脑输入；不发送 `agent/cancel`，Run 可继续推理、读数据或报告输入被暂停 | 用户显式点"继续"                              |
 | 点击 Mimi 打开聊天                                                                         | `hold.foreground = true, reason chat-open`                                                                           | 用户点"继续"，或聊天页失焦且 10s 内无再次聚焦 |
 | 关闭 Mimi 显示                                                                             | 不触发。关闭角色与停止任务是两个入口                                                                                 | —                                             |
 | 拖动 Mimi                                                                                  | 不触发。只停止跟随                                                                                                   | —                                             |
 
-快捷键只在 `CuaDriverHost` 状态为 running 时注册，避免长期占用组合键。
+快捷键在已连接的 CUA proxy 数量大于零时注册，最后一个 proxy 断开后注销（`computer-use-control.ts` 的 `onConnections`）。它停止电脑输入，不取消 Run；取消会话仍使用会话 Stop。`computer-use-control.test.ts` 固定这两个入口的区别。
 
 ### 4.6 在途动作与强制停止
 

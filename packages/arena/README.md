@@ -1,12 +1,15 @@
 # @cjhyy/code-shell-arena
 
-Optional multi-model analysis capability for `@cjhyy/code-shell-core`. Arena
+Retained private multi-model analysis source for `@cjhyy/code-shell-core`. Arena
 coordinates participant research, evidence collection, review, debate,
 adjudication, and consensus without adding multi-model policy to core.
 
-## Host runtime
+## Private workspace entries
 
-Product hosts should use the focused runtime entry:
+This package is `private: true`, is not published to npm, and is not loaded by
+Desktop, TUI, or Server. Its source and tests remain in this workspace for
+experimentation; the following entry is an internal example, not a product Host
+installation instruction:
 
 ```ts
 import {
@@ -18,14 +21,14 @@ import {
 
 `/runtime` contains the Arena class, capability factory, model presets, result
 renderers, and public runtime types. It intentionally excludes phase/strategy
-internals and Iterate mode, reducing the modules evaluated by normal TUI or
-Desktop hosts.
+internals and Iterate mode for isolated workspace experiments.
 
 The package root remains fully compatible and continues to expose advanced
 algorithms, phase helpers, transitions, ledger primitives, and `IterativeArena`.
-Both entries are part of the same release unit.
+Both entries are private. The workspace version follows the repository version
+for consistency, but neither entry is a published release artifact.
 
-## Composition
+## Workspace experiment
 
 ```ts
 import { Engine } from "@cjhyy/code-shell-core";
