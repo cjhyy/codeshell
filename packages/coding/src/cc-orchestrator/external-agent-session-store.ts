@@ -26,6 +26,7 @@ export type ExternalAgentSessionRecord = Omit<
   ExternalAgentSessionBinding,
   "createdAt" | "lastUsedAt" | "updatedAt"
 > & {
+  /** Omitted optional fields are retained; explicitly undefined fields are cleared. */
   createdAt?: number;
   lastUsedAt?: number;
   updatedAt?: number;
@@ -186,28 +187,24 @@ function mergeBinding(
   existing?: ExternalAgentSessionBinding,
 ): ExternalAgentSessionBinding {
   const now = binding.lastUsedAt ?? binding.updatedAt ?? Date.now();
+  const optional = <K extends keyof ExternalAgentSessionBinding>(key: K) =>
+    Object.hasOwn(binding, key) ? binding[key] : existing?.[key];
+  const codeShellSessionId = optional("codeShellSessionId");
+  const workspaceRoot = optional("workspaceRoot");
+  const worktreePath = optional("worktreePath");
+  const worktreeBranch = optional("worktreeBranch");
+  const worktreeBaseRef = optional("worktreeBaseRef");
+  const isolation = optional("isolation");
   return {
     cli: binding.cli,
     sessionId: binding.sessionId,
-    ...((binding.codeShellSessionId ?? existing?.codeShellSessionId)
-      ? { codeShellSessionId: binding.codeShellSessionId ?? existing?.codeShellSessionId }
-      : {}),
+    ...(codeShellSessionId ? { codeShellSessionId } : {}),
     cwd: normalizeCwdPath(binding.cwd),
-    ...((binding.workspaceRoot ?? existing?.workspaceRoot)
-      ? { workspaceRoot: normalizeCwdPath(binding.workspaceRoot ?? existing!.workspaceRoot!) }
-      : {}),
-    ...((binding.worktreePath ?? existing?.worktreePath)
-      ? { worktreePath: normalizeCwdPath(binding.worktreePath ?? existing!.worktreePath!) }
-      : {}),
-    ...((binding.worktreeBranch ?? existing?.worktreeBranch)
-      ? { worktreeBranch: binding.worktreeBranch ?? existing?.worktreeBranch }
-      : {}),
-    ...((binding.worktreeBaseRef ?? existing?.worktreeBaseRef)
-      ? { worktreeBaseRef: binding.worktreeBaseRef ?? existing?.worktreeBaseRef }
-      : {}),
-    ...((binding.isolation ?? existing?.isolation)
-      ? { isolation: binding.isolation ?? existing?.isolation }
-      : {}),
+    ...(workspaceRoot ? { workspaceRoot: normalizeCwdPath(workspaceRoot) } : {}),
+    ...(worktreePath ? { worktreePath: normalizeCwdPath(worktreePath) } : {}),
+    ...(worktreeBranch ? { worktreeBranch } : {}),
+    ...(worktreeBaseRef ? { worktreeBaseRef } : {}),
+    ...(isolation ? { isolation } : {}),
     createdAt: binding.createdAt ?? existing?.createdAt ?? now,
     lastUsedAt: now,
     updatedAt: now,
