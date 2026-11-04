@@ -50,7 +50,8 @@ import {
 import { registerCloudEnvironmentIpc } from "./cloud-environment-ipc.js";
 import { injectDesktopManagedRuntimePath } from "./managed-runtime-service.js";
 import { createDesktopManagedRuntimeWiring } from "./managed-runtime-wiring.js";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { AppRendererNavigation } from "./app-renderer-navigation.js";
 import { createHash, randomUUID } from "node:crypto";
 import { dirname, resolve, basename, extname, isAbsolute, join } from "node:path";
 import { writeFile } from "node:fs/promises";
@@ -622,6 +623,10 @@ import {
 } from "./renderer-configuration-authority.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const appRendererNavigation = new AppRendererNavigation(
+  process.env.VITE_DEV_URL || pathToFileURL(resolve(__dirname, "..", "renderer", "index.html")).href,
+  (url) => shell.openExternal(url),
+);
 const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
 if (chromeNativeMessagingOrigin) {
   void runChromeNativeMessagingHost(chromeNativeMessagingOrigin)
@@ -1629,16 +1634,7 @@ async function createWindow(): Promise<BrowserWindow> {
     });
   }
 
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:/i.test(url)) void shell.openExternal(url);
-    return { action: "deny" };
-  });
-  win.webContents.on("will-navigate", (e, url) => {
-    const devUrl = process.env.VITE_DEV_URL ?? "";
-    if (devUrl && url.startsWith(devUrl)) return;
-    e.preventDefault();
-    if (/^https?:/i.test(url)) void shell.openExternal(url);
-  });
+  appRendererNavigation.bind(win.webContents);
 
   const devUrl = process.env.VITE_DEV_URL;
   const noDevtools = process.env.CODE_SHELL_NO_DEVTOOLS === "1";
@@ -2997,6 +2993,7 @@ function createPetWidgetBrowserWindow(bounds: {
   } catch {
     // Some Linux window managers do not implement workspace pinning.
   }
+  appRendererNavigation.bind(win.webContents);
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   win.webContents.on("will-navigate", (event) => event.preventDefault());
   win.webContents.on("did-fail-load", (_event, code, desc, validatedUrl) => {
@@ -3148,6 +3145,7 @@ async function createBrowserPopout(parent: BrowserWindow, initialUrl?: string): 
       webviewTag: true,
     },
   });
+  appRendererNavigation.bind(win.webContents);
   const wcId = win.webContents.id;
   popoutParents.set(wcId, parent.id);
   win.on("closed", () => popoutParents.delete(wcId));
@@ -6521,7 +6519,8 @@ async function sweepStaleWorktrees(reason: string): Promise<void> {
   }
 }
 
-ipcMain.handle("shell:openExternal", async (_e, url: string) => {
+ipcMain.handle("shell:openExternal", async (event, url: string) => {
+  appRendererNavigation.assertSender(event);
   if (typeof url !== "string" || !url || url.length > 16_384 || url.includes("\0")) {
     throw new Error("openExternal requires a bounded url");
   }
