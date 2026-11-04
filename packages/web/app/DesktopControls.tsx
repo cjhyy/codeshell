@@ -101,7 +101,9 @@ export function DesktopSidebar({
           value={app.activeProjectId ?? app.activeProjectCwd ?? ""}
           onChange={(event) => {
             const selected = event.target.value;
-            if (selected) navigation.guard(() => app.selectProject(selected));
+            const project = app.projects.find((item) => (item.id ?? item.path) === selected);
+            if (selected)
+              navigation.guard(() => app.selectProject(selected), project?.path ?? selected);
           }}
         >
           <option value="" disabled>
@@ -147,7 +149,7 @@ export function DesktopSidebar({
               navigation.conversation(() => {
                 app.newSession({ projectId: null });
                 setCreateOpen(false);
-              })
+              }, null)
             }
           >
             <span className="session-title">无项目对话</span>
@@ -160,7 +162,7 @@ export function DesktopSidebar({
                 navigation.conversation(() => {
                   app.newSession(app.activeCwd);
                   setCreateOpen(false);
-                })
+                }, app.activeCwd)
               }
             >
               {app.activeCwd}
@@ -193,7 +195,7 @@ export function DesktopSidebar({
                         project.name,
                       );
                       setCreateOpen(false);
-                    })
+                    }, root.path)
                   }
                 >
                   <span className="session-title">
@@ -272,7 +274,10 @@ export function DesktopSidebar({
           onChoose={(mode) => {
             const selected = picking;
             setPicking(null);
-            navigation.conversation(() => app.openCcSession(selected.id, selected.cwd, mode));
+            navigation.conversation(
+              () => app.openCcSession(selected.id, selected.cwd, mode),
+              selected.cwd,
+            );
           }}
         />
       ) : null}

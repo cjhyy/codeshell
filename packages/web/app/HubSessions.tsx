@@ -126,7 +126,7 @@ export function HubSessions({
   onDirtyChange,
 }: {
   onAuthLost: () => void;
-  onOpen: (id: string, intent?: HistoryFocusRequest | null) => void;
+  onOpen: (id: string, intent?: HistoryFocusRequest | null, cwd?: string) => void;
   onChanged?: () => void;
   version?: number;
   onDirtyChange?: (dirty: boolean) => void;
@@ -152,6 +152,7 @@ export function HubSessions({
   const openGeneration = React.useRef(0);
   const [openAfterWrite, setOpenAfterWrite] = React.useState<{
     id: string;
+    cwd?: string;
     request: HistoryFocusRequest | null;
     generation: number;
     identity: string;
@@ -269,7 +270,7 @@ export function HubSessions({
       )
         return;
       const intent = focus.take(openAfterWrite.request);
-      if (intent) callbacks.current.onOpen(openAfterWrite.id, intent);
+      if (intent) callbacks.current.onOpen(openAfterWrite.id, intent, openAfterWrite.cwd);
     });
     return () => cancelAnimationFrame(frame);
   }, [busy, loading, loadingMore, openAfterWrite, focus.take]);
@@ -361,6 +362,7 @@ export function HubSessions({
     patch: { title: string; expectedTitle: string } | { archived: boolean },
     open = false,
     source: Element | null = document.activeElement,
+    openCwd?: string,
   ) => {
     if (write.current) return;
     const request = focus.capture(source);
@@ -395,7 +397,8 @@ export function HubSessions({
       setLoading(true);
       setReload((value) => value + 1);
       callbacks.current.onChanged?.();
-      if (open) setOpenAfterWrite({ id, request, generation, identity: openIdentity });
+      if (open)
+        setOpenAfterWrite({ id, cwd: openCwd, request, generation, identity: openIdentity });
     } catch (cause) {
       if (!controller.signal.aborted) {
         if ("title" in patch && !(cause instanceof ApiError && cause.status === 401)) {
@@ -477,10 +480,11 @@ export function HubSessions({
   const open = (entry: ManagedSession, source: HTMLElement) => {
     openGeneration.current += 1;
     setOpenAfterWrite(null);
-    if (entry.archivedAt) void mutate(entry.sessionId, { archived: false }, true, source);
+    if (entry.archivedAt)
+      void mutate(entry.sessionId, { archived: false }, true, source, entry.cwd);
     else {
       const request = document.activeElement === source ? focus.capture(source) : null;
-      callbacks.current.onOpen(entry.sessionId, focus.take(request));
+      callbacks.current.onOpen(entry.sessionId, focus.take(request), entry.cwd);
     }
   };
 

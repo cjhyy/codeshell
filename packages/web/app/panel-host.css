@@ -18,6 +18,14 @@
   margin: 0;
   font-size: 18px;
 }
+.panel-host-heading-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.panel-host-status {
+  display: contents;
+}
 .panel-host-heading p {
   margin: 5px 0 0;
   color: var(--muted);
@@ -135,18 +143,6 @@
   flex-shrink: 0;
   white-space: nowrap;
 }
-@media (max-width: 640px) {
-  .panel-host {
-    padding: 12px 10px;
-  }
-  .panel-host-frame {
-    min-height: 380px;
-  }
-  .panel-host-confirm pre {
-    max-height: 160px;
-  }
-}
-
 .panel-host-preview {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -216,4 +212,105 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 7px;
+}
+
+@media (max-width: 760px), (max-width: 960px) and (max-height: 500px) {
+  .panel-host {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding: 0;
+    gap: 0;
+  }
+  .panel-host-heading {
+    gap: 8px;
+    padding: 6px 10px;
+  }
+  .panel-host-heading > div:first-child {
+    min-width: 0;
+  }
+  .panel-host-heading h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 15px;
+  }
+  .panel-host-heading p {
+    display: none;
+  }
+  .panel-host-heading-actions {
+    gap: 6px;
+  }
+  .panel-host-heading-actions button {
+    padding: 6px 8px;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  .panel-host button,
+  .panel-host-actions a {
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+  .panel-host-status {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    max-height: 35%;
+    overflow: auto;
+    overscroll-behavior: contain;
+    gap: 6px;
+  }
+  .panel-host-status:empty {
+    display: none;
+  }
+  .panel-host-status > * {
+    margin: 0 8px 6px;
+  }
+  .panel-host-limitations,
+  .panel-host-notice,
+  .panel-host-error {
+    padding: 8px 10px;
+    max-height: none;
+    overflow: visible;
+  }
+  .panel-host-limitations summary {
+    min-height: 28px;
+    align-content: center;
+  }
+  .panel-host-frame {
+    flex: 1 1 0;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+  }
+  /* Trusted controls take the available panel viewport without unmounting the guest. */
+  .panel-host-overlaying > .panel-host-heading,
+  .panel-host-overlaying > .panel-host-status,
+  .panel-host-overlaying > .panel-host-frame {
+    visibility: hidden;
+  }
+  .panel-host > .panel-host-preview,
+  .panel-host > .panel-host-confirm,
+  .panel-host > .panel-directory-picker {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 12px 12px max(12px, env(safe-area-inset-bottom));
+    overflow: auto;
+    overscroll-behavior: contain;
+    border-radius: 0;
+  }
+  .panel-host > .panel-directory-picker {
+    overflow: hidden;
+  }
+  .panel-host-confirm pre {
+    max-height: 160px;
+  }
+  .panel-host-actions {
+    flex-wrap: wrap;
+  }
 }

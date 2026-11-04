@@ -77,7 +77,7 @@ try {
   );
   await writeFile(
     join(installPath, "app/index.html"),
-    '<!doctype html><html><body><h1 id="ready"></h1><button id="open">预览电脑文件</button><output id="result"></output><script type="module" src="./main.mjs"></script></body></html>',
+    '<!doctype html><html><body><h1 id="ready"></h1><button id="open">预览电脑文件</button><button id="confirm">请求打开链接</button><output id="result"></output><script type="module" src="./main.mjs"></script></body></html>',
   );
   await writeFile(join(installPath, "app/label.mjs"), 'export const label = "面板模块已加载";');
   await writeFile(
@@ -88,6 +88,10 @@ try {
       try { await window.codeshellPanel.call('resources.open', {assetId:${JSON.stringify(asset.id)}});
         document.querySelector('#result').textContent = 'opened';
       } catch (error) { document.querySelector('#result').textContent = String(error); }
+    };
+    document.querySelector('#confirm').onclick = async () => {
+      try { await window.codeshellPanel.call('external.open', {url:'https://example.invalid/'}); }
+      catch (error) { document.querySelector('#result').textContent = String(error); }
     };`,
   );
   const app = {
@@ -97,7 +101,7 @@ try {
     entry: "app/index.html",
     icon: "panel",
     singleton: true,
-    permissions: ["resources"],
+    permissions: ["resources", "external.open"],
     installPath,
     source: scratch,
     installedAt: "2026-10-28T00:00:00Z",
@@ -147,7 +151,7 @@ try {
   assert.ok(built.success, String(built.logs));
   await writeFile(
     join(buildDir, "index.html"),
-    '<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/mobile/entry.css"><style>body{margin:0}#root{height:100dvh}</style></head><body><div id="root"></div><script type="module" src="/mobile/entry.js"></script></body></html>',
+    '<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/mobile/entry.css"><style>body{margin:0}#root{height:100dvh;display:flex;flex-direction:column}</style></head><body><div id="root"></div><script type="module" src="/mobile/entry.js"></script></body></html>',
   );
   browser = await chromium.launch({
     headless: true,
@@ -179,6 +183,47 @@ try {
   const frame = page.frameLocator("iframe");
   await frame.getByText("面板模块已加载").waitFor();
   await page.getByText("正在打开面板…", { exact: true }).waitFor({ state: "hidden" });
+  const assertViewport = async (selector) => {
+    const bounds = await page.locator(selector).boundingBox();
+    assert.ok(bounds, `${selector} must be visible`);
+    const viewport = page.viewportSize();
+    assert.ok(
+      bounds.y >= 0 && bounds.y + bounds.height <= viewport.height + 1,
+      `${selector} must fit the mobile viewport`,
+    );
+    assert.equal(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollHeight <= innerHeight + 1 &&
+          document.documentElement.scrollWidth <= innerWidth,
+      ),
+      true,
+      "The host must not add a second page scrollbar",
+    );
+    return bounds;
+  };
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 844, height: 390 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const bounds = await assertViewport("iframe");
+    assert.ok(bounds.height > viewport.height / 2, "The panel keeps most of the available height");
+    await frame.getByRole("button", { name: "请求打开链接" }).click();
+    await page.getByRole("button", { name: "取消", exact: true }).waitFor();
+    await assertViewport(".panel-host-confirm");
+    assert.equal(await page.locator("iframe").getAttribute("inert"), "");
+    assert.equal(
+      await page
+        .getByRole("button", { name: "重新加载", exact: true, includeHidden: true })
+        .isDisabled(),
+      true,
+    );
+    await page.getByRole("button", { name: "取消", exact: true }).click();
+    await frame.getByText("面板模块已加载").waitFor();
+    assert.equal(await page.locator("iframe").getAttribute("inert"), null);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(
     assetRequests.some(
       (request) =>
@@ -271,6 +316,8 @@ try {
     JSON.stringify({
       opaqueTunnelModules: true,
       mobileViewport: true,
+      portraitAndLandscapeLayout: true,
+      trustedConfirmationVisible: true,
       computerFileSaved: true,
       exactDownloadBytes: true,
       copyAndFallback: true,
