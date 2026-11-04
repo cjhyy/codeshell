@@ -1,3 +1,4 @@
+import { accountRegistrationUrl } from "@cjhyy/code-shell-web/account";
 import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
 import type { CloudAccountLogin } from "../shared/cloud-account.js";
 import { accountGitHubRequest, accountLinksRequest } from "./cloud-account-links.js";
@@ -7,6 +8,7 @@ import { accountProfileRequest } from "./cloud-account-profile.js";
 export function registerCloudAccountIpc(options: {
   ipcMain: Pick<IpcMain, "handle">;
   manager: CloudAccountManager;
+  openExternal?: (url: string) => Promise<void>;
   isMainWindow: (sender: WebContents) => boolean;
   focusMainWindow?: (sender: WebContents) => void;
 }) {
@@ -32,6 +34,15 @@ export function registerCloudAccountIpc(options: {
   options.ipcMain.handle("cloudAccount:login", (event, input: CloudAccountLogin) => {
     owner(event);
     return options.manager.signIn("login", input, () => allowed(event));
+  });
+  options.ipcMain.handle("cloudAccount:openRegistration", async (event, origin: string) => {
+    owner(event);
+    const url = accountRegistrationUrl(origin);
+    const capabilities = await options.manager.capabilities(origin);
+    owner(event);
+    if (!capabilities.registrationAllowed) throw new Error("此账号服务暂未开放注册。");
+    if (!options.openExternal) throw new Error("网页注册入口暂不可用。");
+    await options.openExternal(url);
   });
   options.ipcMain.handle("cloudAccount:register", (event, input: CloudAccountLogin) => {
     owner(event);

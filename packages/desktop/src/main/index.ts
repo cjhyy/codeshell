@@ -1136,7 +1136,7 @@ const accessPasscode = new AccessPasscode({
 let prepareAccountGitHubLink:
   | ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"]
   | undefined = undefined;
-const { cloudAccountManager, mobileRemoteController, cloudManagementManager } =
+const { cloudAccountManager, mobileRemoteController, cloudManagementManager, accountFeatures } =
   createDesktopRemoteServices({
     ipcMain,
     userDataDir: app.getPath("userData"),
@@ -1160,7 +1160,14 @@ const { cloudAccountManager, mobileRemoteController, cloudManagementManager } =
     cloudWindows: { open: openManagedCloudWorkbench, close: closeManagedCloudWorkbench },
     openLegacyCloud: openCloudWorkbench,
   });
-const captureLinkAccount: CaptureLinkAccountAccess = createLinkAccountAccess(cloudAccountManager);
+const captureLinkAccount: CaptureLinkAccountAccess = createLinkAccountAccess(
+  cloudAccountManager,
+  () => accountFeatures.requireReady("links.remote"),
+);
+app.on("browser-window-focus", (_event, window) => {
+  if ([...mainWindows].includes(window)) void accountFeatures.refresh(undefined, 60_000);
+});
+app.once("before-quit", () => accountFeatures.dispose());
 // Main-owned external runtimes use the same account gate as the stdio worker.
 setDefaultCredentialAccess({
   ...localCredentialAccess,
