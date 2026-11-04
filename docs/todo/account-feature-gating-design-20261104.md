@@ -72,7 +72,7 @@ id 一经发布不改名；废弃时服务端停止下发，客户端视为 `hid
 
 | id                    | 功能                                      | 优先级 | 部署条件                           | 本机条件         | 现状               |
 | --------------------- | ----------------------------------------- | ------ | ---------------------------------- | ---------------- | ------------------ |
-| `links.remote`        | 远程 Link（GitHub、Figma 等经 Link 服务） | 已有   | Link 管理已配置                    | 无               | 已上线，入口待迁移 |
+| `links.remote`        | 远程 Link（GitHub、Figma 等经 Link 服务） | 已有   | Link 管理或登录授权交接已配置      | 无               | 已上线，入口待迁移 |
 | `cloud.projects`      | 云端项目                                  | 已有   | 云端控制已配置，下发 `cloudOrigin` | 无               | 未完整部署         |
 | `relay.phone`         | 手机经账号中继访问本机                    | 已有   | 中继已开启                         | 本机已登记       | 生产未开中继       |
 | `devices.dispatch`    | 电脑派任务给另一台                        | 已有   | 中继已开启                         | 本机中继 `ready` | 入口已隐藏（#281） |
@@ -134,12 +134,14 @@ export const FEATURES = {
 ```
 
 - `offered(context)` 从成功初始化的服务和现有配置推导，不新增常规“开关”环境变量：
-  中继看 `relayCapability.enabled`，Link 看 `linkManagement`，云端看 `cloudAuthority`；
+  中继看 `relayCapability.enabled`，Link 看 `linkManagement` 或 OAuth helper 的
+  `linkEnabled`（兼容只配置登录后 Link 授权交接的旧部署），云端看 `cloudAuthority`；
   不能仅因环境变量或配置对象存在就认为服务可用。
 - 账号层：首版不增加试用人群配置，保留原有会话、资源归属和操作权限检查。
   `not_entitled` 预留给后续账号权益；本轮不实现管理员灰度或指定账号名单。
 - 运维紧急关闭：`ACCOUNT_FEATURE_DISABLED="devices.handoff"`，命中时 `enabled:false`、
-  `reason:"disabled_by_operator"`。
+  `reason:"disabled_by_operator"`。首版启动时读取配置，更新后需重启相应服务；
+  在重新授权、兑换及后续受保护请求时拒绝，不宣称动态配置推送或即时撤销所有存量授权。
 
 ### 服务端强制
 
