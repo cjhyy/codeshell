@@ -12,7 +12,7 @@ const STATUS_BODY = JSON.stringify({
   githubLinkEnabled: false,
   linkManagementEnabled: false,
   relay: { enabled: false },
-  // An explicit empty map makes every feature unavailable; never use legacy inference.
+  // An explicit empty map makes every feature unavailable.
   features: {},
 });
 

@@ -15,8 +15,8 @@ code-shell account logout --origin https://accounts.example
 ```
 
 `code-shell-serve account …` 支持相同命令。账号管理子命令执行后返回，不启动 Hub；正常的
-`code-shell-serve --cwd …` 启动方式不变。`register` 先读取账号服务声明的注册页面：新服务打开 `/register`，旧服务回退到
-`/api/v1/account/manage` 注册门户。路由只接受固定值，不信任服务下发的任意 URL。
+`code-shell-serve --cwd …` 启动方式不变。`register` 检查是否开放注册后，固定打开所选
+账号服务的 `/register`，不接受服务下发的其它 URL，也不回退到账号管理页。
 无浏览器环境使用 `--no-open`，复制输出的地址到浏览器。不同 origin 分别保存账号，后续
 命令须使用相同的 `--origin`。省略时使用产品默认账号服务。
 
@@ -50,8 +50,10 @@ code-shell account login --memory --origin https://accounts.example --username m
 `features` 读取 `/status` 与登录后的 `/overview`，仅输出公开身份与经过白名单投影的
 功能状态，不输出 token。此版 CLI 已接入 `links.remote` 的账号连接列表读取（`links`），
 只有服务端同时提供账号 Link 管理时才显示可用；电脑派发、手机中继、云项目等尚无 CLI
-操作入口的功能统一显示 `hidden`，不会把服务端 `enabled` 当作本机 `ready`。旧服务没有功能清单时从旧能力字段推导；尚未实现的功能保持
-关闭。界面功能状态不能替代各服务接口的鉴权。
+操作入口的功能统一显示 `hidden`，不会把服务端 `enabled` 当作本机 `ready`。
+服务端和客户端统一使用显式 `features` 协议；缺失或无效的声明保持关闭，不从其它
+能力字段推导。账号概况请求失败也不会用匿名部署权限代替账号权限。
+界面功能状态不能替代各服务接口的鉴权。
 
 登录完成后即输出成功的账号状态；若随后读取功能状态失败，会显示重试提示并保留登录。
 `--memory` 控制台也会继续运行，可用 `features` 重试，不会因一次能力查询失败就注销。
