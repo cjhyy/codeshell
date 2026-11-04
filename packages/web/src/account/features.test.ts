@@ -14,9 +14,7 @@ describe("account feature contract", () => {
       { "links.remote": { version: 2, enabled: true } },
       { "links.remote": { version: 1, enabled: "true" } },
     ])
-      expect(readAccountFeatures({ features, linkManagementEnabled: true }, "deployment")).toEqual(
-        {},
-      );
+      expect(readAccountFeatures({ features, linkManagementEnabled: true })).toEqual({});
     for (const cloudOrigin of [
       "javascript:alert(1)",
       "https://user:secret@cloud.example",
@@ -35,27 +33,26 @@ describe("account feature contract", () => {
       }),
     ).toEqual(offered);
   });
-  test("legacy projection only applies when features is absent", () => {
-    const legacy = readAccountFeatures(
-      {
-        githubLinkEnabled: true,
-        relay: { enabled: true },
-        cloudTarget: { enabled: true, cloudOrigin: "https://cloud.example" },
-      },
-      "deployment",
-    );
-    expect(legacy["links.remote"]?.enabled).toBe(true);
-    expect(legacy["devices.dispatch"]?.enabled).toBe(true);
-    expect(legacy["devices.handoff"]).toBeUndefined();
-    expect(legacy["devices.directory"]).toBeUndefined();
-    expect(legacy["relay.phone"]?.params).toBeUndefined();
-    expect(
-      readAccountFeatures({ capabilities: { links: false } }, "account", legacy)["links.remote"]
-        ?.enabled,
-    ).toBe(true);
-    expect(readAccountFeatures({ features: {} }, "account", legacy)).toEqual({});
+  test("only explicit features can grant access", () => {
+    const otherFields = {
+      linkManagementEnabled: true,
+      githubLinkEnabled: true,
+      capabilities: { links: true },
+      relay: { enabled: true },
+      cloudTarget: { enabled: true, cloudOrigin: "https://cloud.example" },
+    };
+    for (const payload of [undefined, null, [], otherFields, { ...otherFields, features: {} }]) {
+      const features = readAccountFeatures(payload);
+      expect(features).toEqual({});
+      expect(
+        Object.values(resolveAccountFeatures({ deployment: features, signedIn: true })).every(
+          (feature) => feature.state === "hidden",
+        ),
+      ).toBe(true);
+    }
+    expect(readAccountFeatures({ ...otherFields, features: offered })).toEqual(offered);
   });
-  test("phone directory discovery allows only the known same-origin route", () => {
+  test("phone feature declarations cannot choose navigation destinations", () => {
     for (const directoryPath of [
       "/devices",
       "/",
@@ -67,15 +64,13 @@ describe("account feature contract", () => {
         "relay.phone": { version: 1, enabled: true, params: { directoryPath, token: "secret" } },
         "links.remote": { version: 1, enabled: true, params: { directoryPath } },
       });
-      expect(features["relay.phone"]?.params).toEqual(
-        directoryPath === "/devices" ? { directoryPath } : undefined,
-      );
+      expect(features["relay.phone"]?.params).toBeUndefined();
       expect(features["links.remote"]?.params).toBeUndefined();
       expect(
         resolveAccountFeatures({ deployment: features, account: features, signedIn: true })[
           "relay.phone"
         ].params,
-      ).toEqual(directoryPath === "/devices" ? { directoryPath } : undefined);
+      ).toBeUndefined();
     }
   });
   test("all four states honor account denial, host support, offline state and prerequisites", () => {
