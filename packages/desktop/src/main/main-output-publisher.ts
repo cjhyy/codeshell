@@ -27,6 +27,23 @@ function fingerprint(event: unknown): string {
 export interface MainOutputSource {
   publish(event: unknown): void;
 }
+
+/**
+ * A producer captured before an idle cold Session starts owns only its future
+ * suffix. Historical output is recovered by the clients, not replayed through
+ * Main's live notification handlers to publish one later host error.
+ */
+export function captureIdleOutputPrefix(
+  root: string,
+  sessionId: string,
+  snapshot: { outputCursor?: string; topLevelRunning: boolean },
+  workerRunning: boolean,
+): string | undefined {
+  if (snapshot.outputCursor || snapshot.topLevelRunning || workerRunning) return undefined;
+  const history = readOutputJournal(root, sessionId, { maxFrames: 1 });
+  return history.status === "ok" ? history.through : undefined;
+}
+
 export class MainOutputPublisher {
   private readonly workerSources = new Map<string, SessionOutputPublisher>();
   private readonly replayed = new Map<string, Map<string, string>>();

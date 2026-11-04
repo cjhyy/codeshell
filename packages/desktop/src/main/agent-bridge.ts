@@ -40,7 +40,11 @@ import {
   type CaptureLinkAccountAccess,
 } from "./link-account-access.js";
 import { randomUUID } from "node:crypto";
-import { MainOutputPublisher, type MainOutputSource } from "./main-output-publisher.js";
+import {
+  captureIdleOutputPrefix,
+  MainOutputPublisher,
+  type MainOutputSource,
+} from "./main-output-publisher.js";
 import { WorkerRunOwnership } from "./worker-run-ownership.js";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
@@ -2666,8 +2670,17 @@ export class AgentBridge implements PetStateBridge {
     sessionId: string,
     options: { browserVisibility?: "hidden" | "milestones" | "full" } = {},
   ): MainOutputSource {
-    const source = this.mainOutput.capture(sessionId, (event) =>
-      this.publishExternalEvent(sessionId, event, options),
+    const historicalPrefix = captureIdleOutputPrefix(
+      sessionsRoot(),
+      sessionId,
+      this.snapshots.get(sessionId),
+      this.workerRuns.sessionIds().includes(sessionId),
+    );
+    const source = this.mainOutput.capture(
+      sessionId,
+      (event) => this.publishExternalEvent(sessionId, event, options),
+      undefined,
+      historicalPrefix,
     );
     return {
       publish: (event) => {
