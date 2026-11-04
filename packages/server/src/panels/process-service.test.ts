@@ -64,6 +64,48 @@ describe("shared Panel process lifecycle", () => {
     return { root, binary, service, owner, params, events };
   }
 
+  test("natural leader exit reaps detached descendants before releasing its lease", async () => {
+    if (process.platform === "win32") return;
+    let leases = 0;
+    const f = await fixture({
+      acquireExecution: () => {
+        leases++;
+        return () => {
+          leases--;
+        };
+      },
+    });
+    await writeFile(
+      f.binary,
+      "#!/bin/sh\n/bin/sleep 30 </dev/null >/dev/null 2>&1 &\necho $! > child.pid\nexit 0\n",
+    );
+    const started = await f.service.start(f.owner, f.params);
+    const exit = await f.service.waitForExit(f.owner, started);
+    const pid = Number(await readFile(join(f.root, "child.pid"), "utf8"));
+    try {
+      expect(exit.code).toBe(0);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(leases).toBe(0);
+      // Linux may retain a dead orphan as a zombie until init reaps it.
+      let alive = false;
+      try {
+        process.kill(pid, 0);
+        alive =
+          process.platform !== "linux" ||
+          !readFileSync(`/proc/${pid}/stat`, "utf8").split(") ")[1]?.startsWith("Z");
+      } catch {
+        /* reaped */
+      }
+      expect(alive).toBe(false);
+    } finally {
+      try {
+        process.kill(pid, "SIGKILL");
+      } catch {
+        /* already gone */
+      }
+    }
+  });
+
   test("package occupation spans approval, spawned process and revocation cleanup", async () => {
     const gate = new PanelExecutionGate();
     const scope = { appId: "fixture", projectPath: "/process-lease-test" };

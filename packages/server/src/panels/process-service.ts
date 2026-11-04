@@ -806,6 +806,13 @@ export class PanelAppProcessService {
         }),
       };
       this.processes.set(processId, running);
+      // A successful launcher may leave children behind (including children
+      // retaining stdout). Reap its group on leader exit, before close/lease release.
+      child.once("exit", () => {
+        const pid = child.pid;
+        if (!running.termination && typeof pid === "number" && pid > 1)
+          running.termination = killProcessGroup(pid).catch(() => {});
+      });
       if (modelTraceOwner && this.options.modelTraces) {
         const channel = new PanelModelTraceChannel({
           service: this.options.modelTraces,
@@ -855,7 +862,7 @@ export class PanelAppProcessService {
         void (async () => {
           clearTimeout(lifetime);
           if (inputChecks) clearInterval(inputChecks);
-          // Cancellation also waits for the process group, not just its leader.
+          // Natural exit and cancellation both wait for the entire process group.
           await running.termination;
           let finalCode = code;
           if (inputChecks && this.processes.get(processId) === running) {
