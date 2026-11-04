@@ -95,6 +95,8 @@ export interface ChatSessionManagerOptions {
 export interface GetOrCreateSessionOptions {
   /** Only explicit user opens may clear a closed Session's tombstone. */
   allowReopen?: boolean;
+  /** Restore disk model authority before publishing a newly created Engine. */
+  restorePersistedModel?: boolean;
   /** Cancel lifecycle waits without creating or reopening the Session. */
   signal?: AbortSignal;
 }
@@ -257,7 +259,7 @@ export class ChatSessionManager {
       // process's event loop, either this creates the resident owner first or
       // beginSessionMigration installs the fence first; both cannot win.
       assertAccess();
-      return this.getOrCreateNow(sessionId, slice);
+      return this.getOrCreateNow(sessionId, slice, options);
     }
   }
 
@@ -410,17 +412,20 @@ export class ChatSessionManager {
         cwd,
         projectTrusted: slice.projectTrusted ?? false,
       } as EngineConfigSlice,
-      { ...options, allowReopen: false },
+      { ...options, allowReopen: false, restorePersistedModel },
     );
     options.signal?.throwIfAborted();
     if (this.isUnavailable(sessionId) || this.sessions.get(sessionId) !== session) {
       throw new Error(`target Session is closing or closed: ${sessionId}`);
     }
-    if (restorePersistedModel) session.engine.restoreSessionModel(sessionId);
     return session;
   }
 
-  private getOrCreateNow(sessionId: string, slice: EngineConfigSlice): ChatSession {
+  private async getOrCreateNow(
+    sessionId: string,
+    slice: EngineConfigSlice,
+    options: GetOrCreateSessionOptions,
+  ): Promise<ChatSession> {
     openSessionPathApprovals(sessionId);
     openInteractiveApprovalSession(sessionId);
     const existing = this.sessions.get(sessionId);
@@ -437,6 +442,12 @@ export class ChatSessionManager {
       throw err;
     }
     const engine = this.factory(slice);
+    try {
+      if (options.restorePersistedModel) engine.restoreSessionModel?.(sessionId);
+    } catch (error) {
+      await this.disposeEngine(engine, sessionId);
+      throw error;
+    }
     const session = new ChatSession({ id: sessionId, engine });
     const sessionManager = this.engineSessionManager(engine);
     const generation = sessionManager?.registerSessionGeneration(sessionId) ?? 1;

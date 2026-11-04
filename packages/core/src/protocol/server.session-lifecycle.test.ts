@@ -174,3 +174,30 @@ test("existence probes read metadata without activating Engines or modules", asy
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("failed persisted model restoration never publishes a partial Engine", async () => {
+  let created = 0,
+    disposed = 0;
+  const manager = new ChatSessionManager({
+    runtime: {} as never,
+    sessionMetadata: { exists: () => true, readSessionMainRoot: () => "/project" },
+    engineFactory: () => {
+      created++;
+      return {
+        restoreSessionModel() {
+          throw new Error("Selected text connection is unavailable");
+        },
+        async dispose() {
+          disposed++;
+        },
+      } as unknown as Engine;
+    },
+  });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await expect(manager.getOrCreatePersisted("deleted-model")).rejects.toThrow("unavailable");
+    expect(manager.get("deleted-model")).toBeUndefined();
+  }
+  expect(created).toBe(2);
+  expect(disposed).toBe(2);
+  await manager.closeAllAsync();
+});

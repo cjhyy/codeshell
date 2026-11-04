@@ -846,8 +846,10 @@ export class AgentServer {
         return null;
       }
 
-      const session = await this.chatManager.getOrCreate(sessionId, slice, { allowReopen: false });
-      session.engine.restoreSessionModel?.(sessionId);
+      const session = await this.chatManager.getOrCreate(sessionId, slice, {
+        allowReopen: false,
+        restorePersistedModel: true,
+      });
       this.wireInteractiveSession(session, sessionId);
       logger.debug("bg_wakeup.rehydrated_session", {
         sessionId,
@@ -1107,10 +1109,9 @@ export class AgentServer {
     const targetSession = await manager.getOrCreate(targetId, targetSlice, {
       allowReopen: false,
       signal: input.signal,
+      ...(targetAlreadyExists && !targetWasResident ? { restorePersistedModel: true } : {}),
     });
     assertStillAuthorized();
-    if (targetAlreadyExists && !targetWasResident)
-      targetSession.engine.restoreSessionModel?.(targetId);
     const approvalRegistration = this.approvalRouter.register(targetId, this.connectionId);
     if (!approvalRegistration.ok) {
       throw new Error(`target Session ${targetId} is owned by another connection`);
