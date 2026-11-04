@@ -2308,6 +2308,7 @@ export class PetDispatchService {
           "sessionArchive",
           "outboundMessage",
           "memory",
+          "mobileRemote",
         ]);
         const hostActionKinds = command.hostWake
           ? []

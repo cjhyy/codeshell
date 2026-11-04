@@ -19,8 +19,14 @@ describe("app profiles", () => {
     const errors: string[] = [];
     const index = loadAppProfiles(BUNDLED, (file, error) => errors.push(`${file}: ${error}`));
     expect(errors).toEqual([]);
-    expect(index.profiles.map((item) => item.id)).toEqual(["chrome", "slack", "video-calls"]);
+    expect(index.profiles.map((item) => item.id)).toEqual([
+      "chrome",
+      "codeshell",
+      "slack",
+      "video-calls",
+    ]);
     expect(index.byId("video-calls")?.stage.quiet).toBe(true);
+    expect(index.match({ bundleId: "com.cjhyy.codeshell" })?.id).toBe("codeshell");
     expect(index.byId("chrome")?.stage).toEqual({
       perch: "title-bar",
       keepClear: ["text"],

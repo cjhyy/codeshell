@@ -2315,7 +2315,10 @@ describe("PetDispatchService", () => {
       });
 
     await makeService(true).dispatch({ type: "chat", message: "desktop" });
-    expect((params?.profileParams as Record<string, unknown>).hostActions).toEqual(["memory"]);
+    expect((params?.profileParams as Record<string, unknown>).hostActions).toEqual([
+      "memory",
+      "mobileRemote",
+    ]);
 
     await makeService(true).dispatch({
       type: "chat",
@@ -3251,7 +3254,11 @@ describe("PetDispatchService", () => {
             result: {
               text: "request accepted",
               extensions: {
-                pet: { hostActions: [{ kind: "mobileRemote", payload: { action: "open" } }] },
+                pet: {
+                  hostActions: [
+                    { kind: "longTaskControl", payload: { taskId: "task-1", action: "pause" } },
+                  ],
+                },
               },
             },
           };
@@ -3259,9 +3266,9 @@ describe("PetDispatchService", () => {
       },
       hostCwd: "/safe/pet",
       hostActions: {
-        mobileRemote: async () => {
+        longTaskControl: async () => {
           executed += 1;
-          return { action: "open" };
+          return { action: "pause" };
         },
       },
     });
@@ -3309,11 +3316,12 @@ describe("PetDispatchService", () => {
           title: "发布准备",
         }),
         mobileRemote: async () => ({ action: "open" }),
+        longTaskControl: async () => ({ action: "pause" }),
       },
     });
 
     const result = await service.dispatch({ type: "chat", message: "complete the follow-up" });
-    expect(declared).toEqual(["followUpMutation"]);
+    expect(declared).toEqual(["followUpMutation", "mobileRemote"]);
     expect(result).toMatchObject({
       ok: true,
       type: "chat",

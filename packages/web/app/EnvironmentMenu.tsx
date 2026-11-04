@@ -84,12 +84,12 @@ export function EnvironmentMenu({
       setError(cause instanceof Error ? cause.message : "保存连接失败。");
     }
   };
-  const go = (value: string) => {
-    const target = environmentAddress(value);
+  const leave = (target: string) => {
     setOpen(false);
     if (navigate) navigate(target);
     else window.location.assign(target);
   };
+  const go = (value: string) => leave(environmentAddress(value));
 
   return (
     <div className="environment-switcher">
@@ -128,78 +128,103 @@ export function EnvironmentMenu({
               {error}
             </p>
           ) : null}
-          {environment ? (
-            <button
-              type="button"
-              className="library-button"
-              onClick={() =>
-                edit(() =>
-                  saveEnvironment(window.localStorage, {
-                    name: environment.name,
-                    address: window.location.origin + environment.entryPath,
-                    environmentId: environment.id,
-                  }),
-                )
-              }
-            >
-              保存当前环境
-            </button>
+          {environment?.accountComputers ? (
+            <section className="environment-account" aria-labelledby="environment-account-title">
+              <strong id="environment-account-title">账号下的电脑</strong>
+              <p>用登记这台电脑的账号登录，在列表里选择要打开的电脑。</p>
+              <button
+                type="button"
+                className="library-button primary"
+                onClick={() => leave(environment.accountComputers!)}
+              >
+                用账号打开我的电脑
+              </button>
+            </section>
+          ) : environment?.kind === "desktop" ? (
+            <p className="environment-hint">
+              在桌面端登录 CodeShell 账号后，这台电脑会登记到账号下（见「设置 ›
+              手机遥控」），这里就能直接打开账号下的所有电脑。
+            </p>
           ) : null}
-          <ul className="environment-list">
-            {saved.map((item) => (
-              <li key={item.address}>
-                <div>
-                  <strong>{item.name}</strong>
-                  <small>{item.address}</small>
-                </div>
-                <button type="button" className="library-button" onClick={() => go(item.address)}>
-                  打开
-                </button>
-                <button
-                  type="button"
-                  className="ghost"
-                  aria-label={`移除 ${item.name}`}
-                  onClick={() => edit(() => removeEnvironment(window.localStorage, item.address))}
-                >
-                  移除
-                </button>
-              </li>
-            ))}
-          </ul>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              edit(() => saveEnvironment(window.localStorage, { name, address: address.trim() }));
-            }}
-          >
-            <label>
-              连接名称
-              <input
-                required
-                maxLength={80}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="例如：家里的电脑"
-              />
-            </label>
-            <label>
-              工作台地址
-              <input
-                required
-                type="url"
-                maxLength={2048}
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
-                placeholder="https://example.com/"
-              />
-            </label>
-            <button type="submit" className="library-button primary">
-              添加连接
-            </button>
-          </form>
-          <p className="environment-hint">
-            连接记录保存在当前工作台的浏览器存储中。目标环境需要单独登录或配对，请勿保存带配对令牌的地址。未连接的环境不会显示为在线。
-          </p>
+          {saved.length ? (
+            <ul className="environment-list">
+              {saved.map((item) => (
+                <li key={item.address}>
+                  <div>
+                    <strong>{item.name}</strong>
+                    <small>{item.address}</small>
+                  </div>
+                  <button type="button" className="library-button" onClick={() => go(item.address)}>
+                    打开
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost"
+                    aria-label={`移除 ${item.name}`}
+                    onClick={() => edit(() => removeEnvironment(window.localStorage, item.address))}
+                  >
+                    移除
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {/* Hand-entered addresses are for LAN or self-hosted workbenches; an
+              account computer is opened from the account's own list above. */}
+          <details className="environment-manual">
+            <summary>高级 · 手动添加地址</summary>
+            {environment ? (
+              <button
+                type="button"
+                className="library-button"
+                onClick={() =>
+                  edit(() =>
+                    saveEnvironment(window.localStorage, {
+                      name: environment.name,
+                      address: window.location.origin + environment.entryPath,
+                      environmentId: environment.id,
+                    }),
+                  )
+                }
+              >
+                保存当前环境
+              </button>
+            ) : null}
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                edit(() => saveEnvironment(window.localStorage, { name, address: address.trim() }));
+              }}
+            >
+              <label>
+                连接名称
+                <input
+                  required
+                  maxLength={80}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="例如：家里的电脑"
+                />
+              </label>
+              <label>
+                工作台地址
+                <input
+                  required
+                  type="url"
+                  maxLength={2048}
+                  value={address}
+                  onChange={(event) => setAddress(event.target.value)}
+                  placeholder="https://example.com/"
+                />
+              </label>
+              <button type="submit" className="library-button primary">
+                添加连接
+              </button>
+            </form>
+            <p className="environment-hint">
+              连接记录保存在当前工作台的浏览器存储中。目标环境需要单独登录或配对，请勿保存带配对令牌的地址。未连接的环境不会显示为在线。
+            </p>
+          </details>
         </dialog>
       ) : null}
     </div>

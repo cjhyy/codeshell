@@ -1266,9 +1266,6 @@ button.ghost:hover:not(:disabled) {
   .composer-caption {
     padding-top: 6px;
   }
-  .composer-toolbar.with-model-selector .model-settings-button {
-    font-size: 12px;
-  }
   .banner {
     padding: 8px 14px;
   }

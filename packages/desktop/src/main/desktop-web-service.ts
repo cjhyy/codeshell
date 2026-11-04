@@ -11,7 +11,7 @@ import {
   createDesktopWebApi,
   type DesktopWebRequestContext,
 } from "@cjhyy/code-shell-server/desktop-web";
-import { createLinkHttp } from "@cjhyy/code-shell-server/links";
+import { createLinkHttp, remoteLinkFromEnvironment } from "@cjhyy/code-shell-server/links";
 import {
   createPanelHttp,
   type SharedPanelToolHost,
@@ -23,6 +23,25 @@ import type { TrustedDeviceStore } from "@cjhyy/code-shell-server/mobile-remote"
 import type { AgentBridge } from "./agent-bridge.js";
 import type { CaptureLinkAccountAccess } from "./link-account-access.js";
 import { createDesktopModelTraceScopeResolver } from "./desktop-model-trace-scopes.js";
+import { accountComputerListUrl, type DesktopRelayStatus } from "../shared/device-relay.js";
+import type { AccountFeatureView } from "../shared/account-features.js";
+
+/**
+ * A registered HTTPS origin is trusted deployment configuration, never a request
+ * header; it is offered only while the desktop account may use remote Link.
+ */
+export function deploymentRemoteLink(
+  authorize: () => unknown,
+  env: NodeJS.ProcessEnv = process.env,
+): RemoteLinkConfiguration | undefined {
+  try {
+    authorize();
+  } catch {
+    return undefined;
+  }
+  const origin = env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN;
+  return origin ? remoteLinkFromEnvironment(env, origin, "/mobile/link/callback") : undefined;
+}
 
 /** Host wiring only. Pages and management services live in shared packages. */
 export function createDesktopWebService(options: {
@@ -42,6 +61,10 @@ export function createDesktopWebService(options: {
   resolveWorkspace: (input: string | undefined, deviceId: string) => Promise<string | undefined>;
   onSessionsChanged: (cwd: string, sessionId: string) => void;
   onPanelsChanged?: (id: string, kind: "install" | "update" | "binding" | "remove") => void;
+  /** Same entry as the settings QR: an account computer opens from the account's list. */
+  relayStatus?: () => DesktopRelayStatus;
+  /** The account's `relay.phone` feature, which gates that entry. */
+  phoneFeature?: () => AccountFeatureView;
 }) {
   const panelProjectPath = options.resolvePanelProjectPath ?? resolvePanelAppBindingProjectPath;
   const contexts = new WeakMap<IncomingMessage, DesktopWebRequestContext>();
@@ -66,6 +89,11 @@ export function createDesktopWebService(options: {
     withConfigurationMutation: withMutation,
     isRunning: (id) => options.getBridge()?.isSessionRunning(id) ?? false,
     onSessionsChanged: options.onSessionsChanged,
+    accountComputers: () => {
+      const relay = options.relayStatus?.();
+      const phone = options.phoneFeature?.();
+      return relay && phone ? accountComputerListUrl(relay, phone) : undefined;
+    },
     onSessionRevoked: (owner) => {
       for (const value of links.values()) value.handler.cancelOwner(owner);
       for (const value of panels.values()) value.handler.cancelOwner(owner);
