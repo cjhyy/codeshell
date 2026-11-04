@@ -24,6 +24,7 @@ for (const scenario of [
   "unmount",
   "cloud-default",
   "cloud-revoke-cleanup",
+  "cloud-sign-in-transition",
 ])
   test(`account feature lifecycle: ${scenario}`, () => {
     const result = Bun.spawnSync({

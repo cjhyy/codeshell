@@ -64,6 +64,7 @@ let subscribed: ((value: AccountFeatureSnapshot) => void) | undefined;
 let unsubscribed = 0,
   opened = 0,
   signIns = 0,
+  closed = 0,
   refreshed = 0,
   enrolled = 0;
 const cloudActions: string[] = [];
@@ -152,10 +153,12 @@ const render = async () =>
               refreshed++;
             }}
           />
-        ) : scenario === "cloud" ? (
+        ) : scenario === "cloud" || scenario === "cloud-sign-in-transition" ? (
           <NewProjectDialog
             open
-            onOpenChange={() => {}}
+            onOpenChange={(open) => {
+              if (!open) closed++;
+            }}
             onCreateLocal={async () => {
               opened++;
             }}
@@ -211,6 +214,14 @@ try {
       subscribed!(featureSnapshot("ready"));
     });
     assert.equal(container.childNodes.length, 0);
+  } else if (scenario === "cloud-sign-in-transition") {
+    await update(() => props(button("云端")).onClick());
+    await update(() => {
+      for (const listener of listeners) listener(featureSnapshot("sign-in"));
+    });
+    await update(() => props(button("云端")).onClick());
+    assert.equal(signIns, 1);
+    assert.equal(closed, 1, "The chooser closes before navigating to Account settings");
   } else if (scenario === "cloud-revoke-cleanup") {
     const form = nodes(container).find((node) => node.tagName === "FORM");
     await update(() => props(form).onSubmit({ preventDefault() {} }));

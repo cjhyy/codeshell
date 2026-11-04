@@ -309,9 +309,13 @@ function App() {
   const [settingsInitialModule, setSettingsInitialModule] = useState<
     SettingsModuleId | undefined
   >();
+  const [accountSettingsNavigation, setAccountSettingsNavigation] = useState(0);
   useEffect(() => {
     const openAccount = () => {
       setSettingsInitialModule("account");
+      // SettingsPage consumes its initial module on mount, including when a
+      // login prompt is clicked from another module in the already open page.
+      setAccountSettingsNavigation((revision) => revision + 1);
       setExecutionDevicesOpen(false);
       setViewMode("settings_page");
     };
@@ -2286,6 +2290,7 @@ function App() {
               onOpenAccountSettings={() =>
                 navigateFromSidebar(() => {
                   setSettingsInitialModule("account");
+                  setAccountSettingsNavigation((revision) => revision + 1);
                   setViewMode("settings_page");
                 })
               }
@@ -2880,7 +2885,7 @@ function App() {
             <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
               {view.viewMode === "settings_page" ? (
                 <SettingsPage
-                  key="settings-global"
+                  key={`settings-global-${accountSettingsNavigation}`}
                   activeProjectPath={activeProject?.path ?? null}
                   initialModule={settingsInitialModule}
                   projects={projects}

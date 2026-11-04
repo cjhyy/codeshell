@@ -260,6 +260,10 @@ export function NewProjectDialog({
                 <CloudProjectManager
                   initialAddress={address}
                   onBusyChange={cloudBusy}
+                  onSignIn={() => {
+                    onOpenChange(false);
+                    openAccountSettings();
+                  }}
                   onBack={() => {
                     setError(null);
                     setLocation("choose");

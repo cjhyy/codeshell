@@ -7,7 +7,7 @@ import type {
   CloudManagementResult,
   CloudProject,
 } from "../../shared/cloud-management.js";
-import { useAccountFeature } from "../account/useAccountFeature";
+import { useAccountFeature, openAccountSettings } from "../account/useAccountFeature";
 import { AccountFeatureEntry } from "../account/AccountFeatureEntry";
 import { useCloudDialogFocus } from "./useCloudDialogFocus";
 import { useT } from "../i18n";
@@ -17,11 +17,13 @@ export function CloudProjectManager({
   onBack,
   onOpened,
   onBusyChange,
+  onSignIn = openAccountSettings,
 }: {
   initialAddress: string;
   onBack: () => void;
   onOpened: (address: string) => void;
   onBusyChange: (busy: boolean) => void;
+  onSignIn?: () => void;
 }) {
   const { t } = useT();
   const feature = useAccountFeature("cloud.projects");
@@ -232,7 +234,7 @@ export function CloudProjectManager({
       className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 [overflow-wrap:anywhere]"
     >
       {feature.state !== "ready" || status.state !== "signed-in" ? (
-        <AccountFeatureEntry feature={feature} label={t("sidebar.cloud")}>
+        <AccountFeatureEntry feature={feature} label={t("sidebar.cloud")} onSignIn={onSignIn}>
           <span />
         </AccountFeatureEntry>
       ) : (
