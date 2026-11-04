@@ -74,7 +74,7 @@ export const delegateWorkToolDef: ToolDefinition = {
         },
         required: ["prior_thread", "reason"],
         description:
-          "Mimi's explicit evidence for reusing session_id. Omit for new or uncertain work; missing or ungrounded evidence makes the host create a new Session.",
+          "Mimi's explicit evidence for reusing session_id. For new or uncertain work omit session_id and session_continuation together. Reusing session_id without grounded evidence is rejected; the host never silently creates a replacement Session.",
       },
     },
     required: ["workspace_id", "objective"],

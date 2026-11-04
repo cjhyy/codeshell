@@ -120,15 +120,51 @@ interface PetParts {
 }
 
 function buildPetParts(): PetParts {
-  let reportToMimi: PetReportToMimiSink | undefined;
+  const reporters = new Map<ProtocolObserverHost, PetReportToMimiSink>();
+  const attached = new Map<ProtocolObserverHost, Set<string>>();
+  const closedSessions = new Set<string>();
+  let sharedAcrossHosts = false;
+  const rememberClosed = (sessionId: string) => {
+    closedSessions.add(sessionId);
+    if (closedSessions.size > 4096) closedSessions.delete(closedSessions.values().next().value!);
+  };
+  const reportFor = (sessionId?: string): PetReportToMimiSink | undefined => {
+    if (!sessionId) return undefined;
+    const live = [...reporters.keys()].filter((host) => !host.isTransportDisconnected());
+    const owners = live.filter((host) => attached.get(host)?.has(sessionId));
+    if (owners.length) return owners.length === 1 ? reporters.get(owners[0]!) : undefined;
+    if (closedSessions.has(sessionId)) return undefined;
+    const residents = live.filter((host) =>
+      host.getLiveSessionSnapshot().some((session) => session.sessionId === sessionId),
+    );
+    if (residents.length) return residents.length === 1 ? reporters.get(residents[0]!) : undefined;
+    // The single-host path also serves child Sessions without a ChatSession entry.
+    return !sharedAcrossHosts && live.length === 1 ? reporters.get(live[0]!) : undefined;
+  };
   const createProtocolObserver = (host: ProtocolObserverHost) => {
-    reportToMimi = (event) =>
-      host.notify(PET_REPORT_TO_MIMI_METHOD, event as unknown as Record<string, unknown>);
+    reporters.set(host, (event) =>
+      host.notify(PET_REPORT_TO_MIMI_METHOD, event as unknown as Record<string, unknown>),
+    );
+    if (reporters.size > 1) sharedAcrossHosts = true;
+    const sessions = new Set<string>();
+    attached.set(host, sessions);
     const projection = createPetProjectionObserver(host);
     return {
       ...projection,
+      onSessionAttached: (sessionId: string, lastActivityAt: number) => {
+        sessions.add(sessionId);
+        closedSessions.delete(sessionId);
+        projection.onSessionAttached?.(sessionId, lastActivityAt);
+      },
+      onSessionClosed: (sessionId: string) => {
+        sessions.delete(sessionId);
+        rememberClosed(sessionId);
+        projection.onSessionClosed?.(sessionId);
+      },
       onServerClose: () => {
-        reportToMimi = undefined;
+        for (const sessionId of sessions) rememberClosed(sessionId);
+        reporters.delete(host);
+        attached.delete(host);
         projection.onServerClose?.();
       },
     };
@@ -148,7 +184,7 @@ function buildPetParts(): PetParts {
           isReadOnly: false,
           isConcurrencySafe: false,
         },
-        execute: (args, ctx) => requestMimiDeliveryTool(args, ctx, reportToMimi),
+        execute: (args, ctx) => requestMimiDeliveryTool(args, ctx, reportFor(ctx?.sessionId)),
         exposure: {
           presetTags: ["harness-min", "general"],
           availability: requestMimiDeliveryAvailability,
@@ -162,7 +198,7 @@ function buildPetParts(): PetParts {
           isReadOnly: false,
           isConcurrencySafe: false,
         },
-        execute: (args, ctx) => reportToMimiTool(args, ctx, reportToMimi),
+        execute: (args, ctx) => reportToMimiTool(args, ctx, reportFor(ctx?.sessionId)),
         exposure: {
           presetTags: ["harness-min", "general"],
           defaultPermissionRules: [{ tool: reportToMimiToolDef.name, decision: "allow" }],
