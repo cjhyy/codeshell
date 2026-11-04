@@ -317,11 +317,15 @@ export function loadPanelState<K extends string = string>(bucket: string): Panel
     const raw = localStorage.getItem(panelStateKey(bucket));
     if (!raw) return { ...(EMPTY_PANEL_STATE as PanelStateSnapshot<K>) };
     const parsed = JSON.parse(raw) as Partial<PanelStateSnapshot<K>>;
+    // Keep only the tab identity: a CC Room tab's task binding refers to an
+    // in-memory request that does not survive a reload.
     const tabs = Array.isArray(parsed.tabs)
-      ? parsed.tabs.filter(
-          (t): t is { id: string; kind: K } =>
-            !!t && typeof t.id === "string" && typeof (t as { kind?: unknown }).kind === "string",
-        )
+      ? parsed.tabs
+          .filter(
+            (t): t is { id: string; kind: K } =>
+              !!t && typeof t.id === "string" && typeof (t as { kind?: unknown }).kind === "string",
+          )
+          .map(({ id, kind }) => ({ id, kind }))
       : [];
     return {
       open: parsed.open === true,

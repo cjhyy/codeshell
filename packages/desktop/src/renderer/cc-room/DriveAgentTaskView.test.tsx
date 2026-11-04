@@ -58,9 +58,15 @@ function text(node: any): string {
   if (node.nodeType === 3) return node.nodeValue ?? node.textContent ?? "";
   return node.childNodes?.length ? node.childNodes.map(text).join("") : (node.textContent ?? "");
 }
-async function render(active = true) {
+async function render(active = true, onShowSessionList?: (cliKind: string) => void) {
   await act(async () => {
-    root!.render(<DriveAgentTaskView request={request} active={active} />);
+    root!.render(
+      <DriveAgentTaskView
+        request={request}
+        active={active}
+        onShowSessionList={onShowSessionList}
+      />,
+    );
     await flushMicrotasks();
   });
 }
@@ -151,7 +157,8 @@ describe("DriveAgentTaskView", () => {
       observing: true,
       onTakeOver: undefined,
     });
-    expect(text(container)).toContain("Bash: bun test");
+    // The linked transcript shows the work; the raw CLI summary would repeat it.
+    expect(text(container)).not.toContain("Bash: bun test");
     expect(text(container)).not.toContain("暂未收到新输出");
     current = {
       ...current,
@@ -178,7 +185,16 @@ describe("DriveAgentTaskView", () => {
   });
 
   test("recovers a live transcript that appears after the initial retry window", async () => {
-    current = job({ externalSessionId: "thread-1" });
+    current = job({
+      externalSessionId: "thread-1",
+      progress: {
+        lastActivityAt: Date.now(),
+        eventCount: 2,
+        phase: "tool",
+        summary: "Bash: bun test",
+        recentEvents: [{ at: Date.now(), summary: "Tool reported an error" }],
+      },
+    });
     const open = window.codeshell.ccRoom.openLinkedSession;
     let attempts = 0;
     window.codeshell.ccRoom.openLinkedSession = async (...args) => {
@@ -189,9 +205,26 @@ describe("DriveAgentTaskView", () => {
     for (let i = 0; i < 4; i++) await elapse(1500);
     expect(attempts).toBe(5);
     expect(text(container)).toContain("暂时无法读取会话记录");
+    // Without a transcript the summary is the only sign of progress.
+    expect(text(container)).toContain("Bash: bun test");
+    expect(text(container)).not.toContain("Tool reported an error");
     await elapse(10_000);
     expect(attempts).toBe(6);
     expect(conversation).toMatchObject({ sessionId: "thread-1", observing: true });
+    expect(text(container)).not.toContain("Bash: bun test");
+  });
+
+  test("offers the CLI's session list only when the host can show it", async () => {
+    await render();
+    expect(text(container)).not.toContain("全部 Codex 会话");
+    const shown: string[] = [];
+    await render(true, (cliKind) => shown.push(cliKind));
+    const button = nodes(container, "BUTTON").find((node) => text(node) === "全部 Codex 会话");
+    await act(async () => {
+      props(button).onClick();
+      await flushMicrotasks();
+    });
+    expect(shown).toEqual(["codex"]);
   });
 
   test("stops connection retries when the task page is hidden", async () => {

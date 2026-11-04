@@ -48,11 +48,14 @@ import { useToast } from "../ui/ToastProvider";
 import type { PanelAppStateChange } from "./PanelAppHost";
 import { PanelLauncher } from "./PanelLauncher";
 import { PANEL_LAUNCHER_KIND } from "./panelLauncherKind";
+import { cliSessionForTab, cliTaskKey, placeCliTaskTab } from "./cliTaskTabs";
 import { nextPanelTabId } from "./panelTabIds";
 
 export interface OpenTab {
   id: string;
   kind: PanelTab;
+  /** Set on the one CC Room tab that shows a DriveAgent task page (see cliTaskTabs). */
+  cliTask?: string;
 }
 
 interface Props {
@@ -510,8 +513,17 @@ function ResolvedPanelArea({
       return;
     openedNonce.current = requestNonce;
     const newTab: OpenTab = { id: mkId(requestKind), kind: requestKind };
+    const cliTask = requestKind === "ccRoom" ? cliTaskKey(openCliSession) : undefined;
+    if (cliTask) {
+      setTabs((prev) => {
+        const placed = placeCliTaskTab(prev, cliTask, newTab);
+        setActiveId(placed.activeId);
+        return placed.tabs;
+      });
+      return;
+    }
     setTabs((prev) => {
-      const existing = prev.find((t) => t.kind === requestKind);
+      const existing = prev.find((t) => t.kind === requestKind && !t.cliTask);
       if (existing) {
         setActiveId(existing.id);
         return prev;
@@ -520,7 +532,17 @@ function ResolvedPanelArea({
       setActiveId(newTab.id);
       return [...prev, newTab];
     });
-  }, [enabledPanelIds, panelRegistryRevision, requestNonce, requestKind, hasReviewSnapshot]);
+  }, [
+    enabledPanelIds,
+    panelRegistryRevision,
+    requestNonce,
+    requestKind,
+    hasReviewSnapshot,
+    openCliSession,
+  ]);
+
+  const showCliSessionList = (tabId: string): void =>
+    setTabs((prev) => prev.map((tab) => (tab.id === tabId ? { id: tab.id, kind: tab.kind } : tab)));
 
   const panelStyle: React.CSSProperties | undefined = hidden
     ? keepActiveBodyLive
@@ -587,9 +609,9 @@ function ResolvedPanelArea({
                     ? t("panels.area.launcherTitle")
                     : tab.kind === "subagent" && subagentSelection?.label
                       ? subagentSelection.label
-                      : tab.kind === "ccRoom" && openCliSession?.jobId
-                        ? openCliSession.title ||
-                          (openCliSession.cliKind === "codex" ? "Codex" : "Claude Code")
+                      : tab.kind === "ccRoom" && cliSessionForTab(tab, openCliSession)?.jobId
+                        ? openCliSession!.title ||
+                          (openCliSession!.cliKind === "codex" ? "Codex" : "Claude Code")
                         : entry
                           ? panelEntryTitle(entry, (key) => t(key as never))
                           : t("panels.area.unavailable"),
@@ -750,7 +772,10 @@ function ResolvedPanelArea({
                     revealFile={revealFile}
                     onRevealConsumed={onRevealConsumed}
                     openUrl={openUrl}
-                    openCliSession={openCliSession}
+                    openCliSession={cliSessionForTab(panelTab, openCliSession)}
+                    onShowCliSessionList={
+                      panelTab.cliTask ? () => showCliSessionList(panelTab.id) : undefined
+                    }
                     subagentSelection={subagentSelection}
                     onOpenCliSessionConsumed={onOpenCliSessionConsumed}
                     onAttachImage={onAttachImage}
@@ -795,6 +820,7 @@ function PanelBody({
   onRevealConsumed,
   openUrl,
   openCliSession,
+  onShowCliSessionList,
   subagentSelection,
   onOpenCliSessionConsumed,
   engineSessionId,
@@ -825,6 +851,7 @@ function PanelBody({
   onRevealConsumed?: (nonce: number) => void;
   openUrl?: { url: string; nonce: number };
   openCliSession?: OpenCliSessionRequest;
+  onShowCliSessionList?: () => void;
   subagentSelection?: SubagentSelection;
   onOpenCliSessionConsumed?: (nonce: number) => void;
   engineSessionId?: string | null;
@@ -872,6 +899,7 @@ function PanelBody({
     onRevealConsumed,
     openUrl,
     openCliSession,
+    onShowCliSessionList,
     subagentSelection,
     onOpenCliSessionConsumed,
     engineSessionId: engineSessionId ?? null,
