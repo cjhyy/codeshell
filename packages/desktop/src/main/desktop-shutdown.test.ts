@@ -334,6 +334,8 @@ test("native quit wiring uses phase-aware dialogs without restoring disposed ser
   listeners.get("before-quit")!({ preventDefault() {} });
   await settle();
   expect(calls).toEqual(["disposed", "cache-close", "quit"]);
+  listeners.get("activate")!();
+  expect(calls).not.toContain("restore");
   listeners.get("window-all-closed")!();
   expect(calls.at(-1)).toBe("quit");
   owned = false;

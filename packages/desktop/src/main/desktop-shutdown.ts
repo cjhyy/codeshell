@@ -91,6 +91,7 @@ export function registerDesktopShutdown(
     platform?: NodeJS.Platform;
   },
 ): void {
+  let disposing = false;
   app.on("window-all-closed", () => {
     if (deps.ownsInstance() && (deps.platform ?? process.platform) !== "darwin") app.quit();
   });
@@ -98,6 +99,10 @@ export function registerDesktopShutdown(
     "before-quit",
     createDesktopShutdownHandler({
       ...deps,
+      disposeOperationResolution: () => {
+        disposing = true;
+        return deps.disposeOperationResolution();
+      },
       quit: () => app.quit(),
       resolveFailure: async (_phase, _error, { canCancel }) => {
         const { response } = await deps.showFailureDialog(desktopShutdownFailureDialog(canCancel));
@@ -106,7 +111,7 @@ export function registerDesktopShutdown(
     }),
   );
   app.on("activate", () => {
-    if (deps.ownsInstance())
+    if (deps.ownsInstance() && !disposing)
       void deps.restoreMainWindow().catch((error) => deps.onError("window.restore_failed", error));
   });
 }
