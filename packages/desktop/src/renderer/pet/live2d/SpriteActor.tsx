@@ -1,11 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import atlas from "../../assets/mimi-papillon/spritesheet-v2.webp";
-import performerAtlas from "../../assets/mimi-papillon/performer-v1.webp";
 import { COMPANION_SPRITE_BOTTOM } from "../../../shared/mimi-companion";
-import { BUNDLED_PACK } from "./bundled-pack";
 import { packFacesLeft, packFrameStyle, packMove } from "./character-pack";
 import type { CharacterActorProps } from "./character-renderer";
 import { SPRITE_ANIMATIONS, spriteAnimation } from "./sprite-animation";
+import { spriteCharacter } from "./sprite-characters";
 
 export function SpriteActor({
   state,
@@ -19,8 +17,10 @@ export function SpriteActor({
   const [frame, setFrame] = useState(0);
   const callbacks = useRef({ onReady, onError, onContact });
   callbacks.current = { onReady, onError, onContact };
-  const moveName = packMove(BUNDLED_PACK, state, cueActive, moving);
-  const move = moveName ? BUNDLED_PACK.moves[moveName] : undefined;
+  const character = spriteCharacter(state.appearance);
+  const { atlas, performer } = character;
+  const moveName = performer && packMove(performer.pack, state, cueActive, moving);
+  const move = moveName ? performer.pack.moves[moveName] : undefined;
   const animation = spriteAnimation(state, moving, cueActive);
   const { row } = SPRITE_ANIMATIONS[animation];
   const frames = move?.frames ?? SPRITE_ANIMATIONS[animation].frames;
@@ -37,15 +37,15 @@ export function SpriteActor({
   useEffect(() => {
     const image = new Image();
     image.onload = () => callbacks.current.onReady();
-    image.onerror = () => callbacks.current.onError("Mimi 动画资源加载失败");
+    image.onerror = () => callbacks.current.onError(`${character.name} 动画资源加载失败`);
     image.src = atlas;
     // Warm the performer atlas so the first surface move does not flash.
-    new Image().src = performerAtlas;
+    if (performer) new Image().src = performer.atlas;
     return () => {
       image.onload = null;
       image.onerror = null;
     };
-  }, []);
+  }, [character, atlas, performer]);
 
   useEffect(() => {
     setFrame(0);
@@ -62,17 +62,17 @@ export function SpriteActor({
       callbacks.current.onContact?.();
   }, [frame, move, playing]);
 
-  if (move) {
+  if (move && performer) {
     return (
       <div
         className="mimi-companion__sprite"
         role="img"
-        aria-label="Mimi，全身动画角色"
+        aria-label={`${character.name}，全身动画角色`}
         data-animation={moveName}
         style={{
           bottom: COMPANION_SPRITE_BOTTOM,
-          backgroundImage: `url(${performerAtlas})`,
-          ...packFrameStyle(BUNDLED_PACK, move, reducedMotion ? 0 : frame, packFacesLeft(state)),
+          backgroundImage: `url(${performer.atlas})`,
+          ...packFrameStyle(performer.pack, move, reducedMotion ? 0 : frame, packFacesLeft(state)),
         }}
       />
     );
@@ -86,7 +86,7 @@ export function SpriteActor({
     <div
       className="mimi-companion__sprite"
       role="img"
-      aria-label="Mimi，全身动画角色"
+      aria-label={`${character.name}，全身动画角色`}
       data-animation={animation}
       style={{
         bottom: COMPANION_SPRITE_BOTTOM,

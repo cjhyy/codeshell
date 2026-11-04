@@ -3,7 +3,7 @@ import { mock } from "bun:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 
-const app = new EventEmitter();
+const app = Object.assign(new EventEmitter(), { getAppMetrics: () => [] as { pid: number }[] });
 const screen = Object.assign(new EventEmitter(), {
   getCursorScreenPoint: () => ({ x: 500, y: 500 }),
   getDisplayNearestPoint: () => display,
@@ -118,7 +118,15 @@ mock.module("electron", () => ({
   session: { fromPartition: () => isolated },
 }));
 
-// Only Electron is mocked: choreography, geometry and capture queue are real.
+// The window under the character's feet; set per scenario.
+let windowUnderFeet: { pid: number; app: string } | undefined;
+mock.module("./window-at-point", () => ({
+  windowAtPoint: async () =>
+    windowUnderFeet && { ...windowUnderFeet, frame: { x: 0, y: 0, width: 800, height: 600 } },
+}));
+
+// Electron and the window query are mocked: choreography, geometry and the
+// capture queue are real.
 const { createMimiCompanionHost } = await import("./mimi-companion-host");
 const { ComputerActivityBus } = await import("./computer-activity-bus");
 const bus = new ComputerActivityBus();
@@ -148,16 +156,17 @@ const captureChanges: boolean[] = [];
 type Rect = { x: number; y: number; width: number; height: number };
 const chatCalls: Array<Rect | undefined> = [];
 const activityCalls: Array<Rect | undefined> = [];
+const moves: Rect[] = [];
+const requests: unknown[] = [];
 const host = await createMimiCompanionHost({
   appPath: "/fixture-app",
-  resourcesPath: "/fixture-resources",
-  packaged: false,
   isMainWindow: () => false,
   presence: {
     onCaptureChange(value) {
       captureChanges.push(value);
       return false;
     },
+    request: (patch) => requests.push(patch),
   },
   openChat: async (_request, near) => {
     chatCalls.push(near);
@@ -165,6 +174,7 @@ const host = await createMimiCompanionHost({
   openActivity: async (near) => {
     activityCalls.push(near);
   },
+  onMoved: (near) => moves.push(near),
   bus,
   gate: gate as any,
   log() {},
@@ -257,7 +267,7 @@ try {
       assert.equal(busSubscriptions, 1);
       assert.equal(gateListeners.size, 1);
       assert.equal(handlers.size, 5);
-      assert.equal(ipcMain.eventNames().length, 7);
+      assert.equal(ipcMain.eventNames().length, 8);
       assert.equal(screen.listenerCount("display-removed"), 1);
       assert.equal(app.listenerCount("browser-window-focus"), 1);
       await host.close();
@@ -298,6 +308,51 @@ try {
       assert.equal(activityCalls.length, 1, "only her own overlay opens the work list");
       host.setAttention({ running: 0, needsAction: 0, unread: 0 });
       assert.equal(latestState(win).attention, undefined, "nothing to show hides the badge");
+      break;
+    }
+    case "menu-resize-and-dock-reach-presence": {
+      const win = await present();
+      assert.equal(latestState(win).chosenSize, latestState(win).size);
+      ipcMain.emit("mimiCompanion:resize", event(win), 320);
+      ipcMain.emit("mimiCompanion:resize", event(win), 9_999);
+      ipcMain.emit("mimiCompanion:resize", event(win), "big");
+      ipcMain.emit("mimiCompanion:resize", { sender: new FakeContents(), senderFrame: {} }, 160);
+      ipcMain.emit("mimiCompanion:presence", event(win), "dock");
+      ipcMain.emit("mimiCompanion:presence", event(win), "close");
+      assert.deepEqual(requests, [
+        { size: 320 },
+        { size: 480 },
+        { mode: "docked" },
+        { visible: false },
+      ]);
+      break;
+    }
+    case "handoff-only-across-apps": {
+      const win = await present();
+      const drag = async (point: { x: number; y: number }, dropOn: typeof windowUnderFeet) => {
+        ipcMain.emit("mimiCompanion:interaction", event(win), "begin");
+        await tick();
+        windowUnderFeet = dropOn;
+        ipcMain.emit("mimiCompanion:move", event(win), point);
+        ipcMain.emit("mimiCompanion:interaction", event(win), "end");
+        for (let i = 0; i < 5; i++) await tick();
+      };
+      windowUnderFeet = { pid: 500, app: "Notes" };
+      await drag({ x: 300, y: 300 }, { pid: 500, app: "Notes" });
+      assert.equal(latestState(win).handoff, undefined, "moving within one app offers nothing");
+      // An open chat follows her: every drag step reports where she now stands.
+      assert.deepEqual(moves.at(-1), {
+        x: 300,
+        y: 300,
+        width: Math.round(latestState(win).size * 0.7),
+        height: Math.round(latestState(win).size),
+      });
+      await drag({ x: 600, y: 300 }, { pid: 600, app: "Safari" });
+      assert.deepEqual(
+        latestState(win).handoff,
+        { app: "Safari" },
+        "dropping on another app offers it",
+      );
       break;
     }
     case "capture-while-human-active": {

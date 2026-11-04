@@ -32,6 +32,7 @@ import type {
   MimiPresenceSnapshot,
 } from "../../shared/mimi-presence";
 import {
+  isMimiAppearance,
   MIMI_COMPANION_DEFAULT_SIZE,
   MIMI_COMPANION_SIZE_OPTIONS,
 } from "../../shared/mimi-companion";
@@ -314,6 +315,23 @@ export function MimiPresenceControls({
       {!presence.visible && (
         <p className="text-xs text-muted-foreground">{t("pet.settings.hiddenHint")}</p>
       )}
+      <div className="flex flex-wrap items-center gap-3">
+        <Label className="text-xs text-muted-foreground">{t("pet.settings.characterLabel")}</Label>
+        <div className="w-56">
+          <SimpleSelect
+            size="sm"
+            value={presence.appearance}
+            onChange={(value) => {
+              if (isMimiAppearance(value)) onChange({ appearance: value });
+            }}
+            options={[
+              { value: "mimi-sprite", label: t("pet.settings.characterMimi") },
+              { value: "shiro-sprite", label: t("pet.settings.characterShiro") },
+              { value: "maki-sprite", label: t("pet.settings.characterMaki") },
+            ]}
+          />
+        </div>
+      </div>
       <div className="space-y-2">
         <div className="text-xs font-medium text-muted-foreground">
           {t("pet.settings.modeLabel")}

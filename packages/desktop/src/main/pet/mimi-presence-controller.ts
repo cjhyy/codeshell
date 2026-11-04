@@ -1,4 +1,9 @@
-import { companionSize } from "../../shared/mimi-companion.js";
+import {
+  companionSize,
+  isMimiAppearance,
+  MIMI_DEFAULT_APPEARANCE,
+  type MimiAppearance,
+} from "../../shared/mimi-companion.js";
 import type {
   MimiPresenceMode,
   MimiPresencePatch,
@@ -31,6 +36,7 @@ export interface MimiDockedSurface extends MimiPresenceSurface {
 
 export interface MimiMovingSurface extends MimiPresenceSurface {
   setSize(size: number): void;
+  setAppearance(appearance: MimiAppearance): void;
   /** Play the settings preview on the already presented surface. */
   startPreview(isCurrent: () => boolean): Promise<void>;
   cancelPreview(): void;
@@ -69,7 +75,13 @@ export class MimiPresenceController {
   private captureHidden = false;
 
   constructor(private readonly options: MimiPresenceControllerOptions) {
-    this.state = { ...options.initial, size: companionSize(options.initial.size) };
+    this.state = {
+      ...options.initial,
+      size: companionSize(options.initial.size),
+      appearance: isMimiAppearance(options.initial.appearance)
+        ? options.initial.appearance
+        : MIMI_DEFAULT_APPEARANCE,
+    };
     this.docked = options.docked;
   }
 
@@ -78,6 +90,7 @@ export class MimiPresenceController {
       visible: this.state.visible,
       mode: this.state.mode,
       size: this.state.size,
+      appearance: this.state.appearance,
       effectiveMode: this.effectiveMode(),
       shown: this.shown,
       movingAvailable: !!this.moving,
@@ -103,6 +116,7 @@ export class MimiPresenceController {
       ? undefined
       : (moving.unavailableReason ?? "当前环境不支持移动模式");
     this.moving?.setSize(this.state.size);
+    this.moving?.setAppearance(this.state.appearance);
     this.started = true;
     return this.apply();
   }
@@ -113,6 +127,7 @@ export class MimiPresenceController {
     if (patch.visible !== undefined) next.visible = patch.visible;
     if (patch.mode !== undefined) next.mode = patch.mode;
     if (patch.size !== undefined) next.size = companionSize(patch.size);
+    if (isMimiAppearance(patch.appearance)) next.appearance = patch.appearance;
     // Asking for a form again is the retry for its failure.
     if (patch.visible === true) this.dockedError = undefined;
     if (patch.visible === true && next.mode === "moving") this.movingError = undefined;
@@ -122,6 +137,7 @@ export class MimiPresenceController {
     const wasShown = this.previewing ? null : this.shown;
     this.state = next;
     if (patch.size !== undefined) this.moving?.setSize(next.size);
+    if (patch.appearance !== undefined) this.moving?.setAppearance(next.appearance);
     // Any explicit request ends a preview; the request is what the user wants now.
     this.endPreviewSilently();
     this.carryPosition(wasShown);

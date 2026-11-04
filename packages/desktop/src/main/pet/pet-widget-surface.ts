@@ -17,6 +17,7 @@ type Bounds = { x: number; y: number; width: number; height: number };
 export interface PetWidgetWindowLike {
   isDestroyed(): boolean;
   isVisible(): boolean;
+  isFocused(): boolean;
   getBounds(): Bounds;
   setBounds(bounds: Bounds, animate?: boolean): void;
   setPosition(x: number, y: number, animate?: boolean): void;
@@ -122,7 +123,7 @@ export function createPetWidgetSurface(options: PetWidgetSurfaceOptions) {
   let raising = false;
   function elevate(win: PetWidgetWindowLike, reorder = true): void {
     if (win.isDestroyed()) return;
-    win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(options.platform));
+    win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(options.platform, win.isFocused()));
     if (!reorder || raising) return;
     raising = true;
     try {
@@ -191,6 +192,7 @@ export function createPetWidgetSurface(options: PetWidgetSurfaceOptions) {
     });
     win.on("move", () => schedulePersist(win));
     win.on("show", () => elevate(win));
+    win.on("focus", () => elevate(win, false));
     win.on("blur", () => elevate(win));
     win.on("always-on-top-changed", (_event: unknown, isAlwaysOnTop: boolean) => {
       if (isAlwaysOnTop || !presenting) return;

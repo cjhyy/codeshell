@@ -5,6 +5,8 @@
   assemble.py atlas --run DIR      generated strips -> performer atlas (webp) beside the pack
   assemble.py check --run DIR      scale/feet check sheet against the base atlas
 
+PACK_CHARACTER=<asset folder> builds another character (default mimi-papillon).
+
 Generation itself is generate.sh (Codex image tool). Extraction and chroma
 despill reuse Codex's hatch-pet scripts so cells match the base atlas exactly.
 See docs/superpowers/specs/2026-10-30-mimi-character-pack-guideline.md.
@@ -22,7 +24,9 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 DESKTOP = Path(__file__).resolve().parents[2]
-ASSETS = DESKTOP / "src/renderer/assets/mimi-papillon"
+# Which character to build: its asset folder under src/renderer/assets.
+CHARACTER = os.environ.get("PACK_CHARACTER", "mimi-papillon")
+ASSETS = DESKTOP / "src/renderer/assets" / CHARACTER
 BASE_ATLAS = ASSETS / "spritesheet-v2.webp"
 PACK = ASSETS / "performer-pack.json"
 HATCH_PET = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")) / "skills/hatch-pet/scripts"

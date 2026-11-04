@@ -35,10 +35,15 @@ export function createMimiBubbleHost(options: MimiBubbleHostOptions) {
         });
       } else surface.release();
     },
-    async open(panel: MimiBubblePanel, near?: MimiCompanionRect, prompt?: string): Promise<void> {
+    async open(
+      panel: MimiBubblePanel,
+      near?: MimiCompanionRect,
+      prompt?: string,
+      send?: boolean,
+    ): Promise<void> {
       if (surface.active()) {
         try {
-          await surface.open(panel, near, prompt);
+          await surface.open(panel, near, prompt, send);
           return;
         } catch (error) {
           options.log?.("pet-bubble.open.failed", { panel, error: String(error) });

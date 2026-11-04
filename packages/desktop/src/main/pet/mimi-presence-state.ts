@@ -4,8 +4,11 @@ import { randomUUID } from "node:crypto";
 import {
   companionFeetOffset,
   companionSize,
+  isMimiAppearance,
   MIMI_COMPANION_DEFAULT_SIZE,
   MIMI_COMPANION_LEGACY_DEFAULT_SIZE,
+  MIMI_DEFAULT_APPEARANCE,
+  type MimiAppearance,
 } from "../../shared/mimi-companion.js";
 import { isMimiPresenceMode, type MimiPresenceMode } from "../../shared/mimi-presence.js";
 import { PET_WIDGET_WINDOW_SIZE } from "./pet-widget-geometry.js";
@@ -21,6 +24,8 @@ export interface MimiPresenceState {
   visible: boolean;
   mode: MimiPresenceMode;
   size: number;
+  /** Which character plays the moving form. */
+  appearance: MimiAppearance;
   /** Top-left of the 112×112 pet anchor (the former pet-widget.json). */
   dockedAnchor?: Point;
   /** Top-left of the moving character box where the user pinned it. */
@@ -30,7 +35,13 @@ export interface MimiPresenceState {
 export const MIMI_PRESENCE_FILE = "mimi-presence.json";
 
 export function defaultMimiPresenceState(): MimiPresenceState {
-  return { schemaVersion: 1, visible: false, mode: "docked", size: MIMI_COMPANION_DEFAULT_SIZE };
+  return {
+    schemaVersion: 1,
+    visible: false,
+    mode: "docked",
+    size: MIMI_COMPANION_DEFAULT_SIZE,
+    appearance: MIMI_DEFAULT_APPEARANCE,
+  };
 }
 
 export function validPresencePoint(value: unknown): value is Point {
@@ -67,6 +78,7 @@ export function parseMimiPresenceState(raw: unknown): MimiPresenceState {
   if (isMimiPresenceMode(value.mode)) state.mode = value.mode;
   if (typeof value.size === "number" && Number.isFinite(value.size))
     state.size = companionSize(value.size);
+  if (isMimiAppearance(value.appearance)) state.appearance = value.appearance;
   if (validPresencePoint(value.dockedAnchor)) state.dockedAnchor = roundPoint(value.dockedAnchor);
   if (validPresencePoint(value.movingAnchor)) state.movingAnchor = roundPoint(value.movingAnchor);
   return state;

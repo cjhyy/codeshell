@@ -139,10 +139,6 @@ export function setPanelAppMediaReader(reader: ManagedMediaReader): void {
 export function registerPanelAppSchemePrivileges(): void {
   protocol.registerSchemesAsPrivileged([
     {
-      scheme: "csmimi",
-      privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true },
-    },
-    {
       scheme: MEDIA_PREVIEW_SCHEME,
       privileges: {
         standard: true,

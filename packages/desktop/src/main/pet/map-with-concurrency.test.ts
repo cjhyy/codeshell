@@ -14,13 +14,17 @@ describe("mapWithConcurrency", () => {
   test("never exceeds the concurrency limit", async () => {
     let active = 0;
     let peak = 0;
-    await mapWithConcurrency(Array.from({ length: 12 }, (_, i) => i), 3, async (value) => {
-      active += 1;
-      peak = Math.max(peak, active);
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      active -= 1;
-      return value;
-    });
+    await mapWithConcurrency(
+      Array.from({ length: 12 }, (_, i) => i),
+      3,
+      async (value) => {
+        active += 1;
+        peak = Math.max(peak, active);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        active -= 1;
+        return value;
+      },
+    );
     expect(peak).toBeLessThanOrEqual(3);
     expect(peak).toBeGreaterThan(1);
   });

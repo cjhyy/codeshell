@@ -1,0 +1,207 @@
+{
+  "version": 1,
+  "head": 0.42,
+  "surfaceScale": 1.5,
+  "poses": {
+    "stand": {
+      "file": "stand.webp",
+      "width": 282,
+      "height": 640,
+      "anchor": {
+        "x": 95,
+        "y": 634
+      },
+      "facing": "front",
+      "head": 215
+    },
+    "look": {
+      "file": "look.webp",
+      "width": 376,
+      "height": 640,
+      "anchor": {
+        "x": 125,
+        "y": 634
+      },
+      "facing": "right",
+      "head": 225
+    },
+    "point": {
+      "file": "point.webp",
+      "width": 373,
+      "height": 640,
+      "anchor": {
+        "x": 115,
+        "y": 634
+      },
+      "facing": "right",
+      "head": 225,
+      "sfx": "这里!"
+    },
+    "kick": {
+      "file": "kick.webp",
+      "width": 488,
+      "height": 640,
+      "anchor": {
+        "x": 130,
+        "y": 634
+      },
+      "facing": "right",
+      "head": 215,
+      "contact": {
+        "x": 478,
+        "y": 210
+      },
+      "sfx": "咚!"
+    },
+    "stomp": {
+      "file": "stomp.webp",
+      "width": 329,
+      "height": 640,
+      "anchor": {
+        "x": 85,
+        "y": 634
+      },
+      "facing": "front",
+      "head": 215,
+      "contact": {
+        "x": 85,
+        "y": 630
+      },
+      "sfx": "啪!"
+    },
+    "dash": {
+      "file": "dash.webp",
+      "width": 1229,
+      "height": 640,
+      "anchor": {
+        "x": 500,
+        "y": 600
+      },
+      "facing": "right",
+      "head": 310
+    },
+    "sit-ledge": {
+      "file": "sit-ledge.webp",
+      "width": 346,
+      "height": 640,
+      "anchor": {
+        "x": 165,
+        "y": 415
+      },
+      "facing": "front",
+      "head": 235
+    },
+    "lie-ledge": {
+      "file": "lie-ledge.webp",
+      "width": 1331,
+      "height": 640,
+      "anchor": {
+        "x": 760,
+        "y": 615
+      },
+      "facing": "right",
+      "head": 350
+    },
+    "cheer": {
+      "file": "cheer.webp",
+      "width": 415,
+      "height": 640,
+      "anchor": {
+        "x": 200,
+        "y": 634
+      },
+      "facing": "front",
+      "head": 190,
+      "sfx": "搞定!"
+    },
+    "fail": {
+      "file": "fail.webp",
+      "width": 427,
+      "height": 640,
+      "anchor": {
+        "x": 220,
+        "y": 630
+      },
+      "facing": "front",
+      "head": 270
+    },
+    "twirl": {
+      "file": "twirl.webp",
+      "width": 288,
+      "height": 640,
+      "anchor": {
+        "x": 120,
+        "y": 634
+      },
+      "facing": "front",
+      "head": 225,
+      "sfx": "哼~"
+    },
+    "piano": {
+      "file": "piano.webp",
+      "width": 478,
+      "height": 640,
+      "anchor": {
+        "x": 250,
+        "y": 634
+      },
+      "facing": "front",
+      "head": 235,
+      "sfx": "♪"
+    },
+    "tomato": {
+      "file": "tomato.webp",
+      "width": 293,
+      "height": 640,
+      "anchor": {
+        "x": 125,
+        "y": 634
+      },
+      "facing": "front",
+      "head": 230,
+      "sfx": "番茄!"
+    },
+    "shy": {
+      "file": "shy.webp",
+      "width": 289,
+      "height": 640,
+      "anchor": {
+        "x": 100,
+        "y": 634
+      },
+      "facing": "front",
+      "head": 220,
+      "sfx": "干、干嘛啦"
+    },
+    "wink": {
+      "file": "wink.webp",
+      "width": 306,
+      "height": 640,
+      "anchor": {
+        "x": 125,
+        "y": 634
+      },
+      "facing": "front",
+      "head": 230,
+      "sfx": "真拿你没办法"
+    },
+    "pout": {
+      "file": "pout.webp",
+      "width": 265,
+      "height": 640,
+      "anchor": {
+        "x": 125,
+        "y": 634
+      },
+      "facing": "front",
+      "head": 230,
+      "sfx": "意味不明!"
+    }
+  },
+  "behaviors": {
+    "idle": ["twirl", "piano", "tomato"],
+    "hover": ["shy"],
+    "complete": ["wink"],
+    "error": ["pout"]
+  }
+}

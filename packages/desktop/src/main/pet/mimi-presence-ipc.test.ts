@@ -13,6 +13,7 @@ function owner(initial: Partial<MimiPresenceSnapshot> = {}) {
     visible: false,
     mode: "docked",
     size: 200,
+    appearance: "mimi-sprite",
     effectiveMode: "docked",
     shown: null,
     movingAvailable: true,
@@ -109,11 +110,14 @@ describe("presence IPC sender validation", () => {
 });
 
 describe("presence patch validation", () => {
-  test("accepts only visible/mode/size within range", () => {
+  test("accepts only visible/mode/size/appearance within range", () => {
     expect(parseMimiPresencePatch({ visible: true })).toEqual({ visible: true });
     expect(parseMimiPresencePatch({ mode: "moving", size: 160 })).toEqual({
       mode: "moving",
       size: 160,
+    });
+    expect(parseMimiPresencePatch({ appearance: "shiro-sprite" })).toEqual({
+      appearance: "shiro-sprite",
     });
     for (const invalid of [
       null,
@@ -125,6 +129,7 @@ describe("presence patch validation", () => {
       { size: 481 },
       { size: Number.NaN },
       { size: 200, extra: 1 },
+      { appearance: "dragon" },
     ]) {
       expect(() => parseMimiPresencePatch(invalid)).toThrow("无效");
     }

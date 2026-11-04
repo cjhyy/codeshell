@@ -22,6 +22,27 @@ function findElements(node: unknown, tagName: string): any[] {
 }
 
 describe("PetWidget", () => {
+  test("a pose character replaces the dog head when Mimi is docked", () => {
+    const props = {
+      runningCount: 0,
+      activityCount: 0,
+      unreadCompletedCount: 0,
+      chatExpanded: false,
+      activityExpanded: false,
+      onToggleChat: () => undefined,
+      onToggleActivity: () => undefined,
+      onOpen: () => undefined,
+      onContextMenu: () => undefined,
+    };
+    expect(renderToStaticMarkup(<PetWidget {...props} />)).not.toContain("data-pet-pose");
+    expect(renderToStaticMarkup(<PetWidget {...props} character="shiro-sprite" />)).toContain(
+      'data-pet-pose="stand"',
+    );
+    expect(
+      renderToStaticMarkup(<PetWidget {...props} runningCount={1} character="shiro-sprite" />),
+    ).toContain('data-pet-pose="look"');
+  });
+
   test("renders a frameless draggable pet with condensed shared indicators", () => {
     const html = renderToStaticMarkup(
       <PetWidget

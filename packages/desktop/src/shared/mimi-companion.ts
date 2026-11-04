@@ -50,7 +50,7 @@ export interface MimiCompanionSettings {
   enabled: boolean;
   size: number;
   available: boolean;
-  appearance: "mimi-sprite" | "live2d";
+  appearance: MimiAppearance;
   error?: string;
 }
 
@@ -58,9 +58,9 @@ export interface MimiCompanionState {
   enabled: boolean;
   visible: boolean;
   size: number;
-  appearance: "mimi-sprite" | "live2d";
-  modelUrl: string;
-  coreUrl: string;
+  /** The size the user chose; `size` can be smaller while she works on a control. */
+  chosenSize?: number;
+  appearance: MimiAppearance;
   position: { x: number; y: number };
   windowOrigin?: { x: number; y: number };
   humanActive?: boolean;
@@ -103,12 +103,25 @@ export interface MimiCompanionApi {
   resumeFollowing(): void;
   /** Ask the single Mimi presence owner to dock the character or close Mimi. */
   presence(action: "dock" | "close"): void;
+  /** Ask the presence owner to resize the character (persisted like the settings page). */
+  resize(size: number): void;
   /** Ask the execution side to refuse all computer input until resumed. */
   stopComputer(): void;
   resumeComputer(): void;
 }
 
-export const MIMI_COMPANION_SCHEME = "csmimi";
+/**
+ * Which character plays the moving form. Sprite characters share the stage
+ * model and the move set (see the character pack guideline).
+ */
+export const MIMI_APPEARANCES = ["mimi-sprite", "shiro-sprite", "maki-sprite"] as const;
+export type MimiAppearance = (typeof MIMI_APPEARANCES)[number];
+export const MIMI_DEFAULT_APPEARANCE: MimiAppearance = "mimi-sprite";
+
+export function isMimiAppearance(value: unknown): value is MimiAppearance {
+  return (MIMI_APPEARANCES as readonly unknown[]).includes(value);
+}
+
 /** Character box height in DIP (logical pixels); the box is 0.7× as wide. */
 export const MIMI_COMPANION_DEFAULT_SIZE = 200;
 export const MIMI_COMPANION_MIN_SIZE = 160;
@@ -116,6 +129,12 @@ export const MIMI_COMPANION_MAX_SIZE = 480;
 export const MIMI_COMPANION_SIZE_OPTIONS = [160, 200, 240, 320, 400, 480] as const;
 /** The default before 2026-11: a saved 320 cannot be told apart from "never changed". */
 export const MIMI_COMPANION_LEGACY_DEFAULT_SIZE = 320;
+/** The character menu's quick sizes; the settings page keeps the full list. */
+export const MIMI_COMPANION_QUICK_SIZES = [
+  { label: "小", size: 160 },
+  { label: "中", size: MIMI_COMPANION_DEFAULT_SIZE },
+  { label: "大", size: 320 },
+] as const;
 /** Drawn height of the working (scaled-down) character never goes below this. */
 export const MIMI_COMPANION_MIN_WORKING_SIZE = 96;
 

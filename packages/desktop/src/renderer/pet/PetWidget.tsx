@@ -1,7 +1,10 @@
 import React from "react";
 import { ChevronDown } from "lucide-react";
 import { useT } from "../i18n";
+import type { MimiAppearance } from "../../shared/mimi-companion";
 import { usePetWidgetSprite, useCanWalk, petVisualState } from "../petSprite";
+import { poseBehavior } from "./live2d/pose-library";
+import { spriteCharacter } from "./live2d/sprite-characters";
 import { Badge } from "../ui/Badge";
 
 export function PetWidget({
@@ -14,6 +17,8 @@ export function PetWidget({
   onToggleActivity,
   onOpen,
   onContextMenu,
+  character = "mimi-sprite",
+  characterPending = false,
 }: {
   runningCount: number;
   activityCount: number;
@@ -24,6 +29,10 @@ export function PetWidget({
   onToggleActivity: () => void;
   onOpen: () => void;
   onContextMenu: () => void;
+  /** The character chosen for Mimi; a pose character replaces the dog head. */
+  character?: MimiAppearance;
+  /** The character is not known yet: draw nothing rather than the wrong one. */
+  characterPending?: boolean;
 }) {
   const { t } = useT();
   const clickTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,16 +63,27 @@ export function PetWidget({
   // walks a short loop and settles back. This is the only ambient motion — no
   // idle breathe, no shimmer — so the widget stays calm.
   const [autoTrot, setAutoTrot] = React.useState(false);
+  /** A pose character's own idle flourish, played instead of some trots. */
+  const [flourish, setFlourish] = React.useState<string>();
+  /** The cheer variant for the current tap. */
+  const [tapPose, setTapPose] = React.useState<string>();
   const trotClearRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const canWalk = useCanWalk();
+  const poses = spriteCharacter(character).poses;
+  const canWalk = useCanWalk() || Boolean(poses);
   // A brief hop on tap. Cleared by a timer back to the resting sprite.
   const [jumping, setJumping] = React.useState(false);
   const jumpClearRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const hop = React.useCallback((): void => {
+    // A tap is a small celebration: the shared cheer or one of her own.
     setJumping(true);
+    setTapPose(
+      poses && Math.random() < 0.5
+        ? poseBehavior(poses.library, "complete", Math.random() * 1e6)
+        : undefined,
+    );
     if (jumpClearRef.current) clearTimeout(jumpClearRef.current);
     jumpClearRef.current = setTimeout(() => setJumping(false), 650);
-  }, []);
+  }, [poses]);
 
   const running = Math.max(0, runningCount);
   const activity = Math.max(0, activityCount);
@@ -79,8 +99,14 @@ export function PetWidget({
       const gap = 25_000 + Math.floor(Math.random() * 30_000);
       timer = setTimeout(() => {
         if (!armed) return;
-        setAutoTrot(true);
-        trotClearRef.current = setTimeout(() => setAutoTrot(false), 2400);
+        const own = poses && poseBehavior(poses.library, "idle", Math.random() * 1e6);
+        if (own && Math.random() < 0.6) {
+          setFlourish(own);
+          trotClearRef.current = setTimeout(() => setFlourish(undefined), 3600);
+        } else {
+          setAutoTrot(true);
+          trotClearRef.current = setTimeout(() => setAutoTrot(false), 2400);
+        }
         schedule();
       }, gap);
     };
@@ -89,7 +115,7 @@ export function PetWidget({
       armed = false;
       clearTimeout(timer);
     };
-  }, [canWalk]);
+  }, [canWalk, poses]);
 
   React.useEffect(
     () => () => {
@@ -107,6 +133,19 @@ export function PetWidget({
     ? "jumping"
     : petVisualState({ runningCount: running, alertCount: completed });
   const dogIcon = usePetWidgetSprite(baseState, dragging || autoTrot, dragDir);
+  // A pose character: fly while walked or dragged, cheer on a tap, look while
+  // work runs, otherwise stand.
+  const pose = !poses
+    ? undefined
+    : dragging || autoTrot
+      ? "dash"
+      : jumping
+        ? (tapPose ?? "cheer")
+        : running > 0
+          ? "look"
+          : (flourish ?? "stand");
+  const icon = (pose && poses?.urls[pose]) || dogIcon;
+  const mirrored = pose === "dash" && dragDir === "left";
   return (
     <div
       data-pet-widget="desktop-window"
@@ -193,10 +232,15 @@ export function PetWidget({
         title={`${summary} · ${t("pet.widget.dragHint")}`}
       >
         <img
-          src={dogIcon}
+          src={icon}
           alt=""
           draggable={false}
-          className="h-24 w-24 select-none object-contain drop-shadow-[0_5px_5px_rgb(0_0_0/0.18)] transition-transform group-hover:scale-105"
+          data-pet-pose={pose}
+          style={{
+            ...(mirrored ? { transform: "scaleX(-1)" } : {}),
+            ...(characterPending ? { visibility: "hidden" as const } : {}),
+          }}
+          className={`h-24 w-24 select-none object-contain drop-shadow-[0_5px_5px_rgb(0_0_0/0.18)] transition-transform ${mirrored ? "" : "group-hover:scale-105"}`}
         />
         {running > 0 && (
           <span

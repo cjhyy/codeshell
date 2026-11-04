@@ -93,6 +93,21 @@ body,
   background: #edf2ee;
 }
 
+.mimi-companion__sizes {
+  display: flex;
+  gap: 2px;
+}
+
+.mimi-companion__sizes button {
+  flex: 1;
+  min-width: 0;
+}
+
+.mimi-companion__sizes button[aria-checked="true"] {
+  background: #dfe8e1;
+  font-weight: 600;
+}
+
 .mimi-companion canvas {
   display: block;
 }
@@ -245,10 +260,10 @@ body,
   animation: none;
 }
 
-/* The human is busy: step back and go quiet without leaving. */
+/* The human took over during computer use: step back without fading out. */
 .mimi-companion--yield .mimi-companion__body {
-  opacity: 0.45;
-  transform: translateY(8px) scale(0.94);
+  opacity: 0.7;
+  transform: translateY(6px) scale(0.97);
   transition:
     opacity 240ms ease-out,
     transform 240ms ease-out;
@@ -402,4 +417,187 @@ body,
     opacity: 0.8;
     transform: scaleX(1);
   }
+}
+
+/* Key poses: one large illustration per moment, popped in and held. While a
+ * pose is held the body keeps moving (bob, sway, bounce), so a still picture
+ * never reads as a frozen frame. */
+.mimi-pose-stage {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mimi-pose-body {
+  position: absolute;
+}
+
+.mimi-pose-body[data-hit] {
+  pointer-events: auto;
+}
+
+.mimi-pose {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  transform: scaleX(var(--mimi-pose-flip, 1));
+  filter: drop-shadow(0 6px 6px #1c23352e);
+  user-select: none;
+}
+
+.mimi-pose--pop {
+  animation: mimi-pose-pop 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes mimi-pose-pop {
+  from {
+    transform: scaleX(var(--mimi-pose-flip, 1)) scale(0.86, 0.9);
+  }
+  to {
+    transform: scaleX(var(--mimi-pose-flip, 1)) scale(1);
+  }
+}
+
+/* Held-pose motion, per pose. Directions follow the facing via --mimi-pose-flip. */
+.mimi-pose-motion--stand {
+  animation: mimi-hold-breathe 2400ms ease-in-out infinite;
+}
+.mimi-pose-motion--look {
+  animation: mimi-hold-lean 1400ms ease-in-out infinite;
+}
+.mimi-pose-motion--point {
+  animation: mimi-hold-jab 700ms ease-in-out infinite;
+}
+.mimi-pose-motion--dash {
+  animation: mimi-hold-fly 360ms ease-in-out infinite;
+}
+.mimi-pose-motion--sit-ledge {
+  animation: mimi-hold-sway 1500ms ease-in-out infinite;
+}
+.mimi-pose-motion--sit-ledge[data-working] {
+  animation: mimi-hold-tap 260ms ease-in-out infinite;
+}
+.mimi-pose-motion--lie-ledge {
+  animation: mimi-hold-sway 2200ms ease-in-out infinite;
+}
+.mimi-pose-motion--cheer {
+  animation: mimi-hold-bounce 520ms cubic-bezier(0.3, 0, 0.5, 1) infinite;
+}
+.mimi-pose-motion--fail {
+  animation: mimi-hold-wobble 900ms ease-in-out infinite;
+}
+.mimi-pose-motion--kick,
+.mimi-pose-motion--stomp {
+  animation: mimi-hold-strike 420ms cubic-bezier(0.2, 0.9, 0.3, 1) 1;
+}
+
+@keyframes mimi-hold-breathe {
+  50% {
+    transform: scale(1, 1.02);
+  }
+}
+@keyframes mimi-hold-lean {
+  50% {
+    transform: rotate(calc(var(--mimi-pose-flip, 1) * 3deg));
+  }
+}
+@keyframes mimi-hold-jab {
+  50% {
+    transform: translateX(calc(var(--mimi-pose-flip, 1) * 4%));
+  }
+}
+@keyframes mimi-hold-fly {
+  0%,
+  100% {
+    transform: translateY(0) rotate(calc(var(--mimi-pose-flip, 1) * -2deg));
+  }
+  50% {
+    transform: translateY(-6%) rotate(calc(var(--mimi-pose-flip, 1) * 1deg));
+  }
+}
+@keyframes mimi-hold-sway {
+  25% {
+    transform: rotate(-1.6deg);
+  }
+  75% {
+    transform: rotate(1.6deg);
+  }
+}
+@keyframes mimi-hold-tap {
+  50% {
+    transform: translateY(-2.5%) scale(1.01, 0.99);
+  }
+}
+@keyframes mimi-hold-bounce {
+  50% {
+    transform: translateY(-10%);
+  }
+}
+@keyframes mimi-hold-wobble {
+  25% {
+    transform: rotate(-3deg);
+  }
+  75% {
+    transform: rotate(3deg);
+  }
+}
+/* Wind up, snap through the contact beat, settle. */
+@keyframes mimi-hold-strike {
+  0% {
+    transform: translateX(calc(var(--mimi-pose-flip, 1) * -8%)) scale(0.96);
+  }
+  35% {
+    transform: translateX(calc(var(--mimi-pose-flip, 1) * 4%)) scale(1.06, 0.95);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* The sound-effect word on contact, like the clip's onomatopoeia. */
+.mimi-sfx {
+  position: absolute;
+  font:
+    900 26px/1 "PingFang SC",
+    "Hiragino Sans GB",
+    sans-serif;
+  color: #fff;
+  -webkit-text-stroke: 5px #ef4f86;
+  paint-order: stroke fill;
+  text-shadow: 0 3px 0 #b8325f;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: mimi-sfx 650ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes mimi-sfx {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 30%) scale(0.4) rotate(-14deg);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.15) rotate(-8deg);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -10%) scale(1) rotate(-8deg);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -30%) scale(1) rotate(-8deg);
+  }
+}
+
+/* The pose itself says what she is doing; keep the label for assistive tech
+ * and show it only for errors and stops. */
+.mimi-companion[data-appearance="shiro-sprite"] .mimi-companion__activity:not([data-notice]),
+.mimi-companion[data-appearance="maki-sprite"] .mimi-companion__activity:not([data-notice]) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

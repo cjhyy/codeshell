@@ -90,21 +90,44 @@ python3 scripts/mimi-pack/assemble.py check --run "$RUN"   # scale-check.png on 
 - Every strip is grounded on `refs/base.png` (base idle cell) and `refs/style-sheet.png` (six base cells). Never generate a strip from text alone.
 - Regenerate a whole row, never single cells, so a row stays one generation.
 
-## 6. Replacing the character
+## 6. Adding or replacing a character
+
+Characters are selectable: Settings → Mimi → 移动角色 sets `appearance` on the presence owner, which persists it and forwards it to the moving surface. Mimi (`mimi-sprite`), Shiro (`shiro-sprite`, a chibi anime girl) and Maki (`maki-sprite`, a chibi derivative of a copyrighted anime character; shipping it in a release needs separate sign-off) ship today.
 
 **Another sprite character.**
 
-1. Create its base 8×11 atlas with `hatch-pet` (rows idle … review plus 16 look directions).
-2. Replace `spritesheet-v2.webp`.
-3. Edit `STYLE_CELLS` in `assemble.py` if its best reference cells differ, and rewrite the identity sentence in `prompts/*.txt`.
-4. Run section 5 and update `feetY` and `scale`.
-5. Keep the move names. The stage model and choreographer do not change.
+1. Create its base 8×11 atlas with `hatch-pet` (rows idle … review plus 16 look directions) and save it as `src/renderer/assets/<name>/spritesheet-v2.webp`.
+2. Copy a `performer-pack.json` into the same folder and write `scripts/mimi-pack/prompts/<name>/<move>.txt` for each move. Describe the character's own body: paws for Mimi, hands and sneakers for Shiro.
+3. Run section 5 with `PACK_CHARACTER=<name>` on both `generate.sh` and `assemble.py`, then update `feetY` and `scale`. Edit `STYLE_CELLS` in `assemble.py` if the best reference cells differ.
+4. Register it: add the id to `MIMI_APPEARANCES` (`src/shared/mimi-companion.ts`), an entry to `SPRITE_CHARACTERS` (`sprite-characters.ts`) and `CHARACTER_RENDERERS`, and an option on the settings page.
+5. Keep the move names. The stage model and choreographer do not change. A character without a performer pack plays its base rows everywhere.
 
-**A different renderer (Live2D, 3D, video).** Implement a `CharacterRenderer` (`character-renderer.ts`) with its own `Actor` and `EffectSet`.
+**A different renderer (3D, video).** Implement a `CharacterRenderer` (`character-renderer.ts`) with its own `Actor` and `EffectSet`. The Live2D prototype was removed on 2026-11-02: its sample model had no typing or contact motions, and it needed a separately licensed runtime.
 
 - The Actor receives the same `CharacterActorProps`. That includes `state.perch` for the surface and `state.size` for the working size, already scaled. It also receives `onContact` to fire the impact burst.
 - Map the four moves to authored motions. Unsupported actions degrade through `EffectSet.fallback`.
 - Keep the feet line contract: the renderer must put the feet `companionFeetOffset(size)` above the box bottom, or the stage model's grounding breaks.
+
+## 6a. Key poses (Shiro)
+
+Shiro does not loop small cells. Like the reference clip, she holds one large illustration per moment and swaps it every few hundred milliseconds (`PoseActor`, `pose-library.ts`, `assets/shiro/poses.json`).
+
+| Pose             | When                                        | Pinned on                                         |
+| ---------------- | ------------------------------------------- | ------------------------------------------------- |
+| `lie-ledge`      | `title-bar`, waiting or observing           | belly line on the window's top edge               |
+| `sit-ledge`      | `on-field`, typing or clicking into a field | seat on the field's top edge, legs over the field |
+| `kick`           | click on a button                           | the sole on the target while it lands             |
+| `stomp`          | other clicks                                | the sole on the target while it lands             |
+| `point`          | click on a link; typing away from a field   | feet                                              |
+| `look`           | observe, scroll, working                    | feet                                              |
+| `dash`           | travel or a human drag                      | body line                                         |
+| `stand`          | idle elsewhere                              | feet                                              |
+| `cheer` / `fail` | run complete / error                        | feet / seat                                       |
+
+- Each pose declares `anchor` (the pixel on the feet line), `head` (head height in pixels; every pose is drawn at `head × box height`), `facing`, and optionally `contact` and `sfx`. A pose with `contact` is drawn with that pixel on the target while a click lands; `sfx` is the word shown on contact.
+- On a control the stage model shrinks the box; poses are drawn `surfaceScale` larger so a kick reaches the control.
+- `behaviors` (optional) lists a character's own poses for `idle`, `hover`, `complete` and `error`; every pose that is not a shared moment must be named by a behavior. At rest `PoseActor` plays an `idle` pose every 12–28 s and a `hover` pose after the pointer rests on her for 450 ms; `complete`/`error` poses are picked alongside `cheer`/`fail` as variants; the docked widget plays `idle` instead of some trots. Maki uses this (`twirl`, `piano`, `tomato`, `shy`, `wink`, `pout`; prompts in `prompts/maki-poses/`).
+- Generate with `scripts/mimi-pack/generate-poses.sh <run> <identity-ref.png>` from `prompts/shiro-poses/`, cut with `PACK_CHARACTER=shiro python3 scripts/mimi-pack/poses.py cut --run <run>`, then measure `anchor`, `head` and `contact` on a ruler sheet at native size (never on a scaled preview) and check with `poses.py sheet`.
 
 ## 7. QA checklist before shipping a pack
 

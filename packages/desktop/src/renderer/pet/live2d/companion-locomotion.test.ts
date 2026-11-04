@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   companionLocomotion,
+  FLY_MAX_MS,
   HOP_DISTANCE,
   WALK_MAX_MS,
   WALK_MIN_MS,
@@ -25,6 +26,18 @@ describe("companionLocomotion", () => {
   test("hops across long distances instead of trailing the real action", () => {
     expect(companionLocomotion({ x: 0, y: 0 }, { x: HOP_DISTANCE + 1, y: 0 }, motion).kind).toBe(
       "hop",
+    );
+  });
+
+  test("a flying character covers the same trip in about half the time and hops later", () => {
+    const fly = { ...motion, pace: "fly" as const };
+    const walk = companionLocomotion({ x: 0, y: 0 }, { x: 800, y: 0 }, motion);
+    const flight = companionLocomotion({ x: 0, y: 0 }, { x: 800, y: 0 }, fly);
+    if (walk.kind !== "walk" || flight.kind !== "walk") throw new Error("expected travel");
+    expect(flight.duration).toBeLessThan(walk.duration * 0.6);
+    expect(flight.duration).toBeLessThanOrEqual(FLY_MAX_MS);
+    expect(companionLocomotion({ x: 0, y: 0 }, { x: HOP_DISTANCE + 1, y: 0 }, fly).kind).toBe(
+      "walk",
     );
   });
 

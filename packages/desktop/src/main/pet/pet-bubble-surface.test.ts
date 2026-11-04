@@ -32,6 +32,9 @@ class FakeWindow implements PetBubbleWindowLike {
   isVisible() {
     return this.visible && !this.destroyed;
   }
+  isFocused() {
+    return this.focused && !this.destroyed;
+  }
   setBounds(bounds: Bounds) {
     this.bounds = { ...bounds };
   }
@@ -54,7 +57,13 @@ class FakeWindow implements PetBubbleWindowLike {
     this.visible = false;
     for (const listener of this.listeners.get("closed") ?? []) listener();
   }
-  setAlwaysOnTop() {}
+  levels: unknown[] = [];
+  setAlwaysOnTop(_flag: boolean, level?: unknown) {
+    this.levels.push(level);
+  }
+  emit(event: string) {
+    for (const listener of this.listeners.get(event) ?? []) listener();
+  }
   setContentProtection(enable: boolean) {
     this.protectedContent = enable;
   }
@@ -135,6 +144,38 @@ describe("createPetBubbleSurface", () => {
     surface.setExpanded(true);
     expect(win.isVisible()).toBe(true);
     expect(win.focused).toBe(true);
+    // Typing: the input method's candidate window must stay above the bubble.
+    expect(win.levels.at(-1)).toBe("floating");
+    win.focused = false;
+    win.emit("blur");
+    expect(win.levels.at(-1)).toBe("screen-saver");
+  });
+
+  test("an accepted request is forwarded to be sent, a plain prompt is not", async () => {
+    const { surface, windows } = setup();
+    await surface.prepare();
+    surface.setExpanded(false);
+    await surface.open("chat", near, "看看这个窗口", true);
+    expect(windows[0].sent.at(-1)?.payload).toEqual({
+      panel: "chat",
+      prompt: "看看这个窗口",
+      send: true,
+    });
+    await surface.open("chat", near, "草稿");
+    expect(windows[0].sent.at(-1)?.payload).toEqual({ panel: "chat", prompt: "草稿" });
+  });
+
+  test("an open bubble follows the dragged character; a hidden one stays put", async () => {
+    const { surface, windows } = setup();
+    await surface.prepare();
+    surface.setExpanded(false);
+    const hiddenBounds = { ...windows[0].bounds };
+    surface.follow({ x: 100, y: 200, width: 112, height: 160 });
+    expect(windows[0].bounds).toEqual(hiddenBounds);
+    await surface.open("chat", near);
+    surface.setExpanded(true);
+    surface.follow({ x: 100, y: 200, width: 112, height: 160 });
+    expect(windows[0].bounds).toMatchObject({ x: 216, y: 200, ...PET_BUBBLE_SIZE });
   });
 
   test("the work list shows without stealing focus", async () => {

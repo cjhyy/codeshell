@@ -25,6 +25,7 @@ function setup(options: { companion?: boolean; failLoad?: boolean } = {}) {
       return {
         isDestroyed: () => gone,
         isVisible: () => visible,
+        isFocused: () => false,
         setBounds: () => void bounds,
         show: () => (visible = true),
         showInactive: () => (visible = true),

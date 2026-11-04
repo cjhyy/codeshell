@@ -12,6 +12,7 @@ import {
   type PetHostActionReceiptRow,
 } from "./PetChatHost";
 import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
+import type { MimiAppearance } from "../../shared/mimi-companion";
 import { PetWidget } from "./PetWidget";
 import { petExternalSessionLocator } from "./petExternalSession";
 import {
@@ -124,6 +125,37 @@ export function PetDesktopWindow({ variant = "docked" }: { variant?: PetDesktopW
   const bubble = variant === "bubble";
   const { t } = useT();
   const api = window.codeshell.pet;
+  // The chosen character is drawn here too when Mimi is docked. Unknown until
+  // the owner answers, so neither character flashes before the right one.
+  const [character, setCharacter] = React.useState<MimiAppearance | null>(null);
+  React.useEffect(() => {
+    if (bubble) return;
+    let live = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const off = api.onPresenceChanged?.((snapshot) => setCharacter(snapshot.appearance));
+    // At launch the widget can ask before Main registers the presence handler
+    // and before its first broadcast; keep asking (bounded) until it answers.
+    const ask = (attempt: number): void => {
+      void api.getPresence?.().then(
+        (snapshot) => {
+          if (live) setCharacter((current) => current ?? snapshot.appearance);
+        },
+        () => {
+          if (!live) return;
+          if (attempt < 25) timer = setTimeout(() => ask(attempt + 1), 400);
+          // Never answered: show the default rather than nothing.
+          else setCharacter((current) => current ?? "mimi-sprite");
+        },
+      );
+    };
+    if (api.getPresence) ask(0);
+    else setCharacter("mimi-sprite");
+    return () => {
+      live = false;
+      if (timer) clearTimeout(timer);
+      off?.();
+    };
+  }, [api, bubble]);
   const {
     state,
     petSessionId,
@@ -194,6 +226,9 @@ export function PetDesktopWindow({ variant = "docked" }: { variant?: PetDesktopW
     return () => window.removeEventListener("storage", syncReceipts);
   }, []);
 
+  // A request the user already made elsewhere (accepting "look at this
+  // window"): sent as soon as the chat can send it.
+  const autoSend = React.useRef<string | null>(null);
   const sendChat = async (): Promise<void> => {
     const message = draft.trim();
     if (!message || !petSessionId) return;
@@ -253,8 +288,17 @@ export function PetDesktopWindow({ variant = "docked" }: { variant?: PetDesktopW
       setActivityListExpanded(false);
       setPanel(request.panel);
       if (request.prompt) setDraft(request.prompt);
+      autoSend.current = request.prompt && request.send ? request.prompt : null;
     });
   }, [api, bubble]);
+
+  React.useEffect(() => {
+    if (!autoSend.current || !petSessionId || draft !== autoSend.current) return;
+    autoSend.current = null;
+    void sendChat();
+    // sendChat reads the draft this render committed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, petSessionId]);
 
   const toggleChatPanel = React.useCallback((): void => {
     setPanel((current) => (current === "chat" ? null : "chat"));
@@ -373,7 +417,7 @@ export function PetDesktopWindow({ variant = "docked" }: { variant?: PetDesktopW
         <section
           data-pet-mini-panel="open"
           data-pet-mini-panel-content="chat"
-          className="absolute left-1 top-1 flex h-[268px] w-[360px] flex-col overflow-hidden rounded-2xl border border-border bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur"
+          className="absolute left-1 top-1 flex h-[400px] w-[420px] flex-col overflow-hidden rounded-2xl border border-border bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur"
           aria-label={t("pet.widget.miniTitle")}
         >
           <header className="flex items-center justify-between border-b border-border px-3 py-2">
@@ -403,7 +447,7 @@ export function PetDesktopWindow({ variant = "docked" }: { variant?: PetDesktopW
                 {t("pet.chat.empty")}
               </p>
             )}
-            {chatRows.slice(-6).map((row) =>
+            {chatRows.slice(-30).map((row) =>
               row.role === "delegation" && row.delegation ? (
                 <PetDelegationCard
                   key={row.id}
@@ -482,7 +526,7 @@ export function PetDesktopWindow({ variant = "docked" }: { variant?: PetDesktopW
         <section
           data-pet-activity-bubbles="true"
           aria-label={t("pet.widget.activityBubbles")}
-          className={`absolute ${bubble ? "left-1 top-1" : "bottom-[112px] right-1"} flex max-h-[268px] w-[392px] flex-col gap-2 overflow-y-auto px-2 pb-2 pt-2`}
+          className={`absolute ${bubble ? "left-1 top-1" : "bottom-[112px] right-1"} flex max-h-[400px] w-[432px] flex-col gap-2 overflow-y-auto px-2 pb-2 pt-2`}
         >
           {workActivity.items.length > 1 && !activityListExpanded ? (
             <div
@@ -539,6 +583,8 @@ export function PetDesktopWindow({ variant = "docked" }: { variant?: PetDesktopW
           onToggleActivity={toggleActivityPanel}
           onOpen={() => void api.openWidgetOverview()}
           onContextMenu={() => api.showWidgetContextMenu?.()}
+          character={character ?? undefined}
+          characterPending={character === null}
         />
       )}
     </div>

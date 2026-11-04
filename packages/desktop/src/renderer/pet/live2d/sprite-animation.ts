@@ -1,6 +1,6 @@
 import type { MimiCompanionState } from "../../../shared/mimi-companion";
-import { BUNDLED_PACK } from "./bundled-pack";
 import { packCueMs, packMove } from "./character-pack";
+import { spriteCharacter } from "./sprite-characters";
 
 export const SPRITE_ANIMATIONS = {
   idle: { row: 0, frames: 6 },
@@ -45,8 +45,9 @@ export function spriteAnimation(
 
 /** One-shot gesture budget. Typing instead follows the operation's start/end. */
 export function companionCueDuration(state: MimiCompanionState): number {
-  const move = packMove(BUNDLED_PACK, state, true, null);
-  const pack = move && packCueMs(BUNDLED_PACK.moves[move]!);
+  const performer = spriteCharacter(state.appearance).performer;
+  const move = performer && packMove(performer.pack, state, true, null);
+  const pack = move && packCueMs(performer.pack.moves[move]!);
   if (pack) return pack;
   return state.activity.action === "idle"
     ? 0

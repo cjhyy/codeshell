@@ -1,10 +1,10 @@
 import { app, BrowserWindow, ipcMain, screen, session, type WebContents } from "electron";
-import { readFile, realpath } from "node:fs/promises";
-import { extname, join, resolve, sep } from "node:path";
+import { join } from "node:path";
 import {
   companionSize,
   MIMI_COMPANION_DEFAULT_SIZE,
-  MIMI_COMPANION_SCHEME,
+  MIMI_DEFAULT_APPEARANCE,
+  type MimiAppearance,
   type MimiCompanionAttention,
   type MimiCompanionRect,
   type MimiCompanionSettings,
@@ -18,6 +18,7 @@ import { petWidgetAlwaysOnTopLevel } from "../pet/pet-widget-geometry.js";
 import { movingAnchorForFeet, movingFeet } from "../pet/mimi-presence-state.js";
 import type { ComputerActivityBus } from "./computer-activity-bus.js";
 import type { InputGate } from "./input-gate.js";
+import type { MimiPresencePatch } from "../../shared/mimi-presence.js";
 
 /** A closed chat keeps foreground input held this long, in case it reopens. */
 const CHAT_RELEASE_MS = 10_000;
@@ -39,26 +40,26 @@ export interface MimiCompanionPresenceHooks {
   onPreviewEnd?(): void;
   /** A capture started/ended; returns whether another Mimi form was hidden. */
   onCaptureChange?(capturing: boolean): boolean;
-  /** The character's own menu asked to dock or close Mimi. */
-  request?(action: "dock" | "close"): void;
+  /** The character's own menu asked to dock, close or resize Mimi. */
+  request?(patch: MimiPresencePatch): void;
 }
 
 export interface MimiCompanionHostOptions {
   appPath: string;
-  resourcesPath: string;
-  packaged: boolean;
   devUrl?: string;
   isMainWindow(sender: WebContents): boolean;
   /** Mimi chat surfaces allowed to hold foreground input (defaults to main windows). */
   isChatSurface?(sender: WebContents): boolean;
   presence?: MimiCompanionPresenceHooks;
   /**
-   * Open the Mimi chat; `prompt` is placed in the composer, never sent. `near`
-   * is where the character stands, so the chat can open beside her.
+   * Open the Mimi chat; `prompt` is placed in the composer and sent only with
+   * `send`. `near` is where the character stands, so the chat opens beside her.
    */
-  openChat(request?: { prompt: string }, near?: MimiCompanionRect): Promise<void>;
+  openChat(request?: { prompt: string; send?: boolean }, near?: MimiCompanionRect): Promise<void>;
   /** Open the work list from the character's badge. */
   openActivity?(near?: MimiCompanionRect): Promise<void>;
+  /** The user dragged the character; a chat open beside her follows. */
+  onMoved?(near: MimiCompanionRect): void;
   holdForChat?: boolean;
   /** Execution-side activity, published by the CUA proxy channel. */
   bus: ComputerActivityBus;
@@ -77,6 +78,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   /** Effect-lab switch, used only when no presence owner drives this host. */
   let standaloneEnabled = false;
   let size = companionSize(hooks.initial?.size ?? MIMI_COMPANION_DEFAULT_SIZE);
+  let appearance: MimiAppearance = MIMI_DEFAULT_APPEARANCE;
   let anchor: { x: number; y: number } | undefined;
   let pinned = false;
   let humanActive = false;
@@ -87,6 +89,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   let handoff: { app: string } | undefined;
   let attention: MimiCompanionAttention | undefined;
   let handoffTimer: ReturnType<typeof setTimeout> | undefined;
+  let pickedUpOn: Promise<{ pid: number; app: string } | undefined> = Promise.resolve(undefined);
   const initialAnchor = hooks.initial?.anchor;
   if (validPoint(initialAnchor)) {
     anchor = { x: initialAnchor.x, y: initialAnchor.y };
@@ -151,9 +154,6 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     },
     publish,
   });
-  const assetRoot = options.packaged
-    ? join(options.resourcesPath, "mimi-live2d")
-    : join(options.appPath, "out", "mimi-live2d");
 
   function normalizeAnchor() {
     if (!anchor) return;
@@ -184,13 +184,12 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     return {
       enabled: presenting,
       visible: presenting && !choreographer.capturing && !placement.obstructed && !disposed,
-      appearance: "mimi-sprite",
-      modelUrl: `${MIMI_COMPANION_SCHEME}://assets/Hiyori/Hiyori.model3.json`,
-      coreUrl: `${MIMI_COMPANION_SCHEME}://assets/Core/live2dcubismcore.min.js`,
+      appearance,
       ...placement,
       // Working on a control draws the character smaller; where the human put
       // it, it keeps the size they chose.
       size: (!anchor && placement.size) || size,
+      chosenSize: size,
       windowOrigin: { x: bounds.x, y: bounds.y },
       humanActive,
       avoidInput: clearsFieldAtOnce(avoidRect, scene.element) && !humanActive && !pinned,
@@ -270,41 +269,16 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       isolated.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
       isolated.webRequest.onHeadersReceived((details, callback) => {
         const script = options.devUrl ? "'self' 'unsafe-inline'" : "'self'";
-        const connect = options.devUrl ? "'self' ws: csmimi:" : "'self' csmimi:";
+        const connect = options.devUrl ? "'self' ws:" : "'self'";
         callback({
           responseHeaders: {
             ...details.responseHeaders,
             "Content-Security-Policy": [
-              `default-src 'none'; script-src ${script}; style-src 'self' 'unsafe-inline'; img-src 'self' data: csmimi:; connect-src ${connect}; object-src 'none'; base-uri 'none'; frame-ancestors 'none'`,
+              `default-src 'none'; script-src ${script}; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ${connect}; object-src 'none'; base-uri 'none'; frame-ancestors 'none'`,
             ],
           },
         });
       });
-      if (!(await isolated.protocol.isProtocolHandled(MIMI_COMPANION_SCHEME))) {
-        isolated.protocol.handle(MIMI_COMPANION_SCHEME, async (request) => {
-          try {
-            const url = new URL(request.url);
-            if (url.hostname !== "assets" || request.method !== "GET")
-              return new Response(null, { status: 403 });
-            const relative = decodeURIComponent(url.pathname).replace(/^\/+/, "");
-            const root = await realpath(assetRoot);
-            const file = await realpath(resolve(root, relative));
-            if (!file.startsWith(root + sep)) return new Response(null, { status: 403 });
-            const mime: Record<string, string> = {
-              ".json": "application/json",
-              ".moc3": "application/octet-stream",
-              ".png": "image/png",
-              ".js": "text/javascript",
-            };
-            if (!mime[extname(file)]) return new Response(null, { status: 403 });
-            return new Response(new Uint8Array(await readFile(file)), {
-              headers: { "Content-Type": mime[extname(file)]!, "Access-Control-Allow-Origin": "*" },
-            });
-          } catch {
-            return new Response(null, { status: 404 });
-          }
-        });
-      }
       if (disposed || !presenting || epoch !== creationEpoch) return;
       const win = new BrowserWindow({
         ...display.bounds,
@@ -513,6 +487,9 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       if (phase === "begin") {
         dragging = true;
         dragged = false;
+        // Where she was picked up: moving her within the same app is just
+        // repositioning, not an offer to look at that app.
+        pickedUpOn = appUnderFeet();
       }
       stopPresentation();
       window?.setIgnoreMouseEvents(false);
@@ -552,6 +529,8 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       window?.setBounds(display.bounds);
     }
     publish();
+    const near = characterRect();
+    if (near) options.onMoved?.(near);
   };
   // Dropping Mimi on another app's window offers to bring that window into the
   // chat. Only the app's name travels, and only after the user confirms.
@@ -560,12 +539,24 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     handoffTimer = undefined;
     handoff = undefined;
   }
+  /** The app window under her feet (never CodeShell's own), if any. */
+  function appUnderFeet(): Promise<{ pid: number; app: string } | undefined> {
+    if (!anchor) return Promise.resolve(undefined);
+    const feet = { x: anchor.x + size * 0.35, y: anchor.y + size * 0.9 };
+    try {
+      const ownPids = new Set([process.pid, ...app.getAppMetrics().map((metric) => metric.pid)]);
+      return windowAtPoint(feet, ownPids).catch(() => undefined);
+    } catch {
+      // A lookup failure must never break a drag; it only skips the offer.
+      return Promise.resolve(undefined);
+    }
+  }
+
   async function offerHandoff() {
     if (!anchor || disposed) return;
-    const feet = { x: anchor.x + size * 0.35, y: anchor.y + size * 0.9 };
-    const ownPids = new Set([process.pid, ...app.getAppMetrics().map((metric) => metric.pid)]);
-    const found = await windowAtPoint(feet, ownPids).catch(() => undefined);
+    const [found, from] = await Promise.all([appUnderFeet(), pickedUpOn]);
     if (!found || disposed || dragging) return;
+    if (from && from.pid === found.pid) return;
     withdrawHandoff();
     handoff = { app: found.app };
     handoffTimer = setTimeout(() => {
@@ -604,15 +595,21 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
   const onPresence = (event: Electron.IpcMainEvent, action: unknown) => {
     if (!ownOverlay(event.sender, event.senderFrame) || !presenting) return;
     if (action !== "dock" && action !== "close") return;
-    hooks.request?.(action);
+    hooks.request?.(action === "dock" ? { mode: "docked" } : { visible: false });
+  };
+  const onResize = (event: Electron.IpcMainEvent, value: unknown) => {
+    if (!ownOverlay(event.sender, event.senderFrame) || !presenting) return;
+    if (typeof value !== "number" || !Number.isFinite(value)) return;
+    hooks.request?.({ size: companionSize(value) });
   };
   ipcMain.on("mimiCompanion:presence", onPresence);
+  ipcMain.on("mimiCompanion:resize", onResize);
   ipcMain.on("mimiCompanion:stopComputer", onStopComputer);
   ipcMain.on("mimiCompanion:resumeComputer", onResumeComputer);
   ipcMain.on("mimiCompanion:interaction", onInteraction);
   ipcMain.on("mimiCompanion:move", onMove);
   ipcMain.on("mimiCompanion:follow", onFollow);
-  async function startChat(request?: { prompt: string }) {
+  async function startChat(request?: { prompt: string; send?: boolean }) {
     // Where she stands before the chat changes anything.
     const near = characterRect();
     // Opening the chat is not a placement: only a drag pins the character.
@@ -652,7 +649,9 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     const offered = handoff;
     withdrawHandoff();
     publish();
-    if (accept && offered) await startChat({ prompt: `请看看我屏幕上的「${offered.app}」窗口。` });
+    // Accepting is the request itself: send it, do not make the user send again.
+    if (accept && offered)
+      await startChat({ prompt: `请看看我屏幕上的「${offered.app}」窗口。`, send: true });
   });
   const onDisplaysChanged = () => {
     normalizeAnchor();
@@ -708,6 +707,12 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     size = companionSize(value);
     normalizeAnchor();
     if (anchor) window?.setBounds(display.bounds);
+    publish();
+  }
+
+  function setAppearance(value: MimiAppearance): void {
+    if (value === appearance) return;
+    appearance = value;
     publish();
   }
 
@@ -784,6 +789,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
     present,
     withdraw,
     setSize,
+    setAppearance,
     startPreview,
     cancelPreview() {
       if (!preview) return;
@@ -845,7 +851,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       return {
         enabled: presenting,
         size,
-        appearance: "mimi-sprite",
+        appearance,
         available: true,
         ...(error ? { error } : {}),
       };
@@ -873,6 +879,7 @@ export async function createMimiCompanionHost(options: MimiCompanionHostOptions)
       await creating?.catch(() => {});
       window?.destroy();
       ipcMain.removeListener("mimiCompanion:presence", onPresence);
+      ipcMain.removeListener("mimiCompanion:resize", onResize);
       ipcMain.removeHandler("mimiCompanion:state");
       ipcMain.removeListener("mimiCompanion:ready", onReady);
       ipcMain.removeListener("mimiCompanion:interaction", onInteraction);
