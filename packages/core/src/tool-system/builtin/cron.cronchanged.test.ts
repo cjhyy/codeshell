@@ -30,8 +30,9 @@ describe("cron tools fire cronChanged sink", () => {
   test("CronDelete success fires the sink", async () => {
     const created = await cronCreateTool({ name: "t", schedule: "5m", prompt: "p" });
     fired = [];
-    const id = created.match(/#(\d+)/)?.[1] ?? "";
-    await cronDeleteTool({ jobId: id });
+    const id = created.match(/#([^\s]+)/)?.[1] ?? "";
+    expect(id).not.toBe("");
+    expect(await cronDeleteTool({ jobId: id })).toContain("deleted.");
     expect(fired).toEqual(["changed"]);
   });
 
