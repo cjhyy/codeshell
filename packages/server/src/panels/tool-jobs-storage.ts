@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { lstat, mkdir, open, realpath, rename, rm } from "node:fs/promises";
+import { lstat, mkdir, open, realpath, readdir, rename, rm, rmdir, unlink } from "node:fs/promises";
 import { dirname, isAbsolute, join } from "node:path";
 
 export function toolJobJson<T>(value: T, limit: number): T {
@@ -20,6 +20,7 @@ export class ToolJobStorage {
   private root = "";
   private identity = "";
   private nonce = "";
+  private ownerClaimFile = "";
   private readonly directories = new Map<string, string>();
 
   constructor(private readonly configuredRoot: string) {}
@@ -32,35 +33,102 @@ export class ToolJobStorage {
       throw new Error("invalid tool job root");
     this.root = await realpath(this.configuredRoot);
     this.identity = `${initial.dev}:${initial.ino}`;
-    const lockPath = join(this.root, "owner.lock");
-    const create = () => open(lockPath, "wx", 0o600);
-    let lock;
-    try {
-      lock = await create();
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      const current = (await this.read(lockPath, 1024)) as { pid?: unknown };
-      let alive = false;
-      if (Number.isSafeInteger(current.pid) && Number(current.pid) > 1) {
-        try {
-          process.kill(Number(current.pid), 0);
-          alive = true;
-        } catch (cause) {
-          if ((cause as NodeJS.ErrnoException).code !== "ESRCH") alive = true;
-        }
-      } else throw new Error("invalid tool job ownership lock", { cause: error });
-      if (alive)
-        throw new Error("tool job storage is already owned by a running Host", { cause: error });
-      await rm(lockPath);
-      lock = await create();
-    }
     this.nonce = randomUUID();
     try {
-      await lock.writeFile(JSON.stringify({ pid: process.pid, nonce: this.nonce }));
-      await lock.sync();
-    } finally {
-      await lock.close();
+      await this.acquireOwnerClaim();
+      // Keep the previous file format as an interoperability barrier for older
+      // Hosts. All current Hosts hold the atomic directory claim before touching it.
+      const lockPath = join(this.root, "owner.lock");
+      try {
+        const current = (await this.read(lockPath, 1024)) as { pid?: unknown };
+        this.assertDeadOwner(current.pid);
+        await rm(lockPath);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+      const lock = await open(lockPath, "wx", 0o600);
+      try {
+        await lock.writeFile(JSON.stringify({ pid: process.pid, nonce: this.nonce }));
+        await lock.sync();
+      } finally {
+        await lock.close();
+      }
+    } catch (error) {
+      await this.releaseOwnerClaim();
+      this.nonce = "";
+      throw error;
     }
+  }
+
+  private assertDeadOwner(pid: unknown): void {
+    if (!Number.isSafeInteger(pid) || Number(pid) <= 1) {
+      throw new Error("invalid tool job ownership lock");
+    }
+    try {
+      process.kill(Number(pid), 0);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ESRCH") return;
+    }
+    throw new Error("tool job storage is already owned by a running Host");
+  }
+
+  private async acquireOwnerClaim(): Promise<void> {
+    const destination = join(this.root, "owner.claim");
+    const temporary = join(this.root, `.owner-${this.nonce}`);
+    const marker = `${this.nonce}.json`;
+    await mkdir(temporary, { mode: 0o700 });
+    try {
+      const file = await open(join(temporary, marker), "wx", 0o600);
+      try {
+        await file.writeFile(JSON.stringify({ pid: process.pid, nonce: this.nonce }));
+        await file.sync();
+      } finally {
+        await file.close();
+      }
+      try {
+        await rename(temporary, destination);
+      } catch (error) {
+        if (!["EEXIST", "ENOTEMPTY", "EPERM"].includes((error as NodeJS.ErrnoException).code ?? ""))
+          throw error;
+        const directory = await lstat(destination);
+        if (!directory.isDirectory() || directory.isSymbolicLink())
+          throw new Error("invalid tool job ownership claim", { cause: error });
+        const entries = await readdir(destination);
+        if (entries.length > 1 || entries.some((entry) => !/^[a-f0-9-]{36}\.json$/.test(entry))) {
+          throw new Error("invalid tool job ownership claim", { cause: error });
+        }
+        if (entries[0]) {
+          const stalePath = join(destination, entries[0]);
+          try {
+            const current = (await this.read(stalePath, 1024)) as { pid?: unknown };
+            this.assertDeadOwner(current.pid);
+            // Delete only the observed owner's unique marker. A delayed
+            // reclaimer cannot unlink a new owner's different marker.
+            await unlink(stalePath);
+          } catch (cause) {
+            if ((cause as NodeJS.ErrnoException).code !== "ENOENT") throw cause;
+          }
+        }
+        // Never move the existing claim: a replacement may already own it.
+        // Some platforms cannot replace even an empty destination directory.
+        // rmdir is safe here: it cannot remove a newly published nonempty claim.
+        await rmdir(destination).catch((cause: NodeJS.ErrnoException) => {
+          if (cause.code !== "ENOENT") throw cause;
+        });
+        await rename(temporary, destination);
+      }
+      this.ownerClaimFile = join(destination, marker);
+    } finally {
+      await rm(temporary, { recursive: true, force: true });
+    }
+  }
+
+  private async releaseOwnerClaim(): Promise<void> {
+    if (!this.ownerClaimFile) return;
+    await unlink(this.ownerClaimFile).catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+    this.ownerClaimFile = "";
   }
 
   async directory(id?: string, work = false, create = false): Promise<string> {
@@ -177,11 +245,15 @@ export class ToolJobStorage {
 
   async close(): Promise<void> {
     if (!this.nonce) return;
-    const path = join(await this.directory(), "owner.lock");
-    const lock = (await this.read(path, 1024)) as { nonce?: unknown };
-    if (lock.nonce === this.nonce) await rm(path);
-    this.nonce = "";
-    this.directories.clear();
+    try {
+      const path = join(await this.directory(), "owner.lock");
+      const lock = (await this.read(path, 1024)) as { nonce?: unknown };
+      if (lock.nonce === this.nonce) await rm(path);
+    } finally {
+      await this.releaseOwnerClaim();
+      this.nonce = "";
+      this.directories.clear();
+    }
   }
 
   async remove(id: string): Promise<void> {
