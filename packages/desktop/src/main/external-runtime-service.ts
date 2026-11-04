@@ -81,6 +81,7 @@ import {
 import { startExternalRuntimeTrace } from "./external-runtime-tracing.js";
 import type { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertOutputHistoryWriteAvailable } from "./session-output-history-lease.js";
+import { ExternalRuntimeDeltaBuffer } from "./external-runtime-delta-buffer.js";
 
 export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
   goal?: string | GoalConfig;
@@ -240,6 +241,7 @@ export class ExternalRuntimeService {
       authority: ExternalRuntimeAuthority;
       ownerWebContentsId?: number;
       forwardEvent: (event: StreamEvent) => void;
+      flushOutput: () => void;
       outputFailure: () => ExternalRuntimeTurnOutcome;
       operations: { current?: ExternalRuntimeOperationRun };
       finalizeOperations: (reason: TerminalReason) => TerminalReason;
@@ -498,6 +500,7 @@ export class ExternalRuntimeService {
     if (needsIndependentOutput(event)) {
       const entry = this.sessions.get(sessionId);
       try {
+        entry?.flushOutput();
         // Cold Goal edits are synchronous, already authorized by Main, and do
         // not allocate a CLI or borrow a prior runtime's asynchronous identity.
         event = entry
@@ -1108,7 +1111,7 @@ export class ExternalRuntimeService {
       }
       return outcome;
     };
-    const forwardEvent = (event: StreamEvent): void => {
+    const processEvent = (event: StreamEvent): void => {
       // A provider process may flush buffered output while close() is in flight.
       // Once this concrete runtime has been stopped/replaced, its events belong
       // to the old generation and must not enter the new business-session stream.
@@ -1152,6 +1155,27 @@ export class ExternalRuntimeService {
             });
           });
         }
+      } catch {
+        outputFailure();
+      }
+    };
+    const output = new ExternalRuntimeDeltaBuffer({
+      single: processEvent,
+      batch: (events) => {
+        if (!lifecycle.active || !lifecycle.turnActive) return;
+        try {
+          for (const event of recorder.onDeltaBatch(events))
+            this.emitSafely(request.sessionId, event);
+        } catch {
+          outputFailure();
+        }
+      },
+      failed: outputFailure,
+    });
+    const forwardEvent = (event: StreamEvent): void => {
+      if (!lifecycle.active || !lifecycle.turnActive) return;
+      try {
+        output.push(event);
       } catch {
         outputFailure();
       }
@@ -1415,6 +1439,7 @@ export class ExternalRuntimeService {
       lifecycle,
       goalToolsAvailable,
       forwardEvent,
+      flushOutput: () => output.flush(),
       outputFailure,
       operations,
       finalizeOperations,
@@ -1555,6 +1580,7 @@ export class ExternalRuntimeService {
         )
           return;
         try {
+          entry.flushOutput();
           this.emitSafely(sessionId, entry.recorder.recordControlOutput(event));
         } catch {
           entry.outputFailure();
@@ -1700,6 +1726,7 @@ export class ExternalRuntimeService {
               entry.forwardEvent({ type: "error", error: detail });
               entry.forwardEvent({ type: "turn_complete", reason: "model_error" });
             } finally {
+              entry.flushOutput();
               trace?.finish(
                 !entry.lifecycle.active ||
                   this.sessions.get(sessionId) !== entry ||
@@ -2099,6 +2126,7 @@ export class ExternalRuntimeService {
   private abortRecordedRun(sessionId: string): void {
     const entry = this.sessions.get(sessionId);
     if (!entry) return;
+    entry.flushOutput();
     if (
       entry.lifecycle.turnActive ||
       (entry.lifecycle.goalRunActive && entry.recorder.hasOpenRun)

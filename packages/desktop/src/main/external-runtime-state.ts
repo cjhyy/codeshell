@@ -225,6 +225,7 @@ export class ExternalRuntimeSessionRecorder {
   private runTiming: ReturnType<typeof createRunTiming> | undefined;
   private persistenceFailed = false;
   private boundaryId: string | undefined;
+  private deltaBatch: StreamEvent[] | undefined;
 
   private textBuffer = "";
   private finalText = "";
@@ -523,13 +524,40 @@ export class ExternalRuntimeSessionRecorder {
   }
 
   private appendOutput(event: StreamEvent): StreamEvent {
-    this.assertOwner();
+    if (!this.deltaBatch) this.assertOwner();
     if (this.persistenceFailed || !this.journal)
       throw new Error("Session output recovery is incomplete");
     if (this.transcript.flushFailed()) throw new Error("Transcript persistence is incomplete");
     event = this.runTiming?.prepareEvent(event) ?? event;
     if (event.type === "session_started") event = { ...event, runId: this.runId };
+    if (this.deltaBatch) {
+      const pending = { ...event };
+      this.deltaBatch.push(pending);
+      return pending;
+    }
     return { ...event, outputCursor: this.journal.append(event) };
+  }
+
+  /** No event escapes until the entire bounded delta batch and its head are durable. */
+  onDeltaBatch(events: readonly StreamEvent[]): StreamEvent[] {
+    if (
+      this.deltaBatch ||
+      !events.length ||
+      events.length > 64 ||
+      events.some((event) => event.type !== "text_delta" && event.type !== "thinking_delta")
+    )
+      throw new Error("Invalid external output delta batch");
+    this.assertOwner();
+    const batch: StreamEvent[] = [];
+    this.deltaBatch = batch;
+    try {
+      for (const event of events) this.onEvent(event);
+      if (!batch.length) return [];
+      const cursors = this.journal!.appendBatch(batch);
+      return batch.map((event, index) => ({ ...event, outputCursor: cursors[index] }));
+    } finally {
+      this.deltaBatch = undefined;
+    }
   }
 
   /** One terminal for the whole logical submission, including Goal continuations. */
@@ -571,7 +599,7 @@ export class ExternalRuntimeSessionRecorder {
 
   onEvent(event: StreamEvent, providerTerminalOnly = false): StreamEvent | undefined {
     if (!this.runId && event.type === "session_started") return event;
-    this.assertOwner();
+    if (!this.deltaBatch) this.assertOwner();
     if (this.persistenceFailed) throw new Error("Session output recovery is incomplete");
     if (this.outcome || this.runClosed) return undefined;
     switch (event.type) {
