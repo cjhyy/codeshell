@@ -251,6 +251,31 @@ describe("ModelTraceStore", () => {
     expect(store.events("run")).toEqual([]);
     expect(store.getEvent("run", "event")).toBeNull();
   });
+  test("retention yields between batches and never scans history inside a trace write", async () => {
+    const store = new ModelTraceStore({ storageDir: directory });
+    for (let index = 0; index < 40; index++) {
+      store.writeEvent({
+        id: `expired-${index}`,
+        traceId: "old-run",
+        kind: "tool",
+        name: "Read",
+        status: "completed",
+        startedAt: Date.now() - 8 * 86_400_000,
+        inputState: "not-recorded",
+        outputState: "not-recorded",
+      });
+    }
+    const events = join(directory, "events", createHash("sha256").update("old-run").digest("hex"));
+    store.write(record("new-request"));
+    // The send's synchronous trace write must leave retention to a later turn.
+    expect(readdirSync(events)).toHaveLength(40);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    // Other event-loop work runs before a whole historical directory is scanned.
+    expect(readdirSync(events).length).toBeGreaterThan(0);
+    await store.flushMaintenance();
+    expect(readdirSync(events)).toEqual([]);
+    expect(store.get("new-request")?.status).toBe("completed");
+  });
   test("exact event lookup validates identity and rejects symlink directories", () => {
     const store = new ModelTraceStore({ storageDir: directory });
     const value = {
@@ -276,7 +301,7 @@ describe("ModelTraceStore", () => {
     symlinkSync(backup, eventPath);
     expect(store.getEvent("exact-trace", "exact-event")).toBeNull();
   });
-  test("retention removes orphan bodies after a failed summary write", () => {
+  test("retention removes orphan bodies after a failed summary write", async () => {
     const store = new ModelTraceStore({ storageDir: directory });
     const summaryPath = join(directory, "summaries");
     writeFileSync(summaryPath, "summary directory is unavailable");
@@ -286,6 +311,7 @@ describe("ModelTraceStore", () => {
     expect(readdirSync(join(directory, "records"))).toHaveLength(1);
     rmSync(summaryPath);
     store.setConfig({ retentionDays: 1 });
+    await store.flushMaintenance();
     expect(readdirSync(join(directory, "records"))).toEqual([]);
     expect(store.get("orphan")).toBeNull();
   });
