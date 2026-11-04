@@ -218,7 +218,7 @@ try {
   await fixture.page.getByRole("button", { name: "重新连接", exact: true }).waitFor();
   assert.equal(fixture.calls.filter((call) => call.path.endsWith("/cloud-tickets")).length, 1);
   fixture.state.offline = true;
-  await fixture.page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await fixture.page.evaluate(() => globalThis.dispatchEvent(new globalThis.Event("focus")));
   await fixture.page.getByRole("button", { name: "重试连接账号服务" }).waitFor();
   assert.equal(
     await fixture.page

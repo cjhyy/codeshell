@@ -26,7 +26,7 @@ test("local relay readiness binds both origin and account and leaves setup actio
   expect(connecting?.["relay.phone"]?.ready).toBe(true);
 });
 test("feature IPC restricts snapshots, refresh and push to live main windows", async () => {
-  const handlers = new Map<string, Function>();
+  const handlers = new Map<string, (...args: any[]) => any>();
   const frame = {};
   let destroyed = false;
   const sent: unknown[] = [];
