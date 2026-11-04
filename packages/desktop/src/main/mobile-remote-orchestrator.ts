@@ -196,7 +196,7 @@ export class MobileRemoteOrchestrator {
     });
     // Mode changes are refused while turns submitted under the current mode are
     // pending; an explicit close (any view) pauses them before the signal.
-    deps.roomManager.setHostTurnHooks?.({
+    deps.roomManager.setHostTurnHooks({
       hasPendingTurns: (roomId) => this.turnQueue.hasPendingTurns({ kind: "room", roomId }),
       beforeClose: (roomId) => this.turnQueue.pauseForStop({ kind: "room", roomId }),
     });
