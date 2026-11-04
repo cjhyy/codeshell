@@ -609,13 +609,27 @@ export class CdpActionsDriver {
       const deadline = Date.now() + effectiveTimeout;
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        const res = (await this.send("Runtime.evaluate", {
-          expression: "document.readyState",
-          returnByValue: true,
-        })) as { result?: { value?: string } };
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) return { ok: true, detail: "load wait timed out (proceeding)" };
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        let res: { result?: { value?: string } } | undefined;
+        try {
+          res = (await Promise.race([
+            this.send("Runtime.evaluate", {
+              expression: "document.readyState",
+              returnByValue: true,
+            }),
+            new Promise<undefined>((resolve) => {
+              timer = setTimeout(resolve, remaining);
+            }),
+          ])) as { result?: { value?: string } } | undefined;
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
+        if (!res) return { ok: true, detail: "load wait timed out (proceeding)" };
         if (res.result?.value === "complete") return { ok: true };
         if (Date.now() > deadline) return { ok: true, detail: "load wait timed out (proceeding)" };
-        await delay(150);
+        await delay(Math.min(150, Math.max(0, deadline - Date.now())));
       }
     } catch (e) {
       return { ok: false, detail: errMsg(e) };
