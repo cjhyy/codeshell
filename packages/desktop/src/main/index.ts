@@ -3,7 +3,7 @@ import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
 import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
 import { registerOperationBatchHost } from "./operation-batch-host.js";
 import { createDesktopRemoteServices } from "./desktop-remote-services.js";
-import { createDesktopShutdownHandler } from "./desktop-shutdown.js";
+import { registerDesktopShutdown } from "./desktop-shutdown.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
 import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
 import { registerSourceCollectionIpc } from "./source-collections-ipc.js";
@@ -7249,110 +7249,81 @@ ipcMain.handle("badge:set", async (_e, count: number) => {
   }
 });
 
-app.on("window-all-closed", () => {
-  if (!ownsDesktopInstance) return;
-  if (process.platform !== "darwin") app.quit();
-});
-
-app.on(
-  "before-quit",
-  createDesktopShutdownHandler({
-    ownsInstance: () => ownsDesktopInstance,
-    flushRenderers: () => sessionCatalogIpc.flushRenderers(),
-    disposeOperationResolution: async () => {
-      await disposeOperationBatchHost();
-      await disposeOperationResolutionHost();
-    },
-    onError: (phase, error) => dlog("main", phase, { error: String(error) }),
-    resolveFailure: async () => {
-      const { response } = await dialog.showMessageBox({
-        type: "warning",
-        title: "CodeShell 无法完成退出",
-        message: "保存或清理未完成。",
-        detail: "重试可再次完成当前步骤。选择仍然退出可能丢失未保存内容或留下未完成的清理。",
-        buttons: ["重试", "取消退出", "仍然退出"],
-        defaultId: 0,
-        cancelId: 1,
-      });
-      if (response === 1) cancelPendingUpdateInstall();
-      return response === 0 ? "retry" : response === 2 ? "quit" : "cancel";
-    },
-    cleanup: async () => {
-      cloudEnvironment.dispose();
-      taskInboxService?.dispose();
-      for (const dispose of taskInboxDisposers.splice(0)) dispose();
-      const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
-      petRuntimeReady = false;
-      browserRuntime.closeAll();
-      bridge?.kill();
-      petStateAggregator?.stop();
-      petStateAggregator = null;
-      petExternalVisibilityController?.shutdown();
-      petExternalVisibilityController = null;
-      reconcileExternalAdapters = null;
-      petDispatchService = null;
-      petFollowUpWakeCoordinator?.stop();
-      petFollowUpWakeCoordinator = null;
-      petHostActionReceiptService = null;
-      petImDecisions?.stop();
-      petImDecisions = null;
-      petLongTaskCoordinator?.stop();
-      petLongTaskCoordinator = null;
-      unsubscribePetLongTaskStream?.();
-      unsubscribePetLongTaskStream = null;
-      unsubscribePetReportStream?.();
-      unsubscribePetReportStream = null;
-      petAttentionPolicy?.stop();
-      petAttentionPolicy = null;
-      const petWorkInboxFlush = petWorkInboxStore?.flush();
-      petWorkInboxStore = null;
-      const petLongTaskFlush = petLongTaskStore?.flush();
-      petLongTaskStore = null;
-      disposePetIpc?.();
-      disposePetIpc = null;
-      automationHandle?.stop();
-      automationHandle = null;
-      ptyKillAll();
-      transcriptSubscriptions?.closeAll();
-      roomManager.closeAll();
-      // Each external-runtime session holds a child process and a listening port,
-      // and neither dies with the parent on Windows. Captured before the async
-      // block so a later reassignment cannot make this a no-op.
-      const externalRuntimeShutdown = externalRuntimeService?.stopAll();
-      externalRuntimeService = null;
-      // The embedded Cua daemon is a direct child; stop it explicitly rather
-      // than relying on the parent-liveness pipe.
-      const cuaDriverShutdown = getCuaDriverHost()?.stop();
-      // Withdraw both Mimi forms and persist presence before closing the character host.
-      const mimiPresenceShutdown = mimiPresence?.dispose();
-      petWidgetSurface?.dispose();
-      mimiBubble?.surface.dispose();
-      await Promise.allSettled([
-        mimiPresenceShutdown,
-        imGatewayService.dispose(),
-        mobileRemoteController.dispose(),
-        cloudManagementManager.dispose(),
-        gatewayControlServer?.stop(),
-        petWorkInboxFlush,
-        petLongTaskFlush,
-        externalRuntimeShutdown,
-        cookieRefreshShutdown,
-        sessionCatalogIpc.close(),
-        panelAppBridge.shutdownMedia(),
-        chromeExtensionRuntimeService.stop(),
-        cuaDriverShutdown,
-        closeComputerUse(),
-      ]);
-      gatewayControlServer = undefined;
-      await mobileUploads.dispose();
-    },
-    quit: () => app.quit(),
-  }),
-);
-
-app.on("activate", () => {
-  if (ownsDesktopInstance)
-    void restoreMainWindow().catch((error) =>
-      dlog("main", "window.restore_failed", { error: String(error) }),
-    );
+registerDesktopShutdown(app, {
+  ownsInstance: () => ownsDesktopInstance,
+  flushRenderers: () => sessionCatalogIpc.flushRenderers(),
+  disposeOperationResolution: async () => {
+    await disposeOperationBatchHost();
+    await disposeOperationResolutionHost();
+  },
+  onError: (phase, error) => dlog("main", phase, { error: String(error) }),
+  cancelQuit: cancelPendingUpdateInstall,
+  showFailureDialog: (options) => dialog.showMessageBox(options),
+  restoreMainWindow,
+  cleanup: async () => {
+    cloudEnvironment.dispose();
+    taskInboxService?.dispose();
+    for (const dispose of taskInboxDisposers.splice(0)) dispose();
+    const cookieRefreshShutdown = cookieCredentialAutoRefresh.shutdown();
+    petRuntimeReady = false;
+    browserRuntime.closeAll();
+    bridge?.kill();
+    petStateAggregator?.stop();
+    petStateAggregator = null;
+    petExternalVisibilityController?.shutdown();
+    petExternalVisibilityController = null;
+    reconcileExternalAdapters = null;
+    petDispatchService = null;
+    petFollowUpWakeCoordinator?.stop();
+    petFollowUpWakeCoordinator = null;
+    petHostActionReceiptService = null;
+    petImDecisions?.stop();
+    petImDecisions = null;
+    petLongTaskCoordinator?.stop();
+    petLongTaskCoordinator = null;
+    unsubscribePetLongTaskStream?.();
+    unsubscribePetLongTaskStream = null;
+    unsubscribePetReportStream?.();
+    unsubscribePetReportStream = null;
+    petAttentionPolicy?.stop();
+    petAttentionPolicy = null;
+    const petWorkInboxFlush = petWorkInboxStore?.flush();
+    petWorkInboxStore = null;
+    const petLongTaskFlush = petLongTaskStore?.flush();
+    petLongTaskStore = null;
+    disposePetIpc?.();
+    disposePetIpc = null;
+    automationHandle?.stop();
+    automationHandle = null;
+    ptyKillAll();
+    transcriptSubscriptions?.closeAll();
+    roomManager.closeAll();
+    // Stop captured external runtimes explicitly; their child processes can survive Windows exit.
+    const externalRuntimeShutdown = externalRuntimeService?.stopAll();
+    externalRuntimeService = null;
+    // Stop the embedded Cua child explicitly.
+    const cuaDriverShutdown = getCuaDriverHost()?.stop();
+    // Withdraw both Mimi forms and persist presence before closing the character host.
+    const mimiPresenceShutdown = mimiPresence?.dispose();
+    petWidgetSurface?.dispose();
+    mimiBubble?.surface.dispose();
+    await Promise.allSettled([
+      mimiPresenceShutdown,
+      imGatewayService.dispose(),
+      mobileRemoteController.dispose(),
+      cloudManagementManager.dispose(),
+      gatewayControlServer?.stop(),
+      petWorkInboxFlush,
+      petLongTaskFlush,
+      externalRuntimeShutdown,
+      cookieRefreshShutdown,
+      panelAppBridge.shutdownMedia(),
+      chromeExtensionRuntimeService.stop(),
+      cuaDriverShutdown,
+      closeComputerUse(),
+    ]);
+    gatewayControlServer = undefined;
+    await mobileUploads.dispose();
+  },
+  finalize: () => sessionCatalogIpc.close(),
 });
