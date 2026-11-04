@@ -54,6 +54,7 @@ let activeDownloadVersion: string | null = null;
 let downloadedVersion: string | null = null;
 let installInFlight = false;
 let githubUpdateSource = true;
+let availabilityGeneration = 0;
 
 function broadcast(): void {
   for (const w of BrowserWindow.getAllWindows()) {
@@ -63,6 +64,9 @@ function broadcast(): void {
 }
 
 function set(status: UpdaterStatus): void {
+  // Any newer lifecycle state supersedes a pending asynchronous signature
+  // probe, including checking/error states that do not carry a version.
+  availabilityGeneration++;
   lastStatus = status;
   dlog("main", "updater.status", status as unknown as Record<string, unknown>);
   broadcast();
@@ -269,7 +273,6 @@ export function initUpdater(): void {
       return;
     set({ kind: "checking" });
   });
-  let availabilityGeneration = 0;
   autoUpdater.on("update-available", (info) => {
     const generation = ++availabilityGeneration;
     const version = String((info as { version?: string }).version ?? "");
@@ -291,7 +294,9 @@ export function initUpdater(): void {
           return;
         set(status);
       })
-      .catch(handleUpdaterError);
+      .catch((error) => {
+        if (generation === availabilityGeneration) handleUpdaterError(error);
+      });
   });
   autoUpdater.on("update-not-available", (info) => {
     availabilityGeneration++;
