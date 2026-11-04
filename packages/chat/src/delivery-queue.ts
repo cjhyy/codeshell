@@ -373,7 +373,7 @@ export class DeliveryQueue {
           if (error === undefined && entry.dedupeKey)
             this.completed.set(entry.dedupeKey, Date.now());
         } else {
-          entry.attempts += 1;
+          entry.attempts = Math.min(Number.MAX_SAFE_INTEGER, entry.attempts + 1);
           entry.nextAttemptAt =
             Date.now() +
             Math.min(
@@ -614,7 +614,8 @@ export class DeliveryQueue {
         });
       }
       const completed = Object.entries(parsed.completed);
-      if (completed.length > MAX_COMPLETED_KEYS) throw new Error("too many completed deliveries");
+      // Older writers could exceed the key cap. The byte-bounded file is still
+      // readable: retain the newest completion keys below instead of refusing startup.
       for (const [key, timestamp] of completed) {
         if (
           key.length <= 16_384 &&
@@ -636,6 +637,7 @@ export class DeliveryQueue {
   private async persist(): Promise<void> {
     const path = this.config.path;
     if (!path) return;
+    this.pruneCompleted();
     const state: DeliveryStateFile = {
       version: 1,
       pending: this.pending
@@ -673,6 +675,11 @@ export class DeliveryQueue {
     const cutoff = Date.now() - this.config.completedTtlMs;
     for (const [key, timestamp] of this.completed) {
       if (timestamp < cutoff) this.completed.delete(key);
+    }
+    if (this.completed.size > MAX_COMPLETED_KEYS) {
+      const oldest = [...this.completed].sort((a, b) => a[1] - b[1]);
+      for (const [key] of oldest.slice(0, this.completed.size - MAX_COMPLETED_KEYS))
+        this.completed.delete(key);
     }
   }
 
@@ -749,7 +756,6 @@ function validStoredEntry(
     value.adapterId.length > 256 ||
     !Number.isSafeInteger(value.attempts) ||
     (value.attempts ?? -1) < 0 ||
-    (value.attempts ?? 0) > 10_000 ||
     !Number.isSafeInteger(value.nextAttemptAt) ||
     (value.nextAttemptAt ?? -1) < 0 ||
     !value.message ||

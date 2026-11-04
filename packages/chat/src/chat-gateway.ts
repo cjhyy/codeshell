@@ -18,7 +18,13 @@ export interface ChatContext {
   reply(message: OutgoingMessage): Promise<void>;
 }
 
-export type ChatMiddleware = (context: ChatContext, next: () => Promise<void>) => Promise<void>;
+export type ChatMiddleware = ((
+  context: ChatContext,
+  next: () => Promise<void>,
+) => Promise<void>) & {
+  /** Side-effect-free ingress check, before attachments are downloaded or persisted. */
+  acceptsMessage?: (message: ChannelMessage, adapter: ChannelAdapter) => boolean;
+};
 
 export interface ChatGatewayOptions {
   adapters: ChannelAdapter[];
@@ -145,8 +151,17 @@ export class ChatGateway {
 
     const runners: Promise<void>[] = [];
     for (const [adapterId, adapter] of adapterById) {
-      const handler = (message: ChannelMessage) =>
-        queue.enqueue(adapterId, message).then(() => undefined);
+      const handler = async (message: ChannelMessage) => {
+        if (message.channel !== adapter.channel)
+          throw new Error("Adapter message channel mismatch");
+        if (
+          this.middleware.some(
+            (middleware) => middleware.acceptsMessage?.(message, adapter) === false,
+          )
+        )
+          return;
+        await queue.enqueue(adapterId, message);
+      };
       if (isWebhookChannelAdapter(adapter)) webhooks.push({ adapter, handler });
       runners.push(this.superviseAdapter(adapterId, adapter, handler, ownedAbort.signal));
     }
@@ -307,12 +322,17 @@ export function createAllowlistMiddleware(
       },
     ]),
   );
-  return async ({ message }, next) => {
+  const acceptsMessage = (message: ChannelMessage): boolean => {
     const rule = normalized.get(message.channel);
-    if (!rule?.targets.has(message.target)) return;
-    if (rule.users && rule.users.size > 0 && !rule.users.has(message.senderId)) return;
-    await next();
+    return Boolean(
+      rule?.targets.has(message.target) && (!rule.users?.size || rule.users.has(message.senderId)),
+    );
   };
+  const middleware: ChatMiddleware = async ({ message }, next) => {
+    if (acceptsMessage(message)) await next();
+  };
+  middleware.acceptsMessage = acceptsMessage;
+  return middleware;
 }
 
 /** Fixed-window per-sender limiter; rejected messages never reach expensive middleware. */
