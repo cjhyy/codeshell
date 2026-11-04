@@ -3,12 +3,12 @@ import type { CloudAccountApi } from "../shared/cloud-account.js";
 import type { AccountDeviceApi } from "../shared/account-device.js";
 import type { SessionOutputRecoveryApi } from "./session-transcript-api.js";
 import type { ModelTraceApi } from "./model-trace-api.js";
+import type { CcRoomModeApi } from "./cc-room-mode-types";
 import type { MobileSessionAnnouncement } from "./mobile-session-announcement.js";
 import type { CloudEnvironmentApi } from "../shared/cloud-environment.js";
 import type { CloudWorkbenchApi } from "../shared/cloud-management.js";
 import type {
   ApprovalResolvedEnvelope,
-  CcRoomOpenResult,
   MobileRemoteApi,
   MobileSessionSettingsEnvelope,
 } from "../shared/mobile-remote.js";
@@ -2456,7 +2456,7 @@ export interface CodeshellApi
    * CC rooms — orchestration of the external `claude` CLI (probe availability,
    * discover its on-disk sessions, list/delete CC-backed scheduled tasks).
    */
-  ccRoom: {
+  ccRoom: CcRoomModeApi & {
     probe(force?: boolean): Promise<CCAvailability>;
     codexProbe(force?: boolean): Promise<CCAvailability>;
     /** Bounded by default (recent 2 weeks AND ≤20); pass all=true to fetch every
@@ -2469,12 +2469,6 @@ export interface CodeshellApi
       cwd: string,
       all?: boolean,
     ): Promise<{ sessions: DiscoveredSession[]; total: number }>;
-    openSession(
-      claudeSessionId: string,
-      cwd: string,
-      mode: string,
-      kind?: "claude-code" | "codex",
-    ): Promise<CcRoomOpenResult>;
     openLinkedSession(
       externalSessionId: string,
       cwd: string,
@@ -2571,7 +2565,6 @@ export interface CodeshellApi
     onApprovalResolved(
       cb: (p: { roomId: string; requestId: string; decision: unknown }) => void,
     ): () => void;
-    onRoomState?(cb: (room: RoomPublic) => void): () => void;
   };
 
   /** Remaining CC/Codex subscription quota. "codex" is free; "claude" costs ~1 token. */
