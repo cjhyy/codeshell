@@ -8,8 +8,10 @@
  * into the string form.
  */
 
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
+import { realpath } from "node:fs/promises";
+import { promisify } from "node:util";
 import { GIT_LOG_FORMAT, parseGitLog, type GitLogEntry } from "./parse-log.js";
 import { resolveExecutable, resolveGit } from "@cjhyy/code-shell-core/extension";
 
@@ -71,6 +73,29 @@ export function resolveProjectRoot(cwd: string): string {
   try {
     const top = git(realCwd, ["rev-parse", "--show-toplevel"], 5000);
     return top ? realpathSync(top) : realCwd;
+  } catch {
+    return realCwd;
+  }
+}
+
+const execGitAsync = promisify(execFile);
+
+/** Nonblocking project-boundary resolution for UI hosts. */
+export async function resolveProjectRootAsync(cwd: string): Promise<string> {
+  let realCwd = cwd;
+  try {
+    realCwd = await realpath(cwd);
+  } catch {
+    return cwd;
+  }
+  try {
+    const { stdout } = await execGitAsync(resolveGit(), ["rev-parse", "--show-toplevel"], {
+      cwd: realCwd,
+      encoding: "utf8",
+      timeout: 5_000,
+    });
+    const top = stdout.trim();
+    return top ? await realpath(top) : realCwd;
   } catch {
     return realCwd;
   }

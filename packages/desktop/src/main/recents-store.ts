@@ -3,7 +3,7 @@ import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { resolveProjectRoot } from "@cjhyy/code-shell-capability-coding/git";
+import { resolveProjectRootAsync } from "@cjhyy/code-shell-capability-coding/git";
 import { dlog } from "./desktop-logger.js";
 
 export interface RecentProject {
@@ -56,7 +56,7 @@ function validProjectPath(value: unknown): value is string {
   );
 }
 
-function checkedCanonicalPath(projectPath: unknown): string {
+async function checkedCanonicalPath(projectPath: unknown): Promise<string> {
   if (!validProjectPath(projectPath)) throw new Error("Invalid recent project path");
   return canonicalPath(projectPath);
 }
@@ -172,7 +172,7 @@ async function checkedWritableTarget(file: string): Promise<void> {
 }
 
 async function writeAll(file: string, list: RecentProject[]): Promise<void> {
-  const normalized = boundRegistry(mergeCanonicalProjects(list));
+  const normalized = boundRegistry(await mergeCanonicalProjects(list));
   const tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
   try {
     await fs.mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
@@ -197,28 +197,28 @@ async function writeAll(file: string, list: RecentProject[]): Promise<void> {
   }
 }
 
-const canonicalPathCache = new Map<string, string>();
+const canonicalPathCache = new Map<string, Promise<string>>();
 
-function canonicalPath(projectPath: string): string {
+function canonicalPath(projectPath: string): Promise<string> {
   const cached = canonicalPathCache.get(projectPath);
   if (cached) return cached;
-  // resolveProjectRoot shells out to git. Missing historical/deleted paths
-  // cannot resolve to a repository root, so retain them without spawning git.
-  const root = fsSync.existsSync(projectPath) ? resolveProjectRoot(projectPath) : projectPath;
-  canonicalPathCache.set(projectPath, root);
-  return root;
+  // Share in-flight resolutions; never block Main waiting for a git process.
+  const pending = resolveProjectRootAsync(projectPath);
+  canonicalPathCache.set(projectPath, pending);
+  return pending;
 }
 
-function canonicalizeProject(p: RecentProject): RecentProject {
-  const root = p.path ? canonicalPath(p.path) : p.path;
+async function canonicalizeProject(p: RecentProject): Promise<RecentProject> {
+  const root = p.path ? await canonicalPath(p.path) : p.path;
   return { ...p, path: root, name: p.name || path.basename(root) };
 }
 
-function mergeCanonicalProjects(list: RecentProject[]): RecentProject[] {
+async function mergeCanonicalProjects(list: RecentProject[]): Promise<RecentProject[]> {
   const byPath = new Map<string, RecentProject>();
   const order: string[] = [];
+  // Resolve sequentially to bound child processes even for a full registry.
   for (const raw of list) {
-    const p = canonicalizeProject(raw);
+    const p = await canonicalizeProject(raw);
     const prior = byPath.get(p.path);
     if (!prior) {
       byPath.set(p.path, p);
@@ -252,7 +252,7 @@ function boundRegistry(list: RecentProject[]): RecentProject[] {
 }
 
 async function readCanonicalAll(file: string): Promise<RecentProject[]> {
-  return boundRegistry(mergeCanonicalProjects(boundRegistry(await readAll(file))));
+  return boundRegistry(await mergeCanonicalProjects(boundRegistry(await readAll(file))));
 }
 
 async function loadCanonicalSafely(file: string): Promise<RecentProject[]> {
@@ -274,14 +274,24 @@ function serializeMutation<T>(mutation: (file: string) => Promise<T>): Promise<T
 }
 
 /** Live = not soft-deleted and directory still exists on disk. */
-function isLive(r: RecentProject): boolean {
-  return Boolean(r.path) && !r.deletedAt && fsSync.existsSync(r.path);
+async function liveProjects(all: RecentProject[]): Promise<RecentProject[]> {
+  const live: RecentProject[] = [];
+  for (const project of all) {
+    if (!project.path || project.deletedAt) continue;
+    try {
+      await fs.access(project.path);
+      live.push(project);
+    } catch {
+      // Historical entries remain stored, but missing paths are hidden.
+    }
+  }
+  return live;
 }
 
 /** Recent-projects menu list: live, capped at MAX, newest-first as stored. */
 export async function loadRecents(): Promise<RecentProject[]> {
   const all = await loadCanonicalSafely(FILE);
-  return all.filter(isLive).slice(0, RECENT_MENU_MAX);
+  return (await liveProjects(all)).slice(0, RECENT_MENU_MAX);
 }
 
 /** Full project list for UI (source of truth for the sidebar / mobile): all live
@@ -289,7 +299,7 @@ export async function loadRecents(): Promise<RecentProject[]> {
  *  ten-item menu cap; only the generous corruption-safety registry bound applies. */
 export async function loadProjects(): Promise<RecentProject[]> {
   const all = await loadCanonicalSafely(FILE);
-  const live = all.filter(isLive);
+  const live = await liveProjects(all);
   const pinned = live.filter((r) => r.pinned);
   const rest = live.filter((r) => !r.pinned);
   return [...pinned, ...rest];
@@ -297,8 +307,9 @@ export async function loadProjects(): Promise<RecentProject[]> {
 
 export async function setPinned(projectPath: string, pinned: boolean): Promise<void> {
   if (typeof pinned !== "boolean") throw new Error("Invalid pinned state");
-  const target = checkedCanonicalPath(projectPath);
+  if (!validProjectPath(projectPath)) throw new Error("Invalid recent project path");
   return serializeMutation(async (file) => {
+    const target = await checkedCanonicalPath(projectPath);
     const all = await readCanonicalAll(file);
     await writeAll(
       file,
@@ -308,8 +319,9 @@ export async function setPinned(projectPath: string, pinned: boolean): Promise<v
 }
 
 export async function softDelete(projectPath: string): Promise<void> {
-  const target = checkedCanonicalPath(projectPath);
+  if (!validProjectPath(projectPath)) throw new Error("Invalid recent project path");
   return serializeMutation(async (file) => {
+    const target = await checkedCanonicalPath(projectPath);
     const all = await readCanonicalAll(file);
     const deletedAt = Date.now();
     await writeAll(
@@ -332,16 +344,16 @@ export async function pushRecent(p: RecentProject): Promise<RecentProject[]> {
     name: inputName || path.basename(inputPath),
   });
   if (!normalized) throw new Error("Invalid recent project");
-  const project = canonicalizeProject(normalized);
   return serializeMutation(async (file) => {
+    const project = await canonicalizeProject(normalized);
     const all = await readCanonicalAll(file);
     const prior = all.find((r) => r.path === project.path);
     // Re-opening a project un-deletes it and preserves its pin state.
     const merged: RecentProject = { ...prior, ...project, deletedAt: undefined };
     const next = boundRegistry(
-      mergeCanonicalProjects([merged, ...all.filter((r) => r.path !== project.path)]),
+      await mergeCanonicalProjects([merged, ...all.filter((r) => r.path !== project.path)]),
     );
     await writeAll(file, next);
-    return next.filter(isLive).slice(0, RECENT_MENU_MAX);
+    return (await liveProjects(next)).slice(0, RECENT_MENU_MAX);
   });
 }
