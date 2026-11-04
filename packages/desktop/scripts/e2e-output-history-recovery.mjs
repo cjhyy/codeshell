@@ -68,6 +68,7 @@ let mainPid,
   mainExit,
   workerPids = [];
 const observations = [];
+const answerViews = [];
 const step = async (name, body) => {
   phase = name;
   console.log(`RECOVERY: ${name}`);
@@ -122,6 +123,49 @@ async function seedRecords(...args) {
     seeded.once("exit", (code, signal) => done({ code, signal }));
   });
   assert.deepEqual(seedExit, { code: 0, signal: null });
+}
+async function verifyRecoveredAnswer(seed) {
+  const items = await win.evaluate((id) => window.codeshell.getSessionTranscript(id), seed.id);
+  const answers = items.filter(
+    (item) =>
+      item.kind === "stream" &&
+      item.event.type === "text_delta" &&
+      item.event.text.startsWith("OWNED ANSWER 0 "),
+  );
+  assert.equal(answers.length, 1, "production transcript IPC retains the original answer once");
+  const expected = answers[0].event.text;
+  assert.equal(expected.length, seed.answer.chars);
+  assert.equal(hash(expected), seed.answer.sha256, "IPC retains every original answer byte");
+
+  // Completed large messages deliberately show one bounded source page. Read
+  // every page through the actual controls instead of expecting hidden tail DOM.
+  const pager = win.locator('[data-message-kind="assistant"] [data-paged-text]').first();
+  await pager
+    .getByRole("status")
+    .filter({ hasText: /^Page 1$/ })
+    .waitFor();
+  assert.equal(
+    await pager.getByRole("button", { name: "Previous page", exact: true }).isDisabled(),
+    true,
+  );
+  const next = pager.getByRole("button", { name: "Next page", exact: true });
+  const pages = [];
+  for (;;) {
+    const text = await pager.locator("pre").textContent();
+    assert.ok(text && text.length <= 32 * 1024, "each visible page has bounded complete text");
+    pages.push(text);
+    if (await next.isDisabled()) break;
+    assert.ok(pages.length < 64, "pagination reaches the end of the owned answer");
+    await next.click();
+    await pager
+      .getByRole("status")
+      .filter({ hasText: new RegExp(`^Page ${pages.length + 1}$`) })
+      .waitFor();
+  }
+  assert.ok(pages.length > 1, "the fixture exercises real large-message pagination");
+  assert.equal(pages.join(""), expected, "all UI pages retain the complete IPC answer in order");
+  await pager.getByText(/OWNED ANSWER 1199/).waitFor();
+  answerViews.push({ pages: pages.length, chars: expected.length, sha256: hash(expected) });
 }
 try {
   await seedRecords();
@@ -192,10 +236,7 @@ try {
       await recovery
         .getByText("This conversation has a known history gap", { exact: true })
         .waitFor();
-      await win
-        .getByText(/OWNED ANSWER 1199/)
-        .first()
-        .waitFor();
+      await verifyRecoveredAnswer(seed);
       await recovery
         .locator("li")
         .filter({ hasText: "OWNED UNCERTAIN INPUT DO NOT AUTO SEND" })
@@ -291,10 +332,7 @@ try {
       await recovery
         .getByText("This conversation has a known history gap", { exact: true })
         .waitFor();
-      await win
-        .getByText(/OWNED ANSWER 1199/)
-        .first()
-        .waitFor();
+      await verifyRecoveredAnswer(seed);
       await win.getByText("OWNED NEW OUTPUT AFTER CHECKPOINT", { exact: true }).waitFor();
       assert.equal(
         hash(await readFile(join(seed.directory, "external-runtime.json"))),
@@ -355,6 +393,7 @@ try {
     error: errorMessage,
     evidence,
     observations,
+    answerViews,
     mainPid,
     mainIdentity,
     mainExit,

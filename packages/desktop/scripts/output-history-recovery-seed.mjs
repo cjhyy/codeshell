@@ -146,7 +146,21 @@ if (process.argv.includes("--append-after-checkpoint")) {
   );
   writeFileSync(
     join(process.env.HOME, "recovery-seed.json"),
-    JSON.stringify({ id, directory, cwd, oldCursor, cacheName, attachment, hashes }),
+    JSON.stringify({
+      id,
+      directory,
+      cwd,
+      oldCursor,
+      cacheName,
+      attachment,
+      hashes,
+      answer: {
+        chars: text.length + 1,
+        sha256: createHash("sha256")
+          .update(text + "\n")
+          .digest("hex"),
+      },
+    }),
     { mode: 0o600 },
   );
 }
