@@ -1131,7 +1131,7 @@ const accessPasscode = new AccessPasscode({
 let prepareAccountGitHubLink:
   | ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"]
   | undefined = undefined;
-const { cloudAccountManager, mobileRemoteController, cloudManagementManager, captureLinkAccount } =
+const { mobileRemoteController, cloudManagementManager, captureLinkAccount } =
   createDesktopRemoteServices({
     app,
     ipcMain,
