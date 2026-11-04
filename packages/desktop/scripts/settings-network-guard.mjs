@@ -1,5 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /** Static settings acceptance needs local assets and IPC, with no remote origin. */
 export async function settingsNetworkGuard(home) {
@@ -12,6 +13,8 @@ globalThis.fetch = async () => deny();
 for (const name of ["node:http", "node:https"]) {
   const transport = require(name); transport.request = deny; transport.get = deny;
 }
+const { withOwnedAccountDiscovery } = require(${JSON.stringify(fileURLToPath(new URL("./owned-account-discovery.cjs", import.meta.url)))});
+require("node:https").request = withOwnedAccountDiscovery(deny);
 require("node:module").syncBuiltinESMExports();
 if (process.versions.electron) {
   const { app, net } = require("electron");
