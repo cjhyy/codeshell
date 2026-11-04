@@ -716,40 +716,48 @@ function roomHarness(kind: "claude-code" | "codex") {
       for (const claim of claims) await uploads[action](deviceId, claim.uploadId, claim.claimId);
     },
   } as unknown as OrchestratorCtx;
-  const host = new MobileTurnQueueHost({
-    remote: sockets.remote,
-    uploads,
-    isSessionBusy: () => false,
-    isSessionAuthorized: () => false,
-    captureSession: async () => undefined,
-    room: (roomId) => {
-      const meta = manager.getRoom(roomId);
-      return meta
-        ? {
-            observing: meta.linkedSessionMode === "observe-only",
-            mode: manager.effectiveMode(roomId),
-            busy: manager.isExecutionBusy(roomId),
-          }
-        : undefined;
-    },
-    submit: (dispatch) =>
-      runQueuedDispatch(dispatch, {
-        ctx,
-        isTrustedDevice: (deviceId) => sockets.trusted.has(deviceId),
-        sessionAuthority: async () => {
-          throw new Error("rooms have no Session authority");
-        },
-        roomMode: (roomId) => manager.effectiveMode(roomId),
-        handle: handleClientEvent,
-      }),
-    intervalMs: 0,
-    settleMs: 0,
-  });
+  // A fresh host models a Main restart: the queue's in-memory receipts are gone.
+  const createHost = () =>
+    new MobileTurnQueueHost({
+      remote: sockets.remote,
+      uploads,
+      isSessionBusy: () => false,
+      isSessionAuthorized: () => false,
+      captureSession: async () => undefined,
+      room: (roomId) => {
+        const meta = manager.getRoom(roomId);
+        return meta
+          ? {
+              observing: meta.linkedSessionMode === "observe-only",
+              mode: manager.effectiveMode(roomId),
+              busy: manager.isExecutionBusy(roomId),
+            }
+          : undefined;
+      },
+      submit: (dispatch) =>
+        runQueuedDispatch(dispatch, {
+          ctx,
+          isTrustedDevice: (deviceId) => sockets.trusted.has(deviceId),
+          sessionAuthority: async () => {
+            throw new Error("rooms have no Session authority");
+          },
+          roomMode: (roomId) => manager.effectiveMode(roomId),
+          handle: handleClientEvent,
+        }),
+      intervalMs: 0,
+      settleMs: 0,
+    });
+  let host = createHost();
   hostRef.current = host;
   manager.setHostTurnHooks({
     hasPendingTurns: (roomId) => host.hasPendingTurns({ kind: "room", roomId }),
     beforeClose: (roomId) => host.pauseForStop({ kind: "room", roomId }),
   });
+  const restartQueue = () => {
+    host.queue.dispose();
+    host = createHost();
+    hostRef.current = host;
+  };
   const deliver = async (event: AuthenticatedMobileClientEvent) => {
     host.observeViewer(event.viewerId, event.deviceId);
     if (!host.control(event) && !(await host.submit(event))) {
@@ -778,7 +786,22 @@ function roomHarness(kind: "claude-code" | "codex") {
       .filter((message) => message.from === "user")
       .map((message) => message.text);
   sockets.connect("phone-tab", "phone");
-  return { sockets, agents, manager, room, cwd, host, deliver, send, target, uploads, userLines };
+  return {
+    sockets,
+    agents,
+    manager,
+    room,
+    cwd,
+    get host() {
+      return host;
+    },
+    restartQueue,
+    deliver,
+    send,
+    target,
+    uploads,
+    userLines,
+  };
 }
 
 for (const kind of ["claude-code", "codex"] as const) {
@@ -808,6 +831,36 @@ for (const kind of ["claude-code", "codex"] as const) {
         "device:phone",
         "device:phone",
       ]);
+    });
+
+    test("a queued turn the room already holds durably is acknowledged, never rerun", async () => {
+      const h = roomHarness(kind);
+      await h.deliver(h.send("once"));
+      expect(h.agents[0]?.sent).toEqual(["once"]);
+      h.agents[0]!.finish();
+      await flush();
+      // Main restarted: the queue no longer remembers the turn, the room does.
+      h.restartQueue();
+      const before = h.sockets.sent.length;
+      await h.deliver(h.send("once"));
+      await h.host.queue.pumpAll();
+      await flush();
+      expect(h.agents[0]?.sent).toEqual(["once"]);
+      expect(h.userLines()).toEqual(["once"]);
+      expect(
+        h.sockets.sent
+          .slice(before)
+          .filter((item) => item.event.type === "room.accepted" || item.event.type === "room.error")
+          .map((item) => item.event.type),
+      ).toEqual(["room.accepted"]);
+      // The same intent id with other content is refused, not mistaken for it.
+      await h.deliver(h.send("changed", { clientMessageId: "cm-once" }));
+      await h.host.queue.pumpAll();
+      await flush();
+      expect(h.agents[0]?.sent).toEqual(["once"]);
+      expect(h.sockets.of("room.error").at(-1)?.event).toMatchObject({
+        clientMessageId: "cm-once",
+      });
     });
 
     test("idleness is the room's own state, not a stream message", async () => {

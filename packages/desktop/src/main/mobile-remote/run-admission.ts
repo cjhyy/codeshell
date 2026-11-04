@@ -1,3 +1,5 @@
+import { onRunStopRequested } from "../run-stop-signals.js";
+
 /** Stop fences submissions still awaiting workspace/model/attachment preparation. */
 const pending = new WeakMap<object, Map<string, Set<{ cancelled: boolean }>>>();
 
@@ -23,4 +25,13 @@ export function cancelMobileRunAdmissions(owner: object, sessionId: string): voi
   const sessions = pending.get(owner);
   for (const entry of sessions?.get(sessionId) ?? []) entry.cancelled = true;
   sessions?.delete(sessionId);
+}
+
+/**
+ * Every Stop of a Session's run (Desktop, phone, task inbox, external
+ * interrupt) fences that Session's sends still being prepared, so a send can
+ * never start a new run right after the user stopped it from another client.
+ */
+export function fenceMobileRunAdmissionsOnStop(owner: object): () => void {
+  return onRunStopRequested((sessionId) => cancelMobileRunAdmissions(owner, sessionId));
 }

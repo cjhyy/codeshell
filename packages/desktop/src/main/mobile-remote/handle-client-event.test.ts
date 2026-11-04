@@ -9,6 +9,8 @@ import { MobileNativeSubmissions } from "./native-submissions.js";
 import { prepareMobileNativeModel } from "./native-model.js";
 import { BUILTIN_CATALOG, createWorkspaceContext } from "@cjhyy/code-shell-core/internal";
 import { MobilePermissionModes } from "./permission-modes.js";
+import { fenceMobileRunAdmissionsOnStop } from "./run-admission.js";
+import { notifyRunStopRequested } from "../run-stop-signals.js";
 import { PendingMobileApprovals } from "@cjhyy/code-shell-server/mobile-remote";
 import {
   agentRunTimeoutMs,
@@ -1033,8 +1035,13 @@ test("native admission stays exclusive through the asynchronous Worker acceptanc
   ]);
 });
 
-for (const stoppedSession of ["session-1", "other-session"])
-  test(`Stop for ${stoppedSession} fences only its in-flight workspace preparation`, async () => {
+for (const [stoppedSession, source] of [
+  ["session-1", "phone"],
+  ["other-session", "phone"],
+  ["session-1", "desktop"],
+  ["other-session", "desktop"],
+] as const)
+  test(`${source} Stop for ${stoppedSession} fences only its in-flight workspace preparation`, async () => {
     const h = createHarness({
       requestedWorkspaceRoot: "/primary",
       lookupSession: () => ({
@@ -1055,13 +1062,17 @@ for (const stoppedSession of ["session-1", "other-session"])
         release = resolve;
       });
     };
+    // Main wires every Stop source (Desktop, task inbox, external interrupt) to the fence.
+    const unfence = fenceMobileRunAdmissionsOnStop(h.ctx.remote);
     const submitted = sendChat(h.ctx);
     await entered;
     // Production creates a fresh context view for each event; the Host object is shared.
-    await handleClientEvent(
-      { ...h.ctx },
-      { type: "run.stop", deviceId: "phone-1", sessionId: stoppedSession },
-    );
+    if (source === "phone")
+      await handleClientEvent(
+        { ...h.ctx },
+        { type: "run.stop", deviceId: "phone-1", sessionId: stoppedSession },
+      );
+    else notifyRunStopRequested(stoppedSession);
     release("/primary");
     await submitted;
     expect(h.metas.filter((meta) => meta.producer === "mobile-chat")).toHaveLength(
@@ -1077,4 +1088,5 @@ for (const stoppedSession of ["session-1", "other-session"])
       expect(h.metas.filter((meta) => meta.producer === "mobile-chat")).toHaveLength(1);
       expect(h.replies.at(-1)?.type).toBe("chat.accepted");
     }
+    unfence();
   });

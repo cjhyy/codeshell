@@ -72,6 +72,7 @@ import {
   type QueuedSessionAuthority,
 } from "./mobile-remote/turn-queue-host.js";
 import { onRunStopRequested } from "./run-stop-signals.js";
+import { fenceMobileRunAdmissionsOnStop } from "./mobile-remote/run-admission.js";
 import type { TurnQueueDispatchResult } from "@cjhyy/code-shell-server/mobile-remote";
 export { toMobileProjectMeta } from "./mobile-project-meta.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
@@ -200,8 +201,10 @@ export class MobileRemoteOrchestrator {
       hasPendingTurns: (roomId) => this.turnQueue.hasPendingTurns({ kind: "room", roomId }),
       beforeClose: (roomId) => this.turnQueue.pauseForStop({ kind: "room", roomId }),
     });
-    // Any stop of a Session run (Desktop, phone, task inbox) pauses its pending turns.
+    // Any stop of a Session run (Desktop, phone, task inbox) pauses its pending
+    // turns and fences the direct sends still being prepared for it.
     onRunStopRequested((sessionId) => this.turnQueue.pauseForStop({ kind: "session", sessionId }));
+    fenceMobileRunAdmissionsOnStop(deps.remote);
     // This command Host owns the FIFO, so it advertises the client capability.
     deps.remote.advertiseTurnQueue?.();
   }
