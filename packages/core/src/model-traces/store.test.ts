@@ -276,6 +276,23 @@ describe("ModelTraceStore", () => {
     expect(readdirSync(events)).toEqual([]);
     expect(store.get("new-request")?.status).toBe("completed");
   });
+  test("corrupt events still yield and retain their bytes during maintenance", async () => {
+    const events = join(directory, "events", "a".repeat(64));
+    mkdirSync(events, { recursive: true });
+    for (let index = 0; index < 80; index++)
+      writeFileSync(join(events, `${index.toString(16).padStart(64, "0")}.json`), "{broken");
+    const store = new ModelTraceStore({ storageDir: directory });
+    store.write(record("new-request"));
+    let completed = false;
+    const maintenance = store.flushMaintenance().then(() => {
+      completed = true;
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(completed).toBe(false);
+    await maintenance;
+    expect(readdirSync(events)).toHaveLength(80);
+    expect(readFileSync(join(events, `${"0".repeat(64)}.json`), "utf8")).toBe("{broken");
+  });
   test("exact event lookup validates identity and rejects symlink directories", () => {
     const store = new ModelTraceStore({ storageDir: directory });
     const value = {

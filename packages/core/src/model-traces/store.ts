@@ -623,7 +623,7 @@ export class ModelTraceStore {
             if (next.done) return finish();
             const { file, startedAt } = next.value;
             try {
-              if (this.directorySafe(dirname(file))) {
+              if (file && this.directorySafe(dirname(file))) {
                 const info = lstatSync(file);
                 const time = Number.isFinite(startedAt) ? startedAt! : info.mtimeMs;
                 if (info.isFile() && !info.isSymbolicLink() && time < cutoff) rmSync(file);
@@ -644,7 +644,7 @@ export class ModelTraceStore {
     });
   }
 
-  private *retentionCandidates(): Generator<{ file: string; startedAt?: number }> {
+  private *retentionCandidates(): Generator<{ file?: string; startedAt?: number }> {
     const startedByName = new Map<string, number>();
     for (const name of this.files("summaries")) {
       const file = join(this.storageDir, "summaries", name);
@@ -666,11 +666,15 @@ export class ModelTraceStore {
     try {
       if (!this.directorySafe(join(this.storageDir, "events"))) return;
       for (const directory of readdirSync(join(this.storageDir, "events"))) {
+        // Empty/invalid directories and unreadable records still consume work.
+        // Yield for them too, otherwise corruption bypasses the batch budget.
+        yield {};
         if (!/^[a-f0-9]{64}$/.test(directory)) continue;
         for (const name of this.files(join("events", directory))) {
           const file = join(this.storageDir, "events", directory, name);
           const event = readJson(file, MAX_RECORD_BYTES);
           if (event) yield { file, startedAt: event.startedAt };
+          else yield {};
         }
       }
     } catch {
