@@ -7,8 +7,9 @@ import type { ComposerDraft } from "./drafts.js";
 import type { ConnectionState, SessionSummary } from "./protocol.js";
 
 export interface WorkbenchNavigation {
-  guard: (action: () => void) => void;
-  conversation: (action: () => void) => void;
+  /** Supply the destination when an action replaces the current workspace. */
+  guard: (action: () => void, targetWorkspace?: string | null) => void;
+  conversation: (action: () => void, targetWorkspace?: string | null) => void;
 }
 
 export interface HistoryDetail {
@@ -49,7 +50,7 @@ export interface WorkbenchController {
   hasUnsent: boolean;
   uncertain: boolean;
   running: boolean;
-  localDrafts: Array<{ sessionId: string; draft: ComposerDraft }>;
+  localDrafts: Array<{ sessionId: string; draft: ComposerDraft; cwd?: string | null }>;
   approvals: Array<{ id: string; sessionId?: string; asynchronous?: boolean }>;
   approvalCount: (sessionId: string) => number;
   approvalContent: React.ReactNode;
@@ -61,6 +62,11 @@ export interface WorkbenchController {
   removeFile: (id: string) => void;
   selectSession: (id: string) => void | Promise<void>;
   newSession: () => void;
+  /** Explicit Panel association: resolve only after the Host session is ready.
+   * Rejections preserve the caller's previous Panel association. */
+  selectPanelSession?: (id: string) => Promise<string>;
+  /** Hosts without an empty-session creation protocol leave this unavailable. */
+  newPanelSession?: () => Promise<string>;
   /** True only after the current draft has been accepted by the local sender. */
   send: (options?: { modelTraceSource?: string }) => boolean;
   stop: () => void;

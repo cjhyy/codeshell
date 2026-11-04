@@ -122,6 +122,12 @@ if (process.argv[2] === "--host") {
   let browser, child;
   let logs = "";
   const errors = [];
+  const expectedReplacements = new Map();
+  const expectedReloads = new Set();
+  const openedRevisions = new Map();
+  const replacementConfirmations = [];
+  const replacementMessage =
+    "此操作会重新加载面板，丢失未保存的面板内容，并中止本面板的 AI 任务。确定继续？";
   let sequence = 0;
   function command(kind, values = {}) {
     const request = ++sequence;
@@ -256,7 +262,10 @@ if (process.argv[2] === "--host") {
     git(repo, "config", "user.email", "recovery@codeshell.test");
     const originalCommit = await writePackage("1.0.0");
     let endpoints = await launchHost();
-    browser = await chromium.launch({ headless: true });
+    browser = await chromium.launch({
+      headless: true,
+      executablePath: process.env.CODESHELL_TEST_CHROMIUM || undefined,
+    });
     const contexts = await Promise.all(
       endpoints.map(() => browser.newContext({ viewport: { width: 1440, height: 1000 } })),
     );
@@ -267,9 +276,19 @@ if (process.argv[2] === "--host") {
         errors.push(error.message);
         console.error("Page error:", error.message);
       });
-      page.on("dialog", (dialog) => {
-        errors.push(`Unexpected dialog: ${dialog.message()}`);
-        void dialog.dismiss();
+      page.on("dialog", async (dialog) => {
+        const expected = expectedReplacements.get(page);
+        if (expected && dialog.type() === "confirm" && dialog.message() === replacementMessage) {
+          expectedReplacements.delete(page);
+          replacementConfirmations.push(expected);
+          await dialog.accept();
+        } else if (dialog.type() === "beforeunload" && expectedReloads.has(page)) {
+          expectedReloads.delete(page);
+          await dialog.accept();
+        } else {
+          errors.push(`Unexpected dialog: ${dialog.message()}`);
+          await dialog.dismiss();
+        }
       });
     }
     async function login(index, setup = false) {
@@ -298,19 +317,41 @@ if (process.argv[2] === "--host") {
         .locator('section[aria-labelledby="installed-panels-heading"] .panels-card')
         .filter({ has: pages[index].getByRole("heading", { name: title, exact: true }) });
     async function management(index) {
-      await pages[index].getByRole("button", { name: "面板", exact: true }).click();
-      await pages[index].getByRole("heading", { name: "面板", exact: true }).waitFor();
+      const page = pages[index];
+      const heading = page.getByRole("heading", { name: "面板", exact: true });
+      if (await heading.isVisible()) return;
+      const returnToList = page.getByRole("button", { name: "返回面板", exact: true });
+      // The sidebar resumes a retained guest; the Host action opens its management list.
+      if (!(await returnToList.isVisible()))
+        await page.getByRole("button", { name: "面板", exact: true }).click();
+      if (await returnToList.isVisible()) await returnToList.click();
+      await heading.waitFor();
     }
     async function version(index, expected) {
       await card(index).getByText(`v${expected}`, { exact: true }).waitFor();
       assert.equal((await panel(index)).version, expected);
     }
     async function document(index, expectedVersion, value, save = false) {
-      await card(index).getByRole("button", { name: "打开面板", exact: true }).click();
-      const frame = pages[index].frameLocator(`iframe[title="${title}面板"]`);
-      await frame
-        .getByRole("heading", { name: `Package ${expectedVersion}`, exact: true })
-        .waitFor();
+      const page = pages[index];
+      const revision = (await panel(index)).revision;
+      assert.equal(typeof revision, "string");
+      if (openedRevisions.has(index) && openedRevisions.get(index) !== revision)
+        expectedReplacements.set(page, { project: index, version: expectedVersion, revision });
+      const frame = page.frameLocator(`iframe[title="${title}面板"]`);
+      try {
+        await card(index).getByRole("button", { name: "打开面板", exact: true }).click();
+        await frame
+          .getByRole("heading", { name: `Package ${expectedVersion}`, exact: true })
+          .waitFor();
+        assert.equal(
+          expectedReplacements.has(page),
+          false,
+          "Replacing a retained package requires consent",
+        );
+      } finally {
+        expectedReplacements.delete(page);
+      }
+      openedRevisions.set(index, revision);
       await frame.getByText("Ready", { exact: true }).waitFor();
       if (save) {
         await frame.getByLabel("Document").fill(value);
@@ -419,7 +460,16 @@ if (process.argv[2] === "--host") {
     assert.notEqual(child.pid, previousPid);
     for (const index of [0, 1]) {
       await login(index);
-      await pages[index].reload();
+      const page = pages[index];
+      // Reconnection may already have retired the old scope. If the browser
+      // asks to leave, authorize only this explicit cold-restart reload.
+      expectedReloads.add(page);
+      try {
+        await page.reload();
+      } finally {
+        expectedReloads.delete(page);
+      }
+      openedRevisions.delete(index);
       await management(index);
       await version(index, "2.0.0");
       await document(index, "2.0.0", `Project ${index} edits`);
@@ -441,6 +491,7 @@ if (process.argv[2] === "--host") {
         corruptedPackageRepair: true,
         sourceFailurePreservesPackage: true,
         restartWithoutSourcePreservesDocuments: true,
+        replacementConfirmations,
         evidence,
       }),
     );

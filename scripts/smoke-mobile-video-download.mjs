@@ -1,6 +1,6 @@
 /* Compiled and run by run-mobile-video-download.mjs in an isolated Node HOME.
  * Real reviewed consumer and Host, deterministic synthetic media. */
-/* global document, window */
+/* global document, window, MutationObserver */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
@@ -201,7 +201,7 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
   });
   await writeFile(
     join(buildDir, "index.html"),
-    '<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/mobile/entry.css"><style>body{margin:0}#root{height:100dvh}</style></head><body><div id="root"></div><script type="module" src="/mobile/entry.js"></script></body></html>',
+    '<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/mobile/entry.css"><style>body{margin:0}#root{height:100dvh;display:flex;flex-direction:column}</style></head><body><div id="root"></div><script type="module" src="/mobile/entry.js"></script></body></html>',
   );
   browser = await chromium.launch({
     headless: true,

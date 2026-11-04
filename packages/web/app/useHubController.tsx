@@ -66,6 +66,12 @@ export function useHubController({
   const [connection, setConnection] = React.useState<ConnectionState>("connecting");
   const [sessions, setSessions] = React.useState<SessionSummary[]>([]);
   const sessionsRef = React.useRef<SessionSummary[]>([]);
+  const [confirmedSessionIds, setConfirmedSessionIds] = React.useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const confirmSession = React.useCallback((id: string) => {
+    setConfirmedSessionIds((current) => (current.has(id) ? current : new Set([...current, id])));
+  }, []);
   const [activeId, setActiveId] = React.useState<string>(
     () => sessionIdFromSearch(window.location.search) ?? newSessionId(),
   );
@@ -272,7 +278,7 @@ export function useHubController({
   const loadTranscript = React.useCallback(
     async (sessionId: string) => {
       const client = clientRef.current;
-      if (!client) return;
+      if (!client) return false;
       const load: {
         sessionId: string;
         events: StreamEventPayload[];
@@ -294,7 +300,7 @@ export function useHubController({
           loadingTranscript.current !== load ||
           activeIdRef.current !== sessionId
         )
-          return;
+          return false;
         let latestRunning = load.running ?? detail.data.running;
         if (latestRunning) liveRuns.current.add(sessionId);
         else if (latestRunning === false) liveRuns.current.delete(sessionId);
@@ -337,7 +343,7 @@ export function useHubController({
           loadingTranscript.current !== load ||
           activeIdRef.current !== sessionId
         )
-          return;
+          return false;
         // Live notifications keep arriving while the durable query is pending.
         // Fold the final buffer only after that asynchronous recovery completes.
         const snapshot = chatFromSnapshot(detail.data, load.events);
@@ -360,9 +366,12 @@ export function useHubController({
         )
           restored.run = "idle";
         setChat((current) => (durableFailed ? current : restored));
+        if (!durableFailed) confirmSession(sessionId);
+        return !durableFailed;
       } catch (cause) {
         if (loadingTranscript.current === load && activeIdRef.current === sessionId)
           reportError(cause);
+        return false;
       } finally {
         if (loadingTranscript.current === load) {
           loadingTranscript.current = null;
@@ -370,7 +379,7 @@ export function useHubController({
         }
       }
     },
-    [reportError],
+    [reportError, confirmSession],
   );
 
   React.useEffect(() => {
@@ -464,6 +473,7 @@ export function useHubController({
       if (method === "agent/runAccepted" && typeof params.sessionId === "string") {
         const submission = submissions.current.get(params.sessionId);
         if (submission) submission.accepted = true;
+        confirmSession(params.sessionId);
         return;
       }
       if (method === "serve/configurationChanged") {
@@ -486,8 +496,10 @@ export function useHubController({
           ["stream_request_start", "text_delta", "thinking_delta", "tool_use_start"].includes(
             String(event.type),
           )
-        )
+        ) {
           submission.accepted = true;
+          confirmSession(sessionId);
+        }
         if (sessionId === activeIdRef.current) {
           if (loadingTranscript.current?.sessionId === sessionId) {
             const load = loadingTranscript.current;
@@ -576,6 +588,7 @@ export function useHubController({
   }, [
     refreshSessions,
     loadTranscript,
+    confirmSession,
     refreshConfiguration,
     recoverUncertainSubmissions,
     onAuthLost,
@@ -594,7 +607,7 @@ export function useHubController({
     return () => clearInterval(timer);
   }, [hasLease]);
 
-  const loadSelectedSession = async (sessionId: string): Promise<void> => {
+  const loadSelectedSession = async (sessionId: string): Promise<boolean> => {
     activeIdRef.current = sessionId;
     activeStreamCursor.current = null;
     activeOutputCursor.current = null;
@@ -608,8 +621,8 @@ export function useHubController({
       !liveRuns.current.has(sessionId) &&
       draftStore.current.unsent().some((item) => item.sessionId === sessionId)
     )
-      return;
-    await loadTranscript(sessionId);
+      return false;
+    return loadTranscript(sessionId);
   };
 
   const createNewSession = (): void => {
@@ -683,6 +696,9 @@ export function useHubController({
         clientMessageId: submission.clientMessageId,
         displayText: text,
         ...(attachments.length ? { uploadIds: attachments.map((file) => file.id) } : {}),
+      })
+      .then(() => {
+        if (mounted.current && clientRef.current === client) confirmSession(sessionId);
       })
       .catch((cause) => {
         if (!mounted.current) return;
@@ -826,7 +842,12 @@ export function useHubController({
     connection,
     session,
     activeId,
-    panelSessionId: activeId,
+    // A paged catalog can omit older sessions. Successful history recovery or
+    // Host run acceptance also proves the ID; a local unsent draft never does.
+    panelSessionId:
+      confirmedSessionIds.has(activeId) || sessions.some((item) => item.sessionId === activeId)
+        ? activeId
+        : undefined,
     loading: loadingSession === activeId,
     chat,
     sessions,
@@ -844,7 +865,7 @@ export function useHubController({
     // A submission awaiting delivery confirmation (in any session) exists only
     // in this page's memory until the Hub confirms it, like an unsent draft.
     hasUnsent: draftStore.current.unsent().length > 0 || uncertainSubmissions.current.size > 0,
-    localDrafts,
+    localDrafts: localDrafts.map((item) => ({ ...item, cwd: workspaceCwd })),
     uncertain: uncertainSubmissions.current.has(activeId),
     running,
     approvals: Object.values(approvalState).map((a) => ({
@@ -885,7 +906,25 @@ export function useHubController({
       uploadScopes.current.delete(id);
       void discardUpload(id, scope).catch(() => {});
     },
-    selectSession: loadSelectedSession,
+    selectSession: async (id) => {
+      await loadSelectedSession(id);
+    },
+    selectPanelSession: async (id) => {
+      const client = clientRef.current;
+      if (connection !== "open" || !client) throw new Error("连接已断开，重新连接后才能关联对话。");
+      if (!sessionsRef.current.some((item) => item.sessionId === id))
+        throw new Error("此对话不在当前项目中，请刷新后重新选择。");
+      const generation = client.connectionGeneration;
+      if (
+        !(await loadSelectedSession(id)) ||
+        !mounted.current ||
+        clientRef.current !== client ||
+        client.connectionGeneration !== generation ||
+        activeIdRef.current !== id
+      )
+        throw new Error("对话未能就绪，请重试关联。");
+      return id;
+    },
     newSession: createNewSession,
     send,
     stop,

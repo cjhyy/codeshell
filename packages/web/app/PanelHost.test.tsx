@@ -74,6 +74,7 @@ interface Request {
 const originalFetch = globalThis.fetch;
 const unmounts: Array<() => Promise<void>> = [];
 const videoRestores: Array<() => void> = [];
+const confirmationRestores: Array<() => void> = [];
 const timerRestores: Array<() => void> = [];
 function manualTimers() {
   setSystemTime(prepared.expiresAt - 60 * 60_000);
@@ -137,6 +138,7 @@ let previousMatchMedia: PropertyDescriptor | undefined;
 afterEach(async () => {
   for (const unmount of unmounts.splice(0)) await unmount();
   for (const restore of videoRestores.splice(0).reverse()) restore();
+  for (const restore of confirmationRestores.splice(0).reverse()) restore();
   for (const restore of timerRestores.splice(0).reverse()) restore();
   globalThis.fetch = originalFetch;
   if (previousMatchMedia) Object.defineProperty(window, "matchMedia", previousMatchMedia);
@@ -151,6 +153,7 @@ async function fixture(
     sessionId?: string;
     intercept?: (request: Request) => Response | Promise<Response> | undefined;
     onSubmit?: (input: { prompt: string; sessionId: string }) => Promise<{ accepted: true }>;
+    onPreviewOpen?: (key: string) => void;
   } = {},
 ) {
   const sessionId = Object.hasOwn(options, "sessionId")
@@ -174,6 +177,7 @@ async function fixture(
   let authLost = 0;
   let dirty = false;
   let busy = false;
+  let active = true;
   globalThis.fetch = (async (path, init) => {
     const request: Request = {
       url: new URL(String(path), "http://localhost"),
@@ -216,6 +220,8 @@ async function fixture(
       panel,
       sessionId,
       busy,
+      active,
+      onPreviewOpen: options.onPreviewOpen,
       onClose() {},
       onAuthLost: () => {
         authLost++;
@@ -287,6 +293,11 @@ async function fixture(
     },
     async updateBusy(value: boolean) {
       busy = value;
+      await render();
+      attach();
+    },
+    async updateActive(value: boolean) {
+      active = value;
       await render();
       attach();
     },
@@ -492,6 +503,60 @@ test("iframe remains opaque and prepare alone does not mark it loaded", async ()
   await view.ready();
   expect(text(view.tree)).not.toContain("正在打开面板");
   expect(text(view.tree)).toContain("视频处理需要桌面客户端");
+});
+
+test("header reload reopens loading and ready panels but waits for trusted host requests", async () => {
+  const view = await fixture({
+    intercept(request) {
+      if (request.body?.method === "resources.recordAudio")
+        return Response.json({
+          effect: "resources.recordAudio",
+          maxDurationSeconds: 60,
+          maxBytes: 1024,
+        });
+    },
+  });
+  const prepares = () =>
+    view.requests.filter((request) => request.url.pathname.endsWith("/prepare")).length;
+  const closes = () => view.requests.filter((request) => request.method === "DELETE").length;
+  const previousConfirm = Object.getOwnPropertyDescriptor(window, "confirm");
+  let reloadAllowed = false;
+  const confirmationMessages: string[] = [];
+  Object.defineProperty(window, "confirm", {
+    configurable: true,
+    value: (message: string) => {
+      confirmationMessages.push(message);
+      return reloadAllowed;
+    },
+  });
+  confirmationRestores.push(() =>
+    previousConfirm
+      ? Object.defineProperty(window, "confirm", previousConfirm)
+      : delete (window as any).confirm,
+  );
+  expect(text(view.tree)).toContain("正在打开面板");
+  await click(button(view.tree, "重新加载"));
+  expect([prepares(), closes()]).toEqual([1, 0]);
+  expect(confirmationMessages[0]).toContain("未保存");
+  expect(confirmationMessages[0]).toContain("AI 任务");
+  reloadAllowed = true;
+  await click(button(view.tree, "重新加载"));
+  expect([prepares(), closes()]).toEqual([2, 1]);
+  view.attach();
+  await view.ready();
+  await click(button(view.tree, "重新加载"));
+  expect([prepares(), closes()]).toEqual([3, 2]);
+  view.attach();
+  await view.ready();
+  await view.call("resources.recordAudio", {}, "record-1");
+  expect(button(view.tree, "重新加载").props.disabled).toBe(true);
+  const request = elements(view.tree).find((item) => item.type === PanelAudioDialog)!.props
+    .request as PanelAudioRequest;
+  await act(async () => {
+    request.finish({ cancelled: true });
+    await flushMicrotasks();
+  });
+  expect(button(view.tree, "重新加载").props.disabled).toBe(false);
 });
 
 test("wrong window, non-opaque origin and wrong instance never reach authenticated APIs", async () => {
@@ -1316,6 +1381,29 @@ const previewAsset = {
 };
 const previewPath = `/api/v1/panels/runtime/${instanceId}/resources/${previewAsset.id}`;
 const previewEffect = { effect: "resources.open", asset: previewAsset, url: previewPath };
+
+test("a background preview waits for the retained panel to become visible without replacing its grant", async () => {
+  const opened: string[] = [];
+  const view = await fixture({
+    onPreviewOpen: (key) => opened.push(key),
+    intercept(request) {
+      if (request.body?.method === "resources.open") return Response.json(previewEffect);
+    },
+  });
+  await view.updateActive(false);
+  await view.call("resources.open", { assetId: previewAsset.id });
+  expect(opened).toEqual([]);
+  await view.updateActive(true);
+  expect(opened).toHaveLength(1);
+  expect(text(view.tree)).toContain("保存到此设备");
+  await view.updateActive(false);
+  await view.updateActive(true);
+  expect(opened).toHaveLength(1);
+  expect(view.requests.filter((request) => request.url.pathname.endsWith("/prepare"))).toHaveLength(
+    1,
+  );
+  expect(view.requests.some((request) => request.method === "DELETE")).toBe(false);
+});
 
 test("browser preview and download retain the original project without exposing URLs to the iframe", async () => {
   setApiWorkspace("/workspace/original");
