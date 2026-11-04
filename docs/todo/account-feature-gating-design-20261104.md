@@ -1,6 +1,6 @@
 # 账号功能统一开关设计
 
-状态：2026-11-04 设计稿，未实施。服务端改动在 `codeshell-services/apps/account-server`，
+状态：2026-11-04 决策已确认，按下述顺序分批实施。服务端改动在 `codeshell-services/apps/account-server`，
 客户端改动在本仓库 Desktop（main、preload、renderer）、TUI、`serve` 与 `packages/web`。本文是
 [账号上下文机制设计](account-context-distribution-design.md) 中
 `codeshell.account.capabilities` 模块的先行落地：先用现有 overview 接口交付，
@@ -152,6 +152,10 @@ export const FEATURES = {
 不能误用尚未实现的“对话连同 Git 状态转移”功能 `devices.handoff`。中继建立设备会话时
 按用途检查 `devices.dispatch` / `relay.phone`。紧急关闭必须在对应服务端授权路径生效，
 不只改变入口显示；退出、撤销和清理权限不因功能关闭而丢失。
+
+本批 `links.remote` 约束 Account 的 Link 管理读取和新的登录授权交接；独立 Link 服务
+已经签发的 OAuth grant 仍按自己的授权规则执行，需用既有撤销接口回收。这个开关不等同
+于独立 Link 服务的运行时全局切断。云端控制面和中继仍保留原有认证、归属和会话校验。
 
 未实现的功能即使列在注册表中也返回 `enabled:false`、`reason:"not_configured"`；
 例如中继已部署不代表 `devices.handoff` 已可用。
