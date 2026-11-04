@@ -5,6 +5,7 @@
  * with a predefined prompt on schedule.
  */
 
+import { randomUUID } from "node:crypto";
 import type { CronStore } from "./store.js";
 import { isCronExpression, parseCronExpression, nextCronTime } from "./cron-expr.js";
 
@@ -283,7 +284,6 @@ export class CronScheduler {
     string,
     { controller: AbortController; done: Promise<void> }
   >();
-  private nextId = 1;
   private onExecute?: (job: CronJob, signal: AbortSignal) => Promise<void | CronExecutionOutcome>;
   private onJobEvent?: (event: CronJobLifecycleEvent) => void;
   /** Optional persistence backend. When set, every create/delete/pause/resume
@@ -398,11 +398,8 @@ export class CronScheduler {
     }
 
     // 2. Add or update jobs from disk.
-    let maxId = 0;
     for (const job of persisted) {
       const prev = this.jobs.get(job.id);
-      const n = parseInt(job.id, 10);
-      if (Number.isFinite(n) && n > maxId) maxId = n;
 
       if (!prev) {
         const observedAt = Date.now();
@@ -456,7 +453,6 @@ export class CronScheduler {
         this.mergeJobFromDisk(prev, job, { preserveNextRun: true });
       }
     }
-    this.nextId = Math.max(this.nextId, maxId + 1);
   }
 
   private jobDefinitionChanged(prev: CronJob, next: CronJob): boolean {
@@ -487,15 +483,6 @@ export class CronScheduler {
         target.nextRun = preservedNextRun;
       }
     }
-  }
-
-  private nextPersistedId(jobs: CronJob[]): string {
-    let maxId = 0;
-    for (const job of jobs) {
-      const n = parseInt(job.id, 10);
-      if (Number.isFinite(n) && n > maxId) maxId = n;
-    }
-    return String(Math.max(this.nextId, maxId + 1));
   }
 
   /** Recompute nextRun without arming a timer (for display in disabled/no-arm hosts). */
@@ -614,7 +601,7 @@ export class CronScheduler {
       const tx = this.store.mutate((jobs) => {
         const existing = existingForKey(jobs);
         if (existing) return { jobs, result: existing };
-        const id = this.nextPersistedId(jobs);
+        const id = randomUUID();
         const job: CronJob = {
           id,
           name,
@@ -646,7 +633,7 @@ export class CronScheduler {
 
     const existing = existingForKey([...this.jobs.values()]);
     if (existing) return existing;
-    const id = String(this.nextId++);
+    const id = randomUUID();
     const job: CronJob = {
       id,
       name,
@@ -1169,15 +1156,16 @@ export class CronScheduler {
       // The executor may have recorded lastRunId on the job. Persist only run
       // metadata so an old in-flight job cannot overwrite an edited prompt or
       // schedule with its stale copy.
-      this.persistRunStats(job);
-      this.running.delete(job.id);
-      this.runningControllers.delete(job.id);
-      // One-shot: delete after its first execution so it never fires again.
-      // Done after persistRunStats so the final stats write can't race the
-      // removal; delete() clears the timer + removes from store/in-memory.
-      if (job.once) this.delete(job.id);
-      // Unblock any abort() awaiting this run's teardown.
-      resolveDone();
+      try {
+        this.persistRunStats(job);
+        // Removal can fail (for example a read-only or replaced store). The
+        // execution still ended, so always release abort waiters and ownership.
+        if (job.once) this.delete(job.id);
+      } finally {
+        this.running.delete(job.id);
+        this.runningControllers.delete(job.id);
+        resolveDone();
+      }
     }
     return true;
   }
