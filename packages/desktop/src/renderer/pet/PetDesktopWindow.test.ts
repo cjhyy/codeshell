@@ -43,7 +43,7 @@ describe("Pet desktop mini chat", () => {
     expect(source).not.toContain("<SessionStatusSection");
     expect(source).not.toContain("globalOverview");
     expect(source).not.toContain("onAttentionEvent");
-    expect(source).toContain("chatRows.slice(-6).map");
+    expect(source).toContain("chatRows.slice(-30).map");
     expect(source).toContain('panel === "chat"');
     expect(source).toContain("markPetWidgetCompletionSeen");
     expect(source).toContain('window.addEventListener("storage", syncReceipts)');

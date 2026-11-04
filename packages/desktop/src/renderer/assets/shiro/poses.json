@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "head": 0.38,
+  "surfaceScale": 1.5,
+  "poses": {
+    "stand": {
+      "file": "stand.webp",
+      "width": 260,
+      "height": 640,
+      "anchor": {
+        "x": 115,
+        "y": 634
+      },
+      "facing": "front",
+      "head": 175
+    },
+    "look": {
+      "file": "look.webp",
+      "width": 370,
+      "height": 640,
+      "anchor": {
+        "x": 135,
+        "y": 634
+      },
+      "facing": "right",
+      "head": 185
+    },
+    "point": {
+      "file": "point.webp",
+      "width": 389,
+      "height": 640,
+      "anchor": {
+        "x": 165,
+        "y": 634
+      },
+      "facing": "right",
+      "head": 180,
+      "sfx": "这里!"
+    },
+    "kick": {
+      "file": "kick.webp",
+      "width": 605,
+      "height": 640,
+      "anchor": {
+        "x": 210,
+        "y": 634
+      },
+      "facing": "right",
+      "head": 185,
+      "sfx": "咚!",
+      "contact": {
+        "x": 590,
+        "y": 170
+      }
+    },
+    "stomp": {
+      "file": "stomp.webp",
+      "width": 309,
+      "height": 640,
+      "anchor": {
+        "x": 115,
+        "y": 634
+      },
+      "facing": "front",
+      "head": 190,
+      "sfx": "啪!",
+      "contact": {
+        "x": 115,
+        "y": 630
+      }
+    },
+    "dash": {
+      "file": "dash.webp",
+      "width": 814,
+      "height": 640,
+      "anchor": {
+        "x": 350,
+        "y": 600
+      },
+      "facing": "right",
+      "head": 240
+    },
+    "sit-ledge": {
+      "file": "sit-ledge.webp",
+      "width": 325,
+      "height": 640,
+      "anchor": {
+        "x": 162,
+        "y": 425
+      },
+      "facing": "front",
+      "head": 180
+    },
+    "lie-ledge": {
+      "file": "lie-ledge.webp",
+      "width": 1254,
+      "height": 640,
+      "anchor": {
+        "x": 700,
+        "y": 615
+      },
+      "facing": "right",
+      "head": 375
+    },
+    "cheer": {
+      "file": "cheer.webp",
+      "width": 466,
+      "height": 640,
+      "anchor": {
+        "x": 240,
+        "y": 634
+      },
+      "facing": "front",
+      "head": 220,
+      "sfx": "搞定!"
+    },
+    "fail": {
+      "file": "fail.webp",
+      "width": 605,
+      "height": 640,
+      "anchor": {
+        "x": 290,
+        "y": 600
+      },
+      "facing": "front",
+      "head": 230
+    }
+  }
+}

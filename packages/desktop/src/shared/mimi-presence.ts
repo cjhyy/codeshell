@@ -1,3 +1,5 @@
+import type { MimiAppearance } from "./mimi-companion.js";
+
 /**
  * One Mimi on the desktop. The user has a single "show Mimi" switch; once shown,
  * Mimi is either docked (the compact pet widget) or moving (the full character
@@ -14,6 +16,8 @@ export interface MimiPresencePatch {
   mode?: MimiPresenceMode;
   /** Moving character box height in DIP. */
   size?: number;
+  /** Which character plays the moving form. */
+  appearance?: MimiAppearance;
 }
 
 /** Actual state as published by the owner. UI must render this, not its own guess. */
@@ -23,6 +27,7 @@ export interface MimiPresenceSnapshot {
   /** The user's preferred form. Kept even while moving is unavailable. */
   mode: MimiPresenceMode;
   size: number;
+  appearance: MimiAppearance;
   /** The form the owner is presenting given availability and failures. */
   effectiveMode: MimiPresenceMode;
   /** The form that is presented right now, or null while none is (or none yet). */
@@ -48,6 +53,8 @@ export type MimiBubblePanel = "chat" | "activity";
 /** What the moving form's bubble is asked to show; `null` closes it. */
 export interface MimiBubbleOpenRequest {
   panel: MimiBubblePanel | null;
-  /** Placed in the composer, never sent. */
+  /** Placed in the composer; sent at once only when `send` is set. */
   prompt?: string;
+  /** The user already asked for this (e.g. accepted "look at this window"). */
+  send?: boolean;
 }

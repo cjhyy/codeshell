@@ -1,6 +1,7 @@
 import type { MimiCompanionRect } from "../../shared/mimi-companion.js";
 import type { MimiBubbleOpenRequest, MimiBubblePanel } from "../../shared/mimi-presence.js";
 import {
+  PET_CHAT_BOX,
   PET_WIDGET_WINDOW_MARGIN,
   petWidgetAlwaysOnTopLevel,
   type PetWidgetWorkArea,
@@ -9,8 +10,11 @@ import {
 type Bounds = { x: number; y: number; width: number; height: number };
 type Point = { x: number; y: number };
 
-/** Same content box as the docked widget's chat bubble (360×268), plus its inset. */
-export const PET_BUBBLE_SIZE = { width: 400, height: 280 } as const;
+/** Same chat box as the docked widget's, plus its inset. */
+export const PET_BUBBLE_SIZE = {
+  width: PET_CHAT_BOX.width + 20,
+  height: PET_CHAT_BOX.height + 12,
+} as const;
 /** Space between the character box and the bubble. */
 const PET_BUBBLE_GAP = 4;
 
@@ -42,6 +46,7 @@ export function petBubbleOrigin(
 export interface PetBubbleWindowLike {
   isDestroyed(): boolean;
   isVisible(): boolean;
+  isFocused(): boolean;
   setBounds(bounds: Bounds, animate?: boolean): void;
   show(): void;
   showInactive(): void;
@@ -101,7 +106,7 @@ export function createPetBubbleSurface(options: PetBubbleSurfaceOptions) {
 
   function elevate(win: PetBubbleWindowLike): void {
     if (win.isDestroyed()) return;
-    win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(options.platform));
+    win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(options.platform, win.isFocused()));
     try {
       win.moveTop();
     } catch {
@@ -125,6 +130,9 @@ export function createPetBubbleSurface(options: PetBubbleSurfaceOptions) {
       options.log?.("pet-bubble.render-process-gone", { reason: details?.reason });
       if (!win.isDestroyed()) win.destroy();
     });
+    // Typing lowers the level so the input method's candidates stay visible.
+    win.on("focus", () => elevate(win));
+    win.on("blur", () => elevate(win));
     win.on("closed", () => {
       if (window !== win) return;
       window = null;
@@ -156,6 +164,16 @@ export function createPetBubbleSurface(options: PetBubbleSurfaceOptions) {
     };
     current.then(clear, clear);
     return current;
+  }
+
+  function besideBounds(near: MimiCompanionRect | undefined): Bounds {
+    const center = near
+      ? { x: Math.round(near.x + near.width / 2), y: Math.round(near.y + near.height / 2) }
+      : undefined;
+    const display = center
+      ? options.screen.getDisplayNearestPoint(center)
+      : options.screen.getPrimaryDisplay();
+    return { ...petBubbleOrigin(near, display.workArea), ...PET_BUBBLE_SIZE };
   }
 
   function hide(): void {
@@ -201,7 +219,12 @@ export function createPetBubbleSurface(options: PetBubbleSurfaceOptions) {
     /** The moving form is gone: the docked widget has its own chat again. */
     release,
     /** Open (or, asked again for the open panel, close) the bubble beside `near`. */
-    async open(panel: MimiBubblePanel, near?: MimiCompanionRect, prompt?: string): Promise<void> {
+    async open(
+      panel: MimiBubblePanel,
+      near?: MimiCompanionRect,
+      prompt?: string,
+      send?: boolean,
+    ): Promise<void> {
       wanted = true;
       const win = await ensureWindow();
       await whenMounted();
@@ -212,18 +235,17 @@ export function createPetBubbleSurface(options: PetBubbleSurfaceOptions) {
         win.webContents.send("pet:bubble-open", { panel: null } satisfies MimiBubbleOpenRequest);
         return;
       }
-      const center = near
-        ? { x: Math.round(near.x + near.width / 2), y: Math.round(near.y + near.height / 2) }
-        : undefined;
-      const display = center
-        ? options.screen.getDisplayNearestPoint(center)
-        : options.screen.getPrimaryDisplay();
-      win.setBounds({ ...petBubbleOrigin(near, display.workArea), ...PET_BUBBLE_SIZE }, false);
+      win.setBounds(besideBounds(near), false);
       requested = panel;
       win.webContents.send("pet:bubble-open", {
         panel,
-        ...(prompt ? { prompt } : {}),
+        ...(prompt ? { prompt, ...(send ? { send } : {}) } : {}),
       } satisfies MimiBubbleOpenRequest);
+    },
+    /** The character was dragged: an open bubble stays beside her. */
+    follow(near: MimiCompanionRect): void {
+      const win = live();
+      if (win?.isVisible()) win.setBounds(besideBounds(near), false);
     },
     /** The renderer opened or closed its panel. Only a requested panel shows. */
     setExpanded(expanded: boolean): void {

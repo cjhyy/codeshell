@@ -1,5 +1,6 @@
 import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
 import {
+  isMimiAppearance,
   MIMI_COMPANION_MAX_SIZE,
   MIMI_COMPANION_MIN_SIZE,
   type MimiCompanionSettings,
@@ -37,7 +38,10 @@ export function parseMimiPresencePatch(raw: unknown): MimiPresencePatch {
   const keys = Object.keys(input);
   if (
     keys.length === 0 ||
-    keys.some((key) => key !== "visible" && key !== "mode" && key !== "size") ||
+    keys.some(
+      (key) => key !== "visible" && key !== "mode" && key !== "size" && key !== "appearance",
+    ) ||
+    (input.appearance !== undefined && !isMimiAppearance(input.appearance)) ||
     (input.visible !== undefined && typeof input.visible !== "boolean") ||
     (input.mode !== undefined && !isMimiPresenceMode(input.mode)) ||
     (input.size !== undefined &&
@@ -120,7 +124,7 @@ export function legacyCompanionSettings(owner: MimiPresenceOwner) {
       return {
         enabled: snapshot.visible && snapshot.effectiveMode === "moving",
         size: snapshot.size,
-        appearance: "mimi-sprite",
+        appearance: snapshot.appearance,
         available: snapshot.movingAvailable,
         ...(snapshot.movingError
           ? { error: snapshot.movingError }

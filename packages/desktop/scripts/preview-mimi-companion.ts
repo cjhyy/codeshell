@@ -1,5 +1,5 @@
 /** Isolated local visual trial. Optional native trial controls its own test form. */
-import { app, BrowserWindow, globalShortcut, ipcMain, protocol, screen } from "electron";
+import { app, BrowserWindow, globalShortcut, ipcMain, screen } from "electron";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -20,12 +20,6 @@ async function main() {
   console.log("Mimi companion: loading preview");
   const temporary = await mkdtemp(join(tmpdir(), "codeshell-mimi-preview-"));
   app.setPath("userData", join(temporary, "user-data"));
-  protocol.registerSchemesAsPrivileged([
-    {
-      scheme: "csmimi",
-      privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true },
-    },
-  ]);
   await app.whenReady();
   console.log("Mimi companion: Electron ready");
   const preload = join(temporary, "preview-preload.cjs");
@@ -55,10 +49,8 @@ async function main() {
   });
   const host = await createMimiCompanionHost({
     appPath: desktopRoot,
-    resourcesPath: process.resourcesPath,
     bus: execution.bus,
     gate: execution.gate,
-    packaged: false,
     isMainWindow: (sender) => sender === control.webContents,
     holdForChat: false,
     openChat: async (request) => {
@@ -159,7 +151,7 @@ async function main() {
     .join(
       "",
     )}</select><label class="grow">大小<select id="size"><option>240</option><option selected>320</option><option>400</option><option>480</option></select></label><button id="preview" class="primary">在此屏幕演示</button></div>
-<div class="grid"><section class="card"><h2>Mimi 图片动画集</h2><p class="small">当前效果 · 全身角色</p><p class="small">待机安静，工作时短暂响应。拖动后停在你放的位置，点击打开聊天入口，右键恢复跟随。</p></section><section class="card ghost"><h2>Live2D / 更多效果集</h2><p class="small">预留适配器位置</p><p class="small">使用相同的动作信号，替换角色渲染方式。此预览未加载 Live2D 模型。</p></section></div>
+<div class="grid"><section class="card"><h2>Mimi 图片动画集</h2><p class="small">当前效果 · 全身角色</p><p class="small">待机安静，工作时短暂响应。拖动后停在你放的位置，点击打开聊天入口，右键恢复跟随。</p></section><section class="card ghost"><h2>更多角色</h2><p class="small">同一套动作信号</p><p class="small">换角色只换图集和表演动作包，舞台和跟随逻辑不变。</p></section></div>
 <div class="steps"><span>看向目标</span><span>靠近 · 点击反馈</span><span>输入反馈</span><span>滚动反馈</span><span>回到待机</span></div>
 ${nativeTrial ? '<button id="native" class="primary">用真实 CUA 试填表单</button><button id="stop">立即停止（⌘/Ctrl ⇧ Esc）</button>' : ""}
 <p id="result"></p><footer>${nativeTrial ? "试填使用原生 CUA，只操作新开的公开测试表单窗口，不提交。此独立实验室仍没有真实聊天。" : "此窗口只演示动作，不会点击、输入或读取其他应用。"} 关闭窗口即退出预览。<br>正式联动入口：CodeShell 设置 → 电脑操控 → 显示 Mimi 操作角色。</footer>

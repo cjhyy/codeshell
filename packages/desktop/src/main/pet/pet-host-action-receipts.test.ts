@@ -192,9 +192,7 @@ describe("PetHostActionReceiptStore", () => {
     if (process.platform === "win32") return;
     expect(statSync(path).mode & 0o777).toBe(0o600);
     chmodSync(path, 0o644);
-    await expect(new PetHostActionReceiptStore(path).load()).rejects.toThrow(
-      "权限必须为 0600",
-    );
+    await expect(new PetHostActionReceiptStore(path).load()).rejects.toThrow("权限必须为 0600");
   });
 
   test("concurrent records are serialized and all persist", async () => {

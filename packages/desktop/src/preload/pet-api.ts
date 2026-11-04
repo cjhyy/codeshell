@@ -545,11 +545,16 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
     },
     onBubbleOpen: (listener) => {
       const handler = (_event: unknown, payload: unknown): void => {
-        const request = payload as { panel?: unknown; prompt?: unknown } | undefined;
+        const request = payload as
+          | { panel?: unknown; prompt?: unknown; send?: unknown }
+          | undefined;
         const panel = request?.panel;
         if (panel !== null && panel !== "chat" && panel !== "activity") return;
         const prompt = typeof request?.prompt === "string" ? request.prompt.slice(0, 500) : "";
-        listener({ panel, ...(prompt.trim() ? { prompt } : {}) });
+        listener({
+          panel,
+          ...(prompt.trim() ? { prompt, ...(request?.send === true ? { send: true } : {}) } : {}),
+        });
       };
       ipcRenderer.on("pet:bubble-open", handler);
       return () => ipcRenderer.removeListener("pet:bubble-open", handler);

@@ -678,6 +678,7 @@ const initialMimiPresenceSnapshot: MimiPresenceSnapshot = {
   visible: false,
   mode: "docked",
   size: defaultMimiPresenceState().size,
+  appearance: defaultMimiPresenceState().appearance,
   effectiveMode: "docked",
   shown: null,
   movingAvailable: false,
@@ -3008,6 +3009,8 @@ function broadcastMimiPresence(snapshot: MimiPresenceSnapshot): void {
     win.webContents.send("mimi:presence-changed", snapshot);
     win.webContents.send("pet:widget-visibility-changed", visible);
   }
+  // The docked widget draws the chosen character too.
+  for (const win of petSurfaceWindows()) win.webContents.send("mimi:presence-changed", snapshot);
 }
 
 /**
@@ -3495,8 +3498,10 @@ app.whenReady().then(async () => {
   try {
     await initializeDesktopComputerUse({
       app,
-      openCompanionChat: async (request, near) => mimiBubble?.open("chat", near, request?.prompt),
+      openCompanionChat: async (request, near) =>
+        mimiBubble?.open("chat", near, request?.prompt, request?.send),
       openCompanionActivity: async (near) => mimiBubble?.open("activity", near),
+      onCompanionMoved: (near) => mimiBubble?.surface.follow(near),
       ipcMain,
       openExternal: (url) => shell.openExternal(url),
       isMainWindow: isMainWindowSender,
@@ -3510,8 +3515,7 @@ app.whenReady().then(async () => {
         onFailure: (error) => presence.surfaceFailed("moving", error),
         onPreviewEnd: () => presence.previewEnded(),
         onCaptureChange: (capturing) => presence.setCaptureActive(capturing),
-        request: (action) =>
-          void presence.set(action === "dock" ? { mode: "docked" } : { visible: false }),
+        request: (patch) => void presence.set(patch),
       },
       companionSettings: legacyCompanionSettings(mimiPresenceOwner),
       cwd: resolveNoRepoCwd,

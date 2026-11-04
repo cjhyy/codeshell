@@ -1,14 +1,15 @@
-import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import type { MimiCompanionApi, MimiCompanionState } from "../../../shared/mimi-companion";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  effectAction,
-  LIVE2D_EFFECTS,
-  SPRITE_EFFECTS,
-  type CharacterRenderer,
-} from "./character-renderer";
+  MIMI_COMPANION_QUICK_SIZES,
+  type MimiCompanionApi,
+  type MimiCompanionState,
+} from "../../../shared/mimi-companion";
+import { effectAction, SPRITE_EFFECTS, type CharacterRenderer } from "./character-renderer";
 import { companionLocomotion, HOP_MS, type CompanionLocomotion } from "./companion-locomotion";
-import { companionActionLabel } from "./companion-pose";
+import { companionActionLabel, companionYields } from "./companion-pose";
 import { companionCueDuration } from "./sprite-animation";
+import { PoseActor } from "./PoseActor";
+import { spriteCharacter } from "./sprite-characters";
 import { SpriteActor } from "./SpriteActor";
 import "./companion.css";
 
@@ -17,7 +18,6 @@ declare global {
     mimiCompanion: MimiCompanionApi;
   }
 }
-const Live2DActor = lazy(() => import("./Live2DActor"));
 export const CHARACTER_RENDERERS: Record<MimiCompanionState["appearance"], CharacterRenderer> = {
   "mimi-sprite": {
     id: "mimi-sprite",
@@ -25,7 +25,20 @@ export const CHARACTER_RENDERERS: Record<MimiCompanionState["appearance"], Chara
     Actor: SpriteActor,
     effects: SPRITE_EFFECTS,
   },
-  live2d: { id: "live2d", label: "Live2D 示例", Actor: Live2DActor, effects: LIVE2D_EFFECTS },
+  "shiro-sprite": {
+    id: "shiro-sprite",
+    label: "Shiro 姿势集",
+    Actor: PoseActor,
+    effects: SPRITE_EFFECTS,
+    pace: "fly",
+  },
+  "maki-sprite": {
+    id: "maki-sprite",
+    label: "Maki 姿势集",
+    Actor: PoseActor,
+    effects: SPRITE_EFFECTS,
+    pace: "fly",
+  },
 };
 
 type Gesture = {
@@ -166,6 +179,7 @@ export function MimiCompanionWindow() {
     const trip = companionLocomotion(lastPosition.current, state.position, {
       reducedMotion,
       immediate: Boolean(state.avoidInput) || !visible,
+      pace: CHARACTER_RENDERERS[state.appearance]?.pace,
     });
     const arrival = trip.kind === "none" ? 0 : trip.duration;
     const remaining =
@@ -195,6 +209,7 @@ export function MimiCompanionWindow() {
         : companionLocomotion(from, state.position, {
             reducedMotion,
             immediate: Boolean(state.avoidInput) || !visible,
+            pace: CHARACTER_RENDERERS[state.appearance]?.pace,
           });
     window.clearTimeout(travelTimer.current);
     setTravel(next);
@@ -291,7 +306,7 @@ export function MimiCompanionWindow() {
   };
 
   if (!state) return null;
-  const { Actor, effects } =
+  const { Actor, effects, pace } =
     CHARACTER_RENDERERS[state.appearance] ?? CHARACTER_RENDERERS["mimi-sprite"];
   const cueActive = Boolean(cueActivity && !humanActive && visible);
   const presented =
@@ -304,8 +319,7 @@ export function MimiCompanionWindow() {
   const typing = cueActive && ["type", "key"].includes(presented.activity.action);
   const targetEffect = cueActive && ["click", "scroll", "drag"].includes(presented.activity.action);
   const position = dragPosition ?? state.position;
-  // While the human is typing or pointing elsewhere, step back and go quiet.
-  const yielding = Boolean(state.control?.userActive) && !humanActive;
+  const yielding = companionYields(state, humanActive);
   // The docked widget's work badge, carried over her head: what needs the
   // human first, then finished work not yet seen, else a quiet "busy" dot.
   const attention = state.attention;
@@ -346,7 +360,7 @@ export function MimiCompanionWindow() {
             state.avoidInput || travel.kind === "hop"
               ? "none"
               : travel.kind === "walk"
-                ? `transform ${travel.duration}ms cubic-bezier(0.33, 0.8, 0.4, 1), width ${travel.duration}ms, height ${travel.duration}ms`
+                ? `transform ${travel.duration}ms ${pace === "fly" ? "cubic-bezier(0.34, 1.3, 0.64, 1)" : "cubic-bezier(0.33, 0.8, 0.4, 1)"}, width ${travel.duration}ms, height ${travel.duration}ms`
                 : reducedMotion
                   ? undefined
                   : "transform 280ms ease-out, width 180ms, height 180ms",
@@ -435,21 +449,19 @@ export function MimiCompanionWindow() {
             window.mimiCompanion.interaction("begin");
           }}
         >
-          <Suspense fallback={null}>
-            <Actor
-              state={presented}
-              reducedMotion={reducedMotion}
-              moving={moving ?? (travel.kind === "walk" ? travel.facing : null)}
-              cueActive={cueActive}
-              onReady={ready}
-              onError={failed}
-              onContact={() => {
-                setImpact(presented.activity.id);
-                window.clearTimeout(impactTimer.current);
-                impactTimer.current = window.setTimeout(() => setImpact(null), 320);
-              }}
-            />
-          </Suspense>
+          <Actor
+            state={presented}
+            reducedMotion={reducedMotion}
+            moving={moving ?? (travel.kind === "walk" ? travel.facing : null)}
+            cueActive={cueActive}
+            onReady={ready}
+            onError={failed}
+            onContact={() => {
+              setImpact(presented.activity.id);
+              window.clearTimeout(impactTimer.current);
+              impactTimer.current = window.setTimeout(() => setImpact(null), 320);
+            }}
+          />
         </button>
         {/* Sitting on the field, the paws already type; the field is the keyboard. */}
         {typing && state.perch !== "on-field" && (
@@ -464,7 +476,11 @@ export function MimiCompanionWindow() {
         )}
         {state.preview && <div className="mimi-companion__preview">动作预览</div>}
         {(error || cueActive || state.control?.stopped) && (
-          <div className="mimi-companion__activity" role="status">
+          <div
+            className="mimi-companion__activity"
+            role="status"
+            data-notice={error || state.control?.stopped ? "true" : undefined}
+          >
             {error ??
               (state.control?.stopped && !cueActive ? "已停止电脑操作" : undefined) ??
               (presented.activity.action === "type"
@@ -505,11 +521,13 @@ export function MimiCompanionWindow() {
           <div
             className="mimi-companion__handoff"
             role="dialog"
-            aria-label="让 Mimi 看看这个窗口"
+            aria-label={`让 ${spriteCharacter(state.appearance).name} 看看这个窗口`}
             onPointerEnter={() => window.mimiCompanion.interaction("hover")}
             onPointerLeave={() => window.mimiCompanion.interaction("leave")}
           >
-            <p>让 Mimi 看看「{state.handoff.app}」？</p>
+            <p>
+              让 {spriteCharacter(state.appearance).name} 看看「{state.handoff.app}」？
+            </p>
             <div>
               <button type="button" onClick={() => answerHandoff(true)}>
                 看看
@@ -543,6 +561,23 @@ export function MimiCompanionWindow() {
             >
               切换到停靠模式
             </button>
+            <div className="mimi-companion__sizes" role="group" aria-label="大小">
+              {MIMI_COMPANION_QUICK_SIZES.map((option) => (
+                <button
+                  key={option.size}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={(state.chosenSize ?? state.size) === option.size}
+                  aria-label={`大小：${option.label}`}
+                  onClick={() => {
+                    window.mimiCompanion.resize(option.size);
+                    closeMenu();
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
             {state.control?.stopped || state.control?.foregroundHeld ? (
               <button
                 type="button"

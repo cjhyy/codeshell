@@ -33,7 +33,7 @@ describe("desktop Pet window position", () => {
         width: PET_WIDGET_EXPANDED_WIDTH,
         height: PET_WIDGET_EXPANDED_HEIGHT,
       }),
-    ).toEqual({ x: -1_140, y: 280 });
+    ).toEqual({ x: -1_100, y: 412 });
   });
 
   test("uses a compact default surface and only expands for requested content", () => {
@@ -60,6 +60,8 @@ describe("desktop Pet window position", () => {
     expect(petWidgetAlwaysOnTopLevel("darwin")).toBe("screen-saver");
     expect(petWidgetAlwaysOnTopLevel("win32")).toBe("floating");
     expect(petWidgetAlwaysOnTopLevel("linux")).toBe("floating");
+    // Typing into Mimi: the input method's candidate window must stay above her.
+    expect(petWidgetAlwaysOnTopLevel("darwin", true)).toBe("floating");
   });
 
   test("keeps the pet above other apps and active across macOS Spaces", () => {
@@ -67,7 +69,7 @@ describe("desktop Pet window position", () => {
     // Window lifecycle moved into the docked surface; host-specific options stay in index.ts.
     const surfaceSource = readFileSync(join(import.meta.dir, "pet-widget-surface.ts"), "utf8");
     expect(surfaceSource).toContain(
-      "win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(options.platform))",
+      "win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(options.platform, win.isFocused()))",
     );
     expect(surfaceSource).toContain("win.moveTop()");
     const factory = mainSource.slice(
@@ -99,7 +101,7 @@ describe("desktop Pet window position", () => {
     const mainSource = readFileSync(join(import.meta.dir, "..", "index.ts"), "utf8");
     const stateSource = readFileSync(join(import.meta.dir, "mimi-presence-state.ts"), "utf8");
     const ipcSource = readFileSync(join(import.meta.dir, "mimi-presence-ipc.ts"), "utf8");
-    expect(stateSource).toContain('visible: false, mode: "docked"');
+    expect(stateSource).toMatch(/visible: false,\s+mode: "docked"/);
     expect(ipcSource).toContain('deps.ipcMain.handle("pet:widget-visible-get"');
     expect(mainSource).toContain("registerMimiPresenceIpc({");
     // No second, independent visibility flag for the widget remains in main.

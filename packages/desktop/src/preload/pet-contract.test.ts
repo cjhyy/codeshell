@@ -268,4 +268,31 @@ describe("Pet preload contract", () => {
     for (const handler of handlers.get("mimi:presence-changed") ?? []) handler({}, snapshot);
     expect(received).toEqual([snapshot]);
   });
+
+  test("bubble open requests keep send only with a prompt and drop malformed ones", () => {
+    const handlers = new Map<string, Set<(event: unknown, payload: unknown) => void>>();
+    const api = createPetApi({
+      invoke: async () => undefined,
+      send: () => {},
+      on: (channel, listener) => {
+        const set = handlers.get(channel) ?? new Set();
+        set.add(listener);
+        handlers.set(channel, set);
+      },
+      removeListener: (channel, listener) => handlers.get(channel)?.delete(listener),
+    });
+    const received: unknown[] = [];
+    api.onBubbleOpen?.((request) => received.push(request));
+    for (const handler of handlers.get("pet:bubble-open") ?? []) {
+      handler({}, { panel: "chat", prompt: "看看这个窗口", send: true });
+      handler({}, { panel: "chat", prompt: "草稿", send: "yes" });
+      handler({}, { panel: "chat", send: true });
+      handler({}, { panel: "elsewhere", prompt: "x", send: true });
+    }
+    expect(received).toEqual([
+      { panel: "chat", prompt: "看看这个窗口", send: true },
+      { panel: "chat", prompt: "草稿" },
+      { panel: "chat" },
+    ]);
+  });
 });

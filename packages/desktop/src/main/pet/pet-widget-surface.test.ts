@@ -27,6 +27,10 @@ class FakeWindow implements PetWidgetWindowLike {
   isVisible() {
     return this.visible && !this.destroyed;
   }
+  focused = false;
+  isFocused() {
+    return this.focused;
+  }
   getBounds() {
     return { ...this.bounds };
   }
@@ -52,7 +56,10 @@ class FakeWindow implements PetWidgetWindowLike {
     this.visible = false;
     this.emit("closed");
   }
-  setAlwaysOnTop() {}
+  levels: unknown[] = [];
+  setAlwaysOnTop(_flag: boolean, level?: unknown) {
+    this.levels.push(level);
+  }
   moveTops = 0;
   moveTop() {
     this.moveTops++;
@@ -291,6 +298,24 @@ describe("docked pet widget surface", () => {
     h.surface.dispose();
   });
 
+  test("typing into the docked chat drops below the input method's candidate window", async () => {
+    const h = setup("darwin");
+    const presented = h.surface.present(() => true);
+    await flush();
+    h.finish();
+    await presented;
+    const win = h.windows[0]!;
+    const shown = win.shows;
+    win.focused = true;
+    win.emit("focus");
+    expect(win.levels.at(-1)).toBe("floating");
+    expect(win.shows).toBe(shown);
+    win.focused = false;
+    win.emit("blur");
+    expect(win.levels.at(-1)).toBe("screen-saver");
+    h.surface.dispose();
+  });
+
   test("other platforms keep moveTop for the z-order refresh", async () => {
     const h = setup("linux");
     const presented = h.surface.present(() => true);
@@ -351,7 +376,7 @@ describe("docked pet widget surface", () => {
     expect(h.surface.owns(100)).toBe(true);
     const before = h.surface.feet();
     h.surface.setSurfaceMode("expanded");
-    expect(h.windows[0]!.bounds).toMatchObject({ width: 400, height: 380 });
+    expect(h.windows[0]!.bounds).toMatchObject({ width: 440, height: 512 });
     expect(h.surface.feet()).toEqual(before);
     h.surface.withdraw();
     expect(h.surface.owns(100)).toBe(false);

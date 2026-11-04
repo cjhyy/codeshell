@@ -79,9 +79,13 @@ export async function initializeDesktopComputerUse(options: {
   resourcesPath: string;
   env: NodeJS.ProcessEnv;
   log: NonNullable<CuaDriverHostOptions["log"]>;
-  openCompanionChat(request?: { prompt: string }, near?: MimiCompanionRect): Promise<void>;
+  openCompanionChat(
+    request?: { prompt: string; send?: boolean },
+    near?: MimiCompanionRect,
+  ): Promise<void>;
   /** The moving character's badge: open the work list beside her. */
   openCompanionActivity?(near?: MimiCompanionRect): Promise<void>;
+  onCompanionMoved?(near: MimiCompanionRect): void;
   /** Mimi chat surfaces (main-window Mimi page, docked inline chat). */
   isCompanionChatSurface?: ComputerUseSettingsDependencies["isMainWindow"];
   /** Hooks into the single Mimi presence owner (Desktop main). */
@@ -125,8 +129,6 @@ export async function initializeDesktopComputerUse(options: {
     const executionControl = control;
     companion = await createMimiCompanionHost({
       appPath: options.app.getAppPath(),
-      resourcesPath: options.resourcesPath,
-      packaged: options.app.isPackaged,
       devUrl: options.env.VITE_DEV_URL,
       isMainWindow: options.isMainWindow,
       isChatSurface: options.isCompanionChatSurface,
@@ -134,6 +136,7 @@ export async function initializeDesktopComputerUse(options: {
       log: options.log,
       openChat: options.openCompanionChat,
       openActivity: options.openCompanionActivity,
+      onMoved: options.onCompanionMoved,
       bus: executionControl.bus,
       gate: executionControl.gate,
       appProfiles: loadAppProfiles(appProfilesDir, (file, error) =>

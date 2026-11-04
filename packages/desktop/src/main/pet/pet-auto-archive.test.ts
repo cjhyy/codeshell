@@ -13,7 +13,12 @@ describe("selectSessionsToArchive", () => {
         { engineSessionId: "fresh-done", status: "completed", updatedAt: now - 2 * DAY },
         { engineSessionId: "old-active", status: "active", updatedAt: now - 8 * DAY },
         { engineSessionId: "old-failed", status: "failed", updatedAt: now - 8 * DAY },
-        { engineSessionId: "already", status: "completed", updatedAt: now - 8 * DAY, archivedAt: 1 },
+        {
+          engineSessionId: "already",
+          status: "completed",
+          updatedAt: now - 8 * DAY,
+          archivedAt: 1,
+        },
       ],
       { now, idleDays: 7 },
     );

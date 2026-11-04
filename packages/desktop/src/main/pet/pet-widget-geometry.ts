@@ -1,10 +1,12 @@
 /** Pure docked-widget geometry and window-level policy (no Electron, no Core). */
 export const PET_WIDGET_WINDOW_SIZE = 112;
 export const PET_WIDGET_WINDOW_MARGIN = 12;
-export const PET_WIDGET_EXPANDED_WIDTH = 400;
-// 268px chat bubble + 112px pet anchor: keep the two interactive surfaces
-// adjacent instead of stacking the pet on top of the composer.
-export const PET_WIDGET_EXPANDED_HEIGHT = 380;
+/** The chat box (renderer `PetDesktopWindow`), shared by the docked widget and the bubble. */
+export const PET_CHAT_BOX = { width: 420, height: 400 } as const;
+export const PET_WIDGET_EXPANDED_WIDTH = PET_CHAT_BOX.width + 20;
+// Chat box + 112px pet anchor: keep the two interactive surfaces adjacent
+// instead of stacking the pet on top of the composer.
+export const PET_WIDGET_EXPANDED_HEIGHT = PET_CHAT_BOX.height + PET_WIDGET_WINDOW_SIZE;
 
 export type PetWidgetSurfaceMode = "collapsed" | "expanded";
 
@@ -29,11 +31,16 @@ export interface PetWidgetWorkArea extends PetWidgetWindowPosition {
 
 export type PetWidgetAlwaysOnTopLevel = "floating" | "screen-saver";
 
-export function petWidgetAlwaysOnTopLevel(platform: NodeJS.Platform): PetWidgetAlwaysOnTopLevel {
+export function petWidgetAlwaysOnTopLevel(
+  platform: NodeJS.Platform,
+  focused = false,
+): PetWidgetAlwaysOnTopLevel {
   // Electron's default `floating` level can still fall behind other apps on
   // macOS. `screen-saver` is the closest BrowserWindow equivalent to the
-  // native overlay panel used by desktop pets such as Codex's.
-  return platform === "darwin" ? "screen-saver" : "floating";
+  // native overlay panel used by desktop pets such as Codex's. While the user
+  // types into Mimi her window is the key window, so `floating` is enough, and
+  // `screen-saver` would cover the input method's candidate window.
+  return platform === "darwin" && !focused ? "screen-saver" : "floating";
 }
 
 export function shouldSkipPetWidgetTaskbar(platform: NodeJS.Platform): boolean {

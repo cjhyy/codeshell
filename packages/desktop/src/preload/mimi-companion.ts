@@ -16,6 +16,7 @@ const api: MimiCompanionApi = {
   handoff: (accept) => ipcRenderer.invoke("mimiCompanion:handoff", accept),
   resumeFollowing: () => ipcRenderer.send("mimiCompanion:follow"),
   presence: (action) => ipcRenderer.send("mimiCompanion:presence", action),
+  resize: (size) => ipcRenderer.send("mimiCompanion:resize", size),
   stopComputer: () => ipcRenderer.send("mimiCompanion:stopComputer"),
   resumeComputer: () => ipcRenderer.send("mimiCompanion:resumeComputer"),
 };

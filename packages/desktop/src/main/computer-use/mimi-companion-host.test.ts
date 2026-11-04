@@ -12,6 +12,8 @@ const scenarios = [
   "capture-while-human-active",
   "busy-preview-rejects",
   "chat-and-badge-beside-character",
+  "handoff-only-across-apps",
+  "menu-resize-and-dock-reach-presence",
   "keeps-dock-icon",
 ] as const;
 

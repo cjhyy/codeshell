@@ -41,6 +41,7 @@ class FakeSurface implements MimiDockedSurface, MimiMovingSurface {
   feetPoint: Point | undefined;
   placed: Point[] = [];
   sizes: number[] = [];
+  appearances: string[] = [];
   previews = 0;
   cancels = 0;
   constructor(
@@ -112,6 +113,9 @@ class FakeSurface implements MimiDockedSurface, MimiMovingSurface {
   }
   setSize(size: number): void {
     this.sizes.push(size);
+  }
+  setAppearance(appearance: string): void {
+    this.appearances.push(appearance);
   }
   async startPreview(isCurrent: () => boolean): Promise<void> {
     if (isCurrent()) this.previews++;
@@ -547,6 +551,16 @@ describe("MimiPresenceController — capture, position, size, persistence", () =
     expect(h.controller.snapshot().size).toBe(160);
     expect(h.moving.sizes).toEqual([200, 480, 160]);
     expect(h.saves.at(-1)?.size).toBe(160);
+  });
+
+  test("the character is forwarded to the moving surface and persisted", async () => {
+    const h = setup();
+    void h.start();
+    expect(h.controller.snapshot().appearance).toBe("mimi-sprite");
+    await h.controller.set({ appearance: "shiro-sprite" });
+    expect(h.controller.snapshot().appearance).toBe("shiro-sprite");
+    expect(h.moving.appearances).toEqual(["mimi-sprite", "shiro-sprite"]);
+    expect(h.saves.at(-1)?.appearance).toBe("shiro-sprite");
   });
 
   test("anchors are remembered per form and persisted in order", async () => {

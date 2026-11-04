@@ -1,15 +1,19 @@
 #!/bin/sh
 # Generate one performer row strip per move with Codex's built-in image tool.
-# Usage: scripts/mimi-pack/generate.sh <run-dir> [move ...]
+# Usage: [PACK_CHARACTER=shiro] scripts/mimi-pack/generate.sh <run-dir> [move ...]
 # The run dir receives refs/, guides/, decoded/<move>.png and logs. Requires a
 # signed-in `codex` CLI with the hatch-pet and imagegen skills installed.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 run=$(mkdir -p "$1" && cd "$1" && pwd); shift
 moves=${*:-"sit-type kick poke lie-wait"}
+# Mimi's prompts sit in prompts/; another character's in prompts/<character>/.
+character=${PACK_CHARACTER:-mimi-papillon}
+prompts="$here/prompts"
+[ "$character" = mimi-papillon ] || prompts="$here/prompts/$character"
 python3 "$here/assemble.py" refs --run "$run"
 for move in $moves; do
-  python3 - "$here/worker.md" "$here/prompts/$move.txt" "$run/decoded/$move.png" > "$run/job-$move.md" <<'PY'
+  python3 - "$here/worker.md" "$prompts/$move.txt" "$run/decoded/$move.png" > "$run/job-$move.md" <<'PY'
 import sys
 template, prompt, out = (open(sys.argv[1]).read(), open(sys.argv[2]).read(), sys.argv[3])
 print(template.replace("{PROMPT}", prompt).replace("{OUT}", out))

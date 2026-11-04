@@ -28,7 +28,6 @@ const fixture = `
 const listeners = new Set();
 let sequence = 0;
 let state = { enabled: true, visible: true, appearance: "mimi-sprite", size: 320,
-  modelUrl: "csmimi://assets/Hiyori/Hiyori.model3.json", coreUrl: "csmimi://assets/Core/live2dcubismcore.min.js",
   position: { x: 620, y: 230 }, windowOrigin: { x: 1440, y: -100 }, target: { x: 520, y: 333 },
   activity: { id: "preview-0", action: "idle", phase: "start", startedAt: Date.now() }, preview: true };
 window.previewReceipts = [];
@@ -113,14 +112,12 @@ if (!process.argv.includes("--serve")) {
       deviceScaleFactor: 1,
     });
     const errors = [];
-    const requests = [];
     page.on("pageerror", (error) => {
       errors.push(error.message);
       console.error("Preview page error:", error.message);
     });
     await page.route("**/*", (route) => {
       const requestUrl = route.request().url();
-      requests.push(requestUrl);
       if (!requestUrl.startsWith(new URL(url).origin + "/")) return route.abort();
       return route.continue();
     });
@@ -386,13 +383,8 @@ if (!process.argv.includes("--serve")) {
       "hidden",
     );
     assert.deepEqual(errors, []);
-    assert.equal(
-      requests.some((request) => /Live2DActor|cubism|pixi-/u.test(request)),
-      false,
-      "default sprite must not load Live2D or Core",
-    );
     console.log(
-      "PASS: one-shot cues, static idle, human priority, click/drag separation, global drag coordinates, keyboard/menu, reduced motion, hide, no Core request.",
+      "PASS: one-shot cues, static idle, human priority, click/drag separation, global drag coordinates, keyboard/menu, reduced motion, hide.",
     );
     console.log(`Screenshots: ${out}`);
   } finally {

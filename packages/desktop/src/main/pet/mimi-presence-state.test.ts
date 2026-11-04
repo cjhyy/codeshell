@@ -47,6 +47,7 @@ describe("defaults and sizes", () => {
       visible: false,
       mode: "docked",
       size: 200,
+      appearance: "mimi-sprite",
     });
   });
 
@@ -77,12 +78,15 @@ describe("parsing keeps valid fields and drops only invalid ones", () => {
       visible: true,
       mode: "docked",
       size: 480,
+      appearance: "mimi-sprite",
       movingAnchor: { x: 5, y: 7 },
     });
     expect(parseMimiPresenceState([1, 2])).toEqual(defaultMimiPresenceState());
     expect(parseMimiPresenceState(null)).toEqual(defaultMimiPresenceState());
     // A saved 320 in the NEW file is an explicit choice and is kept.
     expect(parseMimiPresenceState({ size: 320 }).size).toBe(320);
+    expect(parseMimiPresenceState({ appearance: "shiro-sprite" }).appearance).toBe("shiro-sprite");
+    expect(parseMimiPresenceState({ appearance: "dragon" }).appearance).toBe("mimi-sprite");
   });
 });
 
@@ -98,6 +102,7 @@ describe("legacy migration", () => {
       visible: true,
       mode: "moving",
       size: 200,
+      appearance: "mimi-sprite",
       movingAnchor: { x: 100, y: 200 },
       dockedAnchor: { x: 1700, y: 950 },
     });
@@ -145,6 +150,7 @@ describe("loading from disk", () => {
       visible: true,
       mode: "moving",
       size: 200,
+      appearance: "mimi-sprite",
       movingAnchor: { x: 40, y: 50 },
       dockedAnchor: { x: 1200, y: 700 },
     });
@@ -166,7 +172,13 @@ describe("loading from disk", () => {
     await put(paths.statePath, JSON.stringify({ visible: false, mode: "moving", size: 240 }));
     await put(paths.legacyCompanionPath, JSON.stringify({ enabled: true }));
     expect(await loadMimiPresenceState(paths)).toEqual({
-      state: { schemaVersion: 1, visible: false, mode: "moving", size: 240 },
+      state: {
+        schemaVersion: 1,
+        visible: false,
+        mode: "moving",
+        size: 240,
+        appearance: "mimi-sprite",
+      },
       source: "current",
     });
   });
