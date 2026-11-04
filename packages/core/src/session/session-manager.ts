@@ -56,7 +56,7 @@ import {
   type GoalTerminal,
   type PersistedGoalTerminationReason,
 } from "../goal/lifecycle.js";
-import { lockSync } from "../utils/lockfile.js";
+import { isLockHeldInProcess, lockSync } from "../utils/lockfile.js";
 import { iterateProfileReferences } from "./profile-references.js";
 import type { SessionWorkspaceCapability } from "../capabilities/index.js";
 
@@ -2083,6 +2083,9 @@ export class SessionManager {
   }
 
   private acquireStateLock(target: string): (() => void) | undefined {
+    // A reentrant/asynchronous holder in this process cannot release while we
+    // synchronously wait, including when recording an output failure barrier.
+    if (isLockHeldInProcess(target, { realpath: false })) return undefined;
     const lockPath = `${target}.lock`;
     for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
       if (!this.prepareLegacyStateLock(lockPath)) {

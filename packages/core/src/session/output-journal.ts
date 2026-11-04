@@ -17,7 +17,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import type { StreamEvent, TranscriptEvent } from "../types.js";
-import { lockSync } from "../utils/lockfile.js";
+import { lockSyncWithBoundedRetry } from "../utils/lockfile.js";
 import {
   acknowledgeOutputCoverageAnchor,
   outputCoverageIncarnation,
@@ -1072,7 +1072,7 @@ export class SessionOutputJournal {
     let storage: SegmentedOutputFile | undefined;
     let created = false;
     try {
-      release = lockSync(this.location.statePath, { realpath: false, retries: 0 });
+      release = lockSyncWithBoundedRetry(this.location.statePath, { realpath: false, retries: 0 });
       this.location.state = this.assertOwner(true).state;
       // Resolve the volume before materializing any output file. A platform
       // lookup failure must not strand a newly created, unadmitted journal.
@@ -1393,7 +1393,10 @@ export class SessionOutputJournal {
           });
       }
     }
-    const release = lockSync(this.location.statePath, { realpath: false, retries: 0 });
+    const release = lockSyncWithBoundedRetry(this.location.statePath, {
+      realpath: false,
+      retries: 0,
+    });
     let fd: number | undefined;
     let storage: SegmentedOutputFile | undefined;
     let activeFd: number | undefined;
