@@ -366,6 +366,7 @@ jobs:
           packages/server/src/panels/agent-task-execution.test.ts
           packages/server/src/panels/tool-executor.test.ts
           packages/server/src/panels/tool-jobs.test.ts
+          packages/server/src/panels/tool-jobs-storage.test.ts
       - name: test Hub Panel resources and files
         if: matrix.shard == 'rest-server'
         run: >-
