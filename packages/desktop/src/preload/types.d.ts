@@ -8,6 +8,7 @@ import type { CloudEnvironmentApi } from "../shared/cloud-environment.js";
 import type { CloudWorkbenchApi } from "../shared/cloud-management.js";
 import type {
   ApprovalResolvedEnvelope,
+  CcRoomOpenResult,
   MobileRemoteApi,
   MobileSessionSettingsEnvelope,
 } from "../shared/mobile-remote.js";
@@ -2473,7 +2474,7 @@ export interface CodeshellApi
       cwd: string,
       mode: string,
       kind?: "claude-code" | "codex",
-    ): Promise<{ roomId: string; status: "running" | "missing" | "observing" }>;
+    ): Promise<CcRoomOpenResult>;
     openLinkedSession(
       externalSessionId: string,
       cwd: string,
@@ -2570,6 +2571,7 @@ export interface CodeshellApi
     onApprovalResolved(
       cb: (p: { roomId: string; requestId: string; decision: unknown }) => void,
     ): () => void;
+    onRoomState?(cb: (room: RoomPublic) => void): () => void;
   };
 
   /** Remaining CC/Codex subscription quota. "codex" is free; "claude" costs ~1 token. */

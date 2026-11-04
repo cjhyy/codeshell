@@ -200,7 +200,7 @@ describe("resolveLinkedSessionFromDisk", () => {
     ).toBeNull();
   });
 
-  test("production resolver binds observe-only and only explicit takeover spawns", () => {
+  test("production resolver binds observe-only and only explicit takeover spawns", async () => {
     const root = fixtureRoot();
     const claudeHome = join(root, "claude");
     const roomsRoot = join(root, "rooms");
@@ -227,9 +227,9 @@ describe("resolveLinkedSessionFromDisk", () => {
     expect(manager.open(linked.roomId)).toEqual({ status: "observing" });
     expect(starts).toBe(0);
 
-    expect(
+    await expect(
       manager.takeOverLinkedSession(linked.roomId, "claude-live", "/tmp/project", "claude-code"),
-    ).toMatchObject({ status: "running", cwd: "/tmp/project", mode: "default" });
+    ).resolves.toMatchObject({ status: "running", cwd: "/tmp/project", mode: "default" });
     expect(starts).toBe(1);
 
     manager.close(linked.roomId);
@@ -240,7 +240,7 @@ describe("resolveLinkedSessionFromDisk", () => {
     expect(starts).toBe(2);
   });
 
-  test("takeover drops an inherited bypass mode to the safe default", () => {
+  test("takeover drops an inherited bypass mode to the safe default", async () => {
     const root = fixtureRoot();
     const claudeHome = join(root, "claude");
     writeClaudeSession(claudeHome, "/tmp/risky-project", "claude-risky");
@@ -270,9 +270,9 @@ describe("resolveLinkedSessionFromDisk", () => {
       manager.openLinkedSession("claude-risky", "/tmp/risky-project", "claude-code"),
     ).toMatchObject({ status: "observing", mode: "bypassPermissions" });
     expect(manager.getRoom(room.id)?.linkedSessionMode).toBeUndefined();
-    expect(
+    await expect(
       manager.takeOverLinkedSession(room.id, "claude-risky", "/tmp/risky-project", "claude-code"),
-    ).toMatchObject({ status: "running", mode: "default" });
+    ).resolves.toMatchObject({ status: "running", mode: "default" });
     expect(manager.getRoom(room.id)?.permissionMode).toBe("default");
     expect(starts).toBe(1);
   });

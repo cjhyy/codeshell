@@ -27,7 +27,11 @@ import {
   type ExternalApprovalEvent,
 } from "../external-runtime-approvals.js";
 import type { BrowserWindow } from "electron";
-import type { ExternalRuntimeService } from "../external-runtime-service.js";
+import type {
+  ExternalRuntimeService,
+  ExternalRuntimeStartRequest,
+} from "../external-runtime-service.js";
+import { startMobileExternalRuntime } from "./start-external-runtime.js";
 
 function nativeAuthority() {
   let valid = true;
@@ -1027,4 +1031,81 @@ test("Stop invalidates external input still queued after all async preparation",
   expect(f.physical()).toBe(0);
   expect(f.accepts()).toBe(0);
   admission.release();
+});
+
+test("an active external run: a same-mode send queues on the live runtime, a mode change is refused through the service queue", async () => {
+  // commands -> real startMobileExternalRuntime -> service.ensureContinuation.
+  // The mock service mirrors the contract pinned by external-runtime-service
+  // tests: an open run refuses a configuration change with a coded error.
+  let activeRun = false;
+  let liveMode: string | undefined;
+  const runtime = {};
+  const ensured: Array<string | undefined> = [];
+  const service = {
+    isEnabled: () => true,
+    get: () => (liveMode ? runtime : undefined),
+    getCwd: () => "/workspace",
+    captureActiveRun: () => (activeRun ? { session: runtime, runId: "run-1" } : undefined),
+    ensureContinuation: async (request: ExternalRuntimeStartRequest) => {
+      request.assertStartAuthority?.();
+      ensured.push(request.permissionMode);
+      if (activeRun && liveMode && request.permissionMode !== liveMode)
+        throw Object.assign(
+          new Error("Stop the running task before changing its runtime configuration"),
+          { code: "EXTERNAL_RUNTIME_CONFIGURATION_LOCKED" },
+        );
+      liveMode = request.permissionMode;
+      return runtime;
+    },
+  } as unknown as ExternalRuntimeService;
+  const owner = { isDestroyed: () => false, webContents: { id: 77 } } as unknown as BrowserWindow;
+  const bridge = { panelOwnerWebContentsId: () => 77, isSessionRunning: () => activeRun };
+  const commands = new MobileExternalRuntimeCommands({
+    authenticated: (viewer, device) => viewer === "tab" && device === "phone",
+    authority: async () => ({ stamp: "stable", cwd: "/workspace", assertCurrent() {} }),
+    owner: () => 77,
+    service: () => service,
+    isExternal: () => true,
+    exists: () => true,
+    attachmentPath: async (path) => path,
+    modelKey: () => "codex/test",
+    startRuntime: (request) =>
+      startMobileExternalRuntime(
+        {
+          service: () => service,
+          bridge: () => bridge,
+          windows: () => [owner],
+          history: async () => [],
+        },
+        request,
+      ),
+  });
+  await commands.observe({
+    type: "session.select",
+    sessionId: "external-1",
+    viewerId: "tab",
+    deviceId: "phone",
+  });
+  await commands.prepare("tab", "phone", "external-1", { permissionMode: "default" });
+  expect(liveMode).toBe("default");
+
+  activeRun = true;
+  // Same configuration: reaches the service queue and reuses the live runtime.
+  await expect(
+    commands.prepare("tab", "phone", "external-1", { permissionMode: "default" }),
+  ).resolves.toMatchObject({ cwd: "/workspace" });
+  // A different mode under an open run is refused before anything applies.
+  const refused = await commands
+    .prepare("tab", "phone", "external-1", { permissionMode: "bypassPermissions" })
+    .catch((error: unknown) => error);
+  expect((refused as Error).message).toContain("当前任务仍在运行");
+  expect((refused as Error).message).toContain("下次发送时生效");
+  expect((refused as { code?: string }).code).toBe("EXTERNAL_RUNTIME_CONFIGURATION_LOCKED");
+  expect(liveMode).toBe("default");
+  expect(ensured).toEqual(["default", "default", "bypassPermissions"]);
+
+  // After the run ends the same request applies on the next send.
+  activeRun = false;
+  await commands.prepare("tab", "phone", "external-1", { permissionMode: "bypassPermissions" });
+  expect(liveMode).toBe("bypassPermissions");
 });

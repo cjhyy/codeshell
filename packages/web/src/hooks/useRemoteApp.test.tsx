@@ -5372,6 +5372,177 @@ describe("useRemoteApp CLI room controls", () => {
     }
   });
 
+  test("a Host bypass card for this tab's pending open shows before the room exists; a refusal is reported and late replies are ignored", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    const sent = () => ws.sent.map((payload) => JSON.parse(payload));
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        ws.message({ type: "room.projects.ok", projects: [{ path: "/repo", name: "repo" }] });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.selectProject("/repo");
+        hook.result.current.openCcSession("thread-new", "/repo", "bypassPermissions");
+        await flushMicrotasks();
+      });
+      const open = sent().findLast((event) => event.type === "ccRoom.openSession");
+      expect(open).toMatchObject({ sessionId: "thread-new", mode: "bypassPermissions" });
+      expect(typeof open.requestId).toBe("string");
+      expect(hook.result.current.ccModeRequest).toEqual({
+        mode: "bypassPermissions",
+        switching: false,
+      });
+      const card = (requestId: string, openRequestId: string) =>
+        ws.message({
+          type: "ccRoom.approvalRequest",
+          roomId: "room_reserved_1",
+          req: {
+            requestId,
+            toolName: "CodeShellRoomPermissionMode",
+            displayName: "Claude Code 切换为全放行（高风险）",
+            input: { cwd: "/repo" },
+            description: "Claude Code 将以 bypassPermissions 运行",
+            purpose: "room-permission-mode",
+            modeChange: {
+              sessionId: "thread-new",
+              kind: "claude-code",
+              cwd: "/repo",
+              toMode: "bypassPermissions",
+              openRequestId,
+            },
+          },
+        });
+      await act(async () => {
+        card("room-mode-other", "another-tab-request");
+        card("room-mode-mine", open.requestId);
+        // An ordinary CLI tool approval for a room this tab is not viewing.
+        ws.message({
+          type: "ccRoom.approvalRequest",
+          roomId: "room_reserved_1",
+          req: { requestId: "read-1", toolName: "Read", input: {} },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoomId).toBeUndefined();
+      expect(
+        hook.result.current.approvals.map((a) => [a.requestId, a.purpose, a.risk]),
+      ).toEqual([["room-mode-mine", "room-permission-mode", "high"]]);
+
+      await act(async () => {
+        ws.message({
+          type: "room.error",
+          requestId: open.requestId,
+          message: "全放行未获批准，权限模式未更改（已拒绝）。",
+        });
+        ws.message({
+          type: "ccRoom.approvalResolved",
+          roomId: "room_reserved_1",
+          requestId: "room-mode-mine",
+          decision: { behavior: "deny", message: "denied by user" },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.notice).toContain("未获批准");
+      expect(hook.result.current.ccModeRequest).toBeUndefined();
+      expect(hook.result.current.approvals).toEqual([]);
+
+      // A reply to the already-settled request cannot navigate afterwards.
+      await act(async () => {
+        ws.message({
+          type: "ccRoom.opened",
+          roomId: "room_reserved_1",
+          sessionId: "thread-new",
+          status: "running",
+          permissionMode: "bypassPermissions",
+          requestId: open.requestId,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoomId).toBeUndefined();
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("switching the viewed CLI room's mode keeps the conversation and shows only the Host-applied mode", async () => {
+    const { hook, ws, sent } = await openRoom();
+    try {
+      const subscriptions = () =>
+        sent().filter((event) => event.type === "ccRoom.subscribeTranscript").length;
+      const subscribedBefore = subscriptions();
+      await act(async () => {
+        hook.result.current.setCcRoomPermissionMode!("acceptEdits");
+        await flushMicrotasks();
+      });
+      const first = sent().findLast((event) => event.type === "ccRoom.openSession");
+      expect(first).toMatchObject({
+        sessionId: "thread-cli",
+        cwd: "/repo",
+        mode: "acceptEdits",
+        kind: "claude-code",
+      });
+      expect(hook.result.current.ccModeRequest).toEqual({ mode: "acceptEdits", switching: true });
+      // Until the Host confirms, the running mode is what is shown.
+      expect(hook.result.current.activeRoom?.permissionMode).toBe("bypassPermissions");
+
+      // A busy room refuses: nothing changes, the reason is visible.
+      await act(async () => {
+        ws.message({
+          type: "room.error",
+          requestId: first.requestId,
+          message: "该 CLI 会话仍有任务在运行或排队，请先停止或等待完成后再切换权限模式。",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.notice).toContain("仍有任务在运行");
+      expect(hook.result.current.activeRoom?.permissionMode).toBe("bypassPermissions");
+      expect(hook.result.current.activeRoomId).toBe(room.id);
+
+      await act(async () => {
+        hook.result.current.setCcRoomPermissionMode!("default");
+        await flushMicrotasks();
+      });
+      const second = sent().findLast((event) => event.type === "ccRoom.openSession");
+      await act(async () => {
+        // The reply to the refused request is stale and must not apply.
+        ws.message({
+          type: "ccRoom.opened",
+          roomId: room.id,
+          sessionId: "thread-cli",
+          status: "running",
+          permissionMode: "acceptEdits",
+          requestId: first.requestId,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoom?.permissionMode).toBe("bypassPermissions");
+      expect(hook.result.current.ccModeRequest).toEqual({ mode: "default", switching: true });
+      await act(async () => {
+        ws.message({
+          type: "ccRoom.opened",
+          roomId: room.id,
+          sessionId: "thread-cli",
+          status: "running",
+          permissionMode: "default",
+          changed: true,
+          requestId: second.requestId,
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoomId).toBe(room.id);
+      expect(hook.result.current.activeRoom?.permissionMode).toBe("default");
+      expect(hook.result.current.ccModeRequest).toBeUndefined();
+      // Same conversation: no reset, no second transcript subscription.
+      expect(subscriptions()).toBe(subscribedBefore);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("Stop in a running CLI room stops that room instead of a native session", async () => {
     const { hook, ws, sent } = await openRoom();
     try {

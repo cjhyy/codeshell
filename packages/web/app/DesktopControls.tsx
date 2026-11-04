@@ -25,27 +25,73 @@ const permissionModes: Array<{
   {
     value: "bypassPermissions",
     label: "跳过确认",
-    description: "在主机允许的范围内自动批准工具操作。",
+    description:
+      "自动批准所有工具操作。不在 Host 可信目录时需在 Host 审批卡中再次批准；Codex 会同时关闭沙箱。",
   },
 ];
+
+const permissionLabel = (mode: MobileRemotePermissionMode): string =>
+  permissionModes.find((entry) => entry.value === mode)?.label ?? mode;
+
+/** What restarting a CLI room under `mode` means, in words a phone user sees. */
+export function cliModeSwitchNotice(
+  kind: "claude-code" | "codex",
+  mode: MobileRemotePermissionMode,
+): string {
+  const applies =
+    kind === "codex"
+      ? "Codex 每条消息启动一个新进程，切换后从下一条消息开始生效"
+      : "会重启 Claude Code 进程，重启后生效";
+  const base = `CLI 的权限模式在进程启动时确定。切换为「${permissionLabel(mode)}」${applies}；有任务运行、排队或审批待处理时 Host 会拒绝切换。`;
+  if (mode !== "bypassPermissions") return base;
+  return kind === "codex"
+    ? `${base}\nCodex 全放行会关闭沙箱，命令和文件写入不再经过确认。不在 Host 可信目录时还需在 Host 审批卡中批准。`
+    : `${base}\nClaude Code 全放行会跳过所有工具确认。不在 Host 可信目录时还需在 Host 审批卡中批准。`;
+}
 
 export function DesktopChatControls({ app }: { app: RemoteApp }) {
   // A CLI room runs in the mode its process was started with. Show that mode
   // (or none while its metadata loads), never the native session's mode.
   const inRoom = Boolean(app.activeRoomId || app.activeRoom);
+  const room = app.activeRoom;
+  const pending = app.ccModeRequest?.switching ? app.ccModeRequest : undefined;
+  const roomSwitchable =
+    !!room &&
+    !!app.setCcRoomPermissionMode &&
+    !room.observing &&
+    !pending &&
+    app.status === "online";
+  const activeSession = app.sessions.find((session) => session.id === app.activeSessionId);
+  const externalRuntime =
+    activeSession?.provider === "codex" || activeSession?.provider === "claude-code";
+  const hint = inRoom
+    ? pending
+      ? `正在切换为「${permissionLabel(pending.mode)}」，等待 Host 确认…`
+      : room?.observing
+        ? "只读查看中，接管后才能切换权限模式。"
+        : room?.kind === "codex"
+          ? "切换后从下一条消息启动的 Codex 进程开始生效。"
+          : "切换会重启 CLI 进程，重启后生效。"
+    : externalRuntime
+      ? "下次发送生效；运行中变更需先停止。"
+      : "下次发送生效。";
   return (
     <div className="desktop-chat-controls">
-      <label
-        title={inRoom ? "CLI 会话的权限模式在打开时确定；离开后重新打开即可更改。" : undefined}
-      >
+      <label>
         <span className="desktop-permission-label">权限模式</span>
         <select
           aria-label="权限模式"
-          value={inRoom ? (app.activeRoom?.permissionMode ?? "") : app.permissionMode}
-          disabled={inRoom || app.outputHistoryFailed}
+          value={inRoom ? (room?.permissionMode ?? "") : app.permissionMode}
+          disabled={inRoom ? !roomSwitchable : app.outputHistoryFailed}
           onChange={(event) => {
-            if (inRoom || app.outputHistoryFailed) return;
             const mode = event.target.value as MobileRemotePermissionMode;
+            if (inRoom) {
+              if (!room || !roomSwitchable || mode === room.permissionMode) return;
+              if (!window.confirm(cliModeSwitchNotice(room.kind, mode))) return;
+              app.setCcRoomPermissionMode?.(mode);
+              return;
+            }
+            if (app.outputHistoryFailed) return;
             if (
               mode === "bypassPermissions" &&
               app.permissionMode !== mode &&
@@ -55,7 +101,7 @@ export function DesktopChatControls({ app }: { app: RemoteApp }) {
             app.setPermissionMode(mode);
           }}
         >
-          {inRoom && !app.activeRoom ? <option value="">读取中…</option> : null}
+          {inRoom && !room ? <option value="">读取中…</option> : null}
           {permissionModes.map((mode) => (
             <option key={mode.value} value={mode.value}>
               {mode.label}
@@ -63,6 +109,9 @@ export function DesktopChatControls({ app }: { app: RemoteApp }) {
           ))}
         </select>
       </label>
+      <span className="desktop-permission-hint" role="note">
+        {hint}
+      </span>
       {app.activeRoom ? (
         <>
           <span className="desktop-room-label">{app.activeRoom.name}</span>
@@ -441,6 +490,8 @@ function DesktopApprovalCard({ approval, app }: { approval: PendingApproval; app
     Boolean(approval.options?.length) ||
     approval.toolName === "__ask_user__" ||
     approval.toolName === "AskUserQuestion";
+  // A Host card for one CLI room mode change: no scope, no reuse.
+  const hostModeCard = approval.purpose === "room-permission-mode";
   const respond = (approved: boolean, selectedAnswer?: string) => {
     if (app.status !== "online") return;
     if (approval.roomId)
@@ -506,6 +557,8 @@ function DesktopApprovalCard({ approval, app }: { approval: PendingApproval; app
             </>
           ) : null}
         </>
+      ) : hostModeCard ? (
+        <div className="approval-desc">只对这一次切换有效；拒绝或超时会保持当前模式。</div>
       ) : (
         <div className="desktop-approval-scope">
           <label>
@@ -539,11 +592,11 @@ function DesktopApprovalCard({ approval, app }: { approval: PendingApproval; app
       <div className="approval-actions">
         {!isAsk ? (
           <button className="send" disabled={app.status !== "online"} onClick={() => respond(true)}>
-            允许
+            {hostModeCard ? "批准全放行" : "允许"}
           </button>
         ) : null}
         <button className="stop" disabled={app.status !== "online"} onClick={() => respond(false)}>
-          拒绝
+          {hostModeCard ? "保持当前模式" : "拒绝"}
         </button>
       </div>
     </div>

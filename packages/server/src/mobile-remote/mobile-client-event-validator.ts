@@ -241,7 +241,8 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         boundedString(event.sessionId, MAX_ID_LENGTH) &&
         boundedPath(event.cwd) &&
         member(event.mode, PERMISSION_MODES) &&
-        optionalMember(event.kind, KINDS);
+        optionalMember(event.kind, KINDS) &&
+        optionalBoundedString(event.requestId, MAX_ID_LENGTH);
       break;
     case "ccRoom.subscribeTranscript":
       valid =

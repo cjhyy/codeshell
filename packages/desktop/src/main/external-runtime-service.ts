@@ -83,6 +83,12 @@ import type { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertOutputHistoryWriteAvailable } from "./session-output-history-lease.js";
 import { ExternalRuntimeDeltaBuffer } from "./external-runtime-delta-buffer.js";
 
+/**
+ * `code` of the refusal to change a runtime's model/permission/instructions
+ * while its run is open. Callers branch on this, never on the message text.
+ */
+export const EXTERNAL_RUNTIME_CONFIGURATION_LOCKED = "EXTERNAL_RUNTIME_CONFIGURATION_LOCKED";
+
 export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
   goal?: string | GoalConfig;
   disableGoal?: boolean;
@@ -743,7 +749,10 @@ export class ExternalRuntimeService {
         entry?.recorder.hasOpenRun &&
         entry.configurationKey !== this.configurationKey(continuation)
       )
-        throw new Error("Stop the running task before changing its runtime configuration");
+        throw Object.assign(
+          new Error("Stop the running task before changing its runtime configuration"),
+          { code: EXTERNAL_RUNTIME_CONFIGURATION_LOCKED },
+        );
       return this.ensureExclusive(continuation);
     });
   }

@@ -269,6 +269,9 @@ export type MobileClientEvent =
       cwd: string;
       mode: PermissionMode;
       kind?: "claude-code" | "codex";
+      /** Client correlation id, echoed on ccRoom.opened / room.error and on a
+       * Host mode-approval card for this open. Never an authorization input. */
+      requestId?: string;
     }
   | {
       type: "ccRoom.subscribeTranscript";
@@ -504,6 +507,18 @@ export type MobileServerEvent =
         displayName?: string;
         input: unknown;
         description?: string;
+        /** Set only on Host-generated cards (never on CLI tool approvals). */
+        purpose?: "room-permission-mode";
+        /** Binding of a Host room permission-mode card, for display/correlation. */
+        modeChange?: {
+          sessionId: string;
+          kind: "claude-code" | "codex";
+          cwd: string;
+          fromMode?: PermissionMode;
+          toMode: PermissionMode;
+          /** Echo of the requesting view's ccRoom.openSession requestId. */
+          openRequestId?: string;
+        };
         /** AskUserQuestion only: parsed prompt + option labels for a choice card.
          * `questions` lists every question when the request asks more than one. */
         askUser?: {
@@ -543,6 +558,10 @@ export type MobileServerEvent =
       status: "running" | "missing" | "observing";
       /** Mode the room's CLI runs in (a spawn-time argument); omitted by older hosts. */
       permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
+      /** Echo of ccRoom.openSession.requestId. */
+      requestId?: string;
+      /** True when the process was (re)started under a new mode. */
+      changed?: boolean;
     }
   | {
       type: "ccRoom.transcriptSubscribed";
@@ -579,6 +598,8 @@ export interface RoomPublic {
   open: boolean;
   /** True when the room is bound for transcript observation and cannot send. */
   observing: boolean;
+  /** External CLI session/thread id bound to the room, when there is one. */
+  sessionId?: string;
 }
 
 /** A desktop session the phone can see + drive (from listDiskSessions). */

@@ -73,8 +73,13 @@ import {
   getSessionWorkspaceAuthorityForUi,
 } from "./session-workspace-service.js";
 
+import {
+  canonicalRoomDirectory,
+  mobileRoomModeRequesterKey,
+  type RoomModeAuthority,
+} from "./cc-room/room-mode-authority.js";
+
 export { injectAndAwaitResult } from "./mobile-remote/handle-client-event.js";
-export { resolveRoomPermissionMode } from "./mobile-remote/handle-room-event.js";
 export type { AuthenticatedMobileClientEvent } from "./mobile-remote/handle-client-event.js";
 
 export interface MobileRemoteOrchestratorDeps {
@@ -90,6 +95,8 @@ export interface MobileRemoteOrchestratorDeps {
   getExternalRuntimeModels?: () => Promise<ExternalRuntimeModelEntry[]>;
   startMobileRuntime?: (request: MobileRuntimeStart) => Promise<void>;
   getExternalRuntimeApprovals?: () => ExternalRuntimeApprovals | null;
+  /** Host authority for external CLI room permission modes. */
+  roomModes?: RoomModeAuthority;
   /** Send an IPC payload to every live desktop window. */
   broadcastToWindows: (channel: string, payload: unknown) => void;
 }
@@ -161,6 +168,9 @@ export class MobileRemoteOrchestrator {
   releaseViewer(viewerId: string): void {
     this.outputRecovery.revoke(viewerId);
     this.externalCommands.revoke(viewerId, true);
+    // A disconnected tab cannot keep a mode-change card alive. A room that is
+    // already running legitimately is not touched.
+    this.deps.roomModes?.cancelRequester(mobileRoomModeRequesterKey(viewerId));
   }
 
   /** Installed once by Main's shared Desktop/mobile history composition. */
@@ -487,6 +497,8 @@ export class MobileRemoteOrchestrator {
       broadcastMobileSession: (meta) => this.broadcastMobileSession(meta),
       broadcastApprovalResolved: (params) => this.broadcastApprovalResolved(params),
       roomToPublic: (room) => this.roomToPublic(room),
+      ...(this.deps.roomModes ? { roomModes: this.deps.roomModes } : {}),
+      broadcastRoomState: (roomId) => this.broadcastRoomState(roomId),
       roomMatchesTranscript: (roomId, cwd, sessionId, kind) =>
         this.roomMatchesTranscript(roomId, cwd, sessionId, kind),
       sendProjectList: (deviceId) => this.sendProjectList(deviceId),
@@ -513,12 +525,27 @@ export class MobileRemoteOrchestrator {
     createdAt: number;
     lastActiveAt: number;
     linkedSessionMode?: "observe-only";
+    claudeSessionId?: string;
   }): RoomPublic {
     return {
       ...room,
       open: this.deps.roomManager.isOpen(room.id),
       observing: room.linkedSessionMode === "observe-only",
+      ...(room.claudeSessionId ? { sessionId: room.claudeSessionId } : {}),
     };
+  }
+
+  /**
+   * Publish a room's authoritative mode/status to every phone and Desktop
+   * window after it changed, so no view keeps showing the mode it opened with.
+   */
+  broadcastRoomState(roomId: string): void {
+    const room = this.deps.roomManager.getRoom(roomId);
+    this.deps.remote.broadcast({
+      type: "room.list.ok",
+      rooms: this.deps.roomManager.listRooms().map((r) => this.roomToPublic(r)),
+    });
+    if (room) this.deps.broadcastToWindows("ccRoom:roomState", this.roomToPublic(room));
   }
 
   roomMatchesTranscript(
@@ -528,8 +555,12 @@ export class MobileRemoteOrchestrator {
     kind: "claude-code" | "codex",
   ): boolean {
     const room = this.deps.roomManager.getRoom(roomId);
+    // Rooms opened through the Host authority store the canonical directory.
     return Boolean(
-      room && room.cwd === cwd && room.claudeSessionId === sessionId && room.kind === kind,
+      room &&
+      canonicalRoomDirectory(room.cwd) === canonicalRoomDirectory(cwd) &&
+      room.claudeSessionId === sessionId &&
+      room.kind === kind,
     );
   }
 

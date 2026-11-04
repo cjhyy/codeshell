@@ -5,6 +5,15 @@ import { handleCcRoomEvent } from "./handle-cc-room-event.js";
 function harness() {
   const viewers: Array<[string, Record<string, unknown>]> = [];
   const bridge = new ApprovalBridge({ onPush: () => undefined });
+  const opens: Array<Record<string, any>> = [];
+  const broadcasts: string[] = [];
+  let online = true;
+  let openResult: () => Promise<Record<string, unknown>> = async () => ({
+    roomId: "room-a",
+    status: "running",
+    mode: "default",
+    changed: false,
+  });
   const ctx = {
     approvalBridge: bridge,
     remote: {
@@ -12,10 +21,15 @@ function harness() {
         viewers.push([viewerId, event]),
       sendToDevice: () => undefined,
       broadcast: () => undefined,
+      hasAuthenticatedViewer: () => online,
     },
-    roomManager: {
-      openForSession: () => ({ roomId: "room-a", status: "running" }),
+    roomModes: {
+      openSession: async (input: Record<string, any>) => {
+        opens.push(input);
+        return openResult();
+      },
     },
+    broadcastRoomState: (roomId: string) => broadcasts.push(roomId),
     roomMatchesTranscript: () => true,
     transcriptSubscriptions: {
       subscribe: () => ({
@@ -27,8 +41,89 @@ function harness() {
       }),
     },
   } as any;
-  return { ctx, bridge, viewers };
+  return {
+    ctx,
+    bridge,
+    viewers,
+    opens,
+    broadcasts,
+    setOnline: (value: boolean) => (online = value),
+    setOpenResult: (value: typeof openResult) => (openResult = value),
+  };
 }
+
+test("phone open goes through the Host authority, echoes requestId and reports the applied mode", async () => {
+  const f = harness();
+  f.setOpenResult(async () => ({
+    roomId: "room-a",
+    status: "running",
+    mode: "bypassPermissions",
+    changed: true,
+  }));
+  await handleCcRoomEvent(f.ctx, {
+    type: "ccRoom.openSession",
+    sessionId: "thread-a",
+    cwd: "/repo",
+    mode: "bypassPermissions",
+    kind: "codex",
+    requestId: "open-1",
+    deviceId: "device",
+    viewerId: "tab-1",
+  });
+  expect(f.opens).toHaveLength(1);
+  expect(f.opens[0]).toMatchObject({
+    sessionId: "thread-a",
+    cwd: "/repo",
+    kind: "codex",
+    mode: "bypassPermissions",
+    requester: { key: "mobile:tab-1", channel: "mobile", openRequestId: "open-1" },
+  });
+  // The requester binding fails closed once the paired tab is gone.
+  expect(() => f.opens[0]!.requester.assertCurrent()).not.toThrow();
+  f.setOnline(false);
+  expect(() => f.opens[0]!.requester.assertCurrent()).toThrow();
+  expect(f.viewers[0]).toEqual([
+    "tab-1",
+    {
+      type: "ccRoom.opened",
+      roomId: "room-a",
+      sessionId: "thread-a",
+      status: "running",
+      permissionMode: "bypassPermissions",
+      changed: true,
+      requestId: "open-1",
+    },
+  ]);
+  // Every other view learns the authoritative mode.
+  expect(f.broadcasts).toEqual(["room-a"]);
+});
+
+test("a refused open (denied approval, busy room) is a visible error tied to its request, never a silent downgrade", async () => {
+  const f = harness();
+  f.setOpenResult(async () => {
+    throw new Error("全放行未获批准，权限模式未更改（已拒绝）。");
+  });
+  await handleCcRoomEvent(f.ctx, {
+    type: "ccRoom.openSession",
+    sessionId: "thread-a",
+    cwd: "/repo",
+    mode: "bypassPermissions",
+    requestId: "open-2",
+    deviceId: "device",
+    viewerId: "tab-1",
+  });
+  expect(f.viewers).toEqual([
+    [
+      "tab-1",
+      {
+        type: "room.error",
+        message: "全放行未获批准，权限模式未更改（已拒绝）。",
+        requestId: "open-2",
+      },
+    ],
+  ]);
+  expect(f.broadcasts).toEqual([]);
+});
 
 test("returning to a CLI room replays its still-pending approvals to that viewer", async () => {
   const { ctx, bridge, viewers } = harness();

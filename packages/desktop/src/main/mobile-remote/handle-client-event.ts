@@ -17,6 +17,10 @@ import { transcriptUserDisplay } from "@cjhyy/code-shell-web";
 import { listDiskSessions } from "@cjhyy/code-shell-server/storage";
 import type { AgentBridge } from "../agent-bridge.js";
 import type { ApprovalBridge } from "../cc-room/approval-bridge.js";
+import {
+  mobileRoomModeRequesterKey,
+  type RoomModeAuthority,
+} from "../cc-room/room-mode-authority.js";
 import type { TranscriptSubscriptionManager } from "../cc-room/transcript-subscriptions.js";
 import { getSessionTranscript } from "../transcript-reader.js";
 import { handleCcRoomEvent } from "./handle-cc-room-event.js";
@@ -124,6 +128,10 @@ export interface OrchestratorCtx {
     answer?: string;
   }) => void;
   roomToPublic: (room: RoomMeta) => RoomPublic;
+  /** Host authority for external CLI room permission modes. */
+  roomModes?: RoomModeAuthority;
+  /** Publish a room's authoritative mode/status to every phone and window. */
+  broadcastRoomState?: (roomId: string) => void;
   roomMatchesTranscript: (
     roomId: string,
     cwd: string,
@@ -276,6 +284,18 @@ export async function handleClientEvent(
     );
     return;
   }
+  // Navigating elsewhere retires this tab's pending CLI permission-mode card
+  // (a newer ccRoom.openSession supersedes it inside the authority). Rooms
+  // that already run are never stopped by this.
+  if (
+    event.viewerId &&
+    (event.type === "session.select" ||
+      event.type === "session.create" ||
+      event.type === "room.open" ||
+      event.type === "room.create" ||
+      event.type === "ccRoom.unsubscribeTranscript")
+  )
+    ctx.roomModes?.cancelRequester(mobileRoomModeRequesterKey(event.viewerId));
   const commandSelection = ctx.externalCommands?.observe(event);
   if (ctx.outputRecovery) {
     const recovery = ctx.outputRecovery.handle(event);

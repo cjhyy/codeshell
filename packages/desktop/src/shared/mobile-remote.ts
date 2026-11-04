@@ -31,6 +31,13 @@ export interface MobilePermissionModeSnapshotEntry {
   mode: MobilePermissionMode;
 }
 
+/** ccRoom:openSession result: the mode Main actually started the CLI with. */
+export interface CcRoomOpenResult {
+  roomId: string;
+  status: "running" | "missing" | "observing";
+  permissionMode?: MobilePermissionMode;
+}
+
 export interface MobileRemoteApi {
   relay: DesktopRelayApi;
   start(opts?: { mode?: "lan" | "tunnel" | "relay" }): Promise<{

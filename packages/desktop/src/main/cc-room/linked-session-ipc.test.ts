@@ -129,7 +129,7 @@ function managerDouble(): {
           cwd: "/canonical/project",
         };
       },
-      takeOverLinkedSession: (roomId, externalSessionId, cwd, kind) => {
+      takeOverLinkedSession: async (roomId, externalSessionId, cwd, kind) => {
         calls.push(["takeover", roomId, externalSessionId, cwd, kind]);
         return {
           roomId,
@@ -154,11 +154,11 @@ describe("linked-session IPC handlers", () => {
     expect(calls).toEqual([["open", "thread-1", "/project", "codex"]]);
   });
 
-  test("takeover is a separate explicit operation", () => {
+  test("takeover is a separate explicit operation", async () => {
     const { manager, calls } = managerDouble();
-    expect(
+    await expect(
       takeOverLinkedSessionFromIpc(manager, "room_one_two", "claude-1", "/project", "claude-code"),
-    ).toEqual({
+    ).resolves.toEqual({
       roomId: "room_one_two",
       status: "running",
       mode: "default",

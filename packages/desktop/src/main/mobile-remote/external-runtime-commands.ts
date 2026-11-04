@@ -13,6 +13,10 @@ import type {
   ExternalRuntimeApprovals,
 } from "../external-runtime-approvals.js";
 
+/** Mirrors external-runtime-service's EXTERNAL_RUNTIME_CONFIGURATION_LOCKED
+ * (kept local so this module stays free of the service's runtime imports). */
+const EXTERNAL_RUNTIME_CONFIGURATION_LOCKED = "EXTERNAL_RUNTIME_CONFIGURATION_LOCKED";
+
 /** Persisted provider identity survives a missing/invalid model key. */
 export function isPersistedExternalRuntime(
   state: { provider?: string; model?: string } | undefined,
@@ -82,7 +86,8 @@ export class MobileExternalRuntimeCommands {
   // A retired external selection cannot become a native producer merely
   // because its state disappeared or was recreated under the same ID.
   private readonly externalRoutes = new Map<string, string>();
-  private readonly preparing = new Set<string>();
+  /** Per-Session startup queue; a later preparation waits for the earlier one. */
+  private readonly preparing = new Map<string, Promise<void>>();
   constructor(private readonly deps: MobileExternalRuntimeCommandsDeps) {}
 
   /** Only the Host's successful session.create path may grant a fresh, unpersisted ID. */
@@ -135,19 +140,23 @@ export class MobileExternalRuntimeCommands {
     const modelKey = options?.modelKey ?? persisted;
     if (!modelKey || !parseExternalRuntimeModelKey(modelKey))
       throw new Error("Select a Claude Code or Codex model before starting this session");
-    // Do not replace an active provider merely because another client sends a different model.
-    if (
-      service?.get(sessionId) &&
-      selection.owner !== undefined &&
-      service.captureActiveRun(sessionId, selection.owner)
-    ) {
-      if (options?.modelKey && options.modelKey !== persisted)
-        throw new Error("Stop the running task before changing its runtime model");
-      return;
-    }
-    if (this.preparing.has(sessionId)) throw new Error("External runtime is already starting");
-    this.preparing.add(sessionId);
+    // No active-run shortcut: even while a turn runs, every request goes
+    // through the service's lifecycle queue (ensureContinuation). It reuses a
+    // runtime whose model/permission configuration is unchanged — so a
+    // same-mode send queues behind the turn — and refuses a model or
+    // permission change under an open run before anything is persisted or
+    // announced as applied. Concurrent preparations of one Session queue here.
+    const previous = this.preparing.get(sessionId);
+    let releaseSlot!: () => void;
+    const slot = new Promise<void>((resolve) => {
+      releaseSlot = resolve;
+    });
+    this.preparing.set(sessionId, slot);
     try {
+      if (previous) {
+        await previous;
+        this.assertSelection(viewer, device, selection);
+      }
       if (selection.fresh && this.deps.exists(sessionId))
         throw new Error("New mobile Session was replaced before startup");
       if (!selection.fresh) {
@@ -168,24 +177,35 @@ export class MobileExternalRuntimeCommands {
       // startRuntime establishes an owner once. Subsequent checks use the returned owner;
       // its own start fence validates the captured BrowserWindow across every await.
       const oldOwner = selection.owner;
-      await this.deps.startRuntime({
-        sessionId,
-        cwd: selection.authority.cwd,
-        mainRoot: selection.authority.mainRoot,
-        modelKey,
-        permissionMode: options?.permissionMode,
-        owner: oldOwner,
-        assertCurrent: () => {
-          this.assertSelection(viewer, device, selection);
-          if (
-            this.deps.service() !== service ||
-            (oldOwner !== undefined &&
-              this.deps.owner(sessionId) !== undefined &&
-              this.deps.owner(sessionId) !== oldOwner)
-          )
-            throw new Error("External runtime owner changed while starting");
-        },
-      });
+      try {
+        await this.deps.startRuntime({
+          sessionId,
+          cwd: selection.authority.cwd,
+          mainRoot: selection.authority.mainRoot,
+          modelKey,
+          permissionMode: options?.permissionMode,
+          owner: oldOwner,
+          assertCurrent: () => {
+            this.assertSelection(viewer, device, selection);
+            if (
+              this.deps.service() !== service ||
+              (oldOwner !== undefined &&
+                this.deps.owner(sessionId) !== undefined &&
+                this.deps.owner(sessionId) !== oldOwner)
+            )
+              throw new Error("External runtime owner changed while starting");
+          },
+        });
+      } catch (error) {
+        if ((error as { code?: unknown } | null)?.code === EXTERNAL_RUNTIME_CONFIGURATION_LOCKED)
+          throw Object.assign(
+            new Error(
+              "当前任务仍在运行，不能更改权限模式或模型。请先停止任务；新设置在下次发送时生效。",
+            ),
+            { code: EXTERNAL_RUNTIME_CONFIGURATION_LOCKED },
+          );
+        throw error;
+      }
       this.assertSelection(viewer, device, selection);
       if (this.deps.service() !== service) throw new Error("External runtime service changed");
       const authority = await this.deps.authority(sessionId);
@@ -195,26 +215,30 @@ export class MobileExternalRuntimeCommands {
       selection.fresh = false;
       assertCurrent();
     } finally {
-      this.preparing.delete(sessionId);
-      // Startup can persist the canonical Session before a CLI launch fails. Keep
-      // that exact authorized root retryable without inventing a new native route.
-      if (
-        selection.fresh &&
-        this.deps.exists(sessionId) &&
-        this.deps.modelKey?.(sessionId) === modelKey
-      ) {
-        try {
-          this.assertSelection(viewer, device, selection);
-          const authority = await this.deps.authority(sessionId);
-          this.assertSelection(viewer, device, selection);
-          if (authority.cwd === selection.authority.cwd) {
-            selection.authority = authority;
-            selection.owner = this.deps.owner(sessionId);
-            selection.fresh = false;
+      try {
+        // Startup can persist the canonical Session before a CLI launch fails. Keep
+        // that exact authorized root retryable without inventing a new native route.
+        if (
+          selection.fresh &&
+          this.deps.exists(sessionId) &&
+          this.deps.modelKey?.(sessionId) === modelKey
+        ) {
+          try {
+            this.assertSelection(viewer, device, selection);
+            const authority = await this.deps.authority(sessionId);
+            this.assertSelection(viewer, device, selection);
+            if (authority.cwd === selection.authority.cwd) {
+              selection.authority = authority;
+              selection.owner = this.deps.owner(sessionId);
+              selection.fresh = false;
+            }
+          } catch {
+            /* A revoked or replaced workspace stays rejected. */
           }
-        } catch {
-          /* A revoked or replaced workspace stays rejected. */
         }
+      } finally {
+        if (this.preparing.get(sessionId) === slot) this.preparing.delete(sessionId);
+        releaseSlot();
       }
     }
   }

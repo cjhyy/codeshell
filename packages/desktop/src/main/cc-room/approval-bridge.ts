@@ -26,6 +26,17 @@ export interface ApprovalRequestPayload {
    *  so the UI renders a choice card instead of a yes/no permission card.
    *  `questions` lists every question when one request asks several. */
   askUser?: AskUserPrompt & { questions?: AskUserPrompt[] };
+  /** Only Host-generated cards set this. RoomManager's CLI tool approvals are
+   * built field by field and never carry it, so a CLI cannot mint one. */
+  purpose?: "room-permission-mode";
+  modeChange?: {
+    sessionId: string;
+    kind: "claude-code" | "codex";
+    cwd: string;
+    fromMode?: "default" | "acceptEdits" | "bypassPermissions";
+    toMode: "default" | "acceptEdits" | "bypassPermissions";
+    openRequestId?: string;
+  };
 }
 
 interface Pending {

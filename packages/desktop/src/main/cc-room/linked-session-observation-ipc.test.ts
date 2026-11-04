@@ -72,7 +72,7 @@ async function fixture() {
         calls.open.push(args);
         return { roomId: "room-1", cwd, status: "observing", mode: "default" };
       },
-      takeOverLinkedSession: (...args) => {
+      takeOverLinkedSession: async (...args) => {
         calls.takeover.push(args);
         return { roomId: "room-1", cwd, status: "running", mode: "default" };
       },

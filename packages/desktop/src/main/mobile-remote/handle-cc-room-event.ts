@@ -14,7 +14,7 @@ import {
   type MobileServerEvent,
 } from "@cjhyy/code-shell-server/mobile-remote";
 import type { AuthenticatedMobileClientEvent, OrchestratorCtx } from "./handle-client-event.js";
-import { resolveRoomPermissionMode } from "./handle-room-event.js";
+import { mobileRoomModeRequesterKey } from "../cc-room/room-mode-authority.js";
 
 /**
  * CC Room (external `claude` CLI sessions) for mobile — mirrors the desktop
@@ -82,22 +82,45 @@ export async function handleCcRoomEvent(
       return;
     }
     if (event.type === "ccRoom.openSession") {
-      const mode = await resolveRoomPermissionMode(event.cwd, event.mode);
-      const { roomId, status } = ctx.roomManager.openForSession(
-        event.sessionId,
-        event.cwd,
-        mode,
-        event.kind ?? "claude-code",
-      );
-      reply({
-        type: "ccRoom.opened",
-        roomId,
-        sessionId: event.sessionId,
-        status,
-        // openForSession persists and (re)spawns with exactly this mode.
-        permissionMode: mode,
-      });
-      replayPendingApprovals(roomId);
+      const requestId = event.requestId;
+      try {
+        if (!ctx.roomModes) throw new Error("Host 权限模式授权不可用，无法打开 CLI 会话。");
+        const viewerId = event.viewerId;
+        const result = await ctx.roomModes.openSession({
+          sessionId: event.sessionId,
+          cwd: event.cwd,
+          kind: event.kind ?? "claude-code",
+          mode: event.mode,
+          requester: {
+            key: mobileRoomModeRequesterKey(viewerId ?? `device:${deviceId ?? ""}`),
+            channel: "mobile",
+            ...(requestId ? { openRequestId: requestId } : {}),
+            assertCurrent: () => {
+              if (!viewerId || !deviceId || !ctx.remote.hasAuthenticatedViewer(viewerId, deviceId))
+                throw new Error("requester disconnected");
+            },
+          },
+        });
+        reply({
+          type: "ccRoom.opened",
+          roomId: result.roomId,
+          sessionId: event.sessionId,
+          status: result.status,
+          // The mode the process actually runs in, never just the request.
+          permissionMode: result.mode,
+          changed: result.changed,
+          ...(requestId ? { requestId } : {}),
+        });
+        // Other phones and Desktop windows must not keep showing the old mode.
+        if (result.changed) ctx.broadcastRoomState?.(result.roomId);
+        replayPendingApprovals(result.roomId);
+      } catch (error) {
+        reply({
+          type: "room.error",
+          message: error instanceof Error ? error.message : String(error),
+          ...(requestId ? { requestId } : {}),
+        });
+      }
       return;
     }
     if (event.type === "ccRoom.subscribeTranscript") {

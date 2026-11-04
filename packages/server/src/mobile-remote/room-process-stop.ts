@@ -26,6 +26,49 @@ export function stopRoomProcess(child: ChildProcess): void {
 }
 
 /**
+ * Resolve true once `child` has exited (or never started a process), false
+ * when it is still alive after `timeoutMs`. A replacement CLI for the same
+ * external session may only start after this resolves true; otherwise two
+ * processes could append to one transcript.
+ */
+export function waitForRoomProcessExit(child: ChildProcess, timeoutMs: number): Promise<boolean> {
+  if (child.exitCode !== null || child.signalCode !== null || child.pid === undefined)
+    return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const onExit = (): void => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    const timer = setTimeout(() => {
+      child.off("exit", onExit);
+      resolve(false);
+    }, timeoutMs);
+    timer.unref?.();
+    child.once("exit", onExit);
+  });
+}
+
+/** Signal the process group, then wait (bounded) for the child to exit. */
+export function stopRoomProcessAndWait(child: ChildProcess, timeoutMs: number): Promise<boolean> {
+  const exited = waitForRoomProcessExit(child, timeoutMs);
+  stopRoomProcess(child);
+  return exited;
+}
+
+/**
+ * Resolve once a just-spawned child exists. Node assigns `pid` synchronously
+ * for a successful spawn; a failed spawn (missing command/cwd) has no pid and
+ * reports the failure through `error` on a later tick.
+ */
+export function waitForRoomProcessSpawn(child: ChildProcess): Promise<void> {
+  if (child.pid !== undefined) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    child.once("spawn", () => resolve());
+    child.once("error", (error) => reject(error));
+  });
+}
+
+/**
  * `close` waits for every holder of the child's stdout/stderr. A grandchild the
  * CLI backgrounded with inherited stdio (a dev server, say) keeps them open
  * after the CLI exits, so the room would never settle. Once the CLI has exited

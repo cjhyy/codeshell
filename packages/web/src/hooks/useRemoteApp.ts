@@ -97,6 +97,8 @@ export interface PendingApproval {
   asynchronous?: boolean;
   /** True for path-scoped tools (Read/Edit/Write/…) → show file/dir scope. */
   pathScoped: boolean;
+  /** Host-generated card (not a CLI tool call): a one-time room mode approval. */
+  purpose?: "room-permission-mode";
 }
 
 export interface RemoteApp {
@@ -210,6 +212,10 @@ export interface RemoteApp {
   ccCliKind: CcCliKind;
   setCcCliKind: (kind: CcCliKind) => void;
   openCcSession: (sessionId: string, cwd: string, mode: PermissionMode) => void;
+  /** Restart the viewed CLI room under another mode (Host may require approval). */
+  setCcRoomPermissionMode?: (mode: PermissionMode) => void;
+  /** This tab's in-flight CLI open / mode switch, until the Host answers. */
+  ccModeRequest?: { mode: PermissionMode; switching: boolean };
   respondCcApproval: (roomId: string, requestId: string, decision: CcApprovalDecision) => void;
 }
 
@@ -646,11 +652,23 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
    * independently while this room stays open, so reconnect must not derive the
    * subscription cwd from activeProjectCwd. */
   const ccHistoryCwdRef = useRef<string | undefined>(undefined);
-  /** openSession replies do not echo cwd. Keep it keyed by the requested
-   * session until ccRoom.opened confirms which room acquired it. The
-   * conversation revision of the request lets a reply that arrives after the
+  /** The single in-flight CLI open/mode-switch request of this tab. Replies are
+   * matched by its requestId (sessionId for older hosts that do not echo it),
+   * so a late reply to a superseded request can neither navigate nor overwrite
+   * newer state. The conversation revision lets a reply that arrives after the
    * user navigated elsewhere be discarded instead of navigating back. */
-  const pendingCcOpensRef = useRef<Map<string, { cwd: string; revision: number }>>(new Map());
+  const pendingCcOpenRef = useRef<{
+    requestId: string;
+    sessionId: string;
+    cwd: string;
+    mode: PermissionMode;
+    revision: number;
+    /** True for a mode switch of the room this tab is already viewing. */
+    switching: boolean;
+  } | null>(null);
+  const [ccModeRequest, setCcModeRequest] = useState<
+    { mode: PermissionMode; switching: boolean } | undefined
+  >(undefined);
   const ccBacklogLoadedRef = useRef(false);
   /** Which CLI the currently-open cc session belongs to — selects the on-disk
    *  history reader (claude vs codex rollout) for ccRoom.readHistory. Captured
@@ -1623,7 +1641,17 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             setNotice(event.message);
           }
           break;
-        case "room.error":
+        case "room.error": {
+          const failed = pendingCcOpenRef.current;
+          if (event.requestId && failed && event.requestId === failed.requestId) {
+            // The Host refused this tab's CLI open / mode switch (approval
+            // denied, timed out, busy room, …). Nothing changed; say why.
+            pendingCcOpenRef.current = null;
+            setCcModeRequest(undefined);
+            if (failed.revision === conversationRevisionRef.current)
+              setNotice(event.message || t("mobile.notice.ccRoomOpenFailed"));
+            break;
+          }
           if (event.requestId && event.requestId !== roomCatchupRef.current?.requestId) break;
           if (
             event.roomId === activeRoomIdRef.current &&
@@ -1637,6 +1665,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           }
           setNotice(event.message || t("mobile.notice.roomError"));
           break;
+        }
         case "error":
           if (event.clientRequestId && !failSessionCreation(event.clientRequestId)) break;
           if (event.approvalId) {
@@ -1713,12 +1742,38 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           }
           break;
         case "ccRoom.opened": {
-          const request = pendingCcOpensRef.current.get(event.sessionId);
-          pendingCcOpensRef.current.delete(event.sessionId);
+          const request = pendingCcOpenRef.current;
+          // Hosts that echo requestId are matched exactly; older hosts by session.
+          const matches =
+            !!request &&
+            (event.requestId !== undefined
+              ? event.requestId === request.requestId
+              : event.sessionId === request.sessionId);
+          if (!request || !matches) break;
+          pendingCcOpenRef.current = null;
+          setCcModeRequest(undefined);
           // Only this browser's latest open request may change navigation.
-          if (!request || request.revision !== conversationRevisionRef.current) break;
+          if (request.revision !== conversationRevisionRef.current) break;
           if (event.status === "missing") {
             setNotice(t("mobile.notice.ccRoomOpenFailed"));
+            break;
+          }
+          if (request.switching && event.roomId === activeRoomIdRef.current) {
+            // Same conversation, restarted under a new mode: keep the feed and
+            // subscription, only adopt the mode the Host actually applied.
+            setRooms((previous) =>
+              previous.map((room) =>
+                room.id === event.roomId
+                  ? {
+                      ...room,
+                      open: event.status === "running",
+                      observing: event.status === "observing",
+                      ...(event.permissionMode ? { permissionMode: event.permissionMode } : {}),
+                    }
+                  : room,
+              ),
+            );
+            sendRef.current?.({ type: "room.list" });
             break;
           }
           outputClient.cancel();
@@ -1816,12 +1871,24 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           break;
         case "ccRoom.approvalRequest": {
           // Only surface for the room this phone is viewing (rooms are shared, but
-          // an approval card for some other room would be confusing here).
-          if (event.roomId !== activeRoomIdRef.current) break;
-          const { summary, risk } = summarizeApproval(
+          // an approval card for some other room would be confusing here) — or
+          // the Host mode card of this tab's own pending open, whose room may
+          // not exist (or be bound here) yet.
+          const forPendingOpen =
+            event.req.purpose === "room-permission-mode" &&
+            !!event.req.modeChange?.openRequestId &&
+            event.req.modeChange.openRequestId === pendingCcOpenRef.current?.requestId;
+          if (event.roomId !== activeRoomIdRef.current && !forPendingOpen) break;
+          const summarized = summarizeApproval(
             event.req.input as Record<string, unknown> | undefined,
             undefined,
           );
+          const hostModeCard = event.req.purpose === "room-permission-mode";
+          const risk = hostModeCard ? ("high" as const) : summarized.risk;
+          const summary =
+            hostModeCard && event.req.modeChange
+              ? `${event.req.modeChange.cwd} · ${event.req.modeChange.fromMode ?? "新打开"} → ${event.req.modeChange.toMode}`
+              : summarized.summary;
           // AskUserQuestion is parsed in main → `askUser` carries the question +
           // option labels. Render a choice card; the chosen label is sent back as
           // the decision's `answer` (main bakes it into the CLI's `answers`
@@ -1846,6 +1913,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
                       ? { questions: askUser.questions }
                       : {}),
                     pathScoped: PATH_SCOPED.has(event.req.toolName),
+                    ...(hostModeCard ? { purpose: "room-permission-mode" as const } : {}),
                   },
                 ],
           );
@@ -2113,6 +2181,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     nativeModelSelectionRef.current = false;
     setNativeModelSelection(false);
     creationPermissionEchoRef.current = null;
+    // The Host cancels a disconnected tab's pending CLI mode request; its reply
+    // can never reach this socket, so stop showing it as pending.
+    if (pendingCcOpenRef.current) {
+      pendingCcOpenRef.current = null;
+      setCcModeRequest(undefined);
+    }
     failSessionCreation();
     sessionListRequestRef.current = undefined;
     setLoadingKey("sessions", false);
@@ -2547,13 +2621,74 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       // Pin the CLI this session belongs to so its on-disk backlog is read with
       // the right reader even if the user switches the pane's CLI afterward.
       ccHistoryKindRef.current = ccCliKindRef.current;
-      pendingCcOpensRef.current.set(sessionId, {
+      const requestId = `cc-open-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      pendingCcOpenRef.current = {
+        requestId,
+        sessionId,
         cwd,
+        mode,
         revision: conversationRevisionRef.current,
+        switching: false,
+      };
+      setCcModeRequest({ mode, switching: false });
+      const sent = socket.send({
+        type: "ccRoom.openSession",
+        sessionId,
+        cwd,
+        mode,
+        kind: ccCliKindRef.current,
+        requestId,
       });
-      socket.send({ type: "ccRoom.openSession", sessionId, cwd, mode, kind: ccCliKindRef.current });
+      if (!sent && pendingCcOpenRef.current?.requestId === requestId) {
+        pendingCcOpenRef.current = null;
+        setCcModeRequest(undefined);
+      }
     },
     [socket, setLoadingKey, setNotice],
+  );
+
+  /**
+   * Restart the CLI room this tab is viewing under another permission mode.
+   * Reuses ccRoom.openSession; the Host refuses while the room is busy and
+   * asks for a one-time approval before bypassPermissions. The dropdown keeps
+   * showing the running mode until the Host confirms the new one.
+   */
+  const setCcRoomPermissionMode = useCallback(
+    (mode: PermissionMode) => {
+      const roomId = activeRoomIdRef.current;
+      const sessionId = ccHistorySessionRef.current;
+      const cwd = ccHistoryCwdRef.current;
+      if (!roomId || !sessionId || !cwd) return;
+      if (!socketOnlineRef.current) {
+        setNotice(t("mobile.connection.offlineTitle"));
+        return;
+      }
+      const requestId = `cc-mode-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      pendingCcOpenRef.current = {
+        requestId,
+        sessionId,
+        cwd,
+        mode,
+        revision: conversationRevisionRef.current,
+        switching: true,
+      };
+      setCcModeRequest({ mode, switching: true });
+      const sent = socket.send({
+        type: "ccRoom.openSession",
+        sessionId,
+        cwd,
+        mode,
+        kind: ccHistoryKindRef.current,
+        requestId,
+      });
+      if (!sent && pendingCcOpenRef.current?.requestId === requestId) {
+        // Never reached the Host: nothing changed and nothing is pending.
+        pendingCcOpenRef.current = null;
+        setCcModeRequest(undefined);
+        setNotice(t("mobile.connection.offlineTitle"));
+      }
+    },
+    [socket, setNotice],
   );
 
   const respondCcApproval = useCallback(
@@ -2933,6 +3068,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     ccCliKind,
     setCcCliKind,
     openCcSession,
+    setCcRoomPermissionMode,
+    ccModeRequest,
     respondCcApproval,
   };
 }

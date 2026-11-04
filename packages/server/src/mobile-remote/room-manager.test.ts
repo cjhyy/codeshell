@@ -143,7 +143,7 @@ function makeManager(options?: {
 }
 
 describe("RoomManager", () => {
-  test("no resident agent starts on an external session a background task still owns", () => {
+  test("no resident agent starts on an external session a background task still owns", async () => {
     const owned = new Set(["claude:busy-session"]);
     const checks: string[] = [];
     const { mgr, agents } = makeManager({
@@ -154,16 +154,19 @@ describe("RoomManager", () => {
           throw new Error("owned by a background task");
       },
     });
-    expect(() => mgr.openForSession("busy-session", "/repo", "default")).toThrow("background task");
+    await expect(mgr.openForSession("busy-session", "/repo", "default")).rejects.toThrow(
+      "background task",
+    );
+    expect(agents).toHaveLength(0);
     // The same id under another CLI kind is a different session.
-    const codex = mgr.openForSession("busy-session", "/repo", "default", "codex");
+    const codex = await mgr.openForSession("busy-session", "/repo", "default", "codex");
     expect(codex.status).toBe("running");
     expect(agents).toHaveLength(1);
 
     const linked = mgr.openLinkedSession("busy-session", "/repo", "claude-code");
-    expect(() =>
+    await expect(
       mgr.takeOverLinkedSession(linked.roomId, "busy-session", "/repo", "claude-code"),
-    ).toThrow("background task");
+    ).rejects.toThrow("background task");
     expect(agents).toHaveLength(1);
 
     const room = mgr.createRoom({ cwd: "/repo", permissionMode: "default" });
@@ -557,53 +560,53 @@ describe("RoomManager", () => {
     expect(mgr.getRoom(room.id)).toBeDefined();
   });
 
-  test("openForSession creates a room bound to claudeSessionId and reuses it on a second call", () => {
+  test("openForSession creates a room bound to claudeSessionId and reuses it on a second call", async () => {
     const { mgr } = makeManager();
-    const r1 = mgr.openForSession("cc-sess-A", "/tmp/p", "default");
-    const r2 = mgr.openForSession("cc-sess-A", "/tmp/p", "default");
+    const r1 = await mgr.openForSession("cc-sess-A", "/tmp/p", "default");
+    const r2 = await mgr.openForSession("cc-sess-A", "/tmp/p", "default");
     expect(r1.roomId).toBe(r2.roomId);
     expect(mgr.getRoom(r1.roomId)?.claudeSessionId).toBe("cc-sess-A");
   });
 
-  test("openForSession creates distinct rooms for distinct sessions", () => {
+  test("openForSession creates distinct rooms for distinct sessions", async () => {
     const { mgr } = makeManager();
-    const a = mgr.openForSession("cc-A", "/tmp/p", "default");
-    const b = mgr.openForSession("cc-B", "/tmp/p", "default");
+    const a = await mgr.openForSession("cc-A", "/tmp/p", "default");
+    const b = await mgr.openForSession("cc-B", "/tmp/p", "default");
     expect(a.roomId).not.toBe(b.roomId);
   });
 
-  test("openForSession passes kind through to the created room (codex)", () => {
+  test("openForSession passes kind through to the created room (codex)", async () => {
     const { mgr } = makeManager();
-    const r = mgr.openForSession("thread-1", "/tmp/p", "default", "codex");
+    const r = await mgr.openForSession("thread-1", "/tmp/p", "default", "codex");
     expect(mgr.getRoom(r.roomId)?.kind).toBe("codex");
   });
 
-  test("openForSession defaults kind to claude-code when omitted", () => {
+  test("openForSession defaults kind to claude-code when omitted", async () => {
     const { mgr } = makeManager();
-    const r = mgr.openForSession("sess-1", "/tmp/p", "default");
+    const r = await mgr.openForSession("sess-1", "/tmp/p", "default");
     expect(mgr.getRoom(r.roomId)?.kind).toBe("claude-code");
   });
 
-  test("openForSession does NOT reuse a room of a different kind even if the id collides", () => {
+  test("openForSession does NOT reuse a room of a different kind even if the id collides", async () => {
     const { mgr } = makeManager();
     // Same id string, but one is a claude session and one is a codex thread.
-    const claude = mgr.openForSession("collide-id", "/tmp/p", "default", "claude-code");
-    const codex = mgr.openForSession("collide-id", "/tmp/p", "default", "codex");
+    const claude = await mgr.openForSession("collide-id", "/tmp/p", "default", "claude-code");
+    const codex = await mgr.openForSession("collide-id", "/tmp/p", "default", "codex");
     expect(codex.roomId).not.toBe(claude.roomId);
     expect(mgr.getRoom(claude.roomId)?.kind).toBe("claude-code");
     expect(mgr.getRoom(codex.roomId)?.kind).toBe("codex");
   });
 
-  test("openForSession reusing a room with a CHANGED mode restarts the agent under the new mode", () => {
+  test("openForSession reusing a room with a CHANGED mode restarts the agent under the new mode", async () => {
     const { mgr, agents } = makeManager();
-    const r1 = mgr.openForSession("cc-X", "/tmp/p", "default");
+    const r1 = await mgr.openForSession("cc-X", "/tmp/p", "default");
     expect(agents).toHaveLength(1);
     expect(agents[0].running).toBe(true);
     expect(mgr.getRoom(r1.roomId)?.permissionMode).toBe("default");
     // reopen the SAME session but with bypassPermissions — must persist the new
     // mode AND restart the resident process (permissionMode is a spawn-time CLI
     // arg, so the old default-mode process must be killed and respawned).
-    const r2 = mgr.openForSession("cc-X", "/tmp/p", "bypassPermissions");
+    const r2 = await mgr.openForSession("cc-X", "/tmp/p", "bypassPermissions");
     expect(r2.roomId).toBe(r1.roomId);
     expect(mgr.getRoom(r1.roomId)?.permissionMode).toBe("bypassPermissions");
     expect(agents[0].running).toBe(false); // old agent stopped
@@ -611,10 +614,10 @@ describe("RoomManager", () => {
     expect(agents[1].running).toBe(true);
   });
 
-  test("openForSession reusing a room with the SAME mode does NOT restart the agent", () => {
+  test("openForSession reusing a room with the SAME mode does NOT restart the agent", async () => {
     const { mgr, agents } = makeManager();
-    mgr.openForSession("cc-Y", "/tmp/p", "default");
-    mgr.openForSession("cc-Y", "/tmp/p", "default");
+    await mgr.openForSession("cc-Y", "/tmp/p", "default");
+    await mgr.openForSession("cc-Y", "/tmp/p", "default");
     expect(agents).toHaveLength(1); // reused, no respawn
   });
 
@@ -671,7 +674,7 @@ describe("RoomManager", () => {
     expect(agents).toHaveLength(0);
   });
 
-  test("takeOverLinkedSession is the only linked path that starts an agent, once", () => {
+  test("takeOverLinkedSession is the only linked path that starts an agent, once", async () => {
     const target: LinkedSessionTarget = {
       externalSessionId: "cc-linked",
       cwd: "/tmp/p",
@@ -681,7 +684,7 @@ describe("RoomManager", () => {
     const linked = mgr.openLinkedSession(target.externalSessionId, target.cwd, target.kind);
     expect(agents).toHaveLength(0);
 
-    const takenOver = mgr.takeOverLinkedSession(
+    const takenOver = await mgr.takeOverLinkedSession(
       linked.roomId,
       target.externalSessionId,
       target.cwd,
@@ -697,18 +700,23 @@ describe("RoomManager", () => {
     expect(agents[0]?.running).toBe(true);
     expect(mgr.getRoom(linked.roomId)?.linkedSessionMode).toBeUndefined();
 
-    mgr.takeOverLinkedSession(linked.roomId, target.externalSessionId, target.cwd, target.kind);
+    await mgr.takeOverLinkedSession(
+      linked.roomId,
+      target.externalSessionId,
+      target.cwd,
+      target.kind,
+    );
     expect(agents).toHaveLength(1);
   });
 
-  test("openLinkedSession preserves an existing room mode and live agent", () => {
+  test("openLinkedSession preserves an existing room mode and live agent", async () => {
     const target: LinkedSessionTarget = {
       externalSessionId: "cc-linked",
       cwd: "/tmp/p",
       kind: "claude-code",
     };
     const { mgr, agents } = makeManager({ linkedSessions: [target] });
-    const existing = mgr.openForSession("cc-linked", "/tmp/p", "bypassPermissions");
+    const existing = await mgr.openForSession("cc-linked", "/tmp/p", "bypassPermissions");
     expect(agents).toHaveLength(1);
 
     const linked = mgr.openLinkedSession("cc-linked", "/tmp/p", "claude-code");
@@ -745,7 +753,7 @@ describe("RoomManager", () => {
     expect(agents).toHaveLength(1);
   });
 
-  test("takeover never inherits a stored bypassPermissions mode silently", () => {
+  test("takeover never inherits a stored bypassPermissions mode silently", async () => {
     const target: LinkedSessionTarget = {
       externalSessionId: "cc-risky-idle",
       cwd: "/tmp/p",
@@ -760,14 +768,14 @@ describe("RoomManager", () => {
     });
     mgr.openLinkedSession(target.externalSessionId, target.cwd, target.kind);
 
-    expect(
+    await expect(
       mgr.takeOverLinkedSession(existing.id, target.externalSessionId, target.cwd, target.kind),
-    ).toMatchObject({ status: "running", mode: "default" });
+    ).resolves.toMatchObject({ status: "running", mode: "default" });
     expect(mgr.getRoom(existing.id)?.permissionMode).toBe("default");
     expect(agents).toHaveLength(1);
   });
 
-  test("a stale takeover retires a concurrently reopened bypass agent instead of reusing it", () => {
+  test("a stale takeover retires a concurrently reopened bypass agent instead of reusing it", async () => {
     const target: LinkedSessionTarget = {
       externalSessionId: "cc-shared",
       cwd: "/tmp/p",
@@ -777,14 +785,24 @@ describe("RoomManager", () => {
     // View A observes the transcript and keeps its takeover button.
     const observed = mgr.openLinkedSession(target.externalSessionId, target.cwd, target.kind);
     // View B takes over and then explicitly reopens the session in bypass mode.
-    mgr.takeOverLinkedSession(observed.roomId, target.externalSessionId, target.cwd, target.kind);
-    mgr.openForSession(target.externalSessionId, target.cwd, "bypassPermissions", target.kind);
+    await mgr.takeOverLinkedSession(
+      observed.roomId,
+      target.externalSessionId,
+      target.cwd,
+      target.kind,
+    );
+    await mgr.openForSession(
+      target.externalSessionId,
+      target.cwd,
+      "bypassPermissions",
+      target.kind,
+    );
     expect(agents.map((agent) => [agent.mode, agent.running])).toEqual([
       ["default", false],
       ["bypassPermissions", true],
     ]);
 
-    const takenOver = mgr.takeOverLinkedSession(
+    const takenOver = await mgr.takeOverLinkedSession(
       observed.roomId,
       target.externalSessionId,
       target.cwd,
@@ -798,7 +816,7 @@ describe("RoomManager", () => {
     expect(live[0]?.sent).toEqual(["after takeover"]);
 
     // Reopening with the mode now shown keeps the matching agent.
-    mgr.openForSession(target.externalSessionId, target.cwd, "default", target.kind);
+    await mgr.openForSession(target.externalSessionId, target.cwd, "default", target.kind);
     expect(agents.filter((agent) => agent.running)).toEqual(live);
   });
 
@@ -852,7 +870,7 @@ describe("RoomManager", () => {
     expect(agents).toHaveLength(0);
   });
 
-  test("takeOverLinkedSession revalidates the exact room binding before starting an agent", () => {
+  test("takeOverLinkedSession revalidates the exact room binding before starting an agent", async () => {
     const target: LinkedSessionTarget = {
       externalSessionId: "thread-linked",
       cwd: "/tmp/project",
@@ -861,9 +879,9 @@ describe("RoomManager", () => {
     const { mgr, agents } = makeManager({ linkedSessions: [target] });
     const linked = mgr.openLinkedSession(target.externalSessionId, target.cwd, target.kind);
 
-    expect(() =>
+    await expect(
       mgr.takeOverLinkedSession(linked.roomId, target.externalSessionId, "/tmp/other", target.kind),
-    ).toThrow(/transcript|match/i);
+    ).rejects.toThrow(/transcript|match/i);
     expect(agents).toHaveLength(0);
   });
 
