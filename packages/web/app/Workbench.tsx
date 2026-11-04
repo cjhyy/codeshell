@@ -343,13 +343,13 @@ export function Workbench({
     }
   };
 
-  const openSettings = (section: HubSettingsSection) => {
+  const openSettings = (section: HubSettingsSection, returnTo?: "chat") => {
     if (view === "settings" && settingsSection === section) {
       closeMobileSidebar();
       return;
     }
     requestNavigation(() => {
-      navigation.navigate({ view: "settings", section });
+      navigation.navigate({ view: "settings", section, ...(returnTo ? { returnTo } : {}) });
       closeMobileSidebar();
     });
   };
@@ -1314,23 +1314,19 @@ export function Workbench({
                         </button>
                       </>
                     ) : null}
-                    <button
-                      className="model-button model-settings-button"
-                      aria-label="模型设置"
-                      title="打开模型设置"
-                      onClick={() => openSettings("models")}
-                    >
-                      <span>
-                        {controller.modelSelector
-                          ? "模型设置"
-                          : defaultConnection?.model || "配置模型"}
-                      </span>
-                      <span className="model-settings-mobile-icon">
-                        <WorkbenchIcon name="settings" />
-                      </span>
-                      <WorkbenchIcon name="chevron" />
-                    </button>
-                    {controller.modelSelector}
+                    {/* A runtime picker is the model control; a second button that
+                        leaves the conversation for settings would only compete with it. */}
+                    {controller.modelSelector ?? (
+                      <button
+                        className="model-button model-settings-button"
+                        aria-label="模型设置"
+                        title="打开模型设置"
+                        onClick={() => openSettings("models", "chat")}
+                      >
+                        <span>{defaultConnection?.model || "配置模型"}</span>
+                        <WorkbenchIcon name="chevron" />
+                      </button>
+                    )}
                   </>
                 ) : null}
                 <span className="composer-run-status" role="status">

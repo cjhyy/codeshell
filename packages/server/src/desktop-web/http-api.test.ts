@@ -602,6 +602,16 @@ test("paired devices discover the same desktop identity without disclosing works
   expect((await f.request("/api/v1/environment", cookie)).status).toBe(401);
 });
 
+test("an account-registered desktop points paired devices at the account computer list", async () => {
+  const relay: { list?: string } = {};
+  const f = await fixture({ accountComputers: () => relay.list });
+  const cookie = await f.authenticate();
+  const read = async () => (await (await f.request("/api/v1/environment", cookie)).json()) as any;
+  expect(await read()).not.toHaveProperty("accountComputers");
+  relay.list = "https://account.example/";
+  expect((await read()).accountComputers).toBe("https://account.example/");
+});
+
 test("paired Desktop trace HTTP remains workspace scoped and cannot change native capture policy", async () => {
   const f = await fixture();
   const store = new ModelTraceStore({ storageDir: join(f.sessionRootDir, ".model-traces") });

@@ -1,3 +1,5 @@
+import type { AccountFeatureView } from "./account-features.js";
+
 /** Public desktop state deliberately excludes the computer credential and enrollment ticket. */
 export type DesktopRelayState =
   | "unregistered"
@@ -18,6 +20,19 @@ export interface DesktopRelayStatus {
   accountId?: string;
   environmentId?: string;
   message?: string;
+}
+/**
+ * An account-registered computer opens from the account's computer list (the
+ * phone entry). Only while the account's `relay.phone` feature is ready; the
+ * URL is the public directory page and carries no credential.
+ */
+export function accountComputerListUrl(
+  status: DesktopRelayStatus,
+  phone: Pick<AccountFeatureView, "state" | "params">,
+): string | undefined {
+  return phone.state === "ready" && status.relayOrigin
+    ? `${status.relayOrigin.replace(/\/$/, "")}${phone.params?.directoryPath ?? "/"}`
+    : undefined;
 }
 export interface DesktopRelayEnrollment {
   relayOrigin: string;

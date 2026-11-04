@@ -528,6 +528,12 @@ describe("pet profile host-action integration", () => {
     expect(PET_SYSTEM_PROMPT).toContain(
       'never add a blanket "do not log in" / "do not use login state" rule',
     );
+    expect(PET_SYSTEM_PROMPT).toContain("never tell the executor to strip its token or parameters");
+    expect(PET_SYSTEM_PROMPT).toContain("Do not reply that you cannot operate the computer");
+    expect(PET_SYSTEM_PROMPT).toContain(
+      "The mobile remote is also the answer when the user never names it",
+    );
+    expect(PET_SYSTEM_PROMPT).toContain("offer it in one short sentence instead of opening it");
     expect(PET_SYSTEM_PROMPT).toContain(
       "if a matching saved login is available and policy permits its use",
     );
