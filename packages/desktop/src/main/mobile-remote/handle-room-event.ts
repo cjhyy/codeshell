@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { submitRoomInputOnce } from "./room-input-receipts.js";
 import { resolveExternalAgentConfig } from "@cjhyy/code-shell-capability-coding/orchestration";
 import { markAttachmentsSent } from "@cjhyy/code-shell-server/storage";
 import {
@@ -163,22 +165,42 @@ export async function handleRoomEvent(
         return;
       }
       const text = typeof event.text === "string" ? event.text.trim() : "";
-      const materialized = await materializeMobileAttachments({
-        deviceId: event.deviceId ?? "",
-        cwd: room.cwd,
-        sessionId: room.id,
-        attachments: event.attachments,
-        uploads: ctx.uploads,
+      const receipt = {
+        clientMessageId,
+        clientDeviceId: event.deviceId ?? "legacy",
+        clientIntentHash: createHash("sha256")
+          .update(JSON.stringify([text, event.attachments ?? []]))
+          .digest("hex"),
+      };
+      const accepted = await submitRoomInputOnce(ctx.roomManager, room.id, receipt, async () => {
+        const materialized = await materializeMobileAttachments({
+          deviceId: event.deviceId ?? "",
+          cwd: room.cwd,
+          sessionId: room.id,
+          attachments: event.attachments,
+          uploads: ctx.uploads,
+        });
+        let ok: boolean;
+        try {
+          ok = ctx.roomManager.send(event.roomId, text, materialized.metas, receipt);
+        } catch (error) {
+          await ctx.settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "release");
+          throw error;
+        }
+        if (!ok) {
+          await ctx.settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "release");
+          return false;
+        }
+        await markAttachmentsSent(room.cwd, room.id, materialized.metas).catch((error) =>
+          dlog("main", "mobile.room_attachment.mark_sent_failed", {
+            error: String(error),
+            roomId: room.id,
+          }),
+        );
+        await ctx.settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "finalize");
+        return true;
       });
-      let ok: boolean;
-      try {
-        ok = ctx.roomManager.send(event.roomId, text, materialized.metas);
-      } catch (error) {
-        await ctx.settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "release");
-        throw error;
-      }
-      if (!ok) {
-        await ctx.settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "release");
+      if (!accepted) {
         reply({
           type: "room.error",
           roomId: event.roomId,
@@ -187,13 +209,6 @@ export async function handleRoomEvent(
         });
         return;
       }
-      await markAttachmentsSent(room.cwd, room.id, materialized.metas).catch((error) =>
-        dlog("main", "mobile.room_attachment.mark_sent_failed", {
-          error: String(error),
-          roomId: room.id,
-        }),
-      );
-      await ctx.settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "finalize");
       reply({ type: "room.accepted", roomId: event.roomId, clientMessageId });
       return;
     }

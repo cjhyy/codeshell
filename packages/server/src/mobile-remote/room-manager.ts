@@ -175,6 +175,9 @@ function parseRoomMessage(value: unknown): RoomMessage | undefined {
     "reason",
     "toolId",
     "transcriptSource",
+    "clientMessageId",
+    "clientDeviceId",
+    "clientIntentHash",
   ] as const) {
     const item = raw[field];
     if (item !== undefined && (typeof item !== "string" || item.includes("\0"))) return undefined;
@@ -335,6 +338,15 @@ export interface RoomMessage {
   /** Durable external transcript provenance, scoped to its actual file incarnation. */
   transcriptSource?: string;
   attachments?: Array<{ name: string; mime?: string; size: number; path: string }>;
+  /** Exact mobile intent receipt, durable alongside its accepted user turn. */
+  clientMessageId?: string;
+  clientDeviceId?: string;
+  clientIntentHash?: string;
+}
+export interface RoomInputReceipt {
+  clientMessageId: string;
+  clientDeviceId: string;
+  clientIntentHash: string;
 }
 
 const ROOM_ATTACHMENT_START = "<codeshell-image-attachments>";
@@ -494,6 +506,10 @@ export class RoomManager {
   private readonly rootRealPath: string;
   private readonly rootIdentity: string;
   private readonly failedWrites = new Set<string>();
+  private readonly inputReceipts = new Map<
+    string,
+    { stamp: string; intents: Map<string, string> }
+  >();
 
   /** Drop all pending AskUser entries for a room. Called when its agent goes
    *  away (exit/close) so a request that can no longer be answered doesn't leak
@@ -750,7 +766,17 @@ export class RoomManager {
     const msg: RoomMessage = { seq, ts, ...partial };
     try {
       this.appendRoomMessage(id, msg);
-      this.messageStampByRoom.set(id, this.messageStamp(id));
+      const stamp = this.messageStamp(id);
+      this.messageStampByRoom.set(id, stamp);
+      const receipts = this.inputReceipts.get(id);
+      if (receipts) {
+        receipts.stamp = stamp;
+        if (msg.clientMessageId && msg.clientDeviceId && msg.clientIntentHash)
+          receipts.intents.set(
+            JSON.stringify([msg.clientDeviceId, msg.clientMessageId]),
+            msg.clientIntentHash,
+          );
+      }
     } catch (error) {
       // Sequence assignment is a commit effect, not an attempt counter. A
       // failed serialization/write must not leave a phantom gap in memory.
@@ -1329,10 +1355,56 @@ export class RoomManager {
     }
   }
 
+  /** A replay never opens a new CLI, reclaims an attachment, or reuses a changed intent. */
+  hasAcceptedInput(id: string, receipt: RoomInputReceipt): boolean {
+    if (
+      !receipt.clientMessageId ||
+      receipt.clientMessageId.length > 200 ||
+      !receipt.clientDeviceId ||
+      receipt.clientDeviceId.length > 256 ||
+      !/^[a-f0-9]{64}$/.test(receipt.clientIntentHash)
+    )
+      throw new Error("invalid room input receipt");
+    if (this.failedWrites.has(id)) throw new Error("room persistence failed");
+    const path = this.msgPath(id);
+    const stamp = existsSync(path) ? this.messageStamp(id) : "";
+    let cached = this.inputReceipts.get(id);
+    if (cached && cached.stamp !== stamp)
+      throw new Error("room input history changed; reload before retrying");
+    if (!cached) {
+      const intents = new Map<string, string>();
+      if (stamp)
+        scanRoomHistory(path, parseRoomMessage, (message) => {
+          if (!message.clientMessageId) return;
+          if (!message.clientDeviceId || !message.clientIntentHash)
+            throw new Error("room input receipt is incomplete");
+          const key = JSON.stringify([message.clientDeviceId, message.clientMessageId]);
+          const previous = intents.get(key);
+          if (previous && previous !== message.clientIntentHash)
+            throw new Error("conflicting room input receipts");
+          intents.set(key, message.clientIntentHash);
+        });
+      cached = { stamp, intents };
+      this.inputReceipts.set(id, cached);
+    }
+    const known = cached.intents.get(
+      JSON.stringify([receipt.clientDeviceId, receipt.clientMessageId]),
+    );
+    if (known && known !== receipt.clientIntentHash)
+      throw new Error("同一输入的内容已改变，请核对草稿后作为新消息发送。");
+    return known !== undefined;
+  }
+
   /** Post a user message: persist it, ensure agent running, feed it. */
-  send(id: string, text: string, attachments: InputAttachmentMeta[] = []): boolean {
+  send(
+    id: string,
+    text: string,
+    attachments: InputAttachmentMeta[] = [],
+    receipt?: RoomInputReceipt,
+  ): boolean {
     const meta = this.getRoom(id);
     if (!meta) return false;
+    if (receipt && this.hasAcceptedInput(id, receipt)) return true;
     const displayText = text.trim();
     if (!displayText && attachments.length === 0) return false;
     if (this.open(id).status !== "running") return false;
@@ -1400,6 +1472,7 @@ export class RoomManager {
       from: "user",
       type: "text",
       text: displayText,
+      ...(receipt ?? {}),
       ...(summaries.length ? { attachments: summaries } : {}),
     });
     if (this.transcriptFollowedRooms.has(id)) {
@@ -1485,6 +1558,7 @@ export class RoomManager {
       // Drop the cached seq with the files, so a room id that somehow comes back
       // re-derives its counter from disk instead of continuing a dead sequence.
       this.lastSeqByRoom.delete(meta.id);
+      this.inputReceipts.delete(meta.id);
       removed.push(meta.id);
     }
     return removed;
