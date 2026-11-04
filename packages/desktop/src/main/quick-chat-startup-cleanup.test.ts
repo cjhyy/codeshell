@@ -89,3 +89,28 @@ describe("quick-chat startup cleanup ownership", () => {
     expect(calls).toEqual(["restore", "show", "focus"]);
   });
 });
+
+test("concurrent restore requests share the in-flight main window", async () => {
+  const { createMainWindowRestorer } = await import("./quick-chat-startup-cleanup.js");
+  let creates = 0;
+  let release!: (window: object) => void;
+  let window: object | undefined;
+  const restore = createMainWindowRestorer(
+    () => window,
+    () => {
+      creates++;
+      return new Promise<object>((resolve) => {
+        release = resolve;
+      });
+    },
+  );
+  const first = restore(),
+    second = restore();
+  expect(creates).toBe(1);
+  window = {};
+  release(window);
+  expect(await first).toBe(window);
+  expect(await second).toBe(window);
+  expect(await restore()).toBe(window);
+  expect(creates).toBe(1);
+});

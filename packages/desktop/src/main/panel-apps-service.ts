@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 import {
   isPanelAppBound,
@@ -44,6 +45,22 @@ export function installedPanelAppRevision(app: InstalledPanelApp): string {
   return hash.digest("hex");
 }
 
+async function installedPanelAppRevisionAsync(app: InstalledPanelApp): Promise<string> {
+  const hash = createHash("sha256");
+  for (const relative of [".codeshell-panel/panel.json", ".cs-panel-app-meta.json", app.entry]) {
+    const file = path.join(app.installPath, relative);
+    try {
+      const info = await stat(file);
+      hash.update(relative).update("\0").update(String(info.size)).update("\0");
+      if (relative.endsWith(".json")) hash.update(await readFile(file));
+      else hash.update(String(info.mtimeMs));
+    } catch {
+      hash.update(relative).update("\0missing\0");
+    }
+  }
+  return hash.digest("hex");
+}
+
 async function discoverPanelApps(
   locale: string,
   projectPath = "",
@@ -79,14 +96,15 @@ async function discoverPanelApps(
       )
     )
       throw new Error("Project package changed during discovery");
-  } catch {
-    return { descriptors: [], resources: [], sources: new Map() };
+  } catch (error) {
+    // A failed scan is not an empty installation. Preserve published resources.
+    throw new Error("Unable to discover Panel Apps", { cause: error });
   }
 
   const descriptors: PanelAppDescriptor[] = [];
   const resources: PanelAppProtocolResource[] = [];
   for (const app of apps) {
-    const revision = installedPanelAppRevision(app);
+    const revision = await installedPanelAppRevisionAsync(app);
     const hostId = createHash("sha256")
       .update("codeshell-panel-app-v1")
       .update("\0")

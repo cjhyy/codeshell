@@ -1,4 +1,4 @@
-/** Native quit stays blocked until renderer saves and constrained child cleanup succeed. */
+/** Native quit stays blocked until saves/cleanup succeed or the user chooses to quit. */
 export function createDesktopShutdownHandler(deps: {
   ownsInstance(): boolean;
   flushRenderers(): Promise<unknown>;
@@ -6,6 +6,7 @@ export function createDesktopShutdownHandler(deps: {
   cleanup(): Promise<unknown>;
   quit(): void;
   onError(phase: string, error: unknown): void;
+  resolveFailure?(phase: string, error: unknown): Promise<"retry" | "quit" | "cancel">;
 }): (event: { preventDefault(): void }) => void {
   let pending: Promise<void> | undefined;
   let done = false;
@@ -18,14 +19,21 @@ export function createDesktopShutdownHandler(deps: {
     if (!deps.ownsInstance() || done) return;
     event.preventDefault();
     if (pending) return;
-    // Schedule after assigning pending, including synchronously throwing adapters.
     pending = Promise.resolve().then(async () => {
-      for (const [phase, run] of steps) {
+      for (let index = 0; index < steps.length; index++) {
+        const [phase, run] = steps[index]!;
         try {
           await run();
         } catch (error) {
-          pending = undefined;
           deps.onError(phase, error);
+          const choice =
+            (await deps.resolveFailure?.(phase, error).catch(() => "cancel" as const)) ?? "cancel";
+          if (choice === "retry") {
+            index--;
+            continue;
+          }
+          if (choice === "quit") continue; // still attempt every remaining cleanup step
+          pending = undefined;
           return;
         }
       }

@@ -551,6 +551,7 @@ import {
   checkForUpdate,
   downloadUpdate,
   quitAndInstall,
+  cancelPendingUpdateInstall,
   getLastStatus,
 } from "./updater.js";
 import { loadRecents, loadProjects } from "./recents-store.js";
@@ -607,6 +608,7 @@ import { injectLoginShellPathAtStartup } from "./login-shell-path.js";
 import {
   acquireDesktopInstanceLock,
   registerSecondInstanceFocus,
+  createMainWindowRestorer,
   runOwnedQuickChatStartupCleanup,
 } from "./quick-chat-startup-cleanup.js";
 import {
@@ -701,10 +703,19 @@ const petIpcReady = new Promise<void>((resolveReady) => {
   markPetIpcReady = resolveReady;
 });
 const ownsDesktopInstance = chromeNativeMessagingOrigin ? false : acquireDesktopInstanceLock(app);
+const restoreMainWindow = createMainWindowRestorer(preferredMainWindow, async () => {
+  await app.whenReady();
+  return createWindow();
+});
 if (ownsDesktopInstance) {
   registerSecondInstanceFocus(
     (handler) => app.on("second-instance", handler),
     () => Array.from(mainWindows),
+    () => {
+      void restoreMainWindow().catch((error) =>
+        dlog("main", "window.restore_failed", { error: String(error) }),
+      );
+    },
   );
 }
 
@@ -7254,6 +7265,19 @@ app.on(
       await disposeOperationResolutionHost();
     },
     onError: (phase, error) => dlog("main", phase, { error: String(error) }),
+    resolveFailure: async () => {
+      const { response } = await dialog.showMessageBox({
+        type: "warning",
+        title: "CodeShell 无法完成退出",
+        message: "保存或清理未完成。",
+        detail: "重试可再次完成当前步骤。选择仍然退出可能丢失未保存内容或留下未完成的清理。",
+        buttons: ["重试", "取消退出", "仍然退出"],
+        defaultId: 0,
+        cancelId: 1,
+      });
+      if (response === 1) cancelPendingUpdateInstall();
+      return response === 0 ? "retry" : response === 2 ? "quit" : "cancel";
+    },
     cleanup: async () => {
       cloudEnvironment.dispose();
       taskInboxService?.dispose();
@@ -7328,5 +7352,8 @@ app.on(
 );
 
 app.on("activate", () => {
-  if (ownsDesktopInstance && !preferredMainWindow()) void createWindow();
+  if (ownsDesktopInstance)
+    void restoreMainWindow().catch((error) =>
+      dlog("main", "window.restore_failed", { error: String(error) }),
+    );
 });

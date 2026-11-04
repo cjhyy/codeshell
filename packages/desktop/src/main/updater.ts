@@ -13,7 +13,7 @@
  * `window.codeshell.onUpdaterStatus`.
  */
 
-import { spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { BrowserWindow, app } from "electron";
@@ -125,7 +125,7 @@ function macAppBundlePath(): string {
     : app.getPath("exe");
 }
 
-function macManualInstallReason(): ManualInstallReason | null {
+async function macManualInstallReason(): Promise<ManualInstallReason | null> {
   if (process.platform !== "darwin") return null;
   if (!app.isPackaged) return null;
   if (process.env.CODESHELL_FORCE_MAC_AUTO_UPDATE === "1") return null;
@@ -145,12 +145,21 @@ function macManualInstallReason(): ManualInstallReason | null {
     return macManualInstallRequired ? "mac-signature" : null;
   }
 
-  const detail = spawnSync("codesign", ["-dv", "--verbose=4", appPath], {
-    encoding: "utf8",
-  });
-  const requirement = spawnSync("codesign", ["-d", "-r-", appPath], {
-    encoding: "utf8",
-  });
+  const inspect = (args: string[]) =>
+    new Promise<{ stdout: string; stderr: string; status?: number; error?: Error }>((resolve) => {
+      execFile(
+        "codesign",
+        args,
+        { encoding: "utf8", timeout: 10_000, maxBuffer: 256 * 1024 },
+        (error, stdout, stderr) => {
+          resolve({ stdout, stderr, ...(error ? { error } : { status: 0 }) });
+        },
+      );
+    });
+  const [detail, requirement] = await Promise.all([
+    inspect(["-dv", "--verbose=4", appPath]),
+    inspect(["-d", "-r-", appPath]),
+  ]);
   const text = [
     detail.stdout ?? "",
     detail.stderr ?? "",
@@ -186,8 +195,8 @@ function manualRequiredStatus(version: string, reason: ManualInstallReason): Upd
   };
 }
 
-function availableStatus(version: string): UpdaterStatus {
-  const reason = macManualInstallReason();
+async function availableStatus(version: string): Promise<UpdaterStatus> {
+  const reason = await macManualInstallReason();
   return reason ? manualRequiredStatus(version, reason) : { kind: "available", version };
 }
 
@@ -260,7 +269,9 @@ export function initUpdater(): void {
       return;
     set({ kind: "checking" });
   });
+  let availabilityGeneration = 0;
   autoUpdater.on("update-available", (info) => {
+    const generation = ++availabilityGeneration;
     const version = String((info as { version?: string }).version ?? "");
     if (downloadInFlight || installInFlight) return;
     if (version && downloadedVersion === version) {
@@ -268,9 +279,22 @@ export function initUpdater(): void {
       return;
     }
     if (lastStatus.kind === "downloaded" || lastStatus.kind === "installing") return;
-    set(availableStatus(version));
+    void availableStatus(version)
+      .then((status) => {
+        if (
+          generation !== availabilityGeneration ||
+          downloadInFlight ||
+          installInFlight ||
+          lastStatus.kind === "downloaded" ||
+          lastStatus.kind === "installing"
+        )
+          return;
+        set(status);
+      })
+      .catch(handleUpdaterError);
   });
   autoUpdater.on("update-not-available", (info) => {
+    availabilityGeneration++;
     if (
       downloadInFlight ||
       installInFlight ||
@@ -373,4 +397,11 @@ export function quitAndInstall(): void {
       set({ kind: "error", message: e instanceof Error ? e.message : String(e) });
     }
   });
+}
+
+/** A blocked native quit must leave the downloaded update retryable. */
+export function cancelPendingUpdateInstall(): void {
+  if (!installInFlight) return;
+  installInFlight = false;
+  if (lastStatus.kind === "installing") set({ kind: "downloaded", version: lastStatus.version });
 }

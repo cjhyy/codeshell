@@ -268,7 +268,7 @@ describe("desktop profiles service", () => {
       ],
       tools: [],
     });
-    expect(previewProfileRequirements("video-director", cwd).needsInstall).toBe(true);
+    expect((await previewProfileRequirements("video-director", cwd)).needsInstall).toBe(true);
 
     const writeInstalledSkills = async () => {
       for (const name of ["hyperframes", "media-use"]) {
@@ -285,7 +285,7 @@ describe("desktop profiles service", () => {
       ok: true,
       errors: [],
     });
-    expect(previewProfileRequirements("video-director", cwd).needsInstall).toBe(false);
+    expect((await previewProfileRequirements("video-director", cwd)).needsInstall).toBe(false);
   });
 
   test("does not report success when an installer exits zero without visible project Skills", async () => {

@@ -102,3 +102,30 @@ test("synchronous adapter failure is retryable and a secondary instance does not
   expect(attempts).toBe(2);
   expect(quits).toBe(1);
 });
+
+test("user can retry a failed save or continue cleanup before forcing quit", async () => {
+  const calls: string[] = [];
+  let saves = 0;
+  const handler = createDesktopShutdownHandler({
+    ownsInstance: () => true,
+    flushRenderers: async () => {
+      calls.push("save");
+      if (++saves === 1) throw Error("fixture");
+    },
+    disposeOperationResolution: async () => {
+      calls.push("children");
+      throw Error("fixture");
+    },
+    cleanup: async () => {
+      calls.push("cleanup");
+    },
+    quit: () => {
+      calls.push("quit");
+    },
+    onError: () => {},
+    resolveFailure: async (phase) => (phase === "session.quit_save_failed" ? "retry" : "quit"),
+  });
+  handler({ preventDefault() {} });
+  await settle();
+  expect(calls).toEqual(["save", "save", "children", "cleanup", "quit"]);
+});
