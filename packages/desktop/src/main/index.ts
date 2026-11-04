@@ -1167,6 +1167,7 @@ const captureLinkAccount: CaptureLinkAccountAccess = createLinkAccountAccess(
 app.on("browser-window-focus", (_event, window) => {
   if ([...mainWindows].includes(window)) void accountFeatures.refresh(undefined, 60_000);
 });
+void app.whenReady().then(() => accountFeatures.refresh());
 app.once("before-quit", () => accountFeatures.dispose());
 // Main-owned external runtimes use the same account gate as the stdio worker.
 setDefaultCredentialAccess({

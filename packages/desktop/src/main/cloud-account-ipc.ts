@@ -35,14 +35,18 @@ export function registerCloudAccountIpc(options: {
     owner(event);
     return options.manager.signIn("login", input, () => allowed(event));
   });
-  options.ipcMain.handle("cloudAccount:openRegistration", async (event, origin: string) => {
+  options.ipcMain.handle("cloudAccount:openRegistration", (event, origin: string) => {
     owner(event);
     const url = accountRegistrationUrl(origin);
-    const capabilities = await options.manager.capabilities(origin);
-    owner(event);
-    if (!capabilities.registrationAllowed) throw new Error("此账号服务暂未开放注册。");
-    if (!options.openExternal) throw new Error("网页注册入口暂不可用。");
-    await options.openExternal(url);
+    return (async () => {
+      const capabilities = await options.manager.capabilities(origin);
+      owner(event);
+      if (!capabilities.registrationAllowed) throw new Error("此账号服务暂未开放注册。");
+      if (!options.openExternal) throw new Error("网页注册入口暂不可用。");
+      await options.openExternal(
+        capabilities.registrationPage === "/register" ? url : `${origin}/api/v1/account/manage`,
+      );
+    })();
   });
   options.ipcMain.handle("cloudAccount:register", (event, input: CloudAccountLogin) => {
     owner(event);

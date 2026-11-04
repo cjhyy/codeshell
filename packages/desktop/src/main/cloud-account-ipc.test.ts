@@ -70,6 +70,7 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
       "capabilities",
       "login",
       "register",
+      "openRegistration",
       "github",
       "links",
       "profile",
@@ -251,5 +252,45 @@ test("a missing focus hook or window focus exception does not change a successfu
     const result = view.github(view.event, githubSignIn);
     view.complete(signedIn);
     expect(await result).toBe(signedIn);
+  }
+});
+
+test("web registration uses the advertised fixed page, supports old services and rechecks its owner", async () => {
+  for (const registrationPage of [undefined, "/register"] as const) {
+    const handlers = new Map<string, (...args: any[]) => any>();
+    let destroyed = false;
+    const sender = { mainFrame: {}, isDestroyed: () => destroyed };
+    const event = { sender, senderFrame: sender.mainFrame };
+    const opened: string[] = [];
+    let capabilities: any = {
+      registrationAllowed: true,
+      githubEnabled: false,
+      ...(registrationPage ? { registrationPage } : {}),
+    };
+    registerCloudAccountIpc({
+      ipcMain: { handle: (name, handler) => handlers.set(name, handler) },
+      isMainWindow: (value) => value === (sender as any),
+      manager: {
+        capabilities: async () => {
+          await Promise.resolve();
+          return capabilities;
+        },
+      } as any,
+      openExternal: async (url) => {
+        opened.push(url);
+      },
+    });
+    const register = handlers.get("cloudAccount:openRegistration")!;
+    await register(event, "https://account.example");
+    expect(opened).toEqual([
+      `https://account.example${registrationPage ?? "/api/v1/account/manage"}`,
+    ]);
+    capabilities = { registrationAllowed: false };
+    await expect(register(event, "https://account.example")).rejects.toThrow("未开放注册");
+    capabilities = { registrationAllowed: true };
+    const pending = register(event, "https://account.example");
+    destroyed = true;
+    await expect(pending).rejects.toThrow("主窗口");
+    expect(opened).toHaveLength(1);
   }
 });

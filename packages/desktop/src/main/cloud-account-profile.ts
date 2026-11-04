@@ -1,2 +1,2 @@
-/** Compatibility entry; native account ownership lives in the shared server package. */
-export * from "@cjhyy/code-shell-server/account";
+/** Compatibility entry for the shared native account implementation. */
+export { accountProfileRequest, accountProfile } from "@cjhyy/code-shell-server/account";

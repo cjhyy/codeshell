@@ -49,7 +49,7 @@ export class AccountFeatureService {
     },
   ) {
     this.origin = deps.origin ?? DEFAULT_CLOUD_ACCOUNT_ORIGIN;
-    this.synchronize();
+    // Desktop composes this before Electron ready; keep OS credential loading lazy.
     this.unsubscribe = deps.account.onStatus(() => {
       this.synchronize();
       this.publish();
@@ -74,6 +74,7 @@ export class AccountFeatureService {
     return status;
   }
   snapshot(): AccountFeatureSnapshot {
+    if (this.disposed) return resolveAccountFeatures({ signedIn: false, supported: [] });
     const status = this.synchronize();
     return this.resolve(status, this.deps.local?.(status));
   }
@@ -109,6 +110,7 @@ export class AccountFeatureService {
   }
   /** Checks remote entitlement before a setup action, independent of its local prerequisite. */
   requireEntitled(id: AccountFeatureId) {
+    if (this.disposed) throw new Error("账号功能服务已关闭。");
     const status = this.synchronize();
     this.requireView(this.resolve(status)[id].state);
   }
@@ -116,6 +118,7 @@ export class AccountFeatureService {
     this.requireView(this.snapshot()[id].state);
   }
   private requireView(state: string) {
+    if (this.disposed) throw new Error("账号功能服务已关闭。");
     if (state === "sign-in") throw new Error("请先登录 CodeShell 账号。");
     if (state === "pending") throw new Error("账号功能尚未准备好，请检查连接后重试。");
     if (state !== "ready") throw new Error("当前账号服务未开放此功能。");
@@ -190,6 +193,10 @@ export class AccountFeatureService {
   }
   dispose() {
     this.disposed = true;
+    this.reachable = false;
+    this.account = undefined;
+    this.deployment = undefined;
+    this.inFlight = undefined;
     ++this.generation;
     this.controller?.abort();
     clearInterval(this.timer);

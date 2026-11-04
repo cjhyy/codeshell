@@ -175,3 +175,38 @@ test("setup entitlement ignores local readiness but business operations do not",
     f.service.dispose();
   }
 });
+
+test("disposing removes cached permission and prevents late host work", async () => {
+  const f = fixture(signed());
+  await f.service.refresh();
+  expect(f.service.snapshot()["links.remote"].state).toBe("ready");
+  f.service.dispose();
+  expect(f.service.snapshot()["links.remote"].state).toBe("hidden");
+  expect(() => f.service.requireReady("links.remote")).toThrow("关闭");
+  expect(() => f.service.requireEntitled("links.remote")).toThrow("关闭");
+  const calls = f.calls();
+  await f.service.refresh();
+  expect(f.calls()).toEqual(calls);
+});
+
+test("construction does not load OS credentials before the host is ready", () => {
+  let reads = 0;
+  const authority = {
+    status: () => {
+      reads++;
+      throw new Error("keychain not ready");
+    },
+    onStatus: () => () => {},
+    capabilities: async () => {
+      throw new Error("network");
+    },
+    overview: async () => {
+      throw new Error("network");
+    },
+  };
+  const service = new AccountFeatureService({ account: authority, supported: [] });
+  expect(reads).toBe(0);
+  service.dispose();
+  service.snapshot();
+  expect(reads).toBe(0);
+});
