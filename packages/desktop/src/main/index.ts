@@ -4801,12 +4801,12 @@ ipcMain.handle(
   },
 );
 ipcMain.handle("plugins:uninstall", async (_e, pluginName: string, marketplaceName: string) => {
-  const result = uninstallPluginEntry(pluginName, marketplaceName);
+  const result = await uninstallPluginEntry(pluginName, marketplaceName);
   broadcastPluginCommandsChanged(mainWindows);
   return result;
 });
 ipcMain.handle("plugins:uninstallLocal", async (_e, name: string) => {
-  const result = uninstallLocalPluginEntry(name);
+  const result = await uninstallLocalPluginEntry(name);
   broadcastPluginCommandsChanged(mainWindows);
   return result;
 });

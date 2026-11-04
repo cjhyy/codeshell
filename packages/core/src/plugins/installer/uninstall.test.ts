@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { uninstallPluginByName } from "./uninstall.js";
+import { uninstallPluginByName, uninstallPluginByNameAsync } from "./uninstall.js";
 import { installPluginFromPath } from "./install.js";
 import { readInstalledPlugins } from "../installedPlugins.js";
 
@@ -28,6 +28,23 @@ describe("uninstallPluginByName", () => {
     uninstallPluginByName("gone");
     expect(existsSync(dir)).toBe(false);
     expect(readInstalledPlugins().plugins["gone@local"]).toBeUndefined();
+  });
+
+  test("async uninstall yields and never deletes a replacement installed at the same name", async () => {
+    const dir = await installPluginFromPath(src, "gone", "t");
+    for (let i = 0; i < 100; i++) writeFileSync(join(dir, `data-${i}`), "fixture");
+    let finished = false;
+    const removal = uninstallPluginByNameAsync("gone").then(() => {
+      finished = true;
+    });
+    expect(existsSync(dir)).toBe(false);
+    expect(readInstalledPlugins().plugins["gone@local"]).toBeUndefined();
+    mkdirSync(dir);
+    writeFileSync(join(dir, "replacement"), "new install");
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(finished).toBe(false);
+    await removal;
+    expect(existsSync(join(dir, "replacement"))).toBe(true);
   });
 
   test("throws on unknown plugin", () => {
