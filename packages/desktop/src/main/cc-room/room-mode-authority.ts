@@ -10,6 +10,7 @@ import type {
   RoomSessionOpenPlan,
   RoomSessionOpenResult,
 } from "@cjhyy/code-shell-server/mobile-remote";
+import type { ApprovalBridge } from "./approval-bridge.js";
 
 /** Tool name of the Host-generated card. CLI tool approvals never use it. */
 export const ROOM_MODE_APPROVAL_TOOL = "CodeShellRoomPermissionMode";
@@ -466,6 +467,35 @@ export function roomModeApprovalPayload(approval: RoomModeApproval) {
       ...(approval.openRequestId ? { openRequestId: approval.openRequestId } : {}),
     },
   };
+}
+
+/**
+ * Deliver a bypass approval as the room approval card every paired phone sees.
+ * Cancellation or timeout retires the card on every transport.
+ */
+export function requestRoomModeCard(
+  approvalBridge: Pick<ApprovalBridge, "request" | "respond">,
+  approval: RoomModeApproval,
+  signal: AbortSignal,
+): Promise<{ approved: boolean; reason?: string }> {
+  const decision = approvalBridge.request(
+    approval.roomId,
+    approval.requestId,
+    roomModeApprovalPayload(approval),
+  );
+  const retire = (): void => {
+    approvalBridge.respond(approval.roomId, approval.requestId, {
+      behavior: "deny",
+      message: "权限模式审批已结束",
+    });
+  };
+  if (signal.aborted) retire();
+  else signal.addEventListener("abort", retire, { once: true });
+  return decision.then((settled) =>
+    settled.behavior === "allow"
+      ? { approved: true }
+      : { approved: false, reason: settled.message },
+  );
 }
 
 /** Read only the user-scope allowlist (never project settings). */

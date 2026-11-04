@@ -5,7 +5,7 @@ import {
   bypassConsequence,
   modeTakesEffect,
   RoomModeAuthority,
-  roomModeApprovalPayload,
+  requestRoomModeCard,
   trustedClaudeWorkspacesFromUserSettings,
   type RoomModeApproval,
   type RoomModeRequester,
@@ -37,34 +37,8 @@ export function createDesktopRoomModeAuthority(deps: {
     requestApproval: (approval, requester, signal) =>
       requester.channel === "desktop"
         ? confirmOnDesktop(approval, requester, signal)
-        : requestRoomCard(deps.approvalBridge, approval, signal),
+        : requestRoomModeCard(deps.approvalBridge, approval, signal),
   });
-}
-
-function requestRoomCard(
-  approvalBridge: Pick<ApprovalBridge, "request" | "respond">,
-  approval: RoomModeApproval,
-  signal: AbortSignal,
-): Promise<Decision> {
-  const decision = approvalBridge.request(
-    approval.roomId,
-    approval.requestId,
-    roomModeApprovalPayload(approval),
-  );
-  // Cancellation / timeout retires the card on every transport.
-  const retire = (): void => {
-    approvalBridge.respond(approval.roomId, approval.requestId, {
-      behavior: "deny",
-      message: "权限模式审批已结束",
-    });
-  };
-  if (signal.aborted) retire();
-  else signal.addEventListener("abort", retire, { once: true });
-  return decision.then((settled) =>
-    settled.behavior === "allow"
-      ? { approved: true }
-      : { approved: false, reason: settled.message },
-  );
 }
 
 async function confirmOnDesktop(

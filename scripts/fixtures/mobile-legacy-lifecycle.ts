@@ -19,6 +19,12 @@ import { ApprovalBridge } from "../../packages/desktop/src/main/cc-room/approval
 import { createRoomTranscriptSubscriptions } from "../../packages/desktop/src/main/cc-room/transcript-subscriptions.js";
 import { resolveLinkedSessionFromDisk } from "../../packages/desktop/src/main/cc-room/linked-session-resolver.js";
 import {
+  canonicalRoomDirectory,
+  requestRoomModeCard,
+  RoomModeAuthority,
+} from "../../packages/desktop/src/main/cc-room/room-mode-authority.js";
+import { desktopRoomModeHostBoundary } from "../../packages/desktop/src/main/cc-room/room-mode-host-boundary.js";
+import {
   handleClientEvent,
   type OrchestratorCtx,
 } from "../../packages/desktop/src/main/mobile-remote/handle-client-event.js";
@@ -60,6 +66,9 @@ export async function runLegacyLifecycle(root: string) {
   const roomManager = new RoomManager({
     rootDir: join(root, "legacy-rooms"),
     resolveLinkedSession: resolveLinkedSessionFromDisk,
+    // Production Host start policy: a bypass process needs a live Host grant.
+    authorizeStart: (room) => roomModes.authorizeStart(room),
+    onRoomClosed: (roomId) => roomModes.revoke(roomId),
     createAgent: (room, onEvent) =>
       room.kind === "codex"
         ? new CodexRoomAgent({
@@ -88,6 +97,16 @@ export async function runLegacyLifecycle(root: string) {
       transcripts.endRoom(roomId);
     },
   });
+  // Main's room permission-mode authority, wired as in Desktop Main except that
+  // the fixture workspace is the only registered project and the phone card is
+  // the only approval transport (no Desktop window exists here).
+  const roomModes = new RoomModeAuthority({
+    roomManager,
+    ...desktopRoomModeHostBoundary({ paths: { registeredPaths: [cwd] } }),
+    trustedClaudeWorkspaces: async () => [],
+    requestApproval: (approval, _requester, signal) =>
+      requestRoomModeCard(approvalBridge, approval, signal),
+  });
   const transcripts = createRoomTranscriptSubscriptions({
     roomManager,
     checkpointDir: join(root, "legacy-checkpoints"),
@@ -102,6 +121,12 @@ export async function runLegacyLifecycle(root: string) {
     uploads,
     roomManager,
     approvalBridge,
+    roomModes,
+    broadcastRoomState: () =>
+      remote.broadcast({
+        type: "room.list.ok",
+        rooms: roomManager.listRooms().map((room: any) => context.roomToPublic(room)),
+      }),
     transcriptSubscriptions: transcripts,
     roomToPublic: (room: any) => ({
       ...room,
@@ -111,7 +136,10 @@ export async function runLegacyLifecycle(root: string) {
     roomMatchesTranscript: (roomId: string, path: string, sessionId: string, kind: Kind) => {
       const room = roomManager.getRoom(roomId);
       return (
-        !!room && room.cwd === path && room.claudeSessionId === sessionId && room.kind === kind
+        !!room &&
+        canonicalRoomDirectory(room.cwd) === canonicalRoomDirectory(path) &&
+        room.claudeSessionId === sessionId &&
+        room.kind === kind
       );
     },
     settleMobileUploadClaims: async (id: string, claims: any[], action: "release" | "finalize") => {
@@ -343,8 +371,46 @@ export async function runLegacyLifecycle(root: string) {
 
       phase = `${kind} resume old CLI through Mobile room`;
       const id = `legacy-${kind}-1`;
+      // A phone cannot start an untrusted CLI in bypass: Main asks with its own
+      // high-risk card, and a denial leaves the session unopened (never a
+      // silent downgrade).
+      const turnsBeforeBypass = log().filter(
+        (entry: any) => entry.event === "legacy-physical-turn",
+      ).length;
+      const bypassRequest = `legacy-bypass-${kind}`;
+      const card = await ask(
+        {
+          type: "ccRoom.openSession",
+          sessionId: id,
+          cwd,
+          kind,
+          mode: "bypassPermissions",
+          requestId: bypassRequest,
+        },
+        (event) =>
+          event.type === "ccRoom.approvalRequest" &&
+          event.req.purpose === "room-permission-mode" &&
+          event.req.modeChange?.openRequestId === bypassRequest,
+      );
+      assert.equal(card.req.modeChange.sessionId, id);
+      assert.equal(card.req.modeChange.toMode, "bypassPermissions");
+      const denied = await ask(
+        {
+          type: "ccRoom.respondApproval",
+          roomId: card.roomId,
+          requestId: card.req.requestId,
+          decision: { behavior: "deny", message: "fixture keeps the safe mode" },
+        },
+        (event) => event.type === "room.error" && event.requestId === bypassRequest,
+      );
+      assert(denied.message.includes("全放行未获批准"), denied.message);
+      assert(!roomManager.isOpen(card.roomId));
+      assert.equal(
+        log().filter((entry: any) => entry.event === "legacy-physical-turn").length,
+        turnsBeforeBypass,
+      );
       const resumed = await ask(
-        { type: "ccRoom.openSession", sessionId: id, cwd, kind, mode: "bypassPermissions" },
+        { type: "ccRoom.openSession", sessionId: id, cwd, kind, mode: "default" },
         (event) => event.type === "ccRoom.opened" && event.sessionId === id,
       );
       assert.equal(resumed.status, "running");
@@ -382,7 +448,7 @@ export async function runLegacyLifecycle(root: string) {
       assert(page2.messages.some((message: any) => message.text === "legacy synthetic reply"));
       assert(!page2.messages.some((message: any) => message.seq === page1.messages[0].seq));
       cases.push(
-        `${kind}: Main resumes the real synthetic legacy CLI with safe permission mode and pages durable room output`,
+        `${kind}: Main refuses an unapproved phone bypass via its own card, resumes the real synthetic legacy CLI in the safe mode and pages durable room output`,
       );
       if (kind === "claude-code") {
         phase = "resident Claude approval reconnect";
