@@ -5,6 +5,7 @@ import { CloudAccountHttpError } from "./http.js";
 import { CloudAccountManager } from "./manager.js";
 import { DEFAULT_CLOUD_ACCOUNT_ORIGIN } from "./types.js";
 import { MemoryAccountStore, NativeAccountStore } from "./native-store.js";
+import { acquireNativeAccountLock } from "./native-lock.js";
 import {
   accountRegistrationUrl,
   readAccountFeatures,
@@ -23,7 +24,8 @@ Credentials use the OS credential store; no plaintext fallback. Registration ope
 <origin>/register, or the existing account portal for older services. Local tasks and serve's Hub/passcode identity remain independent.
 With --memory, login keeps an account console open: status, features, links, logout,
 register, exit. Closing this console revokes its temporary login. No device relay
-or upload is started. Use the same --origin on later account commands.`;
+or upload is started. Use the same --origin on later account commands. Persistent
+commands for one origin are serialized; finish an active login before retrying.`;
 
 export interface AccountCliOptions {
   action: "login" | "status" | "features" | "links" | "logout" | "register";
@@ -135,6 +137,7 @@ export interface AccountCliDependencies {
   prompt?: (label: string, secret?: boolean) => Promise<string>;
   readPassword?: () => Promise<string>;
   interactive?: boolean;
+  acquireLock?: (origin: string) => Promise<() => Promise<void>>;
 }
 /** Shared entry for TUI and serve; it never changes Host/Hub authentication. */
 export async function runAccountCli(
@@ -155,109 +158,129 @@ export async function runAccountCli(
     throw new Error(
       "--memory requires an interactive terminal and keeps the session open. Use OS storage for one-shot stdin login.",
     );
-  const manager =
-    deps.createManager?.(options, navigate) ??
-    new CloudAccountManager({
-      store:
-        options.memory || options.action === "register"
-          ? new MemoryAccountStore()
-          : new NativeAccountStore(options.origin),
-      openExternal: navigate,
-      changed() {},
-    });
-  const register = async () => {
-    const capabilities = await manager.capabilities(options.origin);
-    await navigate(
-      capabilities.registrationPage === "/register"
-        ? accountRegistrationUrl(options.origin)
-        : `${options.origin}/api/v1/account/manage`,
-    );
-  };
-  const prompt = deps.prompt ?? question;
-  const display = async (action: "status" | "features" | "links") => {
-    await manager.resume();
-    const status = manager.status();
-    if (action === "status") {
-      write(JSON.stringify(status, null, 2));
-      return;
-    }
-    const deployment = await manager.capabilities(options.origin);
-    const overview =
-      status.state === "signed-in" && status.account && status.origin === options.origin
-        ? await manager
-            .overview({ origin: options.origin, accountId: status.account.id })
-            .catch((error) => {
-              if (error instanceof CloudAccountHttpError && error.status === 404) return undefined;
-              throw error;
-            })
-        : undefined;
-    const deploymentFeatures = readAccountFeatures(deployment, "deployment");
-    const features = resolveAccountFeatures({
-      deployment: deploymentFeatures,
-      account:
-        status.state === "signed-in"
-          ? readAccountFeatures(overview ?? {}, "account", deploymentFeatures)
-          : undefined,
-      signedIn: status.state === "signed-in",
-      // This CLI currently implements account-owned Link listing only.
-      supported:
-        deployment.linkManagementEnabled || overview?.capabilities.links ? ["links.remote"] : [],
-    });
-    if (action === "links") {
-      if (features["links.remote"].state !== "ready" || !status.account)
-        throw new Error(
-          `Account Link list is ${features["links.remote"].state}. Sign in to a service with Link management enabled.`,
-        );
-      write(
-        JSON.stringify(
-          await manager.manageLinks({
-            action: "list",
-            origin: options.origin,
-            accountId: status.account.id,
-          }),
-          null,
-          2,
-        ),
-      );
-    } else write(JSON.stringify({ ...status, features }, null, 2));
-  };
+  const release =
+    options.memory || options.action === "register"
+      ? undefined
+      : await (deps.acquireLock ?? acquireNativeAccountLock)(options.origin);
   try {
-    if (options.action === "register") {
-      await register();
-      return;
-    }
-    if (options.action === "login") {
-      if (options.github)
-        await manager.signInWithGitHub({ origin: options.origin, connectGitHub: false });
-      else
-        await manager.signIn("login", {
-          origin: options.origin,
-          username: options.username ?? (await prompt("Username: ")),
-          password: options.passwordStdin
-            ? await (deps.readPassword ?? stdinPassword)()
-            : await prompt("Password: ", true),
-        });
-      await display("features");
-      if (options.memory) {
-        write(
-          "Temporary account session active. Commands: status, features, links, logout, register, exit.",
-        );
-        while (true) {
-          const command = (await prompt("account> ")).trim();
-          if (command === "exit" || command === "logout") break;
-          if (command === "status" || command === "features" || command === "links")
-            await display(command);
-          else if (command === "register") await register();
-          else write("Commands: status, features, links, logout, register, exit");
-        }
+    const manager =
+      deps.createManager?.(options, navigate) ??
+      new CloudAccountManager({
+        store:
+          options.memory || options.action === "register"
+            ? new MemoryAccountStore()
+            : new NativeAccountStore(options.origin),
+        openExternal: navigate,
+        changed() {},
+      });
+    const register = async () => {
+      const capabilities = await manager.capabilities(options.origin);
+      await navigate(
+        capabilities.registrationPage === "/register"
+          ? accountRegistrationUrl(options.origin)
+          : `${options.origin}/api/v1/account/manage`,
+      );
+    };
+    const prompt = deps.prompt ?? question;
+    const display = async (action: "status" | "features" | "links") => {
+      await manager.resume();
+      const status = manager.status();
+      if (action === "status") {
+        write(JSON.stringify(status, null, 2));
+        return;
       }
-    } else if (options.action === "logout") write(JSON.stringify(await manager.logout()));
-    else await display(options.action);
-  } finally {
+      const deployment = await manager.capabilities(options.origin);
+      const overview =
+        status.state === "signed-in" && status.account && status.origin === options.origin
+          ? await manager
+              .overview({ origin: options.origin, accountId: status.account.id })
+              .catch((error) => {
+                if (error instanceof CloudAccountHttpError && error.status === 404)
+                  return undefined;
+                throw error;
+              })
+          : undefined;
+      const deploymentFeatures = readAccountFeatures(deployment, "deployment");
+      const features = resolveAccountFeatures({
+        deployment: deploymentFeatures,
+        account:
+          status.state === "signed-in"
+            ? readAccountFeatures(overview ?? {}, "account", deploymentFeatures)
+            : undefined,
+        signedIn: status.state === "signed-in",
+        // This CLI currently implements account-owned Link listing only.
+        supported:
+          deployment.linkManagementEnabled || overview?.capabilities.links ? ["links.remote"] : [],
+      });
+      if (action === "links") {
+        if (features["links.remote"].state !== "ready" || !status.account)
+          throw new Error(
+            `Account Link list is ${features["links.remote"].state}. Sign in to a service with Link management enabled.`,
+          );
+        write(
+          JSON.stringify(
+            await manager.manageLinks({
+              action: "list",
+              origin: options.origin,
+              accountId: status.account.id,
+            }),
+            null,
+            2,
+          ),
+        );
+      } else write(JSON.stringify({ ...status, features }, null, 2));
+    };
     try {
-      if (options.memory) await manager.logout();
+      if (options.action === "register") {
+        await register();
+        return;
+      }
+      if (options.action === "login") {
+        if (options.github)
+          await manager.signInWithGitHub({ origin: options.origin, connectGitHub: false });
+        else
+          await manager.signIn("login", {
+            origin: options.origin,
+            username: options.username ?? (await prompt("Username: ")),
+            password: options.passwordStdin
+              ? await (deps.readPassword ?? stdinPassword)()
+              : await prompt("Password: ", true),
+          });
+        const signedIn = manager.status();
+        write(JSON.stringify(signedIn, null, 2));
+        if (signedIn.state !== "signed-in") return;
+        try {
+          await display("features");
+        } catch {
+          write("Signed in. Feature status could not be loaded; retry with account features.");
+        }
+        if (options.memory) {
+          write(
+            "Temporary account session active. Commands: status, features, links, logout, register, exit.",
+          );
+          while (true) {
+            const command = (await prompt("account> ")).trim();
+            if (command === "exit" || command === "logout") break;
+            try {
+              if (command === "status" || command === "features" || command === "links")
+                await display(command);
+              else if (command === "register") await register();
+              else write("Commands: status, features, links, logout, register, exit");
+            } catch {
+              write("Account operation could not finish. Retry features, links, status, or exit.");
+            }
+          }
+        }
+      } else if (options.action === "logout") write(JSON.stringify(await manager.logout()));
+      else await display(options.action);
     } finally {
-      manager.dispose();
+      try {
+        if (options.memory) await manager.logout();
+      } finally {
+        manager.dispose();
+      }
     }
+  } finally {
+    await release?.();
   }
 }

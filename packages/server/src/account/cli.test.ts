@@ -9,7 +9,7 @@ const identity = {
   username: "member",
   displayName: "Member",
 };
-function setup(legacy = false) {
+function setup(legacy = false, discoveryFailures = 0) {
   const requests: CloudAccountRequest[] = [];
   const store = new MemoryAccountStore();
   const manager = new CloudAccountManager({
@@ -27,6 +27,8 @@ function setup(legacy = false) {
           sessionId: "11111111-1111-4111-8111-111111111111",
           account: identity,
         };
+      if (input.path.endsWith("/status") && discoveryFailures-- > 0)
+        throw new Error("private-upstream-failure");
       if (input.path.endsWith("/status") && legacy)
         return { registrationAllowed: true, githubEnabled: false, linkManagementEnabled: true };
       if (input.path.endsWith("/status"))
@@ -59,6 +61,9 @@ test("CLI rejects argv passwords and registration only navigates to the selected
   expect(() => parseAccountArgs(["login", "--origin", "https://account.example/path"])).toThrow();
   const urls: string[] = [];
   await runAccountCli(["register", "--origin", origin], {
+    acquireLock: async () => {
+      throw new Error("registration must not lock persistent credentials");
+    },
     write() {},
     open: async (url) => {
       urls.push(url);
@@ -72,6 +77,9 @@ test("memory login stays usable for live features/status and revokes on normal e
   const output: string[] = [],
     answers = ["fixture-password-123", "features", "links", "status", "exit"];
   await runAccountCli(["login", "--memory", "--origin", origin, "--username", "member"], {
+    acquireLock: async () => {
+      throw new Error("memory sessions must not lock persistent credentials");
+    },
     interactive: true,
     createManager: () => manager,
     prompt: async () => answers.shift()!,
@@ -82,7 +90,9 @@ test("memory login stays usable for live features/status and revokes on normal e
   expect(store.load()).toBeUndefined();
   expect(output.join()).toContain("links.remote");
   expect(requests.some((r) => r.path.endsWith("/links"))).toBe(true);
-  const projection = JSON.parse(output[0]);
+  const projection = JSON.parse(
+    output.find((value) => value.startsWith("{") && value.includes('"features"'))!,
+  );
   expect(projection.features["links.remote"].state).toBe("ready");
   expect(projection.features["cloud.projects"].state).toBe("hidden");
   expect(projection.features["devices.dispatch"].state).toBe("hidden");
@@ -169,7 +179,10 @@ test("legacy Account without overview keeps supported Link listing discoverable"
     readPassword: async () => "fixture-password-123",
     write: (value) => output.push(value),
   });
-  expect(JSON.parse(output[0]).features["links.remote"].state).toBe("ready");
+  expect(
+    JSON.parse(output.find((value) => value.startsWith("{") && value.includes('"features"'))!)
+      .features["links.remote"].state,
+  ).toBe("ready");
 });
 
 test("registration falls back to the existing portal on old services without touching credentials", async () => {
@@ -200,4 +213,39 @@ test("registration discovery ignores untrusted route overrides", async () => {
   });
   expect((await manager.capabilities(origin)).registrationPage).toBeUndefined();
   manager.dispose();
+});
+
+test("optional feature discovery failure preserves a successful persistent or in-process login", async () => {
+  for (const memory of [false, true]) {
+    const { manager, requests, store } = setup(false, 1);
+    const output: string[] = [];
+    const answers = ["fixture-password-123", "features", "exit"];
+    await runAccountCli(
+      [
+        "login",
+        "--origin",
+        origin,
+        "--username",
+        "member",
+        ...(memory ? ["--memory"] : ["--password-stdin"]),
+      ],
+      {
+        createManager: () => manager,
+        interactive: true,
+        readPassword: async () => "fixture-password-123",
+        write: (value) => output.push(value),
+        prompt: async () => {
+          if (answers.length < 3) expect(manager.status().state).toBe("signed-in");
+          return answers.shift()!;
+        },
+      },
+    );
+    expect(output.join()).toContain("Signed in. Feature status could not be loaded");
+    expect(output.join()).not.toContain("private-upstream-failure");
+    if (memory) expect(requests.some((request) => request.path.endsWith("/overview"))).toBe(true);
+    else {
+      expect(store.load()?.account.id).toBe(identity.id);
+      expect(requests.some((request) => request.path.endsWith("/logout"))).toBe(false);
+    }
+  }
 });
