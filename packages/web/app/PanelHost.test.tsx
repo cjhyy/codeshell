@@ -74,6 +74,7 @@ interface Request {
 const originalFetch = globalThis.fetch;
 const unmounts: Array<() => Promise<void>> = [];
 const videoRestores: Array<() => void> = [];
+const confirmationRestores: Array<() => void> = [];
 const timerRestores: Array<() => void> = [];
 function manualTimers() {
   setSystemTime(prepared.expiresAt - 60 * 60_000);
@@ -137,6 +138,7 @@ let previousMatchMedia: PropertyDescriptor | undefined;
 afterEach(async () => {
   for (const unmount of unmounts.splice(0)) await unmount();
   for (const restore of videoRestores.splice(0).reverse()) restore();
+  for (const restore of confirmationRestores.splice(0).reverse()) restore();
   for (const restore of timerRestores.splice(0).reverse()) restore();
   globalThis.fetch = originalFetch;
   if (previousMatchMedia) Object.defineProperty(window, "matchMedia", previousMatchMedia);
@@ -492,6 +494,60 @@ test("iframe remains opaque and prepare alone does not mark it loaded", async ()
   await view.ready();
   expect(text(view.tree)).not.toContain("正在打开面板");
   expect(text(view.tree)).toContain("视频处理需要桌面客户端");
+});
+
+test("header reload reopens loading and ready panels but waits for trusted host requests", async () => {
+  const view = await fixture({
+    intercept(request) {
+      if (request.body?.method === "resources.recordAudio")
+        return Response.json({
+          effect: "resources.recordAudio",
+          maxDurationSeconds: 60,
+          maxBytes: 1024,
+        });
+    },
+  });
+  const prepares = () =>
+    view.requests.filter((request) => request.url.pathname.endsWith("/prepare")).length;
+  const closes = () => view.requests.filter((request) => request.method === "DELETE").length;
+  const previousConfirm = Object.getOwnPropertyDescriptor(window, "confirm");
+  let reloadAllowed = false;
+  const confirmationMessages: string[] = [];
+  Object.defineProperty(window, "confirm", {
+    configurable: true,
+    value: (message: string) => {
+      confirmationMessages.push(message);
+      return reloadAllowed;
+    },
+  });
+  confirmationRestores.push(() =>
+    previousConfirm
+      ? Object.defineProperty(window, "confirm", previousConfirm)
+      : delete (window as any).confirm,
+  );
+  expect(text(view.tree)).toContain("正在打开面板");
+  await click(button(view.tree, "重新加载"));
+  expect([prepares(), closes()]).toEqual([1, 0]);
+  expect(confirmationMessages[0]).toContain("未保存");
+  expect(confirmationMessages[0]).toContain("AI 任务");
+  reloadAllowed = true;
+  await click(button(view.tree, "重新加载"));
+  expect([prepares(), closes()]).toEqual([2, 1]);
+  view.attach();
+  await view.ready();
+  await click(button(view.tree, "重新加载"));
+  expect([prepares(), closes()]).toEqual([3, 2]);
+  view.attach();
+  await view.ready();
+  await view.call("resources.recordAudio", {}, "record-1");
+  expect(button(view.tree, "重新加载").props.disabled).toBe(true);
+  const request = elements(view.tree).find((item) => item.type === PanelAudioDialog)!.props
+    .request as PanelAudioRequest;
+  await act(async () => {
+    request.finish({ cancelled: true });
+    await flushMicrotasks();
+  });
+  expect(button(view.tree, "重新加载").props.disabled).toBe(false);
 });
 
 test("wrong window, non-opaque origin and wrong instance never reach authenticated APIs", async () => {

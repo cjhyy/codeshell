@@ -1002,60 +1002,100 @@ export function PanelHost({
   }, [busy, prepared]);
 
   return (
-    <section className={`panel-host${confirmation?.directory ? " panel-host-picking" : ""}`}>
+    <section
+      className={`panel-host${confirmation?.directory ? " panel-host-picking" : ""}${
+        preview || confirmation || audioRequest || videoRequest ? " panel-host-overlaying" : ""
+      }`}
+    >
       <header className="panel-host-heading">
         <div>
           <h1>{panel.title["zh-CN"] || panel.title.default}</h1>
           <p>v{panel.version} · 运行于当前工作区</p>
         </div>
-        <button onClick={onClose}>返回面板</button>
-      </header>
-      {(prepared?.limitations ?? panel.compatibility.reasons).length > 0 && (
-        <details className="panel-host-limitations" open>
-          <summary>部分功能可用</summary>
-          <p>面板界面可以使用；以下功能尚未接入网页，使用时会显示具体限制。</p>
-          <ul>
-            {(prepared?.limitations ?? panel.compatibility.reasons).map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-        </details>
-      )}
-      {notice && (
-        <p className="panel-host-notice" role="status">
-          {notice}
-        </p>
-      )}
-      {confirmationNotice && (
-        <p className="panel-host-notice" role="status">
-          {confirmationNotice}
-        </p>
-      )}
-      {directory && (
-        <div className="panel-host-notice panel-host-directory" role="status">
-          <p>
-            文件保存在{prepared?.context.host === "desktop" ? "电脑" : "服务器"}目录：
-            {directory.path}
-          </p>
-          {directory.url && (
-            <>
-              <div className="panel-host-actions panel-host-download-actions">
-                <a href={directory.url} target="_blank" rel="noopener noreferrer">
-                  查看并下载文件
-                </a>
-                <CopyDownloadLink key={directory.url} url={directory.url} />
-              </div>
-              <p className="panel-host-download-help">
-                下载链接仅供当前已登录的浏览器使用，关闭面板后失效。
-              </p>
-            </>
-          )}
+        <div className="panel-host-heading-actions">
+          <button
+            disabled={!!confirmation || confirming || !!audioRequest || !!videoRequest}
+            onClick={() => {
+              if (
+                window.confirm(
+                  "重新加载会丢失未保存的面板内容，并中止与当前面板关联的 AI 任务。确定继续？",
+                )
+              )
+                setReload((value) => value + 1);
+            }}
+          >
+            重新加载
+          </button>
+          <button onClick={onClose}>返回面板</button>
         </div>
-      )}
+      </header>
+      <div className="panel-host-status">
+        {(prepared?.limitations ?? panel.compatibility.reasons).length > 0 && (
+          <details className="panel-host-limitations">
+            <summary>部分功能可用</summary>
+            <p>面板界面可以使用；以下功能尚未接入网页，使用时会显示具体限制。</p>
+            <ul>
+              {(prepared?.limitations ?? panel.compatibility.reasons).map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          </details>
+        )}
+        {notice && (
+          <p className="panel-host-notice" role="status">
+            {notice}
+          </p>
+        )}
+        {confirmationNotice && (
+          <p className="panel-host-notice" role="status">
+            {confirmationNotice}
+          </p>
+        )}
+        {directory && (
+          <div className="panel-host-notice panel-host-directory" role="status">
+            <p>
+              文件保存在{prepared?.context.host === "desktop" ? "电脑" : "服务器"}目录：
+              {directory.path}
+            </p>
+            {directory.url && (
+              <>
+                <div className="panel-host-actions panel-host-download-actions">
+                  <a href={directory.url} target="_blank" rel="noopener noreferrer">
+                    查看并下载文件
+                  </a>
+                  <CopyDownloadLink key={directory.url} url={directory.url} />
+                </div>
+                <p className="panel-host-download-help">
+                  下载链接仅供当前已登录的浏览器使用，关闭面板后失效。
+                </p>
+              </>
+            )}
+          </div>
+        )}
+        {connectionStatus && (
+          <p className="panel-host-notice" role="status">
+            {connectionStatus}
+          </p>
+        )}
+        {error && (
+          <div className="panel-host-error" role="alert">
+            <p>{error}</p>
+            <button disabled={loading} onClick={() => setReload((value) => value + 1)}>
+              重新打开面板
+            </button>
+          </div>
+        )}
+        {loading && (
+          <p className="panel-host-loading" role="status">
+            正在打开面板…
+          </p>
+        )}
+      </div>
       {preview && (
         <section
           className="panel-host-preview"
           aria-label="文件预览"
+          inert={!!confirmation || confirming || !!audioRequest || !!videoRequest}
           tabIndex={-1}
           ref={previewElement}
         >
@@ -1107,24 +1147,6 @@ export function PanelHost({
             下载链接仅供当前已登录的浏览器使用，关闭面板后失效。
           </p>
         </section>
-      )}
-      {connectionStatus && (
-        <p className="panel-host-notice" role="status">
-          {connectionStatus}
-        </p>
-      )}
-      {error && (
-        <div className="panel-host-error" role="alert">
-          <p>{error}</p>
-          <button disabled={loading} onClick={() => setReload((value) => value + 1)}>
-            重新打开面板
-          </button>
-        </div>
-      )}
-      {loading && (
-        <p className="panel-host-loading" role="status">
-          正在打开面板…
-        </p>
       )}
       {audioRequest && <PanelAudioDialog request={audioRequest} />}
       {videoRequest && <PanelVideoDialog request={videoRequest} />}
