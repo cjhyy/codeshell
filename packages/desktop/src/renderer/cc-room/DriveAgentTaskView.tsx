@@ -37,10 +37,12 @@ export function DriveAgentTaskView({
   request,
   active,
   onOpenRequestConsumed,
+  onShowSessionList,
 }: {
   request: TaskRequest;
   active: boolean;
   onOpenRequestConsumed?: (nonce: number) => void;
+  onShowSessionList?: (cliKind: TaskRequest["cliKind"]) => void;
 }) {
   const { t, lang } = useT();
   const [job, setJob] = useState<Job | null>(null);
@@ -307,6 +309,11 @@ export function DriveAgentTaskView({
                 {stopping ? t("panels.shells.jobCancelling") : t("panels.common.stop")}
               </Button>
             )}
+            {onShowSessionList && (
+              <Button size="sm" variant="ghost" onClick={() => onShowSessionList(cliKind)}>
+                {t("panels.shells.taskAllSessions", { cli: cliLabel })}
+              </Button>
+            )}
             <Button size="sm" variant="ghost" onClick={returnToChat}>
               {t("panels.shells.taskBack")}
             </Button>
@@ -347,7 +354,8 @@ export function DriveAgentTaskView({
             <span>{t(`panels.shells.taskPhase.${progress.phase}`)}</span>
           )}
         </div>
-        {progress?.summary && (
+        {/* Once the transcript is shown below, the raw CLI summary only repeats it. */}
+        {!linked && progress?.summary && (
           <p className="break-words text-muted-foreground">{progress.summary}</p>
         )}
         {quiet && <p className="text-status-warn">{t("panels.shells.taskQuiet")}</p>}
@@ -393,23 +401,6 @@ export function DriveAgentTaskView({
           <p role="alert" className="text-status-err">
             {actionError}
           </p>
-        )}
-        {!!progress?.recentEvents?.length && (
-          <details>
-            <summary className="cursor-pointer text-muted-foreground">
-              {t("panels.shells.taskEvents", { count: progress.recentEvents.length })}
-            </summary>
-            <ol className="mt-1 max-h-32 space-y-1 overflow-auto text-muted-foreground">
-              {progress.recentEvents.map((event, index) => (
-                <li key={`${event.at}:${index}`} className="flex gap-2">
-                  <span className="shrink-0 tabular-nums">
-                    +{taskDuration(event.at - job!.startedAt)}
-                  </span>
-                  <span className="break-words">{event.summary}</span>
-                </li>
-              ))}
-            </ol>
-          </details>
         )}
         {linked && finalText && (
           <details>

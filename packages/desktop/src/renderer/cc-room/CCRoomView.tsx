@@ -58,10 +58,14 @@ type CCRoomViewProps = {
   active?: boolean;
   openRequest?: OpenCliSessionRequest;
   onOpenRequestConsumed?: (nonce: number) => void;
+  /** Leave a DriveAgent task page for this tab's ordinary session list. */
+  onShowSessionList?: () => void;
 };
 
 export function CCRoomView(props: CCRoomViewProps) {
-  const { openRequest, active = true, onOpenRequestConsumed } = props;
+  const { openRequest, active = true, onOpenRequestConsumed, onShowSessionList } = props;
+  // The list opened from a task page starts on that task's CLI.
+  const [listKind, setListKind] = useState<CliKind>("claude-code");
   if (openRequest?.jobId && openRequest.sourceSessionId) {
     return (
       <DriveAgentTaskView
@@ -69,10 +73,17 @@ export function CCRoomView(props: CCRoomViewProps) {
         request={openRequest as OpenCliSessionRequest & { jobId: string; sourceSessionId: string }}
         active={active}
         onOpenRequestConsumed={onOpenRequestConsumed}
+        onShowSessionList={
+          onShowSessionList &&
+          ((cliKind) => {
+            setListKind(cliKind);
+            onShowSessionList();
+          })
+        }
       />
     );
   }
-  return <CliRoomBrowser {...props} />;
+  return <CliRoomBrowser {...props} initialCliKind={listKind} />;
 }
 
 function CliRoomBrowser({
@@ -80,7 +91,8 @@ function CliRoomBrowser({
   active = true,
   openRequest,
   onOpenRequestConsumed,
-}: CCRoomViewProps) {
+  initialCliKind = "claude-code",
+}: CCRoomViewProps & { initialCliKind?: CliKind }) {
   const { t } = useT();
   const toast = useToast();
   const tRef = useRef(t);
@@ -89,7 +101,7 @@ function CliRoomBrowser({
   tRef.current = t;
   toastRef.current = toast;
   consumeRef.current = onOpenRequestConsumed;
-  const [cliKind, setCliKind] = useState<CliKind>("claude-code");
+  const [cliKind, setCliKind] = useState<CliKind>(initialCliKind);
   const cliKindRef = useRef<CliKind>(cliKind);
   const cwdRef = useRef(cwd);
   cliKindRef.current = cliKind;
