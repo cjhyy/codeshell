@@ -71,7 +71,7 @@ test("project-local settings require approval to read", () => {
     mkdirSync(join(cwd, ".code-shell"));
     const file = join(cwd, ".code-shell", "settings.local.json");
     writeFileSync(file, "{}");
-    expect(classifyPath(file, {operation: "read", cwd}).decision).toBe("ask");
+    expect(classifyPath(file, { operation: "read", workspaceRoot: cwd }).decision).toBe("ask");
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }

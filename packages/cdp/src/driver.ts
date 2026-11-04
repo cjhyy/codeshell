@@ -620,7 +620,7 @@ export class CdpActionsDriver {
               returnByValue: true,
             }),
             new Promise<undefined>((resolve) => {
-              timer = setTimeout(resolve, remaining);
+              timer = setTimeout(() => resolve(undefined), remaining);
             }),
           ])) as { result?: { value?: string } } | undefined;
         } finally {
