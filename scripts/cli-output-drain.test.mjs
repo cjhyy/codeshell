@@ -5,7 +5,10 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { build } from "esbuild";
+import { createRequire } from "node:module";
+const { build } = createRequire(new URL("../packages/desktop/package.json", import.meta.url))(
+  "esbuild",
+);
 
 const run = promisify(execFile);
 test("CLI success output drains through a real pipe before exit", async () => {
