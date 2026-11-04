@@ -2,7 +2,11 @@
  * Engine — the main facade that wires all components together.
  */
 
-import { ConfiguredTextModelBinding } from "./configured-text-model.js";
+import {
+  ConfiguredTextModelBinding,
+  registerConfiguredTextModels,
+  resolveWorkspaceModelEntry,
+} from "./configured-text-model.js";
 import type {
   ClientDefaults,
   Message,
@@ -24,8 +28,6 @@ import { buildWrappedOnStream, createRunOutputJournalPolicy } from "./run-stream
 import { createRunTiming } from "../session/stream-timing.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
-import { getMergedCatalog } from "../model-catalog/index.js";
-import { modelEntriesFromConnections } from "./model-connections-pool.js";
 import { persistActiveModel } from "./persist-active-model.js";
 import {
   addTokenUsage,
@@ -891,24 +893,7 @@ export class Engine {
       sm.invalidate();
       const settings = sm.get();
 
-      // Unified model catalog (统一模型接入方案 §6): register text
-      // connections from settings.modelConnections[] into the pool — the
-      // catalog-driven instance store is the sole source of model selection.
-      // A connection's instance id becomes its pool key. See
-      // docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md.
-      const connections = (settings as { modelConnections?: unknown[] }).modelConnections;
-      if (Array.isArray(connections) && connections.length) {
-        const catalog = getMergedCatalog();
-        const credentials = (settings as { credentials?: unknown[] }).credentials;
-        for (const entry of modelEntriesFromConnections(
-          connections as never[],
-          (Array.isArray(credentials) ? credentials : []) as never[],
-          catalog,
-        )) {
-          this.modelPool.register(entry);
-        }
-      }
-      const hasConnections = Array.isArray(connections) && connections.length > 0;
+      const hasConnections = registerConfiguredTextModels(this.modelPool, settings);
 
       if (hasConnections) {
         this.modelPool.setCacheDir(defaultCacheDir());
@@ -3590,6 +3575,11 @@ export class Engine {
     return this.runtimeToolRegistry;
   }
 
+  /** Resolve a pool selection against this Engine's current workspace settings. */
+  resolveModelEntry(key: string): ModelEntry | undefined {
+    return resolveWorkspaceModelEntry(key, this.modelPool, this.getSettingsManager());
+  }
+
   /**
    * Switch the active model by pool key. Takes effect on the next run() call.
    * Returns the new model entry.
@@ -3606,25 +3596,6 @@ export class Engine {
    * only live in memory and every restart reverts to the previously persisted
    * defaults.text.
    */
-  resolveModelEntry(key: string): ModelEntry | undefined {
-    const pooled = this.modelPool.get(key);
-    const manager = this.getSettingsManager();
-    manager.invalidate();
-    const settings = manager.get();
-    const connections = (settings.modelConnections ?? []).filter((item) => item.id === key);
-    if (!pooled?.configuredConnectionId && connections.length === 0) return pooled;
-    if (connections.length !== 1 || connections[0].tag !== "text") return undefined;
-    const entry = modelEntriesFromConnections(
-      connections,
-      settings.credentials ?? [],
-      getMergedCatalog(),
-    )[0];
-    if (!entry || (entry.needsKey !== false && !entry.apiKey?.trim()))
-      throw new ConfigError(`Selected model connection "${key}" is incomplete`);
-    if (entry.needsKey === false && !entry.apiKey?.trim()) entry.apiKey = "codeshell-keyless";
-    return entry;
-  }
-
   switchModel(key: string, opts?: { persist?: boolean }): ModelEntry {
     const perSession = opts?.persist === false;
     const entry = this.resolveModelEntry(key);
