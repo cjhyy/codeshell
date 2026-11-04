@@ -1,4 +1,10 @@
-import type { BrowserWindow, IpcMain, SafeStorage, WebContents } from "electron";
+import {
+  AccountFeatureService,
+  accountLocalConditions,
+  bindAccountFeatureLifecycle,
+  registerAccountFeatureIpc,
+} from "./account-features.js";
+import type { App, BrowserWindow, IpcMain, SafeStorage, WebContents } from "electron";
 import { resolve } from "node:path";
 import type {
   AccessPasscode,
@@ -17,9 +23,11 @@ import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
 import { registerCloudWorkbenchIpc } from "./cloud-workbench-ipc.js";
 import type { PrepareAccountGitHubLink } from "./account-github-link.js";
 import { CloudManagementManager, type ManagedCloudWindows } from "./cloud-management-manager.js";
+import { createLinkAccountAccess } from "./link-account-access.js";
 
 /** Compose optional cloud identity and its remote-access lifecycle without starting either. */
 export function createDesktopRemoteServices(options: {
+  app?: Pick<App, "on" | "once" | "whenReady">;
   ipcMain: Pick<IpcMain, "handle" | "removeHandler">;
   userDataDir: string;
   environmentDir: string;
@@ -53,8 +61,19 @@ export function createDesktopRemoteServices(options: {
     ),
     openExternal: options.openExternal,
     prepareGitHubLink: options.prepareGitHubLink,
-    activateRelay: (identity, authorized) =>
-      mobileRemoteController.activateAccountRelay(identity, authorized),
+    activateRelay: async (identity, authorized) => {
+      await accountFeatures.refresh();
+      const offered = accountFeatures.snapshot();
+      if (
+        offered["devices.dispatch"].state === "hidden" &&
+        offered["relay.phone"].state === "hidden"
+      )
+        return;
+      accountFeatures.requireEntitled(
+        offered["devices.dispatch"].state !== "hidden" ? "devices.dispatch" : "relay.phone",
+      );
+      if (authorized()) await mobileRemoteController.activateAccountRelay(identity, authorized);
+    },
     retireRelay: async (identity) => {
       accountDeviceService.retireIdentity();
       const results = await Promise.allSettled([
@@ -72,6 +91,7 @@ export function createDesktopRemoteServices(options: {
   const cloudManagementManager = new CloudManagementManager({
     account: cloudAccountManager,
     windows: options.cloudWindows,
+    requireFeature: () => accountFeatures.requireReady("cloud.projects"),
   });
   const mobileRemoteController = new MobileRemoteController({
     account: cloudAccountManager,
@@ -83,12 +103,30 @@ export function createDesktopRemoteServices(options: {
     listProjects: options.listProjects,
     store: new DeviceRelayStore(resolve(options.userDataDir, "mobile-remote", "relay.enc"), cipher),
     changed: (status) => {
+      accountFeatures.localChanged();
       for (const window of options.windows()) {
         if (!window.isDestroyed())
           window.webContents.send("mobileRemote:relayStatusChanged", status);
       }
     },
   });
+  const accountFeatures = new AccountFeatureService({
+    account: cloudAccountManager,
+    supported: [
+      "links.remote",
+      "cloud.projects",
+      "relay.phone",
+      "devices.dispatch",
+      "devices.directory",
+    ],
+    local: (status) => accountLocalConditions(status, mobileRemoteController.relayStatus()),
+  });
+  registerAccountFeatureIpc({
+    ipcMain: options.ipcMain,
+    service: accountFeatures,
+    windows: options.windows,
+  });
+  if (options.app) bindAccountFeatureLifecycle(options.app, accountFeatures, options.windows);
   const accountDeviceService = new AccountDeviceService({
     identity: () => {
       const status = cloudAccountManager.status();
@@ -100,6 +138,8 @@ export function createDesktopRemoteServices(options: {
       cloudAccountManager.getCredential(identity.origin, identity.accountId, signal),
     sourceProof: (identity, signal) => mobileRemoteController.accountRelaySource(identity, signal),
     relayOrigin: async (identity) => {
+      await accountFeatures.refresh();
+      accountFeatures.requireReady("devices.dispatch");
       const capabilities = await cloudAccountManager.capabilities(identity.origin);
       if (!capabilities.relay?.enabled || capabilities.relay.directoryOrigin !== identity.origin)
         throw new Error("当前账号服务不支持设备协作，请升级服务。");
@@ -118,6 +158,7 @@ export function createDesktopRemoteServices(options: {
   registerCloudAccountIpc({
     ipcMain: options.ipcMain,
     manager: cloudAccountManager,
+    openExternal: options.openExternal,
     isMainWindow,
     focusMainWindow: (contents) => {
       const window = [...options.windows()].find(
@@ -141,6 +182,10 @@ export function createDesktopRemoteServices(options: {
     isMainWindow,
   });
   return {
+    captureLinkAccount: createLinkAccountAccess(cloudAccountManager, () =>
+      accountFeatures.requireReady("links.remote"),
+    ),
+    accountFeatures,
     cloudAccountManager,
     mobileRemoteController,
     cloudManagementManager,

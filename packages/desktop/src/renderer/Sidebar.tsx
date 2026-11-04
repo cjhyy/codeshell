@@ -1,3 +1,4 @@
+import { AccountDeviceEntry } from "./account/AccountDeviceEntry";
 import React, {
   useCallback,
   useEffect,
@@ -537,13 +538,7 @@ export function Sidebar({
 
       <div className="shrink-0 border-t border-border/70 bg-card/40 px-2 py-2">
         {onOpenExecutionDevices && (
-          <Button
-            variant="ghost"
-            className="mb-1 w-full justify-start"
-            onClick={onOpenExecutionDevices}
-          >
-            执行电脑 / 设备
-          </Button>
+          <AccountDeviceEntry onOpen={onOpenExecutionDevices} onSignIn={onOpenAccountSettings} />
         )}
         <div className="flex items-center gap-1.5">
           <div className="min-w-0 flex-1">

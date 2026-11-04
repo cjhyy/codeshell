@@ -9,12 +9,7 @@ import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
 import { registerSourceCollectionIpc } from "./source-collections-ipc.js";
 import { openSourceCollectionOperation } from "./source-collections-host.js";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
-import {
-  createLinkAccountAccess,
-  linkAccountExecutionOptions,
-  requireLinkAccountAccess,
-  type CaptureLinkAccountAccess,
-} from "./link-account-access.js";
+import { linkAccountExecutionOptions, requireLinkAccountAccess } from "./link-account-access.js";
 import { createFigmaMcpLinkAdapter } from "./figma-mcp-link.js";
 import { registerOperationResolutionHost } from "./operation-resolution-host.js";
 /**
@@ -1136,8 +1131,9 @@ const accessPasscode = new AccessPasscode({
 let prepareAccountGitHubLink:
   | ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"]
   | undefined = undefined;
-const { cloudAccountManager, mobileRemoteController, cloudManagementManager } =
+const { mobileRemoteController, cloudManagementManager, captureLinkAccount } =
   createDesktopRemoteServices({
+    app,
     ipcMain,
     userDataDir: app.getPath("userData"),
     environmentDir: join(codeShellHome(), "desktop"),
@@ -1160,7 +1156,6 @@ const { cloudAccountManager, mobileRemoteController, cloudManagementManager } =
     cloudWindows: { open: openManagedCloudWorkbench, close: closeManagedCloudWorkbench },
     openLegacyCloud: openCloudWorkbench,
   });
-const captureLinkAccount: CaptureLinkAccountAccess = createLinkAccountAccess(cloudAccountManager);
 // Main-owned external runtimes use the same account gate as the stdio worker.
 setDefaultCredentialAccess({
   ...localCredentialAccess,

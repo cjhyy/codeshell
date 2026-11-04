@@ -19,6 +19,11 @@ export type WebsiteRoute =
 const accounts: AccountSection[] = ["profile", "security", "sessions", "connections"];
 const administrators: AdminSection[] = ["users", "summary", "audit"];
 
+/** Registration accepts no callback, redirect, token or mode from the URL. */
+export function isRegistrationRoute(url: URL): boolean {
+  return url.pathname === "/register" || url.pathname === "/register/";
+}
+
 export function parseWebsiteRoute(url: URL): WebsiteRoute {
   if (url.pathname === "/api/v1/account/manage" || url.pathname === "/settings/account")
     return { kind: "account", section: "profile" };

@@ -12,7 +12,12 @@ import {
   matchesWebsiteTarget,
   parseWebsiteCloudSession,
 } from "./website-cloud.js";
-import { parseWebsiteRoute, websiteRouteUrl, parseWorkbenchLocation } from "./website-routes.js";
+import {
+  isRegistrationRoute,
+  parseWebsiteRoute,
+  websiteRouteUrl,
+  parseWorkbenchLocation,
+} from "./website-routes.js";
 
 const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const origin = "https://cloud.fixture.invalid";
@@ -259,4 +264,12 @@ test("an expired OAuth receipt cannot invalidate an otherwise valid browser acco
     }),
   ).rejects.toThrow("授权请求已失效");
   expect(lost).toBe(false);
+});
+
+test("registration selection uses only the fixed path and ignores untrusted redirect parameters", () => {
+  expect(
+    isRegistrationRoute(new URL("/register?next=https://evil.invalid#token=secret", origin)),
+  ).toBe(true);
+  expect(isRegistrationRoute(new URL("/?register=true", origin))).toBe(false);
+  expect(isRegistrationRoute(new URL("/register/../../admin", origin))).toBe(false);
 });

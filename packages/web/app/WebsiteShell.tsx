@@ -5,7 +5,12 @@ import { ProjectsGate } from "./ProjectsGate.js";
 import { EnvironmentApiContext } from "./EnvironmentMenu.js";
 import { AccountSessionProvider, useAccountSession } from "./AccountSessionProvider.js";
 import { AccountSettings } from "./AccountSettings.js";
-import { WebsiteLogin } from "./WebsiteLogin.js";
+import { WebsiteLogin, WebsiteRegistration } from "./WebsiteLogin.js";
+import {
+  AccountFeatureEntry,
+  accountFeatureMessage,
+  useAccountFeature,
+} from "./useAccountFeature.js";
 import {
   detectWebsiteCloud,
   logoutWebsiteCloudSession,
@@ -13,17 +18,24 @@ import {
   parseWebsiteCloudSession,
   type WebsiteCloudCapability,
 } from "./website-cloud.js";
-import { parseWebsiteRoute, websiteRouteUrl, type WebsiteRoute } from "./website-routes.js";
+import {
+  isRegistrationRoute,
+  parseWebsiteRoute,
+  websiteRouteUrl,
+  type WebsiteRoute,
+} from "./website-routes.js";
 import type { CloudManagementSession } from "./auth.js";
 import "./website.css";
 import { withAccountCookieLock } from "./account-cookie-lock.js";
 import { parseAccountSession } from "./account-api.js";
 
 export function WebsiteEntry({ setupToken }: { setupToken: string }) {
+  const registration = isRegistrationRoute(new URL(window.location.href));
   const [capability, setCapability] = React.useState<WebsiteCloudCapability | null>();
   const [error, setError] = React.useState("");
   const [retry, setRetry] = React.useState(0);
   React.useEffect(() => {
+    if (registration) return;
     const controller = new AbortController();
     setError("");
     void detectWebsiteCloud(globalThis.fetch, controller.signal)
@@ -35,7 +47,13 @@ export function WebsiteEntry({ setupToken }: { setupToken: string }) {
           setError(cause instanceof Error ? cause.message : "无法连接工作台，请重试。");
       });
     return () => controller.abort();
-  }, [retry]);
+  }, [retry, registration]);
+  if (registration)
+    return (
+      <AccountSessionProvider>
+        <WebsiteRegistration />
+      </AccountSessionProvider>
+    );
   if (capability === null) return <AuthGate setupToken={setupToken} />;
   if (capability)
     return (
@@ -73,6 +91,7 @@ function WebsiteAccountMenu({
 }) {
   const account = useAccountSession();
   const user = account.session?.account;
+  const phoneFeature = useAccountFeature("relay.phone");
   return (
     <details className="website-account-menu">
       <summary aria-label="打开账号菜单">
@@ -81,6 +100,12 @@ function WebsiteAccountMenu({
       <div className="website-account-popover">
         <strong>{user?.displayName}</strong>
         <small>@{user?.username}</small>
+        <AccountFeatureEntry
+          id="relay.phone"
+          onClick={() => window.location.assign(phoneFeature.params?.directoryPath ?? "/")}
+        >
+          我的电脑
+        </AccountFeatureEntry>
         <button
           onClick={(event) => {
             event.currentTarget.closest("details")?.removeAttribute("open");
@@ -110,6 +135,8 @@ function WebsiteAccountMenu({
 
 function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
   const account = useAccountSession();
+  const cloudFeature = useAccountFeature("cloud.projects");
+  const phoneFeature = useAccountFeature("relay.phone");
   const [route, setRoute] = React.useState(() => parseWebsiteRoute(new URL(window.location.href)));
   const [cloudGrant, setCloudGrant] = React.useState<{
     session: CloudManagementSession;
@@ -146,12 +173,17 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
     setCloudError("");
     setConnecting(false);
     if (!identity || !accountId) return () => controller.abort();
+    if (cloudFeature.state !== "ready") return () => controller.abort();
     if (!target) {
       setCloudError("当前账号尚未分配云端环境。你仍可管理账号设置。");
       return () => controller.abort();
     }
     if (!matchesWebsiteTarget(capability, target, window.location.origin)) {
       setCloudError("云端环境与账号服务配置不一致，请联系管理员。");
+      return () => controller.abort();
+    }
+    if (cloudFeature.params?.cloudOrigin !== target.cloudOrigin) {
+      setCloudError("云端地址与当前账号配置不一致，请刷新后重试。");
       return () => controller.abort();
     }
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;
@@ -238,6 +270,8 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
     target?.accountOrigin,
     capability,
     account.request,
+    cloudFeature.state,
+    cloudFeature.params?.cloudOrigin,
     attempt,
   ]);
 
@@ -258,7 +292,7 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
   const administrator = account.session.account?.role === "admin";
   return (
     <EnvironmentApiContext.Provider value="/api/v1/cloud-browser/environment">
-      {cloudSession ? (
+      {cloudSession && cloudFeature.state === "ready" ? (
         <div hidden={settings} className="website-workbench-root">
           <ProjectsGate
             key={identity}
@@ -299,14 +333,24 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
           <header className="website-brand">CodeShell {menu}</header>
           <section>
             <p className="website-eyebrow">你的工作台</p>
-            <h1>{connecting ? "正在打开工作空间…" : "连接你的工作空间"}</h1>
+            <h1>
+              {cloudFeature.state === "hidden"
+                ? "你的账号"
+                : connecting
+                  ? "正在打开工作空间…"
+                  : "连接你的工作空间"}
+            </h1>
             <p
               role={cloudError ? "alert" : "status"}
               className={cloudError ? "form-error" : "website-muted"}
             >
-              {cloudError || "正在验证账号与云端环境。"}
+              {accountFeatureMessage(cloudFeature) ||
+                cloudError ||
+                (cloudFeature.state === "hidden"
+                  ? "在账号设置中管理你的资料与登录状态。"
+                  : "正在验证账号与云端环境。")}
             </p>
-            {cloudError ? (
+            {cloudError && cloudFeature.state === "ready" ? (
               <button
                 className="website-button"
                 onClick={() => setAttempt((previous) => previous + 1)}
@@ -314,6 +358,17 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
                 重新连接
               </button>
             ) : null}
+            {cloudFeature.state === "pending" ? (
+              <button className="website-button" onClick={() => void account.restore()}>
+                重试连接账号服务
+              </button>
+            ) : null}
+            <AccountFeatureEntry
+              id="relay.phone"
+              onClick={() => window.location.assign(phoneFeature.params?.directoryPath ?? "/")}
+            >
+              我的电脑
+            </AccountFeatureEntry>
             <button className="ghost" onClick={() => go({ kind: "account", section: "profile" })}>
               账号设置
             </button>

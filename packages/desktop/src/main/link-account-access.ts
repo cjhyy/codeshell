@@ -10,6 +10,7 @@ export type CaptureLinkAccountAccess = () => LinkAccountAccessLease;
 
 export function createLinkAccountAccess(
   account: Pick<CloudAccountManager, "status" | "captureRootAccount">,
+  requireFeature?: () => void,
 ): CaptureLinkAccountAccess {
   return () => {
     const status = account.status();
@@ -21,7 +22,15 @@ export function createLinkAccountAccess(
       !status.account.id.trim()
     )
       throw new Error("请先登录 CodeShell 账号，再使用远程 Link。");
-    return account.captureRootAccount(status.origin, status.account.id, () => true);
+    requireFeature?.();
+    const lease = account.captureRootAccount(status.origin, status.account.id, () => true);
+    return {
+      signal: lease.signal,
+      current() {
+        lease.current();
+        requireFeature?.();
+      },
+    };
   };
 }
 

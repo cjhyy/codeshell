@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import React, { act } from "react";
+import { featureBridge, accountFeatureBridge } from "../account/accountFeatureFixture";
 import { createRoot, type Root } from "react-dom/client";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -511,6 +512,7 @@ async function renderProjectedCatalog(
   ensureMiniDom();
   Object.assign(window, {
     codeshell: {
+      accountFeatures: failures.account ? accountFeatureBridge(failures.account) : featureBridge(),
       cloudAccount: failures.account ?? signedInCloudAccount(),
       credentials: { list: async () => credentials },
       links: {
@@ -597,6 +599,7 @@ async function connectionStatusFixture(
   };
   Object.assign(window, {
     codeshell: {
+      accountFeatures: featureBridge(),
       cloudAccount: signedInCloudAccount(),
       credentials: {
         list: async (cwd: string) => {
@@ -1026,6 +1029,7 @@ describe("Link directory loading presentation", () => {
     };
     Object.assign(window, {
       codeshell: {
+        accountFeatures: accountFeatureBridge(account.api),
         cloudAccount: account.api,
         credentials: { list: async () => credentials.promise },
         links: {
@@ -1982,6 +1986,7 @@ describe("LinkTab integrations", () => {
     };
     Object.assign(window, {
       codeshell: {
+        accountFeatures: featureBridge(),
         cloudAccount: signedInCloudAccount(),
         credentials: { list: async () => [] },
         links: {
@@ -2496,6 +2501,7 @@ describe("LinkTab integrations", () => {
       ];
       Object.assign(window, {
         codeshell: {
+          accountFeatures: featureBridge(),
           cloudAccount: signedInCloudAccount(),
           credentials: { list: async () => credentials },
           links: { listLocalProviders: async () => LINK_PROVIDER_FIXTURES },
@@ -2558,6 +2564,7 @@ describe("LinkTab integrations", () => {
     const openedUrls: string[] = [];
     Object.assign(window, {
       codeshell: {
+        accountFeatures: featureBridge(),
         cloudAccount: signedInCloudAccount(),
         imGateway: {
           status: async () => ({
@@ -2719,6 +2726,7 @@ describe("LinkTab integrations", () => {
     ];
     Object.assign(window, {
       codeshell: {
+        accountFeatures: featureBridge(),
         cloudAccount: signedInCloudAccount(),
         openExternal: async () => undefined,
         credentials: {
@@ -2801,6 +2809,7 @@ describe("LinkTab integrations", () => {
     };
     Object.assign(window, {
       codeshell: {
+        accountFeatures: featureBridge(),
         cloudAccount: signedInCloudAccount(),
         credentials: { list: async () => [] },
         links: {
@@ -2917,6 +2926,7 @@ describe("LinkTab integrations", () => {
     const expiresAt = new Date(Date.now() + 60_000).toISOString();
     Object.assign(window, {
       codeshell: {
+        accountFeatures: featureBridge(),
         cloudAccount: signedInCloudAccount(),
         credentials: { list: async () => [] },
         links: {
@@ -3005,6 +3015,7 @@ describe("LinkTab integrations", () => {
     };
     Object.assign(window, {
       codeshell: {
+        accountFeatures: featureBridge(),
         cloudAccount: signedInCloudAccount(),
         links: {
           authorizationStart: async (...args: unknown[]) => {
@@ -3113,6 +3124,7 @@ describe("LinkTab integrations", () => {
       const expiresAt = new Date(Date.now() + 60_000).toISOString();
       Object.assign(window, {
         codeshell: {
+          accountFeatures: featureBridge(),
           cloudAccount: signedInCloudAccount(),
           links: {
             authorizationStart: async () => ({
@@ -3347,6 +3359,7 @@ describe("LinkTab integrations", () => {
     });
     Object.assign(window, {
       codeshell: {
+        accountFeatures: featureBridge(),
         cloudAccount: signedInCloudAccount(),
         imGateway: {
           status: async () => ({
@@ -3468,6 +3481,7 @@ describe("LinkTab integrations", () => {
     let cliStatusCalls = 0;
     Object.assign(window, {
       codeshell: {
+        accountFeatures: featureBridge(),
         cloudAccount: signedInCloudAccount(),
         openExternal: async () => undefined,
         credentials: { list: async () => credentials },
@@ -3540,6 +3554,7 @@ describe("LinkTab integrations", () => {
     ];
     Object.assign(window, {
       codeshell: {
+        accountFeatures: featureBridge(),
         cloudAccount: signedInCloudAccount(),
         openExternal: async () => undefined,
         credentials: { list: async () => credentials },
@@ -3829,6 +3844,7 @@ describe("Link metadata request lifecycle", () => {
     let calls = 0;
     Object.assign(window, {
       codeshell: {
+        accountFeatures: featureBridge(),
         cloudAccount: signedInCloudAccount(),
         links: { remoteSnapshot: async () => (++calls === 1 ? first : latest) },
       },
@@ -3876,6 +3892,7 @@ describe("Link metadata request lifecycle", () => {
     });
     Object.assign(window, {
       codeshell: {
+        accountFeatures: featureBridge(),
         cloudAccount: signedInCloudAccount(),
         credentials: {
           list: async (cwd: string) => (cwd === "/first" ? first : [account("second-account")]),
@@ -4111,6 +4128,7 @@ describe("reviewed Link authorization failures", () => {
       };
       Object.assign(window, {
         codeshell: {
+          accountFeatures: featureBridge(),
           cloudAccount: signedInCloudAccount(),
           links: {
             authorizationStart: async (_cwd: string, id: string) => {
@@ -4233,6 +4251,7 @@ describe("unified Figma connection card", () => {
     let nextSnapshot: (() => Promise<LinkSnapshot>) | undefined;
     Object.assign(window, {
       codeshell: {
+        accountFeatures: featureBridge(),
         cloudAccount: signedInCloudAccount(),
         links: {
           remoteSnapshot: async () => (nextSnapshot ? nextSnapshot() : snapshot),

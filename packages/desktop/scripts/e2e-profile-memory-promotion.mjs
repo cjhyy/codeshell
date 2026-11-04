@@ -107,6 +107,8 @@ const state = globalThis.__profilePromotion = {pid:process.pid, networkAttempts:
 const deny = () => { state.networkAttempts++; throw new Error("Memory promotion fixture denies HTTP"); };
 globalThis.fetch = deny;
 for (const transport of [http, https]) { transport.request = deny; transport.get = deny; }
+const { withOwnedAccountDiscovery } = (await import(${JSON.stringify(new URL("./owned-account-discovery.cjs", import.meta.url).href)})).default;
+https.request = withOwnedAccountDiscovery(deny);
 syncBuiltinESMExports();
 if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
   globalThis.__promotionImport = (url) => import(url);

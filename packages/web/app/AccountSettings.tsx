@@ -10,6 +10,7 @@ import {
   validWebsiteProfile,
 } from "./account-api.js";
 import type { WebsiteRoute } from "./website-routes.js";
+import { useAccountFeature, accountFeatureMessage } from "./useAccountFeature.js";
 
 function useAccountData<T>(path: string | null) {
   const { request } = useAccountSession();
@@ -457,8 +458,9 @@ function ConnectionSettings({
   reload: () => void;
 }) {
   const account = useAccountSession();
+  const feature = useAccountFeature("links.remote");
   const data = useAccountData<{ connections: LinkConnection[]; grants: LinkGrant[] }>(
-    overview.capabilities.links ? "/links" : null,
+    overview.capabilities.links && feature.state === "ready" ? "/links" : null,
   );
   const [error, setError] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -570,8 +572,12 @@ function ConnectionSettings({
         </button>
         <Notice error={account.error} status={account.status} />
       </div>
-      <h2>Link 数据连接</h2>
-      {!overview.capabilities.links ? (
+      {feature.state !== "hidden" ? <h2>Link 数据连接</h2> : null}
+      {feature.state === "hidden" ? null : feature.state !== "ready" ? (
+        <p role="status" className="website-muted">
+          {accountFeatureMessage(feature)}
+        </p>
+      ) : !overview.capabilities.links ? (
         <p className="website-muted">当前服务尚未开放数据连接管理。</p>
       ) : (
         <>
@@ -607,7 +613,9 @@ function ConnectionSettings({
           ) : null}
         </>
       )}
-      <p className="website-hint">退出登录不会自动撤销已有 Link 数据授权。</p>
+      {feature.state !== "hidden" ? (
+        <p className="website-hint">退出登录不会自动撤销已有 Link 数据授权。</p>
+      ) : null}
     </>
   );
 }

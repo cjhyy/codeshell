@@ -96,6 +96,7 @@ describe("Server package public entry contracts", () => {
     };
     expect(Object.keys(manifest.exports).sort()).toEqual([
       ".",
+      "./account",
       "./auth",
       "./desktop-web",
       "./links",
@@ -106,6 +107,10 @@ describe("Server package public entry contracts", () => {
       "./storage",
       "./worker",
     ]);
+    expect(manifest.exports["./account"]).toEqual({
+      types: "./dist/index.account.d.ts",
+      import: "./dist/index.account.js",
+    });
     expect(manifest.exports["./remote-relay"]).toEqual({
       types: "./dist/index.remote-relay.d.ts",
       import: "./dist/index.remote-relay.js",
@@ -127,6 +132,9 @@ describe("Server package public entry contracts", () => {
       compilerOptions: { paths: Record<string, string[]> };
     };
     expect(tsconfig.compilerOptions.paths["@cjhyy/code-shell-server/*"]).toBeUndefined();
+    expect(tsconfig.compilerOptions.paths["@cjhyy/code-shell-server/account"]).toEqual([
+      "packages/server/src/index.account.ts",
+    ]);
     expect(tsconfig.compilerOptions.paths["@cjhyy/code-shell-server/remote-relay"]).toEqual([
       "packages/server/src/index.remote-relay.ts",
     ]);

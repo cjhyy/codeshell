@@ -1,3 +1,4 @@
+import { accountFeaturesApi } from "./account-features-api.js";
 import { createOperationBatchApi } from "./operation-batch-api.js";
 import { cloudAccountApi } from "./cloud-account-api.js";
 import { accountDeviceApi } from "./account-device-api.js";
@@ -880,6 +881,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     autoDeleteWorktreesGraceMins: number;
   }) => ipcRenderer.invoke("git:setPrefs", prefs),
   cloudAccount: cloudAccountApi,
+  accountFeatures: accountFeaturesApi,
   accountDevices: accountDeviceApi,
   cloudEnvironment: cloudEnvironmentApi,
   openCloudWorkbench: ((input: unknown) =>

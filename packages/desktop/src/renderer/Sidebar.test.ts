@@ -12,7 +12,6 @@ import {
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
 import type { TrackedProject } from "./projects";
 import type { SessionIndex } from "./transcripts";
-import { accountDeviceEntryAvailable } from "./runtime/useAccountDeviceEntry";
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const current = node as Record<string, any>;
@@ -477,15 +476,4 @@ test("cloud rows never probe local roots or reuse a colliding local repair actio
   expect(
     findElements(container, "SPAN").some((span) => reactPropsOf(span)["data-session-root-status"]),
   ).toBe(false);
-});
-
-test("shows the other-computer entry only for a connected account relay", () => {
-  const accountReady = { state: "ready", registered: true, accountId: "acct_1" } as const;
-  expect(accountDeviceEntryAvailable(accountReady)).toBe(true);
-  expect(accountDeviceEntryAvailable(undefined)).toBe(false);
-  expect(accountDeviceEntryAvailable({ state: "unregistered", registered: false })).toBe(false);
-  expect(accountDeviceEntryAvailable({ state: "ready", registered: true })).toBe(false);
-  for (const state of ["connecting", "disconnected", "unauthorized", "unavailable"] as const) {
-    expect(accountDeviceEntryAvailable({ ...accountReady, state })).toBe(false);
-  }
 });

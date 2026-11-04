@@ -10,6 +10,22 @@
  */
 export const core = {
   zh: {
+    accountFeatures: {
+      signIn: "登录后可用",
+      pending: "准备中",
+      device_not_registered: "请先登记此电脑",
+      relay_connecting: "中继连接中",
+      relay_disconnected: "中继已断开，请重新连接",
+      service_unreachable: "服务暂不可达，请稍后重试",
+      storage_error: "安全存储不可用",
+      devices: "执行电脑 / 设备",
+      remoteLink: "远程连接",
+      retry: "重试",
+      advancedAddress: "高级：手动填写云端地址",
+      registration: "前往网页注册",
+      registrationHint: "在网页创建账号后，返回这里登录。",
+      cleanup: "已有授权的清理",
+    },
     externalFiles: {
       missing: "完成时已不存在",
       linked: "linked 工作树",
@@ -213,6 +229,22 @@ export const core = {
     },
   },
   en: {
+    accountFeatures: {
+      signIn: "Sign in to use",
+      pending: "Getting ready",
+      device_not_registered: "Register this computer first",
+      relay_connecting: "Connecting to relay",
+      relay_disconnected: "Relay disconnected. Reconnect to continue.",
+      service_unreachable: "Service unavailable. Try again later.",
+      storage_error: "Secure storage unavailable",
+      devices: "Execution computers / devices",
+      remoteLink: "Remote connection",
+      retry: "Retry",
+      advancedAddress: "Advanced: enter a cloud address",
+      registration: "Register on the website",
+      registrationHint: "Create your account on the website, then return here to sign in.",
+      cleanup: "Remove existing authorizations",
+    },
     externalFiles: {
       missing: "Missing at completion",
       linked: "Linked worktree",
