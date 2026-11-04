@@ -1,3 +1,4 @@
+import type { ChannelRunLifecycle } from "./channel.js";
 import WebSocket, { type RawData } from "ws";
 import type { ChannelAdapter, ChannelMessageHandler, OutgoingMessage } from "./channel.js";
 import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
@@ -45,14 +46,20 @@ export class MattermostAdapter implements ChannelAdapter {
     private readonly fetchFn: typeof fetch = fetch,
   ) {}
 
-  async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
+  async run(
+    handler: ChannelMessageHandler,
+    signal: AbortSignal,
+    lifecycle?: ChannelRunLifecycle,
+  ): Promise<void> {
     let retryMs = 1_000;
     while (!signal.aborted) {
       try {
-        await this.connect(handler, signal);
+        await this.connect(handler, signal, lifecycle);
+        lifecycle?.unavailable();
         retryMs = 1_000;
-      } catch {
+      } catch (error) {
         if (signal.aborted) return;
+        lifecycle?.unavailable(error);
         await abortableDelay(retryMs, signal);
         retryMs = Math.min(retryMs * 2, 30_000);
       }
@@ -105,7 +112,11 @@ export class MattermostAdapter implements ChannelAdapter {
     }
   }
 
-  private connect(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
+  private connect(
+    handler: ChannelMessageHandler,
+    signal: AbortSignal,
+    lifecycle?: ChannelRunLifecycle,
+  ): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const socket = new WebSocket(toWebSocketUrl(this.config.serverUrl));
       let opened = false;
@@ -121,7 +132,7 @@ export class MattermostAdapter implements ChannelAdapter {
           }),
         );
       });
-      socket.on("message", (raw) => this.onMessage(raw, handler, socket));
+      socket.on("message", (raw) => this.onMessage(raw, handler, socket, lifecycle));
       socket.once("error", (error) => {
         if (!opened) reject(error);
       });
@@ -132,7 +143,12 @@ export class MattermostAdapter implements ChannelAdapter {
     });
   }
 
-  private onMessage(raw: RawData, handler: ChannelMessageHandler, socket: WebSocket): void {
+  private onMessage(
+    raw: RawData,
+    handler: ChannelMessageHandler,
+    socket: WebSocket,
+    lifecycle?: ChannelRunLifecycle,
+  ): void {
     let event: MattermostEvent;
     try {
       event = JSON.parse(raw.toString()) as MattermostEvent;
@@ -143,6 +159,7 @@ export class MattermostAdapter implements ChannelAdapter {
       socket.close(1008, "authentication failed");
       return;
     }
+    if (event.event === "hello") lifecycle?.ready();
     if (event.event !== "posted" || !event.data?.post) return;
     let post: MattermostPost;
     try {

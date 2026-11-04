@@ -1,3 +1,4 @@
+import type { ChannelRunLifecycle } from "./channel.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
   ActionRowBuilder,
@@ -60,7 +61,11 @@ export class DiscordAdapter implements ChannelAdapter {
     });
   }
 
-  async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
+  async run(
+    handler: ChannelMessageHandler,
+    signal: AbortSignal,
+    lifecycle?: ChannelRunLifecycle,
+  ): Promise<void> {
     const onMessage = (message: Message) => {
       if (message.author.bot || (!message.content && message.attachments.size === 0)) return;
       const attachments = message.attachments.map((attachment) =>
@@ -91,11 +96,20 @@ export class DiscordAdapter implements ChannelAdapter {
     };
     this.client.on(Events.MessageCreate, onMessage);
     this.client.on(Events.InteractionCreate, onInteraction);
-    await this.client.login(this.config.botToken);
-    if (this.commands.length > 0) await this.registerCommands();
+    const onReady = () => lifecycle?.ready();
+    const onUnavailable = () => lifecycle?.unavailable();
+    this.client.on(Events.ClientReady, onReady);
+    this.client.on(Events.ShardDisconnect, onUnavailable);
+    this.client.on(Events.ShardResume, onReady);
     try {
+      await this.client.login(this.config.botToken);
+      if (this.commands.length > 0) await this.registerCommands();
+      if (this.client.isReady()) lifecycle?.ready();
       await waitForAbort(signal);
     } finally {
+      this.client.off(Events.ClientReady, onReady);
+      this.client.off(Events.ShardDisconnect, onUnavailable);
+      this.client.off(Events.ShardResume, onReady);
       this.client.off(Events.MessageCreate, onMessage);
       this.client.off(Events.InteractionCreate, onInteraction);
       this.client.destroy();

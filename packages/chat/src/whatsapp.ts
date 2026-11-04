@@ -1,3 +1,4 @@
+import type { ChannelRunLifecycle } from "./channel.js";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type {
@@ -65,7 +66,12 @@ export class WhatsAppAdapter implements WebhookChannelAdapter {
     this.config = { ...config, apiVersion: config.apiVersion ?? "v25.0" };
   }
 
-  run(_handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
+  run(
+    _handler: ChannelMessageHandler,
+    signal: AbortSignal,
+    lifecycle?: ChannelRunLifecycle,
+  ): Promise<void> {
+    lifecycle?.ready();
     return waitForAbort(signal);
   }
 

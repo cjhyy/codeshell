@@ -72,7 +72,7 @@ export interface ChatGatewayOptions {
   adapters: ChannelAdapter[];
   webhook?: Partial<WebhookIngressConfig>;
   delivery?: Partial<DeliveryQueueConfig>;
-  adapterRestart?: Partial<{ baseMs: number; maxMs: number }>;
+  adapterRestart?: Partial<{ baseMs: number; maxMs: number; healthyResetMs: number }>;
   onError?: (error: unknown, message: ChannelMessage) => void;
   onAdapterState?: (state: AdapterRuntimeState) => void;
 }
@@ -117,7 +117,7 @@ export class ChatGateway {
   private readonly adapters: ChannelAdapter[];
   private readonly webhook: WebhookIngressConfig;
   private readonly delivery: DeliveryQueueConfig;
-  private readonly adapterRestart: { baseMs: number; maxMs: number };
+  private readonly adapterRestart: { baseMs: number; maxMs: number; healthyResetMs: number };
   private readonly onError: NonNullable<ChatGatewayOptions["onError"]>;
   private readonly onAdapterState?: ChatGatewayOptions["onAdapterState"];
   private readonly adapterStates = new Map<string, AdapterRuntimeState>();
@@ -131,6 +131,7 @@ export class ChatGateway {
     this.adapterRestart = {
       baseMs: options.adapterRestart?.baseMs ?? 1_000,
       maxMs: options.adapterRestart?.maxMs ?? 30_000,
+      healthyResetMs: options.adapterRestart?.healthyResetMs ?? 30_000,
     };
     this.onAdapterState = options.onAdapterState;
     this.onError =
@@ -235,7 +236,12 @@ export class ChatGateway {
   healthSnapshot(): Record<string, unknown> {
     const adapters = [...this.adapterStates.values()];
     return {
-      status: adapters.every(({ state }) => state === "running") ? "ready" : "degraded",
+      status:
+        this.startedAt !== undefined &&
+        adapters.length === this.adapters.length &&
+        adapters.every(({ state }) => state === "running")
+          ? "ready"
+          : "degraded",
       startedAt: this.startedAt,
       adapters,
       inbox: this.queue?.status() ?? { pending: 0, inFlight: 0, delayed: 0 },
@@ -251,13 +257,52 @@ export class ChatGateway {
     let attempts = 0;
     while (!signal.aborted) {
       this.setAdapterState({ id, channel: adapter.channel, state: "starting", attempts });
+      let active = true;
+      let readyAt: number | undefined;
+      const resetAfterHealthyRun = () => {
+        if (readyAt !== undefined && Date.now() - readyAt >= this.adapterRestart.healthyResetMs)
+          attempts = 0;
+      };
+      const ready = () => {
+        if (!active || signal.aborted) return;
+        readyAt ??= Date.now();
+        resetAfterHealthyRun();
+        if (
+          this.adapterStates.get(id)?.state !== "running" ||
+          this.adapterStates.get(id)?.attempts !== attempts
+        ) {
+          this.setAdapterState({ id, channel: adapter.channel, state: "running", attempts });
+        }
+      };
       try {
-        this.setAdapterState({ id, channel: adapter.channel, state: "running", attempts });
-        await adapter.run(handler, signal);
+        await adapter.run(
+          async (message) => {
+            ready();
+            await handler(message);
+          },
+          signal,
+          {
+            ready,
+            unavailable: (error) => {
+              if (!active || signal.aborted) return;
+              resetAfterHealthyRun();
+              readyAt = undefined;
+              this.setAdapterState({
+                id,
+                channel: adapter.channel,
+                state: "starting",
+                attempts,
+                ...(error ? { error: error instanceof Error ? error.message : String(error) } : {}),
+              });
+            },
+          },
+        );
         if (signal.aborted) break;
         throw new Error("adapter exited unexpectedly");
       } catch (error) {
+        active = false;
         if (signal.aborted) break;
+        resetAfterHealthyRun();
         attempts += 1;
         const delay = Math.min(
           this.adapterRestart.maxMs,
@@ -271,6 +316,8 @@ export class ChatGateway {
           error: error instanceof Error ? error.message : String(error),
         });
         await abortableDelay(delay, signal);
+      } finally {
+        active = false;
       }
     }
     this.setAdapterState({ id, channel: adapter.channel, state: "stopped", attempts });

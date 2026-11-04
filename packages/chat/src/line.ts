@@ -1,3 +1,4 @@
+import type { ChannelRunLifecycle } from "./channel.js";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { ChannelMessageHandler, OutgoingMessage, WebhookChannelAdapter } from "./channel.js";
@@ -33,7 +34,12 @@ export class LineAdapter implements WebhookChannelAdapter {
     private readonly fetchFn: typeof fetch = fetch,
   ) {}
 
-  run(_handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
+  run(
+    _handler: ChannelMessageHandler,
+    signal: AbortSignal,
+    lifecycle?: ChannelRunLifecycle,
+  ): Promise<void> {
+    lifecycle?.ready();
     return waitForAbort(signal);
   }
 

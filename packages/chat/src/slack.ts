@@ -1,3 +1,4 @@
+import type { ChannelRunLifecycle } from "./channel.js";
 import { SocketModeClient } from "@slack/socket-mode";
 import { WebClient } from "@slack/web-api";
 import type {
@@ -31,7 +32,11 @@ export class SlackAdapter implements ChannelAdapter {
     this.fetchFn = fetchFn;
   }
 
-  async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
+  async run(
+    handler: ChannelMessageHandler,
+    signal: AbortSignal,
+    lifecycle?: ChannelRunLifecycle,
+  ): Promise<void> {
     const onEvent = async ({ event, ack }: any): Promise<void> => {
       if (
         event?.type !== "message" ||
@@ -114,10 +119,17 @@ export class SlackAdapter implements ChannelAdapter {
     };
     this.socket.on("events_api", onEvent);
     this.socket.on("slash_commands", onCommand);
-    await this.socket.start();
+    const onReady = () => lifecycle?.ready();
+    const onUnavailable = () => lifecycle?.unavailable();
+    this.socket.on("connected", onReady);
+    this.socket.on("disconnected", onUnavailable);
     try {
+      await this.socket.start();
+      lifecycle?.ready();
       await waitForAbort(signal);
     } finally {
+      this.socket.off("connected", onReady);
+      this.socket.off("disconnected", onUnavailable);
       this.socket.off("events_api", onEvent);
       this.socket.off("slash_commands", onCommand);
       await this.socket.disconnect();
