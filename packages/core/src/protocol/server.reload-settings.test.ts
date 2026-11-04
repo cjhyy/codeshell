@@ -292,9 +292,7 @@ describe("AgentServer configure({ reloadSettings })", () => {
     (chatManager as any).sessions.set("A", { id: "A", engine: a.engine });
 
     // Identical settings every read (simulates a no-op personalization re-save).
-    let readCount = 0;
     const settingsReader = () => {
-      readCount++;
       return fakeSettings("same");
     };
 

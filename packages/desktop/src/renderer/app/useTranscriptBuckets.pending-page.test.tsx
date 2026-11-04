@@ -67,7 +67,7 @@ test("pending cache writes cannot consume earlier-history page budgets", async (
   try {
     hook = await renderHook(() => {
       const [transcripts, dispatch] = useReducer(transcriptsReducer, {});
-      const [busy, setBusyKeys] = useState(new Set<string>());
+      const [, setBusyKeys] = useState(new Set<string>());
       return useTranscriptBuckets({
         activeProjectId: "project",
         activeSessionId: "legacy",

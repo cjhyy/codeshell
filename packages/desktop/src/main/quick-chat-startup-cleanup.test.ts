@@ -94,7 +94,7 @@ test("concurrent restore requests share the in-flight main window", async () => 
   const { createMainWindowRestorer } = await import("./quick-chat-startup-cleanup.js");
   let creates = 0;
   let release!: (window: object) => void;
-  let window: object | undefined;
+  let window: object | undefined = undefined;
   const restore = createMainWindowRestorer(
     () => window,
     () => {
