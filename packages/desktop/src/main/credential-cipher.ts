@@ -4,12 +4,10 @@
  * which is why core can't own this: core defines the interface, the host (here)
  * supplies the key.
  *
- * Stored form: `enc:safeStorage:<base64>`. On a platform where safeStorage is
- * unavailable (some Linux desktops without a keyring), we fall back to writing
- * plaintext (tagged `plain:`) so credentials still work at 0o600 — exactly the
- * pre-cipher behavior — rather than failing to save. canDecrypt() lets the
- * store recognize foreign/legacy values and migrate them on next save.
+ * New writes require the OS keyring. Legacy plain values remain readable so
+ * users can migrate them after restoring a protected storage backend.
  */
+import { encryptDesktopCredential } from "./credential-cipher-policy.js";
 import { safeStorage } from "electron";
 import type { EncryptionCipher } from "@cjhyy/code-shell-core";
 
@@ -26,9 +24,7 @@ export class SafeStorageCipher implements EncryptionCipher {
   }
 
   encrypt(plaintext: string): string {
-    if (!this.available()) return `${PLAIN_PREFIX}${plaintext}`;
-    const buf = safeStorage.encryptString(plaintext);
-    return `${ENC_PREFIX}${buf.toString("base64")}`;
+    return encryptDesktopCredential(safeStorage, plaintext);
   }
 
   decrypt(stored: string): string {
