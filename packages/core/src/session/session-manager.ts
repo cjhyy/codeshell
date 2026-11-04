@@ -2402,6 +2402,8 @@ export class SessionManager {
     limit = 20,
     opts?: {
       excludeKinds?: readonly string[];
+      /** Metadata-only callers must not open transcript bodies for previews. */
+      includePreview?: boolean;
       /** Apply workspace/visibility filters before the result limit and previews. */
       cwd?: string;
       archived?: boolean;
@@ -2420,6 +2422,8 @@ export function listSessionEntries(
   limit = 20,
   opts?: {
     excludeKinds?: readonly string[];
+    /** Metadata-only callers must not open transcript bodies for previews. */
+    includePreview?: boolean;
     /** Apply workspace/visibility filters before the result limit and previews. */
     cwd?: string;
     archived?: boolean;
@@ -2518,7 +2522,10 @@ export function listSessionEntries(
       if (opts?.cwd !== undefined && resolve(state.cwd) !== resolve(opts.cwd)) continue;
       if (opts?.archived !== undefined && Boolean(state.archivedAt) !== opts.archived) continue;
       if (opts?.rootsOnly && state.parentSessionId) continue;
-      const preview = c.transcriptExists ? readLastUserMessage(c.transcriptFile) : undefined;
+      const preview =
+        opts?.includePreview !== false && c.transcriptExists
+          ? readLastUserMessage(c.transcriptFile)
+          : undefined;
       const entry = { ...state, preview, lastActiveAt: c.lastActiveAt };
       if (opts?.filter && !opts.filter(entry)) continue;
       sessions.push(entry);

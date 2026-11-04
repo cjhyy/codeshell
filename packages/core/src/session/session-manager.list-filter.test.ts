@@ -136,6 +136,11 @@ test("raw preview line breaks survive for host attachment projection and optiona
     '<attached-file path="report.txt">\nabsolutePath: /private/report.txt\norigin: upload\n</attached-file>\nVisible request';
   transcript.append("message", { role: "user", content: wrapper });
   expect(manager.list(1)[0]?.preview).toBe(wrapper);
+  expect(manager.list(1, { includePreview: false })[0]).toMatchObject({
+    sessionId: state.sessionId,
+    cwd: state.cwd,
+    preview: undefined,
+  });
   transcript.append("message", { role: "assistant", content: "x".repeat(3 * 1024 * 1024) });
   expect(manager.list(1)[0]?.preview).toBeUndefined();
   expect(manager.list(1)[0]?.sessionId).toBe(state.sessionId);
