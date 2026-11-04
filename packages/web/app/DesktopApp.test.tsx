@@ -1322,7 +1322,14 @@ test("CLI room mode switch restarts through the Host and explains when it applie
       app={remoteApp({
         activeSessionId: "s1",
         sessions: [
-          { id: "s1", title: "t", cwd: "/repo", updatedAt: 1, origin: "desktop", provider: "codex" },
+          {
+            id: "s1",
+            title: "t",
+            cwd: "/repo",
+            updatedAt: 1,
+            origin: "desktop",
+            provider: "codex",
+          },
         ],
       })}
     />,

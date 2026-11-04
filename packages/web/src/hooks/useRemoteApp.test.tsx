@@ -5428,9 +5428,9 @@ describe("useRemoteApp CLI room controls", () => {
         await flushMicrotasks();
       });
       expect(hook.result.current.activeRoomId).toBeUndefined();
-      expect(
-        hook.result.current.approvals.map((a) => [a.requestId, a.purpose, a.risk]),
-      ).toEqual([["room-mode-mine", "room-permission-mode", "high"]]);
+      expect(hook.result.current.approvals.map((a) => [a.requestId, a.purpose, a.risk])).toEqual([
+        ["room-mode-mine", "room-permission-mode", "high"],
+      ]);
 
       await act(async () => {
         ws.message({

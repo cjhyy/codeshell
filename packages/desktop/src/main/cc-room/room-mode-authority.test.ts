@@ -46,12 +46,15 @@ function fixture(
   const stateChanges: string[] = [];
   let projectAuthorized = true;
   let trusted: unknown[] = options.trusted ?? [];
-  let decide =
-    options.decide ?? (async (): Promise<Decision> => ({ approved: true }));
+  let decide = options.decide ?? (async (): Promise<Decision> => ({ approved: true }));
   /** The CLI's on-disk session records (what the Host resolver would find). */
   let sessions: LinkedSessionTarget[] = ["thread-1", "thread-codex", "thread-stored"].flatMap(
     (externalSessionId) =>
-      (["claude-code", "codex"] as const).map((kind) => ({ externalSessionId, kind, cwd: project })),
+      (["claude-code", "codex"] as const).map((kind) => ({
+        externalSessionId,
+        kind,
+        cwd: project,
+      })),
   );
   let resolveSession = (target: Readonly<LinkedSessionTarget>): LinkedSessionTarget | null =>
     sessions.find(
@@ -147,8 +150,7 @@ function fixture(
       mode: "default" | "acceptEdits" | "bypassPermissions",
       kind: "claude-code" | "codex" = "claude-code",
       who = requester(),
-    ) =>
-      authority.openSession({ sessionId: "thread-1", cwd: project, kind, mode, requester: who }),
+    ) => authority.openSession({ sessionId: "thread-1", cwd: project, kind, mode, requester: who }),
   };
 }
 

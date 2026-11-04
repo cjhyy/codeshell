@@ -235,9 +235,7 @@ describe("RoomManager permission-mode handoff", () => {
     release(true);
     await expect(switching).rejects.toThrow("已被关闭");
     // No replacement was started after the explicit close, and the mode stayed.
-    expect(f.log.filter((entry) => entry.startsWith("start:"))).toEqual([
-      "start:default:thread-1",
-    ]);
+    expect(f.log.filter((entry) => entry.startsWith("start:"))).toEqual(["start:default:thread-1"]);
     expect(f.manager.getRoom(roomId)?.permissionMode).toBe("default");
     expect(f.manager.isOpen(roomId)).toBe(false);
   });

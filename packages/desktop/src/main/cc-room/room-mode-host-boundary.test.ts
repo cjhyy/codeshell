@@ -105,8 +105,7 @@ function fixture() {
     sessionId: string,
     cwd: string,
     mode: "default" | "bypassPermissions" = "default",
-  ) =>
-    authority.openSession({ sessionId, cwd, kind: "claude-code", mode, requester });
+  ) => authority.openSession({ sessionId, cwd, kind: "claude-code", mode, requester });
   return { project, subdir, worktree, outside, escape, starts, approvals, manager, open };
 }
 

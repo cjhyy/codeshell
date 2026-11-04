@@ -2,14 +2,7 @@
 // the argv each room permission mode really launches with, and that a mode
 // handoff waits until the old process is gone.
 import { afterEach, describe, expect, test } from "bun:test";
-import {
-  chmodSync,
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CodexRoomAgent } from "./codex-room-agent.js";
