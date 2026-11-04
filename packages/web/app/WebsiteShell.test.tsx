@@ -17,6 +17,9 @@ afterEach(async () => {
   setApiWorkspace(undefined);
 });
 const origin = "https://cloud.fixture.invalid";
+const features = {
+  "cloud.projects": { version: 1, enabled: true, params: { cloudOrigin: origin } },
+};
 const accountA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   accountB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
   rootA = "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
@@ -132,6 +135,7 @@ async function fixture() {
         security: { hasPassword: true, githubLinked: false },
         capabilities: { sessions: true, passwordChange: true, admin: false, links: false },
         stats: { activeSessions: 1, loginMethods: 1 },
+        features,
       },
       session: { id: currentRoot, expiresAt: Date.now() + 900000 },
       csrfToken: "C".repeat(43),
@@ -157,7 +161,7 @@ async function fixture() {
         installationId: installation,
       });
     if (path === "/api/v1/account/status")
-      return Response.json({ registrationAllowed: true, githubEnabled: true });
+      return Response.json({ registrationAllowed: true, githubEnabled: true, features });
     if (path === "/api/v1/account/web/session") return Response.json(accountSession());
     if (path === "/api/v1/account/web/overview") return Response.json(accountSession().overview);
     if (path === "/api/v1/account/web/cloud-tickets")

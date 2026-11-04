@@ -28,6 +28,7 @@ const overview = {
   security: { hasPassword: true, githubLinked: false },
   capabilities: { sessions: true, passwordChange: true, admin: false, links: false },
   stats: { activeSessions: 1, loginMethods: 1 },
+  features: {},
 };
 const webSession = () => ({
   authenticated: true,
