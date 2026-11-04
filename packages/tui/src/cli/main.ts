@@ -84,6 +84,7 @@ function addInteractiveOptions(cmd: Command): Command {
 
 program
   .command("account")
+  .helpOption(false)
   .description("Optional account login, status, features, logout, or website registration")
   .argument("[args...]")
   .allowUnknownOption()

@@ -15,7 +15,8 @@ code-shell account logout --origin https://accounts.example
 ```
 
 `code-shell-serve account …` 支持相同命令。账号管理子命令执行后返回，不启动 Hub；正常的
-`code-shell-serve --cwd …` 启动方式不变。`register` 只打开所选服务的 `/register` 网页。
+`code-shell-serve --cwd …` 启动方式不变。`register` 先读取账号服务声明的注册页面：新服务打开 `/register`，旧服务回退到
+`/api/v1/account/manage` 注册门户。路由只接受固定值，不信任服务下发的任意 URL。
 无浏览器环境使用 `--no-open`，复制输出的地址到浏览器。不同 origin 分别保存账号，后续
 命令须使用相同的 `--origin`。省略时使用产品默认账号服务。
 

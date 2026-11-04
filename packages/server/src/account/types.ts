@@ -33,6 +33,7 @@ export interface CloudAccountLogin {
 export interface CloudAccountCapabilities {
   features?: AccountFeatureMap;
   registrationAllowed: boolean;
+  registrationPage?: "/register";
   githubEnabled: boolean;
   githubLinkEnabled?: boolean;
   linkManagementEnabled?: boolean;

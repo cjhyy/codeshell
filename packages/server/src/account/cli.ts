@@ -19,8 +19,8 @@ export const ACCOUNT_HELP = `Usage: account <login|status|features|links|logout|
   --memory                 Keep an interactive account session in this process only
   --no-open                Print browser URLs instead of opening them
 
-Credentials use the OS credential store; no plaintext fallback. Registration opens
-<origin>/register. Local tasks and serve's Hub/passcode identity remain independent.
+Credentials use the OS credential store; no plaintext fallback. Registration opens the service-advertised
+<origin>/register, or the existing account portal for older services. Local tasks and serve's Hub/passcode identity remain independent.
 With --memory, login keeps an account console open: status, features, links, logout,
 register, exit. Closing this console revokes its temporary login. No device relay
 or upload is started. Use the same --origin on later account commands.`;
@@ -151,10 +151,6 @@ export async function runAccountCli(
     write(url);
     if (options.open) await (deps.open ?? openBrowser)(url);
   };
-  if (options.action === "register") {
-    await navigate(accountRegistrationUrl(options.origin));
-    return;
-  }
   if (options.memory && (!(deps.interactive ?? process.stdin.isTTY) || options.passwordStdin))
     throw new Error(
       "--memory requires an interactive terminal and keeps the session open. Use OS storage for one-shot stdin login.",
@@ -162,10 +158,21 @@ export async function runAccountCli(
   const manager =
     deps.createManager?.(options, navigate) ??
     new CloudAccountManager({
-      store: options.memory ? new MemoryAccountStore() : new NativeAccountStore(options.origin),
+      store:
+        options.memory || options.action === "register"
+          ? new MemoryAccountStore()
+          : new NativeAccountStore(options.origin),
       openExternal: navigate,
       changed() {},
     });
+  const register = async () => {
+    const capabilities = await manager.capabilities(options.origin);
+    await navigate(
+      capabilities.registrationPage === "/register"
+        ? accountRegistrationUrl(options.origin)
+        : `${options.origin}/api/v1/account/manage`,
+    );
+  };
   const prompt = deps.prompt ?? question;
   const display = async (action: "status" | "features" | "links") => {
     await manager.resume();
@@ -215,6 +222,10 @@ export async function runAccountCli(
     } else write(JSON.stringify({ ...status, features }, null, 2));
   };
   try {
+    if (options.action === "register") {
+      await register();
+      return;
+    }
     if (options.action === "login") {
       if (options.github)
         await manager.signInWithGitHub({ origin: options.origin, connectGitHub: false });
@@ -236,7 +247,7 @@ export async function runAccountCli(
           if (command === "exit" || command === "logout") break;
           if (command === "status" || command === "features" || command === "links")
             await display(command);
-          else if (command === "register") await navigate(accountRegistrationUrl(options.origin));
+          else if (command === "register") await register();
           else write("Commands: status, features, links, logout, register, exit");
         }
       }

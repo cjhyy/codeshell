@@ -252,6 +252,7 @@ export class CloudAccountManager {
         ? { features: readAccountFeatures(value, "deployment") }
         : {}),
       registrationAllowed: value.registrationAllowed,
+      ...(value.registrationPage === "/register" ? { registrationPage: "/register" as const } : {}),
       githubEnabled: value.githubEnabled,
       ...(value.githubLinkEnabled === undefined
         ? {}

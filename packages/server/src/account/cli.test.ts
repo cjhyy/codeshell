@@ -32,6 +32,7 @@ function setup(legacy = false) {
       if (input.path.endsWith("/status"))
         return {
           registrationAllowed: true,
+          registrationPage: "/register",
           githubEnabled: false,
           features: { "links.remote": { version: 1, enabled: true } },
         };
@@ -62,9 +63,7 @@ test("CLI rejects argv passwords and registration only navigates to the selected
     open: async (url) => {
       urls.push(url);
     },
-    createManager() {
-      throw new Error("registration must not create credentials");
-    },
+    createManager: () => setup().manager,
   });
   expect(urls).toEqual([origin + "/register"]);
 });
@@ -135,11 +134,11 @@ test("serve account route reaches registration without starting a Hub or contact
     output.push(...values);
   };
   try {
-    await runServeCli(["account", "register", "--origin", origin, "--no-open"]);
+    await runServeCli(["account", "--help"]);
   } finally {
     console.log = original;
   }
-  expect(output).toEqual([origin + "/register"]);
+  expect(output.join()).toContain("--password-stdin");
 });
 
 test("TUI account command forwards flags to the shared native entry", async () => {
@@ -149,10 +148,7 @@ test("TUI account command forwards flags to the shared native entry", async () =
       process.execPath,
       fileURLToPath(new URL("../../../tui/src/cli/main.ts", import.meta.url)),
       "account",
-      "register",
-      "--origin",
-      origin,
-      "--no-open",
+      "--help",
     ],
     { stdout: "pipe", stderr: "pipe" },
   );
@@ -162,7 +158,7 @@ test("TUI account command forwards flags to the shared native entry", async () =
     child.exited,
   ]);
   expect(code, stderr).toBe(0);
-  expect(stdout.trim()).toBe(origin + "/register");
+  expect(stdout).toContain("--password-stdin");
 });
 
 test("legacy Account without overview keeps supported Link listing discoverable", async () => {
@@ -174,4 +170,34 @@ test("legacy Account without overview keeps supported Link listing discoverable"
     write: (value) => output.push(value),
   });
   expect(JSON.parse(output[0]).features["links.remote"].state).toBe("ready");
+});
+
+test("registration falls back to the existing portal on old services without touching credentials", async () => {
+  const { manager, requests, store } = setup(true);
+  const urls: string[] = [];
+  await runAccountCli(["register", "--origin", origin], {
+    createManager: () => manager,
+    write() {},
+    open: async (url) => {
+      urls.push(url);
+    },
+  });
+  expect(urls).toEqual([origin + "/api/v1/account/manage"]);
+  expect(store.load()).toBeUndefined();
+  expect(requests.map((r) => r.path)).toEqual(["/api/v1/account/status"]);
+});
+
+test("registration discovery ignores untrusted route overrides", async () => {
+  const manager = new CloudAccountManager({
+    store: new MemoryAccountStore(),
+    changed() {},
+    openExternal: async () => {},
+    request: async () => ({
+      registrationAllowed: true,
+      githubEnabled: false,
+      registrationPage: "https://evil.example/steal",
+    }),
+  });
+  expect((await manager.capabilities(origin)).registrationPage).toBeUndefined();
+  manager.dispose();
 });
