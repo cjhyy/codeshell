@@ -7338,7 +7338,7 @@ app.on(
         petLongTaskFlush,
         externalRuntimeShutdown,
         cookieRefreshShutdown,
-        sessionCatalogIpc.flush(),
+        sessionCatalogIpc.close(),
         panelAppBridge.shutdownMedia(),
         chromeExtensionRuntimeService.stop(),
         cuaDriverShutdown,

@@ -82,6 +82,9 @@ export function registerSessionCatalogIpc(
     flush: async () => {
       await Promise.all([catalog.flush(), transcripts.flush()]);
     },
+    close: async () => {
+      await Promise.all([catalog.flush(), transcripts.close()]);
+    },
     dispose: () => {
       unsubscribe();
       for (const channel of channels) ipc.removeHandler(channel);

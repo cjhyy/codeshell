@@ -15,6 +15,7 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
       "cua-activity-proxy",
       "index",
       "link-provider-module",
+      "session-transcript-cache-worker",
     ]);
     const result = await esbuild.build({
       ...options,
@@ -67,6 +68,15 @@ test("the shared main build delivers the worker Link and Cua proxy entries with 
     const proxy = [...outputs.keys()].find((path) => path.endsWith("cua-activity-proxy.mjs"));
     expect(proxy).toBeDefined();
     expect([...externalsOf(proxy!)].filter((specifier) => !isBuiltin(specifier))).toEqual([]);
+    const cache = [...outputs.keys()].find((path) =>
+      path.endsWith("session-transcript-cache-worker.mjs"),
+    );
+    expect(cache).toBeDefined();
+    expect(
+      [...externalsOf(cache!)].filter(
+        (specifier) => !isBuiltin(specifier) && !/^@cjhyy\/code-shell-core(?:\/|$)/.test(specifier),
+      ),
+    ).toEqual([]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

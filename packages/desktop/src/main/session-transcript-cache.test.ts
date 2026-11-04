@@ -6,6 +6,12 @@ import { SessionTranscriptCache } from "./session-transcript-cache";
 import { SessionManager } from "@cjhyy/code-shell-core";
 
 const fixtures: string[] = [];
+const caches: SessionTranscriptCache[] = [];
+function makeCache(options: ConstructorParameters<typeof SessionTranscriptCache>[0]) {
+  const cache = new SessionTranscriptCache(options);
+  caches.push(cache);
+  return cache;
+}
 const key = { projectKey: "investment.project", sessionId: "codex.session.1" };
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), "codeshell-transcript-cache-"));
@@ -16,7 +22,7 @@ function fixture() {
     directory,
     legacyDirectory,
     sessionsDirectory: join(root, "sessions"),
-    cache: new SessionTranscriptCache({
+    cache: makeCache({
       directory,
       legacyDirectory,
       sessionsDirectory: join(root, "sessions"),
@@ -32,7 +38,8 @@ function state(
 ) {
   return JSON.stringify({ messages, snapshotSeq: 4, activeGoal: { goalId: "goal-1" }, ...extra });
 }
-afterEach(() => {
+afterEach(async () => {
+  await Promise.all(caches.splice(0).map((cache) => cache.close()));
   for (const directory of fixtures.splice(0)) rmSync(directory, { recursive: true, force: true });
 });
 
@@ -126,7 +133,7 @@ describe("SessionTranscriptCache", () => {
       value: state([message("b", "assistant", "updated"), message("c")]),
     });
     await cache.write({ ...key, value: state([message("old")]), legacy: true });
-    const restarted = new SessionTranscriptCache({ directory, legacyDirectory });
+    const restarted = makeCache({ directory, legacyDirectory });
     const loaded = JSON.parse((await restarted.read(key)).value!);
     expect(loaded.messages.map((row: { id: string }) => row.id)).toEqual(["a", "b", "c"]);
     expect(loaded.messages[1].text).toBe("updated");
@@ -245,7 +252,7 @@ describe("SessionTranscriptCache", () => {
 
   test("a delayed second window cannot erase a completed reply or subsequent legacy-only turns", async () => {
     const { directory, legacyDirectory, cache } = fixture();
-    const secondWindow = new SessionTranscriptCache({ directory, legacyDirectory });
+    const secondWindow = makeCache({ directory, legacyDirectory });
     const firstUser = {
       ...message("user-1", "user", "fund forecast"),
       clientMessageId: "intent-1",
