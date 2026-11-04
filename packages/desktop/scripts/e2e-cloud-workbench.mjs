@@ -106,6 +106,11 @@ async function openCloudProjects(win) {
   const opened = await openNewProject(win);
   await opened.chooser.getByRole("button", { name: /^(云端|Cloud)/ }).click();
   await opened.chooser.getByRole("button", { name: /^(返回|Back)$/ }).waitFor();
+  // The service address is the default; explicit address-validation coverage
+  // lives in the existing advanced manual-address controls.
+  const address = opened.chooser.getByPlaceholder("https://cloud.example.com");
+  if (!(await address.isVisible())) await opened.chooser.locator("summary").click();
+  await address.waitFor({ state: "visible" });
   await captureDialog(win, opened.chooser, "cloud");
   return opened;
 }
@@ -121,11 +126,26 @@ try {
     failAfterReady: process.argv.includes("--fail-after-ready"),
   });
   if (process.argv.includes("--server-only")) {
+    const deployment = await fixture.request(fixture.accountOrigin, "/api/v1/account/status");
+    assert(
+      deployment.status === 200 &&
+        deployment.body.features["cloud.projects"].params.cloudOrigin === fixture.cloudOrigin,
+      "Anonymous discovery advertises the exact Cloud target",
+    );
     const login = await fixture.request(fixture.accountOrigin, "/api/v1/account/login", {
       method: "POST",
       body: { username: "chooser-owner", password: "chooser-synthetic-password" },
     });
     assert(login.status === 200, "Synthetic Account login contract");
+    const overview = await fixture.request(fixture.accountOrigin, "/api/v1/account/overview", {
+      token: login.body.accessToken,
+    });
+    assert(
+      overview.status === 200 &&
+        overview.body.account.id === fixture.accountId &&
+        overview.body.features["cloud.projects"].enabled === true,
+      "Signed-in overview grants the Cloud feature to the exact account",
+    );
     const ticket = await fixture.request(
       fixture.accountOrigin,
       "/api/v1/account/cloud-management/tickets",
@@ -184,6 +204,16 @@ try {
     )
       await viewOnly.click();
 
+    // Select the owned deployment through the production discovery bridge. The
+    // feature snapshot must reflect anonymous service policy before opening UI.
+    const initialFeatures = await win.evaluate(
+      (origin) => window.codeshell.accountFeatures.refresh(origin),
+      fixture.accountOrigin,
+    );
+    assert(
+      initialFeatures["cloud.projects"].state === "sign-in",
+      "The owned deployment exposes a sign-in Cloud entry before account login",
+    );
     const initialProjects = await win.evaluate(() => window.codeshell.projectRegistry.list());
     // A controlled cancellation exercises the renderer's real local-project
     // bridge without opening an OS picker against the operator's filesystem.
@@ -225,6 +255,7 @@ try {
     });
     const menuChooser = win.getByRole("dialog", { name: /^(新项目|New project)$/ });
     await menuChooser.waitFor({ state: "visible" });
+    await menuChooser.getByRole("button", { name: /^(云端|Cloud)/ }).waitFor({ state: "visible" });
     assert(
       await menuChooser.getByRole("button", { name: /^(云端|Cloud)/ }).isVisible(),
       "The application Add project menu opens the same location chooser",
@@ -242,16 +273,29 @@ try {
     await win.keyboard.press("Escape");
     await menuChooser.waitFor({ state: "hidden" });
 
-    const firstCloud = await openCloudProjects(win);
-    const prompt = firstCloud.chooser;
-    await prompt.getByLabel("云服务地址", { exact: true }).fill(fixture.accountOrigin);
-    await prompt.getByLabel("账号名称", { exact: true }).fill("chooser-owner");
-    await prompt
+    const signInChooser = (await openNewProject(win)).chooser;
+    await signInChooser.getByRole("button", { name: /^(云端|Cloud)/ }).click();
+    await signInChooser.waitFor({ state: "hidden" });
+    const account = win.getByRole("region", { name: /^CodeShell (云账号|cloud account)/ });
+    await account.waitFor({ state: "visible" });
+    await account.getByLabel("云服务地址", { exact: true }).fill(fixture.accountOrigin);
+    await account.getByLabel("账号名称", { exact: true }).fill("chooser-owner");
+    await account
       .getByLabel("密码（至少 12 位）", { exact: true })
       .fill("chooser-synthetic-password");
-    await prompt.getByRole("button", { name: "登录", exact: true }).click();
+    await account.getByRole("button", { name: "登录", exact: true }).click();
+    await win.waitForFunction(
+      async () =>
+        (await window.codeshell.accountFeatures.snapshot())["cloud.projects"].state === "ready",
+    );
+    await win.locator("[data-settings-back]:visible").click();
+    const firstCloud = await openCloudProjects(win);
+    const prompt = firstCloud.chooser;
     const address = prompt.getByPlaceholder("https://cloud.example.com");
-    await address.waitFor({ state: "visible" });
+    assert(
+      (await address.inputValue()) === fixture.cloudOrigin,
+      "Cloud project address defaults to the service-advertised target",
+    );
     const crypto = await app.evaluate(({ app, safeStorage }) => ({
       available: safeStorage.isEncryptionAvailable(),
       backend: safeStorage.getSelectedStorageBackend(),
@@ -273,6 +317,7 @@ try {
     assert(app.windows().length === 1, "Invalid Cloud address opens no remote window");
     await prompt.getByRole("button", { name: /^(返回|Back)$/ }).click();
     await prompt.getByRole("button", { name: /^(云端|Cloud)/ }).click();
+    await prompt.locator("summary").click();
     await prompt.getByPlaceholder("https://cloud.example.com").fill(fixture.cloudOrigin);
     await prompt.getByRole("button", { name: "连接并加载项目", exact: true }).click();
     await prompt.getByText("Existing Cloud project", { exact: true }).waitFor();
@@ -447,8 +492,8 @@ try {
     await prompt.getByPlaceholder("https://cloud.example.com").waitFor();
     assert(
       (await prompt.getByPlaceholder("https://cloud.example.com").inputValue()) ===
-        `${fixture.cloudOrigin}/`,
-      "Last cloud address not restored",
+        fixture.cloudOrigin,
+      "The advertised cloud target remains the default when reopening",
     );
     await win.keyboard.press("Escape");
     await prompt.waitFor({ state: "hidden" });
@@ -470,6 +515,7 @@ try {
         "The local project choice follows the English UI language",
       );
       await english.chooser.getByRole("button", { name: "Cloud", exact: true }).click();
+      await english.chooser.locator("summary").click();
       await english.chooser.getByLabel("Cloud service address", { exact: true }).waitFor();
       assert(
         await english.chooser
@@ -504,7 +550,15 @@ try {
     await coldCloud.getByRole("button", { name: "Connect and load projects", exact: true }).click();
     await coldCloud.getByText("Cloud-only project", { exact: true }).waitFor();
     await cold.evaluate(() => window.codeshell.cloudAccount.logout());
-    await coldCloud.getByRole("button", { name: "Sign in", exact: true }).waitFor();
+    const signInEntry = coldCloud.locator(
+      '[data-account-feature="cloud.projects"][data-account-feature-state="sign-in"]',
+    );
+    await signInEntry.waitFor({ state: "visible" });
+    await signInEntry.click();
+    await coldCloud.waitFor({ state: "hidden" });
+    await cold
+      .getByRole("region", { name: "CodeShell cloud account (optional)", exact: true })
+      .waitFor({ state: "visible" });
     assert(
       (await cold.evaluate(() => window.codeshell.cloudAccount.status())).state === "signed-out",
       "Root Account logout is acknowledged by the real Main IPC",
