@@ -248,6 +248,13 @@ try {
   await page.locator(".chat:not([hidden])").waitFor();
   assert.equal(await page.locator(".composer textarea").inputValue(), "Owned retained draft");
   assert.equal(await page.locator(".messages").evaluate((n) => n.scrollTop), scroll);
+  // The composer's model button leaves the conversation, so it returns there.
+  await page.getByRole("button", { name: "模型设置", exact: true }).tap();
+  await page.getByRole("heading", { name: "模型与连接", exact: true }).waitFor();
+  await checkBack("返回对话");
+  await back().tap();
+  await page.locator(".chat:not([hidden])").waitFor();
+  assert.equal(await page.locator(".composer textarea").inputValue(), "Owned retained draft");
   await nav("文件");
   await page.getByRole("button", { name: /reports.*文件夹/ }).tap();
   await page.getByRole("button", { name: /owned.txt/ }).tap();

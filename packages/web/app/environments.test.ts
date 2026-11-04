@@ -78,6 +78,25 @@ test("one project id in two hosts has different identity; filesystem paths are n
   );
 });
 
+test("an account computer list is a bare HTTPS page, never a credential-bearing URL", () => {
+  const desktop = environment;
+  expect(
+    isEnvironmentDescriptor({ ...desktop, accountComputers: "https://account.example/" }),
+  ).toBe(true);
+  expect(isEnvironmentDescriptor({ ...desktop, accountComputers: "http://127.0.0.1:4103/" })).toBe(
+    true,
+  );
+  for (const accountComputers of [
+    "http://account.example/",
+    "https://user:secret@account.example/",
+    "https://account.example/?token=secret",
+    "https://account.example/#token=secret",
+    "javascript:alert(1)",
+    42,
+  ])
+    expect(isEnvironmentDescriptor({ ...desktop, accountComputers })).toBe(false);
+});
+
 test("malformed browser data is not trusted or silently overwritten", () => {
   const broken = {
     getItem: () => '[{"name":"X","address":"javascript:alert(1)"}]',

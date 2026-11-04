@@ -439,8 +439,8 @@ import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
 import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
-import { createLinkService, remoteLinkFromEnvironment } from "@cjhyy/code-shell-server/links";
-import { createDesktopWebService } from "./desktop-web-service.js";
+import { createLinkService } from "@cjhyy/code-shell-server/links";
+import { createDesktopWebService, deploymentRemoteLink } from "./desktop-web-service.js";
 import { createDesktopPanelAutomationHost } from "./panel-automation-host.js";
 import {
   installSkillFromDirectory,
@@ -1068,26 +1068,14 @@ const mobileRemote = new RemoteHostManager({
       panelAppBridge.authorizePanelDirectory(app, projectPath, workspacePath),
     getBridge: () => bridge,
     captureRemoteAuthority: () => requireLinkAccountAccess(captureLinkAccount),
-    // A registered HTTPS origin is trusted deployment configuration, never a request header.
-    remoteLink: () => {
-      try {
-        requireLinkAccountAccess(captureLinkAccount);
-      } catch {
-        return undefined;
-      }
-      return process.env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN
-        ? remoteLinkFromEnvironment(
-            process.env,
-            process.env.CODE_SHELL_REMOTE_LINK_WEB_ORIGIN,
-            "/mobile/link/callback",
-          )
-        : undefined;
-    },
+    remoteLink: () => deploymentRemoteLink(() => requireLinkAccountAccess(captureLinkAccount)),
     onPanelsChanged: (id, kind) => {
       if (kind === "remove") panelAppBridge.revokeAppId(id);
       broadcastPanelAppsChanged(BrowserWindow.getAllWindows());
     },
     resolveWorkspace: (input, deviceId) => mobileOrchestrator.resolveWebWorkspace(input, deviceId),
+    relayStatus: () => mobileRemoteController.relayStatus(),
+    phoneFeature: () => accountFeatures.snapshot()["relay.phone"],
     onSessionsChanged: (cwd, sessionId) => {
       const line = JSON.stringify({
         jsonrpc: "2.0",
@@ -1131,7 +1119,7 @@ const accessPasscode = new AccessPasscode({
 let prepareAccountGitHubLink:
   | ReturnType<typeof registerRemoteLinkIpc>["prepareGitHubLink"]
   | undefined = undefined;
-const { mobileRemoteController, cloudManagementManager, captureLinkAccount } =
+const { mobileRemoteController, cloudManagementManager, captureLinkAccount, accountFeatures } =
   createDesktopRemoteServices({
     app,
     ipcMain,

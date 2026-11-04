@@ -19,7 +19,9 @@ export const mobileRemoteToolDef: ToolDefinition = {
   name: MOBILE_REMOTE_TOOL_NAME,
   description:
     "Request the host to open or close the phone remote-control public tunnel. " +
-    "Use action=open when the user asks for the mobile remote, its address, link, or QR code. " +
+    "Use action=open when the user asks for the mobile remote, its address, link, or QR code, " +
+    "or when a user on an IM channel needs something only the desktop screen gives (a waiting " +
+    "approval, a diff or preview to look at, operating something personally). " +
     "The host performs the operation after this turn and delivers the address (and a QR image " +
     "on IM channels) to the user; never invent or predict the tunnel URL yourself.",
   inputSchema: {

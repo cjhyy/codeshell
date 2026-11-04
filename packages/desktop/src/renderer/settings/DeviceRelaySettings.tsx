@@ -7,7 +7,7 @@ import { useT } from "../i18n/I18nProvider";
 import { useToast } from "../ui/ToastProvider";
 import { useConfirm } from "../ui/ConfirmDialog";
 import type { CloudAccountStatus } from "../../shared/cloud-account.js";
-import type { DesktopRelayStatus } from "../../shared/device-relay.js";
+import { accountComputerListUrl, type DesktopRelayStatus } from "../../shared/device-relay.js";
 
 export function DeviceRelaySettings({
   status,
@@ -31,10 +31,7 @@ export function DeviceRelaySettings({
   const [phoneEntryQr, setPhoneEntryQr] = useState<string>();
   // Account registrations are opened from the account's computer list; the
   // phone signs in there, so the QR carries only the public directory URL.
-  const phoneEntryUrl =
-    phoneFeature.state === "ready" && status.relayOrigin
-      ? `${status.relayOrigin.replace(/\/$/, "")}/devices`
-      : undefined;
+  const phoneEntryUrl = accountComputerListUrl(status, phoneFeature);
   useEffect(() => {
     let active = true;
     void window.codeshell.accountFeatures?.refresh().catch(() => undefined);

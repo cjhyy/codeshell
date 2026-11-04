@@ -169,10 +169,6 @@
 .desktop-model-picker .model-choice-trigger {
   max-width: 240px;
 }
-.model-settings-mobile-icon {
-  display: none;
-}
-
 @media (max-width: 760px) {
   .composer-toolbar.with-model-selector {
     display: grid;
@@ -180,28 +176,9 @@
     column-gap: 2px;
     row-gap: 4px;
   }
-  .with-model-selector .model-settings-button {
-    grid-row: 1;
-    grid-column: 3;
-    justify-content: center;
-    max-width: 100%;
-    padding: 0;
-  }
-  .with-model-selector .model-settings-button > span:first-child,
-  .with-model-selector .model-settings-button > svg {
-    display: none;
-  }
-  .with-model-selector .model-settings-mobile-icon {
-    display: flex;
-  }
-  .with-model-selector .model-settings-mobile-icon svg {
-    width: 17px;
-    height: 17px;
-    transform: none;
-  }
   .with-model-selector .desktop-model-picker {
     grid-row: 1;
-    grid-column: 4;
+    grid-column: 3 / 5;
   }
   .desktop-model-picker .model-choice-trigger {
     flex: 1;

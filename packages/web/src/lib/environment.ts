@@ -5,6 +5,8 @@ export interface EnvironmentDescriptor {
   name: string;
   kind: "desktop" | "hub" | "project-host";
   entryPath: "/" | "/mobile";
+  /** The account service's computer list, when this computer is registered to an account. */
+  accountComputers?: string;
 }
 
 export interface ProjectReference {
@@ -27,8 +29,27 @@ export function isEnvironmentDescriptor(value: unknown): value is EnvironmentDes
     record.name.length <= 128 &&
     !/[\u0000-\u001f\u007f]/.test(record.name) &&
     ["desktop", "hub", "project-host"].includes(record.kind) &&
-    record.entryPath === (record.kind === "desktop" ? "/mobile" : "/")
+    record.entryPath === (record.kind === "desktop" ? "/mobile" : "/") &&
+    (record.accountComputers === undefined || isAccountComputersUrl(record.accountComputers))
   );
+}
+
+/** A bare HTTPS origin page (plain HTTP only on loopback); it never carries a credential. */
+export function isAccountComputersUrl(value: unknown): value is string {
+  if (typeof value !== "string" || value.length > 2048) return false;
+  try {
+    const url = new URL(value);
+    return (
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash &&
+      (url.protocol === "https:" ||
+        (url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))
+    );
+  } catch {
+    return false;
+  }
 }
 
 /** Tuple encoding avoids collisions without exposing or interpreting filesystem paths. */

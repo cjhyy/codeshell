@@ -53,6 +53,8 @@ export interface DesktopWebApiOptions {
   /** Release owner-scoped resources contributed by handleExtra (for example Link probes). */
   onSessionRevoked?: (sessionId: string) => void;
   onClose?: () => void | Promise<void>;
+  /** The account computer list, while this computer is registered to an account. */
+  accountComputers?: () => string | undefined;
   /** Authenticated same-origin composition point, for example the shared Link API. */
   handleExtra?: (
     request: IncomingMessage,
@@ -475,7 +477,7 @@ export function createDesktopWebApi(options: DesktopWebApiOptions): DesktopWebHt
             principal(token)?.session !== current.session
           )
             throw new HubConfigurationError(401, "设备连接已失效，请重新连接桌面。");
-          json(response, 200, describeEnvironment(id, "desktop"));
+          json(response, 200, describeEnvironment(id, "desktop", options.accountComputers?.()));
           return true;
         }
         const input = workspaceInput(request, url);

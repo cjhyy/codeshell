@@ -58,6 +58,7 @@ export async function environmentIdentity(dataDir: string): Promise<string> {
 export function describeEnvironment(
   id: string,
   kind: EnvironmentDescriptor["kind"],
+  accountComputers?: string,
 ): EnvironmentDescriptor {
   return {
     version: 1,
@@ -65,5 +66,6 @@ export function describeEnvironment(
     name: kind === "desktop" ? "我的电脑" : kind === "project-host" ? "云端项目" : "Hub 工作台",
     kind,
     entryPath: kind === "desktop" ? "/mobile" : "/",
+    ...(accountComputers ? { accountComputers } : {}),
   };
 }

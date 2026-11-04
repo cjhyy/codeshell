@@ -92,3 +92,31 @@
     flex-basis: 100%;
   }
 }
+.environment-account {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--border, #777);
+  border-radius: 12px;
+}
+.environment-account p {
+  margin: 0;
+  opacity: 0.8;
+}
+.environment-account button {
+  justify-self: start;
+}
+.environment-manual {
+  margin-top: 16px;
+}
+.environment-manual summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  opacity: 0.8;
+}
+.environment-manual > .library-button {
+  margin-top: 8px;
+}

@@ -13,6 +13,8 @@ export interface WorkbenchLocation {
   panel?: ManagedPanel;
   preview?: string;
   files?: WorkbenchFileLocation;
+  /** Settings opened from the composer return to the conversation, not the overview. */
+  returnTo?: "chat";
 }
 const marker = "codeshellWorkbench";
 const chat: WorkbenchLocation = { view: "chat" };
@@ -46,6 +48,8 @@ function parent(route: WorkbenchLocation): { label: string; route: WorkbenchLoca
         },
       };
   }
+  if (route.view === "settings" && route.returnTo === "chat")
+    return { label: "返回对话", route: chat };
   // Execution traces open from the settings overview, so they return there too.
   if (
     route.view === "activity" ||
