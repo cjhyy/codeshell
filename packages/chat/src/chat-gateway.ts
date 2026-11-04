@@ -26,6 +26,48 @@ export type ChatMiddleware = ((
   acceptsMessage?: (message: ChannelMessage, adapter: ChannelAdapter) => boolean;
 };
 
+/** Serialize routing decisions, releasing the lane before downstream model work. */
+export function createOrderedChatRouting(...routing: ChatMiddleware[]): ChatMiddleware {
+  const lanes = new WeakMap<ChannelAdapter, Map<string, Promise<void>>>();
+  return async (context, next) => {
+    let conversations = lanes.get(context.adapter);
+    if (!conversations) lanes.set(context.adapter, (conversations = new Map()));
+    const key = JSON.stringify([context.message.target, context.message.threadId ?? ""]);
+    const previous = conversations.get(key) ?? Promise.resolve();
+    let resolve!: () => void;
+    const current = new Promise<void>((done) => {
+      resolve = done;
+    });
+    conversations.set(key, current);
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      resolve();
+      if (conversations.get(key) === current) conversations.delete(key);
+    };
+    await previous;
+    let index = -1;
+    const dispatch = async (position: number): Promise<void> => {
+      if (position <= index)
+        throw new Error("Chat routing middleware called next() more than once");
+      index = position;
+      const middleware = routing[position];
+      if (middleware) await middleware(context, () => dispatch(position + 1));
+      else {
+        // Mimi must accept same-conversation followers while its turn runs.
+        release();
+        await next();
+      }
+    };
+    try {
+      await dispatch(0);
+    } finally {
+      release();
+    }
+  };
+}
+
 export interface ChatGatewayOptions {
   adapters: ChannelAdapter[];
   webhook?: Partial<WebhookIngressConfig>;

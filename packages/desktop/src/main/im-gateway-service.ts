@@ -22,6 +22,7 @@ import {
   BUILTIN_CHANNEL_CAPABILITIES,
   ChatGateway,
   createAllowlistMiddleware,
+  createOrderedChatRouting,
   createDesktopNotificationHandler,
   FileNotificationDeliveryProgressStore,
   GatewayAlreadyRunningError,
@@ -527,19 +528,21 @@ export class ImGatewayService {
       );
       gateway.use(createRateLimitMiddleware(config.runtime.maxMessagesPerUserPerMinute));
       gateway.use(createImGatewayActivityMiddleware((activity) => this.recordActivity(activity)));
-      gateway.use(createCodeShellRemoteCommands({ desktop }));
       // Enters before Mimi: a conversation bound to a Work Session routes
       // there instead. Only an explicitly unbound conversation falls through;
       // an unavailable bridge leaves the message in the inbox for retry.
       gateway.use(
-        createBoundSessionChat({
-          desktop: {
-            routeBoundSessionMessage: (input) =>
-              desktop.routeBoundSessionMessage
-                ? desktop.routeBoundSessionMessage(input)
-                : Promise.resolve({ kind: "not-bound" as const }),
-          },
-        }),
+        createOrderedChatRouting(
+          createCodeShellRemoteCommands({ desktop }),
+          createBoundSessionChat({
+            desktop: {
+              routeBoundSessionMessage: (input) =>
+                desktop.routeBoundSessionMessage
+                  ? desktop.routeBoundSessionMessage(input)
+                  : Promise.resolve({ kind: "not-bound" as const }),
+            },
+          }),
+        ),
       );
       gateway.use(createMimiPetChat({ desktop, channels: adapters }));
 
