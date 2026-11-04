@@ -1009,3 +1009,22 @@ test("known native providers keep custom external-looking model IDs native", () 
   ).toBeUndefined();
   expect(isPersistedExternalRuntime({ model: "codex/legacy" })).toBe(true);
 });
+
+test("Stop invalidates external input still queued after all async preparation", async () => {
+  const { captureMobileRunAdmission, cancelMobileRunAdmissions } =
+    await import("./run-admission.js");
+  const owner = {};
+  const admission = captureMobileRunAdmission(owner, "external");
+  const f = harness();
+  await f.select();
+  const target = await f.commands.prepare("tab", "phone", "external", {
+    assertSubmissionCurrent: admission.assertCurrent,
+  });
+  f.queue();
+  await target.submit(f.request);
+  cancelMobileRunAdmissions(owner, "external");
+  await expect(f.beforeInput()).rejects.toThrow("已被停止");
+  expect(f.physical()).toBe(0);
+  expect(f.accepts()).toBe(0);
+  admission.release();
+});
