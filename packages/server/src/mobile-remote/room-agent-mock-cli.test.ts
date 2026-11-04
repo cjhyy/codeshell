@@ -30,7 +30,8 @@ function mockCli(): { dir: string; command: string } {
 }
 
 async function argsWritten(file: string): Promise<string[]> {
-  for (let i = 0; i < 200 && !existsSync(file); i++)
+  // A loaded machine can take seconds to exec the stub shell; 2s flaked locally.
+  for (let i = 0; i < 1000 && !existsSync(file); i++)
     await new Promise((resolve) => setTimeout(resolve, 10));
   return readFileSync(file, "utf8").trimEnd().split("\n");
 }
