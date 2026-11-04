@@ -14,9 +14,27 @@ export function ciVerdict(runs, sha) {
   const own = runs.filter(
     (run) => run.head_sha === sha && (run.event === "push" || run.event === "workflow_dispatch"),
   );
-  if (own.some((run) => run.conclusion === "success")) return "green";
-  if (!own.length || own.some((run) => run.status !== "completed")) return "pending";
-  return "red";
+  const latest = own[0];
+  if (!latest || latest.status !== "completed") return "pending";
+  return latest.conclusion === "success" ? "green" : "red";
+}
+
+/** Retry transient GitHub failures without accepting an older green result. */
+export async function fetchCiRuns(url, init, fetcher = fetch, wait = sleep) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const response = await fetcher(url, init);
+      if ((response.status === 429 || response.status >= 500) && attempt < 3) {
+        await response.body?.cancel();
+        await wait(1000 * 2 ** attempt);
+        continue;
+      }
+      return response;
+    } catch (error) {
+      if (attempt >= 3) throw error;
+      await wait(1000 * 2 ** attempt);
+    }
+  }
 }
 
 async function main() {
@@ -27,7 +45,7 @@ async function main() {
     throw new Error("GITHUB_REPOSITORY, GITHUB_TOKEN and a sha are required");
   const url = `https://api.github.com/repos/${repo}/actions/workflows/ci.yml/runs?head_sha=${sha}&per_page=50`;
   for (;;) {
-    const response = await fetch(url, {
+    const response = await fetchCiRuns(url, {
       headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json" },
     });
     if (!response.ok) throw new Error(`GitHub API ${response.status} listing ci.yml runs`);

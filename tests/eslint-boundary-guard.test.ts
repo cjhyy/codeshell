@@ -61,6 +61,7 @@ describe("ESLint CodeShell package boundary guards", () => {
           "packages/core/src/__lint_boundary_probe__.ts",
           [
             'import "../../tui/src/index";',
+            'import "../../host/src/index";',
             "export async function loadTui() {",
             '  return import("@cjhyy/code-shell-tui");',
             "}",
