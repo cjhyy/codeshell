@@ -156,6 +156,7 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/remote-link-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/device-relay-ipc.ts", /ipcMain\.handle\(/g) +
         matches("packages/desktop/src/main/cloud-account-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/account-features.ts", /ipcMain\.handle\(/g) +
         // The registrar loops over eight fixed method entries, so count entries, not the loop.
         matches("packages/desktop/src/main/account-device-ipc.ts", /^    [a-z]+: \(/gm) +
         matches("packages/desktop/src/main/cloud-workbench-ipc.ts", /ipcMain\.handle\(/g) +
@@ -222,7 +223,9 @@ describe("architecture growth budgets", () => {
       // +1 explicit account resume; construction/status remain side-effect free.
       // +8 main-frame-owned computer operations: list/projects/connect/resume/send/stop/approve/close.
       // Main retains credentials and pins every operation to its owner/Host/project/Session.
-    ).toBeLessThanOrEqual(385);
+      // +3 main-frame-only account operations: fixed registration page, public
+      // feature snapshot and bounded refresh. No credential-read route is exposed.
+    ).toBeLessThanOrEqual(388);
     expect(matches("packages/desktop/src/main/account-device-ipc.ts", /^    [a-z]+: \(/gm)).toBe(8);
     expect(
       matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g),
@@ -262,6 +265,7 @@ describe("architecture growth budgets", () => {
     expect(
       matches("packages/desktop/src/preload/device-relay-api.ts", /ipcRenderer\.invoke\(/g) +
         matches("packages/desktop/src/preload/cloud-account-api.ts", /ipcRenderer\.invoke\(/g) +
+        matches("packages/desktop/src/preload/account-features-api.ts", /ipc\.invoke\(/g) +
         // Count each fixed helper call plus send's raw delivery DTO invoke.
         matches("packages/desktop/src/preload/account-device-api.ts", /\binvoke(?:Raw)?\("/g) +
         matches("packages/desktop/src/preload/mobile-remote-api.ts", /ipcRenderer\.invoke\(/g) +
@@ -293,7 +297,8 @@ describe("architecture growth budgets", () => {
       // +1 computerUse:input mirrors the single stop/resume/force-stop Main route.
       // +2 typed history recovery plan/apply invokes mirror the reviewed Main routes.
       // +9 mirrors explicit account resume and the eight bounded computer operations above.
-    ).toBeLessThanOrEqual(369);
+      // +3 exact adapters for registration, feature snapshot and refresh above.
+    ).toBeLessThanOrEqual(372);
     expect(
       matches("packages/desktop/src/preload/account-device-api.ts", /\binvoke(?:Raw)?\("/g),
     ).toBe(8);
@@ -583,7 +588,12 @@ describe("architecture growth budgets", () => {
       // +2 browser-only trace API contracts/requester and shared read-only explorer.
       // Workspace authorization and recording policy remain on the Host.
       // +1 explicit history-recovery confirmation UI; it receives transport callbacks only.
-      "packages/web/src/index.ts": 24,
+      // +2 reviewed browser-safe account feature policy and profile normalization.
+      // Both are pure projections; credentials and transport remain in the Host.
+      "packages/web/src/index.ts": 26,
+      // Optional pure-Node account entry shared by Desktop, TUI and serve.
+      // Existing Desktop implementations moved here; no Core SDK authority added.
+      "packages/server/src/index.account.ts": 11,
     };
     for (const [path, budget] of Object.entries(exportBudgets)) {
       expect(matches(path, /^export /gm), path).toBeLessThanOrEqual(budget);

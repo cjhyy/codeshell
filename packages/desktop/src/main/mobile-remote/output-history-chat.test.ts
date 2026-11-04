@@ -18,7 +18,7 @@ test.each([false, true])(
     });
     let physical = 0;
     const replies: unknown[] = [];
-    const permissionBroadcasts: Parameters<OrchestratorCtx["broadcastDesktopPermissionMode"]>[0][] =
+    const settingsBroadcasts: Parameters<OrchestratorCtx["broadcastDesktopSessionSettings"]>[0][] =
       [];
     const bridge = {
       getLastRunContext: () => ({}),
@@ -58,6 +58,7 @@ test.each([false, true])(
               await workspace;
               return {
                 cwd: "/fixture",
+                modelKey: "codex/gpt-fixture",
                 submit: async () => {
                   physical++;
                   return { ok: true };
@@ -67,9 +68,9 @@ test.each([false, true])(
           }
         : undefined,
       broadcastMobileSession() {},
-      broadcastDesktopPermissionMode: (mode) => permissionBroadcasts.push(mode),
+      broadcastDesktopSessionSettings: (settings) => settingsBroadcasts.push(settings),
       settleMobileUploadClaims: async () => {},
-    } satisfies Pick<OrchestratorCtx, "broadcastDesktopPermissionMode"> &
+    } satisfies Pick<OrchestratorCtx, "broadcastDesktopSessionSettings"> &
       Record<string, unknown> as unknown as OrchestratorCtx;
     const pending = handleClientEvent(ctx, {
       type: "chat.send",
@@ -85,7 +86,8 @@ test.each([false, true])(
     resume("/fixture");
     await pending;
     expect(physical).toBe(0);
-    expect(permissionBroadcasts).toEqual([{ sessionId, mode: "default" }]);
+    // A rejected turn never ran on the chosen model, so Desktop must not adopt it.
+    expect(settingsBroadcasts).toEqual([{ sessionId, permissionMode: "default" }]);
     expect(replies).toEqual([
       expect.objectContaining({ type: "error", clientMessageId: "old-intent" }),
     ]);

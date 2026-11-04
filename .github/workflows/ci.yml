@@ -184,6 +184,12 @@ jobs:
               --path-ignore-patterns '**/src/main/pet/mimi-presence*.test.ts'
               --path-ignore-patterns '**/src/main/pet/pet-widget-surface.test.ts'
               --path-ignore-patterns '**/renderer/app/**'
+              --path-ignore-patterns '**/renderer/account/**'
+              --path-ignore-patterns '**/src/main/account-features.test.ts'
+              --path-ignore-patterns '**/src/main/cloud-account*.test.ts'
+              --path-ignore-patterns '**/src/main/cloud-management*.test.ts'
+              --path-ignore-patterns '**/src/main/desktop-remote-services.test.ts'
+              --path-ignore-patterns '**/src/main/link-account-access.test.ts'
           # rest is split in two only for wall time (470s as one shard). Together the two
           # path lists are the previous single list. The module losses seen when it was split
           # were not size: two suites bundled with an in-process Bun.build, which shares the
@@ -213,7 +219,7 @@ jobs:
             # The panels-only process later hit another native lifecycle failure at
             # 34 files. Bound every Panel group below; lint:test-shards checks exact
             # coverage and budgets while lifecycle diagnostics remain enabled.
-            ignore: "--path-ignore-patterns '**/server/src/panels/**'"
+            ignore: "--path-ignore-patterns '**/server/src/panels/**' --path-ignore-patterns '**/server/src/account/**' --path-ignore-patterns '**/web/src/account/**'"
           # Browser fixtures, not a Bun shard. The overlay and Web suites took 28 of the
           # desktop shard's 44 minutes (2026-10-22) and share nothing with its Bun tests,
           # so they run beside it instead of after it.
@@ -280,6 +286,22 @@ jobs:
       - name: test Desktop application state hooks
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/useMimiPresence.test.tsx' packages/desktop/src/renderer/app
+      - name: test Desktop account feature entries
+        if: matrix.shard == 'desktop'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/account-features.test.ts packages/desktop/src/renderer/account
+      # Account extraction adds a native package boundary. At 771 files the broad
+      # shard hit Bun's resolver/pidfd EBADF in a late history-recovery child.
+      # Keep account imports and the existing in-process Cloud bundler bounded;
+      # the original recovery assertions still run in the broad Desktop shard.
+      - name: test Desktop native account boundaries
+        if: matrix.shard == 'desktop'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/cloud-account-links.test.ts packages/desktop/src/main/link-account-access.test.ts packages/desktop/src/main/cloud-account-manager.test.ts packages/desktop/src/main/cloud-management-http.test.ts packages/desktop/src/main/cloud-account-http.test.ts packages/desktop/src/main/desktop-remote-services.test.ts packages/desktop/src/main/cloud-account.native.test.ts packages/desktop/src/main/cloud-account-relay.test.ts packages/desktop/src/main/cloud-account-ipc.test.ts packages/desktop/src/main/cloud-account-store.test.ts
+      - name: test Desktop Cloud bundle boundary
+        if: matrix.shard == 'desktop'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/cloud-management.test.ts
+      - name: test account policy and native credential lifecycles
+        if: matrix.shard == 'rest-server'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/server/src/account packages/web/src/account
       - name: test Desktop script suites with their own runners
         if: matrix.shard == 'desktop'
         run: |
@@ -293,6 +315,7 @@ jobs:
       - name: test Web navigation, conversations and settings recovery
         if: matrix.shard == 'desktop-ui'
         run: |
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-account-features-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-file-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-latest-messages.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-sidebar-navigation.mjs

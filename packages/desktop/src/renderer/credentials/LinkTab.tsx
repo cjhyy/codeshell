@@ -53,6 +53,9 @@ import {
 } from "./LinkPresentation";
 import { selectPrimaryLinkOption } from "./linkPrimaryConnection";
 import { useCloudAccountStatus } from "./useCloudAccountStatus";
+import { useAccountFeature } from "../account/useAccountFeature";
+import { AccountFeatureEntry } from "../account/AccountFeatureEntry";
+import { UnavailableLinkCleanup } from "./UnavailableLinkCleanup";
 import { localLinkProvider, localLinkSnapshot } from "./linkLocalPresentation";
 import type { MaskedCredentialView } from "./types";
 import { DingTalkSetupDialog } from "./DingTalkSetupDialog";
@@ -378,6 +381,10 @@ export function LinkTab({ cwd }: { cwd: string }) {
   const [category, setCategory] = useState("all");
   const remote = useRemoteLinkSnapshot(cwd, { automatic: false });
   const account = useCloudAccountStatus();
+  const remoteFeature = useAccountFeature("links.remote");
+  useEffect(() => {
+    void window.codeshell.accountFeatures?.refresh().catch(() => undefined);
+  }, []);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   useEffect(() => {
     // Present one coherent first directory, rather than sorting partial account
@@ -385,9 +392,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
     if (localMetadataReady && !remote.loading && !account.loading) setInitialLoadComplete(true);
   }, [localMetadataReady, remote.loading, account.loading]);
   const initialLoading = !initialLoadComplete;
-  const cloudAvailable = Boolean(
-    account.status?.state === "signed-in" && account.status.origin && account.status.account?.id,
-  );
+  const cloudAvailable = remoteFeature.state !== "hidden";
   const visibleSnapshot = useMemo(
     () => (cloudAvailable ? remote.snapshot : localLinkSnapshot(remote.snapshot)),
     [cloudAvailable, remote.snapshot],
@@ -403,9 +408,10 @@ export function LinkTab({ cwd }: { cwd: string }) {
           ),
     [cloudAvailable, credentials],
   );
-  const accountIdentity = cloudAvailable
-    ? `${account.status!.origin}\n${account.status!.account!.id}`
-    : "";
+  const accountIdentity =
+    account.status?.state === "signed-in" && account.status.account
+      ? `${account.status.origin}\n${account.status.account.id}`
+      : "";
   const previousAccountIdentity = useRef(accountIdentity);
   useEffect(() => {
     if (previousAccountIdentity.current === accountIdentity) return;
@@ -994,6 +1000,13 @@ export function LinkTab({ cwd }: { cwd: string }) {
               total: directory.length,
             })}
           </p>
+          <AccountFeatureEntry
+            feature={remoteFeature}
+            label={t("accountFeatures.remoteLink")}
+            className="h-auto w-full flex-wrap text-left"
+          >
+            <span />
+          </AccountFeatureEntry>
           {!account.loading && !cloudAvailable && (
             <div
               role="status"
@@ -1137,22 +1150,33 @@ export function LinkTab({ cwd }: { cwd: string }) {
                     key={`${entry.method.id}:${entry.credential?.id ?? "new"}`}
                     optionId={`method:${entry.method.id}:${entry.credential?.id ?? "new"}`}
                   >
-                    <LinkMethodCard
-                      key={`${entry.method.id}:${entry.credential?.id ?? "new"}`}
-                      entry={entry}
-                      liveness={entry.credential ? cliLiveness[entry.credential.id] : undefined}
-                      busy={busyId === linkMethodStateKey(item.id, entry.method)}
-                      error={errors[linkMethodStateKey(item.id, entry.method)]}
-                      onLocalConnect={() => openLocalDialog(entry)}
-                      onLocalDisconnect={() => disconnectLocal(entry)}
-                      onServerLogin={(credential) => onServerLogin(item, entry.method, credential)}
-                      onServerRefresh={(credential) =>
-                        onServerRefresh(item, entry.method, credential)
+                    <AccountFeatureEntry
+                      feature={
+                        entry.method.executionRuntime === "server"
+                          ? remoteFeature
+                          : { id: "links.remote", state: "ready" }
                       }
-                      onServerLogout={(credential) =>
-                        onServerLogout(item, entry.method, credential)
-                      }
-                    />
+                      label={t("accountFeatures.remoteLink")}
+                    >
+                      <LinkMethodCard
+                        key={`${entry.method.id}:${entry.credential?.id ?? "new"}`}
+                        entry={entry}
+                        liveness={entry.credential ? cliLiveness[entry.credential.id] : undefined}
+                        busy={busyId === linkMethodStateKey(item.id, entry.method)}
+                        error={errors[linkMethodStateKey(item.id, entry.method)]}
+                        onLocalConnect={() => openLocalDialog(entry)}
+                        onLocalDisconnect={() => disconnectLocal(entry)}
+                        onServerLogin={(credential) =>
+                          onServerLogin(item, entry.method, credential)
+                        }
+                        onServerRefresh={(credential) =>
+                          onServerRefresh(item, entry.method, credential)
+                        }
+                        onServerLogout={(credential) =>
+                          onServerLogout(item, entry.method, credential)
+                        }
+                      />
+                    </AccountFeatureEntry>
                   </LinkConnectionOption>
                 ));
                 const hasRemote = Boolean(
@@ -1320,6 +1344,21 @@ export function LinkTab({ cwd }: { cwd: string }) {
           </div>
         </div>
       </section>
+
+      {remoteFeature.state !== "ready" && (
+        <UnavailableLinkCleanup
+          key={cwd}
+          cwd={cwd}
+          connections={remote.snapshot?.connections}
+          credentials={credentials.filter(
+            (credential) =>
+              linkCredentialRuntime(credential) === "server" &&
+              credential.meta?.linkExecutionBackend !== "remote",
+          )}
+          reload={remote.reload}
+          onChanged={() => void load().catch(() => undefined)}
+        />
+      )}
 
       {legacyCredentials.length > 0 ? (
         <section className="space-y-3" aria-labelledby="link-legacy-title">

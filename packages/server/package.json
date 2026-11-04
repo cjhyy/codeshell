@@ -45,6 +45,10 @@
     "./panels": {
       "types": "./dist/index.panels.d.ts",
       "import": "./dist/index.panels.js"
+    },
+    "./account": {
+      "types": "./dist/index.account.d.ts",
+      "import": "./dist/index.account.js"
     }
   },
   "bin": {

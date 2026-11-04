@@ -23,7 +23,8 @@ const scenarios = {
   "profile-failure": "preserves profile drafts and explains a username conflict without IPC noise",
   "profile-stale": "ignores a late profile response after switching accounts",
   "profile-unavailable": "disables profile editing for services without the capability",
-  authentication: "opens account management and keeps login, registration, and logout in sync",
+  authentication:
+    "opens account management and keeps login, website registration, and logout in sync",
   github: "offers GitHub sign-in and cancellation from account settings",
   composition:
     "preserves account settings and drafts when Escape cancels Chinese input composition",
@@ -40,13 +41,12 @@ const scenarios = {
   "registration-unavailable":
     "disables closed registration while allowing existing accounts to log in",
   "registration-validation":
-    "rejects invalid registration names, short passwords, and mismatched confirmation",
-  "registration-success":
-    "registers once and signs in automatically with matching password confirmation",
+    "keeps login validation while registration details belong to the website",
+  "registration-success": "opens the selected registration website and stays signed out locally",
   "login-enter": "submits password login from the credential form with Enter",
-  "register-enter": "submits registration from the credential form with Enter",
+  "register-enter": "never treats Enter on the login form as a registration request",
   "registration-pending":
-    "disables inputs and prevents duplicate registration submissions while pending",
+    "disables inputs and prevents duplicate registration website requests while pending",
   "github-registration-closed":
     "keeps GitHub sign-in available when password registration is closed",
   "github-automatic-account":

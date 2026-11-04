@@ -51,8 +51,9 @@ test("remote composition registers owner-scoped IPC without starting cloud or lo
       },
     });
     // 17 account/relay/cloud routes, plus explicit account resume and the eight
-    // main-frame-owned account computer operations.
-    expect(handlers.size).toBe(26);
+    // main-frame-owned account computer operations, fixed browser registration,
+    // public feature snapshot and refresh.
+    expect(handlers.size).toBe(29);
     expect(handlers.has("cloudAccount:resume")).toBe(true);
     expect(handlers.has("cloudAccount:capabilities")).toBe(true);
     expect(handlers.has("cloudAccount:profile")).toBe(true);

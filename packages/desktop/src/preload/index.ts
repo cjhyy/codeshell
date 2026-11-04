@@ -1,3 +1,4 @@
+import { accountFeaturesApi } from "./account-features-api.js";
 import { createOperationBatchApi } from "./operation-batch-api.js";
 import { cloudAccountApi } from "./cloud-account-api.js";
 import { accountDeviceApi } from "./account-device-api.js";
@@ -224,7 +225,7 @@ const streamListeners: Array<
 > = [];
 const approvalListeners: Array<(env: unknown) => void> = [];
 const approvalResolvedListeners: Array<(env: unknown) => void> = [];
-const mobilePermissionModeListeners: Array<(env: unknown) => void> = [];
+const mobileSessionSettingsListeners: Array<(env: unknown) => void> = [];
 const statusListeners: Array<(evt: unknown) => void> = [];
 const lifecycleListeners: Array<(evt: unknown) => void> = [];
 const worktreeCleanupSkippedListeners: Array<(evt: WorktreeCleanupSkippedEvent) => void> = [];
@@ -339,8 +340,8 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
     approvalListeners.forEach((cb) => cb(params));
   } else if (method === "agent/approvalResolved") {
     approvalResolvedListeners.forEach((cb) => cb(params));
-  } else if (method === "agent/mobilePermissionMode") {
-    mobilePermissionModeListeners.forEach((cb) => cb(params));
+  } else if (method === "agent/mobileSessionSettings") {
+    mobileSessionSettingsListeners.forEach((cb) => cb(params));
   } else if (method === "agent/status") {
     statusListeners.forEach((cb) => cb(params));
   }
@@ -842,11 +843,11 @@ contextBridge.exposeInMainWorld("codeshell", {
       if (i >= 0) approvalResolvedListeners.splice(i, 1);
     };
   },
-  onMobilePermissionMode: (cb: (req: unknown) => void): (() => void) => {
-    mobilePermissionModeListeners.push(cb);
+  onMobileSessionSettings: (cb: (env: unknown) => void): (() => void) => {
+    mobileSessionSettingsListeners.push(cb);
     return () => {
-      const i = mobilePermissionModeListeners.indexOf(cb);
-      if (i >= 0) mobilePermissionModeListeners.splice(i, 1);
+      const i = mobileSessionSettingsListeners.indexOf(cb);
+      if (i >= 0) mobileSessionSettingsListeners.splice(i, 1);
     };
   },
   onStatus: (cb: (evt: unknown) => void): (() => void) => {
@@ -880,6 +881,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     autoDeleteWorktreesGraceMins: number;
   }) => ipcRenderer.invoke("git:setPrefs", prefs),
   cloudAccount: cloudAccountApi,
+  accountFeatures: accountFeaturesApi,
   accountDevices: accountDeviceApi,
   cloudEnvironment: cloudEnvironmentApi,
   openCloudWorkbench: ((input: unknown) =>

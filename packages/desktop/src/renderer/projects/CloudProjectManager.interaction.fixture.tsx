@@ -8,6 +8,7 @@ import tls from "node:tls";
 import { syncBuiltinESMExports } from "node:module";
 import { mock } from "bun:test";
 import React, { act } from "react";
+import { featureBridge } from "../account/accountFeatureFixture";
 import { createRoot } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import type { CloudAccountStatus } from "../../shared/cloud-account";
@@ -133,6 +134,7 @@ const onBusyChange = (next: boolean) => busy.push(next);
 const onOpened = (address: string) => opened.push(address);
 const onBack = () => backCalls++;
 window.codeshell = {
+  accountFeatures: featureBridge(scenario === "anonymous-chooser" ? "sign-in" : "ready"),
   credentials: {
     list: async (cwd: string) => {
       assert.equal(cwd, "");
@@ -356,7 +358,11 @@ try {
         );
         assert.equal(button(label), undefined, "Opened legacy project closes its chooser");
       } else if (scenario === "anonymous-chooser") {
-        assert.ok(contents().includes(t("cloudManager.signIn")));
+        assert.equal(
+          button(t("sidebar.cloud")),
+          undefined,
+          "Sign-in closes the chooser and navigates to account settings",
+        );
         assert.equal(button(t("cloudManager.connect")), undefined);
         assert.equal(localCreates, 0);
       } else {

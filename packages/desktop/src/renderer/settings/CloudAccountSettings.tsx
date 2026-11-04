@@ -18,8 +18,6 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   const [origin, setOrigin] = useState(DEFAULT_CLOUD_ACCOUNT_ORIGIN);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmation, setConfirmation] = useState("");
-  const [mode, setMode] = useState<"login" | "register">("login");
   const [connectGitHub, setConnectGitHub] = useState(false);
   const [githubLinkDefaultCheck, setGitHubLinkDefaultCheck] = useState<
     "checking" | "ready" | "failed"
@@ -127,6 +125,7 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
     setOperationError("");
     if (!serviceOrigin) return;
     const timer = setTimeout(() => {
+      void window.codeshell.accountFeatures?.refresh(serviceOrigin).catch(() => undefined);
       void window.codeshell.cloudAccount.capabilities(serviceOrigin).then(
         (capabilities) => {
           if (active) setService({ origin: serviceOrigin, capabilities });
@@ -200,17 +199,12 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
   };
   const validUsername = /^[a-z0-9][a-z0-9._-]{2,63}$/i.test(username.trim());
   const canSubmit =
-    !!origin.trim() &&
-    validUsername &&
-    password.length >= 12 &&
-    password.length <= 1024 &&
-    (mode === "login" || (!!capabilities?.registrationAllowed && confirmation === password));
-  const signIn = (kind: "login" | "register") => {
+    !!origin.trim() && validUsername && password.length >= 12 && password.length <= 1024;
+  const signIn = () => {
     if (pending || busyRef.current || !canSubmit) return;
     const input = { origin: origin.trim().replace(/\/$/, ""), username: username.trim(), password };
     setPassword("");
-    setConfirmation("");
-    void act(() => window.codeshell.cloudAccount[kind](input), { password: true });
+    void act(() => window.codeshell.cloudAccount.login(input), { password: true });
   };
   return (
     <section
@@ -418,51 +412,28 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
               </p>
             )}
           </div>
-          <div
-            className="flex gap-2"
-            role="group"
-            aria-label={t("settingsX.cloudAccount.passwordMethod")}
-          >
+          <div className="space-y-2">
             <Button
               type="button"
-              variant={mode === "login" ? "default" : "ghost"}
-              aria-pressed={mode === "login"}
-              disabled={pending}
-              onClick={() => {
-                setMode("login");
-                setConfirmation("");
-                setOperationError("");
-              }}
-            >
-              {t("settingsX.cloudAccount.passwordLogin")}
-            </Button>
-            <Button
-              type="button"
-              variant={mode === "register" ? "default" : "ghost"}
-              aria-pressed={mode === "register"}
+              variant="outline"
               disabled={pending || !capabilities?.registrationAllowed}
-              onClick={() => {
-                setMode("register");
-                setConfirmation("");
-                setOperationError("");
-              }}
+              onClick={() =>
+                void act(() => window.codeshell.cloudAccount.openRegistration(serviceOrigin))
+              }
             >
-              {t("settingsX.cloudAccount.createAccount")}
+              {t("accountFeatures.registration")}
             </Button>
+            <p className="text-xs text-muted-foreground">{t("accountFeatures.registrationHint")}</p>
           </div>
           <form
             className="space-y-4"
             // canSubmit validates the trimmed username, including when Enter
             // submits a pasted value before the input has lost focus.
             noValidate
-            aria-label={t(
-              mode === "register"
-                ? "settingsX.cloudAccount.createAccount"
-                : "settingsX.cloudAccount.passwordLogin",
-            )}
+            aria-label={t("settingsX.cloudAccount.passwordLogin")}
             onSubmit={(event) => {
               event.preventDefault();
-              signIn(mode);
+              signIn();
             }}
           >
             <label className="block space-y-2 text-sm">
@@ -478,14 +449,8 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
                 pattern={"[A-Za-z0-9][A-Za-z0-9._\\-]{2,63}"}
                 disabled={pending}
                 autoComplete="username"
-                aria-describedby={mode === "register" ? `${helpId}-username` : undefined}
               />
             </label>
-            {mode === "register" && (
-              <p id={`${helpId}-username`} className="text-xs text-muted-foreground">
-                {t("settingsX.cloudAccount.usernameHelp")}
-              </p>
-            )}
             <label className="block space-y-2 text-sm">
               {t("settingsX.cloudAccount.password")}
               <Input
@@ -497,42 +462,11 @@ export function CloudAccountSettings({ embedded = false }: { embedded?: boolean 
                 minLength={12}
                 maxLength={1024}
                 disabled={pending}
-                autoComplete={mode === "register" ? "new-password" : "current-password"}
+                autoComplete="current-password"
               />
             </label>
-            {mode === "register" && (
-              <>
-                <label className="block space-y-2 text-sm">
-                  {t("settingsX.cloudAccount.confirmPassword")}
-                  <Input
-                    name="password-confirmation"
-                    type="password"
-                    value={confirmation}
-                    onChange={(event) => setConfirmation(event.target.value)}
-                    required
-                    minLength={12}
-                    maxLength={1024}
-                    disabled={pending}
-                    autoComplete="new-password"
-                    aria-invalid={!!confirmation && confirmation !== password}
-                    aria-describedby={
-                      confirmation && confirmation !== password ? `${helpId}-mismatch` : undefined
-                    }
-                  />
-                </label>
-                {confirmation && confirmation !== password && (
-                  <p id={`${helpId}-mismatch`} className="text-xs text-status-err" role="alert">
-                    {t("settingsX.cloudAccount.passwordMismatch")}
-                  </p>
-                )}
-              </>
-            )}
             <Button type="submit" disabled={pending || !canSubmit}>
-              {t(
-                mode === "register"
-                  ? "settingsX.cloudAccount.register"
-                  : "settingsX.cloudAccount.login",
-              )}
+              {t("settingsX.cloudAccount.login")}
             </Button>
           </form>
         </div>

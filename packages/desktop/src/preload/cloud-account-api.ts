@@ -13,6 +13,7 @@ export const cloudAccountApi: CloudAccountApi = {
   resume: () => ipcRenderer.invoke("cloudAccount:resume"),
   capabilities: (origin) => ipcRenderer.invoke("cloudAccount:capabilities", origin),
   login: (input) => ipcRenderer.invoke("cloudAccount:login", input),
+  openRegistration: (origin) => ipcRenderer.invoke("cloudAccount:openRegistration", origin),
   register: (input) => ipcRenderer.invoke("cloudAccount:register", input),
   signInWithGitHub: (input) => github({ mode: "login", input }),
   linkGitHub: () => github({ mode: "link" }),

@@ -1,6 +1,6 @@
 # 账号功能统一开关设计
 
-状态：2026-11-04 决策已确认，按下述顺序分批实施。服务端改动在 `codeshell-services/apps/account-server`，
+状态：2026-11-04 首版已实现，服务端与全部客户端一起交付。服务端改动在 `codeshell-services/apps/account-server`，
 客户端改动在本仓库 Desktop（main、preload、renderer）、TUI、`serve` 与 `packages/web`。本文是
 [账号上下文机制设计](account-context-distribution-design.md) 中
 `codeshell.account.capabilities` 模块的先行落地：先用现有 overview 接口交付，
@@ -170,8 +170,8 @@ export const FEATURES = {
 - 无浏览器的终端或服务主机显示可复制的网址。网页注册成功不等于本机已登录；仍通过
   受验证的原生登录流程取得本机会话，不把账号 token 放进 URL、终端日志或浏览器存储。
 - 注册入口绑定用户选择的 `accountOrigin`，不从错误信息或任意远程字符串跳转。
-  网站需提供固定的注册路由或受控页面参数；现有网站只有登录页内的注册模式，不假设
-  已存在 `/register`。`registrationAllowed:false` 时明确显示注册关闭。
+  新服务通过 `/status.registrationPage: "/register"` 声明固定注册路由；旧服务回退到
+  `/api/v1/account/manage` 门户。`registrationAllowed:false` 时网页明确显示注册关闭。
 - Desktop 的注册表单迁移为打开网页；旧注册 API 在兼容期保留，供旧客户端使用。
   本轮不改变已有 GitHub 登录/首次建号的服务端语义。
 - TUI/`serve` 的凭据由 Host 保管，持久化必须使用安全存储；无安全存储时可提供仅当前
@@ -211,7 +211,7 @@ export interface AccountFeatureView {
     | "relay_disconnected"
     | "service_unreachable"
     | "storage_error";
-  params?: Record<string, string>;
+  params?: { cloudOrigin?: string; directoryPath?: "/devices" };
 }
 ```
 
@@ -279,15 +279,24 @@ export interface AccountFeatureView {
    各客户端注册统一引导网页。原生客户端入口与网页路由需兼容交付后再启用跳转。
 4. 之后每个新功能：服务端注册一项，客户端用一次 hook，再写功能本身。
 
-### 2026-11-04 首批交付记录
+### 2026-11-04 首版交付记录
 
 - 方案：[codeshell PR #283](https://github.com/cjhyy/codeshell/pull/283)。
-- 服务端：[codeshell-services PR #56](https://github.com/cjhyy/codeshell-services/pull/56)，
-  提交 `39bacc067962fc75905c1c547b0e7052ccef12be`。已实现注册表、原生/网页下发、关闭配置
-  和授权路径检查；独立按锁文件安装后 `npm test` 767 项：766 通过、0 失败、1 项原有
-  平台条件跳过；格式检查与 `git diff --check` 通过。
-- 本记录表示源码和 PR 已交付，不表示已合并或部署。共享 Host、Desktop/TUI/`serve`
-  登录接入及网页注册入口仍按后续客户端 PR 实施；Mimi/历史同步未启用。
+- 服务端：[codeshell-services PR #56](https://github.com/cjhyy/codeshell-services/pull/56)。
+  已实现注册表、原生/网页下发、紧急关闭和接口权限检查；固定 `/register` 注册页面、
+  `/devices` 设备门户及部署代理配置同时交付。全量测试 770 项：769 通过、0 失败、
+  1 项原有平台条件跳过；固定手机目录参数另有针对性回归覆盖。
+- Desktop：共享账号管理器与后台功能服务、窗口限定 IPC、四种入口状态、四处入口迁移、
+  云端地址下发、注册跳转均已接入。准备重试可以恢复中继；权限关闭或暂时离线时仍保留
+  已有 Link 的撤销、云项目的停止与退出操作。
+- TUI 与 `serve`：已支持可选登录、状态、功能清单、账号 Link 列表、退出与网页注册，
+  见[原生账号使用说明](../native-account.md)。持久凭据使用系统安全存储，同 origin 的
+  命令跨进程串行，避免刷新令牌竞争；无安全存储时可选择进程内临时会话。
+- Web：复用共享规则，账号、Link、云项目和手机目录入口已接入；注册统一指向网页。
+  新服务仅为 `relay.phone` 下发固定 `params.directoryPath: "/devices"`，没有该参数的旧服务
+  保留原 `/` 入口；客户端不接受任意跳转路径或 URL。
+- 上述为源码交付范围，生产部署按独立部署流程进行。管理员灰度、名单、套餐与
+  Mimi/历史同步均未启用。后续新增功能仍需实现业务接口及权限检查，再登记并接入 hook。
 
 ## 待定
 

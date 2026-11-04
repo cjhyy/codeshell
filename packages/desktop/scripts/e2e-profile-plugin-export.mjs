@@ -83,6 +83,8 @@ for (const name of ["node:http", "node:https"]) {
   require(name).request = deny;
   require(name).get = deny;
 }
+const { withOwnedAccountDiscovery } = require(${JSON.stringify(fileURLToPath(new URL("./owned-account-discovery.cjs", import.meta.url)))});
+require("node:https").request = withOwnedAccountDiscovery(deny);
 require("node:module").syncBuiltinESMExports();
 `,
   );

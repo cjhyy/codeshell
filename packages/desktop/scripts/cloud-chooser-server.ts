@@ -254,6 +254,7 @@ try {
             registrationAllowed: false,
             githubEnabled: false,
             linkManagementEnabled: false,
+            features: { "cloud.projects": { version: 1, enabled: true, params: { cloudOrigin } } },
           });
         }
         const value = await body(req);
@@ -270,12 +271,20 @@ try {
             accessTokenExpiresAt: Date.now() + 3_600_000,
             refreshTokenExpiresAt: Date.now() + 7_200_000,
             sessionId: rootId,
-            account: { id: accountId, username: "chooser-owner" },
+            account: { id: accountId, username: "chooser-owner", displayName: "Chooser owner" },
             kind: "account",
             audience: accountOrigin,
           });
         }
         assert.equal(req.headers.authorization, `Bearer ${accessToken}`);
+        if (req.method === "GET" && req.url === "/api/v1/account/overview") {
+          if (!active) return json(res, 401, { error: "invalid_access_token" });
+          return json(res, 200, {
+            account: { id: accountId, username: "chooser-owner", displayName: "Chooser owner" },
+            capabilities: { links: false },
+            features: { "cloud.projects": { version: 1, enabled: true, params: { cloudOrigin } } },
+          });
+        }
         if (req.method === "POST" && req.url === "/api/v1/account/cloud-management/tickets") {
           assert.ok(active);
           assert.deepEqual(value, { cloudOrigin, installationId });

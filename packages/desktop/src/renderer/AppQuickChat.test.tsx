@@ -574,7 +574,7 @@ function installCodeshellStub(
         approvalResolvedListener = null;
       };
     },
-    onMobilePermissionMode: () => unsubscribe,
+    onMobileSessionSettings: () => unsubscribe,
     onStatus: () => unsubscribe,
     onAgentLifecycle: (listener: typeof lifecycleListener) => {
       lifecycleListener = listener;

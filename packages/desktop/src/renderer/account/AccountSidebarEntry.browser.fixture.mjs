@@ -66,7 +66,7 @@ const source = `
       window.emitStatus({state:'signed-out'});
       return {state:'signed-out',revocation:'confirmed'};
     },
-    login:unexpected('login'),register:unexpected('register'),
+    login:unexpected('login'),register:unexpected('register'),openRegistration:unexpected('openRegistration'),
     signInWithGitHub:unexpected('signInWithGitHub'),linkGitHub:unexpected('linkGitHub'),
     cancelSignIn:unexpected('cancelSignIn'),profile:unexpected('profile'),
     manageLinks:unexpected('manageLinks'),

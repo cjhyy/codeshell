@@ -10,7 +10,15 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./account": {
+      "types": "./dist/account/features.d.ts",
+      "import": "./dist/account/features.js"
+    },
+    "./account-profile": {
+      "types": "./dist/account/profile.d.ts",
+      "import": "./dist/account/profile.js"
+    }
   },
   "files": [
     "dist",

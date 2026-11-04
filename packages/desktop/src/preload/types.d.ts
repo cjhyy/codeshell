@@ -1,3 +1,4 @@
+import type { AccountFeaturesApi } from "../shared/account-features.js";
 import type { CloudAccountApi } from "../shared/cloud-account.js";
 import type { AccountDeviceApi } from "../shared/account-device.js";
 import type { SessionOutputRecoveryApi } from "./session-transcript-api.js";
@@ -7,14 +8,14 @@ import type { CloudEnvironmentApi } from "../shared/cloud-environment.js";
 import type { CloudWorkbenchApi } from "../shared/cloud-management.js";
 import type {
   ApprovalResolvedEnvelope,
-  MobilePermissionModeEnvelope,
   MobileRemoteApi,
+  MobileSessionSettingsEnvelope,
 } from "../shared/mobile-remote.js";
 export type {
   ApprovalResolvedEnvelope,
   MobilePermissionMode,
-  MobilePermissionModeEnvelope,
   MobilePermissionModeSnapshotEntry,
+  MobileSessionSettingsEnvelope,
 } from "../shared/mobile-remote.js";
 /**
  * Renderer-visible types for window.codeshell. Imports `type`-only from
@@ -1322,7 +1323,7 @@ export interface CodeshellApi
   getPendingApprovals(): Promise<ApprovalRequestEnvelope[]>;
   onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;
   onApprovalResolved(cb: (env: ApprovalResolvedEnvelope) => void): Unsubscribe;
-  onMobilePermissionMode(cb: (env: MobilePermissionModeEnvelope) => void): Unsubscribe;
+  onMobileSessionSettings(cb: (env: MobileSessionSettingsEnvelope) => void): Unsubscribe;
   onStatus(cb: (evt: AgentStatusEvent) => void): Unsubscribe;
   onAgentLifecycle(cb: (evt: AgentLifecycleEvent) => void): Unsubscribe;
   onWorktreeCleanupSkipped(cb: (evt: WorktreeCleanupSkippedEvent) => void): Unsubscribe;
@@ -1606,6 +1607,7 @@ export interface CodeshellApi
 
   /** Open a cloud workbench in a browser-only native window, isolated from local projects. */
   cloudAccount: CloudAccountApi;
+  accountFeatures: AccountFeaturesApi;
   accountDevices: AccountDeviceApi;
   cloudEnvironment: CloudEnvironmentApi;
   openCloudWorkbench: CloudWorkbenchApi;

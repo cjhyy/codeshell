@@ -43,6 +43,7 @@ export class CloudManagementManager {
     private readonly deps: {
       account: Pick<CloudAccountManager, "captureRootAccount">;
       windows: ManagedCloudWindows;
+      requireFeature?: () => void;
       request?: CloudManagementTransport;
       now?: () => number;
     },
@@ -133,6 +134,7 @@ export class CloudManagementManager {
   manage(raw: unknown, authorized: () => boolean): Promise<CloudManagementResult> {
     if (this.closed) throw new Error("云端管理正在关闭。");
     const input = cloudManagementRequest(raw);
+    if (input.action !== "logout" && input.action !== "stop") this.deps.requireFeature?.();
     const lease = this.deps.account.captureRootAccount(
       input.accountOrigin,
       input.accountId,
@@ -158,6 +160,7 @@ export class CloudManagementManager {
     const alive = () => {
       if (this.closed) throw new Error("云端管理正在关闭。");
       lease.current();
+      if (input.action !== "logout" && input.action !== "stop") this.deps.requireFeature?.();
     };
     const signal = AbortSignal.any([lease.signal, this.shutdown.signal]);
     alive();

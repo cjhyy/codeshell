@@ -152,7 +152,12 @@ const authenticate = async (action: string, input: CloudAccountLogin) => {
   emit(signedIn(input.username));
   return current;
 };
+const registrationOrigins: string[] = [];
 const api: CloudAccountApi = {
+  openRegistration: async (origin) => {
+    registrationOrigins.push(origin);
+    if (scenario === "registration-pending") await authenticationRequest.promise;
+  },
   profile: async (input) => {
     assert.ok(scenario.startsWith("profile-") && scenario !== "profile-unavailable");
     profileCalls.push(input);
@@ -220,7 +225,9 @@ const api: CloudAccountApi = {
     return Promise.resolve(current);
   },
   login: (input) => authenticate("login", input),
-  register: (input) => authenticate("register", input),
+  register: () => {
+    throw new Error("Native registration must not be called");
+  },
   signInWithGitHub: async (input) => {
     githubRequests.push(input);
     githubOrigin = input.origin;
@@ -789,13 +796,9 @@ try {
     await open();
     assert.equal(listeners.size, 2, "The account form independently observes status");
     assert.equal(props(button("登录")).disabled, true, "Empty credentials cannot be submitted");
-    assert.equal(props(button("密码登录"))["aria-pressed"], true);
-    assert.ok(
-      nodes(accountPage()!).some(
-        (node) => props(node).role === "group" && props(node)["aria-label"] === "账号密码登录方式",
-      ),
-    );
-    assert.equal(props(button("创建账号")).type, "button");
+    assert.equal(props(form())["aria-label"], "密码登录");
+    assert.ok(text(accountPage()!).includes("在网页创建账号后，返回这里登录。"));
+    assert.equal(props(button("前往网页注册")).type, "button");
     assert.equal(props(button("使用 GitHub 登录")).disabled, true);
     assert.equal(props(input("首次 GitHub 登录默认 Link")).disabled, true);
     assert.ok(text(accountPage()!).includes("正在检查可用登录方式…"));
@@ -818,20 +821,23 @@ try {
     await click(button("退出云账号"));
     assertSignedOut();
     assert.equal(props(input("密码（至少 12 位）")).value, "", "Login clears the password");
-    await click(button("创建账号"));
-    await change(input("账号名称"), "new-user");
-    await change(input("密码（至少 12 位）"), "registration-password");
-    await change(input("确认密码"), "registration-password");
-    await settleCapabilities();
-    await click(button("注册"));
-    assertSignedIn("new-user");
-    assert.equal(credentials[1]?.action, "register");
+    await click(button("前往网页注册"));
+    assert.deepEqual(registrationOrigins, ["https://accounts.example.test"]);
+    assert.equal(
+      credentials.length,
+      1,
+      "Registration opens the website without native credentials",
+    );
+    assertSignedOut();
     await close();
     assert.equal(listeners.size, 1, "Closing the form preserves the footer subscription");
-    assertSignedIn("new-user");
     await open();
-    assertSignedIn("new-user");
-    assert.equal(githubRequests.length, 0, "Password login and registration do not connect GitHub");
+    assertSignedOut();
+    assert.equal(
+      githubRequests.length,
+      0,
+      "Password login and website registration do not connect GitHub",
+    );
   } else if (scenario === "github") {
     await open();
     await change(input("云服务地址"), " https://accounts.example.test/ ");
@@ -884,7 +890,7 @@ try {
     await open();
     assert.ok(text(accountPage()!).includes("暂时无法读取账号状态"));
     button("登录");
-    button("创建账号");
+    button("前往网页注册");
     await settleCapabilities();
     assert.equal(props(button("使用 GitHub 登录")).disabled, false);
     await settle(() => emit(signedIn("recovered-user")));
@@ -987,10 +993,9 @@ try {
     await settleCapabilities();
     assert.equal(capabilityAttempts, 2);
     assert.equal(props(button("使用 GitHub 登录")).disabled, false);
-    await click(button("创建账号"));
-    await change(input("密码（至少 12 位）"), "existing-user-password");
-    await change(input("确认密码"), "existing-user-password");
-    assert.equal(props(button("注册")).disabled, false);
+    assert.equal(props(button("前往网页注册")).disabled, false);
+    await click(button("前往网页注册"));
+    assert.equal(registrationOrigins.length, 1);
     assert.ok(!text(accountPage()!).includes("无法检查云服务的登录方式"));
   } else if (scenario === "registration-unavailable") {
     await open();
@@ -998,7 +1003,7 @@ try {
     await change(input("账号名称"), "existing-user");
     await change(input("密码（至少 12 位）"), "existing-user-password");
     assert.ok(text(accountPage()!).includes("此云服务暂未开放注册。"));
-    assert.equal(props(button("创建账号")).disabled, true);
+    assert.equal(props(button("前往网页注册")).disabled, true);
     assert.equal(props(button("登录")).disabled, false);
     await click(button("登录"));
     assertSignedIn("existing-user");
@@ -1006,63 +1011,37 @@ try {
   } else if (scenario === "registration-validation") {
     await open();
     await settleCapabilities();
-    await click(button("创建账号"));
-    assert.equal(props(button("创建账号"))["aria-pressed"], true);
-    assert.ok(text(accountPage()!).includes("3–64 位，以字母或数字开头"));
-    assert.equal(props(input("密码（至少 12 位）")).autoComplete, "new-password");
-    assert.equal(props(input("确认密码")).autoComplete, "new-password");
     await change(input("账号名称"), "bad name!");
-    await change(input("密码（至少 12 位）"), "registration-password");
-    await change(input("确认密码"), "registration-password");
-    assert.equal(props(button("注册")).disabled, true, "Invalid account names cannot register");
-    await submit();
-    assert.equal(credentials.length, 0);
-    await change(input("账号名称"), "valid-user");
     await change(input("密码（至少 12 位）"), "too-short");
-    await change(input("确认密码"), "too-short");
+    assert.equal(props(button("登录")).disabled, true);
+    assert.equal(props(input("密码（至少 12 位）")).autoComplete, "current-password");
     assert.equal(
-      props(button("注册")).disabled,
-      true,
-      "Registration requires at least 12 characters",
+      nodes(accountPage()!).filter((node) => props(node).name === "password-confirmation").length,
+      0,
     );
-    await submit();
+    await click(button("前往网页注册"));
+    assert.equal(
+      registrationOrigins.length,
+      1,
+      "Registration details are entered only on the website",
+    );
     assert.equal(credentials.length, 0);
-    await change(input("密码（至少 12 位）"), "registration-password");
-    await change(input("确认密码"), "different-password");
-    assert.equal(props(input("确认密码"))["aria-invalid"], true);
-    assert.ok(text(accountPage()!).includes("两次输入的密码不一致。"));
-    assert.equal(props(button("注册")).disabled, true, "Password confirmation must match");
-    await submit();
-    assert.equal(credentials.length, 0, "Enter cannot bypass registration validation");
+    assertSignedOut();
   } else if (scenario === "registration-success" || scenario === "register-enter") {
     await open();
     await settleCapabilities();
     await change(input("云服务地址"), " https://accounts.example.test/ ");
     await settleCapabilities();
-    await click(button("创建账号"));
-    await change(input("账号名称"), " new-user ");
-    await change(input("密码（至少 12 位）"), "registration-password");
-    await change(input("确认密码"), "registration-password");
-    assert.equal(props(button("注册")).type, "submit");
-    if (scenario === "register-enter") await submit();
-    else await click(button("注册"));
-    assert.deepEqual(credentials, [
-      {
-        action: "register",
-        input: {
-          origin: "https://accounts.example.test",
-          username: "new-user",
-          password: "registration-password",
-        },
-      },
-    ]);
-    assertSignedIn("new-user");
-    assert.equal(githubOrigin, "");
-    await click(button("退出云账号"));
-    assert.equal(props(input("密码（至少 12 位）")).value, "");
-    if (props(button("创建账号"))["aria-pressed"] === true) {
-      assert.equal(props(input("确认密码")).value, "", "Registration clears both password inputs");
+    assert.equal(props(button("前往网页注册")).type, "button");
+    if (scenario === "register-enter") {
+      await submit();
+      assert.deepEqual(registrationOrigins, [], "Enter on an empty login form must not register");
     }
+    await click(button("前往网页注册"));
+    assert.deepEqual(registrationOrigins, ["https://accounts.example.test"]);
+    assert.equal(credentials.length, 0);
+    assertSignedOut();
+    assert.ok(text(accountPage()!).includes("在网页创建账号后，返回这里登录。"));
   } else if (scenario === "login-enter") {
     await open();
     await change(input("账号名称"), "existing-user");
@@ -1076,49 +1055,26 @@ try {
   } else if (scenario === "registration-pending") {
     await open();
     await settleCapabilities();
-    await click(button("创建账号"));
-    await change(input("账号名称"), "new-user");
-    await change(input("密码（至少 12 位）"), "registration-password");
-    await change(input("确认密码"), "registration-password");
+    const register = props(button("前往网页注册"));
     await settle(() => {
-      props(form()).onSubmit({ preventDefault() {} });
-      props(form()).onSubmit({ preventDefault() {} });
+      register.onClick();
+      register.onClick();
     });
-    assert.equal(
-      credentials.length,
-      1,
-      "Two submissions in one tick send one registration request",
-    );
-    assert.equal(credentials[0]?.action, "register");
-    assert.ok(text(accountPage()!).includes("正在提交账号信息…"));
-    for (const label of ["云服务地址", "账号名称", "密码（至少 12 位）", "确认密码"]) {
-      assert.equal(
-        props(input(label)).disabled,
-        true,
-        `${label} is disabled while registration runs`,
-      );
-    }
-    for (const label of ["密码登录", "创建账号", "注册", "使用 GitHub 登录"]) {
-      assert.equal(
-        props(button(label)).disabled,
-        true,
-        `${label} is disabled while registration runs`,
-      );
-    }
-    assert.equal(props(input("首次 GitHub 登录默认 Link")).disabled, true);
-    await submit();
-    assert.equal(credentials.length, 1, "Pending Enter submission cannot send another request");
-    await settle(() => {
-      emit(signedIn("new-user"));
-      authenticationRequest.resolve(current);
-    });
-    assertSignedIn("new-user");
+    assert.equal(registrationOrigins.length, 1, "Two clicks open one website request");
+    assert.equal(credentials.length, 0);
+    for (const label of ["云服务地址", "账号名称", "密码（至少 12 位）"])
+      assert.equal(props(input(label)).disabled, true);
+    for (const label of ["前往网页注册", "登录", "使用 GitHub 登录"])
+      assert.equal(props(button(label)).disabled, true);
+    await settle(() => authenticationRequest.resolve(current));
+    assert.equal(props(button("前往网页注册")).disabled, false);
+    assertSignedOut();
   } else if (scenario === "github-registration-closed") {
     await open();
     await settleCapabilities();
     assert.ok(text(accountPage()!).includes("此云服务暂未开放注册。"));
     assert.ok(text(accountPage()!).includes("仅已关联 GitHub 的 CodeShell 账号可继续登录。"));
-    assert.equal(props(button("创建账号")).disabled, true);
+    assert.equal(props(button("前往网页注册")).disabled, true);
     assert.equal(props(button("使用 GitHub 登录")).disabled, false);
     assert.equal(props(input("密码（至少 12 位）")).value, "");
     await click(button("使用 GitHub 登录"));
