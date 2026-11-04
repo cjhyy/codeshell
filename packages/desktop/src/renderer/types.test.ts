@@ -555,15 +555,17 @@ describe("applyStreamEvent — subagent isolation", () => {
     expect(after).toBe(before);
 
     const continued = dispatch(after, [
-      ev("text_delta", { text: " continues" } as any),
       ev("thinking_delta", { text: " still" } as any),
+      ev("text_delta", { text: " continues" } as any),
       ev("agent_end", { agentId: "A", error: "child failed" } as any),
     ]);
     expect(findMainAssistant(continued).text).toBe("parent continues");
     expect(continued.streamingThinkingId).toBe(before.streamingThinkingId);
+    // The parent's reasoning kept growing in the same row; the answer text that
+    // followed it then closed that row.
     expect(continued.messages.find((m) => m.id === before.streamingThinkingId)).toMatchObject({
       text: "working still",
-      done: false,
+      done: true,
     });
     expect(findAgent(continued, "A")).toMatchObject({ done: true, error: "child failed" });
     expect(continued.messages.some((m) => m.kind === "system")).toBe(false);
@@ -2111,5 +2113,74 @@ describe("goal waiting for the user", () => {
       ev("goal_progress", { goalId: "g", revision: 1, status: "not_met", round: 2 } as never),
     ]);
     expect(moving.activeGoal?.waitingForUser).toBeUndefined();
+  });
+});
+
+describe("thinking rows settle when the model moves on", () => {
+  const thinking = (s: MessagesReducerState) =>
+    s.messages.flatMap((m) => (m.kind === "thinking" ? [{ text: m.text, done: m.done }] : []));
+  const tool = (id: string) =>
+    ev("tool_use_start", { toolCall: { id, toolName: "Bash", args: {} } } as any);
+
+  test("an earlier request's thinking is sealed by the next request and stays sealed", () => {
+    const mid = dispatch(INITIAL_STATE, [
+      ev("stream_request_start", { turnNumber: 1 } as any),
+      ev("thinking_delta", { text: "step one" } as any),
+      tool("t1"),
+      ev("tool_result", { toolCallId: "t1", result: "ok" } as any),
+      ev("stream_request_start", { turnNumber: 1 } as any),
+      ev("thinking_delta", { text: "step two" } as any),
+    ]);
+    expect(thinking(mid)).toEqual([
+      { text: "step one", done: true },
+      { text: "step two", done: false },
+    ]);
+    const end = dispatch(mid, [ev("turn_complete", { reason: "completed" } as any)]);
+    expect(thinking(end)).toEqual([
+      { text: "step one", done: true },
+      { text: "step two", done: true },
+    ]);
+  });
+
+  test("answer text and tool calls end the reasoning that preceded them", () => {
+    const start = [
+      ev("stream_request_start", { turnNumber: 1 } as any),
+      ev("thinking_delta", { text: "plan" } as any),
+    ];
+    expect(
+      thinking(dispatch(INITIAL_STATE, [...start, ev("text_delta", { text: "answer" } as any)])),
+    ).toEqual([{ text: "plan", done: true }]);
+    expect(thinking(dispatch(INITIAL_STATE, [...start, tool("t1")]))).toEqual([
+      { text: "plan", done: true },
+    ]);
+  });
+
+  test("a single-stream runtime that resumes thinking after a tool opens a new row in order", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("stream_request_start", { turnNumber: 1 } as any),
+      ev("thinking_delta", { text: "first" } as any),
+      tool("t1"),
+      ev("tool_result", { toolCallId: "t1", result: "ok" } as any),
+      ev("thinking_delta", { text: "second" } as any),
+    ]);
+    expect(thinking(s)).toEqual([
+      { text: "first", done: true },
+      { text: "second", done: false },
+    ]);
+    const firstIndex = s.messages.findIndex((m) => m.kind === "thinking" && m.text === "first");
+    const toolIndex = s.messages.findIndex((m) => m.kind === "tool" && m.id === "t1");
+    const secondIndex = s.messages.findIndex((m) => m.kind === "thinking" && m.text === "second");
+    expect(firstIndex).toBeLessThan(toolIndex);
+    expect(toolIndex).toBeLessThan(secondIndex);
+  });
+
+  test("an error that clears the pointer seals the live thinking row", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("stream_request_start", { turnNumber: 1 } as any),
+      ev("thinking_delta", { text: "halfway" } as any),
+      ev("error", { error: "provider exploded" } as any),
+    ]);
+    expect(s.streamingThinkingId).toBeNull();
+    expect(thinking(s)).toEqual([{ text: "halfway", done: true }]);
   });
 });
