@@ -7,6 +7,7 @@ import { useProjectRuntimeSelection } from "./projects/useProjectRuntimeSelectio
 import { useCloudProjectRuntime } from "./runtime/useCloudProjectRuntime";
 import { CloudProjectWorkspace } from "./runtime/CloudProjectWorkspace";
 import { AccountDeviceWorkspace } from "./runtime/AccountDeviceWorkspace";
+import { useAccountDeviceEntry } from "./runtime/useAccountDeviceEntry";
 import type { ContextPackageCreatedOptions } from "./MessageStream";
 import { Sidebar } from "./app/AppSidebar";
 import { ResponsiveSidebar, SIDEBAR_NAVIGATION_ID } from "./app/ResponsiveSidebar";
@@ -198,6 +199,7 @@ function PageLoading({ label }: { label: string }) {
 function App() {
   const [executionDevicesOpen, setExecutionDevicesOpen] = useState(false);
   const [executionDevicesMounted, setExecutionDevicesMounted] = useState(false);
+  const executionDevicesAvailable = useAccountDeviceEntry();
   useThemeAudio();
   const toast = useToast();
   const confirm = useOptionalConfirm();
@@ -2267,11 +2269,14 @@ function App() {
                 });
               }}
               onOpenSettingsPage={() => navigateFromSidebar(() => setViewMode("settings_page"))}
-              onOpenExecutionDevices={() =>
-                navigateFromSidebar(() => {
-                  setExecutionDevicesMounted(true);
-                  setExecutionDevicesOpen(true);
-                })
+              onOpenExecutionDevices={
+                executionDevicesAvailable
+                  ? () =>
+                      navigateFromSidebar(() => {
+                        setExecutionDevicesMounted(true);
+                        setExecutionDevicesOpen(true);
+                      })
+                  : undefined
               }
               onOpenAccountSettings={() =>
                 navigateFromSidebar(() => {
