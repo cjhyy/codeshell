@@ -1,7 +1,7 @@
 import type { ExternalFileOrigin } from "../types";
 import { FilePreviewContent, type FilePreviewReader } from "./FilePreviewContent";
 import type { FileRevealRequest } from "../chat/fileReveal";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   ChevronRight,
@@ -16,6 +16,7 @@ import type { FsEntry, FileContent } from "../../preload/types";
 import { Input } from "@/components/ui/input";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { Markdown } from "../Markdown";
+import { PagedText } from "../components/PagedText";
 import { CommentBox } from "../chat/CommentBox";
 import { addAnchor } from "../chat/addAnchor";
 import { OpenWithMenu } from "../chat/OpenWithMenu";
@@ -903,7 +904,7 @@ function FileRow({
   );
 }
 
-function FileViewer({
+const FileViewer = memo(function FileViewer({
   root,
   path,
   reloadNonce,
@@ -986,7 +987,7 @@ function FileViewer({
       />
     </div>
   );
-}
+});
 
 /** Render an image file by reading it as a data URL through main. */
 function ImagePreview({
@@ -1056,9 +1057,14 @@ function mdBaseDir(root: string, path: string): string {
 }
 
 /** Line-numbered code view; hover a line to pin a comment anchor (file:line). */
-function CodeWithComments({ path, text }: { path: string; text: string }) {
+const CodeWithComments = memo(function CodeWithComments({
+  path,
+  text,
+}: {
+  path: string;
+  text: string;
+}) {
   const { t } = useT();
-  const lines = useMemo(() => text.replace(/\n$/, "").split("\n"), [text]);
   const [commenting, setCommenting] = useState<number | null>(null);
   const commentButton = useRef<HTMLButtonElement | null>(null);
   const name = nativeBasename(path, window.codeshell.platform);
@@ -1069,58 +1075,60 @@ function CodeWithComments({ path, text }: { path: string; text: string }) {
 
   return (
     <div className="p-2 font-mono text-xs leading-relaxed">
-      {lines.map((line, i) => {
-        const no = i + 1;
-        return (
-          // Key on the line number (stable within a file) rather than the array
-          // index, so `commenting` state can't follow the wrong row if line list
-          // composition ever changes without a full remount.
-          <div key={no}>
-            <div className="flex items-start gap-1 px-1 hover:bg-accent/40" data-file-row>
-              {/* Gutter comment button (left): a clear blue + that appears on
+      <PagedText
+        text={text}
+        renderLine={(line, no) => {
+          return (
+            // Key on the line number (stable within a file) rather than the array
+            // index, so `commenting` state can't follow the wrong row if line list
+            // composition ever changes without a full remount.
+            <div key={no}>
+              <div className="flex items-start gap-1 px-1 hover:bg-accent/40" data-file-row>
+                {/* Gutter comment button (left): a clear blue + that appears on
                   row hover, GitHub-style. Click pins this line + your comment
                   into the composer as an anchor. Replaces the old tiny,
                   near-invisible right-side icon. */}
-              <button
-                type="button"
-                aria-label={t("panels.files.commentThisLine")}
-                title={t("panels.files.commentThisLineTitle")}
-                className="cs-file-action mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                data-active={commenting === no ? "true" : undefined}
-                onClick={(event) => {
-                  commentButton.current = event.currentTarget;
-                  setCommenting(commenting === no ? null : no);
-                }}
-              >
-                <MessageSquarePlus size={11} />
-              </button>
-              <span className="w-9 shrink-0 select-none pr-2 text-right text-muted-foreground">
-                {no}
-              </span>
-              <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words text-foreground">
-                {line || " "}
-              </pre>
-            </div>
-            {commenting === no && (
-              <div className="px-2">
-                <CommentBox
-                  title={`${name}:${no}`}
-                  onCancel={closeComment}
-                  onSubmit={(comment) => {
-                    addAnchor({
-                      kind: "file",
-                      label: `${name}:${no}`,
-                      locator: { 文件: path, 行号: String(no), 代码: line.trim().slice(0, 200) },
-                      comment,
-                    });
-                    closeComment();
+                <button
+                  type="button"
+                  aria-label={t("panels.files.commentThisLine")}
+                  title={t("panels.files.commentThisLineTitle")}
+                  className="cs-file-action mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  data-active={commenting === no ? "true" : undefined}
+                  onClick={(event) => {
+                    commentButton.current = event.currentTarget;
+                    setCommenting(commenting === no ? null : no);
                   }}
-                />
+                >
+                  <MessageSquarePlus size={11} />
+                </button>
+                <span className="w-9 shrink-0 select-none pr-2 text-right text-muted-foreground">
+                  {no}
+                </span>
+                <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words text-foreground">
+                  {line || " "}
+                </pre>
               </div>
-            )}
-          </div>
-        );
-      })}
+              {commenting === no && (
+                <div className="px-2">
+                  <CommentBox
+                    title={`${name}:${no}`}
+                    onCancel={closeComment}
+                    onSubmit={(comment) => {
+                      addAnchor({
+                        kind: "file",
+                        label: `${name}:${no}`,
+                        locator: { 文件: path, 行号: String(no), 代码: line.trim().slice(0, 200) },
+                        comment,
+                      });
+                      closeComment();
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        }}
+      />
     </div>
   );
-}
+});

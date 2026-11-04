@@ -1,3 +1,4 @@
+import { PagedText, needsPagedMarkdown } from "../components/PagedText";
 import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -50,6 +51,7 @@ export function StreamingMarkdown({
   streamingRichRender = true,
 }: StreamingMarkdownProps) {
   if (text === "") return null;
+  if (needsPagedMarkdown(text)) return <PagedText text={text} sourceNotice />;
   if (done) {
     return (
       <Markdown
