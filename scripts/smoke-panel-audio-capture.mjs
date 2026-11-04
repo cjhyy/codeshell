@@ -31,7 +31,7 @@ try {
         response
           .writeHead(200, { "Content-Type": "text/html" })
           .end(
-            '<!doctype html><html><head><link rel="stylesheet" href="/entry.css"></head><body><div id="root"></div><script type="module" src="/entry.js"></script></body></html>',
+            '<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/entry.css"><style>body{margin:0}#root{height:100dvh;display:flex;flex-direction:column}</style></head><body><div id="root"></div><script type="module" src="/entry.js"></script></body></html>',
           );
         return;
       }
