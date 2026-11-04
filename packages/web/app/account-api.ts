@@ -31,8 +31,7 @@ export interface AccountOverview {
   security: { hasPassword: boolean; githubLinked: boolean };
   capabilities: { sessions: boolean; passwordChange: boolean; admin: boolean; links: boolean };
   stats: { activeSessions: number; loginMethods: number };
-  features?: AccountFeatureMap;
-  relay?: { enabled: boolean };
+  features: AccountFeatureMap;
 }
 
 const messages: Record<string, string> = {
@@ -226,12 +225,7 @@ export function parseAccountOverview(value: unknown, accountId: string): Account
       links: result.capabilities.links,
     },
     stats: { activeSessions: result.stats.activeSessions, loginMethods: result.stats.loginMethods },
-    ...(Object.hasOwn(result, "features")
-      ? { features: parseAccountFeatures(result.features) }
-      : {}),
-    ...(typeof result.relay?.enabled === "boolean"
-      ? { relay: { enabled: result.relay.enabled } }
-      : {}),
+    features: parseAccountFeatures(result.features),
   };
 }
 

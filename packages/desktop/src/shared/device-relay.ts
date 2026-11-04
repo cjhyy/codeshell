@@ -28,10 +28,10 @@ export interface DesktopRelayStatus {
  */
 export function accountComputerListUrl(
   status: DesktopRelayStatus,
-  phone: Pick<AccountFeatureView, "state" | "params">,
+  phone: Pick<AccountFeatureView, "state">,
 ): string | undefined {
   return phone.state === "ready" && status.relayOrigin
-    ? `${status.relayOrigin.replace(/\/$/, "")}${phone.params?.directoryPath ?? "/"}`
+    ? `${status.relayOrigin.replace(/\/$/, "")}/devices`
     : undefined;
 }
 export interface DesktopRelayEnrollment {

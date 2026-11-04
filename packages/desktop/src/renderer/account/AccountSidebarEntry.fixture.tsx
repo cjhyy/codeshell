@@ -196,6 +196,7 @@ const api: CloudAccountApi = {
       return Promise.reject(new Error("Discovery unavailable"));
     }
     return Promise.resolve({
+      features: {},
       profileEnabled: scenario.startsWith("profile-") && scenario !== "profile-unavailable",
       registrationAllowed: !["registration-unavailable", "github-registration-closed"].includes(
         scenario,
@@ -934,6 +935,7 @@ try {
     assert.equal(capabilityRequests.length, 1);
     await settle(() =>
       capabilityRequests[0]!.request.resolve({
+        features: {},
         registrationAllowed: true,
         githubEnabled: true,
         githubLinkEnabled: true,
@@ -959,11 +961,16 @@ try {
       ["https://old.example.test", "https://new.example.test"],
     );
     await settle(() =>
-      capabilityRequests[2]!.request.resolve({ registrationAllowed: false, githubEnabled: false }),
+      capabilityRequests[2]!.request.resolve({
+        features: {},
+        registrationAllowed: false,
+        githubEnabled: false,
+      }),
     );
     assert.equal(props(button("使用 GitHub 登录")).disabled, true);
     await settle(() =>
       capabilityRequests[1]!.request.resolve({
+        features: {},
         registrationAllowed: true,
         githubEnabled: true,
         githubLinkEnabled: true,

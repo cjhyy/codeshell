@@ -24,11 +24,13 @@
    保留，后续增加权益规则时不改客户端调用。
 3. 各客户端的“注册账号”统一引导到所选账号服务对应的网页注册入口。客户端保留登录、
    状态和退出能力，不再各维护一套注册表单。
+4. 产品尚未正式发布，服务端和客户端统一更新到新协议，不保留旧服务字段推导、
+   旧接口缺失回退或新旧路由选择。
 
 第 3 项是注册入口的产品决策；`sync.mimi`、`sync.history` 的加密方案仍待定，
 在实现和验收前不开放这两个功能。套餐数据来源同样保留待定。
 
-## 现状：判断分散在四处
+## 实施前：判断分散在四处
 
 | 功能                                  | 现在怎么判断                                                      | 问题                                       |
 | ------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------ |
@@ -72,7 +74,7 @@ id 一经发布不改名；废弃时服务端停止下发，客户端视为 `hid
 
 | id                    | 功能                                      | 优先级 | 部署条件                           | 本机条件         | 现状               |
 | --------------------- | ----------------------------------------- | ------ | ---------------------------------- | ---------------- | ------------------ |
-| `links.remote`        | 远程 Link（GitHub、Figma 等经 Link 服务） | 已有   | Link 管理或登录授权交接已配置      | 无               | 已上线，入口待迁移 |
+| `links.remote`        | 远程 Link（GitHub、Figma 等经 Link 服务） | 已有   | Link 管理或登录授权交接已配置      | 无               | 已实现，入口已接入 |
 | `cloud.projects`      | 云端项目                                  | 已有   | 云端控制已配置，下发 `cloudOrigin` | 无               | 未完整部署         |
 | `relay.phone`         | 手机经账号中继访问本机                    | 已有   | 中继已开启                         | 本机已登记       | 生产未开中继       |
 | `devices.dispatch`    | 电脑派任务给另一台                        | 已有   | 中继已开启                         | 本机中继 `ready` | 入口已隐藏（#281） |
@@ -94,7 +96,8 @@ TUI 与 `serve` 仅在用户使用账号关联的远程/云端能力时要求登
 
 ### 下发格式
 
-`/status` 与 `/overview` 各新增一个 `features` 对象，旧字段保留至少一个发布周期：
+`/status` 与 `/overview` 都必须下发 `features` 对象。登录配置、中继连接参数等业务字段
+继续按各自用途使用，不再用于推导功能权限：
 
 ```json
 {
@@ -112,8 +115,8 @@ TUI 与 `serve` 仅在用户使用账号关联的远程/云端能力时要求登
 
 - `/status`（匿名）：只表达部署层，`enabled` 表示这套部署是否提供。
 - `/overview`（登录后）：部署层与账号层合并后的结果。
-- `version` 是该功能的客户端协议版本。客户端只接受自己支持的版本，否则视为 `hidden`，
-  避免旧客户端打开不兼容的新流程。
+- `version` 是该功能的协议版本。客户端只接受自己支持的版本，否则视为 `hidden`；
+  缺失或无效的声明不授予功能权限，也不尝试其它字段或协议。
 - `params` 只放公开配置（地址、协议版本），不放任何凭据。字段由注册表白名单约束。
 - `reason` 是固定枚举（`not_configured`、`not_entitled`、`disabled_by_operator`），
   给界面选文案用，不是给人读的句子。
@@ -135,8 +138,10 @@ export const FEATURES = {
 
 - `offered(context)` 从成功初始化的服务和现有配置推导，不新增常规“开关”环境变量：
   中继看 `relayCapability.enabled`，Link 看 `linkManagement` 或 OAuth helper 的
-  `linkEnabled`（兼容只配置登录后 Link 授权交接的旧部署），云端看 `cloudAuthority`；
+  `linkEnabled`（登录后 Link 授权交接能力），云端看 `cloudAuthority`；
   不能仅因环境变量或配置对象存在就认为服务可用。
+  CLI 目前只实现账号 Link 列表，还需 `linkManagementEnabled`；仅支持授权交接的部署
+  不向 CLI 显示可用列表入口。
 - 账号层：首版不增加试用人群配置，保留原有会话、资源归属和操作权限检查。
   `not_entitled` 预留给后续账号权益；本轮不实现管理员灰度或指定账号名单。
 - 运维紧急关闭：`ACCOUNT_FEATURE_DISABLED="devices.handoff"`，命中时 `enabled:false`、
@@ -147,7 +152,7 @@ export const FEATURES = {
 
 新增 `requireFeature(principal, id)`，受保护接口入口处调用；
 已配置但被关闭时返回 `403 feature_not_entitled`；未登录仍沿用认证层的 `401`，
-未配置服务保留现有 `503` 兼容行为。第一批接到：设备访问 handoff
+未配置服务返回 `503`。第一批接到：设备访问 handoff
 签发、设备目录管理、Link 管理、云端授权签发。设备访问 handoff 属于现有远程访问流程，
 不能误用尚未实现的“对话连同 Git 状态转移”功能 `devices.handoff`。中继建立设备会话时
 按用途检查 `devices.dispatch` / `relay.phone`。紧急关闭必须在对应服务端授权路径生效，
@@ -169,10 +174,10 @@ export const FEATURES = {
   服务的本机用户管理账号会话。命令命名和交互在客户端 PR 中落实。
 - 无浏览器的终端或服务主机显示可复制的网址。网页注册成功不等于本机已登录；仍通过
   受验证的原生登录流程取得本机会话，不把账号 token 放进 URL、终端日志或浏览器存储。
-- 注册入口绑定用户选择的 `accountOrigin`，不从错误信息或任意远程字符串跳转。
-  新服务通过 `/status.registrationPage: "/register"` 声明固定注册路由；旧服务回退到
-  `/api/v1/account/manage` 门户。`registrationAllowed:false` 时网页明确显示注册关闭。
-- Desktop 的注册表单迁移为打开网页；旧注册 API 在兼容期保留，供旧客户端使用。
+- 注册入口固定为所选 `accountOrigin` 下的 `/register`，不从错误信息或任意远程字符串
+  跳转，也不下发路由选择字段。`registrationAllowed:false` 时明确显示注册关闭。
+- Desktop 的注册表单迁移为打开网页。网页仍调用账号服务的注册 API；
+  `/api/v1/account/manage` 是独立账号管理页，不作为注册回退入口。
   本轮不改变已有 GitHub 登录/首次建号的服务端语义。
 - TUI/`serve` 的凭据由 Host 保管，持久化必须使用安全存储；无安全存储时可提供仅当前
   进程有效的会话，不回退到明文文件。账号登录与本机 Hub owner、访问口令、手机配对和
@@ -211,7 +216,7 @@ export interface AccountFeatureView {
     | "relay_disconnected"
     | "service_unreachable"
     | "storage_error";
-  params?: { cloudOrigin?: string; directoryPath?: "/devices" };
+  params?: { cloudOrigin?: string };
 }
 ```
 
@@ -253,15 +258,16 @@ export interface AccountFeatureView {
 `AccountSessionProvider` 匿名时读取 `/status.features`，登录后合成 `overview.features`，
 复用版本和字段校验规则，提供同名 `useAccountFeature(id)`。网站没有本机条件，
 `pending` 只来自服务不可达。网站上的
-`relay.phone` 对应“用手机打开我的电脑列表”。
+`relay.phone` 对应“用手机打开我的电脑列表”，固定打开账号服务的 `/devices`。
 
-## 兼容
+## 部署契约
 
-- 新客户端连旧服务（没有 `features`）：按旧字段推导 `links.remote`、`relay.phone`、
-  `devices.dispatch`、`cloud.projects`，其余为 `hidden`。推导函数单独放、带测试，
-  旧字段下线时一起删。
-- 旧客户端连新服务：旧字段结构保留；未紧急关闭时沿用原有行为。关闭后旧客户端同样
-  受服务端检查约束，入口可能仍可见，但相关操作被拒绝。
+- 服务端与客户端统一采用本协议，不维护旧版本兼容期。
+- 缺少 `features`、缺少单项功能或声明无效时，该项为 `hidden`；不能从
+  `relay.enabled`、`cloudTarget` 或其它能力字段推导权限。
+- `/overview` 的 `404`、认证错误和网络失败均按请求失败处理，不能用匿名部署权限
+  代替账号权限。已有账号结果只可用于离线显示，不得继续作为 `ready` 使用。
+- 注册和手机目录分别固定为 `/register`、`/devices`，不回退到其它页面。
 - TUI、`serve`：加入可选账号登录；匿名时，当前 Host 支持且部署提供的功能为 `sign-in`。
   Host 尚未接入的单项能力为 `hidden`，本地和原有自托管授权流程不依赖账号。
 
@@ -269,14 +275,14 @@ export interface AccountFeatureView {
 
 1. **services PR**：`features.mjs` 注册表、`/status` 与 `/overview` 下发、
    `ACCOUNT_FEATURE_DISABLED`、`requireFeature` 接到现有四类接口。测试：每个功能的
-   部署推导、未实现功能保持关闭、紧急关闭、未登录、账号/资源隔离、旧字段保持不变。
+   部署推导、未实现功能保持关闭、紧急关闭、未登录、账号/资源隔离及完整功能声明。
 2. **codeshell PR（共享 Host、Desktop、TUI、serve）**：共享账号客户端与
    `AccountFeatureService`、TUI/`serve` 登录/状态/退出入口、Desktop IPC、`useAccountFeature`、
    `AccountFeatureEntry`，迁移上表四个入口，删除 `useAccountDeviceEntry`。测试：合成
-   规则表驱动测试、切换账号不串缓存、离线降级、旧服务推导；浏览器夹具覆盖四种入口
+   规则表驱动测试、切换账号不串缓存、离线降级、声明缺失时关闭功能；浏览器夹具覆盖四种入口
    状态；覆盖 TUI/`serve` 的可选登录、安全存储/进程内会话，以及本地能力不受影响。
 3. **codeshell PR（Web 与注册入口）**：网站侧 hook 与入口迁移、固定网页注册入口，
-   各客户端注册统一引导网页。原生客户端入口与网页路由需兼容交付后再启用跳转。
+   各客户端注册统一引导网页，原生客户端入口与网页路由一起交付。
 4. 之后每个新功能：服务端注册一项，客户端用一次 hook，再写功能本身。
 
 ### 2026-11-04 首版交付记录
@@ -285,16 +291,17 @@ export interface AccountFeatureView {
 - 服务端：[codeshell-services PR #56](https://github.com/cjhyy/codeshell-services/pull/56)。
   已实现注册表、原生/网页下发、紧急关闭和接口权限检查；固定 `/register` 注册页面、
   `/devices` 设备门户及部署代理配置同时交付。全量测试 770 项：769 通过、0 失败、
-  1 项原有平台条件跳过；固定手机目录参数另有针对性回归覆盖。
+  1 项原有平台条件跳过；固定网页路由另有针对性回归覆盖。
 - Desktop：共享账号管理器与后台功能服务、窗口限定 IPC、四种入口状态、四处入口迁移、
   云端地址下发、注册跳转均已接入。准备重试可以恢复中继；权限关闭或暂时离线时仍保留
   已有 Link 的撤销、云项目的停止与退出操作。
 - TUI 与 `serve`：已支持可选登录、状态、功能清单、账号 Link 列表、退出与网页注册，
   见[原生账号使用说明](../native-account.md)。持久凭据使用系统安全存储，同 origin 的
   命令跨进程串行，避免刷新令牌竞争；无安全存储时可选择进程内临时会话。
-- Web：复用共享规则，账号、Link、云项目和手机目录入口已接入；注册统一指向网页。
-  新服务仅为 `relay.phone` 下发固定 `params.directoryPath: "/devices"`，没有该参数的旧服务
-  保留原 `/` 入口；客户端不接受任意跳转路径或 URL。
+- Web：复用共享规则，账号、Link、云项目和手机目录入口已接入；注册固定打开
+  `/register`，手机目录固定打开 `/devices`，不接受服务下发的其它跳转路径或 URL。
+- 发布前协议收敛：删除旧字段推导、缺少 `/overview` 时的回退，以及仅用于新旧路由
+  区分的字段。功能只依据显式 `features` 声明与本机条件判断。
 - 上述为源码交付范围，生产部署按独立部署流程进行。管理员灰度、名单、套餐与
   Mimi/历史同步均未启用。后续新增功能仍需实现业务接口及权限检查，再登记并接入 hook。
 

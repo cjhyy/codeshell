@@ -65,7 +65,7 @@ async function fixture({
   signedIn = true,
   renderLogin = false,
   registration = false,
-  featureResponse = undefined as unknown,
+  featureResponse = {} as unknown,
   capabilityResponse = undefined as (() => Response | Promise<Response>) | undefined,
 } = {}) {
   ensureMiniDom();
@@ -126,7 +126,7 @@ async function fixture({
   ];
   let accountFeatures = featureResponse;
   const overview = () => ({
-    ...(accountFeatures === undefined ? {} : { features: accountFeatures }),
+    features: accountFeatures,
     account: profile,
     security: { hasPassword, githubLinked: false },
     capabilities: {
@@ -163,7 +163,8 @@ async function fixture({
     if (override) return override(call);
     if (path === "/api/v1/account/status")
       return (
-        capabilityResponse?.() ?? Response.json({ registrationAllowed: true, githubEnabled: true })
+        capabilityResponse?.() ??
+        Response.json({ registrationAllowed: true, githubEnabled: true, features: {} })
       );
     if (path === "/api/v1/account/web/session") {
       if (init?.method === "POST") authenticated = true;
@@ -567,7 +568,7 @@ test("restoring a live account retries failed login capabilities without signing
     capabilityResponse: () =>
       unavailable
         ? Response.json({}, { status: 503 })
-        : Response.json({ registrationAllowed: true, githubEnabled: true }),
+        : Response.json({ registrationAllowed: true, githubEnabled: true, features: {} }),
   });
   expect(view.context.githubEnabled).toBe(false);
   expect(view.context.session?.account?.id).toBe(accountId);
@@ -595,7 +596,7 @@ test("the login page distinguishes unavailable capabilities and retries without 
     capabilityResponse: () =>
       unavailable
         ? Response.json({}, { status: 503 })
-        : Response.json({ registrationAllowed: true, githubEnabled: true }),
+        : Response.json({ registrationAllowed: true, githubEnabled: true, features: {} }),
   });
   expect(view.context.ready).toBe(true);
   expect(view.context.loginCapabilitiesError).toContain("登录方式暂时无法读取");
@@ -617,7 +618,7 @@ test("the login page distinguishes unavailable capabilities and retries without 
 test("focus rereads operator login options and leaves the active account intact", async () => {
   const view = await fixture();
   view.overrides.set("GET /api/v1/account/status", () =>
-    Response.json({ registrationAllowed: false, githubEnabled: false }),
+    Response.json({ registrationAllowed: false, githubEnabled: false, features: {} }),
   );
   await action(() => window.dispatchEvent({ type: "focus" } as Event));
   await until(() => !view.context.busy && !view.context.loginCapabilitiesLoading);
@@ -648,7 +649,7 @@ test("closing registration returns to login without obsolete registration errors
   await action(() => control(view.container, "FORM", () => true).onSubmit({ preventDefault() {} }));
   expect(text(view.container)).toContain("两次输入的密码不一致。");
   view.overrides.set("GET /api/v1/account/status", () =>
-    Response.json({ registrationAllowed: false, githubEnabled: false }),
+    Response.json({ registrationAllowed: false, githubEnabled: false, features: {} }),
   );
   await action(() => window.dispatchEvent({ type: "focus" } as Event));
   await until(() => !view.context.busy && !view.context.loginCapabilitiesLoading);
@@ -671,7 +672,7 @@ test("late capability failure from an older operation cannot overwrite logout di
   await action(() => view.context.refreshLoginCapabilities());
   expect(view.context.loginCapabilitiesLoading).toBe(true);
   view.overrides.set("GET /api/v1/account/status", () =>
-    Response.json({ registrationAllowed: false, githubEnabled: true }),
+    Response.json({ registrationAllowed: false, githubEnabled: true, features: {} }),
   );
   await action(() => view.context.logout());
   await until(() => !view.context.busy && !view.context.loginCapabilitiesLoading);
@@ -738,6 +739,48 @@ test.each([{}, null, { "links.remote": { version: 2, enabled: true } }])(
   },
 );
 
+test.each(["deployment", "account"])(
+  "missing %s feature declarations cannot be supplied by a cloud-session target",
+  async (missingLayer) => {
+    const cloudOrigin = "https://cloud.fixture.invalid";
+    const features = {
+      "cloud.projects": { version: 1, enabled: true, params: { cloudOrigin } },
+    };
+    const view = await fixture({
+      featureResponse: features,
+      capabilityResponse: () => featureStatus(features),
+    });
+    expect(view.features["cloud.projects"].state).toBe("ready");
+    view.overrides.set("GET /api/v1/account/status", () =>
+      missingLayer === "deployment"
+        ? Response.json({ registrationAllowed: true, githubEnabled: true })
+        : featureStatus(features),
+    );
+    const original = view.snapshot();
+    const { features: _features, ...withoutFeatures } = original.overview!;
+    const overview = missingLayer === "account" ? withoutFeatures : original.overview;
+    view.overrides.set("GET /api/v1/account/web/session", () =>
+      Response.json({
+        ...original,
+        overview,
+        cloudTarget: {
+          enabled: true,
+          cloudOrigin,
+          accountOrigin: cloudOrigin,
+          installationId: accountId,
+        },
+      }),
+    );
+    view.overrides.set("GET /api/v1/account/web/overview", () => Response.json(overview));
+    await action(() => view.context.restore());
+    await until(() => !view.context.busy);
+    expect(view.context.session?.cloudTarget?.cloudOrigin).toBe(cloudOrigin);
+    expect(view.context.registrationAllowed).toBe(true);
+    expect(view.context.githubEnabled).toBe(true);
+    expect(view.features["cloud.projects"].state).toBe("hidden");
+  },
+);
+
 test("known website features degrade offline and recover without replacing the account", async () => {
   const view = await fixture({
     featureResponse: enabledFeatures,
@@ -769,7 +812,7 @@ test("the fixed registration screen opens creation mode and explains a closed se
   expect(text(view.container)).toContain("创建你的账号");
   expect(text(view.container)).toContain("返回 CodeShell 客户端登录");
   view.overrides.set("GET /api/v1/account/status", () =>
-    Response.json({ registrationAllowed: false, githubEnabled: false }),
+    Response.json({ registrationAllowed: false, githubEnabled: false, features: {} }),
   );
   await action(() => view.context.refreshLoginCapabilities());
   await until(() => !view.context.loginCapabilitiesLoading);

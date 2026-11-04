@@ -92,8 +92,7 @@ async function concurrentCommands(
       }
       if (action === "status")
         return Response.json({ registrationAllowed: true, githubEnabled: false, features: {} });
-      if (action === "overview")
-        return Response.json({ account, capabilities: { links: false }, features: {} });
+      if (action === "overview") return Response.json({ account, features: {} });
       return Response.json({}, { status: 404 });
     },
   });

@@ -207,22 +207,9 @@ export class CloudAccountManager {
       throw new Error("云服务返回了无效的账号概况。");
     const value = raw as Record<string, unknown>;
     const account = accountProfile(value, input.accountId);
-    const caps = value.capabilities as Record<string, unknown> | undefined;
-    const relay = this.relayCapability(
-      value.relay as CloudAccountCapabilities["relay"],
-      input.origin,
-    );
-    const target = value.cloudTarget as Record<string, unknown> | undefined;
     return {
       account,
-      capabilities: { links: caps?.links === true },
-      ...(relay === undefined ? {} : { relay }),
-      ...(Object.hasOwn(value, "features")
-        ? { features: readAccountFeatures(value, "account") }
-        : {}),
-      ...(target?.enabled === true && isRelayOrigin(target.cloudOrigin)
-        ? { cloudTarget: { enabled: true, cloudOrigin: target.cloudOrigin as string } }
-        : {}),
+      features: readAccountFeatures(value),
     };
   }
   /** Public service discovery never reads or changes this device's account authority. */
@@ -248,11 +235,8 @@ export class CloudAccountManager {
     )
       throw new Error("云服务返回了无效的账号能力信息。");
     return {
-      ...(Object.hasOwn(value, "features")
-        ? { features: readAccountFeatures(value, "deployment") }
-        : {}),
+      features: readAccountFeatures(value),
       registrationAllowed: value.registrationAllowed,
-      ...(value.registrationPage === "/register" ? { registrationPage: "/register" as const } : {}),
       githubEnabled: value.githubEnabled,
       ...(value.githubLinkEnabled === undefined
         ? {}

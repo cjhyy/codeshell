@@ -40,10 +40,7 @@ test("the account computer list entry follows the relay.phone feature gate", () 
     accountId: "acct",
     relayOrigin: "https://account.example/",
   } as const;
-  expect(accountComputerListUrl(relay, { state: "ready" })).toBe("https://account.example/");
-  expect(
-    accountComputerListUrl(relay, { state: "ready", params: { directoryPath: "/devices" } }),
-  ).toBe("https://account.example/devices");
+  expect(accountComputerListUrl(relay, { state: "ready" })).toBe("https://account.example/devices");
   for (const state of ["hidden", "sign-in", "pending"] as const)
     expect(accountComputerListUrl(relay, { state })).toBeUndefined();
   expect(

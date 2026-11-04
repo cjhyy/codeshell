@@ -43,9 +43,7 @@ export function registerCloudAccountIpc(options: {
       owner(event);
       if (!capabilities.registrationAllowed) throw new Error("此账号服务暂未开放注册。");
       if (!options.openExternal) throw new Error("网页注册入口暂不可用。");
-      await options.openExternal(
-        capabilities.registrationPage === "/register" ? url : `${origin}/api/v1/account/manage`,
-      );
+      await options.openExternal(url);
     })();
   });
   options.ipcMain.handle("cloudAccount:register", (event, input: CloudAccountLogin) => {

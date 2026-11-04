@@ -26,14 +26,14 @@ export interface AccountFeature {
   version: number;
   enabled: boolean;
   reason?: AccountFeatureReason;
-  params?: { cloudOrigin?: string; directoryPath?: "/devices" };
+  params?: { cloudOrigin?: string };
 }
 export type AccountFeatureMap = Partial<Record<AccountFeatureId, AccountFeature>>;
 export interface AccountFeatureView {
   id: AccountFeatureId;
   state: "hidden" | "sign-in" | "pending" | "ready";
   reason?: AccountFeaturePendingReason;
-  params?: { cloudOrigin?: string; directoryPath?: "/devices" };
+  params?: { cloudOrigin?: string };
 }
 export type AccountFeatureSnapshot = Record<AccountFeatureId, AccountFeatureView>;
 const object = (value: unknown): Record<string, unknown> | undefined =>
@@ -67,7 +67,7 @@ export function accountRegistrationUrl(origin: string): string {
   if (!safe) throw new Error("Invalid account service origin");
   return `${safe}/register`;
 }
-/** Explicit malformed/new-version data fails closed, never becoming legacy grants. */
+/** Missing, malformed or unsupported feature declarations fail closed. */
 export function parseAccountFeatures(raw: unknown): AccountFeatureMap {
   const input = object(raw);
   const result: AccountFeatureMap = {};
@@ -83,52 +83,13 @@ export function parseAccountFeatures(raw: unknown): AccountFeatureMap {
       if (!origin) continue;
       feature.params = { cloudOrigin: origin };
     }
-    if (id === "relay.phone" && entry.enabled && object(entry.params)?.directoryPath === "/devices")
-      feature.params = { directoryPath: "/devices" };
     result[id] = feature;
   }
   return result;
 }
-/** Compatibility only for services which entirely omit the features field. */
-export function readAccountFeatures(
-  payload: unknown,
-  layer: "deployment" | "account",
-  fallback?: AccountFeatureMap,
-): AccountFeatureMap {
-  const value = object(payload);
-  if (!value) return {};
-  if (Object.hasOwn(value, "features")) return parseAccountFeatures(value.features);
-  const result: AccountFeatureMap = {};
-  const enabled = (id: AccountFeatureId, available: boolean) => {
-    result[id] = {
-      version: 1,
-      enabled: available,
-      ...(available ? {} : { reason: "not_configured" as const }),
-    };
-  };
-  const capabilities = object(value.capabilities);
-  const link =
-    layer === "deployment"
-      ? value.linkManagementEnabled === true || value.githubLinkEnabled === true
-      : capabilities?.links === true || fallback?.["links.remote"]?.enabled === true;
-  enabled("links.remote", link);
-  const relay = object(value.relay);
-  const relayEnabled = relay
-    ? relay.enabled === true
-    : layer === "account" && fallback?.["relay.phone"]?.enabled === true;
-  enabled("relay.phone", relayEnabled);
-  enabled("devices.dispatch", relayEnabled);
-  const cloud = object(value.cloudTarget);
-  const cloudOrigin = cloud?.enabled === true ? accountPublicOrigin(cloud.cloudOrigin) : undefined;
-  if (cloudOrigin)
-    result["cloud.projects"] = { version: 1, enabled: true, params: { cloudOrigin } };
-  else if (layer === "account" && !cloud && fallback?.["cloud.projects"])
-    result["cloud.projects"] = {
-      ...fallback["cloud.projects"],
-      params: { ...fallback["cloud.projects"].params },
-    };
-  else enabled("cloud.projects", false);
-  return result;
+/** Deployment and account responses share the same explicit feature contract. */
+export function readAccountFeatures(payload: unknown): AccountFeatureMap {
+  return parseAccountFeatures(object(payload)?.features);
 }
 export interface ResolveAccountFeaturesInput {
   deployment?: AccountFeatureMap;

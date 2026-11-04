@@ -504,18 +504,9 @@ export function AccountSessionProvider({ children }: { children: React.ReactNode
     (...args) => api.request(...args),
     [api],
   );
-  // Old services disclose Cloud only on the authenticated web session. Explicit
-  // features (including empty/malformed maps) always win over this compatibility input.
-  const cloudTarget = session?.cloudTarget
-    ? { enabled: true, ...session.cloudTarget }
-    : { enabled: false };
-  const offered = deployment
-    ? readAccountFeatures({ ...deployment, cloudTarget }, "deployment")
-    : undefined;
+  const offered = deployment ? readAccountFeatures(deployment) : undefined;
   const entitled =
-    session?.authenticated && session.overview
-      ? readAccountFeatures({ ...session.overview, cloudTarget }, "account", offered)
-      : undefined;
+    session?.authenticated && session.overview ? readAccountFeatures(session.overview) : undefined;
   const features = resolveAccountFeatures({
     deployment: window.location.origin === origin ? offered : undefined,
     account: entitled,

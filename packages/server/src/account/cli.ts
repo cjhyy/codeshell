@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline/promises";
 import { Writable } from "node:stream";
-import { CloudAccountHttpError } from "./http.js";
 import { CloudAccountManager } from "./manager.js";
 import { DEFAULT_CLOUD_ACCOUNT_ORIGIN } from "./types.js";
 import { MemoryAccountStore, NativeAccountStore } from "./native-store.js";
@@ -20,8 +19,8 @@ export const ACCOUNT_HELP = `Usage: account <login|status|features|links|logout|
   --memory                 Keep an interactive account session in this process only
   --no-open                Print browser URLs instead of opening them
 
-Credentials use the OS credential store; no plaintext fallback. Registration opens the service-advertised
-<origin>/register, or the existing account portal for older services. Local tasks and serve's Hub/passcode identity remain independent.
+Credentials use the OS credential store; no plaintext fallback. Registration opens
+<origin>/register. Local tasks and serve's Hub/passcode identity remain independent.
 With --memory, login keeps an account console open: status, features, links, logout,
 register, exit. Closing this console revokes its temporary login. No device relay
 or upload is started. Use the same --origin on later account commands. Persistent
@@ -175,11 +174,8 @@ export async function runAccountCli(
       });
     const register = async () => {
       const capabilities = await manager.capabilities(options.origin);
-      await navigate(
-        capabilities.registrationPage === "/register"
-          ? accountRegistrationUrl(options.origin)
-          : `${options.origin}/api/v1/account/manage`,
-      );
+      if (!capabilities.registrationAllowed) throw new Error("此账号服务暂未开放注册。");
+      await navigate(accountRegistrationUrl(options.origin));
     };
     const prompt = deps.prompt ?? question;
     const display = async (action: "status" | "features" | "links") => {
@@ -192,25 +188,15 @@ export async function runAccountCli(
       const deployment = await manager.capabilities(options.origin);
       const overview =
         status.state === "signed-in" && status.account && status.origin === options.origin
-          ? await manager
-              .overview({ origin: options.origin, accountId: status.account.id })
-              .catch((error) => {
-                if (error instanceof CloudAccountHttpError && error.status === 404)
-                  return undefined;
-                throw error;
-              })
+          ? await manager.overview({ origin: options.origin, accountId: status.account.id })
           : undefined;
-      const deploymentFeatures = readAccountFeatures(deployment, "deployment");
+      const deploymentFeatures = readAccountFeatures(deployment);
       const features = resolveAccountFeatures({
         deployment: deploymentFeatures,
-        account:
-          status.state === "signed-in"
-            ? readAccountFeatures(overview ?? {}, "account", deploymentFeatures)
-            : undefined,
+        account: status.state === "signed-in" ? readAccountFeatures(overview) : undefined,
         signedIn: status.state === "signed-in",
         // This CLI currently implements account-owned Link listing only.
-        supported:
-          deployment.linkManagementEnabled || overview?.capabilities.links ? ["links.remote"] : [],
+        supported: deployment.linkManagementEnabled === true ? ["links.remote"] : [],
       });
       if (action === "links") {
         if (features["links.remote"].state !== "ready" || !status.account)

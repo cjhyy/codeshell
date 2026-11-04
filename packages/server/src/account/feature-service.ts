@@ -159,23 +159,16 @@ export class AccountFeatureService {
       try {
         const publicValue = await this.deps.account.capabilities(targetOrigin, controller.signal);
         if (!current()) return this.snapshot();
-        const deployment = readAccountFeatures(publicValue, "deployment");
+        const deployment = readAccountFeatures(publicValue);
         this.deployment = deployment;
         if (status.state === "signed-in" && status.account) {
-          let value: unknown;
-          try {
-            value = await this.deps.account.overview(
-              { origin: targetOrigin, accountId: status.account.id },
-              current,
-              controller.signal,
-            );
-          } catch (error) {
-            if ((error as { status?: number })?.status !== 404) throw error;
-            // Old services have no account overview; keep only their public legacy capabilities.
-            value = {};
-          }
+          const value = await this.deps.account.overview(
+            { origin: targetOrigin, accountId: status.account.id },
+            current,
+            controller.signal,
+          );
           if (!current()) return this.snapshot();
-          this.account = readAccountFeatures(value, "account", deployment);
+          this.account = readAccountFeatures(value);
         } else this.account = undefined;
         this.reachable = true;
       } catch {

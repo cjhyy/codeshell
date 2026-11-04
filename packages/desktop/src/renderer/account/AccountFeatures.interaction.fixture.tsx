@@ -61,7 +61,6 @@ const state = scenario.startsWith("remote-cleanup")
   : requestedState;
 const snapshot = featureSnapshot(state as AccountFeatureView["state"], {
   cloudOrigin: "https://cloud.example",
-  ...(scenario === "phone-new-route" ? { directoryPath: "/devices" as const } : {}),
 });
 for (const view of Object.values(snapshot))
   if (view.state === "pending") view.reason = "relay_connecting";
@@ -290,8 +289,6 @@ try {
   } else if (scenario === "credential-cleanup") {
     await update(() => props(button("退出")).onClick());
     assert.equal(revoked, 1);
-  } else if (scenario === "phone-new-route") {
-    assert.deepEqual(qrValues, ["https://account.example/devices"]);
   } else if (scenario === "cloud-target-change") {
     const form = nodes(container).find((node) => node.tagName === "FORM");
     await update(() => props(form).onSubmit({ preventDefault() {} }));
@@ -394,7 +391,7 @@ try {
       assert.ok(nodes(container).some((n) => props(n)["data-link-runtime"] === "server"));
     else if (scenario === "phone") {
       assert.ok(nodes(container).some((n) => n.tagName === "IMG"));
-      assert.deepEqual(qrValues, ["https://account.example/"]);
+      assert.deepEqual(qrValues, ["https://account.example/devices"]);
     } else {
       assert.ok(button(label));
       assert.equal(props(button(label)).disabled, false);

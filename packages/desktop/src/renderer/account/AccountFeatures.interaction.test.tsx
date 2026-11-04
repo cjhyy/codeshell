@@ -27,7 +27,6 @@ for (const scenario of [
   "cloud-sign-in-transition",
   "cloud-stop-hidden",
   "cloud-target-change",
-  "phone-new-route",
   "remote-cleanup-hidden",
   "remote-cleanup-pending",
   "credential-cleanup",

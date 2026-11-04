@@ -9,7 +9,19 @@ const identity = {
   username: "member",
   displayName: "Member",
 };
-function setup(legacy = false, discoveryFailures = 0) {
+function setup({
+  discoveryFailures = 0,
+  overviewError,
+  omitFeatures = false,
+  linkManagementEnabled = true,
+  registrationAllowed = true,
+}: {
+  discoveryFailures?: number;
+  overviewError?: Error;
+  omitFeatures?: boolean;
+  linkManagementEnabled?: boolean;
+  registrationAllowed?: boolean;
+} = {}) {
   const requests: CloudAccountRequest[] = [];
   const store = new MemoryAccountStore();
   const manager = new CloudAccountManager({
@@ -29,22 +41,28 @@ function setup(legacy = false, discoveryFailures = 0) {
         };
       if (input.path.endsWith("/status") && discoveryFailures-- > 0)
         throw new Error("private-upstream-failure");
-      if (input.path.endsWith("/status") && legacy)
-        return { registrationAllowed: true, githubEnabled: false, linkManagementEnabled: true };
       if (input.path.endsWith("/status"))
         return {
-          registrationAllowed: true,
-          registrationPage: "/register",
+          registrationAllowed,
+          linkManagementEnabled,
           githubEnabled: false,
-          features: { "links.remote": { version: 1, enabled: true } },
+          ...(omitFeatures ? {} : { features: { "links.remote": { version: 1, enabled: true } } }),
         };
-      if (input.path.endsWith("/overview") && legacy) throw new CloudAccountHttpError(404);
+      if (input.path.endsWith("/overview") && overviewError) throw overviewError;
       if (input.path.endsWith("/overview"))
         return {
           account: identity,
-          features: {
-            "links.remote": { version: 1, enabled: true, params: { secret: "do-not-project" } },
-          },
+          ...(omitFeatures
+            ? {}
+            : {
+                features: {
+                  "links.remote": {
+                    version: 1,
+                    enabled: true,
+                    params: { secret: "do-not-project" },
+                  },
+                },
+              }),
           capabilities: { links: true },
           refreshToken: "do-not-project",
         };
@@ -60,6 +78,7 @@ test("CLI rejects argv passwords and registration only navigates to the selected
   expect(() => parseAccountArgs(["login", "--password", "never-log"])).toThrow("Passwords");
   expect(() => parseAccountArgs(["login", "--origin", "https://account.example/path"])).toThrow();
   const urls: string[] = [];
+  const { manager, requests, store } = setup();
   await runAccountCli(["register", "--origin", origin], {
     acquireLock: async () => {
       throw new Error("registration must not lock persistent credentials");
@@ -68,9 +87,11 @@ test("CLI rejects argv passwords and registration only navigates to the selected
     open: async (url) => {
       urls.push(url);
     },
-    createManager: () => setup().manager,
+    createManager: () => manager,
   });
   expect(urls).toEqual([origin + "/register"]);
+  expect(requests.map((r) => r.path)).toEqual(["/api/v1/account/status"]);
+  expect(store.load()).toBeUndefined();
 });
 test("memory login stays usable for live features/status and revokes on normal exit", async () => {
   const { manager, requests, store } = setup();
@@ -123,6 +144,7 @@ test("overview strips secrets, status subscriptions are public, and old identity
   await manager.signIn("login", { origin, username: "member", password: "fixture-password-123" });
   const overview = await manager.overview({ origin, accountId: identity.id });
   expect(JSON.stringify(overview)).not.toContain("do-not-project");
+  expect(Object.keys(overview).sort()).toEqual(["account", "features"]);
   expect(JSON.stringify(statuses)).not.toContain("Token");
   const abort = new AbortController();
   abort.abort();
@@ -171,53 +193,59 @@ test("TUI account command forwards flags to the shared native entry", async () =
   expect(stdout).toContain("--password-stdin");
 });
 
-test("legacy Account without overview keeps supported Link listing discoverable", async () => {
-  const { manager } = setup(true);
-  const output: string[] = [];
-  await runAccountCli(["login", "--origin", origin, "--username", "member", "--password-stdin"], {
-    createManager: () => manager,
-    readPassword: async () => "fixture-password-123",
-    write: (value) => output.push(value),
-  });
-  expect(
-    JSON.parse(output.find((value) => value.startsWith("{") && value.includes('"features"'))!)
-      .features["links.remote"].state,
-  ).toBe("ready");
+test("missing features and a handoff-only deployment never enable CLI Link listing", async () => {
+  for (const options of [{ omitFeatures: true }, { linkManagementEnabled: false }]) {
+    const { manager, requests } = setup(options);
+    await manager.signIn("login", { origin, username: "member", password: "fixture-password-123" });
+    await expect(
+      runAccountCli(["links", "--origin", origin], {
+        createManager: () => manager,
+        write() {},
+      }),
+    ).rejects.toThrow("hidden");
+    expect(requests.some((r) => r.path.endsWith("/links"))).toBe(false);
+  }
 });
 
-test("registration falls back to the existing portal on old services without touching credentials", async () => {
-  const { manager, requests, store } = setup(true);
+test("overview errors cannot fall back to public Link configuration", async () => {
+  for (const error of [
+    new CloudAccountHttpError(404),
+    new CloudAccountHttpError(401),
+    new CloudAccountHttpError(403),
+    new Error("offline"),
+  ]) {
+    const { manager, requests } = setup({ overviewError: error });
+    await manager.signIn("login", { origin, username: "member", password: "fixture-password-123" });
+    await expect(
+      runAccountCli(["links", "--origin", origin], {
+        createManager: () => manager,
+        write() {},
+      }),
+    ).rejects.toBe(error);
+    expect(requests.some((r) => r.path.endsWith("/links"))).toBe(false);
+  }
+});
+
+test("closed registration does not open a website or touch credentials", async () => {
+  const { manager, requests, store } = setup({ registrationAllowed: false });
   const urls: string[] = [];
-  await runAccountCli(["register", "--origin", origin], {
-    createManager: () => manager,
-    write() {},
-    open: async (url) => {
-      urls.push(url);
-    },
-  });
-  expect(urls).toEqual([origin + "/api/v1/account/manage"]);
+  await expect(
+    runAccountCli(["register", "--origin", origin], {
+      createManager: () => manager,
+      write() {},
+      open: async (url) => {
+        urls.push(url);
+      },
+    }),
+  ).rejects.toThrow("未开放注册");
+  expect(urls).toEqual([]);
   expect(store.load()).toBeUndefined();
   expect(requests.map((r) => r.path)).toEqual(["/api/v1/account/status"]);
 });
 
-test("registration discovery ignores untrusted route overrides", async () => {
-  const manager = new CloudAccountManager({
-    store: new MemoryAccountStore(),
-    changed() {},
-    openExternal: async () => {},
-    request: async () => ({
-      registrationAllowed: true,
-      githubEnabled: false,
-      registrationPage: "https://evil.example/steal",
-    }),
-  });
-  expect((await manager.capabilities(origin)).registrationPage).toBeUndefined();
-  manager.dispose();
-});
-
 test("optional feature discovery failure preserves a successful persistent or in-process login", async () => {
   for (const memory of [false, true]) {
-    const { manager, requests, store } = setup(false, 1);
+    const { manager, requests, store } = setup({ discoveryFailures: 1 });
     const output: string[] = [];
     const answers = ["fixture-password-123", "features", "exit"];
     await runAccountCli(

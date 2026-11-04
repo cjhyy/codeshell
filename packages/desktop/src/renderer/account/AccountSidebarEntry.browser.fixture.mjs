@@ -57,7 +57,7 @@ const source = `
     },
     capabilities:async origin=>{
       window.requests.capabilities.push({origin,...snapshot()});
-      return {registrationAllowed:true,githubEnabled:true,githubLinkEnabled:true,
+      return {features:{},registrationAllowed:true,githubEnabled:true,githubLinkEnabled:true,
         profileEnabled:false,linkManagementEnabled:false};
     },
     logout:async()=>{
