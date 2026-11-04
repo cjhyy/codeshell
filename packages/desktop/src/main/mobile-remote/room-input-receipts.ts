@@ -19,8 +19,14 @@ export async function submitRoomInputOnce(
       throw new Error("同一输入的内容已改变，请核对草稿后作为新消息发送。");
     return existing.result;
   }
-  if (rooms.hasAcceptedInput(roomId, receipt)) return true;
-  const entry = { hash: receipt.clientIntentHash, result: Promise.resolve().then(submit) };
+  const entry = {
+    hash: receipt.clientIntentHash,
+    result: Promise.resolve().then(async () => {
+      await rooms.prepareInputReceipts(roomId);
+      if (rooms.hasAcceptedInput(roomId, receipt)) return true;
+      return submit();
+    }),
+  };
   inputs.set(key, entry);
   try {
     return await entry.result;

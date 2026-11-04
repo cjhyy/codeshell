@@ -19,6 +19,7 @@ import {
 import {
   readRoomHistoryPage,
   scanRoomHistory,
+  scanRoomHistoryAsync,
   type RoomHistoryRequest,
   type RoomHistoryPage,
 } from "./room-history.js";
@@ -506,6 +507,7 @@ export class RoomManager {
   private readonly rootRealPath: string;
   private readonly rootIdentity: string;
   private readonly failedWrites = new Set<string>();
+  private readonly preparingInputReceipts = new Map<string, Promise<void>>();
   private readonly inputReceipts = new Map<
     string,
     { stamp: string; intents: Map<string, string> }
@@ -1355,6 +1357,56 @@ export class RoomManager {
     }
   }
 
+  /** Prepare cold receipts outside the synchronous send path; concurrent intents share one scan. */
+  async prepareInputReceipts(id: string): Promise<void> {
+    if (this.inputReceipts.has(id)) {
+      this.currentInputReceipts(id);
+      return;
+    }
+    const pending = this.preparingInputReceipts.get(id);
+    if (pending) return pending;
+    const work = this.buildInputReceipts(id).finally(() => {
+      if (this.preparingInputReceipts.get(id) === work) this.preparingInputReceipts.delete(id);
+    });
+    this.preparingInputReceipts.set(id, work);
+    return work;
+  }
+
+  private async buildInputReceipts(id: string): Promise<void> {
+    if (this.failedWrites.has(id)) throw new Error("room persistence failed");
+    const path = this.msgPath(id);
+    const intents = new Map<string, string>();
+    const proof = existsSync(path)
+      ? await scanRoomHistoryAsync(path, parseRoomMessage, (message) => {
+          if (!message.clientMessageId) return;
+          if (!message.clientDeviceId || !message.clientIntentHash)
+            throw new Error("room input receipt is incomplete");
+          const key = JSON.stringify([message.clientDeviceId, message.clientMessageId]);
+          const previous = intents.get(key);
+          if (previous && previous !== message.clientIntentHash)
+            throw new Error("conflicting room input receipts");
+          intents.set(key, message.clientIntentHash);
+        })
+      : { sequence: 0, stamp: "" };
+    if ((existsSync(path) ? this.messageStamp(id) : "") !== proof.stamp)
+      throw new Error("room input history changed; reload before retrying");
+    this.inputReceipts.set(id, { stamp: proof.stamp, intents });
+    // Avoid a second synchronous history scan when the cold Room first appends.
+    if (proof.stamp && !this.lastSeqByRoom.has(id)) {
+      this.lastSeqByRoom.set(id, proof.sequence);
+      this.messageStampByRoom.set(id, proof.stamp);
+    }
+  }
+
+  private currentInputReceipts(id: string) {
+    const cached = this.inputReceipts.get(id);
+    if (!cached) throw new Error("room input receipts must be prepared before send");
+    const path = this.msgPath(id);
+    if (cached.stamp !== (existsSync(path) ? this.messageStamp(id) : ""))
+      throw new Error("room input history changed; reload before retrying");
+    return cached;
+  }
+
   /** A replay never opens a new CLI, reclaims an attachment, or reuses a changed intent. */
   hasAcceptedInput(id: string, receipt: RoomInputReceipt): boolean {
     if (
@@ -1366,27 +1418,7 @@ export class RoomManager {
     )
       throw new Error("invalid room input receipt");
     if (this.failedWrites.has(id)) throw new Error("room persistence failed");
-    const path = this.msgPath(id);
-    const stamp = existsSync(path) ? this.messageStamp(id) : "";
-    let cached = this.inputReceipts.get(id);
-    if (cached && cached.stamp !== stamp)
-      throw new Error("room input history changed; reload before retrying");
-    if (!cached) {
-      const intents = new Map<string, string>();
-      if (stamp)
-        scanRoomHistory(path, parseRoomMessage, (message) => {
-          if (!message.clientMessageId) return;
-          if (!message.clientDeviceId || !message.clientIntentHash)
-            throw new Error("room input receipt is incomplete");
-          const key = JSON.stringify([message.clientDeviceId, message.clientMessageId]);
-          const previous = intents.get(key);
-          if (previous && previous !== message.clientIntentHash)
-            throw new Error("conflicting room input receipts");
-          intents.set(key, message.clientIntentHash);
-        });
-      cached = { stamp, intents };
-      this.inputReceipts.set(id, cached);
-    }
+    const cached = this.currentInputReceipts(id);
     const known = cached.intents.get(
       JSON.stringify([receipt.clientDeviceId, receipt.clientMessageId]),
     );

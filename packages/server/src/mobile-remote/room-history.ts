@@ -17,6 +17,7 @@ import {
   type Stats,
 } from "node:fs";
 import { join } from "node:path";
+import { lstat, open } from "node:fs/promises";
 
 /** Room-local history coordinates. These are never native Session/Run cursors. */
 export interface RoomHistoryPage<T = unknown> {
@@ -38,7 +39,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
 const decoder = new TextDecoder("utf-8", { fatal: true });
 
 function regular(path: string): Stats {
-  const stat = lstatSync(path);
+  return assertRegular(lstatSync(path));
+}
+function assertRegular(stat: Stats): Stats {
   if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1) {
     throw new Error("room history must be a private regular file");
   }
@@ -132,6 +135,61 @@ export function scanRoomHistory<T extends { seq: number }>(
     return seq;
   } finally {
     closeSync(fd);
+  }
+}
+
+/** Same strict snapshot proof as scanRoomHistory, yielding between bounded reads. */
+export async function scanRoomHistoryAsync<T extends { seq: number }>(
+  file: string,
+  parse: (value: unknown) => T | undefined,
+  visit?: (message: T) => void,
+): Promise<{ sequence: number; stamp: string }> {
+  const initial = assertRegular(await lstat(file));
+  const handle = await open(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  try {
+    const before = assertRegular(await handle.stat());
+    if (stamp(initial) !== stamp(before)) throw new Error("room history changed while opening");
+    if (before.size > MAX_BYTES)
+      throw new Error("room history exceeds 256 MiB; archive it before continuing");
+    let offset = 0,
+      seq = 0,
+      partialBytes = 0;
+    let parts: Buffer[] = [];
+    while (offset < before.size) {
+      const chunk = Buffer.allocUnsafe(Math.min(64 * 1024, before.size - offset));
+      const { bytesRead } = await handle.read(chunk, 0, chunk.length, offset);
+      if (!bytesRead) throw new Error("room history was truncated while reading");
+      offset += bytesRead;
+      let from = 0;
+      while (from < bytesRead) {
+        const next = chunk.indexOf(0x0a, from);
+        const newline = next >= 0 && next < bytesRead ? next : -1;
+        const end = newline < 0 ? bytesRead : newline;
+        const piece = chunk.subarray(from, end);
+        partialBytes += piece.length;
+        if (partialBytes > MAX_LINE) throw new Error("room history record exceeds size limit");
+        parts.push(piece);
+        if (newline < 0) break;
+        const bytes = parts.length === 1 ? parts[0]! : Buffer.concat(parts, partialBytes);
+        const message = parse(JSON.parse(decoder.decode(bytes)));
+        if (!message || message.seq !== seq + 1)
+          throw new Error(`room history is corrupt at sequence ${seq + 1}`);
+        seq = message.seq;
+        visit?.(message);
+        parts = [];
+        partialBytes = 0;
+        from = newline + 1;
+      }
+    }
+    if (partialBytes) throw new Error("room history has an incomplete final record");
+    if (
+      stamp(before) !== stamp(await handle.stat()) ||
+      stamp(before) !== stamp(assertRegular(await lstat(file)))
+    )
+      throw new Error("room history changed while scanning");
+    return { sequence: seq, stamp: stamp(before) };
+  } finally {
+    await handle.close();
   }
 }
 
