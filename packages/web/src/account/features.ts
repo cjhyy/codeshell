@@ -26,14 +26,14 @@ export interface AccountFeature {
   version: number;
   enabled: boolean;
   reason?: AccountFeatureReason;
-  params?: { cloudOrigin?: string };
+  params?: { cloudOrigin?: string; directoryPath?: "/devices" };
 }
 export type AccountFeatureMap = Partial<Record<AccountFeatureId, AccountFeature>>;
 export interface AccountFeatureView {
   id: AccountFeatureId;
   state: "hidden" | "sign-in" | "pending" | "ready";
   reason?: AccountFeaturePendingReason;
-  params?: { cloudOrigin?: string };
+  params?: { cloudOrigin?: string; directoryPath?: "/devices" };
 }
 export type AccountFeatureSnapshot = Record<AccountFeatureId, AccountFeatureView>;
 const object = (value: unknown): Record<string, unknown> | undefined =>
@@ -83,6 +83,8 @@ export function parseAccountFeatures(raw: unknown): AccountFeatureMap {
       if (!origin) continue;
       feature.params = { cloudOrigin: origin };
     }
+    if (id === "relay.phone" && entry.enabled && object(entry.params)?.directoryPath === "/devices")
+      feature.params = { directoryPath: "/devices" };
     result[id] = feature;
   }
   return result;

@@ -48,11 +48,35 @@ describe("account feature contract", () => {
     expect(legacy["devices.dispatch"]?.enabled).toBe(true);
     expect(legacy["devices.handoff"]).toBeUndefined();
     expect(legacy["devices.directory"]).toBeUndefined();
+    expect(legacy["relay.phone"]?.params).toBeUndefined();
     expect(
       readAccountFeatures({ capabilities: { links: false } }, "account", legacy)["links.remote"]
         ?.enabled,
     ).toBe(true);
     expect(readAccountFeatures({ features: {} }, "account", legacy)).toEqual({});
+  });
+  test("phone directory discovery allows only the known same-origin route", () => {
+    for (const directoryPath of [
+      "/devices",
+      "/",
+      "//evil.example",
+      "https://evil.example",
+      "/devices?token=secret",
+    ]) {
+      const features = parseAccountFeatures({
+        "relay.phone": { version: 1, enabled: true, params: { directoryPath, token: "secret" } },
+        "links.remote": { version: 1, enabled: true, params: { directoryPath } },
+      });
+      expect(features["relay.phone"]?.params).toEqual(
+        directoryPath === "/devices" ? { directoryPath } : undefined,
+      );
+      expect(features["links.remote"]?.params).toBeUndefined();
+      expect(
+        resolveAccountFeatures({ deployment: features, account: features, signedIn: true })[
+          "relay.phone"
+        ].params,
+      ).toEqual(directoryPath === "/devices" ? { directoryPath } : undefined);
+    }
   });
   test("all four states honor account denial, host support, offline state and prerequisites", () => {
     const base = { deployment: offered, signedIn: false };
