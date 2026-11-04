@@ -15,6 +15,7 @@ import {
   launchCodeShellElectron,
   makeIsolatedElectronHome,
   openSettingsMenu,
+  waitForAsyncFunction,
 } from "./electron-harness.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -146,6 +147,44 @@ try {
         overview.body.features["cloud.projects"].enabled === true,
       "Signed-in overview grants the Cloud feature to the exact account",
     );
+    // Exercise the same strict public-profile parser and account projection as
+    // Desktop Main; raw JSON checks alone miss an invalid overview contract.
+    const {
+      AccountFeatureService,
+      CloudAccountManager,
+      CloudAccountHttpError,
+      MemoryAccountStore,
+    } = await import("@cjhyy/code-shell-server/account");
+    const store = new MemoryAccountStore();
+    store.save({ ...login.body, origin: fixture.accountOrigin });
+    const manager = new CloudAccountManager({
+      store,
+      changed() {},
+      openExternal: async () => {
+        throw new Error("Server contract cannot open a browser");
+      },
+      request: async ({ origin, path, ...options }) => {
+        const reply = await fixture.request(origin, path, options);
+        if (reply.status < 200 || reply.status >= 300)
+          throw new CloudAccountHttpError(reply.status);
+        return reply.body;
+      },
+    });
+    const features = new AccountFeatureService({
+      account: manager,
+      origin: fixture.accountOrigin,
+      supported: ["cloud.projects"],
+    });
+    try {
+      for (let attempt = 0; attempt < 2; attempt++)
+        assert(
+          (await features.refresh())["cloud.projects"].state === "ready",
+          "Desktop account projection accepts the overview on consecutive refreshes",
+        );
+    } finally {
+      features.dispose();
+      manager.dispose();
+    }
     const ticket = await fixture.request(
       fixture.accountOrigin,
       "/api/v1/account/cloud-management/tickets",
@@ -284,7 +323,8 @@ try {
       .getByLabel("密码（至少 12 位）", { exact: true })
       .fill("chooser-synthetic-password");
     await account.getByRole("button", { name: "登录", exact: true }).click();
-    await win.waitForFunction(
+    await waitForAsyncFunction(
+      win,
       async () =>
         (await window.codeshell.accountFeatures.snapshot())["cloud.projects"].state === "ready",
     );
