@@ -544,6 +544,17 @@ function injectBridge(html: string, source: string): string {
   return html.slice(0, offset) + script + html.slice(offset);
 }
 
+// CSP3 and Chromium resolve 'self' in a sandboxed document to its URL's origin,
+// but WebKit (every iOS browser) matches nothing, blocking all of a panel's own
+// scripts and styles. Spell that origin out so every engine enforces one policy.
+function resolveMetaPolicySelf(html: string, origin: string): string {
+  return html.replace(/<meta\b[^>]*>/gi, (tag) =>
+    /\shttp-equiv\s*=\s*(["']?)content-security-policy\1/i.test(tag)
+      ? tag.replaceAll("'self'", origin)
+      : tag,
+  );
+}
+
 /** Owner-bound capability grants serve reviewed static bytes to an opaque-origin iframe. */
 export function createPanelRuntime(options: PanelRuntimeOptions) {
   const publicPathPrefix = options.publicPathPrefix ?? "";
@@ -2358,8 +2369,10 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         // including when the public site is behind HTTPS termination.
         const source = publicPathPrefix + ASSETS + grant.asset + "/";
         if (extname(path).toLowerCase() === ".html") {
-          bytes = Buffer.from(injectBridge(bytes.toString("utf8"), source));
           const resourceOrigin = grant.origin;
+          bytes = Buffer.from(
+            resolveMetaPolicySelf(injectBridge(bytes.toString("utf8"), source), resourceOrigin),
+          );
           const assetSource = resourceOrigin + source;
           // Panels export their own generated files (for example JSON backups).
           // Download permission does not grant origin access, network fetches or popups.

@@ -594,6 +594,20 @@ describe("Panel HTTP runtime", () => {
     }
   });
 
+  test("spells out 'self' in the panel's meta CSP because WebKit matches nothing in an opaque sandbox", async () => {
+    const f = await fixture({
+      html:
+        "<!doctype html><html><head>" +
+        `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'">` +
+        `<meta name="description" content="keeps 'self' prose">` +
+        '<link rel="stylesheet" href="./style.css"></head><body><script type="module" src="./main.mjs"></script></body></html>',
+    });
+    const grant = await f.prepare();
+    const html = await (await fetch(f.url + grant.src, { headers: { Origin: "null" } })).text();
+    expect(html).toContain(`content="default-src 'none'; script-src ${f.url}; style-src ${f.url}"`);
+    expect(html).toContain(`content="keeps 'self' prose"`);
+  });
+
   test("rejects opaque prepare origins, malformed requests, and unbounded parallel preparation", async () => {
     const opaque = await fixture({ origin: "null" });
     expect(
