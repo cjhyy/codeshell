@@ -16,6 +16,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   MAX_MOBILE_IMAGE_BYTES,
   MAX_MOBILE_UPLOAD_TICKETS_PER_DEVICE,
+  MOBILE_UPLOAD_QUEUE_RETENTION_MS,
   MobileUploadService,
 } from "./mobile-upload-service.js";
 
@@ -224,6 +225,57 @@ describe("MobileUploadService", () => {
 
     now = ticket.expiresAt + 1;
     service.cleanupExpired();
+    expect(() => service.claim("device-a", ticket.uploadId)).toThrow(/upload/i);
+  });
+
+  test("a queued turn keeps its ready upload past the ticket TTL, within a bound", async () => {
+    let now = 1000;
+    const service = makeService(() => now);
+    await service.ready();
+    const ticket = service.begin("device-a", {
+      clientId: "queued",
+      name: "photo.png",
+      mime: "image/png",
+      size: PNG.byteLength,
+    });
+    const put = fakePut(service, ticket.uploadId, "image/png", PNG.byteLength);
+    put.request.end(PNG);
+    await put.done;
+    expect(put.response.status).toBe(201);
+    expect(() => service.retain("device-b", ticket.uploadId)).toThrow(/upload/i);
+    service.retain("device-a", ticket.uploadId);
+
+    now = ticket.expiresAt + 60_000;
+    await service.cleanupExpired();
+    const claimed = service.claim("device-a", ticket.uploadId);
+    expect(() => service.retain("device-a", ticket.uploadId)).toThrow(/claimed|ready/i);
+    await service.release("device-a", ticket.uploadId, claimed.claimId);
+
+    now += MOBILE_UPLOAD_QUEUE_RETENTION_MS + 1;
+    await service.cleanupExpired();
+    expect(() => service.claim("device-a", ticket.uploadId)).toThrow(/upload/i);
+  });
+
+  test("discarding a cancelled queued upload frees it, but never one claimed by a running turn", async () => {
+    const service = makeService();
+    await service.ready();
+    const ticket = service.begin("device-a", {
+      clientId: "cancelled",
+      name: "photo.png",
+      mime: "image/png",
+      size: PNG.byteLength,
+    });
+    const put = fakePut(service, ticket.uploadId, "image/png", PNG.byteLength);
+    put.request.end(PNG);
+    await put.done;
+    const claimed = service.claim("device-a", ticket.uploadId);
+    await service.discard("device-a", ticket.uploadId);
+    expect(existsSync(claimed.path)).toBe(true);
+    await service.release("device-a", ticket.uploadId, claimed.claimId);
+    await service.discard("device-b", ticket.uploadId);
+    expect(existsSync(claimed.path)).toBe(true);
+    await service.discard("device-a", ticket.uploadId);
+    expect(existsSync(claimed.path)).toBe(false);
     expect(() => service.claim("device-a", ticket.uploadId)).toThrow(/upload/i);
   });
 

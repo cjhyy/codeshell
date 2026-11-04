@@ -22,6 +22,7 @@ import { groupToolActivity } from "./toolActivityGroups.js";
 import { foldToolDisplayRecords, isInvisibleAssistant } from "./toolDisplayRecords.js";
 import { ToolActivity } from "./ToolActivity.js";
 import { ExpandedHistoryText } from "./ExpandedHistoryText.js";
+import { TurnQueueList } from "./TurnQueueList.js";
 import "./app.css";
 import "./workbench-desktop.css";
 
@@ -515,6 +516,17 @@ export function Workbench({
   const stop = controller.stop;
   const approvals = controller.approvals.filter((a) => !a.sessionId || a.sessionId === activeId);
   const blockingApprovals = approvals.filter((approval) => !approval.asynchronous);
+  // A busy conversation, or one with pending turns, accepts new turns only
+  // through the Host FIFO; they never jump ahead of earlier queued turns.
+  const queuedCount = controller.turnQueue?.state?.entries.length ?? 0;
+  const queueing = Boolean(controller.turnQueue?.canQueue) && (running || queuedCount > 0);
+  const sendDisabled =
+    connection !== "open" ||
+    controller.loading ||
+    uploading ||
+    controller.uncertain ||
+    controller.readOnly ||
+    (!draft.trim() && !files.length);
   const otherApprovals = controller.approvals.filter(
     (a) => a.sessionId && a.sessionId !== activeId,
   );
@@ -858,9 +870,21 @@ export function Workbench({
               {currentTitle}
             </span>
           </div>
-          <span className="connection-pill" title={`任务在${hostLabel}工作区执行`}>
+          {controller.statusBadges?.length ? (
+            <span className="topbar-badges">
+              {controller.statusBadges.map((badge) => (
+                <span key={badge.label} className={`topbar-badge ${badge.tone ?? "neutral"}`}>
+                  {badge.label}
+                </span>
+              ))}
+            </span>
+          ) : null}
+          <span
+            className="connection-pill"
+            title={`任务在${hostLabel}工作区执行 · ${connectionLabel}`}
+          >
             <span className={`dot ${connection}`} />
-            <span>{hostLabel}</span>
+            <span>{connection === "open" ? hostLabel : connectionLabel}</span>
           </span>
         </header>
         {hub &&
@@ -1211,6 +1235,7 @@ export function Workbench({
           </div>
           {controller.readOnlyNote ? <div className="banner">{controller.readOnlyNote}</div> : null}
           <div className="composer-wrap">
+            {controller.turnQueue ? <TurnQueueList queue={controller.turnQueue} /> : null}
             <footer className="composer">
               {files.length || (uploading && controller.host === "hub") ? (
                 <div className="attachments" aria-live="polite">
@@ -1238,7 +1263,11 @@ export function Workbench({
                 value={draft}
                 disabled={controller.readOnly}
                 rows={narrow ? 1 : 2}
-                placeholder="描述你的任务，或提出一个问题…"
+                placeholder={
+                  queueing
+                    ? "任务进行中，可继续输入，结束后按顺序执行…"
+                    : "描述你的任务，或提出一个问题…"
+                }
                 onChange={(event) => {
                   controller.setDraft(event.target.value);
                 }}
@@ -1329,7 +1358,13 @@ export function Workbench({
                     )}
                   </>
                 ) : null}
-                <span className="composer-run-status" role="status">
+                <span
+                  className="composer-run-status"
+                  role="status"
+                  data-state={
+                    blockingApprovals.length ? "waiting" : running ? "running" : undefined
+                  }
+                >
                   {controller.uncertain
                     ? "正在核对消息…"
                     : uploading
@@ -1337,41 +1372,53 @@ export function Workbench({
                         ? "正在发送…"
                         : "正在上传附件…"
                       : blockingApprovals.length
-                        ? "等待你的确认"
+                        ? queuedCount
+                          ? `等待你的确认 · ${queuedCount} 条待执行`
+                          : "等待你的确认"
                         : running
-                          ? "正在处理…"
+                          ? queuedCount
+                            ? `正在处理… · ${queuedCount} 条待执行`
+                            : queueing
+                              ? "正在处理… · 可继续发送，将排队执行"
+                              : "正在处理…"
                           : approvals.length
                             ? "有可稍后回答的问题"
                             : ""}
                 </span>
-                {running ? (
-                  <button
-                    className="stop composer-submit"
-                    aria-label="停止"
-                    title="停止"
-                    onClick={stop}
-                    disabled={connection !== "open"}
-                  >
-                    <WorkbenchIcon name="stop" />
-                  </button>
-                ) : (
-                  <button
-                    className="send composer-submit"
-                    aria-label="发送"
-                    title="发送"
-                    onClick={send}
-                    disabled={
-                      connection !== "open" ||
-                      controller.loading ||
-                      uploading ||
-                      controller.uncertain ||
-                      controller.readOnly ||
-                      (!draft.trim() && !files.length)
-                    }
-                  >
-                    <WorkbenchIcon name="send" />
-                  </button>
-                )}
+                <span className="composer-submit-group">
+                  {queueing ? (
+                    <button
+                      className="send queue composer-submit"
+                      aria-label="加入队列"
+                      title="加入队列：当前任务结束后按顺序执行"
+                      onClick={send}
+                      disabled={sendDisabled}
+                    >
+                      <WorkbenchIcon name="queue" />
+                    </button>
+                  ) : null}
+                  {running ? (
+                    <button
+                      className="stop composer-submit"
+                      aria-label="停止"
+                      title={queuedCount ? "停止当前任务（排队消息会暂停，不会被删除）" : "停止"}
+                      onClick={stop}
+                      disabled={connection !== "open"}
+                    >
+                      <WorkbenchIcon name="stop" />
+                    </button>
+                  ) : queueing ? null : (
+                    <button
+                      className="send composer-submit"
+                      aria-label="发送"
+                      title="发送"
+                      onClick={send}
+                      disabled={sendDisabled}
+                    >
+                      <WorkbenchIcon name="send" />
+                    </button>
+                  )}
+                </span>
               </div>
             </footer>
             <div className="composer-caption">
@@ -1680,6 +1727,7 @@ type WorkbenchIconName =
   | "chevron"
   | "attachment"
   | "send"
+  | "queue"
   | "stop";
 
 function WorkbenchIcon({ name }: { name: WorkbenchIconName }) {
@@ -1742,6 +1790,7 @@ function WorkbenchIcon({ name }: { name: WorkbenchIconName }) {
       <path d="m21 11-8 8a6 6 0 0 1-8.5-8.5l9-9A4 4 0 0 1 19 7l-9 9a2 2 0 0 1-2.8-2.8l8-8" />
     ),
     send: <path d="M12 19V5m-6 6 6-6 6 6" />,
+    queue: <path d="M4 6h12M4 11h12M4 16h7M17 14v6M14 17h6" />,
     stop: <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none" />,
   };
   return (

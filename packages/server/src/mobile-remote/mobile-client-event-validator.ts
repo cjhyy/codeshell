@@ -49,6 +49,7 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
           (typeof event.modelTraceSource === "string" &&
             /^panel:[a-z][a-z0-9-]{0,63}$/.test(event.modelTraceSource))) &&
         optionalBoundedString(event.clientMessageId, MAX_ID_LENGTH) &&
+        optionalQueueFlag(event.queue) &&
         optionalAttachments(event.attachments);
       break;
     case "attachment.upload.begin":
@@ -210,7 +211,22 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         boundedString(event.roomId, MAX_ID_LENGTH) &&
         boundedOptionalEmptyString(event.text, MAX_MESSAGE_LENGTH) &&
         optionalBoundedString(event.clientMessageId, MAX_ID_LENGTH) &&
+        optionalQueueFlag(event.queue) &&
         optionalAttachments(event.attachments);
+      break;
+    case "queue.sync":
+    case "queue.clear":
+    case "queue.resume":
+      valid =
+        queueTarget(event.target) &&
+        Object.keys(event).every((key) => key === "type" || key === "target");
+      break;
+    case "queue.cancel":
+    case "queue.retry":
+      valid =
+        queueTarget(event.target) &&
+        boundedString(event.entryId, MAX_ID_LENGTH) &&
+        Object.keys(event).every((key) => ["type", "target", "entryId"].includes(key));
       break;
     case "room.history":
       valid =
@@ -325,6 +341,25 @@ function optionalPositiveInteger(value: unknown): boolean {
 
 function isBoundedHistoryLimit(value: unknown): value is number {
   return isPositiveInteger(value) && value <= MAX_HISTORY_LIMIT;
+}
+
+function optionalQueueFlag(value: unknown): boolean {
+  return value === undefined || value === true;
+}
+
+function queueTarget(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  const keys = Object.keys(value);
+  if (value.kind === "session")
+    return (
+      boundedTrimmedString(value.sessionId, MAX_ID_LENGTH) &&
+      keys.every((key) => key === "kind" || key === "sessionId")
+    );
+  return (
+    value.kind === "room" &&
+    boundedTrimmedString(value.roomId, MAX_ID_LENGTH) &&
+    keys.every((key) => key === "kind" || key === "roomId")
+  );
 }
 
 function optionalAttachments(value: unknown): boolean {

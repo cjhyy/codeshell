@@ -121,7 +121,11 @@ export class MobileExternalRuntimeCommands {
     viewer: string | undefined,
     device: string | undefined,
     sessionId: string,
-    options?: { modelKey?: string; permissionMode?: MobileRuntimeStart["permissionMode"] },
+    options?: {
+      modelKey?: string;
+      permissionMode?: MobileRuntimeStart["permissionMode"];
+      assertSubmissionCurrent?: () => void;
+    },
   ): Promise<void> {
     const selection = viewer ? this.selections.get(viewer) : undefined;
     if (
@@ -156,6 +160,7 @@ export class MobileExternalRuntimeCommands {
       if (previous) {
         await previous;
         this.assertSelection(viewer, device, selection);
+        options?.assertSubmissionCurrent?.();
       }
       if (selection.fresh && this.deps.exists(sessionId))
         throw new Error("New mobile Session was replaced before startup");
@@ -170,6 +175,7 @@ export class MobileExternalRuntimeCommands {
       this.externalRoutes.set(viewer, sessionId);
       selection.external = true;
       const assertCurrent = () => {
+        options?.assertSubmissionCurrent?.();
         this.assertSelection(viewer, device, selection);
         if (this.deps.service() !== service || this.deps.owner(sessionId) !== selection.owner)
           throw new Error("External runtime owner changed while starting");
@@ -186,6 +192,7 @@ export class MobileExternalRuntimeCommands {
           permissionMode: options?.permissionMode,
           owner: oldOwner,
           assertCurrent: () => {
+            options?.assertSubmissionCurrent?.();
             this.assertSelection(viewer, device, selection);
             if (
               this.deps.service() !== service ||
@@ -423,6 +430,12 @@ export class MobileExternalRuntimeCommands {
     options?: {
       modelKey?: string;
       permissionMode?: MobileRuntimeStart["permissionMode"];
+      /**
+       * The submission's own authority: a phone Stop fence (run admission) and,
+       * for a Host-queued turn, its queue admission. Asserted before a runtime
+       * is started, after each startup wait, and synchronously right before the
+       * input reaches the provider.
+       */
       assertSubmissionCurrent?: () => void;
     },
   ) {

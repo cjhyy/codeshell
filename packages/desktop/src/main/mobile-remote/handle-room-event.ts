@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { submitRoomInputOnce } from "./room-input-receipts.js";
 import { markAttachmentsSent } from "@cjhyy/code-shell-server/storage";
 import {
+  ROOM_INPUT_ACCEPTED,
   materializeMobileAttachments,
   type MobileServerEvent,
 } from "@cjhyy/code-shell-server/mobile-remote";
@@ -140,34 +141,71 @@ export async function handleRoomEvent(
           .update(JSON.stringify([text, event.attachments ?? []]))
           .digest("hex"),
       };
-      const accepted = await submitRoomInputOnce(ctx.roomManager, room.id, receipt, async () => {
-        const materialized = await materializeMobileAttachments({
-          deviceId: event.deviceId ?? "",
-          cwd: room.cwd,
-          sessionId: room.id,
-          attachments: event.attachments,
-          uploads: ctx.uploads,
+      let accepted: boolean;
+      try {
+        accepted = await submitRoomInputOnce(ctx.roomManager, room.id, receipt, async () => {
+          const materialized = await materializeMobileAttachments({
+            deviceId: event.deviceId ?? "",
+            cwd: room.cwd,
+            sessionId: room.id,
+            attachments: event.attachments,
+            uploads: ctx.uploads,
+          });
+          let ok: boolean;
+          try {
+            // A queued turn's final authority/Stop check, synchronously before the
+            // room may (re)start its CLI and receive the input. An input the
+            // durable receipts already hold returned above without reaching here.
+            ctx.beforePhysicalSubmit?.();
+            ok = ctx.roomManager.send(event.roomId, text, materialized.metas, receipt);
+          } catch (error) {
+            if ((error as { code?: unknown } | null)?.code === ROOM_INPUT_ACCEPTED) {
+              // The CLI holds this input (and its staged images); only recording
+              // failed. Never report it as rejected: a retry would run it twice.
+              await markAttachmentsSent(room.cwd, room.id, materialized.metas).catch(
+                () => undefined,
+              );
+              await ctx.settleMobileUploadClaims(
+                event.deviceId ?? "",
+                materialized.claims,
+                "finalize",
+              );
+            } else
+              await ctx.settleMobileUploadClaims(
+                event.deviceId ?? "",
+                materialized.claims,
+                "release",
+              );
+            throw error;
+          }
+          if (!ok) {
+            await ctx.settleMobileUploadClaims(
+              event.deviceId ?? "",
+              materialized.claims,
+              "release",
+            );
+            return false;
+          }
+          await markAttachmentsSent(room.cwd, room.id, materialized.metas).catch((error) =>
+            dlog("main", "mobile.room_attachment.mark_sent_failed", {
+              error: String(error),
+              roomId: room.id,
+            }),
+          );
+          await ctx.settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "finalize");
+          return true;
         });
-        let ok: boolean;
-        try {
-          ok = ctx.roomManager.send(event.roomId, text, materialized.metas, receipt);
-        } catch (error) {
-          await ctx.settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "release");
-          throw error;
-        }
-        if (!ok) {
-          await ctx.settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "release");
-          return false;
-        }
-        await markAttachmentsSent(room.cwd, room.id, materialized.metas).catch((error) =>
-          dlog("main", "mobile.room_attachment.mark_sent_failed", {
-            error: String(error),
-            roomId: room.id,
-          }),
-        );
-        await ctx.settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "finalize");
-        return true;
-      });
+      } catch (error) {
+        if ((error as { code?: unknown } | null)?.code !== ROOM_INPUT_ACCEPTED) throw error;
+        reply({
+          type: "room.error",
+          roomId: event.roomId,
+          clientMessageId,
+          message: error instanceof Error ? error.message : String(error),
+          uncertain: true,
+        });
+        return;
+      }
       if (!accepted) {
         reply({
           type: "room.error",

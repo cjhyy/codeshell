@@ -55,11 +55,15 @@ export function DesktopChatControls({ app }: { app: RemoteApp }) {
   const inRoom = Boolean(app.activeRoomId || app.activeRoom);
   const room = app.activeRoom;
   const pending = app.ccModeRequest?.switching ? app.ccModeRequest : undefined;
+  // Pending Host turns were submitted under the current mode; the Host refuses
+  // a switch until they ran or were removed.
+  const queuedTurns = inRoom ? (app.turnQueue?.entries.length ?? 0) : 0;
   const roomSwitchable =
     !!room &&
     !!app.setCcRoomPermissionMode &&
     !room.observing &&
     !pending &&
+    queuedTurns === 0 &&
     app.status === "online";
   const activeSession = app.sessions.find((session) => session.id === app.activeSessionId);
   const externalRuntime =
@@ -69,9 +73,11 @@ export function DesktopChatControls({ app }: { app: RemoteApp }) {
       ? `正在切换为「${permissionLabel(pending.mode)}」，等待 Host 确认…`
       : room?.observing
         ? "只读查看中，接管后才能切换权限模式。"
-        : room?.kind === "codex"
-          ? "切换后从下一条消息启动的 Codex 进程开始生效。"
-          : "切换会重启 CLI 进程，重启后生效。"
+        : queuedTurns
+          ? `有 ${queuedTurns} 条排队消息按当前模式提交，执行完或取消后才能切换权限模式。`
+          : room?.kind === "codex"
+            ? "切换后从下一条消息启动的 Codex 进程开始生效。"
+            : "切换会重启 CLI 进程，重启后生效。"
     : externalRuntime
       ? "下次发送生效；运行中变更需先停止。"
       : "下次发送生效。";
@@ -109,7 +115,11 @@ export function DesktopChatControls({ app }: { app: RemoteApp }) {
           ))}
         </select>
       </label>
-      <span className="desktop-permission-hint" role="note">
+      <span
+        className="desktop-permission-hint"
+        role="note"
+        data-blocking={inRoom && room && !roomSwitchable ? "" : undefined}
+      >
         {hint}
       </span>
       {app.activeRoom ? (

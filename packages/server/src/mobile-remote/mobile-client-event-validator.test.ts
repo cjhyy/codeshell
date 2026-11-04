@@ -445,3 +445,49 @@ test("phone native choice cannot supply the private Worker proof or a pool model
   ).toBeUndefined();
   expect(parseMobileClientEvent({ ...base, model: "pool-key" })).toBeUndefined();
 });
+
+test("queue intent on sends is an optional literal flag", () => {
+  const chat = { type: "chat.send", text: "later", sessionId: "s", clientMessageId: "c" };
+  const room = { type: "room.send", roomId: "r", text: "later", clientMessageId: "c" };
+  for (const event of [chat, room]) {
+    expect(parseMobileClientEvent(event)).toEqual(event);
+    expect(parseMobileClientEvent({ ...event, queue: true })).toEqual({ ...event, queue: true });
+    for (const queue of [false, "true", 1, null, {}])
+      expect(parseMobileClientEvent({ ...event, queue })).toBeUndefined();
+  }
+});
+
+test("queue controls name one exact conversation and carry no caller authority", () => {
+  const session = { kind: "session", sessionId: "s-1" };
+  const room = { kind: "room", roomId: "r-1" };
+  for (const target of [session, room]) {
+    for (const type of ["queue.sync", "queue.clear", "queue.resume"])
+      expect(parseMobileClientEvent({ type, target })).toEqual({ type, target });
+    for (const type of ["queue.cancel", "queue.retry"]) {
+      expect(parseMobileClientEvent({ type, target, entryId: "e-1" })).toEqual({
+        type,
+        target,
+        entryId: "e-1",
+      });
+      for (const entryId of ["", null, 7, "x".repeat(513)])
+        expect(parseMobileClientEvent({ type, target, entryId })).toBeUndefined();
+      expect(parseMobileClientEvent({ type, target })).toBeUndefined();
+    }
+    // Device/viewer/session authority comes from the authenticated socket only.
+    for (const field of ["deviceId", "viewerId", "sessionId", "cwd"])
+      expect(parseMobileClientEvent({ type: "queue.sync", target, [field]: "x" })).toBeUndefined();
+  }
+  for (const target of [
+    undefined,
+    null,
+    "s-1",
+    { kind: "session" },
+    { kind: "session", sessionId: " " },
+    { kind: "room", roomId: "" },
+    { kind: "session", sessionId: "s", roomId: "r" },
+    { kind: "room", roomId: "r", sessionId: "s" },
+    { kind: "other", sessionId: "s" },
+    { kind: "session", sessionId: "x".repeat(513) },
+  ])
+    expect(parseMobileClientEvent({ type: "queue.sync", target })).toBeUndefined();
+});

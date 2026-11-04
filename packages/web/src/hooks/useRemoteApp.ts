@@ -16,7 +16,16 @@ import type {
   OutputHistoryRecoveryResult,
   MobileHistoryDetail,
   MobileHistoryItem,
+  MobileTurnQueueState,
 } from "@cjhyy/code-shell-core";
+import {
+  QueuedLocalMessages,
+  activeTurnQueueTarget,
+  admittedOwnIntents,
+  applyTurnQueueState,
+  turnQueueKey,
+  type TurnQueueStates,
+} from "./turnQueueState.js";
 import {
   reduceStream,
   initialChatState,
@@ -217,6 +226,14 @@ export interface RemoteApp {
   /** This tab's in-flight CLI open / mode switch, until the Host answers. */
   ccModeRequest?: { mode: PermissionMode; switching: boolean };
   respondCcApproval: (roomId: string, requestId: string, decision: CcApprovalDecision) => void;
+  /** The Host owns a pending-turn FIFO (turnQueue capability). */
+  turnQueueSupported?: boolean;
+  /** Host-authoritative pending turns of the active session or CLI room. */
+  turnQueue?: MobileTurnQueueState;
+  cancelQueuedTurn?: (entryId: string) => void;
+  retryQueuedTurn?: (entryId: string) => void;
+  resumeTurnQueue?: () => void;
+  clearTurnQueue?: () => void;
 }
 
 type CcApprovalDecision = Extract<
@@ -338,6 +355,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const [runtimeModels, setRuntimeModels] = useState<MobileRuntimeModel[]>([]);
   const [nativeModelSelection, setNativeModelSelection] = useState(false);
   const nativeModelSelectionRef = useRef(false);
+  const [turnQueueSupported, setTurnQueueSupported] = useState(false);
+  const turnQueueSupportedRef = useRef(false);
+  const [turnQueues, setTurnQueues] = useState<TurnQueueStates>({});
+  const turnQueuesRef = useRef<TurnQueueStates>(turnQueues);
+  const queuedLocalMessagesRef = useRef(new QueuedLocalMessages());
   const [runtimeModelsLoading, setRuntimeModelsLoading] = useState(false);
   const [runtimeModelsError, setRuntimeModelsError] = useState<string>();
   const [unreadSessionIds, setUnreadSessionIds] = useState<Set<string>>(() => new Set());
@@ -481,7 +503,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     new Map<
       string,
       {
-        resolve: () => void;
+        /** "queued": admitted to the Host FIFO; it has not run yet. */
+        resolve: (outcome?: "queued") => void;
         reject: (error: Error) => void;
         timer: ReturnType<typeof setTimeout>;
         connectionGeneration: number;
@@ -568,7 +591,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       clientMessageId: string,
       connectionGeneration: number,
       conversationRevision: number,
-    ): Promise<void> =>
+    ): Promise<"queued" | undefined> =>
       new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
           messageAckWaitersRef.current.delete(clientMessageId);
@@ -585,14 +608,17 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     [],
   );
 
-  const settleMessageAck = useCallback((clientMessageId: string, error?: Error): void => {
-    const waiter = messageAckWaitersRef.current.get(clientMessageId);
-    if (!waiter) return;
-    messageAckWaitersRef.current.delete(clientMessageId);
-    clearTimeout(waiter.timer);
-    if (error) waiter.reject(error);
-    else waiter.resolve();
-  }, []);
+  const settleMessageAck = useCallback(
+    (clientMessageId: string, error?: Error, outcome?: "queued"): void => {
+      const waiter = messageAckWaitersRef.current.get(clientMessageId);
+      if (!waiter) return;
+      messageAckWaitersRef.current.delete(clientMessageId);
+      clearTimeout(waiter.timer);
+      if (error) waiter.reject(error);
+      else waiter.resolve(outcome);
+    },
+    [],
+  );
 
   useEffect(
     () => () => {
@@ -1084,6 +1110,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         unsentCreatedSessionRef.current = null;
         nativeModelSelectionRef.current = event.capabilities?.nativeModelSelection === 1;
         setNativeModelSelection(nativeModelSelectionRef.current);
+        turnQueueSupportedRef.current = event.capabilities?.turnQueue === 1;
+        setTurnQueueSupported(turnQueueSupportedRef.current);
       }
       if (historyRecovery.observe(event)) return;
       if (
@@ -1172,6 +1200,24 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
               });
             }
           }
+          if (event.clientMessageId && !waiter) {
+            // A turn this tab queued earlier has now been admitted by the Host.
+            const queued = queuedLocalMessagesRef.current.take(event.clientMessageId);
+            if (
+              queued?.target.kind === "session" &&
+              !activeRoomIdRef.current &&
+              boundSessionRef.current === queued.target.sessionId
+            )
+              dispatchChat({
+                kind: "raw",
+                raw: {
+                  type: "session_user_message",
+                  text: queued.text,
+                  clientMessageId: event.clientMessageId,
+                  attachments: event.attachments ?? queued.attachments,
+                },
+              });
+          }
           if (event.clientMessageId) {
             if (waiter) uncertainMessageSessionsRef.current.delete(event.clientMessageId);
             settleMessageAck(
@@ -1228,6 +1274,48 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           );
           break;
         }
+        case "chat.queued": {
+          const waiter = messageAckWaitersRef.current.get(event.clientMessageId);
+          settleMessageAck(
+            event.clientMessageId,
+            waiter && waiter.connectionGeneration !== connectionGenerationRef.current
+              ? new Error("Message acknowledgement arrived on a different connection")
+              : undefined,
+            "queued",
+          );
+          break;
+        }
+        case "queue.state": {
+          const { type: _type, ...state } = event;
+          const applied = applyTurnQueueState(turnQueuesRef.current, state);
+          if (applied.states !== turnQueuesRef.current) {
+            // An admission whose chat.queued was lost (e.g. across a reconnect)
+            // is proven by this authoritative list: release the unconfirmed
+            // intent so the composer is usable, and keep its bubble for the run.
+            for (const clientMessageId of admittedOwnIntents(state)) {
+              const prepared = preparedMessagesRef.current.get(clientMessageId);
+              if (!prepared || messageAckWaitersRef.current.has(clientMessageId)) continue;
+              const entry = state.entries.find((item) => item.clientMessageId === clientMessageId)!;
+              queuedLocalMessagesRef.current.remember(clientMessageId, {
+                text: entry.text,
+                attachments: entry.attachments,
+                target: state.target,
+              });
+              preparedMessagesRef.current.delete(clientMessageId);
+              uncertainMessageSessionsRef.current.delete(clientMessageId);
+            }
+            // Only a current snapshot may retire this tab's pending bubbles.
+            queuedLocalMessagesRef.current.retain(state);
+            turnQueuesRef.current = applied.states;
+            setTurnQueues(applied.states);
+          }
+          if (applied.lostUnconfirmed > 0)
+            setNotice(t("mobile.queue.lostUnconfirmed", { count: applied.lostUnconfirmed }));
+          break;
+        }
+        case "queue.error":
+          setNotice(event.message);
+          break;
         case "chat.uncertain":
           if (messageAckWaitersRef.current.has(event.clientMessageId))
             uncertainMessageSessionsRef.current.set(event.clientMessageId, event.sessionId);
@@ -1661,7 +1749,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             setLoadingKey("roomHistory", false);
           }
           if (event.clientMessageId) {
-            settleMessageAck(event.clientMessageId, new MessageRejectedError(event.message));
+            // An uncertain admission keeps its intent id, so a retry is deduplicated.
+            settleMessageAck(
+              event.clientMessageId,
+              event.uncertain ? new Error(event.message) : new MessageRejectedError(event.message),
+            );
           }
           setNotice(event.message || t("mobile.notice.roomError"));
           break;
@@ -2427,6 +2519,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         conversationRevision,
       );
       let queued: boolean;
+      // A queue-capable Host runs this immediately when the conversation is
+      // idle, otherwise holds it in its FIFO behind the current turn.
+      const hostQueue = turnQueueSupportedRef.current ? ({ queue: true } as const) : {};
       if (roomId) {
         // NO optimistic echo for rooms: RoomManager persists the user line and
         // broadcasts it back to every client (incl. us) as a `room.message`,
@@ -2439,6 +2534,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             text,
             clientMessageId,
             attachments,
+            ...hostQueue,
           },
           connectionGeneration,
         );
@@ -2454,6 +2550,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             sessionId,
             clientMessageId,
             attachments,
+            ...(sessionId ? hostQueue : {}),
           },
           connectionGeneration,
         );
@@ -2464,8 +2561,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         await acknowledged.catch(() => undefined);
         return false;
       }
+      let admission: "queued" | undefined;
       try {
-        await acknowledged;
+        admission = await acknowledged;
       } catch (error) {
         // Only an explicit host rejection proves the message was not admitted.
         const retired = error instanceof MessageRetiredError;
@@ -2485,6 +2583,17 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         return false;
       }
       preparedMessagesRef.current.delete(clientMessageId);
+      if (admission === "queued") {
+        // Admitted but not run: the Host lists it in queue.state. Its user line
+        // appears only when the Host actually starts it (deferred chat.accepted
+        // for sessions, the persisted room message for CLI rooms).
+        queuedLocalMessagesRef.current.remember(clientMessageId, {
+          text,
+          attachments: summaries,
+          target: roomId ? { kind: "room", roomId } : { kind: "session", sessionId: sessionId! },
+        });
+        return true;
+      }
       if (
         !roomId &&
         conversationRevision === conversationRevisionRef.current &&
@@ -2996,7 +3105,60 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     socket.send({ type: "ccRoom.listSessions", cwd: ccDiscoverCwd, kind: ccCliKind });
   }, [socket.status, socket.send, ccDiscoverCwd, ccCliKind, setLoadingKey]);
 
+  // Host-owned pending turns of the visible conversation. The Host also pushes
+  // a snapshot after session.select; this covers rooms and reconnects.
+  const turnQueueTarget = activeTurnQueueTarget(activeRoomId, activeSessionId);
+  const turnQueueTargetId = turnQueueTarget ? turnQueueKey(turnQueueTarget) : "";
+  const turnQueueTargetRef = useRef(turnQueueTarget);
+  turnQueueTargetRef.current = turnQueueTarget;
+  // A Session's command authority is re-established by its (recovery) selection;
+  // ask again once that load settles so a reconnect sees changes it missed.
+  const turnQueueSelectionSettled = !(
+    turnQueueTarget?.kind === "session" && loading.sessionHistory
+  );
+  useEffect(() => {
+    const target = turnQueueTargetRef.current;
+    if (socket.status !== "online" || !turnQueueSupported || !target) return;
+    if (!turnQueueSelectionSettled) return;
+    socket.send({ type: "queue.sync", target });
+  }, [
+    socket.status,
+    socket.send,
+    turnQueueSupported,
+    turnQueueTargetId,
+    turnQueueSelectionSettled,
+  ]);
+  const controlTurnQueue = useCallback(
+    (action: "queue.cancel" | "queue.retry" | "queue.resume" | "queue.clear", entryId?: string) => {
+      const target = turnQueueTargetRef.current;
+      if (!target || !turnQueueSupportedRef.current) return;
+      const sent =
+        action === "queue.cancel" || action === "queue.retry"
+          ? !!entryId && socket.send({ type: action, target, entryId })
+          : socket.send({ type: action, target });
+      if (!sent) setNotice(t("mobile.connection.offlineTitle"));
+    },
+    [socket, setNotice],
+  );
+  const cancelQueuedTurn = useCallback(
+    (entryId: string) => controlTurnQueue("queue.cancel", entryId),
+    [controlTurnQueue],
+  );
+  const retryQueuedTurn = useCallback(
+    (entryId: string) => controlTurnQueue("queue.retry", entryId),
+    [controlTurnQueue],
+  );
+  const resumeTurnQueue = useCallback(() => controlTurnQueue("queue.resume"), [controlTurnQueue]);
+  const clearTurnQueue = useCallback(() => controlTurnQueue("queue.clear"), [controlTurnQueue]);
+  const turnQueue = turnQueueTarget ? turnQueues[turnQueueTargetId] : undefined;
+
   return {
+    turnQueueSupported,
+    turnQueue: turnQueueSupported ? turnQueue : undefined,
+    cancelQueuedTurn,
+    retryQueuedTurn,
+    resumeTurnQueue,
+    clearTurnQueue,
     status: socket.status,
     emptySessionReplacement,
     retryEmptySessionReplacement,

@@ -5,6 +5,7 @@ import {
   type RemoteApp,
   type MobileSessionCreateTarget,
 } from "../src/hooks/useRemoteApp.js";
+import { admittedOwnIntents } from "../src/hooks/turnQueueState.js";
 import { deviceStore } from "../src/lib/storage.js";
 import { generateSecret } from "../src/lib/deviceCredential.js";
 import { projectForCwd, sameProjectPath } from "../src/lib/format.js";
@@ -483,8 +484,12 @@ export function useDesktopController(
     const intent = uncertainIntents.current.get(activeId);
     if (
       !intent ||
-      !app.chat.items.some(
-        (item) => item.kind === "user" && item.clientMessageId === intent.clientMessageId,
+      !(
+        app.chat.items.some(
+          (item) => item.kind === "user" && item.clientMessageId === intent.clientMessageId,
+        ) ||
+        // The Host's own queue lists it: admitted even though chat.queued was lost.
+        (app.turnQueue && admittedOwnIntents(app.turnQueue).includes(intent.clientMessageId))
       )
     )
       return;
@@ -493,7 +498,7 @@ export function useDesktopController(
     if (drafts.current.get(activeId).revision === intent.revision) drafts.current.take(activeId);
     changed();
     setError("");
-  }, [app.chat.items, activeId, app.outputHistoryFailed]);
+  }, [app.chat.items, app.turnQueue, activeId, app.outputHistoryFailed]);
   const selectedProject = workspaceCwd ? projectForCwd(workspaceCwd, app.projects) : undefined;
   const actions: RemoteApp = {
     ...app,
@@ -671,9 +676,23 @@ export function useDesktopController(
     app.chat.run === "running" ||
     app.chat.run === "waiting" ||
     app.approvals.some((approval) => !approval.asynchronous);
+  // Only a Host FIFO may accept a turn while this conversation is busy; it runs
+  // after the current turn (and its approvals) through the same submit path.
+  const queueTarget = app.activeRoomId ?? app.activeSessionId;
+  const canQueue =
+    Boolean(app.turnQueueSupported && queueTarget) &&
+    !app.activeRoom?.observing &&
+    !app.outputHistoryFailed &&
+    !emptyReplacement;
+  const queuedTurns = app.turnQueue?.entries.length ?? 0;
   const send = (options?: { modelTraceSource?: string }): boolean => {
     if (app.outputHistoryFailed || emptyReplacement) return false;
-    if (sendingRef.current || app.status !== "online" || running || app.activeRoom?.observing)
+    if (
+      sendingRef.current ||
+      app.status !== "online" ||
+      (running && !canQueue) ||
+      app.activeRoom?.observing
+    )
       return false;
     if (pendingCreate.current || creationNeedsRetry) return false;
     if (selectedModel && (app.loading.sessionHistory || !app.activeSessionId)) return false;
@@ -893,6 +912,7 @@ export function useDesktopController(
       appRef.current.activeRoomId ||
       app.status !== "online" ||
       running ||
+      queuedTurns > 0 ||
       sendingRef.current ||
       app.loading.sessionHistory ||
       emptyReplacement?.status === "pending" ||
@@ -1082,6 +1102,8 @@ export function useDesktopController(
           app.status !== "online" ||
           app.outputHistoryFailed ||
           running ||
+          // Queued turns carry the model chosen when they were queued.
+          queuedTurns > 0 ||
           sendingId !== null ||
           app.loading.sessionHistory ||
           emptyReplacement?.status === "pending" ||
@@ -1153,6 +1175,27 @@ export function useDesktopController(
       : app.activeRoom?.observing
         ? "此 CLI 会话正在桌面运行，当前设备以只读方式查看。"
         : undefined,
+    turnQueue: app.turnQueueSupported
+      ? {
+          canQueue,
+          state: app.turnQueue,
+          online: app.status === "online",
+          currentPermissionMode: app.activeRoomId ? undefined : app.permissionMode,
+          cancel: (entryId) => app.cancelQueuedTurn?.(entryId),
+          retry: (entryId) => app.retryQueuedTurn?.(entryId),
+          resume: () => app.resumeTurnQueue?.(),
+          clear: () => app.clearTurnQueue?.(),
+        }
+      : undefined,
+    statusBadges: app.activeRoom
+      ? [
+          {
+            label: app.activeRoom.kind === "codex" ? "Codex CLI" : "Claude Code CLI",
+            tone: "accent" as const,
+          },
+          ...(app.activeRoom.observing ? [{ label: "只读观察", tone: "warning" as const }] : []),
+        ]
+      : undefined,
     attachmentAccept: "image/*",
     cameraAttachments: true,
     unreadSessionIds: app.unreadSessionIds,

@@ -121,6 +121,8 @@ export type MobileClientEvent =
       sessionId?: string;
       clientMessageId?: string;
       attachments?: MobileImageAttachment[];
+      /** turnQueue capability: admit behind the current turn in the Host FIFO. */
+      queue?: true;
     }
   | {
       type: "attachment.upload.begin";
@@ -248,6 +250,8 @@ export type MobileClientEvent =
       text: string;
       clientMessageId?: string;
       attachments?: MobileImageAttachment[];
+      /** turnQueue capability: admit behind the current turn in the Host FIFO. */
+      queue?: true;
     }
   | {
       type: "room.history";
@@ -294,7 +298,58 @@ export type MobileClientEvent =
       roomId: string;
       requestId: string;
       decision: CcApprovalDecision;
-    };
+    }
+  // ── Host-owned pending turn queue (turnQueue capability) ──────────────
+  | { type: "queue.sync"; target: MobileTurnQueueTarget }
+  | { type: "queue.cancel"; target: MobileTurnQueueTarget; entryId: string }
+  | { type: "queue.clear"; target: MobileTurnQueueTarget }
+  | { type: "queue.resume"; target: MobileTurnQueueTarget }
+  | { type: "queue.retry"; target: MobileTurnQueueTarget; entryId: string };
+
+/** The exact conversation a queued turn belongs to; never the viewer's current selection. */
+export type MobileTurnQueueTarget =
+  | { kind: "session"; sessionId: string }
+  | { kind: "room"; roomId: string };
+
+/**
+ * queued: waiting behind the current turn. dispatching: handed to the original
+ * submit path, awaiting admission. waiting: the submitting device must be
+ * online (and, for Sessions, selected on it) before the turn may run. failed:
+ * rejected before execution, retryable. uncertain: admission was not
+ * confirmed; it is never retried automatically.
+ */
+export type MobileTurnQueueEntryStatus =
+  | "queued"
+  | "dispatching"
+  | "waiting"
+  | "failed"
+  | "uncertain";
+
+export interface MobileTurnQueueEntry {
+  id: string;
+  clientMessageId: string;
+  text: string;
+  attachments: MobileAttachmentSummary[];
+  status: MobileTurnQueueEntryStatus;
+  message?: string;
+  createdAt: number;
+  /** True only for recipients on the submitting device. */
+  ownDevice: boolean;
+  /** Configuration snapshot captured when the turn was queued. */
+  permissionMode?: PermissionMode;
+  modelKey?: string;
+  nativeConnectionId?: string;
+}
+
+export interface MobileTurnQueueState {
+  target: MobileTurnQueueTarget;
+  /** Host process lifetime; a different value means a restarted Host. */
+  epoch: string;
+  revision: number;
+  /** stopped: the user stopped the current turn. failed/uncertain: the head did not run. */
+  paused?: "stopped" | "failed" | "uncertain";
+  entries: MobileTurnQueueEntry[];
+}
 
 export type MobileServerEvent =
   | {
@@ -320,9 +375,26 @@ export type MobileServerEvent =
         legacyBasePages?: 1;
         outputJournalPageFrames?: 2048;
         historyView?: 1;
+        turnQueue?: 1;
       };
     }
   | { type: "auth.failed"; message: string }
+  | ({ type: "queue.state" } & MobileTurnQueueState)
+  | {
+      /** Admitted to the Host FIFO; it has not run yet. */
+      type: "chat.queued";
+      target: MobileTurnQueueTarget;
+      clientMessageId: string;
+      entryId: string;
+      position: number;
+    }
+  | {
+      type: "queue.error";
+      target: MobileTurnQueueTarget;
+      entryId?: string;
+      clientMessageId?: string;
+      message: string;
+    }
   | {
       type: "pair.ok";
       device: TrustedDevicePublic;
@@ -332,6 +404,7 @@ export type MobileServerEvent =
         legacyBasePages?: 1;
         outputJournalPageFrames?: 2048;
         historyView?: 1;
+        turnQueue?: 1;
       };
     }
   | { type: "pair.failed"; message: string }
@@ -497,6 +570,8 @@ export type MobileServerEvent =
       message: string;
       clientMessageId?: string;
       requestId?: string;
+      /** The CLI already accepted this input; it must not be retried as rejected. */
+      uncertain?: true;
     }
   | {
       type: "ccRoom.approvalRequest";

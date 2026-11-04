@@ -22,5 +22,6 @@ export * from "./mobile-remote/resident-agent.js";
 export * from "./mobile-remote/room-manager.js";
 export * from "./mobile-remote/trusted-device-store.js";
 export * from "./mobile-remote/tunnel-manager.js";
+export * from "./mobile-remote/turn-queue.js";
 export * from "./mobile-remote/types.js";
 export * from "./mobile-remote/viewer-identity.js";

@@ -132,6 +132,13 @@ export interface OrchestratorCtx {
   roomModes?: RoomModeAuthority;
   /** Publish a room's authoritative mode/status to every phone and window. */
   broadcastRoomState?: (roomId: string) => void;
+  /**
+   * Set only for a Host-queued turn: its admission authority and Stop fence.
+   * Asserted synchronously immediately before the input is physically handed
+   * to a worker, runtime or CLI (and before a room/runtime is started); a throw
+   * means nothing was submitted. Ordinary sends leave it unset.
+   */
+  beforePhysicalSubmit?: () => void;
   roomMatchesTranscript: (
     roomId: string,
     cwd: string,
@@ -472,6 +479,13 @@ export async function handleClientEvent(
   if (event.type === "chat.send") {
     const sessionId = resolveSessionId(event.sessionId);
     const admission = captureMobileRunAdmission(ctx.remote, sessionId);
+    // One fence for everything not yet physically submitted. A Host-queued turn
+    // checks its queue admission first, so a Stop is reported as "paused for
+    // resume" (requeue) rather than as this direct send's rejection.
+    const assertSubmissionCurrent = (): void => {
+      ctx.beforePhysicalSubmit?.();
+      admission.assertCurrent();
+    };
     try {
       let assertHistoryCurrent: () => void;
       try {
@@ -565,7 +579,7 @@ export async function handleClientEvent(
             {
               modelKey: event.modelKey,
               permissionMode,
-              assertSubmissionCurrent: admission.assertCurrent,
+              assertSubmissionCurrent,
             },
           );
         } catch (error) {
@@ -618,7 +632,9 @@ export async function handleClientEvent(
             : ctx.resolveSessionWorkspaceRoot,
         submit: (request) => {
           try {
-            admission.assertCurrent();
+            // The final authority/Stop check; the worker injection below is
+            // synchronous, so nothing can change in between.
+            assertSubmissionCurrent();
             if (
               nativeTarget &&
               (ctx.getBridge() !== bridge || bridge.isSessionRunning?.(sessionId))

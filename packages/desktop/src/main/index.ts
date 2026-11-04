@@ -1300,7 +1300,7 @@ const roomManager = new RoomManager({
   onMessage: (roomId, msg) => {
     // Mirror to BOTH transports: phone (WS) and desktop renderer(s) (IPC), so
     // a room is dual-ended — same resident CC, same messages, either side sends.
-    mobileRemote.broadcast({ type: "room.message", roomId, msg });
+    mobileOrchestrator.broadcastRoomMessage(roomId, msg);
     for (const w of BrowserWindow.getAllWindows()) {
       if (!w.isDestroyed()) w.webContents.send("room:message", { roomId, msg });
     }

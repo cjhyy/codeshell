@@ -318,9 +318,11 @@ export interface RoomMeta {
 export type RoomOpenStatus = "running" | "missing" | "observing";
 
 /** Why a room cannot change its spawn-time permission mode right now. */
-export type RoomBusyReason = "switching" | "retiring" | "turn" | "approval";
+export type RoomBusyReason = "switching" | "retiring" | "turn" | "approval" | "queued";
 
 const ROOM_BUSY_MESSAGES: Record<RoomBusyReason, string> = {
+  queued:
+    "该 CLI 会话有排队、失败或无法确认的消息，它们按当前权限模式提交；请先在队列中处理后再切换权限模式。",
   switching: "该 CLI 会话正在切换权限模式，请稍后重试。",
   retiring:
     "该 CLI 会话的旧进程仍未确认退出；为避免两个进程同时写入同一会话，暂不启动新进程，请稍后重试。",
@@ -332,6 +334,24 @@ export class RoomBusyError extends Error {
   constructor(readonly reason: RoomBusyReason) {
     super(ROOM_BUSY_MESSAGES[reason]);
     this.name = "RoomBusyError";
+  }
+}
+
+/** Stable code of RoomInputAcceptedError; callers branch on it, never on text. */
+export const ROOM_INPUT_ACCEPTED = "ROOM_INPUT_ACCEPTED";
+
+/**
+ * The CLI accepted the input, but recording it (history, trace, echo) failed.
+ * The turn may be running: it must never be retried as if it were rejected.
+ */
+export class RoomInputAcceptedError extends Error {
+  readonly code = ROOM_INPUT_ACCEPTED;
+  constructor(cause: unknown) {
+    super(
+      `CLI 已接收这条消息，但会话记录保存失败（${cause instanceof Error ? cause.message : String(cause)}）。请先核对 CLI 会话，不要重复发送。`,
+      { cause },
+    );
+    this.name = "RoomInputAcceptedError";
   }
 }
 
@@ -614,6 +634,10 @@ export class RoomManager {
     string,
     { stamp: string; intents: Map<string, string> }
   >();
+  private hostTurnHooks: {
+    hasPendingTurns?: (roomId: string) => boolean;
+    beforeClose?: (roomId: string) => void;
+  } = {};
 
   /** Drop all pending AskUser entries for a room. Called when its agent goes
    *  away (exit/close) so a request that can no longer be answered doesn't leak
@@ -1099,6 +1123,19 @@ export class RoomManager {
    * maps until respondApproval consumes it).
    */
   roomBusyReason(id: string): RoomBusyReason | undefined {
+    const busy = this.executionBusyReason(id);
+    if (busy) return busy;
+    // A Host-held turn was submitted for the current mode. Changing the mode
+    // underneath it would run it with permissions it was not queued under.
+    return this.hostTurnHooks.hasPendingTurns?.(id) ? "queued" : undefined;
+  }
+
+  /**
+   * The room's own execution state, independent of any Host-held pending
+   * turns: an active or queued CLI input (Codex: a live turn child), a mode
+   * handoff, or an unanswered approval. A Host scheduler waits on this.
+   */
+  private executionBusyReason(id: string): RoomBusyReason | undefined {
     if (this.transitions.has(id)) return "switching";
     if (this.deferredEmitRooms.has(id)) return "turn";
     const agent = this.agents.get(id);
@@ -1109,6 +1146,32 @@ export class RoomManager {
     for (const key of this.pendingApprovalInputs.keys())
       if (key.startsWith(prefix)) return "approval";
     return undefined;
+  }
+
+  /**
+   * True while a new input must not be handed to the room: it is executing
+   * or awaiting an approval, switching modes, or a retired process may still
+   * write. Host pending turns are deliberately not counted here.
+   */
+  isExecutionBusy(id: string): boolean {
+    return this.executionBusyReason(id) !== undefined || this.retiring.has(id);
+  }
+
+  /** Mode a new input would run under: the live process mode, else the stored one. */
+  effectiveMode(id: string): RoomPermissionMode | undefined {
+    return this.liveMode(id) ?? this.getRoom(id)?.permissionMode;
+  }
+
+  /**
+   * Host pending-turn integration, installed once by the Host composition.
+   * `hasPendingTurns` blocks every mode change; `beforeClose` runs before an
+   * explicit close signals the process, so pending turns pause first.
+   */
+  setHostTurnHooks(hooks: {
+    hasPendingTurns?: (roomId: string) => boolean;
+    beforeClose?: (roomId: string) => void;
+  }): void {
+    this.hostTurnHooks = hooks;
   }
 
   /**
@@ -1445,8 +1508,7 @@ export class RoomManager {
   private async startAgent(id: string, transition?: symbol): Promise<RoomOpenStatus> {
     if (transition !== undefined && this.transitions.get(id) !== transition)
       throw new RoomStateChangedError("CLI 会话已被关闭，权限模式切换已取消。");
-    if (transition === undefined && this.transitions.has(id))
-      throw new RoomBusyError("switching");
+    if (transition === undefined && this.transitions.has(id)) throw new RoomBusyError("switching");
     const { status } = this.openAgent(id);
     if (status !== "running") return status;
     const agent = this.agents.get(id);
@@ -1831,13 +1893,21 @@ export class RoomManager {
             ?.respondControl?.(event.requestId, { behavior: "allow", updatedInput: event.input });
           break;
         }
-        this.append(id, {
-          from: "agent",
-          type: "approval",
-          tool: event.toolName,
-          summary: event.description ?? "",
-        });
-        this.pendingApprovalInputs.set(`${id}:${event.requestId}`, event.input);
+        // Record the pending approval BEFORE the message is published: anything
+        // reacting to it (e.g. a Host scheduler) must already see the room busy.
+        const approvalKey = `${id}:${event.requestId}`;
+        this.pendingApprovalInputs.set(approvalKey, event.input);
+        try {
+          this.append(id, {
+            from: "agent",
+            type: "approval",
+            tool: event.toolName,
+            summary: event.description ?? "",
+          });
+        } catch (error) {
+          this.pendingApprovalInputs.delete(approvalKey);
+          throw error;
+        }
         this.opts.onApprovalRequest?.(id, event);
         break;
       }
@@ -1983,9 +2053,26 @@ export class RoomManager {
     }
     // Counted before the buffered events replay, so a synchronous turn_end
     // settles exactly this input.
-    if (this.agents.get(id) === agent)
-      this.turnCounts.set(id, (this.turnCounts.get(id) ?? 0) + 1);
+    if (this.agents.get(id) === agent) this.turnCounts.set(id, (this.turnCounts.get(id) ?? 0) + 1);
+    try {
+      this.recordAcceptedInput(id, meta, agentText, displayText, summaries, buffered, receipt);
+    } catch (error) {
+      // The CLI already has this input. Reporting a plain failure would invite
+      // a second submission of the same turn.
+      throw new RoomInputAcceptedError(error);
+    }
+    return true;
+  }
 
+  private recordAcceptedInput(
+    id: string,
+    meta: RoomMeta,
+    agentText: string,
+    displayText: string,
+    summaries: NonNullable<RoomMessage["attachments"]>,
+    buffered: ResidentAgentEvent[],
+    receipt?: RoomInputReceipt,
+  ): void {
     if (this.opts.modelTracing) {
       try {
         let trace = this.modelTraces.get(id);
@@ -2020,10 +2107,16 @@ export class RoomManager {
     // Replay whatever the agent produced synchronously, now correctly ordered
     // after the user turn.
     for (const event of buffered) this.onAgentEvent(id, event);
-    return true;
   }
 
   close(id: string): void {
+    // Stopping is the current turn only: Host-held turns pause BEFORE the
+    // process is signalled, so the idle boundary cannot start the next one.
+    try {
+      this.hostTurnHooks.beforeClose?.(id);
+    } catch {
+      // Bookkeeping must never keep a process alive.
+    }
     // An explicit close cancels a pending mode handoff: the handoff checks its
     // token before starting the replacement, so it can never reopen the room.
     // The retired-process fence is deliberately kept: until the old process is

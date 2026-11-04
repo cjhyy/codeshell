@@ -763,6 +763,7 @@ function startupHarness() {
   let authenticated = true;
   let stamp = "mounted-root-v1";
   let duringStart = () => {};
+  let beforeStart: (() => Promise<void>) | undefined;
   const started: string[] = [];
   let accepted = 0;
   const authority = () => {
@@ -799,6 +800,7 @@ function startupHarness() {
     attachmentPath: async (path) => path,
     modelKey: () => modelKey,
     startRuntime: async (request) => {
+      if (beforeStart) await beforeStart();
       duringStart();
       request.assertCurrent();
       started.push(request.modelKey);
@@ -837,6 +839,9 @@ function startupHarness() {
         stamp = "replaced-root";
       };
     },
+    beforeStart: (fn: () => Promise<void>) => {
+      beforeStart = fn;
+    },
     switchAtStart: () => {
       duringStart = () => commands.revoke("tab");
     },
@@ -855,6 +860,38 @@ test("a Host-created mobile session starts the chosen external runtime and submi
   expect(target.modelKey).toBe("codex/test");
   expect(await target.submit(f.request)).toEqual({ ok: true });
   expect(f.accepted()).toBe(1);
+});
+
+test("a queued Stop during external startup prevents the replacement runtime and input", async () => {
+  const f = startupHarness();
+  f.restore();
+  await f.select();
+  let release!: () => void;
+  let preparing!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    preparing = resolve;
+  });
+  const waiting = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  f.beforeStart(async () => {
+    preparing();
+    await waiting;
+  });
+  let current = true;
+  const pending = f.commands.prepare("tab", "phone", "mobile-new", {
+    modelKey: "codex/test",
+    permissionMode: "bypassPermissions",
+    assertSubmissionCurrent: () => {
+      if (!current) throw new Error("queued turn stopped");
+    },
+  });
+  await ready;
+  current = false;
+  release();
+  await expect(pending).rejects.toThrow("queued turn stopped");
+  expect(f.started).toEqual([]);
+  expect(f.accepted()).toBe(0);
 });
 
 test("selecting a saved external Session can restart its persisted runtime after Desktop restart", async () => {

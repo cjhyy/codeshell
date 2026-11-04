@@ -519,6 +519,34 @@ button.workspace-button:hover {
   margin-left: auto;
   white-space: nowrap;
 }
+.topbar-badges {
+  display: inline-flex;
+  flex-shrink: 1;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+.topbar-badge {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.topbar-badge.accent {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--accent);
+}
+.topbar-badge.warning {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
+  color: var(--warning);
+}
+.topbar-badges + .connection-pill {
+  margin-left: 0;
+}
 .sidebar-backdrop {
   display: none;
 }
@@ -612,6 +640,10 @@ button.workspace-button:hover {
   flex-direction: column;
   gap: var(--transcript-gap);
   margin: 0 auto;
+}
+/* Long code/tool output scrolls inside its own block, never the whole page. */
+.transcript > * {
+  min-width: 0;
 }
 .chat-empty .messages {
   display: flex;
@@ -847,6 +879,50 @@ button.composer-submit {
   color: var(--text);
   background: var(--panel);
   border: 1px solid var(--border);
+}
+.composer-submit-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+.composer-submit-group button.composer-submit {
+  margin-left: 0;
+}
+/* Queue while busy: same footprint as send, quieter than the primary action. */
+.composer-submit.send.queue {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+.composer-run-status[data-state] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.composer-run-status[data-state]::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  vertical-align: 1px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: run-pulse 1.4s ease-in-out infinite;
+}
+.composer-run-status[data-state="waiting"] {
+  color: var(--warning);
+}
+.composer-run-status[data-state="waiting"]::before {
+  background: var(--warning);
+  animation: none;
+}
+@keyframes run-pulse {
+  50% {
+    opacity: 0.3;
+  }
 }
 .composer-caption {
   display: flex;
@@ -1196,9 +1272,22 @@ button.ghost:hover:not(:disabled) {
     padding-bottom: max(12px, env(safe-area-inset-bottom));
   }
   .workbench-topbar {
-    padding: 0 12px;
+    padding: env(safe-area-inset-top) max(12px, env(safe-area-inset-right)) 0
+      max(12px, env(safe-area-inset-left));
     gap: 8px;
-    height: 50px;
+    height: calc(50px + env(safe-area-inset-top));
+  }
+  .workbench-topbar .topbar-badge.neutral {
+    display: none;
+  }
+  /* Phone touch minimum; the title column absorbs the space, never the controls. */
+  .workbench-topbar > .icon-button {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+  }
+  .workbench-topbar .connection-pill {
+    flex-shrink: 0;
   }
   .panel-project-switcher,
   .panel-session-context {
@@ -1211,13 +1300,25 @@ button.ghost:hover:not(:disabled) {
     --transcript-gap: 16px;
   }
   .msg {
-    font-size: 14px;
+    font-size: 15px;
+    line-height: 1.72;
   }
   .msg.user {
     max-width: 92%;
+    padding: 9px 14px;
+    border-radius: 16px 16px 6px 16px;
   }
   .composer-wrap {
-    padding: 8px 10px max(8px, env(safe-area-inset-bottom));
+    padding: 8px max(10px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left));
+  }
+  .attachment button.ghost,
+  .banner .ghost {
+    min-width: 32px;
+    min-height: 32px;
+  }
+  .approval-actions button {
+    min-height: 44px;
   }
   .chat-empty .composer-wrap {
     margin-bottom: clamp(18px, 10vh, 80px);
@@ -1282,7 +1383,8 @@ button.ghost:hover:not(:disabled) {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cursor {
+  .cursor,
+  .composer-run-status[data-state]::before {
     animation: none;
   }
   .composer {
