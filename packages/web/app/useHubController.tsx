@@ -865,7 +865,7 @@ export function useHubController({
     // A submission awaiting delivery confirmation (in any session) exists only
     // in this page's memory until the Hub confirms it, like an unsent draft.
     hasUnsent: draftStore.current.unsent().length > 0 || uncertainSubmissions.current.size > 0,
-    localDrafts,
+    localDrafts: localDrafts.map((item) => ({ ...item, cwd: workspaceCwd })),
     uncertain: uncertainSubmissions.current.has(activeId),
     running,
     approvals: Object.values(approvalState).map((a) => ({

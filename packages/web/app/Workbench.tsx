@@ -409,7 +409,7 @@ export function Workbench({
   const openSession = (
     id: string,
     intent?: ReturnType<typeof historyFocus.capture>,
-    cwd?: string,
+    cwd?: string | null,
   ) => {
     if (historyHandoff.current) historyFocus.finish(historyHandoff.current.request, null);
     historyHandoff.current = null;
@@ -423,7 +423,7 @@ export function Workbench({
       };
     openConversation(
       () => void controller.selectSession(id),
-      cwd ?? sessions.find((item) => item.sessionId === id)?.cwd,
+      cwd !== undefined ? cwd : sessions.find((item) => item.sessionId === id)?.cwd,
     );
   };
   const startNewSession = () => openConversation(controller.newSession);
@@ -728,13 +728,13 @@ export function Workbench({
             conversation: openConversation,
           })}
           <ul className="sessions" aria-label="最近对话">
-            {localDrafts.map(({ sessionId, draft: pendingDraft }) => (
+            {localDrafts.map(({ sessionId, draft: pendingDraft, cwd }) => (
               <li key={`draft-${sessionId}`}>
                 <button
                   className={
                     sessionId === activeId && view === "chat" ? "session active" : "session"
                   }
-                  onClick={() => void openSession(sessionId)}
+                  onClick={() => void openSession(sessionId, undefined, cwd)}
                 >
                   <span className="session-title">
                     {pendingDraft.text.trim() || `附件：${pendingDraft.files[0]?.name ?? "新对话"}`}

@@ -50,7 +50,7 @@ export interface WorkbenchController {
   hasUnsent: boolean;
   uncertain: boolean;
   running: boolean;
-  localDrafts: Array<{ sessionId: string; draft: ComposerDraft }>;
+  localDrafts: Array<{ sessionId: string; draft: ComposerDraft; cwd?: string | null }>;
   approvals: Array<{ id: string; sessionId?: string; asynchronous?: boolean }>;
   approvalCount: (sessionId: string) => number;
   approvalContent: React.ReactNode;

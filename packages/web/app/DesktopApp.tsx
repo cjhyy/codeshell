@@ -850,7 +850,11 @@ export function useDesktopController(
     setError("");
   };
   const localDrafts = React.useMemo(
-    () => drafts.current.unsent().filter((item) => item.sessionId.startsWith("desktop-new-")),
+    () =>
+      drafts.current
+        .unsent()
+        .filter((item) => item.sessionId.startsWith("desktop-new-"))
+        .map((item) => ({ ...item, cwd: draftWorkspaces.current.get(item.sessionId) ?? null })),
     [draftRevision],
   );
   const selectSession = (id: string) => {

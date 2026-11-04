@@ -765,6 +765,9 @@ describe("Desktop workbench controller", () => {
       hook.result.current.newSession();
     });
     expect(hook.result.current.workspaceCwd).toBe("/project-b");
+    expect(hook.result.current.localDrafts.find((item) => item.sessionId === originalId)?.cwd).toBe(
+      "/project-a",
+    );
     await act(async () => {
       hook.result.current.selectSession(originalId);
     });
@@ -773,6 +776,138 @@ describe("Desktop workbench controller", () => {
     expect(hook.result.current.draft).toBe("belongs to project A");
     await hook.unmount();
   });
+
+  test.each(["/draft-project", null])(
+    "opening a local draft in %s confirms before retiring the retained Panel",
+    async (draftCwd) => {
+      ensureMiniDom();
+      let location = new URL("http://localhost/mobile/");
+      let accept = false;
+      const confirmations: string[] = [];
+      const history = {
+        state: null as unknown,
+        replaceState(state: unknown, _unused: string, url: string) {
+          this.state = state;
+          location = new URL(url, location);
+        },
+        pushState(state: unknown, unused: string, url: string) {
+          this.replaceState(state, unused, url);
+        },
+      };
+      for (const [key, descriptor] of [
+        ["location", { get: () => location }],
+        ["history", { value: history }],
+        [
+          "matchMedia",
+          { value: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }) },
+        ],
+        [
+          "confirm",
+          {
+            value: (message: string) => {
+              confirmations.push(message);
+              return accept;
+            },
+          },
+        ],
+      ] as const) {
+        const previous = Object.getOwnPropertyDescriptor(window, key);
+        Object.defineProperty(window, key, { configurable: true, ...descriptor });
+        browserRestores.push(() =>
+          previous ? Object.defineProperty(window, key, previous) : delete (window as any)[key],
+        );
+      }
+      const creates: unknown[] = [];
+      const app = remoteApp({
+        activeCwd: draftCwd,
+        projects: [
+          { id: "draft", name: "Draft", path: "/draft-project" },
+          { id: "current", name: "Current", path: "/current-project" },
+        ],
+        newSession: (target) => creates.push(target),
+      });
+      const hook = await renderHook(() => {
+        const controller = useDesktopController(app, undefined, noop);
+        return {
+          controller,
+          tree: Workbench({ controller: { ...controller, workspaceApi: true } }),
+        };
+      });
+      const elements = () => workbenchElements(hook.result.current.tree);
+      const draftButton = () =>
+        elements().find(
+          (element) =>
+            element.type === "button" &&
+            workbenchElements(element.props.children).some(
+              (child) => child.type === "span" && child.props.children === "Original local draft",
+            ),
+        );
+      try {
+        const originalId = hook.result.current.controller.activeId;
+        await act(async () => {
+          hook.result.current.controller.setDraft("Original local draft");
+        });
+        await act(async () => {
+          hook.result.current.controller.selectProject!("current");
+        });
+        expect(hook.result.current.controller.workspaceCwd).toBe("/current-project");
+        expect(
+          hook.result.current.controller.localDrafts.find((item) => item.sessionId === originalId)
+            ?.cwd,
+        ).toBe(draftCwd);
+        await act(async () => {
+          const nav = elements().find(
+            (element) =>
+              element.type === "button" &&
+              workbenchElements(element.props.children).some(
+                (child) => child.type === "span" && child.props.children === "面板",
+              ),
+          );
+          nav!.props.onClick();
+        });
+        await act(async () => {
+          elements()
+            .find((element) => element.type === HubPanels)!
+            .props.onOpen({
+              id: "retained-panel",
+              title: { default: "Panel" },
+              version: "1.0.0",
+              entry: "index.html",
+              icon: "panel",
+              singleton: true,
+              permissions: ["context.session"],
+              revision: "revision",
+              bound: true,
+              enabled: true,
+              globalDisabled: false,
+              updatable: false,
+              source: { kind: "local", label: "Fixture" },
+              compatibility: { supported: true, reasons: [] },
+            });
+        });
+        const panelKey = elements().find((element) => element.type === PanelHost)!.key;
+        creates.length = 0;
+        await act(async () => {
+          draftButton()!.props.onClick();
+        });
+        expect(confirmations).toHaveLength(1);
+        expect(creates).toEqual([]);
+        expect(hook.result.current.controller.workspaceCwd).toBe("/current-project");
+        expect(elements().find((element) => element.type === PanelHost)!.key).toBe(panelKey);
+        accept = true;
+        await act(async () => {
+          draftButton()!.props.onClick();
+        });
+        expect(confirmations).toHaveLength(2);
+        expect(creates).toEqual([{ projectId: draftCwd === null ? null : "draft" }]);
+        expect(hook.result.current.controller.workspaceCwd).toBe(draftCwd);
+        expect(hook.result.current.controller.draft).toBe("Original local draft");
+        expect(elements().some((element) => element.type === PanelHost)).toBe(false);
+      } finally {
+        await hook.unmount();
+      }
+    },
+  );
 
   test("failed send restores text and images and keeps later edits after them", async () => {
     let pending = deferred<boolean>();
