@@ -121,7 +121,7 @@ function createHarness(options: {
     sendMobilePermissionMode: () => undefined,
     sendSelectedMobilePermissionModes: () => undefined,
     replayPendingMobileApprovals: () => undefined,
-    broadcastDesktopPermissionMode: () => undefined,
+    broadcastDesktopSessionSettings: () => undefined,
     broadcastMobileSession: () => undefined,
     broadcastApprovalResolved: () => undefined,
     pendingApprovals,

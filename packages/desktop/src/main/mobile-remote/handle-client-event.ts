@@ -100,7 +100,12 @@ export interface OrchestratorCtx {
   sendMobilePermissionMode: (deviceId: string | undefined, sessionId: string) => void;
   sendSelectedMobilePermissionModes: () => void;
   replayPendingMobileApprovals: (sessionId: string, deviceId?: string) => void;
-  broadcastDesktopPermissionMode: (params: { sessionId: string; mode: PermissionMode }) => void;
+  /** Mirrors Host-accepted phone choices onto the Desktop Session's composer. */
+  broadcastDesktopSessionSettings: (params: {
+    sessionId: string;
+    permissionMode?: PermissionMode;
+    modelKey?: string;
+  }) => void;
   broadcastMobileSession: (meta: {
     sessionId: string;
     cwd: string;
@@ -424,7 +429,7 @@ export async function handleClientEvent(
     const sessionId = nextState.sessionId!;
     ctx.mobileSessionCwds.set(sessionId, st.selectedCwd ?? null);
     ctx.mobilePermissionModes.set(sessionId, st.permissionMode!);
-    ctx.broadcastDesktopPermissionMode({ sessionId, mode: st.permissionMode! });
+    ctx.broadcastDesktopSessionSettings({ sessionId, permissionMode: st.permissionMode! });
     reply({
       type: "chat.accepted",
       ...(event.clientRequestId ? { clientRequestId: event.clientRequestId } : {}),
@@ -544,7 +549,7 @@ export async function handleClientEvent(
     }
     const fallbackCwd = nativeTarget?.cwd ?? externalTarget?.cwd ?? ctx.effectiveMobileRunCwd(st);
     ctx.mobilePermissionModes.set(sessionId, permissionMode);
-    ctx.broadcastDesktopPermissionMode({ sessionId, mode: permissionMode });
+    ctx.broadcastDesktopSessionSettings({ sessionId, permissionMode });
     const text = typeof event.text === "string" ? event.text.trim() : "";
     const runId = `mobile-run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     const dispatched = await dispatchMobileChatTurn({
@@ -623,6 +628,12 @@ export async function handleClientEvent(
       return;
     }
     ctx.mobileSessionCwds.set(sessionId, dispatched.cwd);
+    // The phone's model choice is a next-turn intent until the Host accepts the
+    // turn on it. Mirror it before the announcement so Desktop adopts it even
+    // for a Session it has not placed yet.
+    const acceptedModelKey = externalTarget?.modelKey ?? nativeTarget?.nativeConnectionId;
+    if (acceptedModelKey)
+      ctx.broadcastDesktopSessionSettings({ sessionId, modelKey: acceptedModelKey });
     const title = text || `图片 ${dispatched.metas.length} 张`;
     ctx.broadcastMobileSession({
       sessionId,
@@ -887,7 +898,7 @@ export async function handleClientEvent(
     if (sessionId) {
       ctx.mobilePermissionModes.set(sessionId, event.mode);
       ctx.sendSelectedMobilePermissionModes();
-      ctx.broadcastDesktopPermissionMode({ sessionId, mode: event.mode });
+      ctx.broadcastDesktopSessionSettings({ sessionId, permissionMode: event.mode });
     } else {
       // No session is bound yet; keep this as the preset for the next mobile
       // session this device creates, then promote it into the session map.

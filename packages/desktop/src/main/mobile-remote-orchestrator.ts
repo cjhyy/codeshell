@@ -326,13 +326,14 @@ export class MobileRemoteOrchestrator {
     }
   }
 
-  private broadcastDesktopPermissionMode(params: {
+  private broadcastDesktopSessionSettings(params: {
     sessionId: string;
-    mode: PermissionMode;
+    permissionMode?: PermissionMode;
+    modelKey?: string;
   }): void {
     const line = JSON.stringify({
       jsonrpc: "2.0",
-      method: "agent/mobilePermissionMode",
+      method: "agent/mobileSessionSettings",
       params,
     });
     this.deps.broadcastToWindows("agent:msg", line);
@@ -482,7 +483,7 @@ export class MobileRemoteOrchestrator {
       sendSelectedMobilePermissionModes: () => this.sendSelectedMobilePermissionModes(),
       replayPendingMobileApprovals: (sessionId, deviceId) =>
         this.replayPendingMobileApprovals(sessionId, deviceId),
-      broadcastDesktopPermissionMode: (params) => this.broadcastDesktopPermissionMode(params),
+      broadcastDesktopSessionSettings: (params) => this.broadcastDesktopSessionSettings(params),
       broadcastMobileSession: (meta) => this.broadcastMobileSession(meta),
       broadcastApprovalResolved: (params) => this.broadcastApprovalResolved(params),
       roomToPublic: (room) => this.roomToPublic(room),

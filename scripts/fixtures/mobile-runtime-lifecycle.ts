@@ -164,7 +164,7 @@ export async function runRuntimeLifecycle(root: string) {
   });
   const models = new ExternalRuntimeModelService({ isEnabled: () => true });
   const states = new Map();
-  const permissionBroadcasts: Parameters<OrchestratorCtx["broadcastDesktopPermissionMode"]>[0][] =
+  const settingsBroadcasts: Parameters<OrchestratorCtx["broadcastDesktopSessionSettings"]>[0][] =
     [];
   context = {
     remote,
@@ -191,9 +191,9 @@ export async function runRuntimeLifecycle(root: string) {
     sendMobilePermissionMode: (id: string, sessionId: string) =>
       remote.sendToDevice(id, { type: "permission.mode", sessionId, mode: "default" }),
     replayPendingMobileApprovals() {},
-    broadcastDesktopPermissionMode: (mode) => permissionBroadcasts.push(mode),
+    broadcastDesktopSessionSettings: (settings) => settingsBroadcasts.push(settings),
     broadcastMobileSession() {},
-  } satisfies Pick<OrchestratorCtx, "broadcastDesktopPermissionMode"> &
+  } satisfies Pick<OrchestratorCtx, "broadcastDesktopSessionSettings"> &
     Record<string, unknown> as unknown as OrchestratorCtx;
   const requests = () =>
     readFileSync(process.env.CODESHELL_OUTPUT_REQUEST_LOG!, "utf8")
@@ -373,10 +373,18 @@ export async function runRuntimeLifecycle(root: string) {
         (event) => event.type === "chat.accepted" && event.clientRequestId === clientRequestId,
       );
       const id = created.sessionId;
-      assert.deepEqual(permissionBroadcasts.at(-1), { sessionId: id, mode: "default" });
+      assert.deepEqual(settingsBroadcasts.at(-1), { sessionId: id, permissionMode: "default" });
       const before = turns();
       await submit(id, "lifecycle initial", modelKey);
-      assert.deepEqual(permissionBroadcasts.at(-1), { sessionId: id, mode: "default" });
+      assert.deepEqual(settingsBroadcasts.filter((item) => item.permissionMode).at(-1), {
+        sessionId: id,
+        permissionMode: "default",
+      });
+      // Desktop follows the runtime the phone's accepted turn actually started.
+      assert.deepEqual(settingsBroadcasts.filter((item) => item.modelKey).at(-1), {
+        sessionId: id,
+        modelKey,
+      });
       await until(() => idle(id));
       process.env.CODESHELL_OUTPUT_PARTS = "1";
       assert.equal(turns(), before + 1);

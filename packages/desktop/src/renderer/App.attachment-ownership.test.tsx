@@ -243,7 +243,7 @@ function installBridge() {
       onMobileSession: off,
       onApprovalRequest: off,
       onApprovalResolved: off,
-      onMobilePermissionMode: off,
+      onMobileSessionSettings: off,
       onStatus: off,
       onAgentLifecycle: off,
       onWorktreeCleanupSkipped: off,

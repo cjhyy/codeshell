@@ -1009,6 +1009,7 @@ function App() {
       setQuickChatSessions,
       setCollapsedProjects,
       setRevealedSessionIds,
+      setModelOverrides,
     },
     activity: { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys },
   });

@@ -160,7 +160,7 @@ export async function run(root: string, port: number) {
     commands.revoke(viewerId, true);
   });
   const states = new Map();
-  const permissionBroadcasts: Parameters<OrchestratorCtx["broadcastDesktopPermissionMode"]>[0][] =
+  const settingsBroadcasts: Parameters<OrchestratorCtx["broadcastDesktopSessionSettings"]>[0][] =
     [];
   context = {
     outputRecovery: recovery,
@@ -184,7 +184,7 @@ export async function run(root: string, port: number) {
     effectiveMobileRunCwd: () => cwd,
     resolveSessionWorkspaceRoot: async () => cwd,
     sendMobilePermissionMode() {},
-    broadcastDesktopPermissionMode: (mode) => permissionBroadcasts.push(mode),
+    broadcastDesktopSessionSettings: (settings) => settingsBroadcasts.push(settings),
     replayPendingMobileApprovals() {},
     broadcastMobileSession() {},
     uploads: {
@@ -194,7 +194,7 @@ export async function run(root: string, port: number) {
       async release() {},
       async finalize() {},
     },
-  } satisfies Pick<OrchestratorCtx, "broadcastDesktopPermissionMode"> &
+  } satisfies Pick<OrchestratorCtx, "broadcastDesktopSessionSettings"> &
     Record<string, unknown> as unknown as OrchestratorCtx;
   const requests = () => {
     try {
@@ -372,9 +372,9 @@ export async function run(root: string, port: number) {
           .map(({ event }) => ({ type: (event as any).type, message: (event as any).message })),
       }),
     );
-    assert.deepEqual(permissionBroadcasts.at(-1), {
+    assert.deepEqual(settingsBroadcasts.filter((item) => item.permissionMode).at(-1), {
       sessionId: "external-mobile",
-      mode: "default",
+      permissionMode: "default",
     });
     await until(
       () => text() === expected.repeat(3) && hook.result.current.chat.run === "completed",
