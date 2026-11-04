@@ -3,7 +3,7 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
-import { PagedText, textPage, needsPagedMarkdown } from "./PagedText";
+import { PagedText, textPage, previousTextOffset, needsPagedMarkdown } from "./PagedText";
 import { Markdown } from "../Markdown";
 import { StreamingMarkdown } from "../messages/StreamingMarkdown";
 
@@ -84,6 +84,69 @@ test("paging replaces rows, preserves absolute line numbers and exposes the fina
     await next();
     expect(content(rows().at(-1))).toBe("row-605");
     expect(rows()).toHaveLength(5);
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+test("backward pages retain every character within the row and character bounds", () => {
+  const source = "a".repeat(32767) + "😀" + "\n" + "line\n".repeat(1200) + "tail";
+  let end = source.length;
+  let restored = "";
+  while (end > 0) {
+    const start = previousTextOffset(source, end);
+    const page = textPage(source, start, end);
+    expect(page.end).toBe(end);
+    expect(page.value.length).toBeLessThanOrEqual(32768);
+    expect(page.newlines).toBeLessThanOrEqual(300);
+    expect(start).toBeLessThan(end);
+    expect(page.value.startsWith("\ude00")).toBe(false);
+    restored = page.value + restored;
+    end = start;
+  }
+  expect(restored).toBe(source);
+});
+
+test("long streamed output follows the tail, pauses for paging, and keeps the tail at completion", async () => {
+  ensureMiniDom();
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  let text = "historical row with more than thirty characters\n".repeat(800) + "original-tail";
+  const render = async (done = false) => {
+    await act(async () => {
+      root.render(<StreamingMarkdown text={text} done={done} />);
+      await flushMicrotasks();
+    });
+  };
+  const displayed = () => content(nodes(container).find((n) => n.tagName?.toLowerCase() === "pre"));
+  const click = async (labels: string[]) => {
+    const button = nodes(container).find(
+      (n) => n.tagName?.toLowerCase() === "button" && labels.includes(content(n)),
+    );
+    const key = Object.keys(button).find((key) => key.startsWith("__reactProps$"))!;
+    await act(async () => {
+      button[key].onClick();
+      await flushMicrotasks();
+    });
+  };
+  try {
+    await render();
+    expect(displayed()).toEndWith("original-tail");
+    text += "\nnew-output";
+    await render();
+    expect(displayed()).toEndWith("new-output");
+    expect(displayed().length).toBeLessThanOrEqual(32768);
+    expect(displayed().split("\n").length).toBeLessThanOrEqual(301);
+    await click(["上一页", "Previous page"]);
+    const earlier = displayed();
+    text += "\noutput-while-reading-history";
+    await render();
+    expect(displayed()).toBe(earlier);
+    await click(["最新输出", "Latest output"]);
+    expect(displayed()).toEndWith("output-while-reading-history");
+    await render(true);
+    expect(displayed()).toEndWith("output-while-reading-history");
+    expect(nodes(container).length).toBeLessThan(40);
   } finally {
     await act(async () => root.unmount());
   }

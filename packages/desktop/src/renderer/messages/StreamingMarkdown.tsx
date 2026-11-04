@@ -51,7 +51,7 @@ export function StreamingMarkdown({
   streamingRichRender = true,
 }: StreamingMarkdownProps) {
   if (text === "") return null;
-  if (needsPagedMarkdown(text)) return <PagedText text={text} sourceNotice />;
+  if (needsPagedMarkdown(text)) return <PagedText text={text} sourceNotice live={!done} />;
   if (done) {
     return (
       <Markdown
