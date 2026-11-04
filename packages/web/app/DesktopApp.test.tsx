@@ -90,6 +90,175 @@ afterEach(() => {
 });
 
 describe("Desktop workbench controller", () => {
+  test("explicit Panel selection waits for history and preserves each conversation's draft", async () => {
+    const selections: string[] = [];
+    let app = remoteApp({
+      activeCwd: "/owned/A",
+      activeSessionId: "native-a",
+      sessions: ["native-a", "native-b"].map((id) => ({
+        id,
+        title: id,
+        cwd: "/owned/A",
+        updatedAt: 1,
+      })),
+      selectSession: (id) => selections.push(id),
+    });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      await act(async () => hook.result.current.setDraft("Draft in A"));
+      let result: string | undefined;
+      let selection!: Promise<string>;
+      await act(async () => {
+        selection = hook.result.current.selectPanelSession!("native-b");
+        void selection.then((id) => {
+          result = id;
+        });
+      });
+      expect(selections).toEqual(["native-b"]);
+      expect(result).toBeUndefined();
+      app = {
+        ...app,
+        activeSessionId: "native-b",
+        loading: { ...app.loading, sessionHistory: true },
+      };
+      await hook.rerender();
+      expect(result).toBeUndefined();
+      app = { ...app, loading: { ...app.loading, sessionHistory: false } };
+      await hook.rerender();
+      expect(await selection).toBe("native-b");
+      expect(hook.result.current.draft).toBe("");
+      await act(async () => hook.result.current.setDraft("Draft in B"));
+      await act(async () => {
+        hook.result.current.selectSession("native-a");
+      });
+      app = { ...app, activeSessionId: "native-a" };
+      await hook.rerender();
+      expect(hook.result.current.draft).toBe("Draft in A");
+      await act(async () => {
+        hook.result.current.selectSession("native-b");
+      });
+      app = { ...app, activeSessionId: "native-b" };
+      await hook.rerender();
+      expect(hook.result.current.draft).toBe("Draft in B");
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test.each(["history", "disconnect", "navigation"])(
+    "explicit Panel selection rejects %s instead of resolving the old session",
+    async (failure) => {
+      let app = remoteApp({
+        activeCwd: "/owned/A",
+        activeSessionId: "native-a",
+        sessions: ["native-a", "native-b"].map((id) => ({
+          id,
+          title: id,
+          cwd: "/owned/A",
+          updatedAt: 1,
+        })),
+      });
+      const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+      try {
+        let selection!: Promise<string | Error>;
+        await act(async () => {
+          selection = hook.result.current.selectPanelSession!("native-b").catch((error) => error);
+        });
+        if (failure === "navigation") {
+          await act(async () => {
+            hook.result.current.selectSession("native-a");
+          });
+        } else {
+          app =
+            failure === "disconnect"
+              ? { ...app, status: "offline" }
+              : { ...app, activeSessionId: "native-b", outputHistoryFailed: true };
+        }
+        await hook.rerender();
+        expect(await selection).toBeInstanceOf(Error);
+      } finally {
+        await hook.unmount();
+      }
+    },
+  );
+
+  test("Panel association refuses unknown and cross-root sessions without navigating", async () => {
+    const selections: string[] = [];
+    const app = remoteApp({
+      activeCwd: "/owned/A",
+      activeSessionId: "native-a",
+      projects: [
+        {
+          id: "project-a",
+          name: "A",
+          path: "/owned/A",
+          roots: [
+            { id: "a", name: "A", path: "/owned/A" },
+            { id: "b", name: "B", path: "/owned/B" },
+          ],
+        },
+      ],
+      sessions: [{ id: "native-b", title: "B", cwd: "/owned/B", updatedAt: 1 }],
+      selectSession: (id) => selections.push(id),
+    });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      await expect(hook.result.current.selectPanelSession!("unknown-id")).rejects.toThrow(
+        "当前项目",
+      );
+      await expect(hook.result.current.selectPanelSession!("native-b")).rejects.toThrow(
+        "另一个项目目录",
+      );
+      expect(selections).toEqual([]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test.each(["accepted", "rejected"])(
+    "Panel creation returns only its new Host ID (%s)",
+    async (outcome) => {
+      const creates: unknown[] = [];
+      let app = remoteApp({
+        activeCwd: "/owned/A",
+        activeProjectCwd: "/owned/A",
+        activeSessionId: "native-a",
+        projects: [{ id: "project-a", name: "A", path: "/owned/A" }],
+        newSession: (target) => creates.push(target),
+      });
+      const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+      try {
+        let value: string | Error | undefined;
+        let creation!: Promise<string | Error>;
+        await act(async () => {
+          hook.result.current.setDraft("Keep old draft");
+          creation = hook.result.current.newPanelSession!().catch((error) => error);
+          void creation.then((result) => {
+            value = result;
+          });
+        });
+        expect(creates).toEqual([{ projectId: "project-a" }]);
+        expect(value).toBeUndefined();
+        expect(hook.result.current.panelSessionId).toBeUndefined();
+        app =
+          outcome === "accepted"
+            ? { ...app, activeSessionId: "native-created" }
+            : { ...app, sessionCreationFailures: 1 };
+        await hook.rerender();
+        if (outcome === "accepted") {
+          expect(await creation).toBe("native-created");
+          expect(hook.result.current.draft).toBe("");
+        } else {
+          expect(await creation).toBeInstanceOf(Error);
+          expect(hook.result.current.panelSessionId).toBeUndefined();
+          expect(hook.result.current.draft).toBe("Keep old draft");
+        }
+      } finally {
+        await hook.unmount();
+      }
+    },
+  );
+
   test("Panel project selection reuses Desktop navigation and never borrows the old session during creation", async () => {
     const projects = [
       { id: "project-a", name: "Project A", path: "/owned/A" },
@@ -241,13 +410,15 @@ describe("Desktop workbench controller", () => {
         );
         expect(panel).toBeDefined();
         expect(panel!.props.sessionId).toBe(canonical);
-        expect(panel!.key).toContain(activeId);
+        expect(panel!.key).toBe(
+          `${hook.result.current.controller.workspaceKey}:panel:synthetic-panel`,
+        );
         expect(hook.result.current.controller.activeId).toBe(activeId);
         if (!canonical) {
           for (const sessionId of new Set([activeId, "native-previous"]))
             await expect(
               panel!.props.onSubmitPrompt({ prompt: "Must not send", sessionId }),
-            ).rejects.toThrow("当前工作区或对话已经变化");
+            ).rejects.toThrow();
           expect(hook.result.current.controller.draft).toBe("");
         }
         expect(sent).toEqual([]);

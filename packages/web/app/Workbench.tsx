@@ -9,6 +9,8 @@ import { HubSessions, useHistoryActionFocus } from "./HubSessions.js";
 import { HubLinks } from "./HubLinks.js";
 import { HubPanels } from "./HubPanels.js";
 import { PanelHost } from "./PanelHost.js";
+import { PanelSessionBar } from "./PanelSessionBar.js";
+import type { ManagedPanel } from "../../server/src/panels/types.js";
 import { MessageContent, subagentStatusLabel } from "./MessageContent.js";
 import { sessionTitle } from "./chat.js";
 import type { WorkbenchController, WorkbenchNavigation } from "./workbench-types.js";
@@ -35,7 +37,7 @@ export function submitWorkbenchPanelPrompt(
     request.sessionId !== controller.panelSessionId ||
     request.sessionId !== controller.activeId
   )
-    throw new Error("当前工作区或对话已经变化，请重新打开面板后发送。");
+    throw new Error("当前工作区或对话已经变化，请先打开面板关联的对话，再返回面板发送。");
   if (controller.connection !== "open" || controller.loading)
     throw new Error("工作台尚未连接，请连接后重新发送面板任务。");
   if (controller.readOnly) throw new Error("当前对话为只读，无法发送面板任务。");
@@ -134,9 +136,48 @@ export function Workbench({
   } = navigation;
   const view = route.view;
   const settingsSection = route.section ?? "overview";
-  const openedPanel = route.panel
-    ? { panel: route.panel, workspaceKey: controller.workspaceKey }
-    : undefined;
+  // A Panel belongs to the project and conversation selected when it was opened,
+  // not whichever conversation the user happens to be reading now.
+  const [retainedPanel, setRetainedPanel] = React.useState<{
+    panel: ManagedPanel;
+    workspaceKey: string;
+    sessionId?: string;
+    sessionTitle: string;
+  }>();
+  const openedPanel =
+    retainedPanel?.workspaceKey === controller.workspaceKey ? retainedPanel : undefined;
+  const openedPanelRef = React.useRef(openedPanel);
+  openedPanelRef.current = openedPanel;
+  const [pageDirty, setPageDirty] = React.useState(false);
+  const [panelDirty, setPanelDirty] = React.useState(false);
+  const [bindingPending, setBindingPending] = React.useState("");
+  const [bindingError, setBindingError] = React.useState("");
+  const bindingOperation = React.useRef(0);
+  const panelEntrySession = React.useRef<
+    { workspace: string; sessionId?: string; title: string } | undefined
+  >(undefined);
+  const panelVisible =
+    view === "panel" &&
+    !!openedPanel &&
+    route.panel?.id === openedPanel.panel.id &&
+    route.panel.revision === openedPanel.panel.revision;
+  React.useEffect(() => {
+    setNavigationDirty(pageDirty || (panelVisible && panelDirty));
+  }, [pageDirty, panelVisible, panelDirty, setNavigationDirty]);
+  React.useEffect(() => {
+    bindingOperation.current++;
+    setRetainedPanel(undefined);
+    setBindingPending("");
+    setBindingError("");
+    setPanelDirty(false);
+    setPageDirty(false);
+    panelEntrySession.current = undefined;
+  }, [controller.workspaceKey]);
+  React.useEffect(() => {
+    // Browser history may refer to an instance that was explicitly replaced.
+    // Never silently recreate that old grant or reuse its conversation binding.
+    if (view === "panel" && !panelVisible) navigation.replace({ view: "panels" });
+  }, [view, panelVisible]);
   const setView = (view: typeof route.view) => navigation.navigate({ view });
   const [narrow, setNarrow] = React.useState(() => window.matchMedia("(max-width: 760px)").matches);
   const [sidebarOpen, setSidebarOpen] = React.useState(
@@ -324,23 +365,52 @@ export function Workbench({
   openFilesHandler.current = openFiles;
   const openMessageFile = React.useCallback((path: string) => openFilesHandler.current(path), []);
   React.useEffect(() => {
-    if (!navigationDirty && !controller.uploadBusy && !controller.hasUnsent) return;
+    if (
+      !navigationDirty &&
+      !openedPanel &&
+      !panelDirty &&
+      !bindingPending &&
+      !controller.uploadBusy &&
+      !controller.hasUnsent
+    )
+      return;
     const onUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", onUnload);
     return () => window.removeEventListener("beforeunload", onUnload);
-  }, [navigationDirty, controller.uploadBusy, controller.hasUnsent]);
+  }, [
+    navigationDirty,
+    openedPanel,
+    panelDirty,
+    bindingPending,
+    controller.uploadBusy,
+    controller.hasUnsent,
+  ]);
 
-  const openConversation = (action: () => void) =>
+  const guardWorkspaceNavigation = (action: () => void, targetWorkspace?: string | null) =>
     requestNavigation(() => {
+      if (
+        targetWorkspace !== undefined &&
+        targetWorkspace !== workspaceCwd &&
+        !confirmPanelReplacement()
+      )
+        return;
+      action();
+    });
+  const openConversation = (action: () => void, targetWorkspace?: string | null) =>
+    guardWorkspaceNavigation(() => {
       setView("chat");
       closeMobileSidebar();
       latest.resume();
       action();
-    });
-  const openSession = (id: string, intent?: ReturnType<typeof historyFocus.capture>) => {
+    }, targetWorkspace);
+  const openSession = (
+    id: string,
+    intent?: ReturnType<typeof historyFocus.capture>,
+    cwd?: string,
+  ) => {
     if (historyHandoff.current) historyFocus.finish(historyHandoff.current.request, null);
     historyHandoff.current = null;
     // A keyboard-opened history row is removed by this navigation. Keep that
@@ -351,9 +421,94 @@ export function Workbench({
         id,
         workspace: controller.workspaceKey,
       };
-    openConversation(() => void controller.selectSession(id));
+    openConversation(
+      () => void controller.selectSession(id),
+      cwd ?? sessions.find((item) => item.sessionId === id)?.cwd,
+    );
   };
   const startNewSession = () => openConversation(controller.newSession);
+  const confirmPanelReplacement = () =>
+    !openedPanelRef.current ||
+    window.confirm(
+      "此操作会重新加载面板，丢失未保存的面板内容，并中止本面板的 AI 任务。确定继续？",
+    );
+  const showPanel = () => {
+    const current = openedPanelRef.current;
+    requestNavigation(() => {
+      if (current) navigation.navigate({ view: "panel", panel: current.panel });
+      else {
+        panelEntrySession.current = {
+          workspace: controller.workspaceKey,
+          sessionId: view === "chat" ? controller.panelSessionId : undefined,
+          title: controller.title,
+        };
+        setView("panels");
+      }
+      closeMobileSidebar();
+    });
+  };
+  const openPanel = (panel: ManagedPanel) =>
+    requestNavigation(() => {
+      const current = openedPanelRef.current;
+      if (current?.panel.id !== panel.id || current.panel.revision !== panel.revision) {
+        if (panelDirty || bindingPending || !confirmPanelReplacement()) return;
+        const inherited = panelEntrySession.current;
+        setRetainedPanel({
+          panel,
+          workspaceKey: controller.workspaceKey,
+          sessionId:
+            inherited?.workspace === controller.workspaceKey ? inherited.sessionId : undefined,
+          sessionTitle: inherited?.title ?? "未关联对话",
+        });
+        setBindingError("");
+      }
+      navigation.navigate({ view: "panel", panel });
+      closeMobileSidebar();
+    });
+  const changePanelSession = async (id: string | null) => {
+    const target = openedPanelRef.current;
+    const current = currentController.current;
+    if (!target || panelDirty || bindingPending || current.connection !== "open") return;
+    if (id === (target.sessionId ?? "")) return;
+    if (id && !current.sessions.some((item) => item.sessionId === id)) return;
+    if (id === null ? !current.newPanelSession : id && !current.selectPanelSession) return;
+    if (!confirmPanelReplacement()) return;
+    const operation = ++bindingOperation.current;
+    setBindingPending(id === null ? "正在建立对话…" : "正在关联对话…");
+    setBindingError("");
+    try {
+      const selected =
+        id === null
+          ? await current.newPanelSession!()
+          : id
+            ? await current.selectPanelSession!(id)
+            : undefined;
+      const latestController = currentController.current;
+      if (
+        operation !== bindingOperation.current ||
+        openedPanelRef.current !== target ||
+        latestController.workspaceKey !== target.workspaceKey
+      )
+        return;
+      if (
+        selected &&
+        (latestController.panelSessionId !== selected || latestController.activeId !== selected)
+      )
+        throw new Error("当前对话已经变化，请重新选择关联对话。");
+      setRetainedPanel({ ...target, sessionId: selected, sessionTitle: latestController.title });
+    } catch (cause) {
+      if (operation === bindingOperation.current && openedPanelRef.current === target)
+        setBindingError(cause instanceof Error ? cause.message : "关联对话失败，请重试。");
+    } finally {
+      if (operation === bindingOperation.current) setBindingPending("");
+    }
+  };
+  const linkedSession = sessions.find((item) => item.sessionId === openedPanel?.sessionId);
+  const linkedTitle =
+    linkedSession?.customTitle ||
+    linkedSession?.title ||
+    linkedSession?.preview ||
+    (openedPanel?.sessionId ? openedPanel.sessionTitle : "未关联对话");
   const send = () => {
     if (controller.send()) latest.resume();
   };
@@ -453,9 +608,12 @@ export function Workbench({
                 className="nav-button"
                 title={projectName}
                 onClick={() => {
+                  const go = () => {
+                    if (confirmPanelReplacement()) onBackToProjects();
+                  };
                   if (navigationDirty || controller.hasUnsent || controller.uploadBusy)
-                    navigation.prompt(onBackToProjects);
-                  else onBackToProjects();
+                    navigation.prompt(go);
+                  else go();
                 }}
               >
                 <WorkbenchIcon name="folder" />
@@ -514,12 +672,7 @@ export function Workbench({
                 </button>
                 <button
                   className={`nav-button${view === "panels" || view === "panel" ? " active" : ""}`}
-                  onClick={() =>
-                    requestNavigation(() => {
-                      setView("panels");
-                      closeMobileSidebar();
-                    })
-                  }
+                  onClick={showPanel}
                   aria-current={view === "panels" || view === "panel" ? "page" : undefined}
                 >
                   <WorkbenchIcon name="panels" />
@@ -570,7 +723,10 @@ export function Workbench({
             <span>最近对话</span>
             <span>{sessions.length}</span>
           </div>
-          {controller.renderSidebar?.({ guard: requestNavigation, conversation: openConversation })}
+          {controller.renderSidebar?.({
+            guard: guardWorkspaceNavigation,
+            conversation: openConversation,
+          })}
           <ul className="sessions" aria-label="最近对话">
             {localDrafts.map(({ sessionId, draft: pendingDraft }) => (
               <li key={`draft-${sessionId}`}>
@@ -716,7 +872,7 @@ export function Workbench({
             <select
               aria-label="切换面板项目"
               value={controller.selectedProjectId ?? ""}
-              disabled={connection !== "open"}
+              disabled={connection !== "open" || !!bindingPending}
               title={
                 controller.projects.find(
                   (project) => (project.id ?? project.path) === controller.selectedProjectId,
@@ -734,6 +890,8 @@ export function Workbench({
                     !current.projects?.some((project) => (project.id ?? project.path) === selected)
                   )
                     return;
+                  if (!confirmPanelReplacement()) return;
+                  panelEntrySession.current = undefined;
                   navigation.replace({ view: "panels" });
                   current.selectProject(selected);
                   closeMobileSidebar();
@@ -754,6 +912,34 @@ export function Workbench({
               ))}
             </select>
           </label>
+        ) : null}
+        {panelVisible && openedPanel ? (
+          <PanelSessionBar
+            sessionId={openedPanel.sessionId}
+            title={linkedTitle}
+            sessions={sessions.filter((item) => !workspaceCwd || item.cwd === workspaceCwd)}
+            disabled={connection !== "open" || panelDirty || !!bindingPending}
+            pending={bindingPending}
+            error={bindingError}
+            canSelect={!!controller.selectPanelSession}
+            onSelect={(id) => void changePanelSession(id)}
+            onNew={controller.newPanelSession ? () => void changePanelSession(null) : undefined}
+            onOpen={
+              openedPanel.sessionId
+                ? () => openSession(openedPanel.sessionId!)
+                : !controller.newPanelSession
+                  ? () => openConversation(() => {})
+                  : undefined
+            }
+          />
+        ) : null}
+        {openedPanel && !panelVisible && panelDirty ? (
+          <div className="banner" role="status">
+            面板有待处理的确认或录制。
+            <button className="ghost" onClick={showPanel}>
+              返回面板处理
+            </button>
+          </div>
         ) : null}
         {workerNote ? <div className="banner">{workerNote}</div> : null}
         {replayNote ? <div className="banner">{replayNote}</div> : null}
@@ -1213,7 +1399,7 @@ export function Workbench({
             onAuthLost={onAuthLost}
             onConfigurationChange={() => void refreshConfiguration()}
             configurationVersion={configurationVersion}
-            onDirtyChange={setNavigationDirty}
+            onDirtyChange={setPageDirty}
           />
         ) : null}
         {view === "files" && hub ? (
@@ -1247,17 +1433,17 @@ export function Workbench({
           <HubSessions
             key={`${controller.workspaceKey}:history`}
             onAuthLost={onAuthLost}
-            onOpen={(id, intent) => void openSession(id, intent)}
+            onOpen={(id, intent, cwd) => void openSession(id, intent, cwd)}
             onChanged={() => void refreshSessions()}
             version={sessionsVersion}
-            onDirtyChange={setNavigationDirty}
+            onDirtyChange={setPageDirty}
           />
         ) : null}
         {view === "links" && hub ? (
           <HubLinks
             key={`${controller.workspaceKey}:links`}
             onAuthLost={onAuthLost}
-            onDirtyChange={setNavigationDirty}
+            onDirtyChange={setPageDirty}
             hostLabel={hostLabel}
             configurationVersion={configurationVersion}
           />
@@ -1266,40 +1452,53 @@ export function Workbench({
           <HubPanels
             key={`${controller.workspaceKey}:panels`}
             onAuthLost={onAuthLost}
-            onDirtyChange={setNavigationDirty}
+            onDirtyChange={setPageDirty}
             onChanged={() => void refreshConfiguration()}
             hostLabel={hostLabel}
             configurationVersion={configurationVersion}
-            onOpen={(panel) =>
-              requestNavigation(() => {
-                navigation.navigate({ view: "panel", panel });
-                closeMobileSidebar();
-              })
-            }
+            onOpen={openPanel}
           />
         ) : null}
-        {view === "panel" && hub && openedPanel?.workspaceKey === controller.workspaceKey ? (
-          <PanelHost
-            key={`${controller.workspaceKey}:panel:${openedPanel.panel.id}:${activeId}`}
-            panel={openedPanel.panel}
-            sessionId={controller.panelSessionId}
-            busy={running || uploading || controller.uncertain}
-            onAuthLost={onAuthLost}
-            onDirtyChange={setNavigationDirty}
-            onClose={navigation.back}
-            previewKey={route.preview ?? null}
-            onPreviewOpen={(preview) =>
-              (route.preview ? navigation.replace : navigation.navigate)({ ...route, preview })
-            }
-            onPreviewClose={navigation.back}
-            onPreviewUnavailable={() => navigation.replace({ ...route, preview: undefined })}
-            onSubmitPrompt={async (request) =>
-              submitWorkbenchPanelPrompt(controller, {
-                ...request,
-                workspaceKey: openedPanel.workspaceKey,
-              })
-            }
-          />
+        {hub && openedPanel ? (
+          <div
+            className="workbench-panel-slot"
+            hidden={!panelVisible}
+            inert={!panelVisible ? true : undefined}
+          >
+            <PanelHost
+              key={`${openedPanel.workspaceKey}:panel:${openedPanel.panel.id}`}
+              panel={openedPanel.panel}
+              sessionId={openedPanel.sessionId}
+              active={panelVisible}
+              busy={
+                openedPanel.sessionId !== controller.panelSessionId ||
+                running ||
+                uploading ||
+                controller.uncertain
+              }
+              onAuthLost={onAuthLost}
+              onDirtyChange={setPanelDirty}
+              onClose={() => navigation.navigate({ view: "panels" })}
+              previewKey={panelVisible ? (route.preview ?? null) : undefined}
+              onPreviewOpen={(preview) =>
+                (route.preview ? navigation.replace : navigation.navigate)({
+                  view: "panel",
+                  panel: openedPanel.panel,
+                  preview,
+                })
+              }
+              onPreviewClose={navigation.back}
+              onPreviewUnavailable={() => navigation.replace({ ...route, preview: undefined })}
+              onSubmitPrompt={async (request) => {
+                if (request.sessionId !== openedPanelRef.current?.sessionId)
+                  throw new Error("面板关联已经变化，请重试。");
+                return submitWorkbenchPanelPrompt(currentController.current, {
+                  ...request,
+                  workspaceKey: openedPanel.workspaceKey,
+                });
+              }}
+            />
+          </div>
         ) : null}
       </main>
       {pendingNavigation ? (
@@ -1307,7 +1506,16 @@ export function Workbench({
           identity={pendingNavigation}
           workspaceKey={controller.workspaceKey}
           onStay={navigation.stay}
-          onLeave={navigation.leave}
+          onLeave={() => {
+            // The explicit discard choice still closes pending trusted requests.
+            // Ordinary navigation keeps a clean Panel and its independent AI alive.
+            if (panelVisible && panelDirty) {
+              openedPanelRef.current = undefined;
+              setRetainedPanel(undefined);
+              setPanelDirty(false);
+            }
+            navigation.leave();
+          }}
         />
       ) : null}
       {devicesOpen && controller.host === "hub" && !cloudAccount ? (

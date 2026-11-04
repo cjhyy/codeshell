@@ -153,6 +153,7 @@ async function fixture(
     sessionId?: string;
     intercept?: (request: Request) => Response | Promise<Response> | undefined;
     onSubmit?: (input: { prompt: string; sessionId: string }) => Promise<{ accepted: true }>;
+    onPreviewOpen?: (key: string) => void;
   } = {},
 ) {
   const sessionId = Object.hasOwn(options, "sessionId")
@@ -176,6 +177,7 @@ async function fixture(
   let authLost = 0;
   let dirty = false;
   let busy = false;
+  let active = true;
   globalThis.fetch = (async (path, init) => {
     const request: Request = {
       url: new URL(String(path), "http://localhost"),
@@ -218,6 +220,8 @@ async function fixture(
       panel,
       sessionId,
       busy,
+      active,
+      onPreviewOpen: options.onPreviewOpen,
       onClose() {},
       onAuthLost: () => {
         authLost++;
@@ -289,6 +293,11 @@ async function fixture(
     },
     async updateBusy(value: boolean) {
       busy = value;
+      await render();
+      attach();
+    },
+    async updateActive(value: boolean) {
+      active = value;
       await render();
       attach();
     },
@@ -1372,6 +1381,29 @@ const previewAsset = {
 };
 const previewPath = `/api/v1/panels/runtime/${instanceId}/resources/${previewAsset.id}`;
 const previewEffect = { effect: "resources.open", asset: previewAsset, url: previewPath };
+
+test("a background preview waits for the retained panel to become visible without replacing its grant", async () => {
+  const opened: string[] = [];
+  const view = await fixture({
+    onPreviewOpen: (key) => opened.push(key),
+    intercept(request) {
+      if (request.body?.method === "resources.open") return Response.json(previewEffect);
+    },
+  });
+  await view.updateActive(false);
+  await view.call("resources.open", { assetId: previewAsset.id });
+  expect(opened).toEqual([]);
+  await view.updateActive(true);
+  expect(opened).toHaveLength(1);
+  expect(text(view.tree)).toContain("保存到此设备");
+  await view.updateActive(false);
+  await view.updateActive(true);
+  expect(opened).toHaveLength(1);
+  expect(view.requests.filter((request) => request.url.pathname.endsWith("/prepare"))).toHaveLength(
+    1,
+  );
+  expect(view.requests.some((request) => request.method === "DELETE")).toBe(false);
+});
 
 test("browser preview and download retain the original project without exposing URLs to the iframe", async () => {
   setApiWorkspace("/workspace/original");

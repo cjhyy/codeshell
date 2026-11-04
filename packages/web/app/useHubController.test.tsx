@@ -74,7 +74,7 @@ function environment() {
 }
 
 test.each([true, false])(
-  "Hub and legacy adapters expose their protocol session to Panels (hub=%s)",
+  "Hub and legacy adapters never associate an unsent browser draft with Panels (hub=%s)",
   async (hub) => {
     environment();
     globalThis.fetch = (async () => Response.json({ sessions: [] })) as typeof fetch;
@@ -82,10 +82,142 @@ test.each([true, false])(
     cleanups.push(() => hook.unmount());
     const first = hook.result.current.activeId;
     expect(first).toMatch(/^[A-Za-z0-9_-]{8,128}$/);
-    expect(hook.result.current.panelSessionId).toBe(first);
+    expect(hook.result.current.panelSessionId).toBeUndefined();
+    expect(hook.result.current.newPanelSession).toBeUndefined();
     await act(async () => hook.result.current.newSession());
     expect(hook.result.current.activeId).not.toBe(first);
-    expect(hook.result.current.panelSessionId).toBe(hook.result.current.activeId);
+    expect(hook.result.current.panelSessionId).toBeUndefined();
+  },
+);
+
+test.each(["accepted", "rejected", "superseded"])(
+  "Panel association requires a confirmed catalog session and successful restore (%s)",
+  async (outcome) => {
+    environment();
+    const catalog = [
+      {
+        sessionId: "saved-session",
+        title: "Saved",
+        cwd: "/owned",
+        startedAt: 1,
+        model: "owned",
+        status: "idle",
+        turnCount: 1,
+      },
+    ];
+    const pending: Array<{ id: number }> = [];
+    Socket.respond = ({ id, params }) => {
+      if (params.type === "session_detail") {
+        pending.push({ id });
+        return;
+      }
+      if (params.type === "output_journal")
+        return { id, error: { code: -32602, message: "Unknown query type: output_journal" } };
+      return { id, result: { type: "sessions", data: catalog } };
+    };
+    const hook = await renderHook(() => useHubController({}));
+    cleanups.push(() => hook.unmount());
+    const socket = Socket.instances[0];
+    await act(async () => {
+      socket.readyState = 1;
+      socket.onopen?.();
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.panelSessionId).toBeUndefined();
+    await expect(
+      hook.result.current.selectPanelSession!(hook.result.current.activeId),
+    ).rejects.toThrow("当前项目");
+    let selection!: Promise<string | Error>;
+    let settled = false;
+    await act(async () => {
+      hook.result.current.setDraft("Unsent original draft");
+      selection = hook.result.current.selectPanelSession!("saved-session").catch((error) => error);
+      void selection.then(() => {
+        settled = true;
+      });
+      await flushMicrotasks();
+    });
+    expect(settled).toBe(false);
+    expect(hook.result.current.loading).toBe(true);
+    await act(async () => {
+      if (outcome === "superseded") hook.result.current.newSession();
+      socket.onmessage?.({
+        data: JSON.stringify(
+          outcome === "rejected"
+            ? { id: pending[0].id, error: { code: -32000, message: "Session unavailable" } }
+            : {
+                id: pending[0].id,
+                result: {
+                  type: "session_detail",
+                  data: { state: {}, transcript: [], running: false },
+                },
+              },
+        ),
+      });
+      await flushMicrotasks();
+    });
+    const result = await selection;
+    if (outcome === "accepted") {
+      expect(result).toBe("saved-session");
+      expect(hook.result.current.panelSessionId).toBe("saved-session");
+      expect(hook.result.current.draft).toBe("");
+    } else expect(result).toBeInstanceOf(Error);
+    expect(
+      hook.result.current.localDrafts.some((item) => item.draft.text === "Unsent original draft"),
+    ).toBe(true);
+  },
+);
+
+test.each(["history", "run acceptance"])(
+  "Host %s confirms a Panel session before the recent catalog catches up",
+  async (confirmation) => {
+    environment();
+    Socket.respond = ({ id, method, params }) => {
+      if (method === "agent/run") return;
+      if (params.type === "session_detail")
+        return {
+          id,
+          result: { type: "session_detail", data: { state: {}, transcript: [], running: false } },
+        };
+      if (params.type === "output_journal")
+        return { id, error: { code: -32602, message: "Unknown query type: output_journal" } };
+      return { id, result: { type: "sessions", data: [] } };
+    };
+    const hook = await renderHook(() => useHubController({}));
+    cleanups.push(() => hook.unmount());
+    const socket = Socket.instances[0];
+    await act(async () => {
+      socket.readyState = 1;
+      socket.onopen?.();
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.panelSessionId).toBeUndefined();
+    const confirmedId =
+      confirmation === "history" ? "older-valid-session" : hook.result.current.activeId;
+    if (confirmation === "history") {
+      await act(async () => {
+        await hook.result.current.selectSession(confirmedId);
+      });
+    } else {
+      await act(async () => {
+        hook.result.current.setDraft("New task");
+      });
+      await act(async () => {
+        expect(hook.result.current.send()).toBe(true);
+      });
+      expect(hook.result.current.panelSessionId).toBeUndefined();
+      await act(async () => {
+        socket.onmessage?.({
+          data: JSON.stringify({ method: "agent/runAccepted", params: { sessionId: confirmedId } }),
+        });
+      });
+    }
+    expect(hook.result.current.sessions).toEqual([]);
+    expect(hook.result.current.panelSessionId).toBe(confirmedId);
+    await act(async () => {
+      hook.result.current.newSession();
+    });
+    expect(hook.result.current.panelSessionId).toBeUndefined();
   },
 );
 

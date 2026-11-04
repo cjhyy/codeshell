@@ -278,6 +278,26 @@ export function useDesktopController(
     ? `room:${app.activeRoom.id}`
     : (app.activeSessionId ?? newDraftId);
   const navigationRevision = React.useRef(0);
+  const pendingPanelSession = React.useRef<{
+    sessionId?: string;
+    previousSessionId?: string;
+    navigationRevision: number;
+    workspaceCwd: string | null;
+    failureCount: number;
+    notice?: string;
+    timer: ReturnType<typeof setTimeout>;
+    resolve: (id: string) => void;
+    reject: (error: Error) => void;
+  } | null>(null);
+  const finishPanelSession = (result: string | Error) => {
+    const pending = pendingPanelSession.current;
+    if (!pending) return;
+    pendingPanelSession.current = null;
+    clearTimeout(pending.timer);
+    if (result instanceof Error) pending.reject(result);
+    else pending.resolve(result);
+  };
+  React.useEffect(() => () => finishPanelSession(new Error("工作区已关闭，请重新关联对话。")), []);
   const pendingNewSend = React.useRef<{
     draftId: string;
     navigationRevision: number;
@@ -565,6 +585,88 @@ export function useDesktopController(
     status: item.id === app.activeSessionId ? app.chat.run : "saved",
     turnCount: 0,
   }));
+  const associatePanelSession = (sessionId?: string): Promise<string> => {
+    if (!mounted.current || workspaceRef.current !== workspaceCwd)
+      return Promise.reject(new Error("工作区已改变，请重新关联对话。"));
+    if (app.status !== "online")
+      return Promise.reject(new Error("连接已断开，重新连接后才能关联对话。"));
+    if (sessionId && !sessions.some((item) => item.sessionId === sessionId))
+      return Promise.reject(new Error("此对话不在当前项目中，请刷新后重新选择。"));
+    if (sessionId && sessions.find((item) => item.sessionId === sessionId)?.cwd !== workspaceCwd)
+      return Promise.reject(new Error("此对话属于另一个项目目录，请先切换到对应工作区。"));
+    finishPanelSession(new Error("已开始另一项对话关联。"));
+    if (
+      sessionId &&
+      app.activeSessionId === sessionId &&
+      !app.activeRoomId &&
+      !app.loading.sessionHistory &&
+      !app.outputHistoryFailed &&
+      !app.notice &&
+      !pendingCreate.current &&
+      !creationNeedsRetry &&
+      !emptyReplacement
+    )
+      return Promise.resolve(sessionId);
+    return new Promise<string>((resolve, reject) => {
+      const pending = {
+        sessionId,
+        previousSessionId: app.activeSessionId,
+        navigationRevision: navigationRevision.current + 1,
+        workspaceCwd,
+        failureCount: app.sessionCreationFailures ?? 0,
+        notice: app.notice,
+        timer: setTimeout(() => finishPanelSession(new Error("关联对话超时，请重试。")), 30_000),
+        resolve,
+        reject,
+      };
+      pendingPanelSession.current = pending;
+      try {
+        if (sessionId) actions.selectSession(sessionId);
+        else actions.newSession();
+      } catch (cause) {
+        finishPanelSession(cause instanceof Error ? cause : new Error(String(cause)));
+      }
+    });
+  };
+  React.useLayoutEffect(() => {
+    const pending = pendingPanelSession.current;
+    if (!pending) return;
+    if (
+      app.status !== "online" ||
+      pending.navigationRevision !== navigationRevision.current ||
+      pending.workspaceCwd !== workspaceCwd ||
+      app.activeRoomId
+    ) {
+      finishPanelSession(new Error("连接或工作区已改变，请重新关联对话。"));
+      return;
+    }
+    if (
+      (app.sessionCreationFailures ?? 0) > pending.failureCount ||
+      app.outputHistoryFailed ||
+      (app.notice &&
+        (app.notice !== pending.notice || (pending.sessionId && !app.loading.sessionHistory)))
+    ) {
+      finishPanelSession(new Error(app.notice || "对话未能就绪，请重试。"));
+      return;
+    }
+    const id = app.activeSessionId;
+    if (
+      !id ||
+      (pending.sessionId ? id !== pending.sessionId : id === pending.previousSessionId) ||
+      app.loading.sessionHistory ||
+      pendingCreate.current ||
+      creationNeedsRetry ||
+      emptyReplacement
+    )
+      return;
+    // Creation only acquires an active ID after its correlated Host acceptance;
+    // selecting an existing ID also waits for history recovery to finish.
+    if ((app.activeCwd ?? app.activeProjectCwd ?? null) !== pending.workspaceCwd) {
+      finishPanelSession(new Error("对话不属于当前工作区，请重新选择。"));
+      return;
+    }
+    finishPanelSession(id);
+  });
   const running =
     app.chat.run === "running" ||
     app.chat.run === "waiting" ||
@@ -854,6 +956,8 @@ export function useDesktopController(
     projects: app.projects,
     selectedProjectId: selectedProject?.id ?? workspaceCwd ?? undefined,
     selectProject: actions.selectProject,
+    selectPanelSession: (id) => associatePanelSession(id),
+    newPanelSession: () => associatePanelSession(),
     workspaceName: workspaceCwd?.split(/[\\/]/).filter(Boolean).pop() || "桌面工作区",
     title,
     configuration,

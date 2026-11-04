@@ -68,6 +68,8 @@ const errors = [],
   reports = [],
   revoked = [];
 let sequence = 0;
+let expectedPanelSessionId = "owned-session";
+let resourceHold;
 const browser = await chromium.launch({
   headless: true,
   executablePath:
@@ -139,13 +141,13 @@ await context.route("**/*", async (route) => {
       content: "Owned preview content",
     });
   if (pathname === "/api/v1/panels/runtime/prepare") {
-    assert.equal(request.postDataJSON().sessionId, "owned-session");
+    assert.equal(request.postDataJSON().sessionId, expectedPanelSessionId);
     const instanceId = "owned-instance-" + String(++sequence).padStart(12, "0");
     return reply({
       instanceId,
       src: "/api/v1/panel-assets/" + instanceId + "/index.html",
       expiresAt: Date.now() + 600000,
-      context: { host: "desktop", sessionId: "owned-session" },
+      context: { host: "desktop", sessionId: expectedPanelSessionId },
       limitations: [],
     });
   }
@@ -154,6 +156,7 @@ await context.route("**/*", async (route) => {
     return reply(
       `<button id="preview">Open owned resource</button><button id="confirm">Request confirmation</button><a id="anchor-a" href="#a">Owned child A</a><a id="anchor-b" href="#b">Owned child B</a><script>
    const id=${JSON.stringify(id)};let n=0;const call=(method,params)=>parent.postMessage({type:'codeshell-panel:call',instanceId:id,requestId:'owned-'+(++n),method,params},'*');
+   addEventListener('message',event=>{if(event.data?.type==='codeshell-panel:response'&&event.data.result?.opened)document.body.dataset.opened=String(Number(document.body.dataset.opened||0)+1)});
    document.querySelector('#preview').onclick=()=>call('resources.open',{assetId:${JSON.stringify(assetId)}});
    document.querySelector('#confirm').onclick=()=>call('external.open',{url:'https://owned-external.invalid/'});
    parent.postMessage({type:'codeshell-panel:ready',instanceId:id},'*');
@@ -165,12 +168,14 @@ await context.route("**/*", async (route) => {
   if (pathname.endsWith("/call")) {
     const call = request.postDataJSON(),
       id = pathname.split("/")[5];
-    if (call.method === "resources.open")
+    if (call.method === "resources.open") {
+      if (resourceHold) await resourceHold.promise;
       return reply({
         effect: "resources.open",
         asset: { id: assetId, name: "Owned resource.txt", mimeType: "text/plain", bytes: 20 },
         url: "/api/v1/panels/runtime/" + id + "/resources/" + assetId,
       });
+    }
     if (call.method === "external.open")
       return reply({ effect: "external.open", url: "https://owned-external.invalid/" });
   }
@@ -267,7 +272,7 @@ try {
   reports.push("settings and file layers; real Back/Forward; draft and reading position retained");
   await nav("面板");
   await page.locator(".panels-card").getByRole("button", { name: "打开面板", exact: true }).tap();
-  await page.frameLocator("iframe").locator("#preview").tap();
+  await page.frameLocator("iframe").locator("#preview").click();
   await page.locator(".panel-host-preview").waitFor();
   const persisted = await page.evaluate(() => JSON.stringify(history.state) + location.href);
   assert.ok(
@@ -277,7 +282,11 @@ try {
     "History contains no Panel grant or resource URL",
   );
   await checkBack("返回面板");
-  await page.frameLocator("iframe").locator("#confirm").tap();
+  // Trusted overlays hide the mobile guest; simulate its asynchronous request.
+  await page
+    .frameLocator("iframe")
+    .locator("#confirm")
+    .evaluate((button) => button.click());
   await page.locator(".panel-host-confirm").waitFor();
   await page.evaluate(() => history.back());
   await page.locator(".panel-host-preview").waitFor({ state: "hidden" });
@@ -296,18 +305,25 @@ try {
   await frames();
   assert.ok(revoked.length > before);
   // A rejected dirty navigation intentionally abandons its Forward branch.
-  // Ordinary browser Back/Forward must still reopen a fresh, authorized instance.
+  // Ordinary clean Back/Forward preserves the same authorized guest instance.
   await page.locator(".panels-card").getByRole("button", { name: "打开面板", exact: true }).tap();
   await page.frameLocator("iframe").locator("#preview").waitFor();
+  const retainedSrc = await page.locator("iframe").getAttribute("src");
+  const retainedRevocations = revoked.length;
+  const retainedPreparations = sequence;
   await page.evaluate(() => history.back());
   await page.locator(".panels-grid").waitFor();
+  assert.equal(await page.locator("iframe").isVisible(), false);
   await page.evaluate(() => history.forward());
   await page.frameLocator("iframe").locator("#preview").waitFor();
+  assert.equal(await page.locator("iframe").getAttribute("src"), retainedSrc);
+  assert.equal(revoked.length, retainedRevocations);
+  assert.equal(sequence, retainedPreparations);
   assert.equal(await page.locator(".panel-host-preview").count(), 0);
   await back().tap();
   await page.locator(".panels-grid").waitFor();
   reports.push(
-    "Panel preview preserves pending confirmation; guarded exit revokes instance; Forward creates fresh instance",
+    "Panel preview preserves pending confirmation; explicit discard revokes; clean Back/Forward keeps the same grant",
   );
   await page.getByRole("textbox", { name: "GitHub 仓库地址" }).fill("https://owned.invalid/source");
   await frames();
@@ -333,6 +349,7 @@ try {
   );
   // A sandbox iframe contributes joint history without a parent popstate.
   await page.goto(origin + "/outside");
+  expectedPanelSessionId = undefined;
   await page.goto(origin + "/mobile/?view=panels");
   await page.locator(".panels-card").getByRole("button", { name: "打开面板", exact: true }).tap();
   await page.evaluate(() => {
@@ -340,8 +357,14 @@ try {
     window.addEventListener("popstate", () => window.parentPops++);
   });
   const childHistoryStart = await page.evaluate(() => history.length);
-  await page.frameLocator("iframe").locator("#anchor-a").tap();
-  await page.frameLocator("iframe").locator("#anchor-b").tap();
+  await page
+    .frameLocator("iframe")
+    .locator("#anchor-a")
+    .evaluate((link) => link.click());
+  await page
+    .frameLocator("iframe")
+    .locator("#anchor-b")
+    .evaluate((link) => link.click());
   assert.equal(
     await page
       .frameLocator("iframe")
@@ -351,7 +374,10 @@ try {
   );
   assert.equal(await page.evaluate(() => history.length), childHistoryStart + 2);
   assert.equal(await page.evaluate(() => window.parentPops), 0);
-  await page.frameLocator("iframe").locator("#confirm").tap();
+  await page
+    .frameLocator("iframe")
+    .locator("#confirm")
+    .evaluate((button) => button.click());
   await page.locator(".panel-host-confirm").waitFor();
   const childCloseStart = revoked.length;
   await back().tap();
@@ -367,10 +393,16 @@ try {
   reports.push("iframe joint hash history cannot consume explicit parent Back");
   // Preview Back is also parent-owned, and must not close the underlying Panel.
   await page.locator(".panels-card").getByRole("button", { name: "打开面板", exact: true }).tap();
-  await page.frameLocator("iframe").locator("#preview").tap();
+  await page.frameLocator("iframe").locator("#preview").click();
   await page.locator(".panel-host-preview").waitFor();
-  await page.frameLocator("iframe").locator("#anchor-a").tap();
-  await page.frameLocator("iframe").locator("#anchor-b").tap();
+  await page
+    .frameLocator("iframe")
+    .locator("#anchor-a")
+    .evaluate((link) => link.click());
+  await page
+    .frameLocator("iframe")
+    .locator("#anchor-b")
+    .evaluate((link) => link.click());
   const previewCloseStart = revoked.length;
   await back().tap();
   await page.locator(".panel-host-preview").waitFor({ state: "hidden" });
@@ -382,13 +414,23 @@ try {
   // Jump across child history and press Back again while the leave prompt is up.
   // No asynchronous approval may be inherited by the second traversal.
   await page.goto(origin + "/outside");
+  expectedPanelSessionId = undefined;
   await page.goto(origin + "/mobile/?view=panels");
   await page.locator(".panels-card").getByRole("button", { name: "打开面板", exact: true }).tap();
-  await page.frameLocator("iframe").locator("#anchor-a").tap();
-  await page.frameLocator("iframe").locator("#anchor-b").tap();
-  await page.frameLocator("iframe").locator("#preview").tap();
+  await page
+    .frameLocator("iframe")
+    .locator("#anchor-a")
+    .evaluate((link) => link.click());
+  await page
+    .frameLocator("iframe")
+    .locator("#anchor-b")
+    .evaluate((link) => link.click());
+  await page.frameLocator("iframe").locator("#preview").click();
   await page.locator(".panel-host-preview").waitFor();
-  await page.frameLocator("iframe").locator("#confirm").tap();
+  await page
+    .frameLocator("iframe")
+    .locator("#confirm")
+    .evaluate((button) => button.click());
   await page.locator(".panel-host-confirm").waitFor();
   const repeatedCloseStart = revoked.length;
   await page.evaluate(() => {
@@ -421,8 +463,49 @@ try {
   reports.push(
     "repeated Back during dirty restoration retains confirmation; only explicit acceptance revokes",
   );
+  // A resource response arriving after navigation must not take over chat.
+  await page.goto(origin + "/outside");
+  expectedPanelSessionId = undefined;
+  await page.goto(origin + "/mobile/?view=panels");
+  await page.locator(".panels-card").getByRole("button", { name: "打开面板", exact: true }).tap();
+  await page.frameLocator("iframe").locator("#preview").waitFor();
+  const delayedPreviewSrc = await page.locator("iframe").getAttribute("src");
+  const delayedPreviewPreparations = sequence;
+  const delayedPreviewRevocations = revoked.length;
+  let releaseResource;
+  resourceHold = {
+    promise: new Promise((resolve) => {
+      releaseResource = resolve;
+    }),
+    release: () => releaseResource(),
+  };
+  const resourceRequested = page.waitForRequest(
+    (request) =>
+      request.url().includes("/call") && request.postDataJSON()?.method === "resources.open",
+  );
+  await page.frameLocator("iframe").locator("#preview").click();
+  await resourceRequested;
+  await nav("对话");
+  await page.locator(".chat:not([hidden])").waitFor();
+  resourceHold.release();
+  resourceHold = undefined;
+  await page.frameLocator("iframe").locator('body[data-opened="1"]').waitFor({ state: "attached" });
+  await frames();
+  assert.equal(await page.locator(".chat:not([hidden])").isVisible(), true);
+  assert.equal(await page.locator(".panel-host-preview").isVisible(), false);
+  assert.equal(await page.locator("iframe").getAttribute("src"), delayedPreviewSrc);
+  await nav("面板");
+  await page.locator(".panel-host-preview").waitFor();
+  assert.equal(await page.locator("iframe").getAttribute("src"), delayedPreviewSrc);
+  assert.equal(sequence, delayedPreviewPreparations);
+  assert.equal(revoked.length, delayedPreviewRevocations);
+  reports.push(
+    "a delayed resource preview keeps chat visible and appears only after returning to the same retained guest",
+  );
+
   // Fresh direct links get a visible parent but no artificial Back loop.
   await page.goto(origin + "/outside");
+  expectedPanelSessionId = undefined;
   await page.goto(origin + "/mobile/?view=panels");
   await page.locator(".panels-grid").waitFor();
   const length = await page.evaluate(() => history.length);
@@ -479,6 +562,7 @@ try {
   console.error("Back navigation evidence:", output);
   throw error;
 } finally {
+  resourceHold?.release();
   await context.close();
   await browser.close();
 }

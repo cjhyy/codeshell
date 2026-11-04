@@ -414,6 +414,63 @@ button.workspace-button:hover {
   font: inherit;
   text-overflow: ellipsis;
 }
+.workbench-panel-slot {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.workbench-panel-slot[hidden] {
+  display: none;
+}
+.panel-session-context {
+  flex-shrink: 0;
+  padding: 6px 20px;
+  border-bottom: 1px solid var(--subtle);
+  font-size: 12px;
+}
+.panel-session-controls,
+.panel-session-choice,
+.panel-session-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.panel-session-controls {
+  flex-wrap: wrap;
+}
+.panel-session-choice {
+  flex: 1 1 180px;
+  color: var(--muted);
+}
+.panel-session-choice > span,
+.panel-session-actions {
+  flex-shrink: 0;
+}
+.panel-session-choice select {
+  width: 0;
+  flex: 1;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+.panel-session-choice select,
+.panel-session-actions button {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.panel-session-actions {
+  margin-left: auto;
+}
+.panel-session-context p {
+  margin: 4px 0;
+  color: var(--muted);
+}
 .workbench-back {
   display: inline-flex;
   align-items: center;
@@ -1143,7 +1200,8 @@ button.ghost:hover:not(:disabled) {
     gap: 8px;
     height: 50px;
   }
-  .panel-project-switcher {
+  .panel-project-switcher,
+  .panel-session-context {
     padding: 8px 12px;
   }
   .messages {

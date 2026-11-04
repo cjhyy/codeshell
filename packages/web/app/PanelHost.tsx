@@ -52,6 +52,8 @@ export interface PanelHostProps {
   panel: ManagedPanel;
   sessionId?: string;
   busy: boolean;
+  /** A retained guest keeps running while its workbench page is hidden. */
+  active?: boolean;
   onClose: () => void;
   onAuthLost: () => void;
   onDirtyChange?: (dirty: boolean) => void;
@@ -165,6 +167,7 @@ export function PanelHost({
   panel,
   sessionId,
   busy,
+  active = true,
   onClose,
   onAuthLost,
   onDirtyChange,
@@ -184,8 +187,9 @@ export function PanelHost({
   const [preview, setPreview] = React.useState<ResourcePreview>();
   const previews = React.useRef(new Map<string, ResourcePreview>());
   const previewSequence = React.useRef(0);
-  const previewNavigation = React.useRef({ onPreviewOpen, onPreviewClose });
-  previewNavigation.current = { onPreviewOpen, onPreviewClose };
+  const previewNavigation = React.useRef({ onPreviewOpen, onPreviewClose, active });
+  previewNavigation.current = { onPreviewOpen, onPreviewClose, active };
+  const pendingPreview = React.useRef<string | undefined>(undefined);
   React.useEffect(() => {
     if (previewKey !== undefined) {
       setPreview(previewKey ? previews.current.get(previewKey) : undefined);
@@ -193,14 +197,20 @@ export function PanelHost({
       if (previewKey && !previews.current.has(previewKey)) onPreviewUnavailable?.();
     }
   }, [previewKey]);
+  React.useEffect(() => {
+    if (!active || !pendingPreview.current) return;
+    const key = pendingPreview.current;
+    pendingPreview.current = undefined;
+    previewNavigation.current.onPreviewOpen?.(key);
+  }, [active]);
   const [previewError, setPreviewError] = React.useState(false);
   const previewElement = React.useRef<HTMLElement>(null);
   React.useEffect(() => {
-    if (preview) {
+    if (preview && active) {
       previewElement.current?.focus();
       previewElement.current?.scrollIntoView?.({ block: "nearest" });
     }
-  }, [preview]);
+  }, [preview, active]);
   const [connectionStatus, setConnectionStatus] = React.useState("");
   const [confirmationError, setConfirmationError] = React.useState("");
   const [confirmation, setConfirmation] = React.useState<Confirmation>();
@@ -220,11 +230,11 @@ export function PanelHost({
     callbacks.current.onDirtyChange?.(
       !!confirmation || confirming || !!audioRequest || !!videoRequest,
     );
-    if (confirmation) {
+    if (confirmation && active) {
       confirmationElement.current?.focus();
       confirmationElement.current?.scrollIntoView?.({ block: "nearest" });
     }
-  }, [confirmation, confirming, audioRequest, videoRequest]);
+  }, [confirmation, confirming, audioRequest, videoRequest, active]);
 
   React.useEffect(() => {
     const workspace = getApiWorkspace() ?? "";
@@ -286,6 +296,7 @@ export function PanelHost({
     setConfirmationNotice("");
     setDirectory(undefined);
     previews.current.clear();
+    pendingPreview.current = undefined;
     setPreview(undefined);
     setPreviewError(false);
     setConnectionStatus("");
@@ -325,6 +336,7 @@ export function PanelHost({
       setPrepared(undefined);
       setDirectory(undefined);
       previews.current.clear();
+      pendingPreview.current = undefined;
       setPreview(undefined);
       setLoading(false);
       setConfirming(false);
@@ -848,7 +860,8 @@ export function PanelHost({
           if (previews.current.size > 20)
             previews.current.delete(previews.current.keys().next().value!);
           setPreview(nextPreview);
-          previewNavigation.current.onPreviewOpen?.(key);
+          if (previewNavigation.current.active) previewNavigation.current.onPreviewOpen?.(key);
+          else pendingPreview.current = key;
           reply(child, requestId, { opened: true });
         } else if (data.method === "filesystem.openDirectory") {
           setDirectory(undefined);
@@ -970,6 +983,7 @@ export function PanelHost({
     return () => {
       disposed = true;
       previews.current.clear();
+      pendingPreview.current = undefined;
       activeConfirmation.current?.cancel();
       window.removeEventListener("message", listener);
       window.removeEventListener("focus", resume);

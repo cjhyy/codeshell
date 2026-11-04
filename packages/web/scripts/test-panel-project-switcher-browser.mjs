@@ -30,16 +30,27 @@ const projects = [
 const source = `import React from 'react';import{createRoot}from'react-dom/client';
 import{Workbench}from'./Workbench';import{useDesktopController}from'./DesktopApp';import{initialChatState}from'../src/lib/streamReducer';
 const projects=${JSON.stringify(projects)},noop=()=>{},session={id:'owned-login',username:'Fixture',deviceName:'Owned'};
-window.selected=[];window.created=[];window.sent=[];window.stopped=[];window.creationMode='auto';
-function Fixture(){const[state,setState]=React.useState({status:'online',activeSessionId:'session-a',activeCwd:'/owned/A',activeProjectId:'project-a',activeProjectCwd:'/owned/A',sessionCreationFailures:0});
+const initialSessions=[
+{id:'session-a',title:'A original conversation',cwd:'/owned/A',updatedAt:1},
+{id:'session-a-other',title:'A second conversation',cwd:'/owned/A',updatedAt:2},
+{id:'session-b-existing',title:'B conversation must stay in B',cwd:'/owned/B',updatedAt:3}];
+window.selected=[];window.sessionSelections=[];window.created=[];window.sent=[];window.stopped=[];window.creationMode='auto';window.selectionMode='auto';
+function Fixture(){const[state,setState]=React.useState({status:'online',activeSessionId:'session-a',activeCwd:'/owned/A',activeProjectId:'project-a',activeProjectCwd:'/owned/A',sessionCreationFailures:0,sessionHistoryLoading:false,outputHistoryFailed:false,sessions:initialSessions});
 const generation=React.useRef(0);window.setConnection=status=>setState(s=>({...s,status}));
-const app={...state,projects,chat:initialChatState(),sessions:[],approvals:[],conversationRevision:0,permissionMode:'default',unreadSessionIds:new Set(),loading:{sessions:false,sessionHistory:false,rooms:false,projects:false,roomHistory:false,ccSessions:false},ccSessions:[],ccProbe:null,ccCliKind:'claude-code',logout:noop,refreshSessions:noop,respondApproval:noop,setPermissionMode:noop,extendGoal:noop,clearGoal:noop,leaveRoom:noop,setCcCliKind:noop,openCcSession:noop,respondCcApproval:noop,selectSession:noop,
+const app={...state,projects,chat:initialChatState(),approvals:[],conversationRevision:0,permissionMode:'default',unreadSessionIds:new Set(),loading:{sessions:false,sessionHistory:state.sessionHistoryLoading,rooms:false,projects:false,roomHistory:false,ccSessions:false},ccSessions:[],ccProbe:null,ccCliKind:'claude-code',logout:noop,refreshSessions:noop,respondApproval:noop,setPermissionMode:noop,extendGoal:noop,clearGoal:noop,leaveRoom:noop,setCcCliKind:noop,openCcSession:noop,respondCcApproval:noop,
 sendChat:async input=>{window.sent.push(input);return true},stopRun:()=>window.stopped.push('run.stop'),
+selectSession:id=>{window.sessionSelections.push(id);const current=++generation.current,item=state.sessions.find(s=>s.id===id);if(!item)throw Error('Unknown owned session');
+setState(s=>({...s,activeSessionId:id,activeCwd:item.cwd,sessionHistoryLoading:true,outputHistoryFailed:false}));
+window.acceptSelection=()=>{if(current===generation.current)setState(s=>({...s,sessionHistoryLoading:false}))};
+if(window.selectionMode==='fail')queueMicrotask(()=>setState(s=>({...s,sessionHistoryLoading:false,outputHistoryFailed:true})));else if(window.selectionMode==='auto')queueMicrotask(window.acceptSelection)},
 selectProject:id=>{window.selected.push(id);const p=projects.find(p=>p.id===id);setState(s=>({...s,activeProjectId:id,activeProjectCwd:p.path}))},
-newSession:target=>{window.created.push(target);const current=++generation.current,p=projects.find(p=>p.id===target.projectId);window.acceptCreation=()=>{if(current===generation.current)setState(s=>({...s,activeSessionId:'session-'+p.id+'-'+current,activeCwd:p.path}))};
-if(window.creationMode==='fail')setState(s=>({...s,sessionCreationFailures:s.sessionCreationFailures+1}));else if(window.creationMode==='auto')queueMicrotask(window.acceptCreation)}};
-const controller=useDesktopController(app,session,()=>{throw Error('Unexpected auth loss')});window.currentScope=()=>({workspace:controller.workspaceKey,panelSessionId:controller.panelSessionId,selected:controller.selectedProjectId});return <Workbench controller={controller}/>};
+newSession:target=>{window.created.push(target);const current=++generation.current,p=projects.find(p=>p.id===target.projectId),id='session-'+p.id+'-'+current;
+setState(s=>({...s,activeSessionId:undefined,sessionHistoryLoading:false,outputHistoryFailed:false}));
+window.acceptCreation=()=>{if(current===generation.current)setState(s=>({...s,activeSessionId:id,activeCwd:p.path,sessions:[...s.sessions,{id,title:'Explicit new conversation '+current,cwd:p.path,updatedAt:current+10}]}))};
+if(window.creationMode==='fail')queueMicrotask(()=>setState(s=>({...s,sessionCreationFailures:s.sessionCreationFailures+1})));else if(window.creationMode==='auto')queueMicrotask(window.acceptCreation)}};
+const controller=useDesktopController(app,session,()=>{throw Error('Unexpected auth loss')});window.currentScope=()=>({workspace:controller.workspaceKey,panelSessionId:controller.panelSessionId,activeId:controller.activeId,selected:controller.selectedProjectId});return <Workbench controller={controller}/>};
 createRoot(document.getElementById('root')).render(<React.StrictMode><Fixture/></React.StrictMode>);`;
+
 const bundle = await build({
   stdin: { contents: source, resolveDir, loader: "tsx" },
   bundle: true,
@@ -157,7 +168,8 @@ async function handleRoute(route) {
     );
     if (body.sessionId)
       assert.ok(
-        (body.sessionId === "session-a" && workspace === "/owned/A") ||
+        (["session-a", "session-a-other"].includes(body.sessionId) && workspace === "/owned/A") ||
+          (body.sessionId === "session-b-existing" && workspace === "/owned/B") ||
           body.sessionId.startsWith("session-project-" + workspace.slice(-1).toLowerCase() + "-"),
         "No prior project's session is bound",
       );
@@ -181,10 +193,10 @@ async function handleRoute(route) {
     const id = pathname.split("/")[4];
     assert.equal(instances.get(id).workspace, workspace);
     return reply(
-      `<p id="records">Loading existing records</p><button id="confirm">Request confirmation</button><script>
+      `<p id="records">Loading existing records</p><input id="draft" aria-label="Unsaved panel draft"><button id="confirm">Request confirmation</button><script>
       const id=${JSON.stringify(id)};let n=0;const call=(method,params)=>parent.postMessage({type:'codeshell-panel:call',instanceId:id,requestId:'owned-'+(++n),method,params},'*');
       addEventListener('message',e=>{if(e.data?.type==='codeshell-panel:response'&&e.data.result?.records)document.querySelector('#records').textContent=e.data.result.records.join(',')});
-      document.querySelector('#confirm').onclick=()=>call('process.run',{command:'owned-fixture-no-execution'});
+      document.querySelector('#confirm').onclick=()=>{document.body.dataset.confirmClicks=String(Number(document.body.dataset.confirmClicks||0)+1);call('process.run',{command:'owned-fixture-no-execution'})};
       parent.postMessage({type:'codeshell-panel:ready',instanceId:id},'*');call('storage.get',{key:'records'});
       </script>`,
       200,
@@ -228,6 +240,17 @@ async function handleRoute(route) {
             : [],
       });
     }
+    if (pathname.endsWith("/confirm")) {
+      assert.equal(body.requestId, "confirmation-" + id);
+      assert.equal(typeof body.allowed, "boolean");
+      instance.confirmation = false;
+      if (instance.pending) {
+        const finish = instance.pending;
+        instance.pending = null;
+        await finish({ cancelled: !body.allowed }, 200);
+      }
+      return reply({ allowed: body.allowed });
+    }
     if (pathname.endsWith("/call") && body.method === "storage.get")
       return reply({
         records: ["Saved record " + workspace.slice(-1)],
@@ -236,8 +259,8 @@ async function handleRoute(route) {
     if (pathname.endsWith("/call") && body.method === "process.run") {
       instance.confirmation = true;
       return new Promise((resolve) => {
-        instance.pending = async () => {
-          await reply({ error: "Grant closed" }, 410).catch(() => {});
+        instance.pending = async (result = { error: "Grant closed" }, status = 410) => {
+          await reply(result, status).catch(() => {});
           resolve();
         };
       });
@@ -261,7 +284,15 @@ await context.route("**/*", (route) =>
 const page = await context.newPage();
 page.setDefaultTimeout(7000);
 page.on("pageerror", (error) => errors.push(error.message));
+const dialogs = [],
+  dialogDecisions = [];
+page.on("dialog", async (dialog) => {
+  dialogs.push(dialog.message());
+  if (dialogDecisions.shift() === false) await dialog.dismiss();
+  else await dialog.accept();
+});
 const picker = page.getByRole("combobox", { name: "切换面板项目", exact: true });
+const conversation = page.getByRole("combobox", { name: "关联对话", exact: true });
 const frame = page.frameLocator("iframe.panel-host-frame");
 const currentInstance = async () =>
   new URL(await page.locator("iframe.panel-host-frame").getAttribute("src"), origin).pathname.split(
@@ -273,7 +304,12 @@ async function list(letter) {
     .getByRole("heading", { name: "Existing binding " + letter, exact: true })
     .waitFor();
   assert.equal(await picker.inputValue(), "project-" + letter.toLowerCase());
-  assert.equal(await page.locator(".panel-host-frame").count(), 0);
+  assert.equal(await page.locator(".panel-host-frame").isVisible(), false);
+}
+async function sidebarAction(name) {
+  if (!(await page.locator(".workbench-nav").isVisible()))
+    await page.getByRole("button", { name: "展开侧栏", exact: true }).tap();
+  await page.locator(".workbench-nav").getByRole("button", { name, exact: true }).tap();
 }
 async function open(letter) {
   await page.locator(".panels-card").getByRole("button", { name: "打开面板", exact: true }).tap();
@@ -299,7 +335,7 @@ try {
   );
 
   const a = await open("A");
-  await frame.locator("#confirm").tap();
+  await frame.locator("#confirm").click();
   await page.getByText("Owned pending process confirmation", { exact: true }).waitFor();
   const before = await page.evaluate(() => window.selected.length);
   await picker.selectOption("project-b");
@@ -367,34 +403,211 @@ try {
   });
   await picker.selectOption("project-a");
   await list("A");
-  const pending = await open("A");
-  assert.equal(instances.get(pending).sessionId, undefined);
+  const unbound = await open("A");
+  assert.equal(instances.get(unbound).sessionId, undefined);
+  assert.equal(await conversation.inputValue(), "");
+  await frame.locator("#draft").fill("Keep the project-only draft");
   await page.evaluate(() => window.acceptCreation());
   await page.waitForFunction(() => !!window.currentScope().panelSessionId);
-  await frame.locator("#records").getByText("Saved record A", { exact: true }).waitFor();
-  await page.waitForFunction(
-    (old) => !document.querySelector("iframe.panel-host-frame")?.getAttribute("src")?.includes(old),
-    pending,
+  assert.equal(await currentInstance(), unbound);
+  assert.equal(instances.get(unbound).closed, false);
+  assert.equal(await conversation.inputValue(), "");
+  assert.equal(await frame.locator("#draft").inputValue(), "Keep the project-only draft");
+  assert.ok(
+    (await conversation.locator("option").allTextContents()).includes("A original conversation"),
   );
-  assert.ok(instances.get(await currentInstance()).sessionId.startsWith("session-project-a-"));
+  assert.ok(
+    !(await conversation.locator("option").allTextContents()).some((name) =>
+      name.includes("B conversation"),
+    ),
+  );
+  reports.push(
+    "project entry stays unassociated after an incidental controller session succeeds; only current-project conversations are offered",
+  );
+
+  dialogDecisions.push(false);
+  const beforeDismiss = requests.length;
+  await conversation.selectOption("session-a");
+  await page.waitForFunction(() => document.querySelector('[aria-label="关联对话"]').value === "");
+  assert.equal(await currentInstance(), unbound);
+  assert.equal(instances.get(unbound).closed, false);
+  assert.equal(await frame.locator("#draft").inputValue(), "Keep the project-only draft");
+  assert.ok(
+    !requests
+      .slice(beforeDismiss)
+      .some((item) => item.method === "DELETE" || item.pathname.endsWith("/prepare")),
+  );
+  assert.match(dialogs.at(-1), /未保存/);
+  assert.match(dialogs.at(-1), /AI/);
+  await conversation.selectOption("session-a");
+  await page.waitForFunction((old) => {
+    const src = document.querySelector("iframe.panel-host-frame")?.getAttribute("src");
+    return src && !src.includes(old);
+  }, unbound);
+  await frame.locator("#records").getByText("Saved record A", { exact: true }).waitFor();
+  const original = await currentInstance();
+  assert.equal(instances.get(original).sessionId, "session-a");
+  assert.equal(instances.get(unbound).closed, true);
+  assert.equal(await conversation.inputValue(), "session-a");
+  await frame.locator("#draft").fill("Keep this session-owned panel draft");
+  reports.push(
+    "association requires consent; dismissal preserves the old instance and acceptance binds the selected canonical conversation",
+  );
+
+  const beforeChat = requests.length;
+  await page.getByRole("button", { name: "打开对话", exact: true }).tap();
+  await page.locator(".chat:not([hidden])").waitFor();
+  assert.equal(await page.locator("iframe.panel-host-frame").isVisible(), false);
+  assert.equal(instances.get(original).closed, false);
+  await frame.locator("#confirm").evaluate((button) => button.click());
+  await page.getByRole("status").filter({ hasText: "面板有待处理的确认或录制" }).waitFor();
+  assert.equal(await conversation.isVisible(), false);
+  assert.equal(await page.locator("iframe.panel-host-frame").isVisible(), false);
+  dialogDecisions.push(false);
+  const selectionsBeforeHiddenSwitch = await page.evaluate(() => window.selected.length);
+  await page.getByRole("button", { name: "展开侧栏", exact: true }).tap();
+  await page.getByRole("combobox", { name: "选择项目", exact: true }).selectOption("project-b");
+  assert.equal(await page.evaluate(() => window.selected.length), selectionsBeforeHiddenSwitch);
+  assert.equal(await page.evaluate(() => window.currentScope().workspace), "/owned/A");
+  assert.equal(instances.get(original).closed, false);
+  assert.match(dialogs.at(-1), /未保存/);
+  await page
+    .getByRole("dialog", { name: "工作台导航" })
+    .getByRole("button", { name: "收起侧栏", exact: true })
+    .tap();
+  await page.getByRole("button", { name: "返回面板处理", exact: true }).tap();
+  await page.getByText("Owned pending process confirmation", { exact: true }).waitFor();
+  assert.equal(await currentInstance(), original);
+  assert.equal(await conversation.inputValue(), "session-a");
+  assert.equal(await conversation.isDisabled(), true);
+  await page
+    .locator(".panel-host-confirm")
+    .getByRole("button", { name: "取消", exact: true })
+    .tap();
+  await page.locator(".panel-host-confirm").waitFor({ state: "hidden" });
+  assert.equal(instances.get(original).closed, false);
+  await page.getByRole("button", { name: "打开对话", exact: true }).tap();
+  await page.locator(".chat:not([hidden])").waitFor();
+  reports.push(
+    "a hidden guest approval leaves chat visible and offers return to the same guest for trusted cancellation",
+  );
+  await page.getByRole("button", { name: "展开侧栏", exact: true }).tap();
+  await page
+    .locator(".sessions")
+    .getByRole("button", { name: /A second conversation/ })
+    .tap();
+  await page.waitForFunction(() => window.currentScope().panelSessionId === "session-a-other");
+  await sidebarAction("面板");
+  await page.locator("iframe.panel-host-frame").waitFor({ state: "visible" });
+  assert.equal(await currentInstance(), original);
+  assert.equal(await conversation.inputValue(), "session-a");
+  assert.equal(await frame.locator("#draft").inputValue(), "Keep this session-owned panel draft");
+  assert.ok(
+    !requests
+      .slice(beforeChat)
+      .some((item) => item.method === "DELETE" || item.pathname.endsWith("/prepare")),
+  );
+  reports.push(
+    "opening chat and browsing another conversation preserves the original iframe, association and unsaved input without grant revocation",
+  );
+
+  await page.getByRole("button", { name: "打开对话", exact: true }).tap();
+  await page.waitForFunction(() => window.currentScope().panelSessionId === "session-a");
+  await sidebarAction("面板");
+  await page.locator("iframe.panel-host-frame").waitFor({ state: "visible" });
+  assert.equal(await currentInstance(), original);
+  await page.evaluate(() => {
+    window.selectionMode = "hold";
+  });
+  await conversation.selectOption("session-a-other");
+  await page.getByText(/正在关联对话/).waitFor();
+  assert.equal(await conversation.isDisabled(), true);
+  assert.equal(
+    await page.getByRole("button", { name: "新建对话", exact: true }).isDisabled(),
+    true,
+  );
+  assert.equal(await currentInstance(), original);
+  assert.equal(instances.get(original).closed, false);
+  await page.evaluate(() => window.acceptSelection());
+  await page.waitForFunction((old) => {
+    const src = document.querySelector("iframe.panel-host-frame")?.getAttribute("src");
+    return src && !src.includes(old);
+  }, original);
+  await frame.locator("#records").getByText("Saved record A", { exact: true }).waitFor();
+  const selected = await currentInstance();
+  assert.equal(instances.get(selected).sessionId, "session-a-other");
+  assert.equal(await conversation.inputValue(), "session-a-other");
+  await page.evaluate(() => {
+    window.selectionMode = "fail";
+  });
+  await conversation.selectOption("session-a");
+  await page.locator(".panel-session-context").getByRole("alert").waitFor();
+  await page.waitForFunction(() => !document.querySelector('[aria-label="关联对话"]').disabled);
+  assert.equal(await currentInstance(), selected);
+  assert.equal(instances.get(selected).closed, false);
+  assert.equal(await conversation.inputValue(), "session-a-other");
+  reports.push(
+    "existing-conversation selection waits for history acknowledgement; loading and failure retain the previous binding and guest",
+  );
+
+  await page.evaluate(() => {
+    window.selectionMode = "auto";
+    window.creationMode = "hold";
+  });
+  const createsBefore = await page.evaluate(() => window.created.length);
+  await page.getByRole("button", { name: "新建对话", exact: true }).tap();
+  await page.getByText(/正在建立对话/).waitFor();
+  assert.equal(await conversation.isDisabled(), true);
+  assert.equal(
+    await page.getByRole("button", { name: "新建对话", exact: true }).isDisabled(),
+    true,
+  );
+  assert.equal(await currentInstance(), selected);
+  assert.equal(instances.get(selected).closed, false);
+  assert.equal(await page.evaluate(() => window.created.length), createsBefore + 1);
+  await page.evaluate(() => window.acceptCreation());
+  await page.waitForFunction((old) => {
+    const src = document.querySelector("iframe.panel-host-frame")?.getAttribute("src");
+    return src && !src.includes(old);
+  }, selected);
+  await frame.locator("#records").getByText("Saved record A", { exact: true }).waitFor();
+  const created = await currentInstance();
+  assert.ok(instances.get(created).sessionId.startsWith("session-project-a-"));
+  assert.equal(await conversation.inputValue(), instances.get(created).sessionId);
   await page.evaluate(() => {
     window.creationMode = "fail";
   });
-  await picker.selectOption("project-b");
-  await list("B");
-  const failed = await open("B");
-  assert.equal(instances.get(failed).sessionId, undefined);
-  assert.equal(await page.evaluate(() => window.currentScope().panelSessionId), undefined);
+  await page.getByRole("button", { name: "新建对话", exact: true }).tap();
+  await page.locator(".panel-session-context").getByRole("alert").waitFor();
+  await page.waitForFunction(() => !document.querySelector('[aria-label="关联对话"]').disabled);
+  assert.equal(await currentInstance(), created);
+  assert.equal(instances.get(created).closed, false);
+  assert.equal(await conversation.inputValue(), instances.get(created).sessionId);
   reports.push(
-    "new-session pending and failure omit the old project's SID; a correlated successful ID restores the current binding without a send",
+    "explicit creation remains pending until a new canonical ID arrives; failure preserves the previous association and emits no message",
   );
 
   await page.evaluate(() => {
     window.creationMode = "auto";
   });
-  await picker.selectOption("project-a");
+  await picker.selectOption("project-b");
+  await list("B");
+  const reset = await open("B");
+  assert.equal(instances.get(created).closed, true);
+  assert.equal(instances.get(reset).sessionId, undefined);
+  assert.equal(await conversation.inputValue(), "");
+  reports.push(
+    "project change retires the old scoped instance and starts the next project without carrying its conversation",
+  );
+
+  await page.goto(origin + "/mobile/");
+  await page.locator(".chat:not([hidden])").waitFor();
+  await sidebarAction("面板");
   await list("A");
-  await open("A");
+  const inherited = await open("A");
+  assert.equal(instances.get(inherited).sessionId, "session-a");
+  assert.equal(await conversation.inputValue(), "session-a");
+  reports.push("first entry from chat explicitly inherits the current canonical conversation");
   for (const theme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme: theme });
     for (const [width, height] of [
@@ -417,7 +630,8 @@ try {
         };
         return {
           body: document.documentElement.scrollWidth,
-          select: bounds(".panel-project-switcher select"),
+          select: bounds('[aria-label="切换面板项目"]'),
+          conversation: bounds('[aria-label="关联对话"]'),
           label: bounds(".panel-project-switcher"),
           back: bounds(".workbench-back"),
           status: bounds(".connection-pill"),
@@ -425,6 +639,8 @@ try {
       });
       assert.ok(metrics.body <= width + 1);
       assert.ok(metrics.select.height >= 44 && metrics.select.width >= 44);
+      assert.ok(metrics.conversation.height >= 44 && metrics.conversation.width >= 44);
+      assert.ok(metrics.conversation.x >= 0 && metrics.conversation.right <= width);
       assert.ok(
         metrics.label.height >= 44 && metrics.select.x >= 0 && metrics.select.right <= width,
       );
@@ -438,6 +654,7 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => window.setConnection("offline"));
   assert.equal(await picker.isDisabled(), true);
+  assert.equal(await conversation.isDisabled(), true);
   await page.evaluate(() => window.setConnection("online"));
   await page.getByRole("button", { name: "展开侧栏", exact: true }).tap();
   assert.equal(
@@ -468,6 +685,7 @@ try {
         physicalPhoneTested: false,
         reports,
         requests,
+        dialogs,
         modelSends: 0,
         cancellationRequests: 0,
         bindingsUnchanged: true,
@@ -478,9 +696,29 @@ try {
   );
   console.log(JSON.stringify({ ok: true, development, output, reports }));
 } catch (cause) {
+  await page.screenshot({ path: path.join(output, "failure.png"), fullPage: true }).catch(() => {});
+  const diagnostic = await page
+    .evaluate(() => ({
+      url: window.location.href,
+      text: document.body.innerText,
+      frames: [...document.querySelectorAll("iframe")].map((frame) => ({
+        src: frame.src,
+        rect: frame.getBoundingClientRect().toJSON(),
+        inert: frame.inert,
+        hidden: frame.closest("[hidden]")?.className,
+      })),
+    }))
+    .catch(() => null);
+  const frameDiagnostic = await frame
+    .locator("body")
+    .evaluate((body) => ({ text: body.innerText, clicks: body.dataset.confirmClicks }))
+    .catch(() => null);
   console.error(
     JSON.stringify({
       error: cause.message,
+      output,
+      diagnostic,
+      frameDiagnostic,
       errors,
       blocked,
       requests: requests.slice(-20),
