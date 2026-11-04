@@ -33,7 +33,7 @@ export function DeviceRelaySettings({
   // phone signs in there, so the QR carries only the public directory URL.
   const phoneEntryUrl =
     phoneFeature.state === "ready" && status.relayOrigin
-      ? `${status.relayOrigin.replace(/\/$/, "")}${phoneFeature.params?.directoryPath ?? "/"}`
+      ? `${status.relayOrigin.replace(/\/$/, "")}/devices`
       : undefined;
   useEffect(() => {
     let active = true;

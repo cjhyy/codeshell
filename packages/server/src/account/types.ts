@@ -31,9 +31,8 @@ export interface CloudAccountLogin {
 }
 
 export interface CloudAccountCapabilities {
-  features?: AccountFeatureMap;
+  features: AccountFeatureMap;
   registrationAllowed: boolean;
-  registrationPage?: "/register";
   githubEnabled: boolean;
   githubLinkEnabled?: boolean;
   linkManagementEnabled?: boolean;
@@ -104,8 +103,5 @@ export interface CloudAccountApi {
 /** Bounded public projection; no grants, service secrets, or server-only fields. */
 export interface CloudAccountOverview {
   account: CloudAccountIdentity;
-  capabilities: { links: boolean };
-  features?: AccountFeatureMap;
-  relay?: CloudAccountCapabilities["relay"];
-  cloudTarget?: { enabled: true; cloudOrigin: string };
+  features: AccountFeatureMap;
 }

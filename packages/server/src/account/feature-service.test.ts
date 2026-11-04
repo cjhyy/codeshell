@@ -15,7 +15,6 @@ function fixture(initial: CloudAccountStatus = { state: "signed-out" }) {
   let fail = false;
   let overview: AccountFeatureAuthority["overview"] = async () => ({
     account: { id: status.account!.id, username: "user" },
-    capabilities: { links: true },
     features: offered,
   });
   const authority: AccountFeatureAuthority = {
@@ -109,7 +108,6 @@ test("late account A response cannot overwrite account B or restore a logged-out
     await tick();
     f.setOverview(async () => ({
       account: { id: "B", username: "B" },
-      capabilities: { links: false },
       features: {},
     }));
     f.change(signed("B"));
@@ -117,7 +115,6 @@ test("late account A response cannot overwrite account B or restore a logged-out
     expect(seenSignal?.aborted).toBe(true);
     finish({
       account: { id: "A", username: "A" },
-      capabilities: { links: true },
       features: offered,
     });
     await first;
@@ -142,23 +139,27 @@ test("same account id on a different origin drops cached deployment immediately"
     f.service.dispose();
   }
 });
-test("only an absent old overview uses fallback, not authentication or network failures", async () => {
+test("overview absence, denied permissions and network failures never grant features", async () => {
   const f = fixture(signed());
   try {
-    f.setOverview(async () => {
-      throw Object.assign(Error("old"), { status: 404 });
-    });
     await f.service.refresh();
     expect(f.service.snapshot()["links.remote"].state).toBe("ready");
-    f.setOverview(async () => {
-      throw Object.assign(Error("denied"), { status: 401 });
-    });
-    await f.service.refresh();
-    expect(f.service.snapshot()["links.remote"].state).toBe("pending");
+    for (const status of [404, 401, 403, 500, 0]) {
+      f.setOverview(async () => {
+        throw Object.assign(Error("unavailable"), { status });
+      });
+      await f.service.refresh();
+      expect(f.service.snapshot()["links.remote"]).toMatchObject({
+        state: "pending",
+        reason: "service_unreachable",
+      });
+      expect(() => f.service.requireEntitled("links.remote")).toThrow();
+    }
   } finally {
     f.service.dispose();
   }
 });
+
 test("setup entitlement ignores local readiness but business operations do not", async () => {
   const f = fixture(signed());
   const localService = new AccountFeatureService({

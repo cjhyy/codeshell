@@ -1,6 +1,10 @@
 import { expect, test } from "bun:test";
 import { registerCloudAccountIpc } from "./cloud-account-ipc.js";
-import type { CloudAccountLogoutResult, CloudAccountStatus } from "../shared/cloud-account.js";
+import type {
+  CloudAccountCapabilities,
+  CloudAccountLogoutResult,
+  CloudAccountStatus,
+} from "../shared/cloud-account.js";
 
 test.each(["confirmed", "unconfirmed"] as const)(
   "cloud logout IPC returns a public result for %s revocation without rejecting",
@@ -37,7 +41,7 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
       status: () => ({ state: "signed-out" }),
       capabilities: (origin) => {
         capabilityOrigin = origin;
-        return { registrationAllowed: true, githubEnabled: false };
+        return { features: {}, registrationAllowed: true, githubEnabled: false };
       },
       signIn: (_kind, _input, allowed) => {
         authorized = allowed;
@@ -85,6 +89,7 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
     expect(() => handler({ ...event, sender: { ...sender } }, {})).toThrow();
   }
   expect(handlers.get("cloudAccount:capabilities")!(event, "https://account.example")).toEqual({
+    features: {},
     registrationAllowed: true,
     githubEnabled: false,
   });
@@ -255,42 +260,38 @@ test("a missing focus hook or window focus exception does not change a successfu
   }
 });
 
-test("web registration uses the advertised fixed page, supports old services and rechecks its owner", async () => {
-  for (const registrationPage of [undefined, "/register"] as const) {
-    const handlers = new Map<string, (...args: any[]) => any>();
-    let destroyed = false;
-    const sender = { mainFrame: {}, isDestroyed: () => destroyed };
-    const event = { sender, senderFrame: sender.mainFrame };
-    const opened: string[] = [];
-    let capabilities: any = {
-      registrationAllowed: true,
-      githubEnabled: false,
-      ...(registrationPage ? { registrationPage } : {}),
-    };
-    registerCloudAccountIpc({
-      ipcMain: { handle: (name, handler) => handlers.set(name, handler) },
-      isMainWindow: (value) => value === (sender as any),
-      manager: {
-        capabilities: async () => {
-          await Promise.resolve();
-          return capabilities;
-        },
-      } as any,
-      openExternal: async (url) => {
-        opened.push(url);
+test("web registration uses only the fixed page and rechecks its owner", async () => {
+  const handlers = new Map<string, (...args: any[]) => any>();
+  let destroyed = false;
+  const sender = { mainFrame: {}, isDestroyed: () => destroyed };
+  const event = { sender, senderFrame: sender.mainFrame };
+  const opened: string[] = [];
+  let capabilities: CloudAccountCapabilities = {
+    features: {},
+    registrationAllowed: true,
+    githubEnabled: false,
+  };
+  registerCloudAccountIpc({
+    ipcMain: { handle: (name, handler) => handlers.set(name, handler) },
+    isMainWindow: (value) => value === (sender as any),
+    manager: {
+      capabilities: async () => {
+        await Promise.resolve();
+        return capabilities;
       },
-    });
-    const register = handlers.get("cloudAccount:openRegistration")!;
-    await register(event, "https://account.example");
-    expect(opened).toEqual([
-      `https://account.example${registrationPage ?? "/api/v1/account/manage"}`,
-    ]);
-    capabilities = { registrationAllowed: false };
-    await expect(register(event, "https://account.example")).rejects.toThrow("未开放注册");
-    capabilities = { registrationAllowed: true };
-    const pending = register(event, "https://account.example");
-    destroyed = true;
-    await expect(pending).rejects.toThrow("主窗口");
-    expect(opened).toHaveLength(1);
-  }
+    } as any,
+    openExternal: async (url) => {
+      opened.push(url);
+    },
+  });
+  const register = handlers.get("cloudAccount:openRegistration")!;
+  await register(event, "https://account.example");
+  expect(opened).toEqual(["https://account.example/register"]);
+  capabilities = { ...capabilities, registrationAllowed: false };
+  await expect(register(event, "https://account.example")).rejects.toThrow("未开放注册");
+  capabilities = { ...capabilities, registrationAllowed: true };
+  const pending = register(event, "https://account.example");
+  destroyed = true;
+  await expect(pending).rejects.toThrow("主窗口");
+  expect(opened).toHaveLength(1);
 });

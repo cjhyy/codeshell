@@ -422,13 +422,14 @@ test("opt-out and identity binding never prepare a data connection or request re
   expect(denied.saved()).toBeUndefined();
 });
 
-test("optional Link capability is validated without altering legacy capability responses", async () => {
+test("GitHub Link configuration is validated and projected without private fields", async () => {
   const ctx = setup(undefined, async () => ({
     registrationAllowed: true,
     githubEnabled: true,
     githubLinkEnabled: true,
   }));
   expect(await ctx.manager.capabilities(origin)).toEqual({
+    features: {},
     registrationAllowed: true,
     githubEnabled: true,
     githubLinkEnabled: true,
@@ -450,7 +451,7 @@ test("public service capabilities are anonymous, bounded to the selected origin,
     const ctx = setup(undefined, async () => response);
     ctx.unavailable();
     const result = await ctx.manager.capabilities(origin);
-    expect(result).toEqual({ registrationAllowed: enabled, githubEnabled: enabled });
+    expect(result).toEqual({ features: {}, registrationAllowed: enabled, githubEnabled: enabled });
     expect(result).not.toBe(response);
     expect(ctx.requests).toEqual([{ origin, path: "/api/v1/account/status", method: "GET" }]);
     expect(ctx.reads()).toBe(0);
@@ -467,6 +468,7 @@ test("capability discovery preserves an existing session without refreshing or r
   const before = ctx.manager.status();
   ctx.unavailable();
   expect(await ctx.manager.capabilities("https://other.example")).toEqual({
+    features: {},
     registrationAllowed: false,
     githubEnabled: true,
   });
