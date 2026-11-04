@@ -34,6 +34,8 @@ function fakeEngine(models?: string[]): {
     resetSessionUsage(sessionId: string) {
       resetUsage.push(sessionId);
     },
+    resolveModelEntry: (key: string) =>
+      models && !models.includes(key) ? undefined : ({ key, model: key } as never),
     getModelPool: () => {
       const pool = models ? new Set(models) : null;
       return {

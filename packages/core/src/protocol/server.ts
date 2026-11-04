@@ -313,7 +313,7 @@ export interface AgentServerOptions {
    * newly-created session converge on identical disk config — no divergence.
    * When absent, `configure({ reloadSettings })` returns an explicit error.
    */
-  settingsReader?: () => ValidatedSettings;
+  settingsReader?: (cwd?: string) => ValidatedSettings;
   /**
    * Disk-only active-goal reader, used by agent/goalGet when the session is NOT
    * live in chatManager. In worker (chatManager) mode there is no legacyEngine
@@ -407,7 +407,7 @@ export class AgentServer {
   private globalQueryEngine: Engine | null = null;
   private transport: Transport;
   /** Fresh-disk settings reader for config hot-reload; null when not wired. */
-  private readonly settingsReader: (() => ValidatedSettings) | null;
+  private readonly settingsReader: ((cwd?: string) => ValidatedSettings) | null;
   /** Disk-only active-goal reader for agent/goalGet on a non-live session. */
   private readonly readActiveGoalFromDisk:
     | ((sessionId: string) => import("../goal/lifecycle.js").GoalConfig | undefined)
@@ -2903,7 +2903,7 @@ export class AgentServer {
           );
           return;
         }
-        const settings = this.settingsReader();
+        const settings = this.settingsReader(s.engine.getConfig?.().cwd);
         const version = ++this.configVersion;
         s.engine.refreshRuntimeConfig(
           diskDefaultsFrom(settings, s.engine.getEffectiveDisabledLists().disabledPlugins),
@@ -2994,7 +2994,7 @@ export class AgentServer {
         // the reload — otherwise we'd report ok:true while silently dropping it.
         // Mirrors how reloadModels/model/planMode above act on `engine`.
         if (engine) {
-          const settings = this.settingsReader();
+          const settings = this.settingsReader(engine.getConfig?.().cwd);
           engine.refreshRuntimeConfig(
             diskDefaultsFrom(settings, engine.getEffectiveDisabledLists().disabledPlugins),
             ++this.configVersion,
@@ -3003,12 +3003,18 @@ export class AgentServer {
         this.transport.send(createResponse(req.id, { ok: true }));
         return;
       }
-      const settings = this.settingsReader();
+      const settingsByCwd = new Map<string | undefined, ValidatedSettings>();
       // The MCP merge folds each session's PROJECT capabilityOverrides (a
       // project-level "on" must override the global disabledPlugins), so the
       // patch is cwd-dependent — compute it per session, not once.
       const perSession: Array<{ apply: (version: number) => void; patch: unknown }> = [];
       this.chatManager.forEachSession((s) => {
+        const cwd = s.engine.getConfig?.().cwd;
+        let settings = settingsByCwd.get(cwd);
+        if (!settings) {
+          settings = this.settingsReader!(cwd);
+          settingsByCwd.set(cwd, settings);
+        }
         const patch = diskDefaultsFrom(
           settings,
           s.engine.getEffectiveDisabledLists().disabledPlugins,

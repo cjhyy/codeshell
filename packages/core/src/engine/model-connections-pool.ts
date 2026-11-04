@@ -60,6 +60,7 @@ export function modelEntriesFromConnections(
     const extraBody = applyParams(inst.paramValues ?? {}, passthroughParams);
     const e: ModelEntry = {
       key: inst.id,
+      configuredConnectionId: inst.id,
       provider: clientProvider(entry),
       providerKind: entry.adapterKind,
       model: resolved.model,

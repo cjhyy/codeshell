@@ -1018,9 +1018,12 @@ export class Engine {
     }
     const key = this.boundModelKey;
     if (!key) return; // Explicit SDK configs have no catalog/connection binding.
-    const llm = this.modelPool.resolveLLMConfig(key);
-    if (!llm) throw new ConfigError(`Selected model connection "${key}" is no longer configured`);
-    this.config = { ...this.config, llm };
+    const entry = this.resolveModelEntry(key);
+    if (!entry)
+      throw new ConfigError(
+        `Selected model connection "${key}" is unavailable (no longer configured in this workspace)`,
+      );
+    this.config = { ...this.config, llm: this.modelPool.toLLMConfig(entry) };
   }
 
   /**
@@ -3603,9 +3606,28 @@ export class Engine {
    * only live in memory and every restart reverts to the previously persisted
    * defaults.text.
    */
+  resolveModelEntry(key: string): ModelEntry | undefined {
+    const pooled = this.modelPool.get(key);
+    const manager = this.getSettingsManager();
+    manager.invalidate();
+    const settings = manager.get();
+    const connections = (settings.modelConnections ?? []).filter((item) => item.id === key);
+    if (!pooled?.configuredConnectionId && connections.length === 0) return pooled;
+    if (connections.length !== 1 || connections[0].tag !== "text") return undefined;
+    const entry = modelEntriesFromConnections(
+      connections,
+      settings.credentials ?? [],
+      getMergedCatalog(),
+    )[0];
+    if (!entry || (entry.needsKey !== false && !entry.apiKey?.trim()))
+      throw new ConfigError(`Selected model connection "${key}" is incomplete`);
+    if (entry.needsKey === false && !entry.apiKey?.trim()) entry.apiKey = "codeshell-keyless";
+    return entry;
+  }
+
   switchModel(key: string, opts?: { persist?: boolean }): ModelEntry {
     const perSession = opts?.persist === false;
-    const entry = perSession ? this.modelPool.get(key) : this.modelPool.switch(key);
+    const entry = this.resolveModelEntry(key);
     if (!entry) {
       const available = this.modelPool
         .list()
@@ -3613,6 +3635,7 @@ export class Engine {
         .join(", ");
       throw new Error(`Model "${key}" not found. Available: ${available}`);
     }
+    if (!perSession && this.modelPool.has(key)) this.modelPool.switch(key);
     // LLMConfig is pure model identity now — rotate it wholesale. Cross-model
     // runtime knobs (temperature/timeout/retryMaxAttempts/imageDetail) live on
     // this.config.clientDefaults and survive the switch untouched.
