@@ -317,6 +317,91 @@ export interface RoomMeta {
 
 export type RoomOpenStatus = "running" | "missing" | "observing";
 
+/** Why a room cannot change its spawn-time permission mode right now. */
+export type RoomBusyReason = "switching" | "retiring" | "turn" | "approval" | "queued";
+
+const ROOM_BUSY_MESSAGES: Record<RoomBusyReason, string> = {
+  queued:
+    "该 CLI 会话有排队、失败或无法确认的消息，它们按当前权限模式提交；请先在队列中处理后再切换权限模式。",
+  switching: "该 CLI 会话正在切换权限模式，请稍后重试。",
+  retiring:
+    "该 CLI 会话的旧进程仍未确认退出；为避免两个进程同时写入同一会话，暂不启动新进程，请稍后重试。",
+  turn: "该 CLI 会话仍有任务在运行或排队，请先停止或等待完成后再切换权限模式。",
+  approval: "该 CLI 会话有待处理的审批或提问，请先处理后再切换权限模式。",
+};
+
+export class RoomBusyError extends Error {
+  constructor(readonly reason: RoomBusyReason) {
+    super(ROOM_BUSY_MESSAGES[reason]);
+    this.name = "RoomBusyError";
+  }
+}
+
+/** Stable code of RoomInputAcceptedError; callers branch on it, never on text. */
+export const ROOM_INPUT_ACCEPTED = "ROOM_INPUT_ACCEPTED";
+
+/**
+ * The CLI accepted the input, but recording it (history, trace, echo) failed.
+ * The turn may be running: it must never be retried as if it were rejected.
+ */
+export class RoomInputAcceptedError extends Error {
+  readonly code = ROOM_INPUT_ACCEPTED;
+  constructor(cause: unknown) {
+    super(
+      `CLI 已接收这条消息，但会话记录保存失败（${cause instanceof Error ? cause.message : String(cause)}）。请先核对 CLI 会话，不要重复发送。`,
+      { cause },
+    );
+    this.name = "RoomInputAcceptedError";
+  }
+}
+
+/** The room or its process changed between planning and applying a mode change. */
+export class RoomStateChangedError extends Error {
+  constructor(message = "CLI 会话状态已变化，请重新选择权限模式。") {
+    super(message);
+    this.name = "RoomStateChangedError";
+  }
+}
+
+/**
+ * Read-only plan for opening an external CLI session under a mode. A Host may
+ * ask for authorization between plan and apply; apply re-validates every field.
+ */
+export interface RoomSessionOpenPlan {
+  /** Existing room id, or an id reserved for the room apply() will create. */
+  roomId: string;
+  created: boolean;
+  sessionId: string;
+  /** Canonical directory the CLI process will run in. */
+  cwd: string;
+  kind: RoomKind;
+  /** Live process mode, else persisted mode; undefined for a new room. */
+  fromMode?: RoomPermissionMode;
+  toMode: RoomPermissionMode;
+  /** False when metadata and any live process already run in toMode. */
+  change: boolean;
+  /** True when a process is live now (an unchanged open will reuse it). */
+  live: boolean;
+  observing: boolean;
+  revision: number;
+}
+
+export interface RoomSessionOpenResult {
+  roomId: string;
+  status: RoomOpenStatus;
+  mode: RoomPermissionMode;
+  changed: boolean;
+}
+
+function canonicalDirectory(path: string): string {
+  const absolute = resolve(path);
+  try {
+    return realpathSync(absolute);
+  } catch {
+    return absolute;
+  }
+}
+
 export interface RoomMessage {
   seq: number;
   ts: number;
@@ -400,6 +485,15 @@ export interface RoomAgent {
   send(text: string): boolean;
   isRunning(): boolean;
   stop(): void;
+  /** Stop, then resolve true only after the process has really exited. A
+   * replacement for the same external session must not start before that. */
+  stopAndWait?(timeoutMs: number): Promise<boolean>;
+  /** True while a turn process is alive. Codex spawns one child per turn and
+   * that child can outlive the parsed turn_end. Agents without this hook are
+   * tracked by accepted-input / turn_end accounting. */
+  isBusy?(): boolean;
+  /** Resolves once the spawned process exists; rejects for a failed spawn. */
+  whenStarted?(): Promise<void>;
   respondControl?(
     requestId: string,
     decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
@@ -428,6 +522,19 @@ export interface RoomManagerOptions {
    * external session. Checked before any resident agent can start on it, so
    * desktop and phone entry points share one ownership gate. */
   assertExternalSessionAvailable?: (externalSessionId: string, kind: RoomKind) => void;
+  /** Host start policy, checked before ANY resident agent is created (open,
+   * send's implicit open, session open, takeover). Throwing refuses the start.
+   * Persisted metadata alone is never an authorization: the Host decides. */
+  authorizeStart?: (room: Readonly<RoomMeta>) => void;
+  /** Bound on waiting for a retired process during a mode handoff. */
+  processExitTimeoutMs?: number;
+  /** Called after an explicit close() (not after a process exit). */
+  onRoomClosed?: (roomId: string) => void;
+  /** Called when a room's process state changed without a caller to report
+   * it: a failed mode handoff after the old process exited, a failed first
+   * start, or a retired process finally proven gone. Hosts republish the
+   * room's authoritative state to every view. */
+  onRoomStateChanged?: (roomId: string) => void;
   /** Called whenever a room gains a new persisted message (push to phone). */
   onMessage: (roomId: string, msg: RoomMessage) => void;
   /** Called when a room's resident agent requests tool-use approval. For
@@ -462,6 +569,21 @@ export class RoomManager {
   /** Permission mode each live agent was spawned with. The mode is a spawn-time
    * CLI argument, so room metadata alone cannot prove what a process runs. */
   private agentModes = new WeakMap<RoomAgent, RoomPermissionMode>();
+  /** Accepted inputs minus turn_end per room, for agents without isBusy(). A
+   * Claude resident process queues several inputs; each ends with a result. */
+  private turnCounts = new Map<string, number>();
+  /** In-flight mode handoff per room. close() deletes it, so a handoff that is
+   * waiting for the old process can never reopen a room the user closed. */
+  private transitions = new Map<string, symbol>();
+  /** Detached processes not yet proven exited. This is a process-safety fence,
+   * independent of any operation: close() and cancellation leave it in place,
+   * and no agent may start for the room until the process has really exited,
+   * so one external session never has two writers. */
+  private retiring = new Map<string, RoomAgent>();
+  private retiringProbes = new Map<string, Promise<boolean>>();
+  /** Bumped on every change to a room's process or mode, so a Host approval
+   * granted for one state cannot be applied to another. */
+  private revisions = new Map<string, number>();
   private modelTraces = new Map<string, ReturnType<typeof createRoomModelTrace>>();
   /** Rooms whose visible output is currently sourced from the external CLI's
    * transcript tail. While present, the resident agent's stdout mirror is
@@ -512,6 +634,10 @@ export class RoomManager {
     string,
     { stamp: string; intents: Map<string, string> }
   >();
+  private hostTurnHooks: {
+    hasPendingTurns?: (roomId: string) => boolean;
+    beforeClose?: (roomId: string) => void;
+  } = {};
 
   /** Drop all pending AskUser entries for a room. Called when its agent goes
    *  away (exit/close) so a request that can no longer be answered doesn't leak
@@ -652,6 +778,14 @@ export class RoomManager {
     claudeSessionId?: string;
     linkedSessionMode?: "observe-only";
   }): RoomMeta {
+    return this.createRoomWithId(this.mintRoomId(), input);
+  }
+
+  private mintRoomId(): string {
+    return `room_${this.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  private createRoomWithId(id: string, input: Parameters<RoomManager["createRoom"]>[0]): RoomMeta {
     if (
       !input ||
       typeof input.cwd !== "string" ||
@@ -676,7 +810,7 @@ export class RoomManager {
     ) {
       throw new Error("invalid room metadata");
     }
-    const id = `room_${this.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    if (!isValidRoomId(id) || existsSync(this.roomDir(id))) throw new RoomStateChangedError();
     const meta: RoomMeta = {
       id,
       name: input.name ?? defaultRoomName(input.cwd),
@@ -958,45 +1092,446 @@ export class RoomManager {
     }
   }
 
+  /** Monotonic per-room state revision; see `revisions`. */
+  roomRevision(id: string): number {
+    return this.revisions.get(id) ?? 0;
+  }
+
+  private bumpRevision(id: string): void {
+    this.revisions.set(id, this.roomRevision(id) + 1);
+  }
+
+  /** The room bound to an external session. Reuse must match BOTH id and kind:
+   * a codex thread id and a claude session id share the `claudeSessionId`
+   * field, so a bare id match could hand back the other CLI's room. */
+  findSessionRoom(sessionId: string, kind: RoomKind): RoomMeta | undefined {
+    if (!sessionId) return undefined;
+    return this.listRooms().find((r) => r.claudeSessionId === sessionId && r.kind === kind);
+  }
+
+  /** Spawn-time mode of the room's live process, if one is running. */
+  liveMode(id: string): RoomPermissionMode | undefined {
+    const agent = this.agents.get(id);
+    return agent ? this.agentModes.get(agent) : undefined;
+  }
+
   /**
-   * Open (or create) the room bound to a claude session id, deduping by that id
-   * so a given claude session maps to exactly one room. Returns the room id.
+   * Why the room cannot change its process now. A mode change stops the
+   * process, so it must not interrupt queued/active turns, a pending tool
+   * approval or AskUserQuestion, or a decision that already left the approval
+   * bridge but has not been consumed here yet (its entry stays in the pending
+   * maps until respondApproval consumes it).
    */
-  openForSession(
+  roomBusyReason(id: string): RoomBusyReason | undefined {
+    const busy = this.executionBusyReason(id);
+    if (busy) return busy;
+    // A Host-held turn was submitted for the current mode. Changing the mode
+    // underneath it would run it with permissions it was not queued under.
+    return this.hostTurnHooks.hasPendingTurns?.(id) ? "queued" : undefined;
+  }
+
+  /**
+   * The room's own execution state, independent of any Host-held pending
+   * turns: an active or queued CLI input (Codex: a live turn child), a mode
+   * handoff, or an unanswered approval. A Host scheduler waits on this.
+   */
+  private executionBusyReason(id: string): RoomBusyReason | undefined {
+    if (this.transitions.has(id)) return "switching";
+    if (this.deferredEmitRooms.has(id)) return "turn";
+    const agent = this.agents.get(id);
+    if (agent && (agent.isBusy ? agent.isBusy() : (this.turnCounts.get(id) ?? 0) > 0))
+      return "turn";
+    const prefix = `${id}:`;
+    for (const key of this.pendingAskUser.keys()) if (key.startsWith(prefix)) return "approval";
+    for (const key of this.pendingApprovalInputs.keys())
+      if (key.startsWith(prefix)) return "approval";
+    return undefined;
+  }
+
+  /**
+   * True while a new input must not be handed to the room: it is executing
+   * or awaiting an approval, switching modes, or a retired process may still
+   * write. Host pending turns are deliberately not counted here.
+   */
+  isExecutionBusy(id: string): boolean {
+    return this.executionBusyReason(id) !== undefined || this.retiring.has(id);
+  }
+
+  /** Mode a new input would run under: the live process mode, else the stored one. */
+  effectiveMode(id: string): RoomPermissionMode | undefined {
+    return this.liveMode(id) ?? this.getRoom(id)?.permissionMode;
+  }
+
+  /**
+   * Host pending-turn integration, installed once by the Host composition.
+   * `hasPendingTurns` blocks every mode change; `beforeClose` runs before an
+   * explicit close signals the process, so pending turns pause first.
+   */
+  setHostTurnHooks(hooks: {
+    hasPendingTurns?: (roomId: string) => boolean;
+    beforeClose?: (roomId: string) => void;
+  }): void {
+    this.hostTurnHooks = hooks;
+  }
+
+  /**
+   * Plan opening an external session's room under `mode` without changing
+   * anything. Throws for a cwd that differs from the room's bound directory,
+   * an occupied external session, or a busy room whose mode would change.
+   */
+  planSessionOpen(input: {
+    sessionId: string;
+    cwd: string;
+    kind: RoomKind;
+    mode: RoomPermissionMode;
+  }): RoomSessionOpenPlan {
+    const { sessionId, kind, mode } = input;
+    if (typeof sessionId !== "string" || !sessionId) throw new Error("CLI session id is required");
+    this.opts.assertExternalSessionAvailable?.(sessionId, kind);
+    const cwd = canonicalDirectory(input.cwd);
+    const existing = this.findSessionRoom(sessionId, kind);
+    if (!existing) {
+      return {
+        roomId: this.mintRoomId(),
+        created: true,
+        sessionId,
+        cwd,
+        kind,
+        toMode: mode,
+        change: true,
+        live: false,
+        observing: false,
+        revision: 0,
+      };
+    }
+    // The approval and the process must name the same directory.
+    if (canonicalDirectory(existing.cwd) !== cwd)
+      throw new Error("该 CLI 会话已绑定到另一个目录，不能在当前目录打开。");
+    const liveMode = this.liveMode(existing.id);
+    const observing = existing.linkedSessionMode === "observe-only";
+    const change =
+      !observing &&
+      (existing.permissionMode !== mode || (liveMode !== undefined && liveMode !== mode));
+    if (this.transitions.has(existing.id)) throw new RoomBusyError("switching");
+    // Refused before any Host approval is asked for. settleSessionRoom()
+    // re-probes the retired process, so a later attempt succeeds once it exits.
+    if (!observing && this.retiring.has(existing.id)) throw new RoomBusyError("retiring");
+    if (change) {
+      const busy = this.roomBusyReason(existing.id);
+      if (busy) throw new RoomBusyError(busy);
+    }
+    return {
+      roomId: existing.id,
+      created: false,
+      sessionId,
+      cwd,
+      kind,
+      fromMode: liveMode ?? existing.permissionMode,
+      toMode: mode,
+      change,
+      live: liveMode !== undefined,
+      observing,
+      revision: this.roomRevision(existing.id),
+    };
+  }
+
+  /**
+   * Apply a plan from planSessionOpen. `authorize` runs before anything is
+   * changed and again right before the replacement process is created; a
+   * throw leaves metadata untouched (or restores it) and never starts a CLI.
+   * `revalidate` re-checks asynchronous Host facts after every wait for a
+   * retired process, before that final `authorize`, while the room's handoff
+   * is still owned by this call.
+   */
+  async applySessionOpen(
+    plan: RoomSessionOpenPlan,
+    options: { authorize?: () => void; revalidate?: () => Promise<void> } = {},
+  ): Promise<RoomSessionOpenResult> {
+    const authorize = (): void => options.authorize?.();
+    if (plan.created) {
+      if (this.findSessionRoom(plan.sessionId, plan.kind) || this.getRoom(plan.roomId))
+        throw new RoomStateChangedError();
+      authorize();
+      this.opts.assertExternalSessionAvailable?.(plan.sessionId, plan.kind);
+      this.createRoomWithId(plan.roomId, {
+        cwd: plan.cwd,
+        kind: plan.kind,
+        permissionMode: plan.toMode,
+        claudeSessionId: plan.sessionId,
+      });
+      this.bumpRevision(plan.roomId);
+      try {
+        const status = await this.startAgent(plan.roomId);
+        return { roomId: plan.roomId, status, mode: plan.toMode, changed: true };
+      } catch (error) {
+        // The room now exists but nothing runs in it; every view must see that.
+        this.notifyRoomState(plan.roomId);
+        throw error;
+      }
+    }
+    // Plans are checked against the retired-process fence again after it had a
+    // chance to be proven gone; an unproven process still refuses the start.
+    // No await (and so no gap) unless a retired process is actually fenced.
+    if (this.transitions.has(plan.roomId)) throw new RoomBusyError("switching");
+    if (this.retiring.has(plan.roomId)) {
+      if (!(await this.settleRetiring(plan.roomId))) throw new RoomBusyError("retiring");
+      await options.revalidate?.();
+    }
+    const meta = this.getRoom(plan.roomId);
+    if (
+      !meta ||
+      meta.claudeSessionId !== plan.sessionId ||
+      meta.kind !== plan.kind ||
+      canonicalDirectory(meta.cwd) !== plan.cwd ||
+      this.roomRevision(plan.roomId) !== plan.revision
+    )
+      throw new RoomStateChangedError();
+    if (plan.observing) {
+      authorize();
+      return {
+        roomId: plan.roomId,
+        status: "observing",
+        mode: meta.permissionMode,
+        changed: false,
+      };
+    }
+    if (!plan.change) {
+      if (this.transitions.has(plan.roomId)) throw new RoomBusyError("switching");
+      authorize();
+      // Reuses a live process untouched; starts a dormant one in its own mode.
+      const status = await this.startAgent(plan.roomId);
+      return { roomId: plan.roomId, status, mode: meta.permissionMode, changed: false };
+    }
+    const status = await this.transitionRoom(plan.roomId, {
+      toMode: plan.toMode,
+      expectedMode: meta.permissionMode,
+      authorize,
+      ...(options.revalidate ? { revalidate: options.revalidate } : {}),
+    });
+    return { roomId: plan.roomId, status, mode: plan.toMode, changed: true };
+  }
+
+  /**
+   * Open (or create) the room bound to an external session id, deduping by
+   * that id so a given session maps to exactly one room. A different mode is
+   * applied by a guarded process handoff. Hosts that must authorize a mode
+   * use planSessionOpen/applySessionOpen directly.
+   */
+  async openForSession(
     claudeSessionId: string,
     cwd: string,
     mode: RoomPermissionMode,
     kind: RoomKind = "claude-code",
-  ): { roomId: string; status: RoomOpenStatus } {
-    if (claudeSessionId) this.opts.assertExternalSessionAvailable?.(claudeSessionId, kind);
-    // Reuse must match BOTH id and kind: a codex thread id and a claude session
-    // id live in the same `claudeSessionId` field, so a bare id match could
-    // otherwise hand back a claude room when a codex room was asked for.
-    const existing = claudeSessionId
-      ? this.listRooms().find((r) => r.claudeSessionId === claudeSessionId && r.kind === kind)
-      : undefined;
-    const meta =
-      existing ??
-      this.createRoom({
-        cwd,
-        kind,
-        permissionMode: mode,
-        claudeSessionId: claudeSessionId || undefined,
-      });
-    // permissionMode is a spawn-time CLI arg (--permission-mode), so it can't be
-    // changed on a live process. If the caller reopens an existing room under a
-    // DIFFERENT mode, persist the new mode and restart the resident agent;
-    // otherwise reopening keeps the running process and the picked mode would be
-    // silently ignored (the "bypassPermissions still prompts" bug).
-    if (existing && existing.permissionMode !== mode) {
-      this.writeRoomMeta(meta.id, { ...meta, permissionMode: mode });
-      this.close(meta.id); // stop the old-mode process so open() respawns fresh
+  ): Promise<{ roomId: string; status: RoomOpenStatus; mode: RoomPermissionMode }> {
+    // Inline (not settleSessionRoom) so an unfenced room adds no await gap.
+    const existing = this.findSessionRoom(claudeSessionId, kind);
+    if (existing && this.retiring.has(existing.id) && !this.transitions.has(existing.id))
+      await this.settleRetiring(existing.id);
+    const plan = this.planSessionOpen({ sessionId: claudeSessionId, cwd, kind, mode });
+    const result = await this.applySessionOpen(plan);
+    return { roomId: result.roomId, status: result.status, mode: result.mode };
+  }
+
+  /**
+   * Re-probe a retired process of the session's room (see `retiring`), so a
+   * plan made right afterwards is refused only while that process is really
+   * still alive. Never starts anything.
+   */
+  async settleSessionRoom(sessionId: string, kind: RoomKind): Promise<void> {
+    const room = this.findSessionRoom(sessionId, kind);
+    // A handoff in progress owns its retired process; the plan reports it busy.
+    if (room && this.retiring.has(room.id) && !this.transitions.has(room.id))
+      await this.settleRetiring(room.id);
+  }
+
+  /** Resolves true once no retired process of the room can still be alive. */
+  private settleRetiring(id: string): Promise<boolean> {
+    const agent = this.retiring.get(id);
+    if (!agent) return Promise.resolve(true);
+    const inFlight = this.retiringProbes.get(id);
+    if (inFlight) return inFlight;
+    const probe: Promise<boolean> = this.probeRetired(id, agent).finally(() => {
+      if (this.retiringProbes.get(id) === probe) this.retiringProbes.delete(id);
+    });
+    this.retiringProbes.set(id, probe);
+    return probe;
+  }
+
+  private async probeRetired(id: string, agent: RoomAgent): Promise<boolean> {
+    let exited: boolean;
+    try {
+      if (agent.stopAndWait) {
+        exited = await agent.stopAndWait(this.opts.processExitTimeoutMs ?? 5_000);
+      } else {
+        agent.stop();
+        exited = true;
+      }
+    } catch {
+      exited = false;
     }
-    // Metadata alone cannot prove the live process mode (a concurrent takeover
-    // may have rewritten it), so also compare the agent's spawn-time mode.
-    this.retireAgentUnlessMode(meta.id, mode);
-    const { status } = this.open(meta.id);
-    return { roomId: meta.id, status };
+    if (exited && this.retiring.get(id) === agent) {
+      this.retiring.delete(id);
+      // The shared probe owns publication, so concurrent waiters notify once.
+      if (!this.transitions.has(id)) this.notifyRoomState(id);
+    }
+    return !this.retiring.has(id);
+  }
+
+  /** Synchronous entry points cannot wait: refuse, and re-probe in the
+   * background so the next attempt succeeds once the process is gone. */
+  private assertNotRetiring(id: string): void {
+    if (!this.retiring.has(id)) return;
+    this.watchRetired(id);
+    throw new RoomBusyError("retiring");
+  }
+
+  /** Request an exit probe; the shared probe publishes a proven exit once.
+   * A handoff that still owns the room reports its own outcome. */
+  private watchRetired(id: string): void {
+    void this.settleRetiring(id);
+  }
+
+  private notifyRoomState(id: string): void {
+    try {
+      this.opts.onRoomStateChanged?.(id);
+    } catch {
+      // A Host broadcast failure must not change the room's outcome.
+    }
+  }
+
+  /**
+   * Replace a room's process with one in `toMode`. permissionMode is a
+   * spawn-time CLI argument (`--permission-mode` / codex sandbox flags), so a
+   * live process cannot change it. Order matters:
+   *  1. refuse a busy room, before touching anything;
+   *  2. detach the old process, so its late output/exit belongs to nobody, and
+   *     wait (bounded) until it has really exited — never two writers;
+   *  3. re-authorize, then persist the mode and start the replacement;
+   *  4. on any failure restore the previous mode. The old process is already
+   *     gone at that point, so the room reports not running instead of
+   *     pretending the old state came back, and every view is told so.
+   * The detached process stays in `retiring` until its exit is proven: a
+   * timeout, close() or cancellation ends this operation but not the fence.
+   * Transcript followers are not ended: the external session continues.
+   */
+  private async transitionRoom(
+    id: string,
+    input: {
+      toMode: RoomPermissionMode;
+      expectedMode: RoomPermissionMode;
+      authorize: () => void;
+      /** Async Host re-checks after the old process exited (token held). */
+      revalidate?: () => Promise<void>;
+      patch?: Partial<Pick<RoomMeta, "cwd" | "linkedSessionMode">>;
+    },
+  ): Promise<RoomOpenStatus> {
+    const busy = this.roomBusyReason(id);
+    if (busy) throw new RoomBusyError(busy);
+    if (this.retiring.has(id)) throw new RoomBusyError("retiring");
+    // A background task writing this external session refuses the switch
+    // before the live process is touched, not after it has been stopped.
+    const before = this.getRoom(id);
+    if (before?.claudeSessionId)
+      this.opts.assertExternalSessionAvailable?.(before.claudeSessionId, before.kind);
+    input.authorize();
+    const token = Symbol(id);
+    this.transitions.set(id, token);
+    this.bumpRevision(id);
+    let snapshot: RoomMeta | undefined;
+    let metadataWritten = false;
+    /** False only while the detached process may still be alive. */
+    let oldProcessGone = true;
+    let failed = false;
+    try {
+      const agent = this.agents.get(id);
+      if (agent) {
+        // Fence first: from here until its exit is proven nothing may start.
+        this.retiring.set(id, agent);
+        oldProcessGone = false;
+        this.agents.delete(id);
+        this.turnCounts.delete(id);
+        this.modelTraces.get(id)?.finish("cancelled");
+        this.modelTraces.delete(id);
+        this.pendingTranscriptUserEchoes.delete(id);
+        oldProcessGone = await this.settleRetiring(id);
+        if (!oldProcessGone)
+          throw new Error(
+            "旧 CLI 进程未能在时限内退出；为避免两个进程同时写入同一会话，没有启动新模式。",
+          );
+        // Facts proven before the wait may have changed during it. The token
+        // still owns the room, so nothing else can start while this awaits.
+        if (this.transitions.get(id) === token) await input.revalidate?.();
+      }
+      if (this.transitions.get(id) !== token)
+        throw new RoomStateChangedError("CLI 会话已被关闭，权限模式切换已取消。");
+      // The requester and its grant are re-checked right before the
+      // replacement exists; a cancellation leaves the room really stopped.
+      input.authorize();
+      snapshot = this.getRoom(id);
+      if (!snapshot || snapshot.permissionMode !== input.expectedMode)
+        throw new RoomStateChangedError();
+      this.writeRoomMeta(id, { ...snapshot, ...input.patch, permissionMode: input.toMode });
+      metadataWritten = true;
+      const status = await this.startAgent(id, token);
+      if (status !== "running") throw new Error("新模式的 CLI 进程未能启动。");
+      return status;
+    } catch (error) {
+      // A process that may still be alive is not reported as stopped; the
+      // fence is re-probed and the room republished once it is proven gone.
+      if (!oldProcessGone) this.watchRetired(id);
+      if (metadataWritten && snapshot) {
+        try {
+          const current = this.getRoom(id);
+          if (current)
+            this.writeRoomMeta(id, {
+              ...current,
+              cwd: snapshot.cwd,
+              permissionMode: snapshot.permissionMode,
+              linkedSessionMode: snapshot.linkedSessionMode,
+            });
+        } catch {
+          // Surface the original failure; the room reports not running.
+        }
+      }
+      failed = true;
+      throw error;
+    } finally {
+      if (this.transitions.get(id) === token) this.transitions.delete(id);
+      this.bumpRevision(id);
+      // Only the requester receives the error; every other phone and Desktop
+      // window learns the room's real (stopped, restored-mode) state here.
+      if (failed && oldProcessGone) this.notifyRoomState(id);
+    }
+  }
+
+  /** Start (or reuse) the room's agent and wait until a spawned process exists. */
+  private async startAgent(id: string, transition?: symbol): Promise<RoomOpenStatus> {
+    if (transition !== undefined && this.transitions.get(id) !== transition)
+      throw new RoomStateChangedError("CLI 会话已被关闭，权限模式切换已取消。");
+    if (transition === undefined && this.transitions.has(id)) throw new RoomBusyError("switching");
+    const { status } = this.openAgent(id);
+    if (status !== "running") return status;
+    const agent = this.agents.get(id);
+    if (!agent?.whenStarted) return status;
+    try {
+      await agent.whenStarted();
+    } catch (error) {
+      if (this.agents.get(id) === agent) {
+        this.agents.delete(id);
+        this.turnCounts.delete(id);
+        try {
+          agent.stop();
+        } catch {
+          // Preserve the spawn error.
+        }
+        this.bumpRevision(id);
+      }
+      throw new Error(
+        `CLI 进程启动失败：${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      );
+    }
+    return this.agents.get(id) === agent && agent.isRunning() ? "running" : "missing";
   }
 
   /** Bind an external CLI transcript to a room for observation only.
@@ -1054,19 +1589,22 @@ export class RoomManager {
    * This is the linked-session operation that may create/start an agent. The
    * external identity is revalidated at takeover time so stale links cannot
    * silently start a different session. */
-  takeOverLinkedSession(
+  async takeOverLinkedSession(
     roomId: string,
     externalSessionId: string,
     cwd: string,
     kind: RoomKind,
-  ): {
+  ): Promise<{
     roomId: string;
     status: "running";
     mode: RoomPermissionMode;
     cwd: string;
-  } {
+  }> {
     const target = this.requireLinkedSessionTarget({ externalSessionId, cwd, kind });
     this.opts.assertExternalSessionAvailable?.(target.externalSessionId, target.kind);
+    if (this.transitions.has(roomId)) throw new RoomBusyError("switching");
+    if (this.retiring.has(roomId) && !(await this.settleRetiring(roomId)))
+      throw new RoomBusyError("retiring");
     const meta = this.getRoom(roomId);
     if (
       !meta ||
@@ -1076,24 +1614,31 @@ export class RoomManager {
     ) {
       throw new Error("linked session does not match the requested room");
     }
-    const controllableMeta: RoomMeta = {
-      ...meta,
-      cwd: target.cwd,
-      // Observe-only navigation never asks the user to approve a stored
-      // permission mode. A prior bypassPermissions value must not be inherited
-      // silently when takeover starts a new process.
-      permissionMode: "default",
-      linkedSessionMode: undefined,
-    };
-    this.writeRoomMeta(roomId, controllableMeta);
-    // Another view may have taken over and reopened this session under a
-    // different mode. Never report default while feeding that process.
-    this.retireAgentUnlessMode(roomId, controllableMeta.permissionMode);
-    const { status } = this.open(roomId);
+    if (this.transitions.has(roomId)) throw new RoomBusyError("switching");
+    // Observe-only navigation never asks the user to approve a stored
+    // permission mode. A prior bypassPermissions value must not be inherited
+    // silently when takeover starts a new process.
+    const patch = { cwd: target.cwd, linkedSessionMode: undefined };
+    const liveMode = this.liveMode(roomId);
+    let status: RoomOpenStatus;
+    if (liveMode !== undefined && liveMode !== "default") {
+      // Another view runs this session under a different mode. Replace that
+      // process only when it is idle, and only after it has exited.
+      status = await this.transitionRoom(roomId, {
+        toMode: "default",
+        expectedMode: meta.permissionMode,
+        authorize: () => undefined,
+        patch,
+      });
+    } else {
+      this.writeRoomMeta(roomId, { ...meta, ...patch, permissionMode: "default" });
+      this.bumpRevision(roomId);
+      status = await this.startAgent(roomId);
+    }
     if (status !== "running") {
       throw new Error("linked session room is unavailable");
     }
-    return { roomId, status, mode: controllableMeta.permissionMode, cwd: controllableMeta.cwd };
+    return { roomId, status, mode: "default", cwd: target.cwd };
   }
 
   private requireLinkedSessionTarget(target: LinkedSessionTarget): LinkedSessionTarget {
@@ -1202,12 +1747,23 @@ export class RoomManager {
   /** Open a room: start its resident agent if not already running. Observe-only
    * linked rooms fail closed until takeOverLinkedSession clears the boundary. */
   open(id: string): { status: RoomOpenStatus } {
+    // A mode handoff owns the room until its replacement process exists.
+    if (this.transitions.has(id)) throw new RoomBusyError("switching");
+    return this.openAgent(id);
+  }
+
+  private openAgent(id: string): { status: RoomOpenStatus } {
     const meta = this.getRoom(id);
     if (!meta) return { status: "missing" };
     if (meta.linkedSessionMode === "observe-only") return { status: "observing" };
     if (!this.agents.has(id)) {
+      // Every start path ends here: no second writer while a detached
+      // process of this room may still be alive.
+      this.assertNotRetiring(id);
       if (meta.claudeSessionId)
         this.opts.assertExternalSessionAvailable?.(meta.claudeSessionId, meta.kind);
+      // Host policy, e.g. a stored bypassPermissions needs a live Host grant.
+      this.opts.authorizeStart?.(meta);
       let agent: RoomAgent | undefined = undefined;
       agent = this.opts.createAgent(meta, (event) => {
         // stop() sends a signal; an old process can still drain output or emit
@@ -1217,10 +1773,13 @@ export class RoomManager {
       });
       this.agents.set(id, agent);
       this.agentModes.set(agent, meta.permissionMode);
+      this.turnCounts.delete(id);
+      this.bumpRevision(id);
       try {
         agent.start();
       } catch (error) {
         if (this.agents.get(id) === agent) this.agents.delete(id);
+        this.bumpRevision(id);
         this.clearPendingApprovals(id);
         try {
           agent.stop();
@@ -1236,12 +1795,6 @@ export class RoomManager {
     return { status: "running" };
   }
 
-  /** Stop a live agent whose spawn-time permission mode differs from `mode`. */
-  private retireAgentUnlessMode(id: string, mode: RoomPermissionMode): void {
-    const agent = this.agents.get(id);
-    if (agent && this.agentModes.get(agent) !== mode) this.close(id);
-  }
-
   private onAgentEvent(id: string, event: ResidentAgentEvent): void {
     // Buffered while send() is deciding acceptance — replayed right after the
     // user turn is appended, so a synchronous agent reply cannot precede it.
@@ -1250,6 +1803,16 @@ export class RoomManager {
       queued.push(event);
       this.deferredEmits.set(id, queued);
       return;
+    }
+    // Turn accounting must see every event, including the turn_end that the
+    // transcript-follow filter below hides from the stdout mirror.
+    if (event.type === "turn_end") {
+      const remaining = (this.turnCounts.get(id) ?? 0) - 1;
+      if (remaining > 0) this.turnCounts.set(id, remaining);
+      else this.turnCounts.delete(id);
+    } else if (event.type === "exit") {
+      this.turnCounts.delete(id);
+      this.bumpRevision(id);
     }
     const trace = this.modelTraces.get(id);
     trace?.observe(event);
@@ -1330,13 +1893,21 @@ export class RoomManager {
             ?.respondControl?.(event.requestId, { behavior: "allow", updatedInput: event.input });
           break;
         }
-        this.append(id, {
-          from: "agent",
-          type: "approval",
-          tool: event.toolName,
-          summary: event.description ?? "",
-        });
-        this.pendingApprovalInputs.set(`${id}:${event.requestId}`, event.input);
+        // Record the pending approval BEFORE the message is published: anything
+        // reacting to it (e.g. a Host scheduler) must already see the room busy.
+        const approvalKey = `${id}:${event.requestId}`;
+        this.pendingApprovalInputs.set(approvalKey, event.input);
+        try {
+          this.append(id, {
+            from: "agent",
+            type: "approval",
+            tool: event.toolName,
+            summary: event.description ?? "",
+          });
+        } catch (error) {
+          this.pendingApprovalInputs.delete(approvalKey);
+          throw error;
+        }
         this.opts.onApprovalRequest?.(id, event);
         break;
       }
@@ -1480,7 +2051,28 @@ export class RoomManager {
       // Rejected: nothing about this turn reaches history or the phone.
       return false;
     }
+    // Counted before the buffered events replay, so a synchronous turn_end
+    // settles exactly this input.
+    if (this.agents.get(id) === agent) this.turnCounts.set(id, (this.turnCounts.get(id) ?? 0) + 1);
+    try {
+      this.recordAcceptedInput(id, meta, agentText, displayText, summaries, buffered, receipt);
+    } catch (error) {
+      // The CLI already has this input. Reporting a plain failure would invite
+      // a second submission of the same turn.
+      throw new RoomInputAcceptedError(error);
+    }
+    return true;
+  }
 
+  private recordAcceptedInput(
+    id: string,
+    meta: RoomMeta,
+    agentText: string,
+    displayText: string,
+    summaries: NonNullable<RoomMessage["attachments"]>,
+    buffered: ResidentAgentEvent[],
+    receipt?: RoomInputReceipt,
+  ): void {
     if (this.opts.modelTracing) {
       try {
         let trace = this.modelTraces.get(id);
@@ -1515,25 +2107,52 @@ export class RoomManager {
     // Replay whatever the agent produced synchronously, now correctly ordered
     // after the user turn.
     for (const event of buffered) this.onAgentEvent(id, event);
-    return true;
   }
 
   close(id: string): void {
+    // Stopping is the current turn only: Host-held turns pause BEFORE the
+    // process is signalled, so the idle boundary cannot start the next one.
+    try {
+      this.hostTurnHooks.beforeClose?.(id);
+    } catch {
+      // Bookkeeping must never keep a process alive.
+    }
+    // An explicit close cancels a pending mode handoff: the handoff checks its
+    // token before starting the replacement, so it can never reopen the room.
+    // The retired-process fence is deliberately kept: until the old process is
+    // proven gone, an immediate reopen or send is refused, not double-started.
+    this.transitions.delete(id);
+    this.bumpRevision(id);
     // A room going quiet must record its REAL last activity, not the last
     // throttled write.
     this.flushLastActive(id);
     const agent = this.agents.get(id);
     this.modelTraces.get(id)?.finish("cancelled");
     this.modelTraces.delete(id);
+    // stop() only signals: the process can outlive it by the SIGTERM grace
+    // period. Fence the room before signalling so an immediate send/open/
+    // reopen cannot start a second writer on the same external session. An
+    // agent without stopAndWait() has no exit to wait for (stop() is its exit).
+    const fenced = !!agent?.stopAndWait && !this.retiring.has(id);
+    if (fenced) this.retiring.set(id, agent!);
     try {
       agent?.stop();
     } finally {
       if (!agent || this.agents.get(id) === agent) this.agents.delete(id);
+      this.turnCounts.delete(id);
       this.clearPendingApprovals(id);
       this.pendingTranscriptUserEchoes.delete(id);
       this.deferredEmitRooms.delete(id);
       this.deferredEmits.delete(id);
       this.opts.onRoomEnded?.(id);
+      try {
+        this.opts.onRoomClosed?.(id);
+      } catch {
+        // A Host bookkeeping failure must not keep the process alive.
+      }
+      // Prove the exit in the background; the room is republished once it is
+      // gone. Until then isOpen() stays true and every start is refused.
+      if (fenced) this.watchRetired(id);
     }
   }
 
@@ -1550,6 +2169,8 @@ export class RoomManager {
       }
     }
     this.agents.clear();
+    this.transitions.clear();
+    this.turnCounts.clear();
     this.pendingAskUser.clear();
     this.pendingApprovalInputs.clear();
     this.pendingTranscriptUserEchoes.clear();
@@ -1566,8 +2187,10 @@ export class RoomManager {
     if (firstError) throw firstError;
   }
 
+  /** True while the room's process runs, or a retired one is not yet proven
+   * gone (a view must not be told the room stopped while it may still write). */
   isOpen(id: string): boolean {
-    return this.agents.get(id)?.isRunning() ?? false;
+    return (this.agents.get(id)?.isRunning() ?? false) || this.retiring.has(id);
   }
 
   /**
@@ -1584,7 +2207,7 @@ export class RoomManager {
     const removed: string[] = [];
     for (const meta of this.listRooms()) {
       if (meta.lastActiveAt > cutoff) continue;
-      if (this.isOpen(meta.id)) continue; // never reap a live session
+      if (this.isOpen(meta.id) || this.transitions.has(meta.id)) continue; // never reap a live session
       rmSync(this.roomDir(meta.id), { recursive: true, force: true });
       this.agents.delete(meta.id);
       // Drop the cached seq with the files, so a room id that somehow comes back

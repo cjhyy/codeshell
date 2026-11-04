@@ -196,6 +196,10 @@ export const mobile = {
         fallbackName: "操作",
         truncated: "… (已截断)",
       },
+      queue: {
+        lostUnconfirmed:
+          "桌面已重启，此会话中 {count} 条排队消息的执行结果无法确认。请先核对会话历史，避免重复提交。",
+      },
     },
   },
   en: {
@@ -405,6 +409,10 @@ export const mobile = {
         completed: "Completed",
         fallbackName: "Operation",
         truncated: "… (truncated)",
+      },
+      queue: {
+        lostUnconfirmed:
+          "Desktop restarted. Whether {count} queued messages in this conversation ran cannot be confirmed. Check the history to avoid running them twice.",
       },
     },
   },

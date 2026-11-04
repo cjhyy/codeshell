@@ -87,6 +87,7 @@ import {
   interactiveBrowserRuntimeOwner,
   replaceStreamEventInLine,
 } from "./browser-runtime/index.js";
+import { observeRunStopFrame } from "./run-stop-signals.js";
 import {
   executeRemoteLinkAction,
   RemoteLinkError,
@@ -918,6 +919,7 @@ export class AgentBridge implements PetStateBridge {
     const parsed = prepared.parsed;
     if (typeof parsed.params?.sessionId === "string" && meta.producer !== "output-history-recovery")
       assertOutputHistoryWriteAvailable(parsed.params.sessionId);
+    observeRunStopFrame(parsed);
     cancelBrowserActionsForStoppedRun(parsed);
     observeComputerUseRunControl(parsed);
     if (
@@ -1009,6 +1011,7 @@ export class AgentBridge implements PetStateBridge {
           return;
         }
       }
+      observeRunStopFrame(parsed);
       cancelBrowserActionsForStoppedRun(parsed);
       observeComputerUseRunControl(parsed);
       if (isOptimizationLabQuery(parsed)) {

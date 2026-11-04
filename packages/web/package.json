@@ -27,6 +27,7 @@
   "scripts": {
     "test:latest-browser": "node scripts/test-latest-messages.mjs",
     "test:mobile-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-mobile-workbench-browser.mjs",
+    "test:remote-queue-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-remote-queue-browser.mjs",
     "test:chat-operations-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-chat-operations-browser.mjs",
     "test:service-worker-browser": "node ../../scripts/run-isolated-node-smoke.mjs scripts/test-service-worker-browser.mjs",
     "build": "bun run clean && tsc -p tsconfig.json && vite build",

@@ -147,6 +147,20 @@ function CliRoomBrowser({
     setPicking(null);
   }, []);
 
+  // Another view (a paired phone, another window) may restart this room under
+  // a different mode. Show the mode Main reports, not the one we opened with.
+  useEffect(
+    () =>
+      window.codeshell.ccRoom.onRoomState?.((room) =>
+        setConv((current) =>
+          current?.roomId === room.id && current.mode !== room.permissionMode
+            ? { ...current, mode: room.permissionMode }
+            : current,
+        ),
+      ),
+    [],
+  );
+
   useEffect(() => {
     setSessions([]);
     setTotal(0);
@@ -282,7 +296,7 @@ function CliRoomBrowser({
       openingRequestRef.current = request;
       setOpening(true);
       try {
-        const { roomId, status } = await window.codeshell.ccRoom.openSession(
+        const { roomId, status, permissionMode } = await window.codeshell.ccRoom.openSession(
           picking.sessionId,
           picking.cwd,
           mode,
@@ -293,7 +307,8 @@ function CliRoomBrowser({
         setConv({
           roomId,
           sessionId: picking.sessionId,
-          mode,
+          // The mode Main actually started the CLI with, not just the request.
+          mode: permissionMode ?? mode,
           cwd: picking.cwd,
           cliKind,
           status: status === "observing" ? "observing" : "running",

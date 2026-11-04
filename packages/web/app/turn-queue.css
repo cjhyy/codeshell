@@ -1,0 +1,220 @@
+/* Host-owned pending turns: a light list attached to the top of the composer. */
+.turn-queue {
+  margin: 0 8px -1px;
+  padding: 8px 8px 6px 10px;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  background: color-mix(in srgb, var(--panel) 70%, var(--surface));
+  font-size: 12px;
+  line-height: 1.5;
+}
+.turn-queue.is-paused {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
+  background: color-mix(in srgb, var(--warning) 6%, var(--surface));
+}
+.turn-queue-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+  padding: 0 0 6px 2px;
+}
+.turn-queue-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--text);
+}
+.turn-queue-count {
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.turn-queue-note {
+  flex: 1 1 160px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.turn-queue.is-paused .turn-queue-note {
+  color: var(--warning);
+}
+.turn-queue-actions,
+.turn-queue-item-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+button.turn-queue-action,
+button.turn-queue-more {
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button.turn-queue-action:hover:not(:disabled),
+button.turn-queue-more:hover {
+  background: var(--hover);
+}
+button.turn-queue-action.primary {
+  border-color: transparent;
+  background: var(--text);
+  color: var(--bg);
+}
+button.turn-queue-action.danger {
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+  color: var(--danger);
+}
+.turn-queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: min(240px, 30dvh);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+.turn-queue-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 2px 6px 0;
+  border-top: 1px solid var(--subtle);
+}
+.turn-queue-item:first-child {
+  border-top: 0;
+}
+.turn-queue-index {
+  flex: 0 0 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.turn-queue-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.turn-queue-text {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.turn-queue-meta {
+  color: var(--muted);
+  font-size: 11px;
+}
+.turn-queue-message {
+  color: var(--muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.turn-queue-item.status-dispatching .turn-queue-index {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.turn-queue-item.status-failed .turn-queue-meta,
+.turn-queue-item.status-failed .turn-queue-message,
+.turn-queue-item.status-uncertain .turn-queue-meta,
+.turn-queue-item.status-uncertain .turn-queue-message {
+  color: var(--danger);
+}
+.turn-queue-item.status-waiting .turn-queue-meta {
+  color: var(--warning);
+}
+button.turn-queue-remove {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button.turn-queue-remove:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--danger);
+}
+button.turn-queue-more {
+  display: block;
+  width: 100%;
+  min-height: 30px;
+  margin-top: 4px;
+  border-style: dashed;
+  background: transparent;
+  color: var(--muted);
+}
+/* The composer joins the list as one card when both are visible. */
+.turn-queue + .composer {
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+}
+
+@media (max-width: 760px) {
+  .turn-queue {
+    margin-inline: 6px;
+    padding: 6px 6px 4px 8px;
+  }
+  .turn-queue-note {
+    flex-basis: 100%;
+    order: 3;
+  }
+  button.turn-queue-action {
+    min-height: 44px;
+    padding-inline: 12px;
+  }
+  button.turn-queue-remove {
+    width: 44px;
+    height: 44px;
+    margin: -6px -2px -6px 0;
+  }
+  button.turn-queue-more {
+    min-height: 44px;
+  }
+  .turn-queue-text {
+    font-size: 14px;
+  }
+  /* Keep the transcript readable above the keyboard on short phones. */
+  .turn-queue-list {
+    max-height: min(180px, 22dvh);
+  }
+}

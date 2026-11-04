@@ -190,6 +190,9 @@ jobs:
               --path-ignore-patterns '**/src/main/cloud-management*.test.ts'
               --path-ignore-patterns '**/src/main/desktop-remote-services.test.ts'
               --path-ignore-patterns '**/src/main/link-account-access.test.ts'
+              --path-ignore-patterns '**/src/main/mobile-remote/turn-queue-host.test.ts'
+              --path-ignore-patterns '**/src/main/cc-room/room-mode-authority.test.ts'
+              --path-ignore-patterns '**/src/main/cc-room/room-mode-host-boundary.test.ts'
           # rest is split in two only for wall time (470s as one shard). Together the two
           # path lists are the previous single list. The module losses seen when it was split
           # were not size: two suites bundled with an in-process Bun.build, which shares the
@@ -283,6 +286,9 @@ jobs:
           # Keep new presence suites in their own bounded process; the general Desktop shard is full.
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/pet/mimi-presence-controller.test.ts packages/desktop/src/main/pet/mimi-presence-state.test.ts packages/desktop/src/main/pet/mimi-presence-ipc.test.ts packages/desktop/src/main/pet/pet-widget-surface.test.ts packages/desktop/src/renderer/app/useMimiPresence.test.tsx
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/pet/createPetTargetNavigator.test.ts
+          # Host turn-queue and CLI room-mode lifecycle suites (real RoomManager with mock
+          # CLIs) run as one bounded process; the general Desktop shard is at its budget.
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/mobile-remote/turn-queue-host.test.ts packages/desktop/src/main/cc-room/room-mode-authority.test.ts packages/desktop/src/main/cc-room/room-mode-host-boundary.test.ts
       - name: test Desktop application state hooks
         if: matrix.shard == 'desktop'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 --path-ignore-patterns '**/useMimiPresence.test.tsx' packages/desktop/src/renderer/app
@@ -334,6 +340,7 @@ jobs:
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-model-actions-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-workbench-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-mobile-workbench-browser.mjs --development
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-remote-queue-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-history-details-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-compact-tool-progress-browser.mjs
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-compact-tool-progress-browser.mjs --development

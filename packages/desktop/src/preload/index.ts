@@ -1867,6 +1867,11 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.on("ccRoom:approvalResolved", h);
       return () => ipcRenderer.removeListener("ccRoom:approvalResolved", h);
     },
+    onRoomState: (cb: (room: unknown) => void): (() => void) => {
+      const h = (_e: IpcRendererEvent, room: unknown) => cb(room);
+      ipcRenderer.on("ccRoom:roomState", h);
+      return () => ipcRenderer.removeListener("ccRoom:roomState", h);
+    },
   },
 
   // ── Remaining CC/Codex subscription quota ──

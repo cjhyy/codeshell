@@ -1,5 +1,9 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { releaseStdioAfterExit, stopRoomProcess } from "./room-process-stop.js";
+import {
+  releaseStdioAfterExit,
+  stopRoomProcess,
+  stopRoomProcessAndWait,
+} from "./room-process-stop.js";
 import { createInterface } from "node:readline";
 import type { ResidentAgentEvent } from "./resident-agent.js";
 import { pathWithCommonBins } from "./path-bins.js";
@@ -107,6 +111,8 @@ export interface CodexRoomAgentOptions {
  */
 export class CodexRoomAgent implements RoomAgent {
   private child?: ChildProcess;
+  /** Last turn process, kept so stopAndWait() can prove it exited. */
+  private lastChild?: ChildProcess;
   private threadId?: string;
   private started = false;
 
@@ -131,6 +137,7 @@ export class CodexRoomAgent implements RoomAgent {
       stdio: ["pipe", "pipe", "pipe"],
     });
     this.child = child;
+    this.lastChild = child;
     // Settle on `close` so trailing output is read, without waiting on grandchildren.
     releaseStdioAfterExit(child);
     if (child.stdout) {
@@ -226,5 +233,19 @@ export class CodexRoomAgent implements RoomAgent {
     const child = this.child;
     this.child = undefined;
     if (child) stopRoomProcess(child);
+  }
+
+  /** A turn's `codex exec` child may still be alive after turn_end was parsed. */
+  isBusy(): boolean {
+    return Boolean(this.child);
+  }
+
+  /** Stop, then resolve true only once the last turn process has exited. */
+  stopAndWait(timeoutMs: number): Promise<boolean> {
+    this.started = false;
+    const child = this.child ?? this.lastChild;
+    this.child = undefined;
+    if (!child) return Promise.resolve(true);
+    return stopRoomProcessAndWait(child, timeoutMs);
   }
 }

@@ -2,7 +2,7 @@ import { expect, mock, test } from "bun:test";
 import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PendingMobileApprovals } from "@cjhyy/code-shell-server/mobile-remote";
+import { PendingMobileApprovals, RoomManager } from "@cjhyy/code-shell-server/mobile-remote";
 import type { MobileRemoteOrchestratorDeps } from "../mobile-remote-orchestrator.js";
 // The real storage/project/orchestrator execute in a private child process.
 // Only the unused Electron worker import is replaced; these tests never spawn a worker.
@@ -37,6 +37,16 @@ async function fixture() {
   let owner: number | undefined;
   let ownerRevision = 0;
   const pendingApprovals = new PendingMobileApprovals();
+  // Main always composes the orchestrator with its RoomManager (pending-turn
+  // hooks are installed at construction). These tests never open a room.
+  const roomsDir = realpathSync(mkdtempSync(join(tmpdir(), "mobile-history-rooms-")));
+  const roomManager = new RoomManager({
+    rootDir: roomsDir,
+    createAgent: () => {
+      throw new Error("This fixture never starts a CLI room");
+    },
+    onMessage() {},
+  });
   const bridge = {
     getLastRunContext: () => ({}),
     panelOwnerWebContentsId: () => owner,
@@ -55,6 +65,7 @@ async function fixture() {
   const orchestrator = new MobileRemoteOrchestrator({
     remote,
     pendingApprovals,
+    roomManager,
     getBridge: () => bridge,
     broadcastToWindows() {},
   } as unknown as MobileRemoteOrchestratorDeps);
@@ -87,6 +98,7 @@ async function fixture() {
           force: true,
         });
       rmSync(directory, { recursive: true, force: true });
+      rmSync(roomsDir, { recursive: true, force: true });
     },
   };
 }

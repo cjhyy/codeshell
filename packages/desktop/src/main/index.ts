@@ -376,9 +376,9 @@ import {
 } from "@cjhyy/code-shell-server/mobile-remote";
 import {
   MobileRemoteOrchestrator,
-  resolveRoomPermissionMode,
   type AuthenticatedMobileClientEvent,
 } from "./mobile-remote-orchestrator.js";
+import { createDesktopRoomModeAuthority, registerRoomModeIpc } from "./cc-room/room-mode-ipc.js";
 import {
   GatewayControlServer,
   type GatewayControlEventAttachment,
@@ -1275,6 +1275,9 @@ const roomManager = new RoomManager({
   },
   resolveLinkedSession: resolveLinkedSessionFromDisk,
   assertExternalSessionAvailable: backgroundWork.assertExternalSessionIdle,
+  authorizeStart: (room) => roomModes.authorizeStart(room),
+  onRoomClosed: (roomId) => roomModes.revoke(roomId),
+  onRoomStateChanged: (roomId) => mobileOrchestrator.broadcastRoomState(roomId),
   createAgent: (room, onEvent) =>
     room.kind === "codex"
       ? new CodexRoomAgent({
@@ -1297,7 +1300,7 @@ const roomManager = new RoomManager({
   onMessage: (roomId, msg) => {
     // Mirror to BOTH transports: phone (WS) and desktop renderer(s) (IPC), so
     // a room is dual-ended — same resident CC, same messages, either side sends.
-    mobileRemote.broadcast({ type: "room.message", roomId, msg });
+    mobileOrchestrator.broadcastRoomMessage(roomId, msg);
     for (const w of BrowserWindow.getAllWindows()) {
       if (!w.isDestroyed()) w.webContents.send("room:message", { roomId, msg });
     }
@@ -1324,6 +1327,7 @@ const transcriptSubscriptions = createRoomTranscriptSubscriptions({
   broadcast: (event) => mobileRemote.broadcast(event),
   windows: () => BrowserWindow.getAllWindows(),
 });
+const roomModes = createDesktopRoomModeAuthority({ roomManager, approvalBridge });
 
 // Routes authenticated mobile events into the same run/permission path the
 // renderer uses (chat/approvals/sessions/rooms/cc-rooms). Extracted glue —
@@ -1341,6 +1345,7 @@ const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrato
   pendingApprovals: pendingMobileApprovals,
   roomManager,
   approvalBridge,
+  roomModes,
   transcriptSubscriptions,
   getBridge: () => bridge,
   getExternalRuntimeService: () => externalRuntimeService,
@@ -5710,31 +5715,14 @@ ipcMain.handle("rooms:list", async () =>
   roomManager.listRooms().map((room) => mobileOrchestrator.roomToPublic(room)),
 );
 ipcMain.handle("rooms:projects", async () => mobileOrchestrator.projectList());
-ipcMain.handle(
-  "rooms:create",
-  async (
-    _e,
-    input: {
-      name?: string;
-      cwd: string;
-      kind?: "claude-code" | "codex";
-      permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
-    },
-  ) => {
-    const cwd = await requireRendererProjectPath(input?.cwd);
-    if (input.name !== undefined && (typeof input.name !== "string" || input.name.length > 512)) {
-      throw new Error("invalid room name");
-    }
-    const permissionMode = await resolveRoomPermissionMode(cwd, input.permissionMode);
-    const room = roomManager.createRoom({
-      name: input.name,
-      cwd,
-      kind: input.kind,
-      permissionMode,
-    });
-    return mobileOrchestrator.roomToPublic(room);
-  },
-);
+// rooms:create and ccRoom:openSession choose a room's mode via the Host authority.
+registerRoomModeIpc({
+  ipcMain,
+  roomManager,
+  roomModes,
+  roomToPublic: (room) => mobileOrchestrator.roomToPublic(room),
+  broadcastRoomState: (roomId) => mobileOrchestrator.broadcastRoomState(roomId),
+});
 ipcMain.handle("rooms:open", async (_e, roomId: string) => roomManager.open(roomId));
 ipcMain.handle("rooms:send", async (_e, roomId: string, text: string) => {
   if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
@@ -5762,19 +5750,6 @@ ipcMain.handle("ccRoom:listCodexSessions", async (_e, cwd: string, all?: boolean
   const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
   return listRelatedCodexSessions(cwd, opts);
 });
-ipcMain.handle(
-  "ccRoom:openSession",
-  async (
-    _e,
-    claudeSessionId: string,
-    cwd: string,
-    mode: "default" | "acceptEdits" | "bypassPermissions",
-    kind?: "claude-code" | "codex",
-  ) => {
-    cwd = await requireRendererProjectPath(cwd);
-    return roomManager.openForSession(claudeSessionId, cwd, mode, kind ?? "claude-code");
-  },
-);
 registerLinkedSessionObservationIpc({
   ipcMain,
   windows: mainWindows,

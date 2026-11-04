@@ -18,6 +18,10 @@ export type {
   MobileAttachmentSummary,
   MobileClientEvent,
   MobileServerEvent,
+  MobileTurnQueueEntry,
+  MobileTurnQueueEntryStatus,
+  MobileTurnQueueState,
+  MobileTurnQueueTarget,
   RoomPublic,
   MobileSessionMeta,
 } from "@cjhyy/code-shell-core";

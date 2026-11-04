@@ -1,5 +1,10 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { releaseStdioAfterExit, stopRoomProcess } from "./room-process-stop.js";
+import {
+  releaseStdioAfterExit,
+  stopRoomProcess,
+  stopRoomProcessAndWait,
+  waitForRoomProcessSpawn,
+} from "./room-process-stop.js";
 import { createInterface } from "node:readline";
 import { pathWithCommonBins } from "./path-bins.js";
 
@@ -164,11 +169,17 @@ export interface ResidentAgentOptions {
  */
 export class ResidentAgentProcess {
   private child?: ChildProcess;
+  /** The most recently spawned process, kept after stop() so a caller can
+   * wait for it to actually exit before starting a replacement. */
+  private lastChild?: ChildProcess;
+  private spawned?: Promise<void>;
 
   constructor(private readonly opts: ResidentAgentOptions) {}
 
-  start(): void {
-    if (this.child) return;
+  /** Exact argv for one resident process. Pure → unit-testable. */
+  static argsFor(
+    opts: Pick<ResidentAgentOptions, "permissionMode" | "resumeSessionId" | "appendSystemPrompt">,
+  ): string[] {
     const args = [
       "--print",
       "--verbose",
@@ -179,13 +190,15 @@ export class ResidentAgentProcess {
       "--permission-prompt-tool",
       "stdio",
     ];
-    if (this.opts.appendSystemPrompt) {
-      args.push("--append-system-prompt", this.opts.appendSystemPrompt);
-    }
-    if (this.opts.resumeSessionId) {
-      args.push("--resume", this.opts.resumeSessionId);
-    }
-    args.push("--permission-mode", this.opts.permissionMode);
+    if (opts.appendSystemPrompt) args.push("--append-system-prompt", opts.appendSystemPrompt);
+    if (opts.resumeSessionId) args.push("--resume", opts.resumeSessionId);
+    args.push("--permission-mode", opts.permissionMode);
+    return args;
+  }
+
+  start(): void {
+    if (this.child) return;
+    const args = ResidentAgentProcess.argsFor(this.opts);
     const child = spawn(this.opts.command, args, {
       cwd: this.opts.cwd,
       env: { ...process.env, PATH: pathWithCommonBins() },
@@ -193,6 +206,10 @@ export class ResidentAgentProcess {
       stdio: ["pipe", "pipe", "pipe"],
     });
     this.child = child;
+    this.lastChild = child;
+    this.spawned = waitForRoomProcessSpawn(child);
+    // Observed by whenStarted(); an unobserved failed spawn is reported via onEvent.
+    this.spawned.catch(() => undefined);
     // Settle on `close` so trailing output is read, without waiting on grandchildren.
     releaseStdioAfterExit(child);
 
@@ -268,5 +285,22 @@ export class ResidentAgentProcess {
     const child = this.child;
     this.child = undefined;
     if (child) stopRoomProcess(child);
+  }
+
+  /** Resolves once the spawned process exists; rejects when the spawn failed. */
+  whenStarted(): Promise<void> {
+    return this.spawned ?? Promise.resolve();
+  }
+
+  /**
+   * Stop, then resolve true only after the last spawned process has exited.
+   * A process already retired by a pipe error is still waited for: it may be
+   * alive for up to the SIGKILL grace period.
+   */
+  stopAndWait(timeoutMs: number): Promise<boolean> {
+    const child = this.child ?? this.lastChild;
+    this.child = undefined;
+    if (!child) return Promise.resolve(true);
+    return stopRoomProcessAndWait(child, timeoutMs);
   }
 }

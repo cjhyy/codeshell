@@ -1244,6 +1244,99 @@ function textOf(node: any): string {
   return node.childNodes?.length ? node.childNodes.map(textOf).join("") : (node.textContent ?? "");
 }
 
+test("CLI room mode switch restarts through the Host and explains when it applies", async () => {
+  ensureMiniDom();
+  const room = {
+    id: "room-1",
+    name: "CLI",
+    cwd: "/repo",
+    kind: "codex" as const,
+    permissionMode: "default" as const,
+    createdAt: 1,
+    lastActiveAt: 1,
+    open: true,
+    observing: false,
+    sessionId: "thread-1",
+  };
+  const requested: string[] = [];
+  const confirms: string[] = [];
+  const originalConfirm = window.confirm;
+  window.confirm = (message?: string) => {
+    confirms.push(String(message));
+    return true;
+  };
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  try {
+    await act(async () => {
+      root.render(
+        <DesktopChatControls
+          app={remoteApp({
+            activeRoomId: room.id,
+            activeRoom: room,
+            setCcRoomPermissionMode: (mode) => requested.push(mode),
+          })}
+        />,
+      );
+      await flushMicrotasks();
+    });
+    const select = elementsByTag(host, "SELECT")[0]!;
+    expect(reactProps(select).disabled).toBe(false);
+    // Codex has no resident process: the new mode applies to the next turn's process.
+    expect(textOf(host)).toContain("下一条消息");
+    await act(async () => {
+      reactProps(select).onChange({ target: { value: "bypassPermissions" } });
+      await flushMicrotasks();
+    });
+    expect(requested).toEqual(["bypassPermissions"]);
+    // Codex bypass is described as turning the sandbox off, before anything is sent.
+    expect(confirms[0]).toContain("关闭沙箱");
+    expect(confirms[0]).toContain("从下一条消息开始生效");
+
+    // While the Host is deciding, the room keeps its running mode and cannot
+    // start a second switch.
+    await act(async () => {
+      root.render(
+        <DesktopChatControls
+          app={remoteApp({
+            activeRoomId: room.id,
+            activeRoom: room,
+            setCcRoomPermissionMode: (mode) => requested.push(mode),
+            ccModeRequest: { mode: "bypassPermissions", switching: true },
+          })}
+        />,
+      );
+      await flushMicrotasks();
+    });
+    const pending = elementsByTag(host, "SELECT")[0]!;
+    expect(reactProps(pending).disabled).toBe(true);
+    expect(reactProps(pending).value).toBe("default");
+    expect(textOf(host)).toContain("等待 Host 确认");
+  } finally {
+    await act(async () => root.unmount());
+    window.confirm = originalConfirm;
+  }
+
+  const native = renderToStaticMarkup(
+    <DesktopChatControls
+      app={remoteApp({
+        activeSessionId: "s1",
+        sessions: [
+          {
+            id: "s1",
+            title: "t",
+            cwd: "/repo",
+            updatedAt: 1,
+            origin: "desktop",
+            provider: "codex",
+          },
+        ],
+      })}
+    />,
+  );
+  expect(native).toContain("下次发送生效；运行中变更需先停止");
+});
+
 test("CLI room chat controls show the room's actual mode and cannot change it natively", () => {
   const room = {
     id: "room-1",

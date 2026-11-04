@@ -82,6 +82,13 @@ import { startExternalRuntimeTrace } from "./external-runtime-tracing.js";
 import type { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertOutputHistoryWriteAvailable } from "./session-output-history-lease.js";
 import { ExternalRuntimeDeltaBuffer } from "./external-runtime-delta-buffer.js";
+import { notifyRunStopRequested } from "./run-stop-signals.js";
+
+/**
+ * `code` of the refusal to change a runtime's model/permission/instructions
+ * while its run is open. Callers branch on this, never on the message text.
+ */
+export const EXTERNAL_RUNTIME_CONFIGURATION_LOCKED = "EXTERNAL_RUNTIME_CONFIGURATION_LOCKED";
 
 export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
   goal?: string | GoalConfig;
@@ -743,7 +750,10 @@ export class ExternalRuntimeService {
         entry?.recorder.hasOpenRun &&
         entry.configurationKey !== this.configurationKey(continuation)
       )
-        throw new Error("Stop the running task before changing its runtime configuration");
+        throw Object.assign(
+          new Error("Stop the running task before changing its runtime configuration"),
+          { code: EXTERNAL_RUNTIME_CONFIGURATION_LOCKED },
+        );
       return this.ensureExclusive(continuation);
     });
   }
@@ -1898,6 +1908,12 @@ export class ExternalRuntimeService {
       : undefined;
   }
 
+  /** Trusted Main probe: the Session has an open provider run (including Goal turns). */
+  isRunActive(sessionId: string): boolean {
+    const entry = this.sessions.get(sessionId);
+    return Boolean(entry?.lifecycle.active && entry.recorder.hasOpenRun);
+  }
+
   /** Let queued user input in after the current provider turn; see `yieldAfterTurn`. */
   yieldGoal(sessionId: string, callerWebContentsId?: number): boolean {
     this.assertOwner(sessionId, callerWebContentsId);
@@ -1924,6 +1940,9 @@ export class ExternalRuntimeService {
         !entry.recorder.hasOpenRun)
     )
       throw new Error("External run changed before cancellation");
+    // A plain Stop pauses Host-held follow-ups before the provider is interrupted;
+    // interrupt-and-send is the user's own next turn, not a stop.
+    if (!options.keepGoal) notifyRunStopRequested(sessionId);
     this.deps.memory?.cancel(sessionId);
     if (entry) {
       try {

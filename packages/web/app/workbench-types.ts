@@ -1,5 +1,5 @@
 import type React from "react";
-import type { MobileProjectMeta } from "@cjhyy/code-shell-core";
+import type { MobileProjectMeta, MobileTurnQueueState } from "@cjhyy/code-shell-core";
 import type { ChatState } from "../src/lib/streamReducer.js";
 import type { AuthSession, UploadedFile } from "./auth.js";
 import type { HubConfiguration } from "./configuration.js";
@@ -98,4 +98,21 @@ export interface WorkbenchController {
   showTurnCounts?: boolean;
   accountName?: string;
   logout?: () => void;
+  /** Host-owned pending turns. Absent when the Host cannot queue (send stays blocked while busy). */
+  turnQueue?: WorkbenchTurnQueue;
+  /** Compact conversation facts for the top bar (CLI kind, read-only, …). */
+  statusBadges?: Array<{ label: string; tone?: "neutral" | "accent" | "warning" }>;
+}
+
+export interface WorkbenchTurnQueue {
+  /** True when a message typed now would be queued behind the current turn. */
+  canQueue: boolean;
+  state?: MobileTurnQueueState;
+  online: boolean;
+  /** The composer's current permission choice, to label entries queued under another one. */
+  currentPermissionMode?: string;
+  cancel: (entryId: string) => void;
+  retry: (entryId: string) => void;
+  resume: () => void;
+  clear: () => void;
 }

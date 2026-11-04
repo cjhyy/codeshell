@@ -11,6 +11,8 @@ export { MAX_MOBILE_IMAGE_BYTES } from "./mobile-limits.js";
 
 export const MOBILE_UPLOAD_TTL_MS = 5 * 60 * 1000;
 export const MAX_MOBILE_UPLOAD_TICKETS_PER_DEVICE = 16;
+/** Upper bound for an image waiting behind a long turn in the Host FIFO. */
+export const MOBILE_UPLOAD_QUEUE_RETENTION_MS = 12 * 60 * 60 * 1000;
 export const MAX_MOBILE_UPLOAD_CLAIM_ATTEMPTS = 3;
 
 const IMAGE_MIMES = new Set<MobileImageMime>([
@@ -338,6 +340,27 @@ export class MobileUploadService {
       path: record.path!,
       sha256: record.sha256!,
     };
+  }
+
+  /**
+   * Keep a ready upload alive for a Host-queued turn that has not run yet. The
+   * extension is bounded; the per-device ticket cap still limits retained files.
+   */
+  retain(deviceId: string, uploadId: string, durationMs = MOBILE_UPLOAD_QUEUE_RETENTION_MS): void {
+    if (this.revokedDevices.has(deviceId)) throw new Error("upload device was revoked");
+    const record = this.uploads.get(uploadId);
+    if (!record || record.expiresAt <= this.now() || record.deviceId !== deviceId)
+      throw new Error("upload is not ready or no longer exists");
+    if (record.status !== "ready") throw new Error("upload is already claimed or not ready");
+    const until = this.now() + Math.min(durationMs, MOBILE_UPLOAD_QUEUE_RETENTION_MS);
+    if (until > record.expiresAt) record.expiresAt = until;
+  }
+
+  /** Drop an unclaimed upload of a cancelled queued turn immediately. */
+  async discard(deviceId: string, uploadId: string): Promise<void> {
+    const record = this.uploads.get(uploadId);
+    if (!record || record.deviceId !== deviceId || record.status === "claimed") return;
+    await this.expire(uploadId, record);
   }
 
   /** Release a failed staging/dispatch attempt for a bounded retry. */

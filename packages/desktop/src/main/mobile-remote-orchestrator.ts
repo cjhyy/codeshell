@@ -64,6 +64,16 @@ import type {
   OutputHistoryRecoveryCaller,
 } from "./session-output-history-recovery.js";
 import type { MobileOutputHistoryService } from "./mobile-remote/output-history-commands.js";
+import {
+  MobileTurnQueueHost,
+  runQueuedDispatch,
+  type QueueableMobileSend,
+  type QueuedDispatch,
+  type QueuedSessionAuthority,
+} from "./mobile-remote/turn-queue-host.js";
+import { onRunStopRequested } from "./run-stop-signals.js";
+import { fenceMobileRunAdmissionsOnStop } from "./mobile-remote/run-admission.js";
+import type { TurnQueueDispatchResult } from "@cjhyy/code-shell-server/mobile-remote";
 export { toMobileProjectMeta } from "./mobile-project-meta.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { lstatSync, realpathSync } from "node:fs";
@@ -73,8 +83,13 @@ import {
   getSessionWorkspaceAuthorityForUi,
 } from "./session-workspace-service.js";
 
+import {
+  canonicalRoomDirectory,
+  mobileRoomModeRequesterKey,
+  type RoomModeAuthority,
+} from "./cc-room/room-mode-authority.js";
+
 export { injectAndAwaitResult } from "./mobile-remote/handle-client-event.js";
-export { resolveRoomPermissionMode } from "./mobile-remote/handle-room-event.js";
 export type { AuthenticatedMobileClientEvent } from "./mobile-remote/handle-client-event.js";
 
 export interface MobileRemoteOrchestratorDeps {
@@ -90,6 +105,8 @@ export interface MobileRemoteOrchestratorDeps {
   getExternalRuntimeModels?: () => Promise<ExternalRuntimeModelEntry[]>;
   startMobileRuntime?: (request: MobileRuntimeStart) => Promise<void>;
   getExternalRuntimeApprovals?: () => ExternalRuntimeApprovals | null;
+  /** Host authority for external CLI room permission modes. */
+  roomModes?: RoomModeAuthority;
   /** Send an IPC payload to every live desktop window. */
   broadcastToWindows: (channel: string, payload: unknown) => void;
 }
@@ -103,6 +120,7 @@ export class MobileRemoteOrchestrator {
   private readonly externalCommands: MobileExternalRuntimeCommands;
   private readonly nativeSubmissions: MobileNativeSubmissions;
   private outputHistoryRecoveryService?: MobileOutputHistoryService;
+  private readonly turnQueue: MobileTurnQueueHost;
   constructor(private readonly deps: MobileRemoteOrchestratorDeps) {
     this.externalCommands = new MobileExternalRuntimeCommands({
       authenticated: (viewer, device) => deps.remote.hasAuthenticatedViewer(viewer, device),
@@ -156,11 +174,102 @@ export class MobileRemoteOrchestrator {
       ownerRevision: (id) => this.deps.getBridge()?.sessionPanelOwnerRevision(id),
       authenticated: (viewer, device) => this.deps.remote.hasAuthenticatedViewer(viewer, device),
     });
+    this.turnQueue = new MobileTurnQueueHost({
+      remote: deps.remote,
+      uploads: deps.uploads,
+      isSessionBusy: (id) =>
+        !!deps.getBridge()?.isSessionRunning(id) ||
+        !!deps.getExternalRuntimeService?.()?.isRunActive(id),
+      isSessionAuthorized: (viewer, device, sessionId) =>
+        this.selectedSessionAuthorized(viewer, device, sessionId),
+      captureSession: (viewer, device, event) => this.captureQueuedSession(viewer, device, event),
+      room: (roomId) => {
+        const room = deps.roomManager.getRoom(roomId);
+        return room
+          ? {
+              observing: room.linkedSessionMode === "observe-only",
+              mode: deps.roomManager.effectiveMode(roomId),
+              busy: deps.roomManager.isExecutionBusy(roomId),
+            }
+          : undefined;
+      },
+      submit: (dispatch) => this.submitQueuedTurn(dispatch),
+    });
+    // Mode changes are refused while turns submitted under the current mode are
+    // pending; an explicit close (any view) pauses them before the signal.
+    deps.roomManager.setHostTurnHooks({
+      hasPendingTurns: (roomId) => this.turnQueue.hasPendingTurns({ kind: "room", roomId }),
+      beforeClose: (roomId) => this.turnQueue.pauseForStop({ kind: "room", roomId }),
+    });
+    // Any stop of a Session run (Desktop, phone, task inbox) pauses its pending
+    // turns and fences the direct sends still being prepared for it.
+    onRunStopRequested((sessionId) => this.turnQueue.pauseForStop({ kind: "session", sessionId }));
+    fenceMobileRunAdmissionsOnStop(deps.remote);
+    // This command Host owns the FIFO, so it advertises the client capability.
+    deps.remote.advertiseTurnQueue?.();
+  }
+
+  private selectedSessionAuthorized(viewer: string, device: string, sessionId: string): boolean {
+    try {
+      this.externalCommands.captureSelectedAuthority(viewer, device, sessionId);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * The authority a Session turn is admitted under: the tab's selection proves
+   * it now; the Session/project stamp and the device's project binding are
+   * kept so the turn can run later without that tab, and is refused if any of
+   * them changed. External runtimes and native connection choices stay bound
+   * to a live tab of the same device (the Host does not act for a device).
+   */
+  private async captureQueuedSession(
+    viewer: string,
+    device: string,
+    event: Extract<QueueableMobileSend, { type: "chat.send" }>,
+  ): Promise<QueuedSessionAuthority | undefined> {
+    const sessionId = event.sessionId;
+    if (!sessionId || !this.selectedSessionAuthorized(viewer, device, sessionId)) return undefined;
+    const state = this.mobileDeviceStates.get(device);
+    const deviceState: MobileDeviceState = {
+      ...(state?.sessionId ? { sessionId: state.sessionId } : {}),
+      selectedSessionId: sessionId,
+      // A project binding applies only when the device selected this Session.
+      ...(state?.selectedSessionId === sessionId
+        ? {
+            selectedCwd: state.selectedCwd,
+            selectedProjectId: state.selectedProjectId,
+            ...(state.selectedRootId ? { selectedRootId: state.selectedRootId } : {}),
+          }
+        : {}),
+      ...(state?.permissionMode ? { permissionMode: state.permissionMode } : {}),
+    };
+    let viewerBound =
+      !!event.nativeConnectionId ||
+      !!event.modelKey ||
+      this.externalCommands.isExternal(sessionId, viewer, sessionId === state?.sessionId);
+    let stamp: string | undefined;
+    if (!viewerBound) {
+      try {
+        stamp = (await mobileSessionCommandAuthority(sessionId)).stamp;
+      } catch {
+        // Not yet a persisted Session: only its live tab may run the turn.
+        viewerBound = true;
+      }
+      if (!this.selectedSessionAuthorized(viewer, device, sessionId)) return undefined;
+    }
+    return { viewerBound, ...(stamp ? { stamp } : {}), deviceState };
   }
 
   releaseViewer(viewerId: string): void {
     this.outputRecovery.revoke(viewerId);
     this.externalCommands.revoke(viewerId, true);
+    // A disconnected tab cannot keep a mode-change card alive. A room that is
+    // already running legitimately is not touched.
+    this.deps.roomModes?.cancelRequester(mobileRoomModeRequesterKey(viewerId));
+    this.turnQueue.releaseViewer(viewerId);
   }
 
   /** Installed once by Main's shared Desktop/mobile history composition. */
@@ -487,6 +596,8 @@ export class MobileRemoteOrchestrator {
       broadcastMobileSession: (meta) => this.broadcastMobileSession(meta),
       broadcastApprovalResolved: (params) => this.broadcastApprovalResolved(params),
       roomToPublic: (room) => this.roomToPublic(room),
+      ...(this.deps.roomModes ? { roomModes: this.deps.roomModes } : {}),
+      broadcastRoomState: (roomId) => this.broadcastRoomState(roomId),
       roomMatchesTranscript: (roomId, cwd, sessionId, kind) =>
         this.roomMatchesTranscript(roomId, cwd, sessionId, kind),
       sendProjectList: (deviceId) => this.sendProjectList(deviceId),
@@ -500,7 +611,36 @@ export class MobileRemoteOrchestrator {
    * path the renderer uses, via AgentBridge.injectWorkerMessage.
    */
   async handleMobileClientEvent(event: AuthenticatedMobileClientEvent): Promise<void> {
-    return handleClientEvent(this.ctx(), event);
+    this.turnQueue.observeViewer(event.viewerId, event.deviceId);
+    if (this.turnQueue.control(event) || (await this.turnQueue.submit(event))) return;
+    this.turnQueue.before(event);
+    await handleClientEvent(this.ctx(), event);
+    this.turnQueue.after(event);
+  }
+
+  /**
+   * Mirror a persisted room message to phones. The same turn boundaries drive
+   * room idle detection for the Host-owned pending-turn FIFO.
+   */
+  broadcastRoomMessage(roomId: string, message: unknown): void {
+    this.deps.remote.broadcast({ type: "room.message", roomId, msg: message });
+    this.turnQueue.observeRoomMessage(roomId, message);
+  }
+
+  /**
+   * Run one queued turn through the unchanged submit path (see turn-queue-host).
+   * A detached turn first re-verifies its admission authority (device still
+   * trusted, Session/project unchanged, room mode unchanged) and then runs
+   * without re-selecting any tab, on the device binding it was admitted with.
+   */
+  private submitQueuedTurn(dispatch: QueuedDispatch): Promise<TurnQueueDispatchResult> {
+    return runQueuedDispatch(dispatch, {
+      ctx: this.ctx(),
+      isTrustedDevice: (deviceId) => this.deps.remote.isTrustedDevice(deviceId),
+      sessionAuthority: mobileSessionCommandAuthority,
+      roomMode: (roomId) => this.deps.roomManager.effectiveMode(roomId),
+      handle: handleClientEvent,
+    });
   }
   // ── Rooms ──────────────────────────────────────────────────────────────────
 
@@ -513,12 +653,27 @@ export class MobileRemoteOrchestrator {
     createdAt: number;
     lastActiveAt: number;
     linkedSessionMode?: "observe-only";
+    claudeSessionId?: string;
   }): RoomPublic {
     return {
       ...room,
       open: this.deps.roomManager.isOpen(room.id),
       observing: room.linkedSessionMode === "observe-only",
+      ...(room.claudeSessionId ? { sessionId: room.claudeSessionId } : {}),
     };
+  }
+
+  /**
+   * Publish a room's authoritative mode/status to every phone and Desktop
+   * window after it changed, so no view keeps showing the mode it opened with.
+   */
+  broadcastRoomState(roomId: string): void {
+    const room = this.deps.roomManager.getRoom(roomId);
+    this.deps.remote.broadcast({
+      type: "room.list.ok",
+      rooms: this.deps.roomManager.listRooms().map((r) => this.roomToPublic(r)),
+    });
+    if (room) this.deps.broadcastToWindows("ccRoom:roomState", this.roomToPublic(room));
   }
 
   roomMatchesTranscript(
@@ -528,8 +683,12 @@ export class MobileRemoteOrchestrator {
     kind: "claude-code" | "codex",
   ): boolean {
     const room = this.deps.roomManager.getRoom(roomId);
+    // Rooms opened through the Host authority store the canonical directory.
     return Boolean(
-      room && room.cwd === cwd && room.claudeSessionId === sessionId && room.kind === kind,
+      room &&
+      canonicalRoomDirectory(room.cwd) === canonicalRoomDirectory(cwd) &&
+      room.claudeSessionId === sessionId &&
+      room.kind === kind,
     );
   }
 

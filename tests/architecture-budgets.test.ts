@@ -177,6 +177,9 @@ describe("architecture growth budgets", () => {
         // Three owner-scoped DriveAgent task routes: list, cancel and the user's
         // explicit mark-ended for a task no live process reports.
         matches("packages/desktop/src/main/cc-room/background-work-ipc.ts", /ipcMain\.handle\(/g) +
+        // rooms:create and ccRoom:openSession, moved here unchanged in number so
+        // both pass the Host room permission-mode authority.
+        matches("packages/desktop/src/main/cc-room/room-mode-ipc.ts", /ipcMain\.handle\(/g) +
         // Nine local-only Lab routes: eight existing operations plus P2 native
         // adoption. Exact body/scope review and post-dialog revalidation remain
         // in this owner-scoped registrar; ordinary RPC cannot approve adoption.

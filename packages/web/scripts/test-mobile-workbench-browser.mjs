@@ -19,7 +19,7 @@ const noop=()=>{},long='ownedlongidentifier'.repeat(35);window.sends=[];window.o
 function Fixture(){const[state,setState]=React.useState({draft:'First line',model:'',running:false,asking:false,retry:false,scope:'initial',permissionMode:'acceptEdits',large:false});
 window.patchFixture=patch=>setState(current=>({...current,...patch}));
 const approval={id:'owned-approval',requestId:'owned-approval',toolName:'__ask_user__',description:long,summary:long,risk:'low',options:[long],optionsOnly:false};
-const app={status:'online',permissionMode:state.permissionMode,setPermissionMode:mode=>{window.permissionChanges.push(mode);setState(current=>({...current,permissionMode:mode}));},activeProjectId:'owned-project',activeProjectCwd:'/owned',activeCwd:'/owned',projects:[{id:'owned-project',name:'Owned project',path:'/owned'}],loading:{sessions:false,ccSessions:false},ccCliKind:'codex',ccProbe:{available:true},ccSessions:[{sessionId:'owned-cli',firstMessage:long,cwd:'/owned',messageCount:1}],selectProject:noop,refreshSessions:noop,setCcCliKind:noop,newSession:noop,openCcSession:(...args)=>window.opened.push(args),respondApproval:noop};
+const app={status:'online',sessions:[],activeSessionId:'owned-session',permissionMode:state.permissionMode,setPermissionMode:mode=>{window.permissionChanges.push(mode);setState(current=>({...current,permissionMode:mode}));},activeProjectId:'owned-project',activeProjectCwd:'/owned',activeCwd:'/owned',projects:[{id:'owned-project',name:'Owned project',path:'/owned'}],loading:{sessions:false,ccSessions:false},ccCliKind:'codex',ccProbe:{available:true},ccSessions:[{sessionId:'owned-cli',firstMessage:long,cwd:'/owned',messageCount:1}],selectProject:noop,refreshSessions:noop,setCcCliKind:noop,newSession:noop,openCcSession:(...args)=>window.opened.push(args),respondApproval:noop};
 const controller={panelSessionId:undefined,host:'desktop',workspaceApi:true,connection:'open',activeId:'owned-session',chat:{goal:long,items:[{kind:'assistant',id:'owned-output',text:'Owned transcript',done:true}],run:state.running?'running':'idle'},sessions:[],workspaceCwd:'/owned',workspaceName:'Owned workspace',workspaceKey:'owned',title:long,configuration:null,configurationVersion:0,sessionsVersion:0,draft:state.draft,files:[],uploading:false,uploadBusy:false,hasUnsent:false,uncertain:false,running:state.running,localDrafts:[],approvals:state.asking?[approval]:[],approvalCount:()=>0,approvalContent:state.asking?<DesktopApproval approval={approval} app={app}/>:null,error:'',clearError:noop,setDraft:draft=>setState(current=>({...current,draft})),removeFile:noop,selectSession:noop,newSession:noop,send:()=>{window.sends.push(state.draft);setState(current=>({...current,draft:''}));return true},stop:noop,addFiles:noop,cameraAttachments:true,refreshSessions:noop,refreshConfiguration:noop,onAuthLost:noop,composerControls:<DesktopChatControls app={app}/>,modelSelector:<DesktopModelPicker key={state.scope} models={state.retry?[]:models} nativeChoices={state.large?Array.from({length:1000},(_,i)=>({value:'native:owned-'+i,label:'Native model '+i,group:'Owned provider'})):[]} value={state.model} defaultLabel='Default' disabled={state.running} onRefresh={noop} onRetryCreation={state.retry?noop:undefined} onChange={model=>{window.modelChanges.push(model);setState(current=>({...current,model}));}}/>,renderSidebar:navigation=><DesktopSidebar app={app} navigation={navigation}/>};
 return <Workbench controller={controller}/>};createRoot(document.getElementById('root')).render(<React.StrictMode><Fixture/></React.StrictMode>);`;
 const bundle = await build({
@@ -77,7 +77,13 @@ try {
       });
       const page = await context.newPage();
       page.setDefaultTimeout(5000);
-      page.on("pageerror", (error) => errors.push(error.message));
+      page.on("pageerror", (error) => {
+        errors.push(error.message);
+        // The real render stack, not a later unrelated locator timeout.
+        console.error(
+          `[pageerror ${theme} ${initialWidth}x${initialHeight}] ${error.stack ?? error}`,
+        );
+      });
       await page.goto("http://mobile-workbench-owned.test/");
       for (const file of bundle.outputFiles.filter((file) => file.path.endsWith(".css")))
         await page.addStyleTag({ content: file.text });
@@ -85,7 +91,11 @@ try {
         content: bundle.outputFiles.find((file) => file.path.endsWith(".js")).text,
       });
       const input = page.getByRole("textbox", { name: "任务内容", exact: true });
-      await input.waitFor();
+      await input.waitFor().catch((error) => {
+        throw new Error(`${error.message}\npage errors:\n${errors.join("\n") || "(none)"}`, {
+          cause: error,
+        });
+      });
       const permission = page.getByRole("combobox", { name: "权限模式", exact: true });
       assert.equal(await permission.inputValue(), "acceptEdits");
       assert.equal(await permission.evaluate((node) => Boolean(node.closest(".composer"))), true);

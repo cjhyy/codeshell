@@ -94,6 +94,8 @@ export interface RemoteHostManagerOptions {
   historyView?: boolean;
   /** The attached command Host resolves native text connections per authorized Session. */
   nativeModelSelection?: boolean;
+  /** The attached command Host owns a pending-turn FIFO (queue.* events, chat.queued). */
+  turnQueue?: boolean;
   onClientEvent: (event: unknown, ws: WebSocket) => void | Promise<void>;
   /**
    * Absolute path to the built mobile app (out/mobile). Defaults to the
@@ -139,6 +141,7 @@ export class RemoteHostManager extends EventEmitter {
   private readonly mobileRootDir: string;
   /** Dev proxy target for /mobile (HMR); undefined in prod. */
   private readonly mobileDevUrl?: string;
+  private turnQueueEnabled = false;
 
   constructor(private readonly opts: RemoteHostManagerOptions) {
     super();
@@ -152,6 +155,27 @@ export class RemoteHostManager extends EventEmitter {
   /** Install main-owned directory redemption; replacing it synchronously revokes old sessions. */
   setAccountRelayAccess(provider?: AccountRelayAccessProvider): void {
     this.accountAccess.setProvider(provider);
+  }
+
+  /** The attached command Host installed a pending-turn FIFO; advertise it on (re)auth. */
+  advertiseTurnQueue(): void {
+    this.turnQueueEnabled = true;
+  }
+
+  /** A paired (or live account) device that has not been revoked or removed. */
+  isTrustedDevice(deviceId: string): boolean {
+    try {
+      return this.opts.devices
+        .listDevices()
+        .some((device) => device.id === deviceId && !device.revokedAt);
+    } catch {
+      // An unreadable store proves nothing; fail closed.
+      return false;
+    }
+  }
+
+  private get turnQueueAdvertised(): boolean {
+    return this.turnQueueEnabled || this.opts.turnQueue === true;
   }
 
   private relayRequestOrigin(request: IncomingMessage, requireOrigin = false): boolean {
@@ -632,11 +656,12 @@ export class RemoteHostManager extends EventEmitter {
       return {
         type: "pair.ok",
         device,
-        ...(this.opts.outputJournal || this.opts.nativeModelSelection
+        ...(this.opts.outputJournal || this.opts.nativeModelSelection || this.turnQueueAdvertised
           ? {
               capabilities: {
                 ...(this.opts.outputJournal ? { outputJournal: 1 as const } : {}),
                 ...(this.opts.nativeModelSelection ? { nativeModelSelection: 1 as const } : {}),
+                ...(this.turnQueueAdvertised ? { turnQueue: 1 as const } : {}),
                 ...(this.opts.outputJournal && this.opts.historyView
                   ? { historyView: 1 as const }
                   : {}),
@@ -664,11 +689,12 @@ export class RemoteHostManager extends EventEmitter {
       return {
         type: "auth.ok",
         device,
-        ...(this.opts.outputJournal || this.opts.nativeModelSelection
+        ...(this.opts.outputJournal || this.opts.nativeModelSelection || this.turnQueueAdvertised
           ? {
               capabilities: {
                 ...(this.opts.outputJournal ? { outputJournal: 1 as const } : {}),
                 ...(this.opts.nativeModelSelection ? { nativeModelSelection: 1 as const } : {}),
+                ...(this.turnQueueAdvertised ? { turnQueue: 1 as const } : {}),
                 ...(this.opts.outputJournal && this.opts.historyView
                   ? { historyView: 1 as const }
                   : {}),

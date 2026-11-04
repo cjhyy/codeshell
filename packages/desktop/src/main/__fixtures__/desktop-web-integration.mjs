@@ -121,7 +121,22 @@ const workspaceService = await import(join(main, "session-workspace-service.ts")
 workspaceService.__setSessionWorkspaceServiceSessionManagerForTests(sessions);
 workspaceService.__setSessionWorkspaceServiceProjectStoreForTests(project);
 const { MobileRemoteOrchestrator } = await import(join(main, "mobile-remote-orchestrator.ts"));
-const orchestrator = new MobileRemoteOrchestrator({ remote: {}, getBridge: () => bridge });
+// Main always composes the orchestrator with its RoomManager; no room is opened here.
+const { RoomManager } = await import(
+  join(repo, "packages/server/src/mobile-remote/room-manager.ts")
+);
+const roomManager = new RoomManager({
+  rootDir: join(root, "rooms"),
+  createAgent: () => {
+    throw new Error("This fixture never starts a CLI room");
+  },
+  onMessage() {},
+});
+const orchestrator = new MobileRemoteOrchestrator({
+  remote: {},
+  getBridge: () => bridge,
+  roomManager,
+});
 const wait = async (predicate) => {
   const end = Date.now() + 3000;
   while (!predicate()) {
