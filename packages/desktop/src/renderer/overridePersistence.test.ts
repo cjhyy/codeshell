@@ -10,7 +10,7 @@
  * what App.tsx's useState initializer and the persist effect call.
  */
 import { describe, it, expect, beforeEach } from "bun:test";
-import { loadOverrideMap, saveOverrideMap } from "./transcripts";
+import { loadOverrideMap, loadPanelState, saveOverrideMap, savePanelState } from "./transcripts";
 
 type Mode = "default" | "bypassPermissions" | "acceptEdits";
 
@@ -100,5 +100,13 @@ describe("saveOverrideMap / loadOverrideMap round-trip", () => {
     });
 
     expect(loadOverrideMap<Mode>("permission")).toEqual({ "repoA::s1": "default" });
+  });
+});
+
+describe("savePanelState / loadPanelState", () => {
+  it("drops a CC Room tab's task binding, whose request does not survive a reload", () => {
+    const tabs = [{ id: "ccRoom-1", kind: "ccRoom", cliTask: "parent:job-1" }];
+    savePanelState("repoA::s1", { open: true, tabs, activeId: "ccRoom-1" });
+    expect(loadPanelState("repoA::s1").tabs).toEqual([{ id: "ccRoom-1", kind: "ccRoom" }]);
   });
 });

@@ -65,7 +65,7 @@ export interface ApprovalHistoryEntry {
 
 export interface PanelBucketState {
   open: boolean;
-  tabs: { id: string; kind: PanelTab }[];
+  tabs: { id: string; kind: PanelTab; cliTask?: string }[];
   activeId: string | null;
   requestNonce: number;
   requestKind: PanelTab | null;

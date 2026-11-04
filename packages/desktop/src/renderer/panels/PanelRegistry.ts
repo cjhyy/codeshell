@@ -64,6 +64,8 @@ export interface PanelRenderContext extends PanelAvailabilityContext {
   onRevealConsumed?: (nonce: number) => void;
   openUrl?: { url: string; nonce: number };
   openCliSession?: OpenCliSessionRequest;
+  /** Present only on a CC Room tab bound to a DriveAgent task page. */
+  onShowCliSessionList?: () => void;
   subagentSelection?: SubagentSelection;
   onOpenCliSessionConsumed?: (nonce: number) => void;
   onAttachImage?: (absPath: string) => void;
@@ -232,12 +234,19 @@ const BUILTIN_PANEL_ENTRIES: PanelEntry[] = [
     icon: Bot,
     order: 50,
     enabled: alwaysEnabled,
-    render: ({ cwd, foregroundVisible, openCliSession, onOpenCliSessionConsumed }) =>
+    render: ({
+      cwd,
+      foregroundVisible,
+      openCliSession,
+      onOpenCliSessionConsumed,
+      onShowCliSessionList,
+    }) =>
       createElement(CCRoomView, {
         cwd,
         active: foregroundVisible,
         openRequest: openCliSession,
         onOpenRequestConsumed: onOpenCliSessionConsumed,
+        onShowSessionList: onShowCliSessionList,
       }),
   }),
 ];
