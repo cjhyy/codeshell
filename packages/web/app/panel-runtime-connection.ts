@@ -1,3 +1,4 @@
+import { localDeadline } from "../src/remote-deadline.js";
 import { api, ApiError } from "./auth.js";
 import { apiUrl, getApiProject } from "./api-context.js";
 
@@ -112,11 +113,14 @@ export function connectPanelRuntime(options: {
           typeof result !== "object" ||
           !("expiresAt" in result) ||
           typeof result.expiresAt !== "number" ||
-          !Number.isFinite(result.expiresAt) ||
-          result.expiresAt <= Date.now() + 60_000
+          !Number.isFinite(result.expiresAt)
         )
           throw new Error("面板续期响应无效。");
-        expiresAt = result.expiresAt;
+        expiresAt = localDeadline(
+          result.expiresAt,
+          "serverTime" in result ? result.serverTime : undefined,
+        );
+        if (expiresAt <= Date.now() + 60_000) throw new Error("面板续期响应无效。");
         renewAt = expiresAt - 60_000;
         renewFailures = 0;
         armExpiry();
@@ -163,7 +167,24 @@ export function connectPanelRuntime(options: {
         )
           throw new Error("面板事件响应无效。");
         previous = event.id;
-        events.push(event);
+        const payload = event.payload;
+        events.push(
+          event.event === "host.confirm" &&
+            payload &&
+            typeof payload === "object" &&
+            typeof payload.expiresAt === "number"
+            ? {
+                ...event,
+                payload: {
+                  ...payload,
+                  expiresAt: localDeadline(
+                    payload.expiresAt,
+                    "serverTime" in result ? result.serverTime : undefined,
+                  ),
+                },
+              }
+            : event,
+        );
       }
       options.onEvents(events);
       cursor = result.cursor as number;

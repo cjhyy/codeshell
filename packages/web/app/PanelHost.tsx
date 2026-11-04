@@ -1,3 +1,4 @@
+import { localDeadline } from "../src/remote-deadline.js";
 import React from "react";
 import type { ManagedPanel } from "../../server/src/panels/types.js";
 import { api, ApiError } from "./auth.js";
@@ -22,6 +23,7 @@ interface PreparedPanel {
   instanceId: string;
   src: string;
   expiresAt: number;
+  serverTime?: number;
   context: Record<string, unknown>;
   limitations: string[];
 }
@@ -928,8 +930,9 @@ export function PanelHost({
       }),
       signal: prepareController.signal,
     })
-      .then((value) => {
-        if (!validPrepared(value)) throw new Error("面板启动信息无效，请刷新面板列表后重试。");
+      .then((raw) => {
+        if (!validPrepared(raw)) throw new Error("面板启动信息无效，请刷新面板列表后重试。");
+        const value = { ...raw, expiresAt: localDeadline(raw.expiresAt, raw.serverTime) };
         if (disposed || prepareController.signal.aborted) {
           closeGrant(value);
           return;

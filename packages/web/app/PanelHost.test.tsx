@@ -1392,3 +1392,37 @@ for (const mimeType of ["text/html", "image/svg+xml", "application/pdf"])
     await view.call("context.get");
     expect(text(view.tree)).not.toContain("保存到此设备");
   });
+
+test("a phone clock fifteen minutes ahead can prepare a panel and answer its directory picker", async () => {
+  const hostNow = 1_800_000_000_000;
+  setSystemTime(hostNow + 15 * 60_000);
+  const view = await fixture({
+    intercept(request) {
+      if (request.url.pathname.endsWith("/prepare"))
+        return Response.json({
+          ...prepared,
+          expiresAt: hostNow + 10 * 60_000,
+          serverTime: hostNow,
+        });
+      if (request.url.pathname.endsWith("/events"))
+        return Response.json({
+          cursor: 1,
+          events: [directoryEvent("skewed", hostNow + 300_000)],
+          serverTime: hostNow,
+        });
+      if (request.url.pathname.endsWith("/directory-picker")) return directoryList(request);
+    },
+  });
+  const picker = directoryRequest(view.tree);
+  expect(picker?.requestId).toBe("skewed");
+  await act(async () => {
+    picker!.finish(true, directoryDownloads);
+    await flushMicrotasks();
+  });
+  expect(view.requests.find((request) => request.url.pathname.endsWith("/confirm"))?.body).toEqual({
+    requestId: "skewed",
+    allowed: true,
+    directoryToken: directoryDownloads,
+  });
+  expect(view.requests.some((request) => request.method === "DELETE")).toBe(false);
+});
