@@ -1,9 +1,10 @@
 import {
   AccountFeatureService,
   accountLocalConditions,
+  bindAccountFeatureLifecycle,
   registerAccountFeatureIpc,
 } from "./account-features.js";
-import type { BrowserWindow, IpcMain, SafeStorage, WebContents } from "electron";
+import type { App, BrowserWindow, IpcMain, SafeStorage, WebContents } from "electron";
 import { resolve } from "node:path";
 import type {
   AccessPasscode,
@@ -22,9 +23,11 @@ import { registerDeviceRelayIpc } from "./device-relay-ipc.js";
 import { registerCloudWorkbenchIpc } from "./cloud-workbench-ipc.js";
 import type { PrepareAccountGitHubLink } from "./account-github-link.js";
 import { CloudManagementManager, type ManagedCloudWindows } from "./cloud-management-manager.js";
+import { createLinkAccountAccess } from "./link-account-access.js";
 
 /** Compose optional cloud identity and its remote-access lifecycle without starting either. */
 export function createDesktopRemoteServices(options: {
+  app?: Pick<App, "on" | "once" | "whenReady">;
   ipcMain: Pick<IpcMain, "handle" | "removeHandler">;
   userDataDir: string;
   environmentDir: string;
@@ -123,6 +126,7 @@ export function createDesktopRemoteServices(options: {
     service: accountFeatures,
     windows: options.windows,
   });
+  if (options.app) bindAccountFeatureLifecycle(options.app, accountFeatures, options.windows);
   const accountDeviceService = new AccountDeviceService({
     identity: () => {
       const status = cloudAccountManager.status();
@@ -178,6 +182,9 @@ export function createDesktopRemoteServices(options: {
     isMainWindow,
   });
   return {
+    captureLinkAccount: createLinkAccountAccess(cloudAccountManager, () =>
+      accountFeatures.requireReady("links.remote"),
+    ),
     accountFeatures,
     cloudAccountManager,
     mobileRemoteController,

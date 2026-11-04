@@ -1,10 +1,50 @@
 import { expect, test } from "bun:test";
-import { accountLocalConditions, registerAccountFeatureIpc } from "./account-features.js";
+import { EventEmitter } from "node:events";
+import {
+  accountLocalConditions,
+  bindAccountFeatureLifecycle,
+  registerAccountFeatureIpc,
+} from "./account-features.js";
 const account = {
   state: "signed-in" as const,
   origin: "https://a.example",
   account: { id: "same-id", username: "user" },
 };
+test("feature lifecycle waits for Electron ready and only refreshes focused main windows", async () => {
+  let ready!: () => void;
+  const app = Object.assign(new EventEmitter(), {
+    whenReady: () =>
+      new Promise<void>((resolve) => {
+        ready = resolve;
+      }),
+  });
+  const window = {};
+  const refreshes: unknown[][] = [];
+  let disposed = 0;
+  bindAccountFeatureLifecycle(
+    app as any,
+    {
+      refresh: async (...args: any[]) => {
+        refreshes.push(args);
+        return {} as any;
+      },
+      dispose: () => {
+        disposed++;
+      },
+    },
+    () => [window] as any,
+  );
+  expect(refreshes).toEqual([]);
+  ready();
+  await Promise.resolve();
+  expect(refreshes).toEqual([[]]);
+  app.emit("browser-window-focus", {}, {});
+  expect(refreshes).toHaveLength(1);
+  app.emit("browser-window-focus", {}, window);
+  expect(refreshes[1]).toEqual([undefined, 60_000]);
+  app.emit("before-quit");
+  expect(disposed).toBe(1);
+});
 test("local relay readiness binds both origin and account and leaves setup actionable", () => {
   const relay = {
     state: "ready" as const,

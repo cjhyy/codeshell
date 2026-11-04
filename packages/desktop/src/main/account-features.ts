@@ -1,9 +1,21 @@
-import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
+import type { App, BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
 import { AccountFeatureService } from "@cjhyy/code-shell-server/account";
 import type { CloudAccountStatus } from "../shared/cloud-account.js";
 import type { DesktopRelayStatus } from "../shared/device-relay.js";
 import type { ResolveAccountFeaturesInput } from "@cjhyy/code-shell-web/account";
 export { AccountFeatureService };
+/** Credential loading starts only after Electron's safe storage is ready. */
+export function bindAccountFeatureLifecycle(
+  app: Pick<App, "on" | "once" | "whenReady">,
+  service: Pick<AccountFeatureService, "refresh" | "dispose">,
+  windows: () => Iterable<BrowserWindow>,
+) {
+  app.on("browser-window-focus", (_event, window) => {
+    if ([...windows()].includes(window)) void service.refresh(undefined, 60_000);
+  });
+  void app.whenReady().then(() => service.refresh());
+  app.once("before-quit", () => service.dispose());
+}
 export function accountLocalConditions(
   status: CloudAccountStatus,
   relay: DesktopRelayStatus,
