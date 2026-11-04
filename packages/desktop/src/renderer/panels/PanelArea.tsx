@@ -48,35 +48,14 @@ import { useToast } from "../ui/ToastProvider";
 import type { PanelAppStateChange } from "./PanelAppHost";
 import { PanelLauncher } from "./PanelLauncher";
 import { PANEL_LAUNCHER_KIND } from "./panelLauncherKind";
+import { cliSessionForTab, cliTaskKey, placeCliTaskTab } from "./cliTaskTabs";
 import { nextPanelTabId } from "./panelTabIds";
 
 export interface OpenTab {
   id: string;
   kind: PanelTab;
-  /**
-   * Set on the one CC Room tab that shows a DriveAgent task page
-   * (`cliTaskKey` of the bucket's request). Other CC Room tabs keep the
-   * ordinary session list, so following a task link never hides it.
-   */
+  /** Set on the one CC Room tab that shows a DriveAgent task page (see cliTaskTabs). */
   cliTask?: string;
-}
-
-/** Stable identity of a DriveAgent task request; undefined for plain room requests. */
-export function cliTaskKey(request: OpenCliSessionRequest | undefined): string | undefined {
-  return request?.jobId && request.sourceSessionId
-    ? `${request.sourceSessionId}:${request.jobId}`
-    : undefined;
-}
-
-/** The CLI request a given tab should render, if any. */
-export function cliSessionForTab(
-  tab: OpenTab,
-  request: OpenCliSessionRequest | undefined,
-): OpenCliSessionRequest | undefined {
-  if (tab.kind !== "ccRoom") return request;
-  const key = cliTaskKey(request);
-  if (key) return tab.cliTask === key ? request : undefined;
-  return tab.cliTask ? undefined : request;
 }
 
 interface Props {
@@ -536,21 +515,10 @@ function ResolvedPanelArea({
     const newTab: OpenTab = { id: mkId(requestKind), kind: requestKind };
     const cliTask = requestKind === "ccRoom" ? cliTaskKey(openCliSession) : undefined;
     if (cliTask) {
-      // A task link reuses the existing task tab (or opens a new one). It never
-      // takes over a CC Room tab the user is using as the session list.
       setTabs((prev) => {
-        const bound =
-          prev.find((t) => t.kind === "ccRoom" && t.cliTask === cliTask) ??
-          prev.find((t) => t.kind === "ccRoom" && t.cliTask);
-        if (bound) {
-          setActiveId(bound.id);
-          return bound.cliTask === cliTask
-            ? prev
-            : prev.map((t) => (t.id === bound.id ? { ...t, cliTask } : t));
-        }
-        if (prev.some((t) => t.id === newTab.id)) return prev; // updater re-run guard
-        setActiveId(newTab.id);
-        return [...prev, { ...newTab, cliTask }];
+        const placed = placeCliTaskTab(prev, cliTask, newTab);
+        setActiveId(placed.activeId);
+        return placed.tabs;
       });
       return;
     }
