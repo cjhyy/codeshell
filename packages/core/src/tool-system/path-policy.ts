@@ -30,20 +30,10 @@
  * Callers must consult classifyPath before honoring acceptEdits.
  */
 
-import {
-  constants,
-  realpathSync,
-  existsSync,
-  readFileSync,
-  writeFileSync,
-  mkdirSync,
-  renameSync,
-  statSync,
-  readdirSync,
-} from "node:fs";
+import { constants, realpathSync, existsSync, readFileSync, statSync, readdirSync } from "node:fs";
 import { open } from "node:fs/promises";
 import { homedir } from "node:os";
-import { randomUUID } from "node:crypto";
+import { SettingsManager } from "../settings/manager.js";
 import { dirname, join, relative, sep } from "node:path";
 import { readInstalledPlugins } from "../plugins/installedPlugins.js";
 import { canonicalPath } from "../workspace/canonical-key.js";
@@ -333,46 +323,25 @@ function recordPathApproval(
     s.add({ prefix, op: operation });
     return;
   }
-  // project: persist to settings.local.json (atomic, idempotent).
-  const dir = join(cwd, ".code-shell");
-  const file = join(dir, "settings.local.json");
+  // Use the same cross-process lock and strict YAML-aware read as Settings.
   try {
-    // Don't resurrect a deleted project root: a recursive mkdir of
-    // <cwd>/.code-shell recreates `cwd` itself as an empty shell when cwd is
-    // gone. Persistence here is best-effort, so skip when the root is missing.
     if (!existsSync(cwd)) return;
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    let settings: { pathApprovals?: StoredGrant[] } = {};
-    if (existsSync(file)) {
-      try {
-        settings = JSON.parse(readFileSync(file, "utf-8"));
-      } catch {
-        /* start fresh on parse error */
-      }
-    }
-    if (!Array.isArray(settings.pathApprovals)) settings.pathApprovals = [];
-    const existing = settings.pathApprovals.find((g) => storedPrefix(g) === prefix);
-    if (existing) {
-      // Already covered (read-or-better matching the request)? Nothing to do.
-      if (grantCoversOp(storedOp(existing), operation)) return;
-      // Upgrade read → write in place.
-      if (operation === "write") {
+    new SettingsManager(cwd).mutateSettingsForScope("local", cwd, (current) => {
+      const settings = current as { pathApprovals?: StoredGrant[] };
+      if (!Array.isArray(settings.pathApprovals)) settings.pathApprovals = [];
+      const existing = settings.pathApprovals.find((g) => storedPrefix(g) === prefix);
+      if (existing) {
+        if (grantCoversOp(storedOp(existing), operation)) return false;
+        if (operation !== "write") return false;
         settings.pathApprovals = settings.pathApprovals.map((g) =>
           storedPrefix(g) === prefix ? { path: prefix, op: "write" as const } : g,
         );
       } else {
-        return;
+        settings.pathApprovals.push({ path: prefix, op: operation });
       }
-    } else {
-      settings.pathApprovals.push({ path: prefix, op: operation });
-    }
-    // randomUUID() guards against temp-name collisions between writers in
-    // the same millisecond; the rename keeps the swap atomic.
-    const tmp = `${file}.${randomUUID()}.tmp`;
-    writeFileSync(tmp, JSON.stringify(settings, null, 2) + "\n", "utf-8");
-    renameSync(tmp, file);
+    });
   } catch {
-    // Persistence is best-effort; an unwritable disk must not break the op.
+    // The current authorization remains valid; preserve malformed/unwritable config.
   }
 }
 
@@ -773,6 +742,13 @@ function isSafeCodeShellDiagnosticRead(resolved: string): boolean {
  * browser profiles can carry login tokens outside their Cookies database.
  */
 function isCodeShellCredentialContainer(resolved: string): boolean {
+  // Project-local settings can carry the same provider and MCP credentials.
+  if (
+    /(?:^|[/\\])\.code-shell[/\\]settings(?:\.(?:local|managed))?\.(?:json|ya?ml)(?:\.|$)/.test(
+      resolved,
+    )
+  )
+    return true;
   const root = safeRealpath(join(configuredUserHome(), ".code-shell"));
   if (!isInsideDir(resolved, root)) return false;
   const rel = relative(root, resolved).split(sep).join("/");
