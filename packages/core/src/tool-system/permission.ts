@@ -9,7 +9,7 @@ import type {
   ApprovalRequest,
   ApprovalResult,
 } from "../types.js";
-import { resolve as resolvePath, dirname } from "node:path";
+import { resolve as resolvePath, dirname, posix } from "node:path";
 import { existsSync } from "node:fs";
 import { SettingsManager } from "../settings/manager.js";
 import { randomUUID } from "node:crypto";
@@ -1390,6 +1390,8 @@ const SENSITIVE_PATH_PATTERNS = [
   /\.aws\/credentials\b/,
   // Recursive reads of this directory can include provider/MCP/session keys.
   /\.code-shell[/\\]?(?=[\s"']|$)/,
+  // Search tools can traverse these parents without naming their secret files.
+  /\.code-shell[/\\](?:serve|desktop|project-control|browser-runtime|im-gateway|chat(?:[/\\]wechat)?)[/\\]?(?=[\s"']|$)/,
   /\.code-shell[/\\](?:settings(?:\.(?:local|managed))?\.(?:json|ya?ml)|credentials\b|(?:serve|desktop)[/\\]access\.json|project-runtime-secrets\b|project-control[/\\]registry\.json|browser-runtime[/\\](?:profiles|chrome-native\.json)|im-gateway[/\\](?:config|desktop-control)\.json|chat[/\\]wechat[/\\]accounts)/,
 
   /credentials\.json\b/,
@@ -1418,6 +1420,11 @@ export function segmentIsSensitiveRead(segment: string): boolean {
   // Search patterns/options (`rg token SKILL.md`) are not credential paths.
   const words = splitShellWords(s);
   if (!words) return false;
+  // Shell quoting, repeated separators, and dot segments do not change which
+  // file a reader opens. Test normalized words as well as the original text.
+  // Keep this lexical: classification must not perform I/O or depend on cwd.
+  if (words.some((word) => SENSITIVE_PATH_PATTERNS.some((re) => re.test(posix.normalize(word)))))
+    return true;
   if (words[0] === "sed") {
     if (!isSafeReadSedCommand(s)) return false;
     const scriptIndex = words[2] === "-e" ? 3 : 2;

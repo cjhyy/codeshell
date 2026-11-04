@@ -33,6 +33,33 @@ describe("safe-read downgrades on sensitive args / env dump", () => {
       expect(classifyBashCommand(command)).toBe("unsafe");
   });
 
+  test("equivalent secret paths and recursive credential parents require approval", () => {
+    for (const command of [
+      "cat .code-shell/./settings.local.json",
+      "cat .code-shell//settings.local.json",
+      "cat '.code-shell/docs/../settings.local.yaml'",
+      'cat ".code-shell"/settings.json',
+      "grep -r apiKey ~/.code-shell/serve",
+      "rg apiKey ~/.code-shell/serve/",
+      "rg token ~/.code-shell//chat/./wechat",
+      "grep -r token ~/.code-shell/desktop",
+      "rg token ~/.code-shell/project-control/",
+      "rg token ~/.code-shell/browser-runtime",
+      "rg token ~/.code-shell/im-gateway",
+    ])
+      expect(classifyBashCommand(command)).toBe("unsafe");
+  });
+
+  test("ordinary CodeShell skill documentation stays readable", () => {
+    for (const command of [
+      "cat .code-shell/skills/example/SKILL.md",
+      "cat .code-shell//skills/./example/SKILL.md",
+      "rg token .code-shell/skills",
+      "grep -r instruction ~/.code-shell/skills/",
+    ])
+      expect(classifyBashCommand(command)).toBe("safe-read");
+  });
+
   test("env / printenv dump is not safe-read (leaks injected credential env)", () => {
     expect(classifyBashCommand("env")).toBe("unsafe");
     expect(classifyBashCommand("printenv")).toBe("unsafe");
