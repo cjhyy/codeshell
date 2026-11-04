@@ -91,6 +91,7 @@ function WebsiteAccountMenu({
 }) {
   const account = useAccountSession();
   const user = account.session?.account;
+  const phoneFeature = useAccountFeature("relay.phone");
   return (
     <details className="website-account-menu">
       <summary aria-label="打开账号菜单">
@@ -99,7 +100,10 @@ function WebsiteAccountMenu({
       <div className="website-account-popover">
         <strong>{user?.displayName}</strong>
         <small>@{user?.username}</small>
-        <AccountFeatureEntry id="relay.phone" onClick={() => window.location.assign("/devices")}>
+        <AccountFeatureEntry
+          id="relay.phone"
+          onClick={() => window.location.assign(phoneFeature.params?.directoryPath ?? "/")}
+        >
           我的电脑
         </AccountFeatureEntry>
         <button
@@ -132,6 +136,7 @@ function WebsiteAccountMenu({
 function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
   const account = useAccountSession();
   const cloudFeature = useAccountFeature("cloud.projects");
+  const phoneFeature = useAccountFeature("relay.phone");
   const [route, setRoute] = React.useState(() => parseWebsiteRoute(new URL(window.location.href)));
   const [cloudGrant, setCloudGrant] = React.useState<{
     session: CloudManagementSession;
@@ -360,7 +365,7 @@ function WebsiteShell({ capability }: { capability: WebsiteCloudCapability }) {
             ) : null}
             <AccountFeatureEntry
               id="relay.phone"
-              onClick={() => window.location.assign("/devices")}
+              onClick={() => window.location.assign(phoneFeature.params?.directoryPath ?? "/")}
             >
               我的电脑
             </AccountFeatureEntry>

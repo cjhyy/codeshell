@@ -38,7 +38,7 @@ const account = {
 const installationId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const available = {
   "links.remote": { version: 1, enabled: true },
-  "relay.phone": { version: 1, enabled: true },
+  "relay.phone": { version: 1, enabled: true, params: { directoryPath: "/devices" } },
   "cloud.projects": { version: 1, enabled: true, params: { cloudOrigin: origin } },
 };
 const browser = await chromium.launch({
@@ -58,6 +58,7 @@ async function mount({
   registrationAllowed = true,
   features = {},
   statusFeatures = available,
+  legacyDirectory = false,
 } = {}) {
   await context?.close();
   context = await browser.newContext({ serviceWorkers: "block" });
@@ -106,7 +107,10 @@ async function mount({
     if (pathname === "/fixture.js")
       return route.fulfill({ contentType: "text/javascript", body: js });
     if (pathname === "/fixture.css") return route.fulfill({ contentType: "text/css", body: css });
-    if (pathname === "/devices")
+    if (
+      pathname === "/devices" ||
+      (legacyDirectory && pathname === "/" && calls.filter((call) => call.path === "/").length > 1)
+    )
       return route.fulfill({
         contentType: "text/html; charset=utf-8",
         body: "<h1>独立设备目录</h1>",
@@ -194,6 +198,20 @@ try {
   assert.equal(fixture.page.url(), origin + "/devices");
   assert.equal(fixture.calls.find((call) => call.path === "/devices")?.query, "");
   results.push("ready phone entry opens only the fixed credential-free device portal");
+
+  fixture = await mount({
+    features: { "relay.phone": { version: 1, enabled: true } },
+    legacyDirectory: true,
+  });
+  await fixture.page.goto(origin);
+  await fixture.page.getByRole("button", { name: "我的电脑", exact: true }).last().click();
+  await fixture.page.getByRole("heading", { name: "独立设备目录" }).waitFor();
+  assert.equal(fixture.page.url(), origin + "/");
+  assert.equal(
+    fixture.calls.some((call) => call.path === "/devices"),
+    false,
+  );
+  results.push("legacy phone capabilities retain the root directory without guessing new routes");
 
   fixture = await mount({ features: available });
   await fixture.page.goto(origin);
