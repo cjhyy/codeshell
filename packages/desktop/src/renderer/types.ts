@@ -529,6 +529,34 @@ function sealToolWithoutResult(
   };
 }
 
+function findThinkingFromEnd(
+  messages: Message[],
+  thinkingId: string | null,
+): { index: number; message: ThinkingMessage } | undefined {
+  if (!thinkingId) return undefined;
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = messages[index]!;
+    if (message.kind === "thinking" && message.id === thinkingId) return { index, message };
+  }
+  return undefined;
+}
+
+/**
+ * Finish the live thinking row once the model has moved on (answer text, a
+ * tool call, a new request, an error). The pointer is intentionally left in
+ * place by callers that keep the request alive: a tombstone of the current
+ * assistant still removes this row, and the next thinking_delta sees a done
+ * row and opens a fresh one in stream order. Without sealing, a pointer reset
+ * orphaned the row with done:false and its "正在思考…" spinner never stopped.
+ */
+function sealStreamingThinking(messages: Message[], thinkingId: string | null): Message[] {
+  const found = findThinkingFromEnd(messages, thinkingId);
+  if (!found || found.message.done) return messages;
+  const next = messages.slice();
+  next[found.index] = { ...found.message, done: true };
+  return next;
+}
+
 /**
  * Fold a single StreamEvent into the message list. Pure — returns a
  * new state. Unknown event types are no-ops so future Engine event
@@ -1281,13 +1309,16 @@ function applyStreamEventToTurn(
       const id = event.messageId ?? freshId("assistant");
       const startedAt = now();
       const previousId = state.streamingAssistantId;
+      // The previous request's thinking is over; seal it before the pointer
+      // reset below, or turn_complete can no longer find it.
+      const sealed = sealStreamingThinking(state.messages, state.streamingThinkingId);
       const messages = previousId
-        ? state.messages.map((m) =>
+        ? sealed.map((m) =>
             m.kind === "assistant" && m.id === previousId && !m.done
               ? { ...m, done: true, doneAt: m.doneAt ?? startedAt }
               : m,
           )
-        : state.messages;
+        : sealed;
       return {
         ...state,
         messages: [
@@ -1372,12 +1403,17 @@ function applyStreamEventToTurn(
       // keeps its id as the live-turn anchor; the next delta opens a fresh
       // AssistantMessage here. Native Engine streams still open their next
       // segment explicitly with stream_request_start, so both paths converge.
+      // Answer text means the reasoning that preceded it has finished.
+      const base =
+        event.text.length > 0
+          ? sealStreamingThinking(state.messages, state.streamingThinkingId)
+          : state.messages;
       if (!streamingAssistant || streamingAssistant.done) {
         const id = freshId("assistant");
         return {
           ...state,
           messages: [
-            ...state.messages,
+            ...base,
             { kind: "assistant", id, text: event.text, done: false, createdAt: now() },
           ],
           streamingAssistantId: id,
@@ -1385,7 +1421,7 @@ function applyStreamEventToTurn(
       }
       return {
         ...state,
-        messages: state.messages.map((m) =>
+        messages: base.map((m) =>
           m.kind === "assistant" && m.id === state.streamingAssistantId
             ? { ...m, text: m.text + event.text }
             : m,
@@ -1397,7 +1433,11 @@ function applyStreamEventToTurn(
       // Subagent thinking is dropped — same as TUI. No user value in the
       // folded card, and rendering it would defeat the freeze fix.
       if (event.agentId) return state;
-      if (!state.streamingThinkingId) {
+      // A sealed (done) row belongs to an earlier phase of the stream — e.g.
+      // reasoning that resumed after a tool call on a single-stream external
+      // runtime. Open a new row in stream order instead of growing the old one.
+      const liveThinking = findThinkingFromEnd(state.messages, state.streamingThinkingId);
+      if (!liveThinking || liveThinking.message.done) {
         const id = freshId("thinking");
         return {
           ...state,
@@ -1408,14 +1448,12 @@ function applyStreamEventToTurn(
           ],
         };
       }
-      return {
-        ...state,
-        messages: state.messages.map((m) =>
-          m.kind === "thinking" && m.id === state.streamingThinkingId
-            ? { ...m, text: m.text + event.text }
-            : m,
-        ),
+      const messages = state.messages.slice();
+      messages[liveThinking.index] = {
+        ...liveThinking.message,
+        text: liveThinking.message.text + event.text,
       };
+      return { ...state, messages };
     }
 
     case "tool_use_start": {
@@ -1461,8 +1499,10 @@ function applyStreamEventToTurn(
       // stream_request_start for text → tool → text sequences. Drop an empty
       // placeholder (tool-first response); streamingAssistantId remains the
       // live-turn anchor so the next text_delta can create a new segment.
+      // A tool call also ends the reasoning that led to it.
+      const sealed = sealStreamingThinking(state.messages, state.streamingThinkingId);
       const messages = state.streamingAssistantId
-        ? state.messages.flatMap((message) => {
+        ? sealed.flatMap((message) => {
             if (
               message.kind !== "assistant" ||
               message.id !== state.streamingAssistantId ||
@@ -1474,7 +1514,7 @@ function applyStreamEventToTurn(
               ? []
               : [{ ...message, done: true, doneAt: message.doneAt ?? startedAt }];
           })
-        : state.messages;
+        : sealed;
       // Removing an empty assistant can shift agents that were started before
       // this tool arrived. Keep indexed child events attached to their owner.
       const agentMessageIndex =
@@ -2073,13 +2113,15 @@ function applyStreamEventToTurn(
       }
 
       // 2. Finalize streaming pointers (existing behavior).
-      const streamingThinkingId = state.streamingThinkingId;
       const turnDoneAt = now();
       let finalized: Message[] = msgs.map((m) => {
         if (m.kind === "assistant" && !m.done) {
           return { ...m, done: true, doneAt: m.doneAt ?? turnDoneAt };
         }
-        if (m.kind === "thinking" && m.id === streamingThinkingId) {
+        // Every thinking row is over once the turn is. Matching only the live
+        // pointer left earlier rows spinning if any path reset the pointer
+        // without sealing them first.
+        if (m.kind === "thinking" && !m.done) {
           return { ...m, done: true };
         }
         // A terminal turn cannot still own a running top-level tool. Normally
@@ -2162,12 +2204,14 @@ function applyStreamEventToTurn(
       // paths may not). The "你停止了本轮" turn_end line already covers a stop,
       // so swallow abort text instead of stacking a red Error block on top.
       const isAbort = /\b(abort|aborted|cancell?ed|interrupt)\b/i.test(errText);
+      // The pointer is cleared below; seal its row first so it cannot spin on.
+      const sealedThinking = sealStreamingThinking(state.messages, state.streamingThinkingId);
       return {
         ...state,
         messages:
           errText && !isAbort
-            ? [...state.messages, { kind: "system", id: freshId("err"), text: `Error: ${errText}` }]
-            : state.messages,
+            ? [...sealedThinking, { kind: "system", id: freshId("err"), text: `Error: ${errText}` }]
+            : sealedThinking,
         streamingAssistantId: null,
         streamingThinkingId: null,
       };
