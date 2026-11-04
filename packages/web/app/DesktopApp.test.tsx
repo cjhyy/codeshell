@@ -1868,3 +1868,35 @@ test.each(["session", "new", "cli"])(
     }
   },
 );
+
+test.each([false, true])(
+  "the active Desktop approval UI shows the deadline (multiple questions: %s)",
+  (multiple) => {
+    const expiresAt = 2_000_000;
+    const markup = renderToStaticMarkup(
+      <DesktopApproval
+        app={remoteApp({ status: "online" })}
+        approval={{
+          requestId: "deadline",
+          toolName: "Read",
+          summary: "fixture",
+          description: "",
+          risk: "low",
+          expiresAt,
+          ...(multiple
+            ? {
+                roomId: "room",
+                questions: [
+                  { question: "A?", options: ["Yes"], multiSelect: false },
+                  { question: "B?", options: ["Yes"], multiSelect: false },
+                ],
+              }
+            : {}),
+        }}
+      />,
+    );
+    expect(markup).toContain("请在");
+    expect(markup).toContain(new Date(expiresAt).toLocaleTimeString());
+    expect(markup).toContain("超时后需要重新发起");
+  },
+);

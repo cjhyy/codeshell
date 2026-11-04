@@ -333,6 +333,14 @@ export function DesktopApproval({ approval, app }: { approval: PendingApproval; 
   return <DesktopApprovalCard approval={approval} app={app} />;
 }
 
+function ApprovalDeadline({ expiresAt }: { expiresAt?: number }) {
+  return typeof expiresAt === "number" && Number.isFinite(expiresAt) ? (
+    <p className="approval-deadline">
+      请在 {new Date(expiresAt).toLocaleTimeString()} 前确认；超时后需要重新发起。
+    </p>
+  ) : null;
+}
+
 /** A CLI AskUserQuestion request with several questions accepts exactly one
  *  response, so every answer is collected before it is sent. */
 function DesktopAskQuestions({ approval, app }: { approval: PendingApproval; app: RemoteApp }) {
@@ -362,6 +370,7 @@ function DesktopAskQuestions({ approval, app }: { approval: PendingApproval; app
       <div className="approval-title">
         Agent 提问<em> · {approval.risk}</em>
       </div>
+      <ApprovalDeadline expiresAt={approval.expiresAt} />
       {questions.map((question, index) => (
         <div key={`${index}:${question.question}`} className="approval-question">
           <div className="approval-summary">
@@ -456,6 +465,7 @@ function DesktopApprovalCard({ approval, app }: { approval: PendingApproval; app
         {isAsk ? "Agent 提问" : `工具审批：${approval.toolName}`}
         <em> · {approval.risk}</em>
       </div>
+      <ApprovalDeadline expiresAt={approval.expiresAt} />
       {approval.description ? <div className="approval-desc">{approval.description}</div> : null}
       <div className="approval-summary">{approval.summary}</div>
       {isAsk ? (
