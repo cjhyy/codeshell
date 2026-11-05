@@ -39,7 +39,12 @@ export interface BrowserIdentity {
   /** Profile the partition is derived from (e.g. "p:<project>" / "u:<name>"). */
   profileId: string;
   /** Where the browser itself comes from. */
-  sourceKind?: "builtin-panel" | "builtin-headless" | "attached-chrome" | "remote";
+  sourceKind?:
+    | "builtin-panel"
+    | "builtin-task-window"
+    | "builtin-headless"
+    | "attached-chrome"
+    | "remote";
   /** True when this is the user's own browser, carrying their real logins. */
   isUserBrowser?: boolean;
 }

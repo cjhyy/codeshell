@@ -781,7 +781,9 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
         tabId: entry.tabId,
         url: safeCall(() => entry.target?.host.webContents.getURL()) ?? entry.lastUrl,
         title: safeCall(() => entry.target?.host.webContents.getTitle()) ?? entry.lastTitle,
-        reason,
+        // Reclaiming an already closed entry does not turn the close into an
+        // automatic resource eviction that tells the model to reopen it.
+        reason: !entry.target && entry.recovery === "closed" ? "closed" : reason,
         expiresAt: this.deps.now() + this.continuityTtlMs,
       });
       this.pruneContinuity();
@@ -809,8 +811,18 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
 }
 
 function recoveryDetail(entry: RuntimeEntry): string {
+  if (entry.recovery === "closed") {
+    return (
+      `TARGET_CLOSED: this task's separate browser window (${entry.tabId}) was closed. ` +
+      "Stop browser automation for this task. Do not retry resume_control or browser_navigate, " +
+      "request another takeover, or switch to another page to continue. " +
+      "Only if the user explicitly asks to reopen, use browser_navigate with the requested URL " +
+      "and take a new snapshot. " +
+      `Its last URL was ${entry.lastUrl || "about:blank"}; all old element refs and read cursors have expired.`
+    );
+  }
   return (
-    `TARGET_CLOSED: this task's tab ${entry.tabId} was ${entry.recovery === "idle" ? "reclaimed after idle time" : entry.recovery === "capacity" ? "reclaimed to free browser capacity" : "closed"}. ` +
+    `TARGET_CLOSED: this task's tab ${entry.tabId} was ${entry.recovery === "idle" ? "reclaimed after idle time" : "reclaimed to free browser capacity"}. ` +
     `Its last URL was ${entry.lastUrl || "about:blank"}. Use browser_navigate with the intended URL to reopen this same task-owned tab, then take a new snapshot. The tabId remains valid; all old element refs and read cursors have expired. Do not retry the previous action or switch to another task's page.`
   );
 }

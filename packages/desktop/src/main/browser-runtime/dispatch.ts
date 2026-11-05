@@ -114,7 +114,9 @@ export async function dispatchInteractiveBrowserRuntimeAction(
         ok: true,
         code: "NEEDS_HUMAN",
         retryable: false,
-        detail: "showing the same task-owned page operated by browser tools",
+        detail:
+          "Showing the same task-owned page in a separate Browser Runtime window. " +
+          "This is not the docked BrowserPanel tab; that tab requires an explicit user grant.",
       });
     } catch (error) {
       return JSON.stringify({

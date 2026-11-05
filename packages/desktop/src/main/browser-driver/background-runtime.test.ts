@@ -718,6 +718,33 @@ describe("BackgroundBrowserRuntime continuity", () => {
   const owner = { ownerId: "task-1", partition: "persist:workspace-1" };
   const tick = () => new Promise((resolve) => setTimeout(resolve, 30));
 
+  test("a closed window tells the agent to stop even after idle metadata reclamation", async () => {
+    const h = harness({ idleTtlMs: 5 });
+    const first = h.runtime.acquire(owner);
+    await first.bridge.navigate("https://example.com/work");
+    await first.show();
+    h.closeTarget();
+    const closed = await first.bridge.resumeControl!();
+    expect(closed).toMatchObject({ ok: false, code: "TARGET_CLOSED", retryable: false });
+    expect(closed.detail).toContain("separate browser window");
+    expect(closed.detail).toContain("Stop browser automation");
+    expect(closed.detail).toContain("Do not retry resume_control or browser_navigate");
+    expect(closed.detail).toContain("Only if the user explicitly asks to reopen");
+    expect(closed.detail).not.toContain("Use browser_navigate with the intended URL to reopen");
+    first.release();
+    await tick();
+    expect(h.runtime.stats().entries).toBe(0);
+
+    const next = h.runtime.acquire(owner);
+    try {
+      expect(await next.bridge.resumeControl!()).toEqual(closed);
+      expect(h.openOptions).toHaveLength(1);
+    } finally {
+      next.release();
+      h.runtime.closeAll();
+    }
+  });
+
   test("idle reclamation retains only a closed logical handle and requires explicit navigation", async () => {
     const h = harness({ idleTtlMs: 5 });
     const first = h.runtime.acquire(owner);
@@ -734,6 +761,7 @@ describe("BackgroundBrowserRuntime continuity", () => {
     const stale = await resumed.bridge.switchTab(before!.tabId);
     expect(stale).toMatchObject({ ok: false, code: "TARGET_CLOSED", retryable: false });
     expect(stale.detail).toContain("browser_navigate");
+    expect(stale.detail).toContain("Use browser_navigate with the intended URL to reopen");
     expect(stale.detail).toContain("https://example.com/work");
     expect(await resumed.bridge.click("old:e1")).toMatchObject({ code: "TARGET_CLOSED" });
     expect((await resumed.bridge.readContent()).detail).toContain("old element refs");
@@ -768,6 +796,7 @@ describe("BackgroundBrowserRuntime continuity", () => {
     const result = await resumed.bridge.switchTab(before!.tabId);
     expect(result.code).toBe("TARGET_CLOSED");
     expect(result.detail).toContain("capacity");
+    expect(result.detail).toContain("Use browser_navigate with the intended URL to reopen");
     expect(h.openOptions).toHaveLength(2);
     expect(h.state.url).toBe("https://other.example/");
     resumed.release();

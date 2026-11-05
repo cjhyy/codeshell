@@ -116,6 +116,8 @@ describe("interactive Browser Runtime dispatch", () => {
     expect(shown).toBe(1);
     expect(released).toBe(1);
     expect(result).toMatchObject({ ok: true, code: "NEEDS_HUMAN" });
+    expect(result.detail).toContain("separate Browser Runtime window");
+    expect(result.detail).toContain("not the docked BrowserPanel tab");
   });
 
   test("targets a task-owned in-app runtime tab, including tab operations", async () => {
