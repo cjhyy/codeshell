@@ -274,6 +274,15 @@ export class PanelAppAgentTaskService {
     return publicTask(task);
   }
 
+  /** Native Host authority for a currently executing task, never a guest-facing lookup. */
+  activeOwner(sessionId: string): PanelAgentTaskOwner | undefined {
+    const task = [...this.tasks.values()].find(
+      (candidate) => candidate.sessionId === sessionId && candidate.status === "running",
+    );
+    if (!task || task.cancelRequested) return undefined;
+    return { ...task.owner, availableSkills: [...task.owner.availableSkills] };
+  }
+
   async cancel(owner: PanelAgentTaskOwner, id: unknown): Promise<PanelAgentTaskView> {
     const task = this.scopedTask(owner, id);
     if (TERMINAL_STATUSES.has(task.status)) return publicTask(task);

@@ -619,7 +619,8 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRendererNavigation = new AppRendererNavigation(
-  process.env.VITE_DEV_URL || pathToFileURL(resolve(__dirname, "..", "renderer", "index.html")).href,
+  process.env.VITE_DEV_URL ||
+    pathToFileURL(resolve(__dirname, "..", "renderer", "index.html")).href,
   (url) => shell.openExternal(url),
 );
 const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
@@ -1725,6 +1726,7 @@ async function createWindow(): Promise<BrowserWindow> {
           (process.platform !== "linux" ||
             safeStorage.getSelectedStorageBackend() !== "basic_text"),
         hasActiveEphemeralOwner: (sessionId) => quickChatOwnership.hasActiveOwner(sessionId),
+        hasActiveHostTaskOwner: (sessionId) => panelAppBridge.hasActiveAgentTaskOwner(sessionId),
       }),
       captureLinkAccount,
     );

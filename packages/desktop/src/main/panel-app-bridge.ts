@@ -106,6 +106,7 @@ import {
   type PanelAgentTaskStartInput,
 } from "./panel-app-agent-task-service.js";
 import type { PanelAgentTaskModelCatalog } from "./panel-app-agent-task-models.js";
+import { PanelAgentTaskOwnership } from "./panel-app-agent-task-ownership.js";
 import {
   PANEL_APP_API_VERSION,
   type PanelAppBindInput,
@@ -492,6 +493,7 @@ export class PanelAppBridge {
   });
   private readonly directoryBookmarks = desktopPanelDirectoryBookmarks(app.getPath("userData"));
   private readonly agentTaskService: PanelAppAgentTaskService;
+  private readonly agentTaskOwnership: PanelAgentTaskOwnership;
   private mediaService?: PanelMediaService;
   private resourceService?: PanelResourceService;
   private resourceTransfersStopping = false;
@@ -601,6 +603,12 @@ export class PanelAppBridge {
       // package entry hashes, safe arguments and revocation before every spawn.
       confirmExecution: async () => true,
     });
+    this.agentTaskOwnership = new PanelAgentTaskOwnership({
+      activeOwner: (sessionId) => this.agentTaskService.activeOwner(sessionId),
+      currentBridge: () => this.options.getAgentBridge(),
+      isPanelAppBound: (projectPath, appId) => this.options.isPanelAppBound(projectPath, appId),
+      isWorkspaceTrusted: (cwd) => this.options.isWorkspaceTrusted(cwd),
+    });
     this.agentTaskService = new PanelAppAgentTaskService(
       {
         run: async (input) => {
@@ -621,8 +629,9 @@ export class PanelAppBridge {
             if (update.error) latestError = update.error;
             if (update.progress) input.onProgress(update.progress);
           });
+          let releaseOwnership: (() => void) | undefined;
           try {
-            const response = await bridge.requestWorker(
+            const pending = bridge.requestWorker(
               "agent/run",
               {
                 task: input.prompt,
@@ -647,6 +656,10 @@ export class PanelAppBridge {
                 meta: { origin: "host", producer: "panel-agent-task" },
               },
             );
+            // requestWorker synchronously ensures/spawns the worker before returning
+            // its Promise. Capture that generation before any worker reply can arrive.
+            releaseOwnership = this.agentTaskOwnership.track(input.sessionId, bridge);
+            const response = await pending;
             if (!response.ok) throw new Error(response.message);
             const result = (response.result ?? {}) as {
               text?: unknown;
@@ -676,6 +689,7 @@ export class PanelAppBridge {
                 : {}),
             };
           } finally {
+            releaseOwnership?.();
             unsubscribe();
           }
         },
@@ -721,6 +735,11 @@ export class PanelAppBridge {
         }
       },
     );
+  }
+
+  /** Main-only signing authority for an executing Panel task. */
+  hasActiveAgentTaskOwner(sessionId: string): boolean {
+    return this.agentTaskOwnership.hasActiveOwner(sessionId);
   }
 
   registerIpc(): void {
