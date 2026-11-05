@@ -529,7 +529,8 @@ describe("Panel HTTP runtime", () => {
     expect(response.headers.get("referrer-policy")).toBe("no-referrer");
     const csp = response.headers.get("content-security-policy")!;
     expect(csp).toContain(`script-src ${f.url}/api/v1/panel-assets/`);
-    expect(csp).toContain("sandbox allow-scripts allow-downloads;");
+    expect(csp).toContain("sandbox allow-scripts allow-downloads allow-forms;");
+    expect(csp).toContain("form-action 'none';");
     expect(csp).not.toContain("allow-same-origin");
     const assetSource = f.url + grant.src.slice(0, grant.src.indexOf("/app/") + 1);
     expect(csp).toContain(`connect-src ${assetSource};`);

@@ -2374,6 +2374,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           // Panels export their own generated files (for example JSON backups).
           // Download permission does not grant origin access, network fetches or popups.
           // The embedding iframe must enable the same permission.
+          // Forms need submission events and method=dialog for local UI. The
+          // enforcing form-action policy still blocks every form navigation.
           response.setHeader(
             "Content-Security-Policy",
             "default-src 'none'; script-src " +
@@ -2388,7 +2390,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
               assetSource +
               " data:; connect-src " +
               assetSource +
-              "; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; sandbox allow-scripts allow-downloads; frame-ancestors " +
+              "; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; sandbox allow-scripts allow-downloads allow-forms; frame-ancestors " +
               resourceOrigin,
           );
           response.setHeader(

@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -19,10 +20,13 @@ const buildDir = await mkdtemp(join(root, "node_modules/.cache-mobile-panel-"));
 const cwd = join(scratch, "project"),
   installPath = join(scratch, "panel"),
   dataDir = join(scratch, "data");
-let runtime, manager, browser, resources;
+let runtime, manager, browser, resources, formTargetServer;
 let authorized = true;
 const errors = [],
-  assetRequests = [];
+  assetRequests = [],
+  formTargetRequests = [],
+  blockedRequests = [];
+const formTargetPath = "/api/v1/form-parity-target";
 const accessChecks = new WeakMap();
 try {
   await mkdir(cwd);
@@ -38,6 +42,12 @@ try {
       close: async () => runtime?.close(),
       revokeDevice() {},
       handle: (request, response, context) => {
+        if (new URL(request.url, "http://localhost").pathname === formTargetPath) {
+          formTargetRequests.push({ origin: "host", method: request.method });
+          response.writeHead(200, { "Content-Type": "text/plain" });
+          response.end("owned form target");
+          return Promise.resolve(true);
+        }
         accessChecks.set(request, context.isAccessAuthorized);
         return runtime.handle(request, response);
       },
@@ -60,6 +70,17 @@ try {
     passcode,
   });
   installLocalNetworkGuard(origin);
+  formTargetServer = createServer((request, response) => {
+    formTargetRequests.push({ origin: "second", method: request.method });
+    response.writeHead(200, {
+      "Content-Type": "text/plain",
+      "Access-Control-Allow-Origin": origin,
+    });
+    response.end("owned second form target");
+  });
+  await new Promise((resolve) => formTargetServer.listen(0, "127.0.0.1", resolve));
+  const secondOrigin = `http://127.0.0.1:${formTargetServer.address().port}`;
+  const allowedBrowserOrigins = new Set([origin, secondOrigin]);
   const { createPanelRuntime, panelWebCompatibility } =
     await import("../packages/server/src/panels/runtime.ts");
   const { PanelResourceService } =
@@ -77,13 +98,65 @@ try {
   );
   await writeFile(
     join(installPath, "app/index.html"),
-    '<!doctype html><html><body><h1 id="ready"></h1><button id="open">预览电脑文件</button><button id="confirm">请求打开链接</button><output id="result"></output><script type="module" src="./main.mjs"></script></body></html>',
+    `<!doctype html><html><body><h1 id="ready"></h1>
+    <button id="open">预览电脑文件</button><button id="confirm">请求打开链接</button>
+    <output id="result"></output>
+    <button id="open-static-dialog">打开静态对话框</button>
+    <dialog id="static-dialog"><form method="dialog"><button value="static-accepted">确认静态对话框</button></form></dialog>
+    <button id="open-dynamic-dialog">打开动态对话框</button>
+    <form id="prevented-form" method="post" action="${origin}${formTargetPath}">
+      <label>必填内容<input id="required-value" name="value" required></label>
+      <button id="prevented-submit" type="submit">提交本地表单</button>
+    </form>
+    <output id="submit-count">0</output><output id="invalid-count">0</output>
+    <output id="form-policy-count">0</output>
+    <script type="module" src="./main.mjs"></script></body></html>`,
   );
   await writeFile(join(installPath, "app/label.mjs"), 'export const label = "面板模块已加载";');
   await writeFile(
     join(installPath, "app/main.mjs"),
     `import {label} from './label.mjs';
+    const formState = window.formState = { submissions: [], invalid: 0, violations: [], navigationSubmits: 0 };
     document.querySelector('#ready').textContent = label;
+    document.querySelector('#open-static-dialog').onclick = () => document.querySelector('#static-dialog').showModal();
+    document.querySelector('#open-dynamic-dialog').onclick = () => {
+      const dialog = document.createElement('dialog');
+      dialog.id = 'dynamic-dialog';
+      dialog.innerHTML = '<form method="dialog"><button value="dynamic-accepted">确认动态对话框</button></form>';
+      document.body.append(dialog);
+      dialog.showModal();
+    };
+    document.querySelector('#prevented-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      formState.submissions.push({ trusted: event.isTrusted, value: document.querySelector('#required-value').value });
+      document.querySelector('#submit-count').textContent = String(formState.submissions.length);
+    });
+    document.querySelector('#required-value').addEventListener('invalid', () => {
+      document.querySelector('#invalid-count').textContent = String(++formState.invalid);
+    });
+    document.addEventListener('securitypolicyviolation', (event) => {
+      if (event.effectiveDirective !== 'form-action') return;
+      formState.violations.push({ directive: event.effectiveDirective, blockedURI: event.blockedURI, disposition: event.disposition });
+      document.querySelector('#form-policy-count').textContent = String(formState.violations.length);
+    });
+    window.attemptFormNavigation = ({ method, target, fallback, mechanism }) => {
+      const form = document.createElement('form');
+      form.method = method;
+      form.action = mechanism === 'requestSubmit' ? fallback : target;
+      const field = document.createElement('input');
+      field.name = 'proof'; field.value = 'synthetic-form-navigation';
+      const submit = document.createElement('button');
+      submit.type = 'submit'; submit.formAction = target;
+      form.append(field, submit);
+      form.addEventListener('submit', (event) => {
+        formState.navigationSubmits++;
+        if (mechanism === 'submit') event.preventDefault();
+      });
+      document.body.append(form);
+      if (mechanism === 'requestSubmit') form.requestSubmit(submit);
+      else HTMLFormElement.prototype.submit.call(form);
+      form.remove();
+    };
     document.querySelector('#open').onclick = async () => {
       try { await window.codeshellPanel.call('resources.open', {assetId:${JSON.stringify(asset.id)}});
         document.querySelector('#result').textContent = 'opened';
@@ -164,9 +237,11 @@ try {
     viewport: { width: 390, height: 844 },
     acceptDownloads: true,
   });
-  await context.route("**/*", (route) =>
-    new URL(route.request().url()).origin === origin ? route.continue() : route.abort(),
-  );
+  await context.route("**/*", (route) => {
+    if (allowedBrowserOrigins.has(new URL(route.request().url()).origin)) return route.continue();
+    blockedRequests.push(route.request().url());
+    return route.abort();
+  });
   await context.addCookies([
     {
       name: "cs_access",
@@ -224,6 +299,116 @@ try {
     assert.equal(await page.locator("iframe").getAttribute("inert"), null);
   }
   await page.setViewportSize({ width: 390, height: 844 });
+  // Both owned HTTP targets must really be reachable; a test route blocker
+  // must not be mistaken for the guest's form-action CSP enforcement.
+  await page.evaluate(
+    async ({ origin, secondOrigin, path }) => {
+      for (const target of [origin, secondOrigin])
+        for (const method of ["GET", "POST"]) {
+          const response = await fetch(target + path, { method });
+          if (!response.ok) throw new Error("Owned form target is unreachable");
+          await response.text();
+        }
+    },
+    { origin, secondOrigin, path: formTargetPath },
+  );
+  assert.equal(formTargetRequests.length, 4);
+  formTargetRequests.length = 0;
+  assert.equal(await frame.locator("body").evaluate(() => window.origin), "null");
+  assert.equal(
+    await frame.locator("body").evaluate(() => {
+      try {
+        return document.cookie;
+      } catch (error) {
+        return error.name;
+      }
+    }),
+    "SecurityError",
+  );
+  const parentUrl = page.url();
+  const guestUrl = await frame.locator("body").evaluate(() => location.href);
+  for (const kind of ["static", "dynamic"]) {
+    await frame.locator(`#open-${kind}-dialog`).click();
+    const dialog = frame.locator(`#${kind}-dialog`);
+    assert.equal(await dialog.evaluate((element) => element.open), true);
+    await dialog.getByRole("button").click();
+    assert.equal(await dialog.evaluate((element) => element.open), false);
+    assert.equal(await dialog.evaluate((element) => element.returnValue), `${kind}-accepted`);
+  }
+  await frame.locator("#prevented-submit").click();
+  assert.equal(await frame.locator("#invalid-count").textContent(), "1");
+  assert.equal(await frame.locator("#submit-count").textContent(), "0");
+  await frame.locator("#required-value").fill("synthetic local form");
+  await frame.locator("#prevented-submit").click();
+  assert.equal(await frame.locator("#submit-count").textContent(), "1");
+  await frame.locator("#required-value").press("Enter");
+  assert.equal(await frame.locator("#submit-count").textContent(), "2");
+  await frame.locator("#prevented-form").evaluate((form) => form.requestSubmit());
+  assert.equal(await frame.locator("#submit-count").textContent(), "3");
+  assert.equal(
+    await frame
+      .locator("body")
+      .evaluate(() => window.formState.submissions.every((event) => event.trusted)),
+    true,
+  );
+  let attemptedNavigations = 0;
+  for (const method of ["GET", "POST"])
+    for (const targetOrigin of [origin, secondOrigin])
+      for (const mechanism of ["requestSubmit", "submit"]) {
+        const target = targetOrigin + formTargetPath;
+        const fallback = (targetOrigin === origin ? secondOrigin : origin) + formTargetPath;
+        await frame
+          .locator("body")
+          .evaluate((_body, attempt) => window.attemptFormNavigation(attempt), {
+            method,
+            target,
+            fallback,
+            mechanism,
+          });
+        attemptedNavigations++;
+        await frame
+          .locator("#form-policy-count")
+          .filter({ hasText: new RegExp(`^${attemptedNavigations}$`) })
+          .waitFor();
+        const violation = await frame
+          .locator("body")
+          .evaluate(() => window.formState.violations.at(-1));
+        assert.equal(violation.directive, "form-action");
+        assert.equal(violation.disposition, "enforce");
+        assert.equal(new URL(violation.blockedURI).origin, targetOrigin);
+        assert.equal(await frame.locator("body").evaluate(() => location.href), guestUrl);
+        assert.equal(page.url(), parentUrl);
+        assert.deepEqual(
+          formTargetRequests,
+          [],
+          "Neither owned target may receive guest GET/POST forms",
+        );
+      }
+  assert.equal(
+    await frame.locator("body").evaluate(() => window.formState.navigationSubmits),
+    4,
+    "requestSubmit dispatches submit; native submit bypasses the cancelling handler",
+  );
+  assert.equal(await frame.locator("body").evaluate(() => window.formState.submissions.length), 3);
+  const deniedCall = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/call") &&
+      response.request().postDataJSON()?.method === "workspace.readText",
+  );
+  const deniedResult = await frame.locator("body").evaluate(async () => {
+    try {
+      await window.codeshellPanel.call("workspace.readText", { path: "not-authorized.txt" });
+      return "accepted";
+    } catch {
+      return "denied";
+    }
+  });
+  assert.equal(
+    (await deniedCall).status(),
+    403,
+    "Allowing local forms grants no additional SDK permission",
+  );
+  assert.equal(deniedResult, "denied");
   assert.ok(
     assetRequests.some(
       (request) =>
@@ -312,9 +497,17 @@ try {
   assert.ok([401, 403, 404, 410].includes(revoked.status));
   assert.notEqual((await fetch(assetUrl, { headers: { Origin: "null" } })).status, 200);
   assert.deepEqual(errors, []);
+  assert.deepEqual(blockedRequests, []);
   console.log(
     JSON.stringify({
       opaqueTunnelModules: true,
+      staticAndDynamicDialogReturnValue: true,
+      preventedAndKeyboardSubmit: true,
+      requiredValidation: true,
+      blockedFormNavigations: attemptedNavigations,
+      formTargetRequests: formTargetRequests.length,
+      parentCookiesIsolated: true,
+      undeclaredSdkPermissionDenied: true,
       mobileViewport: true,
       portraitAndLandscapeLayout: true,
       trustedConfirmationVisible: true,
@@ -329,6 +522,10 @@ try {
 } finally {
   await browser?.close();
   await manager?.stop();
+  if (formTargetServer) {
+    formTargetServer.closeAllConnections();
+    await new Promise((resolve) => formTargetServer.close(resolve));
+  }
   await resources?.shutdown();
   await rm(buildDir, { recursive: true, force: true });
   await rm(scratch, { recursive: true, force: true });

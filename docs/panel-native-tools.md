@@ -349,6 +349,13 @@ the workbench document, browser storage, or fetch the network. Exporting existin
 server resources still uses the authorized Host resource interfaces. Panels must
 use Host storage for durable drafts when browser storage is unavailable.
 
+Both Web sandbox layers also permit `allow-forms` so local forms can validate,
+fire `submit` events and close `<dialog>` elements with `method="dialog"`.
+The enforcing HTTP CSP retains `form-action 'none'`: native GET/POST submissions,
+including `form.submit()` calls, cannot navigate or send form data to a server.
+This does not grant same-origin access, popups or top-level navigation. A submit
+handler still needs `preventDefault()` when it performs a local application action.
+
 ## Validation and release status
 
 The API 14 implementation is complete in the published 0.9.11 release. Local
