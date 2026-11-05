@@ -88,11 +88,9 @@ interface Props {
    */
   visible?: boolean;
   /**
-   * Electron webview partition for storage/session isolation. Passed per chat
-   * session so one session's browsing (cookies, logged-in state, the live page)
-   * doesn't bleed into another's — sessions each got the same global
-   * `persist:browser` before, so switching sessions showed the prior session's
-   * page. Defaults to the shared partition for the popout / legacy callers.
+   * Electron storage partition for the selected browser login profile. Project
+   * sessions share login state while retaining their own tabs. Defaults to the
+   * global partition for popout / legacy callers.
    */
   partition?: string;
   /** UI session bucket that owns this browser panel. Undefined for legacy/popout. */
@@ -807,7 +805,12 @@ function BrowserTabGuest({
   onUnavailable: (id: string) => void;
 }) {
   const evicted = useIdleEvict(visible);
+  const guestPartition = partition ?? "persist:browser";
   const ready = useCallback(() => onDomReady(tab.id), [onDomReady, tab.id]);
+  useEffect(() => {
+    // A replacement guest must earn its own dom-ready before browser handoff.
+    onUnavailable(tab.id);
+  }, [guestPartition, onUnavailable, tab.id]);
   useEffect(() => {
     if (evicted) onUnavailable(tab.id);
   }, [evicted, onUnavailable, tab.id]);
@@ -815,6 +818,7 @@ function BrowserTabGuest({
     <div className="absolute inset-0" hidden={!active} aria-hidden={!active || undefined}>
       {!evicted && (
         <WebviewHost
+          key={guestPartition}
           ref={viewRef}
           initialUrl={tab.url}
           partition={partition}

@@ -24,6 +24,19 @@ const PANEL_KEYS: PanelTab[] = [
   "quickChat",
 ];
 
+function renderBrowser(context: Partial<PanelRenderContext> & { bucket: string }) {
+  return getPanelEntry("browser")!.render({
+    projectPath: "/repo",
+    cwd: "/repo",
+    engineSessionId: "session-1",
+    tabId: "browser-1",
+    busy: false,
+    visible: true,
+    foregroundVisible: true,
+    ...context,
+  }) as ReactElement<{ bucket: string; partition: string; engineSessionId: string | null }>;
+}
+
 describe("PanelRegistry", () => {
   it("registers every built-in panel in display order", () => {
     expect([...PANEL_REGISTRY.keys()]).toEqual(PANEL_KEYS);
@@ -34,6 +47,50 @@ describe("PanelRegistry", () => {
       expect(entry?.title).toEqual({ kind: "i18n", key: `panels.kinds.${key}` });
       expect(entry?.icon).toBeDefined();
       expect(entry?.render).toBeFunction();
+    }
+  });
+
+  it("mounts session browser tabs in the project's shared login profile", () => {
+    for (const sessionId of ["session-1", "session-2"]) {
+      const bucket = `project-a::${sessionId}`;
+      const rendered = renderBrowser({ bucket, engineSessionId: sessionId });
+      expect(rendered.props).toMatchObject({
+        bucket,
+        engineSessionId: sessionId,
+        partition: "persist:browser:p:project-a",
+      });
+    }
+    expect(renderBrowser({ bucket: "project-b::session-1" }).props.partition).toBe(
+      "persist:browser:p:project-b",
+    );
+    expect(
+      renderBrowser({ bucket: "project-a::session-1", cwd: "/repo/.worktrees/feature" }).props
+        .partition,
+    ).toBe("persist:browser:p:project-a");
+  });
+
+  it("keeps default and sanitized browser profiles on the shared partition contract", () => {
+    for (const [bucket, partition] of [
+      ["__no_repo__::_none_", "persist:browser:p:__no_repo__"],
+      ["__no_repo__::session-1", "persist:browser:p:__no_repo__"],
+      ["project /one::session-1", "persist:browser:p:project__one"],
+    ]) {
+      expect(renderBrowser({ bucket, engineSessionId: null }).props).toMatchObject({
+        bucket,
+        engineSessionId: null,
+        partition,
+      });
+    }
+  });
+
+  it("keeps Quick Chat browser logins temporary and separate per session", () => {
+    for (const sessionId of ["qchat-1", "qchat-2"]) {
+      const bucket = `__quick_chat__::${sessionId}`;
+      expect(renderBrowser({ bucket, engineSessionId: sessionId }).props).toMatchObject({
+        bucket,
+        engineSessionId: sessionId,
+        partition: `browser:qchat:q:__quick_chat__::${sessionId}`,
+      });
     }
   });
 

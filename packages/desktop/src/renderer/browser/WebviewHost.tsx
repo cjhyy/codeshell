@@ -35,8 +35,8 @@ export const WebviewHost = React.forwardRef<
   const frozenSrc = useRef(initialUrl).current;
   // Freeze the partition too (like src): a webview's partition can't change
   // after attach, and it identifies the isolated storage/session the guest runs
-  // in. Per-session partitions keep one chat session's browsing (cookies, logged-
-  // in state, and the live page) from bleeding into another's.
+  // in. Partitions isolate browser login profiles; project sessions may share
+  // a profile while keeping separate tabs. The caller remounts on profile changes.
   const frozenPartition = useRef(partition).current;
   const ready = useRef(false);
 
