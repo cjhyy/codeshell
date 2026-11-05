@@ -235,7 +235,7 @@ try {
   const scroll = await page.locator(".messages").evaluate((n) => n.scrollTop);
   await nav("设置");
   await page.getByRole("heading", { name: "设置", exact: true }).waitFor();
-  await checkBack("返回对话");
+  assert.equal(await back().count(), 0, "sidebar destinations have no header Back");
   await page
     .locator(".hub-settings")
     .getByRole("button", { name: /模型与连接/ })
@@ -244,7 +244,7 @@ try {
   await checkBack("返回设置");
   await page.evaluate(() => history.back());
   await page.getByRole("heading", { name: "设置", exact: true }).waitFor();
-  await back().tap();
+  await nav("对话");
   await page.locator(".chat:not([hidden])").waitFor();
   assert.equal(await page.locator(".composer textarea").inputValue(), "Owned retained draft");
   assert.equal(await page.locator(".messages").evaluate((n) => n.scrollTop), scroll);
@@ -274,7 +274,8 @@ try {
   await page.locator(".file-preview").waitFor({ state: "hidden" });
   await back().tap();
   await page.getByRole("button", { name: /reports.*文件夹/ }).waitFor();
-  await back().tap();
+  assert.equal(await back().count(), 0, "the Files root is a sidebar destination");
+  await nav("对话");
   await page.locator(".chat:not([hidden])").waitFor();
   reports.push("settings and file layers; real Back/Forward; draft and reading position retained");
   await nav("面板");
@@ -510,19 +511,15 @@ try {
     "a delayed resource preview keeps chat visible and appears only after returning to the same retained guest",
   );
 
-  // Fresh direct links get a visible parent but no artificial Back loop.
+  // Fresh direct links to a sidebar destination add no header Back and no Back loop.
   await page.goto(origin + "/outside");
   expectedPanelSessionId = undefined;
   await page.goto(origin + "/mobile/?view=panels");
   await page.locator(".panels-grid").waitFor();
-  const length = await page.evaluate(() => history.length);
-  await checkBack("返回对话");
-  await back().tap();
-  await page.locator(".chat:not([hidden])").waitFor();
-  assert.equal(await page.evaluate(() => history.length), length);
+  assert.equal(await back().count(), 0);
   await page.goBack();
   assert.equal(new URL(page.url()).pathname, "/outside");
-  reports.push("direct link parent replaces once; next browser Back leaves application");
+  reports.push("direct sidebar link has no header Back; browser Back leaves application");
   await page.goto(origin + "/mobile/?view=settings&section=models");
   await page.getByRole("heading", { name: "模型与连接", exact: true }).waitFor();
   for (const width of [320, 390]) {
