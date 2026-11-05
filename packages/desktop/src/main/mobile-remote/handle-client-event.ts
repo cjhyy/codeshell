@@ -391,10 +391,54 @@ export async function handleClientEvent(
     if (deviceId) ctx.remote.sendToDevice(deviceId, e);
     else ctx.remote.broadcast(e);
   };
-  // session selection priority: explicit per-event → this device's selection →
-  // desktop's current run → a stable minted per-device session.
+  // A recent run can be a hidden task, an archived chat or a deleted Session.
+  // Only a catalog-visible disk Session is a default, independently of the
+  // current sidebar page/project filter. Explicit selections retain authority
+  // through their existing selection/recovery path.
+  const usesDefaultSession =
+    event.type === "session.list" ||
+    event.type === "chat.send" ||
+    event.type === "approval.respond" ||
+    event.type === "run.stop" ||
+    (ctx.externalCommands && ["model.set", "goal.extend", "goal.clear"].includes(event.type));
+  const explicitSessionId = "sessionId" in event ? event.sessionId : undefined;
+  let implicitSessionId: string | undefined;
+  if (
+    usesDefaultSession &&
+    explicitSessionId === undefined &&
+    st.selectedSessionId === undefined &&
+    runContext.sessionId
+  ) {
+    const selection = { ...st };
+    implicitSessionId = await listDiskSessions({
+      limit: 1,
+      sessionId: runContext.sessionId,
+    })
+      .then(({ sessions }) => sessions[0]?.id)
+      .catch(() => undefined);
+    // Do not combine the old implicit target with a workspace selected while
+    // the disk lookup awaited, or silently retarget the submitted action.
+    if (
+      event.type !== "session.list" &&
+      (st.sessionId !== selection.sessionId ||
+        st.selectedSessionId !== selection.selectedSessionId ||
+        st.selectedCwd !== selection.selectedCwd ||
+        st.selectedProjectId !== selection.selectedProjectId ||
+        st.selectedRootId !== selection.selectedRootId ||
+        st.permissionMode !== selection.permissionMode)
+    ) {
+      reply({
+        type: "error",
+        message: "会话选择已改变，请确认当前会话后重试。",
+        ...(event.type === "chat.send" && event.clientMessageId
+          ? { clientMessageId: event.clientMessageId }
+          : {}),
+      });
+      return;
+    }
+  }
   const resolveSessionId = (explicit?: string): string =>
-    explicit ?? st.selectedSessionId ?? runContext.sessionId ?? ctx.ensureMobileSessionId(st);
+    explicit ?? st.selectedSessionId ?? implicitSessionId ?? ctx.ensureMobileSessionId(st);
   if (event.type === "session.select") {
     await commandSelection;
     st.selectedSessionId = event.sessionId;
@@ -734,10 +778,7 @@ export async function handleClientEvent(
   }
   if (
     ["model.set", "goal.extend", "goal.clear"].includes(event.type) &&
-    ctx.externalCommands?.isExternal(
-      resolveSessionId("sessionId" in event ? event.sessionId : undefined),
-      event.viewerId,
-    )
+    ctx.externalCommands?.isExternal(resolveSessionId(explicitSessionId), event.viewerId)
   ) {
     if (event.viewerId)
       ctx.remote.sendToViewer(event.viewerId, {
@@ -774,7 +815,7 @@ export async function handleClientEvent(
       }
       return;
     }
-    const sessionId = resolveSessionId(event.sessionId);
+    const sessionId = selectedSessionId;
     const pending = ctx.pendingApprovals.find(sessionId, event.approvalId);
     if (
       !pending ||
@@ -851,7 +892,7 @@ export async function handleClientEvent(
         jsonrpc: "2.0",
         id: `mobile-cancel-${Date.now()}`,
         method: "agent/cancel",
-        params: { sessionId: resolveSessionId(event.sessionId) },
+        params: { sessionId },
       }),
       { origin: "mobile", producer: "mobile-run-stop" },
     );
@@ -865,7 +906,7 @@ export async function handleClientEvent(
       cwds: event.cwds,
     });
     for (const s of sessions) ctx.mobileSessionCwds.set(s.id, s.cwd || null);
-    const activeSessionId = st.selectedSessionId ?? runContext.sessionId;
+    const activeSessionId = st.selectedSessionId ?? implicitSessionId;
     const replyPage = (page: MobileServerEvent) =>
       event.viewerId ? ctx.remote.sendToViewer(event.viewerId, page) : reply(page);
     replyPage({

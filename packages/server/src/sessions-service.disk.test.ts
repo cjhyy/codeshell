@@ -36,6 +36,36 @@ describe("listDiskSessions", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
+  it("checks one candidate without relaxing catalog visibility or inheriting pagination", async () => {
+    mkSession(dir, "recent", { parentSessionId: null }, 3000);
+    mkSession(dir, "older", { parentSessionId: null }, 1000);
+    const rejected: Array<[string, Record<string, unknown>]> = [
+      ["hidden", { ephemeral: true }],
+      ["pet", { kind: "pet" }],
+      ["child", { parentSessionId: "older" }],
+      ["archived", { archivedAt: 2000 }],
+      ["legacy", { parentSessionId: undefined }],
+      ["qchat-temporary", {}],
+      ["panel-task-background", {}],
+    ];
+    for (const [id, state] of rejected)
+      mkSession(dir, id, { parentSessionId: null, ...state }, 4000);
+    expect((await listDiskSessions({ limit: 1 }, dir)).sessions[0]?.id).toBe("recent");
+    expect((await listDiskSessions({ limit: 1, sessionId: "older" }, dir)).sessions[0]?.id).toBe(
+      "older",
+    );
+    for (const [sessionId] of rejected) {
+      expect(await listDiskSessions({ limit: 1, sessionId }, dir)).toEqual({
+        sessions: [],
+        nextCursor: null,
+      });
+    }
+    expect((await listDiskSessions({ limit: 1, sessionId: "missing" }, dir)).sessions).toEqual([]);
+    await expect(listDiskSessions({ limit: 1, sessionId: "../older" }, dir)).rejects.toThrow(
+      "invalid session id",
+    );
+  });
+
   it("filters project roots before paging and preserves external runtime identity", async () => {
     const selected = path.join(dir, "project-a");
     const secondary = path.join(dir, "project-extra");
