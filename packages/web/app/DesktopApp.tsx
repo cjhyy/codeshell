@@ -1063,6 +1063,7 @@ export function useDesktopController(
         app.getSessionOutputRecoveryPlan &&
         app.applySessionOutputRecovery ? (
           <OutputHistoryRecovery
+            className="output-history-recovery"
             sessionId={app.activeSessionId}
             identity={app.outputRecoveryIdentity ?? `${workspaceKey}:${app.activeSessionId}`}
             failed={!!app.outputHistoryFailed}

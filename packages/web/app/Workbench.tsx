@@ -11,6 +11,7 @@ import { HubPanels } from "./HubPanels.js";
 import { PanelHost } from "./PanelHost.js";
 import { PanelSessionBar } from "./PanelSessionBar.js";
 import type { ManagedPanel } from "../../server/src/panels/types.js";
+import { OutputHistoryRecoveryExit } from "../src/components/OutputHistoryRecovery.js";
 import { MessageContent, subagentStatusLabel } from "./MessageContent.js";
 import { sessionTitle } from "./chat.js";
 import type { WorkbenchController, WorkbenchNavigation } from "./workbench-types.js";
@@ -124,6 +125,7 @@ export function Workbench({
   const fileInput = React.useRef<HTMLInputElement>(null);
   const cameraInput = React.useRef<HTMLInputElement>(null);
   const devicesOpener = React.useRef<HTMLButtonElement>(null);
+  const [logoutOpen, setLogoutOpen] = React.useState(false);
   const navigation = useWorkbenchNavigation(
     controller.workspaceKey,
     controller.host === "desktop" ? undefined : { projectId: getApiProject(), sessionId: activeId },
@@ -731,14 +733,16 @@ export function Workbench({
               <span>{projectName ?? workspaceName}</span>
             </div>
           )}
-          <div className="rail-section-label history-label">
-            <span>最近对话</span>
-            <span>{sessions.length}</span>
-          </div>
+          {/* Project and new-conversation controls belong to the workspace group,
+              so the recent list directly follows its own heading. */}
           {controller.renderSidebar?.({
             guard: guardWorkspaceNavigation,
             conversation: openConversation,
           })}
+          <div className="rail-section-label history-label">
+            <span>最近对话</span>
+            <span>{sessions.length}</span>
+          </div>
           <ul className="sessions" aria-label="最近对话">
             {localDrafts.map(({ sessionId, draft: pendingDraft, cwd }) => (
               <li key={`draft-${sessionId}`}>
@@ -829,12 +833,17 @@ export function Workbench({
             </button>
           ) : null}
           {controller.logout ? (
-            <button className="account-button" onClick={controller.logout}>
+            <button
+              className="account-button"
+              aria-haspopup="dialog"
+              onClick={() => setLogoutOpen(true)}
+            >
               <span className="account-avatar">{(controller.accountName || "D").slice(0, 1)}</span>
               <span className="account-copy">
                 <strong>{controller.accountName || "已配对设备"}</strong>
                 <span>退出此设备</span>
               </span>
+              <WorkbenchIcon name="chevron" />
             </button>
           ) : null}
         </div>
@@ -1028,7 +1037,9 @@ export function Workbench({
               }}
             >
               <div className="transcript" ref={latest.contentRef}>
-                {controller.chatControls}
+                <OutputHistoryRecoveryExit.Provider value={startNewSession}>
+                  {controller.chatControls}
+                </OutputHistoryRecoveryExit.Provider>
                 {controller.loading ? (
                   <div className="banner" role="status">
                     {controller.loadingLabel ?? "正在恢复会话记录…"}
@@ -1561,6 +1572,15 @@ export function Workbench({
           }}
         />
       ) : null}
+      {logoutOpen && controller.logout ? (
+        <LogoutPrompt
+          deviceName={controller.accountName || "已配对设备"}
+          hostLabel={hostLabel}
+          connected={connection === "open"}
+          onStay={() => setLogoutOpen(false)}
+          onLogout={controller.logout}
+        />
+      ) : null}
       {devicesOpen && controller.host === "hub" && !cloudAccount ? (
         <Devices
           session={session}
@@ -1571,6 +1591,59 @@ export function Workbench({
         />
       ) : null}
     </div>
+  );
+}
+
+/** The paired-device card looks informational, so signing out must be a deliberate second step. */
+function LogoutPrompt({
+  deviceName,
+  hostLabel,
+  connected,
+  onStay,
+  onLogout,
+}: {
+  deviceName: string;
+  hostLabel: string;
+  connected: boolean;
+  onStay: () => void;
+  onLogout: () => void;
+}) {
+  const dialog = React.useRef<HTMLDialogElement>(null);
+  React.useEffect(() => {
+    const modal = dialog.current;
+    const opener = document.activeElement;
+    if (modal && !modal.open) modal.showModal();
+    return () => {
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
+  }, []);
+  return (
+    <dialog
+      className="navigation-prompt"
+      ref={dialog}
+      aria-labelledby="logout-prompt-title"
+      onCancel={(event) => {
+        event.preventDefault();
+        onStay();
+      }}
+      onClick={(event) => {
+        if (event.target === dialog.current) onStay();
+      }}
+    >
+      <h2 id="logout-prompt-title">{deviceName}</h2>
+      <p>
+        {connected ? `已连接到${hostLabel}。` : `与${hostLabel}的连接已断开。`}
+        退出后，这台设备需要在电脑上重新扫码配对才能再次使用。
+      </p>
+      <div className="library-actions">
+        <button className="library-button primary" onClick={onStay} autoFocus>
+          取消
+        </button>
+        <button className="library-button danger" onClick={onLogout}>
+          退出此设备
+        </button>
+      </div>
+    </dialog>
   );
 }
 
