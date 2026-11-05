@@ -620,6 +620,12 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
   }
 
   private pauseTarget(entry: RuntimeEntry, target = entry.target): void {
+    // A failed takeover of a closed page must not pause its future replacement.
+    // An opening target still needs immediate cancellation before its queue is
+    // drained, including when explicit navigation is recreating a closed page.
+    if (!entry.target && !entry.opening && entry.recovery) {
+      throw new Error(recoveryDetail(entry));
+    }
     entry.controlEpoch += 1;
     entry.controlPaused = true;
     entry.interactiveOnlyRefs.clear();
@@ -676,6 +682,11 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
             this.deps.detach(host.webContents);
             entry.target = undefined;
             entry.recovery = "closed";
+            // The old page's human takeover ends with that page. Only a fresh,
+            // explicit navigation may reopen it; queued actions and resumes
+            // still belong to the closed target and must not regain control.
+            entry.controlEpoch += 1;
+            entry.controlPaused = false;
             entry.interactiveOnlyRefs.clear();
           }
         });

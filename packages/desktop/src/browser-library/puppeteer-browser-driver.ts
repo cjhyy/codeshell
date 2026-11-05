@@ -308,8 +308,28 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
   }
 
   navigate(url: string): Promise<BrowserResult> {
-    return this.resultAction(async () => {
-      await this.page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    return this.enqueue(async (scope) => {
+      const before = this.documentId();
+      try {
+        this.checkActive();
+        scope.check();
+        await this.page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+        this.checkActive();
+        return this.success(before);
+      } catch (error) {
+        // Navigation is expected to replace the document. Preserve a failed
+        // load's actual cause instead of treating that replacement as the error.
+        const failure = this.failure(error);
+        const documentId = this.documentId();
+        if (before === documentId || failure.code === "TARGET_CLOSED" || failure.code === "BLOCKED")
+          return failure;
+        return {
+          ...failure,
+          documentId,
+          documentChanged: true,
+          detail: `${failure.detail}; the page or a frame navigated; observe the new document`,
+        };
+      }
     });
   }
 
