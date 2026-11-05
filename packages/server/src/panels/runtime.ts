@@ -714,6 +714,9 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         holder: { kind: "process" },
       }),
     approvalScope: "guest",
+    // Match Desktop: installed process permission and the authorized project binding
+    // are consent. Every spawn still rechecks owner/revision, handles and fingerprints.
+    allowAuthorizedProcessWithoutPrompt: true,
     resolvePackageEntry: async (owner, name) => {
       const taskScope = toolOwners.get(owner.guestId);
       if (taskScope) {
@@ -741,18 +744,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
       const grant = byGuest.get(owner.guestId);
       return !!grant && (await authorized(grant));
     },
-    confirmExecution: async (input) => {
-      if (toolOwners.has(input.guestId)) return true;
-      const grant = byGuest.get(input.guestId);
-      return (
-        !!grant &&
-        (await confirm(
-          grant,
-          `允许 ${input.appTitle} 运行 ${input.executable}？`,
-          `程序将在服务端运行，可使用当前运行用户的文件与网络权限。\n程序：${input.executablePath}`,
-        ))
-      );
-    },
+    confirmExecution: async () => true,
   });
   const resources = new PanelResourceService({
     rootDirectory: join(options.dataDir, "panel-app-media"),
@@ -2382,6 +2374,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
           // Panels export their own generated files (for example JSON backups).
           // Download permission does not grant origin access, network fetches or popups.
           // The embedding iframe must enable the same permission.
+          // Forms need submission events and method=dialog for local UI. The
+          // enforcing form-action policy still blocks every form navigation.
           response.setHeader(
             "Content-Security-Policy",
             "default-src 'none'; script-src " +
@@ -2396,7 +2390,7 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
               assetSource +
               " data:; connect-src " +
               assetSource +
-              "; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; sandbox allow-scripts allow-downloads; frame-ancestors " +
+              "; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; sandbox allow-scripts allow-downloads allow-forms; frame-ancestors " +
               resourceOrigin,
           );
           response.setHeader(

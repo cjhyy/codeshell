@@ -1243,7 +1243,7 @@ export function PanelHost({
           ref={frame}
           src={prepared.src}
           title={`${panel.title["zh-CN"] || panel.title.default}面板`}
-          sandbox="allow-scripts allow-downloads"
+          sandbox="allow-scripts allow-downloads allow-forms"
           referrerPolicy="no-referrer"
           inert={!!confirmation || confirming || !!audioRequest || !!videoRequest}
           onLoad={() => frameLifecycle.current?.loaded()}

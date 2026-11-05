@@ -322,7 +322,7 @@
 | `MessageContent.tsx`                                                                                                                                                                                                            | 295     | `react-markdown + remark-gfm`（**无 rehype-raw**，网络图片不加载），`ToolMessage` memo。                                                                                                                                                          |
 | `chat.ts`、`approvals.ts`、`drafts.ts`、`api-context.ts`、`useLatestMessages.ts`                                                                                                                                                | 46–208  | 快照/journal → ChatState；审批 lease reducer；会话草稿（仅内存）；项目/工作区作用域头。                                                                                                                                                           |
 | `HubSessions.tsx`、`HubSettings.tsx`、`HubSkills.tsx`、`HubMcp.tsx`、`HubLinks.tsx`、`HubPanels.tsx`、`HubFiles.tsx`、`HubModelTraces.tsx`、`Devices.tsx`、`AccountSettings.tsx` 及 `*-configuration.ts`/`skills-management.ts` | 36–1314 | 管理页（REST `/api/v1/{configuration,skills,mcp,links,panels,projects,...}`）。                                                                                                                                                                   |
-| `PanelHost.tsx`、`panel-runtime-connection.ts`、`panel-*-capture/upload.ts`、`Panel*Dialog.tsx`                                                                                                                                 | 12–1071 | Web 端 Panel App：`<iframe sandbox="allow-scripts allow-downloads">`（`PanelHost.tsx:1057-1061`）+ `postMessage` 桥 + `/api/v1/panels/runtime/<instanceId>` 运行时连接；音视频采集由受信工作台而非 iframe 执行。                                  |
+| `PanelHost.tsx`、`panel-runtime-connection.ts`、`panel-*-capture/upload.ts`、`Panel*Dialog.tsx`                                                                                                                                 | 12–1071 | Web 端 Panel App：`<iframe sandbox="allow-scripts allow-downloads allow-forms">`（`PanelHost.tsx:1057-1061`）+ `postMessage` 桥 + `/api/v1/panels/runtime/<instanceId>` 运行时连接；音视频采集由受信工作台而非 iframe 执行。                                  |
 | `EnvironmentMenu.tsx`、`environments.ts`、`CloudAccountControls.tsx`、`LinkCallback.tsx`、`remote-link-authorization.ts`、`register-service-worker.ts`                                                                          | 7–207   | 多环境切换（仅导航，不转发凭证）、Link OAuth 回调页、SW 注册。                                                                                                                                                                                    |
 
 ### 2.13 遗留 `packages/desktop/src/mobile`
@@ -782,7 +782,7 @@ Agent 调用面板工具：main → onAgentPanelRequest (App.tsx:1441)
   → SessionPanelDock.getService(QUICK_CHAT_PANEL_APP_ID).ensure/release/render (SessionPanelDock.tsx:91-130)
 ```
 
-Web SPA 对应实现：`web/app/PanelHost.tsx` 用 `<iframe sandbox="allow-scripts allow-downloads">` + `postMessage` + `connectPanelRuntime({instanceId})`（`/api/v1/panels/runtime/<id>`），能力子集由 `availableMethods` 声明。
+Web SPA 对应实现：`web/app/PanelHost.tsx` 用 `<iframe sandbox="allow-scripts allow-downloads allow-forms">` + `postMessage` + `connectPanelRuntime({instanceId})`（`/api/v1/panels/runtime/<id>`），能力子集由 `availableMethods` 声明。
 
 ### 4.8 Mobile（/mobile/）重连与会话同步
 
