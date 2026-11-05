@@ -1,7 +1,7 @@
 import type { AccountFeaturesApi } from "../shared/account-features.js";
 import type { CloudAccountApi } from "../shared/cloud-account.js";
 import type { AccountDeviceApi } from "../shared/account-device.js";
-import type { SessionOutputRecoveryApi } from "./session-transcript-api.js";
+import type { DiskSessionListOptions, SessionOutputRecoveryApi } from "./session-transcript-api.js";
 import type { ModelTraceApi } from "./model-trace-api.js";
 import type { CcRoomModeApi } from "./cc-room-mode-types";
 import type { MobileSessionAnnouncement } from "./mobile-session-announcement.js";
@@ -1789,12 +1789,15 @@ export interface CodeshellApi
     sessionId: string,
     options?: { maxBytes?: number },
   ): Promise<SessionTranscriptPage>;
-  listDiskSessions(opts?: { limit?: number; cursor?: string; parentSessionId?: string }): Promise<{
+  listDiskSessions(opts?: DiskSessionListOptions): Promise<{
     sessions: Array<{
       id: string;
       engineSessionId: string;
       cwd: string;
       title: string;
+      model?: string;
+      provider?: string;
+      modelConnectionId?: string;
       updatedAt: number;
       clientMessageId?: string;
       origin: "desktop" | "automation" | "subagent";

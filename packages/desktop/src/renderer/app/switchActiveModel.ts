@@ -5,6 +5,7 @@ import { isExternalRuntimeModelKey } from "../../shared/external-runtime-models"
 import { forgetExternalRuntimeSession } from "../externalRuntimeRun";
 import { bindEngineSession, type SessionIndex } from "../transcripts";
 import type { TranscriptsAction } from "../transcriptsReducer";
+import { noteDesktopModelChoice } from "./useSessionModelReconcile";
 
 interface Params {
   currentModelKey: string | null;
@@ -36,6 +37,7 @@ export function switchActiveModel({
 }: Params): void {
   const wasExternal = isExternalRuntimeModelKey(currentModelKey);
   const nextExternal = isExternalRuntimeModelKey(nextModelKey);
+  noteDesktopModelChoice(activeBucket, nextModelKey);
   setModelOverrides((previous) => ({ ...previous, [activeBucket]: nextModelKey }));
   dispatch({
     type: "stream",

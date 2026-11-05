@@ -14,6 +14,14 @@ export interface SessionOutputRecoveryApi {
   ): Promise<OutputHistoryRecoveryResult>;
 }
 
+/** `sessionId` reads one Session's catalog row (e.g. its model) under the same visibility rules. */
+export interface DiskSessionListOptions {
+  limit?: number;
+  cursor?: string;
+  parentSessionId?: string;
+  sessionId?: string;
+}
+
 /** Original session history stays behind the same validated Main IPC routes. */
 export function createSessionTranscriptApi(
   ipc: Pick<IpcRenderer, "invoke" | "on" | "removeListener">,
@@ -37,7 +45,7 @@ export function createSessionTranscriptApi(
     ) => ipc.invoke("sessions:outputJournal", sessionId, options),
     getSessionTranscriptPage: (sessionId: string, options?: { maxBytes?: number }) =>
       ipc.invoke("sessions:transcriptPage", sessionId, options),
-    listDiskSessions: (opts?: { limit?: number; cursor?: string; parentSessionId?: string }) =>
+    listDiskSessions: (opts?: DiskSessionListOptions) =>
       ipc.invoke("sessions:listDisk", opts ?? {}),
     /** Long-disconnect fallback after the live snapshot has evicted older events. */
     getSessionRawEvents: (sessionId: string, sinceId?: string) =>

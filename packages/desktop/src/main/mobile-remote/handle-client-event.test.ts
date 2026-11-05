@@ -947,18 +947,18 @@ test("explicit external model routes through external submit and advertises reco
   });
 });
 
-test("external model cannot be configured as the native worker's global model", async () => {
-  const harness = createHarness({
-    requestedWorkspaceRoot: "/worktree",
-    lookupSession: () => undefined,
-  });
-  await handleClientEvent(harness.ctx, {
-    type: "model.set",
-    deviceId: "phone-1",
-    model: "claude-code/sonnet",
-  });
-  expect(harness.preparedRuns).toHaveLength(0);
-  expect(harness.replies[0]?.type).toBe("error");
+test("legacy model.set never configures the worker's global default model", async () => {
+  for (const model of ["claude-code/sonnet", "native-text"]) {
+    const harness = createHarness({
+      requestedWorkspaceRoot: "/worktree",
+      lookupSession: () => undefined,
+    });
+    await handleClientEvent(harness.ctx, { type: "model.set", deviceId: "phone-1", model });
+    // No agent/configure frame reaches the worker, and no model.current broadcast.
+    expect(harness.metas).toHaveLength(0);
+    expect(harness.replies).toHaveLength(1);
+    expect(harness.replies[0]?.type).toBe("error");
+  }
 });
 
 test("external model discovery answers failure with an empty bounded response", async () => {

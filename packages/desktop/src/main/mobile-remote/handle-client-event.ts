@@ -158,11 +158,10 @@ export interface OrchestratorCtx {
  * response (result on success, or failure on a JSON-RPC error / timeout). The
  * worker's reply flows back through subscribeOutbound (the same lines mirrored
  * to mobile), so we correlate by request id rather than fabricating success — a
- * model.set for an invalid model or a rejected goal.extend must NOT be reported
- * to the phone as ok.
+ * rejected goal.extend must NOT be reported to the phone as ok.
  */
 /**
- * A control op (model.set, goal.extend/clear) is a near-instant worker state
+ * A control op (goal.extend/clear) is a near-instant worker state
  * change, so a short budget keeps the phone responsive on a bad input.
  *
  * `agent/run` is categorically different: it drives an ENTIRE turn — tool
@@ -1007,24 +1006,11 @@ export async function handleClientEvent(
     return;
   }
   if (event.type === "model.set") {
-    if (parseExternalRuntimeModelKey(event.model)) {
-      reply({ type: "error", message: "请在对话的模型选择器中选择外部运行时。" });
-      return;
-    }
-    // Only confirm the model AFTER the worker actually applied it; an invalid
-    // model name must not be shown as the current model. Model is
-    // engine-global, so a successful change broadcasts to all devices.
-    const res = await injectAndAwaitResult(
-      bridge,
-      "agent/configure",
-      { model: event.model },
-      { origin: "mobile", producer: "mobile-model-set" },
-    );
-    if (res.ok) {
-      ctx.remote.broadcast({ type: "model.current", model: event.model });
-    } else {
-      reply({ type: "error", message: `切换模型失败:${res.message}` });
-    }
+    // Legacy and unused: no shipped client sends it, and its session-less
+    // agent/configure rewrote the GLOBAL default model (settings.defaults.text)
+    // for every Desktop session. The phone now picks a model per turn via
+    // chat.send's modelKey/nativeConnectionId, so refuse instead of mutating.
+    reply({ type: "error", message: "请在对话的模型选择器中选择模型。" });
     return;
   }
   if (event.type === "goal.extend") {
