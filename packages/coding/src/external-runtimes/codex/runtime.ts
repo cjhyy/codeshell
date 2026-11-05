@@ -52,6 +52,8 @@ export interface CodexRuntimeOptions {
 }
 
 export interface CodexTurnHandle {
+  /** The app-server acknowledged turn/start, even if output has not arrived. */
+  readonly accepted: true;
   /** Codex turn id, once known. */
   readonly turnId: string | undefined;
   /** Resolves when the turn reaches a terminal state. */
@@ -322,6 +324,7 @@ export class CodexRuntime {
     const turnId = response?.turn?.id;
     if (turnId) this.bindTurnId(turn, turnId);
     return {
+      accepted: true,
       get turnId() {
         return turn.id;
       },

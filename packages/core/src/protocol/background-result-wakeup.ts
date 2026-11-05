@@ -2,7 +2,6 @@ import type { Engine } from "../engine/engine.js";
 import { logger } from "../logging/logger.js";
 import type { StreamEvent } from "../types.js";
 import {
-  buildNotificationMessage,
   notificationQueue,
   type NotificationQueue,
 } from "../tool-system/builtin/agent-notifications.js";
@@ -10,6 +9,7 @@ import type { ApprovalRouter } from "../tool-system/permission.js";
 import type { ChatSession } from "./chat-session.js";
 import type { ChatSessionManager } from "./chat-session-manager.js";
 import type { WorkspaceContext } from "../workspace/workspace-context.js";
+import { BackgroundContinuationController } from "../session/background-continuation.js";
 
 interface BackgroundRunWorkspace {
   cwd?: string;
@@ -28,7 +28,7 @@ interface BackgroundResultWakeOptions {
 }
 
 /**
- * Drain pending background results into exactly one synthetic continuation.
+ * Claim pending background results for one synthetic continuation.
  * Busy sessions are awaited so a completion cannot fall into the gap between
  * the notification bus callback and the interactive run-boundary re-check.
  */
@@ -144,21 +144,41 @@ export async function wakeSessionForBackgroundResults({
     break;
   }
 
-  const pending = notificationMailbox.drainAll(sessionId);
-  if (pending.length === 0) {
+  const owner = session;
+  const ownerEngine = owner.engine;
+  const ownerBoundary = owner.settled;
+  const continuation = new BackgroundContinuationController(notificationMailbox, sessionId, {
+    isCurrent: () =>
+      !manager.isUnavailable(sessionId) &&
+      manager.get(sessionId) === owner &&
+      owner.engine === ownerEngine &&
+      owner.settled === ownerBoundary,
+    isStopped: () => owner.wasCancelledSinceLastTurn(),
+    isEligible: () => !owner.isBusy() && !owner.engine.isHeadless(),
+  });
+  const delivery = continuation.claim();
+  if (!delivery) {
     logger.debug("bg_wakeup.skipped", { sessionId, reason: "no_pending_results" });
     return false;
   }
-  const task = `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`;
+  const task = `<system-reminder>\n${delivery.message}\n</system-reminder>`;
   try {
     const result = await session.enqueueTurn(task, {
       injected: true,
       ...runWorkspace,
-      onStream,
+      onStream: (event) => {
+        // Native terminal events are synthesized by the host. Its returned
+        // outcome below also has to confirm that a model turn actually ran.
+        if (event.type !== "turn_complete") delivery.observe(event);
+        onStream(event);
+      },
       approvalRouter,
     });
-    if (result.turnCount === 0) {
-      const restored = notificationMailbox.restoreResults(sessionId, pending);
+    // Native counts attempted model turns before dispatch. A failed request
+    // with turnCount=1 is not evidence that the provider accepted this result.
+    if (result.turnCount > 0 && result.reason === "completed") delivery.accept();
+    if (!delivery.wasAccepted) {
+      const restored = delivery.finish();
       logger.warn("bg_wakeup.turn_not_started", {
         sessionId,
         restored,
@@ -169,13 +189,15 @@ export async function wakeSessionForBackgroundResults({
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const restored = notificationMailbox.restoreResults(sessionId, pending);
+    const restored = delivery.finish();
     logger.warn("bg_wakeup.turn_failed", { sessionId, error: message, restored });
     // A setup failure can occur before the turn loop emits its own terminal
-    // event. Emit an error so every renderer clears its busy state, but keep
-    // the result queued so a later user turn can consume it safely.
+    // event. Clear renderer busy state; only an unaccepted result is restored
+    // for a later turn, because a partial response may already have acted on it.
     onStream({ type: "error", error: message || "background wakeup failed" });
     return false;
+  } finally {
+    delivery.finish();
   }
   return true;
 }

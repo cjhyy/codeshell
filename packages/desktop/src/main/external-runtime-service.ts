@@ -45,12 +45,17 @@ import {
   FIRST_PHASE_EXPOSURE,
   isFeatureEnabled,
   type FeatureFlagOverrides,
+  type ToolContext,
+  type ToolVisibilityInputs,
 } from "@cjhyy/code-shell-core/extension";
 import {
   canonicalKey,
   needsIndependentOutput,
   SessionOutputPublisher,
   withModelTraceContext,
+  BackgroundContinuationController,
+  type BackgroundResultDelivery,
+  type NotificationResultClaim,
 } from "@cjhyy/code-shell-core/internal";
 import { getTrustCachedSync } from "./trust-store.js";
 import { dlog } from "./desktop-logger.js";
@@ -73,6 +78,7 @@ import {
   EXTERNAL_UNVERIFIED_WRITE_NOTICE,
 } from "./external-runtime-operations.js";
 import { createExternalRuntimeSourceContext } from "./external-runtime-source-context.js";
+import { EXTERNAL_GOAL_TOOL_CATALOG } from "./external-runtime-goal-tools.js";
 import {
   bindExternalRuntimeProfile,
   externalRuntimeProfileInstructions,
@@ -151,8 +157,8 @@ export interface ExternalRuntimeStartRequest {
  */
 export interface ExternalRuntimeBackgroundWorkDelivery {
   subscribe(listener: (sessionId: string, event: StreamEvent) => void): () => void;
-  /** Drain and format all pending results for one injected continuation turn. */
-  drainMessage(sessionId: string): string | undefined;
+  /** Reserve original result envelopes until the provider accepts the input. */
+  claimResults(sessionId: string): NotificationResultClaim | undefined;
   hasPending(sessionId: string): boolean;
   /** Finite work that will publish a completion notification for this Session. */
   hasRunning(sessionId: string): boolean;
@@ -183,7 +189,7 @@ export interface ExternalRuntimeServiceDeps {
   /** Injectable for deterministic tests; production reads the fail-closed sync cache. */
   projectTrust?: (cwd: string) => "trusted" | "untrusted" | "unknown";
   /** Host seams the exposed tools need (panels, browser, …). */
-  toolContextOverrides?: (sessionId: string) => Record<string, unknown>;
+  toolContextOverrides?: (sessionId: string) => Partial<ToolContext>;
   /**
    * Ask the user to approve a tool call.
    *
@@ -651,7 +657,7 @@ export class ExternalRuntimeService {
 
   /**
    * Queue one synthetic continuation after the current provider turn. The queue
-   * is drained only after that turn settles, so stopping/replacing the Session
+   * is claimed only after that turn settles, so stopping/replacing the Session
    * while a job is running does not consume a result nobody can receive.
    */
   private maybeWakeForBackgroundWork(sessionId: string): void {
@@ -662,7 +668,12 @@ export class ExternalRuntimeService {
     )
       return;
     this.backgroundWakeups.add(sessionId);
+    const owner = this.sessions.get(sessionId);
+    let recheckPending = false;
     void this.wakeForBackgroundWork(sessionId)
+      .then((result) => {
+        recheckPending = result !== "unaccepted";
+      })
       .catch((error) => {
         dlog("external-runtime", "background_wakeup.failed", {
           sessionId,
@@ -672,6 +683,7 @@ export class ExternalRuntimeService {
       .finally(() => {
         this.backgroundWakeups.delete(sessionId);
         if (
+          (recheckPending || this.sessions.get(sessionId) !== owner) &&
           this.mayWakeForBackgroundWork(sessionId) &&
           this.deps.backgroundWork?.hasPending(sessionId)
         ) {
@@ -681,38 +693,71 @@ export class ExternalRuntimeService {
   }
 
   private mayWakeForBackgroundWork(sessionId: string): boolean {
-    const entry = this.sessions.get(sessionId);
-    return (
-      !!entry?.lifecycle.active &&
-      !entry.lifecycle.faulted &&
-      !this.backgroundWakePaused.has(sessionId) &&
-      this.authorityStillCurrent(entry.cwd, entry.authority) &&
-      !this.goals.read(sessionId)?.paused &&
-      // A Goal waiting on the user's answer is not driven by background
-      // results; they stay queued and arrive with the user's reply.
-      this.goals.pendingQuestion(sessionId) === undefined
-    );
+    return this.backgroundContinuation(sessionId)?.canContinue() ?? false;
   }
 
-  private async wakeForBackgroundWork(sessionId: string): Promise<void> {
+  private backgroundContinuation(sessionId: string, automatic = true) {
     const entry = this.sessions.get(sessionId);
-    if (!entry || !entry.lifecycle.active || !this.deps.backgroundWork) return;
+    if (!entry || !this.deps.backgroundWork) return undefined;
+    const generation = entry.lifecycle.interruptGeneration;
+    return new BackgroundContinuationController(this.deps.backgroundWork, sessionId, {
+      isCurrent: () =>
+        this.sessions.get(sessionId) === entry &&
+        entry.lifecycle.active &&
+        !entry.lifecycle.faulted &&
+        generation === entry.lifecycle.interruptGeneration,
+      isStopped: () => this.backgroundWakePaused.has(sessionId),
+      isEligible: () =>
+        this.authorityStillCurrent(entry.cwd, entry.authority) &&
+        (!automatic ||
+          (!this.goals.read(sessionId)?.paused &&
+            this.goals.pendingQuestion(sessionId) === undefined)),
+    });
+  }
+
+  private async wakeForBackgroundWork(
+    sessionId: string,
+  ): Promise<"accepted" | "skipped" | "unaccepted"> {
+    const entry = this.sessions.get(sessionId);
+    const continuation = this.backgroundContinuation(sessionId);
+    if (!entry || !continuation) return "skipped";
     // A completion can arrive before the launching turn reaches its terminal
-    // callback, and user input can queue behind it. Drain and recheck Goal
+    // callback, and user input can queue behind it. Claim and recheck Goal
     // pause/question state only in the serialized slot that actually runs: a
     // user turn ahead of this one consumes the results itself, and a refusal
     // leaves them queued for the next resume.
-    await this.submit(sessionId, () => {
-      if (this.sessions.get(sessionId) !== entry || !this.mayWakeForBackgroundWork(sessionId))
-        return undefined;
-      const message = this.deps.backgroundWork?.drainMessage(sessionId);
-      return message
-        ? { text: `<system-reminder>\n${message}\n</system-reminder>`, injected: true }
-        : undefined;
-    }).catch((error) => {
-      // A replaced runtime never drained; its successor wakes on the queue.
-      if (this.sessions.get(sessionId) === entry) throw error;
-    });
+    let delivery: BackgroundResultDelivery | undefined;
+    let emptySlot = false;
+    try {
+      await this.submit(
+        sessionId,
+        () => {
+          emptySlot = !this.deps.backgroundWork?.hasPending(sessionId);
+          delivery = continuation.claim();
+          return delivery
+            ? { text: `<system-reminder>\n${delivery.message}\n</system-reminder>`, injected: true }
+            : undefined;
+        },
+        undefined,
+        undefined,
+        undefined,
+        () => delivery,
+      ).catch((error) => {
+        if (this.sessions.get(sessionId) === entry) throw error;
+      });
+      // An empty slot can race a new completion before the scheduler releases
+      // its in-flight marker. Recheck that case; only a restored failed attempt
+      // must wait for a later trigger instead of immediately retrying itself.
+      return delivery
+        ? delivery.wasAccepted
+          ? "accepted"
+          : "unaccepted"
+        : emptySlot
+          ? "skipped"
+          : "unaccepted";
+    } finally {
+      delivery?.finish();
+    }
   }
 
   /**
@@ -1026,53 +1071,13 @@ export class ExternalRuntimeService {
       }
       return terminal;
     };
-    for (const name of EXTERNAL_GOAL_TOOLS) {
+    for (const { definition, exposure: toolExposure } of EXTERNAL_GOAL_TOOL_CATALOG) {
+      const name = definition.name;
       // Replace the native acknowledgement-only executors and their static
       // hasGoal guards with this provider's live, version-checked controller.
       registry.unregisterTool(name);
       registry.registerTool(
-        {
-          name,
-          description:
-            name === "get_goal"
-              ? "Read this CodeShell session's persisted goal and its goalId/revision."
-              : name === "complete_goal"
-                ? "Declare the CodeShell goal fully achieved. Supply its current goalId and revision."
-                : name === "wait_for_user"
-                  ? "Stop the CodeShell goal until the user replies, when you need their decision, approval or missing information. Ask the same question in your reply."
-                  : "Cancel a CodeShell goal ONLY when the user explicitly requests cancellation. Include the user's reason.",
-          inputSchema: {
-            type: "object",
-            properties:
-              name === "get_goal"
-                ? {}
-                : {
-                    goalId: { type: "string" },
-                    revision: { type: "integer", minimum: 1 },
-                    ...(name === "complete_goal"
-                      ? { summary: { type: "string" } }
-                      : name === "wait_for_user"
-                        ? { question: { type: "string" } }
-                        : { confirm: { type: "boolean" }, reason: { type: "string" } }),
-                  },
-            required:
-              name === "get_goal"
-                ? []
-                : [
-                    "goalId",
-                    "revision",
-                    ...(name === "cancel_goal"
-                      ? ["confirm", "reason"]
-                      : name === "wait_for_user"
-                        ? ["question"]
-                        : []),
-                  ],
-          },
-          source: "builtin",
-          permissionDefault: "allow",
-          isReadOnly: name === "get_goal",
-          isConcurrencySafe: false,
-        },
+        definition,
         async (args, context) => {
           if (!lifecycle.active) throw new Error("This external runtime has been replaced");
           if (name === "complete_goal" && operations.current?.hasUnverifiedWrites())
@@ -1099,6 +1104,7 @@ export class ExternalRuntimeService {
               )
             : operation();
         },
+        toolExposure,
       );
     }
     let outputFailureReported = false;
@@ -1218,6 +1224,24 @@ export class ExternalRuntimeService {
         : {}),
     };
 
+    const getVisibility = (): ToolVisibilityInputs => {
+      const hostContext = this.deps.toolContextOverrides?.(request.sessionId) ?? {};
+      const primaryRoot = hostContext.workspace?.roots.find((root) => root.role === "primary");
+      if (primaryRoot && canonicalKey(primaryRoot.path) !== canonicalKey(request.cwd)) {
+        throw new Error("External runtime workspace changed; start a newly authorized runtime");
+      }
+      return {
+        ...hostContext.toolVisibility,
+        cwd: request.cwd,
+        workspace: hostContext.workspace,
+        hasGoal: this.goals.read(request.sessionId) !== undefined,
+        host: "desktop",
+        isSubAgent: false,
+        sessionId: request.sessionId,
+        settingsScope: "full",
+      };
+    };
+
     let session: ExternalRuntimeSession;
     // Register immediately before the runtime starts: a host tool call on the
     // first turn needs its bucket, while all fallible preparation above should
@@ -1249,13 +1273,9 @@ export class ExternalRuntimeService {
             settingsScope: "full",
             projectTrusted,
           }),
-        visibility: {
-          cwd: request.cwd,
-          hasGoal: request.hasGoal === true,
-          host: "desktop",
-          isSubAgent: false,
-          sessionId: request.sessionId,
-        },
+        visibility: getVisibility(),
+        getVisibility,
+        goalController: goalToolsAvailable,
         ...(exposure ? { exposure } : {}),
         ...(request.model ? { model: request.model } : {}),
         ...(resumeRuntimeSessionId ? { resumeRuntimeSessionId } : {}),
@@ -1518,6 +1538,7 @@ export class ExternalRuntimeService {
     callerWebContentsId?: number,
     expectedGoal?: { goalId: string; revision: number },
     hooks?: ExternalRuntimeSubmissionHooks,
+    initialBackground?: () => BackgroundResultDelivery | undefined,
   ): Promise<ExternalRuntimeTurnOutcome> {
     assertOutputHistoryWriteAvailable(sessionId);
     this.assertOwner(sessionId, callerWebContentsId);
@@ -1655,14 +1676,28 @@ export class ExternalRuntimeService {
             entry.lifecycle.turnActive = true;
             let prepared = false;
             let trace: ReturnType<typeof startExternalRuntimeTrace>;
+            let background = providerRound === 0 ? initialBackground?.() : undefined;
             try {
+              const physicalTurn = Symbol("provider-turn");
+              entry.providerTurn = physicalTurn;
+              if (providerRound > 0) {
+                background = this.backgroundContinuation(sessionId, false)?.claim();
+                nextInput = {
+                  ...nextInput,
+                  text: withBackground(nextInput.text, background?.message),
+                };
+                if (
+                  this.sessions.get(sessionId) !== entry ||
+                  !entry.lifecycle.active ||
+                  acceptedGeneration !== entry.lifecycle.interruptGeneration
+                )
+                  return entry.recorder.finishIfMissing();
+              }
               const user = entry.recorder.beginTurn(
                 goalRun && providerRound === 0 ? providerInput : nextInput,
                 providerRound > 0,
               );
               prepared = true;
-              const physicalTurn = Symbol("provider-turn");
-              entry.providerTurn = physicalTurn;
               const runId = entry.recorder.outputRunId;
               entry.toolTurnAbort = new AbortController();
               if (providerRound === 0) {
@@ -1716,17 +1751,23 @@ export class ExternalRuntimeService {
                 if (!turnInput.injected || expectedGoal) {
                   this.backgroundWakePaused.delete(sessionId);
                 }
-                // Wait for durable acceptance before taking the results. Keep
-                // the recorded user message intact and attach them to this send.
-                if (goalRun || !turnInput.injected) {
-                  nextInput = {
-                    ...nextInput,
-                    text: withBackground(
-                      nextInput.text,
-                      this.deps.backgroundWork?.drainMessage(sessionId),
-                    ),
-                  };
-                }
+              }
+              // Reserve after durable host acceptance, keeping real user text
+              // intact. Commit the reservation only on provider acceptance.
+              if (providerRound === 0 && !background && (goalRun || !turnInput.injected)) {
+                background = this.backgroundContinuation(sessionId, false)?.claim();
+                nextInput = {
+                  ...nextInput,
+                  text: withBackground(nextInput.text, background?.message),
+                };
+              }
+              // Reserving notifies mailbox observers synchronously. Recheck the
+              // original run before handing any input to a provider after that.
+              if (this.sessions.get(sessionId) !== entry || !entry.lifecycle.active)
+                return entry.recorder.finishIfMissing();
+              if (acceptedGeneration !== entry.lifecycle.interruptGeneration) {
+                this.abortRecordedRun(sessionId);
+                return entry.recorder.finishIfMissing();
               }
               const onEvent = (event: StreamEvent) => {
                 if (
@@ -1736,6 +1777,7 @@ export class ExternalRuntimeService {
                   entry.recorder.outputRunId !== runId
                 )
                   return;
+                background?.observe(event);
                 trace?.observe(event);
                 entry.forwardEvent(event);
               };
@@ -1754,6 +1796,7 @@ export class ExternalRuntimeService {
               }
               entry.modelTrace = trace;
               const turn = await entry.session.send(nextInput, onEvent);
+              if (turn.accepted) background?.accept();
               await turn.done;
             } catch (error) {
               if (error instanceof ExternalAccountingOwnershipError) accountingRejected = true;
@@ -1767,6 +1810,7 @@ export class ExternalRuntimeService {
               entry.forwardEvent({ type: "error", error: detail });
               entry.forwardEvent({ type: "turn_complete", reason: "model_error" });
             } finally {
+              background?.finish();
               entry.flushOutput();
               trace?.finish(
                 !entry.lifecycle.active ||
@@ -1838,10 +1882,7 @@ export class ExternalRuntimeService {
             }
             providerRound++;
             nextInput = {
-              text: withBackground(
-                `继续处理尚未完成的目标。\n\n${this.goals.instruction(goalRun)}`,
-                this.deps.backgroundWork?.drainMessage(sessionId),
-              ),
+              text: `继续处理尚未完成的目标。\n\n${this.goals.instruction(goalRun)}`,
               displayText: "继续处理尚未完成的目标。",
               injected: true,
             };
@@ -1924,10 +1965,14 @@ export class ExternalRuntimeService {
       return outcome;
     };
     const outcome = entry.turnTail.then(runTurn, runTurn);
-    entry.turnTail = outcome.then(
-      () => undefined,
-      () => undefined,
-    );
+    const afterSubmission = () => {
+      // A preserved old runtime can still own a claim while its replacement is
+      // starting. Once that submission settles, its accepted/returned claim no
+      // longer blocks the current owner from delivering newer queued results.
+      if (this.deps.backgroundWork?.hasPending(sessionId))
+        this.maybeWakeForBackgroundWork(sessionId);
+    };
+    entry.turnTail = outcome.then(afterSubmission, afterSubmission);
     return outcome;
   }
 

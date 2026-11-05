@@ -2,6 +2,7 @@ import { computeEffectiveDisabledLists } from "../capability-control/disabled-li
 import { effectiveBuiltinLists, effectiveProjectOverrides } from "../capability-control/overlay.js";
 import { SettingsManager, type SettingsScope } from "../settings/manager.js";
 import type { CapabilityOverrides } from "../settings/schema.js";
+import type { MCPServerConfig } from "../types.js";
 
 export interface SessionToolPolicyOptions {
   cwd: string;
@@ -9,13 +10,18 @@ export interface SessionToolPolicyOptions {
   projectTrusted: boolean;
   /** A trusted session pin; an empty object intentionally suppresses the project profile. */
   getProfileOverrides?: () => CapabilityOverrides;
+  /** Already-authorized Host connections; disk configuration can only narrow them. */
+  mcpServers?: Readonly<Record<string, MCPServerConfig>>;
 }
 
 export class SessionToolPolicyError extends Error {
   constructor(cause: unknown) {
-    super("Session capability settings or Profile are unavailable; repair them before retrying.", {
-      cause,
-    });
+    super(
+      "Session capability settings, Profile, or Host context are unavailable; repair them before retrying.",
+      {
+        cause,
+      },
+    );
     this.name = "SessionToolPolicyError";
   }
 }
@@ -40,7 +46,8 @@ export function readSessionToolPolicy(options: SessionToolPolicyOptions) {
     const profile = options.getProfileOverrides?.();
     const cwd = scope === "isolated" ? undefined : options.cwd;
     const overrides = effectiveProjectOverrides(settings, cwd, profile);
-    const agent = settings.get().agent;
+    const merged = settings.get();
+    const agent = merged.agent;
     const builtin = effectiveBuiltinLists(
       agent?.enabledBuiltinTools ?? [],
       agent?.disabledBuiltinTools ?? [],
@@ -49,6 +56,40 @@ export function readSessionToolPolicy(options: SessionToolPolicyOptions) {
     return {
       disabledBuiltins: new Set(builtin.disabledBuiltinTools),
       ...computeEffectiveDisabledLists(settings, cwd, profile),
+      featureFlags: merged.featureFlags,
+      mcpServers: Object.fromEntries(
+        Object.entries(options.mcpServers ?? {}).map(([name, baseline]) => {
+          const configured = merged.mcpServers?.[name];
+          const override = overrides?.mcp?.[name];
+          const allowedTools =
+            baseline.allowedTools === undefined
+              ? configured?.allowedTools
+              : configured?.allowedTools === undefined
+                ? baseline.allowedTools
+                : baseline.allowedTools.filter((tool) => configured.allowedTools!.includes(tool));
+          return [
+            name,
+            {
+              ...baseline,
+              enabled:
+                baseline.enabled !== false &&
+                override !== "off" &&
+                (override === "on" || configured?.enabled !== false),
+              ...(allowedTools === undefined ? {} : { allowedTools: [...allowedTools] }),
+              ...(baseline.disabledTools === undefined && configured?.disabledTools === undefined
+                ? {}
+                : {
+                    disabledTools: [
+                      ...new Set([
+                        ...(baseline.disabledTools ?? []),
+                        ...(configured?.disabledTools ?? []),
+                      ]),
+                    ],
+                  }),
+            },
+          ];
+        }),
+      ),
     };
   } catch (error) {
     throw new SessionToolPolicyError(error);

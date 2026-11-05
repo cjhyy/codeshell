@@ -60,6 +60,154 @@ async function fixture() {
 }
 
 describe("asynchronous authority for background-result wakeups", () => {
+  test.each([false, true])(
+    "Stop after a turn with Goal=%s holds the completion",
+    async (withGoal) => {
+      const f = await fixture();
+      const original = f.notificationMailbox.getSnapshot("source")[0]!;
+      const manual = f.session.enqueueTurn(
+        "manual",
+        withGoal ? { goal: "finish background work" } : {},
+      );
+      f.session.cancel();
+      f.manual.resolve();
+      await manual;
+      expect(
+        await wakeSessionForBackgroundResults({ ...f.options, resolveWorkspace: async () => ({}) }),
+      ).toBe(false);
+      expect(f.runs).toHaveLength(1);
+      expect(f.notificationMailbox.getSnapshot("source")).toEqual([original]);
+    },
+  );
+
+  test.each([false, true])(
+    "provider failure after output=%s only restores an unaccepted result",
+    async (output) => {
+      const f = await fixture();
+      const original = f.notificationMailbox.getSnapshot("source")[0]!;
+      f.session.engine.run = async (_task, options) => {
+        if (output)
+          options?.onStream?.({ type: "text_delta", text: "Already acted on the result" });
+        throw new Error("provider failed");
+      };
+      expect(
+        await wakeSessionForBackgroundResults({ ...f.options, resolveWorkspace: async () => ({}) }),
+      ).toBe(false);
+      expect(f.notificationMailbox.getSnapshot("source")).toEqual(output ? [] : [original]);
+    },
+  );
+
+  test.each([false, true])(
+    "a returned model error with attempted turnCount=1 and output=%s uses provider evidence",
+    async (output) => {
+      const f = await fixture();
+      const original = f.notificationMailbox.getSnapshot("source")[0]!;
+      f.session.engine.run = async (_task, options) => {
+        options?.onStream?.({ type: "stream_request_start", turnNumber: 1 });
+        if (output) options?.onStream?.({ type: "text_delta", text: "provider accepted" });
+        options?.onStream?.({ type: "usage_update", promptTokens: 0 });
+        options?.onStream?.({ type: "turn_complete", reason: "model_error" });
+        return {
+          text: "failed",
+          reason: "model_error",
+          sessionId: "source",
+          turnCount: 1,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      };
+      expect(
+        await wakeSessionForBackgroundResults({ ...f.options, resolveWorkspace: async () => ({}) }),
+      ).toBe(output);
+      expect(f.notificationMailbox.getSnapshot("source")).toEqual(output ? [] : [original]);
+    },
+  );
+
+  test("a mailbox reset prevents a rejected old run from restoring into its successor", async () => {
+    const f = await fixture();
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    f.session.engine.run = async () => {
+      entered.resolve();
+      await release.promise;
+      throw new Error("old launch failed");
+    };
+    const waking = wakeSessionForBackgroundResults({
+      ...f.options,
+      resolveWorkspace: async () => ({}),
+    });
+    await entered.promise;
+    f.notificationMailbox.reset("source");
+    const successor = f.notificationMailbox.enqueue(
+      {
+        agentId: "new",
+        description: "new work",
+        finalText: "new result",
+        status: "completed",
+        enqueuedAt: 2,
+      },
+      "source",
+    );
+    release.resolve();
+    expect(await waking).toBe(false);
+    expect(f.notificationMailbox.getSnapshot("source")).toEqual([successor]);
+  });
+
+  test("a host completion without a model turn cannot acknowledge the result", async () => {
+    const f = await fixture();
+    const original = f.notificationMailbox.getSnapshot("source")[0]!;
+    f.session.engine.run = async (_task, options) => {
+      options?.onStream?.({ type: "turn_complete", reason: "completed" });
+      return {
+        text: "input skipped",
+        reason: "completed",
+        sessionId: "source",
+        turnCount: 0,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      };
+    };
+    expect(
+      await wakeSessionForBackgroundResults({ ...f.options, resolveWorkspace: async () => ({}) }),
+    ).toBe(false);
+    expect(f.notificationMailbox.getSnapshot("source")).toEqual([original]);
+  });
+
+  test("a completion arriving during delivery stays available for the next continuation", async () => {
+    const f = await fixture();
+    const run = f.session.engine.run.bind(f.session.engine);
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    f.session.engine.run = async (task, options) => {
+      entered.resolve();
+      await release.promise;
+      return run(task, options);
+    };
+    const waking = wakeSessionForBackgroundResults({
+      ...f.options,
+      resolveWorkspace: async () => ({}),
+    });
+    await entered.promise;
+    const next = f.notificationMailbox.enqueue(
+      {
+        agentId: "next",
+        description: "next work",
+        finalText: "queued completion",
+        status: "completed",
+        enqueuedAt: 2,
+      },
+      "source",
+    );
+    release.resolve();
+    expect(await waking).toBe(true);
+    expect(f.notificationMailbox.getSnapshot("source")).toEqual([next]);
+    expect(
+      await wakeSessionForBackgroundResults({ ...f.options, resolveWorkspace: async () => ({}) }),
+    ).toBe(true);
+    expect(f.runs).toHaveLength(2);
+    expect(f.runs[0]!.task).not.toContain("queued completion");
+    expect(f.runs[1]!.task).toContain("queued completion");
+    expect(f.notificationMailbox.getSnapshot("source")).toEqual([]);
+  });
+
   test("host context lets a cold bound Session consume its saved result", async () => {
     const f = await fixture();
     const workspaceContext = createWorkspaceContext({

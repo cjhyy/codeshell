@@ -540,6 +540,8 @@ export interface ToolContext {
   disabledBuiltins?: Set<string>;
   /** Run-profile execution allowlist; omitted keeps the normal tool surface. */
   allowedToolNames?: ReadonlySet<string>;
+  /** Trusted Host argument restrictions, rechecked after hooks and approvals. */
+  validateToolArguments?(toolName: string, args: Record<string, unknown>): string | undefined;
   /**
    * Per-turn context used by builtin availability guards. Engine.run() uses the
    * same object to hide tools from the model; ToolExecutor reuses it to reject

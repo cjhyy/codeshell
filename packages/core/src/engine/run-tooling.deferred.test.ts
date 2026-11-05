@@ -88,11 +88,6 @@ describe("Run-local progressive tool surface", () => {
         mcpServers: {},
         mcpDisabled: false,
         featureFlags: {},
-        toolGuards: new Map(),
-        toolRewriters: new Map(),
-        toolFeatureFlags: new Map(),
-        applyBuiltinOverrideVisibility: (tools, overrides) =>
-          tools.filter((tool) => overrides?.[tool.name] !== "off"),
         profileAllowedToolNames: undefined,
         runPlanMode: false,
       });

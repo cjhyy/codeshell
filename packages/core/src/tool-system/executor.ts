@@ -210,6 +210,15 @@ export class ToolExecutor {
   }
 
   private enforceArgumentPolicy(call: ToolCall): ToolResult | undefined {
+    if (this.toolCtx?.validateToolArguments) {
+      let error: string | undefined;
+      try {
+        error = this.toolCtx.validateToolArguments(call.toolName, call.args);
+      } catch {
+        error = "Host tool argument policy is unavailable. Do NOT retry this tool call.";
+      }
+      if (error) return { id: call.id, toolName: call.toolName, error, isError: true };
+    }
     // Same gate for MCP tools: the registry is worker-shared, so it can hold
     // tools from servers OTHER sessions enabled. Visibility filtering hides
     // them from this session's tool list; this rejects a direct call anyway.
@@ -353,6 +362,7 @@ export class ToolExecutor {
         isError: true,
       };
     }
+    this.toolCtx?.refreshRunToolEligibility?.();
     if (this.toolCtx?.allowedToolNames && !this.toolCtx.allowedToolNames.has(call.toolName)) {
       return {
         id: call.id,
@@ -362,7 +372,6 @@ export class ToolExecutor {
       };
     }
     const surface = this.toolCtx?.runToolSurface;
-    this.toolCtx?.refreshRunToolEligibility?.();
     if (surface && !surface.isEligible(call.toolName)) {
       return {
         id: call.id,
@@ -683,6 +692,21 @@ export class ToolExecutor {
         isError: true,
       };
     }
+    if (this.toolCtx?.allowedToolNames && !this.toolCtx.allowedToolNames.has(call.toolName)) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool ${call.toolName} is no longer available in the current session context. Do NOT retry unless the relevant context changes.`,
+        isError: true,
+      };
+    }
+    if (this.toolCtx?.validateToolArguments) {
+      // Approval handlers may retain their input object. Execute the exact
+      // detached values accepted by this final Host policy check.
+      call = { ...call, args: structuredClone(call.args) };
+    }
+    const lateArgumentPolicyError = this.enforceArgumentPolicy(call);
+    if (lateArgumentPolicyError) return lateArgumentPolicyError;
     if (surface && !surface.isEligible(call.toolName)) {
       return {
         id: call.id,

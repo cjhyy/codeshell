@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { assembleRunToolDefs } from "./run-tooling.js";
 import { ToolRegistry } from "../tool-system/registry.js";
-import { BUILTIN_TOOL_GUARDS } from "../tool-system/builtin/index.js";
 import type { ToolContext } from "../tool-system/context.js";
 import { toolSearchTool } from "../tool-system/builtin/tool-search.js";
 import { ToolExecutor } from "../tool-system/executor.js";
@@ -29,10 +28,6 @@ function surface(browser?: ToolContext["browser"]) {
       mcpServers: {},
       mcpDisabled: false,
       featureFlags: undefined,
-      toolGuards: BUILTIN_TOOL_GUARDS,
-      toolRewriters: new Map(),
-      toolFeatureFlags: new Map(),
-      applyBuiltinOverrideVisibility: (tools) => tools,
       profileAllowedToolNames: undefined,
       runPlanMode: false,
     });

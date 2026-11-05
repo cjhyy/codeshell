@@ -1,412 +1,116 @@
 /**
- * The Host Tool allowlist for external Agent Runtimes.
- *
- * This is a policy artifact, not plumbing. It exists as one reviewable file —
- * rather than scattered through the Claude/Codex adapters — because the design
- * (§9.1) requires each entry to have been risk-reviewed individually, and a
- * reviewer needs to see the whole surface at once.
- *
- * Two rules shape everything here:
- *
- *  1. **Allowlist only.** No "everything in the registry", no prefix matching.
- *     A tool absent from this file does not exist for an external runtime.
- *     Widening it is an edit to this file, which is the point: it leaves a diff.
- *  2. **Host-loopback tools are special** (§9.3). `Panel`, `Browser`,
- *     `SwitchSessionWorkspace` and `InjectCredential` reach back out to a
- *     specific Desktop renderer window to do their work. Passing `ToolExecutor`
- *     does NOT make them callable — owner routing decides that, and it lives
- *     outside the executor. Any such tool needs its owner story argued before it
- *     can be listed.
- *
- * ## Why this is much wider than the original phase-one list
- *
- * The first cut exposed exactly one tool (`Panel`). That was not the product of
- * a risk judgement so much as of an ordering: tools were held back until each
- * had an argument written, and only one did. The result was a runtime that
- * could list panels and nothing else — no skills, no memory, no file access —
- * which is not a usable Agent Runtime, and made the feature's real state easy
- * to overstate.
- *
- * The widening below was an explicit product-owner decision. The governing
- * principle it rests on: **every tool here still executes through
- * `ToolExecutor`**, so path policy, project trust, the user's permission rules
- * and the approval UI all still apply. An external runtime holding `Bash` from
- * this list is strictly more governed than the same model calling its own
- * built-in shell, which answers only to the runtime's sandbox. Exposure moves
- * capability from an unobservable authorization domain into the user's.
- *
- * That argument does not extend to everything, and four tools remain excluded
- * for structural reasons rather than caution — see the block below them.
- * `InjectCredential` is the highest-risk entry and depends on an in-tool
- * approval that must stay mandatory; if that ever changes, it goes back out.
+ * Reviewed external-runtime exposure. Tool owners declare compatibility beside
+ * their catalogs; this snapshot is the independent central approval boundary.
+ * New or changed declarations do not grant access until their complete schema,
+ * permission metadata and argument constraints match the checked-in review.
  */
+import { createHash } from "node:crypto";
+import type { RegisteredTool } from "../types.js";
+import type { BuiltinTool, BuiltinToolExposure } from "./builtin/index.js";
 import type { ExternalToolExposurePolicy } from "./session-tool-host.js";
+import type {
+  ExternalToolCompatibility,
+  ExternalToolReview,
+} from "./external-tool-compatibility.js";
+import reviewedSnapshot from "./external-tool-exposure.reviewed.json";
 
-/** Why a tool is in (or out of) the first-phase allowlist. */
-export interface ExposureRationale {
-  tool: string;
-  /** `self-contained` completes in-process; `host-loopback` calls back to a window. */
-  kind: "self-contained" | "host-loopback";
-  status: "exposed" | "deferred" | "excluded";
-  reason: string;
+export type ExposureRationale = ExternalToolCompatibility & { tool: string };
+
+export interface ExternalExposureRegistry {
+  listToolsDetailed(): RegisteredTool[];
+  getExposure(name: string): BuiltinToolExposure | undefined;
+}
+
+const compareNames = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value).filter(([, item]) => item !== undefined);
+    entries.sort(([a], [b]) => compareNames(a, b));
+    return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 /**
- * The audit trail behind {@link FIRST_PHASE_EXPOSURE}. Kept as data so the
- * "excluded" decisions are visible too — a bare allowlist tells a reviewer what
- * was included but not what was considered and rejected, which is the more
- * useful half when judging whether the surface is sound.
+ * Hash execution-relevant data, not compiled function source or descriptive
+ * prose. Presence of imperative guards/resolvers is reviewed here; their behavior
+ * remains covered by their owning module's tests and code review.
  */
-export const FIRST_PHASE_EXPOSURE_RATIONALE: readonly ExposureRationale[] = [
-  {
-    tool: "Panel",
-    kind: "host-loopback",
-    status: "exposed",
-    reason:
-      "list/open/tools plus invoke for the reviewed job-hunt-hq tool catalog. The " +
-      "invoke exception is constrained by panel id and exact tool name; the Panel " +
-      "App manifest validates the nested payload. Other Panel Apps remain " +
-      "discovery/focus-only until they receive their own review.",
-  },
-  {
-    // NOTE the names: there is no tool called "Browser". The registry exposes
-    // three separate browser tools, and an allowlist entry for a name that does
-    // not exist is silently inert — it neither grants nor denies anything,
-    // which is the worst of both (a reviewer reads it as covered).
-    tool: "browser_navigate",
-    kind: "host-loopback",
-    status: "exposed",
-    reason:
-      "The browser capability the runtime genuinely lacks — the differentiator, " +
-      "not a duplicate — and the owner argument it was waiting on is the same one " +
-      "Panel now has: ExternalRuntimeService registers the session and claims the " +
-      "owning window before the runtime starts. Stays under ToolExecutor plus the " +
-      "user's permission rules; without an owning window it fails closed on " +
-      "routing rather than broadcasting.",
-  },
-  {
-    tool: "browser_observe",
-    kind: "host-loopback",
-    status: "exposed",
-    reason: "Reads page content. Same owner story as browser_navigate, no mutation.",
-  },
-  {
-    tool: "browser_act",
-    kind: "host-loopback",
-    status: "exposed",
-    reason:
-      "Click / type / interact — the mutating third of the browser surface, and " +
-      "the one that combines with InjectCredential to act as the logged-in user. " +
-      "Exposed on the product owner's call, under the same ToolExecutor rules as " +
-      "every other entry here.",
-  },
-  {
-    tool: "browser_inspect",
-    kind: "host-loopback",
-    status: "exposed",
-    reason:
-      "Bounded DOM, console, network and timing observations of the same session-owned " +
-      "target. ToolExecutor applies separate ask permission; the host retains target/domain " +
-      "authorization. No arbitrary script/CDP, request bodies or browser-wide access.",
-  },
-  {
-    tool: "InjectCredential",
-    kind: "host-loopback",
-    status: "exposed",
-    reason:
-      "Injects saved cookie credentials into the built-in browser to restore a " +
-      "login. This is the single highest-risk entry in this file and the one " +
-      "reviewers should look at first: it hands a live session cookie to a page, " +
-      "and a model that can also drive the Browser can then act as the logged-in " +
-      "user. §12.4 excluded credential-bearing tools outright; that blanket rule " +
-      "is relaxed here on the product owner's explicit call because credential " +
-      "restore is what makes browser automation usable at all. The mitigation is " +
-      "NOT the allowlist — it is the tool's own in-tool approval, which stays " +
-      "mandatory (see builtin/index.ts) and is never auto-approved for an " +
-      "external runtime. If that approval is ever made skippable, this entry must " +
-      "go back to excluded.",
-  },
-  {
-    tool: "LinkAction",
-    kind: "host-loopback",
-    status: "exposed",
-    reason:
-      "Uses the Host's connected accounts without returning credentials. Discovery and reads " +
-      "retain the same account grants and ToolExecutor checks as native sessions. Writes still " +
-      "require the tool's exact-parameter approval and a Host-owned per-submission operation " +
-      "controller with independent verification; missing authority fails closed. Runtime input " +
-      "cannot choose the trusted run identity or turn an unknown write into a retry.",
-  },
-  {
-    tool: "ToolSearch",
-    kind: "self-contained",
-    status: "exposed",
-    reason:
-      "Discovers only the tools permitted by this session's allowedToolNames, availability " +
-      "guards and plan mode. The MCP bridge already advertises those schemas; search cannot " +
-      "register another tool, widen this allowlist or bypass execution checks.",
-  },
-  {
-    tool: "ListSources",
-    kind: "self-contained",
-    status: "exposed",
-    reason:
-      "Lists metadata for the workspace's explicitly bound data sources. It uses the same " +
-      "source/profile authority and revocation checks as native sessions and never reads " +
-      "resource contents merely because a source is discoverable.",
-  },
-  {
-    tool: "ReadSource",
-    kind: "self-contained",
-    status: "exposed",
-    reason:
-      "Reads an exact bound source, scope and resource through ToolExecutor approval and " +
-      "the existing source authorization recheck. Content remains bounded, redacted and " +
-      "untrusted; nested LinkAction reads use the same allowlist and account grants. Missing " +
-      "connector or parser capabilities remain unavailable rather than silently falling back.",
-  },
-  // ── Delegation and state-machine exceptions ──────────────────────
-  // Agent and the two plan-state tools remain structurally excluded. DriveAgent
-  // is the reviewed exception because the child does not inherit the host
-  // bridge and background work is allowed only when the host guarantees an
-  // observable completion handoff.
-  {
-    tool: "Agent",
-    kind: "self-contained",
-    status: "excluded",
-    reason:
-      "Can spawn another agent, so an external runtime could recurse into itself, " +
-      "nest approvals, and escape concurrency/budget limits (§12.5). Unlike Bash " +
-      "or Browser, this is not a permission question: the recursion has no owner " +
-      "and no budget to charge, so exposing it would need a nesting model first.",
-  },
-  {
-    tool: "DriveAgent",
-    kind: "self-contained",
-    status: "exposed",
-    reason:
-      "Delegates one bounded task to an installed Codex/Claude CLI. External " +
-      "sessions may detach it only when the Desktop host promises to drain the " +
-      "completion queue and inject a continuation into the same Session; other " +
-      "hosts fail closed and require foreground execution. The child CLI does not " +
-      "inherit this host bridge, which bounds nesting at one level; the outer call " +
-      "still requires the normal DriveAgent approval.",
-  },
-  {
-    tool: "DriveAgentJobs",
-    kind: "self-contained",
-    status: "exposed",
-    reason:
-      "Lets the runtime inspect or cancel retained DriveAgent jobs, including " +
-      "Desktop-backed background delegations whose completion is delivered through " +
-      "the owning Session.",
-  },
-  {
-    tool: "EnterPlanMode",
-    kind: "self-contained",
-    status: "excluded",
-    reason:
-      "Engine state-machine tool. Exposing it lets the runtime and the Native " +
-      "Engine drive each other's plan state (§12.3) — and an external runtime has " +
-      "no Engine plan state of its own to enter, so the call has no coherent " +
-      "meaning on this path.",
-  },
-  {
-    tool: "ExitPlanMode",
-    kind: "self-contained",
-    status: "excluded",
-    reason: "Engine state-machine tool; same reason as EnterPlanMode.",
-  },
-  {
-    tool: "Read",
-    kind: "self-contained",
-    status: "exposed",
-    reason:
-      "Overlaps a tool the runtime already has, which was the original reason to " +
-      "exclude it. That reasoning was wrong about which risk matters: the runtime's " +
-      "OWN Read answers to the runtime's sandbox, while this one answers to " +
-      "ToolExecutor — path policy, project trust and the user's permission rules. " +
-      "Exposing it means the model has a reachable path that IS governed by " +
-      "CodeShell, which is the point of augmented mode. Naming overlap is a " +
-      "presentation problem (the MCP server prefixes its tools); sandbox " +
-      "divergence is a security one.",
-  },
-  {
-    tool: "Bash",
-    kind: "self-contained",
-    status: "exposed",
-    reason:
-      "Same argument as Read, and it is the tool where it matters most: the " +
-      "runtime's own shell runs under the runtime's approval policy, which the " +
-      "user did not configure and cannot see. Routing a shell call through " +
-      "ToolExecutor puts it under the user's own permission rules and the " +
-      "approval UI. Note this does NOT remove the runtime's own shell — it adds a " +
-      "governed alternative.",
-  },
-  // Bash(run_in_background) returns a shell_id and tells the model to manage it
-  // with these three. Without them the only way to inspect or stop a managed
-  // background shell is raw ps/kill through Bash, which loses the intentional-
-  // stop record and the whole-process-group termination.
-  {
-    tool: "BashOutput",
-    kind: "self-contained",
-    status: "exposed",
-    reason:
-      "Reads retained output of a background shell this same Session started. The " +
-      "manager scopes lookups to ctx.sessionId, so another Session's shell_id reads " +
-      "as unknown. Read-only; no new capability beyond the exposed Bash.",
-  },
-  {
-    tool: "KillShell",
-    kind: "self-contained",
-    status: "exposed",
-    reason:
-      "Terminates a background shell (and its process group) that this same Session " +
-      "started; cross-Session ids are refused by the manager. Strictly narrower than " +
-      "kill through the exposed Bash, and it records the stop as intentional.",
-  },
-  {
-    tool: "ListShells",
-    kind: "self-contained",
-    status: "exposed",
-    reason:
-      "Lists this Session's background shells with status and detected port. " +
-      "Session-scoped and read-only.",
-  },
-  // ── Skills, memory and planning ──────────────────────────────────
-  // These are the reason someone runs a model inside CodeShell rather than in a
-  // bare terminal. A runtime that cannot reach them is a stranger in the app: it
-  // cannot load the user's skills, cannot recall anything, and forgets the
-  // session the moment it ends. Phase one excluded them by omission rather than
-  // by argument — no rationale entry existed at all, which is how a surface ends
-  // up shipping at 1 tool out of 48 without anyone deciding that.
-  {
-    tool: "Skill",
-    kind: "self-contained",
-    status: "exposed",
-    reason:
-      "Loads a SKILL.md body and returns it as the tool result — it reads from " +
-      "the scanner, never the disk directly, and executes nothing itself. A skill " +
-      "body may TELL the model to run commands, but those become ordinary tool " +
-      "calls that face the same authorization as any other. Withholding Skill " +
-      "does not withhold that capability; it only withholds the user's own " +
-      "curated instructions.",
-  },
-  {
-    tool: "MemoryRead",
-    kind: "self-contained",
-    status: "exposed",
-    reason: "Reads the user's memory store. No side effects.",
-  },
-  {
-    tool: "MemoryList",
-    kind: "self-contained",
-    status: "exposed",
-    reason: "Enumerates memory entries. No side effects.",
-  },
-  {
-    tool: "MemorySave",
-    kind: "self-contained",
-    status: "exposed",
-    reason:
-      "Writes to the memory store, so it is a mutation — but a scoped one, into " +
-      "a store the user can read and edit, and it carries the same permission " +
-      "rules as on the native path.",
-  },
-  {
-    tool: "MemoryDelete",
-    kind: "self-contained",
-    status: "exposed",
-    reason: "Mutation, same store and same rules as MemorySave.",
-  },
-  {
-    tool: "TodoWrite",
-    kind: "self-contained",
-    status: "exposed",
-    reason: "Session-scoped task list. Visible to the user, trivially reversible.",
-  },
-  {
-    tool: "Glob",
-    kind: "self-contained",
-    status: "exposed",
-    reason: "Path search under the same path policy as Read.",
-  },
-  {
-    tool: "Grep",
-    kind: "self-contained",
-    status: "exposed",
-    reason: "Content search under the same path policy as Read.",
-  },
-  {
-    tool: "Write",
-    kind: "self-contained",
-    status: "exposed",
-    reason: "File mutation governed by ToolExecutor. Same argument as Bash.",
-  },
-  {
-    tool: "Edit",
-    kind: "self-contained",
-    status: "exposed",
-    reason: "File mutation governed by ToolExecutor. Same argument as Bash.",
-  },
-  {
-    tool: "WebSearch",
-    kind: "self-contained",
-    status: "exposed",
-    reason: "Read-only network lookup; already available to the model by other means.",
-  },
-  {
-    tool: "WebFetch",
-    kind: "self-contained",
-    status: "exposed",
-    reason: "Read-only fetch, subject to the same URL handling as the native path.",
-  },
-];
+export function externalToolContractFingerprint(
+  definition: RegisteredTool,
+  exposure: BuiltinToolExposure,
+): string {
+  const { description: _description, pathResolver, ...metadata } = definition;
+  const contract = {
+    definition: {
+      ...metadata,
+      ...(pathResolver ? { pathResolver: { operation: pathResolver.operation } } : {}),
+    },
+    defaultPermissionRules: exposure.defaultPermissionRules ?? [],
+    featureFlag: exposure.featureFlag,
+    hasAvailabilityGuard: exposure.availability !== undefined,
+    hasDefinitionRewriter: exposure.rewriteDefinition !== undefined,
+    requires: exposure.requires ?? [],
+  };
+  return createHash("sha256").update(canonical(contract)).digest("hex");
+}
 
-/**
- * Action-level narrowing for tools that multiplex several operations behind one
- * name. Anchored automatically — see `matchesWholeValue`.
- *
- * This is a second, independent layer from the tool's own
- * `defaultPermissionRules`: those decide allow/ask for a call that IS permitted,
- * while this decides whether the action is reachable from an external runtime at
- * all. `Panel.invoke` additionally fails closed on owner routing. Its exception
- * here is limited to the reviewed job-hunt-hq panel and exact tool names; write
- * operations still pass through Panel's schema, owner routing, permission rules,
- * and approval handling.
- */
-const JOB_HUNT_TOOL_NAMES = [
-  "get_job_search_context",
-  "save_candidate_context",
-  "save_job_opportunities",
-  "save_workflow_progress",
-  "save_job_research",
-  "save_interview_question_set",
-  "save_preparation_plan",
-  "save_interview_debrief",
-  "save_resume_draft",
-].join("|");
+/** Produce review data from the owning contributions, without admitting them. */
+export function createExternalToolReviewSnapshot(
+  catalog: readonly Pick<BuiltinTool, "definition" | "exposure">[],
+): ExternalToolReview[] {
+  const seen = new Set<string>();
+  const snapshot: ExternalToolReview[] = [];
+  for (const { definition, exposure } of catalog) {
+    if (seen.has(definition.name))
+      throw new Error(`Duplicate tool declaration: ${definition.name}`);
+    seen.add(definition.name);
+    if (!exposure.external) continue;
+    snapshot.push({
+      tool: definition.name,
+      ...exposure.external,
+      contractFingerprint: externalToolContractFingerprint(definition, exposure),
+    });
+  }
+  return snapshot.sort((a, b) => compareNames(a.tool, b.tool));
+}
 
-const PANEL_ARGUMENT_PATTERNS: readonly Readonly<Record<string, string>>[] = [
-  { action: "list|open|tools" },
-  {
-    action: "invoke",
-    panel_id: "panel-app:job-hunt-hq",
-    tool_name: JOB_HUNT_TOOL_NAMES,
-  },
-];
+/** Review mismatch is deliberately actionable in tests, never auto-approved. */
+export function assertExternalToolReviewSnapshot(
+  actual: readonly ExternalToolReview[],
+  expected: readonly ExternalToolReview[] = REVIEWED_EXTERNAL_TOOL_EXPOSURE,
+): void {
+  const sorted = (entries: readonly ExternalToolReview[]) =>
+    [...entries].sort((a, b) => compareNames(a.tool, b.tool));
+  if (canonical(sorted(actual)) !== canonical(sorted(expected))) {
+    throw new Error("External tool declarations differ from the reviewed exposure snapshot.");
+  }
+}
 
-const FIRST_PHASE_ARGS_PATTERNS: NonNullable<ExternalToolExposurePolicy["argsPatterns"]> = new Map([
-  ["Panel", PANEL_ARGUMENT_PATTERNS],
-]);
+function freezeReview(entry: ExternalToolReview): ExternalToolReview {
+  return Object.freeze({
+    ...entry,
+    ...(entry.argsPatterns
+      ? {
+          argsPatterns: Object.freeze(
+            entry.argsPatterns.map((pattern) => Object.freeze({ ...pattern })),
+          ),
+        }
+      : {}),
+  });
+}
 
-/**
- * `ReadonlySet` / `ReadonlyMap` are compile-time only — the underlying `Set` and
- * `Map` stay mutable at runtime, and this policy is a process-wide singleton read
- * live on every `execute()`. Without this, one `argsPatterns.delete("Panel")`
- * anywhere in the process would re-enable `Panel.invoke` for every already-running
- * host: exactly the capability held back pending the §9.3.2 owner claim.
- */
+export const REVIEWED_EXTERNAL_TOOL_EXPOSURE: readonly ExternalToolReview[] = Object.freeze(
+  (reviewedSnapshot as ExternalToolReview[]).map(freezeReview),
+);
+
+/** Compatibility view of the original policy, excluding host controller additions. */
+export const FIRST_PHASE_EXPOSURE_RATIONALE: readonly ExposureRationale[] = Object.freeze(
+  REVIEWED_EXTERNAL_TOOL_EXPOSURE.filter((entry) => !entry.requires),
+);
+
 function reject(): never {
   throw new TypeError("The external tool exposure policy is frozen and cannot be widened.");
 }
@@ -468,20 +172,91 @@ function frozenMap<K, V>(entries: Iterable<readonly [K, V]>): ReadonlyMap<K, V> 
   return view;
 }
 
-/** The phase-one policy. Pass to `createSessionToolHost({ exposure })`. */
-export const FIRST_PHASE_EXPOSURE: ExternalToolExposurePolicy = Object.freeze({
-  mode: "allowlist" as const,
-  toolNames: frozenSet(
-    FIRST_PHASE_EXPOSURE_RATIONALE.filter((entry) => entry.status === "exposed").map(
-      (entry) => entry.tool,
+function policyFromReviews(entries: readonly ExternalToolReview[]): ExternalToolExposurePolicy {
+  return Object.freeze({
+    mode: "allowlist" as const,
+    toolNames: frozenSet(entries.map((entry) => entry.tool)),
+    argsPatterns: frozenMap(
+      entries
+        .filter((entry) => entry.argsPatterns !== undefined)
+        .map(
+          (entry) =>
+            [
+              entry.tool,
+              Object.freeze(entry.argsPatterns!.map((pattern) => Object.freeze({ ...pattern }))),
+            ] as const,
+        ),
     ),
-  ),
-  argsPatterns: frozenMap(
-    [...FIRST_PHASE_ARGS_PATTERNS].map(([tool, patterns]) => [
-      tool,
-      Array.isArray(patterns)
-        ? Object.freeze(patterns.map((pattern) => Object.freeze({ ...pattern })))
-        : Object.freeze({ ...patterns }),
-    ]),
-  ),
-});
+  });
+}
+
+/**
+ * A declaration must match the independently reviewed record byte-for-byte after
+ * canonicalization. Unknown tools, replacements without metadata and contract
+ * drift are excluded, including when the caller asks for their names explicitly.
+ */
+export function deriveExternalToolExposure(
+  registry: ExternalExposureRegistry,
+  options: { goalController?: boolean } = {},
+): ExternalToolExposurePolicy {
+  const reviews = new Map(REVIEWED_EXTERNAL_TOOL_EXPOSURE.map((entry) => [entry.tool, entry]));
+  const accepted: ExternalToolReview[] = [];
+  const seen = new Set<string>();
+  for (const definition of registry.listToolsDetailed()) {
+    if (seen.has(definition.name))
+      throw new Error(`Duplicate tool registration: ${definition.name}`);
+    seen.add(definition.name);
+    const exposure = registry.getExposure(definition.name);
+    const declaration = exposure?.external;
+    const reviewed = reviews.get(definition.name);
+    if (!exposure || !declaration || !reviewed || declaration.status !== "exposed") continue;
+    if (declaration.requires === "goal-controller" && options.goalController !== true) continue;
+    const actual = {
+      tool: definition.name,
+      ...declaration,
+      contractFingerprint: externalToolContractFingerprint(definition, exposure),
+    };
+    if (canonical(actual) === canonical(reviewed)) accepted.push(reviewed);
+  }
+  return policyFromReviews(accepted);
+}
+
+/** Explicit host exposure may narrow the reviewed surface, never widen it. */
+export function intersectExternalToolExposure(
+  reviewed: ExternalToolExposurePolicy,
+  requested?: ExternalToolExposurePolicy,
+): ExternalToolExposurePolicy {
+  if (!requested) return reviewed;
+  const toolNames = [...reviewed.toolNames].filter((name) => requested.toolNames.has(name));
+  const patterns: Array<readonly [string, readonly Readonly<Record<string, string>>[]]> = [];
+  for (const name of toolNames) {
+    const left = reviewed.argsPatterns?.get(name);
+    const right = requested.argsPatterns?.get(name);
+    if (!left && !right) continue;
+    const alternatives = (value: typeof left): readonly Readonly<Record<string, string>>[] =>
+      !value ? [{}] : Array.isArray(value) ? value : [value as Readonly<Record<string, string>>];
+    const combined = alternatives(left).flatMap((a) =>
+      alternatives(right).map((b) => {
+        const pattern: Record<string, string> = { ...a };
+        for (const [key, value] of Object.entries(b)) {
+          pattern[key] =
+            pattern[key] === undefined || pattern[key] === value
+              ? value
+              : `(?=(?:${pattern[key]})$)(?:${value})`;
+        }
+        return Object.freeze(pattern);
+      }),
+    );
+    patterns.push([name, Object.freeze(combined)]);
+  }
+  return Object.freeze({
+    mode: "allowlist",
+    toolNames: frozenSet(toolNames),
+    argsPatterns: frozenMap(patterns),
+  });
+}
+
+/** Compatibility export; production factories derive from their composed registry. */
+export const FIRST_PHASE_EXPOSURE: ExternalToolExposurePolicy = policyFromReviews(
+  REVIEWED_EXTERNAL_TOOL_EXPOSURE.filter((entry) => entry.status === "exposed" && !entry.requires),
+);

@@ -393,11 +393,6 @@ describe("SessionToolHost live capability policy", () => {
       mcpServers: {},
       mcpDisabled: false,
       featureFlags: undefined,
-      toolGuards: new Map(),
-      toolRewriters: new Map(),
-      toolFeatureFlags: new Map(),
-      applyBuiltinOverrideVisibility: (tools, overrides) =>
-        tools.filter((tool) => overrides?.[tool.name] !== "off"),
       profileAllowedToolNames: undefined,
       runPlanMode: false,
     });
