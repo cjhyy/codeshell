@@ -706,6 +706,7 @@ try {
   const models = await host.call("agent.task.models");
   assert.ok(models.models.some((model) => model.id === "project-fixture"));
   const approvalsBeforeTask = host.approved.size;
+  const eventsBeforeTask = host.events.length;
   const task = await host.finish(
     host.call("agent.task.start", {
       label: "Smoke shared file",
@@ -721,9 +722,17 @@ try {
       throw new Error(JSON.stringify(current));
     return current.status === "completed" ? current : false;
   }, "independent panel Core task");
-  assert.ok(
-    host.approved.size >= approvalsBeforeTask + 2,
-    "Panel Write requires its own trusted tool confirmation",
+  assert.equal(
+    host.approved.size,
+    approvalsBeforeTask + 1,
+    "Panel Write requires one trusted tool confirmation, without an extra task-start prompt",
+  );
+  assert.deepEqual(
+    host.events
+      .slice(eventsBeforeTask)
+      .filter((event) => event.event === "host.confirm")
+      .map((event) => event.payload.title),
+    ["批准 Write"],
   );
   assert.ok(result.result.text.includes("Read and Write completed"));
   const downloaded = await download();

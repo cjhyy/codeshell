@@ -106,6 +106,37 @@ async function task(host: PanelAgentTaskHost, scope: PanelAgentTaskScope, id: st
   return (await host.call(scope, "agent.task.get", { id })) as PanelAgentTaskView;
 }
 
+test("task starts retain permission, instance owner, project and model boundaries", async () => {
+  const f = await fixture();
+  const input = { prompt: "hold", label: "Hold", key: "query", toolNames: [] };
+  await f.host.call(f.scope, "agent.task.start", input);
+  await until(() => f.events.some((event) => event.payload.activity?.length));
+  for (const changed of [
+    { permissions: [] },
+    { ownerId: "other-owner" },
+    { appId: "other-app" },
+    { cwd: "/other-workspace" },
+    { projectPath: "/other-project" },
+  ]) {
+    await expect(
+      f.host.call({ ...f.scope, ...changed }, "agent.task.start", input),
+    ).rejects.toThrow();
+  }
+  expect(f.host.activeTaskCount()).toBe(1);
+  const unavailable = (await f.host.call(f.scope, "agent.task.start", {
+    ...input,
+    key: "another",
+    model: "not-configured",
+  })) as PanelAgentTaskView;
+  await until(async () => (await task(f.host, f.scope, unavailable.id)).status === "failed");
+  expect((await task(f.host, f.scope, unavailable.id)).error).toContain("配置");
+  expect(f.host.activeTaskCount()).toBe(1);
+  f.revoke();
+  await expect(f.host.call(f.scope, "agent.task.start", input)).rejects.toThrow(
+    /no longer authorized/,
+  );
+});
+
 test("uses a real independent subprocess with bounded model, tools and Skills", async () => {
   const f = await fixture();
   expect(await f.host.call(f.scope, "agent.task.models")).toEqual(catalog);

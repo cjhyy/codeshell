@@ -396,17 +396,20 @@ describe("shared Panel process lifecycle", () => {
     expect(await readFile(join(f.root, "marker"), "utf8").catch(() => "")).toBe("");
   });
 
-  test("pending starts reserve capacity before awaiting concurrent approvals", async () => {
+  test("concurrent starts share one approval while each reserves process capacity", async () => {
     const approval = deferred<boolean>();
     let entered = 0;
+    let authorizationChecks = 0;
     const f = await fixture({
+      isOwnerAuthorized: () => (++authorizationChecks, true),
       confirmExecution: async () => {
         entered++;
         return approval.promise;
       },
     });
+    authorizationChecks = 0;
     const pending = [0, 1, 2].map(() => f.service.start(f.owner, f.params));
-    await eventually(() => entered === 3);
+    await eventually(() => entered === 1 && authorizationChecks === 6);
     await expect(f.service.start(f.owner, f.params)).rejects.toThrow(/at most 3/);
     approval.resolve(true);
     expect(await Promise.all(pending)).toHaveLength(3);
@@ -414,6 +417,94 @@ describe("shared Panel process lifecycle", () => {
     expect((await readFile(join(f.root, "marker"), "utf8")).trim().split("\n")).toHaveLength(3);
     await f.service.start(f.owner, f.params);
     await eventually(() => f.events.filter(({ event }) => event === "process.exit").length === 4);
+    expect(entered).toBe(1);
+  });
+
+  test("a shared refusal rejects all starts and is not cached for a later retry", async () => {
+    const approval = deferred<boolean>();
+    let confirmations = 0;
+    let authorizationChecks = 0;
+    const f = await fixture({
+      approvalScope: "guest",
+      isOwnerAuthorized: () => (++authorizationChecks, true),
+      confirmExecution: async () => {
+        confirmations++;
+        return confirmations === 1 ? approval.promise : true;
+      },
+    });
+    authorizationChecks = 0;
+    const pending = [f.service.start(f.owner, f.params), f.service.start(f.owner, f.params)];
+    const settled = Promise.allSettled(pending);
+    await eventually(() => confirmations === 1 && authorizationChecks === 4);
+    approval.resolve(false);
+    for (const result of await settled) {
+      expect(result.status).toBe("rejected");
+      if (result.status === "rejected") expect(result.reason.message).toMatch(/User denied/);
+    }
+    expect(confirmations).toBe(1);
+    expect(await readFile(join(f.root, "marker"), "utf8").catch(() => "")).toBe("");
+    const started = await f.service.start(f.owner, f.params);
+    expect((await f.service.waitForExit(f.owner, started)).code).toBe(0);
+    expect(confirmations).toBe(2);
+  });
+
+  test("revocation isolates a new guest epoch from an outstanding shared approval", async () => {
+    const decisions = [deferred<boolean>(), deferred<boolean>()];
+    let confirmations = 0;
+    let authorizationChecks = 0;
+    const f = await fixture({
+      approvalScope: "guest",
+      isOwnerAuthorized: () => (++authorizationChecks, true),
+      confirmExecution: () => decisions[confirmations++].promise,
+    });
+    authorizationChecks = 0;
+    const old = Promise.allSettled([
+      f.service.start(f.owner, f.params),
+      f.service.start(f.owner, f.params),
+    ]);
+    await eventually(() => confirmations === 1 && authorizationChecks === 4);
+    f.service.revokeGuest(f.owner.guestId);
+    const executable = await f.service.findExecutable(f.owner, { name: "fixture-tool" });
+    const directory = await f.service.grantDirectory(f.owner, f.root);
+    const fresh = f.service.start(f.owner, {
+      ...f.params,
+      executableHandle: executable.handle,
+      directoryHandle: directory.handle,
+    });
+    await eventually(() => confirmations === 2);
+    decisions[0].resolve(true);
+    for (const result of await old) {
+      expect(result.status).toBe("rejected");
+      if (result.status === "rejected")
+        expect(result.reason.message).toMatch(/no longer authorized/);
+    }
+    expect(await readFile(join(f.root, "marker"), "utf8").catch(() => "")).toBe("");
+    decisions[1].resolve(true);
+    expect((await f.service.waitForExit(f.owner, await fresh)).code).toBe(0);
+    expect(confirmations).toBe(2);
+  });
+
+  test("a changed executable fingerprint cannot join an old pending confirmation", async () => {
+    const decisions = [deferred<boolean>(), deferred<boolean>()];
+    let confirmations = 0;
+    const f = await fixture({
+      approvalScope: "guest",
+      confirmExecution: () => decisions[confirmations++].promise,
+    });
+    const old = f.service.start(f.owner, f.params);
+    const oldResult = Promise.allSettled([old]);
+    await eventually(() => confirmations === 1);
+    await writeFile(f.binary, '#!/bin/sh\nprintf "replacement\\n" >> marker\n');
+    const fresh = f.service.start(f.owner, f.params);
+    await eventually(() => confirmations === 2);
+    decisions[0].resolve(true);
+    const [rejected] = await oldResult;
+    expect(rejected.status).toBe("rejected");
+    if (rejected.status === "rejected")
+      expect(rejected.reason.message).toMatch(/executable changed/);
+    decisions[1].resolve(true);
+    expect((await f.service.waitForExit(f.owner, await fresh)).code).toBe(0);
+    expect(await readFile(join(f.root, "marker"), "utf8")).toBe("replacement\n");
   });
 
   test("Web approvals stay with one guest epoch and never read app-wide remembered grants", async () => {

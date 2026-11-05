@@ -21,7 +21,7 @@ const permissionLabels: Record<string, string> = {
   storage: "保存面板自己的数据",
   "external.open": "打开外部网页",
   "agent.submitPrompt": "向当前对话提交任务",
-  "agent.task": "创建和管理 Agent 任务",
+  "agent.task": "使用已配置模型启动、查询和取消独立 AI 任务，可能产生模型费用",
   "workspace.info": "查看工作区信息",
   "workspace.read": "读取工作区文件",
   "workspace.write": "修改工作区文件",
