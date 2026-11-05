@@ -246,8 +246,11 @@ Pass `{credentialId,url,revision,executableHandle}` using the selected list revi
 Desktop and Web ask for account consent, then return only
 `{authorized:true,fileArgumentHandle,count}`. Pass the handle to `process.spawn`;
 the Host fixes the private argument to `--cookies` and binds it to that executable
-and guest. Web also retains its separate executable confirmation. Paired Web uses
-the Desktop custody adapter and key rather than creating another vault.
+and guest. Desktop and Web use the installed Panel's declared `process` permission
+and authorized project binding as execution consent, without another executable
+confirmation. Account, directory, background-task and AI confirmations remain
+separate. Paired Web uses the Desktop custody adapter and key rather than creating
+another vault.
 
 The process service rechecks Host-owned input validation after execution approval,
 while running, and before recording a successful exit. Changed account contents or

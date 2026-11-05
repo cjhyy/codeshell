@@ -109,9 +109,9 @@ export interface PanelAppProcessServiceOptions {
   /** Rechecked after asynchronous work and immediately before admitting a process. */
   isOwnerAuthorized?(owner: PanelProcessOwner): boolean | Promise<boolean>;
   /**
-   * Desktop delegates durable approval lifetime to its Host hooks. Web uses guest
-   * to isolate each authenticated instance; guest approvals never use the
-   * app-wide durable hooks.
+   * When executable confirmation is required, app scope can delegate durable
+   * approval to Host hooks. Guest scope isolates authenticated instances and
+   * never uses the app-wide durable hooks.
    */
   approvalScope?: "app" | "guest";
   confirmExecution(input: {
@@ -123,7 +123,7 @@ export interface PanelAppProcessServiceOptions {
   }): Promise<boolean>;
   isExecutionApproved?(scope: PanelProcessApprovalScope): Promise<boolean>;
   rememberExecutionApproval?(scope: PanelProcessApprovalScope): Promise<void>;
-  /** Desktop can use installed-app process permission and trusted-project binding as consent. */
+  /** Hosts can use installed-app process permission and authorized-project binding as consent. */
   allowAuthorizedProcessWithoutPrompt?: boolean;
   /** Resolve a declared entry in this app revision; return a canonical, reviewed file. */
   resolvePackageEntry?(
@@ -647,8 +647,8 @@ export class PanelAppProcessService {
       const approvalKey =
         (guestScoped ? `${owner.guestId}\0${epoch}\0` : "") +
         `${scope.appId}\0${scope.revision}\0${scope.executablePath}\0${scope.executableFingerprint}`;
-      // Desktop already checks installed-app process permission and a trusted,
-      // bound project in authorize(). Web keeps its per-guest confirmation path.
+      // Hosts may use installed-app process permission and their authorized,
+      // bound project as consent; authorize() still runs before every spawn.
       let approved =
         this.options.allowAuthorizedProcessWithoutPrompt === true ||
         this.approvedExecutables.has(approvalKey);

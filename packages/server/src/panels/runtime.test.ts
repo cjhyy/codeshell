@@ -45,6 +45,7 @@ afterEach(async () => {
 async function fixture(
   options: {
     html?: string;
+    host?: PanelRuntimeOptions["host"];
     permissions?: InstalledPanelApp["permissions"];
     origin?: string;
     publicPathPrefix?: string;
@@ -133,7 +134,7 @@ async function fixture(
     cwd,
     dataDir: join(root, "data"),
     traceStorageDir: join(root, ".model-traces"),
-    host: options.sharedToolJobs ? "desktop" : "hub",
+    host: options.host ?? (options.sharedToolJobs ? "desktop" : "hub"),
     sharedToolJobs: options.sharedToolJobs?.({ root, cwd, app }),
     publicPathPrefix: options.publicPathPrefix,
     agentTasks: options.agentTasks,
@@ -1111,13 +1112,22 @@ async function waitRuntimeEvent(
   throw new Error(`Panel runtime did not emit ${name}`);
 }
 
-async function nodeProcessFixture() {
-  const f = await fixture({ permissions: ["context.workspace", "process"] });
+async function nodeProcessFixture(host: PanelRuntimeOptions["host"] = "hub", reviewed = false) {
+  const f = await fixture({ host, permissions: ["context.workspace", "process"] });
   const node = await resolvePanelExecutable("node");
   if (!node) throw new Error("Node.js is required for the server process integration test");
   const bin = join(f.root, "data", "panel-bin");
   await mkdir(bin, { recursive: true });
   await symlink(node, join(bin, "fixture-node"));
+  const source =
+    'import {writeFileSync} from "node:fs"; writeFileSync("process-result.txt", "completed"); process.stdout.write("panel node " + process.versions.node); process.stderr.write("stderr delivered");';
+  if (reviewed) {
+    const entry = "app/probe.mjs";
+    await writeFile(join(f.installPath, entry), source);
+    f.app.nativeEntries = {
+      probe: { entry, sha256: createHash("sha256").update(source).digest("hex") },
+    };
+  }
   const grant = await f.prepare();
   const call = async (method: string, params?: unknown) => {
     const response = await f.api(`${grant.instanceId}/call`, "POST", { method, params });
@@ -1127,13 +1137,14 @@ async function nodeProcessFixture() {
   const executable = await call("process.find", { name: "fixture-node" });
   expect(executable.available).toBe(true);
   const directory = await call("filesystem.getKnownDirectory", { name: "downloads" });
+  const entry = reviewed
+    ? await call("process.resolveEntry", { name: "probe", executableHandle: executable.handle })
+    : undefined;
   const params = {
     executableHandle: executable.handle,
     directoryHandle: directory.handle,
-    args: [
-      "-e",
-      'require("node:fs").writeFileSync("process-result.txt", "completed"); process.stdout.write("panel node " + process.versions.node); process.stderr.write("stderr delivered");',
-    ],
+    ...(entry ? { entryHandle: entry.handle } : {}),
+    args: reviewed ? [] : ["--input-type=module", "-e", source],
   };
   return { ...f, grant, params, directory, call };
 }
@@ -1316,19 +1327,13 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
       ...f.params,
       fileArgumentHandles: [authorization.fileArgumentHandle],
     });
-    const event = await waitRuntimeEvent(
-      f,
-      f.grant.instanceId,
-      "host.confirm",
-      events.events.filter((item) => item.event === "host.confirm").at(-1)!.id,
-    );
-    await expect(mutate()).rejects.toThrow("正在提交");
-    await f.api(`${f.grant.instanceId}/confirm`, "POST", {
-      requestId: event.payload.requestId,
-      allowed: true,
-    });
     const response = await pending;
     expect(response.status).toBe(200);
+    expect(
+      (await runtimeEvents(f, f.grant.instanceId, events.cursor)).events.some(
+        (event) => event.event === "host.confirm",
+      ),
+    ).toBe(false);
     const started = await response.json();
     await expect(mutate()).rejects.toThrow("正在提交");
     await f.read("process.write", {
@@ -2253,84 +2258,79 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
     expect((await f.api(`${grant.instanceId}/renew`, "POST", {})).status).toBe(410);
   });
 
-  test("runs real Node only after an owner confirmation and delivers output with acknowledged events", async () => {
-    const f = await nodeProcessFixture();
-    expect(f.grant.context.availableMethods).toContain("process.spawn");
-    expect(f.grant.context.availableMethods).not.toContain("agent.task.start");
-    const pending = f.api(`${f.grant.instanceId}/call`, "POST", {
-      method: "process.spawn",
-      params: f.params,
-    });
-    const confirmation = await waitRuntimeEvent(f, f.grant.instanceId, "host.confirm");
-    expect(
-      await readFile(join(f.directory.path, "process-result.txt"), "utf8").catch(() => ""),
-    ).toBe("");
-    expect((await f.api(`${f.grant.instanceId}/events`, "GET", undefined, "owner-b")).status).toBe(
-      403,
-    );
-    expect(
-      (
-        await f.api(
-          `${f.grant.instanceId}/confirm`,
-          "POST",
-          { requestId: confirmation.payload.requestId, allowed: true },
-          "owner-b",
-        )
-      ).status,
-    ).toBe(403);
-    const confirmed = await f.api(`${f.grant.instanceId}/confirm`, "POST", {
-      requestId: confirmation.payload.requestId,
-      allowed: true,
-    });
-    expect(confirmed.status).toBe(200);
-    expect(await confirmed.json()).toEqual({ accepted: true, allowed: true });
-    const started = await pending;
-    expect(started.status).toBe(200);
-    const process = await started.json();
-    const exited = await waitRuntimeEvent(f, f.grant.instanceId, "process.exit");
-    expect(exited.payload).toMatchObject({ processId: process.processId, code: 0 });
-    const batch = await runtimeEvents(f, f.grant.instanceId);
-    expect(
-      batch.events
-        .filter((item) => item.event === "process.output")
-        .map((item) => item.payload.text)
-        .join(""),
-    ).toContain("panel node");
-    expect(
-      batch.events
-        .filter((item) => item.event === "process.output")
-        .map((item) => item.payload.text)
-        .join(""),
-    ).toContain("stderr delivered");
-    expect(await readFile(join(f.directory.path, "process-result.txt"), "utf8")).toBe("completed");
-    expect((await runtimeEvents(f, f.grant.instanceId, batch.cursor)).events).toEqual([]);
-    expect(
-      (await f.api(`${f.grant.instanceId}/events?after=${batch.cursor + 1}`, "GET")).status,
-    ).toBe(400);
-    const duplicate = await f.api(`${f.grant.instanceId}/confirm`, "POST", {
-      requestId: confirmation.payload.requestId,
-      allowed: false,
-    });
-    expect(await duplicate.json()).toEqual({ accepted: true, allowed: true });
-  });
+  for (const host of ["hub", "desktop"] as const)
+    for (const reviewed of [true, false])
+      test(`${host} runs ${reviewed ? "reviewed" : "direct"} Node without repeat process consent and delivers acknowledged events`, async () => {
+        const f = await nodeProcessFixture(host, reviewed);
+        expect(f.grant.context.availableMethods).toContain("process.spawn");
+        expect(f.grant.context.availableMethods).not.toContain("agent.task.start");
+        const started = await f.api(`${f.grant.instanceId}/call`, "POST", {
+          method: "process.spawn",
+          params: f.params,
+        });
+        expect(
+          (await f.api(`${f.grant.instanceId}/events`, "GET", undefined, "owner-b")).status,
+        ).toBe(403);
+        expect(
+          (
+            await f.api(
+              `${f.grant.instanceId}/call`,
+              "POST",
+              { method: "process.spawn", params: f.params },
+              "owner-b",
+            )
+          ).status,
+        ).toBe(403);
+        expect(started.status).toBe(200);
+        const process = await started.json();
+        const exited = await waitRuntimeEvent(f, f.grant.instanceId, "process.exit");
+        expect(exited.payload).toMatchObject({ processId: process.processId, code: 0 });
+        const batch = await runtimeEvents(f, f.grant.instanceId);
+        expect(batch.events.some((event) => event.event === "host.confirm")).toBe(false);
+        expect(
+          batch.events
+            .filter((item) => item.event === "process.output")
+            .map((item) => item.payload.text)
+            .join(""),
+        ).toContain("panel node");
+        expect(
+          batch.events
+            .filter((item) => item.event === "process.output")
+            .map((item) => item.payload.text)
+            .join(""),
+        ).toContain("stderr delivered");
+        expect(await readFile(join(f.directory.path, "process-result.txt"), "utf8")).toBe(
+          "completed",
+        );
+        expect((await runtimeEvents(f, f.grant.instanceId, batch.cursor)).events).toEqual([]);
+        expect(
+          (await f.api(`${f.grant.instanceId}/events?after=${batch.cursor + 1}`, "GET")).status,
+        ).toBe(400);
+      });
 
-  test("owner revoke while process approval is pending cannot start or confirm the old process", async () => {
-    const f = await nodeProcessFixture();
+  test("owner revoke while process authorization is pending cannot start the old process", async () => {
+    const f = await nodeProcessFixture("hub", true);
+    let release!: () => void;
+    let entered!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const ready = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    f.state.beforeSnapshot = async () => {
+      entered();
+      await gate;
+    };
     const pending = f.api(`${f.grant.instanceId}/call`, "POST", {
       method: "process.spawn",
       params: f.params,
     });
-    const confirmation = await waitRuntimeEvent(f, f.grant.instanceId, "host.confirm");
+    await ready;
     f.runtime.cancelOwner("owner-a");
+    release();
+    f.state.beforeSnapshot = undefined;
     expect((await pending).status).toBe(410);
-    expect(
-      (
-        await f.api(`${f.grant.instanceId}/confirm`, "POST", {
-          requestId: confirmation.payload.requestId,
-          allowed: true,
-        })
-      ).status,
-    ).toBe(410);
     expect(
       await readFile(join(f.directory.path, "process-result.txt"), "utf8").catch(() => ""),
     ).toBe("");
@@ -2343,6 +2343,59 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
         })
       ).status,
     ).toBe(400);
+  });
+
+  test("Web process consent cannot substitute for declared permission or a current binding", async () => {
+    const denied = await fixture({ permissions: ["context.workspace"] });
+    const grant = await denied.prepare();
+    expect(grant.context.availableMethods).not.toContain("process.spawn");
+    for (const method of ["process.find", "process.spawn"])
+      expect(
+        (
+          await denied.api(`${grant.instanceId}/call`, "POST", {
+            method,
+            params: { name: "node" },
+          })
+        ).status,
+      ).toBe(403);
+    expect((await runtimeEvents(denied, grant.instanceId)).events).toEqual([]);
+
+    const f = await nodeProcessFixture("hub", true);
+    f.state.enabled = false;
+    expect(
+      (
+        await f.api(`${f.grant.instanceId}/call`, "POST", {
+          method: "process.spawn",
+          params: f.params,
+        })
+      ).status,
+    ).toBe(410);
+    expect(
+      (
+        await f.api("prepare", "POST", {
+          appId: f.app.id,
+          revision: f.state.revision,
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      await readFile(join(f.directory.path, "process-result.txt"), "utf8").catch(() => ""),
+    ).toBe("");
+  });
+
+  test("Web still rejects a modified reviewed entry without process prompts", async () => {
+    const f = await nodeProcessFixture("hub", true);
+    await writeFile(join(f.installPath, "app/probe.mjs"), 'throw new Error("unreviewed");');
+    const result = await f.api(`${f.grant.instanceId}/call`, "POST", {
+      method: "process.spawn",
+      params: f.params,
+    });
+    expect(result.status).toBe(400);
+    expect(await result.text()).toContain("package entry");
+    expect((await runtimeEvents(f, f.grant.instanceId)).events).toEqual([]);
+    expect(
+      await readFile(join(f.directory.path, "process-result.txt"), "utf8").catch(() => ""),
+    ).toBe("");
   });
 
   test("agent tasks require a parent confirmation and retain their exact owner and bundled skills", async () => {

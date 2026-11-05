@@ -40,10 +40,10 @@ const errors = [],
   blocked = [],
   calls = [],
   assetRequests = [],
-  confirmations = [];
+  hostEvents = [],
+  eventReads = [];
 const accessChecks = new WeakMap();
-let authorized = true,
-  approving = false;
+let authorized = true;
 try {
   await Promise.all([mkdir(cwd), mkdir(bin, { recursive: true })]);
   await mkdir(destination, { recursive: true });
@@ -276,24 +276,23 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
   page.on("request", (request) => {
     if (request.url().endsWith("/call")) calls.push(request.postDataJSON());
   });
-  // Exercise the real visible execution confirmation; no bypass of its endpoint.
-  await page.addLocatorHandler(
-    page
-      .locator(".panel-host-confirm")
-      .filter({ hasText: bin })
-      .getByRole("button", { name: "确认执行", exact: true }),
-    async (button) => {
-      approving = true;
-      const body = await page
-        .locator(".panel-host-confirm")
-        .textContent()
-        .catch(() => "");
-      assert.ok(body.includes(bin), "Only the owned managed-bin programs may be approved");
-      confirmations.push(body);
-      await button.click();
-      approving = false;
-    },
-  );
+  // Observe the real event transport; installed process permission must not
+  // produce another execution prompt. Directory consent remains interactive.
+  page.on("response", (response) => {
+    if (
+      response.status() !== 200 ||
+      !/^\/api\/v1\/panels\/runtime\/[^/]+\/events$/.test(new URL(response.url()).pathname)
+    )
+      return;
+    eventReads.push(
+      response
+        .json()
+        .then((batch) => hostEvents.push(...batch.events))
+        .catch((error) => {
+          errors.push(`Reading Host events: ${error.message}`);
+        }),
+    );
+  });
   await page.goto(origin + "/mobile/");
   console.log("consumer: mobile page opened");
   const frame = page.frameLocator("iframe");
@@ -423,8 +422,22 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
   );
   assert.ok(calls.some((call) => call.method === "resources.capture"));
   assert.ok(calls.some((call) => call.method === "resources.open"));
-  assert.ok(confirmations.length > 0);
-  assert.equal(approving, false);
+  await Promise.all(eventReads);
+  const confirmations = hostEvents.filter((event) => event.event === "host.confirm");
+  assert.equal(
+    new Set(
+      confirmations
+        .filter((event) => event.payload.directoryPicker)
+        .map((event) => event.payload.requestId),
+    ).size,
+    2,
+    "Both real directory confirmations must be observed through the Host event transport",
+  );
+  assert.deepEqual(
+    confirmations.filter((event) => /^允许 .+ 运行 .+？$/.test(event.payload.title)),
+    [],
+    "Installed and project-bound processes must not request duplicate execution consent",
+  );
   assert.ok(
     assetRequests.some(
       (request) => request.url.endsWith("app.js") && request.origin === "null" && !request.cookie,
@@ -463,7 +476,8 @@ createRoot(document.getElementById('root')).render(<PanelHost panel={${JSON.stri
       projectBinding: true,
       opaqueTunnelModules: true,
       realNativeService: true,
-      visibleExecutionApproval: true,
+      noDuplicateProcessConsent: true,
+      visibleDirectoryConsent: true,
       mobileHistoryCapture: true,
       singleTrustedFocusedInspectTap: true,
       inspectionRpcReceived: true,
