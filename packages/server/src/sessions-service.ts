@@ -273,6 +273,8 @@ export async function listDiskSessions(
     cursor?: string;
     /** Display-only project roots filter, applied before pagination. */
     cwds?: readonly string[];
+    /** Check one candidate against the same visibility rules without reading unrelated states. */
+    sessionId?: string;
     includeArchived?: boolean;
     /** Host read models may include children; ordinary sidebar queries stay top-level. */
     includeSubagents?: boolean;
@@ -280,6 +282,16 @@ export async function listDiskSessions(
   },
   baseDir: string = sessionsRoot(),
 ): Promise<ListDiskSessionsResult> {
+  if (
+    opts.sessionId !== undefined &&
+    (typeof opts.sessionId !== "string" ||
+      !SAFE_ID.test(opts.sessionId) ||
+      opts.sessionId.length > 128 ||
+      opts.sessionId === "." ||
+      opts.sessionId.includes(".."))
+  ) {
+    throw new Error("invalid session id");
+  }
   const parentSessionId = opts.parentSessionId;
   if (
     parentSessionId !== undefined &&
@@ -302,7 +314,8 @@ export async function listDiskSessions(
   };
   const cwdRoots = opts.cwds?.map(pathKey);
   const dirs = (await scanSessionDirectories(baseDir)).filter(
-    ({ id }) => !isInternalEphemeralSessionId(id),
+    ({ id }) =>
+      !isInternalEphemeralSessionId(id) && (opts.sessionId === undefined || id === opts.sessionId),
   );
   dirs.sort(compareDiskSessionPosition);
 

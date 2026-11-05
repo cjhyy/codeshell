@@ -3,7 +3,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { NEW_TAB } from "../browser/types";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
-import { BrowserAddressField } from "./BrowserPanel";
+import { BrowserAddressField, BrowserPanel } from "./BrowserPanel";
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const current = node as Record<string, any>;
@@ -180,4 +180,84 @@ describe("BrowserPanel address actions", () => {
     }
     expect(opened).toEqual([]);
   });
+});
+
+test("a changed login partition remounts only the guest and retains the current tab URL", async () => {
+  const registrations: Array<{ partition: string }> = [];
+  Object.assign(window, {
+    codeshell: {
+      registerBrowserSessionBucket: (input: { partition: string }) => registrations.push(input),
+      registerBrowserGuest: () => undefined,
+      getBuiltInBrowserRuntimeHandoff: async () => ({ granted: false, sessionId: "session" }),
+      getChromeBrowserRuntimeStatus: async () => ({ connected: false, sessionId: "session" }),
+    },
+  });
+  const renderPanel = async (partition: string) => {
+    await act(async () => {
+      root?.render(
+        <BrowserPanel
+          cwd="/repo"
+          bucket="project::session"
+          engineSessionId="session"
+          partition={partition}
+          initialUrl="https://example.test/start"
+        />,
+      );
+      await flushMicrotasks();
+    });
+  };
+  const oldPartition = "persist:browser:project::session";
+  const projectPartition = "persist:browser:p:project";
+  const handoffButton = () =>
+    findElements(container, "BUTTON").find((button) =>
+      String(reactPropsOf(button)["aria-label"]).includes("Browser Runtime"),
+    );
+  await renderPanel(oldPartition);
+  const original = findElements(container, "WEBVIEW")[0];
+  expect(original).toBeDefined();
+  original.canGoBack = () => false;
+  original.canGoForward = () => false;
+  original.getWebContentsId = () => 42;
+  await act(async () => {
+    original.dispatchEvent(new Event("dom-ready"));
+    original.dispatchEvent(
+      Object.assign(new Event("did-navigate"), { url: "https://example.test/current" }),
+    );
+    await flushMicrotasks();
+  });
+  await renderPanel(oldPartition);
+  expect(findElements(container, "WEBVIEW")[0]).toBe(original);
+  expect(reactPropsOf(handoffButton()).disabled).toBe(false);
+
+  await renderPanel(projectPartition);
+  const views = findElements(container, "WEBVIEW");
+  expect(views).toHaveLength(1);
+  expect(views[0]).not.toBe(original);
+  expect(views[0].getAttribute("partition")).toBe(projectPartition);
+  expect(views[0].getAttribute("src")).toBe("https://example.test/current");
+  expect(registrations.at(-1)?.partition).toBe(projectPartition);
+  expect(reactPropsOf(handoffButton()).disabled).toBe(true);
+
+  views[0].canGoBack = () => false;
+  views[0].canGoForward = () => false;
+  views[0].getWebContentsId = () => 43;
+  await act(async () => {
+    views[0].dispatchEvent(new Event("dom-ready"));
+    views[0].dispatchEvent(
+      Object.assign(new Event("did-navigate"), { url: "https://example.test/new-profile" }),
+    );
+    await flushMicrotasks();
+  });
+  expect(reactPropsOf(handoffButton()).disabled).toBe(false);
+  const address = () => reactPropsOf(findElements(container, "INPUT")[0]).value;
+  expect(address()).toBe("https://example.test/new-profile");
+  await act(async () => {
+    original.dispatchEvent(
+      Object.assign(new Event("did-navigate"), { url: "https://example.test/stale" }),
+    );
+    await flushMicrotasks();
+  });
+  expect(address()).toBe("https://example.test/new-profile");
+  await renderPanel(projectPartition);
+  expect(findElements(container, "WEBVIEW")[0]).toBe(views[0]);
 });

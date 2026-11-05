@@ -12,6 +12,7 @@ import {
 import type { PanelId } from "../view";
 import type { Anchor } from "../chat/anchors";
 import type { PanelAppAgentToolDescriptor, PanelAppDescriptor } from "../../shared/panel-apps";
+import { browserPartitionForBucket } from "../../shared/browser-profile";
 import { resolvePanelAppIcon } from "./panelAppIcons";
 import { FilesPanel } from "./FilesPanel";
 import type { TrackedProject } from "../projects";
@@ -161,7 +162,7 @@ const BUILTIN_PANEL_ENTRIES: PanelEntry[] = [
         onUpdateAnchor: onUpdateBrowserAnchor,
         bucket,
         engineSessionId,
-        partition: `persist:browser:${bucket.replace(/[^a-zA-Z0-9_:.@-]/g, "_")}`,
+        partition: browserPartitionForBucket(bucket),
       }),
   }),
   builtin({
