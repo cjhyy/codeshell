@@ -15,7 +15,11 @@ import {
 } from "../src/lib/mobileAttachments.js";
 import { ApiError, browserId, ensureDesktopHttpSession, post, type AuthSession } from "./auth.js";
 import { setApiWorkspace } from "./api-context.js";
-import { readConfiguration, type HubConfiguration } from "./configuration.js";
+import {
+  connectionModelLabel,
+  readConfiguration,
+  type HubConfiguration,
+} from "./configuration.js";
 import { SessionDrafts } from "./drafts.js";
 import { sessionTitle } from "./chat.js";
 import { Workbench } from "./Workbench.js";
@@ -901,7 +905,8 @@ export function useDesktopController(
   };
   const title =
     app.activeRoom?.name ||
-    (!app.chat.items.length ? "新对话" : "") ||
+    // A session whose history failed to load is not new, even with no items shown.
+    (!app.chat.items.length && !app.outputHistoryFailed ? "新对话" : "") ||
     app.chat.title ||
     app.sessions.find((item) => item.id === app.activeSessionId)?.title ||
     sessionTitle(app.chat, activeId);
@@ -1092,10 +1097,12 @@ export function useDesktopController(
             : undefined
         }
         value={selectedModel}
-        defaultLabel={
-          configuration?.connections.find((item) => item.id === configuration.defaults.text)
-            ?.model || "默认模型"
-        }
+        defaultLabel={(() => {
+          const connection = configuration?.connections.find(
+            (item) => item.id === configuration.defaults.text,
+          );
+          return (connection && connectionModelLabel(configuration, connection)) || "默认模型";
+        })()}
         defaultDisabled={!app.nativeModelSelection && persistedModel === CURRENT_NATIVE_MODEL}
         loading={app.runtimeModelsLoading}
         error={app.runtimeModelsError}

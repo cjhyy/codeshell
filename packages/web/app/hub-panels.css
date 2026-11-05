@@ -173,6 +173,18 @@
 .panels-confirm p {
   margin: 0 0 8px;
 }
+.panels-limitations {
+  padding-block: 10px;
+  margin: 12px 0;
+}
+.panels-limitations summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+}
+.panels-limitations[open] summary {
+  margin-bottom: 8px;
+}
 .panels-warning ul {
   margin: 6px 0 0;
   padding-left: 22px;

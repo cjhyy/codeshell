@@ -908,6 +908,13 @@ button.composer-submit {
   background: var(--text);
   color: var(--bg);
 }
+/* Waiting for input: outlined and fully opaque, unlike the faded locked state. */
+.composer-submit.send[data-idle]:disabled {
+  opacity: 1;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
 .composer-submit.stop {
   color: var(--text);
   background: var(--panel);
@@ -1353,8 +1360,10 @@ button.ghost:hover:not(:disabled) {
   .approval-actions button {
     min-height: 44px;
   }
+  /* On a phone the composer stays within thumb reach; the welcome above already
+     fills the empty space. */
   .chat-empty .composer-wrap {
-    margin-bottom: clamp(18px, 10vh, 80px);
+    margin-bottom: 0;
   }
   .empty-chat {
     padding: 20px 12px;

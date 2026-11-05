@@ -12,6 +12,7 @@ import { PanelHost } from "./PanelHost.js";
 import { PanelSessionBar } from "./PanelSessionBar.js";
 import type { ManagedPanel } from "../../server/src/panels/types.js";
 import { OutputHistoryRecoveryExit } from "../src/components/OutputHistoryRecovery.js";
+import { connectionModelLabel } from "./configuration.js";
 import { MessageContent, subagentStatusLabel } from "./MessageContent.js";
 import { sessionTitle } from "./chat.js";
 import type { WorkbenchController, WorkbenchNavigation } from "./workbench-types.js";
@@ -522,13 +523,16 @@ export function Workbench({
   // through the Host FIFO; they never jump ahead of earlier queued turns.
   const queuedCount = controller.turnQueue?.state?.entries.length ?? 0;
   const queueing = Boolean(controller.turnQueue?.canQueue) && (running || queuedCount > 0);
-  const sendDisabled =
+  const sendBlocked =
     connection !== "open" ||
     controller.loading ||
     uploading ||
     controller.uncertain ||
-    controller.readOnly ||
-    (!draft.trim() && !files.length);
+    controller.readOnly;
+  const draftEmpty = !draft.trim() && !files.length;
+  const sendDisabled = sendBlocked || draftEmpty;
+  // "Nothing typed yet" must not look like "this conversation is locked".
+  const sendIdle = !sendBlocked && draftEmpty ? true : undefined;
   const otherApprovals = controller.approvals.filter(
     (a) => a.sessionId && a.sessionId !== activeId,
   );
@@ -558,7 +562,9 @@ export function Workbench({
                   : "设置";
   // Execution traces open from the settings overview, so they keep 设置 highlighted.
   const settingsNavActive =
-    view === "activity" || (view === "settings" && settingsSection !== "skills");
+    view === "activity" ||
+    view === "links" ||
+    (view === "settings" && settingsSection !== "skills");
   return (
     <div className={`shell${sidebarOpen ? " sidebar-open" : ""}`}>
       {narrow && sidebarOpen ? (
@@ -691,19 +697,6 @@ export function Workbench({
                 >
                   <WorkbenchIcon name="panels" />
                   <span>面板</span>
-                </button>
-                <button
-                  className={`nav-button${view === "links" ? " active" : ""}`}
-                  onClick={() =>
-                    requestNavigation(() => {
-                      setView("links");
-                      closeMobileSidebar();
-                    })
-                  }
-                  aria-current={view === "links" ? "page" : undefined}
-                >
-                  <WorkbenchIcon name="links" />
-                  <span>Link</span>
                 </button>
                 <button
                   className={`nav-button${settingsNavActive ? " active" : ""}`}
@@ -1197,7 +1190,9 @@ export function Workbench({
                 })}
                 {controller.approvalContent}
 
-                {empty ? (
+                {/* A read-only conversation (recovery pending, observed CLI room) is not
+                    a blank slate, so it gets no "start something" welcome. */}
+                {empty && !controller.readOnly ? (
                   <div className="empty-chat">
                     <span className="welcome-mark">
                       <WorkbenchIcon name="brand" />
@@ -1363,7 +1358,11 @@ export function Workbench({
                         title="打开模型设置"
                         onClick={() => openSettings("models", "chat")}
                       >
-                        <span>{defaultConnection?.model || "配置模型"}</span>
+                        <span>
+                          {defaultConnection
+                            ? connectionModelLabel(configuration, defaultConnection)
+                            : "配置模型"}
+                        </span>
                         <WorkbenchIcon name="chevron" />
                       </button>
                     )}
@@ -1425,6 +1424,7 @@ export function Workbench({
                       title="发送"
                       onClick={send}
                       disabled={sendDisabled}
+                      data-idle={sendIdle}
                     >
                       <WorkbenchIcon name="send" />
                     </button>
@@ -1449,6 +1449,15 @@ export function Workbench({
                 setView("activity");
                 closeMobileSidebar();
               })
+            }
+            onOpenLinks={
+              hub
+                ? () =>
+                    requestNavigation(() => {
+                      setView("links");
+                      closeMobileSidebar();
+                    })
+                : undefined
             }
             onAuthLost={onAuthLost}
             onConfigurationChange={() => void refreshConfiguration()}
