@@ -169,7 +169,7 @@ export const extensions = {
           storage: "保存面板自己的 JSON 数据，按面板和项目隔离。",
           externalOpen: "经确认打开外部 HTTPS 网页。",
           agentSubmitPrompt: "向当前绑定的对话发送提示，提交 AI 任务。",
-          agentTask: "启动、查询和取消由面板创建的独立 AI 任务。",
+          agentTask: "使用已配置模型启动、查询和取消由面板创建的独立 AI 任务，可能产生模型费用。",
           workspaceInfo: "查看项目路径、名称与 Git 分支等信息。",
           workspaceRead: "列出、读取和打开允许范围内的项目文件。",
           workspaceWrite: "写入允许范围内的文本文件或导出 PDF，带文件版本冲突检查。",
@@ -1370,7 +1370,8 @@ export const extensions = {
           storage: "Save the Panel's own JSON data, isolated by Panel and project.",
           externalOpen: "Open external HTTPS pages after confirmation.",
           agentSubmitPrompt: "Send prompts to the bound chat to submit AI tasks.",
-          agentTask: "Start, inspect, and cancel independent AI tasks created by the Panel.",
+          agentTask:
+            "Start, inspect, and cancel independent AI tasks using configured models. Model usage may incur charges.",
           workspaceInfo: "View information such as the project path, name, and Git branch.",
           workspaceRead: "List, read, and open project files within the allowed scope.",
           workspaceWrite:

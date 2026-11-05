@@ -1827,15 +1827,8 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
     }
     if (method.startsWith("agent.task.")) {
       if (!agentTasks) error(501, "当前宿主未提供独立面板任务。");
-      if (
-        method === "agent.task.start" &&
-        !(await confirm(
-          grant,
-          `启动 ${grant.app.title.default} 的 AI 任务？`,
-          String((params as { prompt?: unknown })?.prompt ?? "").slice(0, 8000),
-        ))
-      )
-        error(403, "你取消了面板 AI 任务。");
+      // Match Desktop: the installed app's agent.task permission and live project
+      // binding authorize task creation. Worker tool approvals stay independent.
       return agentTasks.call(taskScope(grant), method, params);
     }
     if (method.startsWith("process.") || method.startsWith("filesystem.")) {

@@ -49,6 +49,12 @@ interface OwnedGrant {
   revision: string;
 }
 
+interface PendingExecutionApproval {
+  guestId: number;
+  result: Promise<void>;
+  waiters: number;
+}
+
 interface ExecutableGrant extends OwnedGrant {
   name: string;
   path: string;
@@ -310,6 +316,7 @@ export class PanelAppProcessService {
   private readonly retiring = new Map<string, RunningProcess>();
   private readonly receipts: ProcessReceipts;
   private readonly approvedExecutables = new Set<string>();
+  private readonly pendingExecutionApprovals = new Map<string, PendingExecutionApproval>();
   private readonly guestEpochs = new Map<number, number>();
   private readonly reservations = new Map<number, number>();
   private closed = false;
@@ -631,6 +638,7 @@ export class PanelAppProcessService {
     // Admission is reserved before the first await, including a user's approval dialog.
     const releaseExecution = this.options.acquireExecution?.(owner);
     let processOwnsExecution = false;
+    let pendingApproval: { key: string; approval: PendingExecutionApproval } | undefined;
     this.reservations.set(owner.guestId, reserved + 1);
     try {
       await this.authorize(owner, epoch);
@@ -656,20 +664,36 @@ export class PanelAppProcessService {
         approved = await this.options.isExecutionApproved(scope).catch(() => false);
         await this.authorize(owner, epoch);
       }
+      approved ||= this.approvedExecutables.has(approvalKey);
       if (!approved) {
-        const allowed = await this.options.confirmExecution({
-          guestId: owner.guestId,
-          appId: owner.appId,
-          appTitle: owner.appTitle,
-          executable: executable.name,
-          executablePath: executable.path,
-        });
-        await this.authorize(owner, epoch);
-        if (!allowed) throw new Error(`User denied running ${executable.name}`);
-        if (!guestScoped) {
-          await this.options.rememberExecutionApproval?.(scope).catch(() => undefined);
-          await this.authorize(owner, epoch);
+        let approval = this.pendingExecutionApprovals.get(approvalKey);
+        if (!approval) {
+          approval = {
+            guestId: owner.guestId,
+            waiters: 0,
+            result: (async () => {
+              const allowed = await this.options.confirmExecution({
+                guestId: owner.guestId,
+                appId: owner.appId,
+                appTitle: owner.appTitle,
+                executable: executable.name,
+                executablePath: executable.path,
+              });
+              await this.authorize(owner, epoch);
+              if (!allowed) throw new Error(`User denied running ${executable.name}`);
+              if (!guestScoped) {
+                await this.options.rememberExecutionApproval?.(scope).catch(() => undefined);
+                await this.authorize(owner, epoch);
+              }
+            })(),
+          };
+          this.pendingExecutionApprovals.set(approvalKey, approval);
         }
+        approval.waiters++;
+        pendingApproval = { key: approvalKey, approval };
+        await approval.result;
+        // Sharing consent does not share a caller's authority or process handles.
+        await this.authorize(owner, epoch);
       }
       // A binary replaced while a dialog was open must earn a new approval.
       if ((await executableFingerprint(executable.path)) !== scope.executableFingerprint) {
@@ -895,6 +919,14 @@ export class PanelAppProcessService {
       processOwnsExecution = true;
       return { processId, executable: executable.name };
     } finally {
+      if (pendingApproval) {
+        const { key, approval } = pendingApproval;
+        approval.waiters--;
+        // Keep successful consent in flight until a caller has cached it after
+        // all spawn checks. Rejections disappear once every waiter has observed them.
+        if (!approval.waiters && this.pendingExecutionApprovals.get(key) === approval)
+          this.pendingExecutionApprovals.delete(key);
+      }
       if (!processOwnsExecution) releaseExecution?.();
       const remaining = (this.reservations.get(owner.guestId) ?? 1) - 1;
       if (remaining) this.reservations.set(owner.guestId, remaining);
@@ -1073,6 +1105,9 @@ export class PanelAppProcessService {
 
   revokeGuest(guestId: number): void {
     this.guestEpochs.set(guestId, (this.guestEpochs.get(guestId) ?? 0) + 1);
+    for (const [key, approval] of this.pendingExecutionApprovals) {
+      if (approval.guestId === guestId) this.pendingExecutionApprovals.delete(key);
+    }
     if (this.options.approvalScope === "guest") {
       for (const key of this.approvedExecutables) {
         if (key.startsWith(`${guestId}\0`)) this.approvedExecutables.delete(key);
@@ -1132,6 +1167,7 @@ export class PanelAppProcessService {
     ]);
     for (const guestId of guests) this.revokeGuest(guestId);
     this.approvedExecutables.clear();
+    this.pendingExecutionApprovals.clear();
     this.receipts.close();
   }
 

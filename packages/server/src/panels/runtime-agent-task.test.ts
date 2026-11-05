@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { Readable } from "node:stream";
 import type { InstalledPanelApp } from "@cjhyy/code-shell-core";
 import { createPanelAgentTaskHost } from "./agent-task-host.js";
-import type { PanelAgentTaskView } from "./agent-task-service.js";
+import type { PanelAgentTaskStartInput, PanelAgentTaskView } from "./agent-task-service.js";
 import { createPanelRuntime, panelWebCompatibility } from "./runtime.js";
 import type { PanelSnapshot } from "./types.js";
 
@@ -26,6 +26,7 @@ createInterface({input:process.stdin}).on('line',line=>{
  const frame=JSON.parse(line);
  if(frame.method==='agent/run'){
   run=frame;
+  if(['plan','rank'].includes(run.params.task)){send({id:run.id,result:{text:run.params.task,reason:'completed'}});return;}
   const ask=run.params.task.startsWith('ask:');
   const panel=run.params.task==='panel';
   send({method:'agent/approvalRequest',params:{sessionId:run.params.sessionId,connectionId:'private-connection',generation:31,requestId:'private-approval',request:{toolName:ask?'__ask_user__':panel?'__panel_action__':'Bash',description:ask?'Enter a real text answer':'Run fixture operation',args:ask?{question:'Which option?',mode:run.params.task.slice(4)}:panel?{action:'invoke',panelId:'panel-app:synthetic-panel',toolName:'read_panel',arguments:{}}:{command:'fixture command'}}}});
@@ -51,7 +52,7 @@ interface RuntimeEvent {
   payload: any;
 }
 
-async function fixture() {
+async function fixture(permissions = ["context.workspace", "agent.task"]) {
   const root = await realpath(await mkdtemp(join(tmpdir(), "panel-runtime-task-")));
   cleanups.push(() => rm(root, { recursive: true, force: true }));
   const cwd = join(root, "workspace");
@@ -74,7 +75,7 @@ async function fixture() {
     entry: "app/index.html",
     icon: "panel",
     singleton: true,
-    permissions: ["context.workspace", "agent.task"],
+    permissions,
     agent: {
       tools: [
         {
@@ -92,13 +93,15 @@ async function fixture() {
     lastUpdated: "2026-10-15T00:00:00.000Z",
   };
   const revision = "a".repeat(64);
+  let ownerId = "fixture-owner";
+  let authorized = true;
   let taskHost!: ReturnType<typeof createPanelAgentTaskHost>;
   const runtime = createPanelRuntime({
     cwd,
     dataDir: join(root, "data"),
     host: "hub",
-    ownerId: async () => "fixture-owner",
-    isAuthorized: async () => true,
+    ownerId: async () => ownerId,
+    isAuthorized: async () => authorized,
     listInstalled: async () => [structuredClone(app)],
     snapshot: async (): Promise<PanelSnapshot> => {
       const {
@@ -196,19 +199,16 @@ async function fixture() {
     });
     expect(response).toEqual({ status: 200, value: { accepted: true, allowed } });
   };
-  const start = async (prompt: string) => {
+  const start = async (prompt: string, input: PanelAgentTaskStartInput = {}) => {
     const before = (await events()).at(-1)?.id ?? 0;
-    const pending = call("agent.task.start", {
+    const response = await call("agent.task.start", {
       prompt,
       label: "Fixture task",
       toolNames: [prompt === "panel" ? "Panel" : "Bash"],
+      ...input,
     });
-    // This is the mandatory outer task-start confirmation, not a worker approval.
-    const startConfirmation = await waitEvent("host.confirm", before);
-    await confirm(startConfirmation, true);
-    const response = await pending;
     expect(response.status).toBe(200);
-    return { task: response.value as PanelAgentTaskView, startConfirmation };
+    return { task: response.value as PanelAgentTaskView, startEventId: before };
   };
   const completed = (id: string) =>
     until(async () => {
@@ -218,7 +218,24 @@ async function fixture() {
         ? (response.value as PanelAgentTaskView)
         : undefined;
     });
-  return { api, instanceId, log, taskHost, events, call, waitEvent, confirm, start, completed };
+  return {
+    api,
+    instanceId,
+    log,
+    taskHost,
+    events,
+    call,
+    waitEvent,
+    confirm,
+    start,
+    completed,
+    changeOwner: () => {
+      ownerId = "another-owner";
+    },
+    revoke: () => {
+      authorized = false;
+    },
+  };
 }
 
 async function until<T>(check: () => Promise<T | undefined>): Promise<T> {
@@ -231,17 +248,62 @@ async function until<T>(check: () => Promise<T | undefined>): Promise<T> {
   }
 }
 
+test("installed task permission starts planning and ranking without extra task confirmations", async () => {
+  const f = await fixture();
+  for (const stage of ["plan", "rank"]) {
+    const { task } = await f.start(stage, { key: `query-${stage}`, toolNames: [] });
+    expect((await f.completed(task.id)).result?.text).toBe(stage);
+  }
+  expect((await f.events()).filter((event) => event.event === "host.confirm")).toHaveLength(0);
+  expect(f.taskHost.activeTaskCount()).toBe(0);
+});
+
+test("task starts still reject missing permission, another owner, and revoked or closed grants", async () => {
+  const input = { prompt: "plan", label: "Plan", toolNames: [] };
+  const missing = await fixture(["context.workspace"]);
+  expect((await missing.call("agent.task.start", input)).status).toBe(403);
+  expect(missing.taskHost.activeTaskCount()).toBe(0);
+
+  const otherOwner = await fixture();
+  otherOwner.changeOwner();
+  expect((await otherOwner.call("agent.task.start", input)).status).toBe(403);
+  expect(otherOwner.taskHost.activeTaskCount()).toBe(0);
+
+  const revoked = await fixture();
+  revoked.revoke();
+  expect((await revoked.call("agent.task.start", input)).status).toBe(401);
+  expect(revoked.taskHost.activeTaskCount()).toBe(0);
+
+  const closed = await fixture();
+  expect((await closed.api(closed.instanceId, "DELETE")).status).toBe(200);
+  expect((await closed.call("agent.task.start", input)).status).toBe(410);
+  expect(closed.taskHost.activeTaskCount()).toBe(0);
+});
+
+test("an active task retry does not restart AI or bypass the pending worker approval", async () => {
+  const f = await fixture();
+  const request = { prompt: "bash", label: "Fixture task", key: "query", toolNames: ["Bash"] };
+  const { task, startEventId } = await f.start("bash", request);
+  const approval = await f.waitEvent("host.confirm", startEventId);
+  expect(approval.payload.title).toBe("批准 Bash");
+  expect((await f.call("agent.task.start", request)).value.id).toBe(task.id);
+  expect(f.taskHost.activeTaskCount()).toBe(1);
+  expect((await f.events()).filter((event) => event.event === "host.confirm")).toHaveLength(1);
+  await f.confirm(approval, false);
+  expect((await f.completed(task.id)).result?.text).toBe("Declined by user");
+});
+
 for (const mode of ["sync", "async"]) {
   test(`Panel runtime rejects ${mode} AskUser without a boolean confirmation or private approval leak`, async () => {
     const f = await fixture();
-    const { task, startConfirmation } = await f.start(`ask:${mode}`);
+    const { task, startEventId } = await f.start(`ask:${mode}`);
     const done = await f.completed(task.id);
     expect(done.result!.text).toMatch(/user\.ask.*not supported.*Panel agent task/);
     const decision = JSON.parse(await readFile(f.log, "utf8")).decision;
     expect(decision).toMatchObject({ approved: false, failure: "unavailable" });
     expect(decision.reason).toBe(done.result!.text);
     expect(decision.answer).toBeUndefined();
-    const workerEvents = (await f.events()).filter((event) => event.id > startConfirmation.id);
+    const workerEvents = (await f.events()).filter((event) => event.id > startEventId);
     expect(workerEvents.some(({ event }) => event === "host.confirm")).toBe(false);
     expect(workerEvents.some(({ event }) => event.startsWith("agent.task.approval"))).toBe(false);
     expect(JSON.stringify(workerEvents)).not.toMatch(
@@ -259,8 +321,8 @@ for (const mode of ["sync", "async"]) {
 for (const allowed of [true, false]) {
   test(`Panel runtime preserves ordinary worker approval through host.confirm (${allowed})`, async () => {
     const f = await fixture();
-    const { task, startConfirmation } = await f.start("bash");
-    const approval = await f.waitEvent("host.confirm", startConfirmation.id);
+    const { task, startEventId } = await f.start("bash");
+    const approval = await f.waitEvent("host.confirm", startEventId);
     expect(approval.payload).toMatchObject({ title: "批准 Bash", body: "Run fixture operation" });
     expect(approval.payload.requestId).not.toBe("private-approval");
     await f.confirm(approval, allowed);
@@ -284,8 +346,8 @@ for (const allowed of [true, false]) {
 test("Panel runtime preserves installed Panel callbacks without generic approval", async () => {
   const f = await fixture();
   expect((await f.call("tools.register", { name: "read_panel" })).status).toBe(200);
-  const { task, startConfirmation } = await f.start("panel");
-  const invocation = await f.waitEvent("tools.invoke", startConfirmation.id);
+  const { task, startEventId } = await f.start("panel");
+  const invocation = await f.waitEvent("tools.invoke", startEventId);
   expect(invocation.payload).toMatchObject({ toolName: "read_panel", args: {} });
   const reply = await f.api(`${f.instanceId}/tool-results`, "POST", {
     requestId: invocation.payload.requestId,
@@ -299,7 +361,7 @@ test("Panel runtime preserves installed Panel callbacks without generic approval
     toolName: "read_panel",
     result: { saved: true },
   });
-  const workerEvents = (await f.events()).filter((event) => event.id > startConfirmation.id);
+  const workerEvents = (await f.events()).filter((event) => event.id > startEventId);
   expect(workerEvents.some(({ event }) => event === "host.confirm")).toBe(false);
   expect(workerEvents.some(({ event }) => event.startsWith("agent.task.approval"))).toBe(false);
   expect(JSON.stringify(workerEvents)).not.toMatch(/private-approval|__panel_action__/);

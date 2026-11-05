@@ -2399,7 +2399,7 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
     ).toBe("");
   });
 
-  test("agent tasks require a parent confirmation and retain their exact owner and bundled skills", async () => {
+  test("installed task permission retains the exact owner and bundled skills without extra confirmation", async () => {
     const calls: Array<{ scope: PanelTaskScope; method: string; params: unknown }> = [];
     const revoked: string[] = [];
     const f = await fixture({
@@ -2426,18 +2426,12 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
       method: "agent.task.start",
       params: { prompt: "Summarize the fixture", label: "Summary" },
     };
-    const pending = f.api(`${grant.instanceId}/call`, "POST", input);
-    const confirmation = await waitRuntimeEvent(f, grant.instanceId, "host.confirm");
-    expect(calls).toHaveLength(0);
+    expect((await f.api(`${grant.instanceId}/call`, "POST", input)).status).toBe(200);
     expect(
-      (
-        await f.api(`${grant.instanceId}/confirm`, "POST", {
-          requestId: confirmation.payload.requestId,
-          allowed: true,
-        })
-      ).status,
-    ).toBe(200);
-    expect((await pending).status).toBe(200);
+      (await runtimeEvents(f, grant.instanceId)).events.some(
+        (event) => event.event === "host.confirm",
+      ),
+    ).toBe(false);
     expect(calls).toHaveLength(1);
     expect(calls[0]!.scope).toMatchObject({
       instanceId: grant.instanceId,
@@ -2452,14 +2446,6 @@ setTimeout(()=>console.log(JSON.stringify({type:"result",result:{ok:true,value:r
       id: "task-fixture",
       status: "running",
     });
-    const denied = f.api(`${grant.instanceId}/call`, "POST", input);
-    const second = await waitRuntimeEvent(f, grant.instanceId, "host.confirm", confirmation.id);
-    await f.api(`${grant.instanceId}/confirm`, "POST", {
-      requestId: second.payload.requestId,
-      allowed: false,
-    });
-    expect((await denied).status).toBe(403);
-    expect(calls).toHaveLength(1);
     f.runtime.cancelOwner("owner-a");
     expect(revoked).toContain(grant.instanceId);
     expect(await calls[0]!.scope.isAuthorized()).toBe(false);

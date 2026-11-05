@@ -382,30 +382,17 @@ test("active independent Panel tasks block model configuration until cancellatio
   const grant = await f.prepare("session-task");
   const call = (method: string, params?: unknown) =>
     f.api(`/api/v1/panels/runtime/${grant.instanceId}/call`, "POST", { method, params }, f.owner);
-  const pending = call("agent.task.start", {
+  const response = await call("agent.task.start", {
     prompt: "hold",
     label: "Hold independent task",
     toolNames: [],
   });
-  const batch = await until(
-    () => f.events(grant.instanceId),
-    (value) => value.events.some((event) => event.event === "host.confirm"),
-  );
-  const confirmation = batch.events.find((event) => event.event === "host.confirm")!.payload;
-  expect(
-    (
-      await f.api(
-        `/api/v1/panels/runtime/${grant.instanceId}/confirm`,
-        "POST",
-        { requestId: confirmation.requestId, allowed: true },
-        f.owner,
-      )
-    ).status,
-  ).toBe(200);
-  const response = await pending;
   expect(response.status).toBe(200);
   const task = (await response.json()) as any;
   expect(task.status).toBe("running");
+  expect(
+    (await f.events(grant.instanceId)).events.some((event) => event.event === "host.confirm"),
+  ).toBe(false);
   const save = () =>
     f.api("/api/v1/configuration/defaults", "PUT", { text: "panel-fixture" }, f.owner);
   expect((await save()).status).toBe(409);
