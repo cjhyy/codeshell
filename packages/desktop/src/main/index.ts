@@ -349,6 +349,7 @@ import {
 } from "./credentials-service.js";
 import { cookieCredentialAutoRefresh } from "./cookie-credential-auto-refresh.js";
 import { isBrowserPartition } from "../shared/browser-partition.js";
+import { isProfileBrowserPartition } from "../shared/browser-profile.js";
 import { resolveCookieCredentialForBrowser } from "./credential-action.js";
 import { restoreCookieCredentialToBrowser } from "./cookie-credential-browser.js";
 import { loginAndCaptureCookies } from "./credentials-login/index.js";
@@ -1442,14 +1443,18 @@ function hardenWebviewGuests(win: BrowserWindow): void {
     // OS popup window while still intercepting the URL. Not a security loosening:
     // every popup is denied; we only read its URL to open an in-app tab.
     (params as Record<string, unknown>).allowpopups = true;
-    // Partition = the guest's isolated storage/session. The renderer passes a
-    // per-chat-session partition (`persist:browser:<bucket>`) so one session's
-    // cookies/logged-in state/live page don't bleed into another's. Only honor a
-    // `persist:browser`-prefixed value (defense-in-depth: never let a guest pick
-    // an arbitrary partition, e.g. the app's own default session); anything else
-    // → the shared browser partition.
+    // Partition = the guest's cookie jar, derived from the browser PROFILE so
+    // the panel, the agent's task window and Cookie restore share one login
+    // state. A session-derived name has the right prefix but is a jar nothing
+    // else writes; refuse it loudly rather than show a logged-out page. Absent
+    // → the legacy shared partition (popout / older callers).
     const wantPartition = typeof params.partition === "string" ? params.partition : "";
-    params.partition = isBrowserPartition(wantPartition) ? wantPartition : BROWSER_PARTITION;
+    if (wantPartition && !isProfileBrowserPartition(wantPartition)) {
+      dlog("browser", "webview_partition_rejected", { partition: wantPartition.slice(0, 200) });
+      event.preventDefault();
+      return;
+    }
+    params.partition = wantPartition || BROWSER_PARTITION;
     pendingWebviews.push({ kind: "browser", partition: String(params.partition) });
   });
   win.webContents.on("did-attach-webview", (_e, guest) => {
