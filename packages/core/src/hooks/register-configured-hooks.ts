@@ -15,7 +15,7 @@
 import type { HookEventName } from "./events.js";
 import type { HookHandler, HookRegistry } from "./registry.js";
 import { runShellHook, shellHookMatches } from "./shell-runner.js";
-import { loadPluginHooks } from "../plugins/loadPluginHooks.js";
+import { loadPluginHooks, type PluginHookDisablePolicy } from "../plugins/loadPluginHooks.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import type { SettingsManager } from "../settings/manager.js";
 import type { SettingsHookConfig } from "../types.js";
@@ -57,16 +57,19 @@ export function registerSettingsShellHooks(
  * Register the plugin and settings hooks `settings` resolves for `cwd`, exactly
  * as a top-level Native Engine does at construction. Read failures register
  * nothing rather than throwing, matching the Engine's best-effort contract.
+ * Hosts may supply a live plugin policy for Profile/project/local capability
+ * changes; settings shell hooks keep their construction-time trust contract.
  */
 export function registerConfiguredHooks(
   registry: HookRegistry,
   settings: SettingsManager,
   cwd: string,
   owner?: HookOwner,
+  getPluginHookPolicy?: () => PluginHookDisablePolicy,
 ): void {
   try {
     const { disabledPlugins, disabledPluginHooks } = computeEffectiveDisabledLists(settings, cwd);
-    loadPluginHooks(registry, disabledPlugins, disabledPluginHooks, owner);
+    loadPluginHooks(registry, disabledPlugins, disabledPluginHooks, owner, getPluginHookPolicy);
   } catch {
     // A plugin-registry failure must not also drop the user's settings hooks.
   }

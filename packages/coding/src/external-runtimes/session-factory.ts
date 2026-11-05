@@ -90,6 +90,8 @@ export interface ExternalRuntimeSessionOptions {
   contextOverrides?: Parameters<typeof createSessionToolHost>[0]["contextOverrides"];
   captureRunContext?: Parameters<typeof createSessionToolHost>[0]["captureRunContext"];
   settingsScope?: Parameters<typeof createSessionToolHost>[0]["settingsScope"];
+  /** Resolve the pinned Host Profile's current capability overrides for each tool operation. */
+  getProfileOverrides?: Parameters<typeof createSessionToolHost>[0]["getProfileOverrides"];
   /**
    * Override the runtime's declared image capability (e.g. a host that knows
    * the selected model is text-only). Defaults per runtime kind.
@@ -208,6 +210,7 @@ export async function startExternalRuntimeSession(
       getStreamCallback: () => turnSink,
       ...(options.captureRunContext ? { captureRunContext: options.captureRunContext } : {}),
       ...(options.settingsScope ? { settingsScope: options.settingsScope } : {}),
+      ...(options.getProfileOverrides ? { getProfileOverrides: options.getProfileOverrides } : {}),
       modelSupportsVision: options.modelSupportsVision ?? RUNTIME_ACCEPTS_TOOL_IMAGES[options.kind],
       // `hooks` is deliberately not passed: the host then loads the same
       // settings/plugin tool hooks a Native Engine registers for this cwd,

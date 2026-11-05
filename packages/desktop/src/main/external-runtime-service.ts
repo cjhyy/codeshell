@@ -76,6 +76,7 @@ import { createExternalRuntimeSourceContext } from "./external-runtime-source-co
 import {
   bindExternalRuntimeProfile,
   externalRuntimeProfileInstructions,
+  readExternalRuntimeProfileOverrides,
   requestedExternalRuntimeProfile,
 } from "./external-runtime-profile.js";
 import { startExternalRuntimeTrace } from "./external-runtime-tracing.js";
@@ -892,8 +893,9 @@ export class ExternalRuntimeService {
     // `new ToolRegistry({})` registers none, which would make the allowlist
     // moot in the quietest possible way: `listTools()` returns [], the runtime
     // advertises nothing, and it looks like the policy denied everything.
-    // Built from the policy so the two cannot drift — a name added to the
-    // allowlist is registered by that same edit.
+    // The registry contains the full catalog. SessionToolHost intersects it
+    // with the reviewed exposure policy and the current capability settings;
+    // registration alone never grants external access.
     const registry = new ToolRegistry({ toolCatalog: [...BUILTIN_TOOLS, ...CODING_TOOLS] });
     const fullAccess = request.permissionMode === "bypassPermissions";
     // Keep host tool deny rules and exposure checks while honoring the user's
@@ -1236,6 +1238,13 @@ export class ExternalRuntimeService {
         // This is the same trusted Desktop scope used by its native stdio
         // Engine. projectTrusted still filters executable project permission rules.
         settingsScope: "full",
+        getProfileOverrides: () =>
+          readExternalRuntimeProfileOverrides({
+            sessionId: request.sessionId,
+            cwd: authority.mainRoot,
+            settingsScope: "full",
+            projectTrusted,
+          }),
         visibility: {
           cwd: request.cwd,
           hasGoal: request.hasGoal === true,

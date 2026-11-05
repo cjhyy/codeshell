@@ -675,6 +675,14 @@ export class ToolExecutor {
     // Hooks and approvals may await while the host revokes a capability. This
     // refresh changes eligibility only, never the completed model step's tools.
     this.toolCtx?.refreshRunToolEligibility?.();
+    if (this.toolCtx?.disabledBuiltins?.has(call.toolName)) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool ${call.toolName} was disabled before execution. Do NOT retry unless the Session context changes.`,
+        isError: true,
+      };
+    }
     if (surface && !surface.isEligible(call.toolName)) {
       return {
         id: call.id,

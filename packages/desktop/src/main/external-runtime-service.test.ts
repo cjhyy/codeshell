@@ -29,6 +29,7 @@ import {
 import {
   backgroundJobRegistry,
   activateWorkspaceProfile,
+  deleteWorkspaceProfile,
   ModelTraceStore,
   saveWorkspaceProfile,
   SessionOutputCoverageStore,
@@ -2801,6 +2802,42 @@ describe("ExternalRuntimeService", () => {
     expect(starts).toHaveLength(0);
     expect(svc.get(request.sessionId)).toBeUndefined();
   });
+
+  test.each(["codex", "claude-code"] as const)(
+    "%s resolves live tool overrides from its Session profile instead of the startup snapshot",
+    async (kind) => {
+      saveWorkspaceProfile({
+        basePreset: "general",
+        name: "reviewer",
+        label: "Reviewer",
+        skills: ["review"],
+        plugins: ["review-tools"],
+      });
+      const svc = service({ external_agent_runtime: true, external_host_tools: true });
+      try {
+        await svc.start({ ...request, kind, workspaceProfile: "reviewer" });
+        const readOverrides = starts[0]!.getProfileOverrides as () => unknown;
+        expect(readOverrides()).toEqual({
+          skills: { review: "on" },
+          plugins: { "review-tools": "on" },
+        });
+        saveWorkspaceProfile({
+          basePreset: "general",
+          name: "reviewer",
+          label: "Reviewer",
+          skills: ["updated-review"],
+        });
+        expect(readOverrides()).toEqual({ skills: { "updated-review": "on" } });
+        expect(starts).toHaveLength(1);
+
+        // Deleting a selected profile cannot silently restore the project default.
+        deleteWorkspaceProfile("reviewer");
+        expect(readOverrides).toThrow(/unavailable/);
+      } finally {
+        await svc.stopAll();
+      }
+    },
+  );
 
   test("lists the live runtimes a window owns so a reloaded renderer can recover Stop", async () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true });

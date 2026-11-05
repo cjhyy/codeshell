@@ -68,6 +68,12 @@ import {
 /** Priority for plugin hooks — between built-in (100) and settings (50). */
 const PLUGIN_HOOK_PRIORITY = 80;
 
+/** Current capability policy for installed plugin hooks in one session. */
+export interface PluginHookDisablePolicy {
+  disabledPlugins: string[];
+  disabledPluginHooks: string[];
+}
+
 const EVENT_NAME_MAP: Record<SupportedPluginHookEvent, HookEventName> = {
   SessionStart: "on_session_start",
   UserPromptSubmit: "user_prompt_submit",
@@ -188,18 +194,25 @@ export function pluginHookKey(hook: { plugin: string; rawEvent: string; command:
  * {@link pluginHookKey} keys (folded from the project's
  * `capabilityOverrides.pluginHooks` by readDisabledLists). A matching hook
  * is skipped while the rest of the plugin keeps working.
+ *
+ * With `getPluginHookPolicy`, approved hooks register regardless of these
+ * initial disabled lists and check the current policy before every invocation.
+ * This lets a live session disable and re-enable hooks without rebuilding its
+ * registry. Policy read failures suppress execution; approval gates still apply.
  */
 export function loadPluginHooks(
   registry: HookRegistry,
   disabledPlugins: string[] = [],
   disabledPluginHooks: string[] = [],
   owner?: Pick<LifetimeScope, "own">,
+  getPluginHookPolicy?: () => PluginHookDisablePolicy,
 ): void {
   const data = readInstalledPlugins();
   const disabledSet = new Set(disabledPlugins);
   const disabledHookSet = new Set(disabledPluginHooks);
   for (const [key, entries] of Object.entries(data.plugins)) {
-    if (disabledSet.has(pluginNameFromKey(key))) continue;
+    const pluginName = pluginNameFromKey(key);
+    if (!getPluginHookPolicy && disabledSet.has(pluginName)) continue;
     for (const entry of entries) {
       const installPath = entry.installPath;
       if (!installPath) continue;
@@ -213,17 +226,12 @@ export function loadPluginHooks(
       if (!snapshot.definition) continue;
 
       for (const hook of iteratePluginHooks(snapshot.definition)) {
-        if (
-          disabledHookSet.has(
-            pluginHookKey({
-              plugin: pluginNameFromKey(key),
-              rawEvent: hook.rawEvent,
-              command: hook.command.command,
-            }),
-          )
-        ) {
-          continue;
-        }
+        const hookKey = pluginHookKey({
+          plugin: pluginName,
+          rawEvent: hook.rawEvent,
+          command: hook.command.command,
+        });
+        if (!getPluginHookPolicy && disabledHookSet.has(hookKey)) continue;
         const commandLine = hook.command.command;
         const timeoutMs = hook.command.timeoutMs;
         // A CC event that maps onto a SHARED codeshell event (SubagentStop
@@ -232,6 +240,20 @@ export function loadPluginHooks(
         const matcher = hook.matcher ?? IMPLIED_NOTIFICATION_KIND[hook.rawEvent];
         const handler = async (ctx: HookContext): Promise<HookResult> => {
           if (!matcherAccepts(hook.event, matcher, ctx)) return {};
+          if (getPluginHookPolicy) {
+            try {
+              const policy = getPluginHookPolicy();
+              if (
+                policy.disabledPlugins.includes(pluginName) ||
+                policy.disabledPluginHooks.includes(hookKey)
+              ) {
+                return {};
+              }
+            } catch {
+              // A missing or unreadable current policy must never launch a hook.
+              return {};
+            }
+          }
           return runPluginCommandHook(
             {
               command: commandLine,
@@ -246,7 +268,7 @@ export function loadPluginHooks(
           hook.event,
           handler,
           PLUGIN_HOOK_PRIORITY,
-          `plugin:${pluginNameFromKey(key)}:${hook.rawEvent}`,
+          `plugin:${pluginName}:${hook.rawEvent}`,
         );
         owner?.own(dispose);
       }
