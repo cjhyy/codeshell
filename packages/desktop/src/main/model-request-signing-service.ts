@@ -15,6 +15,8 @@ export function createDesktopModelRequestSigner(options: {
   cipher: EncryptionCipher;
   encryptionAvailable: () => boolean;
   hasActiveEphemeralOwner: (sessionId: string) => boolean;
+  /** Explicit running Host tasks; absence grants no additional ephemeral authority. */
+  hasActiveHostTaskOwner?: (sessionId: string) => boolean;
 }): ModelRequestSigner {
   const scopeId = createHash("sha256").update(options.sessionStorageDir).digest("hex");
   const keys = new ModelRequestKeyStore({
@@ -23,6 +25,9 @@ export function createDesktopModelRequestSigner(options: {
     custodyMode: "host-encrypted",
   });
   const ephemeralIncarnations = new Map<string, string>();
+  const hasActiveOwner = (sessionId: string) =>
+    options.hasActiveEphemeralOwner(sessionId) ||
+    options.hasActiveHostTaskOwner?.(sessionId) === true;
   return {
     async sign(input: ModelRequestSignInput) {
       const subject = input?.subject;
@@ -34,18 +39,18 @@ export function createDesktopModelRequestSigner(options: {
       )
         throw new Error("Request signing owner mismatch");
       if (subject.ephemeral === true) {
-        if (!options.hasActiveEphemeralOwner(subject.sessionId))
+        if (!hasActiveOwner(subject.sessionId))
           throw new Error("Ephemeral request signing owner is no longer active");
         const bound = ephemeralIncarnations.get(subject.sessionId);
         if (bound && bound !== subject.sessionInstanceId)
           throw new Error("Ephemeral request signing incarnation mismatch");
-        // First use is authorized by native Quick Chat ownership, then pinned
+        // First use is authorized by native Quick Chat or an active Host task, then pinned
         // for this worker generation. dispose() runs when that generation ends.
         ephemeralIncarnations.set(subject.sessionId, subject.sessionInstanceId);
         try {
           const signatures = await keys.sign(input);
           if (
-            !options.hasActiveEphemeralOwner(subject.sessionId) ||
+            !hasActiveOwner(subject.sessionId) ||
             ephemeralIncarnations.get(subject.sessionId) !== subject.sessionInstanceId
           )
             throw new Error("Ephemeral request signing owner changed");
