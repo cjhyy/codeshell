@@ -107,6 +107,7 @@ export interface BrowserActionRequest {
     | "listTabs"
     | "switchTab"
     | "requestTakeover"
+    | "requestPanelAccess"
     | "resumeControl"
     | "inspect";
   inspect?: BrowserInspectOptions;

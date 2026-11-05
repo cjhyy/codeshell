@@ -35,6 +35,7 @@ import {
   useMarkerEcho,
 } from "../browser/markerEcho";
 import { NEW_TAB, NEW_TAB_TITLE, type Tab, type WebviewElement } from "../browser/types";
+import type { BrowserPanelAccessPrompt } from "../../preload/browser-panel-access-api";
 import { WebviewHost } from "../browser/WebviewHost";
 import { FloatingAt, IconBtn } from "../browser/ui";
 import { MarkerDot } from "../browser/markers";
@@ -253,6 +254,8 @@ export function BrowserPanel({
     expiresAt?: number;
   }>({ granted: false, sessionId: engineSessionId ?? "" });
   const [handoffBusy, setHandoffBusy] = useState(false);
+  // The agent asked for this tab (request_panel_access); only Allow grants it.
+  const [accessPrompt, setAccessPrompt] = useState<BrowserPanelAccessPrompt | null>(null);
   const [readyGuestTabId, setReadyGuestTabId] = useState<string | null>(null);
   const [chromeRuntime, setChromeRuntime] = useState<{
     sessionId: string;
@@ -310,6 +313,18 @@ export function BrowserPanel({
     };
   }, [activeId, engineSessionId]);
 
+  const grantActiveTab = useCallback(async (): Promise<void> => {
+    const guestId = viewRef.current?.getWebContentsId?.();
+    if (!engineSessionId || !Number.isFinite(guestId)) {
+      throw new Error("browser guest is not attached");
+    }
+    const status = await window.codeshell.grantBuiltInBrowserToRuntime({
+      sessionId: engineSessionId,
+      guestId: guestId!,
+    });
+    setHandoff(status);
+  }, [engineSessionId, viewRef]);
+
   const toggleRuntimeHandoff = useCallback(async (): Promise<void> => {
     if (!engineSessionId || handoffBusy || !activeGuestReady) return;
     setHandoffBusy(true);
@@ -320,14 +335,7 @@ export function BrowserPanel({
         toast({ message: t("panels.browser.handoffRevoked"), variant: "success" });
         return;
       }
-      const view = viewRef.current;
-      const guestId = view?.getWebContentsId?.();
-      if (!Number.isFinite(guestId)) throw new Error("browser guest is not attached");
-      const status = await window.codeshell.grantBuiltInBrowserToRuntime({
-        sessionId: engineSessionId,
-        guestId: guestId!,
-      });
-      setHandoff(status);
+      await grantActiveTab();
       toast({ message: t("panels.browser.handoffGranted"), variant: "success" });
     } catch (error) {
       toast({
@@ -339,7 +347,51 @@ export function BrowserPanel({
     } finally {
       setHandoffBusy(false);
     }
-  }, [activeGuestReady, engineSessionId, handoff.granted, handoffBusy, t, toast, viewRef]);
+  }, [activeGuestReady, engineSessionId, grantActiveTab, handoff.granted, handoffBusy, t, toast]);
+
+  useEffect(() => {
+    if (!engineSessionId) return;
+    return window.codeshell.browserPanelAccess?.onRequest((prompt) => {
+      if (prompt.sessionId === engineSessionId) setAccessPrompt(prompt);
+    });
+  }, [engineSessionId]);
+
+  // Main declines an unanswered request at expiresAt; drop the bar with it.
+  useEffect(() => {
+    if (!accessPrompt) return;
+    const timer = setTimeout(
+      () => setAccessPrompt((current) => (current === accessPrompt ? null : current)),
+      Math.max(0, accessPrompt.expiresAt - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [accessPrompt]);
+
+  const answerAccessPrompt = useCallback(
+    async (allow: boolean): Promise<void> => {
+      if (!accessPrompt) return;
+      setAccessPrompt(null);
+      let granted = false;
+      if (allow) {
+        setHandoffBusy(true);
+        try {
+          if (!handoff.granted) await grantActiveTab();
+          granted = true;
+          toast({ message: t("panels.browser.handoffGranted"), variant: "success" });
+        } catch (error) {
+          toast({
+            message: `${t("panels.browser.handoffFailed")}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+            variant: "error",
+          });
+        } finally {
+          setHandoffBusy(false);
+        }
+      }
+      window.codeshell.browserPanelAccess?.respond(accessPrompt.requestId, granted);
+    },
+    [accessPrompt, grantActiveTab, handoff.granted, t, toast],
+  );
 
   const toggleChromeRuntime = useCallback(async (): Promise<void> => {
     if (!engineSessionId || chromeBusy) return;
@@ -588,6 +640,36 @@ export function BrowserPanel({
           </IconBtn>
         </div>
       </div>
+
+      {accessPrompt && (
+        <div
+          role="alertdialog"
+          aria-label={t("panels.browser.accessRequestTitle")}
+          className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs text-foreground"
+        >
+          <span>{t("panels.browser.accessRequest")}</span>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => void answerAccessPrompt(false)}
+            >
+              {t("panels.browser.accessDeny")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              disabled={handoffBusy || !activeGuestReady}
+              onClick={() => void answerAccessPrompt(true)}
+            >
+              {t("panels.browser.accessAllow")}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {handoff.granted && (
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs text-foreground">

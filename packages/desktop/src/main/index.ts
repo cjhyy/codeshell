@@ -295,6 +295,8 @@ import {
   interactiveBrowserBridgeForSession,
   interactiveBrowserRuntimeOwner,
   nativeMessagingOriginFromArgv,
+  panelAccessRequests,
+  registerPanelAccessResponses,
   runChromeNativeMessagingHost,
   type ChromeNativeRegistrationResult,
 } from "./browser-runtime/index.js";
@@ -4662,6 +4664,8 @@ ipcMain.handle(
   },
 );
 
+registerPanelAccessResponses(ipcMain, (sender) => BrowserWindow.fromWebContents(sender)?.id);
+
 ipcMain.handle("browser-runtime:revoke-built-in", async (event, rawSessionId: unknown) => {
   const { sessionId } = await prepareRendererBrowserSession(event, rawSessionId);
   builtInBrowserHandoffGrants.revoke(sessionId);
@@ -6877,6 +6881,7 @@ async function deleteDesktopSession(id: string): Promise<void> {
 async function deleteDesktopSessionResources(id: string): Promise<void> {
   mediaPreviewService.releaseSession(id);
   builtInBrowserHandoffGrants.clearSession(id);
+  panelAccessRequests.forgetSession(id);
   chromeExtensionRuntimeService.forgetSession(id);
   const browserPartition = partitionForSession(id);
   const ephemeralBrowserPartition = id.startsWith("qchat-") ? browserPartition : null;

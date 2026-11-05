@@ -235,6 +235,9 @@ export interface BrowserBridge {
   requestHumanTakeover?(): Promise<BrowserResult>;
   /** Explicitly resume automation after the user has finished manual control. */
   resumeControl?(): Promise<BrowserResult>;
+  /** Ask the user to grant the BrowserPanel tab they are looking at. Only the
+   * user's confirmation in the panel grants it; the model cannot. */
+  requestPanelAccess?(): Promise<BrowserResult>;
   /** Separate developer-tool permission applies before this host-scoped call. */
   inspect?(options: BrowserInspectOptions): Promise<BrowserInspectResult>;
   snapshot(): Promise<BrowserSnapshot>;

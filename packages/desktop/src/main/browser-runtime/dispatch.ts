@@ -10,6 +10,7 @@ import { browserRuntime, type BrowserRuntimeLike } from "./runtime.js";
 import { builtInTabClaimBackend } from "./built-in-handoff.js";
 import { chromeExtensionBackend } from "./chrome-extension-singleton.js";
 import { interactiveBrowserRuntimeOwner } from "./dispatch-owner.js";
+import { panelAccessRequests, type PanelAccessRequests } from "./panel-access-request.js";
 
 export { interactiveBrowserRuntimeOwner } from "./dispatch-owner.js";
 
@@ -70,11 +71,13 @@ export function cancelBrowserActionsForStoppedRun(
 export function beginBrowserRunForStartedRun(
   message: { method?: unknown; params?: unknown },
   runtime: BrowserRuntimeLike = browserRuntime,
+  panelAccess: Pick<PanelAccessRequests, "beginRun"> = panelAccessRequests,
 ): boolean {
   if (message.method !== "agent/run") return false;
   const sessionId = (message.params as { sessionId?: unknown } | undefined)?.sessionId;
   if (typeof sessionId !== "string" || !sessionId) return false;
   runtime.beginRun?.(interactiveBrowserRuntimeOwner(sessionId));
+  panelAccess.beginRun(sessionId);
   return true;
 }
 
@@ -100,6 +103,17 @@ export async function dispatchInteractiveBrowserRuntimeAction(
       retryable: false,
       detail: "child browser run has ended",
     });
+  }
+  if (request.action === "requestPanelAccess") {
+    // Only the user's own task may ask for the user's panel tab.
+    return child
+      ? JSON.stringify({
+          ok: false,
+          code: "FAILED",
+          retryable: false,
+          detail: "a child task cannot request the user's BrowserPanel tab",
+        })
+      : panelAccessRequests.request(sessionId);
   }
   // Resolve claims, including expired/revoked claims, before every action.
   // Takeover must preserve target continuity just like click or navigation.
@@ -181,6 +195,7 @@ export function interactiveBrowserBridgeForSession(sessionId: string): BrowserBr
   return {
     requestHumanTakeover: () => call({ action: "requestTakeover" }),
     resumeControl: () => call({ action: "resumeControl" }),
+    requestPanelAccess: () => call({ action: "requestPanelAccess" }),
     inspect: (inspect) => call({ action: "inspect", inspect }),
     snapshot: () => call({ action: "snapshot" }),
     click: (ref) => call({ action: "click", ref }),

@@ -4166,6 +4166,7 @@ export class AgentServer {
     return {
       requestHumanTakeover: () => call("requestTakeover", {}),
       resumeControl: () => call("resumeControl", {}),
+      requestPanelAccess: () => call("requestPanelAccess", {}),
       inspect: (inspect) => call("inspect", { inspect }),
       snapshot: () => call("snapshot", {}),
       click: (ref) => call("click", { ref }),

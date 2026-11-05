@@ -342,6 +342,10 @@ export const browserActToolDef: ToolDefinition = {
     "user can see it and complete login, 2FA, CAPTCHA, or another required manual step. " +
     "Use only when the user asks to see the page or human interaction is required. " +
     "For an already granted panel tab, this only releases control; follow the host's visibility result.\n" +
+    "- request_panel_access: when the user asks you to use a page open in their BrowserPanel, " +
+    "ask them to grant that tab. They confirm in the panel; once granted, browser actions drive " +
+    "that tab instead of the task window. A declined or unanswered request is not asked again " +
+    "until the user's next message. Cookie injection never needs this.\n" +
     "- resume_control: resume after the user confirms their manual step is finished. " +
     "Then take a new snapshot; all previous element refs have expired.\n" +
     "- list_tabs: list tabs in the current task target or explicit grant (tabId, url, title, which is active); it does not discover ungranted panel tabs.\n" +
@@ -364,6 +368,7 @@ export const browserActToolDef: ToolDefinition = {
           "scroll",
           "wait",
           "request_takeover",
+          "request_panel_access",
           "resume_control",
           "list_tabs",
           "switch_tab",
@@ -434,6 +439,15 @@ export async function browserActTool(
       return r.ok
         ? `Browser control handed to the user${r.detail ? ` — ${r.detail}` : ""}`
         : `Error: ${r.detail ?? "could not reveal Browser Runtime"}`;
+    }
+    case "request_panel_access": {
+      if (!b.requestPanelAccess) {
+        return "Error: this host has no BrowserPanel to grant";
+      }
+      const r = await b.requestPanelAccess();
+      return r.ok
+        ? `BrowserPanel tab granted${r.detail ? ` — ${r.detail}` : ""}. Take a new snapshot before acting.`
+        : `Error: ${r.detail ?? "the BrowserPanel tab was not granted"}`;
     }
     case "list_tabs": {
       const tabs = await b.listTabs();

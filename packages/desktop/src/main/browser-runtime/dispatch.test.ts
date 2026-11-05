@@ -388,3 +388,29 @@ test("a new agent/run lets the session's user-closed task window reopen", () => 
   expect(beginBrowserRunForStartedRun({ method: "agent/run", params: {} }, runtime)).toBe(false);
   expect(begun).toHaveLength(1);
 });
+
+test("a child task cannot ask the user for their BrowserPanel tab", async () => {
+  const child = { sourceSessionId: "panel-child", bindingId: "panel-run" };
+  activateChildBrowserRuntime("panel-parent", child);
+  const runtime = {
+    acquire: async () => {
+      throw new Error("a refused request must not acquire a target");
+    },
+    close: () => undefined,
+    closeAll: () => undefined,
+  } as unknown as BrowserRuntimeLike;
+  try {
+    const out = JSON.parse(
+      await dispatchInteractiveBrowserRuntimeAction(
+        "panel-parent",
+        { action: "requestPanelAccess" },
+        runtime,
+        child,
+      ),
+    );
+    expect(out).toMatchObject({ ok: false, code: "FAILED" });
+    expect(out.detail).toContain("child task");
+  } finally {
+    releaseChildBrowserRuntime("panel-parent", child, runtime);
+  }
+});

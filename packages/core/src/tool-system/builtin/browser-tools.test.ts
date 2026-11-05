@@ -718,6 +718,38 @@ describe("browser_act request_takeover", () => {
   });
 });
 
+describe("browser_act request_panel_access", () => {
+  test("reports the tab the user granted", async () => {
+    let asked = 0;
+    const out = await browserActTool(
+      { action: "request_panel_access" },
+      ctxWith({
+        requestPanelAccess: async () => {
+          asked += 1;
+          return { ok: true, code: "OK", detail: 'browser actions now drive "Example"' };
+        },
+      }),
+    );
+    expect(asked).toBe(1);
+    expect(out).toContain("BrowserPanel tab granted");
+    expect(out).toContain("Take a new snapshot");
+  });
+
+  test("passes a decline through without claiming access", async () => {
+    const detail = "The user did not grant the BrowserPanel tab. Do not ask again.";
+    const out = await browserActTool(
+      { action: "request_panel_access" },
+      ctxWith({ requestPanelAccess: async () => ({ ok: false, code: "NEEDS_HUMAN", detail }) }),
+    );
+    expect(out).toBe(`Error: ${detail}`);
+  });
+
+  test("hosts without a BrowserPanel say so", async () => {
+    const out = await browserActTool({ action: "request_panel_access" }, ctxWith({}));
+    expect(out).toContain("no BrowserPanel");
+  });
+});
+
 describe("closed browser target guidance", () => {
   test("preserves the host's stop instruction without directing the model to another target", async () => {
     const detail =
