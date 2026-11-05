@@ -202,7 +202,7 @@ describe("BackgroundBrowserRuntime", () => {
   });
 
   test.each(["show", "requestHumanTakeover"] as const)(
-    "closing a target after %s permits explicit navigation without resuming a closed page",
+    "closing a target after %s stops the run; a new run may reopen it by explicit navigation",
     async (takeoverMethod) => {
       const h = harness();
       const owner = { ownerId: "closed-takeover", partition: "test-closed-takeover" };
@@ -224,7 +224,17 @@ describe("BackgroundBrowserRuntime", () => {
         expect(await next.bridge.listTabs()).toEqual([
           { ...before!, active: false, status: "closed" },
         ]);
+        for (let i = 0; i < 3; i += 1) {
+          expect(await next.bridge.navigate("https://example.com/work")).toMatchObject({
+            ok: false,
+            code: "TARGET_CLOSED",
+          });
+          expect(await next.bridge.requestHumanTakeover!()).toMatchObject({ ok: false });
+        }
+        expect(h.openOptions).toHaveLength(1);
+        expect(h.state.visible).toBe(false);
 
+        h.runtime.beginRun(owner.ownerId);
         expect(await next.bridge.navigate("https://example.com/work")).toMatchObject({ ok: true });
         expect(h.openOptions).toHaveLength(2);
         expect(h.openOptions[1]).toMatchObject({ partition: owner.partition, url: "about:blank" });
@@ -238,7 +248,7 @@ describe("BackgroundBrowserRuntime", () => {
   );
 
   test.each(["show", "requestHumanTakeover"] as const)(
-    "failed %s on a closed target does not block later explicit navigation",
+    "failed %s on a closed target does not block navigation in a later run",
     async (takeoverMethod) => {
       const h = harness();
       const lease = h.runtime.acquire({ ownerId: "closed-show", partition: "test-closed-show" });
@@ -256,6 +266,7 @@ describe("BackgroundBrowserRuntime", () => {
         expect(h.state.visible).toBe(false);
         expect(h.openOptions).toHaveLength(1);
 
+        h.runtime.beginRun("closed-show");
         expect(await lease.bridge.navigate("https://example.com/work")).toMatchObject({ ok: true });
         expect(h.openOptions).toHaveLength(2);
       } finally {
@@ -293,6 +304,7 @@ describe("BackgroundBrowserRuntime", () => {
       expect(h.calls).not.toContain("resume");
       expect(h.openOptions).toHaveLength(1);
 
+      h.runtime.beginRun("closed-queue");
       expect(await lease.bridge.navigate("https://example.com/new-request")).toMatchObject({
         ok: true,
       });
@@ -726,11 +738,10 @@ describe("BackgroundBrowserRuntime continuity", () => {
     h.closeTarget();
     const closed = await first.bridge.resumeControl!();
     expect(closed).toMatchObject({ ok: false, code: "TARGET_CLOSED", retryable: false });
-    expect(closed.detail).toContain("separate browser window");
-    expect(closed.detail).toContain("Stop browser automation");
-    expect(closed.detail).toContain("Do not retry resume_control or browser_navigate");
-    expect(closed.detail).toContain("Only if the user explicitly asks to reopen");
-    expect(closed.detail).not.toContain("Use browser_navigate with the intended URL to reopen");
+    expect(closed.detail).toContain("the user closed this task's separate browser window");
+    expect(closed.detail).toContain("including browser_navigate and request_takeover, is refused");
+    expect(closed.detail).toContain("until the user sends a new request");
+    expect(closed.detail).not.toContain("use browser_navigate with the intended URL to reopen");
     first.release();
     await tick();
     expect(h.runtime.stats().entries).toBe(0);
@@ -738,9 +749,65 @@ describe("BackgroundBrowserRuntime continuity", () => {
     const next = h.runtime.acquire(owner);
     try {
       expect(await next.bridge.resumeControl!()).toEqual(closed);
+      expect(await next.bridge.navigate("https://example.com/work")).toMatchObject({
+        code: "TARGET_CLOSED",
+      });
       expect(h.openOptions).toHaveLength(1);
     } finally {
       next.release();
+      h.runtime.closeAll();
+    }
+  });
+
+  test("a user close outlives continuity expiry until a new run begins", async () => {
+    let now = 100;
+    const h = harness({ idleTtlMs: 5, continuityTtlMs: 50, now: () => now });
+    const first = h.runtime.acquire(owner);
+    await first.bridge.navigate("https://example.com/work");
+    h.closeTarget();
+    first.release();
+    await tick();
+    now += 51;
+
+    const quiet = h.runtime.acquire(owner);
+    expect(await quiet.bridge.snapshot()).toMatchObject({ url: "" });
+    expect(await quiet.bridge.navigate("https://example.com/work")).toMatchObject({
+      code: "TARGET_CLOSED",
+    });
+    expect(h.openOptions).toHaveLength(1);
+    quiet.release();
+    await tick();
+
+    h.runtime.beginRun(owner.ownerId);
+    const later = h.runtime.acquire(owner);
+    try {
+      const hint = await later.bridge.click("old:e1");
+      expect(hint.detail).toContain("during an earlier request");
+      expect(hint.detail).toContain("use browser_navigate with the intended URL to reopen");
+      expect(h.openOptions).toHaveLength(1);
+      expect(await later.bridge.navigate("https://example.com/work")).toMatchObject({ ok: true });
+      expect(h.openOptions).toHaveLength(2);
+    } finally {
+      later.release();
+      h.runtime.closeAll();
+    }
+  });
+
+  test("a new run does not reopen a target the user closes during that run", async () => {
+    const h = harness();
+    const lease = h.runtime.acquire(owner);
+    try {
+      await lease.bridge.navigate("https://example.com/one");
+      h.closeTarget();
+      h.runtime.beginRun(owner.ownerId);
+      expect(await lease.bridge.navigate("https://example.com/two")).toMatchObject({ ok: true });
+      h.closeTarget();
+      expect(await lease.bridge.navigate("https://example.com/three")).toMatchObject({
+        code: "TARGET_CLOSED",
+      });
+      expect(h.openOptions).toHaveLength(2);
+    } finally {
+      lease.release();
       h.runtime.closeAll();
     }
   });

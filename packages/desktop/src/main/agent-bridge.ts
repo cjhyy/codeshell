@@ -80,6 +80,7 @@ import {
   builtInBrowserHandoffGrants,
   chromeExtensionRuntimeService,
   annotateBrowserRuntimeStreamEvent,
+  beginBrowserRunForStartedRun,
   cancelBrowserActionsForStoppedRun,
   dispatchInteractiveBrowserRuntimeAction,
   releaseChildBrowserRuntime,
@@ -925,6 +926,7 @@ export class AgentBridge implements PetStateBridge {
       assertOutputHistoryWriteAvailable(parsed.params.sessionId);
     observeRunStopFrame(parsed);
     cancelBrowserActionsForStoppedRun(parsed);
+    beginBrowserRunForStartedRun(parsed);
     observeComputerUseRunControl(parsed);
     if (
       isOptimizationLabQuery(parsed) &&
@@ -1017,6 +1019,7 @@ export class AgentBridge implements PetStateBridge {
       }
       observeRunStopFrame(parsed);
       cancelBrowserActionsForStoppedRun(parsed);
+      beginBrowserRunForStartedRun(parsed);
       observeComputerUseRunControl(parsed);
       if (isOptimizationLabQuery(parsed)) {
         if (parsed.id !== undefined && !event.sender.isDestroyed()) {

@@ -20,6 +20,7 @@ interface InAppTargetPool {
   close(ownerId: string): void;
   closeAll(): void;
   cancelPending?(ownerId: string): void;
+  beginRun?(ownerId: string): void;
 }
 
 export interface InAppBrowserBackendOptions {
@@ -85,6 +86,10 @@ export class InAppBrowserBackend implements BrowserRuntimeBackend {
 
   cancelPending(ownerId: string): void {
     this.targetPool.cancelPending?.(ownerId);
+  }
+
+  beginRun(ownerId: string): void {
+    this.targetPool.beginRun?.(ownerId);
   }
 
   closeAll(): void {

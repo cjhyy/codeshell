@@ -55,6 +55,8 @@ interface TargetContinuity {
   url: string;
   title: string;
   reason: "idle" | "capacity" | "closed";
+  /** A user close from an earlier run; explicit navigation may reopen it. */
+  reopenable?: boolean;
   expiresAt: number;
 }
 
@@ -102,6 +104,11 @@ interface RuntimeEntry {
   lastUrl: string;
   lastTitle: string;
   recovery?: TargetContinuity["reason"];
+  /**
+   * Set when a later run begins after the user closed this target. Until then
+   * the close stops every browser action, including explicit navigation.
+   */
+  reopenable?: boolean;
   pendingOperations: number;
   lastUsedAt: number;
   target?: BackgroundTarget;
@@ -198,6 +205,7 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
         lastUrl: remembered?.url ?? options.initialUrl?.trim() ?? "about:blank",
         lastTitle: remembered?.title ?? "",
         recovery: remembered?.reason,
+        reopenable: remembered?.reopenable,
         pendingOperations: 0,
         controlEpoch: 0,
         lastUsedAt: this.deps.now(),
@@ -248,6 +256,18 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
     this.continuity.delete(ownerId);
     const entry = this.entries.get(ownerId);
     if (entry) this.disposeEntry(entry);
+  }
+
+  /**
+   * A new run (a new user request) begins for this owner. A target the user
+   * closed during an earlier run may now be reopened by explicit navigation;
+   * nothing a tool call does within the run that saw the close can lift it.
+   */
+  beginRun(ownerId: string): void {
+    const entry = this.entries.get(ownerId);
+    if (entry?.recovery === "closed") entry.reopenable = true;
+    const remembered = this.continuity.get(ownerId);
+    if (remembered?.reason === "closed") remembered.reopenable = true;
   }
 
   /**
@@ -644,7 +664,11 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
     }
     if (entry.target) return entry.target;
     if (entry.opening) return entry.opening;
-    if (entry.recovery && !recover) throw new Error(recoveryDetail(entry));
+    // Closing the window is the user's stop. Only idle/capacity reclamation can
+    // be undone by navigation within the same run.
+    if (entry.recovery && (!recover || (entry.recovery === "closed" && !entry.reopenable))) {
+      throw new Error(recoveryDetail(entry));
+    }
     this.makeTargetCapacity(entry);
 
     const opening = this.deps
@@ -677,13 +701,15 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
         entry.target = target;
         entry.opening = undefined;
         entry.recovery = undefined;
+        entry.reopenable = undefined;
         host.onClosed(() => {
           if (entry.target?.host === host) {
             this.deps.detach(host.webContents);
             entry.target = undefined;
             entry.recovery = "closed";
-            // The old page's human takeover ends with that page. Only a fresh,
-            // explicit navigation may reopen it; queued actions and resumes
+            entry.reopenable = false;
+            // The old page's human takeover ends with that page. Only explicit
+            // navigation in a later run may reopen it; queued actions and resumes
             // still belong to the closed target and must not regain control.
             entry.controlEpoch += 1;
             entry.controlPaused = false;
@@ -775,6 +801,7 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
   private disposeEntry(entry: RuntimeEntry, reason?: "idle" | "capacity"): void {
     if (this.entries.get(entry.ownerId) !== entry) return;
     if (reason && (entry.target || entry.recovery)) {
+      const closed = !entry.target && entry.recovery === "closed";
       this.continuity.delete(entry.ownerId);
       this.continuity.set(entry.ownerId, {
         partition: entry.partition,
@@ -783,7 +810,8 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
         title: safeCall(() => entry.target?.host.webContents.getTitle()) ?? entry.lastTitle,
         // Reclaiming an already closed entry does not turn the close into an
         // automatic resource eviction that tells the model to reopen it.
-        reason: !entry.target && entry.recovery === "closed" ? "closed" : reason,
+        reason: closed ? "closed" : reason,
+        reopenable: closed ? entry.reopenable : undefined,
         expiresAt: this.deps.now() + this.continuityTtlMs,
       });
       this.pruneContinuity();
@@ -802,6 +830,9 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
 
   private pruneContinuity(): void {
     for (const [ownerId, value] of this.continuity) {
+      // A user close in the current run must not lapse into a fresh target
+      // just because the run went quiet; only the count cap bounds it.
+      if (value.reason === "closed" && !value.reopenable) continue;
       if (value.expiresAt <= this.deps.now()) this.continuity.delete(ownerId);
     }
     while (this.continuity.size > this.maxRememberedTargets) {
@@ -811,13 +842,20 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
 }
 
 function recoveryDetail(entry: RuntimeEntry): string {
+  if (entry.recovery === "closed" && entry.reopenable) {
+    return (
+      `TARGET_CLOSED: the user closed this task's separate browser window (${entry.tabId}) ` +
+      "during an earlier request. If the current request needs the browser, use " +
+      "browser_navigate with the intended URL to reopen it, then take a new snapshot. " +
+      `Its last URL was ${entry.lastUrl || "about:blank"}; all old element refs and read cursors have expired.`
+    );
+  }
   if (entry.recovery === "closed") {
     return (
-      `TARGET_CLOSED: this task's separate browser window (${entry.tabId}) was closed. ` +
-      "Stop browser automation for this task. Do not retry resume_control or browser_navigate, " +
-      "request another takeover, or switch to another page to continue. " +
-      "Only if the user explicitly asks to reopen, use browser_navigate with the requested URL " +
-      "and take a new snapshot. " +
+      `TARGET_CLOSED: the user closed this task's separate browser window (${entry.tabId}), ` +
+      "which stops browser automation for the current request. Every browser action, " +
+      "including browser_navigate and request_takeover, is refused until the user sends a new request. " +
+      "Do not retry, and do not switch to another page; tell the user the browser step stopped. " +
       `Its last URL was ${entry.lastUrl || "about:blank"}; all old element refs and read cursors have expired.`
     );
   }

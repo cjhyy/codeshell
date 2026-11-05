@@ -62,6 +62,23 @@ export function cancelBrowserActionsForStoppedRun(
 }
 
 /**
+ * Closing the task window is the user's stop for the run that saw it; only the
+ * next `agent/run` (a new request) lets explicit navigation reopen it. Child
+ * owners are per binding, so a later child run never inherits the close.
+ * Returns whether `message` started a run.
+ */
+export function beginBrowserRunForStartedRun(
+  message: { method?: unknown; params?: unknown },
+  runtime: BrowserRuntimeLike = browserRuntime,
+): boolean {
+  if (message.method !== "agent/run") return false;
+  const sessionId = (message.params as { sessionId?: unknown } | undefined)?.sessionId;
+  if (typeof sessionId !== "string" || !sessionId) return false;
+  runtime.beginRun?.(interactiveBrowserRuntimeOwner(sessionId));
+  return true;
+}
+
+/**
  * Execute one browser tool request against a runtime-owned target.
  *
  * The default target is a task-owned background in-app tab sharing this

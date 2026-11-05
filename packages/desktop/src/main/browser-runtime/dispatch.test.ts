@@ -2,6 +2,7 @@ import { describe, expect, spyOn, test } from "bun:test";
 import type { BrowserBridge } from "@cjhyy/code-shell-core";
 import type { BrowserRuntimeLike } from "./runtime.js";
 import {
+  beginBrowserRunForStartedRun,
   cancelBrowserActionsForStoppedRun,
   interactiveBrowserRuntimeOwner,
   dispatchInteractiveBrowserRuntimeAction,
@@ -365,4 +366,25 @@ test("Stop abandons the stopped session's in-flight browser actions, including i
       runtime,
     );
   }
+});
+
+test("a new agent/run lets the session's user-closed task window reopen", () => {
+  const begun: string[] = [];
+  const runtime = {
+    acquire: async () => {
+      throw new Error("unused");
+    },
+    close: () => undefined,
+    closeAll: () => undefined,
+    beginRun: (ownerId: string) => begun.push(ownerId),
+  } as unknown as BrowserRuntimeLike;
+  expect(
+    beginBrowserRunForStartedRun({ method: "agent/run", params: { sessionId: "s1" } }, runtime),
+  ).toBe(true);
+  expect(begun).toEqual([interactiveBrowserRuntimeOwner("s1")]);
+  expect(
+    beginBrowserRunForStartedRun({ method: "agent/cancel", params: { sessionId: "s1" } }, runtime),
+  ).toBe(false);
+  expect(beginBrowserRunForStartedRun({ method: "agent/run", params: {} }, runtime)).toBe(false);
+  expect(begun).toHaveLength(1);
 });

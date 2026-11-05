@@ -156,7 +156,7 @@ function browserFailure(
           : "The requested observation/condition did not finish in time. Inspect the current page or wait for a specific target; do not repeatedly issue the same failing call."
       }`;
     case "TARGET_CLOSED":
-      return `${error}\n[TARGET_CLOSED] All previous refs are expired. Follow the host's closure guidance. If the user closed this page, stop and wait for an explicit request to reopen it; do not switch to another page.`;
+      return `${error}\n[TARGET_CLOSED] All previous refs are expired. Follow the host's closure guidance. If the user closed this page, stop for this request and do not switch to another page; only a later request can reopen it.`;
     case "NAVIGATION":
     case "STALE_SNAPSHOT":
       return `${error}\n[${result.code}] Take a fresh snapshot before acting; old refs are invalid.`;
