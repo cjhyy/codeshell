@@ -36,6 +36,8 @@ import type { PetHostActionReceiptStore } from "./pet-host-action-receipts.js";
 import type { PetPersonalization } from "../../shared/pet-settings.js";
 import type { PetSegmentClosed, PetSegmentTurnStart } from "./pet-segment-controller.js";
 import type { PetChatAttachment } from "../../shared/pet-chat-attachments.js";
+import { dlog } from "../desktop-logger.js";
+import { createPetTurnTimer } from "./pet-turn-timing.js";
 import {
   selectPetChatAttachments,
   type PetChatAttachmentContext,
@@ -2078,6 +2080,10 @@ export class PetDispatchService {
         ) {
           return { ok: false, code: "invalid-command" };
         }
+        const timer = createPetTurnTimer({
+          clientMessageId: command.clientMessageId,
+          log: (msg, data) => dlog("main", msg, data),
+        });
         const metadata = await this.options.metadata.ensure();
         const attachmentScope = {
           routeKey: petChatRouteKey(command),
@@ -2121,7 +2127,9 @@ export class PetDispatchService {
         }
         const recentInputAttachments = command.hostWake
           ? []
-          : await this.recentChatAttachments(attachmentScope, attachments);
+          : await timer.phase("attachments", () =>
+              this.recentChatAttachments(attachmentScope, attachments),
+            );
         const [
           listedWorkspaces,
           listedReusableSessions,
@@ -2129,14 +2137,16 @@ export class PetDispatchService {
           listedOutboundTargets,
           configuredManagerModel,
           replyAttachmentRoots,
-        ] = await Promise.all([
-          this.options.listWorkspaces?.() ?? [],
-          this.options.listReusableSessions?.() ?? [],
-          this.options.listFollowUps?.() ?? [],
-          this.options.listOutboundTargets?.() ?? [],
-          this.options.managerModel?.() ?? null,
-          this.getReplyAttachmentRoots(),
-        ]);
+        ] = await timer.phase("sources", () =>
+          Promise.all([
+            this.options.listWorkspaces?.() ?? [],
+            this.options.listReusableSessions?.() ?? [],
+            this.options.listFollowUps?.() ?? [],
+            this.options.listOutboundTargets?.() ?? [],
+            this.options.managerModel?.() ?? null,
+            this.getReplyAttachmentRoots(),
+          ]),
+        );
         const reusableSessionCandidates = [...listedReusableSessions];
         if (this.options.resolveReusableSessionBySelector) {
           const knownSelectors = new Set(
@@ -2150,9 +2160,11 @@ export class PetDispatchService {
           const missingFollowUpSelectors = [
             ...new Set(requestedSelectors.filter((selector) => !knownSelectors.has(selector))),
           ];
-          const resolvedFollowUpSources = await Promise.all(
-            missingFollowUpSelectors.map((selector) =>
-              this.options.resolveReusableSessionBySelector!(selector).catch(() => null),
+          const resolvedFollowUpSources = await timer.phase("followUpSelectors", () =>
+            Promise.all(
+              missingFollowUpSelectors.map((selector) =>
+                this.options.resolveReusableSessionBySelector!(selector).catch(() => null),
+              ),
             ),
           );
           for (const resolved of resolvedFollowUpSources) {
@@ -2190,7 +2202,9 @@ export class PetDispatchService {
         // Chat status is user-facing truth. Pull the latest durable terminal
         // markers now instead of waiting for the periodic catalog refresh.
         if (this.options.aggregator.refreshCatalog) {
-          await this.options.aggregator.refreshCatalog(false).catch(() => undefined);
+          await timer.phase("refreshCatalog", () =>
+            this.options.aggregator.refreshCatalog!(false).catch(() => undefined),
+          );
         }
         const snapshot = this.options.aggregator.getSnapshot();
         const unavailableSessionIds = new Set(
@@ -2248,13 +2262,15 @@ export class PetDispatchService {
             }`,
           });
         }
-        await mapWithConcurrency(petReusableSessions, 4, async (session) => {
-          const candidate = reusableSessionById.get(session.id)!;
-          if (!/^[A-Za-z0-9_-]{1,128}$/u.test(candidate.sessionId)) return;
-          const recent = await this.recentWorkContext?.get(candidate.sessionId);
-          if (!recent?.latestRequest && !recent?.latestResult) return;
-          session.description += `; untrusted transcript excerpts=${JSON.stringify(recent)}`;
-        });
+        await timer.phase("workContext", () =>
+          mapWithConcurrency(petReusableSessions, 4, async (session) => {
+            const candidate = reusableSessionById.get(session.id)!;
+            if (!/^[A-Za-z0-9_-]{1,128}$/u.test(candidate.sessionId)) return;
+            const recent = await this.recentWorkContext?.get(candidate.sessionId);
+            if (!recent?.latestRequest && !recent?.latestResult) return;
+            session.description += `; untrusted transcript excerpts=${JSON.stringify(recent)}`;
+          }),
+        );
         const petFollowUps = listedFollowUps.slice(0, 100).map((item) => {
           const sourceSession = item.sessionSelector
             ? reusableSessionById.get(item.sessionSelector)
@@ -2281,23 +2297,29 @@ export class PetDispatchService {
               )
               .slice(0, 1)
           : [];
-        const contextInput = await this.prepareWorldContextInput(
-          {
-            message: command.hostWake?.text ?? command.message.trim(),
-            clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
-            eventKind: command.hostWake ? "follow-up-wake" : "chat",
-            originRef: petContextOriginForSource(
-              command.hostWake?.completionTarget ?? command.source,
-              command.clientMessageId,
-            ),
-          },
-          wakeTasks,
+        const contextInput = await timer.phase("worldContextInput", () =>
+          this.prepareWorldContextInput(
+            {
+              message: command.hostWake?.text ?? command.message.trim(),
+              clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
+              eventKind: command.hostWake ? "follow-up-wake" : "chat",
+              originRef: petContextOriginForSource(
+                command.hostWake?.completionTarget ?? command.source,
+                command.clientMessageId,
+              ),
+            },
+            wakeTasks,
+          ),
         );
-        const [segmentTurn, worldExtrasRaw, personalization] = await Promise.all([
-          this.options.segmentController?.beginTurn(command.clientMessageId),
-          this.options.worldContext?.(contextInput),
-          this.currentPersonalization(),
-        ]);
+        const [segmentTurn, worldExtrasRaw, personalization] = await timer.phase(
+          "segmentWorldPersonalization",
+          () =>
+            Promise.all([
+              this.options.segmentController?.beginTurn(command.clientMessageId),
+              this.options.worldContext?.(contextInput),
+              this.currentPersonalization(),
+            ]),
+        );
         const carryoverBrief = segmentTurn?.carryoverBrief;
         const worldExtras = worldExtrasRaw ?? {};
         // GatewayReply is route-bound and therefore IM-only. The other atomic
@@ -2350,7 +2372,7 @@ export class PetDispatchService {
             .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0)),
         );
         const longTaskContext = this.options.longTasks?.context();
-        const taskInbox = await this.readTaskInbox();
+        const taskInbox = await timer.phase("taskInbox", () => this.readTaskInbox());
         const world = {
           version: projectionWorld.version,
           generation: projectionWorld.generation,
@@ -2432,6 +2454,7 @@ export class PetDispatchService {
           ...remainingWorldExtras,
         };
         const runtimeContext = stringifyBoundedPetWorld(world);
+        timer.done();
         const activeChat = this.activeChatTurn;
         const response = await this.requestChatRun(command, {
           sessionId: metadata.petSessionId,
