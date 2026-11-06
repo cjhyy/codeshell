@@ -29,6 +29,11 @@ interface Replay {
   summaries: CreateMessageOptions[];
 }
 
+/** The pet world rides the volatile context message, not the system prompt. */
+function visibleWorld(options: CreateMessageOptions): string {
+  return JSON.stringify(options.messages);
+}
+
 function modelSnapshot(options: CreateMessageOptions): CreateMessageOptions {
   // Summary calls may carry a live stream callback; retain model-visible
   // inputs only, never clone execution callbacks or cancellation signals.
@@ -446,9 +451,11 @@ describe("Mimi mocked multi-turn chat replay", () => {
     const activeSessionId = "work-active-482";
     const replay = createReplay((options, round) => {
       if (round === 1) {
-        const context = JSON.parse(
-          options.systemPrompt.split("<pet-world>")[1]!.split("</pet-world>")[0]!,
-        );
+        const raw = JSON.parse(JSON.stringify(options.messages.at(-1)!.content));
+        const text = (
+          Array.isArray(raw) ? raw.map((b: { text?: string }) => b.text ?? "").join("") : raw
+        ) as string;
+        const context = JSON.parse(text.split("<pet-world>")[1]!.split("</pet-world>")[0]!);
         return call("WatchSession", { session_id: context.sessions[0].agentSessionId });
       }
       return call("GatewayReply", { text: "已请求登记这个会话的完成通知，等待宿主确认。" });
@@ -496,10 +503,11 @@ describe("Mimi mocked multi-turn chat replay", () => {
     });
 
     const latest = replay.replay.rounds[1]!;
-    expect(latest.systemPrompt).toContain('"status":"paused"');
-    expect(latest.systemPrompt).not.toContain('"status":"running"');
+    expect(visibleWorld(latest)).toContain('\\"status\\":\\"paused\\"');
+    expect(visibleWorld(latest)).not.toContain('\\"status\\":\\"running\\"');
     expect(JSON.stringify(latest.messages)).toContain("只整理说明，不发布");
-    expect(JSON.stringify(latest.messages)).not.toContain("release-ledger");
+    // Only the final (volatile) message carries the world; history never does.
+    expect(JSON.stringify(latest.messages.slice(0, -1))).not.toContain("release-ledger");
     expect(result.petWorkDelegation).toBeUndefined();
     expect(result.extensions?.pet).toEqual({
       hostActions: [
@@ -550,8 +558,8 @@ describe("Mimi mocked multi-turn chat replay", () => {
     const contextAfterRollover = replay.replay.rounds[3]!;
     expect(JSON.stringify(contextAfterRollover.messages)).toContain(note);
     expect(JSON.stringify(contextAfterRollover.messages)).toContain("<context-note>");
-    expect(contextAfterRollover.systemPrompt).toContain('"status":"paused"');
-    expect(contextAfterRollover.systemPrompt).not.toContain('"status":"running"');
+    expect(visibleWorld(contextAfterRollover)).toContain('\\"status\\":\\"paused\\"');
+    expect(visibleWorld(contextAfterRollover)).not.toContain('\\"status\\":\\"running\\"');
     const results = toolResults(replay.events);
     expect(results.map((entry) => entry.toolName)).toEqual([
       "GatewayReply",
