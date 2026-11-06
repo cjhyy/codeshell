@@ -228,7 +228,9 @@ describe("architecture growth budgets", () => {
       // Main retains credentials and pins every operation to its owner/Host/project/Session.
       // +3 main-frame-only account operations: fixed registration page, public
       // feature snapshot and bounded refresh. No credential-read route is exposed.
-    ).toBeLessThanOrEqual(388);
+      // +2 main-frame-owned account operations: browser sign-in and fixed account
+      // management pages. PKCE, session custody and origin checks remain in Main.
+    ).toBeLessThanOrEqual(390);
     expect(matches("packages/desktop/src/main/account-device-ipc.ts", /^    [a-z]+: \(/gm)).toBe(8);
     expect(
       matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g),
@@ -301,6 +303,8 @@ describe("architecture growth budgets", () => {
       // +2 typed history recovery plan/apply invokes mirror the reviewed Main routes.
       // +9 mirrors explicit account resume and the eight bounded computer operations above.
       // +3 exact adapters for registration, feature snapshot and refresh above.
+      // Browser sign-in and fixed account-management navigation add two typed
+      // adapters within the existing ceiling; neither exposes credentials.
     ).toBeLessThanOrEqual(372);
     expect(
       matches("packages/desktop/src/preload/account-device-api.ts", /\binvoke(?:Raw)?\("/g),
