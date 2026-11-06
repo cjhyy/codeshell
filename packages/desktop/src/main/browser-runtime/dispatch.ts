@@ -10,6 +10,7 @@ import { browserRuntime, type BrowserRuntimeLike } from "./runtime.js";
 import { builtInTabClaimBackend } from "./built-in-handoff.js";
 import { chromeExtensionBackend } from "./chrome-extension-singleton.js";
 import { interactiveBrowserRuntimeOwner } from "./dispatch-owner.js";
+import { panelAccessRequests, type PanelAccessRequests } from "./panel-access-request.js";
 
 export { interactiveBrowserRuntimeOwner } from "./dispatch-owner.js";
 
@@ -62,6 +63,25 @@ export function cancelBrowserActionsForStoppedRun(
 }
 
 /**
+ * Closing the task window is the user's stop for the run that saw it; only the
+ * next `agent/run` (a new request) lets explicit navigation reopen it. Child
+ * owners are per binding, so a later child run never inherits the close.
+ * Returns whether `message` started a run.
+ */
+export function beginBrowserRunForStartedRun(
+  message: { method?: unknown; params?: unknown },
+  runtime: BrowserRuntimeLike = browserRuntime,
+  panelAccess: Pick<PanelAccessRequests, "beginRun"> = panelAccessRequests,
+): boolean {
+  if (message.method !== "agent/run") return false;
+  const sessionId = (message.params as { sessionId?: unknown } | undefined)?.sessionId;
+  if (typeof sessionId !== "string" || !sessionId) return false;
+  runtime.beginRun?.(interactiveBrowserRuntimeOwner(sessionId));
+  panelAccess.beginRun(sessionId);
+  return true;
+}
+
+/**
  * Execute one browser tool request against a runtime-owned target.
  *
  * The default target is a task-owned background in-app tab sharing this
@@ -83,6 +103,17 @@ export async function dispatchInteractiveBrowserRuntimeAction(
       retryable: false,
       detail: "child browser run has ended",
     });
+  }
+  if (request.action === "requestPanelAccess") {
+    // Only the user's own task may ask for the user's panel tab.
+    return child
+      ? JSON.stringify({
+          ok: false,
+          code: "FAILED",
+          retryable: false,
+          detail: "a child task cannot request the user's BrowserPanel tab",
+        })
+      : panelAccessRequests.request(sessionId);
   }
   // Resolve claims, including expired/revoked claims, before every action.
   // Takeover must preserve target continuity just like click or navigation.
@@ -114,7 +145,9 @@ export async function dispatchInteractiveBrowserRuntimeAction(
         ok: true,
         code: "NEEDS_HUMAN",
         retryable: false,
-        detail: "showing the same task-owned page operated by browser tools",
+        detail:
+          "Showing the same task-owned page in a separate Browser Runtime window. " +
+          "This is not the docked BrowserPanel tab; that tab requires an explicit user grant.",
       });
     } catch (error) {
       return JSON.stringify({
@@ -162,6 +195,7 @@ export function interactiveBrowserBridgeForSession(sessionId: string): BrowserBr
   return {
     requestHumanTakeover: () => call({ action: "requestTakeover" }),
     resumeControl: () => call({ action: "resumeControl" }),
+    requestPanelAccess: () => call({ action: "requestPanelAccess" }),
     inspect: (inspect) => call({ action: "inspect", inspect }),
     snapshot: () => call({ action: "snapshot" }),
     click: (ref) => call({ action: "click", ref }),

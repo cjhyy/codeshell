@@ -42,7 +42,7 @@ function fixture() {
     },
     restore: async (...args) => {
       calls.push({ name: "restore", args });
-      return { count: jar.length };
+      return restored(jar.length);
     },
     autoRefresh: {
       prepareRestore: (...args) => {
@@ -60,11 +60,15 @@ function fixture() {
   return { target, calls, input, deps };
 }
 
+function restored(count: number) {
+  return { count, expired: 0, failed: 0, failures: [], verified: count };
+}
+
 describe("restoreCookieCredentialToBrowser", () => {
   test("detaches old account and source bindings before Cookie writes begin", async () => {
     const { target, calls, input, deps } = fixture();
 
-    expect(await restoreCookieCredentialToBrowser(input, deps)).toEqual({ count: 1 });
+    expect(await restoreCookieCredentialToBrowser(input, deps)).toMatchObject({ count: 1 });
 
     expect(calls).toEqual([
       { name: "resolve", args: [input.targetSession] },
@@ -93,9 +97,16 @@ describe("restoreCookieCredentialToBrowser", () => {
 
   test("does not bind a credential whose Cookie writes all failed", async () => {
     const { calls, input, deps } = fixture();
-    deps.restore = async () => ({ count: 0 });
+    const allFailed = {
+      count: 0,
+      expired: 0,
+      failed: 1,
+      failures: [{ name: "sid", domain: ".example.com", reason: "refused" }],
+      verified: 0,
+    };
+    deps.restore = async () => allFailed;
 
-    expect(await restoreCookieCredentialToBrowser(input, deps)).toEqual({ count: 0 });
+    expect(await restoreCookieCredentialToBrowser(input, deps)).toEqual(allFailed);
     expect(calls.map((call) => call.name)).toEqual(["resolve", "prepare", "detach"]);
   });
 
@@ -114,9 +125,9 @@ describe("restoreCookieCredentialToBrowser", () => {
   test("does not sync a partially restored login back over its complete snapshot", async () => {
     const { calls, input, deps } = fixture();
     input.resolved.jar.push({ name: "second", value: "required", domain: ".example.com" });
-    deps.restore = async () => ({ count: 1 });
+    deps.restore = async () => restored(1);
 
-    expect(await restoreCookieCredentialToBrowser(input, deps)).toEqual({ count: 1 });
+    expect(await restoreCookieCredentialToBrowser(input, deps)).toMatchObject({ count: 1 });
     expect(calls.map((call) => call.name)).toEqual(["resolve", "prepare", "detach"]);
   });
 
@@ -171,7 +182,7 @@ describe("restoreCookieCredentialToBrowser", () => {
     deps.restore = async () => {
       started.resolve();
       await release.promise;
-      return { count: 1 };
+      return restored(1);
     };
     const restoring = restoreCookieCredentialToBrowser(input, deps);
     await started.promise;
@@ -190,7 +201,7 @@ describe("restoreCookieCredentialToBrowser", () => {
       deps.restore = async () => {
         started.resolve();
         await release.promise;
-        return { count: 1 };
+        return restored(1);
       };
       const restoring = restoreCookieCredentialToBrowser(input, deps);
       await started.promise;
@@ -200,7 +211,7 @@ describe("restoreCookieCredentialToBrowser", () => {
         input.resolved = { ...input.resolved, sourceSecret: "new manual login snapshot" };
       }
       release.resolve();
-      expect(await restoring).toEqual({ count: 1 });
+      expect(await restoring).toEqual(restored(1));
       expect(calls.some((call) => call.name === "bind")).toBe(false);
     });
   }
@@ -219,7 +230,7 @@ describe("restoreCookieCredentialToBrowser", () => {
         await releaseFirst.promise;
       }
       events.push(`finish:${account}`);
-      return { count: jar.length };
+      return restored(jar.length);
     };
     deps.autoRefresh.bind = (binding) => {
       events.push(`bind:${binding.credentialId}`);
@@ -274,7 +285,7 @@ describe("restoreCookieCredentialToBrowser", () => {
       firstStarted.resolve();
       await releaseFirst.promise;
       events.push("first:finish");
-      return { count: 1 };
+      return restored(1);
     };
     second.deps.resolveSession = async () => {
       secondResolved.resolve();
@@ -282,7 +293,7 @@ describe("restoreCookieCredentialToBrowser", () => {
     };
     second.deps.restore = async () => {
       events.push("second:start");
-      return { count: 1 };
+      return restored(1);
     };
     const firstRestore = restoreCookieCredentialToBrowser(first.input, first.deps);
     await firstStarted.promise;

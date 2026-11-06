@@ -29,6 +29,7 @@ mock.module(join(main, "browser-runtime/index.ts"), () => ({
   builtInBrowserHandoffGrants: { clearSession: (id) => released.push(["handoff", id]) },
   chromeExtensionRuntimeService: { forgetSession: (id) => released.push(["extension", id]) },
   annotateBrowserRuntimeStreamEvent: (event) => event,
+  beginBrowserRunForStartedRun: () => false,
   cancelBrowserActionsForStoppedRun: () => false,
   dispatchInteractiveBrowserRuntimeAction: () => {},
   releaseChildBrowserRuntime: () => {},

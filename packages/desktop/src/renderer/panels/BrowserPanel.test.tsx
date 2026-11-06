@@ -261,3 +261,92 @@ test("a changed login partition remounts only the guest and retains the current 
   await renderPanel(projectPartition);
   expect(findElements(container, "WEBVIEW")[0]).toBe(views[0]);
 });
+
+test("an agent's panel access request grants this tab only when the user allows it", async () => {
+  let deliver!: (prompt: Record<string, unknown>) => void;
+  const answers: Array<[string, boolean]> = [];
+  const grants: Array<{ sessionId: string; guestId: number }> = [];
+  Object.assign(window, {
+    codeshell: {
+      registerBrowserSessionBucket: () => undefined,
+      registerBrowserGuest: () => undefined,
+      getBuiltInBrowserRuntimeHandoff: async () => ({ granted: false, sessionId: "session" }),
+      getChromeBrowserRuntimeStatus: async () => ({ connected: false, sessionId: "session" }),
+      grantBuiltInBrowserToRuntime: async (input: { sessionId: string; guestId: number }) => {
+        grants.push(input);
+        return { granted: true, sessionId: input.sessionId, guestId: input.guestId };
+      },
+      browserPanelAccess: {
+        onRequest: (cb: typeof deliver) => {
+          deliver = cb;
+          return () => undefined;
+        },
+        respond: (requestId: string, granted: boolean) => answers.push([requestId, granted]),
+      },
+    },
+  });
+  await act(async () => {
+    root?.render(
+      <BrowserPanel
+        cwd="/repo"
+        bucket="project::session"
+        engineSessionId="session"
+        partition="persist:browser:p:project"
+        initialUrl="https://example.test/start"
+      />,
+    );
+    await flushMicrotasks();
+  });
+  const view = findElements(container, "WEBVIEW")[0];
+  view.canGoBack = () => false;
+  view.canGoForward = () => false;
+  view.getWebContentsId = () => 42;
+  await act(async () => {
+    view.dispatchEvent(new Event("dom-ready"));
+    await flushMicrotasks();
+  });
+  const prompt = (requestId: string, sessionId = "session") => ({
+    requestId,
+    sessionId,
+    url: "https://example.test/start",
+    title: "Start",
+    expiresAt: Date.now() + 60_000,
+  });
+  const bar = () =>
+    findElements(container, "DIV").find((d) => d.getAttribute?.("role") === "alertdialog");
+  const button = (label: string) =>
+    findElements(bar(), "BUTTON").find((b) => b.textContent === label);
+
+  await act(async () => {
+    deliver(prompt("other", "another-session"));
+    await flushMicrotasks();
+  });
+  expect(bar()).toBeUndefined();
+
+  await act(async () => {
+    deliver(prompt("r1"));
+    await flushMicrotasks();
+  });
+  expect(bar()).toBeDefined();
+  await act(async () => {
+    reactPropsOf(button("拒绝") ?? button("Deny")).onClick();
+    await flushMicrotasks();
+  });
+  expect(answers).toEqual([["r1", false]]);
+  expect(grants).toEqual([]);
+  expect(bar()).toBeUndefined();
+
+  await act(async () => {
+    deliver(prompt("r2"));
+    await flushMicrotasks();
+  });
+  await act(async () => {
+    reactPropsOf(button("允许") ?? button("Allow")).onClick();
+    await flushMicrotasks();
+  });
+  expect(grants).toEqual([{ sessionId: "session", guestId: 42 }]);
+  expect(answers).toEqual([
+    ["r1", false],
+    ["r2", true],
+  ]);
+});

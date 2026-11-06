@@ -328,6 +328,11 @@ export const panels = {
         revokeRuntimeHandoff: "撤销 Browser Runtime 授权",
         handoffActive: "当前内置浏览器标签已明确授权给本任务；Runtime 不会同时控制后台浏览器。",
         handoffGranted: "已授权当前标签给 Browser Runtime",
+        accessRequestTitle: "Agent 请求操作此标签页",
+        accessRequest:
+          "Agent 请求操作当前标签页。允许后，浏览器操作将作用于这个页面，而不是后台任务窗口。",
+        accessAllow: "允许",
+        accessDeny: "拒绝",
         handoffRevoked: "已撤销 Browser Runtime 授权",
         handoffFailed: "Browser Runtime 授权失败",
         connectChromeRuntime: "连接已登录的 Chrome 标签",
@@ -751,6 +756,11 @@ export const panels = {
         handoffActive:
           "This built-in browser tab is explicitly granted to this task; the Runtime will not control a background browser at the same time.",
         handoffGranted: "Granted this tab to Browser Runtime",
+        accessRequestTitle: "The agent asks to use this tab",
+        accessRequest:
+          "The agent asks to operate the current tab. If you allow, browser actions drive this page instead of the background task window.",
+        accessAllow: "Allow",
+        accessDeny: "Deny",
         handoffRevoked: "Revoked Browser Runtime access",
         handoffFailed: "Browser Runtime handoff failed",
         connectChromeRuntime: "Connect a signed-in Chrome tab",

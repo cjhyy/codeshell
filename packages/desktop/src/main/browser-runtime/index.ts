@@ -49,7 +49,9 @@ export {
   runChromeNativeMessagingHost,
 } from "./chrome-native-protocol.js";
 export type { BuiltInBrowserHandoffStatus, GrantBuiltInBrowserInput } from "./built-in-handoff.js";
+export { panelAccessRequests, registerPanelAccessResponses } from "./panel-access-request.js";
 export {
+  beginBrowserRunForStartedRun,
   cancelBrowserActionsForStoppedRun,
   dispatchInteractiveBrowserRuntimeAction,
   activateChildBrowserRuntime,

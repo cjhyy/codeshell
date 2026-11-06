@@ -58,6 +58,8 @@ export interface BrowserRuntimeLike {
   closeAll(): void;
   /** Abandon the owner's not-yet-submitted actions (its run was stopped). */
   cancelPending?(ownerId: string): void;
+  /** A new run starts; a target the user closed in an earlier run may reopen. */
+  beginRun?(ownerId: string): void;
 }
 
 export interface RuntimeTargetPool {
@@ -70,6 +72,7 @@ export interface RuntimeTargetPool {
   close(ownerId: string): void;
   closeAll(): void;
   cancelPending?(ownerId: string): void;
+  beginRun?(ownerId: string): void;
 }
 
 export interface DesktopBrowserRuntimeOptions {
@@ -222,6 +225,10 @@ export class DesktopBrowserRuntime implements BrowserRuntimeLike {
 
   cancelPending(ownerId: string): void {
     for (const backend of this.backends) backend.cancelPending?.(ownerId);
+  }
+
+  beginRun(ownerId: string): void {
+    for (const backend of this.backends) backend.beginRun?.(ownerId);
   }
 
   closeAll(): void {
