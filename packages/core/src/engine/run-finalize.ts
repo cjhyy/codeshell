@@ -179,6 +179,8 @@ export async function finalizeRunSuccess(args: {
   hasUnverifiedWrites?: () => boolean;
   hasIncompleteBatch?: () => Promise<boolean>;
 }): Promise<EngineResult> {
+  const finalizeStartedAt = performance.now();
+  let sessionEndHookMs = 0;
   const {
     session,
     result: originalResult,
@@ -260,6 +262,7 @@ export async function finalizeRunSuccess(args: {
   // are notify-only — any returned messages are dropped because the run
   // is already over and there's no next turn to inject into.
   if (profile?.disableHooks !== true) {
+    const sessionEndStartedAt = performance.now();
     await args.emitHook(
       "on_session_end",
       {
@@ -269,6 +272,7 @@ export async function finalizeRunSuccess(args: {
       },
       options?.signal,
     );
+    sessionEndHookMs = Math.round(performance.now() - sessionEndStartedAt);
   }
 
   // Ephemeral side chats must never leak into durable memory, even after
@@ -409,6 +413,12 @@ export async function finalizeRunSuccess(args: {
   const petWorkDelegationMirror = (
     runExtensions?.pet as { workDelegation?: LegacyPetWorkDelegation } | undefined
   )?.workDelegation;
+
+  logger.info("engine.finalize_timing", {
+    sessionId: session.state.sessionId,
+    totalMs: Math.round(performance.now() - finalizeStartedAt),
+    sessionEndHookMs,
+  });
 
   return {
     text: result.text,
