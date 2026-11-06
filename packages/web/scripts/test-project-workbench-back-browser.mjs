@@ -385,8 +385,6 @@ try {
     phase = "same-index-remount";
     await card("Owned project A").getByRole("button", { name: "打开项目", exact: true }).tap();
     await page.locator(".chat:not([hidden])").waitFor();
-    await nav("设置");
-    await page.getByRole("heading", { name: "设置", exact: true }).waitFor();
     await nav("文件");
     await page.locator(".hub-files").waitFor();
     await nav("返回项目列表");
@@ -396,11 +394,10 @@ try {
       () => document.querySelector(".workspace-button")?.getAttribute("title") === "/owned/B",
     );
     const aliasMarker = await page.evaluate(() => history.state.codeshellWorkbench);
+    // Back lands on project A's Chat entry, which the new mount aliases to its own index.
     await page.evaluate(() => history.back());
-    await page.getByRole("heading", { name: "设置", exact: true }).waitFor();
-    assert.deepEqual(await page.evaluate(() => history.state.codeshellWorkbench), aliasMarker);
-    await back().tap();
     await page.locator(".chat:not([hidden])").waitFor();
+    assert.deepEqual(await page.evaluate(() => history.state.codeshellWorkbench), aliasMarker);
     const oldSession = new URL(page.url()).searchParams.get("session"),
       aliasLength = await page.evaluate(() => history.length);
     await nav("新对话");

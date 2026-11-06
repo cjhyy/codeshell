@@ -56,7 +56,8 @@ function parent(route: WorkbenchLocation): { label: string; route: WorkbenchLoca
     (route.view === "settings" && route.section && route.section !== "overview")
   )
     return { label: "返回设置", route: { view: "settings", section: "overview" } };
-  if (route.view !== "chat") return { label: "返回对话", route: chat };
+  // Sidebar destinations are peers of the conversation, not its children; the
+  // sidebar is their navigation, so they get no header Back.
 }
 const identity = (route: WorkbenchLocation) =>
   JSON.stringify([

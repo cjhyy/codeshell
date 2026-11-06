@@ -455,7 +455,10 @@ try {
     }
     await host.authPending.shift().fulfill({ contentType: "application/json", body: "{}" });
     await editor(page).waitFor({ state: "detached" });
-    await page.getByRole("button", { name: "返回对话", exact: true }).tap();
+    assert.equal(await page.locator(".workbench-back").count(), 0);
+    if (await page.getByRole("button", { name: "展开侧栏", exact: true }).count())
+      await page.getByRole("button", { name: "展开侧栏", exact: true }).tap();
+    await page.locator(".workbench-nav").getByRole("button", { name: "对话", exact: true }).tap();
     await page.locator(".chat:not([hidden])").waitFor();
     assert.equal(new URL(page.url()).searchParams.get("view"), null);
     assert.equal(await page.locator(".navigation-prompt").count(), 0);
