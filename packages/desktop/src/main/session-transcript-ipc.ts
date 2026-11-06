@@ -25,7 +25,10 @@ export function registerSessionTranscriptIpc(
 ): void {
   ipcMain.handle(
     "sessions:listDisk",
-    async (_e, opts: { limit?: number; cursor?: string; parentSessionId?: string }) => {
+    async (
+      _e,
+      opts: { limit?: number; cursor?: string; parentSessionId?: string; sessionId?: string },
+    ) => {
       const limit =
         typeof opts?.limit === "number" && Number.isSafeInteger(opts.limit) && opts.limit > 0
           ? Math.min(opts.limit, 200)
@@ -37,10 +40,13 @@ export function registerSessionTranscriptIpc(
         throw new Error("invalid session cursor");
       }
       if (opts?.parentSessionId !== undefined) assertDesktopSessionId(opts.parentSessionId);
+      // A targeted read checks one opened Session under the same catalog rules.
+      if (opts?.sessionId !== undefined) assertDesktopSessionId(opts.sessionId);
       return (readers.listDiskSessions ?? listDiskSessions)({
         limit,
         cursor: typeof opts?.cursor === "string" ? opts.cursor : undefined,
         parentSessionId: opts?.parentSessionId,
+        ...(opts?.sessionId !== undefined ? { sessionId: opts.sessionId } : {}),
       });
     },
   );

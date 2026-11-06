@@ -112,6 +112,27 @@ describe("listDiskSessions", () => {
     expect(second.nextCursor).toBeNull();
   });
 
+  it("exposes only a bounded persisted configured-connection identity", async () => {
+    mkSession(
+      dir,
+      "native",
+      { parentSessionId: null, provider: "openai", model: "gpt", modelConnectionId: "conn-a" },
+      2000,
+    );
+    mkSession(
+      dir,
+      "oversized",
+      { parentSessionId: null, modelConnectionId: "x".repeat(257) },
+      1000,
+    );
+    const [native] = (await listDiskSessions({ limit: 1, sessionId: "native" }, dir)).sessions;
+    expect(native).toMatchObject({ provider: "openai", model: "gpt", modelConnectionId: "conn-a" });
+    const [oversized] = (await listDiskSessions({ limit: 1, sessionId: "oversized" }, dir))
+      .sessions;
+    expect(oversized?.id).toBe("oversized");
+    expect(oversized?.modelConnectionId).toBeUndefined();
+  });
+
   it("returns top-level sessions (parentSessionId === null), newest first", async () => {
     mkSession(dir, "top-old", { cwd: "/p", summary: "老", parentSessionId: null }, 1000);
     mkSession(dir, "top-new", { cwd: "/p", summary: "新", parentSessionId: null }, 3000);

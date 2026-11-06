@@ -41,10 +41,12 @@ describe("session transcript IPC validation", () => {
       includeArchived: true,
     });
     await call("sessions:listDisk", { limit: 1.5 });
+    await call("sessions:listDisk", { limit: 1, sessionId: "opened-a" });
     expect(diskReads).toEqual([
       { limit: 30, cursor: undefined, parentSessionId: undefined },
       { limit: 200, cursor: "v1:100:child", parentSessionId: "parent-a" },
       { limit: 30, cursor: undefined, parentSessionId: undefined },
+      { limit: 1, cursor: undefined, parentSessionId: undefined, sessionId: "opened-a" },
     ]);
   });
 
@@ -52,6 +54,9 @@ describe("session transcript IPC validation", () => {
     const { call, diskReads } = setup();
     for (const parentSessionId of ["../parent", "", ".", "parent/child", "a".repeat(129)]) {
       await expect(call("sessions:listDisk", { parentSessionId })).rejects.toThrow(
+        "invalid desktop sessionId",
+      );
+      await expect(call("sessions:listDisk", { sessionId: parentSessionId })).rejects.toThrow(
         "invalid desktop sessionId",
       );
     }

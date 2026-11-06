@@ -212,6 +212,8 @@ export interface DiskSessionMeta {
   title: string;
   model?: string;
   provider?: string;
+  /** Explicit configured text connection persisted by the Session's last native run. */
+  modelConnectionId?: string;
   updatedAt: number;
   /** Durable creation time, when supplied by the engine's state schema. */
   createdAt?: number;
@@ -441,6 +443,11 @@ export async function listDiskSessions(
       engineSessionId: id,
       ...(typeof state.model === "string" ? { model: state.model } : {}),
       ...(typeof state.provider === "string" ? { provider: state.provider } : {}),
+      ...(typeof state.modelConnectionId === "string" &&
+      state.modelConnectionId.length > 0 &&
+      state.modelConnectionId.length <= 256
+        ? { modelConnectionId: state.modelConnectionId }
+        : {}),
       cwd: typeof state.cwd === "string" ? state.cwd : "",
       // Prefer the LLM-generated title (now persisted to state); fall back to
       // the raw first-message summary, then the id. This lets the disk rebuild

@@ -153,6 +153,7 @@ import { readReviewAvailability, useReviewAvailability } from "./panels/useRevie
 import { useTrackedProjects } from "./app/useTrackedProjects";
 import { useProjectRegistrySync } from "./app/useProjectRegistrySync";
 import { useExternalRuntimeModels } from "./app/useExternalRuntimeModels";
+import { useSessionModelReconcile } from "./app/useSessionModelReconcile";
 
 // Large, low-frequency pages stay off the chat startup path. Each route keeps
 // its own visible loading state through the Suspense boundaries below.
@@ -411,6 +412,7 @@ function App() {
   // The model shown/used for the ACTIVE session: its own override if it has
   // one, else the global default. Drafts share the per-repo "_none_" bucket.
   const activeModelKey = modelOverrides[activeBucket] ?? defaultActiveModelKey;
+  useSessionModelReconcile(activeBucket, activeEngineSessionId, setModelOverrides);
   const goalEnabled = goalOverrides[activeBucket] ?? false;
   const busy = busyKeys.has(activeBucket);
   const compacting = compactingBuckets.has(activeBucket);
