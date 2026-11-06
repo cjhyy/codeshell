@@ -6,6 +6,7 @@ import type {
 } from "@cjhyy/code-shell-core";
 import type { RemoteApp, PendingApproval } from "../src/hooks/useRemoteApp.js";
 import type { WorkbenchNavigation } from "./workbench-types.js";
+import { autoResolveText, useNow } from "./deadline.js";
 
 const permissionModes: Array<{
   value: MobileRemotePermissionMode;
@@ -397,6 +398,25 @@ export function DesktopApproval({ approval, app }: { approval: PendingApproval; 
   return <DesktopApprovalCard approval={approval} app={app} />;
 }
 
+/** A model question's live countdown with 一直等; other requests show a fixed deadline. */
+function QuestionCountdown({ approval, app }: { approval: PendingApproval; app: RemoteApp }) {
+  const deadline = approval.keepWaitable ? approval.expiresAt : undefined;
+  const now = useNow(deadline);
+  if (deadline === undefined || now >= deadline) return null;
+  return (
+    <div className="approval-deadline approval-countdown">
+      <span role="timer">{autoResolveText(deadline - now, approval.recommended)}</span>
+      <button
+        className="library-button"
+        disabled={app.status !== "online"}
+        onClick={() => app.keepWaitingApproval(approval.requestId)}
+      >
+        一直等
+      </button>
+    </div>
+  );
+}
+
 function ApprovalDeadline({ expiresAt }: { expiresAt?: number }) {
   return typeof expiresAt === "number" && Number.isFinite(expiresAt) ? (
     <p className="approval-deadline">
@@ -531,7 +551,11 @@ function DesktopApprovalCard({ approval, app }: { approval: PendingApproval; app
         {isAsk ? "Agent 提问" : `工具审批：${approval.toolName}`}
         <em> · {approval.risk}</em>
       </div>
-      <ApprovalDeadline expiresAt={approval.expiresAt} />
+      {approval.keepWaitable && !approval.roomId ? (
+        <QuestionCountdown approval={approval} app={app} />
+      ) : (
+        <ApprovalDeadline expiresAt={approval.expiresAt} />
+      )}
       {approval.description ? <div className="approval-desc">{approval.description}</div> : null}
       <div className="approval-summary">{approval.summary}</div>
       {isAsk ? (
@@ -545,6 +569,7 @@ function DesktopApprovalCard({ approval, app }: { approval: PendingApproval; app
                 onClick={() => respond(true, option)}
               >
                 {index + 1}. {option}
+                {approval.recommended === option ? "（推荐）" : ""}
               </button>
             ))}
           </div>
@@ -555,7 +580,12 @@ function DesktopApprovalCard({ approval, app }: { approval: PendingApproval; app
                 aria-label="自定义回答"
                 placeholder="输入回答…"
                 value={answer}
-                onChange={(event) => setAnswer(event.target.value)}
+                onChange={(event) => {
+                  // Codex-style: starting to type keeps the question open.
+                  if (!answer && approval.keepWaitable && !approval.roomId)
+                    app.keepWaitingApproval(approval.requestId);
+                  setAnswer(event.target.value);
+                }}
               />
               <button
                 className="send"
@@ -606,7 +636,7 @@ function DesktopApprovalCard({ approval, app }: { approval: PendingApproval; app
           </button>
         ) : null}
         <button className="stop" disabled={app.status !== "online"} onClick={() => respond(false)}>
-          {hostModeCard ? "保持当前模式" : "拒绝"}
+          {hostModeCard ? "保持当前模式" : approval.skippable ? "跳过" : "拒绝"}
         </button>
       </div>
     </div>

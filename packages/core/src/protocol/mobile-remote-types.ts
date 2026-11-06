@@ -203,6 +203,14 @@ export type MobileClientEvent =
       scope?: ApprovalScope;
       pathScope?: ApprovalPathScope;
     }
+  // Keep a model question open past its auto-resolve deadline (一直等).
+  | {
+      type: "approval.keepWaiting";
+      approvalId: string;
+      sessionId?: string;
+      connectionId?: string;
+      generation?: number;
+    }
   // ── Sessions: see every desktop session, open its history, drive it ──────
   | {
       type: "session.list";

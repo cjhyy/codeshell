@@ -197,6 +197,8 @@ interface Props {
   runningAgents?: number;
   activeProjectId: string | null;
   onAskUserAnswer?: AskUserAnswerHandler;
+  /** Keep a question open on a non-local runtime; defaults to the local worker. */
+  onKeepWaitingQuestion?: (question: AskUserMessage) => Promise<void>;
   /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */
   onExtendGoal?: (opts: {
     addTurns?: number;
@@ -448,6 +450,7 @@ export function ChatView({
   runningAgents = 0,
   activeProjectId,
   onAskUserAnswer,
+  onKeepWaitingQuestion,
   onExtendGoal,
   onAttachImagePath,
   onPrepareAttachmentSession,
@@ -2051,7 +2054,7 @@ export function ChatView({
               onAnswer={onAskUserAnswer ?? (() => undefined)}
               onKeepWaiting={
                 question.engineSessionId && question.source !== "external-runtime"
-                  ? keepWaitingOnQuestion
+                  ? (onKeepWaitingQuestion ?? keepWaitingOnQuestion)
                   : undefined
               }
             />

@@ -24,7 +24,13 @@ export class ApprovalLeases {
   ) {}
 
   add(approval: HubApproval): void {
-    if (this.entries.has(approval.requestId)) return;
+    const existing = this.entries.get(approval.requestId);
+    if (existing) {
+      // A republished request (the user kept a question open) replaces its
+      // payload for later snapshots; the holder lease is unchanged.
+      existing.approval = approval;
+      return;
+    }
     if (this.entries.size >= 256) throw new Error("too many pending approvals");
     this.entries.set(approval.requestId, {
       approval,

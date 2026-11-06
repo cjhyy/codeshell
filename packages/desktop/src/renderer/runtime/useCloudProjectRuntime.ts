@@ -9,7 +9,14 @@ export type CloudProjectRuntimeView = CloudRuntimeSnapshot & {
   setModel: (model: string) => void;
   send: (text: string) => Promise<void>;
   stop: () => Promise<void>;
-  approve: (id: string, approved: boolean, answer?: string, reason?: string) => Promise<void>;
+  approve: (
+    id: string,
+    approved: boolean,
+    answer?: string,
+    reason?: string,
+    record?: string,
+  ) => Promise<void>;
+  keepWaiting: (id: string) => Promise<void>;
   addFiles: (files: File[]) => Promise<void>;
   removeUpload: (id: string) => void;
   restoreFailedSubmission: (clientMessageId: string) => void;
@@ -59,6 +66,7 @@ export function useCloudProjectRuntime(
         send: controller.send,
         stop: controller.stop,
         approve: controller.approve,
+        keepWaiting: controller.keepWaiting,
         addFiles: controller.addFiles,
         removeUpload: controller.removeUpload,
         restoreFailedSubmission: controller.restoreFailedSubmission,

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, ShieldAlert, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
 import { Textarea } from "@ui/textarea";
 import { useT } from "@/i18n";
@@ -20,17 +21,57 @@ const RISK_TONE: Record<PendingApproval["risk"], string> = {
   high: "border-status-err/60 text-status-err",
 };
 
+/** Re-render each second until `until` passes; no timer without a deadline. */
+function useNow(until: number | undefined): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (until === undefined) return;
+    const timer = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= until) clearInterval(timer);
+    }, 1_000);
+    return () => clearInterval(timer);
+  }, [until]);
+  return now;
+}
+
+/** Remaining time as m:ss, rounded up so it never reads 0:00 early. */
+export function formatRemaining(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1_000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
 /** A pending permission request, with full desktop-parity controls:
  *  approve/deny, remembered scope (once/session/project), path scope
  *  (file/dir for path-scoped tools), and AskUser options / free-text answer. */
 export function ApprovalCard({
   approval,
   onRespond,
+  onKeepWaiting,
 }: {
   approval: PendingApproval;
   onRespond: (decision: "approve" | "reject", opts?: ApprovalResponse) => void;
+  /** Drop a model question's auto-resolve deadline (一直等). */
+  onKeepWaiting?: () => void;
 }) {
   const { t } = useT();
+  const now = useNow(approval.expiresAt);
+  // A model question's deadline can be dropped; it shows its own countdown.
+  const countdown =
+    approval.keepWaitable === true &&
+    approval.expiresAt !== undefined &&
+    approval.expiresAt > now &&
+    onKeepWaiting
+      ? approval.expiresAt
+      : undefined;
+  const keptWaiting = useRef(false);
+  /** Codex-style: engaging with the card (typing) stops the auto-resolve clock. */
+  const keepWaiting = () => {
+    if (countdown === undefined || keptWaiting.current) return;
+    keptWaiting.current = true;
+    onKeepWaiting?.();
+  };
   const isAsk = approval.toolName === "__ask_user__" || Boolean(approval.options?.length);
   const [scope, setScope] = useState<ApprovalScope>("once");
   const [pathScope, setPathScope] = useState<ApprovalPathScope>("tool");
@@ -72,7 +113,26 @@ export function ApprovalCard({
       {showDescription && (
         <p className="mb-2 break-words text-xs text-muted-foreground">{approval.description}</p>
       )}
-      {approval.expiresAt !== undefined && (
+      {countdown !== undefined && (
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <span
+            role="timer"
+            className={cn(
+              "text-xs tabular-nums text-muted-foreground",
+              countdown - now <= 60_000 && "text-status-err",
+            )}
+          >
+            {t(approval.recommended !== undefined ? "msg.ask.autoChooseIn" : "msg.ask.autoSkipIn", {
+              time: formatRemaining(countdown - now),
+              label: approval.recommended ?? "",
+            })}
+          </span>
+          <Button type="button" size="sm" variant="ghost" onClick={keepWaiting}>
+            {t("msg.ask.keepWaiting")}
+          </Button>
+        </div>
+      )}
+      {approval.expiresAt !== undefined && countdown === undefined && (
         <p className="mb-2 text-xs text-muted-foreground">
           {t("mobile.approval.expiresAt", {
             time: new Date(approval.expiresAt).toLocaleTimeString([], {
@@ -130,6 +190,11 @@ export function ApprovalCard({
                   </span>
                   <span className="min-w-0 flex-1 whitespace-normal break-words text-sm leading-5 text-foreground">
                     {opt}
+                    {approval.recommended === opt && (
+                      <Badge variant="secondary" className="ml-2 px-1.5 align-middle text-[10px]">
+                        {t("msg.ask.recommended")}
+                      </Badge>
+                    )}
                   </span>
                   <Check className="size-4 shrink-0 text-muted-foreground" />
                 </button>
@@ -140,7 +205,10 @@ export function ApprovalCard({
                 <Textarea
                   rows={2}
                   value={freeText}
-                  onChange={(e) => setFreeText(e.target.value)}
+                  onChange={(e) => {
+                    keepWaiting();
+                    setFreeText(e.target.value);
+                  }}
                   placeholder={t("mobile.approval.customPlaceholder")}
                   name="codeshell-answer"
                   autoComplete="off"
@@ -169,7 +237,8 @@ export function ApprovalCard({
               className="rounded-lg"
               onClick={() => onRespond("reject")}
             >
-              {t("common.cancel")}
+              {/* A model question's reject is a skip; the model continues. */}
+              {t(approval.skippable ? "msg.ask.skip" : "common.cancel")}
             </Button>
           </div>
         ) : (

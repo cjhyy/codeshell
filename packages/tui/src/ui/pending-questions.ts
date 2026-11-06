@@ -6,9 +6,15 @@ export interface PendingQuestion {
   sessionId?: string;
   question: string;
   header?: string;
-  options?: { label: string; description: string }[];
+  options?: { label: string; description: string; recommended?: boolean }[];
   multiSelect?: boolean;
   asynchronous?: boolean;
+  /** Host deadline; a model question auto-resolves then unless kept open. */
+  expiresAt?: number;
+  /** The deadline can be dropped (any key keeps waiting). */
+  keepWaitable?: boolean;
+  /** A model question: Esc skips it and the model continues. */
+  skippable?: boolean;
   draft?: QuestionDraft;
   submitting?: boolean;
 }
@@ -54,10 +60,21 @@ export function reducePendingQuestions(
   action: Action,
 ): PendingQuestionsState {
   switch (action.type) {
-    case "receive":
-      if (state.questions.some((question) => question.requestId === action.question.requestId))
-        return state;
-      return { ...state, questions: [...state.questions, action.question] };
+    case "receive": {
+      const existing = state.questions.find(
+        (question) => question.requestId === action.question.requestId,
+      );
+      if (!existing) return { ...state, questions: [...state.questions, action.question] };
+      // Republished without a deadline (someone chose to keep waiting).
+      const { expiresAt, keepWaitable } = action.question;
+      if (existing.expiresAt === expiresAt && existing.keepWaitable === keepWaitable) return state;
+      return {
+        ...state,
+        questions: state.questions.map((question) =>
+          question === existing ? { ...question, expiresAt, keepWaitable } : question,
+        ),
+      };
+    }
     case "open_next":
       return {
         ...state,
@@ -107,6 +124,13 @@ export function reducePendingQuestions(
 }
 
 /** Answer the originating task even if the user switched sessions meanwhile. */
+/** What a timed-out model question defaults to; undefined means it is skipped. */
+export function recommendedAnswer(question: PendingQuestion): string | undefined {
+  const labels = (question.options ?? []).filter((o) => o.recommended).map((o) => o.label);
+  if (labels.length === 0) return undefined;
+  return question.multiSelect ? labels.join(", ") : labels[0];
+}
+
 export function answerPendingQuestion(
   client: Pick<AgentClient, "approve">,
   question: PendingQuestion,

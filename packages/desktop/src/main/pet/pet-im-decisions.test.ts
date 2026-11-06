@@ -716,3 +716,101 @@ test("worker protocol: IM answer releases the original write; Stop drains queued
     });
   }
 });
+
+describe("IM model questions (skippable)", () => {
+  function modelQuestion(expiresAt: number | undefined, recommended = true) {
+    const f = fixture("model");
+    f.params.expiresAt = expiresAt;
+    f.params.request.args = {
+      question: "哪里的样式奇怪？",
+      skippable: true,
+      ...(expiresAt !== undefined ? { keepWaitable: true } : {}),
+      options: [
+        { label: "工作台画布", description: "canvas" },
+        {
+          label: "对照审阅页",
+          description: "review",
+          ...(recommended ? { recommended: true } : {}),
+        },
+      ],
+    };
+    return f;
+  }
+  function relayFor(f: ReturnType<typeof fixture>, now: { value: number }) {
+    const published: GatewayControlEventInput[] = [];
+    const approvals: unknown[] = [];
+    const kept: string[] = [];
+    const relay = new PetImDecisions({
+      read: () => f.read(),
+      now: () => now.value,
+      approve: async (entry, decision) => {
+        approvals.push(decision);
+        f.snapshot.pending = [];
+      },
+      keepWaiting: async (entry) => {
+        kept.push(entry.envelope.requestId);
+        f.params.expiresAt = undefined;
+        delete f.params.request.args.keepWaitable;
+      },
+      publish: async (event) => {
+        published.push(event);
+      },
+      onError: () => undefined,
+    });
+    const reply = (code: string, answer: string) =>
+      relay.reply({
+        message: `回答 ${code} ${answer}`,
+        origin: {
+          channel: "wechat",
+          target: "conversation",
+          senderId: "owner",
+          isDirectMessage: true,
+        },
+      });
+    return { relay, published, approvals, kept, reply };
+  }
+
+  test("announces the recommended default, Skip and keep waiting", async () => {
+    const now = { value: 20_000 };
+    const f = modelQuestion(now.value + 120_000);
+    const h = relayFor(f, now);
+    await h.relay.tick();
+    const text = h.published[0]!.text;
+    const code = f.read()[0]!.code;
+    expect(text).toContain("对照审阅页（推荐）");
+    expect(text).toContain("超时未回答将自动选择推荐项「对照审阅页」");
+    expect(text).toContain(`回答 ${code} 等待`);
+    expect(text).toContain(`回答 ${code} 跳过`);
+  });
+
+  test("leaves the timeout to Core instead of submitting a denial", async () => {
+    const now = { value: 20_000 };
+    const f = modelQuestion(now.value + 120_000);
+    const h = relayFor(f, now);
+    now.value += 121_000;
+    await h.relay.tick();
+    expect(h.approvals).toEqual([]);
+  });
+
+  test("跳过 declines without a reason so Core reports a skip", async () => {
+    const now = { value: 20_000 };
+    const f = modelQuestion(now.value + 120_000, false);
+    const h = relayFor(f, now);
+    const code = f.read()[0]!.code;
+    expect(await h.reply(code, "跳过")).toContain("已跳过这个问题");
+    expect(h.approvals).toEqual([{ approved: false }]);
+  });
+
+  test("等待 keeps the question open, after which it never expires", async () => {
+    const now = { value: 20_000 };
+    const f = modelQuestion(now.value + 120_000);
+    const h = relayFor(f, now);
+    const code = f.read()[0]!.code;
+    expect(await h.reply(code, "等待")).toContain("已改为一直等待");
+    expect(h.kept).toEqual(["request-model"]);
+    now.value += 60 * 60_000;
+    expect(await h.reply(code, "等待")).toContain("已经在一直等待");
+    expect(await h.reply(code, "2")).toContain("回答已交给原任务");
+    expect(h.approvals).toEqual([{ approved: true, answer: "对照审阅页" }]);
+  });
+});

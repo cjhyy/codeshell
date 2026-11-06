@@ -50,7 +50,12 @@ export interface CloudConfiguration {
   restartRequired: boolean;
 }
 
-export type CloudRequestMethod = "agent/run" | "agent/cancel" | "agent/approve" | "agent/query";
+export type CloudRequestMethod =
+  | "agent/run"
+  | "agent/cancel"
+  | "agent/approve"
+  | "agent/approvalKeepWaiting"
+  | "agent/query";
 export type CloudRequestErrorKind = "response" | "transport" | "timeout" | "not-sent";
 export interface CloudRequestError {
   message: string;

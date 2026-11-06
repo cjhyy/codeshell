@@ -398,6 +398,7 @@ export async function handleClientEvent(
     event.type === "session.list" ||
     event.type === "chat.send" ||
     event.type === "approval.respond" ||
+    event.type === "approval.keepWaiting" ||
     event.type === "run.stop" ||
     (ctx.externalCommands && ["model.set", "goal.extend", "goal.clear"].includes(event.type));
   const explicitSessionId = "sessionId" in event ? event.sessionId : undefined;
@@ -869,6 +870,38 @@ export async function handleClientEvent(
         ? { answer: event.answer }
         : {}),
     });
+    return;
+  }
+  if (event.type === "approval.keepWaiting") {
+    const sessionId = resolveSessionId(event.sessionId);
+    const pending = ctx.externalCommands?.isExternal(sessionId, event.viewerId)
+      ? undefined
+      : ctx.pendingApprovals.find(sessionId, event.approvalId);
+    if (
+      !pending ||
+      (event.connectionId !== undefined && event.connectionId !== pending.connectionId) ||
+      (event.generation !== undefined && event.generation !== pending.generation)
+    ) {
+      reply({
+        type: "error",
+        approvalId: event.approvalId,
+        message: "This question has closed, was already handled, or cannot be kept open.",
+      });
+      return;
+    }
+    // Core republishes the same request without a deadline; every surface updates.
+    const result = await injectAndAwaitResult(
+      bridge,
+      "agent/approvalKeepWaiting",
+      {
+        sessionId,
+        requestId: event.approvalId,
+        ...(pending.connectionId !== undefined ? { connectionId: pending.connectionId } : {}),
+        ...(pending.generation !== undefined ? { generation: pending.generation } : {}),
+      },
+      { origin: "mobile", producer: "mobile-keep-waiting" },
+    );
+    if (!result.ok) reply({ type: "error", approvalId: event.approvalId, message: result.message });
     return;
   }
   if (event.type === "run.stop") {

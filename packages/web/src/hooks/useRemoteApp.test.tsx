@@ -2827,6 +2827,70 @@ describe("useRemoteApp project V2 session creation", () => {
   });
 });
 
+describe("useRemoteApp model questions", () => {
+  test("a model question exposes Skip/default, keeps waiting on its route and updates in place", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    const route = { sessionId: "s1", requestId: "m1", connectionId: "worker", generation: 2 };
+    const request = {
+      toolName: "__ask_user__",
+      description: "哪里的样式奇怪？",
+      args: {
+        question: "哪里的样式奇怪？",
+        skippable: true,
+        keepWaitable: true,
+        options: [
+          { label: "工作台画布", description: "canvas" },
+          { label: "对照审阅页", description: "review", recommended: true },
+        ],
+      },
+    };
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        ws.message({
+          method: "agent/approvalRequest",
+          params: { ...route, expiresAt: Date.now() + 120_000, request },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals[0]).toMatchObject({
+        ...route,
+        skippable: true,
+        keepWaitable: true,
+        recommended: "对照审阅页",
+      });
+      await act(async () => {
+        hook.result.current.keepWaitingApproval("m1");
+        await flushMicrotasks();
+      });
+      expect(ws.sent.map((payload) => JSON.parse(payload))).toContainEqual({
+        type: "approval.keepWaiting",
+        approvalId: "m1",
+        sessionId: "s1",
+        connectionId: "worker",
+        generation: 2,
+      });
+      // Core republishes the same request without a deadline.
+      const { keepWaitable: _k, ...kept } = request.args;
+      await act(async () => {
+        ws.message({
+          method: "agent/approvalRequest",
+          params: { ...route, request: { ...request, args: kept } },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals).toHaveLength(1);
+      expect(hook.result.current.approvals[0]!.expiresAt).toBeUndefined();
+      expect(hook.result.current.approvals[0]!.keepWaitable).toBeUndefined();
+    } finally {
+      await hook.unmount();
+    }
+  });
+});
+
 describe("useRemoteApp approval replay", () => {
   test("phone answers preserve the exact worker route and another device's resolution retires its card", async () => {
     setupBrowser();

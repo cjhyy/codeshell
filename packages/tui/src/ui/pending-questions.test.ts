@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import {
   activeQuestion,
   answerPendingQuestion,
+  recommendedAnswer,
   INITIAL_PENDING_QUESTIONS,
   reducePendingQuestions,
   type PendingQuestion,
@@ -132,4 +133,39 @@ test("submission state belongs to the request and blocks deferral until a failur
   state = reducePendingQuestions(state, { type: "resolve", requestId: "a", sessionId: "origin" });
   state = reducePendingQuestions(state, { type: "submitting", requestId: "a", submitting: false });
   expect(state.questions).toHaveLength(0);
+});
+
+test("a republished question moves only its deadline and keeps its draft", () => {
+  const dated: PendingQuestion = {
+    requestId: "m",
+    sessionId: "origin",
+    question: "Which page?",
+    expiresAt: 1_000,
+    keepWaitable: true,
+    skippable: true,
+    options: [{ label: "Review", description: "page", recommended: true }],
+  };
+  let state = reducePendingQuestions(INITIAL_PENDING_QUESTIONS, {
+    type: "receive",
+    question: dated,
+  });
+  state = reducePendingQuestions(state, {
+    type: "draft",
+    requestId: "m",
+    draft: { phase: "pick", cursor: 0, selected: [], inputValue: "typed", reviewCursor: 0 },
+  });
+  const kept = reducePendingQuestions(state, {
+    type: "receive",
+    question: { ...dated, expiresAt: undefined, keepWaitable: false },
+  });
+  expect(kept.questions).toHaveLength(1);
+  expect(kept.questions[0]).toMatchObject({ expiresAt: undefined, keepWaitable: false });
+  expect(kept.questions[0]!.draft?.inputValue).toBe("typed");
+  expect(recommendedAnswer(kept.questions[0]!)).toBe("Review");
+  expect(
+    reducePendingQuestions(kept, {
+      type: "receive",
+      question: { ...dated, expiresAt: undefined, keepWaitable: false },
+    }),
+  ).toBe(kept);
 });

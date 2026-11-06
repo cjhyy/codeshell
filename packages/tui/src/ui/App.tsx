@@ -490,7 +490,7 @@ export function App({
               typeof (o as { label?: unknown }).label === "string" &&
               typeof (o as { description?: unknown }).description === "string",
           )
-            ? (rawOptions as { label: string; description: string }[])
+            ? (rawOptions as { label: string; description: string; recommended?: boolean }[])
             : undefined;
         dispatchQuestion({
           type: "receive",
@@ -505,6 +505,9 @@ export function App({
             options,
             multiSelect: (args as { multiSelect?: unknown }).multiSelect === true,
             asynchronous: (args as { asynchronous?: unknown }).asynchronous === true,
+            expiresAt: meta?.expiresAt,
+            keepWaitable: (args as { keepWaitable?: unknown }).keepWaitable === true,
+            skippable: (args as { skippable?: unknown }).skippable === true,
           },
         });
         return;

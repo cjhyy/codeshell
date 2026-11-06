@@ -49,3 +49,57 @@ describe("HubApprovalCard deadline", () => {
     expect(render(question())).not.toContain("自动");
   });
 });
+
+describe("HubApprovalCard model questions", () => {
+  function modelQuestion(expiresAt?: number, recommended = true): ApprovalRequestPayload {
+    return {
+      requestId: "m1",
+      sessionId: "s1",
+      ...(expiresAt !== undefined ? { expiresAt } : {}),
+      request: {
+        toolName: "__ask_user__",
+        description: "哪里的样式奇怪？",
+        args: {
+          question: "哪里的样式奇怪？",
+          skippable: true,
+          ...(expiresAt !== undefined ? { keepWaitable: true } : {}),
+          options: [
+            { label: "工作台画布", description: "canvas" },
+            {
+              label: "对照审阅页",
+              description: "review",
+              ...(recommended ? { recommended: true } : {}),
+            },
+          ],
+        },
+      },
+    };
+  }
+  const renderModel = (payload: ApprovalRequestPayload) =>
+    renderToStaticMarkup(
+      <HubApprovalCard
+        payload={payload}
+        busy={false}
+        connected
+        onDecide={() => {}}
+        onKeepWaiting={() => {}}
+      />,
+    );
+
+  test("names its default, offers 一直等, Skip, and marks the recommendation", () => {
+    const html = renderModel(modelQuestion(Date.now() + 90_000));
+    expect(html).toMatch(/1:[23]\d 后未回答将自动选择「对照审阅页」/);
+    expect(html).toContain("一直等");
+    expect(html).toContain("对照审阅页（推荐）");
+    expect(html).toContain("跳过");
+    expect(html).not.toContain(">拒绝<");
+  });
+
+  test("without a recommendation it says it will skip; kept open shows no clock", () => {
+    expect(renderModel(modelQuestion(Date.now() + 90_000, false))).toMatch(/后未回答将自动跳过/);
+    const kept = renderModel(modelQuestion(undefined));
+    expect(kept).not.toContain("一直等");
+    expect(kept).not.toContain("后未回答");
+    expect(kept).toContain("跳过");
+  });
+});

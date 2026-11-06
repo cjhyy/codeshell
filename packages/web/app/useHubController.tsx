@@ -766,6 +766,15 @@ export function useHubController({
       });
   };
 
+  const keepWaiting = (payload: ApprovalRequestPayload): void => {
+    const client = clientRef.current;
+    if (!client || connection !== "open") return;
+    const sessionId = payload.sessionId ?? activeIdRef.current;
+    void client
+      .keepWaiting({ ...payload, sessionId: sessionId ?? "" })
+      .catch((cause) => reportError(cause, sessionId));
+  };
+
   const stop = (): void => {
     const sessionId = activeIdRef.current;
     const client = clientRef.current;
@@ -882,6 +891,7 @@ export function useHubController({
         payload={a.payload}
         hidden={!!a.payload.sessionId && a.payload.sessionId !== activeId}
         onDecide={decide}
+        onKeepWaiting={keepWaiting}
         busy={
           !!pendingDecisions[a.payload.requestId] ||
           !!(a.lease?.holderId && (a.lease.expiresAt ?? 0) > now)

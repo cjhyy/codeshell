@@ -491,3 +491,19 @@ test("queue controls name one exact conversation and carry no caller authority",
   ])
     expect(parseMobileClientEvent({ type: "queue.sync", target })).toBeUndefined();
 });
+
+describe("parseMobileClientEvent keep waiting", () => {
+  test("keep-waiting requests carry only a question route", () => {
+    const event = {
+      type: "approval.keepWaiting",
+      sessionId: "s1",
+      approvalId: "a1",
+      connectionId: "worker",
+      generation: 2,
+    };
+    expect(parseMobileClientEvent(event)).toEqual(event);
+    expect(parseMobileClientEvent({ type: "approval.keepWaiting" })).toBeUndefined();
+    for (const generation of [-1, 1.5, "2"])
+      expect(parseMobileClientEvent({ ...event, generation })).toBeUndefined();
+  });
+});

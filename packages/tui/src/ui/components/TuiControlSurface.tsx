@@ -6,6 +6,7 @@ import { CommandInput } from "./CommandInput.js";
 import { AskUserPrompt } from "./AskUserPrompt.js";
 import {
   answerPendingQuestion,
+  recommendedAnswer,
   type PendingQuestion,
   type QuestionDraft,
 } from "../pending-questions.js";
@@ -327,6 +328,15 @@ export function TuiControlSurface(props: TuiControlSurfaceProps) {
             ? () => onQuestionDeferred(pendingQuestion.requestId)
             : undefined
         }
+        deadline={pendingQuestion.keepWaitable ? pendingQuestion.expiresAt : undefined}
+        recommended={recommendedAnswer(pendingQuestion)}
+        skippable={pendingQuestion.skippable}
+        onKeepWaiting={() => {
+          if (!pendingQuestion.sessionId) return;
+          void client
+            .keepWaiting(pendingQuestion.sessionId, pendingQuestion.requestId)
+            .catch((error) => addStatus(`Could not keep the question open: ${String(error)}`));
+        }}
         onAnswer={(answer) => {
           return answerPendingQuestion(client, pendingQuestion, { approved: true, answer })
             .then(() => onQuestionResolved(pendingQuestion))
@@ -336,10 +346,14 @@ export function TuiControlSurface(props: TuiControlSurfaceProps) {
             });
         }}
         onCancel={() => {
-          return answerPendingQuestion(client, pendingQuestion, {
-            approved: false,
-            reason: "(user declined to answer)",
-          })
+          // A model question declined without a reason is reported as a skip.
+          return answerPendingQuestion(
+            client,
+            pendingQuestion,
+            pendingQuestion.skippable
+              ? { approved: false }
+              : { approved: false, reason: "(user declined to answer)" },
+          )
             .then(() => onQuestionResolved(pendingQuestion))
             .catch((error) => {
               addStatus(`Could not dismiss question: ${String(error)}`);

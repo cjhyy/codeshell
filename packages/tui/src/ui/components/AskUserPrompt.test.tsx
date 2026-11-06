@@ -203,3 +203,66 @@ test("deferred multi-select and free-text drafts restore after the prompt remoun
     harness.unmount();
   }
 });
+
+test("a model question shows its default and the first keypress keeps it open", async () => {
+  let kept = 0;
+  let cancelled = 0;
+  const harness = mount(
+    <AskUserPrompt
+      question="Which page?"
+      options={[
+        { label: "Canvas", description: "Workbench" },
+        { label: "Review", description: "Comparison page", recommended: true },
+      ]}
+      deadline={Date.now() + 90_000}
+      recommended="Review"
+      skippable
+      onKeepWaiting={() => {
+        kept++;
+      }}
+      onAnswer={() => undefined}
+      onCancel={() => {
+        cancelled++;
+      }}
+    />,
+    { columns: 120 },
+  );
+  try {
+    await flush();
+    const text = plainText(harness);
+    expect(text).toMatch(/Picks “Review” in 1:[23]\d if unanswered/);
+    expect(text).toContain("(recommended)");
+    expect(text).toContain("Esc skip");
+    harness.stdin.write("\u001b[B");
+    harness.stdin.write("\u001b[A");
+    await flush();
+    expect(kept).toBe(1);
+    // Esc is a decision (skip), never a snooze.
+    harness.stdin.write("\u001b[27u");
+    await flush();
+    expect(cancelled).toBe(1);
+    expect(kept).toBe(1);
+  } finally {
+    harness.unmount();
+  }
+});
+
+test("without a recommendation the clock says it will skip", async () => {
+  const harness = mount(
+    <AskUserPrompt
+      question="Which page?"
+      deadline={Date.now() + 90_000}
+      skippable
+      onKeepWaiting={() => undefined}
+      onAnswer={() => undefined}
+      onCancel={() => undefined}
+    />,
+    { columns: 120 },
+  );
+  try {
+    await flush();
+    expect(plainText(harness)).toMatch(/Skips in 1:[23]\d if unanswered/);
+  } finally {
+    harness.unmount();
+  }
+});

@@ -50,7 +50,7 @@ import type { GoalConfig } from "../goal/lifecycle.js";
 
 export type ApprovalRequestMeta = Pick<
   ApprovalRequestNotification,
-  "connectionId" | "sessionId" | "generation"
+  "connectionId" | "sessionId" | "generation" | "expiresAt"
 >;
 export type ApprovalResolvedEvent = ApprovalResolvedNotification;
 
@@ -206,6 +206,19 @@ export class AgentClient {
     ).finally(() => {
       this.approvalRoutes.delete(requestId);
     });
+  }
+
+  /**
+   * Keep a question open past its auto-resolve deadline. The server republishes
+   * the same requestId without `expiresAt` on success.
+   */
+  keepWaiting(sessionId: string, requestId: string): Promise<void> {
+    const route = this.approvalRoutes.get(requestId);
+    return this.request(Methods.ApprovalKeepWaiting, {
+      ...route,
+      sessionId,
+      requestId,
+    } as unknown as Record<string, unknown>) as Promise<void>;
   }
 
   /**
@@ -564,12 +577,17 @@ export class AgentClient {
             typeof params.connectionId === "string" ? (params.connectionId as string) : undefined;
           const generation =
             typeof params.generation === "number" ? (params.generation as number) : undefined;
-          const meta: ApprovalRequestMeta = {
+          const route = {
             ...(connectionId === undefined ? {} : { connectionId }),
             ...(sessionId === undefined ? {} : { sessionId }),
             ...(generation === undefined ? {} : { generation }),
           };
-          this.approvalRoutes.set(requestId, meta);
+          // A republished question (same requestId) carries its new deadline.
+          const meta: ApprovalRequestMeta = {
+            ...route,
+            ...(typeof params.expiresAt === "number" ? { expiresAt: params.expiresAt } : {}),
+          };
+          this.approvalRoutes.set(requestId, route);
           this.emitter.emit("approvalRequest", requestId, request, meta);
         }
         break;

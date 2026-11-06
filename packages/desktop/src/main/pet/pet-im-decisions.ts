@@ -71,12 +71,35 @@ export function collectImDecisions(
     result.push({
       code,
       createdAt: pending.createdAt,
-      expiresAt: envelope.expiresAt ?? pending.expiresAt,
+      // A model question's live envelope owns its deadline: keeping it open
+      // republishes the request without one, while observer metadata lags.
+      expiresAt: skippableEnvelope(envelope)
+        ? envelope.expiresAt
+        : (envelope.expiresAt ?? pending.expiresAt),
       task,
       envelope,
     });
   }
   return result;
+}
+
+/** Model questions (AskUserQuestion*) — Core resolves their timeout itself. */
+function skippableEnvelope(envelope: Envelope): boolean {
+  return envelope.request.toolName === "__ask_user__" && envelope.request.args.skippable === true;
+}
+
+/** The recommended label(s) a timed-out model question defaults to. */
+function recommended(entry: ImDecision): string | undefined {
+  const args = entry.envelope.request.args;
+  const labels = Array.isArray(args.options)
+    ? args.options.flatMap((option) =>
+        option && option.recommended === true && typeof option.label === "string"
+          ? [option.label as string]
+          : [],
+      )
+    : [];
+  if (labels.length === 0) return undefined;
+  return args.multiSelect === true ? labels.join(", ") : labels[0];
 }
 
 function choices(entry: ImDecision): string[] {
@@ -106,7 +129,7 @@ function questionBody(entry: ImDecision): string | undefined {
         ? args.options.flatMap((option) =>
             option && typeof option.label === "string"
               ? [
-                  `${option.label}${typeof option.description === "string" && option.description ? ` — ${option.description}` : ""}`,
+                  `${option.label}${option.recommended === true ? "（推荐）" : ""}${typeof option.description === "string" && option.description ? ` — ${option.description}` : ""}`,
                 ]
               : [],
           )
@@ -139,6 +162,8 @@ export class PetImDecisions {
     private readonly options: {
       read: () => ImDecision[];
       approve: (entry: ImDecision, decision: Decision) => Promise<void>;
+      /** Drop a model question's auto-resolve deadline (回答 码 等待). */
+      keepWaiting?: (entry: ImDecision) => Promise<void>;
       publish: (event: GatewayControlEventInput) => Promise<void>;
       onError: (error: unknown) => void;
       now?: () => number;
@@ -164,9 +189,10 @@ export class PetImDecisions {
     return this.now() >= this.expiresAt(entry);
   }
   private expiresAt(entry: ImDecision): number {
-    return Number.isFinite(entry.expiresAt)
-      ? entry.expiresAt!
-      : entry.createdAt + (this.options.timeoutMs ?? USER_DECISION_TIMEOUT_MS);
+    if (Number.isFinite(entry.expiresAt)) return entry.expiresAt!;
+    // A model question without a deadline waits until it is answered.
+    if (skippableEnvelope(entry.envelope)) return Number.POSITIVE_INFINITY;
+    return entry.createdAt + (this.options.timeoutMs ?? USER_DECISION_TIMEOUT_MS);
   }
   private sameOrigin(
     entry: ImDecision,
@@ -184,7 +210,8 @@ export class PetImDecisions {
   }
   private pruneDelivered(): void {
     for (const [code, item] of this.delivered) {
-      if (this.now() > Math.max(this.expiresAt(item.entry), item.at) + USER_DECISION_TIMEOUT_MS)
+      const end = this.expiresAt(item.entry);
+      if (this.now() > Math.max(Number.isFinite(end) ? end : 0, item.at) + USER_DECISION_TIMEOUT_MS)
         this.delivered.delete(code);
     }
     while (this.delivered.size > 256) this.delivered.delete(this.delivered.keys().next().value!);
@@ -201,6 +228,8 @@ export class PetImDecisions {
       for (const entry of entries) {
         if (this.submitting.has(entry.code)) continue;
         if (this.expired(entry)) {
+          // Core applies a model question's timeout (recommended option or skip).
+          if (skippableEnvelope(entry.envelope)) continue;
           this.submitting.add(entry.code);
           try {
             // Re-read immediately before submitting; cancellation/restart wins.
@@ -255,8 +284,15 @@ export class PetImDecisions {
   }
 
   private prompt(entry: ImDecision): string {
-    const remaining = Math.max(1, Math.ceil((this.expiresAt(entry) - this.now()) / 60_000));
-    const deadline = `剩余约 ${remaining} 分钟；电脑、微信和已连接的手机遥控共用截止时间，超时不会授权本次操作。`;
+    const question = skippableEnvelope(entry.envelope);
+    const end = this.expiresAt(entry);
+    const remaining = Math.max(1, Math.ceil((end - this.now()) / 60_000));
+    const fallback = recommended(entry);
+    const deadline = !question
+      ? `剩余约 ${remaining} 分钟；电脑、微信和已连接的手机遥控共用截止时间，超时不会授权本次操作。`
+      : !Number.isFinite(end)
+        ? "这个问题会一直等你回答。"
+        : `剩余约 ${remaining} 分钟；超时未回答将${fallback !== undefined ? `自动选择推荐项「${fallback}」` : "自动跳过"}。回复「回答 ${entry.code} 等待」可一直等。`;
     // Existing tasks lack sender identity; group conversations must not receive
     // private permission details or gain authority through a guessed reply code.
     if (!canReply(entry)) return `任务正在等待确认，请打开桌面 Session 处理。\n${deadline}`;
@@ -278,7 +314,7 @@ export class PetImDecisions {
       body,
       instructions,
       "回答时请保留确认码；无需进入 Session。",
-      `回复「回答 ${entry.code} 拒绝」可跳过。`,
+      `回复「回答 ${entry.code} ${question ? "跳过" : "拒绝"}」可跳过。`,
       deadline,
     ]
       .filter(Boolean)
@@ -320,6 +356,7 @@ export class PetImDecisions {
         [...matching, ...delivered.map(({ entry }) => entry)].some((entry) =>
           [
             "拒绝",
+            "跳过",
             ...(entry.envelope.request.toolName === "__ask_user__" ? choices(entry) : ["允许本次"]),
           ].includes(message),
         );
@@ -353,11 +390,27 @@ export class PetImDecisions {
     }
     if (this.submitting.has(code)) return "该确认正在处理，请勿重复提交。";
     if (answer.length > 12_000) return "回答过长，请缩短后重试。";
-    if (answer !== "拒绝" && !questionBody(entry))
+    const question = skippableEnvelope(entry.envelope);
+    if (question && ["等待", "一直等"].includes(answer)) {
+      if (!Number.isFinite(this.expiresAt(entry))) return `确认 ${code} 已经在一直等待你的回答。`;
+      if (!this.options.keepWaiting) return "当前无法改为一直等待，请在电脑上处理。";
+      try {
+        await this.options.keepWaiting(entry);
+        return `确认 ${code} 已改为一直等待，想好后再回复「回答 ${code} 1」等即可。`;
+      } catch (error) {
+        this.options.onError(error);
+        return "没能改为一直等待，可能已在其他端处理。请查看任务状态。";
+      }
+    }
+    const skip = answer === "拒绝" || (question && answer === "跳过");
+    if (!skip && !questionBody(entry))
       return "请在桌面 Session 查看完整确认内容后处理；也可以回复拒绝。";
     let decision: Decision;
-    if (answer === "拒绝")
-      decision = { approved: false, reason: "User declined via the originating IM conversation" };
+    if (skip)
+      // No reason on a model question: Core reports a skip and the model continues.
+      decision = question
+        ? { approved: false }
+        : { approved: false, reason: "User declined via the originating IM conversation" };
     else if (entry.envelope.request.toolName !== "__ask_user__") {
       if (!["1", "2", "允许本次"].includes(answer)) return "请回复选项 1（允许本次）或 2（拒绝）。";
       decision = {
@@ -387,7 +440,7 @@ export class PetImDecisions {
     this.submitting.add(code);
     try {
       await this.options.approve(entry, decision);
-      return `确认 ${code} 已处理${decision.approved ? "，回答已交给原任务" : "，本次操作未授权"}。`;
+      return `确认 ${code} 已处理${decision.approved ? "，回答已交给原任务" : question ? "，已跳过这个问题" : "，本次操作未授权"}。`;
     } catch (error) {
       this.options.onError(error);
       return "确认未提交成功，可能已在其他端处理。请查看任务状态后重试。";
@@ -395,4 +448,42 @@ export class PetImDecisions {
       this.submitting.delete(code);
     }
   }
+}
+
+type WorkerRequest = (
+  method: string,
+  params: Record<string, unknown>,
+  timeoutMs: number,
+  options: { meta: { origin: "host"; producer: string } },
+) => Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
+
+/** Worker-side effects of an IM decision, kept out of the composition root. */
+export function imDecisionWorkerActions(
+  requestWorker: WorkerRequest,
+  broadcastResolved: (params: {
+    sessionId: string;
+    requestId: string;
+    connectionId?: string;
+    generation?: number;
+    approved: boolean;
+    answer?: string;
+  }) => void,
+): Pick<ConstructorParameters<typeof PetImDecisions>[0], "approve" | "keepWaiting"> {
+  const send = async (method: string, params: Record<string, unknown>, producer: string) => {
+    const outcome = await requestWorker(method, params, 15_000, {
+      meta: { origin: "host", producer },
+    });
+    if (!outcome.ok) throw new Error(outcome.message);
+  };
+  return {
+    approve: async (entry, decision) => {
+      const { request: _request, expiresAt: _expiresAt, ...route } = entry.envelope;
+      await send("agent/approve", { ...route, decision }, "pet-im-decision");
+      broadcastResolved({ ...route, approved: decision.approved, answer: decision.answer });
+    },
+    keepWaiting: async (entry) => {
+      const { request: _request, expiresAt: _expiresAt, ...route } = entry.envelope;
+      await send("agent/approvalKeepWaiting", route, "pet-im-keep-waiting");
+    },
+  };
 }

@@ -167,3 +167,87 @@ test("手机异步自由回答保留草稿，稍后不会提交或拒绝，恢�
     document.body.removeChild(container);
   }
 });
+
+const modelQuestion: PendingApproval = {
+  requestId: "m1",
+  toolName: "__ask_user__",
+  description: "哪里的样式奇怪？",
+  summary: "哪里的样式奇怪？",
+  risk: "low",
+  pathScoped: false,
+  options: ["工作台画布", "对照审阅页"],
+  skippable: true,
+  keepWaitable: true,
+  recommended: "对照审阅页",
+  expiresAt: Date.now() + 90_000,
+};
+
+test("模型提问显示倒计时、一直等、跳过与推荐标记", () => {
+  const html = renderToStaticMarkup(
+    <ApprovalCard approval={modelQuestion} onRespond={() => {}} onKeepWaiting={() => {}} />,
+  );
+  expect(html).toMatch(/1:[23]\d 后未回答将自动选择「对照审阅页」/);
+  expect(html).toContain("一直等");
+  expect(html).toContain("推荐");
+  expect(html).toContain("跳过");
+  expect(html).not.toContain(">取消<");
+});
+
+test("改为一直等后不再显示倒计时；权限类提问仍是取消", () => {
+  const kept = renderToStaticMarkup(
+    <ApprovalCard
+      approval={{ ...modelQuestion, keepWaitable: false, expiresAt: undefined }}
+      onRespond={() => {}}
+      onKeepWaiting={() => {}}
+    />,
+  );
+  expect(kept).not.toContain("一直等");
+  expect(kept).not.toContain("后未回答");
+  const permission = renderToStaticMarkup(
+    <ApprovalCard
+      approval={{ ...modelQuestion, skippable: false, keepWaitable: false, recommended: undefined }}
+      onRespond={() => {}}
+    />,
+  );
+  expect(permission).not.toContain("跳过");
+});
+
+test("开始输入自定义回答会自动改为一直等（只触发一次）", async () => {
+  ensureMiniDom();
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  let kept = 0;
+  try {
+    await act(async () => {
+      root.render(
+        <ApprovalCard
+          approval={modelQuestion}
+          onRespond={() => {}}
+          onKeepWaiting={() => {
+            kept++;
+          }}
+        />,
+      );
+      await flushMicrotasks();
+    });
+    const textarea = (function find(node: any): any {
+      if (node?.tagName === "TEXTAREA") return node;
+      for (const child of node?.childNodes ?? []) {
+        const hit = find(child);
+        if (hit) return hit;
+      }
+      return undefined;
+    })(container);
+    const key = Object.keys(textarea).find((k) => k.startsWith("__reactProps$"))!;
+    await act(async () => {
+      textarea[key].onChange({ target: { value: "a" } });
+      textarea[key].onChange({ target: { value: "ab" } });
+      await flushMicrotasks();
+    });
+    expect(kept).toBe(1);
+  } finally {
+    await act(async () => root.unmount());
+    document.body.removeChild(container);
+  }
+});
