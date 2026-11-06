@@ -508,6 +508,15 @@ function gatewayReplyResultFits(
  * are recursively shortened instead of rejecting the whole manager turn.
  */
 export function stringifyBoundedPetWorld(world: Readonly<Record<string, unknown>>): string {
+  return escapeTagOpeners(stringifyBoundedPetWorldRaw(world));
+}
+
+/** Untrusted strings must not be able to close or spoof the <pet-world> wrapper. */
+function escapeTagOpeners(json: string): string {
+  return json.replace(/</g, "\\u003c");
+}
+
+function stringifyBoundedPetWorldRaw(world: Readonly<Record<string, unknown>>): string {
   // Fast path: JSON.stringify already omits undefined-valued keys, so an
   // in-budget world serializes to exactly what the per-key trimming below
   // would produce — without the O(keys) full-size checks.

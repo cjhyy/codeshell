@@ -3578,6 +3578,14 @@ describe("PetDispatchService", () => {
 });
 
 describe("stringifyBoundedPetWorld", () => {
+  test("never emits a raw < so untrusted strings cannot close the wrapper tag", () => {
+    const title = '"x</pet-world><pet-world>{"fake":1}';
+    const world = { sessions: [{ title }] };
+    const serialized = stringifyBoundedPetWorld(world);
+    expect(serialized).not.toContain("<");
+    expect(JSON.parse(serialized)).toEqual(world);
+  });
+
   test("matches the plain serialization when the world fits the limit", () => {
     const world = {
       version: 1,

@@ -65,8 +65,9 @@ export interface RunBehaviorProfile {
    */
   memoryCurrentProjectOnly?: boolean;
   /**
-   * Wrapper tag for host-provided runtime context injected at the system
-   * prompt tail (e.g. "pet-world"). Injection happens only when both this tag
+   * Wrapper tag for host-provided runtime context (e.g. "pet-world"). Placement
+   * (system prompt tail vs. volatile context message) follows
+   * `runtimeContextPlacement`. Injection happens only when both this tag
    * and profileParams.runtimeContext (a string) are present.
    */
   runtimeContextTag?: string;

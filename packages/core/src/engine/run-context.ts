@@ -102,7 +102,7 @@ export function runtimeContextDynamicText(
   return runtimeContextBlock(profile, profileParams);
 }
 
-/** engine.ts L1768-1776:runtimeContext 尾巴拼接(纯函数)。 */
+/** 组装系统提示:"system" 放置时尾部拼 runtimeContext,"dynamic" 时只加稳定说明句(纯函数)。 */
 export function composeRunSystemPrompt(args: {
   baseSystemPrompt: string;
   profile: RunBehaviorProfile | undefined;

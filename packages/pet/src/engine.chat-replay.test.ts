@@ -503,6 +503,9 @@ describe("Mimi mocked multi-turn chat replay", () => {
     });
 
     const latest = replay.replay.rounds[1]!;
+    // Different worlds per run must not change the (cacheable) system prompt.
+    expect(latest.systemPrompt).toBe(replay.replay.rounds[0]!.systemPrompt);
+    expect(JSON.stringify(latest.messages.at(-1))).toContain("<pet-world>");
     expect(visibleWorld(latest)).toContain('\\"status\\":\\"paused\\"');
     expect(visibleWorld(latest)).not.toContain('\\"status\\":\\"running\\"');
     expect(JSON.stringify(latest.messages)).toContain("只整理说明，不发布");
