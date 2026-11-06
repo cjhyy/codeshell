@@ -221,8 +221,9 @@ send({ type: "assistant", message: { model: "actual-claude-model", content: [] }
         kind: "codex",
         cwd,
         pathAccess,
-        registry: new ToolRegistry({ builtinTools: ["Read"] }),
-        presetRules: [{ tool: "Read", decision: "allow" }],
+        // Reads are never path-gated; a write outside the workspace is.
+        registry: new ToolRegistry({ builtinTools: ["Write"] }),
+        presetRules: [{ tool: "Write", decision: "allow" }],
         visibility: { ...BASE.visibility, cwd },
         codexClient: {
           command: process.execPath,
@@ -249,7 +250,7 @@ send({ type: "assistant", message: { model: "actual-claude-model", content: [] }
         },
         body: JSON.stringify({
           id: 1, method: "tools/call",
-          params: { name: "Read", arguments: { file_path: ${JSON.stringify(filePath)} } },
+          params: { name: "Write", arguments: { file_path: ${JSON.stringify(filePath)}, content: "updated" } },
         }),
       });
       writeFileSync(${JSON.stringify(responseFile)}, await response.text());
@@ -267,7 +268,7 @@ send({ type: "assistant", message: { model: "actual-claude-model", content: [] }
       });
       sessions.push(session);
 
-      const turn = await session.send({ text: "read the fixture" });
+      const turn = await session.send({ text: "write the fixture" });
       expect(turn.accepted).toBe(true); // turn/start was acknowledged by the app-server
       await turn.done;
       const response = JSON.parse(readFileSync(responseFile, "utf8")) as {
@@ -275,10 +276,11 @@ send({ type: "assistant", message: { model: "actual-claude-model", content: [] }
       };
       if (pathAccess === "full") {
         expect(response.result.isError).toBeFalsy();
-        expect(response.result.content[0]!.text).toContain("synthetic factory attachment");
+        expect(readFileSync(filePath, "utf8")).toBe("updated");
       } else {
         expect(response.result.isError).toBe(true);
         expect(response.result.content[0]!.text).toContain("path requires approval");
+        expect(readFileSync(filePath, "utf8")).toBe("synthetic factory attachment");
       }
     },
   );
