@@ -2209,18 +2209,12 @@ export class PetDispatchService {
           ),
         );
         const taskInboxTask = settle(timer.phase("taskInbox", () => this.readTaskInbox()));
-        // Advance the topic-segment clock and, if a long-idle boundary was
-        // crossed, obtain a carryover brief (open tasks + recent conclusions)
-        // to inject as background continuity via the pet runtime context. The
-        // clientMessageId keys the new segment's boundary to this turn so the
-        // chat UI can render the divider before it (see PetSegmentController).
-        // Read host extras once; canonical projection keys are reserved below
-        // so an extension cannot shadow trusted session state.
-        const segmentTask = settle(
+        // Side-effect-free reads only: beginTurn opens segments, so it stays
+        // at its original position after the preparation awaits succeed.
+        const worldPersonalizationTask = settle(
           contextInputTask.then((contextInput) =>
-            timer.phase("segmentWorldPersonalization", () =>
+            timer.phase("worldPersonalization", () =>
               Promise.all([
-                this.options.segmentController?.beginTurn(command.clientMessageId),
                 this.options.worldContext?.(contextInput),
                 this.currentPersonalization(),
               ]),
@@ -2361,7 +2355,19 @@ export class PetDispatchService {
           return sourceSession ? { ...item, workspaceId: sourceSession.workspaceId } : item;
         });
         const contextInput = await contextInputTask;
-        const [segmentTurn, worldExtrasRaw, personalization] = await segmentTask;
+        // Advance the topic-segment clock and, if a long-idle boundary was
+        // crossed, obtain a carryover brief (open tasks + recent conclusions)
+        // to inject as background continuity via the pet runtime context. The
+        // clientMessageId keys the new segment's boundary to this turn so the
+        // chat UI can render the divider before it (see PetSegmentController).
+        // Read host extras once; canonical projection keys are reserved below
+        // so an extension cannot shadow trusted session state.
+        const [segmentTurn, [worldExtrasRaw, personalization]] = await Promise.all([
+          timer.phase("segmentBeginTurn", () =>
+            this.options.segmentController?.beginTurn(command.clientMessageId),
+          ),
+          worldPersonalizationTask,
+        ]);
         const carryoverBrief = segmentTurn?.carryoverBrief;
         const worldExtras = worldExtrasRaw ?? {};
         // GatewayReply is route-bound and therefore IM-only. The other atomic

@@ -3505,12 +3505,19 @@ describe("PetDispatchService", () => {
   });
 
   test("a failing preparation source still fails dispatch without unhandled rejections", async () => {
+    let beginTurnCalls = 0;
     const catalogGate = deferred<void>();
     const service = new PetDispatchService({
       metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
       listWorkspaces: async () => {
         throw new Error("workspace boom");
       },
+      segmentController: {
+        beginTurn: async () => {
+          beginTurnCalls += 1;
+          return undefined;
+        },
+      } as never,
       aggregator: {
         getSnapshot: () => snapshot,
         resolveNavigation: async () => ({ status: "not-found" }),
@@ -3534,6 +3541,7 @@ describe("PetDispatchService", () => {
     catalogGate.resolve();
     for (let i = 0; i < 10; i++) await Promise.resolve();
     expect(outcome.kind).toBe("rejected");
+    expect(beginTurnCalls).toBe(0);
     expect(String((outcome as { error: unknown }).error)).toContain("workspace boom");
   });
 
