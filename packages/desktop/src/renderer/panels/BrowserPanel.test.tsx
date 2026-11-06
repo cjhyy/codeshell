@@ -209,8 +209,8 @@ test("a changed login partition remounts only the guest and retains the current 
   const oldPartition = "persist:browser:project::session";
   const projectPartition = "persist:browser:p:project";
   const handoffButton = () =>
-    findElements(container, "BUTTON").find((button) =>
-      String(reactPropsOf(button)["aria-label"]).includes("Browser Runtime"),
+    findElements(container, "BUTTON").find(
+      (button) => String(reactPropsOf(button)["aria-label"]) === "用于当前对话",
     );
   await renderPanel(oldPartition);
   const original = findElements(container, "WEBVIEW")[0];
