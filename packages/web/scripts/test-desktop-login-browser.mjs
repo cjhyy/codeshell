@@ -163,16 +163,16 @@ try {
     fixture.calls.some((call) => call.path.includes("cloud")),
     false,
   );
-  assert.equal(await fixture.page.evaluate(() => localStorage.length), 0);
-  assert.equal(await fixture.page.evaluate(() => sessionStorage.length), 0);
+  assert.equal(await fixture.page.evaluate(() => globalThis.localStorage.length), 0);
+  assert.equal(await fixture.page.evaluate(() => globalThis.sessionStorage.length), 0);
   results.push(
     "password login preserves the desktop request and still requires explicit confirmation",
   );
   await screenshot(fixture.page, "02-confirm-desktop");
   await fixture.page.setViewportSize({ width: 390, height: 844 });
   const width = await fixture.page.evaluate(() => ({
-    body: document.body.scrollWidth,
-    viewport: innerWidth,
+    body: globalThis.document.body.scrollWidth,
+    viewport: globalThis.innerWidth,
   }));
   assert.ok(width.body <= width.viewport, "Desktop confirmation fits a narrow browser");
   await screenshot(fixture.page, "03-confirm-mobile");
