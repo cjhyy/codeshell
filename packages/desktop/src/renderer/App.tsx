@@ -2757,16 +2757,15 @@ function App() {
               )}
             </AppMainView>
 
-            {/* PanelArea stays MOUNTED across close→reopen (hidden via display:none
-          when !open) so the browser <webview> and terminal pty survive a dock
-          close — reopening lands on the same live page instead of reloading
-          from scratch (matches Codex). Closing only hides; the webview process
-          is reclaimed by BrowserPanel's own idle-eviction after a few minutes.
-          We still gate on having tabs so an empty dock doesn't mount stray
-          panel bodies before the user has opened anything. */}
-            {!cloudSelected && projectRuntime.ready && panelBuckets.length > 0 && (
+            {/* Keep session panels mounted across dock close, project selection and
+          cloud views. The dock admits new buckets only after local runtime
+          selection resolves; existing bodies stay hidden with their own state.
+          BrowserPanel handles idle guest eviction. Empty docks mount no bodies. */}
+            {panelBuckets.length > 0 && (
               <React.Suspense
                 fallback={
+                  !cloudSelected &&
+                  projectRuntime.ready &&
                   shouldShowPanelDockFallback(activePanelState.open, isChatView) ? (
                     <div
                       className="flex shrink-0 items-center justify-center border-l border-border text-xs text-muted-foreground"
@@ -2784,6 +2783,7 @@ function App() {
                     panelByBucket={panelByBucket}
                     activeBucket={activeBucket}
                     isChatView={isChatView}
+                    localPanelsReady={!cloudSelected && projectRuntime.ready}
                     onRestorePanelFocus={() =>
                       panelToggleRef.current?.focus({ preventScroll: true })
                     }

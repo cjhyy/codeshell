@@ -1683,6 +1683,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   grantBuiltInBrowserToRuntime: (payload: {
     sessionId: string;
     guestId: number;
+    lifetime?: "session";
     ttlMs?: number;
   }): Promise<{
     granted: boolean;

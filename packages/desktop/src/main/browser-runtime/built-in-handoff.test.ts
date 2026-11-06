@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { WebContents } from "electron";
 import type { GuestRecord } from "../browser-driver/active-guest.js";
-import { BuiltInBrowserHandoffGrants } from "./built-in-handoff.js";
+import {
+  BuiltInBrowserHandoffGrants,
+  parseBuiltInBrowserGrantLifetime,
+} from "./built-in-handoff.js";
 import { handleBrowserAction, releaseGuest } from "../browser-driver/automation-host.js";
 import type { BrowserBridge } from "@cjhyy/code-shell-core";
 
@@ -15,6 +18,17 @@ function fakeRecord(overrides: Partial<GuestRecord> = {}): GuestRecord {
     once: (event: string, listener: () => void) => {
       if (event === "destroyed") destroyedListeners.push(listener);
       return guest;
+    },
+    removeListener: (event: string, listener: () => void) => {
+      if (event === "destroyed") {
+        const index = destroyedListeners.indexOf(listener);
+        if (index >= 0) destroyedListeners.splice(index, 1);
+      }
+      return guest;
+    },
+    emit: (event: string) => {
+      if (event === "destroyed") for (const listener of [...destroyedListeners]) listener();
+      return true;
     },
   } as unknown as WebContents;
   return {
@@ -32,6 +46,205 @@ function fakeRecord(overrides: Partial<GuestRecord> = {}): GuestRecord {
 }
 
 describe("BuiltInBrowserHandoffGrants", () => {
+  test("session grants stay on the exact selected tab across turns without a timer", async () => {
+    let now = 1_000;
+    const record = fakeRecord();
+    const calls: string[] = [];
+    const grants = new BuiltInBrowserHandoffGrants({
+      guestRecordForId: (id) => (id === record.guestId ? record : null),
+      bucketForSession: (id) => (id === "session-bound" ? record.bucket : "other-bucket"),
+      now: () => now,
+      authorizeGuest: () => calls.push("authorize"),
+      releaseGuest: () => calls.push("release"),
+    });
+    const claim = {
+      sessionId: "session-bound",
+      guestId: 42,
+      sourceWindowId: 7,
+      lifetime: "session" as const,
+    };
+    const first = grants.grant(claim);
+    expect(first.grantedAt).toBe(1_000);
+    expect(first.expiresAt).toBeUndefined();
+    expect(
+      JSON.parse((await grants.dispatch(claim.sessionId, { action: "listTabs" }))!)[0],
+    ).toMatchObject({
+      tabId: "42",
+      active: true,
+    });
+    now += 7 * 24 * 60 * 60 * 1_000;
+    expect(grants.grant(claim)).toEqual(first);
+    expect(
+      JSON.parse((await grants.dispatch(claim.sessionId, { action: "listTabs" }))!)[0],
+    ).toMatchObject({
+      tabId: "42",
+      active: true,
+    });
+    expect(calls).toEqual(["authorize"]);
+    expect(() => grants.grant({ ...claim, sourceWindowId: 99 })).toThrow("window that owns");
+    expect(await grants.dispatch("other-session", { action: "listTabs" })).toBeUndefined();
+    expect(() => grants.grant({ ...claim, sessionId: "other-session" })).toThrow("does not belong");
+    grants.clearSession(claim.sessionId);
+    expect(calls).toEqual(["authorize", "release"]);
+    expect(grants.status(claim.sessionId).granted).toBe(false);
+  });
+
+  test("reselecting a session tab preserves in-flight actions and does not resume takeover", async () => {
+    const record = fakeRecord();
+    const calls: string[] = [];
+    const activeChecks: Array<() => boolean> = [];
+    const grants = new BuiltInBrowserHandoffGrants({
+      guestRecordForId: () => record,
+      bucketForSession: () => record.bucket,
+      authorizeGuest: () => calls.push("authorize"),
+      releaseGuest: () => calls.push("release"),
+      dispatchAction: async (_request, deps) => {
+        activeChecks.push(deps!.isActive!);
+        return "ok";
+      },
+    });
+    const claim = {
+      sessionId: "session-paused",
+      guestId: 42,
+      sourceWindowId: 7,
+      lifetime: "session" as const,
+    };
+    const first = grants.grant(claim);
+    await grants.dispatch(claim.sessionId, { action: "snapshot" });
+    expect(activeChecks[0]()).toBe(true);
+    expect(grants.grant(claim)).toEqual(first);
+    expect(activeChecks[0]()).toBe(true);
+    await grants.dispatch(claim.sessionId, { action: "requestTakeover" });
+    expect(activeChecks[0]()).toBe(false);
+    expect(grants.grant(claim)).toEqual(first);
+    expect(activeChecks[0]()).toBe(false);
+    expect(calls).toEqual(["authorize", "release"]);
+    grants.clearSession(claim.sessionId);
+  });
+
+  test("closing or revoking a session tab requires another explicit selection", async () => {
+    const record = fakeRecord();
+    let available = true;
+    const grants = new BuiltInBrowserHandoffGrants({
+      guestRecordForId: () => (available ? record : null),
+      bucketForSession: () => record.bucket,
+      authorizeGuest: () => {},
+      releaseGuest: () => {},
+    });
+    const claim = {
+      sessionId: "session-closed",
+      guestId: 42,
+      sourceWindowId: 7,
+      lifetime: "session" as const,
+    };
+    grants.grant(claim);
+    grants.revoke(claim.sessionId);
+    expect(grants.status(claim.sessionId).granted).toBe(false);
+    expect(
+      JSON.parse((await grants.dispatch(claim.sessionId, { action: "listTabs" }))!),
+    ).toMatchObject({
+      ok: false,
+      code: "NEEDS_HUMAN",
+    });
+    grants.grant(claim);
+    available = false;
+    record.guest.emit("destroyed");
+    expect(
+      JSON.parse((await grants.dispatch(claim.sessionId, { action: "listTabs" }))!),
+    ).toMatchObject({
+      ok: false,
+      code: "NEEDS_HUMAN",
+    });
+    expect(() => grants.grant(claim)).toThrow("no longer available");
+    grants.clearSession(claim.sessionId);
+  });
+
+  test("explicitly selecting a different tab retires the prior session target", async () => {
+    const firstRecord = fakeRecord();
+    const secondRecord = fakeRecord({ guestId: 43 });
+    const records = new Map([
+      [42, firstRecord],
+      [43, secondRecord],
+    ]);
+    const released: number[] = [];
+    const activeChecks: Array<() => boolean> = [];
+    const grants = new BuiltInBrowserHandoffGrants({
+      guestRecordForId: (id) => records.get(id) ?? null,
+      bucketForSession: () => firstRecord.bucket,
+      authorizeGuest: () => {},
+      releaseGuest: (id) => released.push(id),
+      dispatchAction: async (_request, deps) => {
+        activeChecks.push(deps!.isActive!);
+        return JSON.stringify(deps!.listTabs!());
+      },
+    });
+    const claim = {
+      sessionId: "session-switch",
+      guestId: 42,
+      sourceWindowId: 7,
+      lifetime: "session" as const,
+    };
+    grants.grant(claim);
+    expect(
+      JSON.parse((await grants.dispatch(claim.sessionId, { action: "listTabs" }))!)[0].tabId,
+    ).toBe("42");
+    grants.grant({ ...claim, guestId: 43 });
+    expect(activeChecks[0]()).toBe(false);
+    expect(released).toEqual([42]);
+    expect(
+      JSON.parse((await grants.dispatch(claim.sessionId, { action: "listTabs" }))!)[0].tabId,
+    ).toBe("43");
+    firstRecord.guest.emit("destroyed");
+    expect(grants.status(claim.sessionId)).toMatchObject({ granted: true, guestId: 43 });
+    grants.clearSession(claim.sessionId);
+    expect(released).toEqual([42, 43]);
+  });
+
+  test("a session grant is retired when its conversation bucket changes", async () => {
+    const record = fakeRecord();
+    let bucket = record.bucket;
+    const calls: string[] = [];
+    const grants = new BuiltInBrowserHandoffGrants({
+      guestRecordForId: () => record,
+      bucketForSession: () => bucket,
+      authorizeGuest: () => calls.push("authorize"),
+      releaseGuest: () => calls.push("release"),
+      dispatchAction: async () => {
+        calls.push("action");
+        return "ok";
+      },
+    });
+    const claim = {
+      sessionId: "session-rebound",
+      guestId: 42,
+      sourceWindowId: 7,
+      lifetime: "session" as const,
+    };
+    grants.grant(claim);
+    bucket = "different-conversation";
+    expect(
+      JSON.parse((await grants.dispatch(claim.sessionId, { action: "snapshot" }))!),
+    ).toMatchObject({
+      ok: false,
+      code: "NEEDS_HUMAN",
+    });
+    bucket = record.bucket;
+    expect(grants.status(claim.sessionId).granted).toBe(false);
+    expect(calls).toEqual(["authorize", "release"]);
+    grants.clearSession(claim.sessionId);
+  });
+
+  test("session lifetime rejects unknown choices and conflicting TTLs", () => {
+    expect(parseBuiltInBrowserGrantLifetime(undefined, 1_000)).toBeUndefined();
+    expect(parseBuiltInBrowserGrantLifetime("session")).toBe("session");
+    for (const invalid of [null, false, "permanent", "temporary", {}, 1]) {
+      expect(() => parseBuiltInBrowserGrantLifetime(invalid)).toThrow("lifetime is invalid");
+    }
+    for (const ttl of [0, 1_000, null, "1000"]) {
+      expect(() => parseBuiltInBrowserGrantLifetime("session", ttl)).toThrow("time limit");
+    }
+  });
+
   test("window/Session authority is checked at grant and at dispatch without a UI poll", async () => {
     const record = fakeRecord();
     let current = false;
@@ -50,6 +263,7 @@ describe("BuiltInBrowserHandoffGrants", () => {
       sessionId: "cold-session",
       guestId: 42,
       sourceWindowId: 7,
+      lifetime: "session" as const,
       assertCurrent: () => {
         if (!current) throw new Error("Session owner changed");
       },

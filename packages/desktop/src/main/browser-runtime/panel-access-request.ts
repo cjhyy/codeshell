@@ -23,6 +23,8 @@ const DEFAULT_TIMEOUT_MS = 60_000;
 export interface PanelAccessPrompt {
   requestId: string;
   sessionId: string;
+  /** Main-owned identity of the exact tab being requested, not its URL. */
+  guestId: number;
   url: string;
   title: string;
   expiresAt: number;
@@ -30,6 +32,7 @@ export interface PanelAccessPrompt {
 
 interface PanelTarget {
   windowId: number;
+  guestId: number;
   url: string;
   title: string;
 }
@@ -47,6 +50,7 @@ export interface PanelAccessRequestDeps {
 interface Pending {
   sessionId: string;
   windowId: number;
+  guestId: number;
   resolve: (granted: boolean) => void;
 }
 
@@ -85,7 +89,12 @@ export class PanelAccessRequests {
     const pending = this.pending.get(requestId);
     if (!pending || pending.windowId !== senderWindowId) return;
     this.pending.delete(requestId);
-    pending.resolve(granted);
+    const status = granted ? this.deps.status(pending.sessionId) : undefined;
+    pending.resolve(
+      status?.granted === true &&
+        status.sessionId === pending.sessionId &&
+        status.guestId === pending.guestId,
+    );
   }
 
   /** A new user request may ask again. */
@@ -130,11 +139,17 @@ export class PanelAccessRequests {
     }
     const requestId = randomUUID();
     const answer = new Promise<boolean>((resolve) => {
-      this.pending.set(requestId, { sessionId, windowId: panel.windowId, resolve });
+      this.pending.set(requestId, {
+        sessionId,
+        windowId: panel.windowId,
+        guestId: panel.guestId,
+        resolve,
+      });
     });
     const shown = await this.deps.show(panel.windowId, {
       requestId,
       sessionId,
+      guestId: panel.guestId,
       url: panel.url,
       title: panel.title,
       expiresAt: this.deps.now() + this.deps.timeoutMs,
@@ -147,7 +162,13 @@ export class PanelAccessRequests {
     const answered = await answer;
     clearTimeout(timer);
     const after = this.deps.status(sessionId);
-    if (answered && after.granted) return granted(after);
+    if (
+      answered &&
+      after.granted &&
+      after.sessionId === sessionId &&
+      after.guestId === panel.guestId
+    )
+      return granted(after);
     this.declined.add(sessionId);
     return result(
       false,
@@ -172,6 +193,7 @@ function defaultPanelFor(sessionId: string): PanelTarget | null {
   };
   return {
     windowId,
+    guestId: target.guestId,
     url: read(() => target.guest.getURL()),
     title: read(() => target.guest.getTitle()),
   };

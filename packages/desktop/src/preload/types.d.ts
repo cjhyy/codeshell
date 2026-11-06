@@ -1583,10 +1583,11 @@ export interface CodeshellApi
     partition: string;
     engineSessionId?: string | null;
   }): void;
-  /** Explicitly grant one built-in BrowserPanel tab to this task's Browser Runtime. */
+  /** Grant an exact tab; "session" lifetime lasts until revoke, close, or authority loss. */
   grantBuiltInBrowserToRuntime(payload: {
     sessionId: string;
     guestId: number;
+    lifetime?: "session";
     ttlMs?: number;
   }): Promise<BrowserRuntimeHandoffStatus>;
   revokeBuiltInBrowserFromRuntime(sessionId: string): Promise<BrowserRuntimeHandoffStatus>;

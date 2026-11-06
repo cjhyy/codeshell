@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useLayoutEffect, useRef } from "react";
 
 import { PanelArea } from "../panels/PanelArea";
 import { QuickChatPanelHost } from "../panels/QuickChatPanelHost";
@@ -34,6 +34,8 @@ interface SessionPanelDockProps {
   panelByBucket: Record<string, PanelBucketState>;
   activeBucket: string;
   isChatView: boolean;
+  /** Only a resolved local runtime may mount a previously unseen bucket. */
+  localPanelsReady?: boolean;
   /** The shared app host owns the TopBar opener used after the focused last tab closes. */
   onRestorePanelFocus?: () => void;
   projects: TrackedProject[];
@@ -89,6 +91,26 @@ interface SessionPanelDockProps {
 
 /** Keeps every session-owned panel body mounted while only one dock is visible. */
 export function SessionPanelDock(props: SessionPanelDockProps) {
+  const localPanelsReady = props.localPanelsReady ?? true;
+  const admitted = useRef(new Map<string, string>());
+  const targets = props.panelBuckets.flatMap((bucket) => {
+    const { projectId } = parsePanelBucket(bucket);
+    const project = projectId
+      ? (props.projects.find((candidate) => candidate.id === projectId) ?? null)
+      : null;
+    const engineSessionId = props.resolveEngineSessionIdForBucket(bucket) ?? null;
+    const identity = JSON.stringify([engineSessionId, project?.path ?? null]);
+    if (projectId && !project) return [];
+    const mayMount = localPanelsReady && bucket === props.activeBucket;
+    if (!mayMount && admitted.current.get(bucket) !== identity) return [];
+    return [{ bucket, project, engineSessionId, identity }];
+  });
+  // Remember only committed bodies. An abandoned ready render must not admit a
+  // new bucket that a later pending/cloud render would otherwise mount.
+  useLayoutEffect(() => {
+    admitted.current = new Map(targets.map(({ bucket, identity }) => [bucket, identity]));
+  });
+
   const builtinPanelAppHost: DesktopBuiltinPanelAppHost = {
     getService(appId) {
       if (appId !== QUICK_CHAT_PANEL_APP_ID) return undefined;
@@ -161,16 +183,19 @@ export function SessionPanelDock(props: SessionPanelDockProps) {
     },
   };
 
-  return props.panelBuckets.map((panelBucket) => {
+  return targets.map((target) => {
+    const {
+      bucket: panelBucket,
+      project: panelProject,
+      engineSessionId: panelEngineSessionId,
+      identity,
+    } = target;
     const panelState = props.panelByBucket[panelBucket] ?? emptyPanelBucketState();
     const isActivePanelBucket = panelBucket === props.activeBucket;
-    const { projectId } = parsePanelBucket(panelBucket);
-    const panelProject = projectId
-      ? (props.projects.find((project) => project.id === projectId) ?? null)
-      : null;
-    const panelEngineSessionId = props.resolveEngineSessionIdForBucket(panelBucket) ?? null;
-    const hidden = !isActivePanelBucket || !props.isChatView || !panelState.open;
-    const keepActiveBodyLive = panelState.open && (!isActivePanelBucket || !props.isChatView);
+    const hidden =
+      !localPanelsReady || !isActivePanelBucket || !props.isChatView || !panelState.open;
+    const keepActiveBodyLive =
+      panelState.open && (!localPanelsReady || !isActivePanelBucket || !props.isChatView);
     const uiPermissionMode =
       props.permissionOverrides[panelBucket] ?? props.defaultPermissionMode ?? "default";
     // Same derivation as the chat send in useRunController: main keys external
@@ -181,7 +206,7 @@ export function SessionPanelDock(props: SessionPanelDockProps) {
 
     return (
       <PanelArea
-        key={panelBucket}
+        key={JSON.stringify([panelBucket, identity])}
         hidden={hidden}
         keepActiveBodyLive={keepActiveBodyLive}
         onRestoreFocus={props.onRestorePanelFocus}

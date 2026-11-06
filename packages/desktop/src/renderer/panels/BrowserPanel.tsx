@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -35,7 +35,6 @@ import {
   useMarkerEcho,
 } from "../browser/markerEcho";
 import { NEW_TAB, NEW_TAB_TITLE, type Tab, type WebviewElement } from "../browser/types";
-import type { BrowserPanelAccessPrompt } from "../../preload/browser-panel-access-api";
 import { WebviewHost } from "../browser/WebviewHost";
 import { FloatingAt, IconBtn } from "../browser/ui";
 import { MarkerDot } from "../browser/markers";
@@ -47,6 +46,9 @@ import { isExternalHttpUrl } from "../browser/externalUrl";
 import { ContextMenu } from "../ui/ContextMenu";
 import { copyText } from "../lib/clipboard";
 import { useToast } from "../ui/ToastProvider";
+import type { ChromeBrowserRuntimeStatus } from "../../preload/types";
+import { useBrowserSessionTarget } from "../browser/useBrowserSessionTarget";
+import { useBrowserPanelAccessPrompt } from "../browser/useBrowserPanelAccessPrompt";
 
 interface Props {
   /** Workspace root — reserved for future "open file in browser" wiring. */
@@ -247,159 +249,109 @@ export function BrowserPanel({
   // Which marker is open for editing (anchor id), if any. Pure UI state — the
   // markers themselves are derived from the `anchors` prop (single source).
   const [editingMarker, setEditingMarker] = useState<string | null>(null);
-  const [handoff, setHandoff] = useState<{
-    granted: boolean;
-    sessionId: string;
-    guestId?: number;
-    expiresAt?: number;
-  }>({ granted: false, sessionId: engineSessionId ?? "" });
-  const [handoffBusy, setHandoffBusy] = useState(false);
-  // The agent asked for this tab (request_panel_access); only Allow grants it.
-  const [accessPrompt, setAccessPrompt] = useState<BrowserPanelAccessPrompt | null>(null);
-  const [readyGuestTabId, setReadyGuestTabId] = useState<string | null>(null);
-  const [chromeRuntime, setChromeRuntime] = useState<{
-    sessionId: string;
-    connected: boolean;
-    error?: string;
-    pairing?: { code: string; label: string; expiresAt: number };
-    granted?: {
-      tabId: number;
-      url: string;
-      title: string;
-      grantedAt: number;
-      expiresAt: number;
-    };
-  }>({ sessionId: engineSessionId ?? "", connected: false });
-  const [chromeBusy, setChromeBusy] = useState(false);
+  const {
+    status: handoff,
+    busy: handoffBusy,
+    error: handoffError,
+    unavailable: handoffUnavailable,
+    select: selectRuntimeTarget,
+    revoke: revokeRuntimeTarget,
+  } = useBrowserSessionTarget(engineSessionId, bucket, partition);
+  const [readyGuests, setReadyGuests] = useState<Record<string, number>>({});
+  const chromeScope = useMemo(
+    () => ({ engineSessionId, bucket, partition }),
+    [engineSessionId, bucket, partition],
+  );
+  const currentChromeScope = useRef<typeof chromeScope | null>(chromeScope);
+  currentChromeScope.current = chromeScope;
+  const [chromeState, setChromeState] = useState<{
+    scope: typeof chromeScope;
+    status: ChromeBrowserRuntimeStatus;
+  }>({
+    scope: chromeScope,
+    status: { sessionId: engineSessionId ?? "", connected: false },
+  });
+  const chromeRuntime =
+    chromeState.scope === chromeScope
+      ? chromeState.status
+      : { sessionId: engineSessionId ?? "", connected: false };
+  const [chromePending, setChromePending] = useState<typeof chromeScope | null>(null);
+  const chromeBusy = chromePending === chromeScope;
   const [chromeExtensionPath, setChromeExtensionPath] = useState<string | undefined>();
 
-  const handleGuestDomReady = useCallback((id: string) => setReadyGuestTabId(id), []);
-  const handleGuestUnavailable = useCallback(
-    (id: string) => setReadyGuestTabId((previous) => (previous === id ? null : previous)),
-    [],
-  );
-  const activeGuestReady = readyGuestTabId === activeId && !showingNewTab;
+  const handleGuestDomReady = useCallback((id: string, guestId: number) => {
+    setReadyGuests((previous) =>
+      previous[id] === guestId ? previous : { ...previous, [id]: guestId },
+    );
+  }, []);
+  const handleGuestUnavailable = useCallback((id: string) => {
+    setReadyGuests((previous) => {
+      if (!(id in previous)) return previous;
+      const next = { ...previous };
+      delete next[id];
+      return next;
+    });
+  }, []);
+  const activeGuestId = readyGuests[activeId];
+  const activeGuestReady = activeGuestId !== undefined && !showingNewTab;
+  const {
+    prompt: accessPrompt,
+    answer: answerAccessPrompt,
+    busy: accessPromptBusy,
+  } = useBrowserPanelAccessPrompt({
+    engineSessionId,
+    bucket,
+    partition,
+    activeId,
+    guestId: activeGuestReady ? activeGuestId : undefined,
+    url: active.url,
+    select: selectRuntimeTarget,
+  });
+  const currentTabSelected =
+    handoff.granted &&
+    handoff.guestId === activeGuestId &&
+    handoff.expiresAt === undefined &&
+    !handoffUnavailable;
 
   useEffect(() => {
     let cancelled = false;
+    currentChromeScope.current = chromeScope;
     if (!engineSessionId) {
-      setHandoff({ granted: false, sessionId: "" });
-      setChromeRuntime({ sessionId: "", connected: false });
-      return () => {
-        cancelled = true;
-      };
+      setChromeState({ scope: chromeScope, status: { sessionId: "", connected: false } });
+      return;
     }
     const refresh = () => {
-      void Promise.all([
-        window.codeshell.getBuiltInBrowserRuntimeHandoff(engineSessionId),
-        window.codeshell.getChromeBrowserRuntimeStatus(engineSessionId),
-      ])
-        .then(([builtIn, chrome]) => {
-          if (cancelled) return;
-          setHandoff(builtIn);
-          setChromeRuntime(chrome);
+      void window.codeshell
+        .getChromeBrowserRuntimeStatus(engineSessionId)
+        .then((chrome) => {
+          if (!cancelled && chrome.sessionId === engineSessionId)
+            setChromeState({ scope: chromeScope, status: chrome });
         })
         .catch(() => {
-          if (cancelled) return;
-          setHandoff({ granted: false, sessionId: engineSessionId });
-          setChromeRuntime({ sessionId: engineSessionId, connected: false });
+          if (!cancelled)
+            setChromeState({
+              scope: chromeScope,
+              status: { sessionId: engineSessionId, connected: false },
+            });
         });
     };
     refresh();
     const timer = setInterval(refresh, 2_000);
     return () => {
       cancelled = true;
+      if (currentChromeScope.current === chromeScope) currentChromeScope.current = null;
       clearInterval(timer);
     };
-  }, [activeId, engineSessionId]);
-
-  const grantActiveTab = useCallback(async (): Promise<void> => {
-    const guestId = viewRef.current?.getWebContentsId?.();
-    if (!engineSessionId || !Number.isFinite(guestId)) {
-      throw new Error("browser guest is not attached");
-    }
-    const status = await window.codeshell.grantBuiltInBrowserToRuntime({
-      sessionId: engineSessionId,
-      guestId: guestId!,
-    });
-    setHandoff(status);
-  }, [engineSessionId, viewRef]);
-
-  const toggleRuntimeHandoff = useCallback(async (): Promise<void> => {
-    if (!engineSessionId || handoffBusy || !activeGuestReady) return;
-    setHandoffBusy(true);
-    try {
-      if (handoff.granted) {
-        const status = await window.codeshell.revokeBuiltInBrowserFromRuntime(engineSessionId);
-        setHandoff(status);
-        toast({ message: t("panels.browser.handoffRevoked"), variant: "success" });
-        return;
-      }
-      await grantActiveTab();
-      toast({ message: t("panels.browser.handoffGranted"), variant: "success" });
-    } catch (error) {
-      toast({
-        message: `${t("panels.browser.handoffFailed")}: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-        variant: "error",
-      });
-    } finally {
-      setHandoffBusy(false);
-    }
-  }, [activeGuestReady, engineSessionId, grantActiveTab, handoff.granted, handoffBusy, t, toast]);
-
-  useEffect(() => {
-    if (!engineSessionId) return;
-    return window.codeshell.browserPanelAccess?.onRequest((prompt) => {
-      if (prompt.sessionId === engineSessionId) setAccessPrompt(prompt);
-    });
-  }, [engineSessionId]);
-
-  // Main declines an unanswered request at expiresAt; drop the bar with it.
-  useEffect(() => {
-    if (!accessPrompt) return;
-    const timer = setTimeout(
-      () => setAccessPrompt((current) => (current === accessPrompt ? null : current)),
-      Math.max(0, accessPrompt.expiresAt - Date.now()),
-    );
-    return () => clearTimeout(timer);
-  }, [accessPrompt]);
-
-  const answerAccessPrompt = useCallback(
-    async (allow: boolean): Promise<void> => {
-      if (!accessPrompt) return;
-      setAccessPrompt(null);
-      let granted = false;
-      if (allow) {
-        setHandoffBusy(true);
-        try {
-          if (!handoff.granted) await grantActiveTab();
-          granted = true;
-          toast({ message: t("panels.browser.handoffGranted"), variant: "success" });
-        } catch (error) {
-          toast({
-            message: `${t("panels.browser.handoffFailed")}: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-            variant: "error",
-          });
-        } finally {
-          setHandoffBusy(false);
-        }
-      }
-      window.codeshell.browserPanelAccess?.respond(accessPrompt.requestId, granted);
-    },
-    [accessPrompt, grantActiveTab, handoff.granted, t, toast],
-  );
+  }, [engineSessionId, chromeScope]);
 
   const toggleChromeRuntime = useCallback(async (): Promise<void> => {
     if (!engineSessionId || chromeBusy) return;
-    setChromeBusy(true);
+    setChromePending(chromeScope);
     try {
       if (chromeRuntime.granted || chromeRuntime.pairing) {
         const status = await window.codeshell.revokeChromeBrowserRuntime(engineSessionId);
-        setChromeRuntime(status);
+        if (currentChromeScope.current !== chromeScope) return;
+        setChromeState({ scope: chromeScope, status });
         toast({ message: t("panels.browser.chromeRevoked"), variant: "success" });
         return;
       }
@@ -407,7 +359,8 @@ export function BrowserPanel({
         window.codeshell.beginChromeBrowserRuntimePairing({ sessionId: engineSessionId }),
         window.codeshell.getChromeBrowserRuntimeInstallation(),
       ]);
-      setChromeRuntime(status);
+      if (currentChromeScope.current !== chromeScope) return;
+      setChromeState({ scope: chromeScope, status });
       setChromeExtensionPath(installation.extensionPath);
       toast({
         message: t("panels.browser.chromePairingStarted", {
@@ -416,6 +369,7 @@ export function BrowserPanel({
         variant: "success",
       });
     } catch (error) {
+      if (currentChromeScope.current !== chromeScope) return;
       toast({
         message: `${t("panels.browser.chromeFailed")}: ${
           error instanceof Error ? error.message : String(error)
@@ -423,9 +377,17 @@ export function BrowserPanel({
         variant: "error",
       });
     } finally {
-      setChromeBusy(false);
+      setChromePending((pending) => (pending === chromeScope ? null : pending));
     }
-  }, [chromeBusy, chromeRuntime.granted, chromeRuntime.pairing, engineSessionId, t, toast]);
+  }, [
+    chromeScope,
+    chromeBusy,
+    chromeRuntime.granted,
+    chromeRuntime.pairing,
+    engineSessionId,
+    t,
+    toast,
+  ]);
 
   const markers = useMemo(() => browserMarkersFrom(anchors ?? []), [anchors]);
   // Markers belong to a page; hide them when not on that URL.
@@ -605,18 +567,30 @@ export function BrowserPanel({
             </IconBtn>
           )}
           {engineSessionId && (
-            <IconBtn
-              onClick={() => void toggleRuntimeHandoff()}
-              disabled={active.url === NEW_TAB || handoffBusy || !activeGuestReady}
-              label={t(
-                handoff.granted
-                  ? "panels.browser.revokeRuntimeHandoff"
+            <Button
+              type="button"
+              variant={currentTabSelected ? "secondary" : "outline"}
+              size="sm"
+              className="h-8 shrink-0 gap-1.5 px-2 text-xs"
+              onClick={() => {
+                if (accessPrompt) void answerAccessPrompt(true);
+                else if (activeGuestReady) void selectRuntimeTarget(activeGuestId);
+              }}
+              disabled={!activeGuestReady || handoffBusy || currentTabSelected}
+              title={t("panels.browser.handoffSelectionHint")}
+              aria-label={t(
+                currentTabSelected
+                  ? "panels.browser.handoffSelected"
                   : "panels.browser.grantRuntimeHandoff",
               )}
-              active={handoff.granted}
             >
-              <ShieldCheck className="h-4 w-4" />
-            </IconBtn>
+              <ShieldCheck className="h-3.5 w-3.5" />
+              {t(
+                currentTabSelected
+                  ? "panels.browser.handoffSelected"
+                  : "panels.browser.grantRuntimeHandoff",
+              )}
+            </Button>
           )}
           {engineSessionId && (
             <IconBtn
@@ -643,7 +617,7 @@ export function BrowserPanel({
 
       {accessPrompt && (
         <div
-          role="alertdialog"
+          role="status"
           aria-label={t("panels.browser.accessRequestTitle")}
           className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs text-foreground"
         >
@@ -654,6 +628,7 @@ export function BrowserPanel({
               variant="ghost"
               size="sm"
               className="h-6 px-2 text-xs"
+              disabled={accessPromptBusy}
               onClick={() => void answerAccessPrompt(false)}
             >
               {t("panels.browser.accessDeny")}
@@ -662,7 +637,7 @@ export function BrowserPanel({
               type="button"
               size="sm"
               className="h-6 px-2 text-xs"
-              disabled={handoffBusy || !activeGuestReady}
+              disabled={handoffBusy || accessPromptBusy || !activeGuestReady}
               onClick={() => void answerAccessPrompt(true)}
             >
               {t("panels.browser.accessAllow")}
@@ -672,18 +647,31 @@ export function BrowserPanel({
       )}
 
       {handoff.granted && (
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs text-foreground">
-          <span>{t("panels.browser.handoffActive")}</span>
+        <div className="flex min-w-0 shrink-0 items-center justify-between gap-3 border-b border-border px-3 py-1 text-xs text-muted-foreground">
+          <span className="min-w-0 truncate" title={handoff.url}>
+            {handoffUnavailable
+              ? t("panels.browser.handoffUnavailable")
+              : t("panels.browser.handoffActive", { title: handoff.title || handoff.url || "" })}
+          </span>
           <Button
             type="button"
             variant="ghost"
             size="sm"
             className="h-6 px-2 text-xs"
             disabled={handoffBusy}
-            onClick={() => void toggleRuntimeHandoff()}
+            onClick={() => void revokeRuntimeTarget()}
           >
             {t("panels.browser.revokeRuntimeHandoff")}
           </Button>
+        </div>
+      )}
+
+      {handoffError && (
+        <div
+          role="alert"
+          className="shrink-0 border-b border-border px-3 py-2 text-xs text-destructive"
+        >
+          {t("panels.browser.handoffFailed")}: {handoffError}
         </div>
       )}
 
@@ -747,6 +735,7 @@ export function BrowserPanel({
               tab={tab}
               active={tab.id === activeId}
               visible={visible && tab.id === activeId}
+              keepAlive={handoff.granted && handoff.guestId === readyGuests[tab.id]}
               viewRef={tabViewRef(tab.id)}
               partition={partition}
               bucket={bucket}
@@ -869,6 +858,7 @@ function BrowserTabGuest({
   tab,
   active,
   visible,
+  keepAlive,
   viewRef,
   partition,
   bucket,
@@ -879,19 +869,36 @@ function BrowserTabGuest({
   tab: Tab;
   active: boolean;
   visible: boolean;
+  keepAlive: boolean;
   viewRef: React.RefCallback<WebviewElement>;
   partition?: string;
   bucket?: string;
   engineSessionId?: string | null;
-  onDomReady: (id: string) => void;
+  onDomReady: (id: string, guestId: number) => void;
   onUnavailable: (id: string) => void;
 }) {
-  const evicted = useIdleEvict(visible);
+  const evicted = useIdleEvict(visible || keepAlive);
   const guestPartition = partition ?? "persist:browser";
-  const ready = useCallback(() => onDomReady(tab.id), [onDomReady, tab.id]);
+  const guestView = useRef<WebviewElement | null>(null);
+  const attachView = useCallback(
+    (view: WebviewElement | null) => {
+      guestView.current = view;
+      viewRef(view);
+    },
+    [viewRef],
+  );
+  const ready = useCallback(() => {
+    try {
+      const guestId = guestView.current?.getWebContentsId?.();
+      if (Number.isSafeInteger(guestId) && guestId && guestId > 0) onDomReady(tab.id, guestId);
+    } catch {
+      onUnavailable(tab.id);
+    }
+  }, [onDomReady, onUnavailable, tab.id]);
   useEffect(() => {
     // A replacement guest must earn its own dom-ready before browser handoff.
     onUnavailable(tab.id);
+    return () => onUnavailable(tab.id);
   }, [guestPartition, onUnavailable, tab.id]);
   useEffect(() => {
     if (evicted) onUnavailable(tab.id);
@@ -901,7 +908,7 @@ function BrowserTabGuest({
       {!evicted && (
         <WebviewHost
           key={guestPartition}
-          ref={viewRef}
+          ref={attachView}
           initialUrl={tab.url}
           partition={partition}
           bucket={bucket}

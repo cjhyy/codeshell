@@ -209,8 +209,8 @@ test("a changed login partition remounts only the guest and retains the current 
   const oldPartition = "persist:browser:project::session";
   const projectPartition = "persist:browser:p:project";
   const handoffButton = () =>
-    findElements(container, "BUTTON").find((button) =>
-      String(reactPropsOf(button)["aria-label"]).includes("Browser Runtime"),
+    findElements(container, "BUTTON").find(
+      (button) => String(reactPropsOf(button)["aria-label"]) === "用于当前对话",
     );
   await renderPanel(oldPartition);
   const original = findElements(container, "WEBVIEW")[0];
@@ -308,12 +308,13 @@ test("an agent's panel access request grants this tab only when the user allows 
   const prompt = (requestId: string, sessionId = "session") => ({
     requestId,
     sessionId,
+    guestId: 42,
     url: "https://example.test/start",
     title: "Start",
     expiresAt: Date.now() + 60_000,
   });
   const bar = () =>
-    findElements(container, "DIV").find((d) => d.getAttribute?.("role") === "alertdialog");
+    findElements(container, "DIV").find((d) => d.getAttribute?.("role") === "status");
   const button = (label: string) =>
     findElements(bar(), "BUTTON").find((b) => b.textContent === label);
 
@@ -344,7 +345,7 @@ test("an agent's panel access request grants this tab only when the user allows 
     reactPropsOf(button("允许") ?? button("Allow")).onClick();
     await flushMicrotasks();
   });
-  expect(grants).toEqual([{ sessionId: "session", guestId: 42 }]);
+  expect(grants).toEqual([{ sessionId: "session", guestId: 42, lifetime: "session" }]);
   expect(answers).toEqual([
     ["r1", false],
     ["r2", true],

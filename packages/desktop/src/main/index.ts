@@ -295,6 +295,7 @@ import {
   interactiveBrowserBridgeForSession,
   interactiveBrowserRuntimeOwner,
   nativeMessagingOriginFromArgv,
+  parseBuiltInBrowserGrantLifetime,
   panelAccessRequests,
   registerPanelAccessResponses,
   runChromeNativeMessagingHost,
@@ -4629,40 +4630,35 @@ ipcMain.on(
   },
 );
 
-ipcMain.handle(
-  "browser-runtime:grant-built-in",
-  async (e, payload: { sessionId?: unknown; guestId?: unknown; ttlMs?: unknown }) => {
-    const guestId =
-      typeof payload?.guestId === "number" ? payload.guestId : Number(payload?.guestId);
-    if (!Number.isSafeInteger(guestId) || guestId <= 0) {
-      throw new Error("browser handoff requires an existing conversation and browser tab");
-    }
-    const { sessionId, assertCurrent } = await prepareRendererBrowserSession(
-      e,
-      payload?.sessionId,
-      guestRecordForId(guestId)?.bucket,
-    );
-    const ownerWindow = BrowserWindow.fromWebContents(e.sender);
-    if (!ownerWindow) throw new Error("browser handoff requires an owning window");
-    const status = builtInBrowserHandoffGrants.grant({
-      sessionId,
-      guestId,
-      sourceWindowId: ownerWindow.id,
-      assertCurrent,
-      ttlMs:
-        typeof payload.ttlMs === "number" &&
-        Number.isSafeInteger(payload.ttlMs) &&
-        payload.ttlMs > 0
-          ? payload.ttlMs
-          : undefined,
-    });
-    // Switching targets is explicit. Dispose the independent runtime target so
-    // there is never a second browser silently continuing in the background.
-    chromeExtensionRuntimeService.forgetSession(sessionId);
-    browserRuntime.close(interactiveBrowserRuntimeOwner(sessionId));
-    return status;
-  },
-);
+ipcMain.handle("browser-runtime:grant-built-in", async (e, payload: Record<string, unknown>) => {
+  const guestId = typeof payload?.guestId === "number" ? payload.guestId : Number(payload?.guestId);
+  if (!Number.isSafeInteger(guestId) || guestId <= 0) {
+    throw new Error("browser handoff requires an existing conversation and browser tab");
+  }
+  const { sessionId, assertCurrent } = await prepareRendererBrowserSession(
+    e,
+    payload?.sessionId,
+    guestRecordForId(guestId)?.bucket,
+  );
+  const ownerWindow = BrowserWindow.fromWebContents(e.sender);
+  if (!ownerWindow) throw new Error("browser handoff requires an owning window");
+  const status = builtInBrowserHandoffGrants.grant({
+    sessionId,
+    guestId,
+    sourceWindowId: ownerWindow.id,
+    assertCurrent,
+    lifetime: parseBuiltInBrowserGrantLifetime(payload.lifetime, payload.ttlMs),
+    ttlMs:
+      typeof payload.ttlMs === "number" && Number.isSafeInteger(payload.ttlMs) && payload.ttlMs > 0
+        ? payload.ttlMs
+        : undefined,
+  });
+  // Switching targets is explicit. Dispose the independent runtime target so
+  // there is never a second browser silently continuing in the background.
+  chromeExtensionRuntimeService.forgetSession(sessionId);
+  browserRuntime.close(interactiveBrowserRuntimeOwner(sessionId));
+  return status;
+});
 
 registerPanelAccessResponses(ipcMain, (sender) => BrowserWindow.fromWebContents(sender)?.id);
 ipcMain.handle("browser-runtime:revoke-built-in", async (event, rawSessionId: unknown) => {

@@ -111,6 +111,8 @@ let topBarProps: Record<string, any> | null = null;
 let sidebarProps: SidebarProps | null = null;
 const quickChatProps = new Map<string, QuickChatPanelProps>();
 const panelAreaProps = new Map<string, PanelAreaProps>();
+const panelMountCounts = new Map<string, number>();
+const panelUnmountCounts = new Map<string, number>();
 const QUICK_CHAT_PANEL_APP_ID = "codeshell.panel-app.quick-chat";
 
 function MockQuickChatPanelLifecycle({
@@ -180,6 +182,12 @@ mock.module("./panels/QuickChatPanel", () => ({
 
 mock.module("./panels/PanelArea", () => ({
   PanelArea(props: PanelAreaProps) {
+    React.useEffect(() => {
+      panelMountCounts.set(props.bucket, (panelMountCounts.get(props.bucket) ?? 0) + 1);
+      return () => {
+        panelUnmountCounts.set(props.bucket, (panelUnmountCounts.get(props.bucket) ?? 0) + 1);
+      };
+    }, [props.bucket]);
     panelAreaProps.set(props.bucket, props);
     return (
       <div data-bucket={props.bucket}>
@@ -338,6 +346,7 @@ function restoreGlobalProperty(
 function seedApp(options: {
   withNormalSession: boolean;
   withSecondSession?: boolean;
+  withSecondProject?: boolean;
   panelTabs: Array<{ id: string; kind: string }>;
   sidebarCollapsed?: boolean;
   startInDraft?: boolean;
@@ -359,7 +368,44 @@ function seedApp(options: {
       primaryRootId: "root-a",
       addedAt: 1,
     },
+    ...(options.withSecondProject
+      ? [
+          {
+            id: "repoB",
+            name: "Repo B",
+            path: "/tmp/repo-b",
+            roots: [{ id: "root-b", path: "/tmp/repo-b", name: "Repo B", addedAt: 1 }],
+            primaryRootId: "root-b",
+            addedAt: 1,
+          },
+        ]
+      : []),
   ]);
+  if (options.withSecondProject) {
+    localStorageMock.setItem(
+      "codeshell.sessionIndex.repoB",
+      JSON.stringify({
+        activeSessionId: "session-c",
+        sessions: [
+          {
+            id: "session-c",
+            engineSessionId: "engine-c",
+            title: "Session C",
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ],
+      }),
+    );
+    localStorageMock.setItem(
+      "codeshell.panelState.repoB::session-c",
+      JSON.stringify({
+        open: true,
+        tabs: [{ id: "browser-c", kind: "browser" }],
+        activeId: "browser-c",
+      }),
+    );
+  }
   localStorageMock.setItem(
     "codeshell.repos",
     JSON.stringify([{ id: "repoA", name: "Repo A", path: "/tmp/repo-a", addedAt: 1 }]),
@@ -609,6 +655,7 @@ async function flushApp(waitMs = 0): Promise<void> {
 async function mountApp(options: {
   withNormalSession: boolean;
   withSecondSession?: boolean;
+  withSecondProject?: boolean;
   panelTabs: Array<{ id: string; kind: string }>;
   sidebarCollapsed?: boolean;
   startInDraft?: boolean;
@@ -659,6 +706,22 @@ async function mountApp(options: {
     options.modelCatalog,
     options.externalRuntimeModels,
   );
+  if (options.withSecondProject) {
+    const list = window.codeshell.projectRegistry.list;
+    window.codeshell.projectRegistry.list = async () => [
+      ...(await list()),
+      {
+        id: "repoB",
+        name: "Repo B",
+        primaryRootId: "root-b",
+        roots: [{ id: "root-b", path: "/tmp/repo-b", name: "Repo B", addedAt: 1 }],
+        createdAt: 1,
+        updatedAt: 1,
+        lastOpenedAt: 1,
+        revision: 1,
+      },
+    ];
+  }
   container = document.createElement("div");
   root = createRoot(container);
   await act(async () => {
@@ -750,6 +813,8 @@ afterEach(async () => {
   sidebarProps = null;
   quickChatProps.clear();
   panelAreaProps.clear();
+  panelMountCounts.clear();
+  panelUnmountCounts.clear();
   __resetProjectSnapshotForTest();
   if (previousProjects) saveProjects(previousProjects);
   previousProjects = null;
@@ -759,6 +824,73 @@ afterEach(async () => {
 });
 
 describe("App quick-chat integration", () => {
+  test("retains the prior project dock while the next runtime resolves without admitting its saved panels", async () => {
+    const ownerBucket = await mountApp({
+      withNormalSession: true,
+      withSecondProject: true,
+      sidebarCollapsed: false,
+      panelTabs: [{ id: "browser-a", kind: "browser" }],
+    });
+    await flushApp(20);
+    let resolveSelection!: (value: { localProjectId: string; bindingId: null }) => void;
+    const pendingSelection = new Promise<{ localProjectId: string; bindingId: null }>((resolve) => {
+      resolveSelection = resolve;
+    });
+    window.codeshell.cloudEnvironment.getSelection = (projectId: string) =>
+      projectId === "repoB"
+        ? pendingSelection
+        : Promise.resolve({ localProjectId: projectId, bindingId: null });
+    await act(async () => {
+      sidebarProps!.onSelectSession("repoB", "session-c");
+      await flushMicrotasks();
+    });
+    await flushApp();
+    expect(panelUnmountCounts.get(ownerBucket) ?? 0).toBe(0);
+    expect(panelMountCounts.get(ownerBucket)).toBe(1);
+    expect(panelAreaProps.get(ownerBucket)?.hidden).toBe(true);
+    expect(panelMountCounts.has("repoB::session-c")).toBe(false);
+    await act(async () => {
+      resolveSelection({ localProjectId: "repoB", bindingId: null });
+      await flushMicrotasks();
+    });
+    await flushApp();
+    expect(panelMountCounts.get("repoB::session-c")).toBe(1);
+    await act(async () => {
+      sidebarProps!.onSelectSession("repoA", "session-a");
+      await flushMicrotasks();
+    });
+    await flushApp();
+    expect(panelUnmountCounts.get(ownerBucket) ?? 0).toBe(0);
+    expect(panelMountCounts.get(ownerBucket)).toBe(1);
+    expect(panelAreaProps.get(ownerBucket)?.hidden).toBe(false);
+  });
+
+  test("retains an existing browser dock across a same-project session round trip", async () => {
+    const ownerBucket = await mountApp({
+      withNormalSession: true,
+      withSecondSession: true,
+      sidebarCollapsed: false,
+      panelTabs: [{ id: "browser-a", kind: "browser" }],
+    });
+    await flushApp(20);
+    expect(panelMountCounts.get(ownerBucket)).toBe(1);
+    await act(async () => {
+      await sidebarProps!.onSelectSession("repoA", "session-b");
+      await flushMicrotasks();
+    });
+    await flushApp();
+    expect(panelUnmountCounts.get(ownerBucket) ?? 0).toBe(0);
+    expect(panelMountCounts.get(ownerBucket)).toBe(1);
+    await act(async () => {
+      await sidebarProps!.onSelectSession("repoA", "session-a");
+      await flushMicrotasks();
+    });
+    await flushApp();
+    expect(panelUnmountCounts.get(ownerBucket) ?? 0).toBe(0);
+    expect(panelMountCounts.get(ownerBucket)).toBe(1);
+    expect(panelAreaProps.get(ownerBucket)?.tabs).toEqual([{ id: "browser-a", kind: "browser" }]);
+  });
+
   test("loads native choices before runtime discovery and preserves selection when models refresh", async () => {
     let finishDiscovery!: (models: ExternalRuntimeModelEntry[]) => void;
     let discoveredModels = new Promise<ExternalRuntimeModelEntry[]>((resolve) => {

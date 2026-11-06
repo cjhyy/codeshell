@@ -8,17 +8,23 @@ import {
 } from "./panel-access-request.js";
 
 function harness(options: { panel?: boolean; timeoutMs?: number; shows?: boolean } = {}) {
-  let granted = false;
+  let grantedGuestId: number | undefined;
   const prompts: PanelAccessPrompt[] = [];
   const requests = new PanelAccessRequests({
     status: (sessionId) =>
-      granted
-        ? { granted: true, sessionId, guestId: 7, url: "https://example.com/", title: "Example" }
+      grantedGuestId !== undefined
+        ? {
+            granted: true,
+            sessionId,
+            guestId: grantedGuestId,
+            url: "https://example.com/",
+            title: "Example",
+          }
         : { granted: false, sessionId },
     panelFor: () =>
       options.panel === false
         ? null
-        : { windowId: 3, url: "https://example.com/", title: "Example" },
+        : { windowId: 3, guestId: 7, url: "https://example.com/", title: "Example" },
     show: (_windowId, prompt) => {
       prompts.push(prompt);
       return options.shows ?? true;
@@ -27,12 +33,19 @@ function harness(options: { panel?: boolean; timeoutMs?: number; shows?: boolean
     timeoutMs: options.timeoutMs ?? 5_000,
   });
   const allow = () => {
-    granted = true;
+    grantedGuestId = 7;
     requests.respond(prompts.at(-1)!.requestId, true, 3);
   };
   const deny = () => requests.respond(prompts.at(-1)!.requestId, false, 3);
   const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
-  return { requests, prompts, allow, deny, settle, grant: () => (granted = true) };
+  return {
+    requests,
+    prompts,
+    allow,
+    deny,
+    settle,
+    grant: (guestId = 7) => (grantedGuestId = guestId),
+  };
 }
 
 const parse = async (pending: Promise<string>) =>
@@ -47,6 +60,7 @@ describe("PanelAccessRequests", () => {
       {
         requestId: expect.any(String),
         sessionId: "s1",
+        guestId: 7,
         url: "https://example.com/",
         title: "Example",
         expiresAt: 6_000,
@@ -63,6 +77,34 @@ describe("PanelAccessRequests", () => {
     const pending = h.requests.request("s1");
     await h.settle();
     h.requests.respond(h.prompts[0]!.requestId, true, 3);
+    expect(await parse(pending)).toMatchObject({ ok: false, code: "NEEDS_HUMAN" });
+  });
+
+  test("granting another guest with the same URL and title does not answer this request", async () => {
+    const h = harness();
+    const pending = h.requests.request("s1");
+    await h.settle();
+    h.grant(8);
+    h.requests.respond(h.prompts[0]!.requestId, true, 3);
+    expect(await parse(pending)).toMatchObject({ ok: false, code: "NEEDS_HUMAN" });
+  });
+
+  test("an incorrect Allow cannot be validated by granting the requested guest afterward", async () => {
+    const h = harness();
+    const pending = h.requests.request("s1");
+    await h.settle();
+    h.grant(8);
+    h.requests.respond(h.prompts[0]!.requestId, true, 3);
+    h.grant(7);
+    expect(await parse(pending)).toMatchObject({ ok: false, code: "NEEDS_HUMAN" });
+  });
+
+  test("a target changed after Allow is rechecked before reporting success", async () => {
+    const h = harness();
+    const pending = h.requests.request("s1");
+    await h.settle();
+    h.allow();
+    h.grant(8);
     expect(await parse(pending)).toMatchObject({ ok: false, code: "NEEDS_HUMAN" });
   });
 

@@ -4,6 +4,8 @@ import type { IpcRenderer, IpcRendererEvent } from "electron";
 export interface BrowserPanelAccessPrompt {
   requestId: string;
   sessionId: string;
+  /** Exact Main-owned WebContents identity; match this before showing Allow. */
+  guestId: number;
   url: string;
   title: string;
   /** Epoch ms after which main treats the request as declined. */
