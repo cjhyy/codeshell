@@ -60,6 +60,18 @@ export interface HubConfiguration {
   restartRequired: boolean;
 }
 
+/** The catalog preset's display name ("OpenAI: GPT-6.1 Sol"), else the raw model id. */
+export function connectionModelLabel(
+  configuration: Pick<HubConfiguration, "catalog"> | null | undefined,
+  connection: Pick<HubConnection, "catalogId" | "model">,
+): string {
+  const provider = configuration?.catalog.find((item) => item.id === connection.catalogId);
+  return (
+    provider?.modelPresets?.find((item) => item.value === connection.model)?.label ??
+    connection.model
+  );
+}
+
 export interface ConnectionDraft {
   expectedRevision?: string | null;
   id: string;

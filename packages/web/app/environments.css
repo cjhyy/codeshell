@@ -4,6 +4,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* In the sidebar it lines up with the navigation below instead of the rail edge. */
+.rail-content > .environment-switcher {
+  padding: 4px 12px 10px;
+}
 .environment-dialog {
   width: min(560px, calc(100vw - 24px));
   max-height: calc(100dvh - 32px);

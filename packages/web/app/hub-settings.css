@@ -600,6 +600,11 @@
     flex-wrap: wrap;
     padding: 17px;
   }
+  /* Take the whole row so the badge wraps below instead of squeezing the path
+     into a narrow column that breaks every few characters. */
+  .config-workspace-card > div {
+    flex-basis: calc(100% - 46px);
+  }
   .config-workspace-card > .config-badge {
     margin-left: 46px;
   }

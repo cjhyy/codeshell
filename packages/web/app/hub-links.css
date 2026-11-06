@@ -290,8 +290,55 @@
   .links-editor {
     padding: 16px;
   }
+  /* Ten services as full cards fill several phone screens; compact rows keep
+     the catalog to about one. */
   .links-providers {
     grid-template-columns: 1fr;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+  .links-provider {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    column-gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 0;
+  }
+  .links-provider + .links-provider {
+    border-top: 1px solid var(--border);
+  }
+  .links-provider .links-brand {
+    grid-row: 1 / 3;
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 15px;
+  }
+  .links-provider h3 {
+    margin: 0;
+    font-size: 14px;
+  }
+  .links-provider p {
+    grid-column: 2;
+    margin: 0;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .links-provider small {
+    display: none;
+  }
+  .links-provider button {
+    grid-column: 3;
+    grid-row: 1 / 3;
+    margin: 0;
+    white-space: nowrap;
   }
 }
 

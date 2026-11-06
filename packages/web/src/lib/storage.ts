@@ -70,14 +70,58 @@ export const deviceStore = {
     return s;
   },
 
-  /** Device display name, defaulting to a platform-derived label on first use. */
+  /** Device display name, defaulting to a readable device · browser label on first use. */
   getOrCreateName: (): string => {
     let n = safeGet(K.deviceName);
-    if (!n) {
-      const platform = (typeof navigator !== "undefined" && navigator.platform) || "Phone";
-      n = translate(loadUILanguage(), "mobile.storage.browserDevice", { platform });
+    const platform = typeof navigator !== "undefined" ? navigator.platform : "";
+    // Earlier builds stored the raw `navigator.platform` ("MacIntel 浏览器"). That
+    // exact generated value is not a name the user chose, so it is replaced.
+    const legacy =
+      !!platform &&
+      (["zh", "en"] as const).some(
+        (language) => n === translate(language, "mobile.storage.browserDevice", { platform }),
+      );
+    if (!n || legacy) {
+      n =
+        typeof navigator !== "undefined"
+          ? describeDevice(navigator.userAgent, platform, navigator.maxTouchPoints)
+          : "";
+      if (!n)
+        n = translate(loadUILanguage(), "mobile.storage.browserDevice", { platform: "Phone" });
       safeSet(K.deviceName, n);
     }
     return n;
   },
 } as const;
+
+/** "iPhone · Safari"-style label; empty when the user agent says nothing useful. */
+export function describeDevice(userAgent = "", platform = "", maxTouchPoints = 0): string {
+  const ua = userAgent;
+  const device = /iPhone/.test(ua)
+    ? "iPhone"
+    : /iPad/.test(ua) || (/Mac/.test(platform) && maxTouchPoints > 1)
+      ? "iPad"
+      : /Android/.test(ua)
+        ? "Android"
+        : /Mac/.test(platform) || /Macintosh/.test(ua)
+          ? "Mac"
+          : /Win/.test(platform) || /Windows/.test(ua)
+            ? "Windows"
+            : /CrOS/.test(ua)
+              ? "ChromeOS"
+              : /Linux/.test(platform) || /Linux/.test(ua)
+                ? "Linux"
+                : "";
+  const browser = /MicroMessenger/.test(ua)
+    ? "微信"
+    : /EdgA?\//.test(ua)
+      ? "Edge"
+      : /Firefox\/|FxiOS\//.test(ua)
+        ? "Firefox"
+        : /Chrome\/|CriOS\//.test(ua)
+          ? "Chrome"
+          : /Safari\//.test(ua)
+            ? "Safari"
+            : "";
+  return [device, browser].filter(Boolean).join(" · ");
+}

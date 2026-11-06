@@ -1110,7 +1110,8 @@ describe("Desktop workbench controller", () => {
     for (const html of [desktop, hub]) {
       expect(html).toContain('class="workbench');
       expect(html).toContain("Skills");
-      expect(html).toContain("Link");
+      // Link connections open from settings, not the sidebar.
+      expect(html).not.toContain("<span>Link</span>");
       expect(html).toContain('aria-label="任务内容"');
     }
     expect(desktop).toContain('aria-label="选择项目"');

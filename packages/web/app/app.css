@@ -569,6 +569,38 @@ button.workspace-button:hover {
   flex-shrink: 0;
   line-height: 1.6;
 }
+/* Sits above the empty-conversation hint, so it reads as a card, not a native form. */
+.output-history-recovery {
+  margin: 12px 20px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--warning) 7%, var(--surface));
+  font-size: 13px;
+  line-height: 1.6;
+}
+.output-history-recovery p {
+  margin: 6px 0 12px;
+  color: var(--muted);
+}
+.output-history-recovery p[role="alert"] {
+  color: var(--warning);
+}
+.output-history-recovery button {
+  min-height: 40px;
+  margin: 0 8px 8px 0;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.output-history-recovery button:first-of-type {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--surface);
+}
 .banner.goal {
   align-self: stretch;
   border: 1px solid var(--border);
@@ -614,7 +646,8 @@ button.workspace-button:hover {
   color: var(--muted);
   font-size: 11px;
 }
-.latest-announcement {
+.latest-announcement,
+.sr-only {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -874,6 +907,13 @@ button.composer-submit {
 .composer-submit.send {
   background: var(--text);
   color: var(--bg);
+}
+/* Waiting for input: outlined and fully opaque, unlike the faded locked state. */
+.composer-submit.send[data-idle]:disabled {
+  opacity: 1;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
 .composer-submit.stop {
   color: var(--text);
@@ -1320,8 +1360,10 @@ button.ghost:hover:not(:disabled) {
   .approval-actions button {
     min-height: 44px;
   }
+  /* On a phone the composer stays within thumb reach; the welcome above already
+     fills the empty space. */
   .chat-empty .composer-wrap {
-    margin-bottom: clamp(18px, 10vh, 80px);
+    margin-bottom: 0;
   }
   .empty-chat {
     padding: 20px 12px;

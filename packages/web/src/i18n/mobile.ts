@@ -11,6 +11,7 @@ export const mobile = {
         failed: "记录尚未完整载入。已有内容已保留，恢复核对通过前不会继续任务。",
         check: "核对恢复方案",
         checking: "正在核对记录…",
+        startNew: "新建对话继续",
         applying: "正在保留原始记录并恢复…",
         verified:
           "已核对并保留 {turns} 轮聊天、{userInputs} 条输入、{toolCalls} 次工具调用和 {toolResults} 条工具结果。",
@@ -215,6 +216,7 @@ export const mobile = {
           "History has not fully loaded. Existing records are retained; work will stay paused until recovery is verified.",
         check: "Review recovery",
         checking: "Checking records…",
+        startNew: "Continue in a new conversation",
         applying: "Preserving original records and recovering…",
         verified:
           "Verified and retained {turns} conversation turns, {userInputs} inputs, {toolCalls} tool calls and {toolResults} tool results.",

@@ -50,9 +50,11 @@ function parent(route: WorkbenchLocation): { label: string; route: WorkbenchLoca
   }
   if (route.view === "settings" && route.returnTo === "chat")
     return { label: "返回对话", route: chat };
-  // Execution traces open from the settings overview, so they return there too.
+  // Execution traces and Link connections open from the settings overview, so
+  // they return there too.
   if (
     route.view === "activity" ||
+    route.view === "links" ||
     (route.view === "settings" && route.section && route.section !== "overview")
   )
     return { label: "返回设置", route: { view: "settings", section: "overview" } };
