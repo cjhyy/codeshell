@@ -2763,10 +2763,14 @@ function App() {
           from scratch (matches Codex). Closing only hides; the webview process
           is reclaimed by BrowserPanel's own idle-eviction after a few minutes.
           We still gate on having tabs so an empty dock doesn't mount stray
-          panel bodies before the user has opened anything. */}
-            {!cloudSelected && projectRuntime.ready && panelBuckets.length > 0 && (
+          panel bodies before the user has opened anything. The dock admits new
+          local buckets only after runtime selection resolves, while retaining
+          existing bodies invisibly across project selection and cloud views. */}
+            {panelBuckets.length > 0 && (
               <React.Suspense
                 fallback={
+                  !cloudSelected &&
+                  projectRuntime.ready &&
                   shouldShowPanelDockFallback(activePanelState.open, isChatView) ? (
                     <div
                       className="flex shrink-0 items-center justify-center border-l border-border text-xs text-muted-foreground"
@@ -2784,6 +2788,7 @@ function App() {
                     panelByBucket={panelByBucket}
                     activeBucket={activeBucket}
                     isChatView={isChatView}
+                    localPanelsReady={!cloudSelected && projectRuntime.ready}
                     onRestorePanelFocus={() =>
                       panelToggleRef.current?.focus({ preventScroll: true })
                     }
