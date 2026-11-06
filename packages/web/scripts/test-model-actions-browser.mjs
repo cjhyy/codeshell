@@ -407,7 +407,7 @@ try {
     await picker.getByRole("searchbox", { name: "搜索模型" }).fill("owned-model-11");
     await picker.getByRole("searchbox", { name: "搜索模型" }).press("Enter");
     assert.deepEqual(host.writes, [], "search Enter does not submit the settings form");
-    await picker.getByRole("option", { name: "owned-11 · owned-model-11", exact: true }).tap();
+    await picker.getByRole("option", { name: "owned-model-11 · owned-11", exact: true }).tap();
     assert.equal(await text().getAttribute("value"), "owned-11");
     assert.deepEqual(host.writes, [], "choosing a settings model edits only the form until Save");
     await text().tap();

@@ -49,6 +49,20 @@ function panelTitle(title: { default: string; "zh-CN"?: string }) {
 
 function Compatibility({ value }: { value: PanelCompatibility }) {
   if (value.supported && value.reasons.length === 0) return null;
+  // A usable panel's limits are reference detail; folded, they no longer
+  // outweigh the panel card itself.
+  if (value.supported)
+    return (
+      <details className="panels-warning panels-limitations">
+        <summary>部分功能可用 · {value.reasons.length} 项限制</summary>
+        <p>可以打开面板，以下功能当前不可用或需要额外配置。</p>
+        <ul>
+          {value.reasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+      </details>
+    );
   return (
     <div className="panels-warning">
       <strong>{value.supported ? "部分功能可用" : "当前 Web 工作台暂不支持此面板"}</strong>

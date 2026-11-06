@@ -10,6 +10,7 @@ import {
   saveConnection,
   changedDefaults,
   saveDefaults,
+  connectionModelLabel,
   deleteConnection,
   probeConnection,
   type ModelProbeResult,
@@ -27,6 +28,8 @@ interface Props {
   onSectionChange?: (section: HubSettingsSection) => void;
   /** Execution traces live under settings rather than the first-level sidebar. */
   onOpenActivity?: () => void;
+  /** Link connections are reached from settings too; they are not a sidebar destination. */
+  onOpenLinks?: () => void;
   onAuthLost: () => void;
   onDirtyChange?: (dirty: boolean) => void;
   onConfigurationChange?: () => void;
@@ -141,6 +144,7 @@ function ConfigurationSettings({
   section,
   onSectionChange,
   onOpenActivity,
+  onOpenLinks,
   onAuthLost,
   onDirtyChange,
   onConfigurationChange,
@@ -299,6 +303,7 @@ function ConfigurationSettings({
               configuration={configuration}
               onSectionChange={onSectionChange}
               onOpenActivity={onOpenActivity}
+              onOpenLinks={onOpenLinks}
             />
           )}
           {section === "models" && (
@@ -331,11 +336,13 @@ function Overview({
   configuration,
   onSectionChange,
   onOpenActivity,
+  onOpenLinks,
 }: {
   host: "hub" | "desktop";
   configuration: HubConfiguration;
   onSectionChange?: Props["onSectionChange"];
   onOpenActivity?: Props["onOpenActivity"];
+  onOpenLinks?: Props["onOpenLinks"];
 }) {
   const current = configuration.connections.find((item) => item.id === configuration.defaults.text);
   const enabledSkills = configuration.skills.filter((skill) => skill.enabled).length;
@@ -346,7 +353,13 @@ function Overview({
       key: "models",
       open: select("models"),
       title: "模型与连接",
-      summary: current ? `${current.id} · ${current.model}` : "尚未设置默认模型",
+      summary: current
+        ? [
+            connectionModelLabel(configuration, current),
+            configuration.catalog.find((item) => item.id === current.catalogId)?.displayName ??
+              current.id,
+          ].join(" · ")
+        : "尚未设置默认模型",
       icon: "◈",
     },
     {
@@ -363,6 +376,17 @@ function Overview({
       summary: `${configuration.mcpServers.length} 个已配置的工具服务`,
       icon: "⌘",
     },
+    ...(onOpenLinks
+      ? [
+          {
+            key: "links",
+            open: onOpenLinks,
+            title: "Link 连接",
+            summary: "连接 GitHub、Slack、Notion 等服务，让任务可以直接调用",
+            icon: "∞",
+          },
+        ]
+      : []),
     {
       key: "activity",
       open: onOpenActivity,
@@ -758,7 +782,7 @@ function Models({
                           .filter((item) => item.id !== connection.id)
                           .map((item) => (
                             <option value={item.id} key={item.id}>
-                              {item.id} · {item.model}
+                              {connectionModelLabel(configuration, item)} · {item.id}
                             </option>
                           ))}
                       </select>
@@ -905,7 +929,10 @@ function DefaultModels({
     ...(current && !connections.some((item) => item.id === current)
       ? [{ value: current, label: `${current}（连接不可用）`, disabled: true }]
       : []),
-    ...connections.map((item) => ({ value: item.id, label: `${item.id} · ${item.model}` })),
+    ...connections.map((item) => ({
+      value: item.id,
+      label: `${connectionModelLabel(configuration, item)} · ${item.id}`,
+    })),
   ];
   const changed =
     text !== (configuration.defaults.text ?? "") ||

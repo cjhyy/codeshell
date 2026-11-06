@@ -455,7 +455,9 @@ try {
     }
     await host.authPending.shift().fulfill({ contentType: "application/json", body: "{}" });
     await editor(page).waitFor({ state: "detached" });
-    assert.equal(await page.locator(".workbench-back").count(), 0);
+    // Link opens from settings, so its header Back returns there; leave through
+    // the sidebar here so this fixture never needs the settings API.
+    assert.equal(await page.locator(".workbench-back").textContent(), "←返回设置");
     if (await page.getByRole("button", { name: "展开侧栏", exact: true }).count())
       await page.getByRole("button", { name: "展开侧栏", exact: true }).tap();
     await page.locator(".workbench-nav").getByRole("button", { name: "对话", exact: true }).tap();
@@ -709,8 +711,7 @@ try {
   }
   if (!onlyCase || onlyCase === "lifecycle") {
     const { page, context, host } = await mount({ width: 1280, height: 700 });
-    await page.getByRole("button", { name: "Link", exact: true }).focus();
-    await page.keyboard.press("Enter");
+    // Link is no longer a sidebar entry; this mount opens it from its own URL.
     assert.equal(new URL(page.url()).searchParams.get("view"), "links");
     await open(page);
     const first = await active(page);
