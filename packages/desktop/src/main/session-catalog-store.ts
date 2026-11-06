@@ -1,5 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  openSync,
+  readSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { codeShellHome } from "@cjhyy/code-shell-core";
 import { mutateJsonFile } from "@cjhyy/code-shell-core/internal";
@@ -65,6 +74,33 @@ export class SessionCatalogStore {
 
   load(): Promise<SessionCatalogSnapshot> {
     return this.enqueue(() => this.mutate(() => false));
+  }
+
+  /** Reads the last atomic commit without creating a file or taking a write lock. */
+  snapshotSync(): SessionCatalogSnapshot {
+    let fd: number;
+    try {
+      fd = openSync(this.file, constants.O_RDONLY | constants.O_NOFOLLOW);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return cloneSnapshot(emptyCatalog());
+      throw error;
+    }
+    try {
+      const stat = fstatSync(fd);
+      if (!stat.isFile() || stat.size > MAX_FILE_BYTES)
+        throw new Error("invalid session catalog file");
+      const buffer = Buffer.alloc(stat.size + 1);
+      let length = 0;
+      while (length < buffer.length) {
+        const count = readSync(fd, buffer, length, buffer.length - length, length);
+        if (count === 0) break;
+        length += count;
+      }
+      if (length > stat.size) throw new Error("session catalog changed while reading");
+      return cloneSnapshot(parseCatalog(buffer.toString("utf8", 0, length)));
+    } finally {
+      closeSync(fd);
+    }
   }
 
   async flush(): Promise<void> {

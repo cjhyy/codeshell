@@ -419,6 +419,10 @@ export class AgentBridge implements PetStateBridge {
     private readonly workerAutomationCreate?: WorkerAutomationCreate,
     private readonly modelRequestSigner?: ModelRequestSigner,
     private readonly captureLinkAccount?: CaptureLinkAccountAccess,
+    private readonly onSessionPanelOwnerClaimed?: (
+      sessionId: string,
+      webContentsId: number,
+    ) => void,
   ) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
     this.core = new WorkerBridgeCore({
@@ -2199,6 +2203,9 @@ export class AgentBridge implements PetStateBridge {
    * docs/todo/external-agent-runtime-tool-bridge-design.md §9.3.
    */
   claimSessionPanelOwner(sessionId: string, webContentsId: number): void {
+    // Retire browser UI grants immediately when another window starts owning
+    // this Session, even if it changes back before the next browser action.
+    this.onSessionPanelOwnerClaimed?.(sessionId, webContentsId);
     this.panelHostWindowRoutes.claim(sessionId, webContentsId);
   }
 

@@ -32,6 +32,99 @@ function fakeRecord(overrides: Partial<GuestRecord> = {}): GuestRecord {
 }
 
 describe("BuiltInBrowserHandoffGrants", () => {
+  test("window/Session authority is checked at grant and at dispatch without a UI poll", async () => {
+    const record = fakeRecord();
+    let current = false;
+    const calls: string[] = [];
+    const grants = new BuiltInBrowserHandoffGrants({
+      guestRecordForId: () => record,
+      bucketForSession: () => "task-bucket",
+      authorizeGuest: () => calls.push("authorize"),
+      releaseGuest: () => calls.push("release"),
+      dispatchAction: async () => {
+        calls.push("action");
+        return "ok";
+      },
+    });
+    const claim = {
+      sessionId: "cold-session",
+      guestId: 42,
+      sourceWindowId: 7,
+      assertCurrent: () => {
+        if (!current) throw new Error("Session owner changed");
+      },
+    };
+    expect(() => grants.grant(claim)).toThrow("Session owner changed");
+    expect(calls).toEqual([]);
+    current = true;
+    expect(grants.grant(claim).granted).toBe(true);
+    current = false;
+    expect(
+      JSON.parse((await grants.dispatch(claim.sessionId, { action: "listTabs" }))!),
+    ).toMatchObject({ ok: false, code: "NEEDS_HUMAN" });
+    expect(calls).toEqual(["authorize", "release"]);
+    // Restoring the old authority does not resurrect the expired claim or
+    // silently choose a different target.
+    current = true;
+    expect(grants.status(claim.sessionId).granted).toBe(false);
+    expect(
+      JSON.parse((await grants.dispatch(claim.sessionId, { action: "listTabs" }))!),
+    ).toMatchObject({ ok: false, code: "NEEDS_HUMAN" });
+    grants.clearSession(claim.sessionId);
+  });
+
+  test("authority lost while the browser driver starts prevents the queued action", async () => {
+    releaseGuest(42);
+    const record = fakeRecord();
+    let current = true;
+    let finishDriver!: (driver: BrowserBridge) => void;
+    let markStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
+    let navigations = 0;
+    const grants = new BuiltInBrowserHandoffGrants({
+      guestRecordForId: () => record,
+      bucketForSession: () => "task-bucket",
+      authorizeGuest: () => {},
+      releaseGuest,
+      dispatchAction: (request, deps) =>
+        handleBrowserAction(request, {
+          ...deps,
+          policy: () => ({ allowedDomains: [] }),
+          createDriver: () =>
+            new Promise<BrowserBridge>((resolve) => {
+              finishDriver = resolve;
+              markStarted();
+            }),
+        }),
+    });
+    grants.grant({
+      sessionId: "cold-pending-driver",
+      guestId: 42,
+      sourceWindowId: 7,
+      assertCurrent: () => {
+        if (!current) throw new Error("granting window closed");
+      },
+    });
+    const action = grants.dispatch("cold-pending-driver", {
+      action: "navigate",
+      url: "https://example.test/",
+    });
+    await started;
+    current = false;
+    finishDriver({
+      navigate: async () => {
+        navigations++;
+        return { ok: true };
+      },
+    } as BrowserBridge);
+    expect(JSON.parse((await action)!)).toMatchObject({ ok: false, code: "NEEDS_HUMAN" });
+    expect(navigations).toBe(0);
+    grants.clearSession("cold-pending-driver");
+    releaseGuest(42);
+  });
+
   test("takeover invalidates queued resumes without revoking the capability grant", async () => {
     releaseGuest(42);
     const record = fakeRecord();
@@ -222,9 +315,9 @@ describe("BuiltInBrowserHandoffGrants", () => {
       now: () => 100,
     });
 
-    expect(() =>
-      grants.grant({ sessionId: "session-1", guestId: 42, sourceWindowId: 99 }),
-    ).toThrow("window that owns");
+    expect(() => grants.grant({ sessionId: "session-1", guestId: 42, sourceWindowId: 99 })).toThrow(
+      "window that owns",
+    );
     expect(() =>
       new BuiltInBrowserHandoffGrants({
         guestRecordForId: () => record,
@@ -254,9 +347,7 @@ describe("BuiltInBrowserHandoffGrants", () => {
       expiresAt: 6_000,
     });
 
-    const tabs = JSON.parse(
-      (await grants.dispatch("session-1", { action: "listTabs" })) ?? "null",
-    );
+    const tabs = JSON.parse((await grants.dispatch("session-1", { action: "listTabs" })) ?? "null");
     expect(tabs).toEqual([
       {
         tabId: "42",
