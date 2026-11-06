@@ -215,14 +215,16 @@ engine 在 run 首次模型调用前处理话题段归档（`engine.ts:1853-1907
 
 ### 10.2 改动
 
-- `RunBehaviorProfile` 新增 `deferRangeArchive?: boolean`（Mimi 为 true）：notes rollover 失败时，若未归档上下文仍在硬预算内，先正常进行本轮，run 结束后在后台执行归档；仅超过硬预算时才同步归档。
-- 摘要模型保持主模型：`engine.ts:1965` 起的注释明确了压缩摘要替换真实历史、丢失决定会污染后续每一轮，因此有意用主模型保质量，本设计不改这一决定，只把它移出关键路径。
+- `archiveBeforeCurrentTurn` 新增可选 `fallbackSummary?: string`。engine 的顺序变为：给定 `summary` → 直接写标记；否则尝试 notes rollover；失败且有 `fallbackSummary` → 用它直接写标记（不调模型）；都没有才走 `archiveTurnRange` 同步摘要。
+- Mimi 在跨段归档时传入 `fallbackSummary`：固定说明（较早话题已归档，详细内容见 Mimi 日志中该话题段）加上该段的 carryover brief（未完成任务与近期结论）。话题段收尾随后在后台生成 journal 与记忆，细节不丢。
+- 不采用"run 结束后后台归档"：那会与下一轮在同一 transcript 上并发写入，且只是把等待挪到下一轮。
+- 摘要模型保持主模型：`engine.ts:1965` 起的注释明确了压缩摘要替换真实历史、丢失决定会污染后续每一轮，因此有意用主模型保质量，本设计不改这一决定；Mimi 通过 `fallbackSummary` 不再走到这条路径。
 - `buildSummarizeFn`（`core/src/engine/auxiliary-pipeline.ts:47`）当前 `maxTokens: 1024` 写死且不检查 `stopReason`，截断文本会被当作完整摘要返回。改为：输出上限提高到 4,096（基线样本 4,844 prompt token 的区间摘要在 1,024 处被截断，4 倍余量）；`stopReason` 为 `length`/`max_tokens` 时抛错，由调用方按"摘要被拒绝"处理（不归档、保留原历史），绝不写入截断摘要。该修复对所有使用 `buildSummarizeFn` 的压缩路径生效。
 - 归档持久化与幂等沿用 `range_archive` 事件与 segmentId 规则。
 
 ### 10.3 测试
 
-预算内 → 首轮不等待归档、run 后归档完成；超预算 → 同步归档；fake client 返回 `stopReason: "length"` → `buildSummarizeFn` 抛错、不写入 `range_archive`、原历史保留。
+notes rollover 失败且有 `fallbackSummary` → 不调模型、直接写入标记且内容为该文本；无 `fallbackSummary` → 行为不变；fake client 返回 `stopReason: "length"` → `buildSummarizeFn` 抛错、不写入 `range_archive`、原历史保留。
 
 ## 11. 统一计时与验收报告
 
