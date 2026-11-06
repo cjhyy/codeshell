@@ -77,8 +77,10 @@ test("external discovery advertises real Link and source tools and cannot load e
     name: "ToolSearch",
     input: { query: "select:Agent,UseCredential" },
   });
-  expect(excluded.result).toContain('Tool "Agent" not found');
-  expect(excluded.result).toContain('Tool "UseCredential" not found');
+  expect(excluded.result).toContain('Tool "Agent" is not available in the current Session context');
+  expect(excluded.result).toContain(
+    'Tool "UseCredential" is not available in the current Session context',
+  );
   const call = await external.execute({ id: "cannot-call", name: "UseCredential", input: {} });
   expect(call.isError).toBe(true);
   expect(call.error).toContain("not exposed");
