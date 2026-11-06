@@ -201,6 +201,8 @@ const expectedRuntimeExportsByPartition = {
     "findActiveBackgroundJobForExternalSession",
     "markBackgroundJobInterruptedForUI",
     "dropBackgroundJobHistoryForSession",
+    "BackgroundContinuationController",
+    "BackgroundResultDelivery",
     "BackgroundShellManager",
     "ENV_DENY_REGEX",
     "ENV_ALLOWLIST",

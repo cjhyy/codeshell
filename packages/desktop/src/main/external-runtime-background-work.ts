@@ -7,7 +7,6 @@ import {
   agentNotificationBus,
   backgroundJobRegistry,
   backgroundShellManager,
-  buildNotificationMessage,
   notificationQueue,
 } from "@cjhyy/code-shell-core/internal";
 import type { ExternalRuntimeBackgroundWorkDelivery } from "./external-runtime-service.js";
@@ -17,11 +16,9 @@ export function createExternalRuntimeBackgroundWork(
 ): ExternalRuntimeBackgroundWorkDelivery {
   return {
     subscribe: (listener) => agentNotificationBus.subscribe(listener),
-    drainMessage: (sessionId) => {
-      const pending = notificationQueue.drainAll(sessionId);
-      return pending.length > 0 ? buildNotificationMessage(pending) : undefined;
-    },
-    hasPending: (sessionId) => notificationQueue.getSnapshot(sessionId).length > 0,
+    claimResults: (sessionId) => notificationQueue.claimResults(sessionId),
+    hasPending: (sessionId) =>
+      notificationQueue.getSnapshot(sessionId).some((item) => item.kind === "result"),
     // An external provider turn cannot yield like the native Engine's runYield,
     // so a Bash shell explicitly launched with wait_for_exit is finite work too.
     // Services (background_behavior=continue) never park the Goal.

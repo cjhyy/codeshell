@@ -43,12 +43,7 @@ import {
 } from "./steer-queue.js";
 import { RunEnvironmentResolver } from "./run-environment.js";
 import { legacySingleRootWorkspace } from "../workspace/workspace-context.js";
-import {
-  type BuiltinTool,
-  type BuiltinToolExposure,
-  type BuiltinToolFn,
-  type BuiltinToolGuard,
-} from "../tool-system/builtin/index.js";
+import { type BuiltinTool, type BuiltinToolFn } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry, type LiveChildState } from "../tool-system/builtin/agent-registry.js";
 import { skillToolDef } from "../tool-system/builtin/skill.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
@@ -336,12 +331,6 @@ export class Engine {
   /** Compiled module contributions — the single composition fact source. */
   private readonly composition: ResolvedComposition;
   private readonly toolCatalog: readonly BuiltinTool[];
-  private readonly toolGuards: ReadonlyMap<string, BuiltinToolGuard>;
-  /** Per-turn dynamic definition rewriters contributed by builtin exposures. */
-  private readonly toolRewriters: ReadonlyMap<
-    string,
-    NonNullable<BuiltinToolExposure["rewriteDefinition"]>
-  >;
   /** Named per-run behavior profiles (core defaults + config + extensions). */
   private readonly behaviorProfiles: ReadonlyMap<string, RunBehaviorProfile>;
   private readonly capabilityPromptSections: Readonly<Record<string, string>>;
@@ -656,20 +645,6 @@ export class Engine {
       this.composition =
         config.composition ?? compileComposition({ modules: config.modules ?? [] });
       this.toolCatalog = compositionToolCatalog(this.composition);
-      this.toolGuards = new Map(
-        this.toolCatalog.flatMap((tool) =>
-          tool.exposure.availability
-            ? ([[tool.definition.name, tool.exposure.availability]] as const)
-            : [],
-        ),
-      );
-      this.toolRewriters = new Map(
-        this.toolCatalog.flatMap((tool) =>
-          tool.exposure.rewriteDefinition
-            ? ([[tool.definition.name, tool.exposure.rewriteDefinition]] as const)
-            : [],
-        ),
-      );
       // Behavior profile registry: core defaults first, then host config, then
       // module contributions — later registrations override earlier ones by id.
       const moduleProfiles = this.composition.engine.behaviorProfiles;
@@ -748,6 +723,11 @@ export class Engine {
           toolCatalog: this.toolCatalog,
         });
       this.toolRegistry = this.runtimeToolRegistry.fork();
+      // Composition owns executable metadata even when the host supplies a
+      // registry. Attach it to this Engine's fork, never the shared seed.
+      for (const tool of this.toolCatalog) {
+        this.toolRegistry.setExposure(tool.definition.name, tool.exposure);
+      }
       this.lifetime.own(() => this.toolRegistry.clear());
       this.lifetime.own(registerAlwaysTools(this.composition, this.toolRegistry));
       for (const contribution of this.composition.engine.tools) {
@@ -3245,10 +3225,6 @@ export class Engine {
           mcpServers,
           mcpDisabled,
           featureFlags: this.readFeatureFlags(),
-          toolGuards: this.toolGuards,
-          toolRewriters: this.toolRewriters,
-          toolFeatureFlags: TOOL_FEATURE_FLAGS,
-          applyBuiltinOverrideVisibility,
           profileAllowedToolNames: runAllowedToolNames,
           runPlanMode,
         }),
@@ -5028,14 +5004,3 @@ export class Engine {
     return this.auxiliaryPipeline.readMemoriesConfig();
   }
 }
-
-/**
- * Builtin tool name → the feature flag that gates its visibility. A tool here
- * is hidden from the LLM when its flag resolves to false. Tools not listed are
- * unaffected. Kept beside the engine (not in builtin/index) because the flag
- * read needs the engine's scoped SettingsManager.
- */
-const TOOL_FEATURE_FLAGS: ReadonlyMap<string, FeatureFlagName> = new Map([
-  ["WebSearch", "web_search"],
-  ["Bash", "shell_tool"],
-]);

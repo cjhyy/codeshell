@@ -80,8 +80,20 @@ export type { ToolVisibilityInputs } from "./engine/run-tooling.js";
 export {
   FIRST_PHASE_EXPOSURE,
   FIRST_PHASE_EXPOSURE_RATIONALE,
+  REVIEWED_EXTERNAL_TOOL_EXPOSURE,
+  createExternalToolReviewSnapshot,
+  assertExternalToolReviewSnapshot,
+  deriveExternalToolExposure,
+  intersectExternalToolExposure,
 } from "./tool-system/external-tool-exposure.js";
-export type { ExposureRationale } from "./tool-system/external-tool-exposure.js";
+export type {
+  ExposureRationale,
+  ExternalExposureRegistry,
+} from "./tool-system/external-tool-exposure.js";
+export type {
+  ExternalToolCompatibility,
+  ExternalToolReview,
+} from "./tool-system/external-tool-compatibility.js";
 export {
   HOST_MCP_SERVERS_ENV,
   encodeHostMcpServers,

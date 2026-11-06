@@ -17,7 +17,7 @@
  * runtime adapters live in the coding capability and talk to this through the
  * `SessionToolHost` interface.
  */
-import type { PermissionMode, ToolDefinition, ToolResult } from "../types.js";
+import type { MCPServerConfig, PermissionMode, ToolDefinition, ToolResult } from "../types.js";
 import type { ToolContext } from "./context.js";
 import { ToolExecutor } from "./executor.js";
 import { ToolRegistry } from "./registry.js";
@@ -25,9 +25,12 @@ import { PermissionClassifier, type ApprovalBackend } from "./permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { registerConfiguredHooks } from "../hooks/register-configured-hooks.js";
 import { SettingsManager } from "../settings/manager.js";
-import { buildToolVisibility, type ToolVisibilityInputs } from "../engine/run-tooling.js";
+import { buildToolVisibility, type ToolVisibilityInputs } from "./tool-visibility.js";
 import { composePermissionRules } from "../engine/permission-controller.js";
-import { PLAN_MODE_ALLOWED_TOOLS } from "./plan-mode-allowlist.js";
+import type { CapabilityOverrides } from "../settings/schema.js";
+import { readSessionToolPolicy, SessionToolPolicyError } from "./session-tool-policy.js";
+import { prepareToolPolicySnapshot, snapshotMcpToolPolicies } from "./prepare-tool-policy.js";
+import { resolveToolPolicySnapshot } from "./tool-policy-snapshot.js";
 
 /**
  * Permission modes an external session may use.
@@ -82,12 +85,12 @@ export interface ExternalToolExposurePolicy {
 export interface SessionToolHost {
   readonly businessSessionId: string;
   /**
-   * The assembled session ToolContext.
+   * The base session ToolContext. Each invocation refreshes capability policy
+   * into its own context, so concurrent calls do not mutate this shared base.
    *
-   * Exposed read-only so a host can inspect what the executor will actually see
-   * — most usefully `toolVisibility` (absent means ToolExecutor SKIPS its
-   * availability guard) and `allowedToolNames`. Do not mutate it; narrow the
-   * exposure policy instead.
+   * Exposed read-only for stable host context such as `toolVisibility` and
+   * `allowedToolNames`. The live disabled lists belong to each invocation and
+   * are not reflected here. Do not mutate it; narrow the exposure policy instead.
    */
   readonly toolContext: ToolContext;
   listTools(): readonly ToolDefinition[];
@@ -141,6 +144,10 @@ export interface CreateSessionToolHostOptions {
   presetRules: readonly import("../types.js").PermissionRule[];
   /** Settings scope used to resolve the user's own permission rules. */
   settingsScope?: import("../settings/manager.js").SettingsScope;
+  /** Trusted live session Profile overrides; {} suppresses project-profile fallback. */
+  getProfileOverrides?: () => CapabilityOverrides;
+  /** Already-authorized Host MCP connections. Defaults to none; never creates connections. */
+  mcpServers?: Readonly<Record<string, MCPServerConfig>>;
   /**
    * Whether the project at `cwd` has been trusted by the user.
    *
@@ -158,6 +165,8 @@ export interface CreateSessionToolHostOptions {
   projectTrusted: boolean;
   planMode: boolean;
   exposure: ExternalToolExposurePolicy;
+  /** Revalidate reviewed contracts; can only narrow the names admitted at construction. */
+  getExposure?: () => ExternalToolExposurePolicy;
   /**
    * Availability-guard inputs. Required, not optional: `ToolExecutor` SKIPS its
    * visibility gate when `toolCtx.toolVisibility` is absent, so omitting this
@@ -165,6 +174,8 @@ export interface CreateSessionToolHostOptions {
    * callable in a context their guard was written to exclude.
    */
   visibility: ToolVisibilityInputs;
+  /** Trusted live goal/profile/workspace facts; stable session authority is retained. */
+  getVisibility?: () => ToolVisibilityInputs;
   approvalBackend?: ApprovalBackend;
   /**
    * Tool hooks for this session. When absent — the production path — the host
@@ -261,7 +272,9 @@ function configuredHooks(options: CreateSessionToolHostOptions): HookRegistry {
     options.settingsScope ?? "project",
     options.projectTrusted,
   );
-  registerConfiguredHooks(hooks, settings, options.cwd);
+  registerConfiguredHooks(hooks, settings, options.cwd, undefined, () =>
+    readSessionToolPolicy(options),
+  );
   return hooks;
 }
 
@@ -332,11 +345,121 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
     // Belt and braces with the exposure check in execute(): the executor
     // enforces this too, so a future refactor that loses one still fails closed.
     allowedToolNames: new Set(exposure.toolNames),
+    validateToolArguments: (name: string, args: Record<string, unknown>) =>
+      argsMatch(exposure.argsPatterns?.get(name), args)
+        ? undefined
+        : `Tool ${name} was called with arguments outside the scope exposed to this session. Do NOT retry this tool call with the same arguments.`,
   } as unknown as ToolContext;
 
-  const executor = new ToolExecutor(registry, permission, hooks);
-  executor.setContext(toolCtx);
-  executor.setSignal(sessionSignal);
+  // Explicit embedding restrictions remain an upper bound, even when settings
+  // later force a capability on. Copy them once rather than accumulating policy
+  // snapshots across refreshes (which would prevent a later re-enable).
+  const fixedDisabledBuiltins = [...(options.contextOverrides?.disabledBuiltins ?? [])];
+  const fixedDisabledSkills = [...(options.contextOverrides?.disabledSkills ?? [])];
+  const fixedDisabledPlugins = [...(options.contextOverrides?.disabledPlugins ?? [])];
+  const fixedAllowedToolNames = new Set(
+    [...exposure.toolNames].filter(
+      (name) =>
+        !options.contextOverrides?.allowedToolNames ||
+        options.contextOverrides.allowedToolNames.has(name),
+    ),
+  );
+  toolCtx.allowedToolNames = fixedAllowedToolNames;
+  const policyOptions = { ...options, mcpServers: structuredClone(options.mcpServers ?? {}) };
+  const fixedAllowedMcpServers = options.contextOverrides?.allowedMcpServers
+    ? new Set(options.contextOverrides.allowedMcpServers)
+    : undefined;
+  const fixedMcpPolicies = options.contextOverrides?.mcpToolPolicies
+    ? new Map(
+        [...options.contextOverrides.mcpToolPolicies].map(([serverName, policy]) => [
+          serverName,
+          {
+            allowedTools: policy.allowedTools ? new Set(policy.allowedTools) : undefined,
+            disabledTools: new Set(policy.disabledTools),
+          },
+        ]),
+      )
+    : undefined;
+  // A normal function deliberately refreshes its receiver. Bound nested tool
+  // calls clone ToolContext; a closure over toolCtx/callContext would refresh
+  // the wrong call and could leak another invocation's capability snapshot.
+  toolCtx.refreshRunToolEligibility = function (this: ToolContext): void {
+    const policy = readSessionToolPolicy(policyOptions);
+    this.disabledBuiltins = new Set([...fixedDisabledBuiltins, ...policy.disabledBuiltins]);
+    this.disabledSkills = [...new Set([...fixedDisabledSkills, ...policy.disabledSkills])];
+    this.disabledPlugins = [...new Set([...fixedDisabledPlugins, ...policy.disabledPlugins])];
+    let liveVisibility: ToolVisibilityInputs;
+    let liveExposure: ExternalToolExposurePolicy;
+    try {
+      liveVisibility = options.getVisibility?.() ?? options.visibility;
+      liveExposure = options.getExposure?.() ?? exposure;
+    } catch (error) {
+      throw new SessionToolPolicyError(error);
+    }
+    if (Object.prototype.hasOwnProperty.call(liveVisibility, "workspace")) {
+      // A trusted explicit undefined revokes the previous workspace binding.
+      this.workspace = liveVisibility.workspace;
+    }
+    this.validateToolArguments = (name, args) =>
+      liveExposure.toolNames.has(name) &&
+      argsMatch(exposure.argsPatterns?.get(name), args) &&
+      argsMatch(liveExposure.argsPatterns?.get(name), args)
+        ? undefined
+        : `Tool ${name} was called with arguments outside the scope exposed to this session. Do NOT retry this tool call with the same arguments.`;
+    this.toolVisibility = buildToolVisibility({
+      ...liveVisibility,
+      cwd: options.cwd,
+      sessionId: options.businessSessionId,
+      settingsScope: options.settingsScope ?? "project",
+      host: options.visibility.host,
+      isSubAgent: options.visibility.isSubAgent,
+      contextStrategy: undefined,
+      workspace: this.workspace,
+      hasBrowserAutomation: this.browser !== undefined,
+      sessionMessageTargets: this.sessionMessages?.targets ?? liveVisibility.sessionMessageTargets,
+    });
+    const snapshot = prepareToolPolicySnapshot({
+      registry,
+      visibility: this.toolVisibility,
+      disabledBuiltinNames: this.disabledBuiltins,
+      allowedToolNames: [...fixedAllowedToolNames].filter((name) =>
+        liveExposure.toolNames.has(name),
+      ),
+      mcpServers: policy.mcpServers,
+      mcpDisabled: false,
+      featureFlags: policy.featureFlags,
+      agentDefinitions: this.agentDefinitions,
+      planMode: options.planMode,
+    });
+    // Embedding grants are an additional upper bound, never an alternative
+    // source of MCP authority to the explicitly supplied transport baseline.
+    const allowedServers = fixedAllowedMcpServers;
+    if (allowedServers)
+      snapshot.allowedMcpServers = snapshot.allowedMcpServers.filter((name) =>
+        allowedServers.has(name),
+      );
+    const fixedPolicies = fixedMcpPolicies;
+    if (fixedPolicies) {
+      const merged = new Map(snapshot.mcpPolicies.map((entry) => [entry.serverName, entry]));
+      for (const [serverName, fixed] of fixedPolicies) {
+        const live = merged.get(serverName);
+        merged.set(serverName, {
+          serverName,
+          allowedTools: !fixed.allowedTools
+            ? live?.allowedTools
+            : !live?.allowedTools
+              ? [...fixed.allowedTools]
+              : live.allowedTools.filter((name) => fixed.allowedTools!.has(name)),
+          disabledTools: [...new Set([...(live?.disabledTools ?? []), ...fixed.disabledTools])],
+        });
+      }
+      snapshot.mcpPolicies = [...merged.values()];
+    }
+    this.allowedMcpServers = new Set(snapshot.allowedMcpServers);
+    this.mcpToolPolicies = snapshotMcpToolPolicies(snapshot);
+    this.searchableToolDefinitions = resolveToolPolicySnapshot(snapshot);
+    this.allowedToolNames = new Set(this.searchableToolDefinitions.map((tool) => tool.name));
+  };
 
   let disposed = false;
 
@@ -353,14 +476,9 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
 
     listTools(): readonly ToolDefinition[] {
       if (disposed) return [];
-      return registry
-        .getToolDefinitions()
-        .filter((definition) => exposure.toolNames.has(definition.name))
-        .filter((definition) => !options.planMode || PLAN_MODE_ALLOWED_TOOLS.has(definition.name))
-        .filter((definition) => {
-          const guard = registry.getAvailabilityGuard(definition.name);
-          return !guard || guard(toolCtx.toolVisibility!);
-        });
+      const context = { ...toolCtx };
+      context.refreshRunToolEligibility!();
+      return context.searchableToolDefinitions!;
     },
 
     async execute(call, callSignal): Promise<ToolResult> {
@@ -437,32 +555,25 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
         // Forward the per-call signal rather than only checking it at entry: an MCP
         // cancellation arriving mid-flight has to actually stop the work.
         //
-        // A `ToolExecutor` holds exactly one signal, and swapping it per call would
-        // race with concurrent calls carrying different signals. So a call that
-        // brings its own signal gets its own executor — cheap (it is a thin wrapper
-        // over the shared registry/permission/hooks) and free of shared mutable
-        // state. Calls without one use the shared executor unchanged.
-        if (!callSignal && !options.getStreamCallback && !run) {
-          // The one authorized path. Everything above only NARROWS what may reach it.
-          const result = await executor.executeSingle({
-            id: call.id,
-            toolName: call.name,
-            args: input,
-          });
-          await emit({ type: "tool_result", result });
-          return result;
-        }
+        // Every call has its own executor and refreshed policy context. Sharing
+        // these would race both cancellation signals and live capability lists.
         const scoped = new ToolExecutor(registry, permission, hooks);
         scoped.setContext(callContext);
         scoped.setSignal(signal);
-        const result = await scoped.executeSingle(
-          {
-            id: call.id,
-            toolName: call.name,
-            args: input,
-          },
-          run ? { assertAuthorized: run.assertCurrent } : undefined,
-        );
+        let result: ToolResult;
+        try {
+          result = await scoped.executeSingle(
+            {
+              id: call.id,
+              toolName: call.name,
+              args: input,
+            },
+            run ? { assertAuthorized: run.assertCurrent } : undefined,
+          );
+        } catch (error) {
+          if (!(error instanceof SessionToolPolicyError)) throw error;
+          result = failClosed(call.id, call.name, error.message);
+        }
         await emit({ type: "tool_result", result });
         return result;
       };
@@ -476,7 +587,6 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
       // the session is gone.
       disposed = true;
       lifetime.abort();
-      executor.setContext(undefined);
       if (ownsHooks) hooks.clear();
     },
   };

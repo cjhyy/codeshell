@@ -727,28 +727,20 @@ for (const mode of ["interrupt", "stop", "replace"]) {
   });
   const old = [],
     current = [];
+  // External exposure only admits reviewed contracts, so borrow a reviewed
+  // read-only tool's definition and exposure and replace only its execution.
+  const reviewed = new core.ToolRegistry({ builtinTools: ["ListShells"] });
   const registry = new core.ToolRegistry({
     toolCatalog: [
       {
-        definition: {
-          name: "DelayedRead",
-          description: "synthetic",
-          inputSchema: { type: "object", properties: {} },
-          source: "builtin",
-          permissionDefault: "allow",
-          isReadOnly: true,
-          isConcurrencySafe: true,
-        },
+        definition: reviewed.listToolsDetailed().find((tool) => tool.name === "ListShells"),
         execute: async (_args, context) => {
           entered();
           await blocked;
           await context.streamCallback?.({ type: "text_delta", text: "UNOWNED-LATE-TOOL" });
           return "synthetic done";
         },
-        exposure: {
-          presetTags: ["general"],
-          defaultPermissionRules: [{ tool: "DelayedRead", decision: "allow" }],
-        },
+        exposure: reviewed.getExposure("ListShells"),
       },
     ],
   });
@@ -758,10 +750,10 @@ for (const mode of ["interrupt", "stop", "replace"]) {
     cwd: workspace,
     registry,
     permissionMode: "default",
-    presetRules: [{ tool: "DelayedRead", decision: "allow" }],
+    presetRules: [{ tool: "ListShells", decision: "allow" }],
     projectTrusted: true,
     planMode: false,
-    exposure: { mode: "allowlist", toolNames: new Set(["DelayedRead"]) },
+    exposure: { mode: "allowlist", toolNames: new Set(["ListShells"]) },
     visibility: { cwd: workspace, hasGoal: false, host: "desktop", isSubAgent: false },
     contextOverrides: { streamCallback: (event) => old.push(event) },
     codexClient: { command: join(bin, "codex"), env: process.env },

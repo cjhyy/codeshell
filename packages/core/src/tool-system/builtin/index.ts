@@ -4,6 +4,8 @@
 
 import type { PermissionRule, RegisteredTool } from "../../types.js";
 import type { ToolVisibilityContext } from "../context.js";
+import type { FeatureFlagName } from "../../settings/feature-flags.js";
+import type { ExternalToolCompatibility } from "../external-tool-compatibility.js";
 import { readToolDef, readTool } from "./read.js";
 import { writeToolDef, writeTool } from "./write.js";
 import {
@@ -28,12 +30,7 @@ import { grepToolDef, grepTool } from "./grep.js";
 import { bashToolDef, bashTool } from "./bash.js";
 import { webSearchToolDef, webSearchTool, isWebSearchAvailable } from "./web-search.js";
 import { webFetchToolDef, webFetchTool } from "./web-fetch.js";
-import {
-  askUserToolDef,
-  askUserTool,
-  askUserAsyncToolDef,
-  askUserAsyncTool,
-} from "./ask-user.js";
+import { askUserToolDef, askUserTool, askUserAsyncToolDef, askUserAsyncTool } from "./ask-user.js";
 import {
   agentToolDef,
   agentTool,
@@ -251,6 +248,10 @@ export interface BuiltinToolExposure {
   requires?: readonly string[];
   /** Shared by model visibility and the executor's second safety gate. */
   availability?: BuiltinToolGuard;
+  /** Shared feature switch, applied by every host tool surface. */
+  featureFlag?: FeatureFlagName;
+  /** Owner declaration; external access also requires a matching reviewed contract. */
+  external?: ExternalToolCompatibility;
   /**
    * Per-turn dynamic rewrite of the tool definition the model sees (e.g. a
    * closed enum derived from run-scoped state). Pure; must not mutate `def`.
@@ -292,7 +293,15 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       pathPolicy: [{ kind: "arg", arg: "file_path", operation: "read" }],
     },
     execute: readTool,
-    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(readToolDef.name) }),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason:
+          "Overlaps a tool the runtime already has, which was the original reason to exclude it. That reasoning was wrong about which risk matters: the runtime's OWN Read answers to the runtime's sandbox, while this one answers to ToolExecutor — path policy, project trust and the user's permission rules. Exposing it means the model has a reachable path that IS governed by CodeShell, which is the point of augmented mode. Naming overlap is a presentation problem (the MCP server prefixes its tools); sandbox divergence is a security one.",
+      },
+      defaultPermissionRules: allow(readToolDef.name),
+    }),
   },
   {
     definition: {
@@ -304,7 +313,13 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       pathPolicy: [{ kind: "arg", arg: "file_path", operation: "write" }],
     },
     execute: writeTool,
-    exposure: expose(HARNESS_TAGS),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason: "File mutation governed by ToolExecutor. Same argument as Bash.",
+      },
+    }),
   },
   {
     definition: {
@@ -396,7 +411,13 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       pathPolicy: [{ kind: "arg", arg: "file_path", operation: "write" }],
     },
     execute: editTool,
-    exposure: expose(HARNESS_TAGS),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason: "File mutation governed by ToolExecutor. Same argument as Bash.",
+      },
+    }),
   },
   {
     definition: {
@@ -411,7 +432,14 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       ],
     },
     execute: globTool,
-    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(globToolDef.name) }),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason: "Path search under the same path policy as Read.",
+      },
+      defaultPermissionRules: allow(globToolDef.name),
+    }),
   },
   {
     definition: {
@@ -423,7 +451,14 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       pathPolicy: [{ kind: "arg", arg: "path", operation: "read", defaultToCwd: true }],
     },
     execute: grepTool,
-    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(grepToolDef.name) }),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason: "Content search under the same path policy as Read.",
+      },
+      defaultPermissionRules: allow(grepToolDef.name),
+    }),
   },
   {
     definition: {
@@ -435,7 +470,16 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       timeoutMs: 3_600_000, // 1h — supports long-running shell loops (e.g. `until` polling)
     },
     execute: bashTool,
-    exposure: expose(HARNESS_TAGS, { requires: ["BashOutput", "KillShell", "ListShells"] }),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason:
+          "Same argument as Read, and it is the tool where it matters most: the runtime's own shell runs under the runtime's approval policy, which the user did not configure and cannot see. Routing a shell call through ToolExecutor puts it under the user's own permission rules and the approval UI. Note this does NOT remove the runtime's own shell — it adds a governed alternative.",
+      },
+      featureFlag: "shell_tool",
+      requires: ["BashOutput", "KillShell", "ListShells"],
+    }),
   },
   // ─── Background shells (Bash run_in_background companions) ──────
   {
@@ -447,7 +491,14 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: bashOutputTool,
-    exposure: expose(HARNESS_TAGS),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason:
+          "Reads retained output of a background shell this same Session started. The manager scopes lookups to ctx.sessionId, so another Session's shell_id reads as unknown. Read-only; no new capability beyond the exposed Bash.",
+      },
+    }),
   },
   {
     definition: {
@@ -458,7 +509,14 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: killShellTool,
-    exposure: expose(HARNESS_TAGS),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason:
+          "Terminates a background shell (and its process group) that this same Session started; cross-Session ids are refused by the manager. Strictly narrower than kill through the exposed Bash, and it records the stop as intentional.",
+      },
+    }),
   },
   {
     definition: {
@@ -469,7 +527,14 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: listShellsTool,
-    exposure: expose(HARNESS_TAGS),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason:
+          "Lists this Session's background shells with status and detected port. Session-scoped and read-only.",
+      },
+    }),
   },
   {
     definition: {
@@ -481,6 +546,12 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: webSearchTool,
     exposure: expose(GENERAL_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason: "Read-only network lookup; already available to the model by other means.",
+      },
+      featureFlag: "web_search",
       defaultPermissionRules: allow(webSearchToolDef.name),
       availability: (ctx) => isWebSearchAvailable(ctx.cwd),
     }),
@@ -494,7 +565,14 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: webFetchTool,
-    exposure: expose(GENERAL_TAGS, { defaultPermissionRules: allow(webFetchToolDef.name) }),
+    exposure: expose(GENERAL_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason: "Read-only fetch, subject to the same URL handling as the native path.",
+      },
+      defaultPermissionRules: allow(webFetchToolDef.name),
+    }),
   },
   {
     definition: {
@@ -530,6 +608,12 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: agentTool,
     exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "excluded",
+        reason:
+          "Can spawn another agent, so an external runtime could recurse into itself, nest approvals, and escape concurrency/budget limits (§12.5). Unlike Bash or Browser, this is not a permission question: the recursion has no owner and no budget to charge, so exposing it would need a nesting model first.",
+      },
       defaultPermissionRules: allow(agentToolDef.name),
       availability: (ctx) => ctx.behaviorProfile !== "quickChatRestricted",
     }),
@@ -578,6 +662,12 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: enterPlanModeTool,
     exposure: expose(GENERAL_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "excluded",
+        reason:
+          "Engine state-machine tool. Exposing it lets the runtime and the Native Engine drive each other's plan state (§12.3) — and an external runtime has no Engine plan state of its own to enter, so the call has no coherent meaning on this path.",
+      },
       defaultPermissionRules: allow(enterPlanModeToolDef.name),
     }),
   },
@@ -591,6 +681,11 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: exitPlanModeTool,
     exposure: expose(GENERAL_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "excluded",
+        reason: "Engine state-machine tool; same reason as EnterPlanMode.",
+      },
       defaultPermissionRules: allow(exitPlanModeToolDef.name),
     }),
   },
@@ -603,7 +698,15 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: toolSearchTool,
-    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(toolSearchToolDef.name) }),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason:
+          "Discovers only the tools permitted by this session's allowedToolNames, availability guards and plan mode. The MCP bridge already advertises those schemas; search cannot register another tool, widen this allowlist or bypass execution checks.",
+      },
+      defaultPermissionRules: allow(toolSearchToolDef.name),
+    }),
   },
   {
     definition: {
@@ -614,7 +717,14 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: todoWriteTool,
-    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(todoWriteToolDef.name) }),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason: "Session-scoped task list. Visible to the user, trivially reversible.",
+      },
+      defaultPermissionRules: allow(todoWriteToolDef.name),
+    }),
   },
   {
     definition: {
@@ -727,7 +837,15 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: skillTool,
-    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(skillToolDef.name) }),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason:
+          "Loads a SKILL.md body and returns it as the tool result — it reads from the scanner, never the disk directly, and executes nothing itself. A skill body may TELL the model to run commands, but those become ordinary tool calls that face the same authorization as any other. Withholding Skill does not withhold that capability; it only withholds the user's own curated instructions.",
+      },
+      defaultPermissionRules: allow(skillToolDef.name),
+    }),
   },
   {
     definition: {
@@ -779,6 +897,12 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: listSourcesTool,
     exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason:
+          "Lists metadata for the workspace's explicitly bound data sources. It uses the same source/profile authority and revocation checks as native sessions and never reads resource contents merely because a source is discoverable.",
+      },
       defaultPermissionRules: allow(listSourcesToolDef.name),
     }),
   },
@@ -794,7 +918,14 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: readSourceTool,
-    exposure: expose(HARNESS_TAGS),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason:
+          "Reads an exact bound source, scope and resource through ToolExecutor approval and the existing source authorization recheck. Content remains bounded, redacted and untrusted; nested LinkAction reads use the same allowlist and account grants. Missing connector or parser capabilities remain unavailable rather than silently falling back.",
+      },
+    }),
   },
   {
     definition: {
@@ -832,7 +963,14 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: memoryListTool,
-    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(memoryListToolDef.name) }),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason: "Enumerates memory entries. No side effects.",
+      },
+      defaultPermissionRules: allow(memoryListToolDef.name),
+    }),
   },
   {
     definition: {
@@ -843,7 +981,14 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: memoryReadTool,
-    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(memoryReadToolDef.name) }),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason: "Reads the user's memory store. No side effects.",
+      },
+      defaultPermissionRules: allow(memoryReadToolDef.name),
+    }),
   },
   {
     definition: {
@@ -854,7 +999,14 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: memorySaveTool,
-    exposure: expose(HARNESS_TAGS),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason:
+          "Writes to the memory store, so it is a mutation — but a scoped one, into a store the user can read and edit, and it carries the same permission rules as on the native path.",
+      },
+    }),
   },
   {
     definition: {
@@ -865,7 +1017,13 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: false,
     },
     execute: memoryDeleteTool,
-    exposure: expose(HARNESS_TAGS),
+    exposure: expose(HARNESS_TAGS, {
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason: "Mutation, same store and same rules as MemorySave.",
+      },
+    }),
   },
   // ─── Goal mode: model-declared completion ──────────────────────
   // Lets the model explicitly declare the active goal complete. The
@@ -973,6 +1131,11 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: browserObserveTool,
     exposure: expose(GENERAL_TAGS, {
+      external: {
+        kind: "host-loopback",
+        status: "exposed",
+        reason: "Reads page content. Same owner story as browser_navigate, no mutation.",
+      },
       defaultPermissionRules: allow(browserObserveToolDef.name),
       availability: (ctx) => ctx.hasBrowserAutomation === true,
       promptSections: ["browser"],
@@ -989,6 +1152,12 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: browserActTool,
     exposure: expose(GENERAL_TAGS, {
+      external: {
+        kind: "host-loopback",
+        status: "exposed",
+        reason:
+          "Click / type / interact — the mutating third of the browser surface, and the one that combines with InjectCredential to act as the logged-in user. Exposed on the product owner's call, under the same ToolExecutor rules as every other entry here.",
+      },
       availability: (ctx) => ctx.hasBrowserAutomation === true,
       defaultPermissionRules: [
         {
@@ -1011,6 +1180,12 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: browserNavigateTool,
     exposure: expose(GENERAL_TAGS, {
+      external: {
+        kind: "host-loopback",
+        status: "exposed",
+        reason:
+          "The browser capability the runtime genuinely lacks — the differentiator, not a duplicate — and the owner argument it was waiting on is the same one Panel now has: ExternalRuntimeService registers the session and claims the owning window before the runtime starts. Stays under ToolExecutor plus the user's permission rules; without an owning window it fails closed on routing rather than broadcasting.",
+      },
       defaultPermissionRules: allow(browserNavigateToolDef.name),
       availability: (ctx) => ctx.hasBrowserAutomation === true,
       promptSections: ["browser"],
@@ -1027,6 +1202,12 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: browserInspectTool,
     exposure: expose(GENERAL_TAGS, {
+      external: {
+        kind: "host-loopback",
+        status: "exposed",
+        reason:
+          "Bounded DOM, console, network and timing observations of the same session-owned target. ToolExecutor applies separate ask permission; the host retains target/domain authorization. No arbitrary script/CDP, request bodies or browser-wide access.",
+      },
       availability: (ctx) => ctx.hasBrowserAutomation === true,
       defaultPermissionRules: [{ tool: browserInspectToolDef.name, decision: "ask" }],
       promptSections: ["browser"],
@@ -1044,6 +1225,23 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: panelTool,
     exposure: expose(GENERAL_TAGS, {
+      external: {
+        kind: "host-loopback",
+        status: "exposed",
+        reason:
+          "list/open/tools plus invoke for the reviewed job-hunt-hq tool catalog. The invoke exception is constrained by panel id and exact tool name; the Panel App manifest validates the nested payload. Other Panel Apps remain discovery/focus-only until they receive their own review.",
+        argsPatterns: [
+          {
+            action: "list|open|tools",
+          },
+          {
+            action: "invoke",
+            panel_id: "panel-app:job-hunt-hq",
+            tool_name:
+              "get_job_search_context|save_candidate_context|save_job_opportunities|save_workflow_progress|save_job_research|save_interview_question_set|save_preparation_plan|save_interview_debrief|save_resume_draft",
+          },
+        ],
+      },
       defaultPermissionRules: [
         {
           tool: panelToolDef.name,
@@ -1114,6 +1312,12 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: linkActionTool,
     exposure: expose(GENERAL_TAGS, {
+      external: {
+        kind: "host-loopback",
+        status: "exposed",
+        reason:
+          "Uses the Host's connected accounts without returning credentials. Discovery and reads retain the same account grants and ToolExecutor checks as native sessions. Writes still require the tool's exact-parameter approval and a Host-owned per-submission operation controller with independent verification; missing authority fails closed. Runtime input cannot choose the trusted run identity or turn an unknown write into a retry.",
+      },
       defaultPermissionRules: allow(linkActionToolDef.name),
     }),
   },
@@ -1130,6 +1334,12 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: injectCredentialTool,
     exposure: expose(GENERAL_TAGS, {
+      external: {
+        kind: "host-loopback",
+        status: "exposed",
+        reason:
+          "Injects saved cookie credentials into the built-in browser to restore a login. This is the single highest-risk entry in this file and the one reviewers should look at first: it hands a live session cookie to a page, and a model that can also drive the Browser can then act as the logged-in user. §12.4 excluded credential-bearing tools outright; that blanket rule is relaxed here on the product owner's explicit call because credential restore is what makes browser automation usable at all. The mitigation is NOT the allowlist — it is the tool's own in-tool approval, which stays mandatory (see builtin/index.ts) and is never auto-approved for an external runtime. If that approval is ever made skippable, this entry must go back to excluded.",
+      },
       availability: (ctx) => isInjectCredentialAvailable(ctx.cwd, ctx.settingsScope),
     }),
   },

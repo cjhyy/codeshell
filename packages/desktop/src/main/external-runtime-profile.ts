@@ -16,8 +16,10 @@ import {
   type SettingsScope,
 } from "@cjhyy/code-shell-core";
 import {
+  profileOverridesFromDefinition,
   readWorkspaceProfile,
   resolveActiveWorkspaceProfile,
+  resolveActiveWorkspaceProfileSelection,
   workspaceProfileDir,
 } from "@cjhyy/code-shell-core/internal";
 
@@ -92,6 +94,35 @@ export function bindExternalRuntimeProfile(input: {
     ...(profile?.mainInstruction ? { mainInstruction: profile.mainInstruction } : {}),
     ...(profile?.portableMemory ? { profileMemoryDir: workspaceProfileDir(profile.name) } : {}),
   };
+}
+
+/**
+ * Read capability overrides at the tool boundary, not from the startup role
+ * snapshot. Only a Session pin replaces the project's persisted Profile overlay,
+ * matching resolveRunProfileState; an empty pinned definition must return {}.
+ */
+export function readExternalRuntimeProfileOverrides(input: {
+  sessionId: string;
+  cwd: string;
+  settingsScope?: SettingsScope;
+  projectTrusted: boolean;
+}): ReturnType<typeof profileOverridesFromDefinition> | undefined {
+  const state = new SessionManager().readSessionState(input.sessionId);
+  if (!state || state.sessionId !== input.sessionId) {
+    throw new Error("External runtime Session is unavailable");
+  }
+  const pinned = assertWorkspaceProfileName(state.workspaceProfile);
+  const selection = resolveActiveWorkspaceProfileSelection({
+    cwd: input.cwd,
+    settings: new SettingsManager(input.cwd, input.settingsScope ?? "full", input.projectTrusted),
+    sessionProfile: pinned,
+  });
+  if (selection.name && !selection.profile) {
+    throw new Error(`Workspace profile "${selection.name}" is unavailable`);
+  }
+  return pinned && selection.profile
+    ? profileOverridesFromDefinition(selection.profile)
+    : undefined;
 }
 
 /** Developer-instruction section mirroring the native "Digital-Human Main Instruction". */

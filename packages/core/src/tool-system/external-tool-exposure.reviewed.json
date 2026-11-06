@@ -1,0 +1,268 @@
+[
+  {
+    "tool": "Agent",
+    "kind": "self-contained",
+    "status": "excluded",
+    "reason": "Can spawn another agent, so an external runtime could recurse into itself, nest approvals, and escape concurrency/budget limits (§12.5). Unlike Bash or Browser, this is not a permission question: the recursion has no owner and no budget to charge, so exposing it would need a nesting model first.",
+    "contractFingerprint": "d5e6c545608af8cb2343c5b9c40a34d1e2e41d183cf87cc75353e030b7ea5ac8"
+  },
+  {
+    "tool": "Bash",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Same argument as Read, and it is the tool where it matters most: the runtime's own shell runs under the runtime's approval policy, which the user did not configure and cannot see. Routing a shell call through ToolExecutor puts it under the user's own permission rules and the approval UI. Note this does NOT remove the runtime's own shell — it adds a governed alternative.",
+    "contractFingerprint": "d8bf6298adc991af06e4f35269985a71cb62134fbc173b0d25e880e1eb27a9b9"
+  },
+  {
+    "tool": "BashOutput",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Reads retained output of a background shell this same Session started. The manager scopes lookups to ctx.sessionId, so another Session's shell_id reads as unknown. Read-only; no new capability beyond the exposed Bash.",
+    "contractFingerprint": "026c8f9bb786f1835db1dd453bc4fb061bfc6872dbba646422bcfc2e176e6d3e"
+  },
+  {
+    "tool": "DriveAgent",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Delegates one bounded task to an installed Codex/Claude CLI. External sessions may detach it only when the Desktop host promises to drain the completion queue and inject a continuation into the same Session; other hosts fail closed and require foreground execution. The child CLI does not inherit this host bridge, which bounds nesting at one level; the outer call still requires the normal DriveAgent approval.",
+    "contractFingerprint": "5ed54ff909e67425e8dbe10d2bcc40fa118dc88c78b9972f24c31f62ce39d74d"
+  },
+  {
+    "tool": "DriveAgentJobs",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Lets the runtime inspect or cancel retained DriveAgent jobs, including Desktop-backed background delegations whose completion is delivered through the owning Session.",
+    "contractFingerprint": "b544e81ae342a25be6bac00c8f7bd3c571676369e36ec9e4f36093fc04b0f0c7"
+  },
+  {
+    "tool": "Edit",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "File mutation governed by ToolExecutor. Same argument as Bash.",
+    "contractFingerprint": "a57eae646efa94e4d8ff565e0c46f26c67b615eddb1b501b70dda80ecf250804"
+  },
+  {
+    "tool": "EnterPlanMode",
+    "kind": "self-contained",
+    "status": "excluded",
+    "reason": "Engine state-machine tool. Exposing it lets the runtime and the Native Engine drive each other's plan state (§12.3) — and an external runtime has no Engine plan state of its own to enter, so the call has no coherent meaning on this path.",
+    "contractFingerprint": "9eb0c95bb3dd0d1b16eefd4522660f89f598079f1f9ad4dc6b6da8987f11d12e"
+  },
+  {
+    "tool": "ExitPlanMode",
+    "kind": "self-contained",
+    "status": "excluded",
+    "reason": "Engine state-machine tool; same reason as EnterPlanMode.",
+    "contractFingerprint": "8ef4d424db550029361ef273214c0ee8ce9080a41843aebbb3c4a57291a5bb1b"
+  },
+  {
+    "tool": "Glob",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Path search under the same path policy as Read.",
+    "contractFingerprint": "733004515ebab648a15ed6a531629f63384e7e504e1f934272b557f88ae82c39"
+  },
+  {
+    "tool": "Grep",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Content search under the same path policy as Read.",
+    "contractFingerprint": "77db9bc9268faa2b171b9e1a7f51f980d25571a74e82ae52ba1406374a4fd9c2"
+  },
+  {
+    "tool": "InjectCredential",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "reason": "Injects saved cookie credentials into the built-in browser to restore a login. This is the single highest-risk entry in this file and the one reviewers should look at first: it hands a live session cookie to a page, and a model that can also drive the Browser can then act as the logged-in user. §12.4 excluded credential-bearing tools outright; that blanket rule is relaxed here on the product owner's explicit call because credential restore is what makes browser automation usable at all. The mitigation is NOT the allowlist — it is the tool's own in-tool approval, which stays mandatory (see builtin/index.ts) and is never auto-approved for an external runtime. If that approval is ever made skippable, this entry must go back to excluded.",
+    "contractFingerprint": "38a90d5b4a9ab0bcb2f68cc0ede15fa184cbcb06de8b7a7b4674af18d143a917"
+  },
+  {
+    "tool": "KillShell",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Terminates a background shell (and its process group) that this same Session started; cross-Session ids are refused by the manager. Strictly narrower than kill through the exposed Bash, and it records the stop as intentional.",
+    "contractFingerprint": "49d9948481421236fe440b94d7b73b5bac3d07f9feb932501393746262048d55"
+  },
+  {
+    "tool": "LinkAction",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "reason": "Uses the Host's connected accounts without returning credentials. Discovery and reads retain the same account grants and ToolExecutor checks as native sessions. Writes still require the tool's exact-parameter approval and a Host-owned per-submission operation controller with independent verification; missing authority fails closed. Runtime input cannot choose the trusted run identity or turn an unknown write into a retry.",
+    "contractFingerprint": "d7b664d32670c4d456015156fd6a569acfe15a60ea86adf1d4a62e281c518f91"
+  },
+  {
+    "tool": "ListShells",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Lists this Session's background shells with status and detected port. Session-scoped and read-only.",
+    "contractFingerprint": "eca539def95ac3ba094194bd7ce46d147e5199bb6e638b8035ec69a7ec200863"
+  },
+  {
+    "tool": "ListSources",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Lists metadata for the workspace's explicitly bound data sources. It uses the same source/profile authority and revocation checks as native sessions and never reads resource contents merely because a source is discoverable.",
+    "contractFingerprint": "1a15792c4afa970c1e94e65077b8169ee3b67cca219ac0b2cf39048e7d1e54e5"
+  },
+  {
+    "tool": "MemoryDelete",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Mutation, same store and same rules as MemorySave.",
+    "contractFingerprint": "b67e00ded337bc85590b0d486a1dac2caf73690a8f195039dd130caf8690cfe3"
+  },
+  {
+    "tool": "MemoryList",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Enumerates memory entries. No side effects.",
+    "contractFingerprint": "a09fb1cec5b53c0e8cd6c73107205041aaf55a38e23220b24b24f46065cd63cf"
+  },
+  {
+    "tool": "MemoryRead",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Reads the user's memory store. No side effects.",
+    "contractFingerprint": "a760781ab88e2751b6de6122b739c385aa2be5d6afb3345a2448cac1d45592b9"
+  },
+  {
+    "tool": "MemorySave",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Writes to the memory store, so it is a mutation — but a scoped one, into a store the user can read and edit, and it carries the same permission rules as on the native path.",
+    "contractFingerprint": "9fdb9c7fd3f7e5957f739e06172e9fa62b3afefd41bb7d25deddc6b7af7fc028"
+  },
+  {
+    "tool": "Panel",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "reason": "list/open/tools plus invoke for the reviewed job-hunt-hq tool catalog. The invoke exception is constrained by panel id and exact tool name; the Panel App manifest validates the nested payload. Other Panel Apps remain discovery/focus-only until they receive their own review.",
+    "argsPatterns": [
+      {
+        "action": "list|open|tools"
+      },
+      {
+        "action": "invoke",
+        "panel_id": "panel-app:job-hunt-hq",
+        "tool_name": "get_job_search_context|save_candidate_context|save_job_opportunities|save_workflow_progress|save_job_research|save_interview_question_set|save_preparation_plan|save_interview_debrief|save_resume_draft"
+      }
+    ],
+    "contractFingerprint": "556a3a22bb04e0276529a778eda846b510004ecfe2aa12eee6b5b29a0155ee63"
+  },
+  {
+    "tool": "Read",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Overlaps a tool the runtime already has, which was the original reason to exclude it. That reasoning was wrong about which risk matters: the runtime's OWN Read answers to the runtime's sandbox, while this one answers to ToolExecutor — path policy, project trust and the user's permission rules. Exposing it means the model has a reachable path that IS governed by CodeShell, which is the point of augmented mode. Naming overlap is a presentation problem (the MCP server prefixes its tools); sandbox divergence is a security one.",
+    "contractFingerprint": "cf6495a601d9a69eb96403aff3eb9fb666dba482d5dadab849a9a1f1df069ea5"
+  },
+  {
+    "tool": "ReadSource",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Reads an exact bound source, scope and resource through ToolExecutor approval and the existing source authorization recheck. Content remains bounded, redacted and untrusted; nested LinkAction reads use the same allowlist and account grants. Missing connector or parser capabilities remain unavailable rather than silently falling back.",
+    "contractFingerprint": "370f0d052cf3d38a2f0218cb40940ac666cb0dffb0db299e3b712744ce14d9a6"
+  },
+  {
+    "tool": "Skill",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Loads a SKILL.md body and returns it as the tool result — it reads from the scanner, never the disk directly, and executes nothing itself. A skill body may TELL the model to run commands, but those become ordinary tool calls that face the same authorization as any other. Withholding Skill does not withhold that capability; it only withholds the user's own curated instructions.",
+    "contractFingerprint": "f5dcdcdfed66b30d48af015f2ca84bb692e13f2687a344e4f33754f4e0c1a6a9"
+  },
+  {
+    "tool": "TodoWrite",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Session-scoped task list. Visible to the user, trivially reversible.",
+    "contractFingerprint": "06f79b73bc3c589497fd47e133cba7534036449c4b60cf76d0ce9799baf3e4b8"
+  },
+  {
+    "tool": "ToolSearch",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Discovers only the tools permitted by this session's allowedToolNames, availability guards and plan mode. The MCP bridge already advertises those schemas; search cannot register another tool, widen this allowlist or bypass execution checks.",
+    "contractFingerprint": "77b3e96dc3be46a43554c4753a3da3524cea64a9965a2af26930ba1143ee918a"
+  },
+  {
+    "tool": "WebFetch",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Read-only fetch, subject to the same URL handling as the native path.",
+    "contractFingerprint": "7f498727183fbe7947e7ddb86032156ad2d86d0ed1b5784ab224a530abf19454"
+  },
+  {
+    "tool": "WebSearch",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "Read-only network lookup; already available to the model by other means.",
+    "contractFingerprint": "ee9d993d36cf886db9c05aec741841900e0a27666f8c62f48cbbbcfa24b09bd8"
+  },
+  {
+    "tool": "Write",
+    "kind": "self-contained",
+    "status": "exposed",
+    "reason": "File mutation governed by ToolExecutor. Same argument as Bash.",
+    "contractFingerprint": "86d18035fd3206806c91e6905b31dcd3b3da54f722d4d6da4aae189b29c4c24d"
+  },
+  {
+    "tool": "browser_act",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "reason": "Click / type / interact — the mutating third of the browser surface, and the one that combines with InjectCredential to act as the logged-in user. Exposed on the product owner's call, under the same ToolExecutor rules as every other entry here.",
+    "contractFingerprint": "8e5c724691d144df3d03855165b51dbe1d9bb9fdbf73c4b4f47f17e2d14ba006"
+  },
+  {
+    "tool": "browser_inspect",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "reason": "Bounded DOM, console, network and timing observations of the same session-owned target. ToolExecutor applies separate ask permission; the host retains target/domain authorization. No arbitrary script/CDP, request bodies or browser-wide access.",
+    "contractFingerprint": "ca4b4f40a321a796a55c201b3d526a3a3089335963a69a00dd53ef1b7b5e762e"
+  },
+  {
+    "tool": "browser_navigate",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "reason": "The browser capability the runtime genuinely lacks — the differentiator, not a duplicate — and the owner argument it was waiting on is the same one Panel now has: ExternalRuntimeService registers the session and claims the owning window before the runtime starts. Stays under ToolExecutor plus the user's permission rules; without an owning window it fails closed on routing rather than broadcasting.",
+    "contractFingerprint": "5486e7188fedd14f0e3aad91df22f45b5bea90bf1d3c7739e36deca42872231a"
+  },
+  {
+    "tool": "browser_observe",
+    "kind": "host-loopback",
+    "status": "exposed",
+    "reason": "Reads page content. Same owner story as browser_navigate, no mutation.",
+    "contractFingerprint": "4d865447999f0dc93588ef8a9837c44d5b0fb786553deea6a09e570066edd839"
+  },
+  {
+    "tool": "cancel_goal",
+    "kind": "self-contained",
+    "status": "exposed",
+    "requires": "goal-controller",
+    "reason": "Host-owned persisted Goal controller with goalId/revision checks. Available only with Host tools in execution mode; native Engine acknowledgement handlers remain excluded.",
+    "contractFingerprint": "3fcb311a18673c335a9eb153a84580b6d9dc96b3eeb03e1b9814fc8dbbc5397c"
+  },
+  {
+    "tool": "complete_goal",
+    "kind": "self-contained",
+    "status": "exposed",
+    "requires": "goal-controller",
+    "reason": "Host-owned persisted Goal controller with goalId/revision checks. Available only with Host tools in execution mode; native Engine acknowledgement handlers remain excluded.",
+    "contractFingerprint": "ef0a0a3fdc6133eb303f296f13de46b603c9255e94b04aa7f7cc7ba03940c20d"
+  },
+  {
+    "tool": "get_goal",
+    "kind": "self-contained",
+    "status": "exposed",
+    "requires": "goal-controller",
+    "reason": "Host-owned persisted Goal controller with goalId/revision checks. Available only with Host tools in execution mode; native Engine acknowledgement handlers remain excluded.",
+    "contractFingerprint": "dd2cd109e740ff4fdf15066a64c95cbf62b6f591578a6d49c5d006afda0a864e"
+  },
+  {
+    "tool": "wait_for_user",
+    "kind": "self-contained",
+    "status": "exposed",
+    "requires": "goal-controller",
+    "reason": "Host-owned persisted Goal controller with goalId/revision checks. Available only with Host tools in execution mode; native Engine acknowledgement handlers remain excluded.",
+    "contractFingerprint": "35758caec40133b4c27bd57cbd3548c5b2a5a0676b39e92d523d7fc423407204"
+  }
+]

@@ -70,7 +70,16 @@ export const CODING_TOOLS: readonly BuiltinTool[] = [
       ],
     },
     driveAgentTool,
-    { presetTags: ["general", "terminal-coding"], availability: unavailableInQuickChat },
+    {
+      presetTags: ["general", "terminal-coding"],
+      availability: unavailableInQuickChat,
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason:
+          "Delegates one bounded task to an installed Codex/Claude CLI. External sessions may detach it only when the Desktop host promises to drain the completion queue and inject a continuation into the same Session; other hosts fail closed and require foreground execution. The child CLI does not inherit this host bridge, which bounds nesting at one level; the outer call still requires the normal DriveAgent approval.",
+      },
+    },
   ),
   defineTool(
     {
@@ -81,7 +90,16 @@ export const CODING_TOOLS: readonly BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     driveAgentJobsTool,
-    { presetTags: ["general", "terminal-coding"], availability: unavailableInQuickChat },
+    {
+      presetTags: ["general", "terminal-coding"],
+      availability: unavailableInQuickChat,
+      external: {
+        kind: "self-contained",
+        status: "exposed",
+        reason:
+          "Lets the runtime inspect or cancel retained DriveAgent jobs, including Desktop-backed background delegations whose completion is delivered through the owning Session.",
+      },
+    },
   ),
   defineTool(
     {

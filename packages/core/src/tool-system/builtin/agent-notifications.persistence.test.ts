@@ -50,6 +50,53 @@ afterEach(() => {
 });
 
 describe("NotificationQueue persistence", () => {
+  it("reserves original identities durably until acknowledgement and restores once in order", () => {
+    const root = tempRoot();
+    const queue = new NotificationQueue();
+    queue.attachPersistence(persistence(root));
+    const original = queue.enqueue(result("first"))!;
+    const claim = queue.claimResults("parent")!;
+    expect(claim.results).toEqual([original]);
+    expect(queue.getSnapshot("parent")).toEqual([]);
+    const arriving = queue.enqueue(result("second"))!;
+    expect(queue.claimResults("parent")).toBeUndefined();
+    const restarted = new NotificationQueue();
+    restarted.attachPersistence(persistence(root));
+    expect(restarted.getSnapshot("parent").map((item) => item.id)).toEqual([
+      original.id,
+      arriving.id,
+    ]);
+    expect(claim.restore()).toBe(1);
+    expect(claim.restore()).toBe(0);
+    expect(claim.acknowledge()).toBe(false);
+    expect(queue.getSnapshot("parent")).toEqual([original, arriving]);
+    const retry = queue.claimResults("parent")!;
+    expect(retry.acknowledge()).toBe(true);
+    expect(retry.acknowledge()).toBe(false);
+    expect(retry.restore()).toBe(0);
+    const afterAcceptance = new NotificationQueue();
+    afterAcceptance.attachPersistence(persistence(root));
+    expect(afterAcceptance.getSnapshot("parent")).toEqual([]);
+  });
+
+  it.each([false, true])("reset(all=%s) fences delayed acknowledgement and restore", (all) => {
+    const root = tempRoot();
+    const queue = new NotificationQueue();
+    queue.attachPersistence(persistence(root));
+    queue.enqueue(result("old"));
+    const old = queue.claimResults("parent")!;
+    queue.reset(all ? undefined : "parent");
+    const successor = queue.enqueue(result("successor"))!;
+    const current = queue.claimResults("parent")!;
+    expect(old.restore()).toBe(0);
+    expect(old.acknowledge()).toBe(false);
+    expect(current.results).toEqual([successor]);
+    expect(current.restore()).toBe(1);
+    const restarted = new NotificationQueue();
+    restarted.attachPersistence(persistence(root));
+    expect(restarted.getSnapshot("parent").map((item) => item.id)).toEqual([successor.id]);
+  });
+
   it.each([{ signal: "SIGTERM" }, { signal: "SIGKILL" }, { exitCode: 1 }])(
     "preserves failed shell metadata through restart and stream conversion: %j",
     (exit) => {

@@ -460,6 +460,15 @@ function installLegacyResultAliases(envelope: ResultEnvelope): void {
   }
 }
 
+/** A reservation of the original envelopes, fenced against mailbox reset. */
+export interface NotificationResultClaim {
+  readonly results: readonly ResultEnvelope[];
+  /** Commit only once the consumer has evidence that its provider accepted the input. */
+  acknowledge(): boolean;
+  /** Release an unaccepted reservation once; never republishes completion events. */
+  restore(): number;
+}
+
 export class NotificationQueue {
   private buckets = new Map<string, NotificationEnvelope[]>();
   private listeners = new Set<Listener>();
@@ -467,6 +476,7 @@ export class NotificationQueue {
   private sequenceRoutes = new Map<string, { from: string; to: string }>();
   private persistence: NotificationQueuePersistence | null = null;
   private restoredSessions = new Set<string>();
+  private resultClaims = new Map<string, NotificationResultClaim>();
   private readonly maxSequenceRoutes = 4_096;
 
   attachPersistence(persistence: NotificationQueuePersistence | null): void {
@@ -571,7 +581,10 @@ export class NotificationQueue {
     if (valid.length === 0) return 0;
 
     const bucket = this.buckets.get(sessionId) ?? [];
-    const ids = new Set(bucket.map((item) => item.id));
+    const ids = new Set([
+      ...bucket.map((item) => item.id),
+      ...(this.resultClaims.get(sessionId)?.results.map((item) => item.id) ?? []),
+    ]);
     const restored = valid.filter((item) => !ids.has(item.id));
     if (restored.length === 0) return 0;
     this.buckets.set(sessionId, [...restored, ...bucket]);
@@ -709,6 +722,43 @@ export class NotificationQueue {
   }
 
   /**
+   * Reserve terminal results without deleting their durable copies. One claim
+   * per mailbox keeps arrivals ordered while a provider is starting. Reset
+   * revokes the claim, so delayed completion/rollback cannot touch a successor.
+   */
+  claimResults(sessionId: string): NotificationResultClaim | undefined {
+    if (!isValidSessionId(sessionId) || this.resultClaims.has(sessionId)) return undefined;
+    this.restorePersistedSession(sessionId);
+    const bucket = this.buckets.get(sessionId) ?? [];
+    const results = bucket.filter((item): item is ResultEnvelope => item.kind === "result");
+    if (results.length === 0) return undefined;
+    const retained = bucket.filter((item) => item.kind !== "result");
+    if (retained.length) this.buckets.set(sessionId, retained);
+    else this.buckets.delete(sessionId);
+    const claim: NotificationResultClaim = {
+      results,
+      acknowledge: () => {
+        if (this.resultClaims.get(sessionId) !== claim) return false;
+        this.resultClaims.delete(sessionId);
+        this.persistRemovedResults(
+          sessionId,
+          results.map((item) => item.id),
+        );
+        return true;
+      },
+      restore: () => {
+        if (this.resultClaims.get(sessionId) !== claim) return 0;
+        this.resultClaims.delete(sessionId);
+        return this.restoreResults(sessionId, results);
+      },
+    };
+    this.resultClaims.set(sessionId, claim);
+    this.notify();
+    // A synchronous subscriber may close/reset this mailbox while reserving.
+    return this.resultClaims.get(sessionId) === claim ? claim : undefined;
+  }
+
+  /**
    * Restore terminal results that a consumer drained but could not deliver.
    * Existing envelopes retain their ids/sequences and are prepended ahead of
    * results that arrived during the failed delivery attempt. This is an
@@ -719,7 +769,10 @@ export class NotificationQueue {
     if (!isValidSessionId(sessionId) || envelopes.length === 0) return 0;
     this.restorePersistedSession(sessionId);
     const bucket = this.buckets.get(sessionId) ?? [];
-    const ids = new Set(bucket.map((item) => item.id));
+    const ids = new Set([
+      ...bucket.map((item) => item.id),
+      ...(this.resultClaims.get(sessionId)?.results.map((item) => item.id) ?? []),
+    ]);
     const restored = envelopes.filter(
       (item) => item.kind === "result" && item.to.sessionId === sessionId && !ids.has(item.id),
     );
@@ -762,12 +815,13 @@ export class NotificationQueue {
 
   reset(sessionId?: string): void {
     if (sessionId === undefined) {
-      if (this.buckets.size === 0 && this.sequences.size === 0) {
+      if (this.buckets.size === 0 && this.sequences.size === 0 && this.resultClaims.size === 0) {
         this.restoredSessions.clear();
         return;
       }
-      const persistedSessions = [...this.buckets.keys()];
+      const persistedSessions = new Set([...this.buckets.keys(), ...this.resultClaims.keys()]);
       this.buckets.clear();
+      this.resultClaims.clear();
       this.sequences.clear();
       this.sequenceRoutes.clear();
       for (const persistedSession of persistedSessions) {
@@ -778,6 +832,7 @@ export class NotificationQueue {
     } else {
       this.restorePersistedSession(sessionId);
       const hadBucket = this.buckets.delete(sessionId);
+      const hadClaim = this.resultClaims.delete(sessionId);
       let clearedRoute = false;
       for (const [key, route] of this.sequenceRoutes) {
         if (route.from !== sessionId && route.to !== sessionId) continue;
@@ -785,7 +840,7 @@ export class NotificationQueue {
         this.sequences.delete(key);
         clearedRoute = true;
       }
-      if (!hadBucket && !clearedRoute) return;
+      if (!hadBucket && !hadClaim && !clearedRoute) return;
       const file = this.persistence?.fileForSession(sessionId) ?? null;
       if (file) this.replacePersistedResults(file, []);
       this.restoredSessions.delete(sessionId);
