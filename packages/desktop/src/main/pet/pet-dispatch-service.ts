@@ -508,21 +508,12 @@ function gatewayReplyResultFits(
  * are recursively shortened instead of rejecting the whole manager turn.
  */
 export function stringifyBoundedPetWorld(world: Readonly<Record<string, unknown>>): string {
-  return escapeTagOpeners(stringifyBoundedPetWorldRaw(world));
-}
-
-/** Untrusted strings must not be able to close or spoof the <pet-world> wrapper. */
-function escapeTagOpeners(json: string): string {
-  return json.replace(/</g, "\\u003c");
-}
-
-function stringifyBoundedPetWorldRaw(world: Readonly<Record<string, unknown>>): string {
   // Fast path: JSON.stringify already omits undefined-valued keys, so an
   // in-budget world serializes to exactly what the per-key trimming below
   // would produce — without the O(keys) full-size checks.
   try {
-    const serialized = JSON.stringify(world);
-    if (typeof serialized === "string" && serialized.length <= MAX_PET_RUNTIME_CONTEXT_LENGTH) {
+    const serialized = serializePetWorldJson(world);
+    if (serialized !== undefined && serialized.length <= MAX_PET_RUNTIME_CONTEXT_LENGTH) {
       return serialized;
     }
   } catch {
@@ -536,7 +527,7 @@ function stringifyBoundedPetWorldRaw(world: Readonly<Record<string, unknown>>): 
     );
     if (fitted !== OMIT_JSON_VALUE) bounded[key] = fitted;
   }
-  return JSON.stringify(bounded);
+  return serializePetWorldJson(bounded) ?? "{}";
 }
 
 function fitJsonValue(
@@ -580,10 +571,20 @@ function fitJsonValue(
   return OMIT_JSON_VALUE;
 }
 
+/**
+ * The one serializer for the pet world. Untrusted strings must not be able to
+ * close or spoof the <pet-world> wrapper, so every `<` is escaped; budgets are
+ * measured on this escaped form because it is what the model run receives.
+ */
+function serializePetWorldJson(value: unknown): string | undefined {
+  const serialized = JSON.stringify(value);
+  return typeof serialized === "string" ? serialized.replace(/</g, "\\u003c") : undefined;
+}
+
 function jsonFits(value: unknown, maximum: number): boolean {
   try {
-    const serialized = JSON.stringify(value);
-    return typeof serialized === "string" && serialized.length <= maximum;
+    const serialized = serializePetWorldJson(value);
+    return serialized !== undefined && serialized.length <= maximum;
   } catch {
     return false;
   }
