@@ -19,6 +19,7 @@ const source = `
   import React from 'react';
   import {createRoot} from 'react-dom/client';
   import {AccountSidebarEntry} from './account/AccountSidebarEntry';
+  import {useViewTargets} from './app/useViewTargets';
   import {SettingsPage} from './settings/SettingsPage';
   import {DialogProvider} from './ui/DialogProvider';
   import {ToastProvider} from './ui/ToastProvider';
@@ -29,7 +30,8 @@ const source = `
   let current={state:'signed-out'};
   window.actions=[];
   window.actionSnapshots=[];
-  window.requests={status:[],capabilities:[],logout:0,subscriptions:0,unsubscriptions:0};
+  window.requests={status:[],capabilities:[],browserLogin:[],management:[],links:[],logout:0,subscriptions:0,unsubscriptions:0};
+  let finishBrowserLogin;
   window.emitStatus=next=>{
     current=next;
     for(const listener of listeners) listener(next);
@@ -58,7 +60,7 @@ const source = `
     capabilities:async origin=>{
       window.requests.capabilities.push({origin,...snapshot()});
       return {features:{},registrationAllowed:true,githubEnabled:true,githubLinkEnabled:true,
-        profileEnabled:false,linkManagementEnabled:false};
+        browserLoginEnabled:true,profileEnabled:true,linkManagementEnabled:true};
     },
     logout:async()=>{
       window.requests.logout+=1;
@@ -68,12 +70,35 @@ const source = `
     },
     login:unexpected('login'),register:unexpected('register'),openRegistration:unexpected('openRegistration'),
     signInWithGitHub:unexpected('signInWithGitHub'),linkGitHub:unexpected('linkGitHub'),
-    cancelSignIn:unexpected('cancelSignIn'),profile:unexpected('profile'),
-    manageLinks:unexpected('manageLinks'),
+    signInWithBrowser:async input=>{
+      window.requests.browserLogin.push(input);
+      window.emitStatus({state:'signing-in'});
+      return new Promise(resolve=>{finishBrowserLogin=resolve;});
+    },
+    cancelSignIn:async()=>{
+      window.emitStatus({state:'signed-out'});
+      finishBrowserLogin?.(current);
+    },
+    openManagement:async section=>{window.requests.management.push(section);},
+    profile:async input=>{
+      if(input.action!=='read') throw new Error('Unexpected profile mutation');
+      return current;
+    },
+    manageLinks:async input=>{
+      if(input.action!=='list') throw new Error('Unexpected Link mutation');
+      window.requests.links.push(input);
+      return {action:'list',view:{linkOrigin:'https://link.example.test',
+        connections:[{id:'fixture-connection',provider:'github',account:{id:'42',login:'alex-chen'},revoked:false}],
+        grants:[{id:'fixture-grant',connectionId:'fixture-connection',client:{id:'desktop',name:'CodeShell Desktop'},
+          scopes:['github.get_repository'],resources:['alex-chen/project'],revoked:false}]}};
+    },
   }};
   window.fixtureLanguage=loadUILanguage;
   function Fixture(){
     const [accountOpen,setAccountOpen]=React.useState(false);
+    const [view,setView]=React.useState({viewMode:'chat'});
+    const {openLinkCredentials,credentialsInitialTab}=useViewTargets(view.viewMode,setView);
+    window.navigationTarget={viewMode:view.viewMode,credentialsInitialTab};
     return <>
       <main hidden={accountOpen} className="h-full bg-background text-foreground">
         <div className="fixed left-3 top-4 text-sm font-semibold">CodeShell</div>
@@ -90,6 +115,7 @@ const source = `
         <SettingsPage initialModule='account' activeProjectPath={null} projects={[]}
           sessionIndices={{}} onRestoreArchivedSession={()=>{}} onDeleteArchivedSession={()=>{}}
           isMac={false} isFullscreen={false}
+          onOpenLink={()=>{recordAction('local-links');openLinkCredentials();setAccountOpen(false);}}
           onBack={()=>{recordAction('back');setAccountOpen(false);}}/>
       </div>}
     </>;
@@ -135,6 +161,13 @@ const labels = {
     credentials: "凭证",
     pet: "显示 Mimi",
     logout: "退出云账号",
+    browserLogin: "在浏览器中登录",
+    cancelLogin: "取消登录",
+    profile: "账号资料",
+    security: "账号安全",
+    sessions: "登录会话",
+    connections: "登录方式与授权",
+    localLinks: "管理连接与仓库权限",
   },
   en: {
     manage: "Manage account",
@@ -146,6 +179,13 @@ const labels = {
     credentials: "Credentials",
     pet: "Show Mimi",
     logout: "Sign out",
+    browserLogin: "Continue in browser",
+    cancelLogin: "Cancel sign-in",
+    profile: "Account profile",
+    security: "Account security",
+    sessions: "Login sessions",
+    connections: "Sign-in methods and grants",
+    localLinks: "Manage connections and repository access",
   },
 };
 const signedIn = (username = "member.one", displayName = "Alex Chen") => ({
@@ -178,7 +218,8 @@ const assertWithinViewport = async (locator, { width, height }, message) => {
   assert.ok(bounds.y + bounds.height <= height + 1, `${message}: fits viewport height`);
 };
 const screenshots = [];
-const screenshotDir = process.env.CODESHELL_ACCOUNT_MENU_SCREENSHOT_DIR ?? tmpdir();
+const screenshotDir =
+  process.argv[2] ?? process.env.CODESHELL_ACCOUNT_MENU_SCREENSHOT_DIR ?? tmpdir();
 await mkdir(screenshotDir, { recursive: true });
 const browser = await chromium.launch({
   headless: true,
@@ -288,6 +329,7 @@ try {
         const accountHeading = accountPage.getByRole("heading", {
           name: labels[lang].manage,
           exact: true,
+          level: 1,
         });
         await accountHeading.waitFor();
         await assertFocused(
@@ -319,23 +361,39 @@ try {
         await assertWithinViewport(accountPage, { width, height: 760 }, "Account settings page");
         assert.equal(await page.getByRole("dialog").count(), 0);
         if (!authenticated) {
-          const username = accountPage.locator('input[name="username"]');
-          await username.fill("draft-user");
-          await username.dispatchEvent("keydown", {
+          const server = accountPage.getByRole("textbox").first();
+          assert.equal(await accountPage.locator('input[name="username"]').count(), 0);
+          assert.equal(await accountPage.locator('input[name="password"]').count(), 0);
+          assert.equal(await accountPage.getByRole("checkbox").count(), 0);
+          await server.fill("https://accounts.example.test");
+          await server.dispatchEvent("keydown", {
             key: "Escape",
             bubbles: true,
             cancelable: true,
             isComposing: true,
           });
-          await username.press("Escape");
+          await server.press("Escape");
           assert.ok(await accountPage.isVisible(), "Escape keeps account settings open");
           assert.equal(
-            await username.inputValue(),
-            "draft-user",
+            await server.inputValue(),
+            "https://accounts.example.test",
             "Escape preserves account drafts",
           );
+          const browserLogin = accountPage.getByRole("button", {
+            name: labels[lang].browserLogin,
+            exact: true,
+          });
+          await browserLogin.click();
+          await accountPage
+            .getByRole("button", { name: labels[lang].cancelLogin, exact: true })
+            .click();
+          await browserLogin.waitFor();
+          assert.equal(await browserLogin.isEnabled(), true);
+          assert.deepEqual(await page.evaluate(() => window.requests.browserLogin), [
+            { origin: "https://accounts.example.test" },
+          ]);
         }
-        if (lang === "zh" && authenticated) {
+        if (lang === "zh") {
           for (const theme of ["light", "dark"]) {
             await page.evaluate(
               (value) => document.documentElement.classList.toggle("dark", value === "dark"),
@@ -343,12 +401,47 @@ try {
             );
             const screenshotPath = path.join(
               screenshotDir,
-              `account-settings-${width}-${theme}.png`,
+              `account-settings-${authenticated ? "signed-in" : "signed-out"}-${width}-${theme}.png`,
             );
             await page.screenshot({ path: screenshotPath, animations: "disabled" });
             screenshots.push({ theme, path: screenshotPath, width, height: 760 });
           }
           await page.evaluate(() => document.documentElement.classList.remove("dark"));
+        }
+        if (authenticated) {
+          for (const section of ["profile", "security", "sessions", "connections"])
+            await accountPage
+              .getByRole("button", { name: labels[lang][section], exact: true })
+              .click();
+          assert.deepEqual(await page.evaluate(() => window.requests.management), [
+            "profile",
+            "security",
+            "sessions",
+            "connections",
+          ]);
+          await accountPage
+            .getByRole("button", { name: labels[lang].localLinks, exact: true })
+            .scrollIntoViewIfNeeded();
+          if (lang === "zh") {
+            const screenshotPath = path.join(
+              screenshotDir,
+              `account-settings-connections-${width}.png`,
+            );
+            await page.screenshot({ path: screenshotPath, animations: "disabled" });
+            screenshots.push({ theme: "light", path: screenshotPath, width, height: 760 });
+          }
+          await accountPage
+            .getByRole("button", { name: labels[lang].localLinks, exact: true })
+            .click();
+          await accountPage.waitFor({ state: "hidden" });
+          assert.equal(await page.evaluate(() => window.actions.at(-1)), "local-links");
+          assert.deepEqual(await page.evaluate(() => window.navigationTarget), {
+            viewMode: "credentials",
+            credentialsInitialTab: "link",
+          });
+          await opener.click();
+          await item(parentMenu, labels[lang].manage).click();
+          await accountPage.waitFor();
         }
         await accountPage.locator("[data-settings-back]:visible").click();
         await accountPage.waitFor({ state: "hidden" });
@@ -451,7 +544,7 @@ try {
           "Resized account settings",
         );
         await accountPage
-          .getByRole("heading", { name: labels[lang].manage, exact: true })
+          .getByRole("heading", { name: labels[lang].manage, exact: true, level: 1 })
           .waitFor();
         assert.equal(await page.getByRole("dialog").count(), 0);
         await accountPage.locator("[data-settings-back]:visible").click();

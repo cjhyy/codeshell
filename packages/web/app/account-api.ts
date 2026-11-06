@@ -483,7 +483,8 @@ export class AccountWebClient {
           attempt === 0 &&
           path !== "/session" &&
           path !== "/refresh" &&
-          !path.startsWith("/github/")
+          !path.startsWith("/github/") &&
+          !["/browser/approve", "/browser/deny"].includes(path)
         ) {
           const expectedRoot = requestRoot;
           try {

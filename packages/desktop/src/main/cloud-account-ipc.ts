@@ -1,6 +1,7 @@
 import { accountRegistrationUrl } from "@cjhyy/code-shell-web/account";
+import { hostname } from "node:os";
 import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
-import type { CloudAccountLogin } from "../shared/cloud-account.js";
+import type { CloudAccountBrowserLogin, CloudAccountLogin } from "../shared/cloud-account.js";
 import { accountGitHubRequest, accountLinksRequest } from "./cloud-account-links.js";
 import type { CloudAccountManager } from "./cloud-account-manager.js";
 import { accountProfileRequest } from "./cloud-account-profile.js";
@@ -46,6 +47,36 @@ export function registerCloudAccountIpc(options: {
       await options.openExternal(url);
     })();
   });
+  options.ipcMain.handle("cloudAccount:openManagement", (event, section: unknown) => {
+    owner(event);
+    if (
+      typeof section !== "string" ||
+      !["profile", "security", "sessions", "connections"].includes(section)
+    )
+      throw new Error("账号管理页面无效。");
+    const status = options.manager.status();
+    if (status.state !== "signed-in" || !status.account || !status.origin)
+      throw new Error("请先登录云账号。");
+    // Reuse the exact HTTPS origin validation; no account credential is placed in a browser URL.
+    const origin = new URL(accountRegistrationUrl(status.origin)).origin;
+    if (!options.openExternal) throw new Error("网页账号管理入口暂不可用。");
+    return options.openExternal(`${origin}/settings/account/${section}`);
+  });
+  options.ipcMain.handle("cloudAccount:browser", (event, input: CloudAccountBrowserLogin) => {
+    owner(event);
+    return options.manager
+      .signInWithBrowser({ ...input, deviceName: hostname().slice(0, 100) }, () => allowed(event))
+      .then((status) => {
+        if (status.state === "signed-in" && allowed(event)) {
+          try {
+            options.focusMainWindow?.(event.sender);
+          } catch {
+            /* Login is already saved. */
+          }
+        }
+        return status;
+      });
+  });
   options.ipcMain.handle("cloudAccount:register", (event, input: CloudAccountLogin) => {
     owner(event);
     return options.manager.signIn("register", input, () => allowed(event));
@@ -58,7 +89,8 @@ export function registerCloudAccountIpc(options: {
         ? options.manager.linkGitHub(() => allowed(event))
         : options.manager.signInWithGitHub(input.input, () => allowed(event));
     return operation.then((status) => {
-      if (status.state === "signed-in") {
+      // Combined sign-in still needs the browser for Link repository/action consent.
+      if (status.state === "signed-in" && status.githubConnection?.state !== "pending") {
         try {
           if (allowed(event)) options.focusMainWindow?.(event.sender);
         } catch {

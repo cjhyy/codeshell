@@ -105,7 +105,10 @@ describe("architecture growth budgets", () => {
     // +4 composition lines bind MCP probes to the selected configuration target and authorized cwd.
     // +1 net after rebasing onto 7_333: import and register the read-only file-version IPC;
     // root authorization and Git blob checks stay in file-version-ipc/service.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_335);
+    // The integrated cookie/startup fix adds one credential metadata field and
+    // two comment lines explaining reuse of the existing window restorer (+3).
+    // Consent policy and window deduplication remain in their existing modules.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_338);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider
@@ -228,7 +231,9 @@ describe("architecture growth budgets", () => {
       // Main retains credentials and pins every operation to its owner/Host/project/Session.
       // +3 main-frame-only account operations: fixed registration page, public
       // feature snapshot and bounded refresh. No credential-read route is exposed.
-    ).toBeLessThanOrEqual(388);
+      // +2 main-frame-owned account operations: browser sign-in and fixed account
+      // management pages. PKCE, session custody and origin checks remain in Main.
+    ).toBeLessThanOrEqual(390);
     expect(matches("packages/desktop/src/main/account-device-ipc.ts", /^    [a-z]+: \(/gm)).toBe(8);
     expect(
       matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g),
@@ -301,6 +306,8 @@ describe("architecture growth budgets", () => {
       // +2 typed history recovery plan/apply invokes mirror the reviewed Main routes.
       // +9 mirrors explicit account resume and the eight bounded computer operations above.
       // +3 exact adapters for registration, feature snapshot and refresh above.
+      // Browser sign-in and fixed account-management navigation add two typed
+      // adapters within the existing ceiling; neither exposes credentials.
     ).toBeLessThanOrEqual(372);
     expect(
       matches("packages/desktop/src/preload/account-device-api.ts", /\binvoke(?:Raw)?\("/g),

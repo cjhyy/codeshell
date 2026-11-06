@@ -1,7 +1,13 @@
 import React from "react";
 import { useAccountSession } from "./AccountSessionProvider.js";
 
-export function WebsiteLogin({ registration = false }: { registration?: boolean }) {
+export function WebsiteLogin({
+  registration = false,
+  desktopLogin = false,
+}: {
+  registration?: boolean;
+  desktopLogin?: boolean;
+}) {
   const account = useAccountSession();
   const [register, setRegister] = React.useState(registration);
   const [username, setUsername] = React.useState("");
@@ -94,9 +100,15 @@ export function WebsiteLogin({ registration = false }: { registration?: boolean 
         </section>
         <section className="auth-card website-auth" aria-labelledby="website-login-title">
           <p className="website-eyebrow">欢迎来到 CodeShell</p>
-          <h2 id="website-login-title">{register ? "创建你的账号" : "继续你的工作"}</h2>
+          <h2 id="website-login-title">
+            {register ? "创建你的账号" : desktopLogin ? "登录 CodeShell 电脑端" : "继续你的工作"}
+          </h2>
           <p className="website-muted">
-            {registration ? "创建账号后，返回 CodeShell 客户端登录。" : "登录后进入你的工作台。"}
+            {desktopLogin
+              ? "先登录网页账号，再确认要登录的电脑。此页面会保留你的电脑登录请求。"
+              : registration
+                ? "创建账号后，返回 CodeShell 客户端登录。"
+                : "登录后进入你的工作台。"}
           </p>
           {registration &&
           account.ready &&

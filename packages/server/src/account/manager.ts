@@ -9,6 +9,7 @@ import {
 import { isRelayOrigin, isRelayToken } from "../remote-relay/protocol.js";
 import type {
   CloudAccountCapabilities,
+  CloudAccountBrowserLogin,
   CloudAccountOverview,
   CloudAccountGitHubLogin,
   CloudAccountLogin,
@@ -228,6 +229,7 @@ export class CloudAccountManager {
       Array.isArray(value) ||
       typeof value.registrationAllowed !== "boolean" ||
       typeof value.githubEnabled !== "boolean" ||
+      (value.browserLoginEnabled !== undefined && typeof value.browserLoginEnabled !== "boolean") ||
       (value.githubLinkEnabled !== undefined && typeof value.githubLinkEnabled !== "boolean") ||
       (value.linkManagementEnabled !== undefined &&
         typeof value.linkManagementEnabled !== "boolean") ||
@@ -238,6 +240,9 @@ export class CloudAccountManager {
       features: readAccountFeatures(value),
       registrationAllowed: value.registrationAllowed,
       githubEnabled: value.githubEnabled,
+      ...(value.browserLoginEnabled === undefined
+        ? {}
+        : { browserLoginEnabled: value.browserLoginEnabled }),
       ...(value.githubLinkEnabled === undefined
         ? {}
         : { githubLinkEnabled: value.githubLinkEnabled }),
@@ -482,6 +487,103 @@ export class CloudAccountManager {
       });
       return await this.complete(grant, input.origin, generation, authorized);
     } finally {
+      if (generation === this.generation && this.state === "signing-in")
+        this.publish(this.saved ? "signed-in" : "signed-out");
+    }
+  }
+  /** The website confirms identity; only this Host can redeem and persist its own session. */
+  async signInWithBrowser(
+    input: CloudAccountBrowserLogin,
+    authorized: () => boolean = () => true,
+  ): Promise<CloudAccountStatus> {
+    if (
+      !input ||
+      typeof input !== "object" ||
+      Object.keys(input).some((key) => key !== "origin" && key !== "deviceName") ||
+      (input.deviceName !== undefined &&
+        (typeof input.deviceName !== "string" || input.deviceName.length > 100))
+    )
+      throw new Error("网页登录请求无效。");
+    if (!authorized()) throw new Error("云账号操作已取消。");
+    const { generation, signal } = await this.prepare(input.origin);
+    const codeVerifier = randomBytes(32).toString("base64url");
+    const codeChallenge = createHash("sha256").update(codeVerifier).digest("base64url");
+    let receipt: string | undefined;
+    try {
+      const capabilities = await this.capabilities(input.origin, signal);
+      this.current(generation, authorized);
+      if (capabilities.browserLoginEnabled !== true)
+        throw new Error("此账号服务尚未启用网页登录，请更新服务或使用其他登录方式。");
+      const flow = (await this.request({
+        origin: input.origin,
+        path: "/api/v1/account/browser/start",
+        body: { codeChallenge, ...(input.deviceName ? { deviceName: input.deviceName } : {}) },
+        signal,
+      })) as {
+        authorizationUrl?: unknown;
+        receipt?: unknown;
+        expiresAt?: unknown;
+        pollIntervalMs?: unknown;
+      };
+      // Capture a valid receipt before checking navigation so even malformed replies can be cancelled.
+      if (isRelayToken(flow?.receipt)) receipt = flow.receipt;
+      let url: URL | undefined;
+      try {
+        if (typeof flow?.authorizationUrl === "string" && flow.authorizationUrl.length <= 2048)
+          url = new URL(flow.authorizationUrl);
+      } catch {
+        /* Invalid service navigation is reported without echoing its contents. */
+      }
+      if (
+        !url ||
+        url.origin !== input.origin ||
+        url.pathname !== "/desktop-login" ||
+        url.username ||
+        url.password ||
+        url.hash ||
+        [...url.searchParams.keys()].length !== 1 ||
+        !isRelayToken(url.searchParams.get("request")) ||
+        url.searchParams.get("request") === receipt ||
+        !receipt ||
+        !Number.isSafeInteger(flow.expiresAt) ||
+        (flow.expiresAt as number) <= this.now() ||
+        (flow.expiresAt as number) > this.now() + 15 * 60_000
+      )
+        throw new Error("网页登录地址无效，请重新发起登录。");
+      this.current(generation, authorized);
+      await this.deps.openExternal(url.href);
+      const expiresAt = flow.expiresAt as number;
+      while (this.now() < expiresAt) {
+        this.current(generation, authorized);
+        const result = await this.request({
+          origin: input.origin,
+          path: "/api/v1/account/browser/poll",
+          body: { receipt, codeVerifier },
+          signal,
+        });
+        if ((result as { status?: string })?.status !== "pending")
+          return await this.complete(result, input.origin, generation, authorized);
+        await (this.deps.sleep ?? wait)(
+          Math.min(
+            10_000,
+            Math.max(
+              1000,
+              typeof flow.pollIntervalMs === "number" && Number.isFinite(flow.pollIntervalMs)
+                ? flow.pollIntervalMs
+                : 1000,
+            ),
+          ),
+          signal,
+        );
+      }
+      throw new Error("网页登录已超时，请重新发起登录。");
+    } finally {
+      if (receipt)
+        void this.request({
+          origin: input.origin,
+          path: "/api/v1/account/browser/cancel",
+          body: { receipt, codeVerifier },
+        }).catch(() => {});
       if (generation === this.generation && this.state === "signing-in")
         this.publish(this.saved ? "signed-in" : "signed-out");
     }

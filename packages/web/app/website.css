@@ -71,6 +71,11 @@
   padding: 30px;
   box-shadow: var(--shadow);
 }
+.website-desktop-login > .website-auth {
+  max-width: 560px;
+  margin: 64px auto;
+  overflow-wrap: anywhere;
+}
 .website-auth h2 {
   font-size: 25px;
   margin: 10px 0 12px;

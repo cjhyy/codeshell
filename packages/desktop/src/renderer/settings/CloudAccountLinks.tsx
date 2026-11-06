@@ -11,11 +11,15 @@ export function CloudAccountLinks({
   enabled,
   pending,
   current,
+  autoLoad = false,
+  refreshKey,
 }: {
   identity: { origin: string; accountId: string };
   enabled: boolean;
   pending: boolean;
   current: () => boolean;
+  autoLoad?: boolean;
+  refreshKey?: string;
 }) {
   const { t } = useT();
   const [view, setView] = useState<CloudAccountLinkView>();
@@ -25,6 +29,8 @@ export function CloudAccountLinks({
   const [uncertain, setUncertain] = useState(false);
   const active = useRef(true);
   const working = useRef(false);
+  const queuedRefresh = useRef(false);
+  const [refreshRevision, setRefreshRevision] = useState(0);
   useEffect(() => {
     active.current = true;
     return () => {
@@ -42,6 +48,7 @@ export function CloudAccountLinks({
   const act = async (target?: Target) => {
     if (!allowed() || working.current || pending || !enabled) return;
     working.current = true;
+    queuedRefresh.current = false;
     setBusy(true);
     setError("");
     setReview(undefined);
@@ -90,10 +97,23 @@ export function CloudAccountLinks({
       );
     } finally {
       working.current = false;
-      if (allowed()) setBusy(false);
+      if (allowed()) {
+        setBusy(false);
+        if (queuedRefresh.current) {
+          queuedRefresh.current = false;
+          setRefreshRevision((value) => value + 1);
+        }
+      }
     }
   };
   const disabled = pending || busy || !enabled;
+  useEffect(() => {
+    if (!autoLoad || !enabled || pending) return;
+    // A connection can finish while an earlier list request is still in flight.
+    // Coalesce that invalidation, then reload with the latest render's account state.
+    if (working.current) queuedRefresh.current = true;
+    else void act();
+  }, [autoLoad, enabled, pending, refreshKey, refreshRevision]);
   const reviewedConnection =
     review?.kind === "connections"
       ? view?.connections.find((item) => item.id === review.id)

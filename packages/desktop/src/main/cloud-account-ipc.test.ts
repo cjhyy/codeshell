@@ -75,6 +75,8 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
       "login",
       "register",
       "openRegistration",
+      "openManagement",
+      "browser",
       "github",
       "links",
       "profile",
@@ -137,6 +139,89 @@ test("cloud account IPC rejects non-main frames and rechecks ownership after log
   destroyed = true;
   expect(authorized!()).toBe(false);
   for (const handler of handlers.values()) expect(() => handler(event, {})).toThrow();
+});
+
+test("account management opens only fixed pages on the current account origin without credentials", async () => {
+  const handlers = new Map<string, (...args: any[]) => any>();
+  const sender = { mainFrame: {}, isDestroyed: () => false };
+  const event = { sender, senderFrame: sender.mainFrame };
+  let status: CloudAccountStatus = {
+    state: "signed-in",
+    origin: "https://account.example",
+    account: { id: "current-account", username: "alice" },
+  };
+  const opened: string[] = [];
+  registerCloudAccountIpc({
+    ipcMain: { handle: (name, handler) => handlers.set(name, handler) },
+    isMainWindow: (contents) => contents === (sender as any),
+    manager: { status: () => status } as any,
+    openExternal: async (url) => {
+      opened.push(url);
+    },
+  });
+  const open = handlers.get("cloudAccount:openManagement")!;
+  for (const section of ["profile", "security", "sessions", "connections"])
+    await open(event, section);
+  expect(opened).toEqual(
+    ["profile", "security", "sessions", "connections"].map(
+      (section) => `https://account.example/settings/account/${section}`,
+    ),
+  );
+  for (const section of [
+    "https://other.example",
+    "../logout",
+    "profile?token=secret",
+    {},
+    undefined,
+  ])
+    expect(() => open(event, section)).toThrow("页面无效");
+  status = { state: "signed-out" };
+  expect(() => open(event, "profile")).toThrow("请先登录");
+  expect(opened).toHaveLength(4);
+});
+
+test("browser sign-in keeps window ownership and focuses only after native sign-in completes", async () => {
+  const handlers = new Map<string, (...args: any[]) => any>();
+  let destroyed = false;
+  const sender = { mainFrame: {}, isDestroyed: () => destroyed };
+  const event = { sender, senderFrame: sender.mainFrame };
+  let complete!: (status: CloudAccountStatus) => void;
+  let allowed!: () => boolean;
+  let focused = 0;
+  let requested: unknown;
+  registerCloudAccountIpc({
+    ipcMain: { handle: (name, handler) => handlers.set(name, handler) },
+    isMainWindow: (contents) => contents === (sender as any),
+    focusMainWindow: () => {
+      focused++;
+    },
+    manager: {
+      signInWithBrowser: (input, authorized) => {
+        requested = input;
+        allowed = authorized;
+        return new Promise<CloudAccountStatus>((resolve) => {
+          complete = resolve;
+        });
+      },
+    } as any,
+  });
+  const login = handlers.get("cloudAccount:browser")!;
+  const result = login(event, { origin: "https://account.example" });
+  expect(requested).toMatchObject({
+    origin: "https://account.example",
+    deviceName: expect.any(String),
+  });
+  expect(allowed()).toBe(true);
+  expect(focused).toBe(0);
+  complete({ state: "signed-in" });
+  await result;
+  expect(focused).toBe(1);
+  const stale = login(event, { origin: "https://account.example" });
+  destroyed = true;
+  expect(allowed()).toBe(false);
+  complete({ state: "signed-in" });
+  await stale;
+  expect(focused).toBe(1);
 });
 
 function githubFocusFixture(focus?: (sender: unknown) => void) {
@@ -204,6 +289,21 @@ test("GitHub sign-in and association return to their trusted main window only af
     view.complete(signedIn);
     expect(await result).toBe(signedIn);
     expect(focused).toEqual([view.sender]);
+  }
+});
+
+test("combined GitHub sign-in keeps browser focus while Link consent is pending", async () => {
+  for (const state of ["pending", "connected", "failed", "skipped"] as const) {
+    const focused: unknown[] = [];
+    const view = githubFocusFixture((sender) => focused.push(sender));
+    const result = view.github(view.event, {
+      ...githubSignIn,
+      input: { ...githubSignIn.input, connectGitHub: true },
+    });
+    const status: CloudAccountStatus = { ...signedIn, githubConnection: { state } };
+    view.complete(status);
+    expect(await result).toBe(status);
+    expect(focused).toEqual(state === "pending" ? [] : [view.sender]);
   }
 });
 

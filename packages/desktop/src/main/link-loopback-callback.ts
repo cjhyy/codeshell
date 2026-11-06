@@ -54,7 +54,12 @@ export function createLinkLoopbackCallbackBroker(
     entry.signal?.removeEventListener("abort", entry.abort);
     stopIfUnused();
   }
-  function reply(response: ServerResponse, status: number, message: string) {
+  function reply(
+    response: ServerResponse,
+    status: number,
+    message: string,
+    detail = "请返回 CodeShell 查看连接状态。可以关闭此页面。",
+  ) {
     if (response.destroyed || response.writableEnded) return;
     response.writeHead(status, {
       "Content-Type": "text/html; charset=utf-8",
@@ -65,7 +70,7 @@ export function createLinkLoopbackCallbackBroker(
       "X-Content-Type-Options": "nosniff",
     });
     response.end(
-      `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CodeShell</title><style>body{font:16px system-ui;margin:15vh auto;padding:24px;max-width:480px;line-height:1.7;color:#18181b}h1{font-size:24px}p{color:#52525b}</style><h1>${message}</h1><p>请返回 CodeShell 查看连接状态。可以关闭此页面。</p></html>`,
+      `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CodeShell</title><style>body{font:16px system-ui;margin:15vh auto;padding:24px;max-width:480px;line-height:1.7;color:#18181b}h1{font-size:24px}p{color:#52525b}</style><h1>${message}</h1><p>${detail}</p></html>`,
     );
   }
   async function handle(request: IncomingMessage, response: ServerResponse) {
@@ -120,9 +125,23 @@ export function createLinkLoopbackCallbackBroker(
           timeout.unref?.();
         }),
       ]);
-      reply(response, 200, connected === true ? "连接已完成" : "授权响应已处理");
+      if (connected === true) {
+        reply(response, 200, "连接已完成");
+      } else {
+        reply(
+          response,
+          200,
+          "连接未完成",
+          "请返回 CodeShell 查看连接状态，并在「凭证 → Link」中重新连接。可以关闭此页面。",
+        );
+      }
     } catch {
-      reply(response, 500, "连接未完成");
+      reply(
+        response,
+        500,
+        "连接未完成",
+        "请返回 CodeShell 查看连接状态，并在「凭证 → Link」中重新连接。可以关闭此页面。",
+      );
     } finally {
       clearTimeout(timeout);
       processingEntries.delete(entry);

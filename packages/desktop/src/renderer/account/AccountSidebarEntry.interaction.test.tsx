@@ -2,6 +2,9 @@ import { expect, test } from "bun:test";
 import { fileURLToPath } from "node:url";
 
 const scenarios = {
+  "browser-login": "uses one browser login action and updates the account after confirmation",
+  "browser-login-cancel": "cancels browser confirmation and restores the login action",
+  "browser-management": "opens four web account sections and local Link management directly",
   "menu-preview": "shows account actions without mounting a form or contacting the service",
   "menu-logout": "signs out directly from the account menu and restores focus",
   "menu-logout-unconfirmed": "explains unconfirmed revocation after signing out from the menu",

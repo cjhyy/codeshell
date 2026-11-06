@@ -56,6 +56,25 @@ function accountErrorMessage(status: number, path?: string, code?: unknown): str
     if (status === 502 && code === "github_login_failed")
       return "GitHub 登录未完成，请重新发起登录。";
   }
+  const browser = ["start", "poll", "cancel"].some(
+    (action) => path === `/api/v1/account/browser/${action}`,
+  );
+  if (browser) {
+    if (
+      status === 400 &&
+      (code === "invalid_browser_login_request" || code === "invalid_device_name")
+    )
+      return "网页登录请求无效，请重新发起登录。";
+    if (status === 401 && code === "invalid_browser_receipt")
+      return "网页登录请求已失效，请重新发起登录。";
+    if (status === 429 && code === "browser_login_limit") return "网页登录请求过多，请稍后重试。";
+    if (path === "/api/v1/account/browser/poll") {
+      if (status === 401 && code === "browser_login_expired")
+        return "网页账号登录已失效，请在浏览器重新登录后重试。";
+      if (status === 403 && code === "browser_login_denied")
+        return "已取消此次桌面登录。如需登录，请重新发起。";
+    }
+  }
   return status === 401 || status === 403
     ? "云账号授权已失效，请重新登录。"
     : status === 409

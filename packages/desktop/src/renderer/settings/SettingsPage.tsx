@@ -782,7 +782,7 @@ export function SettingsPage({
               {active === "computer-use" && (
                 <ComputerUseSettings onOpenMimiSettings={onOpenMimiSettings} />
               )}
-              {active === "account" && <CloudAccountSettings />}
+              {active === "account" && <CloudAccountSettings onOpenLink={onOpenLink} />}
               {active === "appearance" && <AppearanceSection />}
               {active === "config" && (
                 <>

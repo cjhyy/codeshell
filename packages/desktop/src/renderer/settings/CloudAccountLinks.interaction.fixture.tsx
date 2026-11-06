@@ -45,6 +45,7 @@ const alice: CloudAccountStatus = {
   origin: "https://account.example",
   account: { id: "10000000-0000-0000-0000-000000000004", username: "alice" },
 };
+let currentStatus = alice;
 let data = {
   linkOrigin: "https://link.example",
   connections: [
@@ -69,6 +70,11 @@ let failList = scenario === "load-failure";
 let late: ((value: any) => void) | undefined;
 let onStatus!: (status: CloudAccountStatus) => void;
 const lateList = scenario === "stale-account" || scenario === "same-account-relogin";
+const inflightRefresh = scenario === "connection-refresh-inflight";
+const emit = (status: CloudAccountStatus) => {
+  currentStatus = status;
+  onStatus(status);
+};
 (globalThis as any).window.codeshell = {
   credentials: {
     list: async (cwd: string) => {
@@ -77,7 +83,7 @@ const lateList = scenario === "stale-account" || scenario === "same-account-relo
     },
   },
   cloudAccount: {
-    status: async () => alice,
+    status: async () => currentStatus,
     onStatus: (callback: typeof onStatus) => {
       onStatus = callback;
       return () => {};
@@ -89,12 +95,12 @@ const lateList = scenario === "stale-account" || scenario === "same-account-relo
       linkManagementEnabled: true,
     }),
     manageLinks: async (request: CloudAccountLinksRequest) => {
-      assert.equal(request.origin, alice.origin);
-      assert.equal(request.accountId, alice.account?.id);
+      assert.equal(request.origin, currentStatus.origin);
+      assert.equal(request.accountId, currentStatus.account?.id);
       calls.push(request);
       if (request.action === "list") {
         if (failList) throw new Error("fixture offline");
-        if (lateList && calls.length === 1)
+        if ((lateList || inflightRefresh) && calls.length === 1)
           return new Promise((resolve) => {
             late = resolve;
           });
@@ -128,7 +134,7 @@ document.body.appendChild(container);
 const root = createRoot(container);
 const text = (node: any): string =>
   node?.nodeType === 3
-    ? (node.data ?? node.textContent ?? "")
+    ? (node.nodeValue ?? node.data ?? node.textContent ?? "")
     : node?.childNodes?.length
       ? node.childNodes.map(text).join("")
       : (node?.textContent ?? "");
@@ -163,22 +169,63 @@ try {
     await new Promise((done) => setTimeout(done, 300));
     await flushMicrotasks();
   });
-  await click("加载／刷新连接");
   if (lateList) {
+    const previousData = structuredClone(data);
     await act(async () => {
+      data = { ...data, connections: [], grants: [] };
       if (scenario === "same-account-relogin") {
-        onStatus({ state: "signed-out" });
-        onStatus({ ...alice });
+        emit({ state: "signed-out" });
+        emit({ ...alice });
       } else
-        onStatus({
+        emit({
           ...alice,
           account: { id: "20000000-0000-0000-0000-000000000004", username: "bob" },
         });
-      late!({ action: "list", view: data });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      late!({ action: "list", view: previousData });
       await flushMicrotasks();
     });
     assert.ok(!contents().includes("linked-alice"));
-    assert.equal(calls.length, 1);
+    assert.ok(contents().includes("当前账号没有数据连接"));
+    assert.equal(calls.length, 2, "A new account incarnation loads its own connection list");
+    assert.equal(calls[1].accountId, currentStatus.account?.id);
+  } else if (scenario === "connection-refresh" || inflightRefresh) {
+    assert.equal(calls.length, 1, "Opening account management automatically loads connections");
+    const previousData = structuredClone(data);
+    await act(async () => {
+      emit({ ...alice, githubConnection: { state: "pending" } });
+      await flushMicrotasks();
+    });
+    assert.equal(calls.length, 1, "Pending consent must not issue another list request");
+    data = {
+      ...data,
+      connections: data.connections.map((item) => ({
+        ...item,
+        account: { ...item.account, login: "linked-after-consent" },
+      })),
+    };
+    await act(async () => {
+      emit({ ...alice, githubConnection: { state: "connected" } });
+      await flushMicrotasks();
+    });
+    if (inflightRefresh)
+      await act(async () => {
+        late!({ action: "list", view: previousData });
+        await flushMicrotasks();
+      });
+    await act(async () => {
+      await flushMicrotasks();
+    });
+    assert.equal(calls.length, 2, "Completed consent refreshes connections even after a busy list");
+    assert.ok(contents().includes("linked-after-consent"), contents());
+    assert.ok(!contents().includes("linked-alice"));
+    await act(async () => {
+      emit({ ...alice, githubConnection: { state: "connected" } });
+      await flushMicrotasks();
+    });
+    assert.equal(calls.length, 2, "An unchanged completed status does not repeatedly reload");
   } else if (scenario === "load-failure") {
     assert.ok(contents().includes("fixture offline"));
     assert.ok(!contents().includes("当前账号没有数据连接"));
@@ -191,7 +238,7 @@ try {
     assert.ok(props(button("审阅并断开连接")).disabled);
   } else if (scenario === "refresh-keeps-view") {
     await act(async () => {
-      onStatus({ ...alice });
+      emit({ ...alice });
       await flushMicrotasks();
     });
     assert.ok(contents().includes("linked-alice"));
