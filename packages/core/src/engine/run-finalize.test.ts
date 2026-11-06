@@ -289,4 +289,73 @@ describe("finalizeRunSuccess", () => {
       lastCompletionKind: "background_wait",
     });
   });
+
+  async function runVerified(profile: unknown): Promise<number> {
+    let memory = 0;
+    const state = {
+      sessionId: "verified-session",
+      status: "active",
+      turnCount: 0,
+      tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    };
+    await finalizeRunSuccess({
+      session: {
+        state,
+        transcript: {
+          appendMessage: () => {},
+          flushFailed: () => false,
+          getEvents: () => [{ id: "user-event", data: { role: "user", content: "hi" } }],
+        },
+      } as never,
+      result: {
+        reason: "completed",
+        text: "done",
+        messages: [{ role: "assistant", content: "done" }],
+      },
+      hasUnverifiedWrites: () => false,
+      firstGoalTermination: undefined,
+      turnCount: 1,
+      getRunCacheUsage: () => ({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
+      getRunUsage: () => ({
+        records: [],
+        totalPromptTokens: 0,
+        totalCompletionTokens: 0,
+        totalTokens: 0,
+        requestCount: 0,
+      }),
+      usageBaseline: state.tokenUsage,
+      userContextMsg: null,
+      dynamicContextMsg: null,
+      setCompactedMessages: () => {},
+      setLastMessages: () => {},
+      options: { onStream: () => {} },
+      emitHook: async () => ({}),
+      cwd: "/synthetic",
+      llmClient: {} as never,
+      auxSummaryClient: { createMessage: async () => ({ text: "title" }) } as never,
+      recordExternalBilledUsage: () => ({
+        cumulativePromptTokens: 0,
+        cumulativeCacheReadTokens: 0,
+        cumulativeCacheCreationTokens: 0,
+      }),
+      runMemoryPipeline: () => {
+        memory++;
+      },
+      updatePersistedSessionState: () => {},
+      persistFinalRunState: () => true,
+      markRunAccountingFinalized: () => {},
+      costStoreSerialize: undefined,
+      profile: profile as never,
+      getProfileReportedResults: () => undefined,
+    });
+    return memory;
+  }
+
+  test("disableMemoryPipeline skips the post-run memory pipeline", async () => {
+    expect(await runVerified({ id: "pet", disableMemoryPipeline: true })).toBe(0);
+  });
+
+  test("verified runs without the flag still run the memory pipeline", async () => {
+    expect(await runVerified(undefined)).toBe(1);
+  });
 });

@@ -57,6 +57,8 @@ export interface RunBehaviorProfile {
   disableHooks?: boolean;
   /** Skip auxiliary title generation for this run. */
   disableSessionTitle?: boolean;
+  /** Skip the post-run memory pipeline (extraction, session memory, auto-dream). Reading memory is unaffected. */
+  disableMemoryPipeline?: boolean;
   /**
    * When true, the injected persistent-memory index is trimmed to this run's
    * project: global-layer project-type / dream-scope records tied to other

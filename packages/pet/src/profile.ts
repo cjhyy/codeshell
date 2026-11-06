@@ -151,6 +151,9 @@ export const PET_BEHAVIOR_PROFILE: RunBehaviorProfile = {
   maxTurns: 6,
   disablePlanMode: true,
   disableMcp: true,
+  // Mimi distills memory at topic-segment closure; per-turn core extraction
+  // duplicated it on the primary model with almost no output.
+  disableMemoryPipeline: true,
   // Mimi manages work from one fixed vantage point and never executes inside
   // other repos — cross-project memory records are dead context for her turns.
   memoryCurrentProjectOnly: true,

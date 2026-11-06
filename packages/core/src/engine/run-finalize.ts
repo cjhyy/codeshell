@@ -278,7 +278,11 @@ export async function finalizeRunSuccess(args: {
   // Ephemeral side chats must never leak into durable memory, even after
   // the user explicitly elevates tool permissions for a turn. Lifecycle
   // isolation is independent of the run-scoped behavior/permission mode.
-  if (!unverified && !isEphemeralSessionState(session.state)) {
+  if (
+    !unverified &&
+    !isEphemeralSessionState(session.state) &&
+    profile?.disableMemoryPipeline !== true
+  ) {
     // Fire-and-forget memory pipeline: extract durable memories from the
     // transcript, save a session summary, and conditionally trigger
     // auto-dream consolidation. Doesn't block the Engine result.
