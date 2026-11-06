@@ -14,6 +14,7 @@ import { readExternalRuntimeProfileOverrides } from "./external-runtime-profile.
 let home: string;
 let cwd: string;
 let previousHome: string | undefined;
+let previousUserHome: string | undefined;
 let sessions: SessionManager;
 let settings: SettingsManager;
 const sessionId = "external-live-profile-policy";
@@ -22,6 +23,10 @@ beforeEach(() => {
   previousHome = process.env.CODE_SHELL_HOME;
   home = mkdtempSync(join(tmpdir(), "codeshell-live-profile-"));
   process.env.CODE_SHELL_HOME = home;
+  // SettingsManager resolves the user layer from HOME, not CODE_SHELL_HOME;
+  // without this, saveUserSetting writes into the real ~/.code-shell.
+  previousUserHome = process.env.HOME;
+  process.env.HOME = home;
   cwd = join(home, "workspace");
   mkdirSync(cwd);
   sessions = new SessionManager();
@@ -32,6 +37,8 @@ beforeEach(() => {
 afterEach(() => {
   if (previousHome === undefined) delete process.env.CODE_SHELL_HOME;
   else process.env.CODE_SHELL_HOME = previousHome;
+  if (previousUserHome === undefined) delete process.env.HOME;
+  else process.env.HOME = previousUserHome;
   rmSync(home, { recursive: true, force: true });
 });
 
