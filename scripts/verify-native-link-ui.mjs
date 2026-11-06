@@ -210,7 +210,7 @@ export async function verifyNativeLinkUI({
         .getByRole("button", { name: deny ? "取消" : "允许读取和创建 Issue", exact: true })
         .click();
       if (deny) {
-        await auth.getByText("授权响应已处理", { exact: true }).waitFor();
+        await auth.getByText("连接未完成", { exact: true }).waitFor();
         assert.equal(await auth.getByText("连接已完成", { exact: true }).count(), 0);
         await management
           .getByText(/授权已取消|授权未完成|Authorization cancelled|Authorization did not complete/)

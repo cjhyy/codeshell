@@ -30,10 +30,18 @@ export interface CloudAccountLogin {
   deviceName?: string;
 }
 
+export interface CloudAccountBrowserLogin {
+  origin: string;
+  deviceName?: string;
+}
+
+export type CloudAccountManagementSection = "profile" | "security" | "sessions" | "connections";
+
 export interface CloudAccountCapabilities {
   features: AccountFeatureMap;
   registrationAllowed: boolean;
   githubEnabled: boolean;
+  browserLoginEnabled?: boolean;
   githubLinkEnabled?: boolean;
   linkManagementEnabled?: boolean;
   profileEnabled?: boolean;
@@ -86,6 +94,8 @@ export interface CloudAccountGitHubLogin {
 
 export interface CloudAccountApi {
   openRegistration(origin: string): Promise<void>;
+  openManagement(section: CloudAccountManagementSection): Promise<void>;
+  signInWithBrowser(input: CloudAccountBrowserLogin): Promise<CloudAccountStatus>;
   status(): Promise<CloudAccountStatus>;
   resume?(): Promise<CloudAccountStatus>;
   capabilities(origin: string): Promise<CloudAccountCapabilities>;

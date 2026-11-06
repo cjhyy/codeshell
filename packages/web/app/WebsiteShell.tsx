@@ -28,14 +28,17 @@ import type { CloudManagementSession } from "./auth.js";
 import "./website.css";
 import { withAccountCookieLock } from "./account-cookie-lock.js";
 import { parseAccountSession } from "./account-api.js";
+import { DesktopLoginPage, desktopLoginRequest } from "./DesktopLogin.js";
 
 export function WebsiteEntry({ setupToken }: { setupToken: string }) {
-  const registration = isRegistrationRoute(new URL(window.location.href));
+  const url = new URL(window.location.href);
+  const registration = isRegistrationRoute(url);
+  const desktopLogin = url.pathname === "/desktop-login" || url.pathname === "/desktop-login/";
   const [capability, setCapability] = React.useState<WebsiteCloudCapability | null>();
   const [error, setError] = React.useState("");
   const [retry, setRetry] = React.useState(0);
   React.useEffect(() => {
-    if (registration) return;
+    if (registration || desktopLogin) return;
     const controller = new AbortController();
     setError("");
     void detectWebsiteCloud(globalThis.fetch, controller.signal)
@@ -47,7 +50,13 @@ export function WebsiteEntry({ setupToken }: { setupToken: string }) {
           setError(cause instanceof Error ? cause.message : "无法连接工作台，请重试。");
       });
     return () => controller.abort();
-  }, [retry, registration]);
+  }, [retry, registration, desktopLogin]);
+  if (desktopLogin)
+    return (
+      <AccountSessionProvider>
+        <DesktopLoginPage request={desktopLoginRequest(url)} />
+      </AccountSessionProvider>
+    );
   if (registration)
     return (
       <AccountSessionProvider>

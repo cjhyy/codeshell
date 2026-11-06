@@ -1,9 +1,12 @@
 # Optional Desktop cloud account
 
 CodeShell opens and runs local projects without an account or an account-server
-connection. The sidebar account entry opens the optional cloud account flow, with
-GitHub sign-in first, separate password login and account-creation modes, GitHub
-identity binding, and logout.
+connection. The sidebar account entry opens account settings. Services advertising
+`browserLoginEnabled` use a single **Continue in browser** action: the website
+handles GitHub or password sign-in and registration, then asks which account may
+sign in to this computer. Desktop receives and securely saves its own session,
+updates the sidebar account, and returns focus after completion. Services without
+this capability retain their existing native login controls.
 The account entry is a compact avatar icon beside Settings in the sidebar footer;
 its hover text and accessible description retain the account name and state.
 The service address defaults to `https://115.159.45.55` and remains editable for
@@ -31,6 +34,32 @@ an account. Both password forms support Enter submission and prevent duplicate
 submissions while a request is pending.
 
 ## Registration and sign-in
+
+### Unified browser sign-in
+
+Desktop prepares an expiring request with a PKCE challenge using
+`POST /api/v1/account/browser/start`. Only the public request identifier goes to the
+fixed same-origin `/desktop-login` page. The separate polling receipt and verifier
+stay in the native account manager, never in a URL, renderer event, or persisted
+account record. The website can reuse its existing HttpOnly cookie session but
+always shows the current account and computer name before explicit confirmation.
+
+The cookie-authenticated, CSRF-protected `/api/v1/account/web/browser/request`,
+`/approve`, and `/deny` routes describe and decide the request. Approval records
+the website identity; it does not expose website cookies or mint a desktop token
+in the browser. Desktop polls with its private receipt and verifier. The Account
+service checks that the approving root session and account are still active, then
+issues one independent native session. The normal native completion path validates
+and stores that session and activates account device collaboration. Cancelling,
+expiry, revoked approval, and late responses cannot restore a cancelled login.
+
+This path requires the corresponding `codeshell-services` account changes, the new
+Web SPA, and the exact `/desktop-login` website proxy route to be deployed together.
+It does not use a localhost browser callback. GitHub repository access remains a
+separate connection action in Desktop; signing in to an account does not choose
+repository or Actions permissions.
+
+### Existing native sign-in controls
 
 | Entry                       | Existing identity                                                     | New identity                                                                          |
 | --------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
@@ -62,6 +91,15 @@ password reset/change, and adding a password to a GitHub-only account are not
 implemented in the current account API.
 
 ## Nickname and login username
+
+Desktop keeps its account summary, profile editing, sign-out, connection status,
+and a direct **Manage connections and repository access** action. Account settings
+also link to the selected account service's fixed profile, security, sessions and
+connections pages. These links contain no credentials: the website shows its own
+current account and may ask for login. Connection metadata loads when account
+settings open and refreshes after a pending GitHub authorization finishes; the
+sidebar alone does not load connection metadata. Failed refreshes keep prior data
+visible and disable revocation until a successful reload.
 
 The sidebar avatar opens the account dialog; General settings no longer repeat the
 account form. A service reporting `profileEnabled: true` enables profile editing.

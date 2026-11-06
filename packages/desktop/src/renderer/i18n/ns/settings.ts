@@ -58,6 +58,7 @@ export const settingsNs = {
         title: "CodeShell 云账号（可选）",
         manage: "账号管理",
         profileTitle: "账号资料",
+        editProfile: "编辑账号资料",
         displayName: "昵称",
         displayNameHelp: "昵称用于显示，可包含中文和 emoji；1–64 个字符。不会改变登录用户名。",
         displayNameInvalid: "昵称需为 1–64 个字符，不能包含控制字符。",
@@ -94,14 +95,31 @@ export const settingsNs = {
         login: "登录",
         register: "注册",
         github: "使用 GitHub 登录",
-        connectGitHub: "首次 GitHub 登录默认 Link",
+        browserLogin: "在浏览器中登录",
+        browserLoginHint:
+          "在网页选择账号并确认登录这台电脑，完成后会自动返回 CodeShell。GitHub 仓库访问可在登录后的连接管理中设置。",
+        browserPending:
+          "正在等待浏览器确认。请在网页完成登录；完成后这里会自动更新，也可取消后重试。",
+        webManagement: "账号管理",
+        webManagementHint:
+          "在网页管理账号安全、登录设备与授权。网页会显示当前使用的账号；如尚未登录，请选择与本机一致的账号。",
+        webManagement_profile: "账号资料",
+        webManagement_security: "账号安全",
+        webManagement_sessions: "登录会话",
+        webManagement_connections: "登录方式与授权",
+        localLinks: "本机的数据连接",
+        localLinksHint:
+          "查看 GitHub 等服务的连接状态，选择仓库与操作权限，或重新连接。账号登录成功后仍需单独确认数据访问范围。",
+        manageLocalLinks: "管理连接与仓库权限",
+        retryGitHubConnection: "继续设置 GitHub 连接",
+        connectGitHub: "登录时同时连接 GitHub（需确认仓库权限）",
         cancelGitHubConnection: "取消 GitHub 连接",
         connectGitHubChecking: "正在检查此云服务是否支持同时连接 GitHub…",
         connectGitHubDefaultChecking: "正在检查已保存的 GitHub Link 连接…",
         connectGitHubDefaultUnavailable:
           "暂时无法确认已保存的 GitHub Link，已取消自动勾选。仍可登录，或手动勾选以连接 GitHub；将申请公开和私有仓库读写权限（repo），随后在「凭证 → Link」中选择要使用的仓库和 Actions 权限。",
         connectGitHubDescription:
-          "本机尚未保存 GitHub Link 时默认勾选，首次登录即可同时连接，也可取消勾选。已有 Link 连接会保留，默认不重复授权。勾选将申请公开和私有仓库读写权限（repo），随后在「凭证 → Link」中选择要使用的仓库和 Actions 权限。",
+          "本机尚未保存 GitHub Link 时默认勾选。浏览器先完成 GitHub 登录，再打开 Link 页面选择仓库和 Actions 权限，确认后才完成连接。GitHub 将申请公开和私有仓库读写权限（repo）。已有 Link 连接会保留，默认不重复授权。也可取消勾选，仅登录账号。",
         connectGitHubUnavailable:
           "此云服务暂不支持登录时连接 GitHub；仍可使用 GitHub 登录，稍后在「凭证 → Link」连接。",
         githubConnection: "GitHub 连接",
@@ -1249,6 +1267,7 @@ export const settingsNs = {
         title: "CodeShell cloud account (optional)",
         manage: "Manage account",
         profileTitle: "Account profile",
+        editProfile: "Edit account profile",
         displayName: "Nickname",
         displayNameHelp:
           "Shown as your name; Chinese characters and emoji are supported. Use 1–64 characters. Your sign-in username stays separate.",
@@ -1290,7 +1309,24 @@ export const settingsNs = {
         login: "Sign in",
         register: "Register",
         github: "Sign in with GitHub",
-        connectGitHub: "Link by default on first GitHub sign-in",
+        browserLogin: "Continue in browser",
+        browserLoginHint:
+          "Choose an account and confirm this computer in your browser. CodeShell returns automatically after sign-in. Configure GitHub repository access in connection settings afterward.",
+        browserPending:
+          "Waiting for your browser. Complete sign-in there and this page will update automatically, or cancel and try again.",
+        webManagement: "Account management",
+        webManagementHint:
+          "Manage account security, sessions and grants on the website. Check the account shown there; if prompted, sign in to the same account as this computer.",
+        webManagement_profile: "Account profile",
+        webManagement_security: "Account security",
+        webManagement_sessions: "Login sessions",
+        webManagement_connections: "Sign-in methods and grants",
+        localLinks: "Connections on this computer",
+        localLinksHint:
+          "Check services such as GitHub, choose repositories and actions, or reconnect. Data access permissions are confirmed separately after account sign-in.",
+        manageLocalLinks: "Manage connections and repository access",
+        retryGitHubConnection: "Continue GitHub connection setup",
+        connectGitHub: "Connect GitHub during sign-in (repository confirmation required)",
         cancelGitHubConnection: "Cancel GitHub connection",
         connectGitHubChecking:
           "Checking whether this service supports connecting GitHub during sign-in…",
@@ -1298,7 +1334,7 @@ export const settingsNs = {
         connectGitHubDefaultUnavailable:
           "Saved GitHub Link connections could not be checked, so automatic connection is off. You can still sign in or select this to connect GitHub; it requests read and write access to public and private repositories (repo). Then choose the repositories and Actions permissions to use in Credentials → Link.",
         connectGitHubDescription:
-          "Selected by default when no GitHub Link is saved on this computer, so your first sign-in can connect GitHub too. You can clear it. Existing Link connections are preserved and are not authorized again by default. Selecting this requests read and write access to public and private repositories (repo). Then choose the repositories and Actions permissions to use in Credentials → Link.",
+          "Selected when no GitHub Link is saved on this computer. First sign in with GitHub in your browser, then choose repositories and Actions permissions on the Link page to finish connecting. GitHub requests read and write access to public and private repositories (repo). Existing connections are preserved by default; clear this option to sign in only.",
         connectGitHubUnavailable:
           "This service does not support connecting GitHub during sign-in yet. You can still sign in with GitHub and connect later in Credentials → Link.",
         githubConnection: "GitHub connection",

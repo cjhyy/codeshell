@@ -163,6 +163,287 @@ function githubTransport(
 }
 const settleConnection = () => new Promise((done) => setTimeout(done, 0));
 
+const browserCapabilities = {
+  registrationAllowed: true,
+  githubEnabled: true,
+  browserLoginEnabled: true,
+};
+function browserFlow(now = Date.now()) {
+  const receipt = token();
+  const publicTicket = token();
+  return {
+    authorizationUrl: `${origin}/desktop-login?request=${publicTicket}`,
+    receipt,
+    expiresAt: now + 60_000,
+    pollIntervalMs: 1000,
+  };
+}
+
+test("browser login uses a public request ticket and redeems its own PKCE-bound session before activating relay", async () => {
+  const next = grant();
+  const flow = browserFlow();
+  let polls = 0;
+  const ctx = setup(undefined, async (request) => {
+    if (request.path.endsWith("/status")) return browserCapabilities;
+    if (request.path.endsWith("/start")) return flow;
+    if (request.path.endsWith("/poll")) return ++polls === 1 ? { status: "pending" } : next;
+    return { ok: true };
+  });
+  const result = await ctx.manager.signInWithBrowser({ origin, deviceName: "Fixture desktop" });
+  expect(result).toEqual({ state: "signed-in", origin, account: next.account });
+  expect(ctx.saved()).toEqual(next);
+  expect(ctx.preflights()).toBe(1);
+  expect(ctx.writes()).toBe(1);
+  expect(ctx.activated).toEqual([{ origin, accountId: next.account.id }]);
+  expect(ctx.launched).toEqual([flow.authorizationUrl]);
+  const start = ctx.requests.find((request) => request.path.endsWith("/start"))!;
+  const poll = ctx.requests.find((request) => request.path.endsWith("/poll"))!;
+  const cancel = ctx.requests.find((request) => request.path.endsWith("/cancel"))!;
+  const { codeVerifier } = poll.body as { codeVerifier: string };
+  expect(start.body).toEqual({
+    codeChallenge: createHash("sha256").update(codeVerifier).digest("base64url"),
+    deviceName: "Fixture desktop",
+  });
+  expect(poll.body).toEqual({ receipt: flow.receipt, codeVerifier });
+  expect(cancel.body).toEqual(poll.body);
+  expect(ctx.requests.every((request) => request.origin === origin && !request.token)).toBe(true);
+  expect(ctx.launched[0]).not.toContain(flow.receipt);
+  expect(ctx.launched[0]).not.toContain(codeVerifier);
+  for (const secret of [flow.receipt, codeVerifier, next.accessToken, next.refreshToken])
+    expect(JSON.stringify(ctx.events)).not.toContain(secret);
+  expect(JSON.stringify(ctx.saved())).not.toContain(flow.receipt);
+});
+
+test("browser login rejects untrusted navigation and cancels its private receipt without opening a page", async () => {
+  const flow = browserFlow();
+  for (const authorizationUrl of [
+    "not a URL",
+    flow.authorizationUrl.replace(origin, "https://attacker.example"),
+    flow.authorizationUrl.replace("https:", "http:"),
+    flow.authorizationUrl.replace("account.example", "user:password@account.example"),
+    flow.authorizationUrl.replace("/desktop-login", "/login"),
+    `${flow.authorizationUrl}#unexpected`,
+    `${flow.authorizationUrl}&request=${token()}`,
+    `${flow.authorizationUrl}&returnTo=https://attacker.example`,
+    `${origin}/desktop-login?request=${flow.receipt}`,
+    `${origin}/desktop-login?request=short`,
+    `${origin}/desktop-login`,
+  ]) {
+    const ctx = setup(undefined, async (request) =>
+      request.path.endsWith("/status") ? browserCapabilities : { ...flow, authorizationUrl },
+    );
+    await expect(ctx.manager.signInWithBrowser({ origin })).rejects.toThrow("地址无效");
+    expect(ctx.launched).toEqual([]);
+    expect(ctx.saved()).toBeUndefined();
+    expect(ctx.manager.status()).toEqual({ state: "signed-out" });
+    expect(ctx.requests.map((request) => request.path)).toEqual([
+      "/api/v1/account/status",
+      "/api/v1/account/browser/start",
+      "/api/v1/account/browser/cancel",
+    ]);
+    expect(ctx.requests[2].body).toMatchObject({ receipt: flow.receipt });
+  }
+});
+
+test("browser login validates flow expiry and receipt before navigating or polling", async () => {
+  const now = Date.now();
+  const flow = browserFlow(now);
+  for (const changes of [
+    { expiresAt: now },
+    { expiresAt: now + 15 * 60_000 + 1 },
+    { expiresAt: "tomorrow" },
+    { receipt: "short" },
+    { receipt: undefined },
+  ]) {
+    const ctx = setup(
+      undefined,
+      async (request) =>
+        request.path.endsWith("/status") ? browserCapabilities : { ...flow, ...changes },
+      undefined,
+      () => now,
+    );
+    await expect(ctx.manager.signInWithBrowser({ origin })).rejects.toThrow("地址无效");
+    expect(ctx.launched).toEqual([]);
+    expect(ctx.requests.some((request) => request.path.endsWith("/poll"))).toBe(false);
+    expect(ctx.saved()).toBeUndefined();
+  }
+});
+
+test("browser login revokes late issued sessions when cancelled or when its owning window closes", async () => {
+  for (const cancellation of ["cancel", "owner"] as const) {
+    const flow = browserFlow();
+    const next = grant();
+    const response = deferred<unknown>();
+    let owned = true;
+    const ctx = setup(undefined, async (request) => {
+      if (request.path.endsWith("/status")) return browserCapabilities;
+      if (request.path.endsWith("/start")) return flow;
+      if (request.path.endsWith("/poll")) return response.promise;
+      return { ok: true };
+    });
+    const action = ctx.manager.signInWithBrowser({ origin }, () => owned);
+    await waitForRequest(ctx.requests, "/poll");
+    if (cancellation === "cancel") ctx.manager.cancelSignIn();
+    else owned = false;
+    response.resolve(next);
+    await expect(action).rejects.toThrow("取消");
+    expect(ctx.saved()).toBeUndefined();
+    expect(ctx.writes()).toBe(0);
+    expect(ctx.activated).toEqual([]);
+    expect(ctx.manager.status()).toEqual({ state: "signed-out" });
+    expect(ctx.requests.find((request) => request.path.endsWith("/logout"))).toMatchObject({
+      origin,
+      token: next.accessToken,
+    });
+    expect(ctx.requests.find((request) => request.path.endsWith("/cancel"))!.body).toMatchObject({
+      receipt: flow.receipt,
+    });
+  }
+});
+
+test("browser login cancels a late start response before opening an abandoned browser request", async () => {
+  const flow = browserFlow();
+  const response = deferred<unknown>();
+  const ctx = setup(undefined, async (request) => {
+    if (request.path.endsWith("/status")) return browserCapabilities;
+    if (request.path.endsWith("/start")) return response.promise;
+    return { ok: true };
+  });
+  const action = ctx.manager.signInWithBrowser({ origin });
+  await waitForRequest(ctx.requests, "/start");
+  ctx.manager.cancelSignIn();
+  response.resolve(flow);
+  await expect(action).rejects.toThrow("取消");
+  expect(ctx.launched).toEqual([]);
+  expect(ctx.requests.find((request) => request.path.endsWith("/cancel"))!.body).toMatchObject({
+    receipt: flow.receipt,
+  });
+  expect(ctx.saved()).toBeUndefined();
+});
+
+test("denied and expired browser logins provide safe errors and release the pending login", async () => {
+  for (const [status, code, message] of [
+    [403, "browser_login_denied", "已取消此次桌面登录"],
+    [401, "browser_login_expired", "网页账号登录已失效"],
+    [401, "invalid_browser_receipt", "网页登录请求已失效"],
+  ] as const) {
+    const flow = browserFlow();
+    const ctx = setup(undefined, async (request) => {
+      if (request.path.endsWith("/status")) return browserCapabilities;
+      if (request.path.endsWith("/start")) return flow;
+      if (request.path.endsWith("/poll"))
+        throw new CloudAccountHttpError(status, request.path, code);
+      return { ok: true };
+    });
+    await expect(ctx.manager.signInWithBrowser({ origin })).rejects.toThrow(message);
+    expect(ctx.manager.status()).toEqual({ state: "signed-out" });
+    expect(ctx.saved()).toBeUndefined();
+    expect(ctx.activated).toEqual([]);
+    expect(ctx.requests.at(-1)?.path).toBe("/api/v1/account/browser/cancel");
+  }
+});
+
+test("browser login stops polling at its expiry and cancels the abandoned request", async () => {
+  let now = Date.now();
+  const flow = browserFlow(now);
+  const ctx = setup(
+    undefined,
+    async (request) => {
+      if (request.path.endsWith("/status")) return browserCapabilities;
+      if (request.path.endsWith("/start")) return flow;
+      if (request.path.endsWith("/poll")) {
+        now = flow.expiresAt;
+        return { status: "pending" };
+      }
+      return { ok: true };
+    },
+    undefined,
+    () => now,
+  );
+  await expect(ctx.manager.signInWithBrowser({ origin })).rejects.toThrow("已超时");
+  expect(ctx.requests.filter((request) => request.path.endsWith("/poll"))).toHaveLength(1);
+  expect(ctx.requests.at(-1)?.path).toBe("/api/v1/account/browser/cancel");
+  expect(ctx.manager.status()).toEqual({ state: "signed-out" });
+});
+
+test("browser login preflights secure storage before any cloud request", async () => {
+  const ctx = setup();
+  ctx.unavailable();
+  await expect(ctx.manager.signInWithBrowser({ origin })).rejects.toThrow("keyring unavailable");
+  expect(ctx.requests).toEqual([]);
+  expect(ctx.launched).toEqual([]);
+  expect(ctx.writes()).toBe(0);
+});
+
+test("browser login rejects unsupported capabilities and invalid inputs without starting a flow", async () => {
+  for (const enabled of [undefined, false]) {
+    const ctx = setup(undefined, async () => ({
+      ...browserCapabilities,
+      browserLoginEnabled: enabled,
+    }));
+    await expect(ctx.manager.signInWithBrowser({ origin })).rejects.toThrow("尚未启用网页登录");
+    expect(ctx.requests.map((request) => request.path)).toEqual(["/api/v1/account/status"]);
+    expect(ctx.launched).toEqual([]);
+  }
+  const ctx = setup();
+  for (const input of [
+    { origin, deviceName: 42 },
+    { origin, deviceName: "x".repeat(101) },
+    { origin, authorizationUrl: "https://attacker.example" },
+    { origin: "http://account.example" },
+  ])
+    await expect(ctx.manager.signInWithBrowser(input as any)).rejects.toThrow();
+  expect(ctx.requests).toEqual([]);
+  expect(ctx.preflights()).toBe(0);
+  expect(ctx.launched).toEqual([]);
+});
+
+test("browser login revokes its grant when secure storage cannot save it", async () => {
+  const next = grant();
+  const flow = browserFlow();
+  const ctx = setup(undefined, async (request) => {
+    if (request.path.endsWith("/status")) return browserCapabilities;
+    if (request.path.endsWith("/start")) return flow;
+    if (request.path.endsWith("/poll")) return next;
+    return { ok: true };
+  });
+  ctx.failSave();
+  await expect(ctx.manager.signInWithBrowser({ origin })).rejects.toThrow(
+    "account store cannot save",
+  );
+  expect(ctx.saved()).toBeUndefined();
+  expect(ctx.activated).toEqual([]);
+  expect(ctx.requests.find((request) => request.path.endsWith("/logout"))).toMatchObject({
+    origin,
+    token: next.accessToken,
+  });
+});
+
+test("browser error messages map only known codes without projecting upstream details", () => {
+  for (const [path, status, code, message] of [
+    ["start", 400, "invalid_browser_login_request", "网页登录请求无效，请重新发起登录。"],
+    ["start", 400, "invalid_device_name", "网页登录请求无效，请重新发起登录。"],
+    ["poll", 401, "invalid_browser_receipt", "网页登录请求已失效，请重新发起登录。"],
+    ["start", 429, "browser_login_limit", "网页登录请求过多，请稍后重试。"],
+    ["poll", 401, "browser_login_expired", "网页账号登录已失效，请在浏览器重新登录后重试。"],
+    ["poll", 403, "browser_login_denied", "已取消此次桌面登录。如需登录，请重新发起。"],
+  ] as const) {
+    const error = new CloudAccountHttpError(status, `/api/v1/account/browser/${path}`, code);
+    expect(error.message).toBe(message);
+    expect(error.status).toBe(status);
+  }
+  const privateValue = "fixture-private-upstream-message";
+  const error = new CloudAccountHttpError(401, "/api/v1/account/browser/poll", {
+    error: "invalid_browser_receipt",
+    message: privateValue,
+  });
+  expect(error.message).toBe("云账号授权已失效，请重新登录。");
+  expect(JSON.stringify(error)).not.toContain(privateValue);
+  expect(
+    new CloudAccountHttpError(403, "/api/v1/account/browser/start", "browser_login_denied").message,
+  ).toBe("云账号授权已失效，请重新登录。");
+});
+
 const emptyLinkView = { linkOrigin, connections: [], grants: [] };
 test("Link management sends only current root credential to exact account origin and projects public metadata", async () => {
   const saved = grant();

@@ -14,6 +14,8 @@ test.each([
   "stale-account",
   "same-account-relogin",
   "refresh-keeps-view",
+  "connection-refresh",
+  "connection-refresh-inflight",
 ])("account Link settings: %s", async (scenario) => {
   const directory = await mkdtemp(join(tmpdir(), "codeshell-account-links-ui-"));
   try {

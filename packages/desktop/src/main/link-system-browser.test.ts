@@ -150,9 +150,36 @@ test("provider denial and failed exchange never report a saved connection", asyn
   });
   const response = await fetch(`${f.redirectUri}?state=${f.state}&error=access_denied`);
   const text = await response.text();
+  expect(text).toContain("连接未完成");
+  expect(text).toContain("在「凭证 → Link」中重新连接");
   expect(text).not.toContain("连接已完成");
+  expect(text).not.toContain(f.state);
+  expect(text).not.toContain("access_denied");
   expect(response.headers.get("cache-control")).toBe("no-store");
   expect(response.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
+});
+
+test("an unsuccessful Host exchange gives a retry action without reflecting callback secrets", async () => {
+  for (const outcome of ["false", "throw"] as const) {
+    const f = await fixture();
+    await f.callbacks.register({
+      ...f.registration,
+      onCallback: () => {
+        if (outcome === "throw") throw new Error("private provider failure details");
+        return false;
+      },
+    });
+    const response = await fetch(f.url());
+    const text = await response.text();
+    expect(response.status).toBe(outcome === "false" ? 200 : 500);
+    expect(text).toContain("连接未完成");
+    expect(text).toContain("在「凭证 → Link」中重新连接");
+    expect(text).not.toContain("连接已完成");
+    expect(text).not.toContain("授权响应已处理");
+    expect(text).not.toContain(f.state);
+    expect(text).not.toContain("synthetic");
+    expect(text).not.toContain("private provider failure details");
+  }
 });
 
 test("cancel before bind completion and expiry cannot consume a live owner's callback", async () => {
