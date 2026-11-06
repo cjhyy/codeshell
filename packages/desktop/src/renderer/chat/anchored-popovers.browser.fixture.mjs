@@ -89,7 +89,7 @@ const bundle = await build({
           // pages, account providers or theme media. No implementation is mocked.
           return {
             contents: `
-            import React,{useRef,useState,useId,useEffect} from 'react';
+            import React,{useRef,useState,useId,useEffect,useLayoutEffect,useMemo} from 'react';
             import {createPortal} from 'react-dom';
             import {Folder,GitBranch,Clock,UsersRound,Pin,Loader2,Wrench,Archive} from 'lucide-react';
             import {Button} from './components/ui/button';
