@@ -37,6 +37,15 @@ import { observeScrollProgress } from "./scroll-observation.js";
 import { createPuppeteerInspector } from "./browser-inspector.js";
 import { browserWaitTimeout, pageWaitCondition } from "./wait-condition.js";
 
+/** Command+key editing shortcuts macOS would route through its Edit menu. */
+const MAC_EDIT_COMMANDS: Record<string, string> = {
+  a: "selectAll",
+  c: "copy",
+  x: "cut",
+  v: "paste",
+  z: "undo",
+};
+
 export interface PuppeteerScreenshotRequest {
   /** Viewport-relative CSS pixels; the host owns native scale/zoom conversion. */
   region?: { x: number; y: number; width: number; height: number };
@@ -308,8 +317,28 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
   }
 
   navigate(url: string): Promise<BrowserResult> {
-    return this.resultAction(async () => {
-      await this.page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    return this.enqueue(async (scope) => {
+      const before = this.documentId();
+      try {
+        this.checkActive();
+        scope.check();
+        await this.page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+        this.checkActive();
+        return this.success(before);
+      } catch (error) {
+        // Navigation is expected to replace the document. Preserve a failed
+        // load's actual cause instead of treating that replacement as the error.
+        const failure = this.failure(error);
+        const documentId = this.documentId();
+        if (before === documentId || failure.code === "TARGET_CLOSED" || failure.code === "BLOCKED")
+          return failure;
+        return {
+          ...failure,
+          documentId,
+          documentChanged: true,
+          detail: `${failure.detail}; the page or a frame navigated; observe the new document`,
+        };
+      }
     });
   }
 
@@ -747,6 +776,13 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
       Return: "Enter",
     };
     const keys = combination.split("+").map((key) => (aliases[key] ?? key) as KeyInput);
+    const main = keys.at(-1)!;
+    // CDP key events never reach the macOS menu that turns Command+key into an
+    // editing command, so a dispatched Command+A selected nothing. Name it.
+    const command =
+      isMac && keys.length === 2 && keys[0] === "Meta"
+        ? MAC_EDIT_COMMANDS[String(main).toLowerCase()]
+        : undefined;
     const pressed: KeyInput[] = [];
     try {
       for (const modifier of keys.slice(0, -1)) {
@@ -755,7 +791,7 @@ export class PuppeteerBrowserDriver implements BrowserBridge {
         pressed.push(modifier);
       }
       this.checkActive();
-      await this.page.keyboard.press(keys.at(-1)!);
+      await this.page.keyboard.press(main, command ? { commands: [command] } : undefined);
     } finally {
       for (const modifier of pressed.reverse())
         await this.page.keyboard.up(modifier).catch(() => undefined);

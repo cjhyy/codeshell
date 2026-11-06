@@ -38,4 +38,6 @@ export interface BrowserRuntimeBackend {
   closeAll(): void;
   /** Abandon the owner's not-yet-submitted actions (its run was stopped). */
   cancelPending?(ownerId: string): void;
+  /** A new run starts; a target the user closed in an earlier run may reopen. */
+  beginRun?(ownerId: string): void;
 }

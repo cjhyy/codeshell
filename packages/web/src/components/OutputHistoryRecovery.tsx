@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import type {
   OutputHistoryRecoveryAcceptance,
   OutputHistoryRecoveryPlan,
@@ -23,7 +23,15 @@ export interface OutputHistoryRecoveryProps {
   onApplied(): void;
   t?: (key: WebTranslationKey, params?: Record<string, string | number>) => string;
   timeoutMs?: number;
+  /** A host stylesheet owns the card and its buttons; the inline fallback is dropped. */
+  className?: string;
 }
+
+/**
+ * A host shell provides this so a session whose recovery cannot pass is not a
+ * dead end: the user can continue in a fresh conversation instead.
+ */
+export const OutputHistoryRecoveryExit = createContext<(() => void) | undefined>(undefined);
 
 type Review =
   | { status: "idle" | "checking" | "applying" | "applied" }
@@ -138,6 +146,7 @@ export function useOutputHistoryRecovery(props: OutputHistoryRecoveryProps) {
 
 export function OutputHistoryRecovery(props: OutputHistoryRecoveryProps) {
   const { review, check, confirm, cancel } = useOutputHistoryRecovery(props);
+  const startNew = useContext(OutputHistoryRecoveryExit);
   const t = props.t ?? translate;
   if (!props.failed && !props.historicalGap && review.status !== "applied") return null;
   const prefix = "mobile.historyRecovery.";
@@ -147,13 +156,18 @@ export function OutputHistoryRecovery(props: OutputHistoryRecoveryProps) {
     <section
       role="status"
       aria-live="polite"
-      style={{
-        padding: "12px 16px",
-        border: "1px solid currentColor",
-        borderRadius: 8,
-        margin: "8px 0",
-        fontSize: 13,
-      }}
+      className={props.className}
+      style={
+        props.className
+          ? undefined
+          : {
+              padding: "12px 16px",
+              border: "1px solid currentColor",
+              borderRadius: 8,
+              margin: "8px 0",
+              fontSize: 13,
+            }
+      }
     >
       <strong>{t(gap ? `${prefix}gapTitle` : `${prefix}title`)}</strong>
       <p>{t(gap ? `${prefix}gapNotice` : `${prefix}failed`)}</p>
@@ -184,6 +198,14 @@ export function OutputHistoryRecovery(props: OutputHistoryRecoveryProps) {
                   : `${prefix}check`,
             )}
           </button>
+          {startNew ? (
+            <>
+              {" "}
+              <button type="button" disabled={pending} onClick={startNew}>
+                {t(`${prefix}startNew`)}
+              </button>
+            </>
+          ) : null}
         </>
       ) : null}
     </section>

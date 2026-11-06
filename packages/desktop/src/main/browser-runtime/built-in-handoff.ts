@@ -195,7 +195,10 @@ export class BuiltInTabClaimBackend {
         ok: false,
         code: "NEEDS_HUMAN",
         retryable: false,
-        detail: "the granted built-in browser tab was closed; grant another tab or use the Runtime",
+        detail:
+          "The granted BrowserPanel tab was closed. Stop browser actions; do not reopen it or " +
+          "switch to another target automatically. The user must explicitly grant a tab again " +
+          "or select another browser source through the browser UI before continuing.",
       });
     }
 
@@ -205,7 +208,9 @@ export class BuiltInTabClaimBackend {
       return JSON.stringify({
         ok: true,
         code: "OK",
-        detail: "Browser control released; explicitly resume after the user finishes.",
+        detail:
+          "Control of the granted BrowserPanel tab is released for the user. " +
+          "Panel visibility is unchanged; explicitly resume after the user finishes.",
       });
     }
     const controlEpoch = grant.controlEpoch;

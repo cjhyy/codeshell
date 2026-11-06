@@ -164,25 +164,63 @@ export async function captureAllCookiesFromSessions(
   return { jar, count: jar.length };
 }
 
+/** What a Cookie restore actually did to the target jar. */
+export interface CookieRestoreResult {
+  /** Cookies written (cookies.set resolved). */
+  count: number;
+  /** Cookies already past their expiry, skipped because Chromium would drop them. */
+  expired: number;
+  /** Cookies cookies.set refused. */
+  failed: number;
+  /** The first few refusals with Chromium's reason. */
+  failures: { name: string; domain: string; reason: string }[];
+  /** Written cookies found again when the jar is read back afterwards. */
+  verified: number;
+}
+
+const MAX_REPORTED_FAILURES = 10;
+
 /**
  * 切换账号:把某账号的 cookie jar 导回 persist:browser 覆盖当前登录态(设计稿 §5.5)。
  * mode="merge"(默认)跳过清空,只逐条 set(覆盖同名、保留分区里其他站的登录态);
  * mode="clear" 先**清空整分区 cookie**(干净换号),再逐条 set。
- * 仅 cookie,不动 localStorage(已知局限)。返回成功写入的条数。
+ * 仅 cookie,不动 localStorage(已知局限)。
+ *
+ * 返回值区分「写入」「已过期跳过」「被拒绝」与「回读确认」:写入条数本身
+ * 不能说明目标 jar 里真的有这些 Cookie,更不能说明已登录。
  */
 export async function restoreCookiesToBrowser(
   jar: ElectronCookieLike[],
   mode: "clear" | "merge" = "merge",
   partition?: string | Electron.Session,
-): Promise<{ count: number }> {
+  now: () => number = Date.now,
+): Promise<CookieRestoreResult> {
   if (!isRestorableCookieJar(jar)) throw new Error("Cookie credential is empty or malformed");
   const sess = await browserSession(partition);
   if (mode !== "merge") await sess.clearStorageData({ storages: ["cookies"] });
-  let count = 0;
+  const nowSeconds = now() / 1000;
+  const written: ElectronCookieLike[] = [];
+  let expired = 0;
+  let failed = 0;
+  const failures: CookieRestoreResult["failures"] = [];
+  const fail = (c: ElectronCookieLike, reason: string) => {
+    failed++;
+    if (failures.length < MAX_REPORTED_FAILURES) {
+      failures.push({ name: c.name, domain: c.domain ?? "", reason });
+    }
+  };
   for (const c of jar) {
+    // Chromium drops an already-expired cookie on write; it was never usable.
+    if (typeof c.expirationDate === "number" && c.expirationDate <= nowSeconds) {
+      expired++;
+      continue;
+    }
     // Electron cookies.set 需要一个 url 推断 secure/domain 上下文。
     const host = (c.domain ?? "").replace(/^\./, "");
-    if (!host) continue;
+    if (!host) {
+      fail(c, "missing domain");
+      continue;
+    }
     const scheme = c.secure ? "https" : "http";
     const url = `${scheme}://${host}${c.path ?? "/"}`;
     try {
@@ -200,12 +238,34 @@ export async function restoreCookiesToBrowser(
         sameSite: (c as { sameSite?: "unspecified" | "no_restriction" | "lax" | "strict" })
           .sameSite,
       });
-      count++;
-    } catch {
-      // 个别 cookie 因 host/secure 约束 set 失败时跳过,不中断整批导回。
+      written.push(c);
+    } catch (error) {
+      // 个别 cookie 因 host/secure 约束 set 失败时跳过,不中断整批导回,但要报出来。
+      fail(c, error instanceof Error ? error.message : String(error));
     }
   }
-  return { count };
+  const verified = await countCookiesPresent(sess, written);
+  return { count: written.length, expired, failed, failures, verified };
+}
+
+/** Read the jar back and count how many of the written cookies it now holds. */
+async function countCookiesPresent(
+  sess: Electron.Session,
+  written: ElectronCookieLike[],
+): Promise<number> {
+  const bare = (domain: string | undefined) => (domain ?? "").replace(/^\./, "");
+  const key = (c: { name: string; domain?: string | null; path?: string | null }) =>
+    [bare(c.domain ?? undefined), c.name, c.path ?? "/"].join("\t");
+  const present = new Set<string>();
+  try {
+    for (const domain of new Set(written.map((c) => bare(c.domain)))) {
+      for (const c of await sess.cookies.get({ domain })) present.add(key(c));
+    }
+  } catch {
+    // An unreadable jar verifies nothing; the caller reports the gap.
+    return 0;
+  }
+  return written.filter((c) => present.has(key(c))).length;
 }
 
 /** Materialize a temporary cookies.txt for `domain`; returns its path. Caller cleans up. */

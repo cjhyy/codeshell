@@ -20,6 +20,7 @@ interface InAppTargetPool {
   close(ownerId: string): void;
   closeAll(): void;
   cancelPending?(ownerId: string): void;
+  beginRun?(ownerId: string): void;
 }
 
 export interface InAppBrowserBackendOptions {
@@ -66,12 +67,11 @@ export class InAppBrowserBackend implements BrowserRuntimeBackend {
     });
     return {
       kind: this.kind,
-      // Stamp the identity the model sees. Only this layer knows which
-      // partition the session resolved to, and browser_observe renders it so
-      // the model can tell a sandbox from a real logged-in browser.
+      // Share the profile identity without claiming to control a BrowserPanel
+      // tab: this lease owns a separate task window, initially hidden.
       bridge: withIdentity(lease.bridge, {
         profileId: partition,
-        sourceKind: "builtin-panel",
+        sourceKind: "builtin-task-window",
       }),
       canReveal: true,
       show: () => lease.show(),
@@ -86,6 +86,10 @@ export class InAppBrowserBackend implements BrowserRuntimeBackend {
 
   cancelPending(ownerId: string): void {
     this.targetPool.cancelPending?.(ownerId);
+  }
+
+  beginRun(ownerId: string): void {
+    this.targetPool.beginRun?.(ownerId);
   }
 
   closeAll(): void {

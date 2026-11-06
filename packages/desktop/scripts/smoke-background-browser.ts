@@ -8,7 +8,7 @@
  */
 
 import { createServer } from "node:http";
-import { app, type WebContents } from "electron";
+import { app, BrowserWindow, type WebContents } from "electron";
 import { driverFor } from "../src/main/browser-driver/electron-cdp.js";
 import {
   BackgroundBrowserRuntime,
@@ -169,6 +169,32 @@ async function main(): Promise<void> {
       throw new Error("explicit recovery changed the task's logical tab handle");
     }
 
+    // The user closing the revealed window is a stop: nothing in this run may
+    // reopen it, however often the agent retries; the next run may.
+    await lease.show();
+    const revealed = contents && BrowserWindow.fromWebContents(contents);
+    if (!revealed?.isVisible()) throw new Error("takeover did not reveal the task window");
+    const closedByUser = new Promise<void>((resolve) => revealed.once("closed", () => resolve()));
+    revealed.close();
+    await closedByUser;
+    const windowsAfterClose = BrowserWindow.getAllWindows().length;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const retried = await lease.bridge.navigate(page.url);
+      if (retried.ok || retried.code !== "TARGET_CLOSED") {
+        throw new Error("navigation reopened a window the user closed in this run");
+      }
+      if ((await lease.bridge.requestHumanTakeover!()).ok) {
+        throw new Error("takeover reopened a window the user closed in this run");
+      }
+    }
+    if (BrowserWindow.getAllWindows().length !== windowsAfterClose) {
+      throw new Error("a retry created a browser window after the user closed it");
+    }
+    runtime.beginRun(owner.ownerId);
+    if (!(await lease.bridge.navigate(page.url)).ok) {
+      throw new Error("a new run could not reopen the closed task window");
+    }
+
     // eslint-disable-next-line no-console
     console.log(
       JSON.stringify({
@@ -179,6 +205,7 @@ async function main(): Promise<void> {
         runtime: runtime.stats(),
         keyboardShortcut: true,
         targetRecovery: true,
+        userCloseStopsRun: true,
       }),
     );
   } finally {

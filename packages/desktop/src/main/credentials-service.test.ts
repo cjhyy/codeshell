@@ -93,6 +93,7 @@ const getCalls: Array<{ partition: string; filter: unknown }> = [];
 const clearCalls: Array<{ partition: string; opts: unknown }> = [];
 const setCalls: Array<{ partition: string; cookie: unknown }> = [];
 const partitionCookies = new Map<string, ElectronCookieLike[]>();
+const rejectCookieNames = new Set<string>();
 const sessionByPartition = new Map<string, Electron.Session>();
 
 function mockedSession(partition: string): Electron.Session {
@@ -106,6 +107,16 @@ function mockedSession(partition: string): Electron.Session {
       },
       set: async (cookie: unknown) => {
         setCalls.push({ partition, cookie });
+        if (rejectCookieNames.has((cookie as { name: string }).name)) {
+          throw new Error("Failed to set cookie");
+        }
+        const set = cookie as { url: string; domain?: string; name: string; path?: string };
+        const stored = partitionCookies.get(partition) ?? [];
+        stored.push({
+          ...set,
+          domain: set.domain ?? new URL(set.url).hostname,
+        } as ElectronCookieLike);
+        partitionCookies.set(partition, stored);
       },
     },
     clearStorageData: async (opts: unknown) => {
@@ -134,6 +145,7 @@ beforeEach(() => {
   clearCalls.length = 0;
   setCalls.length = 0;
   partitionCookies.clear();
+  rejectCookieNames.clear();
   sessionByPartition.clear();
 });
 
@@ -338,5 +350,48 @@ describe("restoreCookiesToBrowser", () => {
       path: "/",
       secure: true,
     });
+  });
+
+  test("reports expired, refused and read-back cookies instead of a bare count", async () => {
+    rejectCookieNames.add("refused");
+    const now = Date.UTC(2026, 10, 5);
+    const result = await restoreCookiesToBrowser(
+      [
+        { domain: ".example.com", path: "/", name: "sid", value: "live" },
+        {
+          domain: ".example.com",
+          path: "/",
+          name: "old",
+          value: "x",
+          expirationDate: now / 1000 - 60,
+        },
+        { domain: "example.com", hostOnly: true, path: "/", name: "refused", value: "x" },
+      ],
+      "merge",
+      mockedSession("persist:browser:p:verify"),
+      () => now,
+    );
+    expect(result).toEqual({
+      count: 1,
+      expired: 1,
+      failed: 1,
+      failures: [{ name: "refused", domain: "example.com", reason: "Failed to set cookie" }],
+      verified: 1,
+    });
+    expect(setCalls.map((call) => (call.cookie as { name: string }).name)).toEqual([
+      "sid",
+      "refused",
+    ]);
+  });
+
+  test("a write the jar does not hold afterwards is not verified", async () => {
+    const browserSession = mockedSession("persist:browser:p:dropped");
+    browserSession.cookies.get = async () => [];
+    const result = await restoreCookiesToBrowser(
+      [{ domain: ".example.com", path: "/", name: "sid", value: "abc" }],
+      "merge",
+      browserSession,
+    );
+    expect(result).toMatchObject({ count: 1, verified: 0 });
   });
 });

@@ -285,6 +285,18 @@ export function registeredPartitionForBucket(bucket: string | undefined): Browse
   return partitionByBucket.get(bucket) ?? null;
 }
 
+/**
+ * Buckets with a live panel tab on this partition. Projects share one profile,
+ * so a Cookie restore must refresh every one of them, not only the caller's.
+ */
+export function bucketsWithLiveGuestsForPartition(partition: BrowserPartition): BrowserBucket[] {
+  const buckets = new Set<BrowserBucket>();
+  for (const record of liveRecords()) {
+    if (record.partition === partition) buckets.add(record.bucket);
+  }
+  return [...buckets];
+}
+
 export function listGuestsForBucket(bucket: BrowserBucket): GuestTab[] {
   const cur = activeGuestForBucket(bucket);
   const out: GuestTab[] = [];

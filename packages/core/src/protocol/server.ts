@@ -4166,6 +4166,7 @@ export class AgentServer {
     return {
       requestHumanTakeover: () => call("requestTakeover", {}),
       resumeControl: () => call("resumeControl", {}),
+      requestPanelAccess: () => call("requestPanelAccess", {}),
       inspect: (inspect) => call("inspect", { inspect }),
       snapshot: () => call("snapshot", {}),
       click: (ref) => call("click", { ref }),
@@ -4258,7 +4259,7 @@ export class AgentServer {
     credentialScope: "full" | "project" = "full",
     scope?: ChildHostScope,
     expectedApprovalIdentity?: string,
-  ): Promise<{ ok: boolean; count?: number; error?: string }> {
+  ): ReturnType<import("../tool-system/context.js").InjectCredentialFn> {
     const failure = scope?.failure();
     if (failure)
       return Promise.resolve({ ok: false, error: `${failure.failure}: ${failure.reason}` });
@@ -4273,7 +4274,9 @@ export class AgentServer {
           const parsed = parseHostLoopbackDecision(decision, "credential inject");
           resolve(
             parsed.ok
-              ? (parsed.value as { ok: boolean; count?: number; error?: string })
+              ? (parsed.value as Awaited<
+                  ReturnType<import("../tool-system/context.js").InjectCredentialFn>
+                >)
               : { ok: false, error: parsed.detail },
           );
         },

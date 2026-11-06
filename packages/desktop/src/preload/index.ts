@@ -41,6 +41,7 @@ import { createComputerUseSettingsApi } from "./computer-use-api";
 import { createSessionTranscriptApi } from "./session-transcript-api";
 import { createBackgroundWorkApi, type BackgroundJobProgress } from "./background-work-api";
 import { createModelTraceApi } from "./model-trace-api";
+import { createBrowserPanelAccessApi } from "./browser-panel-access-api";
 import { createProfilePluginExportApi } from "./profile-plugin-export-api";
 import { createProfileMemoryPromotionApi } from "./profile-memory-promotion-api";
 import { createPetApi } from "./pet-api";
@@ -980,6 +981,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
   ...createSessionTranscriptApi(ipcRenderer),
   modelTraces: createModelTraceApi(ipcRenderer),
+  browserPanelAccess: createBrowserPanelAccessApi(ipcRenderer),
   /**
    * Re-subscribe to a session's main-held event snapshot after a remount.
    * Returns events past `sinceSeq` plus the next cursor, so the renderer can

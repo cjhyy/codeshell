@@ -319,7 +319,7 @@ try {
         } else {
           target =
             owner === "sidebar"
-              ? page.getByRole("button", { name: "Link", exact: true })
+              ? page.getByRole("button", { name: "Skills", exact: true })
               : toggle(page);
           await target.focus();
         }
@@ -358,7 +358,7 @@ try {
     assert.notEqual(await page.locator(".workbench-main").getAttribute("inert"), null);
     if (kind === "close") await page.keyboard.press("Enter");
     if (kind === "escape") {
-      await page.getByRole("button", { name: "Link", exact: true }).focus();
+      await page.getByRole("button", { name: "Skills", exact: true }).focus();
       await page.keyboard.press("Escape");
     }
     if (kind === "backdrop")
@@ -394,7 +394,7 @@ try {
         target = mainInput(page);
         await target.focus();
       } else if (owner === "sidebar") {
-        target = page.getByRole("button", { name: "Link", exact: true });
+        target = page.getByRole("button", { name: "Skills", exact: true });
         await target.focus();
       } else target = await outside(page, "blank", 720);
       // No frame or refocus between viewport updates: coalesced media changes remain owned.
@@ -460,7 +460,7 @@ try {
   for (const kind of ["field", "pointer", "svg", "blur", "workspace", "unmount"])
     for (const timing of ["before-commit", "after-commit"]) {
       const page = await mount(1280, 720, "light", true);
-      await page.getByRole("button", { name: "Link", exact: true }).focus();
+      await page.getByRole("button", { name: "Skills", exact: true }).focus();
       await page.evaluate(
         ({ kind, timing }) => {
           const field = document.getElementById("outside-field"),

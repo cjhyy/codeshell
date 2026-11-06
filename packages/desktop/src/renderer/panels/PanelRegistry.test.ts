@@ -10,6 +10,7 @@ import {
 } from "./PanelRegistry";
 import { installQuickChatPanelApp, QUICK_CHAT_PANEL_APP_ID } from "./apps/quickChatPanelApp";
 import { DESKTOP_BUILTIN_PANEL_APP_RUNTIME } from "./DesktopBuiltinPanelApp";
+import { browserPartitionForBucket } from "../../shared/browser-profile";
 
 installQuickChatPanelApp();
 
@@ -38,6 +39,47 @@ function renderBrowser(context: Partial<PanelRenderContext> & { bucket: string }
 }
 
 describe("PanelRegistry", () => {
+  function browserPartition(bucket: string): string {
+    const rendered = getPanelEntry("browser")!.render({
+      projectPath: "/repo",
+      cwd: "/repo",
+      engineSessionId: bucket.split("::")[1] ?? null,
+      tabId: "browser-1",
+      bucket,
+      busy: false,
+      visible: true,
+      foregroundVisible: true,
+      modelKey: null,
+      permissionMode: "default",
+      planMode: false,
+      hasGoal: false,
+    }) as ReactElement<{ partition: string }>;
+    return rendered.props.partition;
+  }
+
+  it("mounts the visible browser in the same project profile as tools and cookie injection", () => {
+    const first = browserPartition("project-1::session-a");
+    const second = browserPartition("project-1::session-b");
+    const otherProject = browserPartition("project-2::session-a");
+
+    expect(first).toBe(browserPartitionForBucket("project-1::session-a"));
+    expect(first).toBe("persist:browser:p:project-1");
+    expect(second).toBe(first);
+    expect(otherProject).toBe("persist:browser:p:project-2");
+    expect(otherProject).not.toBe(first);
+  });
+
+  it("keeps each Quick Chat browser temporary and isolated", () => {
+    const first = browserPartition("__quick_chat__::qchat-a");
+    const second = browserPartition("__quick_chat__::qchat-b");
+
+    expect(first).toBe(browserPartitionForBucket("__quick_chat__::qchat-a"));
+    expect(first).toStartWith("browser:qchat:");
+    expect(first).not.toStartWith("persist:");
+    expect(second).not.toBe(first);
+    expect(second).not.toStartWith("persist:");
+  });
+
   it("registers every built-in panel in display order", () => {
     expect([...PANEL_REGISTRY.keys()]).toEqual(PANEL_KEYS);
 

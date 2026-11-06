@@ -12,7 +12,7 @@
  */
 
 import type { ToolDefinition } from "../types.js";
-import type { ToolContext } from "../tool-system/context.js";
+import type { CredentialInjectReport, ToolContext } from "../tool-system/context.js";
 import {
   credentialUseGate,
   type SessionCredentialAllow,
@@ -60,7 +60,16 @@ export const injectCredentialToolDef: ToolDefinition = {
   },
 };
 
-type InjectResult = { kind: "injected"; count: number } | { kind: "error"; error: string };
+type InjectResult =
+  | ({ kind: "injected"; count: number; note: string } & CredentialInjectReport)
+  | { kind: "error"; error: string };
+
+// A written cookie count was repeatedly reported to users as "logged in" while
+// the visible panel read a different jar. Say what the numbers do not prove.
+const INJECTED_NOTE =
+  "Cookies were written to the jar named in `partition`; this does not prove the site " +
+  "is signed in. Observe the page for a signed-in signal before reporting login status. " +
+  "If `verified` is below `count`, or `failed` is non-zero, say the restore was partial.";
 
 /** 内存会话 allow 集(每 Engine 一份,与 UseCredential 分开:注入是独立动作)。 */
 const injectSessionAllowByEngine = new Map<string, SessionCredentialAllow>();
@@ -173,7 +182,8 @@ export async function injectCredentialTool(
   if (!res.ok) {
     return json({ kind: "error", error: res.error ?? "注入浏览器失败(宿主未返回成功)。" });
   }
-  return json({ kind: "injected", count: res.count ?? 0 });
+  const { ok: _ok, count, error: _error, ...report } = res;
+  return json({ kind: "injected", count: count ?? 0, ...report, note: INJECTED_NOTE });
 }
 
 function json(r: InjectResult): string {

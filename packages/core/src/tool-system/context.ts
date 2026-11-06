@@ -611,12 +611,33 @@ export interface ToolContext {
   injectCredentialToBrowser?: InjectCredentialFn;
 }
 
+/**
+ * Where an injected credential went. Optional: older hosts report only `count`.
+ * Writing cookies is not signing in; these fields let the tool say which jar
+ * was written and how much of the credential actually landed there.
+ */
+export interface CredentialInjectReport {
+  /** Electron partition (cookie jar) written. */
+  partition?: string;
+  /** "panel-tab": through a mounted BrowserPanel tab; "partition-only": no tab was mounted. */
+  target?: "panel-tab" | "partition-only";
+  /** Cookies skipped because they had already expired. */
+  expired?: number;
+  /** Cookies the browser refused. */
+  failed?: number;
+  failures?: { name: string; domain: string; reason: string }[];
+  /** Written cookies read back from the jar afterwards. */
+  verified?: number;
+  /** Chat workspaces whose panel tabs on this jar were reloaded. */
+  reloadedPanels?: number;
+}
+
 /** Inject a cookie credential into the built-in browser (host-implemented). */
 export type InjectCredentialFn = (
   credentialId: string,
   credentialScope?: "full" | "project",
   expectedApprovalIdentity?: string,
-) => Promise<{ ok: boolean; count?: number; error?: string }>;
+) => Promise<{ ok: boolean; count?: number; error?: string } & CredentialInjectReport>;
 
 /**
  * Per-Engine container that produces a fresh ToolContext on demand.
