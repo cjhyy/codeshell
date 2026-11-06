@@ -846,7 +846,8 @@ test("merges a message that arrives while the first turn is still preparing", as
   const firstRun = deferred<{ ok: true; result: { text: string } }>();
   const steerRequested = deferred<void>();
   let outbound:
-    ((line: string, snapshotEntry?: { sessionId: string; event: unknown }) => void) | undefined;
+    | ((line: string, snapshotEntry?: { sessionId: string; event: unknown }) => void)
+    | undefined;
   const calls: string[] = [];
   const service = new PetDispatchService({
     metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
