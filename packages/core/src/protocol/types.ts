@@ -142,6 +142,11 @@ export interface RunParams {
     segmentId?: string;
     /** Host-authored replacement for the archived span; skips the summarizer. */
     summary?: string;
+    /**
+     * Host-authored replacement used only when the cheap notes rollover is
+     * unavailable; avoids a blocking summarizer call before the first reply.
+     */
+    fallbackSummary?: string;
   };
   /** Desktop host ownership generation for process-local Quick Chat runs. */
   quickChatClaimId?: string;

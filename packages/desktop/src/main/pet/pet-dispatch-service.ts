@@ -2590,7 +2590,14 @@ export class PetDispatchService {
                       }
                     : {}),
                   segmentId: segmentTurn.closedSegment.segmentId,
-                  ...(segmentTurn.archiveSummary ? { summary: segmentTurn.archiveSummary } : {}),
+                  ...(segmentTurn.archiveSummary
+                    ? { summary: segmentTurn.archiveSummary }
+                    : {
+                        fallbackSummary: [
+                          "Earlier conversation from the previous topic segment was archived. Its journal entry and memories are produced in the background; use SearchHistory for specific details.",
+                          ...(segmentTurn.carryoverBrief ? [segmentTurn.carryoverBrief] : []),
+                        ].join("\n\n"),
+                      }),
                 },
               }
             : {}),

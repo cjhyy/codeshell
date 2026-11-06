@@ -2170,8 +2170,42 @@ describe("PetDispatchService", () => {
     expect(runParams?.archiveBeforeCurrentTurn).toEqual({
       fromClientMessageId: "client-old",
       segmentId: "seg-old",
+      fallbackSummary: expect.stringContaining("SearchHistory"),
     });
     expect(completed).toEqual(["seg-old"]);
+  });
+
+  test("builds a fallback archive summary from the carryover brief", async () => {
+    let runParams: Record<string, unknown> | undefined;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          runParams = params;
+          return { ok: true, result: { text: "reply" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      segmentController: {
+        beginTurn: async () => ({
+          closedSegment: { segmentId: "s1", nextBoundaryMessageId: "m1", startedAt: 0, endedAt: 1 },
+          carryoverBrief: "open: X",
+        }),
+        completeSegmentClosure: async () => {},
+        onDelegationClosed: async () => {},
+      },
+    });
+
+    await service.dispatch({ type: "chat", message: "new topic", clientMessageId: "m1" });
+
+    const archive = runParams?.archiveBeforeCurrentTurn as { fallbackSummary?: string };
+    expect(archive.fallbackSummary).toContain("open: X");
+    expect(archive.fallbackSummary).toContain("SearchHistory");
+    expect(validatePetRunParams(runParams ?? {})).toBeNull();
   });
 
   test("forwards the fixed manual-clear summary to the pre-model archive boundary", async () => {

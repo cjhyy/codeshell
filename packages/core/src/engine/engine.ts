@@ -1860,6 +1860,12 @@ export class Engine {
           this.compactedMessagesBySession.delete(session.state.sessionId);
           session.state.contextUsageAnchor = undefined;
           archiveStrategy = "notes";
+        } else if (options.archiveBeforeCurrentTurn.fallbackSummary) {
+          // Host-supplied stand-in: no model call blocks the first reply.
+          await this.appendArchiveMarker(session.state.sessionId, {
+            ...anchors,
+            summary: options.archiveBeforeCurrentTurn.fallbackSummary,
+          });
         } else {
           await this.archiveTurnRange(session.state.sessionId, { start: 0, end: 0 }, anchors);
         }

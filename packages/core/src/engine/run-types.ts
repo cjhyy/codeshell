@@ -184,6 +184,11 @@ export interface EngineRunOptions {
     segmentId?: string;
     /** Host-authored replacement for the archived span; skips the summarizer. */
     summary?: string;
+    /**
+     * Host-authored replacement used only when the cheap notes rollover is
+     * unavailable; avoids a blocking summarizer call before the first reply.
+     */
+    fallbackSummary?: string;
   };
   attachments?: InputAttachmentMeta[];
   /** Named per-run behavior profile supplied by interactive product surfaces. */

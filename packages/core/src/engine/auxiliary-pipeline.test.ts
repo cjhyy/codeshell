@@ -7,7 +7,7 @@ import type { SettingsManager } from "../settings/manager.js";
 import type { ToolRegistry } from "../tool-system/registry.js";
 import type { ToolContext } from "../tool-system/context.js";
 import type { EngineConfig } from "./types.js";
-import { AuxiliaryPipeline, sameLlmIdentity } from "./auxiliary-pipeline.js";
+import { AuxiliaryPipeline, buildSummarizeFn, sameLlmIdentity } from "./auxiliary-pipeline.js";
 
 const base: LLMConfig = {
   apiKey: "primary-key",
@@ -135,5 +135,26 @@ describe("AuxiliaryPipeline current model metadata", () => {
       throw new Error("No network calls allowed");
     };
     expect(await pipeline.resolveAuxClient(fallback)).not.toBe(updated);
+  });
+});
+
+describe("buildSummarizeFn", () => {
+  it("rejects a truncated summary and asks for 4096 tokens", async () => {
+    let requested = 0;
+    const summarize = buildSummarizeFn({
+      createMessage: async (req: { maxTokens: number }) => {
+        requested = req.maxTokens;
+        return { text: "partial", stopReason: "length" };
+      },
+    } as never);
+    await expect(summarize("prompt")).rejects.toThrow(/output token budget/);
+    expect(requested).toBe(4096);
+  });
+
+  it("returns the text of a completed summary", async () => {
+    const summarize = buildSummarizeFn({
+      createMessage: async () => ({ text: "full summary", stopReason: "end_turn" }),
+    } as never);
+    expect(await summarize("prompt")).toBe("full summary");
   });
 });

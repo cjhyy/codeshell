@@ -54,7 +54,7 @@ export function buildSummarizeFn(
       systemPrompt: "You are a conversation summarizer. Be concise and factual.",
       messages: [{ role: "user", content: prompt }],
       tools: [],
-      maxTokens: 1024,
+      maxTokens: 4096,
       billingEnabled: true,
       requestVisible: false,
       usagePurpose: purpose,
@@ -62,6 +62,10 @@ export function buildSummarizeFn(
       signal,
     });
     if (response.usage) recordCumulativeUsage?.(response.usage);
+    // Summaries replace real history; a truncated one silently loses context.
+    if (response.stopReason === "length" || response.stopReason === "max_tokens") {
+      throw new Error("Summary exceeded its output token budget; discarded partial text");
+    }
     return response.text;
   };
 }
