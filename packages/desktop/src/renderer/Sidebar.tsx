@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -1307,13 +1308,59 @@ function SessionHoverCard({
   );
 }
 
-/**
- * Memoized: the parent re-renders on every branch backfill and status tick, which
- * previously re-rendered every mounted row. Callbacks are recreated per parent
- * render, so compare by the values that actually change the output.
- */
-const SessionRow = React.memo(
-  function SessionRow({
+interface SessionRowProps {
+  s: SessionSummary;
+  isActive: boolean;
+  status?: SessionStatus;
+  worktreeBranch?: string;
+  branch?: string;
+  folderName: string;
+  rootStatus?: SessionWorkspaceAuthority["rootStatus"];
+  rootStatusMessage?: string;
+  repairTargetRootId?: string;
+  showKbd: boolean;
+  kbdIndex: number;
+  onClick: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+  onPin?: () => void;
+  onArchive?: () => void;
+  onRepair?: () => void;
+  onHover?: () => void;
+}
+
+function SessionRow(props: SessionRowProps) {
+  // A cold row can look unchanged while runtime readiness or authority changes.
+  // Keep actions current without re-rendering its memoized view on every tick.
+  const latest = useRef(props);
+  useLayoutEffect(() => {
+    latest.current = props;
+  });
+  const actions = useMemo(
+    () => ({
+      onClick: () => latest.current.onClick(),
+      onContextMenu: (event: React.MouseEvent) => latest.current.onContextMenu(event),
+      onPin: () => latest.current.onPin?.(),
+      onArchive: () => latest.current.onArchive?.(),
+      onRepair: () => latest.current.onRepair?.(),
+      onHover: () => latest.current.onHover?.(),
+    }),
+    [],
+  );
+  return (
+    <SessionRowView
+      {...props}
+      onClick={actions.onClick}
+      onContextMenu={actions.onContextMenu}
+      onPin={props.onPin ? actions.onPin : undefined}
+      onArchive={props.onArchive ? actions.onArchive : undefined}
+      onRepair={props.onRepair ? actions.onRepair : undefined}
+      onHover={props.onHover ? actions.onHover : undefined}
+    />
+  );
+}
+
+const SessionRowView = React.memo(
+  function SessionRowView({
     s,
     isActive,
     status,
@@ -1331,25 +1378,7 @@ const SessionRow = React.memo(
     onArchive,
     onRepair,
     onHover,
-  }: {
-    s: SessionSummary;
-    isActive: boolean;
-    status?: SessionStatus;
-    worktreeBranch?: string;
-    branch?: string;
-    folderName: string;
-    rootStatus?: SessionWorkspaceAuthority["rootStatus"];
-    rootStatusMessage?: string;
-    repairTargetRootId?: string;
-    showKbd: boolean;
-    kbdIndex: number;
-    onClick: () => void;
-    onContextMenu: (e: React.MouseEvent) => void;
-    onPin?: () => void;
-    onArchive?: () => void;
-    onRepair?: () => void;
-    onHover?: () => void;
-  }) {
+  }: SessionRowProps) {
     const { t, lang } = useT();
     const [confirming, setConfirming] = useState(false);
     const [hoverCardOpen, setHoverCardOpen] = useState(false);
@@ -1371,6 +1400,13 @@ const SessionRow = React.memo(
         if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
       };
     }, []);
+
+    useEffect(() => {
+      if (!onArchive) {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        setConfirming(false);
+      }
+    }, [onArchive]);
 
     const armConfirm = (e: React.MouseEvent): void => {
       e.stopPropagation();
@@ -1514,7 +1550,7 @@ const SessionRow = React.memo(
             </Button>
           )}
           <span className="relative flex shrink-0 items-center">
-            {confirming ? (
+            {confirming && onArchive ? (
               <Button
                 type="button"
                 variant="ghost"
@@ -1615,7 +1651,13 @@ const SessionRow = React.memo(
     prev.rootStatusMessage === next.rootStatusMessage &&
     prev.repairTargetRootId === next.repairTargetRootId &&
     prev.showKbd === next.showKbd &&
-    prev.kbdIndex === next.kbdIndex,
+    prev.kbdIndex === next.kbdIndex &&
+    prev.onClick === next.onClick &&
+    prev.onContextMenu === next.onContextMenu &&
+    prev.onPin === next.onPin &&
+    prev.onArchive === next.onArchive &&
+    prev.onRepair === next.onRepair &&
+    prev.onHover === next.onHover,
 );
 
 export function formatRelative(ts: number, lang: "zh" | "en", now = Date.now()): string {

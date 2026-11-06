@@ -73,7 +73,10 @@ afterEach(async () => {
   root = null;
 });
 
-function ProjectGroupHarness({ revealedSessionId }: { revealedSessionId?: string } = {}) {
+function ProjectGroupHarness({
+  revealedSessionId,
+  ...overrides
+}: Partial<React.ComponentProps<typeof ProjectGroup>> = {}) {
   const [collapsed, setCollapsed] = useState(false);
   return React.createElement(ProjectGroup, {
     project,
@@ -93,8 +96,115 @@ function ProjectGroupHarness({ revealedSessionId }: { revealedSessionId?: string
     onPinSession: () => undefined,
     onArchiveSession: () => undefined,
     workspaceChange: null,
+    ...overrides,
   });
 }
+
+describe("Sidebar current session actions", () => {
+  test("a visually unchanged cold row selects with the latest runtime readiness", async () => {
+    ensureMiniDom();
+    Object.assign(window, {
+      codeshell: { getProjectGitStatus: async () => ({}) },
+    });
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    const selected: string[] = [];
+    const resetRuntime: string[] = [];
+    const render = async (runtimeReady: boolean) => {
+      await act(async () => {
+        root?.render(
+          React.createElement(ProjectGroupHarness, {
+            onSelectSession: (id) => {
+              if (!runtimeReady) resetRuntime.push(id);
+              selected.push(id);
+            },
+          }),
+        );
+        await flushMicrotasks();
+      });
+    };
+    await render(false);
+    const coldRow = buttonWithText(container, "Session 8");
+    const coldRowProps = reactPropsOf(coldRow);
+    await render(true);
+    const readyRow = buttonWithText(container, "Session 8");
+    // Callback refreshes must not undo the expensive row's memoization.
+    expect(readyRow === coldRow).toBe(true);
+    expect(reactPropsOf(readyRow) === coldRowProps).toBe(true);
+    await act(async () => {
+      reactPropsOf(readyRow).onClick();
+      await flushMicrotasks();
+    });
+    expect(selected).toEqual(["session-8"]);
+    expect(resetRuntime).toEqual([]);
+  });
+
+  test("optional local actions disappear and return when runtime authority changes", async () => {
+    ensureMiniDom();
+    Object.assign(window, {
+      codeshell: { getProjectGitStatus: async () => ({}) },
+    });
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    const actions: string[] = [];
+    const render = async (localRuntime: boolean, revision: string) => {
+      await act(async () => {
+        root?.render(
+          React.createElement(ProjectGroupHarness, {
+            localRuntime,
+            onPinSession: (id) => actions.push(`pin:${revision}:${id}`),
+            onArchiveSession: (id) => actions.push(`archive:${revision}:${id}`),
+            onSessionContextMenu: (_event, session) =>
+              actions.push(`menu:${revision}:${session.id}`),
+          }),
+        );
+        await flushMicrotasks();
+      });
+    };
+    const actionButton = (label: string) =>
+      findElements(container, "BUTTON").find(
+        (button) => reactPropsOf(button)["aria-label"] === label,
+      );
+    const row = () => findElements(container, "LI")[0];
+    await render(true, "initial");
+    expect(Boolean(actionButton("置顶 Session"))).toBe(true);
+    expect(Boolean(actionButton("归档"))).toBe(true);
+    await act(async () => {
+      reactPropsOf(actionButton("归档")).onClick({ stopPropagation: () => undefined });
+      await flushMicrotasks();
+    });
+    expect(Boolean(buttonWithText(container, "确认"))).toBe(true);
+    await render(false, "remote");
+    expect(Boolean(actionButton("置顶 Session"))).toBe(false);
+    expect(Boolean(actionButton("归档"))).toBe(false);
+    expect(Boolean(buttonWithText(container, "确认"))).toBe(false);
+    let prevented = false;
+    await act(async () => {
+      reactPropsOf(row()).onContextMenu({ preventDefault: () => (prevented = true) });
+      await flushMicrotasks();
+    });
+    expect(prevented).toBe(true);
+    expect(actions).toEqual([]);
+    await render(true, "restored");
+    expect(Boolean(buttonWithText(container, "确认"))).toBe(false);
+    await render(true, "current");
+    await act(async () => {
+      reactPropsOf(actionButton("置顶 Session")).onClick({ stopPropagation: () => undefined });
+      reactPropsOf(actionButton("归档")).onClick({ stopPropagation: () => undefined });
+      reactPropsOf(row()).onContextMenu({ preventDefault: () => undefined });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactPropsOf(buttonWithText(container, "确认")).onClick({ stopPropagation: () => undefined });
+      await flushMicrotasks();
+    });
+    expect(actions).toEqual([
+      "pin:current:session-8",
+      "menu:current:session-8",
+      "archive:current:session-8",
+    ]);
+  });
+});
 
 describe("Sidebar relative time", () => {
   const now = Date.UTC(2026, 6, 16, 12, 0, 0);
