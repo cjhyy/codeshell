@@ -1445,11 +1445,8 @@ function hardenWebviewGuests(win: BrowserWindow): void {
     // OS popup window while still intercepting the URL. Not a security loosening:
     // every popup is denied; we only read its URL to open an in-app tab.
     (params as Record<string, unknown>).allowpopups = true;
-    // Partition = the guest's cookie jar, derived from the browser PROFILE so
-    // the panel, the agent's task window and Cookie restore share one login
-    // state. A session-derived name has the right prefix but is a jar nothing
-    // else writes; refuse it loudly rather than show a logged-out page. Absent
-    // → the legacy shared partition (popout / older callers).
+    // Partition = the profile's cookie jar, shared by panel, task window and Cookie restore.
+    // Refuse session-derived jars (nothing else writes them); absent → legacy shared partition.
     const wantPartition = typeof params.partition === "string" ? params.partition : "";
     if (wantPartition && !isProfileBrowserPartition(wantPartition)) {
       dlog("browser", "webview_partition_rejected", { partition: wantPartition.slice(0, 200) });
@@ -4665,7 +4662,6 @@ ipcMain.handle(
 );
 
 registerPanelAccessResponses(ipcMain, (sender) => BrowserWindow.fromWebContents(sender)?.id);
-
 ipcMain.handle("browser-runtime:revoke-built-in", async (event, rawSessionId: unknown) => {
   const { sessionId } = await prepareRendererBrowserSession(event, rawSessionId);
   builtInBrowserHandoffGrants.revoke(sessionId);
