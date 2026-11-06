@@ -28,6 +28,8 @@ export interface ApprovalRequestPayload {
   sessionId?: string;
   connectionId?: string;
   generation?: number;
+  /** Host deadline (epoch ms); after it the host resolves the request itself. */
+  expiresAt?: number;
   request: {
     toolName: string;
     args: Record<string, unknown>;
