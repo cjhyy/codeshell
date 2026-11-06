@@ -11,6 +11,7 @@
  * after the renderer reloads — without it, App.tsx silently dropped the events.
  */
 import { bucketKey, type SessionIndex } from "./transcripts";
+import { recommendedAnswer } from "./messages/askUserDefault";
 
 // Bucket keys here are built from an already-resolved projectBucketSegment string (the keys
 // of `sessionIndices`, never null) + a non-null UI session id, which the shared
@@ -77,6 +78,9 @@ export function findAskUserOrigin(
         source?: "external-runtime";
         expiresAt?: number;
         answer?: string;
+        skippable?: boolean;
+        multiSelect?: boolean;
+        options?: Array<{ label: string; recommended?: boolean }>;
       }>;
     }
   >,
@@ -88,6 +92,9 @@ export function findAskUserOrigin(
       source?: "external-runtime";
       expiresAt?: number;
       answer?: string;
+      /** A model question; a timeout picked `timeoutDefault` or skipped it. */
+      skippable?: boolean;
+      timeoutDefault?: string;
     }
   | undefined {
   for (const [bucket, state] of Object.entries(transcripts)) {
@@ -99,6 +106,7 @@ export function findAskUserOrigin(
         answer: msg.answer,
         ...(msg.source ? { source: msg.source } : {}),
         ...(msg.expiresAt !== undefined ? { expiresAt: msg.expiresAt } : {}),
+        ...(msg.skippable ? { skippable: true, timeoutDefault: recommendedAnswer(msg) } : {}),
       };
   }
   return undefined;

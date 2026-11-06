@@ -9,7 +9,17 @@ import type { ApprovalResult } from "../types.js";
 import type { AskUserOptions } from "../tool-system/context.js";
 import type { ApprovalRouteTarget } from "../tool-system/permission.js";
 import type { ChatSession, PendingApprovalEntry } from "./chat-session.js";
-import { Methods, USER_DECISION_TIMEOUT_MS, type PendingApprovalMetadata } from "./types.js";
+import {
+  ErrorCodes,
+  Methods,
+  USER_DECISION_TIMEOUT_MS,
+  createErrorResponse,
+  createResponse,
+  type ApprovalKeepWaitingParams,
+  type PendingApprovalMetadata,
+  type RpcRequest,
+  type RpcResponse,
+} from "./types.js";
 
 interface UserDecisionHost {
   pendingApprovals: Map<string, (result: ApprovalResult) => void>;
@@ -42,7 +52,10 @@ export class UserDecisionLifecycle {
       const requestId = nanoid(12);
       const routeEnvelope = this.host.route(sessionId, requestId);
       const createdAt = Date.now();
-      const expiresAt = createdAt + USER_DECISION_TIMEOUT_MS;
+      const autoResolveMs = opts?.autoResolveMs;
+      const keepWaitable =
+        typeof autoResolveMs === "number" && Number.isFinite(autoResolveMs) && autoResolveMs > 0;
+      const expiresAt = createdAt + (keepWaitable ? autoResolveMs : USER_DECISION_TIMEOUT_MS);
       const cancelQuestion = () =>
         this.finishSession(
           session,
@@ -65,6 +78,7 @@ export class UserDecisionLifecycle {
           createdAt,
           expiresAt,
           surfaceable: true,
+          ...(keepWaitable ? { keepWaitable: true } : {}),
         },
         (decision: unknown) => {
           opts?.signal?.removeEventListener("abort", cancelQuestion);
@@ -85,14 +99,23 @@ export class UserDecisionLifecycle {
             resolve(
               result.approved
                 ? (result.answer ?? "")
-                : (result.reason ?? "(user declined to answer)"),
+                : (result.reason ??
+                    // A model question declined without a reason was skipped.
+                    (keepWaitable ? SKIPPED_QUESTION_REASON : "(user declined to answer)")),
             );
           } else {
             resolve(typeof decision === "string" ? decision : "");
           }
         },
       );
-      this.armTimeout(session, requestId, expiresAt);
+      this.armTimeout(
+        session,
+        requestId,
+        expiresAt,
+        keepWaitable
+          ? autoResolvedQuestionReason(autoResolveMs, recommendedAnswer(opts))
+          : undefined,
+      );
       opts?.signal?.addEventListener("abort", cancelQuestion, { once: true });
       if (opts?.signal?.aborted) {
         cancelQuestion();
@@ -104,19 +127,39 @@ export class UserDecisionLifecycle {
       if (opts?.options !== undefined) args.options = opts.options;
       if (opts?.multiSelect !== undefined) args.multiSelect = opts.multiSelect;
       if (opts?.optionsOnly !== undefined) args.optionsOnly = opts.optionsOnly;
-
-      try {
+      const announce = (deadline: number | undefined, canKeepWaiting: boolean) =>
         this.host.notify(Methods.ApprovalRequest, {
           ...routeEnvelope,
-          expiresAt,
+          ...(deadline !== undefined ? { expiresAt: deadline } : {}),
           ...(sourceSessionId ? { sourceSessionId } : {}),
           request: {
             toolName: "__ask_user__",
-            args,
+            // Model questions stay skippable after the user chose to keep waiting.
+            args: {
+              ...args,
+              ...(keepWaitable ? { skippable: true } : {}),
+              ...(canKeepWaiting ? { keepWaitable: true } : {}),
+            },
             description: question,
             riskLevel: "low" as const,
           },
         });
+
+      const entry = session.pendingApprovals.get(requestId);
+      if (keepWaitable && entry) {
+        entry.keepWaiting = () => {
+          if (session.pendingApprovals.get(requestId) !== entry) return;
+          this.host.clearTimer(requestId);
+          entry.metadata.expiresAt = undefined;
+          entry.metadata.keepWaitable = false;
+          entry.keepWaiting = undefined;
+          // Same requestId: every client and replay cache replaces the dated card.
+          announce(undefined, false);
+        };
+      }
+
+      try {
+        announce(expiresAt, keepWaitable);
       } catch (error) {
         this.finishSession(
           session,
@@ -280,12 +323,48 @@ export class UserDecisionLifecycle {
     return true;
   }
 
-  armTimeout(session: ChatSession, requestId: string, expiresAt: number): void {
+  /**
+   * The user chose to keep a question open: drop its auto-resolve deadline.
+   * `owns` applies the host's answer-ownership rules to the request route.
+   */
+  keepWaitingRpc(
+    req: RpcRequest,
+    sessions: { get(sessionId: string): ChatSession | undefined } | null | undefined,
+    owns: (route: Partial<ApprovalKeepWaitingParams>) => boolean,
+  ): RpcResponse {
+    const params = (req.params ?? {}) as Partial<ApprovalKeepWaitingParams>;
+    const fail = (code: number, message: string) => createErrorResponse(req.id, code, message);
+    const { sessionId, requestId } = params;
+    if (typeof sessionId !== "string" || typeof requestId !== "string")
+      return fail(ErrorCodes.InvalidParams, "sessionId and requestId are required");
+    if (!owns(params))
+      return fail(
+        ErrorCodes.InvalidParams,
+        "Keep-waiting request does not match connectionId, sessionId, generation, and requestId",
+      );
+    const session = sessions?.get(sessionId);
+    if (!session) return fail(ErrorCodes.SessionClosed, `No such session: ${sessionId}`);
+    const entry = session.pendingApprovals.get(requestId);
+    if (!entry) return fail(ErrorCodes.InvalidParams, `No pending question: ${requestId}`);
+    const deadline = entry.metadata.expiresAt;
+    if (deadline !== undefined && Date.now() >= deadline)
+      return fail(ErrorCodes.InvalidParams, "This question has already closed");
+    // Another client already chose to keep waiting: idempotent.
+    if (deadline === undefined && !entry.keepWaiting) return createResponse(req.id, { ok: true });
+    if (!entry.keepWaiting)
+      return fail(ErrorCodes.InvalidParams, "This question cannot be kept open");
+    entry.keepWaiting();
+    return createResponse(req.id, { ok: true });
+  }
+
+  armTimeout(session: ChatSession, requestId: string, expiresAt: number, reason?: string): void {
     this.host.approvalDeadlines.set(requestId, expiresAt);
     this.host.approvalTimers.set(
       requestId,
       setTimeout(
         () => {
+          // A deadline cleared or replaced since arming (keep waiting) is stale.
+          if (this.host.approvalDeadlines.get(requestId) !== expiresAt) return;
           this.finishSession(
             session,
             requestId,
@@ -293,6 +372,7 @@ export class UserDecisionLifecycle {
               approved: false,
               failure: "timed_out",
               reason:
+                reason ??
                 "The confirmation deadline expired without an answer. No permission was granted.",
             },
             "expired",
@@ -341,4 +421,33 @@ export class UserDecisionLifecycle {
       metadata,
     });
   }
+}
+
+/** Model-facing result when a question auto-resolves; silence is never consent. */
+const CONTINUE_WITHOUT_ANSWER =
+  "Continue with your best judgment and state the assumption you made. " +
+  "Silence is not consent: do not take risky, destructive, or irreversible actions on this basis.";
+
+/** Model-facing result when the user presses Skip on a model question. */
+export const SKIPPED_QUESTION_REASON = `(The user skipped this question without answering.) ${CONTINUE_WITHOUT_ANSWER}`;
+
+/** The recommended label(s) a timed-out question defaults to, if any. */
+export function recommendedAnswer(opts: AskUserOptions | undefined): string | undefined {
+  const labels = (opts?.options ?? []).filter((o) => o.recommended === true).map((o) => o.label);
+  if (labels.length === 0) return undefined;
+  return opts?.multiSelect ? labels.join(", ") : labels[0];
+}
+
+/** Model-facing result when a question times out: take the recommendation, else skip. */
+export function autoResolvedQuestionReason(autoResolveMs: number, recommended?: string): string {
+  const seconds = Math.round(autoResolveMs / 1000);
+  const span = seconds % 60 === 0 ? `${seconds / 60} minute(s)` : `${seconds} seconds`;
+  if (recommended !== undefined) {
+    return (
+      `(The user did not answer within ${span}, so your recommended option was applied by default: ${JSON.stringify(recommended)}. ` +
+      "The user did not explicitly choose it; mention the default you took so it is easy to revisit.) " +
+      "Do not treat this default as consent for risky, destructive, or irreversible actions."
+    );
+  }
+  return `(The user did not answer within ${span}, so the question was skipped.) ${CONTINUE_WITHOUT_ANSWER}`;
 }

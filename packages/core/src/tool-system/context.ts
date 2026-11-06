@@ -62,6 +62,8 @@ export interface AskUserChoice {
    * AskUserQuestion tool strips it so model-authored prompts stay neutral.
    */
   tone?: "ok" | "danger" | "neutral";
+  /** The asker's recommended choice; auto-chosen when a deadline question times out. */
+  recommended?: boolean;
 }
 
 /**
@@ -73,6 +75,12 @@ export interface AskUserOptions {
   signal?: AbortSignal;
   /** Runtime-only: preserve host cancellation/expiry as an error instead of a user answer. */
   throwOnFailure?: boolean;
+  /**
+   * Runtime-only: continue without an answer after this many milliseconds
+   * unless the user chooses to keep the question open. Omitted questions use
+   * the host's ordinary decision deadline and cannot be kept open.
+   */
+  autoResolveMs?: number;
   /** Short chip-style label (≤12 chars) shown above the question. */
   header?: string;
   /** Multiple-choice options. When omitted, the UI falls back to free-text. */

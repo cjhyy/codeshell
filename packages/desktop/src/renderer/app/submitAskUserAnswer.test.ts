@@ -58,3 +58,20 @@ test("a retired submission cannot acknowledge a replacement UI after its respons
   complete({ error: { message: "Old session ended" } });
   expect(await submission).toBe(false);
 });
+
+for (const sessionId of ["origin-session", undefined]) {
+  test(`skip declines on the ${sessionId ? "origin session" : "legacy"} route without an answer`, async () => {
+    const calls: unknown[][] = [];
+    Object.defineProperty(window, "codeshell", {
+      configurable: true,
+      value: {
+        approve: async (...args: unknown[]) => {
+          calls.push(args);
+          return { result: { ok: true } };
+        },
+      },
+    });
+    expect(await submitAskUserAnswer(sessionId, "request", "已跳过", () => true, true)).toBe(true);
+    expect(calls).toEqual([[...(sessionId ? [sessionId] : []), "request", "deny"]]);
+  });
+}

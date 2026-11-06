@@ -37,7 +37,7 @@ import { useComposerCaretRestore } from "./chat/useComposerCaretRestore";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ApprovalCard } from "./approvals/ApprovalCard";
 import type { ApproveChoice, ApprovePathScope } from "./approvals/approvalDecision";
-import type { AskUserMessage } from "./types";
+import type { AskUserAnswerHandler, AskUserMessage } from "./types";
 import type { TrackedProject } from "./projects";
 import type {
   ApprovalRequestEnvelope,
@@ -196,7 +196,7 @@ interface Props {
    *  resolves the main run immediately while children keep working). */
   runningAgents?: number;
   activeProjectId: string | null;
-  onAskUserAnswer?: (requestId: string, answer: string) => void | Promise<void>;
+  onAskUserAnswer?: AskUserAnswerHandler;
   /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */
   onExtendGoal?: (opts: {
     addTurns?: number;
@@ -1640,17 +1640,27 @@ export function ChatView({
     }
   };
 
-  // Pin any unanswered AskUser above the composer so it stays
-  // visible as new chat messages roll in. The latest TaskList is
-  // surfaced via the TopBar status popover instead of pinning here.
+  // Pin every unanswered AskUser above the composer so it stays visible as
+  // new chat messages roll in (the stream only keeps answered records, and a
+  // question emitted mid-run would otherwise fold into the process card).
+  // The blocking question leads; answer-later questions follow without
+  // taking focus. The latest TaskList lives in the TopBar status popover.
   let openAsk: AskUserMessage | null = null;
+  const openAsyncAsks: AskUserMessage[] = [];
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
-    if (m.kind === "ask_user" && m.answer === undefined && !m.asynchronous) {
-      openAsk = m;
-      break;
-    }
+    if (m.kind !== "ask_user" || m.answer !== undefined) continue;
+    if (m.asynchronous) openAsyncAsks.unshift(m);
+    else if (!openAsk) openAsk = m;
   }
+  const keepWaitingOnQuestion = useCallback(async (question: AskUserMessage) => {
+    if (!question.engineSessionId) throw new Error("question has no session route");
+    const response = (await window.codeshell.keepWaitingForQuestion(
+      question.engineSessionId,
+      question.requestId,
+    )) as { error?: { message?: string } } | undefined;
+    if (response?.error) throw new Error(response.error.message ?? "keep waiting failed");
+  }, []);
   const previousQuestion = useRef<string | null>(null);
   const stickyQuestionRef = useRef<HTMLDivElement>(null);
   const questionComposerRef = useRef<HTMLDivElement>(null);
@@ -1793,7 +1803,8 @@ export function ChatView({
   const showStickyApproval = !!pendingApproval && !!onApprovalDecide && !inlineApprovalVisible;
   // Keep the composer bound while the request exists. Tying this mode to
   // inline visibility makes its resizing feed back into IntersectionObserver.
-  const hasPendingInteraction = !!openAsk || (!!pendingApproval && !!onApprovalDecide);
+  const hasPendingInteraction =
+    !!openAsk || openAsyncAsks.length > 0 || (!!pendingApproval && !!onApprovalDecide);
   useEffect(() => {
     if (
       (!hasPendingInteraction && variant !== "main") ||
@@ -2029,17 +2040,22 @@ export function ChatView({
         )
       )}
 
-      {!contextSelectionOpen && (openAsk || showStickyApproval) && (
+      {!contextSelectionOpen && (openAsk || openAsyncAsks.length > 0 || showStickyApproval) && (
         <div ref={stickyQuestionRef} className="cs-chat-sticky w-full min-w-0">
           {/* AskUserMessageView carries its own column padding so it lines up
               with the message stream; ApprovalCard has none of its own. */}
-          {openAsk && (
+          {[...(openAsk ? [openAsk] : []), ...openAsyncAsks].map((question) => (
             <AskUserMessageView
-              key={openAsk.requestId}
-              message={openAsk}
+              key={question.requestId}
+              message={question}
               onAnswer={onAskUserAnswer ?? (() => undefined)}
+              onKeepWaiting={
+                question.engineSessionId && question.source !== "external-runtime"
+                  ? keepWaitingOnQuestion
+                  : undefined
+              }
             />
-          )}
+          ))}
           {showStickyApproval && pendingApproval && onApprovalDecide && (
             <div className="px-4">
               <ApprovalCard

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { AskUserMessageView } from "./AskUserMessageView";
+import { AskUserMessageView, formatRemaining } from "./AskUserMessageView";
 import type { AskUserMessage } from "../types";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { translate } from "../i18n/translate";
@@ -252,6 +252,202 @@ describe("AskUserMessageView layout", () => {
   });
 });
 
+describe("AskUserMessageView auto-continue countdown", () => {
+  test("formats remaining time as m:ss and never reads 0:00 early", () => {
+    expect(formatRemaining(120_000)).toBe("2:00");
+    expect(formatRemaining(61_500)).toBe("1:02");
+    expect(formatRemaining(59_001)).toBe("1:00");
+    expect(formatRemaining(400)).toBe("0:01");
+    expect(formatRemaining(-5)).toBe("0:00");
+  });
+
+  test("shows the countdown and keep-waiting control only for a keep-waitable deadline", () => {
+    const keepWaitable = ask({ keepWaitable: true, expiresAt: Date.now() + 90_000 });
+    const html = renderToStaticMarkup(
+      <AskUserMessageView
+        message={keepWaitable}
+        onAnswer={() => {}}
+        onKeepWaiting={async () => {}}
+      />,
+    );
+    expect(html).toContain("后未回答将自动继续");
+    expect(html).toContain("一直等");
+    expect(html).toContain('role="timer"');
+    expect(html).not.toContain("text-status-err");
+
+    const closing = renderToStaticMarkup(
+      <AskUserMessageView
+        message={ask({ keepWaitable: true, expiresAt: Date.now() + 30_000 })}
+        onAnswer={() => {}}
+        onKeepWaiting={async () => {}}
+      />,
+    );
+    expect(closing).toContain("text-status-err");
+
+    // Waiting indefinitely, unsupported host, or a plain permission prompt: no clock.
+    for (const html of [
+      renderToStaticMarkup(
+        <AskUserMessageView
+          message={ask({ keepWaitable: false })}
+          onAnswer={() => {}}
+          onKeepWaiting={async () => {}}
+        />,
+      ),
+      renderToStaticMarkup(<AskUserMessageView message={keepWaitable} onAnswer={() => {}} />),
+      renderToStaticMarkup(
+        <AskUserMessageView
+          message={ask({ expiresAt: Date.now() + 90_000 })}
+          onAnswer={() => {}}
+          onKeepWaiting={async () => {}}
+        />,
+      ),
+    ]) {
+      expect(html).not.toContain("一直等");
+      expect(html).not.toContain('role="timer"');
+    }
+  });
+
+  test("keep waiting fires once from the button or from starting to type", async () => {
+    ensureMiniDom();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const kept: string[] = [];
+    let fail = true;
+    const onKeepWaiting = async (message: AskUserMessage) => {
+      kept.push(message.requestId);
+      if (fail) throw new Error("worker offline");
+    };
+    const button = (label: string) =>
+      descendants(container).find((node) => node.tagName === "BUTTON" && textOf(node) === label)!;
+    const click = async (node: Element) => {
+      await act(async () => {
+        props(node).onClick({ isPropagationStopped: () => false, stopPropagation() {} });
+        await flushMicrotasks();
+      });
+    };
+    try {
+      await act(async () => {
+        root.render(
+          <AskUserMessageView
+            message={ask({
+              options: undefined,
+              keepWaitable: true,
+              expiresAt: Date.now() + 90_000,
+            })}
+            onAnswer={() => {}}
+            onKeepWaiting={onKeepWaiting}
+          />,
+        );
+        await flushMicrotasks();
+      });
+      await click(button("一直等"));
+      expect(kept).toEqual(["r1"]);
+      expect(textOf(container)).toContain("没能改为一直等待，请重试。");
+
+      // A failed request can be retried by engaging with the card again.
+      fail = false;
+      const input = descendants(container).find((node) => node.tagName === "INPUT")!;
+      await act(async () => {
+        props(input).onChange({ target: { value: "对" } });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        props(input).onChange({ target: { value: "对照" } });
+        await flushMicrotasks();
+      });
+      expect(kept).toEqual(["r1", "r1"]);
+      expect(textOf(container)).not.toContain("没能改为一直等待");
+    } finally {
+      await act(async () => root.unmount());
+      document.body.removeChild(container);
+    }
+  });
+});
+
+describe("AskUserMessageView skip", () => {
+  test("offers Skip only on skippable model questions", () => {
+    const skippable = renderToStaticMarkup(
+      <AskUserMessageView message={ask({ skippable: true })} onAnswer={() => {}} />,
+    );
+    expect(skippable).toContain("跳过");
+    const permission = renderToStaticMarkup(
+      <AskUserMessageView message={ask({ optionsOnly: true })} onAnswer={() => {}} />,
+    );
+    expect(permission).not.toContain("跳过");
+  });
+
+  test("Skip declines without an answer and can sit beside keep-waiting", async () => {
+    ensureMiniDom();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const calls: unknown[][] = [];
+    try {
+      await act(async () => {
+        root.render(
+          <AskUserMessageView
+            message={ask({ skippable: true, keepWaitable: true, expiresAt: Date.now() + 90_000 })}
+            onAnswer={(...args) => {
+              calls.push(args);
+            }}
+            onKeepWaiting={async () => {}}
+          />,
+        );
+        await flushMicrotasks();
+      });
+      const labels = descendants(container)
+        .filter((node) => node.tagName === "BUTTON")
+        .map(textOf);
+      expect(labels).toContain("一直等");
+      const skip = descendants(container).find(
+        (node) => node.tagName === "BUTTON" && textOf(node) === "跳过",
+      )!;
+      await act(async () => {
+        props(skip).onClick({ isPropagationStopped: () => false, stopPropagation() {} });
+        await flushMicrotasks();
+      });
+      expect(calls).toEqual([["r1", "已跳过", true]]);
+    } finally {
+      await act(async () => root.unmount());
+      document.body.removeChild(container);
+    }
+  });
+});
+
+describe("AskUserMessageView timeout default", () => {
+  const deadline = () => ({ skippable: true, keepWaitable: true, expiresAt: Date.now() + 90_000 });
+  test("announces the recommended option it will pick and badges it", () => {
+    const html = renderToStaticMarkup(
+      <AskUserMessageView
+        message={ask({
+          ...deadline(),
+          options: [
+            { label: "工作台画布", description: "canvas" },
+            { label: "对照审阅页", description: "review", recommended: true },
+          ],
+        })}
+        onAnswer={() => {}}
+        onKeepWaiting={async () => {}}
+      />,
+    );
+    expect(html).toContain("后未回答将自动选择「对照审阅页」");
+    expect(html.split("推荐")).toHaveLength(2);
+  });
+
+  test("announces a skip when nothing is recommended", () => {
+    const html = renderToStaticMarkup(
+      <AskUserMessageView
+        message={ask({ ...deadline() })}
+        onAnswer={() => {}}
+        onKeepWaiting={async () => {}}
+      />,
+    );
+    expect(html).toContain("后未回答将自动跳过");
+    expect(html).not.toContain("推荐");
+  });
+});
+
 describe("AskUserMessageView deadline", () => {
   test("an open question shows how long it can still be answered", () => {
     const html = renderToStaticMarkup(
@@ -328,5 +524,19 @@ describe("AskUserMessageView deadline", () => {
     expect(translate("en", "msg.ask.expired")).toBe(
       "Timed out — this question can no longer be answered",
     );
+  });
+});
+
+describe("AskUserMessageView single countdown", () => {
+  test("a keep-waitable model question shows one countdown, not the generic deadline too", () => {
+    const html = renderToStaticMarkup(
+      <AskUserMessageView
+        message={ask({ skippable: true, keepWaitable: true, expiresAt: Date.now() + 90_000 })}
+        onAnswer={() => {}}
+        onKeepWaiting={async () => {}}
+      />,
+    );
+    expect(html.split("后未回答将自动跳过")).toHaveLength(2);
+    expect(html).toContain('role="timer"');
   });
 });

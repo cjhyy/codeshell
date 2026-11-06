@@ -261,6 +261,8 @@ export interface AskUserOption {
    * AskUserQuestion options arrive without it and render neutral.
    */
   tone?: "ok" | "danger" | "neutral";
+  /** The model's recommended choice; picked automatically if the question times out. */
+  recommended?: boolean;
 }
 
 /**
@@ -296,6 +298,10 @@ export interface AskUserMessage {
   optionsOnly?: boolean;
   /** The agent continues working while this question remains available. */
   asynchronous?: boolean;
+  /** The question auto-continues at `expiresAt` unless the user keeps waiting. */
+  keepWaitable?: boolean;
+  /** A model question the user may skip (permission prompts offer 拒绝 instead). */
+  skippable?: boolean;
   /** Set after the user answers; chat then renders as resolved. */
   answer?: string;
 }
@@ -2316,14 +2322,41 @@ function applyStreamEventToTurn(
   }
 }
 
+/**
+ * Answer one pending question. With `skip`, decline it without an answer;
+ * `answer` is then only the local record label (e.g. 已跳过).
+ */
+export type AskUserAnswerHandler = (
+  requestId: string,
+  answer: string,
+  skip?: boolean,
+) => void | Promise<void>;
+
 export function appendAskUserMessage(
   state: MessagesReducerState,
   payload: Omit<AskUserMessage, "kind" | "id">,
 ): MessagesReducerState {
   // A pending approval snapshot can race persisted history hydration. The
   // request identity survives both paths; keep its card and any existing answer.
-  if (state.messages.some((m) => m.kind === "ask_user" && m.requestId === payload.requestId))
-    return state;
+  // A republished question (the user chose to keep waiting) only moves its deadline.
+  const index = state.messages.findIndex(
+    (m) => m.kind === "ask_user" && m.requestId === payload.requestId,
+  );
+  if (index >= 0) {
+    const existing = state.messages[index] as AskUserMessage;
+    if (
+      existing.answer !== undefined ||
+      (existing.expiresAt === payload.expiresAt && existing.keepWaitable === payload.keepWaitable)
+    )
+      return state;
+    const messages = state.messages.slice();
+    messages[index] = {
+      ...existing,
+      expiresAt: payload.expiresAt,
+      keepWaitable: payload.keepWaitable,
+    };
+    return { ...state, messages };
+  }
   return {
     ...state,
     messages: [...state.messages, { kind: "ask_user", id: freshId("ask"), ...payload }],

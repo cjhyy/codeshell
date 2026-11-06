@@ -21,6 +21,8 @@ export interface PendingApprovalEntry {
   metadata: PendingApprovalMetadata;
   /** An asynchronous answer is validating/admitting; keep the question retryable. */
   submitting?: boolean;
+  /** Cancel the auto-resolve deadline and republish the question without one. */
+  keepWaiting?: () => void;
 }
 
 export interface TurnOpts {

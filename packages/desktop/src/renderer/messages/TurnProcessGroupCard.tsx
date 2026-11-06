@@ -1,4 +1,5 @@
 import React, { memo, useState, useEffect, useId } from "react";
+import { AskUserMessageView } from "./AskUserMessageView";
 import { ChevronRight, ChevronDown, LoaderCircle } from "lucide-react";
 import { ToolCard } from "../tool-cards";
 import { ToolGroupCard } from "./ToolGroupCard";
@@ -54,6 +55,8 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
  * A newly mounted live turn opens; history starts closed. Completion freezes
  * its clock while retaining the current disclosure and reading position.
  */
+const NOOP_ANSWER = (): void => undefined;
+
 function TurnProcessGroupCardImpl({
   group,
   turnEpoch,
@@ -191,6 +194,12 @@ function TurnProcessGroupCardImpl({
     }
     if (m.kind === "goal_progress") {
       return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
+    }
+    if (m.kind === "ask_user") {
+      // Answered record only: the open question itself is pinned by ChatView.
+      return m.answer !== undefined ? (
+        <AskUserMessageView key={m.id} message={m} onAnswer={NOOP_ANSWER} />
+      ) : null;
     }
     return null;
   };

@@ -19,10 +19,17 @@ import type { ToolContext, AskUserOptions } from "../context.js";
 // existing imports of `AskUserFn` from this module keep working. Type-only.
 export type { AskUserFn, AskUserAsyncFn, AskUserOptions, AskUserChoice } from "../context.js";
 
+/**
+ * A blocking model question continues without an answer after this long
+ * unless the user chooses to keep waiting (Codex-style auto-resolve).
+ */
+export const ASK_USER_AUTO_RESOLVE_MS = 2 * 60 * 1000;
+
 const questionPresentationDescription =
   "Pass `options` to present a multiple-choice list (recommended when the answer is one of a small known set — much better UX than free text). " +
   "Each option needs a short `label` (the choice the user sees) and a `description` (what it means). " +
-  "Lead with the recommended option and append a recommendation marker to its label in the same language as the question (e.g. '(Recommended)' for an English question, '(推荐)' for a Chinese question). " +
+  "List the recommended option first and set `recommended: true` on it (the UI shows a recommendation badge, so do not add a marker to the label). " +
+  "If the user does not answer in time, a blocking question picks the recommended option automatically, or is skipped when none is recommended — so only recommend a choice that is safe to take by default. " +
   "Set `multiSelect: true` when more than one choice can apply. " +
   "ALWAYS write the `question`, every option `label`, every option `description`, and the `header` in the SAME LANGUAGE the user has been writing in. If the user wrote to you in Chinese, write all of these fields in Chinese; if Japanese, in Japanese; etc. The framework's UI chrome (separator hints, the implicit 'Other...' entry) is fixed — only your fields need to match the user's language. ";
 
@@ -31,6 +38,7 @@ export const askUserToolDef: ToolDefinition = {
   description:
     "Ask the user a question and wait for their response. " +
     "Use this when you need clarification, confirmation, or additional input from the user. " +
+    "If the user does not respond within about two minutes (and does not choose to keep it open), the recommended option is chosen for them, or the question is skipped when none is recommended. " +
     questionPresentationDescription +
     "In headless mode this tool will return an error.",
   inputSchema: {
@@ -60,6 +68,11 @@ export const askUserToolDef: ToolDefinition = {
               type: "string",
               description:
                 "What this option means or implies — shown next to the label, in the user's language",
+            },
+            recommended: {
+              type: "boolean",
+              description:
+                "Set on the recommended option (at most one unless multiSelect). Chosen automatically if the user does not answer in time.",
             },
           },
           required: ["label", "description"],
@@ -102,7 +115,7 @@ export async function askUserTool(
     return "Error: AskUserQuestion is not available in headless mode. Make a reasonable assumption and proceed.";
   }
 
-  const opts: AskUserOptions | undefined = parseOptions(args);
+  const opts: AskUserOptions = { ...parseOptions(args), autoResolveMs: ASK_USER_AUTO_RESOLVE_MS };
 
   try {
     const answer = await ctx.askUser(question, opts);
@@ -143,7 +156,7 @@ function parseOptions(args: Record<string, unknown>): AskUserOptions | undefined
   }
 
   const options = rawOptions
-    .filter((o): o is { label: string; description: string } => {
+    .filter((o): o is { label: string; description: string; recommended?: unknown } => {
       return (
         typeof o === "object" &&
         o !== null &&
@@ -151,7 +164,11 @@ function parseOptions(args: Record<string, unknown>): AskUserOptions | undefined
         typeof (o as { description?: unknown }).description === "string"
       );
     })
-    .map((o) => ({ label: o.label, description: o.description }));
+    .map((o) => ({
+      label: o.label,
+      description: o.description,
+      ...(o.recommended === true ? { recommended: true } : {}),
+    }));
 
   if (options.length === 0) return { header, multiSelect, options: undefined };
   return { header, multiSelect, options };

@@ -21,6 +21,7 @@ export interface ProtocolRequestHandlers {
   [Methods.Run]: ProtocolRequestHandler;
   [Methods.ForkSession]: ProtocolRequestHandler;
   [Methods.Approve]: ProtocolRequestHandler;
+  [Methods.ApprovalKeepWaiting]: ProtocolRequestHandler;
   [Methods.Cancel]: ProtocolRequestHandler;
   [Methods.Configure]: ProtocolRequestHandler;
   [Methods.Query]: ProtocolRequestHandler;

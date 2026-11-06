@@ -50,7 +50,7 @@ import { normalizeExternalRuntimeModelKey } from "../../shared/external-runtime-
 import { readApprovalPermission } from "./approvalPermission";
 import { revealSidebarProject } from "../sidebarSessionVisibility";
 import { useToast } from "../ui/ToastProvider";
-import { useT } from "../i18n/I18nProvider";
+import { useT, type TFunction } from "../i18n/I18nProvider";
 import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
@@ -105,6 +105,20 @@ interface Params {
 }
 
 type QuestionProjection = Extract<TranscriptsAction, { type: "ask_user" }>;
+
+/** Record label for a question Core closed without a user answer. */
+export function serverResolvedQuestionLabel(
+  origin: ReturnType<typeof findAskUserOrigin>,
+  env: ApprovalResolvedEnvelope,
+  t: TFunction,
+): string {
+  const expired = env.status === "expired" || (env.status === undefined && env.approved !== false);
+  if (!expired) return t("msg.ask.cancelled");
+  if (!origin?.skippable) return t("msg.ask.timedOut");
+  return origin.timeoutDefault !== undefined
+    ? t("msg.ask.timedOutChose", { label: origin.timeoutDefault })
+    : t("msg.ask.timedOutSkipped");
+}
 
 /** Owns long-lived worker/mobile IPC subscriptions and stream coalescing. */
 export function useHostSubscriptions({
@@ -748,6 +762,34 @@ export function useHostSubscriptions({
           env.requestId,
           setTimeout(expire, Math.min(2_147_483_647, Math.max(0, env.expiresAt - Date.now()))),
         );
+      } else {
+        // Republished without a deadline (the user chose to keep waiting).
+        const previous = approvalDeadlines.get(env.requestId);
+        if (previous !== undefined) clearTimeout(previous);
+        approvalDeadlines.delete(env.requestId);
+      }
+      const republishedQuestion =
+        env.request.toolName === "__ask_user__"
+          ? questionsRef.current.pending.get(env.requestId)
+          : undefined;
+      if (republishedQuestion && pendingApprovalIdsRef.current.has(env.requestId)) {
+        // Same requestId: refresh only the deadline; no second card or sound.
+        // Snapshot replays of an unchanged question are no-ops.
+        const args = env.request.args as Record<string, unknown> | undefined;
+        const keepWaitable = args?.keepWaitable === true;
+        if (
+          republishedQuestion.expiresAt === env.expiresAt &&
+          (republishedQuestion.keepWaitable ?? false) === keepWaitable
+        )
+          return;
+        const updated: QuestionProjection = {
+          ...republishedQuestion,
+          expiresAt: env.expiresAt,
+          keepWaitable,
+        };
+        questionsRef.current.pending.set(env.requestId, updated);
+        dispatch(updated);
+        return;
       }
       if (env.source === "external-runtime") {
         if (externalApprovalsRef.current.resolved.has(env.requestId)) return;
@@ -829,7 +871,14 @@ export function useHostSubscriptions({
                   o.tone === "ok" || o.tone === "danger" || o.tone === "neutral"
                     ? o.tone
                     : undefined;
-                return { label: o.label, description: o.description, ...(tone ? { tone } : {}) };
+                return {
+                  label: o.label,
+                  description: o.description,
+                  ...(tone ? { tone } : {}),
+                  ...((o as { recommended?: unknown }).recommended === true
+                    ? { recommended: true }
+                    : {}),
+                };
               })
           : undefined;
         // Resolve the ORIGINATING session's bucket via the shared resolver
@@ -860,6 +909,8 @@ export function useHostSubscriptions({
           multiSelect,
           optionsOnly,
           asynchronous: args.asynchronous === true,
+          keepWaitable: args.keepWaitable === true,
+          skippable: args.skippable === true,
           expiresAt: env.expiresAt,
         };
         const questions = questionsRef.current;
@@ -1041,13 +1092,7 @@ export function useHostSubscriptions({
           type: "ask_user_answered",
           bucket: questionBucket,
           requestId: env.requestId,
-          answer:
-            env.answer ??
-            t(
-              env.status === "expired" || (env.status === undefined && env.approved !== false)
-                ? "msg.ask.timedOut"
-                : "msg.ask.cancelled",
-            ),
+          answer: env.answer ?? serverResolvedQuestionLabel(origin, env, t),
         });
       }
       pendingQuestionBuckets.delete(env.requestId);

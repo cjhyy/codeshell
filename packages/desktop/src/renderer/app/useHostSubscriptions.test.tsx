@@ -14,9 +14,14 @@ import {
 import { compactSidebarSessions, sortSidebarSessions } from "../sidebarSessionVisibility";
 import { transcriptsReducer, type TranscriptsAction } from "../transcriptsReducer";
 import { getSessionPersistence } from "../sessionPersistence";
-import { useHostSubscriptions } from "./useHostSubscriptions";
+import { serverResolvedQuestionLabel, useHostSubscriptions } from "./useHostSubscriptions";
+import type { TFunction } from "../i18n/I18nProvider";
 import { INITIAL_STATE, type ApprovalState, type AskUserMessage } from "../types";
-import type { ApprovalRequestEnvelope, StreamEventEnvelope } from "../../preload/types";
+import type {
+  ApprovalRequestEnvelope,
+  ApprovalResolvedEnvelope,
+  StreamEventEnvelope,
+} from "../../preload/types";
 import type { PermissionMode } from "../chat/PermissionPill";
 import { bindThemeSoundPlayer, ThemeAudioPlayback, ThemeSoundPlayer } from "../theme-audio";
 
@@ -506,6 +511,31 @@ describe("host subscriptions and recovery", () => {
         question: "Choose a target",
       }),
     ]);
+  });
+
+  test("a question republished without a deadline updates its card in place", async () => {
+    readApprovals = async () => [];
+    hook = await renderHook(() => useHostSubscriptions(params));
+    const asked = approval("question", "__ask_user__");
+    const dated: ApprovalRequestEnvelope = {
+      ...asked,
+      expiresAt: Date.now() + 120_000,
+      request: { ...asked.request, args: { ...asked.request.args, keepWaitable: true } },
+    };
+    await act(async () => {
+      listeners.get("onApprovalRequest")!(dated);
+      await flushMicrotasks();
+      listeners.get("onApprovalRequest")!(dated);
+      await flushMicrotasks();
+      listeners.get("onApprovalRequest")!(asked);
+      await flushMicrotasks();
+    });
+    const questionActions = actions.filter(
+      (action: any) => action.type === "ask_user" && action.requestId === "question",
+    );
+    expect(questionActions).toHaveLength(2);
+    expect(questionActions[0]).toMatchObject({ keepWaitable: true, expiresAt: dated.expiresAt });
+    expect(questionActions[1]).toMatchObject({ keepWaitable: false, expiresAt: undefined });
   });
 
   test("reload retires expired cards while retaining only authoritative pending questions", async () => {
@@ -1956,5 +1986,33 @@ describe("host subscriptions and recovery", () => {
         { type: "turn_complete" },
       ],
     });
+  });
+});
+
+describe("serverResolvedQuestionLabel", () => {
+  const t = ((key: string, params?: Record<string, string>) =>
+    params?.label ? `${key}:${params.label}` : key) as unknown as TFunction;
+  const expired = { requestId: "q", status: "expired" } as ApprovalResolvedEnvelope;
+  test("names the default a timed-out model question took", () => {
+    expect(
+      serverResolvedQuestionLabel(
+        { bucket: "b", skippable: true, timeoutDefault: "对照审阅页" },
+        expired,
+        t,
+      ),
+    ).toBe("msg.ask.timedOutChose:对照审阅页");
+    expect(serverResolvedQuestionLabel({ bucket: "b", skippable: true }, expired, t)).toBe(
+      "msg.ask.timedOutSkipped",
+    );
+  });
+  test("permission prompts and cancellations keep their existing labels", () => {
+    expect(serverResolvedQuestionLabel({ bucket: "b" }, expired, t)).toBe("msg.ask.timedOut");
+    expect(
+      serverResolvedQuestionLabel(
+        { bucket: "b", skippable: true },
+        { requestId: "q", status: "cancelled", approved: false } as ApprovalResolvedEnvelope,
+        t,
+      ),
+    ).toBe("msg.ask.cancelled");
   });
 });

@@ -111,3 +111,23 @@ for (const liveAnswered of [false, true]) {
     expect(mergeHistoryIntoLive(history, merged).messages).toEqual(merged.messages);
   });
 }
+
+test("a republished question moves only its deadline and never reopens an answered card", () => {
+  const dated = appendAskUserMessage(INITIAL_STATE, {
+    ...question,
+    expiresAt: 1_000,
+    keepWaitable: true,
+  });
+  const kept = appendAskUserMessage(dated, { ...question, keepWaitable: false });
+  expect(kept).not.toBe(dated);
+  expect(kept.messages).toHaveLength(1);
+  expect(kept.messages[0]).toMatchObject({
+    id: dated.messages[0]!.id,
+    question: question.question,
+    expiresAt: undefined,
+    keepWaitable: false,
+  });
+  expect(appendAskUserMessage(kept, { ...question, keepWaitable: false })).toBe(kept);
+  const answered = markAskUserAnswered(dated, question.requestId, "Read only");
+  expect(appendAskUserMessage(answered, { ...question, keepWaitable: false })).toBe(answered);
+});

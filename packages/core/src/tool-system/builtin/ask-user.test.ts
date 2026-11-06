@@ -4,6 +4,7 @@ import {
   askUserToolDef,
   askUserAsyncTool,
   askUserAsyncToolDef,
+  ASK_USER_AUTO_RESOLVE_MS,
 } from "./ask-user.js";
 import type { ToolContext, AskUserOptions } from "../context.js";
 
@@ -43,7 +44,26 @@ describe("askUserTool", () => {
     const out = await askUserTool({ question: "favorite color?" }, ctx);
     expect(out).toBe("blue");
     expect(lastQuestion()).toBe("favorite color?");
-    expect(lastOpts()).toBeUndefined(); // no header/options/multiSelect
+    // No presentation fields; only the runtime auto-resolve deadline.
+    expect(lastOpts()).toEqual({ autoResolveMs: ASK_USER_AUTO_RESOLVE_MS });
+  });
+
+  it("keeps only a boolean recommended flag on options", async () => {
+    const { ctx, lastOpts } = ctxWith("A");
+    await askUserTool(
+      {
+        question: "pick",
+        options: [
+          { label: "A", description: "first", recommended: true },
+          { label: "B", description: "second", recommended: "yes" },
+        ],
+      },
+      ctx,
+    );
+    expect(lastOpts()?.options).toEqual([
+      { label: "A", description: "first", recommended: true },
+      { label: "B", description: "second" },
+    ]);
   });
 
   it("parses multiple-choice options + header + multiSelect", async () => {

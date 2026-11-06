@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Forward, Loader2, MessageSquare, X } from "lucide-react";
-import type { Message } from "./types";
+import type { AskUserAnswerHandler, Message } from "./types";
 import { ToolCard } from "./tool-cards";
 import { AssistantMessageView } from "./messages/AssistantMessageView";
 import { ThinkingMessageView } from "./messages/ThinkingMessageView";
@@ -79,7 +79,7 @@ interface Props {
   /** Transcript detail views do not expose file undo/redo. */
   readOnly?: boolean;
   localRuntime?: boolean;
-  onAskUserAnswer?: (requestId: string, answer: string) => void | Promise<void>;
+  onAskUserAnswer?: AskUserAnswerHandler;
   /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */
   onExtendGoal?: (opts: {
     addTurns?: number;
@@ -614,7 +614,9 @@ export function MessageStream({
       case "goal_progress":
         return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
       case "ask_user":
-        return m.answer !== undefined || m.asynchronous ? (
+        // Unanswered questions are pinned above the composer (ChatView); the
+        // stream keeps only the answered record.
+        return m.answer !== undefined ? (
           <AskUserMessageView key={m.id} message={m} onAnswer={onAskUserAnswer ?? NOOP_ON_ANSWER} />
         ) : null;
       case "system":

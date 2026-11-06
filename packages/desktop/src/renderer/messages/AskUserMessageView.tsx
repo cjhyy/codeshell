@@ -1,12 +1,14 @@
 import React, { memo, useEffect, useId, useRef, useState } from "react";
-import type { AskUserMessage } from "../types";
+import type { AskUserAnswerHandler, AskUserMessage } from "../types";
 import { Check, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import { resolveAnswerTone, toneEchoStyle } from "./askUserTone";
+import { recommendedAnswer } from "./askUserDefault";
 
 /** Re-render each second until `until` passes; no timer without a deadline. */
 function useNow(until: number | undefined): number {
@@ -28,16 +30,19 @@ function useNow(until: number | undefined): number {
   return now;
 }
 
-function formatRemaining(ms: number): string {
-  const total = Math.ceil(ms / 1_000);
+/** Remaining time as m:ss, rounded up so the label never reads 0:00 early. */
+export function formatRemaining(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1_000));
   const minutes = Math.floor(total / 60);
   return `${minutes}:${String(total % 60).padStart(2, "0")}`;
 }
 
 interface Props {
   message: AskUserMessage;
-  /** Called with the user's chosen / typed answer string. */
-  onAnswer: (requestId: string, answer: string) => void | Promise<void>;
+  /** Called with the chosen / typed answer, or the skipped label plus `skip`. */
+  onAnswer: AskUserAnswerHandler;
+  /** Drop the question's auto-continue deadline. Absent where unsupported. */
+  onKeepWaiting?: (message: AskUserMessage) => Promise<void>;
 }
 
 /**
@@ -52,8 +57,32 @@ interface Props {
  * The answer is always wire-encoded as a single string. For
  * multiSelect we join selected labels with ", ".
  */
-function AskUserMessageViewImpl({ message, onAnswer }: Props) {
+function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
   const { t } = useT();
+  // The host retires an expired card with its own resolution; lock the card at
+  // the deadline so a late click can't look like it still counts meanwhile.
+  const deadline = message.answer === undefined ? message.expiresAt : undefined;
+  const now = useNow(deadline);
+  const expired = deadline !== undefined && now >= deadline;
+  // A model question's deadline can be dropped ("一直等"); it owns the countdown.
+  const countdownActive =
+    deadline !== undefined && !expired && message.keepWaitable === true && !!onKeepWaiting;
+  const timeoutDefault = recommendedAnswer(message);
+  const [keepWaitingState, setKeepWaitingState] = useState<"idle" | "pending" | "failed">("idle");
+  const keepWaitingRef = useRef(false);
+  /** Codex-style: any engagement with the card stops the auto-continue clock. */
+  const keepWaiting = (): void => {
+    if (!countdownActive || keepWaitingRef.current || !onKeepWaiting) return;
+    keepWaitingRef.current = true;
+    setKeepWaitingState("pending");
+    void onKeepWaiting(message).then(
+      () => setKeepWaitingState("idle"),
+      () => {
+        keepWaitingRef.current = false;
+        setKeepWaitingState("failed");
+      },
+    );
+  };
   const [draft, setDraft] = useState("");
   const [otherOpen, setOtherOpen] = useState(false);
   const [otherDraft, setOtherDraft] = useState("");
@@ -66,11 +95,6 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
   const questionId = useId();
   const otherId = useId();
   const returnFocus = useRef<HTMLElement | null>(null);
-  // The host retires an expired card with its own resolution; lock the card at
-  // the deadline so a late click can't look like it still counts meanwhile.
-  const deadline = message.answer === undefined ? message.expiresAt : undefined;
-  const now = useNow(deadline);
-  const expired = deadline !== undefined && now >= deadline;
   const locked = submitting || expired;
   useEffect(() => {
     if (submitting || !returnFocus.current) return;
@@ -129,16 +153,18 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
   }
 
   const hasOptions = !!message.options && message.options.length > 0;
-  const submit = (val: string): void => {
+  const submit = (val: string, skip = false): void => {
     const v = val.trim();
-    if (!v || submittingRef.current || expired) return;
+    if ((!v && !skip) || submittingRef.current || expired) return;
     submittingRef.current = true;
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setSubmitting(true);
     setSubmitFailed(false);
     void (async () => {
       try {
-        await onAnswer(message.requestId, v);
+        await (skip
+          ? onAnswer(message.requestId, t("msg.ask.skipped"), true)
+          : onAnswer(message.requestId, v));
       } catch {
         // Keep every draft/selection intact so a failed send is retryable.
         setSubmitFailed(true);
@@ -176,7 +202,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
           >
             {message.question}
           </span>
-          {deadline !== undefined && (
+          {deadline !== undefined && !countdownActive && (
             <span className={cn("text-xs", expired ? "text-status-warn" : "text-muted-foreground")}>
               {expired
                 ? t("msg.ask.expired")
@@ -185,19 +211,75 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
           )}
         </div>
 
-        {message.asynchronous && (
+        {(countdownActive || message.asynchronous || message.skippable) && (
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs text-muted-foreground">{t("msg.ask.asyncHint")}</span>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              aria-expanded={!deferred}
-              onClick={() => setDeferred((value) => !value)}
-            >
-              {t(deferred ? "msg.ask.resume" : "msg.ask.later")}
-            </Button>
+            {countdownActive ? (
+              <span
+                role="timer"
+                aria-live="off"
+                className={cn(
+                  "text-xs tabular-nums text-muted-foreground",
+                  deadline! - now <= 60_000 && "text-status-err",
+                )}
+              >
+                {t(
+                  !message.skippable
+                    ? "msg.ask.autoContinueIn"
+                    : timeoutDefault !== undefined
+                      ? "msg.ask.autoChooseIn"
+                      : "msg.ask.autoSkipIn",
+                  {
+                    time: formatRemaining(deadline! - now),
+                    label: timeoutDefault ?? "",
+                  },
+                )}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                {message.asynchronous ? t("msg.ask.asyncHint") : ""}
+              </span>
+            )}
+            <div className="flex flex-wrap items-center gap-1">
+              {countdownActive && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={keepWaitingState === "pending" || locked}
+                  onClick={keepWaiting}
+                >
+                  {t("msg.ask.keepWaiting")}
+                </Button>
+              )}
+              {message.asynchronous && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  aria-expanded={!deferred}
+                  onClick={() => setDeferred((value) => !value)}
+                >
+                  {t(deferred ? "msg.ask.resume" : "msg.ask.later")}
+                </Button>
+              )}
+              {message.skippable && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={locked}
+                  onClick={() => submit("", true)}
+                >
+                  {t("msg.ask.skip")}
+                </Button>
+              )}
+            </div>
           </div>
+        )}
+        {keepWaitingState === "failed" && (
+          <p role="alert" className="mb-3 text-xs text-status-err">
+            {t("msg.ask.keepWaitingFailed")}
+          </p>
         )}
 
         {!deferred &&
@@ -220,6 +302,14 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                         )}
                       >
                         {option.label}
+                        {option.recommended && (
+                          <Badge
+                            variant="secondary"
+                            className="ml-2 px-1.5 align-middle font-normal"
+                          >
+                            {t("msg.ask.recommended")}
+                          </Badge>
+                        )}
                       </span>
                       <span
                         id={descriptionId}
@@ -249,6 +339,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                             aria-describedby={descriptionId}
                             onCheckedChange={(checked) => {
                               if (submittingRef.current || expired) return;
+                              keepWaiting();
                               setPicked((previous) => {
                                 const next = new Set(previous);
                                 if (checked === true) next.add(index);
@@ -287,7 +378,10 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                         "block h-auto w-full whitespace-normal rounded-md border p-2 text-left font-normal transition-colors hover:bg-accent",
                         otherOpen && "border-primary bg-primary/10",
                       )}
-                      onClick={() => setOtherOpen((open) => !open)}
+                      onClick={() => {
+                        keepWaiting();
+                        setOtherOpen((open) => !open);
+                      }}
                     >
                       <span className="block font-medium text-foreground">
                         {t("msg.ask.other")}
@@ -319,7 +413,10 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                           composingRef.current = false;
                         }}
                         value={otherDraft}
-                        onChange={(e) => setOtherDraft(e.target.value)}
+                        onChange={(e) => {
+                          keepWaiting();
+                          setOtherDraft(e.target.value);
+                        }}
                         onKeyDown={(e) => {
                           if (
                             composingRef.current ||
@@ -376,7 +473,10 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                   composingRef.current = false;
                 }}
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
+                onChange={(e) => {
+                  keepWaiting();
+                  setDraft(e.target.value);
+                }}
                 onKeyDown={(e) => {
                   if (
                     composingRef.current ||

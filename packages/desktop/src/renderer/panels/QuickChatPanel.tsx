@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { Message } from "../types";
+import type { AskUserAnswerHandler, Message } from "../types";
 import type { ApprovalRequestEnvelope, InputAttachmentMeta } from "../../preload/types";
 import type { ApproveChoice, ApprovePathScope } from "../approvals/approvalDecision";
 import { useT } from "../i18n/I18nProvider";
@@ -47,7 +47,7 @@ interface Props {
   onStop: () => void;
   onRetry: () => void;
   onUseBlank: () => void;
-  onAskUserAnswer?: (requestId: string, answer: string) => void | Promise<void>;
+  onAskUserAnswer?: AskUserAnswerHandler;
   pendingApproval?: ApprovalRequestEnvelope | null;
   onApprovalDecide?: (
     decision: "approve" | "deny",
