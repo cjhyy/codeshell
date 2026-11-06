@@ -3,7 +3,13 @@ import { BUILTIN_CHANNEL_CAPABILITIES } from "@cjhyy/code-shell-chat";
 import { validatePetRunParams } from "@cjhyy/code-shell-pet";
 import { sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator";
-import { boundedWorld, PetDispatchService, stringifyBoundedPetWorld } from "./pet-dispatch-service";
+import {
+  ARCHIVE_SUMMARY_MAX_LENGTH,
+  boundedWorld,
+  buildArchiveFallbackSummary,
+  PetDispatchService,
+  stringifyBoundedPetWorld,
+} from "./pet-dispatch-service";
 import { taskInboxPetView } from "../task-inbox/task-inbox-pet-view";
 import { mapTaskInboxRecord } from "../task-inbox/task-inbox-mappers";
 
@@ -2206,6 +2212,54 @@ describe("PetDispatchService", () => {
     expect(archive.fallbackSummary).toContain("open: X");
     expect(archive.fallbackSummary).toContain("SearchHistory");
     expect(validatePetRunParams(runParams ?? {})).toBeNull();
+  });
+
+  test("caps an oversized carryover brief so the fallback summary passes run validation", async () => {
+    let runParams: Record<string, unknown> | undefined;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          runParams = params;
+          return { ok: true, result: { text: "reply" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      segmentController: {
+        beginTurn: async () => ({
+          closedSegment: { segmentId: "s1", nextBoundaryMessageId: "m1", startedAt: 0, endedAt: 1 },
+          carryoverBrief: `${"x".repeat(5_000)}\u0000${"y".repeat(6_000)}`,
+        }),
+        completeSegmentClosure: async () => {},
+        onDelegationClosed: async () => {},
+      },
+    });
+
+    await service.dispatch({ type: "chat", message: "new topic", clientMessageId: "m1" });
+
+    const archive = runParams?.archiveBeforeCurrentTurn as { fallbackSummary: string };
+    expect(archive.fallbackSummary.length).toBeLessThanOrEqual(4_000);
+    expect(
+      archive.fallbackSummary.startsWith(
+        "Earlier conversation from the previous topic segment was archived.",
+      ),
+    ).toBe(true);
+    expect(archive.fallbackSummary).toContain("(brief truncated; use SearchHistory)");
+    expect(archive.fallbackSummary).not.toContain("\u0000");
+    expect(archive.fallbackSummary.trim().length).toBeGreaterThan(0);
+    expect(validatePetRunParams(runParams ?? {})).toBeNull();
+  });
+
+  test("buildArchiveFallbackSummary keeps short briefs intact and never splits surrogates", () => {
+    expect(buildArchiveFallbackSummary("open: X")).toContain("open: X");
+    expect(buildArchiveFallbackSummary(undefined)).toContain("SearchHistory");
+    const out = buildArchiveFallbackSummary("😀".repeat(5_000));
+    expect(out.length).toBeLessThanOrEqual(ARCHIVE_SUMMARY_MAX_LENGTH);
+    expect(out).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/u);
   });
 
   test("forwards the fixed manual-clear summary to the pre-model archive boundary", async () => {

@@ -862,6 +862,32 @@ function readWorkerBoolean(result: unknown, key: string): boolean | undefined {
   return typeof value === "boolean" ? value : undefined;
 }
 
+/**
+ * Max length of `archiveBeforeCurrentTurn.summary` / `fallbackSummary`.
+ * Mirrors the agent/run validation in packages/core/src/protocol/dispatch.ts;
+ * exceeding it rejects the whole run.
+ */
+export const ARCHIVE_SUMMARY_MAX_LENGTH = 4_000;
+
+const ARCHIVE_FALLBACK_LEAD =
+  "Earlier conversation from the previous topic segment was archived. Its journal entry and memories are produced in the background; use SearchHistory for specific details.";
+const ARCHIVE_BRIEF_TRUNCATED_MARKER = "\n…(brief truncated; use SearchHistory)";
+
+/** Fixed sentence plus as much of the carryover brief as fits the protocol limit. */
+export function buildArchiveFallbackSummary(carryoverBrief: string | undefined): string {
+  // eslint-disable-next-line no-control-regex
+  const brief = (carryoverBrief ?? "").replace(/\u0000/gu, "").trim();
+  if (!brief) return ARCHIVE_FALLBACK_LEAD;
+  const prefix = `${ARCHIVE_FALLBACK_LEAD}\n\n`;
+  const room = ARCHIVE_SUMMARY_MAX_LENGTH - prefix.length;
+  if (brief.length <= room) return prefix + brief;
+  const keep = Math.max(0, room - ARCHIVE_BRIEF_TRUNCATED_MARKER.length);
+  let cut = brief.slice(0, keep);
+  // Do not split a surrogate pair at the cut.
+  if (/[\uD800-\uDBFF]$/u.test(cut)) cut = cut.slice(0, -1);
+  return prefix + cut + ARCHIVE_BRIEF_TRUNCATED_MARKER;
+}
+
 export class PetDispatchService {
   private async readTaskInbox(): Promise<TaskInboxPetView | undefined> {
     try {
@@ -2593,10 +2619,7 @@ export class PetDispatchService {
                   ...(segmentTurn.archiveSummary
                     ? { summary: segmentTurn.archiveSummary }
                     : {
-                        fallbackSummary: [
-                          "Earlier conversation from the previous topic segment was archived. Its journal entry and memories are produced in the background; use SearchHistory for specific details.",
-                          ...(segmentTurn.carryoverBrief ? [segmentTurn.carryoverBrief] : []),
-                        ].join("\n\n"),
+                        fallbackSummary: buildArchiveFallbackSummary(segmentTurn.carryoverBrief),
                       }),
                 },
               }
