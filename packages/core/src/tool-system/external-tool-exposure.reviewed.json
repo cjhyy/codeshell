@@ -210,7 +210,7 @@
     "kind": "host-loopback",
     "status": "exposed",
     "reason": "Click / type / interact — the mutating third of the browser surface, and the one that combines with InjectCredential to act as the logged-in user. Exposed on the product owner's call, under the same ToolExecutor rules as every other entry here.",
-    "contractFingerprint": "6159eec4801a14d491b02e224ca97293f9759085e454a648e2c9cedf7e4a96ad"
+    "contractFingerprint": "8e5c724691d144df3d03855165b51dbe1d9bb9fdbf73c4b4f47f17e2d14ba006"
   },
   {
     "tool": "browser_inspect",

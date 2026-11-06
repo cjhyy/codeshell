@@ -72,7 +72,7 @@ if (kind === "claude-code") {
             id: 7,
             method: "tools/call",
             params: {
-              name: "DelayedRead",
+              name: "ListShells",
               arguments: {},
               _meta: { threadId: "codeshell-factory-bound" },
             },
