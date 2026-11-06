@@ -81,18 +81,18 @@ describe("buildInputAttachmentContext", () => {
     expect(out.text).toContain(`sha256: ${"1".repeat(64)}`);
   });
 
-  test("rejects paths outside cwd without reading them", async () => {
+  test("loads outside image attachments in default mode", async () => {
     const outside = mkdtempSync(join(tmpdir(), "input-attachments-outside-"));
     try {
-      const secret = join(outside, "secret.png");
-      writeFileSync(secret, Buffer.from(PNG_B64, "base64"));
+      const image = join(outside, "shot.png");
+      writeFileSync(image, Buffer.from(PNG_B64, "base64"));
       const out = await buildInputAttachmentContext(
-        [meta({ path: secret, absPath: secret, relPath: undefined })],
+        [meta({ path: image, absPath: image, relPath: undefined })],
         cwd,
         { expectedSessionId: "sid" },
       );
-      expect(out.images).toEqual([]);
-      expect(out.errors.join("\n")).toContain("blocked by path policy");
+      expect(out.errors).toEqual([]);
+      expect(out.images).toHaveLength(1);
     } finally {
       rmSync(outside, { recursive: true, force: true });
     }
@@ -189,45 +189,6 @@ describe("buildInputAttachmentContext", () => {
     }
   });
 
-  test("rejects workspace symlink file attachments whose realpath escapes cwd", async () => {
-    const outside = mkdtempSync(join(tmpdir(), "input-attachments-symlink-file-outside-"));
-    try {
-      const secretContent = "outside attachment payload should stay unread";
-      const secret = join(outside, "notes.txt");
-      const linkRel = "linked-notes.txt";
-      const linkAbs = join(cwd, linkRel);
-      writeFileSync(secret, secretContent, "utf-8");
-      symlinkSync(secret, linkAbs);
-
-      const out = await buildInputAttachmentContext(
-        [
-          meta({
-            id: "link_file_1",
-            kind: "file",
-            path: linkRel,
-            absPath: linkAbs,
-            relPath: linkRel,
-            mime: "text/plain",
-            size: secretContent.length,
-            sha256: "2".repeat(64),
-            origin: "mention",
-          }),
-        ],
-        cwd,
-        { expectedSessionId: "sid" },
-      );
-
-      expect(out.images).toEqual([]);
-      expect(out.text).toBe("");
-      expect(out.hasStructuredImageAttachments).toBe(false);
-      expect(out.errors.join("\n")).toContain("blocked by path policy");
-      expect(out.errors.join("\n")).toContain("outside workspace");
-      expect(JSON.stringify(out)).not.toContain(secretContent);
-    } finally {
-      rmSync(outside, { recursive: true, force: true });
-    }
-  });
-
   test("reports missing paths as errors", async () => {
     const out = await buildInputAttachmentContext(
       [meta({ path: "missing.png", absPath: join(cwd, "missing.png"), relPath: "missing.png" })],
@@ -255,26 +216,19 @@ describe("buildInputAttachmentContext", () => {
     expect(out.errors.join("\n")).toContain("has no valid path");
   });
 
-  test("rejects sensitive paths through path-policy before reading image bytes", async () => {
-    const abs = join(cwd, ".env");
+  test("credential-named image attachments load in default mode", async () => {
+    // Reads are never gated (aligned with Codex / Claude Code).
+    const abs = join(cwd, ".env.png");
     writeFileSync(abs, Buffer.from(PNG_B64, "base64"));
 
     const out = await buildInputAttachmentContext(
-      [
-        meta({
-          path: ".env",
-          absPath: abs,
-          relPath: ".env",
-          mime: "image/png",
-        }),
-      ],
+      [meta({ path: ".env.png", absPath: abs, relPath: ".env.png", mime: "image/png" })],
       cwd,
       { expectedSessionId: "sid" },
     );
 
-    expect(out.images).toEqual([]);
-    expect(out.errors.join("\n")).toContain("blocked by path policy");
-    expect(out.errors.join("\n")).toContain("sensitive path");
+    expect(out.errors).toEqual([]);
+    expect(out.images).toHaveLength(1);
   });
 
   test("full access loads sensitive image attachments", async () => {
@@ -402,10 +356,9 @@ describe("buildInputAttachmentContext", () => {
 
         expect(out.images).toEqual([]);
         expect(out.text).toBe("");
+        // Session custody holds even when path policy allows the outside read.
         expect(out.errors.join("\n")).toContain(
-          permissionMode === "bypassPermissions"
-            ? "staged path is outside .code-shell/attachments/sid"
-            : "blocked by path policy",
+          "staged path is outside .code-shell/attachments/sid",
         );
       } finally {
         rmSync(outside, { recursive: true, force: true });

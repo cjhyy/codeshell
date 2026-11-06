@@ -41,8 +41,8 @@ function ctxWith(answer: string): { ctx: ToolContext; asked: () => number } {
   return { ctx, asked: () => count };
 }
 
-/** A tool that reads an array-of-paths arg, declaring path-policy on it. */
-function makeArrayPathTool(): RegisteredTool {
+/** A tool that takes an array-of-paths arg, declaring path-policy on it. */
+function makeArrayPathTool(operation: "read" | "write"): RegisteredTool {
   return {
     name: "ReadMany",
     description: "test tool: reads an array of file paths",
@@ -53,13 +53,17 @@ function makeArrayPathTool(): RegisteredTool {
     },
     source: "builtin",
     permissionDefault: "allow",
-    pathPolicy: [{ kind: "arg", arg: "paths", operation: "read" }],
+    pathPolicy: [{ kind: "arg", arg: "paths", operation }],
   } as unknown as RegisteredTool;
 }
 
-async function execute(call: ToolCall, ctx: ToolContext): Promise<string> {
+async function execute(
+  call: ToolCall,
+  ctx: ToolContext,
+  operation: "read" | "write" = "read",
+): Promise<string> {
   const registry = new ToolRegistry({ builtinTools: [] });
-  registry.registerTool(makeArrayPathTool(), async () => "ok");
+  registry.registerTool(makeArrayPathTool(operation), async () => "ok");
   const executor = new ToolExecutor(
     registry,
     new PermissionClassifier([], "bypassPermissions"),
@@ -72,11 +76,12 @@ async function execute(call: ToolCall, ctx: ToolContext): Promise<string> {
 
 describe("path-policy enforces each element of an array path arg", () => {
   test("an outside-workspace element triggers the approval gate (denied → refused)", async () => {
-    writeFileSync(join(outside, "ref.png"), "x");
+    // Reads are never gated, so exercise the per-element check with a write.
     const denied = ctxWith("拒绝");
     const r = await execute(
-      { id: "c1", toolName: "ReadMany", args: { paths: [join(outside, "ref.png")] } },
+      { id: "c1", toolName: "ReadMany", args: { paths: ["ok.png", join(outside, "ref.png")] } },
       denied.ctx,
+      "write",
     );
     expect(denied.asked()).toBe(1); // the array element was checked
     expect(String(r)).toMatch(/path approval denied|blocked by path policy/i);

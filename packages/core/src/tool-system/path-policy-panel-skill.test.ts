@@ -55,106 +55,35 @@ describe("installed Panel App Skill path policy", () => {
     rmSync(outside, { recursive: true, force: true });
   });
 
-  test("installed Panel App package and Skill resources are readable without approval", () => {
+  // Reads are never gated, so the old registry-backed read exceptions are
+  // gone; the app tree lives under ~/.code-shell, so writes still ask.
+  test("installed and unregistered app files, Skill references and credentials are readable", () => {
+    const escaped = join(outside, "credentials.json");
+    writeFileSync(escaped, "outside\n");
+    symlinkSync(escaped, join(skillRoot, "references", "escaped.md"));
     for (const path of [
       appRoot,
       join(appRoot, "README.md"),
-      join(appRoot, "app", "app.js"),
       join(appRoot, ".codeshell-panel", "panel.json"),
       join(skillRoot, "references", "source-quality.md"),
+      join(skillRoot, "references", "token.txt"),
+      join(skillRoot, "references", "escaped.md"),
+      join(home, ".code-shell", "panel-apps", "hidden-app", "README.md"),
     ]) {
-      expect(
-        classifyPath(path, {
-          workspaceRoot: workspace,
-          operation: "read",
-        }),
-      ).toMatchObject({ decision: "allow", reason: "installed Panel App resource read" });
+      expect(classifyPath(path, { workspaceRoot: workspace, operation: "read" }).decision).toBe(
+        "allow",
+      );
     }
   });
 
-  test("user Skill references remain readable without a second approval", () => {
-    const userSkillRoot = join(home, ".code-shell", "skills", "personal-notes");
-    mkdirSync(join(userSkillRoot, "references"), { recursive: true });
-    writeFileSync(
-      join(userSkillRoot, "SKILL.md"),
-      "---\nname: personal-notes\ndescription: notes\n---\n",
-    );
-    writeFileSync(join(userSkillRoot, "references", "guide.md"), "guide\n");
-    expect(
-      classifyPath(join(userSkillRoot, "references", "guide.md"), {
-        workspaceRoot: workspace,
-        operation: "read",
-      }),
-    ).toMatchObject({ decision: "allow", reason: "registered Skill resource read" });
-  });
-
-  test("credential-shaped files and writes retain the sensitive-path boundary", () => {
-    expect(
-      classifyPath(join(skillRoot, "references", "token.txt"), {
-        workspaceRoot: workspace,
-        operation: "read",
-      }).decision,
-    ).toBe("ask");
-    expect(
-      classifyPath(join(skillRoot, "references", "source-quality.md"), {
-        workspaceRoot: workspace,
-        operation: "write",
-      }).decision,
-    ).not.toBe("allow");
-  });
-
-  test("all installed app code is readable but symlink escapes are not trusted", () => {
-    const undeclared = join(appRoot, "agent", "skills", "undeclared");
-    mkdirSync(join(undeclared, "references"), { recursive: true });
-    writeFileSync(
-      join(undeclared, "SKILL.md"),
-      "---\nname: undeclared\ndescription: hidden\n---\n",
-    );
-    writeFileSync(join(undeclared, "references", "notes.md"), "not declared\n");
-    expect(
-      classifyPath(join(undeclared, "references", "notes.md"), {
-        workspaceRoot: workspace,
-        operation: "read",
-      }).decision,
-    ).toBe("allow");
-
-    const escaped = join(outside, "escaped.md");
-    writeFileSync(escaped, "outside\n");
-    symlinkSync(escaped, join(skillRoot, "references", "escaped.md"));
-    expect(
-      classifyPath(join(skillRoot, "references", "escaped.md"), {
-        workspaceRoot: workspace,
-        operation: "read",
-      }).decision,
-    ).toBe("ask");
-  });
-
-  test("ordinary files in an unregistered sibling app remain readable", () => {
-    const unregistered = join(home, ".code-shell", "panel-apps", "hidden-app");
-    mkdirSync(join(unregistered, ".codeshell-panel"), { recursive: true });
-    writeFileSync(
-      join(unregistered, ".codeshell-panel", "panel.json"),
-      JSON.stringify({ schemaVersion: 2, id: "hidden-app" }),
-    );
-    writeFileSync(join(unregistered, "README.md"), "hidden\n");
-    expect(
-      classifyPath(join(unregistered, "README.md"), {
-        workspaceRoot: workspace,
-        operation: "read",
-      }).decision,
-    ).toBe("allow");
-  });
-
-  test("ordinary app files do not need a registry entry to be read", () => {
-    writeFileSync(
-      join(home, ".code-shell", "panel-apps", "installed.json"),
-      JSON.stringify({ version: 1, apps: [] }),
-    );
-    expect(
-      classifyPath(join(skillRoot, "references", "source-quality.md"), {
-        workspaceRoot: workspace,
-        operation: "read",
-      }).decision,
-    ).toBe("allow");
+  test("writes into the installed app tree ask", () => {
+    for (const path of [
+      join(appRoot, "app", "app.js"),
+      join(skillRoot, "references", "source-quality.md"),
+    ]) {
+      expect(classifyPath(path, { workspaceRoot: workspace, operation: "write" }).decision).toBe(
+        "ask",
+      );
+    }
   });
 });

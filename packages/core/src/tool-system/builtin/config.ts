@@ -7,7 +7,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { SettingsManager, setDottedSetting } from "../../settings/manager.js";
 import type { ToolContext } from "../context.js";
-import { enforcePathPolicyWithApproval } from "../path-policy.js";
+import { classifyPath, enforcePathPolicyWithApproval } from "../path-policy.js";
 
 export const configToolDef: ToolDefinition = {
   name: "Config",
@@ -74,9 +74,8 @@ async function runConfigTool(
   const configPath = join(cwd, ".code-shell", "settings.json");
 
   if (action === "read") {
-    // Config's independent approval covers its fixed settings resource. Keep
-    // ordinary Read gated on the credential-bearing file and use the strict
-    // settings reader here so that a link cannot redirect this authority.
+    // Config's independent approval covers its fixed settings resource. Use
+    // the strict settings reader here so that a link cannot redirect it.
     const blocked = await enforcePathPolicyWithApproval(join(cwd, ".code-shell"), "read", ctx);
     if (blocked) return blocked;
     if (!existsSync(configPath)) {
@@ -99,8 +98,18 @@ async function runConfigTool(
     // credential-bearing settings file. SettingsManager rejects linked state
     // directories/files and validates the value inside its locked transaction.
     if (ctx?.planMode) return "Error: Plan mode does not allow settings writes.";
-    const blocked = await enforcePathPolicyWithApproval(join(cwd, ".code-shell"), "write", ctx);
-    if (blocked) return blocked;
+    // `.code-shell` is a protected path, but Config's own approval already
+    // covers it; only re-ask when the directory resolves outside the workspace.
+    const stateDir = join(cwd, ".code-shell");
+    const target = classifyPath(stateDir, {
+      workspaceRoot: cwd,
+      workspaceRoots: ctx?.workspace?.roots.map((root) => root.path),
+      operation: "write",
+    });
+    if (!(target.protectedScope && target.matchedRoot)) {
+      const blocked = await enforcePathPolicyWithApproval(stateDir, "write", ctx);
+      if (blocked) return blocked;
+    }
     const key = args.key as string;
     const value = args.value;
     if (!key) return "Error: 'key' is required for write action.";

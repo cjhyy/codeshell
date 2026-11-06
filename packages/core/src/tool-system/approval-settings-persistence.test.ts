@@ -45,7 +45,7 @@ for (const kind of ["rule", "path"] as const) {
           expect(
             await enforcePathPolicyWithApproval(
               join(tmpdir(), "fixture-outside.txt"),
-              "read",
+              "write",
               context,
             ),
           ).toBeNull();
@@ -65,13 +65,14 @@ for (const kind of ["rule", "path"] as const) {
   }
 }
 
-test("project-local settings require approval to read", () => {
+test("project-local settings are readable but their writes ask", () => {
   const cwd = mkdtempSync(join(tmpdir(), "project-secret-path-"));
   try {
     mkdirSync(join(cwd, ".code-shell"));
     const file = join(cwd, ".code-shell", "settings.local.json");
     writeFileSync(file, "{}");
-    expect(classifyPath(file, { operation: "read", workspaceRoot: cwd }).decision).toBe("ask");
+    expect(classifyPath(file, { operation: "read", workspaceRoot: cwd }).decision).toBe("allow");
+    expect(classifyPath(file, { operation: "write", workspaceRoot: cwd }).decision).toBe("ask");
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }

@@ -238,9 +238,10 @@ describe("ToolExecutor permission hook hardening", () => {
 
   it("runs path policy after pre_tool_use allow, before any handler execution", async () => {
     let pathPrompts = 0;
+    // Reads are never gated; an outside-workspace write still asks.
     const { executor, hooks, didRun } = makeExecutor({
       rules: [rule("allow")],
-      pathPolicy: [{ kind: "arg", arg: "file_path", operation: "read" }],
+      pathPolicy: [{ kind: "arg", arg: "file_path", operation: "write" }],
     });
     executor.setContext({
       cwd: workspace,

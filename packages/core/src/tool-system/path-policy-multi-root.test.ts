@@ -138,11 +138,14 @@ describe("PathPolicy multi-root containment", () => {
       }
       expect(asks).toBe(0);
       expect(
-        (await executor.executeSingle({
-          id: "outside",
-          toolName: "Read",
-          args: { path: join(outside, "secret.txt") },
-        })).isError,
+        // Reads are never gated; a write outside every root still asks.
+        (
+          await executor.executeSingle({
+            id: "outside",
+            toolName: "Write",
+            args: { path: join(outside, "secret.txt") },
+          })
+        ).isError,
       ).toBe(true);
       expect(asks).toBe(1);
     } finally {
