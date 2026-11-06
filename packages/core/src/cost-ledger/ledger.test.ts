@@ -1,5 +1,13 @@
 import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync, readdirSync, readFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -375,6 +383,48 @@ test("two processes cannot overwrite an external receipt after both observe it a
   } finally {
     for (const child of processes) child.kill();
   }
+});
+
+function foreignSessionLedger(sid: string) {
+  const storageDir = directory();
+  const writer = new UsageLedger({ storageDir });
+  const receipt = bill(writer, sid);
+  // A second Runtime (worker restart, another process) sees the receipt only on
+  // disk. Its clock is past the settle window, so unchanged files are cacheable.
+  const reader = new UsageLedger({ storageDir, now: () => Date.now() + 60_000 });
+  expect(reader.adoptSession(sid, writer.sessionState(sid))).toBe(true);
+  const folder = join(storageDir, readdirSync(storageDir)[0]!);
+  return { reader, file: join(folder, `${receipt.requestId}.json`) };
+}
+
+test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+  "session summaries reuse a parsed foreign receipt while its file is unchanged",
+  () => {
+    const { reader, file } = foreignSessionLedger("cached");
+    expect(reader.summary({ scope: "session", sessionId: "cached" }).requests).toBe(1);
+    // An unreadable file can only still be counted if the summary did not open it.
+    chmodSync(file, 0o000);
+    try {
+      const again = reader.summary({ scope: "session", sessionId: "cached" });
+      expect(again.requests).toBe(1);
+      expect(again.promptTokens).toBe(usage.promptTokens);
+      expect(again.invalidReceipts).toBe(0);
+    } finally {
+      chmodSync(file, 0o600);
+    }
+  },
+);
+
+test("cached foreign receipts follow atomic rewrites and deletions by other ledgers", () => {
+  const { reader, file } = foreignSessionLedger("rewritten");
+  expect(reader.summary({ scope: "session", sessionId: "rewritten" }).promptTokens).toBe(100);
+  const receipt = JSON.parse(readFileSync(file, "utf8"));
+  receipt.usage = { promptTokens: 300, completionTokens: 20, totalTokens: 320 };
+  writeFileSync(`${file}.tmp`, JSON.stringify(receipt));
+  renameSync(`${file}.tmp`, file);
+  expect(reader.summary({ scope: "session", sessionId: "rewritten" }).promptTokens).toBe(300);
+  rmSync(file);
+  expect(reader.summary({ scope: "session", sessionId: "rewritten" }).requests).toBe(0);
 });
 
 test("legacy coverage gaps remain explicit after the Session reference is saved and restored", () => {

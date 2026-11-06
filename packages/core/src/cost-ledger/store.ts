@@ -24,6 +24,17 @@ import type {
 
 const MAX_RECEIPTS = 10_000;
 const MAX_RECEIPT_BYTES = 16_384;
+// Writers replace receipts by rename, so a rewrite changes the inode and mtime.
+// A file modified this recently may still be rewritten within the same mtime
+// tick (or reuse a freed inode), so its stat cannot yet prove the copy current.
+const RECEIPT_CACHE_SETTLE_MS = 2_000;
+
+interface CachedDiskReceipt {
+  ino: number;
+  size: number;
+  mtimeMs: number;
+  receipt: UsageReceipt;
+}
 const PURPOSES = new Set([
   "main",
   "aux_summary",
@@ -123,6 +134,13 @@ export class UsageLedger {
   private readonly directory?: string;
   private readonly now: () => number;
   private readonly records = new Map<string, UsageReceipt>();
+  /**
+   * Parsed receipts other ledgers (processes, restarts) persisted, keyed by
+   * request id and pinned to the file's identity. Session summaries run at
+   * every model step; re-reading thousands of unchanged files each time
+   * dominated the gap between steps on long-lived installs.
+   */
+  private readonly diskReceipts = new Map<string, CachedDiskReceipt>();
   private readonly sessionAccountingIds = new Map<string, string>();
   private persistenceErrors = 0;
   private invalidReceipts = 0;
@@ -379,6 +397,7 @@ export class UsageLedger {
       throw new Error("Invalid usage query");
     const ids = new Set(this.records.keys());
     let partial = false;
+    let listed = false;
     if (this.directory && scope !== "runtime") {
       try {
         const directory = opendirSync(this.directory);
@@ -392,12 +411,17 @@ export class UsageLedger {
             if (entry.isFile() && /^[a-f0-9]{64}\.json$/.test(entry.name))
               ids.add(entry.name.slice(0, -5));
           }
+          listed = true;
         } finally {
           directory.closeSync();
         }
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") this.persistenceErrors++;
       }
+    }
+    if (listed && !partial) {
+      // Forget receipts whose files are gone so the cache stays bounded by the store.
+      for (const id of this.diskReceipts.keys()) if (!ids.has(id)) this.diskReceipts.delete(id);
     }
     const ordered = [...ids].sort().filter((id) => !query.cursor || id > query.cursor);
     const selected = ordered.slice(0, limit);
@@ -451,13 +475,34 @@ export class UsageLedger {
     try {
       const file = join(this.directory, `${id}.json`);
       const stat = lstatSync(file);
-      if (!stat.isFile() || stat.isSymbolicLink() || stat.size > MAX_RECEIPT_BYTES)
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.size > MAX_RECEIPT_BYTES) {
+        this.diskReceipts.delete(id);
         return undefined;
+      }
+      const cached = this.diskReceipts.get(id);
+      if (
+        cached &&
+        cached.ino === stat.ino &&
+        cached.size === stat.size &&
+        cached.mtimeMs === stat.mtimeMs
+      )
+        return cached.receipt;
+      this.diskReceipts.delete(id);
+      // Read after stat: a concurrent replacement leaves a stale stat pinned to
+      // newer content, which only causes one extra read on the next lookup.
       const receipt: unknown = JSON.parse(readFileSync(file, "utf8"));
-      return validReceipt(receipt, this.namespace) && receipt.requestId === id
-        ? receipt
-        : undefined;
+      if (!validReceipt(receipt, this.namespace) || receipt.requestId !== id) return undefined;
+      if (this.now() - stat.mtimeMs > RECEIPT_CACHE_SETTLE_MS) {
+        this.diskReceipts.set(id, {
+          ino: stat.ino,
+          size: stat.size,
+          mtimeMs: stat.mtimeMs,
+          receipt,
+        });
+      }
+      return receipt;
     } catch {
+      this.diskReceipts.delete(id);
       return undefined;
     }
   }
