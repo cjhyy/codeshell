@@ -19,8 +19,10 @@ interface HandoffGrant {
   sessionId: string;
   guestId: number;
   bucket: string;
+  sourceWindowId: number;
   grantedAt: number;
-  expiresAt: number;
+  /** Absent for a grant that lasts as long as this Session and exact tab. */
+  expiresAt?: number;
   /** Pause generations are independent of the still-valid capability grant. */
   controlEpoch: number;
   expiryTimer?: ReturnType<typeof setTimeout>;
@@ -53,14 +55,17 @@ export interface GrantBuiltInBrowserInput {
   guestId: number;
   /** Main-process BrowserWindow id of the renderer that made the user gesture. */
   sourceWindowId: number;
+  /** Omit for the existing time-limited grant behavior. */
+  lifetime?: "session";
   ttlMs?: number;
   /** Never supplied by IPC data: the Host binds this to the granting window. */
   assertCurrent?: () => void;
 }
 
 /**
- * Explicit, expiring capability grant from one engine session to one built-in
- * BrowserPanel guest. It never copies cookies and never follows focus changes.
+ * Explicit capability grant from one engine session to one built-in BrowserPanel
+ * guest. Session grants survive turns; legacy timed grants still expire. Neither
+ * kind copies cookies, follows focus changes, or survives the exact tab closing.
  */
 export class BuiltInTabClaimBackend {
   private readonly grants = new Map<string, HandoffGrant>();
@@ -83,6 +88,7 @@ export class BuiltInTabClaimBackend {
 
   grant(input: GrantBuiltInBrowserInput): BuiltInBrowserHandoffStatus {
     input.assertCurrent?.();
+    const lifetime = parseBuiltInBrowserGrantLifetime(input.lifetime, input.ttlMs);
     const sessionId = input.sessionId.trim();
     if (!sessionId) throw new Error("browser handoff requires sessionId");
     if (
@@ -105,14 +111,28 @@ export class BuiltInTabClaimBackend {
       throw new Error("browser handoff must be granted from the window that owns the tab");
     }
 
+    const previous = this.liveGrant(sessionId);
+    if (
+      lifetime === "session" &&
+      previous?.expiresAt === undefined &&
+      previous?.guestId === record.guestId &&
+      previous.bucket === bucket &&
+      previous.sourceWindowId === input.sourceWindowId
+    ) {
+      // Reselecting an already-bound tab is not a new capability or a resume
+      // gesture. Preserve the driver, in-flight work, and human-takeover epoch.
+      return this.status(sessionId);
+    }
     const grantedAt = this.deps.now();
     const requestedTtl = positiveFiniteOr(input.ttlMs, DEFAULT_GRANT_TTL_MS);
     const grant: HandoffGrant = {
       sessionId,
       guestId: record.guestId,
       bucket,
+      sourceWindowId: input.sourceWindowId,
       grantedAt,
-      expiresAt: grantedAt + Math.min(MAX_GRANT_TTL_MS, requestedTtl),
+      expiresAt:
+        lifetime === "session" ? undefined : grantedAt + Math.min(MAX_GRANT_TTL_MS, requestedTtl),
       controlEpoch: 0,
       assertCurrent: input.assertCurrent,
     };
@@ -120,10 +140,12 @@ export class BuiltInTabClaimBackend {
     this.deps.authorizeGuest(record.guest);
     this.revoked.delete(sessionId);
     this.grants.set(sessionId, grant);
-    grant.expiryTimer = setTimeout(() => {
-      if (this.grants.get(sessionId) === grant) this.revoke(sessionId);
-    }, grant.expiresAt - grantedAt);
-    grant.expiryTimer.unref?.();
+    if (grant.expiresAt !== undefined) {
+      grant.expiryTimer = setTimeout(() => {
+        if (this.grants.get(sessionId) === grant) this.revoke(sessionId);
+      }, grant.expiresAt - grantedAt);
+      grant.expiryTimer.unref?.();
+    }
     const onDestroyed = () => {
       const current = this.grants.get(sessionId);
       if (current?.guestId === record.guestId) this.revoke(sessionId);
@@ -231,7 +253,7 @@ export class BuiltInTabClaimBackend {
       this.revoke(sessionId);
       return undefined;
     }
-    if (grant.expiresAt <= this.deps.now()) {
+    if (grant.expiresAt !== undefined && grant.expiresAt <= this.deps.now()) {
       this.revoke(sessionId);
       return undefined;
     }
@@ -267,6 +289,18 @@ function tabFromRecord(record: GuestRecord): {
 
 function positiveFiniteOr(value: number | undefined, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+/** Validate the explicit lifetime choice before granting any browser capability. */
+export function parseBuiltInBrowserGrantLifetime(
+  lifetime: unknown,
+  ttlMs?: unknown,
+): "session" | undefined {
+  if (lifetime !== undefined && lifetime !== "session")
+    throw new Error("browser handoff lifetime is invalid");
+  if (lifetime === "session" && ttlMs !== undefined)
+    throw new Error("a session browser grant cannot also specify a time limit");
+  return lifetime;
 }
 
 function safe<T>(operation: () => T): T | undefined {

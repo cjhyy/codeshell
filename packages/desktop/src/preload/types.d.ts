@@ -1586,6 +1586,8 @@ export interface CodeshellApi
   grantBuiltInBrowserToRuntime(payload: {
     sessionId: string;
     guestId: number;
+    /** Reuse this exact tab until revoked, closed, or its Session authority ends. */
+    lifetime?: "session";
     ttlMs?: number;
   }): Promise<BrowserRuntimeHandoffStatus>;
   revokeBuiltInBrowserFromRuntime(sessionId: string): Promise<BrowserRuntimeHandoffStatus>;

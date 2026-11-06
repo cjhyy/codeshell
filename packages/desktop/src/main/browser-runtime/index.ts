@@ -26,6 +26,7 @@ export {
   builtInTabClaimBackend,
   BuiltInBrowserHandoffGrants,
   builtInBrowserHandoffGrants,
+  parseBuiltInBrowserGrantLifetime,
 } from "./built-in-handoff.js";
 export {
   ChromeExtensionBackend,
