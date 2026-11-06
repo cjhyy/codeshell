@@ -3470,6 +3470,79 @@ describe("PetDispatchService", () => {
     expect(calls).toEqual(["agent/run", "agent/steer"]);
   });
 
+  describe("NewContext segment rollover", () => {
+    async function runWithNewContext(options: {
+      toolResult?: { toolName: string; isError: boolean };
+      segmentTurn?: unknown;
+    }): Promise<{ rolloverCalls: number; runParams?: Record<string, unknown> }> {
+      let outbound:
+        | ((line: string, snapshotEntry?: { sessionId: string; event: unknown }) => void)
+        | undefined;
+      let rolloverCalls = 0;
+      let runParams: Record<string, unknown> | undefined;
+      const service = new PetDispatchService({
+        metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+        aggregator: {
+          getSnapshot: () => snapshot,
+          resolveNavigation: async () => ({ status: "not-found" }),
+        },
+        worker: {
+          subscribeOutbound: (listener) => {
+            outbound = listener;
+            return () => undefined;
+          },
+          requestWorker: async (method, params) => {
+            if (method !== "agent/run") throw new Error(`unexpected worker method: ${method}`);
+            runParams = params as Record<string, unknown>;
+            if (options.toolResult) {
+              outbound?.("", {
+                sessionId: "pet-one",
+                event: { type: "tool_result", result: options.toolResult },
+              });
+            }
+            return { ok: true, result: { text: "ok" } };
+          },
+        },
+        segmentController: {
+          beginTurn: async () => options.segmentTurn as never,
+          requestRolloverBoundary: () => {
+            rolloverCalls += 1;
+          },
+          completeSegmentClosure: async () => undefined,
+          onDelegationClosed: async () => undefined,
+        },
+        hostCwd: "/safe/pet",
+      });
+      await service.dispatch({ type: "chat", message: "hi", clientMessageId: "m1" });
+      return { rolloverCalls, runParams };
+    }
+
+    test("a successful NewContext requests a rollover boundary", async () => {
+      const out = await runWithNewContext({
+        toolResult: { toolName: "NewContext", isError: false },
+      });
+      expect(out.rolloverCalls).toBe(1);
+    });
+
+    test("a failed NewContext does not request a rollover boundary", async () => {
+      const out = await runWithNewContext({
+        toolResult: { toolName: "NewContext", isError: true },
+      });
+      expect(out.rolloverCalls).toBe(0);
+    });
+
+    test("does not archive again when the model already refreshed its context", async () => {
+      const out = await runWithNewContext({
+        segmentTurn: {
+          closedSegment: { segmentId: "s1", nextBoundaryMessageId: "m1", startedAt: 0, endedAt: 1 },
+          contextAlreadyRefreshed: true,
+        },
+      });
+      expect(out.runParams).toBeDefined();
+      expect(out.runParams).not.toHaveProperty("archiveBeforeCurrentTurn");
+    });
+  });
+
   test("queues different IM senders as isolated Mimi turns", async () => {
     const firstRun = deferred<{ ok: true; result: { text: string } }>();
     const firstRunStarted = deferred<void>();

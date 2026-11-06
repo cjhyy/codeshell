@@ -257,6 +257,43 @@ describe("PetSegmentController", () => {
     expect(closed[0]?.segmentId).toBe(store.opened[0]!.id);
   });
 
+  test("the first turn of a new local day closes the open segment once", async () => {
+    const store = new FakePetWorkMemoryStore();
+    let now = new Date(2026, 10, 5, 10, 0, 0).getTime();
+    const controller = new PetSegmentController({
+      store,
+      petSessionId: "pet-1",
+      archiveRange: async () => ({ before: 0, after: 0 }),
+      now: () => now,
+      idleMs: 48 * HOUR,
+    });
+    expect((await controller.beginTurn("a"))?.closedSegment).toBeUndefined();
+    now = new Date(2026, 10, 6, 9, 0, 0).getTime();
+    expect((await controller.beginTurn("b"))?.closedSegment).toBeDefined();
+    now += MINUTE;
+    expect((await controller.beginTurn("c"))?.closedSegment).toBeUndefined();
+  });
+
+  test("a NewContext rollover closes the segment once and marks the context as refreshed", async () => {
+    const store = new FakePetWorkMemoryStore();
+    let now = HOUR;
+    const controller = new PetSegmentController({
+      store,
+      petSessionId: "pet-1",
+      archiveRange: async () => ({ before: 0, after: 0 }),
+      now: () => now,
+      idleMs: 12 * HOUR,
+    });
+    await controller.beginTurn("a");
+    controller.requestRolloverBoundary();
+    now += MINUTE;
+    const turn = await controller.beginTurn("b");
+    expect(turn?.closedSegment).toBeDefined();
+    expect(turn?.contextAlreadyRefreshed).toBe(true);
+    now += MINUTE;
+    expect((await controller.beginTurn("c"))?.closedSegment).toBeUndefined();
+  });
+
   test("the closed event's anchors, when built, carry exactly the boundary/segment fields for archive_range", () => {
     // Mirrors what packages/desktop/src/main/index.ts's onSegmentClosed does
     // with the event this controller emits: derive the archive-marker anchors

@@ -376,6 +376,7 @@ interface PetDispatchOptions {
   segmentController?: {
     beginTurn(clientMessageId?: string): Promise<PetSegmentTurnStart | undefined>;
     requestContextClear?(): Promise<void>;
+    requestRolloverBoundary?(): void;
     completeSegmentClosure(closed: PetSegmentClosed): Promise<void>;
     onDelegationClosed(closure: {
       objective: string;
@@ -806,6 +807,8 @@ interface PetActiveChatTurn {
   workerRunPending: boolean;
   stopRequested: boolean;
   stopConfirmed: boolean;
+  /** The model successfully called NewContext during this turn. */
+  newContextSucceeded: boolean;
   runSettled: boolean;
   followerCount: number;
   steersDrained: Promise<void>;
@@ -874,6 +877,13 @@ export class PetDispatchService {
       const event = snapshotEntry.event;
       if (!event || typeof event !== "object" || Array.isArray(event)) return;
       const record = event as Record<string, unknown>;
+      if (record.type === "tool_result") {
+        const result = record.result as { toolName?: unknown; isError?: unknown } | undefined;
+        if (result?.toolName === "NewContext" && result.isError !== true) {
+          active.newContextSucceeded = true;
+        }
+        return;
+      }
       if (record.type !== "steer_injected" || typeof record.id !== "string") return;
       const steer = active.steers.get(record.id);
       if (steer && !steer.injected) {
@@ -911,6 +921,7 @@ export class PetDispatchService {
       workerRunPending: false,
       stopRequested: false,
       stopConfirmed: false,
+      newContextSucceeded: false,
       runSettled: false,
       followerCount: 0,
       steersDrained: Promise.resolve(),
@@ -2494,7 +2505,9 @@ export class PetDispatchService {
           kind: "pet",
           permissionMode: "default",
           clientMessageId: command.clientMessageId,
-          ...(segmentTurn?.closedSegment && command.clientMessageId
+          ...(segmentTurn?.closedSegment &&
+          !segmentTurn.contextAlreadyRefreshed &&
+          command.clientMessageId
             ? {
                 archiveBeforeCurrentTurn: {
                   ...(segmentTurn.closedSegment.closingBoundaryMessageId &&
@@ -2509,6 +2522,9 @@ export class PetDispatchService {
               }
             : {}),
         }).finally(() => {
+          if (activeChat?.newContextSucceeded) {
+            this.options.segmentController?.requestRolloverBoundary?.();
+          }
           if (!segmentTurn?.closedSegment?.nextBoundaryMessageId) return;
           // Journal/memory extraction is intentionally background work. It
           // starts only after agent/run has settled, so its end anchor is no
