@@ -19,17 +19,16 @@ function fixture() {
   return { cwd, file, ctx: { cwd, permissionMode: "default" } as ToolContext };
 }
 
-test("approved Config writes stay scoped while ordinary file tools retain credential protection", async () => {
+test("approved Config writes need no second path prompt while ordinary file tools still ask", async () => {
   const { cwd, file, ctx } = fixture();
   expect(
     await configTool({ action: "write", key: "agent.responseLanguage", value: "zh" }, ctx),
   ).toContain("Updated");
   expect(JSON.parse(readFileSync(file, "utf8")).agent.responseLanguage).toBe("zh");
-  expect(classifyPath(file, { operation: "write", workspaceRoot: cwd }).decision).toBe("deny");
-  expect(await enforcePathPolicyWithApproval(file, "write", ctx)).toContain(
-    "blocked by path policy",
-  );
-  expect(await enforcePathPolicyWithApproval(file, "read", ctx)).toContain("requires approval");
+  // Ordinary Write/Edit still treat the settings file as a protected path.
+  expect(classifyPath(file, { operation: "write", workspaceRoot: cwd }).decision).toBe("ask");
+  expect(await enforcePathPolicyWithApproval(file, "write", ctx)).toContain("requires approval");
+  expect(await enforcePathPolicyWithApproval(file, "read", ctx)).toBeNull();
   expect(JSON.parse(await configTool({ action: "read" }, ctx)).agent.responseLanguage).toBe("zh");
 });
 
@@ -68,4 +67,16 @@ test("Config cannot redirect its fixed settings target through a symlink", async
   ).toMatch(/^Error:/);
   expect(await configTool({ action: "read" }, ctx)).toMatch(/^Error:/);
   expect(JSON.parse(readFileSync(outside, "utf8")).agent.responseLanguage).toBe("en");
+});
+
+test("Config still asks when .code-shell resolves outside the workspace", async () => {
+  const cwd = mkdtempSync(join(tmpdir(), "config-authority-"));
+  const elsewhere = mkdtempSync(join(tmpdir(), "config-authority-elsewhere-"));
+  roots.push(cwd, elsewhere);
+  symlinkSync(elsewhere, join(cwd, ".code-shell"), "dir");
+  const result = await configTool({ action: "write", key: "agent.responseLanguage", value: "zh" }, {
+    cwd,
+    permissionMode: "default",
+  } as ToolContext);
+  expect(result).toContain("requires approval");
 });

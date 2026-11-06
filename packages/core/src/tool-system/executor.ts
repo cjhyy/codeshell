@@ -72,6 +72,10 @@ function permissionAskReason(
   return parts.length > 0 ? parts.join("\n\n") : undefined;
 }
 
+function planModeBlockedError(toolName: string): string {
+  return `Plan mode: ${toolName} is blocked. Only read-only tools (Read, Glob, Grep, WebSearch, WebFetch, Bash read-only) are allowed. You MUST output your plan as text in the conversation instead. Do NOT retry this tool call.`;
+}
+
 export class ToolExecutor {
   private signal?: AbortSignal;
   /** Per-Engine ToolContext injected for every tool call. */
@@ -210,6 +214,15 @@ export class ToolExecutor {
   }
 
   private enforceArgumentPolicy(call: ToolCall): ToolResult | undefined {
+    if (this.toolCtx?.validateToolArguments) {
+      let error: string | undefined;
+      try {
+        error = this.toolCtx.validateToolArguments(call.toolName, call.args);
+      } catch {
+        error = "Host tool argument policy is unavailable. Do NOT retry this tool call.";
+      }
+      if (error) return { id: call.id, toolName: call.toolName, error, isError: true };
+    }
     // Same gate for MCP tools: the registry is worker-shared, so it can hold
     // tools from servers OTHER sessions enabled. Visibility filtering hides
     // them from this session's tool list; this rejects a direct call anyway.
@@ -311,7 +324,7 @@ export class ToolExecutor {
           error:
             allowed && bashWrite
               ? `Plan mode is read-only: this Bash command writes or modifies files, which is not allowed while planning. To carry it out, first call ExitPlanMode (after the user approves your plan), then run it. Do NOT retry this command in plan mode.`
-              : `Plan mode: ${call.toolName} is blocked. Only read-only tools (Read, Glob, Grep, WebSearch, WebFetch, Bash read-only) are allowed. You MUST output your plan as text in the conversation instead. Do NOT retry this tool call.`,
+              : planModeBlockedError(call.toolName),
           isError: true,
         };
       }
@@ -353,16 +366,20 @@ export class ToolExecutor {
         isError: true,
       };
     }
+    this.toolCtx?.refreshRunToolEligibility?.();
     if (this.toolCtx?.allowedToolNames && !this.toolCtx.allowedToolNames.has(call.toolName)) {
       return {
         id: call.id,
         toolName: call.toolName,
-        error: `Tool ${call.toolName} is not allowed by this run profile. Do NOT retry this tool call.`,
+        // Plan mode also narrows the allowed set; keep its actionable refusal.
+        error:
+          this.toolCtx.planMode && !PLAN_MODE_ALLOWED_TOOLS.has(call.toolName)
+            ? planModeBlockedError(call.toolName)
+            : `Tool ${call.toolName} is not allowed by this run profile. Do NOT retry this tool call.`,
         isError: true,
       };
     }
     const surface = this.toolCtx?.runToolSurface;
-    this.toolCtx?.refreshRunToolEligibility?.();
     if (surface && !surface.isEligible(call.toolName)) {
       return {
         id: call.id,
@@ -675,6 +692,29 @@ export class ToolExecutor {
     // Hooks and approvals may await while the host revokes a capability. This
     // refresh changes eligibility only, never the completed model step's tools.
     this.toolCtx?.refreshRunToolEligibility?.();
+    if (this.toolCtx?.disabledBuiltins?.has(call.toolName)) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool ${call.toolName} was disabled before execution. Do NOT retry unless the Session context changes.`,
+        isError: true,
+      };
+    }
+    if (this.toolCtx?.allowedToolNames && !this.toolCtx.allowedToolNames.has(call.toolName)) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool ${call.toolName} is no longer available in the current session context. Do NOT retry unless the relevant context changes.`,
+        isError: true,
+      };
+    }
+    if (this.toolCtx?.validateToolArguments) {
+      // Approval handlers may retain their input object. Execute the exact
+      // detached values accepted by this final Host policy check.
+      call = { ...call, args: structuredClone(call.args) };
+    }
+    const lateArgumentPolicyError = this.enforceArgumentPolicy(call);
+    if (lateArgumentPolicyError) return lateArgumentPolicyError;
     if (surface && !surface.isEligible(call.toolName)) {
       return {
         id: call.id,

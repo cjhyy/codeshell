@@ -55,25 +55,21 @@ describe("Bash skill documentation reads", () => {
     expect(new PermissionClassifier([], "default").classify("Bash", { command })).toBe("ask");
   });
 
+  // Reads are not gated (aligned with Codex / Claude Code): credential files
+  // classify like any other read, across every Bash reader.
   test.each([
     "sed -n '1,200p' ~/.ssh/id_rsa",
     "sed -n '1,200p' ~/.code-shell/credentials.json",
-    "sed -n '1,200p' ~/.code-shell/skills/example/.env",
     "sed -n '1,200p' ~/.code-shell/skills/example/credentials.json | head -40",
-  ])("preserves the sensitive-read downgrade for sed: %s", (command) => {
-    expect(classifyBashCommand(command)).toBe("unsafe");
-  });
-
-  test.each(
-    ["auth.json", "token.txt", "secret.pem"].flatMap((name) => [
+    ...["auth.json", "token.txt", "secret.pem", ".env"].flatMap((name) => [
       `cat ~/.code-shell/skills/example/${name}`,
       `head -n 20 ~/.code-shell/skills/example/${name}`,
       `tail -c 200 -- ~/.code-shell/skills/example/${name}`,
       `sed -n '1,200p' '~/.code-shell/skills/example/${name}'`,
     ]),
-  )("shares sensitive resource basenames across Bash readers: %s", (command) => {
-    expect(classifyBashCommand(command)).toBe("unsafe");
-    expect(new PermissionClassifier([], "default").classify("Bash", { command })).toBe("ask");
+  ])("credential reads are ordinary safe-reads: %s", (command) => {
+    expect(classifyBashCommand(command)).toBe("safe-read");
+    expect(new PermissionClassifier([], "default").classify("Bash", { command })).toBe("allow");
   });
 
   test("preserves acceptEdits and explicit deny rules for skill reads", () => {

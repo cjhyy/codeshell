@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { AskUserMessageView, formatAutoContinueRemaining } from "./AskUserMessageView";
+import { AskUserMessageView, formatRemaining } from "./AskUserMessageView";
 import type { AskUserMessage } from "../types";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { translate } from "../i18n/translate";
@@ -254,11 +254,11 @@ describe("AskUserMessageView layout", () => {
 
 describe("AskUserMessageView auto-continue countdown", () => {
   test("formats remaining time as m:ss and never reads 0:00 early", () => {
-    expect(formatAutoContinueRemaining(120_000)).toBe("2:00");
-    expect(formatAutoContinueRemaining(61_500)).toBe("1:02");
-    expect(formatAutoContinueRemaining(59_001)).toBe("1:00");
-    expect(formatAutoContinueRemaining(400)).toBe("0:01");
-    expect(formatAutoContinueRemaining(-5)).toBe("0:00");
+    expect(formatRemaining(120_000)).toBe("2:00");
+    expect(formatRemaining(61_500)).toBe("1:02");
+    expect(formatRemaining(59_001)).toBe("1:00");
+    expect(formatRemaining(400)).toBe("0:01");
+    expect(formatRemaining(-5)).toBe("0:00");
   });
 
   test("shows the countdown and keep-waiting control only for a keep-waitable deadline", () => {
@@ -445,5 +445,98 @@ describe("AskUserMessageView timeout default", () => {
     );
     expect(html).toContain("后未回答将自动跳过");
     expect(html).not.toContain("推荐");
+  });
+});
+
+describe("AskUserMessageView deadline", () => {
+  test("an open question shows how long it can still be answered", () => {
+    const html = renderToStaticMarkup(
+      <AskUserMessageView message={ask({ expiresAt: Date.now() + 125_000 })} onAnswer={() => {}} />,
+    );
+    expect(html).toMatch(/2:0\d 后未回答将自动跳过/);
+    expect(html).not.toMatch(/<button[^>]*\sdisabled=""/);
+  });
+
+  test("questions without a deadline and answered questions show no countdown", () => {
+    for (const message of [ask(), ask({ expiresAt: Date.now() + 60_000, answer: "允许本次" })]) {
+      const html = renderToStaticMarkup(
+        <AskUserMessageView message={message} onAnswer={() => {}} />,
+      );
+      expect(html).not.toContain("后未回答将自动跳过");
+      expect(html).not.toContain("已超时");
+    }
+  });
+
+  test("a passed deadline locks every control before the host retires the card", () => {
+    const html = renderToStaticMarkup(
+      <AskUserMessageView message={ask({ expiresAt: Date.now() - 1 })} onAnswer={() => {}} />,
+    );
+    expect(html).toContain("已超时，不能再回答");
+    const buttons = html.match(/<button[^>]*>/g) ?? [];
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const button of buttons) expect(button).toMatch(/\sdisabled=""/);
+  });
+
+  test("an open card locks itself when the deadline passes and ignores late clicks", async () => {
+    ensureMiniDom();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const answers: string[] = [];
+    const option = () =>
+      descendants(container).find(
+        (node) => node.tagName === "BUTTON" && textOf(node).startsWith("允许本次"),
+      )!;
+    try {
+      await act(async () => {
+        root.render(
+          <AskUserMessageView
+            message={ask({ expiresAt: Date.now() + 200 })}
+            onAnswer={(_id, answer) => {
+              answers.push(answer);
+            }}
+          />,
+        );
+        await flushMicrotasks();
+      });
+      expect(props(option()).disabled).toBeFalsy();
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+      });
+      expect(props(option()).disabled).toBe(true);
+      expect(textOf(container)).toContain("已超时，不能再回答");
+      await act(async () => {
+        props(option()).onClick({ isPropagationStopped: () => false, stopPropagation() {} });
+        await flushMicrotasks();
+      });
+      expect(answers).toEqual([]);
+    } finally {
+      await act(async () => root.unmount());
+      document.body.removeChild(container);
+    }
+  });
+
+  test("the deadline copy is available in Chinese and English", () => {
+    expect(translate("zh", "msg.ask.expiresIn", { time: "1:05" })).toBe("1:05 后未回答将自动跳过");
+    expect(translate("en", "msg.ask.expiresIn", { time: "1:05" })).toBe(
+      "Skipped automatically in 1:05 if unanswered",
+    );
+    expect(translate("en", "msg.ask.expired")).toBe(
+      "Timed out — this question can no longer be answered",
+    );
+  });
+});
+
+describe("AskUserMessageView single countdown", () => {
+  test("a keep-waitable model question shows one countdown, not the generic deadline too", () => {
+    const html = renderToStaticMarkup(
+      <AskUserMessageView
+        message={ask({ skippable: true, keepWaitable: true, expiresAt: Date.now() + 90_000 })}
+        onAnswer={() => {}}
+        onKeepWaiting={async () => {}}
+      />,
+    );
+    expect(html.split("后未回答将自动跳过")).toHaveLength(2);
+    expect(html).toContain('role="timer"');
   });
 });

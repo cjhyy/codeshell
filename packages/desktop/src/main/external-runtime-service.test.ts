@@ -29,16 +29,23 @@ import {
 import {
   backgroundJobRegistry,
   activateWorkspaceProfile,
+  deleteWorkspaceProfile,
   ModelTraceStore,
   saveWorkspaceProfile,
   SessionOutputCoverageStore,
   readOutputJournal,
+  legacySingleRootWorkspace,
 } from "@cjhyy/code-shell-core/internal";
 import { SessionSnapshotStore } from "./SessionSnapshotStore.js";
 import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
 import { recoverDesktopOutputJournal } from "../renderer/app/outputJournalRecovery.js";
 import { acquireOutputHistoryRecovery } from "./session-output-history-lease.js";
-import { createSessionToolHost, FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
+import {
+  createSessionToolHost,
+  FIRST_PHASE_EXPOSURE,
+  type ToolVisibilityInputs,
+} from "@cjhyy/code-shell-core/extension";
+import { NotificationQueue } from "../../../core/src/tool-system/builtin/agent-notifications.js";
 import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { EXTERNAL_GOAL_TOOLS } from "./external-runtime-goals.js";
 import type { ExternalRuntimeServiceDeps } from "./external-runtime-service.js";
@@ -55,6 +62,7 @@ const closed: string[] = [];
 /** When set, the next fake provider send rejects the way a dead process does. */
 let failNextSend = false;
 let failNextStart = false;
+let providerAcceptsTurn = true;
 let providerStart: (() => Promise<void>) | undefined;
 let providerSend:
   | ((args: StartArgs, input: { text: string; injected?: boolean }) => Promise<void>)
@@ -90,7 +98,10 @@ function fakeSession(args: StartArgs) {
         onEvent ? { ...args, hooks: { ...(args.hooks as object), onEvent } } : args,
         input,
       );
-      return { done: Promise.resolve() };
+      return {
+        done: Promise.resolve(),
+        ...(providerAcceptsTurn ? { accepted: true as const } : {}),
+      };
     },
     interrupt: async () => {
       await providerInterrupt?.();
@@ -171,6 +182,39 @@ const request = {
   ownerWindow: { webContents: { id: 77 } } as never,
 };
 
+function claimBackgroundMessage(
+  message: string | undefined,
+  restore: (message: string) => void,
+  isCurrent = () => true,
+) {
+  if (message === undefined) return undefined;
+  const mailbox = new NotificationQueue();
+  mailbox.enqueue(
+    {
+      agentId: "result",
+      description: "delegated task",
+      finalText: message,
+      status: "completed",
+      enqueuedAt: 1,
+    },
+    request.sessionId,
+  );
+  const claim = mailbox.claimResults(request.sessionId)!;
+  return {
+    results: claim.results,
+    acknowledge: () => claim.acknowledge(),
+    restore: () => {
+      if (!isCurrent()) {
+        claim.acknowledge();
+        return 0;
+      }
+      const count = claim.restore();
+      if (count) restore(message);
+      return count;
+    },
+  };
+}
+
 function backgroundDelivery() {
   type Listener = Parameters<
     NonNullable<ExternalRuntimeServiceDeps["backgroundWork"]>["subscribe"]
@@ -179,6 +223,8 @@ function backgroundDelivery() {
   const pending = new Map<string, string>();
   const running = new Set<string>();
   const dropped: string[] = [];
+  const generations = new Map<string, number>();
+  const activeClaims = new Map<string, NonNullable<ReturnType<typeof claimBackgroundMessage>>>();
   const delivery = {
     subscribe(next: Listener) {
       listener = next;
@@ -188,13 +234,38 @@ function backgroundDelivery() {
     },
     hasPending: (sessionId: string) => pending.has(sessionId),
     hasRunning: (sessionId: string) => running.has(sessionId),
-    drainMessage(sessionId: string) {
+    claimResults(sessionId: string) {
+      if (activeClaims.has(sessionId)) return undefined;
+      const generation = generations.get(sessionId);
       const message = pending.get(sessionId);
       pending.delete(sessionId);
-      return message;
+      const claim = claimBackgroundMessage(
+        message,
+        (value) =>
+          pending.set(sessionId, [value, pending.get(sessionId)].filter(Boolean).join("\n\n")),
+        () => generations.get(sessionId) === generation,
+      );
+      if (!claim) return undefined;
+      const release = () => {
+        if (activeClaims.get(sessionId) === claim) activeClaims.delete(sessionId);
+      };
+      activeClaims.set(sessionId, claim);
+      return {
+        results: claim.results,
+        acknowledge: () => {
+          release();
+          return claim.acknowledge();
+        },
+        restore: () => {
+          release();
+          return claim.restore();
+        },
+      };
     },
     dropSession(sessionId: string) {
       dropped.push(sessionId);
+      generations.set(sessionId, (generations.get(sessionId) ?? 0) + 1);
+      activeClaims.delete(sessionId);
       pending.delete(sessionId);
       running.delete(sessionId);
     },
@@ -236,6 +307,7 @@ beforeEach(() => {
   stateChanges.length = 0;
   failNextSend = false;
   failNextStart = false;
+  providerAcceptsTurn = true;
   providerStart = undefined;
   providerSend = undefined;
   providerInterrupt = undefined;
@@ -251,6 +323,343 @@ afterEach(() => {
 });
 
 describe("ExternalRuntimeService", () => {
+  test.each(["codex", "claude-code"] as const)(
+    "%s restores a failed background launch once, then delivers it to the replacement",
+    async (kind) => {
+      const background = backgroundDelivery();
+      const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+        backgroundWork: background.delivery,
+      });
+      try {
+        await svc.start({ ...request, kind });
+        failNextSend = true;
+        background.complete(request.sessionId, "recoverable completion");
+        await settleBackgroundWakeup();
+        expect(providerInputs).toHaveLength(1);
+        expect(background.pending.get(request.sessionId)).toBe("recoverable completion");
+        await settleBackgroundWakeup();
+        expect(providerInputs).toHaveLength(1); // restore cannot trigger a retry loop
+        await svc.start({ ...request, kind });
+        await settleBackgroundWakeup();
+        expect(providerInputs).toHaveLength(2);
+        expect(providerInputs[1]!.text).toContain("recoverable completion");
+        expect(background.pending.has(request.sessionId)).toBe(false);
+      } finally {
+        await svc.stopAll();
+      }
+    },
+  );
+
+  test.each(["codex", "claude-code"] as const)(
+    "%s retains results when a started transport reports failure without provider acceptance",
+    async (kind) => {
+      const background = backgroundDelivery();
+      const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+        backgroundWork: background.delivery,
+      });
+      try {
+        await svc.start({ ...request, kind });
+        providerAcceptsTurn = false;
+        providerSend = async (args) => {
+          const onEvent = (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent;
+          onEvent({ type: "stream_request_start", turnNumber: 1 });
+          onEvent({ type: "usage_update", promptTokens: 0 });
+          onEvent({ type: "error", error: "input pipe closed before provider start" });
+          onEvent({ type: "turn_complete", reason: "model_error" });
+        };
+        background.complete(request.sessionId, "transport failed completion");
+        await settleBackgroundWakeup();
+        expect(providerInputs).toHaveLength(1);
+        expect(background.pending.get(request.sessionId)).toBe("transport failed completion");
+      } finally {
+        await svc.stopAll();
+      }
+    },
+  );
+
+  test.each(["codex", "claude-code"] as const)(
+    "%s never replays a background result after provider output followed by failure",
+    async (kind) => {
+      const background = backgroundDelivery();
+      const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+        backgroundWork: background.delivery,
+      });
+      try {
+        await svc.start({ ...request, kind });
+        providerAcceptsTurn = false;
+        providerSend = async (args) => {
+          (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent({
+            type: "text_delta",
+            text: "Already acted on the background result",
+          });
+          throw new Error("transport failed after output");
+        };
+        background.complete(request.sessionId, "already consumed completion");
+        await settleBackgroundWakeup();
+        expect(providerInputs).toHaveLength(1);
+        expect(background.pending.has(request.sessionId)).toBe(false);
+        providerSend = undefined;
+        await svc.start({ ...request, kind });
+        await settleBackgroundWakeup();
+        expect(providerInputs).toHaveLength(1);
+      } finally {
+        await svc.stopAll();
+      }
+    },
+  );
+
+  test("a closed delivery cannot restore its result or acknowledge a successor's result", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    let release!: () => void;
+    let entered!: () => void;
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    let oldEvent!: (event: StreamEvent) => void;
+    try {
+      await svc.start(request);
+      providerSend = async (args) => {
+        oldEvent = (args.hooks as { onEvent: typeof oldEvent }).onEvent;
+        entered();
+        await blocked;
+        throw new Error("old launch failed after close");
+      };
+      background.complete(request.sessionId, "closed completion");
+      await started;
+      await svc.stop(request.sessionId, 77);
+      await svc.start(request);
+      await svc.interrupt(request.sessionId, 77); // hold the new result for real input
+      background.complete(request.sessionId, "successor completion");
+      oldEvent({ type: "text_delta", text: "stale output" });
+      release();
+      await settleBackgroundWakeup();
+      expect(background.pending.get(request.sessionId)).toBe("successor completion");
+      expect(
+        streamEvents.some((event) => event.type === "text_delta" && event.text === "stale output"),
+      ).toBe(false);
+      providerSend = undefined;
+      await svc.send(request.sessionId, "continue");
+      expect(providerInputs).toHaveLength(2);
+      expect(providerInputs[1]!.text).toContain("successor completion");
+      expect(providerInputs[1]!.text).not.toContain("closed completion");
+      expect(background.pending.has(request.sessionId)).toBe(false);
+    } finally {
+      release?.();
+      await svc.stopAll();
+    }
+  });
+
+  test.each(["codex", "claude-code"] as const)(
+    "%s keeps queued completion claims separate from stale prior-turn callbacks",
+    async (kind) => {
+      const background = backgroundDelivery();
+      const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+        backgroundWork: background.delivery,
+      });
+      let enterFirst!: () => void;
+      let enterSecond!: () => void;
+      let releaseFirst!: () => void;
+      let releaseSecond!: () => void;
+      const firstStarted = new Promise<void>((resolve) => {
+        enterFirst = resolve;
+      });
+      const secondStarted = new Promise<void>((resolve) => {
+        enterSecond = resolve;
+      });
+      const firstBlocked = new Promise<void>((resolve) => {
+        releaseFirst = resolve;
+      });
+      const secondBlocked = new Promise<void>((resolve) => {
+        releaseSecond = resolve;
+      });
+      let oldEvent!: (event: StreamEvent) => void;
+      try {
+        await svc.start({ ...request, kind });
+        providerSend = async (args) => {
+          if (providerInputs.length === 1) {
+            oldEvent = (args.hooks as { onEvent: typeof oldEvent }).onEvent;
+            enterFirst();
+            await firstBlocked;
+          } else {
+            enterSecond();
+            await secondBlocked;
+            throw new Error("second provider launch failed");
+          }
+        };
+        background.complete(request.sessionId, "first completion");
+        await firstStarted;
+        background.complete(request.sessionId, "second completion");
+        releaseFirst();
+        await secondStarted;
+        oldEvent({ type: "text_delta", text: "late first-turn output" });
+        releaseSecond();
+        await settleBackgroundWakeup();
+        expect(providerInputs).toHaveLength(2);
+        expect(providerInputs[0]!.text).toContain("first completion");
+        expect(providerInputs[0]!.text).not.toContain("second completion");
+        expect(providerInputs[1]!.text).toContain("second completion");
+        expect(providerInputs[1]!.text).not.toContain("first completion");
+        expect(background.pending.get(request.sessionId)).toBe("second completion");
+        expect(
+          streamEvents.some(
+            (event) => event.type === "text_delta" && event.text === "late first-turn output",
+          ),
+        ).toBe(false);
+      } finally {
+        releaseFirst?.();
+        releaseSecond?.();
+        await svc.stopAll();
+      }
+    },
+  );
+
+  test("a Goal rotates provider ownership before claiming its next-round results", async () => {
+    const background = backgroundDelivery();
+    let oldEvent: ((event: StreamEvent) => void) | undefined;
+    let reservations = 0;
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: {
+        ...background.delivery,
+        claimResults(sessionId) {
+          if (++reservations === 2)
+            oldEvent?.({ type: "text_delta", text: "stale during reserve" });
+          return background.delivery.claimResults(sessionId);
+        },
+      },
+    });
+    try {
+      await svc.start(request);
+      providerSend = async (args) => {
+        if (providerInputs.length === 1) {
+          oldEvent = (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent;
+          background.complete(request.sessionId, "Goal round result");
+        }
+      };
+      await svc.send(request.sessionId, {
+        text: "run",
+        goal: { objective: "test Goal", maxTurns: 2 },
+      });
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(2);
+      expect(providerInputs[1]!.text).toContain("Goal round result");
+      expect(
+        streamEvents.some(
+          (event) => event.type === "text_delta" && event.text === "stale during reserve",
+        ),
+      ).toBe(false);
+    } finally {
+      await svc.stopAll();
+    }
+  });
+
+  test.each(["codex", "claude-code"] as const)(
+    "%s rechecks completions arriving while an empty queued wake releases its slot",
+    async (kind) => {
+      const background = backgroundDelivery();
+      let consumedFirst = false;
+      let publishedSecond = false;
+      const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+        backgroundWork: {
+          ...background.delivery,
+          claimResults(sessionId) {
+            const claim = background.delivery.claimResults(sessionId);
+            if (claim?.results.some((item) => item.payload.finalText === "first completion"))
+              consumedFirst = true;
+            if (!claim && consumedFirst && !publishedSecond) {
+              publishedSecond = true;
+              queueMicrotask(() => background.complete(sessionId, "second completion"));
+            }
+            return claim;
+          },
+        },
+      });
+      let enter!: () => void;
+      let release!: () => void;
+      const started = new Promise<void>((resolve) => {
+        enter = resolve;
+      });
+      const blocked = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      try {
+        await svc.start({ ...request, kind });
+        providerSend = async () => {
+          if (providerInputs.length === 1) {
+            enter();
+            await blocked;
+          }
+        };
+        const launching = svc.send(request.sessionId, "launch work");
+        await started;
+        const nextUser = svc.send(request.sessionId, "user queued before wake");
+        background.complete(request.sessionId, "first completion");
+        release();
+        await launching;
+        await nextUser;
+        await settleBackgroundWakeup();
+        expect(publishedSecond).toBe(true);
+        expect(providerInputs).toHaveLength(3);
+        expect(providerInputs[1]!.text).toContain("first completion");
+        expect(providerInputs[2]).toMatchObject({ injected: true });
+        expect(providerInputs[2]!.text).toContain("second completion");
+        expect(background.pending.has(request.sessionId)).toBe(false);
+      } finally {
+        release?.();
+        await svc.stopAll();
+      }
+    },
+  );
+
+  test("a replacement waits for an old ordinary claim and wakes when that submission settles", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    let enter!: () => void;
+    let release!: () => void;
+    const started = new Promise<void>((resolve) => {
+      enter = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    try {
+      await svc.start(request);
+      background.pending.set(request.sessionId, "old retained result");
+      providerSend = async () => {
+        if (providerInputs.length === 1) {
+          enter();
+          await blocked;
+          throw new Error("old ordinary launch failed");
+        }
+      };
+      const oldUser = svc.send(request.sessionId, "ordinary user input");
+      await started;
+      await svc.start(request);
+      background.complete(request.sessionId, "new queued result");
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(1);
+      expect(background.pending.get(request.sessionId)).toBe("new queued result");
+      release();
+      await oldUser;
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(2);
+      expect(providerInputs[1]!.text).toContain("old retained result");
+      expect(providerInputs[1]!.text).toContain("new queued result");
+      expect(background.pending.has(request.sessionId)).toBe(false);
+      expect(background.dropped).toEqual([]);
+    } finally {
+      release?.();
+      await svc.stopAll();
+    }
+  });
+
   test("history checkpoint quiesces only idle CLI work and preserves plan instructions for continuation", async () => {
     const background = backgroundDelivery();
     const svc = service({ external_agent_runtime: true }, undefined, {
@@ -633,7 +1042,9 @@ describe("ExternalRuntimeService", () => {
     expect(starts[1]!.planMode).toBe(true);
     expect(starts[1]!.sandbox).toBe("read-only");
     expect(starts[1]!.permissionMode).toBe("acceptEdits");
-    expect(starts[1]!.visibility).toMatchObject({ hasGoal: true });
+    // A stale launch hint is not an actual persisted Goal. Visibility reads the
+    // current Host state even while the remaining desktop run options survive.
+    expect(starts[1]!.visibility).toMatchObject({ hasGoal: false });
     expect(starts[1]!.developerInstructions).toContain(desktopRequest.developerInstructions);
     await svc.stopAll();
   });
@@ -1152,6 +1563,253 @@ describe("ExternalRuntimeService", () => {
     expect(providerInputs).toHaveLength(1);
   });
 
+  test.each(["codex", "claude-code"] as const)(
+    "%s retains background completion after Stop until the next user input",
+    async (kind) => {
+      const background = backgroundDelivery();
+      const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+        backgroundWork: background.delivery,
+      });
+      let entered!: () => void;
+      let release!: () => void;
+      const firstStarted = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const blocked = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let onEvent: ((event: StreamEvent) => void) | undefined;
+      let interrupts = 0;
+      providerSend = async (args) => {
+        if (providerInputs.length > 1) return;
+        onEvent = (args.hooks as { onEvent: (event: StreamEvent) => void }).onEvent;
+        background.running.add(request.sessionId);
+        entered();
+        await blocked;
+      };
+      providerInterrupt = async () => {
+        interrupts++;
+        onEvent?.({ type: "turn_complete", reason: "aborted_streaming" });
+        release();
+      };
+
+      let foreground: ReturnType<typeof svc.send> | undefined;
+      try {
+        await svc.start({ ...request, kind });
+        foreground = svc.send(request.sessionId, { text: "Start a background check" }, 77);
+        await firstStarted;
+        expect(svc.getGoal(request.sessionId).goal).toBeNull();
+
+        // Stop leaves the job running, but its result must wait for the user.
+        await svc.interrupt(request.sessionId, 77);
+        expect(await foreground).toMatchObject({ ok: false, reason: "aborted_streaming" });
+        expect(interrupts).toBe(1);
+        expect(svc.hasSession(request.sessionId)).toBe(true);
+        expect(svc.getGoal(request.sessionId).goal).toBeNull();
+        expect(providerInputs).toHaveLength(1);
+        expect(background.running.has(request.sessionId)).toBe(true);
+
+        const completion = "Background check completed after Stop";
+        background.complete(request.sessionId, completion);
+        await settleBackgroundWakeup();
+
+        expect(providerInputs).toHaveLength(1);
+        expect(background.pending.get(request.sessionId)).toBe(completion);
+        expect(emitted).toContainEqual({
+          sessionId: request.sessionId,
+          type: "background_agent_completed",
+        });
+        expect(background.dropped).toEqual([]);
+        expect(starts).toHaveLength(1);
+        expect(closed).toEqual([]);
+        expect(svc.hasSession(request.sessionId)).toBe(true);
+        expect(svc.getGoal(request.sessionId).goal).toBeNull();
+
+        await svc.send(request.sessionId, "Review the completed check", 77);
+        await settleBackgroundWakeup();
+        expect(providerInputs).toHaveLength(2);
+        expect(providerInputs[1]!.injected).not.toBe(true);
+        expect(providerInputs[1]!.text).toContain("Review the completed check");
+        expect(providerInputs[1]!.text.split(completion)).toHaveLength(2);
+        expect(background.pending.has(request.sessionId)).toBe(false);
+
+        // Accepted user input also restores automatic delivery of later jobs.
+        background.complete(request.sessionId, "Another check completed");
+        await settleBackgroundWakeup();
+        expect(providerInputs).toHaveLength(3);
+        expect(providerInputs[2]).toMatchObject({ injected: true });
+        expect(providerInputs[2]!.text).toContain("Another check completed");
+      } finally {
+        release();
+        await foreground?.catch(() => {});
+        await svc.stopAll();
+      }
+    },
+  );
+
+  test.each(["codex", "claude-code"] as const)(
+    "%s automatically continues an ordinary session for background completion without Stop",
+    async (kind) => {
+      const background = backgroundDelivery();
+      const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+        backgroundWork: background.delivery,
+      });
+      try {
+        await svc.start({ ...request, kind });
+        background.running.add(request.sessionId);
+        await svc.send(request.sessionId, "Start a background check", 77);
+        expect(svc.getGoal(request.sessionId).goal).toBeNull();
+
+        background.complete(request.sessionId, "Background check completed normally");
+        await settleBackgroundWakeup();
+        expect(providerInputs).toHaveLength(2);
+        expect(providerInputs[1]).toMatchObject({ injected: true });
+        expect(providerInputs[1]!.text).toContain("Background check completed normally");
+        expect(background.pending.has(request.sessionId)).toBe(false);
+        expect(background.dropped).toEqual([]);
+        expect(starts).toHaveLength(1);
+        expect(closed).toEqual([]);
+      } finally {
+        await svc.stopAll();
+      }
+    },
+  );
+
+  test("Stop fences an already queued background wake and earlier queued user input", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    let entered!: () => void;
+    let release!: () => void;
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    providerSend = async () => {
+      if (providerInputs.length > 1) return;
+      entered();
+      await blocked;
+    };
+    providerInterrupt = async () => release();
+    let foreground: ReturnType<typeof svc.send> | undefined;
+    let queued: ReturnType<typeof svc.send> | undefined;
+    try {
+      await svc.start(request);
+      foreground = svc.send(request.sessionId, "Launch background work", 77);
+      await started;
+      background.complete(request.sessionId, "Result queued before Stop");
+      queued = svc.send(request.sessionId, "Input queued before Stop", 77);
+      await svc.interrupt(request.sessionId, 77);
+      expect(await foreground).toMatchObject({ reason: "aborted_streaming" });
+      expect(await queued).toMatchObject({ reason: "aborted_streaming" });
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(1);
+      expect(background.pending.get(request.sessionId)).toBe("Result queued before Stop");
+
+      await svc.send(request.sessionId, "Continue after Stop", 77);
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(2);
+      expect(providerInputs[1]!.text).toContain("Result queued before Stop");
+      expect(background.pending.size).toBe(0);
+    } finally {
+      release();
+      await Promise.allSettled([foreground, queued]);
+      await svc.stopAll();
+    }
+  });
+
+  test("replacement, rejected input and injected reminders preserve Stop until real input", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    try {
+      await svc.start(request);
+      await svc.send(request.sessionId, "Launch background work", 77);
+      await svc.interrupt(request.sessionId, 77);
+      background.complete(request.sessionId, "Retained result");
+      await svc.start(request);
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(1);
+      expect(background.pending.get(request.sessionId)).toBe("Retained result");
+      expect(background.dropped).toEqual([]);
+
+      await expect(
+        svc.send(request.sessionId, "Rejected input", 77, undefined, {
+          beforeInput: async () => {
+            throw new Error("Input rejected");
+          },
+          accepted: () => {
+            throw new Error("Must not accept rejected input");
+          },
+        }),
+      ).rejects.toThrow("Input rejected");
+      await svc.send(request.sessionId, { text: "Unrelated reminder", injected: true }, 77);
+      // Repeat the completion signal to exercise the wake gate after both sends.
+      background.complete(request.sessionId, "Retained result");
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(2);
+      expect(providerInputs[1]!.text).toBe("Unrelated reminder");
+      expect(background.pending.get(request.sessionId)).toBe("Retained result");
+
+      await svc.send(request.sessionId, "Review the result", 77);
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(3);
+      expect(providerInputs[2]!.text).toStartWith("Review the result\n\n<system-reminder>\n");
+      expect(providerInputs[2]!.text).toContain("Retained result");
+      expect(background.pending.size).toBe(0);
+
+      // A full business-session close releases Stop state as well as job custody.
+      await svc.interrupt(request.sessionId, 77);
+      await svc.stop(request.sessionId, 77);
+      await svc.start(request);
+      background.complete(request.sessionId, "Result after reopening");
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(4);
+      expect(providerInputs[3]!.text).toContain("Result after reopening");
+    } finally {
+      await svc.stopAll();
+    }
+  });
+
+  test("Stop during input acceptance retains results and prevents that provider send", async () => {
+    const background = backgroundDelivery();
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: background.delivery,
+    });
+    let stopping: Promise<void> | undefined;
+    try {
+      await svc.start(request);
+      await svc.send(request.sessionId, "Launch background work", 77);
+      await svc.interrupt(request.sessionId, 77);
+      background.complete(request.sessionId, "Result before interrupted acceptance");
+
+      const outcome = await svc.send(request.sessionId, "Try to continue", 77, undefined, {
+        beforeInput: async () => {},
+        accepted: () => {
+          stopping = svc.interrupt(request.sessionId, 77);
+        },
+      });
+      await stopping;
+      await settleBackgroundWakeup();
+      expect(outcome).toMatchObject({ ok: false, reason: "aborted_streaming" });
+      expect(providerInputs).toHaveLength(1);
+      expect(background.pending.get(request.sessionId)).toBe(
+        "Result before interrupted acceptance",
+      );
+      await svc.send(request.sessionId, "Continue for real", 77);
+      expect(providerInputs).toHaveLength(2);
+      expect(providerInputs[1]!.text).toContain("Result before interrupted acceptance");
+      expect(background.pending.size).toBe(0);
+    } finally {
+      await stopping;
+      await svc.stopAll();
+    }
+  });
+
   test.each([false, true])(
     "consumes background results within the Goal run, with Stop=%s",
     async (stop) => {
@@ -1177,10 +1835,12 @@ describe("ExternalRuntimeService", () => {
               listener = undefined;
             };
           },
-          drainMessage: () => {
+          claimResults: () => {
             const result = pending;
             pending = undefined;
-            return result;
+            return claimBackgroundMessage(result, (value) => {
+              pending = value;
+            });
           },
           hasPending: () => pending !== undefined,
           // Another job may still be running: queued results take precedence.
@@ -1247,6 +1907,18 @@ describe("ExternalRuntimeService", () => {
       expect(pending).toBeUndefined();
       expect(starts).toHaveLength(1);
       expect(svc.getGoal(request.sessionId).goal).toBeNull();
+      providerSend = undefined;
+      pending = "A later background result after Goal Resume";
+      listener?.(request.sessionId, {
+        type: "background_agent_completed",
+        agentId: "later-child",
+        description: "later background work",
+        status: "completed",
+        enqueuedAt: Date.now(),
+      });
+      await settleBackgroundWakeup();
+      expect(providerInputs).toHaveLength(3);
+      expect(providerInputs[2]!.text).toContain("A later background result after Goal Resume");
       await svc.stopAll();
     },
   );
@@ -1269,10 +1941,12 @@ describe("ExternalRuntimeService", () => {
               listener = undefined;
             };
           },
-          drainMessage: () => {
+          claimResults: () => {
             const message = pending;
             pending = undefined;
-            return message;
+            return claimBackgroundMessage(message, (value) => {
+              pending = value;
+            });
           },
           hasPending: () => pending !== undefined,
           hasRunning: (sessionId: string) => sessionId === request.sessionId && running,
@@ -1349,10 +2023,12 @@ describe("ExternalRuntimeService", () => {
           listener = next;
           return () => {};
         },
-        drainMessage: () => {
+        claimResults: () => {
           const message = pending;
           pending = undefined;
-          return message;
+          return claimBackgroundMessage(message, (value) => {
+            pending = value;
+          });
         },
         hasPending: () => pending !== undefined,
         hasRunning: () => true,
@@ -1411,10 +2087,12 @@ describe("ExternalRuntimeService", () => {
           listener = next;
           return () => {};
         },
-        drainMessage: () => {
+        claimResults: () => {
           const message = pending;
           pending = undefined;
-          return message;
+          return claimBackgroundMessage(message, (value) => {
+            pending = value;
+          });
         },
         hasPending: () => pending !== undefined,
         hasRunning: () => false,
@@ -1475,7 +2153,7 @@ describe("ExternalRuntimeService", () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
       backgroundWork: {
         subscribe: () => () => {},
-        drainMessage: () => undefined,
+        claimResults: () => undefined,
         hasPending: () => false,
         hasRunning: () => true,
         dropSession: () => {},
@@ -1496,7 +2174,7 @@ describe("ExternalRuntimeService", () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
       backgroundWork: {
         subscribe: () => () => {},
-        drainMessage: () => undefined,
+        claimResults: () => undefined,
         hasPending: () => false,
         hasRunning: () => true,
         dropSession: () => {},
@@ -1871,11 +2549,13 @@ describe("ExternalRuntimeService", () => {
       writeFileSync(outside, "synthetic outside file");
       writeFileSync(sensitive, "SYNTHETIC_TEST_VALUE=example");
       const approvalRequests: string[] = [];
+      // Reads are never path-gated, so probe with writes and refuse only the
+      // path-policy question.
       const svc = service(
         { external_agent_runtime: true, external_host_tools: true },
         async (_sessionId, approvalRequest) => {
           approvalRequests.push(approvalRequest.toolName);
-          return { approved: false };
+          return { approved: approvalRequest.toolName !== "__ask_user__" };
         },
       );
       await svc.start({ ...request, cwd, permissionMode });
@@ -1897,22 +2577,23 @@ describe("ExternalRuntimeService", () => {
             results.push(
               await host.execute({
                 id: filePath,
-                name: "Read",
-                input: { file_path: filePath },
+                name: "Write",
+                input: { file_path: filePath, content: "updated" },
               }),
             );
           }
         };
-        await svc.send(request.sessionId, { text: "Read fixture files", disableGoal: true });
+        await svc.send(request.sessionId, { text: "Write fixture files", disableGoal: true });
         expect(results).toHaveLength(2);
         for (const [index, filePath] of [outside, sensitive].entries()) {
           const result = results[index]!;
           if (permissionMode === "bypassPermissions") {
             expect(result.isError).toBeFalsy();
-            expect(result.result).toContain(readFileSync(filePath, "utf8"));
+            expect(readFileSync(filePath, "utf8")).toBe("updated");
           } else {
             expect(result.isError).toBe(true);
             expect(result.error).toContain("path approval denied");
+            expect(readFileSync(filePath, "utf8")).not.toBe("updated");
           }
         }
         expect(approvalRequests).toEqual(
@@ -2479,10 +3160,10 @@ describe("ExternalRuntimeService", () => {
             listener = undefined;
           };
         },
-        drainMessage: (sessionId: string) => {
+        claimResults: (sessionId: string) => {
           const message = pending.get(sessionId);
           pending.delete(sessionId);
-          return message;
+          return claimBackgroundMessage(message, (value) => pending.set(sessionId, value));
         },
         hasPending: (sessionId: string) => pending.has(sessionId),
         hasRunning: () => false,
@@ -2802,6 +3483,42 @@ describe("ExternalRuntimeService", () => {
     expect(svc.get(request.sessionId)).toBeUndefined();
   });
 
+  test.each(["codex", "claude-code"] as const)(
+    "%s resolves live tool overrides from its Session profile instead of the startup snapshot",
+    async (kind) => {
+      saveWorkspaceProfile({
+        basePreset: "general",
+        name: "reviewer",
+        label: "Reviewer",
+        skills: ["review"],
+        plugins: ["review-tools"],
+      });
+      const svc = service({ external_agent_runtime: true, external_host_tools: true });
+      try {
+        await svc.start({ ...request, kind, workspaceProfile: "reviewer" });
+        const readOverrides = starts[0]!.getProfileOverrides as () => unknown;
+        expect(readOverrides()).toEqual({
+          skills: { review: "on" },
+          plugins: { "review-tools": "on" },
+        });
+        saveWorkspaceProfile({
+          basePreset: "general",
+          name: "reviewer",
+          label: "Reviewer",
+          skills: ["updated-review"],
+        });
+        expect(readOverrides()).toEqual({ skills: { "updated-review": "on" } });
+        expect(starts).toHaveLength(1);
+
+        // Deleting a selected profile cannot silently restore the project default.
+        deleteWorkspaceProfile("reviewer");
+        expect(readOverrides).toThrow(/unavailable/);
+      } finally {
+        await svc.stopAll();
+      }
+    },
+  );
+
   test("lists the live runtimes a window owns so a reloaded renderer can recover Stop", async () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true });
     await svc.start(request);
@@ -2924,6 +3641,15 @@ describe("ExternalRuntimeService", () => {
     expect(providerInputs).toHaveLength(1);
     expect(svc.getGoal(request.sessionId)).toEqual(goal);
     expect(background.pending.has(request.sessionId)).toBe(true);
+    await svc.send(request.sessionId, "Review the background result", 77);
+    await settleBackgroundWakeup();
+    expect(providerInputs).toHaveLength(2);
+    expect(providerInputs[1]!.text).toStartWith(
+      "Review the background result\n\n<system-reminder>\n",
+    );
+    expect(providerInputs[1]!.text).toContain("delegated result");
+    expect(background.pending.size).toBe(0);
+    expect(svc.getGoal(request.sessionId)).toEqual(goal);
     await svc.stopAll();
   });
 
@@ -3555,3 +4281,45 @@ for (const change of ["delete", "recreate", "symlink"] as const) {
     }
   });
 }
+
+test.each(["codex", "claude-code"] as const)(
+  "%s refreshes Host visibility and refuses a changed primary workspace",
+  async (kind) => {
+    let workspace = legacySingleRootWorkspace(request.cwd);
+    let profileMeta = { revision: 1 };
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      toolContextOverrides: () => ({
+        workspace,
+        toolVisibility: {
+          cwd: request.cwd,
+          hasGoal: true,
+          behaviorProfile: "host-profile",
+          profileMeta,
+        },
+      }),
+    });
+    try {
+      await svc.start({ ...request, kind, hasGoal: true });
+      const readVisibility = starts[0]!.getVisibility as () => ToolVisibilityInputs;
+      expect(readVisibility()).toMatchObject({
+        workspace,
+        behaviorProfile: "host-profile",
+        profileMeta: { revision: 1 },
+        host: "desktop",
+        isSubAgent: false,
+        hasGoal: false,
+      });
+      profileMeta = { revision: 2 };
+      await svc.send(request.sessionId, {
+        text: "start persisted goal",
+        goal: { objective: "pending goal", maxTurns: 1 },
+      });
+      expect(readVisibility()).toMatchObject({ hasGoal: true, profileMeta: { revision: 2 } });
+      expect(starts).toHaveLength(1);
+      workspace = legacySingleRootWorkspace(join(testHome, "different-root"));
+      expect(readVisibility).toThrow(/workspace changed/);
+    } finally {
+      await svc.stopAll();
+    }
+  },
+);

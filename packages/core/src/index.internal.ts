@@ -217,7 +217,13 @@ export {
   agentNotificationBus,
   notificationItemToStreamEvent,
   type NotificationItem,
+  type NotificationResultClaim,
 } from "./tool-system/builtin/agent-notifications.js";
+export {
+  BackgroundContinuationController,
+  BackgroundResultDelivery,
+  type BackgroundResultMailbox,
+} from "./session/background-continuation.js";
 export { backgroundJobRegistry } from "./tool-system/builtin/background-jobs.js";
 export {
   cancelBackgroundWorkForUI,

@@ -44,7 +44,7 @@ describe("classifyPath — sensitive-file matching is not a source-code substrin
     cleanup();
   });
 
-  test("real credential/secret artifact files are still write-denied", () => {
+  test("real credential/secret artifact files still ask on write", () => {
     const ws = tmpWorkspace();
     const protectedFiles = [
       ".env",
@@ -70,7 +70,7 @@ describe("classifyPath — sensitive-file matching is not a source-code substrin
     ];
     for (const name of protectedFiles) {
       const c = classifyPath(join(ws, name), { workspaceRoot: ws, operation: "write" });
-      expect(c.decision).toBe("deny"); // genuine secret-bearing file
+      expect(c.decision).toBe("ask"); // genuine secret-bearing file
     }
     cleanup();
   });
@@ -85,11 +85,11 @@ describe("classifyPath — sensitive-file matching is not a source-code substrin
     cleanup();
   });
 
-  test("real credential files ask (not allow) on read even inside workspace", () => {
+  test("real credential files are readable like any other file", () => {
     const ws = tmpWorkspace();
     for (const name of ["credentials.json", ".env", "secrets.yaml"]) {
       const c = classifyPath(join(ws, name), { workspaceRoot: ws, operation: "read" });
-      expect(c.decision).toBe("ask");
+      expect(c.decision).toBe("allow");
     }
     cleanup();
   });

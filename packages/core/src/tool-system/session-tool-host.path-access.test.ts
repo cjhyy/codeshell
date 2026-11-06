@@ -94,22 +94,22 @@ describe("external host full path access", () => {
     }
   });
 
-  test("default access still prompts for external reads and denies sensitive writes", async () => {
+  test("default access still prompts for external and protected writes", async () => {
     const { cwd, host, executed, questions } = fixture();
     try {
-      const read = await host.execute({
-        id: "read",
-        name: "Read",
+      const external = await host.execute({
+        id: "external",
+        name: "Write",
         input: { file_path: join(cwd, "..", "outside.txt") },
       });
-      const write = await host.execute({
-        id: "write",
+      const protectedWrite = await host.execute({
+        id: "protected",
         name: "Write",
         input: { file_path: join(cwd, ".env") },
       });
-      expect(read.error).toContain("path approval denied");
-      expect(write.error).toContain("writes are not permitted");
-      expect(questions).toHaveLength(1);
+      expect(external.error).toContain("path approval denied");
+      expect(protectedWrite.error).toContain("path approval denied");
+      expect(questions).toHaveLength(2);
       expect(executed).toEqual([]);
     } finally {
       await host.dispose();
@@ -125,7 +125,7 @@ describe("external host full path access", () => {
         input: { file_path: join(cwd, ".env"), pathAccess: "full" },
       });
       expect(host.toolContext.pathAccess).toBe("default");
-      expect(result.error).toContain("writes are not permitted");
+      expect(result.error).toContain("path approval denied");
       expect(executed).toEqual([]);
     } finally {
       await host.dispose();

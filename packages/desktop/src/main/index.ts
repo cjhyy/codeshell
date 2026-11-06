@@ -145,7 +145,10 @@ import { ExternalRuntimeService } from "./external-runtime-service.js";
 import { startMobileExternalRuntime } from "./mobile-remote/start-external-runtime.js";
 import { initializeMobileRemoteLifecycle } from "./mobile-remote/lifecycle.js";
 import { resolveMobileStaticRoot } from "./mobile-remote/mobile-static-root.js";
-import { externalRuntimeToolContextForSession } from "./external-runtime-tool-context.js";
+import {
+  externalRuntimeToolContextForSession,
+  externalRuntimeWorkspaceForSession,
+} from "./external-runtime-tool-context.js";
 import { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { assertWorkspaceProfileName } from "./external-runtime-profile.js";
 import { createExternalRuntimeBackgroundWork } from "./external-runtime-background-work.js";
@@ -1824,6 +1827,7 @@ async function createWindow(): Promise<BrowserWindow> {
           externalBridge,
           sessionId,
           interactiveBrowserBridgeForSession(sessionId),
+          externalRuntimeWorkspaceForSession(sessionId),
         ),
       requestApproval: (sessionId, request) => approvals.request(sessionId, request),
       cancelApprovals: (sessionId) => approvals.cancelSession(sessionId),

@@ -568,7 +568,9 @@ describe("architecture growth budgets", () => {
       // Host-only checkpoint service plus its shared type-only contract.
       // +1 shared configured-text resolver: authorized Host and Worker resolve the same
       // Session/profile connection without falling back to a different shared boot pool.
-      "packages/core/src/index.internal.ts": 130,
+      // +1 Host-only background continuation seam: Desktop's external runtime
+      // delivers background results through the same controller as native Sessions.
+      "packages/core/src/index.internal.ts": 131,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules

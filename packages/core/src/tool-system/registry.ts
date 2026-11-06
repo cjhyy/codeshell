@@ -14,6 +14,7 @@ import {
   type BuiltinTool,
   type BuiltinToolFn,
   type BuiltinToolGuard,
+  type BuiltinToolExposure,
   toToolExecutionResult,
 } from "./builtin/index.js";
 import type { ToolContext } from "./context.js";
@@ -40,6 +41,7 @@ export class ToolRegistry {
   private tools = new Map<string, RegisteredTool>();
   private builtinExecutors = new Map<string, BuiltinToolFn>();
   private availabilityGuards = new Map<string, BuiltinToolGuard>();
+  private exposures = new Map<string, BuiltinToolExposure>();
   private registrationIds = new Map<string, object>();
   private moduleOwners = new Map<string, string>();
 
@@ -76,17 +78,24 @@ export class ToolRegistry {
       validateToolMetadata(tool.definition);
       this.tools.set(tool.definition.name, tool.definition);
       this.builtinExecutors.set(tool.definition.name, tool.execute);
-      if (tool.exposure.availability) {
-        this.availabilityGuards.set(tool.definition.name, tool.exposure.availability);
-      }
+      this.setExposure(tool.definition.name, tool.exposure);
     }
   }
 
-  registerTool(tool: RegisteredTool, executor?: ToolImplementation): Dispose {
+  registerTool(
+    tool: RegisteredTool,
+    executor?: ToolImplementation,
+    exposure?: BuiltinToolExposure,
+  ): Dispose {
     assertPublicToolName(tool.name);
     validateToolMetadata(tool);
     const name = tool.name;
+    // A replacement must carry its own policy. Reusing the old declaration
+    // would authorize a different implementation under stale metadata.
+    this.exposures.delete(name);
+    this.availabilityGuards.delete(name);
     this.tools.set(name, tool);
+    if (exposure) this.setExposure(name, exposure);
     const registration = {};
     this.registrationIds.set(name, registration);
     if (executor) {
@@ -104,6 +113,18 @@ export class ToolRegistry {
     this.moduleOwners.set(name, moduleId);
   }
 
+  /** Trusted composition metadata, attached only to an existing implementation. */
+  setExposure(name: string, exposure: BuiltinToolExposure): void {
+    if (!this.tools.has(name)) return;
+    this.exposures.set(name, exposure);
+    if (exposure.availability) this.availabilityGuards.set(name, exposure.availability);
+    else this.availabilityGuards.delete(name);
+  }
+
+  getExposure(name: string): BuiltinToolExposure | undefined {
+    return this.exposures.get(name);
+  }
+
   clear(): void {
     for (const name of this.tools.keys()) this.unregisterTool(name);
   }
@@ -118,6 +139,7 @@ export class ToolRegistry {
     // guards here lets a model invoke a tool that was correctly hidden from
     // its current turn (for example GatewayReply in a desktop Mimi chat).
     fork.availabilityGuards = new Map(this.availabilityGuards);
+    fork.exposures = new Map(this.exposures);
     fork.moduleOwners = new Map(this.moduleOwners);
     return fork;
   }
@@ -126,6 +148,7 @@ export class ToolRegistry {
     this.tools.delete(name);
     this.builtinExecutors.delete(name);
     this.availabilityGuards.delete(name);
+    this.exposures.delete(name);
     this.registrationIds.delete(name);
     this.moduleOwners.delete(name);
   }

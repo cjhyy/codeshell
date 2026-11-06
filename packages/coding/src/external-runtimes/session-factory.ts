@@ -22,7 +22,8 @@
 import type { PermissionRule, StreamEvent, ToolDefinition } from "@cjhyy/code-shell-core/extension";
 import {
   createSessionToolHost,
-  FIRST_PHASE_EXPOSURE,
+  deriveExternalToolExposure,
+  intersectExternalToolExposure,
   type ExternalToolExposurePolicy,
   type SessionToolHost,
   type ToolVisibilityInputs,
@@ -81,8 +82,9 @@ export interface ExternalRuntimeSessionOptions {
   planMode: boolean;
   visibility: ToolVisibilityInputs;
   /**
-   * Tool exposure. Defaults to the reviewed first-phase allowlist rather than to
-   * "everything", so forgetting it cannot silently widen the surface.
+   * Optional further restriction on the composed registry's reviewed contracts.
+   * The Host revalidates those contracts on every operation; this cannot grant
+   * an undeclared, changed or unreviewed tool.
    */
   exposure?: ExternalToolExposurePolicy;
   approvalBackend?: Parameters<typeof createSessionToolHost>[0]["approvalBackend"];
@@ -90,6 +92,12 @@ export interface ExternalRuntimeSessionOptions {
   contextOverrides?: Parameters<typeof createSessionToolHost>[0]["contextOverrides"];
   captureRunContext?: Parameters<typeof createSessionToolHost>[0]["captureRunContext"];
   settingsScope?: Parameters<typeof createSessionToolHost>[0]["settingsScope"];
+  /** Resolve the pinned Host Profile's current capability overrides for each tool operation. */
+  getProfileOverrides?: Parameters<typeof createSessionToolHost>[0]["getProfileOverrides"];
+  getVisibility?: Parameters<typeof createSessionToolHost>[0]["getVisibility"];
+  mcpServers?: Parameters<typeof createSessionToolHost>[0]["mcpServers"];
+  /** A Host-owned version-checked Goal controller is registered in this catalog. */
+  goalController?: boolean;
   /**
    * Override the runtime's declared image capability (e.g. a host that knows
    * the selected model is text-only). Defaults per runtime kind.
@@ -140,7 +148,11 @@ export interface ExternalRuntimeSession {
   send(
     input: ExternalRuntimeTurnInput,
     onEvent?: (event: StreamEvent) => void,
-  ): Promise<{ done: Promise<void> }>;
+  ): Promise<{
+    done: Promise<void>;
+    /** Explicit provider start acknowledgement; spawning a process does not qualify. */
+    accepted?: true;
+  }>;
   interrupt(): Promise<void>;
   /** Reverses the assembly order; safe to call more than once. */
   close(): Promise<void>;
@@ -161,7 +173,10 @@ export async function startExternalRuntimeSession(
   options: ExternalRuntimeSessionOptions,
 ): Promise<ExternalRuntimeSession> {
   const log = options.log ?? (() => {});
-  const exposure = options.exposure ?? FIRST_PHASE_EXPOSURE;
+  const exposure = intersectExternalToolExposure(
+    deriveExternalToolExposure(options.registry, { goalController: options.goalController }),
+    options.exposure,
+  );
   const pinnedThreadId = `codeshell-${options.businessSessionId}`;
 
   // 1. Bridge — mints the port and token the runtime is configured with.
@@ -200,6 +215,11 @@ export async function startExternalRuntimeSession(
       projectTrusted: options.projectTrusted,
       planMode: options.planMode,
       exposure,
+      getExposure: () =>
+        intersectExternalToolExposure(
+          deriveExternalToolExposure(options.registry, { goalController: options.goalController }),
+          options.exposure,
+        ),
       visibility: options.visibility,
       ...(options.approvalBackend ? { approvalBackend: options.approvalBackend } : {}),
       ...(options.contextOverrides ? { contextOverrides: options.contextOverrides } : {}),
@@ -208,6 +228,9 @@ export async function startExternalRuntimeSession(
       getStreamCallback: () => turnSink,
       ...(options.captureRunContext ? { captureRunContext: options.captureRunContext } : {}),
       ...(options.settingsScope ? { settingsScope: options.settingsScope } : {}),
+      ...(options.getProfileOverrides ? { getProfileOverrides: options.getProfileOverrides } : {}),
+      ...(options.getVisibility ? { getVisibility: options.getVisibility } : {}),
+      ...(options.mcpServers ? { mcpServers: options.mcpServers } : {}),
       modelSupportsVision: options.modelSupportsVision ?? RUNTIME_ACCEPTS_TOOL_IMAGES[options.kind],
       // `hooks` is deliberately not passed: the host then loads the same
       // settings/plugin tool hooks a Native Engine registers for this cwd,
@@ -318,6 +341,7 @@ export async function startExternalRuntimeSession(
       try {
         const turn = await activeRuntime.send(input, sink);
         return {
+          ...("accepted" in turn && turn.accepted === true ? { accepted: true as const } : {}),
           done: turn.done.finally(() => {
             if (turnSink === sink) turnSink = undefined;
           }),

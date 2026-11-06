@@ -38,17 +38,24 @@ describe("ordinary CodeShell files", () => {
     return path;
   }
 
+  // Reads are never gated; every write under ~/.code-shell is a protected
+  // path that asks (it holds provider keys, MCP config and agent settings).
   test.each([
     "sessions/child-id/state.json",
     "sessions/child-id/transcript.jsonl",
     "logs/desktop/sessions/session-child.jsonl",
     "profiles/work/memory/notes.md",
-    "themes/custom.json",
     "skills/unregistered/references/guide.md",
     "panel-apps/unregistered/README.md",
-    "settings.schema.json",
-    "im-gateway/inbox.json",
-  ])("%s is readable without an approval UI and remains write-protected", async (relativePath) => {
+    "credentials.json",
+    "settings.json",
+    "settings.local.json.bak",
+    "plugins/cache/example/.mcp.json",
+    "browser-runtime/profiles/default/Default/Cookies",
+    "serve/access.json",
+    "desktop/project-runtime-secrets/project/runtime.json",
+    "no-repo/.code-shell/attachments/sid/token.txt",
+  ])("%s is readable without an approval UI and its writes ask", async (relativePath) => {
     const path = file(relativePath);
     expect(classifyPath(path, { workspaceRoot: workspace, operation: "read" }).decision).toBe(
       "allow",
@@ -56,58 +63,25 @@ describe("ordinary CodeShell files", () => {
     expect(
       await enforcePathPolicyWithApproval(path, "read", { cwd: workspace } as ToolContext),
     ).toBeNull();
-    expect(classifyPath(path, { workspaceRoot: workspace, operation: "write" }).decision).toBe(
-      "deny",
-    );
+    const write = classifyPath(path, { workspaceRoot: workspace, operation: "write" });
+    expect(write.decision).toBe("ask");
+    expect(write.reason).toContain("~/.code-shell");
   });
 
-  test.each([
-    "credentials.json",
-    "credentials.json.bak",
-    "credentials.json.123.01234567-89ab-cdef-0123-456789abcdef.tmp",
-    "settings.json",
-    "settings.managed.yaml",
-    "settings.local.json.bak",
-    "no-repo/.code-shell/settings.json",
-    "no-repo/.code-shell/settings.local.json",
-    "plugins/cache/example/.mcp.json",
-    "plugins/cache/example/mcp-servers.json",
-    "browser-runtime/profiles/default/Default/Cookies",
-    "browser-runtime/profiles/default/Default/Local Storage/000003.log",
-    "browser-runtime/chrome-native.json",
-    "im-gateway/config.json",
-    "im-gateway/desktop-control.json",
-    "chat/wechat/accounts/user.state.json",
-    "serve/access.json",
-    "serve/hub/auth.json.123.01234567-89ab-cdef-0123-456789abcdef.tmp",
-    "serve/project-control/registry.json",
-    "desktop/project-control/registry.json",
-    "serve/project-runtime-secrets/project/runtime.json",
-    "desktop/project-runtime-secrets/project/runtime.json",
-    "skills/unregistered/.env",
-    "sessions/child-id/tool-results/private.key",
-    "no-repo/.code-shell/attachments/sid/token.txt",
-  ])("%s remains a sensitive read", (relativePath) => {
-    const path = file(relativePath);
-    expect(classifyPath(path, { workspaceRoot: workspace, operation: "read" }).decision).toBe(
-      "ask",
-    );
-  });
-
-  test("symlinks to credential containers cannot inherit ordinary file access", () => {
+  test("a symlink into ~/.code-shell is judged by its target on write", () => {
     const secret = file("browser-runtime/profiles/default/Default/Cookies");
-    const link = join(root, "ordinary.txt");
+    const link = join(workspace, "ordinary.txt");
     symlinkSync(secret, link);
-    expect(classifyPath(link, { workspaceRoot: workspace, operation: "read" }).decision).toBe(
+    expect(classifyPath(link, { workspaceRoot: workspace, operation: "write" }).decision).toBe(
       "ask",
     );
   });
 
-  test("the file grant does not authorize recursive reads of a mixed directory", () => {
+  test("the whole ~/.code-shell directory is readable", () => {
     file("ordinary.txt");
     file("credentials.json");
     expect(classifyPath(root, { workspaceRoot: workspace, operation: "read" }).decision).toBe(
-      "ask",
+      "allow",
     );
   });
 });

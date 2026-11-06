@@ -9,14 +9,16 @@
  * This module is the MVP boundary called out in
  * docs/superpowers/plans/2026-05-27-core-quality-iteration.md, Workstream B.
  *
- * Decision shape:
- *   "allow"  — proceed without prompting (in-workspace and not sensitive)
- *   "ask"    — caller must obtain user approval (outside workspace, OR
- *              sensitive-path read)
- *   "deny"   — refuse outright (sensitive-path write)
+ * Decision shape (aligned with Codex / Claude Code):
+ *   "allow"  — every read; writes inside the workspace that touch no
+ *              protected path
+ *   "ask"    — writes outside the workspace, and writes to protected paths
+ *              (credentials, .git, agent/IDE config, shell rc files) even
+ *              inside it
+ *   "deny"   — only degenerate input (empty path)
  *
  * The classifier is pure: it resolves symlinks (best effort), checks against
- * an explicit sensitive list, then compares against the workspace root. It
+ * an explicit protected list, then compares against the workspace root. It
  * never reads the file; the caller is the one with IO.
  *
  * Rollout escape hatch:
@@ -34,10 +36,11 @@ import { constants, realpathSync, existsSync, readFileSync, statSync, readdirSyn
 import { open } from "node:fs/promises";
 import { homedir } from "node:os";
 import { SettingsManager } from "../settings/manager.js";
-import { dirname, join, relative, sep } from "node:path";
+import { basename, dirname, join, parse, relative, sep } from "node:path";
 import { readInstalledPlugins } from "../plugins/installedPlugins.js";
 import { canonicalPath } from "../workspace/canonical-key.js";
 import type { ToolContext } from "./context.js";
+import { UserDecisionError } from "../exceptions.js";
 
 export type PathDecision = "allow" | "ask" | "deny";
 
@@ -55,6 +58,12 @@ export interface PathClassification {
   resolvedPath: string;
   /** Canonical workspace root containing resolvedPath, when one matched. */
   matchedRoot?: string;
+  /**
+   * Set for a protected-path write: the protected item (`<root>/.git/`, or
+   * `<dir>/.env/` for a single file) as a prefix ending in `sep`. Remembered
+   * approvals cover exactly this item.
+   */
+  protectedScope?: string;
 }
 
 export interface ClassifyOptions {
@@ -77,12 +86,9 @@ export interface FinalWritePathSnapshot {
 const FINAL_WRITE_PATH_SNAPSHOT = Symbol("codeshell.finalWritePathSnapshot");
 
 /**
- * Default sensitive path patterns. These are evaluated AFTER home-expansion
- * and resolution, so a literal "$HOME/.ssh" and a symlink at /tmp/x → ~/.ssh
- * are both caught.
- *
- * Mirrors the existing list in sandbox/index.ts so Bash and file tools agree
- * on what "sensitive" means — keep them in sync when adding entries.
+ * Home-relative credential/config directories whose writes are protected.
+ * These are evaluated AFTER home-expansion and resolution, so a literal
+ * "$HOME/.ssh" and a symlink at /tmp/x → ~/.ssh are both caught.
  */
 const SENSITIVE_DIR_PATTERNS = [
   ".ssh",
@@ -93,6 +99,8 @@ const SENSITIVE_DIR_PATTERNS = [
   ".gnupg",
   ".kube",
   ".docker",
+  ".config/gh",
+  "Library/Keychains",
 ] as const;
 
 /**
@@ -139,6 +147,44 @@ const SENSITIVE_FILE_PATTERNS = [
   /^\.pgpass$/i,
 ] as const;
 
+/**
+ * Directory names that are protected wherever they appear below the
+ * workspace root (or anywhere in an outside path): writing into them can run
+ * code later (git hooks, IDE/devcontainer tasks, build config) or rewrite an
+ * agent's own permissions. Union of Codex's read-only workspace paths and
+ * Claude Code's protected paths, plus CodeShell's own config dir. A `.git`
+ * worktree pointer FILE is matched by the same name.
+ */
+const PROTECTED_DIR_NAMES = new Set([
+  ".git",
+  ".husky",
+  ".code-shell",
+  ".claude",
+  ".codex",
+  ".agents",
+  ".vscode",
+  ".idea",
+  ".devcontainer",
+  ".cargo",
+  ".mvn",
+]);
+
+/** Exact basenames protected anywhere: git/agent/package config, shell rc files. */
+const PROTECTED_FILE_NAMES = new Set([
+  ".gitmodules",
+  ".gitconfig",
+  ".mcp.json",
+  ".claude.json",
+  ".yarnrc",
+  ".yarnrc.yml",
+  ".bashrc",
+  ".bash_profile",
+  ".zshrc",
+  ".zprofile",
+  ".zshenv",
+  ".profile",
+]);
+
 const ENV_DISABLE = "CODESHELL_PATH_POLICY";
 let warnedDisabled = false;
 
@@ -163,7 +209,10 @@ function expandTilde(p: string): string {
 //   - project: persisted to <cwd>/.code-shell/settings.local.json under
 //     `pathApprovals` (per-developer, git-ignored), so it survives restarts.
 // A grant covers the directory of the approved path and everything beneath it,
-// so reading 5 files in one dir prompts once.
+// so writing 5 files in one dir prompts once. A protected-path grant instead
+// covers only the protected item (`<root>/.git/`, or the single `.env` file),
+// and only protected grants satisfy a protected-path ask — so approving `.env`
+// at the repo root never authorizes `.git/hooks` beneath the same directory.
 // ---------------------------------------------------------------------------
 
 export type PathApprovalScope = "once" | "session" | "project";
@@ -179,6 +228,8 @@ interface PathGrant {
   /** Absolute directory prefix ending in `sep`. */
   prefix: string;
   op: PathOperation;
+  /** Granted from a protected-path ask; `prefix` is the protected item. */
+  protected?: boolean;
 }
 
 /** sessionId → set of approved directory grants (prefix + operation). */
@@ -223,10 +274,12 @@ function coveredBy(
   grants: Iterable<PathGrant>,
   resolved: string,
   operation: PathOperation,
+  protectedOnly: boolean,
 ): boolean {
   const target = normPath(resolved.endsWith(sep) ? resolved : resolved + sep);
   for (const g of grants) {
     if (!grantCoversOp(g.op, operation)) continue;
+    if (protectedOnly && !g.protected) continue;
     const gn = normPath(g.prefix);
     if (target === gn || target.startsWith(gn)) return true;
   }
@@ -258,7 +311,8 @@ function projectPathGrants(cwd: string): PathGrant[] {
         typeof (entry as { path?: unknown }).path === "string"
       ) {
         const op = (entry as { op?: unknown }).op === "write" ? "write" : "read";
-        out.push({ prefix: (entry as { path: string }).path, op });
+        const isProtected = (entry as { protected?: unknown }).protected === true;
+        out.push({ prefix: (entry as { path: string }).path, op, protected: isProtected });
       }
     }
     return out;
@@ -267,22 +321,23 @@ function projectPathGrants(cwd: string): PathGrant[] {
   }
 }
 
-/** Has the user already approved `operation` on a directory covering `resolved`? */
+/** Has the user already approved `operation` on a grant covering this ask? */
 function isPathPreApproved(
-  resolved: string,
+  c: PathClassification,
   operation: PathOperation,
   cwd: string,
   sessionId?: string,
 ): boolean {
+  const protectedOnly = c.protectedScope !== undefined;
   if (sessionId) {
     const s = sessionPathGrants.get(sessionId);
-    if (s && coveredBy(s, resolved, operation)) return true;
+    if (s && coveredBy(s, c.resolvedPath, operation, protectedOnly)) return true;
   }
-  return coveredBy(projectPathGrants(cwd), resolved, operation);
+  return coveredBy(projectPathGrants(cwd), c.resolvedPath, operation, protectedOnly);
 }
 
 /** A persisted project grant: object form carries the operation. */
-type StoredGrant = string | { path: string; op: PathOperation };
+type StoredGrant = string | { path: string; op: PathOperation; protected?: boolean };
 
 function storedPrefix(g: StoredGrant): string {
   return typeof g === "string" ? g : g.path;
@@ -290,22 +345,32 @@ function storedPrefix(g: StoredGrant): string {
 function storedOp(g: StoredGrant): PathOperation {
   return typeof g === "string" ? "read" : g.op;
 }
+function storedProtected(g: StoredGrant): boolean {
+  return typeof g === "object" && g.protected === true;
+}
+
+/** The prefix a remembered approval of this ask covers. */
+function grantPrefixFor(c: PathClassification): string {
+  return c.protectedScope ?? dirPrefix(dirname(c.resolvedPath));
+}
 
 /**
- * Record a session/project grant for the DIRECTORY containing `resolved`,
- * tagged with the OPERATION the user approved. A write grant subsumes read,
- * so granting write where a read grant already exists upgrades it.
+ * Record a session/project grant for the DIRECTORY containing the path (or
+ * the protected item, for a protected-path ask), tagged with the OPERATION
+ * the user approved. A write grant subsumes read, so granting write where a
+ * read grant already exists upgrades it.
  */
 function recordPathApproval(
   scope: PathApprovalScope,
-  resolved: string,
+  c: PathClassification,
   operation: PathOperation,
   cwd: string,
   sessionId?: string,
 ): void {
   if (scope === "once") return;
   if (sessionId && closedPathApprovalSessions.has(sessionId)) return;
-  const prefix = dirPrefix(dirname(resolved));
+  const prefix = grantPrefixFor(c);
+  const isProtected = c.protectedScope !== undefined;
   if (scope === "session") {
     if (!sessionId) return;
     let s = sessionPathGrants.get(sessionId);
@@ -316,11 +381,11 @@ function recordPathApproval(
     // Drop a weaker (read) grant for the same prefix when upgrading to write,
     // and skip adding a redundant read when a write grant already covers it.
     for (const g of s) {
-      if (g.prefix !== prefix) continue;
+      if (g.prefix !== prefix || Boolean(g.protected) !== isProtected) continue;
       if (grantCoversOp(g.op, operation)) return; // already covered
       if (operation === "write" && g.op === "read") s.delete(g); // upgrade
     }
-    s.add({ prefix, op: operation });
+    s.add(isProtected ? { prefix, op: operation, protected: true } : { prefix, op: operation });
     return;
   }
   // Use the same cross-process lock and strict YAML-aware read as Settings.
@@ -329,15 +394,18 @@ function recordPathApproval(
     new SettingsManager(cwd).mutateSettingsForScope("local", cwd, (current) => {
       const settings = current as { pathApprovals?: StoredGrant[] };
       if (!Array.isArray(settings.pathApprovals)) settings.pathApprovals = [];
-      const existing = settings.pathApprovals.find((g) => storedPrefix(g) === prefix);
+      const matches = (g: StoredGrant) =>
+        storedPrefix(g) === prefix && storedProtected(g) === isProtected;
+      const entry: StoredGrant = isProtected
+        ? { path: prefix, op: operation, protected: true }
+        : { path: prefix, op: operation };
+      const existing = settings.pathApprovals.find(matches);
       if (existing) {
         if (grantCoversOp(storedOp(existing), operation)) return false;
         if (operation !== "write") return false;
-        settings.pathApprovals = settings.pathApprovals.map((g) =>
-          storedPrefix(g) === prefix ? { path: prefix, op: "write" as const } : g,
-        );
+        settings.pathApprovals = settings.pathApprovals.map((g) => (matches(g) ? entry : g));
       } else {
-        settings.pathApprovals.push({ path: prefix, op: operation });
+        settings.pathApprovals.push(entry);
       }
     });
   } catch {
@@ -533,35 +601,6 @@ function isSkillTreeResource(resolved: string, skillsRoot: string): boolean {
   }
 }
 
-/**
- * Skill instructions routinely link to sibling references/scripts/assets.
- * The Skill builtin can already read the registered SKILL.md, so asking again
- * for every referenced file is both inconsistent and capable of wedging a
- * headless run.
- *
- * Keep the exception narrow:
- *   - read-only (the caller checks the operation);
- *   - user Skills, an installed plugin recorded in the V2 registry, or a
- *     declared Skill in the installed Panel App registry;
- *   - plugin installs must realpath beneath the managed plugin cache;
- *   - the target must remain inside the registered Skill directory.
- */
-function isRegisteredSkillResourceRead(resolved: string): boolean {
-  let codeShellRoot: string;
-  try {
-    codeShellRoot = realpathSync(join(configuredUserHome(), ".code-shell"));
-  } catch {
-    return false;
-  }
-  if (!isInsideDir(resolved, codeShellRoot)) return false;
-
-  if (isSkillTreeResource(resolved, join(codeShellRoot, "skills"))) return true;
-
-  return registeredPluginSkillBases(codeShellRoot).some((base) =>
-    isSkillTreeResource(resolved, base),
-  );
-}
-
 function registeredPluginSkillBases(codeShellRoot: string): string[] {
   let cacheRoot: string;
   try {
@@ -616,76 +655,43 @@ export function registeredSkillResourceRoots(): string[] {
 }
 
 /**
- * Installed Panel Apps live under the otherwise-sensitive
- * `~/.code-shell/panel-apps` tree. Their package contents are reviewed and
- * copied by the installer, so ordinary source, manifests, assets and declared
- * Agent resources should not require a second approval merely because their
- * parent directory is `~/.code-shell`.
+ * Returns the protected item a write to `resolved` lands in, if any: a label
+ * for the prompt and the item's prefix (ending in `sep`) for remembered
+ * approvals.
  *
- * Keep the exception read-only at the call site and require a valid installed
- * registry entry plus a matching V2 manifest. Registry, app root, manifest and
- * target are all realpathed and containment-checked. Credential-shaped files
- * are still caught by `SENSITIVE_FILE_PATTERNS` before this exception, and a
- * symlink escaping the installed package never inherits its read authority.
+ * Inside a workspace only the part below the root is examined, so a workspace
+ * opened inside a protected directory (a Codex worktree under ~/.codex, the
+ * no-repo workspace under ~/.code-shell) owns its ordinary files.
  */
-function isInstalledPanelAppResourceRead(resolved: string): boolean {
-  let codeShellRoot: string;
-  let appsRoot: string;
-  let registryPath: string;
-  try {
-    codeShellRoot = realpathSync(join(configuredUserHome(), ".code-shell"));
-    if (!isInsideDir(resolved, codeShellRoot)) return false;
-    appsRoot = realpathSync(join(codeShellRoot, "panel-apps"));
-    if (!isInsideDir(appsRoot, codeShellRoot)) return false;
-    registryPath = realpathSync(join(appsRoot, "installed.json"));
-    if (!isInsideDir(registryPath, appsRoot)) return false;
-  } catch {
-    return false;
-  }
-
-  let registry: { version?: unknown; apps?: unknown };
-  try {
-    registry = JSON.parse(readFileSync(registryPath, "utf-8")) as {
-      version?: unknown;
-      apps?: unknown;
-    };
-  } catch {
-    return false;
-  }
-  if (registry.version !== 1 || !Array.isArray(registry.apps)) return false;
-
-  for (const rawEntry of registry.apps) {
-    if (!rawEntry || typeof rawEntry !== "object") continue;
-    const id = (rawEntry as { id?: unknown }).id;
-    if (typeof id !== "string" || !/^[a-z][a-z0-9-]{0,63}$/.test(id)) continue;
-
-    try {
-      const appRoot = realpathSync(join(appsRoot, id));
-      if (appRoot === appsRoot || !isInsideDir(appRoot, appsRoot)) continue;
-      const manifestPath = realpathSync(join(appRoot, ".codeshell-panel", "panel.json"));
-      if (!isInsideDir(manifestPath, appRoot) || !statSync(manifestPath).isFile()) continue;
-      const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as {
-        schemaVersion?: unknown;
-        id?: unknown;
-      };
-      if (manifest.schemaVersion !== 2 || manifest.id !== id) continue;
-      if (isInsideDir(resolved, appRoot)) return true;
-    } catch {
-      // A stale, malformed, or tampered Panel App entry grants no read access.
-    }
-  }
-  return false;
-}
-
-/**
- * Returns the matching sensitive-dir entry (with the user's home prefix) if
- * `resolved` lives underneath any sensitive directory, else undefined.
- */
-function matchSensitiveDir(resolved: string): string | undefined {
+function matchProtectedPath(
+  resolved: string,
+  root: string | undefined,
+): { label: string; scope: string } | undefined {
   const home = configuredUserHome();
   for (const rel of SENSITIVE_DIR_PATTERNS) {
     const full = safeRealpath(join(home, rel));
-    if (isInsideDir(resolved, full)) return "~/" + rel;
+    if (isInsideDir(resolved, full) && !(root && isInsideDir(root, full))) {
+      return { label: "~/" + rel, scope: dirPrefix(full) };
+    }
+  }
+
+  const start = root ?? parse(resolved).root;
+  const parts = relative(start, resolved).split(sep).filter(Boolean);
+  let prefix = start;
+  for (let i = 0; i < parts.length; i++) {
+    const name = parts[i]!;
+    prefix = join(prefix, name);
+    // Claude Code keeps its own worktrees here; they are ordinary checkouts.
+    if (name === ".claude" && parts[i + 1] === "worktrees") {
+      prefix = join(prefix, parts[++i]!);
+      continue;
+    }
+    if (PROTECTED_DIR_NAMES.has(name)) return { label: name, scope: dirPrefix(prefix) };
+  }
+
+  const base = basename(resolved);
+  if (PROTECTED_FILE_NAMES.has(base) || matchSensitiveFile(resolved)) {
+    return { label: base, scope: dirPrefix(resolved) };
   }
   return undefined;
 }
@@ -710,92 +716,20 @@ export function isSensitiveResourcePath(path: string): boolean {
   return matchSensitiveFile(path) !== undefined;
 }
 
-function isSafeCodeShellDiagnosticRead(resolved: string): boolean {
-  const home = homedir();
-  const root = home + sep + ".code-shell";
-  if (!isInsideDir(resolved, root)) return false;
-
-  const rel = resolved.slice(root.length + 1);
-  const parts = rel.split(sep).filter(Boolean);
-  // Root and child sessions use bare nanoids, not an `s-` prefix. Match the
-  // safe ID shape accepted by SessionManager, including explicit dotted IDs.
-  const sessionId = parts[1] ?? "";
-  if (
-    parts[0] === "sessions" &&
-    /^[A-Za-z0-9_.-]{1,128}$/.test(sessionId) &&
-    sessionId !== "." &&
-    !sessionId.includes("..")
-  ) {
-    return parts[2] === "tool-results" || parts[2] === "logs" || parts[2] === "transcript";
-  }
-  if (parts[0] === "logs") {
-    const name = parts[1] ?? "";
-    return /^(desktop|tui|agent|main)-.+\.log$/i.test(name);
-  }
-  return false;
-}
-
 /**
- * CodeShell stores credentials in a few containers whose names do not look
- * like secrets. Keep these protected even when ordinary files under its home
- * are readable. Settings can contain provider keys and MCP env/header values;
- * browser profiles can carry login tokens outside their Cookies database.
- */
-function isCodeShellCredentialContainer(resolved: string): boolean {
-  // Project-local settings can carry the same provider and MCP credentials.
-  if (
-    /(?:^|[/\\])\.code-shell[/\\]settings(?:\.(?:local|managed))?\.(?:json|ya?ml)(?:\.|$)/.test(
-      resolved,
-    )
-  )
-    return true;
-  const root = safeRealpath(join(configuredUserHome(), ".code-shell"));
-  if (!isInsideDir(resolved, root)) return false;
-  const rel = relative(root, resolved).split(sep).join("/");
-  return (
-    /(?:^|\/\.code-shell\/)settings(?:\.(?:local|managed))?\.(?:json|ya?ml)(?:\.|$)/.test(rel) ||
-    /^plugins\/(?:.*\/)?(?:\.mcp|mcp-servers)\.json(?:\.|$)/.test(rel) ||
-    /^browser-runtime\/profiles(?:\/|$)/.test(rel) ||
-    /^browser-runtime\/chrome-native\.json(?:\.|$)/.test(rel) ||
-    /^im-gateway\/(?:config|desktop-control)\.json(?:\.|$)/.test(rel) ||
-    /^chat\/wechat\/accounts(?:\/|$)/.test(rel) ||
-    /^(?:(?:serve|desktop)\/)?(?:access\.json(?:\.|$)|project-runtime-secrets(?:\/|$)|project-control\/registry\.json(?:\.|$))/.test(
-      rel,
-    )
-  );
-}
-
-function isOrdinaryCodeShellFileRead(resolved: string): boolean {
-  const root = safeRealpath(join(configuredUserHome(), ".code-shell"));
-  if (!isInsideDir(resolved, root)) return false;
-  try {
-    // Grant individual files only. A recursive directory read could include
-    // credential containers and must still pass its existing approval gate.
-    return statSync(resolved).isFile();
-  } catch {
-    return false;
-  }
-}
-
-function isNoRepoAttachmentRead(resolved: string, operation: PathOperation): boolean {
-  if (operation !== "read") return false;
-  const root = join(homedir(), ".code-shell", "no-repo", ".code-shell", "attachments");
-  return isInsideDir(resolved, root);
-}
-
-/**
- * Classify a file path against the workspace + sensitive-path policy.
+ * Classify a file path against the workspace + protected-path policy.
  *
- * Decision matrix:
+ * Decision matrix (aligned with Codex / Claude Code):
  *
  *                                  read      write
- *   inside workspace, not sens.    allow     allow
- *   inside workspace, sensitive    ask       deny
- *   outside workspace, not sens.   ask       ask
- *   outside workspace, sensitive   ask       deny
+ *   inside workspace, ordinary     allow     allow
+ *   inside workspace, protected    allow     ask
+ *   outside workspace              allow     ask
  *
- * Sensitive wins over workspace placement: a `.env` checked into the project
- * still asks on read and denies on write.
+ * Reads are never gated: like Codex's sandbox and Claude Code's defaults,
+ * there is no built-in read deny list. Protected paths (credentials, .git,
+ * agent/IDE config, shell rc files) win over workspace placement for writes,
+ * since writing them can run code later or widen an agent's own permissions.
  */
 export function classifyPath(rawPath: string, opts: ClassifyOptions): PathClassification {
   if (typeof rawPath !== "string" || rawPath.length === 0) {
@@ -821,82 +755,26 @@ export function classifyPath(rawPath: string, opts: ClassifyOptions): PathClassi
   const resolved = safeRealpath(expanded);
   const workspaceRoots = opts.workspaceRoots?.length ? opts.workspaceRoots : [opts.workspaceRoot];
   const workspaces = workspaceRoots.map((root) => safeRealpath(root));
-
-  const sensitiveDir = matchSensitiveDir(resolved);
-  const sensitiveFile = matchSensitiveFile(resolved);
-  const credentialContainer = isCodeShellCredentialContainer(resolved);
-  const sensitiveLabel = credentialContainer
-    ? "CodeShell credential container"
-    : (sensitiveDir ?? sensitiveFile);
-  const ordinaryRead = opts.operation === "read" && !sensitiveFile && !credentialContainer;
   const matchedRoot = workspaces.find((workspace) => isInsideDir(resolved, workspace));
-  const insideWorkspace = matchedRoot !== undefined;
 
-  // Registered Skill resources are managed runtime inputs. Their SKILL.md is
-  // already readable through the Skill builtin; allow its contained reference
-  // files through the ordinary Read tool as well. A credential-shaped basename
-  // (.env, token.txt, key files, ...) deliberately keeps the sensitive-file
-  // gate even inside a Skill tree.
-  if (ordinaryRead && isRegisteredSkillResourceRead(resolved)) {
-    return {
-      decision: "allow",
-      reason: "registered Skill resource read",
-      resolvedPath: resolved,
-    };
+  if (opts.operation === "read") {
+    return matchedRoot
+      ? { decision: "allow", reason: "inside workspace", resolvedPath: resolved, matchedRoot }
+      : { decision: "allow", reason: "outside workspace read", resolvedPath: resolved };
   }
 
-  if (ordinaryRead && isInstalledPanelAppResourceRead(resolved)) {
-    return {
-      decision: "allow",
-      reason: "installed Panel App resource read",
-      resolvedPath: resolved,
-    };
-  }
-
-  if (
-    ordinaryRead &&
-    (!sensitiveDir || sensitiveDir === "~/.code-shell") &&
-    isOrdinaryCodeShellFileRead(resolved)
-  ) {
-    return {
-      decision: "allow",
-      reason: "ordinary CodeShell file read",
-      resolvedPath: resolved,
-    };
-  }
-
-  // Sensitive: write is always denied, read always asks. Workspace placement
-  // doesn't soften the rule — an `.env` in the project still asks on read.
-  if (sensitiveLabel) {
-    if (ordinaryRead && isNoRepoAttachmentRead(resolved, opts.operation)) {
-      return {
-        decision: "allow",
-        reason: "no-repo attachment read",
-        resolvedPath: resolved,
-      };
-    }
-    if (ordinaryRead && isSafeCodeShellDiagnosticRead(resolved)) {
-      return {
-        decision: "allow",
-        reason: "safe CodeShell diagnostic read",
-        resolvedPath: resolved,
-      };
-    }
-    if (opts.operation === "write") {
-      return {
-        decision: "deny",
-        reason: `sensitive path (${sensitiveLabel}): writes are not permitted`,
-        resolvedPath: resolved,
-      };
-    }
+  const protectedPath = matchProtectedPath(resolved, matchedRoot);
+  if (protectedPath) {
     return {
       decision: "ask",
-      reason: `sensitive path (${sensitiveLabel}): read requires approval`,
+      reason: `protected path (${protectedPath.label}): write requires approval`,
       resolvedPath: resolved,
+      protectedScope: protectedPath.scope,
+      ...(matchedRoot ? { matchedRoot } : {}),
     };
   }
 
-  if (insideWorkspace) {
+  if (matchedRoot) {
     return {
       decision: "allow",
       reason: "inside workspace",
@@ -905,9 +783,6 @@ export function classifyPath(rawPath: string, opts: ClassifyOptions): PathClassi
     };
   }
 
-  // Outside workspace: ask for both read and write. The conservative bias
-  // matches the plan's leaning answer to Q1 — ask on sensitive reads, deny
-  // on silently-allowed writes; outside-workspace falls in between.
   return {
     decision: "ask",
     reason: "outside workspace: caller approval required",
@@ -985,8 +860,9 @@ export async function enforcePathPolicyWithApproval(
   // Already approved this directory for this OPERATION (this session or
   // persisted for the project)? Proceed without re-prompting — this is the fix
   // for "I keep having to click allow for the same folder". A read grant does
-  // NOT cover a write; a write grant covers both.
-  if (isPathPreApproved(c.resolvedPath, operation, ctx.cwd, ctx.sessionId)) return null;
+  // NOT cover a write; a write grant covers both. Protected paths need a
+  // grant made for that protected item.
+  if (isPathPreApproved(c, operation, ctx.cwd, ctx.sessionId)) return null;
   if (!ctx.askUser) {
     return (
       `Error: path requires approval — ${c.reason}. Path: ${c.resolvedPath}. ` +
@@ -1008,7 +884,7 @@ export async function enforcePathPolicyWithApproval(
     await prevTurn;
     // Stop drains the visible prompt; queued paths must not create another one.
     if (ctx.signal?.aborted) return "Error: path approval cancelled — run stopped";
-    if (isPathPreApproved(c.resolvedPath, operation, ctx.cwd, ctx.sessionId)) return null;
+    if (isPathPreApproved(c, operation, ctx.cwd, ctx.sessionId)) return null;
     return await promptForPathApproval(
       c,
       operation,
@@ -1025,59 +901,77 @@ export async function enforcePathPolicyWithApproval(
 /** The actual interactive ask — split out so the serialized section reads flat.
  *  Caller has already verified ctx.askUser and ctx.cwd are present. */
 async function promptForPathApproval(
-  c: { resolvedPath: string; reason: string },
+  c: PathClassification,
   operation: PathOperation,
   ctx: ToolContext & { askUser: NonNullable<ToolContext["askUser"]> },
 ): Promise<string | null> {
-  // Title by the ACTUAL reason, not always "工作区外": a sensitive file
-  // (e.g. ~/.ssh, .env) can sit INSIDE the workspace, so the old fixed
-  // "工作区外路径" header was misleading for sensitive-path asks.
-  const isSensitive = c.reason.startsWith("sensitive");
+  // Title by the ACTUAL reason, not always "工作区外": a protected path
+  // (e.g. .git/hooks, .env) can sit INSIDE the workspace.
+  const isProtected = c.protectedScope !== undefined;
   const what = operation === "read" ? "读取" : "写入";
-  const title = isSensitive ? `工具想${what}敏感文件` : `工具想${what}工作区外路径`;
-  const header = isSensitive ? "敏感文件权限" : "路径权限";
+  const title = isProtected ? `工具想${what}受保护路径` : `工具想${what}工作区外路径`;
+  const header = isProtected ? "受保护路径" : "路径权限";
 
-  // Scope options carry remembered grants for the directory of this path, so
-  // the same folder isn't re-prompted. Labels are matched by exact string
-  // (the ask is optionsOnly — no free-text box that could silently fail to
-  // match). 仅本次 carries no memory.
-  const grantDir = dirname(c.resolvedPath);
+  // Scope options carry remembered grants for the directory of this path (or
+  // the protected item itself), so it isn't re-prompted. Labels are matched by
+  // exact string (the ask is optionsOnly — no free-text box that could
+  // silently fail to match). 仅本次 carries no memory.
+  const grantPrefix = grantPrefixFor(c);
+  const grantTarget = grantPrefix.slice(0, -sep.length);
+  const grantSubject =
+    grantPrefix === dirPrefix(c.resolvedPath) ? grantTarget : `${grantTarget} 下的文件`;
   const ALLOW_ONCE = "允许本次";
   const ALLOW_SESSION = "本目录本会话允许";
   const ALLOW_PROJECT = "本目录本项目允许";
-  const answer = (
-    await ctx.askUser(`${title}：\n${c.resolvedPath}\n\n原因：${c.reason}\n是否允许本次操作？`, {
-      header,
-      options: [
-        { label: ALLOW_ONCE, description: "仅允许当前这一次文件操作继续执行", tone: "ok" },
-        {
-          label: ALLOW_SESSION,
-          description: `本会话内不再询问 ${grantDir} 下的文件`,
-          tone: "ok",
-        },
-        {
-          label: ALLOW_PROJECT,
-          description: `永久允许 ${grantDir} 下的文件（写入 .code-shell/settings.local.json）`,
-          tone: "ok",
-        },
-        { label: "拒绝", description: "阻止当前文件操作", tone: "danger" },
-      ],
-      // Closed-set decision: no free-text "其它…" box. The answer is matched
-      // against the labels below by exact string, so a typed answer must not
-      // be allowed (it could never match and would silently deny).
-      optionsOnly: true,
-    })
-  ).trim();
+  let rawAnswer: string;
+  try {
+    rawAnswer = await ctx.askUser(
+      `${title}：\n${c.resolvedPath}\n\n原因：${c.reason}\n是否允许本次操作？`,
+      {
+        header,
+        options: [
+          { label: ALLOW_ONCE, description: "仅允许当前这一次文件操作继续执行", tone: "ok" },
+          {
+            label: ALLOW_SESSION,
+            description: `本会话内不再询问 ${grantSubject}`,
+            tone: "ok",
+          },
+          {
+            label: ALLOW_PROJECT,
+            description: `永久允许 ${grantSubject}（写入 .code-shell/settings.local.json）`,
+            tone: "ok",
+          },
+          { label: "拒绝", description: "阻止当前文件操作", tone: "danger" },
+        ],
+        // Closed-set decision: no free-text "其它…" box. The answer is matched
+        // against the labels below by exact string, so a typed answer must not
+        // be allowed (it could never match and would silently deny).
+        optionsOnly: true,
+        // Expiry and cancellation must not be reported as an explicit refusal.
+        throwOnFailure: true,
+      },
+    );
+  } catch (error) {
+    if (!(error instanceof UserDecisionError)) throw error;
+    const outcome =
+      error.failure === "timed_out"
+        ? "timed out (no answer before the deadline)"
+        : error.failure === "cancelled"
+          ? "cancelled"
+          : `unavailable (${error.failure})`;
+    return `Error: path approval ${outcome}. No permission was granted. Path: ${c.resolvedPath}`;
+  }
+  const answer = rawAnswer.trim();
 
   // A late answer must not grant access or persist permission after Stop.
   if (ctx.signal?.aborted) return "Error: path approval cancelled — run stopped";
   if (answer === ALLOW_ONCE) return null;
   if (answer === ALLOW_SESSION) {
-    recordPathApproval("session", c.resolvedPath, operation, ctx.cwd!, ctx.sessionId);
+    recordPathApproval("session", c, operation, ctx.cwd!, ctx.sessionId);
     return null;
   }
   if (answer === ALLOW_PROJECT) {
-    recordPathApproval("project", c.resolvedPath, operation, ctx.cwd!, ctx.sessionId);
+    recordPathApproval("project", c, operation, ctx.cwd!, ctx.sessionId);
     return null;
   }
   return (

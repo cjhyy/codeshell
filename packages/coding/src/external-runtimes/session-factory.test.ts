@@ -21,7 +21,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ToolRegistry } from "@cjhyy/code-shell-core";
 import { startExternalRuntimeSession } from "./session-factory.js";
-import { FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
+import { BUILTIN_TOOLS, FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
 
 const dirs: string[] = [];
 const sessions: Array<{ close(): Promise<void> }> = [];
@@ -148,9 +148,9 @@ send({ type: "assistant", message: { model: "actual-claude-model", content: [] }
     });
     sessions.push(session);
     expect(session.resolvedModel).toBe("requested-alias");
-    await (
-      await session.send({ text: "hello" })
-    ).done;
+    const turn = await session.send({ text: "hello" });
+    expect(turn.accepted).toBeUndefined(); // spawning a CLI is not provider acceptance
+    await turn.done;
     expect(session.resolvedModel).toBe("actual-claude-model");
   });
 
@@ -185,6 +185,24 @@ send({ type: "assistant", message: { model: "actual-claude-model", content: [] }
     }
   });
 
+  test("an explicit exposure only narrows reviewed declarations, including registered unknown tools", async () => {
+    const tools = new ToolRegistry({ builtinTools: ["Read", "Panel", "Agent"] });
+    const read = BUILTIN_TOOLS.find((tool) => tool.definition.name === "Read")!;
+    tools.registerTool(
+      { ...read.definition, name: "UnreviewedRead" },
+      async () => "must not be exposed",
+      read.exposure,
+    );
+    const session = await startExternalRuntimeSession({
+      ...BASE,
+      kind: "claude-code",
+      registry: tools,
+      exposure: { mode: "allowlist", toolNames: new Set(["Panel", "Agent", "UnreviewedRead"]) },
+    });
+    sessions.push(session);
+    expect(session.listTools().map((tool) => tool.name)).toEqual(["Panel"]);
+  });
+
   test.each([
     { label: "default", pathAccess: undefined },
     { label: "full", pathAccess: "full" },
@@ -203,8 +221,9 @@ send({ type: "assistant", message: { model: "actual-claude-model", content: [] }
         kind: "codex",
         cwd,
         pathAccess,
-        registry: new ToolRegistry({ builtinTools: ["Read"] }),
-        presetRules: [{ tool: "Read", decision: "allow" }],
+        // Reads are never path-gated; a write outside the workspace is.
+        registry: new ToolRegistry({ builtinTools: ["Write"] }),
+        presetRules: [{ tool: "Write", decision: "allow" }],
         visibility: { ...BASE.visibility, cwd },
         codexClient: {
           command: process.execPath,
@@ -231,7 +250,7 @@ send({ type: "assistant", message: { model: "actual-claude-model", content: [] }
         },
         body: JSON.stringify({
           id: 1, method: "tools/call",
-          params: { name: "Read", arguments: { file_path: ${JSON.stringify(filePath)} } },
+          params: { name: "Write", arguments: { file_path: ${JSON.stringify(filePath)}, content: "updated" } },
         }),
       });
       writeFileSync(${JSON.stringify(responseFile)}, await response.text());
@@ -249,17 +268,19 @@ send({ type: "assistant", message: { model: "actual-claude-model", content: [] }
       });
       sessions.push(session);
 
-      const turn = await session.send({ text: "read the fixture" });
+      const turn = await session.send({ text: "write the fixture" });
+      expect(turn.accepted).toBe(true); // turn/start was acknowledged by the app-server
       await turn.done;
       const response = JSON.parse(readFileSync(responseFile, "utf8")) as {
         result: { isError?: boolean; content: Array<{ text: string }> };
       };
       if (pathAccess === "full") {
         expect(response.result.isError).toBeFalsy();
-        expect(response.result.content[0]!.text).toContain("synthetic factory attachment");
+        expect(readFileSync(filePath, "utf8")).toBe("updated");
       } else {
         expect(response.result.isError).toBe(true);
         expect(response.result.content[0]!.text).toContain("path requires approval");
+        expect(readFileSync(filePath, "utf8")).toBe("synthetic factory attachment");
       }
     },
   );

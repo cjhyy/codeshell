@@ -179,7 +179,9 @@ export function defaultSandboxConfig(mode: SandboxMode = "auto"): SandboxConfig 
   return {
     mode,
     writableRoots: ["${workspace}", ...tmpRoots],
-    deniedReads: ["~/.ssh", "~/.aws", "~/.config/gcloud", "~/.code-shell", "~/.claude"],
+    // No built-in read deny list (aligned with Codex / Claude Code); users can
+    // still configure sandbox.deniedReads.
+    deniedReads: [],
     network: "allow",
   };
 }
