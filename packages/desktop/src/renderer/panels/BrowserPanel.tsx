@@ -48,6 +48,7 @@ import { copyText } from "../lib/clipboard";
 import { useToast } from "../ui/ToastProvider";
 import type { ChromeBrowserRuntimeStatus } from "../../preload/types";
 import { useBrowserSessionTarget } from "../browser/useBrowserSessionTarget";
+import { useBrowserPanelAccessPrompt } from "../browser/useBrowserPanelAccessPrompt";
 
 interface Props {
   /** Workspace root — reserved for future "open file in browser" wiring. */
@@ -293,6 +294,19 @@ export function BrowserPanel({
   }, []);
   const activeGuestId = readyGuests[activeId];
   const activeGuestReady = activeGuestId !== undefined && !showingNewTab;
+  const {
+    prompt: accessPrompt,
+    answer: answerAccessPrompt,
+    busy: accessPromptBusy,
+  } = useBrowserPanelAccessPrompt({
+    engineSessionId,
+    bucket,
+    partition,
+    activeId,
+    guestId: activeGuestReady ? activeGuestId : undefined,
+    url: active.url,
+    select: selectRuntimeTarget,
+  });
   const currentTabSelected =
     handoff.granted &&
     handoff.guestId === activeGuestId &&
@@ -559,7 +573,8 @@ export function BrowserPanel({
               size="sm"
               className="h-8 shrink-0 gap-1.5 px-2 text-xs"
               onClick={() => {
-                if (activeGuestReady) void selectRuntimeTarget(activeGuestId);
+                if (accessPrompt) void answerAccessPrompt(true);
+                else if (activeGuestReady) void selectRuntimeTarget(activeGuestId);
               }}
               disabled={!activeGuestReady || handoffBusy || currentTabSelected}
               title={t("panels.browser.handoffSelectionHint")}
@@ -599,6 +614,37 @@ export function BrowserPanel({
           </IconBtn>
         </div>
       </div>
+
+      {accessPrompt && (
+        <div
+          role="status"
+          aria-label={t("panels.browser.accessRequestTitle")}
+          className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs text-foreground"
+        >
+          <span>{t("panels.browser.accessRequest")}</span>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              disabled={accessPromptBusy}
+              onClick={() => void answerAccessPrompt(false)}
+            >
+              {t("panels.browser.accessDeny")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              disabled={handoffBusy || accessPromptBusy || !activeGuestReady}
+              onClick={() => void answerAccessPrompt(true)}
+            >
+              {t("panels.browser.accessAllow")}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {handoff.granted && (
         <div className="flex min-w-0 shrink-0 items-center justify-between gap-3 border-b border-border px-3 py-1 text-xs text-muted-foreground">

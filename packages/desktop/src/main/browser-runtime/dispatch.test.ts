@@ -2,6 +2,7 @@ import { describe, expect, spyOn, test } from "bun:test";
 import type { BrowserBridge } from "@cjhyy/code-shell-core";
 import type { BrowserRuntimeLike } from "./runtime.js";
 import {
+  beginBrowserRunForStartedRun,
   cancelBrowserActionsForStoppedRun,
   interactiveBrowserRuntimeOwner,
   dispatchInteractiveBrowserRuntimeAction,
@@ -116,6 +117,8 @@ describe("interactive Browser Runtime dispatch", () => {
     expect(shown).toBe(1);
     expect(released).toBe(1);
     expect(result).toMatchObject({ ok: true, code: "NEEDS_HUMAN" });
+    expect(result.detail).toContain("separate Browser Runtime window");
+    expect(result.detail).toContain("not the docked BrowserPanel tab");
   });
 
   test("targets a task-owned in-app runtime tab, including tab operations", async () => {
@@ -362,5 +365,52 @@ test("Stop abandons the stopped session's in-flight browser actions, including i
       { sourceSessionId: "other-child", bindingId: "other-run" },
       runtime,
     );
+  }
+});
+
+test("a new agent/run lets the session's user-closed task window reopen", () => {
+  const begun: string[] = [];
+  const runtime = {
+    acquire: async () => {
+      throw new Error("unused");
+    },
+    close: () => undefined,
+    closeAll: () => undefined,
+    beginRun: (ownerId: string) => begun.push(ownerId),
+  } as unknown as BrowserRuntimeLike;
+  expect(
+    beginBrowserRunForStartedRun({ method: "agent/run", params: { sessionId: "s1" } }, runtime),
+  ).toBe(true);
+  expect(begun).toEqual([interactiveBrowserRuntimeOwner("s1")]);
+  expect(
+    beginBrowserRunForStartedRun({ method: "agent/cancel", params: { sessionId: "s1" } }, runtime),
+  ).toBe(false);
+  expect(beginBrowserRunForStartedRun({ method: "agent/run", params: {} }, runtime)).toBe(false);
+  expect(begun).toHaveLength(1);
+});
+
+test("a child task cannot ask the user for their BrowserPanel tab", async () => {
+  const child = { sourceSessionId: "panel-child", bindingId: "panel-run" };
+  activateChildBrowserRuntime("panel-parent", child);
+  const runtime = {
+    acquire: async () => {
+      throw new Error("a refused request must not acquire a target");
+    },
+    close: () => undefined,
+    closeAll: () => undefined,
+  } as unknown as BrowserRuntimeLike;
+  try {
+    const out = JSON.parse(
+      await dispatchInteractiveBrowserRuntimeAction(
+        "panel-parent",
+        { action: "requestPanelAccess" },
+        runtime,
+        child,
+      ),
+    );
+    expect(out).toMatchObject({ ok: false, code: "FAILED" });
+    expect(out.detail).toContain("child task");
+  } finally {
+    releaseChildBrowserRuntime("panel-parent", child, runtime);
   }
 });

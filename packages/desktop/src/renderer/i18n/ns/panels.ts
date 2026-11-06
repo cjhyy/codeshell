@@ -331,6 +331,11 @@ export const panels = {
         revokeRuntimeHandoff: "停止使用",
         handoffActive: "当前对话使用：{title}",
         handoffGranted: "已授权当前标签给 Browser Runtime",
+        accessRequestTitle: "Agent 请求操作此标签页",
+        accessRequest:
+          "Agent 请求操作当前标签页。允许后，浏览器操作将作用于这个页面，而不是后台任务窗口。",
+        accessAllow: "允许",
+        accessDeny: "拒绝",
         handoffRevoked: "已撤销 Browser Runtime 授权",
         handoffFailed: "无法使用此标签",
         connectChromeRuntime: "连接已登录的 Chrome 标签",
@@ -757,6 +762,11 @@ export const panels = {
         revokeRuntimeHandoff: "Stop using",
         handoffActive: "This conversation uses: {title}",
         handoffGranted: "Granted this tab to Browser Runtime",
+        accessRequestTitle: "The agent asks to use this tab",
+        accessRequest:
+          "The agent asks to operate the current tab. If you allow, browser actions drive this page instead of the background task window.",
+        accessAllow: "Allow",
+        accessDeny: "Deny",
         handoffRevoked: "Revoked Browser Runtime access",
         handoffFailed: "Could not use this tab",
         connectChromeRuntime: "Connect a signed-in Chrome tab",

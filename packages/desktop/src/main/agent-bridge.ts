@@ -80,6 +80,7 @@ import {
   builtInBrowserHandoffGrants,
   chromeExtensionRuntimeService,
   annotateBrowserRuntimeStreamEvent,
+  beginBrowserRunForStartedRun,
   cancelBrowserActionsForStoppedRun,
   dispatchInteractiveBrowserRuntimeAction,
   releaseChildBrowserRuntime,
@@ -122,14 +123,16 @@ import {
   type PetReportToMimiEvent,
 } from "@cjhyy/code-shell-pet";
 import { resolveCookieCredentialForBrowser } from "./credential-action.js";
-import { restoreCookieCredentialToBrowser } from "./cookie-credential-browser.js";
+import {
+  injectCredentialIntoSessionBrowser,
+  type CredentialInjectReport,
+} from "./inject-credential-browser.js";
 import {
   buildCredentialSnapshot,
   materializeCredentialCookieForWorker,
   resolveCredentialValueForWorker,
 } from "./credential-access-service.js";
 import {
-  activeGuestForSession,
   bucketForSession,
   // Aliased: this clears the browser registration, not the retained stream.
   forgetSession as forgetSessionBucket,
@@ -211,6 +214,13 @@ export function resolveNoRepoCwd(): string {
  * need opposite fixes ("no owning window" vs "the tool threw"). The fallback
  * exists only for a malformed reply and says so rather than inventing a cause.
  */
+/** Tell every window's panels in `bucket` to reload after a Cookie restore. */
+function broadcastBrowserReload(bucket: string): void {
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) window.webContents.send("browser:reload", { bucket });
+  }
+}
+
 function describePanelFailure(result: AgentPanelHostResult): string {
   if (result.ok === false && typeof result.detail === "string" && result.detail) {
     return result.detail;
@@ -925,6 +935,7 @@ export class AgentBridge implements PetStateBridge {
       assertOutputHistoryWriteAvailable(parsed.params.sessionId);
     observeRunStopFrame(parsed);
     cancelBrowserActionsForStoppedRun(parsed);
+    beginBrowserRunForStartedRun(parsed);
     observeComputerUseRunControl(parsed);
     if (
       isOptimizationLabQuery(parsed) &&
@@ -1017,6 +1028,7 @@ export class AgentBridge implements PetStateBridge {
       }
       observeRunStopFrame(parsed);
       cancelBrowserActionsForStoppedRun(parsed);
+      beginBrowserRunForStartedRun(parsed);
       observeComputerUseRunControl(parsed);
       if (isOptimizationLabQuery(parsed)) {
         if (parsed.id !== undefined && !event.sender.isDestroyed()) {
@@ -1601,26 +1613,16 @@ export class AgentBridge implements PetStateBridge {
         if (!resolved.ok) {
           resultJson = JSON.stringify({ ok: false, error: resolved.error });
         } else {
-          // Inject into the exact bucket this engine session owns. If no live
-          // guest is mounted, write the persistent partition directly so the
-          // next panel open / app restart still sees the restored login state.
-          const target = activeGuestForSession(parsed.sessionId);
-          const targetPartition = partitionForSession(parsed.sessionId);
-          if (!target?.guest && !targetPartition) {
-            throw new Error(`no browser partition registered for session ${parsed.sessionId}`);
-          }
-          const targetSession = target?.guest.session ?? targetPartition ?? undefined;
-          const { count } = await restoreCookieCredentialToBrowser({
-            targetSession,
+          const report = await injectCredentialIntoSessionBrowser({
+            sessionId: parsed.sessionId,
+            bucket,
             sessionCwd,
             credentialId: parsed.credentialId,
             credentialScope: parsed.credentialScope,
             resolved,
+            reloadBucket: broadcastBrowserReload,
           });
-          for (const w of BrowserWindow.getAllWindows()) {
-            if (!w.isDestroyed()) w.webContents.send("browser:reload", { bucket });
-          }
-          resultJson = JSON.stringify({ ok: true, count });
+          resultJson = JSON.stringify(report);
         }
       } catch (e) {
         resultJson = JSON.stringify({
@@ -2363,7 +2365,7 @@ export class AgentBridge implements PetStateBridge {
     credentialId: string,
     credentialScope: "full" | "project" = "full",
     expectedApprovalIdentity?: string,
-  ): Promise<{ ok: boolean; count?: number; error?: string }> {
+  ): Promise<CredentialInjectReport | { ok: false; error: string }> {
     try {
       const bucket = bucketForSession(sessionId);
       if (!bucket) throw new Error(`no browser bucket registered for session ${sessionId}`);
@@ -2375,23 +2377,15 @@ export class AgentBridge implements PetStateBridge {
         expectedApprovalIdentity,
       );
       if (!resolved.ok) return { ok: false, error: resolved.error };
-      const target = activeGuestForSession(sessionId);
-      const targetPartition = partitionForSession(sessionId);
-      if (!target?.guest && !targetPartition) {
-        throw new Error(`no browser partition registered for session ${sessionId}`);
-      }
-      const targetSession = target?.guest.session ?? targetPartition ?? undefined;
-      const { count } = await restoreCookieCredentialToBrowser({
-        targetSession,
+      return await injectCredentialIntoSessionBrowser({
+        sessionId,
+        bucket,
         sessionCwd,
         credentialId,
         credentialScope,
         resolved,
+        reloadBucket: broadcastBrowserReload,
       });
-      for (const window of BrowserWindow.getAllWindows()) {
-        if (!window.isDestroyed()) window.webContents.send("browser:reload", { bucket });
-      }
-      return { ok: true, count };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : String(error) };
     }

@@ -339,6 +339,37 @@ describe("BuiltInBrowserHandoffGrants", () => {
     releaseGuest(42);
   });
 
+  test("a closed panel stops actions and cannot fall back to a task window", async () => {
+    const record = fakeRecord();
+    let live = true;
+    let dispatched = false;
+    const grants = new BuiltInBrowserHandoffGrants({
+      guestRecordForId: () => (live ? record : null),
+      bucketForSession: () => record.bucket,
+      authorizeGuest: () => {},
+      releaseGuest: () => {},
+      dispatchAction: async () => {
+        dispatched = true;
+        return "{}";
+      },
+      now: () => 100,
+    });
+    grants.grant({ sessionId: "session-1", guestId: 42, sourceWindowId: 7 });
+    live = false;
+    try {
+      const result = JSON.parse((await grants.dispatch("session-1", { action: "snapshot" }))!);
+      expect(result).toMatchObject({ ok: false, code: "NEEDS_HUMAN", retryable: false });
+      expect(result.detail).toContain("Stop browser actions");
+      expect(result.detail).not.toContain("or use the Runtime");
+      const repeated = await grants.dispatch("session-1", { action: "requestTakeover" });
+      expect(repeated).toBeDefined();
+      expect(JSON.parse(repeated!)).toMatchObject({ ok: false, code: "NEEDS_HUMAN" });
+      expect(dispatched).toBe(false);
+    } finally {
+      grants.clearSession("session-1");
+    }
+  });
+
   test("takeover invalidates queued resumes without revoking the capability grant", async () => {
     releaseGuest(42);
     const record = fakeRecord();
@@ -385,7 +416,12 @@ describe("BuiltInBrowserHandoffGrants", () => {
       action: "navigate",
       url: "https://old.example/",
     });
-    await grants.dispatch(claim.sessionId, { action: "requestTakeover" });
+    const takeover = JSON.parse(
+      (await grants.dispatch(claim.sessionId, { action: "requestTakeover" }))!,
+    );
+    expect(takeover).toMatchObject({ ok: true, code: "OK" });
+    expect(takeover.detail).toContain("granted BrowserPanel tab");
+    expect(takeover.detail).toContain("Panel visibility is unchanged");
     await waiting;
     expect(JSON.parse((await oldResume)!)).toMatchObject({ ok: false, code: "NEEDS_HUMAN" });
     expect(JSON.parse((await oldNavigation)!)).toMatchObject({ ok: false, code: "NEEDS_HUMAN" });

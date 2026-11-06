@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import type { BrowserPanelAccessPrompt } from "../../preload/browser-panel-access-api";
 import type { BrowserRuntimeHandoffStatus } from "../../preload/types";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { ToastProvider, useToastHistory } from "../ui/ToastProvider";
@@ -35,6 +36,10 @@ function deferred<T>() {
 let root: Root;
 let container: HTMLElement;
 let sessionId: string;
+let partition: string;
+let bucketPrefix: string;
+let requestAccess: (prompt: BrowserPanelAccessPrompt) => void;
+let accessAnswers: Array<[string, boolean]>;
 let visible: boolean;
 let statuses: Map<string, BrowserRuntimeHandoffStatus>;
 let grants: Array<{ sessionId: string; guestId: number; lifetime?: string }>;
@@ -65,8 +70,8 @@ async function render() {
         <BrowserPanel
           cwd="/repo"
           engineSessionId={sessionId}
-          bucket={`project::${sessionId}`}
-          partition="persist:browser:p:project"
+          bucket={`${bucketPrefix}::${sessionId}`}
+          partition={partition}
           initialUrl="https://example.test/a"
           visible={visible}
         />
@@ -112,6 +117,9 @@ beforeEach(async () => {
     value: { getItem: () => null, setItem() {} },
   });
   sessionId = "session-a";
+  partition = "persist:browser:p:project";
+  bucketPrefix = "project";
+  accessAnswers = [];
   visible = true;
   statuses = new Map();
   grants = [];
@@ -146,6 +154,15 @@ beforeEach(async () => {
       popupCount++;
     },
     codeshell: {
+      browserPanelAccess: {
+        onRequest(callback: typeof requestAccess) {
+          requestAccess = callback;
+          return () => {};
+        },
+        respond(id: string, granted: boolean) {
+          accessAnswers.push([id, granted]);
+        },
+      },
       probeLocalhostPorts: async () => [],
       registerBrowserSessionBucket() {},
       registerBrowserGuest() {},
@@ -411,3 +428,132 @@ test("a late Chrome pairing response cannot populate another session or show a s
   expect(textOf(container)).not.toContain("TEST");
   expect(toastCount).toBe(0);
 });
+
+const accessRequest = (
+  overrides: Partial<BrowserPanelAccessPrompt> = {},
+): BrowserPanelAccessPrompt => ({
+  requestId: "request-a",
+  sessionId: "session-a",
+  guestId: 42,
+  url: "https://example.test/a",
+  title: "Page A",
+  expiresAt: Date.now() + 60_000,
+  ...overrides,
+});
+async function deliverAccess(prompt = accessRequest()) {
+  await act(async () => {
+    requestAccess(prompt);
+    await flushMicrotasks();
+  });
+}
+
+test("agent requests use only the exact guest and direct selection also answers quietly", async () => {
+  await ready(0, 42, "A");
+  await deliverAccess(accessRequest({ guestId: 99 }));
+  expect(button("允许")).toBeUndefined();
+  expect(accessAnswers).toEqual([]);
+  await deliverAccess();
+  expect(button("允许")).toBeDefined();
+  expect(elements(container, "DIV").some((node) => props(node).role === "alertdialog")).toBe(false);
+  await click(button("用于当前对话"));
+  expect(grants).toEqual([{ sessionId: "session-a", guestId: 42, lifetime: "session" }]);
+  expect(accessAnswers).toEqual([["request-a", true]]);
+  expect(button("允许")).toBeUndefined();
+  expect(popupCount).toBe(0);
+  expect(toastCount).toBe(0);
+  await deliverAccess(accessRequest({ requestId: "already-selected" }));
+  await click(button("允许"));
+  expect(grants).toHaveLength(1);
+  expect(accessAnswers.at(-1)).toEqual(["already-selected", true]);
+});
+
+test("failed grants answer false instead of reporting a successful request", async () => {
+  await ready(0, 42, "A");
+  grantResult = deferred<BrowserRuntimeHandoffStatus>();
+  await deliverAccess();
+  await click(button("允许"));
+  expect(props(button("拒绝")).disabled).toBe(true);
+  await act(async () => {
+    grantResult!.reject(new Error("grant refused"));
+    await flushMicrotasks();
+  });
+  expect(accessAnswers).toEqual([["request-a", false]]);
+  expect(textOf(container)).toContain("grant refused");
+  expect(popupCount).toBe(0);
+  expect(toastCount).toBe(0);
+});
+
+test.each(["session", "bucket", "profile", "tab", "guest"])(
+  "changing %s invalidates the pending exact-target request and queued click",
+  async (change) => {
+    await ready(0, 42, "A");
+    await deliverAccess();
+    const allow = props(button("允许")).onClick;
+    const oldListener = requestAccess;
+    if (change === "session") sessionId = "session-b";
+    if (change === "bucket") bucketPrefix = "other-project";
+    if (change === "profile") partition = "persist:browser:p:other";
+    if (change === "tab") await click(button("新选项卡"));
+    else if (change === "guest") await ready(0, 43, "Replacement");
+    else await render();
+    expect(accessAnswers).toEqual([["request-a", false]]);
+    expect(button("允许")).toBeUndefined();
+    await act(async () => {
+      allow();
+      oldListener(accessRequest({ requestId: "late" }));
+      await flushMicrotasks();
+    });
+    expect(grants).toEqual([]);
+    expect(button("允许")).toBeUndefined();
+  },
+);
+
+test("an expired queued Allow cannot grant the tab", async () => {
+  await ready(0, 42, "A");
+  const deadline = Date.now() + 60_000;
+  await deliverAccess(accessRequest({ expiresAt: deadline }));
+  const allow = props(button("允许")).onClick;
+  const original = Date.now;
+  try {
+    Date.now = () => deadline + 1;
+    await act(async () => {
+      allow();
+      await flushMicrotasks();
+    });
+  } finally {
+    Date.now = original;
+  }
+  expect(accessAnswers).toEqual([["request-a", false]]);
+  expect(grants).toEqual([]);
+});
+
+test("a grant finishing after scope changes never answers a different session's request", async () => {
+  await ready(0, 42, "A");
+  grantResult = deferred<BrowserRuntimeHandoffStatus>();
+  await deliverAccess();
+  await click(button("允许"));
+  sessionId = "session-b";
+  await render();
+  expect(accessAnswers).toEqual([["request-a", false]]);
+  await act(async () => {
+    grantResult!.resolve({ sessionId: "session-a", guestId: 42, granted: true });
+    await flushMicrotasks();
+  });
+  expect(accessAnswers).toEqual([["request-a", false]]);
+  expect(textOf(container)).not.toContain("当前对话使用：");
+});
+
+test.each([{ granted: false }, { granted: true, guestId: 99 }])(
+  "an ungranted or mismatched status cannot answer Allow as success: %j",
+  async (result) => {
+    await ready(0, 42, "A");
+    grantResult = deferred<BrowserRuntimeHandoffStatus>();
+    await deliverAccess();
+    await click(button("允许"));
+    await act(async () => {
+      grantResult!.resolve({ sessionId: "session-a", ...result });
+      await flushMicrotasks();
+    });
+    expect(accessAnswers).toEqual([["request-a", false]]);
+  },
+);

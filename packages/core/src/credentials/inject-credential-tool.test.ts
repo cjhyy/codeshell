@@ -146,8 +146,37 @@ describe("InjectCredential tool", () => {
         }),
       ),
     );
-    expect(out).toEqual({ kind: "injected", count: 7 });
+    expect(out).toMatchObject({ kind: "injected", count: 7 });
+    expect(out.note).toContain("does not prove the site is signed in");
     expect(askedFor).toBe("yt");
+  });
+
+  test("passes the host's restore report through with the not-signed-in caveat", async () => {
+    saveCookie(cwd, "yt");
+    const report = {
+      partition: "persist:browser:p:project",
+      target: "panel-tab" as const,
+      expired: 2,
+      failed: 0,
+      failures: [],
+      verified: 44,
+      reloadedPanels: 1,
+    };
+    const out = parse(
+      await injectCredentialTool(
+        { id: "yt", purpose: "resume login" },
+        ctxWith(cwd, {
+          askResult: "允许本次",
+          inject: async () => ({ ok: true, count: 44, ...report }),
+        }),
+      ),
+    );
+    expect(out).toEqual({
+      kind: "injected",
+      count: 44,
+      ...report,
+      note: expect.stringContaining("Observe the page for a signed-in signal"),
+    });
   });
 
   test("user denies → no injection", async () => {
@@ -185,7 +214,7 @@ describe("InjectCredential tool", () => {
         }),
       ),
     );
-    expect(out).toEqual({ kind: "injected", count: 3 });
+    expect(out).toMatchObject({ kind: "injected", count: 3 });
     expect(injected).toBe(true);
   });
 
@@ -308,7 +337,7 @@ describe("InjectCredential tool", () => {
         }),
       ),
     );
-    expect(out).toEqual({ kind: "injected", count: 4 });
+    expect(out).toMatchObject({ kind: "injected", count: 4 });
     expect(injected).toEqual([{ id: "cookie-host", scope: "full" }]);
   });
 

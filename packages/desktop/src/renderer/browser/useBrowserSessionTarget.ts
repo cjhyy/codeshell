@@ -62,8 +62,8 @@ export function useBrowserSessionTarget(
   }, [scope, sessionId]);
 
   const update = useCallback(
-    async (guestId?: number) => {
-      if (!sessionId || current.current !== scope || pending.current === scope) return;
+    async (guestId?: number): Promise<BrowserRuntimeHandoffStatus | null> => {
+      if (!sessionId || current.current !== scope || pending.current === scope) return null;
       if (
         guestId !== undefined &&
         status.granted &&
@@ -71,7 +71,7 @@ export function useBrowserSessionTarget(
         status.expiresAt === undefined &&
         !state.unavailable
       )
-        return;
+        return status;
       pending.current = scope;
       const requestRevision = ++revision.current;
       setState({ scope, status, busy: true });
@@ -84,13 +84,17 @@ export function useBrowserSessionTarget(
                 guestId,
                 lifetime: "session",
               });
-        if (current.current !== scope || revision.current !== requestRevision) return;
+        if (current.current !== scope || revision.current !== requestRevision) return null;
         if (next.sessionId !== sessionId)
           throw new Error("browser selection belongs to another session");
+        if (guestId !== undefined && (!next.granted || next.guestId !== guestId))
+          throw new Error("browser selection was not granted for this tab");
         setState({ scope, status: next });
+        return next;
       } catch (error) {
-        if (current.current !== scope || revision.current !== requestRevision) return;
+        if (current.current !== scope || revision.current !== requestRevision) return null;
         setState({ scope, status, error: error instanceof Error ? error.message : String(error) });
+        return null;
       } finally {
         if (pending.current === scope) pending.current = null;
       }

@@ -296,6 +296,8 @@ import {
   interactiveBrowserRuntimeOwner,
   nativeMessagingOriginFromArgv,
   parseBuiltInBrowserGrantLifetime,
+  panelAccessRequests,
+  registerPanelAccessResponses,
   runChromeNativeMessagingHost,
   type ChromeNativeRegistrationResult,
 } from "./browser-runtime/index.js";
@@ -350,6 +352,7 @@ import {
 } from "./credentials-service.js";
 import { cookieCredentialAutoRefresh } from "./cookie-credential-auto-refresh.js";
 import { isBrowserPartition } from "../shared/browser-partition.js";
+import { isProfileBrowserPartition } from "../shared/browser-profile.js";
 import { resolveCookieCredentialForBrowser } from "./credential-action.js";
 import { restoreCookieCredentialToBrowser } from "./cookie-credential-browser.js";
 import { loginAndCaptureCookies } from "./credentials-login/index.js";
@@ -1443,14 +1446,15 @@ function hardenWebviewGuests(win: BrowserWindow): void {
     // OS popup window while still intercepting the URL. Not a security loosening:
     // every popup is denied; we only read its URL to open an in-app tab.
     (params as Record<string, unknown>).allowpopups = true;
-    // Partition = the guest's isolated storage/session. The renderer passes a
-    // per-chat-session partition (`persist:browser:<bucket>`) so one session's
-    // cookies/logged-in state/live page don't bleed into another's. Only honor a
-    // `persist:browser`-prefixed value (defense-in-depth: never let a guest pick
-    // an arbitrary partition, e.g. the app's own default session); anything else
-    // → the shared browser partition.
+    // Partition = the profile's cookie jar, shared by panel, task window and Cookie restore.
+    // Refuse session-derived jars (nothing else writes them); absent → legacy shared partition.
     const wantPartition = typeof params.partition === "string" ? params.partition : "";
-    params.partition = isBrowserPartition(wantPartition) ? wantPartition : BROWSER_PARTITION;
+    if (wantPartition && !isProfileBrowserPartition(wantPartition)) {
+      dlog("browser", "webview_partition_rejected", { partition: wantPartition.slice(0, 200) });
+      event.preventDefault();
+      return;
+    }
+    params.partition = wantPartition || BROWSER_PARTITION;
     pendingWebviews.push({ kind: "browser", partition: String(params.partition) });
   });
   win.webContents.on("did-attach-webview", (_e, guest) => {
@@ -4653,6 +4657,7 @@ ipcMain.handle("browser-runtime:grant-built-in", async (e, payload: Record<strin
   return status;
 });
 
+registerPanelAccessResponses(ipcMain, (sender) => BrowserWindow.fromWebContents(sender)?.id);
 ipcMain.handle("browser-runtime:revoke-built-in", async (event, rawSessionId: unknown) => {
   const { sessionId } = await prepareRendererBrowserSession(event, rawSessionId);
   builtInBrowserHandoffGrants.revoke(sessionId);
@@ -6868,6 +6873,7 @@ async function deleteDesktopSession(id: string): Promise<void> {
 async function deleteDesktopSessionResources(id: string): Promise<void> {
   mediaPreviewService.releaseSession(id);
   builtInBrowserHandoffGrants.clearSession(id);
+  panelAccessRequests.forgetSession(id);
   chromeExtensionRuntimeService.forgetSession(id);
   const browserPartition = partitionForSession(id);
   const ephemeralBrowserPartition = id.startsWith("qchat-") ? browserPartition : null;

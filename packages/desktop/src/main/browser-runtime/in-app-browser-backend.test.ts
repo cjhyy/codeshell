@@ -215,7 +215,7 @@ describe("InAppBrowserBackend", () => {
 });
 
 describe("InAppBrowserBackend identity", () => {
-  test("stamps the profile identity onto every snapshot", async () => {
+  test("identifies the separate task window while retaining the shared profile", async () => {
     // The tool layer renders snapshot.identity so the model can tell a sandbox
     // partition from a real logged-in browser. The backend is the only layer
     // that knows which partition a session resolved to, so it must supply it.
@@ -243,9 +243,8 @@ describe("InAppBrowserBackend identity", () => {
       expect(snap.identity?.profileId).toBe(
         browserPartitionForBucket("project::identity-test-session"),
       );
-      // The built-in panel is NOT the user's own browser: acting here must not
-      // be described as touching their real accounts.
-      expect(snap.identity?.sourceKind).toBe("builtin-panel");
+      // Sharing login storage does not make this the user-visible panel tab.
+      expect(snap.identity?.sourceKind).toBe("builtin-task-window");
       expect(snap.identity?.isUserBrowser).toBeFalsy();
     } finally {
       forgetSession(sessionId);

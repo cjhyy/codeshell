@@ -219,6 +219,15 @@ describe("Puppeteer exact-node BrowserBridge", () => {
         expect(await driver.type(ref("Count"), "456")).toMatchObject({ ok: true });
         expect(await page.$eval("input[type=number]", (element) => element.value)).toBe("456");
         expect(await driver.pressKey("Control+a", ref("Notes"))).toMatchObject({ ok: true });
+        // Command+A on macOS must reach the editor as selectAll, not a bare keypress.
+        await page.$eval("input", (element) => {
+          element.value = "select me";
+          element.setSelectionRange(0, 0);
+        });
+        expect(await driver.pressKey("ControlOrMeta+a", ref("Name"))).toMatchObject({ ok: true });
+        expect(
+          await page.$eval("input", (element) => [element.selectionStart, element.selectionEnd]),
+        ).toEqual([0, 9]);
         expect(await driver.click(ref("Save"))).toMatchObject({ ok: true });
         expect(await page.$eval("button", (element) => element.dataset.clicked)).toBe("yes");
         const down = spyOn(page.keyboard, "down"),

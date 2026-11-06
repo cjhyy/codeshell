@@ -39,7 +39,12 @@ export interface BrowserIdentity {
   /** Profile the partition is derived from (e.g. "p:<project>" / "u:<name>"). */
   profileId: string;
   /** Where the browser itself comes from. */
-  sourceKind?: "builtin-panel" | "builtin-headless" | "attached-chrome" | "remote";
+  sourceKind?:
+    | "builtin-panel"
+    | "builtin-task-window"
+    | "builtin-headless"
+    | "attached-chrome"
+    | "remote";
   /** True when this is the user's own browser, carrying their real logins. */
   isUserBrowser?: boolean;
 }
@@ -230,6 +235,9 @@ export interface BrowserBridge {
   requestHumanTakeover?(): Promise<BrowserResult>;
   /** Explicitly resume automation after the user has finished manual control. */
   resumeControl?(): Promise<BrowserResult>;
+  /** Ask the user to grant the BrowserPanel tab they are looking at. Only the
+   * user's confirmation in the panel grants it; the model cannot. */
+  requestPanelAccess?(): Promise<BrowserResult>;
   /** Separate developer-tool permission applies before this host-scoped call. */
   inspect?(options: BrowserInspectOptions): Promise<BrowserInspectResult>;
   snapshot(): Promise<BrowserSnapshot>;

@@ -22,6 +22,7 @@
 import {
   BROWSER_PARTITION_PREFIX,
   QUICK_CHAT_PARTITION_PREFIX,
+  isBrowserPartition,
   isQuickChatBucket,
   sanitizeBrowserBucket,
 } from "./browser-partition.js";
@@ -98,6 +99,24 @@ export function browserPartitionForProfile(profileId: string): string {
     ? QUICK_CHAT_PARTITION_PREFIX
     : BROWSER_PARTITION_PREFIX;
   return `${prefix}:${sanitizeBrowserBucket(profileId)}`;
+}
+
+/**
+ * A partition a BrowserPanel webview may attach with: a profile partition or
+ * the legacy global one. A session-derived name
+ * (`persist:browser:<project>::<session>`) is refused even though it carries
+ * the right prefix: it is a cookie jar that Cookie restore and the agent's task
+ * window never use, which is how a panel kept showing logged-out pages after
+ * a successful restore.
+ */
+export function isProfileBrowserPartition(partition: string): boolean {
+  if (!isBrowserPartition(partition)) return false;
+  if (partition === BROWSER_PARTITION_PREFIX) return true;
+  return [
+    `${BROWSER_PARTITION_PREFIX}:${PROJECT_PROFILE_PREFIX}:`,
+    `${BROWSER_PARTITION_PREFIX}:${NAMED_PROFILE_PREFIX}:`,
+    `${QUICK_CHAT_PARTITION_PREFIX}:${QUICK_CHAT_PROFILE_PREFIX}:`,
+  ].some((prefix) => partition.startsWith(prefix) && partition.length > prefix.length);
 }
 
 /**

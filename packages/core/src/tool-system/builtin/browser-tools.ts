@@ -156,7 +156,7 @@ function browserFailure(
           : "The requested observation/condition did not finish in time. Inspect the current page or wait for a specific target; do not repeatedly issue the same failing call."
       }`;
     case "TARGET_CLOSED":
-      return `${error}\n[TARGET_CLOSED] List task-owned tabs and choose a valid target. Reopen the intended URL only if needed; all previous refs are expired.`;
+      return `${error}\n[TARGET_CLOSED] All previous refs are expired. Follow the host's closure guidance. If the user closed this page, stop for this request and do not switch to another page; only a later request can reopen it.`;
     case "NAVIGATION":
     case "STALE_SNAPSHOT":
       return `${error}\n[${result.code}] Take a fresh snapshot before acting; old refs are invalid.`;
@@ -340,10 +340,15 @@ export const browserActToolDef: ToolDefinition = {
     "Prefer a specific target for slow/dynamic pages. This does not inspect iframe/canvas text.\n" +
     "- request_takeover: reveal the exact task-owned Browser Runtime page so the " +
     "user can see it and complete login, 2FA, CAPTCHA, or another required manual step. " +
-    "Use only when the user asks to see the page or human interaction is required.\n" +
+    "Use only when the user asks to see the page or human interaction is required. " +
+    "For an already granted panel tab, this only releases control; follow the host's visibility result.\n" +
+    "- request_panel_access: when the user asks you to use a page open in their BrowserPanel, " +
+    "ask them to grant that tab. They confirm in the panel; once granted, browser actions drive " +
+    "that tab instead of the task window. A declined or unanswered request is not asked again " +
+    "until the user's next message. Cookie injection never needs this.\n" +
     "- resume_control: resume after the user confirms their manual step is finished. " +
     "Then take a new snapshot; all previous element refs have expired.\n" +
-    "- list_tabs: list open browser tabs (tabId, url, title, which is active).\n" +
+    "- list_tabs: list tabs in the current task target or explicit grant (tabId, url, title, which is active); it does not discover ungranted panel tabs.\n" +
     "- switch_tab {tabId}: make another tab the active one that actions drive.\n" +
     "Pass tabId on any action to target a specific tab (switches to it first). " +
     "Re-observe after navigation/page/tab changes (refs go stale per tab). " +
@@ -363,6 +368,7 @@ export const browserActToolDef: ToolDefinition = {
           "scroll",
           "wait",
           "request_takeover",
+          "request_panel_access",
           "resume_control",
           "list_tabs",
           "switch_tab",
@@ -431,8 +437,17 @@ export async function browserActTool(
       }
       const r = await b.requestHumanTakeover();
       return r.ok
-        ? `Browser Runtime is visible for user takeover${r.detail ? ` — ${r.detail}` : ""}`
+        ? `Browser control handed to the user${r.detail ? ` — ${r.detail}` : ""}`
         : `Error: ${r.detail ?? "could not reveal Browser Runtime"}`;
+    }
+    case "request_panel_access": {
+      if (!b.requestPanelAccess) {
+        return "Error: this host has no BrowserPanel to grant";
+      }
+      const r = await b.requestPanelAccess();
+      return r.ok
+        ? `BrowserPanel tab granted${r.detail ? ` — ${r.detail}` : ""}. Take a new snapshot before acting.`
+        : `Error: ${r.detail ?? "the BrowserPanel tab was not granted"}`;
     }
     case "list_tabs": {
       const tabs = await b.listTabs();
@@ -442,7 +457,7 @@ export async function browserActTool(
         tabs
           .map(
             (t) =>
-              `- [${t.tabId}]${t.status === "closed" ? " (closed — navigate to reopen; old refs expired)" : t.active ? " (active)" : ""} ${t.title || "(untitled)"} — ${t.url || "(blank)"}`,
+              `- [${t.tabId}]${t.status === "closed" ? " (closed; old refs expired)" : t.active ? " (active)" : ""} ${t.title || "(untitled)"} — ${t.url || "(blank)"}`,
           )
           .join("\n")
       );

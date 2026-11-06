@@ -637,7 +637,7 @@ describe("browser_act", () => {
       },
     });
     expect(await browserActTool({ action: "list_tabs" }, ctx)).toContain(
-      "closed — navigate to reopen; old refs expired",
+      "closed; old refs expired",
     );
     expect(await browserActTool({ action: "click", ref: "e1", tabId: "5" }, ctx)).toContain(
       "Use browser_navigate",
@@ -697,13 +697,80 @@ describe("browser_act request_takeover", () => {
     const out = await browserActTool({ action: "request_takeover" }, ctx);
 
     expect(requested).toBe(1);
-    expect(out).toContain("visible for user takeover");
+    expect(out).toContain("Browser control handed to the user");
     expect(out).toContain("same page shown");
+  });
+
+  test("does not claim a granted panel was revealed when only control was released", async () => {
+    const detail =
+      "Control of the granted BrowserPanel tab is released. Panel visibility is unchanged.";
+    const out = await browserActTool(
+      { action: "request_takeover" },
+      ctxWith({ requestHumanTakeover: async () => ({ ok: true, detail }) }),
+    );
+    expect(out).toContain(detail);
+    expect(out).not.toContain("is visible");
   });
 
   test("fails clearly when the host cannot reveal the runtime", async () => {
     const out = await browserActTool({ action: "request_takeover" }, ctxWith({}));
     expect(out).toContain("cannot reveal");
+  });
+});
+
+describe("browser_act request_panel_access", () => {
+  test("reports the tab the user granted", async () => {
+    let asked = 0;
+    const out = await browserActTool(
+      { action: "request_panel_access" },
+      ctxWith({
+        requestPanelAccess: async () => {
+          asked += 1;
+          return { ok: true, code: "OK", detail: 'browser actions now drive "Example"' };
+        },
+      }),
+    );
+    expect(asked).toBe(1);
+    expect(out).toContain("BrowserPanel tab granted");
+    expect(out).toContain("Take a new snapshot");
+  });
+
+  test("passes a decline through without claiming access", async () => {
+    const detail = "The user did not grant the BrowserPanel tab. Do not ask again.";
+    const out = await browserActTool(
+      { action: "request_panel_access" },
+      ctxWith({ requestPanelAccess: async () => ({ ok: false, code: "NEEDS_HUMAN", detail }) }),
+    );
+    expect(out).toBe(`Error: ${detail}`);
+  });
+
+  test("hosts without a BrowserPanel say so", async () => {
+    const out = await browserActTool({ action: "request_panel_access" }, ctxWith({}));
+    expect(out).toContain("no BrowserPanel");
+  });
+});
+
+describe("closed browser target guidance", () => {
+  test("preserves the host's stop instruction without directing the model to another target", async () => {
+    const detail =
+      "The task window was closed. Stop browser actions until the user explicitly asks to reopen it.";
+    const ctx = ctxWith({
+      snapshot: async () => ({ code: "TARGET_CLOSED", detail, url: "", elements: [] }),
+      listTabs: async () => [
+        {
+          tabId: "closed",
+          url: "https://example.test",
+          title: "Closed",
+          active: false,
+          status: "closed",
+        },
+      ],
+    });
+    const observation = await browserObserveTool({}, ctx);
+    expect(observation).toContain(detail);
+    expect(observation).not.toContain("choose a valid target");
+    expect(observation).not.toContain("Reopen the intended URL only if needed");
+    expect(await browserActTool({ action: "list_tabs" }, ctx)).not.toContain("navigate to reopen");
   });
 });
 

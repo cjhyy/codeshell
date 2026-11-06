@@ -3,6 +3,7 @@ import type { CloudAccountApi } from "../shared/cloud-account.js";
 import type { AccountDeviceApi } from "../shared/account-device.js";
 import type { DiskSessionListOptions, SessionOutputRecoveryApi } from "./session-transcript-api.js";
 import type { ModelTraceApi } from "./model-trace-api.js";
+import type { BrowserPanelAccessApi } from "./browser-panel-access-api.js";
 import type { CcRoomModeApi } from "./cc-room-mode-types";
 import type { MobileSessionAnnouncement } from "./mobile-session-announcement.js";
 import type { CloudEnvironmentApi } from "../shared/cloud-environment.js";
@@ -1759,6 +1760,7 @@ export interface CodeshellApi
   ): Promise<void>;
   listSessions(): Promise<DesktopSessionSummary[]>;
   modelTraces: ModelTraceApi;
+  browserPanelAccess: BrowserPanelAccessApi;
   setSessionArchived(id: string, archived: boolean): Promise<void>;
   deleteSession(id: string): Promise<void>;
   claimQuickChatSession(id: string, claimId: string): Promise<void>;

@@ -10,6 +10,7 @@ import {
 import {
   browserSessionForCookies,
   restoreCookiesToBrowser,
+  type CookieRestoreResult,
   type ElectronCookieLike,
 } from "./credentials-service.js";
 
@@ -57,7 +58,7 @@ export async function restoreCookieCredentialToBrowser(
     restore: restoreCookiesToBrowser,
     autoRefresh: cookieCredentialAutoRefresh,
   },
-): Promise<{ count: number }> {
+): Promise<CookieRestoreResult> {
   const { resolved } = input;
   if (resolved.jar.length === 0) throw new Error("Cannot restore an empty Cookie credential");
 
@@ -91,7 +92,8 @@ export async function restoreCookieCredentialToBrowser(
     );
     // A partially restored jar may contain a mixture of old and new accounts.
     // Keep the saved snapshot intact until a complete explicit restore succeeds.
-    if (result.count === current.jar.length) {
+    // Expired cookies were never part of a usable login and do not make it partial.
+    if (result.failed === 0 && result.count + result.expired === current.jar.length) {
       // Toggles, deletions and manual re-login can occur during cookies.set.
       // Use the current switch value, but never bind an old login to a newly
       // replaced credential after that asynchronous boundary.
