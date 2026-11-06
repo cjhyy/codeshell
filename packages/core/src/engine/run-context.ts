@@ -1,7 +1,9 @@
 /**
  * Run context — ContextManager creation/seeding and the per-run message-list
  * assembly (user context, lifecycle reminders, volatile dynamic context, and
- * the runtime-context system-prompt tail).
+ * the runtime context, placed per the profile's runtimeContextPlacement: a
+ * "system" tail on the system prompt, or "dynamic" volatile context in the
+ * message list).
  */
 import { ContextManager } from "../context/manager.js";
 import { wrapHookMessages } from "../hooks/inject.js";

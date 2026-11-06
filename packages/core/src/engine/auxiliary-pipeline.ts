@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ClientDefaults, LLMConfig, TokenUsage } from "../types.js";
 import { createLLMClient } from "../llm/client-factory.js";
+import { isTruncatedStop } from "../llm/stop-reason.js";
 import type { ModelPool } from "../llm/model-pool.js";
 import type { SettingsManager } from "../settings/manager.js";
 import type { ToolRegistry } from "../tool-system/registry.js";
@@ -63,7 +64,7 @@ export function buildSummarizeFn(
     });
     if (response.usage) recordCumulativeUsage?.(response.usage);
     // Summaries replace real history; a truncated one silently loses context.
-    if (response.stopReason === "length" || response.stopReason === "max_tokens") {
+    if (isTruncatedStop(response.stopReason)) {
       throw new Error("Summary exceeded its output token budget; discarded partial text");
     }
     return response.text;
@@ -208,7 +209,7 @@ export class AuxiliaryPipeline {
             reasoning: { mode: "off" },
           });
           if (response.usage) recordBilledUsage?.(response.usage);
-          if (response.stopReason === "length" || response.stopReason === "max_tokens") {
+          if (isTruncatedStop(response.stopReason)) {
             throw new Error(
               "Memory response exceeded its output token budget; discarded partial JSON",
             );
