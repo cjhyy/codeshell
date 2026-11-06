@@ -1,5 +1,14 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  truncateSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionCatalogStore } from "./session-catalog-store";
@@ -21,6 +30,37 @@ afterEach(() => {
 });
 
 describe("SessionCatalogStore", () => {
+  test("snapshotSync does not create files and sees external commits and deletion", async () => {
+    const { file, store } = fixture();
+    expect(store.snapshotSync()).toEqual({ revision: 0, indices: {} });
+    expect(existsSync(file)).toBe(false);
+    const writer = new SessionCatalogStore({ file });
+    await writer.apply({ projectKey: "p", upserts: [{ id: "s", values: row("s") }] });
+    const first = store.snapshotSync();
+    first.indices.p.sessions[0].title = "Caller mutation";
+    expect(store.snapshotSync().indices.p.sessions[0].title).toBe(row().title);
+    await writer.apply({ projectKey: "p", upserts: [{ id: "s", values: { title: "External" } }] });
+    expect(store.snapshotSync().indices.p.sessions[0].title).toBe("External");
+    rmSync(file);
+    expect(store.snapshotSync()).toEqual({ revision: 0, indices: {} });
+    expect(existsSync(file)).toBe(false);
+  });
+
+  test("snapshotSync rejects corrupt, oversized and symbolic files without overwriting", () => {
+    const { file, directory, store } = fixture();
+    writeFileSync(file, "not json");
+    expect(() => store.snapshotSync()).toThrow();
+    expect(readFileSync(file, "utf8")).toBe("not json");
+    truncateSync(file, 64 * 1024 * 1024 + 1);
+    expect(() => store.snapshotSync()).toThrow("invalid session catalog file");
+    rmSync(file);
+    const target = join(directory, "target.json");
+    writeFileSync(target, "untouched");
+    symlinkSync(target, file);
+    expect(() => store.snapshotSync()).toThrow();
+    expect(readFileSync(target, "utf8")).toBe("untouched");
+  });
+
   test("preserves an explicit first-run marker across reload and removes it on engine binding", async () => {
     const { file, store } = fixture();
     await store.apply({
