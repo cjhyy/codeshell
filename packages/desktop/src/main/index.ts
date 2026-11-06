@@ -33,8 +33,6 @@ import {
   Notification,
   screen,
   nativeTheme,
-  type IpcMainEvent,
-  type IpcMainInvokeEvent,
   type OpenDialogOptions,
   type SaveDialogOptions,
 } from "electron";
@@ -272,7 +270,10 @@ import { migrateCredentialStore, migrateKnownCredentialStores } from "./credenti
 import { inspectReadableReplyAttachment, readImageDataUrl } from "./image-read-service.js";
 import { MediaPreviewService } from "./media-preview-service.js";
 import { RendererBrowserSessionAccess } from "./renderer-browser-session-access.js";
-import { mobileSessionCommandAuthority as resolvePersistedSessionAuthority } from "./mobile-remote/output-recovery-authority.js";
+import {
+  createRendererBrowserSessionEventAccess,
+  resolvePersistedBrowserSession,
+} from "./renderer-browser-session-ipc-authority.js";
 import { resolveMediaPreviewAuthority } from "./media-preview-authority.js";
 import { MEDIA_PREVIEW_SCHEME } from "../shared/media-preview.js";
 import {
@@ -4521,48 +4522,15 @@ const rendererBrowserSessionAccess = new RendererBrowserSessionAccess({
     [...mainWindows].find(
       (window) => !window.isDestroyed() && window.webContents.id === senderId,
     ) ?? null,
-  resolvePersistedSession: async (sessionId) => {
-    // Reuse the durable Session/project checks used by remote commands. This
-    // registers browser UI routing only: it must not reserve or start a task.
-    const authority = await resolvePersistedSessionAuthority(sessionId);
-    const store = getProjectStore();
-    const projectId =
-      authority.projectId ?? store.resolveExactRootSync(authority.mainRoot)?.project.id;
-    if (!projectId && !store.isNoRepoCwd(authority.mainRoot))
-      throw new Error("Session project is not mounted");
-    return {
-      bucket: readExternalRuntimeBinding(sessionId)
-        ? externalRuntimeBrowserBucket(sessionId)
-        : `${projectId ?? "__no_repo__"}::${sessionId}`,
-      assertCurrent: authority.assertCurrent,
-    };
-  },
+  resolvePersistedSession: resolvePersistedBrowserSession,
   bucketForSession,
   registerSessionBucket,
 });
 
-async function prepareRendererBrowserSession(
-  event: IpcMainEvent | IpcMainInvokeEvent,
-  rawSessionId: unknown,
-) {
-  const frame = event.senderFrame;
-  if (!frame || frame !== event.sender.mainFrame)
-    throw new Error("browser operation requires the current Desktop main window");
-  assertDesktopSessionId(rawSessionId);
-  if (deletingBrowserSessions.has(rawSessionId)) throw new Error("Session is being deleted");
-  const access = await rendererBrowserSessionAccess.prepare(rawSessionId, event.sender.id);
-  const assertCurrent = () => {
-    if (
-      event.sender.isDestroyed() ||
-      event.sender.mainFrame !== frame ||
-      deletingBrowserSessions.has(access.sessionId)
-    )
-      throw new Error("browser conversation window changed");
-    access.assertCurrent();
-  };
-  assertCurrent();
-  return { ...access, assertCurrent };
-}
+const prepareRendererBrowserSession = createRendererBrowserSessionEventAccess(
+  rendererBrowserSessionAccess,
+  (sessionId) => deletingBrowserSessions.has(sessionId),
+);
 
 function requireRendererBrowserPartition(bucket: unknown, senderWebContentsId: number): string {
   const partition = browserPartitionForBucket(bucket);
