@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { AskUserMessageView } from "./AskUserMessageView";
+import { AskUserMessageView, formatAutoContinueRemaining } from "./AskUserMessageView";
 import type { AskUserMessage } from "../types";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { translate } from "../i18n/translate";
@@ -249,5 +249,118 @@ describe("AskUserMessageView layout", () => {
   test("constrains long option text with min-w-0", () => {
     const html = renderToStaticMarkup(<AskUserMessageView message={ask()} onAnswer={() => {}} />);
     expect(html).toContain("min-w-0");
+  });
+});
+
+describe("AskUserMessageView auto-continue countdown", () => {
+  test("formats remaining time as m:ss and never reads 0:00 early", () => {
+    expect(formatAutoContinueRemaining(120_000)).toBe("2:00");
+    expect(formatAutoContinueRemaining(61_500)).toBe("1:02");
+    expect(formatAutoContinueRemaining(59_001)).toBe("1:00");
+    expect(formatAutoContinueRemaining(400)).toBe("0:01");
+    expect(formatAutoContinueRemaining(-5)).toBe("0:00");
+  });
+
+  test("shows the countdown and keep-waiting control only for a keep-waitable deadline", () => {
+    const keepWaitable = ask({ keepWaitable: true, expiresAt: Date.now() + 90_000 });
+    const html = renderToStaticMarkup(
+      <AskUserMessageView
+        message={keepWaitable}
+        onAnswer={() => {}}
+        onKeepWaiting={async () => {}}
+      />,
+    );
+    expect(html).toContain("后未回答将自动继续");
+    expect(html).toContain("一直等");
+    expect(html).toContain('role="timer"');
+    expect(html).not.toContain("text-status-err");
+
+    const closing = renderToStaticMarkup(
+      <AskUserMessageView
+        message={ask({ keepWaitable: true, expiresAt: Date.now() + 30_000 })}
+        onAnswer={() => {}}
+        onKeepWaiting={async () => {}}
+      />,
+    );
+    expect(closing).toContain("text-status-err");
+
+    // Waiting indefinitely, unsupported host, or a plain permission prompt: no clock.
+    for (const html of [
+      renderToStaticMarkup(
+        <AskUserMessageView
+          message={ask({ keepWaitable: false })}
+          onAnswer={() => {}}
+          onKeepWaiting={async () => {}}
+        />,
+      ),
+      renderToStaticMarkup(<AskUserMessageView message={keepWaitable} onAnswer={() => {}} />),
+      renderToStaticMarkup(
+        <AskUserMessageView
+          message={ask({ expiresAt: Date.now() + 90_000 })}
+          onAnswer={() => {}}
+          onKeepWaiting={async () => {}}
+        />,
+      ),
+    ]) {
+      expect(html).not.toContain("一直等");
+      expect(html).not.toContain('role="timer"');
+    }
+  });
+
+  test("keep waiting fires once from the button or from starting to type", async () => {
+    ensureMiniDom();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const kept: string[] = [];
+    let fail = true;
+    const onKeepWaiting = async (message: AskUserMessage) => {
+      kept.push(message.requestId);
+      if (fail) throw new Error("worker offline");
+    };
+    const button = (label: string) =>
+      descendants(container).find((node) => node.tagName === "BUTTON" && textOf(node) === label)!;
+    const click = async (node: Element) => {
+      await act(async () => {
+        props(node).onClick({ isPropagationStopped: () => false, stopPropagation() {} });
+        await flushMicrotasks();
+      });
+    };
+    try {
+      await act(async () => {
+        root.render(
+          <AskUserMessageView
+            message={ask({
+              options: undefined,
+              keepWaitable: true,
+              expiresAt: Date.now() + 90_000,
+            })}
+            onAnswer={() => {}}
+            onKeepWaiting={onKeepWaiting}
+          />,
+        );
+        await flushMicrotasks();
+      });
+      await click(button("一直等"));
+      expect(kept).toEqual(["r1"]);
+      expect(textOf(container)).toContain("没能改为一直等待，请重试。");
+
+      // A failed request can be retried by engaging with the card again.
+      fail = false;
+      const input = descendants(container).find((node) => node.tagName === "INPUT")!;
+      await act(async () => {
+        props(input).onChange({ target: { value: "对" } });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        props(input).onChange({ target: { value: "对照" } });
+        await flushMicrotasks();
+      });
+      expect(kept).toEqual(["r1", "r1"]);
+      expect(textOf(container)).not.toContain("没能改为一直等待");
+    } finally {
+      await act(async () => root.unmount());
+      document.body.removeChild(container);
+    }
   });
 });

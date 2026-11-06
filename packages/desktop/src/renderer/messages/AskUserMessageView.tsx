@@ -12,6 +12,28 @@ interface Props {
   message: AskUserMessage;
   /** Called with the user's chosen / typed answer string. */
   onAnswer: (requestId: string, answer: string) => void | Promise<void>;
+  /** Drop the question's auto-continue deadline. Absent where unsupported. */
+  onKeepWaiting?: (message: AskUserMessage) => Promise<void>;
+}
+
+/** Remaining time as m:ss, rounded up so the label never reads 0:00 early. */
+export function formatAutoContinueRemaining(remainingMs: number): string {
+  const total = Math.max(0, Math.ceil(remainingMs / 1000));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+/** Re-render once a second while a deadline is visible. */
+function useNow(active: boolean): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!active) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [active]);
+  return now;
 }
 
 /**
@@ -26,8 +48,29 @@ interface Props {
  * The answer is always wire-encoded as a single string. For
  * multiSelect we join selected labels with ", ".
  */
-function AskUserMessageViewImpl({ message, onAnswer }: Props) {
+function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
   const { t } = useT();
+  const countdownActive =
+    message.answer === undefined &&
+    message.keepWaitable === true &&
+    message.expiresAt !== undefined &&
+    !!onKeepWaiting;
+  const now = useNow(countdownActive);
+  const [keepWaitingState, setKeepWaitingState] = useState<"idle" | "pending" | "failed">("idle");
+  const keepWaitingRef = useRef(false);
+  /** Codex-style: any engagement with the card stops the auto-continue clock. */
+  const keepWaiting = (): void => {
+    if (!countdownActive || keepWaitingRef.current || !onKeepWaiting) return;
+    keepWaitingRef.current = true;
+    setKeepWaitingState("pending");
+    void onKeepWaiting(message).then(
+      () => setKeepWaitingState("idle"),
+      () => {
+        keepWaitingRef.current = false;
+        setKeepWaitingState("failed");
+      },
+    );
+  };
   const [draft, setDraft] = useState("");
   const [otherOpen, setOtherOpen] = useState(false);
   const [otherDraft, setOtherDraft] = useState("");
@@ -146,6 +189,37 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
           </span>
         </div>
 
+        {countdownActive && (
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <span
+              role="timer"
+              aria-live="off"
+              className={cn(
+                "text-xs tabular-nums text-muted-foreground",
+                message.expiresAt! - now <= 60_000 && "text-status-err",
+              )}
+            >
+              {t("msg.ask.autoContinueIn", {
+                time: formatAutoContinueRemaining(message.expiresAt! - now),
+              })}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={keepWaitingState === "pending"}
+              onClick={keepWaiting}
+            >
+              {t("msg.ask.keepWaiting")}
+            </Button>
+          </div>
+        )}
+        {keepWaitingState === "failed" && (
+          <p role="alert" className="mb-3 text-xs text-status-err">
+            {t("msg.ask.keepWaitingFailed")}
+          </p>
+        )}
+
         {message.asynchronous && (
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs text-muted-foreground">{t("msg.ask.asyncHint")}</span>
@@ -210,6 +284,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                             aria-describedby={descriptionId}
                             onCheckedChange={(checked) => {
                               if (submittingRef.current) return;
+                              keepWaiting();
                               setPicked((previous) => {
                                 const next = new Set(previous);
                                 if (checked === true) next.add(index);
@@ -248,7 +323,10 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                         "block h-auto w-full whitespace-normal rounded-md border p-2 text-left font-normal transition-colors hover:bg-accent",
                         otherOpen && "border-primary bg-primary/10",
                       )}
-                      onClick={() => setOtherOpen((open) => !open)}
+                      onClick={() => {
+                        keepWaiting();
+                        setOtherOpen((open) => !open);
+                      }}
                     >
                       <span className="block font-medium text-foreground">
                         {t("msg.ask.other")}
@@ -280,7 +358,10 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                           composingRef.current = false;
                         }}
                         value={otherDraft}
-                        onChange={(e) => setOtherDraft(e.target.value)}
+                        onChange={(e) => {
+                          keepWaiting();
+                          setOtherDraft(e.target.value);
+                        }}
                         onKeyDown={(e) => {
                           if (
                             composingRef.current ||
@@ -337,7 +418,10 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                   composingRef.current = false;
                 }}
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
+                onChange={(e) => {
+                  keepWaiting();
+                  setDraft(e.target.value);
+                }}
                 onKeyDown={(e) => {
                   if (
                     composingRef.current ||

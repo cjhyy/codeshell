@@ -508,6 +508,31 @@ describe("host subscriptions and recovery", () => {
     ]);
   });
 
+  test("a question republished without a deadline updates its card in place", async () => {
+    readApprovals = async () => [];
+    hook = await renderHook(() => useHostSubscriptions(params));
+    const asked = approval("question", "__ask_user__");
+    const dated: ApprovalRequestEnvelope = {
+      ...asked,
+      expiresAt: Date.now() + 120_000,
+      request: { ...asked.request, args: { ...asked.request.args, keepWaitable: true } },
+    };
+    await act(async () => {
+      listeners.get("onApprovalRequest")!(dated);
+      await flushMicrotasks();
+      listeners.get("onApprovalRequest")!(dated);
+      await flushMicrotasks();
+      listeners.get("onApprovalRequest")!(asked);
+      await flushMicrotasks();
+    });
+    const questionActions = actions.filter(
+      (action: any) => action.type === "ask_user" && action.requestId === "question",
+    );
+    expect(questionActions).toHaveLength(2);
+    expect(questionActions[0]).toMatchObject({ keepWaitable: true, expiresAt: dated.expiresAt });
+    expect(questionActions[1]).toMatchObject({ keepWaitable: false, expiresAt: undefined });
+  });
+
   test("reload retires expired cards while retaining only authoritative pending questions", async () => {
     const read = deferred<ApprovalRequestEnvelope[]>();
     readApprovals = () => read.promise;

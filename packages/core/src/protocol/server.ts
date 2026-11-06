@@ -609,6 +609,12 @@ export class AgentServer {
         [Methods.Run]: (req) => this.handleRun(req),
         [Methods.ForkSession]: (req) => this.handleForkSession(req),
         [Methods.Approve]: (req) => this.handleApprove(req),
+        [Methods.ApprovalKeepWaiting]: (req) =>
+          this.transport.send(
+            this.userDecisions.keepWaitingRpc(req, this.chatManager, (route) =>
+              this.strictApprovalRouting ? this.matchesPendingRoute(route) : true,
+            ),
+          ),
         [Methods.Cancel]: (req) => this.handleCancel(req),
         [Methods.Configure]: (req) => this.handleConfigure(req),
         [Methods.Query]: (req) => this.handleQuery(req),
@@ -2081,19 +2087,27 @@ export class AgentServer {
 
   // ─── Approve ────────────────────────────────────────────────────
 
+  /** Strict hosts accept a decision only from the exact route that owns it. */
+  private matchesPendingRoute(params: Partial<ApprovalRouteTarget> & { requestId?: string }) {
+    const pending =
+      params.requestId === undefined
+        ? undefined
+        : this.pendingApprovalTargets.get(params.requestId);
+    return (
+      pending !== undefined &&
+      params.connectionId === this.connectionId &&
+      params.sessionId === pending.sessionId &&
+      params.connectionId === pending.connectionId &&
+      params.generation === pending.generation &&
+      this.approvalRouter.matches(pending)
+    );
+  }
+
   private async handleApprove(req: RpcRequest): Promise<void> {
     const params = (req.params ?? {}) as unknown as ApproveParams & Partial<ApprovalRouteTarget>;
 
     if (this.strictApprovalRouting) {
-      const pending = this.pendingApprovalTargets.get(params.requestId);
-      const matchesPending =
-        pending !== undefined &&
-        params.connectionId === this.connectionId &&
-        params.sessionId === pending.sessionId &&
-        params.connectionId === pending.connectionId &&
-        params.generation === pending.generation &&
-        this.approvalRouter.matches(pending);
-      if (!matchesPending) {
+      if (!this.matchesPendingRoute(params)) {
         this.transport.send(
           createErrorResponse(
             req.id,
@@ -4038,7 +4052,6 @@ export class AgentServer {
     const requestId = nanoid(12);
     const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
     const createdAt = Date.now();
-    const expiresAt = createdAt + USER_DECISION_TIMEOUT_MS;
     const continuation = session.captureFollowUpOptions();
     const requestingRun = session.settled;
     let answerActive = true;
@@ -4053,8 +4066,7 @@ export class AgentServer {
         kind: "ask_user",
         title: "可稍后回答的问题",
         createdAt,
-        expiresAt,
-        surfaceable: false,
+        surfaceable: false, // No deadline: answerable until answered, cancelled or closed.
         asynchronous: true,
       },
       (decision) => {
@@ -4104,12 +4116,10 @@ export class AgentServer {
         });
       },
     );
-    this.armUserDecisionTimeout(session, requestId, expiresAt);
-    const { signal: _signal, throwOnFailure: _throwOnFailure, ...questionOptions } = opts ?? {};
+    const { signal: _s, throwOnFailure: _t, autoResolveMs: _a, ...questionOptions } = opts ?? {};
     try {
       this.notify(Methods.ApprovalRequest, {
         ...routeEnvelope,
-        expiresAt,
         request: {
           toolName: "__ask_user__",
           args: { question, ...questionOptions, asynchronous: true },
@@ -4758,10 +4768,6 @@ export class AgentServer {
     status: string,
   ): boolean {
     return this.userDecisions.finishSession(session, requestId, decision, status);
-  }
-
-  private armUserDecisionTimeout(session: ChatSession, requestId: string, expiresAt: number): void {
-    this.userDecisions.armTimeout(session, requestId, expiresAt);
   }
 
   private registerSessionApproval(

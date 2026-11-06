@@ -614,7 +614,9 @@ export function MessageStream({
       case "goal_progress":
         return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
       case "ask_user":
-        return m.answer !== undefined || m.asynchronous ? (
+        // Unanswered questions are pinned above the composer (ChatView); the
+        // stream keeps only the answered record.
+        return m.answer !== undefined ? (
           <AskUserMessageView key={m.id} message={m} onAnswer={onAskUserAnswer ?? NOOP_ON_ANSWER} />
         ) : null;
       case "system":

@@ -333,7 +333,8 @@ describe("architecture growth budgets", () => {
     // +6 type-only declaration lines compose the extracted memory-copy API.
     // +1 net: plugin installation origin and forwarded source event identity fields.
     // +4 declaration lines carry that selected MCP configuration target; no new IPC route.
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_988);
+    // +2 declare keepWaitingForQuestion (agent/approvalKeepWaiting) for question cards.
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_990);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and

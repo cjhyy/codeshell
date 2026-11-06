@@ -94,6 +94,7 @@ export type TranscriptsAction =
       multiSelect: boolean;
       optionsOnly?: boolean;
       asynchronous?: boolean;
+      keepWaitable?: boolean;
     }
   | { type: "ask_user_answered"; bucket: string; requestId: string; answer: string }
   | {
@@ -193,6 +194,7 @@ function reduceTranscriptAction(map: TranscriptsMap, action: TranscriptsAction):
         multiSelect: action.multiSelect,
         optionsOnly: action.optionsOnly,
         asynchronous: action.asynchronous,
+        keepWaitable: action.keepWaitable,
       });
       break;
     case "ask_user_answered":

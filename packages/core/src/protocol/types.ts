@@ -48,6 +48,8 @@ export interface PendingApprovalMetadata {
   surfaceable: boolean;
   /** A non-blocking question whose answer is delivered as later user input. */
   asynchronous?: boolean;
+  /** The user may cancel this question's auto-resolve deadline and keep waiting. */
+  keepWaitable?: boolean;
 }
 
 // ─── Envelope ───────────────────────────────────────────────────────
@@ -321,6 +323,14 @@ export interface ApproveParams {
   generation?: number;
   requestId: string;
   decision: ApprovalResult;
+}
+
+/** Keep a pending question open past its auto-resolve deadline. */
+export interface ApprovalKeepWaitingParams {
+  sessionId: string;
+  connectionId?: string;
+  generation?: number;
+  requestId: string;
 }
 
 /** Cancel a running agent turn. */
@@ -646,6 +656,8 @@ export const Methods = {
   Run: "agent/run",
   ForkSession: "agent/forkSession",
   Approve: "agent/approve",
+  /** Cancel a pending question's auto-resolve deadline; it then waits for an answer. */
+  ApprovalKeepWaiting: "agent/approvalKeepWaiting",
   Cancel: "agent/cancel",
   Configure: "agent/configure",
   Query: "agent/query",

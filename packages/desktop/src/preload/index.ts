@@ -753,6 +753,8 @@ contextBridge.exposeInMainWorld("codeshell", {
       decision: decision === "approve" ? approveBranch : { approved: false, reason },
     });
   },
+  keepWaitingForQuestion: (sessionId: string, requestId: string) =>
+    rpc("agent/approvalKeepWaiting", { sessionId, requestId }),
   closeSession: (sessionId: string) => rpc("agent/closeSession", { sessionId }),
   forkSession: (params: {
     sourceSessionId: string;

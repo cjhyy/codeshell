@@ -1264,6 +1264,8 @@ export interface CodeshellApi
     scope?: "once" | "session" | "project",
     pathScope?: "file" | "dir" | "tool",
   ): Promise<RpcResponse>;
+  /** Drop a pending question's auto-continue deadline so it waits for an answer. */
+  keepWaitingForQuestion(sessionId: string, requestId: string): Promise<RpcResponse>;
   /** Destroy a chat session and free its resources. */
   closeSession(sessionId: string): Promise<RpcResponse>;
   /**

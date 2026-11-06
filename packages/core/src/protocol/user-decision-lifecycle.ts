@@ -9,7 +9,17 @@ import type { ApprovalResult } from "../types.js";
 import type { AskUserOptions } from "../tool-system/context.js";
 import type { ApprovalRouteTarget } from "../tool-system/permission.js";
 import type { ChatSession, PendingApprovalEntry } from "./chat-session.js";
-import { Methods, USER_DECISION_TIMEOUT_MS, type PendingApprovalMetadata } from "./types.js";
+import {
+  ErrorCodes,
+  Methods,
+  USER_DECISION_TIMEOUT_MS,
+  createErrorResponse,
+  createResponse,
+  type ApprovalKeepWaitingParams,
+  type PendingApprovalMetadata,
+  type RpcRequest,
+  type RpcResponse,
+} from "./types.js";
 
 interface UserDecisionHost {
   pendingApprovals: Map<string, (result: ApprovalResult) => void>;
@@ -42,7 +52,10 @@ export class UserDecisionLifecycle {
       const requestId = nanoid(12);
       const routeEnvelope = this.host.route(sessionId, requestId);
       const createdAt = Date.now();
-      const expiresAt = createdAt + USER_DECISION_TIMEOUT_MS;
+      const autoResolveMs = opts?.autoResolveMs;
+      const keepWaitable =
+        typeof autoResolveMs === "number" && Number.isFinite(autoResolveMs) && autoResolveMs > 0;
+      const expiresAt = createdAt + (keepWaitable ? autoResolveMs : USER_DECISION_TIMEOUT_MS);
       const cancelQuestion = () =>
         this.finishSession(
           session,
@@ -65,6 +78,7 @@ export class UserDecisionLifecycle {
           createdAt,
           expiresAt,
           surfaceable: true,
+          ...(keepWaitable ? { keepWaitable: true } : {}),
         },
         (decision: unknown) => {
           opts?.signal?.removeEventListener("abort", cancelQuestion);
@@ -92,7 +106,12 @@ export class UserDecisionLifecycle {
           }
         },
       );
-      this.armTimeout(session, requestId, expiresAt);
+      this.armTimeout(
+        session,
+        requestId,
+        expiresAt,
+        keepWaitable ? autoResolvedQuestionReason(autoResolveMs) : undefined,
+      );
       opts?.signal?.addEventListener("abort", cancelQuestion, { once: true });
       if (opts?.signal?.aborted) {
         cancelQuestion();
@@ -104,19 +123,34 @@ export class UserDecisionLifecycle {
       if (opts?.options !== undefined) args.options = opts.options;
       if (opts?.multiSelect !== undefined) args.multiSelect = opts.multiSelect;
       if (opts?.optionsOnly !== undefined) args.optionsOnly = opts.optionsOnly;
-
-      try {
+      const announce = (deadline: number | undefined, canKeepWaiting: boolean) =>
         this.host.notify(Methods.ApprovalRequest, {
           ...routeEnvelope,
-          expiresAt,
+          ...(deadline !== undefined ? { expiresAt: deadline } : {}),
           ...(sourceSessionId ? { sourceSessionId } : {}),
           request: {
             toolName: "__ask_user__",
-            args,
+            args: canKeepWaiting ? { ...args, keepWaitable: true } : args,
             description: question,
             riskLevel: "low" as const,
           },
         });
+
+      const entry = session.pendingApprovals.get(requestId);
+      if (keepWaitable && entry) {
+        entry.keepWaiting = () => {
+          if (session.pendingApprovals.get(requestId) !== entry) return;
+          this.host.clearTimer(requestId);
+          entry.metadata.expiresAt = undefined;
+          entry.metadata.keepWaitable = false;
+          entry.keepWaiting = undefined;
+          // Same requestId: every client and replay cache replaces the dated card.
+          announce(undefined, false);
+        };
+      }
+
+      try {
+        announce(expiresAt, keepWaitable);
       } catch (error) {
         this.finishSession(
           session,
@@ -280,12 +314,48 @@ export class UserDecisionLifecycle {
     return true;
   }
 
-  armTimeout(session: ChatSession, requestId: string, expiresAt: number): void {
+  /**
+   * The user chose to keep a question open: drop its auto-resolve deadline.
+   * `owns` applies the host's answer-ownership rules to the request route.
+   */
+  keepWaitingRpc(
+    req: RpcRequest,
+    sessions: { get(sessionId: string): ChatSession | undefined } | null | undefined,
+    owns: (route: Partial<ApprovalKeepWaitingParams>) => boolean,
+  ): RpcResponse {
+    const params = (req.params ?? {}) as Partial<ApprovalKeepWaitingParams>;
+    const fail = (code: number, message: string) => createErrorResponse(req.id, code, message);
+    const { sessionId, requestId } = params;
+    if (typeof sessionId !== "string" || typeof requestId !== "string")
+      return fail(ErrorCodes.InvalidParams, "sessionId and requestId are required");
+    if (!owns(params))
+      return fail(
+        ErrorCodes.InvalidParams,
+        "Keep-waiting request does not match connectionId, sessionId, generation, and requestId",
+      );
+    const session = sessions?.get(sessionId);
+    if (!session) return fail(ErrorCodes.SessionClosed, `No such session: ${sessionId}`);
+    const entry = session.pendingApprovals.get(requestId);
+    if (!entry) return fail(ErrorCodes.InvalidParams, `No pending question: ${requestId}`);
+    const deadline = entry.metadata.expiresAt;
+    if (deadline !== undefined && Date.now() >= deadline)
+      return fail(ErrorCodes.InvalidParams, "This question has already closed");
+    // Another client already chose to keep waiting: idempotent.
+    if (deadline === undefined && !entry.keepWaiting) return createResponse(req.id, { ok: true });
+    if (!entry.keepWaiting)
+      return fail(ErrorCodes.InvalidParams, "This question cannot be kept open");
+    entry.keepWaiting();
+    return createResponse(req.id, { ok: true });
+  }
+
+  armTimeout(session: ChatSession, requestId: string, expiresAt: number, reason?: string): void {
     this.host.approvalDeadlines.set(requestId, expiresAt);
     this.host.approvalTimers.set(
       requestId,
       setTimeout(
         () => {
+          // A deadline cleared or replaced since arming (keep waiting) is stale.
+          if (this.host.approvalDeadlines.get(requestId) !== expiresAt) return;
           this.finishSession(
             session,
             requestId,
@@ -293,6 +363,7 @@ export class UserDecisionLifecycle {
               approved: false,
               failure: "timed_out",
               reason:
+                reason ??
                 "The confirmation deadline expired without an answer. No permission was granted.",
             },
             "expired",
@@ -341,4 +412,15 @@ export class UserDecisionLifecycle {
       metadata,
     });
   }
+}
+
+/** Model-facing result when a question auto-resolves; silence is never consent. */
+export function autoResolvedQuestionReason(autoResolveMs: number): string {
+  const seconds = Math.round(autoResolveMs / 1000);
+  const span = seconds % 60 === 0 ? `${seconds / 60} minute(s)` : `${seconds} seconds`;
+  return (
+    `(The user did not answer within ${span}, so the question closed without an answer.) ` +
+    "Continue with your best judgment and state the assumption you made. " +
+    "Silence is not consent: do not take risky, destructive, or irreversible actions on this basis."
+  );
 }

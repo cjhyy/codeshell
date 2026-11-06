@@ -102,9 +102,16 @@ export type DesktopExternalRuntimeTurnInput = ExternalRuntimeTurnInput & {
 function askUserApprovalRequest(question: string, options?: Record<string, unknown>) {
   // External approvals share the native ApprovalRequest wire contract. The
   // renderer reads presentation fields from args, not the request's top level.
+  // Runtime-only controls (cancellation, deadlines) never cross the wire.
+  const {
+    signal: _signal,
+    throwOnFailure: _throwOnFailure,
+    autoResolveMs: _autoResolveMs,
+    ...presentation
+  } = options ?? {};
   return {
     toolName: "__ask_user__",
-    args: { ...options, question },
+    args: { ...presentation, question },
     description: question,
     riskLevel: "low" as const,
   };

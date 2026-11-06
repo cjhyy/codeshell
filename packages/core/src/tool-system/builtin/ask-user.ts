@@ -19,6 +19,12 @@ import type { ToolContext, AskUserOptions } from "../context.js";
 // existing imports of `AskUserFn` from this module keep working. Type-only.
 export type { AskUserFn, AskUserAsyncFn, AskUserOptions, AskUserChoice } from "../context.js";
 
+/**
+ * A blocking model question continues without an answer after this long
+ * unless the user chooses to keep waiting (Codex-style auto-resolve).
+ */
+export const ASK_USER_AUTO_RESOLVE_MS = 2 * 60 * 1000;
+
 const questionPresentationDescription =
   "Pass `options` to present a multiple-choice list (recommended when the answer is one of a small known set — much better UX than free text). " +
   "Each option needs a short `label` (the choice the user sees) and a `description` (what it means). " +
@@ -31,6 +37,7 @@ export const askUserToolDef: ToolDefinition = {
   description:
     "Ask the user a question and wait for their response. " +
     "Use this when you need clarification, confirmation, or additional input from the user. " +
+    "If the user does not respond within about two minutes, the question closes and you continue with your best judgment (unless the user chooses to keep it open). " +
     questionPresentationDescription +
     "In headless mode this tool will return an error.",
   inputSchema: {
@@ -102,7 +109,7 @@ export async function askUserTool(
     return "Error: AskUserQuestion is not available in headless mode. Make a reasonable assumption and proceed.";
   }
 
-  const opts: AskUserOptions | undefined = parseOptions(args);
+  const opts: AskUserOptions = { ...parseOptions(args), autoResolveMs: ASK_USER_AUTO_RESOLVE_MS };
 
   try {
     const answer = await ctx.askUser(question, opts);

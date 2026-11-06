@@ -163,10 +163,28 @@ describe("ChatView sticky ask column", () => {
     expect(html).toContain("cs-chat-sticky");
   });
 
-  test("keeps asynchronous questions in the stream without occupying the sticky composer", () => {
+  // An answer-later question emitted mid-run used to render only inline, where
+  // the turn's collapsed process card swallowed it. It now pins like any other.
+  test("pins an unanswered asynchronous question above the composer", () => {
     const html = renderComposer("main", "default", [{ ...pendingAsk, asynchronous: true }]);
-    expect(html).toContain("继续吗？");
+    expect(html).toContain("cs-chat-sticky");
+    expect(html.indexOf("cs-chat-sticky")).toBeLessThan(html.indexOf("继续吗？"));
     expect(html).toContain("稍后回答");
+    expect(html.split("继续吗？")).toHaveLength(2);
+  });
+
+  test("pins the blocking question first, then answer-later questions", () => {
+    const html = renderComposer("main", "default", [
+      { ...pendingAsk, id: "a1", requestId: "ra1", question: "稍后也行？", asynchronous: true },
+      pendingAsk,
+    ]);
+    const sticky = html.slice(html.indexOf("cs-chat-sticky"));
+    expect(sticky.indexOf("继续吗？")).toBeGreaterThan(-1);
+    expect(sticky.indexOf("继续吗？")).toBeLessThan(sticky.indexOf("稍后也行？"));
+  });
+
+  test("keeps an answered question in the stream, not the sticky area", () => {
+    const html = renderComposer("main", "default", [{ ...pendingAsk, answer: "继续" }]);
     expect(html).not.toContain("cs-chat-sticky");
   });
 });

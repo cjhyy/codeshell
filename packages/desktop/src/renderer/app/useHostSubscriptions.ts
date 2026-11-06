@@ -748,6 +748,34 @@ export function useHostSubscriptions({
           env.requestId,
           setTimeout(expire, Math.min(2_147_483_647, Math.max(0, env.expiresAt - Date.now()))),
         );
+      } else {
+        // Republished without a deadline (the user chose to keep waiting).
+        const previous = approvalDeadlines.get(env.requestId);
+        if (previous !== undefined) clearTimeout(previous);
+        approvalDeadlines.delete(env.requestId);
+      }
+      const republishedQuestion =
+        env.request.toolName === "__ask_user__"
+          ? questionsRef.current.pending.get(env.requestId)
+          : undefined;
+      if (republishedQuestion && pendingApprovalIdsRef.current.has(env.requestId)) {
+        // Same requestId: refresh only the deadline; no second card or sound.
+        // Snapshot replays of an unchanged question are no-ops.
+        const args = env.request.args as Record<string, unknown> | undefined;
+        const keepWaitable = args?.keepWaitable === true;
+        if (
+          republishedQuestion.expiresAt === env.expiresAt &&
+          (republishedQuestion.keepWaitable ?? false) === keepWaitable
+        )
+          return;
+        const updated: QuestionProjection = {
+          ...republishedQuestion,
+          expiresAt: env.expiresAt,
+          keepWaitable,
+        };
+        questionsRef.current.pending.set(env.requestId, updated);
+        dispatch(updated);
+        return;
       }
       if (env.source === "external-runtime") {
         if (externalApprovalsRef.current.resolved.has(env.requestId)) return;
@@ -860,6 +888,7 @@ export function useHostSubscriptions({
           multiSelect,
           optionsOnly,
           asynchronous: args.asynchronous === true,
+          keepWaitable: args.keepWaitable === true,
           expiresAt: env.expiresAt,
         };
         const questions = questionsRef.current;

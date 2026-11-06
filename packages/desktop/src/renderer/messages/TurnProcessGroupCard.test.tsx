@@ -90,3 +90,36 @@ describe("TurnProcessGroupCard confirmed user steers", () => {
     expect(html.split(followUp).length - 1).toBe(2);
   });
 });
+
+describe("TurnProcessGroupCard questions", () => {
+  const questionGroup = (answer?: string): RenderedTurnProcessGroup => {
+    const messages: Message[] = [
+      { kind: "user", id: "first", text: "优化设计稿", clientMessageId: "client-first" },
+      tool("AskUserQuestionAsync"),
+      {
+        kind: "ask_user",
+        id: "ask-1",
+        requestId: "r-1",
+        question: "奇怪样式在哪？",
+        multiSelect: false,
+        asynchronous: true,
+        options: [{ label: "对照审阅页", description: "HTML 对照页" }],
+        ...(answer !== undefined ? { answer } : {}),
+      },
+      tool("DriveAgent"),
+    ];
+    const groups = buildStreamItems(messages, { liveTurnActive: true });
+    return groups.find((item) => item.kind === "turn_process_group") as RenderedTurnProcessGroup;
+  };
+
+  test("an answered question inside the tool span stays readable in the open card", () => {
+    const html = renderToStaticMarkup(<TurnProcessGroupCard group={questionGroup("对照审阅页")} />);
+    expect(html).toContain("奇怪样式在哪？");
+    expect(html).toContain("对照审阅页");
+  });
+
+  test("an open question is left to the pinned composer area", () => {
+    const html = renderToStaticMarkup(<TurnProcessGroupCard group={questionGroup()} />);
+    expect(html).not.toContain("奇怪样式在哪？");
+  });
+});

@@ -12,6 +12,8 @@ import { ApprovalRouter } from "../tool-system/permission.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { AgentServer } from "./server.js";
 import { Methods, USER_DECISION_TIMEOUT_MS } from "./types.js";
+import { autoResolvedQuestionReason } from "./user-decision-lifecycle.js";
+import { ASK_USER_AUTO_RESOLVE_MS } from "../tool-system/builtin/ask-user.js";
 
 const cleanup: Array<() => Promise<void> | void> = [];
 afterEach(async () => {
@@ -362,18 +364,16 @@ describe("cross-device user decision lifecycle", () => {
     expect(f.resolutions()[0].params).toMatchObject({ approved: false, status: "cancelled" });
   });
 
-  it("gives an asynchronous question the same deadline and expires it without inventing an answer", async () => {
+  it("keeps an asynchronous question open without a deadline", async () => {
     const f = await fixture();
-    const timers: Array<() => void> = [];
+    const delays: number[] = [];
     const setTimeoutOriginal = globalThis.setTimeout;
     const timerSpy = spyOn(globalThis, "setTimeout").mockImplementation(((
       callback: (...args: any[]) => void,
       delay?: number,
       ...args: any[]
     ) => {
-      if (delay !== undefined && delay >= USER_DECISION_TIMEOUT_MS - 100) {
-        timers.push(() => callback(...args));
-      }
+      if (delay !== undefined) delays.push(delay);
       return setTimeoutOriginal(callback, delay, ...args);
     }) as typeof setTimeout);
     try {
@@ -384,22 +384,130 @@ describe("cross-device user decision lifecycle", () => {
       );
       expect(receipt).toContain("No answer has been received");
       const request = f.request();
-      expect(f.session.pendingApprovals.get(request.requestId)!.metadata.expiresAt).toBe(
-        request.expiresAt,
-      );
-      expect(timers).toHaveLength(1);
-      timers[0]!();
-      expect(f.session.pendingApprovals.size).toBe(0);
-      expect(f.resolutions()).toHaveLength(1);
-      expect(f.resolutions()[0].params).toMatchObject({
-        ...routeOf(request),
-        status: "expired",
-        approved: false,
-      });
-      await f.approve(routeOf(request), { approved: true, answer: "late" }, "late-phone");
-      expect(f.sent.find((frame) => frame.id === "late-phone").error).toBeDefined();
+      expect(request.expiresAt).toBeUndefined();
+      expect(request.request.args.asynchronous).toBe(true);
+      expect(f.session.pendingApprovals.get(request.requestId)!.metadata.expiresAt).toBeUndefined();
+      expect(delays.some((delay) => delay >= ASK_USER_AUTO_RESOLVE_MS - 100)).toBe(false);
+      expect(f.session.pendingApprovals.size).toBe(1);
+      expect(f.resolutions()).toHaveLength(0);
     } finally {
       timerSpy.mockRestore();
     }
+  });
+
+  it("auto-resolves an AskUserQuestion after two minutes without treating silence as consent", async () => {
+    const f = await fixture();
+    const timers: Array<() => void> = [];
+    const setTimeoutOriginal = globalThis.setTimeout;
+    const timerSpy = spyOn(globalThis, "setTimeout").mockImplementation(((
+      callback: (...args: any[]) => void,
+      delay?: number,
+      ...args: any[]
+    ) => {
+      if (
+        delay !== undefined &&
+        delay >= ASK_USER_AUTO_RESOLVE_MS - 100 &&
+        delay <= ASK_USER_AUTO_RESOLVE_MS
+      ) {
+        timers.push(() => callback(...args));
+      }
+      return setTimeoutOriginal(callback, delay, ...args);
+    }) as typeof setTimeout);
+    try {
+      const before = Date.now();
+      const answer = f.ask("Which page?", { autoResolveMs: ASK_USER_AUTO_RESOLVE_MS });
+      const request = f.request();
+      expect(request.expiresAt).toBeGreaterThanOrEqual(before + ASK_USER_AUTO_RESOLVE_MS);
+      expect(request.expiresAt).toBeLessThan(before + USER_DECISION_TIMEOUT_MS);
+      expect(request.request.args.keepWaitable).toBe(true);
+      expect(request.request.args.autoResolveMs).toBeUndefined();
+      expect(timers).toHaveLength(1);
+      timers[0]!();
+      expect(await answer).toBe(autoResolvedQuestionReason(ASK_USER_AUTO_RESOLVE_MS));
+      expect(await answer).toContain("Silence is not consent");
+      expect(f.session.pendingApprovals.size).toBe(0);
+      expect(f.resolutions()[0].params).toMatchObject({ ...routeOf(request), status: "expired" });
+    } finally {
+      timerSpy.mockRestore();
+    }
+  });
+
+  it("keeps waiting on request: drops the deadline and republishes the same question", async () => {
+    const f = await fixture();
+    const timers = new Map<ReturnType<typeof setTimeout>, () => void>();
+    const setTimeoutOriginal = globalThis.setTimeout;
+    const timerSpy = spyOn(globalThis, "setTimeout").mockImplementation(((
+      callback: (...args: any[]) => void,
+      delay?: number,
+      ...args: any[]
+    ) => {
+      const handle = setTimeoutOriginal(callback, delay, ...args);
+      if (delay !== undefined && delay >= ASK_USER_AUTO_RESOLVE_MS - 100) {
+        timers.set(handle, () => callback(...args));
+      }
+      return handle;
+    }) as typeof setTimeout);
+    const keepWaiting = (route: any, id: string) =>
+      (f.server as any).dispatchRequest({
+        jsonrpc: "2.0",
+        id,
+        method: Methods.ApprovalKeepWaiting,
+        params: route,
+      });
+    try {
+      const answer = f.ask("Which page?", { autoResolveMs: ASK_USER_AUTO_RESOLVE_MS });
+      const request = f.request();
+      expect(timers.size).toBe(1);
+
+      keepWaiting({ ...routeOf(request), generation: 999 }, "wrong-owner");
+      expect(f.sent.find((frame) => frame.id === "wrong-owner").error).toBeDefined();
+      expect(f.session.pendingApprovals.get(request.requestId)!.metadata.expiresAt).toBe(
+        request.expiresAt,
+      );
+
+      keepWaiting(routeOf(request), "keep");
+      expect(f.sent.find((frame) => frame.id === "keep").result).toEqual({ ok: true });
+      const entry = f.session.pendingApprovals.get(request.requestId)!;
+      expect(entry.metadata.expiresAt).toBeUndefined();
+      const announcements = f.sent.filter((frame) => frame.method === Methods.ApprovalRequest);
+      expect(announcements).toHaveLength(2);
+      expect(announcements[1].params.requestId).toBe(request.requestId);
+      expect(announcements[1].params.expiresAt).toBeUndefined();
+      expect(announcements[1].params.request.args.keepWaitable).toBeUndefined();
+      expect(announcements[1].params.request.args.question).toBe("Which page?");
+
+      // The original deadline can no longer close the question.
+      for (const fire of timers.values()) fire();
+      expect(f.session.pendingApprovals.size).toBe(1);
+
+      // A second device asking again is a no-op, not an error.
+      keepWaiting(routeOf(request), "keep-again");
+      expect(f.sent.find((frame) => frame.id === "keep-again").result).toEqual({ ok: true });
+      expect(f.sent.filter((frame) => frame.method === Methods.ApprovalRequest)).toHaveLength(2);
+
+      await f.approve(routeOf(request), { approved: true, answer: "对照审阅页" }, "answer");
+      expect(await answer).toBe("对照审阅页");
+    } finally {
+      timerSpy.mockRestore();
+    }
+  });
+
+  it("refuses to keep waiting on a question without an auto-resolve deadline", async () => {
+    const f = await fixture();
+    void f.ask("允许读取？", { options: [{ label: "允许本次", description: "once" }] });
+    const request = f.request();
+    expect(request.request.args.keepWaitable).toBeUndefined();
+    await (f.server as any).dispatchRequest({
+      jsonrpc: "2.0",
+      id: "keep",
+      method: Methods.ApprovalKeepWaiting,
+      params: routeOf(request),
+    });
+    expect(f.sent.find((frame) => frame.id === "keep").error.message).toContain(
+      "cannot be kept open",
+    );
+    expect(f.session.pendingApprovals.get(request.requestId)!.metadata.expiresAt).toBe(
+      request.expiresAt,
+    );
   });
 });
