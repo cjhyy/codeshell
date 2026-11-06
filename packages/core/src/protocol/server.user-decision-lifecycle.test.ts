@@ -12,7 +12,11 @@ import { ApprovalRouter } from "../tool-system/permission.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { AgentServer } from "./server.js";
 import { Methods, USER_DECISION_TIMEOUT_MS } from "./types.js";
-import { SKIPPED_QUESTION_REASON, autoResolvedQuestionReason } from "./user-decision-lifecycle.js";
+import {
+  SKIPPED_QUESTION_REASON,
+  autoResolvedQuestionReason,
+  recommendedAnswer,
+} from "./user-decision-lifecycle.js";
 import { ASK_USER_AUTO_RESOLVE_MS } from "../tool-system/builtin/ask-user.js";
 
 const cleanup: Array<() => Promise<void> | void> = [];
@@ -544,5 +548,51 @@ describe("cross-device user decision lifecycle", () => {
     expect(f.resolutions()).toHaveLength(1);
     expect(f.resolutions()[0].params).toMatchObject({ ...routeOf(request), approved: false });
     expect(f.resolutions()[0].params.answer).toBeUndefined();
+  });
+
+  it("a timed-out question with a recommendation applies it by default", async () => {
+    const f = await fixture();
+    const timers: Array<() => void> = [];
+    const setTimeoutOriginal = globalThis.setTimeout;
+    const timerSpy = spyOn(globalThis, "setTimeout").mockImplementation(((
+      callback: (...args: any[]) => void,
+      delay?: number,
+      ...args: any[]
+    ) => {
+      if (delay !== undefined && delay >= ASK_USER_AUTO_RESOLVE_MS - 100) {
+        timers.push(() => callback(...args));
+      }
+      return setTimeoutOriginal(callback, delay, ...args);
+    }) as typeof setTimeout);
+    try {
+      const answer = f.ask("Which page?", {
+        autoResolveMs: ASK_USER_AUTO_RESOLVE_MS,
+        options: [
+          { label: "工作台画布", description: "canvas" },
+          { label: "对照审阅页", description: "review", recommended: true },
+        ],
+      });
+      expect(f.request().request.args.options[1].recommended).toBe(true);
+      timers[0]!();
+      const result = await answer;
+      expect(result).toContain('"对照审阅页"');
+      expect(result).toContain("applied by default");
+      expect(result).toContain("did not explicitly choose it");
+      expect(result).toBe(autoResolvedQuestionReason(ASK_USER_AUTO_RESOLVE_MS, "对照审阅页"));
+    } finally {
+      timerSpy.mockRestore();
+    }
+  });
+
+  it("the timeout default joins every recommendation only for multi-select", () => {
+    const options = [
+      { label: "A", description: "a", recommended: true },
+      { label: "B", description: "b" },
+      { label: "C", description: "c", recommended: true },
+    ];
+    expect(recommendedAnswer({ options })).toBe("A");
+    expect(recommendedAnswer({ options, multiSelect: true })).toBe("A, C");
+    expect(recommendedAnswer({ options: [options[1]!] })).toBeUndefined();
+    expect(autoResolvedQuestionReason(ASK_USER_AUTO_RESOLVE_MS)).toContain("was skipped");
   });
 });

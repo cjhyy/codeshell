@@ -62,6 +62,8 @@ export interface AskUserChoice {
    * AskUserQuestion tool strips it so model-authored prompts stay neutral.
    */
   tone?: "ok" | "danger" | "neutral";
+  /** The asker's recommended choice; auto-chosen when a deadline question times out. */
+  recommended?: boolean;
 }
 
 /**

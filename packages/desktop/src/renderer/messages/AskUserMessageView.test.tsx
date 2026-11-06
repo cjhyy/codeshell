@@ -414,3 +414,36 @@ describe("AskUserMessageView skip", () => {
     }
   });
 });
+
+describe("AskUserMessageView timeout default", () => {
+  const deadline = () => ({ skippable: true, keepWaitable: true, expiresAt: Date.now() + 90_000 });
+  test("announces the recommended option it will pick and badges it", () => {
+    const html = renderToStaticMarkup(
+      <AskUserMessageView
+        message={ask({
+          ...deadline(),
+          options: [
+            { label: "工作台画布", description: "canvas" },
+            { label: "对照审阅页", description: "review", recommended: true },
+          ],
+        })}
+        onAnswer={() => {}}
+        onKeepWaiting={async () => {}}
+      />,
+    );
+    expect(html).toContain("后未回答将自动选择「对照审阅页」");
+    expect(html.split("推荐")).toHaveLength(2);
+  });
+
+  test("announces a skip when nothing is recommended", () => {
+    const html = renderToStaticMarkup(
+      <AskUserMessageView
+        message={ask({ ...deadline() })}
+        onAnswer={() => {}}
+        onKeepWaiting={async () => {}}
+      />,
+    );
+    expect(html).toContain("后未回答将自动跳过");
+    expect(html).not.toContain("推荐");
+  });
+});

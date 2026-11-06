@@ -14,9 +14,14 @@ import {
 import { compactSidebarSessions, sortSidebarSessions } from "../sidebarSessionVisibility";
 import { transcriptsReducer, type TranscriptsAction } from "../transcriptsReducer";
 import { getSessionPersistence } from "../sessionPersistence";
-import { useHostSubscriptions } from "./useHostSubscriptions";
+import { serverResolvedQuestionLabel, useHostSubscriptions } from "./useHostSubscriptions";
+import type { TFunction } from "../i18n/I18nProvider";
 import { INITIAL_STATE, type ApprovalState, type AskUserMessage } from "../types";
-import type { ApprovalRequestEnvelope, StreamEventEnvelope } from "../../preload/types";
+import type {
+  ApprovalRequestEnvelope,
+  ApprovalResolvedEnvelope,
+  StreamEventEnvelope,
+} from "../../preload/types";
 import type { PermissionMode } from "../chat/PermissionPill";
 import { bindThemeSoundPlayer, ThemeAudioPlayback, ThemeSoundPlayer } from "../theme-audio";
 
@@ -1981,5 +1986,33 @@ describe("host subscriptions and recovery", () => {
         { type: "turn_complete" },
       ],
     });
+  });
+});
+
+describe("serverResolvedQuestionLabel", () => {
+  const t = ((key: string, params?: Record<string, string>) =>
+    params?.label ? `${key}:${params.label}` : key) as unknown as TFunction;
+  const expired = { requestId: "q", status: "expired" } as ApprovalResolvedEnvelope;
+  test("names the default a timed-out model question took", () => {
+    expect(
+      serverResolvedQuestionLabel(
+        { bucket: "b", skippable: true, timeoutDefault: "对照审阅页" },
+        expired,
+        t,
+      ),
+    ).toBe("msg.ask.timedOutChose:对照审阅页");
+    expect(serverResolvedQuestionLabel({ bucket: "b", skippable: true }, expired, t)).toBe(
+      "msg.ask.timedOutSkipped",
+    );
+  });
+  test("permission prompts and cancellations keep their existing labels", () => {
+    expect(serverResolvedQuestionLabel({ bucket: "b" }, expired, t)).toBe("msg.ask.timedOut");
+    expect(
+      serverResolvedQuestionLabel(
+        { bucket: "b", skippable: true },
+        { requestId: "q", status: "cancelled", approved: false } as ApprovalResolvedEnvelope,
+        t,
+      ),
+    ).toBe("msg.ask.cancelled");
   });
 });

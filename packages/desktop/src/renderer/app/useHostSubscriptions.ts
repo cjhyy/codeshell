@@ -50,7 +50,7 @@ import { normalizeExternalRuntimeModelKey } from "../../shared/external-runtime-
 import { readApprovalPermission } from "./approvalPermission";
 import { revealSidebarProject } from "../sidebarSessionVisibility";
 import { useToast } from "../ui/ToastProvider";
-import { useT } from "../i18n/I18nProvider";
+import { useT, type TFunction } from "../i18n/I18nProvider";
 import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
@@ -105,6 +105,20 @@ interface Params {
 }
 
 type QuestionProjection = Extract<TranscriptsAction, { type: "ask_user" }>;
+
+/** Record label for a question Core closed without a user answer. */
+export function serverResolvedQuestionLabel(
+  origin: ReturnType<typeof findAskUserOrigin>,
+  env: ApprovalResolvedEnvelope,
+  t: TFunction,
+): string {
+  const expired = env.status === "expired" || (env.status === undefined && env.approved !== false);
+  if (!expired) return t("msg.ask.cancelled");
+  if (!origin?.skippable) return t("msg.ask.timedOut");
+  return origin.timeoutDefault !== undefined
+    ? t("msg.ask.timedOutChose", { label: origin.timeoutDefault })
+    : t("msg.ask.timedOutSkipped");
+}
 
 /** Owns long-lived worker/mobile IPC subscriptions and stream coalescing. */
 export function useHostSubscriptions({
@@ -857,7 +871,14 @@ export function useHostSubscriptions({
                   o.tone === "ok" || o.tone === "danger" || o.tone === "neutral"
                     ? o.tone
                     : undefined;
-                return { label: o.label, description: o.description, ...(tone ? { tone } : {}) };
+                return {
+                  label: o.label,
+                  description: o.description,
+                  ...(tone ? { tone } : {}),
+                  ...((o as { recommended?: unknown }).recommended === true
+                    ? { recommended: true }
+                    : {}),
+                };
               })
           : undefined;
         // Resolve the ORIGINATING session's bucket via the shared resolver
@@ -1071,13 +1092,7 @@ export function useHostSubscriptions({
           type: "ask_user_answered",
           bucket: questionBucket,
           requestId: env.requestId,
-          answer:
-            env.answer ??
-            t(
-              env.status === "expired" || (env.status === undefined && env.approved !== false)
-                ? "msg.ask.timedOut"
-                : "msg.ask.cancelled",
-            ),
+          answer: env.answer ?? serverResolvedQuestionLabel(origin, env, t),
         });
       }
       pendingQuestionBuckets.delete(env.requestId);

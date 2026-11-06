@@ -48,6 +48,24 @@ describe("askUserTool", () => {
     expect(lastOpts()).toEqual({ autoResolveMs: ASK_USER_AUTO_RESOLVE_MS });
   });
 
+  it("keeps only a boolean recommended flag on options", async () => {
+    const { ctx, lastOpts } = ctxWith("A");
+    await askUserTool(
+      {
+        question: "pick",
+        options: [
+          { label: "A", description: "first", recommended: true },
+          { label: "B", description: "second", recommended: "yes" },
+        ],
+      },
+      ctx,
+    );
+    expect(lastOpts()?.options).toEqual([
+      { label: "A", description: "first", recommended: true },
+      { label: "B", description: "second" },
+    ]);
+  });
+
   it("parses multiple-choice options + header + multiSelect", async () => {
     const { ctx, lastOpts } = ctxWith("A");
     await askUserTool(

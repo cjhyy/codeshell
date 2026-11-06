@@ -1,12 +1,14 @@
 import React, { memo, useEffect, useId, useRef, useState } from "react";
 import type { AskUserAnswerHandler, AskUserMessage } from "../types";
 import { Check, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import { resolveAnswerTone, toneEchoStyle } from "./askUserTone";
+import { recommendedAnswer } from "./askUserDefault";
 
 interface Props {
   message: AskUserMessage;
@@ -56,6 +58,7 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
     message.expiresAt !== undefined &&
     !!onKeepWaiting;
   const now = useNow(countdownActive);
+  const timeoutDefault = recommendedAnswer(message);
   const [keepWaitingState, setKeepWaitingState] = useState<"idle" | "pending" | "failed">("idle");
   const keepWaitingRef = useRef(false);
   /** Codex-style: any engagement with the card stops the auto-continue clock. */
@@ -202,9 +205,17 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
                   message.expiresAt! - now <= 60_000 && "text-status-err",
                 )}
               >
-                {t("msg.ask.autoContinueIn", {
-                  time: formatAutoContinueRemaining(message.expiresAt! - now),
-                })}
+                {t(
+                  !message.skippable
+                    ? "msg.ask.autoContinueIn"
+                    : timeoutDefault !== undefined
+                      ? "msg.ask.autoChooseIn"
+                      : "msg.ask.autoSkipIn",
+                  {
+                    time: formatAutoContinueRemaining(message.expiresAt! - now),
+                    label: timeoutDefault ?? "",
+                  },
+                )}
               </span>
             ) : (
               <span className="text-xs text-muted-foreground">
@@ -274,6 +285,14 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
                         )}
                       >
                         {option.label}
+                        {option.recommended && (
+                          <Badge
+                            variant="secondary"
+                            className="ml-2 px-1.5 align-middle font-normal"
+                          >
+                            {t("msg.ask.recommended")}
+                          </Badge>
+                        )}
                       </span>
                       <span
                         id={descriptionId}

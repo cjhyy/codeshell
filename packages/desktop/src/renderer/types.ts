@@ -261,6 +261,8 @@ export interface AskUserOption {
    * AskUserQuestion options arrive without it and render neutral.
    */
   tone?: "ok" | "danger" | "neutral";
+  /** The model's recommended choice; picked automatically if the question times out. */
+  recommended?: boolean;
 }
 
 /**

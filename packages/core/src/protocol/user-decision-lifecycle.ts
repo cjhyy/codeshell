@@ -112,7 +112,9 @@ export class UserDecisionLifecycle {
         session,
         requestId,
         expiresAt,
-        keepWaitable ? autoResolvedQuestionReason(autoResolveMs) : undefined,
+        keepWaitable
+          ? autoResolvedQuestionReason(autoResolveMs, recommendedAnswer(opts))
+          : undefined,
       );
       opts?.signal?.addEventListener("abort", cancelQuestion, { once: true });
       if (opts?.signal?.aborted) {
@@ -429,8 +431,23 @@ const CONTINUE_WITHOUT_ANSWER =
 /** Model-facing result when the user presses Skip on a model question. */
 export const SKIPPED_QUESTION_REASON = `(The user skipped this question without answering.) ${CONTINUE_WITHOUT_ANSWER}`;
 
-export function autoResolvedQuestionReason(autoResolveMs: number): string {
+/** The recommended label(s) a timed-out question defaults to, if any. */
+export function recommendedAnswer(opts: AskUserOptions | undefined): string | undefined {
+  const labels = (opts?.options ?? []).filter((o) => o.recommended === true).map((o) => o.label);
+  if (labels.length === 0) return undefined;
+  return opts?.multiSelect ? labels.join(", ") : labels[0];
+}
+
+/** Model-facing result when a question times out: take the recommendation, else skip. */
+export function autoResolvedQuestionReason(autoResolveMs: number, recommended?: string): string {
   const seconds = Math.round(autoResolveMs / 1000);
   const span = seconds % 60 === 0 ? `${seconds / 60} minute(s)` : `${seconds} seconds`;
-  return `(The user did not answer within ${span}, so the question closed without an answer.) ${CONTINUE_WITHOUT_ANSWER}`;
+  if (recommended !== undefined) {
+    return (
+      `(The user did not answer within ${span}, so your recommended option was applied by default: ${JSON.stringify(recommended)}. ` +
+      "The user did not explicitly choose it; mention the default you took so it is easy to revisit.) " +
+      "Do not treat this default as consent for risky, destructive, or irreversible actions."
+    );
+  }
+  return `(The user did not answer within ${span}, so the question was skipped.) ${CONTINUE_WITHOUT_ANSWER}`;
 }
