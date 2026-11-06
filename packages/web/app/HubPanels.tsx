@@ -54,9 +54,7 @@ function Compatibility({ value }: { value: PanelCompatibility }) {
   if (value.supported)
     return (
       <details className="panels-warning panels-limitations">
-        <summary>
-          部分功能可用 · {value.reasons.length} 项限制
-        </summary>
+        <summary>部分功能可用 · {value.reasons.length} 项限制</summary>
         <p>可以打开面板，以下功能当前不可用或需要额外配置。</p>
         <ul>
           {value.reasons.map((reason) => (

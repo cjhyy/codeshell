@@ -15,11 +15,7 @@ import {
 } from "../src/lib/mobileAttachments.js";
 import { ApiError, browserId, ensureDesktopHttpSession, post, type AuthSession } from "./auth.js";
 import { setApiWorkspace } from "./api-context.js";
-import {
-  connectionModelLabel,
-  readConfiguration,
-  type HubConfiguration,
-} from "./configuration.js";
+import { connectionModelLabel, readConfiguration, type HubConfiguration } from "./configuration.js";
 import { SessionDrafts } from "./drafts.js";
 import { sessionTitle } from "./chat.js";
 import { Workbench } from "./Workbench.js";
