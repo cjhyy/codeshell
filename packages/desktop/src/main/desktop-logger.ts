@@ -86,9 +86,18 @@ export function dayStamp(d: Date): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+/**
+ * Root of the desktop log tree. Honors CODE_SHELL_HOME (same rule as core's
+ * codeShellHome(); inlined so the logger stays independent of core) so the
+ * test preload's temp home keeps test runs out of the real ~/.code-shell/logs.
+ */
+export function desktopLogDir(): string {
+  return join(process.env.CODE_SHELL_HOME || join(homedir(), ".code-shell"), "logs", "desktop");
+}
+
 /** Log file path for a given day stamp. */
 export function logPathForDay(stamp: string): string {
-  return join(homedir(), ".code-shell", "logs", "desktop", `desktop-${stamp}.log`);
+  return join(desktopLogDir(), `desktop-${stamp}.log`);
 }
 
 let _cachedStamp: string | null = null;
@@ -97,7 +106,8 @@ function logPath(): string {
   const stamp = dayStamp(new Date());
   // Recompute when the day changes — a long-running process must roll over to
   // a new file at midnight instead of writing to the start-day's file forever.
-  if (_cachedStamp !== stamp || _cachedPath === null) {
+  // Also recompute when the log root moved (CODE_SHELL_HOME changed).
+  if (_cachedStamp !== stamp || _cachedPath === null || _cachedPath !== logPathForDay(stamp)) {
     // Day rolled over: close yesterday's stream so it isn't leaked, and let
     // the new path lazily open a fresh stream on next write.
     if (_cachedPath) {
@@ -119,9 +129,9 @@ function logPath(): string {
   return _cachedPath;
 }
 
-const sessionDir = join(homedir(), ".code-shell", "logs", "desktop", "sessions");
 const sessionDirsEnsured = new Set<string>();
 function sessionPath(sid: string): string {
+  const sessionDir = join(desktopLogDir(), "sessions");
   if (!sessionDirsEnsured.has(sessionDir)) {
     try {
       mkdirSync(sessionDir, { recursive: true });
