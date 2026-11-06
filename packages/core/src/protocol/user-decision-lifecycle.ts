@@ -99,7 +99,9 @@ export class UserDecisionLifecycle {
             resolve(
               result.approved
                 ? (result.answer ?? "")
-                : (result.reason ?? "(user declined to answer)"),
+                : (result.reason ??
+                    // A model question declined without a reason was skipped.
+                    (keepWaitable ? SKIPPED_QUESTION_REASON : "(user declined to answer)")),
             );
           } else {
             resolve(typeof decision === "string" ? decision : "");
@@ -130,7 +132,12 @@ export class UserDecisionLifecycle {
           ...(sourceSessionId ? { sourceSessionId } : {}),
           request: {
             toolName: "__ask_user__",
-            args: canKeepWaiting ? { ...args, keepWaitable: true } : args,
+            // Model questions stay skippable after the user chose to keep waiting.
+            args: {
+              ...args,
+              ...(keepWaitable ? { skippable: true } : {}),
+              ...(canKeepWaiting ? { keepWaitable: true } : {}),
+            },
             description: question,
             riskLevel: "low" as const,
           },
@@ -415,12 +422,15 @@ export class UserDecisionLifecycle {
 }
 
 /** Model-facing result when a question auto-resolves; silence is never consent. */
+const CONTINUE_WITHOUT_ANSWER =
+  "Continue with your best judgment and state the assumption you made. " +
+  "Silence is not consent: do not take risky, destructive, or irreversible actions on this basis.";
+
+/** Model-facing result when the user presses Skip on a model question. */
+export const SKIPPED_QUESTION_REASON = `(The user skipped this question without answering.) ${CONTINUE_WITHOUT_ANSWER}`;
+
 export function autoResolvedQuestionReason(autoResolveMs: number): string {
   const seconds = Math.round(autoResolveMs / 1000);
   const span = seconds % 60 === 0 ? `${seconds / 60} minute(s)` : `${seconds} seconds`;
-  return (
-    `(The user did not answer within ${span}, so the question closed without an answer.) ` +
-    "Continue with your best judgment and state the assumption you made. " +
-    "Silence is not consent: do not take risky, destructive, or irreversible actions on this basis."
-  );
+  return `(The user did not answer within ${span}, so the question closed without an answer.) ${CONTINUE_WITHOUT_ANSWER}`;
 }

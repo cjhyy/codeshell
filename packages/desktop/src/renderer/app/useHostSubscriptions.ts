@@ -889,6 +889,7 @@ export function useHostSubscriptions({
           optionsOnly,
           asynchronous: args.asynchronous === true,
           keepWaitable: args.keepWaitable === true,
+          skippable: args.skippable === true,
           expiresAt: env.expiresAt,
         };
         const questions = questionsRef.current;

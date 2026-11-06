@@ -12,7 +12,7 @@ import { ApprovalRouter } from "../tool-system/permission.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { AgentServer } from "./server.js";
 import { Methods, USER_DECISION_TIMEOUT_MS } from "./types.js";
-import { autoResolvedQuestionReason } from "./user-decision-lifecycle.js";
+import { SKIPPED_QUESTION_REASON, autoResolvedQuestionReason } from "./user-decision-lifecycle.js";
 import { ASK_USER_AUTO_RESOLVE_MS } from "../tool-system/builtin/ask-user.js";
 
 const cleanup: Array<() => Promise<void> | void> = [];
@@ -474,6 +474,7 @@ describe("cross-device user decision lifecycle", () => {
       expect(announcements[1].params.requestId).toBe(request.requestId);
       expect(announcements[1].params.expiresAt).toBeUndefined();
       expect(announcements[1].params.request.args.keepWaitable).toBeUndefined();
+      expect(announcements[1].params.request.args.skippable).toBe(true);
       expect(announcements[1].params.request.args.question).toBe("Which page?");
 
       // The original deadline can no longer close the question.
@@ -509,5 +510,39 @@ describe("cross-device user decision lifecycle", () => {
     expect(f.session.pendingApprovals.get(request.requestId)!.metadata.expiresAt).toBe(
       request.expiresAt,
     );
+  });
+
+  it("skipping a model question tells the model to continue; a permission prompt is not skippable", async () => {
+    const f = await fixture();
+    const answer = f.ask("Which page?", { autoResolveMs: ASK_USER_AUTO_RESOLVE_MS });
+    const request = f.request();
+    expect(request.request.args.skippable).toBe(true);
+    await f.approve(routeOf(request), { approved: false }, "skip");
+    expect(await answer).toBe(SKIPPED_QUESTION_REASON);
+    expect(await answer).toContain("Silence is not consent");
+    expect(f.session.pendingApprovals.size).toBe(0);
+
+    const g = await fixture();
+    const permission = g.ask("允许读取？", {
+      options: [{ label: "允许本次", description: "once" }],
+      optionsOnly: true,
+    });
+    const prompt = g.request();
+    expect(prompt.request.args.skippable).toBeUndefined();
+    await g.approve(routeOf(prompt), { approved: false }, "deny");
+    expect(await permission).toBe("(user declined to answer)");
+  });
+
+  it("skipping an answer-later question retires its card without a follow-up turn", async () => {
+    const f = await fixture();
+    await (f.server as any).requestAskUserAsyncForSession(f.session, f.sessionId, "Pick later");
+    const request = f.request();
+    expect(request.request.args.skippable).toBe(true);
+    await f.approve(routeOf(request), { approved: false }, "skip");
+    expect(f.sent.find((frame) => frame.id === "skip").result).toEqual({ ok: true });
+    expect(f.session.pendingApprovals.size).toBe(0);
+    expect(f.resolutions()).toHaveLength(1);
+    expect(f.resolutions()[0].params).toMatchObject({ ...routeOf(request), approved: false });
+    expect(f.resolutions()[0].params.answer).toBeUndefined();
   });
 });

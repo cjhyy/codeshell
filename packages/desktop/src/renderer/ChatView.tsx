@@ -37,7 +37,7 @@ import { useComposerCaretRestore } from "./chat/useComposerCaretRestore";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ApprovalCard } from "./approvals/ApprovalCard";
 import type { ApproveChoice, ApprovePathScope } from "./approvals/approvalDecision";
-import type { AskUserMessage } from "./types";
+import type { AskUserAnswerHandler, AskUserMessage } from "./types";
 import type { TrackedProject } from "./projects";
 import type {
   ApprovalRequestEnvelope,
@@ -196,7 +196,7 @@ interface Props {
    *  resolves the main run immediately while children keep working). */
   runningAgents?: number;
   activeProjectId: string | null;
-  onAskUserAnswer?: (requestId: string, answer: string) => void | Promise<void>;
+  onAskUserAnswer?: AskUserAnswerHandler;
   /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */
   onExtendGoal?: (opts: {
     addTurns?: number;

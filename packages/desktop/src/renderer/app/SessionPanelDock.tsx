@@ -20,7 +20,7 @@ import { quickChatTabKey, type QuickChatSessionRef } from "../quickChatSession";
 import type { TrackedProject } from "../projects";
 import type { ApprovalRequestEnvelope } from "../../preload/types";
 import type { TranscriptsMap } from "../transcriptsReducer";
-import { INITIAL_STATE } from "../types";
+import { INITIAL_STATE, type AskUserAnswerHandler } from "../types";
 import type { ApproveChoice, ApprovePathScope } from "../approvals/approvalDecision";
 import {
   emptyPanelBucketState,
@@ -79,7 +79,7 @@ interface SessionPanelDockProps {
   >["onAttachmentsChange"];
   sendQuickChat: React.ComponentProps<typeof QuickChatPanelHost>["onSend"];
   stop: React.ComponentProps<typeof QuickChatPanelHost>["onStop"];
-  handleAskUserAnswer: (requestId: string, answer: string) => void | Promise<void>;
+  handleAskUserAnswer: AskUserAnswerHandler;
   decideEnvelope: (
     env: ApprovalRequestEnvelope,
     decision: "approve" | "deny",

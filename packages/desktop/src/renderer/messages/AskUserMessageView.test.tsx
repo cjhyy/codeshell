@@ -364,3 +364,53 @@ describe("AskUserMessageView auto-continue countdown", () => {
     }
   });
 });
+
+describe("AskUserMessageView skip", () => {
+  test("offers Skip only on skippable model questions", () => {
+    const skippable = renderToStaticMarkup(
+      <AskUserMessageView message={ask({ skippable: true })} onAnswer={() => {}} />,
+    );
+    expect(skippable).toContain("跳过");
+    const permission = renderToStaticMarkup(
+      <AskUserMessageView message={ask({ optionsOnly: true })} onAnswer={() => {}} />,
+    );
+    expect(permission).not.toContain("跳过");
+  });
+
+  test("Skip declines without an answer and can sit beside keep-waiting", async () => {
+    ensureMiniDom();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const calls: unknown[][] = [];
+    try {
+      await act(async () => {
+        root.render(
+          <AskUserMessageView
+            message={ask({ skippable: true, keepWaitable: true, expiresAt: Date.now() + 90_000 })}
+            onAnswer={(...args) => {
+              calls.push(args);
+            }}
+            onKeepWaiting={async () => {}}
+          />,
+        );
+        await flushMicrotasks();
+      });
+      const labels = descendants(container)
+        .filter((node) => node.tagName === "BUTTON")
+        .map(textOf);
+      expect(labels).toContain("一直等");
+      const skip = descendants(container).find(
+        (node) => node.tagName === "BUTTON" && textOf(node) === "跳过",
+      )!;
+      await act(async () => {
+        props(skip).onClick({ isPropagationStopped: () => false, stopPropagation() {} });
+        await flushMicrotasks();
+      });
+      expect(calls).toEqual([["r1", "已跳过", true]]);
+    } finally {
+      await act(async () => root.unmount());
+      document.body.removeChild(container);
+    }
+  });
+});

@@ -95,6 +95,7 @@ export type TranscriptsAction =
       optionsOnly?: boolean;
       asynchronous?: boolean;
       keepWaitable?: boolean;
+      skippable?: boolean;
     }
   | { type: "ask_user_answered"; bucket: string; requestId: string; answer: string }
   | {
@@ -195,6 +196,7 @@ function reduceTranscriptAction(map: TranscriptsMap, action: TranscriptsAction):
         optionsOnly: action.optionsOnly,
         asynchronous: action.asynchronous,
         keepWaitable: action.keepWaitable,
+        skippable: action.skippable,
       });
       break;
     case "ask_user_answered":

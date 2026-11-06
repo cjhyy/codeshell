@@ -1,5 +1,5 @@
 import React, { memo, useEffect, useId, useRef, useState } from "react";
-import type { AskUserMessage } from "../types";
+import type { AskUserAnswerHandler, AskUserMessage } from "../types";
 import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,8 @@ import { resolveAnswerTone, toneEchoStyle } from "./askUserTone";
 
 interface Props {
   message: AskUserMessage;
-  /** Called with the user's chosen / typed answer string. */
-  onAnswer: (requestId: string, answer: string) => void | Promise<void>;
+  /** Called with the chosen / typed answer, or the skipped label plus `skip`. */
+  onAnswer: AskUserAnswerHandler;
   /** Drop the question's auto-continue deadline. Absent where unsupported. */
   onKeepWaiting?: (message: AskUserMessage) => Promise<void>;
 }
@@ -140,16 +140,18 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
   }
 
   const hasOptions = !!message.options && message.options.length > 0;
-  const submit = (val: string): void => {
+  const submit = (val: string, skip = false): void => {
     const v = val.trim();
-    if (!v || submittingRef.current) return;
+    if ((!v && !skip) || submittingRef.current) return;
     submittingRef.current = true;
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setSubmitting(true);
     setSubmitFailed(false);
     void (async () => {
       try {
-        await onAnswer(message.requestId, v);
+        await (skip
+          ? onAnswer(message.requestId, t("msg.ask.skipped"), true)
+          : onAnswer(message.requestId, v));
       } catch {
         // Keep every draft/selection intact so a failed send is retryable.
         setSubmitFailed(true);
@@ -189,50 +191,67 @@ function AskUserMessageViewImpl({ message, onAnswer, onKeepWaiting }: Props) {
           </span>
         </div>
 
-        {countdownActive && (
+        {(countdownActive || message.asynchronous || message.skippable) && (
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <span
-              role="timer"
-              aria-live="off"
-              className={cn(
-                "text-xs tabular-nums text-muted-foreground",
-                message.expiresAt! - now <= 60_000 && "text-status-err",
+            {countdownActive ? (
+              <span
+                role="timer"
+                aria-live="off"
+                className={cn(
+                  "text-xs tabular-nums text-muted-foreground",
+                  message.expiresAt! - now <= 60_000 && "text-status-err",
+                )}
+              >
+                {t("msg.ask.autoContinueIn", {
+                  time: formatAutoContinueRemaining(message.expiresAt! - now),
+                })}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                {message.asynchronous ? t("msg.ask.asyncHint") : ""}
+              </span>
+            )}
+            <div className="flex flex-wrap items-center gap-1">
+              {countdownActive && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={keepWaitingState === "pending" || submitting}
+                  onClick={keepWaiting}
+                >
+                  {t("msg.ask.keepWaiting")}
+                </Button>
               )}
-            >
-              {t("msg.ask.autoContinueIn", {
-                time: formatAutoContinueRemaining(message.expiresAt! - now),
-              })}
-            </span>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              disabled={keepWaitingState === "pending"}
-              onClick={keepWaiting}
-            >
-              {t("msg.ask.keepWaiting")}
-            </Button>
+              {message.asynchronous && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  aria-expanded={!deferred}
+                  onClick={() => setDeferred((value) => !value)}
+                >
+                  {t(deferred ? "msg.ask.resume" : "msg.ask.later")}
+                </Button>
+              )}
+              {message.skippable && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={submitting}
+                  onClick={() => submit("", true)}
+                >
+                  {t("msg.ask.skip")}
+                </Button>
+              )}
+            </div>
           </div>
         )}
         {keepWaitingState === "failed" && (
           <p role="alert" className="mb-3 text-xs text-status-err">
             {t("msg.ask.keepWaitingFailed")}
           </p>
-        )}
-
-        {message.asynchronous && (
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs text-muted-foreground">{t("msg.ask.asyncHint")}</span>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              aria-expanded={!deferred}
-              onClick={() => setDeferred((value) => !value)}
-            >
-              {t(deferred ? "msg.ask.resume" : "msg.ask.later")}
-            </Button>
-          </div>
         )}
 
         {!deferred &&

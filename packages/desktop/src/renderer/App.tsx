@@ -1573,7 +1573,7 @@ function App() {
     prevBusyRef.current = busy;
   }, [busy, activeProject]);
 
-  const handleAskUserAnswer = async (requestId: string, answer: string): Promise<void> => {
+  const handleAskUserAnswer = async (requestId: string, answer: string, skip?: boolean) => {
     // Route the answer to the session that ORIGINATED the prompt. The prompt
     // message carries engineSessionId (stamped at dispatch from env.sessionId),
     // so we no longer assume "AskUser is always in the active bucket" — that
@@ -1602,7 +1602,7 @@ function App() {
           : undefined;
       engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
     }
-    if (!(await submitAskUserAnswer(engineSessionId, requestId, answer, isCurrent))) return;
+    if (!(await submitAskUserAnswer(engineSessionId, requestId, answer, isCurrent, skip))) return;
     dispatch({
       type: "ask_user_answered",
       // Mark answered in the bucket that actually holds the prompt (found above),
@@ -1619,8 +1619,8 @@ function App() {
       .notifyApprovalResolved({
         requestId,
         sessionId: engineSessionId,
-        approved: true,
-        answer,
+        approved: !skip,
+        ...(skip ? {} : { answer }),
       })
       .catch((error) =>
         window.codeshell.log("ask_user.answer_mirror_failed", { requestId, error: String(error) }),

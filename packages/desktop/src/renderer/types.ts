@@ -298,6 +298,8 @@ export interface AskUserMessage {
   asynchronous?: boolean;
   /** The question auto-continues at `expiresAt` unless the user keeps waiting. */
   keepWaitable?: boolean;
+  /** A model question the user may skip (permission prompts offer 拒绝 instead). */
+  skippable?: boolean;
   /** Set after the user answers; chat then renders as resolved. */
   answer?: string;
 }
@@ -2317,6 +2319,16 @@ function applyStreamEventToTurn(
       return state; // unknown / unhandled events — ignore
   }
 }
+
+/**
+ * Answer one pending question. With `skip`, decline it without an answer;
+ * `answer` is then only the local record label (e.g. 已跳过).
+ */
+export type AskUserAnswerHandler = (
+  requestId: string,
+  answer: string,
+  skip?: boolean,
+) => void | Promise<void>;
 
 export function appendAskUserMessage(
   state: MessagesReducerState,

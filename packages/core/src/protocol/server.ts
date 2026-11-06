@@ -4122,7 +4122,7 @@ export class AgentServer {
         ...routeEnvelope,
         request: {
           toolName: "__ask_user__",
-          args: { question, ...questionOptions, asynchronous: true },
+          args: { question, ...questionOptions, asynchronous: true, skippable: true },
           description: question,
           riskLevel: "low",
         },
