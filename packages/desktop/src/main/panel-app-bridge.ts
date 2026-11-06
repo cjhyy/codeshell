@@ -1860,6 +1860,19 @@ export class PanelAppBridge {
     }));
   }
 
+  /** Settings → Cookie「AI 可自动取用」opts a saved login out of the per-use prompt. */
+  private async savedLoginAutoUse(projectPath: string, credentialId: string): Promise<boolean> {
+    const credentials = await this.options.cookieCredentials?.taskCredentials?.(projectPath);
+    return (
+      credentials?.some(
+        (credential) =>
+          credential.id === credentialId &&
+          credential.type === "cookie" &&
+          credential.autoUseByAI === true,
+      ) ?? false
+    );
+  }
+
   private async confirmTaskCookie(
     binding: GuestBinding,
     input: unknown,
@@ -1877,22 +1890,24 @@ export class PanelAppBridge {
     const cwd = binding.cwd;
     const host = this.getTaskCookieHost();
     const account = await host.check(scope, selection);
-    const owner = BrowserWindow.fromId(binding.ownerWindowId);
-    if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
-    const decision = await dialog.showMessageBox(owner, {
-      type: "question",
-      buttons: ["Use saved login", "Cancel"],
-      defaultId: 1,
-      cancelId: 1,
-      title: binding.resource.descriptor.title,
-      message: background
-        ? `Use “${account.label}” for this background task?`
-        : `Use “${account.label}” with ${entry}?`,
-      detail: `Site: ${new URL(selection.url).hostname}\nTool: ${entry}\nProject: ${binding.projectPath}\nThe selected login will be passed privately to the program. ${background ? "The task may continue after this Panel closes." : "Closing this Panel or revoking access stops use of the temporary file."}`,
-      noLink: true,
-    });
-    if (decision.response !== 0)
-      throw new PanelBridgeError("PERMISSION_DENIED", "Saved login use was cancelled");
+    if (!(await this.savedLoginAutoUse(scope.projectPath, account.id))) {
+      const owner = BrowserWindow.fromId(binding.ownerWindowId);
+      if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
+      const decision = await dialog.showMessageBox(owner, {
+        type: "question",
+        buttons: ["Use saved login", "Cancel"],
+        defaultId: 1,
+        cancelId: 1,
+        title: binding.resource.descriptor.title,
+        message: background
+          ? `Use “${account.label}” for this background task?`
+          : `Use “${account.label}” with ${entry}?`,
+        detail: `Site: ${new URL(selection.url).hostname}\nTool: ${entry}\nProject: ${binding.projectPath}\nThe selected login will be passed privately to the program. ${background ? "The task may continue after this Panel closes." : "Closing this Panel or revoking access stops use of the temporary file."}`,
+        noLink: true,
+      });
+      if (decision.response !== 0)
+        throw new PanelBridgeError("PERMISSION_DENIED", "Saved login use was cancelled");
+    }
     if (
       this.guests.get(binding.guest.id) !== binding ||
       binding.guest.isDestroyed() ||
@@ -3391,20 +3406,22 @@ export class PanelAppBridge {
     }
     const owner = this.processOwner(binding);
     const executable = this.processService.executableName(owner, input?.executableHandle);
-    const window = BrowserWindow.fromId(binding.ownerWindowId);
-    if (!window || window.isDestroyed()) throw new Error("owner window is unavailable");
-    const decision = await dialog.showMessageBox(window, {
-      type: "question",
-      buttons: ["Use saved login", "Cancel"],
-      defaultId: 1,
-      cancelId: 1,
-      title: binding.resource.descriptor.title,
-      message: `Use “${account.label}” with ${executable}?`,
-      detail:
-        "CodeShell will create a temporary owner-only Cookie file and pass it directly to the selected local program. The Panel App receives only an opaque handle, never the Cookie contents or file path. The file is removed when the Panel closes.",
-      noLink: true,
-    });
-    if (decision.response !== 0) return { authorized: false, cancelled: true };
+    if (account.autoUseByAI !== true) {
+      const window = BrowserWindow.fromId(binding.ownerWindowId);
+      if (!window || window.isDestroyed()) throw new Error("owner window is unavailable");
+      const decision = await dialog.showMessageBox(window, {
+        type: "question",
+        buttons: ["Use saved login", "Cancel"],
+        defaultId: 1,
+        cancelId: 1,
+        title: binding.resource.descriptor.title,
+        message: `Use “${account.label}” with ${executable}?`,
+        detail:
+          "CodeShell will create a temporary owner-only Cookie file and pass it directly to the selected local program. The Panel App receives only an opaque handle, never the Cookie contents or file path. The file is removed when the Panel closes.",
+        noLink: true,
+      });
+      if (decision.response !== 0) return { authorized: false, cancelled: true };
+    }
 
     const materialized = await host.materialize({ credentialId, cwd: binding.cwd });
     if ("invalid" in materialized) {
