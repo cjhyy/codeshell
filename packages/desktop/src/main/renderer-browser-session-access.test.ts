@@ -95,6 +95,39 @@ function fixture() {
 type Fixture = ReturnType<typeof fixture>;
 
 describe("RendererBrowserSessionAccess", () => {
+  test("a saved UI alias survives its first run and cannot be rebound by a later renderer hint", async () => {
+    const f = fixture();
+    const alias = "project::legacy-ui-id";
+    f.deps.resolvePersistedSession = async (sessionId, requestedBucket) => {
+      expect(sessionId).toBe(SESSION_ID);
+      expect(requestedBucket).toBe(alias);
+      return f.authority(alias);
+    };
+    const authorization = await f.access.prepare(SESSION_ID, SENDER_ID, alias);
+    expect(f.state.buckets.get(SESSION_ID)).toBe(alias);
+    f.access.sessionOwnerClaimed(SESSION_ID, SENDER_ID);
+    f.state.known = true;
+    f.state.generation++;
+    f.state.owner = SENDER_ID;
+    f.state.ownerRevision++;
+    expect(() => authorization.assertCurrent()).not.toThrow();
+    await expect(f.access.prepare(SESSION_ID, SENDER_ID, "project::other-ui-id")).rejects.toThrow(
+      "does not match",
+    );
+    expect(() => authorization.assertCurrent()).not.toThrow();
+  });
+
+  test.each(["", "bad\0bucket", "x".repeat(513)])(
+    "rejects malformed bucket hints before resolving a Session",
+    async (bucket) => {
+      const f = fixture();
+      await expect(f.access.prepare(SESSION_ID, SENDER_ID, bucket)).rejects.toThrow(
+        "invalid browser bucket",
+      );
+      expect(f.state.resolveCalls).toBe(0);
+    },
+  );
+
   test("a persisted cold conversation gets browser authority without becoming a Host session", async () => {
     const f = fixture();
     expect(() => f.access.assertAccess(SESSION_ID, SENDER_ID)).toThrow(

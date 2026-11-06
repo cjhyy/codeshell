@@ -33,7 +33,10 @@ export interface RendererBrowserSessionAuthorization {
 export interface RendererBrowserSessionAccessDeps {
   bridge(): BrowserSessionBridge | null;
   windowForSender(senderId: number): BrowserSessionWindow | null;
-  resolvePersistedSession(sessionId: string): Promise<PersistedBrowserSessionAuthority>;
+  resolvePersistedSession(
+    sessionId: string,
+    requestedBucket?: string,
+  ): Promise<PersistedBrowserSessionAuthority>;
   bucketForSession(sessionId: string): string | null;
   registerSessionBucket(sessionId: string, bucket: string): void;
 }
@@ -76,8 +79,17 @@ export class RendererBrowserSessionAccess {
   async prepare(
     rawSessionId: unknown,
     senderId: number,
+    requestedBucket?: string,
   ): Promise<RendererBrowserSessionAuthorization> {
     assertDesktopSessionId(rawSessionId);
+    if (
+      requestedBucket !== undefined &&
+      (typeof requestedBucket !== "string" ||
+        !requestedBucket ||
+        requestedBucket.length > 512 ||
+        requestedBucket.includes("\0"))
+    )
+      throw new Error("invalid browser bucket");
     const sessionId = rawSessionId;
     const previous = this.claims.get(sessionId);
     if (previous) {
@@ -91,6 +103,8 @@ export class RendererBrowserSessionAccess {
       if (this.claims.get(sessionId) === previous) {
         if (previous.senderId !== senderId)
           throw new Error("browser operation belongs to another window");
+        if (requestedBucket !== undefined && requestedBucket !== previous.bucket)
+          throw new Error("browser bucket does not match the conversation");
         return previous;
       }
     }
@@ -106,7 +120,7 @@ export class RendererBrowserSessionAccess {
     const ownerRevision = caller.bridge.sessionPanelOwnerRevision(sessionId);
     const generation = caller.bridge.workerGeneration();
     const existingBucket = this.deps.bucketForSession(sessionId);
-    const authority = await this.deps.resolvePersistedSession(sessionId);
+    const authority = await this.deps.resolvePersistedSession(sessionId, requestedBucket);
     caller.assertCurrent();
     if (
       caller.bridge.hasKnownSession(sessionId) ||

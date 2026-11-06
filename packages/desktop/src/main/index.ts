@@ -273,12 +273,12 @@ import { RendererBrowserSessionAccess } from "./renderer-browser-session-access.
 import {
   createRendererBrowserSessionEventAccess,
   resolvePersistedBrowserSession,
+  browserPartitionForBucket,
 } from "./renderer-browser-session-ipc-authority.js";
 import { resolveMediaPreviewAuthority } from "./media-preview-authority.js";
 import { MEDIA_PREVIEW_SCHEME } from "../shared/media-preview.js";
 import {
   bucketForSession,
-  browserPartitionForBucket as registryPartitionForBucket,
   guestRecordForId,
   listGuestSessions,
   partitionForSession,
@@ -4491,15 +4491,6 @@ ipcMain.handle("mcpOAuth:logout", (_e, credentialId: unknown) => {
   assertGenericCredentialMutation("", credentialId);
   return getMcpOAuthService().logout(credentialId);
 });
-function browserPartitionForBucket(bucket: unknown): string | undefined {
-  if (typeof bucket !== "string" || !bucket || bucket.length > 512 || bucket.includes("\0")) {
-    return undefined;
-  }
-  // MUST match PanelArea/WebviewHost's partition exactly (no trim), or
-  // capture/restore would target a different partition than the panel writes.
-  return registryPartitionForBucket(bucket);
-}
-
 function assertRendererSessionAccess(sessionId: unknown, senderWebContentsId: number): string {
   assertDesktopSessionId(sessionId);
   if (!bridge?.hasKnownSession(sessionId)) {
@@ -4560,7 +4551,11 @@ ipcMain.on(
       const partition = typeof payload?.partition === "string" ? payload.partition : undefined;
       if (!sessionId || !bucket || bucket.length > 512 || bucket.includes("\0")) return;
       if (partition !== undefined && (partition.length > 1_024 || partition.includes("\0"))) return;
-      const { bucket: existingBucket } = await prepareRendererBrowserSession(event, sessionId);
+      const { bucket: existingBucket } = await prepareRendererBrowserSession(
+        event,
+        sessionId,
+        bucket,
+      );
       if (!existingBucket) throw new Error("browser Session has no Main-owned bucket");
       if (existingBucket !== bucket) {
         // External runtimes intentionally own an isolated browser partition.
@@ -4610,7 +4605,7 @@ ipcMain.on(
       const ownerWindow = BrowserWindow.fromWebContents(e.sender);
       if (!ownerWindow) return;
       if (payload?.engineSessionId !== undefined) {
-        await prepareRendererBrowserSession(e, payload.engineSessionId);
+        await prepareRendererBrowserSession(e, payload.engineSessionId, bucket);
       }
       registerAttachedGuestMetadata({
         guestId,
@@ -4630,12 +4625,16 @@ ipcMain.on(
 ipcMain.handle(
   "browser-runtime:grant-built-in",
   async (e, payload: { sessionId?: unknown; guestId?: unknown; ttlMs?: unknown }) => {
-    const { sessionId, assertCurrent } = await prepareRendererBrowserSession(e, payload?.sessionId);
     const guestId =
       typeof payload?.guestId === "number" ? payload.guestId : Number(payload?.guestId);
     if (!Number.isSafeInteger(guestId) || guestId <= 0) {
       throw new Error("browser handoff requires an existing conversation and browser tab");
     }
+    const { sessionId, assertCurrent } = await prepareRendererBrowserSession(
+      e,
+      payload?.sessionId,
+      guestRecordForId(guestId)?.bucket,
+    );
     const ownerWindow = BrowserWindow.fromWebContents(e.sender);
     if (!ownerWindow) throw new Error("browser handoff requires an owning window");
     const status = builtInBrowserHandoffGrants.grant({

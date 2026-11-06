@@ -42,7 +42,14 @@ function deferred<T>() {
 
 function fixture() {
   const frame = {};
-  const state = { destroyed: false, deleting: false, current: true, prepareCalls: 0, checks: 0 };
+  const state = {
+    destroyed: false,
+    deleting: false,
+    current: true,
+    prepareCalls: 0,
+    checks: 0,
+    requestedBucket: undefined as string | undefined,
+  };
   const event = {
     senderFrame: frame as object | null,
     sender: { id: 11, mainFrame: frame, isDestroyed: () => state.destroyed },
@@ -58,8 +65,9 @@ function fixture() {
   const pending = deferred<RendererBrowserSessionAuthorization>();
   const access = createRendererBrowserSessionEventAccess(
     {
-      prepare: async (sessionId, senderId) => {
+      prepare: async (sessionId, senderId, requestedBucket) => {
         state.prepareCalls++;
+        state.requestedBucket = requestedBucket;
         expect(sessionId).toBe("saved-session");
         expect(senderId).toBe(11);
         return pending.promise;
@@ -75,12 +83,21 @@ function fixture() {
     event,
     authorization,
     pending,
-    prepare: (sessionId: unknown = "saved-session") =>
-      access(event as unknown as IpcMainInvokeEvent, sessionId),
+    prepare: (sessionId: unknown = "saved-session", bucket?: string) =>
+      access(event as unknown as IpcMainInvokeEvent, sessionId, bucket),
   };
 }
 
 describe("createRendererBrowserSessionEventAccess", () => {
+  test("passes a UI alias hint to Main authority without replacing its canonical result", async () => {
+    const f = fixture();
+    const pending = f.prepare("saved-session", "mounted-project::ui-alias");
+    f.pending.resolve(f.authorization);
+    const result = await pending;
+    expect(f.state.requestedBucket).toBe("mounted-project::ui-alias");
+    expect(result.bucket).toBe(f.authorization.bucket);
+  });
+
   test("preserves canonical authority and rechecks its guard on every dispatch", async () => {
     const f = fixture();
     const pending = f.prepare();
