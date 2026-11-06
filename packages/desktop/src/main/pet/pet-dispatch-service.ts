@@ -2147,11 +2147,87 @@ export class PetDispatchService {
         ) {
           leaderTurn.inputAttachments = structuredClone(attachments);
         }
-        const recentInputAttachments = command.hostWake
-          ? []
-          : await timer.phase("attachments", () =>
-              this.recentChatAttachments(attachmentScope, attachments),
+        const wakeTaskContext = this.options.longTasks?.context() as
+          | { active?: PetGroundedTaskRef[]; recent?: PetGroundedTaskRef[] }
+          | undefined;
+        const wakeTasks = command.hostWake
+          ? [...(wakeTaskContext?.active ?? []), ...(wakeTaskContext?.recent ?? [])]
+              .filter(
+                (task) =>
+                  task.sessionId === command.hostWake!.sourceSessionId &&
+                  (!command.hostWake!.taskId || task.taskId === command.hostWake!.taskId),
+              )
+              .slice(0, 1)
+          : [];
+        // The independent reads start together and are awaited where their
+        // results are first needed. settle() keeps a promise that is never
+        // reached (an earlier await threw) from becoming an unhandled rejection.
+        const settle = <T>(promise: Promise<T>): Promise<T> => {
+          promise.catch(() => undefined);
+          return promise;
+        };
+        const attachmentsTask = command.hostWake
+          ? Promise.resolve<InputAttachmentMeta[]>([])
+          : settle(
+              timer.phase("attachments", () =>
+                this.recentChatAttachments(attachmentScope, attachments),
+              ),
             );
+        const sourcesTask = settle(
+          timer.phase("sources", () =>
+            Promise.all([
+              this.options.listWorkspaces?.() ?? [],
+              this.options.listReusableSessions?.() ?? [],
+              this.options.listFollowUps?.() ?? [],
+              this.options.listOutboundTargets?.() ?? [],
+              this.options.managerModel?.() ?? null,
+              this.getReplyAttachmentRoots(),
+            ]),
+          ),
+        );
+        // Chat status is user-facing truth. Pull the latest durable terminal
+        // markers now instead of waiting for the periodic catalog refresh.
+        const catalogTask = settle(
+          timer.phase("refreshCatalog", async () => {
+            await this.options.aggregator.refreshCatalog?.(false).catch(() => undefined);
+          }),
+        );
+        const contextInputTask = settle(
+          timer.phase("worldContextInput", () =>
+            this.prepareWorldContextInput(
+              {
+                message: command.hostWake?.text ?? command.message.trim(),
+                clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
+                eventKind: command.hostWake ? "follow-up-wake" : "chat",
+                originRef: petContextOriginForSource(
+                  command.hostWake?.completionTarget ?? command.source,
+                  command.clientMessageId,
+                ),
+              },
+              wakeTasks,
+            ),
+          ),
+        );
+        const taskInboxTask = settle(timer.phase("taskInbox", () => this.readTaskInbox()));
+        // Advance the topic-segment clock and, if a long-idle boundary was
+        // crossed, obtain a carryover brief (open tasks + recent conclusions)
+        // to inject as background continuity via the pet runtime context. The
+        // clientMessageId keys the new segment's boundary to this turn so the
+        // chat UI can render the divider before it (see PetSegmentController).
+        // Read host extras once; canonical projection keys are reserved below
+        // so an extension cannot shadow trusted session state.
+        const segmentTask = settle(
+          contextInputTask.then((contextInput) =>
+            timer.phase("segmentWorldPersonalization", () =>
+              Promise.all([
+                this.options.segmentController?.beginTurn(command.clientMessageId),
+                this.options.worldContext?.(contextInput),
+                this.currentPersonalization(),
+              ]),
+            ),
+          ),
+        );
+        const recentInputAttachments = await attachmentsTask;
         const [
           listedWorkspaces,
           listedReusableSessions,
@@ -2159,16 +2235,7 @@ export class PetDispatchService {
           listedOutboundTargets,
           configuredManagerModel,
           replyAttachmentRoots,
-        ] = await timer.phase("sources", () =>
-          Promise.all([
-            this.options.listWorkspaces?.() ?? [],
-            this.options.listReusableSessions?.() ?? [],
-            this.options.listFollowUps?.() ?? [],
-            this.options.listOutboundTargets?.() ?? [],
-            this.options.managerModel?.() ?? null,
-            this.getReplyAttachmentRoots(),
-          ]),
-        );
+        ] = await sourcesTask;
         const reusableSessionCandidates = [...listedReusableSessions];
         if (this.options.resolveReusableSessionBySelector) {
           const knownSelectors = new Set(
@@ -2221,13 +2288,7 @@ export class PetDispatchService {
                 : workspace.path,
           });
         }
-        // Chat status is user-facing truth. Pull the latest durable terminal
-        // markers now instead of waiting for the periodic catalog refresh.
-        if (this.options.aggregator.refreshCatalog) {
-          await timer.phase("refreshCatalog", () =>
-            this.options.aggregator.refreshCatalog!(false).catch(() => undefined),
-          );
-        }
+        await catalogTask;
         const snapshot = this.options.aggregator.getSnapshot();
         const unavailableSessionIds = new Set(
           snapshot.sessions
@@ -2299,49 +2360,8 @@ export class PetDispatchService {
             : undefined;
           return sourceSession ? { ...item, workspaceId: sourceSession.workspaceId } : item;
         });
-        // Advance the topic-segment clock and, if a long-idle boundary was
-        // crossed, obtain a carryover brief (open tasks + recent conclusions)
-        // to inject as background continuity via the pet runtime context. The
-        // clientMessageId keys the new segment's boundary to this turn so the
-        // chat UI can render the divider before it (see PetSegmentController).
-        // Read host extras once; canonical projection keys are reserved below
-        // so an extension cannot shadow trusted session state. The three
-        // sources are independent, so they resolve concurrently.
-        const wakeTaskContext = this.options.longTasks?.context() as
-          | { active?: PetGroundedTaskRef[]; recent?: PetGroundedTaskRef[] }
-          | undefined;
-        const wakeTasks = command.hostWake
-          ? [...(wakeTaskContext?.active ?? []), ...(wakeTaskContext?.recent ?? [])]
-              .filter(
-                (task) =>
-                  task.sessionId === command.hostWake!.sourceSessionId &&
-                  (!command.hostWake!.taskId || task.taskId === command.hostWake!.taskId),
-              )
-              .slice(0, 1)
-          : [];
-        const contextInput = await timer.phase("worldContextInput", () =>
-          this.prepareWorldContextInput(
-            {
-              message: command.hostWake?.text ?? command.message.trim(),
-              clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
-              eventKind: command.hostWake ? "follow-up-wake" : "chat",
-              originRef: petContextOriginForSource(
-                command.hostWake?.completionTarget ?? command.source,
-                command.clientMessageId,
-              ),
-            },
-            wakeTasks,
-          ),
-        );
-        const [segmentTurn, worldExtrasRaw, personalization] = await timer.phase(
-          "segmentWorldPersonalization",
-          () =>
-            Promise.all([
-              this.options.segmentController?.beginTurn(command.clientMessageId),
-              this.options.worldContext?.(contextInput),
-              this.currentPersonalization(),
-            ]),
-        );
+        const contextInput = await contextInputTask;
+        const [segmentTurn, worldExtrasRaw, personalization] = await segmentTask;
         const carryoverBrief = segmentTurn?.carryoverBrief;
         const worldExtras = worldExtrasRaw ?? {};
         // GatewayReply is route-bound and therefore IM-only. The other atomic
@@ -2394,7 +2414,7 @@ export class PetDispatchService {
             .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0)),
         );
         const longTaskContext = this.options.longTasks?.context();
-        const taskInbox = await timer.phase("taskInbox", () => this.readTaskInbox());
+        const taskInbox = await taskInboxTask;
         const world = {
           version: projectionWorld.version,
           generation: projectionWorld.generation,

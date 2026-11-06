@@ -3470,6 +3470,73 @@ describe("PetDispatchService", () => {
     expect(calls).toEqual(["agent/run", "agent/steer"]);
   });
 
+  test("starts independent preparation reads concurrently", async () => {
+    const workspacesGate = deferred<void>();
+    const catalogGate = deferred<void>();
+    const calls: string[] = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      listWorkspaces: async () => {
+        calls.push("workspaces");
+        await workspacesGate.promise;
+        return [];
+      },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+        refreshCatalog: async () => {
+          calls.push("catalog");
+          await catalogGate.promise;
+        },
+      },
+      worker: {
+        subscribeOutbound: () => () => undefined,
+        requestWorker: async () => ({ ok: true, result: { text: "ok" } }),
+      },
+      hostCwd: "/safe/pet",
+    });
+    const pending = service.dispatch({ type: "chat", message: "hi", clientMessageId: "c-1" });
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    expect(calls).toContain("workspaces");
+    expect(calls).toContain("catalog");
+    workspacesGate.resolve();
+    catalogGate.resolve();
+    expect(await pending).toMatchObject({ ok: true });
+  });
+
+  test("a failing preparation source still fails dispatch without unhandled rejections", async () => {
+    const catalogGate = deferred<void>();
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      listWorkspaces: async () => {
+        throw new Error("workspace boom");
+      },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+        refreshCatalog: async () => {
+          await catalogGate.promise;
+          throw new Error("catalog boom");
+        },
+      },
+      worker: {
+        subscribeOutbound: () => () => undefined,
+        requestWorker: async () => ({ ok: true, result: { text: "ok" } }),
+      },
+      hostCwd: "/safe/pet",
+    });
+    const outcome = await service
+      .dispatch({ type: "chat", message: "hi", clientMessageId: "c-2" })
+      .then(
+        (value) => ({ kind: "resolved" as const, value }),
+        (error: unknown) => ({ kind: "rejected" as const, error }),
+      );
+    catalogGate.resolve();
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    expect(outcome.kind).toBe("rejected");
+    expect(String((outcome as { error: unknown }).error)).toContain("workspace boom");
+  });
+
   describe("NewContext segment rollover", () => {
     async function runWithNewContext(options: {
       toolResult?: { toolName: string; isError: boolean };
