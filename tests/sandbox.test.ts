@@ -85,12 +85,16 @@ describe("expandConfig", () => {
   });
 });
 
+// Reads are unrestricted by default (aligned with Codex / Claude Code); the
+// OS-level deny mechanism is exercised with an explicit user-style config.
+const CREDENTIAL_DENIES = ["~/.ssh", "~/.aws", "~/.config/gcloud", "~/.code-shell", "~/.claude"];
+function seatbeltWithCredentialDenies() {
+  return { ...defaultSandboxConfig("seatbelt"), deniedReads: CREDENTIAL_DENIES };
+}
+
 describe("defaultSandboxConfig", () => {
-  it("denies the canonical credential dirs", () => {
-    const cfg = defaultSandboxConfig();
-    expect(cfg.deniedReads).toContain("~/.ssh");
-    expect(cfg.deniedReads).toContain("~/.aws");
-    expect(cfg.deniedReads).toContain("~/.code-shell");
+  it("has no built-in read deny list", () => {
+    expect(defaultSandboxConfig().deniedReads).toEqual([]);
   });
   it("makes ${workspace} writable by default", () => {
     expect(defaultSandboxConfig().writableRoots).toContain("${workspace}");
@@ -201,10 +205,7 @@ describe.if(IS_MAC)("Seatbelt — real sandbox-exec", () => {
   // The backend now returns a cleanup() the Bash tool fires from its close
   // handler. Verify the dir actually disappears.
   it("wrap().cleanup removes the temp profile dir", async () => {
-    const backend = await resolveSandboxBackend(
-      defaultSandboxConfig("seatbelt"),
-      process.cwd(),
-    );
+    const backend = await resolveSandboxBackend(defaultSandboxConfig("seatbelt"), process.cwd());
     const wrapped = backend.wrap("true", { cwd: process.cwd(), shell: "/bin/bash" });
     // args[1] is the profile path: ["-f", "/path/to/profile.sb", shell, "-c", cmd]
     expect(wrapped.args[0]).toBe("-f");
@@ -217,7 +218,7 @@ describe.if(IS_MAC)("Seatbelt — real sandbox-exec", () => {
   });
 
   it("blocks reads of each existing deniedRead path", async () => {
-    const cfg = defaultSandboxConfig("seatbelt");
+    const cfg = seatbeltWithCredentialDenies();
     const backend = await resolveSandboxBackend(cfg, process.cwd());
 
     const expandedDenies = cfg.deniedReads
@@ -249,10 +250,10 @@ describe.if(IS_MAC)("Seatbelt — real sandbox-exec", () => {
 
     const leakPath = `${homedir()}/codeshell-sandbox-leak-test-${process.pid}`;
     try {
-      const wrapped = backend.wrap(
-        `echo leak > ${leakPath} 2>&1; cat ${leakPath} 2>&1`,
-        { cwd: process.cwd(), shell: "/bin/bash" },
-      );
+      const wrapped = backend.wrap(`echo leak > ${leakPath} 2>&1; cat ${leakPath} 2>&1`, {
+        cwd: process.cwd(),
+        shell: "/bin/bash",
+      });
       const result = spawnSync(wrapped.file, wrapped.args, {
         encoding: "utf-8",
         timeout: TIMEOUT,
@@ -335,10 +336,7 @@ describe.if(IS_MAC)("Seatbelt — real sandbox-exec", () => {
     const marker = `BEGIN-OPENSSH-PRIVATE-KEY-${process.pid}`;
     writeFileSync(fakeKey, marker);
     try {
-      const backend = await resolveSandboxBackend(
-        defaultSandboxConfig("seatbelt"),
-        process.cwd(),
-      );
+      const backend = await resolveSandboxBackend(seatbeltWithCredentialDenies(), process.cwd());
       const wrapped = backend.wrap(`cat ${fakeKey} 2>&1`, {
         cwd: process.cwd(),
         shell: "/bin/bash",

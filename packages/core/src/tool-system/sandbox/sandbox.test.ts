@@ -14,13 +14,13 @@ import {
 process.env.CODE_SHELL_SANDBOX_QUIET = "1";
 
 describe("defaultSandboxConfig", () => {
-  test("auto by default, workspace + tmp writable, creds denied", () => {
+  test("auto by default, workspace + tmp writable, reads unrestricted", () => {
     const c = defaultSandboxConfig();
     expect(c.mode).toBe("auto");
     expect(c.writableRoots).toContain("${workspace}");
     expect(c.writableRoots).toContain("/tmp");
-    expect(c.deniedReads).toContain("~/.ssh");
-    expect(c.deniedReads).toContain("~/.code-shell");
+    // Like Codex / Claude Code: no built-in read deny list; users opt in.
+    expect(c.deniedReads).toEqual([]);
     expect(c.network).toBe("allow");
   });
 

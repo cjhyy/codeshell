@@ -2549,11 +2549,13 @@ describe("ExternalRuntimeService", () => {
       writeFileSync(outside, "synthetic outside file");
       writeFileSync(sensitive, "SYNTHETIC_TEST_VALUE=example");
       const approvalRequests: string[] = [];
+      // Reads are never path-gated, so probe with writes and refuse only the
+      // path-policy question.
       const svc = service(
         { external_agent_runtime: true, external_host_tools: true },
         async (_sessionId, approvalRequest) => {
           approvalRequests.push(approvalRequest.toolName);
-          return { approved: false };
+          return { approved: approvalRequest.toolName !== "__ask_user__" };
         },
       );
       await svc.start({ ...request, cwd, permissionMode });
@@ -2575,22 +2577,23 @@ describe("ExternalRuntimeService", () => {
             results.push(
               await host.execute({
                 id: filePath,
-                name: "Read",
-                input: { file_path: filePath },
+                name: "Write",
+                input: { file_path: filePath, content: "updated" },
               }),
             );
           }
         };
-        await svc.send(request.sessionId, { text: "Read fixture files", disableGoal: true });
+        await svc.send(request.sessionId, { text: "Write fixture files", disableGoal: true });
         expect(results).toHaveLength(2);
         for (const [index, filePath] of [outside, sensitive].entries()) {
           const result = results[index]!;
           if (permissionMode === "bypassPermissions") {
             expect(result.isError).toBeFalsy();
-            expect(result.result).toContain(readFileSync(filePath, "utf8"));
+            expect(readFileSync(filePath, "utf8")).toBe("updated");
           } else {
             expect(result.isError).toBe(true);
             expect(result.error).toContain("path approval denied");
+            expect(readFileSync(filePath, "utf8")).not.toBe("updated");
           }
         }
         expect(approvalRequests).toEqual(

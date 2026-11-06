@@ -179,13 +179,16 @@ registry 的第二个职责是「派发执行」——`executeTool(name, args, o
 
 **① realpath 双侧。** 这是防 symlink 逃逸的关键。光 `path.resolve` 不够——仓库内可能有一个 symlink 指向工作区外（`/tmp/x → ~/.ssh`）。所以必须对**目标和工作区根两侧都 realpath**，再比 containment。这条「path-containment 必 realpath」是写过的硬规则：新增任何「路径是否在 root 内」的检查，都不能只 `resolve`。
 
-**② 敏感模式匹配。** 分文件和目录两类：
+**② 读一律放行，写看「受保护路径」。** 对齐 Codex / Claude Code：两者都没有内置的读禁止名单，所以 CodeShell 也不再拦任何读（包括 `.env`、`~/.ssh`、`~/.code-shell`）。写入的受保护路径（**写=`ask`，工作区内也问**；完全访问模式整层跳过）分三类：
 
-- 敏感**文件**模式（`path-policy.ts:97` 起）：`.env*`、`id_rsa*`、`*.pem`、`*.p12`、`*.pfx`，以及「凭证制品文件」——secret 词是主干**且**带数据/配置扩展名（`credentials.json`、`secrets.yaml`、`auth.json`、`token.txt`）。**写=`deny`，读=`ask`。**
+- 受保护**目录名**（`PROTECTED_DIR_NAMES`，工作区内只看根以下的部分）：`.git`（含 worktree 的 `.git` 文件）、`.husky`、`.code-shell`、`.claude`（`.claude/worktrees/` 除外）、`.codex`、`.agents`、`.vscode`、`.idea`、`.devcontainer`、`.cargo`、`.mvn`——写进去会在之后执行代码（git hooks、IDE/容器任务、构建配置）或改 agent 自己的权限。
+- 受保护**文件名**（`PROTECTED_FILE_NAMES`）：`.gitmodules`、`.gitconfig`、`.mcp.json`、`.claude.json`、`.yarnrc*`、shell 启动文件（`.bashrc`、`.zshrc` 等）；以及凭证文件模式：`.env*`、`id_rsa*`、`*.pem`、`*.p12`、`*.pfx`，以及「凭证制品文件」——secret 词是主干**且**带数据/配置扩展名（`credentials.json`、`secrets.yaml`、`auth.json`、`token.txt`）。
 - 关键的设计修正：这个正则**故意排除源码扩展名**（`.ts`/`.js`/`.py`/`.go`/…）。早先版本用裸子串 `/auth/i`、`/token/i` 测 basename，结果**禁掉了对任何含这些词的源码文件的写入**——`authController.ts`、`token-counter.ts`、`oauth-handler.ts` 全被当成凭证，agent 连改个普通鉴权代码都不行（`path-policy.ts:106` 的注释专门记了这个回归）。现在源码文件明确**不**当凭证。
-- 敏感**目录**模式（`SENSITIVE_DIR_PATTERNS`，`path-policy.ts:77`）：`.ssh`、`.aws`、`.config/gcloud`、`.code-shell`、`.claude`、`.gnupg`、`.kube`、`.docker`。这份列表刻意和 `sandbox/index.ts` 的列表保持一致，让 Bash 和文件工具对「什么算敏感」有共识。
+- 家目录下的凭证/配置**目录**（`SENSITIVE_DIR_PATTERNS`）：`~/.ssh`、`~/.aws`、`~/.config/gcloud`、`~/.code-shell`、`~/.claude`、`~/.gnupg`、`~/.kube`、`~/.docker`、`~/.config/gh`、`~/Library/Keychains`。工作区本身开在其中时（如 `~/.code-shell/no-repo`、`~/.codex/worktrees/*`），只判断根以下的部分。
 
-**③ 工作区 containment。** 工作区内 → `allow`；工作区外 → `ask`。
+受保护路径的「本会话/本项目允许」只覆盖**该受保护项本身**（`<root>/.git/` 整个目录，或单个 `.env` 文件），且只有这类授权能放行受保护路径的写——批准根目录下的 `.env` 不会顺带放行同目录下的 `.git/hooks`，普通目录授权也盖不住其下的受保护路径。
+
+**③ 工作区 containment。** 写：工作区内 → `allow`，工作区外 → `ask`。
 
 逃生舱：`CODESHELL_PATH_POLICY=off`（每进程记一次日志）。数组参数（如 `GenerateImage.referenceImages`、`GenerateVideo.images`）**逐元素**检查并过滤掉 `http(s)` URL——这是补过的洞：早先数组参数产出零个目标，导致工作区外读绕过了 Read/Write 都有的 ask 门（`executor.ts:597` 的注释）。相对路径先用 `ctx.cwd` 解析再分类，避免 `classifyPath` 用 `process.cwd()` 误判工作区内的相对路径为「外部」而过度 prompt。
 
@@ -207,12 +210,12 @@ registry 的第二个职责是「派发执行」——`executeTool(name, args, o
 
 `auto` 模式在 `detectSandboxCapabilities`（`sandbox/index.ts:76`）里探测：macOS 看 `/usr/bin/sandbox-exec`，Linux 看 `/usr/bin/bwrap`。`resolveSandboxBackend`（`sandbox/index.ts:194`）的选择逻辑：显式选 `seatbelt`/`bwrap` 但不可用就**抛错**（你明确要了就别静默降级）；`auto` 则 macOS 用 seatbelt、Linux 有 bwrap 就用 bwrap，**都没有就降级 `off` 并告警一次**（`autoDowngradeWarned` 防刷屏，`sandbox/index.ts:144`）。
 
-`defaultSandboxConfig`（`sandbox/index.ts:164`）让工作区 + tmp 可写、拒绝读云凭证目录、**保留网络开放**（关网会破坏 npm/git）。
+`defaultSandboxConfig`（`sandbox/index.ts:164`）让工作区 + tmp 可写、**默认不拦读**（`deniedReads: []`，对齐 Codex / Claude Code；用户可自行配置禁读路径）、**保留网络开放**（关网会破坏 npm/git）。
 
 **两条必须落到文字的边界（红线）：**
 
 1. **Windows 无沙箱后端，`auto` 降级为 `off`**（`defaultSandboxConfig` 只保留平台正确的临时目录，`sandbox/index.ts:164`；`auto` 无后端时在 `resolveSandboxBackend` 降级，`sandbox/index.ts:228`）。不要写成「全平台都有沙箱」。
-2. **沙箱拒绝的是凭证的「读」；拒绝敏感的「写」是路径策略层的活**（文件工具继续走应用层权限门，`sandbox/index.ts:4` 的文件头注释明确这个分工）。两层各管一半，别张冠李戴。
+2. **沙箱默认只限制写（和用户配置的 `deniedReads`）；受保护路径的写审批是路径策略层的活**（文件工具继续走应用层权限门，`sandbox/index.ts:4` 的文件头注释明确这个分工）。两层各管一半，别张冠李戴。
 
 ---
 

@@ -77,15 +77,18 @@ describe("path-policy resolves a single-string relative path arg against ctx.cwd
   test("an in-workspace RELATIVE path does not prompt (the #9 over-prompt bug)", async () => {
     writeFileSync(join(workspace, "ok.txt"), "x");
     const approved = ctxWith("拒绝"); // would refuse IF wrongly asked
+    // Write: outside reads no longer ask, so only a write can expose a
+    // relative path mis-resolved against process.cwd().
     const r = await execute(
       { id: "c1", toolName: "ReadOne", args: { file_path: "ok.txt" } },
       approved.ctx,
+      "write",
     );
     expect(approved.asked()).toBe(0); // in-workspace → allow, no prompt
     expect(String(r)).toBe("ok");
   });
 
-  test("a genuinely outside-workspace absolute path still prompts", async () => {
+  test("a genuinely outside-workspace absolute write still prompts", async () => {
     const outside = mkdtempSync(join(tmpdir(), "pps-out-"));
     try {
       writeFileSync(join(outside, "x.txt"), "x");
@@ -93,6 +96,7 @@ describe("path-policy resolves a single-string relative path arg against ctx.cwd
       const r = await execute(
         { id: "c2", toolName: "ReadOne", args: { file_path: join(outside, "x.txt") } },
         denied.ctx,
+        "write",
       );
       expect(denied.asked()).toBe(1);
       expect(String(r)).toMatch(/path approval denied|blocked by path policy/i);

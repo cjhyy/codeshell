@@ -69,9 +69,9 @@ agent 的全部能力——读文件、跑命令、派子 agent、调 MCP 服务
 ## 6. 路径策略:独立的第二道门
 
 `path-policy.ts` 是和权限分类器**独立**的另一道门,专管文件工具的目标路径。`classifyPath(absPath, operation)` 先对两侧都 **realpath**(防仓内 symlink 逃逸到工作区外),然后:
-- 敏感**文件**模式(`.env*`、`id_rsa*`、`*.pem`、裸 `secret`/`credentials`/`token` 等)→ 写=`deny`,读=`ask`。像 `authController.ts`/`token-counter.ts` 这种**源码文件**明确**不**当凭证。
-- 敏感**目录**模式(`.ssh`、`.aws`、`.config/gcloud`、`.code-shell`、`.claude` 等)。
-- 工作区内 → `allow`;工作区外 → `ask`。
+- 读一律 `allow`(对齐 Codex / Claude Code,没有内置读禁止名单)。
+- 写到受保护路径 → `ask`,工作区内也问:凭证文件(`.env*`、`id_rsa*`、`*.pem`、裸 `secret`/`credentials`/`token` 等,像 `authController.ts`/`token-counter.ts` 这种**源码文件**明确**不**当凭证)、`.git`/`.husky`/`.code-shell`/`.claude`/`.codex`/`.agents`/`.vscode`/`.idea`/`.devcontainer` 等目录、`.mcp.json`/`.gitconfig`/shell 启动文件,以及 `~/.ssh`、`~/.aws` 等家目录凭证目录。受保护路径的记忆授权只覆盖该受保护项本身。
+- 其余写:工作区内 → `allow`,工作区外 → `ask`。
 
 逃生舱:`CODESHELL_PATH_POLICY=off`(记一次日志)。数组参数逐元素检查并过滤掉 `http(s)` URL。
 
@@ -79,7 +79,7 @@ agent 的全部能力——读文件、跑命令、派子 agent、调 MCP 服务
 
 `MCPManager` 连接外部 MCP 服务(自动判 stdio vs streamable-http),发现它们的工具,注册进**同一个** `ToolRegistry`——所以 MCP 工具继承和内置完全一样的权限/路径/沙箱门禁。它还会用 `wrapMcpOutput` 把服务输出包进 `<mcp-result … trust="untrusted">` 标记,让模型把它当数据而非指令(防 prompt 注入)。
 
-沙箱(`sandbox/index.ts`)能把 Bash 命令包进 OS 沙箱:macOS **seatbelt**、Linux **bwrap**、或 **off**。`auto` 选可用后端,都没有就降级并告警一次。注意一个刻意的分工:**沙箱拒绝的是凭证的*读*,拒绝敏感*写*是路径策略层的活**。**Windows 无沙箱后端,`auto` 降级为 off**(Windows 移植确认过),不要写成"全平台沙箱"。
+沙箱(`sandbox/index.ts`)能把 Bash 命令包进 OS 沙箱:macOS **seatbelt**、Linux **bwrap**、或 **off**。`auto` 选可用后端,都没有就降级并告警一次。注意一个刻意的分工:**沙箱默认不拦读(`deniedReads` 为空,用户可配),受保护路径的写审批是路径策略层的活**。**Windows 无沙箱后端,`auto` 降级为 off**(Windows 移植确认过),不要写成"全平台沙箱"。
 
 ## 8. 内置工具:60+ 个,但要记一个坑
 

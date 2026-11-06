@@ -3,6 +3,7 @@
  * path-policy "ask" through the interactive approval prompt (like read/write/
  * edit already do), so "用户批准路径后，原工具继续执行". Previously these four
  * used the non-approval enforcePathPolicy that hard-refused on "ask".
+ * Reads (including outside the workspace) are never gated any more.
  */
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -52,44 +53,26 @@ async function execute(call: ToolCall, ctx: ToolContext): Promise<string> {
   return result.error ?? result.result ?? "";
 }
 
-describe("glob routes outside-workspace ask through approval", () => {
-  test("denied → refuses; approved → proceeds", async () => {
-    const denied = ctxWith("拒绝");
-    const r1 = await execute(
+describe("glob / grep read outside the workspace without prompting", () => {
+  test("glob lists an outside directory", async () => {
+    writeFileSync(join(outside, "hit.txt"), "x");
+    const denied = ctxWith("拒绝"); // would refuse IF wrongly asked
+    const r = await execute(
       { id: "c1", toolName: "Glob", args: { pattern: "*", path: outside } },
       denied.ctx,
     );
-    expect(denied.asked()).toBe(1);
-    expect(String(r1)).toMatch(/path approval denied|blocked by path policy/i);
-
-    writeFileSync(join(outside, "hit.txt"), "x");
-    const approved = ctxWith("允许本次");
-    const r2 = await execute(
-      { id: "c2", toolName: "Glob", args: { pattern: "*", path: outside } },
-      approved.ctx,
-    );
-    expect(approved.asked()).toBe(1);
-    expect(String(r2)).not.toMatch(/path approval denied/i);
+    expect(denied.asked()).toBe(0);
+    expect(String(r)).toContain("hit.txt");
   });
-});
 
-describe("grep routes outside-workspace ask through approval", () => {
-  test("denied → refuses; approved → proceeds", async () => {
+  test("grep searches an outside directory", async () => {
     writeFileSync(join(outside, "f.txt"), "needle here");
     const denied = ctxWith("拒绝");
-    const r1 = await execute(
+    const r = await execute(
       { id: "c1", toolName: "Grep", args: { pattern: "needle", path: outside } },
       denied.ctx,
     );
-    expect(denied.asked()).toBe(1);
-    expect(String(r1)).toMatch(/path approval denied|blocked by path policy/i);
-
-    const approved = ctxWith("允许本次");
-    const r2 = await execute(
-      { id: "c2", toolName: "Grep", args: { pattern: "needle", path: outside } },
-      approved.ctx,
-    );
-    expect(approved.asked()).toBe(1);
-    expect(String(r2)).not.toMatch(/path approval denied/i);
+    expect(denied.asked()).toBe(0);
+    expect(String(r)).toContain("f.txt");
   });
 });

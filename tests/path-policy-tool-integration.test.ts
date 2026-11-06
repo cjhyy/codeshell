@@ -77,11 +77,11 @@ describe("Write tool — PathPolicy wired", () => {
     expect(existsSync(target)).toBe(false);
   });
 
-  test("write to a .env file inside workspace is denied", async () => {
+  test("write to a .env file inside workspace asks (protected) and is refused on deny", async () => {
     const target = join(workspace, ".env");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const out = await runTool("Write", { file_path: target, content: "SECRET=x" }, workspace);
-    expect(out).toContain("blocked by path policy");
+    expect(out).toContain("path approval denied");
     expect(existsSync(target)).toBe(false);
   });
 
@@ -169,14 +169,11 @@ describe("Read tool — PathPolicy wired", () => {
     expect(out).toContain("hello");
   });
 
-  test("outside-workspace read is refused", async () => {
-    const target = join(outside, "leaked.txt");
-    writeFileSync(target, "secret-contents");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  test("outside-workspace read passes through", async () => {
+    const target = join(outside, "notes.txt");
+    writeFileSync(target, "outside-contents");
     const out = await runTool("Read", { file_path: target }, workspace);
-    expect(out.toLowerCase()).toMatch(/approval|outside|path policy/);
-    // Critical: the body must NOT appear in the error message.
-    expect(out).not.toContain("secret-contents");
+    expect(out).toContain("outside-contents");
   });
 
   test("legacy caller without ctx still works (bypass)", async () => {
@@ -204,13 +201,10 @@ describe("Glob tool — PathPolicy wired", () => {
     rmSync(outside, { recursive: true, force: true });
   });
 
-  test("Glob with outside-workspace path is refused", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  test("Glob with outside-workspace path lists it", async () => {
     const out = await runTool("Glob", { pattern: "*.txt", path: outside }, workspace);
-    expect(out.toLowerCase()).toMatch(/approval|outside|path policy/);
-    // Must not have enumerated the files — names must not leak.
-    expect(out).not.toContain("a.txt");
-    expect(out).not.toContain("b.txt");
+    expect(out).toContain("a.txt");
+    expect(out).toContain("b.txt");
   });
 });
 
@@ -230,9 +224,12 @@ describe("Grep tool — PathPolicy wired", () => {
     rmSync(outside, { recursive: true, force: true });
   });
 
-  test("Grep with outside-workspace path is refused", async () => {
-    const out = await runTool("Grep", { pattern: "MAGIC_TOKEN_SHOULD_NOT_LEAK", path: outside }, workspace);
-    expect(out.toLowerCase()).toMatch(/approval|outside|path policy/);
-    expect(out).not.toContain("MAGIC_TOKEN_SHOULD_NOT_LEAK");
+  test("Grep with outside-workspace path searches it", async () => {
+    const out = await runTool(
+      "Grep",
+      { pattern: "MAGIC_TOKEN_SHOULD_NOT_LEAK", path: outside },
+      workspace,
+    );
+    expect(out).toContain("x.txt");
   });
 });

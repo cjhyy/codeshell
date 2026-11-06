@@ -213,7 +213,7 @@ describe("ChatSessionManager.close approval cleanup", () => {
       },
     } as unknown as ToolContext;
     expect(
-      await enforcePathPolicyWithApproval(join(outside, "a.txt"), "read", allowCtx),
+      await enforcePathPolicyWithApproval(join(outside, "a.txt"), "write", allowCtx),
     ).toBeNull();
     expect(asks).toBe(1);
 
@@ -227,7 +227,7 @@ describe("ChatSessionManager.close approval cleanup", () => {
         return "拒绝";
       },
     } as unknown as ToolContext;
-    const denied = await enforcePathPolicyWithApproval(join(outside, "b.txt"), "read", denyCtx);
+    const denied = await enforcePathPolicyWithApproval(join(outside, "b.txt"), "write", denyCtx);
     expect(denied).toContain("approval denied");
     expect(asks).toBe(2);
   });
@@ -262,7 +262,7 @@ describe("ChatSessionManager.close approval cleanup", () => {
         },
       } as unknown as ToolContext;
 
-      const pending = enforcePathPolicyWithApproval(join(outside, "a.txt"), "read", pendingCtx);
+      const pending = enforcePathPolicyWithApproval(join(outside, "a.txt"), "write", pendingCtx);
       await askStarted;
       await mgr.close("s1");
       resolveAsk(answer);
@@ -276,7 +276,7 @@ describe("ChatSessionManager.close approval cleanup", () => {
           return "拒绝";
         },
       } as unknown as ToolContext;
-      const denied = await enforcePathPolicyWithApproval(join(outside, "b.txt"), "read", denyCtx);
+      const denied = await enforcePathPolicyWithApproval(join(outside, "b.txt"), "write", denyCtx);
       expect(denied).toContain("approval denied");
       expect(asks).toBe(2);
     },

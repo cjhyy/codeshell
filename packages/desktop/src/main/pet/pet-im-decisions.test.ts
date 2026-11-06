@@ -576,7 +576,7 @@ test("HTTP gateway resolves exact decisions before bound Sessions and Mimi", asy
   }
 });
 
-test("worker protocol: IM answer releases the original read; Stop drains queued reads", async () => {
+test("worker protocol: IM answer releases the original write; Stop drains queued writes", async () => {
   const { AgentServer } = await import("../../../../core/src/protocol/server.js");
   const { ChatSessionManager } =
     await import("../../../../core/src/protocol/chat-session-manager.js");
@@ -608,8 +608,9 @@ test("worker protocol: IM answer releases the original read; Stop drains queued 
         askUser,
       } as ToolContext;
       results = await Promise.all(
-        [".claude", ".codex", ".ssh"].map((dir) =>
-          enforcePathPolicyWithApproval(join(homedir(), dir), "read", ctx),
+        // Reads never ask; writes outside the workspace do.
+        [".claude", ".aws", ".ssh"].map((dir) =>
+          enforcePathPolicyWithApproval(join(homedir(), dir, "config"), "write", ctx),
         ),
       );
       return {

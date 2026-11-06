@@ -9,13 +9,12 @@ import type {
   ApprovalRequest,
   ApprovalResult,
 } from "../types.js";
-import { resolve as resolvePath, dirname, posix } from "node:path";
+import { resolve as resolvePath, dirname } from "node:path";
 import { existsSync } from "node:fs";
 import { SettingsManager } from "../settings/manager.js";
 import { randomUUID } from "node:crypto";
 import { logger as rootPermLogger } from "../logging/logger.js";
 import { READ_ONLY_TOOLS } from "./plan-mode-allowlist.js";
-import { isSensitiveResourcePath } from "./path-policy.js";
 
 export interface ApprovalBackend {
   requestApproval(request: ApprovalRequest): Promise<ApprovalResult>;
@@ -816,6 +815,7 @@ const SAFE_READ_PATTERNS = [
   /^(uname|hostname|id)\b/,
   /^echo\s/,
   /^env$/,
+  /^printenv(?:\s|$)/,
 ];
 
 /** Split a command conservatively enough to validate read-only argument shapes. */
@@ -1373,95 +1373,6 @@ function matchesSafeReadPattern(segment: string, allowArgumentless = false): boo
   );
 }
 
-// ─── Sensitive safe-read downgrade ────────────────────────────────
-//
-// `Read ~/.ssh/id_rsa` routes through path-policy (asks); the equivalent
-// `cat ~/.ssh/id_rsa` was YOLO-classified safe-read and auto-allowed with the
-// desktop's default sandbox=off — a zero-approval credential exfil channel.
-// A segment that would otherwise be safe-read is downgraded to `unsafe` (→
-// ask) when it dumps the process env or its arguments touch a sensitive path.
-// Conservative-and-narrow: only known credential/secret shapes trip it, so
-// ordinary reads (README.md, src/*.ts) stay safe-read.
-
-const SENSITIVE_PATH_PATTERNS = [
-  /\.ssh\//, // ~/.ssh/id_rsa, authorized_keys, known_hosts
-  /(^|\/)id_(rsa|dsa|ecdsa|ed25519)\b/,
-  /(^|\/|\s)\.env(\.[A-Za-z0-9]|\b)/, // .env, .env.local, .env.production
-  /\.aws\/credentials\b/,
-  // Recursive reads of this directory can include provider/MCP/session keys.
-  /\.code-shell[/\\]?(?=[\s"']|$)/,
-  // Search tools can traverse these parents without naming their secret files.
-  /\.code-shell[/\\](?:serve|desktop|project-control|browser-runtime|im-gateway|chat(?:[/\\]wechat)?)[/\\]?(?=[\s"']|$)/,
-  /\.code-shell[/\\](?:settings(?:\.(?:local|managed))?\.(?:json|ya?ml)|credentials\b|(?:serve|desktop)[/\\]access\.json|project-runtime-secrets\b|project-control[/\\]registry\.json|browser-runtime[/\\](?:profiles|chrome-native\.json)|im-gateway[/\\](?:config|desktop-control)\.json|chat[/\\]wechat[/\\]accounts)/,
-
-  /credentials\.json\b/,
-  /\.npmrc\b/,
-  /\.netrc\b/,
-  /\.pgpass\b/,
-  /\.docker\/config\.json\b/,
-  /\.kube\/config\b/,
-  /\.config\/gh\/hosts\b/,
-  /\.gnupg\//,
-  /(^|\/)\.git-credentials\b/,
-];
-
-/**
- * True when an otherwise-safe-read shell segment must be downgraded to `unsafe`
- * because it dumps the environment or reads a sensitive credential/secret path.
- * Exported for direct unit testing of the predicate.
- */
-export function segmentIsSensitiveRead(segment: string): boolean {
-  const s = segment.trim();
-  // Environment readers expose injected credentials, including quoted names and options.
-  // printenv is deliberately absent from the safe-read allowlist as well.
-  if (s === "env" || splitShellWords(s)?.[0] === "printenv") return true;
-  if (SENSITIVE_PATH_PATTERNS.some((re) => re.test(s))) return true;
-  // Limit the shared basename check to readers with known file operands.
-  // Search patterns/options (`rg token SKILL.md`) are not credential paths.
-  const words = splitShellWords(s);
-  if (!words) return false;
-  // Shell quoting, repeated separators, and dot segments do not change which
-  // file a reader opens. Test normalized words as well as the original text.
-  // Keep this lexical: classification must not perform I/O or depend on cwd.
-  if (words.some((word) => SENSITIVE_PATH_PATTERNS.some((re) => re.test(posix.normalize(word)))))
-    return true;
-  if (words[0] === "sed") {
-    if (!isSafeReadSedCommand(s)) return false;
-    const scriptIndex = words[2] === "-e" ? 3 : 2;
-    return words.slice(scriptIndex + 1).some(isSensitiveResourcePath);
-  }
-  if (!["cat", "head", "tail"].includes(words[0])) return false;
-
-  let options = true;
-  for (let i = 1; i < words.length; i++) {
-    const word = words[i];
-    if (options && word === "--") {
-      options = false;
-      continue;
-    }
-    if (options && word.startsWith("-")) {
-      if (
-        words[0] !== "cat" &&
-        [
-          "-n",
-          "-c",
-          "-b",
-          "-s",
-          "--lines",
-          "--bytes",
-          "--pid",
-          "--sleep-interval",
-          "--max-unchanged-stats",
-        ].includes(word)
-      )
-        i++;
-      continue;
-    }
-    if (isSensitiveResourcePath(word)) return true;
-  }
-  return false;
-}
-
 const SAFE_WRITE_PATTERNS = [
   /^(git\s+(add|commit|stash\s+(save|push)))/,
   /^mkdir\s/,
@@ -1718,18 +1629,10 @@ function classifySegment(segment: string): BashSafetyLevel {
     // (for `\s`-delimited patterns like /^ls\s/), so neither form is missed.
     if (parts.slice(1).some((part) => PIPE_SHELL_COMMAND_RE.test(part))) return "dangerous";
     const partIsSafeRead = (p: string) => matchesSafeReadPattern(p, true);
-    if (parts.every(partIsSafeRead)) {
-      // A sensitive read anywhere in the pipe (`cat ~/.ssh/id_rsa | base64`,
-      // `env | grep KEY`) downgrades the whole pipe.
-      if (parts.some(segmentIsSensitiveRead)) return "unsafe";
-      return "safe-read";
-    }
-    return "unsafe";
+    return parts.every(partIsSafeRead) ? "safe-read" : "unsafe";
   }
 
-  if (matchesSafeReadPattern(segment)) {
-    return segmentIsSensitiveRead(segment) ? "unsafe" : "safe-read";
-  }
+  if (matchesSafeReadPattern(segment)) return "safe-read";
   if (SAFE_WRITE_PATTERNS.some((p) => p.test(segment))) return "safe-write";
   return "unsafe";
 }

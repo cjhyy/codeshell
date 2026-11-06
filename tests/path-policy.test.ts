@@ -11,10 +11,11 @@ import {
 import type { ToolContext } from "../packages/core/src/tool-system/context.js";
 
 /**
- * Task 6 — PathPolicy classifies a file path as allow / ask / deny depending
- * on workspace placement, sensitivity, and the requested operation.
- * Sensitive write → deny. Sensitive read → ask. Outside workspace → ask.
- * Inside workspace + non-sensitive → allow. Symlinks are followed.
+ * Task 6 — PathPolicy classifies a file path as allow / ask depending on
+ * workspace placement, protected paths, and the requested operation.
+ * Reads are always allowed. Writes ask outside the workspace and on protected
+ * paths (credentials, .git, agent/IDE config, shell rc files); other
+ * in-workspace writes are allowed. Symlinks are followed.
  */
 
 describe("classifyPath", () => {
@@ -56,7 +57,27 @@ describe("classifyPath", () => {
     );
   });
 
-  // ─── ask: outside workspace ───────────────────────────────────────
+  // ─── read: always allowed ─────────────────────────────────────────
+  test("every read is allowed: outside, sensitive, CodeShell state, directories", () => {
+    writeFileSync(join(workspace, ".env"), "x\n");
+    for (const target of [
+      join(outside, "x.txt"),
+      outside,
+      homedir(),
+      join(workspace, ".env"),
+      join(workspace, ".git", "config"),
+      "~/.ssh/known_hosts",
+      "~/.aws/credentials",
+      "~/.code-shell/settings.json",
+      "~/.code-shell/sessions/s-abc123/tool-results/call_1.txt",
+    ]) {
+      expect(classifyPath(target, { workspaceRoot: workspace, operation: "read" }).decision).toBe(
+        "allow",
+      );
+    }
+  });
+
+  // ─── write: outside workspace asks ────────────────────────────────
   test("outside-workspace write → ask", () => {
     expect(
       classifyPath(join(outside, "x.txt"), { workspaceRoot: workspace, operation: "write" })
@@ -64,329 +85,92 @@ describe("classifyPath", () => {
     ).toBe("ask");
   });
 
-  test("outside-workspace read → ask", () => {
-    expect(
-      classifyPath(join(outside, "x.txt"), { workspaceRoot: workspace, operation: "read" })
-        .decision,
-    ).toBe("ask");
-  });
-
-  // ─── deny: sensitive write ────────────────────────────────────────
-  test("write under ~/.ssh → deny", () => {
-    const c = classifyPath("~/.ssh/id_rsa", { workspaceRoot: workspace, operation: "write" });
-    expect(c.decision).toBe("deny");
-    expect(c.reason).toContain("~/.ssh");
-  });
-
-  test("write to ~/.aws/credentials → deny", () => {
-    const c = classifyPath("~/.aws/credentials", { workspaceRoot: workspace, operation: "write" });
-    expect(c.decision).toBe("deny");
-  });
-
-  test("write to a .env file inside workspace → deny", () => {
-    // Sensitive file pattern wins even inside the workspace.
-    writeFileSync(join(workspace, ".env"), "SECRET=x\n");
-    expect(
-      classifyPath(join(workspace, ".env"), { workspaceRoot: workspace, operation: "write" })
-        .decision,
-    ).toBe("deny");
-  });
-
-  test("write to a .env.production file → deny", () => {
-    expect(
-      classifyPath(join(workspace, ".env.production"), {
-        workspaceRoot: workspace,
-        operation: "write",
-      }).decision,
-    ).toBe("deny");
-  });
-
-  test("write to an id_rsa file → deny", () => {
-    expect(
-      classifyPath(join(workspace, "id_rsa"), {
-        workspaceRoot: workspace,
-        operation: "write",
-      }).decision,
-    ).toBe("deny");
-  });
-
-  test("write to a .pem file → deny", () => {
-    expect(
-      classifyPath(join(workspace, "server.pem"), {
-        workspaceRoot: workspace,
-        operation: "write",
-      }).decision,
-    ).toBe("deny");
-  });
-
-  // ─── ask: sensitive read ──────────────────────────────────────────
-  test("read under ~/.ssh → ask", () => {
-    expect(
-      classifyPath("~/.ssh/known_hosts", {
-        workspaceRoot: workspace,
-        operation: "read",
-      }).decision,
-    ).toBe("ask");
-  });
-
-  test.each(["s-abc123", "fQCD3EUG", "Ab_cd-EF012345678", "agent.foo"])(
-    "read CodeShell session artifacts for %s → allow",
-    (sessionId) => {
-      const c = classifyPath(`~/.code-shell/sessions/${sessionId}/tool-results/call_1.txt`, {
-        workspaceRoot: workspace,
-        operation: "read",
-      });
-      expect(c.decision).toBe("allow");
-      expect(c.reason).toContain("diagnostic");
-    },
-  );
-
-  test.each(["bad$id", "agent..foo", "a".repeat(129)])(
-    "invalid session ID %s does not receive diagnostic read permission",
-    (sessionId) => {
-      expect(
-        classifyPath(`~/.code-shell/sessions/${sessionId}/tool-results/output.txt`, {
-          workspaceRoot: workspace,
-          operation: "read",
-        }).decision,
-      ).toBe("ask");
-    },
-  );
-
-  test("repeated saved-output reads do not need interactive approval", async () => {
-    let prompts = 0;
-    const ctx = {
-      cwd: workspace,
-      sessionId: "fQCD3EUG",
-      askUser: async () => {
-        prompts++;
-        return "拒绝";
-      },
-    } as ToolContext;
-    const target =
-      "~/.code-shell/sessions/fQCD3EUG/tool-results/29214b49e2230c64e4e041dff7c33e3ba92952e926766e660dda919b5e869cec.txt";
-
-    for (let i = 0; i < 2; i++) {
-      expect(await enforcePathPolicyWithApproval(target, "read", ctx)).toBeNull();
-    }
-    expect(prompts).toBe(0);
-    expect(
-      await enforcePathPolicyWithApproval(target, "read", { cwd: workspace } as ToolContext),
-    ).toBeNull();
-    expect(classifyPath(target, { workspaceRoot: workspace, operation: "write" }).decision).toBe(
-      "deny",
-    );
+  // ─── write: protected paths ask, even inside the workspace ────────
+  test.each([
+    ".env",
+    ".env.production",
+    "id_rsa",
+    "server.pem",
+    "credentials.json",
+    ".git",
+    ".git/hooks/pre-commit",
+    "packages/sub/.git/config",
+    ".gitmodules",
+    ".husky/pre-commit",
+    ".code-shell/settings.local.json",
+    ".code-shell/skills/demo/SKILL.md",
+    ".claude/settings.json",
+    ".codex/config.toml",
+    ".agents/skills/demo.md",
+    ".mcp.json",
+    ".vscode/settings.json",
+    ".idea/workspace.xml",
+    ".devcontainer/devcontainer.json",
+    ".npmrc",
+    ".yarnrc.yml",
+    ".cargo/config.toml",
+    ".mvn/wrapper/maven-wrapper.properties",
+  ])("write to %s inside the workspace → ask (protected)", (rel) => {
+    const c = classifyPath(join(workspace, rel), { workspaceRoot: workspace, operation: "write" });
+    expect(c.decision).toBe("ask");
+    expect(c.reason).toStartWith("protected path");
   });
 
   test.each([
-    "token.txt",
-    "tool-results-backup/output.txt",
-    "tool-results/../../settings.json",
-    "tool-results/.env",
-    "tool-results/token.txt",
-    "tool-results/key.pem",
-  ])("session diagnostic exception does not allow %s", (suffix) => {
-    expect(
-      classifyPath(`~/.code-shell/sessions/fQCD3EUG/${suffix}`, {
-        workspaceRoot: workspace,
-        operation: "read",
-      }).decision,
-    ).toBe("ask");
+    "~/.ssh/id_rsa",
+    "~/.aws/credentials",
+    "~/.config/gh/hosts.yml",
+    "~/Library/Keychains/login.keychain-db",
+    "~/.code-shell/settings.json",
+    "~/.zshrc",
+    "~/.bashrc",
+    "~/.gitconfig",
+    "~/.claude.json",
+  ])("write to %s → ask (protected)", (target) => {
+    const c = classifyPath(target, { workspaceRoot: workspace, operation: "write" });
+    expect(c.decision).toBe("ask");
+    expect(c.reason).toStartWith("protected path");
   });
 
-  test("session diagnostic symlinks do not inherit read permission", () => {
-    const previousHome = process.env.HOME;
-    const fakeHome = realpathSync(outside);
-    const codeShellRoot = join(fakeHome, ".code-shell");
-    const outputDir = join(codeShellRoot, "sessions", "fQCD3EUG", "tool-results");
-    mkdirSync(outputDir, { recursive: true });
-    const target = join(codeShellRoot, "settings.json");
-    writeFileSync(target, "{}\n");
-    const link = join(outputDir, "output.txt");
-    symlinkSync(target, link);
-    process.env.HOME = fakeHome;
-    try {
-      expect(classifyPath(link, { workspaceRoot: workspace, operation: "read" }).decision).toBe(
-        "ask",
-      );
-    } finally {
-      if (previousHome === undefined) delete process.env.HOME;
-      else process.env.HOME = previousHome;
-    }
-  });
+  test.each(["src/index.ts", ".gitignore", ".github/workflows/ci.yml", ".claude/worktrees/x/a.ts"])(
+    "write to %s inside the workspace → allow",
+    (rel) => {
+      expect(
+        classifyPath(join(workspace, rel), { workspaceRoot: workspace, operation: "write" })
+          .decision,
+      ).toBe("allow");
+    },
+  );
 
-  test("read CodeShell desktop logs → allow", () => {
+  test("a workspace opened inside a protected dir owns its files", () => {
+    // e.g. a Codex worktree under ~/.codex/worktrees, or the no-repo
+    // workspace under ~/.code-shell: only paths below the root are judged.
+    const root = join(outside, ".codex", "worktrees", "proj");
+    mkdirSync(root, { recursive: true });
     expect(
-      classifyPath("~/.code-shell/logs/desktop-2026-05-31.log", {
-        workspaceRoot: workspace,
-        operation: "read",
-      }).decision,
+      classifyPath(join(root, "src", "a.ts"), { workspaceRoot: root, operation: "write" }).decision,
     ).toBe("allow");
-  });
-
-  test("CodeShell auth/token material remains protected", () => {
     expect(
-      classifyPath("~/.code-shell/auth.json", {
-        workspaceRoot: workspace,
-        operation: "read",
-      }).decision,
-    ).toBe("ask");
-    expect(
-      classifyPath("~/.code-shell/sessions/s-abc123/token.txt", {
-        workspaceRoot: workspace,
-        operation: "read",
-      }).decision,
-    ).toBe("ask");
-    expect(
-      classifyPath("~/.code-shell/sessions/s-abc123/tool-results/call_1.txt", {
-        workspaceRoot: workspace,
+      classifyPath(join(root, ".git", "hooks", "pre-commit"), {
+        workspaceRoot: root,
         operation: "write",
       }).decision,
-    ).toBe("deny");
-  });
+    ).toBe("ask");
 
-  test("no-repo attachment reads are narrowly allowed under ~/.code-shell", () => {
-    const p = "~/.code-shell/no-repo/.code-shell/attachments/sid/shot.png";
-    const read = classifyPath(p, {
-      workspaceRoot: join(homedir(), ".code-shell", "no-repo"),
-      operation: "read",
-    });
-    expect(read.decision).toBe("allow");
-    expect(read.reason).toContain("no-repo attachment");
-    expect(
-      classifyPath(p, {
-        workspaceRoot: join(homedir(), ".code-shell", "no-repo"),
-        operation: "write",
-      }).decision,
-    ).toBe("deny");
-  });
-
-  test("registered user and plugin Skill resources are readable without approval", async () => {
     const previousHome = process.env.HOME;
     const fakeHome = join(outside, "home");
-    const codeShellRoot = join(fakeHome, ".code-shell");
-    const userSkill = join(codeShellRoot, "skills", "user-demo");
-    const pluginRoot = join(
-      codeShellRoot,
-      "plugins",
-      "cache",
-      "mimi-plugins",
-      "media-downloader",
-      "local",
-    );
-    const pluginSkill = join(pluginRoot, "skills", "media-downloader");
-    const userReference = join(userSkill, "references", "guide.md");
-    const pluginReference = join(pluginSkill, "references", "troubleshooting.md");
-    mkdirSync(join(userSkill, "references"), { recursive: true });
-    mkdirSync(join(pluginSkill, "references"), { recursive: true });
-    writeFileSync(join(userSkill, "SKILL.md"), "# User Skill\n");
-    writeFileSync(userReference, "guide\n");
-    writeFileSync(join(pluginSkill, "SKILL.md"), "# Plugin Skill\n");
-    writeFileSync(pluginReference, "troubleshooting\n");
-    mkdirSync(join(codeShellRoot, "plugins"), { recursive: true });
-    writeFileSync(
-      join(codeShellRoot, "plugins", "installed_plugins.json"),
-      JSON.stringify({
-        version: 2,
-        plugins: {
-          "media-downloader@mimi-plugins": [
-            {
-              scope: "user",
-              installPath: pluginRoot,
-              version: "local",
-              installedAt: "2026-08-05T00:00:00.000Z",
-              lastUpdated: "2026-08-05T00:00:00.000Z",
-            },
-          ],
-        },
-      }),
-    );
-
-    process.env.HOME = fakeHome;
-    try {
-      for (const target of [userReference, pluginReference]) {
-        const read = classifyPath(target, { workspaceRoot: workspace, operation: "read" });
-        expect(read.decision).toBe("allow");
-        expect(read.reason).toContain("Skill resource");
-        // The exception is read-only.
-        expect(
-          classifyPath(target, { workspaceRoot: workspace, operation: "write" }).decision,
-        ).not.toBe("allow");
-      }
-      // Exact headless/worker regression: without this exception the same
-      // reference read returns "No interactive approval UI" and the Skill run
-      // cannot continue.
-      expect(
-        await enforcePathPolicyWithApproval(pluginReference, "read", {
-          cwd: workspace,
-          sessionId: "skill-reference-session",
-        } as ToolContext),
-      ).toBeNull();
-    } finally {
-      if (previousHome === undefined) delete process.env.HOME;
-      else process.env.HOME = previousHome;
-    }
-  });
-
-  test("ordinary unregistered Skill files are readable; credentials and symlink escapes are protected", () => {
-    const previousHome = process.env.HOME;
-    const fakeHome = join(outside, "guard-home");
-    const codeShellRoot = join(fakeHome, ".code-shell");
-    const cacheRoot = join(codeShellRoot, "plugins", "cache");
-    const pluginRoot = join(cacheRoot, "market", "safe-plugin", "v1");
-    const skillRoot = join(pluginRoot, "skills", "safe-skill");
-    const unregisteredRoot = join(cacheRoot, "market", "unregistered", "v1");
-    const privateFile = join(outside, "private.md");
-    mkdirSync(join(skillRoot, "references"), { recursive: true });
-    mkdirSync(join(unregisteredRoot, "skills", "other", "references"), { recursive: true });
-    writeFileSync(join(skillRoot, "SKILL.md"), "# Safe Skill\n");
-    writeFileSync(join(skillRoot, "token.txt"), "not automatically readable\n");
-    writeFileSync(privateFile, "private\n");
-    symlinkSync(privateFile, join(skillRoot, "references", "escape.md"));
-    const unregisteredReference = join(
-      unregisteredRoot,
-      "skills",
-      "other",
-      "references",
-      "guide.md",
-    );
-    writeFileSync(join(unregisteredRoot, "skills", "other", "SKILL.md"), "# Other\n");
-    writeFileSync(unregisteredReference, "other\n");
-    mkdirSync(join(codeShellRoot, "plugins"), { recursive: true });
-    writeFileSync(
-      join(codeShellRoot, "plugins", "installed_plugins.json"),
-      JSON.stringify({
-        version: 2,
-        plugins: {
-          "safe-plugin@market": [
-            {
-              scope: "user",
-              installPath: pluginRoot,
-              version: "v1",
-              installedAt: "2026-08-05T00:00:00.000Z",
-              lastUpdated: "2026-08-05T00:00:00.000Z",
-            },
-          ],
-        },
-      }),
-    );
-
+    const noRepo = join(fakeHome, ".code-shell", "no-repo");
+    mkdirSync(noRepo, { recursive: true });
     process.env.HOME = fakeHome;
     try {
       expect(
-        classifyPath(unregisteredReference, { workspaceRoot: workspace, operation: "read" })
+        classifyPath(join(noRepo, "notes.md"), { workspaceRoot: noRepo, operation: "write" })
           .decision,
       ).toBe("allow");
       expect(
-        classifyPath(join(skillRoot, "token.txt"), {
-          workspaceRoot: workspace,
-          operation: "read",
-        }).decision,
-      ).toBe("ask");
-      expect(
-        classifyPath(join(skillRoot, "references", "escape.md"), {
-          workspaceRoot: workspace,
-          operation: "read",
+        classifyPath(join(fakeHome, ".code-shell", "settings.json"), {
+          workspaceRoot: noRepo,
+          operation: "write",
         }).decision,
       ).toBe("ask");
     } finally {
@@ -395,40 +179,34 @@ describe("classifyPath", () => {
     }
   });
 
-  test("read of .env in workspace → ask", () => {
-    writeFileSync(join(workspace, ".env"), "x\n");
+  test("protected scope is the protected item, not the file's directory", () => {
     expect(
-      classifyPath(join(workspace, ".env"), {
+      classifyPath(join(workspace, ".git", "hooks", "pre-commit"), {
         workspaceRoot: workspace,
-        operation: "read",
-      }).decision,
-    ).toBe("ask");
+        operation: "write",
+      }).protectedScope,
+    ).toBe(join(realpathSync(workspace), ".git") + "/");
+    expect(
+      classifyPath(join(workspace, ".env"), { workspaceRoot: workspace, operation: "write" })
+        .protectedScope,
+    ).toBe(join(realpathSync(workspace), ".env") + "/");
+    expect(
+      classifyPath(join(outside, "x.txt"), { workspaceRoot: workspace, operation: "write" })
+        .protectedScope,
+    ).toBeUndefined();
   });
 
   // ─── symlink resolution ───────────────────────────────────────────
-  test("symlink-to-sensitive-path is followed before classification (write → deny)", () => {
-    // A symlink inside the workspace that points at ~/.ssh must not let a
-    // write slip through as "in workspace".
-    const home = homedir();
-    const sshLike = join(home, ".ssh");
-    // Don't try to create the user's real ~/.ssh — assume it usually exists,
-    // and if not, fall back to a sensitive-pattern dir we DO control.
-    const realSensitive = sshLike;
-    // Best-effort: only run the symlink follow check when the sensitive dir
-    // exists on the host. Otherwise we can't symlink to it.
-    try {
-      const link = join(workspace, "looks-innocent");
-      symlinkSync(realSensitive, link, "dir");
-      const c = classifyPath(join(link, "id_rsa"), {
-        workspaceRoot: workspace,
-        operation: "write",
-      });
-      // Realpath resolves the link → ~/.ssh/id_rsa → deny.
-      expect(c.decision).toBe("deny");
-    } catch (e) {
-      // ~/.ssh missing or symlink not permitted on this host — skip.
-      if (!(e instanceof Error)) throw e;
-    }
+  test("symlink into a protected path is followed before classification", () => {
+    const link = join(workspace, "looks-innocent");
+    symlinkSync(join(workspace, ".git"), link, "dir");
+    mkdirSync(join(workspace, ".git", "hooks"), { recursive: true });
+    const c = classifyPath(join(link, "hooks", "pre-commit"), {
+      workspaceRoot: workspace,
+      operation: "write",
+    });
+    expect(c.decision).toBe("ask");
+    expect(c.reason).toStartWith("protected path");
   });
 
   // ─── env disable switch ───────────────────────────────────────────
@@ -469,8 +247,7 @@ describe("classifyPath", () => {
 
   test("reason text is non-empty and informative", () => {
     const c = classifyPath("~/.ssh/x", { workspaceRoot: workspace, operation: "write" });
-    expect(c.reason.length).toBeGreaterThan(0);
-    expect(c.reason.toLowerCase()).toContain("sensitive");
+    expect(c.reason).toContain("~/.ssh");
   });
 
   test("outside-workspace ask can be approved and continue", async () => {
@@ -483,7 +260,7 @@ describe("classifyPath", () => {
       },
     } as ToolContext;
 
-    const blocked = await enforcePathPolicyWithApproval(join(outside, "x.txt"), "read", ctx);
+    const blocked = await enforcePathPolicyWithApproval(join(outside, "x.txt"), "write", ctx);
 
     expect(blocked).toBeNull();
     expect(question).toContain("工作区外路径");
@@ -503,7 +280,7 @@ describe("classifyPath", () => {
   test("outside-workspace ask is blocked without interactive UI", async () => {
     const ctx = { cwd: workspace } as ToolContext;
 
-    const blocked = await enforcePathPolicyWithApproval(join(outside, "x.txt"), "read", ctx);
+    const blocked = await enforcePathPolicyWithApproval(join(outside, "x.txt"), "write", ctx);
 
     expect(blocked).toContain("No interactive approval UI");
   });

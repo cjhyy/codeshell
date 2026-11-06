@@ -55,7 +55,7 @@ describe("enforcePathPolicyWithApproval", () => {
   test("exact 允许本次 → allowed (returns null)", async () => {
     const ws = tmpWorkspace();
     const outside = join(tmpdir(), "definitely-outside-the-workspace.txt");
-    const res = await enforcePathPolicyWithApproval(outside, "read", ctxAnswering(ws, "允许本次"));
+    const res = await enforcePathPolicyWithApproval(outside, "write", ctxAnswering(ws, "允许本次"));
     expect(res).toBeNull();
     cleanup();
   });
@@ -66,7 +66,7 @@ describe("enforcePathPolicyWithApproval", () => {
     // Simulate a future scope option whose label starts with "允许本次".
     const res = await enforcePathPolicyWithApproval(
       outside,
-      "read",
+      "write",
       ctxAnswering(ws, "允许本次会话"),
     );
     expect(res).not.toBeNull();
@@ -77,7 +77,7 @@ describe("enforcePathPolicyWithApproval", () => {
   test("拒绝 → denied", async () => {
     const ws = tmpWorkspace();
     const outside = join(tmpdir(), "definitely-outside-the-workspace.txt");
-    const res = await enforcePathPolicyWithApproval(outside, "read", ctxAnswering(ws, "拒绝"));
+    const res = await enforcePathPolicyWithApproval(outside, "write", ctxAnswering(ws, "拒绝"));
     expect(res).toContain("approval denied");
     cleanup();
   });
@@ -88,7 +88,7 @@ describe("enforcePathPolicyWithApproval", () => {
     const cap: {
       options?: { label: string; description: string; tone?: string }[];
     } = {};
-    await enforcePathPolicyWithApproval(outside, "read", ctxAnswering(ws, "拒绝", cap));
+    await enforcePathPolicyWithApproval(outside, "write", ctxAnswering(ws, "拒绝", cap));
     const opts = cap.options ?? [];
     const deny = opts.find((o) => o.label === "拒绝");
     expect(deny?.tone).toBe("danger");
@@ -103,25 +103,23 @@ describe("enforcePathPolicyWithApproval", () => {
     const ws = tmpWorkspace();
     const outside = join(tmpdir(), "outside-x.txt");
     const cap: { question?: string; header?: string } = {};
-    await enforcePathPolicyWithApproval(outside, "read", ctxAnswering(ws, "拒绝", cap));
+    await enforcePathPolicyWithApproval(outside, "write", ctxAnswering(ws, "拒绝", cap));
     expect(cap.question).toContain("工作区外");
     expect(cap.header).toBe("路径权限");
     cleanup();
   });
 
-  test("a sensitive file (e.g. ~/.ssh/config) is titled 敏感文件, not 工作区外", async () => {
+  test("a protected path (e.g. .git/hooks) is titled 受保护路径, not 工作区外", async () => {
     const ws = tmpWorkspace();
-    const sensitive = join(homedir(), ".ssh", "config");
     const cap: { question?: string; header?: string } = {};
     const res = await enforcePathPolicyWithApproval(
-      sensitive,
-      "read",
+      join(ws, ".git", "hooks", "pre-commit"),
+      "write",
       ctxAnswering(ws, "拒绝", cap),
     );
-    // ~/.ssh classifies as sensitive (ask on read) → titled accordingly.
     expect(res).toContain("approval denied");
-    expect(cap.question).toContain("敏感文件");
-    expect(cap.header).toBe("敏感文件权限");
+    expect(cap.question).toContain("受保护路径");
+    expect(cap.header).toBe("受保护路径");
     cleanup();
   });
 
@@ -161,9 +159,9 @@ describe("enforcePathPolicyWithApproval", () => {
         return "本目录本会话允许";
       },
     } as unknown as ToolContext;
-    expect(await enforcePathPolicyWithApproval(fileA, "read", ctxGrant)).toBeNull();
+    expect(await enforcePathPolicyWithApproval(fileA, "write", ctxGrant)).toBeNull();
     // Second file in the SAME dir: no prompt (calls stays 1).
-    expect(await enforcePathPolicyWithApproval(fileB, "read", ctxGrant)).toBeNull();
+    expect(await enforcePathPolicyWithApproval(fileB, "write", ctxGrant)).toBeNull();
     expect(calls).toBe(1);
 
     // A different session does NOT inherit the grant.
@@ -176,7 +174,7 @@ describe("enforcePathPolicyWithApproval", () => {
         return "拒绝";
       },
     } as unknown as ToolContext;
-    expect(await enforcePathPolicyWithApproval(fileA, "read", ctxOther)).toContain("denied");
+    expect(await enforcePathPolicyWithApproval(fileA, "write", ctxOther)).toContain("denied");
     expect(asked2).toBe(true);
     cleanup();
   });
@@ -198,12 +196,12 @@ describe("enforcePathPolicyWithApproval", () => {
       },
     } as unknown as ToolContext;
 
-    expect(await enforcePathPolicyWithApproval(fileA, "read", ctx)).toBeNull();
-    expect(await enforcePathPolicyWithApproval(fileB, "read", ctx)).toBeNull();
+    expect(await enforcePathPolicyWithApproval(fileA, "write", ctx)).toBeNull();
+    expect(await enforcePathPolicyWithApproval(fileB, "write", ctx)).toBeNull();
     expect(calls).toBe(1);
 
     clearSessionPathApprovalsUnderRoot("sess-root-removal", formerRoot);
-    expect(await enforcePathPolicyWithApproval(fileB, "read", ctx)).toBeNull();
+    expect(await enforcePathPolicyWithApproval(fileB, "write", ctx)).toBeNull();
     expect(calls).toBe(2);
     cleanup();
   });
@@ -224,7 +222,7 @@ describe("enforcePathPolicyWithApproval", () => {
         return "本目录本项目允许";
       },
     } as unknown as ToolContext;
-    expect(await enforcePathPolicyWithApproval(file, "read", ctxGrant)).toBeNull();
+    expect(await enforcePathPolicyWithApproval(file, "write", ctxGrant)).toBeNull();
 
     // Wipe session memory → simulate a fresh session. Project grant persists.
     _resetSessionPathGrants();
@@ -237,68 +235,14 @@ describe("enforcePathPolicyWithApproval", () => {
         return "拒绝";
       },
     } as unknown as ToolContext;
-    expect(await enforcePathPolicyWithApproval(file, "read", ctxFresh)).toBeNull();
+    expect(await enforcePathPolicyWithApproval(file, "write", ctxFresh)).toBeNull();
     expect(asked).toBe(false); // covered by persisted project grant
     expect(calls).toBe(1);
     cleanup();
   });
 });
 
-describe("路径授权区分读/写(operation-aware grants)", () => {
-  test("read 授权不覆盖 write — 同目录 write 仍要问", async () => {
-    _resetSessionPathGrants();
-    const ws = tmpWorkspace();
-    const dir = mkdtempSync(join(tmpdir(), "cs-rw-readgrant-"));
-    dirs.push(dir);
-    const fileA = join(dir, "a.txt");
-    const fileB = join(dir, "b.txt");
-
-    let calls = 0;
-    const ctx = {
-      cwd: ws,
-      sessionId: "s-rw-1",
-      askUser: async () => {
-        calls += 1;
-        return "本目录本会话允许";
-      },
-    } as unknown as ToolContext;
-
-    // Grant a READ on fileA.
-    expect(await enforcePathPolicyWithApproval(fileA, "read", ctx)).toBeNull();
-    expect(calls).toBe(1);
-    // A WRITE to the same dir must NOT be silently allowed — it asks again.
-    expect(await enforcePathPolicyWithApproval(fileB, "write", ctx)).toBeNull();
-    expect(calls).toBe(2);
-    cleanup();
-  });
-
-  test("write 授权覆盖 read — 同目录 read 不再问", async () => {
-    _resetSessionPathGrants();
-    const ws = tmpWorkspace();
-    const dir = mkdtempSync(join(tmpdir(), "cs-rw-writegrant-"));
-    dirs.push(dir);
-    const fileA = join(dir, "a.txt");
-    const fileB = join(dir, "b.txt");
-
-    let calls = 0;
-    const ctx = {
-      cwd: ws,
-      sessionId: "s-rw-2",
-      askUser: async () => {
-        calls += 1;
-        return "本目录本会话允许";
-      },
-    } as unknown as ToolContext;
-
-    // Grant a WRITE on fileA → read+write covered.
-    expect(await enforcePathPolicyWithApproval(fileA, "write", ctx)).toBeNull();
-    expect(calls).toBe(1);
-    // A READ in the same dir is covered by the write grant — no prompt.
-    expect(await enforcePathPolicyWithApproval(fileB, "read", ctx)).toBeNull();
-    expect(calls).toBe(1);
-    cleanup();
-  });
-
+describe("旧式只读授权不覆盖写入", () => {
   test("旧式裸字符串 pathApprovals 条目保守解释为只读", async () => {
     _resetSessionPathGrants();
     const ws = tmpWorkspace();
@@ -330,10 +274,7 @@ describe("路径授权区分读/写(operation-aware grants)", () => {
       },
     } as unknown as ToolContext;
 
-    // Legacy entry covers READ → no prompt.
-    expect(await enforcePathPolicyWithApproval(file, "read", ctx)).toBeNull();
-    expect(asked).toBe(false);
-    // …but NOT write — the conservative interpretation of legacy bare entries.
+    // Legacy bare entries do NOT cover writes — the conservative interpretation.
     expect(await enforcePathPolicyWithApproval(file, "write", ctx)).toContain("denied");
     expect(asked).toBe(true);
     cleanup();
@@ -358,8 +299,8 @@ describe("并发路径审批串行化(burst dedupe)", () => {
     } as unknown as ToolContext;
 
     // Two parallel tools hit the same (not yet approved) directory.
-    const p1 = enforcePathPolicyWithApproval(outsideA, "read", ctx);
-    const p2 = enforcePathPolicyWithApproval(outsideB, "read", ctx);
+    const p1 = enforcePathPolicyWithApproval(outsideA, "write", ctx);
+    const p2 = enforcePathPolicyWithApproval(outsideB, "write", ctx);
     await new Promise((r) => setTimeout(r, 10));
     // Only ONE card so far — the second waits its turn in the chain.
     expect(asks).toBe(1);
@@ -388,8 +329,8 @@ describe("并发路径审批串行化(burst dedupe)", () => {
       },
     } as unknown as ToolContext;
 
-    const p1 = enforcePathPolicyWithApproval(outsideA, "read", ctx);
-    const p2 = enforcePathPolicyWithApproval(outsideB, "read", ctx);
+    const p1 = enforcePathPolicyWithApproval(outsideA, "write", ctx);
+    const p2 = enforcePathPolicyWithApproval(outsideB, "write", ctx);
     await new Promise((r) => setTimeout(r, 10));
     expect(asks).toBe(1);
     answers[0]!("允许本次"); // no memory recorded
@@ -407,8 +348,8 @@ describe("path approval cancellation", () => {
     const cwd = tmpWorkspace();
     try {
       const result = await enforcePathPolicyWithApproval(
-        join(homedir(), ".claude"),
-        "read",
+        join(homedir(), ".claude", "settings.json"),
+        "write",
         ctxAnswering(cwd, "Confirmation timed out; skip this operation"),
       );
       expect(result).toContain("timed out; skip this operation");
@@ -417,7 +358,7 @@ describe("path approval cancellation", () => {
       cleanup();
     }
   });
-  test("stopping parallel reads drains queued prompts and ignores late grants", async () => {
+  test("stopping parallel writes drains queued prompts and ignores late grants", async () => {
     const cwd = tmpWorkspace();
     const controller = new AbortController();
     let calls = 0;
@@ -434,8 +375,12 @@ describe("path approval cancellation", () => {
       },
     } as unknown as ToolContext;
     try {
-      const first = enforcePathPolicyWithApproval(join(homedir(), ".claude"), "read", ctx);
-      const second = enforcePathPolicyWithApproval(join(homedir(), ".codex"), "read", ctx);
+      const first = enforcePathPolicyWithApproval(
+        join(homedir(), ".claude", "a.json"),
+        "write",
+        ctx,
+      );
+      const second = enforcePathPolicyWithApproval(join(homedir(), ".ssh", "config"), "write", ctx);
       await Promise.resolve();
       expect(calls).toBe(1);
       controller.abort();
@@ -452,10 +397,92 @@ describe("path approval cancellation", () => {
           return "拒绝";
         },
       };
-      await enforcePathPolicyWithApproval(join(homedir(), ".claude"), "read", next);
+      await enforcePathPolicyWithApproval(join(homedir(), ".claude", "a.json"), "write", next);
       expect(calls).toBe(2);
     } finally {
       cleanup();
     }
+  });
+});
+
+describe("受保护路径授权只覆盖该受保护项", () => {
+  function counting(cwd: string, sessionId: string, answers: string[]) {
+    const asked: string[] = [];
+    const ctx = {
+      cwd,
+      sessionId,
+      askUser: async (question: string) => {
+        asked.push(question);
+        return answers.shift() ?? "拒绝";
+      },
+    } as unknown as ToolContext;
+    return { ctx, asked };
+  }
+
+  test("本目录本项目允许 on .env grants only that file, never .git or other protected items", async () => {
+    _resetSessionPathGrants();
+    const ws = tmpWorkspace();
+    const { ctx, asked } = counting(ws, "s-protected-env", ["本目录本项目允许"]);
+    expect(await enforcePathPolicyWithApproval(join(ws, ".env"), "write", ctx)).toBeNull();
+    expect(await enforcePathPolicyWithApproval(join(ws, ".env"), "write", ctx)).toBeNull();
+    expect(asked).toHaveLength(1);
+    // The grant must not widen to the root directory that holds .env.
+    expect(await enforcePathPolicyWithApproval(join(ws, ".env.local"), "write", ctx)).toContain(
+      "denied",
+    );
+    expect(
+      await enforcePathPolicyWithApproval(join(ws, ".git", "hooks", "pre-commit"), "write", ctx),
+    ).toContain("denied");
+    expect(asked).toHaveLength(3);
+    cleanup();
+  });
+
+  test("本目录本会话允许 on a .git hook covers the rest of .git only", async () => {
+    _resetSessionPathGrants();
+    const ws = tmpWorkspace();
+    const { ctx, asked } = counting(ws, "s-protected-git", ["本目录本会话允许"]);
+    expect(
+      await enforcePathPolicyWithApproval(join(ws, ".git", "hooks", "pre-commit"), "write", ctx),
+    ).toBeNull();
+    expect(
+      await enforcePathPolicyWithApproval(join(ws, ".git", "config"), "write", ctx),
+    ).toBeNull();
+    expect(asked).toHaveLength(1);
+    expect(
+      await enforcePathPolicyWithApproval(join(ws, ".vscode", "settings.json"), "write", ctx),
+    ).toContain("denied");
+    expect(asked).toHaveLength(2);
+    cleanup();
+  });
+
+  test("the approval card names the protected item as the grant target", async () => {
+    _resetSessionPathGrants();
+    const ws = tmpWorkspace();
+    const cap: { options?: { label: string; description: string }[] } = {};
+    await enforcePathPolicyWithApproval(
+      join(ws, ".git", "hooks", "pre-commit"),
+      "write",
+      ctxAnswering(ws, "拒绝", cap),
+    );
+    const session = cap.options?.find((o) => o.label === "本目录本会话允许");
+    expect(session?.description).toContain(join(realpathSync(ws), ".git"));
+    expect(session?.description).not.toContain("hooks");
+    cleanup();
+  });
+
+  test("an ordinary outside-dir grant does not cover protected paths beneath it", async () => {
+    _resetSessionPathGrants();
+    const ws = tmpWorkspace();
+    const dir = mkdtempSync(join(tmpdir(), "cs-protected-outside-"));
+    dirs.push(dir);
+    const { ctx, asked } = counting(ws, "s-protected-outside", ["本目录本会话允许"]);
+    expect(await enforcePathPolicyWithApproval(join(dir, "a.txt"), "write", ctx)).toBeNull();
+    expect(await enforcePathPolicyWithApproval(join(dir, "b.txt"), "write", ctx)).toBeNull();
+    expect(asked).toHaveLength(1);
+    expect(
+      await enforcePathPolicyWithApproval(join(dir, ".git", "config"), "write", ctx),
+    ).toContain("denied");
+    expect(asked).toHaveLength(2);
+    cleanup();
   });
 });

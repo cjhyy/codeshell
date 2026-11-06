@@ -101,7 +101,7 @@ function imageBlocks(messages: Message[]): ContentBlock[] {
 
 describe("Engine structured image attachment vision gate", () => {
   it.each(["default", "bypassPermissions"] as const)(
-    "uses the effective %s run mode for sensitive attachments",
+    "loads credential-named attachments in %s run mode",
     async (permissionMode) => {
       const cwd = mkdtempSync(join(tmpdir(), "engine-sensitive-attachment-"));
       const model = `${fakeProvider}-permission-${Math.random()}`;
@@ -122,13 +122,9 @@ describe("Engine structured image attachment vision gate", () => {
           permissionMode,
           attachments: [attachment],
         });
-        expect(result.reason).toBe(permissionMode === "default" ? "image_error" : "completed");
-        if (permissionMode === "default") {
-          expect(result.text).toContain("blocked by path policy");
-          expect(scenario.calls).toHaveLength(0);
-        } else {
-          expect(scenario.calls.length).toBeGreaterThan(0);
-        }
+        // Reads are never gated (aligned with Codex / Claude Code).
+        expect(result.reason).toBe("completed");
+        expect(scenario.calls.length).toBeGreaterThan(0);
       } finally {
         await engine.dispose();
         scenarios.delete(model);
