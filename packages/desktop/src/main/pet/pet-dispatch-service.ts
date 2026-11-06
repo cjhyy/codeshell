@@ -805,6 +805,11 @@ interface PetActiveChatTurn {
   clientMessageId?: string;
   /** Only the original user run accepts steers, never its host receipt turn. */
   workerRunPending: boolean;
+  /** From admission until agent/run returns: same-route input joins this turn. */
+  acceptingFollowers: boolean;
+  /** Resolves true when agent/run starts, false if the turn ends without one. */
+  runStarted: Promise<boolean>;
+  resolveRunStarted: (started: boolean) => void;
   stopRequested: boolean;
   stopConfirmed: boolean;
   /** The model successfully called NewContext during this turn. */
@@ -914,12 +919,18 @@ export class PetDispatchService {
     clientMessageId?: string,
   ): PetActiveChatTurn {
     let resolveRunDone!: () => void;
+    let resolveRunStarted!: (started: boolean) => void;
     let resolveFullyDone!: () => void;
     return {
       routeKey,
       sessionId,
       clientMessageId,
       workerRunPending: false,
+      acceptingFollowers: true,
+      runStarted: new Promise<boolean>((resolve) => {
+        resolveRunStarted = resolve;
+      }),
+      resolveRunStarted,
       stopRequested: false,
       stopConfirmed: false,
       newContextSucceeded: false,
@@ -988,7 +999,7 @@ export class PetDispatchService {
         }
         if (
           active.routeKey === routeKey &&
-          active.workerRunPending &&
+          active.acceptingFollowers &&
           !active.stopRequested &&
           !isPetContextControl(command)
         ) {
@@ -1020,6 +1031,8 @@ export class PetDispatchService {
             : result;
         } finally {
           await this.withChatAdmission(() => {
+            admission.active.acceptingFollowers = false;
+            admission.active.resolveRunStarted(false);
             admission.active.runSettled = true;
             admission.active.resolveRunDone();
             this.finishActiveChatTurnIfDrained(admission.active);
@@ -1042,6 +1055,12 @@ export class PetDispatchService {
       });
       const outcome = await resolveSteerOutcome({
         steer: async () => {
+          // Admitted during preparation: wait for the leader's run to start.
+          // A turn that ends without one releases us to re-admit as our own turn.
+          if (!admission.active.workerRunPending) {
+            const started = await admission.active.runStarted;
+            if (!started) return { accepted: false };
+          }
           if (!admission.active.workerRunPending || admission.active.stopRequested) {
             return { accepted: false };
           }
@@ -1121,6 +1140,8 @@ export class PetDispatchService {
         return await operation();
       } finally {
         await this.withChatAdmission(() => {
+          active.acceptingFollowers = false;
+          active.resolveRunStarted(false);
           active.runSettled = true;
           active.resolveRunDone();
           this.finishActiveChatTurnIfDrained(active);
@@ -1134,8 +1155,10 @@ export class PetDispatchService {
     params: Record<string, unknown>,
   ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }> {
     const active = this.activeChatTurn;
-    if (active && active.clientMessageId === command.clientMessageId)
+    if (active && active.clientMessageId === command.clientMessageId) {
       active.workerRunPending = true;
+      active.resolveRunStarted(true);
+    }
     try {
       return await this.options.worker.requestWorker("agent/run", params, {
         waitForRunCompletion: true,
@@ -1148,6 +1171,7 @@ export class PetDispatchService {
     } finally {
       if (active) {
         active.workerRunPending = false;
+        active.acceptingFollowers = false;
         active.resolveRunDone();
         // Revoke accepted but unused steers before a host receipt run can
         // consume them with its different prompt and capability set.

@@ -3470,6 +3470,290 @@ describe("PetDispatchService", () => {
     expect(calls).toEqual(["agent/run", "agent/steer"]);
   });
 
+  test("merges a message that arrives while the first turn is still preparing", async () => {
+    const prepGate = deferred<void>();
+    const firstRun = deferred<{ ok: true; result: { text: string } }>();
+    const steerRequested = deferred<void>();
+    let outbound:
+      | ((line: string, snapshotEntry?: { sessionId: string; event: unknown }) => void)
+      | undefined;
+    const calls: string[] = [];
+    let workspaceReads = 0;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      segmentController: {
+        beginTurn: async () => undefined,
+        requestContextClear: async () => undefined,
+      } as never,
+      listWorkspaces: async () => {
+        workspaceReads += 1;
+        await prepGate.promise;
+        return [];
+      },
+      worker: {
+        subscribeOutbound: (listener) => {
+          outbound = listener;
+          return () => undefined;
+        },
+        requestWorker: async (method, params) => {
+          calls.push(method);
+          if (method === "agent/run") return firstRun.promise;
+          if (method === "agent/steer") {
+            steerRequested.resolve(undefined);
+            outbound?.("", {
+              sessionId: "pet-one",
+              event: { type: "steer_injected", id: params.id, text: params.text },
+            });
+            return { ok: true, result: { accepted: true } };
+          }
+          throw new Error(`unexpected worker method: ${method}`);
+        },
+      },
+      hostCwd: "/safe/pet",
+    });
+    const send = (message: string, id: string, user = "user-one") =>
+      service.dispatch({
+        type: "chat",
+        message,
+        clientMessageId: id,
+        source: imSource(user),
+      });
+    const tick = async () => {
+      for (let i = 0; i < 5; i++) await Promise.resolve();
+    };
+
+    const leader = send("first", "wechat-1");
+    await tick();
+    const follower = send("second while preparing", "wechat-2");
+    await tick();
+    expect(calls).toEqual([]);
+    prepGate.resolve();
+    await steerRequested.promise;
+    firstRun.resolve({ ok: true, result: { text: "one reply" } });
+    expect(await leader).toMatchObject({ inputDisposition: "turn" });
+    expect(await follower).toMatchObject({ inputDisposition: "steered", suppressReply: true });
+    expect(calls).toEqual(["agent/run", "agent/steer"]);
+  });
+
+  test("three rapid messages become one turn", async () => {
+    const prepGate = deferred<void>();
+    const firstRun = deferred<{ ok: true; result: { text: string } }>();
+    const steerRequested = deferred<void>();
+    let outbound:
+      | ((line: string, snapshotEntry?: { sessionId: string; event: unknown }) => void)
+      | undefined;
+    const calls: string[] = [];
+    let workspaceReads = 0;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      segmentController: {
+        beginTurn: async () => undefined,
+        requestContextClear: async () => undefined,
+      } as never,
+      listWorkspaces: async () => {
+        workspaceReads += 1;
+        await prepGate.promise;
+        return [];
+      },
+      worker: {
+        subscribeOutbound: (listener) => {
+          outbound = listener;
+          return () => undefined;
+        },
+        requestWorker: async (method, params) => {
+          calls.push(method);
+          if (method === "agent/run") return firstRun.promise;
+          if (method === "agent/steer") {
+            steerRequested.resolve(undefined);
+            outbound?.("", {
+              sessionId: "pet-one",
+              event: { type: "steer_injected", id: params.id, text: params.text },
+            });
+            return { ok: true, result: { accepted: true } };
+          }
+          throw new Error(`unexpected worker method: ${method}`);
+        },
+      },
+      hostCwd: "/safe/pet",
+    });
+    const send = (message: string, id: string, user = "user-one") =>
+      service.dispatch({
+        type: "chat",
+        message,
+        clientMessageId: id,
+        source: imSource(user),
+      });
+    const tick = async () => {
+      for (let i = 0; i < 5; i++) await Promise.resolve();
+    };
+
+    const leader = send("first", "wechat-1");
+    await tick();
+    const second = send("second", "wechat-2");
+    const third = send("third", "wechat-3");
+    await tick();
+    expect(calls).toEqual([]);
+    prepGate.resolve();
+    await steerRequested.promise;
+    firstRun.resolve({ ok: true, result: { text: "one reply" } });
+    expect(await leader).toMatchObject({ inputDisposition: "turn" });
+    expect(await second).toMatchObject({ inputDisposition: "steered", suppressReply: true });
+    expect(await third).toMatchObject({ inputDisposition: "steered", suppressReply: true });
+    expect(calls).toEqual(["agent/run", "agent/steer", "agent/steer"]);
+  });
+
+  test("a follower admitted during preparation falls back when the leader never runs", async () => {
+    const prepGate = deferred<void>();
+    const firstRun = deferred<{ ok: true; result: { text: string } }>();
+    const steerRequested = deferred<void>();
+    let outbound:
+      | ((line: string, snapshotEntry?: { sessionId: string; event: unknown }) => void)
+      | undefined;
+    const calls: string[] = [];
+    let workspaceReads = 0;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      segmentController: {
+        beginTurn: async () => undefined,
+        requestContextClear: async () => undefined,
+      } as never,
+      listWorkspaces: async () => {
+        workspaceReads += 1;
+        if (workspaceReads === 1) {
+          await prepGate.promise;
+          throw new Error("workspace read failed");
+        }
+        return [];
+      },
+      worker: {
+        subscribeOutbound: (listener) => {
+          outbound = listener;
+          return () => undefined;
+        },
+        requestWorker: async (method, params) => {
+          calls.push(method);
+          if (method === "agent/run") return { ok: true, result: { text: "second alone" } };
+          if (method === "agent/steer") {
+            steerRequested.resolve(undefined);
+            outbound?.("", {
+              sessionId: "pet-one",
+              event: { type: "steer_injected", id: params.id, text: params.text },
+            });
+            return { ok: true, result: { accepted: true } };
+          }
+          throw new Error(`unexpected worker method: ${method}`);
+        },
+      },
+      hostCwd: "/safe/pet",
+    });
+    const send = (message: string, id: string, user = "user-one") =>
+      service.dispatch({
+        type: "chat",
+        message,
+        clientMessageId: id,
+        source: imSource(user),
+      });
+    const tick = async () => {
+      for (let i = 0; i < 5; i++) await Promise.resolve();
+    };
+
+    const leader = send("first", "wechat-1");
+    const leaderOutcome = leader.then(
+      () => "resolved",
+      () => "rejected",
+    );
+    await tick();
+    const follower = send("second", "wechat-2");
+    await tick();
+    prepGate.resolve();
+    expect(await leaderOutcome).toBe("rejected");
+    expect(await follower).toMatchObject({ inputDisposition: "turn" });
+    expect(calls).toEqual(["agent/run"]);
+  });
+
+  test("does not merge /clear or another sender during preparation", async () => {
+    const prepGate = deferred<void>();
+    const firstRun = deferred<{ ok: true; result: { text: string } }>();
+    const steerRequested = deferred<void>();
+    let outbound:
+      | ((line: string, snapshotEntry?: { sessionId: string; event: unknown }) => void)
+      | undefined;
+    const calls: string[] = [];
+    let workspaceReads = 0;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      segmentController: {
+        beginTurn: async () => undefined,
+        requestContextClear: async () => undefined,
+      } as never,
+      listWorkspaces: async () => {
+        workspaceReads += 1;
+        await prepGate.promise;
+        return [];
+      },
+      worker: {
+        subscribeOutbound: (listener) => {
+          outbound = listener;
+          return () => undefined;
+        },
+        requestWorker: async (method, params) => {
+          calls.push(method);
+          if (method === "agent/run") return firstRun.promise;
+          if (method === "agent/steer") {
+            steerRequested.resolve(undefined);
+            outbound?.("", {
+              sessionId: "pet-one",
+              event: { type: "steer_injected", id: params.id, text: params.text },
+            });
+            return { ok: true, result: { accepted: true } };
+          }
+          throw new Error(`unexpected worker method: ${method}`);
+        },
+      },
+      hostCwd: "/safe/pet",
+    });
+    const send = (message: string, id: string, user = "user-one") =>
+      service.dispatch({
+        type: "chat",
+        message,
+        clientMessageId: id,
+        source: imSource(user),
+      });
+    const tick = async () => {
+      for (let i = 0; i < 5; i++) await Promise.resolve();
+    };
+
+    const leader = send("first", "wechat-1");
+    await tick();
+    const clear = send("/clear", "wechat-2");
+    const other = send("hello from two", "wechat-3", "user-two");
+    await tick();
+    prepGate.resolve();
+    await tick();
+    firstRun.resolve({ ok: true, result: { text: "one" } });
+    expect(await leader).toMatchObject({ inputDisposition: "turn" });
+    await clear;
+    await other;
+    expect(calls).not.toContain("agent/steer");
+    expect(calls.filter((c) => c === "agent/run").length).toBeGreaterThanOrEqual(2);
+  });
+
   test("starts independent preparation reads concurrently", async () => {
     const workspacesGate = deferred<void>();
     const catalogGate = deferred<void>();
@@ -3876,7 +4160,10 @@ test("background completion and user chat share admission without cross-run stee
   });
   closureDone.resolve(undefined);
   const [, firstResult, secondResult] = await Promise.all([closure, first, second]);
-  expect(calls).toEqual(["closure", "first user input", "second user input"]);
+  // The closure never receives a steer. The second input joins the first
+  // user turn's preparation window and tries to steer it; the fake rejects, so
+  // it falls back to its own turn.
+  expect(calls).toEqual(["closure", "first user input", "steer", "second user input"]);
   expect(firstResult).toMatchObject({ inputDisposition: "turn" });
   expect(secondResult).toMatchObject({ inputDisposition: "turn" });
 });
