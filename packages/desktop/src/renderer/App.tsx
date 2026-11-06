@@ -2757,15 +2757,10 @@ function App() {
               )}
             </AppMainView>
 
-            {/* PanelArea stays MOUNTED across close→reopen (hidden via display:none
-          when !open) so the browser <webview> and terminal pty survive a dock
-          close — reopening lands on the same live page instead of reloading
-          from scratch (matches Codex). Closing only hides; the webview process
-          is reclaimed by BrowserPanel's own idle-eviction after a few minutes.
-          We still gate on having tabs so an empty dock doesn't mount stray
-          panel bodies before the user has opened anything. The dock admits new
-          local buckets only after runtime selection resolves, while retaining
-          existing bodies invisibly across project selection and cloud views. */}
+            {/* Keep session panels mounted across dock close, project selection and
+          cloud views. The dock admits new buckets only after local runtime
+          selection resolves; existing bodies stay hidden with their own state.
+          BrowserPanel handles idle guest eviction. Empty docks mount no bodies. */}
             {panelBuckets.length > 0 && (
               <React.Suspense
                 fallback={
