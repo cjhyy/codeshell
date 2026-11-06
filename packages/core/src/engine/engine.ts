@@ -1513,6 +1513,7 @@ export class Engine {
     options: EngineRunOptions | undefined,
     runTiming: ReturnType<typeof createRunTiming>,
   ): Promise<EngineResult> {
+    const prepStartedAt = performance.now();
     // Stream wrappers capture this run's identity. Keep them off the caller's
     // options so reusing an options object cannot nest a previous run's wrapper.
     options = { ...options };
@@ -1898,10 +1899,12 @@ export class Engine {
       runId,
       this.config.isSubAgent ? "subagent" : "main",
     );
+    const costStateStartedAt = performance.now();
     session.state.costState = this.usageCostState(session.state.sessionId);
     session.state.stateRevision = this.sessionManager.updateSessionState(session.state.sessionId, {
       costState: session.state.costState,
     });
+    const costStateMs = Math.round(performance.now() - costStateStartedAt);
     return withEngineRunTrace(session.state, cwd, runId, options, () =>
       withUsageOwner(billingOwner, () =>
         runWithSid(session.state.sessionId, async () => {
@@ -2025,6 +2028,13 @@ export class Engine {
             this.runningSession.ownCacheUsage = accounting.getRunCacheUsage;
           }
 
+          // Run start → first model step: session claim, context, hooks, prompt
+          // and the initial cost-state checkpoint. One line per run.
+          logger.info("engine.prep_timing", {
+            sessionId: session.state.sessionId,
+            totalMs: Math.round(performance.now() - prepStartedAt),
+            costStateMs,
+          });
           let result: Awaited<ReturnType<typeof turnLoop.run>>;
           let firstGoalTermination: GoalTerminationReason | undefined;
           try {
@@ -2057,6 +2067,7 @@ export class Engine {
             result,
             firstGoalTermination,
             turnCount: turnLoop.currentTurn,
+            lastTurnBoundaryMs: turnLoop.lastTurnBoundaryMs,
             getRunUsage,
             usageBaseline,
             userContextMsg,
@@ -2094,6 +2105,7 @@ export class Engine {
     result: Awaited<ReturnType<TurnLoop["run"]>>;
     firstGoalTermination: GoalTerminationReason | undefined;
     turnCount: number;
+    lastTurnBoundaryMs?: number;
     getRunUsage: () => ReturnType<import("./model-facade.js").ModelFacade["getUsage"]>;
     usageBaseline: TokenUsage;
     userContextMsg: Message | null;
@@ -2114,6 +2126,7 @@ export class Engine {
       result,
       firstGoalTermination,
       turnCount,
+      lastTurnBoundaryMs,
       getRunUsage,
       usageBaseline,
       userContextMsg,
@@ -2136,6 +2149,7 @@ export class Engine {
       result,
       firstGoalTermination,
       turnCount,
+      lastTurnBoundaryMs,
       getRunUsage,
       usageBaseline,
       userContextMsg,

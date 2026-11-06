@@ -1,11 +1,12 @@
 import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
 import {
-  chmodSync,
+  lstatSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   renameSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -397,21 +398,31 @@ function foreignSessionLedger(sid: string) {
   return { reader, file: join(folder, `${receipt.requestId}.json`) };
 }
 
-test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
-  "session summaries reuse a parsed foreign receipt while its file is unchanged",
+test.skipIf(process.platform === "win32")(
+  "an in-place restore that keeps inode, size and mtime still invalidates a cached receipt",
   () => {
-    const { reader, file } = foreignSessionLedger("cached");
-    expect(reader.summary({ scope: "session", sessionId: "cached" }).requests).toBe(1);
-    // An unreadable file can only still be counted if the summary did not open it.
-    chmodSync(file, 0o000);
-    try {
-      const again = reader.summary({ scope: "session", sessionId: "cached" });
-      expect(again.requests).toBe(1);
-      expect(again.promptTokens).toBe(usage.promptTokens);
-      expect(again.invalidReceipts).toBe(0);
-    } finally {
-      chmodSync(file, 0o600);
-    }
+    const { reader, file } = foreignSessionLedger("restored");
+    // A fixed past mtime can be restored exactly after the rewrite below.
+    utimesSync(file, 1_700_000_000, 1_700_000_000);
+    expect(reader.summary({ scope: "session", sessionId: "restored" }).promptTokens).toBe(100);
+    const before = lstatSync(file);
+    // Let the coarse kernel clock advance so the rewrite gets a new ctime.
+    Bun.sleepSync(50);
+    const original = readFileSync(file, "utf8");
+    const rewritten = original
+      .replace('"promptTokens":100', '"promptTokens":300')
+      .replace('"totalTokens":120', '"totalTokens":320');
+    expect(rewritten.length).toBe(original.length);
+    writeFileSync(file, rewritten); // same inode, same size
+    utimesSync(file, 1_700_000_000, 1_700_000_000);
+    const after = lstatSync(file);
+    expect([after.ino, after.size, after.mtimeMs]).toEqual([
+      before.ino,
+      before.size,
+      before.mtimeMs,
+    ]);
+    expect(after.ctimeMs).not.toBe(before.ctimeMs);
+    expect(reader.summary({ scope: "session", sessionId: "restored" }).promptTokens).toBe(300);
   },
 );
 

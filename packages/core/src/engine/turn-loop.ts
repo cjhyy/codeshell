@@ -297,6 +297,13 @@ export class TurnLoop {
   private lastCompletedModelTurn = 0;
   /** Last model turn whose transcript/persistence boundary was finalized. */
   private lastFinalizedTurn = 0;
+  /**
+   * Wall time of the latest model-turn close (durable turn_boundary append +
+   * the host's onTurnBoundary persistence). Runs after the step's tool batch,
+   * outside turn.gap_timing's window, so the next step reports it there and
+   * the engine reports the final one in engine.finalize_timing.
+   */
+  private turnBoundaryMs: number | undefined;
 
   /**
    * Consecutive on_stop blocks (Goal mode kept the agent going). Reset to 0
@@ -565,8 +572,15 @@ export class TurnLoop {
       return;
     }
     this.lastFinalizedTurn = this.turnCount;
+    const startedAt = performance.now();
     this.deps.transcript.appendTurnBoundary();
     this.config.onTurnBoundary?.(this.turnCount);
+    this.turnBoundaryMs = Math.round(performance.now() - startedAt);
+  }
+
+  /** Duration of the most recent model-turn close; undefined before the first one. */
+  get lastTurnBoundaryMs(): number | undefined {
+    return this.turnBoundaryMs;
   }
 
   private prepareMessagesForModel(messages: Message[]): Message[] {
@@ -1132,6 +1146,8 @@ export class TurnLoop {
           cat: "turn",
           totalMs: Math.round(performance.now() - gapStartedAt),
           ...gapMarks,
+          // The previous step's close ran before this window opened.
+          ...(this.turnBoundaryMs !== undefined ? { turnBoundaryMs: this.turnBoundaryMs } : {}),
         });
         // Model call (with streaming fallback and max_output_tokens continuation)
         this.modelStepTools = this.deps.getTools?.() ?? this.deps.tools;

@@ -583,6 +583,19 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     expect(heartbeatTurns).toEqual([1, 2]);
   });
 
+  it("reports how long closing the model turn took, including host boundary work", async () => {
+    const { deps } = makeTurnLoopDeps([stopResponse("done")]);
+    const loop = new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+      // Stands in for slow persistence (the usage-ledger summary) at the boundary.
+      onTurnBoundary: () => Bun.sleepSync(30),
+    });
+    expect(loop.lastTurnBoundaryMs).toBeUndefined();
+    await loop.run([{ role: "user", content: "go" }]);
+    expect(loop.lastTurnBoundaryMs).toBeGreaterThanOrEqual(30);
+  });
+
   it("persists advancing heartbeat state and separate transcript turns across repeated blocks", async () => {
     let stopHookCalls = 0;
     let heartbeat = 0;

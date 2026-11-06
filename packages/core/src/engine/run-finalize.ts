@@ -146,6 +146,8 @@ export async function finalizeRunSuccess(args: {
   result: TurnLoopRunResult;
   firstGoalTermination: GoalTerminationReason | undefined;
   turnCount: number; // turnLoop.currentTurn
+  /** Close of the final model turn (turn_boundary + onTurnBoundary), timed by TurnLoop. */
+  lastTurnBoundaryMs?: number;
   getRunUsage: () => LLMUsageTracker;
   getRunCacheUsage: () => TokenUsage;
   usageBaseline: TokenUsage;
@@ -422,6 +424,9 @@ export async function finalizeRunSuccess(args: {
     sessionId: session.state.sessionId,
     totalMs: Math.round(performance.now() - finalizeStartedAt),
     sessionEndHookMs,
+    ...(args.lastTurnBoundaryMs !== undefined
+      ? { lastTurnBoundaryMs: args.lastTurnBoundaryMs }
+      : {}),
   });
 
   return {
