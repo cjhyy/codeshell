@@ -73,6 +73,12 @@ export interface RunBehaviorProfile {
   /** Heading line above the runtime-context block. */
   runtimeContextHeading?: string;
   /**
+   * Where the runtime-context block goes. "system" (default) appends it to the
+   * system prompt. "dynamic" keeps the system prompt stable and sends the block
+   * in the per-run volatile context message, past the history cache breakpoint.
+   */
+  runtimeContextPlacement?: "system" | "dynamic";
+  /**
    * Per-run services injected into ToolContext.runScopedServices for tools
    * that share the profile's domain conventions. reportResult(key, value)
    * surfaces structured run output under EngineResult.extensions[profile.id].

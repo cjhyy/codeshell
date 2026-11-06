@@ -187,6 +187,7 @@ import {
 import {
   createRunContextManager,
   composeRunSystemPrompt,
+  runtimeContextDynamicText,
   assembleRunMessages,
 } from "./run-context.js";
 import {
@@ -2322,19 +2323,26 @@ export class Engine {
     ]);
     // Capability health is current-run context. Keep it out of durable history
     // and summaries so a recovered service is not described as offline later.
-    const dynamicContextMsg: Message | null = mcpFailureSummary
-      ? {
-          role: "user",
-          content: [
-            ...(baseDynamicContextMsg
-              ? typeof baseDynamicContextMsg.content === "string"
-                ? [{ type: "text" as const, text: baseDynamicContextMsg.content }]
-                : baseDynamicContextMsg.content
-              : []),
-            { type: "text", text: `<system-reminder>${mcpFailureSummary}</system-reminder>` },
-          ],
-        }
-      : baseDynamicContextMsg;
+    // Runtime context with "dynamic" placement rides here too.
+    const runtimeDynamicText = runtimeContextDynamicText(profile, profileParams);
+    const extraDynamicBlocks = [
+      ...(runtimeDynamicText ? [runtimeDynamicText] : []),
+      ...(mcpFailureSummary ? [`<system-reminder>${mcpFailureSummary}</system-reminder>`] : []),
+    ];
+    const dynamicContextMsg: Message | null =
+      extraDynamicBlocks.length > 0
+        ? {
+            role: "user",
+            content: [
+              ...(baseDynamicContextMsg
+                ? typeof baseDynamicContextMsg.content === "string"
+                  ? [{ type: "text" as const, text: baseDynamicContextMsg.content }]
+                  : baseDynamicContextMsg.content
+                : []),
+              ...extraDynamicBlocks.map((text) => ({ type: "text" as const, text })),
+            ],
+          }
+        : baseDynamicContextMsg;
     this.loadedInstructionSnapshots = structuredClone([...args.instructionSnapshots]);
     const frozenInstructions = args.instructionSnapshots
       .map(

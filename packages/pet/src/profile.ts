@@ -156,6 +156,7 @@ export const PET_BEHAVIOR_PROFILE: RunBehaviorProfile = {
   memoryCurrentProjectOnly: true,
   runtimeContextTag: "pet-world",
   runtimeContextHeading: "# Trusted Pet Runtime Context (non-durable)",
+  runtimeContextPlacement: "dynamic",
   activateForSessionKinds: ["pet"],
   onUserInputChanged: (services) => {
     (services as unknown as PetRunScopedServices).invalidatePetGatewayReply();
