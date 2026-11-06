@@ -187,6 +187,7 @@ import {
 import {
   createRunContextManager,
   composeRunSystemPrompt,
+  runtimeContextDynamicText,
   assembleRunMessages,
 } from "./run-context.js";
 import {
@@ -1512,6 +1513,7 @@ export class Engine {
     options: EngineRunOptions | undefined,
     runTiming: ReturnType<typeof createRunTiming>,
   ): Promise<EngineResult> {
+    const prepStartedAt = performance.now();
     // Stream wrappers capture this run's identity. Keep them off the caller's
     // options so reusing an options object cannot nest a previous run's wrapper.
     options = { ...options };
@@ -1859,6 +1861,12 @@ export class Engine {
           this.compactedMessagesBySession.delete(session.state.sessionId);
           session.state.contextUsageAnchor = undefined;
           archiveStrategy = "notes";
+        } else if (options.archiveBeforeCurrentTurn.fallbackSummary) {
+          // Host-supplied stand-in: no model call blocks the first reply.
+          await this.appendArchiveMarker(session.state.sessionId, {
+            ...anchors,
+            summary: options.archiveBeforeCurrentTurn.fallbackSummary,
+          });
         } else {
           await this.archiveTurnRange(session.state.sessionId, { start: 0, end: 0 }, anchors);
         }
@@ -1891,10 +1899,12 @@ export class Engine {
       runId,
       this.config.isSubAgent ? "subagent" : "main",
     );
+    const costStateStartedAt = performance.now();
     session.state.costState = this.usageCostState(session.state.sessionId);
     session.state.stateRevision = this.sessionManager.updateSessionState(session.state.sessionId, {
       costState: session.state.costState,
     });
+    const costStateMs = Math.round(performance.now() - costStateStartedAt);
     return withEngineRunTrace(session.state, cwd, runId, options, () =>
       withUsageOwner(billingOwner, () =>
         runWithSid(session.state.sessionId, async () => {
@@ -2018,6 +2028,13 @@ export class Engine {
             this.runningSession.ownCacheUsage = accounting.getRunCacheUsage;
           }
 
+          // Run start → first model step: session claim, context, hooks, prompt
+          // and the initial cost-state checkpoint. One line per run.
+          logger.info("engine.prep_timing", {
+            sessionId: session.state.sessionId,
+            totalMs: Math.round(performance.now() - prepStartedAt),
+            costStateMs,
+          });
           let result: Awaited<ReturnType<typeof turnLoop.run>>;
           let firstGoalTermination: GoalTerminationReason | undefined;
           try {
@@ -2050,6 +2067,7 @@ export class Engine {
             result,
             firstGoalTermination,
             turnCount: turnLoop.currentTurn,
+            lastTurnBoundaryMs: turnLoop.lastTurnBoundaryMs,
             getRunUsage,
             usageBaseline,
             userContextMsg,
@@ -2087,6 +2105,7 @@ export class Engine {
     result: Awaited<ReturnType<TurnLoop["run"]>>;
     firstGoalTermination: GoalTerminationReason | undefined;
     turnCount: number;
+    lastTurnBoundaryMs?: number;
     getRunUsage: () => ReturnType<import("./model-facade.js").ModelFacade["getUsage"]>;
     usageBaseline: TokenUsage;
     userContextMsg: Message | null;
@@ -2107,6 +2126,7 @@ export class Engine {
       result,
       firstGoalTermination,
       turnCount,
+      lastTurnBoundaryMs,
       getRunUsage,
       usageBaseline,
       userContextMsg,
@@ -2129,6 +2149,7 @@ export class Engine {
       result,
       firstGoalTermination,
       turnCount,
+      lastTurnBoundaryMs,
       getRunUsage,
       usageBaseline,
       userContextMsg,
@@ -2322,19 +2343,26 @@ export class Engine {
     ]);
     // Capability health is current-run context. Keep it out of durable history
     // and summaries so a recovered service is not described as offline later.
-    const dynamicContextMsg: Message | null = mcpFailureSummary
-      ? {
-          role: "user",
-          content: [
-            ...(baseDynamicContextMsg
-              ? typeof baseDynamicContextMsg.content === "string"
-                ? [{ type: "text" as const, text: baseDynamicContextMsg.content }]
-                : baseDynamicContextMsg.content
-              : []),
-            { type: "text", text: `<system-reminder>${mcpFailureSummary}</system-reminder>` },
-          ],
-        }
-      : baseDynamicContextMsg;
+    // Runtime context with "dynamic" placement rides here too.
+    const runtimeDynamicText = runtimeContextDynamicText(profile, profileParams);
+    const extraDynamicBlocks = [
+      ...(runtimeDynamicText ? [runtimeDynamicText] : []),
+      ...(mcpFailureSummary ? [`<system-reminder>${mcpFailureSummary}</system-reminder>`] : []),
+    ];
+    const dynamicContextMsg: Message | null =
+      extraDynamicBlocks.length > 0
+        ? {
+            role: "user",
+            content: [
+              ...(baseDynamicContextMsg
+                ? typeof baseDynamicContextMsg.content === "string"
+                  ? [{ type: "text" as const, text: baseDynamicContextMsg.content }]
+                  : baseDynamicContextMsg.content
+                : []),
+              ...extraDynamicBlocks.map((text) => ({ type: "text" as const, text })),
+            ],
+          }
+        : baseDynamicContextMsg;
     this.loadedInstructionSnapshots = structuredClone([...args.instructionSnapshots]);
     const frozenInstructions = args.instructionSnapshots
       .map(

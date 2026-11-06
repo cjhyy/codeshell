@@ -36,6 +36,8 @@ import type { PetHostActionReceiptStore } from "./pet-host-action-receipts.js";
 import type { PetPersonalization } from "../../shared/pet-settings.js";
 import type { PetSegmentClosed, PetSegmentTurnStart } from "./pet-segment-controller.js";
 import type { PetChatAttachment } from "../../shared/pet-chat-attachments.js";
+import { dlog } from "../desktop-logger.js";
+import { createPetTurnTimer } from "./pet-turn-timing.js";
 import {
   selectPetChatAttachments,
   type PetChatAttachmentContext,
@@ -374,6 +376,7 @@ interface PetDispatchOptions {
   segmentController?: {
     beginTurn(clientMessageId?: string): Promise<PetSegmentTurnStart | undefined>;
     requestContextClear?(): Promise<void>;
+    requestRolloverBoundary?(): void;
     completeSegmentClosure(closed: PetSegmentClosed): Promise<void>;
     onDelegationClosed(closure: {
       objective: string;
@@ -510,8 +513,8 @@ export function stringifyBoundedPetWorld(world: Readonly<Record<string, unknown>
   // in-budget world serializes to exactly what the per-key trimming below
   // would produce — without the O(keys) full-size checks.
   try {
-    const serialized = JSON.stringify(world);
-    if (typeof serialized === "string" && serialized.length <= MAX_PET_RUNTIME_CONTEXT_LENGTH) {
+    const serialized = serializePetWorldJson(world);
+    if (serialized !== undefined && serialized.length <= MAX_PET_RUNTIME_CONTEXT_LENGTH) {
       return serialized;
     }
   } catch {
@@ -525,7 +528,7 @@ export function stringifyBoundedPetWorld(world: Readonly<Record<string, unknown>
     );
     if (fitted !== OMIT_JSON_VALUE) bounded[key] = fitted;
   }
-  return JSON.stringify(bounded);
+  return serializePetWorldJson(bounded) ?? "{}";
 }
 
 function fitJsonValue(
@@ -569,10 +572,20 @@ function fitJsonValue(
   return OMIT_JSON_VALUE;
 }
 
+/**
+ * The one serializer for the pet world. Untrusted strings must not be able to
+ * close or spoof the <pet-world> wrapper, so every `<` is escaped; budgets are
+ * measured on this escaped form because it is what the model run receives.
+ */
+function serializePetWorldJson(value: unknown): string | undefined {
+  const serialized = JSON.stringify(value);
+  return typeof serialized === "string" ? serialized.replace(/</g, "\\u003c") : undefined;
+}
+
 function jsonFits(value: unknown, maximum: number): boolean {
   try {
-    const serialized = JSON.stringify(value);
-    return typeof serialized === "string" && serialized.length <= maximum;
+    const serialized = serializePetWorldJson(value);
+    return serialized !== undefined && serialized.length <= maximum;
   } catch {
     return false;
   }
@@ -792,8 +805,15 @@ interface PetActiveChatTurn {
   clientMessageId?: string;
   /** Only the original user run accepts steers, never its host receipt turn. */
   workerRunPending: boolean;
+  /** From admission until agent/run returns: same-route input joins this turn. */
+  acceptingFollowers: boolean;
+  /** Resolves true when agent/run starts, false if the turn ends without one. */
+  runStarted: Promise<boolean>;
+  resolveRunStarted: (started: boolean) => void;
   stopRequested: boolean;
   stopConfirmed: boolean;
+  /** The model successfully called NewContext during this turn. */
+  newContextSucceeded: boolean;
   runSettled: boolean;
   followerCount: number;
   steersDrained: Promise<void>;
@@ -821,6 +841,17 @@ function petChatRouteKey(command: PetChatCommand): string {
   );
 }
 
+/**
+ * agent/run and agent/steer are handled concurrently by the worker, and the
+ * run registers its active turn only after an async session lookup. A steer
+ * sent right after agent/run can therefore be rejected simply because the turn
+ * is not registered yet. No worker event marks that moment (session_user_message
+ * is optional and Mimi does not send displayText), so retry briefly while our
+ * own run is still pending instead of falling back to a separate reply.
+ */
+const STEER_REGISTRATION_RETRY_MS = 50;
+const STEER_REGISTRATION_MAX_ATTEMPTS = 40;
+
 function isPetContextControl(command: PetChatCommand): boolean {
   return command.message.trim().toLowerCase() === "/clear";
 }
@@ -829,6 +860,32 @@ function readWorkerBoolean(result: unknown, key: string): boolean | undefined {
   if (!result || typeof result !== "object" || Array.isArray(result)) return undefined;
   const value = (result as Record<string, unknown>)[key];
   return typeof value === "boolean" ? value : undefined;
+}
+
+/**
+ * Max length of `archiveBeforeCurrentTurn.summary` / `fallbackSummary`.
+ * Mirrors the agent/run validation in packages/core/src/protocol/dispatch.ts;
+ * exceeding it rejects the whole run.
+ */
+export const ARCHIVE_SUMMARY_MAX_LENGTH = 4_000;
+
+const ARCHIVE_FALLBACK_LEAD =
+  "Earlier conversation from the previous topic segment was archived. Its journal entry and memories are produced in the background; use SearchHistory for specific details.";
+const ARCHIVE_BRIEF_TRUNCATED_MARKER = "\n…(brief truncated; use SearchHistory)";
+
+/** Fixed sentence plus as much of the carryover brief as fits the protocol limit. */
+export function buildArchiveFallbackSummary(carryoverBrief: string | undefined): string {
+  // eslint-disable-next-line no-control-regex
+  const brief = (carryoverBrief ?? "").replace(/\u0000/gu, "").trim();
+  if (!brief) return ARCHIVE_FALLBACK_LEAD;
+  const prefix = `${ARCHIVE_FALLBACK_LEAD}\n\n`;
+  const room = ARCHIVE_SUMMARY_MAX_LENGTH - prefix.length;
+  if (brief.length <= room) return prefix + brief;
+  const keep = Math.max(0, room - ARCHIVE_BRIEF_TRUNCATED_MARKER.length);
+  let cut = brief.slice(0, keep);
+  // Do not split a surrogate pair at the cut.
+  if (/[\uD800-\uDBFF]$/u.test(cut)) cut = cut.slice(0, -1);
+  return prefix + cut + ARCHIVE_BRIEF_TRUNCATED_MARKER;
 }
 
 export class PetDispatchService {
@@ -862,6 +919,14 @@ export class PetDispatchService {
       const event = snapshotEntry.event;
       if (!event || typeof event !== "object" || Array.isArray(event)) return;
       const record = event as Record<string, unknown>;
+      if (record.type === "tool_result") {
+        if (record.agentId !== undefined) return;
+        const result = record.result as { toolName?: unknown; isError?: unknown } | undefined;
+        if (result?.toolName === "NewContext" && result.isError !== true) {
+          active.newContextSucceeded = true;
+        }
+        return;
+      }
       if (record.type !== "steer_injected" || typeof record.id !== "string") return;
       const steer = active.steers.get(record.id);
       if (steer && !steer.injected) {
@@ -891,14 +956,21 @@ export class PetDispatchService {
     clientMessageId?: string,
   ): PetActiveChatTurn {
     let resolveRunDone!: () => void;
+    let resolveRunStarted!: (started: boolean) => void;
     let resolveFullyDone!: () => void;
     return {
       routeKey,
       sessionId,
       clientMessageId,
       workerRunPending: false,
+      acceptingFollowers: true,
+      runStarted: new Promise<boolean>((resolve) => {
+        resolveRunStarted = resolve;
+      }),
+      resolveRunStarted,
       stopRequested: false,
       stopConfirmed: false,
+      newContextSucceeded: false,
       runSettled: false,
       followerCount: 0,
       steersDrained: Promise.resolve(),
@@ -964,7 +1036,7 @@ export class PetDispatchService {
         }
         if (
           active.routeKey === routeKey &&
-          active.workerRunPending &&
+          active.acceptingFollowers &&
           !active.stopRequested &&
           !isPetContextControl(command)
         ) {
@@ -996,6 +1068,8 @@ export class PetDispatchService {
             : result;
         } finally {
           await this.withChatAdmission(() => {
+            admission.active.acceptingFollowers = false;
+            admission.active.resolveRunStarted(false);
             admission.active.runSettled = true;
             admission.active.resolveRunDone();
             this.finishActiveChatTurnIfDrained(admission.active);
@@ -1018,28 +1092,47 @@ export class PetDispatchService {
       });
       const outcome = await resolveSteerOutcome({
         steer: async () => {
-          if (!admission.active.workerRunPending || admission.active.stopRequested) {
-            return { accepted: false };
+          // Admitted during preparation: wait for the leader's run to start.
+          // A turn that ends without one releases us to re-admit as our own turn.
+          if (!admission.active.workerRunPending) {
+            const started = await admission.active.runStarted;
+            if (!started) return { accepted: false };
           }
-          const response = await this.options.worker.requestWorker(
-            "agent/steer",
-            {
-              sessionId: admission.active.sessionId,
-              expectedClientMessageId: admission.active.clientMessageId,
-              text: command.message.trim(),
-              id: admission.steer.id,
-              ...(command.clientMessageId ? { clientMessageId: command.clientMessageId } : {}),
-              ...(command.attachments?.length ? { attachments: command.attachments } : {}),
-            },
-            {
-              settleOnExit: true,
-              failFast: true,
-              meta: { origin: "host", producer: "pet-dispatch-steer" },
-            },
-          );
-          return {
-            accepted: response.ok && readWorkerBoolean(response.result, "accepted") === true,
-          };
+          const request = () =>
+            this.options.worker.requestWorker(
+              "agent/steer",
+              {
+                sessionId: admission.active.sessionId,
+                expectedClientMessageId: admission.active.clientMessageId,
+                text: command.message.trim(),
+                id: admission.steer.id,
+                ...(command.clientMessageId ? { clientMessageId: command.clientMessageId } : {}),
+                ...(command.attachments?.length ? { attachments: command.attachments } : {}),
+              },
+              {
+                settleOnExit: true,
+                failFast: true,
+                meta: { origin: "host", producer: "pet-dispatch-steer" },
+              },
+            );
+          for (let attempt = 0; ; attempt += 1) {
+            if (!admission.active.workerRunPending || admission.active.stopRequested) {
+              return { accepted: false };
+            }
+            const response = await request();
+            if (response.ok && readWorkerBoolean(response.result, "accepted") === true) {
+              return { accepted: true };
+            }
+            // A rejected steer while our run is still pending usually means the
+            // worker has not registered the turn yet (see the constants above).
+            if (!response.ok || attempt + 1 >= STEER_REGISTRATION_MAX_ATTEMPTS) {
+              return { accepted: false };
+            }
+            await Promise.race([
+              new Promise<void>((resolve) => setTimeout(resolve, STEER_REGISTRATION_RETRY_MS)),
+              admission.active.runDone,
+            ]);
+          }
         },
         wasInjected: () => admission.steer.injected,
         unsteer: async () => {
@@ -1097,6 +1190,8 @@ export class PetDispatchService {
         return await operation();
       } finally {
         await this.withChatAdmission(() => {
+          active.acceptingFollowers = false;
+          active.resolveRunStarted(false);
           active.runSettled = true;
           active.resolveRunDone();
           this.finishActiveChatTurnIfDrained(active);
@@ -1110,8 +1205,10 @@ export class PetDispatchService {
     params: Record<string, unknown>,
   ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }> {
     const active = this.activeChatTurn;
-    if (active && active.clientMessageId === command.clientMessageId)
+    if (active && active.clientMessageId === command.clientMessageId) {
       active.workerRunPending = true;
+      active.resolveRunStarted(true);
+    }
     try {
       return await this.options.worker.requestWorker("agent/run", params, {
         waitForRunCompletion: true,
@@ -1124,6 +1221,7 @@ export class PetDispatchService {
     } finally {
       if (active) {
         active.workerRunPending = false;
+        active.acceptingFollowers = false;
         active.resolveRunDone();
         // Revoke accepted but unused steers before a host receipt run can
         // consume them with its different prompt and capability set.
@@ -2078,6 +2176,10 @@ export class PetDispatchService {
         ) {
           return { ok: false, code: "invalid-command" };
         }
+        const timer = createPetTurnTimer({
+          clientMessageId: command.clientMessageId,
+          log: (msg, data) => dlog("main", msg, data),
+        });
         const metadata = await this.options.metadata.ensure();
         const attachmentScope = {
           routeKey: petChatRouteKey(command),
@@ -2119,9 +2221,81 @@ export class PetDispatchService {
         ) {
           leaderTurn.inputAttachments = structuredClone(attachments);
         }
-        const recentInputAttachments = command.hostWake
-          ? []
-          : await this.recentChatAttachments(attachmentScope, attachments);
+        const wakeTaskContext = this.options.longTasks?.context() as
+          | { active?: PetGroundedTaskRef[]; recent?: PetGroundedTaskRef[] }
+          | undefined;
+        const wakeTasks = command.hostWake
+          ? [...(wakeTaskContext?.active ?? []), ...(wakeTaskContext?.recent ?? [])]
+              .filter(
+                (task) =>
+                  task.sessionId === command.hostWake!.sourceSessionId &&
+                  (!command.hostWake!.taskId || task.taskId === command.hostWake!.taskId),
+              )
+              .slice(0, 1)
+          : [];
+        // The independent reads start together and are awaited where their
+        // results are first needed. settle() keeps a promise that is never
+        // reached (an earlier await threw) from becoming an unhandled rejection.
+        const settle = <T>(promise: Promise<T>): Promise<T> => {
+          promise.catch(() => undefined);
+          return promise;
+        };
+        const attachmentsTask = command.hostWake
+          ? Promise.resolve<InputAttachmentMeta[]>([])
+          : settle(
+              timer.phase("attachments", () =>
+                this.recentChatAttachments(attachmentScope, attachments),
+              ),
+            );
+        const sourcesTask = settle(
+          timer.phase("sources", () =>
+            Promise.all([
+              this.options.listWorkspaces?.() ?? [],
+              this.options.listReusableSessions?.() ?? [],
+              this.options.listFollowUps?.() ?? [],
+              this.options.listOutboundTargets?.() ?? [],
+              this.options.managerModel?.() ?? null,
+              this.getReplyAttachmentRoots(),
+            ]),
+          ),
+        );
+        // Chat status is user-facing truth. Pull the latest durable terminal
+        // markers now instead of waiting for the periodic catalog refresh.
+        const catalogTask = settle(
+          timer.phase("refreshCatalog", async () => {
+            await this.options.aggregator.refreshCatalog?.(false).catch(() => undefined);
+          }),
+        );
+        const contextInputTask = settle(
+          timer.phase("worldContextInput", () =>
+            this.prepareWorldContextInput(
+              {
+                message: command.hostWake?.text ?? command.message.trim(),
+                clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
+                eventKind: command.hostWake ? "follow-up-wake" : "chat",
+                originRef: petContextOriginForSource(
+                  command.hostWake?.completionTarget ?? command.source,
+                  command.clientMessageId,
+                ),
+              },
+              wakeTasks,
+            ),
+          ),
+        );
+        const taskInboxTask = settle(timer.phase("taskInbox", () => this.readTaskInbox()));
+        // Side-effect-free reads only: beginTurn opens segments, so it stays
+        // at its original position after the preparation awaits succeed.
+        const worldPersonalizationTask = settle(
+          contextInputTask.then((contextInput) =>
+            timer.phase("worldPersonalization", () =>
+              Promise.all([
+                this.options.worldContext?.(contextInput),
+                this.currentPersonalization(),
+              ]),
+            ),
+          ),
+        );
+        const recentInputAttachments = await attachmentsTask;
         const [
           listedWorkspaces,
           listedReusableSessions,
@@ -2129,14 +2303,7 @@ export class PetDispatchService {
           listedOutboundTargets,
           configuredManagerModel,
           replyAttachmentRoots,
-        ] = await Promise.all([
-          this.options.listWorkspaces?.() ?? [],
-          this.options.listReusableSessions?.() ?? [],
-          this.options.listFollowUps?.() ?? [],
-          this.options.listOutboundTargets?.() ?? [],
-          this.options.managerModel?.() ?? null,
-          this.getReplyAttachmentRoots(),
-        ]);
+        ] = await sourcesTask;
         const reusableSessionCandidates = [...listedReusableSessions];
         if (this.options.resolveReusableSessionBySelector) {
           const knownSelectors = new Set(
@@ -2150,9 +2317,11 @@ export class PetDispatchService {
           const missingFollowUpSelectors = [
             ...new Set(requestedSelectors.filter((selector) => !knownSelectors.has(selector))),
           ];
-          const resolvedFollowUpSources = await Promise.all(
-            missingFollowUpSelectors.map((selector) =>
-              this.options.resolveReusableSessionBySelector!(selector).catch(() => null),
+          const resolvedFollowUpSources = await timer.phase("followUpSelectors", () =>
+            Promise.all(
+              missingFollowUpSelectors.map((selector) =>
+                this.options.resolveReusableSessionBySelector!(selector).catch(() => null),
+              ),
             ),
           );
           for (const resolved of resolvedFollowUpSources) {
@@ -2187,11 +2356,7 @@ export class PetDispatchService {
                 : workspace.path,
           });
         }
-        // Chat status is user-facing truth. Pull the latest durable terminal
-        // markers now instead of waiting for the periodic catalog refresh.
-        if (this.options.aggregator.refreshCatalog) {
-          await this.options.aggregator.refreshCatalog(false).catch(() => undefined);
-        }
+        await catalogTask;
         const snapshot = this.options.aggregator.getSnapshot();
         const unavailableSessionIds = new Set(
           snapshot.sessions
@@ -2248,55 +2413,34 @@ export class PetDispatchService {
             }`,
           });
         }
-        await mapWithConcurrency(petReusableSessions, 4, async (session) => {
-          const candidate = reusableSessionById.get(session.id)!;
-          if (!/^[A-Za-z0-9_-]{1,128}$/u.test(candidate.sessionId)) return;
-          const recent = await this.recentWorkContext?.get(candidate.sessionId);
-          if (!recent?.latestRequest && !recent?.latestResult) return;
-          session.description += `; untrusted transcript excerpts=${JSON.stringify(recent)}`;
-        });
+        await timer.phase("workContext", () =>
+          mapWithConcurrency(petReusableSessions, 4, async (session) => {
+            const candidate = reusableSessionById.get(session.id)!;
+            if (!/^[A-Za-z0-9_-]{1,128}$/u.test(candidate.sessionId)) return;
+            const recent = await this.recentWorkContext?.get(candidate.sessionId);
+            if (!recent?.latestRequest && !recent?.latestResult) return;
+            session.description += `; untrusted transcript excerpts=${JSON.stringify(recent)}`;
+          }),
+        );
         const petFollowUps = listedFollowUps.slice(0, 100).map((item) => {
           const sourceSession = item.sessionSelector
             ? reusableSessionById.get(item.sessionSelector)
             : undefined;
           return sourceSession ? { ...item, workspaceId: sourceSession.workspaceId } : item;
         });
+        const contextInput = await contextInputTask;
         // Advance the topic-segment clock and, if a long-idle boundary was
         // crossed, obtain a carryover brief (open tasks + recent conclusions)
         // to inject as background continuity via the pet runtime context. The
         // clientMessageId keys the new segment's boundary to this turn so the
         // chat UI can render the divider before it (see PetSegmentController).
         // Read host extras once; canonical projection keys are reserved below
-        // so an extension cannot shadow trusted session state. The three
-        // sources are independent, so they resolve concurrently.
-        const wakeTaskContext = this.options.longTasks?.context() as
-          | { active?: PetGroundedTaskRef[]; recent?: PetGroundedTaskRef[] }
-          | undefined;
-        const wakeTasks = command.hostWake
-          ? [...(wakeTaskContext?.active ?? []), ...(wakeTaskContext?.recent ?? [])]
-              .filter(
-                (task) =>
-                  task.sessionId === command.hostWake!.sourceSessionId &&
-                  (!command.hostWake!.taskId || task.taskId === command.hostWake!.taskId),
-              )
-              .slice(0, 1)
-          : [];
-        const contextInput = await this.prepareWorldContextInput(
-          {
-            message: command.hostWake?.text ?? command.message.trim(),
-            clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
-            eventKind: command.hostWake ? "follow-up-wake" : "chat",
-            originRef: petContextOriginForSource(
-              command.hostWake?.completionTarget ?? command.source,
-              command.clientMessageId,
-            ),
-          },
-          wakeTasks,
-        );
-        const [segmentTurn, worldExtrasRaw, personalization] = await Promise.all([
-          this.options.segmentController?.beginTurn(command.clientMessageId),
-          this.options.worldContext?.(contextInput),
-          this.currentPersonalization(),
+        // so an extension cannot shadow trusted session state.
+        const [segmentTurn, [worldExtrasRaw, personalization]] = await Promise.all([
+          timer.phase("segmentBeginTurn", () =>
+            this.options.segmentController?.beginTurn(command.clientMessageId),
+          ),
+          worldPersonalizationTask,
         ]);
         const carryoverBrief = segmentTurn?.carryoverBrief;
         const worldExtras = worldExtrasRaw ?? {};
@@ -2350,7 +2494,7 @@ export class PetDispatchService {
             .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0)),
         );
         const longTaskContext = this.options.longTasks?.context();
-        const taskInbox = await this.readTaskInbox();
+        const taskInbox = await taskInboxTask;
         const world = {
           version: projectionWorld.version,
           generation: projectionWorld.generation,
@@ -2432,6 +2576,7 @@ export class PetDispatchService {
           ...remainingWorldExtras,
         };
         const runtimeContext = stringifyBoundedPetWorld(world);
+        timer.done();
         const activeChat = this.activeChatTurn;
         const response = await this.requestChatRun(command, {
           sessionId: metadata.petSessionId,
@@ -2471,11 +2616,18 @@ export class PetDispatchService {
                       }
                     : {}),
                   segmentId: segmentTurn.closedSegment.segmentId,
-                  ...(segmentTurn.archiveSummary ? { summary: segmentTurn.archiveSummary } : {}),
+                  ...(segmentTurn.archiveSummary
+                    ? { summary: segmentTurn.archiveSummary }
+                    : {
+                        fallbackSummary: buildArchiveFallbackSummary(segmentTurn.carryoverBrief),
+                      }),
                 },
               }
             : {}),
         }).finally(() => {
+          if (activeChat?.newContextSucceeded) {
+            this.options.segmentController?.requestRolloverBoundary?.();
+          }
           if (!segmentTurn?.closedSegment?.nextBoundaryMessageId) return;
           // Journal/memory extraction is intentionally background work. It
           // starts only after agent/run has settled, so its end anchor is no

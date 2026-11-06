@@ -105,4 +105,23 @@ describe("StreamingToolQueue.drain result integrity", () => {
       error: expect.stringContaining("reply is already committed"),
     });
   });
+  test("unsafe SaveContextNote then GatewayReply execute sequentially in emission order", async () => {
+    const ran: string[] = [];
+    const exec = fakeExecutor({
+      concurrencySafe: () => false,
+      behavior: async (c) => {
+        ran.push(c.toolName);
+        await new Promise((r) => setTimeout(r, c.toolName === "SaveContextNote" ? 10 : 0));
+        return { id: c.id, toolName: c.toolName, result: "ok" } as ToolResult;
+      },
+    });
+    const q = new StreamingToolQueue(exec);
+    q.enqueue(call("note", "SaveContextNote"));
+    q.enqueue(call("reply", "GatewayReply"));
+
+    const results = await q.drain();
+
+    expect(ran).toEqual(["SaveContextNote", "GatewayReply"]);
+    expect(results.map((r) => r.id)).toEqual(["note", "reply"]);
+  });
 });

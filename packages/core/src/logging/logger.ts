@@ -45,7 +45,9 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
 };
 
 function defaultLogsDir(): string {
-  return join(homedir(), ".code-shell", "logs");
+  // CODE_SHELL_HOME is the same override codeShellHome() honors; it also keeps
+  // other packages' tests (which load core from dist, not src) out of ~/.code-shell/logs.
+  return join(process.env.CODE_SHELL_HOME || join(homedir(), ".code-shell"), "logs");
 }
 
 // Mutable so non-CLI hosts (Electron renderer, headless containers, tests)

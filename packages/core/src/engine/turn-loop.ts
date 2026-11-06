@@ -297,6 +297,13 @@ export class TurnLoop {
   private lastCompletedModelTurn = 0;
   /** Last model turn whose transcript/persistence boundary was finalized. */
   private lastFinalizedTurn = 0;
+  /**
+   * Wall time of the latest model-turn close (durable turn_boundary append +
+   * the host's onTurnBoundary persistence). Runs after the step's tool batch,
+   * outside turn.gap_timing's window, so the next step reports it there and
+   * the engine reports the final one in engine.finalize_timing.
+   */
+  private turnBoundaryMs: number | undefined;
 
   /**
    * Consecutive on_stop blocks (Goal mode kept the agent going). Reset to 0
@@ -565,8 +572,15 @@ export class TurnLoop {
       return;
     }
     this.lastFinalizedTurn = this.turnCount;
+    const startedAt = performance.now();
     this.deps.transcript.appendTurnBoundary();
     this.config.onTurnBoundary?.(this.turnCount);
+    this.turnBoundaryMs = Math.round(performance.now() - startedAt);
+  }
+
+  /** Duration of the most recent model-turn close; undefined before the first one. */
+  get lastTurnBoundaryMs(): number | undefined {
+    return this.turnBoundaryMs;
   }
 
   private prepareMessagesForModel(messages: Message[]): Message[] {
@@ -962,6 +976,17 @@ export class TurnLoop {
         }
         this.turnCount++;
 
+        // Timing of the gap between the previous step and this step's model
+        // request (logged once as turn.gap_timing right before the request).
+        const gapStartedAt = performance.now();
+        const gapMarks: Record<string, number> = {};
+        let gapCursor = gapStartedAt;
+        const markGap = (name: string): void => {
+          const at = performance.now();
+          gapMarks[name] = Math.round(at - gapCursor);
+          gapCursor = at;
+        };
+
         // Abort fast-path: bail at the loop TOP before doing any per-turn work.
         // Without this, an aborted child (parent abort, or the 30min per-call
         // registry timeout) would run a full contextManager.manageAsync (itself
@@ -989,6 +1014,7 @@ export class TurnLoop {
         // must never terminate the newer revision.
         const requestedGoalVersion = this.config.goal ? { ...this.config.goal } : undefined;
         await this.consumeQueuedSteer(messages, "normal_step");
+        markGap("steerMs");
         if (this.goalControlStopRequested) {
           messages = this.redactConsumedSensitiveToolResults(messages);
           return { text: finalText, reason: "completed", messages };
@@ -1014,6 +1040,7 @@ export class TurnLoop {
         const turnStartHook = await this.emitHook("on_turn_start", {
           turnNumber: this.turnCount,
         });
+        markGap("turnStartHookMs");
         const turnStartInjection = wrapHookMessages(turnStartHook.messages);
         if (turnStartInjection) {
           this.appendContextReminder(messages, turnStartInjection, true);
@@ -1068,6 +1095,7 @@ export class TurnLoop {
         } else {
           // Context management (async — may trigger LLM summarization)
           messages = await this.manageContextMessages(messages);
+          markGap("contextMs");
 
           // manageAsync can itself issue an LLM summarization call lasting several
           // seconds; if the signal aborted during it, stop here rather than
@@ -1104,6 +1132,7 @@ export class TurnLoop {
             beforeTokens: pending.before,
             afterTokens: pending.after,
           });
+          markGap("postCompactHookMs");
           const compactInjection = wrapHookMessages(compactHook.messages);
           if (compactInjection) {
             this.appendContextReminder(messages, compactInjection, true);
@@ -1113,6 +1142,13 @@ export class TurnLoop {
           messages = this.redactConsumedSensitiveToolResults(messages);
           return { text: finalText, reason: "completed", messages };
         }
+        tlog.info("turn.gap_timing", {
+          cat: "turn",
+          totalMs: Math.round(performance.now() - gapStartedAt),
+          ...gapMarks,
+          // The previous step's close ran before this window opened.
+          ...(this.turnBoundaryMs !== undefined ? { turnBoundaryMs: this.turnBoundaryMs } : {}),
+        });
         // Model call (with streaming fallback and max_output_tokens continuation)
         this.modelStepTools = this.deps.getTools?.() ?? this.deps.tools;
         retainSensitiveMetadata();
@@ -1791,7 +1827,8 @@ export class TurnLoop {
             // A user message arrived while the batch was executing. The
             // committed reply answered the previous content only — lift the
             // reply barrier so the re-driven round can answer the new message
-            // (the host itself rejects duplicate authoritative replies), and
+            // (a later GatewayReply replaces the pending draft, so the host
+            // still delivers a single reply), and
             // keep any background park pending across the extra round.
             if (replyCommitted) this.deps.consumeToolRunYield?.("reply_committed");
             continue;

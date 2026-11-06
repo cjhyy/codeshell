@@ -1,16 +1,27 @@
 import { describe, expect, test } from "bun:test";
-import { shouldStartNewSegment, buildCarryoverBrief, buildWorkMemoryEntry } from "./topic-segment.js";
+import {
+  shouldCloseForNewDay,
+  shouldStartNewSegment,
+  buildCarryoverBrief,
+  buildWorkMemoryEntry,
+} from "./topic-segment.js";
 
 const HOUR = 60 * 60 * 1000;
 
 describe("topic segment boundaries", () => {
   test("starts a new segment after the idle threshold", () => {
-    expect(shouldStartNewSegment({ lastInteractionAt: 0, now: 13 * HOUR, idleMs: 12 * HOUR })).toBe(true);
-    expect(shouldStartNewSegment({ lastInteractionAt: 0, now: 11 * HOUR, idleMs: 12 * HOUR })).toBe(false);
+    expect(shouldStartNewSegment({ lastInteractionAt: 0, now: 13 * HOUR, idleMs: 12 * HOUR })).toBe(
+      true,
+    );
+    expect(shouldStartNewSegment({ lastInteractionAt: 0, now: 11 * HOUR, idleMs: 12 * HOUR })).toBe(
+      false,
+    );
   });
 
   test("treats exactly the idle threshold as a boundary", () => {
-    expect(shouldStartNewSegment({ lastInteractionAt: 0, now: 12 * HOUR, idleMs: 12 * HOUR })).toBe(true);
+    expect(shouldStartNewSegment({ lastInteractionAt: 0, now: 12 * HOUR, idleMs: 12 * HOUR })).toBe(
+      true,
+    );
   });
 
   test("carryover brief includes unfinished tasks and latest conclusions", () => {
@@ -65,5 +76,57 @@ describe("topic segment boundaries", () => {
     const entry = buildWorkMemoryEntry(input);
     expect(entry).not.toBe(input);
     expect(entry).toEqual(input);
+  });
+});
+
+describe("shouldCloseForNewDay", () => {
+  const hour = 3_600_000;
+  const day1Noon = new Date(2026, 10, 5, 12, 0, 0).getTime();
+  const day2Morning = new Date(2026, 10, 6, 9, 0, 0).getTime();
+  test("closes on the first turn of a new local day when the segment is old enough", () => {
+    expect(
+      shouldCloseForNewDay({
+        lastInteractionAt: day1Noon,
+        segmentStartedAt: day1Noon - 2 * hour,
+        now: day2Morning,
+        minSegmentMs: 6 * hour,
+        minIdleMs: 30 * 60_000,
+      }),
+    ).toBe(true);
+  });
+  test("keeps a young segment open across midnight", () => {
+    expect(
+      shouldCloseForNewDay({
+        lastInteractionAt: day1Noon,
+        segmentStartedAt: day2Morning - hour,
+        now: day2Morning,
+        minSegmentMs: 6 * hour,
+        minIdleMs: 30 * 60_000,
+      }),
+    ).toBe(false);
+  });
+  test("never closes within the same local day", () => {
+    expect(
+      shouldCloseForNewDay({
+        lastInteractionAt: day1Noon,
+        segmentStartedAt: day1Noon - 10 * hour,
+        now: day1Noon + hour,
+        minSegmentMs: 6 * hour,
+        minIdleMs: 30 * 60_000,
+      }),
+    ).toBe(false);
+  });
+  test("does not split a live conversation that crosses midnight", () => {
+    const last = new Date(2026, 10, 5, 23, 58, 0).getTime();
+    const now = new Date(2026, 10, 6, 0, 3, 0).getTime();
+    expect(
+      shouldCloseForNewDay({
+        lastInteractionAt: last,
+        segmentStartedAt: last - 10 * hour,
+        now,
+        minSegmentMs: 6 * hour,
+        minIdleMs: 30 * 60_000,
+      }),
+    ).toBe(false);
   });
 });

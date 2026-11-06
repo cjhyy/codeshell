@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   buildCarryoverBrief,
   buildWorkMemoryEntry,
+  shouldCloseForNewDay,
   shouldStartNewSegment,
   type PetTopicSegment,
   type PetWorkMemoryEntry,
@@ -57,6 +58,12 @@ export interface PetSegmentTurnStart {
   /** Fixed host summary used for a manual context reset instead of an LLM summary. */
   archiveSummary?: string;
 }
+
+/** A segment younger than this is not closed just because the date changed. */
+export const PET_SEGMENT_DAILY_MIN_MS = 6 * 60 * 60 * 1000;
+
+/** A live conversation that merely crosses midnight is not split: require this much idle time. */
+export const PET_SEGMENT_DAILY_MIN_IDLE_MS = 30 * 60 * 1000;
 
 export const PET_MANUAL_CLEAR_ARCHIVE_SUMMARY =
   "The user explicitly cleared the previous Mimi conversation. Treat the next message as a fresh topic. Do not infer or continue details from the cleared conversation.";
@@ -127,6 +134,12 @@ export class PetSegmentController {
    */
   private beginTurnQueue: Promise<unknown> = Promise.resolve();
   private manualClearPending = false;
+  private rolloverBoundaryPending = false;
+
+  /** The model refreshed its own context (NewContext); close the segment on the next turn. */
+  requestRolloverBoundary(): void {
+    this.rolloverBoundaryPending = true;
+  }
 
   constructor(private readonly options: PetSegmentControllerOptions) {}
 
@@ -199,8 +212,23 @@ export class PetSegmentController {
     // brief, since work memory is still empty). Only a *later* turn that crosses
     // the idle gap opens a visible new segment.
     const isFirstInteraction = lastInteractionAt === 0;
+    // First interaction never opens a visible boundary; keep the flag pending then.
+    const rollover = this.rolloverBoundaryPending && !isFirstInteraction;
+    const dayCheckSegment = this.options.store.activeSegment();
+    const newDay =
+      !isFirstInteraction &&
+      dayCheckSegment !== undefined &&
+      shouldCloseForNewDay({
+        lastInteractionAt,
+        segmentStartedAt: dayCheckSegment.startedAt,
+        now,
+        minSegmentMs: PET_SEGMENT_DAILY_MIN_MS,
+        minIdleMs: PET_SEGMENT_DAILY_MIN_IDLE_MS,
+      });
     const openNew =
       manualClear ||
+      rollover ||
+      newDay ||
       (!isFirstInteraction &&
         shouldStartNewSegment({ lastInteractionAt, now, idleMs: this.options.idleMs }));
     if (!openNew) {
@@ -239,6 +267,7 @@ export class PetSegmentController {
     });
     await this.options.store.setLastInteractionAt(now);
     if (manualClear) this.manualClearPending = false;
+    if (rollover) this.rolloverBoundaryPending = false;
     return {
       ...(briefText ? { carryoverBrief: briefText } : {}),
       ...(closedSegment ? { closedSegment } : {}),

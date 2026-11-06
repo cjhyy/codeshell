@@ -327,6 +327,48 @@ describe("Engine archive persistence", () => {
     }
   });
 
+  it.each([
+    { name: "uses fallbackSummary without a model call", fallback: "older topic archived" },
+    { name: "still summarizes when no fallbackSummary is given", fallback: undefined },
+  ])("pre-run archive $name when notes rollover is unavailable", async ({ fallback }) => {
+    const dir = mkdtempSync(join(tmpdir(), "cs-eng-pre-run-fallback-"));
+    const eng = new Engine({
+      llm: { provider: fakeProvider, model: "fake-model", apiKey: "test" } satisfies LLMConfig,
+      cwd: dir,
+      sessionStorageDir: join(dir, "sessions"),
+      headless: true,
+    });
+    (eng as any).hooks.clear();
+    fakeRequests.length = 0;
+    try {
+      const bundle = (eng as any).sessionManager.create(dir, "fake-model", fakeProvider);
+      bundle.transcript.appendMessage("user", "OLD TOPIC", { clientMessageId: "old-boundary" });
+      bundle.transcript.appendMessage("assistant", "OLD REPLY");
+      await eng.run("BRAND NEW TOPIC", {
+        sessionId: bundle.state.sessionId,
+        clientMessageId: "new-boundary",
+        archiveBeforeCurrentTurn: {
+          fromClientMessageId: "old-boundary",
+          segmentId: "seg-fallback",
+          ...(fallback ? { fallbackSummary: fallback } : {}),
+        },
+      });
+      const persisted = (eng as any).sessionManager.resume(bundle.state.sessionId);
+      const events = persisted.transcript.getEvents("range_archive");
+      expect(events).toHaveLength(1);
+      if (fallback) {
+        expect(fakeRequests).toHaveLength(1);
+        expect(String(events[0].data.summary)).toContain(fallback);
+      } else {
+        expect(fakeRequests.length).toBeGreaterThan(1);
+        expect(String(events[0].data.summary)).toContain(SUMMARY_TEXT);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+      fakeRequests.length = 0;
+    }
+  });
+
   it("archiveTurnRange with a dead anchor still summarizes but persists no marker", async () => {
     const summarizerDir = mkdtempSync(join(tmpdir(), "cs-eng-arch-sum-dead-"));
     const summarizerEngine = new Engine({

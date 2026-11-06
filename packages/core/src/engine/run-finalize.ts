@@ -146,6 +146,8 @@ export async function finalizeRunSuccess(args: {
   result: TurnLoopRunResult;
   firstGoalTermination: GoalTerminationReason | undefined;
   turnCount: number; // turnLoop.currentTurn
+  /** Close of the final model turn (turn_boundary + onTurnBoundary), timed by TurnLoop. */
+  lastTurnBoundaryMs?: number;
   getRunUsage: () => LLMUsageTracker;
   getRunCacheUsage: () => TokenUsage;
   usageBaseline: TokenUsage;
@@ -179,6 +181,8 @@ export async function finalizeRunSuccess(args: {
   hasUnverifiedWrites?: () => boolean;
   hasIncompleteBatch?: () => Promise<boolean>;
 }): Promise<EngineResult> {
+  const finalizeStartedAt = performance.now();
+  let sessionEndHookMs = 0;
   const {
     session,
     result: originalResult,
@@ -260,6 +264,7 @@ export async function finalizeRunSuccess(args: {
   // are notify-only — any returned messages are dropped because the run
   // is already over and there's no next turn to inject into.
   if (profile?.disableHooks !== true) {
+    const sessionEndStartedAt = performance.now();
     await args.emitHook(
       "on_session_end",
       {
@@ -269,12 +274,17 @@ export async function finalizeRunSuccess(args: {
       },
       options?.signal,
     );
+    sessionEndHookMs = Math.round(performance.now() - sessionEndStartedAt);
   }
 
   // Ephemeral side chats must never leak into durable memory, even after
   // the user explicitly elevates tool permissions for a turn. Lifecycle
   // isolation is independent of the run-scoped behavior/permission mode.
-  if (!unverified && !isEphemeralSessionState(session.state)) {
+  if (
+    !unverified &&
+    !isEphemeralSessionState(session.state) &&
+    profile?.disableMemoryPipeline !== true
+  ) {
     // Fire-and-forget memory pipeline: extract durable memories from the
     // transcript, save a session summary, and conditionally trigger
     // auto-dream consolidation. Doesn't block the Engine result.
@@ -409,6 +419,15 @@ export async function finalizeRunSuccess(args: {
   const petWorkDelegationMirror = (
     runExtensions?.pet as { workDelegation?: LegacyPetWorkDelegation } | undefined
   )?.workDelegation;
+
+  logger.info("engine.finalize_timing", {
+    sessionId: session.state.sessionId,
+    totalMs: Math.round(performance.now() - finalizeStartedAt),
+    sessionEndHookMs,
+    ...(args.lastTurnBoundaryMs !== undefined
+      ? { lastTurnBoundaryMs: args.lastTurnBoundaryMs }
+      : {}),
+  });
 
   return {
     text: result.text,

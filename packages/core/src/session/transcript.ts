@@ -1205,6 +1205,48 @@ export class Transcript {
   }
 
   /**
+   * Load only the newest `maxTailBytes` for idempotent host appends. Callers
+   * dedupe ids written moments earlier, which always sit in the tail; the
+   * full audit file is never parsed. Small files use the normal loader.
+   * Event ids are random (nanoid), so a partial history cannot collide; the
+   * turn number is floored at the newest tail event's turn so appends never
+   * regress it when no turn_boundary falls inside the window.
+   */
+  static loadTailForAppend(filePath: string, maxTailBytes: number = 4 * 1024 * 1024): Transcript {
+    if (!existsSync(filePath)) return new Transcript(filePath);
+    const fd = openSync(filePath, "r");
+    let text: string;
+    try {
+      const size = fstatSync(fd).size;
+      if (size <= maxTailBytes) return Transcript.loadFromFile(filePath);
+      const buffer = Buffer.allocUnsafe(maxTailBytes);
+      const read = readSync(fd, buffer, 0, maxTailBytes, size - maxTailBytes);
+      const window = buffer.subarray(0, read);
+      const newline = window.indexOf(0x0a);
+      text = window.subarray(newline + 1).toString("utf8");
+    } finally {
+      closeSync(fd);
+    }
+    const transcript = new Transcript(filePath);
+    const events: TranscriptEvent[] = [];
+    for (const line of text.split("\n")) {
+      if (!line.trim()) continue;
+      try {
+        events.push(JSON.parse(line) as TranscriptEvent);
+      } catch {
+        // A torn line at the window edge is skipped like any malformed line.
+      }
+    }
+    transcript.loadEvents(events);
+    for (const event of events) {
+      if (typeof event.turnNumber === "number" && event.turnNumber > transcript.currentTurn) {
+        transcript.currentTurn = event.turnNumber;
+      }
+    }
+    return transcript;
+  }
+
+  /**
    * Load the active replay for a model run while leaving the append-only audit
    * transcript untouched on disk. A host-authored from-less range archive
    * replaces everything before its `to` anchor, so a large Mimi transcript can

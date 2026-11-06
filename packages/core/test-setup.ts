@@ -12,6 +12,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll } from "bun:test";
+import { setLogsDir } from "./src/logging/logger.js";
 
 // Only set it if a test hasn't pinned one already (lets per-test overrides win).
 if (!process.env.CODE_SHELL_HOME) {
@@ -42,6 +43,12 @@ if (!process.env.CODE_SHELL_HOME) {
 // active. Publish the sandbox separately under a name no test manages, so
 // sessionsRoot() can fall back to it instead of the developer's real store.
 process.env.CODE_SHELL_TEST_HOME = process.env.CODE_SHELL_HOME;
+
+// Core's logger writes engine-*.log under homedir() regardless of
+// CODE_SHELL_HOME, so every Engine/TurnLoop test appended to the developer's
+// real ~/.code-shell/logs. Redirect it into the sandbox (a redirect rather than
+// CODE_SHELL_LOG=0 so tests that read logs still work).
+setLogsDir(join(process.env.CODE_SHELL_HOME!, "logs"));
 
 // The TUI's UpdateBanner runs `npm view @cjhyy/code-shell@latest` on every App
 // mount (and could register an on-exit `npm i -g`). Under test that is a real

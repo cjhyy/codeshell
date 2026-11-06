@@ -57,6 +57,8 @@ export interface RunBehaviorProfile {
   disableHooks?: boolean;
   /** Skip auxiliary title generation for this run. */
   disableSessionTitle?: boolean;
+  /** Skip the post-run memory pipeline (extraction, session memory, auto-dream). Reading memory is unaffected. */
+  disableMemoryPipeline?: boolean;
   /**
    * When true, the injected persistent-memory index is trimmed to this run's
    * project: global-layer project-type / dream-scope records tied to other
@@ -65,13 +67,20 @@ export interface RunBehaviorProfile {
    */
   memoryCurrentProjectOnly?: boolean;
   /**
-   * Wrapper tag for host-provided runtime context injected at the system
-   * prompt tail (e.g. "pet-world"). Injection happens only when both this tag
+   * Wrapper tag for host-provided runtime context (e.g. "pet-world"). Placement
+   * (system prompt tail vs. volatile context message) follows
+   * `runtimeContextPlacement`. Injection happens only when both this tag
    * and profileParams.runtimeContext (a string) are present.
    */
   runtimeContextTag?: string;
   /** Heading line above the runtime-context block. */
   runtimeContextHeading?: string;
+  /**
+   * Where the runtime-context block goes. "system" (default) appends it to the
+   * system prompt. "dynamic" keeps the system prompt stable and sends the block
+   * in the per-run volatile context message, past the history cache breakpoint.
+   */
+  runtimeContextPlacement?: "system" | "dynamic";
   /**
    * Per-run services injected into ToolContext.runScopedServices for tools
    * that share the profile's domain conventions. reportResult(key, value)
@@ -175,6 +184,11 @@ export interface EngineRunOptions {
     segmentId?: string;
     /** Host-authored replacement for the archived span; skips the summarizer. */
     summary?: string;
+    /**
+     * Host-authored replacement used only when the cheap notes rollover is
+     * unavailable; avoids a blocking summarizer call before the first reply.
+     */
+    fallbackSummary?: string;
   };
   attachments?: InputAttachmentMeta[];
   /** Named per-run behavior profile supplied by interactive product surfaces. */

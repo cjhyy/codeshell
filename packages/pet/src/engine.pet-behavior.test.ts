@@ -243,8 +243,15 @@ describe("Engine pet behavior", () => {
     expect(first.systemPrompt).not.toContain("<!--PET:AUTO_DELEGATE-->");
     expect(first.systemPrompt).toContain("decide automatically");
     expect(first.systemPrompt).toContain("complaints, or corrections about Mimi's own routing");
-    expect(first.systemPrompt).toContain("runtime-only-hunter2");
-    expect(JSON.stringify(first.messages)).not.toContain("runtime-only-hunter2");
+    expect(first.systemPrompt).not.toContain("runtime-only-hunter2");
+    // Volatile context message sits at the tail; a turn-limit reminder may follow it.
+    const worldIndex = first.messages.findIndex((m) =>
+      JSON.stringify(m).includes("runtime-only-hunter2"),
+    );
+    expect(worldIndex).toBeGreaterThanOrEqual(first.messages.length - 2);
+    expect(JSON.stringify(first.messages.slice(0, worldIndex))).not.toContain(
+      "runtime-only-hunter2",
+    );
     expect(JSON.stringify(first.messages)).not.toContain("Goal 工具状态");
     expect(JSON.stringify(first.messages)).not.toContain("pet-invisible-skill");
     expect(JSON.stringify(first.messages)).not.toContain("active goal");

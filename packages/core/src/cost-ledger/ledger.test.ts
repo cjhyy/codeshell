@@ -1,5 +1,14 @@
 import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync, readdirSync, readFileSync } from "node:fs";
+import {
+  lstatSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -375,6 +384,58 @@ test("two processes cannot overwrite an external receipt after both observe it a
   } finally {
     for (const child of processes) child.kill();
   }
+});
+
+function foreignSessionLedger(sid: string) {
+  const storageDir = directory();
+  const writer = new UsageLedger({ storageDir });
+  const receipt = bill(writer, sid);
+  // A second Runtime (worker restart, another process) sees the receipt only on
+  // disk. Its clock is past the settle window, so unchanged files are cacheable.
+  const reader = new UsageLedger({ storageDir, now: () => Date.now() + 60_000 });
+  expect(reader.adoptSession(sid, writer.sessionState(sid))).toBe(true);
+  const folder = join(storageDir, readdirSync(storageDir)[0]!);
+  return { reader, file: join(folder, `${receipt.requestId}.json`) };
+}
+
+test.skipIf(process.platform === "win32")(
+  "an in-place restore that keeps inode, size and mtime still invalidates a cached receipt",
+  () => {
+    const { reader, file } = foreignSessionLedger("restored");
+    // A fixed past mtime can be restored exactly after the rewrite below.
+    utimesSync(file, 1_700_000_000, 1_700_000_000);
+    expect(reader.summary({ scope: "session", sessionId: "restored" }).promptTokens).toBe(100);
+    const before = lstatSync(file);
+    // Let the coarse kernel clock advance so the rewrite gets a new ctime.
+    Bun.sleepSync(50);
+    const original = readFileSync(file, "utf8");
+    const rewritten = original
+      .replace('"promptTokens":100', '"promptTokens":300')
+      .replace('"totalTokens":120', '"totalTokens":320');
+    expect(rewritten.length).toBe(original.length);
+    writeFileSync(file, rewritten); // same inode, same size
+    utimesSync(file, 1_700_000_000, 1_700_000_000);
+    const after = lstatSync(file);
+    expect([after.ino, after.size, after.mtimeMs]).toEqual([
+      before.ino,
+      before.size,
+      before.mtimeMs,
+    ]);
+    expect(after.ctimeMs).not.toBe(before.ctimeMs);
+    expect(reader.summary({ scope: "session", sessionId: "restored" }).promptTokens).toBe(300);
+  },
+);
+
+test("cached foreign receipts follow atomic rewrites and deletions by other ledgers", () => {
+  const { reader, file } = foreignSessionLedger("rewritten");
+  expect(reader.summary({ scope: "session", sessionId: "rewritten" }).promptTokens).toBe(100);
+  const receipt = JSON.parse(readFileSync(file, "utf8"));
+  receipt.usage = { promptTokens: 300, completionTokens: 20, totalTokens: 320 };
+  writeFileSync(`${file}.tmp`, JSON.stringify(receipt));
+  renameSync(`${file}.tmp`, file);
+  expect(reader.summary({ scope: "session", sessionId: "rewritten" }).promptTokens).toBe(300);
+  rmSync(file);
+  expect(reader.summary({ scope: "session", sessionId: "rewritten" }).requests).toBe(0);
 });
 
 test("legacy coverage gaps remain explicit after the Session reference is saved and restored", () => {

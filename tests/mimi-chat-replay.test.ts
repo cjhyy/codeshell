@@ -54,6 +54,33 @@ function response(toolName?: string, args: Record<string, unknown> = {}, text = 
   };
 }
 
+function messageText(message: CreateMessageOptions["messages"][number] | undefined): string {
+  const content = message?.content;
+  if (typeof content === "string") return content;
+  return Array.isArray(content)
+    ? content.map((block) => ("text" in block ? String(block.text ?? "") : "")).join("")
+    : "";
+}
+
+/**
+ * Mimi's per-turn world rides the trailing volatile context message, never the
+ * cacheable system prompt or persisted history. Returns the world text only
+ * when it sits in that final message.
+ */
+function petWorld(request: CreateMessageOptions): string {
+  const text = messageText(request.messages.at(-1));
+  const start = text.indexOf("<pet-world>");
+  const end = text.lastIndexOf("</pet-world>");
+  return start >= 0 && end > start ? text.slice(start, end) : "";
+}
+
+/** A host fact must reach the model through the volatile world only. */
+function expectWorldFact(request: CreateMessageOptions, fact: string): void {
+  expect(petWorld(request)).toContain(fact);
+  expect(request.systemPrompt).not.toContain(fact);
+  expect(JSON.stringify(request.messages.slice(0, -1))).not.toContain(fact);
+}
+
 class ReplayClient extends LLMClientBase {
   protected initClient(): void {}
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
@@ -63,7 +90,7 @@ class ReplayClient extends LLMClientBase {
     );
     if (
       !options.tools?.length &&
-      (turnLimitSummary || !options.systemPrompt.includes('"delegationLaunchReceipt":'))
+      (turnLimitSummary || !petWorld(options).includes('"delegationLaunchReceipt":'))
     ) {
       if (turnLimitSummary) script.summaries += 1;
       // Deliberately wrong terminal summary: a host must not turn exhausted
@@ -152,6 +179,7 @@ function createHarness(
   const launches: PetAutoDelegation[] = [];
   const outcomes: PetDispatchResult[] = [];
   const steered = deferred();
+  const steerAccepted = deferred();
   const scopedSteers: Array<{ expectedClientMessageId: unknown; accepted: unknown }> = [];
   let replyActions = 0;
   let clearCount = 0;
@@ -187,6 +215,7 @@ function createHarness(
               accepted: (result as { accepted?: boolean }).accepted,
             });
             steered.resolve();
+            if ((result as { accepted?: boolean }).accepted === true) steerAccepted.resolve();
           }
           return { ok: true, result };
         } catch (error) {
@@ -284,6 +313,10 @@ function createHarness(
     dispatcher,
     client,
     steered,
+    steerAccepted,
+    get steerAttempts() {
+      return scopedSteers.length;
+    },
     expectAcceptedScopedSteer: () => {
       expect(scopedSteers).toEqual([
         { expectedClientMessageId: expect.stringMatching(/^im:wechat:/), accepted: true },
@@ -391,30 +424,53 @@ describe("Mimi historical chat replay through the real manager stack", () => {
     const releaseClosure = deferred();
     h.script.steps.push(
       async (request) => {
-        expect(request.systemPrompt).toContain("fixture work process failed");
+        expectWorldFact(request, "fixture work process failed");
         closureEntered.resolve();
         await releaseClosure.promise;
         return response(undefined, {}, "工作失败，保留失败原因。");
       },
-      () => response("GatewayReply", { text: "第一条用户输入的回复。" }),
-      () => response("GatewayReply", { text: "第二条用户输入的回复。" }),
+      // Same-route inputs queued behind the closure merge once it ends: the
+      // first re-admits as leader and the second joins it as a follower
+      // (turn-loop spec §3.2 item 5). Hold the leader's first round until the
+      // follower's steer is accepted so the merge does not depend on timing.
+      async (request) => {
+        // Bounded so a regression fails on the merge assertions, not a timeout.
+        await Promise.race([h.steerAccepted.promise, Bun.sleep(3_000)]);
+        expect(request.tools?.map((tool) => tool.name)).toContain("GatewayReply");
+        return response("GatewayReply", { text: "第一条用户输入的回复。" });
+      },
+      (request) => {
+        const context = JSON.stringify(request.messages);
+        expect(context).toContain("第一条用户输入");
+        expect(context).toContain("第二条用户输入");
+        expect(petWorld(request)).not.toContain("fixture work process failed");
+        return response("GatewayReply", { text: "两条用户输入的合并回复。" });
+      },
     );
     const closure = h.dispatcher.reportLongTaskClosure(closedWorkFixture());
     await closureEntered.promise;
     const first = h.say("第一条用户输入", "queued-user-one");
     const second = h.say("第二条用户输入", "queued-user-two");
     await Bun.sleep(10);
+    // The internal closure owns the session: user inputs neither start a model
+    // round nor try to steer into it, and a chat stop cannot cancel it.
     expect(h.script.requests).toHaveLength(2);
+    expect(h.steerAttempts).toBe(0);
     expect(await h.dispatcher.dispatch({ type: "stop_chat" })).toMatchObject({ stopped: false });
     releaseClosure.resolve();
     const [report] = await Promise.all([closure, first, second]);
     expect(report.text).toContain("工作失败");
-    expect(h.sent.slice(1).map((item) => item.message.text)).toEqual([
-      "第一条用户输入的回复。",
-      "第二条用户输入的回复。",
-    ]);
-    expect(h.events.some((event) => event.type === "steer_injected")).toBe(false);
+    // Closure (1 round) + merged user turn (draft round + steered round).
     expect(h.script.requests).toHaveLength(4);
+    expect(h.sent.slice(1).map((item) => item.message.text)).toEqual(["两条用户输入的合并回复。"]);
+    expect(h.replyActions).toBe(2);
+    expect(h.events.filter((event) => event.type === "steer_injected")).toHaveLength(1);
+    expect(
+      h.outcomes.filter(
+        (outcome) => outcome.ok && outcome.type === "chat" && outcome.suppressReply,
+      ),
+    ).toHaveLength(1);
+    expect(h.transcript()).toContain("第二条用户输入");
   });
 
   test("a real delegation failure can synchronously close work and compose its receipt", async () => {
@@ -435,11 +491,11 @@ describe("Mimi historical chat replay through the real manager stack", () => {
         return delegated;
       },
       (request) => {
-        expect(request.systemPrompt).toContain("fixture work process failed");
+        expectWorldFact(request, "fixture work process failed");
         return response(undefined, {}, "工作进程失败，尚未完成。");
       },
       (request) => {
-        expect(request.systemPrompt).toContain("fixture launch rejected");
+        expectWorldFact(request, "fixture launch rejected");
         expect(request.tools?.map((tool) => tool.name)).not.toContain("DelegateWork");
         return response(undefined, {}, "本次工作未启动，请重试。");
       },
@@ -511,7 +567,7 @@ describe("Mimi historical chat replay through the real manager stack", () => {
       });
       if (failLaunch) {
         h.script.steps.push((request) => {
-          expect(request.systemPrompt).toContain("fixture launch rejected");
+          expectWorldFact(request, "fixture launch rejected");
           expect(request.tools?.map((tool) => tool.name)).not.toContain("DelegateWork");
           expect(request.tools?.map((tool) => tool.name)).not.toContain("GatewayReply");
           return response(undefined, {}, "工作会话未能启动，队列拒绝了这次派发。");
@@ -537,6 +593,10 @@ describe("Mimi historical chat replay through the real manager stack", () => {
       if (failLaunch) {
         h.script.steps.push((request) => {
           expect(request.tools?.map((tool) => tool.name)).toContain("GatewayReply");
+          // The receipt world belonged to the receipt turn only; the next
+          // user turn's world must not carry it again.
+          expect(petWorld(request)).not.toBe("");
+          expect(petWorld(request)).not.toContain('"delegationLaunchReceipt":');
           expect(request.systemPrompt).not.toContain('"delegationLaunchReceipt":');
           return response("GatewayReply", { text: "可以，先讨论下一步。" });
         });
@@ -768,8 +828,13 @@ describe("Mimi historical chat replay through the real manager stack", () => {
     expect(h.replyActions).toBe(100);
     expect(h.sent).toHaveLength(100);
     expect(h.launches).toHaveLength(0);
-    const history = h.script.requests.at(-1)!.messages;
-    expect(JSON.stringify(history)).not.toContain("<pet-world>");
+    // Each turn's world rides only that turn's trailing volatile message; none
+    // of the 100 earlier worlds may accumulate in history or the transcript.
+    const last = h.script.requests.at(-1)!;
+    expect(petWorld(last)).not.toBe("");
+    expect(JSON.stringify(last.messages.slice(0, -1))).not.toContain("<pet-world>");
+    expect(JSON.stringify(last.messages).split("<pet-world>")).toHaveLength(2);
+    expect(h.transcript()).not.toContain("<pet-world>");
     expect(h.script.summaries).toBe(0);
   }, 120_000);
 });

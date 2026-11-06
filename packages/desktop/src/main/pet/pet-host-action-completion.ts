@@ -99,7 +99,7 @@ export class PetHostActionReceiptService implements PetHostActionReceiptRecorder
     try {
       const sessionDir = join(this.options.sessionsRootDir, input.petSessionId);
       await mkdir(sessionDir, { recursive: true, mode: 0o700 });
-      const transcript = Transcript.loadFromFile(join(sessionDir, "transcript.jsonl"));
+      const transcript = Transcript.loadTailForAppend(join(sessionDir, "transcript.jsonl"));
       if (input.userMessage?.trim() && !transcript.hasClientMessageId(input.clientMessageId)) {
         transcript.appendMessage("user", input.userMessage.trim(), {
           clientMessageId: input.clientMessageId,

@@ -53,6 +53,11 @@ export interface TurnOpts {
     segmentId?: string;
     /** Host-authored replacement for the archived span; skips the summarizer. */
     summary?: string;
+    /**
+     * Host-authored replacement used only when the cheap notes rollover is
+     * unavailable; avoids a blocking summarizer call before the first reply.
+     */
+    fallbackSummary?: string;
   };
   /** Structured input attachments for this turn. */
   attachments?: InputAttachmentMeta[];
