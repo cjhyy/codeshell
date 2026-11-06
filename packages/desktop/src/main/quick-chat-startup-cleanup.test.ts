@@ -114,3 +114,13 @@ test("concurrent restore requests share the in-flight main window", async () => 
   expect(await restore()).toBe(window);
   expect(creates).toBe(1);
 });
+
+test("the startup main window shares the restorer with Dock activation", async () => {
+  // A Dock click queued while startup is blocked (e.g. by a Keychain prompt)
+  // fires `activate` right after the startup window is requested. Both paths must
+  // share one restorer, or the gap before mainWindows.add creates a second window.
+  const { readFile } = await import("node:fs/promises");
+  const source = await readFile(new URL("./index.ts", import.meta.url), "utf8");
+  const startup = source.match(/const initialWindowReady = ([^;]+);/);
+  expect(startup?.[1]).toBe("restoreMainWindow()");
+});
