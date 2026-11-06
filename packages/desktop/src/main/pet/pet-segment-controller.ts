@@ -57,12 +57,13 @@ export interface PetSegmentTurnStart {
   closedSegment?: PetSegmentClosed;
   /** Fixed host summary used for a manual context reset instead of an LLM summary. */
   archiveSummary?: string;
-  /** The model already refreshed its context via NewContext; the caller must not archive the closed segment again. */
-  contextAlreadyRefreshed?: boolean;
 }
 
 /** A segment younger than this is not closed just because the date changed. */
 export const PET_SEGMENT_DAILY_MIN_MS = 6 * 60 * 60 * 1000;
+
+/** A live conversation that merely crosses midnight is not split: require this much idle time. */
+export const PET_SEGMENT_DAILY_MIN_IDLE_MS = 30 * 60 * 1000;
 
 export const PET_MANUAL_CLEAR_ARCHIVE_SUMMARY =
   "The user explicitly cleared the previous Mimi conversation. Treat the next message as a fresh topic. Do not infer or continue details from the cleared conversation.";
@@ -211,7 +212,8 @@ export class PetSegmentController {
     // brief, since work memory is still empty). Only a *later* turn that crosses
     // the idle gap opens a visible new segment.
     const isFirstInteraction = lastInteractionAt === 0;
-    const rollover = this.rolloverBoundaryPending;
+    // First interaction never opens a visible boundary; keep the flag pending then.
+    const rollover = this.rolloverBoundaryPending && !isFirstInteraction;
     const dayCheckSegment = this.options.store.activeSegment();
     const newDay =
       !isFirstInteraction &&
@@ -221,6 +223,7 @@ export class PetSegmentController {
         segmentStartedAt: dayCheckSegment.startedAt,
         now,
         minSegmentMs: PET_SEGMENT_DAILY_MIN_MS,
+        minIdleMs: PET_SEGMENT_DAILY_MIN_IDLE_MS,
       });
     const openNew =
       manualClear ||
@@ -269,7 +272,6 @@ export class PetSegmentController {
       ...(briefText ? { carryoverBrief: briefText } : {}),
       ...(closedSegment ? { closedSegment } : {}),
       ...(manualClear ? { archiveSummary: PET_MANUAL_CLEAR_ARCHIVE_SUMMARY } : {}),
-      ...(rollover ? { contextAlreadyRefreshed: true } : {}),
     };
   }
 

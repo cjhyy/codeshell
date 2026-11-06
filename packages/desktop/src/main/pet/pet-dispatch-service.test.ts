@@ -3473,12 +3473,18 @@ describe("PetDispatchService", () => {
   describe("NewContext segment rollover", () => {
     async function runWithNewContext(options: {
       toolResult?: { toolName: string; isError: boolean };
+      agentId?: string;
       segmentTurn?: unknown;
-    }): Promise<{ rolloverCalls: number; runParams?: Record<string, unknown> }> {
+    }): Promise<{
+      rolloverCalls: number;
+      closureCalls: number;
+      runParams?: Record<string, unknown>;
+    }> {
       let outbound:
         | ((line: string, snapshotEntry?: { sessionId: string; event: unknown }) => void)
         | undefined;
       let rolloverCalls = 0;
+      let closureCalls = 0;
       let runParams: Record<string, unknown> | undefined;
       const service = new PetDispatchService({
         metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
@@ -3497,7 +3503,11 @@ describe("PetDispatchService", () => {
             if (options.toolResult) {
               outbound?.("", {
                 sessionId: "pet-one",
-                event: { type: "tool_result", result: options.toolResult },
+                event: {
+                  type: "tool_result",
+                  result: options.toolResult,
+                  ...(options.agentId ? { agentId: options.agentId } : {}),
+                },
               });
             }
             return { ok: true, result: { text: "ok" } };
@@ -3508,13 +3518,16 @@ describe("PetDispatchService", () => {
           requestRolloverBoundary: () => {
             rolloverCalls += 1;
           },
-          completeSegmentClosure: async () => undefined,
+          completeSegmentClosure: async () => {
+            closureCalls += 1;
+          },
           onDelegationClosed: async () => undefined,
         },
         hostCwd: "/safe/pet",
       });
       await service.dispatch({ type: "chat", message: "hi", clientMessageId: "m1" });
-      return { rolloverCalls, runParams };
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      return { rolloverCalls, closureCalls, runParams };
     }
 
     test("a successful NewContext requests a rollover boundary", async () => {
@@ -3531,15 +3544,22 @@ describe("PetDispatchService", () => {
       expect(out.rolloverCalls).toBe(0);
     });
 
-    test("does not archive again when the model already refreshed its context", async () => {
+    test("a sub-agent NewContext result does not request a rollover boundary", async () => {
+      const out = await runWithNewContext({
+        toolResult: { toolName: "NewContext", isError: false },
+        agentId: "child",
+      });
+      expect(out.rolloverCalls).toBe(0);
+    });
+
+    test("still archives the closed segment before the run and distills it once", async () => {
       const out = await runWithNewContext({
         segmentTurn: {
           closedSegment: { segmentId: "s1", nextBoundaryMessageId: "m1", startedAt: 0, endedAt: 1 },
-          contextAlreadyRefreshed: true,
         },
       });
-      expect(out.runParams).toBeDefined();
-      expect(out.runParams).not.toHaveProperty("archiveBeforeCurrentTurn");
+      expect(out.runParams).toHaveProperty("archiveBeforeCurrentTurn");
+      expect(out.closureCalls).toBe(1);
     });
   });
 

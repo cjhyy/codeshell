@@ -90,6 +90,7 @@ describe("shouldCloseForNewDay", () => {
         segmentStartedAt: day1Noon - 2 * hour,
         now: day2Morning,
         minSegmentMs: 6 * hour,
+        minIdleMs: 30 * 60_000,
       }),
     ).toBe(true);
   });
@@ -100,6 +101,7 @@ describe("shouldCloseForNewDay", () => {
         segmentStartedAt: day2Morning - hour,
         now: day2Morning,
         minSegmentMs: 6 * hour,
+        minIdleMs: 30 * 60_000,
       }),
     ).toBe(false);
   });
@@ -110,6 +112,20 @@ describe("shouldCloseForNewDay", () => {
         segmentStartedAt: day1Noon - 10 * hour,
         now: day1Noon + hour,
         minSegmentMs: 6 * hour,
+        minIdleMs: 30 * 60_000,
+      }),
+    ).toBe(false);
+  });
+  test("does not split a live conversation that crosses midnight", () => {
+    const last = new Date(2026, 10, 5, 23, 58, 0).getTime();
+    const now = new Date(2026, 10, 6, 0, 3, 0).getTime();
+    expect(
+      shouldCloseForNewDay({
+        lastInteractionAt: last,
+        segmentStartedAt: last - 10 * hour,
+        now,
+        minSegmentMs: 6 * hour,
+        minIdleMs: 30 * 60_000,
       }),
     ).toBe(false);
   });

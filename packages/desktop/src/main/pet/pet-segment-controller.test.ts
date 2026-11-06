@@ -274,7 +274,7 @@ describe("PetSegmentController", () => {
     expect((await controller.beginTurn("c"))?.closedSegment).toBeUndefined();
   });
 
-  test("a NewContext rollover closes the segment once and marks the context as refreshed", async () => {
+  test("a NewContext rollover closes the segment once", async () => {
     const store = new FakePetWorkMemoryStore();
     let now = HOUR;
     const controller = new PetSegmentController({
@@ -289,7 +289,6 @@ describe("PetSegmentController", () => {
     now += MINUTE;
     const turn = await controller.beginTurn("b");
     expect(turn?.closedSegment).toBeDefined();
-    expect(turn?.contextAlreadyRefreshed).toBe(true);
     now += MINUTE;
     expect((await controller.beginTurn("c"))?.closedSegment).toBeUndefined();
   });

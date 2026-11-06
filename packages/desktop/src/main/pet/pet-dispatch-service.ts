@@ -878,6 +878,7 @@ export class PetDispatchService {
       if (!event || typeof event !== "object" || Array.isArray(event)) return;
       const record = event as Record<string, unknown>;
       if (record.type === "tool_result") {
+        if (record.agentId !== undefined) return;
         const result = record.result as { toolName?: unknown; isError?: unknown } | undefined;
         if (result?.toolName === "NewContext" && result.isError !== true) {
           active.newContextSucceeded = true;
@@ -2505,9 +2506,7 @@ export class PetDispatchService {
           kind: "pet",
           permissionMode: "default",
           clientMessageId: command.clientMessageId,
-          ...(segmentTurn?.closedSegment &&
-          !segmentTurn.contextAlreadyRefreshed &&
-          command.clientMessageId
+          ...(segmentTurn?.closedSegment && command.clientMessageId
             ? {
                 archiveBeforeCurrentTurn: {
                   ...(segmentTurn.closedSegment.closingBoundaryMessageId &&

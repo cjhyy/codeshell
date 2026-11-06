@@ -55,6 +55,7 @@ export function shouldCloseForNewDay(input: {
   segmentStartedAt: number;
   now: number;
   minSegmentMs: number;
+  minIdleMs: number;
 }): boolean {
   const last = new Date(input.lastInteractionAt);
   const now = new Date(input.now);
@@ -62,7 +63,11 @@ export function shouldCloseForNewDay(input: {
     last.getFullYear() === now.getFullYear() &&
     last.getMonth() === now.getMonth() &&
     last.getDate() === now.getDate();
-  return !sameDay && input.now - input.segmentStartedAt >= input.minSegmentMs;
+  return (
+    !sameDay &&
+    input.now - input.segmentStartedAt >= input.minSegmentMs &&
+    input.now - input.lastInteractionAt >= input.minIdleMs
+  );
 }
 
 /** Carryover injected at the head of a new segment: open tasks + recent outcomes. */
