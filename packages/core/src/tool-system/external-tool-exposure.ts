@@ -12,7 +12,7 @@ import type {
   ExternalToolCompatibility,
   ExternalToolReview,
 } from "./external-tool-compatibility.js";
-import reviewedSnapshot from "./external-tool-exposure.reviewed.json";
+import reviewedSnapshot from "./external-tool-exposure.reviewed.json" with { type: "json" };
 
 export type ExposureRationale = ExternalToolCompatibility & { tool: string };
 
