@@ -194,6 +194,8 @@ export interface PanelAppCookieCredential {
   domain?: string;
   platform?: string;
   appUrl?: string;
+  /** Settings → Cookie「AI 可自动取用」: use this login without a per-use prompt. */
+  autoUseByAI?: boolean;
   autoInjectByAI?: boolean;
   cookieExpiry?: {
     nextExpiryAt?: string;

@@ -802,6 +802,7 @@ const panelAppBridge = new PanelAppBridge({
             domain: credential.meta?.domain,
             platform: credential.meta?.platform,
             appUrl: credential.meta?.appUrl,
+            autoUseByAI: credential.autoUseByAI,
             autoInjectByAI: credential.autoInjectByAI,
             cookieExpiry: summarizeCookieExpiry(credential.secret),
           };
@@ -3639,7 +3640,9 @@ app.whenReady().then(async () => {
   void warmTrustCache()
     .then(() => panelAppBridge.initializeMedia())
     .catch((error) => dlog("main", "panel.media.recovery.failed", { error: String(error) }));
-  const initialWindowReady = createWindow();
+  // Share the restorer with `activate`: a Dock click queued during a blocked
+  // startup would otherwise open a second main window before this one registers.
+  const initialWindowReady = restoreMainWindow();
   initUpdater();
   sweepStaleLeases(); // clear any cookie-lease temp files left by a prior crash
   sweepStaleCredentialCookies(); // clear UseCredential temp cookies.txt left by a prior crash
