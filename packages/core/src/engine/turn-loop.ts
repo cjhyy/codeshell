@@ -1811,7 +1811,8 @@ export class TurnLoop {
             // A user message arrived while the batch was executing. The
             // committed reply answered the previous content only — lift the
             // reply barrier so the re-driven round can answer the new message
-            // (the host itself rejects duplicate authoritative replies), and
+            // (a later GatewayReply replaces the pending draft, so the host
+            // still delivers a single reply), and
             // keep any background park pending across the extra round.
             if (replyCommitted) this.deps.consumeToolRunYield?.("reply_committed");
             continue;

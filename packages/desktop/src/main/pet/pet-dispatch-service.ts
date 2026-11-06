@@ -841,6 +841,17 @@ function petChatRouteKey(command: PetChatCommand): string {
   );
 }
 
+/**
+ * agent/run and agent/steer are handled concurrently by the worker, and the
+ * run registers its active turn only after an async session lookup. A steer
+ * sent right after agent/run can therefore be rejected simply because the turn
+ * is not registered yet. No worker event marks that moment (session_user_message
+ * is optional and Mimi does not send displayText), so retry briefly while our
+ * own run is still pending instead of falling back to a separate reply.
+ */
+const STEER_REGISTRATION_RETRY_MS = 50;
+const STEER_REGISTRATION_MAX_ATTEMPTS = 40;
+
 function isPetContextControl(command: PetChatCommand): boolean {
   return command.message.trim().toLowerCase() === "/clear";
 }
@@ -1061,28 +1072,41 @@ export class PetDispatchService {
             const started = await admission.active.runStarted;
             if (!started) return { accepted: false };
           }
-          if (!admission.active.workerRunPending || admission.active.stopRequested) {
-            return { accepted: false };
+          const request = () =>
+            this.options.worker.requestWorker(
+              "agent/steer",
+              {
+                sessionId: admission.active.sessionId,
+                expectedClientMessageId: admission.active.clientMessageId,
+                text: command.message.trim(),
+                id: admission.steer.id,
+                ...(command.clientMessageId ? { clientMessageId: command.clientMessageId } : {}),
+                ...(command.attachments?.length ? { attachments: command.attachments } : {}),
+              },
+              {
+                settleOnExit: true,
+                failFast: true,
+                meta: { origin: "host", producer: "pet-dispatch-steer" },
+              },
+            );
+          for (let attempt = 0; ; attempt += 1) {
+            if (!admission.active.workerRunPending || admission.active.stopRequested) {
+              return { accepted: false };
+            }
+            const response = await request();
+            if (response.ok && readWorkerBoolean(response.result, "accepted") === true) {
+              return { accepted: true };
+            }
+            // A rejected steer while our run is still pending usually means the
+            // worker has not registered the turn yet (see the constants above).
+            if (!response.ok || attempt + 1 >= STEER_REGISTRATION_MAX_ATTEMPTS) {
+              return { accepted: false };
+            }
+            await Promise.race([
+              new Promise<void>((resolve) => setTimeout(resolve, STEER_REGISTRATION_RETRY_MS)),
+              admission.active.runDone,
+            ]);
           }
-          const response = await this.options.worker.requestWorker(
-            "agent/steer",
-            {
-              sessionId: admission.active.sessionId,
-              expectedClientMessageId: admission.active.clientMessageId,
-              text: command.message.trim(),
-              id: admission.steer.id,
-              ...(command.clientMessageId ? { clientMessageId: command.clientMessageId } : {}),
-              ...(command.attachments?.length ? { attachments: command.attachments } : {}),
-            },
-            {
-              settleOnExit: true,
-              failFast: true,
-              meta: { origin: "host", producer: "pet-dispatch-steer" },
-            },
-          );
-          return {
-            accepted: response.ok && readWorkerBoolean(response.result, "accepted") === true,
-          };
         },
         wasInjected: () => admission.steer.injected,
         unsteer: async () => {
