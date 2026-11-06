@@ -251,3 +251,82 @@ describe("AskUserMessageView layout", () => {
     expect(html).toContain("min-w-0");
   });
 });
+
+describe("AskUserMessageView deadline", () => {
+  test("an open question shows how long it can still be answered", () => {
+    const html = renderToStaticMarkup(
+      <AskUserMessageView message={ask({ expiresAt: Date.now() + 125_000 })} onAnswer={() => {}} />,
+    );
+    expect(html).toMatch(/2:0\d 后未回答将自动跳过/);
+    expect(html).not.toMatch(/<button[^>]*\sdisabled=""/);
+  });
+
+  test("questions without a deadline and answered questions show no countdown", () => {
+    for (const message of [ask(), ask({ expiresAt: Date.now() + 60_000, answer: "允许本次" })]) {
+      const html = renderToStaticMarkup(
+        <AskUserMessageView message={message} onAnswer={() => {}} />,
+      );
+      expect(html).not.toContain("后未回答将自动跳过");
+      expect(html).not.toContain("已超时");
+    }
+  });
+
+  test("a passed deadline locks every control before the host retires the card", () => {
+    const html = renderToStaticMarkup(
+      <AskUserMessageView message={ask({ expiresAt: Date.now() - 1 })} onAnswer={() => {}} />,
+    );
+    expect(html).toContain("已超时，不能再回答");
+    const buttons = html.match(/<button[^>]*>/g) ?? [];
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const button of buttons) expect(button).toMatch(/\sdisabled=""/);
+  });
+
+  test("an open card locks itself when the deadline passes and ignores late clicks", async () => {
+    ensureMiniDom();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const answers: string[] = [];
+    const option = () =>
+      descendants(container).find(
+        (node) => node.tagName === "BUTTON" && textOf(node).startsWith("允许本次"),
+      )!;
+    try {
+      await act(async () => {
+        root.render(
+          <AskUserMessageView
+            message={ask({ expiresAt: Date.now() + 200 })}
+            onAnswer={(_id, answer) => {
+              answers.push(answer);
+            }}
+          />,
+        );
+        await flushMicrotasks();
+      });
+      expect(props(option()).disabled).toBeFalsy();
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+      });
+      expect(props(option()).disabled).toBe(true);
+      expect(textOf(container)).toContain("已超时，不能再回答");
+      await act(async () => {
+        props(option()).onClick({ isPropagationStopped: () => false, stopPropagation() {} });
+        await flushMicrotasks();
+      });
+      expect(answers).toEqual([]);
+    } finally {
+      await act(async () => root.unmount());
+      document.body.removeChild(container);
+    }
+  });
+
+  test("the deadline copy is available in Chinese and English", () => {
+    expect(translate("zh", "msg.ask.expiresIn", { time: "1:05" })).toBe("1:05 后未回答将自动跳过");
+    expect(translate("en", "msg.ask.expiresIn", { time: "1:05" })).toBe(
+      "Skipped automatically in 1:05 if unanswered",
+    );
+    expect(translate("en", "msg.ask.expired")).toBe(
+      "Timed out — this question can no longer be answered",
+    );
+  });
+});

@@ -40,6 +40,7 @@ import { basename, dirname, join, parse, relative, sep } from "node:path";
 import { readInstalledPlugins } from "../plugins/installedPlugins.js";
 import { canonicalPath } from "../workspace/canonical-key.js";
 import type { ToolContext } from "./context.js";
+import { UserDecisionError } from "../exceptions.js";
 
 export type PathDecision = "allow" | "ask" | "deny";
 
@@ -922,29 +923,45 @@ async function promptForPathApproval(
   const ALLOW_ONCE = "允许本次";
   const ALLOW_SESSION = "本目录本会话允许";
   const ALLOW_PROJECT = "本目录本项目允许";
-  const answer = (
-    await ctx.askUser(`${title}：\n${c.resolvedPath}\n\n原因：${c.reason}\n是否允许本次操作？`, {
-      header,
-      options: [
-        { label: ALLOW_ONCE, description: "仅允许当前这一次文件操作继续执行", tone: "ok" },
-        {
-          label: ALLOW_SESSION,
-          description: `本会话内不再询问 ${grantSubject}`,
-          tone: "ok",
-        },
-        {
-          label: ALLOW_PROJECT,
-          description: `永久允许 ${grantSubject}（写入 .code-shell/settings.local.json）`,
-          tone: "ok",
-        },
-        { label: "拒绝", description: "阻止当前文件操作", tone: "danger" },
-      ],
-      // Closed-set decision: no free-text "其它…" box. The answer is matched
-      // against the labels below by exact string, so a typed answer must not
-      // be allowed (it could never match and would silently deny).
-      optionsOnly: true,
-    })
-  ).trim();
+  let rawAnswer: string;
+  try {
+    rawAnswer = await ctx.askUser(
+      `${title}：\n${c.resolvedPath}\n\n原因：${c.reason}\n是否允许本次操作？`,
+      {
+        header,
+        options: [
+          { label: ALLOW_ONCE, description: "仅允许当前这一次文件操作继续执行", tone: "ok" },
+          {
+            label: ALLOW_SESSION,
+            description: `本会话内不再询问 ${grantSubject}`,
+            tone: "ok",
+          },
+          {
+            label: ALLOW_PROJECT,
+            description: `永久允许 ${grantSubject}（写入 .code-shell/settings.local.json）`,
+            tone: "ok",
+          },
+          { label: "拒绝", description: "阻止当前文件操作", tone: "danger" },
+        ],
+        // Closed-set decision: no free-text "其它…" box. The answer is matched
+        // against the labels below by exact string, so a typed answer must not
+        // be allowed (it could never match and would silently deny).
+        optionsOnly: true,
+        // Expiry and cancellation must not be reported as an explicit refusal.
+        throwOnFailure: true,
+      },
+    );
+  } catch (error) {
+    if (!(error instanceof UserDecisionError)) throw error;
+    const outcome =
+      error.failure === "timed_out"
+        ? "timed out (no answer before the deadline)"
+        : error.failure === "cancelled"
+          ? "cancelled"
+          : `unavailable (${error.failure})`;
+    return `Error: path approval ${outcome}. No permission was granted. Path: ${c.resolvedPath}`;
+  }
+  const answer = rawAnswer.trim();
 
   // A late answer must not grant access or persist permission after Stop.
   if (ctx.signal?.aborted) return "Error: path approval cancelled — run stopped";

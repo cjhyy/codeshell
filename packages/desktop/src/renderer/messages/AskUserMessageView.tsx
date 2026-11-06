@@ -8,6 +8,32 @@ import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import { resolveAnswerTone, toneEchoStyle } from "./askUserTone";
 
+/** Re-render each second until `until` passes; no timer without a deadline. */
+function useNow(until: number | undefined): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (until === undefined) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = (current: number) => {
+      if (current < until) timer = setTimeout(tick, Math.min(1_000, until - current));
+    };
+    const tick = () => {
+      const current = Date.now();
+      setNow(current);
+      schedule(current);
+    };
+    schedule(Date.now());
+    return () => clearTimeout(timer);
+  }, [until]);
+  return now;
+}
+
+function formatRemaining(ms: number): string {
+  const total = Math.ceil(ms / 1_000);
+  const minutes = Math.floor(total / 60);
+  return `${minutes}:${String(total % 60).padStart(2, "0")}`;
+}
+
 interface Props {
   message: AskUserMessage;
   /** Called with the user's chosen / typed answer string. */
@@ -40,6 +66,12 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
   const questionId = useId();
   const otherId = useId();
   const returnFocus = useRef<HTMLElement | null>(null);
+  // The host retires an expired card with its own resolution; lock the card at
+  // the deadline so a late click can't look like it still counts meanwhile.
+  const deadline = message.answer === undefined ? message.expiresAt : undefined;
+  const now = useNow(deadline);
+  const expired = deadline !== undefined && now >= deadline;
+  const locked = submitting || expired;
   useEffect(() => {
     if (submitting || !returnFocus.current) return;
     const opener = returnFocus.current;
@@ -99,7 +131,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
   const hasOptions = !!message.options && message.options.length > 0;
   const submit = (val: string): void => {
     const v = val.trim();
-    if (!v || submittingRef.current) return;
+    if (!v || submittingRef.current || expired) return;
     submittingRef.current = true;
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setSubmitting(true);
@@ -144,6 +176,13 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
           >
             {message.question}
           </span>
+          {deadline !== undefined && (
+            <span className={cn("text-xs", expired ? "text-status-warn" : "text-muted-foreground")}>
+              {expired
+                ? t("msg.ask.expired")
+                : t("msg.ask.expiresIn", { time: formatRemaining(deadline - now) })}
+            </span>
+          )}
         </div>
 
         {message.asynchronous && (
@@ -198,18 +237,18 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                           className={cn(
                             "flex cursor-pointer items-start gap-2 rounded-md border p-2 transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring",
                             isPicked && "border-primary bg-primary/10",
-                            submitting && "cursor-default opacity-50",
+                            locked && "cursor-default opacity-50",
                           )}
                         >
                           <Checkbox
                             id={checkboxId}
                             checked={isPicked}
-                            disabled={submitting}
+                            disabled={locked}
                             className="mt-0.5"
                             aria-labelledby={titleId}
                             aria-describedby={descriptionId}
                             onCheckedChange={(checked) => {
-                              if (submittingRef.current) return;
+                              if (submittingRef.current || expired) return;
                               setPicked((previous) => {
                                 const next = new Set(previous);
                                 if (checked === true) next.add(index);
@@ -224,7 +263,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                         <Button
                           type="button"
                           variant="ghost"
-                          disabled={submitting}
+                          disabled={locked}
                           aria-labelledby={titleId}
                           aria-describedby={descriptionId}
                           className="block h-auto w-full whitespace-normal rounded-md border p-2 text-left font-normal transition-colors hover:bg-accent"
@@ -241,7 +280,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                     <Button
                       type="button"
                       variant="ghost"
-                      disabled={submitting}
+                      disabled={locked}
                       aria-expanded={otherOpen}
                       aria-controls={otherId}
                       className={cn(
@@ -266,7 +305,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                     {otherOpen && (
                       <Input
                         autoFocus={!message.asynchronous}
-                        disabled={submitting}
+                        disabled={locked}
                         aria-label={t("msg.ask.otherPlaceholder")}
                         aria-describedby={questionId}
                         placeholder={t("msg.ask.otherPlaceholder")}
@@ -299,7 +338,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                       <Button
                         type="button"
                         size="sm"
-                        disabled={submitting || (picked.size === 0 && !otherDraft.trim())}
+                        disabled={locked || (picked.size === 0 && !otherDraft.trim())}
                         onClick={submitMulti}
                       >
                         {t("msg.ask.submit")}
@@ -309,7 +348,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                         <Button
                           type="button"
                           size="sm"
-                          disabled={submitting || !otherDraft.trim()}
+                          disabled={locked || !otherDraft.trim()}
                           onClick={() => submit(otherDraft)}
                         >
                           {t("msg.ask.answer")}
@@ -324,7 +363,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
             <div className="flex items-center gap-2">
               <Input
                 autoFocus={!message.asynchronous}
-                disabled={submitting}
+                disabled={locked}
                 aria-labelledby={questionId}
                 placeholder={t("msg.ask.answerPlaceholder")}
                 onCompositionStart={() => {
@@ -354,7 +393,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
               <Button
                 type="button"
                 size="sm"
-                disabled={submitting || !draft.trim()}
+                disabled={locked || !draft.trim()}
                 onClick={() => submit(draft)}
               >
                 {t("msg.ask.answer")}

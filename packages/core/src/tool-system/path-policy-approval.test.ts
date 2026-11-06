@@ -8,6 +8,7 @@ import {
   _resetSessionPathGrants,
 } from "./path-policy.js";
 import type { ToolContext } from "./context.js";
+import { UserDecisionError } from "../exceptions.js";
 
 // TODO §5.1 — path-approval fixes:
 //  (1) approval match must be EXACT, not startsWith (a future "允许本会话"
@@ -483,6 +484,46 @@ describe("受保护路径授权只覆盖该受保护项", () => {
       await enforcePathPolicyWithApproval(join(dir, ".git", "config"), "write", ctx),
     ).toContain("denied");
     expect(asked).toHaveLength(2);
+    cleanup();
+  });
+});
+
+describe("超时/取消不能说成用户拒绝", () => {
+  test.each([
+    ["timed_out", "path approval timed out"],
+    ["cancelled", "path approval cancelled"],
+    ["session_closed", "path approval unavailable"],
+  ] as const)("a %s question is reported as such, not as a denial", async (failure, wording) => {
+    _resetSessionPathGrants();
+    const ws = tmpWorkspace();
+    let throwOnFailure: boolean | undefined;
+    const ctx = {
+      cwd: ws,
+      sessionId: `s-${failure}`,
+      askUser: async (_question: string, opts?: { throwOnFailure?: boolean }) => {
+        throwOnFailure = opts?.throwOnFailure;
+        throw new UserDecisionError(failure, "no answer");
+      },
+    } as unknown as ToolContext;
+    const result = await enforcePathPolicyWithApproval(join(tmpdir(), "late.txt"), "write", ctx);
+    expect(throwOnFailure).toBe(true);
+    expect(result).toContain(wording);
+    expect(result).toContain("No permission was granted");
+    expect(result).not.toContain("denied");
+    cleanup();
+  });
+
+  test("a non-decision error from the approval UI still propagates", async () => {
+    const ws = tmpWorkspace();
+    const ctx = {
+      cwd: ws,
+      askUser: async () => {
+        throw new Error("transport exploded");
+      },
+    } as unknown as ToolContext;
+    await expect(
+      enforcePathPolicyWithApproval(join(tmpdir(), "late.txt"), "write", ctx),
+    ).rejects.toThrow("transport exploded");
     cleanup();
   });
 });

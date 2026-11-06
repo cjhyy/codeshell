@@ -1,6 +1,32 @@
 import React from "react";
 import type { ApprovalRequestPayload } from "./protocol.js";
 import { summarizeApproval } from "../src/lib/riskClassify.js";
+
+/** Re-render each second until `until` passes; no timer without a deadline. */
+function useNow(until: number | undefined): number {
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    if (until === undefined) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = (current: number) => {
+      if (current < until) timer = setTimeout(tick, Math.min(1_000, until - current));
+    };
+    const tick = () => {
+      const current = Date.now();
+      setNow(current);
+      schedule(current);
+    };
+    schedule(Date.now());
+    return () => clearTimeout(timer);
+  }, [until]);
+  return now;
+}
+
+function formatRemaining(ms: number): string {
+  const total = Math.ceil(ms / 1_000);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
 export function HubApprovalCard({
   payload,
   onDecide,
@@ -17,6 +43,12 @@ export function HubApprovalCard({
   const [answer, setAnswer] = React.useState("");
   const [selected, setSelected] = React.useState<number[]>([]);
   const isAskUser = payload.request.toolName === "__ask_user__";
+  // The host resolves an expired request itself; lock the card at the deadline
+  // so a late click can't look like it still counts before that arrives.
+  const deadline = typeof payload.expiresAt === "number" ? payload.expiresAt : undefined;
+  const now = useNow(deadline);
+  const expired = deadline !== undefined && now >= deadline;
+  const locked = busy || !connected || expired;
   const choices = (
     Array.isArray(payload.request.args.options) ? payload.request.args.options : []
   ).flatMap((option): { label: string; description?: string }[] => {
@@ -58,6 +90,13 @@ export function HubApprovalCard({
       {payload.request.description ? (
         <div className="approval-desc">{payload.request.description}</div>
       ) : null}
+      {deadline !== undefined ? (
+        <span className="muted">
+          {expired
+            ? `已超时，不能再${isAskUser ? "回答" : "处理"}`
+            : `${formatRemaining(deadline - now)} 后${isAskUser ? "未回答将自动跳过" : "未处理将自动拒绝"}`}
+        </span>
+      ) : null}
       {!isAskUser ? (
         <>
           <div className="approval-summary">{summary}</div>
@@ -80,7 +119,7 @@ export function HubApprovalCard({
                     <input
                       type="checkbox"
                       checked={selected.includes(index)}
-                      disabled={busy || !connected}
+                      disabled={locked}
                       onChange={(event) => {
                         const checked = event.currentTarget.checked;
                         setSelected((current) =>
@@ -101,7 +140,7 @@ export function HubApprovalCard({
                   <button
                     className="approval-option"
                     key={`${choice.label}:${index}`}
-                    disabled={busy || !connected}
+                    disabled={locked}
                     onClick={() => onDecide(payload, true, choice.label)}
                   >
                     <span>{choice.label}</span>
@@ -133,17 +172,13 @@ export function HubApprovalCard({
         {!isAskUser || !optionsOnly || multiSelect ? (
           <button
             className="send"
-            disabled={busy || !connected || (isAskUser && !submittedAnswer)}
+            disabled={locked || (isAskUser && !submittedAnswer)}
             onClick={() => onDecide(payload, true, isAskUser ? submittedAnswer : undefined)}
           >
             {isAskUser ? "回答" : "允许"}
           </button>
         ) : null}
-        <button
-          className="stop"
-          disabled={busy || !connected}
-          onClick={() => onDecide(payload, false)}
-        >
+        <button className="stop" disabled={locked} onClick={() => onDecide(payload, false)}>
           拒绝
         </button>
       </div>
