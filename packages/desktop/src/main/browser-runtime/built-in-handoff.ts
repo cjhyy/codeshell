@@ -25,6 +25,8 @@ interface HandoffGrant {
   controlEpoch: number;
   expiryTimer?: ReturnType<typeof setTimeout>;
   removeDestroyedListener?: () => void;
+  /** Main-owned caller/Session authority, rechecked before every action. */
+  assertCurrent?: () => void;
 }
 
 export interface BuiltInBrowserHandoffStatus {
@@ -52,6 +54,8 @@ export interface GrantBuiltInBrowserInput {
   /** Main-process BrowserWindow id of the renderer that made the user gesture. */
   sourceWindowId: number;
   ttlMs?: number;
+  /** Never supplied by IPC data: the Host binds this to the granting window. */
+  assertCurrent?: () => void;
 }
 
 /**
@@ -78,6 +82,7 @@ export class BuiltInTabClaimBackend {
   }
 
   grant(input: GrantBuiltInBrowserInput): BuiltInBrowserHandoffStatus {
+    input.assertCurrent?.();
     const sessionId = input.sessionId.trim();
     if (!sessionId) throw new Error("browser handoff requires sessionId");
     if (
@@ -109,6 +114,7 @@ export class BuiltInTabClaimBackend {
       grantedAt,
       expiresAt: grantedAt + Math.min(MAX_GRANT_TTL_MS, requestedTtl),
       controlEpoch: 0,
+      assertCurrent: input.assertCurrent,
     };
     this.revoke(sessionId);
     this.deps.authorizeGuest(record.guest);
@@ -204,8 +210,7 @@ export class BuiltInTabClaimBackend {
     }
     const controlEpoch = grant.controlEpoch;
     return this.deps.dispatchAction(request, {
-      isActive: () =>
-        this.liveGrant(sessionId) === grant && grant.controlEpoch === controlEpoch,
+      isActive: () => this.liveGrant(sessionId) === grant && grant.controlEpoch === controlEpoch,
       // Fixed target: focus changes and active-tab changes never broaden grant.
       activeGuest: () => record.guest,
       policy: loadBrowserAutomationPolicy,
@@ -220,6 +225,12 @@ export class BuiltInTabClaimBackend {
   private liveGrant(sessionId: string): HandoffGrant | undefined {
     const grant = this.grants.get(sessionId);
     if (!grant) return undefined;
+    try {
+      grant.assertCurrent?.();
+    } catch {
+      this.revoke(sessionId);
+      return undefined;
+    }
     if (grant.expiresAt <= this.deps.now()) {
       this.revoke(sessionId);
       return undefined;

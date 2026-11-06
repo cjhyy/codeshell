@@ -33,6 +33,8 @@ import {
   Notification,
   screen,
   nativeTheme,
+  type IpcMainEvent,
+  type IpcMainInvokeEvent,
   type OpenDialogOptions,
   type SaveDialogOptions,
 } from "electron";
@@ -269,6 +271,8 @@ import {
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
 import { inspectReadableReplyAttachment, readImageDataUrl } from "./image-read-service.js";
 import { MediaPreviewService } from "./media-preview-service.js";
+import { RendererBrowserSessionAccess } from "./renderer-browser-session-access.js";
+import { mobileSessionCommandAuthority as resolvePersistedSessionAuthority } from "./mobile-remote/output-recovery-authority.js";
 import { resolveMediaPreviewAuthority } from "./media-preview-authority.js";
 import { MEDIA_PREVIEW_SCHEME } from "../shared/media-preview.js";
 import {
@@ -1673,9 +1677,15 @@ async function createWindow(): Promise<BrowserWindow> {
   // window is gone would otherwise leak until quit. Reap them once the
   // webContents is actually torn down (next tick after `closed`).
   const ownerWebContentsId = win.webContents.id;
-  win.webContents.once("destroyed", () => mediaPreviewService.releaseOwner(ownerWebContentsId));
+  win.webContents.once("destroyed", () => {
+    mediaPreviewService.releaseOwner(ownerWebContentsId);
+    rendererBrowserSessionAccess.forgetWindow(ownerWebContentsId);
+  });
   win.webContents.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
-    if (isMainFrame && !isInPlace) mediaPreviewService.releaseOwner(ownerWebContentsId);
+    if (isMainFrame && !isInPlace) {
+      mediaPreviewService.releaseOwner(ownerWebContentsId);
+      rendererBrowserSessionAccess.forgetWindow(ownerWebContentsId);
+    }
   });
   // A reload starts with empty preload state; replay the runtimes Main still owns.
   win.webContents.on("did-finish-load", () => {
@@ -1729,6 +1739,7 @@ async function createWindow(): Promise<BrowserWindow> {
         hasActiveHostTaskOwner: (sessionId) => panelAppBridge.hasActiveAgentTaskOwner(sessionId),
       }),
       captureLinkAccount,
+      (sessionId, ownerId) => rendererBrowserSessionAccess.sessionOwnerClaimed(sessionId, ownerId),
     );
     // External Agent Runtimes (Codex / Claude Code). Everything
     // security-relevant is resolved here, in the composition root: this is the
@@ -4503,6 +4514,56 @@ function assertRendererSessionAccess(sessionId: unknown, senderWebContentsId: nu
   return sessionId;
 }
 
+const deletingBrowserSessions = new Set<string>();
+const rendererBrowserSessionAccess = new RendererBrowserSessionAccess({
+  bridge: () => bridge,
+  windowForSender: (senderId) =>
+    [...mainWindows].find(
+      (window) => !window.isDestroyed() && window.webContents.id === senderId,
+    ) ?? null,
+  resolvePersistedSession: async (sessionId) => {
+    // Reuse the durable Session/project checks used by remote commands. This
+    // registers browser UI routing only: it must not reserve or start a task.
+    const authority = await resolvePersistedSessionAuthority(sessionId);
+    const store = getProjectStore();
+    const projectId =
+      authority.projectId ?? store.resolveExactRootSync(authority.mainRoot)?.project.id;
+    if (!projectId && !store.isNoRepoCwd(authority.mainRoot))
+      throw new Error("Session project is not mounted");
+    return {
+      bucket: readExternalRuntimeBinding(sessionId)
+        ? externalRuntimeBrowserBucket(sessionId)
+        : `${projectId ?? "__no_repo__"}::${sessionId}`,
+      assertCurrent: authority.assertCurrent,
+    };
+  },
+  bucketForSession,
+  registerSessionBucket,
+});
+
+async function prepareRendererBrowserSession(
+  event: IpcMainEvent | IpcMainInvokeEvent,
+  rawSessionId: unknown,
+) {
+  const frame = event.senderFrame;
+  if (!frame || frame !== event.sender.mainFrame)
+    throw new Error("browser operation requires the current Desktop main window");
+  assertDesktopSessionId(rawSessionId);
+  if (deletingBrowserSessions.has(rawSessionId)) throw new Error("Session is being deleted");
+  const access = await rendererBrowserSessionAccess.prepare(rawSessionId, event.sender.id);
+  const assertCurrent = () => {
+    if (
+      event.sender.isDestroyed() ||
+      event.sender.mainFrame !== frame ||
+      deletingBrowserSessions.has(access.sessionId)
+    )
+      throw new Error("browser conversation window changed");
+    access.assertCurrent();
+  };
+  assertCurrent();
+  return { ...access, assertCurrent };
+}
+
 function requireRendererBrowserPartition(bucket: unknown, senderWebContentsId: number): string {
   const partition = browserPartitionForBucket(bucket);
   if (!partition || typeof bucket !== "string") {
@@ -4510,9 +4571,13 @@ function requireRendererBrowserPartition(bucket: unknown, senderWebContentsId: n
   }
   const sessionIds = sessionIdsForBucket(bucket);
   const authorized = sessionIds.some((sessionId) => {
-    if (!bridge?.hasKnownSession(sessionId)) return false;
-    const ownerId = bridge.panelOwnerWebContentsId(sessionId);
-    return ownerId === undefined || ownerId === senderWebContentsId;
+    if (deletingBrowserSessions.has(sessionId)) return false;
+    try {
+      rendererBrowserSessionAccess.assertAccess(sessionId, senderWebContentsId);
+      return true;
+    } catch {
+      return false;
+    }
   });
   if (!authorized) throw new Error("browser bucket belongs to another window");
   return partition;
@@ -4520,27 +4585,15 @@ function requireRendererBrowserPartition(bucket: unknown, senderWebContentsId: n
 
 ipcMain.on(
   "browser:register-session-bucket",
-  (event, payload: { sessionId?: unknown; bucket?: unknown; partition?: unknown }) => {
+  async (event, payload: { sessionId?: unknown; bucket?: unknown; partition?: unknown }) => {
     try {
       const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
       const bucket = typeof payload?.bucket === "string" ? payload.bucket : "";
       const partition = typeof payload?.partition === "string" ? payload.partition : undefined;
       if (!sessionId || !bucket || bucket.length > 512 || bucket.includes("\0")) return;
       if (partition !== undefined && (partition.length > 1_024 || partition.includes("\0"))) return;
-      const existingBucket = bucketForSession(sessionId);
-      if (!existingBucket) {
-        if (!bridge?.hasKnownSession(sessionId)) {
-          dlog("browser", "register_session_bucket_rejected", {
-            sessionId,
-            reason: "no main-owned session",
-          });
-          return;
-        }
-        assertRendererSessionAccess(sessionId, event.sender.id);
-        registerSessionBucket(sessionId, bucket, partition);
-        return;
-      }
-      assertRendererSessionAccess(sessionId, event.sender.id);
+      const { bucket: existingBucket } = await prepareRendererBrowserSession(event, sessionId);
+      if (!existingBucket) throw new Error("browser Session has no Main-owned bucket");
       if (existingBucket !== bucket) {
         // External runtimes intentionally own an isolated browser partition.
         // A late renderer effect must never rebind it to the visible session
@@ -4560,7 +4613,7 @@ ipcMain.on(
 
 ipcMain.on(
   "browser:guest-attached",
-  (
+  async (
     e,
     payload: {
       guestId?: unknown;
@@ -4589,7 +4642,7 @@ ipcMain.on(
       const ownerWindow = BrowserWindow.fromWebContents(e.sender);
       if (!ownerWindow) return;
       if (payload?.engineSessionId !== undefined) {
-        assertRendererSessionAccess(payload.engineSessionId, e.sender.id);
+        await prepareRendererBrowserSession(e, payload.engineSessionId);
       }
       registerAttachedGuestMetadata({
         guestId,
@@ -4608,12 +4661,12 @@ ipcMain.on(
 
 ipcMain.handle(
   "browser-runtime:grant-built-in",
-  (e, payload: { sessionId?: unknown; guestId?: unknown; ttlMs?: unknown }) => {
-    const sessionId = assertRendererSessionAccess(payload?.sessionId, e.sender.id);
+  async (e, payload: { sessionId?: unknown; guestId?: unknown; ttlMs?: unknown }) => {
+    const { sessionId, assertCurrent } = await prepareRendererBrowserSession(e, payload?.sessionId);
     const guestId =
       typeof payload?.guestId === "number" ? payload.guestId : Number(payload?.guestId);
     if (!Number.isSafeInteger(guestId) || guestId <= 0) {
-      throw new Error("browser handoff requires a live task and browser tab");
+      throw new Error("browser handoff requires an existing conversation and browser tab");
     }
     const ownerWindow = BrowserWindow.fromWebContents(e.sender);
     if (!ownerWindow) throw new Error("browser handoff requires an owning window");
@@ -4621,6 +4674,7 @@ ipcMain.handle(
       sessionId,
       guestId,
       sourceWindowId: ownerWindow.id,
+      assertCurrent,
       ttlMs:
         typeof payload.ttlMs === "number" &&
         Number.isSafeInteger(payload.ttlMs) &&
@@ -4636,21 +4690,22 @@ ipcMain.handle(
   },
 );
 
-ipcMain.handle("browser-runtime:revoke-built-in", (event, rawSessionId: unknown) => {
-  const sessionId = assertRendererSessionAccess(rawSessionId, event.sender.id);
+ipcMain.handle("browser-runtime:revoke-built-in", async (event, rawSessionId: unknown) => {
+  const { sessionId } = await prepareRendererBrowserSession(event, rawSessionId);
   builtInBrowserHandoffGrants.revoke(sessionId);
   return builtInBrowserHandoffGrants.status(sessionId);
 });
 
-ipcMain.handle("browser-runtime:handoff-status", (event, rawSessionId: unknown) => {
-  const sessionId = assertRendererSessionAccess(rawSessionId, event.sender.id);
+ipcMain.handle("browser-runtime:handoff-status", async (event, rawSessionId: unknown) => {
+  const { sessionId } = await prepareRendererBrowserSession(event, rawSessionId);
   return builtInBrowserHandoffGrants.status(sessionId);
 });
 
 ipcMain.handle(
   "browser-runtime:chrome-begin-pairing",
-  (event, payload: { sessionId?: unknown; label?: unknown }) => {
+  async (event, payload: { sessionId?: unknown; label?: unknown }) => {
     const sessionId = assertRendererSessionAccess(payload?.sessionId, event.sender.id);
+    await prepareRendererBrowserSession(event, sessionId);
     if (
       payload?.label !== undefined &&
       (typeof payload.label !== "string" ||
@@ -4666,13 +4721,14 @@ ipcMain.handle(
   },
 );
 
-ipcMain.handle("browser-runtime:chrome-status", (event, rawSessionId: unknown) => {
-  const sessionId = assertRendererSessionAccess(rawSessionId, event.sender.id);
+ipcMain.handle("browser-runtime:chrome-status", async (event, rawSessionId: unknown) => {
+  const { sessionId } = await prepareRendererBrowserSession(event, rawSessionId);
   return chromeExtensionRuntimeService.status(sessionId);
 });
 
-ipcMain.handle("browser-runtime:chrome-revoke", (event, rawSessionId: unknown) => {
+ipcMain.handle("browser-runtime:chrome-revoke", async (event, rawSessionId: unknown) => {
   const sessionId = assertRendererSessionAccess(rawSessionId, event.sender.id);
+  await prepareRendererBrowserSession(event, sessionId);
   return chromeExtensionRuntimeService.revoke(sessionId);
 });
 
@@ -6834,6 +6890,19 @@ ipcMain.handle("memory:dream", async (_e, level: unknown, cwd?: string) => {
 });
 
 async function deleteDesktopSession(id: string): Promise<void> {
+  deletingBrowserSessions.add(id);
+  rendererBrowserSessionAccess.forgetSession(id);
+  try {
+    await deleteDesktopSessionResources(id);
+  } finally {
+    // Invalidate any authorization captured before deletion started, including
+    // in-flight durable reads, before allowing this ID to be opened again.
+    rendererBrowserSessionAccess.forgetSession(id);
+    deletingBrowserSessions.delete(id);
+  }
+}
+
+async function deleteDesktopSessionResources(id: string): Promise<void> {
   mediaPreviewService.releaseSession(id);
   builtInBrowserHandoffGrants.clearSession(id);
   chromeExtensionRuntimeService.forgetSession(id);
