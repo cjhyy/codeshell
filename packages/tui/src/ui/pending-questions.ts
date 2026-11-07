@@ -124,13 +124,6 @@ export function reducePendingQuestions(
 }
 
 /** Answer the originating task even if the user switched sessions meanwhile. */
-/** What a timed-out model question defaults to; undefined means it is skipped. */
-export function recommendedAnswer(question: PendingQuestion): string | undefined {
-  const labels = (question.options ?? []).filter((o) => o.recommended).map((o) => o.label);
-  if (labels.length === 0) return undefined;
-  return question.multiSelect ? labels.join(", ") : labels[0];
-}
-
 export function answerPendingQuestion(
   client: Pick<AgentClient, "approve">,
   question: PendingQuestion,

@@ -1,7 +1,7 @@
 import React from "react";
 import type { ApprovalRequestPayload } from "./protocol.js";
 import { summarizeApproval } from "../src/lib/riskClassify.js";
-import { recommendedAskAnswer } from "../src/lib/messageMappers.js";
+import { recommendedAskAnswer, recommendedAskLabels } from "../src/lib/messageMappers.js";
 import { autoResolveText, formatRemaining, useNow } from "./deadline.js";
 
 export function HubApprovalCard({
@@ -17,8 +17,8 @@ export function HubApprovalCard({
   connected: boolean;
   hidden?: boolean;
   onDecide: (payload: ApprovalRequestPayload, approved: boolean, answer?: string) => void;
-  /** Drop a model question's auto-resolve deadline (一直等). */
-  onKeepWaiting?: (payload: ApprovalRequestPayload) => void;
+  /** Drop a model question's auto-resolve deadline (一直等); rejects on failure. */
+  onKeepWaiting?: (payload: ApprovalRequestPayload) => Promise<void>;
 }) {
   const [answer, setAnswer] = React.useState("");
   const [selected, setSelected] = React.useState<number[]>([]);
@@ -32,6 +32,7 @@ export function HubApprovalCard({
   // Model questions: Skip instead of 拒绝, a recommended default, and 一直等.
   const skippable = isAskUser && payload.request.args.skippable === true;
   const recommended = skippable ? recommendedAskAnswer(payload.request.args) : undefined;
+  const recommendedLabels = skippable ? recommendedAskLabels(payload.request.args) : [];
   const countdown =
     isAskUser && payload.request.args.keepWaitable === true && !expired && onKeepWaiting
       ? deadline
@@ -40,7 +41,10 @@ export function HubApprovalCard({
   const keepWaiting = () => {
     if (countdown === undefined || keptWaiting.current || locked) return;
     keptWaiting.current = true;
-    onKeepWaiting?.(payload);
+    // A failed attempt must not disable 一直等 for good; the next try resends.
+    void onKeepWaiting?.(payload).catch(() => {
+      keptWaiting.current = false;
+    });
   };
   const choices = (
     Array.isArray(payload.request.args.options) ? payload.request.args.options : []
@@ -130,7 +134,10 @@ export function HubApprovalCard({
                       }}
                     />
                     <span>
-                      <span>{choice.label}</span>
+                      <span>
+                        {choice.label}
+                        {recommendedLabels.includes(choice.label) ? "（推荐）" : ""}
+                      </span>
                       {choice.description ? (
                         <span className="approval-option-description">{choice.description}</span>
                       ) : null}
@@ -145,7 +152,7 @@ export function HubApprovalCard({
                   >
                     <span>
                       {choice.label}
-                      {recommended === choice.label ? "（推荐）" : ""}
+                      {recommendedLabels.includes(choice.label) ? "（推荐）" : ""}
                     </span>
                     {choice.description ? (
                       <span className="approval-option-description">{choice.description}</span>

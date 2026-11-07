@@ -217,7 +217,7 @@ test("a model question shows its default and the first keypress keeps it open", 
       deadline={Date.now() + 90_000}
       recommended="Review"
       skippable
-      onKeepWaiting={() => {
+      onKeepWaiting={async () => {
         kept++;
       }}
       onAnswer={() => undefined}
@@ -247,13 +247,42 @@ test("a model question shows its default and the first keypress keeps it open", 
   }
 });
 
+test("a keep-waiting request that fails is retried on the next keypress", async () => {
+  let kept = 0;
+  const harness = mount(
+    <AskUserPrompt
+      question="Which page?"
+      options={[{ label: "Canvas", description: "Workbench" }]}
+      deadline={Date.now() + 90_000}
+      skippable
+      onKeepWaiting={async () => {
+        kept++;
+        throw new Error("offline");
+      }}
+      onAnswer={() => undefined}
+      onCancel={() => undefined}
+    />,
+    { columns: 120 },
+  );
+  try {
+    await flush();
+    harness.stdin.write("\u001b[B");
+    await flush();
+    harness.stdin.write("\u001b[A");
+    await flush();
+    expect(kept).toBe(2);
+  } finally {
+    harness.unmount();
+  }
+});
+
 test("without a recommendation the clock says it will skip", async () => {
   const harness = mount(
     <AskUserPrompt
       question="Which page?"
       deadline={Date.now() + 90_000}
       skippable
-      onKeepWaiting={() => undefined}
+      onKeepWaiting={async () => undefined}
       onAnswer={() => undefined}
       onCancel={() => undefined}
     />,

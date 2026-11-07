@@ -179,12 +179,13 @@ const modelQuestion: PendingApproval = {
   skippable: true,
   keepWaitable: true,
   recommended: "对照审阅页",
+  recommendedOptions: ["对照审阅页"],
   expiresAt: Date.now() + 90_000,
 };
 
 test("模型提问显示倒计时、一直等、跳过与推荐标记", () => {
   const html = renderToStaticMarkup(
-    <ApprovalCard approval={modelQuestion} onRespond={() => {}} onKeepWaiting={() => {}} />,
+    <ApprovalCard approval={modelQuestion} onRespond={() => {}} onKeepWaiting={async () => {}} />,
   );
   expect(html).toMatch(/1:[23]\d 后未回答将自动选择「对照审阅页」/);
   expect(html).toContain("一直等");
@@ -198,7 +199,7 @@ test("改为一直等后不再显示倒计时；权限类提问仍是取消", ()
     <ApprovalCard
       approval={{ ...modelQuestion, keepWaitable: false, expiresAt: undefined }}
       onRespond={() => {}}
-      onKeepWaiting={() => {}}
+      onKeepWaiting={async () => {}}
     />,
   );
   expect(kept).not.toContain("一直等");
@@ -224,7 +225,7 @@ test("开始输入自定义回答会自动改为一直等（只触发一次）",
         <ApprovalCard
           approval={modelQuestion}
           onRespond={() => {}}
-          onKeepWaiting={() => {
+          onKeepWaiting={async () => {
             kept++;
           }}
         />,
@@ -246,6 +247,66 @@ test("开始输入自定义回答会自动改为一直等（只触发一次）",
       await flushMicrotasks();
     });
     expect(kept).toBe(1);
+  } finally {
+    await act(async () => root.unmount());
+    document.body.removeChild(container);
+  }
+});
+
+test("多选题的每个推荐项都有推荐标记", () => {
+  const html = renderToStaticMarkup(
+    <ApprovalCard
+      approval={{
+        ...modelQuestion,
+        options: ["甲", "乙", "丙"],
+        recommended: "甲, 丙",
+        recommendedOptions: ["甲", "丙"],
+      }}
+      onRespond={() => {}}
+      onKeepWaiting={async () => {}}
+    />,
+  );
+  expect(html.match(/>推荐</g)).toHaveLength(2);
+});
+
+test("一直等失败后再次输入会重试", async () => {
+  ensureMiniDom();
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  let kept = 0;
+  try {
+    await act(async () => {
+      root.render(
+        <ApprovalCard
+          approval={modelQuestion}
+          onRespond={() => {}}
+          onKeepWaiting={async () => {
+            kept++;
+            throw new Error("offline");
+          }}
+        />,
+      );
+      await flushMicrotasks();
+    });
+    const textarea = (function find(node: any): any {
+      if (node?.tagName === "TEXTAREA") return node;
+      for (const child of node?.childNodes ?? []) {
+        const hit = find(child);
+        if (hit) return hit;
+      }
+      return undefined;
+    })(container);
+    const key = Object.keys(textarea).find((k) => k.startsWith("__reactProps$"))!;
+    await act(async () => {
+      textarea[key].onChange({ target: { value: "a" } });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      textarea[key].onChange({ target: { value: "ab" } });
+      await flushMicrotasks();
+    });
+    expect(kept).toBe(2);
   } finally {
     await act(async () => root.unmount());
     document.body.removeChild(container);

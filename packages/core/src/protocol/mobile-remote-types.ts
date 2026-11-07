@@ -466,6 +466,8 @@ export type MobileServerEvent =
       clientMessageId?: string;
       clientRequestId?: string;
       approvalId?: string;
+      /** A failed 一直等: the question is unchanged, unlike a lost `approvalId` decision. */
+      keepWaitingApprovalId?: string;
     }
   | {
       type: "session.outputRecovery.plan";

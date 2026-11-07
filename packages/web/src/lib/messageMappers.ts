@@ -150,11 +150,9 @@ export function extractAskUserOptions(
   return undefined;
 }
 
-/** The recommended label(s) a timed-out model question defaults to (mirrors Core). */
-export function recommendedAskAnswer(
-  args: Record<string, unknown> | undefined,
-): string | undefined {
-  const labels = Array.isArray(args?.options)
+/** The labels a model question marks as recommended, in option order. */
+export function recommendedAskLabels(args: Record<string, unknown> | undefined): string[] {
+  return Array.isArray(args?.options)
     ? args.options.flatMap((o) =>
         o && typeof o === "object" && (o as { recommended?: unknown }).recommended === true
           ? typeof (o as { label?: unknown }).label === "string"
@@ -163,6 +161,13 @@ export function recommendedAskAnswer(
           : [],
       )
     : [];
+}
+
+/** The recommended label(s) a timed-out model question defaults to (mirrors Core). */
+export function recommendedAskAnswer(
+  args: Record<string, unknown> | undefined,
+): string | undefined {
+  const labels = recommendedAskLabels(args);
   if (labels.length === 0) return undefined;
   return args?.multiSelect === true ? labels.join(", ") : labels[0];
 }

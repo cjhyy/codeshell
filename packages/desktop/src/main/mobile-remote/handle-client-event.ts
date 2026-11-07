@@ -884,7 +884,7 @@ export async function handleClientEvent(
     ) {
       reply({
         type: "error",
-        approvalId: event.approvalId,
+        keepWaitingApprovalId: event.approvalId,
         message: "This question has closed, was already handled, or cannot be kept open.",
       });
       return;
@@ -901,7 +901,8 @@ export async function handleClientEvent(
       },
       { origin: "mobile", producer: "mobile-keep-waiting" },
     );
-    if (!result.ok) reply({ type: "error", approvalId: event.approvalId, message: result.message });
+    if (!result.ok)
+      reply({ type: "error", keepWaitingApprovalId: event.approvalId, message: result.message });
     return;
   }
   if (event.type === "run.stop") {

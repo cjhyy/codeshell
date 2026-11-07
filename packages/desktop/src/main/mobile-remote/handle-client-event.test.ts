@@ -1157,7 +1157,9 @@ describe("mobile keep-waiting on a model question", () => {
         );
       await submitted;
       expect(harness.replies).toEqual(
-        success ? [] : [{ type: "error", approvalId: "model-question", message: "closed" }],
+        success
+          ? []
+          : [{ type: "error", keepWaitingApprovalId: "model-question", message: "closed" }],
       );
     });
   }
@@ -1174,7 +1176,12 @@ describe("mobile keep-waiting on a model question", () => {
       approvalId: "missing",
     });
     expect(harness.metas).toEqual([]);
-    expect(harness.replies).toHaveLength(1);
-    expect(harness.replies[0]!.type).toBe("error");
+    expect(harness.replies).toEqual([
+      {
+        type: "error",
+        keepWaitingApprovalId: "missing",
+        message: "This question has closed, was already handled, or cannot be kept open.",
+      },
+    ]);
   });
 });

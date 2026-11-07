@@ -766,13 +766,16 @@ export function useHubController({
       });
   };
 
-  const keepWaiting = (payload: ApprovalRequestPayload): void => {
+  const keepWaiting = async (payload: ApprovalRequestPayload): Promise<void> => {
     const client = clientRef.current;
-    if (!client || connection !== "open") return;
+    if (!client || connection !== "open") throw new Error("not connected");
     const sessionId = payload.sessionId ?? activeIdRef.current;
-    void client
-      .keepWaiting({ ...payload, sessionId: sessionId ?? "" })
-      .catch((cause) => reportError(cause, sessionId));
+    try {
+      await client.keepWaiting({ ...payload, sessionId: sessionId ?? "" });
+    } catch (cause) {
+      reportError(cause, sessionId);
+      throw cause;
+    }
   };
 
   const stop = (): void => {

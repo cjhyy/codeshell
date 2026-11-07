@@ -1,12 +1,15 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { AgentClient } from "@cjhyy/code-shell-core";
-import { asyncAgentRegistry, type OnboardingResult } from "@cjhyy/code-shell-core/internal";
+import {
+  asyncAgentRegistry,
+  recommendedAnswer,
+  type OnboardingResult,
+} from "@cjhyy/code-shell-core/internal";
 import { Box, Text } from "../../render/index.js";
 import { CommandInput } from "./CommandInput.js";
 import { AskUserPrompt } from "./AskUserPrompt.js";
 import {
   answerPendingQuestion,
-  recommendedAnswer,
   type PendingQuestion,
   type QuestionDraft,
 } from "../pending-questions.js";
@@ -332,10 +335,13 @@ export function TuiControlSurface(props: TuiControlSurfaceProps) {
         recommended={recommendedAnswer(pendingQuestion)}
         skippable={pendingQuestion.skippable}
         onKeepWaiting={() => {
-          if (!pendingQuestion.sessionId) return;
-          void client
+          if (!pendingQuestion.sessionId) return Promise.reject(new Error("no session"));
+          return client
             .keepWaiting(pendingQuestion.sessionId, pendingQuestion.requestId)
-            .catch((error) => addStatus(`Could not keep the question open: ${String(error)}`));
+            .catch((error) => {
+              addStatus(`Could not keep the question open: ${String(error)}`);
+              throw error;
+            });
         }}
         onAnswer={(answer) => {
           return answerPendingQuestion(client, pendingQuestion, { approved: true, answer })

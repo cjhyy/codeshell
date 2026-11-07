@@ -430,8 +430,11 @@ export class ProtocolClient {
 
   /** Drop a model question's auto-resolve deadline; the host republishes it. */
   keepWaiting(payload: ApprovalRequestPayload): Promise<unknown> {
+    // Same route fields as approve(): strict serve routing matches on them.
     return this.request("agent/approvalKeepWaiting", {
       sessionId: payload.sessionId ?? "",
+      ...(payload.connectionId ? { connectionId: payload.connectionId } : {}),
+      ...(payload.generation !== undefined ? { generation: payload.generation } : {}),
       requestId: payload.requestId,
     });
   }

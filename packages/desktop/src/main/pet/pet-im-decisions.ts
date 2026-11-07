@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { USER_DECISION_TIMEOUT_MS } from "@cjhyy/code-shell-core/internal";
+import { USER_DECISION_TIMEOUT_MS, recommendedAnswer } from "@cjhyy/code-shell-core/internal";
 import type { PetLongTask } from "@cjhyy/code-shell-pet";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator.js";
 import type {
@@ -88,18 +88,23 @@ function skippableEnvelope(envelope: Envelope): boolean {
   return envelope.request.toolName === "__ask_user__" && envelope.request.args.skippable === true;
 }
 
-/** The recommended label(s) a timed-out model question defaults to. */
+/** The recommended label(s) a timed-out model question defaults to (Core's rule). */
 function recommended(entry: ImDecision): string | undefined {
   const args = entry.envelope.request.args;
-  const labels = Array.isArray(args.options)
+  const options = Array.isArray(args.options)
     ? args.options.flatMap((option) =>
-        option && option.recommended === true && typeof option.label === "string"
-          ? [option.label as string]
+        option && typeof option.label === "string"
+          ? [
+              {
+                label: option.label as string,
+                description: "",
+                recommended: option.recommended === true,
+              },
+            ]
           : [],
       )
     : [];
-  if (labels.length === 0) return undefined;
-  return args.multiSelect === true ? labels.join(", ") : labels[0];
+  return recommendedAnswer({ options, multiSelect: args.multiSelect === true });
 }
 
 function choices(entry: ImDecision): string[] {
@@ -287,20 +292,24 @@ export class PetImDecisions {
     const question = skippableEnvelope(entry.envelope);
     const end = this.expiresAt(entry);
     const remaining = Math.max(1, Math.ceil((end - this.now()) / 60_000));
-    const fallback = recommended(entry);
     const deadline = !question
       ? `剩余约 ${remaining} 分钟；电脑、微信和已连接的手机遥控共用截止时间，超时不会授权本次操作。`
       : !Number.isFinite(end)
         ? "这个问题会一直等你回答。"
-        : `剩余约 ${remaining} 分钟；超时未回答将${fallback !== undefined ? `自动选择推荐项「${fallback}」` : "自动跳过"}。回复「回答 ${entry.code} 等待」可一直等。`;
+        : `剩余约 ${remaining} 分钟；超时未回答将自动按默认处理。`;
     // Existing tasks lack sender identity; group conversations must not receive
     // private permission details or gain authority through a guessed reply code.
     if (!canReply(entry)) return `任务正在等待确认，请打开桌面 Session 处理。\n${deadline}`;
+    const fallback = question && Number.isFinite(end) ? recommended(entry) : undefined;
+    const timeout =
+      question && Number.isFinite(end)
+        ? `剩余约 ${remaining} 分钟；超时未回答将${fallback !== undefined ? `自动选择推荐项「${fallback}」` : "自动跳过"}。回复「回答 ${entry.code} 等待」可一直等。`
+        : deadline;
     const request = entry.envelope.request;
     const args = request.args;
     const body = questionBody(entry);
     if (!body)
-      return `确认 ${entry.code} 内容较长，请打开桌面 Session 查看完整内容后处理。\n${deadline}`;
+      return `确认 ${entry.code} 内容较长，请打开桌面 Session 查看完整内容后处理。\n${timeout}`;
     const labels = choices(entry);
     const options = request.toolName !== "__ask_user__" ? ["允许本次", "拒绝"] : labels;
     const instructions =
@@ -315,7 +324,7 @@ export class PetImDecisions {
       instructions,
       "回答时请保留确认码；无需进入 Session。",
       `回复「回答 ${entry.code} ${question ? "跳过" : "拒绝"}」可跳过。`,
-      deadline,
+      timeout,
     ]
       .filter(Boolean)
       .join("\n");
@@ -356,7 +365,8 @@ export class PetImDecisions {
         [...matching, ...delivered.map(({ entry }) => entry)].some((entry) =>
           [
             "拒绝",
-            "跳过",
+            // Only a model question can be skipped; a permission request is declined.
+            ...(skippableEnvelope(entry.envelope) ? ["跳过"] : []),
             ...(entry.envelope.request.toolName === "__ask_user__" ? choices(entry) : ["允许本次"]),
           ].includes(message),
         );
@@ -391,7 +401,9 @@ export class PetImDecisions {
     if (this.submitting.has(code)) return "该确认正在处理，请勿重复提交。";
     if (answer.length > 12_000) return "回答过长，请缩短后重试。";
     const question = skippableEnvelope(entry.envelope);
-    if (question && ["等待", "一直等"].includes(answer)) {
+    // An option literally named 等待/跳过 is an answer, not a command.
+    const option = question && choices(entry).includes(answer);
+    if (question && !option && ["等待", "一直等"].includes(answer)) {
       if (!Number.isFinite(this.expiresAt(entry))) return `确认 ${code} 已经在一直等待你的回答。`;
       if (!this.options.keepWaiting) return "当前无法改为一直等待，请在电脑上处理。";
       try {
@@ -402,7 +414,7 @@ export class PetImDecisions {
         return "没能改为一直等待，可能已在其他端处理。请查看任务状态。";
       }
     }
-    const skip = answer === "拒绝" || (question && answer === "跳过");
+    const skip = !option && (answer === "拒绝" || (question && answer === "跳过"));
     if (!skip && !questionBody(entry))
       return "请在桌面 Session 查看完整确认内容后处理；也可以回复拒绝。";
     let decision: Decision;

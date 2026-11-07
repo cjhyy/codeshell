@@ -813,4 +813,48 @@ describe("IM model questions (skippable)", () => {
     expect(await h.reply(code, "2")).toContain("回答已交给原任务");
     expect(h.approvals).toEqual([{ approved: true, answer: "对照审阅页" }]);
   });
+
+  test("a conversation that cannot reply gets neither the reply code nor the default", async () => {
+    const now = { value: 20_000 };
+    const f = modelQuestion(now.value + 120_000);
+    f.task.completionTarget!.isDirectMessage = false;
+    const h = relayFor(f, now);
+    await h.relay.tick();
+    const text = h.published[0]!.text;
+    expect(text).toContain("请打开桌面 Session 处理");
+    expect(text).not.toContain(f.read()[0]!.code);
+    expect(text).not.toContain("对照审阅页");
+  });
+
+  test("options literally named 等待 and 跳过 are answers, not commands", async () => {
+    const now = { value: 20_000 };
+    const f = modelQuestion(now.value + 120_000);
+    f.params.request.args.options = [
+      { label: "等待", description: "wait for CI" },
+      { label: "跳过", description: "skip this step" },
+    ];
+    const h = relayFor(f, now);
+    const code = f.read()[0]!.code;
+    expect(await h.reply(code, "跳过")).toContain("回答已交给原任务");
+    expect(h.kept).toEqual([]);
+    expect(h.approvals).toEqual([{ approved: true, answer: "跳过" }]);
+  });
+
+  test("a bare 跳过 is not a short reply to a permission request", async () => {
+    const now = { value: 20_000 };
+    const f = fixture("permission");
+    const h = relayFor(f, now);
+    await h.relay.tick();
+    expect(
+      await h.relay.reply({
+        message: "跳过",
+        origin: {
+          channel: "wechat",
+          target: "conversation",
+          senderId: "owner",
+          isDirectMessage: true,
+        },
+      }),
+    ).toBeUndefined();
+  });
 });

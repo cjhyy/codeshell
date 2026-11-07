@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Check, ShieldAlert, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
 import { Textarea } from "@ui/textarea";
 import { useT } from "@/i18n";
+import { formatRemaining, useNow } from "@/messages/countdown";
 import type { ApprovalScope, ApprovalPathScope } from "@protocol";
 import type { PendingApproval } from "@cjhyy/code-shell-web";
 
@@ -21,27 +22,6 @@ const RISK_TONE: Record<PendingApproval["risk"], string> = {
   high: "border-status-err/60 text-status-err",
 };
 
-/** Re-render each second until `until` passes; no timer without a deadline. */
-function useNow(until: number | undefined): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (until === undefined) return;
-    const timer = setInterval(() => {
-      const current = Date.now();
-      setNow(current);
-      if (current >= until) clearInterval(timer);
-    }, 1_000);
-    return () => clearInterval(timer);
-  }, [until]);
-  return now;
-}
-
-/** Remaining time as m:ss, rounded up so it never reads 0:00 early. */
-export function formatRemaining(ms: number): string {
-  const total = Math.max(0, Math.ceil(ms / 1_000));
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
-}
-
 /** A pending permission request, with full desktop-parity controls:
  *  approve/deny, remembered scope (once/session/project), path scope
  *  (file/dir for path-scoped tools), and AskUser options / free-text answer. */
@@ -52,11 +32,12 @@ export function ApprovalCard({
 }: {
   approval: PendingApproval;
   onRespond: (decision: "approve" | "reject", opts?: ApprovalResponse) => void;
-  /** Drop a model question's auto-resolve deadline (一直等). */
-  onKeepWaiting?: () => void;
+  /** Drop a model question's auto-resolve deadline (一直等); rejects on failure. */
+  onKeepWaiting?: () => Promise<void>;
 }) {
   const { t } = useT();
-  const now = useNow(approval.expiresAt);
+  // Only a model question's countdown ticks; other deadlines are a fixed time.
+  const now = useNow(approval.keepWaitable ? approval.expiresAt : undefined);
   // A model question's deadline can be dropped; it shows its own countdown.
   const countdown =
     approval.keepWaitable === true &&
@@ -66,11 +47,17 @@ export function ApprovalCard({
       ? approval.expiresAt
       : undefined;
   const keptWaiting = useRef(false);
+  const [keepWaitingFailed, setKeepWaitingFailed] = useState(false);
   /** Codex-style: engaging with the card (typing) stops the auto-resolve clock. */
   const keepWaiting = () => {
-    if (countdown === undefined || keptWaiting.current) return;
+    if (countdown === undefined || keptWaiting.current || !onKeepWaiting) return;
     keptWaiting.current = true;
-    onKeepWaiting?.();
+    setKeepWaitingFailed(false);
+    // A failed attempt must not disable 一直等 for good; the next try resends.
+    void onKeepWaiting().catch(() => {
+      keptWaiting.current = false;
+      setKeepWaitingFailed(true);
+    });
   };
   const isAsk = approval.toolName === "__ask_user__" || Boolean(approval.options?.length);
   const [scope, setScope] = useState<ApprovalScope>("once");
@@ -132,6 +119,11 @@ export function ApprovalCard({
           </Button>
         </div>
       )}
+      {keepWaitingFailed && countdown !== undefined && (
+        <p role="alert" className="mb-2 text-xs text-status-err">
+          {t("msg.ask.keepWaitingFailed")}
+        </p>
+      )}
       {approval.expiresAt !== undefined && countdown === undefined && (
         <p className="mb-2 text-xs text-muted-foreground">
           {t("mobile.approval.expiresAt", {
@@ -190,7 +182,7 @@ export function ApprovalCard({
                   </span>
                   <span className="min-w-0 flex-1 whitespace-normal break-words text-sm leading-5 text-foreground">
                     {opt}
-                    {approval.recommended === opt && (
+                    {approval.recommendedOptions?.includes(opt) && (
                       <Badge variant="secondary" className="ml-2 px-1.5 align-middle text-[10px]">
                         {t("msg.ask.recommended")}
                       </Badge>

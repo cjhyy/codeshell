@@ -40,7 +40,8 @@ interface AskUserPromptProps {
   deadline?: number;
   /** What the deadline picks; undefined means the question is skipped. */
   recommended?: string;
-  onKeepWaiting?: () => void;
+  /** Rejects when the deadline could not be dropped; the next key retries. */
+  onKeepWaiting?: () => Promise<void>;
   /** Esc skips (the model continues) instead of cancelling. */
   skippable?: boolean;
 }
@@ -199,9 +200,11 @@ export function AskUserPrompt({
     if (pendingSubmission || submissionRef.current !== "idle") return;
     // Codex-style: any keypress while the clock runs keeps the question open.
     // Esc stays a decision (skip / answer later), not a snooze.
-    if (countdown !== undefined && !key.escape && !keptWaiting.current) {
+    if (countdown !== undefined && !key.escape && !keptWaiting.current && onKeepWaiting) {
       keptWaiting.current = true;
-      onKeepWaiting?.();
+      void onKeepWaiting().catch(() => {
+        keptWaiting.current = false;
+      });
     }
     if (phase === "review") {
       if (key.escape) {

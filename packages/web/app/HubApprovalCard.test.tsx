@@ -82,7 +82,7 @@ describe("HubApprovalCard model questions", () => {
         busy={false}
         connected
         onDecide={() => {}}
-        onKeepWaiting={() => {}}
+        onKeepWaiting={async () => {}}
       />,
     );
 
@@ -101,5 +101,15 @@ describe("HubApprovalCard model questions", () => {
     expect(kept).not.toContain("一直等");
     expect(kept).not.toContain("后未回答");
     expect(kept).toContain("跳过");
+  });
+
+  test("a multi-select default marks every recommended option", () => {
+    const payload = modelQuestion(Date.now() + 90_000);
+    payload.request.args.multiSelect = true;
+    (payload.request.args.options as Array<Record<string, unknown>>)[0]!.recommended = true;
+    const html = renderModel(payload);
+    expect(html).toContain("工作台画布（推荐）");
+    expect(html).toContain("对照审阅页（推荐）");
+    expect(html).toContain("自动选择「工作台画布, 对照审阅页」");
   });
 });

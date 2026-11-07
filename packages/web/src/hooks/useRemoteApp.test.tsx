@@ -2862,8 +2862,9 @@ describe("useRemoteApp model questions", () => {
         keepWaitable: true,
         recommended: "对照审阅页",
       });
+      let keeping: Promise<void> | undefined;
       await act(async () => {
-        hook.result.current.keepWaitingApproval("m1");
+        keeping = hook.result.current.keepWaitingApproval("m1");
         await flushMicrotasks();
       });
       expect(ws.sent.map((payload) => JSON.parse(payload))).toContainEqual({
@@ -2885,6 +2886,62 @@ describe("useRemoteApp model questions", () => {
       expect(hook.result.current.approvals).toHaveLength(1);
       expect(hook.result.current.approvals[0]!.expiresAt).toBeUndefined();
       expect(hook.result.current.approvals[0]!.keepWaitable).toBeUndefined();
+      await keeping;
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("a failed keep-waiting rejects without treating the question as a lost answer", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    const route = { sessionId: "s1", requestId: "m1", connectionId: "worker", generation: 2 };
+    const request = {
+      toolName: "__ask_user__",
+      args: {
+        question: "哪一个？",
+        skippable: true,
+        keepWaitable: true,
+        multiSelect: true,
+        options: [
+          { label: "甲", description: "", recommended: true },
+          { label: "乙", description: "" },
+          { label: "丙", description: "", recommended: true },
+        ],
+      },
+    };
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        ws.message({
+          method: "agent/approvalRequest",
+          params: { ...route, expiresAt: Date.now() + 120_000, request },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals[0]).toMatchObject({
+        recommended: "甲, 丙",
+        recommendedOptions: ["甲", "丙"],
+      });
+      let outcome: Promise<unknown> | undefined;
+      await act(async () => {
+        outcome = hook.result.current.keepWaitingApproval("m1").then(
+          () => "kept",
+          (error: Error) => error.message,
+        );
+        await flushMicrotasks();
+      });
+      const sentBefore = ws.sent.length;
+      await act(async () => {
+        ws.message({ type: "error", keepWaitingApprovalId: "m1", message: "closed" });
+        await flushMicrotasks();
+      });
+      expect(await outcome).toBe("closed");
+      // The question is untouched: still pending, and no replay was requested.
+      expect(hook.result.current.approvals).toHaveLength(1);
+      expect(ws.sent.length).toBe(sentBefore);
     } finally {
       await hook.unmount();
     }

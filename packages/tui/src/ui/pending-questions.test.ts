@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
+import { recommendedAnswer } from "@cjhyy/code-shell-core/internal";
 import {
   activeQuestion,
   answerPendingQuestion,
-  recommendedAnswer,
   INITIAL_PENDING_QUESTIONS,
   reducePendingQuestions,
   type PendingQuestion,

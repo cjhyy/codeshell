@@ -40,6 +40,7 @@ import {
   ccHistoryToEvents,
   extractAskUserOptions,
   recommendedAskAnswer,
+  recommendedAskLabels,
 } from "../lib/messageMappers.js";
 import { projectForCwd } from "../lib/format.js";
 import { MobileOutputClient } from "./mobileOutputClient.js";
@@ -111,6 +112,8 @@ export interface PendingApproval {
   keepWaitable?: boolean;
   /** What a timeout picks; absent means the question is skipped. */
   recommended?: string;
+  /** Each recommended option label (a multi-select default joins several). */
+  recommendedOptions?: string[];
   /** True for path-scoped tools (Read/Edit/Write/…) → show file/dir scope. */
   pathScoped: boolean;
   /** Host-generated card (not a CLI tool call): a one-time room mode approval. */
@@ -211,8 +214,9 @@ export interface RemoteApp {
       pathScope?: ApprovalPathScope;
     },
   ) => void;
-  /** Drop a model question's auto-resolve deadline (一直等). */
-  keepWaitingApproval: (requestId: string) => void;
+  /** Drop a model question's auto-resolve deadline (一直等). Resolves once the
+   *  request is republished without one; rejects when that did not happen. */
+  keepWaitingApproval: (requestId: string) => Promise<void>;
   setPermissionMode: (mode: PermissionMode) => void;
   extendGoal: (sessionId: string) => void;
   clearGoal: (sessionId: string) => void;
@@ -257,6 +261,9 @@ export type MobileSessionCreateTarget =
   | null;
 
 /** Tools whose grants can be remembered with a path scope (file/dir). */
+/** How long a 一直等 waits for Core's deadline-free republish before it reports failure. */
+const KEEP_WAITING_ACK_MS = 15_000;
+
 const PATH_SCOPED = new Set([
   "Read",
   "Edit",
@@ -394,6 +401,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const submittedApprovalsRef = useRef(new Set<string>());
   const retiredApprovalsRef = useRef(new Set<string>());
   const settledApprovalRoutesRef = useRef(new Set<string>());
+  /** In-flight 一直等 requests, settled by the deadline-free republish or an error. */
+  const keepWaitingRef = useRef(
+    new Map<string, { resolve: () => void; reject: (error: Error) => void }>(),
+  );
   const requestActiveResyncRef = useRef<() => void>(() => undefined);
   // The SELECTED project (one-true-source for "what am I looking at"), distinct
   // from activeSessionCwd which is derived from the bound session. Drives session
@@ -871,6 +882,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   }, [sessions]);
 
   const addApproval = useCallback((a: PendingApproval) => {
+    if (a.expiresAt === undefined) keepWaitingRef.current.get(a.requestId)?.resolve();
     if (retiredApprovalsRef.current.has(a.requestId)) return;
     if (settledApprovalRoutesRef.current.has(approvalRouteKey(a))) return;
     if (a.expiresAt !== undefined && a.expiresAt <= Date.now()) return;
@@ -1774,6 +1786,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         }
         case "error":
           if (event.clientRequestId && !failSessionCreation(event.clientRequestId)) break;
+          // A failed 一直等 leaves the question as it was; it is not a lost decision.
+          if (event.keepWaitingApprovalId) {
+            keepWaitingRef.current
+              .get(event.keepWaitingApprovalId)
+              ?.reject(new Error(event.message));
+            setNotice(event.message);
+            break;
+          }
           if (event.approvalId) {
             submittingAsyncApprovalsRef.current.delete(event.approvalId);
             // The decision did not reach Core. The request may still be
@@ -2092,7 +2112,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             optionsOnly: askOptions?.optionsOnly,
             asynchronous: rq.toolName === "__ask_user__" && rq.args?.asynchronous === true,
             ...(rq.toolName === "__ask_user__" && rq.args?.skippable === true
-              ? { skippable: true, recommended: recommendedAskAnswer(rq.args) }
+              ? {
+                  skippable: true,
+                  recommended: recommendedAskAnswer(rq.args),
+                  recommendedOptions: recommendedAskLabels(rq.args),
+                }
               : {}),
             ...(rq.toolName === "__ask_user__" && rq.args?.keepWaitable === true
               ? { keepWaitable: true }
@@ -3001,16 +3025,33 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     [socket, clearApproval],
   );
   const keepWaitingApproval = useCallback(
-    (requestId: string) => {
+    (requestId: string): Promise<void> => {
       const a = approvalsRef.current.find((p) => p.requestId === requestId);
-      if (!a?.keepWaitable || (a.expiresAt !== undefined && a.expiresAt <= Date.now())) return;
-      // Core republishes the request without a deadline; addApproval applies it.
-      socket.send({
-        type: "approval.keepWaiting",
-        approvalId: requestId,
-        sessionId: a.sessionId,
-        ...(a.connectionId !== undefined ? { connectionId: a.connectionId } : {}),
-        ...(a.generation !== undefined ? { generation: a.generation } : {}),
+      if (!a?.keepWaitable || a.expiresAt === undefined || a.expiresAt <= Date.now())
+        return Promise.resolve();
+      return new Promise<void>((resolve, reject) => {
+        const pending = keepWaitingRef.current;
+        const settle = (error?: Error) => {
+          clearTimeout(timer);
+          if (pending.get(requestId)?.resolve === done) pending.delete(requestId);
+          if (error) reject(error);
+          else resolve();
+        };
+        const done = () => settle();
+        const timer = setTimeout(
+          () => settle(new Error("一直等没有得到确认，请重试。")),
+          KEEP_WAITING_ACK_MS,
+        );
+        pending.set(requestId, { resolve: done, reject: settle });
+        // Core republishes the request without a deadline; addApproval settles it.
+        const sent = socket.send({
+          type: "approval.keepWaiting",
+          approvalId: requestId,
+          sessionId: a.sessionId,
+          ...(a.connectionId !== undefined ? { connectionId: a.connectionId } : {}),
+          ...(a.generation !== undefined ? { generation: a.generation } : {}),
+        });
+        if (!sent) settle(new Error("未连接到电脑，请稍后重试。"));
       });
     },
     [socket],

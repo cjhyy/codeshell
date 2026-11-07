@@ -399,20 +399,27 @@ export function DesktopApproval({ approval, app }: { approval: PendingApproval; 
 }
 
 /** A model question's live countdown with 一直等; other requests show a fixed deadline. */
-function QuestionCountdown({ approval, app }: { approval: PendingApproval; app: RemoteApp }) {
+function QuestionCountdown({
+  approval,
+  app,
+  onKeepWaiting,
+  failed,
+}: {
+  approval: PendingApproval;
+  app: RemoteApp;
+  onKeepWaiting: () => void;
+  failed: boolean;
+}) {
   const deadline = approval.keepWaitable ? approval.expiresAt : undefined;
   const now = useNow(deadline);
   if (deadline === undefined || now >= deadline) return null;
   return (
     <div className="approval-deadline approval-countdown">
       <span role="timer">{autoResolveText(deadline - now, approval.recommended)}</span>
-      <button
-        className="library-button"
-        disabled={app.status !== "online"}
-        onClick={() => app.keepWaitingApproval(approval.requestId)}
-      >
+      <button className="library-button" disabled={app.status !== "online"} onClick={onKeepWaiting}>
         一直等
       </button>
+      {failed ? <span role="alert">没能改为一直等，请重试。</span> : null}
     </div>
   );
 }
@@ -522,6 +529,18 @@ function DesktopApprovalCard({ approval, app }: { approval: PendingApproval; app
     approval.toolName === "AskUserQuestion";
   // A Host card for one CLI room mode change: no scope, no reuse.
   const hostModeCard = approval.purpose === "room-permission-mode";
+  const keptWaiting = React.useRef(false);
+  const [keepWaitingFailed, setKeepWaitingFailed] = React.useState(false);
+  const keepWaiting = () => {
+    if (!approval.keepWaitable || approval.roomId || keptWaiting.current) return;
+    keptWaiting.current = true;
+    setKeepWaitingFailed(false);
+    // A failed attempt must not disable 一直等 for good; the next try resends.
+    void app.keepWaitingApproval(approval.requestId).catch(() => {
+      keptWaiting.current = false;
+      setKeepWaitingFailed(true);
+    });
+  };
   const respond = (approved: boolean, selectedAnswer?: string) => {
     if (app.status !== "online") return;
     if (approval.roomId)
@@ -552,7 +571,12 @@ function DesktopApprovalCard({ approval, app }: { approval: PendingApproval; app
         <em> · {approval.risk}</em>
       </div>
       {approval.keepWaitable && !approval.roomId ? (
-        <QuestionCountdown approval={approval} app={app} />
+        <QuestionCountdown
+          approval={approval}
+          app={app}
+          onKeepWaiting={keepWaiting}
+          failed={keepWaitingFailed}
+        />
       ) : (
         <ApprovalDeadline expiresAt={approval.expiresAt} />
       )}
@@ -569,7 +593,7 @@ function DesktopApprovalCard({ approval, app }: { approval: PendingApproval; app
                 onClick={() => respond(true, option)}
               >
                 {index + 1}. {option}
-                {approval.recommended === option ? "（推荐）" : ""}
+                {approval.recommendedOptions?.includes(option) ? "（推荐）" : ""}
               </button>
             ))}
           </div>
@@ -581,9 +605,8 @@ function DesktopApprovalCard({ approval, app }: { approval: PendingApproval; app
                 placeholder="输入回答…"
                 value={answer}
                 onChange={(event) => {
-                  // Codex-style: starting to type keeps the question open.
-                  if (!answer && approval.keepWaitable && !approval.roomId)
-                    app.keepWaitingApproval(approval.requestId);
+                  // Codex-style: typing keeps the question open.
+                  keepWaiting();
                   setAnswer(event.target.value);
                 }}
               />
