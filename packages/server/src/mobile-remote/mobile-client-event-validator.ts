@@ -150,6 +150,14 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
         optionalMember(event.scope, SCOPES) &&
         optionalMember(event.pathScope, PATH_SCOPES);
       break;
+    case "approval.keepWaiting":
+      valid =
+        boundedString(event.approvalId, MAX_ID_LENGTH) &&
+        optionalBoundedString(event.sessionId, MAX_ID_LENGTH) &&
+        optionalBoundedString(event.connectionId, MAX_ID_LENGTH) &&
+        (event.generation === undefined ||
+          (Number.isSafeInteger(event.generation) && (event.generation as number) >= 0));
+      break;
     case "session.list":
       valid =
         optionalBoundedString(event.requestId, 128) &&

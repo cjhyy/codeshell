@@ -1,9 +1,10 @@
-import { test, expect } from "bun:test";
+import { describe, test, expect } from "bun:test";
 import {
   roomMsgToEvent,
   roomHistoryToEvents,
   ccHistoryToEvents,
   extractAskUserOptions,
+  recommendedAskAnswer,
 } from "./messageMappers";
 import { reduceStream, initialChatState } from "./streamReducer";
 
@@ -23,11 +24,15 @@ test("roomMsgToEvent 映射真实 RoomManager 形状", () => {
     type: "assistant_text",
     text: "好",
   });
-  expect(roomMsgToEvent({ from: "agent", type: "tool", tool: "Read", summary: "读 a.ts", seq: 3 })).toEqual({
+  expect(
+    roomMsgToEvent({ from: "agent", type: "tool", tool: "Read", summary: "读 a.ts", seq: 3 }),
+  ).toEqual({
     type: "tool_use_start",
     toolCall: { id: "room-tool-3", toolName: "Read", summary: "读 a.ts" },
   });
-  expect(roomMsgToEvent({ from: "agent", type: "tool_result", summary: "ok", isError: false })).toEqual({
+  expect(
+    roomMsgToEvent({ from: "agent", type: "tool_result", summary: "ok", isError: false }),
+  ).toEqual({
     type: "room_tool_result",
     summary: "ok",
     isError: false,
@@ -40,9 +45,13 @@ test("roomMsgToEvent 映射真实 RoomManager 形状", () => {
     type: "error",
     error: "boom",
   });
-  expect((roomMsgToEvent({ from: "system", type: "agent_exit", reason: "1" }) as { type: string }).type).toBe("error");
+  expect(
+    (roomMsgToEvent({ from: "system", type: "agent_exit", reason: "1" }) as { type: string }).type,
+  ).toBe("error");
   // The room_created audit anchor has no visible rendering.
-  expect(roomMsgToEvent({ from: "system", type: "room_created", text: "cwd=…" })).toEqual({ type: "_noop" });
+  expect(roomMsgToEvent({ from: "system", type: "room_created", text: "cwd=…" })).toEqual({
+    type: "_noop",
+  });
 });
 
 test("房间消息经 roomMsgToEvent → reducer 重建对话(真实形状)", () => {
@@ -109,10 +118,14 @@ test("一回合多条 text → 多个独立气泡,与工具穿插", () => {
   const state = msgs.map(roomMsgToEvent).reduce(reduceStream, initialChatState());
   // user, assistant("我来看一下"), tool, assistant("找到了,这就改") — 两个独立气泡
   expect(state.items.map((i) => i.kind)).toEqual(["user", "assistant", "tool", "assistant"]);
-  const texts = state.items.filter((i) => i.kind === "assistant").map((i) => (i as { text: string }).text);
+  const texts = state.items
+    .filter((i) => i.kind === "assistant")
+    .map((i) => (i as { text: string }).text);
   expect(texts).toEqual(["我来看一下", "找到了,这就改"]);
   // both finished (no streaming cursor stuck)
-  expect(state.items.filter((i) => i.kind === "assistant").every((i) => (i as { done: boolean }).done)).toBe(true);
+  expect(
+    state.items.filter((i) => i.kind === "assistant").every((i) => (i as { done: boolean }).done),
+  ).toBe(true);
 });
 
 // Same untrusted-payload guard as roomHistoryToEvents: a non-array (or junk
@@ -139,13 +152,26 @@ test("ccHistoryToEvents 守卫非数组 / 脏条目(不抛)", () => {
 // id-paired `tool_result` (not the id-less `room_tool_result`).
 test("roomMsgToEvent:有 toolId 时用真 id + 走 id-配对的 tool_result", () => {
   expect(
-    roomMsgToEvent({ from: "agent", type: "tool", tool: "Read", summary: "读 a.ts", toolId: "toolu_01", seq: 3 }),
+    roomMsgToEvent({
+      from: "agent",
+      type: "tool",
+      tool: "Read",
+      summary: "读 a.ts",
+      toolId: "toolu_01",
+      seq: 3,
+    }),
   ).toEqual({
     type: "tool_use_start",
     toolCall: { id: "toolu_01", toolName: "Read", summary: "读 a.ts" },
   });
   expect(
-    roomMsgToEvent({ from: "agent", type: "tool_result", summary: "ok", isError: false, toolId: "toolu_01" }),
+    roomMsgToEvent({
+      from: "agent",
+      type: "tool_result",
+      summary: "ok",
+      isError: false,
+      toolId: "toolu_01",
+    }),
   ).toEqual({
     type: "tool_result",
     result: { id: "toolu_01", result: "ok", isError: false },
@@ -158,9 +184,21 @@ test("roomMsgToEvent:有 toolId 时用真 id + 走 id-配对的 tool_result", ()
 // real parameters. When a (legacy) message has no `args`, the key is omitted so
 // the older exact-shape tests stay green.
 test("roomMsgToEvent 透传完整 args(prompt 等不再只剩 summary)", () => {
-  const args = { description: "build X", prompt: "一大段子任务 prompt……", subagent_type: "general-purpose" };
+  const args = {
+    description: "build X",
+    prompt: "一大段子任务 prompt……",
+    subagent_type: "general-purpose",
+  };
   expect(
-    roomMsgToEvent({ from: "agent", type: "tool", tool: "Agent", summary: "build X", args, toolId: "t9", seq: 7 }),
+    roomMsgToEvent({
+      from: "agent",
+      type: "tool",
+      tool: "Agent",
+      summary: "build X",
+      args,
+      toolId: "t9",
+      seq: 7,
+    }),
   ).toEqual({
     type: "tool_use_start",
     toolCall: { id: "t9", toolName: "Agent", summary: "build X", args },
@@ -227,11 +265,15 @@ test("并行工具按 id 各自收口(回归:不再封错/堆叠)", () => {
 
 test("无 toolId(旧 transcript)仍回退到 room-tool seq id + room_tool_result", () => {
   // Back-compat: messages persisted before the id fix have no toolId.
-  expect(roomMsgToEvent({ from: "agent", type: "tool", tool: "Read", summary: "x", seq: 7 })).toEqual({
+  expect(
+    roomMsgToEvent({ from: "agent", type: "tool", tool: "Read", summary: "x", seq: 7 }),
+  ).toEqual({
     type: "tool_use_start",
     toolCall: { id: "room-tool-7", toolName: "Read", summary: "x" },
   });
-  expect(roomMsgToEvent({ from: "agent", type: "tool_result", summary: "ok", isError: false })).toEqual({
+  expect(
+    roomMsgToEvent({ from: "agent", type: "tool_result", summary: "ok", isError: false }),
+  ).toEqual({
     type: "room_tool_result",
     summary: "ok",
     isError: false,
@@ -239,8 +281,13 @@ test("无 toolId(旧 transcript)仍回退到 room-tool seq id + room_tool_result
 });
 
 test("extractAskUserOptions:字符串选项 / 对象 label / optionsOnly", () => {
-  expect(extractAskUserOptions({ options: ["A", "B"] })).toEqual({ options: ["A", "B"], optionsOnly: false });
-  expect(extractAskUserOptions({ options: [{ label: "甲" }, { label: "乙" }], optionsOnly: true })).toEqual({
+  expect(extractAskUserOptions({ options: ["A", "B"] })).toEqual({
+    options: ["A", "B"],
+    optionsOnly: false,
+  });
+  expect(
+    extractAskUserOptions({ options: [{ label: "甲" }, { label: "乙" }], optionsOnly: true }),
+  ).toEqual({
     options: ["甲", "乙"],
     optionsOnly: true,
   });
@@ -264,4 +311,19 @@ test("roomHistoryToEvents 守卫非数组 messages(不抛/白屏)", () => {
   expect(roomHistoryToEvents(123)).toEqual([]);
   expect(roomHistoryToEvents("oops")).toEqual([]);
   expect(roomHistoryToEvents({ length: 2 })).toEqual([]);
+});
+
+describe("recommendedAskAnswer", () => {
+  test("returns the recommended label, every recommendation for multi-select, else nothing", () => {
+    const options = [
+      { label: "A", recommended: true },
+      { label: "B" },
+      { label: "C", recommended: true },
+    ];
+    expect(recommendedAskAnswer({ options })).toBe("A");
+    expect(recommendedAskAnswer({ options, multiSelect: true })).toBe("A, C");
+    expect(recommendedAskAnswer({ options: [{ label: "B" }] })).toBeUndefined();
+    expect(recommendedAskAnswer({ options: [{ label: "A", recommended: "yes" }] })).toBeUndefined();
+    expect(recommendedAskAnswer(undefined)).toBeUndefined();
+  });
 });

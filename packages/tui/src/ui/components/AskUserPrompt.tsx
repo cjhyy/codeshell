@@ -12,7 +12,7 @@
  *      finalizes; Enter on Cancel or Esc returns to the pick phase so the
  *      user can change their mind without losing what they typed.
  */
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Box, Text, useInput } from "../../render/index.js";
 import TextInput from "./TextInput.js";
 import type { QuestionDraft } from "../pending-questions.js";
@@ -20,6 +20,7 @@ import type { QuestionDraft } from "../pending-questions.js";
 interface Choice {
   label: string;
   description: string;
+  recommended?: boolean;
 }
 
 interface AskUserPromptProps {
@@ -35,6 +36,35 @@ interface AskUserPromptProps {
   onDraftChange?: (draft: QuestionDraft) => void;
   submitting?: boolean;
   onSubmittingChange?: (submitting: boolean) => void;
+  /** Auto-resolve deadline of a model question; any key keeps it open. */
+  deadline?: number;
+  /** What the deadline picks; undefined means the question is skipped. */
+  recommended?: string;
+  /** Rejects when the deadline could not be dropped; the next key retries. */
+  onKeepWaiting?: () => Promise<void>;
+  /** Esc skips (the model continues) instead of cancelling. */
+  skippable?: boolean;
+}
+
+/** Remaining time as m:ss, rounded up so it never reads 0:00 early. */
+export function formatRemaining(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1_000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/** Tick once a second until `until` passes. */
+function useNow(until: number | undefined): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (until === undefined) return;
+    const timer = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= until) clearInterval(timer);
+    }, 1_000);
+    return () => clearInterval(timer);
+  }, [until]);
+  return now;
 }
 
 const OTHER_LABEL = "Other...";
@@ -53,7 +83,15 @@ export function AskUserPrompt({
   onDraftChange,
   submitting: pendingSubmission = false,
   onSubmittingChange,
+  deadline,
+  recommended,
+  onKeepWaiting,
+  skippable,
 }: AskUserPromptProps) {
+  const now = useNow(deadline);
+  const countdown =
+    deadline !== undefined && deadline > now && onKeepWaiting ? deadline - now : undefined;
+  const keptWaiting = useRef(false);
   const hasOptions = !!options && options.length > 0;
   const choices: Choice[] = hasOptions
     ? [...options!, { label: OTHER_LABEL, description: "Type a custom answer" }]
@@ -160,6 +198,14 @@ export function AskUserPrompt({
   // ─── Input handler ─────────────────────────────────────────────────
   useInput((input, key) => {
     if (pendingSubmission || submissionRef.current !== "idle") return;
+    // Codex-style: any keypress while the clock runs keeps the question open.
+    // Esc stays a decision (skip / answer later), not a snooze.
+    if (countdown !== undefined && !key.escape && !keptWaiting.current && onKeepWaiting) {
+      keptWaiting.current = true;
+      void onKeepWaiting().catch(() => {
+        keptWaiting.current = false;
+      });
+    }
     if (phase === "review") {
       if (key.escape) {
         updateDraft((current) => ({ ...current, phase: "pick" }));
@@ -241,6 +287,16 @@ export function AskUserPrompt({
   // ─── Render ────────────────────────────────────────────────────────
   return (
     <Frame header={header}>
+      {countdown !== undefined && (
+        <Box marginLeft={1}>
+          <Text color={countdown <= 60_000 ? "ansi:red" : undefined} dim={countdown > 60_000}>
+            {recommended !== undefined
+              ? `Picks “${recommended}” in ${formatRemaining(countdown)} if unanswered`
+              : `Skips in ${formatRemaining(countdown)} if unanswered`}
+            {" · any key keeps waiting"}
+          </Text>
+        </Box>
+      )}
       {phase === "pick" ? (
         <PickPhase
           question={question}
@@ -254,6 +310,7 @@ export function AskUserPrompt({
           hasOptions={hasOptions}
           inputIdx={inputIdx}
           canDefer={!!onDefer}
+          skippable={!!skippable}
           disabled={submitting || submissionRef.current === "resolved"}
         />
       ) : (
@@ -282,6 +339,7 @@ interface PickPhaseProps {
   hasOptions: boolean;
   inputIdx: number;
   canDefer: boolean;
+  skippable: boolean;
   disabled: boolean;
 }
 
@@ -297,6 +355,7 @@ function PickPhase({
   hasOptions,
   inputIdx,
   canDefer,
+  skippable,
   disabled,
 }: PickPhaseProps) {
   return (
@@ -338,6 +397,7 @@ function PickPhase({
                 ) : (
                   <Text color={labelCol} bold={isCursor}>
                     {c.label}
+                    {c.recommended ? <Text dim> (recommended)</Text> : null}
                   </Text>
                 )}
               </Box>
@@ -355,7 +415,11 @@ function PickPhase({
           {multiSelect && hasOptions
             ? "↑↓ move · 1-9 jump · Space toggle · Enter continue"
             : "↑↓ move · 1-9 jump · Enter continue"}
-          {canDefer ? " · Esc answer later (selection is not submitted)" : " · Esc cancel"}
+          {canDefer
+            ? " · Esc answer later (selection is not submitted)"
+            : skippable
+              ? " · Esc skip"
+              : " · Esc cancel"}
         </Text>
       </Box>
     </>

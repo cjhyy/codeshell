@@ -39,6 +39,8 @@ import {
   roomHistoryToEvents,
   ccHistoryToEvents,
   extractAskUserOptions,
+  recommendedAskAnswer,
+  recommendedAskLabels,
 } from "../lib/messageMappers.js";
 import { projectForCwd } from "../lib/format.js";
 import { MobileOutputClient } from "./mobileOutputClient.js";
@@ -104,6 +106,14 @@ export interface PendingApproval {
   questions?: Array<{ question: string; header?: string; options: string[]; multiSelect: boolean }>;
   /** A nonblocking question remains answerable after the run ends. */
   asynchronous?: boolean;
+  /** A model question: Skip declines it without an answer (no 拒绝 semantics). */
+  skippable?: boolean;
+  /** Its `expiresAt` auto-resolves unless the user keeps waiting (一直等). */
+  keepWaitable?: boolean;
+  /** What a timeout picks; absent means the question is skipped. */
+  recommended?: string;
+  /** Each recommended option label (a multi-select default joins several). */
+  recommendedOptions?: string[];
   /** True for path-scoped tools (Read/Edit/Write/…) → show file/dir scope. */
   pathScoped: boolean;
   /** Host-generated card (not a CLI tool call): a one-time room mode approval. */
@@ -204,6 +214,9 @@ export interface RemoteApp {
       pathScope?: ApprovalPathScope;
     },
   ) => void;
+  /** Drop a model question's auto-resolve deadline (一直等). Resolves once the
+   *  request is republished without one; rejects when that did not happen. */
+  keepWaitingApproval: (requestId: string) => Promise<void>;
   setPermissionMode: (mode: PermissionMode) => void;
   extendGoal: (sessionId: string) => void;
   clearGoal: (sessionId: string) => void;
@@ -248,6 +261,9 @@ export type MobileSessionCreateTarget =
   | null;
 
 /** Tools whose grants can be remembered with a path scope (file/dir). */
+/** How long a 一直等 waits for Core's deadline-free republish before it reports failure. */
+const KEEP_WAITING_ACK_MS = 15_000;
+
 const PATH_SCOPED = new Set([
   "Read",
   "Edit",
@@ -385,6 +401,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const submittedApprovalsRef = useRef(new Set<string>());
   const retiredApprovalsRef = useRef(new Set<string>());
   const settledApprovalRoutesRef = useRef(new Set<string>());
+  /** In-flight 一直等 requests, settled by the deadline-free republish or an error. */
+  const keepWaitingRef = useRef(
+    new Map<string, { resolve: () => void; reject: (error: Error) => void }>(),
+  );
   const requestActiveResyncRef = useRef<() => void>(() => undefined);
   // The SELECTED project (one-true-source for "what am I looking at"), distinct
   // from activeSessionCwd which is derived from the bound session. Drives session
@@ -862,6 +882,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   }, [sessions]);
 
   const addApproval = useCallback((a: PendingApproval) => {
+    if (a.expiresAt === undefined) keepWaitingRef.current.get(a.requestId)?.resolve();
     if (retiredApprovalsRef.current.has(a.requestId)) return;
     if (settledApprovalRoutesRef.current.has(approvalRouteKey(a))) return;
     if (a.expiresAt !== undefined && a.expiresAt <= Date.now()) return;
@@ -886,11 +907,16 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         setActiveSessionId(a.sessionId);
       }
     }
-    setApprovals((prev) =>
-      prev.some((p) => approvalRouteKey(p) === approvalRouteKey(a))
-        ? prev
-        : [...prev.filter((p) => p.requestId !== a.requestId), a],
-    );
+    setApprovals((prev) => {
+      const existing = prev.find((p) => approvalRouteKey(p) === approvalRouteKey(a));
+      if (!existing) return [...prev.filter((p) => p.requestId !== a.requestId), a];
+      // The same request republished without a deadline (someone chose 一直等).
+      if (existing.expiresAt === a.expiresAt && existing.keepWaitable === a.keepWaitable)
+        return prev;
+      return prev.map((p) =>
+        p === existing ? { ...p, expiresAt: a.expiresAt, keepWaitable: a.keepWaitable } : p,
+      );
+    });
   }, []);
 
   const requestSessionHistory = useCallback(
@@ -1760,6 +1786,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         }
         case "error":
           if (event.clientRequestId && !failSessionCreation(event.clientRequestId)) break;
+          // A failed 一直等 leaves the question as it was; it is not a lost decision.
+          if (event.keepWaitingApprovalId) {
+            keepWaitingRef.current
+              .get(event.keepWaitingApprovalId)
+              ?.reject(new Error(event.message));
+            setNotice(event.message);
+            break;
+          }
           if (event.approvalId) {
             submittingAsyncApprovalsRef.current.delete(event.approvalId);
             // The decision did not reach Core. The request may still be
@@ -2077,6 +2111,16 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             options: askOptions?.options,
             optionsOnly: askOptions?.optionsOnly,
             asynchronous: rq.toolName === "__ask_user__" && rq.args?.asynchronous === true,
+            ...(rq.toolName === "__ask_user__" && rq.args?.skippable === true
+              ? {
+                  skippable: true,
+                  recommended: recommendedAskAnswer(rq.args),
+                  recommendedOptions: recommendedAskLabels(rq.args),
+                }
+              : {}),
+            ...(rq.toolName === "__ask_user__" && rq.args?.keepWaitable === true
+              ? { keepWaitable: true }
+              : {}),
             pathScoped: PATH_SCOPED.has(rq.toolName ?? ""),
           });
         }
@@ -2980,6 +3024,38 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     },
     [socket, clearApproval],
   );
+  const keepWaitingApproval = useCallback(
+    (requestId: string): Promise<void> => {
+      const a = approvalsRef.current.find((p) => p.requestId === requestId);
+      if (!a?.keepWaitable || a.expiresAt === undefined || a.expiresAt <= Date.now())
+        return Promise.resolve();
+      return new Promise<void>((resolve, reject) => {
+        const pending = keepWaitingRef.current;
+        const settle = (error?: Error) => {
+          clearTimeout(timer);
+          if (pending.get(requestId)?.resolve === done) pending.delete(requestId);
+          if (error) reject(error);
+          else resolve();
+        };
+        const done = () => settle();
+        const timer = setTimeout(
+          () => settle(new Error("一直等没有得到确认，请重试。")),
+          KEEP_WAITING_ACK_MS,
+        );
+        pending.set(requestId, { resolve: done, reject: settle });
+        // Core republishes the request without a deadline; addApproval settles it.
+        const sent = socket.send({
+          type: "approval.keepWaiting",
+          approvalId: requestId,
+          sessionId: a.sessionId,
+          ...(a.connectionId !== undefined ? { connectionId: a.connectionId } : {}),
+          ...(a.generation !== undefined ? { generation: a.generation } : {}),
+        });
+        if (!sent) settle(new Error("未连接到电脑，请稍后重试。"));
+      });
+    },
+    [socket],
+  );
   const setPermissionMode = useCallback(
     (mode: PermissionMode) => {
       // A CLI room's mode is a spawn-time argument of its process; the native
@@ -3216,6 +3292,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     newSession,
     refreshSessions,
     respondApproval,
+    keepWaitingApproval,
     setPermissionMode,
     extendGoal,
     clearGoal,

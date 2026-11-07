@@ -1,31 +1,8 @@
 import React from "react";
 import type { ApprovalRequestPayload } from "./protocol.js";
 import { summarizeApproval } from "../src/lib/riskClassify.js";
-
-/** Re-render each second until `until` passes; no timer without a deadline. */
-function useNow(until: number | undefined): number {
-  const [now, setNow] = React.useState(() => Date.now());
-  React.useEffect(() => {
-    if (until === undefined) return;
-    let timer: ReturnType<typeof setTimeout>;
-    const schedule = (current: number) => {
-      if (current < until) timer = setTimeout(tick, Math.min(1_000, until - current));
-    };
-    const tick = () => {
-      const current = Date.now();
-      setNow(current);
-      schedule(current);
-    };
-    schedule(Date.now());
-    return () => clearTimeout(timer);
-  }, [until]);
-  return now;
-}
-
-function formatRemaining(ms: number): string {
-  const total = Math.ceil(ms / 1_000);
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
-}
+import { recommendedAskAnswer, recommendedAskLabels } from "../src/lib/messageMappers.js";
+import { autoResolveText, formatRemaining, useNow } from "./deadline.js";
 
 export function HubApprovalCard({
   payload,
@@ -33,12 +10,15 @@ export function HubApprovalCard({
   busy,
   connected,
   hidden,
+  onKeepWaiting,
 }: {
   payload: ApprovalRequestPayload;
   busy: boolean;
   connected: boolean;
   hidden?: boolean;
   onDecide: (payload: ApprovalRequestPayload, approved: boolean, answer?: string) => void;
+  /** Drop a model question's auto-resolve deadline (一直等); rejects on failure. */
+  onKeepWaiting?: (payload: ApprovalRequestPayload) => Promise<void>;
 }) {
   const [answer, setAnswer] = React.useState("");
   const [selected, setSelected] = React.useState<number[]>([]);
@@ -49,6 +29,23 @@ export function HubApprovalCard({
   const now = useNow(deadline);
   const expired = deadline !== undefined && now >= deadline;
   const locked = busy || !connected || expired;
+  // Model questions: Skip instead of 拒绝, a recommended default, and 一直等.
+  const skippable = isAskUser && payload.request.args.skippable === true;
+  const recommended = skippable ? recommendedAskAnswer(payload.request.args) : undefined;
+  const recommendedLabels = skippable ? recommendedAskLabels(payload.request.args) : [];
+  const countdown =
+    isAskUser && payload.request.args.keepWaitable === true && !expired && onKeepWaiting
+      ? deadline
+      : undefined;
+  const keptWaiting = React.useRef(false);
+  const keepWaiting = () => {
+    if (countdown === undefined || keptWaiting.current || locked) return;
+    keptWaiting.current = true;
+    // A failed attempt must not disable 一直等 for good; the next try resends.
+    void onKeepWaiting?.(payload).catch(() => {
+      keptWaiting.current = false;
+    });
+  };
   const choices = (
     Array.isArray(payload.request.args.options) ? payload.request.args.options : []
   ).flatMap((option): { label: string; description?: string }[] => {
@@ -90,7 +87,14 @@ export function HubApprovalCard({
       {payload.request.description ? (
         <div className="approval-desc">{payload.request.description}</div>
       ) : null}
-      {deadline !== undefined ? (
+      {countdown !== undefined ? (
+        <span className="muted approval-countdown">
+          <span role="timer">{autoResolveText(countdown - now, recommended)}</span>
+          <button className="library-button" disabled={locked} onClick={keepWaiting}>
+            一直等
+          </button>
+        </span>
+      ) : deadline !== undefined ? (
         <span className="muted">
           {expired
             ? `已超时，不能再${isAskUser ? "回答" : "处理"}`
@@ -130,7 +134,10 @@ export function HubApprovalCard({
                       }}
                     />
                     <span>
-                      <span>{choice.label}</span>
+                      <span>
+                        {choice.label}
+                        {recommendedLabels.includes(choice.label) ? "（推荐）" : ""}
+                      </span>
                       {choice.description ? (
                         <span className="approval-option-description">{choice.description}</span>
                       ) : null}
@@ -143,7 +150,10 @@ export function HubApprovalCard({
                     disabled={locked}
                     onClick={() => onDecide(payload, true, choice.label)}
                   >
-                    <span>{choice.label}</span>
+                    <span>
+                      {choice.label}
+                      {recommendedLabels.includes(choice.label) ? "（推荐）" : ""}
+                    </span>
                     {choice.description ? (
                       <span className="approval-option-description">{choice.description}</span>
                     ) : null}
@@ -158,7 +168,10 @@ export function HubApprovalCard({
               aria-label="自定义回答"
               value={answer}
               placeholder="输入回答…"
-              onChange={(e) => setAnswer(e.target.value)}
+              onChange={(e) => {
+                keepWaiting();
+                setAnswer(e.target.value);
+              }}
             />
           ) : null}
         </>
@@ -179,7 +192,7 @@ export function HubApprovalCard({
           </button>
         ) : null}
         <button className="stop" disabled={locked} onClick={() => onDecide(payload, false)}>
-          拒绝
+          {skippable ? "跳过" : "拒绝"}
         </button>
       </div>
     </div>

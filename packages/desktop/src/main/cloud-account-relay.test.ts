@@ -821,6 +821,18 @@ test("account devices bind tasks, output, approvals and Stop to the original Hos
       generation: 7,
       decision: "reject",
     });
+    // Another client kept the question open: the same route is republished.
+    // The answer above was already sent, so a second one stays refused.
+    f.sockets[0]!.message(approval);
+    expect(() =>
+      f.service.approve(10, {
+        connectionId: a.id,
+        approvalId: "approval-a",
+        workerConnectionId: "worker-a",
+        generation: 7,
+        approved: true,
+      }),
+    ).toThrow("审批已过期");
     f.service.stop(10, { connectionId: a.id });
     expect(f.sockets[0]!.sent.at(-1)).toEqual({ type: "run.stop", sessionId: a.sessionId });
     expect(() => f.service.stop(99, { connectionId: a.id })).toThrow("授权已结束");

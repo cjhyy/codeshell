@@ -1090,3 +1090,98 @@ for (const [stoppedSession, source] of [
     }
     unfence();
   });
+
+describe("mobile keep-waiting on a model question", () => {
+  for (const success of [true, false]) {
+    test(`relays the worker route and reports a refusal (success: ${success})`, async () => {
+      const harness = createHarness({
+        requestedWorkspaceRoot: "/primary",
+        lookupSession: () => undefined,
+      });
+      const outbound = new Set<OutboundListener>();
+      const requests: Array<{ id: string; method: string; params: Record<string, unknown> }> = [];
+      harness.pendingApprovals.observeOutboundLine(
+        JSON.stringify({
+          method: "agent/approvalRequest",
+          params: {
+            sessionId: "session-1",
+            requestId: "model-question",
+            connectionId: "worker",
+            generation: 2,
+            expiresAt: Date.now() + 120_000,
+            request: {
+              toolName: "__ask_user__",
+              args: { question: "Pick one", skippable: true, keepWaitable: true },
+            },
+          },
+        }),
+      );
+      harness.ctx.getBridge = () =>
+        ({
+          getLastRunContext: () => ({}),
+          subscribeOutbound: (listener: OutboundListener) => {
+            outbound.add(listener);
+            return () => {
+              outbound.delete(listener);
+            };
+          },
+          injectWorkerMessage: (line: string) => {
+            requests.push(JSON.parse(line));
+          },
+        }) as unknown as AgentBridge;
+      const submitted = handleClientEvent(harness.ctx, {
+        type: "approval.keepWaiting",
+        deviceId: "phone-1",
+        sessionId: "session-1",
+        approvalId: "model-question",
+        // A phone-supplied route never overrides the worker's.
+        connectionId: "worker",
+        generation: 2,
+      });
+      expect(requests).toHaveLength(1);
+      expect(requests[0]!.method).toBe("agent/approvalKeepWaiting");
+      expect(requests[0]!.params).toEqual({
+        sessionId: "session-1",
+        requestId: "model-question",
+        connectionId: "worker",
+        generation: 2,
+      });
+      for (const listener of outbound)
+        listener(
+          JSON.stringify({
+            id: requests[0]!.id,
+            ...(success
+              ? { result: { ok: true } }
+              : { error: { code: -32602, message: "closed" } }),
+          }),
+        );
+      await submitted;
+      expect(harness.replies).toEqual(
+        success
+          ? []
+          : [{ type: "error", keepWaitingApprovalId: "model-question", message: "closed" }],
+      );
+    });
+  }
+
+  test("an unknown or mismatched question never reaches the worker", async () => {
+    const harness = createHarness({
+      requestedWorkspaceRoot: "/primary",
+      lookupSession: () => undefined,
+    });
+    await handleClientEvent(harness.ctx, {
+      type: "approval.keepWaiting",
+      deviceId: "phone-1",
+      sessionId: "session-1",
+      approvalId: "missing",
+    });
+    expect(harness.metas).toEqual([]);
+    expect(harness.replies).toEqual([
+      {
+        type: "error",
+        keepWaitingApprovalId: "missing",
+        message: "This question has closed, was already handled, or cannot be kept open.",
+      },
+    ]);
+  });
+});

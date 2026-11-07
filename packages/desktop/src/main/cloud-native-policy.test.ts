@@ -105,4 +105,18 @@ describe("native cloud authority", () => {
       expect(() => validateCloudRequest("agent/cancel", { sessionId })).toThrow();
     }
   });
+
+  test("keep-waiting carries only the session and question", () => {
+    const params = { sessionId: "session-1", requestId: "question-1" };
+    expect(validateCloudRequest("agent/approvalKeepWaiting", params)).toEqual({
+      method: "agent/approvalKeepWaiting",
+      params,
+    });
+    expect(() =>
+      validateCloudRequest("agent/approvalKeepWaiting", { ...params, connectionId: "x" }),
+    ).toThrow();
+    expect(() =>
+      validateCloudRequest("agent/approvalKeepWaiting", { sessionId: "session-1" }),
+    ).toThrow();
+  });
 });

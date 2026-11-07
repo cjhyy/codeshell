@@ -1,6 +1,10 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { AgentClient } from "@cjhyy/code-shell-core";
-import { asyncAgentRegistry, type OnboardingResult } from "@cjhyy/code-shell-core/internal";
+import {
+  asyncAgentRegistry,
+  recommendedAnswer,
+  type OnboardingResult,
+} from "@cjhyy/code-shell-core/internal";
 import { Box, Text } from "../../render/index.js";
 import { CommandInput } from "./CommandInput.js";
 import { AskUserPrompt } from "./AskUserPrompt.js";
@@ -327,6 +331,18 @@ export function TuiControlSurface(props: TuiControlSurfaceProps) {
             ? () => onQuestionDeferred(pendingQuestion.requestId)
             : undefined
         }
+        deadline={pendingQuestion.keepWaitable ? pendingQuestion.expiresAt : undefined}
+        recommended={recommendedAnswer(pendingQuestion)}
+        skippable={pendingQuestion.skippable}
+        onKeepWaiting={() => {
+          if (!pendingQuestion.sessionId) return Promise.reject(new Error("no session"));
+          return client
+            .keepWaiting(pendingQuestion.sessionId, pendingQuestion.requestId)
+            .catch((error) => {
+              addStatus(`Could not keep the question open: ${String(error)}`);
+              throw error;
+            });
+        }}
         onAnswer={(answer) => {
           return answerPendingQuestion(client, pendingQuestion, { approved: true, answer })
             .then(() => onQuestionResolved(pendingQuestion))
@@ -336,10 +352,14 @@ export function TuiControlSurface(props: TuiControlSurfaceProps) {
             });
         }}
         onCancel={() => {
-          return answerPendingQuestion(client, pendingQuestion, {
-            approved: false,
-            reason: "(user declined to answer)",
-          })
+          // A model question declined without a reason is reported as a skip.
+          return answerPendingQuestion(
+            client,
+            pendingQuestion,
+            pendingQuestion.skippable
+              ? { approved: false }
+              : { approved: false, reason: "(user declined to answer)" },
+          )
             .then(() => onQuestionResolved(pendingQuestion))
             .catch((error) => {
               addStatus(`Could not dismiss question: ${String(error)}`);

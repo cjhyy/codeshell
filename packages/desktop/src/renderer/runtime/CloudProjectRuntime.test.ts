@@ -819,4 +819,58 @@ describe("native cloud history completeness", () => {
       }),
     ).rejects.toThrow("exact legacy base");
   });
+
+  test("a cloud model question carries its deadline, keeps waiting remotely and records a skip", async () => {
+    const f = setup();
+    await selected(f);
+    const expiresAt = Date.now() + 90_000;
+    f.event("agent/approvalRequest", {
+      sessionId: "session-alpha",
+      requestId: "q",
+      expiresAt,
+      request: {
+        toolName: "__ask_user__",
+        args: {
+          question: "Which page?",
+          skippable: true,
+          keepWaitable: true,
+          options: [{ label: "Review", description: "page", recommended: true }],
+        },
+      },
+    });
+    expect(f.runtime.getSnapshot().state.messages).toContainEqual(
+      expect.objectContaining({
+        kind: "ask_user",
+        requestId: "q",
+        expiresAt,
+        keepWaitable: true,
+        skippable: true,
+        options: [{ label: "Review", description: "page", recommended: true }],
+      }),
+    );
+    await f.runtime.keepWaiting("q");
+    expect(f.calls.find((call) => call.method === "agent/approvalKeepWaiting")?.params).toEqual({
+      sessionId: "session-alpha",
+      requestId: "q",
+    });
+    // The host republishes the same request without a deadline.
+    f.event("agent/approvalRequest", {
+      sessionId: "session-alpha",
+      requestId: "q",
+      request: { toolName: "__ask_user__", args: { question: "Which page?", skippable: true } },
+    });
+    expect(f.runtime.getSnapshot().state.messages).toContainEqual(
+      expect.objectContaining({ requestId: "q", expiresAt: undefined, keepWaitable: false }),
+    );
+    await f.runtime.approve("q", false, undefined, undefined, "已跳过");
+    expect(f.calls.filter((call) => call.method === "agent/approve").at(-1)?.params).toEqual({
+      sessionId: "session-alpha",
+      requestId: "q",
+      decision: { approved: false },
+    });
+    expect(f.runtime.getSnapshot().state.messages).toContainEqual(
+      expect.objectContaining({ requestId: "q", answer: "已跳过" }),
+    );
+    f.runtime.disconnect();
+  });
 });

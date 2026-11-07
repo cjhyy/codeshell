@@ -56,7 +56,15 @@ export function validateCloudRequest(
   const params = record(value);
   if (Buffer.byteLength(JSON.stringify(params)) > CLOUD_MAX_REQUEST_BYTES)
     throw new Error("请求过大。");
-  if (!["agent/run", "agent/cancel", "agent/approve", "agent/query"].includes(String(method)))
+  if (
+    ![
+      "agent/run",
+      "agent/cancel",
+      "agent/approve",
+      "agent/approvalKeepWaiting",
+      "agent/query",
+    ].includes(String(method))
+  )
     throw new Error("云端不支持这个操作。");
   if (method === "agent/query" && params.type === "sessions") {
     only(params, ["type"]);
@@ -95,6 +103,9 @@ export function validateCloudRequest(
         throw new Error("云端运行参数无效。");
     } else if (method === "agent/cancel") {
       only(params, ["sessionId"]);
+    } else if (method === "agent/approvalKeepWaiting") {
+      only(params, ["sessionId", "requestId"]);
+      if (!text(params.requestId, 256)) throw new Error("云端审批参数无效。");
     } else if (method === "agent/approve") {
       only(params, ["sessionId", "requestId", "decision"]);
       const decision = record(params.decision);

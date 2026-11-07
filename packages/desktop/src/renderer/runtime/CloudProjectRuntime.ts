@@ -729,10 +729,12 @@ export class CloudProjectRuntime {
       typeof payload.request?.toolName !== "string"
     )
       return;
+    // A republished request (the user kept a question open) replaces its deadline.
     this.approvals.set(payload.requestId, {
       requestId: payload.requestId,
       sessionId: payload.sessionId,
       request: payload.request,
+      ...(typeof payload.expiresAt === "number" ? { expiresAt: payload.expiresAt } : {}),
     });
   }
   private projectApprovals(): void {
@@ -754,10 +756,14 @@ export class CloudProjectRuntime {
               ...(o.tone === "ok" || o.tone === "danger" || o.tone === "neutral"
                 ? { tone: o.tone }
                 : {}),
+              ...(o.recommended === true ? { recommended: true } : {}),
             }))
         : [];
       state = appendAskUserMessage(state, {
         requestId: approval.requestId,
+        expiresAt: approval.expiresAt,
+        keepWaitable: args.keepWaitable === true,
+        skippable: args.skippable === true,
         engineSessionId: approval.sessionId,
         question:
           typeof args.question === "string" ? args.question : (approval.request.description ?? ""),
@@ -886,11 +892,25 @@ export class CloudProjectRuntime {
         this.publish({ error: errorText(cause) });
     }
   };
+  /** Drop a model question's auto-resolve deadline; the host republishes it. */
+  keepWaiting = async (requestId: string): Promise<void> => {
+    const connection = this.connection;
+    const approval = this.approvals.get(requestId);
+    if (!connection || !approval || this.value.status !== "connected")
+      throw new Error("Cloud question is no longer available on this connection");
+    await this.api.request({
+      connectionId: connection.connectionId,
+      method: "agent/approvalKeepWaiting",
+      params: { sessionId: approval.sessionId, requestId },
+    });
+  };
   approve = async (
     requestId: string,
     approved: boolean,
     answer?: string,
     reason?: string,
+    /** Transcript record for a declined question (e.g. 已跳过). */
+    record?: string,
   ): Promise<void> => {
     const connection = this.connection;
     const approval = this.approvals.get(requestId);
@@ -923,8 +943,10 @@ export class CloudProjectRuntime {
       )
         return;
       this.approvals.delete(requestId);
-      if (answer !== undefined)
-        this.publish({ state: markAskUserAnswered(this.value.state, requestId, answer) });
+      if ((record ?? answer) !== undefined)
+        this.publish({
+          state: markAskUserAnswered(this.value.state, requestId, (record ?? answer)!),
+        });
       this.projectApprovals();
     } catch (cause) {
       if (
