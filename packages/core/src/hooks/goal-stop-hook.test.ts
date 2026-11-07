@@ -8,6 +8,7 @@ import {
 import type { LLMResponse } from "../types.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
+import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 
 /**
  * GoalStopHook three-state judge. Covers the branches the review flagged as
@@ -187,6 +188,92 @@ describe("createGoalStopHook — three-state judge", () => {
       data: { sessionId: SID, finalText: "started" },
     });
     expect(res.continueSession).toBe(true);
+  });
+
+  // s-mw4q76at-82b430f2: a background DriveAgent (CC) job was running, the model
+  // stopped because its next step depended on that job, but the judge read
+  // `waiting` as "the WHOLE goal only lacks this task" and returned not_met.
+  // Every stop was pushed back into another no-op round (judge → "still
+  // waiting" → poll → judge …) until the job finished. A sub-agent / registry
+  // job always wakes the session when it ends, so its presence alone must park.
+  it("not_met while a finite background job runs → parks (waiting) instead of looping", async () => {
+    const judge = fakeJudge('{"met":false,"waiting":false,"gaps":"真实验收未执行"}');
+    let waitingCalls = 0;
+    const hook = createGoalStopHook({
+      goal: "optimize until no visual diff",
+      llm: judge,
+      log: noopLog,
+      onWaiting: () => {
+        waitingCalls += 1;
+      },
+    });
+    try {
+      backgroundJobRegistry.start("cc-park-job", SID, "DriveAgent(claude): fix report", {
+        kind: "drive-agent",
+      });
+      const res = await hook({
+        eventName: "on_stop",
+        data: { sessionId: SID, finalText: "CC 在跑,等它回来" },
+      });
+      expect(res.continueSession).toBeFalsy();
+      expect(waitingCalls).toBe(1);
+      expect(res.data?.goalVerdict).toEqual({ met: false, gaps: "真实验收未执行" });
+    } finally {
+      backgroundJobRegistry.reset();
+    }
+  });
+
+  it("not_met while a background sub-agent runs → parks (waiting)", async () => {
+    let waitingCalls = 0;
+    const hook = createGoalStopHook({
+      goal: "ship the feature",
+      llm: fakeJudge('{"met":false,"waiting":false,"gaps":"review pending"}'),
+      log: noopLog,
+      onWaiting: () => {
+        waitingCalls += 1;
+      },
+    });
+    try {
+      asyncAgentRegistry.register({
+        agentId: "park-subagent",
+        sessionId: SID,
+        description: "reviewer",
+        status: "running",
+        startedAt: Date.now(),
+        abort: () => {},
+      });
+      const res = await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "等" } });
+      expect(res.continueSession).toBeFalsy();
+      expect(waitingCalls).toBe(1);
+    } finally {
+      asyncAgentRegistry.reset();
+    }
+  });
+
+  it("not_met with only a background shell (dev server) still continues — shells stay judge-driven", async () => {
+    let waitingCalls = 0;
+    const hook = createGoalStopHook({
+      goal: "fix the failing tests",
+      llm: fakeJudge('{"met":false,"waiting":false,"gaps":"tests failing"}'),
+      log: noopLog,
+      onWaiting: () => {
+        waitingCalls += 1;
+      },
+    });
+    const spawned = backgroundShellManager.spawnBackground({
+      command: "sleep 100",
+      cwd: process.cwd(),
+      sessionId: SID,
+    });
+    try {
+      expect(spawned.ok).toBe(true);
+      const res = await hook({ eventName: "on_stop", data: { sessionId: SID, finalText: "hm" } });
+      expect(res.continueSession).toBe(true);
+      expect(waitingCalls).toBe(0);
+    } finally {
+      await backgroundShellManager.killAll();
+      backgroundShellManager._clear();
+    }
   });
 
   it("scrubs CLI and structured secrets from untrusted background task descriptions", async () => {

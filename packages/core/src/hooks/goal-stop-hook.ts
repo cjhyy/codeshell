@@ -757,7 +757,17 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     // the stop would silently abandon the goal — NOTHING would ever wake the
     // session (no notification to drain). So a baseless `waiting` falls through
     // to not_met (continueSession), where the model is nudged to keep working.
-    if (verdict.waiting && runningWork.length > 0) {
+    //
+    // A running sub-agent or registry job (DriveAgent / video) parks on its own,
+    // whatever the judge said. Those always end and always wake the session, so
+    // a stop now only defers the next judgment to when their result arrives.
+    // The judge tends to read `waiting` as "the goal lacks nothing but this
+    // task" and returns not_met whenever more work follows it; pushing the stop
+    // back then just loops the model through no-op "still waiting" rounds and
+    // status polls until the job ends (s-mw4q76at-82b430f2). Shells are not
+    // covered: a dev server never ends, so they stay with the judge.
+    const parksOnFiniteWork = runningWork.some((w) => w.kind !== "shell");
+    if ((verdict.waiting || parksOnFiniteWork) && runningWork.length > 0) {
       log.info("goal_stop.waiting_on_background_task", { cat: "goal", sessionId });
       try {
         if (opts.onWaiting?.() === false) {
