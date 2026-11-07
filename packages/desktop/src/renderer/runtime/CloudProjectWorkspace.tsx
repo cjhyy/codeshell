@@ -218,7 +218,12 @@ export function CloudProjectWorkspace({ runtime, ...projects }: CloudProjectWork
                   )
                   .catch(() => undefined);
             }}
-            onAskUserAnswer={(id, answer) => runtime.approve(id, true, answer)}
+            onAskUserAnswer={(id, answer, skip) =>
+              skip
+                ? runtime.approve(id, false, undefined, undefined, answer)
+                : runtime.approve(id, true, answer)
+            }
+            onKeepWaitingQuestion={(question) => runtime.keepWaiting(question.requestId)}
           />
         </div>
       </div>

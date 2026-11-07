@@ -231,7 +231,11 @@ import { recordPetDelegationClosureBestEffort } from "./pet/pet-delegation-closu
 import { PetReportReceiptStore } from "./pet/pet-report-receipt-store.js";
 import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
-import { PetImDecisions, collectImDecisions } from "./pet/pet-im-decisions.js";
+import {
+  PetImDecisions,
+  collectImDecisions,
+  imDecisionWorkerActions,
+} from "./pet/pet-im-decisions.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
 import { registerRoomHistoryIpc } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
@@ -2185,24 +2189,11 @@ async function createWindow(): Promise<BrowserWindow> {
           pendingMobileApprovals.replayAllLines(),
         );
       },
-      approve: async (entry, decision) => {
-        const { request: _request, ...route } = entry.envelope;
-        const outcome = await decisionBridge.requestWorker(
-          "agent/approve",
-          { ...route, decision },
-          15_000,
-          { meta: { origin: "host", producer: "pet-im-decision" } },
-        );
-        if (!outcome.ok) throw new Error(outcome.message);
-        mobileOrchestrator.broadcastApprovalResolved({
-          sessionId: route.sessionId,
-          requestId: route.requestId,
-          connectionId: route.connectionId,
-          generation: route.generation,
-          approved: decision.approved,
-          answer: decision.answer,
-        });
-      },
+      ...imDecisionWorkerActions(
+        (method, params, timeoutMs, options) =>
+          decisionBridge.requestWorker(method, params, timeoutMs, options),
+        (params) => mobileOrchestrator.broadcastApprovalResolved(params),
+      ),
       publish: publishGatewayControlEvent,
       onError: (error) => dlog("main", "pet.im-decision.failed", { error: String(error) }),
     });

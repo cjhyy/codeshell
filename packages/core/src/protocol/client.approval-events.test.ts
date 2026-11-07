@@ -130,4 +130,47 @@ describe("AgentClient approval notifications", () => {
       decision: { approved: true },
     });
   });
+
+  it("passes a question deadline to listeners and keeps waiting on the worker route", async () => {
+    const { client, serverSide } = setup();
+    let keepParams: Record<string, unknown> | undefined;
+    let approveParams: Record<string, unknown> | undefined;
+    serverSide.onMessage((message) => {
+      const rpc = message as RpcRequest;
+      if (rpc.method === Methods.ApprovalKeepWaiting) keepParams = rpc.params;
+      if (rpc.method === Methods.Approve) approveParams = rpc.params;
+      serverSide.send(createResponse(rpc.id, { ok: true }));
+    });
+    const metas: unknown[] = [];
+    client.onApprovalRequest((_requestId, _request, meta) => metas.push(meta));
+    const request: ApprovalRequest = {
+      toolName: "__ask_user__",
+      args: { question: "Which page?", keepWaitable: true, skippable: true },
+      description: "Which page?",
+      riskLevel: "low",
+    };
+    const route = { connectionId: "connection-a", sessionId: "session-a", generation: 7 };
+    serverSide.send(
+      createNotification(Methods.ApprovalRequest, {
+        ...route,
+        requestId: "q-1",
+        expiresAt: 123_000,
+        request,
+      }),
+    );
+    expect(metas[0]).toEqual({ ...route, expiresAt: 123_000 });
+    await client.keepWaiting("session-a", "q-1");
+    expect(keepParams).toEqual({ ...route, requestId: "q-1" });
+    // Republished without a deadline; the route (not the deadline) still answers.
+    serverSide.send(
+      createNotification(Methods.ApprovalRequest, { ...route, requestId: "q-1", request }),
+    );
+    expect(metas[1]).toEqual(route);
+    await client.approve("session-a", "q-1", { approved: true, answer: "Review" });
+    expect(approveParams).toEqual({
+      ...route,
+      requestId: "q-1",
+      decision: { approved: true, answer: "Review" },
+    });
+  });
 });

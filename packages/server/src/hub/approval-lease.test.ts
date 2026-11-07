@@ -65,4 +65,21 @@ describe("Hub approval leases", () => {
     leases.resolved("approval");
     expect(leases.get("approval")).toBeUndefined();
   });
+
+  test("a republished request replaces its payload and keeps the holder lease", () => {
+    let now = 10;
+    const leases = new ApprovalLeases(
+      () => undefined,
+      100,
+      () => now,
+    );
+    leases.add({ requestId: "q", sessionId: "s", expiresAt: 500 });
+    const claimed = leases.claim("q", "device");
+    // The user chose to keep waiting: same requestId, no deadline.
+    leases.add({ requestId: "q", sessionId: "s" });
+    expect(leases.get("q")).toEqual({ requestId: "q", sessionId: "s" });
+    expect(leases.snapshot()).toEqual([{ requestId: "q", sessionId: "s" }]);
+    expect(leases.snapshotLeases()).toEqual([claimed]);
+    now = 20;
+  });
 });

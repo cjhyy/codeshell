@@ -523,11 +523,20 @@ export class AccountDeviceService {
         : event.method === "agent/approvalRequest"
           ? event.params
           : undefined;
-    if (approval?.requestId)
-      connection.approvals.set(approval.requestId, {
-        connectionId: approval.connectionId,
-        generation: approval.generation,
-      });
+    if (approval?.requestId) {
+      const known = connection.approvals.get(approval.requestId);
+      // A kept-open question is republished under the same route; an answer
+      // already sent for it must stay one-shot.
+      if (
+        !known ||
+        known.connectionId !== approval.connectionId ||
+        known.generation !== approval.generation
+      )
+        connection.approvals.set(approval.requestId, {
+          connectionId: approval.connectionId,
+          generation: approval.generation,
+        });
+    }
     const resolution =
       payload?.method === "agent/approvalResolved"
         ? payload.params

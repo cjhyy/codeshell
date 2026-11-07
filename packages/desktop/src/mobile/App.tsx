@@ -319,6 +319,7 @@ function ApprovalsArea({ app }: { app: ReturnType<typeof useRemoteApp> }) {
               app.respondApproval(a.requestId, decision, opts);
             }
           }}
+          onKeepWaiting={a.roomId ? undefined : () => app.keepWaitingApproval(a.requestId)}
         />
       ))}
     </div>

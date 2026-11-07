@@ -41,10 +41,16 @@ export function roomMsgToEvent(msg: unknown): unknown {
     // `args` carries the FULL tool_use input (e.g. a sub-agent's `prompt`), so
     // the card can show real parameters rather than the lossy one-field summary.
     // Omit the key when the message predates args persistence (legacy lines).
-    const args = m.args && typeof m.args === "object" ? (m.args as Record<string, unknown>) : undefined;
+    const args =
+      m.args && typeof m.args === "object" ? (m.args as Record<string, unknown>) : undefined;
     return {
       type: "tool_use_start",
-      toolCall: { id: toolId ?? `room-tool-${m.seq ?? ""}`, toolName: m.tool, summary: m.summary, ...(args ? { args } : {}) },
+      toolCall: {
+        id: toolId ?? `room-tool-${m.seq ?? ""}`,
+        toolName: m.tool,
+        summary: m.summary,
+        ...(args ? { args } : {}),
+      },
     };
   }
   // Tool result: if we have the real id, emit an id-paired `tool_result` so the
@@ -63,7 +69,8 @@ export function roomMsgToEvent(msg: unknown): unknown {
   }
   if (type === "turn_end") return { type: "turn_complete", reason: m.reason ?? "completed" };
   if (type === "error") return { type: "error", error: m.text };
-  if (type === "agent_exit") return { type: "error", error: `agent 退出 (code ${m.reason ?? "?"})` };
+  if (type === "agent_exit")
+    return { type: "error", error: `agent 退出 (code ${m.reason ?? "?"})` };
   // room_created (audit anchor) and anything else have no visible rendering.
   return { type: "_noop" };
 }
@@ -109,7 +116,10 @@ export function ccHistoryToEvents(messages: unknown): unknown[] {
     for (let t = 0; t < tools.length; t++) {
       const tool = tools[t] as Record<string, unknown> | null;
       if (!tool || typeof tool !== "object") continue;
-      const args = tool.args && typeof tool.args === "object" ? (tool.args as Record<string, unknown>) : undefined;
+      const args =
+        tool.args && typeof tool.args === "object"
+          ? (tool.args as Record<string, unknown>)
+          : undefined;
       out.push({
         type: "tool_use_start",
         toolCall: {
@@ -138,6 +148,28 @@ export function extractAskUserOptions(
     if (labels.length) return { options: labels, optionsOnly: args.optionsOnly === true };
   }
   return undefined;
+}
+
+/** The labels a model question marks as recommended, in option order. */
+export function recommendedAskLabels(args: Record<string, unknown> | undefined): string[] {
+  return Array.isArray(args?.options)
+    ? args.options.flatMap((o) =>
+        o && typeof o === "object" && (o as { recommended?: unknown }).recommended === true
+          ? typeof (o as { label?: unknown }).label === "string"
+            ? [(o as { label: string }).label]
+            : []
+          : [],
+      )
+    : [];
+}
+
+/** The recommended label(s) a timed-out model question defaults to (mirrors Core). */
+export function recommendedAskAnswer(
+  args: Record<string, unknown> | undefined,
+): string | undefined {
+  const labels = recommendedAskLabels(args);
+  if (labels.length === 0) return undefined;
+  return args?.multiSelect === true ? labels.join(", ") : labels[0];
 }
 
 // Room history validation and mapping share one browser-safe entry contract.

@@ -1066,6 +1066,25 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         }
         let approvalId: string | undefined;
         let approvalRouted = false;
+        if (hubAuth && parsed.method === "agent/approvalKeepWaiting") {
+          const requestId = parsed.params?.requestId;
+          const approval = typeof requestId === "string" ? leases.get(requestId) : undefined;
+          if (!approval || approval.sessionId !== parsed.params?.sessionId) {
+            sendToTab(
+              ws,
+              hostQueryError(parsed.id ?? null, -32009, "approval is no longer pending"),
+              "approval",
+            );
+            return;
+          }
+          // Route fields belong to the worker's request, never to browser input.
+          parsed.params = {
+            sessionId: approval.sessionId,
+            requestId: approval.requestId,
+            ...(approval.connectionId !== undefined ? { connectionId: approval.connectionId } : {}),
+            ...(approval.generation !== undefined ? { generation: approval.generation } : {}),
+          };
+        }
         if (hubAuth && parsed.method === "agent/approve") {
           const requestId = parsed.params?.requestId;
           const approval = typeof requestId === "string" ? leases.get(requestId) : undefined;
@@ -1692,7 +1711,12 @@ function readOptionalHubSessionState(sessionManager: SessionManager, sessionId: 
   }
 }
 
-const SERVE_ALLOWED_WORKER_METHODS = new Set(["agent/run", "agent/approve", "agent/cancel"]);
+const SERVE_ALLOWED_WORKER_METHODS = new Set([
+  "agent/run",
+  "agent/approve",
+  "agent/approvalKeepWaiting",
+  "agent/cancel",
+]);
 
 /**
  * The no-account Web host deliberately exposes only the methods used by its

@@ -570,7 +570,9 @@ describe("architecture growth budgets", () => {
       // Session/profile connection without falling back to a different shared boot pool.
       // +1 Host-only background continuation seam: Desktop's external runtime
       // delivers background results through the same controller as native Sessions.
-      "packages/core/src/index.internal.ts": 131,
+      // +1 Core's model-question default rule, so the TUI and the IM relay show the
+      // same timeout default Core applies instead of keeping their own copies.
+      "packages/core/src/index.internal.ts": 132,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
