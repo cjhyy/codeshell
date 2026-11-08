@@ -1235,9 +1235,14 @@ describe("TurnLoop goal lifecycle guardrails", () => {
     expect(result.goalTermination).toBe("stop_blocks_exhausted");
     expect(stopHookCalls).toBe(3);
     expect(calls).toHaveLength(3);
-    expect(
-      events.filter((event) => event.type === "goal_progress" && event.status === "not_met"),
-    ).toHaveLength(2);
+    // Two re-prompts plus the pause marker that asks the user to reply.
+    const notMet = events.filter(
+      (event) => event.type === "goal_progress" && event.status === "not_met",
+    );
+    expect(notMet).toHaveLength(3);
+    expect(notMet[2]?.type === "goal_progress" && notMet[2].waitingForUser).toContain(
+      "回复任意消息继续",
+    );
     expect(
       events.some((event) => event.type === "goal_progress" && event.status === "exhausted"),
     ).toBe(false);
@@ -1247,7 +1252,7 @@ describe("TurnLoop goal lifecycle guardrails", () => {
         (event) =>
           event.type === "assistant_message" &&
           typeof event.message.content === "string" &&
-          event.message.content.includes("Goal 续跑已达 2 次上限"),
+          event.message.content.includes("Goal 续跑已达 2 次仍未达成，已暂停"),
       ),
     ).toBe(true);
   });
@@ -2057,7 +2062,7 @@ describe("Engine persisted goal lifecycle", () => {
     }
   });
 
-  it("clears a stop-block-exhausted goal and does not re-arm it on a bare send", async () => {
+  it("pauses a stop-block-capped goal and re-arms it on the user's next message", async () => {
     const dir = mkdtempSync(join(tmpdir(), "engine-goal-stop-exhausted-"));
     const model = uniqueModel("stop-exhausted");
     const sessionId = "goal-stop-exhausted-clears";
@@ -2088,12 +2093,22 @@ describe("Engine persisted goal lifecycle", () => {
       });
 
       expect(first.reason).toBe("completed");
+      expect(first.goalTermination).toBe("stop_blocks_exhausted");
       expect(
         firstEvents.some((event) => event.type === "goal_progress" && event.status === "exhausted"),
+      ).toBe(false);
+      expect(
+        firstEvents.some(
+          (event) =>
+            event.type === "goal_progress" &&
+            event.status === "not_met" &&
+            !!event.waitingForUser?.includes("回复任意消息继续"),
+        ),
       ).toBe(true);
-      expect(engine.getGoal(sessionId)).toBeUndefined();
-      expect(persistedState(dir, sessionId).activeGoal).toBeUndefined();
-      expect(persistedState(dir, sessionId).goalTerminal?.reason).toBe("stop_blocks_exhausted");
+      // Paused, not given up: the goal survives as a waiting lifecycle.
+      expect(engine.getGoal(sessionId)?.objective).toBe("finish the goal");
+      expect(persistedState(dir, sessionId).goalLifecycle?.phase).toBe("waiting");
+      expect(persistedState(dir, sessionId).goalTerminal).toBeUndefined();
 
       const bareEvents: StreamEvent[] = [];
       await engine.run("plain follow-up", {
@@ -2104,8 +2119,68 @@ describe("Engine persisted goal lifecycle", () => {
         },
       });
 
+      // The reply re-armed the goal: judged again (cap 1 → one more pause).
+      expect(bareEvents.some((event) => event.type === "goal_progress")).toBe(true);
+      expect(persistedState(dir, sessionId).goalLifecycle?.phase).toBe("waiting");
+    } finally {
+      engineScenarios.delete(model);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("parks a goal blocked on the user and re-arms it on the user's reply", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "engine-goal-blocked-on-user-"));
+    const model = uniqueModel("blocked-on-user");
+    const sessionId = "goal-blocked-on-user";
+    engineScenarios.set(model, {
+      mainResponses: [stopResponse("需要你允许启动测试窗口")],
+      mainCalls: 0,
+      judgeResponse:
+        '{"met":false,"waiting":false,"blockedOnUser":true,"gaps":"需要用户允许启动测试窗口"}',
+    });
+
+    try {
+      const engine = new Engine({
+        llm: { provider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        permissionMode: "bypassPermissions",
+        headless: true,
+      });
+      (engine as any).hooks.clear();
+
+      const events: StreamEvent[] = [];
+      const first = await engine.run("optimize the workbench", {
+        sessionId,
+        cwd: dir,
+        goal: { objective: "optimize until no visual diff" },
+        onStream: (event) => {
+          events.push(event);
+        },
+      });
+
+      // Two nudges, then the third blockedOnUser verdict parks the goal —
+      // long before the 25-block cap, and without terminating it.
+      expect(first.reason).toBe("completed");
+      expect(first.goalTermination).toBeUndefined();
       expect(engineScenarios.get(model)?.mainCalls).toBe(3);
-      expect(bareEvents.some((event) => event.type === "goal_progress")).toBe(false);
+      const progress = events.filter((event) => event.type === "goal_progress");
+      expect(progress.map((event) => event.type === "goal_progress" && event.status)).toEqual([
+        "not_met",
+        "not_met",
+        "not_met",
+      ]);
+      const last = progress.at(-1);
+      expect(last?.type === "goal_progress" && last.waitingForUser).toBe(
+        "需要用户允许启动测试窗口",
+      );
+      expect(persistedState(dir, sessionId).goalLifecycle?.phase).toBe("waiting");
+      expect(engine.getGoal(sessionId)?.objective).toBe("optimize until no visual diff");
+
+      // The user's reply is the resume: no explicit Resume, goal judged again.
+      const judgeCallsBefore = engineScenarios.get(model)?.judgeCalls ?? 0;
+      await engine.run("允许启动隔离测试窗口", { sessionId, cwd: dir });
+      expect(engineScenarios.get(model)?.judgeCalls ?? 0).toBeGreaterThan(judgeCallsBefore);
     } finally {
       engineScenarios.delete(model);
       rmSync(dir, { recursive: true, force: true });

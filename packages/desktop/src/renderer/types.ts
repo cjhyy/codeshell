@@ -1262,7 +1262,7 @@ function applyStreamEventToTurn(
         event.authority === "system" ||
         event.authority === "policy";
       if (hidden && !event.clientMessageId) return state;
-      return appendUserMessage(
+      const appended = appendUserMessage(
         state,
         hidden ? "" : event.text,
         now(),
@@ -1273,6 +1273,16 @@ function applyStreamEventToTurn(
         event.clientMessageId,
         hidden ? undefined : outputUserAttachments(state, event),
       );
+      // The user's reply is what a goal waiting for the user resumes on. Clear
+      // the ask now: the resumed run may park on background work without
+      // emitting any goal_progress that would otherwise clear it.
+      if (!hidden && appended.activeGoal?.waitingForUser) {
+        return {
+          ...appended,
+          activeGoal: { ...appended.activeGoal, waitingForUser: undefined },
+        };
+      }
+      return appended;
     }
 
     case "session_started": {

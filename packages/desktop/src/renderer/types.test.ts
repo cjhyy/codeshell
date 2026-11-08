@@ -2114,6 +2114,27 @@ describe("goal waiting for the user", () => {
     ]);
     expect(moving.activeGoal?.waitingForUser).toBeUndefined();
   });
+
+  test("the user's reply clears the wait even before any new progress", () => {
+    const waiting = dispatch(INITIAL_STATE, [
+      ev("goal_set", { goalId: "g", revision: 1, objective: "优化设计", replaced: false } as never),
+      ev("goal_progress", {
+        goalId: "g",
+        revision: 1,
+        status: "not_met",
+        round: 3,
+        waitingForUser: "需要你允许启动测试窗口",
+      } as never),
+    ]);
+    // A background notification injected by the host is not the user's reply.
+    const injected = dispatch(waiting, [
+      ev("session_user_message", { text: "<system-reminder>…</system-reminder>", injected: true }),
+    ]);
+    expect(injected.activeGoal?.waitingForUser).toBe("需要你允许启动测试窗口");
+    const replied = dispatch(waiting, [ev("session_user_message", { text: "允许" })]);
+    expect(replied.activeGoal?.waitingForUser).toBeUndefined();
+    expect(replied.activeGoal?.objective).toBe("优化设计");
+  });
 });
 
 describe("thinking rows settle when the model moves on", () => {

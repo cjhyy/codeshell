@@ -228,6 +228,8 @@ export function createGoalTerminationApplier(args: {
     termination: PersistedGoalTerminationReason,
   ) => GoalTerminalSaveOutcome;
   readActiveGoal: (sid: string) => GoalConfig | undefined | null;
+  /** Park the goal (active → waiting) when the stop-block cap pauses it. */
+  markGoalWaiting: (state: SessionBundle["state"], goal: GoalConfig) => boolean;
   onStream: StreamCallback | undefined;
 }): (termination: GoalTerminationReason | undefined, round: number | undefined) => void {
   const {
@@ -238,6 +240,7 @@ export function createGoalTerminationApplier(args: {
     goalHookHandler,
     persistGoalTerminalOutcome,
     readActiveGoal,
+    markGoalWaiting,
     onStream,
   } = args;
   return (termination: GoalTerminationReason | undefined, round: number | undefined): void => {
@@ -247,6 +250,19 @@ export function createGoalTerminationApplier(args: {
     // and may be resumed after the user reduces fixed judge context, so it
     // must not get a terminal tombstone or be cleared from activeGoal.
     if (termination === "judge_prompt_too_large") return;
+    // The stop-block cap pauses the goal instead of ending it: the user's
+    // next message re-arms it (TurnLoop already announced the pause). If the
+    // waiting write fails the goal simply stays active on disk, which a later
+    // send re-arms the same way, so the failure is only logged.
+    if (termination === "stop_blocks_exhausted") {
+      if (!markGoalWaiting(session.state, runGoal)) {
+        logger.warn("goal.stop_block_cap_pause_persist_failed", {
+          cat: "goal",
+          sessionId: session.state.sessionId,
+        });
+      }
+      return;
+    }
     const outcome = persistGoalTerminalOutcome(session.state, runGoal, termination);
     if (outcome === "failed") {
       // No terminal event has been published. Re-assert the authoritative

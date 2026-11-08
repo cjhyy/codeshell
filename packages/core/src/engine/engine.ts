@@ -2949,6 +2949,7 @@ export class Engine {
       persistGoalTerminalOutcome: (state, goal, t) =>
         this.persistGoalTerminalOutcome(state, goal, t),
       readActiveGoal: (s) => this.sessionManager.readActiveGoal(s),
+      markGoalWaiting: (state, goal) => this.sessionManager.markGoalWaiting(state, goal),
       onStream: options?.onStream,
     });
 

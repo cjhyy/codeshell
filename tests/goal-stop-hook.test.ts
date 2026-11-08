@@ -187,15 +187,16 @@ describe("createGoalStopHook three-state verdict (waiting)", () => {
     expect(seen).toContain("untrustedBackgroundTasks");
   });
 
-  it("judges normally (not_met → continue) when the judge does NOT set waiting", async () => {
+  it("parks on a running finite job even when the judge does NOT set waiting", async () => {
     backgroundJobRegistry.start("video-1", "s1", "生成视频中:a fish");
-    // Even with a background task running, if the judge decides there's still
-    // active work (waiting:false), it pushes — the decision is the LLM's.
+    // A registry job always ends and wakes the session, so pushing the stop
+    // back would only loop no-op "still waiting" rounds until it does
+    // (s-mw4q76at-82b430f2). The remaining gap is judged on that wake.
     const llm = fakeLLM(JSON.stringify({ met: false, waiting: false, gaps: "还要写脚本" }));
     const hook = createGoalStopHook({ goal: "g", llm, log: silentLog });
     const res = await hook(ctx({ goal: "g", sessionId: "s1", finalText: "x" }));
-    expect(res.continueSession).toBe(true);
-    expect(res.messages!.join("\n")).toContain("还要写脚本");
+    expect(res.continueSession).toBeFalsy();
+    expect((res.data as { goalVerdict?: { gaps: string } })?.goalVerdict?.gaps).toBe("还要写脚本");
   });
 
   it("continues safely when an old judge omits the required `waiting` field", async () => {
