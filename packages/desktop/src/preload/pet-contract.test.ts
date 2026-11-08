@@ -269,6 +269,22 @@ describe("Pet preload contract", () => {
     expect(received).toEqual([snapshot]);
   });
 
+  test("bubble mouse reports use their own IPC channel", () => {
+    const sent: unknown[] = [];
+    const api = createPetApi({
+      invoke: async () => undefined,
+      send: (channel, payload) => sent.push({ channel, payload }),
+      on: () => {},
+      removeListener: () => {},
+    });
+    api.reportBubbleInteractive?.(true);
+    api.reportBubbleInteractive?.(false);
+    expect(sent).toEqual([
+      { channel: "pet:bubble-interactive", payload: true },
+      { channel: "pet:bubble-interactive", payload: false },
+    ]);
+  });
+
   test("bubble open requests keep send only with a prompt and drop malformed ones", () => {
     const handlers = new Map<string, Set<(event: unknown, payload: unknown) => void>>();
     const api = createPetApi({

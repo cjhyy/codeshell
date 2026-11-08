@@ -14,6 +14,7 @@ import {
 import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
 import type { MimiAppearance } from "../../shared/mimi-companion";
 import { PetWidget } from "./PetWidget";
+import { usePetBubbleMouse } from "./usePetBubbleMouse";
 import { petExternalSessionLocator } from "./petExternalSession";
 import {
   PET_WIDGET_RECEIPTS_KEY,
@@ -179,6 +180,7 @@ export function PetDesktopWindow({ variant = "docked" }: { variant?: PetDesktopW
     }
   });
   const [panel, setPanel] = React.useState<PetMiniPanel>(null);
+  const bubbleContentRef = usePetBubbleMouse(bubble, panel, api.reportBubbleInteractive);
   const [activityListExpanded, setActivityListExpanded] = React.useState(false);
   const [draft, setDraft] = React.useState("");
   const [chatError, setChatError] = React.useState<string | null>(null);
@@ -415,6 +417,7 @@ export function PetDesktopWindow({ variant = "docked" }: { variant?: PetDesktopW
     <div className="relative h-screen w-screen overflow-hidden bg-transparent">
       {panel === "chat" && (
         <section
+          ref={bubbleContentRef}
           data-pet-mini-panel="open"
           data-pet-mini-panel-content="chat"
           className="absolute left-1 top-1 flex h-[400px] w-[420px] flex-col overflow-hidden rounded-2xl border border-border bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur"
@@ -524,6 +527,7 @@ export function PetDesktopWindow({ variant = "docked" }: { variant?: PetDesktopW
 
       {panel === "activity" && (
         <section
+          ref={bubbleContentRef}
           data-pet-activity-bubbles="true"
           aria-label={t("pet.widget.activityBubbles")}
           className={`absolute ${bubble ? "left-1 top-1" : "bottom-[112px] right-1"} flex max-h-[400px] w-[432px] flex-col gap-2 overflow-y-auto px-2 pb-2 pt-2`}

@@ -25,6 +25,10 @@ export function createMimiBubbleHost(options: MimiBubbleHostOptions) {
     if (!surface.owns(event.sender.id) || !attention || typeof attention !== "object") return;
     options.companion()?.setAttention(attention as MimiCompanionAttention);
   });
+  options.ipcMain.on("pet:bubble-interactive", (event, interactive: unknown) => {
+    if (!surface.owns(event.sender.id) || typeof interactive !== "boolean") return;
+    surface.setInteractive(interactive);
+  });
   return {
     surface,
     /** The bubble exists exactly while moving is the form the user wants shown. */

@@ -47,6 +47,7 @@ export interface PetBubbleWindowLike {
   isDestroyed(): boolean;
   isVisible(): boolean;
   isFocused(): boolean;
+  getBounds(): Bounds;
   setBounds(bounds: Bounds, animate?: boolean): void;
   show(): void;
   showInactive(): void;
@@ -55,6 +56,7 @@ export interface PetBubbleWindowLike {
   destroy(): void;
   setAlwaysOnTop(flag: boolean, level?: any): void;
   setContentProtection(enable: boolean): void;
+  setIgnoreMouseEvents(ignore: boolean, options?: { forward: boolean }): void;
   moveTop(): void;
   on(event: string, listener: (...args: any[]) => void): unknown;
   webContents: {
@@ -92,11 +94,13 @@ export function createPetBubbleSurface(options: PetBubbleSurfaceOptions) {
   const setTimer = options.setTimer ?? ((run, ms) => setTimeout(run, ms));
   const clearTimer =
     options.clearTimer ?? ((handle) => clearTimeout(handle as ReturnType<typeof setTimeout>));
+  const forwardsMouseMovement = options.platform === "darwin" || options.platform === "win32";
   let window: PetBubbleWindowLike | null = null;
   let creation: Promise<PetBubbleWindowLike> | null = null;
   let wanted = false;
   /** The panel last asked for; shown once the renderer says it expanded. */
   let requested: MimiBubblePanel | null = null;
+  let mouseInteractive = false;
   let epoch = 0;
   /** Resolves when the renderer first reports its panel, i.e. it listens. */
   let mounted: Promise<void> = Promise.resolve();
@@ -104,14 +108,43 @@ export function createPetBubbleSurface(options: PetBubbleSurfaceOptions) {
 
   const live = () => (window && !window.isDestroyed() ? window : null);
 
+  function setMouseInteractive(
+    win: PetBubbleWindowLike,
+    interactive: boolean,
+    force = false,
+  ): void {
+    // Electron forwards ignored mouse movement only on macOS and Windows.
+    // Without it the renderer cannot detect re-entry, so keep Linux interactive.
+    if (!forwardsMouseMovement) return;
+    if (!force && mouseInteractive === interactive) return;
+    if (interactive) win.setIgnoreMouseEvents(false);
+    else win.setIgnoreMouseEvents(true, { forward: true });
+    mouseInteractive = interactive;
+  }
+
   function elevate(win: PetBubbleWindowLike): void {
-    if (win.isDestroyed()) return;
+    // A hide can emit blur. That must not reorder the now-empty bubble above
+    // the application's real windows.
+    if (win.isDestroyed() || !win.isVisible()) return;
     win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(options.platform, win.isFocused()));
     try {
       win.moveTop();
     } catch {
       // The always-on-top level still applies when moveTop is unavailable.
     }
+  }
+
+  function placeWindow(win: PetBubbleWindowLike, next: Bounds, changedPanel = false): void {
+    const current = win.getBounds();
+    const moved =
+      current.x !== next.x ||
+      current.y !== next.y ||
+      current.width !== next.width ||
+      current.height !== next.height;
+    // A new location or panel invalidates the pointer hit test. Repeated drag
+    // positions and a new draft in the same chat leave a valid hover intact.
+    if (moved || changedPanel) setMouseInteractive(win, false, true);
+    if (moved) win.setBounds(next, false);
   }
 
   async function createNow(started: number): Promise<PetBubbleWindowLike> {
@@ -122,6 +155,9 @@ export function createPetBubbleSurface(options: PetBubbleSurfaceOptions) {
     const origin = petBubbleOrigin(undefined, options.screen.getPrimaryDisplay().workArea);
     const win = options.createWindow({ ...origin, ...PET_BUBBLE_SIZE });
     window = win;
+    // Only the renderer's actual chat/card region may capture the mouse. The
+    // rest of this transparent rectangle must leave underlying apps clickable.
+    setMouseInteractive(win, false, true);
     mounted = new Promise<void>((resolve) => (markMounted = resolve));
     // The bubble may be open while the agent captures the screen; it is ours,
     // not the user's, so keep it out of captures without hiding a focused input.
@@ -178,7 +214,9 @@ export function createPetBubbleSurface(options: PetBubbleSurfaceOptions) {
 
   function hide(): void {
     const win = live();
-    if (win?.isVisible()) win.hide();
+    if (!win) return;
+    setMouseInteractive(win, false, true);
+    if (win.isVisible()) win.hide();
   }
 
   /** A request sent before the renderer listens would be lost; wait (bounded). */
@@ -202,6 +240,7 @@ export function createPetBubbleSurface(options: PetBubbleSurfaceOptions) {
     const win = live();
     window = null;
     if (win) {
+      setMouseInteractive(win, false, true);
       if (win.isVisible()) win.hide();
       win.destroy();
     }
@@ -235,7 +274,7 @@ export function createPetBubbleSurface(options: PetBubbleSurfaceOptions) {
         win.webContents.send("pet:bubble-open", { panel: null } satisfies MimiBubbleOpenRequest);
         return;
       }
-      win.setBounds(besideBounds(near), false);
+      placeWindow(win, besideBounds(near), requested !== panel);
       requested = panel;
       win.webContents.send("pet:bubble-open", {
         panel,
@@ -245,7 +284,9 @@ export function createPetBubbleSurface(options: PetBubbleSurfaceOptions) {
     /** The character was dragged: an open bubble stays beside her. */
     follow(near: MimiCompanionRect): void {
       const win = live();
-      if (win?.isVisible()) win.setBounds(besideBounds(near), false);
+      if (win?.isVisible()) {
+        placeWindow(win, besideBounds(near));
+      }
     },
     /** The renderer opened or closed its panel. Only a requested panel shows. */
     setExpanded(expanded: boolean): void {
@@ -262,6 +303,12 @@ export function createPetBubbleSurface(options: PetBubbleSurfaceOptions) {
         win.focus();
       } else if (!win.isVisible()) win.showInactive();
       elevate(win);
+    },
+    /** Renderer hit testing covers the content, never the transparent window. */
+    setInteractive(interactive: boolean): void {
+      const win = live();
+      if (!win) return;
+      setMouseInteractive(win, interactive && wanted && requested !== null && win.isVisible());
     },
     window: live,
     owns(contentsId: number): boolean {
