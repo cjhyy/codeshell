@@ -10,6 +10,7 @@ function setup(options: { companion?: boolean; failLoad?: boolean } = {}) {
   const attention: Array<MimiCompanionAttention | undefined> = [];
   const overviews: Array<{ prompt: string } | undefined> = [];
   const sent: unknown[] = [];
+  const ignoredMouseEvents: boolean[] = [];
   let destroyed = 0;
   const host = createMimiBubbleHost({
     platform: "darwin",
@@ -26,7 +27,10 @@ function setup(options: { companion?: boolean; failLoad?: boolean } = {}) {
         isDestroyed: () => gone,
         isVisible: () => visible,
         isFocused: () => false,
-        setBounds: () => void bounds,
+        getBounds: () => ({ ...bounds }),
+        setBounds: (next) => {
+          bounds = { ...next };
+        },
         show: () => (visible = true),
         showInactive: () => (visible = true),
         focus() {},
@@ -37,6 +41,7 @@ function setup(options: { companion?: boolean; failLoad?: boolean } = {}) {
         },
         setAlwaysOnTop() {},
         setContentProtection() {},
+        setIgnoreMouseEvents: (ignore: boolean) => ignoredMouseEvents.push(ignore),
         moveTop() {},
         on() {},
         webContents: {
@@ -65,7 +70,16 @@ function setup(options: { companion?: boolean; failLoad?: boolean } = {}) {
     previewing: false,
     ...patch,
   });
-  return { host, listeners, attention, overviews, sent, snapshot, destroyed: () => destroyed };
+  return {
+    host,
+    listeners,
+    attention,
+    overviews,
+    sent,
+    ignoredMouseEvents,
+    snapshot,
+    destroyed: () => destroyed,
+  };
 }
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -100,6 +114,29 @@ describe("createMimiBubbleHost", () => {
     const { host, overviews } = setup();
     await host.open("chat", undefined, "看看「备忘录」");
     expect(overviews).toEqual([{ prompt: "看看「备忘录」" }]);
+  });
+
+  test("only the bubble's own renderer can report its interactive content", async () => {
+    const { host, listeners, ignoredMouseEvents } = setup();
+    await host.surface.prepare();
+    host.surface.setExpanded(false);
+    await host.open("activity");
+    host.surface.setExpanded(true);
+    const report = listeners.get("pet:bubble-interactive")!;
+    const initialReports = ignoredMouseEvents.length;
+    report({ sender: { id: 99 } }, true);
+    report({ sender: { id: 11 } }, "true");
+    report({ sender: { id: 11 } }, 1);
+    expect(ignoredMouseEvents).toHaveLength(initialReports);
+    expect(ignoredMouseEvents.at(-1)).toBe(true);
+    report({ sender: { id: 11 } }, true);
+    expect(ignoredMouseEvents.at(-1)).toBe(false);
+    report({ sender: { id: 11 } }, false);
+    expect(ignoredMouseEvents.at(-1)).toBe(true);
+    host.surface.release();
+    const releasedReports = ignoredMouseEvents.length;
+    report({ sender: { id: 11 } }, true);
+    expect(ignoredMouseEvents).toHaveLength(releasedReports);
   });
 
   test("a bubble that cannot load falls back to the full page", async () => {

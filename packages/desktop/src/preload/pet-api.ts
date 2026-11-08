@@ -407,6 +407,8 @@ export interface PetApi {
   onBubbleOpen?(listener: (request: MimiBubbleOpenRequest) => void): () => void;
   /** Moving Mimi's bubble: counts for the badge over the character. */
   reportBubbleAttention?(attention: MimiCompanionAttention): void;
+  /** Moving Mimi's bubble: whether the mouse is over its visible content. */
+  reportBubbleInteractive?(interactive: boolean): void;
   /** The single Mimi presence (one switch; docked or moving, never both). */
   getPresence?(): Promise<MimiPresenceSnapshot>;
   setPresence?(patch: MimiPresencePatch): Promise<MimiPresenceSnapshot>;
@@ -560,6 +562,8 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       return () => ipcRenderer.removeListener("pet:bubble-open", handler);
     },
     reportBubbleAttention: (attention) => ipcRenderer.send("pet:bubble-attention", attention),
+    reportBubbleInteractive: (interactive) =>
+      ipcRenderer.send("pet:bubble-interactive", interactive),
     onWidgetVisibilityChanged: (listener) => {
       const handler = (_event: unknown, visible: unknown): void => {
         if (typeof visible === "boolean") listener(visible);
