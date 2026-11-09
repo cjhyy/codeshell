@@ -26,9 +26,14 @@ describe("Pet package public entry contracts", () => {
     expect(Object.keys(protocolApi).sort()).toEqual([
       "GET_PET_PROJECTION_SNAPSHOT_METHOD",
       "LOCAL_PET_OWNER",
+      "NOTICE_CHANNEL_MAX_LENGTH",
+      "NOTICE_EVENTS",
+      "NOTICE_NOTE_MAX_LENGTH",
+      "NOTICE_RULE_CREATORS",
       "PET_PROJECTION_DELTA_METHOD",
       "PET_REPORT_TO_MIMI_METHOD",
       "PET_RULE_UPSERT_ACTION",
+      "parseNoticeEvents",
       "parseNoticeRuleUpsert",
     ]);
     expect(Object.keys(teamApi).sort()).toEqual([

@@ -1,6 +1,14 @@
 import { randomUUID } from "node:crypto";
-import type { PetLongTaskCompletionTarget } from "@cjhyy/code-shell-pet";
 import {
+  normalizePetLongTaskCompletionTarget,
+  type PetLongTaskCompletionTarget,
+} from "@cjhyy/code-shell-pet";
+import {
+  NOTICE_CHANNEL_MAX_LENGTH,
+  NOTICE_EVENTS,
+  NOTICE_NOTE_MAX_LENGTH,
+  NOTICE_RULE_CREATORS,
+  parseNoticeEvents,
   parseNoticeRuleUpsert,
   type NoticeAttention,
   type NoticeChannel,
@@ -13,6 +21,7 @@ import {
   readBoundedJson,
   writeOwnerJsonAtomic,
 } from "./bounded-json-store.js";
+import { imConversationRouteKey } from "./session-turn-scheduler.js";
 
 /** The IM origin a notice should go back to; same shape as a long task's completion target. */
 export type PetChatRoute = PetLongTaskCompletionTarget;
@@ -95,21 +104,12 @@ const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const MAX_LOADED_ROWS = 10_000;
 const SYSTEM_RULE_ID: SystemNoticeRuleId = "all-sessions";
 const RULE_ID_PATTERN = /^rule-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
-const ALL_EVENTS: readonly NoticeEvent[] = ["done", "failed", "blocked"];
 const ATTENTIONS: readonly NoticeAttention[] = ["always", "important", "digest", "muted"];
 const STATES: readonly NoticeRuleState[] = ["active", "paused", "spent", "completed", "cancelled"];
-const CREATORS: readonly NoticeRule["createdBy"][] = [
-  "notify-me",
-  "bell",
-  "delegation",
-  "watch-session",
-  "system",
-];
+const CREATORS: readonly NoticeRule["createdBy"][] = [...NOTICE_RULE_CREATORS, "system"];
 /** Terminal rules are history; only they may be evicted to make room. */
 const EVICTABLE_STATES: ReadonlySet<NoticeRuleState> = new Set(["spent", "completed", "cancelled"]);
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/u;
-const CHANNEL_MAX_LENGTH = 40;
-const NOTE_MAX_LENGTH = 500;
 
 interface PetRuleFile {
   version: typeof SCHEMA_VERSION;
@@ -141,14 +141,14 @@ function isText(value: unknown, max: number): value is string {
 }
 
 function isChannel(value: unknown): value is NoticeChannel {
-  return isText(value, CHANNEL_MAX_LENGTH) && value.trim() === value;
+  return isText(value, NOTICE_CHANNEL_MAX_LENGTH) && value.trim() === value;
 }
 
 function isNote(value: unknown): value is string {
   return (
     typeof value === "string" &&
     value.length > 0 &&
-    value.length <= NOTE_MAX_LENGTH &&
+    value.length <= NOTICE_NOTE_MAX_LENGTH &&
     value.trim() === value
   );
 }
@@ -158,66 +158,49 @@ function isTimestamp(value: unknown): value is number {
 }
 
 function isEvents(value: unknown): value is NoticeEvent[] {
-  return (
-    Array.isArray(value) &&
-    value.length >= 1 &&
-    value.length <= ALL_EVENTS.length &&
-    value.every((event) => (ALL_EVENTS as readonly unknown[]).includes(event)) &&
-    new Set(value).size === value.length
+  return parseNoticeEvents(value) !== null;
+}
+
+/** JSON with object keys sorted, so equality ignores key order from hand-edited files. */
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(value, (_key, item: unknown) =>
+    isRecord(item)
+      ? Object.fromEntries(
+          Object.keys(item)
+            .sort()
+            .map((key) => [key, item[key]]),
+        )
+      : item,
   );
 }
 
-function isRoute(value: unknown): value is PetChatRoute {
-  if (!isRecord(value)) return false;
-  if (
-    !hasOnlyKeys(value, [
-      "kind",
-      "channel",
-      "target",
-      "senderId",
-      "isDirectMessage",
-      "replyButton",
-      "replyAttachmentKinds",
-    ])
-  )
-    return false;
-  const kinds = value.replyAttachmentKinds;
-  return (
-    value.kind === "im-gateway" &&
-    isText(value.channel, 128) &&
-    isText(value.target, 4_096) &&
-    (value.senderId === undefined || isText(value.senderId, 512)) &&
-    (value.isDirectMessage === undefined || typeof value.isDirectMessage === "boolean") &&
-    (value.replyButton === undefined ||
-      value.replyButton === "native" ||
-      value.replyButton === "link") &&
-    (kinds === undefined ||
-      (Array.isArray(kinds) &&
-        kinds.length <= 4 &&
-        new Set(kinds).size === kinds.length &&
-        kinds.every((kind) => ["image", "file", "audio", "video"].includes(kind as string))))
-  );
+/**
+ * Normalise an incoming target with the long-task route normaliser, so field
+ * limits live in one place. Undefined when the route is not addressable.
+ */
+function normalizeTarget(value: unknown): NoticeRule["target"] | undefined {
+  if (!isRecord(value)) return undefined;
+  if (value.kind === "owner") return hasOnlyKeys(value, ["kind"]) ? { kind: "owner" } : undefined;
+  if (value.kind !== "route" || !hasOnlyKeys(value, ["kind", "route"])) return undefined;
+  const route = normalizePetLongTaskCompletionTarget(value.route);
+  return route ? { kind: "route", route } : undefined;
 }
 
+/** A stored target must already be in canonical (normalised) form. */
 function isTarget(value: unknown): value is NoticeRule["target"] {
-  if (!isRecord(value)) return false;
-  if (value.kind === "owner") return hasOnlyKeys(value, ["kind"]);
-  return value.kind === "route" && hasOnlyKeys(value, ["kind", "route"]) && isRoute(value.route);
+  const normalized = normalizeTarget(value);
+  return normalized !== undefined && canonicalJson(normalized) === canonicalJson(value);
 }
 
-/** Identity of a target for "one active rule per session + target". Deep-equal, order-insensitive. */
+/**
+ * Conversation identity of a target for "one active rule per Session +
+ * target". Capabilities (reply button, attachment kinds) are deliberately not
+ * part of it: the same chat with updated capabilities is the same target.
+ */
 function targetKey(target: NoticeRule["target"]): string {
   if (target.kind === "owner") return "owner";
   const route = target.route;
-  return JSON.stringify([
-    route.kind,
-    route.channel,
-    route.target,
-    route.senderId ?? null,
-    route.isDirectMessage ?? null,
-    route.replyButton ?? null,
-    [...(route.replyAttachmentKinds ?? [])].sort(),
-  ]);
+  return imConversationRouteKey(route) ?? JSON.stringify(["im", route.channel, route.target, null]);
 }
 
 function parseWhen(value: unknown): NoticeRule["when"] | undefined {
@@ -314,7 +297,7 @@ function defaultSystemRule(): NoticeRule {
     version: 0,
     origin: "system",
     createdBy: "system",
-    when: { kind: "all-sessions", events: [...ALL_EVENTS], onlyWhenAway: true },
+    when: { kind: "all-sessions", events: [...NOTICE_EVENTS], onlyWhenAway: true },
     then: { mode: "notify" },
     attention: "always",
     channel: "auto",
@@ -418,15 +401,20 @@ export class PetRuleStore {
    * Create, or refresh, the one active rule for this Session + target. A
    * repeat ask updates the existing rule in place (same id, createdAt) so the
    * owner is never notified twice for the same event.
+   *
+   * Only ACTIVE rules are matched. A paused rule for the same Session + target
+   * stays paused (the owner muted it on purpose) and a new active rule is
+   * created beside it; finished rules are history and never revived.
    */
   upsertSessionRule(input: UpsertSessionNoticeRuleInput): Promise<NoticeRule> {
     const snapshot = structuredClone(input);
     return this.mutate((staged) => {
-      const { target, origin, armedAtSeq, ...wire } = snapshot;
+      const { target: rawTarget, origin, armedAtSeq, ...wire } = snapshot;
       const upsert = parseNoticeRuleUpsert(wire);
+      const target = normalizeTarget(rawTarget);
       if (
         !upsert ||
-        !isTarget(target) ||
+        !target ||
         (origin !== "user" && origin !== "delegation") ||
         !isTimestamp(armedAtSeq)
       )
@@ -451,6 +439,8 @@ export class PetRuleStore {
           when,
           channel: upsert.channel,
           attention: upsert.attention,
+          // Same conversation, possibly with refreshed reply capabilities.
+          target: structuredClone(target),
           updatedAt: Math.max(at, existing.updatedAt),
         };
         delete next.note;
@@ -467,7 +457,7 @@ export class PetRuleStore {
         then: { mode: "notify" },
         attention: upsert.attention,
         channel: upsert.channel,
-        target: structuredClone(target),
+        target,
         ...(upsert.note !== undefined ? { note: upsert.note } : {}),
         state: "active",
         createdAt: at,
@@ -486,6 +476,13 @@ export class PetRuleStore {
       if (!current) throw new PetRuleStoreError("rule_not_found");
       if (current.version !== expectedVersion) throw new PetRuleStoreError("version_conflict");
       if (!isPatchShape(snapshot, ["state", "channel", "attention", "note", "events"]))
+        throw new PetRuleStoreError("invalid_rule");
+      if (
+        EVICTABLE_STATES.has(current.state) &&
+        snapshot.state !== undefined &&
+        snapshot.state !== current.state
+      )
+        // Finished rules are history; a new ask creates a fresh rule instead.
         throw new PetRuleStoreError("invalid_rule");
       const next: NoticeRule = structuredClone(current);
       if (snapshot.state !== undefined) next.state = snapshot.state;
@@ -667,12 +664,19 @@ export class PetRuleStore {
     let rejected = 0;
     for (const row of parsed.rules) {
       const rule = parseRule(row);
-      if (rule && !loaded.has(rule.id)) {
+      const seen = rule ? loaded.get(rule.id) : undefined;
+      if (rule && !seen) {
         loaded.set(rule.id, rule);
+        continue;
+      }
+      if (rule && seen && rule.version > seen.version) {
+        // Keep the newer copy of a duplicated id; the older one is kept aside.
+        loaded.set(rule.id, rule);
+        quarantine.push(seen);
       } else {
         quarantine.push(row);
-        rejected += 1;
       }
+      rejected += 1;
     }
     if (rejected > 0) dlog("main", "pet.rules.quarantined_rows", { rejected });
     this.rules = loaded;

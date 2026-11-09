@@ -118,6 +118,60 @@ describe("upsertSessionRule", () => {
     expect(next.note).toBeUndefined();
   });
 
+  test("same conversation with new capabilities is one rule and stores the new route", async () => {
+    const s = store();
+    const first = await s.upsertSessionRule(
+      upsert({ target: { kind: "route", route: { ...ROUTE, replyAttachmentKinds: ["image"] } } }),
+    );
+    const refreshed: PetChatRoute = {
+      ...ROUTE,
+      replyButton: "native",
+      replyAttachmentKinds: ["file", "image"],
+    };
+    const second = await s.upsertSessionRule(
+      upsert({ target: { kind: "route", route: refreshed } }),
+    );
+    expect(second.id).toBe(first.id);
+    expect(second.version).toBe(2);
+    expect(second.target).toEqual({ kind: "route", route: refreshed });
+    const reloaded = store();
+    await reloaded.load();
+    expect(reloaded.list()).toHaveLength(1);
+    expect(reloaded.get(first.id)?.target).toEqual({ kind: "route", route: refreshed });
+  });
+
+  test("a route without a sender is keyed by channel + target", async () => {
+    const s = store();
+    const group = { kind: "im-gateway" as const, channel: "lark", target: "group-1" };
+    const first = await s.upsertSessionRule(upsert({ target: { kind: "route", route: group } }));
+    const again = await s.upsertSessionRule(
+      upsert({ target: { kind: "route", route: { ...group, replyButton: "link" } } }),
+    );
+    const withSender = await s.upsertSessionRule(
+      upsert({ target: { kind: "route", route: { ...group, senderId: "u1" } } }),
+    );
+    expect(again.id).toBe(first.id);
+    expect(withSender.id).not.toBe(first.id);
+  });
+
+  test("routes are stored in normalised form", async () => {
+    const rule = await store().upsertSessionRule(
+      upsert({ target: { kind: "route", route: { ...ROUTE, channel: " WeChat " } } }),
+    );
+    expect(rule.target).toEqual({ kind: "route", route: { ...ROUTE, channel: "wechat" } });
+  });
+
+  test("upsert leaves a paused rule paused and creates a new active one", async () => {
+    const s = store();
+    const original = await s.upsertSessionRule(upsert());
+    const paused = await s.update(original.id, 1, { state: "paused" });
+    const fresh = await s.upsertSessionRule(upsert({ armedAtSeq: 77 }));
+    expect(fresh.id).not.toBe(original.id);
+    expect(fresh.state).toBe("active");
+    expect(s.get(original.id)).toEqual(paused);
+    expect(s.activeForSession("s-login").map((rule) => rule.id)).toEqual([fresh.id]);
+  });
+
   test("deep-equal routes dedupe; different routes and owner coexist", async () => {
     const s = store();
     const owner = await s.upsertSessionRule(upsert());
@@ -252,14 +306,28 @@ describe("update", () => {
     expect(s.get(rule.id)).toEqual(rule);
   });
 
-  test("re-activating a rule cannot create a second active rule for the same key", async () => {
+  test("resuming a paused rule cannot create a second active rule for the same key", async () => {
     const s = store();
     const old = await s.upsertSessionRule(upsert());
-    const cancelled = await s.update(old.id, 1, { state: "cancelled" });
+    const paused = await s.update(old.id, 1, { state: "paused" });
     await s.upsertSessionRule(upsert());
-    await expect(s.update(old.id, cancelled.version, { state: "active" })).rejects.toThrow(
+    await expect(s.update(old.id, paused.version, { state: "active" })).rejects.toThrow(
       "duplicate_active_rule",
     );
+  });
+
+  test("a finished rule can never transition to another state", async () => {
+    const s = store();
+    for (const terminal of ["spent", "completed", "cancelled"] as const) {
+      const rule = await s.upsertSessionRule(upsert({ sessionId: `s-${terminal}` }));
+      const done = await s.update(rule.id, 1, { state: terminal });
+      for (const next of ["active", "paused", "spent", "completed", "cancelled"] as const) {
+        if (next === terminal) continue;
+        const failure = await s.update(rule.id, done.version, { state: next }).catch((e) => e);
+        expect((failure as { code?: string }).code).toBe("invalid_rule");
+      }
+      expect(s.get(rule.id)).toEqual(done);
+    }
   });
 });
 
@@ -387,18 +455,21 @@ describe("load", () => {
     expect((await readDisk()).quarantine).toEqual([unknownRow]);
   });
 
-  test("a duplicate id is quarantined rather than overwriting the first row", async () => {
+  test("a duplicate id keeps the higher version and quarantines the other", async () => {
     const valid = await store().upsertSessionRule(upsert());
     const disk = await readDisk();
-    const duplicate = { ...(disk.rules[0] as NoticeRule), note: "dupe" };
-    await writeFile(filePath, JSON.stringify({ ...disk, rules: [disk.rules[0], duplicate] }), {
-      mode: 0o600,
-    });
+    const newer = { ...(disk.rules[0] as NoticeRule), version: 5, note: "newer" };
+    const sameVersion = { ...(disk.rules[0] as NoticeRule), note: "same version" };
+    await writeFile(
+      filePath,
+      JSON.stringify({ ...disk, rules: [disk.rules[0], newer, sameVersion] }),
+      { mode: 0o600 },
+    );
     const s = store();
     await s.load();
-    expect(s.list()).toEqual([valid]);
+    expect(s.list()).toEqual([newer]);
     await s.upsertSessionRule(upsert({ sessionId: "s-two" }));
-    expect((await readDisk()).quarantine).toEqual([duplicate]);
+    expect((await readDisk()).quarantine).toEqual([valid, sameVersion]);
   });
 
   test("a file from a newer schema is left untouched and writes are refused", async () => {
@@ -461,6 +532,53 @@ describe("cap", () => {
     await expect(
       s.upsertSessionRule(upsert({ sessionId: "a", armedAtSeq: 5 })),
     ).resolves.toBeTruthy();
+  });
+});
+
+describe("cap: paused", () => {
+  test("a paused rule is never evicted", async () => {
+    const s = store({ maxRules: 2 });
+    const a = await s.upsertSessionRule(upsert({ sessionId: "a" }));
+    clock += 1;
+    await s.update(a.id, 1, { state: "paused" });
+    clock += 1;
+    const b = await s.upsertSessionRule(upsert({ sessionId: "b" }));
+    clock += 1;
+    await s.update(b.id, 1, { state: "spent" });
+    clock += 1;
+    await s.upsertSessionRule(upsert({ sessionId: "c" }));
+    expect(s.get(a.id)?.state).toBe("paused");
+    expect(s.get(b.id)).toBeUndefined();
+    await expect(s.upsertSessionRule(upsert({ sessionId: "d" }))).rejects.toThrow(
+      "rule_store_full",
+    );
+    expect(s.get(a.id)?.state).toBe("paused");
+  });
+});
+
+describe("failed writes", () => {
+  test("leave memory unchanged, fire no listeners, and the next write succeeds", async () => {
+    const s = store();
+    const rule = await s.upsertSessionRule(upsert());
+    let calls = 0;
+    s.onChange(() => {
+      calls += 1;
+    });
+    // A directory at the target path makes the atomic replace fail.
+    await rm(filePath);
+    await mkdir(filePath);
+    await expect(s.upsertSessionRule(upsert({ sessionId: "s-two" }))).rejects.toThrow();
+    await expect(s.update(rule.id, 1, { state: "paused" })).rejects.toThrow();
+    expect(s.list()).toEqual([rule]);
+    expect(calls).toBe(0);
+
+    await rm(filePath, { recursive: true });
+    const next = await s.update(rule.id, 1, { state: "paused" });
+    expect(next.version).toBe(2);
+    expect(calls).toBe(1);
+    const reloaded = store();
+    await reloaded.load();
+    expect(reloaded.list()).toEqual([next]);
   });
 });
 

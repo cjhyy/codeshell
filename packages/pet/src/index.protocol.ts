@@ -3,7 +3,7 @@
  *
  * State-machine implementations remain package-private; this entry contains
  * only method/action names, the shapes crossing the host boundary, and the
- * host-side validator for notice-rule upserts.
+ * host-side validators and limits for notice rules.
  */
 export {
   GET_PET_PROJECTION_SNAPSHOT_METHOD,
@@ -14,7 +14,12 @@ export {
   type PetReportToMimiEvent,
 } from "./protocol.js";
 export {
+  NOTICE_CHANNEL_MAX_LENGTH,
+  NOTICE_EVENTS,
+  NOTICE_NOTE_MAX_LENGTH,
+  NOTICE_RULE_CREATORS,
   PET_RULE_UPSERT_ACTION,
+  parseNoticeEvents,
   parseNoticeRuleUpsert,
   type BoundChannel,
   type NoticeAttention,
