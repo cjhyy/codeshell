@@ -245,6 +245,35 @@ describe("Session bell", () => {
     expect(wiring.ruleStore.get(delegation.id)?.state).toBe("active");
   });
 
+  test("the bell on a delegated Session takes Mimi's rule over, so off switches it off", async () => {
+    const { controls, wiring, tasks } = fixture();
+    const delegation = await armDelegation(wiring);
+    // The bell resolves to the same conversation: the delegated task's IM origin.
+    tasks.push({
+      id: "task-1",
+      sessionId: SID,
+      status: "running",
+      completionTarget: { kind: "im-gateway", channel: "lark", target: "dm-1", senderId: "u" },
+    } as PetLongTask);
+    expect(await controls.setSessionBell(SID, true)).toMatchObject({
+      on: true,
+      origin: "user",
+      delegated: false,
+      ruleId: delegation.id,
+      channel: "auto",
+    });
+    expect(wiring.ruleStore.get(delegation.id)).toMatchObject({
+      origin: "user",
+      createdBy: "bell",
+    });
+    expect(await controls.setSessionBell(SID, false)).toEqual({
+      available: true,
+      on: false,
+      delegated: false,
+    });
+    expect(wiring.ruleStore.get(delegation.id)?.state).toBe("cancelled");
+  });
+
   test("a delegation rule alone shows as delegated, not as the owner's bell", async () => {
     const { controls, wiring } = fixture();
     await armDelegation(wiring);

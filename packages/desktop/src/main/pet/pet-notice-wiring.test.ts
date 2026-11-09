@@ -908,6 +908,28 @@ describe("delegation rules", () => {
       expect.objectContaining({ origin: "user" }),
     ]);
   });
+
+  test("NotifyMe on a delegated Session takes the rule over; re-arming and cancel leave it", async () => {
+    current = harness();
+    // A desktop delegation: Mimi's rule targets the owner, like NotifyMe does.
+    await current.wiring.armDelegationRule(running());
+    const [delegation] = current.wiring.ruleStore.activeForSession(SID);
+    await current.handler(SID, upsertArgs({ channel: "lark", events: ["done"] }));
+    const [owned] = current.wiring.ruleStore.activeForSession(SID);
+    expect(owned).toMatchObject({
+      id: delegation!.id,
+      origin: "user",
+      createdBy: "notify-me",
+      channel: "lark",
+      when: { events: ["done"] },
+    });
+    // Mimi re-driving the task never rewrites the owner's rule.
+    await current.wiring.armDelegationRule(running({ id: "task-2", verificationMode: "goal" }));
+    expect(current.wiring.ruleStore.activeForSession(SID)).toEqual([owned!]);
+    // Cancelling the task spends only Mimi's own rules.
+    await current.wiring.notifyTaskClosed(longTask({ status: "cancelled" }));
+    expect(current.wiring.ruleStore.activeForSession(SID)).toEqual([owned!]);
+  });
 });
 
 describe("pending-notice replay", () => {

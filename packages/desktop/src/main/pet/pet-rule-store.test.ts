@@ -122,6 +122,28 @@ describe("upsertSessionRule", () => {
     expect(s.list().filter((rule) => rule.state === "active")).toHaveLength(1);
   });
 
+  test("an owner upsert takes over Mimi's delegation rule; Mimi never rewrites the owner's", async () => {
+    const s = store();
+    const delegation = await s.upsertSessionRule(
+      upsert({ createdBy: "delegation", origin: "delegation", channel: "auto" }),
+    );
+    const owned = await s.upsertSessionRule(
+      upsert({ createdBy: "bell", channel: "lark", attention: "important" }),
+    );
+    expect(owned).toMatchObject({
+      id: delegation.id,
+      origin: "user",
+      createdBy: "bell",
+      channel: "lark",
+      attention: "important",
+    });
+    const kept = await s.upsertSessionRule(
+      upsert({ createdBy: "delegation", origin: "delegation", channel: "auto" }),
+    );
+    expect(kept).toEqual(owned);
+    expect(s.list()).toEqual([owned]);
+  });
+
   test("a repeat upsert without a note clears the previous note", async () => {
     const s = store();
     await s.upsertSessionRule(upsert({ note: "old" }));

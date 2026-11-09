@@ -427,6 +427,11 @@ export class PetRuleStore {
    * Only ACTIVE rules are matched. A paused rule for the same Session + target
    * stays paused (the owner muted it on purpose) and a new active rule is
    * created beside it; finished rules are history and never revived.
+   *
+   * Owner intent wins over Mimi's: an owner upsert onto Mimi's delegation
+   * rule takes it over (origin "user", the owner's channel and attention), so
+   * the task's end never spends it and the bell can switch it off; a
+   * delegation upsert onto an owner rule leaves that rule exactly as it is.
    */
   upsertSessionRule(input: UpsertSessionNoticeRuleInput): Promise<NoticeRule> {
     const snapshot = structuredClone(input);
@@ -454,9 +459,13 @@ export class PetRuleStore {
         scope: upsert.scope,
         armedAt,
       };
+      if (existing?.origin === "user" && origin === "delegation") return existing;
       if (existing) {
         const next: NoticeRule = {
           ...existing,
+          ...(existing.origin === "delegation" && origin === "user"
+            ? { origin, createdBy: upsert.createdBy }
+            : {}),
           version: existing.version + 1,
           when,
           channel: upsert.channel,
