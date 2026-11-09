@@ -125,10 +125,14 @@ export function quickChatLiveTurnActive(state: MessagesReducerState, busy: boole
 }
 
 export function resolveMainComposerBucket(
-  requestedBucket: string | undefined,
+  request: string | { bucket?: string; continueGoal?: boolean } | undefined,
   renderedBucket: string,
   activeBucket: string,
 ): string {
+  const requestedBucket = typeof request === "object" ? request.bucket : request;
+  // A goal answer belongs to its displayed question even if selection changed.
+  if (typeof request === "object" && request.continueGoal && requestedBucket)
+    return requestedBucket;
   if (requestedBucket === renderedBucket && renderedBucket !== activeBucket) {
     return activeBucket;
   }

@@ -257,6 +257,27 @@ describe("mergeTranscripts", () => {
     expect(merged.messages.filter((m) => m.kind === "goal_progress")).toHaveLength(2);
   });
 
+  it("keeps a new background wait whose text matches an older one", () => {
+    // Before goal-level rounds every wait marker was "round 1 + the same text";
+    // the live-only newest wait looked covered by disk and its run was dropped.
+    const wait = (id: string, sinceMs: number): Message => ({
+      kind: "goal_progress",
+      id,
+      status: "not_met",
+      round: 1,
+      waiting: { sinceMs },
+    });
+    const disk = stateOf([assistant("d-a1", "派出任务"), wait("d-w1", 1_000)]);
+    const live = stateOf([
+      assistant("l-a1", "派出任务"),
+      wait("l-w1", 1_000),
+      assistant("l-a2", "再派一个"),
+      wait("l-w2", 5_000),
+    ]);
+    const merged = mergeTranscripts(disk, live);
+    expect(merged.messages.map((m) => m.id)).toEqual(["d-a1", "d-w1", "l-a2", "l-w2"]);
+  });
+
   it("keeps a genuinely different files_changed card (different files)", () => {
     const disk = stateOf([filesChanged("fc-1", "a.ts", 3, 1)]);
     const live = stateOf([filesChanged("fc-2", "b.ts", 5, 0)]); // different file = real new card

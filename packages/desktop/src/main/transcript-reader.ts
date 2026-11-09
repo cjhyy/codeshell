@@ -118,6 +118,49 @@ const MAX_SUBAGENT_RESULT_CHARS = 2 * 1024 * 1024;
 const MAX_SUBAGENT_ENRICHMENT_BYTES = 64 * 1024 * 1024;
 const MAX_SUBAGENT_DETAIL_ITEMS = 100_000;
 
+function finiteNonNegative(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+/** Goal wait/accounting fields of a persisted goal_progress, dropped when malformed. */
+function goalProgressReplayFields(d: Record<string, unknown>): {
+  waiting?: {
+    kind: "background_work";
+    sinceMs: number;
+    tasks?: Array<{ kind: string; label: string }>;
+  };
+  progress?: { rounds: number; activeMs: number; atMs: number };
+} {
+  const out: ReturnType<typeof goalProgressReplayFields> = {};
+  const waiting = d.waiting as Record<string, unknown> | undefined;
+  if (waiting && typeof waiting === "object" && finiteNonNegative(waiting.sinceMs)) {
+    const tasks = Array.isArray(waiting.tasks)
+      ? waiting.tasks.filter(
+          (task): task is { kind: string; label: string } =>
+            !!task &&
+            typeof (task as { kind?: unknown }).kind === "string" &&
+            typeof (task as { label?: unknown }).label === "string",
+        )
+      : [];
+    out.waiting = {
+      kind: "background_work",
+      sinceMs: waiting.sinceMs,
+      ...(tasks.length > 0 ? { tasks } : {}),
+    };
+  }
+  const progress = d.progress as Record<string, unknown> | undefined;
+  if (
+    progress &&
+    typeof progress === "object" &&
+    finiteNonNegative(progress.rounds) &&
+    finiteNonNegative(progress.activeMs) &&
+    finiteNonNegative(progress.atMs)
+  ) {
+    out.progress = { rounds: progress.rounds, activeMs: progress.activeMs, atMs: progress.atMs };
+  }
+  return out;
+}
+
 function isSafeSessionId(value: unknown): value is string {
   return (
     typeof value === "string" &&
@@ -673,6 +716,8 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
             // Number("abc") === NaN would propagate invalid state. Fall back to 0.
             round: Number.isFinite(Number(d.round)) ? Number(d.round) : 0,
             ...(typeof d.gaps === "string" ? { gaps: d.gaps } : {}),
+            ...(typeof d.waitingForUser === "string" ? { waitingForUser: d.waitingForUser } : {}),
+            ...goalProgressReplayFields(d),
           },
           timestamp: ts,
         });

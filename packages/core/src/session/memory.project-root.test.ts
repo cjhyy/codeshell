@@ -202,15 +202,54 @@ describe("legacy project memory migration", () => {
       const m = new MemoryManager({ baseDir: ${JSON.stringify(baseDir)}, projectDir: ${JSON.stringify(projectA)} });
       if (m.loadAll().length !== 1) throw new Error("migrated store not visible");
     `;
-    const procs = Array.from({ length: 12 }, () =>
-      Bun.spawn([process.execPath, "-e", script], { stdout: "pipe", stderr: "pipe" }),
-    );
-    const codes = await Promise.all(procs.map((p) => p.exited));
-    const errors = await Promise.all(procs.map((p) => new Response(p.stderr).text()));
-    expect({ codes, errors: errors.filter(Boolean) }).toEqual({
-      codes: codes.map(() => 0),
-      errors: [],
-    });
+    type Exit = { code: number | null; signal: number | null; error?: string };
+    const children: Array<{
+      process: Bun.Subprocess<"ignore", "ignore", "pipe">;
+      exited: Promise<Exit>;
+      done: Promise<Exit & { stderr: string }>;
+    }> = [];
+    try {
+      for (let index = 0; index < 12; index++) {
+        let finish!: (exit: Exit) => void;
+        const exited = new Promise<Exit>((resolve) => {
+          finish = resolve;
+        });
+        // Register exit observation as part of spawn. Waiting until all fast
+        // children are spawned before reading .exited has hit EBADF/epoll_ctl
+        // on Linux/Bun 1.3.11. onExit may run before spawn itself returns.
+        const child = Bun.spawn([process.execPath, "-e", script], {
+          stdin: "ignore",
+          stdout: "ignore",
+          stderr: "pipe",
+          timeout: 30_000,
+          killSignal: "SIGKILL",
+          onExit: (_child, code, signal, error) => {
+            finish({ code, signal, ...(error ? { error: error.message } : {}) });
+          },
+        });
+        const stderr = (async () => new Response(child.stderr).text())();
+        children.push({
+          process: child,
+          exited,
+          done: Promise.all([exited, stderr]).then(([exit, stderr]) => ({ ...exit, stderr })),
+        });
+      }
+      const results = await Promise.all(children.map((child) => child.done));
+      const codes = results.map((result) => result.code);
+      const errors = results.flatMap(({ error, signal, stderr }) =>
+        [error, signal ? `signal ${signal}` : undefined, stderr].filter(Boolean),
+      );
+      expect({ codes, errors }).toEqual({ codes: Array.from({ length: 12 }, () => 0), errors: [] });
+    } finally {
+      // A spawn/read/assertion failure must not leave writers running after
+      // afterEach removes the shared migration fixture.
+      for (const child of children) {
+        if (child.process.exitCode === null && child.process.signalCode === null)
+          child.process.kill("SIGKILL");
+      }
+      await Promise.allSettled(children.map((child) => child.exited));
+      await Promise.allSettled(children.map((child) => child.done));
+    }
     const rootA = MemoryManager.memoryRootFor({ baseDir, projectDir: projectA });
     expect(readdirSync(join(rootA, "user")).filter((name) => name.endsWith(".md")).length).toBe(2);
     expect(readdirSync(dirname(rootA)).filter((name) => name.startsWith("."))).toEqual([]);

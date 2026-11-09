@@ -56,8 +56,9 @@ const calls: Array<{ route: string; text: string; opts: { attachments?: InputAtt
   [];
 const record =
   (route: string) =>
-  (text: string, opts: { attachments?: InputAttachmentMeta[] } = {}) =>
+  (text: string, opts: { attachments?: InputAttachmentMeta[] } = {}) => {
     calls.push({ route, text, opts });
+  };
 Object.defineProperty(window, "codeshell", {
   configurable: true,
   value: {

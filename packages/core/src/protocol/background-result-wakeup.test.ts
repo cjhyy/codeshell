@@ -60,6 +60,60 @@ async function fixture() {
 }
 
 describe("asynchronous authority for background-result wakeups", () => {
+  test("a goal waiting for the user keeps results until the user resumes it", async () => {
+    const f = await fixture();
+    const original = f.notificationMailbox.getSnapshot("source")[0]!;
+    let blocked = true;
+    f.session.engine.isGoalContinuationBlocked = () => blocked;
+    const options = { ...f.options, resolveWorkspace: async () => ({}) };
+    expect(await wakeSessionForBackgroundResults(options)).toBe(false);
+    expect(f.runs).toHaveLength(0);
+    expect(f.notificationMailbox.getSnapshot("source")).toEqual([original]);
+    blocked = false; // A real answer re-arms the persisted lifecycle.
+    expect(await wakeSessionForBackgroundResults(options)).toBe(true);
+    expect(f.runs).toHaveLength(1);
+    expect(f.runs[0]?.task).toContain("Facts already collected");
+    expect(f.notificationMailbox.getSnapshot("source")).toHaveLength(0);
+  });
+
+  test("a question asked during workspace resolution holds the queued result", async () => {
+    const f = await fixture();
+    let blocked = false;
+    f.session.engine.isGoalContinuationBlocked = () => blocked;
+    const gate = deferred<{ cwd: string }>();
+    const waking = wakeSessionForBackgroundResults({
+      ...f.options,
+      resolveWorkspace: () => gate.promise,
+    });
+    blocked = true;
+    gate.resolve({ cwd: "/project" });
+    expect(await waking).toBe(false);
+    expect(f.runs).toHaveLength(0);
+    expect(f.notificationMailbox.getSnapshot("source")).toHaveLength(1);
+  });
+
+  test("a user-wait transition while reserving restores the notification", async () => {
+    const f = await fixture();
+    const original = f.notificationMailbox.getSnapshot("source")[0]!;
+    let blocked = false;
+    f.session.engine.isGoalContinuationBlocked = () => blocked;
+    const unsubscribe = f.notificationMailbox.subscribe(() => {
+      blocked = true;
+    });
+    try {
+      expect(
+        await wakeSessionForBackgroundResults({
+          ...f.options,
+          resolveWorkspace: async () => ({}),
+        }),
+      ).toBe(false);
+      expect(f.runs).toHaveLength(0);
+      expect(f.notificationMailbox.getSnapshot("source")).toEqual([original]);
+    } finally {
+      unsubscribe();
+    }
+  });
+
   test.each([false, true])(
     "Stop after a turn with Goal=%s holds the completion",
     async (withGoal) => {

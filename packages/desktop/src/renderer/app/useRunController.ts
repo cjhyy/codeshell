@@ -350,6 +350,7 @@ export function useRunController({
       workspaceProfile?: string;
       displayText?: string;
       suppressGoal?: boolean;
+      continueGoal?: boolean;
     } = {},
   ): Promise<void> => {
     // createSession updates the local projection immediately; Main must
@@ -387,9 +388,14 @@ export function useRunController({
     // below then moves the override onto the real bucket for follow-ups.
     const overrideBucket = wasDraft ? (sendOpts.bucket ?? activeBucket) : bucket;
     const sendPermissionMode = permissionOverrides[overrideBucket] ?? defaultPermissionMode;
-    const sendGoalEnabled = goalOverrides[overrideBucket] ?? false;
+    // Answering an existing goal must not consume the ordinary composer's
+    // "make this message a new goal" toggle or replace the current objective.
+    const sendGoalEnabled = !sendOpts.continueGoal && (goalOverrides[overrideBucket] ?? false);
     const sendModelKey = modelOverrides[overrideBucket] ?? defaultActiveModelKey;
     const clientMessageId = sendOpts.clientMessageId ?? newQueuedId();
+    const goalBeforeSend =
+      transcriptsRef.current[bucket]?.activeGoal ??
+      (bucket === activeBucket ? state.activeGoal : null);
     const previousRunIds = new Set(
       Object.values(transcriptsRef.current[bucket]?.streamRuns ?? {}).map((run) => run.runId),
     );
@@ -402,6 +408,33 @@ export function useRunController({
           !!run.runId &&
           !previousRunIds.has(run.runId),
       );
+    const restoreUnsentGoalReply = (): boolean => {
+      if (!sendOpts.continueGoal || !ownsCurrentLaunch() || !goalBeforeSend?.waitingForUser)
+        return false;
+      const current = transcriptsRef.current[bucket];
+      const goal = current?.activeGoal;
+      if (
+        !goal ||
+        !goal.goalId ||
+        goal.goalId !== goalBeforeSend.goalId ||
+        goal.revision !== goalBeforeSend.revision ||
+        goal.objective !== goalBeforeSend.objective ||
+        goal.paused ||
+        goal.waitingForUser ||
+        goal.round !== goalBeforeSend.round ||
+        Object.values(current.streamRuns ?? {}).some(
+          (run) => run.clientMessageId === clientMessageId,
+        )
+      )
+        return false;
+      dispatch({
+        type: "goal_reconcile",
+        bucket,
+        expected: { goalId: goal.goalId, revision: goal.revision },
+        goal: { ...goal, waitingForUser: goalBeforeSend.waitingForUser },
+      });
+      return true;
+    };
     const displayText = sendOpts.displayText ?? text;
     inFlightInputsRef.current.set(launchVersion, {
       bucket,
@@ -617,8 +650,7 @@ export function useRunController({
     // Pass a new objective only for an explicit Goal send; ordinary follow-ups
     // inherit there instead of replacing the goal with a renderer snapshot.
     const hasActiveGoal =
-      !sendOpts.suppressGoal &&
-      (!!opts.goal || (bucket === activeBucket && !!state.activeGoal && !state.activeGoal.paused));
+      !sendOpts.suppressGoal && (!!opts.goal || (!!goalBeforeSend && !goalBeforeSend.paused));
     const externalDeveloperInstructions = [
       opts.sessionBrief ? `CodeShell Session brief:\n${opts.sessionBrief}` : undefined,
       opts.sessionMessageTargets?.length
@@ -705,6 +737,7 @@ export function useRunController({
           reason === "external_runtime_error"
         ) {
           const detail = result?.text?.replace(/^ERROR:\s*/, "") || t("misc.app.requestRejected");
+          if (sendOpts.continueGoal) throw new Error(detail);
           dispatch({ type: "turn_end", bucket, reason: "error", detail });
           toast({ message: detail, variant: "error" });
           playThemeSound("error");
@@ -741,6 +774,7 @@ export function useRunController({
           : t("misc.session.sendSaveFailed");
         dispatch({ type: "turn_end", bucket, reason: "error", detail, elapsedMs });
         toast({ message: detail, variant: "error" });
+        if (restoreUnsentGoalReply()) throw err;
       })
       .finally(() => inFlightInputsRef.current.delete(launchVersion));
   };

@@ -2624,7 +2624,7 @@ function App() {
                       send(text, {
                         ...opts,
                         bucket: resolveMainComposerBucket(
-                          opts?.bucket,
+                          opts,
                           activeBucket,
                           activeBucketRef.current,
                         ),

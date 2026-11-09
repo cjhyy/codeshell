@@ -47,7 +47,7 @@ import {
 } from "@cjhyy/code-shell-core/extension";
 import { NotificationQueue } from "../../../core/src/tool-system/builtin/agent-notifications.js";
 import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
-import { EXTERNAL_GOAL_TOOLS } from "./external-runtime-goals.js";
+import { EXTERNAL_GOAL_TOOLS, ExternalRuntimeGoals } from "./external-runtime-goals.js";
 import type { ExternalRuntimeServiceDeps } from "./external-runtime-service.js";
 import { getProjectStore } from "./project-store.js";
 import { mobileSessionCommandAuthority } from "./mobile-remote/output-recovery-authority.js";
@@ -2078,74 +2078,135 @@ describe("ExternalRuntimeService", () => {
     }
   });
 
-  test("wait_for_user stops continuation until the user replies, holding background results", async () => {
-    let listener: ((sessionId: string, event: StreamEvent) => void) | undefined;
-    let pending: string | undefined;
-    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
-      backgroundWork: {
-        subscribe: (next: typeof listener) => {
-          listener = next;
-          return () => {};
+  test.each([false, true])(
+    "wait_for_user stops continuation until the user replies, holding background results (restart=%s)",
+    async (restart) => {
+      let listener: ((sessionId: string, event: StreamEvent) => void) | undefined;
+      let pending: string | undefined;
+      const background = {
+        backgroundWork: {
+          subscribe: (next: typeof listener) => {
+            listener = next;
+            return () => {};
+          },
+          claimResults: () => {
+            const message = pending;
+            pending = undefined;
+            return claimBackgroundMessage(message, (value) => {
+              pending = value;
+            });
+          },
+          hasPending: () => pending !== undefined,
+          hasRunning: () => false,
+          dropSession: () => {},
         },
-        claimResults: () => {
-          const message = pending;
-          pending = undefined;
-          return claimBackgroundMessage(message, (value) => {
-            pending = value;
+      };
+      let svc = service(
+        { external_agent_runtime: true, external_host_tools: true },
+        undefined,
+        background,
+      );
+      await svc.start(request);
+      try {
+        providerSend = async (args) => {
+          const goal = svc.getGoal(request.sessionId);
+          await (args.registry as ToolRegistry).executeTool("wait_for_user", {
+            goalId: goal.goalId,
+            revision: goal.revision,
+            question: "允许新增三项权限并安装吗？",
           });
-        },
-        hasPending: () => pending !== undefined,
-        hasRunning: () => false,
-        dropSession: () => {},
-      },
-    });
-    await svc.start(request);
+        };
+        await svc.send(request.sessionId, { text: "安装面板", goal: "安装求职面板" });
+        expect(providerInputs).toHaveLength(1);
+        expect(svc.getGoal(request.sessionId)).toMatchObject({
+          goal: "安装求职面板",
+          paused: false,
+        });
+        expect(
+          streamEvents.some(
+            (event) =>
+              event.type === "goal_progress" &&
+              event.waitingForUser === "允许新增三项权限并安装吗？",
+          ),
+        ).toBe(true);
+        expect(
+          new SessionManager().readSessionState(request.sessionId)?.goalLifecycle,
+        ).toMatchObject({
+          phase: "waiting",
+          waitKind: "user",
+        });
+        const restoredGoals = new ExternalRuntimeGoals(() => {});
+        expect(restoredGoals.pendingQuestion(request.sessionId)).toBeUndefined();
+        expect(restoredGoals.isWaitingForUser(request.sessionId)).toBe(true);
+        if (restart) {
+          await svc.stopAll();
+          svc = service(
+            { external_agent_runtime: true, external_host_tools: true },
+            undefined,
+            background,
+          );
+          await svc.start(request);
+        }
+
+        pending = "后台检查已完成";
+        listener?.(request.sessionId, {
+          type: "background_agent_completed",
+          agentId: "check",
+          description: "检查",
+          status: "completed",
+          enqueuedAt: Date.now(),
+        });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(providerInputs).toHaveLength(1);
+        expect(pending).toBe("后台检查已完成");
+
+        providerSend = async (args, input) => {
+          expect(restoredGoals.isWaitingForUser(request.sessionId)).toBe(false);
+          expect(
+            new SessionManager().readSessionState(request.sessionId)?.goalLifecycle?.phase,
+          ).toBe("active");
+          expect(input.text).toContain("允许，安装吧");
+          expect(input.text).toContain("后台检查已完成");
+          expect(input.text).not.toContain("has not yet answered");
+          const goal = svc.getGoal(request.sessionId);
+          await (args.registry as ToolRegistry).executeTool("complete_goal", {
+            goalId: goal.goalId,
+            revision: goal.revision,
+          });
+        };
+        await svc.send(request.sessionId, { text: "允许，安装吧" });
+        expect(providerInputs).toHaveLength(2);
+        expect(svc.getGoal(request.sessionId).goal).toBeNull();
+      } finally {
+        await svc.stopAll();
+      }
+    },
+  );
+
+  test("wait_for_user publishes no wait when its durable transition fails", async () => {
+    const manager = new SessionManager();
+    manager.create(request.cwd, "codex/test", "codex", request.sessionId, null, "desktop");
+    const events: StreamEvent[] = [];
+    const goals = new ExternalRuntimeGoals((_id, event) => events.push(event));
+    const run = goals.start(request.sessionId, "等待显示确认")!;
+    const persist = spyOn(SessionManager.prototype, "markGoalWaiting").mockReturnValue(false);
     try {
-      providerSend = async (args) => {
-        const goal = svc.getGoal(request.sessionId);
-        await (args.registry as ToolRegistry).executeTool("wait_for_user", {
-          goalId: goal.goalId,
-          revision: goal.revision,
-          question: "允许新增三项权限并安装吗？",
-        });
-      };
-      await svc.send(request.sessionId, { text: "安装面板", goal: "安装求职面板" });
-      expect(providerInputs).toHaveLength(1);
-      expect(svc.getGoal(request.sessionId)).toMatchObject({ goal: "安装求职面板", paused: false });
       expect(
-        streamEvents.some(
-          (event) =>
-            event.type === "goal_progress" && event.waitingForUser === "允许新增三项权限并安装吗？",
-        ),
-      ).toBe(true);
-
-      pending = "后台检查已完成";
-      listener?.(request.sessionId, {
-        type: "background_agent_completed",
-        agentId: "check",
-        description: "检查",
-        status: "completed",
-        enqueuedAt: Date.now(),
-      });
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(providerInputs).toHaveLength(1);
-      expect(pending).toBe("后台检查已完成");
-
-      providerSend = async (args, input) => {
-        expect(input.text).toContain("允许，安装吧");
-        expect(input.text).toContain("后台检查已完成");
-        expect(input.text).not.toContain("has not yet answered");
-        const goal = svc.getGoal(request.sessionId);
-        await (args.registry as ToolRegistry).executeTool("complete_goal", {
-          goalId: goal.goalId,
-          revision: goal.revision,
-        });
-      };
-      await svc.send(request.sessionId, { text: "允许，安装吧" });
-      expect(providerInputs).toHaveLength(2);
-      expect(svc.getGoal(request.sessionId).goal).toBeNull();
+        goals.waitForUser(request.sessionId, {
+          goalId: run.goal.goalId,
+          revision: run.goal.revision,
+          question: "这处可以接受吗？",
+        }),
+      ).toMatchObject({ ok: false });
+      expect(goals.isWaitingForUser(request.sessionId)).toBe(false);
+      expect(run.awaitingUser).toBeUndefined();
+      expect(events.some((event) => event.type === "goal_progress" && event.waitingForUser)).toBe(
+        false,
+      );
+      expect(manager.readSessionState(request.sessionId)?.goalLifecycle?.phase).toBe("active");
     } finally {
-      await svc.stopAll();
+      persist.mockRestore();
+      goals.end(run);
     }
   });
 

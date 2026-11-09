@@ -1,5 +1,6 @@
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import type { PetChatAttachment } from "../shared/pet-chat-attachments";
+import { carryGoalClock } from "./goalClock";
 import { timePhase } from "./perf";
 import { applyTranscriptStreamEvent } from "./transcripts";
 import { mergeHistoryIntoLive } from "./automation/hydrateOrder";
@@ -256,7 +257,11 @@ function reduceTranscriptAction(map: TranscriptsMap, action: TranscriptsAction):
             active.goalId === action.expected.goalId &&
             active.revision === action.expected.revision;
       if (!expectedMatches) return map;
-      next = { ...current, activeGoal: action.goal };
+      // A control round-trip does not carry goal accounting; keep this goal's clock.
+      next = {
+        ...current,
+        activeGoal: action.goal && carryGoalClock(active, action.goal),
+      };
       break;
     }
     default:
