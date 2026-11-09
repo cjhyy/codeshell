@@ -148,6 +148,20 @@ describe("record", () => {
     expect(a.queued().map((r) => r.id)).toEqual([queued.id, explicit.id]);
   });
 
+  test("held() lists digest-held records oldest first", async () => {
+    const a = ledger();
+    await a.load();
+    const first = await a.record(
+      draft({ dedupeKey: "h1", decision: { outlet: "digest", reason: "quiet-hours" } }),
+    );
+    clock = NOW + 1;
+    const second = await a.record(draft({ dedupeKey: "h2", delivery: { status: "held" } }));
+    await a.record(draft({ dedupeKey: "plain" }));
+    expect(a.held().map((r) => r.id)).toEqual([first.id, second.id]);
+    await a.settle(first.id, "revoked", "digested");
+    expect(a.held().map((r) => r.id)).toEqual([second.id]);
+  });
+
   test("a drop decision does not touch the dedupe index", async () => {
     const a = ledger();
     await a.load();

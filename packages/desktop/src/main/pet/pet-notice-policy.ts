@@ -62,6 +62,8 @@ export type RouteReason =
   | "p0-cap"
   | "quiet-hours"
   | "hourly-cap"
+  /** Router-only: a P1 for a Session that already got an IM within the merge window. */
+  | "merge-window"
   | "desktop-channel"
   | "named-im"
   | "im-unbound"

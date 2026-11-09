@@ -5,7 +5,7 @@ import type {
   PetNavigationResult,
 } from "./pet-state-aggregator.js";
 import type { PetDispatchCommand, PetDispatchResult } from "./pet-dispatch-service.js";
-import type { PetAttentionEvent, PetAttentionSnapshot } from "./pet-attention-policy.js";
+import type { PetAttentionEvent, PetAttentionSnapshot } from "./pet-notice-router.js";
 import {
   type PetLongTaskControlRequest,
   type PetLongTaskControlResult,

@@ -478,6 +478,14 @@ export class PetNoticeLedger {
       .map((record) => structuredClone(record));
   }
 
+  /** Records held for the next digest, oldest first. */
+  held(): NoticeRecord[] {
+    return [...this.state.records.values()]
+      .filter((record) => record.delivery?.status === "held")
+      .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id))
+      .map((record) => structuredClone(record));
+  }
+
   /**
    * IM sends (claimed or accepted, any channel but "desktop") whose latest
    * claim falls in the same local clock hour as `now`; P0 separately.

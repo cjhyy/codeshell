@@ -156,7 +156,7 @@ import { createPetMemoryHost, createPetMemoryWorldContext } from "./pet/pet-memo
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetChatAttachmentContext } from "./pet/pet-chat-attachment-context.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
-import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
+import { PetAttentionPolicy } from "./pet/pet-notice-router.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";

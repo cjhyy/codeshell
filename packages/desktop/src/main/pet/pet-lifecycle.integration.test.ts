@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { PetProjectionSnapshotResult } from "@cjhyy/code-shell-pet";
 import type { ListDiskSessionsResult } from "@cjhyy/code-shell-server/storage";
-import { PetAttentionPolicy } from "./pet-attention-policy";
+import { PetAttentionPolicy } from "./pet-notice-router";
 import {
   PetStateAggregator,
   type AgentBridgePetEvent,
