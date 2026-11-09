@@ -439,6 +439,15 @@ export class PetNoticeLedger {
       throw new Error("invalid maxBytes");
   }
 
+  /** Resolves once every write queued so far has settled (for shutdown). */
+  async flush(): Promise<void> {
+    let current: Promise<unknown>;
+    do {
+      current = this.queue;
+      await current.catch(() => undefined);
+    } while (current !== this.queue);
+  }
+
   load(): Promise<void> {
     if (!this.loadPromise) {
       const attempt = this.loadFromDisk().catch((error) => {

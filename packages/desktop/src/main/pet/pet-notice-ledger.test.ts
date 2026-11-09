@@ -79,6 +79,17 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
+describe("flush", () => {
+  test("waits for queued writes", async () => {
+    const a = ledger();
+    await a.load();
+    void a.record(draft());
+    void a.record(draft({ dedupeKey: "session.done:s1:run-2" }));
+    await a.flush();
+    expect((await readDisk()).records).toHaveLength(2);
+  });
+});
+
 describe("record", () => {
   test("persists before resolving, so a second instance reads it", async () => {
     const a = ledger();

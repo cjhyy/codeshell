@@ -321,6 +321,21 @@ describe("quiet hours", () => {
     ).toEqual({ outlet: "digest", reason: "quiet-hours" });
   });
 
+  test("an immediate notice skips quiet hours and the hourly cap, not dedupe", () => {
+    const quiet = state({ now: utcAt(23, 30), quietHours: overnight, sentThisHour: 99 });
+    expect(route(notice({ channel: "wechat", immediate: true }), quiet)).toEqual({
+      outlet: "both",
+      im: "wechat",
+      reason: "named-im",
+    });
+    expect(
+      route(notice({ channel: "wechat", immediate: true }), {
+        ...quiet,
+        seenDedupeKeys: new Set([notice().dedupeKey]),
+      }),
+    ).toEqual({ outlet: "drop", reason: "duplicate" });
+  });
+
   test("a P1 is not deferred when start === end", () => {
     expect(
       route(

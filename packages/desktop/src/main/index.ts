@@ -146,7 +146,7 @@ import {
   PetHostActionReceiptService,
 } from "./pet/pet-host-action-completion.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
-import { PetDispatchService } from "./pet/pet-dispatch-service.js";
+import { PetDispatchService, type PetHostActionExecution } from "./pet/pet-dispatch-service.js";
 import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
 import { PetMemoryStore } from "./pet/pet-memory-store.js";
 import { createPetMemoryHost, createPetMemoryWorldContext } from "./pet/pet-memory-host.js";
@@ -1842,6 +1842,7 @@ async function createWindow(): Promise<BrowserWindow> {
       sessionRoutes: () => sessionBridge?.routes,
       gateway: imGatewayService,
       publishRoute: publishGatewayControlEvent,
+      materializeAttachments: materializeOutgoingAttachments,
       notifyDesktop: async (input) => desktopNotifier?.notify(input),
       readSettings: () => new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
       presence: {
@@ -1879,11 +1880,13 @@ async function createWindow(): Promise<BrowserWindow> {
       onTaskClosed: async (task) => {
         let message: string | undefined;
         let continued = false;
+        let closureHostActions: PetHostActionExecution[] | undefined;
         try {
           if (petDispatchService) {
             const report = await petDispatchService.reportLongTaskClosure(task);
             message = report.text;
             continued = report.continued;
+            closureHostActions = report.hostActions;
             // The closure manager runs outside the renderer-initiated chat IPC.
             // Its stream is owner-window scoped, so other open Mimi surfaces can
             // miss the final assistant reply even though it is durable on disk.
@@ -1901,9 +1904,57 @@ async function createWindow(): Promise<BrowserWindow> {
         }
 
         // A successful continuation is an internal manager hand-off. Otherwise
-        // Mimi's final answer is the one owner-facing message for this chain
-        // (IM origin, owner channel and/or desktop), delivered by the router.
-        if (!continued) await notices.notifyTaskClosed(task, { text: message });
+        // the closure's GatewayReply is a DRAFT (text + validated files/button):
+        // the router delivers it as the one owner-facing message for the chain.
+        if (continued) return;
+        const enriched =
+          message === undefined
+            ? undefined
+            : await enrichPetChatReplyWithHostActions(message, closureHostActions, {
+                qrDir: resolve(app.getPath("userData"), "pet", "qr"),
+                attachmentKinds: task.completionTarget?.replyAttachmentKinds,
+              });
+        // The closure manager's final assistant text is only an internal
+        // acknowledgement after GatewayReply; show the routed body instead.
+        const draftAccepted = closureHostActions?.some(
+          (execution) => execution.kind === "gatewayReply" && execution.ok,
+        );
+        if (draftAccepted && enriched && task.completionTarget && petHostActionReceiptService) {
+          await completePetHostActionReceipt({
+            recorder: petHostActionReceiptService,
+            input: {
+              petSessionId: await petDispatchService!.getSessionId(),
+              clientMessageId: task.originClientMessageId,
+              receiptId: `${task.id}:${task.attempt}:${task.status}`,
+              executions: closureHostActions ?? [],
+              authoritativeMessage: enriched.text,
+              replaceAssistant: true,
+              deliveryChannel: task.completionTarget.channel,
+            },
+            publish: (receiptEvent) => {
+              for (const window of BrowserWindow.getAllWindows()) {
+                if (!window.isDestroyed())
+                  window.webContents.send(PET_CHAT_EVENT_CHANNEL, receiptEvent);
+              }
+            },
+          }).catch((error) =>
+            dlog("main", "pet.longTask.gatewayReceipt.failed", {
+              taskId: task.id,
+              error: String(error),
+            }),
+          );
+        }
+        await notices.notifyTaskClosed(task, {
+          ...(enriched ? { text: enriched.text } : {}),
+          ...(enriched && (enriched.button || enriched.attachments.length > 0)
+            ? {
+                media: {
+                  ...(enriched.button ? { button: enriched.button } : {}),
+                  ...(enriched.attachments.length > 0 ? { attachments: enriched.attachments } : {}),
+                },
+              }
+            : {}),
+        });
       },
       onTaskWorkMemory: async (task) => {
         const recorded = await recordPetDelegationClosureBestEffort(
@@ -3098,14 +3149,14 @@ async function dispatchGatewayPetChat(
     if (!window.isDestroyed()) window.webContents.send(PET_CHAT_EVENT_CHANNEL, submitted);
   }
 
-  // Notices this conversation missed ride the turn as data (pendingNotices).
-  const replay = await petNotices?.replayForInbound(request.origin);
+  // Notices this conversation missed ride the turn as data, taken when it starts.
+  const replay = petNotices?.inboundReplay(request.origin);
   const result = await dispatcher
     .dispatch({
       type: "chat",
       message: request.message,
       ...(attachments.length > 0 ? { attachments } : {}),
-      ...(replay ? { pendingNotices: replay.notices } : {}),
+      ...(replay ? { pendingNotices: replay } : {}),
       clientMessageId,
       source: {
         kind: "im-gateway",
@@ -3120,12 +3171,7 @@ async function dispatchGatewayPetChat(
         ...(request.origin ? { target: request.origin.target } : {}),
       },
     })
-    .catch((error: unknown) => {
-      replay?.settle(false);
-      throw error;
-    });
-  // A steered message rode another turn's context, so only a reply of its own took them.
-  replay?.settle(result.ok && result.type === "chat" && !result.suppressReply);
+    .finally(() => replay?.finish());
   if (!result.ok) throw new Error(result.message ?? result.code);
   if (result.type !== "chat") throw new Error("Mimi Pet 返回了非聊天结果");
   await markAttachmentsSent(cwd, sessionId, attachments).catch(() => undefined);
@@ -4474,6 +4520,7 @@ registerDesktopShutdown(app, {
     unsubscribePetLongTaskStream = null;
     unsubscribePetReportStream?.();
     unsubscribePetReportStream = null;
+    const petNoticeFlush = petNotices?.flush();
     petNotices?.dispose();
     petNotices = null;
     const petWorkInboxFlush = petWorkInboxStore?.flush();
@@ -4504,6 +4551,7 @@ registerDesktopShutdown(app, {
       gatewayControlServer?.stop(),
       petWorkInboxFlush,
       petLongTaskFlush,
+      petNoticeFlush,
       externalRuntimeShutdown,
       cookieRefreshShutdown,
       panelAppBridge.shutdownMedia(),

@@ -477,6 +477,22 @@ describe("long task ownership", () => {
     expect(drafts).toEqual([]);
     expect(rules.rules[0]!.state).toBe("active");
   });
+
+  test("ownership is asked per run, with the core run id", async () => {
+    rules.rules.push(sessionRule("rule-a"));
+    const asked: string[] = [];
+    const w = watcher({
+      hasActiveLongTask: (_sessionId, run) => {
+        asked.push(run);
+        return run === "run-1";
+      },
+    });
+    await feed(w, [started(), tool("Bash"), done()]);
+    expect(drafts).toEqual([]);
+    await feed(w, [started({ runId: "run-2" }), tool("Bash"), done()]);
+    expect(asked).toEqual(["run-1", "run-2"]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:run-2`]);
+  });
 });
 
 describe("pending decisions", () => {

@@ -59,12 +59,20 @@ function longTask(overrides: Partial<PetLongTask> = {}): PetLongTask {
   } as PetLongTask;
 }
 
+interface OwnerSend {
+  targetId: string;
+  text: string;
+  key?: string;
+  attachments?: string[];
+}
+
 interface Harness {
   wiring: PetNoticeWiring;
   handler: HostActionHandler;
   submitted: NoticeSubmission[];
   published: GatewayControlEventInput[];
-  ownerSends: { targetId: string; text: string; key?: string }[];
+  ownerSends: OwnerSend[];
+  materialized: string[][];
   desktop: DesktopNotificationInput[];
   sessions: DesktopPetSession[];
   tasks: PetLongTask[];
@@ -82,7 +90,8 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     { id: "lark", label: "飞书", ready: "unknown", targetId: "lark:owner" },
   ];
   const published: GatewayControlEventInput[] = [];
-  const ownerSends: { targetId: string; text: string; key?: string }[] = [];
+  const ownerSends: OwnerSend[] = [];
+  const materialized: string[][] = [];
   const desktop: DesktopNotificationInput[] = [];
   const listeners = new Set<(event: DesktopPetProjectionEvent) => void>();
   let handler: HostActionHandler | undefined;
@@ -126,11 +135,26 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     }),
     gateway: {
       ownerChannels: () => channels,
-      sendOwnerMessage: async (targetId, text, options) => {
+      listOwnerMessageTargets: () =>
+        [
+          { id: "wechat:owner", channel: "wechat", attachments: ["image"] },
+          { id: "lark:owner", channel: "lark", attachments: ["image", "file"] },
+        ].map((target) => ({
+          ...target,
+          label: target.channel,
+          maxTextLength: 8_000,
+          maxAttachments: 1,
+          maxAttachmentBytes: 1_000,
+          proactiveReady: "ready" as const,
+        })) as never,
+      sendOwnerMessage: async (targetId, text, attachments, options) => {
         ownerSends.push({
           targetId,
           text,
           ...(options?.idempotencyKey ? { key: options.idempotencyKey } : {}),
+          ...(attachments.length > 0
+            ? { attachments: attachments.map((attachment) => attachment.name) }
+            : {}),
         });
         return {};
       },
@@ -139,6 +163,15 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     },
     publishRoute: async (event) => {
       published.push(event);
+    },
+    materializeAttachments: async (files) => {
+      materialized.push(files.map((file) => file.path));
+      return files.map((file) => ({
+        kind: file.kind,
+        name: file.name,
+        mimeType: file.mimeType,
+        data: new Uint8Array(),
+      }));
     },
     notifyDesktop: async (input) => {
       desktop.push(input);
@@ -165,6 +198,7 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     submitted,
     published,
     ownerSends,
+    materialized,
     desktop,
     sessions,
     tasks,
@@ -386,7 +420,8 @@ describe("rule watcher wiring", () => {
     // The route pins the channel: one message back to the bound WeChat conversation.
     expect(current.published).toHaveLength(1);
     expect(current.published[0]).toMatchObject({
-      type: "pet.task.reported",
+      type: "pet.task.completed",
+      title: "Mimi 任务已完成",
       text: "「修登录」做完了：测试都过了",
       target: { channel: "wechat", target: "chat-1" },
     });
@@ -407,6 +442,25 @@ describe("rule watcher wiring", () => {
       current.wiring.observeSessionEvent(SID, event);
     await settle();
     expect(current.submitted).toEqual([]);
+  });
+
+  test("a closed long task owns only the run it closed", async () => {
+    current = harness();
+    current.tasks.push(longTask({ runId: "run-1", completedAt: NOW, updatedAt: NOW }));
+    await current.handler(SID, upsertArgs());
+    clock = NOW + 1_000;
+    const turn = (runId: string) => [
+      { type: "session_started", runId, clientMessageId: `cm-${runId}` },
+      { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } },
+      { type: "turn_complete", reason: "completed", runId },
+    ];
+    for (const event of turn("run-1")) current.wiring.observeSessionEvent(SID, event);
+    await settle();
+    expect(current.submitted).toEqual([]);
+    // A later turn in the same Session is the owner's own work again.
+    for (const event of turn("run-2")) current.wiring.observeSessionEvent(SID, event);
+    await settle();
+    expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${SID}:turn:run-2`]);
   });
 
   test("a pending decision becomes a blocked notice for a rule that watches it", async () => {
@@ -451,10 +505,11 @@ describe("long-task closure", () => {
     expect(current.submitted[0]).toMatchObject({
       kind: "session.done",
       priority: "P1",
-      dedupeKey: "task:task-1:completed",
+      dedupeKey: "task:task-1:1:completed",
       sessionId: SID,
       attention: "always",
       channel: "wechat",
+      reply: true,
       target: { kind: "route", route },
       body: "登录修好了，测试全过。",
       facts: { title: "修登录", summary: "登录修好了" },
@@ -462,9 +517,12 @@ describe("long-task closure", () => {
     // The replay of the same closure is a duplicate: exactly one message goes out.
     expect(current.published).toHaveLength(1);
     expect(current.published[0]).toMatchObject({
+      type: "pet.task.completed",
+      title: "Mimi 任务已完成",
       text: "登录修好了，测试全过。",
       target: { channel: "wechat", target: "chat-9" },
     });
+    expect(current.published[0]!.deliveryKey).toMatch(/^[0-9a-f]{64}$/u);
     expect(current.ownerSends).toEqual([]);
     expect(current.wiring.ruleStore.activeForSession(SID)).toEqual([]);
     expect(current.wiring.ruleStore.list()[0]!.state).toBe("spent");
@@ -477,7 +535,7 @@ describe("long-task closure", () => {
     expect(current.submitted).toHaveLength(1);
     expect(current.submitted[0]).toMatchObject({
       kind: "session.failed",
-      dedupeKey: "task:task-1:failed",
+      dedupeKey: "task:task-1:1:failed",
       channel: "lark",
       target: { kind: "owner" },
       facts: { error: "编译失败" },
@@ -501,6 +559,119 @@ describe("long-task closure", () => {
     expect(current.desktop).toHaveLength(1);
   });
 
+  test("a retried attempt that fails again notifies again", async () => {
+    // No merge window, so the second failure is visible as its own send.
+    current = harness({
+      readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }),
+    });
+    await current.wiring.notifyTaskClosed(longTask({ status: "failed", attempt: 1 }));
+    await current.wiring.notifyTaskClosed(longTask({ status: "failed", attempt: 2 }));
+    expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([
+      "task:task-1:1:failed",
+      "task:task-1:2:failed",
+    ]);
+    expect(current.ownerSends).toHaveLength(2);
+  });
+
+  test("IM-started results reply immediately, in quiet hours and inside the merge window", async () => {
+    current = harness();
+    // 23:30 at UTC+0, inside the default 23:00–08:30 quiet hours.
+    clock = Date.UTC(2026, 10, 9, 23, 30, 0);
+    const route = { kind: "im-gateway" as const, channel: "wechat", target: "chat-9" };
+    await current.wiring.notifyTaskClosed(longTask({ completionTarget: route }), { text: "一" });
+    clock += 5 * 60_000;
+    await current.wiring.notifyTaskClosed(longTask({ id: "task-2", completionTarget: route }), {
+      text: "二",
+    });
+    expect(current.published.map((event) => event.text)).toEqual(["一", "二"]);
+  });
+
+  test("an image result reaches the route once, with its attachments and button", async () => {
+    current = harness();
+    const route = {
+      kind: "im-gateway" as const,
+      channel: "wechat",
+      target: "chat-9",
+      replyAttachmentKinds: ["image" as const],
+    };
+    const media = {
+      attachments: [
+        {
+          kind: "image" as const,
+          name: "comic.png",
+          mimeType: "image/png",
+          size: 123,
+          path: "/w/comic.png",
+        },
+      ],
+      button: { text: "打开", url: "https://example.com/comic" },
+    };
+    // A quiet-hours closure with media is still sent, never digested.
+    clock = Date.UTC(2026, 10, 9, 23, 30, 0);
+    const task = longTask({ completionTarget: route });
+    await current.wiring.notifyTaskClosed(task, { text: "漫画在这。", media });
+    await current.wiring.notifyTaskClosed(task, { text: "漫画在这。", media });
+    expect(current.published).toHaveLength(1);
+    expect(current.published[0]).toMatchObject({
+      text: "漫画在这。",
+      attachments: media.attachments,
+      button: media.button,
+      target: { channel: "wechat", target: "chat-9" },
+    });
+    // Desktop shows it too (named channel), pointing at the Session for the files.
+    expect(current.desktop[0]).toMatchObject({ sessionId: SID });
+    expect(current.desktop[0]!.body).toContain("含 1 个附件");
+  });
+
+  test("owner-target media is filtered by the target's capabilities", async () => {
+    current = harness();
+    await current.handler(SID, upsertArgs({ channel: "wechat" }));
+    const media = {
+      attachments: [
+        {
+          kind: "file" as const,
+          name: "a.zip",
+          mimeType: "application/zip",
+          size: 10,
+          path: "/w/a.zip",
+        },
+        {
+          kind: "image" as const,
+          name: "big.png",
+          mimeType: "image/png",
+          size: 5_000,
+          path: "/w/big.png",
+        },
+        {
+          kind: "image" as const,
+          name: "a.png",
+          mimeType: "image/png",
+          size: 10,
+          path: "/w/a.png",
+        },
+        {
+          kind: "image" as const,
+          name: "b.png",
+          mimeType: "image/png",
+          size: 10,
+          path: "/w/b.png",
+        },
+      ],
+      button: { text: "查看", url: "https://example.com/r" },
+    };
+    await current.wiring.notifyTaskClosed(longTask(), { text: "好了", media });
+    // WeChat target: images only, ≤1 000 bytes, at most one.
+    expect(current.materialized).toEqual([["/w/a.png"]]);
+    expect(current.ownerSends).toEqual([
+      {
+        targetId: "wechat:owner",
+        text: "好了\n查看：https://example.com/r",
+        key: expect.stringMatching(/^[0-9a-f]{24}$/u),
+        attachments: ["a.png"],
+      },
+    ]);
+  });
+
   test("a cancelled task produces no notice", async () => {
     current = harness();
     await current.handler(SID, upsertArgs());
@@ -513,31 +684,69 @@ describe("long-task closure", () => {
 });
 
 describe("pending-notice replay", () => {
-  test("a notice queued for an unavailable channel rides the owner's next message", async () => {
+  test("a queued notice is taken when the inbound turn starts and settled then", async () => {
     current = harness();
     current.channels[1] = { id: "lark", label: "飞书", ready: "unavailable" };
     await current.handler(SID, upsertArgs({ channel: "lark" }));
     await current.wiring.notifyTaskClosed(longTask({ status: "failed", lastError: "编译失败" }));
     expect(current.ownerSends).toEqual([]);
     const origin = { channel: "lark", target: "dm-1", senderId: "owner", isDirectMessage: true };
-    expect(await current.wiring.replayForInbound({ ...origin, channel: "wechat" })).toBeUndefined();
+    expect(await current.wiring.inboundReplay({ ...origin, channel: "wechat" })!.take()).toEqual(
+      [],
+    );
     expect(
-      await current.wiring.replayForInbound({ ...origin, isDirectMessage: false }),
-    ).toBeUndefined();
+      await current.wiring.inboundReplay({ ...origin, isDirectMessage: false })!.take(),
+    ).toEqual([]);
+    expect(current.wiring.inboundReplay(undefined)).toBeUndefined();
 
-    const first = await current.wiring.replayForInbound(origin);
-    expect(first?.notices).toEqual([
+    // Taken but the turn never started (e.g. it failed first): released.
+    const first = current.wiring.inboundReplay(origin)!;
+    expect(await first.take()).toEqual([
       { kind: "session.failed", title: "修登录", body: "「修登录」没做完：编译失败" },
     ]);
-    // Withheld while that turn runs; released when it did not take them.
-    expect(await current.wiring.replayForInbound(origin)).toBeUndefined();
-    first!.settle(false);
-    const second = await current.wiring.replayForInbound(origin);
-    expect(second?.notices).toHaveLength(1);
-    second!.settle(true);
+    const concurrent = current.wiring.inboundReplay(origin)!;
+    expect(await concurrent.take()).toEqual([]);
+    concurrent.finish();
+    first.finish();
+
+    // A message that waited in the queue takes them only when its turn starts.
+    const queued = current.wiring.inboundReplay(origin)!;
+    const second = current.wiring.inboundReplay(origin)!;
+    expect(await second.take()).toHaveLength(1);
+    second.started();
+    second.finish();
     await settle();
-    expect(await current.wiring.replayForInbound(origin)).toBeUndefined();
-    expect(await current.wiring.replayForInbound(undefined)).toBeUndefined();
+    expect(await queued.take()).toEqual([]);
+    queued.finish();
+  });
+
+  test("a queued owner notice with media is sent on the next inbound, not put in the turn", async () => {
+    current = harness();
+    current.channels[1] = { id: "lark", label: "飞书", ready: "unavailable" };
+    await current.handler(SID, upsertArgs({ channel: "lark" }));
+    const media = {
+      attachments: [
+        {
+          kind: "file" as const,
+          name: "r.txt",
+          mimeType: "text/plain",
+          size: 10,
+          path: "/w/r.txt",
+        },
+      ],
+    };
+    await current.wiring.notifyTaskClosed(longTask(), { text: "报告好了", media });
+    expect(current.ownerSends).toEqual([]);
+    current.channels[1] = { id: "lark", label: "飞书", ready: "ready", targetId: "lark:owner" };
+    const replay = current.wiring.inboundReplay({
+      channel: "lark",
+      target: "dm-1",
+      isDirectMessage: true,
+    })!;
+    expect(await replay.take()).toEqual([]);
+    expect(current.ownerSends).toEqual([
+      expect.objectContaining({ targetId: "lark:owner", text: "报告好了", attachments: ["r.txt"] }),
+    ]);
   });
 });
 

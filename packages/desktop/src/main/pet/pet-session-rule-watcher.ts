@@ -30,7 +30,11 @@ export interface NoticeDraft {
 export interface PetSessionRuleWatcherOptions {
   rules: Pick<PetRuleStore, "activeForSession" | "update">;
   onNotice: (draft: NoticeDraft) => void;
-  hasActiveLongTask: (sessionId: string) => boolean;
+  /**
+   * A long task owns this run's done / failed (its closure notifies). `runKey`
+   * is the core run id (or the watcher's fallback key when core gave none).
+   */
+  hasActiveLongTask: (sessionId: string, runKey: string) => boolean;
   /** Queued user messages or running background / sub-agent work. */
   isSessionBusy: (sessionId: string) => boolean;
   /** False for Mimi's own Session, child Sessions and hidden kinds. */
@@ -315,8 +319,8 @@ export class PetSessionRuleWatcher {
       return;
     }
     this.carriedWork.delete(sessionId);
-    // Long-task closure owns done/failed; Task 8 spends these rules when it notifies.
-    if (this.options.hasActiveLongTask(sessionId)) return;
+    // Long-task closure owns done/failed and spends these rules when it notifies.
+    if (this.options.hasActiveLongTask(sessionId, run)) return;
     await this.emit(
       sessionId,
       "done",
@@ -342,8 +346,8 @@ export class PetSessionRuleWatcher {
     const armed: Matcher = (when) => when.armedAt <= at;
     const question = boundedText(event.waitingForUser, MAX_FACT_LENGTH);
     if (event.status === "met") {
-      // Long-task closure owns done/failed; Task 8 spends these rules when it notifies.
-      if (this.options.hasActiveLongTask(sessionId)) return;
+      // Long-task closure owns done/failed and spends these rules when it notifies.
+      if (this.options.hasActiveLongTask(sessionId, run)) return;
       const goalId = nonEmptyString(event.goalId) ?? run;
       const emitted = await this.emit(
         sessionId,
@@ -385,8 +389,8 @@ export class PetSessionRuleWatcher {
   ): Promise<void> {
     // An `error` event is usually followed by a failing turn_complete; one notice per turn.
     if (state.failedInTurn) return;
-    // Long-task closure owns done/failed; Task 8 spends these rules when it notifies.
-    if (this.options.hasActiveLongTask(sessionId)) return;
+    // Long-task closure owns done/failed and spends these rules when it notifies.
+    if (this.options.hasActiveLongTask(sessionId, run)) return;
     const emitted = await this.emit(
       sessionId,
       "failed",

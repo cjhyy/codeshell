@@ -20,6 +20,11 @@ export interface RouteNotice {
   channel: NoticeChannel;
   /** Only the all-sessions system rule matched: notify only while the owner is away. */
   requiresAway?: boolean;
+  /**
+   * The answer to something the owner asked for (an IM-started task's result)
+   * or a notice carrying media: never held for quiet hours or the hourly cap.
+   */
+  immediate?: boolean;
 }
 
 /** What the policy needs from the dedupe index; a `ReadonlySet<string>` satisfies it. */
@@ -66,6 +71,8 @@ export type RouteReason =
   | "merge-window"
   /** Router-only: the router was disposed; nothing was recorded or sent. */
   | "disposed"
+  /** Router-only: a notice with media is shown now instead of being digested. */
+  | "media-not-digested"
   | "desktop-channel"
   | "named-im"
   | "im-unbound"
@@ -151,7 +158,7 @@ export function route(notice: RouteNotice, state: RouteState): RouteDecision {
   if (notice.attention === "digest") return { outlet: "digest", reason: "digest-attention" };
   if (notice.priority === "P0") {
     if (state.p0SentThisHour >= state.maxP0PerHour) return { outlet: "digest", reason: "p0-cap" };
-  } else {
+  } else if (!notice.immediate) {
     if (isInQuietHours(state.quietHours, state.now, state.timezoneOffsetMin))
       return { outlet: "digest", reason: "quiet-hours" };
     if (state.sentThisHour >= state.maxPerHour) return { outlet: "digest", reason: "hourly-cap" };

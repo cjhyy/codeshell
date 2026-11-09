@@ -210,7 +210,7 @@ test("closure does not continue a busy Session", async () => {
   expect(h.starts).toEqual([]);
 });
 
-test("invalid continuation corrects the closure text the host delivers", async () => {
+test("invalid continuation corrects the actual Gateway reply", async () => {
   const h = harness({
     mutate: (delegation) => {
       delegation.workspaceId = "foreign";
@@ -221,13 +221,11 @@ test("invalid continuation corrects the closure text the host delivers", async (
   );
   expect(result.continued).toBe(false);
   expect(result.text).not.toContain("Continuation requested");
-  // The closure turn never sends; its text becomes the one owner notice.
-  expect(h.replies).toEqual([]);
-  expect(result).not.toHaveProperty("hostActions");
+  expect(h.replies).toEqual([expect.objectContaining({ text: result.text })]);
   expect(h.starts).toEqual([]);
 });
 
-test("missing original Session produces the failed closure text without replacement", async () => {
+test("missing original Session produces the same failed reply on Gateway without replacement", async () => {
   const h = harness({ launchError: "Original Session does not exist" });
   const result = await h.service.reportLongTaskClosure(
     task({ completionTarget: { kind: "im-gateway", channel: "wechat", target: "owner" } }),
@@ -237,9 +235,7 @@ test("missing original Session produces the failed closure text without replacem
   expect(h.starts[0]!.targetSessionId).toBe("work-original");
   expect(result.text).toContain("Original Session does not exist");
   expect(result.text).not.toContain("Continuation requested");
-  // The closure turn never sends; its text becomes the one owner notice.
-  expect(h.replies).toEqual([]);
-  expect(result).not.toHaveProperty("hostActions");
+  expect(h.replies).toEqual([expect.objectContaining({ text: result.text })]);
 });
 
 test("stale candidate title includes recent user objective and result, excluding injected messages", async () => {

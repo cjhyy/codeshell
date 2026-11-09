@@ -21,6 +21,7 @@ import {
   staleReason,
   unpackFacts,
   type NoticeConversation,
+  type NoticeImPayload,
   type NoticeRouterSettings,
   type NoticeSubmission,
   type NoticeTarget,
@@ -42,6 +43,10 @@ const DEFAULT_REPLAY_HOLD_MS = 10 * 60_000;
 const MAX_RULE_IDS = 100;
 const NO_KEYS: DedupeLookup = { has: () => false };
 const DISPOSED: RouteDecision = { outlet: "drop", reason: "disposed" };
+
+function payloadOf(notice: NoticeSubmission): NoticeImPayload {
+  return { kind: notice.kind, ...(notice.media ? { media: notice.media } : {}) };
+}
 
 interface NoticePlan {
   decision: RouteDecision;
@@ -305,13 +310,23 @@ export class PetNoticeRouter {
     const holdMs = this.options.replayHoldMs ?? DEFAULT_REPLAY_HOLD_MS;
     for (const [id, at] of this.replaying) if (now - at >= holdMs) this.replaying.delete(id);
     const replay: ReplayedNotice[] = [];
+    const resend: NoticeRecord[] = [];
     for (const record of ledger.queued()) {
       if (record.delivery?.channel !== channel || this.replaying.has(record.id)) continue;
-      const { facts, target } = unpackFacts(record.facts);
+      const { facts, target, media } = unpackFacts(record.facts);
+      // Route notices live in the gateway outbox, never in this queue's replay.
+      if (target.kind === "route") continue;
       if (!matchesConversation(target, channel, conversation)) continue;
       const stale = staleReason(record, now, this.options);
       if (stale) {
         await this.settleQuietly(record.id, "revoked", stale);
+        continue;
+      }
+      if (media) {
+        // Files cannot ride a turn's text context: the owner is back on this
+        // channel, so send the notice itself.
+        this.replaying.set(record.id, now);
+        resend.push(record);
         continue;
       }
       this.replaying.set(record.id, now);
@@ -324,7 +339,34 @@ export class PetNoticeRouter {
         body: (record.body ?? composeNoticeBody(record.kind, facts)).slice(0, MAX_NOTICE_BODY),
       });
     }
+    for (const record of resend) {
+      await this.resendQueued(record, channel);
+      this.replaying.delete(record.id);
+    }
     return replay;
+  }
+
+  /** Send one queued notice now (same record, so the same key and payload). */
+  private async resendQueued(record: NoticeRecord, channel: string): Promise<void> {
+    const ledger = this.options.ledger!;
+    const notice = noticeFromRecord(record);
+    const body = record.body ?? composeNoticeBody(notice.kind, notice.facts);
+    this.sending.add(record.id);
+    try {
+      const { key } = await ledger.claim(record.id, channel, body);
+      const outcome = await this.sendIm(
+        record.id,
+        channel,
+        key,
+        imTarget(notice.target, channel),
+        body,
+        payloadOf(notice),
+      );
+      if (outcome !== "accepted") this.log("pet.notice.resend_failed", { kind: record.kind });
+    } catch (error) {
+      this.sending.delete(record.id);
+      this.log("pet.notice.resend_failed", { kind: record.kind, error: errorText(error) });
+    }
   }
 
   /** The replayed notices reached Mimi's turn; settle them for good. */
@@ -423,7 +465,11 @@ export class PetNoticeRouter {
         ...(notice.requestId !== undefined ? { requestId: notice.requestId } : {}),
         ...(notice.expiresAt !== undefined ? { expiresAt: notice.expiresAt } : {}),
         ruleIds: notice.ruleIds.slice(0, MAX_RULE_IDS),
-        facts: { ...notice.facts, target: notice.target },
+        facts: {
+          ...notice.facts,
+          target: notice.target,
+          ...(notice.media ? { media: notice.media } : {}),
+        },
         body,
         decision,
       });
@@ -460,11 +506,13 @@ export class PetNoticeRouter {
     let channel = notice.channel;
     let lastInbound = this.options.lastInboundChannel?.();
     if (pinned) {
-      // The conversation the owner used is the channel; it exists even if unlisted.
-      if (!Object.hasOwn(imReady, routeChannel)) imReady[routeChannel] = "unknown";
+      // The conversation the owner used is the channel. Its gateway outbox is
+      // durable and delivers once the channel is back, so it is always usable.
+      imReady[routeChannel] = "ready";
       if (channel === "auto") lastInbound = routeChannel;
       else channel = routeChannel;
     }
+    const immediate = notice.reply === true || notice.media !== undefined;
     let decision = route(
       {
         priority: notice.priority,
@@ -472,6 +520,7 @@ export class PetNoticeRouter {
         attention: notice.attention,
         channel,
         ...(notice.requiresAway ? { requiresAway: true } : {}),
+        ...(immediate ? { immediate: true } : {}),
       },
       {
         now,
@@ -488,10 +537,14 @@ export class PetNoticeRouter {
       },
     );
     if (pinned) decision = pinToRoute(decision, routeChannel);
+    // Files are never folded into a one-line digest entry.
+    if (notice.media && decision.outlet === "digest")
+      decision = { outlet: "desktop", reason: "media-not-digested" };
     // A decision request held by the P0 cap still has to be in front of the owner.
     let alsoDesktop = notice.priority === "P0" && decision.outlet === "digest";
     if (
       notice.priority === "P1" &&
+      !immediate &&
       notice.sessionId &&
       (decision.outlet === "im" || decision.outlet === "both")
     ) {
@@ -524,7 +577,14 @@ export class PetNoticeRouter {
     if (desktopNow) this.showDesktop(notice, body);
     const { channel, key } = plan.claim;
     const target = imTarget(notice.target, channel);
-    const outcome = await this.sendIm(plan.recordId!, channel, key, target, body);
+    const outcome = await this.sendIm(
+      plan.recordId!,
+      channel,
+      key,
+      target,
+      body,
+      payloadOf(notice),
+    );
     if (outcome !== "accepted" && !desktopNow) this.showOutcome(notice, body, outcome);
   }
 
@@ -534,10 +594,13 @@ export class PetNoticeRouter {
   }
 
   /**
-   * One IM attempt on a claimed record. A failure leaves it queued for the
-   * channel. A timeout on a channel without idempotent sends may already have
-   * reached the owner, so it becomes `unknown` and is never resent
-   * automatically; with idempotent sends the same key makes a resend safe.
+   * One IM attempt on a claimed record. A failure leaves an owner notice
+   * queued for the channel; a route notice (whose durable queue is the
+   * gateway outbox itself) just fails, and the caller shows it on the desktop.
+   * A timeout on a channel without idempotent sends may already have reached
+   * the owner, so it becomes `unknown` and is never resent automatically; with
+   * idempotent sends (and every route publish, keyed by the claim key) the
+   * same key makes a resend safe.
    */
   private async sendIm(
     id: string,
@@ -545,12 +608,14 @@ export class PetNoticeRouter {
     key: string,
     target: NoticeTarget,
     body: string,
+    payload: NoticeImPayload,
   ): Promise<"accepted" | "failed" | "unknown"> {
     this.sending.add(id);
     try {
-      const idempotent = this.options.supportsIdempotentSend?.(channel) === true;
+      const idempotent = this.isIdempotent(channel, target);
       const result = await sendWithTimeout(
-        () => this.options.outlets?.im(channel, target, body, idempotent ? key : undefined),
+        () =>
+          this.options.outlets?.im(channel, target, body, idempotent ? key : undefined, payload),
         this.options.imTimeoutMs ?? DEFAULT_IM_TIMEOUT_MS,
         this.schedule,
         this.cancel,
@@ -565,11 +630,15 @@ export class PetNoticeRouter {
         return "unknown";
       }
       await this.settleQuietly(id, "failed", result.error);
-      await this.settleQuietly(id, "queued", result.error);
+      if (target.kind !== "route") await this.settleQuietly(id, "queued", result.error);
       return "failed";
     } finally {
       this.sending.delete(id);
     }
+  }
+
+  private isIdempotent(channel: string, target: NoticeTarget): boolean {
+    return target.kind === "route" || this.options.supportsIdempotentSend?.(channel) === true;
   }
 
   private async recoverClaim(record: NoticeRecord): Promise<void> {
@@ -586,11 +655,11 @@ export class PetNoticeRouter {
     const channel = record.delivery?.channel;
     const body = record.body ?? "";
     const notice = noticeFromRecord(record);
-    if (channel && body && this.options.supportsIdempotentSend?.(channel) === true) {
+    if (channel && body && this.isIdempotent(channel, imTarget(notice.target, channel))) {
       try {
         const { key } = await ledger.claim(record.id, channel, body);
         const target = imTarget(notice.target, channel);
-        const outcome = await this.sendIm(record.id, channel, key, target, body);
+        const outcome = await this.sendIm(record.id, channel, key, target, body, payloadOf(notice));
         if (outcome !== "accepted") this.showOutcome(notice, body, outcome);
       } catch (error) {
         this.log("pet.notice.resend_failed", { error: errorText(error) });

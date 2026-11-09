@@ -53,6 +53,17 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
+describe("flush", () => {
+  test("waits for queued writes", async () => {
+    const s = store();
+    await s.load();
+    void s.upsertSessionRule(upsert());
+    void s.upsertSessionRule(upsert({ sessionId: "s-other" }));
+    await s.flush();
+    expect((await readDisk()).rules).toHaveLength(2);
+  });
+});
+
 describe("upsertSessionRule", () => {
   test("creates an active session rule with a random stable id", async () => {
     const s = store();

@@ -20,7 +20,13 @@ import { dlog } from "../desktop-logger.js";
 import type { DesktopNotificationInput } from "../desktop-notifier.js";
 import type { HostActionHandler } from "../host-action-dispatch.js";
 import type { GatewayControlEventInput } from "../im-gateway-control-server.js";
-import type { ImGatewayOwnerChannel, ImGatewayOwnerSendOptions } from "../im-gateway-service.js";
+import type { OutgoingAttachment } from "@cjhyy/code-shell-chat";
+import type {
+  ImGatewayOwnerChannel,
+  ImGatewayOwnerSendOptions,
+  ImGatewayOwnerTarget,
+} from "../im-gateway-service.js";
+import type { PetPendingNoticeSource } from "./pet-dispatch-service.js";
 import type { PetIpcAttention } from "./pet-ipc.js";
 import { PetNoticeLedger } from "./pet-notice-ledger.js";
 import {
@@ -30,12 +36,16 @@ import {
 } from "./pet-notice-policy.js";
 import {
   PetNoticeRouter,
+  type NoticeImPayload,
   type NoticeImSendResult,
+  type NoticeMedia,
+  type NoticeMediaAttachment,
   type NoticeRouterSettings,
   type NoticeSubmission,
   type NoticeTarget,
   type PetAttentionOptions,
 } from "./pet-notice-router.js";
+import { parseNoticeMedia } from "./pet-notice-types.js";
 import { createPresenceDetector, DEFAULT_PRESENCE_IDLE_SEC } from "./pet-presence.js";
 import { PetReceiptStore } from "./pet-receipt-store.js";
 import { PetRuleStore, type NoticeRule } from "./pet-rule-store.js";
@@ -52,8 +62,6 @@ export interface PetNotificationSettings extends Required<NoticeRouterSettings> 
 export const DEFAULT_QUIET_HOURS = { start: "23:00", end: "08:30" } as const;
 const DEFAULT_MERGE_WINDOW_SEC = 600;
 const SETTINGS_TTL_MS = 5_000;
-/** A long task closed this recently still owns its Session's done / failed notice. */
-const RECENT_CLOSURE_MS = 2 * 60_000;
 const MAX_VIEWED_SESSIONS = 500;
 const MAX_TITLE = 200;
 const MAX_SUMMARY = 2_000;
@@ -62,9 +70,12 @@ const HH_MM = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;
 
 export interface PetNoticeWiringGateway {
   ownerChannels(): ImGatewayOwnerChannel[];
+  /** Owner targets with their outbound attachment capabilities. */
+  listOwnerMessageTargets(): ImGatewayOwnerTarget[];
   sendOwnerMessage(
     targetId: string,
     text: string,
+    attachments: readonly OutgoingAttachment[],
     options?: ImGatewayOwnerSendOptions,
   ): Promise<unknown>;
   supportsIdempotentOwnerSend(channel: string): boolean;
@@ -88,6 +99,10 @@ export interface PetNoticeWiringDeps {
   gateway: PetNoticeWiringGateway;
   /** Durable gateway outbox publish (`publishGatewayControlEvent`), for replies to a route. */
   publishRoute(event: GatewayControlEventInput): Promise<void>;
+  /** Reads validated attachment descriptors into sendable bytes (owner sends only). */
+  materializeAttachments(
+    attachments: readonly NoticeMediaAttachment[],
+  ): Promise<OutgoingAttachment[]>;
   /** Native desktop notification (`DesktopNotifier.notify`); click opens `sessionId`. */
   notifyDesktop(input: DesktopNotificationInput): Promise<unknown>;
   /** The user settings object (raw); only `pet.notifications` is read. */
@@ -105,6 +120,8 @@ export interface PetNoticeWiringDeps {
 export interface PetTaskClosureNotice {
   /** Mimi's owner-facing closure message, when the closure turn produced one. */
   text?: string;
+  /** Files / URL action from the closure turn's validated GatewayReply draft. */
+  media?: NoticeMedia;
 }
 
 /** A queued notice as Mimi's runtime context carries it (`pendingNotices`): data only. */
@@ -123,13 +140,15 @@ export interface PetInboundOrigin {
 }
 
 /**
- * Notices handed to one inbound turn. Call `settle(true)` once the turn's
- * reply is handed back for delivery (they are revoked for good), or
- * `settle(false)` when the turn did not take them (the next message gets them).
+ * Notices for one inbound message, handed to the dispatcher. They are taken
+ * from the ledger only when that message's own Mimi turn starts (`take`), and
+ * settled for good the moment the turn starts with them (`started`), so a
+ * message that waits in the chat queue never holds them and never hands them
+ * out twice. `finish` (always call it after dispatch) releases notices that
+ * were taken but whose turn never started.
  */
-export interface PetInboundReplay {
-  notices: PetPendingNotice[];
-  settle(delivered: boolean): void;
+export interface PetInboundReplay extends PetPendingNoticeSource {
+  finish(): void;
 }
 
 export interface PetNoticeWiring {
@@ -146,8 +165,10 @@ export interface PetNoticeWiring {
   observeSessionEvent(sessionId: string, event: unknown): void;
   /** A long task reached a terminal state and was not continued: one notice, then spend rules. */
   notifyTaskClosed(task: PetLongTask, closure?: PetTaskClosureNotice): Promise<void>;
-  /** Queued notices for an owner's IM message, before Mimi's turn runs. */
-  replayForInbound(origin: PetInboundOrigin | undefined): Promise<PetInboundReplay | undefined>;
+  /** Queued notices for an owner's IM message; undefined without an IM origin. */
+  inboundReplay(origin: PetInboundOrigin | undefined): PetInboundReplay | undefined;
+  /** Waits for pending rule and notice writes (shutdown). */
+  flush(): Promise<void>;
   /** The settings this wiring currently routes with. */
   settings(): PetNotificationSettings;
   dispose(): void;
@@ -256,6 +277,26 @@ const DESKTOP_TITLES: Readonly<Record<string, string>> = {
   "session.blocked": "Mimi：需要你决定",
   digest: "Mimi：你不在时",
 };
+
+const ROUTE_EVENT_TYPES: Readonly<Record<string, GatewayControlEventInput["type"]>> = {
+  "session.done": "pet.task.completed",
+  "session.failed": "pet.task.failed",
+};
+
+/** Attachments this owner target accepts, in order, within its count and size limits. */
+function attachmentsFor(
+  target: ImGatewayOwnerTarget | undefined,
+  attachments: readonly NoticeMediaAttachment[] | undefined,
+): NoticeMediaAttachment[] {
+  if (!target || !attachments) return [];
+  return attachments
+    .filter(
+      (attachment) =>
+        target.attachments.includes(attachment.kind) &&
+        attachment.size <= target.maxAttachmentBytes,
+    )
+    .slice(0, target.maxAttachments);
+}
 
 /**
  * Remembers which work Session the owner had open on the desktop, so a
@@ -381,11 +422,13 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
           .update("\0")
           .update(body)
           .digest("hex");
+        const files = notice.media?.attachments?.length ?? 0;
         void Promise.resolve(
           deps.notifyDesktop({
             key,
             title: DESKTOP_TITLES[notice.kind] ?? "Mimi",
-            body,
+            // Clicking opens the Session, where the files are.
+            body: files > 0 ? `${body}\n（含 ${files} 个附件，打开会话查看）` : body,
             ...(notice.priority === "P0" ? { urgent: true } : {}),
             ...(notice.sessionId ? { sessionId: notice.sessionId } : {}),
           }),
@@ -393,22 +436,31 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
           log("pet.notice.desktop_notify_failed", { kind: notice.kind, error: errorText(error) }),
         );
       },
-      im: (channel, target, body, key) => sendIm(channel, target, body, key),
+      im: (channel, target, body, key, payload) => sendIm(channel, target, body, key, payload),
     },
     ...(deps.imTimeoutMs !== undefined ? { imTimeoutMs: deps.imTimeoutMs } : {}),
     ...(deps.timezoneOffsetMin ? { timezoneOffsetMin: deps.timezoneOffsetMin } : {}),
     log,
   });
 
+  /**
+   * Route notices are published to the durable gateway outbox (accepted =
+   * enqueued); the deliveryKey derives from the record's claim key, so a
+   * resend of the same record resumes the same delivery instead of repeating
+   * it. Owner notices go to the channel's owner target, with the attachments
+   * that target accepts.
+   */
   async function sendIm(
     channel: string,
     target: NoticeTarget,
     body: string,
     key: string | undefined,
+    payload: NoticeImPayload,
   ): Promise<NoticeImSendResult> {
+    const media = parseNoticeMedia(payload.media);
     try {
       if (target.kind === "route") {
-        // Same durable outbox path as long-task results and Session replies.
+        const title = DESKTOP_TITLES[payload.kind];
         await deps.publishRoute({
           ...(key
             ? {
@@ -418,34 +470,47 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
                   .digest("hex"),
               }
             : {}),
-          type: "pet.task.reported",
+          type: ROUTE_EVENT_TYPES[payload.kind] ?? "pet.task.reported",
+          ...(title ? { title } : {}),
           text: body,
+          ...(media?.button ? { button: media.button } : {}),
+          ...(media?.attachments ? { attachments: media.attachments } : {}),
           target: { channel: target.route.channel, target: target.route.target },
         });
         return { accepted: true };
       }
       const targetId = deps.gateway.ownerChannels().find((entry) => entry.id === channel)?.targetId;
       if (!targetId) return { accepted: false, error: "no-owner-target" };
-      await deps.gateway.sendOwnerMessage(targetId, body, key ? { idempotencyKey: key } : {});
+      const ownerTarget = deps.gateway
+        .listOwnerMessageTargets()
+        .find((entry) => entry.id === targetId);
+      const files = attachmentsFor(ownerTarget, media?.attachments);
+      let attachments: OutgoingAttachment[] = [];
+      try {
+        attachments = files.length > 0 ? await deps.materializeAttachments(files) : [];
+      } catch (error) {
+        // The text still matters; the files stay reachable from the Session.
+        log("pet.notice.attachments_failed", { channel, error: errorText(error) });
+      }
+      const text = media?.button ? `${body}\n${media.button.text}：${media.button.url}` : body;
+      await deps.gateway.sendOwnerMessage(
+        targetId,
+        text,
+        attachments,
+        key ? { idempotencyKey: key } : {},
+      );
       return { accepted: true };
     } catch (error) {
       return { accepted: false, error: errorText(error) };
     }
   }
 
-  const hasActiveLongTask = (sessionId: string): boolean => {
-    if (deps.longTasks.activeForSession(sessionId)) return true;
-    // The coordinator may have closed it a moment before this event was
-    // judged; its closure notice still owns the outcome.
-    const at = now();
-    return deps.longTasks
+  // A long task owns its Session while active, and owns the run it closed.
+  const hasActiveLongTask = (sessionId: string, run: string): boolean =>
+    deps.longTasks.activeForSession(sessionId) !== undefined ||
+    deps.longTasks
       .getSnapshot()
-      .tasks.some(
-        (task) =>
-          task.sessionId === sessionId &&
-          at - (task.completedAt ?? task.updatedAt) < RECENT_CLOSURE_MS,
-      );
-  };
+      .tasks.some((task) => task.sessionId === sessionId && task.runId === run);
 
   const submit = (notice: NoticeSubmission): Promise<unknown> =>
     router.submit(notice).catch((error) => {
@@ -477,9 +542,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   async function resolveRuleTarget(sessionId: string): Promise<NoticeRule["target"]> {
     try {
       const routes = (await deps.sessionRoutes()?.notifyRoutesForSession(sessionId)) ?? [];
-      const bound =
-        routes.find((route) => route.mode === "bound" && route.status === "active") ??
-        routes.find((route) => route.mode === "bound");
+      const bound = routes.find((route) => route.mode === "bound" && route.status === "active");
       if (bound) return routeTarget(bound);
     } catch (error) {
       log("pet.notice.route_lookup_failed", { sessionId, error: errorText(error) });
@@ -595,10 +658,12 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     const summary = textLine(task.resultSummary ?? task.summary, MAX_SUMMARY);
     const error = textLine(task.lastError, MAX_ERROR);
     const body = closure.text?.trim();
+    const media = parseNoticeMedia(closure.media);
     await submit({
       kind: event === "done" ? "session.done" : "session.failed",
       priority: "P1",
-      dedupeKey: `task:${task.id}:${task.status}`,
+      // Per attempt: a retried attempt that fails again must notify again.
+      dedupeKey: `task:${task.id}:${task.attempt}:${task.status}`,
       sessionId: task.sessionId,
       ruleIds: rules.map((rule) => rule.id),
       attention: "always",
@@ -612,53 +677,65 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         ...(error ? { error } : {}),
       },
       ...(body ? { body } : {}),
+      // The owner asked for this over IM: their answer is never held back.
+      ...(completionTarget ? { reply: true } : {}),
+      ...(media ? { media } : {}),
     });
     // This notice satisfies every Session rule that was waiting for the outcome.
     await spend(rules);
   }
 
-  async function replayForInbound(
-    origin: PetInboundOrigin | undefined,
-  ): Promise<PetInboundReplay | undefined> {
-    if (!origin || disposed) return undefined;
-    let replayed: Awaited<ReturnType<PetNoticeRouter["replayPending"]>>;
-    try {
-      await ready;
-      replayed = (
-        await router.replayPending(origin.channel, {
-          target: origin.target,
-          ...(origin.senderId !== undefined ? { senderId: origin.senderId } : {}),
-          ...(origin.isDirectMessage !== undefined
-            ? { isDirectMessage: origin.isDirectMessage }
-            : {}),
-        })
-      ).slice(0, PET_PENDING_NOTICES_MAX);
-    } catch (error) {
-      log("pet.notice.replay_failed", { channel: origin.channel, error: errorText(error) });
-      return undefined;
-    }
-    if (replayed.length === 0) return undefined;
-    const ids = replayed.map((notice) => notice.id);
-    let settled = false;
+  function inboundReplay(origin: PetInboundOrigin | undefined): PetInboundReplay | undefined {
+    if (!origin) return undefined;
+    let ids: string[] = [];
+    let state: "idle" | "taken" | "started" | "finished" = "idle";
     return {
-      notices: replayed.map((notice): PetPendingNotice => {
-        const title = textLine(notice.title, PET_PENDING_NOTICE_TITLE_MAX);
-        return {
-          kind: notice.kind.slice(0, 64),
-          ...(title ? { title } : {}),
-          body: notice.body.slice(0, PET_PENDING_NOTICE_BODY_MAX) || "-",
-        };
-      }),
-      settle(delivered) {
-        if (settled) return;
-        settled = true;
-        if (!delivered) {
-          router.releaseReplay(ids);
-          return;
+      async take() {
+        if (state !== "idle" || disposed) return [];
+        state = "taken";
+        let replayed: Awaited<ReturnType<PetNoticeRouter["replayPending"]>>;
+        try {
+          await ready;
+          replayed = await router.replayPending(origin.channel, {
+            target: origin.target,
+            ...(origin.senderId !== undefined ? { senderId: origin.senderId } : {}),
+            ...(origin.isDirectMessage !== undefined
+              ? { isDirectMessage: origin.isDirectMessage }
+              : {}),
+          });
+        } catch (error) {
+          log("pet.notice.replay_failed", { channel: origin.channel, error: errorText(error) });
+          return [];
         }
+        const kept = replayed.slice(0, PET_PENDING_NOTICES_MAX);
+        // More than one turn can carry stays queued for the next message.
+        router.releaseReplay(replayed.slice(PET_PENDING_NOTICES_MAX).map((notice) => notice.id));
+        ids = kept.map((notice) => notice.id);
+        // finish() may have run while the ledger was being read.
+        if ((state as string) === "finished") {
+          router.releaseReplay(ids);
+          return [];
+        }
+        return kept.map((notice): PetPendingNotice => {
+          const title = textLine(notice.title, PET_PENDING_NOTICE_TITLE_MAX);
+          return {
+            kind: notice.kind.slice(0, 64),
+            ...(title ? { title } : {}),
+            body: notice.body.slice(0, PET_PENDING_NOTICE_BODY_MAX) || "-",
+          };
+        });
+      },
+      started() {
+        if (state !== "taken") return;
+        state = "started";
+        if (ids.length === 0) return;
         void router
           .markReplayed(ids)
           .catch((error) => log("pet.notice.replay_mark_failed", { error: errorText(error) }));
+      },
+      finish() {
+        if (state === "taken") router.releaseReplay(ids);
+        if (state !== "started") state = "finished";
       },
     };
   }
@@ -686,7 +763,10 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       void ready.then(() => (disposed ? undefined : watcher.observe(sessionId, event)));
     },
     notifyTaskClosed,
-    replayForInbound,
+    inboundReplay,
+    flush: async () => {
+      await Promise.all([ruleStore.flush(), ledger.flush()]);
+    },
     settings,
     dispose() {
       if (disposed) return;

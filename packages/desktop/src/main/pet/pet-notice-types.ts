@@ -54,6 +54,61 @@ export type NoticeTarget =
   | { kind: "route"; route: PetLongTaskCompletionTarget }
   | { kind: "owner" };
 
+/** One file a notice carries, as a validated descriptor (the path is read only at send time). */
+export interface NoticeMediaAttachment {
+  kind: "image" | "file" | "audio" | "video";
+  name: string;
+  mimeType: string;
+  size: number;
+  path: string;
+}
+
+/** Files and a URL action that travel with a notice's text (e.g. a closure GatewayReply draft). */
+export interface NoticeMedia {
+  attachments?: NoticeMediaAttachment[];
+  button?: { text: string; url: string };
+}
+
+export const MAX_NOTICE_ATTACHMENTS = 4;
+export const MAX_NOTICE_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const ATTACHMENT_KINDS = new Set(["image", "file", "audio", "video"]);
+
+function boundedText(value: unknown, max: number): value is string {
+  return typeof value === "string" && value.length > 0 && value.length <= max;
+}
+
+/** Bounded media, or undefined when there is nothing valid to carry. */
+export function parseNoticeMedia(value: unknown): NoticeMedia | undefined {
+  if (!isObject(value)) return undefined;
+  const attachments = Array.isArray(value.attachments)
+    ? value.attachments
+        .filter(
+          (entry): entry is NoticeMediaAttachment =>
+            isObject(entry) &&
+            ATTACHMENT_KINDS.has(entry.kind as string) &&
+            boundedText(entry.name, 255) &&
+            boundedText(entry.mimeType, 255) &&
+            typeof entry.size === "number" &&
+            Number.isSafeInteger(entry.size) &&
+            entry.size >= 0 &&
+            entry.size <= MAX_NOTICE_ATTACHMENT_BYTES &&
+            boundedText(entry.path, 4_096),
+        )
+        .slice(0, MAX_NOTICE_ATTACHMENTS)
+        .map(({ kind, name, mimeType, size, path }) => ({ kind, name, mimeType, size, path }))
+    : [];
+  const raw = value.button;
+  const button =
+    isObject(raw) &&
+    boundedText(raw.text, 200) &&
+    boundedText(raw.url, 2_048) &&
+    /^https?:\/\//u.test(raw.url)
+      ? { text: raw.text, url: raw.url }
+      : undefined;
+  if (attachments.length === 0 && !button) return undefined;
+  return { ...(attachments.length > 0 ? { attachments } : {}), ...(button ? { button } : {}) };
+}
+
 /** One notice handed to `PetNoticeRouter.submit`. */
 export interface NoticeSubmission {
   kind: "session.done" | "session.failed" | "session.blocked" | "digest" | (string & {});
@@ -71,6 +126,13 @@ export interface NoticeSubmission {
   target: NoticeTarget;
   /** Pre-written text (e.g. Mimi's closure message); otherwise templated from `facts`. */
   body?: string;
+  /**
+   * The answer to something the owner asked for over IM (an IM-started task's
+   * result): never held for quiet hours, the hourly cap or the merge window.
+   */
+  reply?: boolean;
+  /** Files / URL action sent with the text; such a notice is never digested or merged. */
+  media?: NoticeMedia;
 }
 
 export interface NoticeRouterSettings {
@@ -83,13 +145,24 @@ export interface NoticeRouterSettings {
 
 export type NoticeImSendResult = { accepted: true } | { accepted: false; error: string };
 
+/** What an IM send carries besides the text; the same record always yields the same payload. */
+export interface NoticeImPayload {
+  kind: string;
+  media?: NoticeMedia;
+}
+
 export interface NoticeOutlets {
   desktop(notice: NoticeSubmission, body: string): void;
+  /**
+   * Route targets get the record's claim key always (the gateway outbox keys
+   * its delivery progress by it); owner sends only on idempotent channels.
+   */
   im(
     channel: string,
     target: NoticeTarget,
     body: string,
     idempotencyKey: string | undefined,
+    payload: NoticeImPayload,
   ): Promise<NoticeImSendResult>;
 }
 
@@ -159,17 +232,26 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-/** The ledger keeps the target beside the facts so recovery, digest and replay can use it. */
-export function unpackFacts(raw: unknown): { facts: NoticeFacts; target: NoticeTarget } {
+/**
+ * The ledger keeps the target (and any media) beside the facts so recovery,
+ * digest and replay can use them.
+ */
+export function unpackFacts(raw: unknown): {
+  facts: NoticeFacts;
+  target: NoticeTarget;
+  media?: NoticeMedia;
+} {
   if (!isObject(raw)) return { facts: {}, target: { kind: "owner" } };
-  const { target, ...facts } = raw;
+  const { target, media: rawMedia, ...facts } = raw;
   const route = isObject(target) && target.kind === "route" ? target.route : undefined;
+  const media = parseNoticeMedia(rawMedia);
   return {
     facts: facts as NoticeFacts,
     target:
       isObject(route) && typeof route.channel === "string" && typeof route.target === "string"
         ? { kind: "route", route: route as unknown as PetLongTaskCompletionTarget }
         : { kind: "owner" },
+    ...(media ? { media } : {}),
   };
 }
 
@@ -216,7 +298,7 @@ export function pinToRoute(decision: RouteDecision, channel: string): RouteDecis
 }
 
 export function noticeFromRecord(record: NoticeRecord): NoticeSubmission {
-  const { facts, target } = unpackFacts(record.facts);
+  const { facts, target, media } = unpackFacts(record.facts);
   return {
     kind: record.kind,
     priority: record.priority,
@@ -228,6 +310,7 @@ export function noticeFromRecord(record: NoticeRecord): NoticeSubmission {
     attention: "always",
     channel: "desktop",
     target,
+    ...(media ? { media } : {}),
   };
 }
 

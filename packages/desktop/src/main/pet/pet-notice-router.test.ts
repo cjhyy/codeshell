@@ -11,6 +11,7 @@ import type {
 import {
   PetAttentionPolicy,
   PetNoticeRouter,
+  type NoticeImPayload,
   type NoticeImSendResult,
   type NoticeConversation,
   type NoticeRouterSettings,
@@ -152,6 +153,7 @@ interface ImCall {
   target: NoticeTarget;
   body: string;
   key: string | undefined;
+  payload?: NoticeImPayload;
 }
 
 interface Harness {
@@ -233,8 +235,8 @@ function harness(
     timezoneOffsetMin: () => 480,
     outlets: {
       desktop: (notice, body) => desktop.push({ kind: notice.kind, body }),
-      im: async (channel, target, body, key) => {
-        const call = { channel, target, body, key };
+      im: async (channel, target, body, key, payload) => {
+        const call = { channel, target, body, key, payload };
         im.push(call);
         return state.imResult(call);
       },
@@ -392,12 +394,8 @@ describe("PetNoticeRouter.submit", () => {
     const h = harness();
     h.state.channels.lark = "unavailable";
     h.state.lastInbound = "lark";
-    // Route target pins to lark, which is unavailable → desktop + queued.
-    const decision = await h.router.submit(
-      notice({
-        target: { kind: "route", route: { kind: "im-gateway", channel: "lark", target: "c1" } },
-      }),
-    );
+    // Named lark is unavailable → desktop + queued for the owner.
+    const decision = await h.router.submit(notice({ channel: "lark" }));
     expect(decision).toMatchObject({ outlet: "desktop", im: "lark", queued: true });
     expect(h.desktop).toHaveLength(1);
     const viewed = new PetNoticeRouter({
@@ -408,7 +406,7 @@ describe("PetNoticeRouter.submit", () => {
       wasSessionViewedSince: () => true,
       log: () => {},
     });
-    expect(await viewed.replayPending("lark", { target: "c1" })).toEqual([]);
+    expect(await viewed.replayPending("lark", DM)).toEqual([]);
     expect(h.ledger.queued()).toEqual([]);
   });
 
@@ -583,35 +581,109 @@ describe("PetNoticeRouter.submit", () => {
     expect(h.desktop).toHaveLength(2);
   });
 
-  test("replay matches the stored route and holds handed-out notices until released", async () => {
+  test("route notices go to the gateway outbox, even while the channel is down", async () => {
     const h = harness();
     h.state.channels.lark = "unavailable";
+    h.state.idempotent.clear();
     const routeA = {
       kind: "im-gateway" as const,
       channel: "lark",
       target: "chat-A",
       senderId: "u1",
     };
-    const routeB = { kind: "im-gateway" as const, channel: "lark", target: "chat-B" };
-    await h.router.submit(
+    const decision = await h.router.submit(
       notice({ facts: { title: "A" }, target: { kind: "route", route: routeA } }),
     );
+    expect(decision).toMatchObject({ outlet: "im", im: "lark" });
+    // The claim key always rides a route publish (the outbox keys its progress by it).
+    expect(h.im).toEqual([
+      expect.objectContaining({
+        channel: "lark",
+        target: { kind: "route", route: routeA },
+        key: expect.stringMatching(/^[0-9a-f]{24}$/u),
+        payload: { kind: "session.done" },
+      }),
+    ]);
     await h.router.submit(notice({ facts: { title: "Owner" }, channel: "lark" }));
-    await h.router.submit(
-      notice({ facts: { title: "B" }, target: { kind: "route", route: routeB } }),
-    );
-    expect(h.ledger.queued()).toHaveLength(3);
-
-    const titles = async (conversation: NoticeConversation) =>
-      (await h.router.replayPending("lark", conversation)).map((entry) => entry.title);
-    expect(await titles({ target: "chat-A", senderId: "u2" })).toEqual([]);
-    expect(await titles({ target: "chat-A", senderId: "u1" })).toEqual(["A"]);
+    expect(h.ledger.queued()).toHaveLength(1);
+    expect(await h.router.replayPending("lark", { target: "chat-A", senderId: "u1" })).toEqual([]);
     const owner = await h.router.replayPending("lark", DM);
     expect(owner.map((entry) => entry.title)).toEqual(["Owner"]);
-    expect(await titles(DM)).toEqual([]);
+    expect(await h.router.replayPending("lark", DM)).toEqual([]);
     h.router.releaseReplay(owner.map((entry) => entry.id));
-    expect(await titles(DM)).toEqual(["Owner"]);
-    expect(await titles({ target: "chat-B", senderId: "anyone" })).toEqual(["B"]);
+    expect((await h.router.replayPending("lark", DM)).map((entry) => entry.title)).toEqual([
+      "Owner",
+    ]);
+  });
+
+  test("a failed route publish is shown on the desktop and not queued for replay", async () => {
+    const h = harness();
+    h.state.imResult = () => ({ accepted: false, error: "outbox unavailable" });
+    const route = { kind: "im-gateway" as const, channel: "lark", target: "chat-A" };
+    await h.router.submit(notice({ target: { kind: "route", route } }));
+    expect(h.ledger.queued()).toEqual([]);
+    expect(h.desktop).toHaveLength(1);
+  });
+
+  test("reply notices skip quiet hours, the hourly cap and the merge window", async () => {
+    // 23:30 local (UTC+8).
+    const h = harness({ now: Date.UTC(2026, 10, 9, 15, 30, 0) });
+    h.state.settings = { quietHours: { start: "23:00", end: "08:30" }, maxPerHour: 1 };
+    const route = { kind: "im-gateway" as const, channel: "lark", target: "chat-A" };
+    const reply = (title: string) =>
+      notice({
+        sessionId: "s-same",
+        reply: true,
+        channel: "lark",
+        facts: { title },
+        target: { kind: "route", route },
+      });
+    expect(await h.router.submit(reply("one"))).toMatchObject({ outlet: "both", im: "lark" });
+    h.clock.advance(5 * MINUTE);
+    expect(await h.router.submit(reply("two"))).toMatchObject({ outlet: "both", im: "lark" });
+    expect(h.im).toHaveLength(2);
+    // An ordinary P1 at the same moment is still held.
+    expect(await h.router.submit(notice({ channel: "lark" }))).toMatchObject({
+      outlet: "digest",
+      reason: "quiet-hours",
+    });
+  });
+
+  test("media notices are never digested and carry their media to the outlet", async () => {
+    const h = harness({ now: Date.UTC(2026, 10, 9, 15, 30, 0) });
+    h.state.settings = { quietHours: { start: "23:00", end: "08:30" } };
+    const media = {
+      attachments: [
+        {
+          kind: "image" as const,
+          name: "a.png",
+          mimeType: "image/png",
+          size: 10,
+          path: "/x/a.png",
+        },
+      ],
+    };
+    expect(await h.router.submit(notice({ channel: "lark", media }))).toMatchObject({
+      outlet: "both",
+    });
+    expect(h.im[0]!.payload).toEqual({ kind: "session.done", media });
+    expect(await h.router.submit(notice({ channel: "lark", attention: "digest", media }))).toEqual({
+      outlet: "desktop",
+      reason: "media-not-digested",
+    });
+  });
+
+  test("a queued owner notice with media is sent on the owner's next inbound, not replayed", async () => {
+    const h = harness();
+    h.state.channels.lark = "unavailable";
+    const media = { button: { text: "打开", url: "https://example.com/r" } };
+    await h.router.submit(notice({ channel: "lark", media, facts: { title: "M" } }));
+    expect(h.im).toEqual([]);
+    h.state.channels.lark = "ready";
+    expect(await h.router.replayPending("lark", DM)).toEqual([]);
+    expect(h.im).toHaveLength(1);
+    expect(h.im[0]!.payload).toEqual({ kind: "session.done", media });
+    expect(h.ledger.queued()).toEqual([]);
   });
 
   test("route-target held notices get their own digest on that route, in arrival order", async () => {
