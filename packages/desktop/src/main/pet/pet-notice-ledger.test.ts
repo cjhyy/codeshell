@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
   NOTICE_DEDUPE_RETENTION_MS,
+  NOTICE_QUARANTINE_SIDECARS_KEPT,
   NOTICE_QUEUED_TTL_MS,
   NOTICE_RESEND_WINDOW_MS,
   PetNoticeLedger,
@@ -27,7 +28,12 @@ function plus8HourKey(ms: number): string {
 }
 
 function ledger(
-  options: { maxRecords?: number; maxBytes?: number; localHourKey?: (ms: number) => string } = {},
+  options: {
+    maxRecords?: number;
+    maxBytes?: number;
+    maxDedupeEntries?: number;
+    localHourKey?: (ms: number) => string;
+  } = {},
 ): PetNoticeLedger {
   return new PetNoticeLedger({
     path: filePath,
@@ -251,7 +257,8 @@ describe("claim and settle", () => {
       queued: [ok, bad, bad, bad, ok, ok, ok],
       failed: [ok, bad, bad, bad, ok, ok, ok],
       claimed: [ok, ok, ok, ok, ok, bad, ok],
-      unknown: [ok, bad, bad, bad, bad, bad, ok],
+      // Plain claim() never retries an unknown; see the manualRetry test.
+      unknown: [bad, bad, bad, bad, bad, bad, ok],
       accepted: [fin, fin, fin, fin, fin, fin, fin],
       revoked: [fin, fin, fin, fin, fin, fin, fin],
     };
@@ -288,6 +295,43 @@ describe("claim and settle", () => {
         });
       }
     }
+  });
+});
+
+describe("manual retry of an unknown delivery", () => {
+  test("only claim(..., { manualRetry: true }) resends an unknown notice", async () => {
+    const a = ledger();
+    await a.load();
+    const saved = await a.record(draft());
+    const { key } = await a.claim(saved.id, "wechat", "正文");
+    await a.settle(saved.id, "unknown", "socket closed");
+
+    await expect(a.claim(saved.id, "wechat", "正文")).rejects.toMatchObject({
+      code: "invalid_transition",
+    });
+    await expect(a.claim(saved.id, "wechat", "正文", { manualRetry: false })).rejects.toMatchObject(
+      { code: "invalid_transition" },
+    );
+    expect(a.get(saved.id)!.delivery).toMatchObject({ status: "unknown", attempts: 1 });
+
+    clock = NOW + 1_000;
+    const retry = await a.claim(saved.id, "lark", "改过的正文", { manualRetry: true });
+    expect(retry.key).toBe(key);
+    expect(a.get(saved.id)).toMatchObject({
+      body: "正文",
+      delivery: { status: "claimed", channel: "lark", attempts: 2, claimedAt: NOW + 1_000 },
+    });
+  });
+
+  test("manualRetry does not unlock final states", async () => {
+    const a = ledger();
+    await a.load();
+    const saved = await a.record(draft());
+    await a.claim(saved.id, "wechat", "x");
+    await a.settle(saved.id, "accepted");
+    await expect(a.claim(saved.id, "wechat", "x", { manualRetry: true })).rejects.toMatchObject({
+      code: "notice_already_settled",
+    });
   });
 });
 
@@ -542,6 +586,66 @@ describe("dedupe retention and eviction", () => {
     expect(a.seenDedupeKeys().has("old-0")).toBe(false);
     expect(a.seenDedupeKeys().has("old-79")).toBe(true);
     expect(Buffer.byteLength(await readFile(filePath, "utf8"))).toBeLessThanOrEqual(4_000);
+  });
+
+  test("the dedupe count cap never drops hashes of records still in the ledger", async () => {
+    const a = ledger({ maxDedupeEntries: 3 });
+    await a.load();
+    // Oldest first: kept-1 and kept-2 stay as records, so their hashes must survive.
+    const kept1 = await a.record(draft({ dedupeKey: "kept-1" }));
+    clock += 1;
+    const kept2 = await a.record(draft({ dedupeKey: "kept-2" }));
+    // Index-only entries (no record) are written straight to disk.
+    const disk = await readDisk();
+    disk.dedupe.push([hex24("orphan-old"), NOW + 2], [hex24("orphan-new"), NOW + 3]);
+    await writeFile(filePath, JSON.stringify(disk));
+
+    clock = NOW + 10;
+    const b = ledger({ maxDedupeEntries: 3 });
+    await b.load();
+    await b.record(draft({ dedupeKey: "fresh" }));
+    for (const key of ["kept-1", "kept-2", "fresh"]) expect(b.seenDedupeKeys().has(key)).toBe(true);
+    expect(b.seenDedupeKeys().has("orphan-old")).toBe(false);
+    expect(b.seenDedupeKeys().has("orphan-new")).toBe(false);
+    expect(b.get(kept1.id)).toBeDefined();
+    expect(b.get(kept2.id)).toBeDefined();
+    expect((await readDisk()).dedupe).toHaveLength(3);
+  });
+
+  test("the dedupe count cap may be exceeded by kept records rather than forget them", async () => {
+    const a = ledger({ maxDedupeEntries: 1 });
+    await a.load();
+    await a.record(draft({ dedupeKey: "k1" }));
+    clock += 1;
+    await a.record(draft({ dedupeKey: "k2" }));
+    expect(a.seenDedupeKeys().has("k1")).toBe(true);
+    expect(a.seenDedupeKeys().has("k2")).toBe(true);
+  });
+
+  test("only the newest quarantine sidecars are kept", async () => {
+    await mkdir(dirname(filePath), { recursive: true });
+    const folder = dirname(filePath);
+    const uuid = "00000000-0000-4000-8000-000000000000";
+    const old = Array.from({ length: 6 }, (_, i) => `notices.quarantine.${1_000 + i}.${uuid}.json`);
+    for (const name of old) await writeFile(join(folder, name), "{}");
+    // Unrelated neighbours must never be touched.
+    const unrelated = ["notices.json.1.corrupt", `other.quarantine.1.${uuid}.json`];
+    for (const name of unrelated) await writeFile(join(folder, name), "{}");
+    const quarantine = [{ id: "future", blob: "z".repeat(900) }];
+    await writeFile(filePath, JSON.stringify({ version: 1, records: [], dedupe: [], quarantine }));
+
+    const a = ledger({ maxBytes: 2_000 });
+    await a.load();
+    await a.record(draft({ body: "x".repeat(1_000) }));
+
+    const names = await readdir(folder);
+    const sidecars = names.filter((name) => name.startsWith("notices.quarantine.")).sort();
+    expect(sidecars).toHaveLength(NOTICE_QUARANTINE_SIDECARS_KEPT);
+    // The newly written sidecar survives, plus the four newest old ones.
+    expect(sidecars.filter((name) => old.includes(name))).toEqual(old.slice(2));
+    const fresh = sidecars.find((name) => !old.includes(name))!;
+    expect(JSON.parse(await readFile(join(folder, fresh), "utf8")).rows).toEqual(quarantine);
+    for (const name of unrelated) expect(names).toContain(name);
   });
 
   test("an oversized quarantine moves to a sidecar before the ledger reports full", async () => {

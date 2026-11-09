@@ -1,4 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
+import { readdir, rm } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 import { dlog } from "../desktop-logger.js";
 import {
   quarantineCorruptJson,
@@ -85,6 +87,8 @@ export interface PetNoticeLedgerOptions {
   maxRecords?: number;
   /** Hard cap on the file size. */
   maxBytes?: number;
+  /** Cap on dedupe index entries (default 20 000); hashes of kept records are exempt. */
+  maxDedupeEntries?: number;
 }
 
 export type PetNoticeLedgerErrorCode =
@@ -111,7 +115,9 @@ export const NOTICE_DEDUPE_RETENTION_MS = 7 * 24 * 60 * 60_000;
 export const NOTICE_RESEND_WINDOW_MS = 10 * 60_000;
 /** Default lifetime of a queued notice that has no `expiresAt` of its own. */
 export const NOTICE_QUEUED_TTL_MS = 24 * 60 * 60_000;
-const MAX_DEDUPE_ENTRIES = 20_000;
+const DEFAULT_MAX_DEDUPE_ENTRIES = 20_000;
+/** Overflow quarantine sidecars kept next to the ledger; older ones are deleted. */
+export const NOTICE_QUARANTINE_SIDECARS_KEPT = 5;
 const MAX_TEXT = 1_024;
 const MAX_BODY = 32_000;
 const MAX_ERROR = 2_000;
@@ -152,14 +158,17 @@ const LIVE_STATUSES: ReadonlySet<NoticeDeliveryStatus> = new Set(["claimed", "qu
  *   queued       ok      -        -      -       ok    ok    ok
  *   failed       ok      -        -      -       ok    ok    ok
  *   claimed      ok     ok       ok     ok       ok    -     ok
- *   unknown      ok      -        -      -       -     -     ok
+ *   unknown      m       -        -      -       -     -     ok
  *   accepted     x       x        x      x       x     x     x
  *   revoked      x       x        x      x       x     x     x
  *
- * `-` throws invalid_transition; `x` throws notice_already_settled.
+ * `-` throws invalid_transition; `x` throws notice_already_settled; `m` is
+ * allowed only with `claim(..., { manualRetry: true })`.
  * claimed → claimed is a resend after a restart; claimed → queued is "send
- * failed, retry when the channel is back"; unknown → claimed retries with
- * the same idempotency key so the gateway can collapse a duplicate.
+ * failed, retry when the channel is back". An `unknown` notice may already
+ * have reached the owner, so it is never retried automatically: only an
+ * explicit owner action resends it (same idempotency key, so a gateway that
+ * honours it can still collapse the duplicate).
  */
 const TRANSITIONS: Readonly<
   Record<NoticeDeliveryStatus | "none", ReadonlySet<NoticeDeliveryStatus>>
@@ -169,16 +178,21 @@ const TRANSITIONS: Readonly<
   queued: new Set(["claimed", "queued", "held", "revoked"]),
   failed: new Set(["claimed", "queued", "held", "revoked"]),
   claimed: new Set(["claimed", "accepted", "failed", "unknown", "queued", "revoked"]),
-  unknown: new Set(["claimed", "revoked"]),
+  unknown: new Set(["revoked"]),
   accepted: new Set(),
   revoked: new Set(),
 };
 const FINAL_STATUSES: ReadonlySet<NoticeDeliveryStatus> = new Set(["accepted", "revoked"]);
 
-function assertTransition(from: NoticeDelivery | undefined, to: NoticeDeliveryStatus): void {
+function assertTransition(
+  from: NoticeDelivery | undefined,
+  to: NoticeDeliveryStatus,
+  manualRetry = false,
+): void {
   const status = from?.status ?? "none";
   if (status !== "none" && FINAL_STATUSES.has(status))
     throw new PetNoticeLedgerError("notice_already_settled");
+  if (status === "unknown" && to === "claimed" && manualRetry) return;
   if (!TRANSITIONS[status].has(to)) throw new PetNoticeLedgerError("invalid_transition");
 }
 
@@ -307,6 +321,11 @@ function hex24(value: string): string {
   return createHash("sha256").update(value).digest("hex").slice(0, 24);
 }
 
+/** Dedupe hashes of every record still in the ledger. */
+function recordHashes(staged: LedgerState): Set<string> {
+  return new Set([...staged.records.values()].map((record) => hex24(record.dedupeKey)));
+}
+
 function isEvictable(record: NoticeRecord): boolean {
   return !record.delivery || !LIVE_STATUSES.has(record.delivery.status);
 }
@@ -402,6 +421,8 @@ export class PetNoticeLedger {
   private readonly localHourKey: (ms: number) => string;
   private readonly maxRecords: number;
   private readonly maxBytes: number;
+  private readonly maxDedupeEntries: number;
+  private lastSidecarAt = 0;
 
   constructor(options: PetNoticeLedgerOptions) {
     this.path = options.path;
@@ -409,6 +430,9 @@ export class PetNoticeLedger {
     this.localHourKey = options.localHourKey ?? defaultLocalHourKey;
     this.maxRecords = options.maxRecords ?? DEFAULT_MAX_RECORDS;
     this.maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
+    this.maxDedupeEntries = options.maxDedupeEntries ?? DEFAULT_MAX_DEDUPE_ENTRIES;
+    if (!Number.isSafeInteger(this.maxDedupeEntries) || this.maxDedupeEntries < 0)
+      throw new Error("invalid maxDedupeEntries");
     if (!Number.isSafeInteger(this.maxRecords) || this.maxRecords < 1)
       throw new Error("invalid maxRecords");
     if (!Number.isSafeInteger(this.maxBytes) || this.maxBytes < 1)
@@ -500,12 +524,21 @@ export class PetNoticeLedger {
    * (later bodies are ignored so a resend is identical), status `claimed`,
    * attempts + 1. Persisted before resolving, so a crash mid-send is visible
    * to {@link recoverOnStartup}.
+   *
+   * An `unknown` delivery can only be claimed with `manualRetry: true`, for
+   * an explicit owner "send again"; automatic paths must never pass it.
    */
-  claim(id: string, channel: string, body: string): Promise<{ key: string }> {
+  claim(
+    id: string,
+    channel: string,
+    body: string,
+    options: { manualRetry?: boolean } = {},
+  ): Promise<{ key: string }> {
+    const manualRetry = options.manualRetry === true;
     return this.mutate((staged, touched) => {
       const current = staged.records.get(id);
       if (!current) throw new PetNoticeLedgerError("notice_not_found");
-      assertTransition(current.delivery, "claimed");
+      assertTransition(current.delivery, "claimed", manualRetry);
       if (!isText(channel, 64) || typeof body !== "string" || body.length > MAX_BODY)
         throw new PetNoticeLedgerError("invalid_notice");
       const at = this.timestamp();
@@ -641,18 +674,28 @@ export class PetNoticeLedger {
         if (movedQuarantine.length > 0) await this.writeQuarantineSidecar(movedQuarantine);
         await writeOwnerJsonAtomic(this.path, file, this.maxBytes);
         this.state = staged;
+        if (movedQuarantine.length > 0) await this.pruneQuarantineSidecars();
         return structuredClone(result);
       });
     this.queue = run.catch(() => undefined);
     return run;
   }
 
+  /**
+   * Drop entries past retention, then the oldest entries beyond the count
+   * cap. Hashes of records still in the ledger are never dropped by the cap,
+   * so a kept record can always be recognised as a duplicate.
+   */
   private pruneDedupe(staged: LedgerState): void {
     const cutoff = this.now() - NOTICE_DEDUPE_RETENTION_MS;
     for (const [hash, at] of staged.dedupe) if (at <= cutoff) staged.dedupe.delete(hash);
-    if (staged.dedupe.size <= MAX_DEDUPE_ENTRIES) return;
-    const oldest = [...staged.dedupe].sort((a, b) => a[1] - b[1]);
-    for (const [hash] of oldest.slice(0, staged.dedupe.size - MAX_DEDUPE_ENTRIES)) {
+    if (staged.dedupe.size <= this.maxDedupeEntries) return;
+    const keep = recordHashes(staged);
+    const oldest = [...staged.dedupe]
+      .filter(([hash]) => !keep.has(hash))
+      .sort((a, b) => a[1] - b[1]);
+    for (const [hash] of oldest) {
+      if (staged.dedupe.size <= this.maxDedupeEntries) break;
       staged.dedupe.delete(hash);
     }
   }
@@ -711,7 +754,7 @@ export class PetNoticeLedger {
         continue;
       }
 
-      const keep = new Set([...staged.records.values()].map((record) => hex24(record.dedupeKey)));
+      const keep = recordHashes(staged);
       const entries = [...staged.dedupe]
         .filter(([hash]) => !keep.has(hash))
         .sort((a, b) => a[1] - b[1]);
@@ -739,10 +782,41 @@ export class PetNoticeLedger {
 
   /** Quarantine rows pushed out of the ledger, kept byte-for-byte in JSON terms. */
   private async writeQuarantineSidecar(rows: unknown[]): Promise<void> {
-    const base = this.path.endsWith(".json") ? this.path.slice(0, -".json".length) : this.path;
-    const sidecar = `${base}.quarantine.${Date.now()}.${randomUUID()}.json`;
+    // Monotonic per instance so the newest sidecar always sorts last.
+    this.lastSidecarAt = Math.max(Date.now(), this.lastSidecarAt + 1);
+    const sidecar = `${this.sidecarBase()}.quarantine.${this.lastSidecarAt}.${randomUUID()}.json`;
     await writeOwnerJsonAtomic(sidecar, { version: SCHEMA_VERSION, rows }, this.maxBytes);
     dlog("main", "pet.notices.quarantine_moved", { rows: rows.length, sidecar });
+  }
+
+  private sidecarBase(): string {
+    return this.path.endsWith(".json") ? this.path.slice(0, -".json".length) : this.path;
+  }
+
+  /**
+   * Keep the newest {@link NOTICE_QUARANTINE_SIDECARS_KEPT} sidecars. Runs
+   * only after the ledger write succeeded and is best effort: a failure here
+   * leaves extra files behind but never fails the committed mutation.
+   */
+  private async pruneQuarantineSidecars(): Promise<void> {
+    const folder = dirname(this.path);
+    const prefix = `${basename(this.sidecarBase())}.quarantine.`;
+    try {
+      const sidecars = (await readdir(folder))
+        .flatMap((name) => {
+          if (!name.startsWith(prefix)) return [];
+          const match = /^(\d+)\.[0-9a-f-]{36}\.json$/u.exec(name.slice(prefix.length));
+          return match ? [{ name, at: Number(match[1]) }] : [];
+        })
+        .sort((a, b) => a.at - b.at || a.name.localeCompare(b.name));
+      for (const old of sidecars.slice(0, -NOTICE_QUARANTINE_SIDECARS_KEPT)) {
+        await rm(join(folder, old.name), { force: true });
+      }
+    } catch (error) {
+      dlog("main", "pet.notices.quarantine_prune_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   private reset(): void {
