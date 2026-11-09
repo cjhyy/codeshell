@@ -9,6 +9,7 @@ const scenarios = [
   "withdraw-and-late-ready",
   "concurrent-load-failure",
   "close-cleans-listeners",
+  "drag-releases-native-mouse",
   "capture-while-human-active",
   "busy-preview-rejects",
   "chat-and-badge-beside-character",

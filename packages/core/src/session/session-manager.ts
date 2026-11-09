@@ -1,27 +1,26 @@
 /**
  * Session lifecycle manager.
+ *
+ * Owns Session creation/resume, the process-local (ephemeral) bundle registry,
+ * close epochs and closing-run finalizers, the state.json CAS writer and its
+ * domain updates (run, usage, workspace, Goal), and fork publication. Storage
+ * roots/id validation, state-field interpretation, Goal alias migration,
+ * state-file locking, fork snapshot rules and listing live in sibling
+ * session-*.ts modules and are re-exported here for existing callers.
  */
 
 import {
-  closeSync,
-  constants,
-  fstatSync,
   chmodSync,
   existsSync,
   mkdirSync,
-  lstatSync,
-  openSync,
   readFileSync,
-  readSync,
   readdirSync,
+  lstatSync,
   renameSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
-import { homedir } from "node:os";
-import { createHash } from "node:crypto";
+import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { nanoid } from "nanoid";
 import type {
@@ -32,10 +31,8 @@ import type {
   SessionWorkspace,
   TokenUsage,
   TranscriptEvent,
-  TranscriptEventType,
 } from "../types.js";
 import { Transcript } from "./transcript.js";
-import { preserveOutputCoverage } from "./output-coverage-state.js";
 import { parseSubAgentContinuation } from "./subagent-continuation.js";
 import { SessionError } from "../exceptions.js";
 import { addCumulativeUsage, addTokenUsage, normalizeCumulativeUsageCounters } from "./usage.js";
@@ -44,48 +41,61 @@ import {
   armGoalLifecycle,
   carryGoalProgress,
   createGoalLifecycle,
-  decodeGoalLifecycle,
   deriveLegacyGoalId,
   goalConfigFromLifecycle,
   isGoalLifecycleCurrent,
-  isSameGoalVersion,
-  mergeGoalTerminals,
   terminateGoalLifecycle,
   goalProgressSnapshot,
   waitGoalLifecycle,
   type GoalConfig,
-  type GoalLifecycleTerminalReason,
-  type GoalLifecycleV1,
   type GoalProgressSnapshot,
   type GoalWaitKind,
-  type GoalTerminal,
   type PersistedGoalTerminationReason,
 } from "../goal/lifecycle.js";
-import { isLockHeldInProcess, lockSync } from "../utils/lockfile.js";
 import { iterateProfileReferences } from "./profile-references.js";
 import type { SessionWorkspaceCapability } from "../capabilities/index.js";
+import { assertSafeSessionId, sessionsRoot } from "./session-paths.js";
+import {
+  isEphemeralSessionState,
+  isSessionWorkspace,
+  normalizedSessionKind,
+  sessionMainRoot,
+  validateResumeWorktreeRoot,
+} from "./session-state-shape.js";
+import {
+  adoptCompatibilityGoalMutation,
+  hydrateGoalLifecycle,
+  lifecycleTerminalReason,
+  stateForPersistence,
+} from "./session-goal-state.js";
+import {
+  SESSION_STATE_LOCK_RETRY_DELAYS_MS,
+  acquireStateLock,
+  preservePersistedRecoveryFields,
+  rebaseLiveState,
+  writeStateAtomically as writeStateFileAtomically,
+  type StateSaveAttempt,
+} from "./session-state-file.js";
+import {
+  buildForkState,
+  buildForkTranscript,
+  buildSummaryTransferEvent,
+  cleanupStaleForkStaging,
+  freezeForkSnapshot,
+  type FrozenForkSnapshot,
+} from "./session-fork.js";
+import { listSessionEntries, type SessionListEntry } from "./session-list.js";
+
+export { assertSafeSessionId, codeShellHome, sessionsRoot } from "./session-paths.js";
+export { isEphemeralSessionState, sessionMainRoot } from "./session-state-shape.js";
+export { buildForkState, buildForkTranscript } from "./session-fork.js";
+export { listSessionEntries, type SessionListEntry } from "./session-list.js";
 
 // Shared close epochs for SessionManager instances in this process. Concurrent
 // Engines bind the same epoch; only close advances it. This intentionally does
 // not claim cross-process/Worker protection.
 const currentSessionCloseEpochs = new Map<string, number>();
 const issuedClosingRunFinalizers = new Map<string, number>();
-
-const SESSION_STATE_LOCK_STALE_MS = 10_000;
-const SESSION_STATE_LOCK_RETRY_DELAYS_MS = [5, 10, 20, 40] as const;
-const syncSleepCell = new Int32Array(new SharedArrayBuffer(4));
-
-type StateSaveAttempt =
-  | { ok: true }
-  | {
-      ok: false;
-      reason:
-        | "generation_conflict"
-        | "lock_conflict"
-        | "revision_conflict"
-        | "kind_conflict"
-        | "goal_schema_conflict";
-    };
 
 /** Non-Goal fields accepted by the generic latest-state merge path. */
 export type SessionStateFieldPatch = Readonly<
@@ -133,168 +143,6 @@ export interface SessionClosingRunFinalizer {
 
 export type GoalTerminalSaveOutcome = "persisted" | "obsolete" | "failed";
 
-function sleepSync(ms: number): void {
-  Atomics.wait(syncSleepCell, 0, 0, ms);
-}
-
-function lifecycleTerminalReason(
-  reason: PersistedGoalTerminationReason,
-): GoalLifecycleTerminalReason {
-  return reason;
-}
-
-function newestLegacyTerminal(state: SessionState): GoalTerminal | undefined {
-  return mergeGoalTerminals(state.goalTerminals, state.goalTerminal).at(-1);
-}
-
-function legacyTerminalMatchesGoal(terminal: GoalTerminal, goal: GoalConfig): boolean {
-  if (terminal.goalId && goal.goalId) {
-    return (
-      terminal.goalId === goal.goalId &&
-      Math.max(1, Math.floor(terminal.revision ?? 1)) ===
-        Math.max(1, Math.floor(goal.revision ?? 1))
-    );
-  }
-  return terminal.objective === goal.objective && terminal.setAtMs === goal.setAtMs;
-}
-
-/** Decode the canonical union or derive it once from legacy aliases. */
-function hydrateGoalLifecycle(state: SessionState): SessionState {
-  const hasCanonical = Object.prototype.hasOwnProperty.call(state, "goalLifecycle");
-  const persistedLifecycle = (state as { goalLifecycle?: unknown }).goalLifecycle;
-  let lifecycle: GoalLifecycleV1 | undefined;
-  if (hasCanonical && persistedLifecycle !== undefined) {
-    lifecycle = decodeGoalLifecycle(persistedLifecycle);
-    if (!lifecycle) {
-      throw new SessionError(
-        `Session goal lifecycle is unsupported or corrupt for ${state.sessionId}`,
-      );
-    }
-  } else if (state.activeGoal) {
-    const active: GoalConfig = {
-      ...state.activeGoal,
-      goalId: state.activeGoal.goalId ?? deriveLegacyGoalId(state.sessionId, state.activeGoal),
-      revision: Math.max(1, Math.floor(state.activeGoal.revision ?? 1)),
-    };
-    const terminal = mergeGoalTerminals(state.goalTerminals, state.goalTerminal).find((candidate) =>
-      legacyTerminalMatchesGoal(candidate, active),
-    );
-    const base = createGoalLifecycle(active, active.paused === true ? "paused" : "active");
-    lifecycle = terminal
-      ? terminateGoalLifecycle(
-          base,
-          lifecycleTerminalReason(terminal.reason),
-          terminal.terminatedAtMs ?? Date.now(),
-        )
-      : base;
-  } else {
-    const terminal = newestLegacyTerminal(state);
-    if (terminal) {
-      const goal: GoalConfig = {
-        objective: terminal.objective,
-        goalId:
-          terminal.goalId ??
-          deriveLegacyGoalId(state.sessionId, {
-            objective: terminal.objective,
-            setAtMs: terminal.setAtMs,
-          }),
-        revision: Math.max(1, Math.floor(terminal.revision ?? 1)),
-        ...(terminal.setAtMs !== undefined ? { setAtMs: terminal.setAtMs } : {}),
-      };
-      lifecycle = terminateGoalLifecycle(
-        createGoalLifecycle(goal, "active", terminal.terminatedAtMs ?? Date.now()),
-        lifecycleTerminalReason(terminal.reason),
-        terminal.terminatedAtMs ?? Date.now(),
-      );
-    }
-  }
-
-  if (lifecycle) state.goalLifecycle = lifecycle;
-  else delete state.goalLifecycle;
-
-  // Legacy aliases are migration inputs only. Never reconstruct them in RAM:
-  // all runtime readers and writers consume the canonical lifecycle union.
-  delete state.activeGoal;
-  delete state.goalTerminal;
-  delete state.goalTerminals;
-  return state;
-}
-
-/** New files and runtime state contain only the canonical union. */
-function stateForPersistence(state: SessionState): SessionState {
-  const persisted = { ...state };
-  delete persisted.activeGoal;
-  delete persisted.goalTerminal;
-  delete persisted.goalTerminals;
-  return persisted;
-}
-
-/**
- * Temporary adapter for tests/older in-repo callers that still mutate the
- * hydrated aliases before calling whole-state saveState. Production Goal paths
- * use the domain methods below. The adapter never writes aliases to disk.
- */
-function adoptCompatibilityGoalMutation(state: SessionState): void {
-  const activeTouched = Object.prototype.hasOwnProperty.call(state, "activeGoal");
-  const terminalTouched =
-    Object.prototype.hasOwnProperty.call(state, "goalTerminal") ||
-    Object.prototype.hasOwnProperty.call(state, "goalTerminals");
-  if (!activeTouched && !terminalTouched) return;
-  const lifecycle = decodeGoalLifecycle(state.goalLifecycle);
-  const alias = state.activeGoal
-    ? {
-        ...state.activeGoal,
-        goalId: state.activeGoal.goalId ?? deriveLegacyGoalId(state.sessionId, state.activeGoal),
-        revision: Math.max(1, Math.floor(state.activeGoal.revision ?? 1)),
-      }
-    : undefined;
-  const terminals = mergeGoalTerminals(state.goalTerminals, state.goalTerminal);
-
-  if (!lifecycle) {
-    if (alias) {
-      state.goalLifecycle = createGoalLifecycle(alias, alias.paused === true ? "paused" : "active");
-    }
-    return;
-  }
-
-  if (alias) {
-    const sameIdentity = lifecycle.goalId === alias.goalId;
-    const sameRevision = lifecycle.revision === alias.revision;
-    const matchingTerminal = terminals.find((terminal) =>
-      legacyTerminalMatchesGoal(terminal, alias),
-    );
-    if (matchingTerminal) {
-      const base = createGoalLifecycle(alias, alias.paused === true ? "paused" : "active");
-      state.goalLifecycle = terminateGoalLifecycle(
-        base,
-        lifecycleTerminalReason(matchingTerminal.reason),
-        matchingTerminal.terminatedAtMs ?? Date.now(),
-      );
-      return;
-    }
-    if (lifecycle.phase === "terminal" && sameIdentity && sameRevision) return;
-    const canonicalGoal = goalConfigFromLifecycle(lifecycle);
-    if (!sameIdentity || !sameRevision || !isSameGoalVersion(alias, canonicalGoal)) {
-      state.goalLifecycle = carryGoalProgress(
-        createGoalLifecycle(alias, alias.paused === true ? "paused" : "active"),
-        lifecycle,
-      );
-    }
-    return;
-  }
-
-  const matchingTerminal = terminals.find((terminal) =>
-    legacyTerminalMatchesGoal(terminal, goalConfigFromLifecycle(lifecycle)),
-  );
-  if (matchingTerminal && lifecycle.phase !== "terminal") {
-    state.goalLifecycle = terminateGoalLifecycle(
-      lifecycle,
-      lifecycleTerminalReason(matchingTerminal.reason),
-      matchingTerminal.terminatedAtMs ?? Date.now(),
-    );
-  }
-}
-
 export interface SessionBundle {
   state: SessionState;
   transcript: Transcript;
@@ -332,51 +180,6 @@ export interface SummaryForkOptions {
   estimatedTokens: number;
 }
 
-interface FrozenForkSnapshot {
-  sourceState: SessionState;
-  copiedEvents: TranscriptEvent[];
-}
-
-type ForkEventPolicy = "copy" | "skip";
-
-/**
- * Every known transcript event must make an explicit fork decision. The
- * `satisfies` constraint turns new TranscriptEventType additions into a
- * compile-time error instead of a quick-chat failure discovered at runtime.
- * The runtime fallback below still rejects unknown events from newer or
- * malformed persisted transcripts.
- */
-const FORK_EVENT_POLICY = {
-  // Signed wire receipts remain bound to the original Session incarnation.
-  model_request_boundary: "skip",
-  model_request_attempt: "skip",
-  message: "copy",
-  tool_use: "copy",
-  tool_result: "copy",
-  summary: "copy",
-  context_transfer: "copy",
-  context_note: "copy",
-  context_checkpoint: "copy",
-  range_archive: "copy",
-  content_replace: "copy",
-  file_history: "skip",
-  plan_operation: "skip",
-  session_meta: "skip",
-  subagent: "copy",
-  external_file_changes: "copy",
-  turn_diff: "copy",
-  turn_boundary: "copy",
-  // Idempotency receipts belong to the source session and never contribute to
-  // model context. Copying them could replay a source response in the child.
-  run_result: "skip",
-  goal_progress: "copy",
-  turn_stopped: "copy",
-  error: "copy",
-} as const satisfies Record<TranscriptEventType, ForkEventPolicy>;
-const FORK_STAGING_NAME = /^\.pending-fork-[A-Za-z0-9_.-]+-[A-Za-z0-9_-]{8}$/;
-const FORK_STAGING_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-const FORK_STAGING_CLEANUP_LIMIT = 32;
-
 export type SessionWorkspaceResumeResolution =
   | {
       ok: true;
@@ -393,158 +196,6 @@ export type SessionWorkspaceResumeResolution =
       reason: "worktree_missing_branch_exists" | "workspace_capability_unavailable";
     };
 
-/**
- * Validate a session ID before it is joined into a filesystem path.
- *
- * Internally generated IDs use `nanoid(16)` and are trusted by construction.
- * But every public entry point (`create`'s explicitSessionId, `resume`,
- * `exists`, `saveState`'s state.sessionId, `fork`'s sourceSessionId) accepts
- * an ID from an outside caller — protocol clients, ChatSessionManager-driven
- * cold starts, persisted state files — and join()'s it into `sessionsDir`.
- * Without this check a value like "../etc/passwd" or "/tmp/x" would let the
- * caller escape the sessions directory.
- *
- * Exported for direct unit testing.
- */
-export function assertSafeSessionId(sessionId: unknown): asserts sessionId is string {
-  if (typeof sessionId !== "string" || sessionId.length === 0) {
-    throw new SessionError(`invalid session id: must be a non-empty string`);
-  }
-  // basename check: reject any path-shaped value. Covers absolute paths,
-  // POSIX and Windows separators, parent-dir tokens, and the lone "..".
-  if (sessionId.includes("/") || sessionId.includes("\\")) {
-    throw new SessionError(`invalid session id: contains path separator: ${sessionId}`);
-  }
-  if (sessionId === "." || sessionId === ".." || sessionId.includes("..")) {
-    throw new SessionError(`invalid session id: contains parent-dir token: ${sessionId}`);
-  }
-  // Conservative character allow-list: letters, digits, and `-_.` only.
-  // This matches what nanoid emits plus the dotted variants in-house code
-  // already uses (e.g. "tui-main", "agent.foo"). Anything else (NUL,
-  // newline, control chars, shell metacharacters, glob chars) is rejected.
-  if (!/^[A-Za-z0-9_.-]+$/.test(sessionId)) {
-    throw new SessionError(`invalid session id: unexpected characters: ${sessionId}`);
-  }
-  // Cap the length to keep filesystem APIs happy and avoid disk-name DoS.
-  if (sessionId.length > 128) {
-    throw new SessionError(`invalid session id: too long (max 128 chars)`);
-  }
-}
-
-/**
- * Runtime source of truth for sessions whose state must not outlive their UI
- * lifecycle. The explicit marker covers modern side forks; the qchat namespace
- * keeps historical/blank quick chats fail-closed if their older state file did
- * not contain the marker yet.
- */
-export function isEphemeralSessionState(
-  state: Pick<SessionState, "sessionId" | "ephemeral">,
-): boolean {
-  return state.ephemeral === true || state.sessionId.startsWith("qchat-");
-}
-
-function normalizedSessionKind(kind: unknown): SessionKind {
-  return kind === "pet" ? "pet" : "work";
-}
-
-/**
- * Resolve the `.code-shell` home dir. `CODE_SHELL_HOME` overrides the default
- * `~/.code-shell` — mirrors Codex's `CODEX_HOME`. Tests set it to a temp dir
- * (see bunfig.toml preload) so a `new Engine()` / `new SessionManager()` with
- * no explicit storageDir doesn't pollute the user's real ~/.code-shell/sessions
- * with throwaway test sessions (the rm-usage/test-model sidebar junk).
- */
-export function codeShellHome(): string {
-  return process.env.CODE_SHELL_HOME || join(homedir(), ".code-shell");
-}
-
-/** True when this process is a test runner. `bun test` sets NODE_ENV itself. */
-function isTestRunner(): boolean {
-  return process.env.NODE_ENV === "test" || process.env.BUN_TEST === "1";
-}
-
-/** The real per-user home, ignoring any CODE_SHELL_HOME override. */
-function defaultHome(): string {
-  return join(homedir(), ".code-shell");
-}
-
-/**
- * Canonical root for every persisted CodeShell session. An explicit `home`
- * (a `~/.code-shell`-equivalent data root) overrides the default resolution;
- * absent → `codeShellHome()` exactly as before.
- */
-export function sessionsRoot(home?: string): string {
-  const resolvedHome = home ?? codeShellHome();
-  // Fail closed rather than write fixture sessions into the developer's real
-  // store. The bunfig preload only applies when Bun resolves a bunfig.toml:
-  // `bun test <file>` from a subdirectory, or an IDE/CI runner with its own
-  // cwd, finds none and silently fell through to ~/.code-shell — which is how
-  // ~700 `test-model` sessions ended up in the real store and the sidebar.
-  //
-  // Guarded here rather than in codeShellHome() because the home is also the
-  // legitimate root for settings/projects/trust that many tests read by
-  // design; only the SESSIONS root is the one tests corrupt.
-  if (isTestRunner() && resolvedHome === defaultHome()) {
-    // Prefer the preload's sandbox. Many test files delete CODE_SHELL_HOME in
-    // cleanup, and bun shares one process across files, so isolation would
-    // otherwise vanish for every later suite.
-    const sandbox = process.env.CODE_SHELL_TEST_HOME;
-    if (sandbox) return join(sandbox, "sessions");
-    throw new SessionError(
-      "Refusing to use the real ~/.code-shell/sessions from a test. Set CODE_SHELL_HOME " +
-        "to a temp dir (packages/core/test-setup.ts does this via the bunfig preload) " +
-        "or pass an explicit storageDir.",
-    );
-  }
-  return join(resolvedHome, "sessions");
-}
-
-function isSessionWorkspace(value: unknown): value is SessionWorkspace {
-  if (!value || typeof value !== "object") return false;
-  const ws = value as Partial<SessionWorkspace>;
-  if (typeof ws.root !== "string" || ws.root.length === 0) return false;
-  if (ws.kind !== "main" && ws.kind !== "worktree") return false;
-  if (ws.kind === "main") return ws.worktree === undefined;
-  const wt = ws.worktree as SessionWorkspace["worktree"] | undefined;
-  return (
-    !!wt &&
-    typeof wt.path === "string" &&
-    wt.path.length > 0 &&
-    typeof wt.branch === "string" &&
-    wt.branch.length > 0 &&
-    typeof wt.baseRef === "string" &&
-    wt.baseRef.length > 0 &&
-    wt.createdBy === "codeshell"
-  );
-}
-
-/**
- * Read the session's persisted main-project root from the legacy `state.cwd`
- * field. The field name is part of the state.json compatibility contract and
- * must not be rewritten to `projectRoot`; `state.workspace.root` separately
- * identifies the current main/worktree execution root used on resume.
- */
-export function sessionMainRoot(state: Pick<SessionState, "cwd">): string | undefined {
-  return typeof state.cwd === "string" && state.cwd.length > 0 ? state.cwd : undefined;
-}
-
-async function validateResumeWorktreeRoot(
-  root: string,
-  workspaceCapability: SessionWorkspaceCapability,
-): Promise<string | null> {
-  if (!existsSync(root)) return "no longer exists";
-  let stat;
-  try {
-    stat = lstatSync(root);
-  } catch {
-    return "no longer exists";
-  }
-  if (stat.isSymbolicLink()) return "is not a valid git worktree (symbolic link)";
-  if (!stat.isDirectory()) return "is not a valid git worktree (not a directory)";
-  if (!(await workspaceCapability.validateRoot(root))) return "is not a valid workspace root";
-  return null;
-}
-
 export class SessionManager {
   private readonly sessionsDir: string;
   private readonly registeredCloseEpochs = new Map<string, number>();
@@ -558,7 +209,7 @@ export class SessionManager {
     this.workspaceCapability = workspaceCapability;
     mkdirSync(this.sessionsDir, { recursive: true, mode: 0o700 });
     if (process.platform !== "win32") chmodSync(this.sessionsDir, 0o700);
-    this.cleanupStaleForkStaging();
+    cleanupStaleForkStaging(this.sessionsDir);
   }
 
   private processLocalKey(sessionId: string): string {
@@ -582,29 +233,6 @@ export class SessionManager {
     const bundle = this.processLocalBundle(sessionId);
     if (!bundle || !isEphemeralSessionState(bundle.state)) return false;
     return processLocalSessionBundles.delete(this.processLocalKey(sessionId));
-  }
-
-  private cleanupStaleForkStaging(): void {
-    let removed = 0;
-    let entries;
-    try {
-      entries = readdirSync(this.sessionsDir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      if (removed >= FORK_STAGING_CLEANUP_LIMIT) return;
-      if (!entry.isDirectory() || !FORK_STAGING_NAME.test(entry.name)) continue;
-      const path = join(this.sessionsDir, entry.name);
-      try {
-        if (Date.now() - statSync(path).mtimeMs <= FORK_STAGING_MAX_AGE_MS) continue;
-        rmSync(path, { recursive: true, force: true });
-        removed++;
-      } catch {
-        // Startup cleanup is best effort; a live/unreadable staging directory
-        // must never prevent the SessionManager from serving normal sessions.
-      }
-    }
   }
 
   /** Bind one Engine/session pair to the current close epoch without advancing it. */
@@ -1808,7 +1436,7 @@ export class SessionManager {
       ) {
         // A newer replacement/edit already owns the canonical slot. The stale
         // run is obsolete, but must not mutate that newer goal.
-        this.rebaseLiveState(state, latest);
+        rebaseLiveState(state, latest);
         return "obsolete";
       }
       if (lifecycle.phase !== "terminal") {
@@ -1817,7 +1445,7 @@ export class SessionManager {
       }
       const result = this.saveStateAttempt(latest);
       if (result.ok) {
-        this.rebaseLiveState(state, latest);
+        rebaseLiveState(state, latest);
         return "persisted";
       }
       if (result.reason !== "revision_conflict") return "failed";
@@ -1854,7 +1482,7 @@ export class SessionManager {
         (options.expectedGoalId !== undefined && current?.goalId !== options.expectedGoalId) ||
         (options.expectedRevision !== undefined && current?.revision !== options.expectedRevision)
       ) {
-        this.rebaseLiveState(state, latest);
+        rebaseLiveState(state, latest);
         return false;
       }
       if (current) {
@@ -1878,7 +1506,7 @@ export class SessionManager {
       hydrateGoalLifecycle(latest);
       const result = this.saveStateAttempt(latest);
       if (result.ok) {
-        this.rebaseLiveState(state, latest);
+        rebaseLiveState(state, latest);
         return true;
       }
       if (result.reason !== "revision_conflict") return false;
@@ -1899,11 +1527,11 @@ export class SessionManager {
       const lifecycle = latest.goalLifecycle;
       if (!lifecycle) return false;
       if (lifecycle.goalId !== expectedGoalId || lifecycle.revision !== expectedRevision) {
-        this.rebaseLiveState(state, latest);
+        rebaseLiveState(state, latest);
         return false;
       }
       if (lifecycle.phase === "waiting" && lifecycle.waitKind === waitKind) {
-        this.rebaseLiveState(state, latest);
+        rebaseLiveState(state, latest);
         return true;
       }
       // A wait of another kind is re-parked so its clock rule changes now
@@ -1916,7 +1544,7 @@ export class SessionManager {
       hydrateGoalLifecycle(latest);
       const result = this.saveStateAttempt(latest);
       if (result.ok) {
-        this.rebaseLiveState(state, latest);
+        rebaseLiveState(state, latest);
         return true;
       }
       if (result.reason !== "revision_conflict") return false;
@@ -1946,14 +1574,14 @@ export class SessionManager {
       }
       const lifecycle = latest.goalLifecycle;
       if (!lifecycle || lifecycle.goalId !== goalId) {
-        this.rebaseLiveState(state, latest);
+        rebaseLiveState(state, latest);
         return false;
       }
       latest.goalLifecycle = addGoalProgress(lifecycle, delta);
       hydrateGoalLifecycle(latest);
       const result = this.saveStateAttempt(latest);
       if (result.ok) {
-        this.rebaseLiveState(state, latest);
+        rebaseLiveState(state, latest);
         return true;
       }
       if (result.reason !== "revision_conflict") return false;
@@ -1970,7 +1598,8 @@ export class SessionManager {
       assertSafeSessionId(sessionId);
       const lifecycle = this.readPersistedState(sessionId).goalLifecycle;
       if (!lifecycle || lifecycle.phase === "terminal") return undefined;
-      return { goalId: lifecycle.goalId, ...goalProgressSnapshot(lifecycle) };
+      const snapshot = goalProgressSnapshot(lifecycle);
+      return snapshot && { goalId: lifecycle.goalId, ...snapshot };
     } catch {
       return undefined;
     }
@@ -1987,11 +1616,11 @@ export class SessionManager {
         lifecycle.goalId !== expectedGoalId ||
         lifecycle.revision !== Math.max(1, Math.floor(goal.revision ?? 1))
       ) {
-        this.rebaseLiveState(state, latest);
+        rebaseLiveState(state, latest);
         return true;
       }
       if (lifecycle.phase !== "terminal") return false;
-      this.rebaseLiveState(state, latest);
+      rebaseLiveState(state, latest);
       return true;
     }
     return false;
@@ -2052,8 +1681,8 @@ export class SessionManager {
       if (persisted.title !== undefined && !("title" in state)) state.title = persisted.title;
       state.stateRevision = (persistedRevision ?? incomingRevision ?? 0) + 1;
       const next = hydrateGoalLifecycle(structuredClone(stateForPersistence(state)));
-      this.rebaseLiveState(processLocal.state, next);
-      if (state !== processLocal.state) this.rebaseLiveState(state, next);
+      rebaseLiveState(processLocal.state, next);
+      if (state !== processLocal.state) rebaseLiveState(state, next);
       return { ok: true };
     }
 
@@ -2069,7 +1698,7 @@ export class SessionManager {
     // proper-lockfile uses an atomic mkdir lock plus an mtime lease. It
     // recovers crash-orphaned locks after `stale` and refreshes live locks so a
     // slow writer is not stolen. Short genuine contention gets bounded retry.
-    const release = this.acquireStateLock(target);
+    const release = acquireStateLock(target);
     if (!release) return { ok: false, reason: "lock_conflict" };
 
     try {
@@ -2104,27 +1733,7 @@ export class SessionManager {
       if (persisted?.title !== undefined && !("title" in state)) {
         state.title = persisted.title;
       }
-      // These recovery invariants can be committed by the run's journal writer
-      // under this same lock while an older Session bundle remains live.
-      if (persisted?.outputJournalIdentity)
-        state.outputJournalIdentity = persisted.outputJournalIdentity;
-      if (persisted?.outputJournalHead)
-        state.outputJournalHead = structuredClone(persisted.outputJournalHead);
-      else delete state.outputJournalHead;
-      if (persisted?.outputJournalStorage)
-        state.outputJournalStorage = structuredClone(persisted.outputJournalStorage);
-      else delete state.outputJournalStorage;
-      if (persisted?.outputJournalBinding)
-        state.outputJournalBinding = structuredClone(persisted.outputJournalBinding);
-      else delete state.outputJournalBinding;
-      if (persisted?.outputIdentityRecovery)
-        state.outputIdentityRecovery = structuredClone(persisted.outputIdentityRecovery);
-      else delete state.outputIdentityRecovery;
-      if (persisted?.outputHistoryRecovery)
-        state.outputHistoryRecovery = structuredClone(persisted.outputHistoryRecovery);
-      else delete state.outputHistoryRecovery;
-      if (persisted?.outputRecoveryIncomplete) state.outputRecoveryIncomplete = true;
-      preserveOutputCoverage(state, persisted ?? {});
+      preservePersistedRecoveryFields(state, persisted);
 
       state.stateRevision = (persistedRevision ?? incomingRevision ?? 0) + 1;
       this.writeStateAtomically(target, stateForPersistence(state));
@@ -2138,70 +1747,9 @@ export class SessionManager {
     }
   }
 
+  /** Kept as an instance seam so tests can inject a state.json write failure. */
   private writeStateAtomically(target: string, state: SessionState, label = "state"): void {
-    const tmp = `${target}.${process.pid}.${nanoid(8)}.${label}.tmp`;
-    try {
-      writeFileSync(tmp, JSON.stringify(state, null, 2), {
-        encoding: "utf-8",
-        mode: 0o600,
-      });
-      renameSync(tmp, target);
-    } finally {
-      try {
-        rmSync(tmp, { force: true });
-      } catch {
-        // Preserve the original write/rename error; cleanup is best effort.
-      }
-    }
-  }
-
-  private acquireStateLock(target: string): (() => void) | undefined {
-    // A reentrant/asynchronous holder in this process cannot release while we
-    // synchronously wait, including when recording an output failure barrier.
-    if (isLockHeldInProcess(target, { realpath: false })) return undefined;
-    const lockPath = `${target}.lock`;
-    for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
-      if (!this.prepareLegacyStateLock(lockPath)) {
-        const delay = SESSION_STATE_LOCK_RETRY_DELAYS_MS[attempt];
-        if (delay === undefined) return undefined;
-        sleepSync(delay);
-        continue;
-      }
-      try {
-        return lockSync(target, {
-          stale: SESSION_STATE_LOCK_STALE_MS,
-          update: SESSION_STATE_LOCK_STALE_MS / 2,
-          retries: 0,
-          realpath: false,
-        });
-      } catch (err) {
-        const code = (err as NodeJS.ErrnoException).code;
-        if (code !== "ELOCKED" && code !== "EEXIST") throw err;
-        const delay = SESSION_STATE_LOCK_RETRY_DELAYS_MS[attempt];
-        if (delay === undefined) return undefined;
-        sleepSync(delay);
-      }
-    }
-    return undefined;
-  }
-
-  /** Recover only the old implementation's regular-file orphan lock. */
-  private prepareLegacyStateLock(lockPath: string): boolean {
-    if (!existsSync(lockPath)) return true;
-    let stat;
-    try {
-      stat = lstatSync(lockPath);
-    } catch {
-      return true;
-    }
-    if (stat.isDirectory()) return true;
-    if (Date.now() - stat.mtimeMs <= SESSION_STATE_LOCK_STALE_MS) return false;
-    try {
-      rmSync(lockPath, { force: true });
-      return true;
-    } catch {
-      return false;
-    }
+    writeStateFileAtomically(target, state, label);
   }
 
   private readPersistedState(sessionId: string): SessionState {
@@ -2221,13 +1769,6 @@ export class SessionManager {
         `Session state is corrupt for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
-  }
-
-  private rebaseLiveState(live: SessionState, persisted: SessionState): void {
-    for (const key of Object.keys(live) as Array<keyof SessionState>) {
-      if (!(key in persisted)) delete live[key];
-    }
-    Object.assign(live, persisted);
   }
 
   private generationKey(sessionId: string): string {
@@ -2310,24 +1851,7 @@ export class SessionManager {
     };
     const state = buildForkState(source.state, targetSessionId, lineage, createdAt);
     const [meta] = buildForkTranscript([], state);
-    const summaryEvent: TranscriptEvent = {
-      id: nanoid(12),
-      type: "context_transfer",
-      timestamp: createdAt,
-      turnNumber: 0,
-      data: {
-        summary: options.summary,
-        sourceRange: {
-          sessionId: sourceSessionId,
-          fromEventId: options.fromEventId,
-          toEventId: options.toEventId,
-        },
-        sourceEventCount: options.sourceEventCount,
-        estimatedTokens: options.estimatedTokens,
-        summaryVersion: 1,
-        summaryHash: createHash("sha256").update(options.summary).digest("hex"),
-      },
-    };
+    const summaryEvent = buildSummaryTransferEvent(sourceSessionId, options, createdAt);
     const bundle = this.publishSessionAtomically(targetSessionId, state, [meta!, summaryEvent]);
     return { bundle, lineage, copiedEventCount: 0 };
   }
@@ -2339,7 +1863,7 @@ export class SessionManager {
   ): FrozenForkSnapshot {
     const processLocal = this.processLocalBundle(sourceSessionId);
     if (processLocal) {
-      return this.freezeForkSnapshot(
+      return freezeForkSnapshot(
         sourceSessionId,
         structuredClone(processLocal.state),
         processLocal.transcript.getEvents(),
@@ -2368,68 +1892,13 @@ export class SessionManager {
         `Session transcript is malformed for ${sourceSessionId}: ${parsed.malformedLineCount} invalid line(s)`,
       );
     }
-    return this.freezeForkSnapshot(
+    return freezeForkSnapshot(
       sourceSessionId,
       sourceState,
       parsed.events,
       throughEventId,
       snapshotMode,
     );
-  }
-
-  private freezeForkSnapshot(
-    sourceSessionId: string,
-    sourceState: SessionState,
-    events: readonly TranscriptEvent[],
-    throughEventId: string | undefined,
-    snapshotMode: "tail" | "completed",
-  ): FrozenForkSnapshot {
-    // Both process-local and disk readers provide a snapshot array. Fork
-    // selection is synchronous, so keep event references here and clone once
-    // when the independently-owned target transcript is constructed below.
-    const sourceEvents = [...events];
-    let frozen = sourceEvents;
-    const effectiveCursor =
-      snapshotMode === "completed" ? sourceState.completedThroughEventId : throughEventId;
-    if (snapshotMode === "completed" && effectiveCursor === undefined) {
-      // Legacy sessions predate completedThroughEventId. Their tail is a safe
-      // completed snapshot only when the persisted lifecycle status says the
-      // last run completed naturally. A modern schema marker without a cursor
-      // means persistence was degraded, so even status=completed must not use
-      // the tail. Active/error/abort tails may be partial as well.
-      frozen =
-        sourceState.completedSnapshotVersion === undefined && sourceState.status === "completed"
-          ? sourceEvents
-          : [];
-    } else if (effectiveCursor !== undefined) {
-      const matches = sourceEvents
-        .map((event, index) => (event.id === effectiveCursor ? index : -1))
-        .filter((index) => index >= 0);
-      if (matches.length !== 1) {
-        throw new SessionError(
-          snapshotMode === "completed"
-            ? `Completed fork cursor must identify exactly one source event`
-            : `Fork cursor must identify exactly one source event`,
-        );
-      }
-      const cursor = sourceEvents[matches[0]];
-      if (cursor.type === "session_meta") {
-        throw new SessionError(`Fork cursor cannot point at session metadata`);
-      }
-      frozen = sourceEvents.slice(0, matches[0] + 1);
-    }
-
-    const copiedEvents: TranscriptEvent[] = [];
-    for (const event of frozen) {
-      const policy: ForkEventPolicy | undefined = FORK_EVENT_POLICY[event.type];
-      if (policy === "skip") continue;
-      if (policy !== "copy") {
-        throw new SessionError(`Unsupported transcript event in fork: ${String(event.type)}`);
-      }
-      copiedEvents.push(event);
-    }
-    validateForkToolPairs(copiedEvents);
-    return { sourceState: structuredClone(sourceState), copiedEvents };
   }
 
   private publishSessionAtomically(
@@ -2490,497 +1959,4 @@ export class SessionManager {
   ): SessionListEntry[] {
     return listSessionEntries(this.sessionsDir, limit, opts);
   }
-}
-
-/** In-repo Host listing seam; SessionManager's public list contract remains unchanged. */
-export function listSessionEntries(
-  sessionsDir: string,
-  limit = 20,
-  opts?: {
-    excludeKinds?: readonly string[];
-    /** Metadata-only callers must not open transcript bodies for previews. */
-    includePreview?: boolean;
-    /** Apply workspace/visibility filters before the result limit and previews. */
-    cwd?: string;
-    archived?: boolean;
-    rootsOnly?: boolean;
-    before?: { lastActiveAt: number; sessionId: string };
-    filter?: (entry: Readonly<SessionListEntry>) => boolean;
-  },
-  storage?: {
-    candidates(): { dir: string; lastActiveAt: number; transcriptExists: boolean }[];
-    readState(sessionId: string, maximumBytes: number): string;
-  },
-): SessionListEntry[] {
-  if (!existsSync(sessionsDir)) return [];
-  // Core is domain-agnostic: only the composition root knows which
-  // extension-owned kinds belong outside its generic list. AgentServer passes
-  // the resolved hidden-kind union explicitly; direct SDK callers see every
-  // kind unless they choose exclusions themselves.
-  const excludeKinds = opts?.excludeKinds ?? [];
-
-  type Candidate = {
-    dir: string;
-    lastActiveAt: number;
-    transcriptFile: string;
-    stateFile: string;
-    transcriptExists: boolean;
-  };
-  const candidates: Candidate[] = storage
-    ? storage.candidates().map((candidate) => ({
-        ...candidate,
-        stateFile: join(sessionsDir, candidate.dir, "state.json"),
-        transcriptFile: join(sessionsDir, candidate.dir, "transcript.jsonl"),
-      }))
-    : [];
-  if (!storage) {
-    const dirs = readdirSync(sessionsDir, { withFileTypes: true })
-      .filter(
-        (d) => d.isDirectory() && !d.name.startsWith(".pending-") && !d.name.startsWith("qchat-"),
-      )
-      .map((d) => d.name);
-
-    // Two-pass scan. Pass 1: cheap stat to find each session's
-    // lastActiveAt and sort. Pass 2 opens state.json in that order until it
-    // finds `limit` non-ephemeral winners, then tails only those transcripts
-    // for previews. With ~1 k sessions on disk the difference is ~1 s
-    // (preview-every) vs ~50 ms (preview-top-20).
-    for (const dir of dirs) {
-      const stateFile = join(sessionsDir, dir, "state.json");
-      if (!existsSync(stateFile)) continue;
-      const transcriptFile = join(sessionsDir, dir, "transcript.jsonl");
-      let lastActiveAt: number;
-      let transcriptExists: boolean;
-      try {
-        const stateInfo = lstatSync(stateFile);
-        if (
-          !stateInfo.isFile() ||
-          stateInfo.isSymbolicLink() ||
-          stateInfo.size > MAX_LIST_STATE_BYTES
-        )
-          continue;
-        transcriptExists = existsSync(transcriptFile);
-        if (transcriptExists) {
-          const transcriptInfo = lstatSync(transcriptFile);
-          if (!transcriptInfo.isFile() || transcriptInfo.isSymbolicLink()) continue;
-          lastActiveAt = transcriptInfo.mtimeMs;
-        } else {
-          // Fall back to state.json mtime (cheaper than parsing it for
-          // state.startedAt and good enough for ordering).
-          lastActiveAt = stateInfo.mtimeMs;
-        }
-      } catch {
-        continue;
-      }
-      candidates.push({ dir, lastActiveAt, transcriptFile, stateFile, transcriptExists });
-    }
-  }
-  candidates.sort((a, b) => b.lastActiveAt - a.lastActiveAt || a.dir.localeCompare(b.dir));
-  const sessions: SessionListEntry[] = [];
-  for (const c of candidates) {
-    if (sessions.length >= limit) break;
-    try {
-      // The cursor uses candidate metadata only. Older pages must not reopen
-      // every preceding state file before reaching their first eligible row.
-      if (
-        opts?.before &&
-        (c.lastActiveAt > opts.before.lastActiveAt ||
-          (c.lastActiveAt === opts.before.lastActiveAt &&
-            c.dir.localeCompare(opts.before.sessionId) <= 0))
-      )
-        continue;
-      const state = storage
-        ? parseSessionListState(storage.readState(c.dir, MAX_LIST_STATE_BYTES), c.dir)
-        : readSessionListState(c.stateFile, c.dir);
-      if (isEphemeralSessionState(state)) continue;
-      state.kind = normalizedSessionKind(state.kind);
-      if (excludeKinds.includes(state.kind)) continue;
-      if (opts?.cwd !== undefined && resolve(state.cwd) !== resolve(opts.cwd)) continue;
-      if (opts?.archived !== undefined && Boolean(state.archivedAt) !== opts.archived) continue;
-      if (opts?.rootsOnly && state.parentSessionId) continue;
-      const preview =
-        opts?.includePreview !== false && c.transcriptExists
-          ? readLastUserMessage(c.transcriptFile)
-          : undefined;
-      const entry = { ...state, preview, lastActiveAt: c.lastActiveAt };
-      if (opts?.filter && !opts.filter(entry)) continue;
-      sessions.push(entry);
-    } catch {
-      // Skip corrupted sessions
-    }
-  }
-
-  return sessions;
-}
-
-export function buildForkState(
-  source: SessionState,
-  targetSessionId: string,
-  lineage: SessionForkLineage,
-  startedAt = Date.now(),
-): SessionState {
-  const workspace = isSessionWorkspace(source.workspace)
-    ? structuredClone(source.workspace)
-    : { root: source.cwd, kind: "main" as const };
-  return {
-    sessionId: targetSessionId,
-    kind: "work",
-    stateRevision: 0,
-    cwd: source.cwd,
-    workspace,
-    startedAt,
-    model: source.model,
-    provider: source.provider,
-    tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-    cacheUsageVersion: 1,
-    cumulativePromptTokens: 0,
-    cumulativeCacheReadTokens: 0,
-    cumulativeCacheCreationTokens: 0,
-    turnCount: 0,
-    turnSeq: 0,
-    invokedSkills: [],
-    parentSessionId: null,
-    forkedFrom: structuredClone(lineage),
-    ...(source.origin ? { origin: source.origin } : {}),
-    status: "active",
-  };
-}
-
-export function buildForkTranscript(
-  sourceEvents: readonly TranscriptEvent[],
-  state: SessionState,
-): TranscriptEvent[] {
-  const meta: TranscriptEvent = {
-    id: nanoid(12),
-    type: "session_meta",
-    timestamp: state.startedAt,
-    turnNumber: 0,
-    data: {
-      sessionId: state.sessionId,
-      cwd: state.cwd,
-      workspace: structuredClone(state.workspace),
-      model: state.model,
-      provider: state.provider,
-      startedAt: state.startedAt,
-      forkedFrom: structuredClone(state.forkedFrom),
-    },
-  };
-  const copied = sourceEvents.map((source) => ({
-    ...structuredClone(source),
-    id: nanoid(12),
-  }));
-  Transcript.remapContextForkReferences(sourceEvents, copied);
-  const copiedIds = new Map(sourceEvents.map((event, index) => [event.id, copied[index]!.id]));
-  for (const event of copied) {
-    if (event.type !== "turn_diff") continue;
-    for (const key of ["turnId", "runId"] as const) {
-      const original = event.data[key];
-      if (typeof original === "string" && copiedIds.has(original))
-        event.data[key] = copiedIds.get(original)!;
-    }
-  }
-  return [meta, ...copied];
-}
-
-function validateForkToolPairs(events: readonly TranscriptEvent[]): void {
-  const projectedUses: string[] = [];
-  const projectedResults: string[] = [];
-  const seenProjectedUses = new Set<string>();
-  const seenProjectedResults = new Set<string>();
-  const projectedPending: string[] = [];
-
-  for (const message of Transcript.eventsToMessages(events)) {
-    const blocks = Array.isArray(message.content) ? message.content : [];
-    const uses = blocks.filter((block) => block.type === "tool_use");
-    const results = blocks.filter((block) => block.type === "tool_result");
-
-    if (projectedPending.length > 0) {
-      if (message.role !== "user" || results.length !== blocks.length || results.length === 0) {
-        throw new SessionError(
-          `Fork provider history inserts a message before pending tool results`,
-        );
-      }
-    } else if (results.length > 0) {
-      throw new SessionError(`Fork provider history contains an orphaned tool result`);
-    }
-
-    if (uses.length > 0) {
-      if (message.role !== "assistant" || results.length > 0) {
-        throw new SessionError(`Fork provider history contains tool use blocks in an invalid role`);
-      }
-      for (const block of uses) {
-        const id = block.id;
-        if (typeof id !== "string" || !id) {
-          throw new SessionError(`Fork provider history contains a tool use without id`);
-        }
-        if (seenProjectedUses.has(id)) {
-          throw new SessionError(`Fork provider history contains duplicate tool use ${id}`);
-        }
-        seenProjectedUses.add(id);
-        projectedUses.push(id);
-        projectedPending.push(id);
-      }
-    }
-
-    for (const block of results) {
-      const id = block.tool_use_id;
-      if (typeof id !== "string" || !id) {
-        throw new SessionError(`Fork provider history contains a tool result without id`);
-      }
-      if (seenProjectedResults.has(id)) {
-        throw new SessionError(`Fork provider history contains duplicate tool result ${id}`);
-      }
-      const expected = projectedPending.shift();
-      if (!expected) {
-        throw new SessionError(`Fork provider history contains an orphaned tool result (${id})`);
-      }
-      if (expected !== id) {
-        throw new SessionError(
-          `Fork provider history tool result order mismatch: expected ${expected}, received ${id}`,
-        );
-      }
-      seenProjectedResults.add(id);
-      projectedResults.push(id);
-    }
-  }
-  if (projectedPending.length > 0) {
-    throw new SessionError(
-      `Fork cursor splits an unfinished tool round in provider history (${projectedPending[0]})`,
-    );
-  }
-
-  const metadataUses: string[] = [];
-  const metadataResults: string[] = [];
-  const seenMetadataUses = new Set<string>();
-  const seenMetadataResults = new Set<string>();
-  const metadataPending: string[] = [];
-  for (const event of events) {
-    if (event.type !== "tool_use" && event.type !== "tool_result") continue;
-    const id = event.data.toolCallId;
-    if (typeof id !== "string" || !id) {
-      throw new SessionError(`Fork snapshot contains a tool event without toolCallId`);
-    }
-    if (event.type === "tool_use") {
-      if (seenMetadataUses.has(id)) {
-        throw new SessionError(`Fork snapshot contains duplicate tool use metadata ${id}`);
-      }
-      seenMetadataUses.add(id);
-      metadataUses.push(id);
-      metadataPending.push(id);
-      continue;
-    }
-    if (seenMetadataResults.has(id)) {
-      throw new SessionError(`Fork snapshot contains duplicate tool result metadata ${id}`);
-    }
-    const expected = metadataPending.shift();
-    if (!expected) {
-      throw new SessionError(`Fork snapshot contains tool result metadata before use (${id})`);
-    }
-    if (expected !== id) {
-      throw new SessionError(
-        `Fork snapshot tool metadata order mismatch: expected ${expected}, received ${id}`,
-      );
-    }
-    seenMetadataResults.add(id);
-    metadataResults.push(id);
-  }
-  if (metadataPending.length > 0) {
-    throw new SessionError(`Fork cursor splits unfinished tool metadata (${metadataPending[0]})`);
-  }
-
-  const sameIds = (left: readonly string[], right: readonly string[]) =>
-    left.length === right.length && left.every((id, index) => id === right[index]);
-  if (!sameIds(projectedUses, metadataUses) || !sameIds(projectedResults, metadataResults)) {
-    throw new SessionError(`Fork tool metadata does not match provider history`);
-  }
-}
-
-export type SessionListEntry = SessionState & {
-  preview?: string;
-  /** Last activity time — transcript mtime, falling back to startedAt. */
-  lastActiveAt: number;
-};
-
-/**
- * Scan a transcript.jsonl for the LAST user message and return a short
- * preview, reading the file from the END in 64 KiB chunks.
- *
- * Why: SessionManager.list() calls this for every session in
- * ~/.code-shell/sessions (hundreds to thousands at steady state). The
- * earlier readFileSync-the-whole-file implementation made `/resume`
- * scan ~64 MiB across nearly 1 k transcripts every time the list
- * opened — visible as several seconds of UI freeze. The vast majority
- * of transcripts have their last user message in the final few KiB, so
- * tailing one chunk is usually enough and we never read more than we
- * have to.
- *
- * Algorithm: open the file once, seek to the tail, read backwards one
- * chunk at a time, splitting on newlines. Walk the lines we have so
- * far from newest to oldest; the moment we find a `type:"message",
- * role:"user"` event with non-empty text we close the fd and return.
- * Keep a small "leftover" prefix between chunks so a JSON line straddling
- * a chunk boundary still parses.
- *
- * Returns undefined if the session has no user messages, or on any IO
- * error (caller treats the preview as optional).
- */
-const MAX_LIST_STATE_BYTES = 1024 * 1024;
-const MAX_PREVIEW_SCAN_BYTES = 2 * 1024 * 1024;
-const MAX_PREVIEW_CHARS = 64 * 1024;
-
-/** Never follow a leaf symlink or block on a FIFO while listing optional metadata. */
-function openRegularSessionListFile(file: string): { fd: number; size: number } {
-  let directory: number | undefined;
-  let fd: number | undefined;
-  try {
-    const parent = dirname(file);
-    const before = lstatSync(parent);
-    if (!before.isDirectory() || before.isSymbolicLink())
-      throw new Error("invalid session directory");
-    directory = openSync(
-      parent,
-      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_DIRECTORY ?? 0),
-    );
-    const openedParent = fstatSync(directory);
-    if (before.dev !== openedParent.dev || before.ino !== openedParent.ino)
-      throw new Error("session directory changed");
-    fd = openSync(
-      process.platform === "linux" ? `/proc/self/fd/${directory}/${basename(file)}` : file,
-      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
-    );
-    const opened = fstatSync(fd);
-    const current = lstatSync(file);
-    const currentParent = lstatSync(parent);
-    if (
-      !opened.isFile() ||
-      current.isSymbolicLink() ||
-      currentParent.isSymbolicLink() ||
-      current.dev !== opened.dev ||
-      current.ino !== opened.ino ||
-      currentParent.dev !== before.dev ||
-      currentParent.ino !== before.ino
-    )
-      throw new Error("session file changed");
-    return { fd, size: opened.size };
-  } catch (error) {
-    if (fd !== undefined) closeSync(fd);
-    throw error;
-  } finally {
-    if (directory !== undefined) closeSync(directory);
-  }
-}
-
-function readSessionListState(file: string, sessionId: string): SessionState {
-  const { fd, size } = openRegularSessionListFile(file);
-  try {
-    if (size > MAX_LIST_STATE_BYTES) throw new Error("session list state is too large");
-    const buffer = Buffer.alloc(size);
-    let bytes = 0;
-    while (bytes < buffer.length) {
-      const count = readSync(fd, buffer, bytes, buffer.length - bytes, bytes);
-      if (!count) break;
-      bytes += count;
-    }
-    return parseSessionListState(buffer.subarray(0, bytes).toString("utf8"), sessionId);
-  } finally {
-    closeSync(fd);
-  }
-}
-
-function parseSessionListState(raw: string, sessionId: string): SessionState {
-  if (Buffer.byteLength(raw) > MAX_LIST_STATE_BYTES)
-    throw new Error("session list state is too large");
-  const state = JSON.parse(raw) as SessionState;
-  if (!state || state.sessionId !== sessionId || typeof state.cwd !== "string")
-    throw new Error("invalid session metadata");
-  return state;
-}
-
-const TAIL_CHUNK_SIZE = 64 * 1024;
-
-function readLastUserMessage(transcriptFile: string): string | undefined {
-  if (!existsSync(transcriptFile)) return undefined;
-
-  let fd: number;
-  let fileSize: number;
-  try {
-    const opened = openRegularSessionListFile(transcriptFile);
-    fd = opened.fd;
-    fileSize = opened.size;
-  } catch {
-    return undefined;
-  }
-  if (fileSize === 0) {
-    closeSync(fd);
-    return undefined;
-  }
-
-  try {
-    let position = fileSize;
-    // `leftover` holds bytes from the previous (later) chunk that we
-    // couldn't yet split on a newline — they're the partial start of a
-    // line whose end lives in the older chunk we just read.
-    let leftover = "";
-    const buf = Buffer.alloc(TAIL_CHUNK_SIZE);
-
-    const minimumPosition = Math.max(0, fileSize - MAX_PREVIEW_SCAN_BYTES);
-    while (position > minimumPosition) {
-      const readLen = Math.min(TAIL_CHUNK_SIZE, position - minimumPosition);
-      position -= readLen;
-      const got = readSync(fd, buf, 0, readLen, position);
-      if (got <= 0) break;
-      const text = buf.toString("utf8", 0, got) + leftover;
-      const lines = text.split("\n");
-      // If we haven't reached the beginning of the file, the first
-      // element of `lines` may be a partial line; defer it to the next
-      // (older) chunk. Once position==0 we know the first element is a
-      // real complete line and we should process it too.
-      const start = position === 0 ? 0 : 1;
-      if (position > 0) leftover = lines[0] ?? "";
-      for (let i = lines.length - 1; i >= start; i--) {
-        const preview = parseUserPreview(lines[i]);
-        if (preview !== undefined) return preview;
-      }
-    }
-    return undefined;
-  } catch {
-    return undefined;
-  } finally {
-    try {
-      closeSync(fd);
-    } catch {
-      /* already closed */
-    }
-  }
-}
-
-/**
- * Parse one transcript line; return the preview string if it's a
- * non-empty user message, otherwise undefined. Pulled out so the
- * tail loop above stays focused on IO mechanics.
- */
-function parseUserPreview(line: string | undefined): string | undefined {
-  if (!line) return undefined;
-  let event: {
-    type?: string;
-    data?: { role?: string; content?: unknown; injected?: boolean };
-  };
-  try {
-    event = JSON.parse(line);
-  } catch {
-    return undefined;
-  }
-  if (event.type !== "message") return undefined;
-  if (event.data?.role !== "user") return undefined;
-  if (event.data.injected === true) return undefined;
-  const content = event.data.content;
-  const text =
-    typeof content === "string"
-      ? content
-      : Array.isArray(content)
-        ? (content.find((b: { type?: string; text?: string }) => b.type === "text")?.text ?? "")
-        : "";
-  if (!text.trim()) return undefined;
-  // Hosts strip attachment metadata before collapsing whitespace for display.
-  return text.trim().slice(0, MAX_PREVIEW_CHARS);
 }

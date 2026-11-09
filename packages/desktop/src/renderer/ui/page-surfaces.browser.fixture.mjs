@@ -146,7 +146,7 @@ try {
     { width: 1024, height: 600 },
   ]) {
     const quota = await mount(viewport, { kind: "quota" });
-    await quota.getByRole("button", { name: "额度", exact: true }).click();
+    await quota.getByRole("button", { name: "用量", exact: true }).click();
     await quota.waitForFunction(() => typeof window.resolveQuota === "function");
     await quota.evaluate(() =>
       window.resolveQuota({
@@ -159,7 +159,7 @@ try {
         },
       }),
     );
-    const quotaSurface = quota.getByRole("dialog", { name: "剩余额度" });
+    const quotaSurface = quota.getByRole("dialog", { name: "使用限额" });
     await quota.getByText("Pro", { exact: true }).waitFor();
     await inspect(quota, quotaSurface, { kind: "quota", phase: "loaded" });
     await quota.getByRole("button", { name: "刷新", exact: true }).click();

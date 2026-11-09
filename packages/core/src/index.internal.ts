@@ -321,6 +321,7 @@ export {
 export { createInProcessClient } from "./protocol/helpers.js";
 export { USER_DECISION_TIMEOUT_MS, type ProtocolModelEntry } from "./protocol/types.js";
 export { recommendedAnswer } from "./protocol/user-decision-lifecycle.js";
+export { goalGetPayload } from "./protocol/goal-rpc.js";
 
 // ─── LLM host extensions ─────────────────────────────────────────
 

@@ -19,6 +19,7 @@ import {
 import { subscribeSessionPersistenceFlush } from "../sessionPersistence";
 import type { TranscriptsAction, TranscriptsMap } from "../transcriptsReducer";
 import { applyStreamEvent, INITIAL_STATE, type Message, type MessagesReducerState } from "../types";
+import { adoptPersistedGoalProgress } from "../goalClock";
 import {
   hasTranscriptRecovery,
   hasBufferedTranscriptRecovery,
@@ -646,7 +647,7 @@ export function useTranscriptBuckets({
         const goalLookupEpoch = state.snapshotEpoch ?? null;
         let goalLookupSucceeded = false;
         try {
-          const { ok, goal, goalId, paused, revision, setAtMs } =
+          const { ok, goal, goalId, paused, revision, setAtMs, progress } =
             await window.codeshell.goalGet(engineId);
           goalLookupSucceeded = ok !== false;
           if (ok !== false && goal) {
@@ -665,6 +666,11 @@ export function useTranscriptBuckets({
               ...(setAtMs ? { setAtMs } : {}),
               ...(replacesLocalGoal ? { replaced: true } : {}),
             } as StreamEvent);
+            // Persisted goal rounds/time fill what the replayed markers lack.
+            state = {
+              ...state,
+              activeGoal: adoptPersistedGoalProgress(state.activeGoal, progress),
+            };
           } else if (ok !== false && state.activeGoal) {
             state = applyStreamEvent(state, {
               type: "goal_cleared",

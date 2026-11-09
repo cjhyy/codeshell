@@ -91,7 +91,10 @@ class FakeWindow extends EventEmitter {
   setBounds(value: typeof display.bounds) {
     this.bounds = { ...value };
   }
-  setIgnoreMouseEvents() {}
+  ignoredMouseEvents: Array<{ ignore: boolean; options?: { forward: boolean } }> = [];
+  setIgnoreMouseEvents(ignore: boolean, options?: { forward: boolean }) {
+    this.ignoredMouseEvents.push({ ignore, ...(options ? { options } : {}) });
+  }
   setFocusable() {}
   setAlwaysOnTop() {}
   moveTop() {}
@@ -353,6 +356,38 @@ try {
         { app: "Safari" },
         "dropping on another app offers it",
       );
+      break;
+    }
+    case "drag-releases-native-mouse": {
+      const win = await present();
+      const clickThrough = { ignore: true, options: { forward: true } };
+      assert.deepEqual(win.ignoredMouseEvents.at(-1), clickThrough);
+
+      ipcMain.emit("mimiCompanion:interaction", event(win), "hover");
+      assert.deepEqual(win.ignoredMouseEvents.at(-1), { ignore: false });
+      ipcMain.emit("mimiCompanion:interaction", event(win), "begin");
+      ipcMain.emit("mimiCompanion:move", event(win), { x: 300, y: 300 });
+      // Leaving the body while captured must not drop an active drag.
+      ipcMain.emit("mimiCompanion:interaction", event(win), "leave");
+      assert.equal(latestState(win).humanActive, true);
+      assert.deepEqual(win.ignoredMouseEvents.at(-1), { ignore: false });
+      ipcMain.emit("mimiCompanion:move", event(win), { x: 400, y: 350 });
+      assert.deepEqual(latestState(win).position, { x: 400, y: 350 });
+
+      ipcMain.emit("mimiCompanion:interaction", event(win), "end");
+      // A drop over the body keeps the pet clickable until renderer hit testing
+      // explicitly reports the pointer outside, including lost-event recovery.
+      assert.deepEqual(win.ignoredMouseEvents.at(-1), { ignore: false });
+      ipcMain.emit("mimiCompanion:interaction", event(win), "leave");
+      assert.equal(latestState(win).humanActive, false);
+      assert.deepEqual(win.ignoredMouseEvents.at(-1), clickThrough);
+      ipcMain.emit("mimiCompanion:move", event(win), { x: 800, y: 700 });
+      assert.deepEqual(latestState(win).position, { x: 400, y: 350 });
+
+      ipcMain.emit("mimiCompanion:interaction", event(win), "hover");
+      assert.deepEqual(win.ignoredMouseEvents.at(-1), { ignore: false });
+      ipcMain.emit("mimiCompanion:interaction", event(win), "leave");
+      assert.deepEqual(win.ignoredMouseEvents.at(-1), clickThrough);
       break;
     }
     case "capture-while-human-active": {

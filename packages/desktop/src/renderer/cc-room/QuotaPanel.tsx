@@ -1,6 +1,6 @@
 /**
- * QuotaPanel — a room-header chip that reveals remaining CC/Codex subscription
- * quota (the 5h/7d windows their status lines show) with reset countdowns.
+ * QuotaPanel — a room-header chip that reveals CC/Codex subscription usage
+ * (the 5h/7d windows their status lines show) with local reset times.
  *
  * Thin client: talks only to `window.codeshell.quota.get()`. Fetches on open
  * (lazy — no cost until the user asks). Codex is free; Claude costs ~1 token,
@@ -15,6 +15,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 type Which = "claude" | "codex" | "both";
 
 export function QuotaPanel({ which = "both" }: { which?: Which }) {
+  // Each provider selection owns its cache and pending request.
+  return <QuotaPanelContent key={which} which={which} />;
+}
+
+function QuotaPanelContent({ which }: { which: Which }) {
   const [open, setOpen] = React.useState(false);
   const [data, setData] = React.useState<QuotaResult | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -53,16 +58,16 @@ export function QuotaPanel({ which = "both" }: { which?: Which }) {
                 ? "border-status-warn/50 text-status-warn"
                 : "text-muted-foreground",
           )}
-          title="查看 CC/Codex 剩余额度"
+          title="查看使用限额；百分比为各项限额中最高的已使用比例"
         >
-          <span>额度</span>
-          {peak != null && <span className="font-mono">{peak.toFixed(0)}%</span>}
+          <span>用量</span>
+          {peak != null && <span className="tabular-nums">已使用 {peak.toFixed(0)}%</span>}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" aria-label="剩余额度" className="w-[280px] p-3 text-sm">
+      <PopoverContent align="end" aria-label="使用限额" className="w-[280px] p-3 text-sm">
         <div className="mb-2 flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            剩余额度
+            使用限额
           </span>
           <Button
             size="sm"
@@ -87,7 +92,11 @@ export function QuotaPanel({ which = "both" }: { which?: Which }) {
         )}
 
         <p className="mt-2 border-t border-border pt-2 text-[10px] leading-tight text-muted-foreground">
-          Codex 免费查询；Claude 会发 1-token 探测。
+          {which === "codex"
+            ? "Codex 免费查询。"
+            : which === "claude"
+              ? "Claude 会发 1-token 探测。"
+              : "Codex 免费查询；Claude 会发 1-token 探测。"}
         </p>
       </PopoverContent>
     </Popover>
@@ -103,6 +112,10 @@ function ProviderBlock({ name, pq }: { name: string; pq: ProviderQuota }) {
       </div>
     );
   }
+  const weekly = pq.windows.filter(
+    (w) => pq.provider === "claude" && (w.kind === "7d" || /^7d[_-]/.test(w.kind)),
+  );
+  const other = pq.windows.filter((w) => !weekly.includes(w));
   return (
     <div>
       <div className="mb-1 flex items-center gap-1.5">
@@ -114,12 +127,73 @@ function ProviderBlock({ name, pq }: { name: string; pq: ProviderQuota }) {
         )}
       </div>
       <div className="flex flex-col gap-1.5">
-        {pq.windows.map((w) => (
-          <QuotaBar key={w.kind} label={w.kind} usedPercent={w.usedPercent} resetsAt={w.resetsAt} />
+        {other.map((w) => (
+          <QuotaBar
+            key={w.kind}
+            label={windowLabel(w.kind)}
+            usedPercent={w.usedPercent}
+            resetsAt={w.resetsAt}
+          />
         ))}
+        {weekly.length > 0 && (
+          <section className="mt-2 flex flex-col gap-2">
+            <h3 className="text-xs font-medium">每周限额</h3>
+            {weekly.map((w) => (
+              <QuotaBar
+                key={w.kind}
+                label={weeklyLabel(w.kind)}
+                usedPercent={w.usedPercent}
+                resetsAt={w.resetsAt}
+              />
+            ))}
+          </section>
+        )}
       </div>
+      {pq.provider === "claude" && (
+        <button
+          type="button"
+          className="mt-2 text-left text-[10px] text-muted-foreground underline hover:text-foreground"
+          onClick={() =>
+            void window.codeshell.openExternal(
+              "https://support.claude.com/en/articles/11647753-understanding-usage-and-length-limits",
+            )
+          }
+        >
+          了解更多关于使用限额的信息
+        </button>
+      )}
     </div>
   );
+}
+
+function windowLabel(kind: string): string {
+  switch (kind) {
+    case "5h":
+      return "当前时段（5 小时）";
+    case "7d":
+      return "每周限额";
+    case "overage":
+      return "额外用量";
+    default:
+      return kind;
+  }
+}
+
+function weeklyLabel(kind: string): string {
+  if (kind === "7d") return "所有模型";
+  const model = kind.replace(/^7d[_-]/, "");
+  switch (model) {
+    case "fable":
+      return "Fable";
+    case "sonnet":
+      return "Sonnet";
+    case "opus":
+      return "Opus";
+    case "haiku":
+      return "Haiku";
+    default:
+      return kind;
+  }
 }
 
 function QuotaBar({
@@ -137,14 +211,21 @@ function QuotaBar({
     <div>
       <div className="mb-0.5 flex items-center justify-between text-xs">
         <span className="text-muted-foreground">{label}</span>
-        <span className="font-mono">{pct.toFixed(0)}%</span>
+        <span className="tabular-nums">已使用 {pct.toFixed(0)}%</span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+      <div
+        role="progressbar"
+        aria-label={`${label}已使用`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct}
+        className="h-1.5 overflow-hidden rounded-full bg-muted"
+      >
         <div className={cn("h-full rounded-full", barColor)} style={{ width: `${pct}%` }} />
       </div>
       {resetsAt != null && (
         <div className="mt-0.5 text-right text-[10px] text-muted-foreground">
-          重置 {formatReset(resetsAt)}
+          {formatReset(resetsAt)}
         </div>
       )}
     </div>
@@ -156,17 +237,26 @@ function peakPercent(r: QuotaResult): number | null {
   let peak: number | null = null;
   for (const pq of [r.claude, r.codex]) {
     for (const w of pq?.windows ?? []) {
-      peak = peak == null ? w.usedPercent : Math.max(peak, w.usedPercent);
+      const pct = Math.max(0, Math.min(100, w.usedPercent));
+      peak = peak == null ? pct : Math.max(peak, pct);
     }
   }
   return peak;
 }
 
-/** Absolute epoch-seconds → "2h13m 后" / "已重置". Recomputed on each render. */
+/** Show the provider's actual reset in the user's local timezone. */
 function formatReset(resetsAt: number): string {
   const delta = resetsAt - Math.floor(Date.now() / 1000);
-  if (delta <= 0) return "已重置";
-  const h = Math.floor(delta / 3600);
-  const m = Math.floor((delta % 3600) / 60);
-  return h > 0 ? `${h}h${m}m 后` : `${m}m 后`;
+  if (delta <= 0) return "重置时间已到";
+  const date = new Date(resetsAt * 1000);
+  const day = date.toLocaleDateString("zh-CN", {
+    ...(delta >= 7 * 86400 ? { year: "numeric", month: "numeric", day: "numeric" } : {}),
+    weekday: "short",
+  });
+  const time = date.toLocaleTimeString("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  return `${day} ${time} 重置`;
 }

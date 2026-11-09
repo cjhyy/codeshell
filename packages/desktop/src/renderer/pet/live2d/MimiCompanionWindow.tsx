@@ -43,12 +43,23 @@ export const CHARACTER_RENDERERS: Record<MimiCompanionState["appearance"], Chara
 
 type Gesture = {
   pointerId: number;
+  target: HTMLButtonElement;
   startX: number;
   startY: number;
   origin: { x: number; y: number };
   lastX: number;
   dragged: boolean;
 };
+
+function hitsInteractiveContent(x: number, y: number): boolean {
+  return Boolean(
+    document
+      .elementFromPoint(x, y)
+      ?.closest(
+        ".mimi-companion__body, .mimi-companion__badge, .mimi-companion__handoff, .mimi-companion__menu",
+      ),
+  );
+}
 
 export function MimiCompanionWindow() {
   const [state, setState] = useState<MimiCompanionState | null>(null);
@@ -72,6 +83,11 @@ export function MimiCompanionWindow() {
   const oneShot = useRef<string | undefined>(undefined);
   const seenActivities = useRef(new Set<string>());
   const gesture = useRef<Gesture | null>(null);
+  const mouseActive = useRef(false);
+  const interaction = useCallback((phase: Parameters<MimiCompanionApi["interaction"]>[0]) => {
+    if (phase !== "end") mouseActive.current = phase !== "leave";
+    window.mimiCompanion.interaction(phase);
+  }, []);
   const lastHoverAt = useRef(0);
   const hoverNeedsRefresh = useRef(false);
   const menu = useRef<HTMLDivElement>(null);
@@ -110,10 +126,6 @@ export function MimiCompanionWindow() {
       window.clearTimeout(cueTimer.current);
       window.clearTimeout(travelTimer.current);
       window.clearTimeout(impactTimer.current);
-      if (gesture.current) {
-        window.mimiCompanion.interaction("end");
-        window.mimiCompanion.interaction("leave");
-      }
     };
   }, []);
 
@@ -241,14 +253,14 @@ export function MimiCompanionWindow() {
 
   const closeMenu = useCallback(() => {
     setMenuOpen(false);
-    window.mimiCompanion.interaction("end");
+    interaction("end");
     // Closing a menu outside the body must release the native mouse capture.
     // `end` alone deliberately keeps an ordinary body click interactive.
     if (!body.current?.matches(":hover")) {
       setHovered(false);
-      window.mimiCompanion.interaction("leave");
+      interaction("leave");
     }
-  }, []);
+  }, [interaction]);
   useEffect(() => {
     if (!menuOpen) return;
     const closeOutside = (event: PointerEvent) => {
@@ -278,7 +290,7 @@ export function MimiCompanionWindow() {
     setError(message);
     window.mimiCompanion.ready({ error: message });
   }, []);
-  const openChat = () => {
+  const openChat = useCallback(() => {
     setError(null);
     hoverNeedsRefresh.current = true;
     void window.mimiCompanion.openChat().then(
@@ -287,23 +299,73 @@ export function MimiCompanionWindow() {
       },
       () => setError("暂时无法打开聊天"),
     );
-  };
-  const finishGesture = (event: React.PointerEvent<HTMLButtonElement>, cancelled: boolean) => {
-    const current = gesture.current;
-    if (!current || current.pointerId !== event.pointerId) return;
-    gesture.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId))
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    setHeld(false);
-    setMoving(null);
-    setDragPosition(null);
-    window.mimiCompanion.interaction("end");
-    if (cancelled) {
-      setHovered(false);
-      window.mimiCompanion.interaction("leave");
+  }, []);
+  const finishGesture = useCallback(
+    (
+      event: Pick<PointerEvent, "pointerId" | "clientX" | "clientY"> | undefined,
+      cancelled: boolean,
+    ) => {
+      const current = gesture.current;
+      if (!current || (event && current.pointerId !== event.pointerId)) return;
+      gesture.current = null;
+      if (current.target.hasPointerCapture(current.pointerId))
+        current.target.releasePointerCapture(current.pointerId);
+      setHeld(false);
+      setMoving(null);
+      setDragPosition(null);
+      interaction("end");
+      // Capture retargets pointerup to the body even when the pointer is outside.
+      // Reconcile the actual hit now; a later pointerleave is not guaranteed.
+      if (cancelled || !event || !hitsInteractiveContent(event.clientX, event.clientY)) {
+        setHovered(false);
+        interaction("leave");
+      }
+      if (!cancelled && !current.dragged) openChat();
+    },
+    [interaction, openChat],
+  );
+  const resetInteraction = useCallback(() => {
+    if (gesture.current) finishGesture(undefined, true);
+    else if (mouseActive.current) {
+      // The context menu also holds a native interaction, without a pointer gesture.
+      interaction("end");
+      interaction("leave");
     }
-    if (!cancelled && !current.dragged) openChat();
-  };
+    setHovered(false);
+    setMenuOpen(false);
+  }, [finishGesture, interaction]);
+
+  useEffect(() => {
+    const move = (event: MouseEvent) => {
+      // Electron forwards mousemove even while the transparent window yields
+      // clicks. Recover a release lost during a window/display transition.
+      if (gesture.current && (event.buttons & 1) === 0) finishGesture(undefined, true);
+      if (
+        mouseActive.current &&
+        !gesture.current &&
+        !menuOpen &&
+        !hitsInteractiveContent(event.clientX, event.clientY)
+      ) {
+        setHovered(false);
+        interaction("leave");
+      }
+    };
+    const hidden = () => {
+      if (document.hidden) resetInteraction();
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("blur", resetInteraction);
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("blur", resetInteraction);
+      document.removeEventListener("visibilitychange", hidden);
+    };
+  }, [finishGesture, interaction, menuOpen, resetInteraction]);
+  useEffect(() => {
+    if (!visible) resetInteraction();
+  }, [visible, resetInteraction]);
+  useEffect(() => () => resetInteraction(), [resetInteraction]);
 
   if (!state) return null;
   const { Actor, effects, pace } =
@@ -328,7 +390,7 @@ export function MimiCompanionWindow() {
     Boolean(attention) && !state.preview && !menuOpen && !held && !state.handoff;
   const answerHandoff = (accept: boolean) => {
     void window.mimiCompanion.handoff(accept).catch(() => setError("暂时无法打开聊天"));
-    if (!accept) window.mimiCompanion.interaction("leave");
+    if (!accept) interaction("leave");
   };
   return (
     <div
@@ -357,7 +419,7 @@ export function MimiCompanionWindow() {
           height: state.size,
           transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
           transition:
-            state.avoidInput || travel.kind === "hop"
+            held || state.avoidInput || travel.kind === "hop"
               ? "none"
               : travel.kind === "walk"
                 ? `transform ${travel.duration}ms ${pace === "fly" ? "cubic-bezier(0.34, 1.3, 0.64, 1)" : "cubic-bezier(0.33, 0.8, 0.4, 1)"}, width ${travel.duration}ms, height ${travel.duration}ms`
@@ -376,19 +438,19 @@ export function MimiCompanionWindow() {
           onPointerEnter={() => {
             setHovered(true);
             lastHoverAt.current = performance.now();
-            window.mimiCompanion.interaction("hover");
+            interaction("hover");
           }}
           onPointerLeave={() => {
             setHovered(false);
-            if (!gesture.current && !menuOpen) window.mimiCompanion.interaction("leave");
+            if (!gesture.current && !menuOpen) interaction("leave");
           }}
           onFocus={() => {
             setHovered(true);
-            window.mimiCompanion.interaction("hover");
+            interaction("hover");
           }}
           onBlur={() => {
             setHovered(false);
-            if (!gesture.current && !menuOpen) window.mimiCompanion.interaction("leave");
+            if (!gesture.current && !menuOpen) interaction("leave");
           }}
           onPointerDown={(event) => {
             if (event.button !== 0) return;
@@ -398,6 +460,7 @@ export function MimiCompanionWindow() {
             const bounds = event.currentTarget.getBoundingClientRect();
             gesture.current = {
               pointerId: event.pointerId,
+              target: event.currentTarget,
               startX: event.screenX,
               startY: event.screenY,
               lastX: event.screenX,
@@ -408,7 +471,7 @@ export function MimiCompanionWindow() {
             setDragPosition({ x: bounds.left, y: bounds.top });
             setHeld(true);
             setMenuOpen(false);
-            window.mimiCompanion.interaction("begin");
+            interaction("begin");
           }}
           onPointerMove={(event) => {
             const current = gesture.current;
@@ -417,11 +480,15 @@ export function MimiCompanionWindow() {
                 lastHoverAt.current = performance.now();
                 hoverNeedsRefresh.current = false;
                 setHovered(true);
-                window.mimiCompanion.interaction("hover");
+                interaction("hover");
               }
               return;
             }
             if (current.pointerId !== event.pointerId) return;
+            if ((event.buttons & 1) === 0) {
+              finishGesture(event, true);
+              return;
+            }
             const dx = event.screenX - current.startX;
             const dy = event.screenY - current.startY;
             if (!current.dragged && Math.hypot(dx, dy) < 4) return;
@@ -438,15 +505,15 @@ export function MimiCompanionWindow() {
           onLostPointerCapture={(event) => finishGesture(event, true)}
           onClick={(event) => {
             if (event.detail === 0) {
-              window.mimiCompanion.interaction("begin");
+              interaction("begin");
               openChat();
-              window.mimiCompanion.interaction("end");
+              interaction("end");
             }
           }}
           onContextMenu={(event) => {
             event.preventDefault();
             setMenuOpen(true);
-            window.mimiCompanion.interaction("begin");
+            interaction("begin");
           }}
         >
           <Actor
@@ -506,8 +573,8 @@ export function MimiCompanionWindow() {
                 ? `查看 Mimi 的工作：${attentionCount} 项待看`
                 : "查看 Mimi 正在做的工作"
             }
-            onPointerEnter={() => window.mimiCompanion.interaction("hover")}
-            onPointerLeave={() => window.mimiCompanion.interaction("leave")}
+            onPointerEnter={() => interaction("hover")}
+            onPointerLeave={() => interaction("leave")}
             onClick={() => {
               void window.mimiCompanion
                 .openActivity()
@@ -522,8 +589,8 @@ export function MimiCompanionWindow() {
             className="mimi-companion__handoff"
             role="dialog"
             aria-label={`让 ${spriteCharacter(state.appearance).name} 看看这个窗口`}
-            onPointerEnter={() => window.mimiCompanion.interaction("hover")}
-            onPointerLeave={() => window.mimiCompanion.interaction("leave")}
+            onPointerEnter={() => interaction("hover")}
+            onPointerLeave={() => interaction("leave")}
           >
             <p>
               让 {spriteCharacter(state.appearance).name} 看看「{state.handoff.app}」？

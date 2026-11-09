@@ -175,9 +175,14 @@ A 和 B 互不依赖，可以并行。用户看到的“第 1 轮”只有 B 能
 ## 8. 实现记录（与上文的差异）
 
 - **轮数口径**：每个“被判定的尝试”加 1，包括判“未完成”续跑、挂起等后台任务、挂起等用户、判“已完成”。“接近上限”（`approaching_limit`）和“已耗尽”（`exhausted`）的提示只复述当前轮数，不加轮。内置引擎由 `GoalProgressMeter`（`core/src/goal/progress-meter.ts`）在 Engine 的 `prepareEvent` 里统一改写 `round` 并附上 `progress`；TurnLoop 的 `stopBlockCount` 只管空转上限，没有改动。
-- **没有改 goal/get 接口**：`App.tsx`、`preload/types.d.ts`、`protocol/server.ts` 的行数预算余量为 0。目标栏的累计数据改为从回放的 `goal_progress` 事件里取，每条事件都带着 `progress{rounds, activeMs, atMs}`；等待中的时钟起点取 `waiting.sinceMs`。没有任何进度事件的老目标，界面退回显示“目标已设置 X”。
+- **goal/get 带上 `progress`（先拆分后再加）**：`server.ts`、`preload/types.d.ts` 原本的行数预算余量为 0。先把代码抽出去，再加字段：
+  - `protocol/goal-rpc.ts`：goalExtend 的校验与路由（`goalExtendOutcome`），以及 goalGet 的响应拼装（`goalGetPayload`，只有同一个 goalId 的 progress 才会附上）。`server.ts` 只负责找目标、发送，从 4949 降到 4898 行。
+  - `preload/goal-control-api.ts`：5 个 goal 方法的声明和 RPC 适配集中在一处。`types.d.ts` 通过 extends 接缝组合进来，`index.ts` 展开调用，两个文件各省 58 行，从 2990 降到 2932、从 1886 降到 1828。
+  - 预算测试把这三个文件的上限钉在拆分后的实测值，并写了注释。`index.internal.ts` 的导出预算 +1，用于导出 `goalGetPayload`；桌面端的断线兜底和外部运行时都复用它，顺带修了兜底路径漏返回 `setAtMs` 的问题。
+  - `App.tsx` 不需要改：对账时沿用累计数据的逻辑在 reducer 里（`carryGoalClock`）。
+  - 界面水合：`useTranscriptBuckets` 拿到 goalGet 后调用 `adoptPersistedGoalProgress`。没有运行在跑时，以持久化的值为准；有运行在跑时，保留回放算出来的时钟。
 - **任务清单**：只有 `{kind, label}`，不带 id（`listRunningBackgroundWork` 本来就不给 id）。最多列 8 项，每项 80 字以内，经过 scrub 处理。外部运行时通过 `ExternalRuntimeBackgroundWorkDelivery.listRunning` 提供 DriveAgent 作业的标签。
 - **界面时钟**（`desktop/src/renderer/goalClock.ts`）：每条进度事件带来权威值；运行开始（`session_started`）启动时钟；运行结束（`turn_complete`）停表，但正在等后台任务时继续走；暂停、等用户、清除目标时停表。等待条在下一次运行开始、出现新进度事件、暂停或清除时，打上结束时间。
 - **兼容性**：已用 origin/main 的 `decodeGoalLifecycle` 实测读取带 `progress` 和 `waitKind` 的 active、paused、waiting(background/user)、terminal 五种记录，目标全部保留。
-- **可以接受的近似**：从挂起写盘到运行结束有几毫秒，会被重复计入。升级前就存在的目标，持久化的累计从 0 开始；界面在收到第一条新事件前，可能先用回放的运行时段做估计，之后会校准一次。
+- **可以接受的近似**：从挂起写盘到运行结束有几毫秒，会被重复计入。升级前就存在的目标，持久化的累计从 0 开始。
 
