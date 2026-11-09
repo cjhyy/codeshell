@@ -11,6 +11,7 @@
 import type { ProviderKindName } from "../provider-kinds.js";
 import type { LLMConfig } from "../../types.js";
 import { RULES } from "./rules.js";
+import { promptCachingForModel } from "./prompt-caching.js";
 import { type Capability, DEFAULT_CAPABILITY } from "./types.js";
 
 export { DEFAULT_CAPABILITY } from "./types.js";
@@ -22,6 +23,7 @@ export type {
   EchoReasoning,
   ParallelToolCallsShape,
   StreamUsageShape,
+  PromptCachingCapability,
 } from "./types.js";
 
 /**
@@ -31,11 +33,13 @@ export type {
  * more specific patterns come before catch-alls.
  */
 export function capabilitiesFor(kind: ProviderKindName, model: string): Capability {
+  const promptCaching = promptCachingForModel(kind, model);
   for (const rule of RULES) {
     if (rule.kind !== kind) continue;
     if (!rule.match.test(model)) continue;
     return {
       ...DEFAULT_CAPABILITY,
+      promptCaching,
       ...rule.capability,
       // Set fields need explicit merge — Object spread copies the
       // reference but the caller might mutate it. Keep DEFAULT immutable.
@@ -46,6 +50,7 @@ export function capabilitiesFor(kind: ProviderKindName, model: string): Capabili
   }
   return {
     ...DEFAULT_CAPABILITY,
+    promptCaching,
     rejectedParams: new Set(DEFAULT_CAPABILITY.rejectedParams),
   };
 }
@@ -56,7 +61,10 @@ export function capabilitiesFor(kind: ProviderKindName, model: string): Capabili
  * Keep this pure so tools and provider request filtering use the same source.
  */
 export function capabilitiesForConfig(
-  config?: Pick<LLMConfig, "provider" | "providerKind" | "model" | "supportsVision">,
+  config?: Pick<
+    LLMConfig,
+    "provider" | "providerKind" | "model" | "supportsVision" | "promptCaching"
+  >,
 ): Capability {
   if (!config?.model || !(config.providerKind ?? config.provider)) {
     return { ...DEFAULT_CAPABILITY, rejectedParams: new Set(DEFAULT_CAPABILITY.rejectedParams) };
@@ -67,6 +75,7 @@ export function capabilitiesForConfig(
   );
   return {
     ...capability,
+    promptCaching: config.promptCaching ?? capability.promptCaching,
     supportsVision:
       typeof config.supportsVision === "boolean"
         ? config.supportsVision

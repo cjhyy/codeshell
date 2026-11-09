@@ -41,6 +41,26 @@ describe("prompt cache policy", () => {
     expect(policy.cacheKey).toMatch(/^cs:[a-f0-9]{48}$/);
   });
 
+  it("uses the resolved capability for custom models and explicit opt-outs", () => {
+    expect(
+      resolvePromptCachePolicy({
+        provider: "openai",
+        providerKind: "custom-gateway",
+        model: "deployment-production",
+        promptCaching: "openai-hybrid",
+        request: { scopeId: "s-cache" },
+      }).strategy,
+    ).toBe("openai-hybrid");
+    expect(
+      resolvePromptCachePolicy({
+        provider: "openai",
+        providerKind: "openrouter",
+        model: "openai/gpt-6.1-sol",
+        promptCaching: "provider-managed",
+      }).breakpoints,
+    ).toEqual([]);
+  });
+
   it("uses four semantic boundaries for native Anthropic and three through OpenRouter", () => {
     expect(
       resolvePromptCachePolicy({
@@ -154,6 +174,53 @@ describe("prompt cache history", () => {
     history.commit(plan);
     const retained = JSON.stringify({ plan, boundaries: [...(history as any).boundaries] });
     expect(retained).not.toContain("PRIVATE_");
-    expect(plan.nextBoundary?.prefixHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(plan.nextBoundaries[0]?.prefixHash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("reuses the stable boundary after a run removes its volatile snapshot", () => {
+    const history = new PromptCacheHistory();
+    history.commit(
+      history.prepare({
+        ...request(["system", "history", "dynamic A", "tool A"]),
+        stableBoundaryIndex: 1,
+      }),
+    );
+    const next = history.prepare({
+      ...request(["system", "history", "tool A", "user B", "dynamic B"]),
+      stableBoundaryIndex: 3,
+    });
+    expect(next.readBoundaryIndex).toBe(1);
+    history.commit(next);
+    const third = history.prepare({
+      ...request(["system", "history", "tool A", "user B", "tool B", "dynamic C"]),
+      stableBoundaryIndex: 4,
+    });
+    expect(third.readBoundaryIndex).toBe(3);
+  });
+
+  it("uses the longest surviving boundary and rejects a rewritten stable prefix", () => {
+    const history = new PromptCacheHistory();
+    history.commit(
+      history.prepare({
+        ...request(["system", "history", "dynamic", "tool"]),
+        stableBoundaryIndex: 1,
+      }),
+    );
+    expect(
+      history.prepare(request(["system", "history", "dynamic", "tool", "next"])).readBoundaryIndex,
+    ).toBe(3);
+    expect(
+      history.prepare(request(["system", "changed", "dynamic", "tool", "next"])).readBoundaryIndex,
+    ).toBeUndefined();
+  });
+
+  it("does not resurrect older boundaries after a newer successful empty history", () => {
+    const history = new PromptCacheHistory();
+    const older = history.prepare(request(["system", "history"]));
+    history.commit(history.prepare(request([])));
+    history.commit(older);
+    expect(
+      history.prepare(request(["system", "history", "next"])).readBoundaryIndex,
+    ).toBeUndefined();
   });
 });

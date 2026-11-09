@@ -84,6 +84,7 @@ describe("applyRunLlmOverrides", () => {
         maxTokens: 4096,
         maxContextTokens: 128_000,
         supportsVision: true,
+        promptCaching: "openai-hybrid",
       },
       { model: "other-model" },
     );

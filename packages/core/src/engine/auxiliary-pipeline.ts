@@ -38,6 +38,7 @@ export function sameLlmIdentity(a: LLMConfig, b: LLMConfig): boolean {
     (a.providerKind ?? undefined) === (b.providerKind ?? undefined) &&
     (a.maxTokens ?? undefined) === (b.maxTokens ?? undefined) &&
     a.supportsVision === b.supportsVision &&
+    a.promptCaching === b.promptCaching &&
     a.serviceTier === b.serviceTier &&
     a.reasoningSummary === b.reasoningSummary &&
     JSON.stringify(a.reasoning ?? null) === JSON.stringify(b.reasoning ?? null) &&

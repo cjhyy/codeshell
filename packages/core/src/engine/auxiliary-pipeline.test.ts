@@ -25,6 +25,7 @@ describe("sameLlmIdentity", () => {
 
   it.each([
     { supportsVision: false },
+    { promptCaching: "provider-managed" as const },
     { extraBody: { temperature: 0.9 } },
     { serviceTier: "priority" },
     { reasoningSummary: "detailed" },
@@ -96,6 +97,7 @@ describe("AuxiliaryPipeline current model metadata", () => {
 
   it.each([
     { supportsVision: false },
+    { promptCaching: "provider-managed" as const },
     { extraBody: { temperature: 0.9 } },
     { model: "vendor/another-model" },
     { apiKey: "rotated-fixture-key" },

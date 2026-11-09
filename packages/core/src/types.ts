@@ -1021,6 +1021,8 @@ export interface LLMConfig {
   modelKey?: string;
   /** Explicit per-model catalog capability; false overrides family rules too. */
   supportsVision?: boolean;
+  /** Explicit cache capability from the selected model's catalog preset. */
+  promptCaching?: import("./llm/capabilities/types.js").PromptCachingCapability;
   apiKey?: string;
   baseUrl?: string;
   maxTokens?: number;

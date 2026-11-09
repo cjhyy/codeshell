@@ -32,6 +32,7 @@ function textPreset(
     ...(label ? { label } : {}),
     ...(ctx !== undefined ? { maxContextTokens: ctx } : {}),
     supportsVision: capability.supportsVision,
+    promptCaching: capability.promptCaching,
     ...(params.length > 0 ? { params } : {}),
   };
 }
@@ -123,6 +124,7 @@ function orPreset(value: string, label: string, params?: ParamSpec[], ctx?: numb
     label,
     ...(ctx !== undefined ? { maxContextTokens: ctx } : {}),
     supportsVision: capability.supportsVision,
+    promptCaching: capability.promptCaching,
     ...(params && params.length > 0 ? { params } : {}),
   };
 }

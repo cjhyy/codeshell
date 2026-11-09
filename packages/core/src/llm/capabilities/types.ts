@@ -83,22 +83,27 @@ export type EchoReasoning =
  * Anthropic exposes it inside `tool_choice.disable_parallel_tool_use`.
  * Some endpoints don't support it at all.
  */
-export type ParallelToolCallsShape =
-  | "openai-flag"
-  | "anthropic-disable-flag"
-  | "unsupported";
+export type ParallelToolCallsShape = "openai-flag" | "anthropic-disable-flag" | "unsupported";
 
 /**
  * Streaming usage signal. OpenAI-compat needs `stream_options:
  * {include_usage: true}`; Anthropic always emits usage in
  * `message_delta`; some endpoints reject the field.
  */
-export type StreamUsageShape =
-  | "include-usage-flag"
-  | "auto"
-  | "none";
+export type StreamUsageShape = "include-usage-flag" | "auto" | "none";
+
+/** Cache protocol supported by a model on its selected provider route. */
+export const PROMPT_CACHING_CAPABILITIES = [
+  "provider-managed",
+  "openai-implicit",
+  "openai-hybrid",
+  "anthropic-explicit",
+] as const;
+export type PromptCachingCapability = (typeof PROMPT_CACHING_CAPABILITIES)[number];
 
 export interface Capability {
+  /** Declarative cache support; consumers must not infer it from model versions. */
+  promptCaching: PromptCachingCapability;
   /**
    * Whether the model accepts image content blocks. UI gates image attachments
    * on this — non-vision models surface a "this model does not accept images"
@@ -113,8 +118,13 @@ export interface Capability {
    * for native protocols.
    */
   rejectedParams: ReadonlySet<
-    "temperature" | "top_p" | "presence_penalty" | "frequency_penalty"
-    | "logit_bias" | "logprobs" | "top_logprobs"
+    | "temperature"
+    | "top_p"
+    | "presence_penalty"
+    | "frequency_penalty"
+    | "logit_bias"
+    | "logprobs"
+    | "top_logprobs"
   >;
   /** How thinking is exposed (or not). */
   reasoning: ReasoningShape;
@@ -140,6 +150,7 @@ export interface Capability {
  * every OpenAI-compat endpoint at minimum understands.
  */
 export const DEFAULT_CAPABILITY: Capability = {
+  promptCaching: "provider-managed",
   supportsVision: false,
   tokenLimitField: "max_tokens",
   rejectedParams: new Set(),
