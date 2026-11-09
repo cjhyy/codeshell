@@ -466,7 +466,10 @@ describe("architecture growth budgets", () => {
     // Pin exact formatted owner composition, without future-feature headroom.
     // The combined current-main composition also retains twelve existing
     // lifecycle/authority wiring lines from the intervening fixes.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(5_050);
+    // Live goal controls, range archival and the context-package summary loop
+    // moved to live-goal-control.ts / session-archive.ts /
+    // context-package-summary.ts; the pin drops to the split size.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_664);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {

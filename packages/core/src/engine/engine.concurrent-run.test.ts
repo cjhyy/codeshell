@@ -100,7 +100,7 @@ describe("Engine.run concurrent re-entry guard", () => {
 
       const activeTurnLoop = (engine as any).activeTurnLoop;
       const activeRunSession = (engine as any).activeRunSession;
-      const activeGoalHook = (engine as any).activeGoalHook;
+      const activeGoalHook = (engine as any).goalControl.hook;
       expect((engine as any).runInProgress).toBe(true);
       expect(activeTurnLoop).not.toBeNull();
       expect(activeRunSession.state.sessionId).toBe("session-first");
@@ -119,7 +119,7 @@ describe("Engine.run concurrent re-entry guard", () => {
 
       expect((engine as any).activeTurnLoop).toBe(activeTurnLoop);
       expect((engine as any).activeRunSession).toBe(activeRunSession);
-      expect((engine as any).activeGoalHook).toBe(activeGoalHook);
+      expect((engine as any).goalControl.hook).toBe(activeGoalHook);
       expect((engine as any).lastSessionId).toBe("session-first");
       expect(scenarios.get(model)?.calls).toBe(1);
       expect(existsSync(join(dir, "sessions", "session-second"))).toBe(false);
@@ -137,7 +137,7 @@ describe("Engine.run concurrent re-entry guard", () => {
       expect(engine.clearGoal("session-second")).toBe(false);
       expect(engine.clearGoal("session-first")).toBe(true);
       expect(activeRunSession.state.activeGoal).toBeUndefined();
-      expect((engine as any).activeGoalHook).toBeNull();
+      expect((engine as any).goalControl.hook).toBeNull();
       expect((engine as any).activeTurnLoop).toBe(activeTurnLoop);
 
       firstCall.release.resolve();
@@ -176,7 +176,7 @@ describe("Engine.run concurrent re-entry guard", () => {
       expect(scenarios.get(model)?.calls).toBe(1);
       expect((engine as any).activeTurnLoop).toBeNull();
       expect((engine as any).activeRunSession).toBeNull();
-      expect((engine as any).activeGoalHook).toBeNull();
+      expect((engine as any).goalControl.hook).toBeNull();
       expect((engine as any).runInProgress).toBe(false);
 
       secondRun = engine.run("second task", { sessionId: "session-two", cwd: dir });
@@ -192,7 +192,7 @@ describe("Engine.run concurrent re-entry guard", () => {
       expect(secondResult.sessionId).toBe("session-two");
       expect((engine as any).activeTurnLoop).toBeNull();
       expect((engine as any).activeRunSession).toBeNull();
-      expect((engine as any).activeGoalHook).toBeNull();
+      expect((engine as any).goalControl.hook).toBeNull();
       expect((engine as any).runInProgress).toBe(false);
       expect((engine as any).lastSessionId).toBe("session-two");
     } finally {
@@ -234,7 +234,7 @@ describe("Engine.run concurrent re-entry guard", () => {
       ).toBe(true);
       expect((engine as any).activeTurnLoop).toBeNull();
       expect((engine as any).activeRunSession).toBeNull();
-      expect((engine as any).activeGoalHook).toBeNull();
+      expect((engine as any).goalControl.hook).toBeNull();
       expect((engine as any).runInProgress).toBe(false);
       expect((engine as any).lastSessionId).toBe("session-single");
     } finally {
