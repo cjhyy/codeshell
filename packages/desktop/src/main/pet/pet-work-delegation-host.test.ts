@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { listRecentAttachments, stageImageBytes } from "@cjhyy/code-shell-server/storage";
 import { buildInputAttachmentContext } from "../../../../core/src/engine/input-attachments.js";
+import { buildDelegationBrief, MAX_DELEGATED_TASK_LENGTH } from "./pet-delegation-brief";
 import { PetWorkDelegationHost, petDelegationSessionId } from "./pet-work-delegation-host";
+
+const DESKTOP_BRIEF = buildDelegationBrief({ origin: "desktop" });
 
 function fakeBridge(
   outcome: "accepted" | "rejected" = "accepted",
@@ -235,7 +238,7 @@ describe("PetWorkDelegationHost", () => {
     expect(JSON.parse(fake.lines[0]!)).toMatchObject({
       method: "agent/run",
       params: {
-        task: "下载视频到本地",
+        task: `${DESKTOP_BRIEF}\n\n下载视频到本地`,
         sessionId: first.sessionId,
         cwd: "/work/mimi-test-videos",
         permissionMode: "default",
@@ -243,8 +246,14 @@ describe("PetWorkDelegationHost", () => {
     });
     expect(JSON.parse(fake.lines[0]!).params).not.toHaveProperty("goal");
     expect(fake.reserved).toEqual([[first.sessionId, "/work/mimi-test-videos"]]);
+    // The announced bubble matches what the Session received; the title is
+    // the owner's objective alone.
     expect(fake.announcements).toEqual([
-      expect.objectContaining({ sessionId: first.sessionId, prompt: "下载视频到本地" }),
+      expect.objectContaining({
+        sessionId: first.sessionId,
+        title: "下载视频到本地",
+        prompt: `${DESKTOP_BRIEF}\n\n下载视频到本地`,
+      }),
     ]);
     expect(fake.forgotten).toEqual([]);
   });
@@ -321,9 +330,78 @@ describe("PetWorkDelegationHost", () => {
         requireExisting: true,
       },
     });
+    // Reusing a Session starts a new delegation: its first message gets the brief too.
+    expect(JSON.parse(fake.lines[0]!).params.task).toBe(`${DESKTOP_BRIEF}\n\n继续完成登录修复`);
     expect(fake.announcements).toEqual([
-      expect.objectContaining({ sessionId: "work-login", prompt: "继续完成登录修复" }),
+      expect.objectContaining({
+        sessionId: "work-login",
+        title: "继续完成登录修复",
+        prompt: `${DESKTOP_BRIEF}\n\n继续完成登录修复`,
+      }),
     ]);
+  });
+
+  test("an IM delegation's brief names the channel the owner asked from", async () => {
+    const fake = fakeBridge();
+    const labels: string[] = [];
+    const host = new PetWorkDelegationHost({
+      bridge: fake.bridge,
+      noWorkspaceCwd: "/safe/no-repo",
+      channelLabel: (channel) => {
+        labels.push(channel);
+        return channel === "wechat" ? "微信" : undefined;
+      },
+    });
+    await host.start({
+      clientMessageId: "im:wechat:brief",
+      task: "Fix the login page",
+      workspacePath: "/work/app",
+      completionTarget: { kind: "im-gateway", channel: "wechat", target: "owner" },
+    });
+    await host.start({
+      clientMessageId: "im:lark:brief",
+      task: "Fix the login page",
+      workspacePath: "/work/app",
+      completionTarget: { kind: "im-gateway", channel: "lark", target: "owner" },
+    });
+    expect(labels).toEqual(["wechat", "lark"]);
+    const tasks = fake.lines.map((line) => JSON.parse(line).params.task as string);
+    expect(tasks[0]).toBe(
+      `${buildDelegationBrief({ origin: "im", channelLabel: "微信" })}\n\nFix the login page`,
+    );
+    // Unknown labels fall back to the channel id.
+    expect(tasks[1]).toContain("for the owner from lark.");
+  });
+
+  test("a manager continuation re-drive does not repeat the brief", async () => {
+    const fake = fakeBridge("accepted", ["work-login"]);
+    const host = new PetWorkDelegationHost({ bridge: fake.bridge, noWorkspaceCwd: "/safe" });
+    const task = "Continue the same user objective…\n\nOriginal objective:\nFix login";
+    await host.start({
+      clientMessageId: "pet-continuation:task:1:completed",
+      task,
+      originalObjective: "Fix login",
+      workspacePath: "/work",
+      targetSessionId: "work-login",
+      completionTarget: { kind: "im-gateway", channel: "wechat", target: "owner" },
+      continuationDepth: 1,
+    });
+    expect(JSON.parse(fake.lines[0]!).params.task).toBe(task);
+  });
+
+  test("a long objective stays whole: the brief shrinks, then is left out", async () => {
+    const fake = fakeBridge();
+    const host = new PetWorkDelegationHost({ bridge: fake.bridge, noWorkspaceCwd: "/safe" });
+    const nearlyFull = "x".repeat(MAX_DELEGATED_TASK_LENGTH - 300);
+    const full = "y".repeat(MAX_DELEGATED_TASK_LENGTH);
+    await host.start({ clientMessageId: "long:1", task: nearlyFull, workspacePath: null });
+    await host.start({ clientMessageId: "long:2", task: full, workspacePath: null });
+    const [compact, omitted] = fake.lines.map((line) => JSON.parse(line).params.task as string);
+    expect(compact!.length).toBeLessThanOrEqual(MAX_DELEGATED_TASK_LENGTH);
+    expect(compact).toStartWith("[Delegated by Mimi]\n");
+    expect(compact).not.toContain("RequestMimiDelivery");
+    expect(compact).toEndWith(`[/Delegated by Mimi]\n\n${nearlyFull}`);
+    expect(omitted).toBe(full);
   });
 
   test("does not forget a previously known reusable Session when its run is rejected", async () => {

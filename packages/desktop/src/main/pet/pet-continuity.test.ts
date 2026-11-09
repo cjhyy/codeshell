@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PetLongTask } from "@cjhyy/code-shell-pet";
 import { sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
+import { buildDelegationBrief } from "./pet-delegation-brief.js";
 import { PetDispatchService, type PetAutoDelegation } from "./pet-dispatch-service.js";
 
 const roots: string[] = [];
@@ -297,4 +298,58 @@ test("stale candidate title includes recent user objective and result, excluding
   expect(candidates[0]!.description).toContain("Rows 1–29 checked");
   expect(candidates[0]!.description).not.toContain("SYSTEM REPLACEMENT");
   expect(candidates[0]!.description).toContain("untrusted transcript excerpts");
+});
+
+test("a delegated candidate's request excerpt is the owner's objective, not Mimi's brief", async () => {
+  const root = await mkdtemp(join(tmpdir(), "pet-recent-work-"));
+  roots.push(root);
+  const dir = join(root, "work-delegated");
+  await mkdir(dir);
+  const brief = buildDelegationBrief({ origin: "im", channelLabel: "微信" });
+  await writeFile(
+    join(dir, "transcript.jsonl"),
+    [
+      { role: "user", content: `${brief}\n\nRename the billing module and keep its exports` },
+      { role: "assistant", content: "Renamed; exports unchanged" },
+    ]
+      .map((data) => JSON.stringify({ type: "message", data }))
+      .join("\n"),
+  );
+  let candidates: Array<{ name: string; description: string }> = [];
+  const service = new PetDispatchService({
+    metadata: { ensure: async () => ({ petSessionId: "mimi" }) },
+    aggregator: {
+      getSnapshot: () => ({
+        version: 1,
+        generation: 1,
+        observedAt: 1,
+        workerState: "active",
+        sessions: [],
+        pending: [],
+      }),
+      resolveNavigation: async () => ({ status: "not-found" }),
+    },
+    hostCwd: "/safe/pet",
+    sessionsRootDir: root,
+    listWorkspaces: async () => [{ path: "/work/original", name: "Original" }],
+    listReusableSessions: async () => [
+      {
+        sessionId: "work-delegated",
+        workspacePath: "/work/original",
+        title: "Billing rename",
+        updatedAt: Date.now(),
+      },
+    ],
+    worker: {
+      requestWorker: async (_method, params) => {
+        candidates = (params.profileParams as { reusableSessions: typeof candidates })
+          .reusableSessions;
+        return { ok: true, result: { text: "Read current context" } };
+      },
+    },
+  });
+  await service.dispatch({ type: "chat", message: "Is billing done?", clientMessageId: "one" });
+  expect(candidates[0]!.description).toContain("Rename the billing module");
+  expect(candidates[0]!.description).not.toContain("Delegated by Mimi");
+  expect(candidates[0]!.description).not.toContain("AskUserQuestionAsync");
 });

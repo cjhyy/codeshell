@@ -7,6 +7,7 @@
  */
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { stripDelegationBrief } from "../delegation-brief.js";
 import { listWorkSessionsOnDisk } from "./catalog.js";
 import { textOfContent, type DiskTranscriptEvent } from "./jsonl.js";
 
@@ -70,7 +71,9 @@ function findSnippetsInSession(
   for (const event of events) {
     if (snippets.length >= maxSnippets) break;
     if (event.type !== "message") continue;
-    const text = textOfContent(event.data?.content);
+    const content = textOfContent(event.data?.content);
+    // Mimi's delegation brief is host framing, not something to match.
+    const text = event.data?.role === "user" ? stripDelegationBrief(content) : content;
     if (!text) continue;
     const lowerText = text.toLowerCase();
     const index = lowerText.indexOf(query);

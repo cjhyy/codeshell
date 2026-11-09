@@ -1756,6 +1756,8 @@ async function createWindow(): Promise<BrowserWindow> {
         const entry = await getSessionCwdIndex().refresh(sessionId);
         return entry?.status === "confirmed" ? (entry.workspaceRoot ?? entry.cwd) : undefined;
       },
+      channelLabel: (channel) =>
+        imGatewayService.ownerChannels().find((entry) => entry.id === channel)?.label,
     });
     const petWorkMemory = new PetWorkMemoryStore(
       resolve(app.getPath("userData"), "pet", "work-memory.json"),
@@ -1878,6 +1880,7 @@ async function createWindow(): Promise<BrowserWindow> {
       projection: aggregator,
       worker: bridge,
       launcher: petWorkDelegationHost,
+      onDelegationStarted: (task) => notices.armDelegationRule(task),
       onTaskClosed: async (task) => {
         let message: string | undefined;
         let continued = false;

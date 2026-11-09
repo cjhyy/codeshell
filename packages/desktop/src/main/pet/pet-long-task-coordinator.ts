@@ -49,6 +49,11 @@ interface PetLongTaskCoordinatorOptions {
   launcher: { start(delegation: PetAutoDelegation): Promise<PetWorkDelegationLaunch> };
   now?: () => number;
   onTaskClosed?: (task: PetLongTask) => Promise<void>;
+  /**
+   * A delegation's worker run was accepted (new launches and re-drives, not
+   * idempotent replays). Failures are reported and never fail the launch.
+   */
+  onDelegationStarted?: (task: PetLongTask) => Promise<void>;
   onTaskWorkMemory?: (task: PetLongTask) => Promise<void>;
   onBackgroundError?: (operation: string, error: unknown) => void;
 }
@@ -382,6 +387,12 @@ export class PetLongTaskCoordinator {
         at: this.now(),
         message: "The worker accepted the long-running task",
       });
+      try {
+        await this.options.onDelegationStarted?.(running);
+      } catch (error) {
+        // The worker owns the run now; this must not turn into a failed launch.
+        this.options.onBackgroundError?.("delegationStarted", error);
+      }
       return { ...launch, taskId: running.id };
     } catch (error) {
       const failed = await this.options.store.transition(task.id, {

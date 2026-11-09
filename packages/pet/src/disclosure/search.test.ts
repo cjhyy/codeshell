@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { buildDelegationBrief } from "../delegation-brief.js";
 import { searchSessionTranscripts } from "./search.js";
 
 interface MessageEvent {
@@ -205,5 +206,17 @@ describe("searchSessionTranscripts", () => {
     const result = await searchSessionTranscripts(root, "target", {});
 
     expect(result.matches[0]?.snippets[0]?.text).toContain(" TARGET ");
+  });
+  test("Mimi's delegation brief is not searchable; the owner's objective is", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-"));
+    const brief = buildDelegationBrief({ origin: "desktop" });
+    writeSession(root, "session-a", { kind: "work", cwd: "/a", title: "Session A" }, [
+      { role: "user", content: `${brief}\n\nRename the billing module` },
+    ]);
+
+    expect((await searchSessionTranscripts(root, "AskUserQuestionAsync", {})).matches).toEqual([]);
+    const hit = await searchSessionTranscripts(root, "billing", {});
+    expect(hit.matches[0]?.snippets[0]?.text).toContain("Rename the billing module");
+    expect(hit.matches[0]?.snippets[0]?.text).not.toContain("Delegated by Mimi");
   });
 });

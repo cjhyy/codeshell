@@ -6,6 +6,7 @@ import {
 } from "@cjhyy/code-shell-server/mobile-remote";
 import { markAttachmentsSent } from "@cjhyy/code-shell-server/storage";
 import { preparePetDelegationAttachments } from "./pet-delegation-attachments.js";
+import { delegatedTaskWithBrief } from "./pet-delegation-brief.js";
 import type { PetAutoDelegation } from "./pet-dispatch-service.js";
 
 export interface PetWorkDelegationLaunch {
@@ -56,6 +57,8 @@ export class PetWorkDelegationHost {
       noWorkspaceCwd: string;
       /** Persisted effective workspace of an existing Session, supplied by the Host. */
       resolveSessionCwd?: (sessionId: string) => Promise<string | undefined>;
+      /** Display name of an IM channel id for the delegation brief (微信, 飞书, …). */
+      channelLabel?: (channel: string) => string | undefined;
     },
   ) {}
 
@@ -106,7 +109,9 @@ export class PetWorkDelegationHost {
     let prepared: Awaited<ReturnType<typeof preparePetDelegationAttachments>>;
     try {
       prepared = await preparePetDelegationAttachments({
-        task: delegation.task,
+        // The first message of a delegation tells the Session who started it;
+        // the owner's objective follows unchanged (titles use it alone).
+        task: delegatedTaskWithBrief(delegation, this.options.channelLabel),
         cwd,
         sessionId,
         inputAttachments: delegation.inputAttachments,

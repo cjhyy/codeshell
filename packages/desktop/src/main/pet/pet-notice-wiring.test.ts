@@ -701,6 +701,111 @@ describe("long-task closure", () => {
   });
 });
 
+describe("delegation rules", () => {
+  const running = (overrides: Partial<PetLongTask> = {}) =>
+    longTask({ status: "running", completedAt: undefined, verificationMode: "turn", ...overrides });
+
+  test("an IM delegation arms an always-on rule back to its conversation", async () => {
+    current = harness();
+    const route = { kind: "im-gateway" as const, channel: "wechat", target: "chat-9" };
+    const task = running({ completionTarget: route, verificationMode: "goal" });
+    current.tasks.push(task);
+    await current.wiring.armDelegationRule(task);
+    const rules = current.wiring.ruleStore.activeForSession(SID);
+    expect(rules).toHaveLength(1);
+    expect(rules[0]).toMatchObject({
+      origin: "delegation",
+      createdBy: "delegation",
+      when: {
+        kind: "session",
+        sessionId: SID,
+        events: ["done", "failed", "blocked"],
+        scope: "goal",
+        armedAt: NOW,
+      },
+      channel: "wechat",
+      attention: "always",
+      target: { kind: "route", route },
+    });
+    // Blocked prompts for this Session now have somewhere to go.
+    expect(current.wiring.decisions.rulesFor(SID)).toBeDefined();
+  });
+
+  test("a desktop delegation targets the owner on the delegatedFromDesktop channel", async () => {
+    current = harness();
+    await current.wiring.armDelegationRule(running());
+    expect(current.wiring.ruleStore.activeForSession(SID)[0]).toMatchObject({
+      when: { scope: "turn", events: ["done", "failed", "blocked"] },
+      channel: "auto",
+      target: { kind: "owner" },
+    });
+    current.wiring.dispose();
+    await rm(dir, { recursive: true, force: true });
+    dir = await mkdtemp(join(tmpdir(), "pet-notice-wiring-"));
+    current = harness({
+      readSettings: () => ({ pet: { notifications: { delegatedFromDesktop: "desktop" } } }),
+    });
+    await current.wiring.armDelegationRule(running());
+    expect(current.wiring.ruleStore.activeForSession(SID)[0]).toMatchObject({
+      channel: "desktop",
+      target: { kind: "owner" },
+    });
+  });
+
+  test("re-arming a continuation updates the one rule; an owner rule is left alone", async () => {
+    current = harness();
+    await current.wiring.armDelegationRule(running());
+    await current.wiring.armDelegationRule(running({ id: "task-2", verificationMode: "goal" }));
+    const rules = current.wiring.ruleStore.activeForSession(SID);
+    expect(rules).toHaveLength(1);
+    expect(rules[0]).toMatchObject({ version: 2, when: { scope: "goal" } });
+
+    current.wiring.dispose();
+    await rm(dir, { recursive: true, force: true });
+    dir = await mkdtemp(join(tmpdir(), "pet-notice-wiring-"));
+    current = harness();
+    await current.handler(SID, upsertArgs({ channel: "lark", events: ["done"] }));
+    await current.wiring.armDelegationRule(running());
+    expect(current.wiring.ruleStore.activeForSession(SID)).toEqual([
+      expect.objectContaining({ origin: "user", channel: "lark", version: 1 }),
+    ]);
+  });
+
+  test("a rule that cannot be stored is logged and never thrown", async () => {
+    const logged: string[] = [];
+    current = harness({ log: (event) => logged.push(event) });
+    current.wiring.ruleStore.upsertSessionRule = async () => {
+      throw new Error("disk full");
+    };
+    await expect(current.wiring.armDelegationRule(running())).resolves.toBeUndefined();
+    expect(logged).toContain("pet.notice.delegation_rule_failed");
+  });
+
+  test("the long task's closure spends the delegation rule with its one notice", async () => {
+    current = harness();
+    await current.wiring.armDelegationRule(running());
+    const [rule] = current.wiring.ruleStore.activeForSession(SID);
+    await current.wiring.notifyTaskClosed(longTask(), { text: "登录修好了" });
+    expect(current.submitted).toHaveLength(1);
+    expect(current.submitted[0]!.ruleIds).toEqual([rule!.id]);
+    expect(current.wiring.ruleStore.activeForSession(SID)).toEqual([]);
+    expect(current.wiring.ruleStore.get(rule!.id)?.state).toBe("spent");
+  });
+
+  test("a cancelled delegation spends only its automatic rule, silently", async () => {
+    current = harness();
+    await current.wiring.armDelegationRule(
+      running({ completionTarget: { kind: "im-gateway", channel: "wechat", target: "chat-9" } }),
+    );
+    await current.handler(SID, upsertArgs());
+    await current.wiring.notifyTaskClosed(longTask({ status: "cancelled" }));
+    expect(current.submitted).toEqual([]);
+    expect(current.wiring.ruleStore.activeForSession(SID)).toEqual([
+      expect.objectContaining({ origin: "user" }),
+    ]);
+  });
+});
+
 describe("pending-notice replay", () => {
   test("a queued notice is taken when the inbound turn starts and settled then", async () => {
     current = harness();

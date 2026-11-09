@@ -4,6 +4,7 @@
  * session's current "content". Callers cache by transcript mtime.
  */
 import { join } from "node:path";
+import { stripDelegationBrief } from "../delegation-brief.js";
 import { readTranscriptTail, textOfContent } from "./jsonl.js";
 
 export interface LatestAssistantText {
@@ -36,7 +37,10 @@ export async function readLatestWorkContext(
       (data.role === "user" && data.authority !== undefined && data.authority !== "user")
     )
       continue;
-    const text = textOfContent(data.content).trim();
+    const raw = textOfContent(data.content).trim();
+    // A delegated Session's first request starts with Mimi's brief; the
+    // excerpt is the owner's objective.
+    const text = data.role === "user" ? stripDelegationBrief(raw).trim() : raw;
     if (!text) continue;
     context[key] = {
       text: truncateSafely(text, options.maxChars),

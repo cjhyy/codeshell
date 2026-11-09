@@ -179,6 +179,11 @@ export interface PetNoticeWiring {
   observeSessionEvent(sessionId: string, event: unknown): void;
   /** A long task reached a terminal state and was not continued: one notice, then spend rules. */
   notifyTaskClosed(task: PetLongTask, closure?: PetTaskClosureNotice): Promise<void>;
+  /**
+   * Mimi started (or re-drove) a delegated Session: arm its automatic notice
+   * rule so blocked prompts and the bell follow it. Never throws.
+   */
+  armDelegationRule(task: PetLongTask): Promise<void>;
   /** Queued notices for an owner's IM message; undefined without an IM origin. */
   inboundReplay(origin: PetInboundOrigin | undefined): PetInboundReplay | undefined;
   /** Pending decisions: PetImDecisions asks here where a rule-watched decision goes. */
@@ -872,10 +877,47 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     }
   }
 
+  async function armDelegationRule(task: PetLongTask): Promise<void> {
+    try {
+      await ready;
+      // A rule the owner set on this Session is their choice; never rewrite it.
+      if (ruleStore.activeForSession(task.sessionId).some((rule) => rule.origin === "user")) {
+        log("pet.notice.delegation_rule_skipped", { sessionId: task.sessionId, reason: "user" });
+        return;
+      }
+      const completionTarget = task.completionTarget;
+      await ruleStore.upsertSessionRule({
+        sessionId: task.sessionId,
+        createdBy: "delegation",
+        events: ["done", "failed", "blocked"],
+        scope: task.verificationMode === "goal" ? "goal" : "turn",
+        channel: completionTarget ? completionTarget.channel : settings().delegatedFromDesktop,
+        attention: "always",
+        target: completionTarget ? { kind: "route", route: completionTarget } : { kind: "owner" },
+        origin: "delegation",
+        armedAt: now(),
+      });
+    } catch (error) {
+      log("pet.notice.delegation_rule_failed", {
+        sessionId: task.sessionId,
+        error: errorText(error),
+      });
+    }
+  }
+
   async function notifyTaskClosed(
     task: PetLongTask,
     closure: PetTaskClosureNotice = {},
   ): Promise<void> {
+    if (task.status === "cancelled") {
+      // No notice for a cancelled delegation, but its automatic rule must not
+      // outlive it and fire on the owner's own later turns in that Session.
+      await ready;
+      await spend(
+        ruleStore.activeForSession(task.sessionId).filter((rule) => rule.origin === "delegation"),
+      );
+      return;
+    }
     if (task.status !== "completed" && task.status !== "failed") return;
     await ready;
     const event = task.status === "completed" ? "done" : "failed";
@@ -995,6 +1037,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       void ready.then(() => (disposed ? undefined : watcher.observe(sessionId, event)));
     },
     notifyTaskClosed,
+    armDelegationRule,
     inboundReplay,
     decisions,
     recordBoundReply,
