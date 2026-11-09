@@ -148,6 +148,14 @@ export type GoalLifecycleV1 =
 
 export type GoalLifecyclePhase = GoalLifecycleV1["phase"];
 
+/** A background result is not a user's answer or an explicit resume. */
+export function goalBlocksAutomaticContinuation(lifecycle: GoalLifecycleV1 | undefined): boolean {
+  return (
+    lifecycle?.phase === "paused" ||
+    (lifecycle?.phase === "waiting" && lifecycle.waitKind === "user")
+  );
+}
+
 function positiveSafeNumber(value: unknown): value is number {
   return (
     typeof value === "number" &&

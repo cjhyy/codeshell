@@ -232,6 +232,13 @@ export class ExternalRuntimeGoals {
     if (!question || question.length > MAX_QUESTION_CHARS) {
       return { ok: false, message: "wait_for_user needs the question you are asking the user." };
     }
+    const state = this.manager.readSessionState(sessionId);
+    if (!state || !this.manager.markGoalWaiting(state, run.goal, "user")) {
+      return {
+        ok: false,
+        message: "Could not persist the goal's user wait; retry before ending the turn.",
+      };
+    }
     run.awaitingUser = true;
     run.clockStoppedAtMs ??= this.now();
     this.pendingQuestions.set(sessionId, question);
@@ -252,6 +259,13 @@ export class ExternalRuntimeGoals {
 
   pendingQuestion(sessionId: string): string | undefined {
     return this.pendingQuestions.get(sessionId);
+  }
+
+  /** Automatic work must respect a user wait after the in-memory question is gone. */
+  isWaitingForUser(sessionId: string): boolean {
+    if (this.pendingQuestions.has(sessionId)) return true;
+    const lifecycle = this.manager.readSessionState(sessionId)?.goalLifecycle;
+    return lifecycle?.phase === "waiting" && lifecycle.waitKind === "user";
   }
 
   /** A real user message (not an automatic continuation) answers the open question. */

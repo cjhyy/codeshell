@@ -719,8 +719,7 @@ export class ExternalRuntimeService {
       isEligible: () =>
         this.authorityStillCurrent(entry.cwd, entry.authority) &&
         (!automatic ||
-          (!this.goals.read(sessionId)?.paused &&
-            this.goals.pendingQuestion(sessionId) === undefined)),
+          (!this.goals.read(sessionId)?.paused && !this.goals.isWaitingForUser(sessionId))),
     });
   }
 

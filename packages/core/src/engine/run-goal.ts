@@ -10,6 +10,7 @@ import {
   assertGoalContinuation,
   resolveGoalSetAt,
   goalConfigFromLifecycle,
+  goalBlocksAutomaticContinuation,
   isGoalLifecycleCurrent,
   isSameGoalVersion,
   type GoalConfig,
@@ -56,6 +57,12 @@ export function resolveRunGoal(args: {
   const goalDisabled = options?.disableGoal === true;
   const explicitGoal = goalDisabled ? undefined : normalizeGoal(options?.goal);
   const storedLifecycle = session.state.goalLifecycle;
+  // Recheck inside the run as well as before the mailbox claim: workspace or
+  // provider setup can yield while the user parks/pauses this goal. Synthetic
+  // input must not re-arm it; a real answer follows the normal path below.
+  if (!goalDisabled && options?.injected && goalBlocksAutomaticContinuation(storedLifecycle)) {
+    throw new Error("Goal is paused or waiting for the user's reply; automatic continuation held");
+  }
   const storedGoal =
     !goalDisabled &&
     isSubAgent !== true &&

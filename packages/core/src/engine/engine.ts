@@ -57,6 +57,7 @@ import {
   resolveMaxTurns,
   resolveMaxStopBlocks,
   goalConfigFromLifecycle,
+  goalBlocksAutomaticContinuation,
   isGoalLifecycleCurrent,
   isSameGoalVersion,
   type GoalConfig,
@@ -4098,6 +4099,13 @@ export class Engine {
    */
   getGoal(sessionId: string): GoalConfig | undefined {
     return this.sessionManager.readActiveGoal(sessionId);
+  }
+
+  /** Re-read durable controls before a background completion wakes this session. */
+  isGoalContinuationBlocked(sessionId: string): boolean {
+    return goalBlocksAutomaticContinuation(
+      this.sessionManager.readSessionState(sessionId)?.goalLifecycle,
+    );
   }
 
   /** True when the current run was built with Goal prompt/tools and can resume in place. */
