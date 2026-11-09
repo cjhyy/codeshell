@@ -45,8 +45,11 @@ export interface PetNoticeControlsDeps {
     | "isEligibleSession"
   >;
   ownerChannels(): readonly PetNoticeChannel[];
-  /** The Session's Goal is active and not paused: the bell then waits for the Goal. */
-  hasActiveGoal(sessionId: string): boolean;
+  /**
+   * The Session's persisted Goal (SessionManager). An active, unpaused Goal
+   * makes the bell wait for the Goal instead of the next turn.
+   */
+  goals: { readActiveGoal(sessionId: string): { paused?: boolean } | undefined };
   now?: () => number;
 }
 
@@ -54,15 +57,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-/** The Session's rules the bell shows and switches off: the owner's and Mimi's delegation. */
-function bellRules(rules: readonly NoticeRule[], sessionId: string): NoticeRule[] {
+/** The Session's own rules with this origin (never the all-sessions system rule). */
+function sessionRules(
+  rules: readonly NoticeRule[],
+  sessionId: string,
+  origin: "user" | "delegation",
+): NoticeRule[] {
   return rules.filter(
     (rule) =>
-      rule.when.kind === "session" &&
-      rule.when.sessionId === sessionId &&
-      (rule.origin === "user" || rule.origin === "delegation"),
+      rule.when.kind === "session" && rule.when.sessionId === sessionId && rule.origin === origin,
   );
 }
+
+const UNAVAILABLE: PetSessionBellState = { available: false, on: false, delegated: false };
 
 export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeControls {
   const { notices } = deps;
@@ -75,28 +82,31 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
       .slice(0, MAX_CHANNELS)
       .map(({ id, label, ready }) => ({ id, label, ready }));
 
-  const requireWorkSession = (sessionId: string): void => {
-    if (!notices.isEligibleSession(sessionId)) throw new Error("unknown work Session");
-  };
-
   const goalActive = (sessionId: string): boolean => {
     try {
-      return deps.hasActiveGoal(sessionId);
+      const goal = deps.goals.readActiveGoal(sessionId);
+      return goal !== undefined && goal.paused !== true;
     } catch {
       return false;
     }
   };
 
+  const newest = (rules: readonly NoticeRule[]): NoticeRule | undefined =>
+    [...rules].sort((a, b) => b.updatedAt - a.updatedAt)[0];
+
+  /** The owner's own rule speaks for the bell; Mimi's delegation rule alone is read-only. */
   const describe = (sessionId: string): PetSessionBellState => {
-    const rules = bellRules(store.activeForSession(sessionId), sessionId);
-    if (rules.length === 0) return { on: false };
-    // The owner's own rule speaks for the bell; otherwise the newest delegation rule.
-    const rule =
-      rules.find((candidate) => candidate.origin === "user") ??
-      [...rules].sort((a, b) => b.updatedAt - a.updatedAt)[0]!;
+    const active = store.activeForSession(sessionId);
+    const delegation = newest(sessionRules(active, sessionId, "delegation"));
+    const user = newest(sessionRules(active, sessionId, "user"));
+    const rule = user ?? delegation;
+    if (!rule) return { available: true, on: false, delegated: false };
     const im = notices.predictIm(rule.channel, rule.target);
     return {
+      available: true,
       on: true,
+      origin: user ? "user" : "delegation",
+      delegated: delegation !== undefined,
       ruleId: rule.id,
       channel: rule.channel,
       ...(im ? { imLabel: im.label, ready: im.ready } : {}),
@@ -131,12 +141,11 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
     },
     async sessionBell(sessionId) {
       await notices.ready;
-      requireWorkSession(sessionId);
-      return describe(sessionId);
+      return notices.isEligibleSession(sessionId) ? describe(sessionId) : UNAVAILABLE;
     },
     async setSessionBell(sessionId, on) {
       await notices.ready;
-      requireWorkSession(sessionId);
+      if (!notices.isEligibleSession(sessionId)) return UNAVAILABLE;
       if (on) {
         const target = await notices.resolveRuleTarget(sessionId);
         await store.upsertSessionRule({
@@ -151,7 +160,8 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
           armedAt: now(),
         });
       } else {
-        for (const rule of bellRules(store.activeForSession(sessionId), sessionId)) {
+        // Only the owner's own rules: Mimi's delegation rule follows its task, not the bell.
+        for (const rule of sessionRules(store.activeForSession(sessionId), sessionId, "user")) {
           await cancel(rule);
         }
       }

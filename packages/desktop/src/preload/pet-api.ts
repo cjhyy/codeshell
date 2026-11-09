@@ -407,7 +407,7 @@ export interface PetApi {
   archiveSession?(sessionId: string): Promise<{ ok: true }>;
   /** Bound IM channels, the "every Session" rule and `pet.notifications` (defaults applied). */
   getNoticesState?(): Promise<PetNoticesState>;
-  /** Rejects for Mimi's own, external and unknown Sessions (the bell is hidden there). */
+  /** `available: false` for Mimi's own, external and unknown Sessions (the bell is hidden there). */
   getSessionBell?(sessionId: string): Promise<PetSessionBellState>;
   setSessionBell?(sessionId: string, on: boolean): Promise<PetSessionBellState>;
   setSystemNoticeRule?(patch: PetNoticeSystemRulePatch): Promise<PetNoticeSystemRule>;

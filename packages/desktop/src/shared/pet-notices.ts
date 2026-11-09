@@ -42,9 +42,18 @@ export interface PetNoticesState {
   settings: PetNotificationSettingsView;
 }
 
-/** The bell of one work Session: whether an owner or delegation rule watches it. */
+/**
+ * The bell of one work Session. `available: false` means main does not watch
+ * this Session (Mimi's own, an external runtime, unknown): the bell is hidden.
+ * `origin` says whose rule the bell shows: the owner's own ("user") can be
+ * switched off; Mimi's delegation rule alone ("delegation") is read-only.
+ */
 export interface PetSessionBellState {
+  available: boolean;
   on: boolean;
+  origin?: "user" | "delegation";
+  /** A delegation rule from Mimi also watches this Session (it stays after the bell is off). */
+  delegated: boolean;
   ruleId?: string;
   /** The rule's channel ("auto", "desktop" or an IM id). */
   channel?: string;

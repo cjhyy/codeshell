@@ -161,7 +161,8 @@ export const SettingsSchema = z
           .object({
             /**
              * Local-time window when only decisions are pushed. `enabled: false`
-             * (or a hand-written null) turns it off while keeping the times.
+             * turns it off while keeping the times. A null (which the settings
+             * writer treats as "delete this key") resets it to the host default.
              */
             quietHours: z
               .object({
@@ -169,7 +170,6 @@ export const SettingsSchema = z
                 end: z.string().regex(PET_HH_MM),
                 enabled: z.boolean().optional(),
               })
-              .nullable()
               .optional()
               .catch(undefined),
             /** Ordinary IM pushes per rolling hour. */

@@ -15,9 +15,15 @@ function bellApi(): BellApi | undefined {
   }
 }
 
+/** Only Mimi's delegation rule watches the Session: shown, but not the bell's to switch off. */
+export function isDelegatedOnly(state: PetSessionBellState): boolean {
+  return state.on && state.origin === "delegation";
+}
+
 /** The bell's tooltip: what will happen, and whether that IM can deliver yet. */
 export function sessionBellLabel(state: PetSessionBellState, t: TFunction): string {
   if (!state.on) return t("pet.notices.bellOff");
+  if (isDelegatedOnly(state)) return t("pet.notices.bellDelegated");
   const target = state.imLabel ?? t("pet.notices.bellDesktop");
   const label = t("pet.notices.bellOn", { target });
   return state.imLabel && state.ready && state.ready !== "ready"
@@ -41,17 +47,25 @@ export function SessionNoticeBellButton({
     ? `${sessionBellLabel(state, t)} · ${t("pet.notices.bellFailed", { error })}`
     : sessionBellLabel(state, t);
   const notReady = state.on && !!state.imLabel && !!state.ready && state.ready !== "ready";
+  const readOnly = isDelegatedOnly(state);
   return (
     <IconButton
       label={label}
       active={state.on}
       disabled={pending}
-      data-session-bell={state.on ? "on" : "off"}
+      // Read-only stays hoverable (a disabled button shows no tooltip).
+      aria-disabled={readOnly || undefined}
+      data-session-bell={readOnly ? "delegated" : state.on ? "on" : "off"}
       data-session-bell-ready={notReady ? "not-ready" : undefined}
-      onClick={onToggle}
+      onClick={readOnly ? undefined : onToggle}
     >
       {state.on ? (
-        <BellRing size={14} className={notReady ? "text-status-warn" : "text-primary"} />
+        <BellRing
+          size={14}
+          className={
+            readOnly ? "text-muted-foreground" : notReady ? "text-status-warn" : "text-primary"
+          }
+        />
       ) : (
         <Bell size={14} />
       )}
@@ -59,10 +73,18 @@ export function SessionNoticeBellButton({
   );
 }
 
+interface SessionBell {
+  sessionId: string;
+  bell: PetSessionBellState;
+}
+
 /**
- * "Tell me when this Session is done" for the open work Session. Main refuses
- * Sessions it cannot watch (Mimi's own, external runtimes, unknown ids), and
- * the bell then stays hidden. `refreshKey` re-reads it (e.g. when a run ends).
+ * "Tell me when this Session is done" for the open work Session. Main answers
+ * `available: false` for Sessions it cannot watch (Mimi's own, external
+ * runtimes, unknown ids), and the bell then stays hidden. `refreshKey`
+ * re-reads it (e.g. when a run ends). Every reply is kept with the Session it
+ * was for, so a late answer about the previous Session is never shown or
+ * toggled from.
  */
 export function SessionNoticeBell({
   sessionId,
@@ -71,24 +93,22 @@ export function SessionNoticeBell({
   sessionId: string | null | undefined;
   refreshKey?: unknown;
 }) {
-  const [state, setState] = useState<PetSessionBellState | null>(null);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<SessionBell | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
+  const [error, setError] = useState<{ sessionId: string; message: string } | null>(null);
   const request = useRef(0);
+  const currentSession = useRef(sessionId);
+  currentSession.current = sessionId;
 
   useEffect(() => {
     const api = bellApi();
-    setError(null);
-    if (!sessionId || !api?.getSessionBell) {
-      setState(null);
-      return;
-    }
+    if (!sessionId || !api?.getSessionBell) return;
     let alive = true;
     const load = (): void => {
       const id = ++request.current;
       api.getSessionBell!(sessionId).then(
-        (next) => {
-          if (alive && id === request.current) setState(next);
+        (bell) => {
+          if (alive && id === request.current) setState({ sessionId, bell });
         },
         () => {
           if (alive && id === request.current) setState(null);
@@ -99,32 +119,47 @@ export function SessionNoticeBell({
     const off = api.onNoticesChanged?.(load);
     return () => {
       alive = false;
+      // Whatever is still in flight belongs to this Session; drop it.
+      request.current += 1;
       off?.();
     };
   }, [sessionId, refreshKey]);
 
-  if (!sessionId || !state) return null;
+  const bell = state && state.sessionId === sessionId ? state.bell : null;
+  if (!sessionId || !bell?.available) return null;
+  const busy = pending === sessionId;
   const toggle = (): void => {
     const api = bellApi();
-    if (!api?.setSessionBell || pending) return;
+    if (!api?.setSessionBell || busy || isDelegatedOnly(bell)) return;
+    const target = sessionId;
     const id = ++request.current;
-    setPending(true);
+    setPending(target);
     setError(null);
-    api.setSessionBell(sessionId, !state.on).then(
+    api.setSessionBell(target, !bell.on).then(
       (next) => {
-        if (id === request.current) setState(next);
-        setPending(false);
+        if (id === request.current && currentSession.current === target)
+          setState({ sessionId: target, bell: next });
+        setPending((current) => (current === target ? null : current));
       },
       (cause: unknown) => {
-        setError(cause instanceof Error ? cause.message : String(cause));
-        setPending(false);
+        if (currentSession.current === target)
+          setError({
+            sessionId: target,
+            message: cause instanceof Error ? cause.message : String(cause),
+          });
+        setPending((current) => (current === target ? null : current));
       },
     );
   };
   return (
     // The title bar is a window drag region; the bell must opt back out.
     <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-      <SessionNoticeBellButton state={state} pending={pending} error={error} onToggle={toggle} />
+      <SessionNoticeBellButton
+        state={bell}
+        pending={busy}
+        error={error?.sessionId === sessionId ? error.message : null}
+        onToggle={toggle}
+      />
     </span>
   );
 }

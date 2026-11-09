@@ -263,9 +263,26 @@ function boundRoute(): ConversationSessionRoute {
   } as ConversationSessionRoute;
 }
 
-async function settle(): Promise<void> {
-  for (let index = 0; index < 20; index += 1)
-    await new Promise((resolve) => setTimeout(resolve, 1));
+const SETTLE_DEADLINE_MS = 2_000;
+
+function pause(ms = 1): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Let queued async work (rule writes, ledger writes, sends) run. With `until`,
+ * keep waiting until the expected outcome is visible or the deadline passes,
+ * so a loaded machine cannot fail a test by being slow; `poke` re-drives the
+ * work on each round. Without it, a short drain for "nothing happens" checks.
+ */
+async function settle(until?: () => boolean, poke?: () => Promise<void>): Promise<void> {
+  for (let index = 0; index < 20; index += 1) await pause();
+  if (!until) return;
+  const deadline = Date.now() + SETTLE_DEADLINE_MS;
+  while (!until() && Date.now() < deadline) {
+    await poke?.();
+    await pause(2);
+  }
 }
 
 let current: Harness | undefined;
@@ -297,7 +314,7 @@ describe("parsePetNotificationSettings", () => {
     const parsed = parsePetNotificationSettings({
       pet: {
         notifications: {
-          quietHours: null,
+          quietHours: { start: "21:00", end: "07:00", enabled: false },
           maxPerHour: 3,
           maxP0PerHour: -1,
           mergeWindowSec: "10",
@@ -307,6 +324,7 @@ describe("parsePetNotificationSettings", () => {
       },
     });
     expect(parsed).toEqual({
+      // Switched off with enabled:false (a null is the settings writer's "delete").
       quietHours: null,
       maxPerHour: 3,
       maxP0PerHour: 12,
@@ -352,6 +370,10 @@ describe("parsePetNotificationSettings", () => {
       start: "23:00",
       end: "08:30",
     });
+    // A null is "reset to default", never "off".
+    expect(
+      parsePetNotificationSettings({ pet: { notifications: { quietHours: null } } }).quietHours,
+    ).toEqual({ start: "23:00", end: "08:30" });
   });
 });
 
@@ -466,7 +488,7 @@ describe("rule watcher wiring", () => {
       { type: "turn_complete", reason: "completed", text: "测试都过了", runId: "run-1" },
     ];
     for (const event of events) current.wiring.observeSessionEvent(SID, event);
-    await settle();
+    await settle(() => current!.submitted.length > 0);
     expect(current.submitted).toHaveLength(1);
     expect(current.submitted[0]).toMatchObject({
       kind: "session.done",
@@ -519,7 +541,7 @@ describe("rule watcher wiring", () => {
     expect(current.submitted).toEqual([]);
     // A later turn in the same Session is the owner's own work again.
     for (const event of turn("run-2")) current.wiring.observeSessionEvent(SID, event);
-    await settle();
+    await settle(() => current!.submitted.length > 0);
     expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${SID}:turn:run-2`]);
   });
 
@@ -544,7 +566,7 @@ describe("rule watcher wiring", () => {
       generation: 1,
       observedAt: clock,
     });
-    await settle();
+    await settle(() => nudged.length > 0);
     expect(nudged).toEqual([SID]);
     expect(current.submitted).toEqual([]);
   });
@@ -993,10 +1015,10 @@ function decisionRelay(h: Harness) {
     });
   };
   /** Past the 15 s grace, then a few polls. */
-  const poll = async () => {
+  const poll = async (until?: () => boolean) => {
     clock += 16_000;
     for (let index = 0; index < 3; index += 1) await relay.tick();
-    await settle();
+    await settle(until, () => relay.tick());
   };
   const code = () => relay["options"].read()[0]?.code;
   return { relay, approvals, raise, poll, code };
@@ -1013,7 +1035,7 @@ describe("decision prompts through the router", () => {
     const d = decisionRelay(current);
     d.raise();
     await settle();
-    await d.poll();
+    await d.poll(() => current!.ownerSends.length > 0);
     const code = d.code()!;
     expect(code).toMatch(/^[0-9A-F]{12}$/u);
     expect(current.ownerSends).toHaveLength(1);
@@ -1040,7 +1062,7 @@ describe("decision prompts through the router", () => {
     const d = decisionRelay(current);
     d.raise();
     await settle();
-    await d.poll();
+    await d.poll(() => current!.ownerSends.length > 0);
     expect(current.ownerSends).toHaveLength(1);
     const text = current.ownerSends[0]!.text;
     expect(text).toContain("请打开桌面 Session 处理");
@@ -1067,7 +1089,7 @@ describe("decision prompts through the router", () => {
     present = false;
     clock += SETTINGS_TTL;
     await d.poll();
-    await d.poll();
+    await d.poll(() => current!.ownerSends.length > 0);
     expect(current.ownerSends).toHaveLength(1);
     expect(current.ownerSends[0]!.text).toContain(`回答 ${d.code()} 1`);
     // Answered on the desktop: the escalation record shares the request id and is settled.
@@ -1130,7 +1152,7 @@ describe("decision prompts through the router", () => {
     const d = decisionRelay(current);
     d.raise();
     await settle();
-    await d.poll();
+    await d.poll(() => current!.ownerSends.length > 0);
     expect(current.ownerSends).toHaveLength(1);
     expect(current.ownerSends[0]!.text).toContain(`回答 ${d.code()}`);
   });
@@ -1142,7 +1164,7 @@ describe("decision prompts through the router", () => {
     const d = decisionRelay(current);
     d.raise();
     await settle();
-    await d.poll();
+    await d.poll(() => current!.wiring.ledger.queued().length > 0);
     expect(current.ownerSends).toEqual([]);
     const queued = current.wiring.ledger.queued();
     expect(queued.map((record) => [record.kind, record.requestId])).toEqual([
@@ -1158,7 +1180,7 @@ describe("decision prompts through the router", () => {
       generation: 1,
       observedAt: clock,
     });
-    await settle();
+    await settle(() => current!.wiring.ledger.queued().length === 0);
     expect(current.wiring.ledger.queued()).toEqual([]);
     expect(current.wiring.ledger.get(queued[0]!.id)?.delivery).toMatchObject({
       status: "revoked",
@@ -1197,7 +1219,7 @@ describe("bound Session replies", () => {
     clock = NOW + 1_000;
     current.wiring.recordBoundReply(SID, "run-1", bound);
     for (const event of turn("run-1")) current.wiring.observeSessionEvent(SID, event);
-    await settle();
+    await settle(() => current!.desktop.length > 0);
     expect(current.submitted).toHaveLength(1);
     expect(current.submitted[0]!.boundReplyDelivered).toBe(true);
     // The session.reply (published by the bridge) is the one IM message.
@@ -1219,7 +1241,9 @@ describe("bound Session replies", () => {
       clock = NOW + 1_000;
       current.wiring.recordBoundReply(SID, "run-1", bound);
       for (const event of turn("run-1")) current.wiring.observeSessionEvent(SID, event);
-      await settle();
+      await settle(
+        () => current!.submitted.length > 0 && (suppressed || current!.ownerSends.length > 0),
+      );
       expect(current.submitted[0]!.target).toEqual({ kind: "owner" });
       expect(current.submitted[0]!.boundReplyDelivered === true).toBe(suppressed);
       expect(current.ownerSends).toHaveLength(suppressed ? 0 : 1);
@@ -1238,7 +1262,7 @@ describe("bound Session replies", () => {
       { type: "turn_complete", reason: "completed", text: "改好了", completedAt: clock },
     ])
       current.wiring.observeSessionEvent(SID, event);
-    await settle();
+    await settle(() => current!.published.length > 0);
     expect(current.submitted[0]!.boundReplyDelivered).toBeUndefined();
     expect(current.published).toHaveLength(1);
   });
@@ -1318,7 +1342,7 @@ describe("bound Session replies", () => {
     emit({ type: "session_started", runId: "run-1", clientMessageId: "cm-1" });
     emit({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } });
     emit({ type: "turn_complete", reason: "completed", text: "改好了", runId: "run-1" });
-    await settle();
+    await settle(() => h.submitted.length > 0);
     expect(replies).toHaveLength(1);
     expect(h.submitted.map((notice) => notice.boundReplyDelivered)).toEqual([true]);
     expect(h.published).toEqual([]);
@@ -1341,7 +1365,7 @@ describe("bound Session replies", () => {
       text: "目标完成",
       runId: "run-1",
     });
-    await settle();
+    await settle(() => h.submitted.length > 0);
     expect(replies).toHaveLength(1);
     expect(h.submitted.map((notice) => [notice.dedupeKey, notice.boundReplyDelivered])).toEqual([
       [`${SID}:goal:g-1`, true],
@@ -1368,7 +1392,7 @@ describe("bound Session replies", () => {
     expect(current.submitted).toEqual([]);
     current.wiring.recordBoundReply(SID, "run-1", bound);
     finish();
-    await settle();
+    await settle(() => current!.submitted.length > 0);
     expect(current.submitted.map((notice) => notice.boundReplyDelivered)).toEqual([true]);
     expect(current.published).toEqual([]);
   });
@@ -1380,7 +1404,7 @@ describe("bound Session replies", () => {
     clock = NOW + 1_000;
     current.wiring.recordBoundReply(SID, "run-0", bound);
     for (const event of turn("run-1")) current.wiring.observeSessionEvent(SID, event);
-    await settle();
+    await settle(() => current!.published.length > 0);
     expect(current.published).toHaveLength(1);
     expect(current.published[0]).toMatchObject({ type: "pet.task.completed" });
     await current.handler(SID, upsertArgs({ events: ["failed"] }));
@@ -1388,7 +1412,7 @@ describe("bound Session replies", () => {
     current.wiring.recordBoundReply(SID, "run-2", bound);
     for (const event of turn("run-2", { reason: "model_error" }))
       current.wiring.observeSessionEvent(SID, event);
-    await settle();
+    await settle(() => current!.published.length > 1);
     expect(current.submitted.at(-1)).toMatchObject({ kind: "session.failed" });
     expect(current.submitted.at(-1)!.boundReplyDelivered).toBeUndefined();
     expect(current.published.map((event) => event.type)).toEqual([

@@ -266,13 +266,17 @@ function storedNotifications(userSettings: unknown): StoredPetNotifications {
   return (parsed.success ? parsed.data : undefined) ?? {};
 }
 
-/** `settings.pet.notifications` as the form edits it: defaults applied, quiet-hour times kept. */
+/**
+ * `settings.pet.notifications` as the form edits it: defaults applied,
+ * quiet-hour times kept while `enabled: false`. Quiet hours are only ever
+ * switched off that way; an absent (or null) window is the default one.
+ */
 export function petNotificationSettingsView(userSettings: unknown): PetNotificationSettingsView {
   const stored = storedNotifications(userSettings);
   const window = stored.quietHours ?? DEFAULT_QUIET_HOURS;
   return {
     quietHours: {
-      enabled: stored.quietHours !== null && stored.quietHours?.enabled !== false,
+      enabled: stored.quietHours?.enabled !== false,
       start: window.start,
       end: window.end,
     },

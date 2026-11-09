@@ -96,7 +96,7 @@ function fixture(): Fixture {
   const controls = createPetNoticeControls({
     notices: created,
     ownerChannels: () => channels,
-    hasActiveGoal: (id) => goals.has(id),
+    goals: { readActiveGoal: (id) => (goals.has(id) ? { paused: false } : undefined) },
     now: () => NOW + 5,
   });
   return { wiring: created, controls, channels, routes, tasks, goals, settings };
@@ -115,10 +115,23 @@ afterEach(async () => {
 describe("Session bell", () => {
   test("off by default; on arms an owner rule on every event for the next turn", async () => {
     const { controls, wiring } = fixture();
-    expect(await controls.sessionBell(SID)).toEqual({ on: false });
+    expect(await controls.sessionBell(SID)).toEqual({
+      available: true,
+      on: false,
+      delegated: false,
+    });
 
     const bell = await controls.setSessionBell(SID, true);
-    expect(bell).toMatchObject({ on: true, channel: "auto", imLabel: "微信", ready: "unknown" });
+    expect(bell).toEqual({
+      available: true,
+      on: true,
+      origin: "user",
+      delegated: false,
+      ruleId: expect.any(String),
+      channel: "auto",
+      imLabel: "微信",
+      ready: "unknown",
+    });
     const [rule] = wiring.ruleStore.activeForSession(SID);
     expect(rule).toMatchObject({
       id: bell.ruleId,
@@ -161,10 +174,8 @@ describe("Session bell", () => {
     });
   });
 
-  test("off cancels every active owner and delegation rule of the Session", async () => {
-    const { controls, wiring } = fixture();
-    await controls.setSessionBell(SID, true);
-    await wiring.ruleStore.upsertSessionRule({
+  function armDelegation(wiring: PetNoticeWiring) {
+    return wiring.ruleStore.upsertSessionRule({
       sessionId: SID,
       createdBy: "delegation",
       events: ["done", "failed", "blocked"],
@@ -178,6 +189,12 @@ describe("Session bell", () => {
       origin: "delegation",
       armedAt: NOW,
     });
+  }
+
+  test("off cancels only the owner's rules; Mimi's delegation rule then shows read-only", async () => {
+    const { controls, wiring } = fixture();
+    await controls.setSessionBell(SID, true);
+    const delegation = await armDelegation(wiring);
     await wiring.ruleStore.upsertSessionRule({
       sessionId: "s-other",
       createdBy: "notify-me",
@@ -191,8 +208,25 @@ describe("Session bell", () => {
     });
     await wiring.ruleStore.setSystemRule("all-sessions", { state: "active" });
     expect(wiring.ruleStore.activeForSession(SID)).toHaveLength(3);
+    // Both: the owner's rule speaks for the bell, and the delegation is noted.
+    expect(await controls.sessionBell(SID)).toMatchObject({
+      on: true,
+      origin: "user",
+      delegated: true,
+      channel: "auto",
+    });
 
-    expect(await controls.setSessionBell(SID, false)).toEqual({ on: false });
+    expect(await controls.setSessionBell(SID, false)).toEqual({
+      available: true,
+      on: true,
+      origin: "delegation",
+      delegated: true,
+      ruleId: delegation.id,
+      channel: "auto",
+      // A rule from an IM conversation goes back to that conversation's channel.
+      imLabel: "飞书",
+      ready: "unavailable",
+    });
     const states = wiring.ruleStore
       .list()
       .map((rule) => [
@@ -201,10 +235,25 @@ describe("Session bell", () => {
         rule.state,
       ]);
     expect(states).toContainEqual([SID, "user", "cancelled"]);
-    expect(states).toContainEqual([SID, "delegation", "cancelled"]);
+    expect(states).toContainEqual([SID, "delegation", "active"]);
     // Another Session and the system rule are not the bell's to switch off.
     expect(states).toContainEqual(["s-other", "user", "active"]);
     expect(wiring.ruleStore.systemRule("all-sessions").state).toBe("active");
+
+    // Off again with only the delegation rule left changes nothing.
+    await controls.setSessionBell(SID, false);
+    expect(wiring.ruleStore.get(delegation.id)?.state).toBe("active");
+  });
+
+  test("a delegation rule alone shows as delegated, not as the owner's bell", async () => {
+    const { controls, wiring } = fixture();
+    await armDelegation(wiring);
+    expect(await controls.sessionBell(SID)).toMatchObject({
+      available: true,
+      on: true,
+      origin: "delegation",
+      delegated: true,
+    });
   });
 
   test("off retries once against the fresh version after a concurrent write", async () => {
@@ -222,16 +271,33 @@ describe("Session bell", () => {
       }
       return update(id, version, patch);
     };
-    expect(await controls.setSessionBell(SID, false)).toEqual({ on: false });
+    expect(await controls.setSessionBell(SID, false)).toEqual({
+      available: true,
+      on: false,
+      delegated: false,
+    });
     expect(conflicts).toBe(1);
     expect(store.list()[0]).toMatchObject({ state: "cancelled", note: "edited" });
   });
 
-  test("refuses Mimi's own Session and unknown Sessions", async () => {
-    const { controls } = fixture();
-    await expect(controls.sessionBell(MIMI)).rejects.toThrow("unknown work Session");
-    await expect(controls.setSessionBell(MIMI, true)).rejects.toThrow("unknown work Session");
-    await expect(controls.sessionBell("s-gone")).rejects.toThrow("unknown work Session");
+  test("Mimi's own Session and unknown Sessions are unavailable, never armed", async () => {
+    const { controls, wiring } = fixture();
+    const unavailable = { available: false, on: false, delegated: false };
+    expect(await controls.sessionBell(MIMI)).toEqual(unavailable);
+    expect(await controls.setSessionBell(MIMI, true)).toEqual(unavailable);
+    expect(await controls.sessionBell("s-gone")).toEqual(unavailable);
+    expect(wiring.ruleStore.list()).toEqual([]);
+  });
+
+  test("a paused Goal does not make the bell wait for it", async () => {
+    const { wiring } = fixture();
+    const paused = createPetNoticeControls({
+      notices: wiring,
+      ownerChannels: () => [],
+      goals: { readActiveGoal: () => ({ paused: true }) },
+    });
+    await paused.setSessionBell(SID, true);
+    expect(wiring.ruleStore.activeForSession(SID)[0]?.when).toMatchObject({ scope: "turn" });
   });
 });
 
@@ -329,7 +395,11 @@ describe("pet:notices IPC", () => {
       "pet:notices:set-session-bell",
       "pet:notices:set-system-rule",
     ]);
-    expect(await ipc.call("pet:notices:session-bell", SID)).toEqual({ on: false });
+    expect(await ipc.call("pet:notices:session-bell", SID)).toEqual({
+      available: true,
+      on: false,
+      delegated: false,
+    });
     expect(
       await ipc.call("pet:notices:set-session-bell", { sessionId: SID, on: true }),
     ).toMatchObject({ on: true });

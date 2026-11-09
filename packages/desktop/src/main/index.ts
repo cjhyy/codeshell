@@ -2599,10 +2599,7 @@ async function createWindow(): Promise<BrowserWindow> {
       notices: createPetNoticeControls({
         notices,
         ownerChannels: () => imGatewayService.ownerChannels(),
-        hasActiveGoal: (id) => {
-          const goal = externalGoalSessions.readActiveGoal(id);
-          return goal !== undefined && goal.paused !== true;
-        },
+        goals: externalGoalSessions,
       }),
       workInbox: petWorkInbox,
       // Read-only topic-segment view for the Mimi chat UI. `segments` carries

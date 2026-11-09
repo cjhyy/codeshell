@@ -310,7 +310,9 @@ export function PetNotificationsFields({ controller }: { controller: PetNotifica
             onChange={(event) => controller.update({ maxPerHour: event.target.value })}
             onBlur={controller.flush}
           />
-          <span className="text-xs text-muted-foreground">{t("pet.notices.maxPerHourUnit")}</span>
+          {t("pet.notices.maxPerHourUnit") && (
+            <span className="text-xs text-muted-foreground">{t("pet.notices.maxPerHourUnit")}</span>
+          )}
         </div>
       </div>
 

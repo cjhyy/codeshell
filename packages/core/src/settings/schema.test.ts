@@ -268,9 +268,11 @@ describe("pet settings (Mimi global-view external-session visibility)", () => {
     expect(SettingsSchema.parse({ pet: { notifications } }).pet?.notifications).toEqual(
       notifications,
     );
+    // null is the writer's "delete": it means the host default, not "off".
     expect(
-      SettingsSchema.parse({ pet: { notifications: { quietHours: null } } }).pet?.notifications,
-    ).toEqual({ quietHours: null });
+      SettingsSchema.parse({ pet: { notifications: { quietHours: null } } }).pet?.notifications
+        ?.quietHours,
+    ).toBeUndefined();
     // Absent stays absent: defaults belong to the host, not the file.
     expect(SettingsSchema.parse({}).pet?.notifications).toBeUndefined();
   });
