@@ -354,6 +354,12 @@ describe("architecture growth budgets", () => {
     // while hidden. Device selection, drafts, approvals and reconnect state stay in that module.
     // Pin the measured combined root (the previous ceiling had two spare lines).
     expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_945);
+    // The messages reducer was split out of renderer/types.ts (2_665 lines):
+    // the message model lives in messageTypes.ts and each event family's
+    // handlers in renderer/messages-reducer/. This file keeps the public
+    // re-exports, INITIAL_STATE, run routing and a dispatch-only switch, so a
+    // new event case belongs in its family module, not here.
+    expect(lines("packages/desktop/src/renderer/types.ts")).toBeLessThanOrEqual(452);
     // Goal-extension and pre-turn archive inputs now fail closed at protocol
     // ingress instead of trusting arbitrary numeric/object payloads. Manual
     // Mimi clears also validate their host-authored summary at this boundary.
