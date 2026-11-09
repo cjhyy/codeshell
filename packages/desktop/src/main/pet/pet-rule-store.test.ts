@@ -272,6 +272,13 @@ describe("upsertSessionRule", () => {
     expect(reloaded.get(rule.id)).toEqual(rule);
   });
 
+  test("writes compact JSON: rewritten on every rule change, so no indentation", async () => {
+    await store().upsertSessionRule(upsert());
+    const text = await readFile(filePath, "utf8");
+    expect(text.endsWith("}\n")).toBe(true);
+    expect(text.slice(0, -1)).not.toContain("\n");
+  });
+
   test("concurrent upserts for the same key serialise into one rule", async () => {
     const s = store();
     const results = await Promise.all([

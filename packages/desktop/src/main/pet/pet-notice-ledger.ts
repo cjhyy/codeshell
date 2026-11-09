@@ -5,8 +5,12 @@ import { dlog } from "../desktop-logger.js";
 import {
   quarantineCorruptJson,
   readBoundedJson,
+  serializeOwnerJson,
   writeOwnerJsonAtomic,
 } from "./bounded-json-store.js";
+
+/** Rewritten on every notice: no indentation. */
+const COMPACT = { compact: true } as const;
 import {
   hostTimezoneOffsetMin,
   localHourIndex,
@@ -705,7 +709,7 @@ export class PetNoticeLedger {
         this.enforceCount(staged, touched);
         const { file, movedQuarantine } = this.fitBytes(staged, touched);
         if (movedQuarantine.length > 0) await this.writeQuarantineSidecar(movedQuarantine);
-        await writeOwnerJsonAtomic(this.path, file, this.maxBytes);
+        await writeOwnerJsonAtomic(this.path, file, this.maxBytes, COMPACT);
         this.state = staged;
         if (movedQuarantine.length > 0) await this.pruneQuarantineSidecars();
         return structuredClone(result);
@@ -771,10 +775,9 @@ export class PetNoticeLedger {
         dedupe: [...staged.dedupe],
         quarantine: staged.quarantine,
       };
-      // Same serialisation as writeOwnerJsonAtomic.
-      const size = Buffer.byteLength(`${JSON.stringify(file, null, 2)}\n`, "utf8");
+      const size = Buffer.byteLength(serializeOwnerJson(file, COMPACT), "utf8");
       if (size <= this.maxBytes) return { file, movedQuarantine };
-      // Indented rows are a little larger than these estimates; the loop re-measures.
+      // Separators make rows a little larger than these estimates; the loop re-measures.
       let excess = size - this.maxBytes;
 
       const records = this.evictionOrder(staged, touched);
@@ -818,7 +821,7 @@ export class PetNoticeLedger {
     // Monotonic per instance so the newest sidecar always sorts last.
     this.lastSidecarAt = Math.max(Date.now(), this.lastSidecarAt + 1);
     const sidecar = `${this.sidecarBase()}.quarantine.${this.lastSidecarAt}.${randomUUID()}.json`;
-    await writeOwnerJsonAtomic(sidecar, { version: SCHEMA_VERSION, rows }, this.maxBytes);
+    await writeOwnerJsonAtomic(sidecar, { version: SCHEMA_VERSION, rows }, this.maxBytes, COMPACT);
     dlog("main", "pet.notices.quarantine_moved", { rows: rows.length, sidecar });
   }
 

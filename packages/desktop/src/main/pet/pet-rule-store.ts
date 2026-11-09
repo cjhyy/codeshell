@@ -601,6 +601,8 @@ export class PetRuleStore {
               quarantine: this.quarantine,
             } satisfies PetRuleFile,
             MAX_FILE_BYTES,
+            // Rewritten on every rule change: no indentation.
+            { compact: true },
           );
           this.rules = staged;
           return structuredClone(result);

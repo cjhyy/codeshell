@@ -69,6 +69,20 @@ const MAX_VIEWED_SESSIONS = 500;
 const MAX_TITLE = 200;
 const MAX_SUMMARY = 2_000;
 const MAX_ERROR = 500;
+/** Owner channel / target lookups read the gateway config from disk; a burst shares one read. */
+const OWNER_LOOKUP_TTL_MS = 1_000;
+
+/** `read()`'s result for a short while (wall time), so a burst of notices reads it once. */
+function shortLived<T>(read: () => T, ttlMs = OWNER_LOOKUP_TTL_MS): () => T {
+  let entry: { at: number; value: T } | undefined;
+  return () => {
+    const at = performance.now();
+    if (entry && at - entry.at < ttlMs) return entry.value;
+    const value = read();
+    entry = { at, value };
+    return value;
+  };
+}
 
 export interface PetNoticeWiringGateway {
   ownerChannels(): ImGatewayOwnerChannel[];
@@ -506,9 +520,11 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const isEligibleSession = (sessionId: string): boolean =>
     deps.isMimiSession?.(sessionId) !== true && workSession(sessionId) !== undefined;
 
+  const ownerChannels = shortLived(() => deps.gateway.ownerChannels());
+  const ownerTargets = shortLived(() => deps.gateway.listOwnerMessageTargets());
   const imChannels = (): Record<string, ImReadiness> => {
     const result: Record<string, ImReadiness> = {};
-    for (const channel of deps.gateway.ownerChannels()) result[channel.id] = channel.ready;
+    for (const channel of ownerChannels()) result[channel.id] = channel.ready;
     return result;
   };
 
@@ -622,11 +638,9 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         });
         return { accepted: true };
       }
-      const targetId = deps.gateway.ownerChannels().find((entry) => entry.id === channel)?.targetId;
+      const targetId = ownerChannels().find((entry) => entry.id === channel)?.targetId;
       if (!targetId) return { accepted: false, error: "no-owner-target" };
-      const ownerTarget = deps.gateway
-        .listOwnerMessageTargets()
-        .find((entry) => entry.id === targetId);
+      const ownerTarget = ownerTargets().find((entry) => entry.id === targetId);
       // A group (or unconfirmed) owner target never gets private decision details.
       if (ownerTarget?.isDirect !== true && payload.nonDirectBody) body = payload.nonDirectBody;
       const files = attachmentsFor(ownerTarget, media?.attachments);
@@ -791,7 +805,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     },
     ownerChannelIsDirect(channel) {
       try {
-        return deps.gateway.ownerChannels().some((entry) => entry.id === channel && entry.isDirect);
+        return ownerChannels().some((entry) => entry.id === channel && entry.isDirect);
       } catch {
         return false;
       }
@@ -881,7 +895,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     if (upsert.sessionId !== callerSessionId)
       throw new Error("a Session can only set notice rules for itself");
     if (!isEligibleSession(upsert.sessionId)) throw new Error("unknown work Session");
-    const channels = deps.gateway.ownerChannels();
+    const channels = ownerChannels();
     if (
       upsert.channel !== "auto" &&
       upsert.channel !== "desktop" &&
@@ -1152,7 +1166,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       return () => settingsListeners.delete(listener);
     },
     resolveRuleTarget,
-    predictIm: (channel, target) => predictedIm(channel, target, deps.gateway.ownerChannels()),
+    predictIm: (channel, target) => predictedIm(channel, target, ownerChannels()),
     isEligibleSession,
     dispose() {
       if (disposed) return;

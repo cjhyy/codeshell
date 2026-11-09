@@ -1131,6 +1131,55 @@ describe("startup", () => {
   });
 });
 
+describe("burst load", () => {
+  test("a burst of notices reads the owner channels and targets once", async () => {
+    const reads = { channels: 0, targets: 0 };
+    const sends: string[] = [];
+    current = harness({
+      gateway: {
+        ownerChannels: () => {
+          reads.channels += 1;
+          return [
+            {
+              id: "wechat",
+              label: "微信",
+              ready: "ready",
+              targetId: "wechat:owner",
+              isDirect: true,
+            },
+          ];
+        },
+        listOwnerMessageTargets: () => {
+          reads.targets += 1;
+          return [];
+        },
+        sendOwnerMessage: async (_targetId, text) => {
+          sends.push(text);
+          return {};
+        },
+        supportsIdempotentOwnerSend: () => true,
+        lastOwnerInboundChannel: () => "wechat",
+        isOwnerConversation: () => false,
+      },
+      readSettings: () => ({ pet: { notifications: { quietHours: { enabled: false } } } }),
+    });
+    for (let index = 0; index < 5; index += 1)
+      await current.wiring.router.submit({
+        kind: "session.done",
+        priority: "P1",
+        dedupeKey: `done:burst-${index}`,
+        sessionId: `s-${index}`,
+        ruleIds: [],
+        facts: { title: `任务${index}` },
+        attention: "always",
+        channel: "auto",
+        target: { kind: "owner" },
+      });
+    expect(sends).toHaveLength(5);
+    expect(reads).toEqual({ channels: 1, targets: 1 });
+  });
+});
+
 describe("digest after sleep", () => {
   test("waking, unlocking and the owner's next inbound turn send a due digest", async () => {
     const power = new EventEmitter();

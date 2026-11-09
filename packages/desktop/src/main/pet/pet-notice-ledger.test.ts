@@ -105,6 +105,14 @@ describe("record", () => {
     expect(b.seenDedupeKeys().has("session.done:s1:run-2")).toBe(false);
   });
 
+  test("writes compact JSON: rewritten on every notice, so no indentation", async () => {
+    const a = ledger();
+    await a.record(draft());
+    const text = await readFile(filePath, "utf8");
+    expect(text.endsWith("}\n")).toBe(true);
+    expect(text.slice(0, -1)).not.toContain("\n");
+  });
+
   test("the dedupe index stores hashes, not raw keys", async () => {
     const a = ledger();
     await a.load();
