@@ -94,7 +94,7 @@ export class PetNoticeRouter {
   private burst: DesktopPendingDecision[] = [];
   private readonly log: (event: string, data: Record<string, unknown>) => void;
   private readonly digest?: NoticeDigest;
-  /** Latest IM claim per Session, for the P1 merge window (in memory only). */
+  /** Latest P1 IM claim per Session, for the P1 merge window (in memory only). */
   private readonly lastImSendAt = new Map<string, number>();
   /** Records this process is sending right now; startup recovery must not resend them. */
   private readonly sending = new Set<string>();
@@ -548,7 +548,9 @@ export class PetNoticeRouter {
     this.sending.add(plan.recordId);
     try {
       const { key } = await ledger.claim(plan.recordId, decision.im, body);
-      if (notice.sessionId) this.lastImSendAt.set(notice.sessionId, now);
+      // Only a result opens the merge window; a decision prompt must not hold back its outcome.
+      if (notice.sessionId && notice.priority === "P1")
+        this.lastImSendAt.set(notice.sessionId, now);
       return { ...plan, claim: { channel: decision.im, key }, ledgerFailed: false };
     } catch (error) {
       this.sending.delete(plan.recordId);

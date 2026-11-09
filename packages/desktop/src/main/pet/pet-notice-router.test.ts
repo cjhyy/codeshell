@@ -477,6 +477,28 @@ describe("PetNoticeRouter.submit", () => {
     expect((await h.router.submit(notice({ sessionId: "s-merge" }))).outlet).toBe("im");
   });
 
+  test("a decision prompt does not open the merge window for that Session's result", async () => {
+    const h = harness();
+    const prompt = await h.router.submit(
+      notice({
+        kind: "session.blocked",
+        priority: "P0",
+        sessionId: "s-ask",
+        requestId: "req-ask",
+        facts: { title: "Deploy", question: "Ship it?" },
+      }),
+    );
+    expect(prompt.outlet).toBe("im");
+    h.clock.advance(3 * MINUTE);
+    const result = await h.router.submit(
+      notice({ sessionId: "s-ask", facts: { title: "Deploy", summary: "shipped" } }),
+    );
+    expect(result).toMatchObject({ outlet: "im", im: "lark" });
+    expect(h.im).toHaveLength(2);
+    expect(h.im[1]!.body).toBe("「Deploy」做完了：shipped");
+    expect(h.ledger.held()).toEqual([]);
+  });
+
   test("a ledger write failure still puts a P0 on the desktop", async () => {
     const h = harness({ failLedger: "record" });
     const decision = await h.router.submit(
