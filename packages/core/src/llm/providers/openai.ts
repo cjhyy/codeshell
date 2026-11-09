@@ -237,6 +237,24 @@ const MISSING_TOOL_RESULT_WIRE_TEXT =
 // boundary hashes across those recreations; never retain conversation text.
 const sharedPromptCacheHistory = new PromptCacheHistory();
 
+/** Resolve the same actual message used by the wire marker and history hash. */
+function promptCacheBoundaryIndex(
+  messages: readonly OpenAI.ChatCompletionMessageParam[],
+  index: number | undefined,
+): number | undefined {
+  if (index === undefined) return undefined;
+  for (let cursor = Math.min(index, messages.length - 1); cursor >= 0; cursor--) {
+    const content = messages[cursor]!.content;
+    if (
+      (typeof content === "string" && content.length > 0) ||
+      (Array.isArray(content) && content.length > 0)
+    ) {
+      return cursor;
+    }
+  }
+  return undefined;
+}
+
 /**
  * OpenAI requires each assistant tool_calls batch to be followed immediately
  * by exactly one role:tool message per id. Normalize at the provider boundary
@@ -369,6 +387,7 @@ export class OpenAIClient extends LLMClientBase {
       provider: this.provider,
       providerKind: this.config.providerKind,
       model: this.model,
+      promptCaching: this.capability.promptCaching,
       request,
       explicitDisabled: this._disableExplicitPromptCache,
     });
@@ -424,6 +443,7 @@ export class OpenAIClient extends LLMClientBase {
         );
         const tools = options.tools?.length ? this.convertTools(options.tools) : undefined;
         const cachePolicy = this.promptCachePolicy(options.promptCache);
+        const stableBoundaryIndex = promptCacheBoundaryIndex(messages, stablePrefixEndIndex);
         let cachePlan: PromptCacheHistoryPlan | undefined;
         if (cachePolicy.strategy === "openai-hybrid" && options.promptCache?.scopeId) {
           let latestEligibleIndex = -1;
@@ -455,6 +475,7 @@ export class OpenAIClient extends LLMClientBase {
             ),
             messages,
             latestBoundaryIndex: latestEligibleIndex,
+            stableBoundaryIndex,
             requestIdentity,
           });
         }
@@ -462,7 +483,7 @@ export class OpenAIClient extends LLMClientBase {
           this.applyPromptCacheBreakpoints(
             messages,
             cachePolicy,
-            stablePrefixEndIndex,
+            stableBoundaryIndex,
             cachePlan?.readBoundaryIndex,
           );
         }
@@ -1286,19 +1307,8 @@ export class OpenAIClient extends LLMClientBase {
 
     const markedMessages = new Set<OpenAI.ChatCompletionMessageParam>();
     const mark = (index: number): void => {
-      let cursor = Math.min(index, messages.length - 1);
-      let m: OpenAI.ChatCompletionMessageParam | undefined;
-      while (cursor >= 0) {
-        const candidate = messages[cursor]!;
-        if (
-          (typeof candidate.content === "string" && candidate.content.length > 0) ||
-          (Array.isArray(candidate.content) && candidate.content.length > 0)
-        ) {
-          m = candidate;
-          break;
-        }
-        cursor--;
-      }
+      const actualIndex = promptCacheBoundaryIndex(messages, index);
+      const m = actualIndex === undefined ? undefined : messages[actualIndex];
       if (!m || markedMessages.has(m)) return;
       markedMessages.add(m);
 
@@ -1324,9 +1334,9 @@ export class OpenAIClient extends LLMClientBase {
     const requested = uniquePromptCacheBreakpointIndexes([
       policy.breakpoints.includes("system") ? 0 : undefined,
       policy.breakpoints.includes("stable-history") ? stablePrefixEndIndex : undefined,
-      // Hybrid uses at most three explicit boundaries (system, stable, prior
-      // successful tail), leaving the fourth write slot for the implicit tail.
-      // Retaining the previous boundary lets this request read the last write.
+      // Hybrid uses at most three explicit boundaries, leaving the fourth slot
+      // for the implicit tail. The longest matching prior stable/rolling boundary
+      // permits reuse even when a run's dynamic snapshot has been removed.
       policy.strategy === "openai-hybrid"
         ? previousBoundaryIndex
         : policy.breakpoints.includes("rolling-history")

@@ -7,6 +7,8 @@
  */
 
 import { createHash } from "node:crypto";
+import { capabilitiesForConfig } from "./capabilities/index.js";
+import type { PromptCachingCapability } from "./capabilities/types.js";
 
 export type PromptCacheStrategy =
   | "openai-explicit"
@@ -42,6 +44,8 @@ export interface ResolvePromptCachePolicyInput {
   provider: string;
   providerKind?: string;
   model: string;
+  /** Resolved model capability; explicit catalog declarations take precedence. */
+  promptCaching?: PromptCachingCapability;
   request?: PromptCacheRequestContext;
   /** Sticky compatibility fallback after an endpoint rejects explicit fields. */
   explicitDisabled?: boolean;
@@ -52,23 +56,7 @@ const ANTHROPIC_BREAKPOINTS = ["system", "tools", "stable-history", "rolling-his
 const OPENROUTER_ANTHROPIC_BREAKPOINTS = ["system", "stable-history", "rolling-history"] as const;
 
 function normalizedModel(model: string): string {
-  return model.replace(/^~/, "");
-}
-
-function isAnthropicModel(model: string): boolean {
-  return /^anthropic\/claude-/i.test(normalizedModel(model));
-}
-
-function isOpenAIModel(model: string): boolean {
-  const normalized = normalizedModel(model);
-  return /^openai\//i.test(normalized) || /^(?:gpt-|o\d)/i.test(normalized);
-}
-
-/** GPT-5.6 and later 5.x releases support explicit prompt-cache breakpoints. */
-function supportsOpenAIExplicitCaching(model: string): boolean {
-  const normalized = normalizedModel(model).replace(/^openai\//i, "");
-  const match = /^gpt-5\.(\d+)(?:[-.]|$)/i.exec(normalized);
-  return match !== null && Number(match[1]) >= 6;
+  return model.startsWith("~") ? model.slice(1) : model;
 }
 
 /**
@@ -90,11 +78,12 @@ export function createPromptCacheKey(scopeId: string, namespace: string): string
 export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): PromptCachePolicy {
   const kind = (input.providerKind ?? input.provider).toLowerCase();
   const model = normalizedModel(input.model);
+  const capability = capabilitiesForConfig(input).promptCaching;
   const key = input.request?.scopeId
     ? createPromptCacheKey(input.request.scopeId, `${kind}:${model}`)
     : undefined;
 
-  if (input.provider === "anthropic" || kind === "anthropic") {
+  if (capability === "anthropic-explicit" && kind !== "openrouter") {
     return {
       strategy: "anthropic-explicit",
       layoutVersion: "system-tools-stable-rolling-v2",
@@ -102,7 +91,7 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
     };
   }
 
-  if (kind === "openrouter" && isAnthropicModel(model)) {
+  if (capability === "anthropic-explicit") {
     return {
       strategy: "anthropic-explicit",
       // OpenRouter/Anthropic includes tools in the system-prefix cache entry,
@@ -112,18 +101,17 @@ export function resolvePromptCachePolicy(input: ResolvePromptCachePolicyInput): 
     };
   }
 
-  const openAIRoute = kind === "openai" || (kind === "openrouter" && isOpenAIModel(model));
-  if (openAIRoute && supportsOpenAIExplicitCaching(model) && input.explicitDisabled !== true) {
+  if (capability === "openai-hybrid" && input.explicitDisabled !== true) {
     return {
       strategy: "openai-hybrid",
-      layoutVersion: "system-stable-previous-implicit-v2",
+      layoutVersion: "system-stable-resume-implicit-v3",
       breakpoints: OPENAI_EXPLICIT_BREAKPOINTS,
       ...(key ? { cacheKey: key } : {}),
       promptCacheOptions: { mode: "implicit", ttl: "30m" },
     };
   }
 
-  if (openAIRoute) {
+  if (capability === "openai-hybrid" || capability === "openai-implicit") {
     return {
       strategy: "openai-implicit",
       layoutVersion: "implicit-affinity-v1",
@@ -161,21 +149,22 @@ interface PromptCacheHistoryBoundary {
 export interface PromptCacheHistoryPlan {
   scopeKey: string;
   requestOrder: number;
-  /** Prior successful boundary, only when its entire request prefix still matches. */
+  /** Longest successful boundary whose entire request prefix still matches. */
   readBoundaryIndex?: number;
-  nextBoundary?: PromptCacheHistoryBoundary;
+  nextBoundaries: PromptCacheHistoryBoundary[];
 }
 
 /**
- * Remember one successful rolling boundary per scope, without retaining prompt
- * text. Preparing a request is read-only: failed requests must not advance the
- * boundary. The provider supplies normalized, unmarked messages and the index
- * of the latest eligible message, then commits only after a successful response.
+ * Remember stable and rolling successful boundaries per scope without prompt
+ * text. Removing a run's volatile snapshot invalidates its rolling prefix, but
+ * the stable prefix before that snapshot can still be reused by the next run.
+ * Preparing a request does not advance history; only successful calls commit.
+ * Providers supply normalized, unmarked messages and actual wire boundary indexes.
  */
 export class PromptCacheHistory {
   private readonly boundaries = new Map<
     string,
-    PromptCacheHistoryBoundary & { requestOrder: number; updatedAt: number }
+    { boundaries: PromptCacheHistoryBoundary[]; requestOrder: number; updatedAt: number }
   >();
   private requestOrder = 0;
 
@@ -189,6 +178,7 @@ export class PromptCacheHistory {
       scopeKey: string;
       messages: readonly unknown[];
       latestBoundaryIndex: number;
+      stableBoundaryIndex?: number;
       requestIdentity: unknown;
     },
     now = Date.now(),
@@ -196,9 +186,16 @@ export class PromptCacheHistory {
     const plan: PromptCacheHistoryPlan = {
       scopeKey: input.scopeKey,
       requestOrder: ++this.requestOrder,
+      nextBoundaries: [],
     };
     const stored = this.boundaries.get(input.scopeKey);
     const previous = stored && now - stored.updatedAt < this.ttlMs ? stored : undefined;
+    const previousByIndex = new Map(
+      previous?.boundaries.map((boundary) => [boundary.index, boundary]),
+    );
+    const nextIndexes = new Set(
+      uniquePromptCacheBreakpointIndexes([input.stableBoundaryIndex, input.latestBoundaryIndex]),
+    );
     // Include tools and request settings as well as message content: identical
     // history with different reasoning or tools is not the same rendered prefix.
     const hash = createHash("sha256")
@@ -207,13 +204,13 @@ export class PromptCacheHistory {
       .update("\0");
     for (let index = 0; index < input.messages.length; index++) {
       hash.update(JSON.stringify(input.messages[index]) ?? "null").update("\0");
-      if (index === previous?.index || index === input.latestBoundaryIndex) {
+      if (previousByIndex.has(index) || nextIndexes.has(index)) {
         const prefixHash = hash.copy().digest("hex");
-        if (index === previous?.index && prefixHash === previous.prefixHash) {
+        if (prefixHash === previousByIndex.get(index)?.prefixHash) {
           plan.readBoundaryIndex = index;
         }
-        if (index === input.latestBoundaryIndex) {
-          plan.nextBoundary = { index, prefixHash };
+        if (nextIndexes.has(index)) {
+          plan.nextBoundaries.push({ index, prefixHash });
         }
       }
     }
@@ -225,9 +222,9 @@ export class PromptCacheHistory {
     // not replace the boundary established by a newer successful request.
     if ((this.boundaries.get(plan.scopeKey)?.requestOrder ?? -1) > plan.requestOrder) return;
     this.boundaries.delete(plan.scopeKey);
-    if (plan.nextBoundary && this.maxScopes > 0) {
+    if (this.maxScopes > 0) {
       this.boundaries.set(plan.scopeKey, {
-        ...plan.nextBoundary,
+        boundaries: plan.nextBoundaries.map((boundary) => ({ ...boundary })),
         requestOrder: plan.requestOrder,
         updatedAt: now,
       });

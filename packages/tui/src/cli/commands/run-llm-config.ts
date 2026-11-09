@@ -22,6 +22,7 @@ export function applyRunLlmOverrides(base: LLMConfig, flags: RunLlmFlags): LLMCo
     delete llm.maxTokens;
     delete llm.maxContextTokens;
     delete llm.supportsVision;
+    delete llm.promptCaching;
     delete llm.reasoning;
     llm.model = model;
   }

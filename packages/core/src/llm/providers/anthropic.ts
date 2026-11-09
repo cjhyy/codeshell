@@ -117,6 +117,7 @@ export class AnthropicClient extends LLMClientBase {
       provider: this.provider,
       providerKind: this.config.providerKind,
       model: this.model,
+      promptCaching: this.capability.promptCaching,
       request,
     });
   }

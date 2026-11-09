@@ -58,6 +58,7 @@ export interface ModelEntry {
   model: string;
   /** Explicit capability of this connection's selected model, from its catalog preset. */
   supportsVision?: boolean;
+  promptCaching?: import("./capabilities/types.js").PromptCachingCapability;
   /**
    * Catalog/provider kind used by capability rules. This can differ from
    * `provider`, which only selects the client protocol family.
@@ -285,6 +286,7 @@ export class ModelPool {
       model: entry.model,
       modelKey: entry.key,
       ...(entry.supportsVision !== undefined ? { supportsVision: entry.supportsVision } : {}),
+      ...(entry.promptCaching !== undefined ? { promptCaching: entry.promptCaching } : {}),
       apiKey: entry.apiKey ?? fromCat?.apiKey,
       baseUrl: entry.baseUrl ?? fromCat?.baseUrl,
       // No invented default: undefined lets each client apply its own fallback

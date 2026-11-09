@@ -13,6 +13,7 @@
  */
 
 import { z } from "zod";
+import { PROMPT_CACHING_CAPABILITIES } from "../llm/capabilities/types.js";
 
 const id = z.string().min(1).max(128);
 const shortText = z.string().max(256);
@@ -69,6 +70,8 @@ export const modelPresetSchema = z.object({
   maxContextTokens: boundedNumber.optional(),
   maxOutputTokens: boundedNumber.optional(),
   supportsVision: z.boolean().optional(),
+  /** Cache support for this exact provider/model, including custom deployments. */
+  promptCaching: z.enum(PROMPT_CACHING_CAPABILITIES).optional(),
   /** Params this model supports; absent → no adjustable knobs. */
   params: z.array(paramSpecSchema).max(64).optional(),
 });

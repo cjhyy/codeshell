@@ -12,6 +12,8 @@ import { ModelPool } from "../llm/model-pool.js";
 import { validateSettings } from "../settings/schema.js";
 import type { CatalogEntry } from "../model-catalog/index.js";
 import type { ModelInstance, Credential } from "../model-catalog/resolve.js";
+import { capabilitiesForConfig } from "../llm/capabilities/index.js";
+import { catalogEntrySchema } from "../model-catalog/types.js";
 
 const CATALOG: CatalogEntry[] = [
   {
@@ -61,6 +63,26 @@ const CREDS: Credential[] = [
 ];
 
 describe("modelEntriesFromConnections", () => {
+  test.each(["openai-hybrid", "provider-managed"] as const)(
+    "preserves catalog cache support (%s) through schema, pool and runtime capability",
+    (promptCaching) => {
+      const catalog = [
+        catalogEntrySchema.parse({
+          ...CATALOG[0]!,
+          modelPresets: [{ value: "production-deployment", promptCaching }],
+        }),
+      ];
+      const [entry] = modelEntriesFromConnections(
+        [{ id: "production", catalogId: "openai", tag: "text", model: "production-deployment" }],
+        [],
+        catalog,
+      );
+      const config = new ModelPool().toLLMConfig(entry!);
+      expect(config.promptCaching).toBe(promptCaching);
+      expect(capabilitiesForConfig(config).promptCaching).toBe(promptCaching);
+    },
+  );
+
   test.each([true, false, undefined])(
     "preserves catalog vision metadata (%s) through LLMConfig",
     (supportsVision) => {

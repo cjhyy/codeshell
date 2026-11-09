@@ -65,6 +65,7 @@ export function modelEntriesFromConnections(
       providerKind: entry.adapterKind,
       model: resolved.model,
       ...(preset?.supportsVision !== undefined ? { supportsVision: preset.supportsVision } : {}),
+      ...(preset?.promptCaching !== undefined ? { promptCaching: preset.promptCaching } : {}),
       baseUrl: resolved.baseUrl,
       needsKey: resolved.needsKey,
       ...(resolved.apiKey !== undefined ? { apiKey: resolved.apiKey } : {}),

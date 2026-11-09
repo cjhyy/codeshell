@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import OpenAI from "openai";
 import { OpenAIClient } from "./openai.js";
 import { PromptCacheHistory } from "../prompt-cache.js";
+import type { Capability } from "../capabilities/index.js";
 import type { CreateMessageOptions } from "../types.js";
 
 function completion() {
@@ -35,6 +36,7 @@ function capturingClient(
     baseUrl?: string;
     history?: PromptCacheHistory;
     retryMaxAttempts?: number;
+    promptCaching?: Capability["promptCaching"];
   } = {},
 ) {
   const bodies: any[] = [];
@@ -44,6 +46,7 @@ function capturingClient(
       provider: "openai",
       providerKind,
       model: settings.model ?? "gpt-5.6-sol",
+      promptCaching: settings.promptCaching,
       apiKey: "test",
       baseUrl:
         settings.baseUrl ??
@@ -138,6 +141,26 @@ function canonicalMessages(body: any): any[] {
       ? { content: message.content.map((part: any) => part.text).join("") }
       : {}),
   }));
+}
+
+function expectReusableMarkedPrefix(previous: any, current: any, index: number): void {
+  expect(markedIndexes(previous)).toContain(index);
+  expect(markedIndexes(current)).toContain(index);
+  expect(canonicalMessages(current).slice(0, index + 1)).toEqual(
+    canonicalMessages(previous).slice(0, index + 1),
+  );
+}
+
+function startNextRun(
+  request: CreateMessageOptions,
+  previousSnapshot: string,
+  task: string,
+  nextSnapshot: string,
+): void {
+  request.messages = request.messages.filter((message) => message.content !== previousSnapshot);
+  appendUserTurn(request, task);
+  request.promptCache!.stablePrefixMessageCount = request.messages.length;
+  request.messages.push({ role: "user", content: nextSnapshot });
 }
 
 describe("OpenAIClient prompt caching", () => {
@@ -262,7 +285,7 @@ describe("OpenAIClient prompt caching", () => {
     expect(markedIndexes(bodies[1])).toEqual([0, 1, 2]);
   });
 
-  it("invalidates a moved dynamic snapshot while preserving the new stable boundary", async () => {
+  it("retains the written stable prefix when moving the dynamic snapshot", async () => {
     const { client, bodies } = capturingClient();
     const request = options();
     appendToolBatch(request, ["already-sent"]);
@@ -272,12 +295,121 @@ describe("OpenAIClient prompt caching", () => {
     request.messages.push(snapshot);
     request.promptCache!.stablePrefixMessageCount = request.messages.length - 1;
     await client.createMessage(request);
-    expect(markedIndexes(bodies[1])).toEqual([0, 5]);
+    expect(markedIndexes(bodies[1])).toEqual([0, 1, 5]);
+    expectReusableMarkedPrefix(bodies[0], bodies[1], 1);
     expect(bodies[1].messages[5]).toMatchObject({
       role: "tool",
       tool_call_id: "fresh-persisted-result",
     });
   });
+
+  it("reuses and advances a written stable prefix across three runs and client recreation", async () => {
+    const history = new PromptCacheHistory();
+    const settings = { history, providerKind: "openrouter", model: "openai/gpt-6.1-sol" };
+    const first = capturingClient(settings);
+    const request = options();
+    appendToolBatch(request, ["run-a-first", "run-a-parallel"]);
+    await first.client.createMessage(request);
+    appendToolBatch(request, ["run-a-last"]);
+    await first.client.createMessage(request);
+
+    // Core discards the old run-scoped snapshot before adding the next one.
+    // The old rolling prefix no longer matches, but the stable prefix does.
+    startNextRun(request, "volatile git status", "run B task", "run B git status");
+    const resumed = capturingClient(settings);
+    await resumed.client.createMessage(request);
+    const firstB = resumed.bodies[0];
+    expectReusableMarkedPrefix(first.bodies[1], firstB, 1);
+    expect(JSON.stringify(firstB.messages)).not.toContain("volatile git status");
+    const stableB = canonicalMessages(firstB).findIndex(
+      (message) => message.content === "run B task",
+    );
+    expect(stableB).toBeGreaterThan(1);
+    expect(markedIndexes(firstB)).toContain(stableB);
+
+    appendToolBatch(request, ["run-b-result"]);
+    await resumed.client.createMessage(request);
+    startNextRun(request, "run B git status", "run C task", "run C git status");
+    await resumed.client.createMessage(request);
+    const firstC = resumed.bodies[2];
+    expectReusableMarkedPrefix(firstB, firstC, stableB);
+    expect(JSON.stringify(firstC.messages)).not.toContain("run B git status");
+    expect(markedIndexes(firstC)).not.toContain(1);
+
+    for (const body of [...first.bodies, ...resumed.bodies]) {
+      expect(body.prompt_cache_options).toEqual({ mode: "implicit", ttl: "30m" });
+      expect(explicitMarkers(body).length).toBeLessThanOrEqual(3);
+      expect(body.prompt_cache_key).toBe(first.bodies[0].prompt_cache_key);
+    }
+  });
+
+  it("remembers the actual stable marker when a contentless assistant requires fallback", async () => {
+    const { client, bodies } = capturingClient();
+    const request = options();
+    request.messages.pop();
+    appendToolBatch(request, ["changed-after-marker"]);
+    request.messages.push({ role: "user", content: "volatile git status" });
+    // This boundary lands on a tool-call-only assistant. The wire marker has
+    // to fall back to the preceding message with content, not this candidate.
+    request.promptCache!.stablePrefixMessageCount = 2;
+    await client.createMessage(request);
+    expect(markedIndexes(bodies[0])).toEqual([0, 1]);
+
+    request.messages[1] = {
+      role: "assistant",
+      content: [
+        {
+          type: "tool_use",
+          id: "changed-after-marker",
+          name: "Read",
+          input: { path: "a different path after the cached prefix" },
+        },
+      ],
+    };
+    startNextRun(request, "volatile git status", "next run", "new git status");
+    await client.createMessage(request);
+    expectReusableMarkedPrefix(bodies[0], bodies[1], 1);
+    expect(canonicalMessages(bodies[1])[2]).not.toEqual(canonicalMessages(bodies[0])[2]);
+  });
+
+  for (const failure of ["api-error", "cancelled"] as const) {
+    it(`retains the last successful stable prefix when a new run is ${failure}`, async () => {
+      const { client, bodies, respondWith } = capturingClient();
+      const request = options();
+      appendToolBatch(request, ["successful-run"]);
+      await client.createMessage(request);
+      startNextRun(request, "volatile git status", "failed run", "failed run snapshot");
+      const failedStable = request.promptCache!.stablePrefixMessageCount!;
+      const controller = new AbortController();
+      request.signal = controller.signal;
+      respondWith(() => {
+        if (failure === "cancelled") {
+          controller.abort();
+          throw new OpenAI.APIUserAbortError();
+        }
+        throw new OpenAI.APIError(
+          400,
+          { message: "synthetic failure" },
+          "synthetic failure",
+          undefined,
+        );
+      });
+      await expect(client.createMessage(request)).rejects.toThrow();
+      expect(markedIndexes(bodies[1])).toContain(failedStable);
+
+      respondWith(() => completion());
+      request.signal = undefined;
+      request.messages = request.messages.filter(
+        (message) => message.content !== "failed run snapshot",
+      );
+      request.messages.push({ role: "user", content: "retry with a fresh task" });
+      request.promptCache!.stablePrefixMessageCount = request.messages.length;
+      request.messages.push({ role: "user", content: "retry snapshot" });
+      await client.createMessage(request);
+      expectReusableMarkedPrefix(bodies[0], bodies[2], 1);
+      expect(markedIndexes(bodies[2])).not.toContain(failedStable);
+    });
+  }
 
   it("records the last eligible user instead of a trailing assistant message", async () => {
     const { client, bodies } = capturingClient();
@@ -308,11 +440,14 @@ describe("OpenAIClient prompt caching", () => {
   for (const changed of ["scope", "model", "endpoint", "providerKind"] as const) {
     it(`isolates shared cache history when ${changed} differs`, async () => {
       const history = new PromptCacheHistory();
-      const first = capturingClient({ history });
+      // Hold cache capabilities constant so this checks scope isolation alone,
+      // including a custom gateway that accepts the same model ID as native.
+      const first = capturingClient({ history, promptCaching: "openai-hybrid" });
       const request = options();
       await first.client.createMessage(request);
       const other = capturingClient({
         history,
+        promptCaching: "openai-hybrid",
         ...(changed === "model" ? { model: "gpt-5.6-terra" } : {}),
         ...(changed === "endpoint" ? { baseUrl: "https://gateway.example/v1" } : {}),
         ...(changed === "providerKind" ? { providerKind: "openrouter" } : {}),

@@ -66,6 +66,7 @@ describe("ModelPreset.params — per-entry-per-model param schema", () => {
           maxContextTokens: 400000,
           maxOutputTokens: 128000,
           supportsVision: true,
+          promptCaching: "openai-implicit",
           params: [
             {
               name: "reasoning",
@@ -84,8 +85,23 @@ describe("ModelPreset.params — per-entry-per-model param schema", () => {
       const presets = r.data.modelPresets!;
       expect(presets[0]!.params![0]!.control).toBe("enum");
       expect(presets[0]!.supportsVision).toBe(true);
+      expect(presets[0]!.promptCaching).toBe("openai-implicit");
       expect(presets[1]!.params).toBeUndefined();
     }
+  });
+
+  test("rejects unknown cache protocols in model metadata", () => {
+    expect(
+      catalogEntrySchema.safeParse({
+        id: "custom",
+        tag: "text",
+        adapterKind: "custom",
+        displayName: "Custom",
+        description: "x",
+        defaultBaseUrl: "https://fixture.invalid/v1",
+        modelPresets: [{ value: "deployment", promptCaching: "guess-from-version" }],
+      }).success,
+    ).toBe(false);
   });
 });
 

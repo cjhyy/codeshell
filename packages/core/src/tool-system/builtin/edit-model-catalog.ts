@@ -113,7 +113,7 @@ export const editModelCatalogToolDef: ToolDefinition = {
         type: "object",
         description:
           "One complete ModelPreset for upsertModel: {value, label?, maxContextTokens?, " +
-          "maxOutputTokens?, supportsVision?, params?[]}. Existing model value updates in " +
+          "maxOutputTokens?, supportsVision?, promptCaching?, params?[]}. Existing model value updates in " +
           "place; a new value appends without hiding the provider's other models.",
       },
       setAsDefault: {
@@ -128,7 +128,8 @@ export const editModelCatalogToolDef: ToolDefinition = {
           `(the actual provider/gateway identity: ${CATALOG_ADAPTER_KINDS}), displayName, ` +
           "description, defaultBaseUrl. Optional: protocol (openai-compat|anthropic-style), " +
           "defaultModel, needsKey, signupUrl, test, modelPresets[] (each {value, label?, " +
-          "maxContextTokens?, maxOutputTokens?, supportsVision?, params?[]}). Each param: " +
+          "maxContextTokens?, maxOutputTokens?, supportsVision?, promptCaching?, params?[]}). " +
+          "promptCaching declares provider-managed, openai-implicit, openai-hybrid, or anthropic-explicit support. Each param: " +
           "{name, label?, control (enum|number|toggle|text), options?[], min?, max?, default?, " +
           "doc?, wire?{field}}. Fill maxContextTokens with the model's REAL window; declare " +
           "params per-model (only what that model supports). IMPORTANT: adapterKind is NOT " +
