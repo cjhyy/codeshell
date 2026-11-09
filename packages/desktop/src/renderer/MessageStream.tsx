@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Check, Forward, Loader2, MessageSquare, X } from "lucide-react";
 import type { Message } from "./types";
 import { ToolCard } from "./tool-cards";
@@ -54,6 +54,7 @@ const NOOP_ON_ANSWER = (): void => undefined;
  * history and can be skipped while off-screen.
  */
 const LIVE_TAIL_UNCONTAINED = 8;
+const HISTORY_PAGE_ROWS = 30;
 
 export interface ContextPackageCreatedOptions {
   /** Re-check immediately before navigating because registration may itself be asynchronous. */
@@ -67,8 +68,19 @@ export type ContextPackageCreatedHandler = (
 
 interface Props {
   messages: Message[];
-  /** History controls stay at the beginning of the scrollable conversation. */
-  leading?: React.ReactNode;
+  /** Read-only recent history while the durable state is being recovered. */
+  displayMessages?: Message[];
+  /** Reveal grouped durable history a page at a time. */
+  pageHistory?: boolean;
+  /** Stable UI session identity for the visible window. */
+  historyKey?: string;
+  history?: {
+    hasMore: boolean;
+    loading: boolean;
+    failed: boolean;
+    limitReached: boolean;
+    loadEarlier: () => Promise<void>;
+  };
   /** Transcript detail views do not expose file undo/redo. */
   readOnly?: boolean;
   localRuntime?: boolean;
@@ -134,7 +146,10 @@ interface Props {
 
 export function MessageStream({
   messages,
-  leading,
+  displayMessages,
+  pageHistory = false,
+  historyKey,
+  history,
   readOnly = false,
   localRuntime = true,
   onExtendGoal,
@@ -205,16 +220,6 @@ export function MessageStream({
       break;
     }
   }
-  const { ref, showJump, scrollToBottom, preserveScrollOnChange } =
-    useStickToBottom<HTMLDivElement>({
-      // Trigger encodes message count + trailing key + bucketed streaming tail
-      // length, so growth within a single streaming message keeps following.
-      trigger: buildScrollTrigger(messages, liveTurnActive, trailingKey),
-      // Session switch → snap to bottom instantly (before paint), no scroll flash.
-      jumpKey: engineSessionId ?? null,
-      // User send → unconditional re-arm + snap (separate dep from session id).
-      sendEpoch,
-    });
   // Zoom state carries the whole sibling-image group plus the clicked index,
   // so the Lightbox can offer prev/next across the images in one message.
   const [zoomed, setZoomed] = useState<{
@@ -291,6 +296,7 @@ export function MessageStream({
       !localRuntime ||
       !engineSessionId ||
       !onContextPackageCreated ||
+      displayMessages !== undefined ||
       liveTurnActive ||
       selectionOpen
     )
@@ -311,7 +317,14 @@ export function MessageStream({
     } finally {
       if (loadEpoch === selectionLoadEpochRef.current) setSelectionStatus("idle");
     }
-  }, [engineSessionId, liveTurnActive, onContextPackageCreated, selectionOpen, localRuntime]);
+  }, [
+    engineSessionId,
+    liveTurnActive,
+    onContextPackageCreated,
+    displayMessages,
+    selectionOpen,
+    localRuntime,
+  ]);
 
   useEffect(() => {
     if (
@@ -431,13 +444,14 @@ export function MessageStream({
   // reference — that's what lets their React.memo actually skip work on the
   // 50ms stream batches. prevItemsRef survives renders; the useMemo only
   // recomputes when messages/liveTurnActive change.
+  const streamMessages = selectionOpen ? messages : (displayMessages ?? messages);
   const prevItemsRef = useRef<StreamItem[]>([]);
   const items = useMemo(
     () =>
       timePhase(
         "stream.build",
         () => {
-          const built = buildStreamItems(messages, { liveTurnActive });
+          const built = buildStreamItems(streamMessages, { liveTurnActive });
           const reconciled = reconcileStreamItems(prevItemsRef.current, built);
           prevItemsRef.current = reconciled;
           // Post-pass: collapse runs of ≥2 sibling sub-agents into a summary
@@ -445,13 +459,16 @@ export function MessageStream({
           // refs and a live agent's rollup stats stay fresh each rebuild.
           return foldAgentGroups(reconciled);
         },
-        () => ({ msgs: messages.length }),
+        () => ({ msgs: streamMessages.length }),
       ),
-    [messages, liveTurnActive],
+    [streamMessages, liveTurnActive],
   );
   const displayGroups = useMemo(
-    () => alignContextSelectionGroups(groupStreamItemsIntoContextTurns(items), selectionTurns),
-    [items, selectionTurns],
+    () =>
+      selectionOpen
+        ? alignContextSelectionGroups(groupStreamItemsIntoContextTurns(items), selectionTurns)
+        : null,
+    [items, selectionOpen, selectionTurns],
   );
   const selectionAligned = displayGroups !== null;
 
@@ -571,17 +588,144 @@ export function MessageStream({
   // Draft edits, trailing controls and scroll-follow state can rerender the
   // stream shell without changing history. Reuse the row elements in that case.
   const showingSubagent = localRuntime && selectedSubagent !== null;
+  const sessionKey = historyKey ?? engineSessionId ?? null;
+  const preview = displayMessages !== undefined;
+  const [pageStart, setPageStart] = useState<{ sessionKey: string | null; rowId: string }>();
+  const earlierRequestRef = useRef<{
+    sessionKey: string | null;
+    firstRow: string | undefined;
+    rowCount: number;
+    pending: boolean;
+  } | null>(null);
+  const diskRequest = earlierRequestRef.current;
+  const diskPrepended =
+    diskRequest?.sessionKey === sessionKey &&
+    !preview &&
+    items.length > 0 &&
+    diskRequest.firstRow !== items[0]!.id;
+  const heldIndex =
+    pageHistory && !preview && pageStart?.sessionKey === sessionKey
+      ? items.findIndex((item) => item.id === pageStart.rowId)
+      : -1;
+  let visibleStart = 0;
+  if (pageHistory || preview) {
+    if (diskPrepended) {
+      // Legacy disk paging can supply older rows after the grouped window
+      // has reached its start. Reveal one page of the newly read rows now.
+      const formerStart = heldIndex >= 0 ? heldIndex : items.length - diskRequest.rowCount;
+      visibleStart = Math.max(0, formerStart - HISTORY_PAGE_ROWS);
+    } else {
+      visibleStart = heldIndex >= 0 ? heldIndex : Math.max(0, items.length - HISTORY_PAGE_ROWS);
+    }
+  }
+  const oldestRow = items[visibleStart]?.id;
+  useLayoutEffect(() => {
+    if (
+      diskRequest &&
+      (diskRequest.sessionKey !== sessionKey || preview || history?.failed || diskPrepended)
+    ) {
+      earlierRequestRef.current = null;
+    }
+    setPageStart((previous) => {
+      const current = !preview && previous?.sessionKey === sessionKey ? previous : undefined;
+      if (!pageHistory || selectionOpen || showingSubagent || preview || oldestRow === undefined) {
+        return current;
+      }
+      // Pin the start of the page through appends and settle a disk prepend
+      // before paint, so the next render cannot hide the rows again.
+      return current?.rowId === oldestRow ? current : { sessionKey, rowId: oldestRow };
+    });
+  }, [
+    diskPrepended,
+    diskRequest,
+    history?.failed,
+    oldestRow,
+    pageHistory,
+    preview,
+    selectionOpen,
+    sessionKey,
+    showingSubagent,
+  ]);
+
+  const hasEarlierRows = pageHistory && !preview && visibleStart > 0;
+  const automaticAttemptRef = useRef<{
+    sessionKey: string | null;
+    rowId: string | undefined;
+  } | null>(null);
+  useLayoutEffect(() => {
+    automaticAttemptRef.current = null;
+  }, [sessionKey]);
+  function requestEarlier(automatic: boolean) {
+    if (selectionOpen || showingSubagent || preview) return;
+    const canReadDisk =
+      history &&
+      !history.loading &&
+      !history.limitReached &&
+      (automatic ? history.hasMore && !history.failed : history.hasMore || history.failed);
+    if (!hasEarlierRows && !canReadDisk) return;
+    if (earlierRequestRef.current?.sessionKey === sessionKey && earlierRequestRef.current.pending) {
+      return;
+    }
+    const attempted = automaticAttemptRef.current;
+    if (automatic && attempted?.sessionKey === sessionKey && attempted.rowId === oldestRow) return;
+    automaticAttemptRef.current = { sessionKey, rowId: oldestRow };
+
+    const el = ref.current;
+    if (el) {
+      const viewportTop = el.getBoundingClientRect().top;
+      // Requests are made at the head of the list. Hold the first row the
+      // reader can see rather than assuming the new page has a fixed height.
+      let row = el.firstElementChild?.firstElementChild;
+      while (row) {
+        if (
+          row instanceof HTMLElement &&
+          row.hasAttribute("data-chat-history-row") &&
+          row.getBoundingClientRect().bottom > viewportTop
+        ) {
+          holdHistoryAnchor(row);
+          break;
+        }
+        row = row.nextElementSibling;
+      }
+    }
+    if (hasEarlierRows) {
+      setPageStart({ sessionKey, rowId: items[Math.max(0, visibleStart - HISTORY_PAGE_ROWS)]!.id });
+      return;
+    }
+    const request = { sessionKey, firstRow: items[0]?.id, rowCount: items.length, pending: true };
+    earlierRequestRef.current = request;
+    void history
+      ?.loadEarlier()
+      .catch(() => undefined)
+      .finally(() => {
+        request.pending = false;
+      });
+  }
+
+  const { ref, showJump, scrollToBottom, preserveScrollOnChange, holdHistoryAnchor } =
+    useStickToBottom<HTMLDivElement>({
+      trigger: buildScrollTrigger(streamMessages, liveTurnActive, trailingKey),
+      jumpKey: sessionKey,
+      sendEpoch,
+      historyStartKey: oldestRow,
+      onReadEarlier: hasEarlierRows || history?.hasMore ? () => requestEarlier(true) : undefined,
+    });
+
+  const showHistoryControl = !preview && (hasEarlierRows || history?.hasMore || history?.failed);
   const normalRows = useMemo(() => {
     if (selectionOpen || showingSubagent) return null;
-    return items.map((item, index) => (
+    return items.slice(visibleStart).map((item, index) => (
       <div
         key={`vc-${item.id}`}
-        className={index < items.length - LIVE_TAIL_UNCONTAINED ? "cs-stream-item" : undefined}
+        data-chat-history-row={item.id}
+        className={
+          visibleStart + index < items.length - LIVE_TAIL_UNCONTAINED ? "cs-stream-item" : undefined
+        }
       >
         {renderStreamItem(item)}
       </div>
     ));
-  }, [items, renderStreamItem, selectionOpen, showingSubagent]);
+  }, [items, renderStreamItem, selectionOpen, showingSubagent, visibleStart]);
 
   if (localRuntime && selectedSubagent) {
     return <SubagentSessionDetail {...selectedSubagent} onBack={() => setSelectedSubagent(null)} />;
@@ -626,7 +770,37 @@ export function MessageStream({
           ref={ref}
         >
           <div className="cs-chat-transcript w-full min-w-0">
-            {!selectionOpen && leading}
+            {!selectionOpen && showHistoryControl && (
+              <div className="flex flex-col items-center gap-1 px-4 py-3" data-chat-history-control>
+                {!hasEarlierRows && history?.failed && (
+                  <span role="status" className="text-xs text-muted-foreground">
+                    {t("chat.historyLoadFailed")}
+                  </span>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={!hasEarlierRows && (history?.loading || history?.limitReached)}
+                  onClick={() => requestEarlier(false)}
+                >
+                  {!hasEarlierRows && history?.loading && (
+                    <Loader2 className="mr-2 size-3.5 animate-spin" />
+                  )}
+                  {t(
+                    hasEarlierRows
+                      ? "chat.loadEarlierHistory"
+                      : history?.limitReached
+                        ? "chat.historyPreviewLimit"
+                        : history?.loading
+                          ? "chat.loadingEarlierHistory"
+                          : history?.failed
+                            ? "chat.retryHistory"
+                            : "chat.loadEarlierHistory",
+                  )}
+                </Button>
+              </div>
+            )}
             {selectionOpen &&
               (selectionStatus === "loading" ||
                 selectionTurns.length === 0 ||

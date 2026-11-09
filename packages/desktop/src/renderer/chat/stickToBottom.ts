@@ -21,6 +21,8 @@ export interface StickApi<T extends HTMLElement> {
   scrollToBottom: () => void;
   /** A deliberate disclosure is a reading action: pause follow and keep its header in place. */
   preserveScrollOnChange: AnchoredLayoutChange;
+  /** Hold a visible row while an earlier history page is being prepended. */
+  holdHistoryAnchor: (anchor: HTMLElement) => void;
 }
 
 interface StickOptions {
@@ -44,7 +46,13 @@ interface StickOptions {
   sendEpoch?: number;
   /** Distance (px) from bottom that still counts as "at bottom". */
   threshold?: number;
+  /** Identity of the oldest visible history row, used to restore before paint. */
+  historyStartKey?: string;
+  /** Read earlier history after an upward scroll gesture near the start. */
+  onReadEarlier?: () => void;
 }
+
+const HISTORY_TOP_THRESHOLD = 80;
 
 /**
  * Stick-to-bottom for a scrollable container, upgraded to an explicit
@@ -60,6 +68,8 @@ export function useStickToBottom<T extends HTMLElement>({
   jumpKey,
   sendEpoch,
   threshold = 32,
+  historyStartKey,
+  onReadEarlier,
 }: StickOptions): StickApi<T> {
   const ref = useRef<T>(null);
   // Authoritative, high-frequency follow decision. State below mirrors it for UI.
@@ -67,7 +77,14 @@ export function useStickToBottom<T extends HTMLElement>({
   const [uiState, setUiState] = useState<FollowState>(INITIAL_FOLLOW_STATE);
   // scrollTop we last set ourselves; lets onScroll reject its own snap (S2).
   const lastProgrammaticTopRef = useRef<number | null>(null);
-  const readingAnchorRef = useRef<{ container: T; element: HTMLElement; top: number } | null>(null);
+  const readingAnchorRef = useRef<{
+    container: T;
+    element: HTMLElement;
+    top: number;
+    history: boolean;
+  } | null>(null);
+  const readEarlierRef = useRef(onReadEarlier);
+  readEarlierRef.current = onReadEarlier;
 
   const sync = useCallback((next: FollowState) => {
     followRef.current = next;
@@ -107,6 +124,27 @@ export function useStickToBottom<T extends HTMLElement>({
     [sync, threshold],
   );
 
+  const holdReadingAnchor = useCallback(
+    (anchor: HTMLElement, history: boolean) => {
+      const el = ref.current;
+      if (!el || !el.contains(anchor)) return;
+      readingAnchorRef.current = {
+        container: el,
+        element: anchor,
+        top: anchor.getBoundingClientRect().top,
+        history,
+      };
+      // This ref must change before React commits and ResizeObserver can run.
+      sync({ following: false, atBottom: uiPosition(el, threshold) });
+      lastProgrammaticTopRef.current = null;
+    },
+    [sync, threshold],
+  );
+  const holdHistoryAnchor = useCallback(
+    (anchor: HTMLElement) => holdReadingAnchor(anchor, true),
+    [holdReadingAnchor],
+  );
+
   const preserveScrollOnChange = useCallback<AnchoredLayoutChange>(
     (anchor, change) => {
       const el = ref.current;
@@ -114,11 +152,7 @@ export function useStickToBottom<T extends HTMLElement>({
         change();
         return;
       }
-      const beforeTop = anchor.getBoundingClientRect().top;
-      readingAnchorRef.current = { container: el, element: anchor, top: beforeTop };
-      // This ref must change before React commits and ResizeObserver can run.
-      sync({ following: false, atBottom: uiPosition(el, threshold) });
-      lastProgrammaticTopRef.current = null;
+      holdReadingAnchor(anchor, false);
       // Discrete user actions commit synchronously so no later restoration can
       // race a send, Session switch, or explicit jump-to-bottom request.
       flushSync(change);
@@ -127,7 +161,7 @@ export function useStickToBottom<T extends HTMLElement>({
       lastProgrammaticTopRef.current = el.scrollTop;
       measurePosition(el);
     },
-    [measurePosition, restoreReadingAnchor, sync, threshold],
+    [holdReadingAnchor, measurePosition, restoreReadingAnchor],
   );
 
   // (1) Manual scroll detection — via the pure reducer, rejecting our own snap.
@@ -137,20 +171,37 @@ export function useStickToBottom<T extends HTMLElement>({
     let userScrollUntil = 0;
     let draggingScrollbar = false;
     let primaryPointerDown = false;
-    const noteUserScroll = () => {
-      readingAnchorRef.current = null;
+    let lastTop = el.scrollTop;
+    let touchY: number | undefined;
+    const readEarlierNearTop = () => {
+      if (el.scrollTop <= HISTORY_TOP_THRESHOLD) readEarlierRef.current?.();
+    };
+    const noteUserScroll = (againstTop = false) => {
+      // Repeated upward input at the hard top doesn't move the reader while
+      // an asynchronous page is pending. Keep that page's reading anchor.
+      if (!againstTop || !readingAnchorRef.current?.history) readingAnchorRef.current = null;
       lastProgrammaticTopRef.current = null;
       userScrollUntil = performance.now() + 1000;
     };
     const pauseForReading = () => sync({ following: false, atBottom: uiPosition(el, threshold) });
     const onWheel = (event: WheelEvent) => {
       if (!event.deltaY) return;
-      noteUserScroll();
-      if (event.deltaY < 0) pauseForReading();
+      noteUserScroll(event.deltaY < 0 && el.scrollTop <= 0.5);
+      if (event.deltaY < 0) {
+        pauseForReading();
+        readEarlierNearTop();
+      }
     };
-    const onTouchMove = () => {
-      noteUserScroll();
+    const onTouchStart = (event: TouchEvent) => {
+      touchY = event.touches[0]?.clientY;
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      const y = event.touches[0]?.clientY;
+      const movedEarlier = y !== undefined && touchY !== undefined && y > touchY;
+      noteUserScroll(movedEarlier && el.scrollTop <= 0.5);
       pauseForReading();
+      if (movedEarlier) readEarlierNearTop();
+      touchY = y;
     };
     const onPointerDown = (event: PointerEvent) => {
       readingAnchorRef.current = null;
@@ -208,10 +259,15 @@ export function useStickToBottom<T extends HTMLElement>({
       if (
         ["ArrowUp", "PageUp", "Home"].includes(event.key) ||
         (event.key === " " && event.shiftKey)
-      )
+      ) {
         pauseForReading();
+        readEarlierNearTop();
+      }
     };
     const onScroll = () => {
+      const scrollTop = el.scrollTop;
+      const movedEarlier = scrollTop < lastTop;
+      lastTop = scrollTop;
       // Dragging a selection beyond the viewport causes native auto-scroll.
       if (pauseForSelection()) {
         measurePosition(el);
@@ -224,18 +280,20 @@ export function useStickToBottom<T extends HTMLElement>({
         measurePosition(el);
         return;
       }
-      const distance = el.scrollHeight - (el.scrollTop + el.clientHeight);
+      const distance = el.scrollHeight - (scrollTop + el.clientHeight);
       const { state } = nextFollowState(followRef.current, {
         kind: "scroll",
         distance,
         threshold,
-        scrollTop: el.scrollTop,
+        scrollTop,
         lastProgrammaticTop: lastProgrammaticTopRef.current,
       });
       sync(state);
+      if (movedEarlier && lastProgrammaticTopRef.current === null) readEarlierNearTop();
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     el.addEventListener("wheel", onWheel, { passive: true });
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
     el.addEventListener("touchmove", onTouchMove, { passive: true });
     el.addEventListener("pointerdown", onPointerDown, { passive: true });
     el.addEventListener("keydown", onKeyDown);
@@ -245,6 +303,7 @@ export function useStickToBottom<T extends HTMLElement>({
     return () => {
       el.removeEventListener("scroll", onScroll);
       el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("pointerdown", onPointerDown);
       el.removeEventListener("keydown", onKeyDown);
@@ -298,6 +357,11 @@ export function useStickToBottom<T extends HTMLElement>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sendEpoch]);
 
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el) restoreReadingAnchor(el);
+  }, [historyStartKey, restoreReadingAnchor]);
+
   // (5) Content change (trigger): snap only while following.
   useEffect(() => {
     const el = ref.current;
@@ -321,6 +385,7 @@ export function useStickToBottom<T extends HTMLElement>({
     showJump: showJumpButton(uiState),
     scrollToBottom,
     preserveScrollOnChange,
+    holdHistoryAnchor,
   };
 }
 

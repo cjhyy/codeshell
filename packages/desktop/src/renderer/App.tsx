@@ -2221,7 +2221,8 @@ function App() {
               activeSessionId !== null &&
               isChatView &&
               !busy &&
-              !awaitingHydration
+              !awaitingHydration &&
+              transcriptHistory.displayMessages === undefined
             }
             onSelectContext={requestContextSelection}
             activity={sessionChromeVisible && !cloudSelected ? liveActivity : undefined}
@@ -2572,6 +2573,8 @@ function App() {
                 <>
                   <ChatView
                     messages={state.messages}
+                    displayMessages={transcriptHistory.displayMessages}
+                    pageHistory={activeSessionId !== null}
                     composerDisabled={transcriptHistory.outputRecoveryPending}
                     deliveryEpoch={runController.deliveryEpoch}
                     outputHistoryRecovery={
