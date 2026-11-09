@@ -146,9 +146,13 @@ jobs:
             # of SIGPIPE because Bun already closed the read end. Isolating one file at a
             # time only moved the failure to the next plugins suite (knownMarketplaces,
             # gitOps.lsremote, installedPlugins); the whole dir alone passed 8/8 on the runner.
+            # The session dir also runs in its own Bun process below, for the same bug: from
+            # 2026-11-09 the file order put memory.project-root's 12 concurrent child processes
+            # right after the spawn-heavy output-journal and model-traces suites, and
+            # `p.exited` failed with EBADF epoll_ctl in most core-rest runs on main and PRs.
             ignore: >-
               --path-ignore-patterns **/src/engine/** --path-ignore-patterns **/src/tool-system/**
-              --path-ignore-patterns '**/src/plugins/**'
+              --path-ignore-patterns '**/src/plugins/**' --path-ignore-patterns '**/src/session/**'
           - shard: desktop
             paths: packages/desktop
             # The issuer proof runs alone above so its receipt precedes the first SDK/Core import.
@@ -424,6 +428,9 @@ jobs:
       - name: test core plugins in their own Bun process
         if: matrix.shard == 'core-rest'
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/plugins
+      - name: test core session in its own Bun process
+        if: matrix.shard == 'core-rest'
+        run: node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/session
       - name: Compiled isolated instruction adoption lifecycle
         if: matrix.shard == 'rest'
         run: |

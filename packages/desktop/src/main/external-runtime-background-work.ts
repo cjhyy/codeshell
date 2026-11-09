@@ -11,6 +11,17 @@ import {
 } from "@cjhyy/code-shell-core/internal";
 import type { ExternalRuntimeBackgroundWorkDelivery } from "./external-runtime-service.js";
 
+const MAX_WAITING_TASKS = 8;
+const MAX_WAITING_LABEL_CHARS = 80;
+
+/** One-line, bounded label; job descriptions are model-written (untrusted). */
+function waitingLabel(description: string | undefined): string {
+  const line = (description || "(background job)").replace(/\s+/gu, " ").trim();
+  return line.length > MAX_WAITING_LABEL_CHARS
+    ? `${line.slice(0, MAX_WAITING_LABEL_CHARS - 1)}…`
+    : line;
+}
+
 export function createExternalRuntimeBackgroundWork(
   shells: Pick<typeof backgroundShellManager, "hasExitWaitForSession"> = backgroundShellManager,
 ): ExternalRuntimeBackgroundWorkDelivery {
@@ -25,6 +36,11 @@ export function createExternalRuntimeBackgroundWork(
     hasRunning: (sessionId) =>
       backgroundJobRegistry.hasRunningForSession(sessionId) ||
       shells.hasExitWaitForSession(sessionId),
+    listRunning: (sessionId) =>
+      backgroundJobRegistry
+        .listRunningForSession(sessionId)
+        .slice(0, MAX_WAITING_TASKS)
+        .map((job) => ({ kind: "job", label: waitingLabel(job.description) })),
     dropSession: (sessionId) => {
       backgroundJobRegistry.dropForSession(sessionId);
       notificationQueue.reset(sessionId);

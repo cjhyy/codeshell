@@ -1,5 +1,5 @@
-import React, { memo, useState } from "react";
-import { CircleDot, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
+import React, { memo, useEffect, useState } from "react";
+import { CircleDot, CheckCircle2, AlertTriangle, Clock, Hourglass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GoalProgressMessage } from "../types";
 import { useT } from "../i18n/I18nProvider";
@@ -10,6 +10,18 @@ export interface GoalExtendOpts {
   addStopBlocks?: number;
   addTokenBudget?: number;
   addTimeBudgetMs?: number;
+}
+
+/** How often an open background-wait marker refreshes its "已等" time. */
+const WAIT_TICK_MS = 10_000;
+
+/** `45s` / `12m` / `2h 05m` — minute precision is enough for a wait. */
+export function formatWaitDuration(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  if (total < 60) return `${total}s`;
+  const minutes = Math.floor(total / 60);
+  if (minutes < 60) return `${minutes}m`;
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m`;
 }
 
 /** Default bumps offered by the "再续" button, per limit dimension. */
@@ -23,6 +35,8 @@ const EXTEND_STOP_BLOCKS = 15;
  *   ✓ 目标已达成 · 共 N 轮                     (status "met")
  *   ⚠ 目标续跑已达上限(N 轮) · 已停下          (status "exhausted")
  *   ⏲ 目标接近续跑上限 · 还剩 N 次   [再续 N 次] (status "approaching_limit")
+ *   ⌛ 等待后台任务 · 第 N 轮 · 已等 12m — 任务  (parked on background work;
+ *      becomes "等了后台任务 20m" once the next run starts)
  *
  * Counting the "目标未达成" bars tells the user how many rounds the goal ran;
  * the trailing "目标已达成 · 共 N 轮" repeats the total. Copy is the judge's
@@ -43,6 +57,46 @@ function GoalProgressViewImpl({
   // id), and the reducer replaces/prunes this marker once the run advances, so
   // no persistent "already extended" state is needed.
   const [clicked, setClicked] = useState(false);
+  // An open background wait ticks; an ended one is fixed at its duration.
+  const waitOpen = !!message.waiting && message.waitEndedAtMs === undefined;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!waitOpen) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), WAIT_TICK_MS);
+    return () => clearInterval(timer);
+  }, [waitOpen]);
+
+  if (message.waiting) {
+    const elapsed = formatWaitDuration((message.waitEndedAtMs ?? now) - message.waiting.sinceMs);
+    const tasks = message.waiting.tasks ?? [];
+    const taskTitle =
+      tasks.length > 0
+        ? [t("msg.goal.waitingTasksTitle"), ...tasks.map((task) => `• ${task.label}`)].join("\n")
+        : undefined;
+    return (
+      <div
+        className="flex items-center gap-1.5 px-4 py-1 text-xs text-muted-foreground"
+        data-goal-wait={waitOpen ? "open" : "ended"}
+      >
+        <Hourglass size={12} className="shrink-0" />
+        <span className="shrink-0">
+          {t(waitOpen ? "msg.goal.waitingBackground" : "msg.goal.waitedBackground", {
+            count: round,
+            elapsed,
+          })}
+        </span>
+        {tasks.length > 0 && (
+          <span className="truncate text-muted-foreground/80" title={taskTitle}>
+            —{" "}
+            {tasks.length === 1
+              ? tasks[0]!.label
+              : t("msg.goal.waitingTasks", { count: tasks.length })}
+          </span>
+        )}
+      </div>
+    );
+  }
 
   // Approaching a stop ceiling while still running — offer a one-click extend so
   // an unattended goal isn't truncated. The button targets whichever limit is

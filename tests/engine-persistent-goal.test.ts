@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { Engine } from "../packages/core/src/engine/engine.js";
 import { registerProvider, PROVIDER_REGISTRY } from "../packages/core/src/llm/client-factory.js";
 import { LLMClientBase } from "../packages/core/src/llm/client-base.js";
-import type { LLMResponse } from "../packages/core/src/types.js";
+import type { LLMResponse, StreamEvent } from "../packages/core/src/types.js";
 import type { CreateMessageOptions } from "../packages/core/src/llm/types.js";
 import { backgroundJobRegistry } from "../packages/core/src/tool-system/builtin/background-jobs.js";
 
@@ -157,6 +157,41 @@ describe("persistent goal lifecycle", () => {
     await engine.run("普通消息", { sessionId: sid });
     // No active goal → no judge call this run.
     expect(judgeCalls).toBe(judgeBefore);
+  });
+
+  it("numbers goal rounds per goal across background wakes, not per run", async () => {
+    // s-mw4q76at-82b430f2: every wake parked on new background work and the
+    // marker restarted at "第 1 轮" because TurnLoop counts per run.
+    waitOnFiniteBackgroundWork();
+    const markers: Array<Extract<StreamEvent, { type: "goal_progress" }>> = [];
+    const onStream = (event: StreamEvent) => {
+      if (event.type === "goal_progress") markers.push(event);
+    };
+    await engine.run("派出后台任务", { sessionId: sid, goal: "完成全部任务", onStream });
+    await engine.run("后台完成后继续", { sessionId: sid, onStream });
+    await engine.run("再继续", { sessionId: sid, onStream });
+
+    // "Approaching the turn limit" notices (this harness caps runs at 3 turns)
+    // restate the current count; only judged markers add a round.
+    const waits = markers.filter((marker) => marker.status === "not_met");
+    expect(markers.filter((marker) => marker.status === "approaching_limit")).toHaveLength(3);
+    expect(markers.map((marker) => marker.round)).toEqual([0, 1, 1, 2, 2, 3]);
+    expect(waits.map((marker) => marker.round)).toEqual([1, 2, 3]);
+    for (const marker of waits) {
+      expect(marker.waiting).toMatchObject({
+        kind: "background_work",
+        tasks: [{ kind: "job", label: "finite test work" }],
+      });
+    }
+    expect(waits[2]!.progress?.rounds).toBe(3);
+    expect(engine.getSessionManager().readGoalProgress(sid)).toMatchObject({
+      rounds: 3,
+      runningSinceMs: expect.any(Number),
+    });
+    expect(engine.getSessionManager().readSessionState(sid)?.goalLifecycle).toMatchObject({
+      phase: "waiting",
+      waitKind: "background",
+    });
   });
 
   it("clearGoal() on a session with no goal is a no-op returning false", () => {

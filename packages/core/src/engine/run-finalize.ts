@@ -16,7 +16,7 @@ import {
   type SessionStateFieldPatch,
 } from "../session/session-manager.js";
 import { foldRunUsage, type CumulativeUsageCounters } from "../session/usage.js";
-import type { GoalTerminationReason } from "../goal/lifecycle.js";
+import { goalBlocksAutomaticContinuation, type GoalTerminationReason } from "../goal/lifecycle.js";
 import type { LegacyPetWorkDelegation, Message, TokenUsage } from "../types.js";
 import type { LLMUsageTracker } from "../llm/types.js";
 import type { LLMClientBase } from "../llm/client-base.js";
@@ -96,9 +96,14 @@ export async function drainHeadlessBackgroundAgents(args: {
   // draining + summarizing until none remain. turnCount accumulates, so
   // the turn-loop's maxTurns still bounds runaway re-summarization.
   for (;;) {
+    // A one-shot run can also ask a user question. Keep background results in
+    // the mailbox for their answer instead of entering a new summarize turn.
+    if (goalBlocksAutomaticContinuation(session.state.goalLifecycle)) break;
     while (!aborted && asyncAgentRegistry.hasRunningForSession(sid)) {
       aborted = await args.waitForBackgroundAgentChange(sid, args.signal);
+      if (goalBlocksAutomaticContinuation(session.state.goalLifecycle)) break;
     }
+    if (goalBlocksAutomaticContinuation(session.state.goalLifecycle)) break;
     let pending = notificationQueue.drainAll(sid);
     if (aborted && pending.length === 0) {
       // Abort race: an agent calls markCompleted (registry notify) and only

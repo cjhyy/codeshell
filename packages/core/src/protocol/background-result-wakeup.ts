@@ -154,7 +154,10 @@ export async function wakeSessionForBackgroundResults({
       owner.engine === ownerEngine &&
       owner.settled === ownerBoundary,
     isStopped: () => owner.wasCancelledSinceLastTurn(),
-    isEligible: () => !owner.isBusy() && !owner.engine.isHeadless(),
+    isEligible: () =>
+      !owner.isBusy() &&
+      !owner.engine.isHeadless() &&
+      owner.engine.isGoalContinuationBlocked?.(sessionId) !== true,
   });
   const delivery = continuation.claim();
   if (!delivery) {

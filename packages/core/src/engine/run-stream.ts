@@ -297,6 +297,9 @@ export function buildWrappedOnStream(args: {
         status: event.status,
         round: event.round,
         ...(event.gaps ? { gaps: event.gaps } : {}),
+        ...(event.waitingForUser ? { waitingForUser: event.waitingForUser } : {}),
+        ...(event.waiting ? { waiting: event.waiting } : {}),
+        ...(event.progress ? { progress: event.progress } : {}),
       });
     }
     userOnStream?.(event);

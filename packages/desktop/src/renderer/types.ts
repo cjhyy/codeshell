@@ -20,6 +20,14 @@ import { aggregateFileChangeSummary } from "./messages/fileChangeAggregator";
 import { translate } from "./i18n/translate";
 import { loadUILanguage } from "./uiLanguage";
 import { isSystemReminderText } from "./contextSelection";
+import {
+  carryGoalClock,
+  closeOpenGoalWaits,
+  goalClockAfterProgress,
+  goalRunEnded,
+  startGoalClock,
+  stopGoalClock,
+} from "./goalClock";
 
 export type ToolStatus = "queued" | "running" | "succeeded" | "failed" | "denied" | "cancelled";
 
@@ -206,6 +214,10 @@ export interface GoalProgressMessage {
   stopBlocksRemaining?: number;
   /** For "approaching_limit": which ceiling is closest — drives UI copy + extend default. */
   nearest?: "turns" | "stopBlocks";
+  /** The goal parked on finite background work (rendered as a wait, not a verdict). */
+  waiting?: { sinceMs: number; tasks?: Array<{ kind: string; label: string }> };
+  /** When the wait ended (the next run started or the goal moved on). */
+  waitEndedAtMs?: number;
 }
 
 /** Renderer projection of the session's persisted Goal state. */
@@ -216,10 +228,20 @@ export interface ActiveGoal {
   revision?: number;
   round: number;
   paused: boolean;
-  /** When the objective was set (epoch ms), for the Goal bar's elapsed time. */
+  /** When the objective was set (epoch ms); not elapsed working time. */
   setAtMs?: number;
   /** The Goal stopped to wait for the user's answer to this question. */
   waitingForUser?: string;
+  /**
+   * Goal-level active time (running + background waits), settled up to
+   * `clockSinceMs` when that is set, else final. Absent before any marker
+   * carried progress (older servers) — unknown history is not estimated.
+   */
+  activeMs?: number;
+  /** The goal clock is running since this epoch ms (a run or a background wait). */
+  clockSinceMs?: number;
+  /** Parked on background work: the clock keeps running after the run ends. */
+  waitingBackground?: boolean;
 }
 
 /**
@@ -1262,7 +1284,7 @@ function applyStreamEventToTurn(
         event.authority === "system" ||
         event.authority === "policy";
       if (hidden && !event.clientMessageId) return state;
-      const appended = appendUserMessage(
+      return appendUserMessage(
         state,
         hidden ? "" : event.text,
         now(),
@@ -1273,16 +1295,6 @@ function applyStreamEventToTurn(
         event.clientMessageId,
         hidden ? undefined : outputUserAttachments(state, event),
       );
-      // The user's reply is what a goal waiting for the user resumes on. Clear
-      // the ask now: the resumed run may park on background work without
-      // emitting any goal_progress that would otherwise clear it.
-      if (!hidden && appended.activeGoal?.waitingForUser) {
-        return {
-          ...appended,
-          activeGoal: { ...appended.activeGoal, waitingForUser: undefined },
-        };
-      }
-      return appended;
     }
 
     case "session_started": {
@@ -1291,10 +1303,16 @@ function applyStreamEventToTurn(
       // estimate), not the prompt that will actually be sent. That
       // produced the alarming "473k → 39k" jump in the ring. Wait for
       // the next usage_update — that's the real active prompt size.
+      // A new run of the goal: an open background wait has ended and the
+      // goal clock runs for the run.
+      const startedAt = now() ?? Date.now();
       return {
         ...state,
         sessionId: event.sessionId,
-        messages: withTurnTiming(state.messages, event, now()),
+        messages: closeOpenGoalWaits(withTurnTiming(state.messages, event, now()), startedAt),
+        ...(state.activeGoal && !("agentId" in event && event.agentId)
+          ? { activeGoal: startGoalClock(state.activeGoal, startedAt) }
+          : {}),
       };
     }
 
@@ -1864,6 +1882,9 @@ function applyStreamEventToTurn(
         turnsRemaining: event.turnsRemaining,
         stopBlocksRemaining: event.stopBlocksRemaining,
         nearest: event.nearest,
+        ...(event.waiting
+          ? { waiting: { sinceMs: event.waiting.sinceMs, tasks: event.waiting.tasks } }
+          : {}),
       };
       // The "approaching_limit" marker carries the "再续" button. Only prune it
       // when the moment has TRULY passed:
@@ -1876,11 +1897,15 @@ function applyStreamEventToTurn(
         event.status === "met" ||
         event.status === "exhausted" ||
         event.status === "approaching_limit";
-      const base = dropApproaching
-        ? state.messages.filter(
-            (m) => !(m.kind === "goal_progress" && m.status === "approaching_limit"),
-          )
-        : state.messages;
+      // Any later marker ends an earlier background wait still shown as open.
+      const base = closeOpenGoalWaits(
+        dropApproaching
+          ? state.messages.filter(
+              (m) => !(m.kind === "goal_progress" && m.status === "approaching_limit"),
+            )
+          : state.messages,
+        now() ?? Date.now(),
+      );
       // Track the active goal's round; clear it when the goal settles
       // (met = achieved, exhausted = gave up). not_met/approaching_limit keep
       // it active and bump the round so the popover shows "第 N 轮".
@@ -1888,13 +1913,17 @@ function applyStreamEventToTurn(
         event.status === "met" || event.status === "exhausted"
           ? null
           : state.activeGoal
-            ? {
-                ...state.activeGoal,
-                round: event.round,
-                revision: event.revision ?? state.activeGoal.revision,
-                // Any later progress means the Goal is moving again.
-                waitingForUser: event.waitingForUser,
-              }
+            ? goalClockAfterProgress(
+                {
+                  ...state.activeGoal,
+                  round: event.round,
+                  revision: event.revision ?? state.activeGoal.revision,
+                  // Any later progress means the Goal is moving again.
+                  waitingForUser: event.waitingForUser,
+                },
+                event,
+                now() ?? Date.now(),
+              )
             : state.activeGoal;
       return { ...state, messages: [...base, msg], activeGoal };
     }
@@ -1908,6 +1937,9 @@ function applyStreamEventToTurn(
       ) {
         return state;
       }
+      const runInFlight = Object.values(state.streamRuns ?? {}).some(
+        (run) => !run.completed && !run.stopped,
+      );
       return {
         ...state,
         activeGoal: {
@@ -1917,6 +1949,9 @@ function applyStreamEventToTurn(
           round: 0,
           paused: event.paused ?? false,
           ...(event.setAtMs ? { setAtMs: event.setAtMs } : {}),
+          // A new goal identity starts its own accounting from zero.
+          activeMs: 0,
+          ...(runInFlight && !event.paused ? { clockSinceMs: now() ?? Date.now() } : {}),
         },
       };
     }
@@ -1929,9 +1964,9 @@ function applyStreamEventToTurn(
       if (state.activeGoal && isStaleGoalEvent(state.activeGoal, event, true)) {
         return state;
       }
-      return {
-        ...state,
-        activeGoal: {
+      const updated = carryGoalClock(
+        state.activeGoal,
+        {
           objective: event.objective,
           goalId: event.goalId ?? state.activeGoal?.goalId,
           revision: event.revision ?? state.activeGoal?.revision,
@@ -1941,6 +1976,16 @@ function applyStreamEventToTurn(
             ? { setAtMs: event.setAtMs ?? state.activeGoal?.setAtMs }
             : {}),
         },
+        now() ?? Date.now(),
+      );
+      if (!event.paused) return { ...state, activeGoal: updated };
+      // Pausing stops the goal clock (and ends a shown background wait);
+      // resuming restarts it with the next run.
+      const pausedAt = now() ?? Date.now();
+      return {
+        ...state,
+        messages: closeOpenGoalWaits(state.messages, pausedAt),
+        activeGoal: stopGoalClock(updated, pausedAt),
       };
     }
 
@@ -1948,7 +1993,11 @@ function applyStreamEventToTurn(
       if (state.activeGoal && isStaleGoalEvent(state.activeGoal, event)) {
         return state;
       }
-      return { ...state, activeGoal: null };
+      return {
+        ...state,
+        messages: closeOpenGoalWaits(state.messages, now() ?? Date.now()),
+        activeGoal: null,
+      };
     }
 
     case "usage_update": {
@@ -2205,6 +2254,7 @@ function applyStreamEventToTurn(
         activeAgents: nextActiveAgents,
         messages: finalized,
         turnEpoch: cleanlyCompleted ? state.turnEpoch + 1 : state.turnEpoch,
+        activeGoal: state.activeGoal && goalRunEnded(state.activeGoal, now() ?? Date.now()),
       };
     }
 
@@ -2403,6 +2453,21 @@ export function appendUserMessage(
   attachments?: PetChatAttachment[],
   sourceEventId?: string,
 ): MessagesReducerState {
+  const existing = clientMessageId
+    ? state.messages.find(
+        (m): m is UserMessage => m.kind === "user" && m.clientMessageId === clientMessageId,
+      )
+    : undefined;
+  // New replies and accepted pending sends answer the ask; a delayed echo of
+  // an older accepted message must not answer a question asked afterwards.
+  if (
+    !(injected ?? existing?.injected) &&
+    !pending &&
+    state.activeGoal?.waitingForUser &&
+    (!existing || (existing.pending === true && pending === false))
+  ) {
+    state = { ...state, activeGoal: { ...state.activeGoal, waitingForUser: undefined } };
+  }
   if (clientMessageId) {
     let replaced = false;
     const messages = state.messages.map((m) => {

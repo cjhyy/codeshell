@@ -1,5 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import { browserPartitionForBucket, shouldShowPanelDockFallback } from "./appUtils";
+import {
+  browserPartitionForBucket,
+  resolveMainComposerBucket,
+  shouldShowPanelDockFallback,
+} from "./appUtils";
+
+test("goal answers retain their owning session while ordinary composer sends follow selection", () => {
+  expect(
+    resolveMainComposerBucket({ bucket: "repo::a", continueGoal: true }, "repo::a", "repo::b"),
+  ).toBe("repo::a");
+  expect(resolveMainComposerBucket({ bucket: "repo::a" }, "repo::a", "repo::b")).toBe("repo::b");
+  expect(resolveMainComposerBucket("repo::a", "repo::a", "repo::b")).toBe("repo::b");
+});
 
 describe("panel dock lazy fallback visibility", () => {
   test("does not flash a retained but closed panel during startup", () => {

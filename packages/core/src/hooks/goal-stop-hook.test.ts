@@ -199,12 +199,14 @@ describe("createGoalStopHook — three-state judge", () => {
   it("not_met while a finite background job runs → parks (waiting) instead of looping", async () => {
     const judge = fakeJudge('{"met":false,"waiting":false,"gaps":"真实验收未执行"}');
     let waitingCalls = 0;
+    const waitKinds: string[] = [];
     const hook = createGoalStopHook({
       goal: "optimize until no visual diff",
       llm: judge,
       log: noopLog,
-      onWaiting: () => {
+      onWaiting: (kind) => {
         waitingCalls += 1;
+        waitKinds.push(kind);
       },
     });
     try {
@@ -217,7 +219,13 @@ describe("createGoalStopHook — three-state judge", () => {
       });
       expect(res.continueSession).toBeFalsy();
       expect(waitingCalls).toBe(1);
-      expect(res.data?.goalVerdict).toEqual({ met: false, gaps: "真实验收未执行" });
+      expect(waitKinds).toEqual(["background"]);
+      // The park carries display labels of what it waits on.
+      expect(res.data?.goalVerdict).toEqual({
+        met: false,
+        gaps: "真实验收未执行",
+        waitingOnBackground: [{ kind: "job", label: "DriveAgent(claude): fix report" }],
+      });
     } finally {
       backgroundJobRegistry.reset();
     }
@@ -292,8 +300,10 @@ describe("createGoalStopHook — three-state judge", () => {
       log: noopLog,
       // Fresh evidence each round (the model polls a job between stops).
       getJudgeContext: () => conversationContext(`poll ${round}`, `digest-poll-${round}`),
-      onWaiting: () => {
+      onWaiting: (kind) => {
         waitingCalls += 1;
+        // Parked for the user: this idle time must not count as goal time.
+        expect(kind).toBe("user");
       },
     });
     const results = [];
