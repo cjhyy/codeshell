@@ -472,17 +472,24 @@ describe("load", () => {
     expect((await readDisk()).quarantine).toEqual([valid, sameVersion]);
   });
 
-  test("a legacy sequence-armed row loads as armed at its creation time", async () => {
+  test("a legacy sequence-armed row loads as armed at its last update", async () => {
     const valid = await store().upsertSessionRule(upsert());
     const disk = await readDisk();
     const { armedAt: _armedAt, ...when } = (disk.rules[0] as NoticeRule).when as {
       armedAt: number;
     };
-    const legacy = { ...(disk.rules[0] as NoticeRule), when: { ...when, armedAtSeq: 4 } };
+    const updatedAt = valid.createdAt + 5_000;
+    const legacy = {
+      ...(disk.rules[0] as NoticeRule),
+      updatedAt,
+      when: { ...when, armedAtSeq: 4 },
+    };
     await writeFile(filePath, JSON.stringify({ ...disk, rules: [legacy] }), { mode: 0o600 });
     const s = store();
     await s.load();
-    expect(s.list()).toEqual([{ ...valid, when: { ...valid.when, armedAt: valid.createdAt } }]);
+    expect(s.list()).toEqual([
+      { ...valid, updatedAt, when: { ...valid.when, armedAt: updatedAt } },
+    ]);
     await s.upsertSessionRule(upsert({ sessionId: "s-two" }));
     const after = await readDisk();
     expect(after.quarantine).toEqual([]);

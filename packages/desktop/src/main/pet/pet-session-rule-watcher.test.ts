@@ -359,7 +359,7 @@ describe("blocked", () => {
       {
         kind: "session.blocked",
         priority: "P0",
-        dedupeKey: `${SID}:goal-pause:run-1`,
+        dedupeKey: `${SID}:goal-pause:-:-:run-1`,
         sessionId: SID,
         ruleIds: ["rule-a"],
         facts: { title: "修复登录", summary: "All tests pass now." },
@@ -372,12 +372,15 @@ describe("blocked", () => {
   test("goal waiting for the user emits blocked with the question and revision key", async () => {
     rules.rules.push(sessionRule("rule-a", { scope: "goal" }));
     const w = watcher();
-    await feed(w, [goal("not_met", { revision: 3, waitingForUser: "Which database?" })]);
+    await feed(w, [
+      started(),
+      goal("not_met", { goalId: "g-1", revision: 3, waitingForUser: "Which database?" }),
+    ]);
     expect(drafts).toEqual([
       {
         kind: "session.blocked",
         priority: "P0",
-        dedupeKey: `${SID}:goal-pause:3`,
+        dedupeKey: `${SID}:goal-pause:g-1:3:run-1`,
         sessionId: SID,
         ruleIds: ["rule-a"],
         facts: { title: "修复登录", question: "Which database?" },
@@ -385,7 +388,8 @@ describe("blocked", () => {
     ]);
   });
 
-  test("a bare waitingForUser flag also counts as blocked", async () => {
+  test("defensive: a bare waitingForUser flag also counts as blocked", async () => {
+    // Core sends the question string; a boolean is accepted in case a producer simplifies it.
     rules.rules.push(sessionRule("rule-a"));
     const w = watcher();
     await feed(w, [goal("not_met", { waitingForUser: true })]);
@@ -401,7 +405,7 @@ describe("blocked", () => {
     expect(drafts).toEqual([]);
     await feed(w, [goal("exhausted", { gaps: "ran out", runId: "run-7" })]);
     expect(drafts.map((draft) => [draft.kind, draft.dedupeKey])).toEqual([
-      ["session.blocked", `${SID}:goal-pause:run-7`],
+      ["session.blocked", `${SID}:goal-pause:-:-:run-7`],
     ]);
   });
 
@@ -714,5 +718,155 @@ describe("arming, dedupe keys and ordering", () => {
     const w = watcher();
     for (const event of [null, 3, "x", [], {}, { type: 5 }]) await w.observe(SID, event);
     expect(drafts).toEqual([]);
+  });
+});
+
+describe("core's real flows", () => {
+  test("a Goal waiting for the user parks with a completed turn: blocked only", async () => {
+    rules.rules.push(sessionRule("rule-a"), systemRule());
+    const w = watcher();
+    await feed(w, [
+      started(),
+      tool("Bash"),
+      goal("not_met", { goalId: "g-1", revision: 1, waitingForUser: "Ship it?" }),
+      // turn-loop parks the run with an ordinary completion, no completionKind.
+      done({ text: "Waiting for your answer" }),
+    ]);
+    expect(drafts.map((draft) => [draft.kind, draft.ruleIds])).toEqual([
+      ["session.blocked", ["rule-a", "all-sessions"]],
+    ]);
+    expect(rules.rules[0]!.state).toBe("active");
+  });
+
+  test("an exhausted Goal parked with a completed turn is blocked, not done", async () => {
+    rules.rules.push(sessionRule("rule-a"));
+    const w = watcher();
+    await feed(w, [started(), tool("Bash"), goal("exhausted", { gaps: "tests" }), done()]);
+    expect(drafts.map((draft) => draft.kind)).toEqual(["session.blocked"]);
+    expect(rules.rules[0]!.state).toBe("active");
+  });
+
+  test("the user's reply after a Goal pause can then complete the work", async () => {
+    rules.rules.push(sessionRule("rule-a"));
+    const w = watcher();
+    await feed(w, [started(), tool("Bash"), goal("not_met", { waitingForUser: "Q?" }), done()]);
+    await feed(w, [started({ runId: "run-2", clientMessageId: "cm-2" }), tool("Edit"), done()]);
+    expect(drafts.map((draft) => [draft.kind, draft.dedupeKey])).toEqual([
+      ["session.blocked", `${SID}:goal-pause:-:-:run-1`],
+      ["session.done", `${SID}:turn:run-2`],
+    ]);
+  });
+
+  test("a SendMessageToSession run on an idle Session is a user turn, not a wake", async () => {
+    rules.rules.push(sessionRule("rule-a"));
+    const w = watcher();
+    await feed(w, [started(), tool("NotifyMe"), done()]);
+    const delivered = { runId: "run-2", previousRunId: "run-1", clientMessageId: undefined };
+    await feed(w, [
+      { type: "session_user_message", text: "status?" },
+      started(delivered),
+      done({ text: "Still on it" }),
+    ]);
+    expect(drafts).toEqual([]);
+    // Without the announcing session_user_message the same run is a background wake.
+    await feed(w, [started({ ...delivered, runId: "run-3", previousRunId: "run-2" }), done()]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:run-3`]);
+  });
+
+  test("a SendMessageToSession message queued behind a running turn is still a user turn", async () => {
+    rules.rules.push(systemRule());
+    const w = watcher();
+    await feed(w, [
+      started(),
+      tool("NotifyMe"),
+      // Announced while run-1 is still running; its run starts after run-1 ends.
+      { type: "session_user_message", text: "and also this" },
+      done(),
+      started({ runId: "run-2", previousRunId: "run-1", clientMessageId: undefined }),
+      done(),
+    ]);
+    expect(drafts).toEqual([]);
+  });
+
+  test("a delivered user turn that does work still fires", async () => {
+    rules.rules.push(sessionRule("rule-a"));
+    const w = watcher();
+    await feed(w, [
+      { type: "session_user_message", text: "fix it" },
+      started({ runId: "run-2", previousRunId: "run-1", clientMessageId: undefined }),
+      tool("Bash"),
+      done(),
+    ]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:run-2`]);
+  });
+
+  test("a replayed goal_progress(met) from before the rule was armed does not fire it", async () => {
+    rules.rules.push(sessionRule("rule-goal", { scope: "goal", armedAt: NOW }));
+    const w = watcher();
+    clock = NOW + 10_000;
+    await feed(w, [goal("met", { goalId: "g-old", timestamp: NOW - 5_000 })]);
+    expect(drafts).toEqual([]);
+    await feed(w, [goal("met", { goalId: "g-new", timestamp: NOW + 1 })]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:goal:g-new`]);
+  });
+
+  test("an error event older than the rule does not fire it", async () => {
+    rules.rules.push(sessionRule("rule-a", { armedAt: NOW }));
+    const w = watcher();
+    clock = NOW + 10_000;
+    await feed(w, [{ type: "error", error: "old", timestamp: NOW - 1 }]);
+    expect(drafts).toEqual([]);
+  });
+
+  test("ToolSearch to load NotifyMe is not work", async () => {
+    rules.rules.push(sessionRule("rule-a"));
+    const w = watcher();
+    await feed(w, [started(), tool("ToolSearch"), tool("NotifyMe"), done({ text: "OK" })]);
+    expect(drafts).toEqual([]);
+    expect(rules.rules[0]!.state).toBe("active");
+  });
+
+  test("work deferred by a busy Session is reported by the follow-up turn", async () => {
+    rules.rules.push(systemRule());
+    busy = true;
+    const w = watcher();
+    await feed(w, [started(), tool("Bash"), done()]);
+    expect(drafts).toEqual([]);
+    busy = false;
+    // The queued follow-up needs no tools of its own.
+    await feed(w, [started({ runId: "run-2", clientMessageId: "cm-2" }), done()]);
+    // The carried work is consumed: a later idle turn without work stays quiet.
+    await feed(w, [started({ runId: "run-3", clientMessageId: "cm-3" }), done()]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:run-2`]);
+  });
+
+  test("an aborted follow-up drops the deferred work", async () => {
+    rules.rules.push(systemRule());
+    busy = true;
+    const w = watcher();
+    await feed(w, [started(), tool("Bash"), done()]);
+    busy = false;
+    await feed(w, [
+      started({ runId: "run-2", clientMessageId: "cm-2" }),
+      done({ reason: "aborted_streaming" }),
+      started({ runId: "run-3", clientMessageId: "cm-3" }),
+      done(),
+    ]);
+    expect(drafts).toEqual([]);
+  });
+
+  test("observe never rejects; failures are logged", async () => {
+    const w = watcher({
+      rules: {
+        activeForSession: () => {
+          throw new Error("store gone");
+        },
+        update: rules.update.bind(rules),
+      },
+    });
+    await expect(feed(w, [started(), tool("Bash"), done()])).resolves.toBeUndefined();
+    expect(logs).toEqual([
+      { event: "pet.notice.observe_failed", data: { sessionId: SID, error: "store gone" } },
+    ]);
   });
 });

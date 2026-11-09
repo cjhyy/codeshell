@@ -49,7 +49,11 @@ const NON_WORK_TOOLS: ReadonlySet<string> = new Set([
   "AskUserQuestion",
   "AskUserQuestionAsync",
   "RequestMimiDelivery",
+  // Loading a deferred tool schema (e.g. to reach NotifyMe) is not work either.
+  "ToolSearch",
 ]);
+/** Undelivered host-queued user messages tracked per Session (bounds a stuck counter). */
+const MAX_QUEUED_USER_MESSAGES = 64;
 const MAX_SUMMARY_LENGTH = 2_000;
 const MAX_FACT_LENGTH = 500;
 const MAX_OPTIONS = 10;
@@ -63,6 +67,16 @@ interface SessionTurnState {
   /** A done / failed draft already went out for the current turn. */
   doneInTurn: boolean;
   failedInTurn: boolean;
+  /**
+   * The Goal paused this turn (waiting for the user, or exhausted). Core then
+   * parks the run with an ordinary `turn_complete(completed)`, which must not
+   * read as done.
+   */
+  blockedInTurn: boolean;
+}
+
+function freshTurn(): SessionTurnState {
+  return { workInTurn: false, doneInTurn: false, failedInTurn: false, blockedInTurn: false };
 }
 
 type Matcher = (when: Extract<NoticeRule["when"], { kind: "session" }>) => boolean;
@@ -75,6 +89,12 @@ function boundedText(value: unknown, max: number): string | undefined {
 
 function nonEmptyString(value: unknown): string | undefined {
   return typeof value === "string" && value ? value : undefined;
+}
+
+/** When a stream event happened: its own timestamp when core stamped one, else now. */
+function eventTime(event: Record<string, unknown>, field: string, now: () => number): number {
+  const value = event[field];
+  return typeof value === "number" && Number.isFinite(value) ? value : now();
 }
 
 function pendingOptions(pending: DesktopPendingDecision): NoticeDraftOption[] | undefined {
@@ -122,6 +142,18 @@ function errorMessage(error: unknown): string {
 export class PetSessionRuleWatcher {
   private readonly turns = new Map<string, SessionTurnState>();
   private readonly queues = new Map<string, Promise<void>>();
+  /**
+   * Host-queued user messages (SendMessageToSession) whose run has not started.
+   * Such a run has no client message id, exactly like a background wake, and
+   * is told apart only by the `session_user_message` that precedes it.
+   */
+  private readonly queuedUserMessages = new Map<string, number>();
+  /**
+   * Sessions whose working turn completed while busy: the completion was
+   * deferred, so the follow-up turn inherits the work. Deleted once a done
+   * decision is made or the turn is aborted / fails.
+   */
+  private readonly carriedWork = new Set<string>();
   private readonly now: () => number;
 
   constructor(private readonly options: PetSessionRuleWatcherOptions) {
@@ -135,12 +167,16 @@ export class PetSessionRuleWatcher {
   async observeProjection(event: DesktopPetProjectionEvent): Promise<void> {
     if (event.kind !== "pending-upsert") return;
     const pending = event.pending;
-    await this.enqueue(pending.agentSessionId, () => this.applyPending(pending));
+    const at = Number.isFinite(event.observedAt) ? event.observedAt : this.now();
+    await this.enqueue(pending.agentSessionId, () => this.applyPending(pending, at));
   }
 
   private enqueue(sessionId: string, apply: () => Promise<void>): Promise<void> {
     const previous = this.queues.get(sessionId) ?? Promise.resolve();
-    const operation = previous.catch(() => undefined).then(apply);
+    // Observation is fire-and-forget from the stream tap: never reject.
+    const operation = previous.then(apply).catch((error: unknown) => {
+      this.log("pet.notice.observe_failed", { sessionId, error: errorMessage(error) });
+    });
     this.queues.set(sessionId, operation);
     return operation.finally(() => {
       if (this.queues.get(sessionId) === operation) this.queues.delete(sessionId);
@@ -150,10 +186,23 @@ export class PetSessionRuleWatcher {
   private turn(sessionId: string): SessionTurnState {
     let state = this.turns.get(sessionId);
     if (!state) {
-      state = { workInTurn: false, doneInTurn: false, failedInTurn: false };
+      state = freshTurn();
       this.turns.set(sessionId, state);
     }
     return state;
+  }
+
+  /**
+   * A run without a client message id is either a host-queued user message or
+   * a background wake. `previousRunId` cannot tell them apart (every resumed
+   * run has one); a preceding `session_user_message` can.
+   */
+  private isBackgroundWake(sessionId: string): boolean {
+    const queued = this.queuedUserMessages.get(sessionId) ?? 0;
+    if (queued === 0) return true;
+    if (queued === 1) this.queuedUserMessages.delete(sessionId);
+    else this.queuedUserMessages.set(sessionId, queued - 1);
+    return false;
   }
 
   /** The run this event belongs to; a timestamp only when core gave no run id. */
@@ -165,18 +214,22 @@ export class PetSessionRuleWatcher {
     const event = topLevelEvent(value);
     if (!event) return;
     switch (event.type) {
+      case "session_user_message":
+        // SendMessageToSession announces its run this way before enqueueing it
+        // without a client message id (core server.ts).
+        if (event.clientMessageId === undefined) {
+          const queued = this.queuedUserMessages.get(sessionId) ?? 0;
+          this.queuedUserMessages.set(sessionId, Math.min(queued + 1, MAX_QUEUED_USER_MESSAGES));
+        }
+        return;
       case "session_started": {
-        const state: SessionTurnState = {
-          workInTurn: false,
-          doneInTurn: false,
-          failedInTurn: false,
-        };
+        const state = freshTurn();
         const runId = nonEmptyString(event.runId);
         if (runId) state.runId = runId;
-        // A background completion wakes the Session with a synthetic run that
-        // has no client message id (core background-result-wakeup). That turn
-        // exists to act on finished work, so it counts as work.
-        if (event.clientMessageId === undefined && typeof event.previousRunId === "string")
+        if (event.clientMessageId === undefined && this.isBackgroundWake(sessionId))
+          // A background completion wakes the Session with a synthetic run
+          // (core background-result-wakeup). That turn exists to act on
+          // finished work, so it counts as work.
           state.workInTurn = true;
         this.turns.set(sessionId, state);
         return;
@@ -195,7 +248,7 @@ export class PetSessionRuleWatcher {
         return;
       case "error": {
         const state = this.turn(sessionId);
-        const at = this.now();
+        const at = eventTime(event, "timestamp", this.now);
         await this.emitFailed(
           sessionId,
           state,
@@ -220,10 +273,11 @@ export class PetSessionRuleWatcher {
     state: SessionTurnState,
     event: Record<string, unknown>,
   ): Promise<void> {
-    const at = typeof event.completedAt === "number" ? event.completedAt : this.now();
+    const at = eventTime(event, "completedAt", this.now);
     const run = this.runKey(event, state, at);
     const armed: Matcher = (when) => when.armedAt <= at;
     const reason = event.reason;
+    if (reason !== "completed") this.carriedWork.delete(sessionId);
     if (reason === "aborted_streaming" || reason === "aborted_tools") return;
     if (reason !== "completed") {
       await this.emitFailed(
@@ -236,11 +290,15 @@ export class PetSessionRuleWatcher {
       return;
     }
     const summary = boundedText(event.text, MAX_SUMMARY_LENGTH);
+    // A Goal that paused this run (waiting for the user / stop-block cap) is
+    // parked by core with turn_complete(completed) and no completionKind. The
+    // goal_progress event already raised blocked; this is not done.
+    if (state.blockedInTurn) return;
     if (event.completionKind === "limit_stop") {
       await this.emit(sessionId, "blocked", armed, {
         kind: "session.blocked",
         priority: "P0",
-        dedupeKey: `${sessionId}:goal-pause:${run}`,
+        dedupeKey: `${sessionId}:goal-pause:-:-:${run}`,
         facts: summary ? { summary } : {},
       });
       return;
@@ -249,10 +307,16 @@ export class PetSessionRuleWatcher {
     // goal_cleared / goal_progress(met), which already handled the outcome.
     if (event.completionKind !== undefined) return;
     // The "OK, will do" turn that armed a rule did no work and must not fire it.
-    if (!state.workInTurn) return;
+    // Work deferred from a turn that completed while busy still counts.
+    if (!state.workInTurn && !this.carriedWork.has(sessionId)) return;
+    if (this.options.isSessionBusy(sessionId)) {
+      // More work is queued; the follow-up turn reports it, even with no tools.
+      this.carriedWork.add(sessionId);
+      return;
+    }
+    this.carriedWork.delete(sessionId);
     // Long-task closure owns done/failed; Task 8 spends these rules when it notifies.
     if (this.options.hasActiveLongTask(sessionId)) return;
-    if (this.options.isSessionBusy(sessionId)) return;
     await this.emit(
       sessionId,
       "done",
@@ -272,7 +336,8 @@ export class PetSessionRuleWatcher {
     state: SessionTurnState,
     event: Record<string, unknown>,
   ): Promise<void> {
-    const at = this.now();
+    // A replayed goal_progress from before a rule was armed must not fire it.
+    const at = eventTime(event, "timestamp", this.now);
     const run = this.runKey(event, state, at);
     const armed: Matcher = (when) => when.armedAt <= at;
     const question = boundedText(event.waitingForUser, MAX_FACT_LENGTH);
@@ -299,12 +364,14 @@ export class PetSessionRuleWatcher {
     // Core carries the question itself in `waitingForUser`; accept a bare flag too.
     const waiting = question !== undefined || event.waitingForUser === true;
     if (!waiting && event.status !== "exhausted") return;
-    const revision = typeof event.revision === "number" ? event.revision : run;
+    state.blockedInTurn = true;
+    const goalId = nonEmptyString(event.goalId) ?? "-";
+    const revision = typeof event.revision === "number" ? event.revision : "-";
     const gaps = boundedText(event.gaps, MAX_SUMMARY_LENGTH);
     await this.emit(sessionId, "blocked", armed, {
       kind: "session.blocked",
       priority: "P0",
-      dedupeKey: `${sessionId}:goal-pause:${revision}`,
+      dedupeKey: `${sessionId}:goal-pause:${goalId}:${revision}:${run}`,
       facts: { ...(question ? { question } : {}), ...(gaps ? { summary: gaps } : {}) },
     });
   }
@@ -335,10 +402,9 @@ export class PetSessionRuleWatcher {
     if (emitted) state.failedInTurn = true;
   }
 
-  private async applyPending(pending: DesktopPendingDecision): Promise<void> {
+  private async applyPending(pending: DesktopPendingDecision, at: number): Promise<void> {
     if (pending.status !== "pending") return;
     const sessionId = pending.agentSessionId;
-    const at = this.now();
     const armed: Matcher = (when) => when.armedAt <= at;
     if (this.options.onPendingDecision) {
       // The IM decision module owns pending decisions when wired; it is only

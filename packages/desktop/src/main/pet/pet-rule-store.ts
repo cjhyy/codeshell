@@ -206,13 +206,14 @@ function targetKey(target: NoticeRule["target"]): string {
 
 /**
  * Pre-release builds armed rules by an in-memory turn sequence (`armedAtSeq`),
- * which does not survive a restart. Such rows are read as armed when created.
+ * which does not survive a restart. Such rows are read as armed at their last
+ * update, since a refreshing upsert re-arms a rule in place.
  */
 function migrateLegacyRow(row: unknown): unknown {
   if (!isRecord(row) || !isRecord(row.when) || row.when.kind !== "session") return row;
   if (!("armedAtSeq" in row.when) || "armedAt" in row.when) return row;
   const { armedAtSeq: _legacy, ...when } = row.when;
-  return { ...row, when: { ...when, armedAt: row.createdAt } };
+  return { ...row, when: { ...when, armedAt: row.updatedAt } };
 }
 
 function parseWhen(value: unknown): NoticeRule["when"] | undefined {
