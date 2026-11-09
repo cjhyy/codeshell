@@ -1,4 +1,3 @@
-import { linkConnectionMetadata } from "@cjhyy/code-shell-link";
 import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
 import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
 import { registerOperationBatchHost } from "./operation-batch-host.js";
@@ -10,7 +9,6 @@ import { registerSourceCollectionIpc } from "./source-collections-ipc.js";
 import { openSourceCollectionOperation } from "./source-collections-host.js";
 import { registerRemoteLinkIpc } from "./remote-link-ipc.js";
 import { linkAccountExecutionOptions, requireLinkAccountAccess } from "./link-account-access.js";
-import { createFigmaMcpLinkAdapter } from "./figma-mcp-link.js";
 import { registerOperationResolutionHost } from "./operation-resolution-host.js";
 /**
  * Electron main entry — broker between renderer (ipcMain) and the
@@ -21,20 +19,15 @@ import {
   app,
   BrowserWindow,
   WebContentsView,
-  clipboard,
   dialog,
   ipcMain,
   Menu,
   session,
   shell,
-  systemPreferences,
   safeStorage,
-  webContents,
   Notification,
   screen,
   nativeTheme,
-  type OpenDialogOptions,
-  type SaveDialogOptions,
 } from "electron";
 import { mainWindowTitleBarOptions, registerWindowTitleBarIpc } from "./window-titlebar.js";
 import {
@@ -48,13 +41,11 @@ import { createDesktopManagedRuntimeWiring } from "./managed-runtime-wiring.js";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { AppRendererNavigation } from "./app-renderer-navigation.js";
 import { createHash, randomUUID } from "node:crypto";
-import { dirname, resolve, basename, extname, isAbsolute, join } from "node:path";
-import { writeFile } from "node:fs/promises";
+import { dirname, resolve, isAbsolute, join } from "node:path";
 import {
   approvePluginHooks,
   approvePluginMcp,
   listPluginMcpTrust,
-  mergePluginMcpServers,
   listPluginHooks,
   revokePluginMcp,
   revokePluginHooks,
@@ -64,21 +55,13 @@ import {
   userHome,
   codeShellHome,
   CredentialStore,
-  isRemoteLinkCredential,
   summarizeCookieExpiry,
   materializeCookieSecret,
-  type Credential,
-  type CredentialScope,
-  getCliLinkStatus,
-  isCliLinkProvider,
-  type CliLinkProviderId,
   sweepStaleCredentialCookies,
   setDefaultCredentialCipher,
   setDefaultCredentialAccess,
   localCredentialAccess,
   sessionsRoot,
-  // Quota — remaining CC/Codex subscription usage.
-  WORKSPACE_PROFILE_NAME_RE,
   previewLocalTheme,
   installReviewedLocalTheme,
   listInstalledThemes,
@@ -86,51 +69,25 @@ import {
   type ThemePreview,
 } from "@cjhyy/code-shell-core";
 import {
-  defaultCacheDir,
-  fetchModelList,
-  PROVIDER_KINDS,
-  reasoningControlFor,
-  type ProviderKindName,
   startAutomation,
   CronStore,
   defaultCronStorePath,
   agentNotificationBus,
   type AutomationHandle,
   getMergedCatalog,
-  saveCatalogEntry,
-  deleteUserCatalogEntry,
-  userCatalogPath,
-  catalogEntryOrigins,
   setGitPathOverride,
   isGitAvailable,
   resolveGitPath,
-  // Speech-to-text (voice input / 听写).
-  transcribe,
-  resolveTranscribeProvider,
-  isTranscribeAvailable,
   describeTranscribe,
-  computeEffectiveDisabledLists,
 } from "@cjhyy/code-shell-core/internal";
 import {
   CC_COST_GUARD_PROMPT,
-  checkQuota,
-  DEFAULT_DISCOVER_LIMIT,
-  DEFAULT_DISCOVER_SINCE_MS,
   discoverRecentClaudeSessions,
   discoverRecentCodexSessions,
-  listRelatedClaudeSessions,
-  listRelatedCodexSessions,
   parseClaudeTranscriptLine,
   parseCodexTranscriptLine,
-  probeClaudeCli,
-  probeCodexCli,
-  readCodexRecentHistory,
-  readRecentHistory,
-  resolveQuotaCredentials,
   type ExternalSessionDiscoveryScope,
-  type QuotaResult,
 } from "@cjhyy/code-shell-capability-coding/orchestration";
-import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { getCuaDriverHost } from "./computer-use/service.js";
 import {
@@ -140,7 +97,6 @@ import {
   getMimiCompanion,
   mimiMovingUnavailableReason,
 } from "./computer-use/desktop-setup.js";
-import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
 import { startMobileExternalRuntime } from "./mobile-remote/start-external-runtime.js";
 import { initializeMobileRemoteLifecycle } from "./mobile-remote/lifecycle.js";
@@ -150,35 +106,21 @@ import {
   externalRuntimeWorkspaceForSession,
 } from "./external-runtime-tool-context.js";
 import { ExternalRuntimeMemory } from "./external-runtime-memory.js";
-import { assertWorkspaceProfileName } from "./external-runtime-profile.js";
 import { createExternalRuntimeBackgroundWork } from "./external-runtime-background-work.js";
-import { setProjectTrustWithRevocation } from "./project-trust-lifecycle.js";
-import {
-  createExternalGoalRpcHandler,
-  parseExternalGoalInput,
-} from "./external-runtime-goal-rpc.js";
+import { createExternalGoalRpcHandler } from "./external-runtime-goal-rpc.js";
 import { buildExternalRuntimeHandoffFromEvents } from "./external-runtime-handoff.js";
 import {
   removeExternalRuntimeBinding,
   readExternalRuntimeBinding,
 } from "./external-runtime-state.js";
-import {
-  ExternalRuntimeApprovals,
-  parseExternalApprovalDecision,
-} from "./external-runtime-approvals.js";
-import { availableExternalRuntimes } from "./external-runtime-availability.js";
-import { ExternalRuntimeModelService } from "./external-runtime-model-service.js";
-import type { ExternalRuntimeAttachment } from "@cjhyy/code-shell-capability-coding/external-runtimes";
+import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import {
   requireRendererProject,
-  requireRendererLinkedSessionPath,
-  requireRendererProjectEntryPath,
   requireRendererProjectPath,
   requireRendererProjectPrimary,
   requireRendererProjectRoot,
 } from "./renderer-project-path.js";
-import { requireRendererOrSessionPath, type PtyStartRequest } from "./renderer-session-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
 import {
@@ -237,9 +179,7 @@ import {
   imDecisionWorkerActions,
 } from "./pet/pet-im-decisions.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
-import { registerRoomHistoryIpc } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
-import { registerLinkedSessionObservationIpc } from "./cc-room/linked-session-observation-ipc.js";
 import { DEFAULT_SEGMENT_IDLE_MS, buildMigrationSummary } from "@cjhyy/code-shell-pet";
 import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { materializeOutgoingAttachments } from "@cjhyy/code-shell-chat";
@@ -261,38 +201,18 @@ import { themeImportDialogOptions } from "./theme-import-dialog.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { createDesktopModelRequestSigner } from "./model-request-signing-service.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
-import { listDesktopLinkProviders } from "./link-provider-catalog.js";
-import { createDesktopLinkConnections } from "./link-connections.js";
-import {
-  isLocalBrowserLinkProvider,
-  LinkDeviceOAuthBroker,
-  type LocalBrowserAuthToken,
-} from "./link-device-oauth.js";
-import {
-  installManagedLinkCli,
-  managedCliInstallStatus,
-  type ManagedCliInstallResult,
-} from "./link-cli-installer.js";
+import { LinkDeviceOAuthBroker } from "./link-device-oauth.js";
+import { type ManagedCliInstallResult } from "./link-cli-installer.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
-import { inspectReadableReplyAttachment, readImageDataUrl } from "./image-read-service.js";
+import { inspectReadableReplyAttachment } from "./image-read-service.js";
 import { MediaPreviewService } from "./media-preview-service.js";
-import { RendererBrowserSessionAccess } from "./renderer-browser-session-access.js";
-import {
-  createRendererBrowserSessionEventAccess,
-  resolvePersistedBrowserSession,
-  browserPartitionForBucket,
-} from "./renderer-browser-session-ipc-authority.js";
+import { browserPartitionForBucket } from "./renderer-browser-session-ipc-authority.js";
 import { resolveMediaPreviewAuthority } from "./media-preview-authority.js";
 import { MEDIA_PREVIEW_SCHEME } from "../shared/media-preview.js";
 import {
-  bucketForSession,
   guestRecordForId,
-  listGuestSessions,
   partitionForSession,
   rememberAttachedGuest,
-  registerAttachedGuestMetadata,
-  registerSessionBucket,
-  sessionIdsForBucket,
 } from "./browser-driver/active-guest.js";
 import {
   browserRuntime,
@@ -300,11 +220,8 @@ import {
   chromeExtensionRuntimeService,
   installChromeNativeMessagingHost,
   interactiveBrowserBridgeForSession,
-  interactiveBrowserRuntimeOwner,
   nativeMessagingOriginFromArgv,
-  parseBuiltInBrowserGrantLifetime,
   panelAccessRequests,
-  registerPanelAccessResponses,
   runChromeNativeMessagingHost,
   type ChromeNativeRegistrationResult,
 } from "./browser-runtime/index.js";
@@ -334,29 +251,11 @@ import {
   runAutomationNow,
   cancelAutomationRun,
   type CreateAutomationInput,
-  type UpdateAutomationInput,
 } from "./automation-service.js";
 import { desktopAutomationAuthorityDeps } from "./automation-authority.js";
 import { dlog } from "./desktop-logger.js";
-import {
-  ptyStart,
-  ptyWrite,
-  ptyResize,
-  ptyKill,
-  ptyKillAll,
-  ptyReapDestroyed,
-  assertValidPtySessionId,
-} from "./pty-service.js";
-import {
-  listCookieDomains,
-  getCookiesForDomain,
-  captureCookieJar,
-  captureAllCookies,
-  captureAllCookiesFromSessions,
-  cleanupLease,
-  sweepStaleLeases,
-  BROWSER_PARTITION,
-} from "./credentials-service.js";
+import { ptyKillAll, ptyReapDestroyed } from "./pty-service.js";
+import { cleanupLease, sweepStaleLeases, BROWSER_PARTITION } from "./credentials-service.js";
 import { cookieCredentialAutoRefresh } from "./cookie-credential-auto-refresh.js";
 import { isBrowserPartition } from "../shared/browser-partition.js";
 import { isProfileBrowserPartition } from "../shared/browser-profile.js";
@@ -370,12 +269,10 @@ import {
   cleanupStaleQuickChatSessions,
   deleteSession,
   listDiskSessions,
-  listRecentAttachments,
   markAttachmentsSent,
   stablePromptHash,
   stageFileBytes,
   stageImageBytes,
-  stageImageDataUrl,
   type InputAttachmentMeta,
 } from "@cjhyy/code-shell-server/storage";
 import {
@@ -394,7 +291,7 @@ import {
   MobileRemoteOrchestrator,
   type AuthenticatedMobileClientEvent,
 } from "./mobile-remote-orchestrator.js";
-import { createDesktopRoomModeAuthority, registerRoomModeIpc } from "./cc-room/room-mode-ipc.js";
+import { createDesktopRoomModeAuthority } from "./cc-room/room-mode-ipc.js";
 import {
   GatewayControlServer,
   type GatewayControlEventAttachment,
@@ -406,42 +303,8 @@ import { ImGatewayService, registerImGatewayIpc } from "./im-gateway-service.js"
 import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { createRoomTranscriptSubscriptions } from "./cc-room/transcript-subscriptions.js";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
-import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
-import { registerFileVersionIpc } from "./file-version-ipc.js";
-import { registerLocalFilePreviewIpc } from "./local-file-preview-ipc.js";
-import { registerProfilePluginExportIpc } from "./profile-plugin-export-ipc.js";
-import { registerProfileMemoryPromotionIpc } from "./profile-memory-promotion-ipc.js";
-import {
-  getGitStatus,
-  getGitBranches,
-  switchGitBranch,
-  stashAndSwitchGitBranch,
-  cleanupStaleWorktrees,
-  openExternal,
-  revealInFinder,
-  openPath,
-  openInEditor,
-  undoFiles,
-  type UndoFilesResult,
-  type StaleWorktreeCleanupSkipped,
-} from "./desktop-services.js";
-import { turnUndoState, undoTurn, redoTurn } from "./file-history-service.js";
+import { getGitStatus, getGitBranches, revealInFinder, openPath } from "./desktop-services.js";
 import { readSettings, writeSettings, type SettingsScope } from "./settings-service.js";
-import {
-  listMemory,
-  readMemory,
-  saveMemory,
-  deleteMemory,
-  listPendingMemory,
-  approvePendingMemory,
-  demotePendingMemory,
-  rejectPendingMemory,
-  promoteMemoryToGlobal,
-  type MemoryLevel,
-  type SaveMemoryInput,
-} from "./memory-service.js";
-import { runDream } from "./dream-service.js";
-import type { MemoryScope } from "@cjhyy/code-shell-core";
 import { registerDesktopOutputHistoryHost } from "./session-output-history-host.js";
 import { registerSessionCatalogIpc } from "./session-catalog-ipc.js";
 import { SessionCatalogStore } from "./session-catalog-store.js";
@@ -453,17 +316,11 @@ import { registerTaskInboxIpc } from "./task-inbox/task-inbox-ipc.js";
 import { registerOptimizationLabHost } from "./optimization-lab-host.js";
 import { taskInboxPetView } from "./task-inbox/task-inbox-pet-view.js";
 import { assertDesktopSessionId } from "./session-validation.js";
-import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { createLinkService } from "@cjhyy/code-shell-server/links";
 import { createDesktopWebService, deploymentRemoteLink } from "./desktop-web-service.js";
 import { createDesktopPanelAutomationHost } from "./panel-automation-host.js";
-import {
-  installSkillFromDirectory,
-  listSkills,
-  readSkillBody,
-  uninstallSkill,
-} from "./skills-service.js";
+import { listSkills, readSkillBody, uninstallSkill } from "./skills-service.js";
 import {
   listPlugins,
   getPluginDetail,
@@ -519,44 +376,8 @@ import {
   uploadFiles,
   workspaceAccess as workspaceSourceAccess,
 } from "./sources-service.js";
-import {
-  activateProfile,
-  addProfileRepo,
-  deleteProfile,
-  deactivateProfile,
-  exportProfileDefinition,
-  exportProfileRepo,
-  forceDeleteProfile,
-  importReviewedProfileDefinition,
-  installCatalogProfile,
-  installProfileRequirements,
-  listProfileCatalog,
-  listProfileRepos,
-  listProfiles,
-  previewProfileDefinitionImport,
-  previewProfileDeletion,
-  previewProfileRequirements,
-  removeProfileRepo,
-  saveProfile,
-  setSessionWorkspaceProfile,
-} from "./profiles-service.js";
-import {
-  deleteDigitalHumanTeam,
-  listDigitalHumanTeams,
-  saveDigitalHumanTeam,
-} from "./digital-human-team-service.js";
 import { createRendererProjectFileSearch } from "./file-search-service.js";
-import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
-import type { AgentDefinition } from "@cjhyy/code-shell-core";
-import {
-  inspectRepo,
-  installFromGithub,
-  type InstallFromGithubInput,
-} from "./github-skill-service.js";
-import { GithubSkillReviewStore } from "./github-skill-review.js";
 import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js";
-import { resolveModelMeta } from "./model-meta-service.js";
-import { deleteRunDir } from "./runs-service.js";
 import { listRuns } from "./runs-service.js";
 import {
   initUpdater,
@@ -566,7 +387,7 @@ import {
   cancelPendingUpdateInstall,
   getLastStatus,
 } from "./updater.js";
-import { loadRecents, loadProjects } from "./recents-store.js";
+import { loadProjects } from "./recents-store.js";
 import { getProjectStore } from "./project-store.js";
 import {
   createDesktopPanelProjectScopeResolver,
@@ -574,7 +395,6 @@ import {
   resolveDesktopPanelProjectPath,
 } from "./panel-project-scope.js";
 import { registerProjectAuthorityIpc } from "./project-authority-ipc.js";
-import { reviewService } from "./review-service.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
 import {
   petWidgetWindowStatePath,
@@ -597,25 +417,11 @@ import {
   type MimiPresenceOwner,
 } from "./pet/mimi-presence-ipc.js";
 import type { MimiPresenceSnapshot } from "../shared/mimi-presence.js";
-import {
-  getTrust,
-  getTrustCachedSync,
-  setTrust,
-  warmTrustCache,
-  summarizeProjectTrustRisks,
-  type TrustLevel,
-} from "./trust-store.js";
+import { getTrust, getTrustCachedSync, warmTrustCache } from "./trust-store.js";
 import { installAppMenu } from "./menu.js";
 import { seedDefaults } from "./seed-defaults.js";
 import { bootstrapCorePlugins } from "./bootstrap-core-plugins.js";
-import {
-  probeMcpServers,
-  invalidateMcpProbeCache,
-  type McpServerConfig,
-} from "./mcp-probe-service.js";
-import { probeSearch, type SearchProbeInput } from "./search-probe-service.js";
-import { probeImage, type ImageProbeInput } from "./image-probe-service.js";
-import { parseDataUrl, suggestImageFilename } from "./image-save.js";
+import { invalidateMcpProbeCache } from "./mcp-probe-service.js";
 import { injectLoginShellPathAtStartup } from "./login-shell-path.js";
 import {
   acquireDesktopInstanceLock,
@@ -624,14 +430,37 @@ import {
   runOwnedQuickChatStartupCleanup,
 } from "./quick-chat-startup-cleanup.js";
 import {
-  readSessionDirectoryForUi,
-  readSessionFileForUi,
-  sessionFileExistsForUi,
-} from "./session-fs-service.js";
-import {
   resolveRendererConfigurationTarget,
   type RendererConfigurationTarget,
 } from "./renderer-configuration-authority.js";
+import {
+  rendererConfigurationCwd,
+  rendererOptionalConfigurationCwd,
+  rejectUnexpectedRendererKeys,
+  requireRendererListedSkillPath,
+} from "./renderer-configuration-helpers.js";
+import { registerProfileCatalogIpc } from "./profile-catalog-ipc.js";
+import { registerLinkCredentialIpc } from "./link-credentials-ipc.js";
+import { registerBrowserSessionIpc } from "./browser-session-ipc.js";
+import {
+  registerSpeechIpc,
+  transcribeConfiguredAudio,
+  ensureDesktopMicrophoneAccess,
+} from "./speech-ipc.js";
+import { registerAttachmentsIpc } from "./attachments-ipc.js";
+import { registerAgentsMediaIpc } from "./agents-media-ipc.js";
+import { registerSkillsMcpIpc } from "./skills-mcp-ipc.js";
+import { registerModelCatalogIpc } from "./model-catalog-ipc.js";
+import { registerMobileRemoteIpc } from "./mobile-remote-ipc.js";
+import { registerRoomsIpc } from "./rooms-ipc.js";
+import { registerDialogPickerIpc } from "./dialog-picker-ipc.js";
+import { registerExternalRuntimeIpc } from "./external-runtime-ipc.js";
+import { registerBrowserPopoutIpc } from "./browser-popout-ipc.js";
+import { registerGitReviewIpc } from "./git-review-ipc.js";
+import { registerWorkspaceFilesIpc } from "./workspace-files-ipc.js";
+import { registerMemoryIpc } from "./memory-ipc.js";
+import { registerAutomationIpc } from "./automation-ipc.js";
+import { registerTrustNotificationIpc } from "./trust-notification-ipc.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRendererNavigation = new AppRendererNavigation(
@@ -3768,51 +3597,6 @@ app.whenReady().then(async () => {
   setInterval(() => void sweepStaleWorktrees("interval"), 60 * 60_000);
 });
 
-async function rendererConfigurationCwd(target: RendererConfigurationTarget): Promise<string> {
-  return (await resolveRendererConfigurationTarget(target)).cwd;
-}
-
-async function rendererOptionalConfigurationCwd(
-  target: RendererConfigurationTarget | null,
-  userCwd: string,
-): Promise<string> {
-  return target === null ? userCwd : rendererConfigurationCwd(target);
-}
-
-function rejectUnexpectedRendererKeys(
-  input: Record<string, unknown>,
-  allowed: readonly string[],
-  label: string,
-): void {
-  const allowedSet = new Set(allowed);
-  const unexpected = Object.keys(input).find((key) => !allowedSet.has(key));
-  if (unexpected) throw new Error(`${label} does not accept ${unexpected}`);
-}
-
-async function requireRendererListedSkillPath(
-  target: RendererConfigurationTarget | null,
-  filePath: unknown,
-): Promise<string> {
-  if (typeof filePath !== "string" || !filePath) throw new Error("skill filePath is required");
-  const cwd = await rendererOptionalConfigurationCwd(target, resolveNoRepoCwd());
-  const listed = listSkills(cwd, { includeDisabled: true }).some(
-    (skill) => resolve(skill.filePath) === resolve(filePath),
-  );
-  if (!listed) throw new Error("skill is not available for the configuration target");
-  return filePath;
-}
-
-async function requireRendererListedAgentPath(
-  target: RendererConfigurationTarget | null,
-  filePath: unknown,
-): Promise<string> {
-  if (typeof filePath !== "string" || !filePath) throw new Error("agent filePath is required");
-  const cwd = await rendererOptionalConfigurationCwd(target, "");
-  const listed = listAgents(cwd).some((agent) => resolve(agent.filePath) === resolve(filePath));
-  if (!listed) throw new Error("agent is not available for the configuration target");
-  return filePath;
-}
-
 ipcMain.handle(
   "skills:list",
   async (_e, target: RendererConfigurationTarget | null, opts?: { includeDisabled?: boolean }) =>
@@ -3929,210 +3713,7 @@ registerProfileSwitchIpc({
     return bridge.withWebConfigurationMutation(cwd, write);
   },
 });
-ipcMain.handle("profiles:list", async (_e, target: RendererConfigurationTarget | null) =>
-  listProfiles(target === null ? undefined : await rendererConfigurationCwd(target)),
-);
-ipcMain.handle(
-  "profiles:activate",
-  async (_e, target: RendererConfigurationTarget, name: string) => {
-    const cwd = await rendererConfigurationCwd(target);
-    if (typeof name !== "string" || !name) throw new Error("profiles:activate requires name");
-    activateProfile(cwd, name);
-  },
-);
-ipcMain.handle("profiles:deactivate", async (_e, target: RendererConfigurationTarget) => {
-  const cwd = await rendererConfigurationCwd(target);
-  deactivateProfile(cwd);
-});
-ipcMain.handle("profiles:setSession", async (_e, sessionId: unknown, profileName: unknown) => {
-  assertDesktopSessionId(sessionId);
-  // "" is the unbind signal — a bare falsy check rejected it, so cancelling a
-  // Session's digital human threw instead of clearing it.
-  if (typeof profileName !== "string") {
-    throw new Error("profiles:setSession requires profileName");
-  }
-  return setSessionWorkspaceProfile(sessionId, profileName);
-});
-ipcMain.handle("profiles:catalog", async () => listProfileCatalog());
-ipcMain.handle("profiles:install", async (_e, name: string) => {
-  if (typeof name !== "string" || !name) throw new Error("profiles:install requires name");
-  installCatalogProfile(name);
-});
-ipcMain.handle("profiles:listRepos", async () => listProfileRepos());
-ipcMain.handle("profiles:addRepo", async (_e, repo: string) => {
-  if (typeof repo !== "string" || !repo) throw new Error("profiles:addRepo requires repo");
-  return addProfileRepo(repo.trim());
-});
-ipcMain.handle("profiles:removeRepo", async (_e, repo: string) => {
-  if (typeof repo !== "string" || !repo) throw new Error("profiles:removeRepo requires repo");
-  removeProfileRepo(repo);
-});
-ipcMain.handle(
-  "profiles:forceDelete",
-  async (_e, name: string, target: RendererConfigurationTarget | null) => {
-    if (typeof name !== "string" || !name) throw new Error("profiles:forceDelete requires name");
-    const authorizedCwd = target === null ? undefined : await rendererConfigurationCwd(target);
-    return forceDeleteProfile(name, authorizedCwd ? { cwd: authorizedCwd } : {});
-  },
-);
-ipcMain.handle(
-  "profiles:previewDeletion",
-  async (_e, name: string, target: RendererConfigurationTarget | null) => {
-    if (typeof name !== "string" || !name)
-      throw new Error("profiles:previewDeletion requires name");
-    return previewProfileDeletion(
-      name,
-      target === null ? undefined : await rendererConfigurationCwd(target),
-    );
-  },
-);
-ipcMain.handle(
-  "profiles:previewRequirements",
-  async (_e, name: string, target: RendererConfigurationTarget) => {
-    if (typeof name !== "string" || !name) {
-      throw new Error("profiles:previewRequirements requires name");
-    }
-    const cwd = await rendererConfigurationCwd(target);
-    return previewProfileRequirements(name, cwd);
-  },
-);
-ipcMain.handle(
-  "profiles:installRequirements",
-  async (_e, name: string, target: RendererConfigurationTarget) => {
-    if (typeof name !== "string" || !name) {
-      throw new Error("profiles:installRequirements requires name");
-    }
-    const cwd = await rendererConfigurationCwd(target);
-    return installProfileRequirements(name, cwd);
-  },
-);
-ipcMain.handle(
-  "profiles:save",
-  async (_e, profile: unknown, target: RendererConfigurationTarget | null) => {
-    if (typeof profile !== "object" || profile === null || Array.isArray(profile)) {
-      throw new Error("profiles:save requires profile");
-    }
-    const authorizedCwd = target === null ? undefined : await rendererConfigurationCwd(target);
-    saveProfile(profile as Parameters<typeof saveProfile>[0], authorizedCwd);
-  },
-);
-ipcMain.handle("profiles:pickDefinitionImport", async (event) => {
-  const options: OpenDialogOptions = {
-    title: "Import digital-human profile definition JSON",
-    properties: ["openFile"],
-    filters: [{ name: "JSON", extensions: ["json"] }],
-  };
-  const win = BrowserWindow.fromWebContents(event.sender);
-  const result = win
-    ? await dialog.showOpenDialog(win, options)
-    : await dialog.showOpenDialog(options);
-  const filePath = result.filePaths[0];
-  if (result.canceled || !filePath) return { canceled: true };
-  return { canceled: false, preview: previewProfileDefinitionImport(filePath) };
-});
-ipcMain.handle(
-  "profiles:importReviewedDefinition",
-  async (_e, input: unknown, target: RendererConfigurationTarget | null) => {
-    if (typeof input !== "object" || input === null || Array.isArray(input)) {
-      throw new Error("profiles:importReviewedDefinition requires input");
-    }
-    const candidate = input as { reviewToken?: unknown; overwrite?: unknown };
-    if (typeof candidate.reviewToken !== "string" || !candidate.reviewToken) {
-      throw new Error("profiles:importReviewedDefinition requires reviewToken");
-    }
-    if (candidate.overwrite !== undefined && typeof candidate.overwrite !== "boolean") {
-      throw new Error("profiles:importReviewedDefinition overwrite must be a boolean");
-    }
-    const authorizedCwd = target === null ? undefined : await rendererConfigurationCwd(target);
-    return importReviewedProfileDefinition(
-      {
-        reviewToken: candidate.reviewToken,
-        ...(candidate.overwrite === undefined ? {} : { overwrite: candidate.overwrite }),
-      },
-      authorizedCwd,
-    );
-  },
-);
-ipcMain.handle("profiles:exportDefinition", async (event, name: string) => {
-  if (typeof name !== "string" || !WORKSPACE_PROFILE_NAME_RE.test(name)) {
-    throw new Error("profiles:exportDefinition requires a valid profile name");
-  }
-  const options: SaveDialogOptions = {
-    title: "Export digital-human profile definition JSON",
-    defaultPath: `${name}.codeshell-profile.json`,
-    filters: [{ name: "JSON", extensions: ["json"] }],
-  };
-  const win = BrowserWindow.fromWebContents(event.sender);
-  const result = win
-    ? await dialog.showSaveDialog(win, options)
-    : await dialog.showSaveDialog(options);
-  if (result.canceled || !result.filePath) return { canceled: true };
-  return exportProfileDefinition(name, result.filePath);
-});
-ipcMain.handle("profiles:exportRepo", async (event, names: string[]) => {
-  if (!Array.isArray(names) || names.length === 0 || names.some((n) => typeof n !== "string")) {
-    throw new Error("profiles:exportRepo requires profile names");
-  }
-  const win = BrowserWindow.fromWebContents(event.sender);
-  const options = {
-    title: "Export digital humans as a publishable repo",
-    properties: ["openDirectory", "createDirectory"] as const,
-  };
-  const picked = win
-    ? await dialog.showOpenDialog(win, { ...options, properties: [...options.properties] })
-    : await dialog.showOpenDialog({ ...options, properties: [...options.properties] });
-  if (picked.canceled || picked.filePaths.length === 0) return { canceled: true };
-  return exportProfileRepo(names, picked.filePaths[0]);
-});
-ipcMain.handle(
-  "profiles:delete",
-  async (
-    _e,
-    name: string,
-    options?: {
-      target?: RendererConfigurationTarget | null;
-      clearActiveProject?: boolean;
-    },
-  ) => {
-    if (typeof name !== "string" || !name) throw new Error("profiles:delete requires name");
-    if (options !== undefined && (typeof options !== "object" || options === null)) {
-      throw new Error("profiles:delete options must be an object");
-    }
-    if (options) {
-      rejectUnexpectedRendererKeys(
-        options as Record<string, unknown>,
-        ["target", "clearActiveProject"],
-        "profiles:delete",
-      );
-    }
-    if (
-      options?.clearActiveProject !== undefined &&
-      typeof options.clearActiveProject !== "boolean"
-    ) {
-      throw new Error("profiles:delete clearActiveProject must be a boolean");
-    }
-    const cwd =
-      options?.target == null ? undefined : await rendererConfigurationCwd(options.target);
-    deleteProfile(name, {
-      ...(cwd ? { cwd } : {}),
-      ...(options?.clearActiveProject === undefined
-        ? {}
-        : { clearActiveProject: options.clearActiveProject }),
-    });
-  },
-);
-ipcMain.handle("digital-human-teams:list", async () =>
-  listDigitalHumanTeams({
-    onInvalidTeam: (issue) => dlog("main", "digital_human_team.invalid", { ...issue }),
-  }),
-);
-ipcMain.handle("digital-human-teams:save", async (_e, team: unknown) =>
-  saveDigitalHumanTeam(team as Parameters<typeof saveDigitalHumanTeam>[0]),
-);
-ipcMain.handle("digital-human-teams:delete", async (_e, id: string) => {
-  if (typeof id !== "string" || !id) throw new Error("digital-human-teams:delete requires id");
-  deleteDigitalHumanTeam(id);
-});
+registerProfileCatalogIpc();
 ipcMain.handle("plugins:list", async (_e, target: RendererConfigurationTarget | null) =>
   listPlugins(await rendererOptionalConfigurationCwd(target, "")),
 );
@@ -4179,623 +3760,22 @@ registerProjectPanelIpc({
 
 // ── Credentials (token/link store + cookie capture) ──────────────────
 // cwd may be "" for no-repo contexts; project scope no-ops without a cwd.
-ipcMain.handle("credentials:list", async (_e, cwd: string) => {
-  const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
-  await migrateCredentialStore(authorizedCwd || undefined);
-  const store = new CredentialStore(authorizedCwd || undefined);
-  const projectIds = new Set(store.list("project").map((credential) => credential.id));
-  return store.listMasked().map((credential) => ({
-    ...credential,
-    meta: credential.meta ? linkConnectionMetadata(credential.meta) : undefined,
-    storeScope: projectIds.has(credential.id) ? "project" : "user",
-  }));
-});
-ipcMain.handle(
-  "credentials:save",
-  async (_e, cwd: string, scope: CredentialScope, cred: Credential) => {
-    const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
-    assertGenericCredentialMutation(authorizedCwd, cred.id);
-    if (isRemoteLinkCredential(cred)) throw new Error("远程 Link 连接必须通过授权创建。");
-    if (cred.meta?.recordSchemaVersion === 2) {
-      const {
-        linkExecutionRuntime: _runtime,
-        linkExecutionBackend: _backend,
-        linkAuthSource: _source,
-        ...meta
-      } = cred.meta;
-      cred = { ...cred, meta };
-    }
-    new CredentialStore(authorizedCwd || undefined).save(scope, cred);
-    cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, cred.id, scope);
-    bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
-  },
-);
-ipcMain.handle(
-  "credentials:remove",
-  async (_e, cwd: string, scope: CredentialScope, id: string) => {
-    const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
-    assertGenericCredentialMutation(authorizedCwd, id);
-    new CredentialStore(authorizedCwd || undefined).remove(scope, id);
-    cookieCredentialAutoRefresh.detachForCredential(authorizedCwd || undefined, id, scope);
-    bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
-  },
-);
-ipcMain.handle("links:listLocalProviders", () => listDesktopLinkProviders());
-
-const remoteLinkIpc = registerRemoteLinkIpc({
-  ipcMain,
-  requireRendererProjectPath,
-  isMainWindow: (sender) =>
-    [...mainWindows].some((win) => !win.isDestroyed() && win.webContents === sender),
-  withMutation: (cwd, write) =>
-    bridge ? bridge.withWebConfigurationMutation(cwd, write) : write(),
-  onChanged: () => bridge?.notifyWebConfigurationChanged(),
-  captureAccount: captureLinkAccount,
-  hostOAuthAdapters: () => [
-    createFigmaMcpLinkAdapter({
-      oauth: getMcpOAuthService(),
-      openExternal: (url) => shell.openExternal(url),
-    }),
-  ],
+const { remoteLinkIpc } = registerLinkCredentialIpc({
+  mainWindows,
+  bridge: () => bridge,
+  linkDeviceOAuthBroker,
+  managedCliInstallJobs,
+  getMcpOAuthService,
+  normalizeMcpOAuthLoginInput,
+  captureLinkAccount,
 });
 prepareAccountGitHubLink = remoteLinkIpc.prepareGitHubLink;
-
-function assertGenericCredentialMutation(cwd: string, id: string) {
-  const credential = new CredentialStore(cwd || undefined).resolve(id);
-  if (credential && isRemoteLinkCredential(credential))
-    throw new Error("请在 Link 页的独立服务连接中管理或断开此连接，以同步撤销远端授权。");
-}
-
-async function persistLocalLinkCredential(input: {
-  cwd: string;
-  providerId: string;
-  methodId: string;
-  label: string;
-  token: string;
-  browserOAuthToken?: LocalBrowserAuthToken;
-  existingId: string;
-  authSource: "manual-token" | "browser-oauth";
-}) {
-  const connections = createDesktopLinkConnections({
-    cwd: input.cwd || undefined,
-    onChanged: () => bridge?.notifyWebConfigurationChanged(),
+const { assertRendererSessionAccess, deletingBrowserSessions, rendererBrowserSessionAccess } =
+  registerBrowserSessionIpc({
+    mainWindows,
+    bridge: () => bridge,
+    chromeNativeRegistration: () => chromeNativeRegistration,
   });
-  try {
-    return await connections.connectLocal(input);
-  } finally {
-    connections.close();
-  }
-}
-
-async function persistCliLinkCredential(input: {
-  cwd: string;
-  providerId: CliLinkProviderId;
-  methodId: string;
-  label: string;
-  existingId: string;
-  loginIfNeeded: boolean;
-}) {
-  const connections = createDesktopLinkConnections({
-    cwd: input.cwd || undefined,
-    onChanged: () => bridge?.notifyWebConfigurationChanged(),
-  });
-  try {
-    return await connections.connectCli(input);
-  } finally {
-    connections.close();
-  }
-}
-
-ipcMain.handle("links:cliStatus", async (_e, rawProviderId: unknown, rawCwd: unknown) => {
-  const providerId = typeof rawProviderId === "string" ? rawProviderId.trim() : "";
-  const cwd =
-    typeof rawCwd === "string" && rawCwd ? await requireRendererProjectPath(rawCwd) : undefined;
-  if (!isCliLinkProvider(providerId)) throw new Error("Unsupported CLI Link provider");
-  return getCliLinkStatus(providerId, { cwd });
-});
-
-ipcMain.handle("links:cliInstallStatus", (_e, rawProviderId: unknown) => {
-  const providerId = typeof rawProviderId === "string" ? rawProviderId.trim() : "";
-  return managedCliInstallStatus(providerId);
-});
-
-ipcMain.handle("links:installCli", async (_e, rawProviderId: unknown) => {
-  const providerId = typeof rawProviderId === "string" ? rawProviderId.trim() : "";
-  if (!isCliLinkProvider(providerId)) throw new Error("Unsupported CLI Link provider");
-  const current = managedCliInstallJobs.get(providerId);
-  if (current) return current;
-  const job = installManagedLinkCli(providerId).finally(() => {
-    managedCliInstallJobs.delete(providerId);
-  });
-  managedCliInstallJobs.set(providerId, job);
-  return job;
-});
-
-ipcMain.handle("links:browserAuthStatus", (_e, rawProviderId: unknown) => {
-  const providerId = typeof rawProviderId === "string" ? rawProviderId.trim() : "";
-  if (!isLocalBrowserLinkProvider(providerId)) {
-    throw new Error("Unsupported browser-login Link provider");
-  }
-  return linkDeviceOAuthBroker.status(providerId);
-});
-
-ipcMain.handle("links:startBrowserAuth", async (_e, rawProviderId: unknown) => {
-  const providerId = typeof rawProviderId === "string" ? rawProviderId.trim() : "";
-  if (!isLocalBrowserLinkProvider(providerId)) {
-    throw new Error("Unsupported browser-login Link provider");
-  }
-  const prompt = await linkDeviceOAuthBroker.start(providerId);
-  clipboard.writeText(prompt.userCode);
-  try {
-    await shell.openExternal(prompt.verificationUriComplete ?? prompt.verificationUri);
-  } catch (error) {
-    linkDeviceOAuthBroker.cancel(prompt.attemptId);
-    throw new Error("Could not open the provider authorization page", { cause: error });
-  }
-  return { ...prompt, codeCopied: true };
-});
-
-ipcMain.handle("links:completeBrowserAuth", async (_e, raw: unknown) => {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error("links:completeBrowserAuth requires a connection request");
-  }
-  const input = raw as Record<string, unknown>;
-  const attemptId = typeof input.attemptId === "string" ? input.attemptId.trim() : "";
-  const rawCwd = typeof input.cwd === "string" ? input.cwd : "";
-  const cwd = rawCwd ? await requireRendererProjectPath(rawCwd) : "";
-  const providerId = typeof input.providerId === "string" ? input.providerId.trim() : "";
-  const methodId = typeof input.methodId === "string" ? input.methodId.trim() : "";
-  const label = typeof input.label === "string" ? input.label.trim() : "";
-  const existingId = typeof input.existingId === "string" ? input.existingId.trim() : "";
-  if (!attemptId || !isLocalBrowserLinkProvider(providerId)) {
-    throw new Error("Invalid browser-login Link attempt");
-  }
-  if (!/^[a-z0-9][a-z0-9-]{0,80}$/.test(methodId)) {
-    throw new Error("Invalid local Link connection method");
-  }
-  if (label.length > 200) throw new Error("Connection label is too long");
-  const token = await linkDeviceOAuthBroker.complete(attemptId);
-  if (token.providerId !== providerId) {
-    throw new Error("Browser-login provider does not match the connection request");
-  }
-  return persistLocalLinkCredential({
-    cwd,
-    providerId,
-    methodId,
-    label,
-    token: token.accessToken,
-    browserOAuthToken: token,
-    existingId,
-    authSource: "browser-oauth",
-  });
-});
-
-ipcMain.handle("links:cancelBrowserAuth", (_e, rawAttemptId: unknown) => {
-  const attemptId = typeof rawAttemptId === "string" ? rawAttemptId.trim() : "";
-  return attemptId ? linkDeviceOAuthBroker.cancel(attemptId) : false;
-});
-
-ipcMain.handle("links:connectCli", async (_e, raw: unknown) => {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error("links:connectCli requires a connection request");
-  }
-  const input = raw as Record<string, unknown>;
-  const rawCwd = typeof input.cwd === "string" ? input.cwd : "";
-  const cwd = rawCwd ? await requireRendererProjectPath(rawCwd) : "";
-  const rawProviderId = typeof input.providerId === "string" ? input.providerId.trim() : "";
-  const methodId = typeof input.methodId === "string" ? input.methodId.trim() : "";
-  const label = typeof input.label === "string" ? input.label.trim() : "";
-  const existingId = typeof input.existingId === "string" ? input.existingId.trim() : "";
-  const loginIfNeeded = input.loginIfNeeded === true;
-  if (!isCliLinkProvider(rawProviderId)) throw new Error("Unsupported CLI Link provider");
-  if (!/^[a-z0-9][a-z0-9-]{0,80}$/.test(methodId)) throw new Error("Invalid Link method");
-  if (label.length > 200) throw new Error("Connection label is too long");
-
-  return persistCliLinkCredential({
-    cwd,
-    providerId: rawProviderId,
-    methodId,
-    label,
-    existingId,
-    loginIfNeeded,
-  });
-});
-
-ipcMain.handle("links:connectLocal", async (_e, raw: unknown) => {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error("links:connectLocal requires a connection request");
-  }
-  const input = raw as Record<string, unknown>;
-  const rawCwd = typeof input.cwd === "string" ? input.cwd : "";
-  const cwd = rawCwd ? await requireRendererProjectPath(rawCwd) : "";
-  const providerId = typeof input.providerId === "string" ? input.providerId.trim() : "";
-  const methodId = typeof input.methodId === "string" ? input.methodId.trim() : "";
-  const label = typeof input.label === "string" ? input.label.trim() : "";
-  const token = typeof input.token === "string" ? input.token.trim() : "";
-  const existingId = typeof input.existingId === "string" ? input.existingId.trim() : "";
-  if (!providerId || !methodId || !token) {
-    throw new Error("Provider, connection method, and token are required");
-  }
-  if (!/^[a-z0-9][a-z0-9-]{0,80}$/.test(methodId)) {
-    throw new Error("Invalid local Link connection method");
-  }
-  if (label.length > 200) throw new Error("Connection label is too long");
-  if (token.length > 16_384) throw new Error("Token is too long");
-
-  return persistLocalLinkCredential({
-    cwd,
-    providerId,
-    methodId,
-    label,
-    token,
-    existingId,
-    authSource: "manual-token",
-  });
-});
-// 只改元数据(label/autoUseByAI/meta),保留 secret —— UI 的编辑/AI 开关用,避免清空 jar。
-ipcMain.handle(
-  "credentials:patchMeta",
-  async (
-    _e,
-    cwd: string,
-    scope: CredentialScope,
-    id: string,
-    fields: {
-      label?: string;
-      exposeAsEnv?: string;
-      autoUseByAI?: boolean;
-      autoInjectByAI?: boolean;
-      meta?: unknown;
-    },
-  ) => {
-    const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
-    if (typeof id !== "string" || !id || id.length > 512 || id.includes("\0")) {
-      throw new Error("credentials:patchMeta requires id");
-    }
-    if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
-      throw new Error("credentials:patchMeta requires fields");
-    }
-    assertGenericCredentialMutation(authorizedCwd, id);
-    new CredentialStore(authorizedCwd || undefined).patch(scope, id, fields as never);
-    if (fields.meta && typeof fields.meta === "object" && "autoRefreshFromBrowser" in fields.meta) {
-      if (fields.meta.autoRefreshFromBrowser === true) {
-        cookieCredentialAutoRefresh.requestRefreshForCredential(
-          authorizedCwd || undefined,
-          id,
-          scope,
-        );
-      } else {
-        cookieCredentialAutoRefresh.cancelRefreshForCredential(
-          authorizedCwd || undefined,
-          id,
-          scope,
-        );
-      }
-    }
-    bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
-  },
-);
-ipcMain.handle("mcpOAuth:login", (_e, raw: unknown) => {
-  const input = normalizeMcpOAuthLoginInput(raw);
-  if (input.credentialId) assertGenericCredentialMutation("", input.credentialId);
-  return getMcpOAuthService().login(input);
-});
-ipcMain.handle("mcpOAuth:refresh", (_e, credentialId: unknown) => {
-  if (typeof credentialId !== "string" || !credentialId) {
-    throw new Error("mcpOAuth:refresh requires credentialId");
-  }
-  assertGenericCredentialMutation("", credentialId);
-  return getMcpOAuthService().refresh(credentialId);
-});
-ipcMain.handle("mcpOAuth:logout", (_e, credentialId: unknown) => {
-  if (typeof credentialId !== "string" || !credentialId) {
-    throw new Error("mcpOAuth:logout requires credentialId");
-  }
-  assertGenericCredentialMutation("", credentialId);
-  return getMcpOAuthService().logout(credentialId);
-});
-function assertRendererSessionAccess(sessionId: unknown, senderWebContentsId: number): string {
-  assertDesktopSessionId(sessionId);
-  if (!bridge?.hasKnownSession(sessionId)) {
-    throw new Error("browser operation requires a live CodeShell task");
-  }
-  const ownerId = bridge.panelOwnerWebContentsId(sessionId);
-  // Headless/mobile sessions intentionally have no panel owner and may be
-  // presented by a desktop window. Once a session has an owner, however, a
-  // second window must never rebind or control its browser capability.
-  if (ownerId !== undefined && ownerId !== senderWebContentsId) {
-    throw new Error("browser operation belongs to another window");
-  }
-  return sessionId;
-}
-
-const deletingBrowserSessions = new Set<string>();
-const rendererBrowserSessionAccess = new RendererBrowserSessionAccess({
-  bridge: () => bridge,
-  windowForSender: (senderId) =>
-    [...mainWindows].find(
-      (window) => !window.isDestroyed() && window.webContents.id === senderId,
-    ) ?? null,
-  resolvePersistedSession: resolvePersistedBrowserSession,
-  bucketForSession,
-  registerSessionBucket,
-});
-
-const prepareRendererBrowserSession = createRendererBrowserSessionEventAccess(
-  rendererBrowserSessionAccess,
-  (sessionId) => deletingBrowserSessions.has(sessionId),
-);
-
-function requireRendererBrowserPartition(bucket: unknown, senderWebContentsId: number): string {
-  const partition = browserPartitionForBucket(bucket);
-  if (!partition || typeof bucket !== "string") {
-    throw new Error("a bounded browser bucket is required");
-  }
-  const sessionIds = sessionIdsForBucket(bucket);
-  const authorized = sessionIds.some((sessionId) => {
-    if (deletingBrowserSessions.has(sessionId)) return false;
-    try {
-      rendererBrowserSessionAccess.assertAccess(sessionId, senderWebContentsId);
-      return true;
-    } catch {
-      return false;
-    }
-  });
-  if (!authorized) throw new Error("browser bucket belongs to another window");
-  return partition;
-}
-
-ipcMain.on(
-  "browser:register-session-bucket",
-  async (event, payload: { sessionId?: unknown; bucket?: unknown; partition?: unknown }) => {
-    try {
-      const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
-      const bucket = typeof payload?.bucket === "string" ? payload.bucket : "";
-      const partition = typeof payload?.partition === "string" ? payload.partition : undefined;
-      if (!sessionId || !bucket || bucket.length > 512 || bucket.includes("\0")) return;
-      if (partition !== undefined && (partition.length > 1_024 || partition.includes("\0"))) return;
-      const { bucket: existingBucket } = await prepareRendererBrowserSession(
-        event,
-        sessionId,
-        bucket,
-      );
-      if (!existingBucket) throw new Error("browser Session has no Main-owned bucket");
-      if (existingBucket !== bucket) {
-        // External runtimes intentionally own an isolated browser partition.
-        // A late renderer effect must never rebind it to the visible session
-        // bucket; ignore that stale registration instead of emitting a noisy
-        // error after the external runtime has already started successfully.
-        if (existingBucket === externalRuntimeBrowserBucket(sessionId)) return;
-        throw new Error(
-          `renderer attempted to rebind session ${sessionId} from ${existingBucket} to ${bucket}`,
-        );
-      }
-      registerSessionBucket(sessionId, bucket, partition);
-    } catch (err) {
-      dlog("browser", "register_session_bucket_failed", { error: String(err) });
-    }
-  },
-);
-
-ipcMain.on(
-  "browser:guest-attached",
-  async (
-    e,
-    payload: {
-      guestId?: unknown;
-      bucket?: unknown;
-      partition?: unknown;
-      engineSessionId?: unknown;
-    },
-  ) => {
-    try {
-      const guestId =
-        typeof payload?.guestId === "number" ? payload.guestId : Number(payload?.guestId);
-      const bucket = typeof payload?.bucket === "string" ? payload.bucket : "";
-      const partition = typeof payload?.partition === "string" ? payload.partition : "";
-      if (
-        !Number.isSafeInteger(guestId) ||
-        guestId <= 0 ||
-        !bucket ||
-        bucket.length > 512 ||
-        bucket.includes("\0") ||
-        !partition ||
-        partition.length > 1_024 ||
-        partition.includes("\0")
-      ) {
-        return;
-      }
-      const ownerWindow = BrowserWindow.fromWebContents(e.sender);
-      if (!ownerWindow) return;
-      if (payload?.engineSessionId !== undefined) {
-        await prepareRendererBrowserSession(e, payload.engineSessionId, bucket);
-      }
-      registerAttachedGuestMetadata({
-        guestId,
-        bucket,
-        partition,
-        engineSessionId:
-          typeof payload?.engineSessionId === "string" ? payload.engineSessionId : undefined,
-        windowId: ownerWindow.id,
-        source: "panel",
-      });
-    } catch (err) {
-      dlog("browser", "guest_attached_failed", { error: String(err) });
-    }
-  },
-);
-
-ipcMain.handle("browser-runtime:grant-built-in", async (e, payload: Record<string, unknown>) => {
-  const guestId = typeof payload?.guestId === "number" ? payload.guestId : Number(payload?.guestId);
-  if (!Number.isSafeInteger(guestId) || guestId <= 0) {
-    throw new Error("browser handoff requires an existing conversation and browser tab");
-  }
-  const { sessionId, assertCurrent } = await prepareRendererBrowserSession(
-    e,
-    payload?.sessionId,
-    guestRecordForId(guestId)?.bucket,
-  );
-  const ownerWindow = BrowserWindow.fromWebContents(e.sender);
-  if (!ownerWindow) throw new Error("browser handoff requires an owning window");
-  const status = builtInBrowserHandoffGrants.grant({
-    sessionId,
-    guestId,
-    sourceWindowId: ownerWindow.id,
-    assertCurrent,
-    lifetime: parseBuiltInBrowserGrantLifetime(payload.lifetime, payload.ttlMs),
-    ttlMs:
-      typeof payload.ttlMs === "number" && Number.isSafeInteger(payload.ttlMs) && payload.ttlMs > 0
-        ? payload.ttlMs
-        : undefined,
-  });
-  // Switching targets is explicit. Dispose the independent runtime target so
-  // there is never a second browser silently continuing in the background.
-  chromeExtensionRuntimeService.forgetSession(sessionId);
-  browserRuntime.close(interactiveBrowserRuntimeOwner(sessionId));
-  return status;
-});
-
-registerPanelAccessResponses(ipcMain, (sender) => BrowserWindow.fromWebContents(sender)?.id);
-ipcMain.handle("browser-runtime:revoke-built-in", async (event, rawSessionId: unknown) => {
-  const { sessionId } = await prepareRendererBrowserSession(event, rawSessionId);
-  builtInBrowserHandoffGrants.revoke(sessionId);
-  return builtInBrowserHandoffGrants.status(sessionId);
-});
-
-ipcMain.handle("browser-runtime:handoff-status", async (event, rawSessionId: unknown) => {
-  const { sessionId } = await prepareRendererBrowserSession(event, rawSessionId);
-  return builtInBrowserHandoffGrants.status(sessionId);
-});
-
-ipcMain.handle(
-  "browser-runtime:chrome-begin-pairing",
-  async (event, payload: { sessionId?: unknown; label?: unknown }) => {
-    const sessionId = assertRendererSessionAccess(payload?.sessionId, event.sender.id);
-    await prepareRendererBrowserSession(event, sessionId);
-    if (
-      payload?.label !== undefined &&
-      (typeof payload.label !== "string" ||
-        payload.label.length > 200 ||
-        payload.label.includes("\0"))
-    ) {
-      throw new Error("Chrome pairing label is invalid");
-    }
-    return chromeExtensionRuntimeService.beginPairing(
-      sessionId,
-      typeof payload.label === "string" ? payload.label : undefined,
-    );
-  },
-);
-
-ipcMain.handle("browser-runtime:chrome-status", async (event, rawSessionId: unknown) => {
-  const { sessionId } = await prepareRendererBrowserSession(event, rawSessionId);
-  return chromeExtensionRuntimeService.status(sessionId);
-});
-
-ipcMain.handle("browser-runtime:chrome-revoke", async (event, rawSessionId: unknown) => {
-  const sessionId = assertRendererSessionAccess(rawSessionId, event.sender.id);
-  await prepareRendererBrowserSession(event, sessionId);
-  return chromeExtensionRuntimeService.revoke(sessionId);
-});
-
-ipcMain.handle("browser-runtime:chrome-installation", () => ({
-  ...(chromeNativeRegistration ?? {
-    installed: false,
-    manifestPaths: [],
-    extensionPath: app.isPackaged
-      ? join(process.resourcesPath, "packages", "desktop", "resources", "chrome-extension")
-      : join(app.getAppPath(), "resources", "chrome-extension"),
-    detail: "Chrome bridge is still starting",
-  }),
-}));
-
-ipcMain.handle("credentials:cookieDomains", async (event, bucket?: string) =>
-  listCookieDomains(requireRendererBrowserPartition(bucket, event.sender.id)),
-);
-ipcMain.handle("credentials:cookiePreview", async (event, domain: string, bucket?: string) => {
-  if (
-    typeof domain !== "string" ||
-    !domain.trim() ||
-    domain.length > 253 ||
-    domain.includes("\0")
-  ) {
-    throw new Error("credentials:cookiePreview requires a bounded domain");
-  }
-  // Preview only: just count the cookies in the partition. No lease file is
-  // materialized here — the actual cookies.txt is created on demand by the
-  // (deferred) UseGate when a tool call is approved.
-  const cookies = await getCookiesForDomain(
-    domain.trim(),
-    requireRendererBrowserPartition(bucket, event.sender.id),
-  );
-  return { count: cookies.length };
-});
-// 第二期:按域拓取 cookie jar(renderer 拿去组装成 cookie 凭证存进 CredentialStore)。
-ipcMain.handle("credentials:captureCookieJar", async (event, domain: string, bucket?: string) => {
-  if (
-    typeof domain !== "string" ||
-    !domain.trim() ||
-    domain.length > 253 ||
-    domain.includes("\0")
-  ) {
-    throw new Error("credentials:captureCookieJar requires a domain");
-  }
-  const jar = await captureCookieJar(
-    domain.trim(),
-    requireRendererBrowserPartition(bucket, event.sender.id),
-  );
-  return { jar, count: jar.length };
-});
-// 第二期+:全量拓取当前 chat session 的浏览器分区所有 cookie(不按域过滤)。
-ipcMain.handle("credentials:captureAllCookies", async (event, bucket?: string) => {
-  const jar = await captureAllCookies(requireRendererBrowserPartition(bucket, event.sender.id));
-  return { jar, count: jar.length };
-});
-// 第二期+:兜底拓取所有当前活着的浏览器面板 session,去重合并。
-ipcMain.handle("credentials:captureAllCookiesAllSessions", async () => {
-  return captureAllCookiesFromSessions(listGuestSessions());
-});
-// 第二期:切换账号 — 把某条 cookie 凭证的 jar 导回当前会话浏览器分区覆盖当前登录态,
-// 然后广播 browser:reload 让浏览器面板刷新成该账号身份。
-ipcMain.handle(
-  "credentials:restoreCookieToBrowser",
-  async (event, cwd: string, id: string, bucket?: string) => {
-    const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
-    if (typeof id !== "string" || !id || id.length > 512 || id.includes("\0"))
-      throw new Error("credentials:restoreCookieToBrowser requires id");
-    const partition = requireRendererBrowserPartition(bucket, event.sender.id);
-    await migrateCredentialStore(authorizedCwd || undefined);
-    const resolved = resolveCookieCredentialForBrowser(authorizedCwd || undefined, id, "full");
-    if (!resolved.ok) throw new Error(resolved.error);
-    const { count } = await restoreCookieCredentialToBrowser({
-      targetSession: partition,
-      sessionCwd: authorizedCwd || undefined,
-      credentialId: id,
-      credentialScope: "full",
-      resolved,
-    });
-    for (const w of BrowserWindow.getAllWindows()) {
-      if (!w.isDestroyed()) w.webContents.send("browser:reload", { bucket });
-    }
-    return { count };
-  },
-);
-// 第二期+:独立窗口登录抓 cookie(解决内置 webview 登不上 Google/YouTube)。
-// 开临时分区登录窗 → 用户点保存 → 读 cookie + 用户名 + 校验 → 关窗销毁分区。
-// 只产出 jar/建议名/校验,存凭证由渲染层走 credentials:save。
-ipcMain.handle(
-  "credentials:loginCapture",
-  async (_e, req: { url: string; platform?: string; fullCapture?: boolean }) => {
-    if (!req || typeof req.url !== "string" || !req.url.trim()) {
-      throw new Error("credentials:loginCapture requires a url");
-    }
-    return loginAndCaptureCookies({
-      url: req.url.trim(),
-      platform: req.platform,
-      fullCapture: req.fullCapture === true,
-    });
-  },
-);
 ipcMain.handle("plugins:detail", async (_e, installKey: string) => {
   if (typeof installKey !== "string" || !installKey) {
     throw new Error("plugins:detail requires installKey");
@@ -4858,96 +3838,7 @@ ipcMain.handle("git:check", async () => {
   };
 });
 
-// ─── Voice input (speech-to-text / 听写) ───
-// Renderer records the mic, ships raw audio bytes here; we resolve the
-// configured (or OpenAI-fallback) transcription provider and POST to its
-// /audio/transcriptions. Pure request/response — NOT an agent tool.
-async function transcribeConfiguredAudio(payload: {
-  cwd: string;
-  audio: Uint8Array;
-  mimeType?: string;
-  provider?: string;
-  language?: string;
-}): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
-  const resolved = resolveTranscribeProvider(payload.cwd, payload.provider);
-  if (!resolved) return { ok: false, error: "no-audio-provider" };
-  const mime = payload.mimeType?.trim() || "audio/webm";
-  const ext = mime.includes("webm")
-    ? "webm"
-    : mime.includes("mp4") || mime.includes("m4a")
-      ? "m4a"
-      : mime.includes("wav")
-        ? "wav"
-        : "webm";
-  return transcribe({
-    audio: payload.audio,
-    mimeType: mime,
-    filename: `audio.${ext}`,
-    model: resolved.model,
-    creds: resolved.creds,
-    language: payload.language,
-    fetchImpl: fetch,
-  });
-}
-
-async function ensureDesktopMicrophoneAccess(): Promise<{ granted: boolean }> {
-  if (process.platform !== "darwin") return { granted: true };
-  const status = systemPreferences.getMediaAccessStatus("microphone");
-  if (status === "granted") return { granted: true };
-  const granted = await systemPreferences.askForMediaAccess("microphone");
-  return { granted };
-}
-
-ipcMain.handle(
-  "stt:transcribe",
-  async (
-    _e,
-    payload: {
-      cwd: string;
-      audio: ArrayBuffer;
-      mimeType?: string;
-      provider?: string;
-      language?: string;
-    },
-  ): Promise<{ ok: true; text: string } | { ok: false; error: string }> => {
-    const { cwd, audio, mimeType, provider, language } = payload ?? {};
-    if (
-      typeof cwd !== "string" ||
-      !(audio instanceof ArrayBuffer) ||
-      audio.byteLength === 0 ||
-      audio.byteLength > 25 * 1024 * 1024 ||
-      (mimeType !== undefined && (typeof mimeType !== "string" || mimeType.length > 256)) ||
-      (provider !== undefined && (typeof provider !== "string" || provider.length > 512)) ||
-      (language !== undefined && (typeof language !== "string" || language.length > 64))
-    ) {
-      return { ok: false, error: "bad-request" };
-    }
-    const authorizedCwd = await requireRendererProjectPath(cwd);
-    return transcribeConfiguredAudio({
-      cwd: authorizedCwd,
-      audio: new Uint8Array(audio),
-      ...(typeof mimeType === "string" ? { mimeType } : {}),
-      ...(typeof provider === "string" ? { provider } : {}),
-      ...(typeof language === "string" ? { language } : {}),
-    });
-  },
-);
-ipcMain.handle("stt:available", async (_e, cwd: string) => ({
-  available: isTranscribeAvailable(await requireRendererProjectPath(cwd)),
-}));
-// What voice input will ACTUALLY use right now (configured connection vs reused
-// OpenAI key vs none) — key already masked in core. Lets the connection page
-// show the active/fallback config instead of looking unconfigured.
-ipcMain.handle("stt:describe", async (_e, cwd: string) =>
-  describeTranscribe(await requireRendererProjectPath(cwd)),
-);
-// macOS gates microphone access at the OS level (TCC). Ask BEFORE getUserMedia
-// so the user gets the system prompt with our NSMicrophoneUsageDescription, and
-// so a previously-denied state is reported back (renderer then shows guidance).
-// No-op / always-true on other platforms. Returns whether access is granted.
-ipcMain.handle("stt:ensureMicAccess", async (): Promise<{ granted: boolean }> => {
-  return ensureDesktopMicrophoneAccess();
-});
+registerSpeechIpc();
 ipcMain.handle("marketplace:list", async () => listMarketplacesForUi());
 ipcMain.handle("marketplace:load", async (_e, name: string) => loadMarketplaceForUi(name));
 ipcMain.handle("marketplace:recommended", async () => listRecommendedMarketplacesForUi());
@@ -5051,149 +3942,7 @@ ipcMain.handle("session:content-search", async (_e, ...args: unknown[]) => {
   return searchSessionTranscripts(sessionsRoot(), trimmed, { budgetMs: 5_000 });
 });
 
-async function runClaimBoundAttachmentOperation<T>(
-  ownerId: number,
-  payload: { cwd?: string; sessionId?: string; quickChatClaimId?: string },
-  operation: () => Promise<T>,
-): Promise<T> {
-  const sessionId = payload.sessionId!;
-  if (!sessionId.startsWith("qchat-")) return operation();
-
-  // Quick-chat disk writes share the same ownership generation as fork/GC.
-  // Missing/stale claims fail before IO; cleanup tombstones the claim and waits
-  // for already-started operations to settle before deleting the session.
-  assertQuickChatClaim(sessionId, payload.quickChatClaimId);
-  const claimId = payload.quickChatClaimId!;
-  if (!quickChatOwnership.beginOperation(sessionId, ownerId, claimId)) {
-    throw new Error("quick-chat attachment claim is no longer active");
-  }
-
-  let result: T | undefined;
-  let operationError: unknown;
-  try {
-    result = await operation();
-  } catch (error) {
-    operationError = error;
-  }
-  const settled = await quickChatOwnership.settleOperation(
-    sessionId,
-    ownerId,
-    claimId,
-    async () => {
-      await deleteDesktopSession(sessionId);
-      if (payload.cwd) {
-        // Worktree cwd may not be in the project registry scanned by the
-        // generic session cleanup, so remove the exact late-write directory.
-        await cleanupSessionAttachments(payload.cwd, sessionId).catch(() => undefined);
-      }
-    },
-  );
-  if (operationError) throw operationError;
-  if (!settled.active) {
-    throw new Error("quick-chat attachment result arrived after cleanup");
-  }
-  return result as T;
-}
-
-ipcMain.handle(
-  "attachments:stageImageDataUrl",
-  async (
-    event,
-    payload: {
-      cwd?: string;
-      sessionId?: string;
-      name?: string;
-      mime?: string;
-      dataUrl?: string;
-      origin?: string;
-      quickChatClaimId?: string;
-    },
-  ) => {
-    if (!payload || typeof payload !== "object") {
-      throw new Error("attachments:stageImageDataUrl requires payload");
-    }
-    if (typeof payload.cwd !== "string")
-      throw new Error("attachments:stageImageDataUrl requires cwd");
-    if (typeof payload.sessionId !== "string") {
-      throw new Error("attachments:stageImageDataUrl requires sessionId");
-    }
-    if (typeof payload.dataUrl !== "string") {
-      throw new Error("attachments:stageImageDataUrl requires dataUrl");
-    }
-    const cwd = await requireRendererProjectPath(payload.cwd);
-    if (payload.dataUrl.length > Math.ceil((10 * 1024 * 1024 * 4) / 3) + 1_024) {
-      throw new Error("attachments:stageImageDataUrl exceeds the encoded size limit");
-    }
-    const origin =
-      payload.origin === "paste" ||
-      payload.origin === "os-drop" ||
-      payload.origin === "file-panel" ||
-      payload.origin === "picker" ||
-      payload.origin === "mention" ||
-      payload.origin === "generated" ||
-      payload.origin === "tool"
-        ? payload.origin
-        : "paste";
-    const authorizedPayload = { ...payload, cwd };
-    return runClaimBoundAttachmentOperation(event.sender.id, authorizedPayload, () =>
-      stageImageDataUrl({
-        cwd,
-        sessionId: payload.sessionId!,
-        name: payload.name,
-        mime: payload.mime,
-        dataUrl: payload.dataUrl!,
-        origin,
-      }),
-    );
-  },
-);
-ipcMain.handle(
-  "attachments:cleanup",
-  async (_e, payload: { cwd?: string; sessionId?: string; now?: number }) => {
-    if (!payload || typeof payload.cwd !== "string") {
-      throw new Error("attachments:cleanup requires cwd");
-    }
-    const cwd = await requireRendererProjectPath(payload.cwd);
-    return cleanupAttachments({
-      cwd,
-      sessionId: typeof payload.sessionId === "string" ? payload.sessionId : undefined,
-    });
-  },
-);
-ipcMain.handle("attachments:inspect", async (_e, payload: { cwd?: string; sessionId?: string }) => {
-  if (!payload || typeof payload.cwd !== "string") {
-    throw new Error("attachments:inspect requires cwd");
-  }
-  const cwd = await requireRendererProjectPath(payload.cwd);
-  return listRecentAttachments({
-    cwd,
-    sessionId: typeof payload.sessionId === "string" ? payload.sessionId : undefined,
-  });
-});
-ipcMain.handle(
-  "attachments:markSent",
-  async (
-    event,
-    payload: {
-      cwd?: string;
-      sessionId?: string;
-      attachments?: Array<Parameters<typeof markAttachmentsSent>[2][number]>;
-      quickChatClaimId?: string;
-    },
-  ) => {
-    if (!payload || typeof payload.cwd !== "string" || typeof payload.sessionId !== "string") {
-      throw new Error("attachments:markSent requires cwd and sessionId");
-    }
-    const cwd = await requireRendererProjectPath(payload.cwd);
-    const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
-    if (attachments.length > 32) throw new Error("too many attachments to mark sent");
-    const authorizedPayload = { ...payload, cwd };
-    return runClaimBoundAttachmentOperation(event.sender.id, authorizedPayload, async () => {
-      await markAttachmentsSent(cwd, payload.sessionId!, attachments);
-      return { ok: true } as const;
-    });
-  },
-);
+registerAttachmentsIpc({ quickChatOwnership, deleteDesktopSession, assertQuickChatClaim });
 ipcMain.handle(
   "skills:uninstall",
   async (
@@ -5234,289 +3983,8 @@ ipcMain.handle(
     });
   },
 );
-
-ipcMain.handle("agents:list", async (_e, target: RendererConfigurationTarget | null) =>
-  listAgents(await rendererOptionalConfigurationCwd(target, "")),
-);
-ipcMain.handle(
-  "agents:read",
-  async (_e, target: RendererConfigurationTarget | null, filePath: unknown) =>
-    readAgentBody(await requireRendererListedAgentPath(target, filePath)),
-);
-
-ipcMain.handle("media:getPreview", async (event, input: unknown) => {
-  if (
-    event.senderFrame !== event.sender.mainFrame ||
-    ![...mainWindows].some((window) => !window.isDestroyed() && window.webContents === event.sender)
-  )
-    return null;
-  return mediaPreviewService.create(event.sender.id, input);
-});
-ipcMain.handle("media:releasePreview", (event, url: unknown) => {
-  if (event.senderFrame === event.sender.mainFrame && typeof url === "string")
-    mediaPreviewService.release(event.sender.id, url);
-});
-
-ipcMain.handle(
-  "images:readDataUrl",
-  async (
-    _e,
-    payload: { absPath?: unknown; cwd?: unknown; sessionId?: unknown },
-  ): Promise<string | null> => {
-    const cwd =
-      typeof payload?.cwd === "string" && payload.cwd
-        ? await requireRendererOrSessionPath(payload.cwd, payload.sessionId)
-        : undefined;
-    return readImageDataUrl(typeof payload?.absPath === "string" ? payload.absPath : "", {
-      cwd,
-      sessionId: typeof payload?.sessionId === "string" ? payload.sessionId : undefined,
-    });
-  },
-);
-
-// Save an image to a user-chosen location (Lightbox / attachment "download").
-// Accepts the data URL the renderer already holds (works for generated images,
-// pasted/dragged attachments, and file-backed thumbnails alike). Returns the
-// saved path, or null if the user cancelled the dialog.
-ipcMain.handle(
-  "images:save",
-  async (e, src: string, opts?: { name?: string; mime?: string }): Promise<string | null> => {
-    if (typeof src !== "string" || !src) throw new Error("images:save requires src");
-    if (src.length > Math.ceil((10 * 1024 * 1024 * 4) / 3) + 1_024) {
-      throw new Error("images:save exceeds the encoded size limit");
-    }
-    const parsed = parseDataUrl(src);
-    if (!parsed) throw new Error("images:save: src is not a data URL");
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    const suggested = suggestImageFilename({
-      name: opts?.name ?? null,
-      mime: opts?.mime ?? parsed.mime,
-      stamp,
-    });
-    const win = BrowserWindow.fromWebContents(e.sender) ?? undefined;
-    const result = win
-      ? await dialog.showSaveDialog(win, { defaultPath: suggested })
-      : await dialog.showSaveDialog({ defaultPath: suggested });
-    if (result.canceled || !result.filePath) return null;
-    await writeFile(result.filePath, parsed.buffer);
-    return result.filePath;
-  },
-);
-ipcMain.handle(
-  "agents:save",
-  async (
-    _e,
-    def: AgentDefinition,
-    opts?: { scope?: "user" | "project"; target?: RendererConfigurationTarget },
-  ) => {
-    if (!def || typeof def !== "object") throw new Error("agents:save requires def");
-    if (typeof def.name !== "string" || typeof def.description !== "string")
-      throw new Error("agents:save: name and description are required");
-    if (opts?.scope !== undefined && opts.scope !== "user" && opts.scope !== "project") {
-      throw new Error("invalid agent scope");
-    }
-    if (opts) {
-      rejectUnexpectedRendererKeys(
-        opts as Record<string, unknown>,
-        ["scope", "target"],
-        "agents:save",
-      );
-    }
-    if (opts?.scope === "project" && !opts.target) {
-      throw new Error("project agent save requires stable authority");
-    }
-    if (opts?.scope !== "project" && opts?.target) {
-      throw new Error("user agent save does not accept project authority");
-    }
-    const cwd = opts?.target ? await rendererConfigurationCwd(opts.target) : undefined;
-    return saveAgent(def, { scope: opts?.scope, cwd });
-  },
-);
-ipcMain.handle(
-  "agents:delete",
-  async (
-    _e,
-    name: string,
-    opts?: { scope?: "user" | "project"; target?: RendererConfigurationTarget },
-  ) => {
-    if (typeof name !== "string" || !name) throw new Error("agents:delete requires name");
-    if (opts?.scope !== undefined && opts.scope !== "user" && opts.scope !== "project") {
-      throw new Error("invalid agent scope");
-    }
-    if (opts) {
-      rejectUnexpectedRendererKeys(
-        opts as Record<string, unknown>,
-        ["scope", "target"],
-        "agents:delete",
-      );
-    }
-    if (opts?.scope === "project" && !opts.target) {
-      throw new Error("project agent delete requires stable authority");
-    }
-    if (opts?.scope !== "project" && opts?.target) {
-      throw new Error("user agent delete does not accept project authority");
-    }
-    const cwd = opts?.target ? await rendererConfigurationCwd(opts.target) : undefined;
-    return deleteAgent(name, { scope: opts?.scope, cwd });
-  },
-);
-
-const githubSkillReviews = new GithubSkillReviewStore();
-
-ipcMain.handle("skills:inspectGithub", async (event, url: string, existingNames?: unknown) => {
-  if (typeof url !== "string" || !url || url.length > 8_192 || url.includes("\0")) {
-    throw new Error("skills:inspectGithub requires url");
-  }
-  if (!Array.isArray(existingNames) && existingNames !== undefined) {
-    throw new Error("skills:inspectGithub existingNames must be an array");
-  }
-  const names = existingNames ?? [];
-  if (
-    names.length > 4_096 ||
-    names.some((name) => typeof name !== "string" || name.length > 512 || name.includes("\0"))
-  ) {
-    throw new Error("skills:inspectGithub existingNames are invalid");
-  }
-  return githubSkillReviews.issue(event.sender.id, await inspectRepo(url, names as string[]));
-});
-
-ipcMain.handle("skills:installFromGithub", async (event, input: unknown) => {
-  if (!input || typeof input !== "object") {
-    throw new Error("skills:installFromGithub requires { inspection, selected, scope }");
-  }
-  const i = input as Omit<InstallFromGithubInput, "cwd"> & {
-    target?: RendererConfigurationTarget;
-  };
-  rejectUnexpectedRendererKeys(
-    input as Record<string, unknown>,
-    ["inspection", "selected", "scope", "target", "installName"],
-    "skills:installFromGithub",
-  );
-  if (!i.inspection || !i.selected) throw new Error("missing inspection/selected");
-  if (i.scope !== "user" && i.scope !== "project") throw new Error("invalid scope");
-  if (
-    i.installName !== undefined &&
-    (typeof i.installName !== "string" ||
-      i.installName.length > 512 ||
-      i.installName.includes("\0"))
-  ) {
-    throw new Error("invalid skill install name");
-  }
-  if (i.scope === "project" && !i.target) {
-    throw new Error("project skill install requires stable authority");
-  }
-  if (i.scope === "user" && i.target) {
-    throw new Error("user skill install does not accept project authority");
-  }
-  const cwd = i.target ? await rendererConfigurationCwd(i.target) : undefined;
-  const reviewToken = (i.inspection as { reviewToken?: unknown }).reviewToken;
-  const reviewed = githubSkillReviews.consume(event.sender.id, reviewToken, i.selected);
-  const { target: _target, ...installInput } = i;
-  return installFromGithub({
-    ...installInput,
-    inspection: reviewed.inspection,
-    selected: reviewed.selected,
-    cwd,
-  });
-});
-
-ipcMain.handle(
-  "skills:installLocal",
-  async (
-    _e,
-    sourceDir: string,
-    scope: "user" | "project",
-    target: RendererConfigurationTarget | null,
-    name?: string,
-  ) => {
-    if (typeof sourceDir !== "string" || !sourceDir) {
-      throw new Error("skills:installLocal requires sourceDir");
-    }
-    if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
-    if (scope === "project" && target === null) {
-      throw new Error("project skill install requires stable authority");
-    }
-    if (scope === "user" && target !== null) {
-      throw new Error("user skill install does not accept project authority");
-    }
-    const authorizedCwd = target === null ? undefined : await rendererConfigurationCwd(target);
-    return installSkillFromDirectory(sourceDir, scope, authorizedCwd, name);
-  },
-);
-
-ipcMain.handle(
-  "mcp:probe",
-  async (_e, raw: unknown, force?: boolean, target?: RendererConfigurationTarget | null) => {
-    if (!Array.isArray(raw)) return [];
-    const configs = raw.filter(
-      (x): x is McpServerConfig =>
-        !!x && typeof x === "object" && typeof (x as McpServerConfig).name === "string",
-    );
-    return probeMcpServers(configs, {
-      force: Boolean(force),
-      cwd: await rendererOptionalConfigurationCwd(target ?? null, resolveNoRepoCwd()),
-      oauthService: getMcpOAuthService(),
-    });
-  },
-);
-
-ipcMain.handle(
-  "mcp:listMerged",
-  async (
-    _e,
-    rawBase: unknown,
-    rawDisabledPlugins?: unknown,
-    target?: RendererConfigurationTarget | null,
-  ) => {
-    const base =
-      rawBase && typeof rawBase === "object" ? (rawBase as Record<string, McpServerConfig>) : {};
-    const rawList = Array.isArray(rawDisabledPlugins)
-      ? rawDisabledPlugins.filter((x): x is string => typeof x === "string")
-      : [];
-    // Fold project capabilityOverrides over the renderer's raw global list when
-    // a cwd is known — the pluginDisabled flag must reflect the EFFECTIVE state
-    // (能力总览 project "on" overrides global off), matching the engine's merge.
-    const cwd = target == null ? undefined : await rendererConfigurationCwd(target);
-    const disabledPlugins = cwd
-      ? computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd).disabledPlugins
-      : rawList;
-    // Merge with ALL plugins (no disabled filter): an installed plugin's MCP
-    // should be VISIBLE in the settings page even while the plugin is disabled
-    // (feedback: 装了就该展示,而不是打开插件才出现). The engine's own connect
-    // path still filters disabledPlugins, so a disabled plugin's server is
-    // listed-but-inert; we mark it `pluginDisabled` for the UI.
-    const disabledSet = new Set(disabledPlugins);
-    // Plugin-MCP overrides live globally (user scope), independent of the active
-    // settings scope — read them here and let the merge layer them onto plugin
-    // servers so the listed env/credential reflects the EFFECTIVE connect config.
-    const userSettings = ((await readSettings("user").catch(() => null)) ?? {}) as {
-      mcpServerOverrides?: Record<string, McpServerConfig>;
-    };
-    const overrides = (userSettings.mcpServerOverrides ?? {}) as Record<string, McpServerConfig>;
-    const merged = mergePluginMcpServers(base, [], overrides);
-    return Object.fromEntries(
-      Object.entries(merged).map(([name, cfg]) => {
-        const fromSettings = Object.prototype.hasOwnProperty.call(base, name);
-        const colon = name.indexOf(":");
-        const owner = !fromSettings && colon > 0 ? name.slice(0, colon) : undefined;
-        return [
-          name,
-          {
-            ...cfg,
-            name,
-            source: fromSettings ? "settings" : "plugin",
-            editable: fromSettings,
-            pluginDisabled: owner !== undefined && disabledSet.has(owner),
-            // Flag a plugin server that currently carries a user override so the
-            // UI can badge it. (User-added servers never use the override layer.)
-            hasOverride: !fromSettings && Object.prototype.hasOwnProperty.call(overrides, name),
-          },
-        ];
-      }),
-    );
-  },
-);
-
+registerAgentsMediaIpc({ mainWindows, mediaPreviewService });
+registerSkillsMcpIpc({ getMcpOAuthService });
 // Read-only list of plugin-provided hooks, for the settings 钩子 page to show
 // alongside hand-written hooks (labelled by owner plugin). Mirrors
 // mcp:listMerged's disabledPlugins handling. (#钩子设置页改造)
@@ -5552,81 +4020,7 @@ ipcMain.handle("mcp:revokePlugin", async (_e, installKey: string) => {
   return revokePluginMcp(installKey);
 });
 
-ipcMain.handle("mcp:invalidate", async (_e, name?: string) => {
-  invalidateMcpProbeCache(typeof name === "string" ? name : undefined);
-});
-
-ipcMain.handle("search:probe", async (_e, raw: unknown) => {
-  if (!raw || typeof raw !== "object") {
-    throw new Error("search:probe requires { provider, apiKey?, baseUrl? }");
-  }
-  const r = raw as SearchProbeInput;
-  if (r.provider !== "serper" && r.provider !== "tavily" && r.provider !== "searxng") {
-    throw new Error(`invalid provider: ${r.provider}`);
-  }
-  return probeSearch(r);
-});
-
-ipcMain.handle("image:probe", async (_e, raw: unknown) => {
-  if (!raw || typeof raw !== "object") {
-    throw new Error("image:probe requires { kind, apiKey?, baseUrl?, model? }");
-  }
-  const r = raw as ImageProbeInput;
-  if (typeof r.kind !== "string" || !r.kind) {
-    throw new Error("image:probe requires a provider kind");
-  }
-  return probeImage(r);
-});
-
-ipcMain.handle("catalog:list", async () => getMergedCatalog());
-
-ipcMain.handle("catalog:save", async (_e, entry: unknown) =>
-  saveCatalogEntry(entry, { path: userCatalogPath(), stamp: String(Date.now()) }),
-);
-ipcMain.handle("catalog:delete", async (_e, id: string) =>
-  deleteUserCatalogEntry(id, { path: userCatalogPath(), stamp: String(Date.now()) }),
-);
-ipcMain.handle("catalog:origins", async () => catalogEntryOrigins());
-
-ipcMain.handle("models:resolve-meta", async (_e, models: unknown, providers: unknown) => {
-  if (!Array.isArray(models) || !Array.isArray(providers)) return [];
-  return resolveModelMeta(models as never, providers as never);
-});
-
-ipcMain.handle("models:reasoning-control", async (_e, rawKind: unknown, rawModel: unknown) => {
-  const kind: ProviderKindName =
-    typeof rawKind === "string" && Object.prototype.hasOwnProperty.call(PROVIDER_KINDS, rawKind)
-      ? (rawKind as ProviderKindName)
-      : "custom";
-  const model = typeof rawModel === "string" ? rawModel : "";
-  return reasoningControlFor(kind, model);
-});
-
-ipcMain.handle("models:list", async (_e, rawProvider: unknown, refresh?: boolean) => {
-  const provider =
-    rawProvider && typeof rawProvider === "object" ? (rawProvider as Record<string, unknown>) : {};
-  const rawKind = typeof provider.kind === "string" ? provider.kind : "custom";
-  const kind = Object.prototype.hasOwnProperty.call(PROVIDER_KINDS, rawKind)
-    ? (rawKind as ProviderKindName)
-    : "custom";
-  const meta = PROVIDER_KINDS[kind];
-  const rawBaseUrl =
-    typeof provider.baseUrl === "string" && provider.baseUrl.trim()
-      ? provider.baseUrl.trim()
-      : meta.defaultBaseUrl;
-  const baseUrl = kind === "ollama" ? rawBaseUrl.replace(/\/v1\/?$/, "") : rawBaseUrl;
-  return fetchModelList(
-    {
-      key: typeof provider.key === "string" && provider.key ? provider.key : kind,
-      kind,
-      baseUrl,
-      apiKey: typeof provider.apiKey === "string" ? provider.apiKey : undefined,
-      modelsPath: typeof provider.modelsPath === "string" ? provider.modelsPath : undefined,
-    },
-    { cacheDir: defaultCacheDir(), refresh: refresh === true },
-  );
-});
-
+registerModelCatalogIpc();
 ipcMain.handle("updater:check", async () => checkForUpdate());
 ipcMain.handle("updater:download", async () => downloadUpdate());
 ipcMain.handle("updater:install", async () => quitAndInstall());
@@ -5641,80 +4035,20 @@ desktopManagedRuntimes.registerIpc(
     ) && event.senderFrame === event.sender.mainFrame,
 );
 
-// ── Mobile Web Remote ───────────────────────────────────────────────────────
-const startMobileRemote = (opts?: { mode?: "lan" | "tunnel" | "relay" }) =>
-  mobileRemoteController.start(opts);
-const stopMobileRemote = () => mobileRemoteController.stop();
-const createMobileRemotePairingUrl = () => mobileRemoteController.pairingUrl();
-const getMobileRemoteGatewayStatus = () => mobileRemoteController.status();
-
-ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
-ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => {
-  mobileDevices.revoke(id);
-  mobileRemote.revokeDevice(id);
+const {
+  startMobileRemote,
+  stopMobileRemote,
+  createMobileRemotePairingUrl,
+  getMobileRemoteGatewayStatus,
+} = registerMobileRemoteIpc({
+  mobileDevices,
+  mobileRemote,
+  cloudflaredBinary,
+  tunnelManager,
+  accessPasscode,
+  mobileRemoteController,
+  mobileOrchestrator,
 });
-ipcMain.handle("mobileRemote:removeDevice", async (_e, id: string) => {
-  mobileDevices.remove(id);
-  mobileRemote.revokeDevice(id);
-});
-ipcMain.handle("mobileRemote:renameDevice", async (_e, id: string, name: string) =>
-  mobileDevices.rename(id, name),
-);
-ipcMain.handle("mobileRemote:onlineDevices", async () => mobileRemote.onlineDeviceIds());
-// ── Tunnel-specific IPC ─────────────────────────────────────────────────────
-ipcMain.handle("mobileRemote:cloudflaredInstalled", async () => cloudflaredBinary.isInstalled());
-ipcMain.handle("mobileRemote:downloadCloudflared", async (e) => {
-  const sender = e.sender;
-  await cloudflaredBinary.ensureBinary((pct) => {
-    if (!sender.isDestroyed()) sender.send("mobileRemote:downloadProgress", pct);
-  });
-  return true;
-});
-ipcMain.handle("mobileRemote:passcodeStatus", async () => ({
-  isSet: accessPasscode.isSet(),
-}));
-ipcMain.handle("mobileRemote:setPasscode", async (_e, passcode: string) => {
-  if (typeof passcode !== "string" || passcode.length < 4 || passcode.length > 256) {
-    throw new Error("访问口令需要 4 到 256 个字符");
-  }
-  accessPasscode.set(passcode);
-  return true;
-});
-ipcMain.handle("mobileRemote:tunnelStatus", async () => ({
-  running: tunnelManager.isRunning(),
-  connected: tunnelManager.isConnected(),
-}));
-ipcMain.handle("mobileRemote:updatePermissionModes", async (_e, entries: unknown) => {
-  mobileOrchestrator.updatePermissionModes(entries);
-  return true;
-});
-ipcMain.handle(
-  "mobileRemote:approvalResolved",
-  async (
-    _e,
-    input: {
-      requestId?: unknown;
-      sessionId?: unknown;
-      connectionId?: unknown;
-      generation?: unknown;
-      approved?: unknown;
-      answer?: unknown;
-    },
-  ) => {
-    const requestId = typeof input?.requestId === "string" ? input.requestId : "";
-    if (!requestId) return false;
-    mobileOrchestrator.broadcastApprovalResolved({
-      requestId,
-      sessionId: typeof input?.sessionId === "string" ? input.sessionId : undefined,
-      connectionId: typeof input?.connectionId === "string" ? input.connectionId : undefined,
-      generation: typeof input?.generation === "number" ? input.generation : undefined,
-      approved: typeof input?.approved === "boolean" ? input.approved : undefined,
-      answer: typeof input?.answer === "string" ? input.answer : undefined,
-    });
-    return true;
-  },
-);
-
 const knownGitRoots = new Set<string>();
 
 registerProjectAuthorityIpc({
@@ -5734,180 +4068,16 @@ registerProjectAuthorityIpc({
   openPath,
 });
 
-// ── Rooms (desktop side; same RoomManager the phone uses → dual-ended) ──────
-ipcMain.handle("rooms:list", async () =>
-  roomManager.listRooms().map((room) => mobileOrchestrator.roomToPublic(room)),
-);
-ipcMain.handle("rooms:projects", async () => mobileOrchestrator.projectList());
-// rooms:create and ccRoom:openSession choose a room's mode via the Host authority.
-registerRoomModeIpc({
-  ipcMain,
+registerRoomsIpc({
+  mainWindows,
+  bridge: () => bridge,
+  approvalBridge,
   roomManager,
+  transcriptSubscriptions,
   roomModes,
-  roomToPublic: (room) => mobileOrchestrator.roomToPublic(room),
-  broadcastRoomState: (roomId) => mobileOrchestrator.broadcastRoomState(roomId),
+  mobileOrchestrator,
 });
-ipcMain.handle("rooms:open", async (_e, roomId: string) => roomManager.open(roomId));
-ipcMain.handle("rooms:send", async (_e, roomId: string, text: string) => {
-  if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
-    throw new Error("invalid room message");
-  }
-  return roomManager.send(roomId, text);
-});
-ipcMain.handle("rooms:history", async (_e, roomId: string, sinceSeq?: number) =>
-  roomManager.getMessages(roomId, sinceSeq ?? 0),
-);
-
-// ── CC rooms (external `claude` CLI orchestration) ──────────────────────────
-ipcMain.handle("ccRoom:probe", async (_e, force?: boolean) => probeClaudeCli(Boolean(force)));
-ipcMain.handle("ccRoom:codexProbe", async (_e, force?: boolean) => probeCodexCli(Boolean(force)));
-// Bounded by default (recent 2 weeks AND ≤20) so a project with lots of history
-// doesn't deep-read every session file on open. `all:true` returns everything
-// (the "load more" path). `total` lets the UI show how many are hidden.
-ipcMain.handle("ccRoom:listSessions", async (_e, cwd: string, all?: boolean) => {
-  cwd = await requireRendererProjectPath(cwd);
-  const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-  return listRelatedClaudeSessions(cwd, opts, {}, Boolean(all));
-});
-ipcMain.handle("ccRoom:listCodexSessions", async (_e, cwd: string, all?: boolean) => {
-  cwd = await requireRendererProjectPath(cwd);
-  const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-  return listRelatedCodexSessions(cwd, opts);
-});
-registerLinkedSessionObservationIpc({
-  ipcMain,
-  windows: mainWindows,
-  roomManager,
-  listBackgroundWork: createTaskInboxBackgroundHost({ worker: () => bridge }).list,
-  requirePath: requireRendererLinkedSessionPath,
-  subscriptions: transcriptSubscriptions,
-  roomMatchesTranscript: (...args) => mobileOrchestrator.roomMatchesTranscript(...args),
-  pendingApprovals: (roomId) => approvalBridge.pendingRequests(roomId),
-});
-ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) => {
-  if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
-    throw new Error("invalid room message");
-  }
-  return roomManager.send(roomId, text);
-});
-ipcMain.handle(
-  "ccRoom:respondApproval",
-  async (
-    _e,
-    roomId: string,
-    requestId: string,
-    decision:
-      | { behavior: "allow"; updatedInput?: unknown; answer?: string }
-      | { behavior: "deny"; message: string },
-  ) => approvalBridge.respond(roomId, requestId, decision),
-);
-registerRoomHistoryIpc(ipcMain, roomManager);
-ipcMain.handle("ccRoom:readHistory", async (_e, cwd: string, sessionId: string, limit: number) => {
-  cwd = await requireRendererProjectPath(cwd);
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) throw new Error("invalid limit");
-  return readRecentHistory(cwd, sessionId, limit);
-});
-ipcMain.handle(
-  "ccRoom:readCodexHistory",
-  async (_e, cwd: string, threadId: string, limit: number) => {
-    cwd = await requireRendererProjectPath(cwd);
-    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) throw new Error("invalid limit");
-    return readCodexRecentHistory(cwd, threadId, limit);
-  },
-);
-
-// Remaining CC/Codex subscription quota. Reads tokens from Keychain / ~/.codex
-// then hits each vendor's usage source. `provider` restricts the lookup
-// ("codex" is free; "claude" sends a ~1-token probe). Never throws — a failed
-// lookup lands in the per-provider `error` field.
-ipcMain.handle(
-  "quota:get",
-  async (_e, provider?: "claude" | "codex" | "both"): Promise<QuotaResult> => {
-    const creds = await resolveQuotaCredentials();
-    const providers: ("claude" | "codex")[] =
-      provider === "claude" ? ["claude"] : provider === "codex" ? ["codex"] : ["claude", "codex"];
-    return checkQuota({ creds, providers });
-  },
-);
-
-ipcMain.handle("dialog:pickSkillDir", async (): Promise<{ path: string; name: string } | null> => {
-  const res = await dialog.showOpenDialog({
-    title: "选择 Skill 文件夹",
-    properties: ["openDirectory"],
-  });
-  if (res.canceled || res.filePaths.length === 0) return null;
-  const selected = res.filePaths[0];
-  return { path: selected, name: basename(selected) };
-});
-
-ipcMain.handle(
-  "dialog:pickPluginSource",
-  async (
-    _e,
-    kind: "dir" | "zip",
-  ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null> => {
-    const res =
-      kind === "zip"
-        ? await dialog.showOpenDialog({
-            title: "选择插件压缩包",
-            properties: ["openFile"],
-            filters: [{ name: "Zip 压缩包", extensions: ["zip"] }],
-          })
-        : await dialog.showOpenDialog({
-            title: "选择插件文件夹",
-            properties: ["openDirectory"],
-          });
-    if (res.canceled || res.filePaths.length === 0) return null;
-    const selected = res.filePaths[0];
-    // For a zip, strip the ".zip" extension so the derived name matches the
-    // installed plugin name (e.g. "mimi-video-0.2.0.zip" → "mimi-video-0.2.0").
-    // The picker name is only a hint for the UI's same-name pre-check; core
-    // still derives the authoritative name from the plugin manifest at install.
-    const name = kind === "zip" ? basename(selected, extname(selected)) : basename(selected);
-    return { kind, path: selected, name };
-  },
-);
-
-ipcMain.handle(
-  "dialog:pickPanelAppSource",
-  async (
-    _e,
-    kind: "dir" | "zip",
-  ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null> => {
-    const result =
-      kind === "zip"
-        ? await dialog.showOpenDialog({
-            title: "选择 Panel App 压缩包",
-            properties: ["openFile"],
-            filters: [{ name: "Zip 压缩包", extensions: ["zip"] }],
-          })
-        : await dialog.showOpenDialog({
-            title: "选择 Panel App 文件夹",
-            properties: ["openDirectory"],
-          });
-    if (result.canceled || result.filePaths.length === 0) return null;
-    const selected = result.filePaths[0];
-    const name = kind === "zip" ? basename(selected, extname(selected)) : basename(selected);
-    return { kind, path: selected, name };
-  },
-);
-
-ipcMain.handle("dialog:pickGitBinary", async (): Promise<string | null> => {
-  const res = await dialog.showOpenDialog({
-    title: "选择 git 可执行文件",
-    properties: ["openFile"],
-    filters:
-      process.platform === "win32"
-        ? [
-            { name: "可执行文件", extensions: ["exe"] },
-            { name: "所有文件", extensions: ["*"] },
-          ]
-        : [{ name: "所有文件", extensions: ["*"] }],
-  });
-  if (res.canceled || res.filePaths.length === 0) return null;
-  return res.filePaths[0];
-});
-
+registerDialogPickerIpc();
 ipcMain.handle("window:new", async () => {
   await createWindow();
 });
@@ -6035,607 +4205,13 @@ ipcMain.handle("browser:popout", async (e, initialUrl?: string) => {
   await createBrowserPopout(parent, normalizedUrl);
 });
 
-// Common dev-server ports (subset of Codex's list). Probed in main via real TCP
-// connect (see port-probe.ts) instead of renderer no-cors fetch — no console
-// noise, no opaque-response 403 false-reads. The renderer only renders the
-// resulting open set.
-const CANDIDATE_DEV_PORTS = [
-  3000, 3001, 4000, 5000, 5173, 5174, 6006, 7000, 8000, 8080, 8888, 9000, 1420, 1313,
-];
-// ─── External Agent Runtimes (Codex / Claude Code) ────────────────
-// The renderer picks these like any other model (`codex/gpt-5.6-sol`); these
-// handlers are what makes such a key actually run something.
-const MAX_EXTERNAL_RUNTIME_TEXT_CHARS = 512 * 1024;
-const MAX_EXTERNAL_RUNTIME_CONTEXT_CHARS = 512 * 1024;
-const MAX_EXTERNAL_RUNTIME_ATTACHMENTS = 32;
-const MAX_EXTERNAL_RUNTIME_ID_CHARS = 512;
-
-/** Which runtimes this machine can run — gates the model picker entries. */
-ipcMain.handle("externalRuntime:available", () => {
-  if (!externalRuntimeService?.isEnabled()) return [];
-  return availableExternalRuntimes();
+const { externalRuntimeModelService } = registerExternalRuntimeIpc({
+  externalRuntimeService: () => externalRuntimeService,
+  externalRuntimeApprovals: () => externalRuntimeApprovals,
 });
-
-const externalRuntimeModelService = new ExternalRuntimeModelService({
-  isEnabled: () => externalRuntimeService?.isEnabled() ?? false,
-});
-ipcMain.handle("externalRuntime:models", () => externalRuntimeModelService.list());
-
-/**
- * Start (or restart) a session on an external runtime.
- *
- * The owning window comes from the SENDER, never from the payload: it decides
- * where this session's host-loopback tools are routed, so letting the renderer
- * name an arbitrary window id would let one window drive another's panels.
- */
-ipcMain.handle(
-  "externalRuntime:start",
-  async (
-    event,
-    payload: {
-      sessionId?: unknown;
-      cwd?: unknown;
-      modelKey?: unknown;
-      permissionMode?: unknown;
-      planMode?: unknown;
-      hasGoal?: unknown;
-      initialContext?: unknown;
-      developerInstructions?: unknown;
-      workspaceProfile?: unknown;
-    },
-  ) => {
-    const service = externalRuntimeService;
-    if (!service) throw new Error("external runtime service is unavailable");
-    const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
-    assertDesktopSessionId(sessionId);
-    const cwd = await requireRendererProjectPath(payload?.cwd);
-    const modelKey = typeof payload?.modelKey === "string" ? payload.modelKey : "";
-    if (!modelKey || modelKey.length > MAX_EXTERNAL_RUNTIME_ID_CHARS) {
-      throw new Error("a bounded modelKey is required");
-    }
-    const parsed = parseExternalRuntimeModelKey(modelKey);
-    if (!parsed) throw new Error(`not an external runtime model: ${modelKey}`);
-    const permissionMode =
-      payload?.permissionMode === "default" ||
-      payload?.permissionMode === "acceptEdits" ||
-      payload?.permissionMode === "bypassPermissions" ||
-      payload?.permissionMode === "dontAsk"
-        ? payload.permissionMode
-        : "default";
-
-    const initialContext =
-      typeof payload?.initialContext === "string" ? payload.initialContext : undefined;
-    const developerInstructions =
-      typeof payload?.developerInstructions === "string"
-        ? payload.developerInstructions
-        : undefined;
-    if (
-      (initialContext?.length ?? 0) > MAX_EXTERNAL_RUNTIME_CONTEXT_CHARS ||
-      (developerInstructions?.length ?? 0) > MAX_EXTERNAL_RUNTIME_CONTEXT_CHARS
-    ) {
-      throw new Error("external runtime context is too large");
-    }
-    const ownerWindow = BrowserWindow.fromWebContents(event.sender);
-    if (!ownerWindow || ownerWindow.isDestroyed()) {
-      throw new Error("external runtime requires a live owner window");
-    }
-    const session = await service.ensure({
-      kind: parsed.kind,
-      sessionId,
-      cwd,
-      modelKey,
-      permissionMode,
-      planMode: payload?.planMode === true,
-      hasGoal: payload?.hasGoal === true,
-      ...(initialContext ? { initialContext } : {}),
-      ...(developerInstructions ? { developerInstructions } : {}),
-      ...(parsed.model ? { model: parsed.model } : {}),
-      workspaceProfile: assertWorkspaceProfileName(payload?.workspaceProfile),
-      ownerWindow,
-    });
-    return {
-      kind: session.kind,
-      runtimeSessionId: session.runtimeSessionId ?? null,
-      tools: session.listTools().map((tool) => tool.name),
-    };
-  },
-);
-
-ipcMain.handle(
-  "externalRuntime:send",
-  async (
-    event,
-    payload: {
-      sessionId?: unknown;
-      text?: unknown;
-      clientMessageId?: unknown;
-      attachments?: unknown;
-      goal?: unknown;
-      disableGoal?: unknown;
-    },
-  ) => {
-    const service = externalRuntimeService;
-    if (!service) throw new Error("external runtime service is unavailable");
-    const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
-    assertDesktopSessionId(sessionId);
-    const text = typeof payload?.text === "string" ? payload.text : "";
-    const goal = parseExternalGoalInput(payload?.goal);
-    if (payload?.disableGoal !== undefined && typeof payload.disableGoal !== "boolean") {
-      throw new Error("disableGoal must be a boolean");
-    }
-    if (text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
-      throw new Error("external runtime message is too large");
-    }
-    const clientMessageId =
-      typeof payload?.clientMessageId === "string" ? payload.clientMessageId : undefined;
-    if (
-      clientMessageId !== undefined &&
-      (!clientMessageId ||
-        clientMessageId.length > MAX_EXTERNAL_RUNTIME_ID_CHARS ||
-        clientMessageId.includes("\0"))
-    ) {
-      throw new Error("invalid external runtime clientMessageId");
-    }
-    if (payload?.attachments !== undefined && !Array.isArray(payload.attachments)) {
-      throw new Error("external runtime attachments must be an array");
-    }
-    const attachmentValues = payload?.attachments ?? [];
-    if (attachmentValues.length > MAX_EXTERNAL_RUNTIME_ATTACHMENTS) {
-      throw new Error("too many external runtime attachments");
-    }
-    // The service owns the canonical cwd; use the renderer payload only for
-    // turn content, never to retarget an existing runtime.
-    const entryCwd = service.getCwd(sessionId, event.sender.id);
-    if (!entryCwd) throw new Error("external runtime session has no authorized project");
-    const attachments: ExternalRuntimeAttachment[] = await Promise.all(
-      attachmentValues.map(async (value) => {
-        if (!value || typeof value !== "object" || Array.isArray(value)) {
-          throw new Error("invalid external runtime attachment");
-        }
-        const attachment = value as Record<string, unknown>;
-        const path =
-          typeof attachment.absPath === "string"
-            ? attachment.absPath
-            : typeof attachment.path === "string"
-              ? attachment.path
-              : "";
-        const authorizedPath = await requireRendererProjectEntryPath(path, entryCwd);
-        const detail =
-          attachment.vision && typeof attachment.vision === "object"
-            ? (attachment.vision as { detail?: unknown }).detail
-            : undefined;
-        if (
-          attachment.mime !== undefined &&
-          (typeof attachment.mime !== "string" || attachment.mime.length > 256)
-        ) {
-          throw new Error("invalid external runtime attachment MIME");
-        }
-        return {
-          path: authorizedPath,
-          ...(attachment.kind === "image" ||
-          attachment.kind === "file" ||
-          attachment.kind === "directory"
-            ? { kind: attachment.kind }
-            : {}),
-          ...(typeof attachment.mime === "string" ? { mime: attachment.mime } : {}),
-          ...(detail === "low" || detail === "standard" || detail === "high" ? { detail } : {}),
-        } satisfies ExternalRuntimeAttachment;
-      }),
-    );
-    if (!text.trim() && attachments.length === 0) {
-      throw new Error("external runtime message or attachment is required");
-    }
-    return await service.send(
-      sessionId,
-      {
-        text,
-        ...(goal ? { goal } : {}),
-        ...(payload.disableGoal === true ? { disableGoal: true } : {}),
-        ...(clientMessageId ? { clientMessageId } : {}),
-        ...(attachments.length > 0 ? { attachments } : {}),
-      },
-      event.sender.id,
-    );
-  },
-);
-
-ipcMain.handle(
-  "externalRuntime:interrupt",
-  async (event, sessionId: unknown, options?: { keepGoal?: unknown; ifOwned?: unknown }) => {
-    assertDesktopSessionId(sessionId);
-    // Stop asks with ifOwned: Main, not preload memory, decides which backend
-    // runs the session, so a reloaded renderer still interrupts the provider.
-    const service = externalRuntimeService;
-    if (!service || (options?.ifOwned === true && !service.hasSession(sessionId)))
-      return { handled: false };
-    await service.interrupt(sessionId, event.sender.id, undefined, {
-      keepGoal: options?.keepGoal === true,
-    });
-    return { handled: true };
-  },
-);
-
-/** A queued chat message asks the running Goal to yield after this provider turn. */
-ipcMain.handle("externalRuntime:yieldGoal", (event, sessionId: unknown) => {
-  assertDesktopSessionId(sessionId);
-  return externalRuntimeService?.yieldGoal(sessionId, event.sender.id) ?? false;
-});
-
-/** The renderer answering a prompt this session's runtime is parked on. */
-ipcMain.handle(
-  "externalRuntime:approvalDecision",
-  (event, payload: { requestId?: unknown; approved?: unknown; [key: string]: unknown }) => {
-    const requestId = typeof payload?.requestId === "string" ? payload.requestId : "";
-    const settled =
-      requestId &&
-      externalRuntimeApprovals?.settle(
-        requestId,
-        parseExternalApprovalDecision(payload),
-        event.sender.id,
-      );
-    return settled
-      ? { ok: true }
-      : { ok: false, error: { message: "This prompt is no longer pending in this window." } };
-  },
-);
-
-ipcMain.handle("externalRuntime:stop", async (event, sessionId: unknown) => {
-  assertDesktopSessionId(sessionId);
-  await externalRuntimeService?.stop(sessionId, event.sender.id);
-});
-
-ipcMain.handle("browser:probePorts", async (_e, ports?: unknown) => {
-  const candidates =
-    Array.isArray(ports) &&
-    ports.length <= 64 &&
-    ports.every((p) => Number.isSafeInteger(p) && (p as number) >= 1 && (p as number) <= 65_535)
-      ? (ports as number[])
-      : CANDIDATE_DEV_PORTS;
-  return probeLocalhostPorts(candidates);
-});
-
-// A popout pinned an element anchor → forward it to the parent window's
-// renderer, which dispatches the normal add-anchor flow into the composer.
-ipcMain.on("browser:anchor", (e, anchor: unknown) => {
-  const parentId = popoutParents.get(e.sender.id);
-  if (parentId === undefined) return;
-  try {
-    if (Buffer.byteLength(JSON.stringify(anchor)) > 256 * 1024) return;
-  } catch {
-    return;
-  }
-  const parent = BrowserWindow.fromId(parentId);
-  if (parent && !parent.isDestroyed())
-    parent.webContents.send("browser:anchor-from-popout", anchor);
-});
-
-// ── Browser-anchor hub(圈选统一架构,spec 2026-06-12)─────────────────────
-// The MAIN WINDOW owns anchor state (per session bucket); it pushes the active
-// bucket's browser anchors here on every change. We keep one snapshot per
-// parent and broadcast it only to that parent's popouts — and seed newly-opened popouts — so
-// all browser surfaces echo the same annotation set (and all clear together
-// when a message sends). Ops flow the other way: a popout's add/remove is
-// forwarded to its parent window, which mutates state; the loop closes via the
-// next sync. Full-state-down means a late-opened popout can never drift.
-function broadcastBrowserAnchors(parentId: number, snapshot: unknown[]): void {
-  for (const [popoutWcId, candidateParentId] of popoutParents) {
-    if (candidateParentId !== parentId) continue;
-    const wc = webContents.fromId(popoutWcId);
-    if (wc && !wc.isDestroyed()) wc.send("browser:anchors-state", snapshot);
-  }
-}
-
-ipcMain.on("browser:anchors-sync", (event, anchors: unknown) => {
-  const parent = BrowserWindow.fromWebContents(event.sender);
-  if (!parent || !mainWindows.has(parent) || !Array.isArray(anchors) || anchors.length > 256)
-    return;
-  let snapshot: unknown[];
-  try {
-    const encoded = JSON.stringify(anchors);
-    if (Buffer.byteLength(encoded) > 1024 * 1024) return;
-    snapshot = JSON.parse(encoded) as unknown[];
-  } catch {
-    return;
-  }
-  browserAnchorsByParent.set(parent.id, snapshot);
-  broadcastBrowserAnchors(parent.id, snapshot);
-});
-
-// A popout asked to remove an anchor → forward to the owner (parent window).
-ipcMain.on("browser:anchor-remove", (e, anchorId: unknown) => {
-  const parentId = popoutParents.get(e.sender.id);
-  if (parentId === undefined) return;
-  if (
-    typeof anchorId !== "string" ||
-    !anchorId ||
-    anchorId.length > 512 ||
-    anchorId.includes("\0")
-  ) {
-    return;
-  }
-  const parent = BrowserWindow.fromId(parentId);
-  if (parent && !parent.isDestroyed()) {
-    parent.webContents.send("browser:anchor-remove-from-popout", anchorId);
-  }
-});
-
-// A popout asked to update an anchor's comment → forward to the owner.
-ipcMain.on("browser:anchor-update", (e, update: unknown) => {
-  const parentId = popoutParents.get(e.sender.id);
-  if (parentId === undefined) return;
-  try {
-    if (
-      !update ||
-      typeof update !== "object" ||
-      Buffer.byteLength(JSON.stringify(update)) > 64 * 1024
-    ) {
-      return;
-    }
-  } catch {
-    return;
-  }
-  const parent = BrowserWindow.fromId(parentId);
-  if (parent && !parent.isDestroyed()) {
-    parent.webContents.send("browser:anchor-update-from-popout", update);
-  }
-});
-
-ipcMain.handle("git:projectStatus", async (_e, projectId: string) => {
-  const { path } = await requireRendererProjectPrimary(projectId);
-  return getGitStatus(path);
-});
-
-ipcMain.handle("git:projectBranches", async (_e, projectId: string) => {
-  const { path } = await requireRendererProjectPrimary(projectId);
-  return getGitBranches(path);
-});
-
-ipcMain.handle("git:projectSwitchBranch", async (_e, projectId: string, branch: string) => {
-  if (typeof branch !== "string" || !branch || branch.length > 1_024 || branch.includes("\0")) {
-    throw new Error("git:projectSwitchBranch requires a bounded branch");
-  }
-  const { path } = await requireRendererProjectPrimary(projectId);
-  return switchGitBranch(path, branch);
-});
-
-ipcMain.handle("git:projectStashAndSwitchBranch", async (_e, projectId: string, branch: string) => {
-  if (typeof branch !== "string" || !branch || branch.length > 1_024 || branch.includes("\0")) {
-    throw new Error("git:projectStashAndSwitchBranch requires a bounded branch");
-  }
-  const { path } = await requireRendererProjectPrimary(projectId);
-  return stashAndSwitchGitBranch(path, branch);
-});
-
-ipcMain.handle("review:status", async (_e, sessionId: string) => {
-  assertDesktopSessionId(sessionId);
-  return reviewService.getStatus(sessionId);
-});
-
-ipcMain.handle("review:diff", async (_e, sessionId: string, request: unknown) => {
-  assertDesktopSessionId(sessionId);
-  return reviewService.getDiff(
-    sessionId,
-    request as import("../shared/review.js").ReviewGitDiffRequest,
-  );
-});
-
-ipcMain.handle("review:recentCommits", async (_e, sessionId: string, limit?: number) => {
-  assertDesktopSessionId(sessionId);
-  return reviewService.getRecentCommits(sessionId, limit);
-});
-
-ipcMain.handle("review:preparePrompt", async (_e, sessionId: string, request: unknown) => {
-  assertDesktopSessionId(sessionId);
-  return reviewService.preparePrompt(
-    sessionId,
-    request as import("../shared/review.js").ReviewAiPromptRequest,
-  );
-});
-
-interface MainGitPrefs {
-  branchPrefix: string;
-  autoDeleteWorktrees: boolean;
-  autoDeleteWorktreesGraceMins: number;
-}
-
-let gitPrefsCache: MainGitPrefs = {
-  branchPrefix: "worktree/",
-  autoDeleteWorktrees: false,
-  autoDeleteWorktreesGraceMins: 60 * 24 * 7,
-};
-
-ipcMain.handle("git:setPrefs", async (_e, prefs: MainGitPrefs) => {
-  if (!prefs || typeof prefs !== "object") return;
-  const grace = Number(prefs.autoDeleteWorktreesGraceMins);
-  let branchPrefix: string;
-  try {
-    branchPrefix = normalizeWorktreeBranchPrefix(prefs.branchPrefix);
-  } catch {
-    branchPrefix = "worktree/";
-  }
-  gitPrefsCache = {
-    branchPrefix,
-    autoDeleteWorktrees: prefs.autoDeleteWorktrees === true,
-    autoDeleteWorktreesGraceMins:
-      Number.isSafeInteger(grace) && grace >= 1 ? Math.min(grace, 60 * 24 * 365 * 10) : 60 * 24 * 7,
-  };
-  dlog("main", "git.prefs.updated", { ...gitPrefsCache });
-});
-
-function broadcastWorktreeCleanupSkipped(
-  root: string,
-  skipped: StaleWorktreeCleanupSkipped[],
-): void {
-  if (skipped.length === 0) return;
-  for (const w of BrowserWindow.getAllWindows()) {
-    if (!w.isDestroyed()) {
-      w.webContents.send("git:worktreeCleanupSkipped", { root, skipped });
-    }
-  }
-}
-
-/**
- * Drives the worktree-cleanup sweep across every cwd the desktop has
- * touched this session (worktree create/list/diff/switch all funnel
- * through `cwd`). Each call is fire-and-forget; failures are logged
- * and never block the renderer.
- */
-async function sweepStaleWorktrees(reason: string): Promise<void> {
-  if (!gitPrefsCache.autoDeleteWorktrees) return;
-  if (knownGitRoots.size === 0) return;
-  const grace = gitPrefsCache.autoDeleteWorktreesGraceMins;
-  const branchPrefix = gitPrefsCache.branchPrefix;
-  for (const root of knownGitRoots) {
-    try {
-      const result = await cleanupStaleWorktrees(root, grace, branchPrefix);
-      if (result.removed.length > 0) {
-        dlog("main", "git.worktree.cleanup", { reason, root, removed: result.removed });
-      }
-      if (result.skipped.length > 0) {
-        dlog("main", "git.worktree.cleanup_skipped", {
-          reason,
-          root,
-          skipped: result.skipped,
-        });
-        broadcastWorktreeCleanupSkipped(root, result.skipped);
-      }
-    } catch (e) {
-      dlog("main", "git.worktree.cleanup_error", { root, error: String(e) });
-    }
-  }
-}
-
-ipcMain.handle("shell:openExternal", async (event, url: string) => {
-  appRendererNavigation.assertSender(event);
-  if (typeof url !== "string" || !url || url.length > 16_384 || url.includes("\0")) {
-    throw new Error("openExternal requires a bounded url");
-  }
-  await openExternal(url);
-});
-
-ipcMain.handle("shell:revealInFinder", async (_e, p: string, cwd?: string) => {
-  if (typeof p !== "string" || !p || p.length > 32_768 || p.includes("\0")) {
-    throw new Error("revealInFinder requires a bounded path");
-  }
-  const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
-  await revealInFinder(p, authorizedCwd);
-});
-
-ipcMain.handle("shell:openPath", async (_e, p: string, cwd?: string) => {
-  if (typeof p !== "string" || !p || p.length > 32_768 || p.includes("\0")) {
-    throw new Error("openPath requires a bounded path");
-  }
-  const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
-  return openPath(p, authorizedCwd);
-});
-
-ipcMain.handle("shell:openInEditor", async (_e, p: string, cwd?: string) => {
-  if (typeof p !== "string" || !p || p.length > 32_768 || p.includes("\0")) {
-    throw new Error("openInEditor requires a bounded path");
-  }
-  const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
-  return openInEditor(p, authorizedCwd);
-});
-
-ipcMain.handle(
-  "files:undo",
-  async (_e, cwd: string, paths: string[]): Promise<UndoFilesResult[]> => {
-    cwd = await requireRendererProjectPath(cwd);
-    if (
-      !Array.isArray(paths) ||
-      paths.length === 0 ||
-      paths.length > 100 ||
-      paths.some((path) => typeof path !== "string" || path.length > 32_768 || path.includes("\0"))
-    ) {
-      throw new Error("files:undo requires non-empty paths");
-    }
-    return undoFiles(cwd, paths);
-  },
-);
-
-// Turn-level undo/redo via core FileHistory snapshots (keyed by sessionId, not
-// cwd). Always operates on the latest turn internally — see file-history-service.
-ipcMain.handle("files:turnUndoState", async (event, sessionId: unknown) => {
-  return turnUndoState(assertRendererSessionAccess(sessionId, event.sender.id));
-});
-ipcMain.handle("files:undoTurn", async (event, sessionId: unknown) => {
-  return undoTurn(assertRendererSessionAccess(sessionId, event.sender.id));
-});
-ipcMain.handle("files:redoTurn", async (event, sessionId: unknown) => {
-  return redoTurn(assertRendererSessionAccess(sessionId, event.sender.id));
-});
-
-// ── Terminal (pty) — interactive shell panel ───────────────────────────────
-// Output streams back to the requesting webContents via "pty:data"/"pty:exit".
-ipcMain.handle("pty:start", async (e, opts: PtyStartRequest) => {
-  if (!opts) throw new Error("pty:start requires sessionId");
-  assertValidPtySessionId(opts.sessionId);
-  // A Session's managed worktree is authorized only through that Session.
-  const cwd = await requireRendererOrSessionPath(
-    opts.cwd ?? resolveNoRepoCwd(),
-    opts.engineSessionId,
-  );
-  return ptyStart(e.sender, { ...opts, cwd });
-});
-ipcMain.handle("pty:write", (e, sessionId: string, data: string) => {
-  assertValidPtySessionId(sessionId);
-  if (typeof data !== "string" || data.length > 1024 * 1024) {
-    throw new Error("invalid pty input");
-  }
-  ptyWrite(e.sender, sessionId, data);
-});
-ipcMain.handle("pty:resize", (e, sessionId: string, cols: number, rows: number) => {
-  assertValidPtySessionId(sessionId);
-  ptyResize(e.sender, sessionId, cols, rows);
-});
-ipcMain.handle("pty:kill", (e, sessionId: string) => {
-  assertValidPtySessionId(sessionId);
-  ptyKill(e.sender, sessionId);
-});
-
-// ── Filesystem reads — file-browser panel ──────────────────────────────────
-registerFileVersionIpc(ipcMain);
-registerLocalFilePreviewIpc(ipcMain, (sender) =>
-  [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
-);
-registerProfilePluginExportIpc(
-  ipcMain,
-  dialog,
-  BrowserWindow,
-  (sender) =>
-    [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
-  resolveRendererConfigurationTarget,
-);
-ipcMain.handle("fsRoot:readDir", async (_e, projectId: string, rootId: string, dir?: string) => {
-  const root = await requireRendererProjectRoot(projectId, rootId);
-  return readDirectory(root.path, typeof dir === "string" && dir ? dir : root.path);
-});
-ipcMain.handle("fsRoot:readFile", async (_e, projectId: string, rootId: string, path: string) => {
-  const root = await requireRendererProjectRoot(projectId, rootId);
-  if (typeof path !== "string" || !path) throw new Error("fsRoot:readFile requires path");
-  return fsReadFile(root.path, path);
-});
-ipcMain.handle("fsRoot:exists", async (_e, projectId: string, rootId: string, path: string) => {
-  const root = await requireRendererProjectRoot(projectId, rootId).catch(() => null);
-  if (!root || typeof path !== "string" || !path) return false;
-  return fsFileExists(root.path, path);
-});
-ipcMain.handle("fsSession:readDir", async (_e, sessionId: string, rootId: string, dir?: string) => {
-  assertDesktopSessionId(sessionId);
-  return readSessionDirectoryForUi(sessionId, rootId, dir);
-});
-ipcMain.handle(
-  "fsSession:readFile",
-  async (_e, sessionId: string, rootId: string, path: string) => {
-    assertDesktopSessionId(sessionId);
-    return readSessionFileForUi(sessionId, rootId, path);
-  },
-);
-ipcMain.handle("fsSession:exists", async (_e, sessionId: string, rootId: string, path: string) => {
-  assertDesktopSessionId(sessionId);
-  return sessionFileExistsForUi(sessionId, rootId, path);
-});
-
+registerBrowserPopoutIpc({ mainWindows, popoutParents, browserAnchorsByParent });
+const { sweepStaleWorktrees } = registerGitReviewIpc({ knownGitRoots });
+registerWorkspaceFilesIpc({ appRendererNavigation, mainWindows, assertRendererSessionAccess });
 // Authoritative no-repo conversation cwd (~/.code-shell/no-repo). The renderer
 // is a thin client and must NOT recompute homedir() itself; it asks main so the
 // path it writes capabilityOverrides to is byte-identical to the worker cwd.
@@ -6700,161 +4276,7 @@ ipcMain.handle(
   },
 );
 
-const VALID_MEMORY_LEVELS = new Set<MemoryLevel>(["user", "project", "profile"]);
-const VALID_MEMORY_SCOPES = new Set<MemoryScope>(["user", "dream"]);
-
-function validateMemoryArgs(
-  level: unknown,
-  scope: unknown,
-): { level: MemoryLevel; scope: MemoryScope } {
-  if (typeof level !== "string" || !VALID_MEMORY_LEVELS.has(level as MemoryLevel)) {
-    throw new Error(`memory level must be "user", "project", or "profile", got ${String(level)}`);
-  }
-  if (typeof scope !== "string" || !VALID_MEMORY_SCOPES.has(scope as MemoryScope)) {
-    throw new Error(`memory scope must be "user" or "dream", got ${String(scope)}`);
-  }
-  return { level: level as MemoryLevel, scope: scope as MemoryScope };
-}
-
-ipcMain.handle(
-  "memory:list",
-  async (_e, level: unknown, scope: unknown, cwd?: string, profileName?: string) => {
-    const v = validateMemoryArgs(level, scope);
-    const authorizedCwd =
-      v.level === "project"
-        ? await requireRendererProjectPath(cwd)
-        : typeof cwd === "string" && cwd
-          ? await requireRendererProjectPath(cwd)
-          : undefined;
-    return listMemory(
-      v.level,
-      v.scope,
-      authorizedCwd,
-      typeof profileName === "string" ? profileName : undefined,
-    );
-  },
-);
-
-ipcMain.handle(
-  "memory:read",
-  async (_e, level: unknown, scope: unknown, name: unknown, cwd?: string, profileName?: string) => {
-    const v = validateMemoryArgs(level, scope);
-    if (typeof name !== "string" || !name || name.length > 512 || name.includes("\0")) {
-      throw new Error("bounded memory name required");
-    }
-    const authorizedCwd =
-      v.level === "project"
-        ? await requireRendererProjectPath(cwd)
-        : typeof cwd === "string" && cwd
-          ? await requireRendererProjectPath(cwd)
-          : undefined;
-    return readMemory(
-      v.level,
-      v.scope,
-      name,
-      authorizedCwd,
-      typeof profileName === "string" ? profileName : undefined,
-    );
-  },
-);
-
-ipcMain.handle("memory:save", async (_e, input: SaveMemoryInput) => {
-  if (!input || typeof input !== "object") throw new Error("memory:save requires input");
-  const v = validateMemoryArgs(input.level, input.scope);
-  if (
-    typeof input.name !== "string" ||
-    !input.name.trim() ||
-    input.name.length > 512 ||
-    typeof input.description !== "string" ||
-    input.description.length > 4_096 ||
-    typeof input.content !== "string" ||
-    input.content.length > 1024 * 1024 ||
-    (input.type !== "user" &&
-      input.type !== "feedback" &&
-      input.type !== "project" &&
-      input.type !== "reference")
-  ) {
-    throw new Error("invalid memory payload");
-  }
-  const cwd =
-    v.level === "project"
-      ? await requireRendererProjectPath(input.cwd)
-      : typeof input.cwd === "string" && input.cwd
-        ? await requireRendererProjectPath(input.cwd)
-        : undefined;
-  return saveMemory({ ...input, level: v.level, scope: v.scope, cwd });
-});
-
-ipcMain.handle(
-  "memory:delete",
-  async (_e, level: unknown, scope: unknown, name: unknown, cwd?: string, profileName?: string) => {
-    const v = validateMemoryArgs(level, scope);
-    if (typeof name !== "string" || !name || name.length > 512 || name.includes("\0")) {
-      throw new Error("bounded memory name required");
-    }
-    const authorizedCwd =
-      v.level === "project"
-        ? await requireRendererProjectPath(cwd)
-        : typeof cwd === "string" && cwd
-          ? await requireRendererProjectPath(cwd)
-          : undefined;
-    return deleteMemory(
-      v.level,
-      v.scope,
-      name,
-      authorizedCwd,
-      typeof profileName === "string" ? profileName : undefined,
-    );
-  },
-);
-
-// 审批门 (pending global memories)
-ipcMain.handle("memory:pending:list", async () => listPendingMemory());
-ipcMain.handle("memory:pending:approve", async (_e, name: unknown) => {
-  if (typeof name !== "string" || !name || name.length > 512 || name.includes("\0")) {
-    throw new Error("bounded memory name required");
-  }
-  return approvePendingMemory(name);
-});
-ipcMain.handle("memory:pending:demote", async (_e, name: unknown) => {
-  if (typeof name !== "string" || !name || name.length > 512 || name.includes("\0")) {
-    throw new Error("bounded memory name required");
-  }
-  return demotePendingMemory(name);
-});
-ipcMain.handle("memory:pending:reject", async (_e, name: unknown) => {
-  if (typeof name !== "string" || !name || name.length > 512 || name.includes("\0")) {
-    throw new Error("bounded memory name required");
-  }
-  return rejectPendingMemory(name);
-});
-registerProfileMemoryPromotionIpc(
-  ipcMain,
-  (sender) =>
-    [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
-  requireRendererProjectPath,
-);
-ipcMain.handle("memory:promote", async (_e, cwd: unknown, name: unknown) => {
-  const authorizedCwd = await requireRendererProjectPath(cwd);
-  if (typeof name !== "string" || !name || name.length > 512 || name.includes("\0")) {
-    throw new Error("bounded memory name required");
-  }
-  return promoteMemoryToGlobal(authorizedCwd, name);
-});
-
-ipcMain.handle("memory:dream", async (_e, level: unknown, cwd?: string) => {
-  if (level !== "user" && level !== "project") {
-    throw new Error(`dream level must be "user" or "project", got ${String(level)}`);
-  }
-  const authorizedCwd =
-    level === "project"
-      ? await requireRendererProjectPath(cwd)
-      : typeof cwd === "string" && cwd
-        ? await requireRendererProjectPath(cwd)
-        : undefined;
-  return runDream(level, authorizedCwd);
-});
-
+registerMemoryIpc({ mainWindows });
 async function deleteDesktopSession(id: string): Promise<void> {
   deletingBrowserSessions.add(id);
   rendererBrowserSessionAccess.forgetSession(id);
@@ -7089,166 +4511,8 @@ const disposeOperationResolutionHost = registerOperationResolutionHost({
     !!bridge?.isSessionRunning(id) ||
     !!externalRuntimeService?.isSessionRunning(id),
 });
-ipcMain.handle("runs:delete", async (_e, runId: string) => {
-  if (typeof runId !== "string") throw new Error("runId required");
-  await deleteRunDir(runId);
-});
-
-// ─── Automation (Phase 3 UI) ─────────────────────────────────────
-function assertAutomationId(value: unknown): asserts value is string {
-  if (
-    typeof value !== "string" ||
-    !value ||
-    value.length > 128 ||
-    value.includes("\0") ||
-    value.includes("/") ||
-    value.includes("\\")
-  ) {
-    throw new Error("bounded automation id required");
-  }
-}
-
-function validAutomationBindingId(value: unknown): boolean {
-  return (
-    value === undefined ||
-    value === null ||
-    (typeof value === "string" && value.length > 0 && value.length <= 512 && !value.includes("\0"))
-  );
-}
-
-ipcMain.handle("automation:list", async () => listAutomations());
-ipcMain.handle("automation:get", async (_e, id: string) => {
-  assertAutomationId(id);
-  return getAutomation(id);
-});
-ipcMain.handle("automation:create", async (_e, input: CreateAutomationInput) => {
-  if (
-    !input ||
-    typeof input.name !== "string" ||
-    typeof input.schedule !== "string" ||
-    typeof input.prompt !== "string"
-  ) {
-    throw new Error("name, schedule and prompt are required");
-  }
-  if (
-    !input.name.trim() ||
-    input.name.length > 512 ||
-    !input.schedule.trim() ||
-    input.schedule.length > 512 ||
-    input.prompt.length > 1024 * 1024 ||
-    (input.timezone !== undefined &&
-      (typeof input.timezone !== "string" || input.timezone.length > 128)) ||
-    (input.permissionLevel !== undefined &&
-      input.permissionLevel !== "read-only" &&
-      input.permissionLevel !== "workspace-write" &&
-      input.permissionLevel !== "full") ||
-    !validAutomationBindingId(input.projectId) ||
-    !validAutomationBindingId(input.rootId)
-  ) {
-    throw new Error("invalid automation payload");
-  }
-  if (input.resumeSessionId !== undefined) assertDesktopSessionId(input.resumeSessionId);
-  if (Object.prototype.hasOwnProperty.call(input, "authoritySessionId")) {
-    throw new Error("renderer cannot submit automation Session authority");
-  }
-  return createAutomation(input, desktopAutomationAuthorityDeps());
-});
-ipcMain.handle("automation:update", async (_e, id: string, patch: UpdateAutomationInput) => {
-  assertAutomationId(id);
-  if (!patch || typeof patch !== "object" || Array.isArray(patch))
-    throw new Error("patch required");
-  if (
-    (patch.name !== undefined &&
-      (typeof patch.name !== "string" || !patch.name.trim() || patch.name.length > 512)) ||
-    (patch.prompt !== undefined &&
-      (typeof patch.prompt !== "string" || patch.prompt.length > 1024 * 1024)) ||
-    (patch.schedule !== undefined &&
-      (typeof patch.schedule !== "string" ||
-        !patch.schedule.trim() ||
-        patch.schedule.length > 512)) ||
-    (patch.timezone !== undefined &&
-      (typeof patch.timezone !== "string" || patch.timezone.length > 128)) ||
-    (patch.permissionLevel !== undefined &&
-      patch.permissionLevel !== "read-only" &&
-      patch.permissionLevel !== "workspace-write" &&
-      patch.permissionLevel !== "full") ||
-    !validAutomationBindingId(patch.projectId) ||
-    !validAutomationBindingId(patch.rootId)
-  ) {
-    throw new Error("invalid automation patch");
-  }
-  return updateAutomation(id, patch, desktopAutomationAuthorityDeps());
-});
-ipcMain.handle("automation:delete", async (_e, id: string) => {
-  assertAutomationId(id);
-  return deleteAutomation(id);
-});
-ipcMain.handle("automation:pause", async (_e, id: string) => {
-  assertAutomationId(id);
-  return pauseAutomation(id);
-});
-ipcMain.handle("automation:resume", async (_e, id: string) => {
-  assertAutomationId(id);
-  return resumeAutomation(id);
-});
-ipcMain.handle("automation:runNow", async (_e, id: string) => {
-  assertAutomationId(id);
-  return runAutomationNow(id);
-});
-ipcMain.handle("automation:cancelRun", async (_e, id: string) => {
-  assertAutomationId(id);
-  return cancelAutomationRun(id);
-});
-
-ipcMain.handle("trust:get", async (_e, p: string) => {
-  if (typeof p !== "string") throw new Error("trust:get requires path");
-  return getTrust(await requireRendererProjectPath(p));
-});
-
-ipcMain.handle("trust:set", async (_e, p: string, level: TrustLevel) => {
-  if (typeof p !== "string") throw new Error("trust:set requires path");
-  if (level !== "trusted" && level !== "untrusted") throw new Error("invalid level");
-  await setProjectTrustWithRevocation(await requireRendererProjectPath(p), level, {
-    setTrust,
-    revokeExternalRuntimeTrust: async (cwd) => externalRuntimeService?.revokeProjectTrust(cwd),
-  });
-});
-
-ipcMain.handle("trust:risks", async (_e, p: string) => {
-  if (typeof p !== "string") throw new Error("trust:risks requires path");
-  return summarizeProjectTrustRisks(await requireRendererProjectPath(p));
-});
-
-ipcMain.handle("recents:list", async () => loadRecents());
-
-ipcMain.handle(
-  "notify:show",
-  async (_e, opts: { title: string; body?: string; subtitle?: string }) => {
-    if (
-      !opts ||
-      typeof opts.title !== "string" ||
-      !opts.title ||
-      opts.title.length > 512 ||
-      (opts.body !== undefined && (typeof opts.body !== "string" || opts.body.length > 4_096)) ||
-      (opts.subtitle !== undefined &&
-        (typeof opts.subtitle !== "string" || opts.subtitle.length > 1_024))
-    ) {
-      throw new Error("notify:show requires bounded text");
-    }
-    if (!Notification.isSupported()) return;
-    new Notification(opts).show();
-  },
-);
-
-ipcMain.handle("badge:set", async (_e, count: number) => {
-  if (typeof count !== "number") throw new Error("badge:set requires number");
-  if (process.platform === "darwin") {
-    app.dock?.setBadge(count > 0 ? String(count) : "");
-  } else {
-    app.setBadgeCount?.(count);
-  }
-});
-
+registerAutomationIpc();
+registerTrustNotificationIpc({ externalRuntimeService: () => externalRuntimeService });
 registerDesktopShutdown(app, {
   ownsInstance: () => ownsDesktopInstance,
   flushRenderers: () => sessionCatalogIpc.flushRenderers(),
