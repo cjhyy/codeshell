@@ -12,8 +12,22 @@ import type {
   MimiPresenceSnapshot,
 } from "../shared/mimi-presence";
 import type { MimiCompanionAttention } from "../shared/mimi-companion";
+import type {
+  PetNoticesState,
+  PetNoticeSystemRule,
+  PetNoticeSystemRulePatch,
+  PetSessionBellState,
+} from "../shared/pet-notices";
 
 export type { PetChatAttachment } from "../shared/pet-chat-attachments";
+export type {
+  PetNoticeChannel,
+  PetNoticesState,
+  PetNoticeSystemRule,
+  PetNoticeSystemRulePatch,
+  PetNotificationSettingsView,
+  PetSessionBellState,
+} from "../shared/pet-notices";
 
 export type {
   PetLongTask,
@@ -391,6 +405,14 @@ export interface PetApi {
   getMemoryAutoExtract?(): Promise<boolean>;
   setMemoryAutoExtract?(enabled: boolean): Promise<boolean>;
   archiveSession?(sessionId: string): Promise<{ ok: true }>;
+  /** Bound IM channels, the "every Session" rule and `pet.notifications` (defaults applied). */
+  getNoticesState?(): Promise<PetNoticesState>;
+  /** Rejects for Mimi's own, external and unknown Sessions (the bell is hidden there). */
+  getSessionBell?(sessionId: string): Promise<PetSessionBellState>;
+  setSessionBell?(sessionId: string, on: boolean): Promise<PetSessionBellState>;
+  setSystemNoticeRule?(patch: PetNoticeSystemRulePatch): Promise<PetNoticeSystemRule>;
+  /** Notice rules or notification settings changed. */
+  onNoticesChanged?(listener: () => void): () => void;
   getWidgetVisibility(): Promise<boolean>;
   setWidgetVisible(visible: boolean): Promise<{ ok: true }>;
   setWidgetSurface(mode: "collapsed" | "expanded"): Promise<{ ok: true }>;
@@ -522,6 +544,21 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       ipcRenderer.invoke("pet:prefs-set-auto-extract", enabled) as Promise<boolean>,
     archiveSession: (sessionId) =>
       ipcRenderer.invoke("pet:session-archive", sessionId) as Promise<{ ok: true }>,
+    getNoticesState: () => ipcRenderer.invoke("pet:notices:get-state") as Promise<PetNoticesState>,
+    getSessionBell: (sessionId) =>
+      ipcRenderer.invoke("pet:notices:session-bell", sessionId) as Promise<PetSessionBellState>,
+    setSessionBell: (sessionId, on) =>
+      ipcRenderer.invoke("pet:notices:set-session-bell", {
+        sessionId,
+        on,
+      }) as Promise<PetSessionBellState>,
+    setSystemNoticeRule: (patch) =>
+      ipcRenderer.invoke("pet:notices:set-system-rule", patch) as Promise<PetNoticeSystemRule>,
+    onNoticesChanged: (listener) => {
+      const handler = (): void => listener();
+      ipcRenderer.on("pet:notices:changed", handler);
+      return () => ipcRenderer.removeListener("pet:notices:changed", handler);
+    },
     getWidgetVisibility: () => ipcRenderer.invoke("pet:widget-visible-get") as Promise<boolean>,
     setWidgetVisible: (visible) =>
       ipcRenderer.invoke("pet:widget-visible", visible) as Promise<{ ok: true }>,

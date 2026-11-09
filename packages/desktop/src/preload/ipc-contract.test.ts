@@ -150,6 +150,53 @@ describe("desktop IPC contract", () => {
       expect(mainHandles).toContain(channel);
     }
   });
+
+  test("exposes the Mimi notice bell, system rule and notification state end to end", async () => {
+    const mainHandles = registeredMainHandleChannels(sourceFiles("src/main"));
+    const preloadInvokes = literalChannels(
+      sourceFiles("src/preload"),
+      /ipcRenderer\.invoke\(\s*["']([^"']+)["']/g,
+    );
+    for (const channel of [
+      "pet:notices:get-state",
+      "pet:notices:session-bell",
+      "pet:notices:set-session-bell",
+      "pet:notices:set-system-rule",
+    ]) {
+      expect(preloadInvokes).toContain(channel);
+      expect(mainHandles).toContain(channel);
+    }
+    const { createPetApi } = await import("./pet-api.js");
+    const invoked: Array<[string, unknown]> = [];
+    const listeners = new Map<string, (event: unknown, payload: unknown) => void>();
+    const api = createPetApi({
+      invoke: async (channel, payload) => {
+        invoked.push([channel, payload]);
+        return { on: false };
+      },
+      send: () => undefined,
+      on: (channel, listener) => listeners.set(channel, listener),
+      removeListener: (channel) => listeners.delete(channel),
+    });
+    await api.getNoticesState?.();
+    await api.getSessionBell?.("s-work");
+    await api.setSessionBell?.("s-work", true);
+    await api.setSystemNoticeRule?.({ state: "active" });
+    expect(invoked).toEqual([
+      ["pet:notices:get-state", undefined],
+      ["pet:notices:session-bell", "s-work"],
+      ["pet:notices:set-session-bell", { sessionId: "s-work", on: true }],
+      ["pet:notices:set-system-rule", { state: "active" }],
+    ]);
+    let changes = 0;
+    const off = api.onNoticesChanged?.(() => {
+      changes += 1;
+    });
+    listeners.get("pet:notices:changed")?.({}, null);
+    off?.();
+    expect(changes).toBe(1);
+    expect(listeners.has("pet:notices:changed")).toBe(false);
+  });
 });
 
 test("preload version bridge forwards opaque authority ids and reference", async () => {

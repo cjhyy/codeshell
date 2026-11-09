@@ -16,11 +16,13 @@ import {
   type NoticeRuleUpsertReply,
   type RuleEffect,
 } from "@cjhyy/code-shell-pet/protocol";
+import { SettingsSchema } from "@cjhyy/code-shell-core";
 import { dlog } from "../desktop-logger.js";
 import type { DesktopNotificationInput } from "../desktop-notifier.js";
 import type { HostActionHandler } from "../host-action-dispatch.js";
 import type { GatewayControlEventInput } from "../im-gateway-control-server.js";
 import type { OutgoingAttachment } from "@cjhyy/code-shell-chat";
+import type { PetNotificationSettingsView } from "../../shared/pet-notices.js";
 import type {
   ImGatewayOwnerChannel,
   ImGatewayOwnerSendOptions,
@@ -67,7 +69,6 @@ const MAX_VIEWED_SESSIONS = 500;
 const MAX_TITLE = 200;
 const MAX_SUMMARY = 2_000;
 const MAX_ERROR = 500;
-const HH_MM = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;
 
 export interface PetNoticeWiringGateway {
   ownerChannels(): ImGatewayOwnerChannel[];
@@ -201,6 +202,21 @@ export interface PetNoticeWiring {
   flush(): Promise<void>;
   /** The settings this wiring currently routes with. */
   settings(): PetNotificationSettings;
+  /** Fresh `pet.notifications` for the settings form (bypasses the routing cache). */
+  settingsView(): PetNotificationSettingsView;
+  /** `pet.notifications` was written: drop the routing cache and tell listeners. */
+  settingsChanged(): void;
+  onSettingsChange(listener: () => void): () => void;
+  /**
+   * Where a rule set for this Session now would notify: its bound IM chat,
+   * else the IM origin of its active long task, else the owner. NotifyMe and
+   * the Session bell share it.
+   */
+  resolveRuleTarget(sessionId: string): Promise<NoticeRule["target"]>;
+  /** The IM a rule with this channel and target is predicted to use; undefined → desktop. */
+  predictIm(channel: NoticeChannel, target: NoticeRule["target"]): RuleEffect["im"];
+  /** A top-level work Session (not Mimi's, not external) that rules may watch. */
+  isEligibleSession(sessionId: string): boolean;
   dispose(): void;
 }
 
@@ -237,33 +253,43 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-function boundedInt(value: unknown, min: number, max: number, fallback: number): number {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= min && value <= max
-    ? value
-    : fallback;
+/**
+ * The settings schema's own `pet.notifications` validator: it holds the
+ * bounds, and drops (rather than rejects) any malformed field.
+ */
+const NOTIFICATIONS_SCHEMA = SettingsSchema.shape.pet.removeDefault().shape.notifications;
+type StoredPetNotifications = NonNullable<ReturnType<typeof NOTIFICATIONS_SCHEMA.parse>>;
+
+function storedNotifications(userSettings: unknown): StoredPetNotifications {
+  const pet = isRecord(userSettings) ? userSettings.pet : undefined;
+  const parsed = NOTIFICATIONS_SCHEMA.safeParse(isRecord(pet) ? pet.notifications : undefined);
+  return (parsed.success ? parsed.data : undefined) ?? {};
+}
+
+/** `settings.pet.notifications` as the form edits it: defaults applied, quiet-hour times kept. */
+export function petNotificationSettingsView(userSettings: unknown): PetNotificationSettingsView {
+  const stored = storedNotifications(userSettings);
+  const window = stored.quietHours ?? DEFAULT_QUIET_HOURS;
+  return {
+    quietHours: {
+      enabled: stored.quietHours !== null && stored.quietHours?.enabled !== false,
+      start: window.start,
+      end: window.end,
+    },
+    maxPerHour: stored.maxPerHour ?? DEFAULT_MAX_PER_HOUR,
+    maxP0PerHour: stored.maxP0PerHour ?? DEFAULT_MAX_P0_PER_HOUR,
+    mergeWindowSec: stored.mergeWindowSec ?? DEFAULT_MERGE_WINDOW_SEC,
+    presenceIdleSec: stored.presenceIdleSec ?? DEFAULT_PRESENCE_IDLE_SEC,
+    delegatedFromDesktop: stored.delegatedFromDesktop ?? "auto",
+  };
 }
 
 /** `settings.pet.notifications` with every field bounded; anything malformed falls back. */
 export function parsePetNotificationSettings(userSettings: unknown): PetNotificationSettings {
-  const pet = isRecord(userSettings) ? userSettings.pet : undefined;
-  const raw = isRecord(pet) && isRecord(pet.notifications) ? pet.notifications : {};
-  let quietHours: PetNotificationSettings["quietHours"] = { ...DEFAULT_QUIET_HOURS };
-  if (raw.quietHours === null) quietHours = null;
-  else if (
-    isRecord(raw.quietHours) &&
-    typeof raw.quietHours.start === "string" &&
-    typeof raw.quietHours.end === "string" &&
-    HH_MM.test(raw.quietHours.start) &&
-    HH_MM.test(raw.quietHours.end)
-  )
-    quietHours = { start: raw.quietHours.start, end: raw.quietHours.end };
+  const { quietHours, ...rest } = petNotificationSettingsView(userSettings);
   return {
-    quietHours,
-    maxPerHour: boundedInt(raw.maxPerHour, 0, 100, DEFAULT_MAX_PER_HOUR),
-    maxP0PerHour: boundedInt(raw.maxP0PerHour, 0, 100, DEFAULT_MAX_P0_PER_HOUR),
-    mergeWindowSec: boundedInt(raw.mergeWindowSec, 0, 24 * 60 * 60, DEFAULT_MERGE_WINDOW_SEC),
-    presenceIdleSec: boundedInt(raw.presenceIdleSec, 10, 24 * 60 * 60, DEFAULT_PRESENCE_IDLE_SEC),
-    delegatedFromDesktop: raw.delegatedFromDesktop === "desktop" ? "desktop" : "auto",
+    quietHours: quietHours.enabled ? { start: quietHours.start, end: quietHours.end } : null,
+    ...rest,
   };
 }
 
@@ -430,6 +456,25 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     }
     cachedSettings = { at, value };
     return value;
+  };
+  const settingsListeners = new Set<() => void>();
+  const settingsView = (): PetNotificationSettingsView => {
+    try {
+      return petNotificationSettingsView(deps.readSettings());
+    } catch (error) {
+      log("pet.notice.settings_read_failed", { error: errorText(error) });
+      return petNotificationSettingsView(undefined);
+    }
+  };
+  const settingsChanged = (): void => {
+    cachedSettings = undefined;
+    for (const listener of settingsListeners) {
+      try {
+        listener();
+      } catch (error) {
+        log("pet.notice.settings_listener_failed", { error: errorText(error) });
+      }
+    }
   };
 
   const snapshot = (): DesktopPetProjectionSnapshot => deps.projection.getSnapshot();
@@ -1054,8 +1099,18 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       await Promise.all([ruleStore.flush(), ledger.flush()]);
     },
     settings,
+    settingsView,
+    settingsChanged,
+    onSettingsChange(listener) {
+      settingsListeners.add(listener);
+      return () => settingsListeners.delete(listener);
+    },
+    resolveRuleTarget,
+    predictIm: (channel, target) => predictedIm(channel, target, deps.gateway.ownerChannels()),
+    isEligibleSession,
     dispose() {
       if (disposed) return;
+      settingsListeners.clear();
       disposed = true;
       removeHostAction();
       unsubscribeProjection();

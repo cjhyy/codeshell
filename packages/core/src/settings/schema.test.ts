@@ -255,4 +255,50 @@ describe("pet settings (Mimi global-view external-session visibility)", () => {
     });
     expect(parsed.agent.responseLanguage).toBe("English");
   });
+
+  it("keeps bounded notification preferences", () => {
+    const notifications = {
+      quietHours: { start: "22:30", end: "07:00", enabled: false },
+      maxPerHour: 60,
+      maxP0PerHour: 120,
+      mergeWindowSec: 0,
+      presenceIdleSec: 1_800,
+      delegatedFromDesktop: "desktop",
+    };
+    expect(SettingsSchema.parse({ pet: { notifications } }).pet?.notifications).toEqual(
+      notifications,
+    );
+    expect(
+      SettingsSchema.parse({ pet: { notifications: { quietHours: null } } }).pet?.notifications,
+    ).toEqual({ quietHours: null });
+    // Absent stays absent: defaults belong to the host, not the file.
+    expect(SettingsSchema.parse({}).pet?.notifications).toBeUndefined();
+  });
+
+  it("drops out-of-range notification fields without rejecting the settings file", () => {
+    const parsed = SettingsSchema.parse({
+      agent: { responseLanguage: "English" },
+      pet: {
+        memoryAutoExtract: false,
+        notifications: {
+          quietHours: { start: "24:00", end: "08:00" },
+          maxPerHour: 0,
+          maxP0PerHour: 121,
+          mergeWindowSec: 3_601,
+          presenceIdleSec: 29,
+          delegatedFromDesktop: "im",
+        },
+      },
+    });
+    expect(parsed.pet?.memoryAutoExtract).toBe(false);
+    expect(parsed.agent.responseLanguage).toBe("English");
+    expect(Object.values(parsed.pet?.notifications ?? {}).every((v) => v === undefined)).toBe(true);
+    expect(
+      SettingsSchema.parse({ pet: { notifications: { maxPerHour: 1.5 } } }).pet?.notifications
+        ?.maxPerHour,
+    ).toBeUndefined();
+    expect(
+      SettingsSchema.parse({ pet: { notifications: "loud" } }).pet?.notifications,
+    ).toBeUndefined();
+  });
 });

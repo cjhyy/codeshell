@@ -26,6 +26,7 @@ import {
 import { isPetChatModelKey } from "../../shared/pet-settings.js";
 import type { PetFollowUpControlRequest } from "../../shared/pet-follow-up-control.js";
 import type { PetFollowUpSummaryRow } from "./pet-follow-up-service.js";
+import { registerPetNoticeIpc, type PetNoticeControls } from "./pet-notice-ipc.js";
 
 export const PET_SNAPSHOT_CHANNEL = "pet:get-snapshot";
 export const PET_WORK_MEMORY_CHANNEL = "pet:get-work-memory";
@@ -398,6 +399,8 @@ export function registerPetIpc(options: {
   preferences?: PetIpcPreferences;
   sessionArchive?: PetIpcSessionArchive;
   hostActionReceipt?: PetIpcHostActionReceipt;
+  /** Session bell, system rule and notification settings state (pet:notices:*). */
+  notices?: PetNoticeControls;
   /** Register handlers immediately while their backing indexes hydrate. */
   ready?: Promise<void>;
 }): () => void {
@@ -685,6 +688,13 @@ export function registerPetIpc(options: {
       return afterReady(options.ready, () => options.sessionArchive!.archive(args[0] as string));
     });
   }
+  const disposeNotices = options.notices
+    ? registerPetNoticeIpc({
+        ipcMain: options.ipcMain,
+        windows: options.windows,
+        controls: options.notices,
+      })
+    : undefined;
   const unsubscribeMemories = options.memories?.subscribe(() => {
     void Promise.resolve(options.memories!.list()).then((entries) => {
       for (const window of options.windows()) {
@@ -726,6 +736,7 @@ export function registerPetIpc(options: {
   });
   return () => {
     unsubscribe();
+    disposeNotices?.();
     unsubscribeAttention?.();
     unsubscribeLongTasks?.();
     unsubscribeWorkInbox?.();

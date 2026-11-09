@@ -154,6 +154,7 @@ import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetChatAttachmentContext } from "./pet/pet-chat-attachment-context.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { wirePetNotices, type PetNoticeWiring } from "./pet/pet-notice-wiring.js";
+import { createPetNoticeControls } from "./pet/pet-notice-ipc.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
@@ -2595,6 +2596,14 @@ async function createWindow(): Promise<BrowserWindow> {
       aggregator,
       dispatcher: petDispatchService,
       attention: notices.attention,
+      notices: createPetNoticeControls({
+        notices,
+        ownerChannels: () => imGatewayService.ownerChannels(),
+        hasActiveGoal: (id) => {
+          const goal = externalGoalSessions.readActiveGoal(id);
+          return goal !== undefined && goal.paused !== true;
+        },
+      }),
       workInbox: petWorkInbox,
       // Read-only topic-segment view for the Mimi chat UI. `segments` carries
       // the message-keyed boundary history (keyed by each segment's first-turn
@@ -4237,6 +4246,7 @@ async function applyRendererSettingsSideEffects(
   // Before any await: a failing side effect must not leave the guard on the old binding.
   if (touchesPanelApps) invalidatePanelAppBindingGuard();
   if ("git" in patch) void applyGitPathFromSettings();
+  if (scope === "user" && "pet" in patch) petNotices?.settingsChanged();
   if (touchesExternalSessionVisibility(scope, patch)) await reconcileExternalAdapters?.();
   if (touchesPanelApps) {
     broadcastPanelAppsChanged(mainWindows);

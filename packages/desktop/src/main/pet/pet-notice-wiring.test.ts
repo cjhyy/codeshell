@@ -19,6 +19,7 @@ import {
 import {
   mergeRuleAttributes,
   parsePetNotificationSettings,
+  petNotificationSettingsView,
   wirePetNotices,
   type PetNoticeWiring,
   type PetNoticeWiringDeps,
@@ -312,6 +313,44 @@ describe("parsePetNotificationSettings", () => {
       mergeWindowSec: 600,
       presenceIdleSec: 300,
       delegatedFromDesktop: "desktop",
+    });
+  });
+
+  test("uses the settings schema's bounds", () => {
+    const parsed = parsePetNotificationSettings({
+      pet: {
+        notifications: {
+          quietHours: { start: "22:00", end: "25:00" },
+          maxPerHour: 61,
+          maxP0PerHour: 120,
+          mergeWindowSec: 3_600,
+          presenceIdleSec: 10,
+        },
+      },
+    });
+    expect(parsed).toMatchObject({
+      quietHours: { start: "23:00", end: "08:30" },
+      maxPerHour: 6,
+      maxP0PerHour: 120,
+      mergeWindowSec: 3_600,
+      presenceIdleSec: 120,
+    });
+  });
+
+  test("quiet hours switched off keep their times for the form", () => {
+    const settings = {
+      pet: { notifications: { quietHours: { start: "22:15", end: "07:45", enabled: false } } },
+    };
+    expect(parsePetNotificationSettings(settings).quietHours).toBeNull();
+    expect(petNotificationSettingsView(settings).quietHours).toEqual({
+      enabled: false,
+      start: "22:15",
+      end: "07:45",
+    });
+    expect(petNotificationSettingsView({}).quietHours).toEqual({
+      enabled: true,
+      start: "23:00",
+      end: "08:30",
     });
   });
 });
