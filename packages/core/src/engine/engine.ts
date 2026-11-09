@@ -51,7 +51,7 @@ import { notificationQueue } from "../tool-system/builtin/agent-notifications.js
 import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
-import { createGoalStopHook, type GoalJudgeRuntimeContext } from "../hooks/goal-stop-hook.js";
+import type { GoalJudgeRuntimeContext } from "../hooks/goal-stop-hook.js";
 import {
   normalizeGoal,
   resolveMaxTurns,
@@ -59,7 +59,6 @@ import {
   goalConfigFromLifecycle,
   goalBlocksAutomaticContinuation,
   isGoalLifecycleCurrent,
-  isSameGoalVersion,
   type GoalConfig,
   type GoalExtension,
   type GoalTerminationReason,
@@ -71,14 +70,7 @@ import { ContextManager, type CompactStrategy } from "../context/manager.js";
 import { SessionContextNotes } from "../context/notes.js";
 import { loadSection } from "../prompt/section-loader.js";
 import {
-  CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS,
-  buildAnchoredSummaryMessage,
-  buildContextPackagePromptFromSerialized,
-  takeContextPackageWindow,
-  contextPackageRequestFits,
   estimateTokens,
-  groupMessagesByApiRound,
-  serializeContextPackageMessages,
   clampContextRatios as clampContextRatiosImpl,
 } from "../context/compaction.js";
 import { PromptComposer } from "../prompt/composer.js";
@@ -193,13 +185,24 @@ import {
 } from "./run-context.js";
 import {
   resolveRunGoal,
-  applyRunGoalUpdate,
   armRunGoalHook,
   createGoalTerminationApplier,
   createRunGoalProgressMeter,
   persistRunGoalProgress,
-  type GoalRunSlots,
 } from "./run-goal.js";
+import { LiveGoalControl, extendLiveGoalRun } from "./live-goal-control.js";
+import {
+  appendSessionArchiveMarker,
+  persistArchivedRange,
+  resolveArchiveWindow,
+  tryNotesRollover,
+  unchangedArchiveStats,
+  type ArchiveAnchors,
+} from "./session-archive.js";
+import {
+  assertSummarizableContextPackage,
+  summarizeContextPackageRounds,
+} from "./context-package-summary.js";
 import {
   drainHeadlessBackgroundAgents,
   finalizeRunSuccess,
@@ -360,7 +363,6 @@ export class Engine {
   >();
   private activeRunScope: LifetimeScope | undefined;
   private releaseMcpRun: (() => Promise<void>) | undefined;
-  private activeGoalRegistration: Dispose | undefined;
   private moduleReady!: Promise<void>;
   private moduleActivationPending = true;
   private disposal?: Promise<void>;
@@ -424,22 +426,25 @@ export class Engine {
    * running goal's turn/budget ceilings mid-run (TODO 3.1). Null when idle.
    */
   private activeTurnLoop: TurnLoop | null = null;
-  /** Goal-level round/time meter of the in-flight top-level run (null when idle). */
-  private activeGoalMeter: ReturnType<typeof createRunGoalProgressMeter> | null = null;
   /** Frozen behavior-profile ceiling for the live run's Goal controls. */
   private activeProfileMaxTurns: number | undefined;
-  /**
-   * The goal-stop hook of the in-flight goal run, exposed so clearGoal() can
-   * unregister it mid-run (the closure holds the now-cleared goal and would
-   * otherwise keep re-blocking the stop). Null when no goal run is active.
-   */
-  private activeGoalHook: ReturnType<typeof createGoalStopHook> | null = null;
-  /** Whether activeGoalHook is currently registered (pause detaches it). */
-  private activeGoalHookAttached = false;
-  /** Mutable goal view consumed by the running judge after edits/resume. */
-  private activeRuntimeGoal: GoalConfig | null = null;
-  /** Mutable terminal snapshot kept in sync with a mid-run objective edit. */
-  private activePersistedRunGoal: GoalConfig | null = null;
+  /** Goal identities, stop-hook registration and meter of the in-flight run. */
+  private readonly goalControl = new LiveGoalControl({
+    sessionManager: () => this.sessionManager,
+    turnLoop: () => this.activeTurnLoop,
+    liveSession: () => this.activeRunSession,
+    lastSessionId: () => this.lastSessionId,
+    ownToolSelection: (state) =>
+      this.runningSession?.state === state ? this.runningSession.ownToolSelection?.() : undefined,
+    runLimits: (goal) => ({
+      maxTurns: this.resolveRunMaxTurns(goal, this.activeProfileMaxTurns),
+      maxStopBlocks: resolveMaxStopBlocks(this.config.maxStopBlocks, goal),
+    }),
+    registerHook: (handler) => {
+      this.registerGoalHook(handler);
+    },
+    persistGoalTerminal: (state, goal, reason) => this.persistGoalTerminal(state, goal, reason),
+  });
   /**
    * The in-flight run's session bundle, held so clearGoal() can wipe the goal
    * on the SAME instance the run loop is persisting each turn — not a fresh
@@ -864,7 +869,7 @@ export class Engine {
 
   private registerGoalHook(handler: HookHandler): Dispose {
     const dispose = this.hooks.register("on_stop", handler, 0, "goal-stop");
-    this.activeGoalRegistration = dispose;
+    this.goalControl.registration = dispose;
     this.activeRunScope!.own(dispose);
     return dispose;
   }
@@ -1266,13 +1271,7 @@ export class Engine {
     signal?: AbortSignal,
     sourceSessionId?: string,
   ): Promise<{ summary: string; estimatedTokens: number }> {
-    if (messages.length === 0) throw new Error("Cannot summarize an empty context package");
-    const serializedSelection = serializeContextPackageMessages(messages);
-    if (!serializedSelection.hasSummarizableContent) {
-      throw new Error(
-        "Cannot summarize an image-only context package without textual or tool facts",
-      );
-    }
+    assertSummarizableContextPackage(messages);
     if (sourceSessionId && this.config.costStore) {
       const persisted = this.sessionManager.readSessionState(sourceSessionId)?.costState;
       const legacy = persisted?.kind === "usage-ledger" ? persisted.legacyStore : persisted;
@@ -1284,74 +1283,30 @@ export class Engine {
       "context_package",
     );
     const primaryClient = await createLLMClient(this.config.llm, this.config.clientDefaults);
-    const resolvedAux = await this.auxiliaryPipeline.resolveAuxClientWithMetadata(
+    const aux = await this.auxiliaryPipeline.resolveAuxClientWithMetadata(
       primaryClient,
       this.resolveMaxContextTokens(),
     );
-    const client = resolvedAux.client;
-    const systemPrompt =
-      "You package selected conversation context. Be concise, factual, and complete.";
-    const fitsAuxWindow = contextPackageRequestFits(systemPrompt, resolvedAux.maxContextTokens);
-    if (!fitsAuxWindow("x")) {
-      throw new Error(
-        `Auxiliary model context window (${resolvedAux.maxContextTokens}) is too small for the context package template and output reserve`,
-      );
-    }
-
-    // Every complete round or lossless fragment feeds the same rolling
-    // nine-section merge.
-    const pending = groupMessagesByApiRound(messages).map(
-      (group) => serializeContextPackageMessages(group).text,
-    );
-    let summary: string | undefined;
-    while (pending.length > 0) {
-      const priorSummary = summary;
-      const conversation = takeContextPackageWindow(
-        pending,
-        (candidate) => fitsAuxWindow(candidate, priorSummary),
-        resolvedAux.maxContextTokens,
-      );
-      const sourceState = sourceSessionId
-        ? this.sessionManager.readSessionState(sourceSessionId)
-        : undefined;
-      const response = await withEngineAuxiliaryModelTrace(
-        sourceState,
-        "context_package",
-        () =>
-          withUsageOwner(billingOwner, () =>
-            client.createMessage({
-              systemPrompt,
-              messages: [
-                {
-                  role: "user",
-                  content: buildContextPackagePromptFromSerialized(conversation, summary),
-                },
-              ],
-              tools: [],
-              maxTokens: CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS,
-              billingEnabled: true,
-              requestVisible: false,
-              usagePurpose: "context_package",
-              reasoning: { mode: "off" },
-              signal,
-            }),
-          ),
-        { sessionId: sourceSessionId },
-      );
-      if (response.usage && sourceSessionId) {
+    return summarizeContextPackageRounds({
+      messages,
+      aux,
+      signal,
+      wrapRequest: (request) =>
+        withEngineAuxiliaryModelTrace(
+          sourceSessionId ? this.sessionManager.readSessionState(sourceSessionId) : undefined,
+          "context_package",
+          () => withUsageOwner(billingOwner, request),
+          { sessionId: sourceSessionId },
+        ),
+      onUsage: (usage) => {
+        if (!sourceSessionId) return;
         this.sessionManager.recordAuxiliaryUsage(
           sourceSessionId,
-          response.usage,
+          usage,
           this.usageCostState(sourceSessionId),
         );
-      }
-      summary = response.text.trim();
-      if (!summary) throw new Error("Context package summary was empty");
-    }
-    return {
-      summary: summary!,
-      estimatedTokens: estimateTokens([{ role: "user", content: summary! }]),
-    };
+      },
+    });
   }
 
   /** Restore a cold Engine's configured model from persisted source state without resetting usage. */
@@ -1604,7 +1559,7 @@ export class Engine {
       userOnStream,
       prepareEvent: (event) => {
         event = runTiming.prepareEvent(event);
-        event = this.activeGoalMeter?.decorate(event) ?? event;
+        event = this.goalControl.meter?.decorate(event) ?? event;
         return event.type === "session_started"
           ? { ...event, runId, previousRunId, clientMessageId }
           : event;
@@ -1859,11 +1814,7 @@ export class Engine {
             ...anchors,
             summary: options.archiveBeforeCurrentTurn.summary,
           });
-        } else if (
-          !freshImageMessage &&
-          contextNotes &&
-          this.tryNotesRollover(contextNotes, messages)
-        ) {
+        } else if (!freshImageMessage && contextNotes && tryNotesRollover(contextNotes, messages)) {
           // The note covers its own cursor; any newer messages remain verbatim.
           this.compactedMessagesBySession.delete(session.state.sessionId);
           session.state.contextUsageAnchor = undefined;
@@ -2056,20 +2007,15 @@ export class Engine {
             // Run-scoped: drop the GoalStopHook so a later goal-less send on this
             // long-lived engine doesn't keep blocking stops.
             await this.activeRunScope?.dispose();
-            this.activeGoalRegistration = undefined;
-            if (this.activeGoalHook === goalHookHandler) {
-              this.activeGoalHook = null;
-              this.activeGoalHookAttached = false;
-              this.activeRuntimeGoal = null;
-              this.activePersistedRunGoal = null;
-            }
+            this.goalControl.registration = undefined;
+            this.goalControl.release(goalHookHandler);
             if (this.activeTurnLoop === turnLoop) {
               this.activeTurnLoop = null;
               this.activeProfileMaxTurns = undefined;
             }
             if (this.activeRunSession === session) this.activeRunSession = null;
-            persistRunGoalProgress(this.activeGoalMeter, this.sessionManager, session.state);
-            this.activeGoalMeter = null;
+            persistRunGoalProgress(this.goalControl.meter, this.sessionManager, session.state);
+            this.goalControl.meter = null;
           }
           const finalized = await this.finalizeRun({
             session,
@@ -2860,23 +2806,7 @@ export class Engine {
     // persisted active goal (one active goal per session) and announce it. A
     // bare send with no options.goal inherits the stored active goal so the
     // model keeps working toward it — that's what makes it persistent.
-    const goalSlots: GoalRunSlots = {
-      getActiveRuntimeGoal: () => this.activeRuntimeGoal,
-      setActiveRuntimeGoal: (g) => {
-        this.activeRuntimeGoal = g;
-      },
-      getActivePersistedRunGoal: () => this.activePersistedRunGoal,
-      setActivePersistedRunGoal: (g) => {
-        this.activePersistedRunGoal = g;
-      },
-      getActiveGoalHook: () => this.activeGoalHook,
-      setActiveGoalHook: (h) => {
-        this.activeGoalHook = h;
-      },
-      setActiveGoalHookAttached: (a) => {
-        this.activeGoalHookAttached = a;
-      },
-    };
+    const goalSlots = this.goalControl.slots();
     const { normalizedGoal, persistedRunGoal } = resolveRunGoal({
       options,
       session,
@@ -2887,7 +2817,11 @@ export class Engine {
       onStream: options?.onStream,
     });
     if (this.config.isSubAgent !== true)
-      this.activeGoalMeter = createRunGoalProgressMeter(this.sessionManager, sid, persistedRunGoal);
+      this.goalControl.meter = createRunGoalProgressMeter(
+        this.sessionManager,
+        sid,
+        persistedRunGoal,
+      );
     let latestGoalJudgeContext: GoalJudgeRuntimeContext | undefined;
     const goalHookHandler = armRunGoalHook({
       slots: goalSlots,
@@ -3462,19 +3396,14 @@ export class Engine {
         // turns don't re-arm) AND persists it, and drops the in-flight stop
         // hook so nothing re-blocks the stop we're about to return.
         clearPersistedGoal: (reason) => {
-          const runGoal = this.activePersistedRunGoal ?? persistedRunGoal;
+          const runGoal = this.goalControl.persistedRunGoal ?? persistedRunGoal;
           if (runGoal && !this.persistGoalTerminal(session.state, runGoal, reason)) {
             return false;
           }
           if (goalHookHandler) {
-            void this.activeGoalRegistration?.();
-            this.activeGoalRegistration = undefined;
-            if (this.activeGoalHook === goalHookHandler) {
-              this.activeGoalHook = null;
-              this.activeGoalHookAttached = false;
-              this.activeRuntimeGoal = null;
-              this.activePersistedRunGoal = null;
-            }
+            void this.goalControl.registration?.();
+            this.goalControl.registration = undefined;
+            this.goalControl.release(goalHookHandler);
           }
           return true;
         },
@@ -3772,43 +3701,6 @@ export class Engine {
     }
     if (this.activeRunSession?.state.sessionId !== sessionId) return;
     Object.assign(this.activeRunSession.state, partial, { stateRevision });
-  }
-
-  /**
-   * Adopt the exact persisted snapshot that won a Goal-control CAS without
-   * discarding counters which the current run has advanced since its previous
-   * heartbeat. Merely copying the new stateRevision is unsafe: the next
-   * whole-state save would then be allowed to publish stale title/workspace
-   * metadata over a concurrent field-level writer.
-   */
-  private rebaseActiveRunAfterGoalUpdate(live: SessionState, persisted: SessionState): void {
-    const runOwned = {
-      status: live.status,
-      summary: live.summary,
-      toolSelection:
-        (this.runningSession?.state === live
-          ? this.runningSession.ownToolSelection?.()
-          : undefined) ?? live.toolSelection,
-      tokenUsage: live.tokenUsage,
-      contextUsageAnchor: live.contextUsageAnchor,
-      cacheUsageVersion: live.cacheUsageVersion,
-      cumulativePromptTokens: live.cumulativePromptTokens,
-      cumulativeCacheReadTokens: live.cumulativeCacheReadTokens,
-      cumulativeCacheCreationTokens: live.cumulativeCacheCreationTokens,
-      turnCount: live.turnCount,
-      turnSeq: live.turnSeq,
-      completedThroughEventId: live.completedThroughEventId,
-      completedSnapshotVersion: live.completedSnapshotVersion,
-      invokedSkills: live.invokedSkills,
-      costState: live.costState,
-    } satisfies Partial<SessionState>;
-
-    // Optional fields deleted by another writer must disappear locally too;
-    // clear before assigning rather than leaving stale own-properties behind.
-    for (const key of Object.keys(live)) {
-      delete (live as unknown as Record<string, unknown>)[key];
-    }
-    Object.assign(live, persisted, runOwned);
   }
 
   private persistGoalTerminal(
@@ -4114,16 +4006,14 @@ export class Engine {
     return (
       this.activeTurnLoop !== null &&
       this.activeRunSession?.state.sessionId === sessionId &&
-      this.activeRuntimeGoal !== null &&
-      this.activeGoalHook !== null
+      this.goalControl.runtimeGoal !== null &&
+      this.goalControl.hook !== null
     );
   }
 
   /**
-   * Edit or pause/resume a persisted goal. Mid-run edits use the same step-gap
-   * delivery seam as Steer: the current model/tool call is not aborted, and the
-   * updated objective is injected before the next model step. Pausing detaches
-   * the goal judge and stops this run before another model request is started.
+   * Edit or pause/resume a persisted goal. Mid-run edits reach the live run at
+   * the next step boundary (see {@link LiveGoalControl.update}).
    */
   updateGoal(
     sessionId: string,
@@ -4134,153 +4024,16 @@ export class Engine {
       expectedRevision?: number;
     },
   ): GoalConfig | undefined {
-    if (!sessionId || !this.sessionManager.exists(sessionId)) return undefined;
-    const live =
-      this.activeRunSession?.state.sessionId === sessionId ? this.activeRunSession : null;
-    const liveLifecycle = live?.state.goalLifecycle;
-    const before =
-      liveLifecycle && isGoalLifecycleCurrent(liveLifecycle)
-        ? goalConfigFromLifecycle(liveLifecycle)
-        : this.sessionManager.readActiveGoal(sessionId);
-    if (!before) return undefined;
-    if (patch.expectedGoalId !== undefined && before.goalId !== patch.expectedGoalId) {
-      return undefined;
-    }
-    if (patch.expectedRevision !== undefined && (before.revision ?? 1) !== patch.expectedRevision) {
-      return undefined;
-    }
-    const updated = this.sessionManager.updateActiveGoal(sessionId, {
-      ...patch,
-      expectedGoalId: patch.expectedGoalId ?? before.goalId,
-      expectedRevision: patch.expectedRevision ?? before.revision ?? 1,
-    });
-    if (!updated) return undefined;
-    const next = updated.goal;
-    if (live) {
-      this.rebaseActiveRunAfterGoalUpdate(live.state, updated.state);
-    }
-
-    const resumesDormantGoal =
-      this.activeTurnLoop !== null &&
-      live !== null &&
-      before.paused === true &&
-      next.paused !== true &&
-      this.activeRuntimeGoal === null &&
-      this.activeGoalHook !== null;
-    if (resumesDormantGoal) {
-      // This ordinary run was constructed while the persisted Goal was paused:
-      // its system prompt, visible tools and ToolContext are goal-less and
-      // cannot be safely hot-swapped. Stop it at the next step boundary; the
-      // protocol's conditional resume turn will rebuild a fully Goal-capable
-      // run from the now-unpaused persisted state.
-      this.activeTurnLoop!.updateGoal(undefined);
-    }
-    const controlsThisRun =
-      this.activeTurnLoop !== null &&
-      live !== null &&
-      isSameGoalVersion(before, this.activeRuntimeGoal ?? undefined);
-    if (controlsThisRun) {
-      const instruction = applyRunGoalUpdate(
-        before,
-        next,
-        this.activeRuntimeGoal,
-        this.activePersistedRunGoal,
-      );
-
-      if (next.paused === true) {
-        if (next.goalId) this.activeGoalMeter?.pause(next.goalId);
-        if (this.activeGoalHook && this.activeGoalHookAttached) {
-          void this.activeGoalRegistration?.();
-          this.activeGoalRegistration = undefined;
-          this.activeGoalHookAttached = false;
-        }
-        this.activeTurnLoop!.updateGoal(undefined);
-      } else {
-        if (next.goalId) this.activeGoalMeter?.begin(next.goalId);
-        this.activeTurnLoop!.updateGoal(next, instruction, {
-          maxTurns: this.resolveRunMaxTurns(next, this.activeProfileMaxTurns),
-          maxStopBlocks: resolveMaxStopBlocks(this.config.maxStopBlocks, next),
-        });
-        if (this.activeGoalHook && !this.activeGoalHookAttached) {
-          this.registerGoalHook(this.activeGoalHook);
-          this.activeGoalHookAttached = true;
-        }
-      }
-    }
-    return next;
+    return this.goalControl.update(sessionId, patch);
   }
 
   /**
-   * Clear a session's persisted active goal (CC `/goal clear`). Works whether
-   * the session is idle or its goal run is in flight: it wipes
-   * `state.goalLifecycle` (so the next bare send won't re-inherit it) and, if a
-   * goal hook is currently registered for this engine, unregisters it so an
-   * in-flight run can stop instead of being re-blocked by the now-cleared goal.
-   * Returns true if a goal was actually cleared. Idempotent — clearing a
-   * session with no active goal is a no-op returning false.
+   * Clear a session's persisted active goal (CC `/goal clear`), detaching the
+   * live run's stop hook when it owns that goal. Returns true if a goal was
+   * actually cleared (see {@link LiveGoalControl.clear}).
    */
   clearGoal(sessionId: string, expected?: { goalId?: string; revision?: number }): boolean {
-    if (!this.sessionManager.exists(sessionId)) return false;
-    // Prefer the LIVE run's bundle when it's this session so the domain update
-    // rebases the exact state object used by subsequent progress writes.
-    const live =
-      this.activeRunSession && this.activeRunSession.state.sessionId === sessionId
-        ? this.activeRunSession
-        : null;
-    const session = live ?? this.sessionManager.resume(sessionId);
-    const lifecycle = session.state.goalLifecycle;
-    const currentGoal =
-      lifecycle && isGoalLifecycleCurrent(lifecycle)
-        ? goalConfigFromLifecycle(lifecycle)
-        : undefined;
-    const had = currentGoal !== undefined;
-    let controlsThisRun = false;
-    if (
-      had &&
-      ((expected?.goalId !== undefined && currentGoal?.goalId !== expected.goalId) ||
-        (expected?.revision !== undefined && (currentGoal?.revision ?? 1) !== expected.revision))
-    ) {
-      return false;
-    }
-    if (had) {
-      const clearedGoal = currentGoal!;
-      controlsThisRun =
-        this.activeTurnLoop !== null &&
-        live !== null &&
-        isSameGoalVersion(clearedGoal, this.activeRuntimeGoal ?? undefined);
-      if (!this.persistGoalTerminal(session.state, clearedGoal, "user_cleared")) return false;
-      // A cross-writer edit may have won between the expected-version check
-      // above and saveGoalTerminal's conflict merge. In that case the old
-      // revision's tombstone is durable but the newer active revision remains;
-      // report a stale delete, and never stop/detach the run that owns it.
-      if (session.state.goalLifecycle && isGoalLifecycleCurrent(session.state.goalLifecycle)) {
-        return false;
-      }
-      // A paused Goal inherited by an ordinary run is only dormant persisted
-      // state; deleting it must not cancel that unrelated conversation.
-      if (controlsThisRun) {
-        if (clearedGoal.goalId) this.activeGoalMeter?.pause(clearedGoal.goalId);
-        this.activeTurnLoop!.updateGoal(undefined);
-      }
-    }
-    // If THIS session's goal run is in flight, drop its stop hook so the
-    // current run can terminate (the closure-held goal would otherwise keep
-    // re-blocking). The run's own `finally` also unregisters; double-unregister
-    // is safe (set delete is idempotent).
-    if (
-      had &&
-      this.activeGoalHook &&
-      this.lastSessionId === sessionId &&
-      (controlsThisRun || this.activeRuntimeGoal === null)
-    ) {
-      if (this.activeGoalHookAttached) void this.activeGoalRegistration?.();
-      this.activeGoalRegistration = undefined;
-      this.activeGoalHook = null;
-      this.activeGoalHookAttached = false;
-      this.activeRuntimeGoal = null;
-      this.activePersistedRunGoal = null;
-    }
-    return had;
+    return this.goalControl.clear(sessionId, expected);
   }
 
   setSessionWorkspace(sessionId: string, workspace: SessionWorkspace): SessionWorkspace | null {
@@ -4328,16 +4081,6 @@ export class Engine {
     }
   }
 
-  /** Attempt the durable note path without issuing a separate model request. */
-  private tryNotesRollover(notes: SessionContextNotes, messages: Message[]): Message[] | undefined {
-    try {
-      notes.requestRollover();
-      return notes.applyRollover(messages);
-    } catch {
-      return undefined;
-    }
-  }
-
   /** Force context compaction and return token stats before/after. */
   async forceCompact(sessionId?: string): Promise<{
     before: number;
@@ -4357,7 +4100,7 @@ export class Engine {
       candidate.activateForSessionKinds?.includes(session.state.kind ?? "work"),
     );
     if (this.resolveContextStrategy(profile) === "notes") {
-      const compacted = this.tryNotesRollover(
+      const compacted = tryNotesRollover(
         new SessionContextNotes(session.transcript),
         sourceMessages,
       );
@@ -4480,66 +4223,27 @@ export class Engine {
    * result so a later forceCompact/resume reads the archived history. This is
    * a generic range-archival facade over ContextManager.summarizeRange.
    * Returns token stats before/after; equal before/after means the window was
-   * empty/unresolvable or the summary was rejected.
-   *
-   * Window resolution depends on whether the caller supplied anchors:
-   * - With `anchors`, the caller's `range` is IGNORED and the window is
-   *   resolved from the client-message-id anchors over a fresh, marker-aware
-   *   transcript replay. Callers (the pet segment closure) compute index
-   *   ranges over the RAW transcript message list, whose indices grow
-   *   forever — but the live list is trimmed by every persisted marker
-   *   (replay after restart) and by each in-process archival, so a raw index
-   *   range clamps to an empty window or, worse, onto the WRONG tail
-   *   messages, which would then be persistently mis-summarized against
-   *   correct anchors. Anchors are the only stable coordinates.
-   * - Without `anchors`, legacy behavior: `range` is a half-open index window
-   *   over the cached/in-process message list, and nothing is persisted.
+   * empty/unresolvable or the summary was rejected. With `anchors` the window
+   * comes from stable client-message-id anchors and the boundary is persisted
+   * (see resolveArchiveWindow); without them `range` indexes the cached list.
    */
   async archiveTurnRange(
     sessionId: string,
     range: { start: number; end: number },
-    anchors?: { toClientMessageId: string; fromClientMessageId?: string; segmentId?: string },
+    anchors?: ArchiveAnchors,
   ): Promise<{ before: number; after: number }> {
     const effectiveSessionId = sessionId || this.lastSessionId;
     if (!effectiveSessionId) return { before: 0, after: 0 };
 
     const session = this.sessionManager.resume(effectiveSessionId);
-
-    let sourceMessages: Message[];
-    let window: { start: number; end: number };
-    if (anchors) {
-      const { messages: liveMessages, liveIndexByClientMessageId } =
-        session.transcript.toMessagesWithIndex();
-      sourceMessages = liveMessages;
-      // An absent from-anchor means "from the beginning" — over the live
-      // list that is index 0, which includes any previously replayed
-      // from-less summary at the head, so summarizeRange merge-feeds it
-      // (extractAnchoredSummary) instead of losing it.
-      const start =
-        anchors.fromClientMessageId !== undefined
-          ? liveIndexByClientMessageId.get(anchors.fromClientMessageId)
-          : 0;
-      const end = liveIndexByClientMessageId.get(anchors.toClientMessageId);
-      if (start === undefined || end === undefined || end <= start) {
-        // Fail open: no summarization, no persistence. Falling back to the
-        // caller's raw range is exactly the bug this path exists to fix —
-        // it would summarize the wrong messages and persist that against
-        // the (correct) anchors, with segmentId dedupe blocking correction.
-        logger.warn("engine.archive_range.anchor_window_unresolved", {
-          sessionId: effectiveSessionId,
-          segmentId: anchors.segmentId,
-          fromClientMessageId: anchors.fromClientMessageId,
-          toClientMessageId: anchors.toClientMessageId,
-        });
-        const before = estimateTokens(sourceMessages);
-        return { before, after: before };
-      }
-      window = { start, end };
-    } else {
-      sourceMessages =
-        this.compactedMessagesBySession.get(effectiveSessionId) ?? session.transcript.toMessages();
-      window = range;
-    }
+    const { sourceMessages, window } = resolveArchiveWindow(
+      effectiveSessionId,
+      session,
+      range,
+      anchors,
+      anchors ? undefined : this.compactedMessagesBySession.get(effectiveSessionId),
+    );
+    if (!window) return unchangedArchiveStats(sourceMessages);
     const before = estimateTokens(sourceMessages);
 
     const contextManager = await this.prepareContextManagerForSession(
@@ -4554,19 +4258,7 @@ export class Engine {
 
     const archived = await contextManager.summarizeRange(sourceMessages, window);
     const after = estimateTokens(archived);
-    // Persist the boundary so a restart replays the trimmed context. Only when
-    // summarizeRange actually replaced the span (identity return means empty
-    // window / rejected summary / no summarizer available) and the caller
-    // supplied stable anchors to record it against.
-    if (anchors && archived !== sourceMessages) {
-      const clampedStart = Math.max(0, Math.min(window.start, archived.length - 1));
-      const summaryMessage = archived[clampedStart];
-      const summaryText =
-        typeof summaryMessage?.content === "string" ? summaryMessage.content : undefined;
-      if (summaryText && this.hasLiveArchiveAnchors(session, anchors)) {
-        session.transcript.appendRangeArchive({ summary: summaryText, ...anchors });
-      }
-    }
+    persistArchivedRange(session, anchors, window, sourceMessages, archived);
     // In the anchored path this replaces any in-process-only cache state with
     // the fresh-replay-based result — safe, because the transcript is the
     // superset of the cache and pressure compaction re-runs if needed.
@@ -4577,69 +4269,16 @@ export class Engine {
   }
 
   /**
-   * Guard against writing a marker anchored to a client message id the
-   * transcript doesn't actually contain. toMessages()'s replay silently
-   * ignores a range_archive event whose anchor doesn't resolve (fail open),
-   * so a bad anchor wouldn't corrupt anything on its own — but if the marker
-   * carries a segmentId, appendRangeArchive's idempotency check treats that
-   * segmentId as "already recorded" forever, with no retry path (e.g. a
-   * one-time migration keyed "migration-v1" would be permanently burned on
-   * its first, failed attempt). Reject before writing so the caller can
-   * retry with a corrected anchor. fromClientMessageId is optional in the
-   * data model (absent means "from the beginning"), so only validate it when
-   * present; missing it is fail-open by design, same as the replay path.
-   */
-  private hasLiveArchiveAnchors(
-    session: SessionBundle,
-    anchors: { toClientMessageId: string; fromClientMessageId?: string },
-  ): boolean {
-    if (!session.transcript.hasClientMessageId(anchors.toClientMessageId)) return false;
-    if (
-      anchors.fromClientMessageId !== undefined &&
-      !session.transcript.hasClientMessageId(anchors.fromClientMessageId)
-    ) {
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * Persist an archive boundary WITHOUT a summarization call — the caller
-   * already has the summary text (e.g. the one-time migration built from
-   * pet journal entries). Wraps the plain text in the anchored-summary
-   * envelope so replay and rolling-merge treat it like a real archive.
-   * Returns false when the segmentId was already recorded (idempotent) OR
-   * when the anchors don't resolve to real messages in this transcript —
-   * see hasLiveArchiveAnchors for why a dead anchor must be rejected before
-   * the (potentially one-shot) segmentId gets burned.
+   * Persist an archive boundary WITHOUT a summarization call (the caller
+   * already has the summary text). False when the segmentId was already
+   * recorded or the anchors are dead (see appendSessionArchiveMarker).
    */
   async appendArchiveMarker(
     sessionId: string,
-    marker: {
-      summary: string;
-      toClientMessageId: string;
-      fromClientMessageId?: string;
-      segmentId?: string;
-    },
+    marker: ArchiveAnchors & { summary: string },
   ): Promise<boolean> {
     const session = this.sessionManager.resume(sessionId);
-    if (!this.hasLiveArchiveAnchors(session, marker)) {
-      logger.warn("engine.archive_marker.dead_anchor", {
-        sessionId,
-        segmentId: marker.segmentId,
-        toClientMessageId: marker.toClientMessageId,
-        fromClientMessageId: marker.fromClientMessageId,
-      });
-      return false;
-    }
-    const wrapped = buildAnchoredSummaryMessage(marker.summary, {
-      ...(session.transcript.isPersistent()
-        ? { transcriptPath: session.transcript.getFilePath() }
-        : {}),
-    });
-    const content = typeof wrapped.content === "string" ? wrapped.content : marker.summary;
-    const appended = session.transcript.appendRangeArchive({ ...marker, summary: content });
-    if (!appended) return false;
+    if (!appendSessionArchiveMarker(sessionId, session, marker)) return false;
     // The in-memory cache (if any) predates the marker; drop it so the next
     // run rebuilds from the trimmed transcript replay.
     this.compactedMessagesBySession.delete(sessionId);
@@ -4729,29 +4368,8 @@ export class Engine {
    * 运行中续轮/加预算). No-op (returns null) when no run is active. Lets a user
    * keep an unattended goal going past its original cap instead of restarting.
    */
-  extendGoalRun(opts: GoalExtension): {
-    maxTurns: number;
-    tokenBudget?: number;
-    timeBudgetMs?: number;
-    maxStopBlocks: number;
-  } | null {
-    if (!this.activeTurnLoop) return null;
-    if (
-      this.activeProfileMaxTurns !== undefined &&
-      typeof opts.addTurns === "number" &&
-      Number.isFinite(opts.addTurns) &&
-      opts.addTurns > 0 &&
-      opts.addTurns <= Number.MAX_SAFE_INTEGER
-    ) {
-      // An empty extension is a no-op that returns the live ceilings. Goal
-      // budgets may still grow, but a behavior-profile ceiling cannot.
-      const currentMaxTurns = this.activeTurnLoop.extend({}).maxTurns;
-      return this.activeTurnLoop.extend({
-        ...opts,
-        addTurns: Math.min(opts.addTurns, this.activeProfileMaxTurns - currentMaxTurns),
-      });
-    }
-    return this.activeTurnLoop.extend(opts);
+  extendGoalRun(opts: GoalExtension): ReturnType<TurnLoop["extend"]> | null {
+    return extendLiveGoalRun(this.activeTurnLoop, this.activeProfileMaxTurns, opts);
   }
 
   /**
