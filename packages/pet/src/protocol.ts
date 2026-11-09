@@ -73,6 +73,3 @@ export interface PetReportToMimiEvent {
 export const PET_PROJECTION_DELTA_METHOD = "agent/petProjectionDelta";
 export const GET_PET_PROJECTION_SNAPSHOT_METHOD = "agent/getPetProjectionSnapshot";
 export const PET_REPORT_TO_MIMI_METHOD = "agent/petReportToMimi";
-
-/** Worker → host notice-rule contract (NotifyMe → Desktop rule store); see notice-rule.ts. */
-export * from "./notice-rule.js";

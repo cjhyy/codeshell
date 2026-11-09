@@ -30,8 +30,9 @@ export const notifyMeToolDef: ToolDefinition = {
   name: NOTIFY_ME_TOOL_NAME,
   description:
     "Use when the owner asks to be told when this Session is done, fails or gets blocked. " +
-    "If they name an IM (WeChat/weixin, Feishu/Lark, Telegram, Slack…), set channel to that " +
-    "gateway channel id (wechat, lark, telegram, slack…); omit it when they don't name one; " +
+    "If they name an IM (WeChat/weixin, WeCom/企业微信 → wecom, Feishu/Lark, Telegram, Slack…), " +
+    "set channel to that gateway channel id (wechat, wecom, lark, telegram, slack…); " +
+    "omit it when they don't name one; " +
     "if the id is wrong the host replies with the bound channels. " +
     "Call once; the host tracks completion — do not call RequestMimiDelivery at the end.",
   inputSchema: {
@@ -186,8 +187,17 @@ function hasActiveGoal(ctx: ToolContext, sessionId: string): boolean {
   }
 }
 
+const NOT_SAVED_REASON_MAX_LENGTH = 200;
+
 function notSaved(reason: string): string {
-  return `Error: the notice rule was not saved (${reason}). Tell the owner it is not set up.`;
+  // Host error text is untrusted for the model: collapse control characters
+  // and whitespace runs, then bound it so it cannot smuggle a long payload.
+  const collapsed = reason.replace(/[\u0000-\u001f\u007f\s]+/gu, " ").trim() || "unknown error";
+  const bounded =
+    collapsed.length > NOT_SAVED_REASON_MAX_LENGTH
+      ? `${collapsed.slice(0, NOT_SAVED_REASON_MAX_LENGTH - 1)}…`
+      : collapsed;
+  return `Error: the notice rule was not saved (${bounded}). Tell the owner it is not set up.`;
 }
 
 function readinessText(ready: NoticeChannelReadiness): string {

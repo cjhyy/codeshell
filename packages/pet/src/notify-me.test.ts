@@ -83,8 +83,9 @@ describe("NotifyMe visibility", () => {
       "Use when the owner asks to be told when this Session is done, fails or gets blocked.",
     );
     expect(notifyMeToolDef.description).toContain(
-      "set channel to that gateway channel id (wechat, lark, telegram, slack…)",
+      "set channel to that gateway channel id (wechat, wecom, lark, telegram, slack…)",
     );
+    expect(notifyMeToolDef.description).toContain("WeCom/企业微信 → wecom");
     expect(notifyMeToolDef.description).toContain(
       "Call once; the host tracks completion — do not call RequestMimiDelivery at the end.",
     );
@@ -247,6 +248,19 @@ describe("NotifyMe execution", () => {
     await expect(notifyMeTool({}, context(), request)).resolves.toBe(
       "Error: the notice rule was not saved (rule store is locked). Tell the owner it is not set up.",
     );
+  });
+
+  test("collapses and bounds the host error reason before it reaches the model", async () => {
+    const { request } = recorder(async () => {
+      throw new Error(`disk\n\tfull\u0007  ${"x".repeat(400)}`);
+    });
+    const text = await notifyMeTool({}, context(), request);
+    const reason = text.slice(text.indexOf("(") + 1, text.lastIndexOf(")"));
+    expect(reason.startsWith("disk full x")).toBe(true);
+    expect(reason.length).toBe(200);
+    expect(reason.endsWith("…")).toBe(true);
+    expect(text).not.toMatch(/[\u0000-\u001f\u007f]/u);
+    expect(text).toEndWith("Tell the owner it is not set up.");
   });
 
   test("treats a malformed host reply as not saved", async () => {

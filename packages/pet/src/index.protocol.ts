@@ -2,7 +2,8 @@
  * Stable Pet projection wire contract for host bridges and UI clients.
  *
  * State-machine implementations remain package-private; this entry contains
- * only method names and the shapes crossing the host boundary.
+ * only method/action names, the shapes crossing the host boundary, and the
+ * host-side validator for notice-rule upserts.
  */
 export {
   GET_PET_PROJECTION_SNAPSHOT_METHOD,
@@ -12,6 +13,18 @@ export {
   type PetProjectionSnapshotResult,
   type PetReportToMimiEvent,
 } from "./protocol.js";
+export {
+  PET_RULE_UPSERT_ACTION,
+  parseNoticeRuleUpsert,
+  type BoundChannel,
+  type NoticeAttention,
+  type NoticeChannel,
+  type NoticeChannelReadiness,
+  type NoticeEvent,
+  type NoticeRuleUpsert,
+  type NoticeRuleUpsertReply,
+  type RuleEffect,
+} from "./notice-rule.js";
 export {
   LOCAL_PET_OWNER,
   type PendingDecisionKind,
