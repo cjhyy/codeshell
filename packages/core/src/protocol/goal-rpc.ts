@@ -2,7 +2,8 @@
  * Goal RPC request/response shaping for AgentServer. Pure functions: the
  * server resolves its live/legacy targets and sends; validation, routing
  * outcome and the agent/goalGet payload live here. Desktop hosts that answer
- * agent/goalGet themselves reuse {@link goalGetPayload} so every host returns
+ * agent/goalGet themselves reuse {@link goalGetPayload} (the import-free
+ * agent-bridge fallback mirrors it inline) so every host returns
  * the same shape.
  */
 import type { GoalConfig, GoalExtension, GoalProgressSnapshot } from "../goal/lifecycle.js";
