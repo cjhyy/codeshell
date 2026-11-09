@@ -104,7 +104,11 @@ export interface PetNoticeWiringDeps {
    * notice for that run waits for it (bounded) before deciding on IM.
    */
   boundReplies?: () =>
-    | { pendingReply(sessionId: string, runId: string): Promise<void> | undefined }
+    | {
+        /** Settles when the Session's current run ends (a goal can be met mid-run). */
+        runInFlight(sessionId: string): Promise<void> | undefined;
+        pendingReply(sessionId: string, runId: string): Promise<void> | undefined;
+      }
     | undefined;
   gateway: PetNoticeWiringGateway;
   /** Durable gateway outbox publish (`publishGatewayControlEvent`), for replies to a route. */
@@ -202,10 +206,19 @@ export interface PetDecisionNoticeHooks {
   isOwnerConversation(origin: { channel: string; target: string; senderId?: string }): boolean;
   /** Hear about a pending decision in a rule-watched Session as it appears. */
   onBlocked(listener: (sessionId: string) => void): () => void;
+  /** The owner is away (the router's presence): a desktop-kept prompt may now go to IM. */
+  isAway(): boolean;
+  /** The owner target the router would use on this channel is a confirmed private chat. */
+  ownerChannelIsDirect(channel: string): boolean;
+  /** The projection's status for a decision; undefined once it is gone. */
+  decisionStatus(sessionId: string, requestId: string): string | undefined;
 }
 
-/** How long a done notice waits for the same run's bound reply to be published. */
-const BOUND_REPLY_WAIT_MS = 5_000;
+/**
+ * How long a done notice waits for the same run to end and its bound reply
+ * to be published (a goal is met before its run's turn_complete).
+ */
+const BOUND_REPLY_WAIT_MS = 10_000;
 const MAX_BOUND_REPLY_SESSIONS = 500;
 
 const ATTENTION_RANK: Readonly<Record<NoticeAttention, number>> = {
@@ -291,7 +304,11 @@ function routeTarget(route: ConversationSessionRoute): NoticeRule["target"] {
       channel: route.channel,
       target: route.target,
       senderId: route.senderId,
-      // Binding is refused outside private chats (bind validator).
+      // Binding is refused outside private chats (bind validator). Rules saved
+      // before this flag keep isDirectMessage false: on load a binding-derived
+      // route cannot be told apart from an IM task's group route (both carry a
+      // sender and false), so they are not upgraded; their decision prompts stay
+      // generic until NotifyMe re-arms the rule.
       isDirectMessage: true,
     },
   };
@@ -534,6 +551,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       const ownerTarget = deps.gateway
         .listOwnerMessageTargets()
         .find((entry) => entry.id === targetId);
+      // A group (or unconfirmed) owner target never gets private decision details.
+      if (ownerTarget?.isDirect !== true && payload.nonDirectBody) body = payload.nonDirectBody;
       const files = attachmentsFor(ownerTarget, media?.attachments);
       let attachments: OutgoingAttachment[] = [];
       try {
@@ -596,10 +615,16 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
    * same conversation, or — for an owner-addressed notice — any bound
    * conversation, since binding only happens in the owner's private chats.
    */
-  function boundReplyCovers(sessionId: string, runId: string, target: NoticeTarget): boolean {
+  function boundReplyCovers(sessionId: string, runId: string, notice: NoticeSubmission): boolean {
     const delivered = boundReplies.get(sessionId);
     if (delivered?.runId !== runId || delivered.routes.length === 0) return false;
-    if (target.kind === "owner") return true;
+    const target = notice.target;
+    if (target.kind === "owner")
+      // Only when the owner notice would land on the bound chat's channel.
+      return (
+        notice.channel === "auto" ||
+        delivered.routes.some((route) => route.channel === notice.channel)
+      );
     return delivered.routes.some(
       (route) => route.channel === target.route.channel && route.target === target.route.target,
     );
@@ -608,27 +633,45 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   function submitDone(notice: NoticeSubmission, runId: string): void {
     const sessionId = notice.sessionId!;
     const decide = (): Promise<unknown> => {
-      if (!boundReplyCovers(sessionId, runId, notice.target)) return submit(notice);
+      if (!boundReplyCovers(sessionId, runId, notice)) return submit(notice);
       log("pet.notice.bound_reply_delivered", { sessionId, dedupeKey: notice.dedupeKey });
       return submit({ ...notice, boundReplyDelivered: true });
     };
-    let pending: Promise<void> | undefined;
-    try {
-      pending = deps.boundReplies?.()?.pendingReply(sessionId, runId);
-    } catch (error) {
-      log("pet.notice.bound_reply_lookup_failed", { sessionId, error: errorText(error) });
-    }
-    if (!pending) {
+    const bridge = (() => {
+      try {
+        return deps.boundReplies?.();
+      } catch (error) {
+        log("pet.notice.bound_reply_lookup_failed", { sessionId, error: errorText(error) });
+        return undefined;
+      }
+    })();
+    const lookup = (get: () => Promise<void> | undefined): Promise<void> | undefined => {
+      try {
+        return get();
+      } catch (error) {
+        log("pet.notice.bound_reply_lookup_failed", { sessionId, error: errorText(error) });
+        return undefined;
+      }
+    };
+    // Nothing in flight (the usual turn-scope case): decide now, in order.
+    const running = bridge && lookup(() => bridge.runInFlight(sessionId));
+    const publishing = bridge && lookup(() => bridge.pendingReply(sessionId, runId));
+    if (!running && !publishing) {
       void decide();
       return;
     }
-    // The reply is being published right now: decide once it is (bounded).
+    // Wait (bounded) for the run to end, then for its reply to reach the outbox.
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const waited = new Promise<void>((resolve) => {
+    const deadline = new Promise<void>((resolve) => {
       timer = setTimeout(resolve, BOUND_REPLY_WAIT_MS);
       timer.unref?.();
     });
-    void Promise.race([pending.catch(() => undefined), waited]).then(() => {
+    const settled = async (): Promise<void> => {
+      if (running) await running.catch(() => undefined);
+      const reply = bridge && lookup(() => bridge.pendingReply(sessionId, runId));
+      if (reply) await reply.catch(() => undefined);
+    };
+    void Promise.race([settled(), deadline]).then(() => {
       clearTimeout(timer);
       return disposed ? undefined : decide();
     });
@@ -661,6 +704,25 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     onBlocked(listener) {
       decisionListeners.add(listener);
       return () => decisionListeners.delete(listener);
+    },
+    isAway() {
+      try {
+        return !presence.isPresent();
+      } catch {
+        return false;
+      }
+    },
+    ownerChannelIsDirect(channel) {
+      try {
+        return deps.gateway.ownerChannels().some((entry) => entry.id === channel && entry.isDirect);
+      } catch {
+        return false;
+      }
+    },
+    decisionStatus(sessionId, requestId) {
+      return snapshot().pending.find(
+        (pending) => pending.agentSessionId === sessionId && pending.requestId === requestId,
+      )?.status;
     },
   };
 

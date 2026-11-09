@@ -1348,12 +1348,43 @@ describe("ImGatewayService", () => {
         await new Promise((resolveWait) => setTimeout(resolveWait, 10));
       }
       expect(service.lastOwnerInboundChannel()).toBe("telegram");
+      // Without the adapter's private-chat signal the target is not trusted as private.
+      const ownerTarget = () => service.listOwnerMessageTargets()[0];
+      expect(ownerTarget()?.isDirect).toBeUndefined();
+      await handler({
+        channel: "telegram",
+        target: "owner-chat",
+        senderId: "owner",
+        isDirectMessage: false,
+        text: "群里说一句",
+        messageId: "owner-message-2",
+      });
+      await new Promise((resolveWait) => setTimeout(resolveWait, 50));
+      expect(ownerTarget()?.isDirect).toBeUndefined();
+      await handler({
+        channel: "telegram",
+        target: "owner-chat",
+        senderId: "owner",
+        isDirectMessage: true,
+        text: "私聊",
+        messageId: "owner-message-3",
+      });
+      const directDeadline = Date.now() + 2_000;
+      while (ownerTarget()?.isDirect !== true && Date.now() < directDeadline) {
+        await new Promise((resolveWait) => setTimeout(resolveWait, 10));
+      }
+      expect(ownerTarget()?.isDirect).toBe(true);
+      expect(service.ownerChannels()[0]).toMatchObject({ id: "telegram", isDirect: true });
     } finally {
       await service.stop();
     }
 
     const restarted = new ImGatewayService({ configPath });
     expect(restarted.lastOwnerInboundChannel()).toBe("telegram");
+    // The private-chat memory survives a restart (hashed target ids only).
+    const persisted = JSON.parse(readFileSync(join(root, "owner-inbound.json"), "utf8"));
+    expect(persisted.directTargets).toEqual([expect.stringMatching(/^owner-[0-9a-f]{24}$/u)]);
+    expect(JSON.stringify(persisted)).not.toContain("owner-chat");
     if (process.platform !== "win32") {
       expect(statSync(join(root, "owner-inbound.json")).mode & 0o777).toBe(0o600);
     }

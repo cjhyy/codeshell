@@ -1997,8 +1997,12 @@ async function createWindow(): Promise<BrowserWindow> {
         (params) => mobileOrchestrator.broadcastApprovalResolved(params),
       ),
       // The router decides whether a prompt goes to IM (presence, caps) and where.
-      submit: (notice) => notices.router.submit(notice),
+      submit: (notice) => notices.router.submitWithOutcome(notice),
+      prior: (dedupeKey) => notices.router.priorDecision(dedupeKey),
       isOwnerConversation: notices.decisions.isOwnerConversation,
+      ownerChannelIsDirect: notices.decisions.ownerChannelIsDirect,
+      isAway: notices.decisions.isAway,
+      decisionStatus: notices.decisions.decisionStatus,
       onError: (error) => dlog("main", "pet.im-decision.failed", { error: String(error) }),
     });
     const imDecisions = petImDecisions;

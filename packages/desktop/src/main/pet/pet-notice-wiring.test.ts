@@ -10,6 +10,12 @@ import type { GatewayControlEventInput } from "../im-gateway-control-server.js";
 import type { ImGatewayOwnerChannel } from "../im-gateway-service.js";
 import { collectImDecisions, PetImDecisions } from "./pet-im-decisions.js";
 import type { NoticeSubmission } from "./pet-notice-router.js";
+import type { PetReusableSessionCandidate } from "./pet-dispatch-service.js";
+import {
+  createBoundSessionRunner,
+  createSessionBridgeWiring,
+  type SessionBridgeWiring,
+} from "./session-bridge-wiring.js";
 import {
   mergeRuleAttributes,
   parsePetNotificationSettings,
@@ -81,6 +87,7 @@ interface Harness {
   tasks: PetLongTask[];
   routes: ConversationSessionRoute[];
   channels: ImGatewayOwnerChannel[];
+  directTargets: Set<string>;
   snapshot(): DesktopPetProjectionSnapshot;
   emitProjection(event: DesktopPetProjectionEvent): void;
 }
@@ -91,9 +98,11 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
   const tasks: PetLongTask[] = [];
   const routes: ConversationSessionRoute[] = [];
   const channels: ImGatewayOwnerChannel[] = [
-    { id: "wechat", label: "微信", ready: "ready", targetId: "wechat:owner" },
-    { id: "lark", label: "飞书", ready: "unknown", targetId: "lark:owner" },
+    { id: "wechat", label: "微信", ready: "ready", targetId: "wechat:owner", isDirect: true },
+    { id: "lark", label: "飞书", ready: "unknown", targetId: "lark:owner", isDirect: true },
   ];
+  /** Owner targets confirmed as private chats (tests drop one to model a group). */
+  const directTargets = new Set(["wechat:owner", "lark:owner"]);
   const published: GatewayControlEventInput[] = [];
   const ownerSends: OwnerSend[] = [];
   const materialized: string[][] = [];
@@ -151,6 +160,7 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
           maxAttachments: 1,
           maxAttachmentBytes: 1_000,
           proactiveReady: "ready" as const,
+          ...(directTargets.has(target.id) ? { isDirect: true as const } : {}),
         })) as never,
       sendOwnerMessage: async (targetId, text, attachments, options) => {
         ownerSends.push({
@@ -213,6 +223,7 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     tasks,
     routes,
     channels,
+    directTargets,
     snapshot,
     emitProjection: (event) => {
       for (const listener of listeners) listener(event);
@@ -744,7 +755,13 @@ describe("pending-notice replay", () => {
     };
     await current.wiring.notifyTaskClosed(longTask(), { text: "报告好了", media });
     expect(current.ownerSends).toEqual([]);
-    current.channels[1] = { id: "lark", label: "飞书", ready: "ready", targetId: "lark:owner" };
+    current.channels[1] = {
+      id: "lark",
+      label: "飞书",
+      ready: "ready",
+      targetId: "lark:owner",
+      isDirect: true,
+    };
     const replay = current.wiring.inboundReplay({
       channel: "lark",
       target: "dm-1",
@@ -777,8 +794,12 @@ function decisionRelay(h: Harness) {
           observedAt: clock,
         });
     },
-    submit: (notice) => h.wiring.router.submit(notice),
+    submit: (notice) => h.wiring.router.submitWithOutcome(notice),
+    prior: (dedupeKey) => h.wiring.router.priorDecision(dedupeKey),
     isOwnerConversation: h.wiring.decisions.isOwnerConversation,
+    ownerChannelIsDirect: h.wiring.decisions.ownerChannelIsDirect,
+    isAway: h.wiring.decisions.isAway,
+    decisionStatus: h.wiring.decisions.decisionStatus,
     onError: (error) => {
       throw error;
     },
@@ -826,6 +847,8 @@ function decisionRelay(h: Harness) {
 }
 
 const OWNER_DM = { channel: "wechat", target: "owner-dm", senderId: "me", isDirectMessage: true };
+/** Presence is re-read after the settings cache (5 s) expires. */
+const SETTINGS_TTL = 5_001;
 
 describe("decision prompts through the router", () => {
   test("a non-IM Session with a blocked rule gets exactly one owner prompt, answered by code", async () => {
@@ -851,6 +874,48 @@ describe("decision prompts through the router", () => {
       "已处理",
     );
     expect(d.approvals).toEqual([{ approved: true }]);
+  });
+
+  test("an owner target that is a group gets the generic text: no question, options or code", async () => {
+    current = harness();
+    current.directTargets.delete("wechat:owner");
+    current.channels[0] = { id: "wechat", label: "微信", ready: "ready", targetId: "wechat:owner" };
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    const d = decisionRelay(current);
+    d.raise();
+    await settle();
+    await d.poll();
+    expect(current.ownerSends).toHaveLength(1);
+    const text = current.ownerSends[0]!.text;
+    expect(text).toContain("请打开桌面 Session 处理");
+    expect(text).not.toContain(d.code()!);
+    expect(text).not.toContain("ls");
+    // Nothing answerable went out, so a bare number is ordinary chat.
+    expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toBeUndefined();
+  });
+
+  test("a prompt kept on the desktop escalates to IM once when the owner leaves", async () => {
+    let present = true;
+    current = harness({
+      presence: {
+        getSystemIdleTimeSec: () => (present ? 0 : 3_600),
+        hasFocusedWindow: () => present,
+      },
+    });
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    const d = decisionRelay(current);
+    d.raise();
+    await settle();
+    await d.poll();
+    expect(current.ownerSends).toEqual([]);
+    present = false;
+    clock += SETTINGS_TTL;
+    await d.poll();
+    await d.poll();
+    expect(current.ownerSends).toHaveLength(1);
+    expect(current.ownerSends[0]!.text).toContain(`回答 ${d.code()} 1`);
+    // Answered on the desktop: the escalation record shares the request id and is settled.
+    expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toContain("单独的编号");
   });
 
   test("an IM-started task gets its prompt in its own conversation exactly once", async () => {
@@ -943,7 +1008,13 @@ describe("decision prompts through the router", () => {
       status: "revoked",
       error: "resolved",
     });
-    current.channels[1] = { id: "lark", label: "飞书", ready: "ready", targetId: "lark:owner" };
+    current.channels[1] = {
+      id: "lark",
+      label: "飞书",
+      ready: "ready",
+      targetId: "lark:owner",
+      isDirect: true,
+    };
     const replay = current.wiring.inboundReplay({
       channel: "lark",
       target: "dm-1",
@@ -977,6 +1048,149 @@ describe("bound Session replies", () => {
     expect(current.published).toEqual([]);
     expect(current.ownerSends).toEqual([]);
     expect(current.desktop.map((input) => input.title)).toEqual(["Mimi 任务已完成"]);
+  });
+
+  test("an owner-target done stays on IM when its rule names another channel", async () => {
+    for (const [channel, suppressed] of [
+      ["lark", false],
+      ["auto", true],
+    ] as const) {
+      current?.wiring.dispose();
+      current = harness({
+        readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }),
+      });
+      await current.handler(SID, upsertArgs({ events: ["done"], channel }));
+      clock = NOW + 1_000;
+      current.wiring.recordBoundReply(SID, "run-1", bound);
+      for (const event of turn("run-1")) current.wiring.observeSessionEvent(SID, event);
+      await settle();
+      expect(current.submitted[0]!.target).toEqual({ kind: "owner" });
+      expect(current.submitted[0]!.boundReplyDelivered === true).toBe(suppressed);
+      expect(current.ownerSends).toHaveLength(suppressed ? 0 : 1);
+    }
+  });
+
+  test("a done without a core run id is never paired with a bound reply", async () => {
+    current = harness();
+    current.routes.push(boundRoute());
+    await current.handler(SID, upsertArgs({ events: ["done"] }));
+    clock = NOW + 1_000;
+    current.wiring.recordBoundReply(SID, String(clock), bound);
+    for (const event of [
+      { type: "session_started", clientMessageId: "cm-x" },
+      { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } },
+      { type: "turn_complete", reason: "completed", text: "改好了", completedAt: clock },
+    ])
+      current.wiring.observeSessionEvent(SID, event);
+    await settle();
+    expect(current.submitted[0]!.boundReplyDelivered).toBeUndefined();
+    expect(current.published).toHaveLength(1);
+  });
+
+  /**
+   * Main subscribes the notice tap to the worker stream BEFORE the bound
+   * Session runner. Both run synchronously per line and the rule watcher
+   * defers through promises, so the runner always hands the turn's reply to
+   * the outbox before a done notice is decided. A goal is met mid-run, so
+   * that notice waits for the run to end first.
+   */
+  function realBridge() {
+    const listeners: Array<(line: string, entry?: { sessionId: string; event: unknown }) => void> =
+      [];
+    const worker = {
+      requestWorker: async () => ({ ok: true }),
+      injectWorkerMessage: () => undefined,
+      subscribeOutbound: (listener: (typeof listeners)[number]) => {
+        listeners.push(listener);
+        return () => undefined;
+      },
+    };
+    const replies: unknown[] = [];
+    current = harness({
+      sessionRoutes: () => wiringRef?.routes,
+      boundReplies: () => wiringRef,
+    });
+    const h = current;
+    listeners.push((_line, entry) => {
+      if (entry) h.wiring.observeSessionEvent(entry.sessionId, entry.event);
+    });
+    const wiringRef: SessionBridgeWiring = createSessionBridgeWiring({
+      routesFilePath: join(dir, "routes.json"),
+      resolveSelector: async () =>
+        ({
+          sessionId: SID,
+          workspacePath: "/repo",
+          title: "修登录",
+          updatedAt: NOW,
+        }) as PetReusableSessionCandidate,
+      directoryExists: async () => true,
+      createRunner: (onTurn) =>
+        createBoundSessionRunner(
+          worker,
+          { getSnapshot: () => ({ sessions: [] }), refreshCatalog: async () => undefined },
+          onTurn,
+        ),
+      health: { check: async () => ({ ok: true }) },
+      describeStatus: async () => "",
+      publish: async (event) => {
+        replies.push(event);
+      },
+      onReplyForwarded: ({ sessionId, turnId, route }) =>
+        h.wiring.recordBoundReply(sessionId, turnId, route),
+      now: () => clock,
+    });
+    const emit = (event: Record<string, unknown>) => {
+      for (const listener of listeners) listener("", { sessionId: SID, event });
+    };
+    const bind = () =>
+      wiringRef.sessionBindExecutor(
+        { action: "enter", sessionSelector: "session-0123456789abcdef0123" },
+        {
+          completionTarget: { channel: "wechat", target: "chat-1" },
+          senderId: "owner-1",
+          isDirectMessage: true,
+        },
+      );
+    return { h, emit, bind, replies };
+  }
+
+  test("listener order: a turn's done is decided after its bound reply is in the outbox", async () => {
+    const { h, emit, bind, replies } = realBridge();
+    expect((await bind()).ok).toBe(true);
+    await h.handler(SID, upsertArgs({ events: ["done"] }));
+    clock = NOW + 1_000;
+    emit({ type: "session_started", runId: "run-1", clientMessageId: "cm-1" });
+    emit({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } });
+    emit({ type: "turn_complete", reason: "completed", text: "改好了", runId: "run-1" });
+    await settle();
+    expect(replies).toHaveLength(1);
+    expect(h.submitted.map((notice) => notice.boundReplyDelivered)).toEqual([true]);
+    expect(h.published).toEqual([]);
+  });
+
+  test("a goal met before turn_complete waits for the run, then for its reply", async () => {
+    const { h, emit, bind, replies } = realBridge();
+    expect((await bind()).ok).toBe(true);
+    await h.handler(SID, upsertArgs({ events: ["done"], scope: "goal" }));
+    clock = NOW + 1_000;
+    emit({ type: "session_started", runId: "run-1", clientMessageId: "cm-1" });
+    emit({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } });
+    emit({ type: "goal_progress", status: "met", goalId: "g-1", runId: "run-1" });
+    await settle();
+    expect(h.submitted).toEqual([]);
+    emit({
+      type: "turn_complete",
+      reason: "completed",
+      completionKind: "goal_control_stop",
+      text: "目标完成",
+      runId: "run-1",
+    });
+    await settle();
+    expect(replies).toHaveLength(1);
+    expect(h.submitted.map((notice) => [notice.dedupeKey, notice.boundReplyDelivered])).toEqual([
+      [`${SID}:goal:g-1`, true],
+    ]);
+    expect(h.published).toEqual([]);
   });
 
   test("a done notice waits for the same run's in-flight reply", async () => {

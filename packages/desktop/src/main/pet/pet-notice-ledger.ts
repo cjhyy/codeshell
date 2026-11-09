@@ -464,6 +464,16 @@ export class PetNoticeLedger {
     return record ? structuredClone(record) : undefined;
   }
 
+  /** The newest retained record with this dedupe key (evicted records are gone). */
+  byDedupeKey(dedupeKey: string): NoticeRecord | undefined {
+    let found: NoticeRecord | undefined;
+    for (const record of this.state.records.values()) {
+      if (record.dedupeKey !== dedupeKey) continue;
+      if (!found || record.createdAt >= found.createdAt) found = record;
+    }
+    return found ? structuredClone(found) : undefined;
+  }
+
   /**
    * Dedupe keys first recorded within the last 7 days, including evicted
    * records. The index stores hashes, so this is a lookup, not a listing.

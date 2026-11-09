@@ -22,6 +22,8 @@ import {
   unpackFacts,
   type NoticeConversation,
   type NoticeImPayload,
+  type NoticePriorDecision,
+  type NoticeSubmitResult,
   type NoticeRouterSettings,
   type NoticeSubmission,
   type NoticeTarget,
@@ -45,7 +47,12 @@ const NO_KEYS: DedupeLookup = { has: () => false };
 const DISPOSED: RouteDecision = { outlet: "drop", reason: "disposed" };
 
 function payloadOf(notice: NoticeSubmission): NoticeImPayload {
-  return { kind: notice.kind, ...(notice.media ? { media: notice.media } : {}) };
+  const nonDirect = notice.facts.nonDirectBody;
+  return {
+    kind: notice.kind,
+    ...(notice.media ? { media: notice.media } : {}),
+    ...(typeof nonDirect === "string" && nonDirect ? { nonDirectBody: nonDirect } : {}),
+  };
 }
 
 interface NoticePlan {
@@ -261,13 +268,34 @@ export class PetNoticeRouter {
 
   /** Route one notice, record the decision, and act on it. */
   async submit(notice: NoticeSubmission): Promise<RouteDecision> {
-    if (this.disposed) return DISPOSED;
+    return (await this.submitWithOutcome(notice)).decision;
+  }
+
+  /** {@link submit}, also reporting whether this submission's IM send was accepted. */
+  async submitWithOutcome(notice: NoticeSubmission): Promise<NoticeSubmitResult> {
+    if (this.disposed) return { decision: DISPOSED };
     if (this.recovered) await this.recovered;
-    if (this.disposed) return DISPOSED;
+    if (this.disposed) return { decision: DISPOSED };
     const body = composeNoticeBody(notice.kind, notice.facts, notice.body);
     const plan = await this.serially(() => this.plan(notice, body));
-    await this.deliver(notice, body, plan);
-    return plan.decision;
+    const sent = await this.deliver(notice, body, plan);
+    return { decision: plan.decision, ...(sent ? { sent } : {}) };
+  }
+
+  /**
+   * What became of an earlier notice with this dedupe key: its decision and
+   * current delivery. Lets a caller that lost its memory (a restart) tell
+   * whether that notice ever reached IM. Undefined before the ledger loads.
+   */
+  priorDecision(dedupeKey: string): NoticePriorDecision | undefined {
+    const record = this.options.ledger?.byDedupeKey(dedupeKey);
+    if (!record) return undefined;
+    const channel = record.delivery?.channel ?? record.decision?.im;
+    return {
+      ...(record.decision ? { decision: record.decision } : {}),
+      ...(record.delivery ? { status: record.delivery.status } : {}),
+      ...(channel !== undefined ? { channel } : {}),
+    };
   }
 
   /**
@@ -586,7 +614,11 @@ export class PetNoticeRouter {
     return { decision, alsoDesktop };
   }
 
-  private async deliver(notice: NoticeSubmission, body: string, plan: NoticePlan): Promise<void> {
+  private async deliver(
+    notice: NoticeSubmission,
+    body: string,
+    plan: NoticePlan,
+  ): Promise<"accepted" | "failed" | "unknown" | undefined> {
     const { decision } = plan;
     const desktopNow =
       decision.outlet === "desktop" || decision.outlet === "both" || plan.alsoDesktop;
@@ -600,7 +632,7 @@ export class PetNoticeRouter {
         this.log("pet.notice.lost", { kind: notice.kind, priority: notice.priority });
       if (decision.outlet === "digest" && !plan.ledgerFailed && !this.disposed)
         this.digest?.schedule();
-      return;
+      return undefined;
     }
     if (desktopNow) this.showDesktop(notice, body);
     const { channel, key } = plan.claim;
@@ -614,6 +646,7 @@ export class PetNoticeRouter {
       payloadOf(notice),
     );
     if (outcome !== "accepted" && !desktopNow) this.showOutcome(notice, body, outcome);
+    return outcome;
   }
 
   /** A failed send shows the notice; a send that may have gone out says so. */

@@ -90,6 +90,12 @@ export interface SessionBridgeWiring {
   deliverSessionReply(input: { sessionId: string; turnId: string; text: string }): Promise<void>;
   /** Settles once this turn's reply is in the outbox; undefined when none is in flight. */
   pendingReply(sessionId: string, turnId: string): Promise<void> | undefined;
+  /**
+   * Settles when the Session's observed run ends; undefined when none is in
+   * flight. The run's reply is then handed to the outbox synchronously, so a
+   * caller that waits on this and then on {@link pendingReply} sees it.
+   */
+  runInFlight(sessionId: string): Promise<void> | undefined;
   /** Downgrade routes that aged out while the app was closed. */
   recoverOnStartup(): Promise<void>;
 }
@@ -204,6 +210,7 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
     routeInbound: (inbound) => bridge.accept(inbound),
     deliverSessionReply,
     pendingReply: (sessionId, turnId) => pendingReplies.get(`${sessionId}\u0000${turnId}`),
+    runInFlight: (sessionId) => runner.runInFlight?.(sessionId),
     recoverOnStartup: async () => {
       await routes.expireStaleBoundRoutes();
     },
@@ -476,6 +483,7 @@ export function createBoundSessionRunner(
     },
     wasInjected: (sessionId, id) => injected.has(`${sessionId}\u0000${id}`),
     runDone: (sessionId) => running.get(sessionId)?.done ?? Promise.resolve(),
+    runInFlight: (sessionId) => running.get(sessionId)?.done,
     queueNextTurn: async (input) => {
       // Core owns serialization; its acknowledgement confirms the successor
       // is queued without waiting for the current or following turn to finish.

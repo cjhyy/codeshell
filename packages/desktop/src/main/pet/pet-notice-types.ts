@@ -1,7 +1,7 @@
 import type { PetLongTaskCompletionTarget } from "@cjhyy/code-shell-pet";
 import type { NoticeAttention, NoticeChannel } from "@cjhyy/code-shell-pet/protocol";
 import type { NoticeFacts } from "./pet-notice-compose.js";
-import type { NoticeRecord, PetNoticeLedger } from "./pet-notice-ledger.js";
+import type { NoticeDeliveryStatus, NoticeRecord, PetNoticeLedger } from "./pet-notice-ledger.js";
 import {
   DEFAULT_MAX_P0_PER_HOUR,
   DEFAULT_MAX_PER_HOUR,
@@ -154,6 +154,23 @@ export type NoticeImSendResult = { accepted: true } | { accepted: false; error: 
 export interface NoticeImPayload {
   kind: string;
   media?: NoticeMedia;
+  /** Send this instead when the owner target on that channel is not a private chat. */
+  nonDirectBody?: string;
+}
+
+/** What one submission did: the routing decision and, when IM was tried, the send. */
+export interface NoticeSubmitResult {
+  decision: RouteDecision;
+  /** The IM send of this submission; absent when nothing was sent now. */
+  sent?: "accepted" | "failed" | "unknown";
+}
+
+/** A dedupe key's earlier record (decision and delivery), e.g. after a restart. */
+export interface NoticePriorDecision {
+  decision?: RouteDecision;
+  status?: NoticeDeliveryStatus;
+  /** The IM channel of the latest claim or queue entry. */
+  channel?: string;
 }
 
 export interface NoticeOutlets {
@@ -185,6 +202,7 @@ export type NoticeLedgerPort = Pick<
   | "recoverOnStartup"
   | "expireQueued"
   | "get"
+  | "byDedupeKey"
 >;
 
 /**

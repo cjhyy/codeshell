@@ -9,6 +9,11 @@ export interface NoticeFacts {
   options?: NoticeDraftOption[];
   /** Reply code for answering a blocked decision over IM (PetImDecisions supplies it). */
   code?: string;
+  /**
+   * Text for an owner target that is not a confirmed private chat: no
+   * question, options or code. Without it the notice has nothing private.
+   */
+  nonDirectBody?: string;
 }
 
 /** One held notice as the digest lists it. */

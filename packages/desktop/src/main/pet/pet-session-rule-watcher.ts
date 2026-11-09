@@ -16,7 +16,10 @@ export interface NoticeDraft {
   ruleIds: string[];
   /** True when only the all-sessions system rule matched. */
   requiresAway?: boolean;
-  /** done: the core run (or fallback key) it closed, to pair it with a bound reply. */
+  /**
+   * done: the core run it closed, to pair it with that run's bound reply.
+   * Absent when core gave no run id: such a done is never suppressed.
+   */
   runId?: string;
   requestId?: string;
   expiresAt?: number;
@@ -202,7 +205,21 @@ export class PetSessionRuleWatcher {
 
   /** The run this event belongs to; a timestamp only when core gave no run id. */
   private runKey(event: Record<string, unknown>, state: SessionTurnState, at: number): string {
-    return nonEmptyString(event.runId) ?? state.runId ?? String(at);
+    return this.coreRunId(event, state) ?? String(at);
+  }
+
+  /** The core run id, when core gave one (never the timestamp fallback). */
+  private coreRunId(event: Record<string, unknown>, state: SessionTurnState): string | undefined {
+    return nonEmptyString(event.runId) ?? state.runId;
+  }
+
+  /** `runId` for a done draft: only a real core run id pairs with a bound reply. */
+  private runField(
+    event: Record<string, unknown>,
+    state: SessionTurnState,
+  ): Pick<NoticeDraft, "runId"> {
+    const runId = this.coreRunId(event, state);
+    return runId !== undefined ? { runId } : {};
   }
 
   private async applySessionEvent(sessionId: string, value: unknown): Promise<void> {
@@ -320,7 +337,7 @@ export class PetSessionRuleWatcher {
         kind: "session.done",
         priority: "P1",
         dedupeKey: `${sessionId}:turn:${run}`,
-        runId: run,
+        ...this.runField(event, state),
         facts: summary ? { summary } : {},
       },
       { spend: true, includeSystem: !state.doneInTurn },
@@ -349,7 +366,7 @@ export class PetSessionRuleWatcher {
           kind: "session.done",
           priority: "P1",
           dedupeKey: `${sessionId}:goal:${goalId}`,
-          runId: run,
+          ...this.runField(event, state),
           facts: {},
         },
         { spend: true },
