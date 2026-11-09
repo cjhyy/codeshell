@@ -12,6 +12,7 @@ import {
   PetAttentionPolicy,
   PetNoticeRouter,
   type NoticeImSendResult,
+  type NoticeConversation,
   type NoticeRouterSettings,
   type NoticeSubmission,
   type NoticeTarget,
@@ -159,19 +160,25 @@ interface Harness {
   router: PetNoticeRouter;
   desktop: Array<{ kind: string; body: string }>;
   im: ImCall[];
+  logs: Array<{ event: string; data: Record<string, unknown> }>;
   state: {
     present: boolean;
     channels: Record<string, "ready" | "unknown" | "unavailable">;
     lastInbound?: string;
     settings: NoticeRouterSettings;
-    imResult: (call: ImCall) => NoticeImSendResult;
+    imResult: (call: ImCall) => NoticeImSendResult | Promise<NoticeImSendResult>;
     idempotent: Set<string>;
     pending: Set<string>;
   };
 }
 
 function harness(
-  options: { now?: number; ledger?: PetNoticeLedger; clock?: FakeClock; failLedger?: boolean } = {},
+  options: {
+    now?: number;
+    ledger?: PetNoticeLedger;
+    clock?: FakeClock;
+    failLedger?: "record" | "claim";
+  } = {},
 ): Harness {
   const clock = options.clock ?? new FakeClock();
   if (!options.clock) clock.now = options.now ?? NOON;
@@ -184,6 +191,7 @@ function harness(
     });
   const desktop: Harness["desktop"] = [];
   const im: ImCall[] = [];
+  const logs: Harness["logs"] = [];
   const state: Harness["state"] = {
     present: false,
     channels: { lark: "ready", telegram: "ready" },
@@ -195,7 +203,7 @@ function harness(
   };
   const ledgerPort = options.failLedger
     ? Object.assign(Object.create(ledger) as PetNoticeLedger, {
-        record: () => Promise.reject(new Error("disk full")),
+        [options.failLedger]: () => Promise.reject(new Error("disk full")),
       })
     : ledger;
   const router = new PetNoticeRouter({
@@ -231,9 +239,9 @@ function harness(
         return state.imResult(call);
       },
     },
-    log: () => {},
+    log: (event, data) => logs.push({ event, data }),
   });
-  return { clock, ledger, router, desktop, im, state };
+  return { clock, ledger, router, desktop, im, logs, state };
 }
 
 let seq = 0;
@@ -256,6 +264,23 @@ function notice(overrides: Partial<NoticeSubmission> = {}): NoticeSubmission {
 function key(id: string): string {
   return createHash("sha256").update(id).digest("hex").slice(0, 24);
 }
+
+/** Let real ledger I/O progress until `ready()` holds. */
+async function until(ready: () => boolean): Promise<void> {
+  const deadline = Date.now() + 5_000;
+  while (!ready()) {
+    if (Date.now() > deadline) throw new Error("condition never held");
+    await new Promise((resolve) => setTimeout(resolve, 1));
+  }
+}
+
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => (resolve = done));
+  return { promise, resolve };
+}
+
+const DM: NoticeConversation = { target: "dm-owner", isDirectMessage: true };
 
 function only<T>(values: T[]): T {
   expect(values).toHaveLength(1);
@@ -347,16 +372,18 @@ describe("PetNoticeRouter.submit", () => {
       "queued",
     ]);
 
-    const replay = await h.router.replayPending("lark");
+    const replay = await h.router.replayPending("lark", DM);
     const kept = only(replay);
-    expect(kept.facts.title).toBe("Deploy");
+    expect(Object.keys(kept).sort()).toEqual(["body", "id", "kind", "sessionId", "title"]);
+    expect(kept).toMatchObject({ kind: "session.blocked", sessionId: "s-open", title: "Deploy" });
     expect(kept.body).toBe(
       "「Deploy」需要你决定：Which region?\n1. us\n2. eu（推荐）\n回复：回答 K7 序号 / 跳过 K7 / 等待 K7",
     );
-    expect(kept.facts).not.toHaveProperty("target");
     // The resolved one is revoked; the kept one stays queued until markReplayed.
     expect(only(h.ledger.queued()).id).toBe(kept.id);
-    expect(await h.router.replayPending("telegram")).toEqual([]);
+    expect(await h.router.replayPending("telegram", DM)).toEqual([]);
+    // A second inbound message meanwhile does not get the same notice again.
+    expect(await h.router.replayPending("lark", DM)).toEqual([]);
     await h.router.markReplayed([kept.id]);
     expect(h.ledger.queued()).toEqual([]);
   });
@@ -381,7 +408,7 @@ describe("PetNoticeRouter.submit", () => {
       wasSessionViewedSince: () => true,
       log: () => {},
     });
-    expect(await viewed.replayPending("lark")).toEqual([]);
+    expect(await viewed.replayPending("lark", { target: "c1" })).toEqual([]);
     expect(h.ledger.queued()).toEqual([]);
   });
 
@@ -429,6 +456,8 @@ describe("PetNoticeRouter.submit", () => {
     expect(thirteenth).toMatchObject({ outlet: "digest", reason: "p0-cap" });
     expect(h.im).toHaveLength(12);
     expect(h.ledger.held()).toHaveLength(1);
+    // A held decision request is still put in front of the owner right away.
+    expect(h.desktop).toHaveLength(1);
   });
 
   test("a second P1 for the same Session within the merge window is held", async () => {
@@ -451,7 +480,7 @@ describe("PetNoticeRouter.submit", () => {
   });
 
   test("a ledger write failure still puts a P0 on the desktop", async () => {
-    const h = harness({ failLedger: true });
+    const h = harness({ failLedger: "record" });
     const decision = await h.router.submit(
       notice({
         kind: "session.blocked",
@@ -477,6 +506,123 @@ describe("PetNoticeRouter.submit", () => {
       notice({ channel: "lark", target: { kind: "route", route } }),
     );
     expect(named).toMatchObject({ outlet: "both", im: "telegram" });
+  });
+  test("a claim failure after a successful record falls back to the desktop", async () => {
+    const h = harness({ failLedger: "claim" });
+    const p0 = await h.router.submit(
+      notice({ kind: "session.blocked", priority: "P0", facts: { title: "Gate" } }),
+    );
+    expect(p0.outlet).toBe("im");
+    const p1 = await h.router.submit(notice({ facts: { title: "Done" } }));
+    expect(p1.outlet).toBe("im");
+    expect(h.im).toHaveLength(0);
+    expect(h.desktop.map((entry) => entry.body)).toEqual(["「Gate」需要你决定", "「Done」做完了"]);
+    expect(h.logs.filter((log) => log.event === "pet.notice.claim_failed")).toHaveLength(2);
+  });
+
+  test("a P1 lost to a ledger failure is logged", async () => {
+    const h = harness({ failLedger: "record" });
+    h.state.settings = { quietHours: { start: "00:00", end: "23:59" } };
+    const decision = await h.router.submit(notice());
+    expect(decision.outlet).toBe("digest");
+    expect(h.desktop).toHaveLength(0);
+    expect(h.logs.some((log) => log.event === "pet.notice.lost")).toBe(true);
+  });
+
+  test("a hanging IM send times out, shows the desktop and queues", async () => {
+    const h = harness();
+    h.state.imResult = () => new Promise<NoticeImSendResult>(() => {});
+    const pending = h.router.submit(notice({ facts: { title: "Slow" } }));
+    await until(() => h.im.length === 1);
+    expect(h.desktop).toHaveLength(0);
+    h.clock.advance(30_000);
+    expect(await pending).toMatchObject({ outlet: "im", im: "lark" });
+    expect(only(h.desktop).body).toBe("「Slow」做完了");
+    expect(only(h.ledger.queued()).delivery).toMatchObject({ status: "queued", error: "timeout" });
+  });
+
+  test("merging a named-channel notice spares only the IM", async () => {
+    const h = harness();
+    h.state.present = true;
+    await h.router.submit(notice({ sessionId: "s-named", channel: "telegram" }));
+    h.clock.advance(MINUTE);
+    const merged = await h.router.submit(notice({ sessionId: "s-named", channel: "telegram" }));
+    expect(merged).toMatchObject({ outlet: "digest", reason: "merge-window" });
+    expect(h.im).toHaveLength(1);
+    expect(h.desktop).toHaveLength(2);
+  });
+
+  test("replay matches the stored route and holds handed-out notices until released", async () => {
+    const h = harness();
+    h.state.channels.lark = "unavailable";
+    const routeA = {
+      kind: "im-gateway" as const,
+      channel: "lark",
+      target: "chat-A",
+      senderId: "u1",
+    };
+    const routeB = { kind: "im-gateway" as const, channel: "lark", target: "chat-B" };
+    await h.router.submit(
+      notice({ facts: { title: "A" }, target: { kind: "route", route: routeA } }),
+    );
+    await h.router.submit(notice({ facts: { title: "Owner" }, channel: "lark" }));
+    await h.router.submit(
+      notice({ facts: { title: "B" }, target: { kind: "route", route: routeB } }),
+    );
+    expect(h.ledger.queued()).toHaveLength(3);
+
+    const titles = async (conversation: NoticeConversation) =>
+      (await h.router.replayPending("lark", conversation)).map((entry) => entry.title);
+    expect(await titles({ target: "chat-A", senderId: "u2" })).toEqual([]);
+    expect(await titles({ target: "chat-A", senderId: "u1" })).toEqual(["A"]);
+    const owner = await h.router.replayPending("lark", DM);
+    expect(owner.map((entry) => entry.title)).toEqual(["Owner"]);
+    expect(await titles(DM)).toEqual([]);
+    h.router.releaseReplay(owner.map((entry) => entry.id));
+    expect(await titles(DM)).toEqual(["Owner"]);
+    expect(await titles({ target: "chat-B", senderId: "anyone" })).toEqual(["B"]);
+  });
+
+  test("route-target held notices get their own digest on that route, in arrival order", async () => {
+    const h = harness({ now: Date.UTC(2026, 10, 9, 15, 0, 0) });
+    h.state.settings = { quietHours: { start: "22:00", end: "07:00" } };
+    const route = { kind: "im-gateway" as const, channel: "telegram", target: "chat-9" };
+    const routed = { kind: "route" as const, route };
+    await h.router.submit(notice({ facts: { title: "R1" }, target: routed }));
+    await h.router.submit(notice({ facts: { title: "Owner" } }));
+    await h.router.submit(notice({ facts: { title: "R2" }, target: routed }));
+    await h.router.submit(
+      notice({ kind: "session.failed", facts: { title: "R3" }, target: routed }),
+    );
+    h.clock.advance(Date.UTC(2026, 10, 9, 23, 0, 0) - h.clock.now);
+    await h.router.flushDigest();
+    expect(h.im).toHaveLength(2);
+    const [toRoute, toOwner] = [
+      h.im.find((call) => call.channel === "telegram")!,
+      h.im.find((call) => call.channel === "lark")!,
+    ];
+    expect(toRoute.target).toEqual(routed);
+    expect(toRoute.body).toBe("你不在时：\n- 「R1」做完了\n- 「R2」做完了\n- 「R3」没做完");
+    expect(toOwner).toMatchObject({
+      target: { kind: "owner" },
+      body: "你不在时：\n- 「Owner」做完了",
+    });
+    expect(h.ledger.held()).toEqual([]);
+  });
+
+  test("after dispose submissions drop and in-flight sends settle without the desktop", async () => {
+    const h = harness();
+    const send = deferred<NoticeImSendResult>();
+    h.state.imResult = () => send.promise;
+    const pending = h.router.submit(notice());
+    await until(() => h.im.length === 1);
+    h.router.dispose();
+    send.resolve({ accepted: false, error: "gateway down" });
+    expect((await pending).outlet).toBe("im");
+    expect(h.desktop).toHaveLength(0);
+    expect(only(h.ledger.queued()).delivery?.status).toBe("queued");
+    expect(await h.router.submit(notice())).toEqual({ outlet: "drop", reason: "disposed" });
+    expect(h.im).toHaveLength(1);
   });
 });
 
@@ -554,5 +700,27 @@ describe("PetNoticeRouter.recover", () => {
     await next.router.recover();
     expect(next.clock.pendingAt()).toEqual([Date.UTC(2026, 10, 9, 23, 0, 0)]);
     next.router.dispose();
+  });
+
+  test("recovery concurrent with an in-flight submit never sends twice", async () => {
+    const { clock, record } = await crashedClaim("lark");
+    clock.advance(5 * MINUTE);
+    const ledger = reopened(clock);
+    const h = harness({ clock, ledger });
+    const send = deferred<NoticeImSendResult>();
+    h.state.imResult = (call) =>
+      call.body === "「Crash」做完了" ? { accepted: true } : send.promise;
+    const pending = h.router.submit(notice({ facts: { title: "Live" } }));
+    await until(() => h.im.length === 1);
+    const recovering = h.router.recover();
+    expect(h.router.recover()).toBe(recovering);
+    await until(() => h.im.length === 2);
+    send.resolve({ accepted: true });
+    await Promise.all([pending, recovering]);
+    await h.router.recover();
+    expect(h.im.map((call) => call.body)).toEqual(["「Live」做完了", "「Crash」做完了"]);
+    expect(ledger.get(record.id)?.delivery?.status).toBe("accepted");
+    expect(h.logs.filter((log) => log.event === "pet.notice.settle_failed")).toEqual([]);
+    expect(ledger.queued()).toEqual([]);
   });
 });

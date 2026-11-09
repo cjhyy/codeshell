@@ -64,6 +64,8 @@ export type RouteReason =
   | "hourly-cap"
   /** Router-only: a P1 for a Session that already got an IM within the merge window. */
   | "merge-window"
+  /** Router-only: the router was disposed; nothing was recorded or sent. */
+  | "disposed"
   | "desktop-channel"
   | "named-im"
   | "im-unbound"

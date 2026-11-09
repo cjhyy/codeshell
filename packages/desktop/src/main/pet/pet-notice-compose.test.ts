@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { composeDigestBody, composeNoticeBody } from "./pet-notice-compose";
+import { composeDigestBody, composeNoticeBody, noticeLine } from "./pet-notice-compose";
 
 describe("composeNoticeBody", () => {
   test("templates each kind as plain text and prefers a pre-written body", () => {
@@ -25,6 +25,16 @@ describe("composeNoticeBody", () => {
     expect(composeNoticeBody("session.blocked", { ...facts, code: "Q3" })).toContain(
       "回复：回答 Q3 序号 / 跳过 Q3 / 等待 Q3",
     );
+  });
+
+  test("strips control, bidi and zero-width characters", () => {
+    expect(composeNoticeBody("session.done", {}, "\u202eabc\u0007\u200b\r\nnext\tline\u2066")).toBe(
+      "abc\nnext line",
+    );
+    expect(
+      composeNoticeBody("session.failed", { title: "Bu\u200bild\u202e", error: "a\u2028b" }),
+    ).toBe("「Build」没做完：ab");
+    expect(noticeLine("\u200b\u200f")).toBeUndefined();
   });
 
   test("caps session-provided text", () => {

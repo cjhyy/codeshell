@@ -472,18 +472,24 @@ export class PetNoticeLedger {
 
   /** Records waiting for an IM channel to come back, oldest first. */
   queued(): NoticeRecord[] {
-    return [...this.state.records.values()]
-      .filter((record) => record.delivery?.status === "queued")
-      .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id))
-      .map((record) => structuredClone(record));
+    return (
+      [...this.state.records.values()]
+        .filter((record) => record.delivery?.status === "queued")
+        // Stable sort over insertion (arrival) order; ids are random, so never a tiebreak.
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .map((record) => structuredClone(record))
+    );
   }
 
   /** Records held for the next digest, oldest first. */
   held(): NoticeRecord[] {
-    return [...this.state.records.values()]
-      .filter((record) => record.delivery?.status === "held")
-      .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id))
-      .map((record) => structuredClone(record));
+    return (
+      [...this.state.records.values()]
+        .filter((record) => record.delivery?.status === "held")
+        // Stable sort over insertion (arrival) order; ids are random, so never a tiebreak.
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .map((record) => structuredClone(record))
+    );
   }
 
   /**

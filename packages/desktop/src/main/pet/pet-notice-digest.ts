@@ -8,6 +8,7 @@ import {
   type RouteDecision,
   type RouteState,
 } from "./pet-notice-policy.js";
+import { errorText, targetKey, type NoticeTarget } from "./pet-notice-types.js";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -130,10 +131,11 @@ export interface NoticeDigestOptions {
     mergeWindowMs: number;
     timezoneOffsetMin: number;
   };
-  /** A held record's facts without the router's bookkeeping. */
-  factsOf: (record: NoticeRecord) => NoticeFacts;
-  /** Route the digest itself (P2, channel auto, to the owner). */
+  /** A held record's facts and stored target. */
+  unpack: (record: NoticeRecord) => { facts: NoticeFacts; target: NoticeTarget };
+  /** Route one digest (P2, channel auto) to `target`. */
   submit: (digest: {
+    target: NoticeTarget;
     dedupeKey: string;
     ruleIds: string[];
     body: string;
@@ -218,18 +220,31 @@ export class NoticeDigest {
       this.timer.arm(at);
       return;
     }
+    // One digest per destination: the owner's, and one per IM conversation a
+    // held notice came from, so a group-chat notice is never rerouted to the owner.
+    const groups = new Map<string, { target: NoticeTarget; members: NoticeRecord[] }>();
+    for (const record of members) {
+      const { target } = this.options.unpack(record);
+      const key = targetKey(target);
+      const group = groups.get(key) ?? { target, members: [] };
+      group.members.push(record);
+      groups.set(key, group);
+    }
+    const hour = localHourIndex(now, this.options.window(now).timezoneOffsetMin);
+    for (const group of groups.values()) await this.send(group.target, group.members, hour);
+  }
+
+  private async send(target: NoticeTarget, members: NoticeRecord[], hour: number): Promise<void> {
     const ids = members.map((record) => record.id);
     const decision = await this.options.submit({
-      dedupeKey: digestDedupeKey(
-        localHourIndex(now, this.options.window(now).timezoneOffsetMin),
-        ids,
-      ),
+      target,
+      dedupeKey: digestDedupeKey(hour, ids),
       ruleIds: [...new Set(members.flatMap((record) => record.ruleIds))].slice(
         0,
         MAX_DIGEST_RULE_IDS,
       ),
       body: composeDigestBody(
-        members.map((record) => ({ kind: record.kind, facts: this.options.factsOf(record) })),
+        members.map((record) => ({ kind: record.kind, facts: this.options.unpack(record).facts })),
       ),
       count: members.length,
     });
@@ -237,8 +252,4 @@ export class NoticeDigest {
     if (decision.outlet === "digest") return;
     for (const id of ids) await this.options.settle(id, "revoked", "digested");
   }
-}
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

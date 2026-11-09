@@ -1,217 +1,58 @@
-import type { PetLongTaskCompletionTarget } from "@cjhyy/code-shell-pet";
-import type { NoticeAttention, NoticeChannel } from "@cjhyy/code-shell-pet/protocol";
 import { dlog } from "../desktop-logger.js";
-import { composeNoticeBody, type NoticeFacts } from "./pet-notice-compose.js";
+import { composeNoticeBody, MAX_NOTICE_BODY, noticeLine } from "./pet-notice-compose.js";
 import { NoticeDigest } from "./pet-notice-digest.js";
-import type { NoticeRecord, PetNoticeLedger } from "./pet-notice-ledger.js";
+import type { NoticeRecord, NoticeSettleStatus } from "./pet-notice-ledger.js";
 import {
-  DEFAULT_MAX_P0_PER_HOUR,
-  DEFAULT_MAX_PER_HOUR,
   hostTimezoneOffsetMin,
   route,
   type DedupeLookup,
   type ImReadiness,
-  type NoticePriority,
   type RouteDecision,
-  type RouteState,
 } from "./pet-notice-policy.js";
+import {
+  errorText,
+  imTarget,
+  matchesConversation,
+  noticeFromRecord,
+  normalizeSettings,
+  pinToRoute,
+  sendWithTimeout,
+  staleReason,
+  unpackFacts,
+  type NoticeConversation,
+  type NoticeRouterSettings,
+  type NoticeSubmission,
+  type NoticeTarget,
+  type PetAttentionEvent,
+  type PetAttentionSnapshot,
+  type PetNoticeRouterOptions,
+  type PetPeek,
+  type ReplayedNotice,
+} from "./pet-notice-types.js";
 import type {
   DesktopPendingDecision,
-  DesktopPetProjectionEvent,
   DesktopPetProjectionSnapshot,
-  PetNavigationRequest,
 } from "./pet-state-aggregator.js";
 
-export type { NoticeFacts } from "./pet-notice-compose.js";
+export type * from "./pet-notice-types.js";
 
-export interface PetPeek {
-  id: string;
-  title: string;
-  detail: string;
-  receiptKeys: string[];
-  action:
-    | { type: "open_session"; target: PetNavigationRequest }
-    | { type: "open_pet_pending"; count: number };
-}
-
-export type PetAttentionEvent =
-  | { kind: "count"; surfaceablePendingCount: number }
-  | { kind: "peek"; peek: PetPeek };
-
-export interface PetAttentionSnapshot {
-  surfaceablePendingCount: number;
-}
-
-export interface PetAttentionOptions {
-  source: {
-    getSnapshot(): DesktopPetProjectionSnapshot;
-    subscribe(listener: (event: DesktopPetProjectionEvent) => void): () => void;
-  };
-  receipts: { has(key: string): boolean; mark(key: string, state?: string): void };
-  now?: () => number;
-  setTimeout?: (callback: () => void, delay: number) => unknown;
-  clearTimeout?: (timer: unknown) => void;
-  graceMs?: number;
-  burstMs?: number;
-}
-
-function receiptKey(pending: DesktopPendingDecision): string {
-  return `local-user\u0000${pending.agentSessionId}\u0000${pending.requestId}\u0000pending`;
-}
-
-/** Where an IM notice is addressed: the IM conversation it came from, or the owner. */
-export type NoticeTarget =
-  | { kind: "route"; route: PetLongTaskCompletionTarget }
-  | { kind: "owner" };
-
-/** One notice handed to {@link PetNoticeRouter.submit}. */
-export interface NoticeSubmission {
-  kind: "session.done" | "session.failed" | "session.blocked" | "digest" | (string & {});
-  priority: NoticePriority;
-  dedupeKey: string;
-  sessionId?: string;
-  ruleIds: string[];
-  /** Only the all-sessions system rule matched: notify only while the owner is away. */
-  requiresAway?: boolean;
-  requestId?: string;
-  expiresAt?: number;
-  facts: NoticeFacts;
-  attention: NoticeAttention;
-  channel: NoticeChannel;
-  target: NoticeTarget;
-  /** Pre-written text (e.g. Mimi's closure message); otherwise templated from `facts`. */
-  body?: string;
-}
-
-export interface NoticeRouterSettings {
-  quietHours: RouteState["quietHours"];
-  maxPerHour?: number;
-  maxP0PerHour?: number;
-  /** A P1 for a Session that got an IM within this window is held for the digest. */
-  mergeWindowSec?: number;
-}
-
-export type NoticeImSendResult = { accepted: true } | { accepted: false; error: string };
-
-export interface NoticeOutlets {
-  desktop(notice: NoticeSubmission, body: string): void;
-  im(
-    channel: string,
-    target: NoticeTarget,
-    body: string,
-    idempotencyKey: string | undefined,
-  ): Promise<NoticeImSendResult>;
-}
-
-/** The ledger surface the router uses; {@link PetNoticeLedger} satisfies it. */
-export type NoticeLedgerPort = Pick<
-  PetNoticeLedger,
-  | "load"
-  | "record"
-  | "claim"
-  | "settle"
-  | "countsThisHour"
-  | "seenDedupeKeys"
-  | "queued"
-  | "held"
-  | "recoverOnStartup"
-  | "expireQueued"
->;
-
-/** A queued notice handed back for Mimi's next turn on that channel. */
-export interface ReplayedNotice {
-  id: string;
-  kind: string;
-  facts: NoticeFacts;
-  body: string;
-}
-
-export interface PetNoticeRouterOptions extends PetAttentionOptions {
-  /** Without a ledger the router cannot dedupe, cap or claim, so it never sends IM. */
-  ledger?: NoticeLedgerPort;
-  /** Defaults to "present" (desktop) when absent. */
-  presence?: { isPresent(): boolean };
-  settings?: () => NoticeRouterSettings;
-  /** Bound IM channels in display order. */
-  imChannels?: () => Readonly<Record<string, ImReadiness>>;
-  lastInboundChannel?: () => string | undefined;
-  outlets?: NoticeOutlets;
-  /** The channel's gateway collapses resends that carry the same idempotency key. */
-  supportsIdempotentSend?: (channel: string) => boolean;
-  isDecisionStillPending?: (sessionId: string, requestId: string) => boolean;
-  wasSessionViewedSince?: (sessionId: string, ms: number) => boolean;
-  /** Owner's offset east of UTC at an instant; defaults to the host's (DST-aware). */
-  timezoneOffsetMin?: (ms: number) => number;
-  log?: (event: string, data: Record<string, unknown>) => void;
-}
-
-const DEFAULT_MERGE_WINDOW_SEC = 600;
+const DEFAULT_IM_TIMEOUT_MS = 30_000;
 const MAX_RULE_IDS = 100;
 const NO_KEYS: DedupeLookup = { has: () => false };
+const DISPOSED: RouteDecision = { outlet: "drop", reason: "disposed" };
 
 interface NoticePlan {
   decision: RouteDecision;
+  /** Show on the desktop even though the decision is not desktop/both (P0 held, merged `both`). */
+  alsoDesktop: boolean;
   recordId?: string;
   claim?: { channel: string; key: string };
   /** The decision could not be recorded or claimed; only desktop delivery is safe. */
   ledgerFailed: boolean;
 }
 
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === "object" && !Array.isArray(value);
-}
-
-/** The ledger keeps the target beside the facts so restart recovery can resend. */
-function unpackFacts(raw: unknown): { facts: NoticeFacts; target: NoticeTarget } {
-  if (!isObject(raw)) return { facts: {}, target: { kind: "owner" } };
-  const { target, ...facts } = raw;
-  const route = isObject(target) && target.kind === "route" ? target.route : undefined;
-  return {
-    facts: facts as NoticeFacts,
-    target:
-      isObject(route) && typeof route.channel === "string" && typeof route.target === "string"
-        ? { kind: "route", route: route as unknown as PetLongTaskCompletionTarget }
-        : { kind: "owner" },
-  };
-}
-
-/** The IM address for `channel`: the origin route only when it lives on that channel. */
-function imTarget(target: NoticeTarget, channel: string): NoticeTarget {
-  return target.kind === "route" && target.route.channel === channel ? target : { kind: "owner" };
-}
-
-/**
- * A notice from an IM conversation goes back to that conversation's channel
- * or waits for it; it never jumps to a different IM channel.
- */
-function pinToRoute(decision: RouteDecision, channel: string): RouteDecision {
-  const wantsIm =
-    decision.outlet === "im" ||
-    decision.outlet === "both" ||
-    decision.queued === true ||
-    decision.reason === "no-im-available";
-  if (!wantsIm || decision.im === channel) return decision;
-  return { outlet: "desktop", im: channel, queued: true, reason: "im-unavailable-queued" };
-}
-
-function noticeFromRecord(record: NoticeRecord): NoticeSubmission {
-  const { facts, target } = unpackFacts(record.facts);
-  return {
-    kind: record.kind,
-    priority: record.priority,
-    dedupeKey: record.dedupeKey,
-    ...(record.sessionId !== undefined ? { sessionId: record.sessionId } : {}),
-    ...(record.requestId !== undefined ? { requestId: record.requestId } : {}),
-    ruleIds: record.ruleIds,
-    facts,
-    attention: "always",
-    channel: "desktop",
-    target,
-  };
+function receiptKey(pending: DesktopPendingDecision): string {
+  return `local-user\u0000${pending.agentSessionId}\u0000${pending.requestId}\u0000pending`;
 }
 
 /**
@@ -241,7 +82,12 @@ export class PetNoticeRouter {
   private readonly digest?: NoticeDigest;
   /** Latest IM claim per Session, for the P1 merge window (in memory only). */
   private readonly lastImSendAt = new Map<string, number>();
+  /** Records this process is sending right now; startup recovery must not resend them. */
+  private readonly sending = new Set<string>();
+  /** Records handed to a turn by replayPending and not yet marked or released. */
+  private readonly replaying = new Set<string>();
   private decisionQueue: Promise<unknown> = Promise.resolve();
+  private recovered?: Promise<void>;
   private disposed = false;
 
   constructor(private readonly options: PetNoticeRouterOptions) {
@@ -267,7 +113,7 @@ export class PetNoticeRouter {
             timezoneOffsetMin: this.offset(now),
           };
         },
-        factsOf: (record) => unpackFacts(record.facts).facts,
+        unpack: (record) => unpackFacts(record.facts),
         submit: (digest) =>
           this.submit({
             kind: "digest",
@@ -277,7 +123,7 @@ export class PetNoticeRouter {
             facts: { title: "你不在时", summary: `${digest.count} 条` },
             attention: "always",
             channel: "auto",
-            target: { kind: "owner" },
+            target: digest.target,
             body: digest.body,
           }),
         settle: (id, status, error) => this.settleQuietly(id, status, error),
@@ -408,6 +254,9 @@ export class PetNoticeRouter {
 
   /** Route one notice, record the decision, and act on it. */
   async submit(notice: NoticeSubmission): Promise<RouteDecision> {
+    if (this.disposed) return DISPOSED;
+    if (this.recovered) await this.recovered;
+    if (this.disposed) return DISPOSED;
     const body = composeNoticeBody(notice.kind, notice.facts, notice.body);
     const plan = await this.serially(() => this.plan(notice, body));
     await this.deliver(notice, body, plan);
@@ -415,39 +264,30 @@ export class PetNoticeRouter {
   }
 
   /**
-   * After a restart: resend young claims once on channels that collapse
-   * duplicates (same key, same body), mark the rest `unknown` with a desktop
-   * note, expire stale queued notices, and re-arm the digest. Never passes
-   * `manualRetry`.
+   * After a restart, once (later calls share the first run): resend young
+   * claims on channels that collapse duplicates (same key, same body), mark
+   * the rest `unknown` with a desktop note, expire stale queued notices, and
+   * re-arm the digest. Never passes `manualRetry`; skips claims this process
+   * is sending itself.
    */
-  async recover(): Promise<void> {
-    const ledger = this.options.ledger;
-    if (!ledger) return;
-    const now = this.now();
-    let resend: NoticeRecord[];
-    try {
-      resend = await ledger.recoverOnStartup(now);
-    } catch (error) {
-      this.log("pet.notice.recover_failed", { error: errorText(error) });
-      return;
-    }
-    for (const record of resend) await this.recoverClaim(record);
-    try {
-      await ledger.expireQueued(now);
-    } catch (error) {
-      this.log("pet.notice.expire_failed", { error: errorText(error) });
-    }
-    this.scheduleDigest();
+  recover(): Promise<void> {
+    this.recovered ??= this.runRecover();
+    return this.recovered;
   }
 
   /**
-   * Queued notices for `channel`, for the owner's next inbound message there.
-   * Stale ones (decision resolved, expired, or already seen on the desktop)
-   * are revoked; the rest stay queued until {@link markReplayed}.
+   * Queued notices for the owner's next inbound message on `channel` in
+   * `conversation`. Stale ones (decision resolved, expired, already seen on
+   * the desktop) are revoked. The rest stay queued and are withheld from
+   * other calls until {@link markReplayed} or {@link releaseReplay}.
    */
-  async replayPending(channel: string): Promise<ReplayedNotice[]> {
+  async replayPending(
+    channel: string,
+    conversation: NoticeConversation,
+  ): Promise<ReplayedNotice[]> {
     const ledger = this.options.ledger;
-    if (!ledger) return [];
+    if (!ledger || this.disposed) return [];
+    if (this.recovered) await this.recovered;
     const now = this.now();
     try {
       await ledger.expireQueued(now);
@@ -456,18 +296,22 @@ export class PetNoticeRouter {
     }
     const replay: ReplayedNotice[] = [];
     for (const record of ledger.queued()) {
-      if (record.delivery?.channel !== channel) continue;
-      const stale = this.staleReason(record, now);
-      const { facts } = unpackFacts(record.facts);
+      if (record.delivery?.channel !== channel || this.replaying.has(record.id)) continue;
+      const { facts, target } = unpackFacts(record.facts);
+      if (!matchesConversation(target, channel, conversation)) continue;
+      const stale = staleReason(record, now, this.options);
       if (stale) {
         await this.settleQuietly(record.id, "revoked", stale);
         continue;
       }
+      this.replaying.add(record.id);
+      const title = noticeLine(facts.title);
       replay.push({
         id: record.id,
         kind: record.kind,
-        facts,
-        body: record.body ?? composeNoticeBody(record.kind, facts),
+        ...(record.sessionId !== undefined ? { sessionId: record.sessionId } : {}),
+        ...(title !== undefined ? { title } : {}),
+        body: (record.body ?? composeNoticeBody(record.kind, facts)).slice(0, MAX_NOTICE_BODY),
       });
     }
     return replay;
@@ -475,18 +319,50 @@ export class PetNoticeRouter {
 
   /** The replayed notices reached Mimi's turn; settle them for good. */
   async markReplayed(ids: readonly string[]): Promise<void> {
-    for (const id of ids) await this.settleQuietly(id, "revoked", "replayed-in-turn");
+    for (const id of ids) {
+      await this.settleQuietly(id, "revoked", "replayed-in-turn");
+      this.replaying.delete(id);
+    }
   }
 
-  /** Send the held notices as one digest if sending is allowed now; otherwise re-arm. */
-  flushDigest(): Promise<void> {
-    return this.digest?.flush() ?? Promise.resolve();
+  /** The turn did not take them after all; let the next inbound message replay them. */
+  releaseReplay(ids: readonly string[]): void {
+    for (const id of ids) this.replaying.delete(id);
   }
 
+  /** Send the held notices as digests if sending is allowed now; otherwise re-arm. */
+  async flushDigest(): Promise<void> {
+    if (this.recovered) await this.recovered;
+    await this.digest?.flush();
+  }
+
+  /** New submissions are dropped; in-flight sends still settle but show nothing. */
   dispose(): void {
     this.disposed = true;
     this.digest?.dispose();
     this.stop();
+  }
+
+  private async runRecover(): Promise<void> {
+    const ledger = this.options.ledger;
+    if (!ledger || this.disposed) return;
+    const now = this.now();
+    let resend: NoticeRecord[];
+    try {
+      resend = await ledger.recoverOnStartup(now);
+    } catch (error) {
+      this.log("pet.notice.recover_failed", { error: errorText(error) });
+      return;
+    }
+    for (const record of resend) {
+      if (!this.sending.has(record.id)) await this.recoverClaim(record);
+    }
+    try {
+      await ledger.expireQueued(now);
+    } catch (error) {
+      this.log("pet.notice.expire_failed", { error: errorText(error) });
+    }
+    if (!this.disposed) this.digest?.schedule();
   }
 
   private serially<T>(task: () => Promise<T>): Promise<T> {
@@ -496,18 +372,12 @@ export class PetNoticeRouter {
   }
 
   private settings(): Required<NoticeRouterSettings> {
-    let value: NoticeRouterSettings | undefined;
     try {
-      value = this.options.settings?.();
+      return normalizeSettings(this.options.settings?.());
     } catch (error) {
       this.log("pet.notice.settings_failed", { error: errorText(error) });
+      return normalizeSettings(undefined);
     }
-    return {
-      quietHours: value?.quietHours ?? null,
-      maxPerHour: value?.maxPerHour ?? DEFAULT_MAX_PER_HOUR,
-      maxP0PerHour: value?.maxP0PerHour ?? DEFAULT_MAX_P0_PER_HOUR,
-      mergeWindowSec: value?.mergeWindowSec ?? DEFAULT_MERGE_WINDOW_SEC,
-    };
   }
 
   private offset(ms: number): number {
@@ -530,10 +400,10 @@ export class PetNoticeRouter {
         this.log("pet.notice.ledger_read_failed", { error: errorText(error) });
       }
     }
-    const decision = this.decide(notice, counts, seen, now);
-    if (!ledger || !ledgerReady) return { decision, ledgerFailed: true };
+    const { decision, alsoDesktop } = this.decide(notice, counts, seen, now);
+    const plan: NoticePlan = { decision, alsoDesktop, ledgerFailed: true };
+    if (!ledger || !ledgerReady) return plan;
 
-    let recordId: string;
     try {
       const record = await ledger.record({
         kind: notice.kind,
@@ -547,20 +417,23 @@ export class PetNoticeRouter {
         body,
         decision,
       });
-      recordId = record.id;
+      plan.recordId = record.id;
     } catch (error) {
       this.log("pet.notice.record_failed", { kind: notice.kind, error: errorText(error) });
-      return { decision, ledgerFailed: true };
+      return plan;
     }
     if ((decision.outlet !== "im" && decision.outlet !== "both") || !decision.im)
-      return { decision, recordId, ledgerFailed: false };
+      return { ...plan, ledgerFailed: false };
+    // Registered before the claim lands, so a concurrent recovery never sees it as orphaned.
+    this.sending.add(plan.recordId);
     try {
-      const { key } = await ledger.claim(recordId, decision.im, body);
+      const { key } = await ledger.claim(plan.recordId, decision.im, body);
       if (notice.sessionId) this.lastImSendAt.set(notice.sessionId, now);
-      return { decision, recordId, claim: { channel: decision.im, key }, ledgerFailed: false };
+      return { ...plan, claim: { channel: decision.im, key }, ledgerFailed: false };
     } catch (error) {
+      this.sending.delete(plan.recordId);
       this.log("pet.notice.claim_failed", { kind: notice.kind, error: errorText(error) });
-      return { decision, recordId, ledgerFailed: true };
+      return plan;
     }
   }
 
@@ -569,7 +442,7 @@ export class PetNoticeRouter {
     counts: { sent: number; p0Sent: number },
     seen: DedupeLookup,
     now: number,
-  ): RouteDecision {
+  ): { decision: RouteDecision; alsoDesktop: boolean } {
     const settings = this.settings();
     const imReady: Record<string, ImReadiness> = { ...(this.options.imChannels?.() ?? {}) };
     const routeChannel = notice.target.kind === "route" ? notice.target.route.channel : undefined;
@@ -605,39 +478,43 @@ export class PetNoticeRouter {
       },
     );
     if (pinned) decision = pinToRoute(decision, routeChannel);
+    // A decision request held by the P0 cap still has to be in front of the owner.
+    let alsoDesktop = notice.priority === "P0" && decision.outlet === "digest";
     if (
       notice.priority === "P1" &&
       notice.sessionId &&
       (decision.outlet === "im" || decision.outlet === "both")
     ) {
       const last = this.lastImSendAt.get(notice.sessionId);
-      if (last !== undefined && now - last < settings.mergeWindowSec * 1_000)
+      if (last !== undefined && now - last < settings.mergeWindowSec * 1_000) {
+        // Merging only spares the IM; a named-channel notice still shows on the desktop.
+        alsoDesktop = decision.outlet === "both";
         decision = { outlet: "digest", reason: "merge-window" };
+      }
     }
-    return decision;
+    return { decision, alsoDesktop };
   }
 
   private async deliver(notice: NoticeSubmission, body: string, plan: NoticePlan): Promise<void> {
     const { decision } = plan;
-    const desktopNow = decision.outlet === "desktop" || decision.outlet === "both";
+    const desktopNow =
+      decision.outlet === "desktop" || decision.outlet === "both" || plan.alsoDesktop;
     if (!plan.claim || plan.ledgerFailed) {
       // Never lose a decision request (or a notice meant for the owner now) to the ledger.
       const handled = decision.outlet === "drop" || decision.outlet === "record";
       const fallback =
         plan.ledgerFailed && !handled && (notice.priority === "P0" || decision.outlet === "im");
       if (desktopNow || fallback) this.showDesktop(notice, body);
-      if (decision.outlet === "digest" && !plan.ledgerFailed) this.scheduleDigest();
+      else if (plan.ledgerFailed && !handled)
+        this.log("pet.notice.lost", { kind: notice.kind, priority: notice.priority });
+      if (decision.outlet === "digest" && !plan.ledgerFailed && !this.disposed)
+        this.digest?.schedule();
       return;
     }
     if (desktopNow) this.showDesktop(notice, body);
     const { channel, key } = plan.claim;
-    const sent = await this.sendIm(
-      plan.recordId!,
-      channel,
-      key,
-      imTarget(notice.target, channel),
-      body,
-    );
+    const target = imTarget(notice.target, channel);
+    const sent = await this.sendIm(plan.recordId!, channel, key, target, body);
     if (!sent && !desktopNow) this.showDesktop(notice, body);
   }
 
@@ -649,23 +526,26 @@ export class PetNoticeRouter {
     target: NoticeTarget,
     body: string,
   ): Promise<boolean> {
-    const idempotent = this.options.supportsIdempotentSend?.(channel) === true;
-    let result: NoticeImSendResult;
+    this.sending.add(id);
     try {
-      result = this.options.outlets
-        ? await this.options.outlets.im(channel, target, body, idempotent ? key : undefined)
-        : { accepted: false, error: "no-im-outlet" };
-    } catch (error) {
-      result = { accepted: false, error: errorText(error) };
+      const idempotent = this.options.supportsIdempotentSend?.(channel) === true;
+      const result = await sendWithTimeout(
+        () => this.options.outlets?.im(channel, target, body, idempotent ? key : undefined),
+        this.options.imTimeoutMs ?? DEFAULT_IM_TIMEOUT_MS,
+        this.schedule,
+        this.cancel,
+      );
+      if (result.accepted) {
+        await this.settleQuietly(id, "accepted");
+        return true;
+      }
+      this.log("pet.notice.im_failed", { channel, error: result.error });
+      await this.settleQuietly(id, "failed", result.error);
+      await this.settleQuietly(id, "queued", result.error);
+      return false;
+    } finally {
+      this.sending.delete(id);
     }
-    if (result.accepted) {
-      await this.settleQuietly(id, "accepted");
-      return true;
-    }
-    this.log("pet.notice.im_failed", { channel, error: result.error });
-    await this.settleQuietly(id, "failed", result.error);
-    await this.settleQuietly(id, "queued", result.error);
-    return false;
   }
 
   private async recoverClaim(record: NoticeRecord): Promise<void> {
@@ -676,14 +556,9 @@ export class PetNoticeRouter {
     if (channel && body && this.options.supportsIdempotentSend?.(channel) === true) {
       try {
         const { key } = await ledger.claim(record.id, channel, body);
-        const sent = await this.sendIm(
-          record.id,
-          channel,
-          key,
-          imTarget(notice.target, channel),
-          body,
-        );
-        if (!sent) this.showDesktop(notice, body);
+        const target = imTarget(notice.target, channel);
+        if (!(await this.sendIm(record.id, channel, key, target, body)))
+          this.showDesktop(notice, body);
       } catch (error) {
         this.log("pet.notice.resend_failed", { error: errorText(error) });
         this.showDesktop(notice, body);
@@ -694,32 +569,9 @@ export class PetNoticeRouter {
     this.showDesktop(notice, `可能已发送：${body || composeNoticeBody(notice.kind, notice.facts)}`);
   }
 
-  private staleReason(record: NoticeRecord, now: number): string | undefined {
-    if (record.expiresAt !== undefined && record.expiresAt <= now) return "expired";
-    const { sessionId, requestId } = record;
-    if (
-      sessionId &&
-      requestId &&
-      this.options.isDecisionStillPending &&
-      !this.options.isDecisionStillPending(sessionId, requestId)
-    )
-      return "resolved";
-    if (
-      sessionId &&
-      (record.kind === "session.done" || record.kind === "session.failed") &&
-      this.options.wasSessionViewedSince?.(sessionId, record.createdAt) === true
-    )
-      return "viewed";
-    return undefined;
-  }
-
-  private scheduleDigest(): void {
-    if (!this.disposed) this.digest?.schedule();
-  }
-
   private async settleQuietly(
     id: string,
-    status: Parameters<NoticeLedgerPort["settle"]>[1],
+    status: NoticeSettleStatus,
     error?: string,
   ): Promise<void> {
     try {
@@ -730,6 +582,7 @@ export class PetNoticeRouter {
   }
 
   private showDesktop(notice: NoticeSubmission, body: string): void {
+    if (this.disposed) return;
     try {
       this.options.outlets?.desktop(notice, body);
     } catch (error) {

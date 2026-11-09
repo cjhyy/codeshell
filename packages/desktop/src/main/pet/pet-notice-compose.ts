@@ -28,12 +28,35 @@ const MAX_OPTIONS = 10;
 const MAX_CODE = 16;
 const UNTITLED = "一个会话";
 
-/** Collapse whitespace and control characters, then cap; empty → undefined. */
+/** Bidi overrides / isolates, zero-width characters and line/paragraph separators. */
+const INVISIBLE = /[\u200b-\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/gu;
+/** Control characters other than the newline. */
+const CONTROL_EXCEPT_NEWLINE = /[\u0000-\u0009\u000b-\u001f\u007f]/gu;
+
+/** Collapse whitespace, strip control and invisible characters, then cap; empty → undefined. */
 function line(value: unknown, max: number): string | undefined {
   if (typeof value !== "string") return undefined;
-  const text = value.replace(/[\u0000-\u001f\u007f\s]+/gu, " ").trim();
+  const text = value
+    .replace(INVISIBLE, "")
+    .replace(/[\u0000-\u001f\u007f\s]+/gu, " ")
+    .trim();
   if (!text) return undefined;
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+/** A one-line, capped title for callers outside the templates; undefined when empty. */
+export function noticeLine(value: unknown, max = MAX_TITLE): string | undefined {
+  return line(value, max);
+}
+
+/** A pre-written body keeps its line breaks but loses control and invisible characters. */
+function cleanBody(body: string): string {
+  return body
+    .replace(INVISIBLE, "")
+    .replace(/\r\n?/gu, "\n")
+    .replace(/\t/gu, " ")
+    .replace(CONTROL_EXCEPT_NEWLINE, "")
+    .trim();
 }
 
 function title(facts: NoticeFacts): string {
@@ -77,7 +100,8 @@ const KIND_LABELS: Readonly<Record<string, string>> = {
  * verbatim). A pre-written `body` (e.g. Mimi's closure message) wins.
  */
 export function composeNoticeBody(kind: string, facts: NoticeFacts, body?: string): string {
-  if (typeof body === "string" && body.trim()) return cap(body.trim());
+  const written = typeof body === "string" ? cleanBody(body) : "";
+  if (written) return cap(written);
   switch (kind) {
     case "session.blocked":
       return cap(blockedBody(facts));
