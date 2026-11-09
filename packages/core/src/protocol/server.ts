@@ -982,9 +982,7 @@ export class AgentServer {
         backend.clearSession(input.sessionId);
         if (active) clearSessionPathApprovals(input.sessionId);
         for (const id of scope.pending) {
-          const entry = this.takeSessionApproval(session, id, "cancelled");
-          this.clearApprovalTimer(id);
-          this.pendingApprovalTargets.delete(id);
+          const entry = this.retireSessionApproval(session, id, "cancelled");
           entry?.resolve(
             entry.metadata.kind === "internal"
               ? internalCancellation(closedFailure.failure, closedFailure.reason)
@@ -2160,9 +2158,7 @@ export class AgentServer {
       }
       if (entry.metadata.expiresAt !== undefined && Date.now() >= entry.metadata.expiresAt) {
         if (entry.metadata.kind === "internal") {
-          this.takeSessionApproval(s, params.requestId, "expired");
-          this.pendingApprovalTargets.delete(params.requestId);
-          this.clearApprovalTimer(params.requestId);
+          this.retireSessionApproval(s, params.requestId, "expired");
           entry.resolve(internalCancellation("timed_out", "host operation timed out"));
         } else {
           this.finishSessionUserDecision(
@@ -2219,9 +2215,7 @@ export class AgentServer {
           if (s.pendingApprovals.get(params.requestId) !== entry) {
             throw new Error("Question was cancelled before the answer was accepted");
           }
-          this.takeSessionApproval(s, params.requestId, "resolved");
-          this.pendingApprovalTargets.delete(params.requestId);
-          this.clearApprovalTimer(params.requestId);
+          this.retireSessionApproval(s, params.requestId, "resolved");
           this.notifyDecisionResolved(
             {
               connectionId: this.connectionId,
@@ -4089,9 +4083,7 @@ export class AgentServer {
         },
       });
     } catch (error) {
-      this.takeSessionApproval(session, requestId, "cancelled");
-      this.pendingApprovalTargets.delete(requestId);
-      this.clearApprovalTimer(requestId);
+      this.retireSessionApproval(session, requestId, "cancelled");
       return Promise.reject(error);
     }
     return Promise.resolve(
@@ -4189,9 +4181,7 @@ export class AgentServer {
 
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
-          this.takeSessionApproval(session, requestId, "expired");
-          this.pendingApprovalTargets.delete(requestId);
-          this.approvalTimers.delete(requestId);
+          this.retireSessionApproval(session, requestId, "expired");
           scope?.pending.delete(requestId);
           resolve({
             ok: false,
@@ -4256,9 +4246,7 @@ export class AgentServer {
 
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
-          this.takeSessionApproval(session, requestId, "expired");
-          this.pendingApprovalTargets.delete(requestId);
-          this.approvalTimers.delete(requestId);
+          this.retireSessionApproval(session, requestId, "expired");
           scope?.pending.delete(requestId);
           resolve({
             ok: false,
@@ -4393,9 +4381,7 @@ export class AgentServer {
 
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
-          this.takeSessionApproval(session, requestId, "expired");
-          this.pendingApprovalTargets.delete(requestId);
-          this.approvalTimers.delete(requestId);
+          this.retireSessionApproval(session, requestId, "expired");
           resolve({
             ok: false,
             failure: "timed_out" as const,
@@ -4498,9 +4484,7 @@ export class AgentServer {
 
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
-          this.takeSessionApproval(session, requestId, "expired");
-          this.pendingApprovalTargets.delete(requestId);
-          this.approvalTimers.delete(requestId);
+          this.retireSessionApproval(session, requestId, "expired");
           reject(new Error(`${label} ${HOST_LOOPBACK_FAILURE_DETAIL.timed_out}`));
         }
       }, AgentServer.APPROVAL_TIMEOUT_MS);
@@ -4513,9 +4497,7 @@ export class AgentServer {
         });
       } catch (error) {
         // Never reached the host: retire the wait now instead of at the timeout.
-        this.takeSessionApproval(session, requestId, "cancelled");
-        this.pendingApprovalTargets.delete(requestId);
-        this.clearApprovalTimer(requestId);
+        this.retireSessionApproval(session, requestId, "cancelled");
         reject(error);
       }
     });
@@ -4725,6 +4707,14 @@ export class AgentServer {
     scope?: ChildHostScope,
   ): void {
     this.userDecisions.register(session, metadata, resolve, scope);
+  }
+
+  /** Retire a session wait: its pending entry, route target and timer/deadline. */
+  private retireSessionApproval(session: ChatSession, requestId: string, status: string) {
+    const entry = this.takeSessionApproval(session, requestId, status);
+    this.pendingApprovalTargets.delete(requestId);
+    this.clearApprovalTimer(requestId);
+    return entry;
   }
 
   private takeSessionApproval(

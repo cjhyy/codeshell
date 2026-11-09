@@ -171,6 +171,21 @@ describe("HostActionHandlers.intercept", () => {
     expect(sent).toEqual([]);
   });
 
+  test("logs instead of throwing when sending a malformed-request reply fails", () => {
+    const handlers = new HostActionHandlers();
+    const logged: unknown[] = [];
+    const consumed = handlers.intercept(
+      hostLine({ action: "notice.create", args: null }),
+      () => {
+        throw new Error("worker gone");
+      },
+      (error) => logged.push(error),
+    );
+    expect(consumed).toBe(true);
+    expect(logged).toHaveLength(1);
+    expect(String(logged[0])).toContain("worker gone");
+  });
+
   test("logs instead of leaking a rejection when sending the reply fails", async () => {
     const handlers = new HostActionHandlers();
     handlers.set("notice.create", async () => ({ ok: true }));

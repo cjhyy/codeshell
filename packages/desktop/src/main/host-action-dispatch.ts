@@ -49,7 +49,13 @@ export class HostActionHandlers {
       const envelope = parseHostActionEnvelope(line);
       if (!envelope) return false;
       const malformed = JSON.stringify({ ok: false, error: "malformed host action request" });
-      sendLine(buildHostActionReply(envelope, malformed));
+      // Same isolation as the async path: a failed send must never throw back
+      // into the worker line handler.
+      try {
+        sendLine(buildHostActionReply(envelope, malformed));
+      } catch (error) {
+        log(error);
+      }
       return true;
     }
     void this.dispatch(parsed)
