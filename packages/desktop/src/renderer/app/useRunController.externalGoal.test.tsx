@@ -4,6 +4,7 @@ import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/render
 import { INITIAL_STATE, type ActiveGoal } from "../types";
 import { NO_REPO_KEY, saveSessionIndex } from "../transcripts";
 import { useRunController } from "./useRunController";
+import { transcriptsReducer } from "../transcriptsReducer";
 
 let cleanup: (() => Promise<void>) | undefined;
 let originalStorage: PropertyDescriptor | undefined;
@@ -163,3 +164,158 @@ test("interrupt-and-send keeps the Goal while Stop does not", async () => {
     { sessionId: "A", options: undefined },
   ]);
 });
+
+test.each(["native", "external"] as const)(
+  "a goal reply inherits its objective and preserves the next-message goal toggle (%s)",
+  async (runtime) => {
+    const { hook, params } = await mountBusyExternal(
+      { ...runningGoal, waitingForUser: "这处可以接受吗？" },
+      false,
+    );
+    const requests: Array<Record<string, unknown>> = [];
+    const goalUpdates: unknown[] = [];
+    params.preferences.goalOverrides = { [A]: true };
+    params.preferences.setGoalOverrides = (update) => goalUpdates.push(update);
+    params.runtime.busy = false;
+    params.runtime.busyKeys = new Set();
+    if (runtime === "native") {
+      params.preferences.modelOverrides = {};
+      window.codeshell.run = (async (_text, opts) => {
+        requests.push(opts!);
+        return {};
+      }) as typeof window.codeshell.run;
+    } else {
+      window.codeshell.externalRuntime!.start = async () => ({ ok: true }) as never;
+      window.codeshell.externalRuntime!.send = async (request) => {
+        requests.push(request);
+        return { ok: true } as never;
+      };
+    }
+    await act(async () => {
+      await hook.rerender();
+    });
+    await act(async () => {
+      await hook.result.current.send("这处可接受", { bucket: A, continueGoal: true });
+      await flushMicrotasks();
+    });
+    expect(requests).toHaveLength(1);
+    expect(requests[0]!.goal).toBeUndefined();
+    expect(requests[0]!.disableGoal).toBeUndefined();
+    expect(goalUpdates).toEqual([]);
+
+    await act(async () => {
+      await hook.result.current.send("普通输入框准备的下一个目标", { bucket: A });
+      await flushMicrotasks();
+    });
+    expect(requests[1]!.goal).toBe("普通输入框准备的下一个目标");
+    expect(goalUpdates).toHaveLength(1);
+  },
+);
+
+test.each([
+  "rejected",
+  "early-error",
+  "changed-goal",
+  "new-question",
+  "started",
+  "newer-launch",
+] as const)(
+  "a failed goal reply restores only the unanswered question of an unstarted current launch (%s)",
+  async (outcome) => {
+    const goal = { ...runningGoal, waitingForUser: "这处可以接受吗？", activeMs: 5_000 };
+    const { hook, params } = await mountBusyExternal(goal, false);
+    params.preferences.modelOverrides = {};
+    params.runtime.busy = false;
+    params.runtime.busyKeys = new Set();
+    params.transcript.transcriptsRef.current = { [A]: { ...INITIAL_STATE, activeGoal: goal } };
+    params.transcript.dispatch = (action) => {
+      params.transcript.transcriptsRef.current = transcriptsReducer(
+        params.transcript.transcriptsRef.current,
+        action,
+      );
+    };
+    let fail!: () => void;
+    let clientMessageId = "";
+    let calls = 0;
+    window.codeshell.run = (async (_text, opts) => {
+      if (++calls > 1) return {};
+      clientMessageId = opts!.clientMessageId!;
+      return new Promise((resolve, reject) => {
+        fail = () =>
+          outcome === "early-error"
+            ? resolve({ reason: "model_error", text: "cannot start" })
+            : reject(new Error("cannot start"));
+      });
+    }) as typeof window.codeshell.run;
+    await act(async () => {
+      await hook.rerender();
+    });
+    let result!: Promise<"resolved" | "rejected">;
+    await act(async () => {
+      result = hook.result.current.send("这处可接受", { bucket: A, continueGoal: true }).then(
+        () => "resolved" as const,
+        () => "rejected" as const,
+      );
+      await flushMicrotasks();
+    });
+    expect(params.transcript.transcriptsRef.current[A]!.activeGoal?.waitingForUser).toBeUndefined();
+    if (outcome === "changed-goal") {
+      params.transcript.dispatch({
+        type: "stream",
+        bucket: A,
+        event: {
+          type: "goal_updated",
+          goalId: "g1",
+          revision: 2,
+          objective: "新的目标",
+          paused: false,
+        },
+      });
+    } else if (outcome === "new-question") {
+      params.transcript.dispatch({
+        type: "stream",
+        bucket: A,
+        event: {
+          type: "goal_progress",
+          goalId: "g1",
+          revision: 1,
+          status: "not_met",
+          round: 3,
+          waitingForUser: "新的问题",
+        },
+      });
+    } else if (outcome === "started") {
+      params.transcript.dispatch({
+        type: "stream",
+        bucket: A,
+        event: {
+          type: "session_started",
+          sessionId: "A",
+          promptTokens: 0,
+          runId: "reply-run",
+          clientMessageId,
+        },
+      });
+    } else if (outcome === "newer-launch") {
+      await act(async () => {
+        await hook.result.current.send("新的消息", { bucket: A });
+      });
+    }
+    await act(async () => {
+      fail();
+      await result;
+      await flushMicrotasks();
+    });
+    const current = params.transcript.transcriptsRef.current[A]!.activeGoal!;
+    if (outcome === "rejected" || outcome === "early-error") {
+      expect(await result).toBe("rejected");
+      expect(current.waitingForUser).toBe(goal.waitingForUser);
+      expect(current.activeMs).toBe(5_000);
+      expect(current.clockSinceMs).toBeUndefined();
+    } else {
+      expect(await result).toBe("resolved");
+      expect(current.waitingForUser).toBe(outcome === "new-question" ? "新的问题" : undefined);
+      if (outcome === "changed-goal") expect(current.revision).toBe(2);
+    }
+  },
+);

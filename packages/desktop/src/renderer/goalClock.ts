@@ -20,19 +20,19 @@ export function goalClockAfterProgress(
   event: GoalProgressFields,
   nowMs: number,
 ): ActiveGoal {
-  const stopsClock = event.waitingForUser !== undefined;
+  const stopsClock = goal.paused || event.waitingForUser !== undefined;
   if (!event.progress) return stopsClock ? stopGoalClock(goal, nowMs) : goal;
   return {
     ...goal,
     activeMs: event.progress.activeMs,
     clockSinceMs: stopsClock ? undefined : event.progress.atMs,
-    waitingBackground: event.waiting !== undefined,
+    waitingBackground: !stopsClock && event.waiting !== undefined,
   };
 }
 
 /** A run of the goal started: the clock runs (a background wait hands over). */
 export function startGoalClock(goal: ActiveGoal, nowMs: number): ActiveGoal {
-  if (goal.paused || goal.activeMs === undefined) return goal;
+  if (goal.paused || goal.waitingForUser || goal.activeMs === undefined) return goal;
   if (goal.clockSinceMs !== undefined) {
     return goal.waitingBackground ? { ...goal, waitingBackground: false } : goal;
   }
@@ -44,7 +44,10 @@ export function stopGoalClock(goal: ActiveGoal, nowMs: number): ActiveGoal {
   if (goal.clockSinceMs === undefined) return goal;
   return {
     ...goal,
-    activeMs: (goal.activeMs ?? 0) + Math.max(0, nowMs - goal.clockSinceMs),
+    activeMs:
+      goal.activeMs === undefined
+        ? undefined
+        : goal.activeMs + Math.max(0, nowMs - goal.clockSinceMs),
     clockSinceMs: undefined,
     waitingBackground: false,
   };
@@ -52,21 +55,40 @@ export function stopGoalClock(goal: ActiveGoal, nowMs: number): ActiveGoal {
 
 /** A run ended: the clock keeps running only while parked on background work. */
 export function goalRunEnded(goal: ActiveGoal, nowMs: number): ActiveGoal {
-  return goal.waitingBackground ? goal : stopGoalClock(goal, nowMs);
+  return goal.waitingBackground && !goal.paused && !goal.waitingForUser
+    ? goal
+    : stopGoalClock(goal, nowMs);
 }
 
 /** Goal-level active time at `nowMs`, or undefined before any accounting is known. */
 export function goalElapsedMs(goal: ActiveGoal, nowMs: number): number | undefined {
   if (goal.activeMs === undefined) return undefined;
-  const open = goal.clockSinceMs === undefined ? 0 : Math.max(0, nowMs - goal.clockSinceMs);
+  const open =
+    goal.paused || goal.waitingForUser || goal.clockSinceMs === undefined
+      ? 0
+      : Math.max(0, nowMs - goal.clockSinceMs);
   return goal.activeMs + open;
 }
 
 /** Keep the clock fields of the same goal across a projection rebuild. */
-export function carryGoalClock(previous: ActiveGoal | null, next: ActiveGoal): ActiveGoal {
-  if (!previous || previous.goalId !== next.goalId) return next;
-  return {
+export function carryGoalClock(
+  previous: ActiveGoal | null,
+  next: ActiveGoal,
+  nowMs = Date.now(),
+): ActiveGoal {
+  if (
+    !previous ||
+    previous.goalId !== next.goalId ||
+    (!next.goalId && (previous.objective !== next.objective || previous.setAtMs !== next.setAtMs))
+  )
+    return next;
+  const carried = {
     ...next,
+    // goal/get does not include the outstanding question. A metadata refresh
+    // must not answer it; a real user message or later progress does that.
+    ...(previous.objective === next.objective && previous.waitingForUser
+      ? { waitingForUser: next.waitingForUser ?? previous.waitingForUser }
+      : {}),
     ...(previous.activeMs !== undefined && next.activeMs === undefined
       ? {
           activeMs: previous.activeMs,
@@ -75,6 +97,7 @@ export function carryGoalClock(previous: ActiveGoal | null, next: ActiveGoal): A
         }
       : {}),
   };
+  return next.paused ? stopGoalClock(carried, nowMs) : carried;
 }
 
 /** Stamp the end time on every still-open background-wait marker. */

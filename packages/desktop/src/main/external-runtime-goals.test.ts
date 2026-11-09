@@ -169,6 +169,58 @@ describe("external Goal lifecycle", () => {
     });
   }
 
+  test("asking the user freezes time even when the provider finishes much later", () => {
+    const run = goals.start(sessionId, "等用户确认")!;
+    now += 2_000;
+    goals.waitForUser(sessionId, {
+      goalId: run.goal.goalId,
+      revision: run.goal.revision,
+      question: "继续吗？",
+    });
+    now += 600_000;
+    goals.afterTurn(run, 10, "请确认");
+    goals.end(run);
+    expect(manager.readGoalProgress(sessionId)).toMatchObject({ rounds: 1, activeMs: 2_000 });
+    goals.userReplied(sessionId);
+    const resumed = goals.start(sessionId)!;
+    now += 3_000;
+    goals.afterTurn(resumed, 10, "继续处理");
+    goals.end(resumed);
+    expect(manager.readGoalProgress(sessionId)).toMatchObject({ rounds: 2, activeMs: 5_000 });
+  });
+
+  test("pausing freezes time before an in-flight provider call has completed", () => {
+    const run = goals.start(sessionId, "可暂停的目标")!;
+    now += 2_000;
+    goals.update(sessionId, {
+      paused: true,
+      expectedGoalId: run.goal.goalId!,
+      expectedRevision: run.goal.revision!,
+    });
+    now += 600_000;
+    goals.afterTurn(run, 10, "工具终于结束");
+    goals.end(run);
+    expect(manager.readGoalProgress(sessionId)).toMatchObject({ activeMs: 2_000 });
+  });
+
+  test("background wait and delayed teardown count the overlapping interval once", () => {
+    const clock = spyOn(Date, "now").mockImplementation(() => now);
+    try {
+      const run = goals.start(sessionId, "等待后台任务")!;
+      now += 2_000;
+      goals.afterTurn(run, 10, "后台任务进行中", true);
+      expect(goals.waitForBackgroundWork(run)).toBe(true);
+      now += 60_000;
+      goals.end(run);
+      now += 60_000;
+      const resumed = goals.start(sessionId)!;
+      expect(resumed.progressBase).toEqual({ rounds: 1, activeMs: 122_000 });
+      goals.end(resumed);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   test("stale or failed background waiting never publishes a waiting transition", () => {
     const run = goals.start(sessionId, "后台任务")!;
     const waiting = spyOn(SessionManager.prototype, "markGoalWaiting").mockReturnValue(false);

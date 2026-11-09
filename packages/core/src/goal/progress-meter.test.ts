@@ -79,4 +79,57 @@ describe("GoalProgressMeter", () => {
       { goalId: "new", rounds: 1, activeMs: 15 },
     ]);
   });
+
+  test("a user-wait marker freezes accounting before delayed run teardown", () => {
+    let now = 1_000;
+    const meter = new GoalProgressMeter(
+      () => ({ rounds: 4, activeMs: 10_000 }),
+      () => now,
+    );
+    meter.begin("g1");
+    now = 3_000;
+    expect(
+      meter.decorate({ ...marker("not_met"), waitingForUser: "继续吗？" } as StreamEvent),
+    ).toMatchObject({ progress: { rounds: 5, activeMs: 12_000 } });
+    now = 603_000;
+    expect(meter.drain()).toEqual([{ goalId: "g1", rounds: 1, activeMs: 2_000 }]);
+  });
+
+  test("manual pause and in-place resume accumulate only the active segments", () => {
+    let now = 1_000;
+    const meter = new GoalProgressMeter(
+      () => undefined,
+      () => now,
+    );
+    meter.begin("g1");
+    now = 3_000;
+    meter.pause("g1");
+    now = 63_000;
+    meter.pause("g1"); // Repeated control delivery must not add idle time.
+    meter.begin("g1");
+    now = 65_000;
+    expect(meter.decorate(marker("not_met"))).toMatchObject({
+      progress: { rounds: 1, activeMs: 4_000 },
+    });
+    meter.pause("g1");
+    now = 665_000;
+    expect(meter.drain()).toEqual([{ goalId: "g1", rounds: 1, activeMs: 4_000 }]);
+  });
+
+  test("background park hands the clock over without counting teardown twice", () => {
+    let now = 1_000;
+    const meter = new GoalProgressMeter(
+      () => undefined,
+      () => now,
+    );
+    meter.begin("g1");
+    now = 4_000;
+    const parked = meter.decorate({
+      ...marker("not_met"),
+      waiting: { kind: "background_work", sinceMs: 3_000 },
+    } as StreamEvent);
+    expect(parked).toMatchObject({ progress: { activeMs: 2_000 } });
+    now = 604_000;
+    expect(meter.drain()).toEqual([{ goalId: "g1", rounds: 1, activeMs: 2_000 }]);
+  });
 });

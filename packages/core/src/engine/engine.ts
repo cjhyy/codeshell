@@ -4181,6 +4181,7 @@ export class Engine {
       }
 
       if (next.paused === true) {
+        if (next.goalId) this.activeGoalMeter?.pause(next.goalId);
         if (this.activeGoalHook && this.activeGoalHookAttached) {
           void this.activeGoalRegistration?.();
           this.activeGoalRegistration = undefined;
@@ -4188,6 +4189,7 @@ export class Engine {
         }
         this.activeTurnLoop!.updateGoal(undefined);
       } else {
+        if (next.goalId) this.activeGoalMeter?.begin(next.goalId);
         const objectiveChanged = before.objective !== next.objective;
         const resumed = before.paused === true;
         this.activeTurnLoop!.updateGoal(
@@ -4259,7 +4261,10 @@ export class Engine {
       }
       // A paused Goal inherited by an ordinary run is only dormant persisted
       // state; deleting it must not cancel that unrelated conversation.
-      if (controlsThisRun) this.activeTurnLoop!.updateGoal(undefined);
+      if (controlsThisRun) {
+        if (clearedGoal.goalId) this.activeGoalMeter?.pause(clearedGoal.goalId);
+        this.activeTurnLoop!.updateGoal(undefined);
+      }
     }
     // If THIS session's goal run is in flight, drop its stop hook so the
     // current run can terminate (the closure-held goal would otherwise keep

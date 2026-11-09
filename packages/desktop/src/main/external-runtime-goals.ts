@@ -46,6 +46,8 @@ export interface ExternalGoalRun {
   awaitingUser?: boolean;
   /** Goal-level rounds/active time persisted before this run started. */
   progressBase: { rounds: number; activeMs: number };
+  /** Frozen at pause/park/completion, even if the provider takes time to finish. */
+  clockStoppedAtMs?: number;
 }
 
 /** Display-only description of finite work a parked Goal waits on. */
@@ -187,7 +189,10 @@ export class ExternalRuntimeGoals {
 
   stop(sessionId: string): void {
     const run = this.runs.get(sessionId);
-    if (run) run.stopped = true;
+    if (run) {
+      run.stopped = true;
+      run.clockStoppedAtMs ??= this.now();
+    }
   }
 
   /**
@@ -228,6 +233,7 @@ export class ExternalRuntimeGoals {
       return { ok: false, message: "wait_for_user needs the question you are asking the user." };
     }
     run.awaitingUser = true;
+    run.clockStoppedAtMs ??= this.now();
     this.pendingQuestions.set(sessionId, question);
     this.emit(sessionId, {
       type: "goal_progress",
@@ -261,7 +267,7 @@ export class ExternalRuntimeGoals {
     if (state && run.goal.goalId) {
       this.manager.recordGoalProgress(state, run.goal.goalId, {
         rounds: run.turns,
-        activeMs: Math.max(0, this.now() - run.startedAtMs),
+        activeMs: this.elapsed(run),
       });
     }
   }
@@ -348,6 +354,12 @@ export class ExternalRuntimeGoals {
     if (!this.isCurrent(run)) return false;
     const state = this.manager.readSessionState(run.sessionId);
     if (!state || !this.manager.markGoalWaiting(state, run.goal, "background")) return false;
+    // The persisted lifecycle owns time from waitingSinceMs onward. Avoid
+    // charging the same interval again if the run's cleanup is delayed.
+    run.clockStoppedAtMs ??= Math.min(
+      this.now(),
+      state.goalLifecycle?.phase === "waiting" ? state.goalLifecycle.waitingSinceMs : this.now(),
+    );
     this.emit(run.sessionId, {
       type: "goal_progress",
       goalId: run.goal.goalId,
@@ -445,6 +457,7 @@ export class ExternalRuntimeGoals {
       return { ok: false, message: "Goal changed or could not be saved; no completion recorded." };
     }
     run.stopped = true;
+    run.clockStoppedAtMs ??= this.now();
     this.pendingQuestions.delete(sessionId);
     if (status === "completed") {
       this.emit(sessionId, {
@@ -498,10 +511,14 @@ export class ExternalRuntimeGoals {
       round: rounds,
       progress: {
         rounds,
-        activeMs: run.progressBase.activeMs + Math.max(0, atMs - run.startedAtMs),
+        activeMs: run.progressBase.activeMs + this.elapsed(run, atMs),
         atMs,
       },
     };
+  }
+
+  private elapsed(run: ExternalGoalRun, atMs = this.now()): number {
+    return Math.max(0, (run.clockStoppedAtMs ?? atMs) - run.startedAtMs);
   }
 
   private emitUpdated(sessionId: string, goal: GoalConfig): void {

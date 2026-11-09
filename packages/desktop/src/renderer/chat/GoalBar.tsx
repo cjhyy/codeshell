@@ -16,8 +16,10 @@ import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import type { ActiveGoal } from "../types";
 import { goalElapsedMs } from "../goalClock";
+import { GoalReplyCard } from "./GoalReplyCard";
+import type { MarkdownRootStatus } from "../Markdown";
 
-/** `12h 57m 34s` / `3m 05s` / `45s` — the Goal's age, Codex-style. */
+/** `12h 57m 34s` / `3m 05s` / `45s` — accumulated goal time. */
 export function formatGoalElapsed(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
   const hours = Math.floor(total / 3600);
@@ -38,6 +40,12 @@ interface Props {
   onPausedChange?: (paused: boolean) => void;
   onUpdate?: (objective: string) => void;
   onDelete?: () => void;
+  onReply?: (answer: string) => void | Promise<void>;
+  replyDisabled?: boolean;
+  sessionId?: string | null;
+  cwd?: string | null;
+  rootId?: string | null;
+  rootStatus?: MarkdownRootStatus;
   /** Injectable clock for tests. */
   now?: () => number;
 }
@@ -54,6 +62,12 @@ export function GoalBar({
   onPausedChange,
   onUpdate,
   onDelete,
+  onReply,
+  replyDisabled = false,
+  sessionId,
+  cwd,
+  rootId,
+  rootStatus,
   now = Date.now,
 }: Props) {
   const { t } = useT();
@@ -61,18 +75,44 @@ export function GoalBar({
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(goal.objective);
   const [clock, setClock] = React.useState(now);
+  const replyKey = JSON.stringify([
+    sessionId,
+    goal.goalId,
+    goal.objective,
+    goal.round,
+    goal.waitingForUser,
+  ]);
+  // Keep an answer through the optimistic waiting -> running -> failed launch
+  // transition, even while the reply card itself is temporarily unmounted.
+  const [replyDraft, setReplyDraft] = React.useState({ key: "", text: "", failed: false });
+  const reply = onReply
+    ? async (answer: string): Promise<void> => {
+        setReplyDraft({ key: replyKey, text: answer, failed: false });
+        try {
+          await onReply(answer);
+          setReplyDraft((previous) =>
+            previous.key === replyKey ? { key: "", text: "", failed: false } : previous,
+          );
+        } catch (error) {
+          setReplyDraft((previous) =>
+            previous.key === replyKey ? { ...previous, failed: true } : previous,
+          );
+          throw error;
+        }
+      }
+    : undefined;
 
   React.useEffect(() => {
     if (!editing) setDraft(goal.objective);
   }, [editing, goal.objective]);
 
-  // Goal time (Codex-style): running + background-wait time, stopped while
-  // paused or waiting for the user. Older servers send no accounting; the bar
-  // then shows the Goal's age since it was set.
-  const hasGoalTime = goal.activeMs !== undefined;
-  const ticking = hasGoalTime
-    ? !goal.paused && goal.clockSinceMs !== undefined
-    : !goal.paused && goal.setAtMs !== undefined;
+  // Unknown historical accounting is not elapsed work. Never substitute the
+  // goal's wall-clock age: it includes pauses and time spent waiting for replies.
+  const ticking =
+    goal.activeMs !== undefined &&
+    !goal.paused &&
+    !goal.waitingForUser &&
+    goal.clockSinceMs !== undefined;
   React.useEffect(() => {
     setClock(now());
     if (!ticking) return;
@@ -81,12 +121,7 @@ export function GoalBar({
   }, [ticking, now]);
 
   const goalTime = goalElapsedMs(goal, clock);
-  const elapsed =
-    goalTime !== undefined
-      ? formatGoalElapsed(goalTime)
-      : goal.setAtMs !== undefined
-        ? formatGoalElapsed(clock - goal.setAtMs)
-        : undefined;
+  const elapsed = goalTime !== undefined ? formatGoalElapsed(goalTime) : undefined;
   const elapsedLabel =
     goalTime !== undefined && goal.round > 0
       ? t("chat.goal.barActiveTime", { round: goal.round, elapsed: elapsed! })
@@ -128,7 +163,7 @@ export function GoalBar({
       )}
       data-goal-state={goal.paused ? "paused" : waiting ? "waiting" : busy ? "running" : "active"}
     >
-      <div className="flex h-9 min-w-0 items-center gap-2">
+      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 py-1">
         {goal.paused ? (
           <CirclePause
             size={15}
@@ -150,7 +185,7 @@ export function GoalBar({
         )}
         <span
           className={cn(
-            "shrink-0 font-medium",
+            "min-w-0 truncate font-medium",
             goal.paused ? "text-status-warn" : waiting ? "text-primary" : "text-foreground",
           )}
           title={
@@ -166,7 +201,7 @@ export function GoalBar({
         <Button
           type="button"
           variant="ghost"
-          className="h-7 min-w-0 flex-1 justify-start px-1 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
+          className="col-span-2 row-start-2 h-7 min-w-0 justify-start px-0 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
           title={goal.objective}
           onClick={() => setExpanded((value) => !value)}
         >
@@ -174,13 +209,13 @@ export function GoalBar({
         </Button>
         {elapsedLabel && (
           <span
-            className="shrink-0 text-xs tabular-nums text-muted-foreground"
+            className="col-start-3 row-start-2 justify-self-end text-xs tabular-nums text-muted-foreground"
             title={elapsedTitle || undefined}
           >
             {elapsedLabel}
           </span>
         )}
-        <div className="flex shrink-0 items-center">
+        <div className="col-start-3 row-start-1 flex items-center justify-self-end">
           {onDelete && (
             <Button
               type="button"
@@ -293,12 +328,22 @@ export function GoalBar({
           {goal.paused && (
             <p className="mt-1.5 text-xs text-status-warn">{t("chat.goal.barPausedHint")}</p>
           )}
-          {waiting && (
-            <p className="mt-1.5 whitespace-pre-wrap break-words text-xs text-primary">
-              {t("chat.goal.barWaitingHint")} {goal.waitingForUser}
-            </p>
-          )}
         </div>
+      )}
+      {waiting && (
+        <GoalReplyCard
+          key={replyKey}
+          question={goal.waitingForUser!}
+          onReply={reply}
+          draft={replyDraft.key === replyKey ? replyDraft.text : ""}
+          failed={replyDraft.key === replyKey && replyDraft.failed}
+          onDraftChange={(text) => setReplyDraft({ key: replyKey, text, failed: false })}
+          disabled={pending || busy || replyDisabled}
+          sessionId={sessionId}
+          cwd={cwd}
+          rootId={rootId}
+          rootStatus={rootStatus}
+        />
       )}
     </div>
   );

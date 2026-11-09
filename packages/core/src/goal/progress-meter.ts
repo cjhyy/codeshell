@@ -18,7 +18,8 @@ import type { GoalProgress } from "./lifecycle.js";
 interface MeterEntry {
   base: GoalProgress;
   rounds: number;
-  startedAtMs: number;
+  activeMs: number;
+  startedAtMs?: number;
 }
 
 export interface GoalProgressDelta {
@@ -37,7 +38,16 @@ export class GoalProgressMeter {
 
   /** Start the clock for a goal the run drives from its first step. */
   begin(goalId: string): void {
-    this.entry(goalId);
+    const entry = this.entry(goalId);
+    entry.startedAtMs ??= this.now();
+  }
+
+  /** Close a run segment immediately; delayed tool/stream teardown is not work. */
+  pause(goalId: string, atMs = this.now()): void {
+    const entry = this.entries.get(goalId);
+    if (!entry || entry.startedAtMs === undefined) return;
+    entry.activeMs += Math.max(0, atMs - entry.startedAtMs);
+    entry.startedAtMs = undefined;
   }
 
   decorate(event: StreamEvent): StreamEvent {
@@ -45,13 +55,23 @@ export class GoalProgressMeter {
     const entry = this.entry(event.goalId);
     if (event.status === "not_met" || event.status === "met") entry.rounds += 1;
     const atMs = this.now();
+    if (
+      event.waitingForUser !== undefined ||
+      event.waiting !== undefined ||
+      event.status === "met" ||
+      event.status === "exhausted"
+    ) {
+      // Background time is owned by the lifecycle from its park boundary.
+      // Keeping this segment open would count the teardown overlap twice.
+      this.pause(event.goalId, Math.min(atMs, event.waiting?.sinceMs ?? atMs));
+    }
     const rounds = entry.base.rounds + entry.rounds;
     return {
       ...event,
       round: rounds,
       progress: {
         rounds,
-        activeMs: entry.base.activeMs + Math.max(0, atMs - entry.startedAtMs),
+        activeMs: entry.base.activeMs + this.elapsed(entry, atMs),
         atMs,
       },
     };
@@ -63,7 +83,7 @@ export class GoalProgressMeter {
     const deltas = [...this.entries].map(([goalId, entry]) => ({
       goalId,
       rounds: entry.rounds,
-      activeMs: Math.max(0, endMs - entry.startedAtMs),
+      activeMs: this.elapsed(entry, endMs),
     }));
     this.entries.clear();
     return deltas;
@@ -75,10 +95,17 @@ export class GoalProgressMeter {
       entry = {
         base: this.loadBase(goalId) ?? { rounds: 0, activeMs: 0 },
         rounds: 0,
+        activeMs: 0,
         startedAtMs: this.now(),
       };
       this.entries.set(goalId, entry);
     }
     return entry;
+  }
+
+  private elapsed(entry: MeterEntry, atMs: number): number {
+    return (
+      entry.activeMs + (entry.startedAtMs === undefined ? 0 : Math.max(0, atMs - entry.startedAtMs))
+    );
   }
 }

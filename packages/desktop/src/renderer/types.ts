@@ -228,14 +228,14 @@ export interface ActiveGoal {
   revision?: number;
   round: number;
   paused: boolean;
-  /** When the objective was set (epoch ms), for the Goal bar's elapsed time. */
+  /** When the objective was set (epoch ms); not elapsed working time. */
   setAtMs?: number;
   /** The Goal stopped to wait for the user's answer to this question. */
   waitingForUser?: string;
   /**
    * Goal-level active time (running + background waits), settled up to
    * `clockSinceMs` when that is set, else final. Absent before any marker
-   * carried progress (older servers) — the bar then falls back to `setAtMs`.
+   * carried progress (older servers) — unknown history is not estimated.
    */
   activeMs?: number;
   /** The goal clock is running since this epoch ms (a run or a background wait). */
@@ -1284,7 +1284,7 @@ function applyStreamEventToTurn(
         event.authority === "system" ||
         event.authority === "policy";
       if (hidden && !event.clientMessageId) return state;
-      const appended = appendUserMessage(
+      return appendUserMessage(
         state,
         hidden ? "" : event.text,
         now(),
@@ -1295,16 +1295,6 @@ function applyStreamEventToTurn(
         event.clientMessageId,
         hidden ? undefined : outputUserAttachments(state, event),
       );
-      // The user's reply is what a goal waiting for the user resumes on. Clear
-      // the ask now: the resumed run may park on background work without
-      // emitting any goal_progress that would otherwise clear it.
-      if (!hidden && appended.activeGoal?.waitingForUser) {
-        return {
-          ...appended,
-          activeGoal: { ...appended.activeGoal, waitingForUser: undefined },
-        };
-      }
-      return appended;
     }
 
     case "session_started": {
@@ -1974,16 +1964,20 @@ function applyStreamEventToTurn(
       if (state.activeGoal && isStaleGoalEvent(state.activeGoal, event, true)) {
         return state;
       }
-      const updated = carryGoalClock(state.activeGoal, {
-        objective: event.objective,
-        goalId: event.goalId ?? state.activeGoal?.goalId,
-        revision: event.revision ?? state.activeGoal?.revision,
-        round: state.activeGoal?.round ?? 0,
-        paused: event.paused,
-        ...((event.setAtMs ?? state.activeGoal?.setAtMs)
-          ? { setAtMs: event.setAtMs ?? state.activeGoal?.setAtMs }
-          : {}),
-      });
+      const updated = carryGoalClock(
+        state.activeGoal,
+        {
+          objective: event.objective,
+          goalId: event.goalId ?? state.activeGoal?.goalId,
+          revision: event.revision ?? state.activeGoal?.revision,
+          round: state.activeGoal?.round ?? 0,
+          paused: event.paused,
+          ...((event.setAtMs ?? state.activeGoal?.setAtMs)
+            ? { setAtMs: event.setAtMs ?? state.activeGoal?.setAtMs }
+            : {}),
+        },
+        now() ?? Date.now(),
+      );
       if (!event.paused) return { ...state, activeGoal: updated };
       // Pausing stops the goal clock (and ends a shown background wait);
       // resuming restarts it with the next run.
@@ -2459,6 +2453,21 @@ export function appendUserMessage(
   attachments?: PetChatAttachment[],
   sourceEventId?: string,
 ): MessagesReducerState {
+  const existing = clientMessageId
+    ? state.messages.find(
+        (m): m is UserMessage => m.kind === "user" && m.clientMessageId === clientMessageId,
+      )
+    : undefined;
+  // New replies and accepted pending sends answer the ask; a delayed echo of
+  // an older accepted message must not answer a question asked afterwards.
+  if (
+    !(injected ?? existing?.injected) &&
+    !pending &&
+    state.activeGoal?.waitingForUser &&
+    (!existing || (existing.pending === true && pending === false))
+  ) {
+    state = { ...state, activeGoal: { ...state.activeGoal, waitingForUser: undefined } };
+  }
   if (clientMessageId) {
     let replaced = false;
     const messages = state.messages.map((m) => {

@@ -2146,6 +2146,49 @@ describe("goal waiting for the user", () => {
     expect(replied.activeGoal?.waitingForUser).toBeUndefined();
     expect(replied.activeGoal?.objective).toBe("优化设计");
   });
+
+  test("a delayed echo of an accepted user message does not answer a newer question", () => {
+    const waiting = dispatch(INITIAL_STATE, [
+      ev("goal_set", { goalId: "g", revision: 1, objective: "优化设计", replaced: false } as never),
+      ev("session_user_message", { text: "开始优化", clientMessageId: "earlier" }),
+      ev("goal_progress", {
+        goalId: "g",
+        revision: 1,
+        status: "not_met",
+        round: 3,
+        waitingForUser: "这处效果可以接受吗？",
+      } as never),
+    ]);
+    const echoed = dispatch(waiting, [
+      ev("session_user_message", { text: "开始优化", clientMessageId: "earlier" }),
+    ]);
+    expect(echoed.activeGoal?.waitingForUser).toBe("这处效果可以接受吗？");
+    expect(echoed.messages.filter((m) => m.kind === "user")).toHaveLength(1);
+
+    const queued = appendUserMessage(
+      waiting,
+      "这处可接受",
+      100,
+      false,
+      false,
+      undefined,
+      true,
+      "reply",
+    );
+    expect(queued.activeGoal?.waitingForUser).toBe("这处效果可以接受吗？");
+    const accepted = appendUserMessage(
+      queued,
+      "这处可接受",
+      200,
+      false,
+      false,
+      undefined,
+      false,
+      "reply",
+    );
+    expect(accepted.activeGoal?.waitingForUser).toBeUndefined();
+    expect(accepted.messages.filter((m) => m.kind === "user")).toHaveLength(2);
+  });
 });
 
 describe("thinking rows settle when the model moves on", () => {
@@ -2283,6 +2326,7 @@ describe("goal waits and goal time (reducer)", () => {
     expect(goalElapsedMs(s.activeGoal!, 99_000)).toBe(10_000);
 
     s = dispatch(s, [
+      at(19_000, ev("session_user_message", { text: "可以" })),
       at(20_000, started),
       at(
         30_000,
@@ -2291,6 +2335,110 @@ describe("goal waits and goal time (reducer)", () => {
     ]);
     expect(s.activeGoal).toMatchObject({ paused: true, round: 1 });
     expect(goalElapsedMs(s.activeGoal!, 99_000)).toBe(20_000);
+  });
+
+  test("restoring goal metadata preserves a user wait until an actual reply starts a new run", () => {
+    let s = dispatch(INITIAL_STATE, [
+      at(0, goalSet),
+      at(0, started),
+      at(
+        10_000,
+        ev("goal_progress", {
+          goalId: "g1",
+          revision: 1,
+          status: "not_met",
+          round: 1,
+          waitingForUser: "这处效果可以接受吗？",
+          progress: { rounds: 1, activeMs: 10_000, atMs: 10_000 },
+        } as never),
+      ),
+      at(10_100, completed),
+      at(
+        60_000,
+        ev("goal_updated", { objective: "g", goalId: "g1", revision: 1, paused: false } as never),
+      ),
+      at(70_000, ev("session_user_message", { text: "后台任务完成", injected: true })),
+      at(70_000, started),
+      at(71_000, completed),
+    ]);
+    expect(s.activeGoal?.waitingForUser).toBe("这处效果可以接受吗？");
+    expect(goalElapsedMs(s.activeGoal!, 90_000)).toBe(10_000);
+
+    // The local composer adds its bubble before core emits session_started.
+    // Core's journaled user event need not also be delivered to the live UI.
+    s = appendUserMessage(s, "这处可接受", 100_000);
+    expect(s.activeGoal?.waitingForUser).toBeUndefined();
+    expect(goalElapsedMs(s.activeGoal!, 100_500)).toBe(10_000);
+    s = dispatch(s, [at(101_000, started), at(106_000, completed)]);
+    expect(goalElapsedMs(s.activeGoal!, 999_000)).toBe(15_000);
+  });
+
+  test("progress after a pause does not restart the goal clock", () => {
+    const s = dispatch(INITIAL_STATE, [
+      at(0, goalSet),
+      at(0, started),
+      at(
+        10_000,
+        ev("goal_updated", { objective: "g", goalId: "g1", revision: 2, paused: true } as never),
+      ),
+      at(
+        10_000,
+        ev("goal_progress", {
+          goalId: "g1",
+          revision: 2,
+          status: "not_met",
+          round: 1,
+          progress: { rounds: 1, activeMs: 10_000, atMs: 10_000 },
+        } as never),
+      ),
+      at(20_000, completed),
+    ]);
+    expect(s.activeGoal?.paused).toBe(true);
+    expect(s.activeGoal?.clockSinceMs).toBeUndefined();
+    expect(goalElapsedMs(s.activeGoal!, 99_000)).toBe(10_000);
+  });
+
+  test("an older goal with unknown accounting stays unknown through wait and resume", () => {
+    const legacy = {
+      ...INITIAL_STATE,
+      activeGoal: {
+        goalId: "g1",
+        revision: 1,
+        objective: "g",
+        round: 1,
+        paused: false,
+        setAtMs: 1,
+        waitingForUser: "确认显示效果",
+      },
+    };
+    let s = dispatch(legacy, [
+      at(
+        100_000,
+        ev("goal_updated", { objective: "g", goalId: "g1", revision: 1, paused: false } as never),
+      ),
+    ]);
+    expect(s.activeGoal?.waitingForUser).toBe("确认显示效果");
+    expect(goalElapsedMs(s.activeGoal!, 100_000)).toBeUndefined();
+    s = dispatch(s, [
+      at(110_000, ev("session_user_message", { text: "确认" })),
+      at(111_000, started),
+      at(115_000, completed),
+    ]);
+    expect(goalElapsedMs(s.activeGoal!, 999_000)).toBeUndefined();
+    s = dispatch(s, [
+      at(
+        120_000,
+        ev("goal_progress", {
+          goalId: "g1",
+          revision: 1,
+          status: "not_met",
+          round: 2,
+          waitingForUser: "还有需要调整的吗？",
+          progress: { rounds: 2, activeMs: 4_000, atMs: 120_000 },
+        } as never),
+      ),
+    ]);
+    expect(goalElapsedMs(s.activeGoal!, 999_000)).toBe(4_000);
   });
 
   test("clearing the goal ends a still-open wait marker", () => {
