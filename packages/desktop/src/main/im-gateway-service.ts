@@ -801,6 +801,20 @@ export class ImGatewayService {
     return join(dirname(this.configPath), OWNER_INBOUND_STATE_FILE);
   }
 
+  /**
+   * Whether this conversation is one of the owner's allowlisted targets on the
+   * channel. Callers that grant authority (IM decision codes) also require a
+   * direct message, so an allowlisted group never counts as the owner.
+   */
+  isOwnerConversation(channel: string, target: string): boolean {
+    if (!existsSync(this.configPath)) return false;
+    try {
+      return this.isNotificationTargetAuthorized({ channel, target });
+    } catch {
+      return false;
+    }
+  }
+
   private isNotificationTargetAuthorized(target: { channel: string; target: string }): boolean {
     const current = loadDesktopGatewayConfig(this.configPath, this.options.credentialStore);
     return current.channels.some(

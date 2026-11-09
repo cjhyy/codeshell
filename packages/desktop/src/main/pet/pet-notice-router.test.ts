@@ -379,7 +379,7 @@ describe("PetNoticeRouter.submit", () => {
     expect(Object.keys(kept).sort()).toEqual(["body", "id", "kind", "sessionId", "title"]);
     expect(kept).toMatchObject({ kind: "session.blocked", sessionId: "s-open", title: "Deploy" });
     expect(kept.body).toBe(
-      "「Deploy」需要你决定：Which region?\n1. us\n2. eu（推荐）\n回复：回答 K7 序号 / 跳过 K7 / 等待 K7",
+      "「Deploy」需要你决定：Which region?\n1. us\n2. eu（推荐）\n回复：回答 K7 序号 / 回答 K7 拒绝",
     );
     // The resolved one is revoked; the kept one stays queued until markReplayed.
     expect(only(h.ledger.queued()).id).toBe(kept.id);

@@ -1840,6 +1840,7 @@ async function createWindow(): Promise<BrowserWindow> {
       projection: aggregator,
       longTasks: longTaskStore,
       sessionRoutes: () => sessionBridge?.routes,
+      boundReplies: () => sessionBridge,
       gateway: imGatewayService,
       publishRoute: publishGatewayControlEvent,
       materializeAttachments: materializeOutgoingAttachments,
@@ -1987,6 +1988,7 @@ async function createWindow(): Promise<BrowserWindow> {
           aggregator.getSnapshot(),
           longTaskStore.getSnapshot().tasks,
           pendingMobileApprovals.replayAllLines(),
+          notices.decisions.rulesFor,
         );
       },
       ...imDecisionWorkerActions(
@@ -1994,9 +1996,13 @@ async function createWindow(): Promise<BrowserWindow> {
           decisionBridge.requestWorker(method, params, timeoutMs, options),
         (params) => mobileOrchestrator.broadcastApprovalResolved(params),
       ),
-      publish: publishGatewayControlEvent,
+      // The router decides whether a prompt goes to IM (presence, caps) and where.
+      submit: (notice) => notices.router.submit(notice),
+      isOwnerConversation: notices.decisions.isOwnerConversation,
       onError: (error) => dlog("main", "pet.im-decision.failed", { error: String(error) }),
     });
+    const imDecisions = petImDecisions;
+    notices.decisions.onBlocked((sessionId) => imDecisions.considerSession(sessionId));
     petImDecisions.start();
     unsubscribePetLongTaskStream = bridge.subscribeOutbound((_line, snapshotEntry) => {
       if (!snapshotEntry) return;
@@ -2064,6 +2070,8 @@ async function createWindow(): Promise<BrowserWindow> {
       health: createBoundSessionHealth(aggregator, petSessionsRootDir),
       describeStatus: async (route) => `当前在「${route.sessionTitle}」中。发送 /mimi 可退出。`,
       publish: (event) => publishGatewayControlEvent(event),
+      onReplyForwarded: ({ sessionId, turnId, route }) =>
+        notices.recordBoundReply(sessionId, turnId, route),
       onDeliveryError: (error, turn) =>
         dlog("main", "pet.session.reply.retry", {
           sessionId: turn.sessionId,

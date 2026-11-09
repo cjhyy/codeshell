@@ -73,6 +73,8 @@ export type RouteReason =
   | "disposed"
   /** Router-only: a notice with media is shown now instead of being digested. */
   | "media-not-digested"
+  /** Router-only: a bound Session's reply already told that conversation; desktop only. */
+  | "bound-reply-delivered"
   | "desktop-channel"
   | "named-im"
   | "im-unbound"

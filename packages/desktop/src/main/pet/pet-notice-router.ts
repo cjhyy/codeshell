@@ -377,6 +377,26 @@ export class PetNoticeRouter {
     }
   }
 
+  /**
+   * A pending decision was resolved (or timed out): revoke its notices that
+   * still wait for a channel or the digest, so they are never replayed later.
+   */
+  async revokeDecision(sessionId: string, requestId: string, reason = "resolved"): Promise<void> {
+    const ledger = this.options.ledger;
+    if (!ledger || this.disposed) return;
+    try {
+      await ledger.load();
+    } catch (error) {
+      this.log("pet.notice.ledger_read_failed", { error: errorText(error) });
+      return;
+    }
+    for (const record of [...ledger.queued(), ...ledger.held()]) {
+      if (record.sessionId !== sessionId || record.requestId !== requestId) continue;
+      if (this.sending.has(record.id)) continue;
+      await this.settleQuietly(record.id, "revoked", reason);
+    }
+  }
+
   /** The turn did not take them after all; let the next inbound message replay them. */
   releaseReplay(ids: readonly string[]): void {
     for (const id of ids) this.replaying.delete(id);
@@ -537,6 +557,14 @@ export class PetNoticeRouter {
       },
     );
     if (pinned) decision = pinToRoute(decision, routeChannel);
+    if (
+      notice.boundReplyDelivered === true &&
+      (decision.outlet === "im" ||
+        decision.outlet === "both" ||
+        decision.outlet === "digest" ||
+        decision.queued === true)
+    )
+      decision = { outlet: "desktop", reason: "bound-reply-delivered" };
     // Files are never folded into a one-line digest entry.
     if (notice.media && decision.outlet === "digest")
       decision = { outlet: "desktop", reason: "media-not-digested" };

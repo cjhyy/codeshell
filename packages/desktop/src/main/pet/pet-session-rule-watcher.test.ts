@@ -144,6 +144,7 @@ function watcher(
   return new PetSessionRuleWatcher({
     rules,
     onNotice: (draft) => drafts.push(draft),
+    onPendingDecision: () => undefined,
     hasActiveLongTask: () => longTask,
     isSessionBusy: () => busy,
     isEligibleSession: () => eligible,
@@ -178,6 +179,7 @@ describe("turn-scope done", () => {
         kind: "session.done",
         priority: "P1",
         dedupeKey: `${SID}:turn:run-1`,
+        runId: "run-1",
         sessionId: SID,
         ruleIds: ["rule-a"],
         facts: { title: "修复登录", summary: "All tests pass now." },
@@ -310,6 +312,7 @@ describe("goal scope", () => {
         kind: "session.done",
         priority: "P1",
         dedupeKey: `${SID}:goal:g-1`,
+        runId: "run-1",
         sessionId: SID,
         ruleIds: ["rule-goal"],
         facts: { title: "修复登录" },
@@ -496,31 +499,13 @@ describe("long task ownership", () => {
 });
 
 describe("pending decisions", () => {
-  test("pending-upsert emits a P0 blocked draft keyed by request id", async () => {
+  test("a pending decision is never a blocked draft: the IM decision module owns it", async () => {
     rules.rules.push(sessionRule("rule-a"));
-    const w = watcher();
-    await w.observeProjection(
-      pendingUpsert({
-        ...pending(),
-        options: [{ label: "Postgres", recommended: true }, { label: "SQLite" }],
-      } as DesktopPendingDecision),
-    );
-    expect(drafts).toEqual([
-      {
-        kind: "session.blocked",
-        priority: "P0",
-        dedupeKey: `${SID}:req-1`,
-        sessionId: SID,
-        ruleIds: ["rule-a"],
-        requestId: "req-1",
-        expiresAt: NOW + 60_000,
-        facts: {
-          title: "修复登录",
-          question: "需要用户回答",
-          options: [{ label: "Postgres", recommended: true }, { label: "SQLite" }],
-        },
-      },
-    ]);
+    const handed: string[] = [];
+    const w = watcher({ onPendingDecision: (sessionId) => handed.push(sessionId) });
+    await w.observeProjection(pendingUpsert(pending()));
+    expect(drafts).toEqual([]);
+    expect(handed).toEqual([SID]);
     expect(rules.rules[0]!.state).toBe("active");
   });
 
@@ -714,8 +699,12 @@ describe("arming, dedupe keys and ordering", () => {
     // The Session is blocked right now; arming only gates on when we observe it.
     rules.rules.push(sessionRule("rule-a", { armedAt: NOW }));
     const w = watcher();
+    const handed: string[] = [];
+    const w2 = watcher({ onPendingDecision: (sessionId) => handed.push(sessionId) });
     await w.observeProjection(pendingUpsert(pending({ createdAt: NOW - 60_000 })));
-    expect(drafts.map((draft) => draft.kind)).toEqual(["session.blocked"]);
+    await w2.observeProjection(pendingUpsert(pending({ createdAt: NOW - 60_000 })));
+    expect(drafts).toEqual([]);
+    expect(handed).toEqual([SID]);
   });
 
   test("events for one session are processed in order even when not awaited", async () => {

@@ -27,6 +27,7 @@ import type {
   ImGatewayOwnerTarget,
 } from "../im-gateway-service.js";
 import type { PetPendingNoticeSource } from "./pet-dispatch-service.js";
+import type { ImDecisionRuleDelivery } from "./pet-im-decisions.js";
 import type { PetIpcAttention } from "./pet-ipc.js";
 import { PetNoticeLedger } from "./pet-notice-ledger.js";
 import {
@@ -80,6 +81,8 @@ export interface PetNoticeWiringGateway {
   ): Promise<unknown>;
   supportsIdempotentOwnerSend(channel: string): boolean;
   lastOwnerInboundChannel(): string | undefined;
+  /** An allowlisted owner conversation on this channel (callers also require a direct message). */
+  isOwnerConversation(channel: string, target: string): boolean;
 }
 
 export interface PetNoticeWiringDeps {
@@ -95,6 +98,13 @@ export interface PetNoticeWiringDeps {
   /** IM conversations bound to a Session; resolved lazily (built after this wiring). */
   sessionRoutes: () =>
     | { notifyRoutesForSession(sessionId: string): Promise<ConversationSessionRoute[]> }
+    | undefined;
+  /**
+   * The bound-Session reply still being published for a run, if any; a done
+   * notice for that run waits for it (bounded) before deciding on IM.
+   */
+  boundReplies?: () =>
+    | { pendingReply(sessionId: string, runId: string): Promise<void> | undefined }
     | undefined;
   gateway: PetNoticeWiringGateway;
   /** Durable gateway outbox publish (`publishGatewayControlEvent`), for replies to a route. */
@@ -167,12 +177,36 @@ export interface PetNoticeWiring {
   notifyTaskClosed(task: PetLongTask, closure?: PetTaskClosureNotice): Promise<void>;
   /** Queued notices for an owner's IM message; undefined without an IM origin. */
   inboundReplay(origin: PetInboundOrigin | undefined): PetInboundReplay | undefined;
+  /** Pending decisions: PetImDecisions asks here where a rule-watched decision goes. */
+  decisions: PetDecisionNoticeHooks;
+  /**
+   * A bound Session's turn reply was published to `route`. A done notice for
+   * the same run then stays off that conversation (bound-reply-delivered).
+   */
+  recordBoundReply(
+    sessionId: string,
+    runId: string,
+    route: { channel: string; target: string; senderId?: string },
+  ): void;
   /** Waits for pending rule and notice writes (shutdown). */
   flush(): Promise<void>;
   /** The settings this wiring currently routes with. */
   settings(): PetNotificationSettings;
   dispose(): void;
 }
+
+export interface PetDecisionNoticeHooks {
+  /** The Session's active rules that watch blocked, merged (the Session is blocked now). */
+  rulesFor(sessionId: string): ImDecisionRuleDelivery | undefined;
+  /** An IM conversation that belongs to the owner (direct messages only). */
+  isOwnerConversation(origin: { channel: string; target: string; senderId?: string }): boolean;
+  /** Hear about a pending decision in a rule-watched Session as it appears. */
+  onBlocked(listener: (sessionId: string) => void): () => void;
+}
+
+/** How long a done notice waits for the same run's bound reply to be published. */
+const BOUND_REPLY_WAIT_MS = 5_000;
+const MAX_BOUND_REPLY_SESSIONS = 500;
 
 const ATTENTION_RANK: Readonly<Record<NoticeAttention, number>> = {
   always: 3,
@@ -257,6 +291,8 @@ function routeTarget(route: ConversationSessionRoute): NoticeRule["target"] {
       channel: route.channel,
       target: route.target,
       senderId: route.senderId,
+      // Binding is refused outside private chats (bind validator).
+      isDirectMessage: true,
     },
   };
 }
@@ -275,8 +311,21 @@ const DESKTOP_TITLES: Readonly<Record<string, string>> = {
   "session.done": "Mimi 任务已完成",
   "session.failed": "Mimi 任务执行失败",
   "session.blocked": "Mimi：需要你决定",
+  "decision.expired": "Mimi 任务确认",
   digest: "Mimi：你不在时",
 };
+
+/**
+ * Pending decisions already have one desktop surface: the pet's attention
+ * peek / pending count. Their routed notices (the code-bearing prompt and its
+ * expiry) therefore never add a native notification on top.
+ */
+function hasDesktopSurface(notice: NoticeSubmission): boolean {
+  return (
+    (notice.kind === "session.blocked" && notice.requestId !== undefined) ||
+    notice.kind === "decision.expired"
+  );
+}
 
 const ROUTE_EVENT_TYPES: Readonly<Record<string, GatewayControlEventInput["type"]>> = {
   "session.done": "pet.task.completed",
@@ -416,6 +465,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     },
     outlets: {
       desktop: (notice, body) => {
+        if (hasDesktopSurface(notice)) return;
         const key = createHash("sha256")
           .update("pet-notice\0")
           .update(notice.dedupeKey)
@@ -518,13 +568,122 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       return undefined;
     });
 
+  /** sessionId → the latest run whose bound reply was published, and where to. */
+  const boundReplies = new Map<
+    string,
+    { runId: string; routes: { channel: string; target: string; senderId?: string }[] }
+  >();
+
+  function recordBoundReply(
+    sessionId: string,
+    runId: string,
+    route: { channel: string; target: string; senderId?: string },
+  ): void {
+    const previous = boundReplies.get(sessionId);
+    const routes = previous?.runId === runId ? previous.routes : [];
+    routes.push({ channel: route.channel, target: route.target, senderId: route.senderId });
+    boundReplies.delete(sessionId);
+    boundReplies.set(sessionId, { runId, routes });
+    while (boundReplies.size > MAX_BOUND_REPLY_SESSIONS) {
+      const oldest = boundReplies.keys().next().value;
+      if (oldest === undefined) break;
+      boundReplies.delete(oldest);
+    }
+  }
+
+  /**
+   * Whether this run's reply already reached the notice's IM destination: the
+   * same conversation, or — for an owner-addressed notice — any bound
+   * conversation, since binding only happens in the owner's private chats.
+   */
+  function boundReplyCovers(sessionId: string, runId: string, target: NoticeTarget): boolean {
+    const delivered = boundReplies.get(sessionId);
+    if (delivered?.runId !== runId || delivered.routes.length === 0) return false;
+    if (target.kind === "owner") return true;
+    return delivered.routes.some(
+      (route) => route.channel === target.route.channel && route.target === target.route.target,
+    );
+  }
+
+  function submitDone(notice: NoticeSubmission, runId: string): void {
+    const sessionId = notice.sessionId!;
+    const decide = (): Promise<unknown> => {
+      if (!boundReplyCovers(sessionId, runId, notice.target)) return submit(notice);
+      log("pet.notice.bound_reply_delivered", { sessionId, dedupeKey: notice.dedupeKey });
+      return submit({ ...notice, boundReplyDelivered: true });
+    };
+    let pending: Promise<void> | undefined;
+    try {
+      pending = deps.boundReplies?.()?.pendingReply(sessionId, runId);
+    } catch (error) {
+      log("pet.notice.bound_reply_lookup_failed", { sessionId, error: errorText(error) });
+    }
+    if (!pending) {
+      void decide();
+      return;
+    }
+    // The reply is being published right now: decide once it is (bounded).
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const waited = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, BOUND_REPLY_WAIT_MS);
+      timer.unref?.();
+    });
+    void Promise.race([pending.catch(() => undefined), waited]).then(() => {
+      clearTimeout(timer);
+      return disposed ? undefined : decide();
+    });
+  }
+
+  const decisionListeners = new Set<(sessionId: string) => void>();
+
+  const decisions: PetDecisionNoticeHooks = {
+    rulesFor(sessionId) {
+      if (!isEligibleSession(sessionId)) return undefined;
+      const rules = ruleStore
+        .activeForSession(sessionId)
+        .filter((rule) => rule.when.events.includes("blocked"));
+      if (rules.length === 0) return undefined;
+      const onlySystem = rules.every((rule) => rule.when.kind === "all-sessions");
+      return {
+        ruleIds: rules.map((rule) => rule.id),
+        ...mergeRuleAttributes(rules),
+        ...(onlySystem ? { requiresAway: true } : {}),
+      };
+    },
+    isOwnerConversation(origin) {
+      try {
+        return deps.gateway.isOwnerConversation(origin.channel, origin.target);
+      } catch (error) {
+        log("pet.notice.owner_lookup_failed", { error: errorText(error) });
+        return false;
+      }
+    },
+    onBlocked(listener) {
+      decisionListeners.add(listener);
+      return () => decisionListeners.delete(listener);
+    },
+  };
+
   const watcher = new PetSessionRuleWatcher({
     rules: ruleStore,
     onNotice: (draft: NoticeDraft) => {
       const rules = draft.ruleIds
         .map((id) => ruleStore.get(id))
         .filter((rule): rule is NoticeRule => rule !== undefined);
-      void submit({ ...draft, ...mergeRuleAttributes(rules) });
+      const { runId, ...rest } = draft;
+      const notice: NoticeSubmission = { ...rest, ...mergeRuleAttributes(rules) };
+      if (draft.kind === "session.done" && runId !== undefined) submitDone(notice, runId);
+      else void submit(notice);
+    },
+    // PetImDecisions owns the prompt (with its reply code); nudge it now.
+    onPendingDecision: (sessionId) => {
+      for (const listener of decisionListeners) {
+        try {
+          listener(sessionId);
+        } catch (error) {
+          log("pet.notice.decision_listener_failed", { sessionId, error: errorText(error) });
+        }
+      }
     },
     hasActiveLongTask,
     // Queued user messages (core queue depth). Background work parks the turn
@@ -627,6 +786,17 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   let disposed = false;
   const unsubscribeProjection = deps.projection.subscribe((event) => {
     void ready.then(() => (disposed ? undefined : watcher.observeProjection(event)));
+    // A decision answered anywhere (or timed out) must never be replayed later.
+    const resolved =
+      event.kind === "pending-remove"
+        ? { sessionId: event.sessionId, requestId: event.requestId }
+        : event.kind === "pending-upsert" && event.pending.status !== "pending"
+          ? { sessionId: event.pending.agentSessionId, requestId: event.pending.requestId }
+          : undefined;
+    if (resolved)
+      void ready.then(() =>
+        disposed ? undefined : router.revokeDecision(resolved.sessionId, resolved.requestId),
+      );
   });
 
   async function spend(rules: readonly NoticeRule[]): Promise<void> {
@@ -764,6 +934,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     },
     notifyTaskClosed,
     inboundReplay,
+    decisions,
+    recordBoundReply,
     flush: async () => {
       await Promise.all([ruleStore.flush(), ledger.flush()]);
     },

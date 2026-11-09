@@ -16,6 +16,8 @@ export interface NoticeDraft {
   ruleIds: string[];
   /** True when only the all-sessions system rule matched. */
   requiresAway?: boolean;
+  /** done: the core run (or fallback key) it closed, to pair it with a bound reply. */
+  runId?: string;
   requestId?: string;
   expiresAt?: number;
   facts: {
@@ -39,8 +41,12 @@ export interface PetSessionRuleWatcherOptions {
   isSessionBusy: (sessionId: string) => boolean;
   /** False for Mimi's own Session, child Sessions and hidden kinds. */
   isEligibleSession: (sessionId: string) => boolean;
-  /** When set, a pending decision is handed here instead of emitting a blocked draft. */
-  onPendingDecision?: (sessionId: string, pending: DesktopPendingDecision) => void;
+  /**
+   * A pending decision in a Session a blocked rule watches. The IM decision
+   * module owns the prompt (with its reply code), so the watcher never emits a
+   * blocked draft for it: one source, no duplicates.
+   */
+  onPendingDecision: (sessionId: string, pending: DesktopPendingDecision) => void;
   sessionTitle?: (sessionId: string) => string | undefined;
   now?: () => number;
   log?: (event: string, data: Record<string, unknown>) => void;
@@ -60,7 +66,6 @@ const NON_WORK_TOOLS: ReadonlySet<string> = new Set([
 const MAX_QUEUED_USER_MESSAGES = 64;
 const MAX_SUMMARY_LENGTH = 2_000;
 const MAX_FACT_LENGTH = 500;
-const MAX_OPTIONS = 10;
 
 /** What the watcher knows about the in-flight top-level turn of one Session. */
 interface SessionTurnState {
@@ -101,21 +106,6 @@ function eventTime(event: Record<string, unknown>, field: string, now: () => num
   return typeof value === "number" && Number.isFinite(value) ? value : now();
 }
 
-function pendingOptions(pending: DesktopPendingDecision): NoticeDraftOption[] | undefined {
-  // Not part of the projection today; read defensively so a richer projection
-  // (ask_user choices) flows through without a type change here.
-  const raw = (pending as { options?: unknown }).options;
-  if (!Array.isArray(raw)) return undefined;
-  const options = raw.flatMap((option): NoticeDraftOption[] => {
-    if (!option || typeof option !== "object") return [];
-    const record = option as Record<string, unknown>;
-    const label = boundedText(record.label, MAX_FACT_LENGTH);
-    if (!label) return [];
-    return [{ label, ...(record.recommended === true ? { recommended: true } : {}) }];
-  });
-  return options.length > 0 ? options.slice(0, MAX_OPTIONS) : undefined;
-}
-
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -130,8 +120,9 @@ function errorMessage(error: unknown): string {
  *   that did real work, on an idle Session (turn-scope rules); or
  *   `goal_progress(met)` (goal-scope rules).
  * - failed: `turn_complete` that is neither completed nor a user abort, or `error`.
- * - blocked: `limit_stop`, a Goal waiting for the user, an exhausted Goal, or
- *   a pending decision from the projection.
+ * - blocked: `limit_stop`, a Goal waiting for the user, or an exhausted Goal.
+ *   A pending decision from the projection is handed to `onPendingDecision`
+ *   (the IM decision module) instead, when a blocked rule watches it.
  *
  * A Session rule can only fire on an event that happened at/after its
  * `armedAt` (wall clock, so it survives restarts); the acknowledgement turn
@@ -329,6 +320,7 @@ export class PetSessionRuleWatcher {
         kind: "session.done",
         priority: "P1",
         dedupeKey: `${sessionId}:turn:${run}`,
+        runId: run,
         facts: summary ? { summary } : {},
       },
       { spend: true, includeSystem: !state.doneInTurn },
@@ -357,6 +349,7 @@ export class PetSessionRuleWatcher {
           kind: "session.done",
           priority: "P1",
           dedupeKey: `${sessionId}:goal:${goalId}`,
+          runId: run,
           facts: {},
         },
         { spend: true },
@@ -410,31 +403,18 @@ export class PetSessionRuleWatcher {
     if (pending.status !== "pending") return;
     const sessionId = pending.agentSessionId;
     const armed: Matcher = (when) => when.armedAt <= at;
-    if (this.options.onPendingDecision) {
-      // The IM decision module owns pending decisions when wired; it is only
-      // consulted when a rule asked to be told about this Session blocking.
-      if (this.match(sessionId, "blocked", armed).length === 0) return;
-      try {
-        this.options.onPendingDecision(sessionId, pending);
-      } catch (error) {
-        this.log("pet.notice.pending_handoff_failed", {
-          sessionId,
-          requestId: pending.requestId,
-          error: errorMessage(error),
-        });
-      }
-      return;
+    // The IM decision module owns pending decisions; it is only nudged when a
+    // rule asked to be told about this Session blocking.
+    if (this.match(sessionId, "blocked", armed).length === 0) return;
+    try {
+      this.options.onPendingDecision(sessionId, pending);
+    } catch (error) {
+      this.log("pet.notice.pending_handoff_failed", {
+        sessionId,
+        requestId: pending.requestId,
+        error: errorMessage(error),
+      });
     }
-    const options = pendingOptions(pending);
-    const question = boundedText(pending.title, MAX_FACT_LENGTH);
-    await this.emit(sessionId, "blocked", armed, {
-      kind: "session.blocked",
-      priority: "P0",
-      dedupeKey: `${sessionId}:${pending.requestId}`,
-      requestId: pending.requestId,
-      ...(pending.expiresAt !== undefined ? { expiresAt: pending.expiresAt } : {}),
-      facts: { ...(question ? { question } : {}), ...(options ? { options } : {}) },
-    });
   }
 
   private async cancelGoalRules(sessionId: string): Promise<void> {

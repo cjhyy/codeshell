@@ -7,7 +7,7 @@ export interface NoticeFacts {
   error?: string;
   question?: string;
   options?: NoticeDraftOption[];
-  /** Short reply code for answering a blocked decision over IM (supplied upstream). */
+  /** Reply code for answering a blocked decision over IM (PetImDecisions supplies it). */
   code?: string;
 }
 
@@ -76,10 +76,11 @@ function blockedBody(facts: NoticeFacts): string {
   });
   const code = line(facts.code, MAX_CODE);
   if (code) {
+    // PetImDecisions' reply grammar: "回答 <code> <answer>"; 拒绝 declines or skips.
     lines.push(
       options.length > 0
-        ? `回复：回答 ${code} 序号 / 跳过 ${code} / 等待 ${code}`
-        : `回复：回答 ${code} 你的答复 / 跳过 ${code} / 等待 ${code}`,
+        ? `回复：回答 ${code} 序号 / 回答 ${code} 拒绝`
+        : `回复：回答 ${code} 你的答复 / 回答 ${code} 拒绝`,
     );
   }
   return lines.join("\n");

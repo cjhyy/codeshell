@@ -23,7 +23,7 @@ describe("composeNoticeBody", () => {
       "「Deploy」需要你决定：Region?\n1. us（推荐）\n2. eu",
     );
     expect(composeNoticeBody("session.blocked", { ...facts, code: "Q3" })).toContain(
-      "回复：回答 Q3 序号 / 跳过 Q3 / 等待 Q3",
+      "回复：回答 Q3 序号 / 回答 Q3 拒绝",
     );
   });
 

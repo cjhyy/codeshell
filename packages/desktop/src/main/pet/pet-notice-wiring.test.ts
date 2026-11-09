@@ -8,6 +8,7 @@ import type { DesktopNotificationInput } from "../desktop-notifier.js";
 import type { HostActionHandler } from "../host-action-dispatch.js";
 import type { GatewayControlEventInput } from "../im-gateway-control-server.js";
 import type { ImGatewayOwnerChannel } from "../im-gateway-service.js";
+import { collectImDecisions, PetImDecisions } from "./pet-im-decisions.js";
 import type { NoticeSubmission } from "./pet-notice-router.js";
 import {
   mergeRuleAttributes,
@@ -18,6 +19,7 @@ import {
 } from "./pet-notice-wiring.js";
 import type { NoticeRule } from "./pet-rule-store.js";
 import type {
+  DesktopPendingDecision,
   DesktopPetProjectionEvent,
   DesktopPetProjectionSnapshot,
   DesktopPetSession,
@@ -75,14 +77,17 @@ interface Harness {
   materialized: string[][];
   desktop: DesktopNotificationInput[];
   sessions: DesktopPetSession[];
+  pending: DesktopPendingDecision[];
   tasks: PetLongTask[];
   routes: ConversationSessionRoute[];
   channels: ImGatewayOwnerChannel[];
+  snapshot(): DesktopPetProjectionSnapshot;
   emitProjection(event: DesktopPetProjectionEvent): void;
 }
 
 function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
   const sessions = [session(SID)];
+  const pending: DesktopPendingDecision[] = [];
   const tasks: PetLongTask[] = [];
   const routes: ConversationSessionRoute[] = [];
   const channels: ImGatewayOwnerChannel[] = [
@@ -100,7 +105,7 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     generation: 1,
     workerState: "active",
     sessions,
-    pending: [],
+    pending,
     observedAt: clock,
     workMemorySegments: [],
   });
@@ -160,6 +165,9 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
       },
       supportsIdempotentOwnerSend: (channel) => channel === "wechat",
       lastOwnerInboundChannel: () => "wechat",
+      isOwnerConversation: (channel, target) =>
+        (channel === "wechat" && target === "owner-dm") ||
+        (channel === "lark" && target === "dm-1"),
     },
     publishRoute: async (event) => {
       published.push(event);
@@ -201,9 +209,11 @@ function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     materialized,
     desktop,
     sessions,
+    pending,
     tasks,
     routes,
     channels,
+    snapshot,
     emitProjection: (event) => {
       for (const listener of listeners) listener(event);
     },
@@ -463,9 +473,11 @@ describe("rule watcher wiring", () => {
     expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([`${SID}:turn:run-2`]);
   });
 
-  test("a pending decision becomes a blocked notice for a rule that watches it", async () => {
+  test("a pending decision nudges the decision module and never becomes a second prompt", async () => {
     current = harness();
     await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    const nudged: string[] = [];
+    current.wiring.decisions.onBlocked((sessionId) => nudged.push(sessionId));
     clock = NOW + 1_000;
     current.emitProjection({
       kind: "pending-upsert",
@@ -483,13 +495,8 @@ describe("rule watcher wiring", () => {
       observedAt: clock,
     });
     await settle();
-    expect(current.submitted[0]).toMatchObject({
-      kind: "session.blocked",
-      priority: "P0",
-      requestId: "req-1",
-      channel: "auto",
-      target: { kind: "owner" },
-    });
+    expect(nudged).toEqual([SID]);
+    expect(current.submitted).toEqual([]);
   });
 });
 
@@ -746,6 +753,277 @@ describe("pending-notice replay", () => {
     expect(await replay.take()).toEqual([]);
     expect(current.ownerSends).toEqual([
       expect.objectContaining({ targetId: "lark:owner", text: "报告好了", attachments: ["r.txt"] }),
+    ]);
+  });
+});
+
+/** PetImDecisions as main wires it: rule candidates from the wiring, sends through its router. */
+function decisionRelay(h: Harness) {
+  const lines: string[] = [];
+  const approvals: unknown[] = [];
+  const relay = new PetImDecisions({
+    read: () => collectImDecisions(h.snapshot(), h.tasks, lines, h.wiring.decisions.rulesFor),
+    now: () => clock,
+    approve: async (_entry, decision) => {
+      approvals.push(decision);
+      const [resolved] = h.pending.splice(0);
+      if (resolved)
+        h.emitProjection({
+          kind: "pending-remove",
+          sessionId: resolved.agentSessionId,
+          requestId: resolved.requestId,
+          version: 3,
+          generation: 1,
+          observedAt: clock,
+        });
+    },
+    submit: (notice) => h.wiring.router.submit(notice),
+    isOwnerConversation: h.wiring.decisions.isOwnerConversation,
+    onError: (error) => {
+      throw error;
+    },
+  });
+  const raise = (requestId = "req-1") => {
+    const pending = {
+      agentSessionId: SID,
+      requestId,
+      routeGeneration: 1,
+      workerGeneration: 1,
+      kind: "tool_approval",
+      title: "等待批准 Bash",
+      createdAt: clock,
+      status: "pending",
+    } as DesktopPendingDecision;
+    h.pending.push(pending);
+    lines.push(
+      JSON.stringify({
+        method: "agent/approvalRequest",
+        params: {
+          sessionId: SID,
+          requestId,
+          connectionId: "worker",
+          generation: 1,
+          request: { toolName: "Bash", description: "List files", args: { command: "ls" } },
+        },
+      }),
+    );
+    h.emitProjection({
+      kind: "pending-upsert",
+      pending,
+      version: 2,
+      generation: 1,
+      observedAt: clock,
+    });
+  };
+  /** Past the 15 s grace, then a few polls. */
+  const poll = async () => {
+    clock += 16_000;
+    for (let index = 0; index < 3; index += 1) await relay.tick();
+    await settle();
+  };
+  const code = () => relay["options"].read()[0]?.code;
+  return { relay, approvals, raise, poll, code };
+}
+
+const OWNER_DM = { channel: "wechat", target: "owner-dm", senderId: "me", isDirectMessage: true };
+
+describe("decision prompts through the router", () => {
+  test("a non-IM Session with a blocked rule gets exactly one owner prompt, answered by code", async () => {
+    current = harness();
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    const d = decisionRelay(current);
+    d.raise();
+    await settle();
+    await d.poll();
+    const code = d.code()!;
+    expect(code).toMatch(/^[0-9A-F]{12}$/u);
+    expect(current.ownerSends).toHaveLength(1);
+    expect(current.ownerSends[0]!.targetId).toBe("wechat:owner");
+    expect(current.ownerSends[0]!.text).toContain(`回答 ${code} 1`);
+    expect(current.ownerSends[0]!.text).toContain("ls");
+    expect(current.published).toEqual([]);
+    // The pet's pending peek is the desktop surface; no native notification on top.
+    expect(current.desktop).toEqual([]);
+    expect(
+      await d.relay.reply({ message: `回答 ${code} 1`, origin: { ...OWNER_DM, target: "x" } }),
+    ).toContain("不属于当前私聊");
+    expect(await d.relay.reply({ message: `回答 ${code} 1`, origin: OWNER_DM })).toContain(
+      "已处理",
+    );
+    expect(d.approvals).toEqual([{ approved: true }]);
+  });
+
+  test("an IM-started task gets its prompt in its own conversation exactly once", async () => {
+    current = harness();
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    current.tasks.push(
+      longTask({
+        status: "running",
+        completedAt: undefined,
+        completionTarget: {
+          kind: "im-gateway",
+          channel: "lark",
+          target: "chat-9",
+          senderId: "owner-1",
+          isDirectMessage: true,
+        },
+      }),
+    );
+    const d = decisionRelay(current);
+    d.raise();
+    await settle();
+    await d.poll();
+    await d.poll();
+    expect(current.ownerSends).toEqual([]);
+    expect(current.published).toHaveLength(1);
+    expect(current.published[0]).toMatchObject({ target: { channel: "lark", target: "chat-9" } });
+    expect(current.published[0]!.text).toContain(`回答 ${d.code()} 1`);
+    expect(current.desktop).toEqual([]);
+  });
+
+  test("owner present with an auto rule: no IM prompt, only the pet's pending surface", async () => {
+    current = harness({
+      presence: { getSystemIdleTimeSec: () => 0, hasFocusedWindow: () => true },
+    });
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    const d = decisionRelay(current);
+    d.raise();
+    await settle();
+    await d.poll();
+    expect(current.ownerSends).toEqual([]);
+    expect(current.published).toEqual([]);
+    expect(current.desktop).toEqual([]);
+    current.wiring.router.start();
+    expect(current.wiring.attention.getSnapshot().surfaceablePendingCount).toBe(1);
+    // A code the owner never received answers nothing, and a bare number is ordinary chat.
+    expect(await d.relay.reply({ message: "1", origin: OWNER_DM })).toBeUndefined();
+  });
+
+  test("quiet hours never hold a P0 decision prompt", async () => {
+    current = harness({
+      readSettings: () => ({
+        pet: { notifications: { quietHours: { start: "00:00", end: "23:59" } } },
+      }),
+    });
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    const d = decisionRelay(current);
+    d.raise();
+    await settle();
+    await d.poll();
+    expect(current.ownerSends).toHaveLength(1);
+    expect(current.ownerSends[0]!.text).toContain(`回答 ${d.code()}`);
+  });
+
+  test("a resolved decision's queued prompt is revoked and never replayed", async () => {
+    current = harness();
+    current.channels[1] = { id: "lark", label: "飞书", ready: "unavailable" };
+    await current.handler(SID, upsertArgs({ events: ["blocked"], channel: "lark" }));
+    const d = decisionRelay(current);
+    d.raise();
+    await settle();
+    await d.poll();
+    expect(current.ownerSends).toEqual([]);
+    const queued = current.wiring.ledger.queued();
+    expect(queued.map((record) => [record.kind, record.requestId])).toEqual([
+      ["session.blocked", "req-1"],
+    ]);
+    // Answered on the desktop.
+    current.pending.length = 0;
+    current.emitProjection({
+      kind: "pending-remove",
+      sessionId: SID,
+      requestId: "req-1",
+      version: 3,
+      generation: 1,
+      observedAt: clock,
+    });
+    await settle();
+    expect(current.wiring.ledger.queued()).toEqual([]);
+    expect(current.wiring.ledger.get(queued[0]!.id)?.delivery).toMatchObject({
+      status: "revoked",
+      error: "resolved",
+    });
+    current.channels[1] = { id: "lark", label: "飞书", ready: "ready", targetId: "lark:owner" };
+    const replay = current.wiring.inboundReplay({
+      channel: "lark",
+      target: "dm-1",
+      isDirectMessage: true,
+    })!;
+    expect(await replay.take()).toEqual([]);
+    replay.finish();
+    expect(current.ownerSends).toEqual([]);
+  });
+});
+
+describe("bound Session replies", () => {
+  const turn = (runId: string, extra: Record<string, unknown> = {}) => [
+    { type: "session_started", runId, clientMessageId: `cm-${runId}` },
+    { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } },
+    { type: "turn_complete", reason: "completed", text: "改好了", runId, ...extra },
+  ];
+  const bound = { channel: "wechat", target: "chat-1", senderId: "owner-1" };
+
+  test("a completion already replied in the bound conversation is not sent again", async () => {
+    current = harness();
+    current.routes.push(boundRoute());
+    await current.handler(SID, upsertArgs({ events: ["done"] }));
+    clock = NOW + 1_000;
+    current.wiring.recordBoundReply(SID, "run-1", bound);
+    for (const event of turn("run-1")) current.wiring.observeSessionEvent(SID, event);
+    await settle();
+    expect(current.submitted).toHaveLength(1);
+    expect(current.submitted[0]!.boundReplyDelivered).toBe(true);
+    // The session.reply (published by the bridge) is the one IM message.
+    expect(current.published).toEqual([]);
+    expect(current.ownerSends).toEqual([]);
+    expect(current.desktop.map((input) => input.title)).toEqual(["Mimi 任务已完成"]);
+  });
+
+  test("a done notice waits for the same run's in-flight reply", async () => {
+    let finish!: () => void;
+    const inFlight = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    current = harness({
+      boundReplies: () => ({
+        pendingReply: (sessionId, runId) =>
+          sessionId === SID && runId === "run-1" ? inFlight : undefined,
+      }),
+    });
+    current.routes.push(boundRoute());
+    await current.handler(SID, upsertArgs({ events: ["done"] }));
+    clock = NOW + 1_000;
+    for (const event of turn("run-1")) current.wiring.observeSessionEvent(SID, event);
+    await settle();
+    expect(current.submitted).toEqual([]);
+    current.wiring.recordBoundReply(SID, "run-1", bound);
+    finish();
+    await settle();
+    expect(current.submitted.map((notice) => notice.boundReplyDelivered)).toEqual([true]);
+    expect(current.published).toEqual([]);
+  });
+
+  test("another run's reply does not swallow this run's done; failed still goes through", async () => {
+    current = harness({ readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }) });
+    current.routes.push(boundRoute());
+    await current.handler(SID, upsertArgs({ events: ["done"] }));
+    clock = NOW + 1_000;
+    current.wiring.recordBoundReply(SID, "run-0", bound);
+    for (const event of turn("run-1")) current.wiring.observeSessionEvent(SID, event);
+    await settle();
+    expect(current.published).toHaveLength(1);
+    expect(current.published[0]).toMatchObject({ type: "pet.task.completed" });
+    await current.handler(SID, upsertArgs({ events: ["failed"] }));
+    clock = NOW + 2_000;
+    current.wiring.recordBoundReply(SID, "run-2", bound);
+    for (const event of turn("run-2", { reason: "model_error" }))
+      current.wiring.observeSessionEvent(SID, event);
+    await settle();
+    expect(current.submitted.at(-1)).toMatchObject({ kind: "session.failed" });
+    expect(current.submitted.at(-1)!.boundReplyDelivered).toBeUndefined();
+    expect(current.published.map((event) => event.type)).toEqual([
+      "pet.task.completed",
+      "pet.task.failed",
     ]);
   });
 });

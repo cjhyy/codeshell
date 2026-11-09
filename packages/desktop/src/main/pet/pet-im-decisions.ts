@@ -1,12 +1,15 @@
 import { createHash } from "node:crypto";
 import { USER_DECISION_TIMEOUT_MS, recommendedAnswer } from "@cjhyy/code-shell-core/internal";
 import type { PetLongTask } from "@cjhyy/code-shell-pet";
+import type { NoticeAttention, NoticeChannel } from "@cjhyy/code-shell-pet/protocol";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator.js";
 import type {
-  GatewayControlEventInput,
   PetChatControlRequest,
   SessionRouteControlRequest,
 } from "../im-gateway-control-server.js";
+import { MAX_NOTICE_BODY } from "./pet-notice-compose.js";
+import type { RouteDecision } from "./pet-notice-policy.js";
+import type { NoticeSubmission, NoticeTarget } from "./pet-notice-types.js";
 
 type Decision = { approved: boolean; answer?: string; reason?: string; failure?: "timed_out" };
 interface Envelope {
@@ -17,19 +20,52 @@ interface Envelope {
   expiresAt?: number;
   request: { toolName: string; description?: string; args: Record<string, unknown> };
 }
+/** Where one decision's prompt is routed, and so who may answer it. */
+export interface ImDecisionDelivery {
+  /** Notice rules that asked to hear about this Session blocking. */
+  ruleIds: string[];
+  attention: NoticeAttention;
+  channel: NoticeChannel;
+  /** A route is the conversation answers must come from; owner = the owner's direct chats. */
+  target: NoticeTarget;
+  /** Only the all-sessions system rule matched: prompt only while the owner is away. */
+  requiresAway?: boolean;
+  /** The owner started this task from that IM conversation: it is answered there. */
+  reply: boolean;
+}
+
+/** A Session's active blocked-watching rules, resolved by the notice wiring. */
+export type ImDecisionRuleDelivery = Omit<ImDecisionDelivery, "reply">;
+
 export interface ImDecision {
   code: string;
   createdAt: number;
   expiresAt?: number;
-  task: PetLongTask;
+  /** The Session's title, for the notice's facts. */
+  title?: string;
+  /** The active long task that owns this Session, when there is one. */
+  task?: PetLongTask;
   envelope: Envelope;
+  delivery: ImDecisionDelivery;
 }
 
-/** Join only live, user-visible worker requests to their host-owned origin. */
+/** Room left in a prompt for the code, instructions and deadline lines. */
+const PROMPT_OVERHEAD = 400;
+/** A question longer than this is only reviewable (and answerable) on the desktop. */
+const QUESTION_BODY_MAX = MAX_NOTICE_BODY - PROMPT_OVERHEAD;
+
+/**
+ * Join only live, user-visible worker requests to where they are answered: the
+ * IM conversation that started the Session's long task, else the Session's
+ * active blocked-watching notice rules (`rulesFor`; the Session is blocked
+ * now, so a rule armed after the request appeared still counts). Decisions
+ * with neither stay desktop-only.
+ */
 export function collectImDecisions(
   snapshot: DesktopPetProjectionSnapshot,
   tasks: readonly PetLongTask[],
   lines: readonly string[],
+  rulesFor?: (sessionId: string) => ImDecisionRuleDelivery | undefined,
 ): ImDecision[] {
   const envelopes = new Map<string, Envelope>();
   for (const line of lines) {
@@ -51,7 +87,21 @@ export function collectImDecisions(
         entry.sessionId === pending.agentSessionId &&
         !["completed", "failed", "cancelled"].includes(entry.status),
     );
-    if (!task?.completionTarget) continue;
+    const origin = task?.completionTarget;
+    let delivery: ImDecisionDelivery | undefined;
+    if (origin) {
+      delivery = {
+        ruleIds: rulesFor?.(pending.agentSessionId)?.ruleIds ?? [],
+        attention: "always",
+        channel: origin.channel,
+        target: { kind: "route", route: origin },
+        reply: true,
+      };
+    } else {
+      const rules = rulesFor?.(pending.agentSessionId);
+      if (rules) delivery = { ...rules, reply: false };
+    }
+    if (!delivery) continue;
     const envelope = envelopes.get(`${pending.agentSessionId}\0${pending.requestId}`);
     if (!envelope || envelope.generation !== pending.routeGeneration) continue;
     // Bind the code to this worker and request, never a mutable "current task".
@@ -68,9 +118,15 @@ export function collectImDecisions(
       .digest("hex")
       .slice(0, 12)
       .toUpperCase();
+    const title = snapshot.sessions.find(
+      (session) => session.agentSessionId === pending.agentSessionId,
+    )?.title;
     result.push({
       code,
       createdAt: pending.createdAt,
+      ...(title ? { title } : {}),
+      delivery,
+      ...(task ? { task } : {}),
       // A model question's live envelope owns its deadline: keeping it open
       // republishes the request without one, while observer metadata lags.
       expiresAt: skippableEnvelope(envelope)
@@ -116,9 +172,15 @@ function choices(entry: ImDecision): string[] {
     : [];
 }
 
-function canReply(entry: ImDecision): boolean {
-  const origin = entry.task.completionTarget!;
-  return origin.isDirectMessage === true && !!origin.senderId;
+/**
+ * Only a private chat with an authenticated sender may answer: a route must be
+ * a direct message with a sender; owner prompts go to the owner's own direct
+ * chats, recognised by `isOwnerConversation`.
+ */
+function canReply(entry: ImDecision, ownerConversations: boolean): boolean {
+  const target = entry.delivery.target;
+  if (target.kind === "owner") return ownerConversations;
+  return target.route.isDirectMessage === true && !!target.route.senderId;
 }
 
 function questionBody(entry: ImDecision): string | undefined {
@@ -140,27 +202,70 @@ function questionBody(entry: ImDecision): string | undefined {
           )
         : [];
   const body = [question, ...options.map((label, index) => `${index + 1}. ${label}`)].join("\n");
-  return body.length <= 12_000 ? body : undefined;
+  return body.length <= QUESTION_BODY_MAX ? body : undefined;
 }
 
-function event(entry: ImDecision, suffix: string, text: string): GatewayControlEventInput {
-  const origin = entry.task.completionTarget!;
+/**
+ * The question and options as notice facts (digest lines, replayed context).
+ * A conversation that cannot answer gets neither the details nor the code.
+ */
+function decisionFacts(entry: ImDecision, answerable: boolean): NoticeSubmission["facts"] {
+  if (!answerable) return entry.title ? { title: entry.title } : {};
+  const { toolName, description, args } = entry.envelope.request;
+  const question =
+    toolName === "__ask_user__"
+      ? String(args.question ?? description ?? "需要你的回答")
+      : `${toolName}：${description ?? "工具请求执行许可"}`;
+  const options =
+    toolName !== "__ask_user__"
+      ? [{ label: "允许本次" }, { label: "拒绝" }]
+      : Array.isArray(args.options)
+        ? args.options.flatMap((option) =>
+            option && typeof option.label === "string"
+              ? [
+                  {
+                    label: option.label as string,
+                    ...(option.recommended === true ? { recommended: true } : {}),
+                  },
+                ]
+              : [],
+          )
+        : [];
   return {
-    deliveryKey: createHash("sha256").update(`pet-decision:${entry.code}:${suffix}`).digest("hex"),
-    type: "pet.task.reported",
-    title: "Mimi 任务确认",
-    text,
-    target: { channel: origin.channel, target: origin.target },
+    ...(entry.title ? { title: entry.title } : {}),
+    question,
+    ...(options.length > 0 ? { options } : {}),
+    code: entry.code,
   };
 }
 
-/** Deterministic IM reply handling; no model may infer or manufacture consent. */
+/** The channel a submitted notice went out on over IM, if it did. */
+function imChannel(decision: RouteDecision | undefined): string | undefined {
+  return decision && (decision.outlet === "im" || decision.outlet === "both")
+    ? decision.im
+    : undefined;
+}
+
+/**
+ * Deterministic IM reply handling; no model may infer or manufacture consent.
+ *
+ * This is the only source of IM prompts for pending decisions: after a grace
+ * period each prompt (with its reply code) is submitted to the notice router,
+ * which decides whether it goes to IM at all (presence, the all-sessions
+ * rule's "only while away", P0 caps) and where. A prompt the router kept on
+ * the desktop is never sent; its code is never shown, so it cannot be
+ * answered from IM.
+ */
 export class PetImDecisions {
   private timer?: ReturnType<typeof setInterval>;
   private ticking = false;
+  private retick = false;
+  /** Codes whose prompt was handed to the router (sent or deliberately not). */
   private readonly sent = new Set<string>();
+  /** Codes whose prompt the router sent over IM → that channel. */
+  private readonly prompted = new Map<string, string>();
   private readonly submitting = new Set<string>();
-  private readonly notices = new Map<string, GatewayControlEventInput>();
+  private readonly notices = new Map<string, NoticeSubmission>();
   /** Retain delivered prompts briefly so late short replies receive an explicit ended notice. */
   private readonly delivered = new Map<string, { entry: ImDecision; at: number }>();
   constructor(
@@ -169,7 +274,14 @@ export class PetImDecisions {
       approve: (entry: ImDecision, decision: Decision) => Promise<void>;
       /** Drop a model question's auto-resolve deadline (回答 码 等待). */
       keepWaiting?: (entry: ImDecision) => Promise<void>;
-      publish: (event: GatewayControlEventInput) => Promise<void>;
+      /** The notice router (`PetNoticeRouter.submit`); its decision says whether IM got it. */
+      submit: (notice: NoticeSubmission) => Promise<RouteDecision | undefined>;
+      /** A direct chat that belongs to the owner, for owner-targeted prompts. */
+      isOwnerConversation?: (origin: {
+        channel: string;
+        target: string;
+        senderId?: string;
+      }) => boolean;
       onError: (error: unknown) => void;
       now?: () => number;
       graceMs?: number;
@@ -187,6 +299,14 @@ export class PetImDecisions {
     if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
   }
+  /** A notice rule saw this Session block: look now instead of at the next poll. */
+  considerSession(_sessionId: string): void {
+    if (!this.timer) return;
+    void this.tick();
+  }
+  private canReply(entry: ImDecision): boolean {
+    return canReply(entry, this.options.isOwnerConversation !== undefined);
+  }
   private now(): number {
     return this.options.now?.() ?? Date.now();
   }
@@ -203,14 +323,21 @@ export class PetImDecisions {
     entry: ImDecision,
     origin: Parameters<PetImDecisions["reply"]>[0]["origin"],
   ): boolean {
-    const target = entry.task.completionTarget;
+    if (!origin || origin.isDirectMessage !== true || !this.canReply(entry)) return false;
+    const target = entry.delivery.target;
+    if (target.kind === "owner") {
+      return (
+        this.options.isOwnerConversation?.({
+          channel: origin.channel,
+          target: origin.target,
+          ...(origin.senderId !== undefined ? { senderId: origin.senderId } : {}),
+        }) === true
+      );
+    }
     return (
-      !!target &&
-      canReply(entry) &&
-      origin?.isDirectMessage === true &&
-      origin.channel === target.channel &&
-      origin.target === target.target &&
-      origin.senderId === target.senderId
+      origin.channel === target.route.channel &&
+      origin.target === target.route.target &&
+      origin.senderId === target.route.senderId
     );
   }
   private pruneDelivered(): void {
@@ -223,18 +350,41 @@ export class PetImDecisions {
   }
 
   async tick(): Promise<void> {
-    if (this.ticking) return;
+    if (this.ticking) {
+      this.retick = true;
+      return;
+    }
     this.ticking = true;
+    try {
+      do {
+        this.retick = false;
+        await this.tickOnce();
+      } while (this.retick);
+    } finally {
+      this.ticking = false;
+    }
+  }
+
+  private async tickOnce(): Promise<void> {
     try {
       const entries = this.options.read();
       this.pruneDelivered();
       const live = new Set(entries.map((entry) => entry.code));
       for (const code of this.sent) if (!live.has(code)) this.sent.delete(code);
+      for (const code of this.prompted.keys()) if (!live.has(code)) this.prompted.delete(code);
       for (const entry of entries) {
         if (this.submitting.has(entry.code)) continue;
         if (this.expired(entry)) {
           // Core applies a model question's timeout (recommended option or skip).
           if (skippableEnvelope(entry.envelope)) continue;
+          // Core enforces the same deadline itself; this backstop (and its
+          // notice) is only for decisions that were put to an IM conversation.
+          const channel =
+            this.prompted.get(entry.code) ??
+            (entry.delivery.reply && entry.delivery.target.kind === "route"
+              ? entry.delivery.target.route.channel
+              : undefined);
+          if (channel === undefined) continue;
           this.submitting.add(entry.code);
           try {
             // Re-read immediately before submitting; cancellation/restart wins.
@@ -247,9 +397,9 @@ export class PetImDecisions {
             });
             this.notices.set(
               entry.code,
-              event(
+              this.expiredNotice(
                 entry,
-                "expired",
+                channel,
                 `确认 ${entry.code} 已超时，本次操作未获授权。任务将收到阻塞原因；如需继续此操作，请重新发起任务。`,
               ),
             );
@@ -266,16 +416,20 @@ export class PetImDecisions {
         )
           continue;
         try {
-          await this.options.publish(event(entry, "question", this.prompt(entry)));
+          const decision = await this.options.submit(this.questionNotice(entry));
           this.sent.add(entry.code);
-          this.delivered.set(entry.code, { entry, at: this.now() });
+          const channel = imChannel(decision);
+          if (channel !== undefined) {
+            this.prompted.set(entry.code, channel);
+            this.delivered.set(entry.code, { entry, at: this.now() });
+          }
         } catch (error) {
           this.options.onError(error);
         }
       }
       for (const [code, notice] of this.notices) {
         try {
-          await this.options.publish(notice);
+          await this.options.submit(notice);
           this.notices.delete(code);
         } catch (error) {
           this.options.onError(error);
@@ -283,9 +437,49 @@ export class PetImDecisions {
       }
     } catch (error) {
       this.options.onError(error);
-    } finally {
-      this.ticking = false;
     }
+  }
+
+  /** One P0 blocked notice per request; the router owns quiet hours, presence and caps. */
+  private questionNotice(entry: ImDecision): NoticeSubmission {
+    const { sessionId, requestId } = entry.envelope;
+    const { delivery } = entry;
+    const end = this.expiresAt(entry);
+    return {
+      kind: "session.blocked",
+      priority: "P0",
+      dedupeKey: `${sessionId}:${requestId}`,
+      sessionId,
+      requestId,
+      ...(Number.isFinite(end) ? { expiresAt: end } : {}),
+      ruleIds: delivery.ruleIds,
+      ...(delivery.requiresAway ? { requiresAway: true } : {}),
+      facts: decisionFacts(entry, this.canReply(entry)),
+      attention: delivery.attention,
+      channel: delivery.channel,
+      target: delivery.target,
+      body: this.prompt(entry),
+      ...(delivery.reply ? { reply: true } : {}),
+    };
+  }
+
+  /** Tells the conversation that got the prompt that it ended unanswered. */
+  private expiredNotice(entry: ImDecision, channel: string, text: string): NoticeSubmission {
+    const { sessionId, requestId } = entry.envelope;
+    return {
+      kind: "decision.expired",
+      priority: "P1",
+      dedupeKey: `${sessionId}:${requestId}:expired`,
+      sessionId,
+      ruleIds: entry.delivery.ruleIds,
+      facts: entry.title ? { title: entry.title } : {},
+      attention: "always",
+      // The channel the prompt went out on, so the notice follows it there.
+      channel,
+      target: entry.delivery.target,
+      body: text,
+      reply: true,
+    };
   }
 
   private prompt(entry: ImDecision): string {
@@ -299,7 +493,7 @@ export class PetImDecisions {
         : `剩余约 ${remaining} 分钟；超时未回答将自动按默认处理。`;
     // Existing tasks lack sender identity; group conversations must not receive
     // private permission details or gain authority through a guessed reply code.
-    if (!canReply(entry)) return `任务正在等待确认，请打开桌面 Session 处理。\n${deadline}`;
+    if (!this.canReply(entry)) return `任务正在等待确认，请打开桌面 Session 处理。\n${deadline}`;
     const fallback = question && Number.isFinite(end) ? recommended(entry) : undefined;
     const timeout =
       question && Number.isFinite(end)
@@ -359,7 +553,13 @@ export class PetImDecisions {
       const delivered = [...this.delivered.values()].filter((item) =>
         this.sameOrigin(item.entry, origin),
       );
-      const matching = entries.filter((item) => this.sameOrigin(item, origin));
+      // Owner prompts reach whichever owner chat the router picked, so only
+      // one the router actually sent there is a candidate for a bare reply.
+      const matching = entries.filter(
+        (item) =>
+          this.sameOrigin(item, origin) &&
+          (item.delivery.target.kind === "route" || this.prompted.has(item.code)),
+      );
       const shortReply =
         /^\d+(?:\s*[,，]\s*\d+)*$/u.test(message) ||
         [...matching, ...delivered.map(({ entry }) => entry)].some((entry) =>

@@ -133,6 +133,11 @@ export interface NoticeSubmission {
   reply?: boolean;
   /** Files / URL action sent with the text; such a notice is never digested or merged. */
   media?: NoticeMedia;
+  /**
+   * The Session is bound to an IM conversation that already received this
+   * run's reply: the notice never goes to IM (or the digest), only the desktop.
+   */
+  boundReplyDelivered?: boolean;
 }
 
 export interface NoticeRouterSettings {

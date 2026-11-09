@@ -987,6 +987,10 @@ describe("ImGatewayService", () => {
     const unknown = service.listOwnerMessageTargets();
     expect(unknown).toHaveLength(1);
     expect(unknown[0]).toMatchObject({ channel: "wechat", proactiveReady: "unknown" });
+    // Owner conversations are the allowlisted targets on their own channel.
+    expect(service.isOwnerConversation("wechat", "wechat-owner")).toBe(true);
+    expect(service.isOwnerConversation("wechat", "someone-else")).toBe(false);
+    expect(service.isOwnerConversation("telegram", "wechat-owner")).toBe(false);
     expect(service.ownerChannels()).toEqual([
       { id: "wechat", label: "微信", ready: "unknown", targetId: unknown[0]!.id },
     ]);

@@ -57,6 +57,15 @@ export interface SessionBridgeWiringDeps {
     text: string;
     target: { channel: string; target: string };
   }): Promise<void>;
+  /**
+   * One turn's reply is now in the durable outbox for `route` (the notice
+   * wiring then keeps that run's done notice off the same conversation).
+   */
+  onReplyForwarded?(reply: {
+    sessionId: string;
+    turnId: string;
+    route: ConversationSessionRoute;
+  }): void;
   /** Initial retry delay for a reply not yet persisted to the outbox. */
   deliveryRetryMs?: number;
   onDeliveryError?(error: unknown, turn: BoundSessionTurnResult): void;
@@ -79,6 +88,8 @@ export interface SessionBridgeWiring {
   routeInbound(inbound: BoundSessionInbound): Promise<BoundSessionDisposition>;
   /** Deliver one Session turn's final answer back to every bound conversation. */
   deliverSessionReply(input: { sessionId: string; turnId: string; text: string }): Promise<void>;
+  /** Settles once this turn's reply is in the outbox; undefined when none is in flight. */
+  pendingReply(sessionId: string, turnId: string): Promise<void> | undefined;
   /** Downgrade routes that aged out while the app was closed. */
   recoverOnStartup(): Promise<void>;
 }
@@ -112,6 +123,11 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
         target: { channel: route.channel, target: route.target },
       });
       publishedRoutes?.add(route.id);
+      try {
+        deps.onReplyForwarded?.({ sessionId, turnId, route });
+      } catch {
+        // Bookkeeping for notices must never fail a published reply.
+      }
     }
   }
 
@@ -187,6 +203,7 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
     },
     routeInbound: (inbound) => bridge.accept(inbound),
     deliverSessionReply,
+    pendingReply: (sessionId, turnId) => pendingReplies.get(`${sessionId}\u0000${turnId}`),
     recoverOnStartup: async () => {
       await routes.expireStaleBoundRoutes();
     },
