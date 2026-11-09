@@ -16,6 +16,7 @@ import {
   type GoalTerminationReason,
   type PersistedGoalTerminationReason,
 } from "../goal/lifecycle.js";
+import { GoalProgressMeter } from "../goal/progress-meter.js";
 import { createGoalStopHook, type GoalJudgeRuntimeContext } from "../hooks/goal-stop-hook.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { LLMClientBase } from "../llm/client-base.js";
@@ -184,9 +185,9 @@ export function armRunGoalHook(args: {
         const runGoal = slots.getActivePersistedRunGoal() ?? persistedRunGoal;
         return runGoal ? persistGoalTerminal(session.state, runGoal, "completed") : true;
       },
-      onWaiting: () => {
+      onWaiting: (kind) => {
         const runGoal = slots.getActivePersistedRunGoal() ?? persistedRunGoal;
-        return runGoal ? sessionManager.markGoalWaiting(session.state, runGoal) : true;
+        return runGoal ? sessionManager.markGoalWaiting(session.state, runGoal, kind) : true;
       },
       // Re-read the persisted goal each turn so a mid-run 清除 (clearGoal
       // wrote state.json but this hook's frozen goal copy + the closure's
@@ -229,7 +230,11 @@ export function createGoalTerminationApplier(args: {
   ) => GoalTerminalSaveOutcome;
   readActiveGoal: (sid: string) => GoalConfig | undefined | null;
   /** Park the goal (active → waiting) when the stop-block cap pauses it. */
-  markGoalWaiting: (state: SessionBundle["state"], goal: GoalConfig) => boolean;
+  markGoalWaiting: (
+    state: SessionBundle["state"],
+    goal: GoalConfig,
+    kind: "background" | "user",
+  ) => boolean;
   onStream: StreamCallback | undefined;
 }): (termination: GoalTerminationReason | undefined, round: number | undefined) => void {
   const {
@@ -255,7 +260,8 @@ export function createGoalTerminationApplier(args: {
     // waiting write fails the goal simply stays active on disk, which a later
     // send re-arms the same way, so the failure is only logged.
     if (termination === "stop_blocks_exhausted") {
-      if (!markGoalWaiting(session.state, runGoal)) {
+      // Only the user can resume a capped goal: its idle time does not count.
+      if (!markGoalWaiting(session.state, runGoal, "user")) {
         logger.warn("goal.stop_block_cap_pause_persist_failed", {
           cat: "goal",
           sessionId: session.state.sessionId,
@@ -300,4 +306,50 @@ export function createGoalTerminationApplier(args: {
       }
     }
   };
+}
+
+/**
+ * Engine: the goal-level progress meter for one top-level run. The run's own
+ * goal (if any) starts its clock now; a goal set mid-run starts on its first
+ * marker. Bases come from the persisted lifecycle of the same goal identity.
+ */
+export function createRunGoalProgressMeter(
+  sessionManager: Pick<SessionManager, "readGoalProgress">,
+  sessionId: string,
+  runGoal: GoalConfig | undefined,
+): GoalProgressMeter {
+  const meter = new GoalProgressMeter((goalId) => {
+    const persisted = sessionManager.readGoalProgress(sessionId);
+    return persisted?.goalId === goalId
+      ? { rounds: persisted.rounds, activeMs: persisted.activeMs }
+      : undefined;
+  });
+  if (runGoal?.goalId) meter.begin(runGoal.goalId);
+  return meter;
+}
+
+/** Engine run teardown: persist the meter's per-goal deltas. Never throws. */
+export function persistRunGoalProgress(
+  meter: GoalProgressMeter | null,
+  sessionManager: Pick<SessionManager, "recordGoalProgress">,
+  state: SessionBundle["state"],
+): void {
+  if (!meter) return;
+  for (const delta of meter.drain()) {
+    try {
+      if (!sessionManager.recordGoalProgress(state, delta.goalId, delta)) {
+        logger.info("goal.progress_not_recorded", {
+          cat: "goal",
+          sessionId: state.sessionId,
+          goalId: delta.goalId,
+        });
+      }
+    } catch (error) {
+      logger.warn("goal.progress_persist_failed", {
+        cat: "goal",
+        sessionId: state.sessionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 }

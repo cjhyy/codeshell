@@ -20,8 +20,12 @@ import {
   isGoalTerminated,
   isSameGoalInstance,
   mergeGoalTerminals,
+  addGoalProgress,
   armGoalLifecycle,
+  carryGoalProgress,
   createGoalLifecycle,
+  goalProgressSnapshot,
+  settledGoalProgress,
   decodeGoalLifecycle,
   goalConfigFromLifecycle,
   isGoalLifecycleArmable,
@@ -423,5 +427,79 @@ describe("goal budget tracker", () => {
     const t = createGoalBudgetTracker({ objective: "x" }, 1000);
     recordGoalUsage(t, 1_000_000);
     expect(goalBudgetExceeded(t, 10_000_000)).toBe(false);
+  });
+});
+
+describe("goal-level progress (rounds + active time)", () => {
+  const goal: GoalConfig = { goalId: "g-progress", revision: 1, objective: "长期目标" };
+  const active = () => createGoalLifecycle(goal, "active", 1_000);
+
+  test("decodes valid progress and a wait kind; malformed accounting drops the counter, never the goal", () => {
+    const decoded = decodeGoalLifecycle({
+      ...waitGoalLifecycle(
+        addGoalProgress(active(), { rounds: 3, activeMs: 90_000 }),
+        2_000,
+        "user",
+      ),
+    });
+    expect(decoded).toMatchObject({
+      phase: "waiting",
+      waitKind: "user",
+      progress: { rounds: 3, activeMs: 90_000 },
+    });
+    for (const progress of [{ rounds: -1, activeMs: 1 }, { rounds: 1.5, activeMs: 1 }, "x", null]) {
+      const lifecycle = decodeGoalLifecycle({ ...active(), progress });
+      expect(lifecycle).toBeDefined();
+      expect(lifecycle?.progress).toBeUndefined();
+    }
+    const unknownKind = decodeGoalLifecycle({
+      ...waitGoalLifecycle(active(), 2_000)!,
+      waitKind: "later",
+    });
+    expect(unknownKind?.phase).toBe("waiting");
+    expect(unknownKind && "waitKind" in unknownKind).toBe(false);
+  });
+
+  test("a background wait counts toward active time when it ends; a user wait does not", () => {
+    const base = addGoalProgress(active(), { rounds: 2, activeMs: 60_000 });
+    const background = waitGoalLifecycle(base, 10_000, "background")!;
+    expect(settledGoalProgress(background, 70_000)).toEqual({ rounds: 2, activeMs: 120_000 });
+    expect(goalProgressSnapshot(background)).toEqual({
+      rounds: 2,
+      activeMs: 60_000,
+      runningSinceMs: 10_000,
+    });
+    expect(armGoalLifecycle(background, 70_000)).toMatchObject({
+      phase: "active",
+      progress: { rounds: 2, activeMs: 120_000 },
+    });
+
+    const user = waitGoalLifecycle(base, 10_000, "user")!;
+    expect(settledGoalProgress(user, 999_999)).toEqual({ rounds: 2, activeMs: 60_000 });
+    expect(goalProgressSnapshot(user).runningSinceMs).toBeUndefined();
+    expect(armGoalLifecycle(user, 999_999)?.progress).toEqual({ rounds: 2, activeMs: 60_000 });
+  });
+
+  test("termination keeps the settled totals; rebuilt records carry them only for the same goal", () => {
+    const waiting = waitGoalLifecycle(
+      addGoalProgress(active(), { rounds: 4, activeMs: 1_000 }),
+      5_000,
+      "background",
+    )!;
+    expect(terminateGoalLifecycle(waiting, "completed", 8_000)?.progress).toEqual({
+      rounds: 4,
+      activeMs: 4_000,
+    });
+    const edited = createGoalLifecycle({ ...goal, revision: 2, objective: "改过的目标" });
+    expect(carryGoalProgress(edited, waiting, 8_000).progress).toEqual({
+      rounds: 4,
+      activeMs: 4_000,
+    });
+    const replacement = createGoalLifecycle({
+      goalId: "g-other",
+      revision: 1,
+      objective: "新目标",
+    });
+    expect(carryGoalProgress(replacement, waiting, 8_000).progress).toBeUndefined();
   });
 });

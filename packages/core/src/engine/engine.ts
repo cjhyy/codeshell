@@ -194,6 +194,8 @@ import {
   resolveRunGoal,
   armRunGoalHook,
   createGoalTerminationApplier,
+  createRunGoalProgressMeter,
+  persistRunGoalProgress,
   type GoalRunSlots,
 } from "./run-goal.js";
 import {
@@ -420,6 +422,8 @@ export class Engine {
    * running goal's turn/budget ceilings mid-run (TODO 3.1). Null when idle.
    */
   private activeTurnLoop: TurnLoop | null = null;
+  /** Goal-level round/time meter of the in-flight top-level run (null when idle). */
+  private activeGoalMeter: ReturnType<typeof createRunGoalProgressMeter> | null = null;
   /** Frozen behavior-profile ceiling for the live run's Goal controls. */
   private activeProfileMaxTurns: number | undefined;
   /**
@@ -1598,6 +1602,7 @@ export class Engine {
       userOnStream,
       prepareEvent: (event) => {
         event = runTiming.prepareEvent(event);
+        event = this.activeGoalMeter?.decorate(event) ?? event;
         return event.type === "session_started"
           ? { ...event, runId, previousRunId, clientMessageId }
           : event;
@@ -2061,6 +2066,8 @@ export class Engine {
               this.activeProfileMaxTurns = undefined;
             }
             if (this.activeRunSession === session) this.activeRunSession = null;
+            persistRunGoalProgress(this.activeGoalMeter, this.sessionManager, session.state);
+            this.activeGoalMeter = null;
           }
           const finalized = await this.finalizeRun({
             session,
@@ -2877,6 +2884,8 @@ export class Engine {
       sid,
       onStream: options?.onStream,
     });
+    if (this.config.isSubAgent !== true)
+      this.activeGoalMeter = createRunGoalProgressMeter(this.sessionManager, sid, persistedRunGoal);
     let latestGoalJudgeContext: GoalJudgeRuntimeContext | undefined;
     const goalHookHandler = armRunGoalHook({
       slots: goalSlots,
@@ -2949,7 +2958,7 @@ export class Engine {
       persistGoalTerminalOutcome: (state, goal, t) =>
         this.persistGoalTerminalOutcome(state, goal, t),
       readActiveGoal: (s) => this.sessionManager.readActiveGoal(s),
-      markGoalWaiting: (state, goal) => this.sessionManager.markGoalWaiting(state, goal),
+      markGoalWaiting: (s, g, kind) => this.sessionManager.markGoalWaiting(s, g, kind),
       onStream: options?.onStream,
     });
 

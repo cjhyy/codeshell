@@ -215,6 +215,9 @@ export const chat = {
         barWaitingHint: "目标在等你回答这个问题，回复后才会继续：",
         barPausedHint: "目标已暂停，不会自动继续。点击恢复后接着推进。",
         barElapsed: "目标已设置 {elapsed}",
+        barActiveTime: "第 {round} 轮 · {elapsed}",
+        barActiveTimeHint:
+          "目标用时 {elapsed}：运行和等待后台任务的时间，暂停、等你回复时不计。目标设于 {setAt}。",
         expand: "展开目标",
         collapse: "收起目标",
       },
@@ -552,6 +555,9 @@ export const chat = {
         barPausedHint:
           "This goal is paused and will not continue on its own. Resume it to keep going.",
         barElapsed: "Goal set {elapsed} ago",
+        barActiveTime: "Turn {round} · {elapsed}",
+        barActiveTimeHint:
+          "Goal time {elapsed}: time spent running or waiting on background work, not while paused or waiting for you. Set {setAt}.",
         expand: "Expand goal",
         collapse: "Collapse goal",
       },

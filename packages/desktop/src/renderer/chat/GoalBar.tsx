@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import type { ActiveGoal } from "../types";
+import { goalElapsedMs } from "../goalClock";
 
 /** `12h 57m 34s` / `3m 05s` / `45s` — the Goal's age, Codex-style. */
 export function formatGoalElapsed(ms: number): string {
@@ -65,15 +66,38 @@ export function GoalBar({
     if (!editing) setDraft(goal.objective);
   }, [editing, goal.objective]);
 
-  // Tick only while the Goal is live; a paused Goal's age needs no animation.
+  // Goal time (Codex-style): running + background-wait time, stopped while
+  // paused or waiting for the user. Older servers send no accounting; the bar
+  // then shows the Goal's age since it was set.
+  const hasGoalTime = goal.activeMs !== undefined;
+  const ticking = hasGoalTime
+    ? !goal.paused && goal.clockSinceMs !== undefined
+    : !goal.paused && goal.setAtMs !== undefined;
   React.useEffect(() => {
     setClock(now());
-    if (goal.paused || goal.setAtMs === undefined) return;
+    if (!ticking) return;
     const timer = setInterval(() => setClock(now()), 1000);
     return () => clearInterval(timer);
-  }, [goal.paused, goal.setAtMs, now]);
+  }, [ticking, now]);
 
-  const elapsed = goal.setAtMs !== undefined ? formatGoalElapsed(clock - goal.setAtMs) : undefined;
+  const goalTime = goalElapsedMs(goal, clock);
+  const elapsed =
+    goalTime !== undefined
+      ? formatGoalElapsed(goalTime)
+      : goal.setAtMs !== undefined
+        ? formatGoalElapsed(clock - goal.setAtMs)
+        : undefined;
+  const elapsedLabel =
+    goalTime !== undefined && goal.round > 0
+      ? t("chat.goal.barActiveTime", { round: goal.round, elapsed: elapsed! })
+      : elapsed;
+  const elapsedTitle =
+    goalTime !== undefined
+      ? t("chat.goal.barActiveTimeHint", {
+          elapsed: elapsed!,
+          setAt: goal.setAtMs !== undefined ? new Date(goal.setAtMs).toLocaleString() : "—",
+        })
+      : elapsed && t("chat.goal.barElapsed", { elapsed });
   // Paused wins: a paused Goal does not continue even after the user replies.
   const waiting = !goal.paused && !!goal.waitingForUser;
   const label = goal.paused
@@ -148,12 +172,12 @@ export function GoalBar({
         >
           <span className="truncate">{goal.objective}</span>
         </Button>
-        {elapsed && (
+        {elapsedLabel && (
           <span
             className="shrink-0 text-xs tabular-nums text-muted-foreground"
-            title={t("chat.goal.barElapsed", { elapsed })}
+            title={elapsedTitle || undefined}
           >
-            {elapsed}
+            {elapsedLabel}
           </span>
         )}
         <div className="flex shrink-0 items-center">

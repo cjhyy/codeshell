@@ -85,11 +85,14 @@ describe("external Goal lifecycle", () => {
       waitingFor: "finite_background_work",
     });
     expect(goals.get(sessionId)).toMatchObject({ goal: "收集后台结果", paused: false });
+    // A wait, not an unmet verdict: no gaps text, a waiting marker instead.
     expect(events.at(-1)).toMatchObject({
       type: "goal_progress",
       status: "not_met",
-      gaps: "等待后台任务完成，完成后自动继续。",
+      round: 1,
+      waiting: { kind: "background_work", sinceMs: now },
     });
+    expect(events.at(-1)).not.toHaveProperty("gaps");
     expect(events.some((event) => event.type === "goal_progress" && event.status === "met")).toBe(
       false,
     );
@@ -104,6 +107,67 @@ describe("external Goal lifecycle", () => {
     });
     expect(events.filter((event) => event.type === "goal_set")).toHaveLength(1);
   });
+
+  test("rounds and goal time accumulate across wakes; a user wait is not counted", () => {
+    // Persistence settles background waits with Date.now(); share the fake clock.
+    const clock = spyOn(Date, "now").mockImplementation(() => now);
+    try {
+      accumulateAcrossWakes();
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  function accumulateAcrossWakes(): void {
+    const minute = 60_000;
+    const first = goals.start(sessionId, "长期目标")!;
+    now += minute;
+    expect(goals.afterTurn(first, 10, "派出后台任务", true)).toBe(true);
+    const tasks = [{ kind: "job", label: "DriveAgent(codex): 修样式" }];
+    expect(goals.waitForBackgroundWork(first, tasks)).toBe(true);
+    expect(events.at(-1)).toMatchObject({
+      round: 1,
+      waiting: { kind: "background_work", sinceMs: now, tasks },
+      progress: { rounds: 1, activeMs: minute, atMs: now },
+    });
+    goals.end(first);
+
+    // The background work runs for 20 minutes, then its completion wakes the goal.
+    now += 20 * minute;
+    const second = goals.start(sessionId)!;
+    now += 2 * minute;
+    expect(goals.afterTurn(second, 10, "再派一个", true)).toBe(true);
+    expect(goals.waitForBackgroundWork(second)).toBe(true);
+    expect(events.at(-1)).toMatchObject({
+      round: 2,
+      progress: { rounds: 2, activeMs: 23 * minute },
+    });
+    goals.end(second);
+
+    now += 5 * minute;
+    const third = goals.start(sessionId)!;
+    now += minute;
+    goals.waitForUser(sessionId, {
+      goalId: third.goal.goalId,
+      revision: third.goal.revision,
+      question: "要发布吗？",
+    });
+    expect(events.at(-1)).toMatchObject({
+      round: 3,
+      waitingForUser: "要发布吗？",
+      progress: { rounds: 3, activeMs: 29 * minute },
+    });
+    expect(goals.afterTurn(third, 10, "等你决定")).toBe(false);
+    goals.end(third);
+
+    // Half an hour waiting for the reply is not goal time.
+    now += 30 * minute;
+    expect(manager.readGoalProgress(sessionId)).toEqual({
+      goalId: third.goal.goalId,
+      rounds: 3,
+      activeMs: 29 * minute,
+    });
+  }
 
   test("stale or failed background waiting never publishes a waiting transition", () => {
     const run = goals.start(sessionId, "后台任务")!;

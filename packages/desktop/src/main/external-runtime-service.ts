@@ -169,6 +169,8 @@ export interface ExternalRuntimeBackgroundWorkDelivery {
   hasPending(sessionId: string): boolean;
   /** Finite work that will publish a completion notification for this Session. */
   hasRunning(sessionId: string): boolean;
+  /** Display labels of that running work, for the Goal's waiting marker. */
+  listRunning?(sessionId: string): Array<{ kind: string; label: string }>;
   /** Abort jobs and clear queued results when their owning Session closes. */
   dropSession(sessionId: string): void;
 }
@@ -1876,7 +1878,10 @@ export class ExternalRuntimeService {
               // but release this submission until its completion notification
               // arrives; immediately prompting again would poll the same job.
               const waiting = this.withGoalOutput(sessionId, publishGoalOutput, () =>
-                this.goals.waitForBackgroundWork(goalRun),
+                this.goals.waitForBackgroundWork(
+                  goalRun,
+                  this.deps.backgroundWork?.listRunning?.(sessionId),
+                ),
               );
               if (waiting) {
                 finalOutcome = { ...finalOutcome, completionKind: "background_wait" };

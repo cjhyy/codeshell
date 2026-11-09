@@ -586,7 +586,7 @@ function semanticKey(message: CachedMessage): string | undefined {
     case "context_boundary":
       return fields(["strategy", "before", "after", "contextTransfer"]);
     case "goal_progress":
-      return fields(["goalId", "status", "round", "gaps"]);
+      return fields(["goalId", "status", "round", "gaps", "waiting"]);
     default:
       return undefined;
   }

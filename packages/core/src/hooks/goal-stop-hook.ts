@@ -78,8 +78,12 @@ export interface GoalStopHookOptions {
    */
   /** Return false when durable cleanup failed; the hook will keep Goal mode active. */
   onMet?: () => boolean | void;
-  /** Persist active → waiting before allowing a finite-background-work stop. */
-  onWaiting?: () => boolean | void;
+  /**
+   * Persist active → waiting before allowing the stop. `background` = parked on
+   * finite background work (its time counts toward the goal); `user` = only
+   * the user can unblock it (time does not count).
+   */
+  onWaiting?: (kind: "background" | "user") => boolean | void;
   /**
    * Clock source for the current time fed to the judge. Injectable so tests
    * pin a fixed instant (the judge prompt is a fresh sub-call, not part of the
@@ -353,6 +357,27 @@ function extractJson(text: string): JudgeVerdict | null {
   return parseVerdictCandidate(candidate);
 }
 
+/** Upper bound on tasks listed in a goal_progress waiting marker. */
+const MAX_WAITING_TASKS = 8;
+/** Per-task label budget for the waiting marker (display only). */
+const MAX_WAITING_TASK_LABEL_CHARS = 80;
+
+/** Compact, display-only labels for the tasks a parked goal waits on. */
+function describeWaitingTasks(
+  items: { kind: string; description: string }[],
+): Array<{ kind: string; label: string }> {
+  return items.slice(0, MAX_WAITING_TASKS).map((item) => ({
+    kind: item.kind,
+    label: truncateHeadTail(
+      scrubSecrets(normalizeControlCharacters(item.description)).replace(
+        /[\t\r\n\u2028\u2029]+/gu,
+        " ",
+      ),
+      MAX_WAITING_TASK_LABEL_CHARS,
+    ),
+  }));
+}
+
 /** Render the running background tasks for the judge prompt. */
 function renderBackgroundTasks(
   items: { kind: string; description: string; detectedPort?: number }[],
@@ -553,9 +578,9 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     // Persist active → waiting. Undefined on success; otherwise the result
     // that keeps the run going, because an unpersisted park would let a later
     // bare send miss the parked goal.
-    const persistWaiting = (): HookResult | undefined => {
+    const persistWaiting = (kind: "background" | "user"): HookResult | undefined => {
       try {
-        if (opts.onWaiting?.() !== false) return undefined;
+        if (opts.onWaiting?.(kind) !== false) return undefined;
         log.warn("goal_stop.waiting_persist_failed", { cat: "goal", sessionId });
       } catch (error) {
         log.warn("goal_stop.waiting_persist_failed", {
@@ -582,7 +607,7 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
         streak: blockedOnUserStreak,
         gaps,
       });
-      const persistFailure = persistWaiting();
+      const persistFailure = persistWaiting("user");
       if (persistFailure) return persistFailure;
       const result: HookResult = {
         data: {
@@ -853,10 +878,16 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     const gaps = verdict.gaps.trim();
     if ((verdict.waiting || parksOnFiniteWork) && runningWork.length > 0) {
       log.info("goal_stop.waiting_on_background_task", { cat: "goal", sessionId });
-      const persistFailure = persistWaiting();
+      const persistFailure = persistWaiting("background");
       if (persistFailure) return persistFailure;
       const result: HookResult = {
-        data: { goalVerdict: { met: false, gaps } },
+        data: {
+          goalVerdict: {
+            met: false,
+            gaps,
+            waitingOnBackground: describeWaitingTasks(runningWork),
+          },
+        },
       };
       blockedOnUserStreak = 0;
       lastBlockedOnUserGaps = undefined;

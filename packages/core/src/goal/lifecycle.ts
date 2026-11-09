@@ -104,12 +104,32 @@ export type GoalLifecycleTerminalReason =
   | "time_budget_exhausted"
   | "max_turns_exhausted";
 
+/**
+ * Goal-scoped accounting that survives runs, wakes, edits and pauses of the
+ * same goal identity (Codex `time_used_seconds` / Claude Code `iterations`).
+ * `rounds` counts judged attempts; `activeMs` is settled time spent running or
+ * waiting on finite background work — paused and user-wait time excluded.
+ * Display-only: no limit or budget reads it.
+ */
+export interface GoalProgress {
+  rounds: number;
+  activeMs: number;
+}
+
+/**
+ * Why a waiting goal is parked. Only `background` time counts toward
+ * `progress.activeMs`. A separate optional key instead of a new `waitingFor`
+ * value: older decoders ignore unknown keys but reject unknown enum values.
+ */
+export type GoalWaitKind = "background" | "user";
+
 interface GoalLifecycleBaseV1 {
   version: 1;
   goalId: string;
   revision: number;
   config: GoalLifecycleConfig;
   updatedAtMs: number;
+  progress?: GoalProgress;
 }
 
 export type GoalLifecycleV1 =
@@ -119,6 +139,7 @@ export type GoalLifecycleV1 =
       phase: "waiting";
       waitingSinceMs: number;
       waitingFor: "finite_background_work";
+      waitKind?: GoalWaitKind;
     })
   | (GoalLifecycleBaseV1 & {
       phase: "terminal";
@@ -128,7 +149,12 @@ export type GoalLifecycleV1 =
 export type GoalLifecyclePhase = GoalLifecycleV1["phase"];
 
 function positiveSafeNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= Number.MAX_SAFE_INTEGER;
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value > 0 &&
+    value <= Number.MAX_SAFE_INTEGER
+  );
 }
 
 function positiveSafeInteger(value: unknown): number | undefined {
@@ -227,10 +253,7 @@ export function decodeGoalLifecycle(value: unknown): GoalLifecycleV1 | undefined
     return undefined;
   for (const key of ["tokenBudget", "timeBudgetMs", "maxTurns", "maxStopBlocks"]) {
     const field = config[key];
-    if (
-      field !== undefined &&
-      !positiveSafeNumber(field)
-    ) {
+    if (field !== undefined && !positiveSafeNumber(field)) {
       return undefined;
     }
   }
@@ -247,12 +270,16 @@ export function decodeGoalLifecycle(value: unknown): GoalLifecycleV1 | undefined
     return undefined;
   }
   const phase = candidate.phase;
+  // Display-only accounting is decoded leniently: a malformed value drops the
+  // counter, never the goal (a decode failure here makes the session unreadable).
+  const progress = decodeGoalProgress(candidate.progress);
   const base = {
     version: 1 as const,
     goalId: candidate.goalId,
     revision: candidate.revision,
     config: { ...(config as GoalLifecycleConfig), objective: config.objective.trim() },
     updatedAtMs: candidate.updatedAtMs,
+    ...(progress ? { progress } : {}),
   };
   const hasWaitingFields =
     Object.prototype.hasOwnProperty.call(candidate, "waitingFor") ||
@@ -272,11 +299,16 @@ export function decodeGoalLifecycle(value: unknown): GoalLifecycleV1 | undefined
     ) {
       return undefined;
     }
+    const waitKind =
+      candidate.waitKind === "background" || candidate.waitKind === "user"
+        ? candidate.waitKind
+        : undefined;
     return {
       ...base,
       phase,
       waitingFor: "finite_background_work",
       waitingSinceMs: candidate.waitingSinceMs,
+      ...(waitKind ? { waitKind } : {}),
     };
   }
   if (phase === "terminal") {
@@ -313,6 +345,7 @@ export function decodeGoalLifecycle(value: unknown): GoalLifecycleV1 | undefined
 export function waitGoalLifecycle(
   lifecycle: GoalLifecycleV1,
   nowMs = Date.now(),
+  waitKind: GoalWaitKind = "background",
 ): GoalLifecycleV1 | undefined {
   if (lifecycle.phase !== "active") return undefined;
   return {
@@ -321,6 +354,7 @@ export function waitGoalLifecycle(
     updatedAtMs: nowMs,
     waitingSinceMs: nowMs,
     waitingFor: "finite_background_work",
+    waitKind,
   };
 }
 
@@ -330,8 +364,15 @@ export function armGoalLifecycle(
 ): GoalLifecycleV1 | undefined {
   if (lifecycle.phase === "active") return lifecycle;
   if (lifecycle.phase !== "waiting") return undefined;
-  const { waitingSinceMs: _waitingSinceMs, waitingFor: _waitingFor, ...base } = lifecycle;
-  return { ...base, phase: "active", updatedAtMs: nowMs };
+  const progress = settledGoalProgress(lifecycle, nowMs);
+  const {
+    waitingSinceMs: _waitingSinceMs,
+    waitingFor: _waitingFor,
+    waitKind: _waitKind,
+    progress: _progress,
+    ...base
+  } = lifecycle;
+  return { ...base, ...(progress ? { progress } : {}), phase: "active", updatedAtMs: nowMs };
 }
 
 export function terminateGoalLifecycle(
@@ -340,15 +381,92 @@ export function terminateGoalLifecycle(
   nowMs = Date.now(),
 ): GoalLifecycleV1 | undefined {
   if (lifecycle.phase === "terminal") return lifecycle;
+  const progress = settledGoalProgress(lifecycle, nowMs);
   return {
     version: 1,
     goalId: lifecycle.goalId,
     revision: lifecycle.revision,
     config: lifecycle.config,
+    ...(progress ? { progress } : {}),
     phase: "terminal",
     updatedAtMs: nowMs,
     terminal: { reason, atMs: nowMs },
   };
+}
+
+function nonNegativeSafeInteger(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+}
+
+function decodeGoalProgress(value: unknown): GoalProgress | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const candidate = value as Record<string, unknown>;
+  const rounds = nonNegativeSafeInteger(candidate.rounds);
+  const activeMs = nonNegativeSafeInteger(candidate.activeMs);
+  return rounds === undefined || activeMs === undefined ? undefined : { rounds, activeMs };
+}
+
+function boundedSum(a: number, b: number): number {
+  return Math.min(Number.MAX_SAFE_INTEGER, a + b);
+}
+
+/** Settled progress, including an open background wait up to `nowMs`. */
+export function settledGoalProgress(
+  lifecycle: GoalLifecycleV1,
+  nowMs = Date.now(),
+): GoalProgress | undefined {
+  const progress = lifecycle.progress;
+  if (lifecycle.phase !== "waiting" || lifecycle.waitKind !== "background") return progress;
+  const waitedMs = Math.max(0, Math.floor(nowMs - lifecycle.waitingSinceMs));
+  return {
+    rounds: progress?.rounds ?? 0,
+    activeMs: boundedSum(progress?.activeMs ?? 0, waitedMs),
+  };
+}
+
+/**
+ * Carry the previous record's settled progress into a rebuilt record of the
+ * SAME goal identity (edit, pause/resume, re-arm). A different identity starts
+ * from zero.
+ */
+export function carryGoalProgress(
+  next: GoalLifecycleV1,
+  previous: GoalLifecycleV1 | undefined,
+  nowMs = Date.now(),
+): GoalLifecycleV1 {
+  if (!previous || previous.goalId !== next.goalId) return next;
+  const progress = settledGoalProgress(previous, nowMs);
+  return progress ? { ...next, progress } : next;
+}
+
+/** Add one run's accounting delta. Background wait time is settled separately. */
+export function addGoalProgress(
+  lifecycle: GoalLifecycleV1,
+  delta: { rounds?: number; activeMs?: number },
+): GoalLifecycleV1 {
+  const rounds = Math.max(0, Math.floor(delta.rounds ?? 0));
+  const activeMs = Math.max(0, Math.floor(delta.activeMs ?? 0));
+  if (rounds === 0 && activeMs === 0) return lifecycle;
+  return {
+    ...lifecycle,
+    progress: {
+      rounds: boundedSum(lifecycle.progress?.rounds ?? 0, rounds),
+      activeMs: boundedSum(lifecycle.progress?.activeMs ?? 0, activeMs),
+    },
+  };
+}
+
+/** What a client needs to render goal-level progress and a live clock. */
+export interface GoalProgressSnapshot extends GoalProgress {
+  /** Epoch ms the clock has been running since (an open background wait). */
+  runningSinceMs?: number;
+}
+
+export function goalProgressSnapshot(lifecycle: GoalLifecycleV1): GoalProgressSnapshot {
+  const progress = lifecycle.progress ?? { rounds: 0, activeMs: 0 };
+  return lifecycle.phase === "waiting" && lifecycle.waitKind === "background"
+    ? { ...progress, runningSinceMs: lifecycle.waitingSinceMs }
+    : { ...progress };
 }
 
 /** A forced stop outcome for a Goal run. Some outcomes intentionally preserve the Goal. */

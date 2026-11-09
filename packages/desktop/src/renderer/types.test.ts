@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { parseUnifiedDiff } from "./diff/parseUnifiedDiff";
+import { goalElapsedMs } from "./goalClock";
 import {
   INITIAL_STATE,
   applyStreamEvent,
@@ -10,6 +11,7 @@ import {
   removePendingSteerMessages,
   type AgentMessage,
   type AssistantMessage,
+  type GoalProgressMessage,
   type Message,
   type MessagesReducerState,
   type TurnEndMessage,
@@ -1552,7 +1554,13 @@ describe("persistent goal lifecycle (reducer)", () => {
     const s = dispatch(INITIAL_STATE, [
       ev("goal_set", { objective: "完成全部任务", replaced: false } as never),
     ]);
-    expect(s.activeGoal).toEqual({ objective: "完成全部任务", round: 0, paused: false });
+    // A new goal identity starts its own goal-time accounting at zero.
+    expect(s.activeGoal).toEqual({
+      objective: "完成全部任务",
+      round: 0,
+      paused: false,
+      activeMs: 0,
+    });
   });
 
   test("goal_set replaces an existing active goal", () => {
@@ -1568,7 +1576,7 @@ describe("persistent goal lifecycle (reducer)", () => {
       ev("goal_set", { objective: "g", replaced: false } as never),
       ev("goal_progress", { status: "not_met", round: 2, gaps: "还差" } as never),
     ]);
-    expect(s.activeGoal).toEqual({ objective: "g", round: 2, paused: false });
+    expect(s.activeGoal).toEqual({ objective: "g", round: 2, paused: false, activeMs: 0 });
   });
 
   test("goal_progress(met) clears the active goal", () => {
@@ -1610,6 +1618,7 @@ describe("persistent goal lifecycle (reducer)", () => {
       goalId: "goal-b",
       round: 0,
       paused: false,
+      activeMs: 0,
     });
 
     const afterLateClear = dispatch(afterLateMet, [
@@ -1620,6 +1629,7 @@ describe("persistent goal lifecycle (reducer)", () => {
       goalId: "goal-b",
       round: 0,
       paused: false,
+      activeMs: 0,
     });
   });
 
@@ -1650,6 +1660,7 @@ describe("persistent goal lifecycle (reducer)", () => {
       revision: 1,
       round: 2,
       paused: true,
+      activeMs: 0,
     });
   });
 
@@ -2203,5 +2214,101 @@ describe("thinking rows settle when the model moves on", () => {
     ]);
     expect(s.streamingThinkingId).toBeNull();
     expect(thinking(s)).toEqual([{ text: "halfway", done: true }]);
+  });
+});
+
+describe("goal waits and goal time (reducer)", () => {
+  const at = (timestamp: number, event: StreamEvent) => ({ ...event, timestamp }) as StreamEvent;
+  const goalSet = ev("goal_set", {
+    objective: "g",
+    goalId: "g1",
+    revision: 1,
+    replaced: false,
+  } as never);
+  const started = ev("session_started", { sessionId: "s" } as never);
+  const completed = ev("turn_complete", { reason: "completed" } as never);
+  const waitMarker = (s: MessagesReducerState) =>
+    s.messages.find((m) => m.kind === "goal_progress") as GoalProgressMessage;
+
+  test("a background wait stays open until the next run, and the goal clock runs through it", () => {
+    const tasks = [{ kind: "job", label: "DriveAgent(codex): 修样式" }];
+    let s = dispatch(INITIAL_STATE, [
+      at(1_000, goalSet),
+      at(1_000, started),
+      at(
+        61_000,
+        ev("goal_progress", {
+          goalId: "g1",
+          revision: 1,
+          status: "not_met",
+          round: 4,
+          waiting: { kind: "background_work", sinceMs: 61_000, tasks },
+          progress: { rounds: 4, activeMs: 300_000, atMs: 61_000 },
+        } as never),
+      ),
+      at(61_500, completed),
+    ]);
+    expect(waitMarker(s)).toMatchObject({ round: 4, waiting: { sinceMs: 61_000, tasks } });
+    expect(waitMarker(s).waitEndedAtMs).toBeUndefined();
+    // The run ended, but a background wait keeps the goal clock running.
+    expect(goalElapsedMs(s.activeGoal!, 661_000)).toBe(900_000);
+
+    s = dispatch(s, [at(661_000, started)]);
+    expect(waitMarker(s).waitEndedAtMs).toBe(661_000);
+    expect(goalElapsedMs(s.activeGoal!, 671_000)).toBe(910_000);
+
+    s = dispatch(s, [at(671_000, completed)]);
+    expect(s.activeGoal).toMatchObject({ activeMs: 910_000 });
+    expect(s.activeGoal?.clockSinceMs).toBeUndefined();
+    expect(goalElapsedMs(s.activeGoal!, 9_999_999)).toBe(910_000);
+  });
+
+  test("waiting for the user and pausing stop the goal clock", () => {
+    let s = dispatch(INITIAL_STATE, [
+      at(0, goalSet),
+      at(0, started),
+      at(
+        10_000,
+        ev("goal_progress", {
+          goalId: "g1",
+          revision: 1,
+          status: "not_met",
+          round: 1,
+          waitingForUser: "要发布吗？",
+          progress: { rounds: 1, activeMs: 10_000, atMs: 10_000 },
+        } as never),
+      ),
+      at(10_100, completed),
+    ]);
+    expect(goalElapsedMs(s.activeGoal!, 99_000)).toBe(10_000);
+
+    s = dispatch(s, [
+      at(20_000, started),
+      at(
+        30_000,
+        ev("goal_updated", { objective: "g", goalId: "g1", revision: 2, paused: true } as never),
+      ),
+    ]);
+    expect(s.activeGoal).toMatchObject({ paused: true, round: 1 });
+    expect(goalElapsedMs(s.activeGoal!, 99_000)).toBe(20_000);
+  });
+
+  test("clearing the goal ends a still-open wait marker", () => {
+    const s = dispatch(INITIAL_STATE, [
+      at(0, goalSet),
+      at(
+        5_000,
+        ev("goal_progress", {
+          goalId: "g1",
+          revision: 1,
+          status: "not_met",
+          round: 1,
+          waiting: { kind: "background_work", sinceMs: 5_000 },
+        } as never),
+      ),
+      at(9_000, ev("goal_cleared", { goalId: "g1", revision: 1 } as never)),
+    ]);
+    expect(waitMarker(s).waitEndedAtMs).toBe(9_000);
+    expect(s.activeGoal).toBeNull();
   });
 });

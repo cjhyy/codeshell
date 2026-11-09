@@ -44,6 +44,14 @@ export interface ExternalGoalRun {
   yieldRequested?: boolean;
   /** The model called wait_for_user this turn; end the run and wait for a reply. */
   awaitingUser?: boolean;
+  /** Goal-level rounds/active time persisted before this run started. */
+  progressBase: { rounds: number; activeMs: number };
+}
+
+/** Display-only description of finite work a parked Goal waits on. */
+export interface ExternalGoalWaitingTask {
+  kind: string;
+  label: string;
 }
 
 function positiveInteger(value: unknown): value is number {
@@ -144,9 +152,15 @@ export class ExternalRuntimeGoals {
         throw new Error("Could not re-arm the external runtime goal");
       }
     }
+    // Read after re-arming: a finished background wait is settled by then.
+    const persisted = this.manager.readGoalProgress(sessionId);
     const run: ExternalGoalRun = {
       sessionId,
       goal: { ...goal },
+      progressBase:
+        persisted && persisted.goalId === goal.goalId
+          ? { rounds: persisted.rounds, activeMs: persisted.activeMs }
+          : { rounds: 0, activeMs: 0 },
       startedAtMs: this.now(),
       turns: 0,
       tokensUsed: 0,
@@ -220,7 +234,7 @@ export class ExternalRuntimeGoals {
       goalId: run.goal.goalId,
       revision: run.goal.revision,
       status: "not_met",
-      round: run.turns,
+      ...this.progress(run, run.turns + 1),
       gaps: `等待你的回复：${question}`,
       waitingForUser: question,
     });
@@ -241,6 +255,15 @@ export class ExternalRuntimeGoals {
 
   end(run: ExternalGoalRun): void {
     if (this.runs.get(run.sessionId) === run) this.runs.delete(run.sessionId);
+    // Accounting for this run belongs to the goal identity even if it was
+    // edited, paused or completed meanwhile; a replaced goal drops it.
+    const state = this.manager.readSessionState(run.sessionId);
+    if (state && run.goal.goalId) {
+      this.manager.recordGoalProgress(state, run.goal.goalId, {
+        rounds: run.turns,
+        activeMs: Math.max(0, this.now() - run.startedAtMs),
+      });
+    }
   }
 
   update(sessionId: string, patch: ExternalGoalUpdate) {
@@ -321,17 +344,21 @@ export class ExternalRuntimeGoals {
   }
 
   /** Park only the matching live Goal; completion delivery will re-arm it. */
-  waitForBackgroundWork(run: ExternalGoalRun): boolean {
+  waitForBackgroundWork(run: ExternalGoalRun, tasks: ExternalGoalWaitingTask[] = []): boolean {
     if (!this.isCurrent(run)) return false;
     const state = this.manager.readSessionState(run.sessionId);
-    if (!state || !this.manager.markGoalWaiting(state, run.goal)) return false;
+    if (!state || !this.manager.markGoalWaiting(state, run.goal, "background")) return false;
     this.emit(run.sessionId, {
       type: "goal_progress",
       goalId: run.goal.goalId,
       revision: run.goal.revision,
       status: "not_met",
-      round: run.turns,
-      gaps: "等待后台任务完成，完成后自动继续。",
+      ...this.progress(run, run.turns),
+      waiting: {
+        kind: "background_work",
+        sinceMs: this.now(),
+        ...(tasks.length > 0 ? { tasks } : {}),
+      },
     });
     return true;
   }
@@ -368,7 +395,7 @@ export class ExternalRuntimeGoals {
       goalId: run.goal.goalId,
       revision: run.goal.revision,
       status: remaining <= 2 ? "approaching_limit" : "not_met",
-      round: run.turns,
+      ...this.progress(run, run.turns),
       gaps: "外部运行器尚未声明目标完成，继续处理。",
       ...(remaining <= 2 ? { turnsRemaining: remaining, nearest: "turns" as const } : {}),
     });
@@ -388,7 +415,7 @@ export class ExternalRuntimeGoals {
         goalId: result.goalId,
         revision: result.revision,
         status: "not_met",
-        round: run.turns,
+        ...this.progress(run, run.turns),
         gaps: `${reason}；目标已暂停，可继续。`,
       });
     }
@@ -425,7 +452,7 @@ export class ExternalRuntimeGoals {
         goalId: run.goal.goalId,
         revision: run.goal.revision,
         status: "met",
-        round: run.turns + 1,
+        ...this.progress(run, run.turns + 1),
         ...(typeof args.summary === "string" ? { gaps: args.summary } : {}),
       });
     } else {
@@ -457,6 +484,24 @@ export class ExternalRuntimeGoals {
         : []),
       "</codeshell_goal>",
     ].join("\n");
+  }
+
+  /**
+   * Goal-level round and time for a marker. `turnsCounted` is the provider
+   * turns of this run that the marker covers (the in-flight turn included when
+   * it is emitted from inside that turn).
+   */
+  private progress(run: ExternalGoalRun, turnsCounted: number) {
+    const atMs = this.now();
+    const rounds = run.progressBase.rounds + turnsCounted;
+    return {
+      round: rounds,
+      progress: {
+        rounds,
+        activeMs: run.progressBase.activeMs + Math.max(0, atMs - run.startedAtMs),
+        atMs,
+      },
+    };
   }
 
   private emitUpdated(sessionId: string, goal: GoalConfig): void {

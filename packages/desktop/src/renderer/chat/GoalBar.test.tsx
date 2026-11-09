@@ -70,6 +70,23 @@ describe("GoalBar", () => {
     expect(html).not.toMatch(/\d+s</);
   });
 
+  test("goal time replaces the age once accounting is known, and a stopped clock does not run", () => {
+    const running = renderToStaticMarkup(
+      <GoalBar
+        goal={{ ...goal, activeMs: 2 * 3600_000, clockSinceMs: 5_000_000 }}
+        busy={false}
+        now={at(5_000_000 + 125_000)}
+      />,
+    );
+    // 2h of settled goal time plus the open 2m 05s segment, not the time since setAtMs.
+    expect(running).toContain("第 3 轮 · 2h 02m 05s");
+    expect(running).toContain("暂停、等你回复时不计");
+    const stopped = renderToStaticMarkup(
+      <GoalBar goal={{ ...goal, activeMs: 90_000 }} busy={false} now={at(99_000_000)} />,
+    );
+    expect(stopped).toContain("第 3 轮 · 1m 30s");
+  });
+
   test("a Goal waiting on the user shows the question state, unless it is paused", () => {
     const waiting = renderToStaticMarkup(
       <GoalBar goal={{ ...goal, waitingForUser: "允许新增权限吗？" }} busy={false} now={at(0)} />,
