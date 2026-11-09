@@ -34,7 +34,7 @@ function upsert(
     attention: "always",
     target: { kind: "owner" },
     origin: "user",
-    armedAtSeq: 10,
+    armedAt: NOW - 10,
     ...overrides,
   };
 }
@@ -69,7 +69,7 @@ describe("upsertSessionRule", () => {
         runtime: "native",
         events: ["done", "failed"],
         scope: "turn",
-        armedAtSeq: 10,
+        armedAt: NOW - 10,
       },
       then: { mode: "notify" },
       attention: "always",
@@ -96,7 +96,7 @@ describe("upsertSessionRule", () => {
         channel: "lark",
         attention: "important",
         note: "要等审批",
-        armedAtSeq: 42,
+        armedAt: 42,
       }),
     );
     expect(second.id).toBe(first.id);
@@ -104,7 +104,7 @@ describe("upsertSessionRule", () => {
     expect(second.createdAt).toBe(NOW);
     expect(second.updatedAt).toBe(NOW + 1_000);
     expect(second.createdBy).toBe("notify-me");
-    expect(second.when).toMatchObject({ events: ["blocked"], scope: "goal", armedAtSeq: 42 });
+    expect(second.when).toMatchObject({ events: ["blocked"], scope: "goal", armedAt: 42 });
     expect(second.channel).toBe("lark");
     expect(second.attention).toBe("important");
     expect(second.note).toBe("要等审批");
@@ -165,7 +165,7 @@ describe("upsertSessionRule", () => {
     const s = store();
     const original = await s.upsertSessionRule(upsert());
     const paused = await s.update(original.id, 1, { state: "paused" });
-    const fresh = await s.upsertSessionRule(upsert({ armedAtSeq: 77 }));
+    const fresh = await s.upsertSessionRule(upsert({ armedAt: 77 }));
     expect(fresh.id).not.toBe(original.id);
     expect(fresh.state).toBe("active");
     expect(s.get(original.id)).toEqual(paused);
@@ -179,7 +179,7 @@ describe("upsertSessionRule", () => {
     const again = await s.upsertSessionRule(
       upsert({
         target: { kind: "route", route: { ...ROUTE } },
-        armedAtSeq: 11,
+        armedAt: 11,
       }),
     );
     const otherRoute = await s.upsertSessionRule(
@@ -220,7 +220,7 @@ describe("upsertSessionRule", () => {
     await expect(s.upsertSessionRule(upsert({ sessionId: "" }))).rejects.toThrow();
     await expect(s.upsertSessionRule(upsert({ attention: "muted" as never }))).rejects.toThrow();
     await expect(s.upsertSessionRule(upsert({ createdBy: "system" as never }))).rejects.toThrow();
-    await expect(s.upsertSessionRule(upsert({ armedAtSeq: -1 }))).rejects.toThrow();
+    await expect(s.upsertSessionRule(upsert({ armedAt: -1 }))).rejects.toThrow();
     await expect(s.upsertSessionRule(upsert({ origin: "system" }))).rejects.toThrow();
     await expect(
       s.upsertSessionRule(
@@ -242,9 +242,9 @@ describe("upsertSessionRule", () => {
   test("concurrent upserts for the same key serialise into one rule", async () => {
     const s = store();
     const results = await Promise.all([
-      s.upsertSessionRule(upsert({ armedAtSeq: 1 })),
-      s.upsertSessionRule(upsert({ armedAtSeq: 2 })),
-      s.upsertSessionRule(upsert({ armedAtSeq: 3 })),
+      s.upsertSessionRule(upsert({ armedAt: 1 })),
+      s.upsertSessionRule(upsert({ armedAt: 2 })),
+      s.upsertSessionRule(upsert({ armedAt: 3 })),
     ]);
     expect(new Set(results.map((rule) => rule.id)).size).toBe(1);
     expect(results.map((rule) => rule.version)).toEqual([1, 2, 3]);
@@ -283,7 +283,7 @@ describe("update", () => {
   test("a stale version is a version_conflict", async () => {
     const s = store();
     const rule = await s.upsertSessionRule(upsert());
-    await s.upsertSessionRule(upsert({ armedAtSeq: 99 }));
+    await s.upsertSessionRule(upsert({ armedAt: 99 }));
     const failure = await s.update(rule.id, 1, { state: "cancelled" }).catch((error) => error);
     expect(failure).toBeInstanceOf(Error);
     expect((failure as Error).message).toBe("version_conflict");
@@ -472,6 +472,36 @@ describe("load", () => {
     expect((await readDisk()).quarantine).toEqual([valid, sameVersion]);
   });
 
+  test("a legacy sequence-armed row loads as armed at its creation time", async () => {
+    const valid = await store().upsertSessionRule(upsert());
+    const disk = await readDisk();
+    const { armedAt: _armedAt, ...when } = (disk.rules[0] as NoticeRule).when as {
+      armedAt: number;
+    };
+    const legacy = { ...(disk.rules[0] as NoticeRule), when: { ...when, armedAtSeq: 4 } };
+    await writeFile(filePath, JSON.stringify({ ...disk, rules: [legacy] }), { mode: 0o600 });
+    const s = store();
+    await s.load();
+    expect(s.list()).toEqual([{ ...valid, when: { ...valid.when, armedAt: valid.createdAt } }]);
+    await s.upsertSessionRule(upsert({ sessionId: "s-two" }));
+    const after = await readDisk();
+    expect(after.quarantine).toEqual([]);
+    expect((after.rules[0] as NoticeRule).when).not.toHaveProperty("armedAtSeq");
+  });
+
+  test("a row carrying both arming fields is quarantined unchanged", async () => {
+    await store().upsertSessionRule(upsert());
+    const disk = await readDisk();
+    const rule = disk.rules[0] as NoticeRule;
+    const both = { ...rule, when: { ...rule.when, armedAtSeq: 4 } };
+    await writeFile(filePath, JSON.stringify({ ...disk, rules: [both] }), { mode: 0o600 });
+    const s = store();
+    await s.load();
+    expect(s.list()).toEqual([]);
+    await s.upsertSessionRule(upsert({ sessionId: "s-two" }));
+    expect((await readDisk()).quarantine).toEqual([both]);
+  });
+
   test("a file from a newer schema is left untouched and writes are refused", async () => {
     await mkdir(dirname(filePath), { recursive: true });
     const future = JSON.stringify({ version: 99, rules: [{ anything: true }] });
@@ -529,9 +559,7 @@ describe("cap", () => {
     );
     expect(s.list()).toHaveLength(2);
     // Updating an existing active rule needs no new slot.
-    await expect(
-      s.upsertSessionRule(upsert({ sessionId: "a", armedAtSeq: 5 })),
-    ).resolves.toBeTruthy();
+    await expect(s.upsertSessionRule(upsert({ sessionId: "a", armedAt: 5 }))).resolves.toBeTruthy();
   });
 });
 

@@ -54,9 +54,10 @@ const MAX_SUMMARY_LENGTH = 2_000;
 const MAX_FACT_LENGTH = 500;
 const MAX_OPTIONS = 10;
 
+/** What the watcher knows about the in-flight top-level turn of one Session. */
 interface SessionTurnState {
-  /** Top-level turn completions observed in this process. */
-  turnSeq: number;
+  /** Run identity from `session_started`, for events that do not carry one. */
+  runId?: string;
   /** The current turn did real work (a non-notice tool, or a background wake). */
   workInTurn: boolean;
   /** A done / failed draft already went out for the current turn. */
@@ -70,6 +71,10 @@ function boundedText(value: unknown, max: number): string | undefined {
   if (typeof value !== "string") return undefined;
   const text = value.trim();
   return text ? text.slice(0, max) : undefined;
+}
+
+function nonEmptyString(value: unknown): string | undefined {
+  return typeof value === "string" && value ? value : undefined;
 }
 
 function pendingOptions(pending: DesktopPendingDecision): NoticeDraftOption[] | undefined {
@@ -104,20 +109,23 @@ function errorMessage(error: unknown): string {
  * - blocked: `limit_stop`, a Goal waiting for the user, an exhausted Goal, or
  *   a pending decision from the projection.
  *
+ * A Session rule can only fire on an event that happened at/after its
+ * `armedAt` (wall clock, so it survives restarts); the acknowledgement turn
+ * that armed it is filtered by the work gate instead. Dedupe keys are built
+ * from the core run id, so they are stable across restarts and unique per run.
+ *
  * done / failed spend the matched Session rules; blocked leaves them armed.
  * The all-sessions system rule is never spent. Events are serialised per
  * Session; drafts are emitted before rules are spent so a store failure can
  * never swallow a notice.
  */
 export class PetSessionRuleWatcher {
-  private readonly sessions = new Map<string, SessionTurnState>();
+  private readonly turns = new Map<string, SessionTurnState>();
   private readonly queues = new Map<string, Promise<void>>();
+  private readonly now: () => number;
 
-  constructor(private readonly options: PetSessionRuleWatcherOptions) {}
-
-  /** Turn completions seen for this Session; the `armedAtSeq` for a rule created now. */
-  currentSeq(sessionId: string): number {
-    return this.sessions.get(sessionId)?.turnSeq ?? 0;
+  constructor(private readonly options: PetSessionRuleWatcherOptions) {
+    this.now = options.now ?? Date.now;
   }
 
   observe(sessionId: string, event: unknown): Promise<void> {
@@ -139,83 +147,100 @@ export class PetSessionRuleWatcher {
     });
   }
 
-  private state(sessionId: string): SessionTurnState {
-    let state = this.sessions.get(sessionId);
+  private turn(sessionId: string): SessionTurnState {
+    let state = this.turns.get(sessionId);
     if (!state) {
-      state = { turnSeq: 0, workInTurn: false, doneInTurn: false, failedInTurn: false };
-      this.sessions.set(sessionId, state);
+      state = { workInTurn: false, doneInTurn: false, failedInTurn: false };
+      this.turns.set(sessionId, state);
     }
     return state;
+  }
+
+  /** The run this event belongs to; a timestamp only when core gave no run id. */
+  private runKey(event: Record<string, unknown>, state: SessionTurnState, at: number): string {
+    return nonEmptyString(event.runId) ?? state.runId ?? String(at);
   }
 
   private async applySessionEvent(sessionId: string, value: unknown): Promise<void> {
     const event = topLevelEvent(value);
     if (!event) return;
-    const state = this.state(sessionId);
     switch (event.type) {
-      case "session_started":
-        this.resetTurn(state);
+      case "session_started": {
+        const state: SessionTurnState = {
+          workInTurn: false,
+          doneInTurn: false,
+          failedInTurn: false,
+        };
+        const runId = nonEmptyString(event.runId);
+        if (runId) state.runId = runId;
         // A background completion wakes the Session with a synthetic run that
         // has no client message id (core background-result-wakeup). That turn
         // exists to act on finished work, so it counts as work.
         if (event.clientMessageId === undefined && typeof event.previousRunId === "string")
           state.workInTurn = true;
+        this.turns.set(sessionId, state);
         return;
+      }
       case "tool_use_start": {
         const toolCall = event.toolCall as { toolName?: unknown } | undefined;
         const name = typeof toolCall?.toolName === "string" ? toolCall.toolName : undefined;
-        if (!name || !NON_WORK_TOOLS.has(name)) state.workInTurn = true;
+        if (!name || !NON_WORK_TOOLS.has(name)) this.turn(sessionId).workInTurn = true;
         return;
       }
       case "goal_progress":
-        await this.applyGoalProgress(sessionId, state, event);
+        await this.applyGoalProgress(sessionId, this.turn(sessionId), event);
         return;
       case "goal_cleared":
         await this.cancelGoalRules(sessionId);
         return;
-      case "error":
+      case "error": {
+        const state = this.turn(sessionId);
+        const at = this.now();
         await this.emitFailed(
           sessionId,
           state,
+          at,
+          this.runKey(event, state, at),
           boundedText(event.error, MAX_FACT_LENGTH) ?? "Work session failed",
         );
         return;
-      case "turn_complete": {
-        const seq = state.turnSeq;
-        try {
-          await this.applyTurnComplete(sessionId, state, event, seq);
-        } finally {
-          state.turnSeq = seq + 1;
-          this.resetTurn(state);
-        }
       }
+      case "turn_complete":
+        try {
+          await this.applyTurnComplete(sessionId, this.turn(sessionId), event);
+        } finally {
+          // The turn is over; nothing about it is needed for the next one.
+          this.turns.delete(sessionId);
+        }
     }
-  }
-
-  private resetTurn(state: SessionTurnState): void {
-    state.workInTurn = false;
-    state.doneInTurn = false;
-    state.failedInTurn = false;
   }
 
   private async applyTurnComplete(
     sessionId: string,
     state: SessionTurnState,
     event: Record<string, unknown>,
-    seq: number,
   ): Promise<void> {
+    const at = typeof event.completedAt === "number" ? event.completedAt : this.now();
+    const run = this.runKey(event, state, at);
+    const armed: Matcher = (when) => when.armedAt <= at;
     const reason = event.reason;
     if (reason === "aborted_streaming" || reason === "aborted_tools") return;
     if (reason !== "completed") {
-      await this.emitFailed(sessionId, state, `Work session ended: ${String(reason ?? "unknown")}`);
+      await this.emitFailed(
+        sessionId,
+        state,
+        at,
+        run,
+        `Work session ended: ${String(reason ?? "unknown")}`,
+      );
       return;
     }
     const summary = boundedText(event.text, MAX_SUMMARY_LENGTH);
     if (event.completionKind === "limit_stop") {
-      await this.emit(sessionId, "blocked", (when) => when.armedAtSeq <= seq, {
+      await this.emit(sessionId, "blocked", armed, {
         kind: "session.blocked",
         priority: "P0",
-        dedupeKey: `${sessionId}:goal-pause:${seq}`,
+        dedupeKey: `${sessionId}:goal-pause:${run}`,
         facts: summary ? { summary } : {},
       });
       return;
@@ -223,16 +248,19 @@ export class PetSessionRuleWatcher {
     // background_wait yields to a later wake; goal_control_stop follows
     // goal_cleared / goal_progress(met), which already handled the outcome.
     if (event.completionKind !== undefined) return;
-    if (!state.workInTurn || this.options.hasActiveLongTask(sessionId)) return;
+    // The "OK, will do" turn that armed a rule did no work and must not fire it.
+    if (!state.workInTurn) return;
+    // Long-task closure owns done/failed; Task 8 spends these rules when it notifies.
+    if (this.options.hasActiveLongTask(sessionId)) return;
     if (this.options.isSessionBusy(sessionId)) return;
     await this.emit(
       sessionId,
       "done",
-      (when) => when.scope === "turn" && when.armedAtSeq <= seq,
+      (when) => when.scope === "turn" && armed(when),
       {
         kind: "session.done",
         priority: "P1",
-        dedupeKey: `${sessionId}:turn:${seq}`,
+        dedupeKey: `${sessionId}:turn:${run}`,
         facts: summary ? { summary } : {},
       },
       { spend: true, includeSystem: !state.doneInTurn },
@@ -244,15 +272,18 @@ export class PetSessionRuleWatcher {
     state: SessionTurnState,
     event: Record<string, unknown>,
   ): Promise<void> {
-    const seq = state.turnSeq;
+    const at = this.now();
+    const run = this.runKey(event, state, at);
+    const armed: Matcher = (when) => when.armedAt <= at;
     const question = boundedText(event.waitingForUser, MAX_FACT_LENGTH);
     if (event.status === "met") {
+      // Long-task closure owns done/failed; Task 8 spends these rules when it notifies.
       if (this.options.hasActiveLongTask(sessionId)) return;
-      const goalId = typeof event.goalId === "string" && event.goalId ? event.goalId : seq;
+      const goalId = nonEmptyString(event.goalId) ?? run;
       const emitted = await this.emit(
         sessionId,
         "done",
-        (when) => when.scope === "goal" && when.armedAtSeq <= seq,
+        (when) => when.scope === "goal" && armed(when),
         {
           kind: "session.done",
           priority: "P1",
@@ -268,9 +299,9 @@ export class PetSessionRuleWatcher {
     // Core carries the question itself in `waitingForUser`; accept a bare flag too.
     const waiting = question !== undefined || event.waitingForUser === true;
     if (!waiting && event.status !== "exhausted") return;
-    const revision = typeof event.revision === "number" ? event.revision : seq;
+    const revision = typeof event.revision === "number" ? event.revision : run;
     const gaps = boundedText(event.gaps, MAX_SUMMARY_LENGTH);
-    await this.emit(sessionId, "blocked", (when) => when.armedAtSeq <= seq, {
+    await this.emit(sessionId, "blocked", armed, {
       kind: "session.blocked",
       priority: "P0",
       dedupeKey: `${sessionId}:goal-pause:${revision}`,
@@ -281,19 +312,22 @@ export class PetSessionRuleWatcher {
   private async emitFailed(
     sessionId: string,
     state: SessionTurnState,
+    at: number,
+    run: string,
     error: string,
   ): Promise<void> {
     // An `error` event is usually followed by a failing turn_complete; one notice per turn.
-    if (state.failedInTurn || this.options.hasActiveLongTask(sessionId)) return;
-    const seq = state.turnSeq;
+    if (state.failedInTurn) return;
+    // Long-task closure owns done/failed; Task 8 spends these rules when it notifies.
+    if (this.options.hasActiveLongTask(sessionId)) return;
     const emitted = await this.emit(
       sessionId,
       "failed",
-      (when) => when.armedAtSeq <= seq,
+      (when) => when.armedAt <= at,
       {
         kind: "session.failed",
         priority: "P1",
-        dedupeKey: `${sessionId}:failed:${seq}`,
+        dedupeKey: `${sessionId}:failed:${run}`,
         facts: { error },
       },
       { spend: true },
@@ -304,11 +338,12 @@ export class PetSessionRuleWatcher {
   private async applyPending(pending: DesktopPendingDecision): Promise<void> {
     if (pending.status !== "pending") return;
     const sessionId = pending.agentSessionId;
-    const seq = this.currentSeq(sessionId);
+    const at = this.now();
+    const armed: Matcher = (when) => when.armedAt <= at;
     if (this.options.onPendingDecision) {
       // The IM decision module owns pending decisions when wired; it is only
       // consulted when a rule asked to be told about this Session blocking.
-      if (this.match(sessionId, "blocked", (when) => when.armedAtSeq <= seq).length === 0) return;
+      if (this.match(sessionId, "blocked", armed).length === 0) return;
       try {
         this.options.onPendingDecision(sessionId, pending);
       } catch (error) {
@@ -322,7 +357,7 @@ export class PetSessionRuleWatcher {
     }
     const options = pendingOptions(pending);
     const question = boundedText(pending.title, MAX_FACT_LENGTH);
-    await this.emit(sessionId, "blocked", (when) => when.armedAtSeq <= seq, {
+    await this.emit(sessionId, "blocked", armed, {
       kind: "session.blocked",
       priority: "P0",
       dedupeKey: `${sessionId}:${pending.requestId}`,

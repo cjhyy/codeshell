@@ -43,7 +43,7 @@ function sessionRule(
     sessionId?: string;
     events?: NoticeEvent[];
     scope?: "turn" | "goal";
-    armedAtSeq?: number;
+    armedAt?: number;
     state?: NoticeRule["state"];
   } = {},
 ): NoticeRule {
@@ -58,7 +58,7 @@ function sessionRule(
       runtime: "native",
       events: overrides.events ?? ["done", "failed", "blocked"],
       scope: overrides.scope ?? "turn",
-      armedAtSeq: overrides.armedAtSeq ?? 0,
+      armedAt: overrides.armedAt ?? NOW - 1_000,
     },
     then: { mode: "notify" },
     attention: "always",
@@ -136,6 +136,7 @@ let logs: { event: string; data: Record<string, unknown> }[];
 let longTask: boolean;
 let busy: boolean;
 let eligible: boolean;
+let clock: number;
 
 function watcher(
   extra: Partial<ConstructorParameters<typeof PetSessionRuleWatcher>[0]> = {},
@@ -147,7 +148,7 @@ function watcher(
     isSessionBusy: () => busy,
     isEligibleSession: () => eligible,
     sessionTitle: (sessionId) => (sessionId === SID ? "修复登录" : undefined),
-    now: () => NOW,
+    now: () => clock,
     log: (event, data) => logs.push({ event, data }),
     ...extra,
   });
@@ -164,6 +165,7 @@ beforeEach(() => {
   longTask = false;
   busy = false;
   eligible = true;
+  clock = NOW;
 });
 
 describe("turn-scope done", () => {
@@ -175,14 +177,13 @@ describe("turn-scope done", () => {
       {
         kind: "session.done",
         priority: "P1",
-        dedupeKey: `${SID}:turn:0`,
+        dedupeKey: `${SID}:turn:run-1`,
         sessionId: SID,
         ruleIds: ["rule-a"],
         facts: { title: "修复登录", summary: "All tests pass now." },
       },
     ]);
     expect(rules.rules[0]!.state).toBe("spent");
-    expect(w.currentSeq(SID)).toBe(1);
   });
 
   test("summary is capped", async () => {
@@ -195,13 +196,14 @@ describe("turn-scope done", () => {
   test("the acknowledgement turn (only NotifyMe) does not fire; the next working turn does", async () => {
     const w = watcher();
     await feed(w, [started(), tool("NotifyMe")]);
-    // NotifyMe arms the rule mid-turn at the current seq.
-    rules.rules.push(sessionRule("rule-a", { armedAtSeq: w.currentSeq(SID) }));
+    // NotifyMe arms the rule mid-turn, so this very turn completes after armedAt.
+    rules.rules.push(sessionRule("rule-a", { armedAt: NOW }));
+    clock = NOW + 1_000;
     await feed(w, [tool("AskUserQuestion"), tool("ReportToMimi"), done()]);
     expect(drafts).toEqual([]);
     expect(rules.rules[0]!.state).toBe("active");
     await feed(w, [started({ runId: "run-2", clientMessageId: "cm-2" }), tool("Edit"), done()]);
-    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:1`]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:run-2`]);
   });
 
   test("ignored tools are all excluded from work detection", async () => {
@@ -233,7 +235,7 @@ describe("turn-scope done", () => {
       done({ text: "Build finished" }),
     ]);
     expect(drafts.map((draft) => [draft.kind, draft.dedupeKey, draft.facts.summary])).toEqual([
-      ["session.done", `${SID}:turn:1`, "Build finished"],
+      ["session.done", `${SID}:turn:run-2`, "Build finished"],
     ]);
   });
 
@@ -254,12 +256,12 @@ describe("turn-scope done", () => {
     expect(rules.rules[0]!.state).toBe("active");
     busy = false;
     await feed(w, [started({ runId: "run-2", clientMessageId: "cm-2" }), tool("Bash"), done()]);
-    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:1`]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:run-2`]);
   });
 
   test("rules armed after this turn, goal-scope rules and rules without done do not match", async () => {
     rules.rules.push(
-      sessionRule("rule-future", { armedAtSeq: 1 }),
+      sessionRule("rule-future", { armedAt: NOW + 1 }),
       sessionRule("rule-goal", { scope: "goal" }),
       sessionRule("rule-failed-only", { events: ["failed"] }),
       sessionRule("rule-other", { sessionId: "s-other" }),
@@ -283,7 +285,6 @@ describe("turn-scope done", () => {
     }
     expect(drafts).toEqual([]);
     expect(rules.rules[0]!.state).toBe("active");
-    expect(w.currentSeq(SID)).toBe(4);
   });
 
   test("child agent events are ignored", async () => {
@@ -293,7 +294,6 @@ describe("turn-scope done", () => {
     expect(drafts).toEqual([]);
     await feed(w, [started(), tool("Bash"), { ...done(), agentId: "child" }]);
     expect(drafts).toEqual([]);
-    expect(w.currentSeq(SID)).toBe(1);
   });
 });
 
@@ -318,11 +318,11 @@ describe("goal scope", () => {
     expect(rules.rules[0]!.state).toBe("spent");
   });
 
-  test("goal met without a goal id falls back to the seq", async () => {
+  test("goal met without a goal id falls back to the run id", async () => {
     rules.rules.push(sessionRule("rule-goal", { scope: "goal" }));
     const w = watcher();
-    await feed(w, [goal("met")]);
-    expect(drafts[0]!.dedupeKey).toBe(`${SID}:goal:0`);
+    await feed(w, [started(), goal("met")]);
+    expect(drafts[0]!.dedupeKey).toBe(`${SID}:goal:run-1`);
   });
 
   test("goal_cleared cancels goal-scope rules only and emits nothing", async () => {
@@ -359,7 +359,7 @@ describe("blocked", () => {
       {
         kind: "session.blocked",
         priority: "P0",
-        dedupeKey: `${SID}:goal-pause:0`,
+        dedupeKey: `${SID}:goal-pause:run-1`,
         sessionId: SID,
         ruleIds: ["rule-a"],
         facts: { title: "修复登录", summary: "All tests pass now." },
@@ -399,9 +399,9 @@ describe("blocked", () => {
     const w = watcher();
     await feed(w, [goal("not_met", { gaps: "more" }), goal("approaching_limit")]);
     expect(drafts).toEqual([]);
-    await feed(w, [goal("exhausted", { gaps: "ran out" })]);
+    await feed(w, [goal("exhausted", { gaps: "ran out", runId: "run-7" })]);
     expect(drafts.map((draft) => [draft.kind, draft.dedupeKey])).toEqual([
-      ["session.blocked", `${SID}:goal-pause:0`],
+      ["session.blocked", `${SID}:goal-pause:run-7`],
     ]);
   });
 
@@ -431,7 +431,7 @@ describe("failed", () => {
       {
         kind: "session.failed",
         priority: "P1",
-        dedupeKey: `${SID}:failed:0`,
+        dedupeKey: `${SID}:failed:run-1`,
         sessionId: SID,
         ruleIds: ["rule-a"],
         facts: { title: "修复登录", error: "Work session ended: model_error" },
@@ -449,7 +449,7 @@ describe("failed", () => {
       done({ reason: "error" }),
     ]);
     expect(drafts.map((draft) => [draft.kind, draft.dedupeKey, draft.facts.error])).toEqual([
-      ["session.failed", `${SID}:failed:0`, "provider down"],
+      ["session.failed", `${SID}:failed:run-1`, "provider down"],
     ]);
   });
 
@@ -612,13 +612,90 @@ describe("matching", () => {
   });
 });
 
-describe("sequencing", () => {
-  test("unseen sessions start at seq 0 and seq counts top-level turn completions", async () => {
+describe("arming, dedupe keys and ordering", () => {
+  test("a rule armed before a restart fires on the next completed working turn", async () => {
+    // Armed a day ago by a previous app process; this watcher has never seen the Session.
+    rules.rules.push(sessionRule("rule-a", { armedAt: NOW - 86_400_000 }));
     const w = watcher();
-    expect(w.currentSeq("never")).toBe(0);
-    await feed(w, [done(), done({ reason: "aborted_streaming" }), done()], "s-2");
-    expect(w.currentSeq("s-2")).toBe(3);
-    expect(w.currentSeq(SID)).toBe(0);
+    await feed(w, [
+      started({ runId: "run-after-restart", previousRunId: "run-before", clientMessageId: "cm-9" }),
+      tool("Bash"),
+      done(),
+    ]);
+    expect(drafts.map((draft) => [draft.kind, draft.dedupeKey])).toEqual([
+      ["session.done", `${SID}:turn:run-after-restart`],
+    ]);
+    expect(rules.rules[0]!.state).toBe("spent");
+  });
+
+  test("two different runs produce different dedupe keys", async () => {
+    rules.rules.push(systemRule());
+    const w = watcher();
+    await feed(w, [started(), tool("Bash"), done()]);
+    await feed(w, [started({ runId: "run-2", clientMessageId: "cm-2" }), tool("Bash"), done()]);
+    // A restarted watcher seeing a third run still never reuses an earlier key.
+    await feed(watcher(), [
+      started({ runId: "run-3", clientMessageId: "cm-3" }),
+      tool("Bash"),
+      done(),
+    ]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([
+      `${SID}:turn:run-1`,
+      `${SID}:turn:run-2`,
+      `${SID}:turn:run-3`,
+    ]);
+  });
+
+  test("the run id carried on the terminal event wins over session_started", async () => {
+    rules.rules.push(systemRule());
+    const w = watcher();
+    await feed(w, [started(), tool("Bash"), done({ runId: "run-on-event" })]);
+    expect(drafts[0]!.dedupeKey).toBe(`${SID}:turn:run-on-event`);
+  });
+
+  test("arming compares against turn_complete.completedAt when present", async () => {
+    rules.rules.push(sessionRule("rule-late", { armedAt: NOW + 500 }));
+    const w = watcher();
+    // The turn finished before the rule was armed, even if observed later.
+    clock = NOW + 1_000;
+    await feed(w, [started(), tool("Bash"), done({ completedAt: NOW + 100 })]);
+    expect(drafts).toEqual([]);
+    await feed(w, [
+      started({ runId: "run-2", clientMessageId: "cm-2" }),
+      tool("Bash"),
+      done({ completedAt: NOW + 900 }),
+    ]);
+    expect(drafts.map((draft) => draft.ruleIds)).toEqual([["rule-late"]]);
+  });
+
+  test("arming falls back to now() without completedAt", async () => {
+    rules.rules.push(sessionRule("rule-late", { armedAt: NOW + 500 }));
+    const w = watcher();
+    await feed(w, [started(), tool("Bash"), done()]);
+    expect(drafts).toEqual([]);
+    clock = NOW + 500;
+    await feed(w, [started({ runId: "run-2", clientMessageId: "cm-2" }), tool("Bash"), done()]);
+    expect(drafts.map((draft) => draft.ruleIds)).toEqual([["rule-late"]]);
+  });
+
+  test("without any run id the key falls back to completedAt, then now()", async () => {
+    rules.rules.push(systemRule());
+    const w = watcher();
+    await feed(w, [tool("Bash"), done({ completedAt: NOW + 42 })]);
+    clock = NOW + 7;
+    await feed(w, [tool("Bash"), done()]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([
+      `${SID}:turn:${NOW + 42}`,
+      `${SID}:turn:${NOW + 7}`,
+    ]);
+  });
+
+  test("a pending decision raised before the rule was armed is still reported", async () => {
+    // The Session is blocked right now; arming only gates on when we observe it.
+    rules.rules.push(sessionRule("rule-a", { armedAt: NOW }));
+    const w = watcher();
+    await w.observeProjection(pendingUpsert(pending({ createdAt: NOW - 60_000 })));
+    expect(drafts.map((draft) => draft.kind)).toEqual(["session.blocked"]);
   });
 
   test("events for one session are processed in order even when not awaited", async () => {
@@ -629,12 +706,13 @@ describe("sequencing", () => {
       w.observe(SID, tool("Bash")),
       w.observe(SID, done()),
     ]);
-    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:0`]);
+    expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:run-1`]);
   });
 
   test("malformed events are ignored", async () => {
+    rules.rules.push(systemRule());
     const w = watcher();
     for (const event of [null, 3, "x", [], {}, { type: 5 }]) await w.observe(SID, event);
-    expect(w.currentSeq(SID)).toBe(0);
+    expect(drafts).toEqual([]);
   });
 });

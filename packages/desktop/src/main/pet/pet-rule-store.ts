@@ -41,7 +41,8 @@ export interface NoticeRule {
         runtime: "native";
         events: NoticeEvent[];
         scope: "turn" | "goal";
-        armedAtSeq: number;
+        /** Epoch ms; only turns that complete at/after this instant can fire the rule. */
+        armedAt: number;
       }
     | { kind: "all-sessions"; events: NoticeEvent[]; onlyWhenAway: true };
   then: { mode: "notify" };
@@ -57,7 +58,7 @@ export interface NoticeRule {
 export type UpsertSessionNoticeRuleInput = NoticeRuleUpsert & {
   target: NoticeRule["target"];
   origin: NoticeRule["origin"];
-  armedAtSeq: number;
+  armedAt: number;
 };
 
 export type NoticeRulePatch = Partial<
@@ -203,16 +204,27 @@ function targetKey(target: NoticeRule["target"]): string {
   return imConversationRouteKey(route) ?? JSON.stringify(["im", route.channel, route.target, null]);
 }
 
+/**
+ * Pre-release builds armed rules by an in-memory turn sequence (`armedAtSeq`),
+ * which does not survive a restart. Such rows are read as armed when created.
+ */
+function migrateLegacyRow(row: unknown): unknown {
+  if (!isRecord(row) || !isRecord(row.when) || row.when.kind !== "session") return row;
+  if (!("armedAtSeq" in row.when) || "armedAt" in row.when) return row;
+  const { armedAtSeq: _legacy, ...when } = row.when;
+  return { ...row, when: { ...when, armedAt: row.createdAt } };
+}
+
 function parseWhen(value: unknown): NoticeRule["when"] | undefined {
   if (!isRecord(value)) return undefined;
   if (value.kind === "session") {
     if (
-      !hasOnlyKeys(value, ["kind", "sessionId", "runtime", "events", "scope", "armedAtSeq"]) ||
+      !hasOnlyKeys(value, ["kind", "sessionId", "runtime", "events", "scope", "armedAt"]) ||
       !isText(value.sessionId, 256) ||
       value.runtime !== "native" ||
       !isEvents(value.events) ||
       (value.scope !== "turn" && value.scope !== "goal") ||
-      !isTimestamp(value.armedAtSeq)
+      !isTimestamp(value.armedAt)
     )
       return undefined;
     return value as NoticeRule["when"];
@@ -409,14 +421,14 @@ export class PetRuleStore {
   upsertSessionRule(input: UpsertSessionNoticeRuleInput): Promise<NoticeRule> {
     const snapshot = structuredClone(input);
     return this.mutate((staged) => {
-      const { target: rawTarget, origin, armedAtSeq, ...wire } = snapshot;
+      const { target: rawTarget, origin, armedAt, ...wire } = snapshot;
       const upsert = parseNoticeRuleUpsert(wire);
       const target = normalizeTarget(rawTarget);
       if (
         !upsert ||
         !target ||
         (origin !== "user" && origin !== "delegation") ||
-        !isTimestamp(armedAtSeq)
+        !isTimestamp(armedAt)
       )
         throw new PetRuleStoreError("invalid_rule");
       const key = sessionKey(upsert.sessionId, target);
@@ -430,7 +442,7 @@ export class PetRuleStore {
         runtime: "native",
         events: upsert.events,
         scope: upsert.scope,
-        armedAtSeq,
+        armedAt,
       };
       if (existing) {
         const next: NoticeRule = {
@@ -662,7 +674,8 @@ export class PetRuleStore {
     const loaded = new Map<string, NoticeRule>();
     const quarantine: unknown[] = Array.isArray(parsed.quarantine) ? [...parsed.quarantine] : [];
     let rejected = 0;
-    for (const row of parsed.rules) {
+    for (const stored of parsed.rules) {
+      const row = migrateLegacyRow(stored);
       const rule = parseRule(row);
       const seen = rule ? loaded.get(rule.id) : undefined;
       if (rule && !seen) {
@@ -674,7 +687,8 @@ export class PetRuleStore {
         loaded.set(rule.id, rule);
         quarantine.push(seen);
       } else {
-        quarantine.push(row);
+        // Quarantine exactly what was on disk, not the migrated view.
+        quarantine.push(stored);
       }
       rejected += 1;
     }
