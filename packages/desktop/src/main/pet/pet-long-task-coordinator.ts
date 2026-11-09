@@ -178,7 +178,8 @@ function projectionPredatesCurrentAttempt(
   return sessionAt < currentAttemptStartedAt(task);
 }
 
-function topLevelEvent(value: unknown): Record<string, unknown> | null {
+/** A Session stream event from the top-level agent (child-agent events carry `agentId`). */
+export function topLevelEvent(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const event = value as Record<string, unknown>;
   return typeof event.type === "string" && event.agentId === undefined ? event : null;
