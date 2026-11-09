@@ -298,6 +298,14 @@ describe("external Goal lifecycle", () => {
     expect(goals.instruction(run)).toContain("not a reply from the user");
   });
 
+  test("the instruction limits repeat questions and lets user acceptance finish a judgment goal", () => {
+    const run = goals.start(sessionId, { objective: "优化到没有太多样式差异" })!;
+    const text = goals.instruction(run);
+    expect(text).toContain("Never ask again a question the user has already answered");
+    expect(text).toContain("acceptance of the result as a whole");
+    expect(text).not.toContain("restating the pending question");
+  });
+
   test("extensions raise only the active run ceilings and stale controls cannot delete a goal", () => {
     const run = goals.start(sessionId, { objective: "执行", maxTurns: 2, timeBudgetMs: 100 })!;
     run.tokensUsed = 50;

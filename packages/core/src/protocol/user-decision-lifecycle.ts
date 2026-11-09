@@ -425,7 +425,7 @@ export class UserDecisionLifecycle {
 
 /** Model-facing result when a question auto-resolves; silence is never consent. */
 const CONTINUE_WITHOUT_ANSWER =
-  "Continue with your best judgment and state the assumption you made. " +
+  "Continue with your best judgment and state the assumption you made. Do not ask this same question again. " +
   "Silence is not consent: do not take risky, destructive, or irreversible actions on this basis.";
 
 /** Model-facing result when the user presses Skip on a model question. */
