@@ -205,7 +205,8 @@ function parseAttachmentPaths(value: unknown): string[] | undefined | null {
   return [...value] as string[];
 }
 
-function isReportableSessionId(value: unknown): value is string {
+/** Shared Session-id shape check for tools that attribute host work to the current Session. */
+export function isReportableSessionId(value: unknown): value is string {
   return (
     typeof value === "string" &&
     value.length >= 1 &&

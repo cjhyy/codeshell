@@ -1,5 +1,5 @@
 {
-  "baselineCommit": "28f69b8ed7040f9898e45ec2128e9e43c1467e27",
+  "baselineCommit": "3276efc7aed6d3ccdd5067d276649de690bbaef4",
   "snapshot": {
     "version": 1,
     "modules": [
@@ -613,6 +613,15 @@
       },
       {
         "name": "ReportToMimi",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "NotifyMe",
         "moduleId": "pet",
         "exposure": "preset-tags",
         "presetTags": [
