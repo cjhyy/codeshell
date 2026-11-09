@@ -100,6 +100,8 @@ export class PetNoticeRouter {
   private readonly sending = new Set<string>();
   /** Records handed to a turn by replayPending (→ when), not yet marked or released. */
   private readonly replaying = new Map<string, number>();
+  /** Background media resends started by replayPending, not yet settled. */
+  private readonly resends = new Set<Promise<void>>();
   private decisionQueue: Promise<unknown> = Promise.resolve();
   private recovered?: Promise<void>;
   private disposed = false;
@@ -367,11 +369,25 @@ export class PetNoticeRouter {
         body: (record.body ?? composeNoticeBody(record.kind, facts)).slice(0, MAX_NOTICE_BODY),
       });
     }
-    for (const record of resend) {
-      await this.resendQueued(record, channel);
-      this.replaying.delete(record.id);
+    if (resend.length > 0) {
+      // In the background: a slow IM send (up to the IM timeout) must not hold
+      // up the start of the owner's Mimi turn. The records stay withheld from
+      // other replays until their send has settled the ledger.
+      const sends = (async () => {
+        for (const record of resend) {
+          await this.resendQueued(record, channel);
+          this.replaying.delete(record.id);
+        }
+      })();
+      this.resends.add(sends);
+      void sends.finally(() => this.resends.delete(sends));
     }
     return replay;
+  }
+
+  /** Resolves once every media resend that replayPending started has settled. */
+  async resendsSettled(): Promise<void> {
+    while (this.resends.size > 0) await Promise.all([...this.resends]);
   }
 
   /** Send one queued notice now (same record, so the same key and payload). */

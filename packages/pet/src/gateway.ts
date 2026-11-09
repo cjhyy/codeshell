@@ -264,9 +264,11 @@ function parseCapabilities(value: unknown): PetGatewayChannelCapabilities | unde
           "maxAttachments",
           "maxAttachmentBytes",
         ].includes(key) &&
-        // A newer host's additive boolean flag is ignored (not carried into
-        // the catalog) instead of invalidating every channel. Unknown keys of
-        // any other shape are still rejected.
+        // A newer host's additive boolean flag is ignored (not carried into the catalog) instead of
+        // invalidating every channel. Unknown keys of any other shape are still rejected. This
+        // tolerance is only safe for flags whose ABSENCE is the conservative default. A future
+        // restrictive flag (e.g. `restricted: true`) must not rely on it: an older parser would
+        // drop it and behave permissively.
         typeof outboundRecord[key] !== "boolean",
     ) ||
     (value.outbound.button !== "native" && value.outbound.button !== "link")

@@ -681,8 +681,31 @@ describe("PetNoticeRouter.submit", () => {
     expect(h.im).toEqual([]);
     h.state.channels.lark = "ready";
     expect(await h.router.replayPending("lark", DM)).toEqual([]);
+    // The resend runs in the background so it never delays the inbound turn.
+    await h.router.resendsSettled();
     expect(h.im).toHaveLength(1);
     expect(h.im[0]!.payload).toEqual({ kind: "session.done", media });
+    expect(h.ledger.queued()).toEqual([]);
+  });
+
+  test("a slow media resend does not hold up the inbound turn and stays withheld until it settles", async () => {
+    const h = harness();
+    h.state.channels.lark = "unavailable";
+    const media = { button: { text: "打开", url: "https://example.com/r" } };
+    await h.router.submit(notice({ channel: "lark", media, facts: { title: "M" } }));
+    h.state.channels.lark = "ready";
+    let release!: (result: NoticeImSendResult) => void;
+    h.state.imResult = () =>
+      new Promise<NoticeImSendResult>((resolve) => {
+        release = resolve;
+      });
+    expect(await h.router.replayPending("lark", DM)).toEqual([]);
+    await Promise.resolve();
+    // A second inbound message while the send is in flight does not resend it.
+    expect(await h.router.replayPending("lark", DM)).toEqual([]);
+    expect(h.im).toHaveLength(1);
+    release({ accepted: true });
+    await h.router.resendsSettled();
     expect(h.ledger.queued()).toEqual([]);
   });
 

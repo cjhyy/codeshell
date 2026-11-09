@@ -946,6 +946,8 @@ describe("pending-notice replay", () => {
       isDirectMessage: true,
     })!;
     expect(await replay.take()).toEqual([]);
+    // The send runs in the background so it never delays the inbound turn.
+    await current.wiring.router.resendsSettled();
     expect(current.ownerSends).toEqual([
       expect.objectContaining({ targetId: "lark:owner", text: "报告好了", attachments: ["r.txt"] }),
     ]);
