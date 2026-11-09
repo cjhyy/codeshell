@@ -1,9 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebContents } from "electron";
 import {
   type InstalledPanelApp,
-  type Credential,
   resolvePanelAppBindingProjectPath,
-  validateToolArgsStrict,
   sessionsRoot,
 } from "@cjhyy/code-shell-core";
 import { acquireLockOnPath, acquireWorkspaceWriteLock } from "@cjhyy/code-shell-core/internal";
@@ -23,16 +21,13 @@ import {
   lstat,
   mkdir,
   open,
-  readdir,
   realpath,
   rm,
   stat,
   writeFile,
   type FileHandle,
 } from "node:fs/promises";
-import { basename, dirname, extname, isAbsolute, join, resolve, sep } from "node:path";
-import type { AgentBridge } from "./agent-bridge.js";
-import type { ExternalRuntimeService } from "./external-runtime-service.js";
+import { basename, dirname, join, resolve, sep } from "node:path";
 import { claimPanelHostOwnerForRun } from "./panel-host-routing.js";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import type { PanelAppProtocolResource } from "./panel-app-protocol.js";
@@ -54,7 +49,6 @@ import {
   type BackgroundServiceScope,
   PanelTaskCookieHost,
   taskCookieFromInput,
-  taskCookieSelection,
   createSharedPanelToolHost,
   createPanelDirectoryProjectScope,
   desktopPanelDirectoryBookmarks,
@@ -62,17 +56,11 @@ import {
   createPanelToolExecutor,
   toolJobLimits,
   type ToolJobScope,
-  type ToolQueueUpdate,
-  type ToolJob,
   PanelResourceService,
   panelConnections,
-  panelConnectionIds,
-  materializePanelConnections,
   PanelBridgeError,
   panelBridgeFailure,
   panelAutomationCreationKey,
-  type PanelAutomationHost,
-  type PanelProjectScopeBinding,
 } from "@cjhyy/code-shell-server/panels";
 import { installedPanelAppRevision } from "./panel-apps-service.js";
 import type { PanelAppInspectionCache } from "./panel-app-inspection-cache.js";
@@ -102,381 +90,79 @@ import {
 import {
   PanelAppAgentTaskService,
   type PanelAgentTaskOwner,
-  type PanelAgentTaskProgressInput,
   type PanelAgentTaskStartInput,
 } from "./panel-app-agent-task-service.js";
-import type { PanelAgentTaskModelCatalog } from "./panel-app-agent-task-models.js";
 import { PanelAgentTaskOwnership } from "./panel-app-agent-task-ownership.js";
 import {
   PANEL_APP_API_VERSION,
   type PanelAppBindInput,
-  type PanelAppCookieCredential,
   type PanelAppHostContext,
   type PanelAppAgentToolInvocation,
-  type PanelAppDescriptor,
   type PanelAppPermission,
   type PanelAppWindowTarget,
 } from "../shared/panel-apps.js";
+import type {
+  GuestBinding,
+  PanelAppBridgeInternals,
+  PanelAppBridgeOptions,
+  PanelAppWindowSource,
+  PendingAgentToolCall,
+} from "./panel-app-bridge-types.js";
+import {
+  CALL_TIMEOUT_MS,
+  COOKIE_LOGIN_TIMEOUT_MS,
+  AUDIO_TRANSCRIBE_TIMEOUT_MS,
+  MAX_AGENT_PROMPT_CHARS,
+  MAX_CALLS_PER_WINDOW,
+  MAX_PARAMS_BYTES,
+  MAX_RESULT_BYTES,
+  MAX_WORKSPACE_LIST_RESULT_BYTES,
+  MAX_WORKSPACE_READ_BYTES,
+  MAX_WORKSPACE_WRITE_BYTES,
+  PANEL_AGENT_RUN_TIMEOUT_MS,
+  PANEL_GUEST_SCOPE_WAIT_MS,
+  PDF_EXPORT_TIMEOUT_MS,
+  PROCESS_CONSENT_TIMEOUT_MS,
+  RATE_WINDOW_MS,
+  RESOURCE_TRANSFER_METHODS,
+  RESOURCE_TRANSFER_TIMEOUT_MS,
+  jsonBytes,
+  withTimeout,
+  workspaceRevision,
+} from "./panel-app-bridge-support.js";
+import { createPanelAgentTaskRuntime } from "./panel-app-bridge-agent-tasks.js";
+import {
+  panelWorkspaceExportPdf,
+  panelWorkspaceInfo,
+  panelWorkspaceList,
+  panelWorkspaceOpenPath,
+  panelWorkspaceReadText,
+  panelWorkspaceRevealPath,
+  panelWorkspaceWriteText,
+} from "./panel-app-bridge-workspace.js";
+import {
+  cookieCredentialUrl,
+  panelAuthorizeConnections,
+  panelAuthorizeCookieCredentialForProcess,
+  panelListCookieCredentials,
+  panelLoginAndSaveCookieCredential,
+  panelRestoreCookieCredential,
+} from "./panel-app-bridge-credentials.js";
+import {
+  panelAudioStatus,
+  panelOpenExternal,
+  panelRequestMicrophoneAccess,
+  panelSendNotification,
+  panelTranscribeAudio,
+} from "./panel-app-bridge-system.js";
+import { panelDispatchMedia, panelPickResourceReferences } from "./panel-app-bridge-media.js";
+import { panelDispatchToolJobs, panelToolJobSummary } from "./panel-app-bridge-tool-jobs.js";
+import {
+  panelHandleAgentToolResponse,
+  panelInvokeAgentTool,
+} from "./panel-app-bridge-agent-tools.js";
 
-const MAX_PARAMS_BYTES = 64 * 1024;
-const MAX_RESULT_BYTES = 256 * 1024;
-const MAX_CALLS_PER_WINDOW = 30;
-const RATE_WINDOW_MS = 10_000;
-const CALL_TIMEOUT_MS = 15_000;
-const RESOURCE_TRANSFER_TIMEOUT_MS = 30 * 60 * 1_000;
-const RESOURCE_TRANSFER_METHODS = new Set([
-  "resources.capture",
-  "resources.materialize",
-  "resources.upload.finish",
-  "resources.references.pick",
-]);
-const PDF_EXPORT_TIMEOUT_MS = 30_000;
-const AUDIO_TRANSCRIBE_TIMEOUT_MS = 180_000;
-const COOKIE_LOGIN_TIMEOUT_MS = 30 * 60 * 1_000;
-const PROCESS_CONSENT_TIMEOUT_MS = 30 * 60 * 1_000;
-const PANEL_AGENT_RUN_TIMEOUT_MS = 24 * 60 * 60 * 1000;
-const MAX_AGENT_PROMPT_CHARS = 20_000;
-const MAX_NOTIFICATIONS_PER_WINDOW = 5;
-const MAX_WORKSPACE_READ_BYTES = 480 * 1024;
-const MAX_WORKSPACE_WRITE_BYTES = 384 * 1024;
-const MAX_WORKSPACE_PDF_BYTES = 20 * 1024 * 1024;
-const MAX_WORKSPACE_LIST_ENTRIES = 200;
-const MAX_WORKSPACE_LIST_RESULT_BYTES = 512 * 1024;
-const MAX_AUDIO_TRANSCRIBE_BYTES = 25 * 1024 * 1024;
-const MAX_TRANSCRIPT_CHARS = 20_000;
-const AGENT_TOOL_GUEST_WAIT_MS = 4_000;
-const PANEL_GUEST_SCOPE_WAIT_MS = 4_000;
-const AUDIO_MIME_TYPES = new Set([
-  "audio/webm",
-  "audio/mp4",
-  "audio/m4a",
-  "audio/wav",
-  "audio/x-wav",
-]);
-const WORKSPACE_TEXT_EXTENSIONS = new Set([
-  ".css",
-  ".csv",
-  ".html",
-  ".json",
-  ".md",
-  ".svg",
-  ".tsv",
-  ".txt",
-  ".yaml",
-  ".yml",
-]);
-const DENIED_WORKSPACE_SEGMENTS = new Set(["node_modules"]);
-
-interface GuestBinding {
-  guest: WebContents;
-  ownerWindowId: number;
-  tabId?: string;
-  lastBindInput?: PanelAppBindInput;
-  /** Standalone views inherit authority from one immutable, trusted dock binding. */
-  windowSourceGuestId?: number;
-  windowSourceIdentity?: string;
-  logicalOwnerWebContentsId?: number;
-  resource: PanelAppProtocolResource;
-  context: PanelAppHostContext;
-  callTimes: number[];
-  recordingWriteTimes: number[];
-  notifyTimes: number[];
-  bucket?: string;
-  /** Project selected during prepare; immutable for this guest. */
-  projectPath: string;
-  projectScope?: PanelProjectScopeBinding;
-  projectScopeRevoked?: boolean;
-  bindGeneration?: number;
-  bindController?: AbortController;
-  /** A guest can keep project access, but must never retarget a session action. */
-  sensitiveSessionId?: string;
-  sensitiveSessionRevoked?: boolean;
-  /** Active session/worktree root; available only after renderer binding. */
-  cwd?: string;
-  /**
-   * A submitPrompt handed to the worker but not yet reflected in
-   * `context.busy`.
-   *
-   * `context.busy` is pushed from the renderer, so it lags. Now that
-   * submitPrompt returns as soon as the worker accepts (instead of awaiting the
-   * agent), two calls in quick succession both saw `busy === false` and both
-   * started a run. This flag closes that window from the moment we hand the run
-   * over until the worker acknowledges it.
-   */
-  agentSubmitInFlight?: boolean;
-  /** Trusted renderer→main execution routing; never exposed to the Panel guest. */
-  execution: {
-    /**
-     * The project path the chat renderer routes its own runs by. External
-     * runtimes key session reuse on cwd, so a Panel submission must present
-     * the same value as a chat send or the two paths restart each other.
-     */
-    cwd: string;
-    modelKey?: string;
-    permissionMode: "default" | "acceptEdits" | "bypassPermissions" | "dontAsk";
-    planMode: boolean;
-    hasGoal: boolean;
-  };
-}
-
-export interface PanelAppWindowSource {
-  guestId: number;
-  ownerWindowId: number;
-  descriptor: PanelAppDescriptor;
-  bindInput: PanelAppBindInput;
-}
-
-interface PendingAgentToolCall {
-  guestId: number;
-  releaseExecution(): void;
-  resolve(value: unknown): void;
-  reject(error: Error): void;
-  timer: ReturnType<typeof setTimeout>;
-}
-
-export interface PanelAppBridgeOptions {
-  isTrustedHost(sender: WebContents): boolean;
-  isWorkspaceTrusted(cwd: string): boolean;
-  /** Rechecked on prepare, bind, Agent invocation, and every Host call. */
-  isPanelAppBound(projectPath: string, appId: string): boolean;
-  /** Main's project registry: `rootPath` is a registered root of the project at `projectPath`. */
-  isProjectRoot?(projectPath: string, rootPath: string): boolean;
-  /** Shared with paired Web; IDs are resolved by Main, never accepted from a guest. */
-  resolveProjectScope?(
-    projectPath: string,
-    cwd: string,
-  ): Promise<PanelProjectScopeBinding | undefined>;
-  /** Verified application-owned Node; services never select a user PATH runtime. */
-  resolveBackgroundServiceNode?(): Promise<string | null>;
-  getAgentBridge(): AgentBridge | null;
-  getExternalRuntimeService?(): ExternalRuntimeService | null;
-  /** Canonical transcript handoff used only when a fresh external thread starts. */
-  externalRuntimeInitialContext?(sessionId: string): Promise<string | undefined>;
-  /** Secret-free configured text connections available to isolated Panel Tasks. */
-  agentTaskModels?(cwd: string): PanelAgentTaskModelCatalog | Promise<PanelAgentTaskModelCatalog>;
-  /** Shows a system notification; injected so tests avoid Electron Notification. */
-  showNotification?(notification: { title: string; body: string }): boolean;
-  /** Host-owned Cookie login operations. Cookie values never cross into the Panel guest. */
-  cookieCredentials?: {
-    /** Host-only vault access for versioned background task credentials. */
-    taskCredentials?(cwd: string): Promise<Credential[]>;
-    list(cwd?: string): Promise<PanelAppCookieCredential[]>;
-    loginAndSave(input: {
-      appId: string;
-      providerId: string;
-      providerLabel: string;
-      url: string;
-      cwd?: string;
-      bucket?: string;
-    }): Promise<
-      | {
-          ok: true;
-          credential: PanelAppCookieCredential;
-          cookieCount: number;
-          restoredCount: number;
-        }
-      | { ok: false; cancelled?: boolean; error?: string }
-    >;
-    restore(input: {
-      credentialId: string;
-      cwd?: string;
-      bucket?: string;
-    }): Promise<{ count: number } | { invalid: true }>;
-    materialize?(input: {
-      credentialId: string;
-      cwd?: string;
-    }): Promise<{ filePath: string; count: number; cleanup: () => void } | { invalid: true }>;
-  };
-  /** Project- and task-scoped recurring jobs. The Panel never receives jobs from another cwd. */
-  automations?: {
-    /** True only when create persists creationKey atomically with the job. */
-    uniqueCreation?: boolean;
-    /** Shared project Host for transactionally checked mutations. */
-    conditional?: PanelAutomationHost;
-    list(scope: { resumeSessionId: string }): Promise<
-      Array<{
-        id: string;
-        name: string;
-        schedule: string;
-        prompt: string;
-        enabled: boolean;
-        cwd: string | null;
-        timezone: string | null;
-        permissionLevel: string | null;
-        lastRun: number | null;
-        nextRun: number | null;
-        runCount: number;
-        resumeSessionId: string | null;
-      }>
-    >;
-    create(
-      input: {
-        name: string;
-        schedule: string;
-        prompt: string;
-        timezone?: string;
-        permissionLevel: "full";
-        creationKey?: string;
-      },
-      scope: { resumeSessionId: string },
-    ): Promise<unknown>;
-    update(
-      id: string,
-      patch: {
-        name?: string;
-        schedule?: string;
-        prompt?: string;
-        timezone?: string;
-      },
-      scope: { resumeSessionId: string },
-    ): Promise<unknown>;
-    pause(id: string): Promise<boolean>;
-    resume(id: string): Promise<boolean>;
-    delete(id: string): Promise<boolean>;
-    runNow(id: string): Promise<boolean>;
-  };
-  /** Host-owned microphone consent and speech-to-text. Audio is never persisted by the bridge. */
-  audioTranscription?: {
-    status(cwd: string): {
-      available: boolean;
-      source: "connection" | "fallback" | "none";
-      model?: string;
-    };
-    requestMicrophoneAccess(): Promise<{ granted: boolean }>;
-    transcribe(input: {
-      cwd: string;
-      audio: Uint8Array;
-      mimeType: string;
-      language?: string;
-    }): Promise<{ ok: true; text: string } | { ok: false; error: string }>;
-  };
-  limits?: Partial<{
-    maxParamsBytes: number;
-    maxResultBytes: number;
-    maxCallsPerWindow: number;
-    rateWindowMs: number;
-    callTimeoutMs: number;
-    resourceTransferTimeoutMs: number;
-    storageQuotaBytes: number;
-    maxNotificationsPerWindow: number;
-  }>;
-}
-
-function jsonBytes(value: unknown): number {
-  return Buffer.byteLength(JSON.stringify(value ?? null), "utf-8");
-}
-
-function workspaceRevision(content: Uint8Array | string): string {
-  return `sha256:${createHash("sha256").update(content).digest("hex")}`;
-}
-
-function panelAgentTaskProgress(event: unknown): {
-  progress?: PanelAgentTaskProgressInput;
-  error?: string;
-} {
-  const stream = event as Record<string, unknown> | null;
-  switch (stream?.type) {
-    case "session_started":
-      return {
-        progress: { kind: "model", status: "running", message: "Task started" },
-      };
-    case "stream_request_start":
-      return {
-        progress: {
-          kind: "model",
-          status: "running",
-          message: "AI is planning the next step",
-        },
-      };
-    case "text_delta":
-    case "assistant_message":
-      return {
-        progress: {
-          kind: "model",
-          status: "running",
-          message: "AI is preparing the result",
-        },
-      };
-    case "tool_use_start": {
-      const toolCall = stream.toolCall as Record<string, unknown> | undefined;
-      const toolName = typeof toolCall?.toolName === "string" ? toolCall.toolName : "Tool";
-      return {
-        progress: {
-          kind: "tool",
-          status: "running",
-          message: `Running ${toolName}`,
-          toolName,
-        },
-      };
-    }
-    case "tool_result": {
-      const result = stream.result as Record<string, unknown> | undefined;
-      const toolName = typeof result?.toolName === "string" ? result.toolName : "Tool";
-      return {
-        progress: {
-          kind: "tool",
-          status: "completed",
-          message: `${toolName} returned`,
-          toolName,
-        },
-      };
-    }
-    case "task_update": {
-      const tasks = Array.isArray(stream.tasks) ? stream.tasks : [];
-      const current = tasks.find(
-        (task) => (task as Record<string, unknown> | null)?.status === "in_progress",
-      ) as Record<string, unknown> | undefined;
-      const subject = typeof current?.subject === "string" ? current.subject.trim() : "";
-      return subject
-        ? {
-            progress: {
-              kind: "plan",
-              status: "running",
-              message: subject,
-            },
-          }
-        : {};
-    }
-    case "error": {
-      const error = typeof stream.error === "string" ? stream.error.trim() : "Task failed";
-      return {
-        error,
-        progress: { kind: "error", status: "failed", message: error },
-      };
-    }
-    case "turn_complete":
-      return stream.reason === "completed"
-        ? {
-            progress: { kind: "model", status: "completed", message: "Task completed" },
-          }
-        : {};
-    default:
-      return {};
-  }
-}
-
-function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  onTimeout?: () => void,
-): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      onTimeout?.();
-      reject(new PanelBridgeError("TIMEOUT", "Panel App call timed out"));
-    }, timeoutMs);
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timer);
-        reject(error);
-      },
-    );
-  });
-}
+export type { PanelAppBridgeOptions, PanelAppWindowSource } from "./panel-app-bridge-types.js";
 
 export class PanelAppBridge {
   private readonly guests = new Map<number, GuestBinding>();
@@ -610,115 +296,10 @@ export class PanelAppBridge {
       isWorkspaceTrusted: (cwd) => this.options.isWorkspaceTrusted(cwd),
     });
     this.agentTaskService = new PanelAppAgentTaskService(
-      {
-        run: async (input) => {
-          const bridge = this.options.getAgentBridge();
-          if (!bridge) throw new Error("agent worker is unavailable");
-          bridge.reserveHostSession(
-            input.sessionId,
-            input.owner.cwd,
-            "panel-agent-task",
-            input.owner.projectPath,
-          );
-          bridge.rebindHostSessionBucket(input.sessionId, input.owner.bucket);
-          bridge.claimSessionPanelOwner(input.sessionId, input.owner.ownerWebContentsId);
-          let latestError = "";
-          const unsubscribe = bridge.subscribeOutbound((_line, snapshotEntry) => {
-            if (!snapshotEntry || snapshotEntry.sessionId !== input.sessionId) return;
-            const update = panelAgentTaskProgress(snapshotEntry.event);
-            if (update.error) latestError = update.error;
-            if (update.progress) input.onProgress(update.progress);
-          });
-          let releaseOwnership: (() => void) | undefined;
-          try {
-            const pending = bridge.requestWorker(
-              "agent/run",
-              {
-                task: input.prompt,
-                modelTraceSource: `panel:${input.owner.appId}`,
-                displayText: input.label,
-                clientMessageId: `panel-task:${input.owner.appId}:${input.sessionId}`,
-                sessionId: input.sessionId,
-                cwd: input.owner.cwd,
-                bucket: input.owner.bucket,
-                behaviorMode: "isolatedTask",
-                ephemeral: true,
-                ...(input.model ? { model: input.model } : {}),
-                toolAllowlist: input.toolNames,
-                skillAllowlist: input.skillNames,
-                maxTurns: input.maxTurns,
-                maxContextTokens: input.maxContextTokens,
-              },
-              PANEL_AGENT_RUN_TIMEOUT_MS,
-              {
-                settleOnExit: true,
-                failFast: true,
-                meta: { origin: "host", producer: "panel-agent-task" },
-              },
-            );
-            // requestWorker synchronously ensures/spawns the worker before returning
-            // its Promise. Capture that generation before any worker reply can arrive.
-            releaseOwnership = this.agentTaskOwnership.track(input.sessionId, bridge);
-            const response = await pending;
-            if (!response.ok) throw new Error(response.message);
-            const result = (response.result ?? {}) as {
-              text?: unknown;
-              reason?: unknown;
-              usage?: {
-                promptTokens?: unknown;
-                completionTokens?: unknown;
-                totalTokens?: unknown;
-              };
-            };
-            const usage = result.usage;
-            return {
-              text: typeof result.text === "string" ? result.text : "",
-              ...(typeof result.reason === "string" ? { reason: result.reason } : {}),
-              ...(latestError ? { error: latestError } : {}),
-              ...(usage &&
-              typeof usage.promptTokens === "number" &&
-              typeof usage.completionTokens === "number" &&
-              typeof usage.totalTokens === "number"
-                ? {
-                    usage: {
-                      promptTokens: usage.promptTokens,
-                      completionTokens: usage.completionTokens,
-                      totalTokens: usage.totalTokens,
-                    },
-                  }
-                : {}),
-            };
-          } finally {
-            releaseOwnership?.();
-            unsubscribe();
-          }
-        },
-        cancel: async (sessionId) => {
-          const bridge = this.options.getAgentBridge();
-          if (!bridge) throw new Error("agent worker is unavailable");
-          const response = await bridge.requestWorker("agent/cancel", { sessionId }, 30_000, {
-            settleOnExit: true,
-            failFast: true,
-            meta: { origin: "host", producer: "panel-agent-cancel" },
-          });
-          if (!response.ok) throw new Error(response.message);
-        },
-        close: async (sessionId) => {
-          const bridge = this.options.getAgentBridge();
-          if (!bridge) return;
-          try {
-            await bridge.closeSession(sessionId);
-          } finally {
-            bridge.forgetSession(sessionId);
-          }
-        },
-        rebind: (sessionId, owner) => {
-          const bridge = this.options.getAgentBridge();
-          if (!bridge) return;
-          bridge.rebindHostSessionBucket(sessionId, owner.bucket);
-          bridge.claimSessionPanelOwner(sessionId, owner.ownerWebContentsId);
-        },
-      },
+      createPanelAgentTaskRuntime({
+        getAgentBridge: () => this.options.getAgentBridge(),
+        trackOwnership: (sessionId, bridge) => this.agentTaskOwnership.track(sessionId, bridge),
+      }),
       (owner, task) => {
         for (const binding of this.guests.values()) {
           if (
@@ -1136,147 +717,12 @@ export class PanelAppBridge {
       .sort((left, right) => Number(right.context.visible) - Number(left.context.visible))[0];
   }
 
-  private waitForAgentToolBinding(
-    appDescriptorId: string,
-    bucket: string,
-    ownerWindowId: number,
-  ): Promise<GuestBinding> {
-    const existing = this.findAgentToolBinding(appDescriptorId, bucket, ownerWindowId);
-    if (existing) return Promise.resolve(existing);
-    return new Promise((resolveBinding, reject) => {
-      const startedAt = Date.now();
-      const check = (): void => {
-        const binding = this.findAgentToolBinding(appDescriptorId, bucket, ownerWindowId);
-        if (binding) {
-          resolveBinding(binding);
-          return;
-        }
-        if (Date.now() - startedAt >= AGENT_TOOL_GUEST_WAIT_MS) {
-          reject(new Error(`Panel App '${appDescriptorId}' did not become ready`));
-          return;
-        }
-        setTimeout(check, 50);
-      };
-      setTimeout(check, 0);
-    });
-  }
-
-  private async invokeAgentTool(
-    sender: WebContents,
-    input: PanelAppAgentToolInvocation,
-  ): Promise<unknown> {
-    if (
-      !input ||
-      typeof input.appDescriptorId !== "string" ||
-      !input.appDescriptorId.startsWith("panel-app:") ||
-      typeof input.bucket !== "string" ||
-      input.bucket.length === 0 ||
-      input.bucket.length > 512 ||
-      typeof input.toolName !== "string" ||
-      !/^[a-z][a-z0-9_]{0,63}$/.test(input.toolName) ||
-      !input.arguments ||
-      typeof input.arguments !== "object" ||
-      Array.isArray(input.arguments)
-    ) {
-      throw new Error("invalid Panel App Agent tool invocation");
-    }
-    if (jsonBytes(input.arguments) > (this.options.limits?.maxParamsBytes ?? MAX_PARAMS_BYTES)) {
-      throw new Error("Panel App Agent tool arguments are too large");
-    }
-    const owner = BrowserWindow.fromWebContents(sender);
-    if (!owner) throw new Error("Panel App Agent tool requires a live host window");
-    const binding = await this.waitForAgentToolBinding(
-      input.appDescriptorId,
-      input.bucket,
-      owner.id,
-    );
-    this.assertProjectBinding(binding);
-    const declaration = binding.resource.descriptor.agent?.tools.find(
-      (tool) => tool.name === input.toolName,
-    );
-    if (!declaration) {
-      throw new Error(`Panel App tool '${input.toolName}' is not declared`);
-    }
-    const validationError = validateToolArgsStrict(
-      input.toolName,
-      input.arguments,
-      declaration.inputSchema,
-    );
-    if (validationError) {
-      throw new Error(`Invalid Panel App tool input: ${validationError}`);
-    }
-    if (
-      [...this.pendingAgentToolCalls.values()].filter(
-        (pending) => pending.guestId === binding.guest.id,
-      ).length >= 16
-    )
-      throw new Error("Panel App has too many unfinished Agent tool calls");
-    const releaseExecution = panelExecutionGate.enter({
-      appId: binding.resource.descriptor.appId,
-      projectPath: binding.projectPath,
-      holder: { kind: "agent-tool", guestId: binding.guest.id },
-    });
-    const requestId = randomUUID();
-    const result = await new Promise<unknown>((resolveResult, reject) => {
-      const timer = setTimeout(() => {
-        // A timeout stops waiting, not the guest operation. Retain the lease until
-        // its late response or guest revocation proves it can no longer execute.
-        reject(new Error(`Panel App tool '${input.toolName}' timed out`));
-      }, this.options.limits?.callTimeoutMs ?? CALL_TIMEOUT_MS);
-      this.pendingAgentToolCalls.set(requestId, {
-        releaseExecution,
-        guestId: binding.guest.id,
-        resolve: resolveResult,
-        reject,
-        timer,
-      });
-      try {
-        binding.guest.send("panel-app:agent-tool-request", {
-          requestId,
-          toolName: input.toolName,
-          arguments: input.arguments,
-        });
-      } catch (error) {
-        clearTimeout(timer);
-        this.pendingAgentToolCalls.delete(requestId);
-        releaseExecution();
-        reject(
-          error instanceof Error
-            ? error
-            : new Error("Panel App closed before its Agent tool request was sent"),
-        );
-      }
-    });
-    if (jsonBytes(result) > (this.options.limits?.maxResultBytes ?? MAX_RESULT_BYTES)) {
-      throw new Error("Panel App Agent tool result is too large");
-    }
-    return result;
+  private invokeAgentTool(sender: WebContents, input: PanelAppAgentToolInvocation) {
+    return panelInvokeAgentTool(this.internals(), sender, input);
   }
 
   private handleAgentToolResponse(sender: WebContents, raw: unknown): void {
-    const response = raw as {
-      requestId?: unknown;
-      ok?: unknown;
-      result?: unknown;
-      error?: unknown;
-    } | null;
-    if (!response || typeof response.requestId !== "string") return;
-    const pending = this.pendingAgentToolCalls.get(response.requestId);
-    if (!pending || pending.guestId !== sender.id) return;
-    this.pendingAgentToolCalls.delete(response.requestId);
-    pending.releaseExecution();
-    clearTimeout(pending.timer);
-    if (response.ok === true) {
-      pending.resolve(response.result ?? null);
-      return;
-    }
-    pending.reject(
-      new Error(
-        typeof response.error === "string"
-          ? response.error.slice(0, 1_000)
-          : "Panel App tool failed",
-      ),
-    );
+    panelHandleAgentToolResponse(this.internals(), sender, raw);
   }
 
   private async bindGuest(sender: WebContents, input: PanelAppBindInput): Promise<boolean> {
@@ -1790,11 +1236,6 @@ export class PanelAppBridge {
     return cache;
   }
 
-  private toolSummary(job: ToolJob) {
-    const { input: _input, result: _result, ...summary } = job;
-    return summary;
-  }
-
   async authorizePanelDirectory(
     expected: InstalledPanelApp,
     projectPath: string,
@@ -2135,72 +1576,15 @@ export class PanelAppBridge {
           )
             binding.guest.send("panel-app:event", {
               event: "tasks.changed",
-              payload: this.toolSummary(job),
+              payload: panelToolJobSummary(job),
             });
       },
     });
     return this.toolJobService;
   }
 
-  private async dispatchToolJobs(binding: GuestBinding, method: string, params: unknown) {
-    this.requirePermission(binding, "process");
-    this.requirePermission(binding, "resources");
-    await this.trustedWorkspaceRoot(binding);
-    const scope = {
-      appId: binding.resource.descriptor.appId,
-      projectPath: binding.projectPath,
-      revision: binding.resource.descriptor.revision,
-    };
-    const input = (params ?? {}) as {
-      id?: string;
-      entry?: string;
-      input?: unknown;
-      recovery?: "manual" | "retry";
-      requestKey?: string;
-      offset?: number;
-      limit?: number;
-    };
-    const service = this.getToolJobService();
-    if (method === "tasks.start") {
-      const entry = (await this.installedToolApp(scope)).nativeEntries?.[input.entry ?? ""];
-      if (!entry)
-        throw new PanelBridgeError("NOT_SUPPORTED", "Installed native tool is unavailable");
-      await this.confirmTaskCookie(binding, input.input, input.entry!);
-      return service.start(scope, {
-        entry: { name: input.entry!, sha256: entry.sha256 },
-        input: input.input,
-        recovery: input.recovery ?? "manual",
-        requestKey: input.requestKey,
-      });
-    }
-    if (method === "tasks.find") return service.find(scope, input.requestKey!);
-    if (method === "tasks.queue.get") return service.getQueue(scope);
-    if (method === "tasks.queue.set") return service.setQueue(scope, params as ToolQueueUpdate);
-    if (method === "tasks.list") {
-      const offset = input.offset ?? 0,
-        limit = input.limit ?? 50;
-      if (
-        !Number.isSafeInteger(offset) ||
-        offset < 0 ||
-        !Number.isSafeInteger(limit) ||
-        limit < 1 ||
-        limit > 50
-      )
-        throw new PanelBridgeError("INVALID_ARGUMENT", "Invalid task page");
-      return (await service.list(scope))
-        .slice(offset, offset + limit)
-        .map((job) => this.toolSummary(job));
-    }
-    if (method === "tasks.get") return service.get(scope, input.id!);
-    if (method === "tasks.cancel") return service.cancel(scope, input.id!);
-    if (method === "tasks.retry") {
-      const previous = await service.get(scope, input.id!);
-      if (previous.readOnly)
-        throw new PanelBridgeError("NOT_SUPPORTED", "旧任务仅供查看，请检查输入后创建新任务。");
-      await this.confirmTaskCookie(binding, previous.input, previous.entry.name);
-      return service.retry(scope, input.id!);
-    }
-    throw new PanelBridgeError("NOT_SUPPORTED", "Unknown tool task operation");
+  private dispatchToolJobs(binding: GuestBinding, method: string, params: unknown) {
+    return panelDispatchToolJobs(this.internals(), binding, method, params);
   }
 
   private getResourceService(): PanelResourceService {
@@ -2213,38 +1597,8 @@ export class PanelAppBridge {
     return this.resourceService;
   }
 
-  private async authorizeConnections(binding: GuestBinding, params: unknown) {
-    this.requirePermission(binding, "credentials.connections");
-    this.requirePermission(binding, "process");
-    const input = params as {
-      connectionIds?: unknown;
-      executableHandle?: unknown;
-      argumentName?: unknown;
-    };
-    const ids = panelConnectionIds(input?.connectionIds);
-    const cwd = await this.trustedWorkspaceRoot(binding);
-    if (typeof input.executableHandle !== "string" || typeof input.argumentName !== "string")
-      throw new PanelBridgeError(
-        "INVALID_ARGUMENT",
-        "Connection handoff requires an executable and argument",
-      );
-    const sealed = await materializePanelConnections(
-      join(app.getPath("userData"), "panel-app-sealed"),
-      cwd,
-      ids,
-    );
-    try {
-      this.assertProjectBinding(binding);
-      return await this.processService.grantFileArgument(this.processOwner(binding), {
-        executableHandle: input.executableHandle,
-        argumentName: input.argumentName,
-        path: sealed.path,
-        cleanup: sealed.cleanup,
-      });
-    } catch (error) {
-      sealed.cleanup();
-      throw error;
-    }
+  private authorizeConnections(binding: GuestBinding, params: unknown) {
+    return panelAuthorizeConnections(this.internals(), binding, params);
   }
 
   private getMediaService(): PanelMediaService {
@@ -2269,81 +1623,8 @@ export class PanelAppBridge {
     return this.mediaService;
   }
 
-  private async dispatchMedia(
-    binding: GuestBinding,
-    method: string,
-    params: unknown,
-  ): Promise<unknown> {
-    const scope = { appId: binding.resource.descriptor.appId, projectPath: binding.projectPath };
-    if (!this.options.isWorkspaceTrusted(binding.projectPath))
-      throw new Error("Media requires a trusted workspace");
-    const service = this.getMediaService();
-    const input = (params ?? {}) as Record<string, unknown>;
-    if (method === "media.import") {
-      if (input.paths !== undefined) {
-        this.requirePermission(binding, "workspace.read");
-        return service.importWorkspaceFiles(
-          scope,
-          await this.trustedWorkspaceRoot(binding),
-          input.paths,
-        );
-      }
-      const owner = BrowserWindow.fromId(binding.ownerWindowId);
-      if (!owner || owner.isDestroyed()) throw new Error("Media picker requires an owner window");
-      const selection = await dialog.showOpenDialog(owner, {
-        title: "导入视频、图片与音频",
-        properties: ["openFile", "multiSelections"],
-        filters: [
-          {
-            name: "Media",
-            extensions: [
-              "mp4",
-              "m4v",
-              "mov",
-              "webm",
-              "mkv",
-              "avi",
-              "mp3",
-              "m4a",
-              "aac",
-              "wav",
-              "flac",
-              "ogg",
-              "opus",
-              "png",
-              "jpg",
-              "jpeg",
-              "webp",
-              "gif",
-              "bmp",
-              "tiff",
-            ],
-          },
-        ],
-      });
-      this.assertProjectBinding(binding);
-      if (selection.canceled || !selection.filePaths.length) return { cancelled: true };
-      return service.importFiles(scope, selection.filePaths);
-    }
-    if (method === "media.export") {
-      const asset = await service.library.get(scope, input.assetId as string);
-      const owner = BrowserWindow.fromId(binding.ownerWindowId);
-      if (!owner || owner.isDestroyed()) throw new Error("Media export requires an owner window");
-      const destination = await dialog.showSaveDialog(owner, {
-        title: "保存制作结果",
-        defaultPath: asset.name,
-      });
-      this.assertProjectBinding(binding);
-      if (destination.canceled || !destination.filePath) return { cancelled: true };
-      await service.exportFile(scope, asset.id, destination.filePath);
-      return { saved: true, name: basename(destination.filePath) };
-    }
-    if (method === "media.reveal") {
-      const path = await service.library.resolvePath(scope, input.assetId as string);
-      shell.showItemInFolder(path);
-      return { revealed: true };
-    }
-    return service.dispatch(scope, method, params);
+  private dispatchMedia(binding: GuestBinding, method: string, params: unknown) {
+    return panelDispatchMedia(this.internals(), binding, method, params);
   }
 
   private async dispatch(
@@ -2580,6 +1861,39 @@ export class PanelAppBridge {
     }
   }
 
+  /**
+   * Explicit dependencies for the extracted panel-app-bridge-* handlers. Built
+   * per call and forwarding through `this`, so handlers always reach the
+   * bridge's current guards and services rather than a stale snapshot.
+   */
+  private internals(): PanelAppBridgeInternals {
+    return {
+      options: this.options,
+      guests: this.guests,
+      processService: this.processService,
+      isResourceTransfersStopping: () => this.resourceTransfersStopping,
+      requirePermission: (binding, permission) => this.requirePermission(binding, permission),
+      assertProjectBinding: (binding) => this.assertProjectBinding(binding),
+      trustedWorkspaceRoot: (binding) => this.trustedWorkspaceRoot(binding),
+      isWithinWorkspace: (root, candidate, allowRoot) =>
+        this.isWithinWorkspace(root, candidate, allowRoot),
+      readBoundedWorkspaceFile: (handle, maxBytes) =>
+        this.readBoundedWorkspaceFile(handle, maxBytes),
+      writeWorkspaceFile: (...args) => this.writeWorkspaceFile(...args),
+      processOwner: (binding) => this.processOwner(binding),
+      getTaskCookieHost: () => this.getTaskCookieHost(),
+      confirmTaskCookie: (binding, input, entry, background) =>
+        this.confirmTaskCookie(binding, input, entry, background),
+      getResourceService: () => this.getResourceService(),
+      getMediaService: () => this.getMediaService(),
+      getToolJobService: () => this.getToolJobService(),
+      installedToolApp: (scope) => this.installedToolApp(scope),
+      pendingAgentToolCalls: this.pendingAgentToolCalls,
+      findAgentToolBinding: (appDescriptorId, bucket, ownerWindowId) =>
+        this.findAgentToolBinding(appDescriptorId, bucket, ownerWindowId),
+    };
+  }
+
   private processOwner(binding: GuestBinding): PanelProcessOwner {
     return {
       guestId: binding.guest.id,
@@ -2683,120 +1997,8 @@ export class PanelAppBridge {
     return this.processService.grantDirectory(this.processOwner(binding), path);
   }
 
-  private async pickResourceReferences(
-    binding: GuestBinding,
-    params: unknown,
-    signal?: AbortSignal,
-  ): Promise<unknown> {
-    const input = (params ?? {}) as {
-      multiple?: boolean;
-      filters?: Array<{ name: string; extensions: string[] }>;
-      id?: string;
-    };
-    if (
-      !input ||
-      typeof input !== "object" ||
-      Array.isArray(input) ||
-      Object.keys(input).some((key) => !["multiple", "filters", "id"].includes(key)) ||
-      (input.multiple !== undefined && typeof input.multiple !== "boolean") ||
-      (input.id !== undefined &&
-        (typeof input.id !== "string" || !/^external-[a-f0-9]{64}$/.test(input.id))) ||
-      (input.filters !== undefined &&
-        (!Array.isArray(input.filters) ||
-          input.filters.length > 16 ||
-          input.filters.some(
-            (filter) =>
-              !filter ||
-              typeof filter !== "object" ||
-              Object.keys(filter).some((key) => !["name", "extensions"].includes(key)) ||
-              typeof filter.name !== "string" ||
-              !filter.name.trim() ||
-              filter.name.length > 80 ||
-              !Array.isArray(filter.extensions) ||
-              !filter.extensions.length ||
-              filter.extensions.length > 32 ||
-              filter.extensions.some(
-                (extension) =>
-                  typeof extension !== "string" || !/^(?:[a-zA-Z0-9]{1,16}|\*)$/.test(extension),
-              ),
-          )))
-    )
-      throw new PanelBridgeError("INVALID_ARGUMENT", "Invalid reference file selection");
-    const owner = BrowserWindow.fromId(binding.ownerWindowId);
-    const assertAuthorized = () => {
-      if (
-        signal?.aborted ||
-        this.resourceTransfersStopping ||
-        this.guests.get(binding.guest.id) !== binding ||
-        binding.guest.isDestroyed() ||
-        !owner ||
-        owner.isDestroyed()
-      )
-        throw new PanelBridgeError("REVOKED", "Panel App file selection was revoked");
-      this.requirePermission(binding, "resources");
-      this.assertProjectBinding(binding);
-      if (
-        !this.options.isWorkspaceTrusted(binding.projectPath) ||
-        !this.options.isWorkspaceTrusted(binding.cwd ?? binding.projectPath)
-      )
-        throw new PanelBridgeError("REVOKED", "Panel App workspace trust was revoked");
-    };
-    assertAuthorized();
-    const multiple = !input.id && input.multiple === true;
-    // A closed guest must not hold Host shutdown open while a native dialog is
-    // still waiting for user input. Ignore its eventual answer after revocation.
-    const selected = await new Promise<Electron.OpenDialogReturnValue>(
-      (resolveSelection, reject) => {
-        const abort = () =>
-          reject(new PanelBridgeError("REVOKED", "Panel App file selection was revoked"));
-        signal?.addEventListener("abort", abort, { once: true });
-        if (signal?.aborted) {
-          signal.removeEventListener("abort", abort);
-          abort();
-          return;
-        }
-        void dialog
-          .showOpenDialog(owner!, {
-            title: input.id ? "Reconnect original file" : "Choose files to reference",
-            properties: multiple ? ["openFile", "multiSelections"] : ["openFile"],
-            ...(input.filters ? { filters: input.filters } : {}),
-          })
-          .then(resolveSelection, () =>
-            reject(new PanelBridgeError("OPERATION_FAILED", "Unable to open file selection")),
-          )
-          .finally(() => signal?.removeEventListener("abort", abort));
-      },
-    );
-    assertAuthorized();
-    if (selected.canceled || !selected.filePaths.length) return { references: [] };
-    if (selected.filePaths.length > (multiple ? 128 : 1))
-      throw new PanelBridgeError("INVALID_ARGUMENT", "Select at most 128 files");
-    const scope = { appId: binding.resource.descriptor.appId, projectPath: binding.projectPath };
-    const service = this.getResourceService().references;
-    const references: Awaited<ReturnType<typeof service.createFromSelectedPath>>[] = [];
-    for (const path of selected.filePaths) {
-      assertAuthorized();
-      try {
-        references.push(
-          input.id
-            ? await service.relinkFromSelectedPath(scope, input.id, path, {
-                signal,
-                assertAuthorized,
-              })
-            : await service.createFromSelectedPath(scope, path, { signal, assertAuthorized }),
-        );
-      } catch (error) {
-        assertAuthorized();
-        if (error instanceof PanelBridgeError) throw error;
-        // Filesystem errors can contain the selected absolute source path.
-        throw new PanelBridgeError(
-          "OPERATION_FAILED",
-          "Unable to reference selected file; reconnecting requires the unchanged original file",
-        );
-      }
-    }
-    assertAuthorized();
-    return { references };
+  private pickResourceReferences(binding: GuestBinding, params: unknown, signal?: AbortSignal) {
+    return panelPickResourceReferences(this.internals(), binding, params, signal);
   }
 
   private async pickProcessDirectory(binding: GuestBinding): Promise<unknown> {
@@ -2905,65 +2107,16 @@ export class PanelAppBridge {
     return true;
   }
 
-  private panelAudioHost(binding: GuestBinding) {
-    const host = this.options.audioTranscription;
-    if (!host) throw new Error("Panel App audio transcription host is unavailable");
-    if (!binding.context.cwd || !binding.context.trusted) {
-      throw new Error("Panel App audio transcription requires a trusted workspace");
-    }
-    return host;
+  private panelAudioStatus(binding: GuestBinding) {
+    return panelAudioStatus(this.internals(), binding);
   }
 
-  private panelAudioStatus(binding: GuestBinding): unknown {
-    const host = this.panelAudioHost(binding);
-    return host.status(binding.context.cwd!);
+  private requestPanelMicrophoneAccess(binding: GuestBinding) {
+    return panelRequestMicrophoneAccess(this.internals(), binding);
   }
 
-  private requestPanelMicrophoneAccess(binding: GuestBinding): Promise<{ granted: boolean }> {
-    return this.panelAudioHost(binding).requestMicrophoneAccess();
-  }
-
-  private async transcribePanelAudio(
-    binding: GuestBinding,
-    params: unknown,
-  ): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
-    const input = params as {
-      audio?: unknown;
-      mimeType?: unknown;
-      language?: unknown;
-    } | null;
-    if (!(input?.audio instanceof ArrayBuffer)) {
-      throw new Error("audio.transcribe requires raw ArrayBuffer audio");
-    }
-    if (input.audio.byteLength === 0 || input.audio.byteLength > MAX_AUDIO_TRANSCRIBE_BYTES) {
-      throw new Error("audio.transcribe audio must be between 1 byte and 25 MiB");
-    }
-    const mimeType = typeof input.mimeType === "string" ? input.mimeType.trim().toLowerCase() : "";
-    const baseMimeType = mimeType.split(";", 1)[0] ?? "";
-    if (!AUDIO_MIME_TYPES.has(baseMimeType)) {
-      throw new Error("audio.transcribe MIME type is not supported");
-    }
-    const language =
-      typeof input.language === "string" && input.language.trim()
-        ? input.language.trim()
-        : undefined;
-    if (language && !/^[a-z]{2,3}(?:-[a-z0-9]{2,8})?$/i.test(language)) {
-      throw new Error("audio.transcribe language must be an ISO language tag");
-    }
-    const host = this.panelAudioHost(binding);
-    const result = await host.transcribe({
-      cwd: binding.context.cwd!,
-      audio: new Uint8Array(input.audio),
-      mimeType,
-      ...(language ? { language } : {}),
-    });
-    if (!result.ok) return result;
-    const text = result.text.trim();
-    if (!text) return { ok: false, error: "transcription returned no text" };
-    if (text.length > MAX_TRANSCRIPT_CHARS) {
-      return { ok: false, error: "transcription exceeds the 20000 character limit" };
-    }
-    return { ok: true, text };
+  private transcribePanelAudio(binding: GuestBinding, params: unknown) {
+    return panelTranscribeAudio(this.internals(), binding, params);
   }
 
   private panelAutomationHost(binding: GuestBinding) {
@@ -3190,255 +2343,23 @@ export class PanelAppBridge {
   }
 
   private cookieCredentialUrl(params: unknown): URL {
-    const rawUrl = (params as { url?: unknown } | null)?.url;
-    let url: URL;
-    try {
-      url = new URL(typeof rawUrl === "string" ? rawUrl : "");
-    } catch {
-      throw new Error("Cookie login requires a valid https URL");
-    }
-    if (
-      typeof rawUrl !== "string" ||
-      rawUrl.length > 2_048 ||
-      url.protocol !== "https:" ||
-      !url.hostname ||
-      url.username ||
-      url.password
-    ) {
-      throw new Error("Cookie login requires a valid https URL");
-    }
-    return url;
+    return cookieCredentialUrl(params);
   }
 
-  /**
-   * Match a login URL against a saved credential's domain, one direction only:
-   * the requested host must BE the credential domain or sit beneath it.
-   *
-   * The reverse test (credential domain ends with the requested host) must not
-   * be reintroduced — it let a short host claim every longer credential, so
-   * `https://com` matched `evil.com` and `zhipin.com` matched
-   * `mail.zhipin.com`. Since only `credential.label` (often a phone number or
-   * email) crosses back to the guest, a bad match silently leaks accounts.
-   *
-   * Requiring a dot in the credential domain keeps a bare eTLD entry (`com`,
-   * `cn`) from matching an entire suffix.
-   */
-  private cookieCredentialDomainMatches(url: URL, credential: PanelAppCookieCredential): boolean {
-    const target = url.hostname.toLowerCase().replace(/^www\./, "");
-    const domain = String(credential.domain || "")
-      .toLowerCase()
-      .replace(/^https?:\/\//, "")
-      .replace(/^www\./, "")
-      .split("/")[0]
-      .split(":")[0];
-    if (!domain || !domain.includes(".") || !target) return false;
-    return target === domain || target.endsWith(`.${domain}`);
+  private listCookieCredentials(binding: GuestBinding, params: unknown) {
+    return panelListCookieCredentials(this.internals(), binding, params);
   }
 
-  /**
-   * Reading real credentials is at least as sensitive as writing workspace
-   * files, so it takes the same trust gate those paths use
-   * (`trustedWorkspaceRoot`) rather than only checking that a cwd is bound.
-   */
-  private cookieCredentialHost(binding: GuestBinding) {
-    const host = this.options.cookieCredentials;
-    if (!host) throw new Error("Cookie login is unavailable in this CodeShell host");
-    if (!binding.cwd) throw new Error("Cookie login requires an active project-bound task");
-    if (!this.options.isWorkspaceTrusted(binding.cwd)) {
-      throw new Error("Cookie login requires a trusted workspace");
-    }
-    return host;
+  private loginAndSaveCookieCredential(binding: GuestBinding, params: unknown) {
+    return panelLoginAndSaveCookieCredential(this.internals(), binding, params);
   }
 
-  private async listCookieCredentials(
-    binding: GuestBinding,
-    params: unknown,
-  ): Promise<{ accounts: PanelAppCookieCredential[] }> {
-    const url = this.cookieCredentialUrl(params);
-    const host = this.cookieCredentialHost(binding);
-    const accounts = (await host.list(binding.cwd)).filter((credential) =>
-      this.cookieCredentialDomainMatches(url, credential),
-    );
-    return { accounts };
+  private restoreCookieCredential(binding: GuestBinding, params: unknown) {
+    return panelRestoreCookieCredential(this.internals(), binding, params);
   }
 
-  private async loginAndSaveCookieCredential(
-    binding: GuestBinding,
-    params: unknown,
-  ): Promise<unknown> {
-    const input = params as {
-      providerId?: unknown;
-      providerLabel?: unknown;
-      url?: unknown;
-    } | null;
-    const providerId = typeof input?.providerId === "string" ? input.providerId.trim() : "";
-    const providerLabel =
-      typeof input?.providerLabel === "string" ? input.providerLabel.trim() : "";
-    if (!/^[a-z][a-z0-9-]{0,79}$/.test(providerId)) {
-      throw new Error("Cookie login requires a valid provider id");
-    }
-    if (!providerLabel || providerLabel.length > 80) {
-      throw new Error("Cookie login requires a provider label up to 80 characters");
-    }
-    const url = this.cookieCredentialUrl(params);
-    const host = this.cookieCredentialHost(binding);
-    return host.loginAndSave({
-      appId: binding.resource.descriptor.appId,
-      providerId,
-      providerLabel,
-      url: url.toString(),
-      cwd: binding.cwd,
-      bucket: binding.bucket,
-    });
-  }
-
-  private async restoreCookieCredential(binding: GuestBinding, params: unknown): Promise<unknown> {
-    const input = params as { credentialId?: unknown; providerLabel?: unknown } | null;
-    const credentialId = typeof input?.credentialId === "string" ? input.credentialId.trim() : "";
-    const providerLabel =
-      typeof input?.providerLabel === "string" ? input.providerLabel.trim() : "招聘渠道";
-    if (!credentialId || credentialId.length > 160) {
-      throw new Error("Cookie restore requires a saved credential id");
-    }
-    const host = this.cookieCredentialHost(binding);
-    const owner = BrowserWindow.fromId(binding.ownerWindowId);
-    if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
-    const decision = await dialog.showMessageBox(owner, {
-      type: "question",
-      buttons: ["Restore login", "Cancel"],
-      defaultId: 1,
-      cancelId: 1,
-      title: binding.resource.descriptor.title,
-      message: `Restore the saved login for ${providerLabel || "this channel"}?`,
-      detail:
-        "CodeShell will inject the selected Cookie credential into this task's browser. The Panel App cannot read the Cookie value.",
-      noLink: true,
-    });
-    if (decision.response !== 0) return { restored: false, cancelled: true };
-    const result = await host.restore({
-      credentialId,
-      cwd: binding.cwd,
-      bucket: binding.bucket,
-    });
-    if ("invalid" in result) return { restored: false, invalid: true };
-    return { restored: true, count: result.count };
-  }
-
-  private async authorizeCookieCredentialForProcess(
-    binding: GuestBinding,
-    params: unknown,
-  ): Promise<unknown> {
-    const input = params as {
-      credentialId?: unknown;
-      url?: unknown;
-      executableHandle?: unknown;
-      revision?: unknown;
-    } | null;
-    if (input?.revision !== undefined) {
-      this.requirePermission(binding, "process");
-      this.requirePermission(binding, "resources");
-      const selection = taskCookieSelection({
-        credentialId: input.credentialId,
-        url: input.url,
-        revision: input.revision,
-      });
-      const owner = this.processOwner(binding);
-      const executable = this.processService.executableName(owner, input.executableHandle);
-      const scope = {
-        appId: binding.resource.descriptor.appId,
-        projectPath: binding.projectPath,
-        revision: binding.resource.descriptor.revision,
-      };
-      const cwd = binding.cwd;
-      const host = this.getTaskCookieHost();
-      await this.confirmTaskCookie(
-        binding,
-        { cookieArgument: { ...selection, argumentName: "--cookies" } },
-        executable,
-        false,
-      );
-      const validate = async () => {
-        await host.check(scope, selection);
-        if (
-          this.guests.get(binding.guest.id) !== binding ||
-          binding.guest.isDestroyed() ||
-          binding.cwd !== cwd ||
-          binding.resource.descriptor.revision !== scope.revision ||
-          !this.options.isWorkspaceTrusted(cwd ?? scope.projectPath)
-        )
-          throw new PanelBridgeError("REVOKED", "Panel scope changed during Cookie access");
-        this.assertProjectBinding(binding);
-      };
-      const lease = await host.materialize(scope, selection);
-      try {
-        await validate();
-        const sealed = await this.processService.grantFileArgument(owner, {
-          executableHandle: input.executableHandle,
-          argumentName: "--cookies",
-          path: lease.path,
-          validate,
-          cleanup: () => {
-            void lease.cleanup().catch(() => {});
-          },
-        });
-        return { authorized: true, fileArgumentHandle: sealed.handle, count: lease.count };
-      } catch (cause) {
-        await lease.cleanup();
-        throw cause;
-      }
-    }
-    const credentialId = typeof input?.credentialId === "string" ? input.credentialId.trim() : "";
-    if (!credentialId || credentialId.length > 160) {
-      throw new Error("Cookie process authorization requires a saved credential id");
-    }
-    const url = this.cookieCredentialUrl(params);
-    const host = this.cookieCredentialHost(binding);
-    if (!host.materialize) {
-      throw new Error("Cookie process authorization is unavailable in this CodeShell host");
-    }
-    const account = (await host.list(binding.cwd)).find(
-      (credential) =>
-        credential.id === credentialId && this.cookieCredentialDomainMatches(url, credential),
-    );
-    if (!account) throw new Error("The selected Cookie login does not match this site");
-    if (account.health === "corrupted") {
-      throw new Error("The selected Cookie login is corrupted; sign in and save it again");
-    }
-    const owner = this.processOwner(binding);
-    const executable = this.processService.executableName(owner, input?.executableHandle);
-    if (account.autoUseByAI !== true) {
-      const window = BrowserWindow.fromId(binding.ownerWindowId);
-      if (!window || window.isDestroyed()) throw new Error("owner window is unavailable");
-      const decision = await dialog.showMessageBox(window, {
-        type: "question",
-        buttons: ["Use saved login", "Cancel"],
-        defaultId: 1,
-        cancelId: 1,
-        title: binding.resource.descriptor.title,
-        message: `Use “${account.label}” with ${executable}?`,
-        detail:
-          "CodeShell will create a temporary owner-only Cookie file and pass it directly to the selected local program. The Panel App receives only an opaque handle, never the Cookie contents or file path. The file is removed when the Panel closes.",
-        noLink: true,
-      });
-      if (decision.response !== 0) return { authorized: false, cancelled: true };
-    }
-
-    const materialized = await host.materialize({ credentialId, cwd: binding.cwd });
-    if ("invalid" in materialized) {
-      return { authorized: false, invalid: true };
-    }
-    try {
-      const grant = await this.processService.grantFileArgument(owner, {
-        executableHandle: input?.executableHandle,
-        argumentName: "--cookies",
-        path: materialized.filePath,
-        cleanup: materialized.cleanup,
-      });
-      return { authorized: true, fileArgumentHandle: grant.handle, count: materialized.count };
-    } catch (error) {
-      materialized.cleanup();
-      throw error;
-    }
+  private authorizeCookieCredentialForProcess(binding: GuestBinding, params: unknown) {
+    return panelAuthorizeCookieCredentialForProcess(this.internals(), binding, params);
   }
 
   private storagePath(binding: GuestBinding): string {
@@ -3597,39 +2518,8 @@ export class PanelAppBridge {
     }
   }
 
-  private async openExternal(binding: GuestBinding, params: unknown): Promise<boolean> {
-    const rawUrl = (params as { url?: unknown } | null)?.url;
-    let url: URL;
-    try {
-      url = new URL(typeof rawUrl === "string" ? rawUrl : "");
-    } catch {
-      throw new Error("external.open only accepts https URLs");
-    }
-    if (
-      typeof rawUrl !== "string" ||
-      rawUrl.length > 2048 ||
-      url.protocol !== "https:" ||
-      !url.hostname ||
-      url.username ||
-      url.password
-    ) {
-      throw new Error("external.open only accepts https URLs");
-    }
-    const owner = BrowserWindow.fromId(binding.ownerWindowId);
-    if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
-    const decision = await dialog.showMessageBox(owner, {
-      type: "question",
-      buttons: ["Open", "Cancel"],
-      defaultId: 1,
-      cancelId: 1,
-      title: binding.resource.descriptor.title,
-      message: "Open this link in your system browser?",
-      detail: url.toString(),
-      noLink: true,
-    });
-    if (decision.response !== 0) return false;
-    await shell.openExternal(url.toString());
-    return true;
+  private openExternal(binding: GuestBinding, params: unknown) {
+    return panelOpenExternal(this.internals(), binding, params);
   }
 
   private async submitPrompt(binding: GuestBinding, params: unknown): Promise<unknown> {
@@ -3799,94 +2689,8 @@ export class PanelAppBridge {
     return { accepted: true, clientMessageId };
   }
 
-  /** Read-only workspace metadata. Git branch is best-effort via .git/HEAD (no exec). */
-  private async workspaceInfo(binding: GuestBinding): Promise<unknown> {
-    const cwd = binding.cwd;
-    if (!cwd) return { name: null, root: null, trusted: false, gitBranch: null };
-    let gitBranch: string | null = null;
-    try {
-      const root = await realpath(cwd);
-      const gitPath = join(root, ".git");
-      const gitMetadata = await lstat(gitPath);
-      if (gitMetadata.isSymbolicLink() || !gitMetadata.isDirectory()) {
-        throw new Error("git metadata is not a regular directory");
-      }
-      const canonicalGitPath = await realpath(gitPath);
-      if (!this.isWithinWorkspace(root, canonicalGitPath)) {
-        throw new Error("git metadata escapes the workspace");
-      }
-      const headPath = join(canonicalGitPath, "HEAD");
-      const headMetadata = await lstat(headPath);
-      if (headMetadata.isSymbolicLink() || !headMetadata.isFile() || headMetadata.size > 4 * 1024) {
-        throw new Error("git HEAD is unavailable");
-      }
-      const handle = await open(headPath, constants.O_RDONLY | constants.O_NOFOLLOW);
-      let head: string;
-      try {
-        const { buffer } = await this.readBoundedWorkspaceFile(handle, 4 * 1024);
-        head = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
-      } finally {
-        await handle.close();
-      }
-      const match = /^ref: refs\/heads\/(.+)$/m.exec(head.trim());
-      const candidate = match?.[1];
-      gitBranch =
-        candidate && candidate.length <= 255 && !/[\u0000-\u001f\u007f]/u.test(candidate)
-          ? candidate
-          : null;
-    } catch {
-      // Non-Git workspaces intentionally report no branch.
-    }
-    return {
-      name: basename(cwd),
-      root: cwd,
-      trusted: this.options.isWorkspaceTrusted(cwd),
-      gitBranch,
-    };
-  }
-
-  private workspaceRelativePath(params: unknown, allowRoot = false): string {
-    const rawPath = (params as { path?: unknown } | null)?.path;
-    if (allowRoot && (rawPath === undefined || rawPath === "" || rawPath === ".")) return ".";
-    if (
-      typeof rawPath !== "string" ||
-      rawPath.length === 0 ||
-      rawPath.length > 512 ||
-      isAbsolute(rawPath) ||
-      rawPath.includes(":") ||
-      rawPath.includes("\\") ||
-      /[\u0000-\u001f\u007f]/u.test(rawPath)
-    ) {
-      throw new Error("workspace path must be a safe relative path");
-    }
-    const segments = rawPath.split("/");
-    if (segments.some((segment) => !this.isAllowedWorkspaceSegment(segment))) {
-      throw new Error("workspace path must be a safe relative path");
-    }
-    return segments.join("/");
-  }
-
-  private isAllowedWorkspaceSegment(segment: string): boolean {
-    const windowsBaseName = (segment.split(".", 1)[0] ?? "").trimEnd().toUpperCase();
-    const windowsDeviceName = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/u.test(windowsBaseName);
-    return (
-      segment.length > 0 &&
-      segment !== "." &&
-      segment !== ".." &&
-      !segment.startsWith(".") &&
-      !DENIED_WORKSPACE_SEGMENTS.has(segment.toLowerCase()) &&
-      !segment.includes(":") &&
-      !segment.includes("\\") &&
-      !/[. ]$/u.test(segment) &&
-      !windowsDeviceName &&
-      !/[\u0000-\u001f\u007f]/u.test(segment)
-    );
-  }
-
-  private requireWorkspaceFileExtension(relativePath: string): void {
-    if (!WORKSPACE_TEXT_EXTENSIONS.has(extname(relativePath).toLowerCase())) {
-      throw new Error("workspace file type is not allowed");
-    }
+  private workspaceInfo(binding: GuestBinding) {
+    return panelWorkspaceInfo(this.internals(), binding);
   }
 
   private async trustedWorkspaceRoot(binding: GuestBinding): Promise<string> {
@@ -3905,145 +2709,20 @@ export class PanelAppBridge {
     return candidate.startsWith(prefix);
   }
 
-  private async resolveExistingWorkspacePath(root: string, relativePath: string): Promise<string> {
-    if (relativePath === ".") return root;
-    let current = root;
-    for (const segment of relativePath.split("/")) {
-      const candidate = join(current, segment);
-      const metadata = await lstat(candidate);
-      if (metadata.isSymbolicLink()) {
-        throw new Error("workspace path contains an unsafe symbolic link");
-      }
-      const canonical = await realpath(candidate);
-      if (!this.isWithinWorkspace(root, canonical)) {
-        throw new Error("workspace path escapes the root");
-      }
-      current = canonical;
-    }
-    return current;
+  private workspaceList(binding: GuestBinding, params: unknown) {
+    return panelWorkspaceList(this.internals(), binding, params);
   }
 
-  private async workspaceList(binding: GuestBinding, params: unknown): Promise<unknown> {
-    const relativePath = this.workspaceRelativePath(params, true);
-    const root = await this.trustedWorkspaceRoot(binding);
-    let directory: string;
-    try {
-      directory = await this.resolveExistingWorkspacePath(root, relativePath);
-      if (
-        !this.isWithinWorkspace(root, directory, true) ||
-        !(await stat(directory)).isDirectory()
-      ) {
-        throw new Error("workspace directory is unavailable");
-      }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        return { path: relativePath, entries: [], truncated: false };
-      }
-      throw error;
-    }
-    const entries: Array<{
-      name: string;
-      path: string;
-      kind: "directory" | "file";
-      size?: number;
-      modifiedAt?: number;
-    }> = [];
-    const candidates = (await readdir(directory, { withFileTypes: true }))
-      .filter(
-        (entry) =>
-          this.isAllowedWorkspaceSegment(entry.name) &&
-          !entry.isSymbolicLink() &&
-          (entry.isDirectory() ||
-            (entry.isFile() && WORKSPACE_TEXT_EXTENSIONS.has(extname(entry.name).toLowerCase()))),
-      )
-      .filter((entry) => {
-        const childRelative = relativePath === "." ? entry.name : `${relativePath}/${entry.name}`;
-        return childRelative.length <= 512;
-      })
-      .sort((left, right) => left.name.localeCompare(right.name));
-    for (const entry of candidates.slice(0, MAX_WORKSPACE_LIST_ENTRIES)) {
-      const childRelative = relativePath === "." ? entry.name : `${relativePath}/${entry.name}`;
-      let metadata: Stats;
-      try {
-        metadata = await lstat(join(directory, entry.name));
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
-        throw error;
-      }
-      if (metadata.isSymbolicLink()) continue;
-      if (metadata.isDirectory()) {
-        entries.push({ name: entry.name, path: childRelative, kind: "directory" });
-        continue;
-      }
-      if (!metadata.isFile()) continue;
-      entries.push({
-        name: entry.name,
-        path: childRelative,
-        kind: "file",
-        size: metadata.size,
-        modifiedAt: metadata.mtimeMs,
-      });
-    }
-    return {
-      path: relativePath,
-      entries,
-      truncated: candidates.length > MAX_WORKSPACE_LIST_ENTRIES,
-    };
+  private workspaceReadText(binding: GuestBinding, params: unknown) {
+    return panelWorkspaceReadText(this.internals(), binding, params);
   }
 
-  private async workspaceReadText(binding: GuestBinding, params: unknown): Promise<unknown> {
-    const relativePath = this.workspaceRelativePath(params);
-    this.requireWorkspaceFileExtension(relativePath);
-    const root = await this.trustedWorkspaceRoot(binding);
-    const target = await this.resolveExistingWorkspacePath(root, relativePath);
-    if (!this.isWithinWorkspace(root, target)) throw new Error("workspace path escapes the root");
-    const handle = await open(target, constants.O_RDONLY | constants.O_NOFOLLOW);
-    try {
-      const { buffer, metadata } = await this.readBoundedWorkspaceFile(handle);
-      let content: string;
-      try {
-        content = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
-      } catch (error) {
-        throw new Error("workspace file is not valid UTF-8 text", { cause: error });
-      }
-      return {
-        path: relativePath,
-        content,
-        size: buffer.length,
-        modifiedAt: metadata.mtimeMs,
-        revision: workspaceRevision(buffer),
-      };
-    } finally {
-      await handle.close();
-    }
+  private workspaceOpenPath(binding: GuestBinding, params: unknown) {
+    return panelWorkspaceOpenPath(this.internals(), binding, params);
   }
 
-  private async resolveWorkspaceFileForShell(
-    binding: GuestBinding,
-    params: unknown,
-  ): Promise<string> {
-    const relativePath = this.workspaceRelativePath(params);
-    const root = await this.trustedWorkspaceRoot(binding);
-    const target = await this.resolveExistingWorkspacePath(root, relativePath);
-    if (!this.isWithinWorkspace(root, target)) throw new Error("workspace path escapes the root");
-    const metadata = await lstat(target);
-    if (!metadata.isFile() || metadata.isSymbolicLink()) {
-      throw new Error("workspace path is not a file");
-    }
-    return target;
-  }
-
-  private async workspaceOpenPath(binding: GuestBinding, params: unknown): Promise<boolean> {
-    const target = await this.resolveWorkspaceFileForShell(binding, params);
-    const error = await shell.openPath(target);
-    if (error) throw new Error(`failed to open workspace file: ${error}`);
-    return true;
-  }
-
-  private async workspaceRevealPath(binding: GuestBinding, params: unknown): Promise<boolean> {
-    const target = await this.resolveWorkspaceFileForShell(binding, params);
-    shell.showItemInFolder(target);
-    return true;
+  private workspaceRevealPath(binding: GuestBinding, params: unknown) {
+    return panelWorkspaceRevealPath(this.internals(), binding, params);
   }
 
   private async readBoundedWorkspaceFile(
@@ -4107,97 +2786,12 @@ export class PanelAppBridge {
     return current;
   }
 
-  private async workspaceWriteText(binding: GuestBinding, params: unknown): Promise<unknown> {
-    const relativePath = this.workspaceRelativePath(params);
-    this.requireWorkspaceFileExtension(relativePath);
-    const content = (params as { content?: unknown } | null)?.content;
-    const expectedModifiedAt = (params as { expectedModifiedAt?: unknown } | null)
-      ?.expectedModifiedAt;
-    const expectedRevision = (params as { expectedRevision?: unknown } | null)?.expectedRevision;
-    if (
-      typeof content !== "string" ||
-      Buffer.byteLength(content, "utf-8") > MAX_WORKSPACE_WRITE_BYTES
-    ) {
-      throw new Error(`workspace text must be at most ${MAX_WORKSPACE_WRITE_BYTES} bytes`);
-    }
-    if (
-      expectedModifiedAt !== undefined &&
-      expectedModifiedAt !== null &&
-      (typeof expectedModifiedAt !== "number" || !Number.isFinite(expectedModifiedAt))
-    ) {
-      throw new Error("expectedModifiedAt must be a number, null, or omitted");
-    }
-    if (
-      expectedRevision !== undefined &&
-      (typeof expectedRevision !== "string" || !/^sha256:[0-9a-f]{64}$/.test(expectedRevision))
-    ) {
-      throw new Error("expectedRevision must be a sha256 revision or omitted");
-    }
-    if (expectedModifiedAt === undefined && expectedRevision === undefined) {
-      throw new Error(
-        "workspace.writeText requires expectedModifiedAt or expectedRevision to prevent blind overwrites",
-      );
-    }
-    return this.writeWorkspaceFile(
-      binding,
-      relativePath,
-      Buffer.from(content, "utf-8"),
-      expectedModifiedAt,
-      expectedRevision,
-      MAX_WORKSPACE_READ_BYTES,
-    );
+  private workspaceWriteText(binding: GuestBinding, params: unknown) {
+    return panelWorkspaceWriteText(this.internals(), binding, params);
   }
 
-  private async workspaceExportPdf(binding: GuestBinding, params: unknown): Promise<unknown> {
-    const relativePath = this.workspaceRelativePath(params);
-    if (extname(relativePath).toLowerCase() !== ".pdf") {
-      throw new Error("workspace.exportPdf requires a .pdf path");
-    }
-    const expectedModifiedAt = (params as { expectedModifiedAt?: unknown } | null)
-      ?.expectedModifiedAt;
-    const expectedRevision = (params as { expectedRevision?: unknown } | null)?.expectedRevision;
-    if (
-      expectedModifiedAt !== undefined &&
-      expectedModifiedAt !== null &&
-      (typeof expectedModifiedAt !== "number" || !Number.isFinite(expectedModifiedAt))
-    ) {
-      throw new Error("expectedModifiedAt must be a number, null, or omitted");
-    }
-    if (
-      expectedRevision !== undefined &&
-      (typeof expectedRevision !== "string" || !/^sha256:[0-9a-f]{64}$/.test(expectedRevision))
-    ) {
-      throw new Error("expectedRevision must be a sha256 revision or omitted");
-    }
-    if (expectedModifiedAt === undefined && expectedRevision === undefined) {
-      throw new Error(
-        "workspace.exportPdf requires expectedModifiedAt or expectedRevision to prevent blind overwrites",
-      );
-    }
-    if (binding.guest.isDestroyed()) throw new Error("Panel App is no longer available");
-    const pdf = await binding.guest.printToPDF({
-      pageSize: "A4",
-      printBackground: true,
-      preferCSSPageSize: true,
-      displayHeaderFooter: false,
-      generateTaggedPDF: true,
-      generateDocumentOutline: true,
-    });
-    if (
-      pdf.length < 8 ||
-      pdf.length > MAX_WORKSPACE_PDF_BYTES ||
-      pdf.subarray(0, 5).toString("ascii") !== "%PDF-"
-    ) {
-      throw new Error(`exported PDF must be between 8 and ${MAX_WORKSPACE_PDF_BYTES} bytes`);
-    }
-    return this.writeWorkspaceFile(
-      binding,
-      relativePath,
-      pdf,
-      expectedModifiedAt,
-      expectedRevision,
-      MAX_WORKSPACE_PDF_BYTES,
-    );
+  private workspaceExportPdf(binding: GuestBinding, params: unknown) {
+    return panelWorkspaceExportPdf(this.internals(), binding, params);
   }
 
   private async writeWorkspaceFile(
@@ -4372,39 +2966,7 @@ export class PanelAppBridge {
     }
   }
 
-  private sendNotification(binding: GuestBinding, params: unknown): boolean {
-    const body = (params as { body?: unknown } | null)?.body;
-    const title = (params as { title?: unknown } | null)?.title;
-    if (typeof body !== "string" || body.trim().length === 0 || body.length > 500) {
-      throw new Error("notifications.send requires a non-empty body up to 500 characters");
-    }
-    if (
-      title !== undefined &&
-      (typeof title !== "string" || title.length === 0 || title.length > 80)
-    ) {
-      throw new Error("notifications.send title must be 1-80 characters");
-    }
-    const limits = this.options.limits;
-    const now = Date.now();
-    binding.notifyTimes = binding.notifyTimes.filter(
-      (time) => now - time < (limits?.rateWindowMs ?? RATE_WINDOW_MS),
-    );
-    if (
-      binding.notifyTimes.length >=
-      (limits?.maxNotificationsPerWindow ?? MAX_NOTIFICATIONS_PER_WINDOW)
-    ) {
-      throw new Error("Panel App notification limit exceeded");
-    }
-    binding.notifyTimes.push(now);
-    const show = this.options.showNotification;
-    if (!show) throw new Error("system notifications are unavailable");
-    // The trusted app title always prefixes the shown title so one Panel App
-    // cannot impersonate CodeShell or another app.
-    return show({
-      title: title
-        ? `${binding.resource.descriptor.title}: ${title}`
-        : binding.resource.descriptor.title,
-      body: body.trim(),
-    });
+  private sendNotification(binding: GuestBinding, params: unknown) {
+    return panelSendNotification(this.internals(), binding, params);
   }
 }

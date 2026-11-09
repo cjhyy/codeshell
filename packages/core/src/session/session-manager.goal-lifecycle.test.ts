@@ -196,14 +196,17 @@ describe("SessionManager GoalLifecycleV1 migration", () => {
     expect(manager.saveActiveGoal(state, edited.goal, rearm)).toBe(true);
     expect(manager.readGoalProgress("progress")!.activeMs).toBe(afterBackground);
 
-    // A replacement goal starts from zero and drops a late delta of the old one.
+    // A replacement goal has no accounting yet (unknown, not zero) and drops a
+    // late delta of the old one; its own first run starts the totals.
     const replacement = { objective: "新目标", goalId: "goal-q", revision: 1 };
     expect(manager.saveActiveGoal(state, replacement, { replaceCurrent: true })).toBe(true);
     expect(manager.recordGoalProgress(state, "goal-p", { rounds: 1 })).toBe(false);
+    expect(manager.readGoalProgress("progress")).toBeUndefined();
+    expect(manager.recordGoalProgress(state, "goal-q", { rounds: 1, activeMs: 10 })).toBe(true);
     expect(manager.readGoalProgress("progress")).toEqual({
       goalId: "goal-q",
-      rounds: 0,
-      activeMs: 0,
+      rounds: 1,
+      activeMs: 10,
     });
   });
 

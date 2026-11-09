@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { SessionManager, type GoalConfig, type StreamEvent } from "@cjhyy/code-shell-core";
+import { goalGetPayload } from "@cjhyy/code-shell-core/internal";
 
 // These count provider turns, each of which already contains its own tool loop.
 export const EXTERNAL_GOAL_DEFAULT_TURNS = 12;
@@ -104,14 +105,7 @@ export class ExternalRuntimeGoals {
 
   get(sessionId: string) {
     const goal = this.read(sessionId);
-    return {
-      ok: true as const,
-      goal: goal?.objective ?? null,
-      ...(goal?.goalId ? { goalId: goal.goalId } : {}),
-      ...(goal?.revision ? { revision: goal.revision } : {}),
-      ...(goal?.setAtMs ? { setAtMs: goal.setAtMs } : {}),
-      paused: goal?.paused === true,
-    };
+    return goalGetPayload(goal, goal ? this.manager.readGoalProgress(sessionId) : undefined);
   }
 
   running(sessionId: string): ExternalGoalRun | undefined {

@@ -3,6 +3,7 @@ import type { CloudAccountApi } from "../shared/cloud-account.js";
 import type { AccountDeviceApi } from "../shared/account-device.js";
 import type { DiskSessionListOptions, SessionOutputRecoveryApi } from "./session-transcript-api.js";
 import type { ModelTraceApi } from "./model-trace-api.js";
+import type { GoalControlApi } from "./goal-control-api";
 import type { BrowserPanelAccessApi } from "./browser-panel-access-api.js";
 import type { CcRoomModeApi } from "./cc-room-mode-types";
 import type { MobileSessionAnnouncement } from "./mobile-session-announcement.js";
@@ -1080,6 +1081,7 @@ export type ImGatewayUiEvent =
 
 export interface CodeshellApi
   extends
+    GoalControlApi,
     SessionOutputRecoveryApi,
     ProjectAuthorityApi,
     ProjectPanelVersionApi,
@@ -1158,66 +1160,6 @@ export interface CodeshellApi
   /** Revoke a still-pending steer entry by id (撤回). The response data carries
    *  `{ removed }` — false if the loop already consumed it. */
   unsteer(sessionId: string, id: string): Promise<RpcResponse>;
-  /**
-   * Extend a running goal's turn / budget ceilings mid-run (TODO 3.1). Returns
-   * the resulting effective limits; rejects if there's no active run.
-   */
-  goalExtend(
-    sessionId: string,
-    opts: {
-      addTurns?: number;
-      addTokenBudget?: number;
-      addTimeBudgetMs?: number;
-      addStopBlocks?: number;
-    },
-  ): Promise<{
-    ok: boolean;
-    limits: {
-      maxTurns: number;
-      tokenBudget?: number;
-      timeBudgetMs?: number;
-      maxStopBlocks: number;
-    };
-  }>;
-  /** Clear a session's persisted active goal (CC /goal clear). */
-  goalClear(sessionId: string): Promise<{ ok: boolean; cleared: boolean }>;
-  /** Edit or pause/resume a session's persisted active goal. */
-  goalUpdate(
-    sessionId: string,
-    update: {
-      objective?: string;
-      paused?: boolean;
-      expectedGoalId: string;
-      expectedRevision: number;
-    },
-  ): Promise<{
-    ok: boolean;
-    updated: boolean;
-    goal?: string;
-    goalId?: string;
-    paused?: boolean;
-    revision?: number;
-  }>;
-  /** Delete a session's persisted active goal. `goalClear` remains for compatibility. */
-  goalDelete(
-    sessionId: string,
-    expected: { expectedGoalId: string; expectedRevision: number },
-  ): Promise<{ ok: boolean; deleted: boolean }>;
-  /**
-   * Read a session's persisted active goal objective (or null when none), so
-   * the goal block + edit/pause/delete controls can be restored on load — a
-   * persistent goal isn't replayed from the transcript, so a reloaded session
-   * would otherwise show nothing.
-   */
-  goalGet(sessionId: string): Promise<{
-    ok: boolean;
-    goal: string | null;
-    goalId?: string;
-    paused?: boolean;
-    revision?: number;
-    /** When the objective was set (epoch ms). */
-    setAtMs?: number;
-  }>;
   /** Background-shell dock panel (TODO 3.2). */
   listBackgroundShells(sessionId: string): Promise<{ shells: BackgroundShellInfo[] }>;
   backgroundShellOutput(

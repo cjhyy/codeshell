@@ -1,4 +1,8 @@
 import { describe, it, expect } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { SessionManager } from "../session/session-manager.js";
 import { AgentServer } from "./server.js";
 import type { Engine } from "../engine/engine.js";
 import type { GoalConfig } from "../goal/lifecycle.js";
@@ -112,6 +116,47 @@ describe("AgentServer agent/goalGet", () => {
     t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/goalGet", params: { sessionId: "s-4" } });
 
     expect(lastResult(t.sent)).toEqual({ ok: true, goal: "live goal", paused: false });
+  });
+
+  it("carries the goal's persisted rounds and goal time, only for the same goal", () => {
+    const root = mkdtempSync(join(tmpdir(), "goalget-progress-"));
+    try {
+      const sessions = new SessionManager(root);
+      const { state } = sessions.create("/repo", "model", "provider", "s-5");
+      const goal = { objective: "长期目标", goalId: "goal-5", revision: 1 };
+      expect(sessions.saveActiveGoal(state, goal)).toBe(true);
+      expect(sessions.recordGoalProgress(state, "goal-5", { rounds: 14, activeMs: 90_000 })).toBe(
+        true,
+      );
+      expect(sessions.markGoalWaiting(state, goal, "background")).toBe(true);
+      const waitingSinceMs = (state.goalLifecycle as { waitingSinceMs: number }).waitingSinceMs;
+
+      const ask = (diskGoal: GoalConfig) => {
+        const t = makeTransport();
+        new AgentServer({
+          transport: t.transport,
+          chatManager: { get: () => undefined } as any,
+          sessionDiskRoot: root,
+          readActiveGoalFromDisk: () => diskGoal,
+        });
+        t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/goalGet", params: { sessionId: "s-5" } });
+        return lastResult(t.sent);
+      };
+      expect(ask(goal)).toEqual({
+        ok: true,
+        goal: "长期目标",
+        goalId: "goal-5",
+        revision: 1,
+        paused: false,
+        progress: { rounds: 14, activeMs: 90_000, runningSinceMs: waitingSinceMs },
+      });
+      // A goal reported by another source (e.g. replaced) never borrows these totals.
+      expect(ask({ objective: "别的目标", goalId: "goal-6", revision: 1 })).not.toHaveProperty(
+        "progress",
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("errors when sessionId is missing", () => {

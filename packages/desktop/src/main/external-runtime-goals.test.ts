@@ -167,6 +167,11 @@ describe("external Goal lifecycle", () => {
       rounds: 3,
       activeMs: 29 * minute,
     });
+    // agent/goalGet hands the same totals to a reloading window.
+    expect(goals.get(sessionId)).toMatchObject({
+      goalId: third.goal.goalId,
+      progress: { rounds: 3, activeMs: 29 * minute },
+    });
   }
 
   test("asking the user freezes time even when the provider finishes much later", () => {

@@ -108,8 +108,15 @@ describe("architecture growth budgets", () => {
     // The integrated cookie/startup fix adds one credential metadata field and
     // two comment lines explaining reuse of the existing window restorer (+3).
     // Consent policy and window deduplication remain in their existing modules.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_338);
+    // Split (2026-11-09): 176 IPC routes and their helpers moved unchanged into
+    // per-feature registrars (counted in the route budget below); 7_329 -> 4_593.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(4_593);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
+    // 2026-11-09: workspace, credential, system, media, tool-task and Agent-tool
+    // handlers moved to panel-app-bridge-*.ts siblings (4_410 -> 2_972). Methods
+    // that the source-compiling bridge tests extract stay on the class; new
+    // capabilities belong in a sibling module that receives PanelAppBridgeInternals.
+    expect(lines("packages/desktop/src/main/panel-app-bridge.ts")).toBeLessThanOrEqual(2_972);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider
     // protocols and native browser handoff remain in server/links and
@@ -198,7 +205,27 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/operation-batch-ipc.ts", /handle\("operationBatch:/g) +
         // Mimi's single presence owner: get/set/preview/retry plus the two legacy
         // pet:widget-visible(-get) routes moved here from index.ts.
-        matches("packages/desktop/src/main/pet/mimi-presence-ipc.ts", /ipcMain\.handle\(/g),
+        matches("packages/desktop/src/main/pet/mimi-presence-ipc.ts", /ipcMain\.handle\(/g) +
+        // The 2026-11-09 index.ts split moved 176 existing routes into these
+        // registrars without adding any; count each so the move hides nothing.
+        matches("packages/desktop/src/main/profile-catalog-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/link-credentials-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/browser-session-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/speech-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/attachments-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/agents-media-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/skills-mcp-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/model-catalog-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/mobile-remote-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/rooms-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/dialog-picker-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/external-runtime-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/browser-popout-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/git-review-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/workspace-files-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/memory-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/automation-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/trust-notification-ipc.ts", /ipcMain\.handle\(/g),
       // +1 read-only, bounded Session output-journal page route. Its file/owner
       // validation and recovery algorithm stay in Core and the extracted adapters.
       // +2 metadata-only Profile preview and revision-checked adoption routes.
@@ -263,7 +290,9 @@ describe("architecture growth budgets", () => {
     // The integrated baseline is 1,891 lines; model tracing adds only its
     // extracted adapter import and one composition property (+2).
     // Pin the already-integrated one-line Link login-source forwarding at HEAD.
-    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_894);
+    // Goal controls (extend/clear/update/delete/get) moved to goal-control-api.ts,
+    // which owns both their declarations and RPC adapters (-58); pin the result.
+    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_828);
     // Include all nine extracted Lab invokes and the five generic Link
     // challenge invokes plus usage history. Main-only routes remain counted
     // above even when no renderer adapter exists; do not equate the totals.
@@ -334,7 +363,9 @@ describe("architecture growth budgets", () => {
     // +1 net: plugin installation origin and forwarded source event identity fields.
     // +4 declaration lines carry that selected MCP configuration target; no new IPC route.
     // +2 declare keepWaitingForQuestion (agent/approvalKeepWaiting) for question cards.
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_990);
+    // Goal control declarations are composed from goal-control-api.ts through one
+    // extends seam (-58), which also carries agent/goalGet's goal-level progress.
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_932);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and
@@ -354,6 +385,12 @@ describe("architecture growth budgets", () => {
     // while hidden. Device selection, drafts, approvals and reconnect state stay in that module.
     // Pin the measured combined root (the previous ceiling had two spare lines).
     expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_945);
+    // The messages reducer was split out of renderer/types.ts (2_665 lines):
+    // the message model lives in messageTypes.ts and each event family's
+    // handlers in renderer/messages-reducer/. This file keeps the public
+    // re-exports, INITIAL_STATE, run routing and a dispatch-only switch, so a
+    // new event case belongs in its family module, not here.
+    expect(lines("packages/desktop/src/renderer/types.ts")).toBeLessThanOrEqual(452);
     // Goal-extension and pre-turn archive inputs now fail closed at protocol
     // ingress instead of trusting arbitrary numeric/object payloads. Manual
     // Mimi clears also validate their host-authored summary at this boundary.
@@ -400,7 +437,10 @@ describe("architecture growth budgets", () => {
     // Platform foundation extracts the request routing table, extension alias
     // dispatch and generic run/Goal ingress validation into protocol/dispatch.
     // Connection activation, approval ownership and Session lifetimes stay here.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_949);
+    // Goal RPC shaping (goalExtend validation/routing, the goalGet payload with
+    // goal-level progress) is extracted to protocol/goal-rpc.ts (-51); this file
+    // only resolves live/legacy/disk targets and sends.
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_898);
     expect(lines("packages/core/src/protocol/dispatch.ts")).toBeLessThanOrEqual(246);
     // Topic-boundary archival stays inside run startup. Synthetic worktree
     // authority is only a public delegation seam here; its implementation was
@@ -466,7 +506,15 @@ describe("architecture growth budgets", () => {
     // Pin exact formatted owner composition, without future-feature headroom.
     // The combined current-main composition also retains twelve existing
     // lifecycle/authority wiring lines from the intervening fixes.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(5_050);
+    // Live goal controls, range archival and the context-package summary loop
+    // moved to live-goal-control.ts / session-archive.ts /
+    // context-package-summary.ts; the pin drops to the split size.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_664);
+    // 2026-11-09 split (2,986 → 1,962 incl. goalGet progress): storage roots/id validation, state-field
+    // interpretation, Goal alias migration, state-file locking, fork snapshot
+    // rules and listing moved to sibling session/session-*.ts modules. The
+    // manager keeps creation/resume, close epochs and the CAS domain updates.
+    expect(lines("packages/core/src/session/session-manager.ts")).toBeLessThanOrEqual(1_962);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {
@@ -572,7 +620,9 @@ describe("architecture growth budgets", () => {
       // delivers background results through the same controller as native Sessions.
       // +1 Core's model-question default rule, so the TUI and the IM relay show the
       // same timeout default Core applies instead of keeping their own copies.
-      "packages/core/src/index.internal.ts": 132,
+      // +1 the agent/goalGet payload builder, so Desktop's disk fallback and its
+      // external runtime answer goalGet with the same shape (incl. goal progress).
+      "packages/core/src/index.internal.ts": 133,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules
