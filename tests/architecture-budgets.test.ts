@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 
 function source(path: string): string {
   return readFileSync(resolve(path), "utf8");
@@ -14,124 +14,102 @@ function matches(path: string, pattern: RegExp): number {
   return [...source(path).matchAll(pattern)].length;
 }
 
+// Source files are capped, not pinned. Any file may change freely below its
+// cap; a file that would exceed it must be split into modules instead of
+// raising the number. Caps are round ceilings, never measured line counts.
+const DEFAULT_MAX_LINES = 1_500;
+
+// Files that already exceeded DEFAULT_MAX_LINES on 2026-11-09, each capped at
+// the next multiple of 500 with at least 100 lines of room. These caps may only
+// go down. When a split brings a file under DEFAULT_MAX_LINES, delete its entry.
+// Do not add entries for new files: split them instead.
+const LEGACY_MAX_LINES: Record<string, number> = {
+  "packages/desktop/src/main/index.ts": 5_000,
+  "packages/core/src/engine/engine.ts": 5_000,
+  "packages/core/src/protocol/server.ts": 5_000,
+  "packages/desktop/src/main/panel-app-bridge.ts": 3_500,
+  "packages/web/src/hooks/useRemoteApp.ts": 3_500,
+  "packages/desktop/src/main/pet/pet-dispatch-service.ts": 3_500,
+  "packages/desktop/src/renderer/digital-humans/DigitalHumansView.tsx": 3_500,
+  "packages/desktop/src/preload/types.d.ts": 3_500,
+  "packages/desktop/src/renderer/App.tsx": 3_500,
+  "packages/desktop/src/renderer/ChatView.tsx": 3_000,
+  "packages/desktop/src/main/agent-bridge.ts": 3_000,
+  "packages/tui/src/native-ts/yoga-layout/index.ts": 3_000,
+  "packages/core/src/engine/turn-loop.ts": 3_000,
+  "packages/desktop/src/renderer/i18n/ns/settings.ts": 3_000,
+  "packages/desktop/src/renderer/i18n/ns/extensions.ts": 3_000,
+  "packages/server/src/panels/runtime.ts": 3_000,
+  "packages/core/src/session/session-manager.ts": 2_500,
+  "packages/desktop/src/main/external-runtime-service.ts": 2_500,
+  "packages/desktop/src/renderer/credentials/LinkTab.tsx": 2_500,
+  "packages/tui/src/ui/App.tsx": 2_500,
+  "packages/server/src/links/service.ts": 2_500,
+  "packages/server/src/mobile-remote/room-manager.ts": 2_500,
+  "packages/desktop/src/renderer/settings/AdvancedSections.tsx": 2_500,
+  "packages/core/src/tool-system/permission.ts": 2_500,
+  "packages/tui/src/render/ink.tsx": 2_500,
+  "packages/core/src/tool-system/mcp-manager.ts": 2_500,
+  "packages/desktop/src/renderer/settings/McpSection.tsx": 2_500,
+  "packages/web/app/Workbench.tsx": 2_000,
+  "packages/desktop/src/preload/index.ts": 2_000,
+  "packages/coding/src/tools/drive-agent.ts": 2_000,
+  "packages/server/src/serve/headless-server.ts": 2_000,
+  "packages/desktop/src/renderer/Sidebar.tsx": 2_000,
+  "packages/desktop/src/main/im-gateway-service.ts": 2_000,
+  "packages/core/src/tool-system/builtin/agent.ts": 2_000,
+  "packages/core/src/llm/providers/openai.ts": 2_000,
+  "packages/desktop/src/renderer/app/useRunController.ts": 2_000,
+  "packages/core/src/session/output-journal.ts": 2_000,
+  "packages/desktop/src/main/im-gateway-control-server.ts": 2_000,
+};
+
+const SKIPPED_DIRS = new Set(["node_modules", "dist", "__tests__", "test", "tests", "fixtures"]);
+const TEST_FILE = /\.(test|spec)\.tsx?$/;
+
+function sourceFiles(): string[] {
+  const roots = readdirSync("packages")
+    .map((pkg) => join("packages", pkg, "src"))
+    .concat("packages/web/app")
+    .filter((root) => existsSync(root));
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!SKIPPED_DIRS.has(entry.name)) walk(path);
+      } else if (/\.tsx?$/.test(entry.name) && !TEST_FILE.test(entry.name)) {
+        files.push(path.split("\\").join("/"));
+      }
+    }
+  };
+  roots.forEach(walk);
+  return files.sort();
+}
+
+describe("source file line caps", () => {
+  test("no source file grows past its cap; split it into modules instead", () => {
+    const over = sourceFiles()
+      .map((path) => ({
+        path,
+        count: lines(path),
+        cap: LEGACY_MAX_LINES[path] ?? DEFAULT_MAX_LINES,
+      }))
+      .filter(({ count, cap }) => count > cap)
+      .map(({ path, count, cap }) => `${path}: ${count} lines > cap ${cap}`);
+    expect(over, "Split these files into modules; do not raise the cap.").toEqual([]);
+  });
+
+  test("legacy caps are removed once a file is split under the default", () => {
+    const stale = Object.keys(LEGACY_MAX_LINES)
+      .filter((path) => !existsSync(path) || lines(path) <= DEFAULT_MAX_LINES)
+      .map((path) => `${path}: delete its LEGACY_MAX_LINES entry`);
+    expect(stale).toEqual([]);
+  });
+});
+
 describe("architecture growth budgets", () => {
-  test("large composition roots cannot grow without an extraction", () => {
-    // Exact 2026-08-13 post-security-audit baselines: decreases are welcome;
-    // any growth must extract a module or consciously update this decision.
-    // The IPC count stayed flat; the line increase is the reviewed per-channel
-    // renderer ownership, path-containment, bounded-input enforcement, and the
-    // extracted PTY composite-id assertion at the IPC boundary. The Panel task
-    // host and saved-cookie authorization then landed in v0.8.17; the follow-up
-    // security pass removed nine lines while retaining those reviewed seams.
-    // Panel App submissions that target an external runtime are then wired
-    // through main: the bridge receives the runtime service and the transcript
-    // handoff builder (implemented in external-runtime-handoff.ts), and the
-    // service reports session start/stop to the owning window through the
-    // shared sendToOwnerWindow helper that emit already uses (+9 lines). The
-    // service also receives main's exact-root project resolver so external
-    // runtime sessions persist the same stable project identity as native
-    // Engine sessions (+9 lines). Concurrent IM messages on one route are then
-    // folded into the running Mimi turn via steer: the dispatch source carries
-    // senderId so the route key can distinguish two people in one group chat,
-    // and a steered follower returns early instead of emitting a second IM
-    // reply for the same turn (+9 lines). Both are early-exit branches inside
-    // the existing dispatchGatewayPetChat, so extracting them would split one
-    // request path across two files for no gain; the steer/unsteer scheduler
-    // itself already lives in pet-dispatch-service.ts.
-    // Entering a Work Session from a chat then adds its composition root
-    // (+26): the store, bridge, bind executor, reply delivery, runner and
-    // health probe all live in pet/session-bridge-wiring.ts, so this file
-    // only names collaborators it already owns, registers one host-action
-    // key, and answers one control-plane route. Extracting further would
-    // split the host-action table itself. (The rationale above was written
-    // when the change landed but the number was never raised; 7_002 is the
-    // measured size of that reviewed wiring.)
-    // v0.9.7 adds model-service and activity-history adapter wiring, the delivered
-    // reply body, and parentSessionId validation at the existing IPC boundary
-    // (+25). Their service implementations remain outside the composition root.
-    // v0.9.8 adds two calls to clear browser grants when deleting a Session;
-    // cleanup remains in the existing browser-runtime services (+2 wiring).
-    // The 2026-09-18 consolidation adds external-goal service wiring, reload
-    // approval replay and IM reply delivery (+108 over origin/main's 7_006).
-    // Goal persistence/RPC handlers remain in external-runtime-goals.ts and
-    // external-runtime-goal-rpc.ts; main supplies its live window ownership,
-    // trusted project resolver and service lifecycle. Approval replay combines
-    // the existing native/external queues at the IPC boundary. This reviewed
-    // baseline keeps both IPC-count and public-export budgets unchanged.
-    // The 2026-09-20 media preview authority adds 42 lines of composition-only
-    // wiring. Path validation, scoped authorization, Range streaming and
-    // lifecycle cleanup remain extracted in media-preview-{authority,service}.
-    // Project review ownership/caches and remote Link window lifetimes live in
-    // focused IPC modules. Usage history adds only its import and one local IPC
-    // registration; validation, Session identity and bounded receipt reads stay
-    // in usage-history-service.ts and core/cost-ledger. The formatted Lab host
-    // registration accounts for the remaining two lines over the extracted
-    // 7_152-line root. Pin this reviewed composition-only result exactly.
-    // Request evidence adds eleven composition lines for the Host signer,
-    // actual OS encryption availability and native Quick Chat ownership. Key
-    // custody and worker-generation checks stay in model-request-signing-service.
-    // Signing uses private worker messages, with no renderer IPC registration.
-    // +9 composition-only lines register reviewed Profile preview/CAS adoption.
-    // Target authority, planning and locking stay in the extracted registrar/service.
-    // +9 composition lines for the extracted, owner-scoped static export registrar.
-    // +2 composition lines advertise native Mobile recovery and revoke retired viewers.
-    // +8 composition lines register the extracted native operation-resolution host.
-    // Receipt review, confirmation authority and locking live outside this root.
-    // +5 composition lines supply the existing external Runtime lazily and subscribe
-    // its owned stream to Mobile. Command authority and the bounded recovery pump
-    // stay in mobile-remote modules; no IPC route or public export is added here.
-    // Awaited constrained Hook cleanup uses the extracted desktop-shutdown quit
-    // coordinator. Its failure/retry gate reduces Main without raising this limit.
-    // Seven composition lines register reviewed project-to-Profile memory copies;
-    // review custody and storage validation remain in their extracted modules.
-    // v0.9.35 adds nine composition lines for the lazy, account-owned GitHub
-    // Link preparer. PKCE, continuation validation and cancellation stay in
-    // account-github-link.ts and the existing account/Link managers.
-    // The integrated notification change adds 28 lines binding native clicks
-    // to main's live window ownership/createWindow and loading-frame lifecycle.
-    // Notification content, instance binding and session validation stay in
-    // extracted modules. Both additions keep the IPC route count unchanged.
-    // Pin the current composition plus 24 Cua startup/shutdown wiring lines.
-    // Socket ownership, readiness, restart policy and environment filtering
-    // stay in computer-use/{desktop-setup,service,cua-driver-host}. The five
-    // desktop-only setup routes are counted separately below.
-    // Native batch entry adds only registrar/combined-disposal wiring here.
-    // Main policy, immutable permits and Native approval remain in operation-batch-*.
-    // The combined composition still fits the existing ceiling.
-    // Pin the already-integrated Link account authority wiring at HEAD (7_314).
-    // Panel model observations add no lines or authority to this composition root.
-    // Pin HEAD (7_330): Pet handlers registered before the renderer loads, root-scoped
-    // project file search and the review:preparePrompt handler; logic stays in services.
-    // +4 composition lines bind MCP probes to the selected configuration target and authorized cwd.
-    // +1 net after rebasing onto 7_333: import and register the read-only file-version IPC;
-    // root authorization and Git blob checks stay in file-version-ipc/service.
-    // The integrated cookie/startup fix adds one credential metadata field and
-    // two comment lines explaining reuse of the existing window restorer (+3).
-    // Consent policy and window deduplication remain in their existing modules.
-    // Split (2026-11-09): 176 IPC routes and their helpers moved unchanged into
-    // per-feature registrars (counted in the route budget below); 7_329 -> 4_593.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(4_593);
-    expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
-    // 2026-11-09: workspace, credential, system, media, tool-task and Agent-tool
-    // handlers moved to panel-app-bridge-*.ts siblings (4_410 -> 2_972). Methods
-    // that the source-compiling bridge tests extract stay on the class; new
-    // capabilities belong in a sibling module that receives PanelAppBridgeInternals.
-    expect(lines("packages/desktop/src/main/panel-app-bridge.ts")).toBeLessThanOrEqual(2_972);
-    // The five generic Link authorization operations reuse the window/project
-    // owner and live reauthorization guard here. Challenge state, provider
-    // protocols and native browser handoff remain in server/links and
-    // remote-link-{manager,window}; this registrar holds no provider tokens.
-    // Twelve composition lines construct and return the user-scoped account
-    // preparer through the same mutation/configuration seams. It adds no IPC
-    // route; its lifecycle and remote-connection reuse stay outside this registrar.
-    // Pinned linked files read the window's stored Link revisions through one
-    // accessor that reuses the same owner/context and live authorization guard.
-    // It adds no IPC route and fetches no remote catalog or file content.
-    // Already-integrated Link diagnostics add ten composition lines for a redacted
-    // Host snapshot. They add no IPC routes or credential-returning operations.
-    // Existing Link account access/retirement routes are already 334 lines at HEAD.
-    // This task adds no routes or lines to this file.
-    expect(lines("packages/desktop/src/main/remote-link-ipc.ts")).toBeLessThanOrEqual(334);
+  test("IPC routes and preload invokes cannot grow silently", () => {
     // Count extracted registrations too: moving a route cannot hide API growth.
     // New explicit project-package, remote-Link and Cloud-window operations are
     // part of this feature's reviewed transport contract, total 295 routes.
@@ -265,34 +243,6 @@ describe("architecture growth budgets", () => {
     expect(
       matches("packages/desktop/src/main/session-output-history-ipc.ts", /ipcMain\.handle\(/g),
     ).toBe(2);
-    // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
-    // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
-    // the validation and file-reading implementation remain extracted in main.
-    // Reload recovery adds the pending-approval invoke and acknowledged
-    // external answers; goal inputs and answer mirroring use existing routes.
-    // These are transport adapters (+26 over the 1_802-line main baseline).
-    // Media preview adds two typed invokes and one shared request/result import;
-    // authority and streaming remain in the extracted main-process service (+5).
-    // Project package reviews/restores, independent Link and Cloud window APIs
-    // add only typed invoke adapters; ownership lives in the extracted IPC modules.
-    // The project-version bridge is extracted without changing its exposed methods.
-    // Count those invokes too, preserving the existing transport surface ceiling.
-    // Session history invokes remain counted after extraction. Task Center adds
-    // three reviewed invokes; its changed-event subscription adds no invoke.
-    // Link challenge start/get/respond/cancel/open are typed invoke adapters;
-    // challenge custody remains in the Host. Usage history adds one invoke to
-    // the extracted read-only service. The actual combined root is 1_871 lines.
-    // +7 typed Profile review/adoption adapter lines, with no renderer file access.
-    // +2 import/composition lines for the extracted static export contract.
-    // +2 composition lines for masked native operation review; no resolution logic in preload.
-    // +2 import/composition lines for the reviewed memory-copy API.
-    // +4 typed linked-file snapshot/add adapters over fixed literal channels.
-    // The integrated baseline is 1,891 lines; model tracing adds only its
-    // extracted adapter import and one composition property (+2).
-    // Pin the already-integrated one-line Link login-source forwarding at HEAD.
-    // Goal controls (extend/clear/update/delete/get) moved to goal-control-api.ts,
-    // which owns both their declarations and RPC adapters (-58); pin the result.
-    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_828);
     // Include all nine extracted Lab invokes and the five generic Link
     // challenge invokes plus usage history. Main-only routes remain counted
     // above even when no renderer adapter exists; do not equate the totals.
@@ -341,183 +291,6 @@ describe("architecture growth budgets", () => {
     expect(
       matches("packages/desktop/src/preload/account-device-api.ts", /\binvoke(?:Raw)?\("/g),
     ).toBe(8);
-    // GitHub skill previews and Panel task hosting carry main-issued review and
-    // ownership fields across the typed preload boundary. The optional Mimi
-    // transcript-page method adds its bounded response shape without widening
-    // the renderer's direct imports.
-    // Pending approval recovery, external goal inputs and resolved answer text
-    // add nine declaration lines; no renderer runtime import is introduced.
-    // Media playback adds the narrow get/release preview contract and shared
-    // request/result types while all file access stays in main (+11).
-    // +55 declaration lines for those explicit project/version/Link contracts.
-    // Main-branch integration retains the detailed run-trace declarations (+11).
-    // Lab adds its extracted API type import and one typed capability property (+2).
-    // Generic Link challenge contracts, the bounded UsageQuery/Summary method
-    // and Profile sourceAccess transport fields add declarations only. Host
-    // authorization and source-permission intersection remain outside preload.
-    // +9 declaration lines for the optional bounded output-journal adapter.
-    // +9 typed Profile metadata preview and CAS adoption declarations.
-    // Static export API is composed through one type-only import/extends seam.
-    // +3 type-only native review declaration lines reuse the extracted API contract.
-    // +6 type-only declaration lines compose the extracted memory-copy API.
-    // +1 net: plugin installation origin and forwarded source event identity fields.
-    // +4 declaration lines carry that selected MCP configuration target; no new IPC route.
-    // +2 declare keepWaitingForQuestion (agent/approvalKeepWaiting) for question cards.
-    // Goal control declarations are composed from goal-control-api.ts through one
-    // extends seam (-58), which also carries agent/goalGet's goal-level progress.
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_932);
-    // The responsive-sidebar work extracts ResponsiveSidebar (132),
-    // useResponsiveSidebar (61) and useSessionHistorySync (127) into
-    // renderer/app/, so the 320 lines of behaviour live outside this file and
-    // the +64 here is the composition root naming them plus the narrow-window
-    // view transitions it already owns.
-    // Consolidation adds review-availability hook wiring and waits for answer
-    // acknowledgement before updating this component's transcript state (+25
-    // over 2_748). Availability checks remain in useReviewAvailability.ts;
-    // per-session approval policy remains in app/approvalPermission.ts.
-    // +6 generation checks keep stale project refreshes out of live UI state.
-    // Nine composition lines connect the extracted notification navigation hook
-    // to the existing live/disk Session selectors and unavailable-session toast.
-    // Existing project-runtime selection composes local/cloud session views
-    // and gates navigation until selection is ready (+144). Binding selection
-    // and connection lifecycle stay in the extracted project runtime hooks.
-    // +15 composition lines mount the extracted computer workspace lazily and keep it alive
-    // while hidden. Device selection, drafts, approvals and reconnect state stay in that module.
-    // Pin the measured combined root (the previous ceiling had two spare lines).
-    // +3 composition lines hand the recent-history preview and paging flag to
-    // ChatView and hold context selection while the preview shows; paging and
-    // preview state live in app/useTranscriptBuckets.ts.
-    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_948);
-    // The messages reducer was split out of renderer/types.ts (2_665 lines):
-    // the message model lives in messageTypes.ts and each event family's
-    // handlers in renderer/messages-reducer/. This file keeps the public
-    // re-exports, INITIAL_STATE, run routing and a dispatch-only switch, so a
-    // new event case belongs in its family module, not here.
-    expect(lines("packages/desktop/src/renderer/types.ts")).toBeLessThanOrEqual(452);
-    // Goal-extension and pre-turn archive inputs now fail closed at protocol
-    // ingress instead of trusting arbitrary numeric/object payloads. Manual
-    // Mimi clears also validate their host-authored summary at this boundary.
-    // Routing an IM message into a bound Work Session adds its protocol
-    // ingress here (+87): the outcome shapes and workspace resolution are
-    // extracted to session-message-result.ts (59) and
-    // session-message-workspace.ts (84), so this file validates and dispatches
-    // rather than implementing the routing.
-    // v0.9.7's child-host lifecycle adds activation/disposal, not just wiring
-    // (+210 total). It owns this connection's generation, pending approvals,
-    // notification targets and timers, so cleanup stays with AgentServer's
-    // private state. Approval policy/queues and child-run creation remain in
-    // ApprovalRouter/InteractiveApprovalBackend and subagent-spawner respectively.
-    // v0.9.8 forwards inspect and explicit resume through BrowserBridge (+2);
-    // implementations and authorization stay in the host browser backends.
-    // Shared Desktop/Hub transports add a pending-start cancellation fence
-    // (+70): the manager keys cross-connection cancellation, while AgentServer
-    // owns each connection's controllers until ChatSession accepts the turn.
-    // Cancel, close and disconnect must cover that pre-queue lifetime here;
-    // queued/running turn cancellation stays in ChatSession. Settings refresh
-    // also invalidates the extracted skill scanner's discovery cache (+5), so
-    // an edited SKILL.md is visible on the next turn without a worker restart.
-    // Nonblocking questions add registration and acknowledged answer handling
-    // (+180 over 4_824). AgentServer owns the route generation, cancellation
-    // fence, pending approval entry/timer and transport response, so admission
-    // and retirement stay together here. Follow-up turn delivery is extracted
-    // to async-user-answer.ts; no published entry-point budget is widened.
-    // Per-turn sandbox/background-shell policy is validated and forwarded at
-    // protocol ingress; enforcement remains in the run environment and tools.
-    // Runtime lifecycle adds awaited host activation, owner-scoped observer
-    // shutdown and a single close promise. Lifetime/activation algorithms stay
-    // in composition/{lifetime,activation,protocol-attach}; AgentServer retains
-    // connection ownership and transport cancellation. The usage query reuses
-    // resolveEngineForSessionQuery, rejects aggregation without an explicit
-    // trusted local Host, and delegates receipt reads to Engine/UsageLedger.
-    // +12 reviewed lifecycle lines retain a cloned, resolver-free final pending
-    // decision snapshot after owner disconnect and before observer disposal.
-    // Full close flushes terminal notifications before closing transport, then
-    // drops this metadata cache; no observer, tool resolver or grant is retained.
-    // +32 ingress lines resolve the existing Session owner and forward bounded
-    // journal queries; persistence, cursor validation and paging remain extracted.
-    // +4 private-token forwarding lines at the two existing Run paths. Main
-    // admission and worker batch authority remain in their dedicated owners.
-    // Platform foundation extracts the request routing table, extension alias
-    // dispatch and generic run/Goal ingress validation into protocol/dispatch.
-    // Connection activation, approval ownership and Session lifetimes stay here.
-    // Goal RPC shaping (goalExtend validation/routing, the goalGet payload with
-    // goal-level progress) is extracted to protocol/goal-rpc.ts (-51); this file
-    // only resolves live/legacy/disk targets and sends.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_898);
-    expect(lines("packages/core/src/protocol/dispatch.ts")).toBeLessThanOrEqual(246);
-    // Topic-boundary archival stays inside run startup. Synthetic worktree
-    // authority is only a public delegation seam here; its implementation was
-    // extracted to engine-workspace-authority.ts. The run-yield visibility
-    // filter then moved from a construction-time spread to per-reason
-    // peek/consume closures sharing one suppressesRunYield predicate, so a
-    // committed host reply stays terminal in headless and sub-agent runs and
-    // peek/consume can never disagree (+12 reviewed lines).
-    // A behavior profile's maxTurns is now frozen for the live run so Goal
-    // extension cannot raise a ceiling the profile set (+44). This is engine
-    // state with an engine lifetime — it is cleared when the turn loop it
-    // belongs to ends — so there is nothing to extract without separating the
-    // value from the loop that owns it.
-    // v0.9.7 threads context-note strategy and retained messages through runs,
-    // synchronizes private compaction caches/usage anchors, and installs child
-    // host bindings (+91). Note persistence/rollover/replay lives in context/notes
-    // and the builtin tools; Engine retains ownership of its per-run state.
-    // v0.9.8 retains lastCompletionKind in Engine's own session snapshot (+1),
-    // so a yielded background turn is not projected as completed by hosts.
-    // v0.9.20 threads current-run MCP connection health into dynamic context
-    // (+15 net). Connection policy, retries and user-facing formatting remain
-    // extracted under tool-system; Engine only places the result for this run.
-    // +3 lines pass the frozen per-turn policy into the existing child spawner.
-    // The reviewed 259-line net growth owns Engine/Session/run lifetime scopes,
-    // awaited readiness and shutdown; implementation lives in composition's
-    // lifetime/activation modules. Cost accounting binds the current Session,
-    // run and ancestry to UsageLedger; storage/pricing/summary logic is extracted
-    // under cost-ledger and physical request receipts stay in llm. Workspace
-    // Profile/source guards and the trusted document executable are ToolContext
-    // wiring; source parsing/authorization stay under sources. Per-run operation
-    // controller binding and finalization fences delegate to operations/{ledger,
-    // controller,resolver}. Keep these private owner boundaries together and
-    // pin the actual combined Engine size, with no future-feature allowance.
-    // P2 adds 131 lines binding frozen instructions to Engine-owned run/watch/
-    // abort/cache lifetimes. Snapshot selection, revision comparison and
-    // checkpoint persistence are extracted to engine-instruction-context.ts.
-    // The real no-tools Lab and ordinary Session consumers exercise this seam.
-    // Skill metadata adds 20 reviewed wiring lines: the current model window,
-    // task and up to 32 recent requests enter existing prompt composition, and
-    // registry/allowlist gates suppress unusable listings. Budgeting, ranking
-    // and discovery remain in builtin/skill-prompt.ts; no new Host API is added.
-    // Request evidence adds 42 owner-binding lines: the current Session
-    // incarnation/storage scope, composition/config versions and borrowed or
-    // owned Host signer enter the existing model facade. Provider projection,
-    // validation, custody and durable event writes remain in dedicated modules.
-    // +5 net lines bind persist-before-publish and the workspace path used
-    // by the shared input display projection for queued attachment steering. Journal
-    // ownership/failure fencing remain in run-stream.ts and session/output-journal.ts.
-    // Progressive tools add exactly 10 wiring lines: a run-local surface wraps
-    // the existing catalog assembler and supplies active/eligible callbacks.
-    // Selection, immutable snapshots and execution gates stay in their owners.
-    // Active-close adds exactly 126 reviewed owner-wiring lines: stable actual
-    // run identity, private own-usage checkpoint and settled close handoff.
-    // Permission projection, durable ledger and CAS/epoch validation stay in
-    // their existing owners. Fourteen actual Engine cases cover immediate
-    // revocation, progress/late accounting and successor isolation; keeping this
-    // private run state together avoids adding another mutable ownership seam.
-    // Pin the concrete result, with no allowance for future features.
-    // +3 composition lines bind operations to persisted Session ownership in the extracted factory.
-    // Native batches add only pre-model mode rejection, concrete Run context
-    // and finalizer wiring. Policy/permit/ledger/failure latch live in dedicated
-    // owners; another forwarding wrapper would not improve that boundary.
-    // Pin exact formatted owner composition, without future-feature headroom.
-    // The combined current-main composition also retains twelve existing
-    // lifecycle/authority wiring lines from the intervening fixes.
-    // Live goal controls, range archival and the context-package summary loop
-    // moved to live-goal-control.ts / session-archive.ts /
-    // context-package-summary.ts; the pin drops to the split size.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_664);
-    // 2026-11-09 split (2,986 → 1,962 incl. goalGet progress): storage roots/id validation, state-field
-    // interpretation, Goal alias migration, state-file locking, fork snapshot
-    // rules and listing moved to sibling session/session-*.ts modules. The
-    // manager keeps creation/resume, close epochs and the CAS domain updates.
-    expect(lines("packages/core/src/session/session-manager.ts")).toBeLessThanOrEqual(1_962);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {
