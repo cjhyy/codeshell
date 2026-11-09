@@ -278,6 +278,7 @@ export function useTranscriptBuckets({
       ...previous,
       [bucket]: { engineId, loadedBytes: 0, hasMore: false, loading: true, failed: false },
     }));
+    const startedAt = performance.now();
     window.codeshell.log("session.hydrate.begin", {
       bucket,
       uiSessionId: activeSessionId,
@@ -298,13 +299,45 @@ export function useTranscriptBuckets({
       let page: SessionTranscriptPage | undefined;
       let loadedBytes = INITIAL_CHAT_HISTORY_BYTES;
       let outputCursor: string | undefined;
-      const [persistedResult, canonicalResult] = await Promise.allSettled([
+      const persistedRead = Promise.allSettled([
         freshJournal
           ? Promise.resolve({ state: INITIAL_STATE, hasEarlier: false })
           : loadPersistedTranscript(activeProjectId, activeSessionId, INITIAL_CHAT_HISTORY_BYTES),
-        engineId && !freshJournal
-          ? readHistoryPage(engineId, INITIAL_CHAT_HISTORY_BYTES)
-          : Promise.resolve(undefined),
+      ]);
+      let journalResult:
+        | PromiseSettledResult<Awaited<ReturnType<typeof recoverDesktopOutputJournal>>>
+        | undefined;
+      let journalMs: number | undefined;
+      if (engineId && window.codeshell.getSessionOutputJournal) {
+        const journalStartedAt = performance.now();
+        [journalResult] = await Promise.allSettled([
+          recoverDesktopOutputJournal({
+            read: (options) => window.codeshell.getSessionOutputJournal!(engineId, options),
+            snapshot: async () => {
+              // Cache metadata is needed for goal reconciliation. Overlap the
+              // read with journal replay, then join the live cursor last.
+              await persistedRead;
+              if (!canCommit()) throw new Error("Output recovery stopped");
+              return window.codeshell.subscribeSession(engineId, 0);
+            },
+            canContinue: canCommit,
+            latestObservedCursor: () =>
+              latestRecoveryOutputCursor(transcriptsRef.current, bucket, token),
+          }),
+        ]);
+        journalMs = Math.round(performance.now() - journalStartedAt);
+      }
+      if (!canCommit()) return;
+      const durable = journalResult?.status === "fulfilled" ? journalResult.value : null;
+      // A verified journal already includes its exact legacy base. Only the
+      // fallback path needs the separate canonical transcript window.
+      const canonicalStartedAt = performance.now();
+      const readCanonical = engineId && !freshJournal && !durable;
+      const [[persistedResult], [canonicalResult]] = await Promise.all([
+        persistedRead,
+        Promise.allSettled([
+          readCanonical ? readHistoryPage(engineId, INITIAL_CHAT_HISTORY_BYTES) : undefined,
+        ]),
       ]);
       if (!canCommit()) return;
       if (persistedResult.status === "fulfilled") {
@@ -331,19 +364,14 @@ export function useTranscriptBuckets({
           error: String(canonicalResult.reason),
         });
       }
+      const initialHistoryMs = readCanonical
+        ? Math.round(performance.now() - canonicalStartedAt)
+        : undefined;
 
       let state = base;
       if (engineId) {
         try {
-          const durable = window.codeshell.getSessionOutputJournal
-            ? await recoverDesktopOutputJournal({
-                read: (options) => window.codeshell.getSessionOutputJournal!(engineId, options),
-                snapshot: () => window.codeshell.subscribeSession(engineId, 0),
-                canContinue: canCommit,
-                latestObservedCursor: () =>
-                  latestRecoveryOutputCursor(transcriptsRef.current, bucket, token),
-              })
-            : null;
+          if (journalResult?.status === "rejected") throw journalResult.reason;
           if (freshJournal && !durable)
             throw new Error("Recovered history requires the complete output journal");
           if (durable) {
@@ -513,6 +541,9 @@ export function useTranscriptBuckets({
           bucket,
           messageCount: state.messages.length,
           snapshotSeq: state.snapshotSeq,
+          durationMs: Math.round(performance.now() - startedAt),
+          ...(journalMs !== undefined ? { journalMs } : {}),
+          ...(initialHistoryMs !== undefined ? { initialHistoryMs } : {}),
         });
       }
 

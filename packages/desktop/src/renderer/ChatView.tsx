@@ -2017,7 +2017,6 @@ export function ChatView({
             localRuntime={localRuntime}
             engineSessionId={engineSessionId}
             liveTurnActive={liveTurnActive}
-            onAskUserAnswer={onAskUserAnswer}
             onExtendGoal={onExtendGoal}
             trailing={
               <>

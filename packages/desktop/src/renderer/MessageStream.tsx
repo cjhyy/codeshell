@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Forward, Loader2, MessageSquare, X } from "lucide-react";
-import type { AskUserAnswerHandler, Message } from "./types";
+import type { Message } from "./types";
 import { ToolCard } from "./tool-cards";
 import { UserMessageView } from "./messages/UserMessageView";
 import { AssistantMessageView } from "./messages/AssistantMessageView";
@@ -43,8 +43,7 @@ import {
 } from "./subagents/SubagentNavigation";
 import { SubagentSessionDetail } from "./subagents/SubagentSessionDetail";
 
-// Stable fallback so memoized AskUserMessageView siblings don't see a
-// fresh onAnswer prop on every render.
+// Resolved questions are read-only in the stream. ChatView owns the open cards.
 const NOOP_ON_ANSWER = (): void => undefined;
 
 /**
@@ -73,7 +72,6 @@ interface Props {
   /** Transcript detail views do not expose file undo/redo. */
   readOnly?: boolean;
   localRuntime?: boolean;
-  onAskUserAnswer?: AskUserAnswerHandler;
   /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */
   onExtendGoal?: (opts: {
     addTurns?: number;
@@ -139,7 +137,6 @@ export function MessageStream({
   leading,
   readOnly = false,
   localRuntime = true,
-  onAskUserAnswer,
   onExtendGoal,
   trailing,
   trailingKey,
@@ -458,43 +455,27 @@ export function MessageStream({
   );
   const selectionAligned = displayGroups !== null;
 
-  const renderStreamItem = (m: RenderedStreamItem): React.ReactNode => {
-    if (m.kind === "turn_process_group") {
-      return (
-        <TurnProcessGroupCard
-          key={m.id}
-          group={m}
-          turnEpoch={turnEpoch}
-          cwd={cwd}
-          sessionId={localRuntime ? engineSessionId : undefined}
-          sessionMainRootId={rootId}
-          rootStatus={rootStatus}
-          onExtendGoal={onExtendGoal}
-        />
-      );
-    }
-    if (m.kind === "tool_group") {
-      return (
-        <ToolGroupCard
-          key={m.id}
-          group={m}
-          turnEpoch={turnEpoch}
-          cwd={cwd}
-          sessionId={localRuntime ? engineSessionId : undefined}
-          sessionMainRootId={rootId}
-          rootStatus={rootStatus}
-        />
-      );
-    }
-    if (m.kind === "agent_group") {
-      return <AgentGroupCard key={m.id} group={m} />;
-    }
-    switch (m.kind) {
-      case "tool":
+  const renderStreamItem = useCallback(
+    (m: RenderedStreamItem): React.ReactNode => {
+      if (m.kind === "turn_process_group") {
         return (
-          <ToolCard
+          <TurnProcessGroupCard
             key={m.id}
-            message={m}
+            group={m}
+            turnEpoch={turnEpoch}
+            cwd={cwd}
+            sessionId={localRuntime ? engineSessionId : undefined}
+            sessionMainRootId={rootId}
+            rootStatus={rootStatus}
+            onExtendGoal={onExtendGoal}
+          />
+        );
+      }
+      if (m.kind === "tool_group") {
+        return (
+          <ToolGroupCard
+            key={m.id}
+            group={m}
             turnEpoch={turnEpoch}
             cwd={cwd}
             sessionId={localRuntime ? engineSessionId : undefined}
@@ -502,60 +483,105 @@ export function MessageStream({
             rootStatus={rootStatus}
           />
         );
-      case "user":
-        return (
-          <UserMessageView key={m.id} message={m} localRuntime={localRuntime} onZoom={openZoom} />
-        );
-      case "assistant":
-        return (
-          <AssistantMessageView
-            key={m.id}
-            message={m}
-            cwd={cwd ?? null}
-            sessionId={localRuntime ? engineSessionId : undefined}
-            sessionMainRootId={rootId}
-            rootStatus={rootStatus}
-          />
-        );
-      case "thinking":
-        return <ThinkingMessageView key={m.id} message={m} />;
-      case "agent":
-        return <AgentMessageView key={m.id} message={m} />;
-      case "task_list":
-        return null;
-      case "context_boundary":
-        return <ContextBoundaryView key={m.id} message={m} />;
-      case "goal_progress":
-        return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
-      case "ask_user":
-        // Unanswered questions are pinned above the composer (ChatView); the
-        // stream keeps only the answered record.
-        return m.answer !== undefined ? (
-          <AskUserMessageView key={m.id} message={m} onAnswer={onAskUserAnswer ?? NOOP_ON_ANSWER} />
-        ) : null;
-      case "system":
-        if (m.text.trim() === "") return null;
-        return (
-          <div key={m.id} className="px-4 py-1 text-center text-xs text-muted-foreground">
-            {m.text}
-          </div>
-        );
-      case "files_changed":
-        return (
-          <FilesChangedCard
-            key={m.id}
-            message={m}
-            cwd={cwd ?? null}
-            sessionId={localRuntime ? (engineSessionId ?? null) : null}
-            isLatest={localRuntime && !readOnly && m.id === lastFilesChangedId}
-          />
-        );
-      case "turn_end":
-        return <TurnEndMessageView key={m.id} message={m} />;
-      case "turn_usage":
-        return <TurnUsageMessageView key={m.id} message={m} />;
-    }
-  };
+      }
+      if (m.kind === "agent_group") {
+        return <AgentGroupCard key={m.id} group={m} />;
+      }
+      switch (m.kind) {
+        case "tool":
+          return (
+            <ToolCard
+              key={m.id}
+              message={m}
+              turnEpoch={turnEpoch}
+              cwd={cwd}
+              sessionId={localRuntime ? engineSessionId : undefined}
+              sessionMainRootId={rootId}
+              rootStatus={rootStatus}
+            />
+          );
+        case "user":
+          return (
+            <UserMessageView key={m.id} message={m} localRuntime={localRuntime} onZoom={openZoom} />
+          );
+        case "assistant":
+          return (
+            <AssistantMessageView
+              key={m.id}
+              message={m}
+              cwd={cwd ?? null}
+              sessionId={localRuntime ? engineSessionId : undefined}
+              sessionMainRootId={rootId}
+              rootStatus={rootStatus}
+            />
+          );
+        case "thinking":
+          return <ThinkingMessageView key={m.id} message={m} />;
+        case "agent":
+          return <AgentMessageView key={m.id} message={m} />;
+        case "task_list":
+          return null;
+        case "context_boundary":
+          return <ContextBoundaryView key={m.id} message={m} />;
+        case "goal_progress":
+          return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
+        case "ask_user":
+          // Unanswered questions are pinned above the composer (ChatView); the
+          // stream keeps only the answered record.
+          return m.answer !== undefined ? (
+            <AskUserMessageView key={m.id} message={m} onAnswer={NOOP_ON_ANSWER} />
+          ) : null;
+        case "system":
+          if (m.text.trim() === "") return null;
+          return (
+            <div key={m.id} className="px-4 py-1 text-center text-xs text-muted-foreground">
+              {m.text}
+            </div>
+          );
+        case "files_changed":
+          return (
+            <FilesChangedCard
+              key={m.id}
+              message={m}
+              cwd={cwd ?? null}
+              sessionId={localRuntime ? (engineSessionId ?? null) : null}
+              isLatest={localRuntime && !readOnly && m.id === lastFilesChangedId}
+            />
+          );
+        case "turn_end":
+          return <TurnEndMessageView key={m.id} message={m} />;
+        case "turn_usage":
+          return <TurnUsageMessageView key={m.id} message={m} />;
+      }
+    },
+    [
+      cwd,
+      engineSessionId,
+      lastFilesChangedId,
+      localRuntime,
+      onExtendGoal,
+      openZoom,
+      readOnly,
+      rootId,
+      rootStatus,
+      turnEpoch,
+    ],
+  );
+
+  // Draft edits, trailing controls and scroll-follow state can rerender the
+  // stream shell without changing history. Reuse the row elements in that case.
+  const showingSubagent = localRuntime && selectedSubagent !== null;
+  const normalRows = useMemo(() => {
+    if (selectionOpen || showingSubagent) return null;
+    return items.map((item, index) => (
+      <div
+        key={`vc-${item.id}`}
+        className={index < items.length - LIVE_TAIL_UNCONTAINED ? "cs-stream-item" : undefined}
+      >
+        {renderStreamItem(item)}
+      </div>
+    ));
+  }, [items, renderStreamItem, selectionOpen, showingSubagent]);
 
   if (localRuntime && selectedSubagent) {
     return <SubagentSessionDetail {...selectedSubagent} onBack={() => setSelectedSubagent(null)} />;
@@ -722,34 +748,7 @@ export function MessageStream({
                   </div>
                 );
               })}
-            {!selectionOpen &&
-              items.map((item, index) => {
-                const node = renderStreamItem(item);
-                // Skip layout/paint for off-screen history.
-                //
-                // The stream mounts EVERY item; a few hundred turns of tool
-                // cards and highlighted code blocks keep costing layout on each
-                // render even though almost all of it is scrolled out of view.
-                // `content-visibility:auto` lets the browser skip rendering work
-                // for subtrees outside the viewport, and
-                // `contain-intrinsic-size` gives it a placeholder height so the
-                // scrollbar does not jump as items enter and leave.
-                //
-                // Deliberately NOT applied to the last few items: those are
-                // where streaming output lands, and containment there would
-                // fight the live-growth path (and the auto-scroll that follows
-                // it). Cheap, reversible, and no virtualization bookkeeping.
-                return (
-                  <div
-                    key={`vc-${item.id}`}
-                    className={
-                      index < items.length - LIVE_TAIL_UNCONTAINED ? "cs-stream-item" : undefined
-                    }
-                  >
-                    {node}
-                  </div>
-                );
-              })}
+            {normalRows}
             {liveTurnActive && <LiveActivityLine messages={messages} running={liveTurnActive} />}
             {trailing}
           </div>
