@@ -17,7 +17,6 @@ import { trackRunStart, cancelRunStarts, hasPendingRunStarts } from "./run-start
 
 import {
   createProtocolDispatcher,
-  goalExtensionInputError,
   runInputError,
   type ProtocolRequestHandler,
 } from "./dispatch.js";
@@ -30,6 +29,7 @@ import {
 } from "./server-run-controls.js";
 import { deliverAsyncUserAnswer } from "./async-user-answer.js";
 import { queueGoalResumeTurn as queueGoalResume } from "./goal-resume-turn.js";
+import { goalExtendOutcome, goalGetPayload } from "./goal-rpc.js";
 import {
   type RpcRequest,
   type RunParams,
@@ -2302,64 +2302,16 @@ export class AgentServer {
    * limits, or an error if no session / no active run.
    */
   private handleGoalExtend(req: RpcRequest): void {
-    const rawParams = req.params;
-    if (!rawParams || typeof rawParams !== "object" || Array.isArray(rawParams)) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InvalidParams, "goal extension params are required"),
-      );
-      return;
-    }
-    const inputError = goalExtensionInputError(rawParams as Record<string, unknown>);
-    if (inputError) {
-      this.transport.send(createErrorResponse(req.id, ErrorCodes.InvalidParams, inputError));
-      return;
-    }
-    const params = rawParams as {
-      sessionId?: string;
-      addTurns?: number;
-      addTokenBudget?: number;
-      addTimeBudgetMs?: number;
-      addStopBlocks?: number;
-    };
-    const ext = {
-      addTurns: params.addTurns,
-      addTokenBudget: params.addTokenBudget,
-      addTimeBudgetMs: params.addTimeBudgetMs,
-      addStopBlocks: params.addStopBlocks,
-    };
-    // Multi-session path: route to the named session.
-    const session =
-      this.chatManager && typeof params.sessionId === "string"
-        ? this.chatManager.get(params.sessionId)
-        : undefined;
-    // Legacy single-engine path (no chatManager): extend the one engine's run,
-    // mirroring handleCancel which also supports both paths. Without this a
-    // legacy host can cancel but never extend a goal.
-    const result = session
-      ? session.extendGoalRun(ext)
-      : this.legacyEngine
-        ? this.legacyEngine.extendGoalRun(ext)
-        : undefined;
-    if (result === undefined) {
-      // Couldn't even resolve a target (no session and no legacy engine).
-      if (!session && !this.legacyEngine) {
-        this.transport.send(
-          createErrorResponse(
-            req.id,
-            ErrorCodes.SessionClosed,
-            params.sessionId ? `No such session: ${params.sessionId}` : "sessionId is required",
-          ),
-        );
-        return;
-      }
-    }
-    if (!result) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InvalidParams, "No active run to extend"),
-      );
-      return;
-    }
-    this.transport.send(createResponse(req.id, { ok: true, limits: result }));
+    const outcome = goalExtendOutcome(
+      req.params,
+      (sessionId) => this.chatManager?.get(sessionId),
+      this.legacyEngine,
+    );
+    this.transport.send(
+      outcome.ok
+        ? createResponse(req.id, { ok: true, limits: outcome.limits })
+        : createErrorResponse(req.id, outcome.code, outcome.message),
+    );
   }
 
   /** Reject destructive Goal controls owned by a different TCP connection. */
@@ -2737,16 +2689,13 @@ export class AgentServer {
       : (this.readActiveGoalFromDisk?.(params.sessionId) ??
         this.legacyEngine?.getGoal(params.sessionId) ??
         undefined);
-    this.transport.send(
-      createResponse(req.id, {
-        ok: true,
-        goal: goal ? goal.objective : null,
-        ...(goal?.goalId ? { goalId: goal.goalId } : {}),
-        ...(goal?.revision ? { revision: goal.revision } : {}),
-        ...(goal?.setAtMs ? { setAtMs: goal.setAtMs } : {}),
-        paused: goal?.paused === true,
-      }),
-    );
+    // Goal-level rounds/time live on disk with the goal (settled at run ends).
+    const progress = goal
+      ? (this.diskSessionReader ??= new SessionManager(this.sessionDiskRoot)).readGoalProgress(
+          params.sessionId,
+        )
+      : undefined;
+    this.transport.send(createResponse(req.id, goalGetPayload(goal, progress)));
   }
 
   /**

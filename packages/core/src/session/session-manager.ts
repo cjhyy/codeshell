@@ -1970,7 +1970,8 @@ export class SessionManager {
       assertSafeSessionId(sessionId);
       const lifecycle = this.readPersistedState(sessionId).goalLifecycle;
       if (!lifecycle || lifecycle.phase === "terminal") return undefined;
-      return { goalId: lifecycle.goalId, ...goalProgressSnapshot(lifecycle) };
+      const snapshot = goalProgressSnapshot(lifecycle);
+      return snapshot && { goalId: lifecycle.goalId, ...snapshot };
     } catch {
       return undefined;
     }

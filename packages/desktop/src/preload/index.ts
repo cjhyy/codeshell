@@ -51,6 +51,7 @@ import { createPanelMutationApi } from "./panel-mutation-api";
 import { createSessionCatalogApi } from "./session-catalog-api";
 import { createPreloadRpcIdFactory, takePreloadRpcResponse } from "./rpc-identity";
 import { rpcResult } from "./rpc-result";
+import { createGoalControlApi } from "./goal-control-api";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
 import type { PluginMediaDto } from "../shared/plugin-media";
@@ -592,67 +593,8 @@ contextBridge.exposeInMainWorld("codeshell", {
    * arrive as a user bubble). For the queue panel's per-item delete button.
    */
   unsteer: (sessionId: string, id: string) => rpc("agent/unsteer", { sessionId, id }),
-  /**
-   * Extend a running goal's turn / budget ceilings mid-run (TODO 3.1). Returns
-   * the resulting effective limits, or throws if there's no active run.
-   */
-  goalExtend: (
-    sessionId: string,
-    opts: {
-      addTurns?: number;
-      addTokenBudget?: number;
-      addTimeBudgetMs?: number;
-      addStopBlocks?: number;
-    },
-  ) =>
-    rpc("agent/goalExtend", { sessionId, ...opts }).then(rpcResult) as Promise<{
-      ok: boolean;
-      limits: {
-        maxTurns: number;
-        tokenBudget?: number;
-        timeBudgetMs?: number;
-        maxStopBlocks: number;
-      };
-    }>,
-  /** Clear a session's persisted active goal (CC /goal clear). */
-  goalClear: (sessionId: string) =>
-    rpc("agent/goalClear", { sessionId }).then(rpcResult) as Promise<{
-      ok: boolean;
-      cleared: boolean;
-    }>,
-  /** Edit or pause/resume a session's persisted active goal. */
-  goalUpdate: (
-    sessionId: string,
-    update: {
-      objective?: string;
-      paused?: boolean;
-      expectedGoalId: string;
-      expectedRevision: number;
-    },
-  ) =>
-    rpc("agent/goalUpdate", { sessionId, ...update }).then(rpcResult) as Promise<{
-      ok: boolean;
-      updated: boolean;
-      goal?: string;
-      goalId?: string;
-      paused?: boolean;
-      revision?: number;
-    }>,
-  /** Delete a session's persisted active goal. `goalClear` remains as a legacy alias. */
-  goalDelete: (sessionId: string, expected: { expectedGoalId: string; expectedRevision: number }) =>
-    rpc("agent/goalDelete", { sessionId, ...expected }).then(rpcResult) as Promise<{
-      ok: boolean;
-      deleted: boolean;
-    }>,
-  /** Read a session's persisted active goal objective (null when none). */
-  goalGet: (sessionId: string) =>
-    rpc("agent/goalGet", { sessionId }).then(rpcResult) as Promise<{
-      ok: boolean;
-      goal: string | null;
-      goalId?: string;
-      paused?: boolean;
-      revision?: number;
-    }>,
+  /** Persistent Goal controls (extend/clear/update/delete/get). */
+  ...createGoalControlApi(rpc),
   /** List a session's background shells for the dock panel (TODO 3.2). */
   listBackgroundShells: (sessionId: string) =>
     rpc("agent/backgroundShells", { sessionId, action: "list" }).then(rpcResult) as Promise<{

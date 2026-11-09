@@ -470,8 +470,14 @@ export interface GoalProgressSnapshot extends GoalProgress {
   runningSinceMs?: number;
 }
 
-export function goalProgressSnapshot(lifecycle: GoalLifecycleV1): GoalProgressSnapshot {
-  const progress = lifecycle.progress ?? { rounds: 0, activeMs: 0 };
+/**
+ * Undefined while the goal has no settled accounting yet (a goal from before
+ * accounting existed, or one whose first run has not ended): unknown history
+ * is reported as unknown, never as zero.
+ */
+export function goalProgressSnapshot(lifecycle: GoalLifecycleV1): GoalProgressSnapshot | undefined {
+  const progress = lifecycle.progress;
+  if (!progress) return undefined;
   return lifecycle.phase === "waiting" && lifecycle.waitKind === "background"
     ? { ...progress, runningSinceMs: lifecycle.waitingSinceMs }
     : { ...progress };

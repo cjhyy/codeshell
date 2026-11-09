@@ -162,12 +162,27 @@ export function buildNoChildFallbackReply(
       const sid = parsed.params?.sessionId;
       if (typeof sid !== "string" || !sid) return null;
       const goal = sessions.readActiveGoal(sid);
+      // Same shape as core goalGetPayload; inlined because this module must
+      // stay free of runtime imports (review-draft-response-gate loads it in a VM).
+      const progress = goal ? sessions.readGoalProgress(sid) : undefined;
       return respond({
         ok: true,
         goal: goal ? goal.objective : null,
         ...(goal?.goalId ? { goalId: goal.goalId } : {}),
         ...(goal?.revision ? { revision: goal.revision } : {}),
+        ...(goal?.setAtMs ? { setAtMs: goal.setAtMs } : {}),
         paused: goal?.paused === true,
+        ...(goal && progress && progress.goalId === goal.goalId
+          ? {
+              progress: {
+                rounds: progress.rounds,
+                activeMs: progress.activeMs,
+                ...(progress.runningSinceMs !== undefined
+                  ? { runningSinceMs: progress.runningSinceMs }
+                  : {}),
+              },
+            }
+          : {}),
       });
     }
     case "agent/goalUpdate": {
