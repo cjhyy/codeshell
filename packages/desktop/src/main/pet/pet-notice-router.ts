@@ -16,6 +16,7 @@ import {
   noticeFromRecord,
   normalizeSettings,
   pinToRoute,
+  IM_SEND_TIMEOUT,
   sendWithTimeout,
   staleReason,
   unpackFacts,
@@ -37,6 +38,7 @@ import type {
 export type * from "./pet-notice-types.js";
 
 const DEFAULT_IM_TIMEOUT_MS = 30_000;
+const DEFAULT_REPLAY_HOLD_MS = 10 * 60_000;
 const MAX_RULE_IDS = 100;
 const NO_KEYS: DedupeLookup = { has: () => false };
 const DISPOSED: RouteDecision = { outlet: "drop", reason: "disposed" };
@@ -84,8 +86,8 @@ export class PetNoticeRouter {
   private readonly lastImSendAt = new Map<string, number>();
   /** Records this process is sending right now; startup recovery must not resend them. */
   private readonly sending = new Set<string>();
-  /** Records handed to a turn by replayPending and not yet marked or released. */
-  private readonly replaying = new Set<string>();
+  /** Records handed to a turn by replayPending (→ when), not yet marked or released. */
+  private readonly replaying = new Map<string, number>();
   private decisionQueue: Promise<unknown> = Promise.resolve();
   private recovered?: Promise<void>;
   private disposed = false;
@@ -279,7 +281,13 @@ export class PetNoticeRouter {
    * Queued notices for the owner's next inbound message on `channel` in
    * `conversation`. Stale ones (decision resolved, expired, already seen on
    * the desktop) are revoked. The rest stay queued and are withheld from
-   * other calls until {@link markReplayed} or {@link releaseReplay}.
+   * other calls for `replayHoldMs` (default 10 min).
+   *
+   * Contract: once the notices are in Mimi's turn the caller calls
+   * {@link markReplayed} with their ids (they are revoked for good); if the
+   * turn did not take them it calls {@link releaseReplay} so the next inbound
+   * message gets them. A caller that does neither (it crashed, the turn was
+   * lost) has its hold expire, so a notice is never stuck behind it.
    */
   async replayPending(
     channel: string,
@@ -294,6 +302,8 @@ export class PetNoticeRouter {
     } catch (error) {
       this.log("pet.notice.expire_failed", { error: errorText(error) });
     }
+    const holdMs = this.options.replayHoldMs ?? DEFAULT_REPLAY_HOLD_MS;
+    for (const [id, at] of this.replaying) if (now - at >= holdMs) this.replaying.delete(id);
     const replay: ReplayedNotice[] = [];
     for (const record of ledger.queued()) {
       if (record.delivery?.channel !== channel || this.replaying.has(record.id)) continue;
@@ -304,7 +314,7 @@ export class PetNoticeRouter {
         await this.settleQuietly(record.id, "revoked", stale);
         continue;
       }
-      this.replaying.add(record.id);
+      this.replaying.set(record.id, now);
       const title = noticeLine(facts.title);
       replay.push({
         id: record.id,
@@ -355,7 +365,7 @@ export class PetNoticeRouter {
       return;
     }
     for (const record of resend) {
-      if (!this.sending.has(record.id)) await this.recoverClaim(record);
+      await this.recoverClaim(record);
     }
     try {
       await ledger.expireQueued(now);
@@ -514,18 +524,28 @@ export class PetNoticeRouter {
     if (desktopNow) this.showDesktop(notice, body);
     const { channel, key } = plan.claim;
     const target = imTarget(notice.target, channel);
-    const sent = await this.sendIm(plan.recordId!, channel, key, target, body);
-    if (!sent && !desktopNow) this.showDesktop(notice, body);
+    const outcome = await this.sendIm(plan.recordId!, channel, key, target, body);
+    if (outcome !== "accepted" && !desktopNow) this.showOutcome(notice, body, outcome);
   }
 
-  /** One IM attempt on a claimed record; a failure leaves it queued for the channel. */
+  /** A failed send shows the notice; a send that may have gone out says so. */
+  private showOutcome(notice: NoticeSubmission, body: string, outcome: "failed" | "unknown"): void {
+    this.showDesktop(notice, outcome === "unknown" ? `可能已发送：${body}` : body);
+  }
+
+  /**
+   * One IM attempt on a claimed record. A failure leaves it queued for the
+   * channel. A timeout on a channel without idempotent sends may already have
+   * reached the owner, so it becomes `unknown` and is never resent
+   * automatically; with idempotent sends the same key makes a resend safe.
+   */
   private async sendIm(
     id: string,
     channel: string,
     key: string,
     target: NoticeTarget,
     body: string,
-  ): Promise<boolean> {
+  ): Promise<"accepted" | "failed" | "unknown"> {
     this.sending.add(id);
     try {
       const idempotent = this.options.supportsIdempotentSend?.(channel) === true;
@@ -537,12 +557,16 @@ export class PetNoticeRouter {
       );
       if (result.accepted) {
         await this.settleQuietly(id, "accepted");
-        return true;
+        return "accepted";
       }
       this.log("pet.notice.im_failed", { channel, error: result.error });
+      if (result.error === IM_SEND_TIMEOUT && !idempotent) {
+        await this.settleQuietly(id, "unknown", result.error);
+        return "unknown";
+      }
       await this.settleQuietly(id, "failed", result.error);
       await this.settleQuietly(id, "queued", result.error);
-      return false;
+      return "failed";
     } finally {
       this.sending.delete(id);
     }
@@ -550,6 +574,15 @@ export class PetNoticeRouter {
 
   private async recoverClaim(record: NoticeRecord): Promise<void> {
     const ledger = this.options.ledger!;
+    // The snapshot may be stale: a send of this process may have started or
+    // settled it while earlier records were being recovered.
+    const current = ledger.get(record.id)?.delivery;
+    if (
+      this.sending.has(record.id) ||
+      current?.status !== "claimed" ||
+      current.claimedAt !== record.delivery?.claimedAt
+    )
+      return;
     const channel = record.delivery?.channel;
     const body = record.body ?? "";
     const notice = noticeFromRecord(record);
@@ -557,8 +590,8 @@ export class PetNoticeRouter {
       try {
         const { key } = await ledger.claim(record.id, channel, body);
         const target = imTarget(notice.target, channel);
-        if (!(await this.sendIm(record.id, channel, key, target, body)))
-          this.showDesktop(notice, body);
+        const outcome = await this.sendIm(record.id, channel, key, target, body);
+        if (outcome !== "accepted") this.showOutcome(notice, body, outcome);
       } catch (error) {
         this.log("pet.notice.resend_failed", { error: errorText(error) });
         this.showDesktop(notice, body);

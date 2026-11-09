@@ -106,6 +106,7 @@ export type NoticeLedgerPort = Pick<
   | "held"
   | "recoverOnStartup"
   | "expireQueued"
+  | "get"
 >;
 
 /**
@@ -145,6 +146,8 @@ export interface PetNoticeRouterOptions extends PetAttentionOptions {
   timezoneOffsetMin?: (ms: number) => number;
   /** An IM send that has not answered by then counts as failed (default 30 s). */
   imTimeoutMs?: number;
+  /** How long replayed notices stay withheld without markReplayed/releaseReplay (default 10 min). */
+  replayHoldMs?: number;
   log?: (event: string, data: Record<string, unknown>) => void;
 }
 
@@ -264,6 +267,9 @@ export function staleReason(
   return undefined;
 }
 
+/** The error of a send that did not answer in time (it may still have been delivered). */
+export const IM_SEND_TIMEOUT = "timeout";
+
 /** One IM send raced against a timeout; a throw, a missing outlet or the timeout is a failure. */
 export function sendWithTimeout(
   send: () => Promise<NoticeImSendResult> | undefined,
@@ -279,7 +285,7 @@ export function sendWithTimeout(
       cancel(timer);
       resolve(result);
     };
-    const timer = schedule(() => finish({ accepted: false, error: "timeout" }), timeoutMs);
+    const timer = schedule(() => finish({ accepted: false, error: IM_SEND_TIMEOUT }), timeoutMs);
     // A pending send must never keep the process alive.
     (timer as { unref?: () => void } | undefined)?.unref?.();
     Promise.resolve()

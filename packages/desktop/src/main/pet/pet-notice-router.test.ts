@@ -529,7 +529,7 @@ describe("PetNoticeRouter.submit", () => {
     expect(h.logs.some((log) => log.event === "pet.notice.lost")).toBe(true);
   });
 
-  test("a hanging IM send times out, shows the desktop and queues", async () => {
+  test("a hanging send on an idempotent channel times out, shows the desktop and queues", async () => {
     const h = harness();
     h.state.imResult = () => new Promise<NoticeImSendResult>(() => {});
     const pending = h.router.submit(notice({ facts: { title: "Slow" } }));
@@ -539,6 +539,37 @@ describe("PetNoticeRouter.submit", () => {
     expect(await pending).toMatchObject({ outlet: "im", im: "lark" });
     expect(only(h.desktop).body).toBe("「Slow」做完了");
     expect(only(h.ledger.queued()).delivery).toMatchObject({ status: "queued", error: "timeout" });
+  });
+
+  test("a hanging send on a non-idempotent channel becomes unknown with a note", async () => {
+    const h = harness();
+    h.state.idempotent.clear();
+    h.state.imResult = () => new Promise<NoticeImSendResult>(() => {});
+    const pending = h.router.submit(notice({ facts: { title: "Slow" } }));
+    await until(() => h.im.length === 1);
+    h.clock.advance(30_000);
+    expect((await pending).outlet).toBe("im");
+    expect(only(h.desktop).body).toBe("可能已发送：「Slow」做完了");
+    expect(h.ledger.queued()).toEqual([]);
+    const file = JSON.parse(await readFile(join(dir, "notices.json"), "utf8")) as {
+      records: NoticeRecord[];
+    };
+    expect(only(file.records).delivery).toMatchObject({ status: "unknown", error: "timeout" });
+  });
+
+  test("replayed notices are released automatically after the hold", async () => {
+    const h = harness();
+    h.state.channels.lark = "unavailable";
+    await h.router.submit(notice({ facts: { title: "Owner" }, channel: "lark" }));
+    expect((await h.router.replayPending("lark", DM)).map((entry) => entry.title)).toEqual([
+      "Owner",
+    ]);
+    h.clock.advance(10 * MINUTE - 1);
+    expect(await h.router.replayPending("lark", DM)).toEqual([]);
+    h.clock.advance(1);
+    expect((await h.router.replayPending("lark", DM)).map((entry) => entry.title)).toEqual([
+      "Owner",
+    ]);
   });
 
   test("merging a named-channel notice spares only the IM", async () => {
@@ -722,5 +753,33 @@ describe("PetNoticeRouter.recover", () => {
     expect(ledger.get(record.id)?.delivery?.status).toBe("accepted");
     expect(h.logs.filter((log) => log.event === "pet.notice.settle_failed")).toEqual([]);
     expect(ledger.queued()).toEqual([]);
+  });
+
+  test("recovery skips a claim that settled while earlier records were recovered", async () => {
+    const { clock, record } = await crashedClaim("lark");
+    clock.advance(5 * MINUTE);
+    const ledger = reopened(clock);
+    const h = harness({ clock, ledger });
+    const live = deferred<NoticeImSendResult>();
+    const crash = deferred<NoticeImSendResult>();
+    h.state.imResult = (call) => (call.body === "「Crash」做完了" ? crash.promise : live.promise);
+    const pending = h.router.submit(notice({ facts: { title: "Live" } }));
+    await until(() => h.im.length === 1);
+    // Recovery snapshots both claims; the crashed one (older) is resent first and hangs.
+    const recovering = h.router.recover();
+    await until(() => h.im.length === 2);
+    // Meanwhile the live send settles and leaves the in-flight set.
+    live.resolve({ accepted: true });
+    await pending;
+    crash.resolve({ accepted: true });
+    await recovering;
+    expect(h.im.map((call) => call.body)).toEqual(["「Live」做完了", "「Crash」做完了"]);
+    expect(h.desktop).toEqual([]);
+    expect(ledger.get(record.id)?.delivery?.status).toBe("accepted");
+    expect(
+      h.logs.filter((log) =>
+        ["pet.notice.resend_failed", "pet.notice.settle_failed"].includes(log.event),
+      ),
+    ).toEqual([]);
   });
 });
