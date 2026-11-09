@@ -119,6 +119,12 @@ import type { ResolvedComposition } from "../composition/types.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { SessionWorkspaceRpcHandlers } from "./session-workspace-rpc.js";
 import {
+  hostActionLoopback,
+  settleObjectHostReply,
+  workspaceActionLoopback,
+} from "./host-action.js";
+import type { HostLoopbackRequest } from "./host-action.js";
+import {
   describePluginCommands,
   expandPluginCommandBody,
   scanPluginCommands,
@@ -667,6 +673,11 @@ export class AgentServer {
       },
       isTransportDisconnected: () => this.transportDisconnected,
       notify: (method, params) => this.notify(method, params),
+      requestHostAction: (sessionId, action, args) => {
+        const session = this.chatManager?.get(sessionId);
+        if (!session) return Promise.reject(new Error(`session not live: ${sessionId}`));
+        return this.requestHostLoopback(session, sessionId, hostActionLoopback(action, args));
+      },
     };
     this.moduleReady = attachProtocolContributions({
       composition,
@@ -4410,11 +4421,11 @@ export class AgentServer {
     sessionId: string,
     target: string,
   ): Promise<import("../types.js").SessionWorkspace> {
-    return (await this.requestWorkspaceActionForSession(
+    const request = workspaceActionLoopback("switch", target);
+    return (await this.requestHostLoopback(
       session,
       sessionId,
-      "switch",
-      target,
+      request,
     )) as import("../types.js").SessionWorkspace;
   }
 
@@ -4435,12 +4446,12 @@ export class AgentServer {
     const registration = this.approvalRouter.register(source.id, this.connectionId);
     if (!registration.ok)
       throw new Error(`source Session ${source.id} is owned by another connection`);
-    const resolved = (await this.requestWorkspaceActionForSession(
-      source,
-      source.id,
-      "resolve_session_run",
-      targetId,
-    )) as { cwd?: unknown; workspaceContext?: unknown; projectTrusted?: unknown };
+    const request = workspaceActionLoopback("resolve_session_run", targetId);
+    const resolved = (await this.requestHostLoopback(source, source.id, request)) as {
+      cwd?: unknown;
+      workspaceContext?: unknown;
+      projectTrusted?: unknown;
+    };
     if (
       typeof resolved.cwd !== "string" ||
       !resolved.cwd ||
@@ -4461,42 +4472,26 @@ export class AgentServer {
     return { cwd: resolved.cwd, workspaceContext, projectTrusted: resolved.projectTrusted };
   }
 
-  private requestWorkspaceActionForSession(
+  /** Object-replying internal loopback shared by workspace and generic host actions. */
+  private requestHostLoopback(
     session: ChatSession,
     sessionId: string,
-    action: "switch" | "resolve_session_run",
-    target: string,
+    { toolName, args, label, description }: HostLoopbackRequest,
   ): Promise<unknown> {
-    const label = action === "switch" ? "workspace switch" : "Session workspace resolution";
     return new Promise((resolve, reject) => {
       const requestId = nanoid(12);
       const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
       this.registerSessionApproval(
         session,
-        this.internalPendingMetadata(sessionId, requestId, routeEnvelope, "__workspace_action__"),
+        this.internalPendingMetadata(sessionId, requestId, routeEnvelope, toolName),
         (decision: unknown) => {
           this.clearApprovalTimer(requestId);
           const outcome = parseHostLoopbackDecision(decision, label);
-          if (!outcome.ok) {
-            reject(new Error(outcome.detail));
-            return;
+          try {
+            resolve(settleObjectHostReply(outcome, label, HOST_LOOPBACK_FAILURE_DETAIL.malformed));
+          } catch (error) {
+            reject(error);
           }
-          const parsed = outcome.value as { ok?: false; error?: string };
-          // A workspace is always an object. Reject any other JSON shape rather
-          // than resolving it: `null` / a bare number / a string would otherwise
-          // be handed to setSessionWorkspace as if the switch had succeeded,
-          // rebasing the session onto a non-workspace. (Previously a `"ok" in
-          // parsed` TypeError happened to be caught and turned into a rejection;
-          // this states the requirement instead of relying on that.)
-          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-            reject(new Error(`${label} ${HOST_LOOPBACK_FAILURE_DETAIL.malformed}`));
-            return;
-          }
-          if ("ok" in parsed && parsed.ok === false) {
-            reject(new Error(parsed.error ?? `${label} failed`));
-            return;
-          }
-          resolve(parsed);
         },
       );
 
@@ -4512,12 +4507,7 @@ export class AgentServer {
 
       this.notify(Methods.ApprovalRequest, {
         ...routeEnvelope,
-        request: {
-          toolName: "__workspace_action__",
-          args: { action, target },
-          description: `workspace:${action}:${target}`,
-          riskLevel: "low" as const,
-        },
+        request: { toolName, args, description, riskLevel: "low" as const },
       });
     });
   }

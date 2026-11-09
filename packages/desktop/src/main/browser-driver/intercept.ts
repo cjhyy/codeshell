@@ -248,6 +248,60 @@ export function buildWorkspaceActionReply(
   });
 }
 
+// ── __host_action__ (generic extension-module → host request) ──────────────
+// Emitted by ProtocolObserverHost.requestHostAction (core protocol/server.ts).
+// Main dispatches by `action` to a handler registered on AgentBridge and
+// answers with the JSON result (`{ ok:false, error }` on failure).
+
+export interface ParsedHostAction {
+  connectionId?: string;
+  generation?: number;
+  sessionId?: string;
+  requestId: string;
+  action: string;
+  args: Record<string, unknown>;
+}
+
+export function parseHostActionLine(line: string): ParsedHostAction | null {
+  let msg: any;
+  try {
+    msg = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  if (!msg || msg.method !== Methods.ApprovalRequest) return null;
+  const p = msg.params;
+  if (!p || typeof p.requestId !== "string") return null;
+  const r = p.request;
+  if (!r || r.toolName !== "__host_action__" || !r.args || typeof r.args !== "object") return null;
+  const a = r.args as Record<string, unknown>;
+  if (typeof a.action !== "string") return null;
+  if (!a.args || typeof a.args !== "object" || Array.isArray(a.args)) return null;
+  return {
+    ...(typeof p.connectionId === "string" ? { connectionId: p.connectionId } : {}),
+    ...(typeof p.generation === "number" ? { generation: p.generation } : {}),
+    sessionId: typeof p.sessionId === "string" ? p.sessionId : undefined,
+    requestId: p.requestId,
+    action: a.action,
+    args: a.args as Record<string, unknown>,
+  };
+}
+
+export function buildHostActionReply(parsed: ParsedHostAction, resultJson: string): string {
+  return JSON.stringify({
+    jsonrpc: "2.0",
+    id: replyId(),
+    method: "agent/approve",
+    params: {
+      ...(parsed.connectionId ? { connectionId: parsed.connectionId } : {}),
+      ...(parsed.generation !== undefined ? { generation: parsed.generation } : {}),
+      sessionId: parsed.sessionId,
+      requestId: parsed.requestId,
+      decision: { approved: true, answer: resultJson },
+    },
+  });
+}
+
 // ── __panel_action__ (Panel tool) ──────────────────────────────────────────
 
 export interface ParsedPanelAction {

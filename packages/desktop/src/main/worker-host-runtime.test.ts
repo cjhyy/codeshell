@@ -30,6 +30,7 @@ function fixture() {
     credentialCookie: route("credentialCookie"),
     workspace: route("workspace"),
     panel: route("panel"),
+    hostAction: route("hostAction"),
     automation: route("automation"),
     sendLine: (line) => workerReplies.push(line),
   });
@@ -102,6 +103,7 @@ describe("Desktop worker Host adapter", () => {
     ["__credential_action__", "credentialCookie", { action: "injectCookie" }],
     ["__workspace_action__", "workspace", { action: "resolve_session_run" }],
     ["__panel_action__", "panel", { action: "list" }],
+    ["__host_action__", "hostAction", { action: "notice.create", args: {} }],
   ] as const)("routes supported %s privately without an unsupported reply", (tool, route, args) => {
     const f = fixture();
     const line = approval(tool, args);
@@ -239,6 +241,7 @@ describe("Desktop worker Host adapter", () => {
       credentialCookie: handled,
       workspace: handled,
       panel: handled,
+      hostAction: handled,
       automation: handled,
       sendLine(line) {
         const reply = JSON.parse(line);
