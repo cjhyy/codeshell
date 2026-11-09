@@ -410,7 +410,7 @@ describe("NotifyMe host action", () => {
       ok: true,
       status: "ok",
       effect: {
-        fires: "这个会话下一次完成实际工作后",
+        fires: "这个会话下一次完成实际工作后（你在电脑前时发桌面，不在时发微信）",
         channel: "auto",
         im: { channel: "wechat", label: "微信", ready: "ready" },
         quietHours: "23:00–08:30 只推需要你决定的事",

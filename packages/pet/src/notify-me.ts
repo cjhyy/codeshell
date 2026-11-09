@@ -220,9 +220,15 @@ function unknownChannelText(requested: string, channels: readonly BoundChannel[]
 }
 
 function savedText(effect: RuleEffect): string {
-  const via = effect.im
+  const im = effect.im
     ? `${effect.im.label} (${effect.im.channel}, ${readinessText(effect.im.ready)})`
-    : "a desktop notification";
+    : undefined;
+  // "auto" sends to the desktop while the owner is at the computer, IM only while away.
+  const via = !im
+    ? "a desktop notification"
+    : effect.channel === "auto"
+      ? `a desktop notification while the owner is at the computer, or ${im} while away`
+      : im;
   return [
     `Notice rule ${effect.ruleId} saved: the owner will be told ${effect.fires}, via ${via}.`,
     ...(effect.quietHours ? [`Quiet hours: ${effect.quietHours}.`] : []),

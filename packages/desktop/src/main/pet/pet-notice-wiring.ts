@@ -920,12 +920,17 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     });
     const im = predictedIm(rule.channel, rule.target, channels);
     const quietHours = quietHoursText(settings());
+    const when = upsert.scope === "goal" ? "目标完成或卡住时" : "这个会话下一次完成实际工作后";
     const reply: NoticeRuleUpsertReply = {
       ok: true,
       status: "ok",
       effect: {
         ruleId: rule.id,
-        fires: upsert.scope === "goal" ? "目标完成或卡住时" : "这个会话下一次完成实际工作后",
+        // "auto" only uses the IM while the owner is away; never promise it outright.
+        fires:
+          rule.channel === "auto" && im
+            ? `${when}（你在电脑前时发桌面，不在时发${im.label}）`
+            : when,
         channel: rule.channel,
         ...(im ? { im } : {}),
         ...(quietHours ? { quietHours } : {}),

@@ -208,6 +208,17 @@ describe("NotifyMe execution", () => {
     expect(text).toContain("Tell the owner exactly this; do not claim anything was sent.");
   });
 
+  test("an auto rule promises the IM only while the owner is away", async () => {
+    const { request } = recorder({
+      ...OK_REPLY,
+      effect: { ...OK_REPLY.effect, channel: "auto" },
+    });
+    const text = await notifyMeTool({}, context(), request);
+    expect(text).toContain(
+      "via a desktop notification while the owner is at the computer, or WeChat (wechat, ready) while away.",
+    );
+  });
+
   test("summarizes a desktop rule", async () => {
     const { request } = recorder({
       ok: true,
