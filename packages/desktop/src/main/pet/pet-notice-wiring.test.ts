@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { EventEmitter } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -1082,6 +1083,53 @@ function decisionRelay(h: Harness) {
 const OWNER_DM = { channel: "wechat", target: "owner-dm", senderId: "me", isDirectMessage: true };
 /** Presence is re-read after the settings cache (5 s) expires. */
 const SETTINGS_TTL = 5_001;
+
+describe("digest after sleep", () => {
+  test("waking, unlocking and the owner's next inbound turn send a due digest", async () => {
+    const power = new EventEmitter();
+    current = harness({ powerEvents: power as unknown as PetNoticeWiringDeps["powerEvents"] });
+    await current.wiring.ready;
+    const night = (day: number) => Date.UTC(2026, 10, day, 23, 30, 0);
+    const morning = (day: number) => Date.UTC(2026, 10, day + 1, 8, 30, 0);
+    const hold = async (day: number, title: string) => {
+      clock = night(day);
+      const decision = await current!.wiring.router.submit({
+        kind: "session.done",
+        priority: "P1",
+        dedupeKey: `done:${title}`,
+        sessionId: SID,
+        ruleIds: [],
+        facts: { title },
+        attention: "always",
+        channel: "auto",
+        target: { kind: "owner" },
+      });
+      expect(decision).toMatchObject({ outlet: "digest", reason: "quiet-hours" });
+      clock = morning(day);
+    };
+    const sent = () => current!.ownerSends.map((send) => send.text);
+
+    await hold(9, "一");
+    power.emit("resume");
+    await settle(() => sent().length === 1);
+    expect(sent()).toEqual(["你不在时：\n- 「一」做完了"]);
+
+    await hold(10, "二");
+    power.emit("unlock-screen");
+    await settle(() => sent().length === 2);
+    expect(sent()[1]).toBe("你不在时：\n- 「二」做完了");
+
+    await hold(11, "三");
+    const replay = current.wiring.inboundReplay(OWNER_DM)!;
+    await replay.take();
+    replay.finish();
+    await settle(() => sent().length === 3);
+    expect(sent()[2]).toBe("你不在时：\n- 「三」做完了");
+
+    current.wiring.dispose();
+    expect(power.listenerCount("resume") + power.listenerCount("unlock-screen")).toBe(0);
+  });
+});
 
 describe("goal pauses", () => {
   test("a cancelled Goal's queued and held pauses are never replayed or digested", async () => {

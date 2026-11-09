@@ -86,6 +86,14 @@ export interface PetNoticeWiringGateway {
   isOwnerConversation(channel: string, target: string): boolean;
 }
 
+/** The `powerMonitor` events the digest listens to (overloads keep Electron's type assignable). */
+export interface PetNoticePowerEvents {
+  on(event: "resume", listener: () => void): unknown;
+  on(event: "unlock-screen", listener: () => void): unknown;
+  removeListener(event: "resume", listener: () => void): unknown;
+  removeListener(event: "unlock-screen", listener: () => void): unknown;
+}
+
 export interface PetNoticeWiringDeps {
   /** Electron `app.getPath("userData")`; stores live under `<userData>/pet/`. */
   userDataDir: string;
@@ -125,6 +133,11 @@ export interface PetNoticeWiringDeps {
   presence: { getSystemIdleTimeSec(): number; hasFocusedWindow(): boolean };
   /** Mimi's own Sessions never fire notice rules. */
   isMimiSession?: (sessionId: string) => boolean;
+  /**
+   * Electron `powerMonitor`: a digest whose timer slept through its moment is
+   * sent when the machine wakes or the screen unlocks.
+   */
+  powerEvents?: PetNoticePowerEvents;
   now?: () => number;
   log?: (event: string, data: Record<string, unknown>) => void;
   /** Test seams: the router's IM timeout and the owner's UTC offset. */
@@ -910,6 +923,15 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     .catch((error) => log("pet.notice.load_failed", { error: errorText(error) }));
 
   let disposed = false;
+  /** Send held notices that are due now (their timer may have slept through it). */
+  const flushDueDigest = (): void => {
+    if (disposed) return;
+    void router
+      .flushDigest()
+      .catch((error) => log("pet.notice.digest_failed", { error: errorText(error) }));
+  };
+  deps.powerEvents?.on("resume", flushDueDigest);
+  deps.powerEvents?.on("unlock-screen", flushDueDigest);
   const unsubscribeProjection = deps.projection.subscribe((event) => {
     void ready.then(() => (disposed ? undefined : watcher.observeProjection(event)));
     // A decision answered anywhere (or timed out) must never be replayed later.
@@ -1035,6 +1057,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       async take() {
         if (state !== "idle" || disposed) return [];
         state = "taken";
+        // The owner is back: anything the digest was holding for this moment goes now.
+        flushDueDigest();
         let replayed: Awaited<ReturnType<PetNoticeRouter["replayPending"]>>;
         try {
           await ready;
@@ -1128,6 +1152,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       disposed = true;
       removeHostAction();
       unsubscribeProjection();
+      deps.powerEvents?.removeListener("resume", flushDueDigest);
+      deps.powerEvents?.removeListener("unlock-screen", flushDueDigest);
       router.dispose();
     },
   };

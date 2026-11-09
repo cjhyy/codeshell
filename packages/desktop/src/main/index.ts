@@ -1853,6 +1853,7 @@ async function createWindow(): Promise<BrowserWindow> {
         getSystemIdleTimeSec: () => powerMonitor.getSystemIdleTime(),
         hasFocusedWindow: () => BrowserWindow.getFocusedWindow() !== null,
       },
+      powerEvents: powerMonitor,
     });
     petNotices = notices;
     const petMemoryStoreInstance = new PetMemoryStore(
