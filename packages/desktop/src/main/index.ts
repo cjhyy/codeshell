@@ -28,6 +28,7 @@ import {
   Notification,
   screen,
   nativeTheme,
+  powerMonitor,
 } from "electron";
 import { mainWindowTitleBarOptions, registerWindowTitleBarIpc } from "./window-titlebar.js";
 import {
@@ -145,19 +146,14 @@ import {
   PetHostActionReceiptService,
 } from "./pet/pet-host-action-completion.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
-import {
-  formatPetLongTaskClosureMessage,
-  PetDispatchService,
-  type PetHostActionExecution,
-} from "./pet/pet-dispatch-service.js";
+import { PetDispatchService, type PetHostActionExecution } from "./pet/pet-dispatch-service.js";
 import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
 import { PetMemoryStore } from "./pet/pet-memory-store.js";
 import { createPetMemoryHost, createPetMemoryWorldContext } from "./pet/pet-memory-host.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetChatAttachmentContext } from "./pet/pet-chat-attachment-context.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
-import { PetAttentionPolicy } from "./pet/pet-notice-router.js";
-import { PetReceiptStore } from "./pet/pet-receipt-store.js";
+import { wirePetNotices, type PetNoticeWiring } from "./pet/pet-notice-wiring.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
@@ -818,7 +814,7 @@ let petFollowUpWakeCoordinator: PetFollowUpWakeCoordinator | null = null;
 // IM delivery shares the same completed initialization boundary as Pet IPC.
 let petRuntimeReady = false;
 let petHostActionReceiptService: PetHostActionReceiptService | null = null;
-let petAttentionPolicy: PetAttentionPolicy | null = null;
+let petNotices: PetNoticeWiring | null = null;
 let petWorkInboxStore: PetWorkInboxStore | null = null;
 let petLongTaskStore: PetLongTaskStore | null = null;
 let petLongTaskCoordinator: PetLongTaskCoordinator | null = null;
@@ -1838,6 +1834,22 @@ async function createWindow(): Promise<BrowserWindow> {
     );
     petLongTaskStore = longTaskStore;
     taskInboxDisposers.push(longTaskStore.subscribe(() => taskInboxService?.scheduleRefresh()));
+    const notices = wirePetNotices({
+      userDataDir: app.getPath("userData"),
+      bridge,
+      projection: aggregator,
+      longTasks: longTaskStore,
+      sessionRoutes: () => sessionBridge?.routes,
+      gateway: imGatewayService,
+      publishRoute: publishGatewayControlEvent,
+      notifyDesktop: async (input) => desktopNotifier?.notify(input),
+      readSettings: () => new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
+      presence: {
+        getSystemIdleTimeSec: () => powerMonitor.getSystemIdleTime(),
+        hasFocusedWindow: () => BrowserWindow.getFocusedWindow() !== null,
+      },
+    });
+    petNotices = notices;
     const petMemoryStoreInstance = new PetMemoryStore(
       resolve(app.getPath("userData"), "pet", "memories.json"),
     );
@@ -1865,7 +1877,7 @@ async function createWindow(): Promise<BrowserWindow> {
       worker: bridge,
       launcher: petWorkDelegationHost,
       onTaskClosed: async (task) => {
-        let message = formatPetLongTaskClosureMessage(task);
+        let message: string | undefined;
         let continued = false;
         let closureHostActions: PetHostActionExecution[] | undefined;
         try {
@@ -1885,9 +1897,8 @@ async function createWindow(): Promise<BrowserWindow> {
             });
           }
         } catch (error) {
-          // The deterministic fallback below still reaches the originating IM
-          // conversation and desktop notification when Mimi cannot compose a
-          // richer receipt (for example while the worker is restarting).
+          // The notice router still templates a result from the task's facts
+          // when Mimi cannot compose one (for example while the worker restarts).
           dlog("main", "pet.longTask.reply.failed", { error: String(error), taskId: task.id });
         }
 
@@ -1896,48 +1907,15 @@ async function createWindow(): Promise<BrowserWindow> {
         // while the originating IM chat receives one push only when the chain
         // finishes, needs a user decision, or cannot continue.
         if (!continued) {
-          const completed = task.status === "completed";
-          const cancelled = task.status === "cancelled";
-          const title = completed
-            ? "Mimi 任务已完成"
-            : cancelled
-              ? "Mimi 任务已取消"
-              : "Mimi 任务执行失败";
-          const enriched = await enrichPetChatReplyWithHostActions(message, closureHostActions, {
-            qrDir: resolve(app.getPath("userData"), "pet", "qr"),
-            attachmentKinds: task.completionTarget?.replyAttachmentKinds,
-          });
-          message = enriched.text;
-          const completionAttachments = enriched.attachments;
-          const deliveryKey = createHash("sha256")
-            .update("pet-task-closure\0")
-            .update(task.id)
-            .update("\0")
-            .update(String(task.attempt))
-            .update("\0")
-            .update(task.status)
-            .digest("hex");
-          await publishGatewayControlEvent({
-            deliveryKey,
-            type: completed
-              ? "pet.task.completed"
-              : cancelled
-                ? "pet.task.cancelled"
-                : "pet.task.failed",
-            title,
-            text: message,
-            ...(enriched.button ? { button: enriched.button } : {}),
-            ...(completionAttachments.length > 0 ? { attachments: completionAttachments } : {}),
-            ...(task.completionTarget
-              ? {
-                  target: {
-                    channel: task.completionTarget.channel,
-                    target: task.completionTarget.target,
-                  },
-                }
-              : {}),
-          });
-
+          // Closure GatewayReply is a payload, not a send: the router is the only
+          // owner-facing delivery (IM route, owner channel and/or desktop).
+          if (message !== undefined) {
+            const enriched = await enrichPetChatReplyWithHostActions(message, closureHostActions, {
+              qrDir: resolve(app.getPath("userData"), "pet", "qr"),
+              attachmentKinds: task.completionTarget?.replyAttachmentKinds,
+            });
+            message = enriched.text;
+          }
           // The closure manager's final assistant text is only an internal
           // acknowledgement after GatewayReply (for example, "微信消息已发送，待命").
           // Persist and publish the actual routed body as the visible reply,
@@ -1947,6 +1925,7 @@ async function createWindow(): Promise<BrowserWindow> {
           );
           if (
             gatewayReplyAccepted &&
+            message !== undefined &&
             task.completionTarget &&
             petHostActionReceiptService &&
             petDispatchService
@@ -1977,12 +1956,7 @@ async function createWindow(): Promise<BrowserWindow> {
             );
           }
 
-          await desktopNotifications.notifyPetTaskClosure(desktopNotifier, {
-            deliveryKey,
-            title,
-            message,
-            taskId: task.id,
-          });
+          await notices.notifyTaskClosed(task, { text: message });
         }
       },
       onTaskWorkMemory: async (task) => {
@@ -2032,6 +2006,7 @@ async function createWindow(): Promise<BrowserWindow> {
       void longTaskCoordinator
         .observeSessionEvent(snapshotEntry.sessionId, snapshotEntry.event)
         .catch((error) => dlog("main", "pet.longTask.stream.failed", { error: String(error) }));
+      notices.observeSessionEvent(snapshotEntry.sessionId, snapshotEntry.event);
     });
     // One root for both the Sessions disclosure tool and the resume resolver,
     // so the directory Mimi reads and the one selectors resolve against can
@@ -2444,19 +2419,11 @@ async function createWindow(): Promise<BrowserWindow> {
         processingPetReports.delete(event.reportId);
       }
     });
-    const petReceipts = new PetReceiptStore(
-      resolve(app.getPath("userData"), "pet", "attention-receipts.json"),
-    );
-    const attention = new PetAttentionPolicy({
-      source: aggregator,
-      receipts: petReceipts,
-    });
-    petAttentionPolicy = attention;
     const petInitialization = (async () => {
       await aggregator.start();
       await externalVisibility.reconcile();
       await Promise.all([
-        petReceipts.load(),
+        notices.ready,
         petWorkInbox.load(),
         petHostActionReceipts.load(),
         petWorkMemory.load(),
@@ -2597,7 +2564,7 @@ async function createWindow(): Promise<BrowserWindow> {
       // and work-memory closure sink are ready. Running tasks left idle by a
       // previous process are marked interrupted and remain resumable.
       await longTaskCoordinator.start();
-      attention.start();
+      notices.router.start();
       // Auto-archive completed work sessions idle for 7+ days, then force a full
       // catalog rebuild. Rationale for the full pass: archiveDiskSession touches
       // state.json → bumps the session's dir mtime → the incremental
@@ -2615,7 +2582,7 @@ async function createWindow(): Promise<BrowserWindow> {
       ipcMain,
       aggregator,
       dispatcher: petDispatchService,
-      attention,
+      attention: notices.attention,
       workInbox: petWorkInbox,
       // Read-only topic-segment view for the Mimi chat UI. `segments` carries
       // the message-keyed boundary history (keyed by each segment's first-turn
@@ -4551,8 +4518,8 @@ registerDesktopShutdown(app, {
     unsubscribePetLongTaskStream = null;
     unsubscribePetReportStream?.();
     unsubscribePetReportStream = null;
-    petAttentionPolicy?.stop();
-    petAttentionPolicy = null;
+    petNotices?.dispose();
+    petNotices = null;
     const petWorkInboxFlush = petWorkInboxStore?.flush();
     petWorkInboxStore = null;
     const petLongTaskFlush = petLongTaskStore?.flush();
