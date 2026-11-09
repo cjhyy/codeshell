@@ -512,6 +512,35 @@ describe("long-task closure", () => {
   });
 });
 
+describe("pending-notice replay", () => {
+  test("a notice queued for an unavailable channel rides the owner's next message", async () => {
+    current = harness();
+    current.channels[1] = { id: "lark", label: "飞书", ready: "unavailable" };
+    await current.handler(SID, upsertArgs({ channel: "lark" }));
+    await current.wiring.notifyTaskClosed(longTask({ status: "failed", lastError: "编译失败" }));
+    expect(current.ownerSends).toEqual([]);
+    const origin = { channel: "lark", target: "dm-1", senderId: "owner", isDirectMessage: true };
+    expect(await current.wiring.replayForInbound({ ...origin, channel: "wechat" })).toBeUndefined();
+    expect(
+      await current.wiring.replayForInbound({ ...origin, isDirectMessage: false }),
+    ).toBeUndefined();
+
+    const first = await current.wiring.replayForInbound(origin);
+    expect(first?.notices).toEqual([
+      { kind: "session.failed", title: "修登录", body: "「修登录」没做完：编译失败" },
+    ]);
+    // Withheld while that turn runs; released when it did not take them.
+    expect(await current.wiring.replayForInbound(origin)).toBeUndefined();
+    first!.settle(false);
+    const second = await current.wiring.replayForInbound(origin);
+    expect(second?.notices).toHaveLength(1);
+    second!.settle(true);
+    await settle();
+    expect(await current.wiring.replayForInbound(origin)).toBeUndefined();
+    expect(await current.wiring.replayForInbound(undefined)).toBeUndefined();
+  });
+});
+
 describe("viewed Sessions", () => {
   test("setActiveSession records what the owner looked at", async () => {
     current = harness();

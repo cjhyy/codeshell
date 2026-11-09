@@ -23,7 +23,14 @@ export {
   requestMimiDeliveryAvailability,
   type PetReportToMimiSink,
 } from "./report-to-mimi.js";
-export { petRunOptionsFrom, validatePetRunParams, type PetRunOptions } from "./run-params.js";
+export {
+  PET_PENDING_NOTICE_BODY_MAX,
+  PET_PENDING_NOTICE_TITLE_MAX,
+  PET_PENDING_NOTICES_MAX,
+  petRunOptionsFrom,
+  validatePetRunParams,
+  type PetRunOptions,
+} from "./run-params.js";
 export { SessionIndex } from "./session-index.js";
 export { PendingDecisionIndex, safePendingTitle } from "./pending-decision-index.js";
 export {

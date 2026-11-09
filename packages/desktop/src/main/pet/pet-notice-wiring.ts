@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import type { ConversationSessionRoute, PetLongTask } from "@cjhyy/code-shell-pet";
+import {
+  PET_PENDING_NOTICE_BODY_MAX,
+  PET_PENDING_NOTICE_TITLE_MAX,
+  PET_PENDING_NOTICES_MAX,
+  type ConversationSessionRoute,
+  type PetLongTask,
+} from "@cjhyy/code-shell-pet";
 import {
   PET_RULE_UPSERT_ACTION,
   parseNoticeRuleUpsert,
@@ -101,6 +107,31 @@ export interface PetTaskClosureNotice {
   text?: string;
 }
 
+/** A queued notice as Mimi's runtime context carries it (`pendingNotices`): data only. */
+export interface PetPendingNotice {
+  kind: string;
+  title?: string;
+  body: string;
+}
+
+/** The owner's IM message that starts a Mimi turn. */
+export interface PetInboundOrigin {
+  channel: string;
+  target: string;
+  senderId?: string;
+  isDirectMessage?: boolean;
+}
+
+/**
+ * Notices handed to one inbound turn. Call `settle(true)` once the turn's
+ * reply is handed back for delivery (they are revoked for good), or
+ * `settle(false)` when the turn did not take them (the next message gets them).
+ */
+export interface PetInboundReplay {
+  notices: PetPendingNotice[];
+  settle(delivered: boolean): void;
+}
+
 export interface PetNoticeWiring {
   router: PetNoticeRouter;
   ruleStore: PetRuleStore;
@@ -115,6 +146,8 @@ export interface PetNoticeWiring {
   observeSessionEvent(sessionId: string, event: unknown): void;
   /** A long task reached a terminal state and was not continued: one notice, then spend rules. */
   notifyTaskClosed(task: PetLongTask, closure?: PetTaskClosureNotice): Promise<void>;
+  /** Queued notices for an owner's IM message, before Mimi's turn runs. */
+  replayForInbound(origin: PetInboundOrigin | undefined): Promise<PetInboundReplay | undefined>;
   /** The settings this wiring currently routes with. */
   settings(): PetNotificationSettings;
   dispose(): void;
@@ -584,6 +617,52 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     await spend(rules);
   }
 
+  async function replayForInbound(
+    origin: PetInboundOrigin | undefined,
+  ): Promise<PetInboundReplay | undefined> {
+    if (!origin || disposed) return undefined;
+    let replayed: Awaited<ReturnType<PetNoticeRouter["replayPending"]>>;
+    try {
+      await ready;
+      replayed = (
+        await router.replayPending(origin.channel, {
+          target: origin.target,
+          ...(origin.senderId !== undefined ? { senderId: origin.senderId } : {}),
+          ...(origin.isDirectMessage !== undefined
+            ? { isDirectMessage: origin.isDirectMessage }
+            : {}),
+        })
+      ).slice(0, PET_PENDING_NOTICES_MAX);
+    } catch (error) {
+      log("pet.notice.replay_failed", { channel: origin.channel, error: errorText(error) });
+      return undefined;
+    }
+    if (replayed.length === 0) return undefined;
+    const ids = replayed.map((notice) => notice.id);
+    let settled = false;
+    return {
+      notices: replayed.map((notice): PetPendingNotice => {
+        const title = textLine(notice.title, PET_PENDING_NOTICE_TITLE_MAX);
+        return {
+          kind: notice.kind.slice(0, 64),
+          ...(title ? { title } : {}),
+          body: notice.body.slice(0, PET_PENDING_NOTICE_BODY_MAX) || "-",
+        };
+      }),
+      settle(delivered) {
+        if (settled) return;
+        settled = true;
+        if (!delivered) {
+          router.releaseReplay(ids);
+          return;
+        }
+        void router
+          .markReplayed(ids)
+          .catch((error) => log("pet.notice.replay_mark_failed", { error: errorText(error) }));
+      },
+    };
+  }
+
   const attention: PetIpcAttention = {
     getSnapshot: () => router.getSnapshot(),
     subscribe: (listener) => router.subscribe(listener),
@@ -607,6 +686,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       void ready.then(() => (disposed ? undefined : watcher.observe(sessionId, event)));
     },
     notifyTaskClosed,
+    replayForInbound,
     settings,
     dispose() {
       if (disposed) return;

@@ -374,6 +374,48 @@ describe("PetDispatchService", () => {
     ).toBe("/tmp/x");
   });
 
+  test("puts replayed notices into an IM turn's runtime context as bounded data", async () => {
+    let request: { method: string; params: Record<string, unknown> } | undefined;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (method, params) => {
+          request = { method, params };
+          return { ok: true, result: { text: "先说一下：登录修好了。" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+    });
+    await service.dispatch({
+      type: "chat",
+      message: "在吗",
+      clientMessageId: "im:notices",
+      source: imSource("owner"),
+      pendingNotices: [
+        { kind: "session.done", title: "修登录", body: "「修登录」做完了" },
+        ...Array.from({ length: 11 }, (_, index) => ({
+          kind: "session.failed",
+          body: `${index}:${"x".repeat(2_000)}`,
+        })),
+      ],
+    });
+    const world = JSON.parse(String(request?.params.petRuntimeContext)) as {
+      pendingNotices: { kind: string; title?: string; body: string }[];
+    };
+    expect(world.pendingNotices).toHaveLength(10);
+    expect(world.pendingNotices[0]).toEqual({
+      kind: "session.done",
+      title: "修登录",
+      body: "「修登录」做完了",
+    });
+    expect(world.pendingNotices.every((notice) => notice.body.length <= 1_000)).toBe(true);
+    expect(String(request?.params.task)).toBe("在吗");
+  });
+
   test("marks desktop chat explicitly and withholds the route-bound reply capability", async () => {
     let request: { method: string; params: Record<string, unknown> } | undefined;
     const service = new PetDispatchService({
@@ -633,18 +675,10 @@ describe("PetDispatchService", () => {
     expect(String(request?.params.petRuntimeContext)).not.toContain('"summary":"模型处理中"');
   });
 
-  test("executes only Mimi's explicit closure attachment request and replays that intent", async () => {
-    const imagePath = "/work/codeshell/generated/latest-comic.png";
+  test("an IM-origin closure turn answers in text and never sends a Gateway reply", async () => {
     let workerCalls = 0;
     let request: { method: string; params: Record<string, unknown> } | undefined;
-    let durableDecision:
-      | {
-          key: string;
-          text: string;
-          decidedAt: number;
-          replyAttachmentPaths?: string[];
-        }
-      | undefined;
+    let durableDecision: Record<string, unknown> | undefined;
     const executed: Record<string, unknown>[] = [];
     const service = new PetDispatchService({
       metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
@@ -659,15 +693,11 @@ describe("PetDispatchService", () => {
           return {
             ok: true,
             result: {
-              text: "找到了，我来附上图片。",
+              text: "漫画找到了，在 generated/latest-comic.png。",
+              // A stray host action from an older prompt is ignored, not executed.
               extensions: {
                 pet: {
-                  hostActions: [
-                    {
-                      kind: "gatewayReply",
-                      payload: { text: "找到了，我来附上图片。", attachmentPaths: [imagePath] },
-                    },
-                  ],
+                  hostActions: [{ kind: "gatewayReply", payload: { text: "旧的网关回复" } }],
                 },
               },
             },
@@ -675,22 +705,10 @@ describe("PetDispatchService", () => {
         },
       },
       hostCwd: "/safe/pet",
-      replyAttachmentRoots: async () => ["/Users/admin/Downloads"],
       hostActions: {
         gatewayReply: async (payload) => {
           executed.push(payload);
-          return {
-            text: payload.text,
-            attachments: [
-              {
-                kind: "image",
-                name: "latest-comic.png",
-                mimeType: "image/png",
-                size: 123,
-                path: imagePath,
-              },
-            ],
-          };
+          return { text: payload.text };
         },
       },
       longTasks: {
@@ -722,55 +740,43 @@ describe("PetDispatchService", () => {
       createdAt: 100,
       updatedAt: 300,
       completedAt: 300,
-      resultSummary: `候选图片：${imagePath}`,
+      resultSummary: "候选图片：/work/codeshell/generated/latest-comic.png",
       artifacts: [],
       events: [],
     };
 
     const report = await service.reportLongTaskClosure(task);
 
-    expect((request?.params.profileParams as Record<string, unknown>).hostActions).toEqual([
-      "gatewayReply",
-    ]);
+    const profile = request?.params.profileParams as Record<string, unknown>;
+    expect(profile.hostActions).toBeUndefined();
+    expect(profile.gatewayReply).toBeUndefined();
     expect(String(request?.params.petRuntimeContext)).toContain(
-      '"currentMessageSource":{"kind":"im-gateway","channel":"wechat"}',
+      '"closureDelivery":{"kind":"im-gateway","channel":"wechat"}',
     );
-    expect(String(request?.params.petRuntimeContext)).toContain(
-      '"currentMessageCapabilities":{"gatewayReply":{"tool":"GatewayReply","destination":"current originating IM conversation","allowedRoots":["/safe/pet","/Users/admin/Downloads"]}}',
-    );
-    expect((request?.params.profileParams as Record<string, unknown>).gateway).toBeUndefined();
-    expect(String(request?.params.task)).toContain("MUST call GatewayReply exactly once");
+    expect(String(request?.params.petRuntimeContext)).not.toContain("currentMessageSource");
+    expect(String(request?.params.petRuntimeContext)).not.toContain("currentMessageCapabilities");
     expect(String(request?.params.task)).toContain(
-      "Never say you lack the declared Gateway capability",
+      "Write the owner-facing completion message as your final answer; the host delivers it",
     );
-    expect(String(request?.params.task)).toContain("substitute a localhost link");
-    expect(durableDecision?.replyAttachmentPaths).toEqual([imagePath]);
-    expect(report).toMatchObject({
-      text: "找到了，我来附上图片。",
+    expect(String(request?.params.task)).not.toContain("MUST call GatewayReply");
+    expect(report).toEqual({
+      text: "漫画找到了，在 generated/latest-comic.png。",
       continued: false,
-      hostActions: [
-        {
-          kind: "gatewayReply",
-          payload: { text: "找到了，我来附上图片。", attachmentPaths: [imagePath] },
-          ok: true,
-          result: {
-            text: "找到了，我来附上图片。",
-            attachments: [{ kind: "image", path: imagePath }],
-          },
-        },
-      ],
     });
+    expect(durableDecision).toMatchObject({ text: "漫画找到了，在 generated/latest-comic.png。" });
+    expect(durableDecision).not.toHaveProperty("replyAttachmentPaths");
 
+    // A replay returns the recorded text without rerunning Mimi or sending anything.
     const replay = await service.reportLongTaskClosure({
       ...task,
       closureDecision: durableDecision as never,
     });
-    expect(replay).toMatchObject({ continued: false, hostActions: [{ ok: true }] });
+    expect(replay).toEqual({
+      text: "漫画找到了，在 generated/latest-comic.png。",
+      continued: false,
+    });
     expect(workerCalls).toBe(1);
-    expect(executed).toEqual([
-      { text: "找到了，我来附上图片。", attachmentPaths: [imagePath] },
-      { text: "找到了，我来附上图片。", attachmentPaths: [imagePath] },
-    ]);
+    expect(executed).toEqual([]);
   });
 
   test("lets Mimi continue completed work and carries the original notification route", async () => {

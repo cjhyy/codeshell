@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { PET_BEHAVIOR_PROFILE } from "./profile.js";
-import { petRunOptionsFrom, validatePetRunParams } from "./run-params.js";
+import {
+  PET_PENDING_NOTICE_BODY_MAX,
+  PET_PENDING_NOTICES_MAX,
+  petRunOptionsFrom,
+  validatePetRunParams,
+} from "./run-params.js";
 
 describe("validatePetRunParams", () => {
   test("does not claim behavior modes or session kinds owned by other extensions", () => {
@@ -27,6 +32,33 @@ describe("validatePetRunParams", () => {
         },
       }),
     ).toBeNull();
+  });
+
+  test("bounds pendingNotices in the runtime context", () => {
+    const run = (pendingNotices: unknown) =>
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: { runtimeContext: JSON.stringify({ pendingNotices }) },
+      });
+    expect(
+      run([
+        { kind: "session.done", title: "修登录", body: "「修登录」做完了" },
+        { kind: "session.blocked", body: "等你决定" },
+      ]),
+    ).toBeNull();
+    const invalid = "profileParams.runtimeContext.pendingNotices is invalid";
+    expect(run({})).toBe(invalid);
+    expect(
+      run(Array.from({ length: PET_PENDING_NOTICES_MAX + 1 }, () => ({ kind: "k", body: "b" }))),
+    ).toBe(invalid);
+    expect(run([{ kind: "session.done" }])).toBe(invalid);
+    expect(run([{ kind: "session.done", body: "x".repeat(PET_PENDING_NOTICE_BODY_MAX + 1) }])).toBe(
+      invalid,
+    );
+    expect(run([{ kind: "session.done", body: "ok", extra: 1 }])).toBe(invalid);
+    expect(run([{ kind: "", body: "ok" }])).toBe(invalid);
+    expect(run([{ kind: "session.done", title: 3, body: "ok" }])).toBe(invalid);
   });
 
   test("rejects malformed canonical workspaces", () => {

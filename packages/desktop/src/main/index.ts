@@ -146,7 +146,7 @@ import {
   PetHostActionReceiptService,
 } from "./pet/pet-host-action-completion.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
-import { PetDispatchService, type PetHostActionExecution } from "./pet/pet-dispatch-service.js";
+import { PetDispatchService } from "./pet/pet-dispatch-service.js";
 import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
 import { PetMemoryStore } from "./pet/pet-memory-store.js";
 import { createPetMemoryHost, createPetMemoryWorldContext } from "./pet/pet-memory-host.js";
@@ -1879,13 +1879,11 @@ async function createWindow(): Promise<BrowserWindow> {
       onTaskClosed: async (task) => {
         let message: string | undefined;
         let continued = false;
-        let closureHostActions: PetHostActionExecution[] | undefined;
         try {
           if (petDispatchService) {
             const report = await petDispatchService.reportLongTaskClosure(task);
             message = report.text;
             continued = report.continued;
-            closureHostActions = report.hostActions;
             // The closure manager runs outside the renderer-initiated chat IPC.
             // Its stream is owner-window scoped, so other open Mimi surfaces can
             // miss the final assistant reply even though it is durable on disk.
@@ -1902,62 +1900,10 @@ async function createWindow(): Promise<BrowserWindow> {
           dlog("main", "pet.longTask.reply.failed", { error: String(error), taskId: task.id });
         }
 
-        // A successful continuation is an internal manager hand-off. Mimi's
-        // injected reply remains visible in her durable desktop conversation,
-        // while the originating IM chat receives one push only when the chain
-        // finishes, needs a user decision, or cannot continue.
-        if (!continued) {
-          // Closure GatewayReply is a payload, not a send: the router is the only
-          // owner-facing delivery (IM route, owner channel and/or desktop).
-          if (message !== undefined) {
-            const enriched = await enrichPetChatReplyWithHostActions(message, closureHostActions, {
-              qrDir: resolve(app.getPath("userData"), "pet", "qr"),
-              attachmentKinds: task.completionTarget?.replyAttachmentKinds,
-            });
-            message = enriched.text;
-          }
-          // The closure manager's final assistant text is only an internal
-          // acknowledgement after GatewayReply (for example, "微信消息已发送，待命").
-          // Persist and publish the actual routed body as the visible reply,
-          // with delivery state kept as separate UI metadata.
-          const gatewayReplyAccepted = closureHostActions?.some(
-            (execution) => execution.kind === "gatewayReply" && execution.ok,
-          );
-          if (
-            gatewayReplyAccepted &&
-            message !== undefined &&
-            task.completionTarget &&
-            petHostActionReceiptService &&
-            petDispatchService
-          ) {
-            await completePetHostActionReceipt({
-              recorder: petHostActionReceiptService,
-              input: {
-                petSessionId: await petDispatchService.getSessionId(),
-                clientMessageId: task.originClientMessageId,
-                receiptId: `${task.id}:${task.attempt}:${task.status}`,
-                executions: closureHostActions ?? [],
-                authoritativeMessage: message,
-                replaceAssistant: true,
-                deliveryChannel: task.completionTarget.channel,
-              },
-              publish: (receiptEvent) => {
-                for (const window of BrowserWindow.getAllWindows()) {
-                  if (!window.isDestroyed()) {
-                    window.webContents.send(PET_CHAT_EVENT_CHANNEL, receiptEvent);
-                  }
-                }
-              },
-            }).catch((error) =>
-              dlog("main", "pet.longTask.gatewayReceipt.failed", {
-                taskId: task.id,
-                error: String(error),
-              }),
-            );
-          }
-
-          await notices.notifyTaskClosed(task, { text: message });
-        }
+        // A successful continuation is an internal manager hand-off. Otherwise
+        // Mimi's final answer is the one owner-facing message for this chain
+        // (IM origin, owner channel and/or desktop), delivered by the router.
+        if (!continued) await notices.notifyTaskClosed(task, { text: message });
       },
       onTaskWorkMemory: async (task) => {
         const recorded = await recordPetDelegationClosureBestEffort(
@@ -3152,24 +3098,34 @@ async function dispatchGatewayPetChat(
     if (!window.isDestroyed()) window.webContents.send(PET_CHAT_EVENT_CHANNEL, submitted);
   }
 
-  const result = await dispatcher.dispatch({
-    type: "chat",
-    message: request.message,
-    ...(attachments.length > 0 ? { attachments } : {}),
-    clientMessageId,
-    source: {
-      kind: "im-gateway",
-      channel: sourceChannel,
-      ...(request.origin?.senderId ? { senderId: request.origin.senderId } : {}),
-      isDirectMessage: request.origin?.isDirectMessage === true,
-      capabilities: request.origin?.capabilities ?? {
-        inbound: { text: true, attachments: [] },
-        outbound: { text: true, button: "link", attachments: [] },
+  // Notices this conversation missed ride the turn as data (pendingNotices).
+  const replay = await petNotices?.replayForInbound(request.origin);
+  const result = await dispatcher
+    .dispatch({
+      type: "chat",
+      message: request.message,
+      ...(attachments.length > 0 ? { attachments } : {}),
+      ...(replay ? { pendingNotices: replay.notices } : {}),
+      clientMessageId,
+      source: {
+        kind: "im-gateway",
+        channel: sourceChannel,
+        ...(request.origin?.senderId ? { senderId: request.origin.senderId } : {}),
+        isDirectMessage: request.origin?.isDirectMessage === true,
+        capabilities: request.origin?.capabilities ?? {
+          inbound: { text: true, attachments: [] },
+          outbound: { text: true, button: "link", attachments: [] },
+        },
+        ...(request.origin?.channels ? { channels: request.origin.channels } : {}),
+        ...(request.origin ? { target: request.origin.target } : {}),
       },
-      ...(request.origin?.channels ? { channels: request.origin.channels } : {}),
-      ...(request.origin ? { target: request.origin.target } : {}),
-    },
-  });
+    })
+    .catch((error: unknown) => {
+      replay?.settle(false);
+      throw error;
+    });
+  // A steered message rode another turn's context, so only a reply of its own took them.
+  replay?.settle(result.ok && result.type === "chat" && !result.suppressReply);
   if (!result.ok) throw new Error(result.message ?? result.code);
   if (result.type !== "chat") throw new Error("Mimi Pet 返回了非聊天结果");
   await markAttachmentsSent(cwd, sessionId, attachments).catch(() => undefined);

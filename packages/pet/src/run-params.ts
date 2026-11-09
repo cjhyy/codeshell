@@ -436,16 +436,44 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
   });
 }
 
+/** Queued owner notices replayed into an IM-inbound turn (data, never instructions). */
+export const PET_PENDING_NOTICES_MAX = 10;
+export const PET_PENDING_NOTICE_TITLE_MAX = 200;
+export const PET_PENDING_NOTICE_BODY_MAX = 1_000;
+const PENDING_NOTICE_KIND_MAX = 64;
+
+function isPendingNotice(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (Object.keys(value).some((key) => key !== "kind" && key !== "title" && key !== "body"))
+    return false;
+  const text = (field: unknown, max: number) =>
+    typeof field === "string" && field.length > 0 && field.length <= max;
+  return (
+    text(value.kind, PENDING_NOTICE_KIND_MAX) &&
+    text(value.body, PET_PENDING_NOTICE_BODY_MAX) &&
+    (value.title === undefined || text(value.title, PET_PENDING_NOTICE_TITLE_MAX))
+  );
+}
+
 function validateRuntimeContext(value: unknown, label: string): string | null {
   if (typeof value !== "string" || value.length > MAX_RUNTIME_CONTEXT_LENGTH) {
     return `${label} must be bounded JSON`;
   }
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(value) as unknown;
-    if (!isRecord(parsed)) return `${label} must be a JSON object`;
+    parsed = JSON.parse(value) as unknown;
   } catch {
     return `${label} must be valid JSON`;
   }
+  if (!isRecord(parsed)) return `${label} must be a JSON object`;
+  const notices = parsed.pendingNotices;
+  if (
+    notices !== undefined &&
+    (!Array.isArray(notices) ||
+      notices.length > PET_PENDING_NOTICES_MAX ||
+      !notices.every(isPendingNotice))
+  )
+    return `${label}.pendingNotices is invalid`;
   return null;
 }
 
