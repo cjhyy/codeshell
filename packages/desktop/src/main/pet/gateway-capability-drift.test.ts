@@ -6,8 +6,8 @@
 // every real channel: Mimi loses Gateway discovery on IM turns and the only clue
 // is "contains an invalid Gateway capability catalog".
 //
-// That has now happened twice (`proactive`, then `direct`). Neither package can
-// import the other — pet must not depend on a host/product package — so the
+// That has now happened three times (`proactive`, `direct`, then
+// `idempotentSend`). Neither package can import the other — pet must not depend on a host/product package — so the
 // contract cannot be expressed as a shared type. Desktop depends on both, so it
 // is the one place the two shapes can actually be compared.
 //

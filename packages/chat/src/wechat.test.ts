@@ -417,6 +417,57 @@ describe("personal WeChat ClawBot", () => {
     expect(restartedBodies[0]?.msg).not.toHaveProperty("context_token");
   });
 
+  test("derives every chunk's client id from a caller id and reuses it on stale retry", async () => {
+    const store = memoryStore({ contextTokens: { "owner-user": "stale-context" } });
+    const bodies: Record<string, any>[] = [];
+    let sendCalls = 0;
+    const adapter = new WechatAdapter(
+      { accountId: "abc-im-bot", token: "bot-secret" },
+      {
+        stateStore: store,
+        fetch: async (input, init) => {
+          if (String(input).endsWith("/ilink/bot/sendmessage")) {
+            bodies.push(JSON.parse(String(init?.body)));
+            sendCalls += 1;
+            // First chunk hits a stale context; everything after succeeds.
+            return sendCalls === 1
+              ? Response.json({ ret: 1, errmsg: "prepare failed" })
+              : Response.json({ ret: 0 });
+          }
+          throw new Error(`unexpected request: ${String(input)}`);
+        },
+      },
+    );
+
+    await adapter.send(
+      "owner-user",
+      { text: `${"a".repeat(8_000)}b` },
+      { clientId: "code-shell-notice-abc" },
+    );
+
+    expect(bodies.map((body) => body.msg.client_id)).toEqual([
+      "code-shell-notice-abc-0",
+      "code-shell-notice-abc-0",
+      "code-shell-notice-abc-1",
+    ]);
+    expect(bodies[0]?.msg.context_token).toBe("stale-context");
+    expect(bodies[1]?.msg).not.toHaveProperty("context_token");
+
+    // A replay with the same caller id produces the same platform ids, which
+    // is what lets the platform deduplicate a resend.
+    bodies.length = 0;
+    await adapter.send("owner-user", { text: "短消息" }, { clientId: "code-shell-notice-abc" });
+    expect(bodies.map((body) => body.msg.client_id)).toEqual(["code-shell-notice-abc-0"]);
+
+    // Without a caller id each send keeps its own random ids.
+    bodies.length = 0;
+    await adapter.send("owner-user", { text: "一" });
+    await adapter.send("owner-user", { text: "二" });
+    expect(bodies[0]?.msg.client_id).toMatch(/^code-shell-chat-/u);
+    expect(bodies[1]?.msg.client_id).toMatch(/^code-shell-chat-/u);
+    expect(bodies[0]?.msg.client_id).not.toBe(bodies[1]?.msg.client_id);
+  });
+
   test("keeps the tokenless fallback available when stale-state persistence fails", async () => {
     const bodies: Record<string, any>[] = [];
     const logs: string[] = [];

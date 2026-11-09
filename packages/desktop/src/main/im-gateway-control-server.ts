@@ -178,6 +178,8 @@ export interface PetChatControlChannelCapabilities {
     proactive?: boolean;
     /** Fresh-adapter send support. Optional for legacy Gateway clients. */
     direct?: boolean;
+    /** Platform-deduplicated resend with a caller id. Optional for legacy Gateway clients. */
+    idempotentSend?: boolean;
     maxTextLength?: number;
     button: "native" | "link";
     attachments: PetChatControlAttachmentKind[];
@@ -1356,6 +1358,7 @@ function sameChannelCapabilities(
     left.inbound.attachments.join("\0") === right.inbound.attachments.join("\0") &&
     left.outbound.proactive === right.outbound.proactive &&
     left.outbound.direct === right.outbound.direct &&
+    left.outbound.idempotentSend === right.outbound.idempotentSend &&
     left.outbound.maxTextLength === right.outbound.maxTextLength &&
     left.outbound.button === right.outbound.button &&
     left.outbound.attachments.join("\0") === right.outbound.attachments.join("\0") &&
@@ -1377,6 +1380,7 @@ function parseChannelCapabilities(value: unknown): PetChatControlChannelCapabili
       text: true,
       ...(outbound.proactive === undefined ? {} : { proactive: outbound.proactive }),
       ...(outbound.direct === undefined ? {} : { direct: outbound.direct }),
+      ...(outbound.idempotentSend === undefined ? {} : { idempotentSend: outbound.idempotentSend }),
       ...(outbound.maxTextLength === undefined ? {} : { maxTextLength: outbound.maxTextLength }),
       button: outbound.button!,
       attachments: outbound.attachments,
@@ -1396,6 +1400,7 @@ function parseCapabilityDirection(
   button?: "native" | "link";
   proactive?: boolean;
   direct?: boolean;
+  idempotentSend?: boolean;
   maxTextLength?: number;
   maxAttachments?: number;
   maxAttachmentBytes?: number;
@@ -1411,6 +1416,7 @@ function parseCapabilityDirection(
         "button",
         "proactive",
         "direct",
+        "idempotentSend",
         "maxTextLength",
         "maxAttachments",
         "maxAttachmentBytes",
@@ -1429,6 +1435,8 @@ function parseCapabilityDirection(
     (!outbound && record.button !== undefined) ||
     (record.proactive !== undefined && (!outbound || typeof record.proactive !== "boolean")) ||
     (record.direct !== undefined && (!outbound || typeof record.direct !== "boolean")) ||
+    (record.idempotentSend !== undefined &&
+      (!outbound || typeof record.idempotentSend !== "boolean")) ||
     (record.maxTextLength !== undefined &&
       (!outbound ||
         !Number.isSafeInteger(record.maxTextLength) ||
@@ -1452,6 +1460,9 @@ function parseCapabilityDirection(
     ...(outbound ? { button: record.button as "native" | "link" } : {}),
     ...(typeof record.proactive === "boolean" ? { proactive: record.proactive } : {}),
     ...(typeof record.direct === "boolean" ? { direct: record.direct } : {}),
+    ...(typeof record.idempotentSend === "boolean"
+      ? { idempotentSend: record.idempotentSend }
+      : {}),
     ...(typeof record.maxTextLength === "number" ? { maxTextLength: record.maxTextLength } : {}),
     ...(typeof record.maxAttachments === "number" ? { maxAttachments: record.maxAttachments } : {}),
     ...(typeof record.maxAttachmentBytes === "number"

@@ -208,6 +208,12 @@ describe("outbound proactive and direct capabilities", () => {
     expect(parsePetGatewayCatalog(withOutbound({ proactive: "yes" }))).toBeUndefined();
     expect(parsePetGatewayCatalog(withOutbound({ proactive: 1 }))).toBeUndefined();
     expect(parsePetGatewayCatalog(withOutbound({ direct: "yes" }))).toBeUndefined();
+    expect(parsePetGatewayCatalog(withOutbound({ idempotentSend: "yes" }))).toBeUndefined();
+  });
+
+  test("idempotentSend is accepted and carried through", () => {
+    const catalog = parsePetGatewayCatalog(withOutbound({ idempotentSend: true }));
+    expect(catalog?.channels[0]?.capabilities.outbound.idempotentSend).toBe(true);
   });
 
   test("direct is carried through and available to capability search", async () => {

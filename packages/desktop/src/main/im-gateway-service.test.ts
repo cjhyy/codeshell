@@ -960,7 +960,7 @@ describe("ImGatewayService", () => {
     await service.stop();
   });
 
-  test("hides WeChat proactive targets until an inbound message provides context", async () => {
+  test("lists WeChat targets without inbound context as unknown instead of hiding them", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-wechat-context-"));
     const configPath = join(root, "config.json");
     const credentialsDir = join(root, "wechat-credentials");
@@ -984,7 +984,12 @@ describe("ImGatewayService", () => {
     );
     const service = new ImGatewayService({ configPath });
 
-    expect(service.listOwnerMessageTargets()).toEqual([]);
+    const unknown = service.listOwnerMessageTargets();
+    expect(unknown).toHaveLength(1);
+    expect(unknown[0]).toMatchObject({ channel: "wechat", proactiveReady: "unknown" });
+    expect(service.ownerChannels()).toEqual([
+      { id: "wechat", label: "微信", ready: "unknown", targetId: unknown[0]!.id },
+    ]);
     expect(
       service.status().channelStatuses.find(({ channel }) => channel === "wechat"),
     ).toMatchObject({
@@ -994,15 +999,20 @@ describe("ImGatewayService", () => {
     await credentialStore.stateStore(credentials.accountId).save({
       contextTokens: { "wechat-owner": "fresh-context" },
     });
-    expect(service.listOwnerMessageTargets()).toHaveLength(1);
+    expect(service.listOwnerMessageTargets()).toEqual([
+      { ...unknown[0]!, proactiveReady: "ready" },
+    ]);
+    expect(service.ownerChannels()).toEqual([
+      { id: "wechat", label: "微信", ready: "ready", targetId: unknown[0]!.id },
+    ]);
     expect(
       service.status().channelStatuses.find(({ channel }) => channel === "wechat"),
     ).toMatchObject({ proactiveReady: true });
     await credentialStore.stateStore(credentials.accountId).save({ contextTokens: {} });
-    expect(service.listOwnerMessageTargets()).toEqual([]);
+    expect(service.listOwnerMessageTargets()).toEqual(unknown);
   });
 
-  test("removes a WeChat Mimi destination after a failed send invalidates its context", async () => {
+  test("downgrades a WeChat Mimi destination to unknown after a failed send invalidates its context", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-wechat-stale-context-"));
     const configPath = join(root, "config.json");
     const credentialsDir = join(root, "wechat-credentials");
@@ -1047,8 +1057,9 @@ describe("ImGatewayService", () => {
 
     const target = service.listOwnerMessageTargets()[0];
     if (!target) throw new Error("missing context-bound WeChat target");
+    expect(target.proactiveReady).toBe("ready");
     await expect(service.sendOwnerMessage(target.id, "测试消息")).rejects.toThrow("prepare failed");
-    expect(service.listOwnerMessageTargets()).toEqual([]);
+    expect(service.listOwnerMessageTargets()).toEqual([{ ...target, proactiveReady: "unknown" }]);
     expect(
       service.status().channelStatuses.find(({ channel }) => channel === "wechat"),
     ).toMatchObject({
@@ -1094,13 +1105,193 @@ describe("ImGatewayService", () => {
     });
 
     expect(service.listOwnerMessageTargets()).toEqual([]);
+    expect(service.ownerChannels()).toEqual([
+      { id: "discord", label: "Discord", ready: "unavailable" },
+    ]);
     try {
       await service.start();
       expect(service.listOwnerMessageTargets()).toHaveLength(1);
+      expect(service.ownerChannels()).toEqual([
+        {
+          id: "discord",
+          label: "Discord",
+          ready: "ready",
+          targetId: service.listOwnerMessageTargets()[0]!.id,
+        },
+      ]);
     } finally {
       await service.stop();
     }
     expect(service.listOwnerMessageTargets()).toEqual([]);
+    expect(service.ownerChannels()).toEqual([
+      { id: "discord", label: "Discord", ready: "unavailable" },
+    ]);
+  });
+
+  test("passes an idempotency key as the client id only to idempotent channels", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-idempotent-send-"));
+    const configPath = join(root, "config.json");
+    const credentialsDir = join(root, "wechat-credentials");
+    const credentialStore = new FileWechatCredentialStore(credentialsDir);
+    const credentials = credentialStore.save({
+      accountId: "wechat-account",
+      token: "wechat-token",
+      baseUrl: "https://ilinkai.weixin.qq.com",
+      userId: "wechat-owner",
+    });
+    await credentialStore.stateStore(credentials.accountId).save({
+      contextTokens: { "wechat-owner": "fresh-context" },
+    });
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        telegram: { botToken: "test-token", allowedChatIds: ["owner-chat"], allowedUserIds: [] },
+        wechat: { enabled: true, accountId: credentials.accountId, credentialsDir },
+        runtime: {
+          lockPath: join(root, "gateway.lock"),
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath: join(root, "events.json"),
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const sent: Array<{ channel: string; text: string; options: unknown }> = [];
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (channel) => ({
+        channel: channel.channel,
+        run: async () => undefined,
+        send: async (_target, message, options) => {
+          sent.push({ channel: channel.channel, text: message.text, options });
+        },
+      }),
+    });
+    const targets = service.listOwnerMessageTargets();
+    const wechat = targets.find((target) => target.channel === "wechat")!;
+    const telegram = targets.find((target) => target.channel === "telegram")!;
+    expect(service.supportsIdempotentOwnerSend("wechat")).toBe(true);
+    expect(service.supportsIdempotentOwnerSend("telegram")).toBe(false);
+    expect(service.supportsIdempotentOwnerSend("unknown-channel")).toBe(false);
+
+    await service.sendOwnerMessage(wechat.id, "微信通知", { idempotencyKey: "abc123" });
+    await service.sendOwnerMessage(wechat.id, "带附件签名", [], { idempotencyKey: "abc123" });
+    await service.sendOwnerMessage(telegram.id, "电报通知", { idempotencyKey: "abc123" });
+    await service.sendOwnerMessage(wechat.id, "无键");
+    await expect(
+      service.sendOwnerMessage(wechat.id, "坏键", { idempotencyKey: "bad key!" }),
+    ).rejects.toThrow("幂等键");
+
+    expect(sent).toEqual([
+      { channel: "wechat", text: "微信通知", options: { clientId: "code-shell-notice-abc123" } },
+      { channel: "wechat", text: "带附件签名", options: { clientId: "code-shell-notice-abc123" } },
+      { channel: "telegram", text: "电报通知", options: undefined },
+      { channel: "wechat", text: "无键", options: undefined },
+    ]);
+  });
+
+  test("reports one owner channel entry per bound channel", () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-owner-channels-"));
+    const configPath = join(root, "config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        telegram: {
+          botToken: "test-token",
+          allowedChatIds: ["owner-chat", "second-chat"],
+          allowedUserIds: [],
+        },
+        slack: { enabled: false, botToken: "xoxb-test", allowedChannelIds: ["C1"] },
+        runtime: {
+          lockPath: join(root, "gateway.lock"),
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath: join(root, "events.json"),
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const service = new ImGatewayService({ configPath });
+    const targets = service.listOwnerMessageTargets();
+    expect(targets.map((target) => target.label)).toEqual(["Telegram 1", "Telegram 2"]);
+    expect(service.ownerChannels()).toEqual([
+      { id: "telegram", label: "Telegram", ready: "ready", targetId: targets[0]!.id },
+    ]);
+    expect(
+      new ImGatewayService({ configPath: join(root, "missing.json") }).ownerChannels(),
+    ).toEqual([]);
+  });
+
+  test("remembers the channel of the last accepted owner inbound message across restarts", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-last-inbound-"));
+    const configPath = join(root, "config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        telegram: { botToken: "test-token", allowedChatIds: ["owner-chat"], allowedUserIds: [] },
+        desktop: {
+          autoLaunch: false,
+          descriptorPath: join(root, "missing-desktop-control.json"),
+        },
+        runtime: {
+          lockPath: join(root, "gateway.lock"),
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath: join(root, "events.json"),
+          adapterRestartBaseMs: 5,
+          adapterRestartMaxMs: 5,
+        },
+      }),
+      { mode: 0o600 },
+    );
+    let handler: ChannelMessageHandler | undefined;
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (channel) => ({
+        channel: channel.channel,
+        run: async (next, signal) => {
+          handler = next;
+          if (signal.aborted) return;
+          await new Promise<void>((resolveDone) =>
+            signal.addEventListener("abort", () => resolveDone(), { once: true }),
+          );
+        },
+        send: async () => undefined,
+      }),
+    });
+
+    expect(service.lastOwnerInboundChannel()).toBeUndefined();
+    try {
+      await service.start();
+      if (!handler) throw new Error("adapter did not receive a handler");
+      // Not allowlisted: rejected before the activity middleware.
+      await handler({
+        channel: "telegram",
+        target: "stranger-chat",
+        senderId: "stranger",
+        text: "你好",
+      });
+      await new Promise((resolveWait) => setTimeout(resolveWait, 50));
+      expect(service.lastOwnerInboundChannel()).toBeUndefined();
+
+      await handler({
+        channel: "telegram",
+        target: "owner-chat",
+        senderId: "owner",
+        text: "在吗",
+        messageId: "owner-message-1",
+      });
+      const deadline = Date.now() + 2_000;
+      while (service.lastOwnerInboundChannel() === undefined && Date.now() < deadline) {
+        await new Promise((resolveWait) => setTimeout(resolveWait, 10));
+      }
+      expect(service.lastOwnerInboundChannel()).toBe("telegram");
+    } finally {
+      await service.stop();
+    }
+
+    const restarted = new ImGatewayService({ configPath });
+    expect(restarted.lastOwnerInboundChannel()).toBe("telegram");
+    if (process.platform !== "win32") {
+      expect(statSync(join(root, "owner-inbound.json")).mode & 0o777).toBe(0o600);
+    }
   });
 
   test("starts configured channels only after the owning Desktop control plane is ready", async () => {

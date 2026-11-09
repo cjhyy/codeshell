@@ -27,6 +27,11 @@ export interface PetGatewayChannelCapabilities {
     proactive?: boolean;
     /** Whether send works without an active Gateway polling loop. */
     direct?: boolean;
+    /**
+     * Whether a resend with the same caller id is deduplicated by the platform.
+     * Mirrors `ChannelCapabilities.outbound.idempotentSend`; host-side only.
+     */
+    idempotentSend?: boolean;
     maxTextLength?: number;
     button: "native" | "link";
     attachments: readonly PetGatewayAttachmentKind[];
@@ -257,6 +262,7 @@ function parseCapabilities(value: unknown): PetGatewayChannelCapabilities | unde
           // lost Gateway discovery on IM turns.
           "proactive",
           "direct",
+          "idempotentSend",
           "maxTextLength",
           "button",
           "attachments",
@@ -286,6 +292,8 @@ function parseCapabilities(value: unknown): PetGatewayChannelCapabilities | unde
   if (proactive !== undefined && typeof proactive !== "boolean") return undefined;
   const direct = value.outbound.direct;
   if (direct !== undefined && typeof direct !== "boolean") return undefined;
+  const idempotentSend = value.outbound.idempotentSend;
+  if (idempotentSend !== undefined && typeof idempotentSend !== "boolean") return undefined;
   return Object.freeze({
     inbound: Object.freeze({ text: true as const, attachments: inboundAttachments }),
     outbound: Object.freeze({
@@ -294,6 +302,7 @@ function parseCapabilities(value: unknown): PetGatewayChannelCapabilities | unde
       // the kind of thing Mimi must not assume.
       ...(proactive === undefined ? {} : { proactive }),
       ...(direct === undefined ? {} : { direct }),
+      ...(idempotentSend === undefined ? {} : { idempotentSend }),
       ...(maxTextLength === undefined ? {} : { maxTextLength }),
       button: value.outbound.button,
       attachments: outboundAttachments,

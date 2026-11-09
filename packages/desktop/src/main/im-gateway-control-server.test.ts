@@ -452,7 +452,7 @@ describe("GatewayControlServer", () => {
     await server.stop();
   });
 
-  test("routes Mimi Pet requests with proactive/direct channel capabilities", async () => {
+  test("routes Mimi Pet requests with proactive/direct/idempotent channel capabilities", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-gateway-pet-"));
     roots.push(root);
     let observed: unknown;
@@ -517,6 +517,7 @@ describe("GatewayControlServer", () => {
         text: true as const,
         proactive: true,
         direct: true,
+        idempotentSend: true,
         maxTextLength: 8_000,
         button: "native" as const,
         attachments: [] as const,

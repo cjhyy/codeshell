@@ -13,7 +13,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import type { IpcMain } from "electron";
 import { CredentialStore, type Credential } from "@cjhyy/code-shell-core";
 import { acquireFileLock } from "@cjhyy/code-shell-core/internal";
@@ -210,6 +210,31 @@ export interface ImGatewayOwnerTarget {
   attachments: readonly ChatAttachmentKind[];
   maxAttachments: number;
   maxAttachmentBytes: number;
+  /**
+   * "unknown" means a send is attempted but its platform prerequisite is not
+   * proven (WeChat without a stored inbound context token); the send reports
+   * the real outcome instead of the target being hidden.
+   */
+  proactiveReady: "ready" | "unknown";
+}
+
+export type ImGatewayOwnerChannelReadiness = "ready" | "unknown" | "unavailable";
+
+/** One bound channel (at least one allowlisted owner target) and how sendable it is now. */
+export interface ImGatewayOwnerChannel {
+  id: ImGatewayChannel;
+  label: string;
+  ready: ImGatewayOwnerChannelReadiness;
+  /** Owner target to use for this channel; absent while the channel is unavailable. */
+  targetId?: string;
+}
+
+export interface ImGatewayOwnerSendOptions {
+  /**
+   * Caller-stable key for a resend-safe delivery. Only channels declaring
+   * outbound.idempotentSend receive it (as the platform client id); others ignore it.
+   */
+  idempotencyKey?: string;
 }
 
 interface PendingVerification {
@@ -230,6 +255,10 @@ const MAX_GATEWAY_CONFIG_BYTES = 4 * 1024 * 1024;
 const MAX_SETUP_LIST_ITEMS = 1_000;
 const MAX_SETUP_VALUE_CHARS = 4_096;
 const MAX_SETUP_SECRET_CHARS = 64 * 1024;
+/** Sidecar next to the gateway config remembering the owner's last inbound channel. */
+const OWNER_INBOUND_STATE_FILE = "owner-inbound.json";
+const MAX_OWNER_INBOUND_STATE_BYTES = 4 * 1024;
+const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_-]{1,64}$/u;
 
 function resolveCredentialStore(
   credentialStore?: ImGatewayCredentialStore,
@@ -307,6 +336,8 @@ export class ImGatewayService {
   private startingAdapters = false;
   /** Serializes host delivery ownership and the polling-Gateway start hand-off. */
   private deliveryHandoffTail: Promise<void> = Promise.resolve();
+  /** Lazily restored from the sidecar file; undefined channel = never recorded. */
+  private ownerInbound?: { channel?: ImGatewayChannel };
 
   constructor(private readonly options: ImGatewayServiceOptions = {}) {
     this.configPath = resolve(
@@ -669,22 +700,95 @@ export class ImGatewayService {
       // host-side one-shot callers while the polling Gateway is stopped.
       if (!this.active?.adapters.has(channel.channel) && !capabilities.outbound.direct) return [];
       const maxTextLength = Math.min(capabilities.outbound.maxTextLength ?? 8_000, 8_000);
-      return channel.allowedTargetIds.flatMap((target, index) =>
-        hasRequiredProactiveContext(channel, target)
-          ? [
-              {
-                id: ownerTargetId(channel.channel, target),
-                channel: channel.channel,
-                label: `${channelDisplayName(channel.channel)}${channel.allowedTargetIds.length > 1 ? ` ${index + 1}` : ""}`,
-                maxTextLength,
-                attachments: capabilities.outbound.attachments,
-                maxAttachments: capabilities.outbound.maxAttachments ?? 0,
-                maxAttachmentBytes: capabilities.outbound.maxAttachmentBytes ?? 0,
-              },
-            ]
-          : [],
-      );
+      // A WeChat target without a stored inbound context stays listed as
+      // "unknown": the tokenless send is best-effort and reports its real
+      // result, which beats hiding the only owner destination.
+      return channel.allowedTargetIds.map((target, index) => ({
+        id: ownerTargetId(channel.channel, target),
+        channel: channel.channel,
+        label: `${channelDisplayName(channel.channel)}${channel.allowedTargetIds.length > 1 ? ` ${index + 1}` : ""}`,
+        maxTextLength,
+        attachments: capabilities.outbound.attachments,
+        maxAttachments: capabilities.outbound.maxAttachments ?? 0,
+        maxAttachmentBytes: capabilities.outbound.maxAttachmentBytes ?? 0,
+        proactiveReady: hasRequiredProactiveContext(channel, target)
+          ? ("ready" as const)
+          : ("unknown" as const),
+      }));
     });
+  }
+
+  /**
+   * Every bound channel (at least one allowlisted owner target) with its
+   * current owner-send readiness. Lifecycle-bound channels are unavailable
+   * while the polling Gateway is stopped; WeChat without a stored inbound
+   * context is unknown. targetId is the first ready owner target, else the
+   * first owner target — the same order listOwnerMessageTargets uses.
+   */
+  ownerChannels(): ImGatewayOwnerChannel[] {
+    if (!existsSync(this.configPath)) return [];
+    let config: ReturnType<typeof loadDesktopGatewayConfig>;
+    try {
+      config = loadDesktopGatewayConfig(this.configPath, this.options.credentialStore);
+    } catch {
+      return [];
+    }
+    const targets = this.listOwnerMessageTargets();
+    return config.channels.flatMap((channel): ImGatewayOwnerChannel[] => {
+      if (channel.allowedTargetIds.length === 0) return [];
+      const base = { id: channel.channel, label: channelDisplayName(channel.channel) };
+      const listed = targets.filter((target) => target.channel === channel.channel);
+      // listOwnerMessageTargets already drops non-proactive channels and
+      // lifecycle-bound ones without a running adapter.
+      const selected = listed.find((target) => target.proactiveReady === "ready") ?? listed[0];
+      if (!selected) return [{ ...base, ready: "unavailable" }];
+      // A running adapter in restart backoff may or may not accept a send.
+      const adapterBackingOff =
+        this.active?.adapters.has(channel.channel) &&
+        this.adapterStates.get(channel.channel)?.state === "backoff";
+      const ready: ImGatewayOwnerChannelReadiness =
+        selected.proactiveReady === "unknown" || adapterBackingOff ? "unknown" : "ready";
+      return [{ ...base, ready, targetId: selected.id }];
+    });
+  }
+
+  /** Whether owner sends on this channel honour ImGatewayOwnerSendOptions.idempotencyKey. */
+  supportsIdempotentOwnerSend(channel: string): boolean {
+    return (
+      isImGatewayChannel(channel) &&
+      BUILTIN_CHANNEL_CAPABILITIES[channel].outbound.idempotentSend === true
+    );
+  }
+
+  /**
+   * Channel of the most recent inbound message accepted from an allowlisted
+   * owner, persisted beside the gateway config so it survives restarts.
+   */
+  lastOwnerInboundChannel(): ImGatewayChannel | undefined {
+    return this.loadOwnerInbound().channel;
+  }
+
+  private loadOwnerInbound(): { channel?: ImGatewayChannel } {
+    if (!this.ownerInbound) {
+      this.ownerInbound = { channel: readOwnerInboundChannel(this.ownerInboundStatePath()) };
+    }
+    return this.ownerInbound;
+  }
+
+  private noteOwnerInbound(channel: ImGatewayChannel): void {
+    const current = this.loadOwnerInbound();
+    if (current.channel === channel) return;
+    current.channel = channel;
+    try {
+      writeOwnerInboundChannel(this.ownerInboundStatePath(), channel);
+    } catch {
+      // A routing hint, not delivery state: the in-memory value still serves
+      // this process and the next accepted inbound message retries the write.
+    }
+  }
+
+  private ownerInboundStatePath(): string {
+    return join(dirname(this.configPath), OWNER_INBOUND_STATE_FILE);
   }
 
   private isNotificationTargetAuthorized(target: { channel: string; target: string }): boolean {
@@ -695,16 +799,38 @@ export class ImGatewayService {
     );
   }
 
+  sendOwnerMessage(
+    targetId: string,
+    text: string,
+    options?: ImGatewayOwnerSendOptions,
+  ): Promise<ImGatewayOwnerTarget>;
+  sendOwnerMessage(
+    targetId: string,
+    text: string,
+    attachments?: readonly OutgoingAttachment[],
+    options?: ImGatewayOwnerSendOptions,
+  ): Promise<ImGatewayOwnerTarget>;
   async sendOwnerMessage(
     targetId: string,
     text: string,
-    attachments: readonly OutgoingAttachment[] = [],
+    attachmentsOrOptions: readonly OutgoingAttachment[] | ImGatewayOwnerSendOptions = [],
+    maybeOptions: ImGatewayOwnerSendOptions = {},
   ): Promise<ImGatewayOwnerTarget> {
+    const attachments = Array.isArray(attachmentsOrOptions)
+      ? (attachmentsOrOptions as readonly OutgoingAttachment[])
+      : [];
+    const options = Array.isArray(attachmentsOrOptions)
+      ? maybeOptions
+      : (attachmentsOrOptions as ImGatewayOwnerSendOptions);
+    const idempotencyKey = options.idempotencyKey;
+    if (idempotencyKey !== undefined && !IDEMPOTENCY_KEY_PATTERN.test(idempotencyKey)) {
+      throw new Error("幂等键格式无效");
+    }
     const selected = this.listOwnerMessageTargets().find((target) => target.id === targetId);
     if (!selected) throw new Error("消息目标未授权、已移除或 Gateway 尚未运行");
     return this.enqueueDeliveryHandoff(() =>
       this.withOwnerSendLock(selected.channel, () =>
-        this.sendOwnerMessageInOrder(targetId, text, attachments),
+        this.sendOwnerMessageInOrder(targetId, text, attachments, idempotencyKey),
       ),
     );
   }
@@ -825,6 +951,7 @@ export class ImGatewayService {
     targetId: string,
     text: string,
     attachments: readonly OutgoingAttachment[],
+    idempotencyKey?: string,
   ): Promise<ImGatewayOwnerTarget> {
     // If Gateway construction claimed delivery first, wait and use its live
     // adapter. When this send claimed first, startInOrder waits on the hand-off
@@ -905,11 +1032,19 @@ export class ImGatewayService {
       }
     }
     const requestId = randomUUID();
+    // Only an idempotent channel turns the key into platform message ids; a
+    // non-idempotent adapter would ignore it anyway, so do not pass it.
+    const sendOptions =
+      idempotencyKey !== undefined && this.supportsIdempotentOwnerSend(selected.channel)
+        ? { clientId: `code-shell-notice-${idempotencyKey}` }
+        : undefined;
     try {
-      await adapter.send(rawTarget, {
+      const outgoing = {
         text: normalized,
         ...(attachments.length > 0 ? { attachments } : {}),
-      });
+      };
+      if (sendOptions) await adapter.send(rawTarget, outgoing, sendOptions);
+      else await adapter.send(rawTarget, outgoing);
       this.recordActivity({
         id: randomUUID(),
         requestId,
@@ -1304,6 +1439,9 @@ export class ImGatewayService {
   }
 
   private recordActivity(activity: ImGatewayActivity): void {
+    // The activity middleware runs after the allowlist, so every inbound entry
+    // is a message accepted from an authorized owner.
+    if (activity.direction === "inbound") this.noteOwnerInbound(activity.channel);
     this.recentActivity.unshift(activity);
     if (this.recentActivity.length > 30) this.recentActivity.length = 30;
     this.emitStatus();
@@ -1383,6 +1521,43 @@ function ownerTargetId(channel: ImGatewayChannel, target: string): string {
 function hasRequiredProactiveContext(channel: ConfiguredChannel, target: string): boolean {
   if (channel.channel !== "wechat") return true;
   return hasWechatStoredContextToken(channel.statePath, target);
+}
+
+function readOwnerInboundChannel(path: string): ImGatewayChannel | undefined {
+  let fd: number | undefined;
+  try {
+    const entry = lstatSync(path);
+    if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_OWNER_INBOUND_STATE_BYTES) {
+      return undefined;
+    }
+    fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = fstatSync(fd);
+    if (!opened.isFile() || opened.size > MAX_OWNER_INBOUND_STATE_BYTES) return undefined;
+    const channel = readRecord(JSON.parse(readFileSync(fd, "utf8")) as unknown).channel;
+    return typeof channel === "string" && isImGatewayChannel(channel) ? channel : undefined;
+  } catch {
+    // Missing or unreadable hint: behave as if no owner message was seen yet.
+    return undefined;
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
+}
+
+function writeOwnerInboundChannel(path: string, channel: ImGatewayChannel): void {
+  // Same owner-only temp+rename discipline as the config file. A single
+  // last-writer-wins scalar, so atomic replacement is all it needs.
+  assertSafeGatewayConfigTarget(path);
+  const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(temporary, `${JSON.stringify({ version: 1, channel })}\n`, {
+      encoding: "utf8",
+      mode: 0o600,
+      flag: "wx",
+    });
+    renameSync(temporary, path);
+  } finally {
+    rmSync(temporary, { force: true });
+  }
 }
 
 function channelDisplayName(channel: ImGatewayChannel): string {
