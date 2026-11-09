@@ -187,7 +187,10 @@ export interface PetNoticeWiring {
   receipts: PetReceiptStore;
   /** The router as pet IPC sees it; also records which Session the owner is viewing. */
   attention: PetIpcAttention;
-  /** Stores loaded and startup recovery kicked off. */
+  /**
+   * Stores loaded. Startup recovery then runs in the background; the
+   * router's submit, replay and digest flush wait for it themselves.
+   */
   ready: Promise<void>;
   /** Feed one top-level Session stream event (from the bridge's outbound tap). */
   observeSessionEvent(sessionId: string, event: unknown): void;
@@ -919,8 +922,13 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const removeHostAction = deps.bridge.setHostActionHandler(PET_RULE_UPSERT_ACTION, upsertRule);
 
   const ready: Promise<void> = Promise.all([ruleStore.load(), ledger.load(), receipts.load()])
-    .then(() => router.recover())
+    .then(() => undefined)
     .catch((error) => log("pet.notice.load_failed", { error: errorText(error) }));
+  // In the background: a slow resend (up to the IM timeout) must not hold up
+  // startup. The router's own submit / replay / flush wait for it.
+  void ready
+    .then(() => router.recover())
+    .catch((error) => log("pet.notice.recover_failed", { error: errorText(error) }));
 
   let disposed = false;
   /** Send held notices that are due now (their timer may have slept through it). */

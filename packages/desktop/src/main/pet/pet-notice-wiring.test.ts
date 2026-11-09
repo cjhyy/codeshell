@@ -10,6 +10,7 @@ import type { HostActionHandler } from "../host-action-dispatch.js";
 import type { GatewayControlEventInput } from "../im-gateway-control-server.js";
 import type { ImGatewayOwnerChannel } from "../im-gateway-service.js";
 import { collectImDecisions, PetImDecisions } from "./pet-im-decisions.js";
+import { PetNoticeLedger } from "./pet-notice-ledger.js";
 import type { NoticeSubmission } from "./pet-notice-router.js";
 import type { PetReusableSessionCandidate } from "./pet-dispatch-service.js";
 import {
@@ -1083,6 +1084,52 @@ function decisionRelay(h: Harness) {
 const OWNER_DM = { channel: "wechat", target: "owner-dm", senderId: "me", isDirectMessage: true };
 /** Presence is re-read after the settings cache (5 s) expires. */
 const SETTINGS_TTL = 5_001;
+
+describe("startup", () => {
+  test("a hanging resend during recovery does not hold up ready", async () => {
+    // A young claim from before the restart, on an idempotent channel: recovery resends it.
+    const before = new PetNoticeLedger({
+      path: join(dir, "pet", "notices.json"),
+      now: () => clock,
+    });
+    const record = await before.record({
+      kind: "session.done",
+      priority: "P1",
+      dedupeKey: "done:before-restart",
+      ruleIds: [],
+      facts: { title: "旧任务", target: { kind: "owner" } },
+      body: "「旧任务」做完了",
+      decision: { outlet: "im", im: "wechat", reason: "away-last-inbound" },
+    });
+    await before.claim(record.id, "wechat", "「旧任务」做完了");
+    await before.flush();
+    clock = NOW + 60_000;
+    const attempts: string[] = [];
+    current = harness({
+      imTimeoutMs: 60_000,
+      gateway: {
+        ownerChannels: () => [
+          { id: "wechat", label: "微信", ready: "ready", targetId: "wechat:owner", isDirect: true },
+        ],
+        listOwnerMessageTargets: () => [],
+        sendOwnerMessage: (_targetId, text) => {
+          attempts.push(text);
+          return new Promise(() => undefined);
+        },
+        supportsIdempotentOwnerSend: () => true,
+        lastOwnerInboundChannel: () => "wechat",
+        isOwnerConversation: () => false,
+      },
+    });
+    const outcome = await Promise.race([
+      current.wiring.ready.then(() => "ready"),
+      pause(1_000).then(() => "blocked"),
+    ]);
+    expect(outcome).toBe("ready");
+    await settle(() => attempts.length > 0);
+    expect(attempts).toEqual(["「旧任务」做完了"]);
+  });
+});
 
 describe("digest after sleep", () => {
   test("waking, unlocking and the owner's next inbound turn send a due digest", async () => {
