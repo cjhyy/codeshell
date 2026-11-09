@@ -1390,18 +1390,21 @@ export function useRunController({
 
   // Extend the running goal (TODO 3.1). Fired by the "approaching limit" extend
   // button; opts target whichever ceiling is closest (turns or stop-blocks).
-  const extendGoal = (opts: {
-    addTurns?: number;
-    addStopBlocks?: number;
-    addTokenBudget?: number;
-    addTimeBudgetMs?: number;
-  }): void => {
-    const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);
-    if (!engineSessionId) return;
-    void window.codeshell
-      .goalExtend(engineSessionId, opts)
-      .catch((e) => window.codeshell.log("goal.extend.failed", { error: String(e) }));
-  };
+  const extendGoal = useCallback(
+    (opts: {
+      addTurns?: number;
+      addStopBlocks?: number;
+      addTokenBudget?: number;
+      addTimeBudgetMs?: number;
+    }): void => {
+      const engineSessionId = resolveEngineSessionIdForBucket(activeBucket);
+      if (!engineSessionId) return;
+      void window.codeshell
+        .goalExtend(engineSessionId, opts)
+        .catch((e) => window.codeshell.log("goal.extend.failed", { error: String(e) }));
+    },
+    [activeBucket, resolveEngineSessionIdForBucket],
+  );
 
   const decideEnvelope = (
     env: ApprovalRequestEnvelope,

@@ -6,6 +6,7 @@ import type { SessionTranscriptPage } from "../../preload/types";
 import { mergeHistoryWindows } from "./mergeHistoryWindows";
 import { useIdleTranscriptEviction } from "./useIdleTranscriptEviction";
 import { foldTranscript } from "../automation/foldTranscript";
+import { mergeHistoryIntoLive } from "../automation/hydrateOrder";
 import { selectReplayEvents, snapshotHasUnfinishedTopLevelTurn } from "../snapshotReplay";
 import {
   bucketKey,
@@ -17,7 +18,7 @@ import {
 } from "../transcripts";
 import { subscribeSessionPersistenceFlush } from "../sessionPersistence";
 import type { TranscriptsAction, TranscriptsMap } from "../transcriptsReducer";
-import { applyStreamEvent, INITIAL_STATE, type MessagesReducerState } from "../types";
+import { applyStreamEvent, INITIAL_STATE, type Message, type MessagesReducerState } from "../types";
 import { adoptPersistedGoalProgress } from "../goalClock";
 import {
   hasTranscriptRecovery,
@@ -30,6 +31,7 @@ import type { SequencedStreamEvent } from "../streamCoalescer";
 
 export const INITIAL_CHAT_HISTORY_BYTES = 512 * 1024;
 const MAX_CHAT_HISTORY_BYTES = 128 * 1024 * 1024;
+const HISTORY_PREVIEW_WAIT_MS = 400;
 const NO_PROTECTED_BUCKETS = new Set<string>();
 
 interface HistoryPageState {
@@ -38,6 +40,14 @@ interface HistoryPageState {
   hasMore: boolean;
   loading: boolean;
   failed: boolean;
+}
+
+interface HistoryPreview {
+  bucket: string;
+  engineId: string;
+  token: number;
+  state: MessagesReducerState;
+  hasMore: boolean;
 }
 
 async function readHistoryPage(engineId: string, maxBytes: number): Promise<SessionTranscriptPage> {
@@ -50,6 +60,45 @@ async function readHistoryPage(engineId: string, maxBytes: number): Promise<Sess
     loadedBytes: 0,
     hasMore: false,
   };
+}
+
+function readInitialHistory(engineId: string) {
+  const startedAt = performance.now();
+  return Promise.allSettled([
+    readHistoryPage(engineId, INITIAL_CHAT_HISTORY_BYTES).then((page) => ({
+      page,
+      state: foldTranscript(page.items),
+    })),
+  ]).then(([result]) => ({ result, durationMs: Math.round(performance.now() - startedAt) }));
+}
+
+function waitForHistoryPreview(read: ReturnType<typeof readInitialHistory>) {
+  return new Promise<Awaited<typeof read> | undefined>((resolve) => {
+    const timer = setTimeout(() => resolve(undefined), HISTORY_PREVIEW_WAIT_MS);
+    void read.then((result) => {
+      clearTimeout(timer);
+      resolve(result);
+    });
+  });
+}
+
+function allowHistoryPreviewPaint(): Promise<void> | undefined {
+  if (typeof window.requestAnimationFrame !== "function") return;
+  return new Promise((resolve) => {
+    // A hidden/occluded window may stop running animation frames. Never hold
+    // the authoritative live join indefinitely on the presentation yield.
+    let secondFrame: number | undefined;
+    const done = () => {
+      clearTimeout(timer);
+      window.cancelAnimationFrame?.(firstFrame);
+      if (secondFrame !== undefined) window.cancelAnimationFrame?.(secondFrame);
+      resolve();
+    };
+    const timer = setTimeout(done, 80);
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(done);
+    });
+  });
 }
 
 export interface TranscriptBucketsParams {
@@ -81,6 +130,8 @@ export function useTranscriptBuckets({
   protectedBuckets = NO_PROTECTED_BUCKETS,
 }: TranscriptBucketsParams): {
   state: MessagesReducerState;
+  /** An unverified recent page for the chat view while the live join runs. */
+  displayMessages: Message[] | undefined;
   awaitingHydration: boolean;
   historyHasMore: boolean;
   historyLoading: boolean;
@@ -97,6 +148,7 @@ export function useTranscriptBuckets({
   const appliedSeqRef = useRef<Map<string, number>>(new Map());
   const hydratedBucketsRef = useRef(new Map<string, string | undefined>());
   const [historyPages, setHistoryPages] = useState<Record<string, HistoryPageState>>({});
+  const [historyPreview, setHistoryPreview] = useState<HistoryPreview>();
   const historyPagesRef = useRef(historyPages);
   historyPagesRef.current = historyPages;
   const pagingRequestsRef = useRef(new Set<string>());
@@ -272,13 +324,21 @@ export function useTranscriptBuckets({
       ? transcriptsRef.current[bucket].activeGoal
       : local.activeGoal;
     let cancelled = false;
+    let previewClosed = false;
     const canCommit = () =>
       hydrationGenerationsRef.current.get(bucket) === token &&
       (!cancelled || hasBufferedTranscriptRecovery(transcriptsRef.current, bucket, token));
+    const clearPreview = () => {
+      previewClosed = true;
+      setHistoryPreview((preview) =>
+        preview?.bucket === bucket && preview.token === token ? undefined : preview,
+      );
+    };
     setHistoryPages((previous) => ({
       ...previous,
       [bucket]: { engineId, loadedBytes: 0, hasMore: false, loading: true, failed: false },
     }));
+    const startedAt = performance.now();
     window.codeshell.log("session.hydrate.begin", {
       bucket,
       uiSessionId: activeSessionId,
@@ -299,15 +359,82 @@ export function useTranscriptBuckets({
       let page: SessionTranscriptPage | undefined;
       let loadedBytes = INITIAL_CHAT_HISTORY_BYTES;
       let outputCursor: string | undefined;
-      const [persistedResult, canonicalResult] = await Promise.allSettled([
+      // A current bridge can provide a bounded, display-only history page.
+      // A compatibility bridge's unbounded legacy read is a fallback only.
+      // Queue the first visible page before the cache read, but overlap both.
+      const recentRead =
+        engineId &&
+        !freshJournal &&
+        (!window.codeshell.getSessionOutputJournal || window.codeshell.getSessionTranscriptPage)
+          ? readInitialHistory(engineId)
+          : undefined;
+      const persistedRead = Promise.allSettled([
         freshJournal
           ? Promise.resolve({ state: INITIAL_STATE, hasEarlier: false })
           : loadPersistedTranscript(activeProjectId, activeSessionId, INITIAL_CHAT_HISTORY_BYTES),
-        engineId && !freshJournal
-          ? readHistoryPage(engineId, INITIAL_CHAT_HISTORY_BYTES)
-          : Promise.resolve(undefined),
+      ]);
+      let journalResult:
+        | PromiseSettledResult<Awaited<ReturnType<typeof recoverDesktopOutputJournal>>>
+        | undefined;
+      let journalMs: number | undefined;
+      if (engineId && window.codeshell.getSessionOutputJournal) {
+        const publishPreview = (
+          recent: Awaited<ReturnType<typeof readInitialHistory>>,
+          late = false,
+        ) => {
+          if (previewClosed || cancelled || !canCommit() || recent.result.status !== "fulfilled")
+            return false;
+          const { page, state: recentState } = recent.result.value;
+          if (!recentState.messages.length) return false;
+          setHistoryPreview({ bucket, engineId, token, state: recentState, hasMore: page.hasMore });
+          window.codeshell.log("session.hydrate.preview", {
+            bucket,
+            messageCount: recentState.messages.length,
+            readMs: recent.durationMs,
+            late,
+          });
+          return true;
+        };
+        const recent = recentRead ? await waitForHistoryPreview(recentRead) : undefined;
+        if (!canCommit()) return;
+        if (!recent && recentRead) {
+          // The read outlived the preview budget. It can still become visible
+          // during the journal join; don't hold that join for it again.
+          void recentRead.then((result) => publishPreview(result, true));
+        } else if (recent && publishPreview(recent)) {
+          const paint = allowHistoryPreviewPaint();
+          if (paint) await paint;
+          if (!canCommit()) return;
+        }
+        const journalStartedAt = performance.now();
+        [journalResult] = await Promise.allSettled([
+          recoverDesktopOutputJournal({
+            read: (options) => window.codeshell.getSessionOutputJournal!(engineId, options),
+            snapshot: async () => {
+              // Cache metadata is needed for goal reconciliation. Overlap the
+              // read with journal replay, then join the live cursor last.
+              await persistedRead;
+              if (!canCommit()) throw new Error("Output recovery stopped");
+              return window.codeshell.subscribeSession(engineId, 0);
+            },
+            canContinue: canCommit,
+            latestObservedCursor: () =>
+              latestRecoveryOutputCursor(transcriptsRef.current, bucket, token),
+          }),
+        ]);
+        journalMs = Math.round(performance.now() - journalStartedAt);
+      }
+      if (!canCommit()) return;
+      const durable = journalResult?.status === "fulfilled" ? journalResult.value : null;
+      // A verified journal already includes its exact legacy base. Use the
+      // same recent read for a fallback, never to establish verified coverage.
+      const readCanonical = engineId && !freshJournal && !durable;
+      const [[persistedResult], canonical] = await Promise.all([
+        persistedRead,
+        readCanonical ? (recentRead ?? readInitialHistory(engineId)) : undefined,
       ]);
       if (!canCommit()) return;
+      const canonicalResult = canonical?.result;
       if (persistedResult.status === "fulfilled") {
         local = persistedResult.value.state;
         persistedHasEarlier = persistedResult.value.hasEarlier;
@@ -319,32 +446,24 @@ export function useTranscriptBuckets({
           error: String(persistedResult.reason),
         });
       }
-      if (canonicalResult.status === "fulfilled") {
-        page = canonicalResult.value;
-        canonicalHistory = page ? foldTranscript(page.items) : undefined;
-        base = canonicalHistory ? mergeHistoryWindows(canonicalHistory, local) : local;
-        historyLoaded = persistedLoaded;
-      } else {
+      if (canonicalResult?.status === "rejected") {
         base = local;
         window.codeshell.log("session.hydrate.fail", {
           bucket,
           stage: "transcript",
           error: String(canonicalResult.reason),
         });
+      } else {
+        page = canonicalResult?.value.page;
+        canonicalHistory = canonicalResult?.value.state;
+        base = canonicalHistory ? mergeHistoryWindows(canonicalHistory, local) : local;
+        historyLoaded = persistedLoaded;
       }
 
       let state = base;
       if (engineId) {
         try {
-          const durable = window.codeshell.getSessionOutputJournal
-            ? await recoverDesktopOutputJournal({
-                read: (options) => window.codeshell.getSessionOutputJournal!(engineId, options),
-                snapshot: () => window.codeshell.subscribeSession(engineId, 0),
-                canContinue: canCommit,
-                latestObservedCursor: () =>
-                  latestRecoveryOutputCursor(transcriptsRef.current, bucket, token),
-              })
-            : null;
+          if (journalResult?.status === "rejected") throw journalResult.reason;
           if (freshJournal && !durable)
             throw new Error("Recovered history requires the complete output journal");
           if (durable) {
@@ -499,6 +618,7 @@ export function useTranscriptBuckets({
           outputCursor,
           incomplete: snapshotFailed,
         });
+        clearPreview();
         // Existing live buckets already get authoritative busy changes from the
         // host subscription, including a completion during the awaited reads.
         if (snapshotShowsRunning && !transcriptsRef.current[bucket]) {
@@ -514,6 +634,9 @@ export function useTranscriptBuckets({
           bucket,
           messageCount: state.messages.length,
           snapshotSeq: state.snapshotSeq,
+          durationMs: Math.round(performance.now() - startedAt),
+          ...(journalMs !== undefined ? { journalMs } : {}),
+          ...(canonical ? { initialHistoryMs: canonical.durationMs } : {}),
         });
       }
 
@@ -576,6 +699,7 @@ export function useTranscriptBuckets({
     })();
     return () => {
       cancelled = true;
+      clearPreview();
       dispatch({ type: "hydrate_cancel", bucket, token });
     };
   }, [
@@ -699,19 +823,31 @@ export function useTranscriptBuckets({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBucket]);
   const state = transcripts[activeBucket] ?? fallbackState;
+  const activePreview =
+    historyPreview?.bucket === activeBucket &&
+    historyPreview.engineId === engineId &&
+    historyPreview.token === hydrationGenerationsRef.current.get(activeBucket) &&
+    !outputRecoveries[activeBucket]
+      ? historyPreview
+      : undefined;
+  const displayMessages = useMemo(
+    () => (activePreview ? mergeHistoryIntoLive(activePreview.state, state).messages : undefined),
+    [activePreview, state],
+  );
   const historyPage = historyPages[activeBucket];
   const activeHistoryPage = historyPage?.engineId === engineId ? historyPage : undefined;
   const awaitingHydration =
     activeSessionId !== null &&
     (!hydratedBucketsRef.current.has(activeBucket) ||
       hydratedBucketsRef.current.get(activeBucket) !== engineId) &&
-    state.messages.length === 0 &&
+    (displayMessages ?? state.messages).length === 0 &&
     !activeHistoryPage?.failed;
 
   return {
     state,
+    displayMessages,
     awaitingHydration,
-    historyHasMore: activeHistoryPage?.hasMore ?? false,
+    historyHasMore: activePreview?.hasMore ?? activeHistoryPage?.hasMore ?? false,
     historyLoading: activeHistoryPage?.loading ?? false,
     historyFailed: !!outputRecoveries[activeBucket] || (activeHistoryPage?.failed ?? false),
     outputRecoveryPending: !!outputRecoveries[activeBucket],

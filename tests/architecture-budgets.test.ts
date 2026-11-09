@@ -384,7 +384,10 @@ describe("architecture growth budgets", () => {
     // +15 composition lines mount the extracted computer workspace lazily and keep it alive
     // while hidden. Device selection, drafts, approvals and reconnect state stay in that module.
     // Pin the measured combined root (the previous ceiling had two spare lines).
-    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_945);
+    // +3 composition lines hand the recent-history preview and paging flag to
+    // ChatView and hold context selection while the preview shows; paging and
+    // preview state live in app/useTranscriptBuckets.ts.
+    expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_948);
     // The messages reducer was split out of renderer/types.ts (2_665 lines):
     // the message model lives in messageTypes.ts and each event family's
     // handlers in renderer/messages-reducer/. This file keeps the public

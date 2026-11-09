@@ -59,6 +59,33 @@ function Fixture({initialLive,...options}){
 }
 const root=createRoot(document.getElementById('root'));let epoch=0;
 window.renderFixture=props=>{saveUILanguage(props.lang||'zh');document.documentElement.classList.toggle('dark',props.mode==='dark');root.render(<I18nProvider key={++epoch}><Fixture {...props}/></I18nProvider>)};
+function HistoryFixture({disk,preview}){
+  const [first,setFirst]=React.useState(disk?60:0);
+  const [last,setLast]=React.useState(80);
+  const [session,setSession]=React.useState('first');
+  const [loading,setLoading]=React.useState(false);
+  const [failed,setFailed]=React.useState(false);
+  const [pending,setPending]=React.useState(preview);
+  window.appendHistoryLive=()=>setLast(n=>n+1);
+  window.commitHistoryPreview=()=>setPending(false);
+  window.switchHistorySession=()=>setSession('second');
+  const rows=Array.from({length:last-first},(_,index)=>({
+    kind:'system',id:session+'-history-'+(first+index),text:'Session entry '+(first+index),
+  }));
+  const history=disk?{
+    hasMore:first>0,loading,failed,limitReached:false,
+    loadEarlier:async()=>{
+      const attempt=++window.historyReads;
+      setLoading(true);setFailed(false);
+      await new Promise(resolve=>setTimeout(resolve,70));
+      if(attempt===1)setFailed(true);
+      else setFirst(30);
+      setLoading(false);
+    },
+  }:undefined;
+  return <main className="fixed inset-0 flex min-h-0 min-w-0 flex-col bg-background text-foreground"><MessageStream messages={pending?[]:rows} displayMessages={pending?rows.slice(-50):undefined} pageHistory history={history} historyKey={session}/></main>;
+}
+window.renderHistoryFixture=props=>{window.historyReads=0;saveUILanguage('en');root.render(<I18nProvider key={++epoch}><HistoryFixture {...props}/></I18nProvider>)};
 window.scrollElement=()=>document.querySelector('.cs-chat-transcript').parentElement;
 window.headerElement=()=>document.querySelector('.cs-process-heading');
 window.metric=()=>{const s=window.scrollElement(),h=window.headerElement(),focus=document.activeElement,box=focus&&s.contains(focus)?focus.getBoundingClientRect():null;return {focusTop:box?.top??null,focusBottom:box?.bottom??null,focusLabel:box?(focus.getAttribute('aria-label')||focus.textContent||'').slice(0,80):null,time:performance.now(),scrollTop:s.scrollTop,scrollHeight:s.scrollHeight,clientHeight:s.clientHeight,headerTop:h.getBoundingClientRect().top,headerBottom:h.getBoundingClientRect().bottom,expanded:h.getAttribute('aria-expanded'),distance:s.scrollHeight-s.scrollTop-s.clientHeight,jump:!!document.querySelector('button[aria-label="'+window.jumpLabel+'"]')}};
@@ -192,8 +219,79 @@ async function pauseByWheel() {
   await page.mouse.wheel(0, -550);
   await page.waitForTimeout(180);
 }
+
+async function verifyHistoryPaging() {
+  await page.setViewportSize({ width: 680, height: 520 });
+  await page.evaluate(() => window.renderHistoryFixture({ preview: true }));
+  const row = (id) => page.locator('[data-chat-history-row="' + id + '"]');
+  const historyControl = page.locator("[data-chat-history-control]");
+  await row("first-history-79").waitFor();
+  assert.equal(await row("first-history-49").count(), 0, "recent preview is bounded");
+  assert.equal(await historyControl.count(), 0, "preview cannot advance history paging");
+  await page.evaluate(() => window.commitHistoryPreview());
+  await historyControl.waitFor({ state: "attached" });
+  assert.equal(await page.locator("[data-chat-history-row]").count(), 30);
+  assert.equal(await row("first-history-49").count(), 0, "handoff keeps the newest page");
+  const before = await page.evaluate(() => {
+    const scroll = window.scrollElement();
+    scroll.style.overflowAnchor = "none"; // Exercise application anchoring.
+    scroll.scrollTop = 0;
+    window.retainedHistoryRow = document.querySelector(
+      '[data-chat-history-row="first-history-50"]',
+    );
+    const top = window.retainedHistoryRow.getBoundingClientRect().top;
+    scroll.dispatchEvent(new window.WheelEvent("wheel", { deltaY: -4, bubbles: true }));
+    return top;
+  });
+  const anchorTop = () =>
+    page.evaluate(() => window.retainedHistoryRow.getBoundingClientRect().top);
+  await row("first-history-20").waitFor({ state: "attached" });
+  assert.equal(await row("first-history-19").count(), 0, "wheel reveals one earlier page");
+  assert.equal(
+    await row("first-history-50").evaluate((element) => element === window.retainedHistoryRow),
+    true,
+    "prepending history retains existing rows",
+  );
+  assert.ok(Math.abs((await anchorTop()) - before) <= 5, "prepend preserves viewport position");
+  await page.evaluate(() => window.appendHistoryLive());
+  await row("first-history-80").waitFor({ state: "attached" });
+  assert.equal(
+    await row("first-history-20").count(),
+    1,
+    "live output keeps the older page mounted",
+  );
+  assert.ok(Math.abs((await anchorTop()) - before) <= 5, "live output does not move the reader");
+  await page.evaluate(() => window.switchHistorySession());
+  await row("second-history-80").waitFor({ state: "attached" });
+  assert.equal(await page.locator("[data-chat-history-row]").count(), 30);
+  assert.equal(await row("second-history-50").count(), 0, "session switch starts from newest page");
+
+  await page.setViewportSize({ width: 680, height: 360 });
+  await page.evaluate(() => window.renderHistoryFixture({ disk: true }));
+  await row("first-history-60").waitFor({ state: "attached" });
+  await page.evaluate(() => {
+    const scroll = window.scrollElement();
+    scroll.scrollTop = 0;
+    for (let i = 0; i < 2; i++) {
+      scroll.dispatchEvent(new window.WheelEvent("wheel", { deltaY: -4, bubbles: true }));
+    }
+  });
+  await historyControl.getByRole("status").waitFor();
+  await page.evaluate(() =>
+    window
+      .scrollElement()
+      .dispatchEvent(new window.WheelEvent("wheel", { deltaY: -4, bubbles: true })),
+  );
+  assert.equal(await page.evaluate(() => window.historyReads), 1, "wheel doesn't retry failure");
+  await historyControl.getByRole("button").click();
+  await row("first-history-30").waitFor({ state: "attached" });
+  assert.equal(await page.evaluate(() => window.historyReads), 2, "manual retry remains available");
+  await page.setViewportSize({ width: 680, height: 520 });
+}
+
 let failure;
 try {
+  if (phase === "after") await verifyHistoryPaging();
   await render(false);
   await trace(
     "historical-expand-at-bottom",

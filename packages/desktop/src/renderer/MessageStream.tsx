@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Check, Forward, Loader2, MessageSquare, X } from "lucide-react";
-import type { AskUserAnswerHandler, Message } from "./types";
+import type { Message } from "./types";
 import { ToolCard } from "./tool-cards";
 import { UserMessageView } from "./messages/UserMessageView";
 import { AssistantMessageView } from "./messages/AssistantMessageView";
@@ -43,8 +43,7 @@ import {
 } from "./subagents/SubagentNavigation";
 import { SubagentSessionDetail } from "./subagents/SubagentSessionDetail";
 
-// Stable fallback so memoized AskUserMessageView siblings don't see a
-// fresh onAnswer prop on every render.
+// Resolved questions are read-only in the stream. ChatView owns the open cards.
 const NOOP_ON_ANSWER = (): void => undefined;
 
 /**
@@ -55,6 +54,7 @@ const NOOP_ON_ANSWER = (): void => undefined;
  * history and can be skipped while off-screen.
  */
 const LIVE_TAIL_UNCONTAINED = 8;
+const HISTORY_PAGE_ROWS = 30;
 
 export interface ContextPackageCreatedOptions {
   /** Re-check immediately before navigating because registration may itself be asynchronous. */
@@ -68,12 +68,22 @@ export type ContextPackageCreatedHandler = (
 
 interface Props {
   messages: Message[];
-  /** History controls stay at the beginning of the scrollable conversation. */
-  leading?: React.ReactNode;
+  /** Read-only recent history while the durable state is being recovered. */
+  displayMessages?: Message[];
+  /** Reveal grouped durable history a page at a time. */
+  pageHistory?: boolean;
+  /** Stable UI session identity for the visible window. */
+  historyKey?: string;
+  history?: {
+    hasMore: boolean;
+    loading: boolean;
+    failed: boolean;
+    limitReached: boolean;
+    loadEarlier: () => Promise<void>;
+  };
   /** Transcript detail views do not expose file undo/redo. */
   readOnly?: boolean;
   localRuntime?: boolean;
-  onAskUserAnswer?: AskUserAnswerHandler;
   /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */
   onExtendGoal?: (opts: {
     addTurns?: number;
@@ -136,10 +146,12 @@ interface Props {
 
 export function MessageStream({
   messages,
-  leading,
+  displayMessages,
+  pageHistory = false,
+  historyKey,
+  history,
   readOnly = false,
   localRuntime = true,
-  onAskUserAnswer,
   onExtendGoal,
   trailing,
   trailingKey,
@@ -208,16 +220,6 @@ export function MessageStream({
       break;
     }
   }
-  const { ref, showJump, scrollToBottom, preserveScrollOnChange } =
-    useStickToBottom<HTMLDivElement>({
-      // Trigger encodes message count + trailing key + bucketed streaming tail
-      // length, so growth within a single streaming message keeps following.
-      trigger: buildScrollTrigger(messages, liveTurnActive, trailingKey),
-      // Session switch → snap to bottom instantly (before paint), no scroll flash.
-      jumpKey: engineSessionId ?? null,
-      // User send → unconditional re-arm + snap (separate dep from session id).
-      sendEpoch,
-    });
   // Zoom state carries the whole sibling-image group plus the clicked index,
   // so the Lightbox can offer prev/next across the images in one message.
   const [zoomed, setZoomed] = useState<{
@@ -294,6 +296,7 @@ export function MessageStream({
       !localRuntime ||
       !engineSessionId ||
       !onContextPackageCreated ||
+      displayMessages !== undefined ||
       liveTurnActive ||
       selectionOpen
     )
@@ -314,7 +317,14 @@ export function MessageStream({
     } finally {
       if (loadEpoch === selectionLoadEpochRef.current) setSelectionStatus("idle");
     }
-  }, [engineSessionId, liveTurnActive, onContextPackageCreated, selectionOpen, localRuntime]);
+  }, [
+    engineSessionId,
+    liveTurnActive,
+    onContextPackageCreated,
+    displayMessages,
+    selectionOpen,
+    localRuntime,
+  ]);
 
   useEffect(() => {
     if (
@@ -434,13 +444,14 @@ export function MessageStream({
   // reference — that's what lets their React.memo actually skip work on the
   // 50ms stream batches. prevItemsRef survives renders; the useMemo only
   // recomputes when messages/liveTurnActive change.
+  const streamMessages = selectionOpen ? messages : (displayMessages ?? messages);
   const prevItemsRef = useRef<StreamItem[]>([]);
   const items = useMemo(
     () =>
       timePhase(
         "stream.build",
         () => {
-          const built = buildStreamItems(messages, { liveTurnActive });
+          const built = buildStreamItems(streamMessages, { liveTurnActive });
           const reconciled = reconcileStreamItems(prevItemsRef.current, built);
           prevItemsRef.current = reconciled;
           // Post-pass: collapse runs of ≥2 sibling sub-agents into a summary
@@ -448,53 +459,40 @@ export function MessageStream({
           // refs and a live agent's rollup stats stay fresh each rebuild.
           return foldAgentGroups(reconciled);
         },
-        () => ({ msgs: messages.length }),
+        () => ({ msgs: streamMessages.length }),
       ),
-    [messages, liveTurnActive],
+    [streamMessages, liveTurnActive],
   );
   const displayGroups = useMemo(
-    () => alignContextSelectionGroups(groupStreamItemsIntoContextTurns(items), selectionTurns),
-    [items, selectionTurns],
+    () =>
+      selectionOpen
+        ? alignContextSelectionGroups(groupStreamItemsIntoContextTurns(items), selectionTurns)
+        : null,
+    [items, selectionOpen, selectionTurns],
   );
   const selectionAligned = displayGroups !== null;
 
-  const renderStreamItem = (m: RenderedStreamItem): React.ReactNode => {
-    if (m.kind === "turn_process_group") {
-      return (
-        <TurnProcessGroupCard
-          key={m.id}
-          group={m}
-          turnEpoch={turnEpoch}
-          cwd={cwd}
-          sessionId={localRuntime ? engineSessionId : undefined}
-          sessionMainRootId={rootId}
-          rootStatus={rootStatus}
-          onExtendGoal={onExtendGoal}
-        />
-      );
-    }
-    if (m.kind === "tool_group") {
-      return (
-        <ToolGroupCard
-          key={m.id}
-          group={m}
-          turnEpoch={turnEpoch}
-          cwd={cwd}
-          sessionId={localRuntime ? engineSessionId : undefined}
-          sessionMainRootId={rootId}
-          rootStatus={rootStatus}
-        />
-      );
-    }
-    if (m.kind === "agent_group") {
-      return <AgentGroupCard key={m.id} group={m} />;
-    }
-    switch (m.kind) {
-      case "tool":
+  const renderStreamItem = useCallback(
+    (m: RenderedStreamItem): React.ReactNode => {
+      if (m.kind === "turn_process_group") {
         return (
-          <ToolCard
+          <TurnProcessGroupCard
             key={m.id}
-            message={m}
+            group={m}
+            turnEpoch={turnEpoch}
+            cwd={cwd}
+            sessionId={localRuntime ? engineSessionId : undefined}
+            sessionMainRootId={rootId}
+            rootStatus={rootStatus}
+            onExtendGoal={onExtendGoal}
+          />
+        );
+      }
+      if (m.kind === "tool_group") {
+        return (
+          <ToolGroupCard
+            key={m.id}
+            group={m}
             turnEpoch={turnEpoch}
             cwd={cwd}
             sessionId={localRuntime ? engineSessionId : undefined}
@@ -502,60 +500,232 @@ export function MessageStream({
             rootStatus={rootStatus}
           />
         );
-      case "user":
-        return (
-          <UserMessageView key={m.id} message={m} localRuntime={localRuntime} onZoom={openZoom} />
-        );
-      case "assistant":
-        return (
-          <AssistantMessageView
-            key={m.id}
-            message={m}
-            cwd={cwd ?? null}
-            sessionId={localRuntime ? engineSessionId : undefined}
-            sessionMainRootId={rootId}
-            rootStatus={rootStatus}
-          />
-        );
-      case "thinking":
-        return <ThinkingMessageView key={m.id} message={m} />;
-      case "agent":
-        return <AgentMessageView key={m.id} message={m} />;
-      case "task_list":
-        return null;
-      case "context_boundary":
-        return <ContextBoundaryView key={m.id} message={m} />;
-      case "goal_progress":
-        return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
-      case "ask_user":
-        // Unanswered questions are pinned above the composer (ChatView); the
-        // stream keeps only the answered record.
-        return m.answer !== undefined ? (
-          <AskUserMessageView key={m.id} message={m} onAnswer={onAskUserAnswer ?? NOOP_ON_ANSWER} />
-        ) : null;
-      case "system":
-        if (m.text.trim() === "") return null;
-        return (
-          <div key={m.id} className="px-4 py-1 text-center text-xs text-muted-foreground">
-            {m.text}
-          </div>
-        );
-      case "files_changed":
-        return (
-          <FilesChangedCard
-            key={m.id}
-            message={m}
-            cwd={cwd ?? null}
-            sessionId={localRuntime ? (engineSessionId ?? null) : null}
-            isLatest={localRuntime && !readOnly && m.id === lastFilesChangedId}
-          />
-        );
-      case "turn_end":
-        return <TurnEndMessageView key={m.id} message={m} />;
-      case "turn_usage":
-        return <TurnUsageMessageView key={m.id} message={m} />;
+      }
+      if (m.kind === "agent_group") {
+        return <AgentGroupCard key={m.id} group={m} />;
+      }
+      switch (m.kind) {
+        case "tool":
+          return (
+            <ToolCard
+              key={m.id}
+              message={m}
+              turnEpoch={turnEpoch}
+              cwd={cwd}
+              sessionId={localRuntime ? engineSessionId : undefined}
+              sessionMainRootId={rootId}
+              rootStatus={rootStatus}
+            />
+          );
+        case "user":
+          return (
+            <UserMessageView key={m.id} message={m} localRuntime={localRuntime} onZoom={openZoom} />
+          );
+        case "assistant":
+          return (
+            <AssistantMessageView
+              key={m.id}
+              message={m}
+              cwd={cwd ?? null}
+              sessionId={localRuntime ? engineSessionId : undefined}
+              sessionMainRootId={rootId}
+              rootStatus={rootStatus}
+            />
+          );
+        case "thinking":
+          return <ThinkingMessageView key={m.id} message={m} />;
+        case "agent":
+          return <AgentMessageView key={m.id} message={m} />;
+        case "task_list":
+          return null;
+        case "context_boundary":
+          return <ContextBoundaryView key={m.id} message={m} />;
+        case "goal_progress":
+          return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
+        case "ask_user":
+          // Unanswered questions are pinned above the composer (ChatView); the
+          // stream keeps only the answered record.
+          return m.answer !== undefined ? (
+            <AskUserMessageView key={m.id} message={m} onAnswer={NOOP_ON_ANSWER} />
+          ) : null;
+        case "system":
+          if (m.text.trim() === "") return null;
+          return (
+            <div key={m.id} className="px-4 py-1 text-center text-xs text-muted-foreground">
+              {m.text}
+            </div>
+          );
+        case "files_changed":
+          return (
+            <FilesChangedCard
+              key={m.id}
+              message={m}
+              cwd={cwd ?? null}
+              sessionId={localRuntime ? (engineSessionId ?? null) : null}
+              isLatest={localRuntime && !readOnly && m.id === lastFilesChangedId}
+            />
+          );
+        case "turn_end":
+          return <TurnEndMessageView key={m.id} message={m} />;
+        case "turn_usage":
+          return <TurnUsageMessageView key={m.id} message={m} />;
+      }
+    },
+    [
+      cwd,
+      engineSessionId,
+      lastFilesChangedId,
+      localRuntime,
+      onExtendGoal,
+      openZoom,
+      readOnly,
+      rootId,
+      rootStatus,
+      turnEpoch,
+    ],
+  );
+
+  // Draft edits, trailing controls and scroll-follow state can rerender the
+  // stream shell without changing history. Reuse the row elements in that case.
+  const showingSubagent = localRuntime && selectedSubagent !== null;
+  const sessionKey = historyKey ?? engineSessionId ?? null;
+  const preview = displayMessages !== undefined;
+  const [pageStart, setPageStart] = useState<{ sessionKey: string | null; rowId: string }>();
+  const earlierRequestRef = useRef<{
+    sessionKey: string | null;
+    firstRow: string | undefined;
+    rowCount: number;
+    pending: boolean;
+  } | null>(null);
+  const diskRequest = earlierRequestRef.current;
+  const diskPrepended =
+    diskRequest?.sessionKey === sessionKey &&
+    !preview &&
+    items.length > 0 &&
+    diskRequest.firstRow !== items[0]!.id;
+  const heldIndex =
+    pageHistory && !preview && pageStart?.sessionKey === sessionKey
+      ? items.findIndex((item) => item.id === pageStart.rowId)
+      : -1;
+  let visibleStart = 0;
+  if (pageHistory || preview) {
+    if (diskPrepended) {
+      // Legacy disk paging can supply older rows after the grouped window
+      // has reached its start. Reveal one page of the newly read rows now.
+      const formerStart = heldIndex >= 0 ? heldIndex : items.length - diskRequest.rowCount;
+      visibleStart = Math.max(0, formerStart - HISTORY_PAGE_ROWS);
+    } else {
+      visibleStart = heldIndex >= 0 ? heldIndex : Math.max(0, items.length - HISTORY_PAGE_ROWS);
     }
-  };
+  }
+  const oldestRow = items[visibleStart]?.id;
+  useLayoutEffect(() => {
+    if (
+      diskRequest &&
+      (diskRequest.sessionKey !== sessionKey || preview || history?.failed || diskPrepended)
+    ) {
+      earlierRequestRef.current = null;
+    }
+    setPageStart((previous) => {
+      const current = !preview && previous?.sessionKey === sessionKey ? previous : undefined;
+      if (!pageHistory || selectionOpen || showingSubagent || preview || oldestRow === undefined) {
+        return current;
+      }
+      // Pin the start of the page through appends and settle a disk prepend
+      // before paint, so the next render cannot hide the rows again.
+      return current?.rowId === oldestRow ? current : { sessionKey, rowId: oldestRow };
+    });
+  }, [
+    diskPrepended,
+    diskRequest,
+    history?.failed,
+    oldestRow,
+    pageHistory,
+    preview,
+    selectionOpen,
+    sessionKey,
+    showingSubagent,
+  ]);
+
+  const hasEarlierRows = pageHistory && !preview && visibleStart > 0;
+  const automaticAttemptRef = useRef<{
+    sessionKey: string | null;
+    rowId: string | undefined;
+  } | null>(null);
+  useLayoutEffect(() => {
+    automaticAttemptRef.current = null;
+  }, [sessionKey]);
+  function requestEarlier(automatic: boolean) {
+    if (selectionOpen || showingSubagent || preview) return;
+    const canReadDisk =
+      history &&
+      !history.loading &&
+      !history.limitReached &&
+      (automatic ? history.hasMore && !history.failed : history.hasMore || history.failed);
+    if (!hasEarlierRows && !canReadDisk) return;
+    if (earlierRequestRef.current?.sessionKey === sessionKey && earlierRequestRef.current.pending) {
+      return;
+    }
+    const attempted = automaticAttemptRef.current;
+    if (automatic && attempted?.sessionKey === sessionKey && attempted.rowId === oldestRow) return;
+    automaticAttemptRef.current = { sessionKey, rowId: oldestRow };
+
+    const el = ref.current;
+    if (el) {
+      const viewportTop = el.getBoundingClientRect().top;
+      // Requests are made at the head of the list. Hold the first row the
+      // reader can see rather than assuming the new page has a fixed height.
+      let row = el.firstElementChild?.firstElementChild;
+      while (row) {
+        if (
+          row instanceof HTMLElement &&
+          row.hasAttribute("data-chat-history-row") &&
+          row.getBoundingClientRect().bottom > viewportTop
+        ) {
+          holdHistoryAnchor(row);
+          break;
+        }
+        row = row.nextElementSibling;
+      }
+    }
+    if (hasEarlierRows) {
+      setPageStart({ sessionKey, rowId: items[Math.max(0, visibleStart - HISTORY_PAGE_ROWS)]!.id });
+      return;
+    }
+    const request = { sessionKey, firstRow: items[0]?.id, rowCount: items.length, pending: true };
+    earlierRequestRef.current = request;
+    void history
+      ?.loadEarlier()
+      .catch(() => undefined)
+      .finally(() => {
+        request.pending = false;
+      });
+  }
+
+  const { ref, showJump, scrollToBottom, preserveScrollOnChange, holdHistoryAnchor } =
+    useStickToBottom<HTMLDivElement>({
+      trigger: buildScrollTrigger(streamMessages, liveTurnActive, trailingKey),
+      jumpKey: sessionKey,
+      sendEpoch,
+      historyStartKey: oldestRow,
+      onReadEarlier: hasEarlierRows || history?.hasMore ? () => requestEarlier(true) : undefined,
+    });
+
+  const showHistoryControl = !preview && (hasEarlierRows || history?.hasMore || history?.failed);
+  const normalRows = useMemo(() => {
+    if (selectionOpen || showingSubagent) return null;
+    return items.slice(visibleStart).map((item, index) => (
+      <div
+        key={`vc-${item.id}`}
+        data-chat-history-row={item.id}
+        className={
+          visibleStart + index < items.length - LIVE_TAIL_UNCONTAINED ? "cs-stream-item" : undefined
+        }
+      >
+        {renderStreamItem(item)}
+      </div>
+    ));
+  }, [items, renderStreamItem, selectionOpen, showingSubagent, visibleStart]);
 
   if (localRuntime && selectedSubagent) {
     return <SubagentSessionDetail {...selectedSubagent} onBack={() => setSelectedSubagent(null)} />;
@@ -600,7 +770,37 @@ export function MessageStream({
           ref={ref}
         >
           <div className="cs-chat-transcript w-full min-w-0">
-            {!selectionOpen && leading}
+            {!selectionOpen && showHistoryControl && (
+              <div className="flex flex-col items-center gap-1 px-4 py-3" data-chat-history-control>
+                {!hasEarlierRows && history?.failed && (
+                  <span role="status" className="text-xs text-muted-foreground">
+                    {t("chat.historyLoadFailed")}
+                  </span>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={!hasEarlierRows && (history?.loading || history?.limitReached)}
+                  onClick={() => requestEarlier(false)}
+                >
+                  {!hasEarlierRows && history?.loading && (
+                    <Loader2 className="mr-2 size-3.5 animate-spin" />
+                  )}
+                  {t(
+                    hasEarlierRows
+                      ? "chat.loadEarlierHistory"
+                      : history?.limitReached
+                        ? "chat.historyPreviewLimit"
+                        : history?.loading
+                          ? "chat.loadingEarlierHistory"
+                          : history?.failed
+                            ? "chat.retryHistory"
+                            : "chat.loadEarlierHistory",
+                  )}
+                </Button>
+              </div>
+            )}
             {selectionOpen &&
               (selectionStatus === "loading" ||
                 selectionTurns.length === 0 ||
@@ -722,34 +922,7 @@ export function MessageStream({
                   </div>
                 );
               })}
-            {!selectionOpen &&
-              items.map((item, index) => {
-                const node = renderStreamItem(item);
-                // Skip layout/paint for off-screen history.
-                //
-                // The stream mounts EVERY item; a few hundred turns of tool
-                // cards and highlighted code blocks keep costing layout on each
-                // render even though almost all of it is scrolled out of view.
-                // `content-visibility:auto` lets the browser skip rendering work
-                // for subtrees outside the viewport, and
-                // `contain-intrinsic-size` gives it a placeholder height so the
-                // scrollbar does not jump as items enter and leave.
-                //
-                // Deliberately NOT applied to the last few items: those are
-                // where streaming output lands, and containment there would
-                // fight the live-growth path (and the auto-scroll that follows
-                // it). Cheap, reversible, and no virtualization bookkeeping.
-                return (
-                  <div
-                    key={`vc-${item.id}`}
-                    className={
-                      index < items.length - LIVE_TAIL_UNCONTAINED ? "cs-stream-item" : undefined
-                    }
-                  >
-                    {node}
-                  </div>
-                );
-              })}
+            {normalRows}
             {liveTurnActive && <LiveActivityLine messages={messages} running={liveTurnActive} />}
             {trailing}
           </div>

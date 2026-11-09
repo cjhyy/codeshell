@@ -412,6 +412,10 @@ describe("transcript history hydration after a background resume", () => {
     try {
       initial = {};
       readDisk = async () => [];
+      const persisted = deferred<{ value: string | null; hasEarlier: boolean }>();
+      installSnapshotReader(() => persisted.promise);
+      let journalReads = 0;
+      let snapshotReads = 0;
       publish({ type: "session_user_message", text: "question", clientMessageId: "client" });
       publish({ type: "session_started", sessionId: "saved", runId: "run", promptTokens: 0 });
       const provenance = {
@@ -453,16 +457,28 @@ describe("transcript history hydration after a background resume", () => {
       publish({ type: "stream_request_start", turnNumber: 1, messageId: "durable-reply" });
       const parts = Array.from({ length: 12 }, (_, index) => `${index}汉🙂`);
       for (const text of parts) publish({ type: "text_delta", text });
-      readSnapshot = async () => snapshots.get("saved") as SessionSnapshot;
-      window.codeshell.getSessionOutputJournal = async (_id, options) => ({
-        ...readOutputJournal(root, "saved", { ...options, maxFrames: 128 }),
-        legacyBaseComplete: true,
-        legacyBaseItems: [],
-      });
+      readSnapshot = async () => {
+        snapshotReads++;
+        return snapshots.get("saved") as SessionSnapshot;
+      };
+      window.codeshell.getSessionOutputJournal = async (_id, options) => {
+        journalReads++;
+        return {
+          ...readOutputJournal(root, "saved", { ...options, maxFrames: 128 }),
+          legacyBaseComplete: true,
+          legacyBaseItems: [],
+        };
+      };
       hook = await renderHook(useHarness);
+      // A slow cache no longer holds up journal replay. The live snapshot is
+      // still joined after the cache resolves so its cursor stays current.
+      expect(journalReads).toBeGreaterThan(0);
+      expect(snapshotReads).toBe(0);
       await act(async () => {
+        persisted.resolve({ value: null, hasEarlier: false });
         await flushMicrotasks();
       });
+      expect(diskReads).toBe(0);
       expect(hook.result.current.state.messages).toContainEqual(
         expect.objectContaining({
           id: "durable-reply",
@@ -497,6 +513,145 @@ describe("transcript history hydration after a background resume", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  test.each(["early", "late", "after-join"] as const)(
+    "joins independent live output exactly once (recent page timing: %s)",
+    async (when) => {
+      const root = mkdtempSync(join(tmpdir(), "codeshell-hydrate-preview-"));
+      const manager = new SessionManager(root);
+      const session = manager.create(root, "fixture", "fixture", "saved");
+      manager.startSessionRun(session.state, "run");
+      const writer = new SessionOutputJournal(
+        root,
+        "saved",
+        "run",
+        session.transcript.getEvents()[0].id,
+      );
+      const snapshots = new SessionSnapshotStore({
+        coverage: new SessionOutputCoverageStore(() => root),
+      });
+      const publish = (event: StreamEvent) => {
+        const durable = { ...event, outputCursor: writer.append(event) };
+        const { seq } = snapshots.append("saved", durable);
+        return { event: durable, seq };
+      };
+      try {
+        initial = {};
+        const journal = deferred<void>();
+        const journalStarted = deferred<void>();
+        const recent = deferred<SessionTranscriptPage>();
+        const writes: unknown[] = [];
+        installSnapshotReader(async () => ({ value: null, hasEarlier: false }));
+        window.codeshell.sessionCatalog!.writeTranscript = async (request) => {
+          writes.push(request);
+        };
+        const reads: number[] = [];
+        const recentPage: SessionTranscriptPage = {
+          items: [
+            { kind: "user", text: "Recent saved request", clientMessageId: "recent", timestamp: 2 },
+          ],
+          loadedBytes: INITIAL_CHAT_HISTORY_BYTES,
+          hasMore: true,
+        };
+        window.codeshell.getSessionTranscriptPage = async (_id, options) => {
+          reads.push(options!.maxBytes!);
+          return when === "early" ? recentPage : recent.promise;
+        };
+        publish({
+          type: "session_user_message",
+          text: "Older durable request",
+          clientMessageId: "old",
+        });
+        publish({
+          type: "session_user_message",
+          text: "Recent saved request",
+          clientMessageId: "recent",
+        });
+        readSnapshot = async () => snapshots.get("saved") as SessionSnapshot;
+        window.codeshell.getSessionOutputJournal = async (_id, options) => {
+          journalStarted.resolve();
+          await journal.promise;
+          return {
+            ...readOutputJournal(root, "saved", options),
+            legacyBaseComplete: true,
+            legacyBaseItems: [],
+          };
+        };
+        hook = await renderHook(useHarness);
+        expect(reads).toEqual([INITIAL_CHAT_HISTORY_BYTES]);
+        if (when !== "early") {
+          expect(hook.result.current.displayMessages).toBeUndefined();
+          await act(async () => {
+            // The read hasn't resolved, but expiration still lets recovery start.
+            await journalStarted.promise;
+            if (when === "late") recent.resolve(recentPage);
+            await flushMicrotasks();
+          });
+        }
+        if (when !== "after-join") {
+          expect(hook.result.current.displayMessages).toMatchObject([
+            { text: "Recent saved request" },
+          ]);
+          expect(hook.result.current.awaitingHydration).toBe(false);
+          expect(hook.result.current.historyHasMore).toBe(true);
+        }
+        expect(hook.result.current.state.messages).toEqual([]);
+        expect(hook.result.current.state.outputCursor).toBeUndefined();
+        const raw = [
+          publish({ type: "session_user_message", text: "Live request", clientMessageId: "live" }),
+          publish({ type: "session_started", sessionId: "saved", runId: "run", promptTokens: 0 }),
+          publish({ type: "stream_request_start", turnNumber: 1, messageId: "live-answer" }),
+          publish({ type: "text_delta", text: "Live answer while opening" }),
+        ];
+        await act(async () => {
+          hook!.result.current.dispatch({
+            type: "stream_batch",
+            bucket,
+            events: raw.map(({ event }) => event),
+            maxSeq: raw.at(-1)!.seq,
+            epoch: snapshots.get("saved").epoch,
+            raw,
+          });
+          await flushMicrotasks();
+          await flushSessionPersistence();
+        });
+        expect(
+          hook.result.current.displayMessages ?? hook.result.current.state.messages,
+        ).toMatchObject([
+          ...(when === "after-join" ? [] : [{ text: "Recent saved request" }]),
+          { text: "Live request" },
+          { id: "live-answer", text: "Live answer while opening" },
+        ]);
+        expect(hook.result.current.appliedSeqRef.current.has(bucket)).toBe(false);
+        expect(writes).toEqual([]);
+        await act(async () => {
+          journal.resolve();
+          await flushMicrotasks();
+        });
+        expect(hook.result.current.displayMessages).toBeUndefined();
+        expect(hook.result.current.state.messages).toMatchObject([
+          { text: "Older durable request" },
+          { text: "Recent saved request" },
+          { text: "Live request" },
+          { id: "live-answer", text: "Live answer while opening" },
+        ]);
+        expect(hook.result.current.state.outputCursor).toBe(snapshots.get("saved").outputCursor);
+        expect(reads).toEqual([INITIAL_CHAT_HISTORY_BYTES]);
+        if (when === "after-join") {
+          await act(async () => {
+            recent.resolve(recentPage);
+            await flushMicrotasks();
+          });
+          expect(hook.result.current.displayMessages).toBeUndefined();
+          expect(hook.result.current.historyHasMore).toBe(false);
+        }
+      } finally {
+        await hook?.unmount();
+        hook = undefined;
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
 
   for (const mode of [
     "normal",
@@ -970,12 +1125,16 @@ describe("transcript history hydration after a background resume", () => {
     expect(hook.result.current.transcripts[bucket]).toBeUndefined();
   });
 
-  test("a cancelled output recovery does not expand the old session's display window", async () => {
+  test("a cancelled output recovery does not read the old session's fallback window", async () => {
     initial = {};
     const snapshot = deferred<SessionSnapshot>();
     installUnpairedOutput();
-    window.codeshell.subscribeSession = async (id) =>
-      id === "saved" ? snapshot.promise : emptySnapshot;
+    let savedSnapshotRequested = false;
+    window.codeshell.subscribeSession = async (id) => {
+      if (id !== "saved") return emptySnapshot;
+      savedSnapshotRequested = true;
+      return snapshot.promise;
+    };
     const savedReads: number[] = [];
     window.codeshell.getSessionTranscriptPage = async (id, options) => {
       if (id === "saved") savedReads.push(options!.maxBytes!);
@@ -986,6 +1145,7 @@ describe("transcript history hydration after a background resume", () => {
       };
     };
     hook = await renderHook(useHarness);
+    expect(savedSnapshotRequested).toBe(true);
     await act(async () => {
       hook!.result.current.setActive("other");
       await flushMicrotasks();

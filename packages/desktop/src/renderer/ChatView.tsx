@@ -125,6 +125,10 @@ interface Props {
   onSelectRemoteFiles?: (files: File[]) => Promise<void>;
   onRemoveRemoteFile?: (id: string) => void;
   messages: Message[];
+  /** Recent read-only projection shown before the durable journal catches up. */
+  displayMessages?: Message[];
+  /** Show completed history in pages in the transcript. */
+  pageHistory?: boolean;
   /**
    * True while an EXISTING session picked from the sidebar is being hydrated
    * (no localStorage projection yet). `messages` is empty in this frame, but it
@@ -419,6 +423,8 @@ export function ChatView({
   onSelectRemoteFiles,
   onRemoveRemoteFile,
   messages,
+  displayMessages,
+  pageHistory = false,
   awaitingHydration = false,
   historyHasMore = false,
   historyLoading = false,
@@ -1689,7 +1695,10 @@ export function ChatView({
   // NOT render as the welcome hero (see awaitingHydration) — it shows a loading
   // placeholder below instead.
   const isNewChat =
-    messages.length === 0 && !awaitingHydration && !historyFailed && !historyHasMore;
+    (displayMessages ?? messages).length === 0 &&
+    !awaitingHydration &&
+    !historyFailed &&
+    !historyHasMore;
 
   // Codex-style inline approvals: when an approval is pending, drop
   // the full ApprovalCard at the tail of the chat stream so it scrolls
@@ -1981,44 +1990,24 @@ export function ChatView({
         !isNewChat && (
           <MessageStream
             messages={messages}
-            leading={
-              (historyHasMore || historyFailed) && onLoadEarlierHistory ? (
-                <div
-                  className="flex flex-col items-center gap-1 px-4 py-3"
-                  data-chat-history-control
-                >
-                  {historyFailed && (
-                    <span role="status" className="text-xs text-muted-foreground">
-                      {t("chat.historyLoadFailed")}
-                    </span>
-                  )}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={historyLoading || historyLimitReached}
-                    onClick={() => void onLoadEarlierHistory()}
-                  >
-                    {historyLoading && <Loader2 className="mr-2 size-3.5 animate-spin" />}
-                    {t(
-                      historyLimitReached
-                        ? "chat.historyPreviewLimit"
-                        : historyLoading
-                          ? "chat.loadingEarlierHistory"
-                          : historyFailed
-                            ? "chat.retryHistory"
-                            : "chat.loadEarlierHistory",
-                    )}
-                  </Button>
-                </div>
-              ) : undefined
+            displayMessages={displayMessages}
+            pageHistory={pageHistory}
+            historyKey={sendBucket}
+            readOnly={displayMessages !== undefined}
+            history={
+              onLoadEarlierHistory && {
+                hasMore: historyHasMore,
+                loading: historyLoading,
+                failed: historyFailed,
+                limitReached: historyLimitReached,
+                loadEarlier: onLoadEarlierHistory,
+              }
             }
             turnEpoch={turnEpoch}
             localRuntime={localRuntime}
             engineSessionId={engineSessionId}
             liveTurnActive={liveTurnActive}
-            onAskUserAnswer={onAskUserAnswer}
-            onExtendGoal={onExtendGoal}
+            onExtendGoal={displayMessages === undefined ? onExtendGoal : undefined}
             trailing={
               <>
                 {inlineApproval}
