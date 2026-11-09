@@ -1,3 +1,4 @@
+import type { StreamEvent } from "@cjhyy/code-shell-core";
 import type { SessionSnapshot, FoldItem } from "../../preload/types";
 import type { OutputJournalOptions, OutputJournalPage } from "@cjhyy/code-shell-core/internal";
 import {
@@ -16,6 +17,9 @@ type DesktopPage = OutputJournalPage & {
   legacyBaseItems?: FoldItem[];
 };
 
+const RECOVERY_PAGE_FRAMES = 2048;
+type JournalDelta = Extract<StreamEvent, { type: "text_delta" | "thinking_delta" }>;
+
 /** Rebuild a complete output prefix, then join it to actual Main snapshots. */
 export async function recoverDesktopOutputJournal(args: {
   read: (options: OutputJournalOptions) => Promise<DesktopPage>;
@@ -27,7 +31,11 @@ export async function recoverDesktopOutputJournal(args: {
   outputCursor: string;
   snapshot: SessionSnapshot;
 } | null> {
-  let page = await args.read({});
+  // Core still applies the byte bound. Dense pages save IPC round trips when
+  // the journal mostly contains small token deltas.
+  const read = (options: OutputJournalOptions = {}) =>
+    args.read({ ...options, maxFrames: RECOVERY_PAGE_FRAMES });
+  let page = await read();
   if (page.status === "unavailable") {
     const snapshot = await args.snapshot();
     if (!args.canContinue()) throw new Error("Output recovery stopped");
@@ -37,7 +45,7 @@ export async function recoverDesktopOutputJournal(args: {
       () => false,
     );
     if (snapshot.outputCursor || args.latestObservedCursor()) {
-      page = await args.read({});
+      page = await read();
       if (page.status === "unavailable") throw new Error("Output recovery journal is unavailable");
     } else {
       if (snapshot.outputJournalIdentity) throw new Error("Output recovery journal is unavailable");
@@ -60,12 +68,42 @@ export async function recoverDesktopOutputJournal(args: {
         legacyBaseItems: _baseItems,
         ...journalPage
       } = page;
+      // Fold adjacent chunks once per slot after the shared verifier accepts
+      // the page. Keep all boundaries (including empty deltas), the first
+      // timestamp, and the last accepted cursor.
+      let delta: JournalDelta | undefined;
+      const flushDelta = () => {
+        if (!delta) return;
+        state = applyTranscriptStreamEvent(state, delta);
+        delta = undefined;
+      };
       const complete = applyOutputJournalPage(recovery, journalPage, (event) => {
+        if (
+          (event.type === "text_delta" || event.type === "thinking_delta") &&
+          typeof event.text === "string" &&
+          event.text.length > 0
+        ) {
+          if (
+            delta?.type === event.type &&
+            delta.runId === event.runId &&
+            delta.clientMessageId === event.clientMessageId &&
+            delta.agentId === event.agentId
+          ) {
+            delta.text += event.text;
+            delta.outputCursor = event.outputCursor;
+          } else {
+            flushDelta();
+            delta = { ...event };
+          }
+          return;
+        }
+        flushDelta();
         state = applyTranscriptStreamEvent(state, event);
       });
       if (recovery.incomplete) throw new Error("Output recovery is incomplete");
+      flushDelta();
       if (complete) return;
-      page = await args.read({ after: recovery.cursor, through: recovery.through });
+      page = await read({ after: recovery.cursor, through: recovery.through });
     }
   };
   await fold();
@@ -126,7 +164,7 @@ export async function recoverDesktopOutputJournal(args: {
       };
     }
     recovery = { incomplete: false, cursor: recovery.appliedCursor };
-    page = await args.read({ after: recovery.cursor, through: target });
+    page = await read({ after: recovery.cursor, through: target });
     await fold();
   }
   throw new Error("Output recovery could not catch up within its round budget");
