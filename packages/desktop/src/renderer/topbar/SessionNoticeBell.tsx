@@ -15,6 +15,29 @@ function bellApi(): BellApi | undefined {
   }
 }
 
+/**
+ * The hidden-window "agent done" notification, unless a notice rule watches
+ * (or just fired for) this Session: main's notice router owns that one.
+ */
+export async function notifyAgentDone(
+  sessionId: string | null | undefined,
+  input: { title: string; body: string },
+  deps: {
+    bell?: Pick<PetApi, "getSessionBell">;
+    notify: (input: { title: string; body: string }) => Promise<unknown>;
+  } = { bell: bellApi(), notify: (input) => window.codeshell.notify(input) },
+): Promise<void> {
+  if (sessionId && deps.bell?.getSessionBell) {
+    try {
+      const bell = await deps.bell.getSessionBell(sessionId);
+      if (bell.on || bell.firedRecently) return;
+    } catch {
+      // Unknown: notify as before rather than stay silent.
+    }
+  }
+  await deps.notify(input);
+}
+
 /** Only Mimi's delegation rule watches the Session: shown, but not the bell's to switch off. */
 export function isDelegatedOnly(state: PetSessionBellState): boolean {
   return state.on && state.origin === "delegation";

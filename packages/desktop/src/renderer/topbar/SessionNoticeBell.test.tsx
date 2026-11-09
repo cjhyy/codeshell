@@ -8,8 +8,13 @@ import type { PetSessionBellState } from "../../shared/pet-notices";
 // Radix and friends bind layout effects at import time: install the DOM first.
 ensureMiniDom();
 const { createRoot } = await import("react-dom/client");
-const { SessionNoticeBell, SessionNoticeBellButton, isDelegatedOnly, sessionBellLabel } =
-  await import("./SessionNoticeBell");
+const {
+  SessionNoticeBell,
+  SessionNoticeBellButton,
+  isDelegatedOnly,
+  notifyAgentDone,
+  sessionBellLabel,
+} = await import("./SessionNoticeBell");
 const { translate } = await import("../i18n");
 
 const t = (key: string, params?: Record<string, string | number>) => translate("zh", key, params);
@@ -239,5 +244,45 @@ describe("SessionNoticeBell", () => {
     expect(bellButton(container).getAttribute("data-session-bell")).toBe("off");
     // s-b is not stuck waiting on s-a's toggle.
     expect(bellButton(container).getAttribute("disabled")).toBeNull();
+  });
+});
+
+describe("notifyAgentDone", () => {
+  const input = { title: "code-shell", body: "完成了" };
+  async function shown(
+    sessionId: string | null,
+    bell: PetSessionBellState | Error | undefined,
+  ): Promise<number> {
+    const sent: unknown[] = [];
+    await notifyAgentDone(sessionId, input, {
+      ...(bell
+        ? {
+            bell: {
+              getSessionBell: async () => {
+                if (bell instanceof Error) throw bell;
+                return bell;
+              },
+            },
+          }
+        : {}),
+      notify: async (value) => {
+        sent.push(value);
+      },
+    });
+    return sent.length;
+  }
+
+  test("main's notice router owns a Session a rule watches or just fired for", async () => {
+    expect(await shown("s-a", ON)).toBe(0);
+    expect(await shown("s-a", DELEGATED)).toBe(0);
+    expect(await shown("s-a", { ...OFF, firedRecently: true })).toBe(0);
+  });
+
+  test("otherwise the hidden window still says the agent is done", async () => {
+    expect(await shown("s-a", OFF)).toBe(1);
+    expect(await shown("s-a", UNAVAILABLE)).toBe(1);
+    expect(await shown(null, ON)).toBe(1);
+    expect(await shown("s-a", undefined)).toBe(1);
+    expect(await shown("s-a", new Error("ipc down"))).toBe(1);
   });
 });

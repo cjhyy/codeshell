@@ -146,6 +146,26 @@ describe("Session bell", () => {
     expect(await controls.sessionBell(SID)).toEqual(bell);
   });
 
+  test("a rule that just fired says so, so the renderer leaves that outcome to main", async () => {
+    const { controls, wiring } = fixture();
+    // Switching the bell off is not a notice.
+    await controls.setSessionBell(SID, true);
+    expect(await controls.setSessionBell(SID, false)).toEqual({
+      available: true,
+      on: false,
+      delegated: false,
+    });
+    await controls.setSessionBell(SID, true);
+    const [rule] = wiring.ruleStore.activeForSession(SID);
+    await wiring.ruleStore.update(rule!.id, rule!.version, { state: "spent" });
+    expect(await controls.sessionBell(SID)).toEqual({
+      available: true,
+      on: false,
+      delegated: false,
+      firedRecently: true,
+    });
+  });
+
   test("waits for the Goal when one drives the Session, and follows a bound IM chat", async () => {
     const { controls, wiring, goals, routes } = fixture();
     goals.add(SID);

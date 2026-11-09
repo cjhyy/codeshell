@@ -30,6 +30,7 @@ import {
 import { TopBar } from "./TopBar";
 import { usePetSprite } from "./app/useAppPetSprite";
 import { summarizeLiveActivity } from "./topbar/liveActivity";
+import { notifyAgentDone } from "./topbar/SessionNoticeBell";
 // InspectorPanel removed — tool details now live inline in the chat
 // stream's expandable tool cards (no dedicated detail pane).
 import { useToast } from "./ui/ToastProvider";
@@ -1562,14 +1563,13 @@ function App() {
 
   const prevBusyRef = useRef(busy);
   useEffect(() => {
-    if (prevBusyRef.current && !busy && document.hidden) {
-      void window.codeshell.notify({
+    if (prevBusyRef.current && !busy && document.hidden)
+      void notifyAgentDone(activeEngineSessionId, {
         title: "code-shell",
         body: activeProject
           ? t("misc.app.notifyDone", { name: activeProject.name })
           : t("misc.app.notifyAgentDone"),
       });
-    }
     prevBusyRef.current = busy;
   }, [busy, activeProject]);
 

@@ -70,6 +70,8 @@ function sessionRules(
 }
 
 const UNAVAILABLE: PetSessionBellState = { available: false, on: false, delegated: false };
+/** How long after a Session rule fired the renderer leaves its outcome to main. */
+const FIRED_RECENTLY_MS = 60_000;
 
 export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeControls {
   const { notices } = deps;
@@ -100,7 +102,23 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
     const delegation = newest(sessionRules(active, sessionId, "delegation"));
     const user = newest(sessionRules(active, sessionId, "user"));
     const rule = user ?? delegation;
-    if (!rule) return { available: true, on: false, delegated: false };
+    const since = now() - FIRED_RECENTLY_MS;
+    const fired = store
+      .list()
+      .some(
+        (candidate) =>
+          candidate.when.kind === "session" &&
+          candidate.when.sessionId === sessionId &&
+          candidate.state === "spent" &&
+          candidate.updatedAt >= since,
+      );
+    if (!rule)
+      return {
+        available: true,
+        on: false,
+        delegated: false,
+        ...(fired ? { firedRecently: true } : {}),
+      };
     const im = notices.predictIm(rule.channel, rule.target);
     return {
       available: true,
@@ -110,6 +128,7 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
       ruleId: rule.id,
       channel: rule.channel,
       ...(im ? { imLabel: im.label, ready: im.ready } : {}),
+      ...(fired ? { firedRecently: true } : {}),
     };
   };
 

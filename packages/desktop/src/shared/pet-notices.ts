@@ -60,6 +60,11 @@ export interface PetSessionBellState {
   /** The IM the notice is predicted to use; absent → a desktop notification. */
   imLabel?: string;
   ready?: PetNoticeChannelReadiness;
+  /**
+   * A rule of this Session fired within the last minute: main is already
+   * telling the owner about that outcome (the renderer adds no notification).
+   */
+  firedRecently?: boolean;
 }
 
 /** Bounds of the editable settings; main's settings schema enforces the same. */
