@@ -7,14 +7,17 @@ import { compileComposition } from "../composition/compiler.js";
 import type { Engine } from "../engine/engine.js";
 import type { ProtocolObserverHost } from "../tool-system/capability-module.js";
 
-function makeTransport() {
+function makeTransport(failSend?: (m: any) => boolean) {
   const sent: any[] = [];
   let onMsg: (msg: unknown) => void = () => {};
   return {
     sent,
     deliver: (msg: unknown) => onMsg(msg),
     transport: {
-      send: (m: unknown) => sent.push(m),
+      send: (m: unknown) => {
+        if (failSend?.(m)) throw new TypeError("Do not know how to serialize a BigInt");
+        sent.push(m);
+      },
       onMessage: (cb: (msg: unknown) => void) => {
         onMsg = cb;
       },
@@ -33,7 +36,10 @@ async function waitFor<T>(read: () => T | undefined, message: string): Promise<T
   throw new Error(message);
 }
 
-async function fixture() {
+const isHostActionRequest = (m: any) =>
+  m?.method === Methods.ApprovalRequest && m.params?.request?.toolName === HOST_ACTION_TOOL_NAME;
+
+async function fixture(failSend?: (m: any) => boolean) {
   let host: ProtocolObserverHost | undefined;
   const composition = compileComposition({
     modules: [
@@ -58,20 +64,12 @@ async function fixture() {
         dispose() {},
       }) as unknown as Engine,
   });
-  const t = makeTransport();
+  const t = makeTransport(failSend);
   const server = new AgentServer({ transport: t.transport, chatManager, composition });
   await (server as any).moduleReady;
   const session = await chatManager.getOrCreate("sess-host", {});
   const findRequest = () =>
-    waitFor(
-      () =>
-        t.sent.find(
-          (m) =>
-            m.method === Methods.ApprovalRequest &&
-            m.params?.request?.toolName === HOST_ACTION_TOOL_NAME,
-        ),
-      "host action request should be emitted",
-    );
+    waitFor(() => t.sent.find(isHostActionRequest), "host action request should be emitted");
   const answer = (requestId: string, payload: unknown) =>
     t.deliver({
       jsonrpc: "2.0",
@@ -134,13 +132,59 @@ describe("AgentServer host action loopback", () => {
     await expect(f.host.requestHostAction!("missing-session", "notice.create", {})).rejects.toThrow(
       "session not live",
     );
-    expect(
-      f.t.sent.some(
-        (m) =>
-          m.method === Methods.ApprovalRequest &&
-          m.params?.request?.toolName === HOST_ACTION_TOOL_NAME,
-      ),
-    ).toBe(false);
+    expect(f.t.sent.some(isHostActionRequest)).toBe(false);
     await f.server.close();
+  });
+
+  test("rejects an invalid action or non-plain args before registering anything", async () => {
+    const f = await fixture();
+    const call = f.host.requestHostAction! as (
+      s: string,
+      a: unknown,
+      b: unknown,
+    ) => Promise<unknown>;
+    for (const [action, args] of [
+      ["", {}],
+      [42, {}],
+      ["notice.create", null],
+      ["notice.create", [1]],
+      ["notice.create", "x"],
+      ["notice.create", new Date()],
+    ] as const) {
+      await expect(call("sess-host", action, args)).rejects.toThrow(/host action/);
+    }
+    expect(f.t.sent.some(isHostActionRequest)).toBe(false);
+    expect(f.session.pendingApprovals.size).toBe(0);
+    expect((f.server as any).approvalTimers.size).toBe(0);
+    await f.server.close();
+  });
+
+  test("retires the pending wait at once when the request cannot be sent", async () => {
+    const f = await fixture(isHostActionRequest);
+    await expect(f.host.requestHostAction!("sess-host", "notice.create", {})).rejects.toThrow(
+      "serialize",
+    );
+    expect(f.session.pendingApprovals.size).toBe(0);
+    expect((f.server as any).approvalTimers.size).toBe(0);
+    expect((f.server as any).pendingApprovalTargets.size).toBe(0);
+    await f.server.close();
+  });
+
+  test("times out like a workspace action and clears the pending wait", async () => {
+    const original = (AgentServer as any).APPROVAL_TIMEOUT_MS;
+    (AgentServer as any).APPROVAL_TIMEOUT_MS = 20;
+    try {
+      const f = await fixture();
+      const pending = f.host.requestHostAction!("sess-host", "notice.create", {});
+      await f.findRequest();
+      await expect(pending).rejects.toThrow(
+        "host action notice.create timed out waiting for the host",
+      );
+      expect(f.session.pendingApprovals.size).toBe(0);
+      expect((f.server as any).approvalTimers.size).toBe(0);
+      await f.server.close();
+    } finally {
+      (AgentServer as any).APPROVAL_TIMEOUT_MS = original;
+    }
   });
 });

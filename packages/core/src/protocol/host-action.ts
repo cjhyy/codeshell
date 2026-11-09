@@ -11,13 +11,15 @@
 export const HOST_ACTION_TOOL_NAME = "__host_action__";
 
 /** `request.args` of a {@link HOST_ACTION_TOOL_NAME} approval request. */
-export interface HostActionRequestArgs {
+export type HostActionRequestArgs = {
   action: string;
   args: Record<string, unknown>;
-}
+};
 
-/** What `parseHostLoopbackDecision` (protocol/server.ts) classified a reply as. */
-export type HostLoopbackOutcome = { ok: true; value: unknown } | { ok: false; detail: string };
+/** How `parseHostLoopbackDecision` (protocol/server.ts) classified a host-loopback reply. */
+export type HostLoopbackOutcome<Failure extends string = string> =
+  | { ok: true; value: unknown }
+  | { ok: false; failure: Failure; detail: string };
 
 /**
  * Settle an object-shaped host-loopback reply (workspace + host actions).
@@ -67,15 +69,27 @@ export function workspaceActionLoopback(
   };
 }
 
-/** `__host_action__`: generic extension-module request to the host. */
-export function hostActionLoopback(
-  action: string,
-  args: Record<string, unknown>,
-): HostLoopbackRequest {
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+/**
+ * `__host_action__`: generic extension-module request to the host. Throws —
+ * before anything is registered — unless `action` is a non-empty string and
+ * `args` a plain object, so a bad call never reaches the host as a line it
+ * cannot parse.
+ */
+export function hostActionLoopback(action: unknown, args: unknown): HostLoopbackRequest {
+  if (typeof action !== "string" || !action) {
+    throw new Error("host action requires a non-empty action name");
+  }
+  if (!isPlainObject(args)) throw new Error(`host action ${action} requires plain-object args`);
   const request: HostActionRequestArgs = { action, args };
   return {
     toolName: HOST_ACTION_TOOL_NAME,
-    args: { ...request },
+    args: request,
     label: `host action ${action}`,
     description: `host:${action}`,
   };

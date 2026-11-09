@@ -123,7 +123,7 @@ import {
   settleObjectHostReply,
   workspaceActionLoopback,
 } from "./host-action.js";
-import type { HostLoopbackRequest } from "./host-action.js";
+import type { HostLoopbackOutcome, HostLoopbackRequest } from "./host-action.js";
 import {
   describePluginCommands,
   expandPluginCommandBody,
@@ -252,7 +252,7 @@ function hostLoopbackDetail(result: unknown): string | undefined {
 function parseHostLoopbackDecision(
   decision: unknown,
   label: string,
-): { ok: true; value: unknown } | { ok: false; failure: HostLoopbackFailure; detail: string } {
+): HostLoopbackOutcome<HostLoopbackFailure> {
   const cancelled = asInternalCancellation(decision);
   if (cancelled) {
     return {
@@ -673,10 +673,11 @@ export class AgentServer {
       },
       isTransportDisconnected: () => this.transportDisconnected,
       notify: (method, params) => this.notify(method, params),
-      requestHostAction: (sessionId, action, args) => {
+      requestHostAction: async (sessionId, action, args) => {
+        const request = hostActionLoopback(action, args);
         const session = this.chatManager?.get(sessionId);
-        if (!session) return Promise.reject(new Error(`session not live: ${sessionId}`));
-        return this.requestHostLoopback(session, sessionId, hostActionLoopback(action, args));
+        if (!session) throw new Error(`session not live: ${sessionId}`);
+        return this.requestHostLoopback(session, sessionId, request);
       },
     };
     this.moduleReady = attachProtocolContributions({
@@ -4505,10 +4506,18 @@ export class AgentServer {
       }, AgentServer.APPROVAL_TIMEOUT_MS);
       this.approvalTimers.set(requestId, timer);
 
-      this.notify(Methods.ApprovalRequest, {
-        ...routeEnvelope,
-        request: { toolName, args, description, riskLevel: "low" as const },
-      });
+      try {
+        this.notify(Methods.ApprovalRequest, {
+          ...routeEnvelope,
+          request: { toolName, args, description, riskLevel: "low" as const },
+        });
+      } catch (error) {
+        // Never reached the host: retire the wait now instead of at the timeout.
+        this.takeSessionApproval(session, requestId, "cancelled");
+        this.pendingApprovalTargets.delete(requestId);
+        this.clearApprovalTimer(requestId);
+        reject(error);
+      }
     });
   }
 

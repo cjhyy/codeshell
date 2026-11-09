@@ -79,6 +79,7 @@ describe("PendingDecisionIndex", () => {
       "__browser_action__",
       "__credential_action__",
       "__workspace_action__",
+      "__host_action__",
     ]) {
       index.created({
         sessionId: "session-a",

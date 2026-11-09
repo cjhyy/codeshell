@@ -74,8 +74,6 @@ import {
   buildWorkspaceActionReply,
   parsePanelActionLine,
   buildPanelActionReply,
-  parseHostActionLine,
-  buildHostActionReply,
 } from "./browser-driver/intercept.js";
 import { HostActionHandlers, type HostActionHandler } from "./host-action-dispatch.js";
 import {
@@ -1694,12 +1692,11 @@ export class AgentBridge implements PetStateBridge {
   }
 
   private maybeHandleHostAction(line: string): boolean {
-    const parsed = parseHostActionLine(line);
-    if (!parsed) return false;
-    void this.hostActionHandlers
-      .dispatch(parsed)
-      .then((resultJson) => this.core.sendLine(buildHostActionReply(parsed, resultJson)));
-    return true;
+    return this.hostActionHandlers.intercept(
+      line,
+      (reply) => this.core.sendLine(reply),
+      (error) => dlog("bridge", "host-action-reply-failed", { error: String(error) }),
+    );
   }
 
   private requestPanelHost(

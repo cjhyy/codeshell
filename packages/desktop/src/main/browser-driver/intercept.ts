@@ -253,16 +253,25 @@ export function buildWorkspaceActionReply(
 // Main dispatches by `action` to a handler registered on AgentBridge and
 // answers with the JSON result (`{ ok:false, error }` on failure).
 
-export interface ParsedHostAction {
+/** Routing fields every `__host_action__` reply must echo back. */
+export interface HostActionEnvelope {
   connectionId?: string;
   generation?: number;
   sessionId?: string;
   requestId: string;
+}
+
+export interface ParsedHostAction extends HostActionEnvelope {
   action: string;
   args: Record<string, unknown>;
 }
 
-export function parseHostActionLine(line: string): ParsedHostAction | null {
+/**
+ * The reply envelope of any `__host_action__` approval request, even one whose
+ * args are malformed, so main can still answer (and consume) it. Null for
+ * every other line, or when there is no requestId to answer.
+ */
+export function parseHostActionEnvelope(line: string): HostActionEnvelope | null {
   let msg: any;
   try {
     msg = JSON.parse(line);
@@ -272,22 +281,25 @@ export function parseHostActionLine(line: string): ParsedHostAction | null {
   if (!msg || msg.method !== Methods.ApprovalRequest) return null;
   const p = msg.params;
   if (!p || typeof p.requestId !== "string") return null;
-  const r = p.request;
-  if (!r || r.toolName !== "__host_action__" || !r.args || typeof r.args !== "object") return null;
-  const a = r.args as Record<string, unknown>;
-  if (typeof a.action !== "string") return null;
-  if (!a.args || typeof a.args !== "object" || Array.isArray(a.args)) return null;
+  if (!p.request || p.request.toolName !== "__host_action__") return null;
   return {
     ...(typeof p.connectionId === "string" ? { connectionId: p.connectionId } : {}),
     ...(typeof p.generation === "number" ? { generation: p.generation } : {}),
     sessionId: typeof p.sessionId === "string" ? p.sessionId : undefined,
     requestId: p.requestId,
-    action: a.action,
-    args: a.args as Record<string, unknown>,
   };
 }
 
-export function buildHostActionReply(parsed: ParsedHostAction, resultJson: string): string {
+export function parseHostActionLine(line: string): ParsedHostAction | null {
+  const envelope = parseHostActionEnvelope(line);
+  if (!envelope) return null;
+  const a = (JSON.parse(line) as any).params.request.args;
+  if (!a || typeof a !== "object" || typeof a.action !== "string") return null;
+  if (!a.args || typeof a.args !== "object" || Array.isArray(a.args)) return null;
+  return { ...envelope, action: a.action, args: a.args as Record<string, unknown> };
+}
+
+export function buildHostActionReply(parsed: HostActionEnvelope, resultJson: string): string {
   return JSON.stringify({
     jsonrpc: "2.0",
     id: replyId(),
