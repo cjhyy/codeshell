@@ -14,8 +14,12 @@
 
 ## 实现期发现（相对设计稿的调整）
 
-- **不需要 core `controlReason`。** `complete_goal` 先发 `goal_progress(met)`（`turn-loop.ts:1905-1912`），`cancel_goal` 先发 `goal_cleared`（`turn-loop.ts:1948-1952`），都在 `turn_complete` 之前；规则观察器按这两个事件区分即可。Task 12 同步改设计稿 §5.1 第 4 条。
+- **不需要 core `controlReason`。** `complete_goal` 先发 `goal_progress(met)`（`turn-loop.ts:1905-1912`），`cancel_goal` 先发 `goal_cleared`（`turn-loop.ts:1948-1952`），都在 `turn_complete` 之前；规则观察器按这两个事件区分即可。设计稿已同步（设计分支 `5abda58b7`）。
 - **`NotifyMe` 的请求/响应通道。** 扩展协议观察器没有"向宿主请求并等回复"的能力（`capability-module.ts:54-67` 只有 `notify`）。core 内部已有审批回环（`server.ts:4515-4573` 的 `__workspace_action__`，desktop 在 `agent-bridge.ts` 拦截并以 `agent/approve` 回复）。Task 1 把它泛化为 `__host_action__` 并暴露给扩展。
+
+## 渠道（D8，同日追加）
+
+推送渠道不限微信：网关里任一已绑定的 IM（`NoticeChannel = "auto" | "desktop" | string`，string 为网关渠道 id）。主人点名时由模型对应到已绑定渠道 id；宿主校验，渠道不存在时返回 `{ ok:false, error:"unknown_channel", channels:[{ id, label, ready }] }`，模型据此告诉主人可选项或重试。没点名（`auto`）：在电脑前发桌面，不在时发主人最近一次给 Mimi 发消息的渠道，没有则第一个就绪渠道，再没有只发桌面。不新增"默认 IM"设置。幂等发送只在适配器声明 `outbound.idempotentSend` 时启用（一期只有微信）。
 
 ## 约定
 
@@ -113,7 +117,7 @@ setHostActionHandler(action: string, handler: (sessionId: string, args: Record<s
 // notice-rule.ts — 与 desktop 共享
 export type NoticeEvent = "done" | "failed" | "blocked";
 export type NoticeAttention = "always" | "important" | "digest" | "muted";
-export type NoticeChannel = "auto" | "wechat";
+export type NoticeChannel = "auto" | "desktop" | string; // string = 网关已绑定渠道 id
 export interface NoticeRuleUpsert {
   sessionId: string;
   createdBy: "notify-me" | "bell" | "delegation" | "watch-session";
@@ -126,20 +130,26 @@ export interface NoticeRuleUpsert {
 export interface RuleEffect {
   ruleId: string;
   fires: string;
-  channel: "wechat" | "desktop" | "auto";
-  wechat: "ready" | "unknown" | "unavailable";
+  channel: NoticeChannel;
+  im?: { channel: string; label: string; ready: "ready" | "unknown" | "unavailable" };
   quietHours?: string;
+}
+export interface UnknownChannelError {
+  ok: false;
+  error: "unknown_channel";
+  channels: { id: string; label: string; ready: "ready" | "unknown" | "unavailable" }[];
 }
 export const PET_RULE_UPSERT_ACTION = "pet.rule.upsert";
 ```
 
 - [ ] **Step 1: 失败测试**：
-  - 参数校验：`when` 只能是三者子集且非空；`scope`、`channel`、`attention` 枚举；`note` ≤ 500；未知字段报错。
+  - 参数校验：`when` 只能是三者子集且非空；`scope`、`attention` 枚举；`channel` 为非空字符串（≤ 40；`auto`、`desktop` 或渠道 id，存在性由宿主校验）；`note` ≤ 500；未知字段报错。
+  - 宿主返回 `UnknownChannelError` → 工具文本列出已绑定渠道（id、名称、就绪度）并提示 "Pick one of these ids, or tell the owner which channels are bound."
   - 可见性：有合法 `ctx.sessionId` 的原生顶层会话可见；子代理可见（规则挂 `ctx.parentSessionId ?? ctx.sessionId`，从现有子代理上下文字段取父会话 id，`grep -n "parentSessionId" packages/core/src/tool-system/context.ts` 确认字段名）；`behaviorProfile === "pet"`（Mimi 自己）不可见。
-  - 执行：`requestHostAction` 不可用 → 返回 `Error: the host rule channel is unavailable.`；返回 `{ ok:false, error }` → `Error: ...没有订上...`；返回 `RuleEffect` → 文本包含 `ruleId`、`fires`、`channel`、`wechat`，并含一句"Tell the owner exactly this; do not claim anything was sent."
+  - 执行：`requestHostAction` 不可用 → 返回 `Error: the host rule channel is unavailable.`；返回 `{ ok:false, error }` → `Error: ...没有订上...`；返回 `RuleEffect` → 文本包含 `ruleId`、`fires`、实际渠道（`im.label` 与就绪度，或桌面），并含一句"Tell the owner exactly this; do not claim anything was sent."
   - 默认值：有活动 Goal（`ctx.hasGoal`）时 `scope: "goal"`，否则 `"turn"`；`channel` 默认 `"auto"`；`attention` 默认 `"always"`。
 - [ ] **Step 2: 确认失败**：`bun test ./packages/pet/src/notify-me.test.ts`
-- [ ] **Step 3: 实现**，工具描述写清："Use when the owner asks to be told when this Session is done, fails or gets blocked. If they name WeChat, set channel to wechat. Call once; the host tracks completion — do not call RequestMimiDelivery at the end."
+- [ ] **Step 3: 实现**，工具描述写清："Use when the owner asks to be told when this Session is done, fails or gets blocked. If they name an IM (WeChat/weixin, Feishu/Lark, Telegram, Slack…), set channel to that gateway channel id (wechat, lark, telegram, slack…); omit it when they don't name one; if the id is wrong the host replies with the bound channels. Call once; the host tracks completion — do not call RequestMimiDelivery at the end."
 - [ ] **Step 4: capability.ts 注册**：默认权限 `allow`（同 ReportToMimi）；把 observer host 的 `requestHostAction` 通过与 `reportFor(sessionId)` 相同的宿主解析逻辑交给工具。
 - [ ] **Step 5: 跑 pet 全部测试**：`bun test ./packages/pet/src`
 - [ ] **Step 6: Commit** `feat(pet): NotifyMe tool registers a persisted notice rule`
@@ -255,10 +265,12 @@ export interface RouteState {
   maxPerHour: number;
   maxP0PerHour: number;
   seenDedupeKeys: ReadonlySet<string>;
-  wechat: "ready" | "unknown" | "unavailable";
+  imReady: Readonly<Record<string, "ready" | "unknown" | "unavailable">>;
+  lastInboundChannel?: string;
 }
 export interface RouteDecision {
-  outlet: "wechat" | "desktop" | "both" | "digest" | "record" | "drop";
+  outlet: "im" | "desktop" | "both" | "digest" | "record" | "drop";
+  im?: string;
   reason: string;
 }
 export function route(
@@ -273,7 +285,7 @@ export function route(
 ): RouteDecision;
 ```
 
-规则（设计稿 §8.3，每条一个表驱动用例）：重复 → drop；muted → record；digest → digest；P0：`p0SentThisHour >= maxP0PerHour` → digest，否则进渠道；P1/P2：在免打扰（跨零点）→ digest，`sentThisHour >= maxPerHour` → digest；渠道：`channel === "wechat"` → both；`auto` 且 present → desktop（`requiresAway` 时 present → record）；`auto` 且 !present → wechat（`wechat === "unavailable"` → desktop + 待送，outlet 记 `desktop`，reason `wechat-unavailable-queued`）。
+规则（设计稿 §8.3，每条一个表驱动用例）：重复 → drop；muted → record；digest → digest；P0：`p0SentThisHour >= maxP0PerHour` → digest，否则进渠道；P1/P2：在免打扰（跨零点）→ digest，`sentThisHour >= maxPerHour` → digest；渠道：`channel === "desktop"` → desktop；具体渠道 id → both（`im` = 该 id；该渠道 `unavailable` → desktop + 待送，reason `im-unavailable-queued`）；`auto` 且 present → desktop（`requiresAway` 时 present → record）；`auto` 且 !present → `im` = `lastInboundChannel`（非 unavailable）?? 第一个非 unavailable 渠道；都没有 → desktop，reason `no-im-available`。
 
 Ledger：`notices.json`（≤ 5000 条 / 8 MB，淘汰最旧的终结项）；`claim(notice) → key`（冻结 `body`、生成 `delivery.key = sha256(dedupeKey).slice(0,24)`、状态 `claimed` 落盘后才返回）；`settle(id, status, error?)`；整点计数按本地时区；`recoverOnStartup(now)`：`claimed` 且 `now - at < 10min` → 返回待重发列表，否则置 `unknown`。
 
@@ -284,31 +296,32 @@ Ledger：`notices.json`（≤ 5000 条 / 8 MB，淘汰最旧的终结项）；`c
 **Files:** `git mv packages/desktop/src/main/pet/pet-attention-policy.ts packages/desktop/src/main/pet/pet-notice-router.ts`（测试同改名）；Create `pet-presence.ts` + test；更新所有 import（`grep -rn "pet-attention-policy" packages/desktop`）。
 
 - 保留现有 `PetAttentionPolicy` 行为与对外事件（`count`/`peek`），类名改 `PetNoticeRouter`，旧名 `export { PetNoticeRouter as PetAttentionPolicy }` 过渡一版。
-- 新增 `submit(draft: NoticeDraft & { body?: string; attention; channel; target })`：调 `route()`；`desktop/both` → 现有 peek 通道 + `DesktopNotifier`；`wechat/both` → `ledger.claim` → `outlets.wechat(target, body, clientId)`；`digest` → 加入摘要缓冲，在下一个可发送时刻（免打扰结束 / 下一整点）合成一条"你不在时：……"走同一流程；失败 → `failed` + 待送队列。
+- 新增 `submit(draft: NoticeDraft & { body?: string; attention; channel; target })`：调 `route()`；`desktop/both` → 现有 peek 通道 + `DesktopNotifier`；`im/both` → `ledger.claim` → `outlets.im(channel, target, body, idempotencyKey)`；`digest` → 加入摘要缓冲，在下一个可发送时刻（免打扰结束 / 下一整点）合成一条"你不在时：……"走同一流程；失败 → `failed` + 待送队列。
 - 待送队列：`replayPending(routeKey)` 在主人入站消息、该轮 Mimi 运行前调用；逐条重查（blocked：`isDecisionStillPending(requestId)`、未过 `expiresAt`；done/failed：`wasSessionViewedSince(sessionId, createdAt)`），有效的返回给调用方注入 `runtimeContext.pendingNotices`。
 - `pet-presence.ts`：`isPresent(): boolean = powerMonitor.getSystemIdleTime() < idleSec && BrowserWindow.getFocusedWindow() != null`，依赖注入以便测试。
 - 成文：模板用于 blocked（问题 + 选项 + `回答 码 N / 跳过 / 等待`，码由 Task 10 提供）与 failed；done 若 draft 带 `body`（收尾轮文案）用之，否则模板"「{title}」做完了：{summary}"。会话内容一律作为数据插入模板，不经模型。
 
 - [ ] Steps：失败测试（用假 outlets、假 presence、假时钟）覆盖：在场只发桌面、明说微信两边都发、免打扰进摘要并在结束时合成一条、P0 第 13 条进摘要、发送失败入队、入队后审批已解决则补发前撤销、重启恢复 claimed → 10 分钟内重发同一 clientId → 实现 → 通过 → Commit `feat(desktop): grow attention policy into the notice router`
 
-### Task 7: 微信外部 `client_id` 与目标就绪度
+### Task 7: 幂等键透传、渠道就绪度、最近入站渠道
 
 **Files:** `packages/chat/src/wechat.ts:375-430`、`packages/chat/src/channel.ts`（发送选项类型）、`packages/desktop/src/main/im-gateway-service.ts:656-688,698-760,1383-1386` + tests
 
 - `send(target, message, { clientId?: string })`：提供时所有分段用 `${clientId}-${index}`，不再 `randomUUID()`；失效重试沿用同一值。
-- `sendOwnerMessage(targetId, text, { idempotencyKey?: string })` 透传为 `clientId: "code-shell-notice-" + key`。
+- `sendOwnerMessage(targetId, text, { idempotencyKey?: string })`：适配器能力新增 `outbound.idempotentSend?: boolean`（微信 true，其余缺省 false）；为 true 时透传为 `clientId: "code-shell-notice-" + key`，否则忽略。
+- 新增 `ownerChannels(): { id: string; label: string; ready: "ready" | "unknown" | "unavailable" }[]`（每个已绑定渠道一项：未绑定不列；需要网关而网关未开 → unavailable；微信无存盘 token → unknown；其余 ready）与 `lastOwnerInboundChannel(): string | undefined`（网关收到 allowed owner 入站消息时记录渠道 id，持久化在网关现有状态里）。
 - `listOwnerMessageTargets` 不再因缺少存盘 token 隐藏微信目标；返回项加 `proactiveReady: "ready" | "unknown"`（有 token → ready，无 → unknown）。`SendMessage` 工具与"微信主动发送暂不可用"兜底文案按 `unknown` 仍尝试发送。
 
-- [ ] Steps：`wechat.test.ts` 新增"外部 clientId 用于所有分段且失效重试复用"；im-gateway 测试新增"无 token 目标列出为 unknown"、"idempotencyKey → clientId" → 实现 → Commit `feat(chat): caller-supplied WeChat client ids and unknown readiness`
+- [ ] Steps：`wechat.test.ts` 新增"外部 clientId 用于所有分段且失效重试复用"；im-gateway 测试新增"无 token 微信目标列出为 unknown"、"idempotentSend 渠道 idempotencyKey → clientId，其他渠道忽略"、"需要网关的渠道在网关未开时 unavailable"、"入站后 lastOwnerInboundChannel 更新且重启保留" → 实现 → Commit `feat(chat): idempotent owner sends, per-channel readiness and last inbound channel`
 
 ### Task 8: main 接线 `pet-notice-wiring.ts`
 
 **Files:** Create `packages/desktop/src/main/pet/pet-notice-wiring.ts`；Modify `packages/desktop/src/main/index.ts`（PetAttentionPolicy 构造处 `index.ts:2617` 附近、`subscribeOutbound` 处 `:2201`、`onTaskClosed` 处 `:2038-2156`）
 
 - `wirePetNotices({ userDataDir, bridge, projection, longTaskStore, imGateway, desktopNotifier, settings, lock })` 返回 `{ router, ruleStore, watcher, dispose }`。
-- 在 bridge 上 `setHostActionHandler(PET_RULE_UPSERT_ACTION, ...)`：校验 `sessionId` 为顶层或子代理会话（子代理挂父会话）；确定 target（会话由 IM 绑定或长任务有 IM 来源 → route，否则 owner）；`ruleStore.upsertSessionRule`；返回 `RuleEffect`（`wechat` 取 `listOwnerMessageTargets` 的就绪度；`quietHours` 取设置）。
+- 在 bridge 上 `setHostActionHandler(PET_RULE_UPSERT_ACTION, ...)`：校验 `sessionId` 为顶层或子代理会话（子代理挂父会话）；确定 target（会话由 IM 绑定或长任务有 IM 来源 → route，否则 owner）；`ruleStore.upsertSessionRule`；`channel` 不是 `auto`/`desktop` 且不在 `ownerChannels()` 里 → 返回 `UnknownChannelError`；否则返回 `RuleEffect`（`im` 为实际会用的渠道：点名的，或按 auto 规则预估的；`quietHours` 取设置）。
 - `bridge.subscribeOutbound` 的同一 tap 里，在 `longTaskCoordinator.observeSessionEvent` 之后调 `watcher.observe(sessionId, event)`。
-- `onTaskClosed`：删除 `publishGatewayControlEvent(pet.task.*)` 与直接 `DesktopNotifier` 调用，改为 `router.submit({ kind, priority:"P1", dedupeKey: task:${task.id}:${status}, body: closureText, target: task.completionTarget ?? owner, channel: rule?.channel ?? delegatedFromDesktop, attention: "always" })`。
+- `onTaskClosed`：删除 `publishGatewayControlEvent(pet.task.*)` 与直接 `DesktopNotifier` 调用，改为 `router.submit({ kind, priority:"P1", dedupeKey: task:${task.id}:${status}, body: closureText, target: task.completionTarget ?? owner, channel: task.completionTarget ? task.completionTarget.channel : rule?.channel ?? settings.delegatedFromDesktop ?? "auto", attention: "always" })`。
 - index.ts 只保留 `const notices = wirePetNotices(...)` 与少量调用；跑预算测试。
 
 - [ ] Steps：wiring 单测（假 bridge/假 store）覆盖 host action 处理与 onTaskClosed 只产生一条 Notice → 实现 → `bun test ./packages/desktop/src/main/pet` → Commit `feat(desktop): wire notice rules and router into main`
@@ -351,7 +364,7 @@ Mimi started this Session for the owner from {channel}. The owner may be away fr
 ```
 
 - 续派（continuation 模板）不重复加。
-- `startDelegation` 成功后 `ruleStore.upsertSessionRule({ createdBy:"delegation", events:["done","failed","blocked"], scope: verificationMode, channel: completionTarget ? "wechat" : settings.delegatedFromDesktop === "wechat" ? "wechat" : "auto", attention:"always", target })`。
+- `startDelegation` 成功后 `ruleStore.upsertSessionRule({ createdBy:"delegation", events:["done","failed","blocked"], scope: verificationMode, channel: completionTarget ? completionTarget.channel : settings.delegatedFromDesktop ?? "auto", attention:"always", target })`。
 
 - [ ] Steps：失败测试 → 实现 → Commit `feat(desktop): delegated sessions get a brief and an automatic notice rule`
 
@@ -359,10 +372,10 @@ Mimi started this Session for the owner from {channel}. The owner may be away fr
 
 **Files:**
 
-- `packages/core/src/settings/schema.ts:123-151`：`pet.notifications`（`delegatedFromDesktop`、`quietHours`、`maxPerHour`、`maxP0PerHour`、`mergeWindowSec`、`presenceIdleSec`，全部可选、带上下界）。
+- `packages/core/src/settings/schema.ts:123-151`：`pet.notifications`（`delegatedFromDesktop: "auto" | "desktop"`、`quietHours`、`maxPerHour`、`maxP0PerHour`、`mergeWindowSec`、`presenceIdleSec`，全部可选、带上下界）。
 - IPC：`pet:rules:list`、`pet:rules:setSessionBell(sessionId, on)`、`pet:rules:setSystemRule(id, patch)`（`pet-ipc.ts`，参照现有 handler 写法与 ipc-contract 测试）。
-- Renderer：工作会话头部铃铛（找到会话头部组件：`grep -rn "SessionHeader\|session-header" packages/desktop/src/renderer -l`），状态取 `pet:rules:list`，点击切换；Mimi 设置页"通知与主动"卡片：免打扰、每小时上限、桌面派活默认渠道、"不在电脑前所有会话都推我"开关。i18n 中英同步。
-- 设计稿：§5.1 第 4 条改为"按 `goal_cleared` / `goal_progress(met)` 区分，无需 core 字段"；§13 表 1a 去掉 `controlReason`；§14 core 行去掉 `controlReason`。
+- Renderer：工作会话头部铃铛（找到会话头部组件：`grep -rn "SessionHeader\|session-header" packages/desktop/src/renderer -l`），状态取 `pet:rules:list`，点击切换；Mimi 设置页"通知与主动"卡片：免打扰、每小时上限、桌面派活是否推 IM（auto/desktop）、已绑定渠道及就绪度的只读列表、"不在电脑前所有会话都推我"开关。i18n 中英同步。
+- 设计稿：已在设计分支同步（`5abda58b7`）；本任务开 PR 前把实现分支 rebase 到设计分支最新提交。
 
 - [ ] Steps：settings schema 测试、ipc-contract 测试、铃铛组件测试（迷你 DOM，先 `ensureMiniDom` 再 import）→ 实现 → Commit `feat(desktop): notification settings, session bell and system rule toggle`
 
