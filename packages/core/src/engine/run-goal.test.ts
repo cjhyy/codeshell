@@ -1,7 +1,34 @@
 import { describe, expect, test } from "bun:test";
-import { createGoalLifecycle, waitGoalLifecycle } from "../goal/lifecycle.js";
+import { createGoalLifecycle, waitGoalLifecycle, type GoalConfig } from "../goal/lifecycle.js";
 import type { SessionBundle } from "../session/session-manager.js";
-import { resolveRunGoal } from "./run-goal.js";
+import { applyRunGoalUpdate, resolveRunGoal } from "./run-goal.js";
+
+describe("applyRunGoalUpdate", () => {
+  test("edits preserve borrowed object identities and remove the old pause flag", () => {
+    const before = { objective: "old", goalId: "goal", revision: 1, paused: true };
+    const runtime: GoalConfig = { ...before };
+    const persisted: GoalConfig = { ...before };
+    const next = { objective: "new", goalId: "goal", revision: 2, maxTurns: 9 };
+    expect(applyRunGoalUpdate(before, next, runtime, persisted)).toBe("目标已编辑。新的目标：new");
+    expect(runtime).toEqual(next);
+    expect(persisted).toEqual(next);
+    expect(before).toMatchObject({ objective: "old", paused: true, revision: 1 });
+  });
+
+  test("resume and budget-only controls keep their distinct prompt behavior", () => {
+    const before: GoalConfig = { objective: "finish", paused: true };
+    expect(applyRunGoalUpdate(before, { objective: "finish" }, before, null)).toBe(
+      "目标已恢复：finish",
+    );
+    expect(before.paused).toBeUndefined();
+    const paused = { objective: "finish", paused: true };
+    expect(applyRunGoalUpdate(before, paused, before, null)).toBeUndefined();
+    expect(before.paused).toBe(true);
+    expect(
+      applyRunGoalUpdate({ objective: "finish" }, { objective: "finish", maxTurns: 9 }, null, null),
+    ).toBeUndefined();
+  });
+});
 
 describe("resolveRunGoal", () => {
   test.each(["user", "background"] as const)(

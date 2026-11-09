@@ -43,6 +43,27 @@ export interface GoalRunSlots {
   setActiveGoalHookAttached(attached: boolean): void;
 }
 
+/** Sync the run's borrowed goal identities and describe a mid-run user control. */
+export function applyRunGoalUpdate(
+  before: GoalConfig,
+  next: GoalConfig,
+  runtimeGoal: GoalConfig | null,
+  persistedRunGoal: GoalConfig | null,
+): string | undefined {
+  const objectiveChanged = before.objective !== next.objective;
+  const resumed = before.paused === true;
+  for (const goal of [runtimeGoal, persistedRunGoal]) {
+    if (!goal) continue;
+    Object.assign(goal, next);
+    if (next.paused !== true) delete goal.paused;
+  }
+  return objectiveChanged
+    ? `目标已编辑。新的目标：${next.objective}`
+    : resumed
+      ? `目标已恢复：${next.objective}`
+      : undefined;
+}
+
 /** engine.ts:explicit/stored/fallback 归一化 + 持久化 + goal_set 事件。 */
 export function resolveRunGoal(args: {
   options: EngineRunOptions | undefined;

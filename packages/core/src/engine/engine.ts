@@ -193,6 +193,7 @@ import {
 } from "./run-context.js";
 import {
   resolveRunGoal,
+  applyRunGoalUpdate,
   armRunGoalHook,
   createGoalTerminationApplier,
   createRunGoalProgressMeter,
@@ -4179,14 +4180,12 @@ export class Engine {
       live !== null &&
       isSameGoalVersion(before, this.activeRuntimeGoal ?? undefined);
     if (controlsThisRun) {
-      if (this.activeRuntimeGoal) {
-        Object.assign(this.activeRuntimeGoal, next);
-        if (next.paused !== true) delete this.activeRuntimeGoal.paused;
-      }
-      if (this.activePersistedRunGoal) {
-        Object.assign(this.activePersistedRunGoal, next);
-        if (next.paused !== true) delete this.activePersistedRunGoal.paused;
-      }
+      const instruction = applyRunGoalUpdate(
+        before,
+        next,
+        this.activeRuntimeGoal,
+        this.activePersistedRunGoal,
+      );
 
       if (next.paused === true) {
         if (next.goalId) this.activeGoalMeter?.pause(next.goalId);
@@ -4198,20 +4197,10 @@ export class Engine {
         this.activeTurnLoop!.updateGoal(undefined);
       } else {
         if (next.goalId) this.activeGoalMeter?.begin(next.goalId);
-        const objectiveChanged = before.objective !== next.objective;
-        const resumed = before.paused === true;
-        this.activeTurnLoop!.updateGoal(
-          next,
-          objectiveChanged
-            ? `目标已编辑。新的目标：${next.objective}`
-            : resumed
-              ? `目标已恢复：${next.objective}`
-              : undefined,
-          {
-            maxTurns: this.resolveRunMaxTurns(next, this.activeProfileMaxTurns),
-            maxStopBlocks: resolveMaxStopBlocks(this.config.maxStopBlocks, next),
-          },
-        );
+        this.activeTurnLoop!.updateGoal(next, instruction, {
+          maxTurns: this.resolveRunMaxTurns(next, this.activeProfileMaxTurns),
+          maxStopBlocks: resolveMaxStopBlocks(this.config.maxStopBlocks, next),
+        });
         if (this.activeGoalHook && !this.activeGoalHookAttached) {
           this.registerGoalHook(this.activeGoalHook);
           this.activeGoalHookAttached = true;
