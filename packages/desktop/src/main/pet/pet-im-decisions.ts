@@ -330,8 +330,8 @@ export class PetImDecisions {
     if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
   }
-  /** A notice rule saw this Session block: look now instead of at the next poll. */
-  considerSession(_sessionId: string): void {
+  /** A notice rule saw a Session block: run the full poll now instead of at the next tick. */
+  scanNow(): void {
     if (!this.timer) return;
     void this.tick();
   }

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { PetProjectionSnapshotResult } from "@cjhyy/code-shell-pet";
 import type { ListDiskSessionsResult } from "@cjhyy/code-shell-server/storage";
-import { PetAttentionPolicy } from "./pet-notice-router";
+import { PetNoticeRouter } from "./pet-notice-router";
 import {
   PetStateAggregator,
   type AgentBridgePetEvent,
@@ -79,7 +79,7 @@ describe("Pet lifecycle integration", () => {
       ],
     };
     await bridge.emit({ kind: "lifecycle", state: "active" });
-    const policy = new PetAttentionPolicy({
+    const policy = new PetNoticeRouter({
       source: aggregator,
       receipts: { has: () => true, mark: () => {} },
       now: () => 20_000,

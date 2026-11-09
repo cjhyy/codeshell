@@ -802,6 +802,3 @@ export class PetNoticeRouter {
     for (const listener of this.listeners) listener(event);
   }
 }
-
-/** Compatibility name for the attention-only API; new code uses {@link PetNoticeRouter}. */
-export { PetNoticeRouter as PetAttentionPolicy };

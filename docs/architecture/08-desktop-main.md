@@ -545,7 +545,7 @@ flowchart LR
    - `bridge.subscribeOutbound` → task inbox 刷新、移动端镜像（`mobileRemote.broadcast({type:"session.stream"...})`）、`pendingMobileApprovals.observeOutboundLine`
    - `:1700` `ExternalRuntimeApprovals`；`:1705` `ExternalRuntimeService({registerSession, emit→ingestOwnedExternalEvent, toolContextOverrides:{panels, browser: interactiveBrowserBridgeForSession, injectCredentialToBrowser}, backgroundWork…})`
    - `setExternalGoalRpcHandler(createExternalGoalRpcHandler(...))`
-   - 整套 Mimi：`PetMetadataStore`、`:1847 PetWorkDelegationHost`、`PetWorkMemoryStore`、`:1854 PetStateAggregator`、`ExternalSessionVisibilityController`、`PetLongTaskStore`、`PetMemoryStore`、`PetWorkInboxStore`、`PetHostActionReceiptStore`、`PetJournalStore`、`:1949 PetLongTaskCoordinator`、`PetImDecisions`、`PetHostActionReceiptService`、`:2201 PetDispatchService`、`PetReportReceiptStore`、`PetAttentionPolicy`
+   - 整套 Mimi：`PetMetadataStore`、`:1847 PetWorkDelegationHost`、`PetWorkMemoryStore`、`:1854 PetStateAggregator`、`ExternalSessionVisibilityController`、`PetLongTaskStore`、`PetMemoryStore`、`PetWorkInboxStore`、`PetHostActionReceiptStore`、`PetJournalStore`、`:1949 PetLongTaskCoordinator`、`PetImDecisions`、`PetHostActionReceiptService`、`:2201 PetDispatchService`、`PetReportReceiptStore`、`PetNoticeRouter`
    - `:2550` `petInitialization`（异步：确定 pet 会话 id、建 `PetSegmentController` 与收尾服务、backfill、一次性上下文迁移 `agent/query {type:"archive_marker"}`、`longTaskCoordinator.start()`、`attention.start()`、自动归档）
    - `:2716` `registerPetIpc({...})` —— **在 loadRenderer 之前**注册，handler 内部 `afterReady(ready, …)` 等待水合
    - `:2793` `loadRenderer()`；`await petInitialization`；`petRuntimeReady = true`；`markPetIpcReady()`

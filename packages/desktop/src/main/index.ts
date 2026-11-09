@@ -2011,7 +2011,7 @@ async function createWindow(): Promise<BrowserWindow> {
       onError: (error) => dlog("main", "pet.im-decision.failed", { error: String(error) }),
     });
     const imDecisions = petImDecisions;
-    notices.decisions.onBlocked((sessionId) => imDecisions.considerSession(sessionId));
+    notices.decisions.onBlocked(() => imDecisions.scanNow());
     petImDecisions.start();
     unsubscribePetLongTaskStream = bridge.subscribeOutbound((_line, snapshotEntry) => {
       if (!snapshotEntry) return;

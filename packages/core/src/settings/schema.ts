@@ -172,9 +172,9 @@ export const SettingsSchema = z
               })
               .optional()
               .catch(undefined),
-            /** Ordinary IM pushes per rolling hour. */
+            /** Ordinary IM pushes per local clock hour (resets on the hour). */
             maxPerHour: z.number().int().min(1).max(60).optional().catch(undefined),
-            /** Decision (P0) IM pushes per rolling hour. */
+            /** Decision (P0) IM pushes per local clock hour (resets on the hour). */
             maxP0PerHour: z.number().int().min(1).max(120).optional().catch(undefined),
             /** Seconds a burst of notices is merged into one digest. */
             mergeWindowSec: z.number().int().min(0).max(3_600).optional().catch(undefined),

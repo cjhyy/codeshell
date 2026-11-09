@@ -9,7 +9,6 @@ import type {
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator";
 import {
-  PetAttentionPolicy,
   PetNoticeRouter,
   type NoticeImPayload,
   type NoticeImSendResult,
@@ -64,13 +63,13 @@ function snapshot(count = 1): DesktopPetProjectionSnapshot {
   };
 }
 
-describe("PetAttentionPolicy", () => {
+describe("PetNoticeRouter attention", () => {
   test("waits the full 15s grace and cancels resolved work", () => {
     const clock = new FakeClock();
     let current = snapshot();
     let sourceListener: ((event: DesktopPetProjectionEvent) => void) | undefined;
     const events: unknown[] = [];
-    const policy = new PetAttentionPolicy({
+    const policy = new PetNoticeRouter({
       source: {
         getSnapshot: () => current,
         subscribe: (listener) => {
@@ -101,7 +100,7 @@ describe("PetAttentionPolicy", () => {
     let current = snapshot(1);
     const marked: string[] = [];
     const peeks: unknown[] = [];
-    const policy = new PetAttentionPolicy({
+    const policy = new PetNoticeRouter({
       source: { getSnapshot: () => current, subscribe: () => () => {} },
       receipts: { has: (key) => marked.includes(key), mark: (key) => marked.push(key) },
       now: () => clock.now,
