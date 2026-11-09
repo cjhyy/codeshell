@@ -37,10 +37,7 @@ export async function readLatestWorkContext(
       (data.role === "user" && data.authority !== undefined && data.authority !== "user")
     )
       continue;
-    const raw = textOfContent(data.content).trim();
-    // A delegated Session's first request starts with Mimi's brief; the
-    // excerpt is the owner's objective.
-    const text = data.role === "user" ? stripDelegationBrief(raw).trim() : raw;
+    const text = data.role === "user" ? userRequestText(data) : textOfContent(data.content).trim();
     if (!text) continue;
     context[key] = {
       text: truncateSafely(text, options.maxChars),
@@ -50,6 +47,17 @@ export async function readLatestWorkContext(
     if (context.latestRequest && context.latestResult) break;
   }
   return context;
+}
+
+/**
+ * What the user asked: the host's `displayText` when present (a delegated
+ * Session's first request hides Mimi's brief there), else the content with a
+ * leading delegation brief removed (transcripts written before displayText).
+ */
+function userRequestText(data: Record<string, unknown>): string {
+  if (typeof data.displayText === "string" && data.displayText.trim())
+    return data.displayText.trim();
+  return stripDelegationBrief(textOfContent(data.content)).trim();
 }
 
 /** Truncate to maxChars without splitting a UTF-16 surrogate pair in two. */

@@ -880,8 +880,17 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   async function armDelegationRule(task: PetLongTask): Promise<void> {
     try {
       await ready;
-      // A rule the owner set on this Session is their choice; never rewrite it.
-      if (ruleStore.activeForSession(task.sessionId).some((rule) => rule.origin === "user")) {
+      // A rule the owner set on this Session (even paused) is their choice; never rewrite it.
+      const ownerRule = ruleStore
+        .list()
+        .some(
+          (rule) =>
+            rule.origin === "user" &&
+            rule.when.kind === "session" &&
+            rule.when.sessionId === task.sessionId &&
+            (rule.state === "active" || rule.state === "paused"),
+        );
+      if (ownerRule) {
         log("pet.notice.delegation_rule_skipped", { sessionId: task.sessionId, reason: "user" });
         return;
       }

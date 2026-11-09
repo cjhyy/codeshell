@@ -771,6 +771,18 @@ describe("delegation rules", () => {
     ]);
   });
 
+  test("a paused owner rule also keeps the automatic rule out", async () => {
+    current = harness();
+    await current.handler(SID, upsertArgs());
+    const [owner] = current.wiring.ruleStore.activeForSession(SID);
+    await current.wiring.ruleStore.update(owner!.id, owner!.version, { state: "paused" });
+    await current.wiring.armDelegationRule(running());
+    expect(current.wiring.ruleStore.activeForSession(SID)).toEqual([]);
+    expect(current.wiring.ruleStore.list()).toEqual([
+      expect.objectContaining({ origin: "user", state: "paused" }),
+    ]);
+  });
+
   test("a rule that cannot be stored is logged and never thrown", async () => {
     const logged: string[] = [];
     current = harness({ log: (event) => logged.push(event) });

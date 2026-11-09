@@ -60,6 +60,17 @@ describe("SessionManager.create", () => {
     expect(sm.list(1)[0]?.preview).toBe("real user request");
   });
 
+  test("list preview shows a user message's displayText over its model-only content", () => {
+    const sm = new SessionManager(dir);
+    const session = sm.create("/tmp/proj", "m", "p", "with-display-text");
+    session.transcript.appendMessage("user", "[host framing]\n\nRename billing", {
+      displayText: "Rename billing",
+    });
+    session.transcript.appendMessage("assistant", "ok");
+
+    expect(sm.list(1)[0]?.preview).toBe("Rename billing");
+  });
+
   test("explicit ephemeral sessions stay process-local and out of list results", () => {
     const sm = new SessionManager(dir);
     const task = sm.create("/tmp/proj", "m", "p", "panel-task-test", null, "panel", "work", true);

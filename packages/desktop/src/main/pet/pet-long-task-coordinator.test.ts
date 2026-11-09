@@ -1638,6 +1638,68 @@ describe("PetLongTaskCoordinator", () => {
     expect(cleared.tasks).toEqual([]);
   });
 
+  test("resume and retry are re-drives that keep the IM route and re-arm the rule", async () => {
+    const started: PetLongTask[] = [];
+    const h = await harness(emptySnapshot(), {
+      onDelegationStarted: async (task) => {
+        started.push(task);
+      },
+    });
+    const route = { kind: "im-gateway" as const, channel: "wechat", target: "owner" };
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "message-redrive",
+      task: "Finish a long migration",
+      workspacePath: "/work/app",
+      completionTarget: route,
+    });
+    expect(h.launches[0]).not.toHaveProperty("redrive");
+
+    await h.coordinator.control({ taskId: launch.taskId, action: "pause" });
+    const resumed = await h.coordinator.control({ taskId: launch.taskId, action: "resume" });
+    expect(resumed.ok).toBe(true);
+    expect(h.launches.at(-1)).toMatchObject({ redrive: true, completionTarget: route });
+
+    h.tick(2_000);
+    await h.stream(launch.sessionId, { type: "error", error: "temporary worker failure" });
+    expect(h.store.get(launch.taskId)).toMatchObject({ status: "failed" });
+    const retried = await h.coordinator.control({ taskId: launch.taskId, action: "retry" });
+    expect(retried.ok && retried.task).toMatchObject({ status: "running", attempt: 2 });
+    expect(h.launches.at(-1)).toMatchObject({ redrive: true, completionTarget: route });
+    // The failed attempt's closure spent the automatic rule; each re-drive re-arms it.
+    expect(started.map((task) => [task.id, task.attempt])).toEqual([
+      [launch.taskId, 1],
+      [launch.taskId, 1],
+      [launch.taskId, 2],
+    ]);
+    h.coordinator.stop();
+  });
+
+  test("retrying a delegation the worker never accepted still sends the brief", async () => {
+    const started: PetLongTask[] = [];
+    const h = await harness(emptySnapshot(), {
+      onDelegationStarted: async (task) => {
+        started.push(task);
+      },
+    });
+    const route = { kind: "im-gateway" as const, channel: "lark", target: "owner" };
+    const created = await h.store.create({
+      id: "never-accepted",
+      originClientMessageId: "never-accepted",
+      objective: "Rename billing",
+      workspacePath: "/work/app",
+      sessionId: "work-never",
+      completionTarget: route,
+      at: 1_000,
+    });
+    await h.store.transition(created.id, { kind: "failed", at: 1_001, error: "worker offline" });
+    const retried = await h.coordinator.control({ taskId: created.id, action: "retry" });
+    expect(retried.ok).toBe(true);
+    expect(h.launches.at(-1)).toMatchObject({ completionTarget: route });
+    expect(h.launches.at(-1)).not.toHaveProperty("redrive");
+    expect(started).toHaveLength(1);
+    h.coordinator.stop();
+  });
+
   test("ignores an old terminal replay after retrying the same Session", async () => {
     const h = await harness();
     const launch = await h.coordinator.startDelegation({

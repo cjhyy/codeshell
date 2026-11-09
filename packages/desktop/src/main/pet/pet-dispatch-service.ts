@@ -97,6 +97,11 @@ export interface PetAutoDelegation {
   completionTarget?: PetLongTaskCompletionTarget;
   /** Bounded autonomous manager-continuation depth. */
   continuationDepth?: number;
+  /**
+   * Host re-drive of an accepted delegation (manager continuation, resume,
+   * retry): the Session already received Mimi's delegation brief.
+   */
+  redrive?: boolean;
 }
 
 export type PetStartedDelegation = Omit<
@@ -107,6 +112,7 @@ export type PetStartedDelegation = Omit<
   | "goalContinuation"
   | "completionTarget"
   | "continuationDepth"
+  | "redrive"
   | "inputAttachments"
 > & {
   sessionId: string;
@@ -1750,6 +1756,7 @@ export class PetDispatchService {
       ...(goalContinuation ? { goalContinuation } : {}),
       ...(task.completionTarget ? { completionTarget: task.completionTarget } : {}),
       continuationDepth: continuationDepth + 1,
+      redrive: true,
     };
     let launch: { sessionId: string; cwd: string; taskId?: string };
     try {

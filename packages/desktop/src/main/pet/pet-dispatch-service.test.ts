@@ -918,6 +918,8 @@ describe("PetDispatchService", () => {
           target: "owner-conversation",
         },
         continuationDepth: 1,
+        // The Session already received Mimi's delegation brief.
+        redrive: true,
       },
     ]);
     expect(effects).toEqual(["decision-persisted", "session-started", "launch-persisted"]);

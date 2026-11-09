@@ -48,7 +48,7 @@ describe("readLatestAssistantText", () => {
     });
   });
 
-  test("a delegated request excerpt is the owner's objective, not Mimi's brief", async () => {
+  test("an older delegated request without displayText drops Mimi's brief", async () => {
     const brief = buildDelegationBrief({ origin: "im", channelLabel: "WeChat" });
     const dir = makeSessionDir([
       { role: "user", content: `${brief}\n\nFix the login page` },
@@ -58,6 +58,25 @@ describe("readLatestAssistantText", () => {
       latestRequest: { text: "Fix the logi", truncated: true },
       // Only user requests carry the brief; assistant text is never rewritten.
       latestResult: { text: "[Delegated b", truncated: true },
+    });
+  });
+
+  test("a user request reads as its displayText when the host recorded one", async () => {
+    const dir = makeSessionDir([]);
+    writeFileSync(
+      join(dir, "transcript.jsonl"),
+      JSON.stringify({
+        type: "message",
+        data: {
+          role: "user",
+          content: `${buildDelegationBrief({ origin: "desktop" })}\n\nRename billing`,
+          displayText: "Rename billing",
+        },
+      }) + "\n",
+    );
+    expect((await readLatestWorkContext(dir, { maxChars: 100 })).latestRequest).toMatchObject({
+      text: "Rename billing",
+      truncated: false,
     });
   });
 

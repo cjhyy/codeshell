@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  buildCompactDelegationBrief,
-  buildDelegationBrief,
-  stripDelegationBrief,
-} from "./delegation-brief.js";
+import { buildDelegationBrief, stripDelegationBrief } from "./delegation-brief.js";
 
 describe("delegation brief", () => {
   test("names the IM channel the owner asked from", () => {
@@ -11,7 +7,7 @@ describe("delegation brief", () => {
       [
         "[Delegated by Mimi]",
         "Mimi started this Session for the owner from WeChat. The owner may be away from the computer.",
-        "- When you need a decision, use AskUserQuestionAsync with concrete options, mark one recommended, and set skippable.",
+        "- When you need a decision, use AskUserQuestionAsync with concrete options and mark one recommended.",
         "- The host reports completion automatically; do not call RequestMimiDelivery at the end.",
         "- Use ReportToMimi only for a milestone the owner would want before completion.",
         "[/Delegated by Mimi]",
@@ -29,13 +25,13 @@ describe("delegation brief", () => {
     );
   });
 
-  test("strip removes a leading brief, full or compact, and nothing else", () => {
+  test("strip removes a leading brief and nothing else", () => {
     const objective = "Fix the login page.\n\nKeep the old API.";
     expect(
       stripDelegationBrief(`${buildDelegationBrief({ origin: "desktop" })}\n\n${objective}`),
     ).toBe(objective);
     expect(
-      stripDelegationBrief(`  ${buildCompactDelegationBrief({ origin: "im" })}\n\n${objective}`),
+      stripDelegationBrief(`  ${buildDelegationBrief({ origin: "im" })}\n\n${objective}`),
     ).toBe(objective);
     expect(stripDelegationBrief(objective)).toBe(objective);
     const quoted = `Explain this: [Delegated by Mimi] x [/Delegated by Mimi]`;

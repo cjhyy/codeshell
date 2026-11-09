@@ -71,9 +71,15 @@ function findSnippetsInSession(
   for (const event of events) {
     if (snippets.length >= maxSnippets) break;
     if (event.type !== "message") continue;
-    const content = textOfContent(event.data?.content);
-    // Mimi's delegation brief is host framing, not something to match.
-    const text = event.data?.role === "user" ? stripDelegationBrief(content) : content;
+    const data = event.data ?? {};
+    // A user message matches as the user wrote it: the host's displayText, or
+    // the content without Mimi's delegation brief (older transcripts).
+    const text =
+      data.role !== "user"
+        ? textOfContent(data.content)
+        : typeof data.displayText === "string" && data.displayText.trim()
+          ? data.displayText
+          : stripDelegationBrief(textOfContent(data.content));
     if (!text) continue;
     const lowerText = text.toLowerCase();
     const index = lowerText.indexOf(query);

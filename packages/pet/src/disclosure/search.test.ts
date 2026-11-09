@@ -207,7 +207,32 @@ describe("searchSessionTranscripts", () => {
 
     expect(result.matches[0]?.snippets[0]?.text).toContain(" TARGET ");
   });
-  test("Mimi's delegation brief is not searchable; the owner's objective is", async () => {
+  test("a user message matches as its displayText", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-"));
+    const dir = join(root, "session-a");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "state.json"),
+      JSON.stringify({ sessionId: "session-a", kind: "work", cwd: "/a", title: "A" }),
+    );
+    writeFileSync(
+      join(dir, "transcript.jsonl"),
+      JSON.stringify({
+        type: "message",
+        turnNumber: 0,
+        data: {
+          role: "user",
+          content: `${buildDelegationBrief({ origin: "desktop" })}\n\nRename the billing module`,
+          displayText: "Rename the billing module",
+        },
+      }) + "\n",
+    );
+    expect((await searchSessionTranscripts(root, "ReportToMimi", {})).matches).toEqual([]);
+    const hit = await searchSessionTranscripts(root, "billing", {});
+    expect(hit.matches[0]?.snippets[0]?.text).toBe("Rename the billing module");
+  });
+
+  test("Mimi's delegation brief is not searchable in older transcripts either", async () => {
     const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-"));
     const brief = buildDelegationBrief({ origin: "desktop" });
     writeSession(root, "session-a", { kind: "work", cwd: "/a", title: "Session A" }, [
