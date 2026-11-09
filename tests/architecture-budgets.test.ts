@@ -110,6 +110,11 @@ describe("architecture growth budgets", () => {
     // Consent policy and window deduplication remain in their existing modules.
     expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_338);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
+    // 2026-11-09: workspace, credential, system, media, tool-task and Agent-tool
+    // handlers moved to panel-app-bridge-*.ts siblings (4_410 -> 2_972). Methods
+    // that the source-compiling bridge tests extract stay on the class; new
+    // capabilities belong in a sibling module that receives PanelAppBridgeInternals.
+    expect(lines("packages/desktop/src/main/panel-app-bridge.ts")).toBeLessThanOrEqual(2_972);
     // The five generic Link authorization operations reuse the window/project
     // owner and live reauthorization guard here. Challenge state, provider
     // protocols and native browser handoff remain in server/links and
