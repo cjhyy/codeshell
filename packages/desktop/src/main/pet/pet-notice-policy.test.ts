@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_MAX_P0_PER_HOUR,
   DEFAULT_MAX_PER_HOUR,
+  hostTimezoneOffsetMin,
   isInQuietHours,
+  localHourIndex,
   route,
   type RouteDecision,
   type RouteNotice,
@@ -132,9 +134,9 @@ const rows: Row[] = [
     expected: { outlet: "desktop", im: "lark", queued: true, reason: "im-unavailable-queued" },
   },
   {
-    name: "a named channel that is not bound falls back to desktop and queues",
+    name: "a named channel that is not bound falls back to desktop without queueing",
     notice: { channel: "telegram" },
-    expected: { outlet: "desktop", im: "telegram", queued: true, reason: "im-unavailable-queued" },
+    expected: { outlet: "desktop", reason: "im-unbound" },
   },
   {
     name: "auto while present stays on the desktop",
@@ -204,6 +206,81 @@ describe("route", () => {
     route(n, s);
     expect(JSON.stringify({ ...s, seenDedupeKeys: [...seen] })).toBe(before);
     expect(seen.size).toBe(0);
+  });
+});
+
+describe("requiresAway applies to every channel", () => {
+  const cases: Array<[string, boolean, RouteDecision]> = [
+    ["desktop", true, { outlet: "record", reason: "requires-away-present" }],
+    ["desktop", false, { outlet: "desktop", reason: "desktop-channel" }],
+    ["wechat", true, { outlet: "record", reason: "requires-away-present" }],
+    ["wechat", false, { outlet: "both", im: "wechat", reason: "named-im" }],
+    ["auto", true, { outlet: "record", reason: "requires-away-present" }],
+    ["auto", false, { outlet: "im", im: "lark", reason: "away-last-inbound" }],
+  ];
+  for (const [channel, present, expected] of cases) {
+    test(`${channel} while ${present ? "present" : "away"}`, () => {
+      expect(
+        route(
+          notice({ channel, requiresAway: true }),
+          state({ present, lastInboundChannel: "lark" }),
+        ),
+      ).toEqual(expected);
+    });
+  }
+
+  test("throttling still wins over requiresAway (nothing is lost)", () => {
+    expect(
+      route(
+        notice({ channel: "auto", requiresAway: true }),
+        state({ present: true, sentThisHour: DEFAULT_MAX_PER_HOUR }),
+      ),
+    ).toEqual({ outlet: "digest", reason: "hourly-cap" });
+  });
+});
+
+describe("DST", () => {
+  // Bun stops tracking TZ once it is deleted, so restore by reassigning.
+  const hostZone = process.env.TZ || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  function withTz<T>(tz: string, run: () => T): T {
+    process.env.TZ = tz;
+    try {
+      return run();
+    } finally {
+      process.env.TZ = hostZone;
+    }
+  }
+
+  // US spring-forward 2026-03-08: 02:00 EST jumps to 03:00 EDT (07:00Z).
+  const beforeSpring = Date.UTC(2026, 2, 8, 6, 30); // 01:30 EST
+  const afterSpring = Date.UTC(2026, 2, 8, 7, 30); // 03:30 EDT
+  // US fall-back 2026-11-01: 01:00–02:00 local happens twice (05:00Z EDT, 06:00Z EST).
+  const firstOne = Date.UTC(2026, 10, 1, 5, 30); // 01:30 EDT
+  const secondOne = Date.UTC(2026, 10, 1, 6, 30); // 01:30 EST
+
+  test("the host offset is sampled at each instant", () => {
+    withTz("America/New_York", () => {
+      expect(hostTimezoneOffsetMin(beforeSpring)).toBe(-300);
+      expect(hostTimezoneOffsetMin(afterSpring)).toBe(-240);
+    });
+    withTz("UTC", () => expect(Object.is(hostTimezoneOffsetMin(beforeSpring), 0)).toBe(true));
+  });
+
+  test("quiet hours follow the local wall clock across spring-forward", () => {
+    const window = { start: "03:00", end: "04:00" };
+    withTz("America/New_York", () => {
+      expect(isInQuietHours(window, beforeSpring, hostTimezoneOffsetMin(beforeSpring))).toBe(false);
+      expect(isInQuietHours(window, afterSpring, hostTimezoneOffsetMin(afterSpring))).toBe(true);
+    });
+  });
+
+  test("hour index: spring-forward skips an hour, fall-back repeats one", () => {
+    withTz("America/New_York", () => {
+      const index = (ms: number) => localHourIndex(ms, hostTimezoneOffsetMin(ms));
+      expect(index(afterSpring) - index(beforeSpring)).toBe(2);
+      // The repeated 01:00 wall-clock hour is one bucket.
+      expect(index(secondOne)).toBe(index(firstOne));
+    });
   });
 });
 

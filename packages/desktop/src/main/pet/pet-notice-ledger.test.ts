@@ -5,10 +5,13 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
   NOTICE_DEDUPE_RETENTION_MS,
+  NOTICE_QUEUED_TTL_MS,
   NOTICE_RESEND_WINDOW_MS,
   PetNoticeLedger,
   PetNoticeLedgerError,
+  type NoticeDeliveryStatus,
   type NoticeRecord,
+  type NoticeRecordInput,
 } from "./pet-notice-ledger.js";
 
 const NOW = 1_700_000_000_000;
@@ -23,7 +26,9 @@ function plus8HourKey(ms: number): string {
   return String(Math.floor((ms + 8 * HOUR) / HOUR));
 }
 
-function ledger(options: { maxRecords?: number; maxBytes?: number } = {}): PetNoticeLedger {
+function ledger(
+  options: { maxRecords?: number; maxBytes?: number; localHourKey?: (ms: number) => string } = {},
+): PetNoticeLedger {
   return new PetNoticeLedger({
     path: filePath,
     now: () => clock,
@@ -32,9 +37,7 @@ function ledger(options: { maxRecords?: number; maxBytes?: number } = {}): PetNo
   });
 }
 
-function draft(
-  overrides: Partial<Omit<NoticeRecord, "id" | "createdAt">> = {},
-): Omit<NoticeRecord, "id" | "createdAt"> {
+function draft(overrides: Partial<NoticeRecordInput> = {}): NoticeRecordInput {
   return {
     kind: "session.done",
     priority: "P1",
@@ -45,6 +48,10 @@ function draft(
     decision: { outlet: "both", im: "wechat", reason: "named-im" },
     ...overrides,
   };
+}
+
+function hex24(value: string): string {
+  return createHash("sha256").update(value).digest("hex").slice(0, 24);
 }
 
 async function readDisk(): Promise<{
@@ -78,6 +85,16 @@ describe("record", () => {
     await b.load();
     expect(b.get(saved.id)).toEqual(saved);
     expect(b.seenDedupeKeys().has("session.done:s1:run-1")).toBe(true);
+    expect(b.seenDedupeKeys().has("session.done:s1:run-2")).toBe(false);
+  });
+
+  test("the dedupe index stores hashes, not raw keys", async () => {
+    const a = ledger();
+    await a.load();
+    await a.record(draft({ dedupeKey: "secret-ish:key" }));
+    const disk = await readDisk();
+    expect(disk.dedupe).toEqual([[hex24("secret-ish:key"), NOW]]);
+    expect(JSON.stringify(disk.dedupe)).not.toContain("secret-ish");
   });
 
   test("returns copies; callers cannot mutate ledger state", async () => {
@@ -95,26 +112,74 @@ describe("record", () => {
     await expect(a.record(draft({ priority: "P9" as "P0" }))).rejects.toMatchObject({
       code: "invalid_notice",
     });
+    await expect(
+      a.record(draft({ delivery: { status: "accepted" as "held" } })),
+    ).rejects.toMatchObject({ code: "invalid_notice" });
     await expect(readFile(filePath, "utf8")).rejects.toThrow();
+  });
+
+  test("a digest decision starts held; a queued decision starts queued with a 24 h expiry", async () => {
+    const a = ledger();
+    await a.load();
+    const held = await a.record(
+      draft({ dedupeKey: "h", decision: { outlet: "digest", reason: "quiet-hours" } }),
+    );
+    expect(held.delivery).toEqual({ key: hex24(held.id), status: "held", attempts: 0, at: NOW });
+    const queued = await a.record(
+      draft({
+        dedupeKey: "q",
+        decision: { outlet: "desktop", im: "lark", queued: true, reason: "im-unavailable-queued" },
+      }),
+    );
+    expect(queued.delivery).toMatchObject({ status: "queued", channel: "lark", attempts: 0 });
+    expect(queued.expiresAt).toBe(NOW + NOTICE_QUEUED_TTL_MS);
+    // Distinct createdAt so queued() order (oldest first) is deterministic.
+    clock = NOW + 1;
+    const explicit = await a.record(
+      draft({ dedupeKey: "e", expiresAt: NOW + 5, delivery: { status: "queued", channel: "x" } }),
+    );
+    expect(explicit.expiresAt).toBe(NOW + 5);
+    expect(a.queued().map((r) => r.id)).toEqual([queued.id, explicit.id]);
+  });
+
+  test("a drop decision does not touch the dedupe index", async () => {
+    const a = ledger();
+    await a.load();
+    await a.record(
+      draft({ dedupeKey: "dropped", decision: { outlet: "drop", reason: "duplicate" } }),
+    );
+    expect(a.seenDedupeKeys().has("dropped")).toBe(false);
+  });
+
+  test("a repeated key does not extend its dedupe entry", async () => {
+    const a = ledger();
+    await a.load();
+    await a.record(draft({ dedupeKey: "k" }));
+    clock = NOW + 6 * 24 * HOUR;
+    await a.record(draft({ dedupeKey: "k" }));
+    clock = NOW + NOTICE_DEDUPE_RETENTION_MS;
+    expect(a.seenDedupeKeys().has("k")).toBe(false);
+    // Once expired, the next record starts a fresh window.
+    await a.record(draft({ dedupeKey: "k" }));
+    expect(a.seenDedupeKeys().has("k")).toBe(true);
   });
 });
 
 describe("claim and settle", () => {
-  test("claim freezes the body, derives a deterministic key and persists", async () => {
+  test("claim freezes the body, derives the key from the record id and persists", async () => {
     const a = ledger();
     await a.load();
     const saved = await a.record(draft());
+    const twin = await a.record(draft());
     const { key } = await a.claim(saved.id, "wechat", "第一版正文");
-    expect(key).toBe(
-      createHash("sha256").update("session.done:s1:run-1").digest("hex").slice(0, 24),
-    );
-    expect(key).toHaveLength(24);
+    expect(key).toBe(hex24(saved.id));
+    expect((await a.claim(twin.id, "wechat", "x")).key).not.toBe(key);
 
     const b = ledger();
     await b.load();
     expect(b.get(saved.id)).toMatchObject({
       body: "第一版正文",
-      delivery: { key, channel: "wechat", status: "claimed", attempts: 1, at: NOW },
+      delivery: { key, channel: "wechat", status: "claimed", attempts: 1, at: NOW, claimedAt: NOW },
     });
 
     // A resend re-claims: same key, attempts grow, the frozen body never changes.
@@ -124,12 +189,12 @@ describe("claim and settle", () => {
     expect(again.key).toBe(key);
     expect(b.get(saved.id)).toMatchObject({
       body: "第一版正文",
-      delivery: { status: "claimed", attempts: 2, at: NOW + 1_000 },
+      delivery: { status: "claimed", attempts: 2, at: NOW + 1_000, claimedAt: NOW + 1_000 },
     });
     expect(b.get(saved.id)!.delivery!.error).toBeUndefined();
   });
 
-  test("settle records the outcome and error, persisted", async () => {
+  test("settle records the outcome and error, persisted, and keeps the claim time", async () => {
     const a = ledger();
     await a.load();
     const saved = await a.record(draft());
@@ -143,53 +208,22 @@ describe("claim and settle", () => {
       status: "unknown",
       attempts: 1,
       at: NOW + 500,
+      claimedAt: NOW,
       error: "socket closed",
     });
-    await b.settle(saved.id, "accepted");
-    expect(b.get(saved.id)!.delivery).toMatchObject({ status: "accepted" });
-    expect(b.get(saved.id)!.delivery!.error).toBeUndefined();
   });
 
-  test("an accepted or revoked notice cannot be claimed again", async () => {
-    const a = ledger();
-    await a.load();
-    const one = await a.record(draft({ dedupeKey: "k1" }));
-    await a.claim(one.id, "wechat", "x");
-    await a.settle(one.id, "accepted");
-    await expect(a.claim(one.id, "wechat", "x")).rejects.toMatchObject({
-      code: "notice_already_settled",
-    });
-    const two = await a.record(draft({ dedupeKey: "k2" }));
-    await a.settle(two.id, "revoked");
-    await expect(a.claim(two.id, "wechat", "x")).rejects.toMatchObject({
-      code: "notice_already_settled",
-    });
-  });
-
-  test("queued can be set without a claim and shows in queued()", async () => {
-    const a = ledger();
-    await a.load();
-    const saved = await a.record(
-      draft({
-        decision: { outlet: "desktop", im: "lark", queued: true, reason: "im-unavailable-queued" },
-      }),
-    );
-    await a.settle(saved.id, "queued");
-    expect(a.get(saved.id)!.delivery).toMatchObject({
-      status: "queued",
-      channel: "lark",
-      attempts: 0,
-    });
-    expect(a.queued().map((r) => r.id)).toEqual([saved.id]);
-    await a.claim(saved.id, "lark", "正文");
-    expect(a.queued()).toEqual([]);
-  });
-
-  test("accepted / failed / unknown require a prior claim", async () => {
+  test("settling queued without an expiry sets a 24 h default", async () => {
     const a = ledger();
     await a.load();
     const saved = await a.record(draft());
-    await expect(a.settle(saved.id, "accepted")).rejects.toMatchObject({ code: "invalid_notice" });
+    await a.claim(saved.id, "wechat", "x");
+    clock = NOW + 1_000;
+    await a.settle(saved.id, "queued", "gateway down");
+    expect(a.get(saved.id)).toMatchObject({
+      expiresAt: NOW + 1_000 + NOTICE_QUEUED_TTL_MS,
+      delivery: { status: "queued", channel: "wechat", attempts: 1 },
+    });
   });
 
   test("unknown ids are rejected", async () => {
@@ -202,11 +236,63 @@ describe("claim and settle", () => {
       code: "notice_not_found",
     });
   });
+
+  describe("transition table", () => {
+    type From = NoticeDeliveryStatus | "none";
+    type To = NoticeDeliveryStatus;
+    const ops: To[] = ["claimed", "accepted", "failed", "unknown", "queued", "held", "revoked"];
+    const ok = "ok";
+    const bad = "invalid_transition";
+    const fin = "notice_already_settled";
+    // Independent copy of the table documented in pet-notice-ledger.ts.
+    const table: Record<From, string[]> = {
+      none: [ok, bad, bad, bad, ok, ok, ok],
+      held: [ok, bad, bad, bad, ok, ok, ok],
+      queued: [ok, bad, bad, bad, ok, ok, ok],
+      failed: [ok, bad, bad, bad, ok, ok, ok],
+      claimed: [ok, ok, ok, ok, ok, bad, ok],
+      unknown: [ok, bad, bad, bad, bad, bad, ok],
+      accepted: [fin, fin, fin, fin, fin, fin, fin],
+      revoked: [fin, fin, fin, fin, fin, fin, fin],
+    };
+
+    async function reach(a: PetNoticeLedger, from: From): Promise<string> {
+      const { id } = await a.record(draft({ dedupeKey: `${from}-${Math.random()}` }));
+      if (from === "none") return id;
+      if (from === "held" || from === "queued" || from === "revoked") {
+        await a.settle(id, from);
+        return id;
+      }
+      await a.claim(id, "wechat", "x");
+      if (from !== "claimed") await a.settle(id, from);
+      return id;
+    }
+
+    for (const [from, row] of Object.entries(table) as Array<[From, string[]]>) {
+      for (const [index, to] of ops.entries()) {
+        const expected = row[index]!;
+        test(`${from} → ${to}: ${expected}`, async () => {
+          const a = ledger();
+          await a.load();
+          const id = await reach(a, from);
+          const before = a.get(id);
+          const attempt =
+            to === "claimed" ? a.claim(id, "wechat", "x").then(() => undefined) : a.settle(id, to);
+          if (expected === ok) {
+            await attempt;
+            expect(a.get(id)!.delivery!.status).toBe(to);
+          } else {
+            await expect(attempt).rejects.toMatchObject({ code: expected });
+            expect(a.get(id)).toEqual(before!);
+          }
+        });
+      }
+    }
+  });
 });
 
 describe("countsThisHour", () => {
   test("counts claimed + accepted IM sends in the same local clock hour, P0 separately", async () => {
-    // NOW + 8h falls at 06:13 "local"; local hour boundaries are at :00 of the shifted clock.
     const hourStart = Math.floor((NOW + 8 * HOUR) / HOUR) * HOUR - 8 * HOUR;
     const a = ledger();
     await a.load();
@@ -237,9 +323,56 @@ describe("countsThisHour", () => {
     expect(a.countsThisHour(hourStart - 1)).toEqual({ sent: 1, p0Sent: 0 });
     expect(a.countsThisHour(hourStart + HOUR)).toEqual({ sent: 0, p0Sent: 1 });
   });
+
+  test("buckets by claim time, not settle time", async () => {
+    const hourStart = Math.floor((NOW + 8 * HOUR) / HOUR) * HOUR - 8 * HOUR;
+    const a = ledger();
+    await a.load();
+    clock = hourStart + HOUR - 1_000;
+    const r = await a.record(draft());
+    await a.claim(r.id, "wechat", "x");
+    clock = hourStart + HOUR + 1_000;
+    await a.settle(r.id, "accepted");
+    expect(a.countsThisHour(hourStart + 30 * 60_000)).toEqual({ sent: 1, p0Sent: 0 });
+    expect(a.countsThisHour(hourStart + HOUR + 30 * 60_000)).toEqual({ sent: 0, p0Sent: 0 });
+  });
+
+  describe("default local hour key across DST", () => {
+    const hostZone = process.env.TZ || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    beforeEach(() => {
+      process.env.TZ = "America/New_York";
+    });
+    afterEach(() => {
+      // Bun stops tracking TZ once it is deleted, so restore by reassigning.
+      process.env.TZ = hostZone;
+    });
+
+    async function claimAt(a: PetNoticeLedger, at: number, key: string): Promise<void> {
+      clock = at;
+      const r = await a.record(draft({ dedupeKey: key }));
+      await a.claim(r.id, "wechat", "x");
+    }
+
+    test("spring-forward: 01:30 EST and 03:30 EDT are different hours", async () => {
+      const a = new PetNoticeLedger({ path: filePath, now: () => clock });
+      await a.load();
+      await claimAt(a, Date.UTC(2026, 2, 8, 6, 30), "before");
+      expect(a.countsThisHour(Date.UTC(2026, 2, 8, 6, 59))).toEqual({ sent: 1, p0Sent: 0 });
+      expect(a.countsThisHour(Date.UTC(2026, 2, 8, 7, 30))).toEqual({ sent: 0, p0Sent: 0 });
+    });
+
+    test("fall-back: the repeated 01:00 wall-clock hour shares one budget", async () => {
+      const a = new PetNoticeLedger({ path: filePath, now: () => clock });
+      await a.load();
+      await claimAt(a, Date.UTC(2026, 10, 1, 5, 30), "edt"); // 01:30 EDT
+      await claimAt(a, Date.UTC(2026, 10, 1, 6, 10), "est"); // 01:10 EST
+      expect(a.countsThisHour(Date.UTC(2026, 10, 1, 6, 45))).toEqual({ sent: 2, p0Sent: 0 });
+      expect(a.countsThisHour(Date.UTC(2026, 10, 1, 7, 15))).toEqual({ sent: 0, p0Sent: 0 });
+    });
+  });
 });
 
-describe("recoverOnStartup", () => {
+describe("recoverOnStartup and expiry", () => {
   test("recent claims come back for resend; stale claims become unknown", async () => {
     const a = ledger();
     await a.load();
@@ -266,6 +399,65 @@ describe("recoverOnStartup", () => {
     await c.load();
     expect(c.get(stale.id)!.delivery!.status).toBe("unknown");
   });
+
+  test("recovery is serialised with a concurrent settle", async () => {
+    const a = ledger();
+    await a.load();
+    const recent = await a.record(draft({ dedupeKey: "recent" }));
+    await a.claim(recent.id, "wechat", "x");
+    clock = NOW - NOTICE_RESEND_WINDOW_MS - 1;
+    const stale = await a.record(draft({ dedupeKey: "stale" }));
+    await a.claim(stale.id, "wechat", "x");
+    clock = NOW;
+
+    // Both settles are queued before recovery runs; recovery must see them.
+    const settles = [a.settle(recent.id, "accepted"), a.settle(stale.id, "accepted")];
+    const resend = await a.recoverOnStartup(NOW + 1_000);
+    await Promise.all(settles);
+    expect(resend).toEqual([]);
+    expect(a.get(recent.id)!.delivery!.status).toBe("accepted");
+    expect(a.get(stale.id)!.delivery!.status).toBe("accepted");
+  });
+
+  test("expireQueued revokes expired queued notices only, and recovery runs it", async () => {
+    const a = ledger();
+    await a.load();
+    const expiring = await a.record(
+      draft({ dedupeKey: "q1", delivery: { status: "queued", channel: "lark" } }),
+    );
+    const later = await a.record(
+      draft({
+        dedupeKey: "q2",
+        expiresAt: NOW + 2 * NOTICE_QUEUED_TTL_MS,
+        delivery: { status: "queued" },
+      }),
+    );
+    const held = await a.record(
+      draft({ dedupeKey: "h", expiresAt: NOW + 1, delivery: { status: "held" } }),
+    );
+
+    expect(await a.expireQueued(NOW + NOTICE_QUEUED_TTL_MS - 1)).toEqual([]);
+    const revoked = await a.expireQueued(NOW + NOTICE_QUEUED_TTL_MS);
+    expect(revoked.map((r) => r.id)).toEqual([expiring.id]);
+    expect(a.get(expiring.id)!.delivery).toMatchObject({ status: "revoked", error: "expired" });
+    expect(a.get(held.id)!.delivery!.status).toBe("held");
+
+    const b = ledger();
+    await b.load();
+    await b.recoverOnStartup(NOW + 2 * NOTICE_QUEUED_TTL_MS);
+    expect(b.get(later.id)!.delivery!.status).toBe("revoked");
+    expect(b.get(held.id)!.delivery!.status).toBe("held");
+  });
+
+  test("recovery with nothing to change does not write", async () => {
+    await mkdir(dirname(filePath), { recursive: true });
+    const future = JSON.stringify({ version: 99, records: [], dedupe: [], quarantine: [] });
+    await writeFile(filePath, future);
+    const a = ledger();
+    await a.load();
+    expect(await a.recoverOnStartup(NOW)).toEqual([]);
+    expect(await readFile(filePath, "utf8")).toBe(future);
+  });
 });
 
 describe("dedupe retention and eviction", () => {
@@ -281,7 +473,7 @@ describe("dedupe retention and eviction", () => {
 
     const b = ledger({ maxRecords: 2 });
     await b.load();
-    expect([...b.seenDedupeKeys()].sort()).toEqual(["k1", "k2", "k3"]);
+    for (const key of ["k1", "k2", "k3"]) expect(b.seenDedupeKeys().has(key)).toBe(true);
 
     // k1 was recorded at NOW, k2 at NOW + 1: exactly k1 has aged out.
     clock = NOW + NOTICE_DEDUPE_RETENTION_MS;
@@ -289,10 +481,12 @@ describe("dedupe retention and eviction", () => {
     expect(b.seenDedupeKeys().has("k3")).toBe(true);
     // A write prunes expired index entries from disk.
     await b.record(draft({ dedupeKey: "k4" }));
-    expect((await readDisk()).dedupe.map(([key]) => key).sort()).toEqual(["k2", "k3", "k4"]);
+    expect((await readDisk()).dedupe.map(([hash]) => hash).sort()).toEqual(
+      ["k2", "k3", "k4"].map(hex24).sort(),
+    );
   });
 
-  test("eviction never removes claimed or queued records", async () => {
+  test("eviction never removes claimed, queued or held records", async () => {
     const a = ledger({ maxRecords: 2 });
     await a.load();
     const claimed = await a.record(draft({ dedupeKey: "claimed" }));
@@ -301,30 +495,23 @@ describe("dedupe retention and eviction", () => {
     const queued = await a.record(draft({ dedupeKey: "queued" }));
     await a.settle(queued.id, "queued");
     clock += 1;
+    const held = await a.record(
+      draft({ dedupeKey: "held", decision: { outlet: "digest", reason: "hourly-cap" } }),
+    );
+    clock += 1;
     const plain = await a.record(draft({ dedupeKey: "plain" }));
     clock += 1;
     const latest = await a.record(draft({ dedupeKey: "latest" }));
 
     expect(a.get(claimed.id)).toBeDefined();
     expect(a.get(queued.id)).toBeDefined();
+    expect(a.get(held.id)).toBeDefined();
     expect(a.get(plain.id)).toBeUndefined();
     // Nothing else is evictable: the count cap is soft rather than lose a notice.
     expect(a.get(latest.id)).toBeDefined();
     const b = ledger({ maxRecords: 2 });
     await b.load();
     expect(b.get(latest.id)).toBeDefined();
-  });
-
-  test("the byte cap is hard once only live deliveries remain", async () => {
-    const a = ledger({ maxBytes: 2_000 });
-    await a.load();
-    const claimed = await a.record(draft({ dedupeKey: "claimed" }));
-    await a.claim(claimed.id, "wechat", "x".repeat(800));
-    await expect(
-      a.record(draft({ dedupeKey: "next", body: "y".repeat(1_200) })),
-    ).rejects.toMatchObject({ code: "notice_ledger_full" });
-    expect(a.get(claimed.id)).toBeDefined();
-    expect(a.seenDedupeKeys().has("next")).toBe(false);
   });
 
   test("the byte cap evicts oldest terminal records", async () => {
@@ -340,6 +527,56 @@ describe("dedupe retention and eviction", () => {
     const bytes = Buffer.byteLength(await readFile(filePath, "utf8"));
     expect(bytes).toBeLessThanOrEqual(4_000);
     expect(a.seenDedupeKeys().has("k0")).toBe(true);
+  });
+
+  test("a full dedupe index is compacted before the ledger reports full", async () => {
+    await mkdir(dirname(filePath), { recursive: true });
+    const dedupe = Array.from({ length: 80 }, (_, i) => [hex24(`old-${i}`), NOW - 1_000 + i]);
+    await writeFile(filePath, JSON.stringify({ version: 1, records: [], dedupe, quarantine: [] }));
+    const a = ledger({ maxBytes: 4_000 });
+    await a.load();
+    const saved = await a.record(draft({ dedupeKey: "new", body: "x".repeat(1_500) }));
+    expect(a.get(saved.id)).toBeDefined();
+    expect(a.seenDedupeKeys().has("new")).toBe(true);
+    // The oldest entries went first; the newest survived.
+    expect(a.seenDedupeKeys().has("old-0")).toBe(false);
+    expect(a.seenDedupeKeys().has("old-79")).toBe(true);
+    expect(Buffer.byteLength(await readFile(filePath, "utf8"))).toBeLessThanOrEqual(4_000);
+  });
+
+  test("an oversized quarantine moves to a sidecar before the ledger reports full", async () => {
+    await mkdir(dirname(filePath), { recursive: true });
+    const quarantine = [0, 1, 2].map((i) => ({ id: `future-${i}`, blob: "z".repeat(900) }));
+    await writeFile(
+      filePath,
+      JSON.stringify({ version: 1, records: [], dedupe: [], quarantine }, null, 2),
+    );
+    const a = ledger({ maxBytes: 4_000 });
+    await a.load();
+    const saved = await a.record(draft({ body: "x".repeat(1_500) }));
+    expect(a.get(saved.id)).toBeDefined();
+
+    const disk = await readDisk();
+    const sidecars = (await readdir(dirname(filePath))).filter((name) =>
+      name.startsWith("notices.quarantine."),
+    );
+    expect(sidecars).toHaveLength(1);
+    const moved = JSON.parse(await readFile(join(dirname(filePath), sidecars[0]!), "utf8"));
+    // Nothing is lost: the oldest rows moved out, the rest stayed, in order.
+    expect([...moved.rows, ...disk.quarantine]).toEqual(quarantine);
+    expect(moved.rows.length).toBeGreaterThan(0);
+  });
+
+  test("the byte cap is hard once only live deliveries remain", async () => {
+    const a = ledger({ maxBytes: 2_000 });
+    await a.load();
+    const claimed = await a.record(draft({ dedupeKey: "claimed" }));
+    await a.claim(claimed.id, "wechat", "x".repeat(800));
+    await expect(
+      a.record(draft({ dedupeKey: "next", body: "y".repeat(1_200) })),
+    ).rejects.toMatchObject({ code: "notice_ledger_full" });
+    expect(a.get(claimed.id)).toBeDefined();
+    expect(a.seenDedupeKeys().has("next")).toBe(false);
   });
 });
 

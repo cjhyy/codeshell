@@ -5,18 +5,32 @@ import {
   readBoundedJson,
   writeOwnerJsonAtomic,
 } from "./bounded-json-store.js";
-import type { NoticePriority, RouteDecision } from "./pet-notice-policy.js";
+import {
+  hostTimezoneOffsetMin,
+  localHourIndex,
+  type DedupeLookup,
+  type NoticePriority,
+  type RouteDecision,
+} from "./pet-notice-policy.js";
 
 export type NoticeDeliveryStatus =
   | "claimed"
   | "accepted"
   | "failed"
   | "queued"
+  | "held"
   | "unknown"
   | "revoked";
 
+/** Everything but `claimed`, which only {@link PetNoticeLedger.claim} sets. */
+export type NoticeSettleStatus = Exclude<NoticeDeliveryStatus, "claimed">;
+
 export interface NoticeDelivery {
-  /** Idempotency key for the gateway: sha256(dedupeKey), first 24 hex chars. */
+  /**
+   * Gateway idempotency key: sha256(record id), first 24 hex chars. Resends
+   * reuse the record and so the key; a notice re-emitted as a new record
+   * (a later digest, a dedupe key seen again after retention) gets a new one.
+   */
   key: string;
   channel?: string;
   status: NoticeDeliveryStatus;
@@ -24,6 +38,8 @@ export interface NoticeDelivery {
   attempts: number;
   /** Epoch ms of the last status change (claim or settle). */
   at: number;
+  /** Epoch ms of the latest claim; the hourly caps bucket sends by this. */
+  claimedAt?: number;
   error?: string;
 }
 
@@ -34,6 +50,7 @@ export interface NoticeRecord {
   dedupeKey: string;
   sessionId?: string;
   requestId?: string;
+  /** Queued notices default to {@link NOTICE_QUEUED_TTL_MS} after they are queued. */
   expiresAt?: number;
   ruleIds: string[];
   facts: unknown;
@@ -44,15 +61,24 @@ export interface NoticeRecord {
   createdAt: number;
 }
 
-export type NoticeRecordInput = Omit<NoticeRecord, "id" | "createdAt">;
+/**
+ * A new notice. Its delivery, when given, may only start as `held` (waiting
+ * for the digest) or `queued` (waiting for an IM channel); the ledger fills
+ * in the key and counters. Without one, a `digest` decision starts `held`
+ * and a `queued` decision starts `queued` (channel = `decision.im`).
+ */
+export type NoticeRecordInput = Omit<NoticeRecord, "id" | "createdAt" | "delivery"> & {
+  delivery?: { status: "held" | "queued"; channel?: string };
+};
 
 export interface PetNoticeLedgerOptions {
   path: string;
   now?: () => number;
   /**
    * Maps an instant to its local clock hour; two instants with the same key
-   * are in the same hour for the hourly caps. Defaults to the host's local
-   * time zone (DST-aware via Date's local getters).
+   * are in the same hour for the hourly caps. Defaults to
+   * `localHourIndex(ms, hostTimezoneOffsetMin(ms))`, the policy's own math
+   * with the offset sampled at that instant (DST-aware).
    */
   localHourKey?: (ms: number) => string;
   /** Soft cap on records; only terminal records are evicted to honour it. */
@@ -64,6 +90,7 @@ export interface PetNoticeLedgerOptions {
 export type PetNoticeLedgerErrorCode =
   | "notice_not_found"
   | "notice_already_settled"
+  | "invalid_transition"
   | "notice_ledger_unwritable"
   | "notice_ledger_full"
   | "invalid_notice";
@@ -82,12 +109,14 @@ const DEFAULT_MAX_BYTES = 8 * 1024 * 1024;
 export const NOTICE_DEDUPE_RETENTION_MS = 7 * 24 * 60 * 60_000;
 /** A claim younger than this at startup is resent; older ones are marked unknown. */
 export const NOTICE_RESEND_WINDOW_MS = 10 * 60_000;
+/** Default lifetime of a queued notice that has no `expiresAt` of its own. */
+export const NOTICE_QUEUED_TTL_MS = 24 * 60 * 60_000;
 const MAX_DEDUPE_ENTRIES = 20_000;
 const MAX_TEXT = 1_024;
 const MAX_BODY = 32_000;
 const MAX_ERROR = 2_000;
 const MAX_RULE_IDS = 100;
-const DELIVERY_KEY = /^[0-9a-f]{24}$/u;
+const HEX24 = /^[0-9a-f]{24}$/u;
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/u;
 const PRIORITIES: readonly NoticePriority[] = ["P0", "P1", "P2"];
 const OUTLETS: readonly RouteDecision["outlet"][] = [
@@ -103,23 +132,63 @@ const STATUSES: readonly NoticeDeliveryStatus[] = [
   "accepted",
   "failed",
   "queued",
+  "held",
   "unknown",
   "revoked",
 ];
 const SETTLE_STATUSES: readonly NoticeDeliveryStatus[] = STATUSES.filter(
   (status) => status !== "claimed",
 );
-/** In-flight deliveries; their records are never evicted. */
-const LIVE_STATUSES: ReadonlySet<NoticeDeliveryStatus> = new Set(["claimed", "queued"]);
-/** Settles that only make sense after a send was attempted. */
-const NEEDS_CLAIM: ReadonlySet<NoticeDeliveryStatus> = new Set(["accepted", "failed", "unknown"]);
-/** A notice in these states must never be sent again. */
+/** Work still owed to the owner; these records are never evicted. */
+const LIVE_STATUSES: ReadonlySet<NoticeDeliveryStatus> = new Set(["claimed", "queued", "held"]);
+
+/**
+ * Delivery state machine. Rows are the current status ("none" = no delivery
+ * yet); columns are the target (`claimed` via claim(), the rest via settle()).
+ *
+ *              claimed accepted failed unknown queued held revoked
+ *   none         ok      -        -      -       ok    ok    ok
+ *   held         ok      -        -      -       ok    ok    ok
+ *   queued       ok      -        -      -       ok    ok    ok
+ *   failed       ok      -        -      -       ok    ok    ok
+ *   claimed      ok     ok       ok     ok       ok    -     ok
+ *   unknown      ok      -        -      -       -     -     ok
+ *   accepted     x       x        x      x       x     x     x
+ *   revoked      x       x        x      x       x     x     x
+ *
+ * `-` throws invalid_transition; `x` throws notice_already_settled.
+ * claimed → claimed is a resend after a restart; claimed → queued is "send
+ * failed, retry when the channel is back"; unknown → claimed retries with
+ * the same idempotency key so the gateway can collapse a duplicate.
+ */
+const TRANSITIONS: Readonly<
+  Record<NoticeDeliveryStatus | "none", ReadonlySet<NoticeDeliveryStatus>>
+> = {
+  none: new Set(["claimed", "queued", "held", "revoked"]),
+  held: new Set(["claimed", "queued", "held", "revoked"]),
+  queued: new Set(["claimed", "queued", "held", "revoked"]),
+  failed: new Set(["claimed", "queued", "held", "revoked"]),
+  claimed: new Set(["claimed", "accepted", "failed", "unknown", "queued", "revoked"]),
+  unknown: new Set(["claimed", "revoked"]),
+  accepted: new Set(),
+  revoked: new Set(),
+};
 const FINAL_STATUSES: ReadonlySet<NoticeDeliveryStatus> = new Set(["accepted", "revoked"]);
+
+function assertTransition(from: NoticeDelivery | undefined, to: NoticeDeliveryStatus): void {
+  const status = from?.status ?? "none";
+  if (status !== "none" && FINAL_STATUSES.has(status))
+    throw new PetNoticeLedgerError("notice_already_settled");
+  if (!TRANSITIONS[status].has(to)) throw new PetNoticeLedgerError("invalid_transition");
+}
 
 interface PetNoticeFile {
   version: typeof SCHEMA_VERSION;
   records: NoticeRecord[];
-  /** dedupeKey → createdAt of its latest record, kept after the record is evicted. */
+  /**
+   * sha256(dedupeKey)[0..24] → createdAt of the first record with that key
+   * inside the retention window. Kept after the record is evicted.
+   */
   dedupe: Array<[string, number]>;
   /** Rows this build could not understand, carried forward unchanged. */
   quarantine: unknown[];
@@ -128,6 +197,7 @@ interface PetNoticeFile {
 interface LedgerState {
   records: Map<string, NoticeRecord>;
   dedupe: Map<string, number>;
+  quarantine: unknown[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -171,16 +241,17 @@ function parseDecision(value: unknown): RouteDecision | undefined {
 function parseDelivery(value: unknown): NoticeDelivery | undefined {
   if (
     !isRecord(value) ||
-    !hasOnlyKeys(value, ["key", "channel", "status", "attempts", "at", "error"])
+    !hasOnlyKeys(value, ["key", "channel", "status", "attempts", "at", "claimedAt", "error"])
   )
     return undefined;
   if (
     typeof value.key !== "string" ||
-    !DELIVERY_KEY.test(value.key) ||
+    !HEX24.test(value.key) ||
     (value.channel !== undefined && !isText(value.channel, 64)) ||
     !isOneOf(STATUSES, value.status) ||
     !isTimestamp(value.attempts) ||
     !isTimestamp(value.at) ||
+    (value.claimedAt !== undefined && !isTimestamp(value.claimedAt)) ||
     (value.error !== undefined &&
       (typeof value.error !== "string" || value.error.length > MAX_ERROR))
   )
@@ -232,8 +303,8 @@ function parseNoticeRecord(value: unknown): NoticeRecord | undefined {
   return value as unknown as NoticeRecord;
 }
 
-function deliveryKey(dedupeKey: string): string {
-  return createHash("sha256").update(dedupeKey).digest("hex").slice(0, 24);
+function hex24(value: string): string {
+  return createHash("sha256").update(value).digest("hex").slice(0, 24);
 }
 
 function isEvictable(record: NoticeRecord): boolean {
@@ -241,12 +312,27 @@ function isEvictable(record: NoticeRecord): boolean {
 }
 
 function defaultLocalHourKey(ms: number): string {
-  const d = new Date(ms);
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}T${d.getHours()}`;
+  return String(localHourIndex(ms, hostTimezoneOffsetMin(ms)));
+}
+
+function jsonBytes(value: unknown): number {
+  return Buffer.byteLength(JSON.stringify(value), "utf8");
 }
 
 /** Rebuild an input with only known fields, dropping `undefined` and non-JSON values. */
 function normalizeInput(input: NoticeRecordInput, id: string, createdAt: number): NoticeRecord {
+  const initial = input.delivery ?? impliedDelivery(input.decision);
+  if (
+    initial !== undefined &&
+    (!isRecord(initial) ||
+      !hasOnlyKeys(initial, ["status", "channel"]) ||
+      (initial.status !== "held" && initial.status !== "queued") ||
+      (initial.channel !== undefined && !isText(initial.channel, 64)))
+  )
+    throw new PetNoticeLedgerError("invalid_notice");
+  const expiresAt =
+    input.expiresAt ??
+    (initial?.status === "queued" ? createdAt + NOTICE_QUEUED_TTL_MS : undefined);
   const record: NoticeRecord = {
     id,
     kind: input.kind,
@@ -254,12 +340,22 @@ function normalizeInput(input: NoticeRecordInput, id: string, createdAt: number)
     dedupeKey: input.dedupeKey,
     ...(input.sessionId !== undefined ? { sessionId: input.sessionId } : {}),
     ...(input.requestId !== undefined ? { requestId: input.requestId } : {}),
-    ...(input.expiresAt !== undefined ? { expiresAt: input.expiresAt } : {}),
+    ...(expiresAt !== undefined ? { expiresAt } : {}),
     ruleIds: Array.isArray(input.ruleIds) ? [...input.ruleIds] : input.ruleIds,
     facts: input.facts,
     ...(input.body !== undefined ? { body: input.body } : {}),
     ...(input.decision !== undefined ? { decision: input.decision } : {}),
-    ...(input.delivery !== undefined ? { delivery: input.delivery } : {}),
+    ...(initial !== undefined
+      ? {
+          delivery: {
+            key: hex24(id),
+            ...(initial.channel !== undefined ? { channel: initial.channel } : {}),
+            status: initial.status,
+            attempts: 0,
+            at: createdAt,
+          },
+        }
+      : {}),
     createdAt,
   };
   let json: string | undefined;
@@ -275,6 +371,13 @@ function normalizeInput(input: NoticeRecordInput, id: string, createdAt: number)
   return parsed;
 }
 
+function impliedDelivery(decision: RouteDecision | undefined): NoticeRecordInput["delivery"] {
+  if (decision?.queued)
+    return { status: "queued", ...(decision.im ? { channel: decision.im } : {}) };
+  if (decision?.outlet === "digest") return { status: "held" };
+  return undefined;
+}
+
 /**
  * Durable record of every notice Mimi decided on and how its delivery went,
  * owned by the Electron main process (`<userData>/pet/notices.json`).
@@ -282,14 +385,15 @@ function normalizeInput(input: NoticeRecordInput, id: string, createdAt: number)
  * Every mutation is serialised in-process, staged on a copy, validated,
  * committed atomically, and only then becomes visible; a promise resolves
  * after its write is on disk. Rows this build cannot read are carried in
- * `quarantine` unchanged, and a file from a newer schema is never overwritten.
+ * `quarantine` (or moved to a sidecar file under byte pressure), and a file
+ * from a newer schema is never overwritten.
  *
- * The dedupe index outlives eviction so an evicted notice cannot repeat
- * within {@link NOTICE_DEDUPE_RETENTION_MS}.
+ * A write can still fail (disk, `notice_ledger_full`). The router must not
+ * let that swallow a notice: a P0 still has to reach the desktop surface
+ * even when its ledger record could not be written.
  */
 export class PetNoticeLedger {
-  private state: LedgerState = { records: new Map(), dedupe: new Map() };
-  private quarantine: unknown[] = [];
+  private state: LedgerState = { records: new Map(), dedupe: new Map(), quarantine: [] };
   private unwritable = false;
   private loadPromise: Promise<void> | undefined;
   private queue: Promise<unknown> = Promise.resolve();
@@ -327,12 +431,19 @@ export class PetNoticeLedger {
     return record ? structuredClone(record) : undefined;
   }
 
-  /** Dedupe keys recorded within the last 7 days, including evicted records. */
-  seenDedupeKeys(): ReadonlySet<string> {
+  /**
+   * Dedupe keys first recorded within the last 7 days, including evicted
+   * records. The index stores hashes, so this is a lookup, not a listing.
+   */
+  seenDedupeKeys(): DedupeLookup {
+    const index = this.state.dedupe;
     const cutoff = this.now() - NOTICE_DEDUPE_RETENTION_MS;
-    const keys = new Set<string>();
-    for (const [key, at] of this.state.dedupe) if (at > cutoff) keys.add(key);
-    return keys;
+    return {
+      has: (dedupeKey: string) => {
+        const at = index.get(hex24(dedupeKey));
+        return at !== undefined && at > cutoff;
+      },
+    };
   }
 
   /** Records waiting for an IM channel to come back, oldest first. */
@@ -344,8 +455,8 @@ export class PetNoticeLedger {
   }
 
   /**
-   * IM sends (claimed or accepted, any channel but "desktop") whose last
-   * status change falls in the same local clock hour as `now`; P0 separately.
+   * IM sends (claimed or accepted, any channel but "desktop") whose latest
+   * claim falls in the same local clock hour as `now`; P0 separately.
    */
   countsThisHour(now: number): { sent: number; p0Sent: number } {
     const hour = this.localHourKey(now);
@@ -355,23 +466,30 @@ export class PetNoticeLedger {
       const delivery = record.delivery;
       if (!delivery?.channel || delivery.channel === "desktop") continue;
       if (delivery.status !== "claimed" && delivery.status !== "accepted") continue;
-      if (this.localHourKey(delivery.at) !== hour) continue;
+      if (this.localHourKey(delivery.claimedAt ?? delivery.at) !== hour) continue;
       if (record.priority === "P0") p0Sent += 1;
       else sent += 1;
     }
     return { sent, p0Sent };
   }
 
+  /**
+   * Persist a new notice. A `drop` decision never touches the dedupe index,
+   * and an existing index entry keeps its first time, so a key repeated
+   * every day still ages out 7 days after it was first seen.
+   */
   record(notice: NoticeRecordInput): Promise<NoticeRecord> {
     const snapshot = structuredClone(notice);
     return this.mutate((staged, touched) => {
       const createdAt = this.timestamp();
       const record = normalizeInput(snapshot, `notice-${randomUUID()}`, createdAt);
       staged.records.set(record.id, record);
-      staged.dedupe.set(
-        record.dedupeKey,
-        Math.max(createdAt, staged.dedupe.get(record.dedupeKey) ?? 0),
-      );
+      if (record.decision?.outlet !== "drop") {
+        const hash = hex24(record.dedupeKey);
+        const seen = staged.dedupe.get(hash);
+        if (seen === undefined || seen <= createdAt - NOTICE_DEDUPE_RETENTION_MS)
+          staged.dedupe.set(hash, createdAt);
+      }
       touched.add(record.id);
       return record;
     });
@@ -387,12 +505,12 @@ export class PetNoticeLedger {
     return this.mutate((staged, touched) => {
       const current = staged.records.get(id);
       if (!current) throw new PetNoticeLedgerError("notice_not_found");
-      if (current.delivery && FINAL_STATUSES.has(current.delivery.status))
-        throw new PetNoticeLedgerError("notice_already_settled");
+      assertTransition(current.delivery, "claimed");
       if (!isText(channel, 64) || typeof body !== "string" || body.length > MAX_BODY)
         throw new PetNoticeLedgerError("invalid_notice");
-      const key = deliveryKey(current.dedupeKey);
-      const next: NoticeRecord = {
+      const at = this.timestamp();
+      const key = current.delivery?.key ?? hex24(current.id);
+      staged.records.set(id, {
         ...current,
         body: current.body ?? body,
         delivery: {
@@ -400,78 +518,95 @@ export class PetNoticeLedger {
           channel,
           status: "claimed",
           attempts: (current.delivery?.attempts ?? 0) + 1,
-          at: this.timestamp(),
+          at,
+          claimedAt: at,
         },
-      };
-      staged.records.set(id, next);
+      });
       touched.add(id);
       return { key };
     });
   }
 
-  /**
-   * Record a delivery outcome. `accepted` / `failed` / `unknown` need a prior
-   * claim; `queued` / `revoked` may be set on a notice that was never sent
-   * (the queued channel then comes from the decision's `im`).
-   */
-  settle(
-    id: string,
-    status: Exclude<NoticeDeliveryStatus, "claimed">,
-    error?: string,
-  ): Promise<void> {
+  /** Record a delivery outcome; see the transition table at the top of this file. */
+  settle(id: string, status: NoticeSettleStatus, error?: string): Promise<void> {
     return this.mutate((staged, touched) => {
       const current = staged.records.get(id);
       if (!current) throw new PetNoticeLedgerError("notice_not_found");
-      // Runtime guard for untyped callers (IPC); "claimed" is only set by claim().
+      // Runtime guard for untyped callers; "claimed" is only set by claim().
       if (!isOneOf(SETTLE_STATUSES, status)) throw new PetNoticeLedgerError("invalid_notice");
-      if (!current.delivery && NEEDS_CLAIM.has(status))
-        throw new PetNoticeLedgerError("invalid_notice");
+      assertTransition(current.delivery, status);
+      const at = this.timestamp();
       const channel = current.delivery?.channel ?? current.decision?.im;
-      const delivery: NoticeDelivery = {
-        key: current.delivery?.key ?? deliveryKey(current.dedupeKey),
-        ...(channel !== undefined ? { channel } : {}),
-        status,
-        attempts: current.delivery?.attempts ?? 0,
-        at: this.timestamp(),
-        ...(typeof error === "string" && error ? { error: error.slice(0, MAX_ERROR) } : {}),
+      const claimedAt = current.delivery?.claimedAt;
+      const next: NoticeRecord = {
+        ...current,
+        delivery: {
+          key: current.delivery?.key ?? hex24(current.id),
+          ...(channel !== undefined ? { channel } : {}),
+          status,
+          attempts: current.delivery?.attempts ?? 0,
+          at,
+          ...(claimedAt !== undefined ? { claimedAt } : {}),
+          ...(typeof error === "string" && error ? { error: error.slice(0, MAX_ERROR) } : {}),
+        },
       };
-      staged.records.set(id, { ...current, delivery });
+      if (status === "queued" && next.expiresAt === undefined)
+        next.expiresAt = at + NOTICE_QUEUED_TTL_MS;
+      staged.records.set(id, next);
       touched.add(id);
       return undefined;
     });
   }
 
   /**
-   * After a restart: claims younger than {@link NOTICE_RESEND_WINDOW_MS} are
-   * returned unchanged for the caller to resend (same key, same body); older
-   * claims may or may not have reached the owner and become `unknown`.
+   * Revoke queued notices whose `expiresAt` has passed; returns them. Held
+   * (digest) notices are left for the digest consumer.
+   */
+  expireQueued(now: number): Promise<NoticeRecord[]> {
+    return this.mutate((staged, touched) => this.applyExpiry(staged, touched, now));
+  }
+
+  /**
+   * After a restart, in one serialised step: expire queued notices, return
+   * claims younger than {@link NOTICE_RESEND_WINDOW_MS} unchanged for the
+   * caller to resend (same key, same body), and mark older claims `unknown`
+   * (they may or may not have reached the owner).
    */
   recoverOnStartup(now: number): Promise<NoticeRecord[]> {
-    return this.load().then(() => {
-      const claimed = [...this.state.records.values()].filter(
-        (record) => record.delivery?.status === "claimed",
-      );
-      const resend = claimed
-        .filter((record) => now - record.delivery!.at < NOTICE_RESEND_WINDOW_MS)
-        .sort((a, b) => a.delivery!.at - b.delivery!.at || a.id.localeCompare(b.id))
-        .map((record) => structuredClone(record));
-      const stale = claimed.filter(
-        (record) => now - record.delivery!.at >= NOTICE_RESEND_WINDOW_MS,
-      );
-      if (stale.length === 0) return resend;
-      return this.mutate((staged, touched) => {
-        for (const { id } of stale) {
-          const current = staged.records.get(id);
-          if (current?.delivery?.status !== "claimed") continue;
-          staged.records.set(id, {
-            ...current,
-            delivery: { ...current.delivery, status: "unknown", at: now },
-          });
-          touched.add(id);
+    return this.mutate((staged, touched) => {
+      this.applyExpiry(staged, touched, now);
+      const resend: NoticeRecord[] = [];
+      for (const record of staged.records.values()) {
+        const delivery = record.delivery;
+        if (delivery?.status !== "claimed") continue;
+        if (now - delivery.at < NOTICE_RESEND_WINDOW_MS) {
+          resend.push(record);
+          continue;
         }
-        return undefined;
-      }).then(() => resend);
+        staged.records.set(record.id, {
+          ...record,
+          delivery: { ...delivery, status: "unknown", at: now },
+        });
+        touched.add(record.id);
+      }
+      return resend.sort((a, b) => a.delivery!.at - b.delivery!.at || a.id.localeCompare(b.id));
     });
+  }
+
+  private applyExpiry(staged: LedgerState, touched: Set<string>, now: number): NoticeRecord[] {
+    const expired: NoticeRecord[] = [];
+    for (const record of staged.records.values()) {
+      if (record.delivery?.status !== "queued") continue;
+      if (record.expiresAt === undefined || record.expiresAt > now) continue;
+      const next: NoticeRecord = {
+        ...record,
+        delivery: { ...record.delivery, status: "revoked", at: now, error: "expired" },
+      };
+      staged.records.set(record.id, next);
+      touched.add(record.id);
+      expired.push(next);
+    }
+    return expired;
   }
 
   private timestamp(): number {
@@ -480,26 +615,31 @@ export class PetNoticeLedger {
     return at;
   }
 
+  /** A mutation that touches no record is a read and never writes. */
   private mutate<T>(apply: (staged: LedgerState, touched: Set<string>) => T): Promise<T> {
     const run = this.queue
       .catch(() => undefined)
       .then(() => this.load())
       .then(async () => {
-        if (this.unwritable) throw new PetNoticeLedgerError("notice_ledger_unwritable");
         const staged: LedgerState = {
           records: new Map(
             [...this.state.records].map(([id, record]) => [id, structuredClone(record)] as const),
           ),
           dedupe: new Map(this.state.dedupe),
+          quarantine: [...this.state.quarantine],
         };
         const touched = new Set<string>();
         const result = apply(staged, touched);
+        if (touched.size === 0) return structuredClone(result);
+        if (this.unwritable) throw new PetNoticeLedgerError("notice_ledger_unwritable");
         for (const record of staged.records.values()) {
           if (!parseNoticeRecord(record)) throw new PetNoticeLedgerError("invalid_notice");
         }
         this.pruneDedupe(staged);
         this.enforceCount(staged, touched);
-        await writeOwnerJsonAtomic(this.path, this.fitBytes(staged, touched), this.maxBytes);
+        const { file, movedQuarantine } = this.fitBytes(staged, touched);
+        if (movedQuarantine.length > 0) await this.writeQuarantineSidecar(movedQuarantine);
+        await writeOwnerJsonAtomic(this.path, file, this.maxBytes);
         this.state = staged;
         return structuredClone(result);
       });
@@ -509,11 +649,11 @@ export class PetNoticeLedger {
 
   private pruneDedupe(staged: LedgerState): void {
     const cutoff = this.now() - NOTICE_DEDUPE_RETENTION_MS;
-    for (const [key, at] of staged.dedupe) if (at <= cutoff) staged.dedupe.delete(key);
+    for (const [hash, at] of staged.dedupe) if (at <= cutoff) staged.dedupe.delete(hash);
     if (staged.dedupe.size <= MAX_DEDUPE_ENTRIES) return;
     const oldest = [...staged.dedupe].sort((a, b) => a[1] - b[1]);
-    for (const [key] of oldest.slice(0, staged.dedupe.size - MAX_DEDUPE_ENTRIES)) {
-      staged.dedupe.delete(key);
+    for (const [hash] of oldest.slice(0, staged.dedupe.size - MAX_DEDUPE_ENTRIES)) {
+      staged.dedupe.delete(hash);
     }
   }
 
@@ -525,9 +665,9 @@ export class PetNoticeLedger {
   }
 
   /**
-   * Soft count cap: evict the oldest terminal records. Live deliveries
-   * (claimed / queued) and the records this mutation wrote are never
-   * evicted, so the ledger may sit above the cap rather than lose a notice.
+   * Soft count cap: evict the oldest terminal records. Live work (claimed /
+   * queued / held) and the records this mutation wrote are never evicted,
+   * so the ledger may sit above the cap rather than lose a notice.
    */
   private enforceCount(staged: LedgerState, touched: ReadonlySet<string>): void {
     if (staged.records.size <= this.maxRecords) return;
@@ -537,33 +677,76 @@ export class PetNoticeLedger {
     }
   }
 
-  /** Hard byte cap: evict more terminal records until the file fits, else refuse. */
-  private fitBytes(staged: LedgerState, touched: ReadonlySet<string>): PetNoticeFile {
+  /**
+   * Hard byte cap. Shed, in order: the oldest terminal records; the oldest
+   * dedupe entries whose record is gone; the oldest quarantine rows (moved
+   * to a sidecar file, not dropped). Only live records plus this mutation's
+   * own writes that still do not fit throw `notice_ledger_full`.
+   */
+  private fitBytes(
+    staged: LedgerState,
+    touched: ReadonlySet<string>,
+  ): { file: PetNoticeFile; movedQuarantine: unknown[] } {
+    const movedQuarantine: unknown[] = [];
     for (;;) {
       const file: PetNoticeFile = {
         version: SCHEMA_VERSION,
         records: [...staged.records.values()],
         dedupe: [...staged.dedupe],
-        quarantine: this.quarantine,
+        quarantine: staged.quarantine,
       };
       // Same serialisation as writeOwnerJsonAtomic.
       const size = Buffer.byteLength(`${JSON.stringify(file, null, 2)}\n`, "utf8");
-      if (size <= this.maxBytes) return file;
-      const candidates = this.evictionOrder(staged, touched);
-      if (candidates.length === 0) throw new PetNoticeLedgerError("notice_ledger_full");
+      if (size <= this.maxBytes) return { file, movedQuarantine };
+      // Indented rows are a little larger than these estimates; the loop re-measures.
       let excess = size - this.maxBytes;
-      for (const record of candidates) {
-        staged.records.delete(record.id);
-        // Indented rows are a little larger than this; the loop re-measures.
-        excess -= Buffer.byteLength(JSON.stringify(record), "utf8");
-        if (excess <= 0) break;
+
+      const records = this.evictionOrder(staged, touched);
+      if (records.length > 0) {
+        for (const record of records) {
+          staged.records.delete(record.id);
+          excess -= jsonBytes(record);
+          if (excess <= 0) break;
+        }
+        continue;
       }
+
+      const keep = new Set([...staged.records.values()].map((record) => hex24(record.dedupeKey)));
+      const entries = [...staged.dedupe]
+        .filter(([hash]) => !keep.has(hash))
+        .sort((a, b) => a[1] - b[1]);
+      if (entries.length > 0) {
+        for (const entry of entries) {
+          staged.dedupe.delete(entry[0]);
+          excess -= jsonBytes(entry) + 8;
+          if (excess <= 0) break;
+        }
+        continue;
+      }
+
+      if (staged.quarantine.length > 0) {
+        while (staged.quarantine.length > 0 && excess > 0) {
+          const row = staged.quarantine.shift();
+          movedQuarantine.push(row);
+          excess -= jsonBytes(row ?? null);
+        }
+        continue;
+      }
+
+      throw new PetNoticeLedgerError("notice_ledger_full");
     }
   }
 
+  /** Quarantine rows pushed out of the ledger, kept byte-for-byte in JSON terms. */
+  private async writeQuarantineSidecar(rows: unknown[]): Promise<void> {
+    const base = this.path.endsWith(".json") ? this.path.slice(0, -".json".length) : this.path;
+    const sidecar = `${base}.quarantine.${Date.now()}.${randomUUID()}.json`;
+    await writeOwnerJsonAtomic(sidecar, { version: SCHEMA_VERSION, rows }, this.maxBytes);
+    dlog("main", "pet.notices.quarantine_moved", { rows: rows.length, sidecar });
+  }
+
   private reset(): void {
-    this.state = { records: new Map(), dedupe: new Map() };
-    this.quarantine = [];
+    this.state = { records: new Map(), dedupe: new Map(), quarantine: [] };
     this.unwritable = false;
   }
 
@@ -613,24 +796,23 @@ export class PetNoticeLedger {
     // The dedupe index is derived data: malformed pairs are skipped, not kept.
     for (const entry of Array.isArray(parsed.dedupe) ? parsed.dedupe : []) {
       if (!Array.isArray(entry) || entry.length !== 2) continue;
-      const [key, at] = entry as unknown[];
-      if (!isText(key) || !isTimestamp(at)) continue;
-      dedupe.set(key, Math.max(at, dedupe.get(key) ?? 0));
+      const [hash, at] = entry as unknown[];
+      if (typeof hash !== "string" || !HEX24.test(hash) || !isTimestamp(at)) continue;
+      const seen = dedupe.get(hash);
+      dedupe.set(hash, seen === undefined ? at : Math.min(seen, at));
     }
     let rejected = 0;
     for (const stored of parsed.records) {
       const record = parseNoticeRecord(stored);
       if (record && !records.has(record.id)) {
         records.set(record.id, record);
-        dedupe.set(record.dedupeKey, Math.max(record.createdAt, dedupe.get(record.dedupeKey) ?? 0));
         continue;
       }
       quarantine.push(stored);
       rejected += 1;
     }
     if (rejected > 0) dlog("main", "pet.notices.quarantined_rows", { rejected });
-    this.state = { records, dedupe };
-    this.quarantine = quarantine;
+    this.state = { records, dedupe, quarantine };
     this.unwritable = false;
   }
 }

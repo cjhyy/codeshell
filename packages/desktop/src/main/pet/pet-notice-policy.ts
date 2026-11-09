@@ -22,6 +22,11 @@ export interface RouteNotice {
   requiresAway?: boolean;
 }
 
+/** What the policy needs from the dedupe index; a `ReadonlySet<string>` satisfies it. */
+export interface DedupeLookup {
+  has(dedupeKey: string): boolean;
+}
+
 export interface RouteState {
   now: number;
   present: boolean;
@@ -42,7 +47,7 @@ export interface RouteState {
   p0SentThisHour: number;
   maxPerHour: number;
   maxP0PerHour: number;
-  seenDedupeKeys: ReadonlySet<string>;
+  seenDedupeKeys: DedupeLookup;
   /** Bound IM channels in display order (string keys; insertion order is the order). */
   imReady: Readonly<Record<string, ImReadiness>>;
   /** The channel the owner last used to message Mimi. */
@@ -59,6 +64,7 @@ export type RouteReason =
   | "hourly-cap"
   | "desktop-channel"
   | "named-im"
+  | "im-unbound"
   | "im-unavailable-queued"
   | "present-desktop"
   | "requires-away-present"
@@ -87,10 +93,25 @@ function parseClock(value: string): number | undefined {
   return match ? Number(match[1]) * 60 + Number(match[2]) : undefined;
 }
 
+/** The host's offset east of UTC at that instant (DST-aware), in minutes. */
+export function hostTimezoneOffsetMin(ms: number): number {
+  return -new Date(ms).getTimezoneOffset() || 0;
+}
+
 /** Minutes since local midnight, in [0, 1440). */
 export function localMinuteOfDay(now: number, timezoneOffsetMin: number): number {
   const minutes = Math.floor(now / 60_000) + Math.trunc(timezoneOffsetMin);
   return ((minutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+}
+
+/**
+ * Index of the local clock hour containing `ms`, using the same offset math
+ * as quiet hours. Two instants with the same index are "the same hour" for
+ * the hourly caps; across a DST fall-back the repeated wall-clock hour maps
+ * to one index, so it shares one budget.
+ */
+export function localHourIndex(ms: number, timezoneOffsetMin: number): number {
+  return Math.floor((ms + Math.trunc(timezoneOffsetMin) * 60_000) / 3_600_000);
 }
 
 export function isInQuietHours(
@@ -131,20 +152,23 @@ export function route(notice: RouteNotice, state: RouteState): RouteDecision {
       return { outlet: "digest", reason: "quiet-hours" };
     if (state.sentThisHour >= state.maxPerHour) return { outlet: "digest", reason: "hourly-cap" };
   }
+  // "Only while I'm away" holds whatever channel the rule names.
+  if (notice.requiresAway && state.present)
+    return { outlet: "record", reason: "requires-away-present" };
 
   if (notice.channel === "desktop") return { outlet: "desktop", reason: "desktop-channel" };
   if (notice.channel !== "auto") {
-    // A channel the owner named wins over presence.
+    // A channel the owner named wins over presence. An unbound channel will
+    // not come back by itself, so it is not queued; a bound but unavailable
+    // one is queued for when it reconnects.
+    if (!Object.hasOwn(state.imReady, notice.channel))
+      return { outlet: "desktop", reason: "im-unbound" };
     return usable(state, notice.channel)
       ? { outlet: "both", im: notice.channel, reason: "named-im" }
       : { outlet: "desktop", im: notice.channel, queued: true, reason: "im-unavailable-queued" };
   }
 
-  if (state.present) {
-    return notice.requiresAway
-      ? { outlet: "record", reason: "requires-away-present" }
-      : { outlet: "desktop", reason: "present-desktop" };
-  }
+  if (state.present) return { outlet: "desktop", reason: "present-desktop" };
   if (usable(state, state.lastInboundChannel))
     return { outlet: "im", im: state.lastInboundChannel, reason: "away-last-inbound" };
   const first = Object.keys(state.imReady).find((channel) => usable(state, channel));
