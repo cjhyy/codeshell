@@ -28,8 +28,10 @@ export const completeGoalToolDef: ToolDefinition = {
   name: COMPLETE_GOAL_TOOL_NAME,
   description:
     "声明当前目标已完全达成。仅当目标确实完整完成时才调用本工具(模型在目标完全达成时显式调用以声明完成)。" +
+    "目标是主观标准(效果够好、没有明显差异等)时,用户表示当前结果可以接受即视为达成,不要再逐项请用户确认剩余细节。" +
     "调用后应当停止。可选传入 summary 作为一句话完成总结。\n" +
     "Declare the current goal complete. Call this ONLY when the goal is fully achieved. " +
+    "For a judgment-based objective, the user accepting the current result counts as achieved; do not ask them to accept the remaining details one by one. " +
     "After calling, you should stop. Optionally pass a one-line summary of what was accomplished.",
   inputSchema: {
     type: "object",

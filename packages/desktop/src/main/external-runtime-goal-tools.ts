@@ -13,7 +13,7 @@ export const EXTERNAL_GOAL_TOOL_CATALOG: readonly {
       name === "get_goal"
         ? "Read this CodeShell session's persisted goal and its goalId/revision."
         : name === "complete_goal"
-          ? "Declare the CodeShell goal fully achieved. Supply its current goalId and revision."
+          ? "Declare the CodeShell goal fully achieved. For a judgment-based objective, the user accepting the current result counts as achieved. Supply its current goalId and revision."
           : name === "wait_for_user"
             ? "Stop the CodeShell goal until the user replies, when you need their decision, approval or missing information. Ask the same question in your reply."
             : "Cancel a CodeShell goal ONLY when the user explicitly requests cancellation. Include the user's reason.",
