@@ -5,6 +5,7 @@
 // runtime. AgentBridge imports from here.
 
 import type { SessionManager } from "@cjhyy/code-shell-core";
+import { goalGetPayload } from "@cjhyy/code-shell-core/internal";
 
 /** Minimal shape of a parsed inbound JSON-RPC line the bridge cares about. */
 export interface ParsedRpc {
@@ -162,13 +163,7 @@ export function buildNoChildFallbackReply(
       const sid = parsed.params?.sessionId;
       if (typeof sid !== "string" || !sid) return null;
       const goal = sessions.readActiveGoal(sid);
-      return respond({
-        ok: true,
-        goal: goal ? goal.objective : null,
-        ...(goal?.goalId ? { goalId: goal.goalId } : {}),
-        ...(goal?.revision ? { revision: goal.revision } : {}),
-        paused: goal?.paused === true,
-      });
+      return respond(goalGetPayload(goal, goal ? sessions.readGoalProgress(sid) : undefined));
     }
     case "agent/goalUpdate": {
       const sid = parsed.params?.sessionId;

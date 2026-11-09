@@ -263,7 +263,9 @@ describe("architecture growth budgets", () => {
     // The integrated baseline is 1,891 lines; model tracing adds only its
     // extracted adapter import and one composition property (+2).
     // Pin the already-integrated one-line Link login-source forwarding at HEAD.
-    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_894);
+    // Goal controls (extend/clear/update/delete/get) moved to goal-control-api.ts,
+    // which owns both their declarations and RPC adapters (-58); pin the result.
+    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_828);
     // Include all nine extracted Lab invokes and the five generic Link
     // challenge invokes plus usage history. Main-only routes remain counted
     // above even when no renderer adapter exists; do not equate the totals.
@@ -334,7 +336,9 @@ describe("architecture growth budgets", () => {
     // +1 net: plugin installation origin and forwarded source event identity fields.
     // +4 declaration lines carry that selected MCP configuration target; no new IPC route.
     // +2 declare keepWaitingForQuestion (agent/approvalKeepWaiting) for question cards.
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_990);
+    // Goal control declarations are composed from goal-control-api.ts through one
+    // extends seam (-58), which also carries agent/goalGet's goal-level progress.
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_932);
     // The responsive-sidebar work extracts ResponsiveSidebar (132),
     // useResponsiveSidebar (61) and useSessionHistorySync (127) into
     // renderer/app/, so the 320 lines of behaviour live outside this file and
@@ -400,7 +404,10 @@ describe("architecture growth budgets", () => {
     // Platform foundation extracts the request routing table, extension alias
     // dispatch and generic run/Goal ingress validation into protocol/dispatch.
     // Connection activation, approval ownership and Session lifetimes stay here.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_949);
+    // Goal RPC shaping (goalExtend validation/routing, the goalGet payload with
+    // goal-level progress) is extracted to protocol/goal-rpc.ts (-51); this file
+    // only resolves live/legacy/disk targets and sends.
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_898);
     expect(lines("packages/core/src/protocol/dispatch.ts")).toBeLessThanOrEqual(246);
     // Topic-boundary archival stays inside run startup. Synthetic worktree
     // authority is only a public delegation seam here; its implementation was
@@ -572,7 +579,9 @@ describe("architecture growth budgets", () => {
       // delivers background results through the same controller as native Sessions.
       // +1 Core's model-question default rule, so the TUI and the IM relay show the
       // same timeout default Core applies instead of keeping their own copies.
-      "packages/core/src/index.internal.ts": 132,
+      // +1 the agent/goalGet payload builder, so Desktop's disk fallback and its
+      // external runtime answer goalGet with the same shape (incl. goal progress).
+      "packages/core/src/index.internal.ts": 133,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       // +1 for conversation-session.ts, which re-exports the four modules

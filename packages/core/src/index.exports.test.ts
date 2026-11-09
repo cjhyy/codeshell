@@ -223,7 +223,12 @@ const expectedRuntimeExportsByPartition = {
     "deleteUserCatalogEntry",
     "catalogEntryOrigins",
   ],
-  protocolExtensions: ["createInProcessClient", "USER_DECISION_TIMEOUT_MS", "recommendedAnswer"],
+  protocolExtensions: [
+    "createInProcessClient",
+    "USER_DECISION_TIMEOUT_MS",
+    "recommendedAnswer",
+    "goalGetPayload",
+  ],
   llmHostExtensions: [
     "defaultCacheDir",
     "fetchModelList",

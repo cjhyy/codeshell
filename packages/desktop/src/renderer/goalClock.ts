@@ -119,3 +119,26 @@ export function closeOpenGoalWaits(messages: Message[], nowMs: number): Message[
   });
   return changed ? next : messages;
 }
+
+/**
+ * Adopt the persisted goal snapshot from agent/goalGet on hydration. It is
+ * authoritative unless a run is in flight (the replayed clock then already
+ * includes time the host settles only at run end). Fills goals whose history
+ * carried no accounting, e.g. a tail-only replay.
+ */
+export function adoptPersistedGoalProgress(
+  goal: ActiveGoal | null,
+  progress: { rounds: number; activeMs: number; runningSinceMs?: number } | undefined,
+): ActiveGoal | null {
+  if (!goal || !progress) return goal;
+  if (goal.clockSinceMs !== undefined && !goal.waitingBackground) return goal;
+  // Paused or waiting for the user's reply: the goal clock does not run.
+  const running = progress.runningSinceMs !== undefined && !goal.paused && !goal.waitingForUser;
+  return {
+    ...goal,
+    round: Math.max(goal.round, progress.rounds),
+    activeMs: progress.activeMs,
+    clockSinceMs: running ? progress.runningSinceMs : undefined,
+    waitingBackground: running,
+  };
+}
