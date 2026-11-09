@@ -44,6 +44,16 @@ export interface ExternalGoalRun {
   yieldRequested?: boolean;
   /** The model called wait_for_user this turn; end the run and wait for a reply. */
   awaitingUser?: boolean;
+  /** Goal-level rounds/active time persisted before this run started. */
+  progressBase: { rounds: number; activeMs: number };
+  /** Frozen at pause/park/completion, even if the provider takes time to finish. */
+  clockStoppedAtMs?: number;
+}
+
+/** Display-only description of finite work a parked Goal waits on. */
+export interface ExternalGoalWaitingTask {
+  kind: string;
+  label: string;
 }
 
 function positiveInteger(value: unknown): value is number {
@@ -144,9 +154,15 @@ export class ExternalRuntimeGoals {
         throw new Error("Could not re-arm the external runtime goal");
       }
     }
+    // Read after re-arming: a finished background wait is settled by then.
+    const persisted = this.manager.readGoalProgress(sessionId);
     const run: ExternalGoalRun = {
       sessionId,
       goal: { ...goal },
+      progressBase:
+        persisted && persisted.goalId === goal.goalId
+          ? { rounds: persisted.rounds, activeMs: persisted.activeMs }
+          : { rounds: 0, activeMs: 0 },
       startedAtMs: this.now(),
       turns: 0,
       tokensUsed: 0,
@@ -173,7 +189,10 @@ export class ExternalRuntimeGoals {
 
   stop(sessionId: string): void {
     const run = this.runs.get(sessionId);
-    if (run) run.stopped = true;
+    if (run) {
+      run.stopped = true;
+      run.clockStoppedAtMs ??= this.now();
+    }
   }
 
   /**
@@ -213,14 +232,22 @@ export class ExternalRuntimeGoals {
     if (!question || question.length > MAX_QUESTION_CHARS) {
       return { ok: false, message: "wait_for_user needs the question you are asking the user." };
     }
+    const state = this.manager.readSessionState(sessionId);
+    if (!state || !this.manager.markGoalWaiting(state, run.goal, "user")) {
+      return {
+        ok: false,
+        message: "Could not persist the goal's user wait; retry before ending the turn.",
+      };
+    }
     run.awaitingUser = true;
+    run.clockStoppedAtMs ??= this.now();
     this.pendingQuestions.set(sessionId, question);
     this.emit(sessionId, {
       type: "goal_progress",
       goalId: run.goal.goalId,
       revision: run.goal.revision,
       status: "not_met",
-      round: run.turns,
+      ...this.progress(run, run.turns + 1),
       gaps: `等待你的回复：${question}`,
       waitingForUser: question,
     });
@@ -234,6 +261,13 @@ export class ExternalRuntimeGoals {
     return this.pendingQuestions.get(sessionId);
   }
 
+  /** Automatic work must respect a user wait after the in-memory question is gone. */
+  isWaitingForUser(sessionId: string): boolean {
+    if (this.pendingQuestions.has(sessionId)) return true;
+    const lifecycle = this.manager.readSessionState(sessionId)?.goalLifecycle;
+    return lifecycle?.phase === "waiting" && lifecycle.waitKind === "user";
+  }
+
   /** A real user message (not an automatic continuation) answers the open question. */
   userReplied(sessionId: string): void {
     this.pendingQuestions.delete(sessionId);
@@ -241,6 +275,15 @@ export class ExternalRuntimeGoals {
 
   end(run: ExternalGoalRun): void {
     if (this.runs.get(run.sessionId) === run) this.runs.delete(run.sessionId);
+    // Accounting for this run belongs to the goal identity even if it was
+    // edited, paused or completed meanwhile; a replaced goal drops it.
+    const state = this.manager.readSessionState(run.sessionId);
+    if (state && run.goal.goalId) {
+      this.manager.recordGoalProgress(state, run.goal.goalId, {
+        rounds: run.turns,
+        activeMs: this.elapsed(run),
+      });
+    }
   }
 
   update(sessionId: string, patch: ExternalGoalUpdate) {
@@ -321,17 +364,27 @@ export class ExternalRuntimeGoals {
   }
 
   /** Park only the matching live Goal; completion delivery will re-arm it. */
-  waitForBackgroundWork(run: ExternalGoalRun): boolean {
+  waitForBackgroundWork(run: ExternalGoalRun, tasks: ExternalGoalWaitingTask[] = []): boolean {
     if (!this.isCurrent(run)) return false;
     const state = this.manager.readSessionState(run.sessionId);
-    if (!state || !this.manager.markGoalWaiting(state, run.goal)) return false;
+    if (!state || !this.manager.markGoalWaiting(state, run.goal, "background")) return false;
+    // The persisted lifecycle owns time from waitingSinceMs onward. Avoid
+    // charging the same interval again if the run's cleanup is delayed.
+    run.clockStoppedAtMs ??= Math.min(
+      this.now(),
+      state.goalLifecycle?.phase === "waiting" ? state.goalLifecycle.waitingSinceMs : this.now(),
+    );
     this.emit(run.sessionId, {
       type: "goal_progress",
       goalId: run.goal.goalId,
       revision: run.goal.revision,
       status: "not_met",
-      round: run.turns,
-      gaps: "等待后台任务完成，完成后自动继续。",
+      ...this.progress(run, run.turns),
+      waiting: {
+        kind: "background_work",
+        sinceMs: this.now(),
+        ...(tasks.length > 0 ? { tasks } : {}),
+      },
     });
     return true;
   }
@@ -368,7 +421,7 @@ export class ExternalRuntimeGoals {
       goalId: run.goal.goalId,
       revision: run.goal.revision,
       status: remaining <= 2 ? "approaching_limit" : "not_met",
-      round: run.turns,
+      ...this.progress(run, run.turns),
       gaps: "外部运行器尚未声明目标完成，继续处理。",
       ...(remaining <= 2 ? { turnsRemaining: remaining, nearest: "turns" as const } : {}),
     });
@@ -388,7 +441,7 @@ export class ExternalRuntimeGoals {
         goalId: result.goalId,
         revision: result.revision,
         status: "not_met",
-        round: run.turns,
+        ...this.progress(run, run.turns),
         gaps: `${reason}；目标已暂停，可继续。`,
       });
     }
@@ -418,6 +471,7 @@ export class ExternalRuntimeGoals {
       return { ok: false, message: "Goal changed or could not be saved; no completion recorded." };
     }
     run.stopped = true;
+    run.clockStoppedAtMs ??= this.now();
     this.pendingQuestions.delete(sessionId);
     if (status === "completed") {
       this.emit(sessionId, {
@@ -425,7 +479,7 @@ export class ExternalRuntimeGoals {
         goalId: run.goal.goalId,
         revision: run.goal.revision,
         status: "met",
-        round: run.turns + 1,
+        ...this.progress(run, run.turns + 1),
         ...(typeof args.summary === "string" ? { gaps: args.summary } : {}),
       });
     } else {
@@ -459,6 +513,28 @@ export class ExternalRuntimeGoals {
         : []),
       "</codeshell_goal>",
     ].join("\n");
+  }
+
+  /**
+   * Goal-level round and time for a marker. `turnsCounted` is the provider
+   * turns of this run that the marker covers (the in-flight turn included when
+   * it is emitted from inside that turn).
+   */
+  private progress(run: ExternalGoalRun, turnsCounted: number) {
+    const atMs = this.now();
+    const rounds = run.progressBase.rounds + turnsCounted;
+    return {
+      round: rounds,
+      progress: {
+        rounds,
+        activeMs: run.progressBase.activeMs + this.elapsed(run, atMs),
+        atMs,
+      },
+    };
+  }
+
+  private elapsed(run: ExternalGoalRun, atMs = this.now()): number {
+    return Math.max(0, (run.clockStoppedAtMs ?? atMs) - run.startedAtMs);
   }
 
   private emitUpdated(sessionId: string, goal: GoalConfig): void {

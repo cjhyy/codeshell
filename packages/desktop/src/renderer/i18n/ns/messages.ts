@@ -131,6 +131,10 @@ export const messagesNs = {
         notMetRound: "目标未达成 · 第 {count} 轮",
         gap: "— 还差:{gaps}",
         keepGoing: "— 继续推进",
+        waitingBackground: "等待后台任务 · 第 {count} 轮 · 已等 {elapsed}",
+        waitedBackground: "等了后台任务 {elapsed} · 第 {count} 轮",
+        waitingTasks: "{count} 个后台任务",
+        waitingTasksTitle: "在等这些后台任务完成，完成后自动继续：",
       },
       // process / tool group header labels
       process: {
@@ -336,6 +340,10 @@ export const messagesNs = {
         notMetRound: "Goal not met · turn {count}",
         gap: "— Remaining: {gaps}",
         keepGoing: "— Keep going",
+        waitingBackground: "Waiting on background work · turn {count} · {elapsed} so far",
+        waitedBackground: "Waited {elapsed} on background work · turn {count}",
+        waitingTasks: "{count} background tasks",
+        waitingTasksTitle: "Waiting for these to finish, then continuing automatically:",
       },
       process: {
         processRunning: "Working",

@@ -134,7 +134,8 @@ function signature(m: Message): string {
       // each open, so keying on id let one duplicate accumulate per re-open
       // ("每次重启都冒一个 goal 提示"). Key on its content (status + round +
       // gaps) so the disk and live copies collapse to one.
-      return `goal_progress|${m.goalId ?? ""}|${m.status}|${m.round}|${m.gaps ?? ""}`;
+      // A background wait's start time keeps two otherwise identical waits apart.
+      return `goal_progress|${m.goalId ?? ""}|${m.status}|${m.round}|${m.gaps ?? ""}|${m.waiting?.sinceMs ?? ""}`;
     default:
       // Remaining kinds (agent, task_list, ask_user) are NOT produced by the
       // disk fold — their source events (agent_start, task_update, ask) aren't

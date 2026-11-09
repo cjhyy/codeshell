@@ -157,8 +157,9 @@ interface Props {
       attachments?: InputAttachmentMeta[];
       displayText?: string;
       suppressGoal?: boolean;
+      continueGoal?: boolean;
     },
-  ) => void;
+  ) => void | Promise<void>;
   onQueueInput?: (
     text: string,
     opts?: {
@@ -628,7 +629,7 @@ export function ChatView({
         sameLinkIntent(intent, target) ? { ...intent, resumeConnection } : intent,
       ),
     );
-  const rememberLinkSubmission = (text: string) => {
+  const rememberLinkSubmission = (text: string, expectedBucket?: string) => {
     if (variant !== "main" || !sendBucket || !onReadLinkResource) return {};
     const resources = composerLinkResources(text);
     if (!resources.length) return {};
@@ -636,6 +637,7 @@ export function ChatView({
     // then target a real session instead of the shared per-project draft bucket.
     const prepared = onPrepareLinkSubmission?.();
     if (!prepared || !prepared.cwd || isDraftBucket(prepared.bucket)) return {};
+    if (expectedBucket && prepared.bucket !== expectedBucket) return {};
     const targetBucket = prepared.bucket;
     const cwd = prepared.cwd;
     const clientMessageId = crypto.randomUUID();
@@ -2194,12 +2196,32 @@ export function ChatView({
           )}
           {variant === "main" && activeGoal && (
             <GoalBar
+              key={sendBucket ?? engineSessionId}
               goal={activeGoal}
               busy={busy}
               pending={goalPending}
               onUpdate={onUpdateGoal}
               onPausedChange={onGoalPausedChange}
               onDelete={onDeleteGoal}
+              sessionId={engineSessionId}
+              cwd={conversationRoot}
+              rootId={conversationRootId}
+              rootStatus={conversationRootStatus}
+              replyDisabled={controlsDisabled || !!openAsk}
+              onReply={
+                openAsk
+                  ? undefined
+                  : (answer) => {
+                      if (controlsDisabled || goalPending || !activeGoal.waitingForUser) return;
+                      const sent = onSend(answer, {
+                        ...(sendBucket ? { bucket: sendBucket } : {}),
+                        ...rememberLinkSubmission(answer, sendBucket),
+                        continueGoal: true,
+                      });
+                      setSendEpoch((epoch) => epoch + 1);
+                      return sent;
+                    }
+              }
             />
           )}
           {/*

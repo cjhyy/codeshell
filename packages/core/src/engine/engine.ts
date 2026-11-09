@@ -57,6 +57,7 @@ import {
   resolveMaxTurns,
   resolveMaxStopBlocks,
   goalConfigFromLifecycle,
+  goalBlocksAutomaticContinuation,
   isGoalLifecycleCurrent,
   isSameGoalVersion,
   type GoalConfig,
@@ -192,8 +193,11 @@ import {
 } from "./run-context.js";
 import {
   resolveRunGoal,
+  applyRunGoalUpdate,
   armRunGoalHook,
   createGoalTerminationApplier,
+  createRunGoalProgressMeter,
+  persistRunGoalProgress,
   type GoalRunSlots,
 } from "./run-goal.js";
 import {
@@ -420,6 +424,8 @@ export class Engine {
    * running goal's turn/budget ceilings mid-run (TODO 3.1). Null when idle.
    */
   private activeTurnLoop: TurnLoop | null = null;
+  /** Goal-level round/time meter of the in-flight top-level run (null when idle). */
+  private activeGoalMeter: ReturnType<typeof createRunGoalProgressMeter> | null = null;
   /** Frozen behavior-profile ceiling for the live run's Goal controls. */
   private activeProfileMaxTurns: number | undefined;
   /**
@@ -1598,6 +1604,7 @@ export class Engine {
       userOnStream,
       prepareEvent: (event) => {
         event = runTiming.prepareEvent(event);
+        event = this.activeGoalMeter?.decorate(event) ?? event;
         return event.type === "session_started"
           ? { ...event, runId, previousRunId, clientMessageId }
           : event;
@@ -2061,6 +2068,8 @@ export class Engine {
               this.activeProfileMaxTurns = undefined;
             }
             if (this.activeRunSession === session) this.activeRunSession = null;
+            persistRunGoalProgress(this.activeGoalMeter, this.sessionManager, session.state);
+            this.activeGoalMeter = null;
           }
           const finalized = await this.finalizeRun({
             session,
@@ -2877,6 +2886,8 @@ export class Engine {
       sid,
       onStream: options?.onStream,
     });
+    if (this.config.isSubAgent !== true)
+      this.activeGoalMeter = createRunGoalProgressMeter(this.sessionManager, sid, persistedRunGoal);
     let latestGoalJudgeContext: GoalJudgeRuntimeContext | undefined;
     const goalHookHandler = armRunGoalHook({
       slots: goalSlots,
@@ -2949,7 +2960,7 @@ export class Engine {
       persistGoalTerminalOutcome: (state, goal, t) =>
         this.persistGoalTerminalOutcome(state, goal, t),
       readActiveGoal: (s) => this.sessionManager.readActiveGoal(s),
-      markGoalWaiting: (state, goal) => this.sessionManager.markGoalWaiting(state, goal),
+      markGoalWaiting: (s, g, kind) => this.sessionManager.markGoalWaiting(s, g, kind),
       onStream: options?.onStream,
     });
 
@@ -4091,6 +4102,13 @@ export class Engine {
     return this.sessionManager.readActiveGoal(sessionId);
   }
 
+  /** Re-read durable controls before a background completion wakes this session. */
+  isGoalContinuationBlocked(sessionId: string): boolean {
+    return goalBlocksAutomaticContinuation(
+      this.sessionManager.readSessionState(sessionId)?.goalLifecycle,
+    );
+  }
+
   /** True when the current run was built with Goal prompt/tools and can resume in place. */
   canResumeGoalInPlace(sessionId: string): boolean {
     return (
@@ -4162,16 +4180,15 @@ export class Engine {
       live !== null &&
       isSameGoalVersion(before, this.activeRuntimeGoal ?? undefined);
     if (controlsThisRun) {
-      if (this.activeRuntimeGoal) {
-        Object.assign(this.activeRuntimeGoal, next);
-        if (next.paused !== true) delete this.activeRuntimeGoal.paused;
-      }
-      if (this.activePersistedRunGoal) {
-        Object.assign(this.activePersistedRunGoal, next);
-        if (next.paused !== true) delete this.activePersistedRunGoal.paused;
-      }
+      const instruction = applyRunGoalUpdate(
+        before,
+        next,
+        this.activeRuntimeGoal,
+        this.activePersistedRunGoal,
+      );
 
       if (next.paused === true) {
+        if (next.goalId) this.activeGoalMeter?.pause(next.goalId);
         if (this.activeGoalHook && this.activeGoalHookAttached) {
           void this.activeGoalRegistration?.();
           this.activeGoalRegistration = undefined;
@@ -4179,20 +4196,11 @@ export class Engine {
         }
         this.activeTurnLoop!.updateGoal(undefined);
       } else {
-        const objectiveChanged = before.objective !== next.objective;
-        const resumed = before.paused === true;
-        this.activeTurnLoop!.updateGoal(
-          next,
-          objectiveChanged
-            ? `目标已编辑。新的目标：${next.objective}`
-            : resumed
-              ? `目标已恢复：${next.objective}`
-              : undefined,
-          {
-            maxTurns: this.resolveRunMaxTurns(next, this.activeProfileMaxTurns),
-            maxStopBlocks: resolveMaxStopBlocks(this.config.maxStopBlocks, next),
-          },
-        );
+        if (next.goalId) this.activeGoalMeter?.begin(next.goalId);
+        this.activeTurnLoop!.updateGoal(next, instruction, {
+          maxTurns: this.resolveRunMaxTurns(next, this.activeProfileMaxTurns),
+          maxStopBlocks: resolveMaxStopBlocks(this.config.maxStopBlocks, next),
+        });
         if (this.activeGoalHook && !this.activeGoalHookAttached) {
           this.registerGoalHook(this.activeGoalHook);
           this.activeGoalHookAttached = true;
@@ -4250,7 +4258,10 @@ export class Engine {
       }
       // A paused Goal inherited by an ordinary run is only dormant persisted
       // state; deleting it must not cancel that unrelated conversation.
-      if (controlsThisRun) this.activeTurnLoop!.updateGoal(undefined);
+      if (controlsThisRun) {
+        if (clearedGoal.goalId) this.activeGoalMeter?.pause(clearedGoal.goalId);
+        this.activeTurnLoop!.updateGoal(undefined);
+      }
     }
     // If THIS session's goal run is in flight, drop its stop hook so the
     // current run can terminate (the closure-held goal would otherwise keep

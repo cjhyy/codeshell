@@ -24,9 +24,14 @@ describe("formatGoalElapsed", () => {
 });
 
 describe("GoalBar", () => {
-  test("a driving Goal shows its target icon, objective and age", () => {
+  test("a driving Goal shows its target icon, objective and active time", () => {
     const html = renderToStaticMarkup(
-      <GoalBar goal={goal} busy now={at(1_000_000 + 65_000)} onPausedChange={() => {}} />,
+      <GoalBar
+        goal={{ ...goal, activeMs: 0, clockSinceMs: 1_000_000 }}
+        busy
+        now={at(1_000_000 + 65_000)}
+        onPausedChange={() => {}}
+      />,
     );
     expect(html).toContain('data-goal-state="running"');
     expect(html).toContain("lucide-target");
@@ -64,10 +69,32 @@ describe("GoalBar", () => {
     expect(html.match(/disabled=""/g)?.length).toBe(2);
   });
 
-  test("an unknown set time hides the age instead of guessing", () => {
-    const { setAtMs: _setAtMs, ...withoutTime } = goal;
-    const html = renderToStaticMarkup(<GoalBar goal={withoutTime} busy={false} now={at(0)} />);
+  test("unknown accounting hides wall-clock age, including legacy waiting goals", () => {
+    const html = renderToStaticMarkup(
+      <GoalBar
+        goal={{ ...goal, waitingForUser: "这处效果是否可接受？" }}
+        busy={false}
+        now={at(250_000_000)}
+      />,
+    );
     expect(html).not.toMatch(/\d+s</);
+  });
+
+  test("goal time replaces the age once accounting is known, and a stopped clock does not run", () => {
+    const running = renderToStaticMarkup(
+      <GoalBar
+        goal={{ ...goal, activeMs: 2 * 3600_000, clockSinceMs: 5_000_000 }}
+        busy={false}
+        now={at(5_000_000 + 125_000)}
+      />,
+    );
+    // 2h of settled goal time plus the open 2m 05s segment, not the time since setAtMs.
+    expect(running).toContain("第 3 轮 · 2h 02m 05s");
+    expect(running).toContain("暂停、等你回复时不计");
+    const stopped = renderToStaticMarkup(
+      <GoalBar goal={{ ...goal, activeMs: 90_000 }} busy={false} now={at(99_000_000)} />,
+    );
+    expect(stopped).toContain("第 3 轮 · 1m 30s");
   });
 
   test("a Goal waiting on the user shows the question state, unless it is paused", () => {
@@ -77,6 +104,7 @@ describe("GoalBar", () => {
     expect(waiting).toContain('data-goal-state="waiting"');
     expect(waiting).toContain("lucide-message-circle-question");
     expect(waiting).toContain("等待你的回复");
+    expect(waiting).toContain("允许新增权限吗？</p>");
     const paused = renderToStaticMarkup(
       <GoalBar
         goal={{ ...goal, paused: true, waitingForUser: "允许新增权限吗？" }}
@@ -85,5 +113,22 @@ describe("GoalBar", () => {
       />,
     );
     expect(paused).toContain('data-goal-state="paused"');
+    expect(paused).not.toContain("data-goal-reply");
+  });
+
+  test("a waiting question exposes its answer field without expanding the objective", () => {
+    const html = renderToStaticMarkup(
+      <GoalBar
+        goal={{ ...goal, activeMs: 65_000, waitingForUser: "这处效果是否可接受？" }}
+        busy={false}
+        now={at(250_000_000)}
+        onReply={() => {}}
+      />,
+    );
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('aria-label="回答目标问题"');
+    expect(html).toContain("回复并继续");
+    expect(html).toContain("1m 05s");
+    expect(html).toContain("等待回复期间不计入目标用时");
   });
 });

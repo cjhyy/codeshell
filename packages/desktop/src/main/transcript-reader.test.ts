@@ -606,6 +606,50 @@ describe("transcriptToFoldItems", () => {
     });
   });
 
+  it("replays a goal's waits and accounting, dropping malformed parts", () => {
+    const jsonl = [
+      line("goal_progress", {
+        status: "not_met",
+        round: 7,
+        waiting: {
+          kind: "background_work",
+          sinceMs: 500,
+          tasks: [{ kind: "job", label: "DriveAgent(codex)" }, { kind: 1 }],
+        },
+        progress: { rounds: 7, activeMs: 9_000, atMs: 500 },
+        waitingForUser: "要发布吗？",
+      }),
+      line("goal_progress", {
+        status: "not_met",
+        round: 8,
+        waiting: { sinceMs: "soon" },
+        progress: { rounds: 8, activeMs: -1, atMs: 1 },
+      }),
+    ].join("\n");
+    const items = transcriptToFoldItems(jsonl);
+    expect(items[0]).toEqual({
+      kind: "stream",
+      event: {
+        type: "goal_progress",
+        status: "not_met",
+        round: 7,
+        waitingForUser: "要发布吗？",
+        waiting: {
+          kind: "background_work",
+          sinceMs: 500,
+          tasks: [{ kind: "job", label: "DriveAgent(codex)" }],
+        },
+        progress: { rounds: 7, activeMs: 9_000, atMs: 500 },
+      },
+      timestamp: 1,
+    });
+    expect(items[1]).toEqual({
+      kind: "stream",
+      event: { type: "goal_progress", status: "not_met", round: 8 },
+      timestamp: 1,
+    });
+  });
+
   it("reconstructs the task panel from a TodoWrite tool_use (so todos survive a disk reload)", () => {
     // A persistent todo list lives only as the args.todos snapshot on the
     // TodoWrite tool_use event — it is NOT re-emitted on a plain session

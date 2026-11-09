@@ -40,7 +40,9 @@ import { parseSubAgentContinuation } from "./subagent-continuation.js";
 import { SessionError } from "../exceptions.js";
 import { addCumulativeUsage, addTokenUsage, normalizeCumulativeUsageCounters } from "./usage.js";
 import {
+  addGoalProgress,
   armGoalLifecycle,
+  carryGoalProgress,
   createGoalLifecycle,
   decodeGoalLifecycle,
   deriveLegacyGoalId,
@@ -49,10 +51,13 @@ import {
   isSameGoalVersion,
   mergeGoalTerminals,
   terminateGoalLifecycle,
+  goalProgressSnapshot,
   waitGoalLifecycle,
   type GoalConfig,
   type GoalLifecycleTerminalReason,
   type GoalLifecycleV1,
+  type GoalProgressSnapshot,
+  type GoalWaitKind,
   type GoalTerminal,
   type PersistedGoalTerminationReason,
 } from "../goal/lifecycle.js";
@@ -270,7 +275,10 @@ function adoptCompatibilityGoalMutation(state: SessionState): void {
     if (lifecycle.phase === "terminal" && sameIdentity && sameRevision) return;
     const canonicalGoal = goalConfigFromLifecycle(lifecycle);
     if (!sameIdentity || !sameRevision || !isSameGoalVersion(alias, canonicalGoal)) {
-      state.goalLifecycle = createGoalLifecycle(alias, alias.paused === true ? "paused" : "active");
+      state.goalLifecycle = carryGoalProgress(
+        createGoalLifecycle(alias, alias.paused === true ? "paused" : "active"),
+        lifecycle,
+      );
     }
     return;
   }
@@ -1484,7 +1492,12 @@ export class SessionManager {
       };
       if (patch.paused === true) goal.paused = true;
       else if (patch.paused === false) delete goal.paused;
-      state.goalLifecycle = createGoalLifecycle(goal, goal.paused === true ? "paused" : "active");
+      // Same identity: edits and pause/resume keep the goal's accumulated
+      // progress (an open background wait is settled up to now).
+      state.goalLifecycle = carryGoalProgress(
+        createGoalLifecycle(goal, goal.paused === true ? "paused" : "active"),
+        lifecycle,
+      );
       hydrateGoalLifecycle(state);
 
       const result = this.saveStateAttempt(state);
@@ -1857,9 +1870,9 @@ export class SessionManager {
       ) {
         latest.goalLifecycle = armGoalLifecycle(current) ?? current;
       } else {
-        latest.goalLifecycle = createGoalLifecycle(
-          armedGoal,
-          armedGoal.paused === true ? "paused" : "active",
+        latest.goalLifecycle = carryGoalProgress(
+          createGoalLifecycle(armedGoal, armedGoal.paused === true ? "paused" : "active"),
+          current?.phase === "terminal" ? undefined : current,
         );
       }
       hydrateGoalLifecycle(latest);
@@ -1874,7 +1887,11 @@ export class SessionManager {
   }
 
   /** Persist active → waiting only for the expected concrete Goal version. */
-  markGoalWaiting(state: SessionState, goal: GoalConfig): boolean {
+  markGoalWaiting(
+    state: SessionState,
+    goal: GoalConfig,
+    waitKind: GoalWaitKind = "background",
+  ): boolean {
     const expectedGoalId = goal.goalId ?? deriveLegacyGoalId(state.sessionId, goal);
     const expectedRevision = Math.max(1, Math.floor(goal.revision ?? 1));
     for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
@@ -1885,11 +1902,15 @@ export class SessionManager {
         this.rebaseLiveState(state, latest);
         return false;
       }
-      if (lifecycle.phase === "waiting") {
+      if (lifecycle.phase === "waiting" && lifecycle.waitKind === waitKind) {
         this.rebaseLiveState(state, latest);
         return true;
       }
-      const waiting = waitGoalLifecycle(lifecycle);
+      // A wait of another kind is re-parked so its clock rule changes now
+      // (an open background wait is settled first).
+      const nowMs = Date.now();
+      const active = lifecycle.phase === "waiting" ? armGoalLifecycle(lifecycle, nowMs) : lifecycle;
+      const waiting = active ? waitGoalLifecycle(active, nowMs, waitKind) : undefined;
       if (!waiting) return false;
       latest.goalLifecycle = waiting;
       hydrateGoalLifecycle(latest);
@@ -1901,6 +1922,58 @@ export class SessionManager {
       if (result.reason !== "revision_conflict") return false;
     }
     return false;
+  }
+
+  /**
+   * Add one run's goal accounting (judged rounds + running time) to the goal
+   * that is still persisted under `goalId`. Revision is intentionally not
+   * fenced: an edit or pause during the run keeps the same goal, and the
+   * delta still belongs to it. A replaced goal (other id) drops the delta.
+   * Does not bump the goal revision — this is accounting, not a control.
+   */
+  recordGoalProgress(
+    state: SessionState,
+    goalId: string,
+    delta: { rounds?: number; activeMs?: number },
+  ): boolean {
+    if (!(delta.rounds ?? 0) && !(delta.activeMs ?? 0)) return true;
+    for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
+      let latest: SessionState;
+      try {
+        latest = this.readPersistedState(state.sessionId);
+      } catch {
+        return false;
+      }
+      const lifecycle = latest.goalLifecycle;
+      if (!lifecycle || lifecycle.goalId !== goalId) {
+        this.rebaseLiveState(state, latest);
+        return false;
+      }
+      latest.goalLifecycle = addGoalProgress(lifecycle, delta);
+      hydrateGoalLifecycle(latest);
+      const result = this.saveStateAttempt(latest);
+      if (result.ok) {
+        this.rebaseLiveState(state, latest);
+        return true;
+      }
+      if (result.reason !== "revision_conflict") return false;
+    }
+    return false;
+  }
+
+  /**
+   * Goal-level progress for the session's current (non-terminal) goal, for
+   * clients restoring the Goal bar. Never throws; undefined when absent.
+   */
+  readGoalProgress(sessionId: string): (GoalProgressSnapshot & { goalId: string }) | undefined {
+    try {
+      assertSafeSessionId(sessionId);
+      const lifecycle = this.readPersistedState(sessionId).goalLifecycle;
+      if (!lifecycle || lifecycle.phase === "terminal") return undefined;
+      return { goalId: lifecycle.goalId, ...goalProgressSnapshot(lifecycle) };
+    } catch {
+      return undefined;
+    }
   }
 
   /** Drop a matching active goal only when its terminal identity is durable. */

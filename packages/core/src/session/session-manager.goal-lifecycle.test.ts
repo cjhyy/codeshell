@@ -149,6 +149,64 @@ describe("SessionManager GoalLifecycleV1 migration", () => {
     });
   });
 
+  test("goal progress survives edits and re-arms; background waits count, user waits do not", () => {
+    const { state } = manager.create("/repo", "model", "provider", "progress");
+    const goal = { objective: "长期目标", goalId: "goal-p", revision: 1 };
+    const backdateWait = (ms: number) => {
+      const persisted = raw("progress");
+      (persisted.goalLifecycle as { waitingSinceMs: number }).waitingSinceMs = Date.now() - ms;
+      writeFileSync(statePath("progress"), JSON.stringify(persisted, null, 2));
+    };
+    expect(manager.saveActiveGoal(state, goal)).toBe(true);
+    expect(manager.recordGoalProgress(state, "goal-p", { rounds: 2, activeMs: 5_000 })).toBe(true);
+
+    // An edit bumps the revision but keeps the same goal's totals, and a run
+    // that started before the edit still records into the same goal.
+    const edited = manager.updateActiveGoal("progress", {
+      objective: "改过的目标",
+      expectedGoalId: "goal-p",
+      expectedRevision: 1,
+    })!;
+    expect(raw("progress")).toMatchObject({
+      goalLifecycle: { revision: 2, progress: { rounds: 2, activeMs: 5_000 } },
+    });
+    expect(manager.recordGoalProgress(state, "goal-p", { rounds: 1, activeMs: 1_000 })).toBe(true);
+
+    // A background wait runs the clock until the wake re-arms the goal.
+    expect(manager.markGoalWaiting(state, edited.goal, "background")).toBe(true);
+    backdateWait(60_000);
+    expect(manager.readGoalProgress("progress")).toMatchObject({
+      goalId: "goal-p",
+      rounds: 3,
+      activeMs: 6_000,
+      runningSinceMs: expect.any(Number),
+    });
+    const rearm = { expectedGoalId: "goal-p", expectedRevision: 2 };
+    expect(manager.saveActiveGoal(state, edited.goal, rearm)).toBe(true);
+    const afterBackground = manager.readGoalProgress("progress")!.activeMs;
+    expect(afterBackground).toBeGreaterThanOrEqual(66_000);
+    expect(afterBackground).toBeLessThan(76_000);
+
+    // Waiting for the user's reply is idle time and does not count.
+    expect(manager.markGoalWaiting(state, edited.goal, "user")).toBe(true);
+    expect(raw("progress")).toMatchObject({
+      goalLifecycle: { phase: "waiting", waitKind: "user" },
+    });
+    backdateWait(600_000);
+    expect(manager.saveActiveGoal(state, edited.goal, rearm)).toBe(true);
+    expect(manager.readGoalProgress("progress")!.activeMs).toBe(afterBackground);
+
+    // A replacement goal starts from zero and drops a late delta of the old one.
+    const replacement = { objective: "新目标", goalId: "goal-q", revision: 1 };
+    expect(manager.saveActiveGoal(state, replacement, { replaceCurrent: true })).toBe(true);
+    expect(manager.recordGoalProgress(state, "goal-p", { rounds: 1 })).toBe(false);
+    expect(manager.readGoalProgress("progress")).toEqual({
+      goalId: "goal-q",
+      rounds: 0,
+      activeMs: 0,
+    });
+  });
+
   test("unknown versions fail closed and are not overwritten", () => {
     manager.create("/repo", "model", "provider", "future");
     const future = raw("future");

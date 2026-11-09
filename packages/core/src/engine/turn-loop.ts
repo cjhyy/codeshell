@@ -1578,12 +1578,18 @@ export class TurnLoop {
           // rides back here so we can show goal progress WITHOUT a second LLM
           // call — `gaps` is whatever the judge already computed.
           const goalVerdict = stopHook.data?.goalVerdict as
-            | { met: boolean; gaps: string; waitingForUser?: string }
+            | {
+                met: boolean;
+                gaps: string;
+                waitingForUser?: string;
+                waitingOnBackground?: Array<{ kind: string; label: string }>;
+              }
             | undefined;
           if (stopHook.continueSession && this.stopBlockCount < maxStopBlocks) {
             this.stopBlockCount++;
-            // Goal visibility: one not_met marker per re-prompt. round counts
-            // up with stopBlockCount so the UI can show "第 N 轮".
+            // Goal visibility: one not_met marker per re-prompt. `round` here
+            // is run-local; the Engine rewrites it to the goal-level count
+            // (GoalProgressMeter) before the event is persisted or shown.
             this.config.onStream?.({
               type: "goal_progress",
               goalId: this.config.goal?.goalId,
@@ -1667,6 +1673,25 @@ export class TurnLoop {
               message: {
                 role: "assistant",
                 content: "（Goal 已暂停：在等你回复，回复后自动继续。）",
+              },
+            });
+          } else if (this.config.goal && goalVerdict?.waitingOnBackground) {
+            // The goal parked on finite background work (already persisted as
+            // waiting). Show it as a wait, not as an unmet verdict; the work's
+            // completion wakes the session and the goal is judged again then.
+            this.config.onStream?.({
+              type: "goal_progress",
+              goalId: this.config.goal.goalId,
+              revision: this.config.goal.revision,
+              status: "not_met",
+              round: this.stopBlockCount + 1,
+              ...(goalVerdict.gaps ? { gaps: goalVerdict.gaps } : {}),
+              waiting: {
+                kind: "background_work",
+                sinceMs: Date.now(),
+                ...(goalVerdict.waitingOnBackground.length > 0
+                  ? { tasks: goalVerdict.waitingOnBackground }
+                  : {}),
               },
             });
           } else if (this.config.goal && goalVerdict?.met) {

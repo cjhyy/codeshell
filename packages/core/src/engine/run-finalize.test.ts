@@ -1,6 +1,60 @@
 import { describe, expect, test } from "bun:test";
-import { buildRunFailureResult, finalizeRunSuccess } from "./run-finalize.js";
+import {
+  buildRunFailureResult,
+  drainHeadlessBackgroundAgents,
+  finalizeRunSuccess,
+} from "./run-finalize.js";
 import type { StreamEvent } from "../types.js";
+import { armGoalLifecycle, createGoalLifecycle, waitGoalLifecycle } from "../goal/lifecycle.js";
+import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
+
+test("headless user waits keep background results queued until a real reply re-arms the goal", async () => {
+  const sid = "headless-user-wait-results";
+  notificationQueue.reset(sid);
+  const original = notificationQueue.enqueue(
+    {
+      agentId: "finished-child",
+      description: "collected evidence",
+      finalText: "saved result",
+      status: "completed",
+      enqueuedAt: 1,
+    },
+    sid,
+  );
+  const session = {
+    state: {
+      goalLifecycle: waitGoalLifecycle(createGoalLifecycle({ objective: "finish" }), 1_000, "user"),
+    },
+  };
+  const result = { text: "请确认", reason: "completed", messages: [] } as const;
+  let summarized = 0;
+  const args = {
+    sid,
+    session: session as never,
+    signal: undefined,
+    initialResult: result as never,
+    runTurnLoop: async () => {
+      summarized++;
+      return result as never;
+    },
+    applyGoalTermination() {},
+    waitForBackgroundAgentChange: async () => false,
+    waitForBackgroundAgentChangeOrTimeout: async () => false,
+    getFirstGoalTermination: () => undefined,
+    setFirstGoalTermination() {},
+  };
+  try {
+    await drainHeadlessBackgroundAgents(args);
+    expect(summarized).toBe(0);
+    expect(notificationQueue.getSnapshot(sid)).toEqual([original]);
+    session.state.goalLifecycle = armGoalLifecycle(session.state.goalLifecycle!, 2_000);
+    await drainHeadlessBackgroundAgents(args);
+    expect(summarized).toBe(1);
+    expect(notificationQueue.getSnapshot(sid)).toHaveLength(0);
+  } finally {
+    notificationQueue.reset(sid);
+  }
+});
 
 test("initialization failure still attempts its terminal when the error publication fails", () => {
   const events: StreamEvent[] = [];

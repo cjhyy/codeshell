@@ -806,6 +806,22 @@ type StreamEventPayload =
       nearest?: "turns" | "stopBlocks";
       /** The Goal stopped to wait for the user's answer to this question (wait_for_user). */
       waitingForUser?: string;
+      /**
+       * The Goal parked on finite background work instead of being judged
+       * unmet: the run ends and the work's completion wakes it. `tasks` are
+       * display-only, already-sanitized labels (untrusted text).
+       */
+      waiting?: {
+        kind: "background_work";
+        sinceMs: number;
+        tasks?: Array<{ kind: string; label: string }>;
+      };
+      /**
+       * Goal-level accounting as of `atMs`: `rounds` (= `round`) counts judged
+       * attempts across every run of this goal; `activeMs` is running plus
+       * background-wait time, excluding paused/user-wait time.
+       */
+      progress?: { rounds: number; activeMs: number; atMs: number };
       agentId?: string;
     }
   // Persistent goal lifecycle (CC /goal style). `goal_set` fires when a send
