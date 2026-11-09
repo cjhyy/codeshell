@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { NoticeChannel } from "@cjhyy/code-shell-pet/protocol";
 import { composeDigestBody, type NoticeFacts } from "./pet-notice-compose.js";
 import type { NoticeRecord, NoticeSettleStatus, PetNoticeLedger } from "./pet-notice-ledger.js";
 import {
@@ -131,11 +132,16 @@ export interface NoticeDigestOptions {
     mergeWindowMs: number;
     timezoneOffsetMin: number;
   };
-  /** A held record's facts and stored target. */
-  unpack: (record: NoticeRecord) => { facts: NoticeFacts; target: NoticeTarget };
-  /** Route one digest (P2, channel auto) to `target`. */
+  /** A held record's facts, stored target and the channel it asked for (absent: auto). */
+  unpack: (record: NoticeRecord) => {
+    facts: NoticeFacts;
+    target: NoticeTarget;
+    channel?: NoticeChannel;
+  };
+  /** Route one digest (P2) to `target` on `channel`. */
   submit: (digest: {
     target: NoticeTarget;
+    channel: NoticeChannel;
     dedupeKey: string;
     ruleIds: string[];
     body: string;
@@ -221,23 +227,35 @@ export class NoticeDigest {
       return;
     }
     // One digest per destination: the owner's, and one per IM conversation a
-    // held notice came from, so a group-chat notice is never rerouted to the owner.
-    const groups = new Map<string, { target: NoticeTarget; members: NoticeRecord[] }>();
+    // held notice came from, so a group-chat notice is never rerouted to the
+    // owner; and per channel asked for, so a named IM (or desktop only) is kept.
+    const groups = new Map<
+      string,
+      { target: NoticeTarget; channel: NoticeChannel; members: NoticeRecord[] }
+    >();
     for (const record of members) {
-      const { target } = this.options.unpack(record);
-      const key = targetKey(target);
-      const group = groups.get(key) ?? { target, members: [] };
+      const { target, channel = "auto" } = this.options.unpack(record);
+      const key = JSON.stringify([targetKey(target), channel]);
+      const group = groups.get(key) ?? { target, channel, members: [] };
       group.members.push(record);
       groups.set(key, group);
     }
     const hour = localHourIndex(now, this.options.window(now).timezoneOffsetMin);
-    for (const group of groups.values()) await this.send(group.target, group.members, hour);
+    for (const group of groups.values()) await this.send(group, hour);
   }
 
-  private async send(target: NoticeTarget, members: NoticeRecord[], hour: number): Promise<void> {
+  private async send(
+    {
+      target,
+      channel,
+      members,
+    }: { target: NoticeTarget; channel: NoticeChannel; members: NoticeRecord[] },
+    hour: number,
+  ): Promise<void> {
     const ids = members.map((record) => record.id);
     const decision = await this.options.submit({
       target,
+      channel,
       dedupeKey: digestDedupeKey(hour, ids),
       ruleIds: [...new Set(members.flatMap((record) => record.ruleIds))].slice(
         0,

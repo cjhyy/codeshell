@@ -138,7 +138,7 @@ export class PetNoticeRouter {
             ruleIds: digest.ruleIds,
             facts: { title: "你不在时", summary: `${digest.count} 条` },
             attention: "always",
-            channel: "auto",
+            channel: digest.channel,
             target: digest.target,
             body: digest.body,
           }),
@@ -532,6 +532,8 @@ export class PetNoticeRouter {
         facts: {
           ...notice.facts,
           target: notice.target,
+          // A held notice keeps the channel it asked for, so its digest goes there too.
+          ...(notice.channel !== "auto" ? { channel: notice.channel } : {}),
           ...(notice.media ? { media: notice.media } : {}),
         },
         body,

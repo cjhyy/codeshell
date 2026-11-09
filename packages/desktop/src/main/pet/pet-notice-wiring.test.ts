@@ -511,6 +511,37 @@ describe("rule watcher wiring", () => {
     expect(current.wiring.ruleStore.activeForSession(SID)).toEqual([]);
   });
 
+  test("a WeChat rule's result held for quiet hours is digested to WeChat, owner present", async () => {
+    let present = false;
+    current = harness({
+      presence: {
+        getSystemIdleTimeSec: () => (present ? 0 : 3_600),
+        hasFocusedWindow: () => present,
+      },
+    });
+    // 23:30 at UTC+0, inside the default 23:00–08:30 quiet hours.
+    clock = Date.UTC(2026, 10, 9, 23, 30, 0);
+    await current.handler(SID, upsertArgs({ channel: "wechat" }));
+    clock += 1_000;
+    for (const event of [
+      { type: "session_started", runId: "run-1", clientMessageId: "cm-1" },
+      { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } },
+      { type: "turn_complete", reason: "completed", text: "测试都过了", runId: "run-1" },
+    ])
+      current.wiring.observeSessionEvent(SID, event);
+    await settle(() => current!.wiring.ledger.held().length > 0);
+    expect(current.ownerSends).toEqual([]);
+    present = true;
+    clock = Date.UTC(2026, 10, 10, 8, 30, 0);
+    await current.wiring.router.flushDigest();
+    expect(current.ownerSends).toHaveLength(1);
+    expect(current.ownerSends[0]).toMatchObject({
+      targetId: "wechat:owner",
+      text: "你不在时：\n- 「修登录」做完了",
+    });
+    expect(current.desktop.map((input) => input.title)).toEqual(["Mimi：你不在时"]);
+  });
+
   test("Sessions with a long task leave done to the closure notice", async () => {
     current = harness();
     current.tasks.push(longTask({ status: "running", completedAt: undefined, updatedAt: NOW }));

@@ -758,6 +758,31 @@ describe("PetNoticeRouter.submit", () => {
     expect(h.ledger.held()).toEqual([]);
   });
 
+  test("a held notice's digest keeps the channel it asked for", async () => {
+    // 23:30 local (UTC+8), inside the default-style 23:00–08:30 quiet hours.
+    const h = harness({ now: Date.UTC(2026, 10, 9, 15, 30, 0) });
+    h.state.settings = { quietHours: { start: "23:00", end: "08:30" } };
+    await h.router.submit(notice({ channel: "telegram", facts: { title: "Named" } }));
+    await h.router.submit(notice({ channel: "desktop", facts: { title: "Local" } }));
+    await h.router.submit(notice({ facts: { title: "Auto" } }));
+    expect(h.ledger.held()).toHaveLength(3);
+    // 08:30 local: the owner is back at the computer.
+    h.state.present = true;
+    h.clock.advance(Date.UTC(2026, 10, 10, 0, 30, 0) - h.clock.now);
+    await h.router.flushDigest();
+    // The named IM still gets its digest (plus the desktop record); the rest stay local.
+    expect(only(h.im)).toMatchObject({
+      channel: "telegram",
+      body: "你不在时：\n- 「Named」做完了",
+    });
+    expect(h.desktop.map((entry) => entry.body).sort()).toEqual([
+      "你不在时：\n- 「Auto」做完了",
+      "你不在时：\n- 「Local」做完了",
+      "你不在时：\n- 「Named」做完了",
+    ]);
+    expect(h.ledger.held()).toEqual([]);
+  });
+
   test("after dispose submissions drop and in-flight sends settle without the desktop", async () => {
     const h = harness();
     const send = deferred<NoticeImSendResult>();

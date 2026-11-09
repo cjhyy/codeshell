@@ -256,16 +256,18 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * The ledger keeps the target (and any media) beside the facts so recovery,
- * digest and replay can use them.
+ * The ledger keeps the target, a channel other than "auto" (and any media)
+ * beside the facts so recovery, digest and replay can use them.
  */
 export function unpackFacts(raw: unknown): {
   facts: NoticeFacts;
   target: NoticeTarget;
+  /** The channel the notice asked for; absent means "auto". */
+  channel?: NoticeChannel;
   media?: NoticeMedia;
 } {
   if (!isObject(raw)) return { facts: {}, target: { kind: "owner" } };
-  const { target, media: rawMedia, ...facts } = raw;
+  const { target, media: rawMedia, channel, ...facts } = raw;
   const route = isObject(target) && target.kind === "route" ? target.route : undefined;
   const media = parseNoticeMedia(rawMedia);
   return {
@@ -274,6 +276,7 @@ export function unpackFacts(raw: unknown): {
       isObject(route) && typeof route.channel === "string" && typeof route.target === "string"
         ? { kind: "route", route: route as unknown as PetLongTaskCompletionTarget }
         : { kind: "owner" },
+    ...(typeof channel === "string" && channel && channel !== "auto" ? { channel } : {}),
     ...(media ? { media } : {}),
   };
 }
