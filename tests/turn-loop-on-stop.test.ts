@@ -215,10 +215,13 @@ describe("TurnLoop goal_progress events", () => {
     );
     const result = await loop.run([{ role: "user", content: "go" }]);
 
-    // TurnLoop reports the forced terminal to Engine. Engine publishes exhausted
-    // only after the lifecycle commit succeeds.
+    // The cap pauses rather than ends the goal: the third not_met carries the
+    // "reply to continue" ask, and Engine parks the persisted goal as waiting.
     const verdicts = events.filter((e) => e.status !== "approaching_limit");
-    expect(verdicts.map((e) => e.status)).toEqual(["not_met", "not_met"]);
+    expect(verdicts.map((e) => e.status)).toEqual(["not_met", "not_met", "not_met"]);
+    expect(verdicts.slice(0, 2).every((e) => e.waitingForUser === undefined)).toBe(true);
+    expect(verdicts[2]?.waitingForUser).toContain("回复任意消息继续");
+    expect(verdicts[2]?.gaps).toBe("still going");
     expect(result.goalTermination).toBe("stop_blocks_exhausted");
     expect(result.goalTerminationRound).toBe(2);
   });

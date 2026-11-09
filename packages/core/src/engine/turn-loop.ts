@@ -1578,7 +1578,7 @@ export class TurnLoop {
           // rides back here so we can show goal progress WITHOUT a second LLM
           // call — `gaps` is whatever the judge already computed.
           const goalVerdict = stopHook.data?.goalVerdict as
-            | { met: boolean; gaps: string }
+            | { met: boolean; gaps: string; waitingForUser?: string }
             | undefined;
           if (stopHook.continueSession && this.stopBlockCount < maxStopBlocks) {
             this.stopBlockCount++;
@@ -1619,20 +1619,54 @@ export class TurnLoop {
           }
           let goalTermination: GoalTerminationReason | undefined;
           if (stopHook.continueSession && this.stopBlockCount >= maxStopBlocks) {
-            // Cap hit: stop anyway, but tell the user why we're not looping
-            // forever on an unsatisfiable goal.
+            // Cap hit: stop looping, but PAUSE rather than give the goal up
+            // (Claude Code's "Goal paused · send a message to continue"). The
+            // Engine parks the persisted goal as waiting, so the user's next
+            // message re-arms it; the goal is not tombstoned.
             tlog.info("turn.stop_block_cap", {
               cat: "turn",
               stopBlockCount: this.stopBlockCount,
               maxStopBlocks,
             });
             goalTermination = "stop_blocks_exhausted";
+            const gaps = goalVerdict?.gaps || undefined;
+            this.config.onStream?.({
+              type: "goal_progress",
+              goalId: this.config.goal?.goalId,
+              revision: this.config.goal?.revision,
+              status: "not_met",
+              round: this.stopBlockCount,
+              gaps,
+              waitingForUser: `续跑 ${maxStopBlocks} 次仍未达成，回复任意消息继续${gaps ? `。还差：${gaps}` : "。"}`,
+            });
             this.config.onStream?.({
               type: "assistant_message",
               messageId: assistantMessageId,
               message: {
                 role: "assistant",
-                content: `（Goal 续跑已达 ${maxStopBlocks} 次上限，先停下。）`,
+                content: `（Goal 续跑已达 ${maxStopBlocks} 次仍未达成，已暂停；回复任意消息继续。）`,
+              },
+            });
+          } else if (this.config.goal && goalVerdict?.waitingForUser) {
+            // The judge parked the goal because only the user can unblock it.
+            // Surface the ask so the Goal bar shows "等待你的回复"; the user's
+            // next message re-arms the waiting goal.
+            tlog.info("turn.goal_waiting_on_user", { cat: "goal" });
+            this.config.onStream?.({
+              type: "goal_progress",
+              goalId: this.config.goal.goalId,
+              revision: this.config.goal.revision,
+              status: "not_met",
+              round: this.stopBlockCount,
+              gaps: goalVerdict.gaps || undefined,
+              waitingForUser: goalVerdict.waitingForUser,
+            });
+            this.config.onStream?.({
+              type: "assistant_message",
+              messageId: assistantMessageId,
+              message: {
+                role: "assistant",
+                content: "（Goal 已暂停：在等你回复，回复后自动继续。）",
               },
             });
           } else if (this.config.goal && goalVerdict?.met) {
