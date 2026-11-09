@@ -147,6 +147,8 @@ export interface NoticeDigestOptions {
     body: string;
     count: number;
   }) => Promise<RouteDecision>;
+  /** Why a held notice should no longer be sent (see `staleReason`); undefined keeps it. */
+  stale?: (record: NoticeRecord, now: number) => string | undefined;
   /** Settle without throwing. */
   settle: (id: string, status: NoticeSettleStatus, error: string) => Promise<void>;
   log: (event: string, data: Record<string, unknown>) => void;
@@ -218,8 +220,14 @@ export class NoticeDigest {
     // A digest that was itself held (a race with the cap) is superseded by this one.
     for (const record of held)
       if (record.kind === "digest") await this.options.settle(record.id, "revoked", "superseded");
-    const members = held.filter((record) => record.kind !== "digest");
     const now = this.options.now();
+    const members: NoticeRecord[] = [];
+    for (const record of held) {
+      if (record.kind === "digest") continue;
+      const stale = this.options.stale?.(record, now);
+      if (stale) await this.options.settle(record.id, "revoked", stale);
+      else members.push(record);
+    }
     const at = this.flushAt(members, now);
     if (at === undefined) return;
     if (at > now) {

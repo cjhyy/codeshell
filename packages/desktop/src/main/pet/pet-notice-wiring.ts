@@ -534,6 +534,12 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
       }
       return views.viewedSince(sessionId, ms, focused);
     },
+    isGoalRuleCancelled: (ruleId) => {
+      const rule = ruleStore.get(ruleId);
+      return (
+        rule?.when.kind === "session" && rule.when.scope === "goal" && rule.state === "cancelled"
+      );
+    },
     outlets: {
       desktop: (notice, body) => {
         if (hasDesktopSurface(notice)) return;
@@ -803,6 +809,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         }
       }
     },
+    // A cancelled Goal's pauses must never be replayed or digested later.
+    onGoalCleared: (sessionId) => router.revokeSessionBlocked(sessionId),
     hasActiveLongTask,
     // Queued user messages (core queue depth). Background work parks the turn
     // with completionKind background_wait, which the watcher already skips.

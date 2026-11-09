@@ -238,6 +238,8 @@ export interface PetNoticeRouterOptions extends PetAttentionOptions {
   supportsIdempotentSend?: (channel: string) => boolean;
   isDecisionStillPending?: (sessionId: string, requestId: string) => boolean;
   wasSessionViewedSince?: (sessionId: string, ms: number) => boolean;
+  /** The rule is a goal-scope Session rule that was cancelled (its Goal was cleared). */
+  isGoalRuleCancelled?: (ruleId: string) => boolean;
   /** Owner's offset east of UTC at an instant; defaults to the host's (DST-aware). */
   timezoneOffsetMin?: (ms: number) => number;
   /** An IM send that has not answered by then counts as failed (default 30 s). */
@@ -354,19 +356,31 @@ export function normalizeSettings(
 }
 
 /**
- * Why a queued notice should no longer be replayed: expired, its decision
- * was resolved elsewhere, or (done / failed) the owner already looked at the
- * Session on the desktop.
+ * Why a queued or held notice should no longer be replayed or digested:
+ * expired, its decision was resolved elsewhere, its Goal was cleared (a goal
+ * pause whose goal rule is cancelled), or (done / failed) the owner already
+ * looked at the Session on the desktop.
  */
 export function staleReason(
   record: NoticeRecord,
   now: number,
-  probes: Pick<PetNoticeRouterOptions, "isDecisionStillPending" | "wasSessionViewedSince">,
+  probes: Pick<
+    PetNoticeRouterOptions,
+    "isDecisionStillPending" | "wasSessionViewedSince" | "isGoalRuleCancelled"
+  >,
 ): string | undefined {
   if (record.expiresAt !== undefined && record.expiresAt <= now) return "expired";
   const { sessionId, requestId } = record;
   const pending = probes.isDecisionStillPending;
   if (sessionId && requestId && pending && !pending(sessionId, requestId)) return "resolved";
+  const goalCancelled = probes.isGoalRuleCancelled;
+  if (
+    record.kind === "session.blocked" &&
+    requestId === undefined &&
+    goalCancelled &&
+    record.ruleIds.some((id) => goalCancelled(id))
+  )
+    return "goal-cleared";
   if (
     sessionId &&
     (record.kind === "session.done" || record.kind === "session.failed") &&

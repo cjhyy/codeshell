@@ -410,6 +410,43 @@ describe("PetNoticeRouter.submit", () => {
     expect(h.ledger.queued()).toEqual([]);
   });
 
+  test("a goal pause whose goal rule was cancelled is stale for replay and the digest", async () => {
+    const h = harness();
+    h.state.channels.lark = "unavailable";
+    const pause = (overrides: Partial<NoticeSubmission>) =>
+      notice({
+        kind: "session.blocked",
+        priority: "P0",
+        ruleIds: ["rule-goal"],
+        facts: { title: "Goal", question: "Which?" },
+        ...overrides,
+      });
+    // Queued for the named, unavailable lark; held by digest attention.
+    await h.router.submit(pause({ channel: "lark" }));
+    await h.router.submit(pause({ attention: "digest" }));
+    const ids = [only(h.ledger.queued()).id, only(h.ledger.held()).id];
+    const cancelled = new PetNoticeRouter({
+      source: { getSnapshot: () => ({}) as never, subscribe: () => () => {} },
+      receipts: { has: () => false, mark: () => {} },
+      ledger: h.ledger,
+      now: () => h.clock.now,
+      setTimeout: h.clock.setTimeout,
+      clearTimeout: h.clock.clearTimeout,
+      isGoalRuleCancelled: (id) => id === "rule-goal",
+      outlets: { desktop: () => {}, im: async () => ({ accepted: true }) },
+      log: () => {},
+    });
+    expect(await cancelled.replayPending("lark", DM)).toEqual([]);
+    h.clock.advance(HOUR);
+    await cancelled.flushDigest();
+    expect(h.ledger.queued()).toEqual([]);
+    expect(h.ledger.held()).toEqual([]);
+    expect(ids.map((id) => h.ledger.get(id)?.delivery)).toEqual([
+      expect.objectContaining({ status: "revoked", error: "goal-cleared" }),
+      expect.objectContaining({ status: "revoked", error: "goal-cleared" }),
+    ]);
+  });
+
   test("quiet hours hold P1s, send P0s, and flush one digest at the end", async () => {
     // 23:00 local (UTC+8); quiet 22:00–07:00 ends at 07:00 local the next day.
     const h = harness({ now: Date.UTC(2026, 10, 9, 15, 0, 0) });

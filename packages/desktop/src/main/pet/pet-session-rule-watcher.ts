@@ -50,6 +50,8 @@ export interface PetSessionRuleWatcherOptions {
    * blocked draft for it: one source, no duplicates.
    */
   onPendingDecision: (sessionId: string, pending: DesktopPendingDecision) => void;
+  /** The Session's Goal was cleared (after its goal rules were cancelled). */
+  onGoalCleared?: (sessionId: string) => Promise<void> | void;
   sessionTitle?: (sessionId: string) => string | undefined;
   now?: () => number;
   log?: (event: string, data: Record<string, unknown>) => void;
@@ -257,6 +259,7 @@ export class PetSessionRuleWatcher {
         return;
       case "goal_cleared":
         await this.cancelGoalRules(sessionId);
+        await this.options.onGoalCleared?.(sessionId);
         return;
       case "error": {
         const state = this.turn(sessionId);

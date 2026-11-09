@@ -130,6 +130,7 @@ export class PetNoticeRouter {
           };
         },
         unpack: (record) => unpackFacts(record.facts),
+        stale: (record, now) => staleReason(record, now, this.options),
         submit: (digest) =>
           this.submit({
             kind: "digest",
@@ -426,6 +427,31 @@ export class PetNoticeRouter {
    * still wait for a channel or the digest, so they are never replayed later.
    */
   async revokeDecision(sessionId: string, requestId: string, reason = "resolved"): Promise<void> {
+    await this.revokeWaiting(
+      (record) => record.sessionId === sessionId && record.requestId === requestId,
+      reason,
+    );
+  }
+
+  /**
+   * The Session's Goal was cleared: its goal pauses (blocked notices without
+   * a decision request) that still wait for a channel or the digest are moot.
+   */
+  async revokeSessionBlocked(sessionId: string, reason = "goal-cleared"): Promise<void> {
+    await this.revokeWaiting(
+      (record) =>
+        record.sessionId === sessionId &&
+        record.kind === "session.blocked" &&
+        record.requestId === undefined,
+      reason,
+    );
+  }
+
+  /** Revoke queued / held notices that match, except those being sent right now. */
+  private async revokeWaiting(
+    matches: (record: NoticeRecord) => boolean,
+    reason: string,
+  ): Promise<void> {
     const ledger = this.options.ledger;
     if (!ledger || this.disposed) return;
     try {
@@ -435,8 +461,7 @@ export class PetNoticeRouter {
       return;
     }
     for (const record of [...ledger.queued(), ...ledger.held()]) {
-      if (record.sessionId !== sessionId || record.requestId !== requestId) continue;
-      if (this.sending.has(record.id)) continue;
+      if (!matches(record) || this.sending.has(record.id)) continue;
       await this.settleQuietly(record.id, "revoked", reason);
     }
   }

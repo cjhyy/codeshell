@@ -1083,6 +1083,58 @@ const OWNER_DM = { channel: "wechat", target: "owner-dm", senderId: "me", isDire
 /** Presence is re-read after the settings cache (5 s) expires. */
 const SETTINGS_TTL = 5_001;
 
+describe("goal pauses", () => {
+  test("a cancelled Goal's queued and held pauses are never replayed or digested", async () => {
+    current = harness();
+    const TWO = "s-two";
+    current.sessions.push(session(TWO));
+    current.channels[0] = { ...current.channels[0]!, ready: "unavailable" };
+    // SID: a named, unavailable WeChat queues the pause; TWO: digest attention holds it.
+    await current.handler(
+      SID,
+      upsertArgs({ scope: "goal", events: ["blocked"], channel: "wechat" }),
+    );
+    await current.handler(TWO, upsertArgs({ sessionId: TWO, scope: "goal", events: ["blocked"] }));
+    const [two] = current.wiring.ruleStore.activeForSession(TWO);
+    await current.wiring.ruleStore.update(two!.id, two!.version, { attention: "digest" });
+    clock = NOW + 1_000;
+    for (const id of [SID, TWO])
+      for (const event of [
+        { type: "session_started", runId: `run-${id}`, clientMessageId: `cm-${id}` },
+        {
+          type: "goal_progress",
+          status: "not_met",
+          goalId: `g-${id}`,
+          revision: 1,
+          waitingForUser: "用哪个数据库？",
+          runId: `run-${id}`,
+        },
+        { type: "turn_complete", reason: "completed", runId: `run-${id}` },
+      ])
+        current.wiring.observeSessionEvent(id, event);
+    await settle(
+      () =>
+        current!.wiring.ledger.queued().length === 1 && current!.wiring.ledger.held().length === 1,
+    );
+    for (const id of [SID, TWO])
+      current.wiring.observeSessionEvent(id, { type: "goal_cleared", goalId: `g-${id}` });
+    await settle(
+      () =>
+        current!.wiring.ledger.queued().length === 0 && current!.wiring.ledger.held().length === 0,
+    );
+    expect(current.wiring.ledger.queued()).toEqual([]);
+    expect(current.wiring.ledger.held()).toEqual([]);
+    current.channels[0] = { ...current.channels[0]!, ready: "ready" };
+    const replay = current.wiring.inboundReplay(OWNER_DM)!;
+    expect(await replay.take()).toEqual([]);
+    replay.finish();
+    clock += 60 * 60_000;
+    await current.wiring.router.flushDigest();
+    expect(current.ownerSends).toEqual([]);
+    expect(current.published).toEqual([]);
+  });
+});
+
 describe("decision prompts through the router", () => {
   test("a non-IM Session with a blocked rule gets exactly one owner prompt, answered by code", async () => {
     current = harness();
