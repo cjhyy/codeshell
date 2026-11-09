@@ -190,8 +190,8 @@ export interface PetNoticeWiring {
   /** Pending decisions: PetImDecisions asks here where a rule-watched decision goes. */
   decisions: PetDecisionNoticeHooks;
   /**
-   * A bound Session's turn reply was published to `route`. A done notice for
-   * the same run then stays off that conversation (bound-reply-delivered).
+   * A bound Session's turn reply was published to `route`. A done / failed
+   * notice for the same run then stays off that conversation (bound-reply-delivered).
    */
   recordBoundReply(
     sessionId: string,
@@ -236,7 +236,7 @@ export interface PetDecisionNoticeHooks {
 }
 
 /**
- * How long a done notice waits for the same run to end and its bound reply
+ * How long a done / failed notice waits for the same run to end and its bound reply
  * to be published (a goal is met before its run's turn_complete).
  */
 const BOUND_REPLY_WAIT_MS = 10_000;
@@ -684,7 +684,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     );
   }
 
-  function submitDone(notice: NoticeSubmission, runId: string): void {
+  /** A done / failed notice, decided once this run's bound reply (if any) is in the outbox. */
+  function submitRunOutcome(notice: NoticeSubmission, runId: string): void {
     const sessionId = notice.sessionId!;
     const decide = (): Promise<unknown> => {
       if (!boundReplyCovers(sessionId, runId, notice)) return submit(notice);
@@ -788,7 +789,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         .filter((rule): rule is NoticeRule => rule !== undefined);
       const { runId, ...rest } = draft;
       const notice: NoticeSubmission = { ...rest, ...mergeRuleAttributes(rules) };
-      if (draft.kind === "session.done" && runId !== undefined) submitDone(notice, runId);
+      // A bound Session's own reply (or its failure text) may already cover this run.
+      if (draft.kind !== "session.blocked" && runId !== undefined) submitRunOutcome(notice, runId);
       else void submit(notice);
     },
     // PetImDecisions owns the prompt (with its reply code); nudge it now.

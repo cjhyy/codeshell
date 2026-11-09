@@ -1452,7 +1452,7 @@ describe("bound Session replies", () => {
     expect(current.published).toEqual([]);
   });
 
-  test("another run's reply does not swallow this run's done; failed still goes through", async () => {
+  test("another run's reply swallows neither this run's done nor its failed", async () => {
     current = harness({ readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }) });
     current.routes.push(boundRoute());
     await current.handler(SID, upsertArgs({ events: ["done"] }));
@@ -1464,7 +1464,6 @@ describe("bound Session replies", () => {
     expect(current.published[0]).toMatchObject({ type: "pet.task.completed" });
     await current.handler(SID, upsertArgs({ events: ["failed"] }));
     clock = NOW + 2_000;
-    current.wiring.recordBoundReply(SID, "run-2", bound);
     for (const event of turn("run-2", { reason: "model_error" }))
       current.wiring.observeSessionEvent(SID, event);
     await settle(() => current!.published.length > 1);
@@ -1474,6 +1473,26 @@ describe("bound Session replies", () => {
       "pet.task.completed",
       "pet.task.failed",
     ]);
+  });
+
+  test("a bound Session's failed turn posts once: the bridge's failure reply", async () => {
+    const { h, emit, bind, replies } = realBridge();
+    expect((await bind()).ok).toBe(true);
+    await h.handler(SID, upsertArgs({ events: ["failed"] }));
+    clock = NOW + 1_000;
+    emit({ type: "session_started", runId: "run-1", clientMessageId: "cm-1" });
+    emit({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } });
+    emit({ type: "error", error: "model down", runId: "run-1" });
+    emit({ type: "turn_complete", reason: "model_error", runId: "run-1" });
+    await settle(() => h.submitted.length > 0);
+    expect(replies).toEqual([
+      expect.objectContaining({ text: "这个 Session 本轮执行失败，请在桌面端查看详情后重试。" }),
+    ]);
+    expect(h.submitted.map((notice) => [notice.kind, notice.boundReplyDelivered])).toEqual([
+      ["session.failed", true],
+    ]);
+    expect(h.published).toEqual([]);
+    expect(h.ownerSends).toEqual([]);
   });
 });
 

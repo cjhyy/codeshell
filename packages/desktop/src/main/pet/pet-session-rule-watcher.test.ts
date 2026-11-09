@@ -439,6 +439,8 @@ describe("failed", () => {
         kind: "session.failed",
         priority: "P1",
         dedupeKey: `${SID}:failed:run-1`,
+        // Pairs the notice with the bound reply that already told the chat.
+        runId: "run-1",
         sessionId: SID,
         ruleIds: ["rule-a"],
         facts: { title: "修复登录", error: "Work session ended: model_error" },
@@ -455,9 +457,9 @@ describe("failed", () => {
       { type: "error", error: "provider down" },
       done({ reason: "error" }),
     ]);
-    expect(drafts.map((draft) => [draft.kind, draft.dedupeKey, draft.facts.error])).toEqual([
-      ["session.failed", `${SID}:failed:run-1`, "provider down"],
-    ]);
+    expect(
+      drafts.map((draft) => [draft.kind, draft.dedupeKey, draft.runId, draft.facts.error]),
+    ).toEqual([["session.failed", `${SID}:failed:run-1`, "run-1", "provider down"]]);
   });
 
   test("rules without failed do not match", async () => {

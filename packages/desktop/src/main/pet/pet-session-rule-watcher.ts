@@ -17,8 +17,8 @@ export interface NoticeDraft {
   /** True when only the all-sessions system rule matched. */
   requiresAway?: boolean;
   /**
-   * done: the core run it closed, to pair it with that run's bound reply.
-   * Absent when core gave no run id: such a done is never suppressed.
+   * done / failed: the core run it closed, to pair it with that run's bound
+   * reply. Absent when core gave no run id: such a notice is never suppressed.
    */
   runId?: string;
   requestId?: string;
@@ -213,7 +213,7 @@ export class PetSessionRuleWatcher {
     return nonEmptyString(event.runId) ?? state.runId;
   }
 
-  /** `runId` for a done draft: only a real core run id pairs with a bound reply. */
+  /** `runId` for a done / failed draft: only a real core run id pairs with a bound reply. */
   private runField(
     event: Record<string, unknown>,
     state: SessionTurnState,
@@ -267,6 +267,7 @@ export class PetSessionRuleWatcher {
           at,
           this.runKey(event, state, at),
           boundedText(event.error, MAX_FACT_LENGTH) ?? "Work session failed",
+          this.runField(event, state),
         );
         return;
       }
@@ -298,6 +299,7 @@ export class PetSessionRuleWatcher {
         at,
         run,
         `Work session ended: ${String(reason ?? "unknown")}`,
+        this.runField(event, state),
       );
       return;
     }
@@ -396,6 +398,7 @@ export class PetSessionRuleWatcher {
     at: number,
     run: string,
     error: string,
+    runField: Pick<NoticeDraft, "runId">,
   ): Promise<void> {
     // An `error` event is usually followed by a failing turn_complete; one notice per turn.
     if (state.failedInTurn) return;
@@ -409,6 +412,7 @@ export class PetSessionRuleWatcher {
         kind: "session.failed",
         priority: "P1",
         dedupeKey: `${sessionId}:failed:${run}`,
+        ...runField,
         facts: { error },
       },
       { spend: true },
