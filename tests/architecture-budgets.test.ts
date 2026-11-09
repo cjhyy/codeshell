@@ -108,7 +108,9 @@ describe("architecture growth budgets", () => {
     // The integrated cookie/startup fix adds one credential metadata field and
     // two comment lines explaining reuse of the existing window restorer (+3).
     // Consent policy and window deduplication remain in their existing modules.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(7_338);
+    // Split (2026-11-09): 176 IPC routes and their helpers moved unchanged into
+    // per-feature registrars (counted in the route budget below); 7_329 -> 4_593.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(4_593);
     expect(lines("packages/desktop/src/main/project-panel-ipc.ts")).toBeLessThanOrEqual(322);
     // 2026-11-09: workspace, credential, system, media, tool-task and Agent-tool
     // handlers moved to panel-app-bridge-*.ts siblings (4_410 -> 2_972). Methods
@@ -203,7 +205,27 @@ describe("architecture growth budgets", () => {
         matches("packages/desktop/src/main/operation-batch-ipc.ts", /handle\("operationBatch:/g) +
         // Mimi's single presence owner: get/set/preview/retry plus the two legacy
         // pet:widget-visible(-get) routes moved here from index.ts.
-        matches("packages/desktop/src/main/pet/mimi-presence-ipc.ts", /ipcMain\.handle\(/g),
+        matches("packages/desktop/src/main/pet/mimi-presence-ipc.ts", /ipcMain\.handle\(/g) +
+        // The 2026-11-09 index.ts split moved 176 existing routes into these
+        // registrars without adding any; count each so the move hides nothing.
+        matches("packages/desktop/src/main/profile-catalog-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/link-credentials-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/browser-session-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/speech-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/attachments-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/agents-media-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/skills-mcp-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/model-catalog-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/mobile-remote-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/rooms-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/dialog-picker-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/external-runtime-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/browser-popout-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/git-review-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/workspace-files-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/memory-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/automation-ipc.ts", /ipcMain\.handle\(/g) +
+        matches("packages/desktop/src/main/trust-notification-ipc.ts", /ipcMain\.handle\(/g),
       // +1 read-only, bounded Session output-journal page route. Its file/owner
       // validation and recovery algorithm stay in Core and the extracted adapters.
       // +2 metadata-only Profile preview and revision-checked adoption routes.

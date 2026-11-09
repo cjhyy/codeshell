@@ -27,7 +27,10 @@ const runController = readFileSync(
   join(import.meta.dir, "..", "app", "useRunController.ts"),
   "utf-8",
 );
-const main = readFileSync(join(import.meta.dir, "..", "..", "main", "index.ts"), "utf-8");
+// Profile/digital-human IPC routes are registered from main/index.ts via profile-catalog-ipc.ts.
+const main = ["index.ts", "profile-catalog-ipc.ts"]
+  .map((file) => readFileSync(join(import.meta.dir, "..", "..", "main", file), "utf-8"))
+  .join("\n");
 const profilesService = readFileSync(
   join(import.meta.dir, "..", "..", "main", "profiles-service.ts"),
   "utf-8",
