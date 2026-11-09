@@ -275,6 +275,9 @@ function parseOutboundTargets(value: unknown): PetOutboundTargetOption[] | undef
       new Set(attachments).size !== attachments.length ||
       !Number.isSafeInteger(maxAttachments) ||
       !Number.isSafeInteger(maxAttachmentBytes) ||
+      (entry.proactiveReady !== undefined &&
+        entry.proactiveReady !== "ready" &&
+        entry.proactiveReady !== "unknown") ||
       (attachments.length === 0
         ? maxAttachments !== 0 || maxAttachmentBytes !== 0
         : maxAttachments < 1 ||
@@ -293,6 +296,7 @@ function parseOutboundTargets(value: unknown): PetOutboundTargetOption[] | undef
       attachments: Object.freeze([...attachments]) as PetOutboundTargetOption["attachments"],
       maxAttachments,
       maxAttachmentBytes,
+      ...(entry.proactiveReady === "unknown" ? { proactiveReady: "unknown" as const } : {}),
     });
   }
   return result;

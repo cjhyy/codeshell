@@ -2312,6 +2312,8 @@ async function createWindow(): Promise<BrowserWindow> {
           attachments: target.attachments,
           maxAttachments: target.maxAttachments,
           maxAttachmentBytes: target.maxAttachmentBytes,
+          // Mimi labels an unproven WeChat context instead of the host hiding it.
+          proactiveReady: target.proactiveReady,
         })),
       replyAttachmentRoots: knownReplyAttachmentCwds,
       // Second-chance lookup for a DelegateWork selector Mimi found via the

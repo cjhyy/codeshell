@@ -27,11 +27,6 @@ export interface PetGatewayChannelCapabilities {
     proactive?: boolean;
     /** Whether send works without an active Gateway polling loop. */
     direct?: boolean;
-    /**
-     * Whether a resend with the same caller id is deduplicated by the platform.
-     * Mirrors `ChannelCapabilities.outbound.idempotentSend`; host-side only.
-     */
-    idempotentSend?: boolean;
     maxTextLength?: number;
     button: "native" | "link";
     attachments: readonly PetGatewayAttachmentKind[];
@@ -251,24 +246,28 @@ function parseCapabilities(value: unknown): PetGatewayChannelCapabilities | unde
   if (!inboundAttachments || !isRecord(value.outbound) || value.outbound.text !== true) {
     return undefined;
   }
+  const outboundRecord = value.outbound;
   if (
-    Object.keys(value.outbound).some(
+    Object.keys(outboundRecord).some(
       (key) =>
         ![
           "text",
           // `proactive` is part of the chat package's capability shape. It was
-          // missing from this allowlist, and the check rejects ANY unknown key —
-          // so every real channel failed catalog validation and Mimi silently
-          // lost Gateway discovery on IM turns.
+          // missing from this allowlist, and the check used to reject ANY
+          // unknown key — so every real channel failed catalog validation and
+          // Mimi silently lost Gateway discovery on IM turns.
           "proactive",
           "direct",
-          "idempotentSend",
           "maxTextLength",
           "button",
           "attachments",
           "maxAttachments",
           "maxAttachmentBytes",
-        ].includes(key),
+        ].includes(key) &&
+        // A newer host's additive boolean flag is ignored (not carried into
+        // the catalog) instead of invalidating every channel. Unknown keys of
+        // any other shape are still rejected.
+        typeof outboundRecord[key] !== "boolean",
     ) ||
     (value.outbound.button !== "native" && value.outbound.button !== "link")
   ) {
@@ -292,8 +291,6 @@ function parseCapabilities(value: unknown): PetGatewayChannelCapabilities | unde
   if (proactive !== undefined && typeof proactive !== "boolean") return undefined;
   const direct = value.outbound.direct;
   if (direct !== undefined && typeof direct !== "boolean") return undefined;
-  const idempotentSend = value.outbound.idempotentSend;
-  if (idempotentSend !== undefined && typeof idempotentSend !== "boolean") return undefined;
   return Object.freeze({
     inbound: Object.freeze({ text: true as const, attachments: inboundAttachments }),
     outbound: Object.freeze({
@@ -302,7 +299,6 @@ function parseCapabilities(value: unknown): PetGatewayChannelCapabilities | unde
       // the kind of thing Mimi must not assume.
       ...(proactive === undefined ? {} : { proactive }),
       ...(direct === undefined ? {} : { direct }),
-      ...(idempotentSend === undefined ? {} : { idempotentSend }),
       ...(maxTextLength === undefined ? {} : { maxTextLength }),
       button: value.outbound.button,
       attachments: outboundAttachments,

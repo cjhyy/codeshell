@@ -19,6 +19,12 @@ export interface PetOutboundTargetOption {
   attachments: readonly ("image" | "file" | "audio" | "video")[];
   maxAttachments: number;
   maxAttachmentBytes: number;
+  /**
+   * "unknown": the platform prerequisite for an owner push is not proven (a
+   * personal WeChat owner who has not messaged recently). The host still
+   * attempts the send and reports the real outcome. Absent = ready.
+   */
+  proactiveReady?: "ready" | "unknown";
 }
 
 export const sendMessageToolDef: ToolDefinition = {
@@ -86,7 +92,11 @@ export function rewriteSendMessageDef(
           const media = target.attachments.length
             ? `; attachments=${target.attachments.join("/")} max=${target.maxAttachments}x${target.maxAttachmentBytes}B`
             : "; text only";
-          return `- ${JSON.stringify(target.id)}: ${target.label} (${target.channel}${media})`;
+          const readiness =
+            target.proactiveReady === "unknown"
+              ? "; readiness=unknown: may not deliver until the owner messages first"
+              : "";
+          return `- ${JSON.stringify(target.id)}: ${target.label} (${target.channel}${media}${readiness})`;
         })
         .join("\n"),
     inputSchema: {

@@ -211,9 +211,20 @@ describe("outbound proactive and direct capabilities", () => {
     expect(parsePetGatewayCatalog(withOutbound({ idempotentSend: "yes" }))).toBeUndefined();
   });
 
-  test("idempotentSend is accepted and carried through", () => {
-    const catalog = parsePetGatewayCatalog(withOutbound({ idempotentSend: true }));
-    expect(catalog?.channels[0]?.capabilities.outbound.idempotentSend).toBe(true);
+  test("an unknown boolean outbound flag from a newer host is ignored, not carried", () => {
+    // Additive flags (e.g. host-side idempotentSend) must not invalidate the
+    // whole catalog on an older Mimi; they are simply dropped.
+    const catalog = parsePetGatewayCatalog(
+      withOutbound({ proactive: true, idempotentSend: true, futureFlag: false }),
+    );
+    expect(catalog).toBeDefined();
+    const outbound = catalog!.channels[0]!.capabilities.outbound as Record<string, unknown>;
+    expect(outbound.proactive).toBe(true);
+    expect(outbound).not.toHaveProperty("idempotentSend");
+    expect(outbound).not.toHaveProperty("futureFlag");
+    // Non-boolean unknown values are still rejected.
+    expect(parsePetGatewayCatalog(withOutbound({ futureLimit: 3 }))).toBeUndefined();
+    expect(parsePetGatewayCatalog(withOutbound({ futureShape: {} }))).toBeUndefined();
   });
 
   test("direct is carried through and available to capability search", async () => {

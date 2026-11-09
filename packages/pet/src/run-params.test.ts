@@ -301,6 +301,23 @@ describe("validatePetRunParams", () => {
     const options = petRunOptionsFrom({ outboundTargets: [target] });
     expect(options.outboundTargets[0]).toEqual(target);
     expect(Object.isFrozen(options.outboundTargets[0]?.attachments)).toBe(true);
+
+    // Readiness: "unknown" is carried, "ready" is the default, anything else fails.
+    expect(
+      petRunOptionsFrom({ outboundTargets: [{ ...target, proactiveReady: "unknown" }] })
+        .outboundTargets[0],
+    ).toEqual({ ...target, proactiveReady: "unknown" });
+    expect(
+      petRunOptionsFrom({ outboundTargets: [{ ...target, proactiveReady: "ready" }] })
+        .outboundTargets[0],
+    ).toEqual(target);
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: { outboundTargets: [{ ...target, proactiveReady: "maybe" }] },
+      }),
+    ).toContain("invalid or duplicate destination");
   });
 });
 

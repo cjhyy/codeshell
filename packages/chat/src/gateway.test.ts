@@ -174,6 +174,36 @@ describe("CodeShell remote command integration", () => {
     expect(adapter.replies[0]?.message.text).toContain("桌面端未在线");
   });
 
+  test("keeps host-side idempotentSend off the wire to Desktop/Mimi", async () => {
+    const wechat = {
+      ...fakeAdapter({ capabilities: BUILTIN_CHANNEL_CAPABILITIES.wechat }),
+      channel: "wechat",
+    };
+    expect(BUILTIN_CHANNEL_CAPABILITIES.wechat.outbound.idempotentSend).toBe(true);
+    const gateway = new ChatGateway({ adapters: [wechat] });
+    let observed: any;
+    gateway.use(
+      createMimiPetChat({
+        channels: [wechat],
+        desktop: {
+          petChat: async (input) => {
+            observed = input;
+            return { text: "好的", petSessionId: "pet-1" };
+          },
+        },
+      }),
+    );
+    await gateway.dispatch(wechat, { ...message("在吗"), channel: "wechat" });
+    const { idempotentSend: _hostOnly, ...wireOutbound } =
+      BUILTIN_CHANNEL_CAPABILITIES.wechat.outbound;
+    expect(observed.origin.capabilities.outbound).toEqual(wireOutbound);
+    expect(observed.origin.channels).toEqual([
+      { channel: "wechat", capabilities: observed.origin.capabilities },
+    ]);
+    // Local send mechanics still see the full capability object.
+    expect(wechat.capabilities?.outbound.idempotentSend).toBe(true);
+  });
+
   test("routes ordinary text and lazily downloaded media to Mimi Pet", async () => {
     const adapter = fakeAdapter();
     const staleTelegram = {

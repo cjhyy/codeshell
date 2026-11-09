@@ -221,9 +221,17 @@ readiness prerequisite. Its persisted per-owner `context_token` comes only from
 an inbound message. A direct send first reuses the live adapter for that account
 and otherwise creates a one-shot adapter; a stale-token response evicts only the
 token that failed and makes one best-effort tokenless attempt with the same
-`client_id`. Tokenless sending is not advertised as guaranteed, so Desktop does
-not expose the WeChat `SendMessage` destination until a usable inbound context
-exists. Live registration and direct-send serialization are account-scoped, not
+`client_id`. Tokenless sending is not advertised as guaranteed, so a WeChat
+`SendMessage` destination without a stored inbound context is still listed but
+marked `proactiveReady: "unknown"`; Mimi's destination list labels it "may not
+deliver until the owner messages first", the host attempts the send, and the
+receipt reports the real platform result (acceptance is still not delivery).
+The durable Desktop notification outbox is stricter: it does not one-shot a
+context-less WeChat target and leaves the event for the Gateway watcher. A
+caller-supplied idempotency key (owner notices) becomes the WeChat
+`client_id` prefix, one deterministic id per chunk/attachment, so a resend is
+deduplicated by the platform; this host-side `idempotentSend` capability is
+never sent to Mimi. Live registration and direct-send serialization are account-scoped, not
 token-scoped: credential rotation while a live adapter exists fails explicitly
 until the Gateway restarts instead of opening competing sessions. A successful
 QR rebind resets cursor/context state when its token or base URL changed; when

@@ -258,7 +258,11 @@ const MAX_SETUP_SECRET_CHARS = 64 * 1024;
 /** Sidecar next to the gateway config remembering the owner's last inbound channel. */
 const OWNER_INBOUND_STATE_FILE = "owner-inbound.json";
 const MAX_OWNER_INBOUND_STATE_BYTES = 4 * 1024;
-const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_-]{1,64}$/u;
+// The notice router uses 24 hex chars; 32 leaves headroom while keeping the
+// derived WeChat client_id short. Follow-up, unverified for iLink: if it turns
+// out to remember a client_id even after a definite rejection, a resend after
+// such a failure would need a generation suffix on the key.
+const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_-]{1,32}$/u;
 
 function resolveCredentialStore(
   credentialStore?: ImGatewayCredentialStore,
@@ -763,6 +767,12 @@ export class ImGatewayService {
   /**
    * Channel of the most recent inbound message accepted from an allowlisted
    * owner, persisted beside the gateway config so it survives restarts.
+   *
+   * Granularity: "owner" means whatever passed the allowlist — with an empty
+   * allowedUserIds every member of an allowlisted group counts. Only messages
+   * polled by this Desktop's Gateway are seen; while an external CLI Gateway
+   * owns polling nothing is recorded. A durable-inbox replay of an older
+   * message records its channel again (it passes the same middleware).
    */
   lastOwnerInboundChannel(): ImGatewayChannel | undefined {
     return this.loadOwnerInbound().channel;
@@ -876,6 +886,9 @@ export class ImGatewayService {
       // cannot reach it (channel not direct-capable, WeChat context missing).
       authorizedRequestedTargets += 1;
       if (!BUILTIN_CHANNEL_CAPABILITIES[channel].outbound.direct) return [];
+      // Unlike listOwnerMessageTargets (which offers an "unknown" WeChat target
+      // to an interactive sender that sees the real result), a durable event
+      // without context waits for the Gateway watcher instead of a blind try.
       if (!hasRequiredProactiveContext(configured, target)) return [];
       return [{ channel, target, configured }];
     });

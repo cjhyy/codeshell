@@ -1128,6 +1128,64 @@ describe("ImGatewayService", () => {
     ]);
   });
 
+  test("reports a running adapter in restart backoff as unknown", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-owner-backoff-"));
+    const configPath = join(root, "config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        telegram: { botToken: "test-token", allowedChatIds: ["owner-chat"], allowedUserIds: [] },
+        discord: {
+          enabled: true,
+          botToken: "discord-token",
+          allowedChannelIds: ["owner-channel"],
+          allowedUserIds: [],
+        },
+        desktop: { autoLaunch: false },
+        runtime: {
+          lockPath: join(root, "gateway.lock"),
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath: join(root, "events.json"),
+          // Keep the failed adapter parked in backoff for the whole test.
+          adapterRestartBaseMs: 60_000,
+          adapterRestartMaxMs: 60_000,
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (channel) => ({
+        channel: channel.channel,
+        run: async (_handler, signal) => {
+          if (channel.channel === "discord") throw new Error("discord login failed");
+          if (signal.aborted) return;
+          await new Promise<void>((resolveDone) =>
+            signal.addEventListener("abort", () => resolveDone(), { once: true }),
+          );
+        },
+        send: async () => undefined,
+      }),
+    });
+
+    try {
+      await service.start();
+      const deadline = Date.now() + 2_000;
+      while (
+        service.status().channelStatuses.find(({ channel }) => channel === "discord")?.state !==
+          "retrying" &&
+        Date.now() < deadline
+      ) {
+        await new Promise((resolveWait) => setTimeout(resolveWait, 10));
+      }
+      const byId = Object.fromEntries(service.ownerChannels().map((entry) => [entry.id, entry]));
+      expect(byId.discord).toMatchObject({ ready: "unknown", targetId: expect.any(String) });
+      expect(byId.telegram).toMatchObject({ ready: "ready" });
+    } finally {
+      await service.stop();
+    }
+  });
+
   test("passes an idempotency key as the client id only to idempotent channels", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-idempotent-send-"));
     const configPath = join(root, "config.json");
@@ -1179,6 +1237,9 @@ describe("ImGatewayService", () => {
     await service.sendOwnerMessage(wechat.id, "无键");
     await expect(
       service.sendOwnerMessage(wechat.id, "坏键", { idempotencyKey: "bad key!" }),
+    ).rejects.toThrow("幂等键");
+    await expect(
+      service.sendOwnerMessage(wechat.id, "超长键", { idempotencyKey: "a".repeat(33) }),
     ).rejects.toThrow("幂等键");
 
     expect(sent).toEqual([
