@@ -467,6 +467,11 @@ describe("architecture growth budgets", () => {
     // The combined current-main composition also retains twelve existing
     // lifecycle/authority wiring lines from the intervening fixes.
     expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(5_050);
+    // 2026-11-09 split (2,986 → 1,961): storage roots/id validation, state-field
+    // interpretation, Goal alias migration, state-file locking, fork snapshot
+    // rules and listing moved to sibling session/session-*.ts modules. The
+    // manager keeps creation/resume, close epochs and the CAS domain updates.
+    expect(lines("packages/core/src/session/session-manager.ts")).toBeLessThanOrEqual(1_961);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {
