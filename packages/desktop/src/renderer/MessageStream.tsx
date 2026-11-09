@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Check, Forward, Loader2, MessageSquare, X } from "lucide-react";
 import type { AskUserAnswerHandler, Message } from "./types";
 import { ToolCard } from "./tool-cards";
+import { UserMessageView } from "./messages/UserMessageView";
 import { AssistantMessageView } from "./messages/AssistantMessageView";
 import { ThinkingMessageView } from "./messages/ThinkingMessageView";
 import { AgentMessageView } from "./messages/AgentMessageView";
@@ -11,7 +12,6 @@ import { TurnEndMessageView } from "./messages/TurnEndMessageView";
 import { TurnUsageMessageView } from "./messages/TurnUsageMessageView";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ToolGroupCard } from "./messages/ToolGroupCard";
-import { CollapsibleContent } from "./messages/CollapsibleContent";
 import { TurnProcessGroupCard } from "./messages/TurnProcessGroupCard";
 import { FilesChangedCard } from "./messages/FilesChangedCard";
 import { LiveActivityLine } from "./messages/LiveActivityLine";
@@ -23,11 +23,7 @@ import { TranscriptScrollContext } from "./chat/TranscriptScrollContext";
 import { buildScrollTrigger } from "./chat/scrollTrigger";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "./ui/icons";
-import { decodeWireForDisplay } from "./chat/attachments";
-import { extractAnnotations } from "./chat/anchors";
-import { AnnotationsBlock } from "./messages/AnnotationsBlock";
-import { formatMessageTime } from "./messages/time";
-import { Lightbox } from "./chat/Lightbox";
+import { Lightbox, type LightboxItem } from "./chat/Lightbox";
 import { timePhase } from "./perf";
 import { useT } from "./i18n/I18nProvider";
 import type { SummaryForkSessionResult } from "../preload/types";
@@ -35,12 +31,10 @@ import {
   buildSelectableContextTurns,
   alignContextSelectionGroups,
   groupStreamItemsIntoContextTurns,
-  isSystemReminderText,
   selectedTurnRange,
   type SelectableContextTurn,
 } from "./contextSelection";
 import { DriveAgentJobsLoader } from "./tool-cards/DriveAgentJobsContext";
-import { SystemReminderTask } from "./messages/SystemReminderTask";
 import type { MarkdownRootStatus } from "./Markdown";
 import {
   SubagentNavigationContext,
@@ -227,9 +221,12 @@ export function MessageStream({
   // Zoom state carries the whole sibling-image group plus the clicked index,
   // so the Lightbox can offer prev/next across the images in one message.
   const [zoomed, setZoomed] = useState<{
-    items: { src: string; alt: string; name?: string }[];
+    items: LightboxItem[];
     index: number;
   } | null>(null);
+  const openZoom = useCallback((items: LightboxItem[], index: number) => {
+    setZoomed({ items, index });
+  }, []);
   const [selectionOpen, setSelectionOpen] = useState(false);
   const [selectionTurns, setSelectionTurns] = useState<SelectableContextTurn[]>([]);
   const [selectionAnchor, setSelectionAnchor] = useState<number | null>(null);
@@ -505,93 +502,10 @@ export function MessageStream({
             rootStatus={rootStatus}
           />
         );
-      case "user": {
-        if (isSystemReminderText(m.text)) {
-          return <SystemReminderTask key={m.id} text={m.text} />;
-        }
-        const decoded = decodeWireForDisplay(m.text);
-        const images = decoded.images;
-        const { block: annotations, text } = extractAnnotations(decoded.text);
-        const askedAt = formatMessageTime(m.createdAt);
-        // A local optimistic send carries its images inline in the wire text;
-        // a message restored from the output journal carries only the
-        // attachment summary, which must still be shown.
-        const remoteAttachments = localRuntime && images.length > 0 ? [] : (m.attachments ?? []);
-        if (!text && !annotations && images.length === 0 && remoteAttachments.length === 0)
-          return null;
+      case "user":
         return (
-          <div key={m.id} className="group flex min-w-0 max-w-full flex-col items-end px-4 py-1.5">
-            {m.isGoal && (
-              <span className="mb-0.5 flex items-center gap-1 px-1 text-[11px] font-medium text-status-running">
-                ◎ {t("msg.user.goal")}
-              </span>
-            )}
-            <div
-              className={
-                "min-w-0 max-w-[80%] rounded-xl border px-3 py-2 text-sm " +
-                (m.isGoal
-                  ? "border-status-running/50 bg-status-running/10"
-                  : "border-border bg-muted/40")
-              }
-            >
-              {annotations && <AnnotationsBlock block={annotations} />}
-              {text && (
-                <CollapsibleContent>
-                  <div className="whitespace-pre-wrap break-words">{text}</div>
-                </CollapsibleContent>
-              )}
-              {remoteAttachments.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2" data-remote-message-attachments>
-                  {remoteAttachments.map((attachment, index) => (
-                    <span
-                      key={index}
-                      className="max-w-full break-words rounded-md border px-2 py-1 text-xs"
-                    >
-                      {attachment.originalName}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {images.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {images.map((img, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      className="max-w-full cursor-zoom-in overflow-hidden rounded-lg outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      aria-label={t("chat.composer.imageClickToZoom", {
-                        name: img.name || t("chat.composer.imageFallbackName"),
-                      })}
-                      onClick={() =>
-                        setZoomed({
-                          items: images.map((g) => ({
-                            src: g.dataUrl,
-                            alt: g.name || "image",
-                            name: g.name || undefined,
-                          })),
-                          index: i,
-                        })
-                      }
-                    >
-                      <img
-                        className="h-20 max-w-full object-cover"
-                        src={img.dataUrl}
-                        alt={img.name || t("chat.composer.imageFallbackName")}
-                        title={img.name || undefined}
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {askedAt && (
-              <span className="mt-0.5 px-1 text-[11px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-                {askedAt}
-              </span>
-            )}
-          </div>
+          <UserMessageView key={m.id} message={m} localRuntime={localRuntime} onZoom={openZoom} />
         );
-      }
       case "assistant":
         return (
           <AssistantMessageView

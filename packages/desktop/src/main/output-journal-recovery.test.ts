@@ -38,23 +38,35 @@ test("actual Main IPC recovers output evicted from the snapshot and survives Mai
     publish({ type: "session_started", sessionId: id, runId: "run", promptTokens: 0 });
     publish({ type: "stream_request_start", turnNumber: 1, messageId: "reply" });
     for (let index = 0; index < 8; index++) publish({ type: "text_delta", text: `汉🙂${index}` });
+    publish({ type: "tool_use_start", toolCall: { id: "read", toolName: "Read", args: {} } });
+    publish({ type: "tool_result", result: { id: "read", result: "data" } });
+    publish({ type: "text_delta", text: "after ", timestamp: 42 });
+    publish({ type: "text_delta", text: "the tool", timestamp: 43 });
     const recover = (store: SessionSnapshotStore) =>
       recoverDesktopOutputJournal({
         read: (options) =>
-          handlers.get("sessions:outputJournal")!({}, id, { ...options, maxFrames: 2 }),
+          handlers.get("sessions:outputJournal")!({}, id, { ...options, maxFrames: 3 }),
         snapshot: async () => store.get(id) as any,
         canContinue: () => true,
         latestObservedCursor: () => undefined,
       });
     const before = await recover(snapshots);
-    expect(before?.state.messages.filter((item) => item.kind === "assistant")).toHaveLength(4);
-    expect(before?.state.messages).toContainEqual(
+    expect(before?.state.messages.filter((item) => item.kind === "assistant")).toHaveLength(5);
+    expect(before?.state.messages.slice(-3)).toEqual([
       expect.objectContaining({
         kind: "assistant",
         text: Array.from({ length: 8 }, (_, index) => `汉🙂${index}`).join(""),
+        done: true,
+      }),
+      expect.objectContaining({ kind: "tool", id: "read", result: "data" }),
+      expect.objectContaining({
+        kind: "assistant",
+        text: "after the tool",
+        createdAt: 42,
         done: false,
       }),
-    );
+    ]);
+    expect(before?.outputCursor).toBe(snapshots.get(id).outputCursor);
     const restarted = new SessionSnapshotStore({
       coverage: new SessionOutputCoverageStore(() => root),
     });
