@@ -207,6 +207,38 @@ describe("startup", () => {
 });
 
 describe("goal pauses", () => {
+  test("a pause in an IM-delegated task is a reply in its conversation, like its prompts", async () => {
+    current = harness();
+    const route = { kind: "im-gateway" as const, channel: "lark", target: "chat-9" };
+    const task = longTask({
+      status: "running",
+      completedAt: undefined,
+      verificationMode: "goal",
+      completionTarget: route,
+    });
+    current.tasks.push(task);
+    await current.wiring.armDelegationRule(task);
+    env.clock = NOW + 1_000;
+    for (const event of [
+      { type: "session_started", runId: "run-1", clientMessageId: "cm-1" },
+      {
+        type: "goal_progress",
+        status: "not_met",
+        goalId: "g-1",
+        revision: 1,
+        waitingForUser: "用哪个数据库？",
+        runId: "run-1",
+      },
+    ])
+      current.observeSessionEvent(SID, event);
+    await settle(() => current!.published.length > 0);
+    await current.idle();
+    expect(current.submitted).toMatchObject([
+      { kind: "session.blocked", reply: true, target: { kind: "route", route } },
+    ]);
+    expect(current.published).toMatchObject([{ target: { channel: "lark", target: "chat-9" } }]);
+  });
+
   test("a cancelled Goal's queued and held pauses are never replayed or digested", async () => {
     current = harness();
     const TWO = "s-two";

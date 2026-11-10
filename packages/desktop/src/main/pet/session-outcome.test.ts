@@ -83,13 +83,21 @@ function derive(events: Event[]): SessionOutcome[] {
 }
 
 /** Fields every outcome of run-1 carries, by where it was raised. */
-const running = { sessionId: SID, runId: "run-1", runKey: "run-1", at: NOW + 1, final: false };
+const running = {
+  sessionId: SID,
+  runId: "run-1",
+  runKey: "run-1",
+  at: NOW + 1,
+  final: false,
+  inRun: true,
+};
 const closing = {
   sessionId: SID,
   runId: "run-1",
   runKey: "run-1",
   at: NOW + 5,
   final: true,
+  inRun: true,
   // complete() ends with text, which a bound conversation is sent.
   reply: true,
 };
@@ -309,6 +317,7 @@ const scenarios: Scenario[] = [
         runKey: String(NOW + 5),
         at: NOW + 5,
         final: true,
+        inRun: true,
         reply: false,
         kind: "done",
         scope: "turn",
@@ -317,8 +326,9 @@ const scenarios: Scenario[] = [
   },
 ];
 
+/** Without the `turn` counter and the forwarded text (checked on its own below). */
 const withoutTurn = (outcomes: SessionOutcome[]) =>
-  outcomes.map(({ turn: _turn, ...rest }) => rest as Record<string, unknown>);
+  outcomes.map(({ turn: _turn, replyText: _text, ...rest }) => rest as Record<string, unknown>);
 
 describe("SessionOutcomeDeriver", () => {
   describe.each(scenarios)("$name", ({ events, outcomes }) => {
@@ -387,6 +397,16 @@ describe("SessionOutcomeDeriver", () => {
     );
     // Outcomes raised while the run is going cannot know yet.
     expect(runningOutcome(derive([started(), goal("met")]))).not.toHaveProperty("reply");
+    // The closing outcome carries exactly the text the bridge forwards.
+    const text = (...events: Event[]) => closingOutcome(derive([started(), ...events]))!.replyText;
+    expect(text(said("progress"), complete({ text: " 改好了 " }))).toBe("改好了");
+    expect(text(said([{ type: "text", text: "done" }]), complete({ text: undefined }))).toBe(
+      "done",
+    );
+    expect(text(said("working on it"), complete({ text: "  " }))).toBeUndefined();
+    expect(text(complete({ reason: "model_error", text: undefined }))).toBe(
+      "这个 Session 本轮执行失败，请在桌面端查看详情后重试。",
+    );
     expect(forwardedReplyText({ reason: "completed", text: " 改好了 " }, "earlier")).toBe("改好了");
   });
 
@@ -478,6 +498,35 @@ describe("SessionOutcomeDeriver", () => {
     expect(outcomes.map((outcome) => outcome.kind)).toEqual(["failed", "failed", "idle"]);
     expect(outcomes[0]!.turn).toBe(outcomes[1]!.turn);
     expect(outcomes[2]!.turn).not.toBe(outcomes[0]!.turn);
+  });
+
+  test("an error outside any run is a turn of its own that nothing closes", () => {
+    const deriver = new SessionOutcomeDeriver({ now: () => NOW });
+    // Core reports some failures after the run boundary (a Goal resume that
+    // could not start, an async answer that could not be delivered).
+    const [late] = deriver.derive(SID, { type: "error", error: "Goal resume could not start" });
+    expect(late).toMatchObject({ kind: "failed", final: false, inRun: false, runKey: String(NOW) });
+    deriver.derive(SID, started());
+    const [inside] = deriver.derive(SID, { type: "error", error: "boom" });
+    expect(inside).toMatchObject({ kind: "failed", inRun: true, runId: "run-1" });
+    expect(inside!.turn).not.toBe(late!.turn);
+  });
+
+  test("reset forgets in-flight turns: a new worker's events never inherit a run", () => {
+    const deriver = new SessionOutcomeDeriver({ now: () => NOW });
+    deriver.derive(SID, started());
+    deriver.derive(SID, tool("Bash"));
+    deriver.reset();
+    const [error] = deriver.derive(SID, { type: "error", error: "boom" });
+    expect(error).toMatchObject({ inRun: false });
+    expect(error!.runId).toBeUndefined();
+    // Nor its work: the closing turn_complete of a new run that did nothing is idle.
+    deriver.derive(SID, started({ runId: "run-2" }));
+    deriver.derive(SID, tool("Bash"));
+    deriver.reset();
+    expect(deriver.derive(SID, complete({ runId: "run-3" }))).toMatchObject([
+      { kind: "idle", runId: "run-3" },
+    ]);
   });
 
   test("Sessions are tracked separately", () => {

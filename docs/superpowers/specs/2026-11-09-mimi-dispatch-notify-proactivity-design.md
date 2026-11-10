@@ -735,7 +735,7 @@ outcome?: {
 
 ### 16.3 做完 1c 应该能删掉的东西
 
-- [x] 观察器里的工具名单和"是否后台唤醒"的计数回退（有 `outcome` 时不走）。已移出观察器（C1）：`NON_WORK_TOOLS` 和排队消息计数只留在 `SessionOutcomeDeriver` 的回退路径里，供旧 core 和外部运行时用；core 报了 `outcome` 时不走。
+- [x] 观察器里的工具名单和"是否后台唤醒"的计数回退（有 `outcome` 时不采用）。已移出观察器（C1）：`NON_WORK_TOOLS` 和排队消息计数只留在 `SessionOutcomeDeriver` 里，供旧 core 和外部运行时用。推导本身仍随事件流运行（`turn_complete` 到来前无法知道它带不带 `outcome`），但 core 报了 `outcome` 时它的结果不被采用。
 - [x] `hasActiveLongTask` / 按运行 id 判断归属的逻辑（C2）。
 - [x] 绑定回复的 10 秒等待、`boundReplyRun` 配对（C2）。监听器顺序的约定也去掉了：测试改为两种订阅顺序都只发一条。
 - [x] `PetImDecisions` 的内存表和 `priorDecision` 反查（C3）。

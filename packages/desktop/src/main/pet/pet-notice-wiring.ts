@@ -162,7 +162,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     deliveries,
     onNotice: (draft: NoticeDraft) => {
       const { delivery, ...rest } = draft;
-      const { attention, channel, target, ruleIds, requiresAway } = delivery;
+      const { attention, channel, target, ruleIds, requiresAway, reply } = delivery;
       // The Session's own reply (or its failure text) in that conversation is
       // the delivery: the router keeps the desktop record and sends no IM.
       const served = delivery.composeBy === "session-reply";
@@ -178,6 +178,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
         attention,
         channel,
         target,
+        // The owner asked for this over IM: it is answered there, never held back.
+        ...(reply ? { reply: true } : {}),
         ...(served ? { boundReplyDelivered: true } : {}),
       });
     },
@@ -193,6 +195,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     },
     isEligibleSession: view.isEligibleSession,
     sessionTitle: (sessionId) => view.workSession(sessionId)?.title,
+    activeTask: (sessionId) => deps.longTasks.activeForSession(sessionId),
     now,
     log,
   });
@@ -230,7 +233,14 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   const workerGone = createWorkerLossDetector(view);
   const unsubscribeProjection = deps.projection.subscribe((event) => {
     void ready.then(() => (disposed ? undefined : watcher.observeProjection(event)));
-    if (workerGone(event)) void ready.then(() => (disposed ? undefined : watcher.flush()));
+    if (workerGone(event)) {
+      try {
+        deps.onWorkerLost?.();
+      } catch (error) {
+        log("pet.notice.worker_lost_listener_failed", { error: errorText(error) });
+      }
+      void ready.then(() => (disposed ? undefined : watcher.flush()));
+    }
     // A decision answered anywhere (or timed out) must never be replayed later.
     const resolved = resolvedDecision(event);
     if (resolved)

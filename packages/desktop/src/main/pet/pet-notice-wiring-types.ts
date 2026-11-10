@@ -45,6 +45,12 @@ export interface PetNoticeWiringDeps {
    */
   hasLiveWorker?: () => boolean;
   /**
+   * The worker is really gone (see `createWorkerLossDetector`): the Session
+   * outcome deriver forgets its in-flight turns, so a new worker's events
+   * never inherit an old run's id.
+   */
+  onWorkerLost?: () => void;
+  /**
    * IM conversations that receive a Session's turn replies; resolved lazily
    * (built after this wiring). A done / failed notice for a conversation the
    * reply already reaches is recorded on the desktop and never sent to IM.

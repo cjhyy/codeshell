@@ -48,8 +48,6 @@ export interface PetNoticeReplayDeps {
 export interface PetNoticeReplayHandle {
   /** Queued notices for an owner's IM message; undefined without an IM origin. */
   inboundReplay(origin: PetInboundOrigin | undefined): PetInboundReplay | undefined;
-  /** Send held notices that are due now (their timer may have slept through it). */
-  flushDueDigest(): void;
   dispose(): void;
 }
 
@@ -61,6 +59,7 @@ export function createNoticeReplay(deps: PetNoticeReplayDeps): PetNoticeReplayHa
   const { router, ready, log } = deps;
   let disposed = false;
 
+  /** Send held notices that are due now (their timer may have slept through it). */
   const flushDueDigest = (): void => {
     if (disposed) return;
     void router
@@ -129,7 +128,6 @@ export function createNoticeReplay(deps: PetNoticeReplayDeps): PetNoticeReplayHa
 
   return {
     inboundReplay,
-    flushDueDigest,
     dispose() {
       disposed = true;
       deps.powerEvents?.removeListener("resume", flushDueDigest);

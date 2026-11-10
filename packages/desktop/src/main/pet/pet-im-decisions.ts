@@ -183,8 +183,12 @@ function decisionKey(sessionId: string, requestId: string): string {
  * changed where a prompt goes). Everything time-critical has its own trigger.
  */
 const SAFETY_SWEEP_MS = 60_000;
-/** A decision past its grace whose first prompt has no record yet is tried again this soon. */
+/**
+ * A decision past its grace whose first prompt has no record yet (the ledger
+ * write failed) is tried again this soon, doubling per failed try up to the cap.
+ */
 const UNRECORDED_RETRY_MS = 3_000;
+const UNRECORDED_RETRY_MAX_MS = 60_000;
 
 export interface PetImDecisionsOptions {
   read: () => ImDecision[];
@@ -251,6 +255,8 @@ export class PetImDecisions {
   private rescan = false;
   /** Codes being answered or auto-denied right now (one submission each). */
   private readonly answering = new Set<string>();
+  /** Failed first-prompt tries per code while its record could not be written. */
+  private readonly unrecordedTries = new Map<string, number>();
   /** One timer per decision: its grace end, then its deadline. */
   private readonly wakes: KeyedTimers;
   private readonly unsubscribe: Array<() => void> = [];
@@ -631,21 +637,32 @@ export class PetImDecisions {
   /** Each decision's next moment: the end of its grace, then its deadline. */
   private reschedule(entries: readonly ImDecision[]): void {
     const now = this.now();
+    const codes = new Set(entries.map((entry) => entry.code));
+    for (const code of this.unrecordedTries.keys())
+      if (!codes.has(code)) this.unrecordedTries.delete(code);
     for (const entry of entries) {
       const record = this.router.decisionRecord(entry.code);
+      if (record) this.unrecordedTries.delete(entry.code);
       const end = this.expiresAt(entry);
       const graceEnd = entry.createdAt + this.graceMs();
       const due = !record
-        ? // Past its grace with no record: the submission failed; try again soon.
+        ? // Past its grace with no record: the submission failed; try again, backing off.
           graceEnd > now
           ? graceEnd
-          : now + UNRECORDED_RETRY_MS
+          : now + this.unrecordedRetryDelay(entry.code)
         : !isPromptEnded(record.prompt.phase) && Number.isFinite(end)
           ? end
           : undefined;
       const key = decisionKey(entry.envelope.sessionId, entry.envelope.requestId);
       if (this.started && due !== undefined && due > now) this.wakes.set(key, due);
     }
+  }
+
+  /** 3 s, 6 s, 12 s, … up to 60 s for one code whose record keeps failing. */
+  private unrecordedRetryDelay(code: string): number {
+    const tries = this.unrecordedTries.get(code) ?? 0;
+    this.unrecordedTries.set(code, tries + 1);
+    return Math.min(UNRECORDED_RETRY_MS * 2 ** Math.min(tries, 10), UNRECORDED_RETRY_MAX_MS);
   }
 
   /** Listen for the owner leaving only while some prompt waits for that. */

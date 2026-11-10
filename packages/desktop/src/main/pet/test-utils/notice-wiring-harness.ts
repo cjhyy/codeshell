@@ -103,6 +103,8 @@ export interface OwnerSend {
 
 export interface Harness {
   wiring: PetNoticeWiring;
+  /** The one deriver behind `observeSessionEvent` (reset when the worker is lost). */
+  deriver: SessionOutcomeDeriver;
   /** Feed one raw stream event the way the main-process tap does: interpreted once. */
   observeSessionEvent(sessionId: string, event: unknown): void;
   handler: HostActionHandler;
@@ -157,6 +159,7 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     observedAt: env.clock,
     workMemorySegments: [],
   });
+  const deriver = new SessionOutcomeDeriver({ now: () => env.clock });
   const wiring = wirePetNotices({
     userDataDir: env.dir,
     bridge: {
@@ -240,6 +243,7 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
     now: () => env.clock,
     log: () => undefined,
     timezoneOffsetMin: () => 0,
+    onWorkerLost: () => deriver.reset(),
     ...overrides,
   } as PetNoticeWiringDeps);
   if (!handler) throw new Error("host action handler was not registered");
@@ -264,12 +268,13 @@ export function harness(overrides: Partial<PetNoticeWiringDeps> = {}): Harness {
   };
   return {
     wiring,
+    deriver,
     observeSessionEvent: createSessionOutcomeTap(
       {
         coordinator: () => undefined,
         watcher: (sessionId, outcomes) => wiring.observeSessionOutcomes(sessionId, outcomes),
       },
-      new SessionOutcomeDeriver({ now: () => env.clock }),
+      deriver,
     ),
     handler: (sessionId, args) => handler!(sessionId, args),
     submitted,

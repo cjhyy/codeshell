@@ -31,7 +31,11 @@ import {
 } from "./session-conversation-bridge.js";
 import { createSessionBindHostAction, type BindActionContext } from "./session-bind-host-action.js";
 import type { PetReusableSessionCandidate } from "./pet-dispatch-service.js";
-import { assistantMessageText, forwardedReplyText } from "./session-outcome.js";
+import {
+  closingOutcome,
+  sessionOutcomeStreamOf,
+  type SessionOutcomeStream,
+} from "./session-outcome.js";
 
 export interface SessionBridgeWiringDeps {
   /** `<userData>/pet/conversation-session-routes.json`. */
@@ -265,6 +269,13 @@ export function createBoundSessionRunner(
   worker: BridgeWorkerLike,
   aggregator: BridgeAggregatorLike,
   onTurn?: (result: BoundSessionTurnResult) => void | Promise<void>,
+  /**
+   * The Session stream with the deriver's outcomes. Main passes its one tap's
+   * stream; without it the runner interprets the worker stream itself.
+   */
+  sessions: SessionOutcomeStream = sessionOutcomeStreamOf((listener) =>
+    worker.subscribeOutbound(listener),
+  ),
 ): BoundSessionRunner {
   const injected = new Set<string>();
   interface ObservedRun {
@@ -273,7 +284,6 @@ export function createBoundSessionRunner(
     runId?: string;
     clientMessageId?: string;
     fallbackTurnId: string;
-    lastAssistantText?: string;
   }
   const running = new Map<string, ObservedRun>();
   const completed = new Set<string>();
@@ -307,9 +317,7 @@ export function createBoundSessionRunner(
   }
 
   // One tap serves steer confirmation, turn boundaries and reply capture.
-  worker.subscribeOutbound((_line, snapshotEntry) => {
-    const sessionId = snapshotEntry?.sessionId;
-    const event = snapshotEntry?.event;
+  sessions.subscribe((sessionId, event, outcomes) => {
     if (!sessionId || !event || typeof event !== "object" || Array.isArray(event)) return;
     const record = event as Record<string, unknown>;
     // Child events share the parent's stream envelope. They cannot settle its
@@ -336,17 +344,15 @@ export function createBoundSessionRunner(
       return;
     }
     if (type === "assistant_message") {
-      const entry = running.get(sessionId) ?? beginRun(sessionId);
-      if (!belongsToRun(record, entry)) return;
-      const text = assistantMessageText(record.message);
-      if (text) entry.lastAssistantText = text;
+      // A message is evidence of a run in flight; its text is the deriver's to keep.
+      if (!running.has(sessionId)) beginRun(sessionId);
       return;
     }
     if (type === "turn_complete") {
       const entry = running.get(sessionId);
       const matching = entry && belongsToRun(record, entry) ? entry : undefined;
-      // The same rule tells the notice plan whether this run forwards anything.
-      const text = forwardedReplyText(record, matching?.lastAssistantText);
+      // Exactly the text the outcome says is forwarded (the notice plan reads the same).
+      const text = closingOutcome(outcomes)?.replyText;
       const turnId =
         (typeof record.runId === "string" && record.runId) ||
         matching?.runId ||

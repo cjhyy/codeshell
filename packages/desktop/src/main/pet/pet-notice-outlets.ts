@@ -50,7 +50,7 @@ function shortLived<T>(read: () => T, ttlMs = OWNER_LOOKUP_TTL_MS): () => T {
   };
 }
 
-export const DESKTOP_TITLES: Readonly<Record<string, string>> = {
+const DESKTOP_TITLES: Readonly<Record<string, string>> = {
   "session.done": "Mimi 任务已完成",
   "session.failed": "Mimi 任务执行失败",
   "session.blocked": "Mimi：需要你决定",

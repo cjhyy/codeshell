@@ -13,6 +13,7 @@
  * | idle, closing                     | same as done (turn)          | done only for carried work |
  * | done (goal), running              | completed                    | done, goal-scope rules     |
  * | failed, running (`error`)         | failed                       | failed, once per turn      |
+ * | failed, outside a run (`inRun` false) | failed                   | failed at once; rules stay armed |
  * | failed, closing                   | failed                       | failed, once per turn      |
  * | blocked (user), running           | none (checkpoint from event) | blocked                    |
  * | blocked (goal_exhausted), running | FAILED                       | BLOCKED                    |
@@ -23,6 +24,10 @@
  * | aborted, closing                  | interrupted                  | none (drops carried work)  |
  * | waiting-worker, closing           | waiting-worker               | none                       |
  * | unrecognized, closing             | interrupted                  | none                       |
+ *
+ * Some failures core reports after the run boundary, with no run in flight
+ * (`inRun` false); nothing closes them, so no consumer may wait for a close.
+ * `reset()` forgets every in-flight turn when the worker is lost.
  *
  * An exhausted Goal is read two ways on purpose, from the one outcome: the
  * task that was driving that Goal has failed and closes, while the owner is
@@ -54,11 +59,26 @@ interface SessionOutcomeBase {
   /** Outcomes with the same value belong to the same turn of this Session. */
   turn: number;
   /**
+   * The outcome belongs to a run in flight (opened by `session_started`, or
+   * evidently going: its tool, message or Goal events were seen). False for an
+   * `error` raised with no run in flight: core reports some failures after the
+   * run boundary (a cross-Session message, a Goal resume, an async answer, a
+   * background wake that could not start). No `turn_complete` follows those,
+   * so a consumer must never wait for one.
+   */
+  inRun: boolean;
+  /**
    * Closing outcomes only: the run ended with text a bound IM conversation is
    * sent (`forwardedReplyText`). False means nothing is forwarded for this
    * run, so that conversation has not heard about it.
    */
   reply?: boolean;
+  /**
+   * Closing outcomes only, when `reply`: exactly the text the bound-Session
+   * bridge forwards. The bridge sends this and nothing else, so what is
+   * forwarded and what the notice plan believes was forwarded cannot differ.
+   */
+  replyText?: string;
 }
 
 export type SessionOutcome = SessionOutcomeBase &
@@ -121,6 +141,8 @@ const MAX_FACT_LENGTH = 500;
 /** What the deriver knows about the in-flight top-level turn of one Session. */
 interface TurnState {
   turn: number;
+  /** A run is in flight (false only for an `error` raised outside any run). */
+  inRun: boolean;
   /** Run identity from `session_started`, for events that do not carry one. */
   runId?: string;
   /** Fallback only: a non-notice tool ran, or the run is a background wake. */
@@ -142,7 +164,7 @@ interface TurnState {
  * a block list; only text blocks are user-facing, so tool calls and thinking
  * never reach a chat.
  */
-export function assistantMessageText(message: unknown): string | undefined {
+function assistantMessageText(message: unknown): string | undefined {
   if (!message || typeof message !== "object" || Array.isArray(message)) return undefined;
   const content = (message as { content?: unknown }).content;
   if (typeof content === "string") return content.trim() || undefined;
@@ -160,9 +182,10 @@ export function assistantMessageText(message: unknown): string | undefined {
 
 /**
  * The text a bound IM conversation is sent for a run's `turn_complete`, or
- * undefined when there is nothing to forward. The one rule shared by the
- * bridge (which forwards it) and the outcome deriver (which reports whether
- * anything is forwarded), so the two can never disagree.
+ * undefined when there is nothing to forward. Only the deriver applies it
+ * (as the closing outcome's `replyText`, which the bridge sends verbatim).
+ *
+ * @internal Exported for tests.
  *
  * Core's completion text is the authoritative final answer; an explicit empty
  * result must not resurrect an earlier progress message.
@@ -264,7 +287,7 @@ export class SessionOutcomeDeriver {
         }
         return [];
       case "session_started": {
-        const state = this.freshTurn();
+        const state = this.freshTurn(true);
         const runId = nonEmptyString(event.runId);
         if (runId) state.runId = runId;
         // A background completion wakes the Session with a synthetic run
@@ -295,7 +318,15 @@ export class SessionOutcomeDeriver {
       case "error":
         return [
           {
-            ...this.base(sessionId, this.turn(sessionId), event, "timestamp", false),
+            // With no turn in flight (core reported it after the run boundary)
+            // the error is a turn of its own, and nothing will close it.
+            ...this.base(
+              sessionId,
+              this.turns.get(sessionId) ?? this.freshTurn(false),
+              event,
+              "timestamp",
+              false,
+            ),
             kind: "failed",
             error: typeof event.error === "string" ? event.error : "Work session failed",
           },
@@ -312,15 +343,26 @@ export class SessionOutcomeDeriver {
     }
   }
 
-  private freshTurn(): TurnState {
+  /**
+   * Forget every Session's in-flight turn: the worker that ran them is gone,
+   * so none of them will close, and a new worker's events must not inherit an
+   * old run's id or work.
+   */
+  reset(): void {
+    this.turns.clear();
+    this.queuedUserMessages.clear();
+  }
+
+  private freshTurn(inRun: boolean): TurnState {
     this.turnSequence += 1;
-    return { turn: this.turnSequence, work: false };
+    return { turn: this.turnSequence, inRun, work: false };
   }
 
   private turn(sessionId: string): TurnState {
     let state = this.turns.get(sessionId);
     if (!state) {
-      state = this.freshTurn();
+      // Only events of a run get here (the host attached mid-run).
+      state = this.freshTurn(true);
       this.turns.set(sessionId, state);
     }
     return state;
@@ -361,6 +403,7 @@ export class SessionOutcomeDeriver {
       at,
       final,
       turn: state.turn,
+      inRun: state.inRun,
     };
   }
 
@@ -402,9 +445,11 @@ export class SessionOutcomeDeriver {
     state: TurnState,
     event: Record<string, unknown>,
   ): SessionOutcome {
+    const replyText = forwardedReplyText(event, state.lastAssistantText);
     const base: SessionOutcomeBase = {
       ...this.base(sessionId, state, event, "completedAt", true),
-      reply: forwardedReplyText(event, state.lastAssistantText) !== undefined,
+      reply: replyText !== undefined,
+      ...(replyText !== undefined ? { replyText } : {}),
     };
     const reason = event.reason;
     if (reason === "aborted_streaming" || reason === "aborted_tools")
@@ -465,11 +510,25 @@ export function runningOutcome(outcomes: readonly SessionOutcome[]): SessionOutc
   return outcomes.find((outcome) => !outcome.final);
 }
 
+/** One Session stream event with what the deriver made of it. */
+export type SessionOutcomeListener = (
+  sessionId: string,
+  event: unknown,
+  outcomes: readonly SessionOutcome[],
+) => void;
+
+/** Session stream events as the outcome tap hands them on (the bound-Session bridge reads these). */
+export interface SessionOutcomeStream {
+  subscribe(listener: SessionOutcomeListener): () => void;
+}
+
 export interface SessionOutcomeConsumers {
   /** Called first. Returns at once; its own work is asynchronous. */
   coordinator: (sessionId: string, event: unknown, outcomes: readonly SessionOutcome[]) => void;
   /** Called second. Returns at once; its own work is asynchronous. */
   watcher: (sessionId: string, outcomes: readonly SessionOutcome[]) => void;
+  /** Called last: the bound-Session bridge forwards the closing outcome's `replyText`. */
+  stream?: SessionOutcomeListener;
 }
 
 /**
@@ -491,7 +550,53 @@ export function createSessionOutcomeTap(
     try {
       consumers.coordinator(sessionId, event, outcomes);
     } finally {
-      consumers.watcher(sessionId, outcomes);
+      try {
+        consumers.watcher(sessionId, outcomes);
+      } finally {
+        consumers.stream?.(sessionId, event, outcomes);
+      }
     }
+  };
+}
+
+/** Listeners fed by one outcome tap (its `stream` consumer), as a `SessionOutcomeStream`. */
+export function createSessionOutcomeFanout(): SessionOutcomeStream & {
+  emit: SessionOutcomeListener;
+} {
+  const listeners = new Set<SessionOutcomeListener>();
+  return {
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    emit(sessionId, event, outcomes) {
+      for (const listener of [...listeners]) {
+        try {
+          listener(sessionId, event, outcomes);
+        } catch {
+          // One listener must not keep the event from the others.
+        }
+      }
+    },
+  };
+}
+
+/**
+ * A raw worker stream interpreted by its own deriver: for a runner used on
+ * its own (tests, tools). Main shares the one tap's deriver instead.
+ */
+export function sessionOutcomeStreamOf(
+  subscribeOutbound: (
+    listener: (line: string, entry?: { sessionId: string; event: unknown }) => void,
+  ) => () => void,
+  deriver: SessionOutcomeDeriver = new SessionOutcomeDeriver(),
+): SessionOutcomeStream {
+  return {
+    subscribe(listener) {
+      return subscribeOutbound((_line, entry) => {
+        if (entry)
+          listener(entry.sessionId, entry.event, deriver.derive(entry.sessionId, entry.event));
+      });
+    },
   };
 }

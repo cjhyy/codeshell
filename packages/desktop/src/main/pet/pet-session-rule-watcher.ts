@@ -4,6 +4,7 @@ import {
   type DeliveryQuery,
   type PetDeliveryResolver,
 } from "./pet-delivery-plan.js";
+import type { PetLongTask } from "@cjhyy/code-shell-pet";
 import type { NoticeRule, NoticeRuleState, PetRuleStore } from "./pet-rule-store.js";
 import type { DesktopPendingDecision, DesktopPetProjectionEvent } from "./pet-state-aggregator.js";
 import type { SessionOutcome } from "./session-outcome.js";
@@ -56,6 +57,11 @@ export interface PetSessionRuleWatcherOptions {
   /** The Session's Goal was cleared (after its goal rules were cancelled). */
   onGoalCleared?: (sessionId: string) => Promise<void> | void;
   sessionTitle?: (sessionId: string) => string | undefined;
+  /**
+   * The Session's active long task. A Goal pause in a task the owner asked
+   * for over IM is answered there, like its decision prompts (`reply`).
+   */
+  activeTask?: (sessionId: string) => PetLongTask | undefined;
   now?: () => number;
   log?: (event: string, data: Record<string, unknown>) => void;
 }
@@ -82,12 +88,13 @@ interface ParkedReport {
   event: "done" | "failed";
   query: OutcomeQuery;
   draft: DraftFacts;
+  spend: boolean;
 }
 
 /** What an outcome asks the delivery plan: which rules it can satisfy, and whose run it is. */
 type OutcomeQuery = Pick<
   DeliveryQuery,
-  "at" | "scope" | "includeSystem" | "runKey" | "replyForwarded"
+  "at" | "scope" | "includeSystem" | "runKey" | "replyForwarded" | "task"
 >;
 
 function boundedText(value: unknown, max: number): string | undefined {
@@ -216,8 +223,8 @@ export class PetSessionRuleWatcher {
     marks: TurnMarks,
     replyForwarded: boolean,
   ): Promise<void> {
-    for (const { event, query, draft } of marks.parked.splice(0))
-      await this.emit(sessionId, event, { ...query, replyForwarded }, draft);
+    for (const { event, query, draft, spend } of marks.parked.splice(0))
+      await this.emit(sessionId, event, { ...query, replyForwarded }, draft, undefined, spend);
   }
 
   private async applyOutcome(outcome: SessionOutcome): Promise<void> {
@@ -308,14 +315,20 @@ export class PetSessionRuleWatcher {
       sessionId,
       "done",
       // A replayed goal_progress from before a rule was armed must not fire it.
-      { scope: "goal", at: outcome.at, runKey: outcome.runKey },
+      {
+        scope: "goal",
+        at: outcome.at,
+        runKey: outcome.runKey,
+        ...(outcome.inRun ? {} : { replyForwarded: false }),
+      },
       {
         kind: "session.done",
         priority: "P1",
         dedupeKey: `${sessionId}:goal:${outcome.goalId ?? outcome.runKey}`,
         facts: {},
       },
-      marks,
+      // Only a run that is open can still forward a reply when it closes.
+      outcome.inRun ? marks : undefined,
     );
     // The closing outcome of this run must not tell the system rule twice.
     if (emitted) marks.done = true;
@@ -325,10 +338,13 @@ export class PetSessionRuleWatcher {
     const { sessionId, question, summary } = outcome;
     // Blocked leaves the rules armed, and is the rules' to report even while a
     // long task owns the run (no `runKey`: the closure only reports done / failed).
+    // The active task, like a decision prompt's: an IM-started task's pause goes
+    // back to its conversation as a reply.
+    const task = this.options.activeTask?.(sessionId);
     await this.emit(
       sessionId,
       "blocked",
-      { at: outcome.at },
+      { at: outcome.at, ...(task ? { task } : {}) },
       {
         kind: "session.blocked",
         priority: "P0",
@@ -351,7 +367,13 @@ export class PetSessionRuleWatcher {
       {
         at: outcome.at,
         runKey: outcome.runKey,
-        ...(outcome.final ? { replyForwarded: outcome.reply } : {}),
+        // Outside a run (core reported the failure after the run boundary) no
+        // reply will be forwarded for it: report it now, templated.
+        ...(outcome.final
+          ? { replyForwarded: outcome.reply }
+          : outcome.inRun
+            ? {}
+            : { replyForwarded: false }),
       },
       {
         kind: "session.failed",
@@ -359,8 +381,12 @@ export class PetSessionRuleWatcher {
         dedupeKey: `${sessionId}:failed:${outcome.runKey}`,
         facts: { error: boundedText(outcome.error, MAX_FACT_LENGTH) ?? "Work session failed" },
       },
-      // An `error` is raised before the run closes.
-      outcome.final ? undefined : marks,
+      // An `error` inside a run is raised before the run closes; one outside
+      // a run has no closing outcome to wait for.
+      outcome.final || !outcome.inRun ? undefined : marks,
+      // A failure outside any run is not the run the rules wait for: the owner
+      // hears about it, and the rules stay armed for the next real result.
+      outcome.final || outcome.inRun,
     );
     if (emitted) marks.failed = true;
   }
@@ -401,6 +427,8 @@ export class PetSessionRuleWatcher {
    * `park`: the run has not closed yet. A report its bound conversation's
    * reply would serve waits there for the closing outcome, which knows
    * whether a reply is forwarded at all.
+   *
+   * `spend`: done / failed spend the rules they satisfied, unless false.
    */
   private async emit(
     sessionId: string,
@@ -408,13 +436,14 @@ export class PetSessionRuleWatcher {
     query: OutcomeQuery,
     draft: DraftFacts,
     park?: TurnMarks,
+    spend = event !== "blocked",
   ): Promise<boolean> {
     if (!this.options.isEligibleSession(sessionId)) return false;
     const plan = await this.options.deliveries.plan({ sessionId, event, ...query });
     const delivery = ruleDelivery(plan);
     if (!delivery) return false;
     if (park && event !== "blocked" && delivery.composeBy === "session-reply") {
-      park.parked.push({ event, query, draft });
+      park.parked.push({ event, query, draft, spend });
       return true;
     }
     const title = boundedText(this.options.sessionTitle?.(sessionId), MAX_FACT_LENGTH);
@@ -435,7 +464,7 @@ export class PetSessionRuleWatcher {
       });
       return false;
     }
-    if (event !== "blocked") await this.setState(sessionId, plan.rules, "spent");
+    if (spend && event !== "blocked") await this.setState(sessionId, plan.rules, "spent");
     return true;
   }
 

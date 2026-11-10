@@ -7,6 +7,7 @@ import {
   createSessionBridgeWiring,
   type SessionBridgeWiring,
 } from "./session-bridge-wiring.js";
+import type { SessionOutcomeListener } from "./session-outcome.js";
 import {
   NOW,
   SID,
@@ -54,6 +55,63 @@ describe("bound Session replies", () => {
       outlet: "desktop",
       reason: "bound-reply-delivered",
     });
+  });
+
+  test("an error outside any run is told at once; the next real done still notifies", async () => {
+    current = harness({ readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }) });
+    current.routes.push(boundRoute());
+    await current.handler(SID, upsertArgs());
+    env.clock = NOW + 1_000;
+    // Core reports some failures after the run boundary (here a Goal resume
+    // that could not start): no run is open, and no turn_complete will follow.
+    current.observeSessionEvent(SID, { type: "error", error: "Goal resume could not start" });
+    await settle(() => current!.published.length > 0);
+    await current.idle();
+    // Not parked waiting for a reply that never comes: templated, in the bound chat, now.
+    expect(current.published).toMatchObject([
+      { type: "pet.task.failed", target: { channel: "wechat", target: "chat-1" } },
+    ]);
+    // It was not the run the rule waits for.
+    expect(current.wiring.ruleStore.activeForSession(SID)).toHaveLength(1);
+
+    // An hour later, an ordinary turn: its reply serves the done, which still notifies.
+    env.clock = NOW + 60 * 60_000;
+    for (const event of turn("run-2")) current.observeSessionEvent(SID, event);
+    await settle(() => current!.submitted.length > 1);
+    await current.idle();
+    expect(current.submitted.map((notice) => [notice.kind, notice.boundReplyDelivered])).toEqual([
+      ["session.failed", undefined],
+      ["session.done", true],
+    ]);
+    expect(current.published).toHaveLength(1);
+    expect(current.wiring.ruleStore.activeForSession(SID)).toEqual([]);
+  });
+
+  test("a lost worker's open run is forgotten: the new worker's error is not inherited", async () => {
+    let live = true;
+    current = harness({ hasLiveWorker: () => live });
+    current.routes.push(boundRoute());
+    await current.handler(SID, upsertArgs({ events: ["failed"] }));
+    env.clock = NOW + 1_000;
+    current.observeSessionEvent(SID, {
+      type: "session_started",
+      runId: "run-old",
+      clientMessageId: "cm-old",
+    });
+    live = false;
+    current.setWorkerState("disconnected");
+    current.emitProjection({ kind: "reset", version: 2, generation: 1, observedAt: env.clock });
+    await current.idle();
+    live = true;
+    current.setWorkerState("active", 2);
+    // An error from the new worker before any run of its own.
+    current.observeSessionEvent(SID, { type: "error", error: "boom" });
+    await settle(() => current!.submitted.length > 0);
+    await current.idle();
+    expect(current.submitted.map((notice) => notice.dedupeKey)).toEqual([
+      `${SID}:failed:${env.clock}`,
+    ]);
+    expect(current.published).toMatchObject([{ type: "pet.task.failed" }]);
   });
 
   test("an owner-target done stays on IM when its rule names another channel", async () => {
@@ -243,19 +301,23 @@ describe("bound Session replies", () => {
   });
 
   /**
-   * The real bridge and the notice tap on one worker stream. Everything that
-   * lands in the bound conversation is collected in `conversation`: the
-   * bridge's session.reply and anything the notice router publishes to that
-   * route. `tapFirst` is the order the two listeners were subscribed in; who
-   * tells the conversation is decided by the delivery plan, so it must not matter.
+   * The real bridge and the notice watcher on one interpreted stream, as main
+   * wires them: each event is derived once and both read the same outcomes.
+   * Everything that lands in the bound conversation is collected in
+   * `conversation`: the bridge's session.reply and anything the notice router
+   * publishes to that route. `tapFirst` is the order the two hear an event
+   * in; who tells the conversation is decided by the delivery plan, so it
+   * must not matter.
    */
   function realBridge(tapFirst = true) {
-    const listeners: Array<(line: string, entry?: { sessionId: string; event: unknown }) => void> =
-      [];
+    const listeners: SessionOutcomeListener[] = [];
     const worker = {
       requestWorker: async () => ({ ok: true }),
       injectWorkerMessage: () => undefined,
-      subscribeOutbound: (listener: (typeof listeners)[number]) => {
+      subscribeOutbound: () => () => undefined,
+    };
+    const sessions = {
+      subscribe: (listener: SessionOutcomeListener) => {
         listeners.push(listener);
         return () => undefined;
       },
@@ -263,9 +325,8 @@ describe("bound Session replies", () => {
     const replies: Array<{ text: string; target: { channel: string; target: string } }> = [];
     current = harness({ sessionRoutes: () => wiringRef?.routes });
     const h = current;
-    const tap = (_line: string, entry?: { sessionId: string; event: unknown }) => {
-      if (entry) h.observeSessionEvent(entry.sessionId, entry.event);
-    };
+    const tap: SessionOutcomeListener = (sessionId, _event, outcomes) =>
+      h.wiring.observeSessionOutcomes(sessionId, outcomes);
     if (tapFirst) listeners.push(tap);
     const wiringRef: SessionBridgeWiring = createSessionBridgeWiring({
       routesFilePath: join(env.dir, "routes.json"),
@@ -282,6 +343,7 @@ describe("bound Session replies", () => {
           worker,
           { getSnapshot: () => ({ sessions: [] }), refreshCatalog: async () => undefined },
           onTurn,
+          sessions,
         ),
       health: { check: async () => ({ ok: true }) },
       describeStatus: async () => "",
@@ -293,7 +355,8 @@ describe("bound Session replies", () => {
     });
     if (!tapFirst) listeners.push(tap);
     const emit = (event: Record<string, unknown>) => {
-      for (const listener of listeners) listener("", { sessionId: SID, event });
+      const outcomes = h.deriver.derive(SID, event);
+      for (const listener of listeners) listener(SID, event, outcomes);
     };
     const bind = () =>
       wiringRef.sessionBindExecutor(

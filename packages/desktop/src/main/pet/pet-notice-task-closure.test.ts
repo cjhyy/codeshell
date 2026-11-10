@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { join } from "node:path";
 import type { PetLongTask } from "@cjhyy/code-shell-pet";
+import { PetLongTaskCoordinator } from "./pet-long-task-coordinator.js";
+import { PetLongTaskStore } from "./pet-long-task-store.js";
+import { petDelegationClientMessageId } from "./pet-work-delegation-host.js";
+import { createSessionOutcomeTap } from "./session-outcome.js";
 import {
   NOW,
   SID,
@@ -10,6 +15,7 @@ import {
   harness,
   longTask,
   resetNoticeEnv,
+  settle,
   sourceFile,
   upsertArgs,
   type Harness,
@@ -307,5 +313,74 @@ describe("delegation rules", () => {
     // Cancelling the task spends only Mimi's own rules.
     await current.wiring.notifyTaskClosed(longTask({ status: "cancelled" }));
     expect(current.wiring.ruleStore.activeForSession(SID)).toEqual([owned!]);
+  });
+});
+
+describe("the real coordinator and watcher on one tap", () => {
+  test("an IM-delegated done is told once, by the closure, in its conversation", async () => {
+    const store = new PetLongTaskStore(join(env.dir, "long-tasks.json"), () => env.clock);
+    current = harness({
+      longTasks: store,
+      readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }),
+    });
+    const h = current;
+    const route = { kind: "im-gateway" as const, channel: "wechat", target: "chat-9" };
+    const identity = { runId: "run-1", clientMessageId: petDelegationClientMessageId("cm-im") };
+    let tap: (sessionId: string, event: unknown) => void = () => undefined;
+    const coordinator = new PetLongTaskCoordinator({
+      store,
+      projection: { getSnapshot: h.snapshot, subscribe: h.subscribeProjection },
+      worker: {
+        hasLiveWorker: () => true,
+        requestWorker: async () => ({ ok: false as const, message: "no worker" }),
+      },
+      launcher: {
+        start: async (delegation) => {
+          tap(SID, { type: "session_started", sessionId: SID, promptTokens: 0, ...identity });
+          return { sessionId: delegation.targetSessionId ?? SID, cwd: "/work/app" };
+        },
+      },
+      now: () => env.clock,
+      onDelegationStarted: (task) => h.wiring.armDelegationRule(task),
+      onTaskClosed: (task) => h.wiring.notifyTaskClosed(task, { text: "登录修好了，可以验收。" }),
+    });
+    // main's tap: one interpretation, coordinator first, then the notice watcher.
+    tap = createSessionOutcomeTap(
+      {
+        coordinator: (sessionId, event, outcomes) =>
+          void coordinator.observeSessionEvent(sessionId, event, outcomes),
+        watcher: (sessionId, outcomes) => h.wiring.observeSessionOutcomes(sessionId, outcomes),
+      },
+      h.deriver,
+    );
+    await coordinator.start();
+    try {
+      const launch = await coordinator.startDelegation({
+        clientMessageId: "cm-im",
+        task: "修复登录问题",
+        workspacePath: "/work/app",
+        targetSessionId: SID,
+        completionTarget: route,
+      });
+      expect(h.wiring.ruleStore.activeForSession(SID)).toMatchObject([{ origin: "delegation" }]);
+      env.clock = NOW + 1_000;
+      tap(SID, { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } });
+      tap(SID, { type: "turn_complete", reason: "completed", text: "改好了", ...identity });
+      await settle(() => h.published.length > 0);
+      await h.idle();
+      await settle();
+      expect(store.get(launch.taskId)?.status).toBe("completed");
+      // The watcher left the run to the closure: one notice, Mimi's text, back to the chat.
+      expect(h.submitted.map((notice) => [notice.dedupeKey, notice.body])).toEqual([
+        [`task:${launch.taskId}:1:completed`, "登录修好了，可以验收。"],
+      ]);
+      expect(h.published).toMatchObject([
+        { type: "pet.task.completed", target: { channel: "wechat", target: "chat-9" } },
+      ]);
+      expect(h.ownerSends).toEqual([]);
+      expect(h.wiring.ruleStore.activeForSession(SID)).toEqual([]);
+    } finally {
+      coordinator.stop();
+    }
   });
 });

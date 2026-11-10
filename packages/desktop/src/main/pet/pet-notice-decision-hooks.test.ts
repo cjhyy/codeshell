@@ -351,6 +351,30 @@ describe("decision prompts through the router", () => {
     expect(d.approvals).toEqual([]);
   });
 
+  test("a prompt whose record keeps failing is retried with backoff, capped at a minute", async () => {
+    current = harness();
+    await current.handler(SID, upsertArgs({ events: ["blocked"] }));
+    current.wiring.ledger.record = async () => {
+      throw new Error("disk full");
+    };
+    const timers = fakeTimers();
+    const d = decisionRelay(current, timers);
+    d.relay.start();
+    d.raise();
+    await settle();
+    let at = env.clock + 15_000;
+    const delays: number[] = [];
+    for (let index = 0; index < 7; index += 1) {
+      timers.advance(at);
+      await settle(() => timers.pending().some((due) => due > at));
+      const next = timers.pending().find((due) => due > at)!;
+      delays.push(next - at);
+      at = next;
+    }
+    expect(delays).toEqual([3_000, 6_000, 12_000, 24_000, 48_000, 60_000, 60_000]);
+    d.relay.stop();
+  });
+
   test("the same request on a new connection gets its own record, once, and no retry loop", async () => {
     current = harness();
     await current.handler(SID, upsertArgs({ events: ["blocked"] }));

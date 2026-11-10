@@ -170,7 +170,11 @@ import { recordPetDelegationClosureBestEffort } from "./pet/pet-delegation-closu
 import { PetReportReceiptStore } from "./pet/pet-report-receipt-store.js";
 import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
-import { createSessionOutcomeTap } from "./pet/session-outcome.js";
+import {
+  createSessionOutcomeFanout,
+  createSessionOutcomeTap,
+  SessionOutcomeDeriver,
+} from "./pet/session-outcome.js";
 import {
   PetImDecisions,
   collectImDecisions,
@@ -1838,6 +1842,10 @@ async function createWindow(): Promise<BrowserWindow> {
     );
     petLongTaskStore = longTaskStore;
     taskInboxDisposers.push(longTaskStore.subscribe(() => taskInboxService?.scheduleRefresh()));
+    // The one interpreter of Session streams (see createSessionOutcomeTap below);
+    // the bound-Session bridge reads its outcomes from `sessionOutcomes`.
+    const sessionOutcomeDeriver = new SessionOutcomeDeriver();
+    const sessionOutcomes = createSessionOutcomeFanout();
     const notices = wirePetNotices({
       userDataDir: app.getPath("userData"),
       bridge,
@@ -1856,6 +1864,7 @@ async function createWindow(): Promise<BrowserWindow> {
       powerEvents: powerMonitor,
       focusEvents: app,
       hasLiveWorker: () => bridge?.hasLiveWorker() ?? false,
+      onWorkerLost: () => sessionOutcomeDeriver.reset(),
     });
     petNotices = notices;
     const petMemoryStoreInstance = new PetMemoryStore(
@@ -2021,13 +2030,17 @@ async function createWindow(): Promise<BrowserWindow> {
     // One interpretation of each Session event, handed to the long task and
     // the notice rules (see createSessionOutcomeTap). Which of them reports a
     // run is decided by the delivery plan, not by who hears of it first.
-    const observeSessionOutcome = createSessionOutcomeTap({
-      coordinator: (sessionId, event, outcomes) =>
-        void longTaskCoordinator
-          .observeSessionEvent(sessionId, event, outcomes)
-          .catch((error) => dlog("main", "pet.longTask.stream.failed", { error: String(error) })),
-      watcher: (sessionId, outcomes) => notices.observeSessionOutcomes(sessionId, outcomes),
-    });
+    const observeSessionOutcome = createSessionOutcomeTap(
+      {
+        coordinator: (sessionId, event, outcomes) =>
+          void longTaskCoordinator
+            .observeSessionEvent(sessionId, event, outcomes)
+            .catch((error) => dlog("main", "pet.longTask.stream.failed", { error: String(error) })),
+        watcher: (sessionId, outcomes) => notices.observeSessionOutcomes(sessionId, outcomes),
+        stream: sessionOutcomes.emit,
+      },
+      sessionOutcomeDeriver,
+    );
     unsubscribePetLongTaskStream = bridge.subscribeOutbound((_line, snapshotEntry) => {
       if (snapshotEntry) observeSessionOutcome(snapshotEntry.sessionId, snapshotEntry.event);
     });
@@ -2086,7 +2099,8 @@ async function createWindow(): Promise<BrowserWindow> {
     sessionBridge = createSessionBridgeWiring({
       routesFilePath: resolve(app.getPath("userData"), "pet", "conversation-session-routes.json"),
       resolveSelector: createReusableSessionResolver(petSessionsRootDir),
-      createRunner: (onTurn) => createBoundSessionRunner(worker, aggregator, onTurn),
+      createRunner: (onTurn) =>
+        createBoundSessionRunner(worker, aggregator, onTurn, sessionOutcomes),
       health: createBoundSessionHealth(aggregator, petSessionsRootDir),
       describeStatus: async (route) => `当前在「${route.sessionTitle}」中。发送 /mimi 可退出。`,
       publish: (event) => publishGatewayControlEvent(event),
