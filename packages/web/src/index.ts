@@ -5,8 +5,9 @@
  * everything here runs in a plain browser (localStorage/WebSocket/navigator).
  * Protocol types come from @cjhyy/code-shell-core (type-only, erased).
  *
- * The desktop mobile UI (packages/desktop/src/mobile) renders on top of this;
- * a future standalone browser client is meant to grow from this package.
+ * The package also contains the complete web/app SPA, built to dist-app for
+ * Server hosting. Desktop's mobile entry reuses web/app/DesktopApp; this root
+ * entry remains the reusable browser logic and component surface.
  */
 
 // ── Hooks: remote-app state machine + reconnecting socket ───────────────────

@@ -1,5 +1,7 @@
 # Engine Split Plan
 
+> **已过期（2026-11-10 标注）**：本文保留 2026-07-07 的拆分草案与当时行数；当前实施范围、依赖和验收以 [架构审查任务清单](architecture-review-tasks-20261110.md) 为准。
+
 Status: planning draft only. Source code has not been changed.
 
 Scope: physically split `packages/core/src/engine/engine.ts`. In this checkout it is

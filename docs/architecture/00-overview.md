@@ -139,7 +139,7 @@ flowchart LR
 
 **逐行核对过调用链**
 
-- **多会话路径丢字段**：`packages/core/src/protocol/server.ts:1822/1835` 把 `operationBatchToken`、`sessionBrief` 传给 `session.enqueueTurn`，但 `TurnOpts`（`protocol/chat-session.ts:26`）没有这两个字段，`ChatSession` 转发给 `engine.run`（`chat-session.ts:515`）时也没带。单 Engine（legacy）路径（`server.ts:1987`）会直接传。结果是：Desktop/server 的多会话模式下，`Engine` 里依赖它们的逻辑（`engine/engine.ts:1622`、`:1755`、`:1807`）收不到值。
+- **多会话路径丢字段（候选修复已实现，尚未合入）**：原问题是 `AgentServer` 传入的 `operationBatchToken`、`sessionBrief` 未进入 `TurnOpts`，也未由 `ChatSession` 转发给 `engine.run`。2026-11-10 的 T1 候选 `68eca438fbfa449c4f1267d0900c4c9a5fbb8ed2`（分支 `codex/architecture/t1-run-option-forwarding`）已补齐两字段及完整选项映射约束；此时尚无 PR 号，待建立 PR、独立审查并合入后补记 PR。状态与验证以 [架构审查任务 T1](../todo/architecture-review-tasks-20261110.md#t1-多会话路径丢-operationbatchtoken-和-sessionbrief) 和实施交接为准。
 - **中继能看到明文**：`packages/server/src/remote-relay/protocol.ts:1` 说明云端中继会解开 TLS，本地是纯 HTTP，没有端到端加密（目前是已知且接受的取舍）。
 
 **对照源码确认过行为**

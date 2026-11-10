@@ -1,9 +1,9 @@
 # 12 · Package Boundaries & Release Units
 
-> Audit date: 2026-08-11. Scope: workspace manifests, package entry points,
-> production imports, build outputs and publish dry-runs. This chapter explains
-> why the current packages exist, where the boundaries are sound, and which
-> boundaries should be tightened before adding more product capabilities.
+> Original audit: 2026-08-11. Release inventory, workspace graph and packaging
+> notes refreshed on 2026-11-10 against the architecture-review candidate after
+> R1/R2. Older size/export measurements below remain historical audit evidence.
+> This source inventory does not assert that the candidate has merged or shipped.
 
 ## Executive verdict
 
@@ -20,84 +20,94 @@ The most important conclusions are:
    roughly 3,600 source lines including tests, a second npm package would add
    release overhead without buying meaningful isolation. Narrow subpath exports
    are the next step.
-3. `server` remains one install unit, but its reusable kernel now has focused
-   `/storage`, `/worker`, and `/mobile-remote` entries with no static Coding or
-   Web imports. The `/serve` entry deliberately owns ready-made Coding worker
-   and Web app resolution.
+3. `server` remains one install unit, with focused kernel and host entries.
+   Reusable entries avoid ready-made Coding composition and the React-bearing
+   Web root; shared replay/coverage helpers use narrow Web entries. `/serve`
+   deliberately owns Coding worker and full Web app resolution.
 4. `chat` is logically standalone, but its install unit is too coarse: every
    platform SDK is a mandatory dependency even when a consumer uses one
    adapter.
 5. Package builds must clean `dist` before compiling. Before this audit,
    `@cjhyy/code-shell-core` would have published stale Arena/Pet code and lint
    probes left by earlier refactors.
-6. A clean-build tarball audit of all ten public packages — Link, Core, Pet, Arena,
-   Coding, Web, Server, TUI, Chat, and the root meta package — verifies every
+6. A clean-build tarball audit covers the ten current public packages — Link, Core,
+   Host, Pet, Coding, Web, Server, TUI, Chat, and the root meta package — and verifies every
    export/bin target, workspace-version rewrite, focused-entry identity, and
    required copied asset. It also caught declaration-only dependency leaks.
 7. That audit is now automated by `bun run test:package-release`. The release
    workflow runs it as a dedicated ten-tarball job before npm publication,
    without adding pack work to the normal targeted unit-test job.
 
-> Arena update (2026-11-10): the retired private workspace, dormant TUI command, and test fixture have been deleted. Earlier audit observations below remain historical; `scripts/package-release-audit-config.ts` is the current release authority.
+> The R1/R2 candidate removes the retired Arena workspace and the legacy CDP
+> driver/package. Neither is a current release unit. Historical mentions below
+> describe the earlier audit; `scripts/package-release-audit-config.ts` is the
+> authority for the current package inventory and publish order.
 
 ## Current dependency graph
 
-Workspace edges from production code and manifests:
+The current tree has 12 workspace packages plus the root meta package. Runtime
+manifest dependencies and Desktop's explicit bundle composition are:
 
 ```text
-@cjhyy/code-shell (meta manifest)
-  ├─> core
-  └─> tui ──────────────> core + coding
-
-link                     (no CodeShell runtime dependency)
-
-coding ─────────────────> core/extension
-
-generated meta runtime
+@cjhyy/code-shell (root meta)
   ├─> core (SDK re-export)
-  └─> tui  (CLI shim)
+  └─> tui  (CLI shim) ──> core + coding
+
+link                      (no CodeShell runtime dependency)
+core ────────────────────> link
+host ────────────────────> core
+coding / pet ────────────> core/extension
+optimization-lab (private) -> core/extension
+browser-devtools (private) (no runtime dependencies)
+
+server ──────────────────> core + host + link + coding + web
+web ─────────────────────> core types + link browser-safe provider contracts
+chat                      (no CodeShell package dependency)
 
 desktop (private)
-  ├─> core + core/internal
-  ├─> coding / pet
-  ├─> server / web / chat
-  └─> Electron + renderer dependencies
-
-server
-  ├─> core
-  ├─> coding
-  └─> web
-
-pet ────────────────────> core/extension
-web ────────────────────> core types
-chat                     (no CodeShell package dependency)
+  ├─> external Core + Link + Coding; dynamically loaded Pet / Optimization Lab
+  ├─> bundled Host / Server / Web / Chat / browser diagnostics
+  └─> Electron + native/browser runtime dependencies
 ```
 
-There are no workspace dependency cycles. The intended layer order is:
+There are no workspace dependency cycles. Host depends only on Core and owns
+host capability dispatch and shared host services; it does not depend on another
+host, Electron, or a capability package. Core's only runtime workspace dependency
+is the framework-independent Link contract. Coding and Pet use Core's extension
+surface; Server and TUI compose the capabilities they need.
 
-| Layer | Packages                        | Meaning                                                   |
-| ----- | ------------------------------- | --------------------------------------------------------- |
-| L0    | `link`, `core`, `chat`   | Foundations with no dependency on another product package |
-| L1    | `coding`, `pet`, `web` | Capabilities or clients built on core contracts           |
-| L2    | `tui`, `server`                 | Composition hosts                                         |
-| L3    | `desktop`, root meta package    | Product/distribution composition                          |
+Web's Core imports are erased types, while its Link imports are browser-safe
+runtime values. Its manifest declares both so the published runtime/declarations
+resolve. The package includes reusable `dist/` entries and the complete `web/app`
+SPA built into `dist-app/`; Server serves those assets and Desktop's mobile entry
+reuses the app source. The H2/H3 candidate exposes `/transcript-replay`,
+`/output-coverage` and `/panels` for shared contracts/helpers without evaluating
+the React-bearing root; Server retains compatibility re-exports for its moved
+Panel contracts, and the SPA consumes its own package rather than Server source.
 
-`web -> core` is type-only in browser source, although the manifest currently
-declares core as a regular dependency so emitted declarations can resolve.
+Desktop's main bundle keeps Electron, Playwright Core, Core, Link and Coding
+external (`packages/desktop/scripts/build-main.ts`). `predist.ts` explicitly
+materializes Link, Core, Coding, Pet and Optimization Lab using
+`DESKTOP_MATERIALIZED_WORKSPACES`, replacing workspace symlinks with package
+files and installing their production dependency closures. Link is listed in
+Desktop's `devDependencies`, but it is explicitly materialized and is also a
+Core production dependency; it is not supplied by an accidental development
+hoist. Host is bundled into main and requires no separate materialized package.
 
 ## Package-by-package assessment
 
-| Package   | Current release boundary                                                                  | Assessment                                                                                                                                                                                             |
-| --------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `link`    | Public manifest/guide root                                                                | Correct framework-independent leaf boundary. Hosts consume provider metadata without pulling in Core or a UI runtime.                                                                                  |
-| `core`    | Public `.`, trusted `/extension`, in-repo `/internal`, plugin runtime and worker subpaths | Correct three-surface model. The root barrel remains broad, so the documented stable API table must stay the compatibility authority.                                                                  |
-| `coding`  | Compatibility root plus `/capability`, `/git`, `/orchestration` and worker bin            | Correct physical capability split. Focused host imports no longer evaluate unrelated LSP, patch, Git, or external-agent surfaces, while the root preserves the existing SDK.                           |
-| `pet`     | Compatibility root plus `/capability`, `/protocol`, `/team`                               | Correct extraction from core. Focused subpaths keep one release unit while preventing new consumers from depending on its implementation-wide root barrel.                                             |
-| `server`  | Compatibility root plus `/storage`, `/worker`, `/mobile-remote`, `/serve`, and CLI bin    | Correct evaluation boundary within one release unit. Kernel consumers avoid Coding/Web composition; `/serve` retains the ready-made product defaults.                                                  |
-| `web`     | Browser logic root plus bundled SPA assets                                                | Good browser boundary: no Electron and no core runtime import. Keeping the reusable state/reducer layer and SPA in one package is reasonable at current scale.                                         |
-| `tui`     | Public root plus `code-shell` bin                                                         | Correct host boundary. Its extensive `/internal` use is acceptable for an in-repo, version-locked host, but prevents independent versioning from core.                                                 |
-| `desktop` | Private app                                                                               | Correct composition root. Code loaded only through bundling may live in dev dependencies, while worker-loaded packages must remain runtime dependencies and be copied by `predist`.                    |
-| `chat`    | Root plus per-platform subpaths                                                           | Good domain independence. `/factory` now dynamically imports only the selected adapter, but all platform SDKs remain one default installation unit.                                                    |
+| Package   | Current release boundary                                                                  | Assessment                                                                                                                                                                                    |
+| --------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `link`    | Public manifest/guide root                                                                | Correct framework-independent leaf boundary. Hosts consume provider metadata without pulling in Core or a UI runtime.                                                                         |
+| `core`    | Public `.`, trusted `/extension`, in-repo `/internal`, plugin runtime and worker subpaths | Correct three-surface model. The root barrel remains broad, so the documented stable API table must stay the compatibility authority.                                                         |
+| `host`    | Public root plus `/session-files`                                                         | Shared Core-only Host capability dispatch/services; the storage entry avoids loading probes and model clients. Published before Server and bundled by Desktop.                                |
+| `coding`  | Compatibility root plus `/capability`, `/git`, `/orchestration` and worker bin            | Correct physical capability split. Focused host imports no longer evaluate unrelated LSP, patch, Git, or external-agent surfaces, while the root preserves the existing SDK.                  |
+| `pet`     | Compatibility root plus `/capability`, `/protocol`, `/team`                               | Correct extraction from core. Focused subpaths keep one release unit while preventing new consumers from depending on its implementation-wide root barrel.                                    |
+| `server`  | Compatibility root plus `/storage`, `/worker`, `/mobile-remote`, `/serve`, and CLI bin    | Correct evaluation boundary within one release unit. Kernel consumers avoid Coding/Web composition; `/serve` retains the ready-made product defaults.                                         |
+| `web`     | Reusable browser entries plus full `dist-app` SPA assets                                  | Good browser boundary: no Electron and no core runtime import. Keeping the reusable state/reducer layer and SPA in one package is reasonable at current scale.                                |
+| `tui`     | Public root plus `code-shell` bin                                                         | Correct host boundary. Its extensive `/internal` use is acceptable for an in-repo, version-locked host, but prevents independent versioning from core.                                        |
+| `desktop` | Private app                                                                               | Correct composition root. Code loaded only through bundling may live in dev dependencies, while worker-loaded packages must remain runtime dependencies and be copied by `predist`.           |
+| `chat`    | Root plus per-platform subpaths                                                           | Good domain independence. `/factory` now dynamically imports only the selected adapter, but all platform SDKs remain one default installation unit.                                           |
 | root meta | Core re-export and TUI CLI shim                                                           | Correct compatibility package. Its direct runtime dependencies now match the generated artifacts: Core for the SDK re-export and TUI for the CLI shim. Coding remains a TUI-owned dependency. |
 
 ## Why Pet is a package
@@ -243,9 +253,12 @@ package:
 ```
 
 `ResidentAgentProcess` accepts `appendSystemPrompt` from its host instead of
-importing Coding policy. `/storage`, `/worker`, and `/mobile-remote` therefore
-have no static Coding or Web imports. Desktop injects
-`CC_COST_GUARD_PROMPT` when it creates the Claude resident-agent process.
+importing Coding policy. Desktop injects `CC_COST_GUARD_PROMPT` when it creates
+the Claude resident-agent process. Reusable Server consumers do not load the
+Web root or its React hooks: the H2/H3 candidate selects `/transcript-replay`,
+`/output-coverage` and `/panels` where shared Web contracts are needed. This is
+an evaluation boundary within one install unit, not the absence of every Web
+package dependency.
 
 `packages/server/src/serve/cli.ts` still resolves the Coding worker bin and the
 Web package's built SPA. This is valid for the ready-made `code-shell-serve`
@@ -339,34 +352,62 @@ their roots for compatibility while offering focused host entries.
 
 Suggested shape/status:
 
-| Package  | Primary entry      | Focused subpaths / status                                         |
-| -------- | ------------------ | ----------------------------------------------------------------- |
-| `coding` | compatibility root | Implemented: `/capability`, `/git`, `/orchestration`, worker bin  |
-| `pet`    | compatibility root | Implemented: `/capability`, `/protocol`, `/team`                  |
-| `server` | compatibility root | Implemented: `/storage`, `/worker`, `/mobile-remote`, `/serve`    |
+| Package  | Primary entry      | Focused subpaths / status                                        |
+| -------- | ------------------ | ---------------------------------------------------------------- |
+| `coding` | compatibility root | Implemented: `/capability`, `/git`, `/orchestration`, worker bin |
+| `pet`    | compatibility root | Implemented: `/capability`, `/protocol`, `/team`                 |
+| `server` | compatibility root | Implemented: `/storage`, `/worker`, `/mobile-remote`, `/serve`   |
 
 ### Release package source and publish order
 
-`scripts/package-release-audit-config.ts` is the single declaration for every
-versioned workspace package. Ten entries are public release units;
-`browser-devtools`, `optimization-lab`, and `desktop` are private but still
-participate in synchronized version and lockfile verification.
+[`scripts/package-release-audit-config.ts`](../../scripts/package-release-audit-config.ts)
+is the single declaration used by version verification, release builds, tarball
+smoke and publication. It currently contains **13 entries: 12 workspaces plus the
+root meta package**. Ten are public release units; three are private and versioned
+but never packed or published by this release workflow.
 
-The public list is also the npm publish order:
+The public entries below are in the exact declared npm publication order:
+
+| Order | Directory         | Package                               |
+| ----: | ----------------- | ------------------------------------- |
+|     1 | `packages/link`   | `@cjhyy/code-shell-link`              |
+|     2 | `packages/core`   | `@cjhyy/code-shell-core`              |
+|     3 | `packages/host`   | `@cjhyy/code-shell-host`              |
+|     4 | `packages/pet`    | `@cjhyy/code-shell-pet`               |
+|     5 | `packages/coding` | `@cjhyy/code-shell-capability-coding` |
+|     6 | `packages/web`    | `@cjhyy/code-shell-web`               |
+|     7 | `packages/server` | `@cjhyy/code-shell-server`            |
+|     8 | `packages/tui`    | `@cjhyy/code-shell-tui`               |
+|     9 | `packages/chat`   | `@cjhyy/code-shell-chat`              |
+|    10 | `.`               | `@cjhyy/code-shell`                   |
 
 ```text
-link -> core -> pet -> coding -> web -> server -> tui -> chat -> root meta
+link -> core -> host -> pet -> coding -> web -> server -> tui -> chat -> root meta
 ```
 
-Independent packages may appear anywhere after their dependencies; the
-enforced invariant is that every public workspace dependency is published
-before its consumer. `scripts/release.ts`, CI tag verification, tarball smoke,
-and the npm publish helper all consume this declaration. Adding a workspace
-manifest without adding it to the declaration fails version verification.
+This is a publish sequence, not a claim that each package imports its immediate
+predecessor. Every public workspace runtime, optional or peer dependency must
+appear before its consumer. Host therefore follows Core and precedes Server;
+Core follows Link. Private workspaces cannot be runtime dependencies of a public
+release unit.
+
+The private version-only entries are `packages/browser-devtools`,
+`packages/desktop` and `packages/optimization-lab`. They participate in
+synchronized version and lockfile verification. Desktop's application artifact
+is packaged separately; private does not mean unused at runtime (the app
+explicitly materializes Optimization Lab).
+
+The release audit clean-builds public packages in dependency order, including
+Host after Core, before packing and checking Node runtime imports and strict
+consumer declarations. Build order for the whole repository also includes the
+private packages and is distinct from npm publication order. Adding a workspace
+manifest without declaring it here fails version verification. Arena and the
+legacy CDP package are absent after R1/R2; published historical artifacts are not
+rewritten by their source removal.
 
 ### P2 — package metadata and local entry documentation
 
-- Link, Core, Coding, Pet, Server, Web, TUI and Chat now publish repository
+- Link, Core, Host, Coding, Pet, Server, Web, TUI and Chat now publish repository
   metadata and a Node `>=20.10` engine contract.
 - Web now has a package-local README. Pet, Coding, Server and Web
   document their focused entry contracts locally.
@@ -382,14 +423,15 @@ runtime boundary defect.
 
 The repository guard now encodes these invariants:
 
-| Source                              | Allowed CodeShell imports                                                |
-| ----------------------------------- | ------------------------------------------------------------------------ |
-| `core` production                   | None; use relative self-imports                                          |
-| `coding`, `pet` production | `@cjhyy/code-shell-core/extension`                                       |
-| coding worker composition entry     | Above plus core's stdio worker bin                                       |
-| TUI/Desktop main                    | core public/internal and explicitly composed capabilities                |
-| desktop renderer                    | Type-only CodeShell contracts and reviewed browser-safe runtime packages |
-| `web`                               | Type-only core protocol contracts                                        |
+| Source                          | Allowed CodeShell imports                                                |
+| ------------------------------- | ------------------------------------------------------------------------ |
+| `core` production               | Link public provider contract; otherwise relative self-imports           |
+| `coding`, `pet` production      | `@cjhyy/code-shell-core/extension`                                       |
+| coding worker composition entry | Above plus core's stdio worker bin                                       |
+| TUI/Desktop main                | core public/internal and explicitly composed capabilities                |
+| desktop renderer                | Type-only CodeShell contracts and reviewed browser-safe runtime packages |
+| `host`                          | Core public/internal contracts; no other host or capability package      |
+| `web`                           | Type-only Core contracts and browser-safe Link provider contracts        |
 
 This guard is deliberately about **direction**, not package size. A large,
 cohesive leaf package is safer than several small packages with cycles or
@@ -398,7 +440,7 @@ host-to-core back references.
 ## Recommended execution order
 
 Completed in these boundary passes: clean-first package builds; focused Pet,
-Coding, Arena, and Server subpaths; chat adapter lazy loading; and the
+Coding and Server subpaths (the historical Arena package is now removed); chat adapter lazy loading; and the
 renderer's explicit browser-safe Panel App runtime entry.
 
 Remaining order:
@@ -413,12 +455,12 @@ Remaining order:
 Useful checks:
 
 ```bash
-bun test tests/eslint-boundary-guard.test.ts
-bun test packages/core/src/plugins/runtime.browser-contract.test.ts
-bun test packages/pet/src/index.exports.test.ts
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./tests/eslint-boundary-guard.test.ts
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/core/src/plugins/runtime.browser-contract.test.ts
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/pet/src/index.exports.test.ts
 node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/coding/src/index.exports.test.ts
-bun test packages/server/src/index.exports.test.ts
-bun test packages/core/src/utils/lockfile.test.ts
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/server/src/index.exports.test.ts
+node scripts/run-bun-test-shard.mjs --timeout 30000 ./packages/core/src/utils/lockfile.test.ts
 bun run test:package-release -- --list
 bun run test:package-release -- --dry-run
 bun run test:package-release

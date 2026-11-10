@@ -22,9 +22,9 @@ packages/
   server/   @cjhyy/code-shell-server   — pure-Node remote transport layer (HTTP+WS host, pairing,
                                           passcode, tunnel, rooms, uploads). Extracted from desktop
                                           main; the seed of the future auth-gateway server.
-  web/      @cjhyy/code-shell-web      — browser client logic layer (stream reducer, approval state,
-                                          reconnect hooks). Seed of the future Web Client; consumed
-                                          by desktop's mobile UI today.
+  web/      @cjhyy/code-shell-web      — reusable browser client state/hooks plus the full web/app SPA;
+                                          publishes dist/ logic and dist-app/ assets, used by Server
+                                          and Desktop's mobile UI.
   tui/      @cjhyy/code-shell-tui      — Ink-based terminal REPL on top of core.
   desktop/  @cjhyy/code-shell-desktop  — Electron client (private, not published).
   browser-devtools/ @cjhyy/code-shell-browser-devtools — private host-neutral browser diagnostics collectors.
