@@ -32,6 +32,7 @@ import type { PetPendingNoticeSource } from "./pet-dispatch-service.js";
 import type { ImDecisionRuleDelivery } from "./pet-im-decisions.js";
 import type { PetIpcAttention } from "./pet-ipc.js";
 import { PetNoticeLedger } from "./pet-notice-ledger.js";
+import { PetNoticeMediaStore } from "./pet-notice-media.js";
 import {
   DEFAULT_MAX_P0_PER_HOUR,
   DEFAULT_MAX_PER_HOUR,
@@ -474,6 +475,8 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
   // in-process serialisation is enough (no cross-process lock).
   const ruleStore = new PetRuleStore({ path: join(petDir, "rules.json"), now });
   const ledger = new PetNoticeLedger({ path: join(petDir, "notices.json"), now });
+  // Each notice's files are copied here when it is recorded, so a resend sends the same bytes.
+  const mediaStore = new PetNoticeMediaStore({ root: join(petDir, "notice-media"), log });
   const receipts = new PetReceiptStore(join(petDir, "attention-receipts.json"), now);
   const views = new SessionViewTracker();
 
@@ -599,6 +602,7 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
     },
     ...(deps.imTimeoutMs !== undefined ? { imTimeoutMs: deps.imTimeoutMs } : {}),
     ...(deps.timezoneOffsetMin ? { timezoneOffsetMin: deps.timezoneOffsetMin } : {}),
+    media: mediaStore,
     log,
   });
 
@@ -633,7 +637,9 @@ export function wirePetNotices(deps: PetNoticeWiringDeps): PetNoticeWiring {
           ...(title ? { title } : {}),
           text: body,
           ...(media?.button ? { button: media.button } : {}),
-          ...(media?.attachments ? { attachments: media.attachments } : {}),
+          ...(media?.attachments
+            ? { attachments: media.attachments.map(({ sha256: _digest, ...file }) => file) }
+            : {}),
           target: { channel: target.route.channel, target: target.route.target },
         });
         return { accepted: true };

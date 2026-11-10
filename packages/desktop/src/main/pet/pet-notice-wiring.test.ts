@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ConversationSessionRoute, PetLongTask } from "@cjhyy/code-shell-pet";
@@ -38,6 +38,16 @@ const SID = "s-work";
 const NOW = 1_700_000_000_000;
 
 let dir: string;
+
+/** A real source file of `size` bytes: notices freeze copies of their files. */
+async function sourceFile(name: string, size: number): Promise<string> {
+  const path = join(dir, name);
+  await writeFile(path, Buffer.alloc(size, 1));
+  return path;
+}
+
+/** Where the notice router froze a file (`<userData>/pet/notice-media/<record>/<n><ext>`). */
+const frozenPath = expect.stringMatching(/\/pet\/notice-media\/notice-[0-9a-f-]{36}\/\d+\.\w+$/u);
 let clock = NOW;
 
 function session(id: string, extra: Partial<DesktopPetSession> = {}): DesktopPetSession {
@@ -713,7 +723,7 @@ describe("long-task closure", () => {
           name: "comic.png",
           mimeType: "image/png",
           size: 123,
-          path: "/w/comic.png",
+          path: await sourceFile("comic.png", 123),
         },
       ],
       button: { text: "打开", url: "https://example.com/comic" },
@@ -726,10 +736,18 @@ describe("long-task closure", () => {
     expect(current.published).toHaveLength(1);
     expect(current.published[0]).toMatchObject({
       text: "漫画在这。",
-      attachments: media.attachments,
+      // The frozen copy, in the outbox's own descriptor shape (no digest field).
+      attachments: [{ ...media.attachments[0], path: frozenPath }],
       button: media.button,
       target: { channel: "wechat", target: "chat-9" },
     });
+    expect(Object.keys(current.published[0]!.attachments![0]!).sort()).toEqual([
+      "kind",
+      "mimeType",
+      "name",
+      "path",
+      "size",
+    ]);
     // Desktop shows it too (named channel), pointing at the Session for the files.
     expect(current.desktop[0]).toMatchObject({ sessionId: SID });
     expect(current.desktop[0]!.body).toContain("含 1 个附件");
@@ -745,35 +763,37 @@ describe("long-task closure", () => {
           name: "a.zip",
           mimeType: "application/zip",
           size: 10,
-          path: "/w/a.zip",
+          path: await sourceFile("a.zip", 10),
         },
         {
           kind: "image" as const,
           name: "big.png",
           mimeType: "image/png",
           size: 5_000,
-          path: "/w/big.png",
+          path: await sourceFile("big.png", 5_000),
         },
         {
           kind: "image" as const,
           name: "a.png",
           mimeType: "image/png",
           size: 10,
-          path: "/w/a.png",
+          path: await sourceFile("a.png", 10),
         },
         {
           kind: "image" as const,
           name: "b.png",
           mimeType: "image/png",
           size: 10,
-          path: "/w/b.png",
+          path: await sourceFile("b.png", 10),
         },
       ],
       button: { text: "查看", url: "https://example.com/r" },
     };
     await current.wiring.notifyTaskClosed(longTask(), { text: "好了", media });
     // WeChat target: images only, ≤1 000 bytes, at most one.
-    expect(current.materialized).toEqual([["/w/a.png"]]);
+    expect(current.materialized).toEqual([[expect.stringMatching(/\/2\.png$/u)]]);
+    // Accepted: the copies are gone.
+    expect(await readdir(join(dir, "pet", "notice-media"))).toEqual([]);
     expect(current.ownerSends).toEqual([
       {
         targetId: "wechat:owner",
@@ -982,7 +1002,7 @@ describe("pending-notice replay", () => {
           name: "r.txt",
           mimeType: "text/plain",
           size: 10,
-          path: "/w/r.txt",
+          path: await sourceFile("r.txt", 10),
         },
       ],
     };

@@ -1,7 +1,11 @@
 import { dlog } from "../desktop-logger.js";
 import { composeNoticeBody, MAX_NOTICE_BODY, noticeLine } from "./pet-notice-compose.js";
 import { NoticeDigest } from "./pet-notice-digest.js";
-import type { NoticeRecord, NoticeSettleStatus } from "./pet-notice-ledger.js";
+import {
+  newNoticeRecordId,
+  type NoticeRecord,
+  type NoticeSettleStatus,
+} from "./pet-notice-ledger.js";
 import {
   hostTimezoneOffsetMin,
   route,
@@ -45,6 +49,13 @@ const DEFAULT_REPLAY_HOLD_MS = 10 * 60_000;
 const MAX_RULE_IDS = 100;
 const NO_KEYS: DedupeLookup = { has: () => false };
 const DISPOSED: RouteDecision = { outlet: "drop", reason: "disposed" };
+/**
+ * A route notice's gateway outbox keeps the file paths and may deliver after
+ * the router saw "accepted" (the gateway was stopped); its frozen copies stay
+ * this long, or until the record leaves the ledger.
+ */
+export const ROUTE_MEDIA_RETENTION_MS = 7 * 24 * 60 * 60_000;
+const MEDIA_RELEASED: ReadonlySet<NoticeSettleStatus> = new Set(["accepted", "revoked", "unknown"]);
 
 function payloadOf(notice: NoticeSubmission): NoticeImPayload {
   const nonDirect = notice.facts.nonDirectBody;
@@ -102,6 +113,8 @@ export class PetNoticeRouter {
   private readonly replaying = new Map<string, number>();
   /** Background media resends started by replayPending, not yet settled. */
   private readonly resends = new Set<Promise<void>>();
+  /** Records whose files are being frozen or submitted; the startup sweep keeps them. */
+  private readonly freezing = new Set<string>();
   private decisionQueue: Promise<unknown> = Promise.resolve();
   private recovered?: Promise<void>;
   private disposed = false;
@@ -280,9 +293,70 @@ export class PetNoticeRouter {
     if (this.recovered) await this.recovered;
     if (this.disposed) return { decision: DISPOSED };
     const body = composeNoticeBody(notice.kind, notice.facts, notice.body);
-    const plan = await this.serially(() => this.plan(notice, body));
-    const sent = await this.deliver(notice, body, plan);
-    return { decision: plan.decision, ...(sent ? { sent } : {}) };
+    // Files are copied before the decision queue, so a slow copy never holds up another notice.
+    const frozen = await this.freezeMedia(notice);
+    try {
+      const plan = await this.serially(() => this.plan(frozen.notice, body, frozen.id));
+      const sent = await this.deliver(frozen.notice, body, plan);
+      return { decision: plan.decision, ...(sent ? { sent } : {}) };
+    } finally {
+      if (frozen.id !== undefined) {
+        this.freezing.delete(frozen.id);
+        await this.releaseMediaIfDone(frozen.id);
+      }
+    }
+  }
+
+  /** Copy the notice's files under a record id chosen now; text-only when that fails. */
+  private async freezeMedia(
+    notice: NoticeSubmission,
+  ): Promise<{ notice: NoticeSubmission; id?: string }> {
+    const store = this.options.media;
+    if (!store || !this.options.ledger || !notice.media?.attachments?.length) return { notice };
+    const id = newNoticeRecordId();
+    this.freezing.add(id);
+    const { media: _original, ...rest } = notice;
+    const media = await store.freeze(id, notice.media);
+    return { notice: media ? { ...rest, media } : rest, id };
+  }
+
+  /**
+   * Whether a record's frozen files may still be sent: it is live (claimed,
+   * queued, held) or failed, or it is a route notice the gateway outbox may
+   * still deliver from the copies.
+   */
+  private needsMedia(record: NoticeRecord, now: number): boolean {
+    const status = record.delivery?.status;
+    if (status === "claimed" || status === "queued" || status === "held" || status === "failed")
+      return true;
+    return (
+      status === "accepted" &&
+      unpackFacts(record.facts).target.kind === "route" &&
+      now - record.createdAt < ROUTE_MEDIA_RETENTION_MS
+    );
+  }
+
+  /** Delete a record's frozen files once nothing can send them any more. */
+  private async releaseMediaIfDone(id: string): Promise<void> {
+    const store = this.options.media;
+    if (!store) return;
+    const record = this.options.ledger?.get(id);
+    if (record && !unpackFacts(record.facts).media?.attachments) return;
+    if (record && this.needsMedia(record, this.now())) return;
+    await store.release(id);
+  }
+
+  /** Startup: drop the folders of records that are gone or can no longer be sent. */
+  private async sweepMedia(): Promise<void> {
+    const store = this.options.media;
+    const ledger = this.options.ledger;
+    if (!store || !ledger) return;
+    const now = this.now();
+    await store.sweep((id) => {
+      if (this.freezing.has(id) || this.sending.has(id)) return true;
+      const record = ledger.get(id);
+      return record !== undefined && this.needsMedia(record, now);
+    });
   }
 
   /**
@@ -333,11 +407,7 @@ export class PetNoticeRouter {
     if (!ledger || this.disposed) return [];
     if (this.recovered) await this.recovered;
     const now = this.now();
-    try {
-      await ledger.expireQueued(now);
-    } catch (error) {
-      this.log("pet.notice.expire_failed", { error: errorText(error) });
-    }
+    await this.expireQueued(now);
     const holdMs = this.options.replayHoldMs ?? DEFAULT_REPLAY_HOLD_MS;
     for (const [id, at] of this.replaying) if (now - at >= holdMs) this.replaying.delete(id);
     const replay: ReplayedNotice[] = [];
@@ -498,12 +568,19 @@ export class PetNoticeRouter {
     for (const record of resend) {
       await this.recoverClaim(record);
     }
+    await this.expireQueued(now);
+    // Claims recovery marked unknown, expired and evicted records lose their files.
+    await this.sweepMedia();
+    if (!this.disposed) this.digest?.schedule();
+  }
+
+  private async expireQueued(now: number): Promise<void> {
     try {
-      await ledger.expireQueued(now);
+      const expired = await this.options.ledger!.expireQueued(now);
+      for (const record of expired) await this.releaseMediaIfDone(record.id);
     } catch (error) {
       this.log("pet.notice.expire_failed", { error: errorText(error) });
     }
-    if (!this.disposed) this.digest?.schedule();
   }
 
   private serially<T>(task: () => Promise<T>): Promise<T> {
@@ -525,7 +602,7 @@ export class PetNoticeRouter {
     return (this.options.timezoneOffsetMin ?? hostTimezoneOffsetMin)(ms);
   }
 
-  private async plan(notice: NoticeSubmission, body: string): Promise<NoticePlan> {
+  private async plan(notice: NoticeSubmission, body: string, id?: string): Promise<NoticePlan> {
     const now = this.now();
     const ledger = this.options.ledger;
     let counts = { sent: 0, p0Sent: 0 };
@@ -546,24 +623,27 @@ export class PetNoticeRouter {
     if (!ledger || !ledgerReady) return plan;
 
     try {
-      const record = await ledger.record({
-        kind: notice.kind,
-        priority: notice.priority,
-        dedupeKey: notice.dedupeKey,
-        ...(notice.sessionId !== undefined ? { sessionId: notice.sessionId } : {}),
-        ...(notice.requestId !== undefined ? { requestId: notice.requestId } : {}),
-        ...(notice.expiresAt !== undefined ? { expiresAt: notice.expiresAt } : {}),
-        ruleIds: notice.ruleIds.slice(0, MAX_RULE_IDS),
-        facts: {
-          ...notice.facts,
-          target: notice.target,
-          // A held notice keeps the channel it asked for, so its digest goes there too.
-          ...(notice.channel !== "auto" ? { channel: notice.channel } : {}),
-          ...(notice.media ? { media: notice.media } : {}),
+      const record = await ledger.record(
+        {
+          kind: notice.kind,
+          priority: notice.priority,
+          dedupeKey: notice.dedupeKey,
+          ...(notice.sessionId !== undefined ? { sessionId: notice.sessionId } : {}),
+          ...(notice.requestId !== undefined ? { requestId: notice.requestId } : {}),
+          ...(notice.expiresAt !== undefined ? { expiresAt: notice.expiresAt } : {}),
+          ruleIds: notice.ruleIds.slice(0, MAX_RULE_IDS),
+          facts: {
+            ...notice.facts,
+            target: notice.target,
+            // A held notice keeps the channel it asked for, so its digest goes there too.
+            ...(notice.channel !== "auto" ? { channel: notice.channel } : {}),
+            ...(notice.media ? { media: notice.media } : {}),
+          },
+          body,
+          decision,
         },
-        body,
-        decision,
-      });
+        id !== undefined ? { id } : {},
+      );
       plan.recordId = record.id;
     } catch (error) {
       this.log("pet.notice.record_failed", { kind: notice.kind, error: errorText(error) });
@@ -786,7 +866,9 @@ export class PetNoticeRouter {
       await this.options.ledger?.settle(id, status, error);
     } catch (failure) {
       this.log("pet.notice.settle_failed", { status, error: errorText(failure) });
+      return;
     }
+    if (MEDIA_RELEASED.has(status)) await this.releaseMediaIfDone(id);
   }
 
   private showDesktop(notice: NoticeSubmission, body: string): void {

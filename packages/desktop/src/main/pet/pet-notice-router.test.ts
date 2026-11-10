@@ -1,15 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PetNoticeLedger, type NoticeRecord } from "./pet-notice-ledger";
+import { NOTICE_RESEND_WINDOW_MS, PetNoticeLedger, type NoticeRecord } from "./pet-notice-ledger";
+import { PetNoticeMediaStore } from "./pet-notice-media";
 import type {
   DesktopPetProjectionEvent,
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator";
 import {
   PetNoticeRouter,
+  ROUTE_MEDIA_RETENTION_MS,
   type NoticeImPayload,
   type NoticeImSendResult,
   type NoticeConversation,
@@ -179,6 +181,7 @@ function harness(
     ledger?: PetNoticeLedger;
     clock?: FakeClock;
     failLedger?: "record" | "claim";
+    media?: PetNoticeMediaStore;
   } = {},
 ): Harness {
   const clock = options.clock ?? new FakeClock();
@@ -240,6 +243,7 @@ function harness(
         return state.imResult(call);
       },
     },
+    ...(options.media ? { media: options.media } : {}),
     log: (event, data) => logs.push({ event, data }),
   });
   return { clock, ledger, router, desktop, im, logs, state };
@@ -961,3 +965,140 @@ describe("PetNoticeRouter.recover", () => {
     ).toEqual([]);
   });
 });
+
+describe("PetNoticeRouter frozen media", () => {
+  const root = () => join(dir, "notice-media");
+  const folders = async () => (await readdir(root()).catch(() => [] as string[])).sort();
+  const button = { text: "打开", url: "https://example.com/r" };
+
+  async function report(content = "v1"): Promise<NoticeSubmission["media"]> {
+    const path = join(dir, "report.txt");
+    await writeFile(path, content);
+    return {
+      attachments: [{ kind: "file", name: "report.txt", mimeType: "text/plain", size: 2, path }],
+      button,
+    };
+  }
+
+  function mediaHarness(options: Parameters<typeof harness>[0] = {}) {
+    const logs: string[] = [];
+    const media = new PetNoticeMediaStore({ root: root(), log: (event) => logs.push(event) });
+    return { ...harness({ ...options, media }), mediaLogs: logs };
+  }
+
+  test("a resend sends the bytes frozen at submit, then the copy is deleted", async () => {
+    const h = mediaHarness();
+    h.state.channels.lark = "unavailable";
+    await h.router.submit(notice({ channel: "lark", media: await report("v1") }));
+    const [record] = h.ledger.queued();
+    expect(await folders()).toEqual([record!.id]);
+    await writeFile(join(dir, "report.txt"), "v2 changed after the notice");
+    h.state.channels.lark = "ready";
+    let sent: string | undefined;
+    h.state.imResult = async (call) => {
+      sent = await readFile(call.payload!.media!.attachments![0]!.path, "utf8");
+      return { accepted: true };
+    };
+    await h.router.replayPending("lark", DM);
+    await h.router.resendsSettled();
+    const file = h.im[0]!.payload!.media!.attachments![0]!;
+    expect(file).toMatchObject({
+      path: join(root(), record!.id, "0.txt"),
+      size: 2,
+      sha256: createHash("sha256").update("v1").digest("hex"),
+    });
+    expect(sent).toBe("v1");
+    expect(h.ledger.get(record!.id)?.delivery?.status).toBe("accepted");
+    expect(await folders()).toEqual([]);
+  });
+
+  test("a revoked or expired notice loses its copy", async () => {
+    const h = mediaHarness();
+    h.state.channels.lark = "unavailable";
+    h.state.pending.add("s-q/req-1");
+    await h.router.submit(
+      notice({ channel: "lark", sessionId: "s-q", requestId: "req-1", media: await report() }),
+    );
+    await h.router.submit(notice({ channel: "lark", media: await report() }));
+    expect(await folders()).toHaveLength(2);
+    await h.router.revokeDecision("s-q", "req-1");
+    expect(await folders()).toHaveLength(1);
+    h.clock.advance(25 * HOUR);
+    await h.router.replayPending("lark", DM);
+    expect(await folders()).toEqual([]);
+  });
+
+  test("a notice the desktop shows (no IM) keeps no copy", async () => {
+    const h = mediaHarness();
+    h.state.present = true;
+    expect(await h.router.submit(notice({ media: await report() }))).toMatchObject({
+      outlet: "desktop",
+    });
+    expect(await folders()).toEqual([]);
+  });
+
+  test("a route notice keeps its copy for the gateway outbox until retention ends", async () => {
+    const h = mediaHarness();
+    const route = { kind: "im-gateway" as const, channel: "telegram", target: "chat-9" };
+    await h.router.submit(
+      notice({ target: { kind: "route", route }, reply: true, media: await report() }),
+    );
+    expect(h.im).toHaveLength(1);
+    const kept = await folders();
+    expect(kept).toHaveLength(1);
+    expect(h.ledger.get(kept[0]!)?.delivery?.status).toBe("accepted");
+    // A restart inside the window keeps it; one after the window sweeps it.
+    await mediaHarness({ clock: h.clock, ledger: h.ledger }).router.recover();
+    expect(await folders()).toEqual(kept);
+    h.clock.advance(ROUTE_MEDIA_RETENTION_MS);
+    await mediaHarness({ clock: h.clock, ledger: h.ledger }).router.recover();
+    expect(await folders()).toEqual([]);
+  });
+
+  test("a file that cannot be copied sends the text (and button) only", async () => {
+    const h = mediaHarness();
+    const media = await report();
+    await rm(media!.attachments![0]!.path);
+    expect(await h.router.submit(notice({ channel: "lark", media }))).toMatchObject({
+      outlet: "both",
+      im: "lark",
+    });
+    expect(h.im[0]!.payload).toEqual({ kind: "session.done", media: { button } });
+    expect(h.mediaLogs).toEqual(["pet.notice.media_freeze_failed"]);
+    expect(await folders()).toEqual([]);
+  });
+
+  test("startup drops folders of unknown claims and of records that are gone", async () => {
+    const h = mediaHarness();
+    h.state.imResult = () => new Promise<NoticeImSendResult>(() => undefined);
+    void h.router.submit(notice({ channel: "lark", media: await report() }));
+    await waitUntil(async () => h.im.length === 1);
+    const [claimed] = await folders();
+    // An orphan from a record the ledger evicted long ago.
+    const orphan = "notice-00000000-0000-4000-8000-000000000000";
+    await mkdir(join(root(), orphan), { recursive: true });
+    h.router.dispose();
+    h.clock.advance(NOTICE_RESEND_WINDOW_MS);
+    const next = mediaHarness({ clock: h.clock, ledger: reopen(h.clock) });
+    next.state.idempotent.delete("lark");
+    await next.router.recover();
+    expect(next.ledger.get(claimed!)?.delivery?.status).toBe("unknown");
+    expect(await folders()).toEqual([]);
+  });
+
+  function reopen(clock: FakeClock): PetNoticeLedger {
+    return new PetNoticeLedger({
+      path: join(dir, "notices.json"),
+      now: () => clock.now,
+      localHourKey: plus8HourKey,
+    });
+  }
+});
+
+async function waitUntil(condition: () => Promise<boolean>): Promise<void> {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    if (await condition()) return;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  throw new Error("condition not met");
+}

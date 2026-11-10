@@ -113,6 +113,17 @@ export class PetNoticeLedgerError extends Error {
 const SCHEMA_VERSION = 1;
 const DEFAULT_MAX_RECORDS = 5_000;
 const DEFAULT_MAX_BYTES = 8 * 1024 * 1024;
+const RECORD_ID = /^notice-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
+
+/** A fresh ledger record id (`notice-<uuid>`). */
+export function newNoticeRecordId(): string {
+  return `notice-${randomUUID()}`;
+}
+
+export function isNoticeRecordId(value: string): boolean {
+  return RECORD_ID.test(value);
+}
+
 /** A key seen within this window is a duplicate, even after its record was evicted. */
 export const NOTICE_DEDUPE_RETENTION_MS = 7 * 24 * 60 * 60_000;
 /** A claim younger than this at startup is resent; older ones are marked unknown. */
@@ -539,11 +550,15 @@ export class PetNoticeLedger {
    * and an existing index entry keeps its first time, so a key repeated
    * every day still ages out 7 days after it was first seen.
    */
-  record(notice: NoticeRecordInput): Promise<NoticeRecord> {
+  record(notice: NoticeRecordInput, options: { id?: string } = {}): Promise<NoticeRecord> {
     const snapshot = structuredClone(notice);
+    const id = options.id;
     return this.mutate((staged, touched) => {
+      // A caller-chosen id (from newNoticeRecordId) lets files be frozen under it first.
+      if (id !== undefined && (!isNoticeRecordId(id) || staged.records.has(id)))
+        throw new PetNoticeLedgerError("invalid_notice");
       const createdAt = this.timestamp();
-      const record = normalizeInput(snapshot, `notice-${randomUUID()}`, createdAt);
+      const record = normalizeInput(snapshot, id ?? newNoticeRecordId(), createdAt);
       staged.records.set(record.id, record);
       if (record.decision?.outlet !== "drop") {
         const hash = hex24(record.dedupeKey);

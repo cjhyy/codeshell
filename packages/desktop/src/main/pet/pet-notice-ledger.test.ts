@@ -10,6 +10,7 @@ import {
   NOTICE_RESEND_WINDOW_MS,
   PetNoticeLedger,
   PetNoticeLedgerError,
+  newNoticeRecordId,
   type NoticeDeliveryStatus,
   type NoticeRecord,
   type NoticeRecordInput,
@@ -141,6 +142,19 @@ describe("record", () => {
       a.record(draft({ delivery: { status: "accepted" as "held" } })),
     ).rejects.toMatchObject({ code: "invalid_notice" });
     await expect(readFile(filePath, "utf8")).rejects.toThrow();
+  });
+
+  test("a caller-chosen record id is used once, and only in the ledger's own format", async () => {
+    const a = ledger();
+    const id = newNoticeRecordId();
+    expect((await a.record(draft(), { id })).id).toBe(id);
+    expect(a.get(id)?.delivery).toBeUndefined();
+    await expect(a.record(draft({ dedupeKey: "again" }), { id })).rejects.toMatchObject({
+      code: "invalid_notice",
+    });
+    await expect(a.record(draft({ dedupeKey: "bad" }), { id: "../x" })).rejects.toMatchObject({
+      code: "invalid_notice",
+    });
   });
 
   test("a digest decision starts held; a queued decision starts queued with a 24 h expiry", async () => {

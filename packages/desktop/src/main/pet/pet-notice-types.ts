@@ -54,13 +54,18 @@ export type NoticeTarget =
   | { kind: "route"; route: PetLongTaskCompletionTarget }
   | { kind: "owner" };
 
-/** One file a notice carries, as a validated descriptor (the path is read only at send time). */
+/**
+ * One file a notice carries, as a validated descriptor. Once the router has
+ * recorded the notice, `path` points at the notice's own frozen copy (see
+ * pet-notice-media.ts) and `sha256` is that copy's digest.
+ */
 export interface NoticeMediaAttachment {
   kind: "image" | "file" | "audio" | "video";
   name: string;
   mimeType: string;
   size: number;
   path: string;
+  sha256?: string;
 }
 
 /** Files and a URL action that travel with a notice's text (e.g. a closure GatewayReply draft). */
@@ -72,6 +77,7 @@ export interface NoticeMedia {
 export const MAX_NOTICE_ATTACHMENTS = 4;
 export const MAX_NOTICE_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const ATTACHMENT_KINDS = new Set(["image", "file", "audio", "video"]);
+const SHA256 = /^[0-9a-f]{64}$/u;
 
 function boundedText(value: unknown, max: number): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= max;
@@ -92,10 +98,19 @@ export function parseNoticeMedia(value: unknown): NoticeMedia | undefined {
             Number.isSafeInteger(entry.size) &&
             entry.size >= 0 &&
             entry.size <= MAX_NOTICE_ATTACHMENT_BYTES &&
-            boundedText(entry.path, 4_096),
+            boundedText(entry.path, 4_096) &&
+            (entry.sha256 === undefined ||
+              (typeof entry.sha256 === "string" && SHA256.test(entry.sha256))),
         )
         .slice(0, MAX_NOTICE_ATTACHMENTS)
-        .map(({ kind, name, mimeType, size, path }) => ({ kind, name, mimeType, size, path }))
+        .map(({ kind, name, mimeType, size, path, sha256 }) => ({
+          kind,
+          name,
+          mimeType,
+          size,
+          path,
+          ...(sha256 !== undefined ? { sha256 } : {}),
+        }))
     : [];
   const raw = value.button;
   const button =
@@ -107,6 +122,20 @@ export function parseNoticeMedia(value: unknown): NoticeMedia | undefined {
       : undefined;
   if (attachments.length === 0 && !button) return undefined;
   return { ...(attachments.length > 0 ? { attachments } : {}), ...(button ? { button } : {}) };
+}
+
+/** Files a notice carries, copied once per record so every (re)send sends the same bytes. */
+export interface NoticeMediaFreezer {
+  /**
+   * Copy the attachments into the record's own folder and return descriptors
+   * that point at the copies. Never throws: when any copy fails the notice
+   * goes out text-only (its URL button kept), so a file can never hold it up.
+   */
+  freeze(recordId: string, media: NoticeMedia): Promise<NoticeMedia | undefined>;
+  /** Delete the record's folder (best effort, never throws). */
+  release(recordId: string): Promise<void>;
+  /** Delete every record folder that `keep` does not claim (best effort). */
+  sweep(keep: (recordId: string) => boolean): Promise<void>;
 }
 
 /** One notice handed to `PetNoticeRouter.submit`. */
@@ -246,6 +275,8 @@ export interface PetNoticeRouterOptions extends PetAttentionOptions {
   imTimeoutMs?: number;
   /** How long replayed notices stay withheld without markReplayed/releaseReplay (default 10 min). */
   replayHoldMs?: number;
+  /** Copies a notice's files per record; without it attachments are read from their paths. */
+  media?: NoticeMediaFreezer;
   log?: (event: string, data: Record<string, unknown>) => void;
 }
 
