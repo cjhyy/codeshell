@@ -5,7 +5,6 @@ import {
   notifyBackgroundResult,
   notifyMissingAutomationResumeTarget,
   notifyMissedAutomation,
-  notifyPetTaskClosure,
   type DesktopNotificationSink,
 } from "./desktop-notification-routes.js";
 import type { DesktopNotificationInput } from "./desktop-notifier.js";
@@ -53,17 +52,6 @@ function notifyResult(
 }
 
 describe("desktop notification routes", () => {
-  it("routes a Mimi closure with its durable delivery key", async () => {
-    const { sink, calls } = fixture();
-    await notifyPetTaskClosure(sink, {
-      deliveryKey: "closure-1",
-      title: "done",
-      message: "result",
-      taskId: "task-1",
-    });
-    expect(calls).toEqual([{ key: "closure-1", title: "done", body: "result" }]);
-  });
-
   it("marks a missing automation resume target urgent", async () => {
     const { sink, calls } = fixture();
     await notifyMissingAutomationResumeTarget(sink, cronJob());

@@ -80,6 +80,12 @@ import {
   reportToMimiToolDef,
   type PetReportToMimiSink,
 } from "./report-to-mimi.js";
+import {
+  notifyMeAvailability,
+  notifyMeTool,
+  notifyMeToolDef,
+  type NoticeRuleHostRequester,
+} from "./notify-me.js";
 import { validatePetRunParams } from "./run-params.js";
 
 /**
@@ -128,18 +134,28 @@ function buildPetParts(): PetParts {
     closedSessions.add(sessionId);
     if (closedSessions.size > 4096) closedSessions.delete(closedSessions.values().next().value!);
   };
-  const reportFor = (sessionId?: string): PetReportToMimiSink | undefined => {
+  /** The one attached observer host that owns `sessionId`; undefined when absent or ambiguous. */
+  const hostFor = (sessionId?: string): ProtocolObserverHost | undefined => {
     if (!sessionId) return undefined;
     const live = [...reporters.keys()].filter((host) => !host.isTransportDisconnected());
     const owners = live.filter((host) => attached.get(host)?.has(sessionId));
-    if (owners.length) return owners.length === 1 ? reporters.get(owners[0]!) : undefined;
+    if (owners.length) return owners.length === 1 ? owners[0] : undefined;
     if (closedSessions.has(sessionId)) return undefined;
     const residents = live.filter((host) =>
       host.getLiveSessionSnapshot().some((session) => session.sessionId === sessionId),
     );
-    if (residents.length) return residents.length === 1 ? reporters.get(residents[0]!) : undefined;
+    if (residents.length) return residents.length === 1 ? residents[0] : undefined;
     // The single-host path also serves child Sessions without a ChatSession entry.
-    return !sharedAcrossHosts && live.length === 1 ? reporters.get(live[0]!) : undefined;
+    return !sharedAcrossHosts && live.length === 1 ? live[0] : undefined;
+  };
+  const reportFor = (sessionId?: string): PetReportToMimiSink | undefined => {
+    const host = hostFor(sessionId);
+    return host ? reporters.get(host) : undefined;
+  };
+  const ruleRequesterFor = (sessionId?: string): NoticeRuleHostRequester | undefined => {
+    const host = hostFor(sessionId);
+    const request = host?.requestHostAction;
+    return request ? (sid, action, args) => request.call(host, sid, action, args) : undefined;
   };
   const createProtocolObserver = (host: ProtocolObserverHost) => {
     reporters.set(host, (event) =>
@@ -203,6 +219,21 @@ function buildPetParts(): PetParts {
           presetTags: ["harness-min", "general"],
           defaultPermissionRules: [{ tool: reportToMimiToolDef.name, decision: "allow" }],
           availability: reportToMimiAvailability,
+        },
+      },
+      {
+        definition: {
+          ...notifyMeToolDef,
+          source: "builtin",
+          permissionDefault: "allow",
+          isReadOnly: false,
+          isConcurrencySafe: false,
+        },
+        execute: (args, ctx) => notifyMeTool(args, ctx, ruleRequesterFor(ctx?.sessionId)),
+        exposure: {
+          presetTags: ["harness-min", "general"],
+          defaultPermissionRules: [{ tool: notifyMeToolDef.name, decision: "allow" }],
+          availability: notifyMeAvailability,
         },
       },
       {

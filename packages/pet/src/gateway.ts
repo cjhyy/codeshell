@@ -246,15 +246,16 @@ function parseCapabilities(value: unknown): PetGatewayChannelCapabilities | unde
   if (!inboundAttachments || !isRecord(value.outbound) || value.outbound.text !== true) {
     return undefined;
   }
+  const outboundRecord = value.outbound;
   if (
-    Object.keys(value.outbound).some(
+    Object.keys(outboundRecord).some(
       (key) =>
         ![
           "text",
           // `proactive` is part of the chat package's capability shape. It was
-          // missing from this allowlist, and the check rejects ANY unknown key —
-          // so every real channel failed catalog validation and Mimi silently
-          // lost Gateway discovery on IM turns.
+          // missing from this allowlist, and the check used to reject ANY
+          // unknown key — so every real channel failed catalog validation and
+          // Mimi silently lost Gateway discovery on IM turns.
           "proactive",
           "direct",
           "maxTextLength",
@@ -262,7 +263,13 @@ function parseCapabilities(value: unknown): PetGatewayChannelCapabilities | unde
           "attachments",
           "maxAttachments",
           "maxAttachmentBytes",
-        ].includes(key),
+        ].includes(key) &&
+        // A newer host's additive boolean flag is ignored (not carried into the catalog) instead of
+        // invalidating every channel. Unknown keys of any other shape are still rejected. This
+        // tolerance is only safe for flags whose ABSENCE is the conservative default. A future
+        // restrictive flag (e.g. `restricted: true`) must not rely on it: an older parser would
+        // drop it and behave permissively.
+        typeof outboundRecord[key] !== "boolean",
     ) ||
     (value.outbound.button !== "native" && value.outbound.button !== "link")
   ) {

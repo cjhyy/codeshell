@@ -248,6 +248,72 @@ export function buildWorkspaceActionReply(
   });
 }
 
+// ── __host_action__ (generic extension-module → host request) ──────────────
+// Emitted by ProtocolObserverHost.requestHostAction (core protocol/server.ts).
+// Main dispatches by `action` to a handler registered on AgentBridge and
+// answers with the JSON result (`{ ok:false, error }` on failure).
+
+/** Routing fields every `__host_action__` reply must echo back. */
+export interface HostActionEnvelope {
+  connectionId?: string;
+  generation?: number;
+  sessionId?: string;
+  requestId: string;
+}
+
+export interface ParsedHostAction extends HostActionEnvelope {
+  action: string;
+  args: Record<string, unknown>;
+}
+
+/**
+ * The reply envelope of any `__host_action__` approval request, even one whose
+ * args are malformed, so main can still answer (and consume) it. Null for
+ * every other line, or when there is no requestId to answer.
+ */
+export function parseHostActionEnvelope(line: string): HostActionEnvelope | null {
+  let msg: any;
+  try {
+    msg = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  if (!msg || msg.method !== Methods.ApprovalRequest) return null;
+  const p = msg.params;
+  if (!p || typeof p.requestId !== "string") return null;
+  if (!p.request || p.request.toolName !== "__host_action__") return null;
+  return {
+    ...(typeof p.connectionId === "string" ? { connectionId: p.connectionId } : {}),
+    ...(typeof p.generation === "number" ? { generation: p.generation } : {}),
+    sessionId: typeof p.sessionId === "string" ? p.sessionId : undefined,
+    requestId: p.requestId,
+  };
+}
+
+export function parseHostActionLine(line: string): ParsedHostAction | null {
+  const envelope = parseHostActionEnvelope(line);
+  if (!envelope) return null;
+  const a = (JSON.parse(line) as any).params.request.args;
+  if (!a || typeof a !== "object" || typeof a.action !== "string") return null;
+  if (!a.args || typeof a.args !== "object" || Array.isArray(a.args)) return null;
+  return { ...envelope, action: a.action, args: a.args as Record<string, unknown> };
+}
+
+export function buildHostActionReply(parsed: HostActionEnvelope, resultJson: string): string {
+  return JSON.stringify({
+    jsonrpc: "2.0",
+    id: replyId(),
+    method: "agent/approve",
+    params: {
+      ...(parsed.connectionId ? { connectionId: parsed.connectionId } : {}),
+      ...(parsed.generation !== undefined ? { generation: parsed.generation } : {}),
+      sessionId: parsed.sessionId,
+      requestId: parsed.requestId,
+      decision: { approved: true, answer: resultJson },
+    },
+  });
+}
+
 // ── __panel_action__ (Panel tool) ──────────────────────────────────────────
 
 export interface ParsedPanelAction {

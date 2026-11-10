@@ -49,6 +49,12 @@ interface PetLongTaskCoordinatorOptions {
   launcher: { start(delegation: PetAutoDelegation): Promise<PetWorkDelegationLaunch> };
   now?: () => number;
   onTaskClosed?: (task: PetLongTask) => Promise<void>;
+  /**
+   * A delegation's worker run was accepted: a new launch or continuation
+   * (not an idempotent replay), a resume, or a retry, whose failed attempt
+   * spent the previous rule. Failures are reported and never fail the launch.
+   */
+  onDelegationStarted?: (task: PetLongTask) => Promise<void>;
   onTaskWorkMemory?: (task: PetLongTask) => Promise<void>;
   onBackgroundError?: (operation: string, error: unknown) => void;
 }
@@ -178,7 +184,8 @@ function projectionPredatesCurrentAttempt(
   return sessionAt < currentAttemptStartedAt(task);
 }
 
-function topLevelEvent(value: unknown): Record<string, unknown> | null {
+/** A Session stream event from the top-level agent (child-agent events carry `agentId`). */
+export function topLevelEvent(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const event = value as Record<string, unknown>;
   return typeof event.type === "string" && event.agentId === undefined ? event : null;
@@ -381,6 +388,7 @@ export class PetLongTaskCoordinator {
         at: this.now(),
         message: "The worker accepted the long-running task",
       });
+      await this.delegationStarted(running);
       return { ...launch, taskId: running.id };
     } catch (error) {
       const failed = await this.options.store.transition(task.id, {
@@ -390,6 +398,15 @@ export class PetLongTaskCoordinator {
       });
       await this.notifyClosed(failed);
       throw error;
+    }
+  }
+
+  /** The worker owns the run now; a hook failure must not turn into a failed launch. */
+  private async delegationStarted(task: PetLongTask): Promise<void> {
+    try {
+      await this.options.onDelegationStarted?.(task);
+    } catch (error) {
+      this.options.onBackgroundError?.("delegationStarted", error);
     }
   }
 
@@ -1058,8 +1075,12 @@ export class PetLongTaskCoordinator {
         ...(resumed.verificationMode === "goal" ? { goalObjective: resumed.objective } : {}),
         workspacePath: resumed.workspacePath,
         targetSessionId: resumed.sessionId,
+        ...(resumed.completionTarget ? { completionTarget: resumed.completionTarget } : {}),
+        redrive: true,
       });
-      return { ok: true, task: this.options.store.get(task.id) ?? resumed };
+      const current = this.options.store.get(task.id) ?? resumed;
+      await this.delegationStarted(current);
+      return { ok: true, task: current };
     } catch (error) {
       const interrupted = await this.options.store.transition(task.id, {
         kind: "interrupted",
@@ -1126,12 +1147,20 @@ export class PetLongTaskCoordinator {
         ...(retrying.verificationMode === "goal" ? { goalObjective: retrying.objective } : {}),
         workspacePath: retrying.workspacePath,
         targetSessionId: retrying.sessionId,
+        ...(retrying.completionTarget ? { completionTarget: retrying.completionTarget } : {}),
+        // A delegation the worker never accepted never delivered its brief.
+        // (A retry clears startedAt, so earlier accepted attempts count too.)
+        ...(task.startedAt !== undefined || task.events.some((event) => event.kind === "started")
+          ? { redrive: true }
+          : {}),
       });
       const started = await this.options.store.transition(task.id, {
         kind: "started",
         at: this.now(),
         message: `Retry attempt ${retrying.attempt} started`,
       });
+      // The failed attempt's closure spent the automatic rule; arm it again.
+      await this.delegationStarted(started);
       return { ok: true, task: started };
     } catch (error) {
       const failed = await this.options.store.transition(task.id, {

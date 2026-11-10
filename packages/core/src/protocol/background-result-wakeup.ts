@@ -168,6 +168,7 @@ export async function wakeSessionForBackgroundResults({
   try {
     const result = await session.enqueueTurn(task, {
       injected: true,
+      trigger: "background_wake",
       ...runWorkspace,
       onStream: (event) => {
         // Native terminal events are synthesized by the host. Its returned

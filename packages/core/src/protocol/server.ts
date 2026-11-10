@@ -100,7 +100,7 @@ import {
 import { logger } from "../logging/logger.js";
 import { nanoid } from "nanoid";
 import { UserDecisionLifecycle } from "./user-decision-lifecycle.js";
-import type { ChatSession } from "./chat-session.js";
+import { withRunTrigger, type ChatSession } from "./chat-session.js";
 import type { ChatSessionManager, EngineConfigSlice } from "./chat-session-manager.js";
 import { wakeSessionForBackgroundResults } from "./background-result-wakeup.js";
 import { assertSafeSessionId, SessionManager } from "../session/session-manager.js";
@@ -118,6 +118,12 @@ import { LifetimeScope } from "../composition/lifetime.js";
 import type { ResolvedComposition } from "../composition/types.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { SessionWorkspaceRpcHandlers } from "./session-workspace-rpc.js";
+import {
+  hostActionLoopback,
+  settleObjectHostReply,
+  workspaceActionLoopback,
+} from "./host-action.js";
+import type { HostLoopbackOutcome, HostLoopbackRequest } from "./host-action.js";
 import {
   describePluginCommands,
   expandPluginCommandBody,
@@ -246,7 +252,7 @@ function hostLoopbackDetail(result: unknown): string | undefined {
 function parseHostLoopbackDecision(
   decision: unknown,
   label: string,
-): { ok: true; value: unknown } | { ok: false; failure: HostLoopbackFailure; detail: string } {
+): HostLoopbackOutcome<HostLoopbackFailure> {
   const cancelled = asInternalCancellation(decision);
   if (cancelled) {
     return {
@@ -667,6 +673,12 @@ export class AgentServer {
       },
       isTransportDisconnected: () => this.transportDisconnected,
       notify: (method, params) => this.notify(method, params),
+      requestHostAction: async (sessionId, action, args) => {
+        const request = hostActionLoopback(action, args);
+        const session = this.chatManager?.get(sessionId);
+        if (!session) throw new Error(`session not live: ${sessionId}`);
+        return this.requestHostLoopback(session, sessionId, request);
+      },
     };
     this.moduleReady = attachProtocolContributions({
       composition,
@@ -970,9 +982,7 @@ export class AgentServer {
         backend.clearSession(input.sessionId);
         if (active) clearSessionPathApprovals(input.sessionId);
         for (const id of scope.pending) {
-          const entry = this.takeSessionApproval(session, id, "cancelled");
-          this.clearApprovalTimer(id);
-          this.pendingApprovalTargets.delete(id);
+          const entry = this.retireSessionApproval(session, id, "cancelled");
           entry?.resolve(
             entry.metadata.kind === "internal"
               ? internalCancellation(closedFailure.failure, closedFailure.reason)
@@ -1182,6 +1192,7 @@ export class AgentServer {
       // persisted binding, so a stale source catalog cannot switch it back.
       workspaceProfile: targetAlreadyExists ? undefined : input.target.workspaceProfile,
       sessionMessageTargets: input.catalog,
+      trigger: "host_message",
       onStream: (event: StreamEvent) => {
         if (event.type === "session_started" && !state.started) {
           state.started = true;
@@ -1368,6 +1379,7 @@ export class AgentServer {
   }
 
   private observeApprovalTransition(metadata: PendingApprovalMetadata, status: string): void {
+    this.userDecisions.hooks.retired(metadata, status);
     this.forEachObserver("onApprovalTransition", (observer) =>
       observer.onApprovalTransition?.(metadata, status),
     );
@@ -1834,6 +1846,7 @@ export class AgentServer {
           displayText: displayText || undefined,
           injected: params.injected === true,
           attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
+          trigger: "user",
           onStream: (event: StreamEvent) => {
             acceptance.observe(event);
             this.observeSessionStream(sid, event);
@@ -1984,7 +1997,8 @@ export class AgentServer {
     const acceptance = runAcceptance(params, req.id, (payload) =>
       this.notify(Methods.RunAccepted, payload),
     );
-    const streamToClient = (event: StreamEvent) => {
+    const streamToClient = (raw: StreamEvent) => {
+      const event = withRunTrigger(raw, "user");
       acceptance.observe(event);
       this.notify(Methods.StreamEvent, { sessionId: params.sessionId ?? "", event });
     };
@@ -2148,9 +2162,7 @@ export class AgentServer {
       }
       if (entry.metadata.expiresAt !== undefined && Date.now() >= entry.metadata.expiresAt) {
         if (entry.metadata.kind === "internal") {
-          this.takeSessionApproval(s, params.requestId, "expired");
-          this.pendingApprovalTargets.delete(params.requestId);
-          this.clearApprovalTimer(params.requestId);
+          this.retireSessionApproval(s, params.requestId, "expired");
           entry.resolve(internalCancellation("timed_out", "host operation timed out"));
         } else {
           this.finishSessionUserDecision(
@@ -2207,9 +2219,7 @@ export class AgentServer {
           if (s.pendingApprovals.get(params.requestId) !== entry) {
             throw new Error("Question was cancelled before the answer was accepted");
           }
-          this.takeSessionApproval(s, params.requestId, "resolved");
-          this.pendingApprovalTargets.delete(params.requestId);
-          this.clearApprovalTimer(params.requestId);
+          this.retireSessionApproval(s, params.requestId, "resolved");
           this.notifyDecisionResolved(
             {
               connectionId: this.connectionId,
@@ -4005,6 +4015,7 @@ export class AgentServer {
     const requestingRun = session.settled;
     let answerActive = true;
     session.lastActivityAt = Date.now();
+    this.userDecisions.hooks.describe(requestId, { question, header: opts?.header });
     this.registerSessionApproval(
       session,
       {
@@ -4077,9 +4088,7 @@ export class AgentServer {
         },
       });
     } catch (error) {
-      this.takeSessionApproval(session, requestId, "cancelled");
-      this.pendingApprovalTargets.delete(requestId);
-      this.clearApprovalTimer(requestId);
+      this.retireSessionApproval(session, requestId, "cancelled");
       return Promise.reject(error);
     }
     return Promise.resolve(
@@ -4177,9 +4186,7 @@ export class AgentServer {
 
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
-          this.takeSessionApproval(session, requestId, "expired");
-          this.pendingApprovalTargets.delete(requestId);
-          this.approvalTimers.delete(requestId);
+          this.retireSessionApproval(session, requestId, "expired");
           scope?.pending.delete(requestId);
           resolve({
             ok: false,
@@ -4244,9 +4251,7 @@ export class AgentServer {
 
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
-          this.takeSessionApproval(session, requestId, "expired");
-          this.pendingApprovalTargets.delete(requestId);
-          this.approvalTimers.delete(requestId);
+          this.retireSessionApproval(session, requestId, "expired");
           scope?.pending.delete(requestId);
           resolve({
             ok: false,
@@ -4381,9 +4386,7 @@ export class AgentServer {
 
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
-          this.takeSessionApproval(session, requestId, "expired");
-          this.pendingApprovalTargets.delete(requestId);
-          this.approvalTimers.delete(requestId);
+          this.retireSessionApproval(session, requestId, "expired");
           resolve({
             ok: false,
             failure: "timed_out" as const,
@@ -4410,11 +4413,11 @@ export class AgentServer {
     sessionId: string,
     target: string,
   ): Promise<import("../types.js").SessionWorkspace> {
-    return (await this.requestWorkspaceActionForSession(
+    const request = workspaceActionLoopback("switch", target);
+    return (await this.requestHostLoopback(
       session,
       sessionId,
-      "switch",
-      target,
+      request,
     )) as import("../types.js").SessionWorkspace;
   }
 
@@ -4435,12 +4438,12 @@ export class AgentServer {
     const registration = this.approvalRouter.register(source.id, this.connectionId);
     if (!registration.ok)
       throw new Error(`source Session ${source.id} is owned by another connection`);
-    const resolved = (await this.requestWorkspaceActionForSession(
-      source,
-      source.id,
-      "resolve_session_run",
-      targetId,
-    )) as { cwd?: unknown; workspaceContext?: unknown; projectTrusted?: unknown };
+    const request = workspaceActionLoopback("resolve_session_run", targetId);
+    const resolved = (await this.requestHostLoopback(source, source.id, request)) as {
+      cwd?: unknown;
+      workspaceContext?: unknown;
+      projectTrusted?: unknown;
+    };
     if (
       typeof resolved.cwd !== "string" ||
       !resolved.cwd ||
@@ -4461,64 +4464,47 @@ export class AgentServer {
     return { cwd: resolved.cwd, workspaceContext, projectTrusted: resolved.projectTrusted };
   }
 
-  private requestWorkspaceActionForSession(
+  /** Object-replying internal loopback shared by workspace and generic host actions. */
+  private requestHostLoopback(
     session: ChatSession,
     sessionId: string,
-    action: "switch" | "resolve_session_run",
-    target: string,
+    { toolName, args, label, description }: HostLoopbackRequest,
   ): Promise<unknown> {
-    const label = action === "switch" ? "workspace switch" : "Session workspace resolution";
     return new Promise((resolve, reject) => {
       const requestId = nanoid(12);
       const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);
       this.registerSessionApproval(
         session,
-        this.internalPendingMetadata(sessionId, requestId, routeEnvelope, "__workspace_action__"),
+        this.internalPendingMetadata(sessionId, requestId, routeEnvelope, toolName),
         (decision: unknown) => {
           this.clearApprovalTimer(requestId);
           const outcome = parseHostLoopbackDecision(decision, label);
-          if (!outcome.ok) {
-            reject(new Error(outcome.detail));
-            return;
+          try {
+            resolve(settleObjectHostReply(outcome, label, HOST_LOOPBACK_FAILURE_DETAIL.malformed));
+          } catch (error) {
+            reject(error);
           }
-          const parsed = outcome.value as { ok?: false; error?: string };
-          // A workspace is always an object. Reject any other JSON shape rather
-          // than resolving it: `null` / a bare number / a string would otherwise
-          // be handed to setSessionWorkspace as if the switch had succeeded,
-          // rebasing the session onto a non-workspace. (Previously a `"ok" in
-          // parsed` TypeError happened to be caught and turned into a rejection;
-          // this states the requirement instead of relying on that.)
-          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-            reject(new Error(`${label} ${HOST_LOOPBACK_FAILURE_DETAIL.malformed}`));
-            return;
-          }
-          if ("ok" in parsed && parsed.ok === false) {
-            reject(new Error(parsed.error ?? `${label} failed`));
-            return;
-          }
-          resolve(parsed);
         },
       );
 
       const timer = setTimeout(() => {
         if (session.pendingApprovals.has(requestId)) {
-          this.takeSessionApproval(session, requestId, "expired");
-          this.pendingApprovalTargets.delete(requestId);
-          this.approvalTimers.delete(requestId);
+          this.retireSessionApproval(session, requestId, "expired");
           reject(new Error(`${label} ${HOST_LOOPBACK_FAILURE_DETAIL.timed_out}`));
         }
       }, AgentServer.APPROVAL_TIMEOUT_MS);
       this.approvalTimers.set(requestId, timer);
 
-      this.notify(Methods.ApprovalRequest, {
-        ...routeEnvelope,
-        request: {
-          toolName: "__workspace_action__",
-          args: { action, target },
-          description: `workspace:${action}:${target}`,
-          riskLevel: "low" as const,
-        },
-      });
+      try {
+        this.notify(Methods.ApprovalRequest, {
+          ...routeEnvelope,
+          request: { toolName, args, description, riskLevel: "low" as const },
+        });
+      } catch (error) {
+        // Never reached the host: retire the wait now instead of at the timeout.
+        this.retireSessionApproval(session, requestId, "cancelled");
+        reject(error);
+      }
     });
   }
 
@@ -4726,6 +4712,14 @@ export class AgentServer {
     scope?: ChildHostScope,
   ): void {
     this.userDecisions.register(session, metadata, resolve, scope);
+  }
+
+  /** Retire a session wait: its pending entry, route target and timer/deadline. */
+  private retireSessionApproval(session: ChatSession, requestId: string, status: string) {
+    const entry = this.takeSessionApproval(session, requestId, status);
+    this.pendingApprovalTargets.delete(requestId);
+    this.clearApprovalTimer(requestId);
+    return entry;
   }
 
   private takeSessionApproval(

@@ -10,6 +10,8 @@ import {
   MAX_MCP_CONNECT_TIMEOUT_MS,
 } from "../tool-system/mcp-connection-policy.js";
 const DEFAULT_WORKTREE_BRANCH_PREFIX = "worktree/";
+/** 24-hour local clock time, "00:00" to "23:59". */
+const PET_HH_MM = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;
 const McpToolNameListSchema = z
   .array(
     z
@@ -149,6 +151,40 @@ export const SettingsSchema = z
             customInstructions: z.string().max(6_000).optional(),
           })
           .optional(),
+        /**
+         * How Mimi reaches the owner about work Sessions (desktop notices and
+         * IM pushes). Every field is optional and bounded; an out-of-range or
+         * malformed value is dropped (the host default applies) instead of
+         * invalidating the whole settings file.
+         */
+        notifications: z
+          .object({
+            /**
+             * Local-time window when only decisions are pushed. `enabled: false`
+             * turns it off while keeping the times. A null (which the settings
+             * writer treats as "delete this key") resets it to the host default.
+             */
+            quietHours: z
+              .object({
+                start: z.string().regex(PET_HH_MM),
+                end: z.string().regex(PET_HH_MM),
+                enabled: z.boolean().optional(),
+              })
+              .optional()
+              .catch(undefined),
+            /** Ordinary IM pushes per local clock hour (resets on the hour). */
+            maxPerHour: z.number().int().min(1).max(60).optional().catch(undefined),
+            /** Decision (P0) IM pushes per local clock hour (resets on the hour). */
+            maxP0PerHour: z.number().int().min(1).max(120).optional().catch(undefined),
+            /** Seconds a burst of notices is merged into one digest. */
+            mergeWindowSec: z.number().int().min(0).max(3_600).optional().catch(undefined),
+            /** Seconds of system idle after which the owner counts as away. */
+            presenceIdleSec: z.number().int().min(30).max(1_800).optional().catch(undefined),
+            /** Where a desktop-started delegation's result goes when no rule names a channel. */
+            delegatedFromDesktop: z.enum(["auto", "desktop"]).optional().catch(undefined),
+          })
+          .optional()
+          .catch(undefined),
       })
       .default({}),
 

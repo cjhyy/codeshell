@@ -6,6 +6,7 @@ import {
 } from "@cjhyy/code-shell-server/mobile-remote";
 import { markAttachmentsSent } from "@cjhyy/code-shell-server/storage";
 import { preparePetDelegationAttachments } from "./pet-delegation-attachments.js";
+import { delegatedRunText } from "./pet-delegation-brief.js";
 import type { PetAutoDelegation } from "./pet-dispatch-service.js";
 
 export interface PetWorkDelegationLaunch {
@@ -56,6 +57,8 @@ export class PetWorkDelegationHost {
       noWorkspaceCwd: string;
       /** Persisted effective workspace of an existing Session, supplied by the Host. */
       resolveSessionCwd?: (sessionId: string) => Promise<string | undefined>;
+      /** Display name of an IM channel id for the delegation brief (微信, 飞书, …). */
+      channelLabel?: (channel: string) => string | undefined;
     },
   ) {}
 
@@ -103,10 +106,13 @@ export class PetWorkDelegationHost {
     // (credentials, browser partition) — especially if the reuse run is then
     // rejected and the entry is intentionally kept.
     if (!wasKnownToHost) this.options.bridge.reserveHostSession(sessionId, cwd);
+    // The first message of a delegation tells the model who started it; every
+    // display surface shows the owner's objective (displayText) instead.
+    const runText = delegatedRunText(delegation, this.options.channelLabel);
     let prepared: Awaited<ReturnType<typeof preparePetDelegationAttachments>>;
     try {
       prepared = await preparePetDelegationAttachments({
-        task: delegation.task,
+        task: runText.task,
         cwd,
         sessionId,
         inputAttachments: delegation.inputAttachments,
@@ -120,6 +126,7 @@ export class PetWorkDelegationHost {
             sessionId,
             cwd,
             clientMessageId: workClientMessageId,
+            ...(runText.displayText ? { displayText: runText.displayText } : {}),
             ...(prepared.attachments.length > 0 ? { attachments: prepared.attachments } : {}),
             // Delegation does not grant Mimi authority to bypass the user's normal
             // permission and sensitive-path boundaries. A run that needs approval
@@ -151,7 +158,7 @@ export class PetWorkDelegationHost {
       sessionId,
       cwd,
       title: delegationTitle(delegation.task),
-      prompt: prepared.task,
+      prompt: runText.displayText ?? prepared.task,
       clientMessageId: workClientMessageId,
     });
     return { sessionId, cwd };

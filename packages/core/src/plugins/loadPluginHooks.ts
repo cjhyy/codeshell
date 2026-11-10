@@ -38,7 +38,8 @@
  *   PostToolUse     — matches against ctx.data.toolName
  *   Notification /
  *   SubagentStop    — matches against ctx.data.kind (agent_* terminal states,
- *                     approval_requested/resolved, mcp_server_*, …)
+ *                     approval_requested/resolved, ask_user_requested/resolved,
+ *                     mcp_server_*, …)
  *   other events    — matcher is currently ignored (the CC spec doesn't
  *                     define matcher semantics for them either)
  *
@@ -128,7 +129,7 @@ export function matcherAccepts(
   }
   if (event === "notification") {
     // Notification fan-in carries a `kind` discriminator (agent_* terminal
-    // states, approval_requested/resolved, mcp_server_*…). Matcher filters on
+    // states, approval_/ask_user_ requested/resolved, mcp_server_*…). Matcher filters on
     // it so a subscriber only wakes for the kinds it cares about.
     const kind = ctx.data.kind;
     if (typeof kind !== "string") return true;

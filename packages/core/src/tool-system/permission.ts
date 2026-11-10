@@ -1772,10 +1772,10 @@ export class PermissionClassifier {
 
   /**
    * Observe interactive-approval lifecycle (requested → resolved). The engine
-   * wires this to the `notification` hook so plugins / settings hooks can
-   * react to "waiting for the user's decision" moments (system notification,
-   * IM ping, …). Listener errors are swallowed — observation must never
-   * affect the approval outcome.
+   * traces it; the `notification` hook for user-facing approvals is emitted
+   * where the protocol registers the decision (decision-notification-hooks.ts).
+   * Listener errors are swallowed — observation must never affect the
+   * approval outcome.
    */
   setApprovalEventListener(listener: ((event: ApprovalLifecycleEvent) => void) | undefined): void {
     this.approvalEventListener = listener;

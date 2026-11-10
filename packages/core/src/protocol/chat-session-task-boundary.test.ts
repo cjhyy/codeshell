@@ -137,3 +137,39 @@ test("queued host tasks retain their original hard tool/Skill ceiling and epheme
   });
   expect(runs[2]).toMatchObject({ toolAllowlist: [], skillAllowlist: [], ephemeral: false });
 });
+
+test("a turn's trigger marks its own top-level session_started only", async () => {
+  const events: StreamEvent[] = [];
+  const engine = {
+    async run(_task: string, options: EngineRunOptions) {
+      const emit = options.onStream!;
+      emit({
+        type: "session_started",
+        sessionId: "work",
+        promptTokens: 0,
+        runId: "child-run",
+        agentId: "child",
+      } as StreamEvent);
+      emit({ type: "session_started", sessionId: "work", promptTokens: 0, runId: "run" });
+      emit({ type: "turn_complete", reason: "completed" });
+      return {
+        text: "done",
+        reason: "completed",
+        sessionId: "work",
+        turnCount: 1,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      };
+    },
+  } as unknown as Engine;
+  const session = new ChatSession({ id: "work", engine, onStream: (event) => events.push(event) });
+  await session.enqueueTurn("wake", { injected: true, trigger: "background_wake" });
+  await session.enqueueTurn("legacy", {});
+  const started = events.filter((event) => event.type === "session_started");
+  expect(started.map((event) => ("trigger" in event ? event.trigger : undefined))).toEqual([
+    undefined,
+    "background_wake",
+    undefined,
+    undefined,
+  ]);
+  expect(events.some((event) => event.type === "turn_complete" && "trigger" in event)).toBe(false);
+});

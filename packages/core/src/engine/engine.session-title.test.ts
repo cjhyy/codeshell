@@ -78,6 +78,7 @@ interface EngineTitleScenario {
   primaryCalls: number;
   primaryCallStarted?: (callNumber: number) => void;
   primaryGates?: Map<number, Promise<void>>;
+  titlePrompts?: string[];
 }
 
 const engineTitleScenarios = new Map<string, EngineTitleScenario>();
@@ -98,6 +99,7 @@ class FakeEngineTitleClient extends LLMClientBase {
     if (!scenario) throw new Error(`missing title scenario: ${this.model}`);
 
     if (options.systemPrompt.startsWith("You generate a very short title")) {
+      scenario.titlePrompts?.push(String(options.messages[0]?.content ?? ""));
       const text = await scenario.title.promise;
       return {
         text,
@@ -158,6 +160,53 @@ function readState(storageDir: string, sessionId: string): SessionState {
 }
 
 describe("Engine session title persistence", () => {
+  it("titles the first request by its displayText, not model-only framing", async () => {
+    const root = mkdtempSync(join(tmpdir(), "engine-title-display-"));
+    const storageDir = join(root, "sessions");
+    const model = `${engineProvider}-${Date.now()}-${Math.random()}`;
+    const title = deferred<string>();
+    const titlePrompts: string[] = [];
+    engineTitleScenarios.set(model, {
+      title,
+      titlePrompts,
+      primaryCalls: 0,
+      responses: [primaryResponse("renamed")],
+    });
+    try {
+      const engine = new Engine({
+        llm: { provider: engineProvider, model, apiKey: "test" } as never,
+        cwd: root,
+        sessionStorageDir: storageDir,
+        enabledBuiltinTools: [],
+        headless: true,
+        permissionMode: "bypassPermissions",
+      });
+      (engine as any).hooks.clear();
+      let titled!: () => void;
+      const done = new Promise<void>((resolve) => {
+        titled = resolve;
+      });
+      title.resolve("重命名账单模块");
+      await engine.run(
+        "[Delegated by Mimi]\nhost framing\n[/Delegated by Mimi]\n\n重命名账单模块",
+        {
+          sessionId: "title-display-session",
+          displayText: "重命名账单模块",
+          onStream: (event) => {
+            if (event.type === "session_title") titled();
+          },
+        },
+      );
+      await done;
+      expect(titlePrompts).toHaveLength(1);
+      expect(titlePrompts[0]).toStartWith("User: 重命名账单模块\n\n");
+      expect(titlePrompts[0]).not.toContain("host framing");
+    } finally {
+      engineTitleScenarios.delete(model);
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("merges a delayed title after a later serial session-state update", async () => {
     const root = mkdtempSync(join(tmpdir(), "engine-title-serial-"));
     const storageDir = join(root, "sessions");

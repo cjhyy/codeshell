@@ -1,6 +1,6 @@
 import type { Engine, EngineResult } from "../engine/engine.js";
 import type { ModelEntry } from "../llm/model-pool.js";
-import type { StreamEvent } from "../types.js";
+import type { SessionRunTrigger, StreamEvent } from "../types.js";
 import type { PermissionMode, SessionKind } from "../types.js";
 import { isAbortError } from "../llm/client-base.js";
 import type { InputAttachmentMeta, PendingApprovalMetadata } from "./types.js";
@@ -91,6 +91,20 @@ export interface TurnOpts {
   kind?: SessionKind;
   /** Connection owner router for permission prompts in this turn. */
   approvalRouter?: ApprovalRouter;
+  /** Why this turn runs; stamped on its top-level `session_started`. */
+  trigger?: SessionRunTrigger;
+}
+
+/** Mark a top-level `session_started` with why its run started (other events pass through). */
+export function withRunTrigger(
+  event: StreamEvent,
+  trigger: SessionRunTrigger | undefined,
+): StreamEvent {
+  return trigger !== undefined &&
+    event.type === "session_started" &&
+    !("agentId" in event && event.agentId !== undefined)
+    ? { ...event, trigger }
+    : event;
 }
 
 interface QueuedTurn {
@@ -513,7 +527,9 @@ export class ChatSession {
       // A late callback must never borrow the identity of this.active's next run.
       let runId: string | undefined;
       let clientMessageId = next.opts.clientMessageId;
-      const stream = (event: StreamEvent): void => {
+      const trigger = next.opts.trigger;
+      const stream = (raw: StreamEvent): void => {
+        const event = withRunTrigger(raw, trigger);
         if (event.type === "session_started") {
           runId = event.runId;
           clientMessageId = event.clientMessageId;

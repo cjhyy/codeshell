@@ -37,18 +37,6 @@ async function deliver(
   }
 }
 
-export function notifyPetTaskClosure(
-  notifier: DesktopNotificationSink | null,
-  input: { deliveryKey: string; title: string; message: string; taskId: string },
-): Promise<void> {
-  return deliver(
-    notifier,
-    { key: input.deliveryKey, title: input.title, body: input.message },
-    "desktop_notification.pet_closure.failed",
-    { taskId: input.taskId },
-  );
-}
-
 export function notifyMissingAutomationResumeTarget(
   notifier: DesktopNotificationSink | null,
   job: CronJob | undefined,

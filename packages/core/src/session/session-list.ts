@@ -311,7 +311,7 @@ function parseUserPreview(line: string | undefined): string | undefined {
   if (!line) return undefined;
   let event: {
     type?: string;
-    data?: { role?: string; content?: unknown; injected?: boolean };
+    data?: { role?: string; content?: unknown; injected?: boolean; displayText?: unknown };
   };
   try {
     event = JSON.parse(line);
@@ -321,6 +321,10 @@ function parseUserPreview(line: string | undefined): string | undefined {
   if (event.type !== "message") return undefined;
   if (event.data?.role !== "user") return undefined;
   if (event.data.injected === true) return undefined;
+  // The host's user-facing text wins over model-only framing in the content.
+  const displayText = event.data.displayText;
+  if (typeof displayText === "string" && displayText.trim())
+    return displayText.trim().slice(0, MAX_PREVIEW_CHARS);
   const content = event.data.content;
   const text =
     typeof content === "string"

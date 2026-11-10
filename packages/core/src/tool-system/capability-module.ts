@@ -62,6 +62,19 @@ export interface ProtocolObserverHost {
   isTransportDisconnected: () => boolean;
   /** Server → client notification. */
   notify: (method: string, params: Record<string, unknown>) => void;
+  /**
+   * Ask the host (e.g. Desktop main) to perform `action` on behalf of a live
+   * session and await its JSON result. Rides the internal `__host_action__`
+   * approval loopback, so it never surfaces as an approval card. Rejects when
+   * the session is not live, the host replies `{ ok: false, error }`, the
+   * reply is not an object, or the host does not answer before the approval
+   * timeout. Absent on servers that predate the loopback.
+   */
+  requestHostAction?: (
+    sessionId: string,
+    action: string,
+    args: Record<string, unknown>,
+  ) => Promise<unknown>;
   /** Register a protocol-method/query alias handled by this extension. */
   registerQuery: (type: string, handler: ExtensionQueryHandler) => Dispose;
 }

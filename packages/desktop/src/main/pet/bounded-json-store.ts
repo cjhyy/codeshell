@@ -47,12 +47,21 @@ export async function quarantineCorruptJson(path: string): Promise<string | unde
   }
 }
 
+/**
+ * The exact bytes {@link writeOwnerJsonAtomic} writes. `compact` drops the
+ * indentation, for stores rewritten on every event (notices, rules).
+ */
+export function serializeOwnerJson(value: unknown, options: { compact?: boolean } = {}): string {
+  return `${options.compact ? JSON.stringify(value) : JSON.stringify(value, null, 2)}\n`;
+}
+
 export async function writeOwnerJsonAtomic(
   path: string,
   value: unknown,
   maxBytes: number,
+  options: { compact?: boolean } = {},
 ): Promise<void> {
-  const serialized = `${JSON.stringify(value, null, 2)}\n`;
+  const serialized = serializeOwnerJson(value, options);
   if (Buffer.byteLength(serialized, "utf8") > maxBytes) throw new Error("state is too large");
   const parent = dirname(path);
   await mkdir(parent, { recursive: true, mode: 0o700 });

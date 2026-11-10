@@ -308,7 +308,14 @@ function normalizeReplyButton(value: unknown): { text: string; url: string } | u
   return { text: record.text.trim(), url: record.url };
 }
 
-function normalizeCompletionTarget(value: unknown): PetLongTaskCompletionTarget | undefined {
+/**
+ * Canonical IM completion route, or undefined when it is not addressable.
+ * Shared with host stores that persist the same route shape so field limits
+ * stay defined in one place.
+ */
+export function normalizePetLongTaskCompletionTarget(
+  value: unknown,
+): PetLongTaskCompletionTarget | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const record = value as Record<string, unknown>;
   const channel = typeof record.channel === "string" ? record.channel.trim().toLowerCase() : "";
@@ -402,7 +409,7 @@ export function createPetLongTask(input: CreatePetLongTaskInput): PetLongTask {
     throw new Error("invalid Pet long-task identity or objective");
   }
   const workspacePath = input.workspacePath ? bounded(input.workspacePath, 4_096) : null;
-  const completionTarget = normalizeCompletionTarget(input.completionTarget);
+  const completionTarget = normalizePetLongTaskCompletionTarget(input.completionTarget);
   const continuationDepth =
     typeof input.continuationDepth === "number" &&
     Number.isSafeInteger(input.continuationDepth) &&
@@ -752,7 +759,7 @@ export function transitionPetLongTask(
       };
       break;
     case "completion-target-set": {
-      const completionTarget = normalizeCompletionTarget(transition.completionTarget);
+      const completionTarget = normalizePetLongTaskCompletionTarget(transition.completionTarget);
       if (!completionTarget) return current;
       Object.assign(next, { completionTarget });
       event = {
@@ -1180,7 +1187,7 @@ export function parsePetLongTask(value: unknown): PetLongTask | null {
         .filter((event): event is PetLongTaskEvent => event !== null)
         .slice(-MAX_PET_LONG_TASK_EVENTS)
     : [];
-  const completionTarget = normalizeCompletionTarget(record.completionTarget);
+  const completionTarget = normalizePetLongTaskCompletionTarget(record.completionTarget);
   const continuationDepth =
     typeof record.continuationDepth === "number" &&
     Number.isSafeInteger(record.continuationDepth) &&

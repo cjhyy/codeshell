@@ -8,6 +8,8 @@ export interface DesktopWorkerHostHandlers {
   credentialCookie(line: string): boolean;
   workspace(line: string): boolean;
   panel(line: string): boolean;
+  /** Generic `__host_action__` loopback (ProtocolObserverHost.requestHostAction). */
+  hostAction(line: string): boolean;
   automation(line: string): boolean;
   sendLine(line: string): void;
 }
@@ -19,6 +21,7 @@ export function createDesktopWorkerHost(handlers: DesktopWorkerHostHandlers) {
     "credential.browserCookie": handlers.credentialCookie,
     "workspace.switch": handlers.workspace,
     panel: handlers.panel,
+    __host_action__: handlers.hostAction,
     "desktop/operationBatch": handlers.operationBatch,
     "desktop/automationCreate": handlers.automation,
   };

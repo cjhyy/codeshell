@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, writeFileSync, appendFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { buildDelegationBrief } from "../delegation-brief.js";
 import { readLatestAssistantText, readLatestWorkContext } from "./latest-result.js";
 
 interface RawEvent {
@@ -44,6 +45,38 @@ describe("readLatestAssistantText", () => {
     expect(await readLatestWorkContext(dir, { maxChars: 10 })).toMatchObject({
       latestRequest: { text: "Latest rea", truncated: true },
       latestResult: { text: "Latest res", truncated: true },
+    });
+  });
+
+  test("an older delegated request without displayText drops Mimi's brief", async () => {
+    const brief = buildDelegationBrief({ origin: "im", channelLabel: "WeChat" });
+    const dir = makeSessionDir([
+      { role: "user", content: `${brief}\n\nFix the login page` },
+      { role: "assistant", content: `${brief} is quoted back` },
+    ]);
+    expect(await readLatestWorkContext(dir, { maxChars: 12 })).toMatchObject({
+      latestRequest: { text: "Fix the logi", truncated: true },
+      // Only user requests carry the brief; assistant text is never rewritten.
+      latestResult: { text: "[Delegated b", truncated: true },
+    });
+  });
+
+  test("a user request reads as its displayText when the host recorded one", async () => {
+    const dir = makeSessionDir([]);
+    writeFileSync(
+      join(dir, "transcript.jsonl"),
+      JSON.stringify({
+        type: "message",
+        data: {
+          role: "user",
+          content: `${buildDelegationBrief({ origin: "desktop" })}\n\nRename billing`,
+          displayText: "Rename billing",
+        },
+      }) + "\n",
+    );
+    expect((await readLatestWorkContext(dir, { maxChars: 100 })).latestRequest).toMatchObject({
+      text: "Rename billing",
+      truncated: false,
     });
   });
 

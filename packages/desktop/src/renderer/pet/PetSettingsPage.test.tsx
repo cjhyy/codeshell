@@ -37,6 +37,8 @@ describe("PetSettingsPage", () => {
     expect(html).toContain('data-pet-setting="widget"');
     expect(html).toContain('data-state="checked"');
     expect(html).toContain('data-pet-setting="connections"');
+    expect(html).toContain('data-pet-setting="notifications"');
+    expect(html).toContain("通知与主动");
   });
 
   test("moves personalization fields into a dedicated second-level page", () => {

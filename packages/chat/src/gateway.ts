@@ -247,7 +247,7 @@ async function buildMimiOutgoingReplies(
       senderId: message.senderId,
       isDirectMessage: message.isDirectMessage === true,
       ...(message.messageId ? { messageId: message.messageId } : {}),
-      capabilities,
+      capabilities: wireChannelCapabilities(capabilities),
       channels: gatewayChannelCatalog(message.channel, capabilities, configuredChannels),
     },
   });
@@ -294,8 +294,19 @@ function gatewayChannelCatalog(
   channels.set(currentChannel, currentCapabilities);
   return [...channels].slice(0, 32).map(([channel, declared]) => ({
     channel,
-    capabilities: declared,
+    capabilities: wireChannelCapabilities(declared),
   }));
+}
+
+/**
+ * Capabilities as sent to Desktop/Mimi. Host-side send mechanics such as
+ * `idempotentSend` stay off the wire: Mimi never needs them, and an older
+ * Desktop whose strict validator predates a key would reject the whole catalog.
+ */
+export function wireChannelCapabilities(capabilities: ChannelCapabilities): ChannelCapabilities {
+  if (capabilities.outbound.idempotentSend === undefined) return capabilities;
+  const { idempotentSend: _hostOnly, ...outbound } = capabilities.outbound;
+  return { ...capabilities, outbound };
 }
 
 function normalizePetReplyButton(value: unknown): OutgoingMessage["button"] | undefined {

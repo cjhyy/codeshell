@@ -10,6 +10,9 @@ import {
   isPetHostActionRequest,
   isPetWorkExecutionBackend,
   normalizePetWorkDelegation,
+  PET_PENDING_NOTICE_BODY_MAX,
+  PET_PENDING_NOTICE_TITLE_MAX,
+  PET_PENDING_NOTICES_MAX,
 } from "@cjhyy/code-shell-pet";
 import { readLatestWorkContext, sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
 import { createMtimeSessionCache } from "./mtime-session-cache.js";
@@ -94,6 +97,11 @@ export interface PetAutoDelegation {
   completionTarget?: PetLongTaskCompletionTarget;
   /** Bounded autonomous manager-continuation depth. */
   continuationDepth?: number;
+  /**
+   * Host re-drive of an accepted delegation (manager continuation, resume,
+   * retry): the Session already received Mimi's delegation brief.
+   */
+  redrive?: boolean;
 }
 
 export type PetStartedDelegation = Omit<
@@ -104,6 +112,7 @@ export type PetStartedDelegation = Omit<
   | "goalContinuation"
   | "completionTarget"
   | "continuationDepth"
+  | "redrive"
   | "inputAttachments"
 > & {
   sessionId: string;
@@ -179,6 +188,17 @@ export interface PetHostActionExecution {
   error?: string;
 }
 
+/**
+ * Notices an IM conversation missed, taken only when this command's own Mimi
+ * turn starts (never for an input steered into another turn), so a message
+ * that waited in the chat queue cannot hand them out twice.
+ */
+export interface PetPendingNoticeSource {
+  take(): Promise<readonly { kind: string; title?: string; body: string }[]>;
+  /** The turn is starting with them in its runtime context. */
+  started(): void;
+}
+
 export type PetDispatchCommand =
   | { type: "get_global_status" }
   | { type: "list_pending" }
@@ -194,6 +214,8 @@ export type PetDispatchCommand =
       attachments?: InputAttachmentMeta[];
       /** Main-only wake authority; renderer IPC deliberately rejects this field. */
       hostWake?: PetRegisteredFollowUp;
+      /** Main-only: notices queued for this IM conversation (renderer IPC rejects it). */
+      pendingNotices?: PetPendingNoticeSource;
       source?: {
         kind: "im-gateway";
         channel: string;
@@ -1734,6 +1756,7 @@ export class PetDispatchService {
       ...(goalContinuation ? { goalContinuation } : {}),
       ...(task.completionTarget ? { completionTarget: task.completionTarget } : {}),
       continuationDepth: continuationDepth + 1,
+      redrive: true,
     };
     let launch: { sessionId: string; cwd: string; taskId?: string };
     try {
@@ -2482,6 +2505,7 @@ export class PetDispatchService {
           "followUps",
           "outboundTargets",
           "hostWake",
+          "pendingNotices",
           "contextAssociation",
           "inputAttachments",
         ]);
@@ -2495,6 +2519,9 @@ export class PetDispatchService {
         );
         const longTaskContext = this.options.longTasks?.context();
         const taskInbox = await taskInboxTask;
+        const pendingNotices = command.pendingNotices
+          ? await command.pendingNotices.take().catch(() => [])
+          : [];
         const world = {
           version: projectionWorld.version,
           generation: projectionWorld.generation,
@@ -2523,6 +2550,18 @@ export class PetDispatchService {
                   instruction:
                     "Only the exact original reusable Session is authorized. Do not create another task or widen scope.",
                 },
+              }
+            : {}),
+          // Early, so the bounded serializer keeps them ahead of noisier arrays.
+          ...(pendingNotices.length
+            ? {
+                pendingNotices: pendingNotices
+                  .slice(0, PET_PENDING_NOTICES_MAX)
+                  .map(({ kind, title, body }) => ({
+                    kind: kind.slice(0, 64),
+                    ...(title ? { title: title.slice(0, PET_PENDING_NOTICE_TITLE_MAX) } : {}),
+                    body: body.slice(0, PET_PENDING_NOTICE_BODY_MAX),
+                  })),
               }
             : {}),
           ...(gatewayCatalog
@@ -2578,6 +2617,7 @@ export class PetDispatchService {
         const runtimeContext = stringifyBoundedPetWorld(world);
         timer.done();
         const activeChat = this.activeChatTurn;
+        command.pendingNotices?.started();
         const response = await this.requestChatRun(command, {
           sessionId: metadata.petSessionId,
           task: command.message.trim(),

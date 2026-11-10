@@ -26,6 +26,7 @@ import {
   type PetPersonalization,
 } from "../../shared/pet-settings";
 import { SimpleSelect } from "@/components/ui/simple-select";
+import { PetNotificationsCard } from "./PetNotificationsCard";
 import type {
   MimiPresenceMode,
   MimiPresencePatch,
@@ -608,6 +609,8 @@ export function PetSettingsPage({
               </Button>
             </CardHeader>
           </Card>
+
+          <PetNotificationsCard />
 
           <Card data-pet-setting="connections" className="rounded-2xl">
             <CardHeader className="flex-row items-start gap-3 space-y-0">

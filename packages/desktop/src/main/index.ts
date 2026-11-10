@@ -28,6 +28,7 @@ import {
   Notification,
   screen,
   nativeTheme,
+  powerMonitor,
 } from "electron";
 import { mainWindowTitleBarOptions, registerWindowTitleBarIpc } from "./window-titlebar.js";
 import {
@@ -145,19 +146,15 @@ import {
   PetHostActionReceiptService,
 } from "./pet/pet-host-action-completion.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
-import {
-  formatPetLongTaskClosureMessage,
-  PetDispatchService,
-  type PetHostActionExecution,
-} from "./pet/pet-dispatch-service.js";
+import { PetDispatchService, type PetHostActionExecution } from "./pet/pet-dispatch-service.js";
 import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
 import { PetMemoryStore } from "./pet/pet-memory-store.js";
 import { createPetMemoryHost, createPetMemoryWorldContext } from "./pet/pet-memory-host.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetChatAttachmentContext } from "./pet/pet-chat-attachment-context.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
-import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
-import { PetReceiptStore } from "./pet/pet-receipt-store.js";
+import { wirePetNotices, type PetNoticeWiring } from "./pet/pet-notice-wiring.js";
+import { createPetNoticeControls } from "./pet/pet-notice-ipc.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
@@ -818,7 +815,7 @@ let petFollowUpWakeCoordinator: PetFollowUpWakeCoordinator | null = null;
 // IM delivery shares the same completed initialization boundary as Pet IPC.
 let petRuntimeReady = false;
 let petHostActionReceiptService: PetHostActionReceiptService | null = null;
-let petAttentionPolicy: PetAttentionPolicy | null = null;
+let petNotices: PetNoticeWiring | null = null;
 let petWorkInboxStore: PetWorkInboxStore | null = null;
 let petLongTaskStore: PetLongTaskStore | null = null;
 let petLongTaskCoordinator: PetLongTaskCoordinator | null = null;
@@ -1760,6 +1757,8 @@ async function createWindow(): Promise<BrowserWindow> {
         const entry = await getSessionCwdIndex().refresh(sessionId);
         return entry?.status === "confirmed" ? (entry.workspaceRoot ?? entry.cwd) : undefined;
       },
+      channelLabel: (channel) =>
+        imGatewayService.ownerChannels().find((entry) => entry.id === channel)?.label,
     });
     const petWorkMemory = new PetWorkMemoryStore(
       resolve(app.getPath("userData"), "pet", "work-memory.json"),
@@ -1838,6 +1837,25 @@ async function createWindow(): Promise<BrowserWindow> {
     );
     petLongTaskStore = longTaskStore;
     taskInboxDisposers.push(longTaskStore.subscribe(() => taskInboxService?.scheduleRefresh()));
+    const notices = wirePetNotices({
+      userDataDir: app.getPath("userData"),
+      bridge,
+      projection: aggregator,
+      longTasks: longTaskStore,
+      sessionRoutes: () => sessionBridge?.routes,
+      boundReplies: () => sessionBridge,
+      gateway: imGatewayService,
+      publishRoute: publishGatewayControlEvent,
+      materializeAttachments: materializeOutgoingAttachments,
+      notifyDesktop: async (input) => desktopNotifier?.notify(input),
+      readSettings: () => new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
+      presence: {
+        getSystemIdleTimeSec: () => powerMonitor.getSystemIdleTime(),
+        hasFocusedWindow: () => BrowserWindow.getFocusedWindow() !== null,
+      },
+      powerEvents: powerMonitor,
+    });
+    petNotices = notices;
     const petMemoryStoreInstance = new PetMemoryStore(
       resolve(app.getPath("userData"), "pet", "memories.json"),
     );
@@ -1864,8 +1882,9 @@ async function createWindow(): Promise<BrowserWindow> {
       projection: aggregator,
       worker: bridge,
       launcher: petWorkDelegationHost,
+      onDelegationStarted: (task) => notices.armDelegationRule(task),
       onTaskClosed: async (task) => {
-        let message = formatPetLongTaskClosureMessage(task);
+        let message: string | undefined;
         let continued = false;
         let closureHostActions: PetHostActionExecution[] | undefined;
         try {
@@ -1885,105 +1904,63 @@ async function createWindow(): Promise<BrowserWindow> {
             });
           }
         } catch (error) {
-          // The deterministic fallback below still reaches the originating IM
-          // conversation and desktop notification when Mimi cannot compose a
-          // richer receipt (for example while the worker is restarting).
+          // The notice router still templates a result from the task's facts
+          // when Mimi cannot compose one (for example while the worker restarts).
           dlog("main", "pet.longTask.reply.failed", { error: String(error), taskId: task.id });
         }
 
-        // A successful continuation is an internal manager hand-off. Mimi's
-        // injected reply remains visible in her durable desktop conversation,
-        // while the originating IM chat receives one push only when the chain
-        // finishes, needs a user decision, or cannot continue.
-        if (!continued) {
-          const completed = task.status === "completed";
-          const cancelled = task.status === "cancelled";
-          const title = completed
-            ? "Mimi 任务已完成"
-            : cancelled
-              ? "Mimi 任务已取消"
-              : "Mimi 任务执行失败";
-          const enriched = await enrichPetChatReplyWithHostActions(message, closureHostActions, {
-            qrDir: resolve(app.getPath("userData"), "pet", "qr"),
-            attachmentKinds: task.completionTarget?.replyAttachmentKinds,
-          });
-          message = enriched.text;
-          const completionAttachments = enriched.attachments;
-          const deliveryKey = createHash("sha256")
-            .update("pet-task-closure\0")
-            .update(task.id)
-            .update("\0")
-            .update(String(task.attempt))
-            .update("\0")
-            .update(task.status)
-            .digest("hex");
-          await publishGatewayControlEvent({
-            deliveryKey,
-            type: completed
-              ? "pet.task.completed"
-              : cancelled
-                ? "pet.task.cancelled"
-                : "pet.task.failed",
-            title,
-            text: message,
-            ...(enriched.button ? { button: enriched.button } : {}),
-            ...(completionAttachments.length > 0 ? { attachments: completionAttachments } : {}),
-            ...(task.completionTarget
-              ? {
-                  target: {
-                    channel: task.completionTarget.channel,
-                    target: task.completionTarget.target,
-                  },
-                }
-              : {}),
-          });
-
-          // The closure manager's final assistant text is only an internal
-          // acknowledgement after GatewayReply (for example, "微信消息已发送，待命").
-          // Persist and publish the actual routed body as the visible reply,
-          // with delivery state kept as separate UI metadata.
-          const gatewayReplyAccepted = closureHostActions?.some(
-            (execution) => execution.kind === "gatewayReply" && execution.ok,
+        // A successful continuation is an internal manager hand-off. Otherwise
+        // the closure's GatewayReply is a DRAFT (text + validated files/button):
+        // the router delivers it as the one owner-facing message for the chain.
+        if (continued) return;
+        const enriched =
+          message === undefined
+            ? undefined
+            : await enrichPetChatReplyWithHostActions(message, closureHostActions, {
+                qrDir: resolve(app.getPath("userData"), "pet", "qr"),
+                attachmentKinds: task.completionTarget?.replyAttachmentKinds,
+              });
+        // The closure manager's final assistant text is only an internal
+        // acknowledgement after GatewayReply; show the routed body instead.
+        const draftAccepted = closureHostActions?.some(
+          (execution) => execution.kind === "gatewayReply" && execution.ok,
+        );
+        if (draftAccepted && enriched && task.completionTarget && petHostActionReceiptService) {
+          await completePetHostActionReceipt({
+            recorder: petHostActionReceiptService,
+            input: {
+              petSessionId: await petDispatchService!.getSessionId(),
+              clientMessageId: task.originClientMessageId,
+              receiptId: `${task.id}:${task.attempt}:${task.status}`,
+              executions: closureHostActions ?? [],
+              authoritativeMessage: enriched.text,
+              replaceAssistant: true,
+              deliveryChannel: task.completionTarget.channel,
+            },
+            publish: (receiptEvent) => {
+              for (const window of BrowserWindow.getAllWindows()) {
+                if (!window.isDestroyed())
+                  window.webContents.send(PET_CHAT_EVENT_CHANNEL, receiptEvent);
+              }
+            },
+          }).catch((error) =>
+            dlog("main", "pet.longTask.gatewayReceipt.failed", {
+              taskId: task.id,
+              error: String(error),
+            }),
           );
-          if (
-            gatewayReplyAccepted &&
-            task.completionTarget &&
-            petHostActionReceiptService &&
-            petDispatchService
-          ) {
-            await completePetHostActionReceipt({
-              recorder: petHostActionReceiptService,
-              input: {
-                petSessionId: await petDispatchService.getSessionId(),
-                clientMessageId: task.originClientMessageId,
-                receiptId: `${task.id}:${task.attempt}:${task.status}`,
-                executions: closureHostActions ?? [],
-                authoritativeMessage: message,
-                replaceAssistant: true,
-                deliveryChannel: task.completionTarget.channel,
-              },
-              publish: (receiptEvent) => {
-                for (const window of BrowserWindow.getAllWindows()) {
-                  if (!window.isDestroyed()) {
-                    window.webContents.send(PET_CHAT_EVENT_CHANNEL, receiptEvent);
-                  }
-                }
-              },
-            }).catch((error) =>
-              dlog("main", "pet.longTask.gatewayReceipt.failed", {
-                taskId: task.id,
-                error: String(error),
-              }),
-            );
-          }
-
-          await desktopNotifications.notifyPetTaskClosure(desktopNotifier, {
-            deliveryKey,
-            title,
-            message,
-            taskId: task.id,
-          });
         }
+        await notices.notifyTaskClosed(task, {
+          ...(enriched ? { text: enriched.text } : {}),
+          ...(enriched && (enriched.button || enriched.attachments.length > 0)
+            ? {
+                media: {
+                  ...(enriched.button ? { button: enriched.button } : {}),
+                  ...(enriched.attachments.length > 0 ? { attachments: enriched.attachments } : {}),
+                },
+              }
+            : {}),
+        });
       },
       onTaskWorkMemory: async (task) => {
         const recorded = await recordPetDelegationClosureBestEffort(
@@ -2016,6 +1993,7 @@ async function createWindow(): Promise<BrowserWindow> {
           aggregator.getSnapshot(),
           longTaskStore.getSnapshot().tasks,
           pendingMobileApprovals.replayAllLines(),
+          notices.decisions.rulesFor,
         );
       },
       ...imDecisionWorkerActions(
@@ -2023,15 +2001,24 @@ async function createWindow(): Promise<BrowserWindow> {
           decisionBridge.requestWorker(method, params, timeoutMs, options),
         (params) => mobileOrchestrator.broadcastApprovalResolved(params),
       ),
-      publish: publishGatewayControlEvent,
+      // The router decides whether a prompt goes to IM (presence, caps) and where.
+      submit: (notice) => notices.router.submitWithOutcome(notice),
+      prior: (dedupeKey) => notices.router.priorDecision(dedupeKey),
+      isOwnerConversation: notices.decisions.isOwnerConversation,
+      ownerChannelIsDirect: notices.decisions.ownerChannelIsDirect,
+      isAway: notices.decisions.isAway,
+      decisionStatus: notices.decisions.decisionStatus,
       onError: (error) => dlog("main", "pet.im-decision.failed", { error: String(error) }),
     });
+    const imDecisions = petImDecisions;
+    notices.decisions.onBlocked(() => imDecisions.scanNow());
     petImDecisions.start();
     unsubscribePetLongTaskStream = bridge.subscribeOutbound((_line, snapshotEntry) => {
       if (!snapshotEntry) return;
       void longTaskCoordinator
         .observeSessionEvent(snapshotEntry.sessionId, snapshotEntry.event)
         .catch((error) => dlog("main", "pet.longTask.stream.failed", { error: String(error) }));
+      notices.observeSessionEvent(snapshotEntry.sessionId, snapshotEntry.event);
     });
     // One root for both the Sessions disclosure tool and the resume resolver,
     // so the directory Mimi reads and the one selectors resolve against can
@@ -2092,6 +2079,8 @@ async function createWindow(): Promise<BrowserWindow> {
       health: createBoundSessionHealth(aggregator, petSessionsRootDir),
       describeStatus: async (route) => `当前在「${route.sessionTitle}」中。发送 /mimi 可退出。`,
       publish: (event) => publishGatewayControlEvent(event),
+      onReplyForwarded: ({ sessionId, turnId, route }) =>
+        notices.recordBoundReply(sessionId, turnId, route),
       onDeliveryError: (error, turn) =>
         dlog("main", "pet.session.reply.retry", {
           sessionId: turn.sessionId,
@@ -2312,6 +2301,8 @@ async function createWindow(): Promise<BrowserWindow> {
           attachments: target.attachments,
           maxAttachments: target.maxAttachments,
           maxAttachmentBytes: target.maxAttachmentBytes,
+          // Mimi labels an unproven WeChat context instead of the host hiding it.
+          proactiveReady: target.proactiveReady,
         })),
       replyAttachmentRoots: knownReplyAttachmentCwds,
       // Second-chance lookup for a DelegateWork selector Mimi found via the
@@ -2442,19 +2433,11 @@ async function createWindow(): Promise<BrowserWindow> {
         processingPetReports.delete(event.reportId);
       }
     });
-    const petReceipts = new PetReceiptStore(
-      resolve(app.getPath("userData"), "pet", "attention-receipts.json"),
-    );
-    const attention = new PetAttentionPolicy({
-      source: aggregator,
-      receipts: petReceipts,
-    });
-    petAttentionPolicy = attention;
     const petInitialization = (async () => {
       await aggregator.start();
       await externalVisibility.reconcile();
       await Promise.all([
-        petReceipts.load(),
+        notices.ready,
         petWorkInbox.load(),
         petHostActionReceipts.load(),
         petWorkMemory.load(),
@@ -2595,7 +2578,7 @@ async function createWindow(): Promise<BrowserWindow> {
       // and work-memory closure sink are ready. Running tasks left idle by a
       // previous process are marked interrupted and remain resumable.
       await longTaskCoordinator.start();
-      attention.start();
+      notices.router.start();
       // Auto-archive completed work sessions idle for 7+ days, then force a full
       // catalog rebuild. Rationale for the full pass: archiveDiskSession touches
       // state.json → bumps the session's dir mtime → the incremental
@@ -2613,7 +2596,12 @@ async function createWindow(): Promise<BrowserWindow> {
       ipcMain,
       aggregator,
       dispatcher: petDispatchService,
-      attention,
+      attention: notices.attention,
+      notices: createPetNoticeControls({
+        notices,
+        ownerChannels: () => imGatewayService.ownerChannels(),
+        goals: externalGoalSessions,
+      }),
       workInbox: petWorkInbox,
       // Read-only topic-segment view for the Mimi chat UI. `segments` carries
       // the message-keyed boundary history (keyed by each segment's first-turn
@@ -3183,24 +3171,29 @@ async function dispatchGatewayPetChat(
     if (!window.isDestroyed()) window.webContents.send(PET_CHAT_EVENT_CHANNEL, submitted);
   }
 
-  const result = await dispatcher.dispatch({
-    type: "chat",
-    message: request.message,
-    ...(attachments.length > 0 ? { attachments } : {}),
-    clientMessageId,
-    source: {
-      kind: "im-gateway",
-      channel: sourceChannel,
-      ...(request.origin?.senderId ? { senderId: request.origin.senderId } : {}),
-      isDirectMessage: request.origin?.isDirectMessage === true,
-      capabilities: request.origin?.capabilities ?? {
-        inbound: { text: true, attachments: [] },
-        outbound: { text: true, button: "link", attachments: [] },
+  // Notices this conversation missed ride the turn as data, taken when it starts.
+  const replay = petNotices?.inboundReplay(request.origin);
+  const result = await dispatcher
+    .dispatch({
+      type: "chat",
+      message: request.message,
+      ...(attachments.length > 0 ? { attachments } : {}),
+      ...(replay ? { pendingNotices: replay } : {}),
+      clientMessageId,
+      source: {
+        kind: "im-gateway",
+        channel: sourceChannel,
+        ...(request.origin?.senderId ? { senderId: request.origin.senderId } : {}),
+        isDirectMessage: request.origin?.isDirectMessage === true,
+        capabilities: request.origin?.capabilities ?? {
+          inbound: { text: true, attachments: [] },
+          outbound: { text: true, button: "link", attachments: [] },
+        },
+        ...(request.origin?.channels ? { channels: request.origin.channels } : {}),
+        ...(request.origin ? { target: request.origin.target } : {}),
       },
-      ...(request.origin?.channels ? { channels: request.origin.channels } : {}),
-      ...(request.origin ? { target: request.origin.target } : {}),
-    },
-  });
+    })
+    .finally(() => replay?.finish());
   if (!result.ok) throw new Error(result.message ?? result.code);
   if (result.type !== "chat") throw new Error("Mimi Pet 返回了非聊天结果");
   await markAttachmentsSent(cwd, sessionId, attachments).catch(() => undefined);
@@ -4251,6 +4244,7 @@ async function applyRendererSettingsSideEffects(
   // Before any await: a failing side effect must not leave the guard on the old binding.
   if (touchesPanelApps) invalidatePanelAppBindingGuard();
   if ("git" in patch) void applyGitPathFromSettings();
+  if (scope === "user" && "pet" in patch) petNotices?.settingsChanged();
   if (touchesExternalSessionVisibility(scope, patch)) await reconcileExternalAdapters?.();
   if (touchesPanelApps) {
     broadcastPanelAppsChanged(mainWindows);
@@ -4549,8 +4543,9 @@ registerDesktopShutdown(app, {
     unsubscribePetLongTaskStream = null;
     unsubscribePetReportStream?.();
     unsubscribePetReportStream = null;
-    petAttentionPolicy?.stop();
-    petAttentionPolicy = null;
+    const petNoticeFlush = petNotices?.flush();
+    petNotices?.dispose();
+    petNotices = null;
     const petWorkInboxFlush = petWorkInboxStore?.flush();
     petWorkInboxStore = null;
     const petLongTaskFlush = petLongTaskStore?.flush();
@@ -4579,6 +4574,7 @@ registerDesktopShutdown(app, {
       gatewayControlServer?.stop(),
       petWorkInboxFlush,
       petLongTaskFlush,
+      petNoticeFlush,
       externalRuntimeShutdown,
       cookieRefreshShutdown,
       panelAppBridge.shutdownMedia(),

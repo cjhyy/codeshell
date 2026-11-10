@@ -417,6 +417,57 @@ describe("personal WeChat ClawBot", () => {
     expect(restartedBodies[0]?.msg).not.toHaveProperty("context_token");
   });
 
+  test("derives every chunk's client id from a caller id and reuses it on stale retry", async () => {
+    const store = memoryStore({ contextTokens: { "owner-user": "stale-context" } });
+    const bodies: Record<string, any>[] = [];
+    let sendCalls = 0;
+    const adapter = new WechatAdapter(
+      { accountId: "abc-im-bot", token: "bot-secret" },
+      {
+        stateStore: store,
+        fetch: async (input, init) => {
+          if (String(input).endsWith("/ilink/bot/sendmessage")) {
+            bodies.push(JSON.parse(String(init?.body)));
+            sendCalls += 1;
+            // First chunk hits a stale context; everything after succeeds.
+            return sendCalls === 1
+              ? Response.json({ ret: 1, errmsg: "prepare failed" })
+              : Response.json({ ret: 0 });
+          }
+          throw new Error(`unexpected request: ${String(input)}`);
+        },
+      },
+    );
+
+    await adapter.send(
+      "owner-user",
+      { text: `${"a".repeat(8_000)}b` },
+      { clientId: "code-shell-notice-abc" },
+    );
+
+    expect(bodies.map((body) => body.msg.client_id)).toEqual([
+      "code-shell-notice-abc-0",
+      "code-shell-notice-abc-0",
+      "code-shell-notice-abc-1",
+    ]);
+    expect(bodies[0]?.msg.context_token).toBe("stale-context");
+    expect(bodies[1]?.msg).not.toHaveProperty("context_token");
+
+    // A replay with the same caller id produces the same platform ids, which
+    // is what lets the platform deduplicate a resend.
+    bodies.length = 0;
+    await adapter.send("owner-user", { text: "短消息" }, { clientId: "code-shell-notice-abc" });
+    expect(bodies.map((body) => body.msg.client_id)).toEqual(["code-shell-notice-abc-0"]);
+
+    // Without a caller id each send keeps its own random ids.
+    bodies.length = 0;
+    await adapter.send("owner-user", { text: "一" });
+    await adapter.send("owner-user", { text: "二" });
+    expect(bodies[0]?.msg.client_id).toMatch(/^code-shell-chat-/u);
+    expect(bodies[1]?.msg.client_id).toMatch(/^code-shell-chat-/u);
+    expect(bodies[0]?.msg.client_id).not.toBe(bodies[1]?.msg.client_id);
+  });
+
   test("keeps the tokenless fallback available when stale-state persistence fails", async () => {
     const bodies: Record<string, any>[] = [];
     const logs: string[] = [];
@@ -894,6 +945,80 @@ describe("personal WeChat ClawBot", () => {
     expect(bodies).toHaveLength(3);
     expect(new Set(bodies.map((body) => body.msg.client_id)).size).toBe(1);
     expect(bodies.every((body) => body.msg.context_token === "context-secret")).toBe(true);
+  });
+
+  test("rate-limit retries reuse the caller-derived client id", async () => {
+    const bodies: Record<string, any>[] = [];
+    const adapter = new WechatAdapter(
+      { accountId: "abc-im-bot", token: "bot-secret" },
+      {
+        stateStore: ownerContextStore(),
+        rateLimitRetries: 2,
+        rateLimitRetryBaseMs: 1,
+        sleep: async () => undefined,
+        fetch: async (_input, init) => {
+          bodies.push(JSON.parse(String(init?.body)));
+          return bodies.length < 3
+            ? Response.json({ ret: -2, errmsg: "frequency limit" })
+            : Response.json({ ret: 0 });
+        },
+      },
+    );
+
+    await adapter.send("owner-user", { text: "测试消息" }, { clientId: "code-shell-notice-k" });
+
+    expect(bodies.map((body) => body.msg.client_id)).toEqual([
+      "code-shell-notice-k-0",
+      "code-shell-notice-k-0",
+      "code-shell-notice-k-0",
+    ]);
+  });
+
+  test("numbers attachment client ids after the text chunks", async () => {
+    const sendBodies: Record<string, any>[] = [];
+    const adapter = new WechatAdapter(
+      { accountId: "abc-im-bot", token: "bot-secret" },
+      {
+        stateStore: ownerContextStore(),
+        fetch: async (input, init) => {
+          const url = String(input);
+          if (url.endsWith("/ilink/bot/getuploadurl")) {
+            return Response.json({ ret: 0, upload_param: "upload-once" });
+          }
+          if (url.startsWith("https://novac2c.cdn.weixin.qq.com/c2c/upload?")) {
+            return new Response(null, {
+              status: 200,
+              headers: { "x-encrypted-param": "download-once" },
+            });
+          }
+          if (url.endsWith("/ilink/bot/sendmessage")) {
+            sendBodies.push(JSON.parse(String(init?.body)));
+            return Response.json({ ret: 0 });
+          }
+          throw new Error(`unexpected request: ${url}`);
+        },
+      },
+    );
+
+    const image = {
+      kind: "image" as const,
+      name: "a.png",
+      mimeType: "image/png",
+      data: Uint8Array.from([1, 2, 3]),
+    };
+    await adapter.send(
+      "owner-user",
+      { text: `${"a".repeat(8_000)}b`, attachments: [image, { ...image, name: "b.png" }] },
+      { clientId: "code-shell-notice-m" },
+    );
+
+    expect(sendBodies.map((body) => body.msg.client_id)).toEqual([
+      "code-shell-notice-m-0",
+      "code-shell-notice-m-1",
+      "code-shell-notice-m-2",
+      "code-shell-notice-m-3",
+    ]);
+    expect(sendBodies[2]?.msg.item_list[0].type).toBe(2);
   });
 
   test("retries explicit HTTP 429 but not ambiguous HTTP 5xx responses", async () => {

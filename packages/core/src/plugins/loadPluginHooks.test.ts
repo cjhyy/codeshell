@@ -1,7 +1,7 @@
 import { describe, test, expect, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { loadPluginHooks, listPluginHooks, pluginHookKey } from "./loadPluginHooks.js";
 import { pluginHooksDigest } from "./pluginHookIntegrity.js";
 import { HookRegistry } from "../hooks/registry.js";
@@ -10,6 +10,8 @@ import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse, Message } from "../types.js";
+import type { ChatSession } from "../protocol/chat-session.js";
+import { DecisionNotificationHooks } from "../protocol/decision-notification-hooks.js";
 
 /**
  * loadPluginHooks reads the real ~/.code-shell/plugins/installed_plugins.json
@@ -34,6 +36,7 @@ function stagePlugin(
   sessionStartGroups: unknown[] = [{ hooks: [{ type: "command", command: "echo hi" }] }],
   hookDigest?: "current" | string,
   approvedHookDigest?: "current" | string,
+  event = "SessionStart",
 ): string {
   const home = mkdtempSync(join(tmpdir(), "plughome-"));
   dirs.push(home);
@@ -45,7 +48,7 @@ function stagePlugin(
     join(installPath, "hooks", "hooks.json"),
     JSON.stringify({
       hooks: {
-        SessionStart: sessionStartGroups,
+        [event]: sessionStartGroups,
       },
     }),
   );
@@ -374,5 +377,61 @@ describe("listPluginHooks (read-only, for the settings UI)", () => {
     const reg = new HookRegistry();
     // A fresh registry that never had loadPluginHooks called stays empty.
     expect(reg.hasHooks("on_session_start")).toBe(false);
+  });
+});
+
+describe("Claude-Code Notification hooks for user decisions", () => {
+  test("a plugin Notification hook with a kind matcher receives question events", async () => {
+    const out = join(mkdtempSync(join(tmpdir(), "notify-out-")), "events.jsonl");
+    dirs.push(dirname(out));
+    stagePlugin(
+      "notify@market",
+      [
+        {
+          matcher: "^ask_user_",
+          hooks: [{ type: "command", command: `cat >> '${out}'; echo >> '${out}'` }],
+        },
+      ],
+      undefined,
+      undefined,
+      "Notification",
+    );
+    const reg = new HookRegistry();
+    loadPluginHooks(reg);
+    expect(reg.hasHooks("notification")).toBe(true);
+    const session = { engine: { getHookRegistry: () => reg } } as unknown as ChatSession;
+    const hooks = new DecisionNotificationHooks();
+    const base = {
+      sessionId: "s1",
+      workerGeneration: 1,
+      createdAt: 1,
+      surfaceable: true,
+    };
+    // Filtered out by the matcher.
+    hooks.requested(session, {
+      ...base,
+      requestId: "tool-1",
+      kind: "tool_approval",
+      title: "等待批准 Bash",
+      toolName: "Bash",
+    });
+    hooks.describe("q-1", { question: "Ship it?" });
+    hooks.requested(session, {
+      ...base,
+      requestId: "q-1",
+      kind: "ask_user",
+      title: "需要用户回答",
+    });
+    const deadline = Date.now() + 5_000;
+    while (Date.now() < deadline && !existsSync(out))
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    // Give a wrongly matched second hook time to append too.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const lines = readFileSync(out, "utf8").split("\n").filter(Boolean);
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0]!)).toMatchObject({
+      eventName: "notification",
+      data: { kind: "ask_user_requested", requestId: "q-1", message: "Ship it?" },
+    });
   });
 });

@@ -100,6 +100,31 @@ describe("Mimi atomic manager tools", () => {
     ).toContain("requires");
   });
 
+  test("labels a destination whose proactive context is unproven", () => {
+    const base: PetOutboundTargetOption = {
+      id: "owner-abc",
+      channel: "wechat",
+      label: "微信",
+      maxTextLength: 100,
+      attachments: [],
+      maxAttachments: 0,
+      maxAttachmentBytes: 0,
+    };
+    const describeTargets = (targets: PetOutboundTargetOption[]) =>
+      rewriteSendMessageDef(sendMessageToolDef, {
+        behaviorProfile: "pet",
+        profileMeta: { petHostActionKinds: ["outboundMessage"], petOutboundTargets: targets },
+      } as unknown as ToolVisibilityContext).description;
+    expect(describeTargets([{ ...base, proactiveReady: "unknown" }])).toContain(
+      "may not deliver until the owner messages first",
+    );
+    expect(describeTargets([base])).not.toContain("readiness=unknown");
+    // Acceptance is still never delivery, for either readiness.
+    expect(describeTargets([{ ...base, proactiveReady: "unknown" }])).toContain(
+      "never proof of delivery",
+    );
+  });
+
   test("exposes proactive messaging only for exact host-authorized targets", async () => {
     const targets: PetOutboundTargetOption[] = [
       {

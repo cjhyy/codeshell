@@ -11,3 +11,4 @@ export * from "./disclosure/todo-snapshot.js";
 export * from "./disclosure/catalog.js";
 export * from "./disclosure/selector.js";
 export * from "./disclosure/search.js";
+export * from "./delegation-brief.js";

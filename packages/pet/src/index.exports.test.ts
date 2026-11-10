@@ -3,6 +3,12 @@ import * as capabilityApi from "./index.capability.js";
 import * as protocolApi from "./index.protocol.js";
 import * as teamApi from "./index.team.js";
 import type {
+  BoundChannel as _BoundChannel,
+  NoticeAttention as _NoticeAttention,
+  NoticeChannel as _NoticeChannel,
+  NoticeEvent as _NoticeEvent,
+  NoticeRuleUpsert as _NoticeRuleUpsert,
+  NoticeRuleUpsertReply as _NoticeRuleUpsertReply,
   PendingDecisionProjection as _PendingDecisionProjection,
   PetProjectionDelta as _PetProjectionDelta,
   PetProjectionSnapshotResult as _PetProjectionSnapshotResult,
@@ -20,8 +26,15 @@ describe("Pet package public entry contracts", () => {
     expect(Object.keys(protocolApi).sort()).toEqual([
       "GET_PET_PROJECTION_SNAPSHOT_METHOD",
       "LOCAL_PET_OWNER",
+      "NOTICE_CHANNEL_MAX_LENGTH",
+      "NOTICE_EVENTS",
+      "NOTICE_NOTE_MAX_LENGTH",
+      "NOTICE_RULE_CREATORS",
       "PET_PROJECTION_DELTA_METHOD",
       "PET_REPORT_TO_MIMI_METHOD",
+      "PET_RULE_UPSERT_ACTION",
+      "parseNoticeEvents",
+      "parseNoticeRuleUpsert",
     ]);
     expect(Object.keys(teamApi).sort()).toEqual([
       "DIGITAL_HUMAN_ID_RE",
@@ -96,5 +109,9 @@ type _ProtocolContract =
   | _PendingDecisionProjection
   | _PetProjectionDelta
   | _PetProjectionSnapshotResult
-  | _PetSessionProjection;
+  | _PetSessionProjection
+  | _NoticeRuleUpsert
+  | _NoticeRuleUpsertReply
+  | _BoundChannel
+  | { event: _NoticeEvent; attention: _NoticeAttention; channel: _NoticeChannel };
 type _TeamContract = _DigitalHumanTeam | { mode: _DigitalHumanTeamMode };

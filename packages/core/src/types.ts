@@ -680,6 +680,9 @@ export interface TurnDiffSnapshot {
   omissions: { path: string; reason: string }[];
 }
 
+/** Why a run started; see `session_started.trigger`. */
+export type SessionRunTrigger = "user" | "host_message" | "background_wake";
+
 export type StreamEvent = {
   /** Source wall-clock time (Unix milliseconds), retained across durable replay. */
   timestamp?: number;
@@ -727,6 +730,14 @@ type StreamEventPayload =
       previousRunId?: string;
       /** Start of the whole logical submission, before run preparation. */
       startedAt?: number;
+      /**
+       * Why this run started, when the host knows. Optional and additive:
+       * `user` is the attached client's own submit (including an answer to
+       * an earlier question), `host_message` an ordinary user message another
+       * Session or host queued (SendMessageToSession), and `background_wake`
+       * core waking an idle Session to act on finished background work.
+       */
+      trigger?: SessionRunTrigger;
       promptTokens: number;
       promptTokensSource?: PromptTokenSource;
       promptTokensConfidence?: PromptTokenConfidence;

@@ -1,15 +1,17 @@
 // The chat capability shape and pet's validator must not drift apart.
 //
 // `ChannelCapabilities.outbound` lives in @cjhyy/code-shell-chat; pet re-declares
-// a mirror type and validates against a hard-coded key ALLOWLIST that rejects any
-// unknown key outright. So adding a field on the chat side silently invalidates
-// every real channel: Mimi loses Gateway discovery on IM turns and the only clue
-// is "contains an invalid Gateway capability catalog".
+// a mirror type and validates against a hard-coded key ALLOWLIST. It used to
+// reject any unknown key outright, so adding a field on the chat side silently
+// invalidated every real channel: Mimi lost Gateway discovery on IM turns and the
+// only clue was "contains an invalid Gateway capability catalog". That happened
+// twice (`proactive`, then `direct`). Unknown BOOLEAN flags are now ignored, and
+// host-side flags such as `idempotentSend` are stripped before the wire; unknown
+// keys of any other shape are still rejected.
 //
-// That has now happened twice (`proactive`, then `direct`). Neither package can
-// import the other — pet must not depend on a host/product package — so the
-// contract cannot be expressed as a shared type. Desktop depends on both, so it
-// is the one place the two shapes can actually be compared.
+// Neither package can import the other — pet must not depend on a host/product
+// package — so the contract cannot be expressed as a shared type. Desktop
+// depends on both, so it is the one place the two shapes can actually be compared.
 //
 // This is a CONTRACT test, not a unit test: it feeds the REAL builtin channel
 // capabilities through the REAL validator. Adding a field to chat without
@@ -56,26 +58,28 @@ describe("chat ↔ pet gateway capability contract", () => {
     expect(catalog!.channels).toHaveLength(channels.length);
   });
 
-  test("an unknown outbound key is still rejected", () => {
-    // The allowlist must stay strict — this guard exists so the fix for drift is
-    // "teach pet the new field", never "stop validating".
-    const rejected = parsePetGatewayCatalog({
-      currentChannel: "telegram",
-      channels: [
-        {
-          channel: "telegram",
-          capabilities: {
-            inbound: { text: true, attachments: [] },
-            outbound: {
-              text: true,
-              button: "link",
-              attachments: [],
-              somethingNobodyTaughtPetAbout: true,
+  test("an unknown non-boolean outbound key is still rejected", () => {
+    // The allowlist stays strict for value shapes — only additive boolean flags
+    // are tolerated, never "stop validating".
+    const withOutbound = (extra: Record<string, unknown>) =>
+      parsePetGatewayCatalog({
+        currentChannel: "telegram",
+        channels: [
+          {
+            channel: "telegram",
+            capabilities: {
+              inbound: { text: true, attachments: [] },
+              outbound: { text: true, button: "link", attachments: [], ...extra },
             },
           },
-        },
-      ],
-    });
-    expect(rejected).toBeUndefined();
+        ],
+      });
+    expect(withOutbound({ somethingNobodyTaughtPetAbout: "yes" })).toBeUndefined();
+    expect(withOutbound({ somethingNobodyTaughtPetAbout: 1 })).toBeUndefined();
+    const tolerated = withOutbound({ somethingNobodyTaughtPetAbout: true });
+    expect(tolerated).toBeDefined();
+    expect(tolerated!.channels[0]!.capabilities.outbound).not.toHaveProperty(
+      "somethingNobodyTaughtPetAbout",
+    );
   });
 });

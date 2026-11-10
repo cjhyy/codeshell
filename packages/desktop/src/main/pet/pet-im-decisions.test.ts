@@ -1,11 +1,38 @@
 import { describe, expect, test } from "bun:test";
 import { createPetLongTask, parsePetLongTask } from "../../../../pet/src/long-task.js";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator.js";
-import type {
-  GatewayControlEventInput,
-  PetChatControlRequest,
-} from "../im-gateway-control-server.js";
+import type { PetChatControlRequest } from "../im-gateway-control-server.js";
 import { collectImDecisions, PetImDecisions } from "./pet-im-decisions.js";
+import type { RouteDecision } from "./pet-notice-policy.js";
+import type {
+  NoticePriorDecision,
+  NoticeSubmission,
+  NoticeSubmitResult,
+} from "./pet-notice-types.js";
+
+/** What reached an IM conversation through the (stubbed) notice router. */
+interface Sent {
+  text: string;
+  target: { channel: string; target: string } | { owner: true };
+  notice: NoticeSubmission;
+}
+
+/** A router that sends every notice to its channel, recording what went out. */
+function routerStub(sent: Sent[]) {
+  return async (notice: NoticeSubmission): Promise<NoticeSubmitResult> => {
+    const channel =
+      notice.target.kind === "route" ? notice.target.route.channel : String(notice.channel);
+    sent.push({
+      text: notice.body!,
+      target:
+        notice.target.kind === "route"
+          ? { channel: notice.target.route.channel, target: notice.target.route.target }
+          : { owner: true },
+      notice,
+    });
+    return { decision: { outlet: "both", im: channel, reason: "named-im" }, sent: "accepted" };
+  };
+}
 
 function fixture(id = "one") {
   const task = createPetLongTask({
@@ -72,7 +99,7 @@ function fixture(id = "one") {
 }
 function harness(...fixtures: ReturnType<typeof fixture>[]) {
   let now = 20_000;
-  const published: GatewayControlEventInput[] = [];
+  const published: Sent[] = [];
   const approvals: Array<{ requestId: string; decision: unknown }> = [];
   const errors: unknown[] = [];
   const relay = new PetImDecisions({
@@ -80,12 +107,10 @@ function harness(...fixtures: ReturnType<typeof fixture>[]) {
     now: () => now,
     approve: async (entry, decision) => {
       approvals.push({ requestId: entry.envelope.requestId, decision });
-      const f = fixtures.find((item) => item.task.id === entry.task.id)!;
+      const f = fixtures.find((item) => item.task.id === entry.task!.id)!;
       f.snapshot.pending = [];
     },
-    publish: async (event) => {
-      published.push(event);
-    },
+    submit: routerStub(published),
     onError: (error) => errors.push(error),
   });
   const reply = (code: string, answer: string, origin = {}) =>
@@ -395,7 +420,7 @@ describe("IM task confirmations", () => {
     expect(h.approvals[0]!.decision).toMatchObject({ approved: false });
   });
 
-  test("retries publication with the same durable delivery key", async () => {
+  test("retries a failed submission with the same dedupe key", async () => {
     const f = fixture();
     const keys: string[] = [];
     let calls = 0;
@@ -403,9 +428,10 @@ describe("IM task confirmations", () => {
       read: f.read,
       now: () => 20_000,
       approve: async () => {},
-      publish: async (ev) => {
-        keys.push(ev.deliveryKey!);
+      submit: async (notice) => {
+        keys.push(notice.dedupeKey);
         if (++calls === 1) throw new Error("offline");
+        return { decision: { outlet: "both", im: "wechat", reason: "named-im" }, sent: "accepted" };
       },
       onError: () => {},
     });
@@ -429,7 +455,7 @@ describe("IM task confirmations", () => {
         });
         f.snapshot.pending = [];
       },
-      publish: async () => {},
+      submit: async () => undefined,
       onError: () => {},
     });
     const request: PetChatControlRequest = {
@@ -668,7 +694,7 @@ test("worker protocol: IM answer releases the original write; Stop drains queued
     };
     const relay = new PetImDecisions({
       read,
-      publish: async () => {},
+      submit: async () => undefined,
       onError: (error) => {
         throw error;
       },
@@ -737,7 +763,7 @@ describe("IM model questions (skippable)", () => {
     return f;
   }
   function relayFor(f: ReturnType<typeof fixture>, now: { value: number }) {
-    const published: GatewayControlEventInput[] = [];
+    const published: Sent[] = [];
     const approvals: unknown[] = [];
     const kept: string[] = [];
     const relay = new PetImDecisions({
@@ -752,9 +778,7 @@ describe("IM model questions (skippable)", () => {
         f.params.expiresAt = undefined;
         delete f.params.request.args.keepWaitable;
       },
-      publish: async (event) => {
-        published.push(event);
-      },
+      submit: routerStub(published),
       onError: () => undefined,
     });
     const reply = (code: string, answer: string) =>
@@ -856,5 +880,304 @@ describe("IM model questions (skippable)", () => {
         },
       }),
     ).toBeUndefined();
+  });
+});
+
+describe("decisions routed through the notice router", () => {
+  /** A Session without an IM-started task whose blocked rule targets the owner. */
+  function ruleFixture(id = "rule") {
+    const f = fixture(id);
+    delete f.task.completionTarget;
+    const read = () =>
+      collectImDecisions(
+        f.snapshot,
+        [f.task],
+        [JSON.stringify({ method: "agent/approvalRequest", params: f.params })],
+        (sessionId) =>
+          sessionId === f.task.sessionId
+            ? {
+                ruleIds: ["rule-1"],
+                attention: "always",
+                channel: "auto",
+                target: { kind: "owner" },
+              }
+            : undefined,
+      );
+    return { ...f, read };
+  }
+  const OWNER_DM = { channel: "lark", target: "owner-dm", senderId: "me", isDirectMessage: true };
+  /** The owner's private chat on another channel. */
+  const OTHER_OWNER_DM = {
+    channel: "wechat",
+    target: "owner-wx",
+    senderId: "me",
+    isDirectMessage: true,
+  };
+  function relayWith(
+    read: () => ReturnType<typeof collectImDecisions>,
+    decide: (notice: NoticeSubmission) => RouteDecision,
+    now = { value: 20_000 },
+    extra: Partial<ConstructorParameters<typeof PetImDecisions>[0]> = {},
+  ) {
+    const submitted: NoticeSubmission[] = [];
+    const approvals: unknown[] = [];
+    const relay = new PetImDecisions({
+      read,
+      now: () => now.value,
+      approve: async (_entry, decision) => {
+        approvals.push(decision);
+      },
+      submit: async (notice) => {
+        submitted.push(notice);
+        const decision = decide(notice);
+        return {
+          decision,
+          ...(decision.im && decision.outlet !== "desktop" ? { sent: "accepted" as const } : {}),
+        };
+      },
+      isOwnerConversation: (origin) =>
+        (origin.channel === OWNER_DM.channel && origin.target === OWNER_DM.target) ||
+        (origin.channel === OTHER_OWNER_DM.channel && origin.target === OTHER_OWNER_DM.target),
+      ownerChannelIsDirect: () => true,
+      onError: (error) => {
+        throw error;
+      },
+      ...extra,
+    });
+    return { relay, submitted, approvals, now };
+  }
+  const toIm = (): RouteDecision => ({ outlet: "im", im: "lark", reason: "away-first-ready" });
+  const toDesktop = (): RouteDecision => ({ outlet: "desktop", reason: "present-desktop" });
+
+  test("a rule-watched Session gets one code-bearing P0 prompt for the owner", async () => {
+    const f = ruleFixture();
+    const h = relayWith(f.read, toIm);
+    await h.relay.tick();
+    await h.relay.tick();
+    expect(h.submitted).toHaveLength(1);
+    const code = f.read()[0]!.code;
+    expect(h.submitted[0]).toMatchObject({
+      kind: "session.blocked",
+      priority: "P0",
+      dedupeKey: `${f.task.sessionId}:request-rule`,
+      requestId: "request-rule",
+      expiresAt: 100 + 10 * 60_000,
+      sessionId: f.task.sessionId,
+      ruleIds: ["rule-1"],
+      attention: "always",
+      channel: "auto",
+      target: { kind: "owner" },
+      facts: { question: "Read /private/example?", code },
+    });
+    expect(h.submitted[0]!.reply).toBeUndefined();
+    expect(h.submitted[0]!.body).toContain(`回答 ${code} 1`);
+    expect(h.submitted[0]!.body).toContain("允许本次 — One read");
+
+    // Only the owner's own direct chat can answer it.
+    const answer = (origin: Record<string, unknown>) =>
+      h.relay.reply({ message: `回答 ${code} 1`, origin: { ...OWNER_DM, ...origin } as never });
+    expect(await answer({ isDirectMessage: false })).toContain("不属于当前私聊");
+    expect(await answer({ target: "someone-else" })).toContain("不属于当前私聊");
+    expect(h.approvals).toEqual([]);
+    expect(await answer({})).toContain("已处理");
+    expect(h.approvals).toEqual([{ approved: true, answer: "允许本次" }]);
+  });
+
+  test("an IM-started task prompts its own conversation and replies immediately", async () => {
+    const f = fixture("origin");
+    const h = relayWith(f.read, () => ({ outlet: "both", im: "wechat", reason: "named-im" }));
+    await h.relay.tick();
+    await h.relay.tick();
+    expect(h.submitted).toHaveLength(1);
+    expect(h.submitted[0]).toMatchObject({
+      channel: "wechat",
+      target: { kind: "route", route: { channel: "wechat", target: "conversation" } },
+      reply: true,
+      ruleIds: [],
+    });
+  });
+
+  test("a prompt the router kept on the desktop is never treated as delivered", async () => {
+    const f = ruleFixture();
+    const h = relayWith(f.read, toDesktop);
+    await h.relay.tick();
+    expect(h.submitted).toHaveLength(1);
+    // The owner never saw a code: a bare number is not an answer to anything.
+    expect(await h.relay.reply({ message: "1", origin: OWNER_DM })).toBeUndefined();
+    // Core owns the deadline for a decision that never went to IM.
+    h.now.value = 100 + 10 * 60_000 + 1;
+    await h.relay.tick();
+    expect(h.approvals).toEqual([]);
+    expect(h.submitted).toHaveLength(1);
+  });
+
+  test("an unanswered owner prompt times out and says so on the channel it used", async () => {
+    const f = ruleFixture();
+    const h = relayWith(f.read, toIm);
+    await h.relay.tick();
+    h.now.value = 100 + 10 * 60_000 + 1;
+    await h.relay.tick();
+    expect(h.approvals).toEqual([
+      expect.objectContaining({ approved: false, failure: "timed_out" }),
+    ]);
+    expect(h.submitted[1]).toMatchObject({
+      kind: "decision.expired",
+      channel: "lark",
+      target: { kind: "owner" },
+      reply: true,
+    });
+    expect(h.submitted[1]!.body).toContain("本次操作未获授权");
+  });
+
+  test("owner prompts carry a generic text for a chat that is not private", async () => {
+    const f = ruleFixture();
+    const h = relayWith(f.read, toIm, undefined, { ownerChannelIsDirect: () => false });
+    await h.relay.tick();
+    const generic = h.submitted[0]!.facts.nonDirectBody!;
+    expect(generic).toContain("请打开桌面 Session 处理");
+    expect(generic).not.toContain(f.read()[0]!.code);
+    expect(generic).not.toContain("/private/example");
+    // Sent to a group: nothing there is answerable, so a bare reply is not one.
+    expect(await h.relay.reply({ message: "1", origin: OWNER_DM })).toBeUndefined();
+  });
+
+  test("a bare answer only counts on the channel the owner prompt went to", async () => {
+    const f = ruleFixture();
+    const h = relayWith(f.read, toIm);
+    await h.relay.tick();
+    const code = f.read()[0]!.code;
+    expect(await h.relay.reply({ message: "1", origin: OTHER_OWNER_DM })).toBeUndefined();
+    expect(await h.relay.reply({ message: "1", origin: OWNER_DM })).toContain(`回答 ${code} 1`);
+    // A coded answer may come from any of the owner's private chats.
+    expect(await h.relay.reply({ message: `回答 ${code} 1`, origin: OTHER_OWNER_DM })).toContain(
+      "已处理",
+    );
+  });
+
+  test("a prompt kept on the desktop goes to IM once the owner leaves", async () => {
+    const f = ruleFixture();
+    let away = false;
+    const h = relayWith(
+      f.read,
+      (notice) => (notice.dedupeKey.endsWith(":away") ? toIm() : toDesktop()),
+      undefined,
+      { isAway: () => away },
+    );
+    await h.relay.tick();
+    await h.relay.tick();
+    expect(h.submitted).toHaveLength(1);
+    away = true;
+    await h.relay.tick();
+    await h.relay.tick();
+    expect(h.submitted.map((notice) => notice.dedupeKey)).toEqual([
+      `${f.task.sessionId}:request-rule`,
+      `${f.task.sessionId}:request-rule:away`,
+    ]);
+    expect(h.submitted[1]).toMatchObject({
+      requestId: "request-rule",
+      facts: { code: f.read()[0]!.code },
+    });
+    expect(await h.relay.reply({ message: "1", origin: OWNER_DM })).toContain("单独的编号");
+  });
+
+  test("no escalation for a desktop-only rule, the P0 cap, or a nearly expired decision", async () => {
+    for (const [decision, now] of [
+      [{ outlet: "desktop", reason: "desktop-channel" }, 20_000],
+      [{ outlet: "digest", reason: "p0-cap" }, 20_000],
+      [{ outlet: "record", reason: "muted" }, 20_000],
+      [{ outlet: "desktop", reason: "present-desktop" }, 100 + 10 * 60_000 - 59_000],
+    ] as const) {
+      const f = ruleFixture();
+      const h = relayWith(f.read, () => decision, { value: now }, { isAway: () => true });
+      await h.relay.tick();
+      await h.relay.tick();
+      expect(h.submitted).toHaveLength(1);
+    }
+  });
+
+  test("after a restart the router's record decides: no resubmission, and prompted survives", async () => {
+    const f = ruleFixture();
+    const records = new Map<string, NoticePriorDecision>();
+    const first = relayWith(f.read, toIm);
+    await first.relay.tick();
+    records.set(first.submitted[0]!.dedupeKey, {
+      decision: toIm(),
+      status: "accepted",
+      channel: "lark",
+    });
+    const restarted = relayWith(f.read, toIm, undefined, {
+      prior: (key) => records.get(key),
+    });
+    await restarted.relay.tick();
+    expect(restarted.submitted).toEqual([]);
+    expect(await restarted.relay.reply({ message: "1", origin: OWNER_DM })).toContain("单独的编号");
+  });
+
+  test("after a restart a desktop-kept prompt can still escalate once", async () => {
+    const f = ruleFixture();
+    const key = `${f.task.sessionId}:request-rule`;
+    const records = new Map<string, NoticePriorDecision>([[key, { decision: toDesktop() }]]);
+    const h = relayWith(f.read, toIm, undefined, {
+      prior: (dedupeKey) => records.get(dedupeKey),
+      isAway: () => true,
+    });
+    await h.relay.tick();
+    expect(h.submitted.map((notice) => notice.dedupeKey)).toEqual([`${key}:away`]);
+    records.set(`${key}:away`, { decision: toIm(), status: "accepted", channel: "lark" });
+    const again = relayWith(f.read, toIm, undefined, {
+      prior: (dedupeKey) => records.get(dedupeKey),
+      isAway: () => true,
+    });
+    await again.relay.tick();
+    expect(again.submitted).toEqual([]);
+  });
+
+  test("a queued prompt counts as delivered once the router sends it", async () => {
+    const f = ruleFixture();
+    const key = `${f.task.sessionId}:request-rule`;
+    const records = new Map<string, NoticePriorDecision>();
+    const h = relayWith(
+      f.read,
+      () => ({ outlet: "desktop", im: "lark", queued: true, reason: "im-unavailable-queued" }),
+      undefined,
+      { prior: (dedupeKey) => records.get(dedupeKey) },
+    );
+    await h.relay.tick();
+    expect(await h.relay.reply({ message: "1", origin: OWNER_DM })).toBeUndefined();
+    records.set(key, { status: "accepted", channel: "lark" });
+    await h.relay.tick();
+    expect(await h.relay.reply({ message: "1", origin: OWNER_DM })).toContain("单独的编号");
+  });
+
+  test("Core's deadline firing first still tells the prompted chat; an answer does not", async () => {
+    const f = ruleFixture();
+    let status: string | undefined = "pending";
+    const now = { value: 20_000 };
+    const h = relayWith(f.read, toIm, now, { decisionStatus: () => status });
+    await h.relay.tick();
+    // Core expired it and the projection dropped it before this module's tick.
+    f.snapshot.pending = [];
+    status = "expired";
+    await h.relay.tick();
+    await h.relay.tick();
+    expect(h.approvals).toEqual([]);
+    expect(h.submitted.map((notice) => notice.kind)).toEqual([
+      "session.blocked",
+      "decision.expired",
+    ]);
+    expect(h.submitted[1]).toMatchObject({ channel: "lark", target: { kind: "owner" } });
+
+    const g = ruleFixture("answered");
+    const answered = relayWith(g.read, toIm, now, { decisionStatus: () => undefined });
+    await answered.relay.tick();
+    g.snapshot.pending = [];
+    await answered.relay.tick();
+    expect(answered.submitted.map((notice) => notice.kind)).toEqual(["session.blocked"]);
+  });
+
+  test("Sessions with neither an IM task nor a blocked rule are not candidates", () => {
+    const f = fixture("none");
+    delete f.task.completionTarget;
+    expect(f.read()).toEqual([]);
   });
 });

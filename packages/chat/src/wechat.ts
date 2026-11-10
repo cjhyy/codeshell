@@ -5,6 +5,7 @@ import type {
   ChannelAdapter,
   ChannelMessage,
   ChannelMessageHandler,
+  ChannelSendOptions,
   OutgoingMessage,
 } from "./channel.js";
 import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
@@ -351,15 +352,22 @@ export class WechatAdapter implements ChannelAdapter {
     }
   }
 
-  send(target: string, message: OutgoingMessage): Promise<void> {
+  send(target: string, message: OutgoingMessage, options?: ChannelSendOptions): Promise<void> {
+    const callerClientId = options?.clientId;
     const operation = this.outboundQueue.then(() =>
-      withWechatAccountSendLock(this.accountKey, () => this.sendInOrder(target, message)),
+      withWechatAccountSendLock(this.accountKey, () =>
+        this.sendInOrder(target, message, callerClientId),
+      ),
     );
     this.outboundQueue = operation.catch(() => undefined);
     return operation;
   }
 
-  private async sendInOrder(target: string, message: OutgoingMessage): Promise<void> {
+  private async sendInOrder(
+    target: string,
+    message: OutgoingMessage,
+    callerClientId?: string,
+  ): Promise<void> {
     await this.ensureState();
     const text = message.button
       ? `${message.text}\n\n${message.button.text}: ${message.button.url}`
@@ -369,20 +377,25 @@ export class WechatAdapter implements ChannelAdapter {
     if (textChunks.length === 0 && attachments.length === 0) {
       throw new Error("微信待发送消息不能为空");
     }
+    // A caller id makes item i's platform id deterministic, so replaying the
+    // same message (e.g. a notice resend after an unknown outcome) lets
+    // WeChat deduplicate it. Without one every item gets a fresh random id.
+    const itemClientId = (index: number) =>
+      callerClientId ? `${callerClientId}-${index}` : `code-shell-chat-${randomUUID()}`;
     // iLink accepts exactly one MessageItem per sendmessage call. In
     // particular, a text caption and a media item must be sent separately;
     // combining them is rejected by the service as "invalid arguments".
     await this.delivery.run(message, () => [
-      ...textChunks.map((chunk) => {
+      ...textChunks.map((chunk, index) => {
         // Keep the platform id stable across DeliveryQueue retries. A request
         // can reach WeChat successfully while its HTTP acknowledgement is
         // lost; retrying with a fresh id visibly duplicates the reply.
-        const clientId = `code-shell-chat-${randomUUID()}`;
+        const clientId = itemClientId(index);
         return () =>
           this.sendItem(target, { type: ITEM_TYPE_TEXT, text_item: { text: chunk } }, clientId);
       }),
-      ...attachments.map((attachment) => {
-        const clientId = `code-shell-chat-${randomUUID()}`;
+      ...attachments.map((attachment, index) => {
+        const clientId = itemClientId(textChunks.length + index);
         return async () => {
           const item =
             attachment.kind === "image"

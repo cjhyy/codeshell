@@ -7,6 +7,7 @@
  */
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { stripDelegationBrief } from "../delegation-brief.js";
 import { listWorkSessionsOnDisk } from "./catalog.js";
 import { textOfContent, type DiskTranscriptEvent } from "./jsonl.js";
 
@@ -70,7 +71,15 @@ function findSnippetsInSession(
   for (const event of events) {
     if (snippets.length >= maxSnippets) break;
     if (event.type !== "message") continue;
-    const text = textOfContent(event.data?.content);
+    const data = event.data ?? {};
+    // A user message matches as the user wrote it: the host's displayText, or
+    // the content without Mimi's delegation brief (older transcripts).
+    const text =
+      data.role !== "user"
+        ? textOfContent(data.content)
+        : typeof data.displayText === "string" && data.displayText.trim()
+          ? data.displayText
+          : stripDelegationBrief(textOfContent(data.content));
     if (!text) continue;
     const lowerText = text.toLowerCase();
     const index = lowerText.indexOf(query);

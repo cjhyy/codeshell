@@ -315,9 +315,17 @@ export async function finalizeRunSuccess(args: {
     const onStream = options?.onStream;
     if (userMsgCount === 1 && onStream && result.text) {
       const sessionId = session.state.sessionId;
-      const rawContent = (userMsgEvents[0]?.data as { content?: unknown })?.content;
+      const firstUserData = userMsgEvents[0]?.data as
+        | { content?: unknown; displayText?: unknown }
+        | undefined;
+      const rawContent = firstUserData?.content;
+      // Title what the user sees: a host may hide model-only framing behind displayText.
       const firstUserText =
-        typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent ?? "");
+        typeof firstUserData?.displayText === "string" && firstUserData.displayText.trim()
+          ? firstUserData.displayText
+          : typeof rawContent === "string"
+            ? rawContent
+            : JSON.stringify(rawContent ?? "");
       void buildSessionTitle(
         auxSummaryClient,
         firstUserText,

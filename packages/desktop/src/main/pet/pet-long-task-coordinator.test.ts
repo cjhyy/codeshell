@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { ErrorCodes } from "@cjhyy/code-shell-core";
-import type { PetLongTaskStatus } from "@cjhyy/code-shell-pet";
+import type { PetLongTask, PetLongTaskStatus } from "@cjhyy/code-shell-pet";
 import type {
   DesktopPetProjectionEvent,
   DesktopPetProjectionSnapshot,
@@ -51,7 +51,10 @@ function fakeProjection(snapshot = emptySnapshot()) {
   };
 }
 
-async function harness(snapshot = emptySnapshot()) {
+async function harness(
+  snapshot = emptySnapshot(),
+  hooks: { onDelegationStarted?: (task: PetLongTask) => Promise<void> } = {},
+) {
   const root = await mkdtemp(join(tmpdir(), "pet-long-task-coordinator-"));
   roots.push(root);
   let now = 1_000;
@@ -69,6 +72,7 @@ async function harness(snapshot = emptySnapshot()) {
   const launches: Array<Record<string, unknown>> = [];
   const workerRequests: Array<{ method: string; params: Record<string, unknown> }> = [];
   const closed: Array<{ id: string; status: string }> = [];
+  const backgroundErrors: Array<{ operation: string; error: unknown }> = [];
   const coordinator = new PetLongTaskCoordinator({
     store,
     projection,
@@ -81,6 +85,7 @@ async function harness(snapshot = emptySnapshot()) {
     },
     launcher: {
       start: async (delegation) => {
+        if (delegation.executionBackend === "codex") throw new Error("Codex is not supported");
         launches.push(delegation as unknown as Record<string, unknown>);
         const sessionId =
           delegation.targetSessionId ?? petDelegationSessionId(delegation.clientMessageId);
@@ -108,10 +113,13 @@ async function harness(snapshot = emptySnapshot()) {
     onTaskClosed: async (task) => {
       closed.push({ id: task.id, status: task.status });
     },
+    ...(hooks.onDelegationStarted ? { onDelegationStarted: hooks.onDelegationStarted } : {}),
+    onBackgroundError: (operation, error) => backgroundErrors.push({ operation, error }),
   });
   await coordinator.start();
   return {
     root,
+    backgroundErrors,
     store,
     projection,
     coordinator,
@@ -194,6 +202,70 @@ function waitForTaskStatus(
 }
 
 describe("PetLongTaskCoordinator", () => {
+  test("an accepted delegation arms its notice rule once; replays and failed launches do not", async () => {
+    const started: PetLongTask[] = [];
+    const h = await harness(emptySnapshot(), {
+      onDelegationStarted: async (task) => {
+        started.push(task);
+      },
+    });
+    const request = {
+      clientMessageId: "arm-once",
+      task: "Fix login",
+      goalObjective: "Fix login",
+      workspacePath: "/work/app",
+      completionTarget: { kind: "im-gateway" as const, channel: "wechat", target: "owner" },
+    };
+    const launch = await h.coordinator.startDelegation(request);
+    await h.coordinator.startDelegation(request);
+    expect(started).toHaveLength(1);
+    expect(started[0]).toMatchObject({
+      id: launch.taskId,
+      sessionId: launch.sessionId,
+      status: "running",
+      verificationMode: "goal",
+      completionTarget: request.completionTarget,
+    });
+    await expect(
+      h.coordinator.startDelegation({
+        clientMessageId: "arm-never",
+        task: "Run with Codex",
+        workspacePath: "/work/app",
+        targetSessionId: "missing",
+        executionBackend: "codex",
+      }),
+    ).rejects.toThrow("Codex is not supported");
+    expect(started).toHaveLength(1);
+    h.coordinator.stop();
+  });
+
+  test.each(["rejects", "throws"])(
+    "a notice rule that %s never fails the accepted delegation",
+    async (mode) => {
+      const h = await harness(emptySnapshot(), {
+        onDelegationStarted:
+          mode === "rejects"
+            ? async () => {
+                throw new Error("rules.json is read-only");
+              }
+            : ((() => {
+                throw new Error("rules.json is read-only");
+              }) as () => Promise<void>),
+      });
+      const launch = await h.coordinator.startDelegation({
+        clientMessageId: `arm-${mode}`,
+        task: "Fix login",
+        workspacePath: "/work/app",
+      });
+      expect(h.store.get(launch.taskId)?.status).toBe("running");
+      expect(h.launches).toHaveLength(1);
+      expect(h.backgroundErrors).toEqual([
+        { operation: "delegationStarted", error: new Error("rules.json is read-only") },
+      ]);
+      h.coordinator.stop();
+    },
+  );
+
   test.each(["met", "exhausted"])(
     "defers %s Goal closure through end hooks until the same run becomes idle",
     async (status) => {
@@ -1564,6 +1636,68 @@ describe("PetLongTaskCoordinator", () => {
     ]);
     const cleared = await h.coordinator.clearTerminalTask(launch.taskId);
     expect(cleared.tasks).toEqual([]);
+  });
+
+  test("resume and retry are re-drives that keep the IM route and re-arm the rule", async () => {
+    const started: PetLongTask[] = [];
+    const h = await harness(emptySnapshot(), {
+      onDelegationStarted: async (task) => {
+        started.push(task);
+      },
+    });
+    const route = { kind: "im-gateway" as const, channel: "wechat", target: "owner" };
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "message-redrive",
+      task: "Finish a long migration",
+      workspacePath: "/work/app",
+      completionTarget: route,
+    });
+    expect(h.launches[0]).not.toHaveProperty("redrive");
+
+    await h.coordinator.control({ taskId: launch.taskId, action: "pause" });
+    const resumed = await h.coordinator.control({ taskId: launch.taskId, action: "resume" });
+    expect(resumed.ok).toBe(true);
+    expect(h.launches.at(-1)).toMatchObject({ redrive: true, completionTarget: route });
+
+    h.tick(2_000);
+    await h.stream(launch.sessionId, { type: "error", error: "temporary worker failure" });
+    expect(h.store.get(launch.taskId)).toMatchObject({ status: "failed" });
+    const retried = await h.coordinator.control({ taskId: launch.taskId, action: "retry" });
+    expect(retried.ok && retried.task).toMatchObject({ status: "running", attempt: 2 });
+    expect(h.launches.at(-1)).toMatchObject({ redrive: true, completionTarget: route });
+    // The failed attempt's closure spent the automatic rule; each re-drive re-arms it.
+    expect(started.map((task) => [task.id, task.attempt])).toEqual([
+      [launch.taskId, 1],
+      [launch.taskId, 1],
+      [launch.taskId, 2],
+    ]);
+    h.coordinator.stop();
+  });
+
+  test("retrying a delegation the worker never accepted still sends the brief", async () => {
+    const started: PetLongTask[] = [];
+    const h = await harness(emptySnapshot(), {
+      onDelegationStarted: async (task) => {
+        started.push(task);
+      },
+    });
+    const route = { kind: "im-gateway" as const, channel: "lark", target: "owner" };
+    const created = await h.store.create({
+      id: "never-accepted",
+      originClientMessageId: "never-accepted",
+      objective: "Rename billing",
+      workspacePath: "/work/app",
+      sessionId: "work-never",
+      completionTarget: route,
+      at: 1_000,
+    });
+    await h.store.transition(created.id, { kind: "failed", at: 1_001, error: "worker offline" });
+    const retried = await h.coordinator.control({ taskId: created.id, action: "retry" });
+    expect(retried.ok).toBe(true);
+    expect(h.launches.at(-1)).toMatchObject({ completionTarget: route });
+    expect(h.launches.at(-1)).not.toHaveProperty("redrive");
+    expect(started).toHaveLength(1);
+    h.coordinator.stop();
   });
 
   test("ignores an old terminal replay after retrying the same Session", async () => {

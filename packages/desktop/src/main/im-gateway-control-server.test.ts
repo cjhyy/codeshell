@@ -592,6 +592,44 @@ describe("GatewayControlServer", () => {
     });
     expect(invalidCapabilityFlag.status).toBe(400);
 
+    // A newer Gateway's additive boolean flag is tolerated and dropped rather
+    // than failing the whole route; an unknown non-boolean value still fails.
+    const postWithOutbound = (extra: Record<string, unknown>) =>
+      fetch(`${descriptor.baseUrl}/v1/pet/chat`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${descriptor.token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          message: "inspect",
+          origin: {
+            channel: "telegram",
+            target: "owner-chat",
+            senderId: "owner",
+            capabilities: {
+              ...telegramCapabilities,
+              outbound: { ...telegramCapabilities.outbound, ...extra },
+            },
+            channels: [
+              {
+                channel: "telegram",
+                capabilities: {
+                  ...telegramCapabilities,
+                  outbound: { ...telegramCapabilities.outbound, ...extra },
+                },
+              },
+            ],
+          },
+        }),
+      });
+    const futureFlag = await postWithOutbound({ idempotentSend: true, futureFlag: false });
+    expect(futureFlag.status).toBe(200);
+    const forwarded = (observed as { origin: { capabilities: { outbound: object } } }).origin;
+    expect(forwarded.capabilities.outbound).not.toHaveProperty("idempotentSend");
+    expect(forwarded.capabilities.outbound).not.toHaveProperty("futureFlag");
+    expect((await postWithOutbound({ futureLimit: 3 })).status).toBe(400);
+
     const invalidPrivateFlag = await fetch(`${descriptor.baseUrl}/v1/pet/chat`, {
       method: "POST",
       headers: {

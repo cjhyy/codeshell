@@ -25,6 +25,12 @@ export interface ChannelCapabilities {
     proactive: boolean;
     /** Whether send() works on a fresh adapter without run() being active. */
     direct: boolean;
+    /**
+     * Whether send() honours ChannelSendOptions.clientId by deriving stable
+     * platform message ids from it, so a resend with the same id can be
+     * deduplicated by the platform instead of appearing twice. Absent = false.
+     */
+    idempotentSend?: boolean;
     /** Maximum complete GatewayReply text before transport-safe chunking. */
     maxTextLength?: number;
     /** Native interactive button, or a normal labelled URL rendered in text/markdown. */
@@ -47,6 +53,7 @@ function capabilities(
     maxAttachmentBytes?: number;
     proactive?: boolean;
     direct?: boolean;
+    idempotentSend?: boolean;
   } = {},
 ): ChannelCapabilities {
   return {
@@ -55,6 +62,7 @@ function capabilities(
       text: true,
       proactive: options.proactive ?? true,
       direct: options.direct ?? false,
+      ...(options.idempotentSend ? { idempotentSend: true } : {}),
       maxTextLength: options.maxTextLength ?? 8_000,
       button,
       attachments: outboundAttachments,
@@ -75,8 +83,10 @@ export const BUILTIN_CHANNEL_CAPABILITIES = {
   wecom: capabilities("link", ["image", "file", "video"], ALL_ATTACHMENT_KINDS),
   // A fresh adapter can reuse a persisted inbound context_token. Stale tokens
   // are durably evicted; tokenless retry is best-effort, not a protocol promise.
+  // Platform client_id deduplicates a resend that reuses it.
   wechat: capabilities("link", ALL_ATTACHMENT_KINDS, ALL_ATTACHMENT_KINDS, {
     direct: true,
+    idempotentSend: true,
   }),
   matrix: capabilities("link", ALL_ATTACHMENT_KINDS, ALL_ATTACHMENT_KINDS, { direct: true }),
   mattermost: capabilities("link", ALL_ATTACHMENT_KINDS, ALL_ATTACHMENT_KINDS, { direct: true }),
@@ -140,6 +150,12 @@ export interface OutgoingAttachment {
 export interface ChannelSendOptions {
   /** Platform thread to reply in; adapters without threads ignore it. */
   threadId?: string;
+  /**
+   * Caller-stable idempotency id. Adapters declaring outbound.idempotentSend
+   * derive each platform message id from it (one per chunk/attachment), so
+   * replaying the same message with the same id is deduplicated. Others ignore it.
+   */
+  clientId?: string;
 }
 
 export type ChannelMessageHandler = (message: ChannelMessage) => Promise<void>;

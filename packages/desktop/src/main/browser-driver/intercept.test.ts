@@ -8,6 +8,8 @@ import {
   buildWorkspaceActionReply,
   parsePanelActionLine,
   buildPanelActionReply,
+  parseHostActionLine,
+  buildHostActionReply,
 } from "./intercept";
 
 const browserActionLine = (args: Record<string, unknown>, requestId = "rq1", sessionId = "s1") =>
@@ -355,5 +357,112 @@ describe("panel action interception", () => {
     expect(reply.params.sessionId).toBe("s4");
     expect(reply.params.requestId).toBe("rq4");
     expect(reply.params.decision.answer).toContain('"panelId":"files"');
+  });
+});
+
+const hostActionLine = (
+  args: unknown,
+  { toolName = "__host_action__", method = "agent/approvalRequest", extra = {} } = {},
+) =>
+  JSON.stringify({
+    jsonrpc: "2.0",
+    method,
+    params: { sessionId: "s5", requestId: "rq5", ...extra, request: { toolName, args } },
+  });
+
+describe("parseHostActionLine", () => {
+  test("parses a generic host action with its routing envelope", () => {
+    const line = hostActionLine(
+      { action: "notice.create", args: { title: "x", nested: { a: 1 } } },
+      { extra: { connectionId: "c1", generation: 3 } },
+    );
+    expect(parseHostActionLine(line)).toEqual({
+      connectionId: "c1",
+      generation: 3,
+      sessionId: "s5",
+      requestId: "rq5",
+      action: "notice.create",
+      args: { title: "x", nested: { a: 1 } },
+    });
+  });
+
+  test("leaves sessionId undefined when the worker omitted it", () => {
+    const line = JSON.stringify({
+      jsonrpc: "2.0",
+      method: "agent/approvalRequest",
+      params: {
+        requestId: "rq5",
+        request: { toolName: "__host_action__", args: { action: "a", args: {} } },
+      },
+    });
+    expect(parseHostActionLine(line)).toEqual({
+      sessionId: undefined,
+      requestId: "rq5",
+      action: "a",
+      args: {},
+    });
+  });
+
+  test("returns null for other tools, methods or malformed payloads", () => {
+    const ok = { action: "notice.create", args: {} };
+    expect(
+      parseHostActionLine(hostActionLine(ok, { toolName: "__workspace_action__" })),
+    ).toBeNull();
+    expect(parseHostActionLine(hostActionLine(ok, { method: "agent/streamEvent" }))).toBeNull();
+    expect(parseHostActionLine(workspaceActionLine({ action: "switch", target: "x" }))).toBeNull();
+    expect(parseHostActionLine(hostActionLine({ args: {} }))).toBeNull();
+    expect(parseHostActionLine(hostActionLine({ action: 1, args: {} }))).toBeNull();
+    expect(parseHostActionLine(hostActionLine({ action: "a" }))).toBeNull();
+    expect(parseHostActionLine(hostActionLine({ action: "a", args: null }))).toBeNull();
+    expect(parseHostActionLine(hostActionLine({ action: "a", args: [1] }))).toBeNull();
+    expect(parseHostActionLine(hostActionLine({ action: "a", args: "x" }))).toBeNull();
+    expect(parseHostActionLine(hostActionLine(null))).toBeNull();
+    expect(parseHostActionLine("not json")).toBeNull();
+  });
+
+  test("does not consume a host action whose request id is missing", () => {
+    const line = JSON.stringify({
+      jsonrpc: "2.0",
+      method: "agent/approvalRequest",
+      params: {
+        sessionId: "s5",
+        request: { toolName: "__host_action__", args: { action: "a", args: {} } },
+      },
+    });
+    expect(parseHostActionLine(line)).toBeNull();
+  });
+});
+
+describe("buildHostActionReply", () => {
+  test("wraps the result json in an agent/approve carrying the routing envelope", () => {
+    const parsed = {
+      connectionId: "c1",
+      generation: 3,
+      sessionId: "s5",
+      requestId: "rq5",
+      action: "notice.create",
+      args: {},
+    };
+    const reply = JSON.parse(buildHostActionReply(parsed, '{"ok":true,"id":"r1"}'));
+    expect(reply.jsonrpc).toBe("2.0");
+    expect(reply.id).toBeDefined();
+    expect(reply.method).toBe("agent/approve");
+    expect(reply.params).toEqual({
+      connectionId: "c1",
+      generation: 3,
+      sessionId: "s5",
+      requestId: "rq5",
+      decision: { approved: true, answer: '{"ok":true,"id":"r1"}' },
+    });
+  });
+
+  test("omits connectionId/generation when the request had none", () => {
+    const parsed = { sessionId: "s5", requestId: "rq5", action: "a", args: {} };
+    const reply = JSON.parse(buildHostActionReply(parsed, "{}"));
+    expect(reply.params).toEqual({
+      sessionId: "s5",
+      requestId: "rq5",
+      decision: { approved: true, answer: "{}" },
+    });
   });
 });

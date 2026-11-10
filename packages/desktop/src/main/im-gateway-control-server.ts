@@ -1417,7 +1417,14 @@ function parseCapabilityDirection(
       ])
     : new Set(["text", "attachments"]);
   if (
-    Object.keys(record).some((key) => !allowedKeys.has(key)) ||
+    // An unknown boolean outbound flag from a newer Gateway is ignored (and dropped below) so
+    // additive capability flags never break older peers; any other unknown key or value shape is
+    // still rejected. This tolerance is only safe for flags whose ABSENCE is the conservative
+    // default. A future restrictive flag (e.g. `restricted: true`) must not rely on it: an older
+    // parser would drop it and behave permissively.
+    Object.keys(record).some(
+      (key) => !allowedKeys.has(key) && !(outbound && typeof record[key] === "boolean"),
+    ) ||
     record.text !== true ||
     !Array.isArray(record.attachments) ||
     record.attachments.length > 4 ||

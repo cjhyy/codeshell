@@ -70,6 +70,11 @@ describe("built-in channel capabilities", () => {
     }
     expect(
       Object.entries(BUILTIN_CHANNEL_CAPABILITIES)
+        .filter(([, capability]) => capability.outbound.idempotentSend === true)
+        .map(([channel]) => channel),
+    ).toEqual(["wechat"]);
+    expect(
+      Object.entries(BUILTIN_CHANNEL_CAPABILITIES)
         .filter(([, capability]) => capability.outbound.direct)
         .map(([channel]) => channel),
     ).toEqual(["telegram", "slack", "lark", "wechat", "matrix", "mattermost", "line", "whatsapp"]);

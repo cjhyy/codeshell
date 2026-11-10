@@ -75,6 +75,7 @@ import {
   parsePanelActionLine,
   buildPanelActionReply,
 } from "./browser-driver/intercept.js";
+import { HostActionHandlers, type HostActionHandler } from "./host-action-dispatch.js";
 import {
   browserRuntime,
   builtInBrowserHandoffGrants,
@@ -406,6 +407,8 @@ export class AgentBridge implements PetStateBridge {
     }
   >();
 
+  private readonly hostActionHandlers = new HostActionHandlers();
+
   private readonly workerHost = createDesktopWorkerHost({
     operationBatch: (line) => this.maybeHandleOperationBatch(line),
     credentials: (line) => this.maybeHandleCredentialAccessMessage(line),
@@ -413,6 +416,7 @@ export class AgentBridge implements PetStateBridge {
     credentialCookie: (line) => this.maybeHandleCredentialAction(line),
     workspace: (line) => this.maybeHandleWorkspaceAction(line),
     panel: (line) => this.maybeHandlePanelAction(line),
+    hostAction: (line) => this.maybeHandleHostAction(line),
     automation: (line) => this.maybeHandleAutomationAuthorityMessage(line),
     sendLine: (line) => this.core.sendLine(line),
   });
@@ -1676,6 +1680,23 @@ export class AgentBridge implements PetStateBridge {
       this.core.sendLine(buildWorkspaceActionReply(parsed, resultJson));
     })();
     return true;
+  }
+
+  /**
+   * Handle `action` for ProtocolObserverHost.requestHostAction calls from the
+   * worker. The handler's resolved value is the reply object; a throw becomes
+   * `{ ok:false, error }`. Returns a function that removes this registration.
+   */
+  setHostActionHandler(action: string, handler: HostActionHandler): () => void {
+    return this.hostActionHandlers.set(action, handler);
+  }
+
+  private maybeHandleHostAction(line: string): boolean {
+    return this.hostActionHandlers.intercept(
+      line,
+      (reply) => this.core.sendLine(reply),
+      (error) => dlog("bridge", "host-action-reply-failed", { error: String(error) }),
+    );
   }
 
   private requestPanelHost(

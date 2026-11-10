@@ -16,6 +16,7 @@ import { useT } from "./i18n";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { NotificationHistory } from "./ui/NotificationHistory";
+import { SessionNoticeBell } from "./topbar/SessionNoticeBell";
 import { useWindowTitleBar } from "./app/useWindowTitleBar";
 
 interface Props {
@@ -214,6 +215,8 @@ function TopBarImpl({
         </div>
         <div className="flex shrink-0 items-center gap-1 border-l border-border/60 pl-2">
           <NotificationHistory />
+          {/* Mimi's own chat has no work-Session id here; main hides the rest. */}
+          {statusAvailable && <SessionNoticeBell sessionId={sessionId} refreshKey={busy} />}
           {contextSelectionAvailable && onSelectContext && (
             <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
               <IconButton

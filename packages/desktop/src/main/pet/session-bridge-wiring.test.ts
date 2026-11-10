@@ -201,6 +201,21 @@ describe("delivering a Session reply", () => {
     expect(w.published[2]!.deliveryKey).not.toBe(w.published[0]!.deliveryKey);
   });
 
+  test("each published route is reported, and the turn is pending until then", async () => {
+    const forwarded: unknown[] = [];
+    const w = wiring({
+      onReplyForwarded: ({ sessionId, turnId, route }) =>
+        forwarded.push([sessionId, turnId, route.channel, route.target]),
+    });
+    await w.sessionBindExecutor({ action: "enter", sessionSelector: SELECTOR }, IM_CONTEXT);
+    expect(w.pendingReply("s-login", "t-1")).toBeUndefined();
+    const delivery = w.emitTurn({ sessionId: "s-login", turnId: "t-1", text: "已修复" });
+    expect(w.pendingReply("s-login", "t-1")).toBe(delivery);
+    await delivery;
+    expect(forwarded).toEqual([["s-login", "t-1", "wechat", "owner-1"]]);
+    expect(w.pendingReply("s-login", "t-1")).toBeUndefined();
+  });
+
   test("an unrelated Session and an empty answer publish nothing", async () => {
     const w = wiring();
     await w.sessionBindExecutor({ action: "enter", sessionSelector: SELECTOR }, IM_CONTEXT);

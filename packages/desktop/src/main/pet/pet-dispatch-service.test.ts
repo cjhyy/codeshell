@@ -374,6 +374,56 @@ describe("PetDispatchService", () => {
     ).toBe("/tmp/x");
   });
 
+  test("takes replayed notices only when the turn starts and bounds them", async () => {
+    let request: { method: string; params: Record<string, unknown> } | undefined;
+    const calls: string[] = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (method, params) => {
+          calls.push("run");
+          request = { method, params };
+          return { ok: true, result: { text: "先说一下：登录修好了。" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+    });
+    await service.dispatch({
+      type: "chat",
+      message: "在吗",
+      clientMessageId: "im:notices",
+      source: imSource("owner"),
+      pendingNotices: {
+        take: async () => {
+          calls.push("take");
+          return [
+            { kind: "session.done", title: "修登录", body: "「修登录」做完了" },
+            ...Array.from({ length: 11 }, (_, index) => ({
+              kind: "session.failed",
+              body: `${index}:${"x".repeat(2_000)}`,
+            })),
+          ];
+        },
+        started: () => calls.push("started"),
+      },
+    });
+    expect(calls).toEqual(["take", "started", "run"]);
+    const world = JSON.parse(String(request?.params.petRuntimeContext)) as {
+      pendingNotices: { kind: string; title?: string; body: string }[];
+    };
+    expect(world.pendingNotices).toHaveLength(10);
+    expect(world.pendingNotices[0]).toEqual({
+      kind: "session.done",
+      title: "修登录",
+      body: "「修登录」做完了",
+    });
+    expect(world.pendingNotices.every((notice) => notice.body.length <= 1_000)).toBe(true);
+  });
+
   test("marks desktop chat explicitly and withholds the route-bound reply capability", async () => {
     let request: { method: string; params: Record<string, unknown> } | undefined;
     const service = new PetDispatchService({
@@ -868,6 +918,8 @@ describe("PetDispatchService", () => {
           target: "owner-conversation",
         },
         continuationDepth: 1,
+        // The Session already received Mimi's delegation brief.
+        redrive: true,
       },
     ]);
     expect(effects).toEqual(["decision-persisted", "session-started", "launch-persisted"]);

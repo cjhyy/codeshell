@@ -51,6 +51,8 @@ export async function deliverAsyncUserAnswer({
         ...workspace,
         clientMessageId,
         displayText: text,
+        // The asking run's trigger must not carry over: this is the user's answer.
+        trigger: "user",
         onStream,
       });
       void run.then(
