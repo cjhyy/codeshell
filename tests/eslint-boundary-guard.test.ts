@@ -67,6 +67,63 @@ function lintStdin(filename: string, source: string) {
 
 describe("ESLint CodeShell package boundary guards", () => {
   it(
+    "rejects cross-workspace relative imports in ordinary package source",
+    () => {
+      const result = lintStdin(
+        "packages/server/src/__lint_relative_probe__.ts",
+        [
+          'export { state } from "../../web/src/index.js";',
+          'export type { State } from "../../web/src/index.js";',
+          'export async function load() { return import("../../web/src/index.js"); }',
+          'export function requireState() { return require("../../web/src/index.js"); }',
+        ].join("\n"),
+      );
+      expect(result.status).not.toBe(0);
+      expect(result.stdout.match(/use a declared workspace package entry/g)).toHaveLength(4);
+    },
+    LINT_PROBE_TIMEOUT_MS,
+  );
+
+  it(
+    "allows Web type contracts but rejects Core runtime imports",
+    () => {
+      const result = lintStdin(
+        "packages/web/app/__lint_core_probe__.ts",
+        [
+          'export type { StreamEvent } from "@cjhyy/code-shell-core";',
+          'export { type EngineConfig } from "@cjhyy/code-shell-core/internal";',
+          'export { Engine } from "@cjhyy/code-shell-core";',
+          'export async function load() { return import("@cjhyy/code-shell-core/internal"); }',
+        ].join("\n"),
+      );
+      expect(result.status).not.toBe(0);
+      const customMessages = result.stdout
+        .split("\n")
+        .filter((line) => line.includes("custom-rules/codeshell-boundary-imports"));
+      expect(customMessages).toHaveLength(2);
+      expect(
+        customMessages.every((line) =>
+          line.includes("web may import core contracts only as types"),
+        ),
+      ).toBe(true);
+    },
+    LINT_PROBE_TIMEOUT_MS,
+  );
+
+  it(
+    "preserves the reviewed Desktop mobile SPA source entry",
+    () => {
+      const result = lintStdin(
+        "packages/desktop/src/mobile/main.tsx",
+        'export { App } from "../../../web/app/App.js";',
+      );
+      expect(`${result.stdout}\n${result.stderr}`).toBe("\n");
+      expect(result.status).toBe(0);
+    },
+    LINT_PROBE_TIMEOUT_MS,
+  );
+
+  it(
     "allows only the portable Link public contract in Core",
     () => {
       const allowed = lintStdin(
