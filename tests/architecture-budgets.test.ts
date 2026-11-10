@@ -50,7 +50,7 @@ const DEFAULT_MAX_LINES = 1_500;
 const LEGACY_MAX_LINES: Record<string, number> = {
   "packages/desktop/src/main/index.ts": 5_000,
   "packages/core/src/engine/engine.ts": 5_000,
-  "packages/core/src/protocol/server.ts": 5_000,
+  "packages/core/src/protocol/server.ts": 4_500,
   "packages/desktop/src/main/panel-app-bridge.ts": 3_500,
   "packages/web/src/hooks/useRemoteApp.ts": 3_500,
   "packages/desktop/src/main/pet/pet-dispatch-service.ts": 3_500,
