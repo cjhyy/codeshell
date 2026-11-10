@@ -183,7 +183,6 @@ const UPWARD_ALLOWLIST = new Set([
   "links/operation-reader.ts -> engine",
   "preset/index.ts -> tool-system/builtin",
   "prompt/composer.ts -> tool-system/builtin",
-  "runtime/background-shell.ts -> session",
   "runtime/background-shell.ts -> tool-system/builtin",
   "session/background-continuation.ts -> tool-system/builtin",
   "session/output-history-comparison.ts -> engine",
@@ -205,7 +204,6 @@ const UPWARD_ALLOWLIST = new Set([
 
 const SAME_LAYER_CYCLES = new Set([
   "hooks <-> plugins",
-  "model-catalog <-> settings",
   "panel-apps <-> plugins",
   "plugins <-> skills",
   "preset <-> prompt",

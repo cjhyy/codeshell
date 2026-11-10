@@ -21,7 +21,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { userHome } from "../settings/manager.js";
+import { userHome } from "../utils/paths.js";
 import { sortSessionMemoriesByRecency } from "./session-memory-sort.js";
 import { formatMemoryTranscript } from "./memory-transcript.js";
 

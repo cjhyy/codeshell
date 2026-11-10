@@ -16,7 +16,7 @@ import {
   realpathSync,
 } from "node:fs";
 import { join, dirname, extname } from "node:path";
-import { homedir } from "node:os";
+import { userHome } from "../utils/paths.js";
 import { parse as parseYaml } from "yaml";
 import { validateSettings, type ValidatedSettings } from "./schema.js";
 import { migrateModels } from "../migrate-models.js";
@@ -29,16 +29,7 @@ import {
   type SettingsHookSourceSnapshot,
 } from "./hook-provenance.js";
 
-/**
- * Resolve the user's home directory. Prefers `process.env.HOME` so that
- * runtime env overrides (set after process start, e.g. in tests) actually
- * take effect — on some runtimes (e.g. Bun on macOS) `os.homedir()` is
- * cached from the user database at process startup and ignores later
- * `process.env.HOME` mutations.
- */
-export function userHome(): string {
-  return process.env.HOME ?? homedir();
-}
+export { userHome } from "../utils/paths.js";
 
 /**
  * Settings keys that form the trust/permission root and therefore must NOT be

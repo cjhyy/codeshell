@@ -7,7 +7,7 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { userHome } from "./settings/manager.js";
+import { userHome } from "./utils/paths.js";
 import { getOpenRouterModels } from "./data/openrouter-models.js";
 import {
   KNOWN_MAX_OUTPUT,

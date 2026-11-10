@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { userHome } from "../settings/manager.js";
+import { userHome } from "../utils/paths.js";
 import { PlaintextCipher } from "../credentials/cipher.js";
 import type { Transport } from "../protocol/transport.js";
 import { HostRequestSigningTimeoutError } from "./context.js";

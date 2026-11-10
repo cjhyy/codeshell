@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { codeShellHome } from "../../session/session-manager.js";
+import { codeShellHome } from "../../utils/paths.js";
 import type { BackgroundJobEntry, ExternalCliKind } from "./background-jobs.js";
 
 const MAX_SNAPSHOTS = 500;

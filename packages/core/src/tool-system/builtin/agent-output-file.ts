@@ -12,7 +12,7 @@
 
 import { join } from "node:path";
 import { mkdir, writeFile, rm, readdir } from "node:fs/promises";
-import { userHome } from "../../settings/manager.js";
+import { userHome } from "../../utils/paths.js";
 
 /** Directory holding per-agent output files. */
 export function agentOutputDir(): string {

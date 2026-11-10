@@ -18,7 +18,7 @@ import {
 import { promises as fs } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { parseDocument } from "yaml";
-import { userHome } from "../settings/manager.js";
+import { userHome } from "../utils/paths.js";
 import { acquireFileLock } from "../utils/file-mutex.js";
 import { invalidateSkillCache } from "./scanner.js";
 import { parseFrontmatter, quoteProblematicValues } from "./frontmatter.js";

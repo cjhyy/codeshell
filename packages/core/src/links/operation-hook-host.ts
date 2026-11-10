@@ -5,7 +5,7 @@ import { isClosedInlineHook, type ConfiguredToolHook } from "../hooks/configured
 import { createConstrainedDockerProcessHost } from "../runtime/constrained-process/docker.js";
 import { sha256 } from "../runtime/constrained-process/resources.js";
 import type { ConstrainedProcessResources } from "../runtime/constrained-process/types.js";
-import { userHome } from "../settings/manager.js";
+import { userHome } from "../utils/paths.js";
 import {
   assertHookResourceNotCredential,
   createHookCredentialPolicy,

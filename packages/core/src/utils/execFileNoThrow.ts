@@ -10,7 +10,7 @@
  */
 
 import { execFile, type ExecFileOptions } from "node:child_process";
-import { isBrokenPipeError, killChildTree } from "../runtime/spawn-common.js";
+import { isBrokenPipeError, killChildTree } from "./process-tree.js";
 
 export interface ExecFileNoThrowResult {
   /** Exit code, or 1 for input/signal failure (0 = success, null = spawn failed). */

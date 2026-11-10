@@ -1,7 +1,7 @@
 import { lstatSync } from "node:fs";
 import { join } from "node:path";
-import type { SettingsManager } from "../settings/manager.js";
-import { userHome, type SettingsScope } from "../settings/manager.js";
+import type { SettingsManager, SettingsScope } from "../settings/manager.js";
+import { userHome } from "../utils/paths.js";
 import { listPluginHooksForHost, matcherAccepts } from "../plugins/loadPluginHooks.js";
 import type { PluginHookSource } from "../plugins/loadPluginHooks.js";
 import type { SettingsHookOrigin } from "../settings/hook-provenance.js";

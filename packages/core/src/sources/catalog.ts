@@ -2,7 +2,7 @@
 import { chmodSync, existsSync, lstatSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { logger } from "../logging/logger.js";
-import { codeShellHome } from "../session/session-manager.js";
+import { codeShellHome } from "../utils/paths.js";
 import { mutateJsonFile } from "../utils/file-mutex.js";
 import { SourceDefinitionSchema, type SourceDefinition } from "./types.js";
 import { linkSourceView } from "./link-view.js";

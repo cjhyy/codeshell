@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { ChatSession } from "./chat-session.js";
-import { SessionManager, codeShellHome } from "../session/session-manager.js";
+import { SessionManager } from "../session/session-manager.js";
+import { codeShellHome } from "../utils/paths.js";
 import type { SessionKind } from "../types.js";
 import type { SessionProjectBinding, SessionWorkspace } from "../types.js";
 import type { Engine } from "../engine/engine.js";
