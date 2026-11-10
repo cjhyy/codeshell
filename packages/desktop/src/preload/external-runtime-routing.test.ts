@@ -119,6 +119,6 @@ describe("the shipped preload actually routes", () => {
       main.indexOf('ipcMain.handle("agent:subscribe"'),
     );
     expect(pending).toContain("pendingForWindow(event.sender.id)");
-    expect(main).toContain("externalRuntimeApprovals?.cancelWindow(ownerWebContentsId)");
+    expect(main).toContain("externalRuntime.approvals?.cancelWindow(ownerWebContentsId)");
   });
 });

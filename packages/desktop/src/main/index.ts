@@ -2,7 +2,8 @@ import { registerLinkedFileSourceIpc } from "./linked-file-sources-ipc.js";
 import { openLinkedFileSourceOperation } from "./linked-file-sources-host.js";
 import { registerOperationBatchHost } from "./operation-batch-host.js";
 import { createDesktopRemoteServices } from "./desktop-remote-services.js";
-import { registerDesktopShutdown } from "./desktop-shutdown.js";
+import { createDesktopModuleRegistry, registerDesktopShutdown } from "./desktop-shutdown.js";
+import { createExternalRuntimeModule } from "./external-runtime-module.js";
 import { registerProjectPanelIpc } from "./project-panel-ipc.js";
 import { registerProfileSwitchIpc } from "./profile-switch-ipc.js";
 import { registerSourceCollectionIpc } from "./source-collections-ipc.js";
@@ -98,7 +99,6 @@ import {
   getMimiCompanion,
   mimiMovingUnavailableReason,
 } from "./computer-use/desktop-setup.js";
-import { ExternalRuntimeService } from "./external-runtime-service.js";
 import { startMobileExternalRuntime } from "./mobile-remote/start-external-runtime.js";
 import { initializeMobileRemoteLifecycle } from "./mobile-remote/lifecycle.js";
 import { resolveMobileStaticRoot } from "./mobile-remote/mobile-static-root.js";
@@ -106,7 +106,6 @@ import {
   externalRuntimeToolContextForSession,
   externalRuntimeWorkspaceForSession,
 } from "./external-runtime-tool-context.js";
-import { ExternalRuntimeMemory } from "./external-runtime-memory.js";
 import { createExternalRuntimeBackgroundWork } from "./external-runtime-background-work.js";
 import { createExternalGoalRpcHandler } from "./external-runtime-goal-rpc.js";
 import { buildExternalRuntimeHandoffFromEvents } from "./external-runtime-handoff.js";
@@ -114,7 +113,6 @@ import {
   removeExternalRuntimeBinding,
   readExternalRuntimeBinding,
 } from "./external-runtime-state.js";
-import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import {
   requireRendererProject,
@@ -575,16 +573,60 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
 let bridge: AgentBridge | null = null;
 let desktopNotifier: DesktopNotifier | null = null;
 let chromeNativeRegistration: ChromeNativeRegistrationResult | undefined;
-/**
- * Sessions backed by Codex / Claude Code instead of the native Engine.
- *
- * Created alongside the AgentBridge below (it needs the bridge for host-tool
- * seams) and torn down in `before-quit` — each session owns a child process and
- * a listening port, neither of which dies with the parent on Windows.
- */
-let externalRuntimeService: ExternalRuntimeService | null = null;
-/** Routes external-runtime tool approvals to the renderer's existing dialog. */
-let externalRuntimeApprovals: ExternalRuntimeApprovals | null = null;
+const externalRuntime = createExternalRuntimeModule(() => {
+  const externalBridge = bridge!;
+  return {
+    approvals: {
+      windows: () => mainWindows,
+      ownerWebContentsId: (sessionId) => externalBridge.panelOwnerWebContentsId(sessionId),
+      onPendingChange: (event) => mobileOrchestrator.mirrorExternalApproval(event),
+    },
+    service: {
+      featureFlags: () => {
+        const cwd = resolveNoRepoCwd();
+        const settings = new SettingsManager(cwd, "full").getForScope("user") as {
+          featureFlags?: Record<string, boolean>;
+        };
+        return settings.featureFlags ?? {};
+      },
+      registerSession: (sessionId, cwd, webContentsId) =>
+        externalBridge.registerExternalSession(sessionId, cwd, webContentsId),
+      releaseSession: (sessionId) => externalBridge.releaseExternalSession(sessionId),
+      resolveProjectBinding: (cwd) => {
+        const resolved = getProjectStore().resolveExactRootSync(cwd);
+        return resolved
+          ? {
+              projectId: resolved.project.id,
+              mainRootId: resolved.mainRoot.id,
+            }
+          : undefined;
+      },
+      // Route events to the window that owns the session, not every window: a
+      // second window showing a different session must not receive its stream.
+      emit: (sessionId, event) => {
+        externalBridge.ingestOwnedExternalEvent(sessionId, event);
+        taskInboxService?.scheduleRefresh();
+      },
+      sessionStateChanged: (sessionId, active, ownerId) => {
+        sendToOwnerWindow(ownerId, "externalRuntime:sessionState", { sessionId, active });
+        taskInboxService?.scheduleRefresh();
+      },
+      // The host seams the exposed tools need. `panels` points at the same
+      // requestPanelHost the native protocol line reaches, so owner routing,
+      // the timeout and invoke's fail-closed behaviour are shared rather than
+      // reimplemented.
+      toolContextOverrides: (sessionId) =>
+        externalRuntimeToolContextForSession(
+          externalBridge,
+          sessionId,
+          interactiveBrowserBridgeForSession(sessionId),
+          externalRuntimeWorkspaceForSession(sessionId),
+        ),
+      backgroundWork: createExternalRuntimeBackgroundWork(),
+    },
+  };
+});
+const desktopModules = createDesktopModuleRegistry([externalRuntime]);
 const resolvePanelProjectScope = createDesktopPanelProjectScopeResolver({
   store: getProjectStore(),
 });
@@ -599,7 +641,7 @@ const panelAppBridge = new PanelAppBridge({
   resolveProjectScope: resolvePanelProjectScope,
   resolveBackgroundServiceNode: desktopManagedRuntimes.resolveBackgroundServiceNode,
   getAgentBridge: () => bridge,
-  getExternalRuntimeService: () => externalRuntimeService,
+  getExternalRuntimeService: () => externalRuntime.service,
   externalRuntimeInitialContext: async (sessionId) =>
     buildExternalRuntimeHandoffFromEvents(await getSessionEvents(sessionId)),
   agentTaskModels: (cwd) =>
@@ -1192,13 +1234,13 @@ const mobileOrchestrator: MobileRemoteOrchestrator = new MobileRemoteOrchestrato
   roomModes,
   transcriptSubscriptions,
   getBridge: () => bridge,
-  getExternalRuntimeService: () => externalRuntimeService,
+  getExternalRuntimeService: () => externalRuntime.service,
   getExternalRuntimeModels: () => externalRuntimeModelService.list(),
-  getExternalRuntimeApprovals: () => externalRuntimeApprovals,
+  getExternalRuntimeApprovals: () => externalRuntime.approvals,
   startMobileRuntime: (request) =>
     startMobileExternalRuntime(
       {
-        service: () => externalRuntimeService,
+        service: () => externalRuntime.service,
         bridge: () => bridge,
         windows: () => mainWindows,
       },
@@ -1529,12 +1571,12 @@ async function createWindow(): Promise<BrowserWindow> {
   });
   // A reload starts with empty preload state; replay the runtimes Main still owns.
   win.webContents.on("did-finish-load", () => {
-    for (const sessionId of externalRuntimeService?.ownedSessionIds(ownerWebContentsId) ?? [])
+    for (const sessionId of externalRuntime.service?.ownedSessionIds(ownerWebContentsId) ?? [])
       win.webContents.send("externalRuntime:sessionState", { sessionId, active: true });
   });
   win.on("closed", () => {
-    externalRuntimeApprovals?.cancelWindow(ownerWebContentsId);
-    void externalRuntimeService?.stopOwnedBy(ownerWebContentsId);
+    externalRuntime.approvals?.cancelWindow(ownerWebContentsId);
+    void externalRuntime.service?.stopOwnedBy(ownerWebContentsId);
     mainWindows.delete(win);
     browserAnchorsByParent.delete(win.id);
     if (process.platform !== "darwin" && mainWindows.size === 0) {
@@ -1608,67 +1650,13 @@ async function createWindow(): Promise<BrowserWindow> {
         }
       }),
     );
-    // Approvals reach the SAME renderer dialog the native path uses — the
-    // renderer cannot tell which transport a prompt arrived over, so there is
-    // only one approval UI to keep correct.
-    externalRuntimeApprovals = new ExternalRuntimeApprovals({
-      windows: () => mainWindows,
-      ownerWebContentsId: (sessionId) => externalBridge.panelOwnerWebContentsId(sessionId),
-      onPendingChange: (event) => mobileOrchestrator.mirrorExternalApproval(event),
-    });
-    const approvals = externalRuntimeApprovals;
-    externalRuntimeService = new ExternalRuntimeService({
-      memory: new ExternalRuntimeMemory(),
-      featureFlags: () => {
-        const cwd = resolveNoRepoCwd();
-        const settings = new SettingsManager(cwd, "full").getForScope("user") as {
-          featureFlags?: Record<string, boolean>;
-        };
-        return settings.featureFlags ?? {};
-      },
-      registerSession: (sessionId, cwd, webContentsId) =>
-        externalBridge.registerExternalSession(sessionId, cwd, webContentsId),
-      releaseSession: (sessionId) => externalBridge.releaseExternalSession(sessionId),
-      resolveProjectBinding: (cwd) => {
-        const resolved = getProjectStore().resolveExactRootSync(cwd);
-        return resolved
-          ? {
-              projectId: resolved.project.id,
-              mainRootId: resolved.mainRoot.id,
-            }
-          : undefined;
-      },
-      // Route events to the window that owns the session, not every window: a
-      // second window showing a different session must not receive its stream.
-      emit: (sessionId, event) => {
-        externalBridge.ingestOwnedExternalEvent(sessionId, event);
-        taskInboxService?.scheduleRefresh();
-      },
-      sessionStateChanged: (sessionId, active, ownerId) => {
-        sendToOwnerWindow(ownerId, "externalRuntime:sessionState", { sessionId, active });
-        taskInboxService?.scheduleRefresh();
-      },
-      // The host seams the exposed tools need. `panels` points at the same
-      // requestPanelHost the native protocol line reaches, so owner routing,
-      // the timeout and invoke's fail-closed behaviour are shared rather than
-      // reimplemented.
-      toolContextOverrides: (sessionId) =>
-        externalRuntimeToolContextForSession(
-          externalBridge,
-          sessionId,
-          interactiveBrowserBridgeForSession(sessionId),
-          externalRuntimeWorkspaceForSession(sessionId),
-        ),
-      requestApproval: (sessionId, request) => approvals.request(sessionId, request),
-      cancelApprovals: (sessionId) => approvals.cancelSession(sessionId),
-      backgroundWork: createExternalRuntimeBackgroundWork(),
-    });
+    desktopModules.start();
 
     const externalGoalSessions = new SessionManager();
     externalBridge.setExternalGoalRpcHandler(
       createExternalGoalRpcHandler({
         isExternalSession: (sessionId) => {
-          if (externalRuntimeService?.get(sessionId)) return true;
+          if (externalRuntime.service?.get(sessionId)) return true;
           // The canonical model wins over an old external-runtime sidecar after
           // a user switches this task back to the native runtime.
           return !!parseExternalRuntimeModelKey(
@@ -1687,7 +1675,7 @@ async function createWindow(): Promise<BrowserWindow> {
           }
         },
         prepareResume: async (sessionId, callerId) => {
-          const service = externalRuntimeService;
+          const service = externalRuntime.service;
           if (!service) throw new Error("external runtime service is unavailable");
           if (service.canResumeGoal(sessionId, callerId)) return;
           const state = externalGoalSessions.readSessionState(sessionId);
@@ -1717,8 +1705,8 @@ async function createWindow(): Promise<BrowserWindow> {
           });
         },
         service: () => {
-          if (!externalRuntimeService) throw new Error("external runtime service is unavailable");
-          return externalRuntimeService;
+          if (!externalRuntime.service) throw new Error("external runtime service is unavailable");
+          return externalRuntime.service;
         },
       }),
     );
@@ -4199,8 +4187,8 @@ ipcMain.handle("browser:popout", async (e, initialUrl?: string) => {
 });
 
 const { externalRuntimeModelService } = registerExternalRuntimeIpc({
-  externalRuntimeService: () => externalRuntimeService,
-  externalRuntimeApprovals: () => externalRuntimeApprovals,
+  externalRuntimeService: () => externalRuntime.service,
+  externalRuntimeApprovals: () => externalRuntime.approvals,
 });
 registerBrowserPopoutIpc({ mainWindows, popoutParents, browserAnchorsByParent });
 const { sweepStaleWorktrees } = registerGitReviewIpc({ knownGitRoots });
@@ -4300,7 +4288,7 @@ async function deleteDesktopSessionResources(id: string): Promise<void> {
   // An external runtime is a child process plus a listening port; neither is
   // owned by the worker, so closeSession above does not touch them. Without
   // this a deleted session leaves both alive for the rest of the app's life.
-  await externalRuntimeService?.stop(id).catch((error) => {
+  await externalRuntime.service?.stop(id).catch((error) => {
     dlog("external-runtime", "session.delete.stop_failed", { id, error: String(error) });
   });
   removeExternalRuntimeBinding(id);
@@ -4373,7 +4361,7 @@ ipcMain.handle("agent:pendingApprovals", (event) => {
   );
   return [
     ...pendingMobileApprovals.replayAllLines().map((line) => JSON.parse(line).params),
-    ...(externalRuntimeApprovals?.pendingForWindow(event.sender.id) ?? []),
+    ...(externalRuntime.approvals?.pendingForWindow(event.sender.id) ?? []),
   ];
 });
 /**
@@ -4401,7 +4389,7 @@ registerDesktopOutputHistoryHost({
     return [...mainWindows, ...petSurfaceWindows()];
   },
   bridge: () => bridge,
-  external: () => externalRuntimeService,
+  external: () => externalRuntime.service,
   mobile: mobileOrchestrator,
 });
 const sessionCatalogStore = new SessionCatalogStore();
@@ -4465,14 +4453,14 @@ const taskInboxSources = createTaskInboxSources({
     },
   },
   external: {
-    hasSession: (id) => !!externalRuntimeService?.hasSession(id),
-    isSessionRunning: (id) => !!externalRuntimeService?.isSessionRunning(id),
-    hasPending: (id) => !!externalRuntimeApprovals?.hasPendingSession(id),
+    hasSession: (id) => !!externalRuntime.service?.hasSession(id),
+    isSessionRunning: (id) => !!externalRuntime.service?.isSessionRunning(id),
+    hasPending: (id) => !!externalRuntime.approvals?.hasPendingSession(id),
     kind: (id) => readExternalRuntimeBinding(id)?.kind,
     interrupt: async (id) => {
-      if (!externalRuntimeService?.hasSession(id))
+      if (!externalRuntime.service?.hasSession(id))
         throw new Error("External runtime is unavailable");
-      await externalRuntimeService.interrupt(id);
+      await externalRuntime.service.interrupt(id);
     },
   },
   background: createTaskInboxBackgroundHost({ worker: () => bridge }),
@@ -4495,7 +4483,7 @@ const disposeOperationBatchHost = registerOperationBatchHost({
   isSessionRunning: (id) =>
     taskInboxAutomationSessions.has(id) ||
     bridge?.isSessionRunning(id) === true ||
-    externalRuntimeService?.isSessionRunning(id) === true,
+    externalRuntime.service?.isSessionRunning(id) === true,
 });
 const disposeOperationResolutionHost = registerOperationResolutionHost({
   windows: () => [...mainWindows],
@@ -4503,10 +4491,10 @@ const disposeOperationResolutionHost = registerOperationResolutionHost({
   isSessionRunning: (id) =>
     taskInboxAutomationSessions.has(id) ||
     !!bridge?.isSessionRunning(id) ||
-    !!externalRuntimeService?.isSessionRunning(id),
+    !!externalRuntime.service?.isSessionRunning(id),
 });
 registerAutomationIpc();
-registerTrustNotificationIpc({ externalRuntimeService: () => externalRuntimeService });
+registerTrustNotificationIpc({ externalRuntimeService: () => externalRuntime.service });
 registerDesktopShutdown(app, {
   ownsInstance: () => ownsDesktopInstance,
   flushRenderers: () => sessionCatalogIpc.flushRenderers(),
@@ -4558,8 +4546,7 @@ registerDesktopShutdown(app, {
     transcriptSubscriptions?.closeAll();
     roomManager.closeAll();
     // Stop captured external runtimes explicitly; their child processes can survive Windows exit.
-    const externalRuntimeShutdown = externalRuntimeService?.stopAll();
-    externalRuntimeService = null;
+    const externalRuntimeShutdown = desktopModules.dispose();
     // Stop the embedded Cua child explicitly.
     const cuaDriverShutdown = getCuaDriverHost()?.stop();
     // Withdraw both Mimi forms and persist presence before closing the character host.

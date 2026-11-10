@@ -1,3 +1,56 @@
+/** A module starts synchronously at its existing composition point; cleanup may await children. */
+export interface DesktopModule {
+  readonly name: string;
+  start(): void;
+  dispose(): void | Promise<void>;
+}
+
+/** Own only registered modules: start in order and finish every cleanup in reverse order. */
+export function createDesktopModuleRegistry(modules: readonly DesktopModule[]) {
+  const registered = [...modules];
+  if (new Set(registered.map((module) => module.name)).size !== registered.length)
+    throw new Error("Desktop module names must be unique");
+  const started: DesktopModule[] = [];
+  let startFailed = false;
+  let startError: unknown;
+  let stopped = false;
+  let disposing: Promise<void> | undefined;
+  return {
+    start(): void {
+      if (stopped) throw new Error("Desktop modules have been disposed");
+      if (startFailed) throw startError;
+      while (started.length < registered.length) {
+        const module = registered[started.length]!;
+        // A failing start may already own resources, so it must participate in cleanup.
+        started.push(module);
+        try {
+          module.start();
+        } catch (error) {
+          startFailed = true;
+          startError = error;
+          throw error;
+        }
+      }
+    },
+    dispose(): Promise<void> {
+      if (disposing) return disposing;
+      stopped = true;
+      disposing = (async () => {
+        const failures: unknown[] = [];
+        for (const module of [...started].reverse()) {
+          try {
+            await module.dispose();
+          } catch (error) {
+            failures.push(error);
+          }
+        }
+        if (failures.length) throw new AggregateError(failures, "Desktop module cleanup failed");
+      })();
+      return disposing;
+    },
+  };
+}
+
 export type DesktopShutdownChoice = "retry" | "quit" | "cancel";
 
 /** Only the initial save can return to a fully usable application. */
