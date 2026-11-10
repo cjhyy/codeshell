@@ -58,8 +58,6 @@ export interface BoundSessionRunner {
   wasInjected(sessionId: string, id: string): boolean;
   /** Resolves when the in-flight turn settles. */
   runDone(sessionId: string): Promise<void>;
-  /** The observed in-flight run of any Session (not only bound ones); undefined when idle. */
-  runInFlight?(sessionId: string): Promise<void> | undefined;
   /** Queue for the next turn; resolves on worker admission, not turn completion. */
   queueNextTurn(input: { sessionId: string; text: string; clientMessageId: string }): Promise<void>;
   /** Whether this runtime supports steering at all. */

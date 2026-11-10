@@ -8,7 +8,9 @@
  *
  * It owns three concerns: constructing the store and bridge, exposing the
  * sessionBind executor for the host-action table, and turning a Session's
- * final answer into a durable outbound event.
+ * final answer into a durable outbound event. Which conversations that answer
+ * goes to is the delivery plan's call (pet-delivery-plan.ts): there, this
+ * reply is the delivery of the turn's outcome to a bound conversation.
  */
 
 import { randomUUID } from "node:crypto";
@@ -58,14 +60,12 @@ export interface SessionBridgeWiringDeps {
     target: { channel: string; target: string };
   }): Promise<void>;
   /**
-   * One turn's reply is now in the durable outbox for `route` (the notice
-   * wiring then keeps that run's done notice off the same conversation).
+   * The conversations a Session's turn reply is forwarded to, from the
+   * delivery plan (`PetDeliveryResolver.replyRoutes`): the same plan keeps a
+   * done / failed notice off a conversation this reply already reaches.
+   * Defaults to every route this wiring's store holds for the Session.
    */
-  onReplyForwarded?(reply: {
-    sessionId: string;
-    turnId: string;
-    route: ConversationSessionRoute;
-  }): void;
+  replyRoutes?(sessionId: string): Promise<readonly ConversationSessionRoute[]>;
   /** Initial retry delay for a reply not yet persisted to the outbox. */
   deliveryRetryMs?: number;
   onDeliveryError?(error: unknown, turn: BoundSessionTurnResult): void;
@@ -88,14 +88,6 @@ export interface SessionBridgeWiring {
   routeInbound(inbound: BoundSessionInbound): Promise<BoundSessionDisposition>;
   /** Deliver one Session turn's final answer back to every bound conversation. */
   deliverSessionReply(input: { sessionId: string; turnId: string; text: string }): Promise<void>;
-  /** Settles once this turn's reply is in the outbox; undefined when none is in flight. */
-  pendingReply(sessionId: string, turnId: string): Promise<void> | undefined;
-  /**
-   * Settles when the Session's observed run ends; undefined when none is in
-   * flight. The run's reply is then handed to the outbox synchronously, so a
-   * caller that waits on this and then on {@link pendingReply} sees it.
-   */
-  runInFlight(sessionId: string): Promise<void> | undefined;
   /** Downgrade routes that aged out while the app was closed. */
   recoverOnStartup(): Promise<void>;
 }
@@ -112,7 +104,10 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
     publishedRoutes?: Set<string>,
   ): Promise<void> {
     if (!text.trim()) return;
-    for (const route of await routes.notifyRoutesForSession(sessionId)) {
+    const targets = deps.replyRoutes
+      ? await deps.replyRoutes(sessionId)
+      : await routes.notifyRoutesForSession(sessionId);
+    for (const route of targets) {
       if (publishedRoutes?.has(route.id)) continue;
       await deps.publish({
         // Stable across retries and restarts so one turn is delivered once.
@@ -129,11 +124,6 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
         target: { channel: route.channel, target: route.target },
       });
       publishedRoutes?.add(route.id);
-      try {
-        deps.onReplyForwarded?.({ sessionId, turnId, route });
-      } catch {
-        // Bookkeeping for notices must never fail a published reply.
-      }
     }
   }
 
@@ -209,8 +199,6 @@ export function createSessionBridgeWiring(deps: SessionBridgeWiringDeps): Sessio
     },
     routeInbound: (inbound) => bridge.accept(inbound),
     deliverSessionReply,
-    pendingReply: (sessionId, turnId) => pendingReplies.get(`${sessionId}\u0000${turnId}`),
-    runInFlight: (sessionId) => runner.runInFlight?.(sessionId),
     recoverOnStartup: async () => {
       await routes.expireStaleBoundRoutes();
     },
@@ -483,7 +471,6 @@ export function createBoundSessionRunner(
     },
     wasInjected: (sessionId, id) => injected.has(`${sessionId}\u0000${id}`),
     runDone: (sessionId) => running.get(sessionId)?.done ?? Promise.resolve(),
-    runInFlight: (sessionId) => running.get(sessionId)?.done,
     queueNextTurn: async (input) => {
       // Core owns serialization; its acknowledgement confirms the successor
       // is queued without waiting for the current or following turn to finish.

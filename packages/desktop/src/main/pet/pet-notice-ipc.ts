@@ -40,7 +40,7 @@ export interface PetNoticeControlsDeps {
     | "ready"
     | "settingsView"
     | "onSettingsChange"
-    | "resolveRuleTarget"
+    | "deliveries"
     | "predictIm"
     | "isEligibleSession"
   >;
@@ -166,7 +166,7 @@ export function createPetNoticeControls(deps: PetNoticeControlsDeps): PetNoticeC
       await notices.ready;
       if (!notices.isEligibleSession(sessionId)) return UNAVAILABLE;
       if (on) {
-        const target = await notices.resolveRuleTarget(sessionId);
+        const target = await notices.deliveries.ruleTarget(sessionId);
         await store.upsertSessionRule({
           sessionId,
           createdBy: "bell",

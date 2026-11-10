@@ -197,8 +197,9 @@ function isTarget(value: unknown): value is NoticeRule["target"] {
  * Conversation identity of a target for "one active rule per Session +
  * target". Capabilities (reply button, attachment kinds) are deliberately not
  * part of it: the same chat with updated capabilities is the same target.
+ * Delivery plans dedupe conversations with the same key.
  */
-function targetKey(target: NoticeRule["target"]): string {
+export function noticeTargetKey(target: NoticeRule["target"]): string {
   if (target.kind === "owner") return "owner";
   const route = target.route;
   return imConversationRouteKey(route) ?? JSON.stringify(["im", route.channel, route.target, null]);
@@ -323,7 +324,7 @@ function defaultSystemRule(): NoticeRule {
 }
 
 function sessionKey(sessionId: string, target: NoticeRule["target"]): string {
-  return `${sessionId}\u0000${targetKey(target)}`;
+  return `${sessionId}\u0000${noticeTargetKey(target)}`;
 }
 
 function ruleSessionKey(rule: NoticeRule): string | undefined {

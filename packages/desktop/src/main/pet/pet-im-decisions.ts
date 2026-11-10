@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { USER_DECISION_TIMEOUT_MS, recommendedAnswer } from "@cjhyy/code-shell-core/internal";
 import type { PetLongTask } from "@cjhyy/code-shell-pet";
 import type { NoticeAttention, NoticeChannel } from "@cjhyy/code-shell-pet/protocol";
+import type { DeliveryPlanEntry } from "./pet-delivery-plan.js";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator.js";
 import type {
   PetChatControlRequest,
@@ -39,8 +40,16 @@ export interface ImDecisionDelivery {
   reply: boolean;
 }
 
-/** A Session's active blocked-watching rules, resolved by the notice wiring. */
-export type ImDecisionRuleDelivery = Omit<ImDecisionDelivery, "reply">;
+/**
+ * Where a pending decision in a Session is prompted, as the delivery plan
+ * resolves it (`PetDeliveryResolver.planBlocked`): the IM conversation that
+ * started the Session's active long task, else the Session's active
+ * blocked-watching notice rules. Undefined keeps the decision on the desktop.
+ */
+export type ImDecisionDeliveryResolver = (
+  sessionId: string,
+  task: PetLongTask | undefined,
+) => DeliveryPlanEntry | undefined;
 
 export interface ImDecision {
   code: string;
@@ -68,17 +77,16 @@ const PROMPT_OVERHEAD = 400;
 const QUESTION_BODY_MAX = MAX_NOTICE_BODY - PROMPT_OVERHEAD;
 
 /**
- * Join only live, user-visible worker requests to where they are answered: the
- * IM conversation that started the Session's long task, else the Session's
- * active blocked-watching notice rules (`rulesFor`; the Session is blocked
- * now, so a rule armed after the request appeared still counts). Decisions
- * with neither stay desktop-only.
+ * Join only live, user-visible worker requests to where they are answered.
+ * Where that is comes from the delivery plan (`deliveryFor`), the same source
+ * every other notice about the Session uses; a decision the plan has no entry
+ * for stays desktop-only.
  */
 export function collectImDecisions(
   snapshot: DesktopPetProjectionSnapshot,
   tasks: readonly PetLongTask[],
   lines: readonly string[],
-  rulesFor?: (sessionId: string) => ImDecisionRuleDelivery | undefined,
+  deliveryFor: ImDecisionDeliveryResolver,
 ): ImDecision[] {
   const envelopes = new Map<string, Envelope>();
   for (const line of lines) {
@@ -100,21 +108,16 @@ export function collectImDecisions(
         entry.sessionId === pending.agentSessionId &&
         !["completed", "failed", "cancelled"].includes(entry.status),
     );
-    const origin = task?.completionTarget;
-    let delivery: ImDecisionDelivery | undefined;
-    if (origin) {
-      delivery = {
-        ruleIds: rulesFor?.(pending.agentSessionId)?.ruleIds ?? [],
-        attention: "always",
-        channel: origin.channel,
-        target: { kind: "route", route: origin },
-        reply: true,
-      };
-    } else {
-      const rules = rulesFor?.(pending.agentSessionId);
-      if (rules) delivery = { ...rules, reply: false };
-    }
-    if (!delivery) continue;
+    const entry = deliveryFor(pending.agentSessionId, task);
+    if (!entry) continue;
+    const delivery: ImDecisionDelivery = {
+      ruleIds: entry.ruleIds,
+      attention: entry.attention,
+      channel: entry.channel,
+      target: entry.target,
+      ...(entry.requiresAway ? { requiresAway: true } : {}),
+      reply: entry.reply,
+    };
     const envelope = envelopes.get(`${pending.agentSessionId}\0${pending.requestId}`);
     if (!envelope || envelope.generation !== pending.routeGeneration) continue;
     // Bind the code to this worker and request, never a mutable "current task".

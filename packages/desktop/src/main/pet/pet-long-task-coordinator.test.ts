@@ -8,6 +8,7 @@ import type {
   DesktopPetProjectionEvent,
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator.js";
+import { createPetDeliveryResolver } from "./pet-delivery-plan.js";
 import { PetLongTaskCoordinator } from "./pet-long-task-coordinator.js";
 import { PetLongTaskStore } from "./pet-long-task-store.js";
 import type { NoticeRule } from "./pet-rule-store.js";
@@ -2044,12 +2045,21 @@ describe("one interpretation for the long task and the notice rules", () => {
         scope: "goal",
         armedAt: 0,
       },
+      attention: "always",
+      channel: "auto",
+      target: { kind: "owner" },
     } as unknown as NoticeRule;
     const watcher = new PetSessionRuleWatcher({
       rules: { activeForSession: () => [rule], update: async () => rule },
       onNotice: (draft) => drafts.push(draft),
       onPendingDecision: () => undefined,
-      hasActiveLongTask: () => true,
+      // The task owns the run; blocked is still the rules' to report.
+      deliveries: createPetDeliveryResolver({
+        rules: { activeForSession: () => [rule] },
+        longTasks: h.store,
+        replyRoutes: async () => [],
+        delegatedFromDesktop: () => "auto",
+      }),
       isSessionBusy: () => false,
       isEligibleSession: () => true,
     });

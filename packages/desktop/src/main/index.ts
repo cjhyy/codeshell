@@ -1844,7 +1844,6 @@ async function createWindow(): Promise<BrowserWindow> {
       projection: aggregator,
       longTasks: longTaskStore,
       sessionRoutes: () => sessionBridge?.routes,
-      boundReplies: () => sessionBridge,
       gateway: imGatewayService,
       publishRoute: publishGatewayControlEvent,
       materializeAttachments: materializeOutgoingAttachments,
@@ -1994,7 +1993,7 @@ async function createWindow(): Promise<BrowserWindow> {
           aggregator.getSnapshot(),
           longTaskStore.getSnapshot().tasks,
           pendingMobileApprovals.replayAllLines(),
-          notices.decisions.rulesFor,
+          notices.decisions.deliveryFor,
         );
       },
       ...imDecisionWorkerActions(
@@ -2014,8 +2013,9 @@ async function createWindow(): Promise<BrowserWindow> {
     const imDecisions = petImDecisions;
     notices.decisions.onBlocked(() => imDecisions.scanNow());
     petImDecisions.start();
-    // One interpretation of each Session event, handed to the long task first
-    // and the notice rules second (see createSessionOutcomeTap).
+    // One interpretation of each Session event, handed to the long task and
+    // the notice rules (see createSessionOutcomeTap). Which of them reports a
+    // run is decided by the delivery plan, not by who hears of it first.
     const observeSessionOutcome = createSessionOutcomeTap({
       coordinator: (sessionId, event, outcomes) =>
         void longTaskCoordinator
@@ -2085,8 +2085,8 @@ async function createWindow(): Promise<BrowserWindow> {
       health: createBoundSessionHealth(aggregator, petSessionsRootDir),
       describeStatus: async (route) => `当前在「${route.sessionTitle}」中。发送 /mimi 可退出。`,
       publish: (event) => publishGatewayControlEvent(event),
-      onReplyForwarded: ({ sessionId, turnId, route }) =>
-        notices.recordBoundReply(sessionId, turnId, route),
+      // The conversations a turn's reply goes to come from the delivery plan.
+      replyRoutes: (sessionId) => notices.deliveries.replyRoutes(sessionId),
       onDeliveryError: (error, turn) =>
         dlog("main", "pet.session.reply.retry", {
           sessionId: turn.sessionId,

@@ -19,14 +19,12 @@ import {
   type SessionBridgeWiring,
 } from "./session-bridge-wiring.js";
 import {
-  mergeRuleAttributes,
   parsePetNotificationSettings,
   petNotificationSettingsView,
   wirePetNotices,
   type PetNoticeWiring,
   type PetNoticeWiringDeps,
 } from "./pet-notice-wiring.js";
-import type { NoticeRule } from "./pet-rule-store.js";
 import { createSessionOutcomeTap, SessionOutcomeDeriver } from "./session-outcome.js";
 import type {
   DesktopPendingDecision,
@@ -396,29 +394,6 @@ describe("parsePetNotificationSettings", () => {
     expect(
       parsePetNotificationSettings({ pet: { notifications: { quietHours: null } } }).quietHours,
     ).toEqual({ start: "23:00", end: "08:30" });
-  });
-});
-
-describe("mergeRuleAttributes", () => {
-  const base = {
-    attention: "important",
-    channel: "auto",
-    target: { kind: "owner" },
-  } as unknown as NoticeRule;
-  test("strongest attention, named IM over auto, route over owner", () => {
-    const route = {
-      kind: "route",
-      route: { kind: "im-gateway", channel: "wechat", target: "chat-1" },
-    } as const;
-    expect(
-      mergeRuleAttributes([
-        base,
-        { ...base, attention: "always", channel: "lark" },
-        { ...base, channel: "desktop", target: route },
-      ]),
-    ).toEqual({ attention: "always", channel: "lark", target: route });
-    expect(mergeRuleAttributes([{ ...base, channel: "desktop" }]).channel).toBe("desktop");
-    expect(mergeRuleAttributes([{ ...base, channel: "desktop" }, base]).channel).toBe("auto");
   });
 });
 
@@ -852,7 +827,7 @@ describe("delegation rules", () => {
       target: { kind: "route", route },
     });
     // Blocked prompts for this Session now have somewhere to go.
-    expect(current.wiring.decisions.rulesFor(SID)).toBeDefined();
+    expect(current.wiring.decisions.deliveryFor(SID, undefined)).toBeDefined();
   });
 
   test("a desktop delegation targets the owner on the delegatedFromDesktop channel", async () => {
@@ -1044,7 +1019,7 @@ function decisionRelay(h: Harness) {
   const lines: string[] = [];
   const approvals: unknown[] = [];
   const relay = new PetImDecisions({
-    read: () => collectImDecisions(h.snapshot(), h.tasks, lines, h.wiring.decisions.rulesFor),
+    read: () => collectImDecisions(h.snapshot(), h.tasks, lines, h.wiring.decisions.deliveryFor),
     now: () => clock,
     approve: async (_entry, decision) => {
       approvals.push(decision);
@@ -1491,14 +1466,12 @@ describe("bound Session replies", () => {
     { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } },
     { type: "turn_complete", reason: "completed", text: "改好了", runId, ...extra },
   ];
-  const bound = { channel: "wechat", target: "chat-1", senderId: "owner-1" };
 
-  test("a completion already replied in the bound conversation is not sent again", async () => {
+  test("a completion replied in the bound conversation is not sent again", async () => {
     current = harness();
     current.routes.push(boundRoute());
     await current.handler(SID, upsertArgs({ events: ["done"] }));
     clock = NOW + 1_000;
-    current.wiring.recordBoundReply(SID, "run-1", bound);
     for (const event of turn("run-1")) current.observeSessionEvent(SID, event);
     await settle(() => current!.desktop.length > 0);
     expect(current.submitted).toHaveLength(1);
@@ -1507,6 +1480,10 @@ describe("bound Session replies", () => {
     expect(current.published).toEqual([]);
     expect(current.ownerSends).toEqual([]);
     expect(current.desktop.map((input) => input.title)).toEqual(["Mimi 任务已完成"]);
+    expect(current.wiring.ledger.byDedupeKey(`${SID}:turn:run-1`)?.decision).toEqual({
+      outlet: "desktop",
+      reason: "bound-reply-delivered",
+    });
   });
 
   test("an owner-target done stays on IM when its rule names another channel", async () => {
@@ -1518,44 +1495,90 @@ describe("bound Session replies", () => {
       current = harness({
         readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }),
       });
+      // Armed before the Session was bound: the rule addresses the owner.
       await current.handler(SID, upsertArgs({ events: ["done"], channel }));
+      current.routes.push(boundRoute());
       clock = NOW + 1_000;
-      current.wiring.recordBoundReply(SID, "run-1", bound);
       for (const event of turn("run-1")) current.observeSessionEvent(SID, event);
       await settle(
         () => current!.submitted.length > 0 && (suppressed || current!.ownerSends.length > 0),
       );
+      expect(current.submitted).toHaveLength(1);
       expect(current.submitted[0]!.target).toEqual({ kind: "owner" });
       expect(current.submitted[0]!.boundReplyDelivered === true).toBe(suppressed);
-      expect(current.ownerSends).toHaveLength(suppressed ? 0 : 1);
+      expect(current.ownerSends.map((send) => send.targetId)).toEqual(
+        suppressed ? [] : ["lark:owner"],
+      );
     }
   });
 
-  test("a done without a core run id is never paired with a bound reply", async () => {
+  test("a done without a core run id is served by the bound reply all the same", async () => {
     current = harness();
     current.routes.push(boundRoute());
     await current.handler(SID, upsertArgs({ events: ["done"] }));
     clock = NOW + 1_000;
-    current.wiring.recordBoundReply(SID, String(clock), bound);
     for (const event of [
       { type: "session_started", clientMessageId: "cm-x" },
       { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } },
       { type: "turn_complete", reason: "completed", text: "改好了", completedAt: clock },
     ])
       current.observeSessionEvent(SID, event);
+    await settle(() => current!.submitted.length > 0);
+    expect(current.submitted.map((notice) => notice.boundReplyDelivered)).toEqual([true]);
+    expect(current.published).toEqual([]);
+    expect(current.ownerSends).toEqual([]);
+  });
+
+  test("once the conversation no longer receives replies, the notice is sent there", async () => {
+    current = harness({ readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }) });
+    current.routes.push(boundRoute());
+    await current.handler(SID, upsertArgs({ events: ["done"] }));
+    // The route is gone (the Session was rebound elsewhere / the route removed).
+    current.routes.length = 0;
+    clock = NOW + 1_000;
+    for (const event of turn("run-1")) current.observeSessionEvent(SID, event);
     await settle(() => current!.published.length > 0);
-    expect(current.submitted[0]!.boundReplyDelivered).toBeUndefined();
-    expect(current.published).toHaveLength(1);
+    expect(current.submitted.map((notice) => notice.boundReplyDelivered)).toEqual([undefined]);
+    expect(current.published).toMatchObject([
+      { type: "pet.task.completed", target: { channel: "wechat", target: "chat-1" } },
+    ]);
+    current.routes.push(boundRoute());
+    await current.handler(SID, upsertArgs({ events: ["failed"] }));
+    current.routes.length = 0;
+    clock = NOW + 2_000;
+    for (const event of turn("run-2", { reason: "model_error" }))
+      current.observeSessionEvent(SID, event);
+    await settle(() => current!.published.length > 1);
+    expect(current.published.map((event) => event.type)).toEqual([
+      "pet.task.completed",
+      "pet.task.failed",
+    ]);
+  });
+
+  test("routes that cannot be read never swallow the notice", async () => {
+    current = harness({
+      sessionRoutes: () => ({
+        notifyRoutesForSession: async () => {
+          throw new Error("routes unreadable");
+        },
+      }),
+    });
+    await current.handler(SID, upsertArgs({ events: ["done"], channel: "wechat" }));
+    clock = NOW + 1_000;
+    for (const event of turn("run-1")) current.observeSessionEvent(SID, event);
+    await settle(() => current!.ownerSends.length > 0);
+    expect(current.submitted.map((notice) => notice.boundReplyDelivered)).toEqual([undefined]);
+    expect(current.ownerSends).toHaveLength(1);
   });
 
   /**
-   * Main subscribes the notice tap to the worker stream BEFORE the bound
-   * Session runner. Both run synchronously per line and the rule watcher
-   * defers through promises, so the runner always hands the turn's reply to
-   * the outbox before a done notice is decided. A goal is met mid-run, so
-   * that notice waits for the run to end first.
+   * The real bridge and the notice tap on one worker stream. Everything that
+   * lands in the bound conversation is collected in `conversation`: the
+   * bridge's session.reply and anything the notice router publishes to that
+   * route. `tapFirst` is the order the two listeners were subscribed in; who
+   * tells the conversation is decided by the delivery plan, so it must not matter.
    */
-  function realBridge() {
+  function realBridge(tapFirst = true) {
     const listeners: Array<(line: string, entry?: { sessionId: string; event: unknown }) => void> =
       [];
     const worker = {
@@ -1566,15 +1589,13 @@ describe("bound Session replies", () => {
         return () => undefined;
       },
     };
-    const replies: unknown[] = [];
-    current = harness({
-      sessionRoutes: () => wiringRef?.routes,
-      boundReplies: () => wiringRef,
-    });
+    const replies: Array<{ text: string; target: { channel: string; target: string } }> = [];
+    current = harness({ sessionRoutes: () => wiringRef?.routes });
     const h = current;
-    listeners.push((_line, entry) => {
+    const tap = (_line: string, entry?: { sessionId: string; event: unknown }) => {
       if (entry) h.observeSessionEvent(entry.sessionId, entry.event);
-    });
+    };
+    if (tapFirst) listeners.push(tap);
     const wiringRef: SessionBridgeWiring = createSessionBridgeWiring({
       routesFilePath: join(dir, "routes.json"),
       resolveSelector: async () =>
@@ -1596,10 +1617,10 @@ describe("bound Session replies", () => {
       publish: async (event) => {
         replies.push(event);
       },
-      onReplyForwarded: ({ sessionId, turnId, route }) =>
-        h.wiring.recordBoundReply(sessionId, turnId, route),
+      replyRoutes: (sessionId) => h.wiring.deliveries.replyRoutes(sessionId),
       now: () => clock,
     });
+    if (!tapFirst) listeners.push(tap);
     const emit = (event: Record<string, unknown>) => {
       for (const listener of listeners) listener("", { sessionId: SID, event });
     };
@@ -1612,33 +1633,51 @@ describe("bound Session replies", () => {
           isDirectMessage: true,
         },
       );
-    return { h, emit, bind, replies };
+    /** Every message the bound conversation received, whoever sent it. */
+    const conversation = () => [
+      ...replies.map((event) => event.text),
+      ...h.published
+        .filter((event) => event.target.channel === "wechat" && event.target.target === "chat-1")
+        .map((event) => event.text),
+    ];
+    return { h, emit, bind, replies, conversation };
   }
 
-  test("listener order: a turn's done is decided after its bound reply is in the outbox", async () => {
-    const { h, emit, bind, replies } = realBridge();
-    expect((await bind()).ok).toBe(true);
-    await h.handler(SID, upsertArgs({ events: ["done"] }));
-    clock = NOW + 1_000;
-    emit({ type: "session_started", runId: "run-1", clientMessageId: "cm-1" });
-    emit({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } });
-    emit({ type: "turn_complete", reason: "completed", text: "改好了", runId: "run-1" });
-    await settle(() => h.submitted.length > 0);
-    expect(replies).toHaveLength(1);
-    expect(h.submitted.map((notice) => notice.boundReplyDelivered)).toEqual([true]);
-    expect(h.published).toEqual([]);
+  test("a bound Session's done turn posts exactly once, whichever listener hears it first", async () => {
+    for (const tapFirst of [true, false]) {
+      current?.wiring.dispose();
+      const { h, emit, bind, conversation } = realBridge(tapFirst);
+      expect((await bind()).ok).toBe(true);
+      await h.handler(SID, upsertArgs({ events: ["done"] }));
+      clock = NOW + 1_000;
+      // The notice ledger outlives the harness: a run id of its own per round.
+      const runId = `run-${tapFirst ? "tap" : "bridge"}-first`;
+      emit({ type: "session_started", runId, clientMessageId: "cm-1" });
+      emit({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } });
+      emit({ type: "turn_complete", reason: "completed", text: "改好了", runId });
+      await settle(() => h.desktop.length > 0 && conversation().length > 0);
+      await settle();
+      expect(conversation()).toEqual(["改好了"]);
+      expect(h.ownerSends).toEqual([]);
+      // The owner still gets the desktop record of the outcome.
+      expect(h.desktop.map((input) => input.title)).toEqual(["Mimi 任务已完成"]);
+    }
   });
 
-  test("a goal met before turn_complete waits for the run, then for its reply", async () => {
-    const { h, emit, bind, replies } = realBridge();
+  test("a goal met mid-run posts exactly once: the run's closing reply", async () => {
+    const { h, emit, bind, conversation } = realBridge();
     expect((await bind()).ok).toBe(true);
     await h.handler(SID, upsertArgs({ events: ["done"], scope: "goal" }));
     clock = NOW + 1_000;
     emit({ type: "session_started", runId: "run-1", clientMessageId: "cm-1" });
     emit({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } });
     emit({ type: "goal_progress", status: "met", goalId: "g-1", runId: "run-1" });
-    await settle();
-    expect(h.submitted).toEqual([]);
+    // Nothing waits for the run to end: the plan already says who is served.
+    await settle(() => h.submitted.length > 0);
+    expect(h.submitted.map((notice) => [notice.dedupeKey, notice.boundReplyDelivered])).toEqual([
+      [`${SID}:goal:g-1`, true],
+    ]);
+    expect(conversation()).toEqual([]);
     emit({
       type: "turn_complete",
       reason: "completed",
@@ -1646,63 +1685,15 @@ describe("bound Session replies", () => {
       text: "目标完成",
       runId: "run-1",
     });
-    await settle(() => h.submitted.length > 0);
-    expect(replies).toHaveLength(1);
-    expect(h.submitted.map((notice) => [notice.dedupeKey, notice.boundReplyDelivered])).toEqual([
-      [`${SID}:goal:g-1`, true],
-    ]);
-    expect(h.published).toEqual([]);
-  });
-
-  test("a done notice waits for the same run's in-flight reply", async () => {
-    let finish!: () => void;
-    const inFlight = new Promise<void>((resolve) => {
-      finish = resolve;
-    });
-    current = harness({
-      boundReplies: () => ({
-        pendingReply: (sessionId, runId) =>
-          sessionId === SID && runId === "run-1" ? inFlight : undefined,
-      }),
-    });
-    current.routes.push(boundRoute());
-    await current.handler(SID, upsertArgs({ events: ["done"] }));
-    clock = NOW + 1_000;
-    for (const event of turn("run-1")) current.observeSessionEvent(SID, event);
+    await settle(() => conversation().length > 0);
     await settle();
-    expect(current.submitted).toEqual([]);
-    current.wiring.recordBoundReply(SID, "run-1", bound);
-    finish();
-    await settle(() => current!.submitted.length > 0);
-    expect(current.submitted.map((notice) => notice.boundReplyDelivered)).toEqual([true]);
-    expect(current.published).toEqual([]);
-  });
-
-  test("another run's reply swallows neither this run's done nor its failed", async () => {
-    current = harness({ readSettings: () => ({ pet: { notifications: { mergeWindowSec: 0 } } }) });
-    current.routes.push(boundRoute());
-    await current.handler(SID, upsertArgs({ events: ["done"] }));
-    clock = NOW + 1_000;
-    current.wiring.recordBoundReply(SID, "run-0", bound);
-    for (const event of turn("run-1")) current.observeSessionEvent(SID, event);
-    await settle(() => current!.published.length > 0);
-    expect(current.published).toHaveLength(1);
-    expect(current.published[0]).toMatchObject({ type: "pet.task.completed" });
-    await current.handler(SID, upsertArgs({ events: ["failed"] }));
-    clock = NOW + 2_000;
-    for (const event of turn("run-2", { reason: "model_error" }))
-      current.observeSessionEvent(SID, event);
-    await settle(() => current!.published.length > 1);
-    expect(current.submitted.at(-1)).toMatchObject({ kind: "session.failed" });
-    expect(current.submitted.at(-1)!.boundReplyDelivered).toBeUndefined();
-    expect(current.published.map((event) => event.type)).toEqual([
-      "pet.task.completed",
-      "pet.task.failed",
-    ]);
+    expect(conversation()).toEqual(["目标完成"]);
+    expect(h.submitted).toHaveLength(1);
+    expect(h.ownerSends).toEqual([]);
   });
 
   test("a bound Session's failed turn posts once: the bridge's failure reply", async () => {
-    const { h, emit, bind, replies } = realBridge();
+    const { h, emit, bind, conversation } = realBridge();
     expect((await bind()).ok).toBe(true);
     await h.handler(SID, upsertArgs({ events: ["failed"] }));
     clock = NOW + 1_000;
@@ -1710,15 +1701,39 @@ describe("bound Session replies", () => {
     emit({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } });
     emit({ type: "error", error: "model down", runId: "run-1" });
     emit({ type: "turn_complete", reason: "model_error", runId: "run-1" });
-    await settle(() => h.submitted.length > 0);
-    expect(replies).toEqual([
-      expect.objectContaining({ text: "这个 Session 本轮执行失败，请在桌面端查看详情后重试。" }),
-    ]);
+    await settle(() => h.submitted.length > 0 && conversation().length > 0);
+    await settle();
+    expect(conversation()).toEqual(["这个 Session 本轮执行失败，请在桌面端查看详情后重试。"]);
     expect(h.submitted.map((notice) => [notice.kind, notice.boundReplyDelivered])).toEqual([
       ["session.failed", true],
     ]);
-    expect(h.published).toEqual([]);
     expect(h.ownerSends).toEqual([]);
+  });
+
+  test("a delegated task in a bound Session: Mimi's closure to its origin, the reply to the chat", async () => {
+    const { h, emit, bind, conversation } = realBridge();
+    expect((await bind()).ok).toBe(true);
+    // Started from the desktop; the long task owns run-1.
+    const task = longTask({ status: "running", runId: "run-1", completedAt: undefined });
+    h.tasks.push(task);
+    await h.wiring.armDelegationRule(task);
+    clock = NOW + 1_000;
+    emit({ type: "session_started", runId: "run-1", clientMessageId: "cm-1" });
+    emit({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } });
+    emit({ type: "turn_complete", reason: "completed", text: "改好了", runId: "run-1" });
+    await settle(() => conversation().length > 0);
+    await settle();
+    // The watcher leaves the run to the closure; only the Session's reply is out.
+    expect(h.submitted).toEqual([]);
+    expect(conversation()).toEqual(["改好了"]);
+    Object.assign(task, { status: "completed", completedAt: clock });
+    await h.wiring.notifyTaskClosed(task, { text: "登录修好了，可以验收。" });
+    await settle(() => h.ownerSends.length > 0);
+    expect(h.submitted.map((notice) => [notice.kind, notice.body, notice.target.kind])).toEqual([
+      ["session.done", "登录修好了，可以验收。", "owner"],
+    ]);
+    expect(h.ownerSends.map((send) => send.text)).toEqual(["登录修好了，可以验收。"]);
+    expect(conversation()).toEqual(["改好了"]);
   });
 });
 

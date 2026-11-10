@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import type { ConversationSessionRoute, PetLongTask } from "@cjhyy/code-shell-pet";
 import type { NoticeEvent } from "@cjhyy/code-shell-pet/protocol";
+import { createPetDeliveryResolver, type DeliveryPlanEntry } from "./pet-delivery-plan.js";
 import type { NoticeRule, NoticeRulePatch } from "./pet-rule-store.js";
 import { PetRuleStoreError } from "./pet-rule-store.js";
 import type { DesktopPendingDecision, DesktopPetProjectionEvent } from "./pet-state-aggregator.js";
@@ -132,7 +134,13 @@ function pendingUpsert(value: DesktopPendingDecision): DesktopPetProjectionEvent
 }
 
 let rules: FakeRules;
-let drafts: NoticeDraft[];
+/** Drafts as emitted, without their delivery (kept in `deliveries`, same order). */
+let drafts: Omit<NoticeDraft, "delivery">[];
+let deliveries: DeliveryPlanEntry[];
+/** Long tasks the delivery plan knows (closed ones included). */
+let tasks: PetLongTask[];
+/** IM conversations that receive the Session's turn replies. */
+let replyRoutes: ConversationSessionRoute[];
 let logs: { event: string; data: Record<string, unknown> }[];
 let longTask: boolean;
 let busy: boolean;
@@ -144,9 +152,21 @@ function watcher(
 ): PetSessionRuleWatcher {
   return new PetSessionRuleWatcher({
     rules,
-    onNotice: (draft) => drafts.push(draft),
+    deliveries: createPetDeliveryResolver({
+      rules,
+      longTasks: {
+        activeForSession: (sessionId) =>
+          longTask ? ({ id: "task-active", sessionId } as PetLongTask) : undefined,
+        getSnapshot: () => ({ tasks }),
+      },
+      replyRoutes: async () => replyRoutes,
+      delegatedFromDesktop: () => "auto",
+    }),
+    onNotice: ({ delivery, ...draft }) => {
+      drafts.push(draft);
+      deliveries.push(delivery);
+    },
     onPendingDecision: () => undefined,
-    hasActiveLongTask: () => longTask,
     isSessionBusy: () => busy,
     isEligibleSession: () => eligible,
     sessionTitle: (sessionId) => (sessionId === SID ? "修复登录" : undefined),
@@ -172,6 +192,9 @@ async function feed(w: PetSessionRuleWatcher, events: unknown[], sessionId = SID
 beforeEach(() => {
   rules = new FakeRules();
   drafts = [];
+  deliveries = [];
+  tasks = [];
+  replyRoutes = [];
   logs = [];
   longTask = false;
   busy = false;
@@ -189,7 +212,6 @@ describe("turn-scope done", () => {
         kind: "session.done",
         priority: "P1",
         dedupeKey: `${SID}:turn:run-1`,
-        runId: "run-1",
         sessionId: SID,
         ruleIds: ["rule-a"],
         facts: { title: "修复登录", summary: "All tests pass now." },
@@ -322,7 +344,6 @@ describe("goal scope", () => {
         kind: "session.done",
         priority: "P1",
         dedupeKey: `${SID}:goal:g-1`,
-        runId: "run-1",
         sessionId: SID,
         ruleIds: ["rule-goal"],
         facts: { title: "修复登录" },
@@ -450,7 +471,6 @@ describe("failed", () => {
         priority: "P1",
         dedupeKey: `${SID}:failed:run-1`,
         // Pairs the notice with the bound reply that already told the chat.
-        runId: "run-1",
         sessionId: SID,
         ruleIds: ["rule-a"],
         facts: { title: "修复登录", error: "Work session ended: model_error" },
@@ -467,9 +487,9 @@ describe("failed", () => {
       { type: "error", error: "provider down" },
       done({ reason: "error" }),
     ]);
-    expect(
-      drafts.map((draft) => [draft.kind, draft.dedupeKey, draft.runId, draft.facts.error]),
-    ).toEqual([["session.failed", `${SID}:failed:run-1`, "run-1", "provider down"]]);
+    expect(drafts.map((draft) => [draft.kind, draft.dedupeKey, draft.facts.error])).toEqual([
+      ["session.failed", `${SID}:failed:run-1`, "provider down"],
+    ]);
   });
 
   test("rules without failed do not match", async () => {
@@ -511,20 +531,44 @@ describe("long task ownership", () => {
     expect(rules.rules[0]!.state).toBe("active");
   });
 
-  test("ownership is asked per run, with the core run id", async () => {
+  test("a closed task still owns the run it closed, and no later run", async () => {
     rules.rules.push(sessionRule("rule-a"));
-    const asked: string[] = [];
-    const w = watcher({
-      hasActiveLongTask: (_sessionId, run) => {
-        asked.push(run);
-        return run === "run-1";
-      },
-    });
+    tasks.push({
+      id: "task-1",
+      sessionId: SID,
+      runId: "run-1",
+      status: "completed",
+    } as PetLongTask);
+    const w = watcher();
     await feed(w, [started(), tool("Bash"), done()]);
     expect(drafts).toEqual([]);
+    expect(rules.rules[0]!.state).toBe("active");
     await feed(w, [started({ runId: "run-2" }), tool("Bash"), done()]);
-    expect(asked).toEqual(["run-1", "run-2"]);
     expect(drafts.map((draft) => draft.dedupeKey)).toEqual([`${SID}:turn:run-2`]);
+    expect(deliveries.map((delivery) => delivery.composeBy)).toEqual(["template"]);
+  });
+
+  test("a Session bound to an IM chat: the draft says its reply is the delivery", async () => {
+    rules.rules.push(sessionRule("rule-a"));
+    replyRoutes.push({
+      id: "route-1",
+      channel: "wechat",
+      target: "chat-1",
+      senderId: "owner-1",
+      sessionId: SID,
+      mode: "bound",
+      status: "active",
+    } as ConversationSessionRoute);
+    const w = watcher();
+    // Core gave no run id: the plan does not need one to know who is served.
+    await feed(w, [tool("Bash"), done()]);
+    expect(drafts.map((draft) => [draft.kind, draft.ruleIds])).toEqual([
+      ["session.done", ["rule-a"]],
+    ]);
+    expect(deliveries).toMatchObject([
+      { composeBy: "session-reply", target: { kind: "owner" }, channel: "auto" },
+    ]);
+    expect(rules.rules[0]!.state).toBe("spent");
   });
 });
 
@@ -937,11 +981,10 @@ describe("core's real flows", () => {
 
   test("observe never rejects; failures are logged", async () => {
     const w = watcher({
-      rules: {
-        activeForSession: () => {
+      deliveries: {
+        plan: async () => {
           throw new Error("store gone");
         },
-        update: rules.update.bind(rules),
       },
     });
     await expect(feed(w, [started(), tool("Bash"), done()])).resolves.toBeUndefined();

@@ -2,13 +2,28 @@ import { describe, expect, test } from "bun:test";
 import { createPetLongTask, parsePetLongTask } from "../../../../pet/src/long-task.js";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator.js";
 import type { PetChatControlRequest } from "../im-gateway-control-server.js";
-import { collectImDecisions, PetImDecisions } from "./pet-im-decisions.js";
+import { buildDeliveryPlan, type DeliveryPlanEntry } from "./pet-delivery-plan.js";
+import {
+  collectImDecisions,
+  PetImDecisions,
+  type ImDecisionDeliveryResolver,
+} from "./pet-im-decisions.js";
 import type { RouteDecision } from "./pet-notice-policy.js";
 import type {
   NoticePriorDecision,
   NoticeSubmission,
   NoticeSubmitResult,
 } from "./pet-notice-types.js";
+
+/** The delivery plan with no notice rules: only a task started over IM has a target. */
+const taskOriginOnly: ImDecisionDeliveryResolver = (_sessionId, task) =>
+  buildDeliveryPlan({
+    event: "blocked",
+    rules: [],
+    ...(task ? { task } : {}),
+    replyRoutes: [],
+    delegatedFromDesktop: "auto",
+  })[0];
 
 /** What reached an IM conversation through the (stubbed) notice router. */
 interface Sent {
@@ -94,6 +109,7 @@ function fixture(id = "one") {
       snapshot,
       [task],
       [JSON.stringify({ method: "agent/approvalRequest", params })],
+      taskOriginOnly,
     );
   return { task, params, snapshot, read };
 }
@@ -690,6 +706,7 @@ test("worker protocol: IM answer releases the original write; Stop drains queued
         f.snapshot,
         [f.task],
         requests().map((frame) => JSON.stringify(frame)),
+        taskOriginOnly,
       );
     };
     const relay = new PetImDecisions({
@@ -893,13 +910,17 @@ describe("decisions routed through the notice router", () => {
         f.snapshot,
         [f.task],
         [JSON.stringify({ method: "agent/approvalRequest", params: f.params })],
-        (sessionId) =>
+        (sessionId): DeliveryPlanEntry | undefined =>
           sessionId === f.task.sessionId
             ? {
+                key: "owner",
                 ruleIds: ["rule-1"],
                 attention: "always",
                 channel: "auto",
                 target: { kind: "owner" },
+                reply: false,
+                composeBy: "template",
+                requiresAway: false,
               }
             : undefined,
       );

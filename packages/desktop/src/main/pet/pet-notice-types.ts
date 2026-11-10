@@ -163,8 +163,9 @@ export interface NoticeSubmission {
   /** Files / URL action sent with the text; such a notice is never digested or merged. */
   media?: NoticeMedia;
   /**
-   * The Session is bound to an IM conversation that already received this
-   * run's reply: the notice never goes to IM (or the digest), only the desktop.
+   * The delivery plan serves this outcome with the Session's own reply in a
+   * bound IM conversation (`composeBy: "session-reply"`): the notice never
+   * goes to IM (or the digest), only the desktop.
    */
   boundReplyDelivered?: boolean;
 }
